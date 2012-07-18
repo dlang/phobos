@@ -426,9 +426,23 @@ template map(fun...) if (fun.length >= 1)
 
             static if (isRandomAccessRange!R)
             {
-                auto ref opIndex(size_t index)
+                static if(hasLength!R)
                 {
-                    return _fun(_input[index]);
+                    //use type returned by length
+                    private: alias typeof(_input.length) index_t;
+                }
+                else
+                {
+                    //Hope that size_t is actually compatible...
+                    private: alias size_t index_t;
+                }
+
+                static if(is(typeof(_input[cast(index_t)0]))) //double check we guessed right
+                {
+                    auto ref opIndex(index_t index)
+                    {
+                        return _fun(_input[index]);
+                    }
                 }
             }
 
@@ -444,9 +458,23 @@ template map(fun...) if (fun.length >= 1)
 
             static if (hasSlicing!R)
             {
-                auto opSlice(size_t lowerBound, size_t upperBound)
+                static if(hasLength!R)
                 {
-                    return typeof(this)(_input[lowerBound..upperBound]);
+                    //use type returned by length
+                    private: alias typeof(_input.length) index_t;
+                }
+                else
+                {
+                    //Hope that size_t is actually compatible...
+                    private: size_t index_t;
+                }
+
+                static if(is(typeof(_input[cast(index_t)0 .. cast(index_t)(0)]))) //double check we guessed right
+                {
+                    auto opSlice(index_t lowerBound, index_t upperBound)
+                    {
+                        return typeof(this)(_input[lowerBound..upperBound]);
+                    }
                 }
             }
 
@@ -848,7 +876,7 @@ assert(a == [ 5, 5, 5, 5 ]);
 ----
  */
 void fill(Range, Value)(Range range, Value filler)
-if (isInputRange!Range && is(typeof(range.front = filler)))
+if (isForwardRange!Range && is(typeof(range.front = filler)))
 {
     alias ElementType!Range T;
     static if (hasElaborateCopyConstructor!T || !isDynamicArray!Range)
@@ -924,7 +952,7 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
     static if(isInfinite!Range2)
     {
         //Range2 is infinite, no need for bounds checking
-        static if(hasSlicing!Range2 && hasLength!Range1)
+        static if(hasSlicing!Range2 && hasLength!Range1 && is(typeof(filler[0 .. range.length])))
         {
             //Quick copy
             auto len = range.length;
@@ -952,11 +980,11 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
         }
         
         //and finally fill the partial range. No need to save here.
-        static if (hasSlicing!Range2 && is(typeof(range.length) == typeof(filler.length)))
+        static if (hasSlicing!Range2 && is(typeof(filler[0 .. range.length])))
         {
             //use a quick copy
             auto len2 = range.length;
-            range = copy(filler[0 .. len2], range.save);
+            range = copy(filler[0 .. len2], range);
         }
         else
         {
@@ -4704,27 +4732,14 @@ assert(p == [ 7, 8, 9 ]);
 Range findAdjacent(alias pred = "a == b", Range)(Range r)
     if (isForwardRange!Range)
 {
-    static if(isRandomAccessRange!Range && hasSlicing!Range)
+    if (r.empty) return r;
+    auto ahead = r.save; 
+    for (ahead.popFront(); !ahead.empty; r.popFront(), ahead.popFront())
     {
-        auto len = r.length;
-        if(r.empty) return r;
-        foreach(i ; 0 .. len - 1)
-        {
-            if (binaryFun!pred(r[i], r[i+1])) return r[i .. len];
-        }
-        return r[len .. len]; //not found, return an empty view of r;
+        if (binaryFun!(pred)(r.front, ahead.front)) return r;
     }
-    else
-    {
-        if (r.empty) return r;
-        auto ahead = r.save; 
-        for (ahead.popFront(); !ahead.empty; r.popFront(), ahead.popFront())
-        {
-            if (binaryFun!(pred)(r.front, ahead.front)) return r;
-        }
-        r.popFront();
-        return r;
-    }
+    r.popFront();
+    return r;
 }
 
 unittest
@@ -4966,30 +4981,18 @@ bool equal(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
     if (isInputRange!(Range1) && isInputRange!(Range2)
         && is(typeof(binaryFun!pred(r1.front, r2.front))))
 {
-    static if (hasLength!Range1 && hasLength!Range2 && is(typeof(r1.length == r2.length)))
+    static if (hasLength!Range1 && hasLength!Range2
+        && is(typeof(r1.length == r2.length)))
     {
         auto len1 = r1.length;
         auto len2 = r2.length;
         if(len1 != len2) return false; //Is this short-circuit legal, or must we make the calls to pred?
 
-        static if(isRandomAccessRange!Range1 && isRandomAccessRange!Range2 && is(typeof(r1.length) == typeof(r2.length)) )
+        for (; !r1.empty; r1.popFront(), r2.popFront())
         {
-            foreach(i; 0..len1)
-            {
-                if (!binaryFun!(pred)(r1[i], r2[i]))
-                return false;
-            }
-            return true;
+            if (!binaryFun!(pred)(r1.front, r2.front)) return false;
         }
-        else
-        {
-            //We have already validated that the lengths are equal, no need to check r2
-            for (; !r1.empty; r1.popFront(), r2.popFront())
-            {
-                if (!binaryFun!(pred)(r1.front, r2.front)) return false;
-            }
-            return true;
-        }
+        return true;
     }
     else
     {
@@ -5342,33 +5345,27 @@ assert(minCount!("a > b")(a) == tuple(4, 2));
  */
 Tuple!(ElementType!(Range), size_t)
 minCount(alias pred = "a < b", Range)(Range range)
-  if (isInputRange!Range)
+    if ( isInputRange!Range && !isInfinite!Range)
 {
-    //In this algorithm, is it cheaper to make a copy, and copare with the copy?
-    //Or is it better to NOT make a copy, and re-index (range.front/range[i])
-    //Implementation assumes copies are cheaper.
-    //We could also check if input is an Array, but this would make a simple
-    //implementation too complicated
-
-    enforce(!range.empty); //returning the min _value_ of an empty range makes no sense.
+    enforce(!range.empty);
     size_t occurrences = 1;
-    auto p = range.front;
-    static if(isRandomAccessRange!Range)
+
+    //if possible, prefer making copy of the range, rather than of the object
+    if(isForwardRange!Range)
     {
-        foreach(j; 1 .. range.length)
+        Range result = range.save;
+        for (range.popFront(); !range.empty; range.popFront())
         {
-            if (binaryFun!(pred)(p, range[j])) continue;
-            if (binaryFun!(pred)(range[j], p))
+            if (binaryFun!(pred)(result.front, range.front)) continue;
+            if (binaryFun!(pred)(range.front, result.front))
             {
-                //change the min
-                p = range[j];
+                result = range.save;
                 occurrences = 1;
             }
             else
-            {
                 ++occurrences;
-            }
         }
+        return tuple(result.front, occurrences);
     }
     else
     {
@@ -5387,8 +5384,8 @@ minCount(alias pred = "a < b", Range)(Range range)
                 ++occurrences;
             }
         }
+        return tuple(p, occurrences);
     }
-    return tuple(p, occurrences);
 }
 
 unittest
@@ -5421,38 +5418,16 @@ assert(minPos!("a > b")(a) == [ 4, 1, 2, 4, 1, 1, 2 ]);
 ----
  */
 Range minPos(alias pred = "a < b", Range)(Range range)
-    if(isForwardRange!Range)
-{
-    //In this algorithm, is it cheaper to make a copy, and copare with the copy?
-    //Or is it better to NOT make a copy, and re-index (range.front/range[i])
-    //Implementation assumes copies are cheaper.
-    //We could also check if input is an Array, but this would make a simple
-    //implementation too complicated
-    
+    if(isForwardRange!Range && !isInfinite!Range)
+{    
     if (range.empty) return range;
     auto result = range.save;
-    auto p = range.front;
-    static if(isRandomAccessRange!Range)
+    for (range.popFront(); !range.empty; range.popFront())
     {
-        auto len = range.length;
-        foreach(i ; 1..len)
-        {
-            if (binaryFun!(pred)(p, range[i])
-                    || !binaryFun!(pred)(range[i], p)) continue;
-            // change the min
-            p = range[i];
-            result = range[i..len];
-        }
-    }
-    else
-    {
-        for (range.popFront(); !range.empty; range.popFront())
-        {
-            if (binaryFun!(pred)(result.front, range.front)
-                    || !binaryFun!(pred)(range.front, result.front)) continue;
-            // change the min
-            result = range.save;
-        }
+        if (binaryFun!(pred)(result.front, range.front)
+                || !binaryFun!(pred)(range.front, result.front)) continue;
+        // change the min
+        result = range.save;
     }
     return result;
 }
