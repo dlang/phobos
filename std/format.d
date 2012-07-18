@@ -1219,7 +1219,7 @@ unittest
 
     class C1 { bool val; alias val this; this(bool v){ val = v; } }
     class C2 { bool val; alias val this; this(bool v){ val = v; }
-               override string toString() const { return "C"; } }
+               override string toString(){ return "C"; } }
     formatTest( new C1(false), "false" );
     formatTest( new C1(true),  "true" );
     formatTest( new C2(false), "C" );
@@ -1227,7 +1227,7 @@ unittest
 
     struct S1 { bool val; alias val this; }
     struct S2 { bool val; alias val this;
-                string toString() const { return "S"; } }
+                string toString(){ return "S"; } }
     formatTest( S1(false), "false" );
     formatTest( S1(true),  "true"  );
     formatTest( S2(false), "S" );
@@ -1418,13 +1418,13 @@ unittest
 
     class C1 { long val; alias val this; this(long v){ val = v; } }
     class C2 { long val; alias val this; this(long v){ val = v; }
-               override string toString() const { return "C"; } }
+               override string toString(){ return "C"; } }
     formatTest( new C1(10), "10" );
     formatTest( new C2(10), "C" );
 
     struct S1 { long val; alias val this; }
     struct S2 { long val; alias val this;
-                string toString() const { return "S"; } }
+                string toString(){ return "S"; } }
     formatTest( S1(10), "10" );
     formatTest( S2(10), "S" );
 }
@@ -1504,13 +1504,13 @@ unittest
 
     class C1 { double val; alias val this; this(double v){ val = v; } }
     class C2 { double val; alias val this; this(double v){ val = v; }
-               override string toString() const { return "C"; } }
+               override string toString(){ return "C"; } }
     formatTest( new C1(2.25), "2.25" );
     formatTest( new C2(2.25), "C" );
 
     struct S1 { double val; alias val this; }
     struct S2 { double val; alias val this;
-                string toString() const { return "S"; } }
+                string toString(){ return "S"; } }
     formatTest( S1(2.25), "2.25" );
     formatTest( S2(2.25), "S" );
 }
@@ -1545,13 +1545,13 @@ unittest
 
     class C1 { cdouble val; alias val this; this(cdouble v){ val = v; } }
     class C2 { cdouble val; alias val this; this(cdouble v){ val = v; }
-               override string toString() const { return "C"; } }
+               override string toString(){ return "C"; } }
     formatTest( new C1(3+2.25i), "3+2.25i" );
     formatTest( new C2(3+2.25i), "C" );
 
     struct S1 { cdouble val; alias val this; }
     struct S2 { cdouble val; alias val this;
-                string toString() const { return "S"; } }
+                string toString(){ return "S"; } }
     formatTest( S1(3+2.25i), "3+2.25i" );
     formatTest( S2(3+2.25i), "S" );
 }
@@ -1584,13 +1584,13 @@ unittest
 
     class C1 { idouble val; alias val this; this(idouble v){ val = v; } }
     class C2 { idouble val; alias val this; this(idouble v){ val = v; }
-               override string toString() const { return "C"; } }
+               override string toString(){ return "C"; } }
     formatTest( new C1(2.25i), "2.25i" );
     formatTest( new C2(2.25i), "C" );
 
     struct S1 { idouble val; alias val this; }
     struct S2 { idouble val; alias val this;
-                string toString() const { return "S"; } }
+                string toString(){ return "S"; } }
     formatTest( S1(2.25i), "2.25i" );
     formatTest( S2(2.25i), "S" );
 }
@@ -1621,13 +1621,13 @@ unittest
 
     class C1 { char val; alias val this; this(char v){ val = v; } }
     class C2 { char val; alias val this; this(char v){ val = v; }
-               override string toString() const { return "C"; } }
+               override string toString(){ return "C"; } }
     formatTest( new C1('c'), "c" );
     formatTest( new C2('c'), "C" );
 
     struct S1 { char val; alias val this; }
     struct S2 { char val; alias val this;
-                string toString() const { return "S"; } }
+                string toString(){ return "S"; } }
     formatTest( S1('c'), "c" );
     formatTest( S2('c'), "S" );
 }
@@ -1665,11 +1665,11 @@ unittest
 unittest
 {
     class  C3 { string val; alias val this; this(string s){ val = s; }
-                override string toString() const { return "C"; } }
+                override string toString(){ return "C"; } }
     formatTest( new C3("c3"), "C" );
 
     struct S3 { string val; alias val this;
-                string toString() const { return "S"; } }
+                string toString(){ return "S"; } }
     formatTest( S3("s3"), "S" );
 }
 
@@ -1738,7 +1738,7 @@ unittest
       }
 
       static if (flags & 4)
-        string toString() const { return "S"; }
+        string toString(){ return "S"; }
     }
     formatTest(S!0b000([0, 1, 2]), "S!(0)([0, 1, 2])");
     formatTest(S!0b001([0, 1, 2]), "[0, 1, 2]");        // Test for bug 7628
@@ -1765,7 +1765,7 @@ unittest
       }
 
       static if (flags & 4)
-        override string toString() const { return "C"; }
+        override string toString(){ return "C"; }
     }
     formatTest(new C!0b000([0, 1, 2]), (new C!0b000([])).toString());
     formatTest(new C!0b001([0, 1, 2]), "[0, 1, 2]");    // Test for bug 7628
@@ -2251,13 +2251,13 @@ unittest
 {
     class C1 { int[char] val; alias val this; this(int[char] v){ val = v; } }
     class C2 { int[char] val; alias val this; this(int[char] v){ val = v; }
-               override string toString() const { return "C"; } }
+               override string toString(){ return "C"; } }
     formatTest( new C1(['c':1, 'd':2]), `['c':1, 'd':2]` );
     formatTest( new C2(['c':1, 'd':2]), "C" );
 
     struct S1 { int[char] val; alias val this; }
     struct S2 { int[char] val; alias val this;
-                string toString() const { return "S"; } }
+                string toString(){ return "S"; } }
     formatTest( S1(['c':1, 'd':2]), `['c':1, 'd':2]` );
     formatTest( S2(['c':1, 'd':2]), "S" );
 }
@@ -2425,7 +2425,7 @@ unittest
     class C4
     {
         mixin(inputRangeCode);
-        override string toString() const { return "[012]"; }
+        override string toString() { return "[012]"; }
     }
     class C5
     {
@@ -2475,7 +2475,7 @@ unittest
     interface Whatever {}
     class C : Whatever
     {
-        override @property string toString() const { return "ab"; }
+        override @property string toString() { return "ab"; }
     }
     Whatever val = new C;
     formatTest( val, "ab" );
@@ -2533,9 +2533,9 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !isBuiltinT
 unittest
 {
     // bug 4638
-    struct U8  {  string toString() const { return "blah"; } }
-    struct U16 { wstring toString() const { return "blah"; } }
-    struct U32 { dstring toString() const { return "blah"; } }
+    struct U8  {  string toString() { return "blah"; } }
+    struct U16 { wstring toString() { return "blah"; } }
+    struct U32 { dstring toString() { return "blah"; } }
     formatTest( U8(), "blah" );
     formatTest( U16(), "blah" );
     formatTest( U32(), "blah" );
@@ -2566,7 +2566,7 @@ unittest
     {
         int n;
         string s;
-        string toString() const { return s; }
+        string toString(){ return s; }
     }
     U2 u2;
     u2.s = "hello";
@@ -2713,7 +2713,7 @@ unittest
     // Test for issue 7869
     struct S
     {
-        string toString() const { return ""; }
+        string toString(){ return ""; }
     }
     S* p = null;
     formatTest( p, "null" );
@@ -4873,9 +4873,9 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
             case Mangle.Tsarray:
                 version (X86)
-                    putArray(argptr, (cast(TypeInfo_StaticArray)ti).len, cast()(cast(TypeInfo_StaticArray)ti).next);
+                    putArray(argptr, (cast(TypeInfo_StaticArray)ti).len, (cast(TypeInfo_StaticArray)ti).next);
                 else
-                    putArray((cast(__va_list*)argptr).stack_args, (cast(TypeInfo_StaticArray)ti).len, cast()(cast(TypeInfo_StaticArray)ti).next);
+                    putArray((cast(__va_list*)argptr).stack_args, (cast(TypeInfo_StaticArray)ti).len, (cast(TypeInfo_StaticArray)ti).next);
                 return;
 
             case Mangle.Tarray:
@@ -4883,7 +4883,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 if (ti.classinfo.name.length == 14 &&
                     ti.classinfo.name[9..14] == "Array")
                 { // array of non-primitive types
-                  TypeInfo tn = cast()(cast(TypeInfo_Array)ti).next;
+                  TypeInfo tn = (cast(TypeInfo_Array)ti).next;
                   tn = skipCI(tn);
                   switch (cast(Mangle)tn.classinfo.name[9])
                   {
@@ -4902,7 +4902,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 { // associative array
                   ubyte[long] vaa = va_arg!(ubyte[long])(argptr);
                   putAArray(vaa,
-                        cast()(cast(TypeInfo_AssociativeArray)ti).next,
+                        (cast(TypeInfo_AssociativeArray)ti).next,
                         (cast(TypeInfo_AssociativeArray)ti).key);
                   return;
                 }
@@ -5155,7 +5155,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             if (ti.classinfo.name.length == 14 &&
                     ti.classinfo.name[9..14] == "Array")
             {
-                TypeInfo tn = cast()(cast(TypeInfo_Array)ti).next;
+                TypeInfo tn = (cast(TypeInfo_Array)ti).next;
                 tn = skipCI(tn);
                 switch (cast(Mangle)tn.classinfo.name[9])
                 {
