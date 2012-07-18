@@ -876,7 +876,7 @@ assert(a == [ 5, 5, 5, 5 ]);
 ----
  */
 void fill(Range, Value)(Range range, Value filler)
-if (isForwardRange!Range && is(typeof(range.front = filler)))
+if (isInputRange!Range && is(typeof(range.front = filler)))
 {
     alias ElementType!Range T;
     static if (hasElaborateCopyConstructor!T || !isDynamicArray!Range)
@@ -946,8 +946,8 @@ assert(a == [ 8, 9, 8, 9, 8 ]);
 ----
  */
 void fill(Range1, Range2)(Range1 range, Range2 filler)
-    if (isInputRange!Range1 && isForwardRange!Range2
-        && is(typeof(Range1.init.front = Range2.init.front)))
+if (isInputRange!Range1 && isForwardRange!Range2
+    && is(typeof(Range1.init.front = Range2.init.front)))
 {
     static if(isInfinite!Range2)
     {
@@ -4990,7 +4990,7 @@ bool equal(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
 
         for (; !r1.empty; r1.popFront(), r2.popFront())
         {
-            if (!binaryFun!(pred)(r1.front, r2.front)) return false;
+            if (!binaryFun!pred(r1.front, r2.front)) return false;
         }
         return true;
     }
@@ -5345,13 +5345,13 @@ assert(minCount!("a > b")(a) == tuple(4, 2));
  */
 Tuple!(ElementType!(Range), size_t)
 minCount(alias pred = "a < b", Range)(Range range)
-    if ( isInputRange!Range && !isInfinite!Range)
+    if (isInputRange!Range && !isInfinite!Range)
 {
     enforce(!range.empty);
     size_t occurrences = 1;
 
     //if possible, prefer making copy of the range, rather than of the object
-    if(isForwardRange!Range)
+    static if(isForwardRange!Range)
     {
         Range result = range.save;
         for (range.popFront(); !range.empty; range.popFront())
