@@ -7,6 +7,7 @@ Source: $(PHOBOSSRC std/_container.d)
 Macros:
 WIKI = Phobos/StdContainer
 TEXTWITHCOMMAS = $0
+CONTAINER_RUN = $(D_RUN_CODE $0, $(ARGS), $(ARGS), $(ARGS import std.container;))
 
 Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
 copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
@@ -1214,6 +1215,7 @@ Complexity: $(BIGOH k + m), where $(D k) is the number of elements in
 $(D r) and $(D m) is the length of $(D stuff).
 
 Examples:
+$(CONTAINER_RUN
 --------------------
 auto sl = SList!string(["a", "b", "d"]);
 sl.insertAfter(sl[], "e"); // insert at the end (slowest)
@@ -1221,6 +1223,7 @@ assert(std.algorithm.equal(sl[], ["a", "b", "d", "e"]));
 sl.insertAfter(std.range.take(sl[], 2), "c"); // insert after "b"
 assert(std.algorithm.equal(sl[], ["a", "b", "c", "d", "e"]));
 --------------------
+)
      */
 
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
@@ -3078,6 +3081,7 @@ insertBack), the $(D BinaryHeap) may grow by adding elements to the
 container.
 
 Example:
+$(CONTAINER_RUN
 ----
 // Example from "Introduction to Algorithms" Cormen et al, p 146
 int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
@@ -3085,8 +3089,9 @@ auto h = heapify(a);
 // largest element
 assert(h.front == 16);
 // a has the heap property
-assert(equal(a, [ 16, 14, 10, 9, 8, 7, 4, 3, 2, 1 ]));
+assert(std.algorithm.equal(a, [16, 14, 10, 8, 7, 9, 3, 2, 4, 1]));
 ----
+)
      */
 struct BinaryHeap(Store, alias less = "a < b")
 if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
@@ -5465,6 +5470,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
        Complexity: $(BIGOH m log(n)) (where m is the number of elements to remove)
 
         Examples:
+$(CONTAINER_RUN
 --------------------
 auto rbt = redBlackTree!true(0, 1, 1, 1, 4, 5, 7);
 rbt.removeKey(1, 4, 7);
@@ -5472,6 +5478,7 @@ assert(std.algorithm.equal(rbt[], [0, 1, 1, 5]));
 rbt.removeKey(1, 1, 0);
 assert(std.algorithm.equal(rbt[], [5]));
 --------------------
+)
       +/
     size_t removeKey(U...)(U elems)
         if(allSatisfy!(isImplicitlyConvertibleToElem, U))
@@ -5869,6 +5876,7 @@ unittest
     values.
 
         Examples:
+$(CONTAINER_RUN
 --------------------
 auto rbt1 = redBlackTree(0, 1, 5, 7);
 auto rbt2 = redBlackTree!string("hello", "world");
@@ -5876,6 +5884,7 @@ auto rbt3 = redBlackTree!true(0, 1, 5, 7, 5);
 auto rbt4 = redBlackTree!"a > b"(0, 1, 5, 7);
 auto rbt5 = redBlackTree!("a > b", true)(0.1, 1.3, 5.9, 7.2, 5.9);
 --------------------
+)
   +/
 auto redBlackTree(E)(E[] elems...)
 {

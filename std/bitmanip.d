@@ -6,6 +6,7 @@ Bit-level manipulation facilities.
 Macros:
 
 WIKI = StdBitarray
+BITMANIP_RUN = $(D_RUN_CODE $0, $(ARGS), $(ARGS), $(ARGS import std.bitmanip;))
 
 Copyright: Copyright Digital Mars 2007 - 2011.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
@@ -167,6 +168,7 @@ class)es.
 
 Example:
 
+$(BITMANIP_RUN
 ----
 struct A
 {
@@ -181,6 +183,7 @@ A obj;
 obj.x = 2;
 obj.z = obj.x;
 ----
+)
 
 The example above creates a bitfield pack of eight bits, which fit in
 one $(D_PARAM ubyte). The bitfields are allocated starting from the
@@ -193,6 +196,7 @@ one bitfield with an empty name.
 
 Example:
 
+$(BITMANIP_RUN
 ----
 struct A
 {
@@ -202,6 +206,7 @@ struct A
         uint, "",         6));
 }
 ----
+)
 
 The type of a bit field can be any integral type or enumerated
 type. The most efficient type to store in bitfields is $(D_PARAM
@@ -293,6 +298,7 @@ unittest
    Allows manipulating the fraction, exponent, and sign parts of a
    $(D_PARAM float) separately. The definition is:
 
+$(BITMANIP_RUN
 ----
 struct FloatRep
 {
@@ -307,6 +313,7 @@ struct FloatRep
     enum uint bias = 127, fractionBits = 23, exponentBits = 8, signBits = 1;
 }
 ----
+)
 */
 
 struct FloatRep
@@ -326,6 +333,7 @@ struct FloatRep
    Allows manipulating the fraction, exponent, and sign parts of a
    $(D_PARAM double) separately. The definition is:
 
+$(BITMANIP_RUN
 ----
 struct DoubleRep
 {
@@ -340,6 +348,7 @@ struct DoubleRep
     enum uint bias = 1023, signBits = 1, fractionBits = 52, exponentBits = 11;
 }
 ----
+)
 */
 
 struct DoubleRep
@@ -1517,6 +1526,7 @@ private union EndianSwapper(T)
     unusable if you tried to transfer it to another machine).
 
         Examples:
+$(BITMANIP_RUN
 --------------------
 int i = 12345;
 ubyte[4] swappedI = nativeToBigEndian(i);
@@ -1526,6 +1536,7 @@ double d = 123.45;
 ubyte[8] swappedD = nativeToBigEndian(d);
 assert(d == bigEndianToNative!double(swappedD));
 --------------------
+)
   +/
 auto nativeToBigEndian(T)(T val) @safe pure nothrow
     if(isIntegral!T ||
@@ -1653,6 +1664,7 @@ unittest
     can't actually have swapped floating point values as floating point values).
 
         Examples:
+$(BITMANIP_RUN
 --------------------
 ushort i = 12345;
 ubyte[2] swappedI = nativeToBigEndian(i);
@@ -1662,6 +1674,7 @@ dchar c = 'D';
 ubyte[4] swappedC = nativeToBigEndian(c);
 assert(c == bigEndianToNative!dchar(swappedC));
 --------------------
+)
   +/
 T bigEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow
     if((isIntegral!T ||
@@ -1722,6 +1735,7 @@ private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
     can't actually have swapped floating point values as floating point values).
 
         Examples:
+$(BITMANIP_RUN      
 --------------------
 int i = 12345;
 ubyte[4] swappedI = nativeToLittleEndian(i);
@@ -1731,6 +1745,7 @@ double d = 123.45;
 ubyte[8] swappedD = nativeToLittleEndian(d);
 assert(d == littleEndianToNative!double(swappedD));
 --------------------
+)
   +/
 auto nativeToLittleEndian(T)(T val) @safe pure nothrow
     if(isIntegral!T ||
@@ -1831,6 +1846,7 @@ unittest
     unusable if you tried to transfer it to another machine).
 
         Examples:
+$(BITMANIP_RUN
 --------------------
 ushort i = 12345;
 ubyte[2] swappedI = nativeToLittleEndian(i);
@@ -1840,6 +1856,7 @@ dchar c = 'D';
 ubyte[4] swappedC = nativeToLittleEndian(c);
 assert(c == littleEndianToNative!dchar(swappedC));
 --------------------
+)
   +/
 T littleEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow
     if((isIntegral!T ||
@@ -1931,6 +1948,7 @@ private auto floatEndianImpl(size_t n, bool swap)(ubyte[n] val) @safe pure nothr
                 available if $(D hasSlicing!R) is $(D true).
 
         Examples:
+$(BITMANIP_RUN
 --------------------
 ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
 assert(buffer.peek!uint() == 17110537);
@@ -1951,6 +1969,7 @@ assert(index == 6);
 assert(buffer.peek!ubyte(&index) == 8);
 assert(index == 7);
 --------------------
+)
   +/
 T peek(T, Endian endianness = Endian.bigEndian, R)(R range)
     if(isIntegral!T && isForwardRange!R && is(ElementType!R : const ubyte))
@@ -2052,6 +2071,8 @@ unittest
         range = The range to read from.
 
         Examples:
+$(D_RUN_CODE
+$(ARGS
 --------------------
 ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
 assert(buffer.length == 7);
@@ -2065,6 +2086,7 @@ assert(buffer.length == 1);
 assert(buffer.read!ubyte() == 8);
 assert(buffer.empty);
 --------------------
+), $(ARGS), $(ARGS), $(ARGS import std.bitmanip, std.array;))
   +/
 T read(T, Endian endianness = Endian.bigEndian, R)(ref R range)
     if(isIntegral!T && isInputRange!R && is(ElementType!R : const ubyte))
@@ -2138,6 +2160,7 @@ unittest
                 is updated to the index after the bytes read.
 
         Examples:
+$(BITMANIP_RUN
 --------------------
 //Bug# 8129 forces the casts. They shouldn't be necessary.
 {
@@ -2180,6 +2203,7 @@ unittest
     assert(index == 7);
 }
 --------------------
+)
   +/
 void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t index)
     if(isIntegral!T &&
@@ -2268,6 +2292,8 @@ unittest
         range = The range to append to.
 
         Examples:
+$(D_RUN_CODE
+$(ARGS
 --------------------
 //Bug# 8129 forces the casts. They shouldn't be necessary.
 auto buffer = appender!(const ubyte[])();
@@ -2280,6 +2306,7 @@ assert(buffer.data == [1, 5, 22, 9, 44, 255]);
 buffer.append!ubyte(cast(ubyte)8);
 assert(buffer.data == [1, 5, 22, 9, 44, 255, 8]);
 --------------------
+), $(ARGS), $(ARGS), $(ARGS import std.bitmanip, std.array;))
   +/
 void append(T, Endian endianness = Endian.bigEndian, R)(R range, T value)
     if(isIntegral!T && isOutputRange!(R, ubyte))

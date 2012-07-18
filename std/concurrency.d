@@ -393,7 +393,7 @@ private:
  *     auto tid1 = spawn(&f1, str);
  *
  *     // Fails:  char[] has mutable aliasing.
- *     auto tid2 = spawn(&f2, str.dup);
+ *     //auto tid2 = spawn(&f2, str.dup);
  * }
  * ---
  *), $(ARGS), $(ARGS), $(ARGS))

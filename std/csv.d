@@ -1,6 +1,9 @@
 //Written in the D programming language
 
 /**
+ * Macros:
+ *       CSV_RUN = $(D_RUN_CODE $0, $(ARGS), $(ARGS), $(ARGS import std.csv;))
+ *
  * Implements functionality to read Comma Separated Values and its variants
  * from a input range of $(D dchar).
  *
@@ -23,40 +26,54 @@
  *
  * Example:
  *
+ *$(D_RUN_CODE
+ *$(ARGS
  * -------
- * import std.algorithm;
- * import std.array;
- * import std.csv;
- * import std.stdio;
- * import std.typecons;
+ *import std.algorithm;
+ *import std.array;
+ *import std.csv;
+ *import std.stdio;
+ *import std.typecons;
  *
- * void main()
- * {
- *     auto text = "Joe,Carpenter,300000\nFred,Blacksmith,400000\r\n";
+ *void main()
+ *{
+ *    auto text = "Joe,Carpenter,300000\nFred,Blacksmith,400000\r\n";
  *
- *     foreach(record; csvReader!(Tuple!(string,string,int))(text))
- *     {
- *         writefln("%s works as a %s and earns $%d per year",
- *                  record[0], record[1], record[2]);
- *     }
+ *    foreach(record; csvReader!(Tuple!(string,string,int))(text))
+ *    {
+ *        writefln("%s works as a %s and earns $%d per year",
+ *                 record[0], record[1], record[2]);
+ *    }
  * }
  * -------
- *
+ *),$(ARGS),$(ARGS),$(ARGS))
  * When an input contains a header the $(D Contents) can be specified as an
  * associative array. Passing null to signify that a header is present.
  *
+ *$(D_RUN_CODE
+ *$(ARGS
  * -------
- * auto text = "Name,Occupation,Salary\r"
- *     "Joe,Carpenter,300000\nFred,Blacksmith,400000\r\n";
+ *import std.algorithm;
+ *import std.array;
+ *import std.csv;
+ *import std.stdio;
+ *import std.typecons;
  *
- * foreach(record; csvReader!(string[string])
- *         (text, null))
- * {
- *     writefln("%s works as a %s and earns $%s per year.",
- *              record["Name"], record["Occupation"],
- *              record["Salary"]);
- * }
+ *void main()
+ *{
+ *      auto text = "Name,Occupation,Salary\r"
+ *          "Joe,Carpenter,300000\nFred,Blacksmith,400000\r\n";
+ *
+ *      foreach(record; csvReader!(string[string])
+ *              (text, null))
+ *      {
+ *          writefln("%s works as a %s and earns $%s per year.",
+ *                  record["Name"], record["Occupation"],
+ *                  record["Salary"]);
+ *      }
+ *}
  * -------
+ *),$(ARGS),$(ARGS),$(ARGS))
  *
  * This module allows content to be iterated by record stored in a struct,
  * class, associative array, or as a range of fields. Upon detection of an
@@ -219,6 +236,7 @@ enum Malformed
  * The $(D Contents) of the input can be provided if all the records are the
  * same type such as all integer data:
  *
+ *$(CSV_RUN
  * -------
  * string str = `76,26,22`;
  * int[] ans = [76,26,22];
@@ -226,12 +244,14 @@ enum Malformed
  *
  * foreach(record; records)
  * {
- *     assert(equal(record, ans));
+ *     assert(std.algorithm.equal(record, ans));
  * }
  * -------
+ *)
  *
  * Example using a struct with modified delimiter:
  *
+ *$(CSV_RUN
  * -------
  * string str = "Hello;65;63.63\nWorld;123;3673.562";
  * struct Layout
@@ -245,16 +265,18 @@ enum Malformed
  *
  * foreach(record; records)
  * {
- *     writeln(record.name);
- *     writeln(record.value);
- *     writeln(record.other);
+ *     std.stdio.writeln(record.name);
+ *     std.stdio.writeln(record.value);
+ *     std.stdio.writeln(record.other);
  * }
  * -------
+ *)
  *
  * Specifying $(D ErrorLevel) as Malformed.ignore will lift restrictions
  * on the format. This example shows that an exception is not thrown when
  * finding a quote in a field not quoted.
  *
+ *$(CSV_RUN
  * -------
  * string str = "A \" is now part of the data";
  * auto records = csvReader!(string,Malformed.ignore)(str);
@@ -262,6 +284,7 @@ enum Malformed
  *
  * assert(record.front == str);
  * -------
+ *)
  *
  * Returns:
  *        An input range R as defined by $(XREF range, isInputRange). When $(D
@@ -300,6 +323,8 @@ auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException
  *
  * Read only column "b":
  *
+ *$(D_RUN_CODE
+ *$(ARGS
  * -------
  * string str = "a,b,c\nHello,65,63.63\nWorld,123,3673.562";
  * auto records = csvReader!int(str, ["b"]);
@@ -311,9 +336,11 @@ auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException
  *     ans.popFront();
  * }
  * -------
+ *), $(ARGS), $(ARGS), $(ARGS import std.csv, std.array, std.algorithm;))
  *
  * Read from header of different order:
  *
+ *$(CSV_RUN
  * -------
  * string str = "a,b,c\nHello,65,63.63\nWorld,123,3673.562";
  * struct Layout
@@ -325,17 +352,20 @@ auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException
  *
  * auto records = csvReader!Layout(str, ["b","c","a"]);
  * -------
+ *)
  *
  * The header can also be left empty if the input contains a header but
  * all columns should be iterated. The header from the input can always
  * be accessed from the header field.
  *
+ *$(CSV_RUN
  * -------
  * string str = "a,b,c\nHello,65,63.63\nWorld,123,3673.562";
  * auto records = csvReader(str, null);
  *
  * assert(records.header == ["a","b","c"]);
  * -------
+ *)
  *
  * Returns:
  *        An input range R as defined by $(XREF range, isInputRange). When $(D
@@ -346,12 +376,14 @@ auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException
  *        The returned range provides a header field for accessing the header
  *        from the input in array form.
  *
+ *$(CSV_RUN
  * -------
  * string str = "a,b,c\nHello,65,63.63";
  * auto records = csvReader(str, ["a"]);
  *
  * assert(records.header == ["a","b","c"]);
  * -------
+ *)
  *
  * Throws:
  *       $(LREF CSVException) When a quote is found in an unquoted field,
@@ -732,6 +764,7 @@ private struct Input(Range, Malformed ErrorLevel)
  *
  * Example for integer data:
  *
+ *$(CSV_RUN
  * -------
  * string str = `76;^26^;22`;
  * int[] ans = [76,26,22];
@@ -742,6 +775,7 @@ private struct Input(Range, Malformed ErrorLevel)
  *    assert(equal(record, ans));
  * }
  * -------
+ *)
  *
  */
 private struct CsvReader(Contents, Malformed ErrorLevel, Range, Separator, Header)
@@ -770,13 +804,14 @@ private:
 public:
     /**
      * Header from the input in array form.
-     *
+     *$(CSV_RUN
      * -------
      * string str = "a,b,c\nHello,65,63.63";
      * auto records = csvReader(str, ["a"]);
      *
      * assert(records.header == ["a","b","c"]);
      * -------
+     *)
      */
     string[] header;
 
@@ -784,6 +819,7 @@ public:
      * Constructor to initialize the input, delimiter and quote for input
      * without a header.
      *
+     *$(CSV_RUN
      * -------
      * string str = `76;^26^;22`;
      * int[] ans = [76,26,22];
@@ -794,6 +830,8 @@ public:
      *    assert(equal(record, ans));
      * }
      * -------
+     *)
+     *
      */
     this(Range input, Separator delimiter, Separator quote)
     {
@@ -809,6 +847,7 @@ public:
      * Constructor to initialize the input, delimiter and quote for input
      * with a header.
      *
+     *$(CSV_RUN
      * -------
      * string str = `high;mean;low\n76;^26^;22`;
      * auto records = CsvReader!(int,Malformed.ignore,string,char,string[])
@@ -819,6 +858,7 @@ public:
      *    assert(equal(record, ans));
      * }
      * -------
+     *)
      *
      * Throws:
      *       $(LREF HeaderMismatchException)  when a header is provided but a
@@ -1273,6 +1313,8 @@ public:
  * start with either a delimiter or record break (\n, \r\n, \r) which
  * must be removed for subsequent calls.
  *
+ *$(D_RUN_CODE
+ *$(ARGS
  * -------
  * string str = "65,63\n123,3673";
  *
@@ -1294,6 +1336,7 @@ public:
  * assert(a.data == "123");
  * assert(str == ",3673");
  * -------
+ *), $(ARGS), $(ARGS), $(ARGS import std.csv, std.array;))
  *
  * params:
  *       input = Any CSV input

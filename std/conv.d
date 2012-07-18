@@ -14,6 +14,9 @@ Authors:   $(WEB digitalmars.com, Walter Bright),
            Kenji Hara
 
 Source:    $(PHOBOSSRC std/_conv.d)
+
+Macros:
+CONV_RUN = $(D_RUN_CODE $0, $(ARGS), $(ARGS), $(ARGS import std.conv;))
 */
 module std.conv;
 
@@ -150,11 +153,13 @@ Converting a value to its own type (useful mostly for generic code)
 simply returns its argument.
 
 Example:
+$(CONV_RUN
 -------------------------
 int a = 42;
 auto b = to!int(a); // b is int with value 42
 auto c = to!double(3.14); // c is double with value 3.14
 -------------------------
+)
 
 Converting among numeric types is a safe way to cast them around.
 
@@ -165,6 +170,7 @@ truncate. (To round a floating point value when casting to an
 integral, use $(D_PARAM roundTo).)
 
 Examples:
+$(CONV_RUN
 -------------------------
 int a = 420;
 auto b = to!long(a); // same as long b = a;
@@ -181,7 +187,7 @@ h = to!uint(a); // h = 3
 e = -3.99;
 f = to!int(a); // f = -3
 -------------------------
-
+)
 Conversions from integral types to floating-point types always
 succeed, but might lose accuracy. The largest integers with a
 predecessor representable in floating-point format are 2^24-1 for
@@ -189,6 +195,7 @@ float, 2^53-1 for double, and 2^64-1 for $(D_PARAM real) (when
 $(D_PARAM real) is 80-bit, e.g. on Intel machines).
 
 Example:
+$(CONV_RUN
 -------------------------
 int a = 16_777_215; // 2^24 - 1, largest proper integer representable as float
 assert(to!int(to!float(a)) == a);
@@ -196,6 +203,7 @@ assert(to!int(to!float(-a)) == -a);
 a += 2;
 assert(to!int(to!float(a)) == a); // fails!
 -------------------------
+)
 
 Conversions from string to numeric types differ from the C equivalents
 $(D_PARAM atoi()) and $(D_PARAM atol()) by checking for overflow and
@@ -222,6 +230,7 @@ element in turn. Associative arrays can be converted to associative
 arrays as long as keys and values can in turn be converted.
 
 Example:
+$(CONV_RUN
 -------------------------
 int[] a = ([1, 2, 3]).dup;
 auto b = to!(float[])(a);
@@ -235,16 +244,17 @@ c["b"] = 2;
 auto d = to!(double[wstring])(c);
 assert(d["a"w] == 1 && d["b"w] == 2);
 -------------------------
+)
 
 Conversions operate transitively, meaning that they work on arrays and
 associative arrays of any complexity:
-
+$(CONV_RUN
 -------------------------
 int[string][double[int[]]] a;
-...
+//...
 auto b = to!(short[wstring][string[double[]]])(a);
 -------------------------
-
+)
 This conversion works because $(D_PARAM to!short) applies to an
 $(D_PARAM int), $(D_PARAM to!wstring) applies to a $(D_PARAM
 string), $(D_PARAM to!string) applies to a $(D_PARAM double), and
@@ -431,7 +441,7 @@ class Date
     {
         return timestamp;
     }
-    ...
+    //...
 }
 
 unittest
@@ -1626,6 +1636,7 @@ unittest
  Rounded conversion from floating point to integral.
 
 Example:
+$(CONV_RUN
 ---------------
 assert(roundTo!int(3.14) == 3);
 assert(roundTo!int(3.49) == 3);
@@ -1636,6 +1647,7 @@ assert(roundTo!int(-3.49) == -3);
 assert(roundTo!int(-3.5) == -4);
 assert(roundTo!int(-3.999) == -4);
 ---------------
+)
 Rounded conversions do not work with non-integral target types.
  */
 
@@ -1682,17 +1694,19 @@ unittest
  * was meaningfully converted.
  *
  * Example:
+ $(CONV_RUN
 --------------
 string test = "123 \t  76.14";
 auto a = parse!uint(test);
 assert(a == 123);
 assert(test == " \t  76.14"); // parse bumps string
-munch(test, " \t\n\r"); // skip ws
+std.string.munch(test, " \t\n\r"); // skip ws
 assert(test == "76.14");
 auto b = parse!double(test);
 assert(b == 76.14);
 assert(test == "");
 --------------
+)
  */
 
 Target parse(Target, Source)(ref Source s)
@@ -3031,11 +3045,13 @@ Target parseElement(Target, Source)(ref Source s)
    arguments into _text (the three character widths).
 
    Example:
+$(CONV_RUN   
 ----
 assert(text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz");
 assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
 assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
 ----
+)
 */
 string text(T...)(T args)
 {
@@ -3086,6 +3102,7 @@ U) or $(D u) suffix. _Octals created from integers preserve the type
 of the passed-in integral.
 
 Example:
+$(CONV_RUN
 ----
 // same as 0177
 auto x = octal!177;
@@ -3094,6 +3111,7 @@ enum y = octal!160;
 // Create an unsigned octal
 auto z = octal!"1_000_000u";
 ----
+)
  */
 @property int octal(string num)()
     if((octalFitsInInt!(num) && !literalIsLong!(num)) && !literalIsUnsigned!(num))
