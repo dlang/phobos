@@ -4993,30 +4993,61 @@ bool equal(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
     if (isInputRange!Range1 && isInputRange!Range2
         && is(typeof(binaryFun!pred(r1.front, r2.front))))
 {
-    //Note, narrow string literals don't have "hasLength"
-    static if (hasLength!Range1 && hasLength!Range2
+     alias ElementType!Range1 T;
+
+    //Helper function for the "generic" case
+    static bool genericImpl(Range1 r1, Range2 r2)
+    {
+        for (; !r1.empty; r1.popFront(), r2.popFront())
+        {
+            if (r2.empty) return false;
+            if (!binaryFun!(pred)(r1.front, r2.front)) return false;
+        }
+        return r2.empty;
+    }
+
+    //First, special implementation for narrow strings, with matching type
+    static if (isNarrowString!Range1 && isNarrowString!Range2
+         && is(ElementType!Range1 == ElementType!Range2))
+    {
+        auto len = r1.length; //This returns the narrow string's binary length
+        auto len2 = r2.length;
+        if(len != len2) return false; //Short circuit return
+        //binary lengths are same, do a formal comparsion
+        static if (is(typeof(pred == "a == b")) && (pred == "a == b"))
+        {
+            //Do a fast memcmp here.
+            return !memcmp(cast(void*) r1.ptr, cast(void*) r2.ptr, len * T.sizeof);
+        }
+        else
+        {
+            //Have finish with the generic route.
+            //Note we have no garantee the true lengths are equal
+            return genericImpl(r1, r2);
+        }
+    }
+    else static if (hasLength!Range1 && hasLength!Range2
         && is(typeof(r1.length == r2.length)))
     {
         auto len1 = r1.length;
         auto len2 = r2.length;
         if(len1 != len2) return false; //Short circuit return
-        
         //Lengths are the same, so we need to do the comparison
         
         //Investigate if a fast memcmp is possible.
-        alias ElementType!Range1 T;
         static if (is(typeof(pred == "a == b")) && (pred == "a == b")        //Pred must be left at the default "a == b"
             && isArray!Range1 && isArray!Range2                              //inputs must be arrays
             && is(ElementType!Range1 == ElementType!Range2)                  //with perfectly matching types
             && (isBoolean!T || isNumeric!T || isSomeChar!T || isPointer!T)   //And the data must be trivially built-in.
         )
         {
-            //Do a fast memcmp here.
+            //Do a fast memcmp here. Note: We want isSomeChar for dchar's.
             return !memcmp(cast(void*) r1.ptr, cast(void*) r2.ptr, len1 * T.sizeof);
         }
         else
         {
-            //Go the slower explicit element by element comparison
+            //Have to go the generic route.
+            //Good news is we can sqeeze out a bit of performance by not checking if Range2 is empty
             for (; !r1.empty; r1.popFront(), r2.popFront())
             {
                 if (!binaryFun!(pred)(r1.front, r2.front)) return false;
@@ -5026,14 +5057,8 @@ bool equal(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
     }
     else
     {
-        //Basic case for input ranges and string literals.
-        //No need for special case for strings either actually (I think...).
-        for (; !r1.empty; r1.popFront(), r2.popFront())
-        {
-            if (r2.empty) return false;
-            if (!binaryFun!(pred)(r1.front, r2.front)) return false;
-        }
-        return r2.empty;
+        //Generic case
+        return genericImpl(r1, r2);
     }
 }
 
