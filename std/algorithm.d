@@ -426,23 +426,29 @@ template map(fun...) if (fun.length >= 1)
 
             static if (isRandomAccessRange!R)
             {
-                static if(hasLength!R)
+                //Looking for the input type of [].
+                static if (is(ParameterTypeTuple!(R.opIndex)))
                 {
-                    //use type returned by length
-                    private: alias typeof(_input.length) index_t;
-                }
-                else
-                {
-                    //Hope that size_t is actually compatible...
-                    private: alias size_t index_t;
-                }
-
-                static if(is(typeof(_input[cast(index_t)0]))) //double check we guessed right
-                {
-                    auto ref opIndex(index_t index)
+                    static if (ParameterTypeTuple!(R.opIndex).length > 0)
                     {
-                        return _fun(_input[index]);
+                        auto ref opIndex(ParameterTypeTuple!(R.opIndex) index)
+                        {
+                            return _fun(_input[index]);
+                        }
                     }
+                    //else
+                    //  R exposes an opIndex that takes no arguments, that shadows the one we want.
+                    //  There is no way to reliably forward opIndex, and it is best to not re-expose.
+                    //  "Guessing" or using "length" is too dangerous. For example:
+                    //  iota does not have matching types for length and index.
+                    //  Getting it wrong will result in a non-compiling conversion on the edges of our opIndex.
+                }
+                else //If R doesn't expose opIndex, then it exposes a naked array. We can use size_t safelly.
+                {
+                  auto ref opIndex(size_t index)
+                  {
+                      return _fun(_input[index]);
+                  }
                 }
             }
 
@@ -458,22 +464,28 @@ template map(fun...) if (fun.length >= 1)
 
             static if (hasSlicing!R)
             {
-                static if(hasLength!R)
+                //Looking for the input type of [].
+                static if (is(ParameterTypeTuple!(R.opSlice)))
                 {
-                    //use type returned by length
-                    private: alias typeof(_input.length) index_t;
-                }
-                else
-                {
-                    //Hope that size_t is actually compatible...
-                    private: size_t index_t;
-                }
-
-                static if(is(typeof(_input[cast(index_t)0 .. cast(index_t)(0)]))) //double check we guessed right
-                {
-                    auto opSlice(index_t lowerBound, index_t upperBound)
+                    static if (ParameterTypeTuple!(R.opSlice).length > 1)
                     {
-                        return typeof(this)(_input[lowerBound..upperBound]);
+                        auto opSlice(ParameterTypeTuple!(R.opSlice) bounds)
+                        {
+                            return typeof(this)(_input[bounds[0] .. bounds[1]]);
+                        }
+                    }
+                    //else
+                    //  R exposes an opIndex that takes no arguments, that shadows the one we want.
+                    //  There is no way to reliably forward opIndex, and it is best to not re-expose.
+                    //  "Guessing" or using "length" is too dangerous. For example:
+                    //  iota does not have matching types for length and index.
+                    //  Getting it wrong will result in a non-compiling conversion on the edges of our opIndex.
+                }
+                else //If R doesn't expose opSlice, then it exposes a naked array. We can use size_t safelly.
+                {
+                    auto opSlice(size_t lowerBound, size_t upperBound)
+                    {
+                        return typeof(this)(_input[lowerBound .. upperBound]);
                     }
                 }
             }
@@ -4978,24 +4990,44 @@ assert(equal!(approxEqual)(b, c));
 ----
 */
 bool equal(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
-if (isInputRange!(Range1) && isInputRange!(Range2)
+    if (isInputRange!Range1 && isInputRange!Range2
         && is(typeof(binaryFun!pred(r1.front, r2.front))))
 {
+    //Note, narrow string literals don't have "hasLength"
     static if (hasLength!Range1 && hasLength!Range2
         && is(typeof(r1.length == r2.length)))
     {
         auto len1 = r1.length;
         auto len2 = r2.length;
-        if(len1 != len2) return false; //Is this short-circuit legal, or must we make the calls to pred?
-
-        for (; !r1.empty; r1.popFront(), r2.popFront())
+        if(len1 != len2) return false; //Short circuit return
+        
+        //Lengths are the same, so we need to do the comparison
+        
+        //Investigate if a fast memcmp is possible.
+        alias ElementType!Range1 T;
+        static if (is(typeof(pred == "a == b")) && (pred == "a == b")        //Pred must be left at the default "a == b"
+            && isArray!Range1 && isArray!Range2                              //inputs must be arrays
+            && is(ElementType!Range1 == ElementType!Range2)                  //with perfectly matching types
+            && (isBoolean!T || isNumeric!T || isSomeChar!T || isPointer!T)   //And the data must be trivially built-in.
+        )
         {
-            if (!binaryFun!pred(r1.front, r2.front)) return false;
+            //Do a fast memcmp here.
+            return !memcmp(cast(void*) r1.ptr, cast(void*) r2.ptr, len1 * T.sizeof);
         }
-        return true;
+        else
+        {
+            //Go the slower explicit element by element comparison
+            for (; !r1.empty; r1.popFront(), r2.popFront())
+            {
+                if (!binaryFun!(pred)(r1.front, r2.front)) return false;
+            }
+            return true;
+        }
     }
     else
     {
+        //Basic case for input ranges and string literals.
+        //No need for special case for strings either actually (I think...).
         for (; !r1.empty; r1.popFront(), r2.popFront())
         {
             if (r2.empty) return false;
