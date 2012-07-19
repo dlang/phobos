@@ -2644,6 +2644,9 @@ unittest {
   assert (m.position == 10);
   assert (m.available == 90);
   assert (m.size == 100);
+  m.seekSet (0);
+  assert (m.printf ("Answer is %d", 42) == 12);
+  assert (buf[0..12] == "Answer is 42");
 }
 
 /// This subclass reads and constructs an array of bytes in memory.
