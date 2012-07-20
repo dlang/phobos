@@ -47,7 +47,7 @@ type associated with the _container.))
 $(TR $(TD $(D c[])) $(TDNW $(D log n$(SUB c))) $(TD Returns a range
 iterating over the entire _container, in a _container-defined order.))
 
-$(TR $(TDNW $(D c[a, b])) $(TDNW $(D log n$(SUB c))) $(TD Fetches a
+$(TR $(TDNW $(D c[a .. b])) $(TDNW $(D log n$(SUB c))) $(TD Fetches a
 portion of the _container from key $(D a) to key $(D b).))
 
 $(LEADINGROW Capacity)
