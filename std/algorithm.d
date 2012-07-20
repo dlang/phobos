@@ -958,7 +958,9 @@ assert(a == [ 8, 9, 8, 9, 8 ]);
 ----
  */
 void fill(Range1, Range2)(Range1 range, Range2 filler)
-if (isInputRange!Range1 && isForwardRange!Range2
+    if (isInputRange!Range1
+        && (isForwardRange!Range2
+            || (isInputRange!Range2 && isInfinite!Range2))
         && is(typeof(Range1.init.front = Range2.init.front)))
 {
     static if(isInfinite!Range2)
@@ -979,7 +981,7 @@ if (isInputRange!Range1 && isForwardRange!Range2
             }
         }
     }
-    else if(hasLength!Range1 && hasLength!Range2 
+    else static if(hasLength!Range1 && hasLength!Range2 
         && is(typeof(range.length > filler.length)))
     {
         //Case we have access to length
@@ -1034,6 +1036,14 @@ unittest
     fill(range,[1,2]);
     foreach(i,value;range.arr)
     	assert(value == (i%2==0?1:2));
+
+    //test with a input being a "consumable forward" range
+    fill(a, new ConsumableForwardRange!int([8, 9]));
+    assert(a == [8, 9, 8, 9, 8]);
+    
+    //test with a input being an "infinite input" range
+    fill(a, new InfiniteInputRange!int());
+    assert(a == [0, 1, 2, 3, 4]);
 }
 
 /**
@@ -4999,7 +5009,7 @@ bool equal(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
         && is(ElementType!Range1 == ElementType!Range2))
     {
         //Ranges are arrays with comparable types.
-        //Let the compiler do it do the comparison. It's super effective.
+        //Let the compiler do the comparison. It's super effective.
         return r1 == r2;
     }
     //Not an array, try a faster impl when the ranges have comparable lengths
@@ -5046,8 +5056,54 @@ unittest
     double[] c = [ 1.005, 2, 4, 3];
     assert(equal!(approxEqual)(b, c));
 
-    // utf-8 strings
-    assert(equal("æøå", "æøå"));
+    // various strings
+    assert(equal("æøå",  "æøå"));    //UTF8 vs UTF8
+    assert(!equal("日本語", "æøå")); //UTF8 vs UTF8
+    assert(equal("æøå"w, "æøå"d));    //UTF16 vs UTF32
+    assert(!equal("日本語"w, "æøå"d));//UTF16 vs UTF32
+    assert(equal("æøå"d, "æøå"d));    //UTF32 vs UTF32
+    assert(!equal("日本語"d, "æøå"d));//UTF32 vs UTF32
+    assert(!equal("hello", "world"));
+
+    // same strings, but "explicit non default" comparison (to test the non optimized array comparison)
+    assert( equal!("a==b")("æøå",  "æøå"));   //UTF8 vs UTF8
+    assert(!equal!("a==b")("日本語", "æøå")); //UTF8 vs UTF8
+    assert( equal!("a==b")("æøå"w, "æøå"d));  //UTF16 vs UTF32
+    assert(!equal!("a==b")("日本語"w, "æøå"d));//UTF16 vs UTF32
+    assert( equal!("a==b")("æøå"d, "æøå"d));   //UTF32 vs UTF32
+    assert(!equal!("a==b")("日本語"d, "æøå"d));//UTF32 vs UTF32
+    assert(!equal!("a==b")("hello", "world"));
+
+    //Array of string
+    assert(equal(["hello", "world"], ["hello", "world"]));
+    assert(!equal(["hello", "world"], ["hello"]));
+    assert(!equal(["hello", "world"], ["hello", "Bob!"]));
+    
+    //Should not compile, because "string == dstring" is illegal
+    static assert(!is(typeof(equal(["hello", "world"], ["hello"d, "world"d]))));
+    //However, arrays of non-matching string can be compared using equal!equal. Neat-o!
+    equal!equal(["hello", "world"], ["hello"d, "world"d]);
+
+    //Tests, with more fancy map ranges
+    assert(equal([2, 4, 8, 6], map!"a*2"(a)));
+    assert(equal!approxEqual(map!"a*2"(b), map!"a*2"(c)));
+    assert(!equal([2, 4, 1, 3], map!"a*2"(a)));
+    assert(!equal([2, 4, 1], map!"a*2"(a)));
+    assert(!equal!approxEqual(map!"a*3"(b), map!"a*2"(c)));
+    
+    //Tests with some fancy consumable ranges.
+    ConsumableInputRange!int   cir = new ConsumableInputRange!int([1, 2, 4, 3]);
+    ConsumableForwardRange!int cfr = new ConsumableForwardRange!int([1, 2, 4, 3]);
+    assert(equal(cir, a));
+    cir = new ConsumableInputRange!int([1, 2, 4, 3]);
+    assert(equal(cir, cfr.save));
+    assert(equal(cfr.save, cfr.save));
+    cir = new ConsumableInputRange!int([1, 2, 8, 1]);
+    assert(!equal(cir, cfr));
+
+    //Test with an infinte range
+    InfiniteForwardRange!int ifr = new InfiniteForwardRange!int;
+    assert(!equal(a, ifr));
 }
 
 // cmp
@@ -5423,6 +5479,10 @@ unittest
     int[][] b = [ [4], [2, 4], [4], [4] ];
     auto c = minCount!("a[0] < b[0]")(b);
     assert(c == tuple([2, 4], 1), text(c[0]));
+
+    //test with consumable ranges. Test both input and forward.
+    assert(minCount(new ConsumableInputRange!int([1, 2, 1, 0, 2, 0])) == tuple(0, 2));
+    assert(minCount(new ConsumableForwardRange!int([1, 2, 1, 0, 2, 0])) == tuple(0, 2));
 }
 
 // minPos
@@ -5466,6 +5526,9 @@ unittest
     assert(minPos(a) == [ 1, 2, 4, 1, 1, 2 ]);
 // Maximum is 4 and first occurs in position 5
     assert(minPos!("a > b")(a) == [ 4, 1, 2, 4, 1, 1, 2 ]);
+
+    //test with consumable range.
+    assert( equal( minPos(new ConsumableForwardRange!int([1, 2, 1, 0, 2, 0])), [0, 2, 0] ) );
 }
 
 // mismatch
@@ -8884,6 +8947,42 @@ version(unittest)
             result ~= i / 50.;
         }
         return result;
+    }
+
+    //Consumable input range
+    private class ConsumableInputRange(T)
+    {
+        this(Range)(Range r) if (isInputRange!Range) {_payload = array(r);}
+        final @property ref T front(){return _payload.front;}
+        final void popFront(){_payload.popFront;}
+        final bool empty(){return _payload.empty;}
+        protected T[] _payload;
+    }
+
+    //Consumable forward range
+    private class ConsumableForwardRange(T) : ConsumableInputRange!T
+    {
+        this(Range)(Range r) if (isInputRange!Range) {super(r);}
+        final ConsumableForwardRange save()
+        {return new ConsumableForwardRange!T(_payload);}
+    }
+
+    //Infinite input range
+    private class InfiniteInputRange(T)
+    {
+        this(T first = T.init) {_val = first;}
+        final @property T front(){return _val;}
+        final void popFront(){++_val;}
+        enum bool empty = false;
+        protected T _val;
+    }
+
+    //Infinite forward range
+    private class InfiniteForwardRange(T) : InfiniteInputRange!T
+    {
+        this(T first = T.init) {super(first);}
+        final InfiniteForwardRange save()
+        {return new InfiniteForwardRange!T(_val);}
     }
 }
 
