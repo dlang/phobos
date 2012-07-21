@@ -25,6 +25,8 @@ import core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
        std.range, std.stdio, std.string, std.traits,
        std.typecons, std.typetuple, std.utf;
 
+import std.ascii : letters, digits;
+
 import std.metastrings; //For generating deprecation messages only. Remove once
                         //deprecation path complete.
 
@@ -3093,9 +3095,100 @@ string tempDir()
         }
         else static assert (false, "Unsupported platform");
 
-        if (cache is null) cache = ".";
+        if (cache is null)
+            cache = ".";
+        else if (cache.endsWith(dirSeparator))
+            cache.popBackN(walkLength(dirSeparator));
     }
     return cache;
+}
+
+unittest
+{
+    assert(tempDir() !is null);
+    assert(!tempDir().endsWith(dirSeparator));
+}
+
+
+/++
+    Creates a randomly generated file name in the given directory. It does not
+    actually create the file or access the file system in any way (aside from
+    the default initializer for $(D dir) calling $(D tempDir)).
+
+    Params:
+        prefix = Optional prefix for the generated file name.
+        dir    = Directory of temporary file.
+
+  +/
+string tempFile(string prefix = "", string dir = tempDir())
+{
+    import std.random;
+
+    //Make sure that we don't reuse a previous front if it wasn't popped after
+    //being used.
+    rndGen.popFront();
+
+    immutable prefixLen = prefix.length;
+    //32 is arbitrary, but it's the number of characters in a UUID, so it should
+    //be long enough to reasonably guarantee uniqueness.
+    immutable size_t len = prefixLen + 32;
+    auto name = new char[](len);
+    name[0 .. prefixLen] = prefix[0 .. prefixLen];
+
+    foreach(ref c; name[prefixLen .. $])
+    {
+        c = _possibleChars[rndGen.front % _possibleChars.length];
+        rndGen.popFront();
+    }
+
+    return buildPath(dir, name);
+}
+
+immutable _possibleChars = letters ~ digits;
+
+unittest
+{
+    auto dir = tempDir();
+    auto otherDir = buildPath(dir, "tempFile");
+    mkdir(otherDir);
+    scope(exit) if(otherDir.exists) rmdirRecurse(otherDir);
+
+    auto t1 = tempFile();
+    assert(dirName(t1) == dir);
+    assert(baseName(t1).length == 32);
+
+    auto t2 = tempFile();
+    assert(dirName(t2) == dir);
+    assert(baseName(t2).length == 32);
+
+    immutable t3Prefix = "tempFile_";
+    auto t3 = tempFile(t3Prefix);
+    assert(dirName(t3) == dir);
+    assert(baseName(t3).startsWith(t3Prefix));
+    assert(baseName(t3).length == t3Prefix.length + 32);
+
+    immutable t4Prefix = `温度_`;
+    auto t4 = tempFile(t4Prefix);
+    assert(dirName(t4) == dir);
+    assert(baseName(t4).startsWith(t4Prefix));
+    assert(baseName(t4).length == t4Prefix.length + 32);
+
+    auto t5 = tempFile(null, otherDir);
+    assert(dirName(t5) == otherDir);
+    assert(baseName(t5).length == 32);
+
+    auto t3Name = baseName(t3)[t3Prefix.length .. $];
+    auto t4Name = baseName(t4)[t4Prefix.length .. $];
+    assert(baseName(t1) != baseName(t2));
+    assert(baseName(t1) != t3Name);
+    assert(baseName(t1) != t4Name);
+    assert(baseName(t1) != baseName(t5));
+    assert(baseName(t2) != t3Name);
+    assert(baseName(t2) != t4Name);
+    assert(baseName(t2) != baseName(t5));
+    assert(t3Name != t4Name);
+    assert(t3Name != baseName(t5));
+    assert(t4Name != baseName(t5));
 }
 
 
