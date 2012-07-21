@@ -4241,7 +4241,7 @@ unittest
     auto fact = recurrence!("n * a[n-1]")(1);
     assert( equal(take(fact, 10), [1, 1, 2, 2*3, 2*3*4, 2*3*4*5, 2*3*4*5*6,
                             2*3*4*5*6*7, 2*3*4*5*6*7*8, 2*3*4*5*6*7*8*9][]) );
-    auto piapprox = recurrence!("a[n] + (n & 1 ? 4. : -4.) / (2 * n + 3)")(4.);
+    auto piapprox = recurrence!("a[n] + (n & 1 ? 4.0 : -4.0) / (2 * n + 3)")(4.0);
     foreach (e; take(piapprox, 20)) {}
     // Thanks to yebblies for this test and the associated fix
     auto r = recurrence!"a[n-2]"(1, 2);

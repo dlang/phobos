@@ -1206,8 +1206,8 @@ euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
 
 unittest
 {
-    double[] a = [ 1., 2., ];
-    double[] b = [ 4., 6., ];
+    double[] a = [ 1.0, 2.0, ];
+    double[] b = [ 4.0, 6.0, ];
     assert(euclideanDistance(a, b) == 5);
     assert(euclideanDistance(a, b, 5) == 5);
     assert(euclideanDistance(a, b, 4) == 5);
@@ -1291,8 +1291,8 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
 
 unittest
 {
-    double[] a = [ 1., 2., ];
-    double[] b = [ 4., 6., ];
+    double[] a = [ 1.0, 2.0, ];
+    double[] b = [ 4.0, 6.0, ];
     assert(dotProduct(a, b) == 16);
     assert(dotProduct([1, 3, -5], [4, -2, -1]) == 3);
 
@@ -1335,8 +1335,8 @@ cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
 
 unittest
 {
-    double[] a = [ 1., 2., ];
-    double[] b = [ 4., 3., ];
+    double[] a = [ 1.0, 2.0, ];
+    double[] b = [ 4.0, 3.0, ];
     // writeln(cosineSimilarity(a, b));
     // writeln(10.0 / sqrt(5.0 * 25));
     assert(approxEqual(
@@ -1396,10 +1396,10 @@ unittest
 {
     double[] a = [];
     assert(!normalize(a));
-    a = [ 1., 3. ];
+    a = [ 1.0, 3.0 ];
     assert(normalize(a));
     assert(a == [ 0.25, 0.75 ]);
-    a = [ 0., 0. ];
+    a = [ 0.0, 0.0 ];
     assert(!normalize(a));
     assert(a == [ 0.5, 0.5 ]);
 }
@@ -1800,7 +1800,7 @@ unittest
     assert(gapWeightedSimilarity(t, t, 1) == 7);
     assert(gapWeightedSimilarity(s, t, 1) == 7);
     assert(approxEqual(gapWeightedSimilarityNormalized(s, t, 1),
-                    7. / sqrt(15. * 7), 0.01));
+                    7.0 / sqrt(15.0 * 7), 0.01));
 }
 
 /**
@@ -2055,14 +2055,14 @@ unittest
             ["nyuk", "I", "have", "no", "chocolate", "giba"],
             ["wyda", "I", "have", "I", "have", "have", "I", "have", "hehe"],
             0.5);
-    double witness[] = [ 7., 4.03125, 0, 0 ];
+    double witness[] = [ 7.0, 4.03125, 0, 0 ];
     foreach (e; sim)
     {
         //writeln(e);
         assert(e == witness.front);
         witness.popFront();
     }
-    witness = [ 3., 1.3125, 0.25 ];
+    witness = [ 3.0, 1.3125, 0.25 ];
     sim = GapWeightedSimilarityIncremental!(string[])(
         ["I", "have", "no", "chocolate"],
         ["I", "have", "some", "chocolate"],
