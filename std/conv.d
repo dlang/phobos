@@ -2467,7 +2467,7 @@ unittest
         assert(to!Float("123e2") == Literal!Float(123e2));
         assert(to!Float("123e+2") == Literal!Float(123e+2));
         assert(to!Float("123e-2") == Literal!Float(123e-2));
-        assert(to!Float("123.") == Literal!Float(123.));
+        assert(to!Float("123.") == Literal!Float(123.0));
         assert(to!Float(".456") == Literal!Float(.456));
 
         assert(to!Float("1.23456E+2") == Literal!Float(1.23456E+2));

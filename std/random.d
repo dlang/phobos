@@ -1111,7 +1111,7 @@ unittest
     MinstdRand0 gen;
     foreach (i; 0 .. 20)
     {
-        auto x = uniform(0., 15., gen);
+        auto x = uniform(0.0, 15.0, gen);
         assert(0 <= x && x < 15);
     }
     foreach (i; 0 .. 20)
