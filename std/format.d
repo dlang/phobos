@@ -3002,7 +3002,7 @@ unittest
     assert(stream.data == "  12.68:");
     stream.clear();
 
-    formattedWrite(stream, "%04f|%05d|%#05x|%#5x",-4.,-10,1,1);
+    formattedWrite(stream, "%04f|%05d|%#05x|%#5x",-4.0,-10,1,1);
     assert(stream.data == "-4.000000|-0010|0x001|  0x1",
             stream.data);
     stream.clear();
@@ -5405,7 +5405,7 @@ unittest
     s = std.string.format("%7.4g:", 12.678L);
     assert(s == "  12.68:");
 
-    s = std.string.format("%04f|%05d|%#05x|%#5x",-4.,-10,1,1);
+    s = std.string.format("%04f|%05d|%#05x|%#5x",-4.0,-10,1,1);
     assert(s == "-4.000000|-0010|0x001|  0x1");
 
     i = -10;

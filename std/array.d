@@ -128,7 +128,7 @@ unittest
     auto c = array([new C(1), new C(2)][]);
     //writeln(c);
 
-    auto d = array([1., 2.2, 3][]);
+    auto d = array([1.0, 2.2, 3][]);
     assert(is(typeof(d) == double[]));
     //writeln(d);
 
