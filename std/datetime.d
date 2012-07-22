@@ -18268,7 +18268,7 @@ Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
 
         Examples:
 --------------------
-assert(Interval!Date(Date(1996, 1, 2), Dur.years(3)) ==
+assert(Interval!Date(Date(1996, 1, 2), dur!"years"(3)) ==
        Interval!Date(Date(1996, 1, 2), Date(1999, 1, 2)));
 --------------------
       +/
