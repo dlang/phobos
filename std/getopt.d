@@ -368,6 +368,32 @@ enum config {
     stopOnFirstNonOption,
 };
 
+/**
+ * An exception thrown when an unrecognized option is encountered.
+ */
+class UnrecognizedOptionException : Exception {
+
+    /// The command-line argument that triggered the exception.
+    string option;
+    
+    this(string _option) {
+        option = _option;
+        super("Unrecognized option "~option);
+    }
+}
+
+unittest {
+    // for UnrecognizedOptionException
+    string[] args = ["progname", "-u"];
+    try {
+        bool someOption;
+        getopt(args, "l", &someOption);
+        assert(0);
+    } catch (UnrecognizedOptionException e) {
+        assert(e.option == "-u");
+    }
+}
+
 private void getoptImpl(T...)(ref string[] args,
     ref configuration cfg, T opts)
 {
@@ -408,7 +434,7 @@ private void getoptImpl(T...)(ref string[] args,
             if (endOfOptions.length && a == endOfOptions) break;
             if (!cfg.passThrough)
             {
-                throw new Exception("Unrecognized option "~a);
+                throw new UnrecognizedOptionException(a);
             }
         }
     }
