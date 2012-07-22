@@ -22,6 +22,10 @@ $(VERSION 060, ddd mm, 2012, =================================================,
         $(LI The overloads of std.conv.to which were scheduled for deprecation
              because formattedWrite replaced them have now been deprecated.
              Please use std.format.formattedWrite instead.)
+        $(LI The overload of std.exception.enforce which takes the file and line number as template
+             arguments has been scheduled for deprecation (as it causes unnecessary template bloat).
+             Please use the overload which takes them as function arguments instead. This will have no
+             effect on any calls to enforce which do not explicitly pass the file or line number.)
         $(LI std.file.listDir has been deprecated. Please use std.file.dirEntries instead.)
         $(LI UtfException - which was scheduled for deprecation - has been deprecated.
              Please use UTFException instead.)
