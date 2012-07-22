@@ -7,6 +7,9 @@
     the built-in types $(D cfloat), $(D cdouble), $(D creal), $(D ifloat),
     $(D idouble), and $(D ireal).
 
+    Macros:
+        COMPLEX_RUN = $(D_RUN_CODE $0, $(ARGS), $(ARGS), $(ARGS import std.complex;))
+
     Authors:    Lars Tandle Kyllingstad, Don Clugston
     Copyright:  Copyright (c) 2010, Lars T. Kyllingstad.
     License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
@@ -28,22 +31,24 @@ import std.traits;
     function returns a $(D Complex!double).  Otherwise, the return type
     is deduced using $(D std.traits.CommonType!(R, I)).
 
-    Examples:
-    ---
-    auto c = complex(2.0);
-    static assert (is(typeof(c) == Complex!double));
-    assert (c.re == 2.0);
-    assert (c.im == 0.0);
+Examples:
+$(COMPLEX_RUN
+---
+auto c = complex(2.0);
+static assert (is(typeof(c) == Complex!double));
+assert (c.re == 2.0);
+assert (c.im == 0.0);
 
-    auto w = complex(2);
-    static assert (is(typeof(w) == Complex!double));
-    assert (w == c);
+auto w = complex(2);
+static assert (is(typeof(w) == Complex!double));
+assert (w == c);
 
-    auto z = complex(1, 3.14L);
-    static assert (is(typeof(z) == Complex!real));
-    assert (z.re == 1.0L);
-    assert (z.im == 3.14L);
-    ---
+auto z = complex(1, 3.14L);
+static assert (is(typeof(z) == Complex!real));
+assert (z.re == 1.0L);
+assert (z.im == 3.14L);
+---
+)
 */
 auto complex(T)(T re)  @safe pure nothrow  if (is(T : double))
 {
