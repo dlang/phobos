@@ -333,6 +333,7 @@ unittest
     }
 }
 
+
 /++
     If $(D !!value) is true, $(D value) is returned. Otherwise,
     $(D new Exception(msg)) is thrown.
@@ -352,7 +353,19 @@ auto line = readln(f);
 enforce(line.length, "Expected a non-empty line.");
 --------------------
  +/
-T enforce(T, string file = __FILE__, size_t line = __LINE__)
+T enforce(T)(T value, lazy const(char)[] msg = null, string file = __FILE__, size_t line = __LINE__) @safe pure
+{
+    if (!value) bailOut(file, line, msg);
+    return value;
+}
+
+/++
+   $(RED Scheduled for deprecation in January 2013. If passing the file or line
+         number explicitly, please use the version of enforce which takes them as
+         function arguments. Taking them as template arguments causes
+         unnecessary template bloat.)
+ +/
+T enforce(T, string file, size_t line = __LINE__)
     (T value, lazy const(char)[] msg = null) @safe pure
 {
     if (!value) bailOut(file, line, msg);
