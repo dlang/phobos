@@ -1568,19 +1568,40 @@ struct RandomSample(R, Random = void)
     // choice but to store a copy.
     static if(!is(Random == void))
     {
-        Random gen;
-    }
+        Random _gen;
 
-/**
-Constructor.
-*/
-    static if (hasLength!R)
-        this(R input, size_t howMany)
+        static if (hasLength!R)
         {
-            this(input, howMany, input.length);
+            this(R input, size_t howMany, Random gen)
+            {
+                _gen = gen;
+                initialize(input, howMany, input.length);
+            }
         }
 
-    this(R input, size_t howMany, size_t total)
+        this(R input, size_t howMany, size_t total, Random gen)
+        {
+            _gen = gen;
+            initialize(input, howMany, total);
+        }
+    }
+    else
+    {
+        static if (hasLength!R)
+        {
+            this(R input, size_t howMany)
+            {
+                initialize(input, howMany, input.length);
+            }
+        }
+
+        this(R input, size_t howMany, size_t total)
+        {
+            initialize(input, howMany, total);
+        }
+    }
+
+    private void initialize(R input, size_t howMany, size_t total)
     {
         _input = input;
         _available = total;
@@ -1672,7 +1693,7 @@ to remaining data values is sufficiently large.
             }
             else
             {
-                s = uniform(0, _available, gen);
+                s = uniform(0, _available, _gen);
             }
         }
         else
@@ -1687,7 +1708,7 @@ to remaining data values is sufficiently large.
             }
             else
             {
-                v = uniform!"()"(0.0, 1.0, gen);
+                v = uniform!"()"(0.0, 1.0, _gen);
             }
 
             while (quot > v)
@@ -1711,7 +1732,7 @@ Randomly reset the value of _Vprime.
         }
         else
         {
-            double r = uniform!"()"(0.0, 1.0, gen);
+            double r = uniform!"()"(0.0, 1.0, _gen);
         }
 
         return r ^^ (1.0 / remaining);
@@ -1767,7 +1788,7 @@ Variable names are chosen to match those in Vitter's paper.
                 }
                 else
                 {
-                    double u = uniform!"()"(0.0, 1.0, gen);
+                    double u = uniform!"()"(0.0, 1.0, _gen);
                 }
 
                 y1 = (u * (cast(double) _available) / qu1) ^^ (1.0/(_toSelect - 1));
@@ -1860,18 +1881,14 @@ auto randomSample(R)(R r, size_t n)
 auto randomSample(R, Random)(R r, size_t n, size_t total, Random gen)
 if(isInputRange!R && isUniformRNG!Random)
 {
-    auto ret = RandomSample!(R, Random)(r, n, total);
-    ret.gen = gen;
-    return ret;
+    return RandomSample!(R, Random)(r, n, total, gen);
 }
 
 /// Ditto
 auto randomSample(R, Random)(R r, size_t n, Random gen)
 if (isInputRange!R && hasLength!R && isUniformRNG!Random)
 {
-    auto ret = RandomSample!(R, Random)(r, n, r.length);
-    ret.gen = gen;
-    return ret;
+    return RandomSample!(R, Random)(r, n, r.length, gen);
 }
 
 unittest
@@ -1892,4 +1909,14 @@ unittest
         //writeln(e);
     }
     assert(i == 5);
+
+    // Bugzilla 8314
+    {
+        auto sample(uint seed) { return randomSample(a, 1, Random(seed)).front; }
+
+        immutable fst = sample(0);
+        uint n;
+        while (sample(++n) == fst && n < n.max) {}
+        assert(n < n.max);
+    }
 }
