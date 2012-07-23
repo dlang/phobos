@@ -6536,7 +6536,7 @@ enum SearchPolicy
    assert(!r.contains(42));                // passes although it shouldn't
    ----
 */
-struct SortedRange(Range, alias pred = "a < b")
+struct SortedRange(Range, alias pred = ((a, b) => a < b))
 if (isRandomAccessRange!Range)
 {
     private alias binaryFun!pred predFun;
@@ -7047,7 +7047,7 @@ unsorted range failing the test is very high (however, an
 almost-sorted range is likely to pass it). To check for sortedness at
 cost $(BIGOH n), use $(XREF algorithm,isSorted).
  */
-auto assumeSorted(alias pred = "a < b", R)(R r)
+auto assumeSorted(alias pred = ((a, b) => a < b), R)(R r)
 if (isRandomAccessRange!(Unqual!R))
 {
     return SortedRange!(Unqual!R, pred)(r);
