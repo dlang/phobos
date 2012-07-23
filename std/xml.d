@@ -593,7 +593,7 @@ class Document : Element
          * if (d1 == d2) { }
          * --------------
          */
-        override bool opEquals(const Object o)
+        override bool opEquals(Object o)
         {
             const doc = toType!(const Document)(o);
             return
@@ -615,14 +615,14 @@ class Document : Element
          * if (d1 < d2) { }
          * --------------
          */
-        override int opCmp(const Object o)
+        override int opCmp(Object o)
         {
             const doc = toType!(const Document)(o);
             return
                 ((prolog != doc.prolog            )
                     ? ( prolog < doc.prolog             ? -1 : 1 ) :
                 ((super  != cast(const Element)doc)
-                    ? ( super  < cast(const Element)doc ? -1 : 1 ) :
+                    ? ( cast()super  < cast()cast(const Element)doc ? -1 : 1 ) :
                 ((epilog != doc.epilog            )
                     ? ( epilog < doc.epilog             ? -1 : 1 ) :
             0 )));
@@ -636,7 +636,7 @@ class Document : Element
          */
         override hash_t toHash() @trusted
         {
-            return hash(prolog, hash(epilog, super.toHash()));
+            return hash(prolog, hash(epilog, (cast()super).toHash()));
         }
 
         /**
@@ -824,14 +824,14 @@ class Element : Item
      * if (e1 == e2) { }
      * --------------
      */
-    override const bool opEquals(const Object o)
+    override const bool opEquals(Object o)
     {
         const element = toType!(const Element)(o);
         auto len = items.length;
         if (len != element.items.length) return false;
         foreach (i; 0 .. len)
         {
-            if (!items[i].opEquals(element.items[i])) return false;
+            if (!items[i].opEquals(cast()element.items[i])) return false;
         }
         return true;
     }
@@ -848,7 +848,7 @@ class Element : Item
      * if (e1 < e2) { }
      * --------------
      */
-    override const int opCmp(const Object o)
+    override const int opCmp(Object o)
     {
         const element = toType!(const Element)(o);
         for (uint i=0; ; ++i)
@@ -857,7 +857,7 @@ class Element : Item
             if (i == items.length) return -1;
             if (i == element.items.length) return 1;
             if (items[i] != element.items[i])
-                return items[i].opCmp(element.items[i]);
+                return items[i].opCmp(cast()element.items[i]);
         }
     }
 
@@ -1091,7 +1091,7 @@ class Tag
          * if (tag1 == tag2) { }
          * --------------
          */
-        override bool opEquals(const Object o)
+        override bool opEquals(Object o)
         {
             const tag = toType!(const Tag)(o);
             return
@@ -1110,7 +1110,7 @@ class Tag
          * if (tag1 < tag2) { }
          * --------------
          */
-        override int opCmp(const Object o)
+        override int opCmp(Object o)
         {
             const tag = toType!(const Tag)(o);
             return
@@ -1233,7 +1233,7 @@ class Comment : Item
      * if (item1 == item2) { }
      * --------------
      */
-    override const bool opEquals(const Object o)
+    override const bool opEquals(Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(Comment)item;
@@ -1252,7 +1252,7 @@ class Comment : Item
      * if (item1 < item2) { }
      * --------------
      */
-    override const int opCmp(const Object o)
+    override const int opCmp(Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(Comment)item;
@@ -1312,7 +1312,7 @@ class CData : Item
      * if (item1 == item2) { }
      * --------------
      */
-    override const bool opEquals(const Object o)
+    override const bool opEquals(Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(CData)item;
@@ -1331,7 +1331,7 @@ class CData : Item
      * if (item1 < item2) { }
      * --------------
      */
-    override const int opCmp(const Object o)
+    override const int opCmp(Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(CData)item;
@@ -1389,7 +1389,7 @@ class Text : Item
      * if (item1 == item2) { }
      * --------------
      */
-    override const bool opEquals(const Object o)
+    override const bool opEquals(Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(Text)item;
@@ -1408,7 +1408,7 @@ class Text : Item
      * if (item1 < item2) { }
      * --------------
      */
-    override const int opCmp(const Object o)
+    override const int opCmp(Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(Text)item;
@@ -1471,7 +1471,7 @@ class XMLInstruction : Item
      * if (item1 == item2) { }
      * --------------
      */
-    override const bool opEquals(const Object o)
+    override const bool opEquals(Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(XMLInstruction)item;
@@ -1490,7 +1490,7 @@ class XMLInstruction : Item
      * if (item1 < item2) { }
      * --------------
      */
-    override const int opCmp(const Object o)
+    override const int opCmp(Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(XMLInstruction)item;
@@ -1550,7 +1550,7 @@ class ProcessingInstruction : Item
      * if (item1 == item2) { }
      * --------------
      */
-    override const bool opEquals(const Object o)
+    override const bool opEquals(Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(ProcessingInstruction)item;
@@ -1569,7 +1569,7 @@ class ProcessingInstruction : Item
      * if (item1 < item2) { }
      * --------------
      */
-    override const int opCmp(const Object o)
+    override const int opCmp(Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(ProcessingInstruction)item;
@@ -1599,10 +1599,10 @@ class ProcessingInstruction : Item
 abstract class Item
 {
     /// Compares with another Item of same type for equality
-    abstract override const bool opEquals(const Object o);
+    abstract override const bool opEquals(Object o);
 
     /// Compares with another Item of same type
-    abstract override const int opCmp(const Object o);
+    abstract override const int opCmp(Object o);
 
     /// Returns the hash of this item
     abstract override const hash_t toHash();
