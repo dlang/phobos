@@ -426,33 +426,18 @@ template map(fun...) if (fun.length >= 1)
 
             static if (isRandomAccessRange!R)
             {
-                //Looking for the input type of [].
-                static if (is(ParameterTypeTuple!(R.opIndex)))
+                static if (is(typeof(_input[ulong.max])))
+                    private alias ulong opIndex_t;
+                else
+                    private alias uint opIndex_t;
+                    
+                auto ref opIndex(opIndex_t index)
                 {
-                    static if (ParameterTypeTuple!(R.opIndex).length > 0)
-                    {
-                        auto ref opIndex(ParameterTypeTuple!(R.opIndex) index)
-                        {
-                            return _fun(_input[index]);
-                        }
-                    }
-                    //else
-                    //  R exposes an opIndex that takes no arguments, that shadows the one we want.
-                    //  There is no way to reliably forward opIndex, and it is best to not re-expose.
-                    //  "Guessing" or using "length" is too dangerous. For example:
-                    //  iota does not have matching types for length and index.
-                    //  Getting it wrong will result in a non-compiling conversion on the edges of our opIndex.
-                }
-                else //If R doesn't expose opIndex, then it exposes a naked array. We can use size_t safelly.
-                {
-                  auto ref opIndex(size_t index)
-                  {
-                      return _fun(_input[index]);
-                  }
+                    return _fun(_input[index]);
                 }
             }
 
-            static if (hasLength!R || isSomeString!R)
+            static if (hasLength!R)
             {
                 @property auto length()
                 {
@@ -464,29 +449,14 @@ template map(fun...) if (fun.length >= 1)
 
             static if (hasSlicing!R)
             {
-                //Looking for the input type of [].
-                static if (is(ParameterTypeTuple!(R.opSlice)))
+                static if (is(typeof(_input[ulong.max .. ulong.max])))
+                    private alias ulong opSlice_t;
+                else
+                    private alias uint opSlice_t;
+
+                auto opSlice(opSlice_t lowerBound, opSlice_t upperBound)
                 {
-                    static if (ParameterTypeTuple!(R.opSlice).length > 1)
-                    {
-                        auto opSlice(ParameterTypeTuple!(R.opSlice) bounds)
-                        {
-                            return typeof(this)(_input[bounds[0] .. bounds[1]]);
-                        }
-                    }
-                    //else
-                    //  R exposes an opIndex that takes no arguments, that shadows the one we want.
-                    //  There is no way to reliably forward opIndex, and it is best to not re-expose.
-                    //  "Guessing" or using "length" is too dangerous. For example:
-                    //  iota does not have matching types for length and index.
-                    //  Getting it wrong will result in a non-compiling conversion on the edges of our opIndex.
-                }
-                else //If R doesn't expose opSlice, then it exposes a naked array. We can use size_t safelly.
-                {
-                    auto opSlice(size_t lowerBound, size_t upperBound)
-                    {
-                        return typeof(this)(_input[lowerBound .. upperBound]);
-                    }
+                    return typeof(this)(_input[lowerBound .. upperBound]);
                 }
             }
 
@@ -591,6 +561,14 @@ unittest
         static assert(propagatesRangeType!(typeof(m), DummyType));
         assert(equal(m, [1,4,9,16,25,36,49,64,81,100]));
     }
+    
+    //Test string access
+    string  s1 = "hello world!";
+    dstring s2 = "hello world!"d;
+    auto ms1 = map!(std.ascii.toUpper)(s1);
+    auto ms2 = map!(std.ascii.toUpper)(s2);
+    static assert(!is(ms1[0])); //narrow strings can't be indexed
+    assert(ms2[0] == 'H');
 }
 unittest
 {
@@ -965,12 +943,11 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
 {
     static if(isInfinite!Range2)
     {
-        //Range2 is infinite, no need for bounds checking
-        static if(hasSlicing!Range2 && hasLength!Range1 && is(typeof(filler[0 .. range.length])))
+        //Range2 is infinite, no need for bounds checking or saving
+        static if(hasSlicing!Range2 && hasLength!Range1
+            && is(typeof(filler[0 .. range.length])))
         {
-            //Quick copy
-            auto len = range.length;
-            copy(filler[0..len], range);
+            copy(filler[0..range.length], range);
         }
         else
         {
@@ -981,43 +958,46 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
             }
         }
     }
-    else static if(hasLength!Range1 && hasLength!Range2 
-        && is(typeof(range.length > filler.length)))
+    else
     {
-        //Case we have access to length
-        enforce(!filler.empty);
-        auto len = filler.length;
-        //Start by bulk copies
-        for( ; range.length > len ; )
+        enforce(!filler.empty, "Cannot fill range with an empty filler");
+
+        static if(hasLength!Range1 && hasLength!Range2 
+            && is(typeof(range.length > filler.length)))
         {
-            range = copy(filler.save, range);
-        }
-        
-        //and finally fill the partial range. No need to save here.
-        static if (hasSlicing!Range2 && is(typeof(filler[0 .. range.length])))
-        {
-            //use a quick copy
-            auto len2 = range.length;
-            range = copy(filler[0 .. len2], range);
+            //Case we have access to length
+            auto len = filler.length;
+            //Start by bulk copies
+            for( ; range.length > len ; )
+            {
+                range = copy(filler.save, range);
+            }
+            
+            //and finally fill the partial range. No need to save here.
+            static if (hasSlicing!Range2 && is(typeof(filler[0 .. range.length])))
+            {
+                //use a quick copy
+                auto len2 = range.length;
+                range = copy(filler[0 .. len2], range);
+            }
+            else
+            {
+                //iterate. No need to check filler, it's length is longer than range's
+                for (; !range.empty; range.popFront(), filler.popFront())
+                {
+                    range.front = filler.front;
+                }
+            }
         }
         else
         {
-            //iterate. No need to check filler, it's length is longer than range's
+            //Most basic case.
+            auto bck = filler.save;
             for (; !range.empty; range.popFront(), filler.popFront())
             {
+                if (filler.empty) filler = bck.save;
                 range.front = filler.front;
             }
-        }
-    }
-    else
-    {
-        //Most basic case.
-        enforce(!filler.empty);
-        auto bck = filler.save; //make backup
-        for (; !range.empty; range.popFront(), filler.popFront())
-        {
-            if (filler.empty) filler = bck.save;
-            range.front = filler.front;
         }
     }
 }
@@ -1044,6 +1024,9 @@ unittest
     //test with a input being an "infinite input" range
     fill(a, new InfiniteInputRange!int());
     assert(a == [0, 1, 2, 3, 4]);
+
+    //empty filler test
+    assertThrown(fill(a, a[$..$]));
 }
 
 /**
@@ -4999,29 +4982,38 @@ double[] c = [ 1.005, 2, 4, 3];
 assert(equal!(approxEqual)(b, c));
 ----
 */
-bool equal(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
+bool equal(Range1, Range2)(Range1 r1, Range2 r2)
+    if (isInputRange!Range1 && isInputRange!Range2
+        && is(typeof(r1.front == r2.front)))
+{
+    static if (isArray!Range1 && isArray!Range2
+        && is(typeof(r1 == r2)))
+    {
+        //Ranges are comparable. Let the compiler do the comparison.
+        return r1 == r2;
+    }
+    else
+    {
+        //Need to do an actual compare, delegate to predicate version
+        return equal!"a==b"(r1, r2);
+    }
+}
+
+// Ditto
+bool equal(alias pred, Range1, Range2)(Range1 r1, Range2 r2)
     if (isInputRange!Range1 && isInputRange!Range2
         && is(typeof(binaryFun!pred(r1.front, r2.front))))
 {
-    //First, special case for similar arrays when the op is the default "a == b"
-    static if (is(typeof(pred == "a == b")) && (pred == "a == b")
-        && isArray!Range1 && isArray!Range2
-        && is(ElementType!Range1 == ElementType!Range2))
-    {
-        //Ranges are arrays with comparable types.
-        //Let the compiler do the comparison. It's super effective.
-        return r1 == r2;
-    }
-    //Not an array, try a faster impl when the ranges have comparable lengths
-    else static if (hasLength!Range1 && hasLength!Range2
+    //Try a fast implementation when the ranges have comparable lengths
+    static if (hasLength!Range1 && hasLength!Range2
         && is(typeof(r1.length == r2.length)))
     {
         auto len1 = r1.length;
         auto len2 = r2.length;
-        if(len1 != len2) return false; //Short circuit return
+        if (len1 != len2) return false; //Short circuit return
         
         //Lengths are the same, so we need to do an actual comparison
-        //Good news is we can sqeeze out a bit of performance by not checking if Range2 is empty
+        //Good news is we can sqeeze out a bit of performance by not checking if r2 is empty
         for (; !r1.empty; r1.popFront(), r2.popFront())
         {
             if (!binaryFun!(pred)(r1.front, r2.front)) return false;
@@ -5426,47 +5418,28 @@ assert(minCount!("a > b")(a) == tuple(4, 2));
  */
 Tuple!(ElementType!(Range), size_t)
 minCount(alias pred = "a < b", Range)(Range range)
-    if (isInputRange!Range && !isInfinite!Range)
+    if ( isInputRange!Range && !isInfinite!Range)
 {
-    enforce(!range.empty);
+    enforce(!range.empty, "Can't count elements from an empty range");
     size_t occurrences = 1;
 
-    //if possible, prefer making copy of the range, rather than of the object
-    static if(isForwardRange!Range)
+    auto p = range.front;
+    for (range.popFront(); !range.empty; range.popFront())
     {
-        Range result = range.save;
-        for (range.popFront(); !range.empty; range.popFront())
+        auto p2 = range.front;
+        if (binaryFun!(pred)(p, p2)) continue;
+        if (binaryFun!(pred)(p2, p))
         {
-            if (binaryFun!(pred)(result.front, range.front)) continue;
-            if (binaryFun!(pred)(range.front, result.front))
-            {
-                result = range.save;
-                occurrences = 1;
-            }
-            else
-                ++occurrences;
+            //change the min
+            move(p2, p);
+            occurrences = 1;
         }
-        return tuple(result.front, occurrences);
-    }
-    else
-    {
-        auto p = range.front;
-        for (range.popFront(); !range.empty; range.popFront())
+        else
         {
-            if (binaryFun!(pred)(p, range.front)) continue;
-            if (binaryFun!(pred)(range.front, p))
-            {
-                //change the min
-                p = range.front;
-                occurrences = 1;
-            }
-            else
-            {
-                ++occurrences;
-            }
+            ++occurrences;
         }
-        return tuple(p, occurrences);
     }
+    return tuple(p, occurrences);
 }
 
 unittest
@@ -5479,6 +5452,9 @@ unittest
     int[][] b = [ [4], [2, 4], [4], [4] ];
     auto c = minCount!("a[0] < b[0]")(b);
     assert(c == tuple([2, 4], 1), text(c[0]));
+
+    //Test empty range
+    assertThrown(minCount(a[$..$]));
 
     //test with consumable ranges. Test both input and forward.
     assert(minCount(new ConsumableInputRange!int([1, 2, 1, 0, 2, 0])) == tuple(0, 2));
@@ -5504,15 +5480,17 @@ assert(minPos!("a > b")(a) == [ 4, 1, 2, 4, 1, 1, 2 ]);
  */
 Range minPos(alias pred = "a < b", Range)(Range range)
     if(isForwardRange!Range && !isInfinite!Range)
-{    
-    if (range.empty) return range;
+{
     auto result = range.save;
+    auto p = result.front;
     for (range.popFront(); !range.empty; range.popFront())
     {
-        if (binaryFun!(pred)(result.front, range.front)
-                || !binaryFun!(pred)(range.front, result.front)) continue;
+        auto p2 = range.front;
+        if (binaryFun!(pred)(p, p2)
+            || !binaryFun!(pred)(p2, p)) continue;
         // change the min
         result = range.save;
+        move(p2, p);
     }
     return result;
 }
