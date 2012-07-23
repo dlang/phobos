@@ -1017,12 +1017,12 @@ unittest
     foreach(i,value;range.arr)
     	assert(value == (i%2==0?1:2));
 
-    //test with a input being a "consumable forward" range
-    fill(a, new ConsumableForwardRange!int([8, 9]));
+    //test with a input being a "reference forward" range
+    fill(a, new ReferenceForwardRange!int([8, 9]));
     assert(a == [8, 9, 8, 9, 8]);
     
     //test with a input being an "infinite input" range
-    fill(a, new InfiniteInputRange!int());
+    fill(a, new ReferenceInfiniteInputRange!int());
     assert(a == [0, 1, 2, 3, 4]);
 
     //empty filler test
@@ -5083,18 +5083,18 @@ unittest
     assert(!equal([2, 4, 1], map!"a*2"(a)));
     assert(!equal!approxEqual(map!"a*3"(b), map!"a*2"(c)));
     
-    //Tests with some fancy consumable ranges.
-    ConsumableInputRange!int   cir = new ConsumableInputRange!int([1, 2, 4, 3]);
-    ConsumableForwardRange!int cfr = new ConsumableForwardRange!int([1, 2, 4, 3]);
+    //Tests with some fancy reference ranges.
+    ReferenceInputRange!int   cir = new ReferenceInputRange!int([1, 2, 4, 3]);
+    ReferenceForwardRange!int cfr = new ReferenceForwardRange!int([1, 2, 4, 3]);
     assert(equal(cir, a));
-    cir = new ConsumableInputRange!int([1, 2, 4, 3]);
+    cir = new ReferenceInputRange!int([1, 2, 4, 3]);
     assert(equal(cir, cfr.save));
     assert(equal(cfr.save, cfr.save));
-    cir = new ConsumableInputRange!int([1, 2, 8, 1]);
+    cir = new ReferenceInputRange!int([1, 2, 8, 1]);
     assert(!equal(cir, cfr));
 
     //Test with an infinte range
-    InfiniteForwardRange!int ifr = new InfiniteForwardRange!int;
+    ReferenceInfiniteForwardRange!int ifr = new ReferenceInfiniteForwardRange!int;
     assert(!equal(a, ifr));
 }
 
@@ -5456,9 +5456,9 @@ unittest
     //Test empty range
     assertThrown(minCount(a[$..$]));
 
-    //test with consumable ranges. Test both input and forward.
-    assert(minCount(new ConsumableInputRange!int([1, 2, 1, 0, 2, 0])) == tuple(0, 2));
-    assert(minCount(new ConsumableForwardRange!int([1, 2, 1, 0, 2, 0])) == tuple(0, 2));
+    //test with reference ranges. Test both input and forward.
+    assert(minCount(new ReferenceInputRange!int([1, 2, 1, 0, 2, 0])) == tuple(0, 2));
+    assert(minCount(new ReferenceForwardRange!int([1, 2, 1, 0, 2, 0])) == tuple(0, 2));
 }
 
 // minPos
@@ -5506,8 +5506,8 @@ unittest
 // Maximum is 4 and first occurs in position 5
     assert(minPos!("a > b")(a) == [ 4, 1, 2, 4, 1, 1, 2 ]);
 
-    //test with consumable range.
-    assert( equal( minPos(new ConsumableForwardRange!int([1, 2, 1, 0, 2, 0])), [0, 2, 0] ) );
+    //test with reference range.
+    assert( equal( minPos(new ReferenceForwardRange!int([1, 2, 1, 0, 2, 0])), [0, 2, 0] ) );
 }
 
 // mismatch
@@ -8928,7 +8928,7 @@ version(unittest)
         return result;
     }
 
-    //Consumable input range
+    //Reference input range
     private class ConsumableInputRange(T)
     {
         this(Range)(Range r) if (isInputRange!Range) {_payload = array(r);}
@@ -8938,7 +8938,7 @@ version(unittest)
         protected T[] _payload;
     }
 
-    //Consumable forward range
+    //Reference forward range
     private class ConsumableForwardRange(T) : ConsumableInputRange!T
     {
         this(Range)(Range r) if (isInputRange!Range) {super(r);}
@@ -8946,7 +8946,7 @@ version(unittest)
         {return new ConsumableForwardRange!T(_payload);}
     }
 
-    //Infinite input range
+    //Reference infinite input range
     private class InfiniteInputRange(T)
     {
         this(T first = T.init) {_val = first;}
@@ -8956,7 +8956,7 @@ version(unittest)
         protected T _val;
     }
 
-    //Infinite forward range
+    //Reference infinite forward range
     private class InfiniteForwardRange(T) : InfiniteInputRange!T
     {
         this(T first = T.init) {super(first);}
