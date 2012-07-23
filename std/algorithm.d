@@ -5486,11 +5486,12 @@ Range minPos(alias pred = "a < b", Range)(Range range)
     for (range.popFront(); !range.empty; range.popFront())
     {
         auto p2 = range.front;
-        if (binaryFun!(pred)(p, p2)
-            || !binaryFun!(pred)(p2, p)) continue;
-        // change the min
-        result = range.save;
-        move(p2, p);
+        if (binaryFun!(pred)(p2, p))
+        {
+            // change the min
+            result = range.save;
+            move(p2, p);
+        }
     }
     return result;
 }
