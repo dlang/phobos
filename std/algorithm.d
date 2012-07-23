@@ -456,7 +456,7 @@ template map(fun...) if (fun.length >= 1)
 
                 auto opSlice(opSlice_t lowerBound, opSlice_t upperBound)
                 {
-                    return typeof(this)(_input[lowerBound .. upperBound]);
+                    return typeof(this)(_input[lowerBound..upperBound]);
                 }
             }
 
@@ -5418,7 +5418,7 @@ assert(minCount!("a > b")(a) == tuple(4, 2));
  */
 Tuple!(ElementType!(Range), size_t)
 minCount(alias pred = "a < b", Range)(Range range)
-    if ( isInputRange!Range && !isInfinite!Range)
+    if (isInputRange!Range && !isInfinite!Range)
 {
     enforce(!range.empty, "Can't count elements from an empty range");
     size_t occurrences = 1;
