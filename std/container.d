@@ -88,7 +88,7 @@ $(TR $(TDNW $(D c.back)) $(TDNW $(D log n$(SUB c))) $(TD Returns the
 last element of the _container, in a _container-defined order.))
 
 $(TR $(TDNW $(D c.moveBack)) $(TDNW $(D log n$(SUB c))) $(TD
-Destructively reads and returns the first element of the
+Destructively reads and returns the last element of the
 container. The slot is not removed from the _container; it is left
 initalized with $(D T.init). This routine need not be defined if $(D
 front) returns a $(D ref).))
