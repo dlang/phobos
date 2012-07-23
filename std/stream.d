@@ -1164,6 +1164,15 @@ class Stream : InputStream, OutputStream {
 
   // writes data to stream using printf() syntax,
   // returns number of bytes written
+  version (X86_64)
+  size_t printf(const(char)[] format, ...) {
+    va_list ap;
+    va_start(ap, __va_argsave);
+    auto result = vprintf(format, ap);
+    va_end(ap);
+    return result;
+  }
+  else
   size_t printf(const(char)[] format, ...) {
     va_list ap;
     ap = cast(va_list) &format;
@@ -2635,6 +2644,9 @@ unittest {
   assert (m.position == 10);
   assert (m.available == 90);
   assert (m.size == 100);
+  m.seekSet (0);
+  assert (m.printf ("Answer is %d", 42) == 12);
+  assert (buf[0..12] == "Answer is 42");
 }
 
 /// This subclass reads and constructs an array of bytes in memory.
