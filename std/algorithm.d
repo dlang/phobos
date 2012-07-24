@@ -8078,7 +8078,7 @@ unittest
 /**
 Forwards to $(D any) for backwards compatibility.
 
-$(RED Scheduled for deprecation in August 2012. Please use $(D any) instead.)
+$(RED Scheduled for deprecation in September 2012. Please use $(D any) instead.)
 */
 bool canFind(alias pred, Range)(Range range)
 {
