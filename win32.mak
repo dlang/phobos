@@ -714,6 +714,23 @@ cleanhtml:
 install:
 	$(CP) $(LIB) $(DIR)\windows\lib\ 
 	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DIR)\windows\lib\ 
+	+rd/s/q $(DIR)\src\phobos\ 
+	mkdir $(DIR)\src\phobos\ 
+	mkdir $(DIR)\src\phobos\std\ 
+	mkdir $(DIR)\src\phobos\std\net\ 
+	mkdir $(DIR)\src\phobos\std\c\ 
+	mkdir $(DIR)\src\phobos\std\windows\ 
+	mkdir $(DIR)\src\phobos\std\c\windows\ 
+	mkdir $(DIR)\src\phobos\std\c\linux\ 
+	mkdir $(DIR)\src\phobos\std\c\osx\ 
+	mkdir $(DIR)\src\phobos\std\c\freebsd\ 
+	mkdir $(DIR)\src\phobos\std\internal\ 
+	mkdir $(DIR)\src\phobos\std\internal\math\ 
+	mkdir $(DIR)\src\phobos\std\internal\windows\ 
+	mkdir $(DIR)\src\phobos\etc\ 
+	mkdir $(DIR)\src\phobos\etc\c\ 
+	mkdir $(DIR)\src\phobos\etc\c\zlib\ 
+	mkdir $(DIR)\html\d\phobos\ 
 	$(CP) win32.mak posix.mak $(STDDOC) $(DIR)\src\phobos\ 
 	$(CP) $(SRC) $(DIR)\src\phobos\ 
 	$(CP) $(SRC_STD) $(DIR)\src\phobos\std\ 
