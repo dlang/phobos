@@ -7393,7 +7393,7 @@ assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).daysInMonth == 30);
     }
 
     /++
-        $(RED Deprecated. It will be removed in August 2012.
+        $(RED Deprecated. It will be removed in September 2012.
               Please use daysInMonth instead.)
       +/
     deprecated @property ubyte endOfMonthDay() const nothrow
@@ -12406,7 +12406,7 @@ assert(Date(2000, 6, 4).daysInMonth == 30);
     }
 
     /++
-        $(RED Deprecated. It will be removed in August 2012.
+        $(RED Deprecated. It will be removed in September 2012.
               Please use daysInMonth instead.)
       +/
     deprecated @property ubyte endOfMonthDay() const pure nothrow
@@ -17299,7 +17299,7 @@ assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).daysInMonth == 30);
     }
 
     /++
-        $(RED Deprecated. It will be removed in August 2012.
+        $(RED Deprecated. It will be removed in September 2012.
               Please use daysInMonth instead.)
       +/
     deprecated @property ubyte endOfMonthDay() const pure nothrow
