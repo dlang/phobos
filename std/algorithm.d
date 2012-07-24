@@ -426,13 +426,18 @@ template map(fun...) if (fun.length >= 1)
 
             static if (isRandomAccessRange!R)
             {
-                auto ref opIndex(size_t index)
+                static if (is(typeof(_input[ulong.max])))
+                    private alias ulong opIndex_t;
+                else
+                    private alias uint opIndex_t;
+                    
+                auto ref opIndex(opIndex_t index)
                 {
                     return _fun(_input[index]);
                 }
             }
 
-            static if (hasLength!R || isSomeString!R)
+            static if (hasLength!R)
             {
                 @property auto length()
                 {
@@ -444,7 +449,12 @@ template map(fun...) if (fun.length >= 1)
 
             static if (hasSlicing!R)
             {
-                auto opSlice(size_t lowerBound, size_t upperBound)
+                static if (is(typeof(_input[ulong.max .. ulong.max])))
+                    private alias ulong opSlice_t;
+                else
+                    private alias uint opSlice_t;
+
+                auto opSlice(opSlice_t lowerBound, opSlice_t upperBound)
                 {
                     return typeof(this)(_input[lowerBound..upperBound]);
                 }
@@ -551,6 +561,14 @@ unittest
         static assert(propagatesRangeType!(typeof(m), DummyType));
         assert(equal(m, [1,4,9,16,25,36,49,64,81,100]));
     }
+    
+    //Test string access
+    string  s1 = "hello world!";
+    dstring s2 = "hello world!"d;
+    auto ms1 = map!(std.ascii.toUpper)(s1);
+    auto ms2 = map!(std.ascii.toUpper)(s2);
+    static assert(!is(ms1[0])); //narrow strings can't be indexed
+    assert(ms2[0] == 'H');
 }
 unittest
 {
@@ -918,15 +936,69 @@ assert(a == [ 8, 9, 8, 9, 8 ]);
 ----
  */
 void fill(Range1, Range2)(Range1 range, Range2 filler)
-if (isInputRange!Range1 && isForwardRange!Range2
+    if (isInputRange!Range1
+        && (isForwardRange!Range2
+            || (isInputRange!Range2 && isInfinite!Range2))
         && is(typeof(Range1.init.front = Range2.init.front)))
 {
-    enforce(!filler.empty);
-    auto t = filler.save;
-    for (; !range.empty; range.popFront(), t.popFront())
+    static if(isInfinite!Range2)
     {
-        if (t.empty) t = filler;
-        range.front = t.front;
+        //Range2 is infinite, no need for bounds checking or saving
+        static if(hasSlicing!Range2 && hasLength!Range1
+            && is(typeof(filler[0 .. range.length])))
+        {
+            copy(filler[0..range.length], range);
+        }
+        else
+        {
+            //manual feed
+            for ( ; !range.empty; range.popFront(), filler.popFront())
+            {
+                range.front = filler.front;
+            }
+        }
+    }
+    else
+    {
+        enforce(!filler.empty, "Cannot fill range with an empty filler");
+
+        static if(hasLength!Range1 && hasLength!Range2 
+            && is(typeof(range.length > filler.length)))
+        {
+            //Case we have access to length
+            auto len = filler.length;
+            //Start by bulk copies
+            for( ; range.length > len ; )
+            {
+                range = copy(filler.save, range);
+            }
+            
+            //and finally fill the partial range. No need to save here.
+            static if (hasSlicing!Range2 && is(typeof(filler[0 .. range.length])))
+            {
+                //use a quick copy
+                auto len2 = range.length;
+                range = copy(filler[0 .. len2], range);
+            }
+            else
+            {
+                //iterate. No need to check filler, it's length is longer than range's
+                for (; !range.empty; range.popFront(), filler.popFront())
+                {
+                    range.front = filler.front;
+                }
+            }
+        }
+        else
+        {
+            //Most basic case.
+            auto bck = filler.save;
+            for (; !range.empty; range.popFront(), filler.popFront())
+            {
+                if (filler.empty) filler = bck.save;
+                range.front = filler.front;
+            }
+        }
     }
 }
 
@@ -944,6 +1016,17 @@ unittest
     fill(range,[1,2]);
     foreach(i,value;range.arr)
     	assert(value == (i%2==0?1:2));
+
+    //test with a input being a "reference forward" range
+    fill(a, new ReferenceForwardRange!int([8, 9]));
+    assert(a == [8, 9, 8, 9, 8]);
+    
+    //test with a input being an "infinite input" range
+    fill(a, new ReferenceInfiniteInputRange!int());
+    assert(a == [0, 1, 2, 3, 4]);
+
+    //empty filler test
+    assertThrown(fill(a, a[$..$]));
 }
 
 /**
@@ -4652,17 +4735,16 @@ assert(p == [ 7, 8, 9 ]);
 ----
 */
 Range findAdjacent(alias pred = "a == b", Range)(Range r)
-    if (isForwardRange!(Range))
+    if (isForwardRange!Range)
 {
-    auto ahead = r;
-    if (!ahead.empty)
+    if (r.empty) return r;
+    auto ahead = r.save; 
+    for (ahead.popFront(); !ahead.empty; r.popFront(), ahead.popFront())
     {
-        for (ahead.popFront(); !ahead.empty; r.popFront(), ahead.popFront())
-        {
-            if (binaryFun!(pred)(r.front, ahead.front)) return r;
-        }
+        if (binaryFun!(pred)(r.front, ahead.front)) return r;
     }
-    return ahead;
+    r.popFront();
+    return r;
 }
 
 unittest
@@ -4900,16 +4982,54 @@ double[] c = [ 1.005, 2, 4, 3];
 assert(equal!(approxEqual)(b, c));
 ----
 */
-bool equal(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
-if (isInputRange!(Range1) && isInputRange!(Range2)
+bool equal(Range1, Range2)(Range1 r1, Range2 r2)
+    if (isInputRange!Range1 && isInputRange!Range2
+        && is(typeof(r1.front == r2.front)))
+{
+    static if (isArray!Range1 && isArray!Range2
+        && is(typeof(r1 == r2)))
+    {
+        //Ranges are comparable. Let the compiler do the comparison.
+        return r1 == r2;
+    }
+    else
+    {
+        //Need to do an actual compare, delegate to predicate version
+        return equal!"a==b"(r1, r2);
+    }
+}
+
+// Ditto
+bool equal(alias pred, Range1, Range2)(Range1 r1, Range2 r2)
+    if (isInputRange!Range1 && isInputRange!Range2
         && is(typeof(binaryFun!pred(r1.front, r2.front))))
 {
-    for (; !r1.empty; r1.popFront(), r2.popFront())
+    //Try a fast implementation when the ranges have comparable lengths
+    static if (hasLength!Range1 && hasLength!Range2
+        && is(typeof(r1.length == r2.length)))
     {
-        if (r2.empty) return false;
-        if (!binaryFun!(pred)(r1.front, r2.front)) return false;
+        auto len1 = r1.length;
+        auto len2 = r2.length;
+        if (len1 != len2) return false; //Short circuit return
+        
+        //Lengths are the same, so we need to do an actual comparison
+        //Good news is we can sqeeze out a bit of performance by not checking if r2 is empty
+        for (; !r1.empty; r1.popFront(), r2.popFront())
+        {
+            if (!binaryFun!(pred)(r1.front, r2.front)) return false;
+        }
+        return true;
     }
-    return r2.empty;
+    else
+    {
+        //Generic case, we have to walk both ranges making sure neither is empty
+        for (; !r1.empty; r1.popFront(), r2.popFront())
+        {
+            if (r2.empty) return false;
+            if (!binaryFun!(pred)(r1.front, r2.front)) return false;
+        }
+        return r2.empty;
+    }
 }
 
 unittest
@@ -4928,8 +5048,54 @@ unittest
     double[] c = [ 1.005, 2, 4, 3];
     assert(equal!(approxEqual)(b, c));
 
-    // utf-8 strings
-    assert(equal("æøå", "æøå"));
+    // various strings
+    assert(equal("æøå",  "æøå"));    //UTF8 vs UTF8
+    assert(!equal("日本語", "æøå")); //UTF8 vs UTF8
+    assert(equal("æøå"w, "æøå"d));    //UTF16 vs UTF32
+    assert(!equal("日本語"w, "æøå"d));//UTF16 vs UTF32
+    assert(equal("æøå"d, "æøå"d));    //UTF32 vs UTF32
+    assert(!equal("日本語"d, "æøå"d));//UTF32 vs UTF32
+    assert(!equal("hello", "world"));
+
+    // same strings, but "explicit non default" comparison (to test the non optimized array comparison)
+    assert( equal!("a==b")("æøå",  "æøå"));   //UTF8 vs UTF8
+    assert(!equal!("a==b")("日本語", "æøå")); //UTF8 vs UTF8
+    assert( equal!("a==b")("æøå"w, "æøå"d));  //UTF16 vs UTF32
+    assert(!equal!("a==b")("日本語"w, "æøå"d));//UTF16 vs UTF32
+    assert( equal!("a==b")("æøå"d, "æøå"d));   //UTF32 vs UTF32
+    assert(!equal!("a==b")("日本語"d, "æøå"d));//UTF32 vs UTF32
+    assert(!equal!("a==b")("hello", "world"));
+
+    //Array of string
+    assert(equal(["hello", "world"], ["hello", "world"]));
+    assert(!equal(["hello", "world"], ["hello"]));
+    assert(!equal(["hello", "world"], ["hello", "Bob!"]));
+    
+    //Should not compile, because "string == dstring" is illegal
+    static assert(!is(typeof(equal(["hello", "world"], ["hello"d, "world"d]))));
+    //However, arrays of non-matching string can be compared using equal!equal. Neat-o!
+    equal!equal(["hello", "world"], ["hello"d, "world"d]);
+
+    //Tests, with more fancy map ranges
+    assert(equal([2, 4, 8, 6], map!"a*2"(a)));
+    assert(equal!approxEqual(map!"a*2"(b), map!"a*2"(c)));
+    assert(!equal([2, 4, 1, 3], map!"a*2"(a)));
+    assert(!equal([2, 4, 1], map!"a*2"(a)));
+    assert(!equal!approxEqual(map!"a*3"(b), map!"a*2"(c)));
+    
+    //Tests with some fancy reference ranges.
+    ReferenceInputRange!int   cir = new ReferenceInputRange!int([1, 2, 4, 3]);
+    ReferenceForwardRange!int cfr = new ReferenceForwardRange!int([1, 2, 4, 3]);
+    assert(equal(cir, a));
+    cir = new ReferenceInputRange!int([1, 2, 4, 3]);
+    assert(equal(cir, cfr.save));
+    assert(equal(cfr.save, cfr.save));
+    cir = new ReferenceInputRange!int([1, 2, 8, 1]);
+    assert(!equal(cir, cfr));
+
+    //Test with an infinte range
+    ReferenceInfiniteForwardRange!int ifr = new ReferenceInfiniteForwardRange!int;
+    assert(!equal(a, ifr));
 }
 
 // cmp
@@ -5252,17 +5418,20 @@ assert(minCount!("a > b")(a) == tuple(4, 2));
  */
 Tuple!(ElementType!(Range), size_t)
 minCount(alias pred = "a < b", Range)(Range range)
+    if (isInputRange!Range && !isInfinite!Range)
 {
-    if (range.empty) return typeof(return)();
-    auto p = &(range.front());
+    enforce(!range.empty, "Can't count elements from an empty range");
     size_t occurrences = 1;
+
+    auto p = range.front;
     for (range.popFront(); !range.empty; range.popFront())
     {
-        if (binaryFun!(pred)(*p, range.front)) continue;
-        if (binaryFun!(pred)(range.front, *p))
+        auto p2 = range.front;
+        if (binaryFun!(pred)(p, p2)) continue;
+        if (binaryFun!(pred)(p2, p))
         {
-            // change the min
-            p = &(range.front());
+            //change the min
+            move(p2, p);
             occurrences = 1;
         }
         else
@@ -5270,7 +5439,7 @@ minCount(alias pred = "a < b", Range)(Range range)
             ++occurrences;
         }
     }
-    return tuple(*p, occurrences);
+    return tuple(p, occurrences);
 }
 
 unittest
@@ -5283,6 +5452,13 @@ unittest
     int[][] b = [ [4], [2, 4], [4], [4] ];
     auto c = minCount!("a[0] < b[0]")(b);
     assert(c == tuple([2, 4], 1), text(c[0]));
+
+    //Test empty range
+    assertThrown(minCount(a[$..$]));
+
+    //test with reference ranges. Test both input and forward.
+    assert(minCount(new ReferenceInputRange!int([1, 2, 1, 0, 2, 0])) == tuple(0, 2));
+    assert(minCount(new ReferenceForwardRange!int([1, 2, 1, 0, 2, 0])) == tuple(0, 2));
 }
 
 // minPos
@@ -5303,15 +5479,19 @@ assert(minPos!("a > b")(a) == [ 4, 1, 2, 4, 1, 1, 2 ]);
 ----
  */
 Range minPos(alias pred = "a < b", Range)(Range range)
+    if(isForwardRange!Range && !isInfinite!Range)
 {
-    if (range.empty) return range;
-    auto result = range;
+    auto result = range.save;
+    auto p = result.front;
     for (range.popFront(); !range.empty; range.popFront())
     {
-        if (binaryFun!(pred)(result.front, range.front)
-                || !binaryFun!(pred)(range.front, result.front)) continue;
-        // change the min
-        result = range;
+        auto p2 = range.front;
+        if (binaryFun!(pred)(p2, p))
+        {
+            // change the min
+            result = range.save;
+            move(p2, p);
+        }
     }
     return result;
 }
@@ -5325,6 +5505,9 @@ unittest
     assert(minPos(a) == [ 1, 2, 4, 1, 1, 2 ]);
 // Maximum is 4 and first occurs in position 5
     assert(minPos!("a > b")(a) == [ 4, 1, 2, 4, 1, 1, 2 ]);
+
+    //test with reference range.
+    assert( equal( minPos(new ReferenceForwardRange!int([1, 2, 1, 0, 2, 0])), [0, 2, 0] ) );
 }
 
 // mismatch
@@ -8741,6 +8924,42 @@ version(unittest)
             result ~= i / 50.0;
         }
         return result;
+    }
+
+    //Reference input range
+    private class ConsumableInputRange(T)
+    {
+        this(Range)(Range r) if (isInputRange!Range) {_payload = array(r);}
+        final @property ref T front(){return _payload.front;}
+        final void popFront(){_payload.popFront;}
+        final bool empty(){return _payload.empty;}
+        protected T[] _payload;
+    }
+
+    //Reference forward range
+    private class ConsumableForwardRange(T) : ConsumableInputRange!T
+    {
+        this(Range)(Range r) if (isInputRange!Range) {super(r);}
+        final ConsumableForwardRange save()
+        {return new ConsumableForwardRange!T(_payload);}
+    }
+
+    //Reference infinite input range
+    private class InfiniteInputRange(T)
+    {
+        this(T first = T.init) {_val = first;}
+        final @property T front(){return _val;}
+        final void popFront(){++_val;}
+        enum bool empty = false;
+        protected T _val;
+    }
+
+    //Reference infinite forward range
+    private class InfiniteForwardRange(T) : InfiniteInputRange!T
+    {
+        this(T first = T.init) {super(first);}
+        final InfiniteForwardRange save()
+        {return new InfiniteForwardRange!T(_val);}
     }
 }
 
