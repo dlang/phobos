@@ -416,7 +416,7 @@ unittest
 }
 
 /**
-$(RED Deprecated. It will be removed in August 2012. Please define $(D opCast)
+$(RED Deprecated. It will be removed in September 2012. Please define $(D opCast)
       for user-defined types instead of a $(D to) function.
       $(LREF to) will now use $(D opCast).)
 

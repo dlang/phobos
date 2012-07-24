@@ -647,7 +647,7 @@ receiveOnlyRet!(T) receiveOnly(T...)()
 
 
 /**
- * $(RED Deprecated. It will be removed in August 2012. Please use the version
+ * $(RED Deprecated. It will be removed in September 2012. Please use the version
  *       which takes a $(CXREF time, Duration) instead.)
  */
 deprecated bool receiveTimeout(T...)( long ms, T ops )
