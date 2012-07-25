@@ -2479,12 +2479,26 @@ Assignment operators
     void opAssign(typeof(this) rhs)
     {
         swap(RefCounted._store, rhs.RefCounted._store);
+
+        //Take this opportunity to check this is initialized for autoInit == yes
+        static if (autoInit == RefCountedAutoInitialize.yes)
+        {
+            RefCounted.ensureInitialized();
+        }
     }
 
 /// Ditto
     void opAssign(T rhs)
     {
-        RefCounted._store._payload = move(rhs);
+        static if (autoInit == RefCountedAutoInitialize.yes)
+        {
+            RefCounted.ensureInitialized();
+        }
+        else
+        {
+            assert(RefCounted.isInitialized);
+        }
+        move(rhs, RefCounted._store._payload);
     }
 
 /**
