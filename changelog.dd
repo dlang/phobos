@@ -19,6 +19,12 @@ $(VERSION 060, ddd mm, 2012, =================================================,
         $(LI std.utf: Added overload of codeLength which operates on a string.)
         $(LI Capitalized std.traits.pointerTarget to PointerTarget. Old one is
              scheduled for deprecation.)
+        $(LI std.algorithm.indexOf - which was scheduled for deprecation - has been deprecated (it was
+             easily confused with std.string.indexOf). Please use countUntil instead.)
+        $(LI std.cpuid - which was scheduled for deprecation - has been deprecated.
+             Please use core.cpuid instead.)
+        $(LI std.conv.ConvError and ConvOverflowException - which were scheduled for deprecation - have
+             been deprecated. Please catch ConvException and ConvOverflowException instead.)
         $(LI The overloads of std.conv.to which were scheduled for deprecation
              because formattedWrite replaced them have now been deprecated.
              Please use std.format.formattedWrite instead.)
@@ -26,7 +32,18 @@ $(VERSION 060, ddd mm, 2012, =================================================,
              arguments has been scheduled for deprecation (as it causes unnecessary template bloat).
              Please use the overload which takes them as function arguments instead. This will have no
              effect on any calls to enforce which do not explicitly pass the file or line number.)
+        $(LI std.format.FormatError - which was scheduled for deprecation - has been deprecated.
+             Please catch FormatException instead.)
         $(LI std.file.listDir has been deprecated. Please use std.file.dirEntries instead.)
+        $(LI std.range.replicate - which was scheduled for deprecation - has been deprecated.
+             Please use repeat instead.)
+        $(LI std.range.SortedRange.canFind - which was scheduled for deprecation - has been deprecated.
+             Please use SortedRange.contains instead.)
+        $(LI std.socket: timeval and linger - which were scheduled for deprecation - have been deprecated.
+             Please use TimeVal and Linger.)
+        $(LI std.stdio.isStreamingDevice has been scheduled for deprecation. Please use
+             isFileHandle instead.)
+        $(LI The deprecated std.typecons.defineEnum has been removed.)
         $(LI UtfException - which was scheduled for deprecation - has been deprecated.
              Please use UTFException instead.)
         $(LI The deprecated overloads of std.array.insert and std.array.replace
