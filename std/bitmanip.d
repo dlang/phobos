@@ -25,25 +25,174 @@ module std.bitmanip;
 
 import core.bitop;
 import std.traits;
+import std.stdio : writeln, writefln, writef;
 
+private pure int indexOf(string str, char letter)
+{
+    foreach(i, c; str)
+        if (c == letter)
+            return i;
+    return -1;
+}
 
-private string myToStringx(ulong n)
+//remove spaces from beginning/end of string
+private pure string trim(string str)
+{
+    while (str.length && str[0] == ' ')
+        str = str[1 .. $];
+    while (str.length && str[$-1] == ' ')
+        str = str[0 .. $-1];
+    return str;
+}
+
+private pure string myToStringHex(ulong n)
+{
+    enum s = "0123456789abcdef";
+    enum len = s.length;
+    if (n < len)
+        return "0x" ~ s[cast(size_t) n .. (cast(size_t) n + 1)];
+    else
+        return myToStringHex(n / len) ~ myToStringHex(n % len)[2 .. $];
+}
+
+//for debugging
+private pure string myToStringx(long n)
 {
     enum s = "0123456789";
-    if (n < 10)
-        return s[cast(size_t)n..cast(size_t)n+1];
+    enum len = s.length;
+
+    if (n < 0)
+        return "-" ~ myToString(cast(ulong) -n);
+
+    if (n < len)
+        return s[cast(size_t) n .. (cast(size_t) n + 1)];
     else
-        return myToStringx(n / 10) ~ myToStringx(n % 10);
+        return myToStringx(n / len) ~ myToStringx(n % len);
 }
 
-private string myToString(ulong n)
+private pure ulong myToLongFromHex(string str)
 {
-    return myToStringx(n) ~ (n > uint.max ? "UL" : "U");
+    enum l = "0123456789abcdef";
+    enum u = "0123456789ABCDEF";
+
+    ulong sum;
+
+    foreach(ch; str[2 .. $]) {
+        assert(l.indexOf(ch) != -1 || u.indexOf(ch) != -1);
+        sum <<= 4;
+        
+        if (l.indexOf(ch) != -1)
+            sum += l.indexOf(ch);
+        else if (u.indexOf(ch) != -1)
+            sum += u.indexOf(ch);
+    }
+
+    return sum;
 }
+
+private pure ulong myToLong(string str)
+{
+    ulong sum;
+
+    enum d = "0123456789";
+    enum len = d.length;
+    
+    if (str == "true")
+        return 1;
+    if (str == "false")
+        return 0;
+        
+    if (str.length > 2 && str[0 .. 2] == "0x") {
+        return myToLongFromHex(str);
+    }
+        
+    if (str[0] == '-')
+        return -myToLong(str[1 .. $]);
+    
+    foreach(ch; str) {
+        assert(d.indexOf(ch) != -1);
+        sum *= len;
+        sum += d.indexOf(ch);
+    }
+    
+    return sum;
+}
+
+unittest
+{
+    assert("01234".indexOf('2') == 2);
+    assert("01234".indexOf('x') == -1);
+    
+    assert(myToStringHex(0x12340deed) == "0x12340deed");
+    
+    assert(myToStringx(-100) == "-100");
+    assert(myToStringx(5) == "5");
+    assert(myToStringx(512) == "512");
+    assert(myToStringx(123) == "123");
+    assert(myToStringx(-123) == "-123");
+    
+    assert(myToLongFromHex("0x1234") == 0x1234);
+    assert(myToLongFromHex("0x90dead") == 0x90dead);
+    assert(myToLongFromHex("0x90BEEF") == 0x90beef);
+
+    assert(myToLong("123") == 123);
+    assert(myToLong("-123") == -123);
+    assert(myToLong("true") == 1);
+    assert(myToLong("false") == 0);
+    assert(myToLong("0x123") == 0x123);
+    
+    assert(myToString(45) == "45");
+    assert(myToString(1UL << 32) == "0x100000000UL");
+
+    assert(trim("   123   ") == "123");
+}
+
+private pure string myToString(long n)
+{
+    //within a certain size we don't need to bother with hex, right?
+    if (n >= short.min && n <= short.max)
+        return myToStringx(n);
+
+    return myToStringHex(n) ~ ((n > uint.max || n < uint.min) ? "UL" : "U");
+}
+
+//pair to split name=value into their two halfs safely.
+//add built in 'trim' to them?
+private pure string getName(string nameAndValue)
+{
+    int equalsChar = nameAndValue.indexOf('=');
+    if (equalsChar != -1)
+        return trim(nameAndValue[0 .. equalsChar]);
+    return trim(nameAndValue);
+}
+
+private pure ulong getValue(string nameAndValue)
+{
+    int equalsChar = nameAndValue.indexOf('=');
+    if (equalsChar != -1)
+        return myToLong(trim(nameAndValue[equalsChar+1 .. $]));
+    return 0;
+}
+
+unittest
+{
+    assert(getName("test") == "test");
+    assert(getValue("test") == 0);
+
+    assert(getName("test=100") == "test");
+    assert(getValue("test=100") == 100);
+    
+    assert(getName("  test  =  100  ") == "test");
+    assert(getValue("  test  =  100  ") == 100);
+}
+
 
 private template createAccessors(
-    string store, T, string name, size_t len, size_t offset)
+    string store, T, string nameAndValue, size_t len, size_t offset)
 {
+    enum name = getName(nameAndValue),
+                defaultValue = getValue(nameAndValue);
+    
     static if (!name.length)
     {
         // No need to create any accessor
@@ -68,30 +217,55 @@ private template createAccessors(
         {
             enum long minVal = -(1uL << (len - 1));
             enum ulong maxVal = (1uL << (len - 1)) - 1;
+            static assert(cast(long) minVal <= cast(long) defaultValue &&
+                    cast(long) maxVal >= cast(long) defaultValue,
+                        "Default value outside of valid range:"
+                        ~"\nVariable: " ~ name
+                        ~"\nMinimum: " ~ myToStringx(minVal)
+                        ~"\nMaximum: " ~ myToStringx(maxVal)
+                        ~"\nDefault: " ~ myToStringx(cast(long) defaultValue));
         }
         else
         {
             enum ulong minVal = 0;
             enum ulong maxVal = (1uL << len) - 1;
+            static assert(minVal <= defaultValue && maxVal >= defaultValue,
+                "Default value outside of valid range:"
+                ~"\nVariable: " ~ name
+                ~"\nMinimum: " ~ myToStringx(minVal)
+                ~"\nMaximum: " ~ myToStringx(maxVal)
+                ~"\nDefault: " ~ myToStringx(defaultValue));
         }
+
+        enum ulong defVal = (defaultValue << offset) & maskAllElse;
 
         static if (is(T == bool))
         {
             static assert(len == 1);
             enum result =
+            // constants
+                //only optional for cleaner namespace
+                (defVal ? "enum " ~ name ~ "_def = " ~ myToString(defVal) ~ ";\n" : "\n")
             // getter
-                "@property @safe bool " ~ name ~ "() pure nothrow const { return "
+                ~"@property @safe pure nothrow bool " ~ name ~ "() const { return "
                 ~"("~store~" & "~myToString(maskAllElse)~") != 0;}\n"
             // setter
-                ~"@property @safe void " ~ name ~ "(bool v) pure nothrow {"
+                ~"@property @safe pure nothrow void " ~ name ~ "(bool v){"
                 ~"if (v) "~store~" |= "~myToString(maskAllElse)~";"
                 ~"else "~store~" &= ~"~myToString(maskAllElse)~";}\n";
         }
         else
         {
+            // constants
+            enum result = "enum "~T.stringof~" "~name~"_min = cast("~T.stringof~")"
+                ~(minVal < 0 ? myToString(cast(long) minVal) : myToString(minVal))~"; "
+                ~" enum "~T.stringof~" "~name~"_max = cast("~T.stringof~")"
+                ~myToString(maxVal)~"; "
+                //only optional for cleaner namespace
+                ~ (defVal ? "enum " ~ name ~ "_def = " ~ myToString(defVal) ~ ";\n" : "\n")
             // getter
-            enum result = "@property @safe "~T.stringof~" "~name~"() pure nothrow const { auto result = "
-                "("~store~" & "
+                ~ "@property @safe "~T.stringof~" "~name~"() pure nothrow const { auto result = "
+                ~ "("~store~" & "
                 ~ myToString(maskAllElse) ~ ") >>"
                 ~ myToString(offset) ~ ";"
                 ~ (T.min < 0
@@ -106,12 +280,7 @@ private template createAccessors(
                 ~store~" = cast(typeof("~store~"))"
                 " (("~store~" & ~"~myToString(maskAllElse)~")"
                 " | ((cast(typeof("~store~")) v << "~myToString(offset)~")"
-                " & "~myToString(maskAllElse)~"));}\n"
-            // constants
-                ~"enum "~T.stringof~" "~name~"_min = cast("~T.stringof~")"
-                ~myToString(minVal)~"; "
-                ~" enum "~T.stringof~" "~name~"_max = cast("~T.stringof~")"
-                ~myToString(maxVal)~"; ";
+                " & "~myToString(maskAllElse)~"));}\n";
         }
     }
 }
@@ -121,10 +290,17 @@ private template createStoreName(Ts...)
     static if (Ts.length < 2)
         enum createStoreName = "";
     else
-        enum createStoreName = "_" ~ Ts[1] ~ createStoreName!(Ts[3 .. $]);
+        enum createStoreName = "_" ~ getName(Ts[1]) ~ createStoreName!(Ts[3 .. $]);
+}
+unittest
+{
+    //make sure added defaults don't interfere with store name.
+    assert(createStoreName!(int, "abc", 1, int, "def", 1) == "_abc_def");
+    assert(createStoreName!(int, "abc=5", 1, int, "def=true", 1) == "_abc_def");
+    assert(createStoreName!(int, " abc = -5 ", 1, int, " def = true ", 1) == "_abc_def");
 }
 
-private template createFields(string store, size_t offset, Ts...)
+private template createFields(string store, size_t offset, string defaults, Ts...)
 {
     static if (!Ts.length)
     {
@@ -141,13 +317,26 @@ private template createFields(string store, size_t offset, Ts...)
             static assert(false, "Field widths must sum to 8, 16, 32, or 64");
             alias ulong StoreType; // just to avoid another error msg
         }
-        enum result = "private " ~ StoreType.stringof ~ " " ~ store ~ ";";
+        //if we have any defaults, auto assign, otherwise blank.
+        //bitmanip used in a union we will have a 'overlapping initialization' otherwise
+        enum result = "private " ~ StoreType.stringof ~ " " ~ store ~
+                (defaults.length ? " = " ~ defaults : "") ~ ";";
     }
     else
     {
         enum result
             = createAccessors!(store, Ts[0], Ts[1], Ts[2], offset).result
-            ~ createFields!(store, offset + Ts[2], Ts[3 .. $]).result;
+            ~ createFields!(store, offset + Ts[2], defaults ~
+                //if we have a bitfield name
+                (Ts[1].length ? (
+                    //and it has a value
+                    getValue(Ts[1]) ? (
+                        //if we have a previous value, OR it, appending our new value
+                        (defaults.length ? " | " : "")
+                        ~getName(Ts[1]) ~ "_def"
+                    ) : ""
+                ) : ""),
+                Ts[3 .. $]).result;
     }
 }
 
@@ -164,18 +353,25 @@ struct A
     mixin(bitfields!(
         uint, "x",    2,
         int,  "y",    3,
-        uint, "z",    2,
+        uint, "z=1",  2,
         bool, "flag", 1));
 }
 A obj;
 obj.x = 2;
 obj.z = obj.x;
+assert(obj.z == 1);
 ----
 
 The example above creates a bitfield pack of eight bits, which fit in
 one $(D_PARAM ubyte). The bitfields are allocated starting from the
 least significant bit, i.e. x occupies the two least significant bits
 of the bitfields storage.
+
+Adding a default value is possible using adding '=value' on the variable
+name. It will fail to compile if your default value is outside the range
+that the bit could hold. IE 'ubyte, "x=64", 5'. Do not use this if you
+intend to use it in a union, or you will get a 'overlapping initialization'
+compile time error.
 
 The sum of all bit lengths in one $(D_PARAM bitfield) instantiation
 must be exactly 8, 16, 32, or 64. If padding is needed, just allocate
@@ -200,32 +396,7 @@ bool), followed by unsigned types, followed by signed types.
 
 template bitfields(T...)
 {
-    enum { bitfields = createFields!(createStoreName!(T), 0, T).result }
-}
-
-unittest
-{
-    struct Test
-    {
-        mixin(bitfields!(bool, "a", 1,
-                         uint, "b", 3,
-                         short, "c", 4));
-    }
-
-    @safe void test() pure nothrow
-    {
-        Test t;
-
-        t.a = true;
-        t.b = 5;
-        t.c = 2;
-
-        assert(t.a);
-        assert(t.b == 5);
-        assert(t.c == 2);
-    }
-
-    test();
+    enum { bitfields = createFields!(createStoreName!(T), 0, "", T).result }
 }
 
 unittest
@@ -277,6 +448,62 @@ unittest
     assert(f.checkExpectations(false));
     f.b = true;
     assert(f.checkExpectations(true));
+    
+    //test default values
+    struct WithDefaults {
+        mixin(bitfields!(
+                bool, "b_f=false", 1,
+                bool, "b_t=true", 1,
+                uint, "i_min=0", 3,
+                uint, "i_max=7", 3,
+                short, "  s_min  =  -8  ", 4,   //test spaces
+                short, "s_max=7", 4));
+
+        mixin(bitfields!(
+                bool, "b_", 1,
+                uint, "i_", 3,
+                short, "  s_  ", 4));
+    }
+    WithDefaults wd;
+
+    with(wd) {
+        //non-specified variables go to 0
+        assert(b_ == false);
+        assert(i_ == 0);
+        assert(s_ == 0);
+        
+        //assigned defaults should be set.
+        assert(b_f == false);
+        assert(b_t == true);
+        assert(i_min == 0);
+        assert(i_max == 7);
+        assert(s_min == -8);
+        assert(s_max == 7);
+        
+        assert(i_min_max == i_max_max);
+        assert(i_max_min == i_min_min);
+        
+        assert(i_min_min == i_min);
+        assert(i_max_max == i_max);
+        assert(s_min_min == s_min);
+        assert(s_max_max == s_max);
+    }
+
+    /*
+      from format.d; Ensures there's no 'overlapping initialization'.
+      Compiling is enough to ensure it works. If any of these has a
+      default; say 'flDash=true', then the problem would appear.
+    */
+    union xxx {
+        ubyte allFlags;
+        mixin(bitfields!(
+                bool, "flDash", 1,
+                bool, "flZero", 1,
+                bool, "flSpace", 1,
+                bool, "flPlus", 1,
+                bool, "flHash", 1,
+                ubyte, "", 3));
+    }
 }
 
 /**
@@ -357,7 +584,7 @@ unittest
     assert(x.fraction == 0 && x.exponent == 1022 && !x.sign);
 
     // test writing
-    x.fraction = 1125899906842624;
+    x.fraction = 0x4UL << 48;
     x.exponent = 1025;
     x.sign = true;
     assert(x.value == -5.0);
