@@ -600,6 +600,259 @@ unittest
     }
 }
 
+//functions preparing for BitArray
+
+/**
+  Contains common enum values for bit related data.
+  Enums:
+  ----
+  alias enumBits!ubyte enumUByte;
+  assert(enumUByte.bitsPerT == 8);     //bits for the type
+  assert(enumUByte.logT == 3);         //log2(bitsPerT)
+  assert(enumUByte.logTMask == 7);    //mask to include logT bits on
+  ----
+*/
+template enumBits(T)
+if(isArray!(T) == false && (isNumeric!(T) || is(T == void)))
+{
+    enum {
+        bitsPerT = T.sizeof * 8,
+        logT = log2(bitsPerT),
+        logTMask = (1 << logT) - 1,
+    }
+    
+    /**
+     used for dividing the lower bit offset and the array offset, removing magic numbers
+     ----
+     alias enumBits!ubyte enumUByte;
+     assert(enumUByte.arrayIndex(7) == 0);
+     assert(enumUByte.arrayIndex(8) == 1);
+     assert(enumUByte.arrayIndex(15) == 1);
+     assert(enumUByte.arrayIndex(16) == 2);
+     ----
+    */
+    @safe static pure nothrow size_t arrayIndex(ulong index)
+    {
+        return cast(size_t) (index >> logT);
+    }
+
+    /**
+     Compliment of arrayIndex. Give the bit offset for the array
+     ----
+     alias enumBits!ubyte enumUByte;
+     assert(enumUByte.bitIndex(7) == 7);
+     assert(enumUByte.bitIndex(8) == 0);
+     assert(enumUByte.bitIndex(12) == 4); //12 % 8
+     ----
+    */
+    @safe static pure nothrow size_t bitIndex(ulong index)
+    {
+        return cast(size_t) (index & logTMask);
+    }
+}
+
+//simple log2 function not requiring floating point.
+private @property @safe pure nothrow size_t log2(T)(T val)
+if(isIntegral!(T) && isFloatingPoint!(T) == false)
+{
+    size_t shifts;
+    
+    if (val) {
+        val--;
+
+        while (val) {
+            val >>>= 1;
+            shifts++;
+        }
+    }
+    
+    return shifts;
+}
+
+unittest
+{
+    assert(log2(0) == 0);    //correct?
+    assert(log2(1) == 0);    //correct?
+    assert(log2(2) == 1);
+    assert(log2(3) == 2);
+    assert(log2(4) == 2);
+    assert(log2(5) == 3);
+    assert(log2(6) == 3);
+    assert(log2(7) == 3);
+    assert(log2(8) == 3);
+    assert(log2(9) == 4);
+
+}
+
+unittest
+{
+    with(enumBits!size_t)
+    {
+        assert(bitsPerT == size_t.sizeof * 8);
+        assert(arrayIndex(30) == 30 / bitsPerT);
+        assert(arrayIndex(60) == 60 / bitsPerT);
+        assert(arrayIndex(70) == 70 / bitsPerT);
+        assert(arrayIndex(63) == 63 / bitsPerT);
+
+        assert(bitIndex(30) == 30 % bitsPerT);
+        assert(bitIndex(60) == 60 % bitsPerT);
+        assert(bitIndex(70) == 70 % bitsPerT);
+        assert(bitIndex(63) == 63 % bitsPerT);
+    }
+    
+    assert(enumBits!void.bitsPerT == 8);
+    
+    with(enumBits!byte)
+    {
+        assert(bitsPerT == byte.sizeof * 8);
+        assert(arrayIndex(30) == 30 / bitsPerT);
+        assert(arrayIndex(60) == 60 / bitsPerT);
+        assert(arrayIndex(70) == 70 / bitsPerT);
+        assert(arrayIndex(63) == 63 / bitsPerT);
+
+        assert(bitIndex(30) == 30 % bitsPerT);
+        assert(bitIndex(60) == 60 % bitsPerT);
+        assert(bitIndex(70) == 70 % bitsPerT);
+        assert(bitIndex(63) == 63 % bitsPerT);
+    }
+}
+
+//returns how many bits a particular array (in it's entirety) has.
+@property @safe pure nothrow ulong totalBits(T)(T[] arr)
+{
+    return enumBits!T.bitsPerT * arr.length;
+}
+
+//returns how many bits a particular type has
+@property @safe pure nothrow ulong totalBits(T)(T e)
+if(isArray!(T) == false)
+{
+    return enumBits!T.bitsPerT;
+}
+
+unittest
+{
+    ubyte[10] a;
+    size_t[2] b;
+    ubyte[] c;
+    c.length = 3;
+    
+    assert(a.totalBits == (ubyte.sizeof * a.length * 8));
+    assert(b.totalBits == (size_t.sizeof * b.length * 8));
+    assert(c.totalBits == (ubyte.sizeof * c.length * 8));
+    
+    int i;
+    assert(i.totalBits == (int.sizeof * 8));
+}
+
+/**
+ * Returns the true/false value of the bit
+ * replacement so ulong can be used for the bit number offset.
+ */
+@safe pure bool getBit(T)(in T[] array, ulong bitnum)
+if(isIntegral!(T) && isFloatingPoint!(T) == false)
+{
+    with (enumBits!T)
+    {
+        size_t i = array[arrayIndex(bitnum)];
+        return (i >> bitIndex(bitnum)) & 1;
+    }
+}
+
+/**
+ * Sets the bit to the bool value
+ */
+@safe pure void setBit(T)(T[] array, ulong bitnum, bool value)
+if(isIntegral!(T) && isFloatingPoint!(T) == false)
+{
+    with (enumBits!T)
+    {
+        if (value)
+            array[arrayIndex(bitnum)] |= (1 << bitIndex(bitnum));
+        else
+            array[arrayIndex(bitnum)] &= ~(1 << bitIndex(bitnum));
+    }
+}
+
+/**
+ * xor/flips the specific bit
+ */
+@safe pure void xorBit(T)(T[] array, ulong bitnum)
+if(isIntegral!(T) && isFloatingPoint!(T) == false)
+{
+    with (enumBits!T)
+    {
+        array[arrayIndex(bitnum)] ^= (1 << bitIndex(bitnum));
+    }
+}
+
+/**
+ * checks for the first true/on bit.
+ * If there is no on bit, returns -1
+ */
+@safe pure long firstOnBit(T)(in T[] array)
+if(isIntegral!(T) && isFloatingPoint!(T) == false)
+{
+    ulong i;
+    
+    with(enumBits!T)
+    {
+        ulong length = array.length * bitsPerT;
+        
+        //bulk check
+        while(i < array.length && !array[cast(size_t) i])
+            i++;
+        
+        i *= bitsPerT;
+        
+        for(; i < length; i++)
+        {
+            if (getBit(array, i))
+                return i;
+        }
+    }
+
+    return -1;    //proper return for none found?
+}
+
+unittest
+{
+    size_t[1] bits;
+    
+    bits = 0x00005555;
+    //getBit
+    assert(getBit(bits, 0) == true);
+    assert(getBit(bits, 1) == false);
+    assert(getBit(bits, 2) == true);
+    assert(getBit(bits, 3) == false);
+    assert(getBit(bits, 12) == true);
+
+    //set
+    setBit(bits, 7, true);
+    assert(bits[0] == 0x000055d5, myToStringHex(bits[0]));
+
+    setBit(bits, 7, false);
+    assert(bits[0] == 0x00005555);
+
+    //xor
+    xorBit(bits, 7);
+    assert(bits[0] == 0x000055d5);
+
+    xorBit(bits, 7);
+    assert(bits[0] == 0x00005555);
+    
+    bits = 32;
+    assert(firstOnBit(bits) == 5);
+    
+    //bulk
+    ubyte[4] ub;
+    
+    assert(firstOnBit(ub) == -1);
+
+    ub[3] = 255;
+    assert(firstOnBit(ub) == 24);
+}
+
 //for the life of me I can't find this anywhere..
 auto ref min(T, U)(auto ref T lhs, auto ref U rhs) { return lhs > rhs ? rhs : lhs; }
  
