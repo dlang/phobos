@@ -2484,7 +2484,15 @@ Assignment operators
 /// Ditto
     void opAssign(T rhs)
     {
-        RefCounted._store._payload = move(rhs);
+        static if (autoInit == RefCountedAutoInitialize.yes)
+        {
+            RefCounted.ensureInitialized();
+        }
+        else
+        {
+            assert(RefCounted.isInitialized);
+        }
+        move(rhs, RefCounted._store._payload);
     }
 
 /**
@@ -2591,6 +2599,17 @@ unittest
     }
 
     alias RefCounted!S SRC;
+}
+
+unittest
+{
+    RefCounted!int a;
+    a = 5; //This should not assert
+    assert(a == 5);
+
+    RefCounted!int b;
+    b = a; //This should not assert either
+    assert(b == 5);
 }
 
 /**
