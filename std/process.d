@@ -841,10 +841,10 @@ string expandWindowsVars(in char[] path) {
 }
 
 version(Windows) {
-    /// An alias to $(LREF expandWindowsVars).
+    /// An alias to $(LREF expandWindowsVars) on windows and on any other system an alias to $(LREF expandPosixVars).
     alias expandWindowsVars expandVars;
 } else {
-    /// An alias to $(LREF expandPosixVars).
+    /// An alias to $(LREF expandWindowsVars) on windows and on any other system an alias to $(LREF expandPosixVars).
     alias expandPosixVars expandVars;
 }
 
