@@ -1326,14 +1326,12 @@ void randomShuffle(Range, RandomGen = Random)(Range r,
                                               ref RandomGen gen = rndGen)
     if(isRandomAccessRange!Range && isUniformRNG!RandomGen)
 {
-    foreach (i; 0 .. r.length)
-    {
-        swapAt(r, i, i + uniform(0, r.length - i, gen));
-    }
+    return partialShuffle!(Range, RandomGen)(r, r.length, gen);
 }
 
 unittest
 {
+    // Also tests partialShuffle indirectly.
     auto a = ([ 1, 2, 3, 4, 5, 6, 7, 8, 9 ]).dup;
     auto b = a.dup;
     Mt19937 gen;
@@ -1341,6 +1339,28 @@ unittest
     assert(a.sort == b.sort);
     randomShuffle(a);
     assert(a.sort == b.sort);
+}
+
+/**
+Partially shuffles the elements of $(D r) such that upon returning $(D r[0..n]) 
+is a random subset of $(D r) and is randomly ordered.  $(D r[n..r.length]) 
+will contain the elements not in $(D r[0..n]).  These will be in an undefined 
+order, but will not be random in the sense that their order after 
+$(D partialShuffle) returns will not be independent of their order before 
+$(D partialShuffle) was called.
+
+$(D r) must be a random-access range with length.  $(D n) must be less than
+or equal to $(D r.length).  
+*/
+void partialShuffle(Range, RandomGen = Random)(Range r, size_t n,
+                                              ref RandomGen gen = rndGen)
+    if(isRandomAccessRange!Range && isUniformRNG!RandomGen)
+{
+    enforce(n <= r.length, "n must be <= r.length for partialShuffle.");
+    foreach (i; 0 .. n)
+    {
+        swapAt(r, i, i + uniform(0, r.length - i, gen));
+    }
 }
 
 /**
