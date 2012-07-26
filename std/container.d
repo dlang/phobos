@@ -2255,15 +2255,19 @@ Defines the container's primary range, which is a random-access range.
     {
 
 /**
-_a <= _b is an invariant.
-It is first enforced in the constructor, and then maintained by the implementation.
-There is no enforce this in the functions (but it _must_ be maintained).
+/// ***Implementation Note***
 
-However, we must ALWAYS check that _b <= _outer.length,
-as the container may have shrunk in the without the ranges knowledge.
-A range that goes past the container's end is considered invalid,
-and any and all operations should throw an enforement error,
-Regardless of the valid of the operation (eg front).
+"_a <= _b" is an invariant for Array.Range.
+This is first enforced in the constructor, and is then maintained by the implementation.
+There is no need to call enforce on each function call to check this condition,
+but the implementation _must_ maintain this invariant.
+
+"_b <= _outer.length" must be respected for the range to be considered valid.
+This condition must be checked (enforeced) on every call,
+as the container may have shrunk in between two calls, without the range's knowledge.
+A range that does go past the container's end will be considered invalid,
+and any and all operations on it will throw an enforcement error,
+even if the operation *could* be executed (eg: front).
      */
 
         private Array _outer;
