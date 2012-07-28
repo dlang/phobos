@@ -159,6 +159,7 @@ $(VERSION 060, ddd mm, 2012, =================================================,
         $(LI $(BUGZILLA 8362): std.traits.isSafe doesn't work with unsafe lamdba functions)
         $(LI $(BUGZILLA 8386): writeln stopped working with wstring)
         $(LI $(BUGZILLA 8398): enforceEx cannot be used with OutOfMemoryError)
+        $(LI $(BUGZILLA 8450):  std.traits.isSafe doesn't work with unsafe lamdba functions)
     )
  )
 
