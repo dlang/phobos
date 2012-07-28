@@ -8946,8 +8946,8 @@ version(unittest)
     {
         this(Range)(Range r) if (isInputRange!Range) {_payload = array(r);}
         final @property ref T front(){return _payload.front;}
-        final void popFront(){_payload.popFront;}
-        final bool empty(){return _payload.empty;}
+        final void popFront(){_payload.popFront();}
+        final @property bool empty(){return _payload.empty;}
         protected T[] _payload;
     }
 
