@@ -30998,26 +30998,13 @@ void main() {
 }
 --------------------
   +/
-@safe ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
-                                                  alias targetFunc,
-                                                  int times = 0xfff)()
-    if(isSafe!baseFunc && isSafe!targetFunc)
-{
-    auto t = benchmark!(baseFunc, targetFunc)(times);
-    return ComparingBenchmarkResult(t[0], t[1]);
-}
-
-
-/++ Ditto +/
 ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
                                             alias targetFunc,
                                             int times = 0xfff)()
-    if(!isSafe!baseFunc || !isSafe!targetFunc)
 {
     auto t = benchmark!(baseFunc, targetFunc)(times);
     return ComparingBenchmarkResult(t[0], t[1]);
 }
-
 
 version(testStdDateTime) @safe unittest
 {
@@ -31029,7 +31016,6 @@ version(testStdDateTime) @safe unittest
     //static auto b2 = comparingBenchmark!(f1x, f2x, 1); // NG
 }
 
-
 version(testStdDateTime) unittest
 {
     void f1x() {}
@@ -31038,6 +31024,20 @@ version(testStdDateTime) unittest
     @safe void f2o() {}
     auto b1 = comparingBenchmark!(f1o, f2o, 1)(); // OK
     auto b2 = comparingBenchmark!(f1x, f2x, 1)(); // OK
+}
+
+//Bug# 8450
+version(testStdDateTime) unittest
+{
+    @safe    void safeFunc() {}
+    @trusted void trustFunc() {}
+    @system  void sysFunc() {}
+    auto safeResult  = comparingBenchmark!((){safeFunc();}, (){safeFunc();})();
+    auto trustResult = comparingBenchmark!((){trustFunc();}, (){trustFunc();})();
+    auto sysResult   = comparingBenchmark!((){sysFunc();}, (){sysFunc();})();
+    auto mixedResult1  = comparingBenchmark!((){safeFunc();}, (){trustFunc();})();
+    auto mixedResult2  = comparingBenchmark!((){trustFunc();}, (){sysFunc();})();
+    auto mixedResult3  = comparingBenchmark!((){safeFunc();}, (){sysFunc();})();
 }
 
 
@@ -32064,7 +32064,7 @@ writeln("benchmark end!");
 else
 {
     @safe auto measureTime(alias func)()
-        if(isSafe!func)
+        if(isSafelyCallable!((){StopWatch sw; unaryFun!func(sw.peek());}))
     {
         struct Result
         {
@@ -32082,7 +32082,7 @@ else
     }
 
     auto measureTime(alias func)()
-        if(!isSafe!func)
+        if(!isSafelyCallable!((){StopWatch sw; unaryFun!func(sw.peek());}))
     {
         struct Result
         {
@@ -32134,6 +32134,17 @@ version(testStdDateTime) unittest
         // @@@BUG@@@ doesn't work yet.
     }
     +/
+}
+
+//Bug# 8450
+version(testStdDateTime) unittest
+{
+    @safe    void safeFunc() {}
+    @trusted void trustFunc() {}
+    @system  void sysFunc() {}
+    auto safeResult  = measureTime!((a){safeFunc();})();
+    auto trustResult = measureTime!((a){trustFunc();})();
+    auto sysResult   = measureTime!((a){sysFunc();})();
 }
 
 //==============================================================================
