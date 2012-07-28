@@ -3109,7 +3109,7 @@ unittest
     
     //Make underlying container smaller than the range, invalidating it.
     //Now EVERYTHING should be invalid.
-    a.removeBack;
+    a.removeBack();
     assertThrown(r.empty);
     assertThrown(r.length);
     assertThrown(r.save);
