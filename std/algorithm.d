@@ -8955,7 +8955,7 @@ version(unittest)
     private class ReferenceForwardRange(T) : ReferenceInputRange!T
     {
         this(Range)(Range r) if (isInputRange!Range) {super(r);}
-        final ReferenceForwardRange save()
+        final @property ReferenceForwardRange save()
         {return new ReferenceForwardRange!T(_payload);}
     }
 
@@ -8973,7 +8973,7 @@ version(unittest)
     private class ReferenceInfiniteForwardRange(T) : ReferenceInfiniteInputRange!T
     {
         this(T first = T.init) {super(first);}
-        final ReferenceInfiniteForwardRange save()
+        final @property ReferenceInfiniteForwardRange save()
         {return new ReferenceInfiniteForwardRange!T(_val);}
     }
 }
