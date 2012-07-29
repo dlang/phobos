@@ -16,9 +16,8 @@ $(VERSION 060, ddd mm, 2012, =================================================,
              pass a range by reference.)
         $(LI std.traits: Added KeyType, ValueType, isScalarType, isBasicType, and
              SetFunctionAttributes templates.)
-        $(LI std.traits: isSafe now checks for @safe only rather than @safe and @trusted.
-             Use isSafelyCallable to check for both. Due to bug# 8362, isSafe was badly
-             broken prior to 2.060 anyway, so any code using isSafe should probably be examined.)
+        $(LI std.traits: areAllSafe has been scheduled for deprecation. Please use
+             allSatisfy(isSafe, ...) instead.)
         $(LI std.utf: Added overload of codeLength which operates on a string.)
         $(LI Capitalized std.traits.pointerTarget to PointerTarget. Old one is
              scheduled for deprecation.)
@@ -159,7 +158,8 @@ $(VERSION 060, ddd mm, 2012, =================================================,
         $(LI $(BUGZILLA 8362): std.traits.isSafe doesn't work with unsafe lamdba functions)
         $(LI $(BUGZILLA 8386): writeln stopped working with wstring)
         $(LI $(BUGZILLA 8398): enforceEx cannot be used with OutOfMemoryError)
-        $(LI $(BUGZILLA 8450):  std.traits.isSafe doesn't work with unsafe lamdba functions)
+        $(LI $(BUGZILLA 8450): measureTime doesn't work with unsafe template functions)
+        $(LI $(BUGZILLA 8459): std.traits.isSafe behavior silently changed)
     )
  )
 
