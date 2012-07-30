@@ -377,90 +377,90 @@ template map(fun...) if (fun.length >= 1)
             alias unaryFun!fun _fun;
         }
 
-        struct Result
+        return MapResult!(_fun, Range)(r);
+    }
+}
+
+private struct MapResult(alias fun, Range)
+{
+    alias Unqual!Range R;
+    //alias typeof(fun(.ElementType!R.init)) ElementType;
+    R _input;
+
+    static if (isBidirectionalRange!R)
+    {
+        @property auto ref back()
         {
-            alias Unqual!Range R;
-            alias typeof(_fun(.ElementType!R.init)) ElementType;
-            R _input;
-
-            static if (isBidirectionalRange!R)
-            {
-                @property auto ref back()
-                {
-                    return _fun(_input.back);
-                }
-
-                void popBack()
-                {
-                    _input.popBack();
-                }
-            }
-
-            this(R input)
-            {
-                _input = input;
-            }
-
-            static if (isInfinite!R)
-            {
-                // Propagate infinite-ness.
-                enum bool empty = false;
-            }
-            else
-            {
-                @property bool empty()
-                {
-                    return _input.empty;
-                }
-            }
-
-            void popFront()
-            {
-                _input.popFront();
-            }
-
-            @property auto ref front()
-            {
-                return _fun(_input.front);
-            }
-
-            static if (isRandomAccessRange!R)
-            {
-                auto ref opIndex(size_t index)
-                {
-                    return _fun(_input[index]);
-                }
-            }
-
-            static if (hasLength!R || isSomeString!R)
-            {
-                @property auto length()
-                {
-                    return _input.length;
-                }
-
-                alias length opDollar;
-            }
-
-            static if (hasSlicing!R)
-            {
-                auto opSlice(size_t lowerBound, size_t upperBound)
-                {
-                    return typeof(this)(_input[lowerBound..upperBound]);
-                }
-            }
-
-            static if (isForwardRange!R)
-                @property auto save()
-                {
-                    auto result = this;
-                    result._input = result._input.save;
-                    return result;
-                }
+            return fun(_input.back);
         }
 
-        return Result(r);
+        void popBack()
+        {
+            _input.popBack();
+        }
     }
+
+    this(R input)
+    {
+        _input = input;
+    }
+
+    static if (isInfinite!R)
+    {
+        // Propagate infinite-ness.
+        enum bool empty = false;
+    }
+    else
+    {
+        @property bool empty()
+        {
+            return _input.empty;
+        }
+    }
+
+    void popFront()
+    {
+        _input.popFront();
+    }
+
+    @property auto ref front()
+    {
+        return fun(_input.front);
+    }
+
+    static if (isRandomAccessRange!R)
+    {
+        auto ref opIndex(size_t index)
+        {
+            return fun(_input[index]);
+        }
+    }
+
+    static if (hasLength!R || isSomeString!R)
+    {
+        @property auto length()
+        {
+            return _input.length;
+        }
+
+        alias length opDollar;
+    }
+
+    static if (hasSlicing!R)
+    {
+        auto opSlice(size_t lowerBound, size_t upperBound)
+        {
+            return typeof(this)(_input[lowerBound..upperBound]);
+        }
+    }
+
+    static if (isForwardRange!R)
+        @property auto save()
+        {
+            auto result = this;
+            result._input = result._input.save;
+            return result;
+        }
 }
 
 unittest
@@ -1092,54 +1092,54 @@ template filter(alias pred) if (is(typeof(unaryFun!pred)))
 {
     auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range))
     {
-        struct FilteredRange
+        return FilterResult!(unaryFun!pred, Range)(rs);
+    }
+}
+
+private struct FilterResult(alias pred, Range)
+{
+    alias Unqual!Range R;
+    R _input;
+
+    this(R r)
+    {
+        _input = r;
+        while (!_input.empty && !pred(_input.front))
         {
-            alias Unqual!Range R;
-            R _input;
-
-            this(R r)
-            {
-                _input = r;
-                while (!_input.empty && !unaryFun!pred(_input.front))
-                {
-                    _input.popFront();
-                }
-            }
-
-            auto opSlice() { return this; }
-
-            static if (isInfinite!Range)
-            {
-                enum bool empty = false;
-            }
-            else
-            {
-                @property bool empty() { return _input.empty; }
-            }
-
-            void popFront()
-            {
-                do
-                {
-                    _input.popFront();
-                } while (!_input.empty && !unaryFun!pred(_input.front));
-            }
-
-            @property auto ref front()
-            {
-                return _input.front;
-            }
-
-            static if(isForwardRange!R)
-            {
-                @property auto save()
-                {
-                    return typeof(this)(_input);
-                }
-            }
+            _input.popFront();
         }
+    }
 
-        return FilteredRange(rs);
+    auto opSlice() { return this; }
+
+    static if (isInfinite!Range)
+    {
+        enum bool empty = false;
+    }
+    else
+    {
+        @property bool empty() { return _input.empty; }
+    }
+
+    void popFront()
+    {
+        do
+        {
+            _input.popFront();
+        } while (!_input.empty && !pred(_input.front));
+    }
+
+    @property auto ref front()
+    {
+        return _input.front;
+    }
+
+    static if(isForwardRange!R)
+    {
+        @property auto save()
+        {
+            return typeof(this)(_input);
+        }
     }
 }
 
@@ -1256,56 +1256,53 @@ template filterBidirectional(alias pred)
 {
     auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(Unqual!Range))
     {
-        struct Result
+        return FilterBidiResult!(unaryFun!pred, Range)(r);
+    }
+}
+
+private struct FilterBidiResult(alias pred, Range)
+{
+    alias Unqual!Range R;
+    R _input;
+
+    this(R r)
+    {
+        _input = r;
+        while (!_input.empty && !pred(_input.front)) _input.popFront();
+        while (!_input.empty && !pred(_input.back)) _input.popBack();
+    }
+
+    @property bool empty() { return _input.empty; }
+
+    void popFront()
+    {
+        do
         {
-            alias Unqual!Range R;
-            alias unaryFun!pred predFun;
-            R _input;
+            _input.popFront();
+        } while (!_input.empty && !pred(_input.front));
+    }
 
-            this(R r)
-            {
-                _input = r;
-                while (!_input.empty && !predFun(_input.front)) _input.popFront();
-                while (!_input.empty && !predFun(_input.back)) _input.popBack();
-            }
+    @property auto ref front()
+    {
+        return _input.front;
+    }
 
-            @property bool empty() { return _input.empty; }
+    void popBack()
+    {
+        do
+        {
+            _input.popBack();
+        } while (!_input.empty && !pred(_input.back));
+    }
 
-            void popFront()
-            {
-                do
-                {
-                    _input.popFront();
-                } while (!_input.empty && !predFun(_input.front));
-            }
+    @property auto ref back()
+    {
+        return _input.back;
+    }
 
-            @property auto ref front()
-            {
-                return _input.front;
-            }
-
-            void popBack()
-            {
-                do
-                {
-                    _input.popBack();
-                } while (!_input.empty && !predFun(_input.back));
-            }
-
-            @property auto ref back()
-            {
-                return _input.back;
-            }
-
-            @property auto save()
-            {
-                Result result;
-                result._input = _input.save;
-                return result;
-            }
-        }
-
-        return Result(r);
+    @property auto save()
+    {
+        return typeof(this)(_input.save);
     }
 }
 
@@ -2211,95 +2208,95 @@ unittest
 auto splitter(alias isTerminator, Range)(Range input)
 if (is(typeof(unaryFun!(isTerminator)(ElementType!(Range).init))))
 {
-    struct Result
+    return SplitterResult!(unaryFun!isTerminator, Range)(input);
+}
+
+private struct SplitterResult(alias isTerminator, Range)
+{
+    private Range _input;
+    private size_t _end;
+
+    this(Range input)
     {
-        private Range _input;
-        private size_t _end;
-        private alias unaryFun!isTerminator _isTerminator;
-
-        this(Range input)
+        _input = input;
+        if (_input.empty)
         {
-            _input = input;
-            if (_input.empty)
-            {
-                _end = _end.max;
-            }
-            else
-            {
-                // Chase first terminator
-                while (_end < _input.length && !_isTerminator(_input[_end]))
-                {
-                    ++_end;
-                }
-            }
-        }
-
-        static if (isInfinite!Range)
-        {
-            enum bool empty = false;  // Propagate infiniteness.
+            _end = _end.max;
         }
         else
         {
-            @property bool empty()
-            {
-                return _end == _end.max;
-            }
-        }
-
-        @property Range front()
-        {
-            assert(!empty);
-            return _input[0 .. _end];
-        }
-
-        void popFront()
-        {
-            assert(!empty);
-            if (_input.empty)
-            {
-                _end = _end.max;
-                return;
-            }
-            // Skip over existing word
-            _input = _input[_end .. _input.length];
-            // Skip terminator
-            for (;;)
-            {
-                if (_input.empty)
-                {
-                    // Nothing following the terminator - done
-                    _end = _end.max;
-                    return;
-                }
-                if (!_isTerminator(_input.front))
-                {
-                    // Found a legit next field
-                    break;
-                }
-                _input.popFront();
-            }
-            assert(!_input.empty && !_isTerminator(_input.front));
-            // Prepare _end
-            _end = 1;
-            while (_end < _input.length && !_isTerminator(_input[_end]))
+            // Chase first terminator
+            while (_end < _input.length && !isTerminator(_input[_end]))
             {
                 ++_end;
             }
         }
+    }
 
-        static if(isForwardRange!Range)
+    static if (isInfinite!Range)
+    {
+        enum bool empty = false;  // Propagate infiniteness.
+    }
+    else
+    {
+        @property bool empty()
         {
-            @property typeof(this) save()
-            {
-                auto ret = this;
-                ret._input = _input.save;
-                return ret;
-            }
+            return _end == _end.max;
         }
     }
 
-    return Result(input);
+    @property Range front()
+    {
+        assert(!empty);
+        return _input[0 .. _end];
+    }
+
+    void popFront()
+    {
+        assert(!empty);
+        if (_input.empty)
+        {
+            _end = _end.max;
+            return;
+        }
+        // Skip over existing word
+        _input = _input[_end .. _input.length];
+        // Skip terminator
+        for (;;)
+        {
+            if (_input.empty)
+            {
+                // Nothing following the terminator - done
+                _end = _end.max;
+                return;
+            }
+            if (!isTerminator(_input.front))
+            {
+                // Found a legit next field
+                break;
+            }
+            _input.popFront();
+        }
+        assert(!_input.empty && !isTerminator(_input.front));
+        // Prepare _end
+        _end = 1;
+        while (_end < _input.length && !isTerminator(_input[_end]))
+        {
+            ++_end;
+        }
+    }
+
+    static if(isForwardRange!Range)
+    {
+        @property typeof(this) save()
+        {
+            auto ret = this;
+            ret._input = _input.save;
+            return ret;
+        }
+    }
 }
+
 unittest
 {
     auto L = iota(1L, 10L);
@@ -2639,65 +2636,65 @@ assert(equal(uniq(arr), [ 1, 2, 3, 4, 5 ][]));
 auto uniq(alias pred = "a == b", Range)(Range r)
 if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
 {
-    struct Result
+    return UniqResult!(binaryFun!pred, Range)(r);
+}
+
+private struct UniqResult(alias pred, Range)
+{
+    Range _input;
+
+    this(Range input)
     {
-        Range _input;
-
-        this(Range input)
-        {
-            _input = input;
-        }
-
-        auto opSlice()
-        {
-            return this;
-        }
-
-        void popFront()
-        {
-            auto last = _input.front;
-            do
-            {
-                _input.popFront();
-            }
-            while (!_input.empty && binaryFun!(pred)(last, _input.front));
-        }
-
-        @property ElementType!Range front() { return _input.front; }
-
-        static if (isBidirectionalRange!Range)
-        {
-            void popBack()
-            {
-                auto last = _input.back;
-                do
-                {
-                    _input.popBack();
-                }
-                while (!_input.empty && binaryFun!pred(last, _input.back));
-            }
-
-            @property ElementType!Range back() { return _input.back; }
-        }
-
-        static if (isInfinite!Range)
-        {
-            enum bool empty = false;  // Propagate infiniteness.
-        }
-        else
-        {
-            @property bool empty() { return _input.empty; }
-        }
-
-
-        static if (isForwardRange!Range) {
-            @property typeof(this) save() {
-                return typeof(this)(_input.save);
-            }
-        }
+        _input = input;
     }
 
-    return Result(r);
+    auto opSlice()
+    {
+        return this;
+    }
+
+    void popFront()
+    {
+        auto last = _input.front;
+        do
+        {
+            _input.popFront();
+        }
+        while (!_input.empty && pred(last, _input.front));
+    }
+
+    @property ElementType!Range front() { return _input.front; }
+
+    static if (isBidirectionalRange!Range)
+    {
+        void popBack()
+        {
+            auto last = _input.back;
+            do
+            {
+                _input.popBack();
+            }
+            while (!_input.empty && pred(last, _input.back));
+        }
+
+        @property ElementType!Range back() { return _input.back; }
+    }
+
+    static if (isInfinite!Range)
+    {
+        enum bool empty = false;  // Propagate infiniteness.
+    }
+    else
+    {
+        @property bool empty() { return _input.empty; }
+    }
+
+
+    static if (isForwardRange!Range) {
+        @property typeof(this) save() {
+            return typeof(this)(_input.save);
+        }
+    }
 }
 
 unittest
