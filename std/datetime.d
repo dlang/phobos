@@ -32064,7 +32064,7 @@ writeln("benchmark end!");
 else
 {
     @safe auto measureTime(alias func)()
-        if(isSafelyCallable!((){StopWatch sw; unaryFun!func(sw.peek());}))
+        if(isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
     {
         struct Result
         {
@@ -32082,7 +32082,7 @@ else
     }
 
     auto measureTime(alias func)()
-        if(!isSafelyCallable!((){StopWatch sw; unaryFun!func(sw.peek());}))
+        if(!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
     {
         struct Result
         {

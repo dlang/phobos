@@ -749,7 +749,7 @@ unittest
 
 
 /**
-$(D true) if $(D func) is $(D @safe).
+$(D true) if $(D func) is $(D @safe) or $(D @trusted).
 
 Example:
 --------------------
@@ -758,14 +758,15 @@ Example:
 @system  int mul(int a, int b) {return a*b;}
 
 static assert( isSafe!add);
-static assert(!isSafe!sub);
+static assert( isSafe!sub);
 static assert(!isSafe!mul);
 --------------------
  */
 template isSafe(alias func)
     if(isCallable!func)
 {
-    enum isSafe = (functionAttributes!func & FunctionAttribute.safe) != 0;
+    enum isSafe = (functionAttributes!func & FunctionAttribute.safe) != 0 ||
+                  (functionAttributes!func & FunctionAttribute.trusted) != 0;
 }
 
 //Verify Examples.
@@ -776,7 +777,7 @@ unittest
     @system  int mul(int a, int b) {return a*b;}
 
     static assert( isSafe!add);
-    static assert(!isSafe!sub);
+    static assert( isSafe!sub);
     static assert(!isSafe!mul);
 }
 
@@ -791,7 +792,7 @@ unittest
         int safeF() @safe;
     }
     static assert( isSafe!(Set.safeF));
-    static assert(!isSafe!(Set.trustedF));
+    static assert( isSafe!(Set.trustedF));
     static assert(!isSafe!(Set.systemF));
 
     //Functions
@@ -800,7 +801,7 @@ unittest
     @system static systemFunc() {}
 
     static assert( isSafe!safeFunc);
-    static assert(!isSafe!trustedFunc);
+    static assert( isSafe!trustedFunc);
     static assert(!isSafe!systemFunc);
 
     //Delegates
@@ -809,12 +810,12 @@ unittest
     auto systemDel = delegate() @system {};
 
     static assert( isSafe!safeDel);
-    static assert(!isSafe!trustedDel);
+    static assert( isSafe!trustedDel);
     static assert(!isSafe!systemDel);
 
     //Lambdas
     static assert( isSafe!({safeDel();}));
-    static assert( isSafe!({trustedDel();})); //attribute inference makes this @safe
+    static assert( isSafe!({trustedDel();}));
     static assert(!isSafe!({systemDel();}));
 
     //Static opCall
@@ -823,7 +824,7 @@ unittest
     struct SystemStatic { @system static SystemStatic opCall() { return SystemStatic.init; } }
 
     static assert( isSafe!(SafeStatic()));
-    static assert(!isSafe!(TrustedStatic()));
+    static assert( isSafe!(TrustedStatic()));
     static assert(!isSafe!(SystemStatic()));
 
     //Non-static opCall
@@ -832,186 +833,8 @@ unittest
     struct System { @system System opCall() { return System.init; } }
 
     static assert( isSafe!(Safe.init()));
-    static assert(!isSafe!(Trusted.init()));
+    static assert( isSafe!(Trusted.init()));
     static assert(!isSafe!(System.init()));
-}
-
-
-/**
-$(D true) if $(D func) is $(D @trusted).
-
-Example:
---------------------
-@safe    int add(int a, int b) {return a+b;}
-@trusted int sub(int a, int b) {return a-b;}
-@system  int mul(int a, int b) {return a*b;}
-
-static assert(!isTrusted!add);
-static assert( isTrusted!sub);
-static assert(!isTrusted!mul);
---------------------
- */
-template isTrusted(alias func)
-    if(isCallable!func)
-{
-    enum isTrusted = (functionAttributes!func & FunctionAttribute.trusted) != 0;
-}
-
-//Verify Examples.
-unittest
-{
-    @safe    int add(int a, int b) {return a+b;}
-    @trusted int sub(int a, int b) {return a-b;}
-    @system  int mul(int a, int b) {return a*b;}
-
-    static assert(!isTrusted!add);
-    static assert( isTrusted!sub);
-    static assert(!isTrusted!mul);
-}
-
-
-unittest
-{
-    //Member functions
-    interface Set
-    {
-        int systemF() @system;
-        int trustedF() @trusted;
-        int safeF() @safe;
-    }
-    static assert(!isTrusted!(Set.safeF));
-    static assert( isTrusted!(Set.trustedF));
-    static assert(!isTrusted!(Set.systemF));
-
-    //Functions
-    @safe static safeFunc() {}
-    @trusted static trustedFunc() {}
-    @system static systemFunc() {}
-
-    static assert(!isTrusted!safeFunc);
-    static assert( isTrusted!trustedFunc);
-    static assert(!isTrusted!systemFunc);
-
-    //Delegates
-    auto safeDel = delegate() @safe {};
-    auto trustedDel = delegate() @trusted {};
-    auto systemDel = delegate() @system {};
-
-    static assert(!isTrusted!safeDel);
-    static assert( isTrusted!trustedDel);
-    static assert(!isTrusted!systemDel);
-
-    //Lambdas
-    static assert(!isTrusted!({safeDel();}));
-    static assert(!isTrusted!({trustedDel();})); //attribute inference makes this @safe
-    static assert(!isTrusted!({systemDel();}));
-
-    //Static opCall
-    struct SafeStatic { @safe static SafeStatic opCall() { return SafeStatic.init; } }
-    struct TrustedStatic { @trusted static TrustedStatic opCall() { return TrustedStatic.init; } }
-    struct SystemStatic { @system static SystemStatic opCall() { return SystemStatic.init; } }
-
-    static assert(!isTrusted!(SafeStatic()));
-    static assert( isTrusted!(TrustedStatic()));
-    static assert(!isTrusted!(SystemStatic()));
-
-    //Non-static opCall
-    struct Safe { @safe Safe opCall() { return Safe.init; } }
-    struct Trusted { @trusted Trusted opCall() { return Trusted.init; } }
-    struct System { @system System opCall() { return System.init; } }
-
-    static assert(!isTrusted!(Safe.init()));
-    static assert( isTrusted!(Trusted.init()));
-    static assert(!isTrusted!(System.init()));
-}
-
-
-/**
-$(D true) if $(D func) is $(D @safe) or $(D @trusted).
-
-Example:
---------------------
-@safe    int add(int a, int b) {return a+b;}
-@trusted int sub(int a, int b) {return a-b;}
-@system  int mul(int a, int b) {return a*b;}
-
-static assert( isSafelyCallable!add);
-static assert( isSafelyCallable!sub);
-static assert(!isSafelyCallable!mul);
---------------------
- */
-template isSafelyCallable(alias func)
-    if(isCallable!func)
-{
-    enum isSafelyCallable = isSafe!func || isTrusted!func;
-}
-
-//Verify Examples.
-unittest
-{
-    @safe    int add(int a, int b) {return a+b;}
-    @trusted int sub(int a, int b) {return a-b;}
-    @system  int mul(int a, int b) {return a*b;}
-
-    static assert( isSafelyCallable!add);
-    static assert( isSafelyCallable!sub);
-    static assert(!isSafelyCallable!mul);
-}
-
-
-unittest
-{
-    //Member functions
-    interface Set
-    {
-        int systemF() @system;
-        int trustedF() @trusted;
-        int safeF() @safe;
-    }
-    static assert( isSafelyCallable!(Set.safeF));
-    static assert( isSafelyCallable!(Set.trustedF));
-    static assert(!isSafelyCallable!(Set.systemF));
-
-    //Functions
-    @safe static safeFunc() {}
-    @trusted static trustedFunc() {}
-    @system static systemFunc() {}
-
-    static assert( isSafelyCallable!safeFunc);
-    static assert( isSafelyCallable!trustedFunc);
-    static assert(!isSafelyCallable!systemFunc);
-
-    //Delegates
-    auto safeDel = delegate() @safe {};
-    auto trustedDel = delegate() @trusted {};
-    auto systemDel = delegate() @system {};
-
-    static assert( isSafelyCallable!safeDel);
-    static assert( isSafelyCallable!trustedDel);
-    static assert(!isSafelyCallable!systemDel);
-
-    //Lambdas
-    static assert( isSafelyCallable!({safeDel();}));
-    static assert( isSafelyCallable!({trustedDel();}));
-    static assert(!isSafelyCallable!({systemDel();}));
-
-    //Static opCall
-    struct SafeStatic { @safe static SafeStatic opCall() { return SafeStatic.init; } }
-    struct TrustedStatic { @trusted static TrustedStatic opCall() { return TrustedStatic.init; } }
-    struct SystemStatic { @system static SystemStatic opCall() { return SystemStatic.init; } }
-
-    static assert( isSafelyCallable!(SafeStatic()));
-    static assert( isSafelyCallable!(TrustedStatic()));
-    static assert(!isSafelyCallable!(SystemStatic()));
-
-    //Non-static opCall
-    struct Safe { @safe Safe opCall() { return Safe.init; } }
-    struct Trusted { @trusted Trusted opCall() { return Trusted.init; } }
-    struct System { @system System opCall() { return System.init; } }
-
-    static assert( isSafelyCallable!(Safe.init()));
-    static assert( isSafelyCallable!(Trusted.init()));
-    static assert(!isSafelyCallable!(System.init()));
 }
 
 
@@ -1031,7 +854,7 @@ static assert( isUnsafe!mul);
  */
 template isUnsafe(alias func)
 {
-    enum isUnsafe = !isSafelyCallable!func;
+    enum isUnsafe = !isSafe!func;
 }
 
 //Verify Examples.
@@ -1106,9 +929,9 @@ unittest
 $(RED Scheduled for deprecation in January 2013. It's badly named and provides
 redundant functionality. It was also badly broken prior to 2.060 (bug# 8362), so
 any code which uses it probably needs to be changed anyway. Please use
-$(D allSatisfy(isSafelyCallable, ...)) instead.)
+$(D allSatisfy(isSafe, ...)) instead.)
 
-$(D true) all functions are $(D isSafelyCallable).
+$(D true) all functions are $(D isSafe).
 
 Example:
 --------------------
@@ -1126,7 +949,7 @@ template areAllSafe(funcs...)
 {
     static if (funcs.length == 1)
     {
-        enum areAllSafe = isSafelyCallable!(funcs[0]);
+        enum areAllSafe = isSafe!(funcs[0]);
     }
     else static if (isSafe!(funcs[0]))
     {

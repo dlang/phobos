@@ -355,7 +355,8 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest4.obj $(SRC_STD_4)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest5.obj $(SRC_STD_5_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest6.obj $(SRC_STD_REST)
-	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(SRC_TO_COMPILE_NOT_STD) $(UNITTEST_OBJS) \
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest7.obj $(SRC_TO_COMPILE_NOT_STD)
+	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(UNITTEST_OBJS) unittest7.obj \
 		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 	unittest
 
