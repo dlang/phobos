@@ -757,7 +757,7 @@ Example:
 @trusted int sub(int a, int b) {return a-b;}
 @system  int mul(int a, int b) {return a*b;}
 
-htatic assert( isSafe!add);
+static assert( isSafe!add);
 static assert( isSafe!sub);
 static assert(!isSafe!mul);
 --------------------
