@@ -124,7 +124,7 @@ class CSVException : Exception
         this.col = col;
     }
 
-    override string toString() const {
+    override string toString() {
         return "(Row: " ~ to!string(row) ~
               ", Col: " ~ to!string(col) ~ ") " ~ msg;
     }
