@@ -72,7 +72,7 @@ class UTFException : Exception
     }
 
 
-    override string toString() const
+    override string toString()
     {
         import std.string;
         if(len == 0)

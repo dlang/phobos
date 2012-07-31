@@ -824,7 +824,7 @@ class Element : Item
      * if (e1 == e2) { }
      * --------------
      */
-    override const bool opEquals(Object o)
+    override bool opEquals(Object o)
     {
         const element = toType!(const Element)(o);
         auto len = items.length;
@@ -848,7 +848,7 @@ class Element : Item
      * if (e1 < e2) { }
      * --------------
      */
-    override const int opCmp(Object o)
+    override int opCmp(Object o)
     {
         const element = toType!(const Element)(o);
         for (uint i=0; ; ++i)
@@ -1233,7 +1233,7 @@ class Comment : Item
      * if (item1 == item2) { }
      * --------------
      */
-    override const bool opEquals(Object o)
+    override bool opEquals(Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(Comment)item;
@@ -1252,7 +1252,7 @@ class Comment : Item
      * if (item1 < item2) { }
      * --------------
      */
-    override const int opCmp(Object o)
+    override int opCmp(Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(Comment)item;
@@ -1312,7 +1312,7 @@ class CData : Item
      * if (item1 == item2) { }
      * --------------
      */
-    override const bool opEquals(Object o)
+    override bool opEquals(Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(CData)item;
@@ -1331,7 +1331,7 @@ class CData : Item
      * if (item1 < item2) { }
      * --------------
      */
-    override const int opCmp(Object o)
+    override int opCmp(Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(CData)item;
@@ -1389,7 +1389,7 @@ class Text : Item
      * if (item1 == item2) { }
      * --------------
      */
-    override const bool opEquals(Object o)
+    override bool opEquals(Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(Text)item;
@@ -1408,7 +1408,7 @@ class Text : Item
      * if (item1 < item2) { }
      * --------------
      */
-    override const int opCmp(Object o)
+    override int opCmp(Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(Text)item;
@@ -1471,7 +1471,7 @@ class XMLInstruction : Item
      * if (item1 == item2) { }
      * --------------
      */
-    override const bool opEquals(Object o)
+    override bool opEquals(Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(XMLInstruction)item;
@@ -1490,7 +1490,7 @@ class XMLInstruction : Item
      * if (item1 < item2) { }
      * --------------
      */
-    override const int opCmp(Object o)
+    override int opCmp(Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(XMLInstruction)item;
@@ -1550,7 +1550,7 @@ class ProcessingInstruction : Item
      * if (item1 == item2) { }
      * --------------
      */
-    override const bool opEquals(Object o)
+    override bool opEquals(Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(ProcessingInstruction)item;
@@ -1569,7 +1569,7 @@ class ProcessingInstruction : Item
      * if (item1 < item2) { }
      * --------------
      */
-    override const int opCmp(Object o)
+    override int opCmp(Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(ProcessingInstruction)item;
@@ -1599,10 +1599,10 @@ class ProcessingInstruction : Item
 abstract class Item
 {
     /// Compares with another Item of same type for equality
-    abstract override const bool opEquals(Object o);
+    abstract override bool opEquals(Object o);
 
     /// Compares with another Item of same type
-    abstract override const int opCmp(Object o);
+    abstract override int opCmp(Object o);
 
     /// Returns the hash of this item
     abstract override const hash_t toHash();
@@ -2815,7 +2815,7 @@ private alias CheckException Err;
 
 private
 {
-    T toType(T)(const Object o)
+    T toType(T)(Object o)
     {
         T t = cast(T)(o);
         if (t is null)
