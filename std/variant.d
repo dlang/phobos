@@ -800,36 +800,54 @@ public:
         return type.getHash(&store);
     }
 
+    //simple CTFE codegenerator
+    static private string generateIfChain( string op)
+    {
+        string code;
+        foreach(type1; TypeTuple!("int", "uint", "ulong", "long", "double", "real"))
+        {
+            bool last_one = type1 == "real";
+            code ~= last_one ? `
+                {` : `
+                if(fptr == &handler!`~type1~`){`;
+            foreach(t; TypeTuple!("uint", "int", "ulong", "long", "double", "real"))
+            {
+                code ~= `
+                    if(other.fptr == &handler!` ~ t ~ `)
+                        result = get!`~type1~op~`other.get!`~t~`;`;
+                if(t != "real")
+                    code ~= `
+                    else `;
+            }
+            code ~= last_one ? `
+                }` : `} 
+                else `;
+        }
+        return code;
+    }
+
     private VariantN opArithmetic(T, string op)(T other)
     {
         VariantN result;
         static if (is(T == VariantN))
-        {
-            if (convertsTo!(uint) && other.convertsTo!(uint))
-                result = mixin("get!(uint) " ~ op ~ " other.get!(uint)");
-            else if (convertsTo!(int) && other.convertsTo!(int))
-                result = mixin("get!(int) " ~ op ~ " other.get!(int)");
-            else if (convertsTo!(ulong) && other.convertsTo!(ulong))
-                result = mixin("get!(ulong) " ~ op ~ " other.get!(ulong)");
-            else if (convertsTo!(long) && other.convertsTo!(long))
-                result = mixin("get!(long) " ~ op ~ " other.get!(long)");
-            else if (convertsTo!(double) && other.convertsTo!(double))
-                result = mixin("get!(double) " ~ op ~ " other.get!(double)");
-            else
-                result = mixin("get!(real) " ~ op ~ " other.get!(real)");
+        {            
+            mixin(generateIfChain(op));
         }
         else
         {
-            if (is(typeof(T.max) : uint) && T.min == 0 && convertsTo!(uint))
+            if (is(typeof(T.max) : uint) && T.min == 0
+                    && fptr == &handler!uint)
                 result = mixin("get!(uint) " ~ op ~ " other");
-            else if (is(typeof(T.max) : int) && T.min < 0 && convertsTo!(int))
+            else if (is(typeof(T.max) : int) && T.min < 0
+                    && fptr == &handler!int)
                 result = mixin("get!(int) " ~ op ~ " other");
             else if (is(typeof(T.max) : ulong) && T.min == 0
-                     && convertsTo!(ulong))
+                    && fptr == &handler!ulong)
                 result = mixin("get!(ulong) " ~ op ~ " other");
-            else if (is(typeof(T.max) : long) && T.min < 0 && convertsTo!(long))
+            else if (is(typeof(T.max) : long) && T.min < 0 
+                    && fptr == &handler!long)
                 result = mixin("get!(long) " ~ op ~ " other");
-            else if (is(T : double) && convertsTo!(double))
+            else if (is(T : double) &&  fptr == &handler!double)
                 result = mixin("get!(double) " ~ op ~ " other");
             else
                 result = mixin("get!(real) " ~ op ~ " other");
