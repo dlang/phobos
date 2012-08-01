@@ -681,6 +681,7 @@ private
     //Scheduled for deprecation
     deprecated void putRangeIntoPut(R, E)(ref R r, E e)
     {
+        static assert(false, "Putting a range of elements into an OutputRange has been deprecated.");
         for (; !e.empty; e.popFront()) put(r, e.front);
     }
 
