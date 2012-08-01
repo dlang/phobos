@@ -679,7 +679,7 @@ private
     //This allows putting an entire range of elements into R if R is an output range of elements in e;
     //Use "r = copy(e, r)" instead
     //Scheduled for deprecation
-    /* Deprecated */ void putRangeIntoPut(R, E)(ref R r, E e)
+    Deprecated void putRangeIntoPut(R, E)(ref R r, E e)
     {
         for (; !e.empty; e.popFront()) put(r, e.front);
     }
