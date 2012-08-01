@@ -679,7 +679,7 @@ private
     //This allows putting an entire range of elements into R if R is an output range of elements in e;
     //Use "r = copy(e, r)" instead
     //Scheduled for deprecation
-    Deprecated void putRangeIntoPut(R, E)(ref R r, E e)
+    deprecated void putRangeIntoPut(R, E)(ref R r, E e)
     {
         for (; !e.empty; e.popFront()) put(r, e.front);
     }
@@ -687,7 +687,7 @@ private
     //This allows putting [e] in r
     //Use "put(r, [e])" instead
     //Scheduled for deprecation
-    /* Deprecated */ void putArrayIntoPut(R, E)(ref R r, E e)
+    /* deprecated */ void putArrayIntoPut(R, E)(ref R r, E e)
     {
         r.put((&e)[0..1]);
     }
@@ -695,7 +695,7 @@ private
     //This allows putting [e] in r
     //Use "put(r, [e])" instead
     //Scheduled for deprecation
-    /* Deprecated */ void putArrayIntoDelegate(R, E)(ref R r, E e)
+    /* deprecated */ void putArrayIntoDelegate(R, E)(ref R r, E e)
     {
         r((&e)[0..1]);
     }
