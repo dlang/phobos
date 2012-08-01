@@ -10,7 +10,8 @@ WIKI = StdBitarray
 Copyright: Copyright Digital Mars 2007 - 2011.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors:   $(WEB digitalmars.com, Walter Bright),
-           $(WEB erdani.org, Andrei Alexandrescu)
+           $(WEB erdani.org, Andrei Alexandrescu),
+           Era Scarecrow
 Source: $(PHOBOSSRC std/_bitmanip.d)
 */
 /*
@@ -25,9 +26,14 @@ module std.bitmanip;
 
 import core.bitop;
 import std.traits;
+import std.algorithm;
+import std.string;
+import std.ascii;
 import std.stdio : writeln, writefln, writef;
+import core.stdc.stdio;
 
-private pure int indexOf(string str, char letter)
+//CTFE has issues if you use the std.string version at present
+private int indexOf(string str, char letter) pure
 {
     foreach(i, c; str)
         if (c == letter)
@@ -35,17 +41,7 @@ private pure int indexOf(string str, char letter)
     return -1;
 }
 
-//remove spaces from beginning/end of string
-private pure string trim(string str)
-{
-    while (str.length && str[0] == ' ')
-        str = str[1 .. $];
-    while (str.length && str[$-1] == ' ')
-        str = str[0 .. $-1];
-    return str;
-}
-
-private pure string myToStringHex(ulong n)
+private string myToStringHex(ulong n) pure
 {
     enum s = "0123456789abcdef";
     enum len = s.length;
@@ -56,7 +52,7 @@ private pure string myToStringHex(ulong n)
 }
 
 //for debugging
-private pure string myToStringx(long n)
+private string myToStringx(long n) pure
 {
     enum s = "0123456789";
     enum len = s.length;
@@ -70,7 +66,7 @@ private pure string myToStringx(long n)
         return myToStringx(n / len) ~ myToStringx(n % len);
 }
 
-private pure ulong myToLongFromHex(string str)
+private ulong myToLongFromHex(string str) pure
 {
     enum l = "0123456789abcdef";
     enum u = "0123456789ABCDEF";
@@ -90,7 +86,7 @@ private pure ulong myToLongFromHex(string str)
     return sum;
 }
 
-private pure ulong myToLong(string str)
+private ulong myToLong(string str) pure
 {
     ulong sum;
 
@@ -144,33 +140,34 @@ unittest
     assert(myToString(45) == "45");
     assert(myToString(1UL << 32) == "0x100000000UL");
 
-    assert(trim("   123   ") == "123");
+    assert(strip("   123   ") == "123");
 }
 
-private pure string myToString(long n)
+
+//within a certain size we don't need to bother with hex, right?
+//if you print the mixin data out it makes a bit more sense this way.
+private string myToString(long n) pure
 {
-    //within a certain size we don't need to bother with hex, right?
     if (n >= short.min && n <= short.max)
         return myToStringx(n);
 
-    return myToStringHex(n) ~ ((n > uint.max || n < uint.min) ? "UL" : "U");
+    return myToStringHex(n) ~ "UL";
 }
 
 //pair to split name=value into their two halfs safely.
-//add built in 'trim' to them?
-private pure string getName(string nameAndValue)
+private string getName(string nameAndValue)
 {
     int equalsChar = nameAndValue.indexOf('=');
     if (equalsChar != -1)
-        return trim(nameAndValue[0 .. equalsChar]);
-    return trim(nameAndValue);
+        return strip(nameAndValue[0 .. equalsChar]);
+    return strip(nameAndValue);
 }
 
-private pure ulong getValue(string nameAndValue)
+private ulong getValue(string nameAndValue)
 {
     int equalsChar = nameAndValue.indexOf('=');
     if (equalsChar != -1)
-        return myToLong(trim(nameAndValue[equalsChar+1 .. $]));
+        return myToLong(strip(nameAndValue[equalsChar+1 .. $]));
     return 0;
 }
 
@@ -188,7 +185,7 @@ unittest
 
 
 private template createAccessors(
-    string store, T, string nameAndValue, size_t len, size_t offset)
+    string store, string attributes, T, string nameAndValue, size_t len, size_t offset)
 {
     enum name = getName(nameAndValue),
                 defaultValue = getValue(nameAndValue);
@@ -210,9 +207,9 @@ private template createAccessors(
         else
             alias ulong MasksType;
         enum MasksType
-            maskAllElse = ((1uL << len) - 1u) << offset,
+            maskAllElse = ((1uL << len) - 1) << offset,
             signBitCheck = 1uL << (len - 1),
-            extendSign = ~((cast(MasksType)1u << len) - 1);
+            extendSign = cast(MasksType) ~((1uL << len) - 1);
         static if (T.min < 0)
         {
             enum long minVal = -(1uL << (len - 1));
@@ -245,26 +242,27 @@ private template createAccessors(
             enum result =
             // constants
                 //only optional for cleaner namespace
-                (defVal ? "enum " ~ name ~ "_def = " ~ myToString(defVal) ~ ";\n" : "\n")
+                //two underscores used since much less likely to clash with other fields
+                (defVal ? "enum " ~ name ~ "__def = " ~ myToString(defVal) ~ ";\n" : "\n")
             // getter
-                ~"@property @safe pure nothrow bool " ~ name ~ "() const { return "
+                ~"bool " ~ name ~ "() " ~ attributes ~ " const { return "
                 ~"("~store~" & "~myToString(maskAllElse)~") != 0;}\n"
             // setter
-                ~"@property @safe pure nothrow void " ~ name ~ "(bool v){"
+                ~"void " ~ name ~ "(bool v) " ~ attributes ~ " {"
                 ~"if (v) "~store~" |= "~myToString(maskAllElse)~";"
                 ~"else "~store~" &= ~"~myToString(maskAllElse)~";}\n";
         }
         else
         {
             // constants
-            enum result = "enum "~T.stringof~" "~name~"_min = cast("~T.stringof~")"
+            enum result = "enum "~T.stringof~" "~name~"__min = cast("~T.stringof~")"
                 ~(minVal < 0 ? myToString(cast(long) minVal) : myToString(minVal))~"; "
-                ~" enum "~T.stringof~" "~name~"_max = cast("~T.stringof~")"
+                ~" enum "~T.stringof~" "~name~"__max = cast("~T.stringof~")"
                 ~myToString(maxVal)~"; "
                 //only optional for cleaner namespace
-                ~ (defVal ? "enum " ~ name ~ "_def = " ~ myToString(defVal) ~ ";\n" : "\n")
+                ~ (defVal ? "enum " ~ name ~ "__def = " ~ myToString(defVal) ~ ";\n" : "\n")
             // getter
-                ~ "@property @safe "~T.stringof~" "~name~"() pure nothrow const { auto result = "
+                ~ ""~T.stringof~" "~name~"() " ~ attributes ~ " const { auto result = "
                 ~ "("~store~" & "
                 ~ myToString(maskAllElse) ~ ") >>"
                 ~ myToString(offset) ~ ";"
@@ -274,9 +272,9 @@ private template createAccessors(
                    : "")
                 ~ " return cast("~T.stringof~") result;}\n"
             // setter
-                ~"@property @safe void "~name~"("~T.stringof~" v) pure nothrow { "
-                ~"assert(v >= "~name~"_min); "
-                ~"assert(v <= "~name~"_max); "
+                ~"void "~name~"("~T.stringof~" v) " ~ attributes ~ " { "
+                ~"assert(v >= "~name~"__min, \"bitfield '" ~ name ~ "' assignment < min\"); "
+                ~"assert(v <= "~name~"__max, \"bitfield '" ~ name ~ "' assignment > max\"); "
                 ~store~" = cast(typeof("~store~"))"
                 " (("~store~" & ~"~myToString(maskAllElse)~")"
                 " | ((cast(typeof("~store~")) v << "~myToString(offset)~")"
@@ -300,7 +298,7 @@ unittest
     assert(createStoreName!(int, " abc = -5 ", 1, int, " def = true ", 1) == "_abc_def");
 }
 
-private template createFields(string store, size_t offset, string defaults, Ts...)
+private template createFields(string store, bool suppliedName, size_t offset, string defaults, Ts...)
 {
     static if (!Ts.length)
     {
@@ -317,23 +315,26 @@ private template createFields(string store, size_t offset, string defaults, Ts..
             static assert(false, "Field widths must sum to 8, 16, 32, or 64");
             alias ulong StoreType; // just to avoid another error msg
         }
-        //if we have any defaults, auto assign, otherwise blank.
-        //bitmanip used in a union we will have a 'overlapping initialization' otherwise
-        enum result = "private " ~ StoreType.stringof ~ " " ~ store ~
-                (defaults.length ? " = " ~ defaults : "") ~ ";";
+        static if (!suppliedName)
+            //if we have any defaults, auto assign, otherwise blank.
+            //bitmanip used in a union we will have a 'overlapping initialization' otherwise
+            enum result = "private " ~ StoreType.stringof ~ " " ~ store ~
+                    (defaults.length ? " = " ~ defaults : "") ~ ";";
+        else
+            enum result = "";
     }
     else
     {
         enum result
-            = createAccessors!(store, Ts[0], Ts[1], Ts[2], offset).result
-            ~ createFields!(store, offset + Ts[2], defaults ~
+            = createAccessors!(store, "@property @safe nothrow " ~ (suppliedName ? "pure" : ""), Ts[0], Ts[1], Ts[2], offset).result
+            ~ createFields!(store, suppliedName, offset + Ts[2], defaults ~
                 //if we have a bitfield name
                 (Ts[1].length ? (
                     //and it has a value
                     getValue(Ts[1]) ? (
                         //if we have a previous value, OR it, appending our new value
                         (defaults.length ? " | " : "")
-                        ~getName(Ts[1]) ~ "_def"
+                        ~getName(Ts[1]) ~ "__def"
                     ) : ""
                 ) : ""),
                 Ts[3 .. $]).result;
@@ -392,11 +393,56 @@ struct A
 The type of a bit field can be any integral type or enumerated
 type. The most efficient type to store in bitfields is $(D_PARAM
 bool), followed by unsigned types, followed by signed types.
+
+If there is only one field offered that fills the full 8/16/32/64 bit area
+then it defaults to it's own type. Example:
+
+----
+struct B
+{
+    mixin(bitfields!(int, "something", 32);
+    //is equal to:
+    int something;
+}
+----
 */
 
 template bitfields(T...)
 {
-    enum { bitfields = createFields!(createStoreName!(T), 0, "", T).result }
+    //if there's one entry and it maxes out, don't bother with bitfields
+    //shift operator will complain anyways.
+    static if (T.length == 3 && T[0].sizeof * 8 == T[2])
+        enum { bitfields = T[0].stringof ~ " " ~ T[1] ~ ";" }
+    else
+        enum { bitfields = createFields!(createStoreName!(T), false, 0, "", T).result }
+}
+
+
+/**
+Same as bitfields template, with the exception that you can set the
+variable you want to be the target.
+----
+struct X {
+    struct Y { uint something; }
+    Y y;
+    mixin(bitfieldsOn!("y.something", //target variable
+        int, "a", 10,
+        int, "b", 6));
+}
+
+X x;
+assert(x.y.something == 0);
+x.a = 100;
+x.b = 10;
+
+assert(x.y.something);   //check it was changed
+assert(x.a == 100);      //check against our values.
+assert(x.b == 10);
+----
+*/
+template bitfieldsOn(string storeName, T...)
+{
+    enum { bitfieldsOn = createFields!(storeName, true, 0, "", T).result }
 }
 
 unittest
@@ -454,39 +500,39 @@ unittest
         mixin(bitfields!(
                 bool, "b_f=false", 1,
                 bool, "b_t=true", 1,
-                uint, "i_min=0", 3,
-                uint, "i_max=7", 3,
+                uint, "ii_min=0", 3,
+                uint, "ii_max=7", 3,
                 short, "  s_min  =  -8  ", 4,   //test spaces
                 short, "s_max=7", 4));
 
         mixin(bitfields!(
-                bool, "b_", 1,
-                uint, "i_", 3,
-                short, "  s_  ", 4));
+                bool, "b", 1,
+                uint, "ii", 3,
+                short, "  s  ", 4));
     }
     WithDefaults wd;
 
     with(wd) {
         //non-specified variables go to 0
-        assert(b_ == false);
-        assert(i_ == 0);
-        assert(s_ == 0);
-        
+        assert(b == false);
+        assert(ii == 0);
+        assert(s == 0);
+
         //assigned defaults should be set.
         assert(b_f == false);
         assert(b_t == true);
-        assert(i_min == 0);
-        assert(i_max == 7);
+        assert(ii_min == 0);
+        assert(ii_max == 7);
         assert(s_min == -8);
         assert(s_max == 7);
-        
-        assert(i_min_max == i_max_max);
-        assert(i_max_min == i_min_min);
-        
-        assert(i_min_min == i_min);
-        assert(i_max_max == i_max);
-        assert(s_min_min == s_min);
-        assert(s_max_max == s_max);
+
+        assert(ii_min__max == ii_max__max);
+        assert(ii_max__min == ii_min__min);
+
+        assert(ii_min__min == ii_min);
+        assert(ii_max__max == ii_max);
+        assert(s_min__min == s_min);
+        assert(s_max__max == s_max);
     }
 
     /*
@@ -504,6 +550,87 @@ unittest
                 bool, "flHash", 1,
                 ubyte, "", 3));
     }
+}
+
+//bug 8474, 32bits size at beginning of mixin gives trouble.
+//also 64bit total (long/ulong)
+unittest {
+    struct X {
+        //single 16bit
+        mixin(bitfields!(
+            short, "ss",  16,
+        ));
+        
+        //single 32bit
+        mixin(bitfields!(
+            uint, "ui",  32,
+        ));
+        
+        //two 32bits
+        mixin(bitfields!(
+            int, "si1",  32,
+            int, "si2",  32,
+        ));
+        
+        //full 64bit
+        mixin(bitfields!(
+            ulong, "ul",  64,
+        ));
+        
+        //check assignment
+        //single 32bit
+        mixin(bitfields!(
+            uint, "ui_def=42",  32,
+        ));
+    }
+    
+    X x;
+    
+    assert(x.ui_def == 42);
+}
+
+//issue 5942 - Bitfields are overwritten erroneously
+unittest {
+    struct S {
+        mixin(bitfields!(
+                int, "a" , 32,
+                int, "b" , 32
+            ));
+    }
+
+    S data;
+    
+    data.b = 42;
+    data.a = 1;
+
+    assert(data.b == 42);
+}
+
+//issue 5520 - bitfieldsOn, supplying location for int/value to be affected.
+unittest {
+    struct X {
+        struct Y { uint something; }
+        Y y;
+        mixin(bitfieldsOn!("y.something",
+            int, "a", 10,
+            int, "b", 10,
+            int, "c", 10,
+            uint, "d", 2
+        ));
+    }
+
+    X x;
+    assert(x.y.something == 0);
+    x.a = 10;
+    x.b = 100;
+    x.c = 500;
+    x.d = 2;
+    
+    assert(x.y.something);  //check it was changed
+    assert(x.a == 10);      //check against our values.
+    assert(x.b == 100);
+    assert(x.c == 500);
+    assert(x.d == 2);
 }
 
 /**
