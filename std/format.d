@@ -1267,12 +1267,12 @@ if (!hasToString!(T, Char) && isIntegral!T)
         {
             // must swap bytes
             foreach_reverse (i; 0 .. val.sizeof)
-                put(w, begin[i]);
+                put(w, [begin[i]]);
         }
         else
         {
             foreach (i; 0 .. val.sizeof)
-                put(w, begin[i]);
+                put(w, [begin[i]]);
         }
         return;
     }
@@ -1447,12 +1447,12 @@ if (!hasToString!(T, Char) && isFloatingPoint!T)
         {
             // must swap bytes
             foreach_reverse (i; 0 .. val.sizeof)
-                put(w, begin[i]);
+                put(w, [begin[i]]);
         }
         else
         {
             foreach (i; 0 .. val.sizeof)
-                put(w, begin[i]);
+                put(w, [begin[i]]);
         }
         return;
     }

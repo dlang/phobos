@@ -618,11 +618,11 @@ void put(R, E)(ref R r, E e)
         }
         else static if (!isArray!R && is(typeof(r.put((&e)[0..1]))))
         {
-            r.put((&e)[0..1]);
+            putArrayIntoPut(r, e);
         }
         else static if (isInputRange!E && is(typeof(put(r, e.front))))
         {
-            for (; !e.empty; e.popFront()) put(r, e.front);
+            putRangeIntoPut(r, e);
         }
         else
         {
@@ -642,7 +642,7 @@ void put(R, E)(ref R r, E e)
             }
             else static if (isInputRange!E && is(typeof(put(r, e.front))))
             {
-                for (; !e.empty; e.popFront()) put(r, e.front);
+                putRangeIntoPut(r, e);
             }
             else
             {
@@ -659,7 +659,7 @@ void put(R, E)(ref R r, E e)
             }
             else static if (is(typeof(r((&e)[0..1]))))
             {
-                r((&e)[0..1]);
+                putArrayIntoDelegate(r, e);
             }
             else
             {
@@ -667,6 +667,40 @@ void put(R, E)(ref R r, E e)
                         "Cannot put a "~E.stringof~" into a "~R.stringof);
             }
         }
+    }
+}
+
+private 
+{ 
+    //The following methods are features of "put" which are being deprecated.
+    //They are being deprecated because they interfere with with the correct definition of "isOutputRange"
+    //Use the suggested alternative instead
+
+    //This allows putting an entire range of elements into R if R is an output range of elements in e;
+    //Use "r = copy(e, r)" instead
+    //Scheduled for deprecation
+    deprecated void putRangeIntoPut(R, E)(ref R r, E e)
+    {
+        static assert(false, "Putting a range of elements into an OutputRange has been deprecated.");
+        for (; !e.empty; e.popFront()) put(r, e.front);
+    }
+
+    //This allows putting [e] in r
+    //Use "put(r, [e])" instead
+    //Scheduled for deprecation
+    deprecated void putArrayIntoPut(R, E)(ref R r, E e)
+    {
+        static assert(false, "deprecated: Please call put(r, [e]) directly.");
+        r.put((&e)[0..1]);
+    }
+
+    //This allows putting [e] in r
+    //Use "put(r, [e])" instead
+    //Scheduled for deprecation
+    deprecated void putArrayIntoDelegate(R, E)(ref R r, E e)
+    {
+        static assert(false, "deprecated: Please call put(r, [e]) directly.");
+        r((&e)[0..1]);
     }
 }
 
@@ -686,7 +720,7 @@ unittest
 {
     int[] a = [1, 2, 3], b = [10, 20];
     auto c = a;
-    put(a, b);
+    foreach(v; b) put(a, v);
     assert(c == [10, 20, 3]);
     assert(a == [3]);
 }
@@ -703,7 +737,7 @@ unittest
 {
     void myprint(in char[] s) { }
     auto r = &myprint;
-    put(r, 'a');
+    put(r, ['a']);
 }
 
 unittest
@@ -717,7 +751,7 @@ unittest
      * a[0] = "ABC"[0]; // OK
      * put(a, "ABC");   // OK
      */
-    static assert( __traits(compiles, put(a, "ABC")));
+    static assert( __traits(compiles, a = copy("ABC", a)));
 }
 
 unittest
@@ -746,7 +780,7 @@ unittest
     }
     LockingTextWriter w;
     RetroResult r;
-    put(w, r);
+    w = copy(r, w);
 }
 
 /**
