@@ -524,6 +524,58 @@ version(unittest)
 }
 
 /**
+Returns $(D true) if $(D R) is an input range. An input range must
+define the primitives $(D empty), $(D popFront), and $(D front). The
+following code should compile for any input range.
+
+----
+R r;              // can define a range object
+if (r.empty) {}   // can test for empty
+r.popFront();     // can invoke popFront()
+auto h = r.front; // can get the front of the range of non-void type
+----
+
+The semantics of an input range (not checkable during compilation) are
+assumed to be the following ($(D r) is an object of type $(D R)):
+
+$(UL $(LI $(D r.empty) returns $(D false) iff there is more data
+available in the range.)  $(LI $(D r.front) returns the current
+element in the range. It may return by value or by reference. Calling
+$(D r.front) is allowed only if calling $(D r.empty) has, or would
+have, returned $(D false).) $(LI $(D r.popFront) advances to the next
+element in the range. Calling $(D r.popFront) is allowed only if
+calling $(D r.empty) has, or would have, returned $(D false).))
+ */
+template isInputRange(R)
+{
+    enum bool isInputRange = is(typeof(
+    (inout int _dummy=0)
+    {
+        R r = void;       // can define a range object
+        if (r.empty) {}   // can test for empty
+        r.popFront();     // can invoke popFront()
+        auto h = r.front; // can get the front of the range
+    }));
+}
+
+unittest
+{
+    struct A {}
+    struct B
+    {
+        void popFront();
+        @property bool empty();
+        @property int front();
+    }
+    static assert(!isInputRange!(A));
+    static assert( isInputRange!(B));
+    static assert( isInputRange!(int[]));
+    static assert( isInputRange!(char[]));
+    static assert(!isInputRange!(char[4]));
+    static assert( isInputRange!(inout(int)[])); // bug 7824
+}
+
+/**
 Outputs $(D e) to $(D r). The exact effect is dependent upon the two
 types. Several cases are accepted, as described below. The code snippets
 are attempted in order, and the first to compile "wins" and gets
