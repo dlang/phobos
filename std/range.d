@@ -688,16 +688,18 @@ private
     //This allows putting [e] in r
     //Use "put(r, [e])" instead
     //Scheduled for deprecation
-    /* deprecated */ void putArrayIntoPut(R, E)(ref R r, E e)
+    deprecated void putArrayIntoPut(R, E)(ref R r, E e)
     {
+        static assert(false, "deprecated: Please call put(r, [e]) directly.");
         r.put((&e)[0..1]);
     }
 
     //This allows putting [e] in r
     //Use "put(r, [e])" instead
     //Scheduled for deprecation
-    /* deprecated */ void putArrayIntoDelegate(R, E)(ref R r, E e)
+    deprecated void putArrayIntoDelegate(R, E)(ref R r, E e)
     {
+        static assert(false, "deprecated: Please call put(r, [e]) directly.");
         r((&e)[0..1]);
     }
 }
