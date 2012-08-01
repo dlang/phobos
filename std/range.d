@@ -575,37 +575,6 @@ unittest
     static assert( isInputRange!(inout(int)[])); // bug 7824
 }
 
-private
-{
-    //The following methods are features of "Put" which are being deprecated.*
-    //They are being deprecated because they interfere with with the correct definition of "isOutputRange"
-    //Use the suggested alternative instead
-
-    //This allows putting an entire range of elements into R if R is an output range of elements in e;
-    //Use "r = copy(e, r)" instead
-    //Scheduled for deprecation
-    deprecated void putRange(R, E)(ref R r, E e)
-    {
-        for (; !e.empty; e.popFront()) put(r, e.front);
-    }
-    
-    //This allows putting [e] in r
-    //Use "put(r, [e])" instead
-    //Scheduled for deprecation
-    deprecated void putArray(R, E)(ref R r, E e)
-    {
-        r.put((&e)[0..1]);
-    }
-    
-    //This allows putting [e] in r
-    //Use "put(r, [e])" instead
-    //Scheduled for deprecation
-    deprecated void putDelegateArray(R, E)(ref R r, E e)
-    {
-        r((&e)[0..1]);
-    }
-}
-
 /**
 Outputs $(D e) to $(D r). The exact effect is dependent upon the two
 types. Several cases are accepted, as described below. The code snippets
@@ -620,87 +589,145 @@ $(TR $(TD $(D r.put(e);)) $(TD $(D R) specifically defines a method
 $(D put) accepting an $(D E).))
 
 $(TR $(TD $(D r.put([ e ]);)) $(TD $(D R) specifically defines a
-method $(D put) accepting an $(D E[]).)) DEPRECATED!
-
+method $(D put) accepting an $(D E[]).))
 $(TR $(TD $(D r.front = e; r.popFront();)) $(TD $(D R) is an input
 range and $(D e) is assignable to $(D r.front).))
 
 $(TR $(TD $(D for (; !e.empty; e.popFront()) put(r, e.front);)) $(TD
-Copying range $(D E) to range $(D R).)) DEPRECATED!
-
+Copying range $(D E) to range $(D R).))
 $(TR $(TD $(D r(e);)) $(TD $(D R) is e.g. a delegate accepting an $(D
 E).))
 
 $(TR $(TD $(D r([ e ]);)) $(TD $(D R) is e.g. a $(D delegate)
-accepting an $(D E[]).)) DEPRECATED!
+accepting an $(D E[]).))
 
 )
  */
+
 void put(R, E)(ref R r, E e)
+    if (
+        hasMember!(R, "put")
+        && is(typeof(r.put(e)))
+    )
 {
-    static if (hasMember!(R, "put") ||
-    (isPointer!R && is(PointerTarget!R == struct) &&
-     hasMember!(PointerTarget!R, "put")))
-    {
-        // commit to using the "put" method
-        static if (!isArray!R && is(typeof(r.put(e))))
-        {
-            r.put(e);
-        }
-        else static if (!isArray!R && is(typeof(r.put((&e)[0..1]))))
-        {
-            putArray(r, e);
-        }
-        else static if (isInputRange!E && is(typeof(put(r, e.front))))
-        {
-            putRange(r, e);
-        }
-        else
-        {
-            static assert(false,
-                    "Cannot put a "~E.stringof~" into a "~R.stringof);
-        }
-    }
-    else
-    {
-        static if (isInputRange!R)
-        {
-            // Commit to using assignment to front
-            static if (is(typeof(r.front = e, r.popFront())))
-            {
-                r.front = e;
-                r.popFront();
-            }
-            else static if (isInputRange!E && is(typeof(put(r, e.front))))
-            {
-                putRange(r, e);
-            }
-            else
-            {
-                static assert(false,
-                        "Cannot put a "~E.stringof~" into a "~R.stringof);
-            }
-        }
-        else
-        {
-            // Commit to using opCall
-            static if (is(typeof(r(e))))
-            {
-                r(e);
-            }
-            else static if (is(typeof(r((&e)[0..1]))))
-            {
-                putDelegateArray(r, e);
-            }
-            else
-            {
-                static assert(false,
-                        "Cannot put a "~E.stringof~" into a "~R.stringof);
-            }
-        }
-    }
+    //straight up put
+    r.put(e);
 }
 
+///ditto
+void put(R, E)(ref R r, E e)
+    if (
+        hasMember!(R, "put")
+        && !is(typeof(r.put(e)))
+        && is(typeof(r.put((&e)[0..1])))
+    )
+{
+    //Adaptor for arrays: put(r, [e])
+    r.put((&e)[0..1]);
+}
+
+///ditto
+void put(R, E)(ref R r, E e)
+    if (
+        hasMember!(R, "put")
+        && !is(typeof(r.put(e)))
+        && !is(typeof(r.put((&e)[0..1])))
+        && is(typeof(put(r, e.front)))
+    )
+{
+    //adaptor for ranges
+    for (; !e.empty; e.popFront()) put(r, e.front);
+}
+
+///ditto
+void put(R, E)(ref R r, E e)
+    if (
+        hasMember!(R, "put")
+        && !is(typeof(r.put(e)))
+        && !is(typeof(r.put((&e)[0..1])))
+        && !is(typeof(put(r, e.front)))
+    )
+{
+    //R defines put, but we can't use it.
+    static assert(false, "Cannot put a "~E.stringof~" into a "~R.stringof);
+}
+
+///ditto
+void put(R, E)(ref R r, E e)
+    if (
+        !hasMember!(R, "put")
+        && isInputRange!R
+        && is(typeof(r.front = e, r.popFront()))
+    )
+{
+    //when r is an input range
+    r.front = e;
+    r.popFront();
+}
+
+///ditto
+void put(R, E)(ref R r, E e)
+    if (
+        !hasMember!(R, "put")
+        && isInputRange!R
+        && !is(typeof(r.front = e, r.popFront()))
+        && is(typeof(r.front = e))
+    )
+{
+    //put range in range
+    for (; !e.empty; e.popFront()) put(r, e.front);
+}
+
+///ditto
+void put(R, E)(ref R r, E e)
+    if (
+        !hasMember!(R, "put")
+        && isInputRange!R
+        && !is(typeof(r.front = e, r.popFront()))
+        && !is(typeof(r.front = e))
+    )
+{
+    //R is an input range, but wa can't assign to it.
+    static assert(false, "Cannot put a "~E.stringof~" into a "~R.stringof);
+}
+
+///ditto
+void put(R, E)(ref R r, E e)
+    if (
+        !hasMember!(R, "put")
+        && !isInputRange!R
+        && is(typeof(r(e)))
+    )
+{
+    //Delegate version
+    r(e);
+}
+
+///ditto
+void put(R, E)(ref R r, E e)
+    if (
+        !hasMember!(R, "put")
+        && !isInputRange!R
+        && !is(typeof(r(e)))
+        && is(typeof((r((&e)[0..1]))))
+    )
+{
+    //Delegate version of( r([e]) )
+    r((&e)[0..1]);
+}
+
+///ditto
+void put(R, E)(ref R r, E e)
+    if (
+        !hasMember!(R, "put")
+        && !isInputRange!R
+        && !is(typeof(r(e)))
+        && is(typeof((r((&e)[0..1]))))
+    )
+{
+    //R is a delegate, but we can't call it.
+    static assert(false, "Cannot put a "~E.stringof~" into a "~R.stringof);
+}
 unittest
 {
     struct A {}
