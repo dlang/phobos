@@ -2253,11 +2253,29 @@ Defines the container's primary range, which is a random-access range.
      */
     struct Range
     {
+
+/**
+/// ***Implementation Note***
+
+"_a <= _b" is an invariant for Array.Range.
+This is first enforced in the constructor, and is then maintained by the implementation.
+There is no need to call enforce on each function call to check this condition,
+but the implementation _must_ maintain this invariant.
+
+"_b <= _outer.length" must be respected for the range to be considered valid.
+This condition must be checked (enforeced) on every call,
+as the container may have shrunk in between two calls, without the range's knowledge.
+A range that does go past the container's end will be considered invalid,
+and any and all operations on it will throw an enforcement error,
+even if the operation *could* be executed (eg: front).
+     */
+
         private Array _outer;
         private size_t _a, _b;
 
         this(Array data, size_t a, size_t b)
         {
+            enforce(a <= b && b <= data.length);
             _outer = data;
             _a = a;
             _b = b;
@@ -2265,37 +2283,38 @@ Defines the container's primary range, which is a random-access range.
 
         @property bool empty() const
         {
-            assert(_outer.length >= _b);
-            return _a >= _b;
+            enforce(_b <= _outer.length);
+            return !(_a < _b);
         }
 
         @property Range save()
         {
+            enforce(_b <= _outer.length);
             return this;
         }
 
         @property T front()
         {
             enforce(!empty);
-            return _outer[_a];
+            return _outer._data._payload[_a];
         }
 
         @property T back()
         {
             enforce(!empty);
-            return _outer[_b - 1];
+            return _outer._data._payload[_b - 1];
         }
 
         @property void front(T value)
         {
             enforce(!empty);
-            _outer[_a] = move(value);
+            move(value, _outer._data._payload[_a]);
         }
 
         @property void back(T value)
         {
             enforce(!empty);
-            _outer[_b - 1] = move(value);
+            move(value, _outer._data._payload[_b - 1]);
         }
 
         void popFront()
@@ -2325,7 +2344,7 @@ Defines the container's primary range, which is a random-access range.
         T moveAt(size_t i)
         {
             i += _a;
-            enforce(i < _b && !empty);
+            enforce(i < _b && _b <= _outer.length);
             return move(_outer._data._payload[_a + i]);
         }
 
@@ -2333,28 +2352,41 @@ Defines the container's primary range, which is a random-access range.
         {
             i += _a;
             enforce(i < _b && _b <= _outer.length);
-            return _outer[i];
+            return _outer._data._payload[i];
         }
 
         void opIndexAssign(T value, size_t i)
         {
             i += _a;
             enforce(i < _b && _b <= _outer.length);
-            _outer[i] = value;
+            _outer._data._payload[i] = value;
         }
 
         typeof(this) opSlice(size_t a, size_t b)
         {
-            return typeof(this)(_outer, a + _a, b + _a);
+            a += _a; b += _a;
+            enforce(b <= _b && _b <= _outer.length);
+            //The constructor will enfore a itself
+            return typeof(this)(_outer, a, b);
         }
 
         void opIndexOpAssign(string op)(T value, size_t i)
         {
-            enforce(_outer && _a + i < _b && _b <= _outer._payload.length);
-            mixin("_outer._payload.ptr[_a + i] "~op~"= value;");
+            i += _a;
+            enforce(i < _b && _b <= _outer.length);
+            mixin("_outer._data._payload[i] "~op~"= value;");
         }
 
-        @property size_t length() const {
+        void opIndexUnary(string op)(size_t i)
+        {
+            i += _a;
+            enforce(i < _b && _b <= _outer.length);
+            mixin(op~" _outer._data._payload[i];");
+        }
+
+        @property size_t length() const
+        {
+            enforce(_b <= _outer.length);
             return _b - _a;
         }
     }
@@ -2482,21 +2514,21 @@ Complexity: $(BIGOH 1)
         return *_data._payload.ptr;
     }
 
-/// ditto
+    /// ditto
     @property void front(T value)
     {
         enforce(!empty);
         *_data._payload.ptr = value;
     }
 
-/// ditto
+    /// ditto
     @property T back()
     {
         enforce(!empty);
         return _data._payload[$ - 1];
     }
 
-/// ditto
+    /// ditto
     @property void back(T value)
     {
         enforce(!empty);
@@ -2523,10 +2555,16 @@ Complexity: $(BIGOH 1)
         _data._payload[i] = value;
     }
 
-/// ditto
+    /// ditto
     void opIndexOpAssign(string op)(T value, size_t i)
     {
         mixin("_data._payload[i] "~op~"= value;");
+    }
+
+    /// ditto
+    void opIndexUnary(string op)(size_t i)
+    {
+        mixin(op~"_data._payload[i];");
     }
 
 /**
@@ -2633,7 +2671,7 @@ elements in $(D stuff)
         _data.RefCounted.ensureInitialized();
         return _data.insertBack(stuff);
     }
-/// ditto
+    /// ditto
     alias insertBack insert;
 
 /**
@@ -2655,7 +2693,7 @@ Complexity: $(BIGOH log(n)).
         }
         _data._payload = _data._payload[0 .. $ - 1];
     }
-/// ditto
+    /// ditto
     alias removeBack stableRemoveBack;
 
 /**
@@ -2714,7 +2752,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
         return 1;
     }
 
-/// ditto
+    /// ditto
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
@@ -2765,7 +2803,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
         return result;
     }
 
-/// ditto
+    /// ditto
     size_t replace(Stuff)(Range r, Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
@@ -2787,7 +2825,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
         return result;
     }
 
-/// ditto
+    /// ditto
     size_t replace(Stuff)(Range r, Stuff stuff)
     if (isImplicitlyConvertible!(Stuff, T))
     {
@@ -3046,6 +3084,36 @@ unittest
 	assertThrown(a.replace(r, 42));
 	assertThrown(a.replace(r, [42]));
 	assertThrown(a.linearRemove(r));
+}
+//Test issue 8332 8333: opIndexOpAssign/opIndexUnary
+unittest
+{
+    auto a = Array!int([1, 2, 3]);
+    a[1] = 0;  //Check Array.opIndexAssign
+    a[1] += 1; //Check Array.opIndexOpAssign
+    ++a[1];    //Check Array.opIndexUnary
+    auto r = a[];
+    r[1] = 0;  //Check Array.Range.opIndexAssign
+    r[1] += 1; //Check Array.Range.opIndexOpAssign
+    ++r[1];    //Check Array.Range.opIndexUnary
+}
+//Validate that illegal operations enforce:
+unittest
+{
+    auto a = Array!int([1, 2, 3]);
+    assertThrown(a[1 .. 4]); //out of range
+    assertThrown(a[1 .. 0]); //illegal slice
+    auto r = a[];
+    assertThrown(r[1 .. 4]); //out of range
+    assertThrown(r[1 .. 0]); //illegal slice
+    
+    //Make underlying container smaller than the range, invalidating it.
+    //Now EVERYTHING should be invalid.
+    a.removeBack();
+    assertThrown(r.empty);
+    assertThrown(r.length);
+    assertThrown(r.save);
+    assertThrown(r[1 .. 2]);
 }
 
 // BinaryHeap
