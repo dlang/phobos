@@ -212,6 +212,7 @@ module std.container;
 import core.memory, core.stdc.stdlib, core.stdc.string, std.algorithm,
     std.conv, std.exception, std.functional, std.range, std.traits,
     std.typecons, std.typetuple;
+import std.string : format;
 version(unittest) import std.stdio;
 
 version(unittest) version = RBDoChecks;
@@ -2256,105 +2257,133 @@ Defines the container's primary range, which is a random-access range.
         private Array _outer;
         private size_t _a, _b;
 
+        private enum string internalMessage = "Array.Range: Internal Error: a > b";
+        private enum string invalidatedMessage = "Array.Range: range has become invalid";
+        private enum string emptyMessage = ": range is empty";
+        private enum string indexMessage = ": index is out of range, i = ";
+
+        private nothrow
+        bool checkIndex(size_t i) const
+        {
+            assert(_a <= _b, internalMessage);
+            assert(_b <= _outer.length, invalidatedMessage);
+            return(_a + i < _b);
+        }
+
         this(Array data, size_t a, size_t b)
         {
+            enforce(a <= b);
             _outer = data;
             _a = a;
             _b = b;
+            assert(_b <= _outer.length, invalidatedMessage);
         }
 
-        @property bool empty() const
+        @property nothrow
+        bool empty() const
         {
-            assert(_outer.length >= _b);
-            return _a >= _b;
+            assert(_a <= _b, internalMessage);
+            assert(_b <= _outer.length, invalidatedMessage);
+            return !(_a < _b);
         }
 
         @property Range save()
         {
+            assert(_a <= _b, internalMessage);
             return this;
         }
 
         @property T front()
         {
-            enforce(!empty);
-            return _outer[_a];
+            enforce(!empty, text("Array.Range.front", emptyMessage));
+            return _outer._data._payload[_a];
         }
 
         @property T back()
         {
-            enforce(!empty);
-            return _outer[_b - 1];
+            enforce(!empty, text("Array.Range.back", emptyMessage));
+            return _outer._data._payload[_b - 1];
         }
 
         @property void front(T value)
         {
-            enforce(!empty);
-            _outer[_a] = move(value);
+            enforce(!empty, text("Array.Range.front", emptyMessage));
+            move(value, _outer._data._payload[_a]);
         }
 
         @property void back(T value)
         {
-            enforce(!empty);
-            _outer[_b - 1] = move(value);
+            enforce(!empty, text("Array.Range.back", emptyMessage));
+            move(value, _outer._data._payload[_b - 1]);
         }
 
         void popFront()
         {
-            enforce(!empty);
+            enforce(!empty, text("Array.Range.popFront", emptyMessage));
             ++_a;
         }
 
         void popBack()
         {
-            enforce(!empty);
+            enforce(!empty, text("Array.Range.popBack", emptyMessage));
             --_b;
         }
 
         T moveFront()
         {
-            enforce(!empty);
+            enforce(!empty, text("Array.Range.moveFront", emptyMessage));
             return move(_outer._data._payload[_a]);
         }
 
         T moveBack()
         {
-            enforce(!empty);
+            enforce(!empty, text("Array.Range.moveBack", emptyMessage));
             return move(_outer._data._payload[_b - 1]);
         }
 
         T moveAt(size_t i)
         {
-            i += _a;
-            enforce(i < _b && !empty);
+            enforce(checkIndex(i), text("Array.Range.moveAt", indexMessage, i));
             return move(_outer._data._payload[_a + i]);
         }
 
         T opIndex(size_t i)
         {
-            i += _a;
-            enforce(i < _b && _b <= _outer.length);
-            return _outer[i];
+            enforce(checkIndex(i), text("Array.Range.opIndex", indexMessage, i));
+            return _outer._data._payload[_a + i];
         }
 
         void opIndexAssign(T value, size_t i)
         {
-            i += _a;
-            enforce(i < _b && _b <= _outer.length);
-            _outer[i] = value;
+            enforce(checkIndex(i), text("Array.Range.opIndexAssign", indexMessage, i));
+            _outer._data._payload[_a + i] = value;
         }
 
         typeof(this) opSlice(size_t a, size_t b)
         {
-            return typeof(this)(_outer, a + _a, b + _a);
+            enforce(a <= b, format("Array.Range.opIndexOpAssign: low index %s is bigger than high index%",
+                a, b));
+            enforce(checkIndex(a), text("Array.Range.opIndexOpAssign", indexMessage, a));
+            enforce(checkIndex(b), text("Array.Range.opIndexOpAssign", indexMessage, b));
+            return typeof(this)(_outer, a, b);
         }
 
         void opIndexOpAssign(string op)(T value, size_t i)
         {
-            enforce(_outer && _a + i < _b && _b <= _outer._payload.length);
-            mixin("_outer._payload.ptr[_a + i] "~op~"= value;");
+            enforce(checkIndex(i), text("Array.Range.opIndexOpAssign", indexMessage, i));
+            mixin("_outer._data._payload[_a + i] "~op~"= value;");
         }
 
-        @property size_t length() const {
+        void opIndexUnary(string op)(size_t i)
+        {
+            enforce(checkIndex(i), text("Array.Range.opIndexUnary", indexMessage, i));
+            mixin(op~" _outer._data._payload[_a + i];");
+        }
+
+        @property nothrow
+        size_t length() const
+        {
+            assert(_a <= _b, internalMessage);
             return _b - _a;
         }
     }
@@ -2365,7 +2394,8 @@ elements.
 
 Complexity: $(BIGOH 1)
      */
-    @property bool empty() const
+    @property nothrow
+    bool empty() const
     {
         return !_data.RefCounted.isInitialized || _data._payload.empty;
     }
@@ -2387,7 +2417,8 @@ Returns the number of elements in the container.
 
 Complexity: $(BIGOH 1).
      */
-    @property size_t length() const
+    @property nothrow
+    size_t length() const
     {
         return _data.RefCounted.isInitialized ? _data._payload.length : 0;
     }
@@ -2398,7 +2429,8 @@ Returns the maximum number of elements the container can store without
 
 Complexity: $(BIGOH 1)
      */
-    @property size_t capacity()
+    @property nothrow
+    size_t capacity()
     {
         return _data.RefCounted.isInitialized ? _data._capacity : 0;
     }
@@ -2516,7 +2548,7 @@ Complexity: $(BIGOH 1)
         return _data._payload[i];
     }
 
-    /// ditto
+/// ditto
     void opIndexAssign(T value, size_t i)
     {
         enforce(_data.RefCounted.isInitialized);
@@ -2527,6 +2559,12 @@ Complexity: $(BIGOH 1)
     void opIndexOpAssign(string op)(T value, size_t i)
     {
         mixin("_data._payload[i] "~op~"= value;");
+    }
+
+/// ditto
+    void opIndexUnary(string op)(size_t i)
+    {
+        mixin(op~"_data._payload[i];");
     }
 
 /**
@@ -3046,6 +3084,18 @@ unittest
 	assertThrown(a.replace(r, 42));
 	assertThrown(a.replace(r, [42]));
 	assertThrown(a.linearRemove(r));
+}
+//Test issue 8332 8333: opIndexOpAssign/opIndexUnary
+unittest
+{
+    auto a = Array!int([1, 2, 3]);
+    a[1] = 0;  //Check Array.opIndexAssign
+    a[1] += 1; //Check Array.opIndexOpAssign
+    ++a[1];    //Check Array.opIndexUnary
+    auto r = a[];
+    r[1] = 0;  //Check Array.Range.opIndexAssign
+    r[1] += 1; //Check Array.Range.opIndexOpAssign
+    ++r[1];    //Check Array.Range.opIndexUnary
 }
 
 // BinaryHeap
