@@ -188,7 +188,8 @@ private template createAccessors(
     string store, string attributes, T, string nameAndValue, size_t len, size_t offset)
 {
     enum name = getName(nameAndValue),
-                defaultValue = getValue(nameAndValue);
+                defaultValue = getValue(nameAndValue),
+                unqT = Unqual!(T).stringof; //removes any const qualifier, cleaner output code
     
     static if (!name.length)
     {
@@ -198,7 +199,7 @@ private template createAccessors(
     else static if (len == 0)
     {
         // Fields of length 0 are always zero
-        enum result = "enum "~T.stringof~" "~name~" = 0;\n";
+        enum result = "enum "~unqT~" "~name~" = 0;";
     }
     else
     {
@@ -243,26 +244,27 @@ private template createAccessors(
             // constants
                 //only optional for cleaner namespace
                 //two underscores used since much less likely to clash with other fields
-                (defVal ? "enum " ~ name ~ "__def = " ~ myToString(defVal) ~ ";\n" : "\n")
+                (defVal ? "enum " ~ name ~ "__def = " ~ myToString(defVal) ~ ";" : "")
             // getter
                 ~"bool " ~ name ~ "() " ~ attributes ~ " const { return "
-                ~"("~store~" & "~myToString(maskAllElse)~") != 0;}\n"
-            // setter
-                ~"void " ~ name ~ "(bool v) " ~ attributes ~ " {"
-                ~"if (v) "~store~" |= "~myToString(maskAllElse)~";"
-                ~"else "~store~" &= ~"~myToString(maskAllElse)~";}\n";
+                ~"("~store~" & "~myToString(maskAllElse)~") != 0;}"
+            // setter, but only if it's assignable
+                ~(isAssignable!(T, T) ?
+                    "void " ~ name ~ "(bool v) " ~ attributes ~ " {"
+                    ~"if (v) "~store~" |= "~myToString(maskAllElse)~";"
+                    ~"else "~store~" &= ~"~myToString(maskAllElse)~";}" : "");
         }
         else
         {
             // constants
-            enum result = "enum "~T.stringof~" "~name~"__min = cast("~T.stringof~")"
+            enum result = "enum "~unqT~" "~name~"__min = cast("~unqT~")"
                 ~(minVal < 0 ? myToString(cast(long) minVal) : myToString(minVal))~"; "
-                ~" enum "~T.stringof~" "~name~"__max = cast("~T.stringof~")"
+                ~" enum "~unqT~" "~name~"__max = cast("~unqT~")"
                 ~myToString(maxVal)~"; "
-                //only optional for cleaner namespace
-                ~ (defVal ? "enum " ~ name ~ "__def = " ~ myToString(defVal) ~ ";\n" : "\n")
+            //optional (for cleaner namespace)
+                ~ (defVal ? "enum " ~ name ~ "__def = " ~ myToString(defVal) ~ ";" : "")
             // getter
-                ~ ""~T.stringof~" "~name~"() " ~ attributes ~ " const { auto result = "
+                ~ ""~unqT~" "~name~"() " ~ attributes ~ " const { auto result = "
                 ~ "("~store~" & "
                 ~ myToString(maskAllElse) ~ ") >>"
                 ~ myToString(offset) ~ ";"
@@ -270,15 +272,17 @@ private template createAccessors(
                    ? "if (result >= " ~ myToString(signBitCheck)
                    ~ ") result |= " ~ myToString(extendSign) ~ ";"
                    : "")
-                ~ " return cast("~T.stringof~") result;}\n"
-            // setter
-                ~"void "~name~"("~T.stringof~" v) " ~ attributes ~ " { "
-                ~"assert(v >= "~name~"__min, \"bitfield '" ~ name ~ "' assignment < min\"); "
-                ~"assert(v <= "~name~"__max, \"bitfield '" ~ name ~ "' assignment > max\"); "
-                ~store~" = cast(typeof("~store~"))"
-                " (("~store~" & ~"~myToString(maskAllElse)~")"
-                " | ((cast(typeof("~store~")) v << "~myToString(offset)~")"
-                " & "~myToString(maskAllElse)~"));}\n";
+                ~ " return cast("~unqT~") result;}"
+            // setter, but only if it's assignable
+                ~(isAssignable!(T, T) ?
+                    "void "~name~"("~unqT~" v) " ~ attributes ~ " { "
+                    ~"assert(v >= "~name~"__min, \"bitfield '" ~ name ~ "' assignment < min\"); "
+                    ~"assert(v <= "~name~"__max, \"bitfield '" ~ name ~ "' assignment > max\"); "
+                    ~store~" = cast(typeof("~store~"))"
+                    " (("~store~" & ~"~myToString(maskAllElse)~")"
+                    " | ((cast(typeof("~store~")) v << "~myToString(offset)~")"
+                    " & "~myToString(maskAllElse)~"));}"
+                    : "" );
         }
     }
 }
@@ -298,36 +302,45 @@ unittest
     assert(createStoreName!(int, " abc = -5 ", 1, int, " def = true ", 1) == "_abc_def");
 }
 
-private template createFields(string store, bool suppliedName, size_t offset, string defaults, Ts...)
+private template createFields(alias store, size_t offset, string defaults, Ts...)
 {
     static if (!Ts.length)
     {
-        static if (offset == ubyte.sizeof * 8)
-            alias ubyte StoreType;
-        else static if (offset == ushort.sizeof * 8)
-            alias ushort StoreType;
-        else static if (offset == uint.sizeof * 8)
-            alias uint StoreType;
-        else static if (offset == ulong.sizeof * 8)
-            alias ulong StoreType;
-        else
-        {
-            static assert(false, "Field widths must sum to 8, 16, 32, or 64");
-            alias ulong StoreType; // just to avoid another error msg
-        }
-        static if (!suppliedName)
+        static if (isSomeString!(typeof(store)) && store[0] == '_') {
+            static if (offset == ubyte.sizeof * 8)
+                alias ubyte StoreType;
+            else static if (offset == ushort.sizeof * 8)
+                alias ushort StoreType;
+            else static if (offset == uint.sizeof * 8)
+                alias uint StoreType;
+            else static if (offset == ulong.sizeof * 8)
+                alias ulong StoreType;
+            else
+            {
+                static assert(false, "Field widths must sum to 8, 16, 32, or 64");
+                alias ulong StoreType; // just to avoid another error msg
+            }
             //if we have any defaults, auto assign, otherwise blank.
             //bitmanip used in a union we will have a 'overlapping initialization' otherwise
             enum result = "private " ~ StoreType.stringof ~ " " ~ store ~
                     (defaults.length ? " = " ~ defaults : "") ~ ";";
+        }
         else
+        {
+            static if (isSomeString!(typeof(store)))
+                static assert(typeid(store).sizeof * 8 <= offset,
+                    "Supplied variable '" ~ store.stringof ~ "' too small (" ~ myToStringx(typeid(store).sizeof * 8) ~ ")");
             enum result = "";
+        }
     }
     else
     {
-        enum result
-            = createAccessors!(store, "@property @safe nothrow " ~ (suppliedName ? "pure" : ""), Ts[0], Ts[1], Ts[2], offset).result
-            ~ createFields!(store, suppliedName, offset + Ts[2], defaults ~
+        static if (is(typeof(store) == string))
+            enum accessors = createAccessors!(store, "@property @safe nothrow pure" , Ts[0], Ts[1], Ts[2], offset).result;
+        else
+            enum accessors = createAccessors!(store.stringof, "@property" , Ts[0], Ts[1], Ts[2], offset).result;
+        
+        enum result = accessors ~ createFields!(store, offset + Ts[2], defaults ~
                 //if we have a bitfield name
                 (Ts[1].length ? (
                     //and it has a value
@@ -338,6 +351,7 @@ private template createFields(string store, bool suppliedName, size_t offset, st
                     ) : ""
                 ) : ""),
                 Ts[3 .. $]).result;
+        
     }
 }
 
@@ -405,6 +419,24 @@ struct B
     int something;
 }
 ----
+
+ If a bitfield is marked 'const' or 'immutable' as part of it's
+type signature, the setter will be absent, to help honor that definition.
+
+----
+struct C
+{
+    mixin(bitfields!(
+        bool      , "flag1",    1,
+        const bool, "flag2",    1,
+        uint      , "",         6));
+}
+
+C c;
+c.flag1 = true;
+c.flag2 = false; //compile-time error, (not a property of flag2)
+----
+
 */
 
 template bitfields(T...)
@@ -414,7 +446,7 @@ template bitfields(T...)
     static if (T.length == 3 && T[0].sizeof * 8 == T[2])
         enum { bitfields = T[0].stringof ~ " " ~ T[1] ~ ";" }
     else
-        enum { bitfields = createFields!(createStoreName!(T), false, 0, "", T).result }
+        enum { bitfields = createFields!(createStoreName!(T), 0, "", T).result }
 }
 
 
@@ -425,9 +457,14 @@ variable you want to be the target.
 struct X {
     struct Y { uint something; }
     Y y;
+    uint local;
     mixin(bitfieldsOn!("y.something", //target variable
         int, "a", 10,
         int, "b", 6));
+        
+    mixin(bitfieldsOn!(local,   //more accurate and warns you of size issues
+        int      , "c", 10,
+        const int, "d", 6));
 }
 
 X x;
@@ -438,11 +475,17 @@ x.b = 10;
 assert(x.y.something);   //check it was changed
 assert(x.a == 100);      //check against our values.
 assert(x.b == 10);
+
+x.c = true;
+x.d = false; //compile time error, const and immutable honored as good as they can.
+
 ----
 */
-template bitfieldsOn(string storeName, T...)
+template bitfieldsOn(alias storeName, T...)
+if((isIntegral!(typeof(storeName)) && isUnsigned!(typeof(storeName)) &&
+        isFloatingPoint!(typeof(storeName)) == false) || isSomeString!(typeof(storeName)))
 {
-    enum { bitfieldsOn = createFields!(storeName, true, 0, "", T).result }
+    enum { bitfieldsOn = createFields!(storeName, 0, "", T).result }
 }
 
 unittest
@@ -611,12 +654,16 @@ unittest {
     struct X {
         struct Y { uint something; }
         Y y;
-        mixin(bitfieldsOn!("y.something",
+        uint z;
+        mixin(bitfieldsOn!("y.something", //stringof may not get inner references, raw unchecked then.
             int, "a", 10,
             int, "b", 10,
             int, "c", 10,
             uint, "d", 2
         ));
+        mixin(bitfieldsOn!(z,
+            int, "za", 8,
+            int, "zb", 8));
     }
 
     X x;
@@ -631,7 +678,140 @@ unittest {
     assert(x.b == 100);
     assert(x.c == 500);
     assert(x.d == 2);
+    
+    assert(x.z == 0);
+    x.za = 25;
+    x.zb = 55;
+
+    assert(x.z);
+    assert(x.z == (55 << 8) + 25);
+    assert(x.za == 25);      //check against our values.
+    assert(x.zb == 55);
 }
+
+/+
+//constness for individual fields: setters will be absent.
+unittest {
+    struct X {
+        uint ui;
+        mixin(bitfields!(
+            bool, "b1", 1,
+            bool, "b2", 1,
+            void, "", 6));
+        mixin(bitfields!(
+            const bool, "cb1", 1,
+            immutable bool, "cb2", 1,
+            void, "", 6));
+        mixin(bitfields!(
+            int, "i1", 4,
+            int, "i2", 4));
+        mixin(bitfields!(
+            const int, "ci1", 4,
+            immutable int, "ci2", 4));
+            
+        mixin(bitfieldsOn!(ui,
+            bool, "sp_b1", 1,
+            bool, "sp_b2", 1,
+            void, "", 6));
+        mixin(bitfieldsOn!(ui,
+            const bool, "sp_cb1", 1,
+            immutable bool, "sp_cb2", 1,
+            void, "", 6));
+        mixin(bitfieldsOn!(ui,
+            int, "sp_i1", 4,
+            int, "sp_i2", 4));
+        mixin(bitfieldsOn!(ui,
+            const int, "sp_ci1", 4,
+            immutable int, "sp_ci2", 4));
+
+        mixin(bitfieldsOn!(ui,
+            bool, "sp2_b1", 1,
+            bool, "sp2_b2", 1,
+            void, "", 6));
+        mixin(bitfieldsOn!(ui,
+            const bool, "sp2_cb1", 1,
+            immutable bool, "sp2_cb2", 1,
+            void, "", 6));
+        mixin(bitfieldsOn!(ui,
+            int, "sp2_i1", 4,
+            int, "sp2_i2", 4));
+        mixin(bitfieldsOn!(ui,
+            const int, "sp2_ci1", 4,
+            immutable int, "sp2_ci2", 4));
+        }
+        
+    
+    X x;
+    //should compile normally
+    x.b1 = true;    //normal
+    x.b2 = false;
+    x.i1 = true;
+    x.i2 = false;
+    x.sp_b1 = true; //specific (alias variable)
+    x.sp_b2 = false;
+    x.sp_i1 = true;
+    x.sp_i2 = false;
+    x.sp2_b1 = true; //explicit variable
+    x.sp2_b2 = false;
+    x.sp2_i1 = true;
+    x.sp2_i2 = false;
+
+    //these should fail setter missing on purpose (as it's const)
+    x.cb1 = true;   //normal
+    x.cb2 = false;
+    x.ci1 = true;
+    x.ci2 = false;
+    x.sp_cb1 = true;    //specific (alias variable)
+    x.sp_cb2 = false;
+    x.sp_ci1 = true;
+    x.sp_ci2 = false;
+    x.sp2_cb1 = true;   //explicit variable
+    x.sp2_cb2 = false;
+    x.sp2_ci1 = true;
+    x.sp2_ci2 = false;    
+    //bitfieldsOn, all these structs should fail based on type.
+    struct Y {
+        union {
+            ulong ul;
+            uint ui;
+            ushort us;
+            ubyte ub;
+            float fl;
+            double dbl;
+            long sl;
+        }
+        
+        X x;
+        //needs to be a numeric, non-float, non-signed
+        mixin(bitfieldsOn!(ul,
+            int, "ul1", 4,
+            int, "ul2", 4));
+        mixin(bitfieldsOn!(ui,
+            int, "ui1", 4,
+            int, "ui2", 4));
+        mixin(bitfieldsOn!(us,
+            int, "us1", 4,
+            int, "us2", 4));
+        mixin(bitfieldsOn!(ub,
+            int, "ub1", 4,
+            int, "ub2", 4));
+            
+        //following 4 should fail.
+        mixin(bitfieldsOn!(fl,  //float
+            int, "fl1", 4,
+            int, "", 4));
+        mixin(bitfieldsOn!(dbl, //double
+            int, "dbl1", 4,
+            int, "", 4));
+        mixin(bitfieldsOn!(sl,  //signed - May be relaxed later.
+            int, "sl1", 4,
+            int, "", 4));
+        mixin(bitfieldsOn!(x,   //struct
+            int, "x1", 4,
+            int, "", 4));
+    }
+}
++/
 
 /**
    Allows manipulating the fraction, exponent, and sign parts of a
