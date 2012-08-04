@@ -7564,12 +7564,43 @@ assert(isSorted!("a > b")(arr));
 */
 bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
 {
-    // @@@BUG@@@ Should work with inlined predicate
-    bool pred(ElementType!Range a, ElementType!Range b)
+    if (r.empty) return true;
+
+    static if (isRandomAccessRange!Range && hasLength!Range)
     {
-        return binaryFun!less(b, a);
+        immutable limit = r.length - 1;
+        foreach (i; 0 .. limit)
+        {
+            if (!binaryFun!less(r[i + 1], r[i])) continue;
+            assert(
+                !binaryFun!less(r[i], r[i + 1]),
+                text("Predicate for isSorted is not antisymmetric. Both"
+                        " pred(a, b) and pred(b, a) are true for a=", r[i],
+                        " and b=", r[i+1], " in positions ", i, " and ",
+                        i + 1));
+            return false;
+        }
     }
-    return findAdjacent!pred(r).empty;
+    else
+    {
+        auto ahead = r;
+        ahead.popFront();
+        size_t i;
+
+        for (; !ahead.empty; ahead.popFront(), ++i)
+        {
+            if (!binaryFun!less(ahead.front, r.front)) continue;
+            // Check for antisymmetric predicate
+            assert(
+                !binaryFun!less(r.front, ahead.front),
+                text("Predicate for isSorted is not antisymmetric. Both"
+                        " pred(a, b) and pred(b, a) are true for a=", r.front,
+                        " and b=", ahead.front, " in positions ", i, " and ",
+                        i + 1));
+            return false;
+        }
+    }
+    return true;
 }
 
 // makeIndex
