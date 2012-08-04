@@ -302,11 +302,11 @@ unittest
     assert(createStoreName!(int, " abc = -5 ", 1, int, " def = true ", 1) == "_abc_def");
 }
 
-private template createFields(alias store, size_t offset, string defaults, Ts...)
+private template createFields(alias store, size_t offset, string attributes, string defaults, Ts...)
 {
     static if (!Ts.length)
     {
-        static if (isSomeString!(typeof(store)) && store[0] == '_') {
+        static if (store[0] == '_') {
             static if (offset == ubyte.sizeof * 8)
                 alias ubyte StoreType;
             else static if (offset == ushort.sizeof * 8)
@@ -327,20 +327,13 @@ private template createFields(alias store, size_t offset, string defaults, Ts...
         }
         else
         {
-            static if (isSomeString!(typeof(store)))
-                static assert(typeid(store).sizeof * 8 <= offset,
-                    "Supplied variable '" ~ store.stringof ~ "' too small (" ~ myToStringx(typeid(store).sizeof * 8) ~ ")");
-            enum result = "";
+            enum result = "static assert((" ~ store ~ ".sizeof * 8) >= " ~ myToStringx(offset) ~ ",\"Supplied variable '" ~ store ~ "' too small (" ~ myToStringx(store.sizeof * 8) ~ ")\");";
         }
     }
     else
     {
-        static if (is(typeof(store) == string))
-            enum accessors = createAccessors!(store, "@property @safe nothrow pure" , Ts[0], Ts[1], Ts[2], offset).result;
-        else
-            enum accessors = createAccessors!(store.stringof, "@property" , Ts[0], Ts[1], Ts[2], offset).result;
-        
-        enum result = accessors ~ createFields!(store, offset + Ts[2], defaults ~
+        enum result = createAccessors!(store, attributes , Ts[0], Ts[1], Ts[2], offset).result
+            ~ createFields!(store, offset + Ts[2], attributes, defaults ~
                 //if we have a bitfield name
                 (Ts[1].length ? (
                     //and it has a value
@@ -446,13 +439,14 @@ template bitfields(T...)
     static if (T.length == 3 && T[0].sizeof * 8 == T[2])
         enum { bitfields = T[0].stringof ~ " " ~ T[1] ~ ";" }
     else
-        enum { bitfields = createFields!(createStoreName!(T), 0, "", T).result }
+        enum { bitfields = createFields!(createStoreName!(T), 0, "@property @safe pure nothrow", "", T).result }
 }
 
 
 /**
 Same as bitfields template, with the exception that you can set the
-variable you want to be the target.
+variable you want to be the target. The selected variable must be
+a non-float, unsigned number. No other types will work (at present).
 ----
 struct X {
     struct Y { uint something; }
@@ -460,11 +454,8 @@ struct X {
     uint local;
     mixin(bitfieldsOn!("y.something", //target variable
         int, "a", 10,
-        int, "b", 6));
-        
-    mixin(bitfieldsOn!(local,   //more accurate and warns you of size issues
-        int      , "c", 10,
-        const int, "d", 6));
+        int, "b", 5,
+        const bool, "c", 1));
 }
 
 X x;
@@ -476,16 +467,28 @@ assert(x.y.something);   //check it was changed
 assert(x.a == 100);      //check against our values.
 assert(x.b == 10);
 
-x.c = true;
-x.d = false; //compile time error, const and immutable honored as good as they can.
+x.c = false; //compile time error, const honored, setter absent.
 
 ----
 */
 template bitfieldsOn(alias storeName, T...)
-if((isIntegral!(typeof(storeName)) && isUnsigned!(typeof(storeName)) &&
-        isFloatingPoint!(typeof(storeName)) == false) || isSomeString!(typeof(storeName)))
+if (isSomeString!(typeof(storeName)))
 {
-    enum { bitfieldsOn = createFields!(storeName, 0, "", T).result }
+    enum bitfieldsOn = "mixin(bitfieldsOn_b!(\"" ~ storeName ~ "\"," ~ storeName ~ TupleToString!(T) ~ "));";
+}
+
+template TupleToString(T...) {
+    static if (T.length)
+        enum TupleToString = "," ~ T[0].stringof ~ TupleToString!(T[1 .. $]);
+    else
+        enum TupleToString = "";
+}
+
+template bitfieldsOn_b(string storeName, alias storeNameType, T...)
+if((isIntegral!(typeof(storeNameType)) && isUnsigned!(typeof(storeNameType)) &&
+        isFloatingPoint!(typeof(storeNameType)) == false))
+{
+    enum bitfieldsOn_b = createFields!(storeName, 0, "@property", "", T).result;
 }
 
 unittest
@@ -654,16 +657,12 @@ unittest {
     struct X {
         struct Y { uint something; }
         Y y;
-        uint z;
         mixin(bitfieldsOn!("y.something", //stringof may not get inner references, raw unchecked then.
             int, "a", 10,
             int, "b", 10,
             int, "c", 10,
             uint, "d", 2
         ));
-        mixin(bitfieldsOn!(z,
-            int, "za", 8,
-            int, "zb", 8));
     }
 
     X x;
@@ -678,23 +677,13 @@ unittest {
     assert(x.b == 100);
     assert(x.c == 500);
     assert(x.d == 2);
-    
-    assert(x.z == 0);
-    x.za = 25;
-    x.zb = 55;
-
-    assert(x.z);
-    assert(x.z == (55 << 8) + 25);
-    assert(x.za == 25);      //check against our values.
-    assert(x.zb == 55);
 }
 
-/+
 //constness for individual fields: setters will be absent.
 unittest {
     struct X {
         uint ui;
-        mixin(bitfields!(
+        mixin(bitfields!(   //normal
             bool, "b1", 1,
             bool, "b2", 1,
             void, "", 6));
@@ -709,35 +698,20 @@ unittest {
             const int, "ci1", 4,
             immutable int, "ci2", 4));
             
-        mixin(bitfieldsOn!(ui,
+        mixin(bitfieldsOn!("ui",    //specified variable
             bool, "sp_b1", 1,
             bool, "sp_b2", 1,
             void, "", 6));
-        mixin(bitfieldsOn!(ui,
+        mixin(bitfieldsOn!("ui",
             const bool, "sp_cb1", 1,
             immutable bool, "sp_cb2", 1,
             void, "", 6));
-        mixin(bitfieldsOn!(ui,
+        mixin(bitfieldsOn!("ui",
             int, "sp_i1", 4,
             int, "sp_i2", 4));
-        mixin(bitfieldsOn!(ui,
+        mixin(bitfieldsOn!("ui",
             const int, "sp_ci1", 4,
             immutable int, "sp_ci2", 4));
-
-        mixin(bitfieldsOn!(ui,
-            bool, "sp2_b1", 1,
-            bool, "sp2_b2", 1,
-            void, "", 6));
-        mixin(bitfieldsOn!(ui,
-            const bool, "sp2_cb1", 1,
-            immutable bool, "sp2_cb2", 1,
-            void, "", 6));
-        mixin(bitfieldsOn!(ui,
-            int, "sp2_i1", 4,
-            int, "sp2_i2", 4));
-        mixin(bitfieldsOn!(ui,
-            const int, "sp2_ci1", 4,
-            immutable int, "sp2_ci2", 4));
         }
         
     
@@ -747,28 +721,21 @@ unittest {
     x.b2 = false;
     x.i1 = true;
     x.i2 = false;
-    x.sp_b1 = true; //specific (alias variable)
+    x.sp_b1 = true; //specific variable
     x.sp_b2 = false;
     x.sp_i1 = true;
     x.sp_i2 = false;
-    x.sp2_b1 = true; //explicit variable
-    x.sp2_b2 = false;
-    x.sp2_i1 = true;
-    x.sp2_i2 = false;
 
     //these should fail setter missing on purpose (as it's const)
-    x.cb1 = true;   //normal
-    x.cb2 = false;
-    x.ci1 = true;
-    x.ci2 = false;
-    x.sp_cb1 = true;    //specific (alias variable)
-    x.sp_cb2 = false;
-    x.sp_ci1 = true;
-    x.sp_ci2 = false;
-    x.sp2_cb1 = true;   //explicit variable
-    x.sp2_cb2 = false;
-    x.sp2_ci1 = true;
-    x.sp2_ci2 = false;    
+    static assert(is(typeof(x.cb1 = true) == bool) == false);   //normal
+    static assert(is(typeof(x.cb2 = false) == bool) == false);
+    static assert(is(typeof(x.ci1 = true) == bool) == false);
+    static assert(is(typeof(x.ci2 = false) == bool) == false);
+    static assert(is(typeof(x.sp_cb1 = true) == bool) == false);    //specific variable
+    static assert(is(typeof(x.sp_cb2 = false) == bool) == false);
+    static assert(is(typeof(x.sp_ci1 = true) == bool) == false);
+    static assert(is(typeof(x.sp_ci2 = false) == bool) == false);
+
     //bitfieldsOn, all these structs should fail based on type.
     struct Y {
         union {
@@ -783,35 +750,47 @@ unittest {
         
         X x;
         //needs to be a numeric, non-float, non-signed
-        mixin(bitfieldsOn!(ul,
+        mixin(bitfieldsOn!("ul",
             int, "ul1", 4,
             int, "ul2", 4));
-        mixin(bitfieldsOn!(ui,
+        mixin(bitfieldsOn!("ui",
             int, "ui1", 4,
             int, "ui2", 4));
-        mixin(bitfieldsOn!(us,
+        mixin(bitfieldsOn!("us",
             int, "us1", 4,
             int, "us2", 4));
-        mixin(bitfieldsOn!(ub,
+        mixin(bitfieldsOn!("ub",
             int, "ub1", 4,
             int, "ub2", 4));
             
-        //following 4 should fail.
-        mixin(bitfieldsOn!(fl,  //float
-            int, "fl1", 4,
-            int, "", 4));
-        mixin(bitfieldsOn!(dbl, //double
-            int, "dbl1", 4,
-            int, "", 4));
-        mixin(bitfieldsOn!(sl,  //signed - May be relaxed later.
-            int, "sl1", 4,
-            int, "", 4));
-        mixin(bitfieldsOn!(x,   //struct
-            int, "x1", 4,
-            int, "", 4));
+        //the following should all fail.
+        static assert(is(typeof({
+            mixin(bitfieldsOn!("fl",  //float
+                int, "fl1", 4,
+                int, "", 4));
+            }) == bool) == false);
+        static assert(is(typeof({
+            mixin(bitfieldsOn!("dbl", //double
+                int, "dbl1", 4,
+                int, "", 4));
+            }) == bool) == false);
+        static assert(is(typeof({
+            mixin(bitfieldsOn!("sl",  //signed - May be relaxed later.
+                int, "sl1", 4,
+                int, "", 4));
+            }) == bool) == false);
+        static assert(is(typeof({
+            mixin(bitfieldsOn!("x",   //struct
+                int, "x1", 4,
+                int, "", 4));
+            }) == bool) == false);
+        static assert(is(typeof({
+            mixin(bitfieldsOn!("ub",   //too large for variable
+                int, "too_big", 8,
+                int, "for_ubyte", 8));
+            }) == bool) == false);
     }
 }
-+/
 
 /**
    Allows manipulating the fraction, exponent, and sign parts of a
