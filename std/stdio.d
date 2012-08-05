@@ -679,7 +679,7 @@ arguments in text format to the file. */
         foreach (arg; args)
         {
             alias typeof(arg) A;
-            static if (isAggregateType!A)
+            static if (isAggregateType!A || is(A == enum))
             {
                 std.format.formattedWrite(w, "%s", arg);
             }
@@ -731,7 +731,7 @@ first argument. */
         assert(p);
         assert(p.handle);
         static assert(S.length>0, errorMessage);
-        static assert(isSomeString!(S[0]), errorMessage);
+        static assert(isSomeString!(S[0]) && !is(S[0] == enum), errorMessage);
         auto w = lockingTextWriter;
         std.format.formattedWrite(w, args);
     }
@@ -741,7 +741,7 @@ Same as writef, plus adds a newline. */
     void writefln(S...)(S args)
     {
         static assert(S.length>0, errorMessage);
-        static assert(isSomeString!(S[0]), errorMessage);
+        static assert(isSomeString!(S[0]) && !is(S[0] == enum), errorMessage);
         auto w = lockingTextWriter;
         std.format.formattedWrite(w, args);
         w.put('\n');
@@ -813,7 +813,7 @@ with every line.  */
     }
 
 /** ditto */
-    size_t readln(C)(ref C[] buf, dchar terminator = '\n') if (isSomeChar!C)
+    size_t readln(C)(ref C[] buf, dchar terminator = '\n') if (isSomeChar!C && !is(C == enum))
     {
         static if (is(C == char))
         {
@@ -1582,7 +1582,8 @@ void writeln(T...)(T args)
         enforce(fputc('\n', .stdout.p.handle) == '\n');
     }
     else static if (T.length == 1 &&
-                    isSomeString!(typeof(args[0])) && is(typeof(args[0]) : const(char)[]) &&
+                    is(typeof(args[0]) : const(char)[]) &&
+                    !is(typeof(args[0]) == enum) && !is(typeof(args[0]) == typeof(null)) &&
                     !isAggregateType!(typeof(args[0])))
     {
         // Specialization for strings - a very frequent case
