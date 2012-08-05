@@ -3199,7 +3199,9 @@ template BooleanTypeOf(T) if (!is(T == enum))
 
        immutable(bool) idy(    immutable(bool) );
 
-    static if (is(typeof(idx(T.init)) X) && !isIntegral!T)
+    static if (is(T == enum))
+        alias .BooleanTypeOf!(OriginalType!T) BooleanTypeOf;
+    else static if (is(typeof(idx(T.init)) X) && !isIntegral!T)
         alias X BooleanTypeOf;
     else static if (is(typeof(idy(T.init)) X) && is(Unqual!X == bool) && !isIntegral!T)
         alias X BooleanTypeOf;
@@ -3259,7 +3261,9 @@ template IntegralTypeOf(T) if (!is(T == enum))
        immutable(  long) idy(    immutable(  long) );
        immutable( ulong) idy(    immutable( ulong) );
 
-    static if (is(typeof(idx(T.init)) X))
+    static if (is(T == enum))
+        alias .IntegralTypeOf!(OriginalType!T) IntegralTypeOf;
+    else static if (is(typeof(idx(T.init)) X))
         alias X IntegralTypeOf;
     else static if (is(typeof(idy(T.init)) X) && staticIndexOf!(Unqual!X, IntegralTypeList) >= 0)
         alias X IntegralTypeOf;
@@ -3298,7 +3302,9 @@ template FloatingPointTypeOf(T) if (!is(T == enum))
        immutable(double) idy(   immutable(double) );
        immutable(  real) idy(   immutable(  real) );
 
-    static if (is(typeof(idx(T.init)) X))
+    static if (is(T == enum))
+        alias .FloatingPointTypeOf!(OriginalType!T) FloatingPointTypeOf;
+    else static if (is(typeof(idx(T.init)) X))
         alias X FloatingPointTypeOf;
     else static if (is(typeof(idy(T.init)) X))
         alias X FloatingPointTypeOf;
@@ -3397,7 +3403,9 @@ template CharTypeOf(T) if (!is(T == enum))
       immutable(  long) idy(   immutable(  long) );
       immutable( ulong) idy(   immutable( ulong) );
 
-    static if (is(typeof(idx(T.init)) X))
+    static if (is(T == enum))
+        alias .CharTypeOf!(OriginalType!T) CharTypeOf;
+    else static if (is(typeof(idx(T.init)) X))
         alias X CharTypeOf;
     else static if (is(typeof(idy(T.init)) X) && staticIndexOf!(Unqual!X, CharTypeList) >= 0)
         alias X CharTypeOf;
@@ -3633,6 +3641,12 @@ template isBoolean(T)
     enum bool isBoolean = is(BooleanTypeOf!T);
 }
 
+unittest
+{
+    enum EB : bool { a = true }
+    static assert(isBoolean!EB);
+}
+
 /**
  * Detect whether we can treat T as a built-in integral type. Types $(D bool),
  * $(D char), $(D wchar), and $(D dchar) are not considered integral.
@@ -3693,6 +3707,11 @@ unittest
     static assert(isIntegral!(shared(const(ulong))));
 
     static assert(!isIntegral!(float));
+
+    enum EU : uint { a = 0, b = 1, c = 2 }  // base type is unsigned
+    enum EI : int { a = -1, b = 0, c = 1 }  // base type is signed (bug 7909)
+    static assert(isIntegral!EU &&  isUnsigned!EU && !isSigned!EU);
+    static assert(isIntegral!EI && !isUnsigned!EI &&  isSigned!EI);
 }
 
 /**
@@ -3723,6 +3742,9 @@ unittest
         static assert(!isFloatingPoint!(typeof(b)));
         static assert(!isFloatingPoint!(typeof(c)));
     }
+
+    enum EF : real { a = 1.414, b = 1.732, c = 2.236 }
+    static assert( isFloatingPoint!EF);
 }
 
 /**
@@ -3805,6 +3827,9 @@ unittest
     static assert(!isSomeChar!(wstring));
     static assert(!isSomeChar!(dstring));
     static assert(!isSomeChar!(char[4]));
+
+    enum EC : char { a = 'x', b = 'y' }
+    static assert( isSomeChar!EC);
 }
 
 /**
@@ -3840,6 +3865,9 @@ unittest
     static assert(!isSomeString!(int[]));
     static assert(!isSomeString!(byte[]));
     static assert(!isSomeString!(typeof(null)));
+
+    enum ES : string { a = "aaa", b = "bbb" }
+    static assert( isSomeString!ES);
 }
 
 template isNarrowString(T)
@@ -3892,6 +3920,9 @@ unittest
     static assert(!isStaticArray!(int[1][]));
     static assert(!isStaticArray!(int[int]));
     static assert(!isStaticArray!(int));
+
+    //enum ESA : int[1] { a = [1], b = [2] }
+    //static assert( isStaticArray!ESA);
 }
 
 /**
@@ -3912,6 +3943,9 @@ unittest
     static assert( isDynamicArray!(int[]));
     static assert(!isDynamicArray!(int[5]));
     static assert(!isDynamicArray!(typeof(null)));
+
+    //enum EDA : int[] { a = [1], b = [2] }
+    //static assert( isDynamicArray!EDA);
 }
 
 /**
@@ -3957,6 +3991,9 @@ unittest
     static assert(!isAssociativeArray!(int));
     static assert(!isAssociativeArray!(int[]));
     static assert(!isAssociativeArray!(typeof(null)));
+
+    //enum EAA : int[int] { a = [1:1], b = [2:2] }
+    //static assert( isAssociativeArray!EAA);
 }
 
 template isBuiltinType(T)
