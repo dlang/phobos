@@ -8094,12 +8094,32 @@ unittest
 // canFind
 /**
 Returns $(D true) if and only if $(D value) can be found in $(D
-range). Performs $(BIGOH r.length) evaluations of $(D pred). */
-
-bool canFind(alias pred = "a == b", Range, V)(Range range, V value)
-if (is(typeof(find!pred(range, value))))
+range). Performs $(BIGOH needle.length) evaluations of $(D pred).
+ */
+bool canFind(alias pred = "a == b", R, E)(R haystack, E needle)
+if (is(typeof(find!pred(haystack, needle))))
 {
-    return !find!pred(range, value).empty;
+    return !find!pred(haystack, needle).empty;
+}
+
+
+/++
+    Returns the 1-based index of the first needle found in $(D haystack). If no
+    needle is found, then $(D 0) is returned.
+
+    So, if used directly in the condition of an if statement or loop, the result
+    will be $(D true) if one of the needles is found and $(D false) if none are
+    found, whereas if the result is used elsewhere, it can either be cast to
+    $(D bool) for the same effect or used to get which needle was found first
+    without having to deal with the tuple that $(D LREF find) returns for the
+    same operation.
+ +/
+size_t canFind(alias pred = "a == b", Range, Ranges...)(Range haystack, Ranges needles)
+if (Ranges.length > 1 &&
+    allSatisfy!(isForwardRange, Ranges) &&
+    is(typeof(find!pred(haystack, needles))))
+{
+    return find!pred(haystack, needles)[1];
 }
 
 unittest
@@ -8112,6 +8132,16 @@ unittest
         auto b = a[a.length / 2];
         assert(canFind(a, b));
     }
+
+    assert(canFind([0, 1, 2, 3], 2) == true);
+    assert(canFind([0, 1, 2, 3], [1, 2], [2, 3]));
+    assert(canFind([0, 1, 2, 3], [1, 2], [2, 3]) == 1);
+    assert(canFind([0, 1, 2, 3], [1, 7], [2, 3]));
+    assert(canFind([0, 1, 2, 3], [1, 7], [2, 3]) == 2);
+
+    assert(canFind([0, 1, 2, 3], 4) == false);
+    assert(!canFind([0, 1, 2, 3], [1, 3], [2, 4]));
+    assert(canFind([0, 1, 2, 3], [1, 3], [2, 4]) == 0);
 }
 
 /**
