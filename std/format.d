@@ -1202,7 +1202,7 @@ unittest
    "0" with integral-specific format specs.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && isBoolean!T)
+if (isBoolean!T && !is(T == enum) && !hasToString!(T, Char))
 {
     BooleanTypeOf!T val = obj;
 
@@ -1238,7 +1238,7 @@ unittest
    $(D null) literal is formatted as $(D "null").
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && is(T == typeof(null)))
+if (is(T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
 {
     enforceEx!FormatException(f.spec == 's', "null");
 
@@ -1254,7 +1254,7 @@ unittest
    Integrals are formatted like $(D printf) does.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && isIntegral!T)
+if (isIntegral!T && !is(T == enum) && !hasToString!(T, Char))
 {
     IntegralTypeOf!T val = obj;
 
@@ -1433,7 +1433,7 @@ unittest
  * Floating-point values are formatted like $(D printf) does.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && isFloatingPoint!T)
+if (isFloatingPoint!T && !is(T == enum) && !hasToString!(T, Char))
 {
     FormatSpec!Char fs = f; // fs is copy for change its values.
     FloatingPointTypeOf!T val = obj;
@@ -1519,7 +1519,7 @@ unittest
    Formatting a $(D creal) is deprecated but still kept around for a while.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && is(Unqual!T : creal) && !is(T == enum))
+if (is(Unqual!T : creal) && !is(T == enum) && !hasToString!(T, Char))
 {
     creal val = obj;
 
@@ -1560,7 +1560,7 @@ unittest
    Formatting an $(D ireal) is deprecated but still kept around for a while.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && is(Unqual!T : ireal) && !is(T == enum))
+if (is(Unqual!T : ireal) && !is(T == enum) && !hasToString!(T, Char))
 {
     ireal val = obj;
 
@@ -1601,7 +1601,7 @@ unittest
    integral-specific format specs.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && isSomeChar!T)
+if (isSomeChar!T && !is(T == enum) && !hasToString!(T, Char))
 {
     CharTypeOf!T val = obj;
 
@@ -1636,7 +1636,7 @@ unittest
    Strings are formatted like $(D printf) does.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && isSomeString!T && !isStaticArray!T)
+if (isSomeString!T && !isStaticArray!T && !is(T == enum) && !hasToString!(T, Char))
 {
     Unqual!(StringTypeOf!T) val = obj;  // for `alias this`, see bug5371
     formatRange(w, val, f);
@@ -1677,7 +1677,7 @@ unittest
    Static-size arrays are formatted as dynamic arrays.
  */
 void formatValue(Writer, T, Char)(Writer w, auto ref T obj, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && isStaticArray!T)
+if (isStaticArray!T && !is(T == enum) && !hasToString!(T, Char))
 {
     formatValue(w, obj[], f);
 }
@@ -1702,7 +1702,7 @@ unittest    // Test for issue 8310
           $(LI Const array is converted to input range by removing its qualifier.))
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && !isSomeString!T && isDynamicArray!T)
+if (isDynamicArray!T && !isSomeString!T && !is(T == enum) && !hasToString!(T, Char))
 {
     static if (is(const(ArrayTypeOf!T) == const(void[])))
     {
@@ -2082,7 +2082,7 @@ private void formatChar(Writer)(Writer w, in dchar c, in char quote)
 // undocumented
 // string elements are formatted like UTF-8 string literals.
 void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (isSomeString!T)
+if (isSomeString!T && !is(T == enum))
 {
     StringTypeOf!T str = val;   // bug 8015
 
@@ -2152,7 +2152,7 @@ unittest
 // undocumented
 // character elements are formatted like UTF-8 character literals.
 void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (isSomeChar!T)
+if (isSomeChar!T && !is(T == enum))
 {
     if (f.spec == 's')
     {
@@ -2167,7 +2167,7 @@ if (isSomeChar!T)
 // undocumented
 // Maybe T is noncopyable struct, so receive it by 'auto ref'.
 void formatElement(Writer, T, Char)(Writer w, auto ref T val, ref FormatSpec!Char f)
-if (!isSomeString!T && !isSomeChar!T)
+if (!isSomeString!T && !isSomeChar!T || is(T == enum))
 {
     formatValue(w, val, f);
 }
@@ -2177,7 +2177,7 @@ if (!isSomeString!T && !isSomeChar!T)
    separators, and enclosed by $(D '[') and $(D ']').
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && isAssociativeArray!T)
+if (isAssociativeArray!T && !is(T == enum) && !hasToString!(T, Char))
 {
     AssocArrayTypeOf!T val = obj;
 
@@ -2665,7 +2665,7 @@ unittest
    Pointers are formatted as hex integers.
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && isPointer!T)
+if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 {
     if (val is null)
         put(w, "null");
@@ -2739,7 +2739,7 @@ unittest
    Delegates are formatted by 'Attributes ReturnType delegate(Parameters)'
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && is(T == delegate))
+if (is(T == delegate) && !is(T == enum) && !hasToString!(T, Char))
 {
     alias FunctionAttribute FA;
     if (functionAttributes!T & FA.pure_)    formatValue(w, "pure ", f);
@@ -3654,7 +3654,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
    Reads an integral value and returns it.
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isInputRange!Range && isIntegral!T)
+    if (isInputRange!Range && isIntegral!T && !is(T == enum))
 {
     enforce(std.algorithm.find(acceptedSpecs!T, spec.spec).length,
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
@@ -3674,7 +3674,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
    Reads a floating-point value and returns it.
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isFloatingPoint!T)
+    if (isFloatingPoint!T && !is(T == enum))
 {
     if (spec.spec == 'r')
     {
@@ -3750,7 +3750,7 @@ unittest
  * Reads one character and returns it.
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isInputRange!Range && isSomeChar!T)
+    if (isInputRange!Range && isSomeChar!T && !is(T == enum))
 {
     if (spec.spec == 's' || spec.spec == 'c')
     {
@@ -3787,7 +3787,7 @@ unittest
    Reads a string and returns it.
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isInputRange!Range && isSomeString!T)
+    if (isInputRange!Range && isSomeString!T && !is(T == enum))
 {
     if (spec.spec == '(')
     {
@@ -3863,7 +3863,7 @@ unittest
    Reads an array (except for string types) and returns it.
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isInputRange!Range && isArray!T && !isSomeString!T)
+    if (isInputRange!Range && isArray!T && !isSomeString!T && !is(T == enum))
 {
     if (spec.spec == '(')
     {
@@ -3956,7 +3956,7 @@ unittest
  * Reads an associative array and returns it.
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isInputRange!Range && isAssociativeArray!T)
+    if (isInputRange!Range && isAssociativeArray!T && !is(T == enum))
 {
     if (spec.spec == '(')
     {

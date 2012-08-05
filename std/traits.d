@@ -3192,7 +3192,7 @@ unittest
 
 /*
  */
-template BooleanTypeOf(T) if (!is(T == enum))
+template BooleanTypeOf(T)
 {
            inout(bool) idx(        inout(bool) );
     shared(inout bool) idx( shared(inout bool) );
@@ -3228,7 +3228,7 @@ unittest
 
 /*
  */
-template IntegralTypeOf(T) if (!is(T == enum))
+template IntegralTypeOf(T)
 {
            inout(  byte) idx(        inout(  byte) );
            inout( ubyte) idx(        inout( ubyte) );
@@ -3289,7 +3289,7 @@ unittest
 
 /*
  */
-template FloatingPointTypeOf(T) if (!is(T == enum))
+template FloatingPointTypeOf(T)
 {
            inout( float) idx(        inout( float) );
            inout(double) idx(        inout(double) );
@@ -3330,7 +3330,7 @@ unittest
 
 /*
  */
-template NumericTypeOf(T) if (!is(T == enum))
+template NumericTypeOf(T)
 {
     static if (is(IntegralTypeOf!T X))
         alias X NumericTypeOf;
@@ -3358,7 +3358,7 @@ unittest
 
 /*
  */
-template UnsignedTypeOf(T) if (!is(T == enum))
+template UnsignedTypeOf(T)
 {
     static if (is(IntegralTypeOf!T X) &&
                staticIndexOf!(Unqual!X, UnsignedIntTypeList) >= 0)
@@ -3367,7 +3367,7 @@ template UnsignedTypeOf(T) if (!is(T == enum))
         static assert(0, T.stringof~" is not an unsigned type.");
 }
 
-template SignedTypeOf(T) if (!is(T == enum))
+template SignedTypeOf(T)
 {
     static if (is(IntegralTypeOf!T X) &&
                staticIndexOf!(Unqual!X, SignedIntTypeList) >= 0)
@@ -3380,7 +3380,7 @@ template SignedTypeOf(T) if (!is(T == enum))
 
 /*
  */
-template CharTypeOf(T) if (!is(T == enum))
+template CharTypeOf(T)
 {
            inout( char) idx(        inout( char) );
            inout(wchar) idx(        inout(wchar) );
@@ -3437,7 +3437,7 @@ unittest
 
 /*
  */
-template StaticArrayTypeOf(T) if (!is(T == enum))
+template StaticArrayTypeOf(T)
 {
     inout(U[n]) idx(U, size_t n)( inout(U[n]) );
 
@@ -3468,7 +3468,7 @@ unittest
 
 /*
  */
-template DynamicArrayTypeOf(T) if (!is(T == enum))
+template DynamicArrayTypeOf(T)
 {
     inout(U[]) idx(U)( inout(U[]) );
 
@@ -3508,7 +3508,7 @@ unittest
 
 /*
  */
-template ArrayTypeOf(T) if (!is(T == enum))
+template ArrayTypeOf(T)
 {
     static if (is(StaticArrayTypeOf!T X))
         alias X ArrayTypeOf;
@@ -3524,7 +3524,7 @@ unittest
 
 /*
  */
-template StringTypeOf(T) if (!is(T == enum) && isSomeString!T)
+template StringTypeOf(T) if (isSomeString!T)
 {
     alias ArrayTypeOf!T StringTypeOf;
 }
@@ -3554,7 +3554,7 @@ unittest
 
 /*
  */
-template AssocArrayTypeOf(T) if (!is(T == enum))
+template AssocArrayTypeOf(T)
 {
        immutable(V [K]) idx(K, V)(    immutable(V [K]) );
 
@@ -3837,11 +3837,7 @@ Detect whether we can treat T as one of the built-in string types.
  */
 template isSomeString(T)
 {
-    static if (is(T == enum))
-    {
-        enum isSomeString = false;
-    }
-    else static if (is(T == typeof(null)))
+    static if (is(T == typeof(null)))
     {
         // It is impossible to determine exact string type from typeof(null) -
         // it means that StringTypeOf!(typeof(null)) is undefined.
