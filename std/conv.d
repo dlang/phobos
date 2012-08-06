@@ -2112,7 +2112,7 @@ unittest // bugzilla 4744
 }
 
 Target parse(Target, Source)(ref Source p)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Surce == enum) &&
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
         isFloatingPoint!Target && !is(Target == enum))
 {
     static immutable real negtab[14] =
