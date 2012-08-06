@@ -730,7 +730,7 @@ unittest
 
 /** Returns the argument with environment variables expanded.
     Substrings of the form $(I ${name}) and $(I $name) are
-    replaced by the value of the named environment variable. Malformed or non existent
+    replaced by the value of the named environment variable. Malformed or non-existent
     variables are left in place. To escape $(I $), use $(I $$).
 */
 string expandPosixVars(in char[] path) {
@@ -797,7 +797,7 @@ string expandPosixVars(in char[] path) {
 
 /** Returns the argument with environment variables expanded.
     Substrings of the form $(I %name%) are
-    replaced by the value of the named environment variable. Malformed or non existent
+    replaced by the value of the named environment variable. Malformed or non-existent
     variables are left in place. To escape $(I %), use $(I %%).
 */
 string expandWindowsVars(in char[] path) {
