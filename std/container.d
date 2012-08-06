@@ -3747,7 +3747,7 @@ struct Array(T) if (is(T == bool))
     @property bool back()
     {
         enforce(!empty);
-        return cast(bool)(data.back & (1u << ((_store._length - 1) % bitsPerWord)));
+        return cast(bool)(data.back & (cast(size_t)1 << ((_store._length - 1) % bitsPerWord)));
     }
 
     /// Ditto
@@ -3756,7 +3756,7 @@ struct Array(T) if (is(T == bool))
         enforce(!empty);
         if (value)
         {
-            data.back |= (1u << ((_store._length - 1) % bitsPerWord));
+            data.back |= (cast(size_t)1 << ((_store._length - 1) % bitsPerWord));
         }
         else
         {
@@ -3782,7 +3782,7 @@ struct Array(T) if (is(T == bool))
         auto div = cast(size_t) (i / bitsPerWord);
         auto rem = i % bitsPerWord;
         enforce(div < data.length);
-        return cast(bool)(data.ptr[div] & (1u << rem));
+        return cast(bool)(data.ptr[div] & (cast(size_t)1 << rem));
     }
     /// ditto
     void opIndexAssign(bool value, ulong i)
@@ -3790,7 +3790,7 @@ struct Array(T) if (is(T == bool))
         auto div = cast(size_t) (i / bitsPerWord);
         auto rem = i % bitsPerWord;
         enforce(div < data.length);
-        if (value) data.ptr[div] |= (1u << rem);
+        if (value) data.ptr[div] |= (cast(size_t)1 << rem);
         else data.ptr[div] &= ~(cast(size_t)1 << rem);
     }
     /// ditto
@@ -3799,13 +3799,13 @@ struct Array(T) if (is(T == bool))
         auto div = cast(size_t) (i / bitsPerWord);
         auto rem = i % bitsPerWord;
         enforce(div < data.length);
-        auto oldValue = cast(bool) (data.ptr[div] & (1u << rem));
+        auto oldValue = cast(bool) (data.ptr[div] & (cast(size_t)1 << rem));
         // Do the deed
         auto newValue = mixin("oldValue "~op~" value");
         // Write back the value
         if (newValue != oldValue)
         {
-            if (newValue) data.ptr[div] |= (1u << rem);
+            if (newValue) data.ptr[div] |= (cast(size_t)1 << rem);
             else data.ptr[div] &= ~(cast(size_t)1 << rem);
         }
     }
