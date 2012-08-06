@@ -35,6 +35,7 @@ import std.internal.processinit;
 import std.stdio;
 import std.string;
 import std.typecons;
+import std.algorithm : countUntil, canFind;
 
 version (Windows)
 {
@@ -725,6 +726,160 @@ unittest
 
         assert (v == environment[n]);
     }
+}
+
+/** Returns the argument with environment variables expanded.
+    Substrings of the form $(I ${name}) and $(I $name) are
+    replaced by the value of the named environment variable. Malformed or non-existent
+    variables are left in place. To escape $(I $), use $(I $$).
+*/
+string expandPosixVars(in char[] path) {
+    enum varchars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-";
+    size_t index = 0;
+    size_t pathlen = path.length;
+    auto result = appender!string();
+
+    while(index < pathlen) {
+        char c = path[index++];
+
+        if(c == '$' && index < pathlen) {
+            char c1 = path[index];
+
+            if(c1 == '$') {
+                result.put('$');
+                ++index;
+            } else if(c1 == '{') {
+                auto temp = path[++index..$];
+                auto until = temp.countUntil('}');
+
+                if(until >= 0) {
+                    string env = getenv(path[index..index+until]);
+
+                    if(env.length) {
+                        result.put(env);
+                        index += until+1;
+                    } else {
+                        result.put("${");
+                    }
+                } else {
+                    result.put("${");
+                }
+            } else {
+                string var;
+
+                c = c1;
+                while(c && varchars.canFind(c)) {
+                    var ~= c;
+                    ++index;
+                    if(index < pathlen) {
+                        c = path[index];
+                    } else {
+                        break;
+                    }
+                }
+
+                string env = getenv(var);
+                if(env.length) {
+                    result.put(env);
+                } else {
+                    result.put("$");
+                    result.put(var);
+                }
+            }
+        } else {
+            result.put(c);
+        }
+    }
+
+    return result.data;
+}
+
+
+/** Returns the argument with environment variables expanded.
+    Substrings of the form $(I %name%) are
+    replaced by the value of the named environment variable. Malformed or non-existent
+    variables are left in place. To escape $(I %), use $(I %%).
+*/
+string expandWindowsVars(in char[] path) {
+    enum varchars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-";
+    size_t index = 0;
+    size_t pathlen = path.length;
+    auto result = appender!string();
+
+    while(index < pathlen) {
+        char c = path[index++];
+
+        if(c == '%' && index < pathlen) {
+            char c1 = path[index];
+
+            if(c1 == '%') {
+                result.put('%');
+                ++index;
+            } else {
+                auto temp = path[index..$];
+                auto until = temp.countUntil('%');
+
+                if(until >= 0) {
+                    string env = getenv(path[index..index+until]);
+
+                    if(env.length) {
+                        result.put(env);
+                        index += until+1;
+                    } else {
+                        result.put('%');
+                    }
+                } else {
+                    result.put('%');
+                }
+            }
+        } else {
+            result.put(c);
+        }
+    }
+
+    return result.data;
+}
+
+version(Windows) {
+    /// An alias to $(LREF expandWindowsVars) on windows and on any other system an alias to $(LREF expandPosixVars).
+    alias expandWindowsVars expandVars;
+} else {
+    /// An alias to $(LREF expandWindowsVars) on windows and on any other system an alias to $(LREF expandPosixVars).
+    alias expandPosixVars expandVars;
+}
+
+unittest {
+    environment["fake_key_dlang"] = "test";
+    assert(expandPosixVars("${fake_key_dlang}/bar") == "test/bar");
+    assert(expandPosixVars("${test/bar") == "${test/bar");
+    assert(expandPosixVars("$${fake_key_dlang}/bar") == "${fake_key_dlang}/bar");
+
+    assert(expandPosixVars("$fake_key_dlang/bar") == "test/bar");
+    assert(expandPosixVars("$/bar") == "$/bar");
+
+    assert(expandWindowsVars("%fake_key_dlang%/bar") == "test/bar");
+    assert(expandWindowsVars("%test/bar") == "%test/bar");
+    assert(expandWindowsVars("%%fake_key_dlang%%/bar") == "%fake_key_dlang%/bar");
+
+    version(Windows) {
+        assert(expandVars("%home% %fake_key_dlang%") == expandWindowsVars("%home% %fake_key_dlang%"));
+    } else {
+        assert(expandVars("$home $fake_key_dlang") == expandPosixVars("$home $fake_key_dlang"));
+    }
+
+    environment.remove("fake_key_dlang");
+    assert(expandPosixVars("${fake_key_dlang}/bar") == "${fake_key_dlang}/bar");
+
+    assert(expandPosixVars("$fake_key_dlang/bar") == "$fake_key_dlang/bar");
+
+    assert(expandWindowsVars("%fake_key_dlang%/bar") == "%fake_key_dlang%/bar");
+
+
+    assert(expandPosixVars("${") == "${");
+    assert(expandPosixVars("${foo") == "${foo");
+    assert(expandPosixVars("$") == "$");
+    assert(expandWindowsVars("%") == "%");
+    assert(expandWindowsVars("%foo") == "%foo");
 }
 
 
