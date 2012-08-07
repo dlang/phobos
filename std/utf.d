@@ -246,6 +246,12 @@ unittest
     $(D strideBack) returns the length of the UTF-8 sequence ending one code
     unit before $(D index) in $(D str).
 
+    $(D strideBack) works with both UTF-8 strings and ranges of $(D char). If no
+    index is passed, then a bidirectional range will work, but if an index is
+    passed, then a random-access range is required.
+
+    $(D index) defaults to $(D str.length) if none is passed.
+
     Returns:
         The number of bytes in the UTF-8 sequence.
 
@@ -253,7 +259,9 @@ unittest
         $(D UTFException) if $(D str[index]) is not one past the end of a valid
         UTF-8 sequence.
   +/
-uint strideBack(in char[] str, size_t index) @safe pure
+uint strideBack(S)(auto ref S str, size_t index)
+    if (is(S : const char[]) ||
+        (isRandomAccessRange!S && is(Unqual!(ElementType!S) == char)))
 {
     if (index >= 1 && (str[index-1] & 0b1100_0000) != 0b1000_0000)
         return 1;
@@ -267,12 +275,62 @@ uint strideBack(in char[] str, size_t index) @safe pure
         throw new UTFException("Not the end of the UTF sequence", index);
 }
 
+/// Ditto
+uint strideBack(S)(auto ref S str)
+    if (is(S : const char[]) ||
+        (isBidirectionalRange!S && is(Unqual!(ElementType!S) == char)))
+{
+    static if(is(S : const char[]) || (isRandomAccessRange!S && hasLength!S))
+        return strideBack(str, str.length);
+    else
+    {
+        if(!str.empty && (str.back & 0b1100_0000) != 0b1000_0000)
+            return 1;
+        else
+        {
+            auto temp = str.save;
+            temp.popBack();
+
+            if (!temp.empty && (temp.back & 0b1100_0000) != 0b1000_0000)
+                return 2;
+            else
+            {
+                temp.popBack();
+
+                if (!temp.empty && (temp.back & 0b1100_0000) != 0b1000_0000)
+                    return 3;
+                else
+                {
+                    temp.popBack();
+
+                    if (!temp.empty && (temp.back & 0b1100_0000) != 0b1000_0000)
+                        return 4;
+                }
+            }
+        }
+
+        throw new UTFException("The last code unit is not the end of the UTF-8 sequence");
+    }
+}
+
 unittest
 {
     static void test(string s, dchar c, size_t i = size_t.max, size_t line = __LINE__)
     {
         enforce(strideBack(s, i == size_t.max ? s.length : i) == codeLength!char(c),
-                new AssertError(format("Unit test failure: %s", s), __FILE__, line));
+                new AssertError(format("Unit test failure string: %s", s), __FILE__, line));
+
+        enforce(strideBack(RandomCU!char(s), i == size_t.max ? s.length : i) == codeLength!char(c),
+                new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
+
+        if(i == size_t.max)
+        {
+            enforce(strideBack(s) == codeLength!char(c),
+                    new AssertError(format("Unit test failure string length: %s", s), __FILE__, line));
+
+            enforce(strideBack(BidirCU!char(s)) == codeLength!char(c),
+                    new AssertError(format("Unit test failure range length: %s", s), __FILE__, line));
+        }
     }
 
     test("a", 'a');
@@ -290,6 +348,15 @@ unittest
     test("\U00010143\u0100\U00010143hello", '\U00010143', 10);
     test("\U00010143\u0100\U00010143hello", '\u0100', 6);
     test("\U00010143\u0100\U00010143hello", '\U00010143', 4);
+
+    foreach(S; TypeTuple!(char[], const char[], string))
+    {
+        enum str = to!S("hello world");
+        static assert(isSafe!((){strideBack(str, 0);}));
+        static assert(isSafe!((){strideBack(str);}));
+        static assert((functionAttributes!((){strideBack(str, 0);}) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!((){strideBack(str);}) & FunctionAttribute.pure_) != 0);
+    }
 }
 
 
@@ -379,6 +446,12 @@ uint stride(S)(auto ref S str)
     $(D strideBack) returns the length of the UTF-16 sequence ending one code
     unit before $(D index) in $(D str).
 
+    $(D strideBack) works with both UTF-16 strings and ranges of $(D wchar). If
+    no index is passed, then a bidirectional range will work, but if an index is
+    passed, then a random-access range is required.
+
+    $(D index) defaults to $(D str.length) if none is passed.
+
     Returns:
         The number of bytes in the UTF-16 sequence.
 
@@ -386,13 +459,50 @@ uint stride(S)(auto ref S str)
         $(D UTFException) if $(D str[index]) is not one past the end of a valid
         UTF-16 sequence.
   +/
-uint strideBack(in wchar[] str, size_t index) @safe pure
+uint strideBack(S)(auto ref S str, size_t index)
+    if (is(S : const wchar[]) ||
+        (isRandomAccessRange!S && is(Unqual!(ElementType!S) == wchar)))
 {
-    enforce(index != 0 && (str[index-1] < 0xD800 || str[index-1] > 0xDBFF),
-            new UTFException("Not the end of the UTF-16 sequence", index));
-    if (index <= 1)
+    if (index == 0 || !(str[index-1] < 0xD800 || str[index-1] > 0xDBFF))
+        throw new UTFException("Not the end of the UTF-16 sequence", index);
+    if (index == 1)
         return 1;
     immutable c = str[index - 2];
+    return 1 + (c >= 0xD800 && c <= 0xDBFF);
+}
+
+/// Ditto
+uint strideBack(S)(auto ref S str)
+    if (is(S : const wchar[]) ||
+        (isInputRange!S && is(Unqual!(ElementType!S) == wchar)))
+{
+    static if(is(S : const(wchar)[]))
+        immutable valid = !str.empty && str[$ - 1] < 0xD800 || str[$ - 1] > 0xDBFF;
+    else
+        immutable valid = !str.empty && str.back < 0xD800 || str.back > 0xDBFF;
+
+    if(!valid)
+        throw new UTFException("The last code unit is not the end of the UTF-16 sequence");
+
+    static if(is(S : const(wchar)[]) || hasLength!S)
+    {
+       if (str.length == 1)
+           return 1;
+    }
+
+    static if(is(S : const(wchar)[]) || (isRandomAccessRange!S && hasLength!R))
+        immutable c = str[$ - 2];
+    else
+    {
+        auto temp = str.save;
+        temp.popBack();
+
+        if(temp.empty)
+            return 1;
+
+        immutable c = temp.back;
+    }
+
     return 1 + (c >= 0xD800 && c <= 0xDBFF);
 }
 
@@ -401,7 +511,19 @@ unittest
     static void test(wstring s, dchar c, size_t i = size_t.max, size_t line = __LINE__)
     {
         enforce(strideBack(s, i == size_t.max ? s.length : i) == codeLength!wchar(c),
-                new AssertError(format("Unit test failure: %s", s), __FILE__, line));
+                new AssertError(format("Unit test failure string: %s", s), __FILE__, line));
+
+        enforce(strideBack(RandomCU!wchar(s), i == size_t.max ? s.length : i) == codeLength!wchar(c),
+                new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
+
+        if(i == size_t.max)
+        {
+            enforce(strideBack(s) == codeLength!wchar(c),
+                    new AssertError(format("Unit test failure string length: %s", s), __FILE__, line));
+
+            enforce(strideBack(BidirCU!wchar(s)) == codeLength!wchar(c),
+                    new AssertError(format("Unit test failure range length: %s", s), __FILE__, line));
+        }
     }
 
     test("a", 'a');
@@ -419,6 +541,15 @@ unittest
     test("\U00010143\u0100\U00010143hello", '\U00010143', 5);
     test("\U00010143\u0100\U00010143hello", '\u0100', 3);
     test("\U00010143\u0100\U00010143hello", '\U00010143', 2);
+
+    foreach(S; TypeTuple!(wchar[], const wchar[], wstring))
+    {
+        enum str = to!S("hello world");
+        static assert(isSafe!((){strideBack(str, 0);}));
+        static assert(isSafe!((){strideBack(str);}));
+        static assert((functionAttributes!((){strideBack(str, 0);}) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!((){strideBack(str);}) & FunctionAttribute.pure_) != 0);
+    }
 }
 
 
@@ -491,12 +622,28 @@ unittest
     $(D strideBack) returns the length of the UTF-32 sequence ending one code
     unit before $(D index) in $(D str).
 
+    $(D strideBack) works with both UTF-32 strings and ranges of $(D dchar). If
+    no index is passed, then a bidirectional range will work, but if an index is
+    passed, then a random-access range is required.
+
+    $(D index) defaults to $(D str.length) if none is passed.
+
     Returns:
         The number of bytes in the UTF-32 sequence (always $(D 1)).
   +/
-uint strideBack(in dchar[] str, size_t index) @safe pure nothrow
+uint strideBack(S)(auto ref S str, size_t index)
+    if (isRandomAccessRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
 {
-    assert(index <= str.length);
+    static if(hasLength!S)
+        assert(index <= str.length);
+    return 1;
+}
+
+/// Ditto
+uint strideBack(S)(auto ref S str)
+    if (isBidirectionalRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
+{
+    assert(!str.empty);
     return 1;
 }
 
@@ -505,7 +652,19 @@ unittest
     static void test(dstring s, dchar c, size_t i = size_t.max, size_t line = __LINE__)
     {
         enforce(strideBack(s, i == size_t.max ? s.length : i) == codeLength!dchar(c),
-                new AssertError(format("Unit test failure: %s", s), __FILE__, line));
+                new AssertError(format("Unit test failure string: %s", s), __FILE__, line));
+
+        enforce(strideBack(RandomCU!dchar(s), i == size_t.max ? s.length : i) == codeLength!dchar(c),
+                new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
+
+        if(i == size_t.max)
+        {
+            enforce(strideBack(s) == codeLength!dchar(c),
+                    new AssertError(format("Unit test failure string length: %s", s), __FILE__, line));
+
+            enforce(strideBack(BidirCU!dchar(s)) == codeLength!dchar(c),
+                    new AssertError(format("Unit test failure range length: %s", s), __FILE__, line));
+        }
     }
 
     test("a", 'a');
@@ -523,6 +682,15 @@ unittest
     test("\U00010143\u0100\U00010143hello", '\U00010143', 3);
     test("\U00010143\u0100\U00010143hello", '\u0100', 2);
     test("\U00010143\u0100\U00010143hello", '\U00010143', 1);
+
+    foreach(S; TypeTuple!(dchar[], const dchar[], dstring))
+    {
+        enum str = to!S("hello world");
+        static assert(isSafe!((){strideBack(str, 0);}));
+        static assert(isSafe!((){strideBack(str);}));
+        static assert((functionAttributes!((){strideBack(str, 0);}) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!((){strideBack(str);}) & FunctionAttribute.pure_) != 0);
+    }
 }
 
 
