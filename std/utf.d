@@ -843,7 +843,7 @@ body
     if (str[index] < limit)
         return str[index++];
     else
-        return decodeImpl(str, index);
+        return decodeImpl!true(str, index);
 }
 
 dchar decode(S)(auto ref S str, ref size_t index)
@@ -864,7 +864,7 @@ body
     if (str[index] < limit)
         return str[index++];
     else
-        return decodeImpl(str, index);
+        return decodeImpl!true(str, index);
 }
 
 /// Ditto
@@ -888,7 +888,7 @@ body
         return str[0];
     }
     else
-        return decodeImpl(str, index);
+        return decodeImpl!true(str, index);
 }
 
 /// Ditto
@@ -906,7 +906,12 @@ body
 {
     enum limit = codeUnitLimit!S;
 
-    static if(isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S))
+    //@@@BUG@@@ 8521 forces canIndex to be down outside of decodeImpl, which
+    //is undesirable, since not all overloads of decodeImpl need it. So, it
+    //should be moved back into decodeImpl once bug# 8521 has been fixed.
+    enum canIndex = isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S);
+    //static if(isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S))
+    static if(canIndex)
         immutable fst = str[0];
     else
         immutable fst = str.front;
@@ -917,7 +922,7 @@ body
         return fst;
     }
     else
-        return decodeImpl(str, index);
+        return decodeImpl!canIndex(str, index);
 }
 
 template codeUnitLimit(S)
@@ -937,7 +942,7 @@ template codeUnitLimit(S)
  * Subsequently it uses a pointer instead of an array to avoid
  * redundant bounds checking.
  */
-private dchar decodeImpl(S)(auto ref S str, ref size_t index)
+private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
     if(is(S : const char[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == char)))
 {
     /* The following encodings are valid, except for the 5 and 6 byte
@@ -961,7 +966,8 @@ private dchar decodeImpl(S)(auto ref S str, ref size_t index)
     else
         alias str pstr;
 
-    enum canIndex = is(S : const char[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S);
+    //@@@BUG@@@ 8521 forces this to be down outside of decodeImpl
+    //enum canIndex = is(S : const char[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S);
 
     static if(canIndex)
     {
@@ -1066,7 +1072,7 @@ private dchar decodeImpl(S)(auto ref S str, ref size_t index)
     }
 }
 
-private dchar decodeImpl(S)(auto ref S str, ref size_t index)
+private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
     if(is(S : const wchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == wchar)))
 {
     static if(is(S : const wchar[]))
@@ -1076,7 +1082,8 @@ private dchar decodeImpl(S)(auto ref S str, ref size_t index)
     else
         alias str pstr;
 
-    enum canIndex = is(S : const wchar[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S);
+    //@@@BUG@@@ 8521 forces this to be down outside of decodeImpl
+    //enum canIndex = is(S : const wchar[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S);
 
     static if(canIndex)
     {
@@ -1144,7 +1151,7 @@ private dchar decodeImpl(S)(auto ref S str, ref size_t index)
     }
 }
 
-private dchar decodeImpl(S)(auto ref S str, ref size_t index)
+private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
     if(is(S : const dchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
 {
     static if(is(S : const dchar[]))
