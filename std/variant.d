@@ -814,7 +814,8 @@ public:
             {
                 code ~= `
                     if(other.fptr == &handler!` ~ t ~ `)
-                        result = get!`~type1~op~`other.get!`~t~`;`;
+                        result = *cast(` ~ type1 ~ `*)store.ptr`
+                            ~ op ~` *cast(` ~ t ~ `*)other.store.ptr;`;
                 if(t != "real")
                     code ~= `
                     else `;
@@ -837,20 +838,20 @@ public:
         {
             if (is(typeof(T.max) : uint) && T.min == 0
                     && fptr == &handler!uint)
-                result = mixin("get!(uint) " ~ op ~ " other");
+                result = mixin("*cast(uint*)store.ptr " ~ op ~ " other");
             else if (is(typeof(T.max) : int) && T.min < 0
                     && fptr == &handler!int)
-                result = mixin("get!(int) " ~ op ~ " other");
+                result = mixin("*cast(int*)store.ptr " ~ op ~ " other");
             else if (is(typeof(T.max) : ulong) && T.min == 0
                     && fptr == &handler!ulong)
-                result = mixin("get!(ulong) " ~ op ~ " other");
+                result = mixin("*cast(ulong*)store.ptr " ~ op ~ " other");
             else if (is(typeof(T.max) : long) && T.min < 0 
                     && fptr == &handler!long)
-                result = mixin("get!(long) " ~ op ~ " other");
+                result = mixin("*cast(long*)store.ptr " ~ op ~ " other");
             else if (is(T : double) &&  fptr == &handler!double)
-                result = mixin("get!(double) " ~ op ~ " other");
+                result = mixin("*cast(double*)store.ptr " ~ op ~ " other");
             else
-                result = mixin("get!(real) " ~ op ~ " other");
+                result = mixin("*cast(real*)store.ptr " ~ op ~ " other");
         }
         return result;
     }
