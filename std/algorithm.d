@@ -4825,10 +4825,6 @@ unittest
 }
 
 // countUniq
-/**
- * Returns the number of unique elements in an input range.
-*/
-
 /// returns the number of unique elements in an input range
 auto countUniq(Range) (Range r) if(isInputRange!(Range))
 {
