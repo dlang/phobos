@@ -950,6 +950,7 @@ Range that reads one line at a time. */
         Char[] line;
         Terminator terminator;
         KeepTerminator keepTerminator;
+        bool first_call = true;
 
         this(File f, KeepTerminator kt = KeepTerminator.no,
                 Terminator terminator = '\n')
@@ -985,7 +986,11 @@ Range that reads one line at a time. */
         /// Ditto
         @property Char[] front()
         {
-            if (line is null) popFront();
+            if (first_call)
+            {
+                popFront();
+                first_call = false;
+            }
             return line;
         }
 
@@ -1035,7 +1040,8 @@ to this file. */
         f.close();
 
         void test(string txt, string[] witness,
-                KeepTerminator kt = KeepTerminator.no)
+                KeepTerminator kt = KeepTerminator.no,
+                bool popFirstLine = false)
         {
             uint i;
             std.file.write(deleteme, txt);
@@ -1045,7 +1051,13 @@ to this file. */
                 f.close();
                 assert(!f.isOpen);
             }
-            foreach (line; f.byLine(kt))
+            auto lines = f.byLine(kt);
+            if (popFirstLine) 
+            {
+                lines.popFront(); 
+                i = 1;
+            }
+            foreach (line; lines)
             {
                 assert(line == witness[i++]);
             }
@@ -1055,12 +1067,14 @@ to this file. */
         test("", null);
         test("\n", [ "" ]);
         test("asd\ndef\nasdf", [ "asd", "def", "asdf" ]);
+        test("asd\ndef\nasdf", [ "asd", "def", "asdf" ], KeepTerminator.no, true);
         test("asd\ndef\nasdf\n", [ "asd", "def", "asdf" ]);
 
         test("", null, KeepTerminator.yes);
         test("\n", [ "\n" ], KeepTerminator.yes);
         test("asd\ndef\nasdf", [ "asd\n", "def\n", "asdf" ], KeepTerminator.yes);
         test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes);
+        test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes, true);
     }
 
     template byRecord(Fields...)
