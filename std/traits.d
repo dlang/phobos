@@ -2246,7 +2246,7 @@ version(none) unittest
 
 /// getMemberType
 /**
-*   Retrieves member type with $(D name) of class $(D Class). If member is agregate 
+*   Retrieves member type with $(D name) of aggregate type $(D Class). If member is agregate 
 *   type declaration or simply doesn't exist, retrieves no type. You can check it with
 *   $(D is) operator.
 *
