@@ -4368,7 +4368,12 @@ public:
         this._cache = compute(this._state, ++this._n);
     }
 
-
+    auto opSlice(ulong lower, ulong upper) const in {
+        assert(upper >= lower);
+    } body {
+        auto seq = typeof(this)(this._state, lower);
+        return take(seq, upper - lower);
+    }
 
     ElementType opIndex(size_t n)
     {
@@ -4416,6 +4421,19 @@ unittest
     assert(odds.front == 3);
     odds.popFront();
     assert(odds.front == 5);
+}
+
+unittest
+{
+    auto odds = sequence!("a[0] + n * a[1]")(1, 2);
+    auto odds2 = odds; // copy
+
+    assert(equal(odds[0 .. 5], std.range.take(odds2, 5)));
+
+    odds2.popFront();
+    odds2.popFront();
+    odds2.popFront();
+    assert(equal(odds[3 .. 7], std.range.take(odds2, 4)));
 }
 
 /**
