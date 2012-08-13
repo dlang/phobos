@@ -50,7 +50,7 @@ version (Posix)
 version (unittest)
 {
     import std.file, std.conv, std.array, std.random;
-    import std.path : rel2abs;
+    import std.path : absolutePath;
 }
 
 
@@ -990,7 +990,10 @@ private char[] escapePosixArgumentImpl(alias allocator)(in char[] arg)
     buf[p++] = '\'';
     foreach (c; arg)
         if (c == '\'')
+        {
             buf[p..p+4] = `'\''`;
+            p += 4;
+        }
         else
             buf[p++] = c;
     buf[p++] = '\'';
@@ -1138,7 +1141,7 @@ unittest
     // Then, test this module with:
     // rdmd --main -unittest -version=unittest_burnin process.d
 
-    auto helper = rel2abs("std_process_unittest_helper");
+    auto helper = absolutePath("std_process_unittest_helper");
     assert(shell(helper ~ " hello").split("\0")[1..$] == ["hello"], "Helper malfunction");
 
     void test(string[] s, string fn)
