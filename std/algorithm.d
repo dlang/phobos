@@ -4824,6 +4824,43 @@ unittest
     assert(findAmong!("a==b")(b, [ 4, 6, 7 ][]).empty);
 }
 
+// countUniq
+/// returns the number of unique elements in an input range
+auto countUniq(Range) (Range r) if(isInputRange!(Range))
+{
+	// use a hashtable
+	ulong[typeof(r[0])] map;
+
+	while( !r.empty() )
+	{
+		++map[r.front()];
+		r.popFront();
+	}
+	
+	return map.length;
+}
+
+// unittest for countUniq
+unittest
+{
+	debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+        
+	auto numbers = [1, 1, 1, 2, 2, 3, 3];
+	assert(countUniq(numbers) == 3);
+	
+	numbers = [-1, 7, 2, 7, 3, 6]; // 5 are unique
+	assert(countUniq(numbers) == 5);
+	
+	numbers = [];
+	assert(countUniq(numbers) == 0);
+	
+	numbers = null;
+	assert(countUniq(numbers) == 0);
+	
+	assert(countUniq(std.range.iota(0, 10)) == 10);
+}
+
 // count
 /**
 The first version counts the number of elements $(D x) in $(D r) for
