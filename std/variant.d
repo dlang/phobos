@@ -650,7 +650,8 @@ public:
      * VariantException).
      */
 
-    @property T get(T)() if (!is(T == const))
+    @property T get(T)()
+        if (staticIndexOf!(Unqual!T, opTypes) == -1)
     {
         union Buf
         {
@@ -666,7 +667,8 @@ public:
         return buf.result;
     }
 
-    @property T get(T)() const if (is(T == const))
+    @property T get(T)() const
+        if (staticIndexOf!(Unqual!T, opTypes) != -1)
     {
         union Buf
         {
@@ -799,24 +801,27 @@ public:
     {
         return type.getHash(&store);
     }
+    
+    private alias TypeTuple!(uint, int, ulong, long, float, double, real,
+            string, wstring, dstring) opTypes;
 
     //simple CTFE codegenerator
-    static private string generateIfChain( string op)
+    static private string generateIfChain(string op, string[] tls)
     {
         string code;
-        foreach(type1; TypeTuple!("int", "uint", "ulong", "long", "double", "real"))
+        foreach (type1; tls)
         {
-            bool last_one = type1 == "real";
+            bool last_one = type1 == tls[$-1];
             code ~= last_one ? `
                 {` : `
                 if(fptr == &handler!`~type1~`){`;
-            foreach(t; TypeTuple!("uint", "int", "ulong", "long", "double", "real"))
+            foreach (type2; tls)
             {
                 code ~= `
-                    if(other.fptr == &handler!` ~ t ~ `)
-                        result = *cast(` ~ type1 ~ `*)store.ptr`
-                            ~ op ~` *cast(` ~ t ~ `*)other.store.ptr;`;
-                if(t != "real")
+                    if(other.fptr == &handler!` ~ type2 ~ `)
+                        result = (*cast(` ~ type1 ~ `*)store.ptr)`
+                            ~ op ~` (*cast(` ~ type2 ~ `*)other.store.ptr);`;
+                if(type2 != tls[$-1])
                     code ~= `
                     else `;
             }
@@ -827,36 +832,37 @@ public:
         return code;
     }
 
-    private VariantN opArithmetic(T, string op)(T other)
+    private VariantN opArithmetic(T, string op)(in T other) const
     {
         VariantN result;
         static if (is(T == VariantN))
-        {            
-            mixin(generateIfChain(op));
+        {                       
+            mixin(generateIfChain(op, 
+                ["uint", "int", "ulong", "long", "float", "double", "real"]));
         }
         else
         {
             if (is(typeof(T.max) : uint) && T.min == 0
                     && fptr == &handler!uint)
-                result = mixin("*cast(uint*)store.ptr " ~ op ~ " other");
+                result = mixin("(*cast(uint*)store.ptr) " ~ op ~ " other");
             else if (is(typeof(T.max) : int) && T.min < 0
                     && fptr == &handler!int)
-                result = mixin("*cast(int*)store.ptr " ~ op ~ " other");
+                result = mixin("(*cast(int*)store.ptr) " ~ op ~ " other");
             else if (is(typeof(T.max) : ulong) && T.min == 0
                     && fptr == &handler!ulong)
-                result = mixin("*cast(ulong*)store.ptr " ~ op ~ " other");
+                result = mixin("(*cast(ulong*)store.ptr) " ~ op ~ " other");
             else if (is(typeof(T.max) : long) && T.min < 0 
                     && fptr == &handler!long)
-                result = mixin("*cast(long*)store.ptr " ~ op ~ " other");
+                result = mixin("(*cast(long*)store.ptr) " ~ op ~ " other");
             else if (is(T : double) &&  fptr == &handler!double)
-                result = mixin("*cast(double*)store.ptr " ~ op ~ " other");
-            else
-                result = mixin("*cast(real*)store.ptr " ~ op ~ " other");
+                result = mixin("(*cast(double*)store.ptr) " ~ op ~ " other");
+            else//unknown combination, try reals
+                result = mixin("get!(real) " ~ op ~ " other");
         }
         return result;
     }
 
-    private VariantN opLogic(T, string op)(T other)
+    private VariantN opLogic(T, string op)(in T other)const
     {
         VariantN result;
         static if (is(T == VariantN))
@@ -893,70 +899,38 @@ public:
      * arithmetic conversions.
      */
 
-    // Adapted from http://www.prowiki.org/wiki4d/wiki.cgi?DanielKeep/Variant
-    // arithmetic
-    VariantN opAdd(T)(T rhs) { return opArithmetic!(T, "+")(rhs); }
+    VariantN opBinary(string op, T)(in T rhs) const
+    {
+        static if (op == "+" || op == "-" || op == "*" || op == "/" 
+                || op == "%" || op == "^^")
+            return opArithmetic!(T, op)(rhs); 
+        else static if(op == "^" || op == "|" || op == "&" || op == ">>"
+                || op == "<<" || op ==  ">>>")
+            return opLogic!(T, op)(rhs);
+        else static if(op == "~")
+        {
+            auto temp = cast(Unqual!(typeof(this)))this;
+            temp ~= rhs;
+            return temp;
+        }
+        else
+            static assert(false, "unsupported operator");            
+    }
     ///ditto
-    VariantN opSub(T)(T rhs) { return opArithmetic!(T, "-")(rhs); }
-
+    VariantN opBinaryRight(string op, T)(in T lhs) const
+        if(!is(T == VariantN))
+    {
+        static if (op == "+" || op == "*" || op == "^" 
+            || op == "|" || op == "&")
+            return mixin ("this "~op~" lhs");
+        else static if(staticIndexOf!(T, opTypes) != -1)
+            return mixin("VariantN(cast(Unqual!T)lhs) "~op~" this");
+        else
+            assert(false, "unsupported type for opBinary");
+    }
     // Commenteed all _r versions for now because of ambiguities
     // arising when two Variants are used
 
-    /////ditto
-    // VariantN opSub_r(T)(T lhs)
-    // {
-    //     return VariantN(lhs).opArithmetic!(VariantN, "-")(this);
-    // }
-    ///ditto
-    VariantN opMul(T)(T rhs) { return opArithmetic!(T, "*")(rhs); }
-    ///ditto
-    VariantN opDiv(T)(T rhs) { return opArithmetic!(T, "/")(rhs); }
-    // ///ditto
-    // VariantN opDiv_r(T)(T lhs)
-    // {
-    //     return VariantN(lhs).opArithmetic!(VariantN, "/")(this);
-    // }
-    ///ditto
-    VariantN opMod(T)(T rhs) { return opArithmetic!(T, "%")(rhs); }
-    // ///ditto
-    // VariantN opMod_r(T)(T lhs)
-    // {
-    //     return VariantN(lhs).opArithmetic!(VariantN, "%")(this);
-    // }
-    ///ditto
-    VariantN opAnd(T)(T rhs) { return opLogic!(T, "&")(rhs); }
-    ///ditto
-    VariantN opOr(T)(T rhs) { return opLogic!(T, "|")(rhs); }
-    ///ditto
-    VariantN opXor(T)(T rhs) { return opLogic!(T, "^")(rhs); }
-    ///ditto
-    VariantN opShl(T)(T rhs) { return opLogic!(T, "<<")(rhs); }
-    // ///ditto
-    // VariantN opShl_r(T)(T lhs)
-    // {
-    //     return VariantN(lhs).opLogic!(VariantN, "<<")(this);
-    // }
-    ///ditto
-    VariantN opShr(T)(T rhs) { return opLogic!(T, ">>")(rhs); }
-    // ///ditto
-    // VariantN opShr_r(T)(T lhs)
-    // {
-    //     return VariantN(lhs).opLogic!(VariantN, ">>")(this);
-    // }
-    ///ditto
-    VariantN opUShr(T)(T rhs) { return opLogic!(T, ">>>")(rhs); }
-    // ///ditto
-    // VariantN opUShr_r(T)(T lhs)
-    // {
-    //     return VariantN(lhs).opLogic!(VariantN, ">>>")(this);
-    // }
-    ///ditto
-    VariantN opCat(T)(T rhs)
-    {
-        auto temp = this;
-        temp ~= rhs;
-        return temp;
-    }
     // ///ditto
     // VariantN opCat_r(T)(T rhs)
     // {
@@ -965,34 +939,19 @@ public:
     //     return temp;
     // }
 
-    ///ditto
-    VariantN opAddAssign(T)(T rhs)  { return this = this + rhs; }
-    ///ditto
-    VariantN opSubAssign(T)(T rhs)  { return this = this - rhs; }
-    ///ditto
-    VariantN opMulAssign(T)(T rhs)  { return this = this * rhs; }
-    ///ditto
-    VariantN opDivAssign(T)(T rhs)  { return this = this / rhs; }
-    ///ditto
-    VariantN opModAssign(T)(T rhs)  { return this = this % rhs; }
-    ///ditto
-    VariantN opAndAssign(T)(T rhs)  { return this = this & rhs; }
-    ///ditto
-    VariantN opOrAssign(T)(T rhs)   { return this = this | rhs; }
-    ///ditto
-    VariantN opXorAssign(T)(T rhs)  { return this = this ^ rhs; }
-    ///ditto
-    VariantN opShlAssign(T)(T rhs)  { return this = this << rhs; }
-    ///ditto
-    VariantN opShrAssign(T)(T rhs)  { return this = this >> rhs; }
-    ///ditto
-    VariantN opUShrAssign(T)(T rhs) { return this = this >>> rhs; }
-    ///ditto
-    VariantN opCatAssign(T)(T rhs)
-    {
-        auto toAppend = VariantN(rhs);
-        fptr(OpID.catAssign, &store, &toAppend) == 0 || assert(false);
-        return this;
+    ref opOpAssign(string op, T)(in T rhs)
+    { 
+        static if(op != "~")
+            return mixin("this = this" ~ op ~ "rhs"); 
+        else 
+        {
+            static if(!is(T == VariantN))
+                auto toAppend = VariantN(rhs);
+            else
+                auto toAppend = cast(VariantN)rhs;
+            fptr(OpID.catAssign, &store, &toAppend) == 0 || assert(false);
+            return this;
+        }
     }
 
     /**
