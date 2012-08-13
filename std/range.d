@@ -4368,11 +4368,15 @@ public:
         this._cache = compute(this._state, ++this._n);
     }
 
-    auto opSlice(ulong lower, ulong upper) const in {
+    auto opSlice(ulong lower, ulong upper)
+    in
+    {
         assert(upper >= lower);
-    } body {
-        auto seq = typeof(this)(this._state, lower);
-        return take(seq, upper - lower);
+    }
+    body
+    {
+        auto s = typeof(this)(this._state, lower);
+        return take(s, upper - lower);
     }
 
     ElementType opIndex(size_t n)
