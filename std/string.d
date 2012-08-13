@@ -774,7 +774,7 @@ unittest
 
 
 /**
- * Returns the representation type of a string, which is the same type
+ * Returns the representation of a string, which has the same type
  * as the string except the character type is replaced by $(D ubyte),
  * $(D ushort), or $(D uint) depending on the character width.
  *
@@ -782,58 +782,54 @@ unittest
 ----
 string s = "hello";
 static assert(is(typeof(representation(s)) == immutable(ubyte)[]));
+assert(representation(s) is cast(immutable(ubyte)[]) s);
 ----
  */
 auto representation(Char)(Char[] s) pure nothrow
     if(isSomeChar!Char)
 {
     // Get representation type
-    static if (Char.sizeof == 1) enum t = "ubyte";
-    else static if (Char.sizeof == 2) enum t = "ushort";
-    else static if (Char.sizeof == 4) enum t = "uint";
-    else static assert(false); // can't happen due to isSomeChar!Char
+    alias TypeTuple!(ubyte, ushort, uint)[Char.sizeof / 2] U;
 
-    // Get representation qualifier
-    static if (is(Char == immutable)) enum q = "immutable";
-    else static if (is(Char == const)) enum q = "const";
-    else static if (is(Char == shared)) enum q = "shared";
-    else enum q = "";
+    // const and immutable storage classes
+    static if (is(Char == immutable)) alias immutable(U) T;
+    else static if (is(Char == const)) alias const(U) T;
+    else alias U T;
 
-    // Result type is qualifier(RepType)[]
-    static if (q.length)
-        return mixin("cast(" ~ q ~ "(" ~ t ~ ")[]) s");
-    else
-        return mixin("cast(" ~ t ~ "[]) s");
+    // shared storage class (because shared(const(T)) is possible)
+    static if (is(Char == shared)) alias shared(T) ST;
+    else alias T ST;
+
+    return cast(ST[]) s;
 }
 
 unittest
 {
-    auto c = to!(char[])("hello");
-    static assert(is(typeof(representation(c)) == ubyte[]));
+    void test(Char, T)(Char[] str)
+    {
+        static assert(is(typeof(representation(str)) == T[]));
+        assert(representation(str) is cast(T[]) str);
+    }
 
-    auto w = to!(wchar[])("hello");
-    static assert(is(typeof(representation(w)) == ushort[]));
+    test!(immutable(char) , immutable(ubyte) )("hello" );
+    test!(immutable(wchar), immutable(ushort))("hello"w);
+    test!(immutable(dchar), immutable(uint)  )("hello"d);
 
-    auto d = to!(dchar[])("hello");
-    static assert(is(typeof(representation(d)) == uint[]));
+    test!(const(char) , const(ubyte) )("hello" );
+    test!(const(wchar), const(ushort))("hello"w);
+    test!(const(dchar), const(uint)  )("hello"d);
 
-    const(char[]) cc = "hello";
-    static assert(is(typeof(representation(cc)) == const(ubyte)[]));
+    test!(char , ubyte )("hello" .dup);
+    test!(wchar, ushort)("hello"w.dup);
+    test!(dchar, uint  )("hello"d.dup);
 
-    const(wchar[]) cw = "hello"w;
-    static assert(is(typeof(representation(cw)) == const(ushort)[]));
+    test!(shared(char) , shared(ubyte) )(cast(shared) "hello" .dup);
+    test!(shared(wchar), shared(ushort))(cast(shared) "hello"w.dup);
+    test!(shared(dchar), shared(uint)  )(cast(shared) "hello"d.dup);
 
-    const(dchar[]) cd = "hello"d;
-    static assert(is(typeof(representation(cd)) == const(uint)[]));
-
-    string s = "hello";
-    static assert(is(typeof(representation(s)) == immutable(ubyte)[]));
-
-    wstring iw = "hello"w;
-    static assert(is(typeof(representation(iw)) == immutable(ushort)[]));
-
-    dstring id = "hello"d;
-    static assert(is(typeof(representation(id)) == immutable(uint)[]));
+    test!(const(shared(char)) , const(shared(ubyte)) )("hello" );
+    test!(const(shared(wchar)), const(shared(ushort)))("hello"w);
+    test!(const(shared(dchar)), const(shared(uint))  )("hello"d);
 }
 
 
