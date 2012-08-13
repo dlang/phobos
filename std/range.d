@@ -4368,7 +4368,7 @@ public:
         this._cache = compute(this._state, ++this._n);
     }
 
-    auto opSlice(ulong lower, ulong upper)
+    auto opSlice(size_t lower, size_t upper)
     in
     {
         assert(upper >= lower);
