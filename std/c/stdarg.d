@@ -77,6 +77,71 @@ version (X86)
         dest = src;
     }
 }
+else version (Windows) // Win64
+{
+    /*********************
+     * The argument pointer type.
+     */
+    alias void* va_list;
+
+    /**********
+     * Initialize ap.
+     * For 32 bit code, parmn should be the last named parameter.
+     * For 64 bit code, parmn should be __va_argsave.
+     */
+    void va_start(T)(out va_list ap, inout T parmn)
+    {
+        ap = cast(va_list)(cast(void*)&parmn + ((T.sizeof + int.sizeof - 1) & ~(int.sizeof - 1)));
+    }
+
+    /************
+     * Retrieve and return the next value that is type T.
+     * Should use the other va_arg instead, as this won't work for 64 bit code.
+     */
+    T va_arg(T)(inout va_list ap)
+    {
+        T arg = *cast(T*)ap;
+        ap = cast(va_list)(cast(void*)ap + ((T.sizeof + int.sizeof - 1) & ~(int.sizeof - 1)));
+        return arg;
+    }
+
+    /************
+     * Retrieve and return the next value that is type T.
+     * This is the preferred version.
+     */
+    void va_arg(T)(inout va_list ap, inout T parmn)
+    {
+        parmn = *cast(T*)ap;
+        ap = cast(va_list)(cast(void*)ap + ((T.sizeof + int.sizeof - 1) & ~(int.sizeof - 1)));
+    }
+
+    /*************
+     * Retrieve and store through parmn the next value that is of TypeInfo ti.
+     * Used when the static type is not known.
+     */
+    void va_arg()(inout va_list ap, TypeInfo ti, void* parmn)
+    {
+        // Wait until everyone updates to get TypeInfo.talign()
+        //auto talign = ti.talign();
+        //auto p = cast(void*)(cast(size_t)ap + talign - 1) & ~(talign - 1);
+        auto p = ap;
+        auto tsize = ti.tsize();
+        ap = cast(void*)(cast(size_t)p + ((tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1)));
+        parmn[0..tsize] = p[0..tsize];
+    }
+
+    /***********************
+     * End use of ap.
+     */
+    void va_end(va_list ap)
+    {
+    }
+
+    void va_copy(out va_list dest, va_list src)
+    {
+        dest = src;
+    }
+}
 else version (X86_64)
 {
     // Layout of this struct must match __gnuc_va_list for C ABI compatibility
