@@ -418,6 +418,22 @@ public:
     }
 
 /**
+   Comparison for equality.
+ */
+    bool opEquals(R)(R rhs) const if (isTuple!R)
+    {
+        static assert(field.length == rhs.field.length,
+                "Length mismatch in attempting to compare a "
+                ~typeof(this).stringof
+                ~" with a "~typeof(rhs).stringof);
+        foreach (i, Unused; Types)
+        {
+            if (field[i] != rhs.field[i]) return false;
+        }
+        return true;
+    }
+
+/**
    Comparison for ordering.
  */
     int opCmp(R)(R rhs) if (isTuple!R)
