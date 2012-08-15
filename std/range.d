@@ -4376,7 +4376,7 @@ public:
     body
     {
         auto s = typeof(this)(this._state, lower);
-        return take(s, upper - lower);
+        return takeExactly(s, upper - lower);
     }
 
     ElementType opIndex(size_t n)
