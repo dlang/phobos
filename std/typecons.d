@@ -418,8 +418,9 @@ public:
     }
 
 /**
-   Comparison for equality.
- */
+    ditto
+*/
+
     bool opEquals(R)(R rhs) const if (isTuple!R)
     {
         static assert(field.length == rhs.field.length,
