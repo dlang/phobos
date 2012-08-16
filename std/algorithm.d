@@ -9327,9 +9327,9 @@ unittest
 
 unittest
 {
-	alias Tuple!(uint, uint) T;
-	const Array!T arrayOne = Array!T( [ T(1,2), T(3,4) ] );
-	const Array!T arrayTwo = Array!T([ T(1,2), T(3,4) ] );
+    alias Tuple!(uint, uint) T;
+    const Array!T arrayOne = Array!T( [ T(1,2), T(3,4) ] );
+    const Array!T arrayTwo = Array!T([ T(1,2), T(3,4) ] );
 
-	assert(arrayOne == arrayTwo);
+    assert(arrayOne == arrayTwo);
 }
