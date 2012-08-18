@@ -190,7 +190,7 @@ body
 {
     import core.bitop;
     immutable msbs = 7 - bsr(~c);
-    if(!(msbs >= 2 && msbs <= 6))
+    if(msbs < 2 || msbs > 6)
         throw new UTFException("Invalid UTF-8 sequence", index);
     return msbs;
 }
@@ -246,9 +246,9 @@ unittest
     $(D strideBack) returns the length of the UTF-8 sequence ending one code
     unit before $(D index) in $(D str).
 
-    $(D strideBack) works with both UTF-8 strings and ranges of $(D char). If no
-    index is passed, then a bidirectional range will work, but if an index is
-    passed, then a random-access range is required.
+    $(D strideBack) works with both UTF-8 strings and bidirectional ranges of
+    $(D char). If no index is passed, then a bidirectional range will work, but
+    if an index is passed, then a random-access range is required.
 
     $(D index) defaults to $(D str.length) if none is passed.
 
@@ -277,40 +277,35 @@ uint strideBack(S)(auto ref S str, size_t index)
 
 /// Ditto
 uint strideBack(S)(auto ref S str)
-    if (is(S : const char[]) ||
-        (isBidirectionalRange!S && is(Unqual!(ElementType!S) == char)))
+    if(is(S : const char[]) ||
+       (isRandomAccessRange!S && hasLength!S && is(Unqual!(ElementType!S) == char)))
 {
-    static if(is(S : const char[]) || (isRandomAccessRange!S && hasLength!S))
-        return strideBack(str, str.length);
-    else
-    {
-        if(!str.empty && (str.back & 0b1100_0000) != 0b1000_0000)
-            return 1;
-        else
-        {
-            auto temp = str.save;
-            temp.popBack();
+    return strideBack(str, str.length);
+}
 
-            if (!temp.empty && (temp.back & 0b1100_0000) != 0b1000_0000)
-                return 2;
-            else
-            {
-                temp.popBack();
+uint strideBack(S)(auto ref S str)
+    if (isBidirectionalRange!S && is(Unqual!(ElementType!S) == char) && !isRandomAccessRange!S)
+{
+    if(!str.empty && (str.back & 0b1100_0000) != 0b1000_0000)
+        return 1;
 
-                if (!temp.empty && (temp.back & 0b1100_0000) != 0b1000_0000)
-                    return 3;
-                else
-                {
-                    temp.popBack();
+    auto temp = str.save;
+    temp.popBack();
 
-                    if (!temp.empty && (temp.back & 0b1100_0000) != 0b1000_0000)
-                        return 4;
-                }
-            }
-        }
+    if (!temp.empty && (temp.back & 0b1100_0000) != 0b1000_0000)
+        return 2;
 
-        throw new UTFException("The last code unit is not the end of the UTF-8 sequence");
-    }
+    temp.popBack();
+
+    if (!temp.empty && (temp.back & 0b1100_0000) != 0b1000_0000)
+        return 3;
+
+    temp.popBack();
+
+    if (!temp.empty && (temp.back & 0b1100_0000) != 0b1000_0000)
+        return 4;
+
+    throw new UTFException("The last code unit is not the end of the UTF-8 sequence");
 }
 
 unittest
@@ -838,12 +833,7 @@ out (result)
 }
 body
 {
-    enum limit = codeUnitLimit!S;
-
-    if (str[index] < limit)
-        return str[index++];
-    else
-        return decodeImpl!true(str, index);
+    return str[index] < codeUnitLimit!S ? str[index++] : decodeImpl!true(str, index);
 }
 
 dchar decode(S)(auto ref S str, ref size_t index)
@@ -859,12 +849,7 @@ out (result)
 }
 body
 {
-    enum limit = codeUnitLimit!S;
-
-    if (str[index] < limit)
-        return str[index++];
-    else
-        return decodeImpl!true(str, index);
+    return str[index] < codeUnitLimit!S ? str[index++] : decodeImpl!true(str, index);
 }
 
 /// Ditto
@@ -880,15 +865,13 @@ out (result)
 }
 body
 {
-    enum limit = codeUnitLimit!S;
-
-    if (str[0] < limit)
+    if (str[0] < codeUnitLimit!S)
     {
         index = 1;
         return str[0];
     }
-    else
-        return decodeImpl!true(str, index);
+
+    return decodeImpl!true(str, index);
 }
 
 /// Ditto
@@ -904,8 +887,6 @@ out (result)
 }
 body
 {
-    enum limit = codeUnitLimit!S;
-
     //@@@BUG@@@ 8521 forces canIndex to be down outside of decodeImpl, which
     //is undesirable, since not all overloads of decodeImpl need it. So, it
     //should be moved back into decodeImpl once bug# 8521 has been fixed.
@@ -916,16 +897,17 @@ body
     else
         immutable fst = str.front;
 
-    if (fst < limit)
+    if (fst < codeUnitLimit!S)
     {
         index = 1;
         return fst;
     }
-    else
-        return decodeImpl!canIndex(str, index);
+
+    return decodeImpl!canIndex(str, index);
 }
 
-template codeUnitLimit(S)
+// Gives the maximum value that a code unit for the given range type can hold.
+private template codeUnitLimit(S)
    if(isSomeChar!(ElementEncodingType!S))
 {
     static if(is(Unqual!(ElementEncodingType!S) == char))
@@ -980,59 +962,6 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
         pstr.popFront();
     }
 
-    assert(fst & 0x80);
-    ubyte tmp = void;
-    dchar d = fst; // upper control bits are masked out later
-    fst <<= 1;
-
-    foreach(i; TypeTuple!(1, 2, 3))
-    {
-
-        static if(canIndex)
-        {
-            if (i == length)
-                goto Ebounds;
-        }
-        else
-        {
-            if (pstr.empty)
-                goto Ebounds;
-        }
-
-        static if(canIndex)
-            tmp = pstr[i];
-        else
-        {
-            tmp = pstr.front;
-            pstr.popFront();
-        }
-
-        if ((tmp & 0xC0) != 0x80)
-            goto Eutf;
-
-        d = (d << 6) | (tmp & 0x3F);
-        fst <<= 1;
-
-        if (!(fst & 0x80)) // no more bytes
-        {
-            d &= bitMask[i]; // mask out control bits
-
-            // overlong, could have been encoded with i bytes
-            if ((d & ~bitMask[i - 1]) == 0)
-                goto Eutf;
-
-            // check for surrogates only needed for 3 bytes
-            static if (i == 2)
-            {
-                if (!isValidDchar(d))
-                    goto Eutf;
-            }
-
-            index += i + 1;
-            return d;
-        }
-    }
-
     static if(canIndex)
     {
         static UTFException exception(S)(S str, string msg)
@@ -1049,27 +978,85 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
         }
     }
 
-    static if(canIndex)
+    UTFException invalidUTF()
     {
-        Eutf:
-           throw exception(pstr[0 .. length], "Invalid UTF-8 sequence");
-        Ebounds:
-           throw exception(pstr[0 .. length], "Attempted to decode past the end of a string");
+        static if(canIndex)
+           return exception(pstr[0 .. length], "Invalid UTF-8 sequence");
+        else
+        {
+            //We can't include the invalid sequence with input strings without
+            //saving each of the code units along the way, and we can't do it with
+            //forward ranges without saving the entire range. Both would incur a
+            //cost for the decoding of every character just to provide a better
+            //error message for the (hopefully) rare case when an invalid UTF-8
+            //sequence is encountered, so we don't bother trying to include the
+            //invalid sequence here, unlike with strings and sliceable ranges.
+           return new UTFException("Invalid UTF-8 sequence");
+        }
     }
-    else
+
+    UTFException outOfBounds()
     {
-        //We can't include the invalid sequence with input strings without
-        //saving each of the code units along the way, and we can't do it with
-        //forward ranges without saving the entire range. Both would incur a
-        //cost for the decoding of every character just to provide a better
-        //error message for the (hopefully) rare case when an invalid UTF-8
-        //sequence is encountered, so we don't bother trying to include the
-        //invalid sequence here, unlike with strings and sliceable ranges.
-        Eutf:
-           throw new UTFException("Invalid UTF-8 sequence");
-        Ebounds:
-           throw new UTFException("Attempted to decode past the end of a string");
+        static if(canIndex)
+           return exception(pstr[0 .. length], "Attempted to decode past the end of a string");
+        else
+           return new UTFException("Attempted to decode past the end of a string");
     }
+
+    assert(fst & 0x80);
+    ubyte tmp = void;
+    dchar d = fst; // upper control bits are masked out later
+    fst <<= 1;
+
+    foreach(i; TypeTuple!(1, 2, 3))
+    {
+
+        static if(canIndex)
+        {
+            if (i == length)
+                throw outOfBounds();
+        }
+        else
+        {
+            if (pstr.empty)
+                throw outOfBounds();
+        }
+
+        static if(canIndex)
+            tmp = pstr[i];
+        else
+        {
+            tmp = pstr.front;
+            pstr.popFront();
+        }
+
+        if ((tmp & 0xC0) != 0x80)
+            throw invalidUTF();
+
+        d = (d << 6) | (tmp & 0x3F);
+        fst <<= 1;
+
+        if (!(fst & 0x80)) // no more bytes
+        {
+            d &= bitMask[i]; // mask out control bits
+
+            // overlong, could have been encoded with i bytes
+            if ((d & ~bitMask[i - 1]) == 0)
+                throw invalidUTF();
+
+            // check for surrogates only needed for 3 bytes
+            static if (i == 2)
+            {
+                if (!isValidDchar(d))
+                    throw invalidUTF();
+            }
+
+            index += i + 1;
+            return d;
+        }
+    }
+
+    throw invalidUTF();
 }
 
 private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
@@ -1096,6 +1083,14 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
         pstr.popFront();
     }
 
+    UTFException exception(string msg)
+    {
+        static if(canIndex)
+            return (new UTFException(msg)).setSequence(pstr[0]);
+        else
+            return new UTFException(msg);
+    }
+
     string msg;
     assert(u >= 0xD800);
 
@@ -1107,10 +1102,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
             immutable onlyOneCodeUnit = pstr.empty;
 
         if (onlyOneCodeUnit)
-        {
-            msg = "surrogate UTF-16 high value past end of string";
-            goto Lerr;
-        }
+            throw exception("surrogate UTF-16 high value past end of string");
 
         static if(canIndex)
             immutable uint u2 = pstr[1];
@@ -1121,19 +1113,13 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
         }
 
         if (u2 < 0xDC00 || u2 > 0xDFFF)
-        {
-            msg = "surrogate UTF-16 low value out of range";
-            goto Lerr;
-        }
+            throw exception("surrogate UTF-16 low value out of range");
 
         u = ((u - 0xD7C0) << 10) + (u2 - 0xDC00);
         index += 2;
     }
     else if (u >= 0xDC00 && u <= 0xDFFF)
-    {
-        msg = "unpaired surrogate UTF-16 value";
-        goto Lerr;
-    }
+        throw exception("unpaired surrogate UTF-16 value");
     else
         ++index;
 
@@ -1141,14 +1127,6 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
     // Unicode standard for application internal use (see isValidDchar)
 
     return cast(dchar)u;
-
-    Lerr:
-    {
-        static if(canIndex)
-            throw (new UTFException(msg)).setSequence(pstr[0]);
-        else
-            throw new UTFException(msg);
-    }
 }
 
 private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
