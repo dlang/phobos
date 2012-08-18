@@ -34,6 +34,7 @@ import std.regex;
 import std.string;
 import std.traits;
 import std.utf;
+import std.uni;
 
 /**
  * Check that an email address conforms to RFCs 5321, 5322 and others.
@@ -2013,7 +2014,7 @@ bool isNumeric (dchar c)
         default:
     }
 
-    return std.string.isNumeric(c);
+    return std.uni.isNumber(c);
 }
 
 // Issue 5744
