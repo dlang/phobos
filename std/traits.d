@@ -2067,7 +2067,7 @@ template hasElaborateCopyConstructor(S)
     else
     {
         enum hasElaborateCopyConstructor = is(typeof({
-            S s;
+            S s = void;
             return &s.__postblit;
         })) || anySatisfy!(.hasElaborateCopyConstructor, typeof(S.tupleof));
     }
@@ -2084,6 +2084,9 @@ unittest
     struct S3 { uint num; S1 s; }
     static assert(!hasElaborateCopyConstructor!S2);
     static assert( hasElaborateCopyConstructor!S3);
+
+    struct S4 { @disable this(); this(int n){} this(this){} }
+    static assert( hasElaborateCopyConstructor!S4);
 }
 
 /**
@@ -2101,7 +2104,7 @@ template hasElaborateAssign(S)
     else
     {
         enum hasElaborateAssign = is(typeof(S.init.opAssign(S.init))) ||
-                                  is(typeof(S.init.opAssign({ return S.init; }()))) ||
+                                  is(typeof(S.init.opAssign({ S s = void; return s; }()))) ||
             anySatisfy!(.hasElaborateAssign, typeof(S.tupleof));
     }
 }
@@ -2126,6 +2129,9 @@ unittest
         @disable void opAssign(U)(ref U u);
     }
     static assert( hasElaborateAssign!S4);
+
+    struct S5 { @disable this(); this(int n){} S s; }
+    static assert( hasElaborateAssign!S5);
 }
 
 /**
@@ -2950,8 +2956,8 @@ static assert(!isAssignable!(string, char[]));
 template isAssignable(Lhs, Rhs)
 {
     enum bool isAssignable = is(typeof({
-        Lhs l;
-        Rhs r;
+        Lhs l = void;
+        Rhs r = void;
         l = r;
         return l;
     }));
@@ -2964,6 +2970,9 @@ unittest
 
     static assert(!isAssignable!(int, long));
     static assert(!isAssignable!(string, char[]));
+
+    struct S { @disable this(); this(int n){} }
+    static assert( isAssignable!(S, S));
 }
 
 

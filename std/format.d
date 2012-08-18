@@ -2270,19 +2270,19 @@ template hasToString(T, Char)
         // X* does not have toString, even if X is aggregate type has toString.
         enum hasToString = 0;
     }
-    else static if (is(typeof({ T val; FormatSpec!Char f; val.toString((const(char)[] s){}, f); })))
+    else static if (is(typeof({ T val = void; FormatSpec!Char f; val.toString((const(char)[] s){}, f); })))
     {
         enum hasToString = 4;
     }
-    else static if (is(typeof({ T val; val.toString((const(char)[] s){}, "%s"); })))
+    else static if (is(typeof({ T val = void; val.toString((const(char)[] s){}, "%s"); })))
     {
         enum hasToString = 3;
     }
-    else static if (is(typeof({ T val; val.toString((const(char)[] s){}); })))
+    else static if (is(typeof({ T val = void; val.toString((const(char)[] s){}); })))
     {
         enum hasToString = 2;
     }
-    else static if (is(typeof({ T val; return val.toString(); }()) S) && isSomeString!S)
+    else static if (is(typeof({ T val = void; return val.toString(); }()) S) && isSomeString!S)
     {
         enum hasToString = 1;
     }
