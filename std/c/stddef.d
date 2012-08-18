@@ -13,6 +13,10 @@ version (Win32)
 {
     alias wchar wchar_t;
 }
+else version (Win64)
+{
+    alias wchar wchar_t;
+}
 else version (linux)
 {
     alias dchar wchar_t;

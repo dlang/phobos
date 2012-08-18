@@ -117,6 +117,71 @@ version (Win32)
     int  _snprintf(char *,size_t,char *,...);
     int  _vsnprintf(char *,size_t,char *,va_list);
 }
+else version (Win64)
+{
+    const int _NSTREAM_ = 512;
+    const int _NFILE = _NSTREAM_;
+    const int BUFSIZ = 512;
+    const int _IOB_ENTRIES = 20;
+    const int EOF = -1;
+
+    struct _iobuf
+    {   char* _ptr;
+        int _cnt;
+        char* _base;
+        int _flag;
+        int _file;
+        int _charbuf;
+        int _bufsiz;
+        char* _tmpfname;
+    }
+
+    alias _iobuf FILE;
+
+    const char[] _P_tmpdir = "\\";
+    const wchar[] _wP_tmpdir = "\\";
+    const int L_tmpnam = _P_tmpdir.length + 12;
+    const int L_tmpnam_s = _P_tmpdir.length + 16;
+
+    enum { SEEK_SET, SEEK_CUR, SEEK_END }
+
+    const int FILENAME_MAX = 260;
+    const int FOPEN_MAX = 20;
+    const int _SYS_OPEN = 20;
+    const int TMP_MAX = 32767;
+    const int _TMP_MAX_S = 2147483647;
+
+    alias long fpos_t;
+
+    FILE* __iob_func();
+
+//    FILE* stdin = &__iob_func()[0];
+//    FILE* stdout = &__iob_func()[1];
+//    FILE* stderr = &__iob_func()[2];
+
+    enum
+    {
+        _IOREAD = 1,
+        _IOWRT  = 2,
+        _IONBF  = 4,
+        _IOMYBUF = 8,
+        _IOEOF  = 0x10,
+        _IOERR  = 0x20,
+        _IOLBF  = 0x40,
+        _IOSTRG = 0x40,
+        _IORW   = 0x80,
+        _IOFBF  = 0,
+        _IOAPPEND  = 0x200,
+    }
+
+    int  ferror(FILE *fp)       { return fp._flag&_IOERR;       }
+    int  feof(FILE *fp)         { return fp._flag&_IOEOF;       }
+    void clearerr(FILE *fp);
+    void rewind(FILE *fp);
+    int  fileno(FILE *fp)       { return fp._file; }
+    int  _snprintf(char *,size_t,char *,...);
+    int  _vsnprintf(char *,size_t,char *,va_list);
+}
 else version (linux)
 {
     const int EOF = -1;
