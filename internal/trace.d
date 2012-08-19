@@ -1043,7 +1043,7 @@ void _trace_epi_n()
 }
 
 
-version (Win32)
+version (Windows)
 {
     extern (Windows)
     {

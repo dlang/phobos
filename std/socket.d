@@ -158,7 +158,7 @@ class SocketException: Exception
 
 static this()
 {
-        version(Win32)
+        version(Windows)
         {
                 WSADATA wd;
 
@@ -174,7 +174,7 @@ static this()
 
 static ~this()
 {
-        version(Win32)
+        version(Windows)
         {
                 WSACleanup();
         }
@@ -815,7 +815,7 @@ class SocketSet
         fd_set set;
 
 
-        version(Win32)
+        version(Windows)
         {
                 uint count()
                 {
@@ -930,7 +930,7 @@ class SocketSet
 
         int selectn()
         {
-                version(Win32)
+                version(Windows)
                 {
                         return count;
                 }
@@ -961,7 +961,7 @@ enum SocketOptionLevel: int
 extern(C) struct linger
 {
         // D interface
-        version(Win32)
+        version(Windows)
         {
                 uint16_t on;    /// Nonzero for on.
                 uint16_t time;  /// Linger time.
@@ -1015,7 +1015,7 @@ class Socket
         socket_t sock;
         AddressFamily _family;
 
-        version(Win32)
+        version(Windows)
             bool _blocking = false;     /// Property to get or set whether the socket is blocking or nonblocking.
 
 
@@ -1082,7 +1082,7 @@ class Socket
          */
         bool blocking()
         {
-                version(Win32)
+                version(Windows)
                 {
                         return _blocking;
                 }
@@ -1095,7 +1095,7 @@ class Socket
         /// ditto
         void blocking(bool byes)
         {
-                version(Win32)
+                version(Windows)
                 {
                         uint num = !byes;
                         if(_SOCKET_ERROR == ioctlsocket(sock, FIONBIO, &num))
@@ -1156,7 +1156,7 @@ class Socket
 
                         if(!blocking)
                         {
-                                version(Win32)
+                                version(Windows)
                                 {
                                         if(WSAEWOULDBLOCK == err)
                                                 return;
@@ -1220,7 +1220,7 @@ class Socket
                         assert(newSocket.sock == socket_t.init);
 
                         newSocket.sock = newsock;
-                        version(Win32)
+                        version(Windows)
                                 newSocket._blocking = _blocking; //inherits blocking mode
                         newSocket._family = _family; //same family
                 }
@@ -1242,7 +1242,7 @@ class Socket
 
         private static void _close(socket_t sock)
         {
-                version(Win32)
+                version(Windows)
                 {
                         .closesocket(sock);
                 }
@@ -1515,7 +1515,7 @@ class Socket
                 fd_set* fr, fw, fe;
                 int n = 0;
 
-                version(Win32)
+                version(Windows)
                 {
                         // Windows has a problem with empty fd_set`s that aren't null.
                         fr = (checkRead && checkRead.count()) ? checkRead.toFd_set() : null;
@@ -1563,7 +1563,7 @@ class Socket
 
                 int result = .select(n, fr, fw, fe, cast(_ctimeval*)tv);
 
-                version(Win32)
+                version(Windows)
                 {
                         if(_SOCKET_ERROR == result && WSAGetLastError() == WSAEINTR)
                                 return -1;

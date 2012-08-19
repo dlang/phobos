@@ -29,7 +29,7 @@ module gcx;
 /***************************************************/
 
 
-version (Win32)
+version (Windows)
 {
     import win32;
 }

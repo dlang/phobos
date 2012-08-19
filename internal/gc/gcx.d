@@ -57,7 +57,7 @@ debug private import std.c.stdio;
 import std.outofmemory;
 import std.gc;
 
-version (Win32)
+version (Windows)
 {
     import win32;
     import std.c.windows.windows;
@@ -87,7 +87,7 @@ private void onOutOfMemoryError()
 
 private void* rt_stackBottom()
 {
-    version (Win32)
+    version (Windows)
     {
         return win32.os_query_stackBottom();
     }
@@ -2030,6 +2030,19 @@ struct Gcx
                         debug (PRINTF) printf("mt scan stack bot = %p, top = %p\n", context.Esp, t.stackBottom);
                         mark(cast(void *)context.Esp, t.stackBottom);
                         mark(&context.Edi, &context.Eip);
+                    }
+                    else version (Win64)
+                    {
+                        CONTEXT context;
+
+                        context.ContextFlags = CONTEXT_INTEGER | CONTEXT_CONTROL;
+                        if (!GetThreadContext(t.hdl, &context))
+                        {
+                            assert(0);
+                        }
+                        debug (PRINTF) printf("mt scan stack bot = %p, top = %p\n", context.Esp, t.stackBottom);
+                        mark(cast(void *)context.Rsp, t.stackBottom);
+                        mark(&context.Rax, &context.Rip);
                     }
                     else version (OSX)
                     {

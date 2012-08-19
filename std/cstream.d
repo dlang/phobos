@@ -145,7 +145,7 @@ class CFile : Stream {
     file.writeString("Hello, world!");
     file.write(i);
     // string#1 + string#2 + int should give exacly that
-    version (Win32)
+    version (Windows)
       assert(file.position() == 19 + 13 + 4);
     version (Posix)
       assert(file.position() == 18 + 13 + 4);
@@ -163,7 +163,7 @@ class CFile : Stream {
     assert(!std.string.cmp(line, "Testing stream.d:"));
     // jump over "Hello, "
     file.seek(7, SeekPos.Current);
-    version (Win32)
+    version (Windows)
       assert(file.position() == 19 + 7);
     version (Posix)
       assert(file.position() == 18 + 7);
@@ -171,7 +171,7 @@ class CFile : Stream {
     i = 0; file.read(i);
     assert(i == 666);
     // string#1 + string#2 + int should give exacly that
-    version (Win32)
+    version (Windows)
       assert(file.position() == 19 + 13 + 4);
     version (Posix)
       assert(file.position() == 18 + 13 + 4);

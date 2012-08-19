@@ -1575,7 +1575,7 @@ int trymatch(size_t pc, size_t pcend)
                         (&program[pc + 1 + uint.sizeof])[0 .. len]);
                 if (src + len > input.length)
                     goto Lnomatch;
-                version (Win32)
+                version (Windows)
                 {
                     if (memicmp(cast(char*)&program[pc + 1 + uint.sizeof], &input[src], len * rchar.sizeof))
                         goto Lnomatch;

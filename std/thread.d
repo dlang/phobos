@@ -41,9 +41,9 @@ import std.c.stdio;
 
 //debug=thread;
 
-/* ================================ Win32 ================================= */
+/* ================================ Windows ================================= */
 
-version (Win32)
+version (Windows)
 {
 
 private import std.c.windows.windows;
@@ -165,9 +165,9 @@ class Thread
             return fp(arg);
         else if (dg)
             return dg();
-	// XXX Work around crash on OSX when calling assert here.
-	error("neither delegate nor function pointer supplied to run");
-	assert(false); // Not reached but compilred doesn't notice
+        // XXX Work around crash on OSX when calling assert here.
+        error("neither delegate nor function pointer supplied to run");
+        assert(false); // Not reached but compilred doesn't notice
     }
 
     /*****************************
@@ -604,7 +604,7 @@ class Thread
 
 
 /**********************************************
- * Determine "bottom" of stack (actually the top on Win32 systems).
+ * Determine "bottom" of stack (actually the top on Windows systems).
  */
 
 void *os_query_stackBottom()
@@ -736,9 +736,9 @@ class Thread
             return fp(arg);
         else if (dg)
             return dg();
-	// XXX Work around crash on OSX when calling assert here.
-	error("neither delegate nor function pointer supplied to run");
-	assert(false); // Not reached but compilred doesn't notice
+        // XXX Work around crash on OSX when calling assert here.
+        error("neither delegate nor function pointer supplied to run");
+        assert(false); // Not reached but compilred doesn't notice
     }
 
     void wait()

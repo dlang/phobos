@@ -749,7 +749,7 @@ static this()
     //printf("LocalTZA = %g, %g\n", LocalTZA, LocalTZA / msPerHour);
 }
 
-version (Win32)
+version (Windows)
 {
     private import std.c.windows.windows;
     //import c.time;

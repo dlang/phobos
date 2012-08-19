@@ -1109,7 +1109,7 @@ class Stream : InputStream, OutputStream {
   // writes a line, throws WriteException on error
   void writeLine(char[] s) {
     writeString(s);
-    version (Win32)
+    version (Windows)
       writeString("\r\n");
     else version (Mac)
       writeString("\r");
@@ -1120,7 +1120,7 @@ class Stream : InputStream, OutputStream {
   // writes a Unicode line, throws WriteException on error
   void writeLineW(wchar[] s) {
     writeStringW(s);
-    version (Win32)
+    version (Windows)
       writeStringW("\r\n");
     else version (Mac)
       writeStringW("\r");
@@ -1149,7 +1149,7 @@ class Stream : InputStream, OutputStream {
     size_t psize = buffer.length;
     size_t count;
     while (true) {
-      version (Win32) {
+      version (Windows) {
         count = _vsnprintf(p, psize, f, args);
         if (count != -1)
           break;
@@ -1795,7 +1795,7 @@ enum FileMode {
   Append = 10 // includes FileMode.Out
 }
 
-version (Win32) {
+version (Windows) {
   private import std.c.windows.windows;
   extern (Windows) {
     void FlushFileBuffers(HANDLE hFile);
@@ -1810,7 +1810,7 @@ version (Posix) {
 /// This subclass is for unbuffered file system streams.
 class File: Stream {
 
-  version (Win32) {
+  version (Windows) {
     private HANDLE hFile;
   }
   version (Posix) {
@@ -1819,7 +1819,7 @@ class File: Stream {
 
   this() {
     super();
-    version (Win32) {
+    version (Windows) {
       hFile = null;
     }
     version (Posix) {
@@ -1873,7 +1873,7 @@ class File: Stream {
     seekable = true;
     readable = cast(bool)(mode & FileMode.In);
     writeable = cast(bool)(mode & FileMode.Out);
-    version (Win32) {
+    version (Windows) {
       if (std.file.useWfuncs) {
         hFile = CreateFileW(std.utf.toUTF16z(filename), access, share,
                             null, createMode, 0, null);
@@ -1897,7 +1897,7 @@ class File: Stream {
                          out int access,
                          out int share,
                          out int createMode) {
-    version (Win32) {
+    version (Windows) {
       share |= FILE_SHARE_READ | FILE_SHARE_WRITE;
       if (mode & FileMode.In) {
         access |= GENERIC_READ;
@@ -1945,7 +1945,7 @@ class File: Stream {
     if (isopen) {
       super.close();
       if (hFile) {
-        version (Win32) {
+        version (Windows) {
           CloseHandle(hFile);
           hFile = null;
         } else version (Posix) {
@@ -1959,7 +1959,7 @@ class File: Stream {
   // destructor, closes file if still opened
   ~this() { close(); }
 
-  version (Win32) {
+  version (Windows) {
     // returns size of stream
     ulong size() {
       assertSeekable();
@@ -1971,7 +1971,7 @@ class File: Stream {
 
   override size_t readBlock(void* buffer, size_t size) {
     assertReadable();
-    version (Win32) {
+    version (Windows) {
       ReadFile(hFile, buffer, size, &size, null);
     } else version (Posix) {
       size = std.c.posix.posix.read(hFile, buffer, size);
@@ -1984,7 +1984,7 @@ class File: Stream {
 
   override size_t writeBlock(void* buffer, size_t size) {
     assertWriteable();
-    version (Win32) {
+    version (Windows) {
       WriteFile(hFile, buffer, size, &size, null);
     } else version (Posix) {
       size = std.c.posix.posix.write(hFile, buffer, size);
@@ -1996,7 +1996,7 @@ class File: Stream {
 
   override ulong seek(long offset, SeekPos rel) {
     assertSeekable();
-    version (Win32) {
+    version (Windows) {
       int hi = cast(int)(offset>>32);
       uint low = SetFilePointer(hFile, cast(int)offset, &hi, rel);
       if ((low == INVALID_SET_FILE_POINTER) && (GetLastError() != 0))
@@ -2040,7 +2040,7 @@ class File: Stream {
     file.writeString("Hello, world!");
     file.write(i);
     // string#1 + string#2 + int should give exacly that
-    version (Win32)
+    version (Windows)
       assert(file.position() == 19 + 13 + 4);
     version (Posix)
       assert(file.position() == 18 + 13 + 4);
@@ -2060,7 +2060,7 @@ class File: Stream {
     assert(!std.string.cmp(line, "Testing stream.d:"));
     // jump over "Hello, "
     file.seek(7, SeekPos.Current);
-    version (Win32)
+    version (Windows)
       assert(file.position() == 19 + 7);
     version (Posix)
       assert(file.position() == 18 + 7);
@@ -2068,7 +2068,7 @@ class File: Stream {
     i = 0; file.read(i);
     assert(i == 666);
     // string#1 + string#2 + int should give exacly that
-    version (Win32)
+    version (Windows)
       assert(file.position() == 19 + 13 + 4);
     version (Posix)
       assert(file.position() == 18 + 13 + 4);
@@ -2157,7 +2157,7 @@ class BufferedFile: BufferedStream {
     file.writeString("Hello, world!");
     file.write(i);
     // string#1 + string#2 + int should give exacly that
-    version (Win32)
+    version (Windows)
       assert(file.position() == 19 + 13 + 4);
     version (Posix)
       assert(file.position() == 18 + 13 + 4);
@@ -2177,7 +2177,7 @@ class BufferedFile: BufferedStream {
     assert(!std.string.cmp(file.readLine(), "Testing stream.d:"));
     // jump over "Hello, "
     file.seek(7, SeekPos.Current);
-    version (Win32)
+    version (Windows)
       assert(file.position() == 19 + 7);
     version (Posix)
       assert(file.position() == 18 + 7);
@@ -2185,7 +2185,7 @@ class BufferedFile: BufferedStream {
     i = 0; file.read(i);
     assert(i == 666);
     // string#1 + string#2 + int should give exacly that
-    version (Win32)
+    version (Windows)
       assert(file.position() == 19 + 13 + 4);
     version (Posix)
       assert(file.position() == 18 + 13 + 4);

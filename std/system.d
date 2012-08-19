@@ -23,11 +23,16 @@ const
         OSX,
         FreeBSD,
         Solaris,
+        Win64,
     }
 
     version (Win32)
     {
         Family family = Family.Win32;
+    }
+    else version (Win64)
+    {
+        Family family = Family.Win64;
     }
     else version (linux)
     {

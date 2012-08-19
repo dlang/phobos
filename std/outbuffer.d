@@ -252,7 +252,7 @@ class OutBuffer
         auto psize = buffer.length;
         for (;;)
         {
-            version(Win32)
+            version(Windows)
             {
                 count = _vsnprintf(p,psize,f,args);
                 if (count != -1)

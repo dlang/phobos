@@ -14,7 +14,7 @@ module std.random;
 // Segments of the code in this file Copyright (c) 1997 by Rick Booth
 // From "Inner Loops" by Rick Booth, Addison-Wesley
 
-version (Win32)
+version (Windows)
 {
     extern(Windows) int QueryPerformanceCounter(ulong *count);
 }
@@ -97,7 +97,7 @@ static this()
 {
     ulong s;
 
-    version(Win32)
+    version(Windows)
     {
         QueryPerformanceCounter(&s);
     }

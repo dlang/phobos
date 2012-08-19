@@ -25,7 +25,7 @@
 /********************************************
  * Encode and decode UTF-8, UTF-16 and UTF-32 strings.
  *
- * For Win32 systems, the C wchar_t type is UTF-16 and corresponds to the D
+ * For Windows systems, the C wchar_t type is UTF-16 and corresponds to the D
  * wchar type.
  * For linux systems, the C wchar_t type is UTF-32 and corresponds to
  * the D utf.dchar type.
@@ -931,7 +931,7 @@ unittest
 
 /****************
  * Encodes string s into UTF-16 and returns the encoded string.
- * toUTF16z() is suitable for calling the 'W' functions in the Win32 API that take
+ * toUTF16z() is suitable for calling the 'W' functions in the Windows API that take
  * an LPWSTR or LPCWSTR argument.
  */
 

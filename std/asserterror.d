@@ -37,7 +37,7 @@ class AssertError : Error
             super("AssertError no memory");
         else
         {
-            version (Win32) alias _snprintf snprintf;
+            version (Windows) alias _snprintf snprintf;
             count = snprintf(buffer, len, "AssertError Failure %.*s(%u) %.*s",
                 filename.length, filename.ptr, linnum, msg.length, msg.ptr);
             if (count >= len || count == -1)

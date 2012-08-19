@@ -98,7 +98,7 @@ version (Posix) alias std.string.cmp fcmp;
  *
  * Examples:
  * -----
- * version(Win32)
+ * version(Windows)
  * {
  *     getExt(r"d:\path\foo.bat") // "bat"
  *     getExt(r"d:\path.two\bar") // null
@@ -120,7 +120,7 @@ string getExt(string fullname)
         if (fullname[i - 1] == '.')
             return fullname[i .. fullname.length];
         i--;
-        version(Win32)
+        version(Windows)
         {
             if (fullname[i] == ':' || fullname[i] == '\\')
                 break;
@@ -139,28 +139,28 @@ unittest
     debug(path) printf("path.getExt.unittest\n");
     string result;
 
-    version (Win32)
+    version (Windows)
         result = getExt("d:\\path\\foo.bat");
     version (Posix)
         result = getExt("/path/foo.bat");
     auto i = cmp(result, "bat");
     assert(i == 0);
 
-    version (Win32)
+    version (Windows)
         result = getExt("d:\\path\\foo.");
     version (Posix)
         result = getExt("d/path/foo.");
     i = cmp(result, "");
     assert(i == 0);
 
-    version (Win32)
+    version (Windows)
         result = getExt("d:\\path\\foo");
     version (Posix)
         result = getExt("d/path/foo");
     i = cmp(result, "");
     assert(i == 0);
 
-    version (Win32)
+    version (Windows)
         result = getExt("d:\\path.bar\\foo");
     version (Posix)
         result = getExt("/path.bar/foo");
@@ -189,7 +189,7 @@ unittest
  *
  * Examples:
  * -----
- * version(Win32)
+ * version(Windows)
  * {
  *     getName(r"d:\path\foo.bat") => "d:\path\foo"
  *     getName(r"d:\path.two\bar") => null
@@ -211,7 +211,7 @@ string getName(string fullname)
         if (fullname[i - 1] == '.')
             return fullname[0 .. i - 1];
         i--;
-        version(Win32)
+        version(Windows)
         {
             if (fullname[i] == ':' || fullname[i] == '\\')
                 break;
@@ -235,7 +235,7 @@ unittest
     assert(i == 0);
 
     result = getName("d:\\path.two\\bar");
-    version (Win32)
+    version (Windows)
         i = cmp(result, null);
     version (Posix)
         i = cmp(result, "d:\\path");
@@ -257,7 +257,7 @@ unittest
  *
  * Examples:
  * -----
- * version(Win32)
+ * version(Windows)
  * {
  *     getBaseName(r"d:\path\foo.bat") => "foo.bat"
  * }
@@ -278,7 +278,7 @@ string getBaseName(string fullname)
         auto i = fullname.length;
         for (; i > 0; i--)
         {
-            version(Win32)
+            version(Windows)
             {
                 if (fullname[i - 1] == ':' || fullname[i - 1] == '\\')
                     break;
@@ -333,7 +333,7 @@ unittest
  *
  * Examples:
  * -----
- * version(Win32)
+ * version(Windows)
  * {
  *     getDirName(r"d:\path\foo.bat") => r"d:\path"
  *     getDirName(getDirName(r"d:\path\foo.bat")) => r"d:\"
@@ -357,7 +357,7 @@ string getDirName(string fullname)
 
         for (i = fullname.length; i > 0; i--)
         {
-            version(Win32)
+            version(Windows)
             {
                 if (fullname[i - 1] == ':')
                     break;
@@ -409,7 +409,7 @@ string getDrive(string fullname)
     }
     body
     {
-        version(Win32)
+        version(Windows)
         {
             for (uint i = 0; i < fullname.length; i++)
             {
@@ -517,7 +517,7 @@ string addExt(string filename, string ext)
  *
  * Examples:
  * -----
- * version(Win32)
+ * version(Windows)
  * {
  *     isabs(r"relative\path") => 0
  *     isabs(r"\relative\path") => 0
@@ -573,7 +573,7 @@ unittest
  *
  * Examples:
  * -----
- * version(Win32)
+ * version(Windows)
  * {
  *     join(r"c:\foo", "bar") => r"c:\foo\bar"
  *     join("foo", r"d:\bar") => r"d:\bar"
@@ -596,7 +596,7 @@ string join(string p1, string p2)
     string p;
     string d1;
 
-    version(Win32)
+    version(Windows)
     {
         if (getDrive(p2))
         {
@@ -654,13 +654,13 @@ unittest
     int i;
 
     p = join("foo", "bar");
-    version (Win32)
+    version (Windows)
         i = cmp(p, "foo\\bar");
     version (Posix)
         i = cmp(p, "foo/bar");
     assert(i == 0);
 
-    version (Win32)
+    version (Windows)
     {   p = join("foo\\", "bar");
         i = cmp(p, "foo\\bar");
     }
@@ -670,7 +670,7 @@ unittest
     }
     assert(i == 0);
 
-    version (Win32)
+    version (Windows)
     {   p = join("foo", "\\bar");
         i = cmp(p, "\\bar");
     }
@@ -680,7 +680,7 @@ unittest
     }
     assert(i == 0);
 
-    version (Win32)
+    version (Windows)
     {   p = join("foo\\", "\\bar");
         i = cmp(p, "\\bar");
     }
@@ -690,7 +690,7 @@ unittest
     }
     assert(i == 0);
 
-    version(Win32)
+    version(Windows)
     {
         p = join("d:", "bar");
         i = cmp(p, "d:bar");
@@ -739,7 +739,7 @@ unittest
  *
  * Examples:
  * -----
- * version(Win32)
+ * version(Windows)
  * {
  *     fncharmatch('a', 'b') => 0
  *     fncharmatch('A', 'a') => 1
@@ -754,7 +754,7 @@ unittest
 
 int fncharmatch(dchar c1, dchar c2)
 {
-    version (Win32)
+    version (Windows)
     {
         if (c1 != c2)
         {
@@ -802,7 +802,7 @@ int fncharmatch(dchar c1, dchar c2)
  *
  * Examples:
  * -----
- * version(Win32)
+ * version(Windows)
  * {
  *     fnmatch("foo.bar", "*") => 1
  *     fnmatch(r"foo/foo\bar", "f*b*r") => 1
@@ -926,7 +926,7 @@ unittest
 {
     debug(path) printf("path.fnmatch.unittest\n");
 
-    version (Win32)
+    version (Windows)
         assert(fnmatch("foo", "Foo"));
     version (Posix)
         assert(!fnmatch("foo", "Foo"));

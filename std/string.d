@@ -146,7 +146,7 @@ int icmp(char[] s1, char[] s2)
 
     if (s2.length < len)
         len = s2.length;
-    version (Win32)
+    version (Windows)
     {
         result = memicmp(s1.ptr, s2.ptr, len);
     }
