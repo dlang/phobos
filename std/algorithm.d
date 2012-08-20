@@ -3201,8 +3201,8 @@ unittest
 // Leftover specialization: searching a random-access range for a
 // non-bidirectional forward range
 R1 find(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
-if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2
-        && is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
+if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2 &&
+    is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
     static if (!is(ElementType!R1 == ElementType!R2))
     {
@@ -3211,11 +3211,25 @@ if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2
     else
     {
         // Prepare the search with needle's first element
-        if (needle.empty) return haystack;
+        if (needle.empty)
+            return haystack;
+
         haystack = .find!pred(haystack, needle.front);
-        if (haystack.empty) return haystack;
+
+        static if (hasLength!R1 && hasLength!R2 && is(typeof(takeNone(haystack)) == typeof(haystack)))
+        {
+            if (needle.length > haystack.length)
+                return takeNone(haystack);
+        }
+        else
+        {
+            if (haystack.empty)
+                return haystack;
+        }
+
         needle.popFront();
         size_t matchLen = 1;
+
         // Loop invariant: haystack[0 .. matchLen] matches everything in
         // the initial needle that was popped out of needle.
         for (;;)
@@ -3223,11 +3237,22 @@ if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2
             // Extend matchLength as much as possible
             for (;;)
             {
-                if (needle.empty || haystack.empty) return haystack;
-                if (!binaryFun!pred(haystack[matchLen], needle.front)) break;
+                if (needle.empty || haystack.empty)
+                    return haystack;
+
+                static if(hasLength!R1 && is(typeof(takeNone(haystack)) == typeof(haystack)))
+                {
+                    if(matchLen == haystack.length)
+                        return takeNone(haystack);
+                }
+
+                if (!binaryFun!pred(haystack[matchLen], needle.front))
+                    break;
+
                 ++matchLen;
                 needle.popFront();
             }
+
             auto bestMatch = haystack[0 .. matchLen];
             haystack.popFront();
             haystack = .find!pred(haystack, bestMatch);
@@ -3239,6 +3264,19 @@ unittest
 {
     assert(find([ 1, 2, 3 ], SList!int(2, 3)[]) == [ 2, 3 ]);
     assert(find([ 1, 2, 1, 2, 3, 3 ], SList!int(2, 3)[]) == [ 2, 3, 3 ]);
+}
+
+//Bug# 8334
+unittest
+{
+    auto haystack = [1, 2, 3, 4, 1, 9, 12, 42];
+    auto needle = [12, 42, 27];
+
+    //different overload of find, but it's the base case.
+    assert(find(haystack, needle).empty);
+
+    assert(find(haystack, takeExactly(filter!"true"(needle), 3)).empty);
+    assert(find(haystack, filter!"true"(needle)).empty);
 }
 
 // Internally used by some find() overloads above. Can't make it
