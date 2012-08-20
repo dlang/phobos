@@ -173,7 +173,7 @@ uint stride(S)(auto ref S str)
     if (is(S : const char[]) ||
         (isInputRange!S && is(Unqual!(ElementType!S) == char)))
 {
-    static if(is(S : const char[]))
+    static if (is(S : const char[]))
         immutable c = str[0];
     else
         immutable c = str.front;
@@ -190,7 +190,7 @@ body
 {
     import core.bitop;
     immutable msbs = 7 - bsr(~c);
-    if(msbs < 2 || msbs > 6)
+    if (msbs < 2 || msbs > 6)
         throw new UTFException("Invalid UTF-8 sequence", index);
     return msbs;
 }
@@ -205,7 +205,7 @@ unittest
         enforce(stride(RandomCU!char(s), i) == codeLength!char(c),
                 new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
 
-        if(i == 0)
+        if (i == 0)
         {
             enforce(stride(s) == codeLength!char(c),
                     new AssertError(format("Unit test failure string 0: %s", s), __FILE__, line));
@@ -277,7 +277,7 @@ uint strideBack(S)(auto ref S str, size_t index)
 
 /// Ditto
 uint strideBack(S)(auto ref S str)
-    if(is(S : const char[]) ||
+    if (is(S : const char[]) ||
        (isRandomAccessRange!S && hasLength!S && is(Unqual!(ElementType!S) == char)))
 {
     return strideBack(str, str.length);
@@ -286,7 +286,7 @@ uint strideBack(S)(auto ref S str)
 uint strideBack(S)(auto ref S str)
     if (isBidirectionalRange!S && is(Unqual!(ElementType!S) == char) && !isRandomAccessRange!S)
 {
-    if(!str.empty && (str.back & 0b1100_0000) != 0b1000_0000)
+    if (!str.empty && (str.back & 0b1100_0000) != 0b1000_0000)
         return 1;
 
     auto temp = str.save;
@@ -318,7 +318,7 @@ unittest
         enforce(strideBack(RandomCU!char(s), i == size_t.max ? s.length : i) == codeLength!char(c),
                 new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
 
-        if(i == size_t.max)
+        if (i == size_t.max)
         {
             enforce(strideBack(s) == codeLength!char(c),
                     new AssertError(format("Unit test failure string length: %s", s), __FILE__, line));
@@ -400,7 +400,7 @@ uint stride(S)(auto ref S str)
         enforce(stride(RandomCU!wchar(s), i) == codeLength!wchar(c),
                 new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
 
-        if(i == 0)
+        if (i == 0)
         {
             enforce(stride(s) == codeLength!wchar(c),
                     new AssertError(format("Unit test failure string 0: %s", s), __FILE__, line));
@@ -471,28 +471,28 @@ uint strideBack(S)(auto ref S str)
     if (is(S : const wchar[]) ||
         (isInputRange!S && is(Unqual!(ElementType!S) == wchar)))
 {
-    static if(is(S : const(wchar)[]))
+    static if (is(S : const(wchar)[]))
         immutable valid = !str.empty && str[$ - 1] < 0xD800 || str[$ - 1] > 0xDBFF;
     else
         immutable valid = !str.empty && str.back < 0xD800 || str.back > 0xDBFF;
 
-    if(!valid)
+    if (!valid)
         throw new UTFException("The last code unit is not the end of the UTF-16 sequence");
 
-    static if(is(S : const(wchar)[]) || hasLength!S)
+    static if (is(S : const(wchar)[]) || hasLength!S)
     {
        if (str.length == 1)
            return 1;
     }
 
-    static if(is(S : const(wchar)[]) || (isRandomAccessRange!S && hasLength!R))
+    static if (is(S : const(wchar)[]) || (isRandomAccessRange!S && hasLength!R))
         immutable c = str[$ - 2];
     else
     {
         auto temp = str.save;
         temp.popBack();
 
-        if(temp.empty)
+        if (temp.empty)
             return 1;
 
         immutable c = temp.back;
@@ -511,7 +511,7 @@ unittest
         enforce(strideBack(RandomCU!wchar(s), i == size_t.max ? s.length : i) == codeLength!wchar(c),
                 new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
 
-        if(i == size_t.max)
+        if (i == size_t.max)
         {
             enforce(strideBack(s) == codeLength!wchar(c),
                     new AssertError(format("Unit test failure string length: %s", s), __FILE__, line));
@@ -561,7 +561,7 @@ uint stride(S)(auto ref S str, size_t index = 0)
     if (is(S : const dchar[]) ||
         (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
 {
-    static if(hasLength!S)
+    static if (hasLength!S)
         assert(index < str.length);
     return 1;
 }
@@ -576,7 +576,7 @@ unittest
         enforce(stride(RandomCU!dchar(s), i) == codeLength!dchar(c),
                 new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
 
-        if(i == 0)
+        if (i == 0)
         {
             enforce(stride(s) == codeLength!dchar(c),
                     new AssertError(format("Unit test failure string 0: %s", s), __FILE__, line));
@@ -629,7 +629,7 @@ unittest
 uint strideBack(S)(auto ref S str, size_t index)
     if (isRandomAccessRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
 {
-    static if(hasLength!S)
+    static if (hasLength!S)
         assert(index <= str.length);
     return 1;
 }
@@ -652,7 +652,7 @@ unittest
         enforce(strideBack(RandomCU!dchar(s), i == size_t.max ? s.length : i) == codeLength!dchar(c),
                 new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
 
-        if(i == size_t.max)
+        if (i == size_t.max)
         {
             enforce(strideBack(s) == codeLength!dchar(c),
                     new AssertError(format("Unit test failure string length: %s", s), __FILE__, line));
@@ -822,7 +822,7 @@ size_t toUTFindex(in dchar[] str, size_t n) @safe pure nothrow
         sequence.
   +/
 dchar decode(S)(auto ref S str, ref size_t index) @trusted pure
-    if(isSomeString!S)
+    if (isSomeString!S)
 in
 {
     assert(index < str.length, "Attempted to decode past the end of a string");
@@ -837,7 +837,7 @@ body
 }
 
 dchar decode(S)(auto ref S str, ref size_t index)
-    if(!isSomeString!S &&
+    if (!isSomeString!S &&
        (isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S)))
 in
 {
@@ -854,7 +854,7 @@ body
 
 /// Ditto
 dchar decodeFront(S)(auto ref S str, out size_t index) @trusted pure
-    if(isSomeString!S)
+    if (isSomeString!S)
 in
 {
     assert(!str.empty);
@@ -876,7 +876,7 @@ body
 
 /// Ditto
 dchar decodeFront(S)(auto ref S str, out size_t index)
-    if(!isSomeString!S)
+    if (!isSomeString!S)
 in
 {
     assert(!str.empty);
@@ -891,8 +891,8 @@ body
     //is undesirable, since not all overloads of decodeImpl need it. So, it
     //should be moved back into decodeImpl once bug# 8521 has been fixed.
     enum canIndex = isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S);
-    //static if(isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S))
-    static if(canIndex)
+    //static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S))
+    static if (canIndex)
         immutable fst = str[0];
     else
         immutable fst = str.front;
@@ -908,11 +908,11 @@ body
 
 // Gives the maximum value that a code unit for the given range type can hold.
 private template codeUnitLimit(S)
-   if(isSomeChar!(ElementEncodingType!S))
+   if (isSomeChar!(ElementEncodingType!S))
 {
-    static if(is(Unqual!(ElementEncodingType!S) == char))
+    static if (is(Unqual!(ElementEncodingType!S) == char))
         enum char codeUnitLimit = 0x80;
-    else static if(is(Unqual!(ElementEncodingType!S) == wchar))
+    else static if (is(Unqual!(ElementEncodingType!S) == wchar))
         enum wchar codeUnitLimit = 0xD800;
     else
         enum dchar codeUnitLimit = 0xD800;
@@ -925,7 +925,7 @@ private template codeUnitLimit(S)
  * redundant bounds checking.
  */
 private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
-    if(is(S : const char[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == char)))
+    if (is(S : const char[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == char)))
 {
     /* The following encodings are valid, except for the 5 and 6 byte
      * combinations:
@@ -941,9 +941,9 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
      */
     enum bitMask = [(1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1];
 
-    static if(is(S : const char[]))
+    static if (is(S : const char[]))
         auto pstr = str.ptr + index;
-    else static if(isRandomAccessRange!S && hasSlicing!S && hasLength!S)
+    else static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
         auto pstr = str[index .. str.length];
     else
         alias str pstr;
@@ -951,7 +951,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
     //@@@BUG@@@ 8521 forces this to be down outside of decodeImpl
     //enum canIndex = is(S : const char[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S);
 
-    static if(canIndex)
+    static if (canIndex)
     {
         immutable length = str.length - index;
         ubyte fst = pstr[0];
@@ -962,7 +962,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
         pstr.popFront();
     }
 
-    static if(canIndex)
+    static if (canIndex)
     {
         static UTFException exception(S)(S str, string msg)
         {
@@ -980,7 +980,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
 
     UTFException invalidUTF()
     {
-        static if(canIndex)
+        static if (canIndex)
            return exception(pstr[0 .. length], "Invalid UTF-8 sequence");
         else
         {
@@ -997,7 +997,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
 
     UTFException outOfBounds()
     {
-        static if(canIndex)
+        static if (canIndex)
            return exception(pstr[0 .. length], "Attempted to decode past the end of a string");
         else
            return new UTFException("Attempted to decode past the end of a string");
@@ -1011,7 +1011,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
     foreach(i; TypeTuple!(1, 2, 3))
     {
 
-        static if(canIndex)
+        static if (canIndex)
         {
             if (i == length)
                 throw outOfBounds();
@@ -1022,7 +1022,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
                 throw outOfBounds();
         }
 
-        static if(canIndex)
+        static if (canIndex)
             tmp = pstr[i];
         else
         {
@@ -1060,11 +1060,11 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
 }
 
 private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
-    if(is(S : const wchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == wchar)))
+    if (is(S : const wchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == wchar)))
 {
-    static if(is(S : const wchar[]))
+    static if (is(S : const wchar[]))
         auto pstr = str.ptr + index;
-    else static if(isRandomAccessRange!S && hasSlicing!S && hasLength!S)
+    else static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
         auto pstr = str[index .. str.length];
     else
         alias str pstr;
@@ -1072,7 +1072,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
     //@@@BUG@@@ 8521 forces this to be down outside of decodeImpl
     //enum canIndex = is(S : const wchar[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S);
 
-    static if(canIndex)
+    static if (canIndex)
     {
         immutable length = str.length - index;
         uint u = pstr[0];
@@ -1085,7 +1085,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
 
     UTFException exception(string msg)
     {
-        static if(canIndex)
+        static if (canIndex)
             return (new UTFException(msg)).setSequence(pstr[0]);
         else
             return new UTFException(msg);
@@ -1096,7 +1096,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
 
     if (u >= 0xD800 && u <= 0xDBFF)
     {
-        static if(canIndex)
+        static if (canIndex)
             immutable onlyOneCodeUnit = length == 1;
         else
             immutable onlyOneCodeUnit = pstr.empty;
@@ -1104,7 +1104,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
         if (onlyOneCodeUnit)
             throw exception("surrogate UTF-16 high value past end of string");
 
-        static if(canIndex)
+        static if (canIndex)
             immutable uint u2 = pstr[1];
         else
         {
@@ -1130,14 +1130,14 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
 }
 
 private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
-    if(is(S : const dchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
+    if (is(S : const dchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
 {
-    static if(is(S : const dchar[]))
+    static if (is(S : const dchar[]))
         auto pstr = str.ptr;
     else
         alias str pstr;
 
-    static if(is(S : const dchar[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S))
+    static if (is(S : const dchar[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S))
     {
         if (!isValidDchar(pstr[index]))
             throw (new UTFException("Invalid UTF-32 value")).setSequence(pstr[index]);
@@ -1246,7 +1246,7 @@ unittest
 
     foreach(S; TypeTuple!(to!string, RandomCU!char, InputCU!char))
     {
-        static if(is(S == InputCU!char))
+        static if (is(S == InputCU!char))
             alias TypeTuple!(decodeFront) funcs;
         else
             alias TypeTuple!(decode, decodeFront) funcs;
@@ -1274,7 +1274,7 @@ unittest
 
     foreach(S; TypeTuple!(to!wstring, RandomCU!wchar, InputCU!wchar))
     {
-        static if(is(S == InputCU!wchar))
+        static if (is(S == InputCU!wchar))
             alias TypeTuple!(decodeFront) funcs;
         else
             alias TypeTuple!(decode, decodeFront) funcs;
@@ -1309,7 +1309,7 @@ unittest
 
     foreach(S; TypeTuple!(to!dstring, RandomCU!dchar, InputCU!dchar))
     {
-        static if(is(S == InputCU!dchar))
+        static if (is(S == InputCU!dchar))
             alias TypeTuple!(decodeFront) funcs;
         else
             alias TypeTuple!(decode, decodeFront) funcs;
