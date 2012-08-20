@@ -3216,7 +3216,7 @@ if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2 &&
 
         haystack = .find!pred(haystack, needle.front);
 
-        static if (hasLength!R1 && hasLength!R2 && is(typeof(takeNone(haystack)) == typeof(haystack)))
+        static if (hasLength!R1 && hasLength!R2 && is(typeof(takeNone(haystack)) == R1))
         {
             if (needle.length > haystack.length)
                 return takeNone(haystack);
@@ -3240,9 +3240,9 @@ if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2 &&
                 if (needle.empty || haystack.empty)
                     return haystack;
 
-                static if(hasLength!R1 && is(typeof(takeNone(haystack)) == typeof(haystack)))
+                static if (hasLength!R1 && is(typeof(takeNone(haystack)) == R1))
                 {
-                    if(matchLen == haystack.length)
+                    if (matchLen == haystack.length)
                         return takeNone(haystack);
                 }
 
