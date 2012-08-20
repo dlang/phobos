@@ -4430,14 +4430,9 @@ unittest
 unittest
 {
     auto odds = sequence!("a[0] + n * a[1]")(1, 2);
-    auto odds2 = odds; // copy
 
-    assert(equal(odds[0 .. 5], std.range.take(odds2, 5)));
-
-    odds2.popFront();
-    odds2.popFront();
-    odds2.popFront();
-    assert(equal(odds[3 .. 7], std.range.take(odds2, 4)));
+    assert(equal(odds[0 .. 5], take(odds, 5)));
+    assert(equal(odds[3 .. 7], take(drop(odds, 3), 4)));
 }
 
 /**
