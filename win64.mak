@@ -1,4 +1,4 @@
-# Makefile to build D runtime library phobos.lib for Win32
+# Makefile to build D runtime library phobos.lib for Win64
 # Designed to work with \dm\bin\make.exe
 # Targets:
 #	make
@@ -14,19 +14,21 @@
 # Notes:
 #	This relies on LIB.EXE 8.00 or later, and MAKE.EXE 5.01 or later.
 
-CP=cp
 DIR=\dmd
-PHOBOSSVN=\svnproj\phobos1
+VCDIR="\Program Files (x86)\Microsoft Visual Studio 10.0\VC"
 
-CFLAGS=-mn -6 -r
-#CFLAGS=-g -mn -6 -r
+CC=$(VCDIR)\bin\amd64\cl
+LD=$(VCDIR)\bin\amd64\link
+LIB=$(VCDIR)\bin\amd64\lib
+CP=cp
+
+CFLAGS=/O2 /I$(VCDIR)\INCLUDE
+#CFLAGS=/Zi /I$(VCDIR)\INCLUDE
 
 DFLAGS=-O -release -nofloat -w
 #DFLAGS=-nofloat -w
 #DFLAGS=-unittest -g -w
 #DFLAGS=-unittest -cov -g
-
-CC=dmc
 
 DMD=$(DIR)\windows\bin\dmd
 #DMD=..\dmd
@@ -34,11 +36,13 @@ DMD=$(DIR)\windows\bin\dmd
 DOC=..\..\html\d\phobos
 #DOC=..\doc\phobos
 
+PHOBOSLIB=phobos64.lib
+
 .c.obj:
-	$(CC) -c $(CFLAGS) $*
+	$(CC) /c $(CFLAGS) $*.c
 
 .cpp.obj:
-	$(CC) -c $(CFLAGS) $*
+	$(CC) /c $(CFLAGS) $*.cpp
 
 .d.obj:
 	$(DMD) -c $(DFLAGS) $*
@@ -46,14 +50,14 @@ DOC=..\..\html\d\phobos
 .asm.obj:
 	$(CC) -c $*
 
-targets : phobos.lib gcstub.obj
+targets : $(PHOBOSLIB) gcstub.obj
 
 test : test.exe
 
 test.obj : test.d
 	$(DMD) -c test -g -unittest
 
-test.exe : test.obj phobos.lib
+test.exe : test.obj $(PHOBOSLIB)
 	$(DMD) test.obj -g -L/map
 
 OBJS= deh.obj complex.obj gcstats.obj \
@@ -66,7 +70,7 @@ OBJS= deh.obj complex.obj gcstats.obj \
 #	ti_bit.obj ti_Abit.obj
 
 MAKEFILES= \
-	win32.mak linux.mak osx.mak freebsd.mak openbsd.mak solaris.mak
+	win32.mak win64.mak linux.mak osx.mak freebsd.mak openbsd.mak solaris.mak
 
 SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\base64.d std\md5.d std\regexp.d \
@@ -336,40 +340,40 @@ SRC_GC= internal\gc\gc.d \
 	internal\gc\openbsd.mak \
 	internal\gc\solaris.mak
 
-phobos.lib : $(OBJS) $(SRCS) minit.obj internal\gc\dmgc.lib \
-	etc\c\zlib\zlib.lib win32.mak
-#	lib -c -p32 phobos.lib $(OBJS) minit.obj internal\gc\dmgc.lib \
-#		etc\c\zlib\zlib.lib
-	$(DMD) -lib -ofphobos.lib -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) minit.obj \
-		internal\gc\dmgc.lib etc\c\zlib\zlib.lib
+$(PHOBOSLIB) : $(OBJS) $(SRCS) minit.obj internal\gc\dmgc64.lib \
+	etc\c\zlib\zlib64.lib win64.mak
+#	lib -c -p32 $(PHOBOSLIB) $(OBJS) minit.obj internal\gc\dmgc64.lib \
+#		etc\c\zlib\zlib64.lib
+	$(DMD) -lib -of$(PHOBOSLIB) -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) minit.obj \
+		internal\gc\dmgc64.lib etc\c\zlib\zlib64.lib
 
-unittest : $(SRCS) phobos.lib
-	$(DMD) $(DFLAGS) -unittest -version=Unittest unittest.d $(SRCS) phobos.lib
+unittest : $(SRCS) $(PHOBOSLIB)
+	$(DMD) $(DFLAGS) -unittest -version=Unittest unittest.d $(SRCS) $(PHOBOSLIB)
 	unittest
 
 #unittest : unittest.exe
 #       unittest
 #
-#unittest.exe : unittest.d phobos.lib
+#unittest.exe : unittest.d $(PHOBOSLIB)
 #       $(DMD) unittest -g
 #       dmc unittest.obj -g
 
-cov : $(SRCS) phobos.lib
-	$(DMD) -cov -unittest -ofcov.exe unittest.d -version=Unittest $(SRCS) phobos.lib
+cov : $(SRCS) $(PHOBOSLIB)
+	$(DMD) -cov -unittest -ofcov.exe unittest.d -version=Unittest $(SRCS) $(PHOBOSLIB)
 	cov
 
 html : $(DOCS)
 
 ######################################################
 
-internal\gc\dmgc.lib:
+internal\gc\dmgc64.lib:
 	cd internal\gc
-	make DMD=$(DMD) -f win32.mak dmgc.lib
+	make DMD=$(DMD) -f win64.mak dmgc64.lib
 	cd ..\..
 
-etc\c\zlib\zlib.lib:
+etc\c\zlib\zlib64.lib:
 	cd etc\c\zlib
-	make -f win32.mak zlib.lib
+	make -f win64.mak zlib64.lib
 	cd ..\..\..
 
 errno.obj : errno.c
@@ -957,7 +961,7 @@ clean:
 	del $(OBJS)
 	del $(DOCS)
 	del phobos.json
-	del phobos.lib
+	del $(PHOBOSLIB)
 
 cleanhtml:
 	del $(DOCS)
@@ -969,12 +973,18 @@ detab:
 # $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
 
 tolf:
+	tolf win32.mak \
+	tolf win64.mak \
 	tolf freebsd.mak \
 	tolf openbsd.mak \
+	internal\gc\win32.mak \
+	internal\gc\win64.mak \
 	internal\gc\freebsd.mak \
 	internal\gc\openbsd.mak \
 	internal\gc\osx.mak \
 	internal\gc\solaris.mak \
+	etc\c\zlib\win32.mak \
+	etc\c\zlib\win64.mak \
 	etc\c\zlib\freebsd.mak \
 	etc\c\zlib\openbsd.mak \
 	etc\c\zlib\osx.mak \
@@ -984,7 +994,7 @@ tolf:
 	$(SRC_STDLINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_SOLARIS)
 
 install:
-	$(CP) phobos.lib gcstub.obj $(DIR)\windows\lib
+	$(CP) $(PHOBOSLIB) gcstub.obj $(DIR)\windows\lib
 	$(CP) $(MAKEFILES) phoboslicense.txt minit.obj std.ddoc $(DIR)\src\phobos
 	$(CP) $(SRC) $(DIR)\src\phobos
 	$(CP) $(SRC_STD) $(DIR)\src\phobos\std
@@ -1005,6 +1015,8 @@ install:
 	$(CP) $(SRC_GC) $(DIR)\src\phobos\internal\gc
 
 ################# Write to SVN ####################
+
+PHOBOSSVN=\svnproj\phobos1
 
 svn:	detab tolf svn2
 

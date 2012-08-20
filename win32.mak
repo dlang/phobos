@@ -14,9 +14,8 @@
 # Notes:
 #	This relies on LIB.EXE 8.00 or later, and MAKE.EXE 5.01 or later.
 
-CP=cp
 DIR=\dmd
-PHOBOSSVN=\svnproj\phobos1
+PHOBOSGIT=walter@mercury:dpl/phobos1
 
 CFLAGS=-mn -6 -r
 #CFLAGS=-g -mn -6 -r
@@ -27,7 +26,8 @@ DFLAGS=-O -release -nofloat -w
 #DFLAGS=-unittest -cov -g
 
 CC=dmc
-
+CP=cp
+SCP=\putty\pscp -i c:\.ssh\colossus.ppk
 DMD=$(DIR)\windows\bin\dmd
 #DMD=..\dmd
 
@@ -66,7 +66,7 @@ OBJS= deh.obj complex.obj gcstats.obj \
 #	ti_bit.obj ti_Abit.obj
 
 MAKEFILES= \
-	win32.mak linux.mak osx.mak freebsd.mak openbsd.mak solaris.mak
+	win32.mak win64.mak linux.mak osx.mak freebsd.mak openbsd.mak solaris.mak
 
 SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\base64.d std\md5.d std\regexp.d \
@@ -312,8 +312,11 @@ SRC_ZLIB= \
 	etc\c\zlib\algorithm.txt \
 	etc\c\zlib\zlib.3 \
 	etc\c\zlib\ChangeLog \
-	etc\c\zlib\README \
+	etc\c\zlib\README
+
+MAKEFILES_ZLIB=\
 	etc\c\zlib\win32.mak \
+	etc\c\zlib\win64.mak \
 	etc\c\zlib\linux.mak \
 	etc\c\zlib\osx.mak \
 	etc\c\zlib\freebsd.mak \
@@ -328,8 +331,11 @@ SRC_GC= internal\gc\gc.d \
 	internal\gc\win32.d \
 	internal\gc\gclinux.d \
 	internal\gc\gcosxc.c \
-	internal\gc\testgc.d \
+	internal\gc\testgc.d
+
+MAKEFILES_GC=\
 	internal\gc\win32.mak \
+	internal\gc\win64.mak \
 	internal\gc\linux.mak \
 	internal\gc\osx.mak \
 	internal\gc\freebsd.mak \
@@ -364,11 +370,13 @@ html : $(DOCS)
 
 internal\gc\dmgc.lib:
 	cd internal\gc
+	make DMD=$(DMD) -f win32.mak clean
 	make DMD=$(DMD) -f win32.mak dmgc.lib
 	cd ..\..
 
 etc\c\zlib\zlib.lib:
 	cd etc\c\zlib
+	make -f win32.mak clean
 	make -f win32.mak zlib.lib
 	cd ..\..\..
 
@@ -932,7 +940,8 @@ $(DOC)\std_c_wcharh.html : std.ddoc std\c\wcharh.d
 
 zip : $(MAKEFILES) phoboslicense.txt std.ddoc $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
-	$(SRC_STDLINUX) $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
+	$(SRC_STDLINUX) $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC) \
+	$(MAKEFILES_ZLIB) $(MAKEFILES_GC)
 	del phobos.zip
 	zip32 -u phobos $(MAKEFILES) std.ddoc
 	zip32 -u phobos $(SRC)
@@ -950,8 +959,8 @@ zip : $(MAKEFILES) phoboslicense.txt std.ddoc $(SRC) \
 	zip32 -u phobos $(SRC_STD_C_POSIX)
 	zip32 -u phobos $(SRC_ETC)
 	zip32 -u phobos $(SRC_ETC_C)
-	zip32 -u phobos $(SRC_ZLIB)
-	zip32 -u phobos $(SRC_GC)
+	zip32 -u phobos $(SRC_ZLIB) $(MAKEFILES_ZLIB)
+	zip32 -u phobos $(SRC_GC) $(MAKEFILES_GC)
 
 clean:
 	del $(OBJS)
@@ -966,19 +975,10 @@ detab:
 	detab $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_STDLINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_SOLARIS)
-# $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
+#	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
 
 tolf:
-	tolf freebsd.mak \
-	tolf openbsd.mak \
-	internal\gc\freebsd.mak \
-	internal\gc\openbsd.mak \
-	internal\gc\osx.mak \
-	internal\gc\solaris.mak \
-	etc\c\zlib\freebsd.mak \
-	etc\c\zlib\openbsd.mak \
-	etc\c\zlib\osx.mak \
-	etc\c\zlib\solaris.mak \
+	tolf $(MAKEFILES) $(MAKEFILES_ZLIB) $(MAKEFILES_GC) \
 	$(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_STDLINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_SOLARIS)
@@ -1002,29 +1002,30 @@ install:
 	$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc
 	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c
 	$(CP) $(SRC_ZLIB) $(DIR)\src\phobos\etc\c\zlib
+	$(CP) $(MAKEFILES_ZLIB) $(DIR)\src\phobos\etc\c\zlib
 	$(CP) $(SRC_GC) $(DIR)\src\phobos\internal\gc
+	$(CP) $(MAKEFILES_GC) $(DIR)\src\phobos\internal\gc
 
 ################# Write to SVN ####################
 
-svn:	detab tolf svn2
+git:	detab tolf git2
 
-svn2:
-	$(CP) $(MAKEFILES) phoboslicense.txt minit.obj std.ddoc $(PHOBOSSVN)
-	$(CP) $(SRC) $(PHOBOSSVN)
-	$(CP) $(SRC_STD) $(PHOBOSSVN)\std
-	$(CP) $(SRC_STD_C) $(PHOBOSSVN)\std\c
-	$(CP) $(SRC_TI) $(PHOBOSSVN)\std\typeinfo
-	$(CP) $(SRC_INT) $(PHOBOSSVN)\internal
-	$(CP) $(SRC_STD_WIN) $(PHOBOSSVN)\std\windows
-	$(CP) $(SRC_STD_C_WIN) $(PHOBOSSVN)\std\c\windows
-	$(CP) $(SRC_STD_C_LINUX) $(PHOBOSSVN)\std\c\linux
-	$(CP) $(SRC_STD_C_OSX) $(PHOBOSSVN)\std\c\osx
-	$(CP) $(SRC_STD_C_FREEBSD) $(PHOBOSSVN)\std\c\freebsd
-	$(CP) $(SRC_STD_C_OPENBSD) $(PHOBOSSVN)\std\c\openbsd
-	$(CP) $(SRC_STD_C_SOLARIS) $(PHOBOSSVN)\std\c\solaris
-	$(CP) $(SRC_STD_C_POSIX) $(PHOBOSSVN)\std\c\posix
-	$(CP) $(SRC_ETC) $(PHOBOSSVN)\etc
-	$(CP) $(SRC_ETC_C) $(PHOBOSSVN)\etc\c
-	$(CP) $(SRC_ZLIB) $(PHOBOSSVN)\etc\c\zlib
-	$(CP) $(SRC_GC) $(PHOBOSSVN)\internal\gc
+git2:
+	$(SCP) $(MAKEFILES) phoboslicense.txt minit.obj std.ddoc $(SRC) $(PHOBOSGIT)
+	$(SCP) $(SRC_STD) $(PHOBOSGIT)/std
+	$(SCP) $(SRC_STD_C) $(PHOBOSGIT)/std/c
+	$(SCP) $(SRC_TI) $(PHOBOSGIT)/std/typeinfo
+	$(SCP) $(SRC_INT) $(PHOBOSGIT)/internal
+	$(SCP) $(SRC_STD_WIN) $(PHOBOSGIT)/std/windows
+	$(SCP) $(SRC_STD_C_WIN) $(PHOBOSGIT)/std/c/windows
+	$(SCP) $(SRC_STD_C_LINUX) $(PHOBOSGIT)/std/c/linux
+	$(SCP) $(SRC_STD_C_OSX) $(PHOBOSGIT)/std/c/osx
+	$(SCP) $(SRC_STD_C_FREEBSD) $(PHOBOSGIT)/std/c/freebsd
+	$(SCP) $(SRC_STD_C_OPENBSD) $(PHOBOSGIT)/std/c/openbsd
+	$(SCP) $(SRC_STD_C_SOLARIS) $(PHOBOSGIT)/std/c/solaris
+	$(SCP) $(SRC_STD_C_POSIX) $(PHOBOSGIT)/std/c/posix
+	$(SCP) $(SRC_ETC) $(PHOBOSGIT)/etc
+	$(SCP) $(SRC_ETC_C) $(PHOBOSGIT)/etc/c
+	$(SCP) $(SRC_ZLIB) $(MAKEFILES_ZLIB) $(PHOBOSGIT)/etc/c/zlib
+	$(SCP) $(SRC_GC) $(MAKEFILES_GC) $(PHOBOSGIT)/internal/gc
 
