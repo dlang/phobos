@@ -2871,9 +2871,6 @@ Returns a range with at most one element; for example, $(D
 takeOne([42, 43, 44])) returns a range consisting of the integer $(D
 42). Calling $(D popFront()) off that range renders it empty.
 
-Sometimes an empty range with the same signature is needed. For such
-ranges use $(D takeNone!R()). For example:
-
 ----
 auto s = takeOne([42, 43, 44]);
 static assert(isRandomAccessRange!(typeof(s)));
@@ -2887,19 +2884,15 @@ assert(s[0] == 43);
 s.popFront();
 assert(s.length == 0);
 assert(s.empty);
-s = takeNone!(int[])();
-assert(s.length == 0);
-assert(s.empty);
 ----
 
-In effect $(D takeOne(r)) is somewhat equivalent to $(D take(r, 1)) and
-$(D takeNone(r)) is equivalent to $(D take(r, 0)), but in certain
-interfaces it is important to know statically that the range may only
+In effect $(D takeOne(r)) is somewhat equivalent to $(D take(r, 1)) but in
+certain interfaces it is important to know statically that the range may only
 have at most one element.
 
-The type returned by $(D takeOne) and $(D takeNone) is a random-access
-range with length regardless of $(D R)'s capability (another feature
-that distinguishes $(D takeOne)/$(D takeNone) from $(D take)).
+The type returned by $(D takeOne) is a random-access range with length
+regardless of $(D R)'s capabilities (another feature that distinguishes
+$(D takeOne) from $(D take)).
  */
 auto takeOne(R)(R source) if (isInputRange!R)
 {
@@ -2935,12 +2928,6 @@ auto takeOne(R)(R source) if (isInputRange!R)
     }
 }
 
-/// Ditto
-auto takeNone(R)() if (isInputRange!R)
-{
-    return typeof(takeOne(R.init)).init;
-}
-
 unittest
 {
     auto s = takeOne([42, 43, 44]);
@@ -2955,9 +2942,193 @@ unittest
     s.popFront();
     assert(s.length == 0);
     assert(s.empty);
-    s = takeNone!(int[])();
-    assert(s.length == 0);
-    assert(s.empty);
+}
+
+/++
+    Returns an empty range which is statically known to be empty and is
+    guaranteed to have $(D length) and be random access regardless of $(D R)'s
+    capabilities.
+
+    Examples:
+--------------------
+auto range = takeNone!(int[])();
+assert(range.length == 0);
+assert(range.empty);
+--------------------
+  +/
+auto takeNone(R)()
+    if(isInputRange!R)
+{
+    return typeof(takeOne(R.init)).init;
+}
+
+unittest
+{
+    auto range = takeNone!(int[])();
+    assert(range.length == 0);
+    assert(range.empty);
+
+    enum ctfe = takeNone!(int[])();
+    static assert(ctfe.length == 0);
+    static assert(ctfe.empty);
+}
+
+
+/++
+    Creates an empty range from the given range in $(BIGOH 1). If it can, it
+    will return the same range type. If not, it will return
+    $(D takeExactly(range, 0)).
+
+    Examples:
+--------------------
+assert(takeNone([42, 27, 19]).empty);
+assert(takeNone("dlang.org").empty);
+assert(takeNone(filter!"true"([42, 27, 19])).empty);
+--------------------
+  +/
+auto takeNone(R)(R range)
+    if(isInputRange!R)
+{
+    //Makes it so that calls to takeNone which don't use UFCS still work with a
+    //member version if it's defined.
+    static if(is(typeof(R.takeNone)))
+        auto retval = range.takeNone();
+    //@@@BUG@@@ 8339
+    else static if(isDynamicArray!R)/+ ||
+                   (is(R == struct) && __traits(compiles, {auto r = R.init;}) && R.init.empty))+/
+    {
+        auto retval = R.init;
+    }
+    //An infinite range sliced at [0 .. 0] would likely still not be empty...
+    else static if(hasSlicing!R && !isInfinite!R)
+        auto retval = range[0 .. 0];
+    else
+        auto retval = takeExactly(range, 0);
+
+    //@@@BUG@@@ 7892 prevents this from being done in an out block.
+    assert(retval.empty);
+    return retval;
+}
+
+//Verify Examples.
+unittest
+{
+    assert(takeNone([42, 27, 19]).empty);
+    assert(takeNone("dlang.org").empty);
+    assert(takeNone(filter!"true"([42, 27, 19])).empty);
+}
+
+unittest
+{
+    import std.metastrings;
+
+    string genInput()
+    {
+        return "@property bool empty() { return _arr.empty; }" ~
+                "@property auto front() { return _arr.front; }" ~
+                "void popFront() { _arr.popFront(); }" ~
+                "static assert(isInputRange!(typeof(this)));";
+    }
+
+    static struct NormalStruct
+    {
+        //Disabled to make sure that the takeExactly version is used.
+        @disable this();
+        this(int[] arr) { _arr = arr; }
+        mixin(genInput());
+        int[] _arr;
+    }
+
+    static struct SliceStruct
+    {
+        @disable this();
+        this(int[] arr) { _arr = arr; }
+        mixin(genInput());
+        auto opSlice(size_t i, size_t j) { return typeof(this)(_arr[i .. j]); }
+        int[] _arr;
+    }
+
+    static struct InitStruct
+    {
+        mixin(genInput());
+        int[] _arr;
+    }
+
+    static struct TakeNoneStruct
+    {
+        this(int[] arr) { _arr = arr; }
+        @disable this();
+        mixin(genInput());
+        auto takeNone() { return typeof(this)(null); }
+        int[] _arr;
+    }
+
+    static class NormalClass
+    {
+        this(int[] arr) {_arr = arr;}
+        mixin(genInput());
+        int[] _arr;
+    }
+
+    static class SliceClass
+    {
+        this(int[] arr) { _arr = arr; }
+        mixin(genInput());
+        auto opSlice(size_t i, size_t j) { return new typeof(this)(_arr[i .. j]); }
+        int[] _arr;
+    }
+
+    static class TakeNoneClass
+    {
+        this(int[] arr) { _arr = arr; }
+        mixin(genInput());
+        auto takeNone() { return new typeof(this)(null); }
+        int[] _arr;
+    }
+
+    foreach(range; TypeTuple!(`[1, 2, 3, 4, 5]`,
+                              `"hello world"`,
+                              `"hello world"w`,
+                              `"hello world"d`,
+                              `SliceStruct([1, 2, 3])`,
+                              //@@@BUG@@@ 8339 forces this to be takeExactly
+                              //`InitStruct([1, 2, 3])`,
+                              `TakeNoneStruct([1, 2, 3])`))
+    {
+        mixin(Format!("enum a = takeNone(%s).empty;", range));
+        assert(a, typeof(range).stringof);
+        mixin(Format!("assert(takeNone(%s).empty);", range));
+        mixin(Format!("static assert(is(typeof(%s) == typeof(takeNone(%s))), typeof(%s).stringof);",
+                      range, range, range));
+    }
+
+    foreach(range; TypeTuple!(`NormalStruct([1, 2, 3])`,
+                              `InitStruct([1, 2, 3])`))
+    {
+        mixin(Format!("enum a = takeNone(%s).empty;", range));
+        assert(a, typeof(range).stringof);
+        mixin(Format!("assert(takeNone(%s).empty);", range));
+        mixin(Format!("static assert(is(typeof(takeExactly(%s, 0)) == typeof(takeNone(%s))), typeof(%s).stringof);",
+                      range, range, range));
+    }
+
+    //Don't work in CTFE.
+    auto normal = new NormalClass([1, 2, 3]);
+    assert(takeNone(normal).empty);
+    static assert(is(typeof(takeExactly(normal, 0)) == typeof(takeNone(normal))), typeof(normal).stringof);
+
+    auto slice = new SliceClass([1, 2, 3]);
+    assert(takeNone(slice).empty);
+    static assert(is(SliceClass == typeof(takeNone(slice))), typeof(slice).stringof);
+
+    auto taken = new TakeNoneClass([1, 2, 3]);
+    assert(takeNone(taken).empty);
+    static assert(is(TakeNoneClass == typeof(takeNone(taken))), typeof(taken).stringof);
+
+    auto filtered = filter!"true"([1, 2, 3, 4, 5]);
+    assert(takeNone(filtered).empty);
+    //@@@BUG@@@ 8339 and 5941 force this to be takeExactly
+    //static assert(is(typeof(filtered) == typeof(takeNone(filtered))), typeof(filtered).stringof);
 }
 
 

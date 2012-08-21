@@ -2067,7 +2067,7 @@ template hasElaborateCopyConstructor(S)
     else
     {
         enum hasElaborateCopyConstructor = is(typeof({
-            S s;
+            S s = void;
             return &s.__postblit;
         })) || anySatisfy!(.hasElaborateCopyConstructor, typeof(S.tupleof));
     }
@@ -2084,6 +2084,9 @@ unittest
     struct S3 { uint num; S1 s; }
     static assert(!hasElaborateCopyConstructor!S2);
     static assert( hasElaborateCopyConstructor!S3);
+
+    struct S4 { @disable this(); this(int n){} this(this){} }
+    static assert( hasElaborateCopyConstructor!S4);
 }
 
 /**
@@ -2101,7 +2104,7 @@ template hasElaborateAssign(S)
     else
     {
         enum hasElaborateAssign = is(typeof(S.init.opAssign(S.init))) ||
-                                  is(typeof(S.init.opAssign({ return S.init; }()))) ||
+                                  is(typeof(S.init.opAssign({ S s = void; return s; }()))) ||
             anySatisfy!(.hasElaborateAssign, typeof(S.tupleof));
     }
 }
@@ -2126,6 +2129,9 @@ unittest
         @disable void opAssign(U)(ref U u);
     }
     static assert( hasElaborateAssign!S4);
+
+    struct S5 { @disable this(); this(int n){} S s; }
+    static assert( hasElaborateAssign!S5);
 }
 
 /**
@@ -2950,8 +2956,8 @@ static assert(!isAssignable!(string, char[]));
 template isAssignable(Lhs, Rhs)
 {
     enum bool isAssignable = is(typeof({
-        Lhs l;
-        Rhs r;
+        Lhs l = void;
+        Rhs r = void;
         l = r;
         return l;
     }));
@@ -2964,6 +2970,9 @@ unittest
 
     static assert(!isAssignable!(int, long));
     static assert(!isAssignable!(string, char[]));
+
+    struct S { @disable this(); this(int n){} }
+    static assert( isAssignable!(S, S));
 }
 
 
@@ -3192,14 +3201,16 @@ unittest
 
 /*
  */
-template BooleanTypeOf(T) if (!is(T == enum))
+template BooleanTypeOf(T)
 {
            inout(bool) idx(        inout(bool) );
     shared(inout bool) idx( shared(inout bool) );
 
        immutable(bool) idy(    immutable(bool) );
 
-    static if (is(typeof(idx(T.init)) X) && !isIntegral!T)
+    static if (is(T == enum))
+        alias .BooleanTypeOf!(OriginalType!T) BooleanTypeOf;
+    else static if (is(typeof(idx(T.init)) X) && !isIntegral!T)
         alias X BooleanTypeOf;
     else static if (is(typeof(idy(T.init)) X) && is(Unqual!X == bool) && !isIntegral!T)
         alias X BooleanTypeOf;
@@ -3226,7 +3237,7 @@ unittest
 
 /*
  */
-template IntegralTypeOf(T) if (!is(T == enum))
+template IntegralTypeOf(T)
 {
            inout(  byte) idx(        inout(  byte) );
            inout( ubyte) idx(        inout( ubyte) );
@@ -3259,7 +3270,9 @@ template IntegralTypeOf(T) if (!is(T == enum))
        immutable(  long) idy(    immutable(  long) );
        immutable( ulong) idy(    immutable( ulong) );
 
-    static if (is(typeof(idx(T.init)) X))
+    static if (is(T == enum))
+        alias .IntegralTypeOf!(OriginalType!T) IntegralTypeOf;
+    else static if (is(typeof(idx(T.init)) X))
         alias X IntegralTypeOf;
     else static if (is(typeof(idy(T.init)) X) && staticIndexOf!(Unqual!X, IntegralTypeList) >= 0)
         alias X IntegralTypeOf;
@@ -3285,7 +3298,7 @@ unittest
 
 /*
  */
-template FloatingPointTypeOf(T) if (!is(T == enum))
+template FloatingPointTypeOf(T)
 {
            inout( float) idx(        inout( float) );
            inout(double) idx(        inout(double) );
@@ -3298,7 +3311,9 @@ template FloatingPointTypeOf(T) if (!is(T == enum))
        immutable(double) idy(   immutable(double) );
        immutable(  real) idy(   immutable(  real) );
 
-    static if (is(typeof(idx(T.init)) X))
+    static if (is(T == enum))
+        alias .FloatingPointTypeOf!(OriginalType!T) FloatingPointTypeOf;
+    else static if (is(typeof(idx(T.init)) X))
         alias X FloatingPointTypeOf;
     else static if (is(typeof(idy(T.init)) X))
         alias X FloatingPointTypeOf;
@@ -3324,7 +3339,7 @@ unittest
 
 /*
  */
-template NumericTypeOf(T) if (!is(T == enum))
+template NumericTypeOf(T)
 {
     static if (is(IntegralTypeOf!T X))
         alias X NumericTypeOf;
@@ -3352,7 +3367,7 @@ unittest
 
 /*
  */
-template UnsignedTypeOf(T) if (!is(T == enum))
+template UnsignedTypeOf(T)
 {
     static if (is(IntegralTypeOf!T X) &&
                staticIndexOf!(Unqual!X, UnsignedIntTypeList) >= 0)
@@ -3361,7 +3376,7 @@ template UnsignedTypeOf(T) if (!is(T == enum))
         static assert(0, T.stringof~" is not an unsigned type.");
 }
 
-template SignedTypeOf(T) if (!is(T == enum))
+template SignedTypeOf(T)
 {
     static if (is(IntegralTypeOf!T X) &&
                staticIndexOf!(Unqual!X, SignedIntTypeList) >= 0)
@@ -3374,7 +3389,7 @@ template SignedTypeOf(T) if (!is(T == enum))
 
 /*
  */
-template CharTypeOf(T) if (!is(T == enum))
+template CharTypeOf(T)
 {
            inout( char) idx(        inout( char) );
            inout(wchar) idx(        inout(wchar) );
@@ -3397,7 +3412,9 @@ template CharTypeOf(T) if (!is(T == enum))
       immutable(  long) idy(   immutable(  long) );
       immutable( ulong) idy(   immutable( ulong) );
 
-    static if (is(typeof(idx(T.init)) X))
+    static if (is(T == enum))
+        alias .CharTypeOf!(OriginalType!T) CharTypeOf;
+    else static if (is(typeof(idx(T.init)) X))
         alias X CharTypeOf;
     else static if (is(typeof(idy(T.init)) X) && staticIndexOf!(Unqual!X, CharTypeList) >= 0)
         alias X CharTypeOf;
@@ -3429,7 +3446,7 @@ unittest
 
 /*
  */
-template StaticArrayTypeOf(T) if (!is(T == enum))
+template StaticArrayTypeOf(T)
 {
     inout(U[n]) idx(U, size_t n)( inout(U[n]) );
 
@@ -3460,7 +3477,7 @@ unittest
 
 /*
  */
-template DynamicArrayTypeOf(T) if (!is(T == enum))
+template DynamicArrayTypeOf(T)
 {
     inout(U[]) idx(U)( inout(U[]) );
 
@@ -3500,7 +3517,7 @@ unittest
 
 /*
  */
-template ArrayTypeOf(T) if (!is(T == enum))
+template ArrayTypeOf(T)
 {
     static if (is(StaticArrayTypeOf!T X))
         alias X ArrayTypeOf;
@@ -3516,7 +3533,7 @@ unittest
 
 /*
  */
-template StringTypeOf(T) if (!is(T == enum) && isSomeString!T)
+template StringTypeOf(T) if (isSomeString!T)
 {
     alias ArrayTypeOf!T StringTypeOf;
 }
@@ -3546,7 +3563,7 @@ unittest
 
 /*
  */
-template AssocArrayTypeOf(T) if (!is(T == enum))
+template AssocArrayTypeOf(T)
 {
        immutable(V [K]) idx(K, V)(    immutable(V [K]) );
 
@@ -3633,6 +3650,12 @@ template isBoolean(T)
     enum bool isBoolean = is(BooleanTypeOf!T);
 }
 
+unittest
+{
+    enum EB : bool { a = true }
+    static assert(isBoolean!EB);
+}
+
 /**
  * Detect whether we can treat T as a built-in integral type. Types $(D bool),
  * $(D char), $(D wchar), and $(D dchar) are not considered integral.
@@ -3693,6 +3716,11 @@ unittest
     static assert(isIntegral!(shared(const(ulong))));
 
     static assert(!isIntegral!(float));
+
+    enum EU : uint { a = 0, b = 1, c = 2 }  // base type is unsigned
+    enum EI : int { a = -1, b = 0, c = 1 }  // base type is signed (bug 7909)
+    static assert(isIntegral!EU &&  isUnsigned!EU && !isSigned!EU);
+    static assert(isIntegral!EI && !isUnsigned!EI &&  isSigned!EI);
 }
 
 /**
@@ -3723,6 +3751,9 @@ unittest
         static assert(!isFloatingPoint!(typeof(b)));
         static assert(!isFloatingPoint!(typeof(c)));
     }
+
+    enum EF : real { a = 1.414, b = 1.732, c = 2.236 }
+    static assert( isFloatingPoint!EF);
 }
 
 /**
@@ -3805,6 +3836,9 @@ unittest
     static assert(!isSomeChar!(wstring));
     static assert(!isSomeChar!(dstring));
     static assert(!isSomeChar!(char[4]));
+
+    enum EC : char { a = 'x', b = 'y' }
+    static assert( isSomeChar!EC);
 }
 
 /**
@@ -3812,11 +3846,7 @@ Detect whether we can treat T as one of the built-in string types.
  */
 template isSomeString(T)
 {
-    static if (is(T == enum))
-    {
-        enum isSomeString = false;
-    }
-    else static if (is(T == typeof(null)))
+    static if (is(T == typeof(null)))
     {
         // It is impossible to determine exact string type from typeof(null) -
         // it means that StringTypeOf!(typeof(null)) is undefined.
@@ -3840,6 +3870,9 @@ unittest
     static assert(!isSomeString!(int[]));
     static assert(!isSomeString!(byte[]));
     static assert(!isSomeString!(typeof(null)));
+
+    enum ES : string { a = "aaa", b = "bbb" }
+    static assert( isSomeString!ES);
 }
 
 template isNarrowString(T)
@@ -3892,6 +3925,9 @@ unittest
     static assert(!isStaticArray!(int[1][]));
     static assert(!isStaticArray!(int[int]));
     static assert(!isStaticArray!(int));
+
+    //enum ESA : int[1] { a = [1], b = [2] }
+    //static assert( isStaticArray!ESA);
 }
 
 /**
@@ -3912,6 +3948,9 @@ unittest
     static assert( isDynamicArray!(int[]));
     static assert(!isDynamicArray!(int[5]));
     static assert(!isDynamicArray!(typeof(null)));
+
+    //enum EDA : int[] { a = [1], b = [2] }
+    //static assert( isDynamicArray!EDA);
 }
 
 /**
@@ -3957,6 +3996,9 @@ unittest
     static assert(!isAssociativeArray!(int));
     static assert(!isAssociativeArray!(int[]));
     static assert(!isAssociativeArray!(typeof(null)));
+
+    //enum EAA : int[int] { a = [1:1], b = [2:2] }
+    //static assert( isAssociativeArray!EAA);
 }
 
 template isBuiltinType(T)

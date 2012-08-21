@@ -103,12 +103,12 @@ private
     template isEnumStrToStr(S, T)
     {
         enum isEnumStrToStr = isImplicitlyConvertible!(S, T) &&
-                              is(S == enum) && isSomeString!T;
+                              is(S == enum) && isSomeString!T && !is(T == enum);
     }
     template isNullToStr(S, T)
     {
         enum isNullToStr = isImplicitlyConvertible!(S, T) &&
-                           is(S == typeof(null)) && isSomeString!T;
+                           is(S == typeof(null)) && isSomeString!T && !is(T == enum);
     }
 
     template isRawStaticArray(T, A...)
@@ -465,7 +465,7 @@ When source type supports member template function opCast, is is used.
 */
 T toImpl(T, S)(S value)
     if (is(typeof(S.init.opCast!T()) : T) &&
-        !isSomeString!T)
+        !(isSomeString!T && !is(T == enum) && !isAggregateType!T))
 {
     return value.opCast!T();
 }
@@ -780,9 +780,9 @@ $(UL
 T toImpl(T, S)(S value)
     if (!(isImplicitlyConvertible!(S, T) &&
           !isEnumStrToStr!(S, T) && !isNullToStr!(S, T)) &&
-        isSomeString!T && !isAggregateType!T)
+        (isSomeString!T && !is(T == enum) && !isAggregateType!T))
 {
-    static if (isSomeString!S && value[0].sizeof == ElementEncodingType!T.sizeof)
+    static if (isSomeString!S && !is(S == enum) && value[0].sizeof == ElementEncodingType!T.sizeof)
     {
         // string-to-string with incompatible qualifier conversion
         static if (is(ElementEncodingType!T == immutable))
@@ -796,7 +796,7 @@ T toImpl(T, S)(S value)
             return value.dup;
         }
     }
-    else static if (isSomeString!S)
+    else static if (isSomeString!S && !is(S == enum))
     {
         // other string-to-string conversions always run decode/encode
         return toStr!T(value);
@@ -1044,7 +1044,7 @@ unittest
     enum EU : uint { a = 0, b = 1, c = 2 }  // base type is unsigned
     enum EI : int { a = -1, b = 0, c = 1 }  // base type is signed (bug 7909)
     enum EF : real { a = 1.414, b = 1.732, c = 2.236 }
-    enum EC : char { a = 'a', b = 'b' }
+    enum EC : char { a = 'x', b = 'y' }
     enum ES : string { a = "aaa", b = "bbb" }
 
     foreach (E; TypeTuple!(EB, EU, EI, EF, EC, ES))
@@ -1064,7 +1064,7 @@ unittest
 /// ditto
 T toImpl(T, S)(S value, uint radix)
     if (isIntegral!S &&
-        isSomeString!T)
+        isSomeString!T && !is(T == enum))
 in
 {
     assert(radix >= 2 && radix <= 36);
@@ -1128,7 +1128,7 @@ unittest
 */
 deprecated T toImpl(T, S)(S s, in T leftBracket, in T separator = ", ", in T rightBracket = "]")
     if (!isSomeChar!(ElementType!S) && (isInputRange!S || isInputRange!(Unqual!S)) &&
-        isSomeString!T)
+        (isSomeString!T && !is(T == enum)))
 {
     pragma(msg, hardDeprec!("2.060", "January 2013", "std.conv.toImpl with extra parameters",
                                                  "std.format.formattedWrite"));
@@ -1165,7 +1165,7 @@ deprecated T toImpl(T, S)(S s, in T leftBracket, in T separator = ", ", in T rig
 /// ditto
 deprecated T toImpl(T, S)(ref S s, in T leftBracket, in T separator = " ", in T rightBracket = "]")
     if ((is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[])) &&
-        isSomeString!T)
+        (isSomeString!T && !is(T == enum)))
 {
     pragma(msg, hardDeprec!("2.060", "January 2013", "std.conv.toImpl with extra parameters",
                                                  "std.format.formattedWrite"));
@@ -1175,8 +1175,8 @@ deprecated T toImpl(T, S)(ref S s, in T leftBracket, in T separator = " ", in T 
 
 /// ditto
 deprecated T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separator = ", ", in T rightBracket = "]")
-    if (isAssociativeArray!S &&
-        isSomeString!T)
+    if (isAssociativeArray!S && !is(S == enum) &&
+        (isSomeString!T && !is(T == enum)))
 {
     pragma(msg, hardDeprec!("2.060", "January 2013", "std.conv.toImpl with extra parameters",
                                                  "std.format.formattedWrite"));
@@ -1202,7 +1202,7 @@ deprecated T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separat
 /// ditto
 deprecated T toImpl(T, S)(S s, in T nullstr)
     if (is(S : Object) &&
-        isSomeString!T)
+        (isSomeString!T && !is(T == enum)))
 {
     pragma(msg, hardDeprec!("2.060", "January 2013", "std.conv.toImpl with extra parameters",
                                                  "std.format.formattedWrite"));
@@ -1215,7 +1215,7 @@ deprecated T toImpl(T, S)(S s, in T nullstr)
 /// ditto
 deprecated T toImpl(T, S)(S s, in T left, in T separator = ", ", in T right = ")")
     if (is(S == struct) && !is(typeof(&S.init.toString)) && !isInputRange!S &&
-        isSomeString!T)
+        (isSomeString!T && !is(T == enum)))
 {
     pragma(msg, hardDeprec!("2.060", "January 2013", "std.conv.toImpl with extra parameters",
                                                  "std.format.formattedWrite"));
@@ -1249,7 +1249,7 @@ deprecated T toImpl(T, S)(S s, in T left, in T separator = ", ", in T right = ")
 */
 deprecated T toImpl(T, S)(S s, in T left = to!T(S.stringof~"("), in T right = ")")
     if (is(S == typedef) &&
-        isSomeString!T)
+        (isSomeString!T && !is(T == enum)))
 {
     static if (is(S Original == typedef))
     {
@@ -1265,8 +1265,8 @@ fit in the narrower type.
  */
 T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
-        (isNumeric!S || isSomeChar!S) &&
-        (isNumeric!T || isSomeChar!T))
+        (isNumeric!S || isSomeChar!S) && !is(S == enum) &&
+        (isNumeric!T || isSomeChar!T) && !is(T == enum))
 {
     enum sSmallest = mostNegative!S;
     enum tSmallest = mostNegative!T;
@@ -1324,7 +1324,7 @@ converts each element in turn by using $(D to).
 T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
         !isSomeString!S && isDynamicArray!S &&
-        !isSomeString!T && isArray!T)
+        !(isSomeString!T && !is(T == enum)) && isArray!T)
 {
     alias typeof(T.init[0]) E;
     auto result = new E[value.length];
@@ -1373,7 +1373,7 @@ and each value in turn.
  */
 T toImpl(T, S)(S value)
     if (isAssociativeArray!S &&
-        isAssociativeArray!T)
+        isAssociativeArray!T && !is(T == enum))
 {
     alias typeof(T.keys[0]) K2;
     alias typeof(T.values[0]) V2;
@@ -1579,8 +1579,8 @@ $(UL
   $(LI When the source is a narrow string, normal text parsing occurs.))
 */
 T toImpl(T, S)(S value)
-    if (isDynamicArray!S && isSomeString!S &&
-        !isSomeString!T && is(typeof(parse!T(value))))
+    if (isDynamicArray!S && isSomeString!S && !is(S == enum) &&
+        !(isSomeString!T && !is(T == enum)) && is(typeof(parse!T(value))))
 {
     scope(exit)
     {
@@ -1595,7 +1595,7 @@ T toImpl(T, S)(S value)
 /// ditto
 T toImpl(T, S)(S value, uint radix)
     if (isDynamicArray!S && isSomeString!S &&
-        !isSomeString!T && is(typeof(parse!T(value, radix))))
+        !(isSomeString!T && !is(T == enum)) && is(typeof(parse!T(value, radix))))
 {
     scope(exit)
     {
@@ -1697,7 +1697,7 @@ assert(test == "");
 
 Target parse(Target, Source)(ref Source s)
     if (isSomeChar!(ElementType!Source) &&
-        isIntegral!Target)
+        isIntegral!Target && !is(Target == enum))
 {
     static if (Target.sizeof < int.sizeof)
     {
@@ -1958,7 +1958,7 @@ unittest
 /// ditto
 Target parse(Target, Source)(ref Source s, uint radix)
     if (isSomeChar!(ElementType!Source) &&
-        isIntegral!Target)
+        isIntegral!Target && !is(Target == enum))
 in
 {
     assert(radix >= 2 && radix <= 36);
@@ -1972,7 +1972,7 @@ body
 
     Target v = 0;
     size_t i = 0;
-    
+
     for (; !s.empty; s.popFront(), ++i)
     {
         uint c = s.front;
@@ -2053,7 +2053,7 @@ unittest // bugzilla 7302
 }
 
 Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source &&
+    if (isSomeString!Source && !is(Source == enum) &&
         is(Target == enum))
 {
     Target result;
@@ -2112,8 +2112,8 @@ unittest // bugzilla 4744
 }
 
 Target parse(Target, Source)(ref Source p)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
-        isFloatingPoint!Target)
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
+        isFloatingPoint!Target && !is(Target == enum))
 {
     static immutable real negtab[14] =
         [ 1e-4096L,1e-2048L,1e-1024L,1e-512L,1e-256L,1e-128L,1e-64L,1e-32L,
@@ -2592,7 +2592,7 @@ Parsing one character off a string returns the character and bumps the
 string up one position.
  */
 Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source &&
+    if (isSomeString!Source && !is(Source == enum) &&
         staticIndexOf!(Unqual!Target, dchar, Unqual!(ElementEncodingType!Source)) >= 0)
 {
     static if (is(Unqual!Target == dchar))
@@ -2629,7 +2629,7 @@ unittest
 
 Target parse(Target, Source)(ref Source s)
     if (!isSomeString!Source && isInputRange!Source && isSomeChar!(ElementType!Source) &&
-        isSomeChar!Target && Target.sizeof >= ElementType!Source.sizeof)
+        isSomeChar!Target && Target.sizeof >= ElementType!Source.sizeof && !is(Target == enum))
 {
     Target result = s.front;
     s.popFront();
@@ -2638,7 +2638,7 @@ Target parse(Target, Source)(ref Source s)
 
 // string to bool conversions
 Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source &&
+    if (isSomeString!Source && !is(Source == enum) &&
         is(Unqual!Target == bool))
 {
     if (s.length >= 4 && icmp(s[0 .. 4], "true")==0)
@@ -2686,7 +2686,7 @@ unittest
 
 // string to null literal conversions
 Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source &&
+    if (isSomeString!Source && !is(Source == enum) &&
         is(Unqual!Target == typeof(null)))
 {
     if (s.length >= 4 && icmp(s[0 .. 4], "null")==0)
@@ -2728,8 +2728,8 @@ private void skipWS(R)(ref R r)
  * default $(D ',')).
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
-    if (isSomeString!Source &&
-        isDynamicArray!Target)
+    if (isSomeString!Source && !is(Source == enum) &&
+        isDynamicArray!Target && !is(Target == enum))
 {
     Target result;
 
@@ -2790,8 +2790,8 @@ unittest
 
 /// ditto
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
-    if (isSomeString!Source &&
-        isStaticArray!Target)
+    if (isSomeString!Source && !is(Source == enum) &&
+        isStaticArray!Target && !is(Target == enum))
 {
     Target result = void;
 
@@ -2856,8 +2856,8 @@ unittest
  * ':')), and element seprator (by default $(D ',')).
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
-    if (isSomeString!Source &&
-        isAssociativeArray!Target)
+    if (isSomeString!Source && !is(Source == enum) &&
+        isAssociativeArray!Target && !is(Target == enum))
 {
     alias typeof(Target.keys[0]) KeyType;
     alias typeof(Target.values[0]) ValueType;
@@ -2961,8 +2961,8 @@ private dchar parseEscape(Source)(ref Source s)
 
 // Undocumented
 Target parseElement(Target, Source)(ref Source s)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
-        isSomeString!Target)
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
+        isSomeString!Target && !is(Target == enum))
 {
     auto result = appender!Target();
 
@@ -2999,8 +2999,8 @@ Target parseElement(Target, Source)(ref Source s)
 
 // ditto
 Target parseElement(Target, Source)(ref Source s)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
-        isSomeChar!Target)
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
+        isSomeChar!Target && !is(Target == enum))
 {
     Target c;
 

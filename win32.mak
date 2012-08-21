@@ -346,7 +346,7 @@ $(LIB) : $(SRC_TO_COMPILE) \
 		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 
 UNITTEST_OBJS= unittest1.obj unittest2.obj unittest3.obj unittest4.obj \
-		unittest5.obj unittest6.obj
+		unittest5.obj unittest6.obj unittest7.obj
 
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
@@ -356,7 +356,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest5.obj $(SRC_STD_5_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest6.obj $(SRC_STD_REST)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest7.obj $(SRC_TO_COMPILE_NOT_STD)
-	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(UNITTEST_OBJS) unittest7.obj \
+	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(UNITTEST_OBJS) \
 		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 	unittest
 

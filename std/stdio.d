@@ -679,7 +679,7 @@ arguments in text format to the file. */
         foreach (arg; args)
         {
             alias typeof(arg) A;
-            static if (isAggregateType!A)
+            static if (isAggregateType!A || is(A == enum))
             {
                 std.format.formattedWrite(w, "%s", arg);
             }
@@ -731,7 +731,7 @@ first argument. */
         assert(p);
         assert(p.handle);
         static assert(S.length>0, errorMessage);
-        static assert(isSomeString!(S[0]), errorMessage);
+        static assert(isSomeString!(S[0]) && !is(S[0] == enum), errorMessage);
         auto w = lockingTextWriter;
         std.format.formattedWrite(w, args);
     }
@@ -741,7 +741,7 @@ Same as writef, plus adds a newline. */
     void writefln(S...)(S args)
     {
         static assert(S.length>0, errorMessage);
-        static assert(isSomeString!(S[0]), errorMessage);
+        static assert(isSomeString!(S[0]) && !is(S[0] == enum), errorMessage);
         auto w = lockingTextWriter;
         std.format.formattedWrite(w, args);
         w.put('\n');
@@ -813,7 +813,7 @@ with every line.  */
     }
 
 /** ditto */
-    size_t readln(C)(ref C[] buf, dchar terminator = '\n') if (isSomeChar!C)
+    size_t readln(C)(ref C[] buf, dchar terminator = '\n') if (isSomeChar!C && !is(C == enum))
     {
         static if (is(C == char))
         {
@@ -950,6 +950,7 @@ Range that reads one line at a time. */
         Char[] line;
         Terminator terminator;
         KeepTerminator keepTerminator;
+        bool first_call = true;
 
         this(File f, KeepTerminator kt = KeepTerminator.no,
                 Terminator terminator = '\n')
@@ -985,7 +986,11 @@ Range that reads one line at a time. */
         /// Ditto
         @property Char[] front()
         {
-            if (line is null) popFront();
+            if (first_call)
+            {
+                popFront();
+                first_call = false;
+            }
             return line;
         }
 
@@ -1035,7 +1040,8 @@ to this file. */
         f.close();
 
         void test(string txt, string[] witness,
-                KeepTerminator kt = KeepTerminator.no)
+                KeepTerminator kt = KeepTerminator.no,
+                bool popFirstLine = false)
         {
             uint i;
             std.file.write(deleteme, txt);
@@ -1045,7 +1051,13 @@ to this file. */
                 f.close();
                 assert(!f.isOpen);
             }
-            foreach (line; f.byLine(kt))
+            auto lines = f.byLine(kt);
+            if (popFirstLine) 
+            {
+                lines.popFront(); 
+                i = 1;
+            }
+            foreach (line; lines)
             {
                 assert(line == witness[i++]);
             }
@@ -1055,12 +1067,14 @@ to this file. */
         test("", null);
         test("\n", [ "" ]);
         test("asd\ndef\nasdf", [ "asd", "def", "asdf" ]);
+        test("asd\ndef\nasdf", [ "asd", "def", "asdf" ], KeepTerminator.no, true);
         test("asd\ndef\nasdf\n", [ "asd", "def", "asdf" ]);
 
         test("", null, KeepTerminator.yes);
         test("\n", [ "\n" ], KeepTerminator.yes);
         test("asd\ndef\nasdf", [ "asd\n", "def\n", "asdf" ], KeepTerminator.yes);
         test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes);
+        test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes, true);
     }
 
     template byRecord(Fields...)
@@ -1582,7 +1596,8 @@ void writeln(T...)(T args)
         enforce(fputc('\n', .stdout.p.handle) == '\n');
     }
     else static if (T.length == 1 &&
-                    isSomeString!(typeof(args[0])) && is(typeof(args[0]) : const(char)[]) &&
+                    is(typeof(args[0]) : const(char)[]) &&
+                    !is(typeof(args[0]) == enum) && !is(typeof(args[0]) == typeof(null)) &&
                     !isAggregateType!(typeof(args[0])))
     {
         // Specialization for strings - a very frequent case
