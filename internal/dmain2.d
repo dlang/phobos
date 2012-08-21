@@ -119,6 +119,11 @@ extern (C) int _d_run_main(size_t argc, char **argv, void *p)
     }
     version (Win64)
     {
+        auto fp = __iob_func();
+        stdin  = &fp[0];
+        stdout = &fp[1];
+        stderr = &fp[2];
+
         gc_init();
         _minit();
         am = cast(char[] *) alloca(argc * (char[]).sizeof);

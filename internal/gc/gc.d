@@ -385,7 +385,9 @@ array_t _d_newarraymT(TypeInfo ti, size_t ndims, ...)
         result = array_t.init;
     else
     {   va_list ap;
-        version (X86_64) va_start(ap, __va_argsave); else va_start(ap, ndims);
+	version (Win64) va_start(ap, ndims);
+        else version (X86_64) va_start(ap, __va_argsave);
+        else va_start(ap, ndims);
 
         void[] foo(TypeInfo ti, va_list ap, int ndims)
         {
@@ -407,9 +409,15 @@ array_t _d_newarraymT(TypeInfo ti, size_t ndims, ...)
                     va_list ap2;
                     va_copy(ap2, ap);
                 }
+		else version (Win64)
+                {
+                    va_list ap2;
+                    va_copy(ap2, ap);
+                }
                 for (size_t i = 0; i < dim; i++)
                 {
-                    version (X86_64)
+		    version (Win64) { }
+                    else version (X86_64)
                     {
                         __va_list argsave = *cast(__va_list*)ap;
                         va_list ap2 = &argsave;
@@ -446,7 +454,9 @@ array_t _d_newarraymiT(TypeInfo ti, size_t ndims, ...)
     else
     {
         va_list ap;
-        version (X86_64) va_start(ap, __va_argsave); else va_start(ap, ndims);
+	version (Win64) va_start(ap, ndims);
+        else version (X86_64) va_start(ap, __va_argsave);
+        else va_start(ap, ndims);
 
         void[] foo(TypeInfo ti, va_list ap, int ndims)
         {
@@ -467,9 +477,15 @@ array_t _d_newarraymiT(TypeInfo ti, size_t ndims, ...)
                     va_list ap2;
                     va_copy(ap2, ap);
                 }
+                else version (Win64)
+                {
+                    va_list ap2;
+                    va_copy(ap2, ap);
+                }
                 for (int i = 0; i < dim; i++)
                 {
-                    version (X86_64)
+		    version (Win64) { }
+                    else version (X86_64)
                     {
                         __va_list argsave = *cast(__va_list*)ap;
                         va_list ap2 = &argsave;
@@ -966,6 +982,11 @@ byte[] _d_arrayappendcT(TypeInfo ti, inout byte[] x, ...)
         byte *argp = cast(byte *)(&ti + 2);
         x.ptr[length * sizeelem .. newsize] = argp[0 .. sizeelem];
     }
+    else version (Win64)
+    {
+        byte *argp = cast(byte *)(&ti + 2);
+        x.ptr[length * sizeelem .. newsize] = argp[0 .. sizeelem];
+    }
     else
     {
         va_list ap;
@@ -1257,6 +1278,15 @@ byte[] _d_arraycatnT(TypeInfo ti, uint n, ...)
             length += b.length;
         }
     }
+    else version (Win64)
+    {
+        auto p = cast(byte[]*)(&n + 1);
+        for (uint i = 0; i < n; i++)
+        {
+            byte[] b = *p++;
+            length += b.length;
+        }
+    }
     else
     {
         __va_list argsave = __va_argsave.va;
@@ -1279,6 +1309,20 @@ byte[] _d_arraycatnT(TypeInfo ti, uint n, ...)
         _gc.hasNoPointers(a);
 
     version (X86)
+    {
+        p = cast(byte[]*)(&n + 1);
+        size_t j = 0;
+        for (uint i = 0; i < n; i++)
+        {
+            byte[] b = *p++;
+            if (b.length)
+            {
+                memcpy(a + j, b.ptr, b.length * sizeelem);
+                j += b.length * sizeelem;
+            }
+        }
+    }
+    else version (Win64)
     {
         p = cast(byte[]*)(&n + 1);
         size_t j = 0;

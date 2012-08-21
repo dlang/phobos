@@ -155,9 +155,9 @@ else version (Win64)
 
     FILE* __iob_func();
 
-//    FILE* stdin = &__iob_func()[0];
-//    FILE* stdout = &__iob_func()[1];
-//    FILE* stderr = &__iob_func()[2];
+    FILE* stdin;  // = &__iob_func()[0];
+    FILE* stdout; // = &__iob_func()[1];
+    FILE* stderr; // = &__iob_func()[2];
 
     enum
     {

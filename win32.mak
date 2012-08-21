@@ -34,6 +34,8 @@ DMD=$(DIR)\windows\bin\dmd
 DOC=..\..\html\d\phobos
 #DOC=..\doc\phobos
 
+PHOBOSLIB=phobos.lib
+
 .c.obj:
 	$(CC) -c $(CFLAGS) $*
 
@@ -46,14 +48,14 @@ DOC=..\..\html\d\phobos
 .asm.obj:
 	$(CC) -c $*
 
-targets : phobos.lib gcstub.obj
+targets : $(PHOBOSLIB) gcstub.obj
 
 test : test.exe
 
 test.obj : test.d
 	$(DMD) -c test -g -unittest
 
-test.exe : test.obj phobos.lib
+test.exe : test.obj $(PHOBOSLIB)
 	$(DMD) test.obj -g -L/map
 
 OBJS= deh.obj complex.obj gcstats.obj \
@@ -342,26 +344,26 @@ MAKEFILES_GC=\
 	internal\gc\openbsd.mak \
 	internal\gc\solaris.mak
 
-phobos.lib : $(OBJS) $(SRCS) minit.obj internal\gc\dmgc.lib \
+$(PHOBOSLIB) : $(OBJS) $(SRCS) minit.obj internal\gc\dmgc.lib \
 	etc\c\zlib\zlib.lib win32.mak
-#	lib -c -p32 phobos.lib $(OBJS) minit.obj internal\gc\dmgc.lib \
+#	lib -c -p32 $(PHOBOSLIB) $(OBJS) minit.obj internal\gc\dmgc.lib \
 #		etc\c\zlib\zlib.lib
-	$(DMD) -lib -ofphobos.lib -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) minit.obj \
+	$(DMD) -lib -of$(PHOBOSLIB) -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) minit.obj \
 		internal\gc\dmgc.lib etc\c\zlib\zlib.lib
 
-unittest : $(SRCS) phobos.lib
-	$(DMD) $(DFLAGS) -unittest -version=Unittest unittest.d $(SRCS) phobos.lib
+unittest : $(SRCS) $(PHOBOSLIB)
+	$(DMD) $(DFLAGS) -unittest -version=Unittest unittest.d $(SRCS) $(PHOBOSLIB)
 	unittest
 
 #unittest : unittest.exe
 #       unittest
 #
-#unittest.exe : unittest.d phobos.lib
+#unittest.exe : unittest.d $(PHOBOSLIB)
 #       $(DMD) unittest -g
 #       dmc unittest.obj -g
 
-cov : $(SRCS) phobos.lib
-	$(DMD) -cov -unittest -ofcov.exe unittest.d -version=Unittest $(SRCS) phobos.lib
+cov : $(SRCS) $(PHOBOSLIB)
+	$(DMD) -cov -unittest -ofcov.exe unittest.d -version=Unittest $(SRCS) $(PHOBOSLIB)
 	cov
 
 html : $(DOCS)
@@ -966,7 +968,7 @@ clean:
 	del $(OBJS)
 	del $(DOCS)
 	del phobos.json
-	del phobos.lib
+	del $(PHOBOSLIB)
 
 cleanhtml:
 	del $(DOCS)
@@ -984,7 +986,7 @@ tolf:
 	$(SRC_STDLINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_SOLARIS)
 
 install:
-	$(CP) phobos.lib gcstub.obj $(DIR)\windows\lib
+	$(CP) phobos.lib phobos64.lib gcstub.obj $(DIR)\windows\lib
 	$(CP) $(MAKEFILES) phoboslicense.txt minit.obj std.ddoc $(DIR)\src\phobos
 	$(CP) $(SRC) $(DIR)\src\phobos
 	$(CP) $(SRC_STD) $(DIR)\src\phobos\std
