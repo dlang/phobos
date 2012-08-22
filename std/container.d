@@ -828,23 +828,11 @@ unittest {
 }
 
 /**
-Returns an initialized container. This function is mainly for
-eliminating construction differences between $(D class) containers and
-$(D struct) containers.
- */
-Container make(Container, T...)(T arguments) if (is(Container == struct))
-{
-    static if (T.length == 0)
-        static assert(false, "You must pass at least one argument");
-    else
-        return Container(arguments);
-}
+Kept for backwards compatibility.
 
-/// ditto
-Container make(Container, T...)(T arguments) if (is(Container == class))
-{
-    return new Container(arguments);
-}
+This as alias to $(XREF conv, make).
+ */
+alias std.conv.make make;
 
 /**
    Implements a simple and fast singly-linked list.
