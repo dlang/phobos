@@ -14,6 +14,8 @@
 # Notes:
 #	This relies on LIB.EXE 8.00 or later, and MAKE.EXE 5.01 or later.
 
+MODEL=64
+
 DIR=\dmd
 VCDIR="\Program Files (x86)\Microsoft Visual Studio 10.0\VC"
 SDKDIR="\Program Files (x86)\Microsoft SDKs\Windows\v7.0A"
@@ -26,10 +28,10 @@ CP=cp
 CFLAGS=/O2 /I$(VCDIR)\INCLUDE /I$(SDKDIR)\Include
 #CFLAGS=/Zi /I$(VCDIR)\INCLUDE /I$(SDKDIR)\Include
 
-DFLAGS=-O -release -nofloat -w
-#DFLAGS=-nofloat -w
-#DFLAGS=-unittest -g -w
-#DFLAGS=-unittest -cov -g
+DFLAGS=-m$(MODEL) -O -release -nofloat -w
+#DFLAGS=-m$(MODEL) -nofloat -w
+#DFLAGS=-m$(MODEL) -unittest -g -w
+#DFLAGS=-m$(MODEL) -unittest -cov -g
 
 DMD=$(DIR)\windows\bin\dmd
 #DMD=..\dmd
@@ -61,7 +63,7 @@ test.obj : test.d
 test.exe : test.obj $(PHOBOSLIB)
 	$(DMD) test.obj -g -L/map
 
-OBJS= deh.obj complex.obj gcstats.obj \
+OBJS= deh2.obj complex.obj gcstats.obj \
 	critical.obj object.obj monitor.obj \
 	crc32.obj \
 	Czlib.obj Dzlib.obj process.obj \
@@ -416,8 +418,8 @@ complex.obj : internal\complex.c
 critical.obj : internal\critical.c
 	$(CC) -c $(CFLAGS) internal\critical.c
 
-deh.obj : internal\deh.d
-	$(DMD) -c $(DFLAGS) internal\deh.d
+deh2.obj : internal\deh2.d
+	$(DMD) -c $(DFLAGS) internal\deh2.d
 
 dmain2.obj : internal\dmain2.d
 	$(DMD) -c $(DFLAGS) internal\dmain2.d

@@ -107,6 +107,15 @@ version (Solaris)
     extern (C) ModuleReference *_Dmodule_ref;  // start of linked list
 }
 
+version (Win64)
+{
+    extern (C)
+    {
+        extern void* _minfo_beg;
+        extern void* _minfo_end;
+    }
+}
+
 version (none)
 {
     extern (C)
@@ -192,6 +201,17 @@ extern (C) void _moduleCtor()
     {
         // Ensure module destructors also get called on program termination
         //_fatexit(&_STD_moduleDtor);
+    }
+
+    else version (Win64)
+    {
+        _moduleinfo_array = (cast(ModuleInfo)&_minfo_beg)[1 .. &_minfo_end - &_minfo_end];
+
+        foreach (m; _moduleinfo_array)
+        {
+            //printf("\t%p\n", m);
+            printf("\t%.*s\n", m.name.length, m.name.ptr);
+        }
     }
 
     else
