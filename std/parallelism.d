@@ -1098,9 +1098,10 @@ private:
         doJob(t);
     }
 
-    // This work loop is used for a "normal" task pool where a worker thread
-    // does more than one task.
-    void workLoop()
+    // This function performs initialization for each thread that affects
+    // thread local storage and therefore must be done from within the
+    // worker thread.  It then calls executeWorkLoop().  
+    void startWorkLoop()
     {
         // Initialize thread index.
         {
@@ -1109,7 +1110,15 @@ private:
             threadIndex = nextThreadIndex;
             nextThreadIndex++;
         }
+        
+        executeWorkLoop();
+    }
 
+    // This is the main work loop that worker threads spend their time in
+    // until they terminate.  It's also entered by non-worker threads when
+    // finish() is called with the blocking variable set to true.
+    void executeWorkLoop()
+    {    
         while(atomicReadUbyte(status) != PoolState.stopNow)
         {
             AbstractTask* task = pop();
@@ -1179,7 +1188,7 @@ private:
     void abstractPut(AbstractTask* task)
     {
         queueLock();
-        scope(exit) queueUnlock();
+        scope(exit) queueUnlock();        
         abstractPutNoSync(task);
     }
 
@@ -1199,6 +1208,16 @@ private:
     }
     body
     {
+        // Not using enforce() to save on function call overhead since this
+        // is a performance critical function.
+        if(status != PoolState.running)
+        {
+            throw new Error(
+                "Cannot submit a new task to a pool after calling " ~
+                "finish() or stop()."
+            );
+        }
+        
         task.next = null;
         if (head is null)   //Queue is empty.
         {
@@ -1217,6 +1236,14 @@ private:
 
     void abstractPutGroupNoSync(AbstractTask* h, AbstractTask* t)
     {
+        if(status != PoolState.running)
+        {
+            throw new Error(
+                "Cannot submit a new task to a pool after calling " ~
+                "finish() or stop()."
+            );
+        }
+        
         if(head is null)
         {
             head = h;
@@ -1383,25 +1410,25 @@ public:
     size_t defaultWorkUnitSize(size_t rangeLen) const pure nothrow @safe
     {
         if(this.size == 0)
-{
-    return rangeLen;
-}
+        {
+            return rangeLen;
+        }
 
-immutable size_t eightSize = 4 * (this.size + 1);
-auto ret = (rangeLen / eightSize) +
-           ((rangeLen % eightSize == 0) ? 0 : 1);
-return max(ret, 1);
-}
+        immutable size_t eightSize = 4 * (this.size + 1);
+        auto ret = (rangeLen / eightSize) +
+                   ((rangeLen % eightSize == 0) ? 0 : 1);
+        return max(ret, 1);
+    }
 
-/**
-Default constructor that initializes a $(D TaskPool) with
-$(D totalCPUs) - 1 worker threads.  The minus 1 is included because the
-main thread will also be available to do work.
+    /**
+    Default constructor that initializes a $(D TaskPool) with
+    $(D totalCPUs) - 1 worker threads.  The minus 1 is included because the
+    main thread will also be available to do work.
 
-Note:  On single-core machines, the primitives provided by $(D TaskPool)
-       operate transparently in single-threaded mode.
- */
-this() @trusted
+    Note:  On single-core machines, the primitives provided by $(D TaskPool)
+           operate transparently in single-threaded mode.
+     */
+    this() @trusted
     {
         this(totalCPUs - 1);
     }
@@ -1430,7 +1457,7 @@ this() @trusted
         pool = new ParallelismThread[nWorkers];
         foreach(ref poolThread; pool)
         {
-            poolThread = new ParallelismThread(&workLoop);
+            poolThread = new ParallelismThread(&startWorkLoop);
             poolThread.pool = this;
             poolThread.start();
         }
@@ -3083,7 +3110,11 @@ public:
     before returning.  This option might be used in applications where
     task results are never consumed-- e.g. when $(D TaskPool) is employed as a
     rudimentary scheduler for tasks which communicate by means other than
-    return values.
+    return values.  
+    
+    Warning:  Calling this function with $(D blocking = true) from a worker
+              thread that is a member of the same $(D TaskPool) that 
+              $(D finish) is being called on will result in a deadlock.
      */
     void finish(bool blocking = false) @trusted
     {
@@ -3093,8 +3124,25 @@ public:
             atomicCasUbyte(status, PoolState.running, PoolState.finishing);
             notifyAll();
         }
-        if (blocking) {
-            foreach(t; pool) t.join();
+        if (blocking) 
+        {
+            // Use this thread as a worker until everything is finished.
+            executeWorkLoop();
+            
+            foreach(t; pool) 
+            {
+                // Maybe there should be something here to prevent a thread
+                // from calling join() on itself if this function is called
+                // from a worker thread in the same pool, but:
+                //
+                // 1.  Using an if statement to skip join() would result in 
+                //     finish() returning without all tasks being finished.
+                //
+                // 2.  If an exception were thrown, it would bubble up to the
+                //     Task from which finish() was called and likely be
+                //     swallowed.                
+                t.join();
+            }
         }
     }
 
@@ -4081,9 +4129,17 @@ unittest
         pool2.finish(true); // blocking
         assert(tSlow2.done);
         
+        // Test fix for Bug 8582 by making pool size zero.
+        auto pool3 = new TaskPool(0);
+        auto tSlow3 = task!slowFun();
+        pool3.put(tSlow3);
+        pool3.finish(true); // blocking
+        assert(tSlow3.done);
+        
         // This is correct because no thread will terminate unless pool2.status
-        // has already been set to stopNow.
+        // and pool3.status have already been set to stopNow.
         assert(pool2.status == TaskPool.PoolState.stopNow);
+        assert(pool3.status == TaskPool.PoolState.stopNow);
     }
 
     // Test default pool stuff.
