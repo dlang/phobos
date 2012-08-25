@@ -1210,7 +1210,7 @@ private:
         // is a performance critical function.
         if(status != PoolState.running)
         {
-            throw new Exception(
+            throw new Error(
                 "Cannot submit a new task to a pool after calling " ~
                 "finish() or stop()."
             );
@@ -1236,7 +1236,7 @@ private:
     {
         if(status != PoolState.running)
         {
-            throw new Exception(
+            throw new Error(
                 "Cannot submit a new task to a pool after calling " ~
                 "finish() or stop()."
             );
@@ -3108,7 +3108,11 @@ public:
     before returning.  This option might be used in applications where
     task results are never consumed-- e.g. when $(D TaskPool) is employed as a
     rudimentary scheduler for tasks which communicate by means other than
-    return values.
+    return values.  
+    
+    Warning:  Calling this function with $(D blocking = true) from a worker
+              thread that is a member of the same $(D TaskPool) that 
+              $(D finish) is being called on will result in a deadlock.
      */
     void finish(bool blocking = false) @trusted
     {
@@ -3125,12 +3129,17 @@ public:
             
             foreach(t; pool) 
             {
-                // Necessary to avoid deadlocks if finish() is called from
-                // a worker thread.
-                if(t !is Thread.getThis()) 
-                {
-                    t.join();
-                }
+                // Maybe there should be something here to prevent a thread
+                // from calling join() on itself if this function is called
+                // from a worker thread in the same pool, but:
+                //
+                // 1.  Using an if statement to skip join() would result in 
+                //     finish() returning without all tasks being finished.
+                //
+                // 2.  If an exception were thrown, it would bubble up to the
+                //     Task from which finish() was called and likely be
+                //     swallowed.                
+                t.join();
             }
         }
     }
