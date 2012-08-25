@@ -1110,6 +1110,8 @@ private:
             threadIndex = nextThreadIndex;
             nextThreadIndex++;
         }
+        
+        executeWorkLoop();
     }
 
     // This is the main work loop that worker threads spend their time in
