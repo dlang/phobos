@@ -515,7 +515,9 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
 
    Returns:
 
-   On success, the function returns the number of variables filled. This count can match the expected number of readings or fewer, even zero, if a matching failure happens.
+   On success, the function returns the number of variables filled. This count
+   can match the expected number of readings or fewer, even zero, if a
+   matching failure happens.
 
    Example:
 ----
