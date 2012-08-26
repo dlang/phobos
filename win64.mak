@@ -377,13 +377,11 @@ html : $(DOCS)
 
 internal\gc\dmgc64.lib:
 	cd internal\gc
-	make DMD=$(DMD) -f win64.mak clean
 	make DMD=$(DMD) -f win64.mak dmgc64.lib
 	cd ..\..
 
 etc\c\zlib\zlib64.lib:
 	cd etc\c\zlib
-	make -f win64.mak clean
 	make -f win64.mak zlib64.lib
 	cd ..\..\..
 
@@ -970,6 +968,12 @@ zip : $(MAKEFILES) phoboslicense.txt std.ddoc $(SRC) \
 	zip32 -u phobos $(SRC_GC) $(MAKEFILES_GC)
 
 clean:
+	cd etc\c\zlib
+	make -f win64.mak clean
+	cd ..\..\..
+	cd internal\gc
+	make DMD=$(DMD) -f win64.mak clean
+	cd ..\..
 	del $(OBJS)
 	del $(DOCS)
 	del phobos.json

@@ -31,10 +31,14 @@ import std.c.stdarg;
 
 version (DigitalMars)
 {
-    version (Windows)
+    version (Win32)
     {
         // Specific to the way Digital Mars C does stdio
         version = DIGITAL_MARS_STDIO;
+    }
+    version (Win64)
+    {
+        version = GENERIC_IO;
     }
 }
 

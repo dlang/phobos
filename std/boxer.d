@@ -281,7 +281,9 @@ struct Box
 
         args[0..(char[]).sizeof] = (cast(void*) &format)[0..(char[]).sizeof];
         args[(char[]).sizeof..length] = data;
-        version (X86_64)
+        version (Win64)
+            std.format.doFormat(&putc, arguments, args.ptr);
+        else version (X86_64)
         {   __va_list va;
             va.stack_args = args.ptr;
             std.format.doFormat(&putc, arguments, &va);
@@ -413,6 +415,8 @@ body
 {
     version (X86)
         return box(_arguments[0], _argptr);
+    else version (Win64)
+        return box(_arguments[0], _argptr);
     else version (X86_64)
     {
         va_list argptr;
@@ -498,6 +502,8 @@ Box[] boxArray(TypeInfo[] types, void* data)
 Box[] boxArray(...)
 {
     version (X86)
+        return boxArray(_arguments, _argptr);
+    else version (Win64)
         return boxArray(_arguments, _argptr);
     else version (X86_64)
     {

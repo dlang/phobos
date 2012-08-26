@@ -44,7 +44,7 @@ char* toMBSz(char[] s, uint codePage = 0)
             if (result.length)
             {
                 readLen = WideCharToMultiByte(codePage, 0, ws, -1, result.ptr,
-                        result.length, null, null);
+                        cast(int)result.length, null, null);
             }
 
             if (!readLen || readLen != result.length)
@@ -89,7 +89,7 @@ char[] fromMBSz(char* s, int codePage = 0)
             if (result.length)
             {
                 readLen = MultiByteToWideChar(codePage, 0, s, -1, result.ptr,
-                        result.length);
+                        cast(int)result.length);
             }
 
             if (!readLen || readLen != result.length)

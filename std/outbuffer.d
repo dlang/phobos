@@ -291,7 +291,15 @@ class OutBuffer
      * Append output of C's printf() to internal buffer.
      */
 
-    version (X86_64)
+    version (Win64)
+    void printf(string format, ...)
+    {
+        va_list ap;
+        va_start(ap, format);
+        vprintf(format, ap);
+        va_end(ap);
+    }
+    else version (X86_64)
     extern (C) void printf(string format, ...)
     {
         va_list ap;

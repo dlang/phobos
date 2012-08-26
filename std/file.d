@@ -39,7 +39,7 @@ private import std.gc;
 
 /* =========================== Win32 ======================= */
 
-version (Win32)
+version (Windows)
 {
 
 private import std.c.windows.windows;
@@ -164,7 +164,7 @@ void write(char[] name, void[] buffer)
     if (h == INVALID_HANDLE_VALUE)
         goto err;
 
-    if (WriteFile(h,buffer.ptr,buffer.length,&numwritten,null) != 1)
+    if (WriteFile(h,buffer.ptr,cast(int)buffer.length,&numwritten,null) != 1)
         goto err2;
 
     if (buffer.length != numwritten)
@@ -208,7 +208,7 @@ void append(char[] name, void[] buffer)
 
     SetFilePointer(h, 0, null, FILE_END);
 
-    if (WriteFile(h,buffer.ptr,buffer.length,&numwritten,null) != 1)
+    if (WriteFile(h,buffer.ptr,cast(int)buffer.length,&numwritten,null) != 1)
         goto err2;
 
     if (buffer.length != numwritten)
@@ -509,10 +509,10 @@ struct DirEntry
         clength = std.c.string.strlen(fd.cFileName.ptr);
 
         // Convert cFileName[] to unicode
-        wlength = MultiByteToWideChar(0,0,fd.cFileName.ptr,clength,null,0);
+        wlength = MultiByteToWideChar(0,0,fd.cFileName.ptr,cast(int)clength,null,0);
         if (wlength > wbuf.length)
             wbuf.length = wlength;
-        n = MultiByteToWideChar(0,0,fd.cFileName.ptr,clength,cast(wchar*)wbuf,wlength);
+        n = MultiByteToWideChar(0,0,fd.cFileName.ptr,cast(int)clength,cast(wchar*)wbuf,cast(int)wlength);
         assert(n == wlength);
         // toUTF8() returns a new buffer
         name = std.path.join(path, std.utf.toUTF8(wbuf[0 .. wlength]));

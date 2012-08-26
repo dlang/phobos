@@ -1173,7 +1173,13 @@ class Stream : InputStream, OutputStream {
 
   // writes data to stream using printf() syntax,
   // returns number of bytes written
-  version (X86_64)
+  version (Win64)
+  extern (C) size_t printf(char[] format, ...) {
+    va_list ap;
+    va_start(ap, format);
+    return vprintf(format, ap);
+  }
+  else version (X86_64)
   extern (C) size_t printf(char[] format, ...) {
     va_list ap;
     va_start(ap, __va_argsave);
@@ -1972,7 +1978,9 @@ class File: Stream {
   override size_t readBlock(void* buffer, size_t size) {
     assertReadable();
     version (Windows) {
-      ReadFile(hFile, buffer, size, &size, null);
+      uint nbytes = cast(int)size;
+      ReadFile(hFile, buffer, nbytes, &nbytes, null);
+      size = nbytes;
     } else version (Posix) {
       size = std.c.posix.posix.read(hFile, buffer, size);
       if (size == -1)
@@ -1985,7 +1993,9 @@ class File: Stream {
   override size_t writeBlock(void* buffer, size_t size) {
     assertWriteable();
     version (Windows) {
-      WriteFile(hFile, buffer, size, &size, null);
+      uint nbytes = cast(uint)size;
+      WriteFile(hFile, buffer, nbytes, &nbytes, null);
+      size = nbytes;
     } else version (Posix) {
       size = std.c.posix.posix.write(hFile, buffer, size);
       if (size == -1)

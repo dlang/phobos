@@ -205,7 +205,7 @@ extern (C) void _moduleCtor()
 
     else version (Win64)
     {
-        _moduleinfo_array = (cast(ModuleInfo)&_minfo_beg)[1 .. &_minfo_end - &_minfo_end];
+        _moduleinfo_array = (cast(ModuleInfo*)&_minfo_beg)[1 .. &_minfo_end - &_minfo_end];
 
         foreach (m; _moduleinfo_array)
         {

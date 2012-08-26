@@ -559,7 +559,7 @@ body
     // more if it does.
     for(;;)
     {
-        cchName = name.length;
+        cchName = cast(DWORD)name.length;
 
         res = RegEnumKeyExA(hkey, index, name.ptr, cchName, RESERVED, null, null, null);
 
@@ -1290,7 +1290,7 @@ public:
         Reg_SetValueExA_(m_hkey, name, asEXPAND_SZ
                                             ? REG_VALUE_TYPE.REG_EXPAND_SZ
                                             : REG_VALUE_TYPE.REG_SZ, value.ptr
-                        , value.length);
+                        , cast(int)value.length);
     }
 
     /// Sets the named value with the given multiple-strings value
@@ -1312,13 +1312,13 @@ public:
         // Allocate
 
         char[]  cs      =   new char[total];
-        int     base    =   0;
+        size_t  base    =   0;
 
         // Slice the individual strings into the new array
 
         foreach(string s; value)
         {
-            int top = base + s.length;
+            auto top = base + s.length;
 
             cs[base .. top] = s;
             cs[top] = 0;
@@ -1326,7 +1326,7 @@ public:
             base = 1 + top;
         }
 
-        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_MULTI_SZ, cs.ptr, cs.length);
+        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_MULTI_SZ, cs.ptr, cast(int)cs.length);
     }
 
     /// Sets the named value with the given binary value
@@ -1336,7 +1336,7 @@ public:
     /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
     void setValue(string name, byte[] value)
     {
-        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_BINARY, value.ptr, value.length);
+        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_BINARY, value.ptr, cast(int)value.length);
     }
 
     /// Deletes the named value
@@ -1459,7 +1459,7 @@ public:
         DWORD   cchRequired =   ExpandEnvironmentStringsA(lpSrc, null, 0);
         char[]  newValue    =   new char[cchRequired];
 
-        if(!ExpandEnvironmentStringsA(lpSrc, newValue.ptr, newValue.length))
+        if(!ExpandEnvironmentStringsA(lpSrc, newValue.ptr, cast(int)newValue.length))
         {
             throw new Win32Exception("Failed to expand environment variables");
         }

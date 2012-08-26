@@ -46,10 +46,10 @@ version(Posix)
         version = BsdSockets;
 }
 
-version(Win32)
+version(Windows)
 {
 
-        pragma (lib, "wsock32.lib");
+        version (Win32) pragma (lib, "wsock32.lib");
 
         private import std.c.windows.windows, std.c.windows.winsock;
         private alias std.c.windows.winsock.timeval _ctimeval;
@@ -1326,7 +1326,7 @@ class Socket
         ssize_t send(void[] buf, SocketFlags flags)
         {
                 flags |= SocketFlags.NOSIGNAL;
-                auto sent = .send(sock, buf.ptr, buf.length, cast(int)flags);
+                auto sent = .send(sock, buf.ptr, cast(int)buf.length, cast(int)flags);
                 return sent;
         }
 
@@ -1342,7 +1342,7 @@ class Socket
         ssize_t sendTo(void[] buf, SocketFlags flags, Address to)
         {
                 flags |= SocketFlags.NOSIGNAL;
-                auto sent = .sendto(sock, buf.ptr, buf.length, cast(int)flags, to.name(), to.nameLen());
+                auto sent = .sendto(sock, buf.ptr, cast(int)buf.length, cast(int)flags, to.name(), to.nameLen());
                 return sent;
         }
 
@@ -1358,7 +1358,7 @@ class Socket
         ssize_t sendTo(void[] buf, SocketFlags flags)
         {
                 flags |= SocketFlags.NOSIGNAL;
-                auto sent = .sendto(sock, buf.ptr, buf.length, cast(int)flags, null, 0);
+                auto sent = .sendto(sock, buf.ptr, cast(int)buf.length, cast(int)flags, null, 0);
                 return sent;
         }
 
@@ -1382,7 +1382,7 @@ class Socket
         {
                 if(!buf.length) //return 0 and don't think the connection closed
                         return 0;
-                auto read = .recv(sock, buf.ptr, buf.length, cast(int)flags);
+                auto read = .recv(sock, buf.ptr, cast(int)buf.length, cast(int)flags);
                 // if(!read) //connection closed
                 return read;
         }
@@ -1406,7 +1406,7 @@ class Socket
                         return 0;
                 from = newFamilyObject();
                 auto nameLen = from.nameLen();
-                auto read = .recvfrom(sock, buf.ptr, buf.length, cast(int)flags, from.name(), &nameLen);
+                auto read = .recvfrom(sock, buf.ptr, cast(int)buf.length, cast(int)flags, from.name(), &nameLen);
                 assert(from.addressFamily() == _family);
                 // if(!read) //connection closed
                 return read;
@@ -1426,7 +1426,7 @@ class Socket
         {
                 if(!buf.length) //return 0 and don't think the connection closed
                         return 0;
-                auto read = .recvfrom(sock, buf.ptr, buf.length, cast(int)flags, null, null);
+                auto read = .recvfrom(sock, buf.ptr, cast(int)buf.length, cast(int)flags, null, null);
                 // if(!read) //connection closed
                 return read;
         }
