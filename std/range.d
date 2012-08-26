@@ -3168,11 +3168,15 @@ unittest
 
 
 /**
-Eagerly advances $(D r) itself (not a copy) $(D n) times (by calling
+Eagerly advances $(D r) itself (not a copy) up to $(D n) times (by calling
 $(D r.popFront) at most $(D n) times). The pass of $(D r) into $(D
 popFrontN) is by reference, so the original range is
-affected. Completes in $(BIGOH 1) steps for ranges that support
-slicing, and in $(BIGOH n) time for all other ranges.
+affected. Completes in $(BIGOH 1) steps for ranges that have both length 
+and support slicing, and in $(BIGOH n) time for all other ranges.
+
+Returns:
+
+How much $(D r) was actually advanced, which may be less than $(D n) if $(D r) did not have $(D n) element.
 
 Example:
 ----
@@ -3218,13 +3222,15 @@ unittest
 }
 
 /**
-   Eagerly reduces $(D r) itself (not a copy) $(D n) times from its right
+   Eagerly reduces $(D r) itself (not a copy) up to $(D n) times from its right
    side (by calling $(D r.popBack) $(D n) times). The pass of $(D r) into
    $(D popBackN) is by reference, so the original range is
-   affected. Completes in $(BIGOH 1) steps for ranges that support
-   slicing, and in $(BIGOH n) time for all other ranges.
+   affected. Completes in $(BIGOH 1) steps for ranges that have both length 
+   and support slicing, and in $(BIGOH n) time for all other ranges.
 
-   Returns the actual number of elements popped.
+   Returns:
+
+   The actual number of elements popped, which may be less than $(D n) if $(D r) did not have $(D n) element.
 
    Example:
    ----
