@@ -416,8 +416,10 @@ class ZipArchive
         de.compressionMethod = getUshort(de.offset + 8);
         de.time = cast(DosFileTime)getUint(de.offset + 10);
         de.crc32 = getUint(de.offset + 14);
-        de.compressedSize = getUint(de.offset + 18);
-        de.expandedSize = getUint(de.offset + 22);
+        uint compressedSize = getUint(de.offset + 18);
+        de.compressedSize = compressedSize ? compressedSize : de.compressedSize;
+        uint expandedSize = getUint(de.offset + 22);
+        de.expandedSize = expandedSize ? expandedSize : de.expandedSize;
         namelen = getUshort(de.offset + 26);
         extralen = getUshort(de.offset + 28);
 
