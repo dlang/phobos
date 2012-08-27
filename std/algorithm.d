@@ -3726,21 +3726,21 @@ result[1]) is the same as $(XREF range,takeExactly).
 
 Example:
 ----
-auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
-auto r = findSplit(a, [9, 1]);
+auto a = "Carl Sagan Memorial Station";
+auto r = findSplit(a, "Velikovsky");
 assert(r[0] == a);
 assert(r[1].empty);
 assert(r[2].empty);
-r = findSplit(a, [ 3, 4 ]);
-assert(r[0] == a[0 .. 2]);
-assert(r[1] == a[2 .. 4]);
-assert(r[2] == a[4 .. $]);
-auto r1 = findSplitBefore(a, [ 7, 8 ]);
-assert(r1[0] == a[0 .. 6]);
-assert(r1[1] == a[6 .. $]);
-auto r1 = findSplitAfter(a, [ 7, 8 ]);
-assert(r1[0] == a);
-assert(r1[1].empty);
+r = findSplit(a, " ");
+assert(r[0] == "Carl");
+assert(r[1] == " ");
+assert(r[2] == "Sagan Memorial Station");
+auto r1 = findSplitBefore(a, "Sagan");
+assert(r1[0] == "Carl ", r1[0]);
+assert(r1[1] == "Sagan Memorial Station");
+auto r2 = findSplitAfter(a, "Sagan");
+assert(r2[0] == "Carl Sagan");
+assert(r2[1] == " Memorial Station");
 ----
  */
 auto findSplit(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
