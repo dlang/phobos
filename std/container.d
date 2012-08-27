@@ -212,7 +212,6 @@ module std.container;
 import core.memory, core.stdc.stdlib, core.stdc.string, std.algorithm,
     std.conv, std.exception, std.functional, std.range, std.traits,
     std.typecons, std.typetuple;
-import std.string : format;
 version(unittest) import std.stdio;
 
 version(unittest) version = RBDoChecks;
@@ -2064,6 +2063,9 @@ Array type with deterministic control of memory. The memory allocated
 for the array is reclaimed as soon as possible; there is no reliance
 on the garbage collector. $(D Array) uses $(D malloc) and $(D free)
 for managing its own memory.
+
+Array.Range can provide better performance than Array itself to
+access or modify elements.
  */
 struct Array(T) if (!is(T : const(bool)))
 {
@@ -2217,6 +2219,7 @@ struct Array(T) if (!is(T : const(bool)))
     }
     private alias RefCounted!(Payload, RefCountedAutoInitialize.no) Data;
     private Data _data;
+    private static T[] _emptyDataPayload; //Dummy range to use when _data is not initialized.
 
     this(U)(U[] values...) if (isImplicitlyConvertible!(U, T))
     {
@@ -2257,135 +2260,163 @@ Defines the container's primary range, which is a random-access range.
         private Array _outer;
         private size_t _a, _b;
 
-        private enum string internalMessage = "Array.Range: Internal Error: a > b";
-        private enum string invalidatedMessage = "Array.Range: range has become invalid";
-        private enum string emptyMessage = ": range is empty";
-        private enum string indexMessage = ": index is out of range, i = ";
-
-        private nothrow
-        bool checkIndex(size_t i) const
+        //Validates the range, and returns a clean slice to operate on
+        private @property nothrow 
+        T[] get()
         {
-            assert(_a <= _b, internalMessage);
-            assert(_b <= _outer.length, invalidatedMessage);
-            return(_a + i < _b);
+            assert(_b <= _outer.length, "Array.Range: range has become invalid");
+            return _outer._data._payload[_a .. _b];
+        }
+
+        //Validates the range, and returns a clean slice to operate on
+        private @property nothrow 
+        const(T)[] get() const
+        {
+            assert(_b <= _outer.length, "Array.Range: range has become invalid");
+            return _outer._data._payload[_a .. _b];
         }
 
         this(Array data, size_t a, size_t b)
         {
-            enforce(a <= b);
             _outer = data;
             _a = a;
             _b = b;
-            assert(_b <= _outer.length, invalidatedMessage);
+            get; //Asserts range validity, and validates a <= b via slicing
         }
-
+        
         @property nothrow
         bool empty() const
         {
-            assert(_a <= _b, internalMessage);
-            assert(_b <= _outer.length, invalidatedMessage);
-            return !(_a < _b);
-        }
-
-        @property Range save()
-        {
-            assert(_a <= _b, internalMessage);
-            return this;
-        }
-
-        @property T front()
-        {
-            enforce(!empty, text("Array.Range.front", emptyMessage));
-            return _outer._data._payload[_a];
-        }
-
-        @property T back()
-        {
-            enforce(!empty, text("Array.Range.back", emptyMessage));
-            return _outer._data._payload[_b - 1];
-        }
-
-        @property void front(T value)
-        {
-            enforce(!empty, text("Array.Range.front", emptyMessage));
-            move(value, _outer._data._payload[_a]);
-        }
-
-        @property void back(T value)
-        {
-            enforce(!empty, text("Array.Range.back", emptyMessage));
-            move(value, _outer._data._payload[_b - 1]);
-        }
-
-        void popFront()
-        {
-            enforce(!empty, text("Array.Range.popFront", emptyMessage));
-            ++_a;
-        }
-
-        void popBack()
-        {
-            enforce(!empty, text("Array.Range.popBack", emptyMessage));
-            --_b;
-        }
-
-        T moveFront()
-        {
-            enforce(!empty, text("Array.Range.moveFront", emptyMessage));
-            return move(_outer._data._payload[_a]);
-        }
-
-        T moveBack()
-        {
-            enforce(!empty, text("Array.Range.moveBack", emptyMessage));
-            return move(_outer._data._payload[_b - 1]);
-        }
-
-        T moveAt(size_t i)
-        {
-            enforce(checkIndex(i), text("Array.Range.moveAt", indexMessage, i));
-            return move(_outer._data._payload[_a + i]);
-        }
-
-        T opIndex(size_t i)
-        {
-            enforce(checkIndex(i), text("Array.Range.opIndex", indexMessage, i));
-            return _outer._data._payload[_a + i];
-        }
-
-        void opIndexAssign(T value, size_t i)
-        {
-            enforce(checkIndex(i), text("Array.Range.opIndexAssign", indexMessage, i));
-            _outer._data._payload[_a + i] = value;
-        }
-
-        typeof(this) opSlice(size_t a, size_t b)
-        {
-            enforce(a <= b, format("Array.Range.opIndexOpAssign: low index %s is bigger than high index%",
-                a, b));
-            enforce(checkIndex(a), text("Array.Range.opIndexOpAssign", indexMessage, a));
-            enforce(checkIndex(b), text("Array.Range.opIndexOpAssign", indexMessage, b));
-            return typeof(this)(_outer, a, b);
-        }
-
-        void opIndexOpAssign(string op)(T value, size_t i)
-        {
-            enforce(checkIndex(i), text("Array.Range.opIndexOpAssign", indexMessage, i));
-            mixin("_outer._data._payload[_a + i] "~op~"= value;");
-        }
-
-        void opIndexUnary(string op)(size_t i)
-        {
-            enforce(checkIndex(i), text("Array.Range.opIndexUnary", indexMessage, i));
-            mixin(op~" _outer._data._payload[_a + i];");
+            return get.empty;
         }
 
         @property nothrow
         size_t length() const
         {
-            assert(_a <= _b, internalMessage);
-            return _b - _a;
+            return get.length;
         }
+
+        @property Range save()
+        {
+            //All validations done by constructor
+            return Range(_outer, _a, _b); 
+        }
+
+        typeof(this) opSlice(size_t a, size_t b)
+        {
+            //All validations done by constructor
+            return typeof(this)(_outer, _a + a, _a + b);
+        }
+
+        @property T front()
+        {
+            return get.front;
+        }
+
+        @property T back()
+        {
+            return get.back;
+        }
+
+        @property void front(T value)
+        {
+            get.front = (value);
+        }
+
+        @property void back(T value)
+        {
+            get.back = (value);
+        }
+
+        void popFront() nothrow
+        {
+            auto dummy = get;
+            dummy.popFront(); //Dummy call, but asserts the range is valid, and checks not empty
+            ++_a;
+        }
+
+        void popBack() nothrow
+        {
+            auto dummy = get;
+            dummy.popBack(); //Dummy call, but asserts the range is valid, and checks not empty
+            --_b;
+        }
+
+        T moveFront()
+        {
+            return move(get.front);
+        }
+
+        T moveBack()
+        {
+            return move(get.back);
+        }
+
+        T moveAt(size_t i)
+        {
+            return move(get[i]);
+        }
+
+        void opUnary(string op)()
+            if(op == "++" || op == "--")
+        {
+            mixin(op~"get[];");
+        }
+
+        //Only works for ++ and --
+        //For +, this doesn't work with raw arrays anyways
+        //for -, ~, there is no way to implement it.
+        void opUnary(string op)()
+            if(op != "++" && op != "--")
+        {
+            mixin(op~"get[];");
+        }
+
+        void opOpAssign(string op)(T value)
+            if(op != "~")
+        {
+            mixin("get[] "~op~"= value;");
+        }
+
+        T opIndex(size_t i)
+        {
+            return get[i];
+        }
+
+        void opIndexAssign(T value, size_t i)
+        {
+            get[i] = value;
+        }
+
+        void opIndexUnary(string op)(size_t i)
+            if(op == "++" || op == "--")
+        {
+            mixin(op~" get[i];");
+        }
+
+        T opIndexUnary(string op)(size_t i)
+            if(op != "++" && op != "--")
+        {
+            mixin("return "~op~" get[i];");
+        }
+
+        T opIndexOpAssign(string op)(T value, size_t i)
+        {
+            mixin("return get[i] "~op~"= value;");
+        }
+    }
+
+    //Returns a valid slice, either to the payload itself, or to static empty range
+    private @property nothrow
+    T[] get()
+    {
+        return _data.RefCounted.isInitialized ? _data._payload : _emptyDataPayload;
+    }
+    //Returns a valid slice, either to the payload itself, or to static empty range
+    private @property nothrow
+    const(T)[] get() const
+    {
+        return _data.RefCounted.isInitialized ? _data._payload : _emptyDataPayload;
     }
 
 /**
@@ -2397,19 +2428,7 @@ Complexity: $(BIGOH 1)
     @property nothrow
     bool empty() const
     {
-        return !_data.RefCounted.isInitialized || _data._payload.empty;
-    }
-
-/**
-Duplicates the container. The elements themselves are not transitively
-duplicated.
-
-Complexity: $(BIGOH n).
-     */
-    @property Array dup()
-    {
-        if (!_data.RefCounted.isInitialized) return this;
-        return Array(_data._payload);
+        return get.empty;
     }
 
 /**
@@ -2430,9 +2449,22 @@ Returns the maximum number of elements the container can store without
 Complexity: $(BIGOH 1)
      */
     @property nothrow
-    size_t capacity()
+    size_t capacity() const
     {
+        //The "get" trick doesn't work here: we have to really access the payload
         return _data.RefCounted.isInitialized ? _data._capacity : 0;
+    }
+
+/**
+Duplicates the container. The elements themselves are not transitively
+duplicated.
+
+Complexity: $(BIGOH n).
+     */
+    @property Array dup()
+    {
+        if (!_data.RefCounted.isInitialized) return this;
+        return Array(_data._payload);
     }
 
 /**
@@ -2470,10 +2502,8 @@ Complexity: $(BIGOH 1)
      */
     Range opSlice()
     {
-        // Workaround for bug 4356
-        Array copy;
-        copy._data = this._data;
-        return Range(copy, 0, length);
+        _data.RefCounted.ensureInitialized();
+        return Range(this, 0, length);
     }
 
 /**
@@ -2486,11 +2516,9 @@ Complexity: $(BIGOH 1)
      */
     Range opSlice(size_t a, size_t b)
     {
-        enforce(a <= b && b <= length);
-        // Workaround for bug 4356
-        Array copy;
-        copy._data = this._data;
-        return Range(copy, a, b);
+        _data.RefCounted.ensureInitialized();
+        //Range.this will be the one enforecing a <= b
+        return Range(this, a, b);
     }
 
 /**
@@ -2510,29 +2538,25 @@ Complexity: $(BIGOH 1)
      */
     @property T front()
     {
-        enforce(!empty);
-        return *_data._payload.ptr;
+        return get.front;
     }
 
 /// ditto
     @property void front(T value)
     {
-        enforce(!empty);
-        *_data._payload.ptr = value;
+        get.front = value;
     }
 
 /// ditto
     @property T back()
     {
-        enforce(!empty);
-        return _data._payload[$ - 1];
+        return get.back;
     }
 
 /// ditto
     @property void back(T value)
     {
-        enforce(!empty);
-        _data._payload[$ - 1] = value;
+        get.back = value;
     }
 
 /**
@@ -2544,27 +2568,33 @@ Complexity: $(BIGOH 1)
      */
     T opIndex(size_t i)
     {
-        enforce(_data.RefCounted.isInitialized);
-        return _data._payload[i];
+        return get[i];
     }
 
 /// ditto
     void opIndexAssign(T value, size_t i)
     {
-        enforce(_data.RefCounted.isInitialized);
-        _data._payload[i] = value;
+        get[i] = value;
     }
 
 /// ditto
     void opIndexOpAssign(string op)(T value, size_t i)
     {
-        mixin("_data._payload[i] "~op~"= value;");
+        mixin("get[i] "~op~"= value;");
     }
 
 /// ditto
     void opIndexUnary(string op)(size_t i)
+        if(op == "++" || op == "--")
     {
-        mixin(op~"_data._payload[i];");
+        mixin(op~" get[i];");
+    }
+
+/// ditto
+    T opIndexUnary(string op)(size_t i)
+        if(op != "++" && op != "--")
+    {
+        mixin("return "~op~" get[i];");
     }
 
 /**
@@ -2575,7 +2605,8 @@ define $(D opBinary).
 Complexity: $(BIGOH n + m), where m is the number of elements in $(D
 stuff)
      */
-    Array opBinary(string op, Stuff)(Stuff stuff) if (op == "~")
+    Array opBinary(string op, Stuff)(Stuff stuff)
+        if (op == "~")
     {
         // TODO: optimize
         Array result;
@@ -2590,7 +2621,8 @@ stuff)
     /**
        Forwards to $(D insertBack(stuff)).
      */
-    void opOpAssign(string op, Stuff)(Stuff stuff) if (op == "~")
+    void opOpAssign(string op, Stuff)(Stuff stuff)
+        if (op == "~")
     {
         static if (is(typeof(stuff[])))
         {
@@ -2612,7 +2644,16 @@ Complexity: $(BIGOH n)
      */
     void clear()
     {
-        .destroy(_data);
+        //destroying _data would be problematic for any existing range
+        //that indexe 0..0, as they *should* remain valid.
+        //However, destorying _data would break our forced initializaton invariant.
+        //We prefer setting the length to 0 instead
+
+        //.destroy(_data);
+        if(_data.RefCounted.isInitialized)
+        {
+            _data.length = 0;
+        }
     }
 
 /**
@@ -2790,7 +2831,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
         }
     }
 
-    /// ditto
+/// ditto
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
     {
         enforce(r._outer._data is _data);
@@ -3085,17 +3126,42 @@ unittest
 	assertThrown(a.replace(r, [42]));
 	assertThrown(a.linearRemove(r));
 }
-//Test issue 8332 8333: opIndexOpAssign/opIndexUnary
 unittest
 {
-    auto a = Array!int([1, 2, 3]);
-    a[1] = 0;  //Check Array.opIndexAssign
+    auto a = Array!int([1, 1]);
+    a[1]  = 0; //Check Array.opIndexAssign
+    assert(a[1] == 0);
     a[1] += 1; //Check Array.opIndexOpAssign
-    ++a[1];    //Check Array.opIndexUnary
+    assert(a[1] == 1);
+    
+    //Check Array.opIndexUnary
+    ++a[0];
+    assert(a[0] == 2);
+    assert(+a[0] == +2);
+    assert(-a[0] == -2);
+    assert(~a[0] == ~2);
+    
     auto r = a[];
-    r[1] = 0;  //Check Array.Range.opIndexAssign
+    r[1]  = 0; //Check Array.Range.opIndexAssign
+    assert(r[1] == 0);
     r[1] += 1; //Check Array.Range.opIndexOpAssign
-    ++r[1];    //Check Array.Range.opIndexUnary
+    assert(r[1] == 1);
+    
+    //Check Array.Range.opIndexUnary
+    ++r[0];
+    assert(r[0] == 3);
+    assert(+r[0] == +3);
+    assert(-r[0] == -3);
+    assert(~r[0] == ~3);
+}
+unittest
+{
+    //Test "range-wide" operations
+    auto r = Array!int([0, 1, 2])[];
+    r += 5;
+    assert(r.equal([5, 6, 7]));
+    ++r;
+    assert(r.equal([6, 7, 8]));
 }
 
 // BinaryHeap
