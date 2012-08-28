@@ -2398,7 +2398,8 @@ if (!is(T == class))
            Returns $(D true) if and only if the underlying store has been
            allocated and initialized.
         */
-        @property bool isInitialized() const
+        @property nothrow
+        bool isInitialized() const
         {
             return _store !is null;
         }
@@ -2495,13 +2496,51 @@ Assignment operators
         move(rhs, RefCounted._store._payload);
     }
 
+// Conditional method attributes: throw or nothrow
+    static if (autoInit == RefCountedAutoInitialize.yes)
+    {
+        //These methods can throw
+        @property
+        ref T refCountedPayloadInternal()
+        {
+            RefCounted.ensureInitialized();
+            return RefCounted._store._payload;
+        }
+
+        @property
+        ref const(T) refCountedPayloadInternal() const
+        {
+            // @@@
+            //refCountedEnsureInitialized();
+            assert(RefCounted.isInitialized);
+            return RefCounted._store._payload;
+        }
+    }
+    else
+    {
+        //These methods don't throw (they assert)
+        @property nothrow
+        ref T refCountedPayloadInternal()
+        {
+            assert(RefCounted.isInitialized);
+            return RefCounted._store._payload;
+        }
+
+        @property nothrow
+        ref const(T) refCountedPayloadInternal() const
+        {
+            assert(RefCounted.isInitialized);
+            return RefCounted._store._payload;
+        }
+    }
+
 /**
 Returns a reference to the payload. If (autoInit ==
 RefCountedAutoInitialize.yes), calls $(D
 refCountedEnsureInitialized). Otherwise, just issues $(D
 assert(refCountedIsInitialized)).
  */
-    alias refCountedPayload this;
+    alias refCountedPayloadInternal this;
 
 /**
 Returns a reference to the payload. If (autoInit ==
@@ -2511,34 +2550,7 @@ assert(refCountedIsInitialized)). Used with $(D alias
 refCountedPayload this;), so callers can just use the $(D RefCounted)
 object as a $(D T).
  */
-    @property ref T refCountedPayload()
-    {
-        static if (autoInit == RefCountedAutoInitialize.yes)
-        {
-            RefCounted.ensureInitialized();
-        }
-        else
-        {
-            assert(RefCounted.isInitialized);
-        }
-        return RefCounted._store._payload;
-    }
-
-//
-    @property ref const(T) refCountedPayload() const
-    {
-        static if (autoInit == RefCountedAutoInitialize.yes)
-        {
-            // @@@
-            //refCountedEnsureInitialized();
-            assert(RefCounted.isInitialized);
-        }
-        else
-        {
-            assert(RefCounted.isInitialized);
-        }
-        return RefCounted._store._payload;
-    }
+    alias refCountedPayloadInternal refCountedPayload;
 }
 
 unittest
