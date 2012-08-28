@@ -36,6 +36,7 @@ import std.zlib;
 import std.datetime;
 import core.bitop;
 import std.conv;
+import std.algorithm;
 
 //debug=print;
 
@@ -426,8 +427,8 @@ class ZipArchive
         de.compressionMethod = getUshort(de.offset + 8);
         de.time = cast(DosFileTime)getUint(de.offset + 10);
         de.crc32 = getUint(de.offset + 14);
-        de.compressedSize = getUint(de.offset + 18);
-        de.expandedSize = getUint(de.offset + 22);
+        de.compressedSize = max(getUint(de.offset + 18), de.compressedSize);
+        de.expandedSize = max(getUint(de.offset + 22), de.expandedSize);
         namelen = getUshort(de.offset + 26);
         extralen = getUshort(de.offset + 28);
 
