@@ -325,6 +325,9 @@ version(unittest)
     mixin(dummyRanges);
 }
 
+/// Eponymous template.
+template map(fun...) if (fun.length >= 1)
+{
 /**
 Implements the homonym function (also known as $(D transform)) present
 in many languages of functional flavor. The call $(D map!(fun)(range))
@@ -364,8 +367,6 @@ alias map!(to!string) stringize;
 assert(equal(stringize([ 1, 2, 3, 4 ]), [ "1", "2", "3", "4" ]));
 ----
 */
-template map(fun...) if (fun.length >= 1)
-{
     auto map(Range)(Range r) if (isInputRange!(Unqual!Range))
     {
         static if (fun.length > 1)
@@ -585,7 +586,9 @@ unittest
     assert(equal(m, [1L, 4L, 9L]));
 }
 
-// reduce
+/// Eponymous template.
+template reduce(fun...) if (fun.length >= 1)
+{
 /**
 Implements the homonym function (also known as $(D accumulate), $(D
 compress), $(D inject), or $(D foldl)) present in various programming
@@ -658,9 +661,6 @@ auto avg = r[0] / a.length;
 auto stdev = sqrt(r[1] / a.length - avg * avg);
 ----
  */
-
-template reduce(fun...) if (fun.length >= 1)
-{
     auto reduce(Args...)(Args args)
     if (Args.length > 0 && Args.length <= 2 && isIterable!(Args[$ - 1]))
     {
@@ -1156,7 +1156,9 @@ unittest
     //writeln(benchmark!(fun0, fun1, fun2)(10000));
 }
 
-// filter
+/// Eponymous template.
+template filter(alias pred) if (is(typeof(unaryFun!pred)))
+{
 /**
 Implements the homonym function present in various programming
 languages of functional flavor. The call $(D filter!(fun)(range))
@@ -1180,8 +1182,6 @@ auto r1 = filter!("cast(int) a != a")(chain(c, a, b));
 assert(equal(r1, [ 2.5 ]));
 ----
  */
-template filter(alias pred) if (is(typeof(unaryFun!pred)))
-{
     auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range))
     {
         return FilterResult!(unaryFun!pred, Range)(rs);
@@ -1321,7 +1321,9 @@ unittest
     assert(equal(filter!underX(list), [ 1, 2, 3, 4 ]));
 }
 
-// filterBidirectional
+/// Eponymous template.
+template filterBidirectional(alias pred)
+{
 /**
  * Similar to $(D filter), except it defines a bidirectional
  * range. There is a speed disadvantage - the constructor spends time
@@ -1344,8 +1346,6 @@ auto r = filterBidirectional!("a > 0")(chain(a, b));
 assert(r.back == 102);
 ----
  */
-template filterBidirectional(alias pred)
-{
     auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(Unqual!Range))
     {
         return FilterBidiResult!(unaryFun!pred, Range)(r);
@@ -7355,6 +7355,9 @@ private template validPredicates(E, less...) {
             validPredicates!(E, less[1 .. $]);
 }
 
+/// Eponymous template.
+template multiSort(less...) //if (less.length > 1)
+{
 /**
 Sorts a range by multiple keys. The call $(D multiSort!("a.id < b.id",
 "a.date > b.date")(r)) sorts the range $(D r) by $(D id) ascending,
@@ -7372,8 +7375,6 @@ multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts1);
 assert(pts1 == pts2);
 ----
  */
-template multiSort(less...) //if (less.length > 1)
-{
     void multiSort(Range)(Range r)
     if (validPredicates!(ElementType!Range, less))
     {
