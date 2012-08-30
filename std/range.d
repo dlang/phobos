@@ -6193,10 +6193,8 @@ unittest
  *
  * Examples:
  * ---
- * class UsesRanges {
- *     void useRange(InputRange range) {
- *         // Function body.
- *     }
+ * void useRange(InputRange!int range) {
+ *     // Function body.
  * }
  *
  * // Create a range type.
@@ -6206,8 +6204,7 @@ unittest
  * auto squaresWrapped = inputRangeObject(squares);
  *
  * // Use it.
- * auto usesRanges = new UsesRanges;
- * usesRanges.useRange(squaresWrapped);
+ * useRange(squaresWrapped);
  * ---
  *
  * Limitations:
