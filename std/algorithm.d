@@ -1161,8 +1161,8 @@ template filter(alias pred) if (is(typeof(unaryFun!pred)))
 {
     /**
     Implements the homonym function present in various programming
-    languages of functional flavor. The call $(D filter!(fun)(range))
-    returns a new range only containing elements $(D x) in $(D r) for
+    languages of functional flavor. The call $(D filter!(predicate)(range))
+    returns a new range only containing elements $(D x) in $(D range) for
     which $(D predicate(x)) is $(D true).
 
     Example:
