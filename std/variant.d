@@ -1533,14 +1533,15 @@ unittest
 }
 
 /**
- * Applies one or several visitors or functions to the given Algebraic ensuring that
+ * Applies a delegate to the given Algebraic depending on the held type, ensuring that
  * all types are handled by the visiting functions.
  *
- * A visitor is either specified as a struct or class which has
- * overloaded functions opCall for types the Algebraic can hold or by
- * passing delegates to $(D_PARAM visit). It is statically ensured that all types of
- * $(D_PARAM variant) are handled accross all visitors and delegates.
- * $(D_PARAM visit) allows delegates, static functions and any callable object to be passed
+ * The delegate having the currently held value as parameter is called
+ * with $(D_PARM variant)'s current value. Visiting functions are passed
+ * in the template parameter list.
+ * It is statically ensured that all types of
+ * $(D_PARAM variant) are handled accross all delegates.
+ * $(D_PARAM visit) allows delegates and static functions to be passed
  * as parameters.
  *
  * Duplicate overloads matching the same type in one of the visitors are disallowed.
@@ -1549,48 +1550,41 @@ unittest
  * -----------------------
  *  Algebraic!(int, string) variant;
  *
- *  struct VarVisitor {
- *       int opCall(string s) {
- *           return cast(int)s.length;
- *       }
+ *  strfunc(string s) {
+ *    return cast(int)s.length;
+ *  }
  *
- *       int opCall(int i) const {
- *           return i;
- *       }
- *   }
+ *  int ifunc(int i) {
+ *    return i;
+ *  }
  *
  *   variant = 10;
  *   VarVisitor visitor;
- *   assert(visit(variant, visitor) == 10);
+ *   assert(visit!(strfunc, ifunc)(variant) == 10);
  *   variant = "string";
- *   assert(visit(variant, visitor) == 6);
+ *   assert(visit!(ifunc, strfunc)(variant) == 6);
  *
- *   static int func(string s) {
- *      return cast(int)s.length;
- *   }
  *
- *   variant = "test";
- *
- *   assert( 4 == visit(variant,
- *               (int i){ return i; },
- *               &func));
- *
- *   Algebraic!(int, string, float) mixTest;
+ *   Algebraic!(int, string, float) variant2;
  *   static int floatVisit(float f) {
  *      return 42;
  *   }
- *   mixTest = 10.0f;
+ *   variant2 = 10.0f;
  *
- *   assert(42 == visit(mixTest, visitor, &floatVisit));
+ *   assert(42 == visit!(strfunc, ifunc, floatVisit)(variant2));
  * ----------------------
  * Returns: The return type of applyVisitor is deduced from the visiting functions and must be
  * the same accross all overloads.
  * Throws: VariantException if $(D_PARAM variant) doesn't hold a value.
  */
-auto visit(VariantType, Delegate...)(VariantType variant, Delegate dgs)
-    if (isAlgebraic!VariantType)
+template visit(Delegate ...)
+    if (Delegate.length > 0)
 {
-    return visitImpl!true(variant, dgs);
+    auto visit(VariantType)(VariantType variant)
+        if (isAlgebraic!VariantType)
+    {
+        return visitImpl!(true, VariantType, Delegate)(variant);
+    }
 }
 
 unittest
@@ -1598,59 +1592,41 @@ unittest
     Algebraic!(int, string) variant;
 
     // not all handled check
-    static assert(!__traits(compiles, visit(variant, (int i){ }) ));
+    static assert(!__traits(compiles, visit!((int i){ })(variant) ));
 
     variant = 10;
     auto which = 0;
-    visit(variant,
-          (string s){ which = 1; },
-          (int i){ which = 0; }
-    );
+    visit!( (string s){ which = 1; },
+            (int i){ which = 0; }
+          )(variant);
+
     // integer overload was called
     assert(which == 0);
 
     // mustn't compile as generic Variant not supported
     Variant v;
-    static assert(!__traits(compiles, visit(v,
+    static assert(!__traits(compiles, visit!(
                                             (string s){ which = 1; },
                                             (int i){ which = 0; }
-    )));
+                                            )
+                                            (v)
+                                            ));
 
     static int func(string s) {
         return cast(int)s.length;
     }
 
-    struct Caller {
-        int opCall(int i) { return i; }
-    }
-
     variant = "test";
-    Caller caller;
-    assert( 4 == visit(variant,
-                       caller,
-                       &func));
-
-    //===========================================================================
-
-    struct VarVisitor {
-        int opCall(string s) const {
-            return cast(int)s.length;
-        }
-
-        int opCall(ref int i) const {
-            return i;
-        }
-    }
-
-    variant = 10;
-    const VarVisitor visitor;
-    assert(visit(variant, visitor) == 10);
-    variant = "string";
-    assert(visit(variant, visitor) == 6);
+    assert( 4 == visit!(func,
+                        (int i) { return i; }
+                        )(variant));
 
     Algebraic!(int, float, string) variant2 = 5.0f;
     // Shouldn' t compile as float not handled by visitor.
-    static assert(!__traits(compiles, visit(variant2, visitor)));
+    static assert(!__traits(compiles, visit!(
+                        (int) {},
+                        (string) {})
+                        (variant2)));
 
     //==========================================================================
 
@@ -1660,7 +1636,12 @@ unittest
         return 42;
     }
 
-    assert(visit(variant3, visitor /* handling int and string */, &floatVisit) == 42);
+    assert(visit!(
+                 floatVisit,
+                 func,
+                 (int i) { return i; }
+                 )
+                (variant3) == 42);
 }
 
 /**
@@ -1673,10 +1654,14 @@ unittest
  *         if $(D_PARAM variant) holds a value which isn't handled by the visiting
  *         functions.
  */
-auto tryVisit(VariantType, Delegate...)(VariantType variant, Delegate dgs)
-    if (isAlgebraic!VariantType)
+template tryVisit(Delegate ...)
+    if (Delegate.length > 0)
 {
-    return visitImpl!false(variant, dgs);
+    auto tryVisit(VariantType)(VariantType variant)
+    if (isAlgebraic!VariantType)
+    {
+        return visitImpl!(false, VariantType, Delegate)(variant);
+    }
 }
 
 unittest
@@ -1685,9 +1670,7 @@ unittest
 
     variant = 10;
     auto which = -1;
-    tryVisit(variant,
-          (int i){ which = 0; }
-    );
+    tryVisit!((int i){ which = 0; })(variant);
 
     assert(which == 0);
 
@@ -1695,7 +1678,7 @@ unittest
 
     try
     {
-        tryVisit(variant, (int i) { which = 0; });
+        tryVisit!((int i) { which = 0; })(variant);
         assert(false);
     }
     catch(VariantException)
@@ -1704,14 +1687,33 @@ unittest
     }
 }
 
-private template visitPriv(AllowedTypes...)
+/**
+ * Returns: true, if template parameter is an Algebraic type, otherwise
+ *          false.
+ */
+private template isAlgebraic(Type)
 {
+    enum isAlgebraic = __traits(hasMember, Type, "AllowedTypes")
+                        && Type.AllowedTypes.length > 0
+                        && __traits(hasMember, Type, "hasValue")
+                        && __traits(hasMember, Type, "peek");
+}
+
+private auto visitImpl(bool Strict, VariantType, Delegate...)(VariantType variant)
+    if (isAlgebraic!VariantType && Delegate.length > 0)
+{
+    if (!variant.hasValue())
+        throw new VariantException("variant must hold a value before being visited.");
+
+    alias VariantType.AllowedTypes AllowedTypes;
+
+
     /**
      * Returns: Array which contains at the n-th position
      * the index in Delegate which takes the
      * n-th type of AllowedTypes.
      */
-    private auto visitGetOverloadMap(Delegate...)()
+    auto visitGetOverloadMap()
     {
         int indices[];
         foreach(T; AllowedTypes)
@@ -1732,19 +1734,9 @@ private template visitPriv(AllowedTypes...)
                     }
                 }
                 // Handle composite visitors with opCall overloads
-                else if (__traits(hasMember, dg, "opCall"))
+                else
                 {
-                    foreach(fnc; __traits(getOverloads, dg, "opCall"))
-                    {
-                        static if (is(Unqual!(ParameterTypeTuple!fnc[0]) == T))
-                        {
-                            if (added)
-                                assert(false, "duplicate overload specified for type '" ~ T.stringof ~ "'");
-
-                            added = true;
-                            indices ~= idx;
-                        }
-                    }
+                    static assert(false, dg.stringof ~ " is not a function or delegate");
                 }
             }
 
@@ -1754,26 +1746,8 @@ private template visitPriv(AllowedTypes...)
 
         return indices;
     }
-}
 
-
-private template isAlgebraic(Type)
-{
-    enum isAlgebraic = __traits(hasMember, Type, "AllowedTypes")
-                        && Type.AllowedTypes.length > 0
-                        && __traits(hasMember, Type, "hasValue")
-                        && __traits(hasMember, Type, "peek");
-}
-
-private auto visitImpl(bool Strict, VariantType, Delegate...)(VariantType variant, Delegate dgs)
-    if (isAlgebraic!VariantType && Delegate.length > 0)
-{
-    if (!variant.hasValue())
-        throw new VariantException("variant must hold a value before being visited.");
-
-    alias VariantType.AllowedTypes AllowedTypes;
-
-    enum DelegateOverloadMap = visitPriv!AllowedTypes.visitGetOverloadMap!Delegate();
+    enum DelegateOverloadMap = visitGetOverloadMap();
 
     foreach(idx, T; AllowedTypes)
     {
@@ -1789,7 +1763,9 @@ private auto visitImpl(bool Strict, VariantType, Delegate...)(VariantType varian
                     throw new VariantException("variant holds value of type '" ~ T.stringof ~ "' but no visitor has been provided");
             }
             else
-                return dgs[ dgIdx ](*ptr);
+            {
+                return Delegate[ dgIdx ](*ptr);
+            }
         }
     }
 
