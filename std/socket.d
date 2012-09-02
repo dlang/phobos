@@ -942,7 +942,7 @@ private AddressInfo[] getAddressInfoImpl(in char[] node, in char[] service, addr
                 cast(AddressFamily) ai.ai_family,
                 cast(SocketType   ) ai.ai_socktype,
                 cast(ProtocolType ) ai.ai_protocol,
-                new UnknownAddressReference(ai.ai_addr, ai.ai_addrlen),
+                new UnknownAddressReference(ai.ai_addr, cast(socklen_t) ai.ai_addrlen),
                 ai.ai_canonname ? to!string(ai.ai_canonname) : null);
 
         assert(result.length > 0);
