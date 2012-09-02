@@ -3397,6 +3397,30 @@ final class Box
     }
 
     /**
+     * Compares the stored value for equality with the
+     * value stored in $(D o). Boxes with different
+     * underlying types will never be equal.
+     *
+     * Params:
+     *  o = The box whose stored value should be
+     *      compared with this box's stored value
+     *      for equality.
+     *
+     * Returns:
+     *  $(D true) if the two stored values are equal;
+     *  otherwise, $(D false).
+     */
+    @trusted override bool opEquals(Object o) const
+    {
+        auto box = cast(Box)o;
+
+        if (!box || box._type != _type)
+            return false;
+
+        return _type.equals(&_value, &box._value);
+    }
+
+    /**
      * Compares the stored value's relativity with the
      * value stored in $(D o). If $(D o) has a different
      * underlying types, it will be considered less than
@@ -3411,30 +3435,6 @@ final class Box
      *  $(D 0) if the stored values are equal; 1 if this
      *  box's stored value is greater; -1 if this box's
      *  stored value is lesser.
-     */
-    @trusted override bool opEquals(Object o) const
-    {
-        auto box = cast(Box)o;
-
-        if (!box || box._type != _type)
-            return false;
-
-        return _type.equals(&_value, &box._value);
-    }
-
-    /**
-     * Compares the stored value for equality with the
-     * value stored in $(D o). Boxes with different
-     * underlying types will never be equal.
-     *
-     * Params:
-     *  o = The box whose stored value should be
-     *      compared with this box's stored value
-     *      for equality.
-     *
-     * Returns:
-     *  $(D true) if the two stored values are equal;
-     *  otherwise, $(D false).
      */
     @trusted override int opCmp(Object o) const
     {
