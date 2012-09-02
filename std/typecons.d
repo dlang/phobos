@@ -40,7 +40,8 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
            $(WEB bartoszmilewski.wordpress.com, Bartosz Milewski),
            Don Clugston,
            Shin Fujishiro,
-           Kenji Hara
+           Kenji Hara,
+           Alex Rønne Petersen
  */
 module std.typecons;
 import core.memory, core.stdc.stdlib;
@@ -3324,3 +3325,220 @@ unittest
     assert(flag1 == Yes.abc);
 }
 
+/**
+ * A heap box capable of wrapping (boxing) any value.
+ *
+ * $(D Box) objects cannot be constructed directly; they
+ * must be built with the $(D box) function. $(D Box)es
+ * are always allocated with the garbage collector and
+ * assume that the stored value can always be a garbage-
+ * collected reference (in other words, the GC will always
+ * scan the memory of a $(D Box)).
+ */
+final class Box
+{
+    private const TypeInfo _type;
+    private ubyte _value; // Actually T.sizeof bytes long.
+
+    pure nothrow invariant()
+    {
+        assert(_type);
+    }
+
+    private this(T)(inout T value) inout pure nothrow
+    {
+        _type = typeid(cast()value);
+        *(cast(T*)&_value) = cast()value;
+    }
+
+    /**
+     * Gets an array containing the raw data of the stored
+     * value. Note that access through this property is
+     * generally unportable and should be avoided.
+     *
+     * Returns:
+     *  An array containing the raw data of the stored value.
+     */
+    @trusted @property inout(void)[] rawValue() inout pure nothrow
+    {
+        return (cast(inout(void)*)&_value)[0 .. _type.tsize];
+    }
+
+    /**
+     * Gets the type of the stored value.
+     *
+     * Returns:
+     *  The type of the stored value.
+     */
+    @trusted @property const(TypeInfo) type() const pure nothrow
+    {
+        return _type;
+    }
+
+    /**
+     * Retrieves (unboxes) the stored value from this box.
+     *
+     * Params:
+     *  T = The type to unbox to.
+     *
+     * Returns:
+     *  The unboxed value.
+     *
+     * Throws:
+     *  $(D UnboxException) if $(D T) is not the same
+     *  type as that of the stored value.
+     */
+    @trusted inout(T) unbox(T)() inout
+    {
+        if (typeid(T) != _type)
+            throw new UnboxException(typeid(T), cast()_type);
+
+        return *cast(T*)&_value;
+    }
+
+    /**
+     * Compares the stored value's relativity with the
+     * value stored in $(D o). If $(D o) has a different
+     * underlying types, it will be considered less than
+     * this box.
+     *
+     * Params:
+     *  o = The box whose stored value should be
+     *      compared with this box's stored value
+     *      for relativity.
+     *
+     * Returns:
+     *  $(D 0) if the stored values are equal; 1 if this
+     *  box's stored value is greater; -1 if this box's
+     *  stored value is lesser.
+     */
+    @trusted override bool opEquals(Object o) const
+    {
+        auto box = cast(Box)o;
+
+        if (!box || box._type != _type)
+            return false;
+
+        return _type.equals(&_value, &box._value);
+    }
+
+    /**
+     * Compares the stored value for equality with the
+     * value stored in $(D o). Boxes with different
+     * underlying types will never be equal.
+     *
+     * Params:
+     *  o = The box whose stored value should be
+     *      compared with this box's stored value
+     *      for equality.
+     *
+     * Returns:
+     *  $(D true) if the two stored values are equal;
+     *  otherwise, $(D false).
+     */
+    @trusted override int opCmp(Object o) const
+    {
+        auto box = cast(Box)o;
+
+        if (!box || box._type != _type)
+            return 1;
+
+        return _type.compare(&_value, &box._value);
+    }
+
+    /**
+     * Hashes the stored value.
+     *
+     * Returns:
+     *  A hash of the stored value.
+     */
+    @trusted override hash_t toHash() const
+    {
+        return _type.getHash(&_value);
+    }
+}
+
+/**
+ * Thrown when a $(D Box) cannot be unboxed to a
+ * requested type.
+ */
+class UnboxException : Exception
+{
+    /// The requested type to unbox to.
+    TypeInfo requested;
+
+    /// The actual type of the box.
+    TypeInfo actual;
+
+    this(TypeInfo requested, TypeInfo actual)
+    {
+        super("Box: Attempting to unbox value of type " ~ actual.toString() ~
+              " to type " ~ requested.toString());
+
+        this.requested = requested;
+        this.actual = actual;
+    }
+}
+
+/**
+ * Encapsulates a value in a $(D Box). The resulting
+ * instance is allocated with the garbage collector.
+ *
+ * Params:
+ *  T = Type of $(D value).
+ *  value = The value to encapsulate.
+ *
+ * Returns:
+ *  A $(D Box) containing $(D value).
+ */
+@trusted inout(Box) box(T)(inout T value) pure nothrow
+{
+    auto instSize = __traits(classInstanceSize, Box);
+    auto size = instSize - 1 + T.sizeof; // Don't count the Box._value field.
+
+    // Always conservatively assume the memory could
+    // contain GC-managed references.
+    auto mem = GC.malloc(size)[0 .. size];
+
+    // Note that we don't have to initialize the area
+    // containing the value since we'll overwrite it
+    // in Box's constructor anyway.
+    mem[0 .. instSize] = typeid(Box).init[];
+
+    auto box = cast(inout Box)mem.ptr;
+
+    box.__ctor!T(value);
+
+    return box;
+}
+
+unittest
+{
+    assert(box(42));
+    assert((cast(int[])box(42).rawValue)[0] == 42);
+    assert(box(42).type == typeid(int));
+    assert(box(42) == box(42));
+    assert(box(42) != box(41));
+    assert(box(42) > box(41));
+    assert(box(41) < box(42));
+    assert(box(42) >= box(42));
+    assert(box(42) >= box(41));
+    assert(box(41) <= box(41));
+    assert(box(41) <= box(42));
+    assert(box(42).unbox!int() == 42);
+}
+
+unittest
+{
+    auto o1 = new Object;
+    auto o2 = new Object;
+
+    assert(box(o1) == box(o1));
+    assert(box(o1) != box(o2));
+}
+
+unittest
+{
+    assert(box(42) != box(42.0f));
+    assert(box(42.0f) != box(42));
+}
