@@ -3796,3 +3796,141 @@ unittest
     auto larger = make!long(5);
     assert(larger == 5);
 }
+
+
+/++
+    Constructs T generically on the heap with new. This function is mainly for
+    eliminating the construction differences between types. It will work with
+    all types except for static arrays.
+
+    This is particularly advantageous for scalar types, because it makes it
+    possible to allocate their memory and assign them a value in one statement
+    instead of several.
+
+    Examples:
+--------------------
+static struct S { int _i; string _s;
+                 this(int i, string s) { _i = i; _s = s; } }
+static class C { string _s; bool _b;
+                 this(string s, bool b) { _s = s; _b = b; } }
+
+S* s = makeNew!S(42, "hello");
+C c = makeNew!C("goodbye", false);
+
+string str = makeNew!string('h', 'e', 'l', 'l', 'o');
+int[] arr1 = makeNew!(int[])(1, 2, 3, 4, 5);
+
+int* i = makeNew!int(5);
+real* r = makeNew!real(42.2);
+const bool* b = makeNew!(const bool)(false);
+--------------------
+  +/
+auto makeNew(T, Args...)(Args args)
+    if(is(T == struct) || is(T == class))
+{
+    return new T(args);
+}
+
+T makeNew(T, Args...)(Args args)
+    if(isDynamicArray!T)
+{
+    return make!T(args);
+}
+
+T* makeNew(T, Args...)(Args args) @trusted
+    if(isScalarType!T && Args.length == 1 && is(Args[0] : T))
+{
+    auto retval = new Unqual!T;
+    *retval = args[0];
+    return cast(T*)retval;
+}
+
+//Verify Examples.
+unittest
+{
+    static struct S { int _i; string _s;
+                     this(int i, string s) { _i = i; _s = s; } }
+    static class C { string _s; bool _b;
+                     this(string s, bool b) { _s = s; _b = b; } }
+
+    S* s = makeNew!S(42, "hello");
+    C c = makeNew!C("goodbye", false);
+
+    string str = makeNew!string('h', 'e', 'l', 'l', 'o');
+    int[] arr1 = makeNew!(int[])(1, 2, 3, 4, 5);
+
+    int* i = makeNew!int(5);
+    real* r = makeNew!real(42.2);
+    const bool* b = makeNew!(const bool)(false);
+}
+
+unittest
+{
+    static struct S
+    {
+        string s;
+        dchar c;
+        int[] a;
+
+        this(string s, dchar c, int[] a)
+        {
+            this.s = s;
+            this.c = c;
+            this.a = a;
+        }
+
+        //@@@BUG@@@ 3789 makeNews this necessary.
+        bool opEquals(const S rhs) { return rhs.s == s && rhs.c == c && rhs.a == a; }
+    }
+
+    auto s = makeNew!S("hello", 'Q', [1, 2, 3]);
+    assert(*s == S("hello", 'Q', [1, 2, 3]));
+
+    static class C
+    {
+        this(int i, float f, string s)
+        {
+            _i = i;
+            _f = f;
+            _s = s;
+        }
+
+        override bool opEquals(Object obj)
+        {
+            auto rhs = cast(C)obj;
+            return rhs._i == _i && rhs._f == _f && rhs._s == _s;
+        }
+
+        int _i;
+        float _f;
+        string _s;
+    }
+
+    auto c = makeNew!C(12, 13.7, "goodbye");
+    assert(c == new C(12, 13.7, "goodbye"));
+
+    auto arr1 = make!(const int[])();
+    assert(arr1 is null);
+
+    auto arr2 = make!(const uint[])(48, 49, 50, 51, 52);
+    assert(arr2 == [48, 49, 50, 51, 52]);
+
+    auto arr3 = make!(const int[])(cast(byte)1, cast(byte)2, cast(byte)3);
+    assert(arr3 == [1, 2, 3]);
+
+    auto arr4 = make!(const C[])(new C(9, 5, "h"), new const(C)(1, 2, "w"));
+    assert(arr4 == [new const(C)(9, 5, "h"), new const(C)(1, 2, "w")]);
+
+    foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
+                          char, wchar, dchar, float, double, real))
+    {
+        auto t1 = makeNew!T(cast(T)42);
+        assert(*t1 == cast(T)42);
+
+        auto t2 = makeNew!(const T)(cast(T)22);
+        assert(*t2 == cast(T)22);
+    }
+
+    auto larger = makeNew!long(5);
+    assert(*larger == 5);
+}
