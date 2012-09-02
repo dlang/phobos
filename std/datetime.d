@@ -30843,6 +30843,55 @@ public:
         assert(t2 == t3);
     }
 
+
+    /++
+       Set the amount of time which has been measured since the stop watch was
+       started.
+      +/
+    void setMeasured(TickDuration d)
+    {
+        reset();
+        _timeMeasured = d;
+    }
+
+    version(testStdDateTime) @safe unittest
+    {
+        StopWatch sw;
+        TickDuration t0;
+        t0.length = 100;
+        sw.setMeasured(t0);
+        auto t1 = sw.peek();
+        assert(t0 == t1);
+    }
+
+
+    /++
+       Confirm whether this stopwatch is measuring time.
+      +/
+    bool running() @property const pure nothrow
+    {
+        return _flagStarted;
+    }
+
+    version(testStdDateTime) @safe unittest
+    {
+        StopWatch sw1;
+        assert(!sw1.running);
+        sw1.start();
+        assert(sw1.running);
+        sw1.stop();
+        assert(!sw1.running);
+        StopWatch sw2 = AutoStart.yes;
+        assert(sw2.running);
+        sw2.stop();
+        assert(!sw2.running);
+        sw2.start();
+        assert(sw2.running);
+    }
+
+
+
+
 private:
 
     // true if observing.
