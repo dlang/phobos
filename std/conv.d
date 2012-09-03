@@ -3659,23 +3659,9 @@ T make(T, Args...)(Args args)
 T make(T, Args...)(Args args)
     if(isStaticArray!T)
 {
-    static if(Args.length == 0)
-        return T.init;
-    else
-    {
-        alias Unqual!(ElementType!T) UET;
-        UET[T.init.length] retval = void;
-        static assert(Args.length == T.init.length,
-                      "Number of arguments does not match the length of " ~ T.stringof);
-        foreach(i, arg; args)
-        {
-            static assert(is(typeof({ElementEncodingType!T t = arg;})),
-                          Format!("Argument# %s is not implicitly convertible to %s",
-                                  i, ElementEncodingType!T.stringof));
-            retval[i] = cast(UET)arg;
-        }
-        return cast(T)retval;
-    }
+    static assert(Args.length == T.init.length,
+                  "Number of arguments does not match the length of " ~ T.stringof);
+    return _makeStaticArray!(ElementEncodingType!T, true)(args);
 }
 
 T make(T, Args...)(Args args)
@@ -4024,4 +4010,96 @@ unittest
 
     auto arr5 = makeArray!(immutable ubyte)(42, 22, 9);
     assert(arr5 == [42, 22, 9]);
+}
+
+
+/++
+    This constructs a static array with the given elements. It's the same as
+    $(LREF makeArray) (including the casting) except that it creates a static
+    array. The size of the static array is inferred.
+
+    Examples:
+--------------------
+//No heap allocations
+ushort[4] sArr1 = makeStaticArray!ushort(4, 9, 22, 7);
+assert(sArr1 == [4, 9, 22, 7]);
+
+//No heap allocations
+byte[3] sArr2 = makeStaticArray!byte(1, 2, 3);
+assert(sArr2 == [1, 2, 3]);
+--------------------
+  +/
+auto makeStaticArray(T, Args...)(Args args)
+    if(allSatisfy!(_canCast!T, Args))
+{
+    return _makeStaticArray!(T, false)(args);
+}
+
+private auto _makeStaticArray(T, bool check, Args...)(Args args)
+{
+    static if(Args.length == 0)
+        return (T[0]).init;
+    else
+    {
+        alias Unqual!T UT;
+        UT[Args.length] retval = void;
+        foreach(i, arg; args)
+        {
+            static assert(!check || is(typeof({T t = arg;})),
+                          Format!("Argument# %s is not implicitly convertable to %s",
+                                  i, ElementEncodingType!T.stringof));
+            retval[i] = cast(UT)arg;
+        }
+        return cast(T[Args.length])retval;
+    }
+}
+
+//Verify Examples.
+unittest
+{
+    //No heap allocations
+    ushort[4] sArr1 = makeStaticArray!ushort(4, 9, 22, 7);
+    assert(sArr1 == [4, 9, 22, 7]);
+
+    //No heap allocations
+    byte[3] sArr2 = makeStaticArray!byte(1, 2, 3);
+    assert(sArr2 == [1, 2, 3]);
+}
+
+unittest
+{
+    static class C
+    {
+        this(int i, float f, string s)
+        {
+            _i = i;
+            _f = f;
+            _s = s;
+        }
+
+        override bool opEquals(Object obj)
+        {
+            auto rhs = cast(C)obj;
+            return rhs._i == _i && rhs._f == _f && rhs._s == _s;
+        }
+
+        int _i;
+        float _f;
+        string _s;
+    }
+
+    auto sArr1 = makeStaticArray!(const int)();
+    assert(sArr1.length == 0);
+
+    auto sArr2 = makeStaticArray!(const int)(6, 7, 8, 9, 10);
+    assert(sArr2 == [6, 7, 8, 9, 10]);
+
+    auto sArr3 = makeStaticArray!(const int)(cast(byte)1, cast(byte)2, cast(byte)3);
+    assert(sArr3 == [1, 2, 3]);
+
+    auto sArr4 = makeStaticArray!(const C)(new C(9, 5, "h"), new const(C)(1, 2, "w"));
+    assert(sArr4 == [new const(C)(9, 5, "h"), new const(C)(1, 2, "w")]);
+
+    auto sArr5 = makeArray!(immutable ubyte)(42, 22, 9);
+    assert(sArr5 == [42, 22, 9]);
 }
