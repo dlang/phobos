@@ -2280,10 +2280,7 @@ Defines the container's primary range, which is a random-access range.
             assert(_b <= _outer.length);
             return _b - _a;
         }
-        
-        /**
-        @@@BUG@@@ This doesn't work yet
-             */
+
         size_t opDollar() const
         {
             return length;
@@ -2406,8 +2403,8 @@ Defines the container's primary range, which is a random-access range.
         {
             assert(_b <= _outer.length);
             if(i == 0 && j == 0 ) return;
-            i+=_a;
-            j+=_a;
+            i += _a;
+            j += _a;
             enforce(i <= j && j <= _b);
             _outer._data._payload[i .. j] = value;
         }
@@ -2424,8 +2421,8 @@ Defines the container's primary range, which is a random-access range.
         {
             assert(_b <= _outer.length);
             if(i == 0 && j == 0 ) return;
-            i+=_a;
-            j+=_a;
+            i += _a;
+            j += _a;
             enforce(i <= j && j <= _b);
             mixin(op~"_outer._data._payload[i .. j];");
         }
@@ -2440,8 +2437,8 @@ Defines the container's primary range, which is a random-access range.
         {
             assert(_b <= _outer.length);
             if(i == 0 && j == 0 ) return;
-            i+=_a;
-            j+=_a;
+            i += _a;
+            j += _a;
             enforce(i <= j && j <= _b);
             mixin("_outer._data._payload[i .. j] "~op~"= value;");
         }
@@ -2480,11 +2477,10 @@ Complexity: $(BIGOH 1).
         return _data.RefCounted.isInitialized ? _data._payload.length : 0;
     }
 
-/**
-@@@BUG@@@ This doesn't work yet
-     */
+    /// ditto
     size_t opDollar() const
     {
+        // @@@BUG@@@ This doesn't work yet
         return length;
     }
 
@@ -2650,8 +2646,7 @@ Complexity: $(BIGOH slice.length)
 
     void opSliceAssign(T value, size_t i, size_t j)
     {
-        if(i == 0 && j == 0 ) return;
-        enforce(_data.RefCounted.isInitialized);
+        enforce(_data.RefCounted.isInitialized || (i == 0 && j == 0));
         _data._payload[i .. j] = value;
     }
 
@@ -2666,8 +2661,7 @@ Complexity: $(BIGOH slice.length)
     void opSliceUnary(string op)(size_t i, size_t j)
         if(op == "++" || op == "--")
     {
-        if(i == 0 && j == 0 ) return;
-        enforce(_data.RefCounted.isInitialized);
+        enforce(_data.RefCounted.isInitialized || (i == 0 && j == 0));
         mixin(op~"_data._payload[i .. j];");
     }
 
@@ -2681,8 +2675,7 @@ Complexity: $(BIGOH slice.length)
     /// ditto
     void opSliceOpAssign(string op)(T value, size_t i, size_t j)
     {
-        if(i == 0 && j == 0 ) return;
-        enforce(_data.RefCounted.isInitialized);
+        enforce(_data.RefCounted.isInitialized || (i == 0 && j == 0));
         mixin("_data._payload[i .. j] "~op~"= value;");
     }
 
@@ -3213,7 +3206,7 @@ unittest
     
     //Check Array.opIndexUnary
     ++a[0];
-    //a[0]++ @@@5044
+    //a[0]++ //op++ doesn't return, so this shouldn't work, even with 5044 fixed
     assert(a[0] == 2);
     assert(+a[0] == +2);
     assert(-a[0] == -2);
@@ -3227,7 +3220,7 @@ unittest
     
     //Check Array.Range.opIndexUnary
     ++r[0];
-    //r[0]++ @@@5044
+    //r[0]++ //op++ doesn't return, so this shouldn't work, even with 5044 fixed
     assert(r[0] == 3);
     assert(+r[0] == +3);
     assert(-r[0] == -3);
