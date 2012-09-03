@@ -3653,23 +3653,7 @@ T make(T, Args...)(Args args)
 T make(T, Args...)(Args args)
     if(isDynamicArray!T)
 {
-    static if(Args.length == 0)
-        return null;
-    else static if(is(typeof([args]) == T))
-        return [args];
-    else
-    {
-        alias Unqual!(ElementType!T) UET;
-        auto retval = uninitializedArray!(UET[])(Args.length);
-        foreach(i, arg; args)
-        {
-            static assert(is(typeof({ElementEncodingType!T t = arg;})),
-                          Format!("Argument# %s is not implicitly convertible to %s",
-                                  i, ElementEncodingType!T.stringof));
-            retval[i] = cast(UET)arg;
-        }
-        return cast(T)retval;
-    }
+    return _makeArray!(ElementEncodingType!T, true)(args);
 }
 
 T make(T, Args...)(Args args)
@@ -3933,4 +3917,111 @@ unittest
 
     auto larger = makeNew!long(5);
     assert(*larger == 5);
+}
+
+
+/++
+    This constructs a dynamic array with the given elements. It's similar to
+    make except that it takes the element type of the array rather than the
+    whole array type, and it explicitly casts each element to the element type.
+
+    This is particularly useful for constructing arrays of integral types other
+    than $(D int) without having to cast each of the elements individually.
+    However, since it $(I does) cast each element, it is unsafe and must be used
+    with care.
+
+    Examples:
+--------------------
+byte[] arr1 = makeArray!byte(1, 2, 3, 4, 5);
+assert(arr1 == [cast(byte)1, cast(byte)2, cast(byte)3,
+                cast(byte)4, cast(byte)5]);
+
+const(ushort)[] arr2 = makeArray!(const ushort)(1, 2, 3, 4, 5);
+assert(arr2 == [cast(ushort)1, cast(ushort)2, cast(ushort)3,
+                cast(ushort)4, cast(ushort)5]);
+--------------------
+  +/
+T[] makeArray(T, Args...)(Args args)
+    if(allSatisfy!(_canCast!T, Args))
+{
+    return _makeArray!(T, false)(args);
+}
+
+private template _canCast(T)
+{
+    template _canCast(U)
+    {
+        enum _canCast = __traits(compiles, {U u = void; auto t = cast(Unqual!T)u;});
+    }
+}
+
+private T[] _makeArray(T, bool check, Args...)(Args args)
+{
+    static if(Args.length == 0)
+        return null;
+    else static if(is(typeof([args]) == T[]))
+        return [args];
+    else
+    {
+        alias Unqual!T UT;
+        auto retval = uninitializedArray!(UT[])(Args.length);
+        foreach(i, arg; args)
+        {
+            static assert(!check || is(typeof({T t = arg;})),
+                          Format!("Argument# %s is not implicitly convertible to %s",
+                                  i, ElementEncodingType!T.stringof));
+            retval[i] = cast(UT)arg;
+        }
+        return cast(T[])retval;
+    }
+}
+
+//Verify Examples.
+unittest
+{
+    byte[] arr1 = makeArray!byte(1, 2, 3, 4, 5);
+    assert(arr1 == [cast(byte)1, cast(byte)2, cast(byte)3,
+                    cast(byte)4, cast(byte)5]);
+
+    const(ushort)[] arr2 = makeArray!(const ushort)(1, 2, 3, 4, 5);
+    assert(arr2 == [cast(ushort)1, cast(ushort)2, cast(ushort)3,
+                    cast(ushort)4, cast(ushort)5]);
+}
+
+unittest
+{
+    static class C
+    {
+        this(int i, float f, string s)
+        {
+            _i = i;
+            _f = f;
+            _s = s;
+        }
+
+        override bool opEquals(Object obj)
+        {
+            auto rhs = cast(C)obj;
+            return rhs._i == _i && rhs._f == _f && rhs._s == _s;
+        }
+
+        int _i;
+        float _f;
+        string _s;
+    }
+
+    auto arr1 = makeArray!(const int)();
+    assert(arr1 is null);
+
+    auto arr2 = makeArray!(const uint)(48, 49, 50, 51, 52);
+    assert(arr2 == [48, 49, 50, 51, 52]);
+
+    auto arr3 = makeArray!(const int)(cast(byte)1, cast(byte)2, cast(byte)3);
+    assert(arr3 == [1, 2, 3]);
+
+    auto arr4 = makeArray!(const C)(new C(9, 5, "h"), new const(C)(1, 2, "w"));
+    assert(arr4 == [new const(C)(9, 5, "h"), new const(C)(1, 2, "w")]);
+
+    auto arr5 = makeArray!(immutable ubyte)(42, 22, 9);
+    assert(arr5 == [42, 22, 9]);
 }
