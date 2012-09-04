@@ -326,6 +326,8 @@ version(unittest)
 }
 
 /**
+$(D auto map(Range)(Range r) if (isInputRange!(Unqual!Range));)
+
 Implements the homonym function (also known as $(D transform)) present
 in many languages of functional flavor. The call $(D map!(fun)(range))
 returns a range of which elements are obtained by applying $(D fun(x))
@@ -585,8 +587,10 @@ unittest
     assert(equal(m, [1L, 4L, 9L]));
 }
 
-// reduce
 /**
+$(D auto reduce(Args...)(Args args)
+    if (Args.length > 0 && Args.length <= 2 && isIterable!(Args[$ - 1]));)
+
 Implements the homonym function (also known as $(D accumulate), $(D
 compress), $(D inject), or $(D foldl)) present in various programming
 languages of functional flavor. The call $(D reduce!(fun)(seed,
@@ -1156,8 +1160,9 @@ unittest
     //writeln(benchmark!(fun0, fun1, fun2)(10000));
 }
 
-// filter
 /**
+$(D auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range));)
+
 Implements the homonym function present in various programming
 languages of functional flavor. The call $(D filter!(predicate)(range))
 returns a new range only containing elements $(D x) in $(D range) for
@@ -1321,8 +1326,9 @@ unittest
     assert(equal(filter!underX(list), [ 1, 2, 3, 4 ]));
 }
 
-// filterBidirectional
 /**
+ * $(D auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(Unqual!Range));)
+ * 
  * Similar to $(D filter), except it defines a bidirectional
  * range. There is a speed disadvantage - the constructor spends time
  * finding the last element in the range that satisfies the filtering
@@ -7356,6 +7362,9 @@ private template validPredicates(E, less...) {
 }
 
 /**
+$(D void multiSort(Range)(Range r)
+    if (validPredicates!(ElementType!Range, less));)
+
 Sorts a range by multiple keys. The call $(D multiSort!("a.id < b.id",
 "a.date > b.date")(r)) sorts the range $(D r) by $(D id) ascending,
 and sorts elements that have the same $(D id) by $(D date)
