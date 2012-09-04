@@ -325,47 +325,48 @@ version(unittest)
     mixin(dummyRanges);
 }
 
-/**
-Implements the homonym function (also known as $(D transform)) present
-in many languages of functional flavor. The call $(D map!(fun)(range))
-returns a range of which elements are obtained by applying $(D fun(x))
-left to right for all $(D x) in $(D range). The original ranges are
-not changed. Evaluation is done lazily. The range returned by $(D map)
-caches the last value such that evaluating $(D front) multiple times
-does not result in multiple calls to $(D fun).
-
-Example:
-----
-int[] arr1 = [ 1, 2, 3, 4 ];
-int[] arr2 = [ 5, 6 ];
-auto squares = map!("a * a")(chain(arr1, arr2));
-assert(equal(squares, [ 1, 4, 9, 16, 25, 36 ]));
-----
-
-Multiple functions can be passed to $(D map). In that case, the
-element type of $(D map) is a tuple containing one element for each
-function.
-
-Example:
-
-----
-auto arr1 = [ 1, 2, 3, 4 ];
-foreach (e; map!("a + a", "a * a")(arr1))
-{
-    writeln(e[0], " ", e[1]);
-}
-----
-
-You may alias $(D map) with some function(s) to a symbol and use
-it separately:
-
-----
-alias map!(to!string) stringize;
-assert(equal(stringize([ 1, 2, 3, 4 ]), [ "1", "2", "3", "4" ]));
-----
-*/
+/// Eponymous template.
 template map(fun...) if (fun.length >= 1)
 {
+    /**
+    Implements the homonym function (also known as $(D transform)) present
+    in many languages of functional flavor. The call $(D map!(fun)(range))
+    returns a range of which elements are obtained by applying $(D fun(x))
+    left to right for all $(D x) in $(D range). The original ranges are
+    not changed. Evaluation is done lazily. The range returned by $(D map)
+    caches the last value such that evaluating $(D front) multiple times
+    does not result in multiple calls to $(D fun).
+
+    Example:
+    ----
+    int[] arr1 = [ 1, 2, 3, 4 ];
+    int[] arr2 = [ 5, 6 ];
+    auto squares = map!("a * a")(chain(arr1, arr2));
+    assert(equal(squares, [ 1, 4, 9, 16, 25, 36 ]));
+    ----
+
+    Multiple functions can be passed to $(D map). In that case, the
+    element type of $(D map) is a tuple containing one element for each
+    function.
+
+    Example:
+
+    ----
+    auto arr1 = [ 1, 2, 3, 4 ];
+    foreach (e; map!("a + a", "a * a")(arr1))
+    {
+        writeln(e[0], " ", e[1]);
+    }
+    ----
+
+    You may alias $(D map) with some function(s) to a symbol and use
+    it separately:
+
+    ----
+    alias map!(to!string) stringize;
+    assert(equal(stringize([ 1, 2, 3, 4 ]), [ "1", "2", "3", "4" ]));
+    ----
+    */
     auto map(Range)(Range r) if (isInputRange!(Unqual!Range))
     {
         static if (fun.length > 1)
@@ -585,82 +586,81 @@ unittest
     assert(equal(m, [1L, 4L, 9L]));
 }
 
-// reduce
-/**
-Implements the homonym function (also known as $(D accumulate), $(D
-compress), $(D inject), or $(D foldl)) present in various programming
-languages of functional flavor. The call $(D reduce!(fun)(seed,
-range)) first assigns $(D seed) to an internal variable $(D result),
-also called the accumulator. Then, for each element $(D x) in $(D
-range), $(D result = fun(result, x)) gets evaluated. Finally, $(D
-result) is returned. The one-argument version $(D reduce!(fun)(range))
-works similarly, but it uses the first element of the range as the
-seed (the range must be non-empty).
-
-Many aggregate range operations turn out to be solved with $(D reduce)
-quickly and easily. The example below illustrates $(D reduce)'s
-remarkable power and flexibility.
-
-Example:
-----
-int[] arr = [ 1, 2, 3, 4, 5 ];
-// Sum all elements
-auto sum = reduce!("a + b")(0, arr);
-assert(sum == 15);
-
-// Compute the maximum of all elements
-auto largest = reduce!(max)(arr);
-assert(largest == 5);
-
-// Compute the number of odd elements
-auto odds = reduce!("a + (b & 1)")(0, arr);
-assert(odds == 3);
-
-// Compute the sum of squares
-auto ssquares = reduce!("a + b * b")(0, arr);
-assert(ssquares == 55);
-
-// Chain multiple ranges into seed
-int[] a = [ 3, 4 ];
-int[] b = [ 100 ];
-auto r = reduce!("a + b")(chain(a, b));
-assert(r == 107);
-
-// Mixing convertible types is fair game, too
-double[] c = [ 2.5, 3.0 ];
-auto r1 = reduce!("a + b")(chain(a, b, c));
-assert(r1 == 112.5);
-----
-
-$(DDOC_SECTION_H Multiple functions:) Sometimes it is very useful to
-compute multiple aggregates in one pass. One advantage is that the
-computation is faster because the looping overhead is shared. That's
-why $(D reduce) accepts multiple functions. If two or more functions
-are passed, $(D reduce) returns a $(XREF typecons, Tuple) object with
-one member per passed-in function. The number of seeds must be
-correspondingly increased.
-
-Example:
-----
-double[] a = [ 3.0, 4, 7, 11, 3, 2, 5 ];
-// Compute minimum and maximum in one pass
-auto r = reduce!(min, max)(a);
-// The type of r is Tuple!(double, double)
-assert(r[0] == 2);  // minimum
-assert(r[1] == 11); // maximum
-
-// Compute sum and sum of squares in one pass
-r = reduce!("a + b", "a + b * b")(tuple(0.0, 0.0), a);
-assert(r[0] == 35);  // sum
-assert(r[1] == 233); // sum of squares
-// Compute average and standard deviation from the above
-auto avg = r[0] / a.length;
-auto stdev = sqrt(r[1] / a.length - avg * avg);
-----
- */
-
+/// Eponymous template.
 template reduce(fun...) if (fun.length >= 1)
 {
+    /**
+    Implements the homonym function (also known as $(D accumulate), $(D
+    compress), $(D inject), or $(D foldl)) present in various programming
+    languages of functional flavor. The call $(D reduce!(fun)(seed,
+    range)) first assigns $(D seed) to an internal variable $(D result),
+    also called the accumulator. Then, for each element $(D x) in $(D
+    range), $(D result = fun(result, x)) gets evaluated. Finally, $(D
+    result) is returned. The one-argument version $(D reduce!(fun)(range))
+    works similarly, but it uses the first element of the range as the
+    seed (the range must be non-empty).
+
+    Many aggregate range operations turn out to be solved with $(D reduce)
+    quickly and easily. The example below illustrates $(D reduce)'s
+    remarkable power and flexibility.
+
+    Example:
+    ----
+    int[] arr = [ 1, 2, 3, 4, 5 ];
+    // Sum all elements
+    auto sum = reduce!("a + b")(0, arr);
+    assert(sum == 15);
+
+    // Compute the maximum of all elements
+    auto largest = reduce!(max)(arr);
+    assert(largest == 5);
+
+    // Compute the number of odd elements
+    auto odds = reduce!("a + (b & 1)")(0, arr);
+    assert(odds == 3);
+
+    // Compute the sum of squares
+    auto ssquares = reduce!("a + b * b")(0, arr);
+    assert(ssquares == 55);
+
+    // Chain multiple ranges into seed
+    int[] a = [ 3, 4 ];
+    int[] b = [ 100 ];
+    auto r = reduce!("a + b")(chain(a, b));
+    assert(r == 107);
+
+    // Mixing convertible types is fair game, too
+    double[] c = [ 2.5, 3.0 ];
+    auto r1 = reduce!("a + b")(chain(a, b, c));
+    assert(r1 == 112.5);
+    ----
+
+    $(DDOC_SECTION_H Multiple functions:) Sometimes it is very useful to
+    compute multiple aggregates in one pass. One advantage is that the
+    computation is faster because the looping overhead is shared. That's
+    why $(D reduce) accepts multiple functions. If two or more functions
+    are passed, $(D reduce) returns a $(XREF typecons, Tuple) object with
+    one member per passed-in function. The number of seeds must be
+    correspondingly increased.
+
+    Example:
+    ----
+    double[] a = [ 3.0, 4, 7, 11, 3, 2, 5 ];
+    // Compute minimum and maximum in one pass
+    auto r = reduce!(min, max)(a);
+    // The type of r is Tuple!(double, double)
+    assert(r[0] == 2);  // minimum
+    assert(r[1] == 11); // maximum
+
+    // Compute sum and sum of squares in one pass
+    r = reduce!("a + b", "a + b * b")(tuple(0.0, 0.0), a);
+    assert(r[0] == 35);  // sum
+    assert(r[1] == 233); // sum of squares
+    // Compute average and standard deviation from the above
+    auto avg = r[0] / a.length;
+    auto stdev = sqrt(r[1] / a.length - avg * avg);
+    ----
+     */
     auto reduce(Args...)(Args args)
     if (Args.length > 0 && Args.length <= 2 && isIterable!(Args[$ - 1]))
     {
@@ -1156,32 +1156,32 @@ unittest
     //writeln(benchmark!(fun0, fun1, fun2)(10000));
 }
 
-// filter
-/**
-Implements the homonym function present in various programming
-languages of functional flavor. The call $(D filter!(fun)(range))
-returns a new range only containing elements $(D x) in $(D r) for
-which $(D predicate(x)) is $(D true).
-
-Example:
-----
-int[] arr = [ 1, 2, 3, 4, 5 ];
-// Sum all elements
-auto small = filter!("a < 3")(arr);
-assert(equal(small, [ 1, 2 ]));
-// In combination with chain() to span multiple ranges
-int[] a = [ 3, -2, 400 ];
-int[] b = [ 100, -101, 102 ];
-auto r = filter!("a > 0")(chain(a, b));
-assert(equal(r, [ 3, 400, 100, 102 ]));
-// Mixing convertible types is fair game, too
-double[] c = [ 2.5, 3.0 ];
-auto r1 = filter!("cast(int) a != a")(chain(c, a, b));
-assert(equal(r1, [ 2.5 ]));
-----
- */
+/// Eponymous template.
 template filter(alias pred) if (is(typeof(unaryFun!pred)))
 {
+    /**
+    Implements the homonym function present in various programming
+    languages of functional flavor. The call $(D filter!(predicate)(range))
+    returns a new range only containing elements $(D x) in $(D range) for
+    which $(D predicate(x)) is $(D true).
+
+    Example:
+    ----
+    int[] arr = [ 1, 2, 3, 4, 5 ];
+    // Sum all elements
+    auto small = filter!("a < 3")(arr);
+    assert(equal(small, [ 1, 2 ]));
+    // In combination with chain() to span multiple ranges
+    int[] a = [ 3, -2, 400 ];
+    int[] b = [ 100, -101, 102 ];
+    auto r = filter!("a > 0")(chain(a, b));
+    assert(equal(r, [ 3, 400, 100, 102 ]));
+    // Mixing convertible types is fair game, too
+    double[] c = [ 2.5, 3.0 ];
+    auto r1 = filter!("cast(int) a != a")(chain(c, a, b));
+    assert(equal(r1, [ 2.5 ]));
+    ----
+     */
     auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range))
     {
         return FilterResult!(unaryFun!pred, Range)(rs);
@@ -1321,31 +1321,31 @@ unittest
     assert(equal(filter!underX(list), [ 1, 2, 3, 4 ]));
 }
 
-// filterBidirectional
-/**
- * Similar to $(D filter), except it defines a bidirectional
- * range. There is a speed disadvantage - the constructor spends time
- * finding the last element in the range that satisfies the filtering
- * condition (in addition to finding the first one). The advantage is
- * that the filtered range can be spanned from both directions. Also,
- * $(XREF range, retro) can be applied against the filtered range.
- *
-Example:
-----
-int[] arr = [ 1, 2, 3, 4, 5 ];
-auto small = filterBidirectional!("a < 3")(arr);
-assert(small.back == 2);
-assert(equal(small, [ 1, 2 ]));
-assert(equal(retro(small), [ 2, 1 ]));
-// In combination with chain() to span multiple ranges
-int[] a = [ 3, -2, 400 ];
-int[] b = [ 100, -101, 102 ];
-auto r = filterBidirectional!("a > 0")(chain(a, b));
-assert(r.back == 102);
-----
- */
+/// Eponymous template.
 template filterBidirectional(alias pred)
 {
+    /**
+     * Similar to $(D filter), except it defines a bidirectional
+     * range. There is a speed disadvantage - the constructor spends time
+     * finding the last element in the range that satisfies the filtering
+     * condition (in addition to finding the first one). The advantage is
+     * that the filtered range can be spanned from both directions. Also,
+     * $(XREF range, retro) can be applied against the filtered range.
+     *
+    Example:
+    ----
+    int[] arr = [ 1, 2, 3, 4, 5 ];
+    auto small = filterBidirectional!("a < 3")(arr);
+    assert(small.back == 2);
+    assert(equal(small, [ 1, 2 ]));
+    assert(equal(retro(small), [ 2, 1 ]));
+    // In combination with chain() to span multiple ranges
+    int[] a = [ 3, -2, 400 ];
+    int[] b = [ 100, -101, 102 ];
+    auto r = filterBidirectional!("a > 0")(chain(a, b));
+    assert(r.back == 102);
+    ----
+     */
     auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(Unqual!Range))
     {
         return FilterBidiResult!(unaryFun!pred, Range)(r);
@@ -7355,25 +7355,26 @@ private template validPredicates(E, less...) {
             validPredicates!(E, less[1 .. $]);
 }
 
-/**
-Sorts a range by multiple keys. The call $(D multiSort!("a.id < b.id",
-"a.date > b.date")(r)) sorts the range $(D r) by $(D id) ascending,
-and sorts elements that have the same $(D id) by $(D date)
-descending. Such a call is equivalent to $(D sort!"a.id != b.id ? a.id
-< b.id : a.date > b.date"(r)), but $(D multiSort) is faster because it
-does fewer comparisons (in addition to being more convenient).
-
-Example:
-----
-static struct Point { int x, y; }
-auto pts1 = [ Point(0, 0), Point(5, 5), Point(0, 1), Point(0, 2) ];
-auto pts2 = [ Point(0, 0), Point(0, 1), Point(0, 2), Point(5, 5) ];
-multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts1);
-assert(pts1 == pts2);
-----
- */
+/// Eponymous template.
 template multiSort(less...) //if (less.length > 1)
 {
+    /**
+    Sorts a range by multiple keys. The call $(D multiSort!("a.id < b.id",
+    "a.date > b.date")(r)) sorts the range $(D r) by $(D id) ascending,
+    and sorts elements that have the same $(D id) by $(D date)
+    descending. Such a call is equivalent to $(D sort!"a.id != b.id ? a.id
+    < b.id : a.date > b.date"(r)), but $(D multiSort) is faster because it
+    does fewer comparisons (in addition to being more convenient).
+
+    Example:
+    ----
+    static struct Point { int x, y; }
+    auto pts1 = [ Point(0, 0), Point(5, 5), Point(0, 1), Point(0, 2) ];
+    auto pts2 = [ Point(0, 0), Point(0, 1), Point(0, 2), Point(5, 5) ];
+    multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts1);
+    assert(pts1 == pts2);
+    ----
+     */
     void multiSort(Range)(Range r)
     if (validPredicates!(ElementType!Range, less))
     {
