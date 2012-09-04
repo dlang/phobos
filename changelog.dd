@@ -1,5 +1,6 @@
 $(VERSION 061, ddd mm, 2012, =================================================,
     $(WHATSNEW
+        $(LI std.algorithm: Added copyInto to copy InputRanges into OutputRanges.)
     )
 
     $(LIBBUGSFIXED

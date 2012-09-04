@@ -32,10 +32,10 @@ largestPartialIntersection) $(MYREF largestPartialIntersectionWeighted)
 $(MYREF nWayUnion) $(MYREF setDifference) $(MYREF setIntersection) $(MYREF
 setSymmetricDifference) $(MYREF setUnion) )
 )
-$(TR $(TDNW Mutation) $(TD $(MYREF bringToFront) $(MYREF copy) $(MYREF
-fill) $(MYREF initializeAll) $(MYREF move) $(MYREF moveAll) $(MYREF
-moveSome) $(MYREF remove) $(MYREF reverse) $(MYREF swap) $(MYREF
-swapRanges) $(MYREF uninitializedFill) ))
+$(TR $(TDNW Mutation) $(TD $(MYREF bringToFront) $(MYREF copy)
+$(MYREF copyInto) $(MYREF fill) $(MYREF initializeAll) $(MYREF move)
+$(MYREF moveAll) $(MYREF moveSome) $(MYREF remove) $(MYREF reverse)
+$(MYREF swap) $(MYREF swapRanges) $(MYREF uninitializedFill) ))
 )
 
 Implements algorithms oriented mainly towards processing of
@@ -268,6 +268,8 @@ and $(D b = [4, 5, 6, 7]), $(D bringToFront(a, b)) leaves $(D a = [4,
 $(TR $(TDNW $(LREF copy)) $(TD Copies a range to another. If
 $(D a = [1, 2, 3]) and $(D b = new int[5]), then $(D copy(a, b))
 leaves $(D b = [1, 2, 3, 0, 0]) and returns $(D b[3 .. $]).)
+)
+$(TR $(TDNW $(LREF copyInto)) $(TD Copies an InputRange into an OutputRange.)
 )
 $(TR $(TDNW $(LREF fill)) $(TD Fills a range with a pattern,
 e.g., if $(D a = new int[3]), then $(D fill(a, 4)) leaves $(D a = [4,
@@ -5858,7 +5860,7 @@ remaining (unfilled) part of $(D target). See also $(WEB
 sgi.com/tech/stl/_copy.html, STL's _copy). If a behavior similar to
 $(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward) is
 needed, use $(D copy(retro(source), retro(target))). See also $(XREF
-range, retro).
+range, retro). For OutputRanges, use $(LREF copyInto).
 
 Example:
 ----
@@ -5973,6 +5975,57 @@ unittest
             copy(arr1, arr2);
             return 35;
         }();
+    }
+}
+
+// copy
+/**
+Copies the content of $(D source) into $(D target) where target
+is an OutputRange. See also $(WEB sgi.com/tech/stl/_copy.html, STL's _copy).
+If a behavior similar to
+$(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward) is
+needed, use $(D copy(retro(source), retro(target))). See also $(XREF
+range, retro). For arrays, see also $(LREF copy).
+
+Example:
+----
+import std.array;
+auto app = appender!string();
+immutable(char)[] input = "abcd";
+
+copyInto(input, app);
+input.copyInto(app);
+assert(app.data == "abcdabcd");
+----
+
+To copy at most $(D n) elements from range $(D a) to range $(D b), you
+may want to use $(D copyInto(take(a, n), b)). To copy those elements from
+range $(D a) that satisfy predicate $(D pred) to range $(D b), you may
+want to use $(D copyInto(filter!(pred)(a), b)).
+ */
+auto ref Range2 copyInto(Range1, Range2)(Range1 source, auto ref Range2 target)
+if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
+{
+    for (; !source.empty; source.popFront())
+    {
+        put(target, source.front);
+    }
+
+    return target;
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    {
+        import std.array;
+        auto app = appender!string();
+        immutable(char)[] input = "abcd";
+
+        copyInto(input, app);
+        input.copyInto(app);
+        assert(app.data == "abcdabcd");
     }
 }
 
