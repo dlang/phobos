@@ -3347,7 +3347,7 @@ final class Box
 
     private this(T)(inout T value) inout pure nothrow
     {
-        _type = typeid(cast()value);
+        _type = typeid(Unqual!T);
         *(cast(T*)&_value) = cast()value;
     }
 
