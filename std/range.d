@@ -4375,7 +4375,7 @@ public:
     }
     body
     {
-        auto s = typeof(this)(this._state, lower);
+        auto s = typeof(this)(this._state, this._n + lower);
         return takeExactly(s, upper - lower);
     }
 
@@ -4435,9 +4435,9 @@ unittest
     assert(equal(odds[0 .. 5], take(odds, 5)));
     assert(equal(odds[3 .. 7], take(drop(odds, 3), 4)));
 
-    // relative slicing test, testing slicing is agnostic of state
-    odds = drop(odds, 5);
-    assert(equal(odds[5 .. 9], take(odds, 4)));
+    // relative slicing test, testing slicing is NOT agnostic of state
+    auto odds_less5 = drop(odds, 5);
+    assert(equal(odds_less5[0 .. 10], odds[5 .. 15]));
 }
 
 /**
