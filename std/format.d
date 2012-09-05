@@ -44,12 +44,6 @@ version (DigitalMarsC)
                 in real* pdval,
                 char* buf, size_t* psl, int width) __pfloatfmt;
     }
-    alias core.stdc.stdio._snprintf snprintf;
-}
-else
-{
-    // Use C99 snprintf
-    extern (C) int snprintf(char* s, size_t n, in char* format, ...);
 }
 
 /**********************************************************************
