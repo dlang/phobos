@@ -258,19 +258,22 @@ struct File
 {
     private struct Impl
     {
-        FILE * handle = null;
+        FILE * handle = null; // Is null iff this Impl is closed by another File
         uint refs = uint.max / 2;
         string name = null;
         bool isPipe;
-        this(FILE* h, uint r, string n, bool pipe = false)
-        {
-            handle = h;
-            refs = r;
-            name = n;
-            isPipe = pipe;
-        }
     }
-    private Impl * p;
+    private Impl* p;
+
+    private this(FILE* handle, string name, uint refs = 1, bool isPipe = false)
+    {
+        assert(!p);
+        p = new Impl;
+        p.handle = handle;
+        p.refs = refs;
+        p.name = name;
+        p.isPipe = isPipe;
+    }
 
 /**
 Constructor taking the name of the file to open and the open mode
@@ -286,17 +289,15 @@ object refers to it anymore.
  */
     this(string name, in char[] stdioOpenmode = "rb")
     {
-        p = new Impl(errnoEnforce(.fopen(name, stdioOpenmode),
+        this(errnoEnforce(.fopen(name, stdioOpenmode),
                         text("Cannot open file `", name, "' in mode `",
                                 stdioOpenmode, "'")),
-                1, name);
+                name);
     }
 
     ~this()
     {
-        if (!p) return;
-        if (p.refs == 1) close();
-        else --p.refs;
+        detach();
     }
 
     this(this)
@@ -326,8 +327,7 @@ Throws exception in case of error.
     void open(string name, in char[] stdioOpenmode = "rb")
     {
         detach();
-        auto another = File(name, stdioOpenmode);
-        swap(this, another);
+        this = File(name, stdioOpenmode);
     }
 
 /**
@@ -338,9 +338,9 @@ opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
     version(Posix) void popen(string command, in char[] stdioOpenmode = "r")
     {
         detach();
-        p = new Impl(errnoEnforce(.popen(command, stdioOpenmode),
+        this = File(errnoEnforce(.popen(command, stdioOpenmode),
                         "Cannot run command `"~command~"'"),
-                1, command, true);
+                command, 1, true);
     }
 
 /** Returns $(D true) if the file is opened. */
@@ -383,9 +383,14 @@ and throws if that fails.
     void detach()
     {
         if (!p) return;
-        if (p.refs == 1) close();
-        else if(p.refs != 0) p.refs--;
-        p = null;
+        if (p.refs == 1)
+            close();
+        else
+        {
+            assert(p.refs);
+            --p.refs;
+            p = null;
+        }
     }
 
     unittest
@@ -413,17 +418,21 @@ referring to the same handle will see a closed file henceforth.
     void close()
     {
         if (!p) return; // succeed vacuously
-        if (!p.handle)
+        scope(exit)
         {
+            assert(p.refs);
+            --p.refs;
             p = null; // start a new life
+        }
+        if (!p.handle) // Impl is closed by another File 
+        {
+            assert(!p.name);
             return;
         }
         scope(exit)
         {
             p.handle = null; // nullify the handle anyway
             p.name = null;
-            --p.refs;
-            p = null;
         }
         version (Posix)
         {
@@ -899,11 +908,9 @@ with every line.  */
  cplusplus.com/reference/clibrary/cstdio/_tmpfile.html, _tmpfile). */
     static File tmpfile()
     {
-        auto h = errnoEnforce(core.stdc.stdio.tmpfile(),
-                "Could not create temporary file with tmpfile()");
-        File result = void;
-        result.p = new Impl(h, 1, null);
-        return result;
+        return File(errnoEnforce(core.stdc.stdio.tmpfile(),
+                "Could not create temporary file with tmpfile()"),
+            null);
     }
 
 /**
@@ -911,10 +918,8 @@ Unsafe function that wraps an existing $(D FILE*). The resulting $(D
 File) never takes the initiative in closing the file. */
     /*private*/ static File wrapFile(FILE* f)
     {
-        File result = void;
-        //result.p = new Impl(f, uint.max / 2, null);
-        result.p = new Impl(f, 9999, null);
-        return result;
+        return File(enforce(f, "Could not wrap null FILE*"),
+            null, /*uint.max / 2*/ 9999);
     }
 
 /**
@@ -1240,10 +1245,7 @@ $(D Range) that locks the file and allows fast writing to it.
         /// Range primitive implementations.
         void put(A)(A writeme) if (is(ElementType!A : const(dchar)))
         {
-            static if (isSomeString!A)
-                alias typeof(writeme[0]) C;
-            else
-                alias ElementType!A C;
+            alias ElementEncodingType!A C;
             static assert(!is(C == void));
             if (writeme[0].sizeof == 1 && orientation <= 0)
             {
@@ -2737,12 +2739,8 @@ version(linux) {
         enforce(sock.connect(s, cast(sock.sockaddr*) &addr, addr.sizeof) != -1,
             new StdioException("Connect failed"));
 
-        FILE* fp = enforce(fdopen(s, "w+".ptr));
-
-        File f;
-        f.p = new File.Impl(fp, 1, host ~ ":" ~ to!string(port));
-
-        return f;
+        return File(enforce(fdopen(s, "w+".ptr)),
+            host ~ ":" ~ to!string(port));
     }
 }
 
