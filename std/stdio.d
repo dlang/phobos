@@ -269,9 +269,12 @@ struct File
     private this(FILE* handle, string name, uint refs = 1, bool isPipe = false)
     {
         assert(!p);
-        p = new Impl;
+        p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
         p.handle = handle;
         p.refs = refs;
+        // Note that GC knows nothing about C heap and
+        // possibly GC allocated `name` should be also
+        // stored in `_name` field.
         _name = p.name = name;
         p.isPipe = isPipe;
     }
@@ -425,7 +428,8 @@ referring to the same handle will see a closed file henceforth.
         scope(exit)
         {
             assert(p.refs);
-            --p.refs;
+            if(!--p.refs)
+                free(p);
             p = null; // start a new life
         }
         if (!p.handle) // Impl is closed by another File 
