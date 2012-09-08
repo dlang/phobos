@@ -264,6 +264,7 @@ struct File
         bool isPipe;
     }
     private Impl* p;
+    private string _name;
 
     private this(FILE* handle, string name, uint refs = 1, bool isPipe = false)
     {
@@ -271,7 +272,7 @@ struct File
         p = new Impl;
         p.handle = handle;
         p.refs = refs;
-        p.name = name;
+        _name = p.name = name;
         p.isPipe = isPipe;
     }
 
@@ -314,7 +315,7 @@ file.
  */
     void opAssign(File rhs)
     {
-        swap(p, rhs.p);
+        swap(this, rhs);
     }
 
 /**
@@ -360,10 +361,13 @@ must be opened, otherwise an exception is thrown.
         return .feof(cast(FILE*) p.handle) != 0;
     }
 
-/** Returns the name of the file, if any. */
+/** Returns the name of the last opened file, if any.
+If a $(D File) was created with $(LREF tmpfile) and $(LREF wrapFile)
+it has no name.*/
     @property string name() const pure nothrow
     {
-        return p.name;
+        assert(!isOpen || p.name is _name);
+        return _name;
     }
 
 /**
@@ -905,7 +909,8 @@ with every line.  */
 
 /**
  Returns a temporary file by calling $(WEB
- cplusplus.com/reference/clibrary/cstdio/_tmpfile.html, _tmpfile). */
+ cplusplus.com/reference/clibrary/cstdio/_tmpfile.html, _tmpfile). 
+ Note that the created file has no $(LREF name).*/
     static File tmpfile()
     {
         return File(errnoEnforce(core.stdc.stdio.tmpfile(),
@@ -915,7 +920,8 @@ with every line.  */
 
 /**
 Unsafe function that wraps an existing $(D FILE*). The resulting $(D
-File) never takes the initiative in closing the file. */
+File) never takes the initiative in closing the file.
+Note that the created file has no $(LREF name)*/
     /*private*/ static File wrapFile(FILE* f)
     {
         return File(enforce(f, "Could not wrap null FILE*"),
