@@ -260,7 +260,6 @@ struct File
     {
         FILE * handle = null; // Is null iff this Impl is closed by another File
         uint refs = uint.max / 2;
-        string name = null;
         bool isPipe;
     }
     private Impl* p;
@@ -272,11 +271,8 @@ struct File
         p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
         p.handle = handle;
         p.refs = refs;
-        // Note that GC knows nothing about C heap and
-        // possibly GC allocated `name` should be also
-        // stored in `_name` field.
-        _name = p.name = name;
         p.isPipe = isPipe;
+        _name = name;
     }
 
 /**
@@ -369,7 +365,6 @@ If a $(D File) was created with $(LREF tmpfile) and $(LREF wrapFile)
 it has no name.*/
     @property string name() const pure nothrow
     {
-        assert(!isOpen || p.name is _name);
         return _name;
     }
 
@@ -432,29 +427,22 @@ referring to the same handle will see a closed file henceforth.
                 free(p);
             p = null; // start a new life
         }
-        if (!p.handle) // Impl is closed by another File 
-        {
-            assert(!p.name);
-            return;
-        }
-        scope(exit)
-        {
-            p.handle = null; // nullify the handle anyway
-            p.name = null;
-        }
+        if (!p.handle) return; // Impl is closed by another File 
+
+        scope(exit) p.handle = null; // nullify the handle anyway
         version (Posix)
         {
             if (p.isPipe)
             {
                 // Ignore the result of the command
                 errnoEnforce(.pclose(p.handle) != -1,
-                        "Could not close pipe `"~p.name~"'");
+                        "Could not close pipe `"~_name~"'");
                 return;
             }
         }
         //fprintf(std.c.stdio.stderr, ("Closing file `"~name~"`.\n\0").ptr);
         errnoEnforce(.fclose(p.handle) == 0,
-                "Could not close file `"~p.name~"'");
+                "Could not close file `"~_name~"'");
     }
 
 /**
@@ -561,7 +549,7 @@ $(D rawWrite) always writes in binary mode on Windows.
         errnoEnforce(result == buffer.length,
                 text("Wrote ", result, " instead of ", buffer.length,
                         " objects of type ", T.stringof, " to file `",
-                        p.name, "'"));
+                        _name, "'"));
     }
 
     unittest
@@ -585,13 +573,13 @@ file handle. Throws on error.
         version (Windows)
         {
             errnoEnforce(fseek(p.handle, to!int(offset), origin) == 0,
-                    "Could not seek in file `"~p.name~"'");
+                    "Could not seek in file `"~_name~"'");
         }
         else
         {
             //static assert(off_t.sizeof == 8);
             errnoEnforce(fseeko(p.handle, offset, origin) == 0,
-                    "Could not seek in file `"~p.name~"'");
+                    "Could not seek in file `"~_name~"'");
         }
     }
 
@@ -637,7 +625,7 @@ managed file handle. Throws on error.
             immutable result = ftello(cast(FILE*) p.handle);
         }
         errnoEnforce(result != -1,
-                "Query ftell() failed for file `"~p.name~"'");
+                "Query ftell() failed for file `"~_name~"'");
         return result;
     }
 
@@ -672,7 +660,7 @@ the file handle.
     {
         enforce(isOpen, "Attempting to call setvbuf() on an unopened file");
         errnoEnforce(.setvbuf(p.handle, null, mode, size) == 0,
-                "Could not set buffering for file `"~p.name~"'");
+                "Could not set buffering for file `"~_name~"'");
     }
 
 /**
@@ -684,7 +672,7 @@ _setvbuf) for the file handle. */
         enforce(isOpen, "Attempting to call setvbuf() on an unopened file");
         errnoEnforce(.setvbuf(p.handle,
                         cast(char*) buf.ptr, mode, buf.length) == 0,
-                "Could not set buffering for file `"~p.name~"'");
+                "Could not set buffering for file `"~_name~"'");
     }
 
 /**
@@ -731,7 +719,7 @@ arguments in text format to the file, followed by a newline. */
     {
         write(args, '\n');
         errnoEnforce(.fflush(p.handle) == 0,
-                    "Could not flush file `"~p.name~"'");
+                    "Could not flush file `"~_name~"'");
     }
 
     private enum errorMessage =
