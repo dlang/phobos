@@ -92,7 +92,7 @@ template TypeList(T...)
 unittest {
     static assert (is (TypeList!(void*, int).toTuple == TypeTuple!(void*, int)));
     static assert (is (TypeList!(void*, int).head == void*));
-    static assert (is (TypeList!(void*, int).tail.toTuple == TypeTuple!(int)));
+    static assert (is (TypeList!(void*, int).tail.toTuple == TypeTuple!int));
     static assert (is (TypeList!(int).tail.toTuple == TypeTuple!()));
     static assert (TypeList!(int).tail.isEmpty);
 
@@ -153,7 +153,7 @@ unittest {
                        == TypeTuple!(long, void*, int)));
     static assert (is (Cons!(long, TypeList!(void*, int)).head
                        == long));
-    static assert (is (Cons!(int, TypeList!()).toTuple == TypeTuple!(int)));
+    static assert (is (Cons!(int, TypeList!()).toTuple == TypeTuple!int));
     static assert (is (Cons!(char[], Cons!(int, TypeList!())).toTuple
                     == TypeTuple!(char[], int)));
 }

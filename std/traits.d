@@ -133,7 +133,7 @@ version(unittest)
     template WildOf(T)        { alias        inout(T)  WildOf;        }
     template SharedWildOf(T)  { alias shared(inout(T)) SharedWildOf;  }
 
-    alias TypeTuple!(MutableOf, ConstOf, SharedOf, SharedConstOf, ImmutableOf) TypeQualifierList;
+    alias GenericTuple!(MutableOf, ConstOf, SharedOf, SharedConstOf, ImmutableOf) TypeQualifierList;
 
     struct SubTypeOf(T)
     {
@@ -412,7 +412,7 @@ unittest {
 }
 
 /**
-Returns a tuple consisting of the storage classes of the parameters of a
+Returns an expression tuple consisting of the storage classes of the parameters of a
 function $(D func).
 
 Example:
@@ -466,14 +466,14 @@ template ParameterStorageClassTuple(func...)
             enum skip = mangledName!(Params[i]).length; // for bypassing Type
             enum rest = demang.rest;
 
-            alias TypeTuple!(
+            alias expressionTuple!(
                     demang.value + 0, // workaround: "not evaluatable at ..."
                     demangleNextParameter!(rest[skip .. $], i + 1)
                 ) demangleNextParameter;
         }
         else // went thru all the parameters
         {
-            alias TypeTuple!() demangleNextParameter;
+            alias expressionTuple!() demangleNextParameter;
         }
     }
 
@@ -518,7 +518,7 @@ unittest
 
 
 /*
-Get, as a tuple, the identifiers of the parameters to a function symbol.
+Get, as an expression tuple, the identifiers of the parameters to a function symbol.
 
 Example:
 ---
@@ -551,9 +551,9 @@ template ParameterIdentifierTuple(func...)
     template Impl(size_t i = 0)
     {
         static if (i == PT.length)
-            alias TypeTuple!() Impl;
+            alias expressionTuple!() Impl;
         else
-            alias TypeTuple!(Get!i, Impl!(i+1)) Impl;
+            alias expressionTuple!(Get!i, Impl!(i+1)) Impl;
     }
 
     alias Impl!() ParameterIdentifierTuple;
@@ -593,7 +593,7 @@ unittest
 
 
 /*
-Get, as a tuple, the default value of the parameters to a function symbol.
+Get, as generic tuple, the default value of the parameters to a function symbol.
 If a parameter doesn't have the default value, $(D void) is returned instead.
 
 Example:
@@ -633,9 +633,9 @@ template ParameterDefaultValueTuple(func...)
     template Impl(size_t i = 0)
     {
         static if (i == PT.length)
-            alias TypeTuple!() Impl;
+            alias GenericTuple!() Impl;
         else
-            alias TypeTuple!(Get!i, Impl!(i+1)) Impl;
+            alias GenericTuple!(Get!i, Impl!(i+1)) Impl;
     }
 
     alias Impl!() ParameterDefaultValueTuple;
@@ -657,14 +657,14 @@ unittest
     static assert(PDVT!bar.length == 2);
     static assert(PDVT!bar[0] == 1);
     static assert(PDVT!bar[1] == "hello");
-    static assert(is(typeof(PDVT!bar) == typeof(TypeTuple!(1, "hello"))));
+    static assert(is(typeof(PDVT!bar) == typeof(expressionTuple!(1, "hello"))));
 
     void baz(int x, int n = 1, string s = "hello"){}
     static assert(PDVT!baz.length == 3);
     static assert(is(PDVT!baz[0] == void));
     static assert(   PDVT!baz[1] == 1);
     static assert(   PDVT!baz[2] == "hello");
-    static assert(is(typeof(PDVT!baz) == typeof(TypeTuple!(void, 1, "hello"))));
+    static assert(is(typeof(PDVT!baz) == typeof(GenericTuple!(void, 1, "hello"))));
 
     struct Colour
     {
@@ -1197,7 +1197,7 @@ unittest
         int  test();
         int  test() @property;
     }
-    alias TypeTuple!(__traits(getVirtualFunctions, Overloads, "test")) ov;
+    alias GenericTuple!(__traits(getVirtualFunctions, Overloads, "test")) ov;
     alias FunctionTypeOf!(ov[0]) F_ov0;
     alias FunctionTypeOf!(ov[1]) F_ov1;
     alias FunctionTypeOf!(ov[2]) F_ov2;
@@ -1336,7 +1336,7 @@ unittest
             // Check that all linkage types work (D-style variadics require D linkage).
             static if (variadicFunctionStyle!T != Variadic.d)
             {
-                foreach (newLinkage; TypeTuple!("D", "C", "Windows", "Pascal", "C++"))
+                foreach (newLinkage; expressionTuple!("D", "C", "Windows", "Pascal", "C++"))
                 {
                     alias SetFunctionAttributes!(T, newLinkage, attrs) New;
                     static assert(functionLinkage!New == newLinkage,
@@ -1387,7 +1387,7 @@ template FieldTypeTuple(S)
 // {
 //     static if (T.length == 0)
 //     {
-//         alias TypeTuple!() Result;
+//         alias expressionTuple!() Result;
 //     }
 //     else
 //     {
@@ -1403,7 +1403,7 @@ template FieldTypeTuple(S)
 //         else
 //         {
 //             private enum size_t mySize = T[0].sizeof;
-//             alias TypeTuple!myOffset Head;
+//             alias expressionTuple!myOffset Head;
 //             static if (is(T == union))
 //             {
 //                 alias FieldOffsetsTupleImpl!(myOffset, T[1 .. $]).Result
@@ -1415,7 +1415,7 @@ template FieldTypeTuple(S)
 //                                              T[1 .. $]).Result
 //                     Tail;
 //             }
-//             alias TypeTuple!(Head, Tail) Result;
+//             alias expressionTuple!(Head, Tail) Result;
 //         }
 //     }
 // }
@@ -1559,15 +1559,15 @@ RepresentationOffsets
 
 // private template Repeat(size_t n, T...)
 // {
-//     static if (n == 0) alias TypeTuple!() Repeat;
-//     else alias TypeTuple!(T, Repeat!(n - 1, T)) Repeat;
+//     static if (n == 0) alias GenericTuple!() Repeat;
+//     else alias GenericTuple!(T, Repeat!(n - 1, T)) Repeat;
 // }
 
 // template RepresentationOffsetsImpl(size_t n, T...)
 // {
 //     static if (T.length == 0)
 //     {
-//         alias TypeTuple!() Result;
+//         alias expressionTuple!() Result;
 //     }
 //     else
 //     {
@@ -1585,9 +1585,9 @@ RepresentationOffsets
 //         }
 //         else
 //         {
-//             alias TypeTuple!myOffset Head;
+//             alias expressionTuple!myOffset Head;
 //         }
-//         alias TypeTuple!(Head,
+//         alias expressionTuple!(Head,
 //                          RepresentationOffsetsImpl!(
 //                              myOffset + T[0].sizeof, T[1 .. $]).Result)
 //             Result;
@@ -2575,7 +2575,7 @@ Params:
  E = An enumerated type. $(D E) may have duplicated values.
 
 Returns:
- Static tuple composed of the members of the enumerated type $(D E).
+ Expression tuple composed of the members of the enumerated type $(D E).
  The members are arranged in the same order as declared in $(D E).
 
 Note:
@@ -2653,7 +2653,7 @@ template EnumMembers(E)
     {
         static if (names.length > 0)
         {
-            alias TypeTuple!(
+            alias expressionTuple!(
                     WithIdentifier!(names[0])
                         .Symbolize!(__traits(getMember, E, names[0])),
                     EnumSpecificMembers!(names[1 .. $])
@@ -2661,7 +2661,7 @@ template EnumMembers(E)
         }
         else
         {
-            alias TypeTuple!() EnumSpecificMembers;
+            alias expressionTuple!() EnumSpecificMembers;
         }
     }
 
@@ -2935,7 +2935,7 @@ unittest
 
 
 /**
-Returns a tuple of non-static functions with the name $(D name) declared in the
+Returns a generic tuple of non-static functions with the name $(D name) declared in the
 class or interface $(D C).  Covariant duplicates are shrunk into the most
 derived one.
 
@@ -2969,28 +2969,28 @@ template MemberFunctionsTuple(C, string name)
             static if (__traits(hasMember, Node, name) && __traits(compiles, __traits(getMember, Node, name)))
             {
                 // Get all overloads in sight (not hidden).
-                alias TypeTuple!(__traits(getVirtualFunctions, Node, name)) inSight;
+                alias GenericTuple!(__traits(getVirtualFunctions, Node, name)) inSight;
 
                 // And collect all overloads in ancestor classes to reveal hidden
                 // methods.  The result may contain duplicates.
                 template walkThru(Parents...)
                 {
                     static if (Parents.length > 0)
-                        alias TypeTuple!(
+                        alias GenericTuple!(
                                     CollectOverloads!(Parents[0]),
                                     walkThru!(Parents[1 .. $])
                                 ) walkThru;
                     else
-                        alias TypeTuple!() walkThru;
+                        alias GenericTuple!() walkThru;
                 }
 
                 static if (is(Node Parents == super))
-                    alias TypeTuple!(inSight, walkThru!Parents) CollectOverloads;
+                    alias GenericTuple!(inSight, walkThru!Parents) CollectOverloads;
                 else
-                    alias TypeTuple!inSight CollectOverloads;
+                    alias GenericTuple!inSight CollectOverloads;
             }
             else
-                alias TypeTuple!() CollectOverloads; // no overloads in this hierarchy
+                alias GenericTuple!() CollectOverloads; // no overloads in this hierarchy
         }
 
         // duplicates in this tuple will be removed by shrink()
@@ -3016,13 +3016,13 @@ template MemberFunctionsTuple(C, string name)
                     alias shrinkOne!(rest[0], rest[1 .. $]) shrinkOne;
                 else
                     // target and rest[0] are distinct.
-                    alias TypeTuple!(
+                    alias GenericTuple!(
                                 shrinkOne!(target, rest[1 .. $]),
                                 rest[0] // keep
                             ) shrinkOne;
             }
             else
-                alias TypeTuple!target shrinkOne; // done
+                alias GenericTuple!target shrinkOne; // done
         }
 
         /*
@@ -3033,17 +3033,17 @@ template MemberFunctionsTuple(C, string name)
             static if (overloads.length > 0)
             {
                 alias shrinkOne!overloads temp;
-                alias TypeTuple!(temp[0], shrink!(temp[1 .. $])) shrink;
+                alias GenericTuple!(temp[0], shrink!(temp[1 .. $])) shrink;
             }
             else
-                alias TypeTuple!() shrink; // done
+                alias GenericTuple!() shrink; // done
         }
 
         // done.
         alias shrink!overloads MemberFunctionsTuple;
     }
     else
-        alias TypeTuple!() MemberFunctionsTuple;
+        alias GenericTuple!() MemberFunctionsTuple;
 }
 
 unittest
@@ -3809,7 +3809,7 @@ template StaticArrayTypeOf(T)
 unittest
 {
     foreach (T; TypeTuple!(bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
-    foreach (Q; TypeTuple!(TypeQualifierList, WildOf, SharedWildOf))
+    foreach (Q; GenericTuple!(TypeQualifierList, WildOf, SharedWildOf))
     {
         static assert(is( Q!(   T[1] ) == StaticArrayTypeOf!( Q!(              T[1]  ) ) ));
 
@@ -3819,7 +3819,7 @@ unittest
       }
     }
     foreach (T; TypeTuple!void)
-    foreach (Q; TypeTuple!TypeQualifierList)
+    foreach (Q; GenericTuple!TypeQualifierList)
     {
         static assert(is( StaticArrayTypeOf!( Q!(void[1]) ) == Q!(void[1]) ));
     }
@@ -3852,12 +3852,12 @@ template DynamicArrayTypeOf(T)
 unittest
 {
     foreach (T; TypeTuple!(/*void, */bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
-    foreach (Q; TypeTuple!(TypeQualifierList, WildOf, SharedWildOf))
+    foreach (Q; GenericTuple!(TypeQualifierList, WildOf, SharedWildOf))
     {
         static assert(is( Q!T[]  == DynamicArrayTypeOf!( Q!T[] ) ));
         static assert(is( Q!(T[])  == DynamicArrayTypeOf!( Q!(T[]) ) ));
 
-      foreach (P; TypeTuple!(MutableOf, ConstOf, ImmutableOf))
+      foreach (P; GenericTuple!(MutableOf, ConstOf, ImmutableOf))
       {
         static assert(is( Q!(P!T[]) == DynamicArrayTypeOf!( Q!(SubTypeOf!(P!T[])) ) ));
         static assert(is( Q!(P!(T[])) == DynamicArrayTypeOf!( Q!(SubTypeOf!(P!(T[]))) ) ));
@@ -3891,7 +3891,7 @@ template StringTypeOf(T) if (isSomeString!T)
 unittest
 {
     foreach (T; CharTypeList)
-    foreach (Q; TypeTuple!(MutableOf, ConstOf, ImmutableOf, WildOf))
+    foreach (Q; GenericTuple!(MutableOf, ConstOf, ImmutableOf, WildOf))
     {
         static assert(is(Q!T[] == StringTypeOf!( Q!T[] )));
 
@@ -3905,7 +3905,7 @@ unittest
         }
     }
     foreach (T; CharTypeList)
-    foreach (Q; TypeTuple!(SharedOf, SharedConstOf, SharedWildOf))
+    foreach (Q; GenericTuple!(SharedOf, SharedConstOf, SharedWildOf))
     {
         static assert(!is(StringTypeOf!( Q!T[] )));
     }
@@ -3956,17 +3956,17 @@ template AssocArrayTypeOf(T)
 unittest
 {
     foreach (T; TypeTuple!(int/*bool, CharTypeList, NumericTypeList, ImaginaryTypeList, ComplexTypeList*/))
-    foreach (P; TypeTuple!(TypeQualifierList, WildOf, SharedWildOf))
-    foreach (Q; TypeTuple!(TypeQualifierList, WildOf, SharedWildOf))
-    foreach (R; TypeTuple!(TypeQualifierList, WildOf, SharedWildOf))
+    foreach (P; GenericTuple!(TypeQualifierList, WildOf, SharedWildOf))
+    foreach (Q; GenericTuple!(TypeQualifierList, WildOf, SharedWildOf))
+    foreach (R; GenericTuple!(TypeQualifierList, WildOf, SharedWildOf))
     {
         static assert(is( P!(Q!T[R!T]) == AssocArrayTypeOf!(            P!(Q!T[R!T])  ) ));
     }
     foreach (T; TypeTuple!(int/*bool, CharTypeList, NumericTypeList, ImaginaryTypeList, ComplexTypeList*/))
-    foreach (O; TypeTuple!(TypeQualifierList, WildOf, SharedWildOf))
-    foreach (P; TypeTuple!TypeQualifierList)
-    foreach (Q; TypeTuple!TypeQualifierList)
-    foreach (R; TypeTuple!TypeQualifierList)
+    foreach (O; GenericTuple!(TypeQualifierList, WildOf, SharedWildOf))
+    foreach (P; GenericTuple!TypeQualifierList)
+    foreach (Q; GenericTuple!TypeQualifierList)
+    foreach (R; GenericTuple!TypeQualifierList)
     {
         static assert(is( O!(P!(Q!T[R!T])) == AssocArrayTypeOf!( O!(SubTypeOf!(P!(Q!T[R!T]))) ) ));
     }

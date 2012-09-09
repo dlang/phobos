@@ -37,28 +37,103 @@ module std.generictuple;
 import std.traits;
 
 /**
+Creates a generic tuple out of a sequence of zero or more types, expressions, or aliases.
+
+Example:
+---
+template MyTemplate(T) { alias T[] MyTemplate; }
+
+alias GenericTuple!(int, 5, "a string", MyTemplate) MyTuple;
+
+MyTuple[0] myVar = MyTuple[1]; // same as `int myVar = 5;`
+auto str = MyTuple[2]; // same as `auto str = "a string";`
+
+alias MyTuple[3] Template;
+static assert(is(Template!int == int[]));
+---
+*/
+template GenericTuple(Args...)
+{
+    alias Args GenericTuple;
+}
+
+/**
  * Creates a typetuple out of a sequence of zero or more types.
+ * Same as $(D GenericTuple), except it contains only types.
+ *
  * Example:
  * ---
  * import std.generictuple;
- * alias TypeTuple!(int, double) TL;
+ * alias TypeTuple!(int, double) IntDouble;
  *
- * int foo(TL td)  // same as int foo(int, double);
+ * int foo(IntDouble args)  // same as `int foo(int, double)`
  * {
- *    return td[0] + cast(int)td[1];
+ *    return args[0] + cast(int) args[1];
  * }
+ *
+ * alias TypeTuple!(int, double, char) IntDoubleChar;
+ * static assert(is(TypeTuple!(IntDouble, char) == IntDoubleChar));
+ * static assert(is(IntDoubleChar[0 .. 2] == IntDouble));
+ *
+ *
+ * alias TypeTuple!(int, 5) BadTypeTuple; // error: not a type tuple
  * ---
+ */
+template TypeTuple(Types...) if(isTypeTuple!Types)
+{
+    alias Types TypeTuple;
+}
+
+unittest
+{
+    static assert(TypeTuple!().length == 0);
+    static assert(!__traits(compiles, TypeTuple!(int, 5)));
+    
+    static assert(is(TypeTuple!(int, TypeTuple!()) == TypeTuple!int));
+    static assert(is(TypeTuple!(int, TypeTuple!char) == TypeTuple!(int, char)));
+    static assert(is(TypeTuple!(int, TypeTuple!(char, bool)) == TypeTuple!(int, char, bool)));
+}
+
+/**
+ * Creates an expression tuple out of a sequence of zero or more expressions.
+ * Same as $(D GenericTuple), except it contains only expressions.
  *
  * Example:
  * ---
- * TypeTuple!(TL, char)
- * // is equivalent to:
- * TypeTuple!(int, double, char)
+ * import std.generictuple;
+ * alias expressionTuple!(5, 'c', "str") expressions;
+ * 
+ * typeof(expressions[0]) myVar = expressions[1]; // same as `int myVar = 5;`
+ * auto str = expressions[2]; // same as `auto str = "a string";`
+ * 
+ * void foo(out typeof(expressions[0 .. 2]) args)  // same as `int foo(out int, out char)`
+ * {
+ *     args[0] = expressions[0] * 2; // same as `5 * 2`
+ *     args[1] = expressions[1] + 1; // same as `'c' + 1`
+ * }
+ * 
+ * void main()
+ * {
+ *     int i;
+ *     char c;
+ *     foo(i, c);
+ *     assert(i == 10 && c == 'd');
+ * }
+ *
+ * alias expressionTuple!(int, 5) badExpressionTuple; // error: not an expression tuple
  * ---
  */
-template TypeTuple(TList...)
+template expressionTuple(expressions...) if(isExpressionTuple!expressions)
 {
-    alias TList TypeTuple;
+    alias expressions expressionTuple;
+}
+
+unittest
+{
+    static assert(expressionTuple!().length == 0);
+    static assert(Pack!(expressionTuple!(5, 'c', "str")).equals!(5, 'c', "str"));
+    static assert(!__traits(compiles, expressionTuple!(int, 5)));
+    static assert(!__traits(compiles, expressionTuple!void));
 }
 
 /**
@@ -143,7 +218,7 @@ unittest
 alias staticIndexOf IndexOf;
 
 /**
- * Returns a typetuple created from TList with the first occurrence,
+ * Returns a generic tuple created from TList with the first occurrence,
  * if any, of T removed.
  * Example:
  * ---
@@ -159,7 +234,7 @@ alias staticIndexOf IndexOf;
 //     else static if (is(T == TList[0]))
 //  alias TList[1 .. $] Erase;
 //     else
-//  alias TypeTuple!(TList[0], Erase!(T, TList[1 .. $])) Erase;
+//  alias GenericTuple!(TList[0], Erase!(T, TList[1 .. $])) Erase;
 // }
  template Erase(T, TList...)
  {
@@ -187,11 +262,11 @@ private template GenericErase(args...)
         static if (isSame!(e, head))
             alias tail result;
         else
-            alias TypeTuple!(head, GenericErase!(e, tail).result) result;
+            alias GenericTuple!(head, GenericErase!(e, tail).result) result;
     }
      else
     {
-        alias TypeTuple!() result;
+        alias GenericTuple!() result;
     }
  }
 
@@ -208,7 +283,7 @@ unittest
 
 
 /**
- * Returns a typetuple created from TList with the all occurrences,
+ * Returns a generic tuple created from TList with the all occurrences,
  * if any, of T removed.
  * Example:
  * ---
@@ -246,11 +321,11 @@ private template GenericEraseAll(args...)
         static if (isSame!(e, head))
             alias next result;
         else
-            alias TypeTuple!(head, next) result;
+            alias GenericTuple!(head, next) result;
     }
      else
     {
-        alias TypeTuple!() result;
+        alias GenericTuple!() result;
     }
  }
 
@@ -267,8 +342,8 @@ unittest
 
 
 /**
- * Returns a typetuple created from TList with the all duplicate
- * types removed.
+ * Returns a generic tuple created from TList with the all duplicates
+ * removed.
  * Example:
  * ---
  * alias TypeTuple!(int, long, long, int, float) TL;
@@ -283,7 +358,7 @@ template NoDuplicates(TList...)
     static if (TList.length == 0)
     alias TList NoDuplicates;
     else
-    alias TypeTuple!(TList[0], NoDuplicates!(EraseAll!(TList[0], TList[1 .. $]))) NoDuplicates;
+    alias GenericTuple!(TList[0], NoDuplicates!(EraseAll!(TList[0], TList[1 .. $]))) NoDuplicates;
 }
 
 unittest
@@ -296,8 +371,8 @@ unittest
 
 
 /**
- * Returns a typetuple created from TList with the first occurrence
- * of type T, if found, replaced with type U.
+ * Returns a generic tuple created from TList with the first occurrence
+ * of T, if found, replaced with U.
  * Example:
  * ---
  * alias TypeTuple!(int, long, long, int, float) TL;
@@ -344,14 +419,14 @@ private template GenericReplace(args...)
         alias    tuple[1 .. $] tail;
 
         static if (isSame!(from, head))
-            alias TypeTuple!(to, tail) result;
+            alias GenericTuple!(to, tail) result;
         else
-            alias TypeTuple!(head,
+            alias GenericTuple!(head,
                 GenericReplace!(from, to, tail).result) result;
     }
      else
     {
-        alias TypeTuple!() result;
+        alias GenericTuple!() result;
     }
  }
 
@@ -375,8 +450,8 @@ unittest
 }
 
 /**
- * Returns a typetuple created from TList with all occurrences
- * of type T, if found, replaced with type U.
+ * Returns a generic tuple created from TList with all occurrences
+ * of T, if found, replaced with U.
  * Example:
  * ---
  * alias TypeTuple!(int, long, long, int, float) TL;
@@ -424,13 +499,13 @@ private template GenericReplaceAll(args...)
         alias GenericReplaceAll!(from, to, tail).result next;
 
         static if (isSame!(from, head))
-            alias TypeTuple!(to, next) result;
+            alias GenericTuple!(to, next) result;
         else
-            alias TypeTuple!(head, next) result;
+            alias GenericTuple!(head, next) result;
     }
     else
     {
-        alias TypeTuple!() result;
+        alias GenericTuple!() result;
     }
 }
 
@@ -454,7 +529,7 @@ unittest
 }
 
 /**
- * Returns a typetuple created from TList with the order reversed.
+ * Returns a generic tuple created from TList with the order reversed.
  * Example:
  * ---
  * alias TypeTuple!(int, long, long, int, float) TL;
@@ -469,7 +544,7 @@ template Reverse(TList...)
     static if (TList.length == 0)
     alias TList Reverse;
     else
-    alias TypeTuple!(Reverse!(TList[1 .. $]), TList[0]) Reverse;
+    alias GenericTuple!(Reverse!(TList[1 .. $]), TList[0]) Reverse;
 }
 
 /**
@@ -510,7 +585,7 @@ template MostDerived(T, TList...)
  * TypeTuple!(C, B, A)
  * ---
  */
-template DerivedToFront(TList...)
+template DerivedToFront(TList...) if(isTypeTuple!TList)
 {
     static if (TList.length == 0)
     alias TList DerivedToFront;
@@ -523,7 +598,7 @@ template DerivedToFront(TList...)
 
 
 /**
-Evaluates to $(D TypeTuple!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
+Evaluates to $(D GenericTuple!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
 
 Example:
 ----
@@ -535,11 +610,11 @@ template staticMap(alias F, T...)
 {
     static if (T.length == 0)
     {
-        alias TypeTuple!() staticMap;
+        alias GenericTuple!() staticMap;
     }
     else
     {
-        alias TypeTuple!(F!(T[0]),
+        alias GenericTuple!(F!(T[0]),
                          staticMap!(F, T[1 .. $])) staticMap;
     }
 }
@@ -630,8 +705,8 @@ unittest
 
 
 /++
-    Filters a $(D TypeTuple) using a template predicate. Returns a
-    $(D TypeTuple) of the elements which satisfy the predicate.
+    Filters a $(D GenericTuple) using a template predicate. Returns a
+    $(D GenericTuple) of the elements which satisfy the predicate.
 
     Examples:
 --------------------
@@ -646,9 +721,9 @@ static assert(is(Filter!(isUnsigned, int, byte, ubyte,
 template Filter(alias pred, TList...)
 {
     static if(TList.length == 0)
-        alias TypeTuple!() Filter;
+        alias GenericTuple!() Filter;
     else static if(pred!(TList[0]))
-        alias TypeTuple!(TList[0], Filter!(pred, TList[1 .. $])) Filter;
+        alias GenericTuple!(TList[0], Filter!(pred, TList[1 .. $])) Filter;
     else
         alias Filter!(pred, TList[1 .. $]) Filter;
 }
@@ -886,7 +961,7 @@ unittest
 
 unittest
 {
-    foreach (T; TypeTuple!(int, staticMap, 42))
+    foreach (T; GenericTuple!(int, staticMap, 42))
     {
         static assert(!Instantiate!(templateNot!testAlways, T));
         static assert(Instantiate!(templateNot!testNever, T));
@@ -946,7 +1021,7 @@ unittest
 
 unittest
 {
-    foreach (T; TypeTuple!(int, staticMap, 42))
+    foreach (T; GenericTuple!(int, staticMap, 42))
     {
         static assert(Instantiate!(templateAnd!(), T));
         static assert(Instantiate!(templateAnd!(testAlways), T));
@@ -1013,7 +1088,7 @@ unittest
 
 unittest
 {
-    foreach (T; TypeTuple!(int, staticMap, 42))
+    foreach (T; GenericTuple!(int, staticMap, 42))
     {
         static assert(Instantiate!(templateOr!(testAlways), T));
         static assert(Instantiate!(templateOr!(testAlways, testAlways), T));

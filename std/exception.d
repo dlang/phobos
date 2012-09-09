@@ -413,11 +413,11 @@ unittest
 {
     import std.generictuple;
 
-    foreach (EncloseSafe; TypeTuple!(false, true))
-    foreach (EnclosePure; TypeTuple!(false, true))
+    foreach (EncloseSafe; expressionTuple!(false, true))
+    foreach (EnclosePure; expressionTuple!(false, true))
     {
-        foreach (BodySafe; TypeTuple!(false, true))
-        foreach (BodyPure; TypeTuple!(false, true))
+        foreach (BodySafe; expressionTuple!(false, true))
+        foreach (BodyPure; expressionTuple!(false, true))
         {
             enum code =
                 "delegate void() " ~

@@ -24,7 +24,7 @@ import std.conv;       // to, assumeUnique
 import std.exception;  // enforce, assumeUnique
 import std.range;      // walkLength
 import std.traits;     // isSomeChar, isSomeString
-import std.generictuple;  // TypeTuple
+import std.generictuple;  // TypeTuple, expressionTuple, GenericTuple
 
 //debug=utf;           // uncomment to turn on debugging printf's
 
@@ -1012,7 +1012,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
     dchar d = fst; // upper control bits are masked out later
     fst <<= 1;
 
-    foreach(i; TypeTuple!(1, 2, 3))
+    foreach(i; expressionTuple!(1, 2, 3))
     {
 
         static if (canIndex)
@@ -1158,7 +1158,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
 
 unittest
 {
-    foreach(S; TypeTuple!(to!string, RandomCU!char))
+    foreach(S; GenericTuple!(to!string, RandomCU!char))
     {
         size_t i;
         dchar c;
@@ -1202,7 +1202,7 @@ unittest
         }
     }
 
-    foreach(S; TypeTuple!(to!string, RandomCU!char, InputCU!char))
+    foreach(S; GenericTuple!(to!string, RandomCU!char, InputCU!char))
     {
         size_t i;
         dchar c;
@@ -1248,12 +1248,12 @@ unittest
 {
     size_t i;
 
-    foreach(S; TypeTuple!(to!string, RandomCU!char, InputCU!char))
+    foreach(S; GenericTuple!(to!string, RandomCU!char, InputCU!char))
     {
         static if (is(S == InputCU!char))
-            alias TypeTuple!(decodeFront) funcs;
+            alias GenericTuple!(decodeFront) funcs;
         else
-            alias TypeTuple!(decode, decodeFront) funcs;
+            alias GenericTuple!(decode, decodeFront) funcs;
 
         foreach(func; funcs)
         {
@@ -1276,12 +1276,12 @@ unittest
 {
     size_t i;
 
-    foreach(S; TypeTuple!(to!wstring, RandomCU!wchar, InputCU!wchar))
+    foreach(S; GenericTuple!(to!wstring, RandomCU!wchar, InputCU!wchar))
     {
         static if (is(S == InputCU!wchar))
-            alias TypeTuple!(decodeFront) funcs;
+            alias GenericTuple!(decodeFront) funcs;
         else
-            alias TypeTuple!(decode, decodeFront) funcs;
+            alias GenericTuple!(decode, decodeFront) funcs;
 
         foreach(func; funcs)
         {
@@ -1295,7 +1295,7 @@ unittest
         }
     }
 
-    foreach(S; TypeTuple!(to!wstring, RandomCU!wchar))
+    foreach(S; GenericTuple!(to!wstring, RandomCU!wchar))
     {
         auto str = S([ cast(wchar)0xD800, cast(wchar)0xDC00,
                        cast(wchar)0x1400,
@@ -1311,12 +1311,12 @@ unittest
 {
     size_t i;
 
-    foreach(S; TypeTuple!(to!dstring, RandomCU!dchar, InputCU!dchar))
+    foreach(S; GenericTuple!(to!dstring, RandomCU!dchar, InputCU!dchar))
     {
         static if (is(S == InputCU!dchar))
-            alias TypeTuple!(decodeFront) funcs;
+            alias GenericTuple!(decodeFront) funcs;
         else
-            alias TypeTuple!(decode, decodeFront) funcs;
+            alias GenericTuple!(decode, decodeFront) funcs;
 
         foreach(func; funcs)
         {
@@ -1331,7 +1331,7 @@ unittest
         }
     }
 
-    foreach(S; TypeTuple!(to!dstring, RandomCU!dchar))
+    foreach(S; GenericTuple!(to!dstring, RandomCU!dchar))
     {
         auto str = S([ cast(dchar)0x10000, cast(dchar)0x1400, cast(dchar)0xB9DDE ]);
         i = 0;

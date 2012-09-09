@@ -267,7 +267,7 @@ the type of the $(D k)th key of the container.
 A container may define both $(D KeyType) and $(D KeyTypes), e.g. in
 the case it has the notion of primary/preferred key.
  */
-    alias TypeTuple!(T) KeyTypes;
+    alias TypeTuple!T KeyTypes;
 
 /**
 If the container has a notion of key-value mapping, $(D ValueType)

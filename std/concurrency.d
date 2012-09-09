@@ -1015,7 +1015,7 @@ private
             }
             else
             {
-                alias TypeTuple!(T) Ops;
+                alias TypeTuple!T Ops;
                 alias vals[0 .. $] ops;
                 enum timedWait = false;
             }

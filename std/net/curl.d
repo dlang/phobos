@@ -3400,7 +3400,7 @@ struct Curl
         copy.stopped = false;
 
         with (CurlOption) {
-            auto tt = TypeTuple!(file, writefunction, writeheader,
+            auto tt = expressionTuple!(file, writefunction, writeheader,
                                  headerfunction, infile,
                                  readfunction, ioctldata, ioctlfunction,
                                  seekdata, seekfunction, sockoptdata,
