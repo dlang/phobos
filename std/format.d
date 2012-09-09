@@ -505,7 +505,10 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
 
 /**
    Reads characters from input range $(D r), converts them according
-   to $(D fmt), and writes them to $(D args).
+   to $(D fmt), and writes them to $(D args). Note that $(D r) is passed
+   by reference, and read characters removed from $(D r). A
+   non-pass-by-reference version is provided to bind to unnamed
+   temporary R-values.
 
    Returns:
 
@@ -515,12 +518,14 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
 
    Example:
 ----
-string s = "hello!124:34.5";
+string s = "hello!124:34.5world!!!";
 string a;
 int b;
 double c;
 formattedRead(s, "%s!%s:%s", &a, &b, &c);
-assert(a == "hello" && b == 124 && c == 34.5);
+assert(a == "hello" && b == 124 && c == 34.5 && s == "world!!!");
+formattedRead(s.save,"%s!!!", &a);
+assert(a == "world" && s == "world!!!");
 ----
  */
 uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, S args)
@@ -569,7 +574,25 @@ uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, S args)
         return 1 + formattedRead(r, spec.trailing, args[1 .. $]);
     }
 }
+/// ditto
+uint formattedRead(R, Char, S...)(R r, const(Char)[] fmt, S args) //Pass by value for unnamed R-Values
+{
+    //r is now a named variable, so we can legally pass it by reference
+    //We let the "ref" version of formattedRead do the work
+    return formattedRead(r, fmt, args);
+}
 
+unittest
+{
+    string s = "hello!124:34.5world!!!";
+    string a;
+    int b;
+    double c;
+    formattedRead(s, "%s!%s:%s", &a, &b, &c);
+    assert(a == "hello" && b == 124 && c == 34.5 && s == "world!!!");
+    formattedRead(s.save,"%s!!!", &a);
+    assert(a == "world" && s == "world!!!");
+}
 unittest
 {
     string s = " 1.2 3.4 ";
