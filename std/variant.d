@@ -65,7 +65,7 @@
  */
 module std.variant;
 
-import std.traits, std.c.string, std.typetuple, std.conv, std.exception;
+import std.traits, std.c.string, std.generictuple, std.conv, std.exception;
 // version(unittest)
 // {
     import std.exception, std.stdio;

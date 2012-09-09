@@ -34,7 +34,7 @@ import std.traits;
 version(unittest)
 {
     import std.stdio;
-    import std.typetuple;
+    import std.generictuple;
 }
 
 

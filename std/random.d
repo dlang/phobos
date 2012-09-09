@@ -61,7 +61,7 @@ import std.algorithm, std.c.time, std.conv, std.exception,
        core.thread, core.time;
 import std.string : format;
 
-version(unittest) import std.typetuple;
+version(unittest) import std.generictuple;
 
 
 // Segments of the code in this file Copyright (c) 1997 by Rick Booth

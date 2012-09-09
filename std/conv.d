@@ -20,7 +20,7 @@ module std.conv;
 import std.math : ldexp;
 import core.stdc.string;
 import std.algorithm, std.array, std.ascii, std.exception, std.math, std.range,
-    std.string, std.traits, std.typecons, std.typetuple, std.uni,
+    std.string, std.traits, std.typecons, std.generictuple, std.uni,
     std.utf;
 import std.format;
 import std.metastrings;

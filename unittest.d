@@ -48,7 +48,7 @@ public import std.string;
 public import std.syserror;
 public import std.system;
 public import std.traits;
-public import std.typetuple;
+public import std.generictuple;
 public import std.uni;
 public import std.uri;
 public import std.utf;

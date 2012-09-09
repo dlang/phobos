@@ -26,7 +26,7 @@
  */
 module std.traits;
 import std.algorithm;
-import std.typetuple;
+import std.generictuple;
 import std.typecons;
 import core.vararg;
 
@@ -2720,7 +2720,7 @@ unittest
  *
  * Example:
  * ---
- * import std.traits, std.typetuple, std.stdio;
+ * import std.traits, std.generictuple, std.stdio;
  * interface I { }
  * class A { }
  * class B : A, I { }
@@ -2776,7 +2776,7 @@ unittest
  *
  * Example:
  * ---
- * import std.traits, std.typetuple, std.stdio;
+ * import std.traits, std.generictuple, std.stdio;
  * interface I { }
  * class A { }
  * class B : A, I { }
@@ -2816,7 +2816,7 @@ template BaseClassesTuple(T)
  *
  * Example:
  * ---
- * import std.traits, std.typetuple, std.stdio;
+ * import std.traits, std.generictuple, std.stdio;
  * interface I1 { }
  * interface I2 { }
  * class A : I1, I2 { }
@@ -2892,7 +2892,7 @@ unittest
  *
  * Example:
  * ---
- * import std.traits, std.typetuple, std.stdio;
+ * import std.traits, std.generictuple, std.stdio;
  * interface I { }
  * class A { }
  * class B : A, I { }

@@ -89,7 +89,7 @@ import std.math;
 import std.range;
 import std.traits;
 import std.typecons;
-import std.typetuple;
+import std.generictuple;
 
 version(OSX)
 {

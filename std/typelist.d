@@ -42,7 +42,7 @@
  */
 module std.typelist;
 version(unittest) {
-    import std.typetuple;
+    import std.generictuple;
 }
 
 /**

@@ -117,7 +117,7 @@ SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
     std\uni.d std\base64.d std\md5.d std\ctype.d std\ascii.d \
     std\demangle.d std\uri.d std\mmfile.d std\getopt.d
 
-SRC_STD_3a= std\signals.d std\typetuple.d std\traits.d \
+SRC_STD_3a= std\signals.d std\generictuple.d std\traits.d \
     std\encoding.d std\xml.d \
     std\random.d std\regexp.d \
     std\exception.d \
@@ -159,7 +159,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\socket.d std\socketstream.d std\format.d \
 	std\stdio.d std\perf.d std\uni.d std\uuid.d \
 	std\cstream.d std\demangle.d \
-	std\signals.d std\cpuid.d std\typetuple.d std\traits.d \
+	std\signals.d std\cpuid.d std\generictuple.d std\traits.d \
 	std\metastrings.d std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
 	std\functional.d std\algorithm.d std\array.d std\typecons.d \
@@ -327,7 +327,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_thread.html \
 	$(DOC)\std_traits.html \
 	$(DOC)\std_typecons.html \
-	$(DOC)\std_typetuple.html \
+	$(DOC)\std_generictuple.html \
 	$(DOC)\std_uni.html \
 	$(DOC)\std_uri.html \
 	$(DOC)\std_utf.html \
@@ -610,8 +610,8 @@ $(DOC)\std_traits.html : $(STDDOC) std\traits.d
 $(DOC)\std_typecons.html : $(STDDOC) std\typecons.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_typecons.html $(STDDOC) std\typecons.d
 
-$(DOC)\std_typetuple.html : $(STDDOC) std\typetuple.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_typetuple.html $(STDDOC) std\typetuple.d
+$(DOC)\std_generictuple.html : $(STDDOC) std\generictuple.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_generictuple.html $(STDDOC) std\generictuple.d
 
 $(DOC)\std_uni.html : $(STDDOC) std\uni.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_uni.html $(STDDOC) std\uni.d

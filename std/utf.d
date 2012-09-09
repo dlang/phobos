@@ -24,7 +24,7 @@ import std.conv;       // to, assumeUnique
 import std.exception;  // enforce, assumeUnique
 import std.range;      // walkLength
 import std.traits;     // isSomeChar, isSomeString
-import std.typetuple;  // TypeTuple
+import std.generictuple;  // TypeTuple
 
 //debug=utf;           // uncomment to turn on debugging printf's
 
@@ -2212,7 +2212,7 @@ unittest
     import core.exception;
     import std.algorithm;
     import std.metastrings;
-    import std.typetuple;
+    import std.generictuple;
 
     size_t zeroLen(C)(const(C)* ptr)
     {
@@ -2308,7 +2308,7 @@ const(wchar)* toUTF16z(C)(const(C)[] str)
 
 unittest
 {
-    import std.typetuple;
+    import std.generictuple;
 
     //toUTFz is already thoroughly tested, so this will just verify that
     //toUTF16z compiles properly for the various string types.

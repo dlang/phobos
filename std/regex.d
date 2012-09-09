@@ -224,7 +224,7 @@ module std.regex;
 
 import std.internal.uni, std.internal.uni_tab;//unicode property tables
 import std.array, std.algorithm, std.range,
-       std.conv, std.exception, std.traits, std.typetuple,
+       std.conv, std.exception, std.traits, std.generictuple,
        std.uni, std.utf, std.format, std.typecons, std.bitmanip,
        std.functional, std.exception;
 import core.bitop, core.stdc.string, core.stdc.stdlib;

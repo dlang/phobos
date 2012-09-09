@@ -23,7 +23,7 @@ import core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
        core.stdc.errno, std.algorithm, std.array, std.conv,
        std.datetime, std.exception, std.format, std.path, std.process,
        std.range, std.stdio, std.string, std.traits,
-       std.typecons, std.typetuple, std.utf;
+       std.typecons, std.generictuple, std.utf;
 
 import std.metastrings; //For generating deprecation messages only. Remove once
                         //deprecation path complete.

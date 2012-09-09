@@ -75,7 +75,7 @@ private
     import std.range;
     import std.traits;
     import std.typecons;
-    import std.typetuple;
+    import std.generictuple;
 
     template hasLocalAliasing(T...)
     {

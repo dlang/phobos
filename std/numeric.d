@@ -36,7 +36,7 @@ import std.string;
 import std.range;
 import std.c.stdlib;
 import std.functional;
-import std.typetuple;
+import std.generictuple;
 import std.complex;
 
 import core.bitop;

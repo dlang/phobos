@@ -317,7 +317,7 @@ module std.algorithm;
 import std.c.string;
 import std.array, std.ascii, std.container, std.conv, std.exception,
     std.functional, std.math, std.metastrings, std.range, std.string,
-    std.traits, std.typecons, std.typetuple, std.uni;
+    std.traits, std.typecons, std.generictuple, std.uni;
 
 version(unittest)
 {

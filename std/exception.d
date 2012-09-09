@@ -411,7 +411,7 @@ unittest
 // purity and safety inference test
 unittest
 {
-    import std.typetuple;
+    import std.generictuple;
 
     foreach (EncloseSafe; TypeTuple!(false, true))
     foreach (EnclosePure; TypeTuple!(false, true))

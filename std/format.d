@@ -23,7 +23,7 @@ module std.format;
 import core.stdc.stdio, core.stdc.stdlib, core.stdc.string, core.vararg;
 import std.algorithm, std.array, std.ascii, std.bitmanip, std.conv,
     std.exception, std.functional, std.math, std.range,
-    std.string, std.system, std.traits, std.typecons, std.typetuple,
+    std.string, std.system, std.traits, std.typecons, std.generictuple,
     std.utf;
 version(unittest) {
     import std.stdio;

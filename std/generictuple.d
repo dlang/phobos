@@ -25,14 +25,14 @@
  * Authors:
  *     $(WEB digitalmars.com, Walter Bright),
  *     $(WEB klickverbot.at, David Nadlinger)
- * Source:    $(PHOBOSSRC std/_typetuple.d)
+ * Source:    $(PHOBOSSRC std/_generictuple.d)
  */
 /*          Copyright Digital Mars 2005 - 2009.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
-module std.typetuple;
+module std.generictuple;
 
 import std.traits;
 
@@ -40,7 +40,7 @@ import std.traits;
  * Creates a typetuple out of a sequence of zero or more types.
  * Example:
  * ---
- * import std.typetuple;
+ * import std.generictuple;
  * alias TypeTuple!(int, double) TL;
  *
  * int foo(TL td)  // same as int foo(int, double);
@@ -67,7 +67,7 @@ template TypeTuple(TList...)
  * If not found, -1 is returned.
  * Example:
  * ---
- * import std.typetuple;
+ * import std.generictuple;
  * import std.stdio;
  *
  * void foo()

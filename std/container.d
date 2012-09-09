@@ -211,7 +211,7 @@ module std.container;
 
 import core.memory, core.stdc.stdlib, core.stdc.string, std.algorithm,
     std.conv, std.exception, std.functional, std.range, std.traits,
-    std.typecons, std.typetuple;
+    std.typecons, std.generictuple;
 version(unittest) import std.stdio;
 
 version(unittest) version = RBDoChecks;

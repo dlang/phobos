@@ -45,7 +45,7 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
 module std.typecons;
 import core.memory, core.stdc.stdlib;
 import std.algorithm, std.array, std.conv, std.exception, std.format,
-    std.metastrings, std.traits, std.typetuple, std.range;
+    std.metastrings, std.traits, std.generictuple, std.range;
 
 debug(Unique) import std.stdio;
 
