@@ -1916,6 +1916,14 @@ private auto floatEndianImpl(size_t n, bool swap)(ubyte[n] val) @safe pure nothr
 }
 
 
+private template canSwapEndianness(T)
+{
+    enum canSwapEndianness = isIntegral!T ||
+                             isSomeChar!T ||
+                             is(Unqual!T == bool) ||
+                             is(Unqual!T == float) ||
+                             is(Unqual!T == double);
+}
 /++
     Takes a range of $(D ubyte)s and converts the first $(D T.sizeof) bytes to
     $(D T). The value returned is converted from the given endianness to the
@@ -1952,8 +1960,11 @@ assert(buffer.peek!ubyte(&index) == 8);
 assert(index == 7);
 --------------------
   +/
+
 T peek(T, Endian endianness = Endian.bigEndian, R)(R range)
-    if(isIntegral!T && isForwardRange!R && is(ElementType!R : const ubyte))
+    if (canSwapEndianness!T &&
+        isForwardRange!R &&
+        is(ElementType!R : const ubyte))
 {
     static if(hasSlicing!R)
         const ubyte[T.sizeof] bytes = range[0 .. T.sizeof];
@@ -1978,7 +1989,7 @@ T peek(T, Endian endianness = Endian.bigEndian, R)(R range)
 
 /++ Ditto +/
 T peek(T, Endian endianness = Endian.bigEndian, R)(R range, size_t index)
-    if(isIntegral!T &&
+    if(canSwapEndianness!T &&
        isForwardRange!R &&
        hasSlicing!R &&
        is(ElementType!R : const ubyte))
@@ -1988,7 +1999,7 @@ T peek(T, Endian endianness = Endian.bigEndian, R)(R range, size_t index)
 
 /++ Ditto +/
 T peek(T, Endian endianness = Endian.bigEndian, R)(R range, size_t* index)
-    if(isIntegral!T &&
+    if(canSwapEndianness!T &&
        isForwardRange!R &&
        hasSlicing!R &&
        is(ElementType!R : const ubyte))
@@ -2009,24 +2020,138 @@ T peek(T, Endian endianness = Endian.bigEndian, R)(R range, size_t* index)
 //Verify Example.
 unittest
 {
-    ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
-    assert(buffer.peek!uint() == 17110537);
-    assert(buffer.peek!ushort() == 261);
-    assert(buffer.peek!ubyte() == 1);
+    {   //uint, ushort, ubyte
+        ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
+        assert(buffer.peek!uint() == 17110537);
+        assert(buffer.peek!ushort() == 261);
+        assert(buffer.peek!ubyte() == 1);
 
-    assert(buffer.peek!uint(2) == 369700095);
-    assert(buffer.peek!ushort(2) == 5641);
-    assert(buffer.peek!ubyte(2) == 22);
+        assert(buffer.peek!uint(2) == 369700095);
+        assert(buffer.peek!ushort(2) == 5641);
+        assert(buffer.peek!ubyte(2) == 22);
 
-    size_t index = 0;
-    assert(buffer.peek!ushort(&index) == 261);
-    assert(index == 2);
+        size_t index = 0;
+        assert(buffer.peek!ushort(&index) == 261);
+        assert(index == 2);
 
-    assert(buffer.peek!uint(&index) == 369700095);
-    assert(index == 6);
+        assert(buffer.peek!uint(&index) == 369700095);
+        assert(index == 6);
 
-    assert(buffer.peek!ubyte(&index) == 8);
-    assert(index == 7);
+        assert(buffer.peek!ubyte(&index) == 8);
+        assert(index == 7);
+    }
+
+    {   //bool
+        ubyte[] buffer = [0, 1];
+        assert(buffer.peek!bool() == false);
+        assert(buffer.peek!bool(1) == true);
+
+        size_t index = 0;
+        assert(buffer.peek!bool(&index) == false);
+        assert(index == 1);
+
+        assert(buffer.peek!bool(&index) == true);
+        assert(index == 2);
+    }
+
+    {   //char (8bit)
+        ubyte[] buffer = [97, 98, 99, 100];
+        assert(buffer.peek!char() == 'a');
+        assert(buffer.peek!char(1) == 'b');
+
+        size_t index = 0;
+        assert(buffer.peek!char(&index) == 'a');
+        assert(index == 1);
+
+        assert(buffer.peek!char(&index) == 'b');
+        assert(index == 2);
+    }
+
+    {   //wchar (16bit - 2x ubyte)
+        ubyte[] buffer = [1, 5, 32, 29, 1, 7];
+        assert(buffer.peek!wchar() == 'ą');
+        assert(buffer.peek!wchar(2) == '”');
+        assert(buffer.peek!wchar(4) == 'ć');
+
+        size_t index = 0;
+        assert(buffer.peek!wchar(&index) == 'ą');
+        assert(index == 2);
+
+        assert(buffer.peek!wchar(&index) == '”');
+        assert(index == 4);
+
+        assert(buffer.peek!wchar(&index) == 'ć');
+        assert(index == 6);
+    }
+
+    {   //dchar (32bit - 4x ubyte)
+        ubyte[] buffer = [0, 0, 1, 5, 0, 0, 32, 29, 0, 0, 1, 7];
+        assert(buffer.peek!dchar() == 'ą');
+        assert(buffer.peek!dchar(4) == '”');
+        assert(buffer.peek!dchar(8) == 'ć');
+
+        size_t index = 0;
+        assert(buffer.peek!dchar(&index) == 'ą');
+        assert(index == 4);
+
+        assert(buffer.peek!dchar(&index) == '”');
+        assert(index == 8);
+
+        assert(buffer.peek!dchar(&index) == 'ć');
+        assert(index == 12);
+    }
+
+    {   //float (32bit - 4x ubyte)
+        ubyte[] buffer = [66, 0, 0, 0, 65, 200, 0, 0];
+        assert(buffer.peek!float()== 32.0);
+        assert(buffer.peek!float(4) == 25.0f);
+        
+        size_t index = 0;
+        assert(buffer.peek!float(&index) == 32.0f);
+        assert(index == 4);
+
+        assert(buffer.peek!float(&index) == 25.0f);
+        assert(index == 8);
+    }
+
+    {   //double (64bit - 8x ubyte)
+        ubyte[] buffer = [64, 64, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0];
+        assert(buffer.peek!double() == 32.0);
+        assert(buffer.peek!double(8) == 25.0);
+        
+        size_t index = 0;
+        assert(buffer.peek!double(&index) == 32.0);
+        assert(index == 8);
+
+        assert(buffer.peek!double(&index) == 25.0);
+        assert(index == 16);
+    }
+
+    {   //enum
+        ubyte[] buffer = [0, 0, 0, 10, 0, 0, 0, 20, 0, 0, 0, 30];
+        
+        enum Foo
+        {
+            One = 10,
+            Two = 20,
+            Three = 30
+        }
+
+        assert(buffer.peek!Foo() == Foo.One);
+        assert(buffer.peek!Foo(0) == Foo.One);
+        assert(buffer.peek!Foo(4) == Foo.Two);
+        assert(buffer.peek!Foo(8) == Foo.Three);
+
+        size_t index = 0;
+        assert(buffer.peek!Foo(&index) == Foo.One);
+        assert(index == 4);
+
+        assert(buffer.peek!Foo(&index) == Foo.Two);
+        assert(index == 8);
+
+        assert(buffer.peek!Foo(&index) == Foo.Three);
+        assert(index == 12);
+    }
 }
 
 unittest
@@ -2067,7 +2192,7 @@ assert(buffer.empty);
 --------------------
   +/
 T read(T, Endian endianness = Endian.bigEndian, R)(ref R range)
-    if(isIntegral!T && isInputRange!R && is(ElementType!R : const ubyte))
+    if(canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
 {
     static if(hasSlicing!R)
     {
@@ -2094,17 +2219,115 @@ T read(T, Endian endianness = Endian.bigEndian, R)(ref R range)
 //Verify Example.
 unittest
 {
-    ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
-    assert(buffer.length == 7);
+    {
+        ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
+        assert(buffer.length == 7);
 
-    assert(buffer.read!ushort() == 261);
-    assert(buffer.length == 5);
+        assert(buffer.read!ushort() == 261);
+        assert(buffer.length == 5);
 
-    assert(buffer.read!uint() == 369700095);
-    assert(buffer.length == 1);
+        assert(buffer.read!uint() == 369700095);
+        assert(buffer.length == 1);
 
-    assert(buffer.read!ubyte() == 8);
-    assert(buffer.empty);
+        assert(buffer.read!ubyte() == 8);
+        assert(buffer.empty);
+    }
+
+    {   //bool
+        ubyte[] buffer = [0, 1];
+        assert(buffer.length == 2);
+
+        assert(buffer.read!bool() == false);
+        assert(buffer.length == 1);
+
+        assert(buffer.read!bool() == true);
+        assert(buffer.empty);
+    }
+
+    {   //char (8bit)
+        ubyte[] buffer = [97, 98, 99];
+        assert(buffer.length == 3);
+
+        assert(buffer.read!char() == 'a');
+        assert(buffer.length == 2);
+
+        assert(buffer.read!char() == 'b');
+        assert(buffer.length == 1);
+
+        assert(buffer.read!char() == 'c');
+        assert(buffer.empty);
+    }
+
+    {   //wchar (16bit - 2x ubyte)
+        ubyte[] buffer = [1, 5, 32, 29, 1, 7];
+        assert(buffer.length == 6);
+
+        assert(buffer.read!wchar() == 'ą');
+        assert(buffer.length == 4);
+
+        assert(buffer.read!wchar() == '”');
+        assert(buffer.length == 2);
+
+        assert(buffer.read!wchar() == 'ć');
+        assert(buffer.empty);
+    }
+
+    {   //dchar (32bit - 4x ubyte)
+        ubyte[] buffer = [0, 0, 1, 5, 0, 0, 32, 29, 0, 0, 1, 7];
+        assert(buffer.length == 12);
+
+        assert(buffer.read!dchar() == 'ą');
+        assert(buffer.length == 8);
+
+        assert(buffer.read!dchar() == '”');
+        assert(buffer.length == 4);
+
+        assert(buffer.read!dchar() == 'ć');
+        assert(buffer.empty);
+    }
+
+    {   //float (32bit - 4x ubyte)
+        ubyte[] buffer = [66, 0, 0, 0, 65, 200, 0, 0];
+        assert(buffer.length == 8);
+
+        assert(buffer.read!float()== 32.0);
+        assert(buffer.length == 4);
+
+        assert(buffer.read!float() == 25.0f);
+        assert(buffer.empty);
+    }
+
+    {   //double (64bit - 8x ubyte)
+        ubyte[] buffer = [64, 64, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0];
+        assert(buffer.length == 16);
+
+        assert(buffer.read!double() == 32.0);
+        assert(buffer.length == 8);
+
+        assert(buffer.read!double() == 25.0);
+        assert(buffer.empty);
+    }
+
+    {   //enum
+        ubyte[] buffer = [0, 0, 0, 10, 0, 0, 0, 20, 0, 0, 0, 30];
+        assert(buffer.length == 12);
+
+        enum Foo
+        {
+            One = 10,
+            Two = 20,
+            Three = 30
+        }
+
+        assert(buffer.read!Foo() == Foo.One);
+        assert(buffer.length == 8);
+
+        assert(buffer.read!Foo() == Foo.Two);
+        assert(buffer.length == 4);
+
+        assert(buffer.read!Foo() == Foo.Three);
+        assert(buffer.empty);
+    }
 }
 
 unittest
@@ -2139,50 +2362,49 @@ unittest
 
         Examples:
 --------------------
-//Bug# 8129 forces the casts. They shouldn't be necessary.
 {
-    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0];
+    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
     buffer.write!uint(29110231u, 0);
-    assert(buffer == [1, 188, 47, 215, 0, 0, 0]);
+    assert(buffer == [1, 188, 47, 215, 0, 0, 0, 0]);
 
-    buffer.write!ushort(cast(ushort)927, 0);
-    assert(buffer == [3, 159, 47, 215, 0, 0, 0]);
+    buffer.write!ushort(927, 0);
+    assert(buffer == [3, 159, 47, 215, 0, 0, 0, 0]);
 
-    buffer.write!ubyte(cast(ubyte)42, 0);
-    assert(buffer == [42, 159, 47, 215, 0, 0, 0]);
+    buffer.write!ubyte(42, 0);
+    assert(buffer == [42, 159, 47, 215, 0, 0, 0, 0]);
 }
 
 {
-    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0];
+    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0, 0];
     buffer.write!uint(142700095u, 2);
-    assert(buffer == [0, 0, 8, 129, 110, 63, 0]);
+    assert(buffer == [0, 0, 8, 129, 110, 63, 0, 0, 0]);
 
-    buffer.write!ushort(cast(ushort)19839, 2);
-    assert(buffer == [0, 0, 77, 127, 110, 63, 0]);
+    buffer.write!ushort(19839, 2);
+    assert(buffer == [0, 0, 77, 127, 110, 63, 0, 0, 0]);
 
-    buffer.write!ubyte(cast(ubyte)132, 2);
-    assert(buffer == [0, 0, 132, 127, 110, 63, 0]);
+    buffer.write!ubyte(132, 2);
+    assert(buffer == [0, 0, 132, 127, 110, 63, 0, 0, 0]);
 }
 
 {
-    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0];
+    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
     size_t index = 0;
-    buffer.write!ushort(cast(ushort)261, &index);
-    assert(buffer == [1, 5, 0, 0, 0, 0, 0]);
+    buffer.write!ushort(261, &index);
+    assert(buffer == [1, 5, 0, 0, 0, 0, 0, 0]);
     assert(index == 2);
 
     buffer.write!uint(369700095u, &index);
-    assert(buffer == [1, 5, 22, 9, 44, 255, 0]);
+    assert(buffer == [1, 5, 22, 9, 44, 255, 0, 0]);
     assert(index == 6);
 
-    buffer.write!ubyte(cast(ubyte)8, &index);
-    assert(buffer == [1, 5, 22, 9, 44, 255, 8]);
+    buffer.write!ubyte(8, &index);
+    assert(buffer == [1, 5, 22, 9, 44, 255, 8, 0]);
     assert(index == 7);
 }
 --------------------
   +/
 void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t index)
-    if(isIntegral!T &&
+    if(canSwapEndianness!T &&
        isForwardRange!R &&
        hasSlicing!R &&
        is(ElementType!R : ubyte))
@@ -2192,7 +2414,7 @@ void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t 
 
 /++ Ditto +/
 void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t* index)
-    if(isIntegral!T &&
+    if(canSwapEndianness!T &&
        isForwardRange!R &&
        hasSlicing!R &&
        is(ElementType!R : ubyte))
@@ -2213,45 +2435,202 @@ void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t*
 //Verify Example.
 unittest
 {
-    //Bug# 8129 forces the casts. They shouldn't be necessary.
     {
-        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0];
+        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
         buffer.write!uint(29110231u, 0);
-        assert(buffer == [1, 188, 47, 215, 0, 0, 0]);
+        assert(buffer == [1, 188, 47, 215, 0, 0, 0, 0]);
 
-        buffer.write!ushort(cast(ushort)927, 0);
-        assert(buffer == [3, 159, 47, 215, 0, 0, 0]);
+        buffer.write!ushort(927, 0);
+        assert(buffer == [3, 159, 47, 215, 0, 0, 0, 0]);
 
-        buffer.write!ubyte(cast(ubyte)42, 0);
-        assert(buffer == [42, 159, 47, 215, 0, 0, 0]);
+        buffer.write!ubyte(42, 0);
+        assert(buffer == [42, 159, 47, 215, 0, 0, 0, 0]);
     }
 
     {
-        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0];
+        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0, 0];
         buffer.write!uint(142700095u, 2);
-        assert(buffer == [0, 0, 8, 129, 110, 63, 0]);
+        assert(buffer == [0, 0, 8, 129, 110, 63, 0, 0, 0]);
 
-        buffer.write!ushort(cast(ushort)19839, 2);
-        assert(buffer == [0, 0, 77, 127, 110, 63, 0]);
+        buffer.write!ushort(19839, 2);
+        assert(buffer == [0, 0, 77, 127, 110, 63, 0, 0, 0]);
 
-        buffer.write!ubyte(cast(ubyte)132, 2);
-        assert(buffer == [0, 0, 132, 127, 110, 63, 0]);
+        buffer.write!ubyte(132, 2);
+        assert(buffer == [0, 0, 132, 127, 110, 63, 0, 0, 0]);
     }
 
     {
-        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0];
+        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
         size_t index = 0;
-        buffer.write!ushort(cast(ushort)261, &index);
-        assert(buffer == [1, 5, 0, 0, 0, 0, 0]);
+        buffer.write!ushort(261, &index);
+        assert(buffer == [1, 5, 0, 0, 0, 0, 0, 0]);
         assert(index == 2);
 
         buffer.write!uint(369700095u, &index);
-        assert(buffer == [1, 5, 22, 9, 44, 255, 0]);
+        assert(buffer == [1, 5, 22, 9, 44, 255, 0, 0]);
         assert(index == 6);
 
-        buffer.write!ubyte(cast(ubyte)8, &index);
-        assert(buffer == [1, 5, 22, 9, 44, 255, 8]);
+        buffer.write!ubyte(8, &index);
+        assert(buffer == [1, 5, 22, 9, 44, 255, 8, 0]);
         assert(index == 7);
+    }
+
+
+    {   //bool
+        ubyte[] buffer = [0, 0];
+
+        buffer.write!bool(false, 0);
+        assert(buffer == [0, 0]);
+
+        buffer.write!bool(true, 0);
+        assert(buffer == [1, 0]);
+
+        buffer.write!bool(true, 1);
+        assert(buffer == [1, 1]);
+
+        buffer.write!bool(false, 1);
+        assert(buffer == [1, 0]);
+
+        size_t index = 0;
+        buffer.write!bool(false, &index);
+        assert(buffer == [0, 0]);
+        assert(index == 1);
+
+        buffer.write!bool(true, &index);
+        assert(buffer == [0, 1]);
+        assert(index == 2);
+    }
+
+    {   //char (8bit)
+        ubyte[] buffer = [0, 0, 0];;
+        
+        buffer.write!char('a', 0);
+        assert(buffer == [97, 0, 0]);
+
+        buffer.write!char('b', 1);
+        assert(buffer == [97, 98, 0]);
+
+        size_t index = 0;
+        buffer.write!char('a', &index);
+        assert(buffer == [97, 98, 0]);
+        assert(index == 1);
+
+        buffer.write!char('b', &index);
+        assert(buffer == [97, 98, 0]);
+        assert(index == 2);
+
+        buffer.write!char('c', &index);
+        assert(buffer == [97, 98, 99]);
+        assert(index == 3);
+    }
+
+    {   //wchar (16bit - 2x ubyte)
+        ubyte[] buffer = [0, 0, 0, 0];//[1, 5, 32, 29, 1, 7];
+        
+        buffer.write!wchar('ą', 0);
+        assert(buffer == [1, 5, 0, 0]);
+
+        buffer.write!wchar('”', 2);
+        assert(buffer == [1, 5, 32, 29]);
+
+        size_t index = 0;
+        buffer.write!wchar('ć', &index);
+        assert(buffer == [1, 7, 32, 29]);
+        assert(index == 2);
+
+        buffer.write!wchar('ą', &index);
+        assert(buffer == [1, 7, 1, 5]);
+        assert(index == 4);
+    }
+
+    {   //dchar (32bit - 4x ubyte)
+        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
+        
+        buffer.write!dchar('ą', 0);
+        assert(buffer == [0, 0, 1, 5, 0, 0, 0, 0]);
+
+        buffer.write!dchar('”', 4);
+        assert(buffer == [0, 0, 1, 5, 0, 0, 32, 29]);
+
+        size_t index = 0;
+        buffer.write!dchar('ć', &index);
+        assert(buffer == [0, 0, 1, 7, 0, 0, 32, 29]);
+        assert(index == 4);
+
+        buffer.write!dchar('ą', &index);
+        assert(buffer == [0, 0, 1, 7, 0, 0, 1, 5]);
+        assert(index == 8);
+    }     
+
+    {   //float (32bit - 4x ubyte)
+        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
+
+        buffer.write!float(32.0f, 0);
+        assert(buffer == [66, 0, 0, 0, 0, 0, 0, 0]);
+
+        buffer.write!float(25.0f, 4);
+        assert(buffer == [66, 0, 0, 0, 65, 200, 0, 0]);
+
+        size_t index = 0;
+        buffer.write!float(25.0f, &index);
+        assert(buffer == [65, 200, 0, 0, 65, 200, 0, 0]);
+        assert(index == 4);
+
+        buffer.write!float(32.0f, &index);
+        assert(buffer == [65, 200, 0, 0, 66, 0, 0, 0]);
+        assert(index == 8);
+    }
+
+    {   //double (64bit - 8x ubyte)
+        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+        buffer.write!double(32.0, 0);
+        assert(buffer == [64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+
+        buffer.write!double(25.0, 8);
+        assert(buffer == [64, 64, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0]);
+        
+        size_t index = 0;
+        buffer.write!double(25.0, &index);
+        assert(buffer == [64, 57, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0]);
+        assert(index == 8);
+
+        buffer.write!double(32.0, &index);
+        assert(buffer == [64, 57, 0, 0, 0, 0, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0]);
+        assert(index == 16);
+    }
+
+    {   //enum
+        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];//[0, 0, 0, 10, 0, 0, 0, 20, 0, 0, 0, 30];
+        
+        enum Foo
+        {
+            One = 10,
+            Two = 20,
+            Three = 30
+        }
+
+        buffer.write!Foo(Foo.One, 0);
+        assert(buffer == [0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0]);
+
+        buffer.write!Foo(Foo.Two, 4);
+        assert(buffer == [0, 0, 0, 10, 0, 0, 0, 20, 0, 0, 0, 0]);
+
+        buffer.write!Foo(Foo.Three, 8);
+        assert(buffer == [0, 0, 0, 10, 0, 0, 0, 20, 0, 0, 0, 30]);
+
+        size_t index = 0;
+        buffer.write!Foo(Foo.Three, &index);
+        assert(buffer == [0, 0, 0, 30, 0, 0, 0, 20, 0, 0, 0, 30]);
+        assert(index == 4);
+
+        buffer.write!Foo(Foo.One, &index);
+        assert(buffer == [0, 0, 0, 30, 0, 0, 0, 10, 0, 0, 0, 30]);
+        assert(index == 8);
+
+        buffer.write!Foo(Foo.Two, &index);
+        assert(buffer == [0, 0, 0, 30, 0, 0, 0, 10, 0, 0, 0, 20]);
+        assert(index == 12);
     }
 }
 
@@ -2269,20 +2648,19 @@ unittest
 
         Examples:
 --------------------
-//Bug# 8129 forces the casts. They shouldn't be necessary.
 auto buffer = appender!(const ubyte[])();
-buffer.append!ushort(cast(ushort)261);
+buffer.append!ushort(261);
 assert(buffer.data == [1, 5]);
 
 buffer.append!uint(369700095u);
 assert(buffer.data == [1, 5, 22, 9, 44, 255]);
 
-buffer.append!ubyte(cast(ubyte)8);
+buffer.append!ubyte(8);
 assert(buffer.data == [1, 5, 22, 9, 44, 255, 8]);
 --------------------
   +/
 void append(T, Endian endianness = Endian.bigEndian, R)(R range, T value)
-    if(isIntegral!T && isOutputRange!(R, ubyte))
+    if(canSwapEndianness!T && isOutputRange!(R, ubyte))
 {
     static if(endianness == Endian.bigEndian)
         immutable bytes = nativeToBigEndian!T(value);
@@ -2295,16 +2673,74 @@ void append(T, Endian endianness = Endian.bigEndian, R)(R range, T value)
 //Verify Example.
 unittest
 {
-    //Bug# 8129 forces the casts. They shouldn't be necessary.
-    auto buffer = appender!(const ubyte[])();
-    buffer.append!ushort(cast(ushort)261);
-    assert(buffer.data == [1, 5]);
+    {
+        auto buffer = appender!(const ubyte[])();
+        buffer.append!ushort(261);
+        assert(buffer.data == [1, 5]);
 
-    buffer.append!uint(369700095u);
-    assert(buffer.data == [1, 5, 22, 9, 44, 255]);
+        buffer.append!uint(369700095u);
+        assert(buffer.data == [1, 5, 22, 9, 44, 255]);
 
-    buffer.append!ubyte(cast(ubyte)8);
-    assert(buffer.data == [1, 5, 22, 9, 44, 255, 8]);
+        buffer.append!ubyte(8);
+        assert(buffer.data == [1, 5, 22, 9, 44, 255, 8]);
+    }
+
+
+    {   //bool
+        auto buffer = appender!(const ubyte[])();
+
+        buffer.append!bool(true);
+        assert(buffer.data == [1]);
+
+        buffer.append!bool(false);
+        assert(buffer.data == [1, 0]);
+    }
+
+    {   //char wchar dchar
+        auto buffer = appender!(const ubyte[])();
+        
+        buffer.append!char('a');
+        assert(buffer.data == [97]);
+
+        buffer.append!char('b');
+        assert(buffer.data == [97, 98]);
+        
+        buffer.append!wchar('ą');
+        assert(buffer.data == [97, 98, 1, 5]);
+
+        buffer.append!dchar('ą');
+        assert(buffer.data == [97, 98, 1, 5, 0, 0, 1, 5]);
+    }     
+
+    {   //float double
+        auto buffer = appender!(const ubyte[])();
+
+        buffer.append!float(32.0f);
+        assert(buffer.data == [66, 0, 0, 0]);
+
+        buffer.append!double(32.0);
+        assert(buffer.data == [66, 0, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0]);
+    }
+
+    {   //enum
+        auto buffer = appender!(const ubyte[])();
+        
+        enum Foo
+        {
+            One = 10,
+            Two = 20,
+            Three = 30
+        }
+
+        buffer.append!Foo(Foo.One);
+        assert(buffer.data == [0, 0, 0, 10]);
+
+        buffer.append!Foo(Foo.Two);
+        assert(buffer.data == [0, 0, 0, 10, 0, 0, 0, 20]);
+
+        buffer.append!Foo(Foo.Three);
+        assert(buffer.data == [0, 0, 0, 10, 0, 0, 0, 20, 0, 0, 0, 30]);
+    }
 }
 
 unittest

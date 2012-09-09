@@ -1,27 +1,22 @@
-# Makefile to build D runtime library phobos.lib for Win32
+# Makefile to build D runtime library phobos64.lib for Win64
 # Prerequisites:
-#	Digital Mars dmc, lib, and make that are unzipped from Digital Mars C:
-#	    http://ftp.digitalmars.com/Digital_Mars_C++/Patch/dm850c.zip
-#	and are in the \dm\bin directory.
+#	Microsoft Visual Studio
 # Targets:
 #	make
 #		Same as make unittest
-#	make phobos.lib
-#		Build phobos.lib
+#	make phobos64.lib
+#		Build phobos64.lib
 #	make clean
 #		Delete unneeded files created by build process
 #	make unittest
-#		Build phobos.lib, build and run unit tests
+#		Build phobos64.lib, build and run unit tests
 #	make cov
 #		Build for coverage tests, run coverage tests
 #	make html
 #		Build documentation
-# Notes:
-#	minit.obj requires Microsoft MASM386.EXE to build from minit.asm,
-#	or just use the supplied minit.obj
 
 ## Memory model (32 or 64)
-MODEL=32
+MODEL=64
 
 ## Copy command
 
@@ -31,24 +26,30 @@ CP=cp
 
 DIR=\dmd2
 
-## Flags for dmc C compiler
+## Visual C directories
+VCDIR="\Program Files (x86)\Microsoft Visual Studio 10.0\VC"
+SDKDIR="\Program Files (x86)\Microsoft SDKs\Windows\v7.0A"
 
-CFLAGS=-mn -6 -r
-#CFLAGS=-g -mn -6 -r
+## Flags for VC compiler
+
+#CFLAGS=/O2 /I$(VCDIR)\INCLUDE /I$(SDKDIR)\Include
+CFLAGS=/Zi /I$(VCDIR)\INCLUDE /I$(SDKDIR)\Include
 
 ## Flags for dmd D compiler
 
-DFLAGS=-O -release -w -d -property
-#DFLAGS=-unittest -g -d
-#DFLAGS=-unittest -cov -g -d
+DFLAGS=-m$(MODEL) -O -release -w -d -property
+#DFLAGS=-m$(MODEL) -unittest -g -d
+#DFLAGS=-m$(MODEL) -unittest -cov -g -d
 
 ## Flags for compiling unittests
 
-UDFLAGS=-O -w -d -property
+UDFLAGS=-m$(MODEL) -O -w -d -property
 
-## C compiler
+## C compiler, linker, librarian
 
-CC=dmc
+CC=$(VCDIR)\bin\amd64\cl
+LD=$(VCDIR)\bin\amd64\link
+LIB=$(VCDIR)\bin\amd64\lib
 
 ## D compiler
 
@@ -67,17 +68,17 @@ DOC=..\..\html\d\phobos
 ## Location of druntime tree
 
 DRUNTIME=..\druntime
-DRUNTIMELIB=$(DRUNTIME)\lib\druntime.lib
+DRUNTIMELIB=$(DRUNTIME)\lib\druntime64.lib
 
 ## Zlib library
 
-ZLIB=etc\c\zlib\zlib.lib
+ZLIB=etc\c\zlib\zlib$(MODEL).lib
 
 .c.obj:
-	$(CC) -c $(CFLAGS) $*
+	$(CC) -c $(CFLAGS) $*.c
 
 .cpp.obj:
-	$(CC) -c $(CFLAGS) $*
+	$(CC) -c $(CFLAGS) $*.cpp
 
 .d.obj:
 	$(DMD) -c $(DFLAGS) $*
@@ -85,17 +86,17 @@ ZLIB=etc\c\zlib\zlib.lib
 .asm.obj:
 	$(CC) -c $*
 
-LIB=phobos.lib
+LIB=phobos$(MODEL).lib
 
 targets : $(LIB)
 
 test : test.exe
 
 test.obj : test.d
-	$(DMD) -c test -g -unittest
+	$(DMD) -c -m$(MODEL) test -g -unittest
 
 test.exe : test.obj $(LIB)
-	$(DMD) test.obj -g -L/map
+	$(DMD) test.obj -m$(MODEL) -g -L/map
 
 #	ti_bit.obj ti_Abit.obj
 
@@ -376,7 +377,7 @@ unittest : $(LIB)
 #	dmc unittest.obj -g
 
 cov : $(SRC_TO_COMPILE) $(LIB)
-	$(DMD) -cov -unittest -ofcov.exe unittest.d $(SRC_TO_COMPILE) $(LIB)
+	$(DMD) -m$(MODEL) -cov -unittest -ofcov.exe unittest.d $(SRC_TO_COMPILE) $(LIB)
 	cov
 
 html : $(DOCS)
@@ -385,7 +386,7 @@ html : $(DOCS)
 
 $(ZLIB): $(SRC_ZLIB)
 	cd etc\c\zlib
-	make -f win$(MODEL).mak zlib.lib
+	make -f win$(MODEL).mak zlib$(MODEL).lib
 	cd ..\..\..
 
 ################## DOCS ####################################

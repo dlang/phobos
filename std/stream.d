@@ -1164,7 +1164,14 @@ class Stream : InputStream, OutputStream {
 
   // writes data to stream using printf() syntax,
   // returns number of bytes written
-  version (X86_64)
+  version (Win64)
+  size_t printf(const(char)[] format, ...) {
+    va_list ap;
+    ap = cast(va_list) &format;
+    ap += format.sizeof;
+    return vprintf(format, ap);
+  }
+  else version (X86_64)
   size_t printf(const(char)[] format, ...) {
     va_list ap;
     va_start(ap, __va_argsave);
