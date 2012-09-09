@@ -14,16 +14,17 @@
 # Notes:
 #	This relies on LIB.EXE 8.00 or later, and MAKE.EXE 5.01 or later.
 
+MODEL=32
 DIR=\dmd
 PHOBOSGIT=walter@mercury:dpl/phobos1
 
 CFLAGS=-mn -6 -r
 #CFLAGS=-g -mn -6 -r
 
-DFLAGS=-O -release -nofloat -w
-#DFLAGS=-nofloat -w
-#DFLAGS=-unittest -g -w
-#DFLAGS=-unittest -cov -g
+DFLAGS=-m$(MODEL) -O -release -nofloat -w
+#DFLAGS=-m$(MODEL) -nofloat -w
+#DFLAGS=-m$(MODEL) -unittest -g -w
+#DFLAGS=-m$(MODEL) -unittest -cov -g
 
 CC=dmc
 CP=cp
@@ -372,8 +373,8 @@ html : $(DOCS)
 
 internal\gc\dmgc.lib:
 	cd internal\gc
-	make DMD=$(DMD) -f win32.mak clean
-	make DMD=$(DMD) -f win32.mak dmgc.lib
+	make DMD=$(DMD) -f win$(MODEL).mak clean
+	make DMD=$(DMD) -f win$(MODEL).mak dmgc.lib
 	cd ..\..
 
 etc\c\zlib\zlib.lib:
@@ -965,6 +966,12 @@ zip : $(MAKEFILES) phoboslicense.txt std.ddoc $(SRC) \
 	zip32 -u phobos $(SRC_GC) $(MAKEFILES_GC)
 
 clean:
+	cd etc\c\zlib
+	make -f win$(MODEL).mak clean
+	cd ..\..\..
+	cd internal\gc
+	make DMD=$(DMD) -f win$(MODEL).mak clean
+	cd ..\..
 	del $(OBJS)
 	del $(DOCS)
 	del phobos.json

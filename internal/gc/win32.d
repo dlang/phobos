@@ -85,7 +85,8 @@ void *os_query_stackBottom()
         asm
         {
             naked               ;
-            mov RAX,FS:8        ;
+            mov RAX,8           ;
+            mov RAX,GS:[RAX]    ;
             ret                 ;
         }
    else
@@ -98,15 +99,41 @@ void *os_query_stackBottom()
 
 extern (C)
 {
-    extern int _xi_a;   // &_xi_a just happens to be start of data segment
-    extern int _edata;  // &_edata is start of BSS segment
-    extern int _end;    // &_end is past end of BSS
+
+    version (Win32)
+    {
+	extern int _xi_a;   // &_xi_a just happens to be start of data segment
+	extern int _edata;  // &_edata is start of BSS segment
+	extern int _end;    // &_end is past end of BSS
+    }
+    else version (Win64)
+    {
+	extern int __xc_a;   // &__xc_a just happens to be start of data segment
+	//extern int _edata;  // &_edata is start of BSS segment
+	extern void* _deh_beg;    // &_deh_beg is past end of BSS
+    }
+    else
+    {
+	static assert(0);
+    }
 }
 
 void os_query_staticdataseg(void **base, uint *nbytes)
 {
-    *base = cast(void *)&_xi_a;
-    *nbytes = cast(uint)(cast(char *)&_end - cast(char *)&_xi_a);
+    version (Win32)
+    {
+	*base = cast(void *)&_xi_a;
+	*nbytes = cast(uint)(cast(char *)&_end - cast(char *)&_xi_a);
+    }
+    else version (Win64)
+    {
+	*base = cast(void *)&__xc_a;
+	*nbytes = cast(uint)(cast(char *)&_deh_beg - cast(char *)&__xc_a);
+    }
+    else
+    {
+	static assert(0);
+    }
 }
 
 /++++

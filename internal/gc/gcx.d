@@ -234,6 +234,7 @@ class GC
 
     void initialize()
     {
+	//printf("GC.initialize(), this = %p\n", this);
         gcLock = GCLock.classinfo;
         gcx = cast(Gcx *)cstdlib.calloc(1, Gcx.sizeof);
         if (!gcx)
@@ -962,10 +963,14 @@ class GC
         {
             gcx.addRange(pbot, ptop);
         }
-        else synchronized (gcLock)
-        {
-            gcx.addRange(pbot, ptop);
-        }
+        else
+	{
+	    //printf("sync gcLock %p, classinit = %p, this = %p\n", gcLock, GCLock.classinfo, this);
+	    synchronized (gcLock)
+	    {
+		gcx.addRange(pbot, ptop);
+	    }
+	}
         //debug(PRINTF) printf("-GC.addRange()\n");
     }
 

@@ -25,8 +25,8 @@ LD=$(VCDIR)\bin\amd64\link
 LIB=$(VCDIR)\bin\amd64\lib
 CP=cp
 
-CFLAGS=/O2 /I$(VCDIR)\INCLUDE /I$(SDKDIR)\Include
-#CFLAGS=/Zi /I$(VCDIR)\INCLUDE /I$(SDKDIR)\Include
+#CFLAGS=/O2 /I$(VCDIR)\INCLUDE /I$(SDKDIR)\Include
+CFLAGS=/Zi /I$(VCDIR)\INCLUDE /I$(SDKDIR)\Include
 
 DFLAGS=-m$(MODEL) -O -release -nofloat -w
 #DFLAGS=-m$(MODEL) -nofloat -w
@@ -97,6 +97,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\stdint.d \
 	std\stdarg.d \
 	internal\aaA.d internal\adi.d \
+	internal\alloca.d \
 	internal\aApply.d internal\aApplyR.d internal\memset.d \
 	internal\arraycast.d internal\arraycat.d \
 	internal\switch.d internal\qsort.d internal\invariant.d \
@@ -349,11 +350,11 @@ MAKEFILES_GC=\
 	internal\gc\openbsd.mak \
 	internal\gc\solaris.mak
 
-$(PHOBOSLIB) : $(OBJS) $(SRCS) minit.obj internal\gc\dmgc64.lib \
+$(PHOBOSLIB) : $(OBJS) $(SRCS) internal\gc\dmgc64.lib \
 	etc\c\zlib\zlib64.lib win64.mak
-#	lib -c -p32 $(PHOBOSLIB) $(OBJS) minit.obj internal\gc\dmgc64.lib \
+#	lib -c -p32 $(PHOBOSLIB) $(OBJS) internal\gc\dmgc64.lib \
 #		etc\c\zlib\zlib64.lib
-	$(DMD) -lib -of$(PHOBOSLIB) -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) minit.obj \
+	$(DMD) -lib -of$(PHOBOSLIB) -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) \
 		internal\gc\dmgc64.lib etc\c\zlib\zlib64.lib
 
 unittest : $(SRCS) $(PHOBOSLIB)
@@ -969,10 +970,10 @@ zip : $(MAKEFILES) phoboslicense.txt std.ddoc $(SRC) \
 
 clean:
 	cd etc\c\zlib
-	make -f win64.mak clean
+	make -f win$(MODEL).mak clean
 	cd ..\..\..
 	cd internal\gc
-	make DMD=$(DMD) -f win64.mak clean
+	make DMD=$(DMD) -f win$(MODEL).mak clean
 	cd ..\..
 	del $(OBJS)
 	del $(DOCS)

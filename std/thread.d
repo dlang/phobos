@@ -620,7 +620,8 @@ void *os_query_stackBottom()
     asm
     {
         naked                   ;
-        mov     RAX,FS:8        ;
+        mov     RAX,8           ;
+        mov     RAX,GS:[RAX]    ;
         ret                     ;
     }
     else

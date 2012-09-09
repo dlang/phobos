@@ -205,12 +205,14 @@ extern (C) void _moduleCtor()
 
     else version (Win64)
     {
-        _moduleinfo_array = (cast(ModuleInfo*)&_minfo_beg)[1 .. &_minfo_end - &_minfo_end];
+        _moduleinfo_array = (cast(ModuleInfo*)&_minfo_beg)[1 .. &_minfo_end - &_minfo_beg];
 
-        foreach (m; _moduleinfo_array)
+        debug printf("%p .. %p\n", &_minfo_beg, &_minfo_end);
+        debug foreach (i, m; _moduleinfo_array)
         {
-            //printf("\t%p\n", m);
-            printf("\t%.*s\n", m.name.length, m.name.ptr);
+            //printf("\t[%p] %p\n", &_moduleinfo_array[i], m);
+            if (m)
+                printf("\t%.*s\n", m.name.length, m.name.ptr);
         }
     }
 
@@ -247,10 +249,10 @@ void _moduleCtor2(ModuleInfo[] mi, int skip)
         debug printf("\tmodule[%d] = '%p'\n", i, m);
         if (!m)
             continue;
-        debug printf("\tmodule[%d] = '%.*s'\n", i, m.name);
+        debug printf("\tmodule[%d] = '%.*s'\n", i, m.name.length, m.name.ptr);
         if (m.flags & MIctordone)
             continue;
-        debug printf("\tmodule[%d] = '%.*s', m = x%x, m.flags = x%x\n", i, m.name, m, m.flags);
+        debug printf("\tmodule[%d] = '%.*s', m = %p, m.flags = x%x\n", i, m.name.length, m.name.ptr, m, m.flags);
 
         if (m.ctor || m.dtor)
         {
@@ -318,7 +320,7 @@ extern (C) void _moduleUnitTests()
         if (!m)
             continue;
 
-        debug printf("\tmodule[%d] = '%.*s'\n", i, m.name);
+        debug printf("\tmodule[%d] = '%.*s'\n", i, m.name.length, m.name.ptr);
         if (m.unitTest)
         {
             (*m.unitTest)();

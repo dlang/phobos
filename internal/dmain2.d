@@ -56,6 +56,7 @@ alias extern(C) int function(char[][] args) MainFunc;
  */
 extern (C) int main(size_t argc, char **argv)
 {
+    //printf("main(argc = %lld, argv = %p)\n", argc, argv);
     return _d_run_main(argc, argv, cast(void*)&main);
 }
 
@@ -124,8 +125,10 @@ extern (C) int _d_run_main(size_t argc, char **argv, void *p)
         stdout = &fp[1];
         stderr = &fp[2];
 
+        _STI_monitor_staticctor();
+        _STI_critical_init();
         gc_init();
-        _minit();
+        //_minit();
         am = cast(char[] *) alloca(argc * (char[]).sizeof);
     }
 
@@ -183,6 +186,11 @@ extern (C) int _d_run_main(size_t argc, char **argv, void *p)
     version (Posix)
     {
         free(am);
+        _STD_critical_term();
+        _STD_monitor_staticdtor();
+    }
+    version (Win64)
+    {
         _STD_critical_term();
         _STD_monitor_staticdtor();
     }
