@@ -20,6 +20,9 @@
 #	minit.obj requires Microsoft MASM386.EXE to build from minit.asm,
 #	or just use the supplied minit.obj
 
+## Memory model (32 or 64)
+MODEL=32
+
 ## Copy command
 
 CP=cp
@@ -53,10 +56,6 @@ DMD=$(DIR)\bin\dmd
 #DMD=..\dmd
 DMD=dmd
 
-## Location of the svn repository
-
-SVN=\svnproj\phobos\phobos
-
 ## Location of where to write the html documentation files
 
 DOCSRC = .
@@ -69,6 +68,10 @@ DOC=..\..\html\d\phobos
 
 DRUNTIME=..\druntime
 DRUNTIMELIB=$(DRUNTIME)\lib\druntime.lib
+
+## Zlib library
+
+ZLIB=etc\c\zlib\zlib.lib
 
 .c.obj:
 	$(CC) -c $(CFLAGS) $*
@@ -240,6 +243,7 @@ SRC_ZLIB= \
 	etc\c\zlib\ChangeLog \
 	etc\c\zlib\README \
 	etc\c\zlib\win32.mak \
+	etc\c\zlib\win64.mak \
 	etc\c\zlib\linux.mak \
 	etc\c\zlib\osx.mak
 
@@ -343,9 +347,9 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\phobos.html
 
 $(LIB) : $(SRC_TO_COMPILE) \
-	etc\c\zlib\zlib.lib $(DRUNTIMELIB) win32.mak
+	$(ZLIB) $(DRUNTIMELIB) win32.mak win64.mak
 	$(DMD) -lib -of$(LIB) -Xfphobos.json $(DFLAGS) $(SRC_TO_COMPILE) \
-		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
+		$(ZLIB) $(DRUNTIMELIB)
 
 UNITTEST_OBJS= unittest1.obj unittest2.obj unittest2a.obj \
 		unittest3.obj unittest4.obj \
@@ -361,7 +365,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest6.obj $(SRC_STD_REST)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest7.obj $(SRC_TO_COMPILE_NOT_STD)
 	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(UNITTEST_OBJS) \
-		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
+		$(ZLIB) $(DRUNTIMELIB)
 	unittest
 
 #unittest : unittest.exe
@@ -379,9 +383,9 @@ html : $(DOCS)
 
 ######################################################
 
-etc\c\zlib\zlib.lib: $(SRC_ZLIB)
+$(ZLIB): $(SRC_ZLIB)
 	cd etc\c\zlib
-	make -f win32.mak zlib.lib
+	make -f win$(MODEL).mak zlib.lib
 	cd ..\..\..
 
 ################## DOCS ####################################
@@ -682,13 +686,13 @@ $(DOC)\etc_c_zlib.html : $(STDDOC) etc\c\zlib.d
 
 ######################################################
 
-zip : win32.mak posix.mak $(STDDOC) $(SRC) \
+zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
 	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) \
 	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
 	del phobos.zip
-	zip32 -u phobos win32.mak posix.mak $(STDDOC)
+	zip32 -u phobos win32.mak win64.mak posix.mak $(STDDOC)
 	zip32 -u phobos $(SRC)
 	zip32 -u phobos $(SRC_STD)
 	zip32 -u phobos $(SRC_STD_C)
@@ -706,7 +710,7 @@ zip : win32.mak posix.mak $(STDDOC) $(SRC) \
 
 clean:
 	cd etc\c\zlib
-	make -f win32.mak clean
+	make -f win$(MODEL).mak clean
 	cd ..\..\..
 	del $(DOCS)
 	del $(UNITTEST_OBJS) unittest.obj unittest.exe
@@ -736,7 +740,7 @@ install:
 	mkdir $(DIR)\src\phobos\etc\c\ 
 	mkdir $(DIR)\src\phobos\etc\c\zlib\ 
 	mkdir $(DIR)\html\d\phobos\ 
-	$(CP) win32.mak posix.mak $(STDDOC) $(DIR)\src\phobos\ 
+	$(CP) win32.mak win64.mak posix.mak $(STDDOC) $(DIR)\src\phobos\ 
 	$(CP) $(SRC) $(DIR)\src\phobos\ 
 	$(CP) $(SRC_STD) $(DIR)\src\phobos\std\ 
 	$(CP) $(SRC_STD_NET) $(DIR)\src\phobos\std\net\ 
@@ -753,24 +757,5 @@ install:
 	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c\ 
 	$(CP) $(SRC_ZLIB) $(DIR)\src\phobos\etc\c\zlib\ 
 	$(CP) $(DOCS) $(DIR)\html\d\phobos\ 
-
-svn:
-	$(CP) win32.mak posix.mak $(STDDOC) $(SVN)\ 
-	$(CP) $(SRC) $(SVN)\ 
-	$(CP) $(SRC_STD) $(SVN)\std\ 
-	$(CP) $(SRC_STD_NET) $(SVN)\std\net\ 
-	$(CP) $(SRC_STD_C) $(SVN)\std\c\ 
-	$(CP) $(SRC_STD_WIN) $(SVN)\std\windows\ 
-	$(CP) $(SRC_STD_C_WIN) $(SVN)\std\c\windows\ 
-	$(CP) $(SRC_STD_C_LINUX) $(SVN)\std\c\linux\ 
-	$(CP) $(SRC_STD_C_OSX) $(SVN)\std\c\osx\ 
-	$(CP) $(SRC_STD_C_FREEBSD) $(SVN)\std\c\freebsd\ 
-	$(CP) $(SRC_STD_INTERNAL) $(SVN)\std\internal\ 
-	$(CP) $(SRC_STD_INTERNAL_MATH) $(SVN)\std\internal\math\ 
-	$(CP) $(SRC_STD_INTERNAL_WINDOWS) $(SVN)\std\internal\windows\ 
-	#$(CP) $(SRC_ETC) $(SVN)\etc\ 
-	$(CP) $(SRC_ETC_C) $(SVN)\etc\c\ 
-	$(CP) $(SRC_ZLIB) $(SVN)\etc\c\zlib\ 
-
 
 

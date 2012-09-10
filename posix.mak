@@ -202,6 +202,7 @@ C_FILES = $(addsuffix .c,$(C_MODULES))
 C_EXTRAS = $(addprefix etc/c/zlib/, algorithm.txt ChangeLog crc32.h	\
 deflate.h example.c inffast.h inffixed.h inflate.h inftrees.h		\
 linux.mak minigzip.c osx.mak README trees.h win32.mak zconf.h		\
+win64.mak \
 gzguts.h zlib.3 zlib.h zutil.h)
 # Aggregate all C files over all OSs (this is for the zip file)
 ALL_C_FILES = $(C_FILES) $(C_EXTRAS)
@@ -275,7 +276,7 @@ clean :
 	rm -rf $(ROOT_OF_THEM_ALL) $(ZIPFILE) $(DOC_OUTPUT_DIR)
 
 zip :
-	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES) win32.mak
+	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES) win32.mak win64.mak
 
 install : release
 	sudo cp $(LIB) /usr/lib/

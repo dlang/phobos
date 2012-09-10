@@ -1,24 +1,22 @@
-# Makefile to build D runtime library phobos.lib for Win32
+# Makefile to build D runtime library phobos64.lib for Win64
 # Prerequisites:
-#	Digital Mars dmc, lib, and make that are unzipped from Digital Mars C:
-#	    http://ftp.digitalmars.com/Digital_Mars_C++/Patch/dm850c.zip
-#	and are in the \dm\bin directory.
+#	Microsoft Visual Studio
 # Targets:
 #	make
 #		Same as make unittest
-#	make phobos.lib
-#		Build phobos.lib
+#	make phobos64.lib
+#		Build phobos64.lib
 #	make clean
 #		Delete unneeded files created by build process
 #	make unittest
-#		Build phobos.lib, build and run unit tests
+#		Build phobos64.lib, build and run unit tests
 #	make cov
 #		Build for coverage tests, run coverage tests
 #	make html
 #		Build documentation
-# Notes:
-#	minit.obj requires Microsoft MASM386.EXE to build from minit.asm,
-#	or just use the supplied minit.obj
+
+## Memory model (32 or 64)
+MODEL=64
 
 ## Copy command
 
@@ -28,34 +26,36 @@ CP=cp
 
 DIR=\dmd2
 
-## Flags for dmc C compiler
+## Visual C directories
+VCDIR="\Program Files (x86)\Microsoft Visual Studio 10.0\VC"
+SDKDIR="\Program Files (x86)\Microsoft SDKs\Windows\v7.0A"
 
-CFLAGS=-mn -6 -r
-#CFLAGS=-g -mn -6 -r
+## Flags for VC compiler
+
+#CFLAGS=/O2 /I$(VCDIR)\INCLUDE /I$(SDKDIR)\Include
+CFLAGS=/Zi /I$(VCDIR)\INCLUDE /I$(SDKDIR)\Include
 
 ## Flags for dmd D compiler
 
-DFLAGS=-O -release -w -d -property
-#DFLAGS=-unittest -g -d
-#DFLAGS=-unittest -cov -g -d
+DFLAGS=-m$(MODEL) -O -release -w -d -property
+#DFLAGS=-m$(MODEL) -unittest -g -d
+#DFLAGS=-m$(MODEL) -unittest -cov -g -d
 
 ## Flags for compiling unittests
 
-UDFLAGS=-O -w -d -property
+UDFLAGS=-m$(MODEL) -O -w -d -property
 
-## C compiler
+## C compiler, linker, librarian
 
-CC=dmc
+CC=$(VCDIR)\bin\amd64\cl
+LD=$(VCDIR)\bin\amd64\link
+LIB=$(VCDIR)\bin\amd64\lib
 
 ## D compiler
 
 DMD=$(DIR)\bin\dmd
 #DMD=..\dmd
 DMD=dmd
-
-## Location of the svn repository
-
-SVN=\svnproj\phobos\phobos
 
 ## Location of where to write the html documentation files
 
@@ -68,13 +68,17 @@ DOC=..\..\html\d\phobos
 ## Location of druntime tree
 
 DRUNTIME=..\druntime
-DRUNTIMELIB=$(DRUNTIME)\lib\druntime.lib
+DRUNTIMELIB=$(DRUNTIME)\lib\druntime64.lib
+
+## Zlib library
+
+ZLIB=etc\c\zlib\zlib$(MODEL).lib
 
 .c.obj:
-	$(CC) -c $(CFLAGS) $*
+	$(CC) -c $(CFLAGS) $*.c
 
 .cpp.obj:
-	$(CC) -c $(CFLAGS) $*
+	$(CC) -c $(CFLAGS) $*.cpp
 
 .d.obj:
 	$(DMD) -c $(DFLAGS) $*
@@ -82,17 +86,17 @@ DRUNTIMELIB=$(DRUNTIME)\lib\druntime.lib
 .asm.obj:
 	$(CC) -c $*
 
-LIB=phobos.lib
+LIB=phobos$(MODEL).lib
 
 targets : $(LIB)
 
 test : test.exe
 
 test.obj : test.d
-	$(DMD) -c test -g -unittest
+	$(DMD) -c -m$(MODEL) test -g -unittest
 
 test.exe : test.obj $(LIB)
-	$(DMD) test.obj -g -L/map
+	$(DMD) test.obj -m$(MODEL) -g -L/map
 
 #	ti_bit.obj ti_Abit.obj
 
@@ -240,6 +244,7 @@ SRC_ZLIB= \
 	etc\c\zlib\ChangeLog \
 	etc\c\zlib\README \
 	etc\c\zlib\win32.mak \
+	etc\c\zlib\win64.mak \
 	etc\c\zlib\linux.mak \
 	etc\c\zlib\osx.mak
 
@@ -343,9 +348,9 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\phobos.html
 
 $(LIB) : $(SRC_TO_COMPILE) \
-	etc\c\zlib\zlib.lib $(DRUNTIMELIB) win32.mak
+	$(ZLIB) $(DRUNTIMELIB) win32.mak win64.mak
 	$(DMD) -lib -of$(LIB) -Xfphobos.json $(DFLAGS) $(SRC_TO_COMPILE) \
-		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
+		$(ZLIB) $(DRUNTIMELIB)
 
 UNITTEST_OBJS= unittest1.obj unittest2.obj unittest2a.obj \
 		unittest3.obj unittest4.obj \
@@ -361,7 +366,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest6.obj $(SRC_STD_REST)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest7.obj $(SRC_TO_COMPILE_NOT_STD)
 	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(UNITTEST_OBJS) \
-		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
+		$(ZLIB) $(DRUNTIMELIB)
 	unittest
 
 #unittest : unittest.exe
@@ -372,16 +377,16 @@ unittest : $(LIB)
 #	dmc unittest.obj -g
 
 cov : $(SRC_TO_COMPILE) $(LIB)
-	$(DMD) -cov -unittest -ofcov.exe unittest.d $(SRC_TO_COMPILE) $(LIB)
+	$(DMD) -m$(MODEL) -cov -unittest -ofcov.exe unittest.d $(SRC_TO_COMPILE) $(LIB)
 	cov
 
 html : $(DOCS)
 
 ######################################################
 
-etc\c\zlib\zlib.lib: $(SRC_ZLIB)
+$(ZLIB): $(SRC_ZLIB)
 	cd etc\c\zlib
-	make -f win32.mak zlib.lib
+	make -f win$(MODEL).mak zlib$(MODEL).lib
 	cd ..\..\..
 
 ################## DOCS ####################################
@@ -682,13 +687,13 @@ $(DOC)\etc_c_zlib.html : $(STDDOC) etc\c\zlib.d
 
 ######################################################
 
-zip : win32.mak posix.mak $(STDDOC) $(SRC) \
+zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
 	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) \
 	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
 	del phobos.zip
-	zip32 -u phobos win32.mak posix.mak $(STDDOC)
+	zip32 -u phobos win32.mak win64.mak posix.mak $(STDDOC)
 	zip32 -u phobos $(SRC)
 	zip32 -u phobos $(SRC_STD)
 	zip32 -u phobos $(SRC_STD_C)
@@ -706,7 +711,7 @@ zip : win32.mak posix.mak $(STDDOC) $(SRC) \
 
 clean:
 	cd etc\c\zlib
-	make -f win32.mak clean
+	make -f win$(MODEL).mak clean
 	cd ..\..\..
 	del $(DOCS)
 	del $(UNITTEST_OBJS) unittest.obj unittest.exe
@@ -736,7 +741,7 @@ install:
 	mkdir $(DIR)\src\phobos\etc\c\ 
 	mkdir $(DIR)\src\phobos\etc\c\zlib\ 
 	mkdir $(DIR)\html\d\phobos\ 
-	$(CP) win32.mak posix.mak $(STDDOC) $(DIR)\src\phobos\ 
+	$(CP) win32.mak win64.mak posix.mak $(STDDOC) $(DIR)\src\phobos\ 
 	$(CP) $(SRC) $(DIR)\src\phobos\ 
 	$(CP) $(SRC_STD) $(DIR)\src\phobos\std\ 
 	$(CP) $(SRC_STD_NET) $(DIR)\src\phobos\std\net\ 
@@ -753,24 +758,5 @@ install:
 	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c\ 
 	$(CP) $(SRC_ZLIB) $(DIR)\src\phobos\etc\c\zlib\ 
 	$(CP) $(DOCS) $(DIR)\html\d\phobos\ 
-
-svn:
-	$(CP) win32.mak posix.mak $(STDDOC) $(SVN)\ 
-	$(CP) $(SRC) $(SVN)\ 
-	$(CP) $(SRC_STD) $(SVN)\std\ 
-	$(CP) $(SRC_STD_NET) $(SVN)\std\net\ 
-	$(CP) $(SRC_STD_C) $(SVN)\std\c\ 
-	$(CP) $(SRC_STD_WIN) $(SVN)\std\windows\ 
-	$(CP) $(SRC_STD_C_WIN) $(SVN)\std\c\windows\ 
-	$(CP) $(SRC_STD_C_LINUX) $(SVN)\std\c\linux\ 
-	$(CP) $(SRC_STD_C_OSX) $(SVN)\std\c\osx\ 
-	$(CP) $(SRC_STD_C_FREEBSD) $(SVN)\std\c\freebsd\ 
-	$(CP) $(SRC_STD_INTERNAL) $(SVN)\std\internal\ 
-	$(CP) $(SRC_STD_INTERNAL_MATH) $(SVN)\std\internal\math\ 
-	$(CP) $(SRC_STD_INTERNAL_WINDOWS) $(SVN)\std\internal\windows\ 
-	#$(CP) $(SRC_ETC) $(SVN)\etc\ 
-	$(CP) $(SRC_ETC_C) $(SVN)\etc\c\ 
-	$(CP) $(SRC_ZLIB) $(SVN)\etc\c\zlib\ 
-
 
 
