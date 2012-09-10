@@ -44,12 +44,6 @@ version (DigitalMarsC)
                 in real* pdval,
                 char* buf, size_t* psl, int width) __pfloatfmt;
     }
-    alias core.stdc.stdio._snprintf snprintf;
-}
-else
-{
-    // Use C99 snprintf
-    extern (C) int snprintf(char* s, size_t n, in char* format, ...);
 }
 
 /**********************************************************************
@@ -186,7 +180,7 @@ $(I FormatChar):
     values $(D nan) and $(D infinity)).  Ignore if there's a $(I
     Precision).))
 
-    $(TR $(TD $(B ' ')) $(TD integral ($(B 'd'))) $(TD Prefix positive
+    $(TR $(TD $(B ' ')) $(TD numeric)) $(TD Prefix positive
     numbers in a signed conversion with a space.)))
 
     <dt>$(I Width)
@@ -512,6 +506,12 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
 /**
    Reads characters from input range $(D r), converts them according
    to $(D fmt), and writes them to $(D args).
+
+   Returns:
+
+   On success, the function returns the number of variables filled. This count
+   can match the expected number of readings or fewer, even zero, if a
+   matching failure happens.
 
    Example:
 ----

@@ -103,8 +103,9 @@ SRC_STD_1_HEAVY= std\stdio.d std\stdiobase.d \
 	std\string.d std\format.d \
 	std\file.d
 
-SRC_STD_2_HEAVY= std\array.d std\functional.d std\range.d \
-	std\path.d std\outbuffer.d std\utf.d
+SRC_STD_2_HEAVY= std\array.d std\functional.d std\range.d
+
+SRC_STD_2a_HEAVY= std\path.d std\outbuffer.d std\utf.d
 
 SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
     std\datetime.d \
@@ -134,7 +135,8 @@ SRC_STD_REST= std\variant.d \
 	std\mathspecial.d \
 	std\process.d
 
-SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_3) $(SRC_STD_4) \
+SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_2a_HEAVY) \
+	$(SRC_STD_3) $(SRC_STD_4) \
 	$(SRC_STD_5_HEAVY) $(SRC_STD_REST)
 
 SRC=	unittest.d crc32.d index.d
@@ -345,12 +347,14 @@ $(LIB) : $(SRC_TO_COMPILE) \
 	$(DMD) -lib -of$(LIB) -Xfphobos.json $(DFLAGS) $(SRC_TO_COMPILE) \
 		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 
-UNITTEST_OBJS= unittest1.obj unittest2.obj unittest3.obj unittest4.obj \
+UNITTEST_OBJS= unittest1.obj unittest2.obj unittest2a.obj \
+		unittest3.obj unittest4.obj \
 		unittest5.obj unittest6.obj unittest7.obj
 
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRC_STD_2_HEAVY)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2a.obj $(SRC_STD_2a_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3.obj $(SRC_STD_3)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest4.obj $(SRC_STD_4)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest5.obj $(SRC_STD_5_HEAVY)

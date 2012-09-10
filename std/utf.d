@@ -833,7 +833,9 @@ out (result)
 }
 body
 {
-    return str[index] < codeUnitLimit!S ? str[index++] : decodeImpl!true(str, index);
+    if (str[index] < codeUnitLimit!S)
+        return str[index++];
+    return decodeImpl!true(str, index);
 }
 
 dchar decode(S)(auto ref S str, ref size_t index)
@@ -849,7 +851,9 @@ out (result)
 }
 body
 {
-    return str[index] < codeUnitLimit!S ? str[index++] : decodeImpl!true(str, index);
+    if (str[index] < codeUnitLimit!S)
+        return str[index++];
+    return decodeImpl!true(str, index);
 }
 
 /// Ditto

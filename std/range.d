@@ -3168,11 +3168,15 @@ unittest
 
 
 /**
-Eagerly advances $(D r) itself (not a copy) $(D n) times (by calling
+Eagerly advances $(D r) itself (not a copy) up to $(D n) times (by calling
 $(D r.popFront) at most $(D n) times). The pass of $(D r) into $(D
 popFrontN) is by reference, so the original range is
-affected. Completes in $(BIGOH 1) steps for ranges that support
-slicing, and in $(BIGOH n) time for all other ranges.
+affected. Completes in $(BIGOH 1) steps for ranges that have both length 
+and support slicing, and in $(BIGOH n) time for all other ranges.
+
+Returns:
+
+How much $(D r) was actually advanced, which may be less than $(D n) if $(D r) did not have $(D n) element.
 
 Example:
 ----
@@ -3218,13 +3222,15 @@ unittest
 }
 
 /**
-   Eagerly reduces $(D r) itself (not a copy) $(D n) times from its right
+   Eagerly reduces $(D r) itself (not a copy) up to $(D n) times from its right
    side (by calling $(D r.popBack) $(D n) times). The pass of $(D r) into
    $(D popBackN) is by reference, so the original range is
-   affected. Completes in $(BIGOH 1) steps for ranges that support
-   slicing, and in $(BIGOH n) time for all other ranges.
+   affected. Completes in $(BIGOH 1) steps for ranges that have both length 
+   and support slicing, and in $(BIGOH n) time for all other ranges.
 
-   Returns the actual number of elements popped.
+   Returns:
+
+   The actual number of elements popped, which may be less than $(D n) if $(D r) did not have $(D n) element.
 
    Example:
    ----
@@ -6182,15 +6188,13 @@ unittest
  * around input ranges with element type E.  This is useful where a well-defined
  * binary interface is required, such as when a DLL function or virtual function
  * needs to accept a generic range as a parameter.  Note that
- * $(D isInputRange) and friends check for conformance to structural
+ * $(LREF isInputRange) and friends check for conformance to structural
  * interfaces, not for implementation of these $(D interface) types.
  *
  * Examples:
  * ---
- * class UsesRanges {
- *     void useRange(InputRange range) {
- *         // Function body.
- *     }
+ * void useRange(InputRange!int range) {
+ *     // Function body.
  * }
  *
  * // Create a range type.
@@ -6200,8 +6204,7 @@ unittest
  * auto squaresWrapped = inputRangeObject(squares);
  *
  * // Use it.
- * auto usesRanges = new UsesRanges;
- * usesRanges.useRange(squaresWrapped);
+ * useRange(squaresWrapped);
  * ---
  *
  * Limitations:
@@ -6212,6 +6215,8 @@ unittest
  *
  * Length is not propagated in the case of non-random access ranges.
  *
+ * See_Also:
+ * $(LREF inputRangeObject)
  */
 interface InputRange(E) {
     ///
@@ -6520,7 +6525,9 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
     }
 }
 
-/**Convenience function for creating a $(D InputRangeObject) of the proper type.*/
+/**Convenience function for creating an $(D InputRangeObject) of the proper type.
+ * See $(LREF InputRange) for an example.
+ */
 InputRangeObject!R inputRangeObject(R)(R range) if (isInputRange!R) {
     static if (is(R : InputRange!(ElementType!R))) {
         return range;
@@ -6529,7 +6536,7 @@ InputRangeObject!R inputRangeObject(R)(R range) if (isInputRange!R) {
     }
 }
 
-/**Convenience function for creating a $(D OutputRangeObject) with a base range
+/**Convenience function for creating an $(D OutputRangeObject) with a base range
  * of type $(D R) that accepts types $(D E).
 
  Examples:

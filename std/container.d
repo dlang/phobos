@@ -5093,7 +5093,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     }
 
     /**
-     * Check if any elements exist in the container.  Returns $(D true) if at least
+     * Check if any elements exist in the container.  Returns $(D false) if at least
      * one element exists.
      */
     @property bool empty()
