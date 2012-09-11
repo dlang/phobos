@@ -720,33 +720,21 @@ arguments in text format to the file, followed by a newline. */
         write(args, '\n');
     }
 
-    private enum errorMessage =
-        "You must pass a formatting string as the first"
-        " argument to writef or writefln. If no formatting is needed,"
-        " you may want to use write or writeln.";
-
 /**
 If the file is not opened, throws an exception. Otherwise, writes its
 arguments in text format to the file, according to the format in the
 first argument. */
-    void writef(S...)(S args) // if (isSomeString!(S[0]))
+    void writef(Char, A...)(in Char[] fmt, A args)
     {
-        assert(_p);
-        assert(_p.handle);
-        static assert(S.length>0, errorMessage);
-        static assert(isSomeString!(S[0]) && !is(S[0] == enum), errorMessage);
-        auto w = lockingTextWriter;
-        std.format.formattedWrite(w, args);
+        std.format.formattedWrite(lockingTextWriter, fmt, args);
     }
 
 /**
 Same as writef, plus adds a newline. */
-    void writefln(S...)(S args)
+    void writefln(Char, A...)(in Char[] fmt, A args)
     {
-        static assert(S.length>0, errorMessage);
-        static assert(isSomeString!(S[0]) && !is(S[0] == enum), errorMessage);
         auto w = lockingTextWriter;
-        std.format.formattedWrite(w, args);
+        std.format.formattedWrite(w, fmt, args);
         w.put('\n');
     }
 
