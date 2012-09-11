@@ -718,8 +718,6 @@ arguments in text format to the file, followed by a newline. */
     void writeln(S...)(S args)
     {
         write(args, '\n');
-        errnoEnforce(.fflush(_p.handle) == 0,
-                    "Could not flush file `"~_name~"'");
     }
 
     private enum errorMessage =
@@ -750,7 +748,6 @@ Same as writef, plus adds a newline. */
         auto w = lockingTextWriter;
         std.format.formattedWrite(w, args);
         w.put('\n');
-        .fflush(_p.handle);
     }
 
 /**********************************
