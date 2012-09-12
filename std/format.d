@@ -30,7 +30,7 @@ version(unittest) {
     import core.exception;
 }
 
-version (Windows) version (DigitalMars)
+version (Win32) version (DigitalMars)
 {
     version = DigitalMarsC;
 }
@@ -4656,6 +4656,8 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             //doFormat(putc, (&valti)[0 .. 1], p);
             version(X86)
                 argptr = p;
+            else version(Win64)
+                argptr = p;
             else version(X86_64)
             {
                 __va_list va;
@@ -4706,6 +4708,8 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 //doFormat(putc, (&keyti)[0..1], pkey);
                 version (X86)
                     argptr = pkey;
+                else version (Win64)
+                    argptr = pkey;
                 else version (X86_64)
                 {   __va_list va;
                     va.stack_args = pkey;
@@ -4720,6 +4724,8 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 putc(':');
                 //doFormat(putc, (&valti)[0..1], pvalue);
                 version (X86)
+                    argptr = pvalue;
+                else version (Win64)
                     argptr = pvalue;
                 else version (X86_64)
                 {   __va_list va2;
@@ -4874,6 +4880,8 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             case Mangle.Tsarray:
                 version (X86)
                     putArray(argptr, (cast(TypeInfo_StaticArray)ti).len, cast()(cast(TypeInfo_StaticArray)ti).next);
+                else version (Win64)
+                    putArray(argptr, (cast(TypeInfo_StaticArray)ti).len, cast()(cast(TypeInfo_StaticArray)ti).next);
                 else
                     putArray((cast(__va_list*)argptr).stack_args, (cast(TypeInfo_StaticArray)ti).len, cast()(cast(TypeInfo_StaticArray)ti).next);
                 return;
@@ -4969,6 +4977,11 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                     throw new FormatException("Can't convert " ~ tis.toString()
                             ~ " to string: \"string toString()\" not defined");
                 version(X86)
+                {
+                    s = tis.xtoString(argptr);
+                    argptr += (tis.tsize() + 3) & ~3;
+                }
+                else version(Win64)
                 {
                     s = tis.xtoString(argptr);
                     argptr += (tis.tsize() + 3) & ~3;
