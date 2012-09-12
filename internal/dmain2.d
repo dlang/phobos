@@ -41,6 +41,21 @@ version (Solaris)
     extern (C) void* __libc_stack_end;
 }
 
+version (Windows)
+{
+    import std.c.stddef; // wchar_t
+
+    extern (Windows)
+    {
+        void*      LocalFree(void*);
+        wchar_t*   GetCommandLineW();
+        wchar_t**  CommandLineToArgvW(wchar_t*, int*);
+        int WideCharToMultiByte(uint, uint, wchar_t*, int, char*, int, char*, int*);
+        int MultiByteToWideChar(uint, uint, in char*, int, wchar_t*, int);
+    }
+    pragma(lib, "shell32.lib"); // needed for CommandLineToArgvW
+}
+
 /***********************************
  * The D main() function supplied by the user's program
  */
@@ -134,13 +149,45 @@ extern (C) int _d_run_main(size_t argc, char **argv, void *p)
 
     void setArgs()
     {
-        for (size_t i = 0; i < argc; i++)
-        {
-            auto len = strlen(argv[i]);
-            am[i] = argv[i][0 .. len];
-        }
-
         args = am[0 .. argc];
+        version (Windows)
+        {
+            wchar_t*  wcbuf = GetCommandLineW();
+            size_t    wclen = wcslen(wcbuf);
+            int       wargc = 0;
+            wchar_t** wargs = CommandLineToArgvW(wcbuf, &wargc);
+            assert(wargc == argc);
+
+            // This is required because WideCharToMultiByte requires int as input.
+            assert(wclen <= int.max, "wclen must not exceed int.max");
+
+            char*     cargp = null;
+            size_t    cargl = WideCharToMultiByte(65001, 0, wcbuf, cast(int)wclen, null, 0, null, null);
+
+            cargp = cast(char*) alloca(cargl);
+
+            for (size_t i = 0, p = 0; i < wargc; i++)
+            {
+                size_t wlen = wcslen(wargs[i]);
+                assert(wlen <= int.max, "wlen cannot exceed int.max");
+                int clen = WideCharToMultiByte(65001, 0, &wargs[i][0], cast(int)wlen, null, 0, null, null);
+                args[i]  = cargp[p .. p+clen];
+                if (clen==0) continue;
+                p += clen; assert(p <= cargl);
+                WideCharToMultiByte(65001, 0, &wargs[i][0], cast(int)wlen, &args[i][0], clen, null, null);
+            }
+            LocalFree(wargs);
+            wargs = null;
+            wargc = 0;
+        }
+        else
+        {
+            for (size_t i = 0; i < argc; i++)
+            {
+                auto len = strlen(argv[i]);
+                args[i] = argv[i][0 .. len];
+            }
+        }
     }
 
     if (no_catch_exceptions)
