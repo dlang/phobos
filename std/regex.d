@@ -202,6 +202,8 @@
   are slices of the original input, with the notable exception of the $(D replace)
   family of functions which generate a new string from the input.
 
+  Copyright: Copyright Dmitry Olshansky, 2011
+
   License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
   Authors: Dmitry Olshansky,
@@ -209,7 +211,7 @@
   API and utility constructs are based on original $(D std.regex)
   by Walter Bright and Andrei Alexandrescu.
 
-  Copyright: Copyright Dmitry Olshansky, 2011
+  Source: $(PHOBOSSRC std/_regex.d)
 
 Macros:
     REG_ROW = $(TR $(TD $(I $1 )) $(TD $+) )
