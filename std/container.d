@@ -946,12 +946,17 @@ Defines the container's primary range, which embodies a forward range.
     {
         private Node * _head;
         private this(Node * p) { _head = p; }
-        /// Forward range primitives.
+
+        /// Input range primitives.
         @property bool empty() const { return !_head; }
+
         /// ditto
-        @property Range save() { return this; }
-        /// ditto
-        @property T front() { return _head._payload; }
+        @property T front()
+        {
+            enforce(_head);
+            return _head._payload;
+        }
+
         /// ditto
         static if (isAssignable!(T, T))
         {
@@ -961,12 +966,16 @@ Defines the container's primary range, which embodies a forward range.
                 _head._payload = value;
             }
         }
+
         /// ditto
         void popFront()
         {
             enforce(_head);
             _head = _head._next;
         }
+
+        /// Forward range primitive.
+        @property Range save() { return this; }
 
         T moveFront()
         {
@@ -1452,7 +1461,6 @@ unittest
     assert(equal(r2, [8, 9, 10]));
 }
 
-
 unittest
 {
     auto lst = SList!int(1, 5, 42, 9);
@@ -1480,6 +1488,16 @@ unittest
         const int val;
     }
     SList!Data list;
+}
+
+unittest
+{
+    auto s = SList!int([1, 2, 3]);
+    s.front = 5; //test frontAssign
+    assert(s.front == 5);
+    auto r = s[];
+    r.front = 1; //test frontAssign
+    assert(r.front == 1);
 }
 
 /**
@@ -1548,9 +1566,28 @@ elements in $(D rhs).
         private Node * _last;
         private this(Node* first, Node* last) { _first = first; _last = last; }
         private this(Node* n) { _first = _last = n; }
-        /// Forward range primitives.
+
+        /// Input range primitives.
         @property bool empty() const { return !_first; }
-        @property T front() { return _first._payload; }
+
+        /// ditto
+        @property T front()
+        {
+            enforce(_first);
+            return _first._payload;
+        }
+
+        /// ditto
+        static if(isAssignable!(T, T))
+        {
+            @property void front(T value)
+            {
+                enforce(_first);
+                _first._payload = value;
+            }
+        }
+
+        /// ditto
         void popFront()
         {
             enforce(_first);
@@ -1564,13 +1601,32 @@ elements in $(D rhs).
                 _first = _first._next;
             }
         }
+
+        /// Forward range primitive.
         @property Range save() { return this; }
+
         /// Bidirectional range primitives.
-        @property T back() { return _last._payload; }
+        @property T back()
+        {
+            enforce(_last);
+            return _last._payload;
+        }
+
+        /// ditto
+        static if(isAssignable!(T, T))
+        {
+            @property void back(T value)
+            {
+                enforce(_last);
+                _last._payload = value;
+            }
+        }
+
+        /// ditto
         void popBack()
         {
-            enforce(_first);
-            assert(_last);
+            enforce(_last);
+            assert(_first);
             if (_first is _last)
             {
                 _first = _last = null;
@@ -1631,10 +1687,43 @@ Complexity: $(BIGOH 1)
         return _first._payload;
     }
 
+/**
+Forward to $(D opSlice().front(value)).
+
+Complexity: $(BIGOH 1)
+     */
+    static if(isAssignable!(T,T))
+    {
+        @property void front(T value)
+        {
+            enforce(_first);
+            _first._payload = value;
+        }
+    }
+
+/**
+Forward to $(D opSlice().back).
+
+Complexity: $(BIGOH 1)
+     */
     @property T back()
     {
         enforce(_last);
         return _last._payload;
+    }
+
+/**
+Forward to $(D opSlice().back(value)).
+
+Complexity: $(BIGOH 1)
+     */
+    static if(isAssignable!(T,T))
+    {
+        @property void back(T value)
+        {
+            enforce(_last);
+            _last._payload = value;
+        }
     }
 
 /**
@@ -2056,6 +2145,16 @@ unittest
     dlr.popFront(); dlr.popFront();
     dl.insertBefore(dlr, "c"); // insert before "b"
     assert(equal(dl[], ["e", "a", "c", "b", "d"]));
+}
+
+unittest
+{
+    auto d = DList!int([1, 2, 3]);
+    d.front = 5; //test frontAssign
+    assert(d.front == 5);
+    auto r = d[];
+    r.back = 1;
+    assert(r.back == 1);
 }
 
 /**
