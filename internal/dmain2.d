@@ -132,11 +132,8 @@ extern (C) int _d_run_main(size_t argc, char **argv, void *p)
         am = cast(char[] *) alloca(argc * (char[]).sizeof);
     }
 
-    if (no_catch_exceptions)
+    void setArgs()
     {
-        _moduleCtor();
-        _moduleUnitTests();
-
         for (size_t i = 0; i < argc; i++)
         {
             auto len = strlen(argv[i]);
@@ -144,6 +141,14 @@ extern (C) int _d_run_main(size_t argc, char **argv, void *p)
         }
 
         args = am[0 .. argc];
+    }
+
+    if (no_catch_exceptions)
+    {
+        _moduleCtor();
+        _moduleUnitTests();
+
+        setArgs();
 
         result = main(args);
         _moduleDtor();
@@ -156,13 +161,7 @@ extern (C) int _d_run_main(size_t argc, char **argv, void *p)
             _moduleCtor();
             _moduleUnitTests();
 
-            for (size_t i = 0; i < argc; i++)
-            {
-                auto len = strlen(argv[i]);
-                am[i] = argv[i][0 .. len];
-            }
-
-            args = am[0 .. argc];
+            setArgs();
 
             result = main(args);
             _moduleDtor();
