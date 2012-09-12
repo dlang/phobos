@@ -353,7 +353,7 @@ auto line = readln(f);
 enforce(line.length, "Expected a non-empty line.");
 --------------------
  +/
-T enforce(T)(T value, lazy const(char)[] msg = null, string file = __FILE__, size_t line = __LINE__) @safe pure
+T enforce(T)(T value, lazy const(char)[] msg = null, string file = __FILE__, size_t line = __LINE__)
 {
     if (!value) bailOut(file, line, msg);
     return value;
@@ -366,7 +366,7 @@ T enforce(T)(T value, lazy const(char)[] msg = null, string file = __FILE__, siz
          unnecessary template bloat.)
  +/
 T enforce(T, string file, size_t line = __LINE__)
-    (T value, lazy const(char)[] msg = null) @safe pure
+    (T value, lazy const(char)[] msg = null)
 {
     if (!value) bailOut(file, line, msg);
     return value;
@@ -443,6 +443,41 @@ unittest
     }
 }
 
+// Test for bugzilla 8637
+unittest
+{
+    struct S
+    {
+        static int g;
+        ~this() {}  // impure & unsafe destructor
+        bool opCast(T:bool)() {
+            int* p = cast(int*)0;   // unsafe operation
+            int n = g;              // impure operation
+            return true;
+        }
+    }
+    S s;
+
+    enforce(s);
+    enforce!(S, __FILE__, __LINE__)(s, ""); // scheduled for deprecation
+    enforce(s, {});
+    enforce(s, new Exception(""));
+
+    errnoEnforce(s);
+
+    alias Exception E1;
+    static class E2 : Exception
+    {
+        this(string fn, size_t ln) { super("", fn, ln); }
+    }
+    static class E3 : Exception
+    {
+        this(string msg) { super(msg, __FILE__, __LINE__); }
+    }
+    enforceEx!E1(s);
+    enforceEx!E2(s);
+    enforceEx!E3(s, "");    // deprecated
+}
 
 /++
     If $(D !!value) is true, $(D value) is returned. Otherwise, $(D ex) is thrown.
@@ -454,7 +489,7 @@ auto line = readln(f);
 enforce(line.length, new IOException); // expect a non-empty line
 --------------------
  +/
-T enforce(T)(T value, lazy Throwable ex) @safe pure
+T enforce(T)(T value, lazy Throwable ex)
 {
     if (!value) throw ex();
     return value;
@@ -479,7 +514,7 @@ enforce(line.length); // expect a non-empty line
 --------------------
  +/
 T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
-    (T value, lazy string msg = null) @safe pure
+    (T value, lazy string msg = null)
 {
     if (!value) throw new ErrnoException(msg, file, line);
     return value;
@@ -502,7 +537,7 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
 template enforceEx(E)
     if (is(typeof(new E("", __FILE__, __LINE__))))
 {
-    T enforceEx(T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__) @safe pure
+    T enforceEx(T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__)
     {
         if (!value) throw new E(msg, file, line);
         return value;
@@ -512,7 +547,7 @@ template enforceEx(E)
 template enforceEx(E)
     if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LINE__))))
 {
-    T enforceEx(T)(T value, string file = __FILE__, size_t line = __LINE__) @safe pure
+    T enforceEx(T)(T value, string file = __FILE__, size_t line = __LINE__)
     {
         if (!value) throw new E(file, line);
         return value;
@@ -530,7 +565,7 @@ template enforceEx(E)
 deprecated template enforceEx(E)
     if (is(typeof(new E(""))) && !is(typeof(new E("", __FILE__, __LINE__))) && !is(typeof(new E(__FILE__, __LINE__))))
 {
-    T enforceEx(T)(T value, lazy string msg = "") @safe pure
+    T enforceEx(T)(T value, lazy string msg = "")
     {
         if (!value) throw new E(msg);
         return value;
