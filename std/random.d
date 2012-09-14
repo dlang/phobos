@@ -1201,27 +1201,6 @@ struct LaggedFibonacciEngine(Type, size_t bits, size_t longLag, size_t shortLag)
     Payload* payload;
 
   public:
-
-/**
-Creates a new $(D LaggedFibonacciEngine) and calls $(D seed(value)).
-*/
-    this(uint value)
-    {
-        seed(value);
-    }
-
-    //@@@
-    //Deactivated, as this creates overload conflicts with the non template
-    //constructor. We can sidestep the problem by defining the above
-    //constructor as "this()(uint value)". However, if we do this, then
-    //"new LaggedFibonacci()" will create a template mismatch error.
-    //
-    //this(Range)(Range range)
-    //    if (isInputRange!Range)
-    //{
-    //    seed(range);
-    //}
-
 /**
 Tells if the generator has been seeded/initialized
 */
