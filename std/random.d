@@ -1415,8 +1415,10 @@ unittest
             r.discard(5000);
             assert(r == r);
             assert(equal!approxEqual(r.save.take(5), r.save.take(5)));
-            auto ra = Type(331u);
-            auto rb = Type(331u);
+            auto ra = Type();
+            auto rb = Type();
+            ra.seed();
+            rb.seed();
             assert(ra !is rb);
             assert(ra == rb);
             ra.popFront();
