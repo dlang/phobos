@@ -1016,9 +1016,16 @@ unittest
 * numbers in the range [0 .. 2^^bits). Real Type will generate
 * floating points in the range [0 .. 1), with a step of 1/2^^bits.
 *
-* The engine uses reference semantics, and models a ForwardRange.
+* A $(D LaggedFibonacciEngine) must maintain a very large set of data
+* to function. Because of this, and contrary to all other generators
+* in this module, the engine is allocated on the heap, and uses
+* reference semantics.
 *
-* The engine must be seeded prior to use.
+* The engine must be seeded prior to use. Use of an un-seeded
+* (un-initialized) engine will generate an assertion error.
+*
+* The $(D LaggedFibonacciEngine) models an $(D Infinite)
+* $(D InfiniteForwardRange).
 *
 * Ported from boost 1.50 on July 30th 2012
 */
@@ -1037,7 +1044,7 @@ struct LaggedFibonacciEngine(Type, size_t bits, size_t longLag, size_t shortLag)
 
   private:
     enum uint defaultSeed = 331u;
-    alias typeof(this) This; //A *non-qualified* alias for typof(this).
+    alias typeof(this) This; //A *non-qualified* alias for typeof(this), required for dup.
 
     //Conditional Aliases/enums/asserts
     static if (isUnsigned!Type)
@@ -1121,32 +1128,41 @@ struct LaggedFibonacciEngine(Type, size_t bits, size_t longLag, size_t shortLag)
         @safe nothrow
         void fill()
         {
-            static if (isUnsigned!Type)
+            @safe nothrow
+            void addAndMask(Type[] a, Type[] b) 
             {
-                // two loops to avoid costly modulo operations
-                foreach(j; 0..shortLag)
-                    x[j] = (x[j] + x[j+(longLag-shortLag)]) & mask;
-                foreach(j; shortLag..longLag)
-                    x[j] = (x[j] + x[j-shortLag]) & mask;
-            }
-            else //static if (isFloatingPoint!Type)
-            {
-                // two loops to avoid costly modulo operations
-                foreach(j; 0..shortLag)
+                try //@@@ 8651
                 {
-                    RealType t = x[j] + x[j+(longLag-shortLag)];
-                    if(t >= 1.0)
-                        t -= 1.0;
-                    x[j] = t;
+                    //Common to both: Just opOpAssing!"+"
+                    a[] += b[];
+                    static if (isUnsigned!Type)
+                    {
+                        //Integral type: A simple mask will suffice
+                        a[] &= mask;
+                    }
+                    else //static if (isFloatingPoint!Type)
+                    {
+                        //Floating point type, manual operation
+                        foreach(ref t; a[])
+                            if(t >= 1.0)
+                                t -= 1.0;
+                    }
                 }
-                foreach(j; shortLag..longLag)
+                catch(Exception) //@@@ 8651
                 {
-                    RealType t = x[j] + x[j-shortLag];
-                    if(t >= 1.0)
-                        t -= 1.0;
-                    x[j] = t;
+                    assert(0, "Unexpected exception in LaggedFibonacciEngine.Payload.Fill");
                 }
             }
+            
+            //Start with the special wrap-around case
+            addAndMask(x[0..shortLag], x[longLag-shortLag..longLag]);
+            //Iterate on bands of shortLag size
+            size_t low = shortLag;
+            for( ; low + shortLag <= longLag ; low += shortLag)
+                addAndMask(x[low..low+shortLag], x[low-shortLag..low]);
+
+            //Do the final partial band
+            addAndMask(x[low..longLag], x[low-shortLag..longLag-shortLag]);
         }
 
         @property @safe nothrow const
@@ -1169,7 +1185,7 @@ struct LaggedFibonacciEngine(Type, size_t bits, size_t longLag, size_t shortLag)
         @safe nothrow
         void discard(size_t n)
         {
-            //Do NOT replace with n+=i, or risk an integer overflow
+            //Do NOT replace with i+=n, or risk an integer overflow
             while(n >= longLag)
             {
                 fill();
