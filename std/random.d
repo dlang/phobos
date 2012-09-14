@@ -1025,7 +1025,7 @@ unittest
 * (un-initialized) engine will generate an assertion error.
 *
 * The $(D LaggedFibonacciEngine) models an $(D Infinite)
-* $(D InfiniteForwardRange).
+* $(D ForwardRange).
 *
 * Ported from boost 1.50 on July 30th 2012
 */
@@ -1213,9 +1213,10 @@ Creates a new $(D LaggedFibonacciEngine) and calls $(D seed(value)).
     }
 
     //@@@
-    //Deactivated, as this creates conflicts with the non template constructor.
-    //We can define the above as "this()(uint value)", and it works,
-    //but then "new LaggedFib()" will create a template mismatch error.
+    //Deactivated, as this creates overload conflicts with the non template
+    //constructor. We can sidestep the problem by defining the above
+    //constructor as "this()(uint value)". However, if we do this, then
+    //"new LaggedFibonacci()" will create a template mismatch error.
     //
     //this(Range)(Range range)
     //    if (isInputRange!Range)
@@ -1264,12 +1265,13 @@ The number of elements required is the 'longLag' template parameter of the Lagge
     }
 
 /**
-Creates a copy of the generator. $(BIGOH longLag) complexity.
+Creates a deep copy of the generator; Saves the range.
+$(BIGOH longLag) complexity.
 */
     @property const
     auto dup()
     {
-        This ret;
+        This ret; //non qualified typeof(this)
         if(payload)
         {
             ret.payload = new Payload;
@@ -1466,18 +1468,22 @@ unittest
 }
 unittest
 {
-  //Test everything works for an 8 bit generator
-  auto a = LaggedFibonacciEngine!(ushort, 8,   607,   273)();
-  ushort b = 5;
-  ulong c = 5;
-  a.seed(b); //Can be built seeded from a ushort
-  a.seed(cast(uint)c); //ulong needs a cast
-  a.seed(unpredictableSeed()); //unperdictable seed is fine
+    //Test everything works for an 8 bit generator
+    auto a = LaggedFibonacciEngine!(ushort, 8,   607,   273)();
+    ushort b = 5;
+    ulong c = 5;
+    a.seed(b); //Can be built seeded from a ushort
+    a.seed(cast(uint)c); //ulong needs a cast
+    a.seed(unpredictableSeed()); //unperdictable seed is fine
 }
 unittest
 {
-  auto a = LaggedFibonacci();
-  assertThrown(a.seed([1, 2, 3])); //Input range too short
+    auto a = LaggedFibonacci();
+    assertThrown(a.seed([1, 2, 3])); //Input range too short
+}
+unittest
+{
+    auto p = new LaggedFibonacci();
 }
 
 /**
