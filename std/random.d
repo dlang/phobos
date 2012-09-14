@@ -1267,7 +1267,7 @@ The number of elements required is the 'longLag' template parameter of the Lagge
 Creates a copy of the generator. $(BIGOH longLag) complexity.
 */
     @property const
-    This dup()
+    auto dup()
     {
         This ret;
         if(payload)
