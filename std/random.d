@@ -1011,9 +1011,9 @@ unittest
 /**
 * Lagged Fibonacci generator.
 *
-* The single engine can be started with either an unsigned integral type,
-* or a floating point type. Unsigned Integral Type engine will generate
-* numbers in the range [0 .. 2^^bits). Real Type will generate
+* The engine can be instanciated with either an unsigned integral type,
+* or a floating point type. An unsigned integral engine will generate
+* numbers in the range [0 .. 2^^bits). A floating point engine will generate
 * floating points in the range [0 .. 1), with a step of 1/2^^bits.
 *
 * A $(D LaggedFibonacciEngine) must maintain a very large set of data
