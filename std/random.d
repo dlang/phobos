@@ -1067,17 +1067,143 @@ struct LaggedFibonacciEngine(Type, size_t bits, size_t longLag, size_t shortLag)
     }
 
   private:
-    //We cannot use a static array, even in an allocated struct, due to the size of S.init
-    //We create a dynamic array instead.
-    //No need for a Payload struct, but i must be allocated though, for reference semantics.
-    size_t* pi;
-    Type[] x;
+    //Payload; Reference semantics
+    static struct Payload
+    {
+        Type[longLag] x;
+        size_t i = 0;
 
-    //For convenience: Access i with value semantics
-    @property @safe nothrow ref auto i() {return *pi;}
-    @property @safe nothrow ref auto i() const {return *pi;}
+        void throwSeedException() const
+        {
+            throw new Exception(
+                text("LaggedFibonacciEngine.seed: Input range didn't provide enough elements: Need ",
+                    longLag, " elements."));
+        }
+
+        void seed(Range)(Range range)
+            //Range conditions were validated in public interface
+        {
+            i = 0;
+            static if (isUnsigned!Type)
+            {
+                foreach(j; 0..longLag)
+                {
+                    UIntType val = 0;
+                    foreach(k; 0..kMax)
+                    {
+                        if(range.empty) throwSeedException();
+                        val += cast(UIntType)range.front << 32*k;
+                        range.popFront();
+                    }
+                    x[j] = val & mask;
+                }
+            }
+            else //static if (isFloatingPoint!Type)
+            {
+                foreach(j; 0..longLag)
+                {
+                    RealType val = 0;
+                    RealType mult = divisor;
+                    foreach(k; 0..kMax)
+                    {
+                        if(range.empty) throwSeedException();
+                        val += cast(uint)range.front * mult;
+                        range.popFront();
+                        mult *= two32;
+                    }
+                    static if(mask != 0)
+                    {
+                        if(range.empty) throwSeedException();
+                        val += (cast(uint)range.front & mask) * mult;
+                        range.popFront();
+                    }
+                    assert(val >= 0.0, text("LaggedFibonacciEngine: Floating point value is smaller than 0: ", val));
+                    assert(val < 1.0, text("LaggedFibonacciEngine: Floating point value is bigger than 1: ", val));
+                    x[j] = val;
+                }
+            }
+            fill();
+        }
+
+        @safe nothrow
+        void fill()
+        {
+            @safe nothrow
+            void addAndMask(Type[] a, Type[] b) 
+            {
+                try //@@@ 8651
+                {
+                    //Common to both: Just opOpAssing!"+"
+                    a[] += b[];
+                    static if (isUnsigned!Type)
+                    {
+                        //Integral type: A simple mask will suffice
+                        a[] &= mask;
+                    }
+                    else //static if (isFloatingPoint!Type)
+                    {
+                        //Floating point type, manual operation
+                        foreach(ref t; a[])
+                            if(t >= 1.0)
+                                t -= 1.0;
+                    }
+                }
+                catch(Exception) //@@@ 8651
+                {
+                    assert(0, "Unexpected exception in LaggedFibonacciEngine.Payload.Fill");
+                }
+            }
+            
+            //Start with the special wrap-around case
+            addAndMask(x[0..shortLag], x[longLag-shortLag..longLag]);
+            //Iterate on bands of shortLag size
+            size_t low = shortLag;
+            for( ; low + shortLag <= longLag ; low += shortLag)
+                addAndMask(x[low..low+shortLag], x[low-shortLag..low]);
+
+            //Do the final partial band
+            addAndMask(x[low..longLag], x[low-shortLag..longLag-shortLag]);
+        }
+
+        @property @safe nothrow const
+        Type front()
+        {
+            return x[i];
+        }
+
+        @safe nothrow
+        void popFront()
+        {
+            ++i;
+            if(i == longLag)
+            {
+                fill();
+                i = 0;
+            }
+        }
+
+        @safe nothrow
+        void discard(size_t n)
+        {
+            //Do NOT replace with n+=i, or risk an integer overflow
+            while(n >= longLag)
+            {
+                fill();
+                n -= longLag;
+            }
+            //Now that n is smaller, we can take i into account and do the last iteration
+            i += n;
+            if(i >= longLag)
+            {
+                fill();
+                i -= longLag;
+            }
+        }
+    }
+    Payload* payload;
 
   public:
+
 /**
 Creates a new $(D LaggedFibonacciEngine) and calls $(D seed()).
 */
@@ -1103,7 +1229,7 @@ Tells if the generator has been seeded/initialized
     @property @safe nothrow const
     bool seeded()
     {
-        return pi !is null;
+        return payload != null;
     }
 
 /**
@@ -1133,21 +1259,21 @@ The number of elements required is the 'longLag' template parameter of the Lagge
         if ( isInputRange!InputRange && isIntegral!(ElementType!InputRange) &&
             ( ElementType!InputRange.sizeof >= 4 || ElementType!InputRange.sizeof >= Type.sizeof ) )
     {
-        seedInternal(range);
+        if(!payload) payload = new Payload;
+        payload.seed(range);
     }
 
 /**
 Creates a copy of the generator. $(BIGOH longLag) complexity.
 */
     @property const
-    auto dup()
+    This dup()
     {
         This ret;
-        if(pi)
+        if(payload)
         {
-            ret.pi = new size_t;
-            *ret.pi = *pi;
-            ret.x =  x.dup;
+            ret.payload = new Payload;
+            *ret.payload = *payload;
         }
         return ret;
     }
@@ -1164,9 +1290,11 @@ $(BIGOH longLag) worst case complexity.
     @safe nothrow const
     bool opEquals(const(This) b)
     {
-        return (x is b.x) ||
-               (x && b.x && *pi == *b.pi && x == b.x);
+        return (payload is b.payload) ||
+               (payload && b.payload && *payload == *b.payload);
     }
+
+    private enum payloadErrorText = "LaggedFibonacciEngine: Attempt to use an un-initialized engine";
 
 /**
 Returns the current value of the generator. Constant complexity.
@@ -1174,8 +1302,8 @@ Returns the current value of the generator. Constant complexity.
     @property @safe nothrow const
     Type front()
     {
-        assert(pi, seedErrorText);
-        return x[i];
+        assert(payload, payloadErrorText);
+        return payload.front;
     }
 
 /**
@@ -1188,13 +1316,8 @@ is advanced by $(D longLag).
     @safe nothrow
     void popFront()
     {
-        assert(pi, seedErrorText);
-        ++i;
-        if(i == longLag)
-        {
-            fill();
-            i = 0;
-        }
+        assert(payload, payloadErrorText);
+        payload.popFront();
     }
 
 /**
@@ -1206,117 +1329,8 @@ Amortized $(BIGOH z) time: advancing the get pointer is constant time, but each 
     @safe nothrow
     void discard(size_t z)
     {
-        assert(pi, seedErrorText);
-        //Do NOT replace with z+=i, or risk an integer overflow
-        while(z >= longLag)
-        {
-            fill();
-            z -= longLag;
-        }
-        //Now that z is smaller, we can take i into account and do the last iteration
-        i += z;
-        if(i >= longLag)
-        {
-            fill();
-            i -= longLag;
-        }
-    }
-
-  private:
-    private enum seedErrorText = "LaggedFibonacciEngine: Attempt to use an un-initialized engine";
-
-    void throwSeedException() const
-    {
-        throw new Exception(
-            text("LaggedFibonacciEngine.seed: Input range didn't provide enough elements: Need ",
-                longLag, " elements."));
-    }
-
-    void seedInternal(Range)(Range range)
-        //Range conditions were validated in public interface
-    {
-        if(!x)  x  = new Type[](longLag);
-        if(!pi) pi = new size_t();
-        i = 0;
-        static if (isUnsigned!Type)
-        {
-            foreach(j; 0..longLag)
-            {
-                UIntType val = 0;
-                foreach(k; 0..kMax)
-                {
-                    if(range.empty) throwSeedException();
-                    val += cast(UIntType)range.front << 32*k;
-                    range.popFront();
-                }
-                x[j] = val & mask;
-            }
-        }
-        else //static if (isFloatingPoint!Type)
-        {
-            foreach(j; 0..longLag)
-            {
-                RealType val = 0;
-                RealType mult = divisor;
-                foreach(k; 0..kMax)
-                {
-                    if(range.empty) throwSeedException();
-                    val += cast(uint)range.front * mult;
-                    range.popFront();
-                    mult *= two32;
-                }
-                static if(mask != 0)
-                {
-                    if(range.empty) throwSeedException();
-                    val += (cast(uint)range.front & mask) * mult;
-                    range.popFront();
-                }
-                assert(val >= 0.0, text("LaggedFibonacciEngine: Floating point value is smaller than 0: ", val));
-                assert(val < 1.0, text("LaggedFibonacciEngine: Floating point value is bigger than 1: ", val));
-                x[j] = val;
-            }
-        }
-        fill();
-    }
-
-    @safe nothrow
-    void fill()
-    {
-        @safe nothrow
-        void addAndMask(Type[] a, Type[] b) 
-        {
-            try //@@@ 8651
-            {
-                //Common to both: Just opOpAssing!"+"
-                a[] += b[];
-                static if (isUnsigned!Type)
-                {
-                    //Integral type: A simple mask will suffice
-                    a[] &= mask;
-                }
-                else //static if (isFloatingPoint!Type)
-                {
-                    //Floating point type, manual operation
-                    foreach(ref t; a[])
-                        if(t >= 1.0)
-                            t -= 1.0;
-                }
-            }
-            catch(Exception) //@@@ 8651
-            {
-                assert(0, "Unexpected exception in LaggedFibonacciEngine.Payload.Fill");
-            }
-        }
-        
-        //Start with the special wrap-around case
-        addAndMask(x[0..shortLag], x[longLag-shortLag..longLag]);
-        //Iterate on bands of shortLag size
-        size_t low = shortLag;
-        for( ; low + shortLag <= longLag ; low += shortLag)
-            addAndMask(x[low..low+shortLag], x[low-shortLag..low]);
-
-        //Do the final partial band
-        addAndMask(x[low..longLag], x[low-shortLag..longLag-shortLag]);
+        assert(payload, payloadErrorText);
+        payload.discard(z);
     }
 }
 
