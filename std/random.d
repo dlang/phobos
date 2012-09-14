@@ -1424,7 +1424,8 @@ unittest
         }
 
         //Verify validity of output "steps"
-        auto fourGenerator = LaggedFibonacciEngine!(T, 4, 607, 273)(unpredictableSeed());
+        auto fourGenerator = LaggedFibonacciEngine!(T, 4, 607, 273)();
+        fourGenerator.seed(unpredictableSeed());
         T[] sixteen = [ 0,  1,  2,  3,
                         4,  5,  6,  7,
                         8,  9, 10, 11,
