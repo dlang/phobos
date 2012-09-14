@@ -1205,7 +1205,7 @@ struct LaggedFibonacciEngine(Type, size_t bits, size_t longLag, size_t shortLag)
   public:
 
 /**
-Creates a new $(D LaggedFibonacciEngine) and calls $(D seed()).
+Creates a new $(D LaggedFibonacciEngine) and calls $(D seed(value)).
 */
     this(uint value)
     {
