@@ -1128,41 +1128,39 @@ struct LaggedFibonacciEngine(Type, size_t bits, size_t longLag, size_t shortLag)
         @safe nothrow
         void fill()
         {
-            @safe nothrow
-            void addAndMask(Type[] a, Type[] b) 
+            //The basic algorithm might not be visible at first.
+            //
+            //It is the same for both integer/float:
+            //foreach(i; 0..longLag)
+            //{
+            //    x[i] += x[i - shortLag]; //*with modulo wrap around if negative*
+            //    x[i].ApplyMask
+            //}
+            //Where ApplyMask is
+            //*Integer: "x[i] &= mask"
+            //*Floats: "if(x[i]>1) x[i] -= 1"
+            //
+            //We exploit vectorial operations for perfomance.
+            //Data is iterated on in strips of shortLag length.
+            //Entire "stips at once" are processed in addAndMask.
+            //There is a special "first iteration" case to avoid the costly modulo operation
+            //There is a special "final iteration" for the last (shorter) strip
+            @safe nothrow void addAndMask(Type[] r1, Type[] r2) 
             {
                 try //@@@ 8651
                 {
-                    //Common to both: Just opOpAssing!"+"
-                    a[] += b[];
-                    static if (isUnsigned!Type)
-                    {
-                        //Integral type: A simple mask will suffice
-                        a[] &= mask;
-                    }
-                    else //static if (isFloatingPoint!Type)
-                    {
-                        //Floating point type, manual operation
-                        foreach(ref t; a[])
-                            if(t >= 1.0)
-                                t -= 1.0;
-                    }
+                    r1[] += r2[];
+                    static if (isUnsigned!Type) r1[] &= mask;
+                    else foreach(ref t; r1[]) if(t >= 1.0) t -= 1.0;
                 }
-                catch(Exception) //@@@ 8651
-                {
-                    assert(0, "Unexpected exception in LaggedFibonacciEngine.Payload.Fill");
-                }
+                catch(Exception) assert(0, "Unexpected exception in LaggedFibonacciEngine.Payload.Fill");
             }
-            
-            //Start with the special wrap-around case
-            addAndMask(x[0..shortLag], x[longLag-shortLag..longLag]);
-            //Iterate on bands of shortLag size
+    
+            addAndMask(x[0 .. shortLag], x[longLag - shortLag .. longLag]);
             size_t low = shortLag;
-            for( ; low + shortLag <= longLag ; low += shortLag)
-                addAndMask(x[low..low+shortLag], x[low-shortLag..low]);
-
-            //Do the final partial band
-            addAndMask(x[low..longLag], x[low-shortLag..longLag-shortLag]);
+            for( ; low + shortLag <= longLag ; low += shortLag) //Iteration necessarry to avoid overlap operations
+                addAndMask(x[low .. low + shortLag], x[low - shortLag .. low]);
+            addAndMask(x[low .. longLag], x[low - shortLag .. longLag - shortLag]);
         }
 
         @property @safe nothrow const
@@ -1326,7 +1324,7 @@ is advanced by $(D longLag).
 Advances the state of the generator by $(D z). More efficient than calling popFront $(D z) times.
 
 Amortized $(BIGOH z) time: advancing the get pointer is constant time, but each refill
-(every time the engine is advaned by $(D longLag)) will still require $(D longLag) time.
+(every time the engine is advanced by $(D longLag)) will still require $(D longLag) time.
 */
     @safe nothrow
     void discard(size_t z)
