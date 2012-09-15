@@ -770,9 +770,6 @@ else version (OSX)
         }
         else
         {
-            //browser = "/Applications/Safari.app/Contents/MacOS/Safari";
-            //args[1] = "-a".ptr;
-            //args[2] = "/Applications/Safari.app".ptr;
             args[0] = "open".ptr;
             args[1] = toStringz(url);
             args[2] = null;
