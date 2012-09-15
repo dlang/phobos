@@ -7594,6 +7594,11 @@ else
             for(int i=0; i<20; i++)
                 foreach (matchNew; uniCapturesNew) {}
     }
+    unittest
+    {// bugzilla 8637 purity of enforce
+        auto m = match("hello world", regex("world"));
+        enforce(m);
+    }
 }
 
 }//version(unittest)
