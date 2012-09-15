@@ -129,7 +129,8 @@ extern (C) int _d_run_main(size_t argc, char **argv, void *p)
         _STI_critical_init();
         gc_init();
         //_minit();
-        am = cast(char[] *) alloca(argc * (char[]).sizeof);
+        // BUG: alloca() conflicts with try-catch-finally stack unwinding
+        am = cast(char[] *) malloc(argc * (char[]).sizeof);
     }
 
     if (no_catch_exceptions)

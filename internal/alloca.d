@@ -248,24 +248,3 @@ extern (C) void* __alloca(int nbytes)
         static assert(0);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
