@@ -152,13 +152,14 @@ MAIN = $(ROOT)/emptymain.d
 
 # Stuff in std/
 STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
-        bitmanip compiler complex concurrency container conv		\
-        cpuid cstream ctype csv datetime demangle encoding exception	\
-        file format functional getopt json math mathspecial md5	\
-        metastrings mmfile numeric outbuffer parallelism path perf		\
-        process random range regex regexp signals socket socketstream	\
-        stdint stdio stdiobase stream string syserror system traits		\
-        typecons typetuple uni uri utf uuid variant xml zip zlib)
+        benchmark bitmanip compiler complex concurrency container		\
+        conv cpuid cstream ctype csv datetime demangle encoding			\
+        exception file format functional getopt json math mathspecial	\
+        md5 metastrings mmfile numeric outbuffer parallelism path		\
+        perf process random range regex regexp signals socket			\
+        socketstream stdint stdio stdiobase stream string syserror		\
+        system traits typecons typetuple uni uri utf uuid variant xml	\
+        zip zlib)
 
 STD_NET_MODULES = $(addprefix std/net/, isemail curl)
 
