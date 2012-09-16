@@ -684,13 +684,13 @@ void printResults(in BenchmarkResult[] data, File target = stdout)
             if (relative < 1000)
             {
                 // represent relative speed as percent
-                fmt = "%-*s %7.1f%%  %6.1m  %6.1m";
+                fmt = "%-*s %7.1f%% %6.1ms  %6.1m";
                 relative *= 100;
             }
             else
             {
                 // represent relative speed as multiplication factor
-                fmt = "%-*s  %6.1mx  %6.1m  %6.1m";
+                fmt = "%-*s  %6.1mx %6.1ms  %6.1m";
             }
             target.writefln(fmt,
                     columns - 25, name,
