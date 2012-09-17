@@ -622,7 +622,7 @@ unittest
 }
 
 /**
-Returns a pointer to one-past-the-end of an array.
+    Returns a pointer to one-past-the-end of an array.
 
 Example:
 $(D_RUN_CODE
@@ -634,6 +634,10 @@ assert(a.ptr + a.length == a.ptrEnd);
 assert(b.ptr == b.ptrEnd);
 ----
 ), $(ARGS), $(ARGS), $(ARGS import std.array;))
+
+    $(RED The returned pointer should be used ONLY for pointer arithmatic,
+    as it will not be considered a refernce to the array by the Garbage
+    Collector.)
 */
 @property @trusted pure nothrow
 auto ptrEnd(T)(T arr)
