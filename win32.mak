@@ -990,7 +990,8 @@ tolf:
 	tolf $(MAKEFILES) $(MAKEFILES_ZLIB) $(MAKEFILES_GC) \
 	$(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
-	$(SRC_STDLINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_SOLARIS)
+	$(SRC_STDLINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_SOLARIS) \
+	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
 
 install:
 	$(CP) phobos.lib phobos64.lib gcstub.obj $(DIR)\windows\lib
