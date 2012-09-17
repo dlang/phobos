@@ -189,7 +189,7 @@ private template nDimensions(T)
 {
     static if(isArray!T)
     {
-        enum nDimensions = 1 + nDimensions!(typeof(T.init[0]));
+        enum nDimensions = 1 + nDimensions!(ArrayElementType!T);
     }
     else
     {
@@ -272,7 +272,7 @@ if(allSatisfy!(isIntegral, I))
         to!string(sizes.length) ~ " dimensions specified for a " ~
         to!string(nDimensions!T) ~ " dimensional array.");
 
-    alias typeof(T.init[0]) E;
+    alias ArrayElementType!T E;
 
     auto ptr = cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!(E));
     auto ret = ptr[0..sizes[0]];

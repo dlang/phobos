@@ -1326,7 +1326,7 @@ T toImpl(T, S)(S value)
         !isSomeString!S && isDynamicArray!S &&
         !(isSomeString!T && !is(T == enum)) && isArray!T)
 {
-    alias typeof(T.init[0]) E;
+    alias ArrayElementType!T E;
     auto result = new E[value.length];
     foreach (i, e; value)
     {

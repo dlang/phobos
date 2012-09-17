@@ -3848,7 +3848,7 @@ private struct RoundRobinBuffer(C1, C2)
     // No need for constraints because they're already checked for in asyncBuf.
 
     alias ParameterTypeTuple!(C1.init)[0] Array;
-    alias typeof(Array.init[0]) T;
+    alias ArrayElementType!Array T;
 
     T[][] bufs;
     size_t index;
