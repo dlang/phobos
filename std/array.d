@@ -635,9 +635,8 @@ assert(b.ptr == b.ptrEnd);
 ----
 ), $(ARGS), $(ARGS), $(ARGS import std.array;))
 
-    $(RED The returned pointer should be used ONLY for pointer arithmatic,
-    as it will not be considered a refernce to the array by the Garbage
-    Collector.)
+    $(RED Warning: The pointer returned by this function will not be
+    considered a live reference to the array by the garbage collector.)
 */
 @property @trusted pure nothrow
 auto ptrEnd(T)(T arr)
