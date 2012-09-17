@@ -680,7 +680,7 @@ inout(T)[] overlap(T)(inout(T)[] r1, inout(T)[] r2) @trusted pure nothrow
     static U* min(U* a, U* b) nothrow { return a < b ? a : b; }
 
     auto b = max(r1.ptr, r2.ptr);
-    auto e = min(r1.ptrEnd, r2.ptr + r2.ptrEnd);
+    auto e = min(r1.ptrEnd, r2.ptrEnd);
     return b < e ? b[0 .. e - b] : null;
 }
 
