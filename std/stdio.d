@@ -38,7 +38,7 @@ version (DigitalMars)
     }
     version (Win64)
     {
-        version = GENERIC_IO;
+        version = MICROSOFT_STDIO;
     }
 }
 
@@ -85,6 +85,28 @@ version (DIGITAL_MARS_STDIO)
 
     alias __fp_lock FLOCK;
     alias __fp_unlock FUNLOCK;
+}
+else version (MICROSOFT_STDIO)
+{
+    extern (C)
+    {
+        /* **
+         * Microsoft under-the-hood C I/O functions
+         */
+        int _fputc_nolock(int, FILE*);
+        int _fputwc_nolock(int, FILE*);
+        int _fgetc_nolock(FILE*);
+        int _fgetwc_nolock(FILE*);
+        void _lock_file(FILE*);
+        void _unlock_file(FILE*);
+    }
+    alias _fputc_nolock FPUTC;
+    alias _fputwc_nolock FPUTWC;
+    alias _fgetc_nolock FGETC;
+    alias _fgetwc_nolock FGETWC;
+
+    alias _lock_file FLOCK;
+    alias _unlock_file FUNLOCK;
 }
 else version (GCC_IO)
 {
@@ -490,6 +512,21 @@ size_t readln(FILE* fp, inout char[] buf)
             buf = buf[0 .. i];
             return i;
         }
+    }
+    else version (MICROSOFT_STDIO)
+    {
+        FLOCK(fp);
+        scope(exit) FUNLOCK(fp);
+        buf.length = 0;
+        for (int c; (c = FGETC(fp)) != -1; )
+        {
+            buf ~= c;
+            if (c == '\n')
+                break;
+        }
+        if (ferror(fp))
+            StdioException();
+        return buf.length;
     }
     else version (GCC_IO)
     {

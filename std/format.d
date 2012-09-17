@@ -40,6 +40,7 @@ import std.stdarg;      // caller will need va_list
 
 private import std.utf;
 private import std.c.stdlib;
+private import std.c.stdio;
 private import std.c.string;
 private import std.string;
 
@@ -47,7 +48,10 @@ version (Windows)
 {
     version (DigitalMars)
     {
-        version = DigitalMarsC;
+        version (Win32)
+        {
+            version = DigitalMarsC;
+        }
     }
 }
 
@@ -597,7 +601,10 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 while (1)
                 {
                     sl = fbuf.length;
-                    auto n = snprintf(fbuf.ptr, sl, format.ptr, field_width, precision, v);
+                    version (Win64)
+                        auto n = _snprintf(fbuf.ptr, sl, format.ptr, field_width, precision, cast(double)v);
+                    else
+                        auto n = snprintf(fbuf.ptr, sl, format.ptr, field_width, precision, v);
                     //printf("format = '%s', n = %d\n", cast(char*)format, n);
                     if (n >= 0 && n < sl)
                     {   sl = n;
@@ -642,18 +649,24 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
           while (len--)
           {
             //doFormat(putc, (&valti)[0 .. 1], p);
-            version (X86)
+            version (Win64)
+            {
                 argptr = p;
-            else version (Win64)
-                argptr = p;
-            else
-            {   __va_list va;
-                va.stack_args = p;
-                argptr = &va;
+                formatArg('s');
+                p += size_t.sizeof;
             }
-            formatArg('s');
-
-            p += tsize;
+            else
+            {
+                version (X86)
+                    argptr = p;
+                else
+                {   __va_list va;
+                    va.stack_args = p;
+                    argptr = &va;
+                }
+                formatArg('s');
+                p += tsize;
+            }
             if (len > 0) putc(',');
           }
           m = mSave;
@@ -981,8 +994,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 }
                 else version (Win64)
                 {   s = tis.xtoString(argptr);
-                    argptr += (tis.tsize() + 3) & ~3;
-                    // This isn't correct
+                    argptr += size_t.sizeof;
                 }
                 else version (X86_64)
                 {

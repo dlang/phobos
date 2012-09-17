@@ -416,7 +416,15 @@ body
     version (X86)
         return box(_arguments[0], _argptr);
     else version (Win64)
-        return box(_arguments[0], _argptr);
+    {
+        TypeInfo ti = _arguments[0];
+        void* p = _argptr;
+        auto tsize = ti.tsize();
+        if (tsize > 8)
+            p = *cast(void**)_argptr;
+        va_end(_argptr);
+        return box(ti, p);
+    }
     else version (X86_64)
     {
         va_list argptr;
@@ -504,7 +512,22 @@ Box[] boxArray(...)
     version (X86)
         return boxArray(_arguments, _argptr);
     else version (Win64)
-        return boxArray(_arguments, _argptr);
+    {
+        Box[] array = new Box[_arguments.length];
+
+        foreach(size_t index, TypeInfo ti; _arguments)
+        {
+            void* p = _argptr;
+            auto tsize = ti.tsize();
+            if (tsize > 8)
+                p = *cast(void**)_argptr;
+            _argptr += 8;
+            array[index] = box(ti, p);
+        }
+
+        va_end(_argptr);
+        return array;
+    }
     else version (X86_64)
     {
         Box[] array = new Box[_arguments.length];

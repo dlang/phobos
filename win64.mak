@@ -104,6 +104,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	internal\dmain2.d internal\cast.d internal\obj.d \
 	internal\arrayfloat.d internal\arraydouble.d internal\arrayreal.d \
 	internal\arraybyte.d internal\arrayshort.d internal\arrayint.d \
+	internal\cmath2.d \
 	etc\gamma.d \
 	std\c\math.d \
 	std\c\stdarg.d \
@@ -410,6 +411,9 @@ arraycat.obj : internal\arraycat.d
 
 cast.obj : internal\cast.d
 	$(DMD) -c $(DFLAGS) internal\cast.d
+
+cmath2.obj : internal\cmath2.d
+	$(DMD) -c $(DFLAGS) internal\cmath2.d
 
 complex.obj : internal\complex.c
 	$(CC) -c $(CFLAGS) internal\complex.c

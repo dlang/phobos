@@ -116,6 +116,8 @@ version (Win32)
     int  fileno(FILE *fp)       { return fp._file; }
     int  _snprintf(char *,size_t,char *,...);
     int  _vsnprintf(char *,size_t,char *,va_list);
+
+    int fwide(FILE* fp, int mode);  ///
 }
 else version (Win64)
 {
@@ -181,6 +183,30 @@ else version (Win64)
     int  fileno(FILE *fp)       { return fp._file; }
     int  _snprintf(char *,size_t,char *,...);
     int  _vsnprintf(char *,size_t,char *,va_list);
+
+    int fwide(FILE* fp, int mode) { return mode; }
+
+    int _filbuf(FILE *fp);
+    int _flsbuf(int c, FILE *fp);
+
+    int _fputc_nolock(int c, FILE *fp)
+    {
+        if (--fp._cnt >= 0)
+            return *fp._ptr++ = cast(char)c;
+        else
+            return _flsbuf(c, fp);
+    }
+
+    int _fgetc_nolock(FILE *fp)
+    {
+        if (--fp._cnt >= 0)
+            return *fp._ptr++;
+        else
+            return _filbuf(fp);
+    }
+
+    int _lock_file(FILE *fp);
+    int _unlock_file(FILE *fp);
 }
 else version (linux)
 {
@@ -258,6 +284,8 @@ else version (linux)
     int  fileno(FILE *fp);
     int  snprintf(char *,size_t,char *,...);
     int  vsnprintf(char *,size_t,char *,va_list);
+
+    int fwide(FILE* fp, int mode);  ///
 }
 else version (OSX)
 {
@@ -344,6 +372,8 @@ else version (OSX)
     int  fileno(FILE *fp);
     int  snprintf(char *,size_t,char *,...);
     int  vsnprintf(char *,size_t,char *,va_list);
+
+    int fwide(FILE* fp, int mode);  ///
 }
 else version (FreeBSD)
 {
@@ -430,6 +460,8 @@ else version (FreeBSD)
     int  fileno(FILE *fp);
     int  snprintf(char *,size_t,char *,...);
     int  vsnprintf(char *,size_t,char *,va_list);
+
+    int fwide(FILE* fp, int mode);  ///
 }
 else version (OpenBSD)
 {
@@ -499,6 +531,8 @@ else version (OpenBSD)
     int vsnprintf(char *, size_t, char *, va_list);
     int fseeko(FILE *, off_t, int);
     off_t ftello(FILE *);
+
+    int fwide(FILE* fp, int mode);  ///
 }
 else version (Solaris)
 {
@@ -555,6 +589,8 @@ else version (Solaris)
     int  fileno(FILE *fp);
     int  snprintf(char *,size_t,char *,...);
     int  vsnprintf(char *,size_t,char *,va_list);
+
+    int fwide(FILE* fp, int mode);  ///
 }
 else
 {
@@ -662,5 +698,3 @@ wchar_t  putwchar_t(wchar_t c)  { return fputwc(c,stdout); }
 wchar_t  getwc(FILE *fp); //        { return fgetwc(fp); }
 ///
 wchar_t  putwc(wchar_t c, FILE *fp); //     { return fputwc(c, fp); }
-
-int fwide(FILE* fp, int mode);  ///
