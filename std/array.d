@@ -635,7 +635,7 @@ assert(b.ptr == b.ptrEnd);
 ----
 ), $(ARGS), $(ARGS), $(ARGS import std.array;))
 */
-@trusted pure nothrow
+@property @trusted pure nothrow
 auto ptrEnd(T)(T arr)
     if(isArray!T)
 {
