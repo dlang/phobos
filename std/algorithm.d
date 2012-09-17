@@ -9362,3 +9362,12 @@ unittest
     //writeln(b[0]);
     assert(b[0] == tuple(4.0, 2u));
 }
+
+unittest
+{
+    alias Tuple!(uint, uint) T;
+    const Array!T arrayOne = Array!T( [ T(1,2), T(3,4) ] );
+    const Array!T arrayTwo = Array!T([ T(1,2), T(3,4) ] );
+
+    assert(arrayOne == arrayTwo);
+}
