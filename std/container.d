@@ -2263,15 +2263,27 @@ Defines the container's primary range, which is a random-access range.
             _b = b;
         }
 
+        @property Range save()
+        {
+            assert(_b <= _outer.length);
+            return this;
+        }
+
         @property bool empty() const
         {
-            assert(_outer.length >= _b);
+            assert(_b <= _outer.length);
             return _a >= _b;
         }
 
-        @property Range save()
+        @property size_t length() const
         {
-            return this;
+            assert(_b <= _outer.length);
+            return _b - _a;
+        }
+
+        size_t opDollar() const
+        {
+            return length;
         }
 
         @property T front()
@@ -2326,14 +2338,30 @@ Defines the container's primary range, which is a random-access range.
         {
             i += _a;
             enforce(i < _b && !empty);
-            return move(_outer._data._payload[_a + i]);
+            return move(_outer._data._payload[i]);
         }
 
         T opIndex(size_t i)
         {
             i += _a;
             enforce(i < _b && _b <= _outer.length);
-            return _outer[i];
+            return _outer._data._payload[i];
+        }
+
+        void opIndexUnary(string op)(size_t i)
+            if(op == "++" || op == "--")
+        {
+            i += _a;
+            enforce(i < _b && _b <= _outer.length);
+            mixin(op~"_outer._data._payload[i];");
+        }
+
+        T opIndexUnary(string op)(size_t i)
+            if(op != "++" && op != "--")
+        {
+            i += _a;
+            enforce(i < _b && _b <= _outer.length);
+            mixin("return "~op~"_outer._data._payload[i];");
         }
 
         void opIndexAssign(T value, size_t i)
@@ -2343,31 +2371,77 @@ Defines the container's primary range, which is a random-access range.
             _outer[i] = value;
         }
 
-        typeof(this) opSlice(size_t a, size_t b)
-        {
-            return typeof(this)(_outer, a + _a, b + _a);
-        }
-
         void opIndexOpAssign(string op)(T value, size_t i)
         {
-            enforce(_outer && _a + i < _b && _b <= _outer._payload.length);
-            mixin("_outer._payload.ptr[_a + i] "~op~"= value;");
+            i += _a;
+            enforce(i < _b && _b <= _outer.length);
+            mixin("_outer._data._payload[i] "~op~"= value;");
         }
 
-        @property size_t length() const {
-            return _b - _a;
+        typeof(this) opSlice()
+        {
+            assert(_b <= _outer.length);
+            return this;
         }
-    }
 
-/**
-Property returning $(D true) if and only if the container has no
-elements.
+        typeof(this) opSlice(size_t a, size_t b)
+        {
+            assert(_b <= _outer.length);
+            a += _a;
+            b += _a;
+            enforce(a <= b && b <= _b);
+            return typeof(this)(_outer, a, b);
+        }
 
-Complexity: $(BIGOH 1)
-     */
-    @property bool empty() const
-    {
-        return !_data.RefCounted.isInitialized || _data._payload.empty;
+        void opSliceAssign(T value)
+        {
+            assert(_b <= _outer.length);
+            _outer._data._payload[_a .. _b] = value;
+        }
+
+        void opSliceAssign(T value, size_t i, size_t j)
+        {
+            assert(_b <= _outer.length);
+            if(i == 0 && j == 0 ) return;
+            i += _a;
+            j += _a;
+            enforce(i <= j && j <= _b);
+            _outer._data._payload[i .. j] = value;
+        }
+
+        void opSliceUnary(string op)()
+            if(op == "++" || op == "--")
+        {
+            assert(_b <= _outer.length);
+            mixin(op~"_outer._data._payload[_a .. _b];");
+        }
+
+        void opSliceUnary(string op)(size_t i, size_t j)
+            if(op == "++" || op == "--")
+        {
+            assert(_b <= _outer.length);
+            if(i == 0 && j == 0 ) return;
+            i += _a;
+            j += _a;
+            enforce(i <= j && j <= _b);
+            mixin(op~"_outer._data._payload[i .. j];");
+        }
+
+        void opSliceOpAssign(string op)(T value)
+        {
+            assert(_b <= _outer.length);
+            mixin("_outer._data._payload[_a .. _b] "~op~"= value;");
+        }
+
+        void opSliceOpAssign(string op)(T value, size_t i, size_t j)
+        {
+            assert(_b <= _outer.length);
+            if(i == 0 && j == 0 ) return;
+            i += _a;
+            j += _a;
+            enforce(i <= j && j <= _b);
+            mixin("_outer._data._payload[i .. j] "~op~"= value;");
+        }
     }
 
 /**
@@ -2383,6 +2457,17 @@ Complexity: $(BIGOH n).
     }
 
 /**
+Property returning $(D true) if and only if the container has no
+elements.
+
+Complexity: $(BIGOH 1)
+     */
+    @property bool empty() const
+    {
+        return !_data.RefCounted.isInitialized || _data._payload.empty;
+    }
+
+/**
 Returns the number of elements in the container.
 
 Complexity: $(BIGOH 1).
@@ -2390,6 +2475,13 @@ Complexity: $(BIGOH 1).
     @property size_t length() const
     {
         return _data.RefCounted.isInitialized ? _data._payload.length : 0;
+    }
+
+    /// ditto
+    size_t opDollar() const
+    {
+        // @@@BUG@@@ This doesn't work yet
+        return length;
     }
 
 /**
@@ -2462,14 +2554,6 @@ Complexity: $(BIGOH 1)
     }
 
 /**
-@@@BUG@@@ This doesn't work yet
-     */
-    size_t opDollar() const
-    {
-        return length;
-    }
-
-/**
 Forward to $(D opSlice().front) and $(D opSlice().back), respectively.
 
 Precondition: $(D !empty)
@@ -2482,21 +2566,21 @@ Complexity: $(BIGOH 1)
         return *_data._payload.ptr;
     }
 
-/// ditto
+    /// ditto
     @property void front(T value)
     {
         enforce(!empty);
         *_data._payload.ptr = value;
     }
 
-/// ditto
+    /// ditto
     @property T back()
     {
         enforce(!empty);
         return _data._payload[$ - 1];
     }
 
-/// ditto
+    /// ditto
     @property void back(T value)
     {
         enforce(!empty);
@@ -2517,16 +2601,82 @@ Complexity: $(BIGOH 1)
     }
 
     /// ditto
+    void opIndexUnary(string op)(size_t i)
+        if(op == "++" || op == "--")
+    {
+        enforce(_data.RefCounted.isInitialized);
+        mixin(op~"_data._payload[i];");
+    }
+
+    /// ditto
+    T opIndexUnary(string op)(size_t i)
+        if(op != "++" && op != "--")
+    {
+        enforce(_data.RefCounted.isInitialized);
+        mixin("return "~op~"_data._payload[i];");
+    }
+
+    /// ditto
     void opIndexAssign(T value, size_t i)
     {
         enforce(_data.RefCounted.isInitialized);
         _data._payload[i] = value;
     }
 
-/// ditto
+    /// ditto
     void opIndexOpAssign(string op)(T value, size_t i)
     {
+        enforce(_data.RefCounted.isInitialized);
         mixin("_data._payload[i] "~op~"= value;");
+    }
+
+/**
+Slicing operations execute an operation on an entire slice.
+
+Precondition: $(D $(D i < j && j < length)
+
+Complexity: $(BIGOH slice.length)
+     */
+
+    void opSliceAssign(T value)
+    {
+        if(!_data.RefCounted.isInitialized) return;
+        _data._payload[] = value;
+    }
+
+    void opSliceAssign(T value, size_t i, size_t j)
+    {
+        enforce(_data.RefCounted.isInitialized || (i == 0 && j == 0));
+        _data._payload[i .. j] = value;
+    }
+
+    void opSliceUnary(string op)()
+        if(op == "++" || op == "--")
+    {
+        if(!_data.RefCounted.isInitialized) return;
+        mixin(op~"_data._payload[];");
+    }
+
+    /// ditto
+    void opSliceUnary(string op)(size_t i, size_t j)
+        if(op == "++" || op == "--")
+    {
+        enforce(_data.RefCounted.isInitialized || (i == 0 && j == 0));
+        mixin(op~"_data._payload[i .. j];");
+    }
+
+    /// ditto
+    void opSliceOpAssign(string op)(T value)
+    {
+        if(!_data.RefCounted.isInitialized) return;
+        mixin("_data._payload[] "~op~"= value;");
+    }
+
+    /// ditto
+    void opSliceOpAssign(string op)(T value, size_t i, size_t j)
+    {
+        enforce(_data.RefCounted.isInitialized || (i == 0 && j == 0));
+        mixin("_data._payload[i .. j] "~op~"= value;");
     }
 
 /**
@@ -2537,7 +2687,8 @@ define $(D opBinary).
 Complexity: $(BIGOH n + m), where m is the number of elements in $(D
 stuff)
      */
-    Array opBinary(string op, Stuff)(Stuff stuff) if (op == "~")
+    Array opBinary(string op, Stuff)(Stuff stuff)
+        if (op == "~")
     {
         // TODO: optimize
         Array result;
@@ -2549,10 +2700,11 @@ stuff)
         return result;
     }
 
-    /**
-       Forwards to $(D insertBack(stuff)).
+/**
+Forwards to $(D insertBack(stuff)).
      */
-    void opOpAssign(string op, Stuff)(Stuff stuff) if (op == "~")
+    void opOpAssign(string op, Stuff)(Stuff stuff)
+        if (op == "~")
     {
         static if (is(typeof(stuff[])))
         {
@@ -2633,7 +2785,7 @@ elements in $(D stuff)
         _data.RefCounted.ensureInitialized();
         return _data.insertBack(stuff);
     }
-/// ditto
+    /// ditto
     alias insertBack insert;
 
 /**
@@ -2655,7 +2807,7 @@ Complexity: $(BIGOH log(n)).
         }
         _data._payload = _data._payload[0 .. $ - 1];
     }
-/// ditto
+    /// ditto
     alias removeBack stableRemoveBack;
 
 /**
@@ -2714,7 +2866,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
         return 1;
     }
 
-/// ditto
+    /// ditto
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
@@ -2765,7 +2917,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
         return result;
     }
 
-/// ditto
+    /// ditto
     size_t replace(Stuff)(Range r, Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
@@ -2787,7 +2939,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
         return result;
     }
 
-/// ditto
+    /// ditto
     size_t replace(Stuff)(Range r, Stuff stuff)
     if (isImplicitlyConvertible!(Stuff, T))
     {
@@ -2830,10 +2982,8 @@ $(D r)
         length = offset1 + tailLength;
         return this[length - tailLength .. length];
     }
-
     /// ditto
     alias remove stableLinearRemove;
-
 }
 
 // unittest
@@ -3034,7 +3184,6 @@ unittest
     a.replace(a[], 1);
     assert(equal(a[], [1]));
 }
-
 // make sure that Array instances refuse ranges that don't belong to them
 unittest
 {
@@ -3046,6 +3195,60 @@ unittest
 	assertThrown(a.replace(r, 42));
 	assertThrown(a.replace(r, [42]));
 	assertThrown(a.linearRemove(r));
+}
+unittest
+{
+    auto a = Array!int([1, 1]);
+    a[1]  = 0; //Check Array.opIndexAssign
+    assert(a[1] == 0);
+    a[1] += 1; //Check Array.opIndexOpAssign
+    assert(a[1] == 1);
+    
+    //Check Array.opIndexUnary
+    ++a[0];
+    //a[0]++ //op++ doesn't return, so this shouldn't work, even with 5044 fixed
+    assert(a[0] == 2);
+    assert(+a[0] == +2);
+    assert(-a[0] == -2);
+    assert(~a[0] == ~2);
+    
+    auto r = a[];
+    r[1]  = 0; //Check Array.Range.opIndexAssign
+    assert(r[1] == 0);
+    r[1] += 1; //Check Array.Range.opIndexOpAssign
+    assert(r[1] == 1);
+    
+    //Check Array.Range.opIndexUnary
+    ++r[0];
+    //r[0]++ //op++ doesn't return, so this shouldn't work, even with 5044 fixed
+    assert(r[0] == 3);
+    assert(+r[0] == +3);
+    assert(-r[0] == -3);
+    assert(~r[0] == ~3);
+}
+unittest
+{
+    //Test "array-wide" operations
+    auto a = Array!int([0, 1, 2]); //Array
+    a[] += 5;
+    assert(a[].equal([5, 6, 7]));
+    ++a[];
+    assert(a[].equal([6, 7, 8]));
+    a[1 .. 3] *= 5;
+    assert(a[].equal([6, 35, 40]));
+    a[0 .. 2] = 0;
+    assert(a[].equal([0, 0, 40]));
+
+    //Test "range-wide" operations
+    auto r = Array!int([0, 1, 2])[]; //Array.range
+    r[] += 5;
+    assert(r.equal([5, 6, 7]));
+    ++r[];
+    assert(r.equal([6, 7, 8]));
+    r[1 .. 3] *= 5;
+    assert(r.equal([6, 35, 40]));
+    r[0 .. 2] = 0;
+    assert(r.equal([0, 0, 40]));
 }
 
 // BinaryHeap
