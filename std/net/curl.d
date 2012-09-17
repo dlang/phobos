@@ -2384,7 +2384,7 @@ struct HTTP
       */
     @property void postData(const(void)[] data)
     {
-        _postData(cast(void*)data.ptr, "application/octet-stream");
+        _postData(cast(void*)data.ptr, data.length * void.sizeof, "application/octet-stream");
     }
 
     /** Specifying data to post when not using the onSend callback.
@@ -2403,17 +2403,18 @@ struct HTTP
       */
     @property void postData(const(char)[] data)
     {
-        _postData(cast(void*)data.ptr, "text/plain");
+        _postData(cast(void*)data.ptr, data.length * char.sizeof, "text/plain");
     }
 
     // Helper for postData property
-    private void _postData(void* data, string contentType)
+    private void _postData(void* data, size_t length, string contentType)
     {
         // cannot use callback when specifying data directly so it is disabled here.
         // here.
         p.curl.clear(CurlOption.readfunction);
         addRequestHeader("Content-Type", contentType);
         p.curl.set(CurlOption.postfields, data);
+        p.curl.set(CurlOption.postfieldssize, length);
         if (method == Method.undefined)
             method = Method.post;
     }
