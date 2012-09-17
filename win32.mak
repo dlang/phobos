@@ -122,7 +122,9 @@ SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
     std\compiler.d std\cpuid.d \
     std\system.d std\concurrency.d
 
-SRC_STD_4= std\uuid.d
+#can't place SRC_STD_DIGEST in SRC_STD_REST because of out-of-memory issues
+SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d std\digest\digest.d
+SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST)
 
 SRC_STD_5_HEAVY= std\algorithm.d
 
@@ -187,7 +189,7 @@ SRC_STD_INTERNAL= std\internal\processinit.d std\internal\uni.d std\internal\uni
 
 SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
-    std\internal\math\gammafunction.d std\internal\math\errorfunction.d
+	std\internal\math\gammafunction.d std\internal\math\errorfunction.d
 
 SRC_STD_INTERNAL_WINDOWS= std\internal\windows\advapi32.d
 
@@ -278,6 +280,10 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_container.html \
 	$(DOC)\std_conv.html \
 	$(DOC)\std_cpuid.html \
+	$(DOC)\std_digest_crc.html \
+	$(DOC)\std_digest_sha.html \
+	$(DOC)\std_digest_md.html \
+	$(DOC)\std_digest_digest.html \
 	$(DOC)\std_cstream.html \
 	$(DOC)\std_ctype.html \
 	$(DOC)\std_csv.html \
@@ -635,6 +641,18 @@ $(DOC)\std_net_isemail.html : $(STDDOC) std\net\isemail.d
 $(DOC)\std_net_curl.html : $(STDDOC) std\net\curl.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_net_curl.html $(STDDOC) std\net\curl.d
 
+$(DOC)\std_digest_crc.html : $(STDDOC) std\digest\crc.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_crc.html $(STDDOC) std\digest\crc.d
+
+$(DOC)\std_digest_sha.html : $(STDDOC) std\digest\sha.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_sha.html $(STDDOC) std\digest\sha.d
+
+$(DOC)\std_digest_md.html : $(STDDOC) std\digest\md.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_md.html $(STDDOC) std\digest\md.d
+
+$(DOC)\std_digest_digest.html : $(STDDOC) std\digest\digest.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_digest.html $(STDDOC) std\digest\digest.d
+
 $(DOC)\std_windows_charset.html : $(STDDOC) std\windows\charset.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_windows_charset.html $(STDDOC) std\windows\charset.d
 
@@ -689,7 +707,7 @@ $(DOC)\etc_c_zlib.html : $(STDDOC) etc\c\zlib.d
 zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
-	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) \
+	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST) \
 	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
 	del phobos.zip
 	zip32 -u phobos win32.mak win64.mak posix.mak $(STDDOC)
@@ -707,6 +725,7 @@ zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_ETC) $(SRC_ETC_C)
 	zip32 -u phobos $(SRC_ZLIB)
 	zip32 -u phobos $(SRC_STD_NET)
+	zip32 -u phobos $(SRC_STD_DIGEST)
 
 clean:
 	cd etc\c\zlib
@@ -744,6 +763,7 @@ install:
 	$(CP) $(SRC) $(DIR)\src\phobos\ 
 	$(CP) $(SRC_STD) $(DIR)\src\phobos\std\ 
 	$(CP) $(SRC_STD_NET) $(DIR)\src\phobos\std\net\ 
+	$(CP) $(SRC_STD_DIGEST) $(DIR)\src\phobos\std\digest\ 
 	$(CP) $(SRC_STD_C) $(DIR)\src\phobos\std\c\ 
 	$(CP) $(SRC_STD_WIN) $(DIR)\src\phobos\std\windows\ 
 	$(CP) $(SRC_STD_C_WIN) $(DIR)\src\phobos\std\c\windows\ 
@@ -751,7 +771,7 @@ install:
 	$(CP) $(SRC_STD_C_OSX) $(DIR)\src\phobos\std\c\osx\ 
 	$(CP) $(SRC_STD_C_FREEBSD) $(DIR)\src\phobos\std\c\freebsd\ 
 	$(CP) $(SRC_STD_INTERNAL) $(DIR)\src\phobos\std\internal\ 
-	$(CP) $(SRC_STD_INTERNAL_MATH) $(DIR)\src\phobos\std\internal\math\ 
+	$(CP) $(SRC_STD_INTERNAL_MATH) $(DIR)\src\phobos\std\internal\math\
 	$(CP) $(SRC_STD_INTERNAL_WINDOWS) $(DIR)\src\phobos\std\internal\windows\ 
 	#$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc\ 
 	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c\ 

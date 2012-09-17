@@ -389,7 +389,7 @@ interface OutputStream {
 
 // not really abstract, but its instances will do nothing useful
 class Stream : InputStream, OutputStream {
-  private import std.string, crc32, std.c.stdlib, std.c.stdio;
+  private import std.string, std.digest.crc, std.c.stdlib, std.c.stdio;
 
   // stream abilities
   bool readable = false;        /// Indicates whether this stream can be read from.
@@ -1364,16 +1364,25 @@ class Stream : InputStream, OutputStream {
     {
         ulong pos = position;
         scope(exit) position(pos);
-        uint crc = init_crc32();
+        CRC32 crc;
+        crc.start();
         position(0);
         ulong len = size;
         for (ulong i = 0; i < len; i++)
         {
           ubyte c;
           read(c);
-          crc = update_crc32(c, crc);
+          crc.put(c);
         }
-        return crc;
+        
+        union resUnion
+        {
+            size_t hash;
+            ubyte[4] crcVal;
+        }
+        resUnion res;
+        res.crcVal = crc.finish();
+        return res.hash;
     }
     catch (Throwable)
     {

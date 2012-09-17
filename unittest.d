@@ -58,6 +58,10 @@ public import std.zip;
 public import std.zlib;
 public import std.net.isemail;
 public import std.net.curl;
+public import std.digest.digest;
+public import std.digest.crc;
+public import std.digest.sha;
+public import std.digest.md;
 
 int main(char[][] args)
 {
@@ -126,6 +130,11 @@ version (all)
     bool isEmail = std.net.isemail.isEmail("abc");
     auto http = std.net.curl.HTTP("dlang.org");
     auto uuid = randomUUID();
+
+    auto md5 = md5Of("hello");
+    auto sha1 = sha1Of("hello");
+    auto crc = crc32Of("hello");
+    auto string = toHexString(crc);
 }
     puts("Success!");
     return 0;

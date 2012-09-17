@@ -1,5 +1,12 @@
 $(VERSION 061, ddd mm, 2012, =================================================,
     $(WHATSNEW
+        $(LI std.digest: Added new package for digests. This replaces std.md5 and the internal crc32
+             implementation.)
+        $(LI std.digest.sha: Added SHA1 digest implementation.)
+        $(LI std.uuid: Support SHA1 UUIDs.)
+        $(LI std.uuid: md5UUID and sha1UUID can now be used in pure code.)
+        $(LI std.md5 has been scheduled for deprecation (Use std.digest.md instead).)
+        $(LI crc32 has been scheduled for deprecation (Use std.digest.crc instead).)
     )
 
     $(LIBBUGSFIXED
