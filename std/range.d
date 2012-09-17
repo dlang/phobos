@@ -4545,7 +4545,16 @@ public:
         this._cache = compute(this._state, ++this._n);
     }
 
-
+    auto opSlice(size_t lower, size_t upper)
+    in
+    {
+        assert(upper >= lower);
+    }
+    body
+    {
+        auto s = typeof(this)(this._state, this._n + lower);
+        return takeExactly(s, upper - lower);
+    }
 
     ElementType opIndex(size_t n)
     {
@@ -4593,6 +4602,19 @@ unittest
     assert(odds.front == 3);
     odds.popFront();
     assert(odds.front == 5);
+}
+
+unittest
+{
+    auto odds = sequence!("a[0] + n * a[1]")(1, 2);
+
+    // static slicing tests
+    assert(equal(odds[0 .. 5], take(odds, 5)));
+    assert(equal(odds[3 .. 7], take(drop(odds, 3), 4)));
+
+    // relative slicing test, testing slicing is NOT agnostic of state
+    auto odds_less5 = drop(odds, 5);
+    assert(equal(odds_less5[0 .. 10], odds[5 .. 15]));
 }
 
 /**
