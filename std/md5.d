@@ -5,6 +5,8 @@
  */
 
 /**
+ * $(RED Scheduled for deprecation. Please use std.digest.md instead.)
+ * 
  * Computes MD5 digests of arbitrary data. MD5 digests are 16 byte quantities that are like a checksum or crc, but are more robust.
  *
  * There are two ways to do this. The first does it all in one function call to
@@ -79,6 +81,9 @@ documentation and/or software.
  */
 
 module std.md5;
+
+pragma(msg, "std.md5 is scheduled for deprecation. Please use "
+    "std.digest.md instead");
 
 //debug=md5;            // uncomment to turn on debugging printf's
 
@@ -490,4 +495,3 @@ unittest
     assert(digestToString(cast(ubyte[16])x"c3fcd3d76192e4007dfb496cca67e13b")
         == "C3FCD3D76192E4007DFB496CCA67E13B");
 }
-
