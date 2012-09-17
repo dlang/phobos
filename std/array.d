@@ -621,6 +621,34 @@ unittest
     return decode(a, i);
 }
 
+/**
+Returns a pointer to one-past-the-end of an array.
+
+Example:
+$(D_RUN_CODE
+$(ARGS
+----
+int[] a = [ 1, 2, 3 ];
+int[] b;
+assert(a.ptr + a.length == a.ptrEnd);
+assert(b.ptr == b.ptrEnd);
+----
+), $(ARGS), $(ARGS), $(ARGS import std.array;))
+*/
+@trusted pure nothrow
+auto ptrEnd(T)(T arr)
+    if(isArray!T)
+{
+    return arr.ptr + arr.length;
+}
+unittest
+{
+    int[] a = [ 1, 2, 3 ];
+    int[] b;
+    assert(a.ptr + a.length == a.ptrEnd);
+    assert(b.ptr == b.ptrEnd);
+}
+
 // overlap
 /*
 Returns the overlapping portion, if any, of two arrays. Unlike $(D
@@ -648,7 +676,7 @@ inout(T)[] overlap(T)(inout(T)[] r1, inout(T)[] r2) @trusted pure nothrow
     static U* min(U* a, U* b) nothrow { return a < b ? a : b; }
 
     auto b = max(r1.ptr, r2.ptr);
-    auto e = min(r1.ptr + r1.length, r2.ptr + r2.length);
+    auto e = min(r1.ptrEnd, r2.ptr + r2.ptrEnd);
     return b < e ? b[0 .. e - b] : null;
 }
 
