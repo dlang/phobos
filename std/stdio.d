@@ -60,8 +60,17 @@ version (FreeBSD)
 
 version(Windows)
 {
-    alias core.stdc.stdio.fopen fopen64;
+    // core.stdc.stdio.fopen expects file names to be
+    // encoded in CP_ACP on Windows instead of UTF-8.
+    /+ Waiting for druntime pull 299
+    alias core.sys.windows.c.stdio._wfopen fopen64; 
+    +/ extern (C) nothrow FILE* _wfopen(in wchar* filename, in wchar* mode);
+    alias _wfopen fopen64;
+
+    alias std.utf.toUTF16z toOSStringz;
 }
+else
+    alias std.string.toStringz toOSStringz;
 
 version (DIGITAL_MARS_STDIO)
 {
@@ -1869,12 +1878,12 @@ size_t readln(ref char[] buf, dchar terminator = '\n')
 
 /*
  * Convenience function that forwards to $(D std.c.stdio.fopen)
+ * (to $(D std.c.stdio._wfopen) on Windows)
  * with appropriately-constructed C-style strings.
  */
 private FILE* fopen(in char[] name, in char[] mode = "r")
 {
-    const namez = toStringz(name), modez = toStringz(mode);
-    return fopen64(namez, modez);
+    return fopen64(toOSStringz(name), toOSStringz(mode));
 }
 
 version (Posix)
@@ -1887,7 +1896,7 @@ version (Posix)
  */
     FILE* popen(in char[] name, in char[] mode = "r")
     {
-        return popen(toStringz(name), toStringz(mode));
+        return popen(toOSStringz(name), toOSStringz(mode));
     }
 }
 
@@ -2749,5 +2758,12 @@ version(linux) {
 version(unittest) string testFilename(string file = __FILE__, size_t line = __LINE__)
 {
     import std.path;
-    return text("deleteme.", baseName(file), ".", line);
+
+    // Non-ASCII characters can't be used because of snn.lib @@@BUG8643@@@
+    version(DIGITAL_MARS_STDIO)
+        return text("deleteme-.", baseName(file), ".", line);
+    else
+
+        // filename intentionally contains non-ASCII (Russian) characters
+        return text("deleteme-детка.", baseName(file), ".", line);
 }
