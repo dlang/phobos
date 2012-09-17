@@ -770,12 +770,9 @@ else version (OSX)
         }
         else
         {
-            //browser = "/Applications/Safari.app/Contents/MacOS/Safari";
             args[0] = "open".ptr;
-            args[1] = "-a".ptr;
-            args[2] = "/Applications/Safari.app".ptr;
-            args[3] = toStringz(url);
-            args[4] = null;
+            args[1] = toStringz(url);
+            args[2] = null;
         }
 
         auto childpid = fork();
