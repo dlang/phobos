@@ -114,8 +114,9 @@ SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
     std\datetime.d \
     std\metastrings.d std\bitmanip.d std\typecons.d \
     std\uni.d std\base64.d std\md5.d std\ctype.d std\ascii.d \
-    std\demangle.d std\uri.d std\mmfile.d std\getopt.d \
-    std\signals.d std\typetuple.d std\traits.d \
+    std\demangle.d std\uri.d std\mmfile.d std\getopt.d
+
+SRC_STD_3a= std\signals.d std\typetuple.d std\traits.d \
     std\encoding.d std\xml.d \
     std\random.d std\regexp.d \
     std\exception.d \
@@ -141,7 +142,7 @@ SRC_STD_REST= std\variant.d \
 	std\process.d
 
 SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_2a_HEAVY) \
-	$(SRC_STD_3) $(SRC_STD_4) \
+	$(SRC_STD_3) $(SRC_STD_3a) $(SRC_STD_4) \
 	$(SRC_STD_5_HEAVY) $(SRC_STD_REST)
 
 SRC=	unittest.d crc32.d index.d
@@ -366,6 +367,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRC_STD_2_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2a.obj $(SRC_STD_2a_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3.obj $(SRC_STD_3)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3a.obj $(SRC_STD_3a)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest4.obj $(SRC_STD_4)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest5.obj $(SRC_STD_5_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest6.obj $(SRC_STD_REST)
