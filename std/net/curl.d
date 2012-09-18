@@ -418,9 +418,22 @@ if (is(T == char) || is(T == ubyte))
 unittest
 {
     if (!netAllowed()) return;
-    auto res = post(testUrl2, "Hello world");
-    assert(res == "Hello world",
-           "put!HTTP() returns unexpected content " ~ res);
+
+    {
+        string data = "Hello world";
+        auto res = post(testUrl2, data);
+        assert(res == data,
+               "put!HTTP() returns unexpected content " ~ res);
+    }
+
+    {
+        ubyte[] data;
+        foreach (n; 0..256)
+            data ~= cast(ubyte)n;
+        auto res = post!ubyte(testUrl2, data);
+        assert(res == data,
+               "put!HTTP() with binary data returns unexpected content (" ~ text(res.length) ~ " bytes)");
+    }
 }
 
 
@@ -2384,7 +2397,7 @@ struct HTTP
       */
     @property void postData(const(void)[] data)
     {
-        _postData(cast(void*)data.ptr, "application/octet-stream");
+        _postData(data, "application/octet-stream");
     }
 
     /** Specifying data to post when not using the onSend callback.
@@ -2403,19 +2416,34 @@ struct HTTP
       */
     @property void postData(const(char)[] data)
     {
-        _postData(cast(void*)data.ptr, "text/plain");
+        _postData(data, "text/plain");
     }
 
     // Helper for postData property
-    private void _postData(void* data, string contentType)
+    private void _postData(const(void)[] data, string contentType)
     {
         // cannot use callback when specifying data directly so it is disabled here.
-        // here.
         p.curl.clear(CurlOption.readfunction);
         addRequestHeader("Content-Type", contentType);
-        p.curl.set(CurlOption.postfields, data);
+        p.curl.set(CurlOption.postfields, cast(void*)data.ptr);
+        p.curl.set(CurlOption.postfieldsize, data.length);
         if (method == Method.undefined)
             method = Method.post;
+    }
+
+    unittest
+    {
+        if (!netAllowed()) return;
+        ubyte[] data;
+        foreach (n; 0..256)
+            data ~= cast(ubyte)n;
+        auto http = HTTP(testUrl2);
+        http.postData = data;
+        ubyte[] result;
+        http.onReceive = (ubyte[] data) { result ~= data; return data.length; };
+        http.perform();
+        assert(data == result,
+               "HTTP POST with binary data returns unexpected content (" ~ text(result.length) ~ " bytes)");
     }
 
     /**
@@ -2604,7 +2632,6 @@ struct HTTP
     }
 
 } // HTTP
-
 
 /**
    FTP client functionality.
