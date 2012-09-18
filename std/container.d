@@ -2496,7 +2496,7 @@ Complexity: $(BIGOH 1).
 
 /**
 Returns the maximum number of elements the container can store without
-    (a) allocating memory, (b) invalidating iterators upon insertion.
+   (a) allocating memory, (b) invalidating iterators upon insertion.
 
 Complexity: $(BIGOH 1)
      */
@@ -2554,7 +2554,7 @@ index $(D a) up to (excluding) index $(D b).
 Precondition: $(D a <= b && b <= length)
 
 Complexity: $(BIGOH 1)
-*/
+     */
     Range opSlice(size_t a, size_t b)
     {
         enforce(a <= b && b <= length);
@@ -2828,6 +2828,7 @@ Complexity: $(BIGOH howMany).
      */
     size_t removeBack(size_t howMany)
     {
+        if(!_data.RefCounted.isInitialized) return 0;
         if (howMany > length) howMany = length;
         static if (is(T == struct))
         {
@@ -2857,7 +2858,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     if (isImplicitlyConvertible!(Stuff, T))
     {
-        enforce(ownsRange(r), "Array.replace: Range does not belong to the Array");
+        enforce(ownsRange(r), "Array.insertBefore: Range does not belong to the Array");
         reserve(length + 1);
         assert(_data.RefCounted.isInitialized);
         // Move elements over by one slot
@@ -2873,7 +2874,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
-        enforce(ownsRange(r), "Array.replace: Range does not belong to the Array");
+        enforce(ownsRange(r), "Array.insertBefore: Range does not belong to the Array");
         static if (isForwardRange!Stuff)
         {
             // Can find the length in advance
@@ -2910,7 +2911,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     /// ditto
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
     {
-        enforce(ownsRange(r), "Array.replace: Range does not belong to the Array");
+        enforce(ownsRange(r), "Array.insertAfter: Range does not belong to the Array");
         // TODO: optimize
         immutable offset = r._b;
         enforce(offset <= length);
