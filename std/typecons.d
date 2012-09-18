@@ -354,6 +354,22 @@ private:
         }
     }
 
+    template isCompatibleTuples(Tup1, Tup2, string op)
+    {
+        enum isCompatibleTuples = is(typeof(
+        {
+            Tup1 tup1 = void;
+            Tup2 tup2 = void;
+            static assert(tup1.field.length == tup2.field.length);
+            foreach (i, _; Tup1.Types)
+            {
+                typeof(tup1.field[i]) lhs = void;
+                typeof(tup2.field[i]) rhs = void;
+                auto result = mixin("lhs "~op~" rhs");
+            }
+        }));
+    }
+
 public:
 /**
    The type of the tuple's components.
@@ -404,29 +420,19 @@ public:
 /**
    Comparison for equality.
  */
-    bool opEquals(R)(R rhs) if (isTuple!R)
+    bool opEquals(R)(R rhs)
+        if (isTuple!R && isCompatibleTuples!(typeof(this), R, "=="))
     {
-        static assert(field.length == rhs.field.length,
-                "Length mismatch in attempting to compare a "
-                ~typeof(this).stringof
-                ~" with a "~typeof(rhs).stringof);
         foreach (i, Unused; Types)
         {
             if (field[i] != rhs.field[i]) return false;
         }
         return true;
     }
-
-/**
-    ditto
-*/
-
-    bool opEquals(R)(R rhs) const if (isTuple!R)
+    /// ditto
+    bool opEquals(R)(R rhs) const
+        if (isTuple!R && isCompatibleTuples!(typeof(this), R, "=="))
     {
-        static assert(field.length == rhs.field.length,
-                "Length mismatch in attempting to compare a "
-                ~typeof(this).stringof
-                ~" with a "~typeof(rhs).stringof);
         foreach (i, Unused; Types)
         {
             if (field[i] != rhs.field[i]) return false;
@@ -681,6 +687,43 @@ unittest
         auto t1 = tuple(x);
         alias Tuple!(const(int)) T;
         auto t2 = T(1);
+    }
+}
+unittest
+{
+    // opEquals
+    {
+        struct Equ1 { bool opEquals(Equ1) { return true; } }
+        auto  tm1 = tuple(Equ1.init);
+        const tc1 = tuple(Equ1.init);
+        static assert( is(typeof(tm1 == tm1)));
+        static assert(!is(typeof(tm1 == tc1)));
+        static assert(!is(typeof(tc1 == tm1)));
+        static assert(!is(typeof(tc1 == tc1)));
+
+        struct Equ2 { bool opEquals(const Equ2) const { return true; } }
+        auto  tm2 = tuple(Equ2.init);
+        const tc2 = tuple(Equ2.init);
+        static assert( is(typeof(tm2 == tm2)));
+        static assert( is(typeof(tm2 == tc2)));
+        static assert( is(typeof(tc2 == tm2)));
+        static assert( is(typeof(tc2 == tc2)));
+
+        struct Equ3 { bool opEquals(T)(T) { return true; } }
+        auto  tm3 = tuple(Equ3.init);           // bugzilla 8686
+        const tc3 = tuple(Equ3.init);
+        static assert( is(typeof(tm3 == tm3)));
+        static assert( is(typeof(tm3 == tc3)));
+        static assert(!is(typeof(tc3 == tm3)));
+        static assert(!is(typeof(tc3 == tc3)));
+
+        struct Equ4 { bool opEquals(T)(T) const { return true; } }
+        auto  tm4 = tuple(Equ4.init);
+        const tc4 = tuple(Equ4.init);
+        static assert( is(typeof(tm4 == tm4)));
+        static assert( is(typeof(tm4 == tc4)));
+        static assert( is(typeof(tc4 == tm4)));
+        static assert( is(typeof(tc4 == tc4)));
     }
 }
 
