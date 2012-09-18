@@ -2248,7 +2248,7 @@ struct Array(T) if (!is(T : const(bool)))
 
 /**
 Comparison for equality.
-    */
+     */
     bool opEquals(const Array rhs) const
     {
         return opEquals(rhs);
@@ -2264,7 +2264,7 @@ Comparison for equality.
 
 /**
 Defines the container's primary range, which is a random-access range.
-    */
+     */
     struct Range
     {
         private Data _data;
@@ -2459,7 +2459,7 @@ Duplicates the container. The elements themselves are not transitively
 duplicated.
 
 Complexity: $(BIGOH n).
-    */
+     */
     @property Array dup()
     {
         if (!_data.RefCounted.isInitialized) return this;
@@ -2471,7 +2471,7 @@ Property returning $(D true) if and only if the container has no
 elements.
 
 Complexity: $(BIGOH 1)
-    */
+     */
     @property bool empty() const
     {
         return _get.empty;
@@ -2481,7 +2481,7 @@ Complexity: $(BIGOH 1)
 Returns the number of elements in the container.
 
 Complexity: $(BIGOH 1).
-    */
+     */
     @property size_t length() const
     {
         return _get.length;
@@ -2499,7 +2499,7 @@ Returns the maximum number of elements the container can store without
     (a) allocating memory, (b) invalidating iterators upon insertion.
 
 Complexity: $(BIGOH 1)
-    */
+     */
     @property size_t capacity()
     {
         //Do NOT use _get here, as .capacity will lie
@@ -2512,7 +2512,7 @@ Ensures sufficient capacity to accommodate $(D e) elements.
 Postcondition: $(D capacity >= e)
 
 Complexity: $(BIGOH 1)
-    */
+     */
     void reserve(size_t elements)
     {
         if (!_data.RefCounted.isInitialized)
@@ -2538,7 +2538,7 @@ Returns a range that iterates over elements of the container, in
 forward order.
 
 Complexity: $(BIGOH 1)
-    */
+     */
     Range opSlice()
     {
         // Workaround for bug 4356
@@ -2570,7 +2570,7 @@ Forward to $(D opSlice().front) and $(D opSlice().back), respectively.
 Precondition: $(D !empty)
 
 Complexity: $(BIGOH 1)
-    */
+     */
     @property T front()
     {
         return _get.front;
@@ -2600,7 +2600,7 @@ Indexing operators yield or modify the value at a specified index.
 Precondition: $(D i < length)
 
 Complexity: $(BIGOH 1)
-    */
+     */
     T opIndex(size_t i)
     {
         return _get[i];
@@ -2638,7 +2638,7 @@ Slicing operations execute an operation on an entire slice.
 Precondition: $(D $(D i < j && j < length)
 
 Complexity: $(BIGOH slice.length)
-    */
+     */
 
     void opSliceAssign(T value)
     {
@@ -2682,7 +2682,7 @@ define $(D opBinary).
 
 Complexity: $(BIGOH n + m), where m is the number of elements in $(D
 stuff)
-    */
+     */
     Array opBinary(string op, Stuff)(Stuff stuff)
         if (op == "~")
     {
@@ -2698,7 +2698,7 @@ stuff)
 
 /**
 Forwards to $(D insertBack(stuff)).
-    */
+     */
     void opOpAssign(string op, Stuff)(Stuff stuff)
         if (op == "~")
     {
@@ -2719,7 +2719,7 @@ capacity) is affected.
 Postcondition: $(D empty)
 
 Complexity: $(BIGOH n)
-    */
+     */
     void clear()
     {
         //Do not destroy _data outright, as the ranges still need it.
@@ -2741,7 +2741,7 @@ T.init).
 Complexity: $(BIGOH abs(n - newLength))
 
 Postcondition: $(D length == newLength)
-    */
+     */
     @property void length(size_t newLength)
     {
         _data.RefCounted.ensureInitialized();
@@ -2760,7 +2760,7 @@ Precondition: $(D !empty)
 Returns: The element removed.
 
 Complexity: $(BIGOH log(n)).
-    */
+     */
     T removeAny()
     {
         auto result = back;
@@ -2780,7 +2780,7 @@ Returns: The number of elements inserted
 
 Complexity: $(BIGOH m * log(n)), where $(D m) is the number of
 elements in $(D stuff)
-    */
+     */
     size_t insertBack(Stuff)(Stuff stuff)
     if (isImplicitlyConvertible!(Stuff, T) ||
             isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
@@ -2799,7 +2799,7 @@ container are never invalidated.
 Precondition: $(D !empty)
 
 Complexity: $(BIGOH log(n)).
-    */
+     */
     void removeBack()
     {
         enforce(!empty);
@@ -2825,7 +2825,7 @@ never invalidated.
 Returns: The number of elements removed
 
 Complexity: $(BIGOH howMany).
-    */
+     */
     size_t removeBack(size_t howMany)
     {
         if (howMany > length) howMany = length;
@@ -2853,7 +2853,7 @@ ranges iterating over the container are never invalidated.
 Returns: The number of values inserted.
 
 Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
-    */
+     */
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     if (isImplicitlyConvertible!(Stuff, T))
     {
@@ -2971,7 +2971,7 @@ initially were right after $(D r).
 
 Complexity: $(BIGOH n - m), where $(D m) is the number of elements in
 $(D r)
-    */
+     */
     Range linearRemove(Range r)
     {
         enforce(ownsRange(r), "Array.linearRemove: Range does not belong to the Array");
@@ -2986,7 +2986,7 @@ $(D r)
     /// ditto
     alias remove stableLinearRemove;
 
-    //A "good" enough test of range ownership
+    //A "good enough" test of range ownership
     private bool ownsRange(Range r)
     {
         assert(r._b <= r._data.length, "Array.Range: Range has been invalidated");
