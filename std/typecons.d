@@ -443,12 +443,22 @@ public:
 /**
    Comparison for ordering.
  */
-    int opCmp(R)(R rhs) if (isTuple!R)
+    int opCmp(R)(R rhs)
+        if (isTuple!R && isCompatibleTuples!(typeof(this), R, "<"))
     {
-        static assert(field.length == rhs.field.length,
-                "Length mismatch in attempting to compare a "
-                ~typeof(this).stringof
-                ~" with a "~typeof(rhs).stringof);
+        foreach (i, Unused; Types)
+        {
+            if (field[i] != rhs.field[i])
+            {
+                return field[i] < rhs.field[i] ? -1 : 1;
+            }
+        }
+        return 0;
+    }
+    /// ditto
+    int opCmp(R)(R rhs) const
+        if (isTuple!R && isCompatibleTuples!(typeof(this), R, "<"))
+    {
         foreach (i, Unused; Types)
         {
             if (field[i] != rhs.field[i])
@@ -724,6 +734,40 @@ unittest
         static assert( is(typeof(tm4 == tc4)));
         static assert( is(typeof(tc4 == tm4)));
         static assert( is(typeof(tc4 == tc4)));
+    }
+    // opCmp
+    {
+        struct Cmp1 { int opCmp(Cmp1) { return 0; } }
+        auto  tm1 = tuple(Cmp1.init);
+        const tc1 = tuple(Cmp1.init);
+        static assert( is(typeof(tm1 < tm1)));
+        static assert(!is(typeof(tm1 < tc1)));
+        static assert(!is(typeof(tc1 < tm1)));
+        static assert(!is(typeof(tc1 < tc1)));
+
+        struct Cmp2 { int opCmp(const Cmp2) const { return 0; } }
+        auto  tm2 = tuple(Cmp2.init);
+        const tc2 = tuple(Cmp2.init);
+        static assert( is(typeof(tm2 < tm2)));
+        static assert( is(typeof(tm2 < tc2)));
+        static assert( is(typeof(tc2 < tm2)));
+        static assert( is(typeof(tc2 < tc2)));
+
+        struct Cmp3 { int opCmp(T)(T) { return 0; } }
+        auto  tm3 = tuple(Cmp3.init);
+        const tc3 = tuple(Cmp3.init);
+        static assert( is(typeof(tm3 < tm3)));
+        static assert( is(typeof(tm3 < tc3)));
+        static assert(!is(typeof(tc3 < tm3)));
+        static assert(!is(typeof(tc3 < tc3)));
+
+        struct Cmp4 { int opCmp(T)(T) const { return 0; } }
+        auto  tm4 = tuple(Cmp4.init);
+        const tc4 = tuple(Cmp4.init);
+        static assert( is(typeof(tm4 < tm4)));
+        static assert( is(typeof(tm4 < tc4)));
+        static assert( is(typeof(tc4 < tm4)));
+        static assert( is(typeof(tc4 < tc4)));
     }
 }
 
