@@ -171,8 +171,8 @@ version(unittest)
     // Run unit test with the PHOBOS_TEST_ALLOW_NET=1 set in order to
     // allow net traffic
     import std.stdio;
-    import std.c.stdlib;
     import std.range;
+    import std.process : environment;
     enum testUrl1 = "http://d-lang.appspot.com/testUrl1";
     enum testUrl2 = "http://d-lang.appspot.com/testUrl2";
     enum testUrl3 = "ftp://ftp.digitalmars.com/sieve.ds";
@@ -266,8 +266,8 @@ void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn co
 unittest
 {
     if (!netAllowed()) return;
-    download("ftp.digitalmars.com/sieve.ds", "/tmp/downloaded-ftp-file");
-    download("d-lang.appspot.com/testUrl1", "/tmp/downloaded-http-file");
+    download("ftp.digitalmars.com/sieve.ds", getTempPath() ~ "downloaded-ftp-file");
+    download("d-lang.appspot.com/testUrl1", getTempPath() ~ "downloaded-http-file");
 }
 
 /** Upload file from local files system using the HTTP or FTP protocol.
@@ -322,8 +322,8 @@ void upload(Conn = AutoProtocol)(string loadFromPath, const(char)[] url, Conn co
 unittest
 {
     if (!netAllowed()) return;
-    //    upload("/tmp/downloaded-ftp-file", "ftp.digitalmars.com/sieve.ds");
-    upload("/tmp/downloaded-http-file", "d-lang.appspot.com/testUrl2");
+    //    upload(getTempPath() ~ "downloaded-ftp-file", "ftp.digitalmars.com/sieve.ds");
+    upload(getTempPath() ~ "downloaded-http-file", "d-lang.appspot.com/testUrl2");
 }
 
 /** HTTP/FTP get content.
@@ -4077,7 +4077,17 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     fromTid.send(thisTid(), curlMessage(true)); // signal done
 }
 
-version (unittest) private auto netAllowed()
+version (unittest)
 {
-      return getenv("PHOBOS_TEST_ALLOW_NET") != null;
+    private auto netAllowed()
+    {
+        return environment.get("PHOBOS_TEST_ALLOW_NET") != null;
+    }
+    private string getTempPath()
+    {
+        version (Windows)
+            return environment["TEMP"] ~ `\`;
+        else
+            return "/tmp/";
+    }
 }
