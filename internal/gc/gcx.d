@@ -1604,8 +1604,15 @@ struct Gcx
             memmove(pooltable + n,
                     pooltable + n + 1,
                     (--npools - n) * (Pool*).sizeof);
-            minAddr = pooltable[0].baseAddr;
-            maxAddr = pooltable[npools - 1].topAddr;
+	    if (npools)
+	    {
+		minAddr = pooltable[0].baseAddr;
+		maxAddr = pooltable[npools - 1].topAddr;
+	    }
+	    else
+	    {	minAddr = null;
+		maxAddr = null;
+	    }
         }
     }
 
