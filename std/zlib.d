@@ -298,9 +298,7 @@ class Compress
         if (inited)
         {
             inited = 0;
-            err = deflateEnd(&zs);
-            if (err)
-                error(err);
+            deflateEnd(&zs);
         }
     }
 
@@ -458,9 +456,7 @@ class UnCompress
         if (inited)
         {
             inited = 0;
-            err = inflateEnd(&zs);
-            if (err)
-                error(err);
+            inflateEnd(&zs);
         }
         done = 1;
     }
