@@ -1,7 +1,7 @@
 
 /* Trace dynamic profiler.
  * For use with the Digital Mars DMD compiler.
- * Copyright (C) 1995-2010 by Digital Mars
+ * Copyright (C) 1995-2012 by Digital Mars
  * All Rights Reserved
  * Written by Walter Bright
  * http://www.digitalmars.com
@@ -9,12 +9,24 @@
 
 module internal.trace;
 
+version (Win32)
+{
+    // The code in Digital Mars C++'s runtime library is used for Win32
+}
+else
+{
+
 import std.stdio;
 import std.ctype;
 import std.string;
 import std.c.string;
 import std.c.stdlib;
 import std.c.stdio;
+
+version (Win64)
+{
+    alias std.c.stdlib._strtoui64 strtoull;
+}
 
 extern (C):
 
@@ -356,7 +368,7 @@ else
         fprintf(fplog,"%7d\t%3lld.%07lld\t%3lld.%07lld\t%3lld.%07lld\t%.*s\n",
             calls,tl,tr,fl,fr,pl,pr,id);
 }
-        if (id !is s.Sident)
+        if (id.ptr != s.Sident.ptr)
             free(cast(void*)id.ptr);
     }
 }
@@ -538,6 +550,7 @@ static void trace_sympair_add(SymPair** psp, Symbol* s, uint count)
 static void trace_pro(string id)
 {
     //printf("trace_pro(ptr = %p, length = %lld)\n", id.ptr, id.length);
+    //printf("trace_pro(id = '%.*s')\n", id.length, id.ptr);
     Stack* n;
     Symbol* s;
     timer_t starttime;
@@ -884,6 +897,49 @@ void _trace_pro_n()
         popad                           ;
         ret                             ;
     }
+    else version (Win64)
+    asm
+    {   naked                           ;
+        push    RAX                     ;
+        push    RCX                     ;
+        push    RDX                     ;
+        push    RSI                     ;
+        push    RDI                     ;
+        push    R8                      ;
+        push    R9                      ;
+        push    R10                     ;
+        push    R11                     ;
+        mov     RCX,9*8[RSP]            ;
+        xor     RAX,RAX                 ;
+        mov     AL,[RCX]                ;
+        cmp     AL,0xFF                 ;
+        jne     L1                      ;
+        cmp     byte ptr 1[RCX],0       ;
+        jne     L1                      ;
+        mov     AX,2[RCX]               ;
+        add     9*8[RSP],3              ;
+        add     RCX,3                   ;
+    L1: inc     RAX                     ;
+        inc     RCX                     ;
+        add     9*8[RSP],RAX            ;
+        dec     RAX                     ;
+        sub     RSP,0x20                ;
+        mov     16[RSP],RCX             ;
+        mov     8[RSP],RAX              ;
+        lea     RCX,8[RSP]              ;
+        call    trace_pro               ;
+        add     RSP,0x20                ;
+        pop     R11                     ;
+        pop     R10                     ;
+        pop     R9                      ;
+        pop     R8                      ;
+        pop     RDI                     ;
+        pop     RSI                     ;
+        pop     RDX                     ;
+        pop     RCX                     ;
+        pop     RAX                     ;
+        ret                             ;
+    }
     else version (D_InlineAsm_X86_64)
     asm
     {   naked                           ;
@@ -1047,6 +1103,7 @@ version (Windows)
 {
     extern (Windows)
     {
+        // Part of the Windows API
         export int QueryPerformanceCounter(timer_t *);
         export int QueryPerformanceFrequency(timer_t *);
     }
@@ -1097,4 +1154,6 @@ else version (D_InlineAsm_X86_64)
 else
 {
     static assert(0);
+}
+
 }

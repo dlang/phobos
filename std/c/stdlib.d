@@ -95,3 +95,12 @@ size_t wcstombs(char *s, wchar_t *pwcs, size_t n);      /// ditto
 
 version (linux)
     const int RAND_MAX = 2147483647;
+
+version (Win64)
+{
+    ulong  _strtoui64(char *,char **,int);
+    ulong  _wcstoui64(wchar *,wchar **,int);
+
+    long  _strtoi64(char *,char **,int);
+    long  _wcstoi64(wchar *,wchar **,int);
+}

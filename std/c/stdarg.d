@@ -135,7 +135,7 @@ else version (Windows) // Win64
         auto p = ap;
         auto tsize = ti.tsize();
         ap = cast(void*)(cast(size_t)p + ((size_t.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1)));
-        void* q = (tsize > size.sizeof) ? *cast(void**)p : p;
+        void* q = (tsize > size_t.sizeof) ? *cast(void**)p : p;
         parmn[0..tsize] = q[0..tsize];
     }
 
