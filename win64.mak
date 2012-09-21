@@ -360,7 +360,7 @@ $(LIB) : $(SRC_TO_COMPILE) \
 		$(ZLIB) $(DRUNTIMELIB)
 
 UNITTEST_OBJS= unittest1.obj unittest2.obj unittest2a.obj \
-		unittest3.obj unittest4.obj \
+		unittest3.obj unittest3a.obj unittest4.obj \
 		unittest5.obj unittest6.obj unittest7.obj
 
 unittest : $(LIB)
