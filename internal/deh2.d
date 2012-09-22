@@ -44,7 +44,10 @@ struct DHandlerInfo
     uint endoffset;             // offset of end of guarded section
     int prev_index;             // previous table index
     uint cioffset;              // offset to DCatchInfo data from start of table (!=0 if try-catch)
-    void *finally_code;         // pointer to finally code to execute
+    version (Win64)
+        size_t finally_offset;  // offset to finally code to execute
+    else
+        void *finally_offset;   // pointer to finally code to execute
                                 // (!=0 if try-finally)
 }
 
@@ -52,7 +55,10 @@ struct DHandlerInfo
 
 struct DHandlerTable
 {
-    void *fptr;                 // pointer to start of function
+    version (Win64)
+    { }
+    else
+        void *fptr;             // pointer to start of function
     uint espoffset;             // offset of ESP from EBP
     uint retoffset;             // offset from start of function to return code
     size_t nhandlers;           // dimension of handler_info[] (use size_t to set alignment of handler_info[])
@@ -63,7 +69,10 @@ struct DCatchBlock
 {
     ClassInfo type;             // catch type
     size_t bpoffset;            // EBP offset of catch var
-    void *code;                 // catch handler code
+    version (Win64)
+        size_t codeoffset;      // catch handler offset
+    else
+        void *codeoffset;       // catch handler code
 }
 
 // Create one of these for each try-catch
@@ -96,7 +105,7 @@ void terminate()
  * Return DHandlerTable if there is one, NULL if not.
  */
 
-DHandlerTable *__eh_finddata(void *address)
+FuncTable *__eh_finddata(void *address)
 {
     debug printf("FuncTable.sizeof = %p\n", FuncTable.sizeof);
     debug printf("__eh_finddata(address = %p)\n", address);
@@ -135,11 +144,24 @@ DHandlerTable *__eh_finddata(void *address)
         debug printf("  ft = %p, fptr = %p, handlertable = %p, fsize = x%03x\n",
               ft, ft.fptr, ft.handlertable, ft.fsize);
 
-        if (ft.fptr <= address &&
-            address < cast(void *)(cast(char *)ft.fptr + ft.fsize))
+        void *fptr = ft.fptr;
+        version (Win64)
+        {
+            /* If linked with /DEBUG, the linker rewrites it so the function pointer points
+             * to a JMP to the actual code. The address will be in the actual code, so we
+             * need to follow the JMP.
+             */
+            if ((cast(ubyte*)fptr)[0] == 0xE9)
+            {   // JMP target = RIP of next instruction + signed 32 bit displacement
+                fptr = fptr + 5 + *cast(int*)(fptr + 1);
+            }
+        }
+
+        if (fptr <= address &&
+            address < cast(void *)(cast(char *)fptr + ft.fsize))
         {
           debug printf("\tfound handler table\n");
-            return ft.handlertable;
+            return ft;
         }
     }
     debug printf("\tnot found\n");
@@ -229,13 +251,25 @@ extern (C) void _d_throwc(Object *h)
 
         debug printf("found caller, EBP = %p, retaddr = %p\n", regebp, retaddr);
 //if (++count == 12) *(char*)0=0;
-        auto handler_table = __eh_finddata(cast(void *)retaddr);   // find static data associated with function
-        if (!handler_table)         // if no static data
+        auto func_table = __eh_finddata(cast(void *)retaddr);   // find static data associated with function
+        if (!func_table)         // if no static data
         {
             debug printf("no handler table\n");
             continue;
         }
-        auto funcoffset = cast(size_t)handler_table.fptr;
+        auto funcoffset = cast(size_t)func_table.fptr;
+        version (Win64)
+        {
+            /* If linked with /DEBUG, the linker rewrites it so the function pointer points
+             * to a JMP to the actual code. The address will be in the actual code, so we
+             * need to follow the JMP.
+             */
+            if ((cast(ubyte*)funcoffset)[0] == 0xE9)
+            {   // JMP target = RIP of next instruction + signed 32 bit displacement
+                funcoffset = funcoffset + 5 + *cast(int*)(funcoffset + 1);
+            }
+        }
+        auto handler_table = func_table.handlertable;
         auto spoff = handler_table.espoffset;
         auto retoffset = handler_table.retoffset;
 
@@ -255,8 +289,8 @@ extern (C) void _d_throwc(Object *h)
             for (int i = 0; i < dim; i++)
             {
                 auto phi = &handler_table.handler_info[i];
-                printf("\t[%d]: offset = x%04x, endoffset = x%04x, prev_index = %d, cioffset = x%04x, finally_code = %x\n",
-                        i, phi.offset, phi.endoffset, phi.prev_index, phi.cioffset, phi.finally_code);
+                printf("\t[%d]: offset = x%04x, endoffset = x%04x, prev_index = %d, cioffset = x%04x, finally_offset = %x\n",
+                        i, phi.offset, phi.endoffset, phi.prev_index, phi.cioffset, phi.finally_offset);
             }
         }
 
@@ -302,7 +336,10 @@ extern (C) void _d_throwc(Object *h)
                             size_t catch_esp;
                             fp_t catch_addr;
 
-                            catch_addr = cast(fp_t)(pcb.code);
+                            version (Win64)
+                                catch_addr = cast(fp_t)(funcoffset + pcb.codeoffset);
+                            else
+                                catch_addr = cast(fp_t)(pcb.codeoffset);
                             catch_esp = regebp - handler_table.espoffset - fp_t.sizeof;
                             version (D_InlineAsm_X86)
                                 asm
@@ -331,12 +368,15 @@ extern (C) void _d_throwc(Object *h)
                     }
                 }
             }
-            else if (phi.finally_code)
+            else if (phi.finally_offset)
             {   // Call finally block
                 // Note that it is unnecessary to adjust the ESP, as the finally block
                 // accesses all items on the stack as relative to EBP.
 
-                auto blockaddr = phi.finally_code;
+                version (Win64)
+                    auto blockaddr = cast(void*)(funcoffset + phi.finally_offset);
+                else
+                    auto blockaddr = phi.finally_offset;
 
                 version (OSX)
                 {
