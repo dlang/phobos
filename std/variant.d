@@ -1766,9 +1766,12 @@ private auto visitImpl(bool Strict, VariantType, Delegate...)(VariantType varian
                         // inner iteration (over delegates)
                         if (tidx > 0)
                             continue;
-                        if (result.exceptionFuncIdx != -1)
-                            assert(false, "duplicate parameter-less (error-)function specified");
-                        result.exceptionFuncIdx = dgidx;
+                        else
+                        {
+                            if (result.exceptionFuncIdx != -1)
+                                assert(false, "duplicate parameter-less (error-)function specified");
+                            result.exceptionFuncIdx = dgidx;
+                        }
                     }
                     else if (is(Unqual!(Params[0]) == T))
                     {
