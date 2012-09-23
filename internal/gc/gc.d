@@ -1278,14 +1278,14 @@ byte[] _d_arraycatnT(TypeInfo ti, uint n, ...)
         }
     }
     else version (Win64)
-    {
-        auto p = cast(byte[]*)(&n + 1);
+    {{
+        auto p = cast(byte[]**)(cast(void*)&n + 8);
         for (uint i = 0; i < n; i++)
         {
-            byte[] b = *p++;
-            length += b.length;
+            byte[]* b = *p++;
+            length += (*b).length;
         }
-    }
+    }}
     else
     {
         __va_list argsave = __va_argsave.va;
@@ -1322,19 +1322,19 @@ byte[] _d_arraycatnT(TypeInfo ti, uint n, ...)
         }
     }
     else version (Win64)
-    {
-        p = cast(byte[]*)(&n + 1);
+    {{
+        auto p = cast(byte[]**)(cast(void*)&n + 8);
         size_t j = 0;
         for (uint i = 0; i < n; i++)
         {
-            byte[] b = *p++;
+            byte[] b = *(*p++);
             if (b.length)
             {
                 memcpy(a + j, b.ptr, b.length * sizeelem);
                 j += b.length * sizeelem;
             }
         }
-    }
+    }}
     else
     {
         va_list ap2 = &argsave;

@@ -638,6 +638,8 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
         {
           //printf("\nputArray(len = %u), tsize = %u\n", len, valti.tsize());
           putc('[');
+          //ubyte*b = cast(ubyte*)p;
+          //printf(" %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n", b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8], b[9]);
           valti = skipCI(valti);
           size_t tsize = valti.tsize();
           auto argptrSave = argptr;
@@ -651,9 +653,16 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             //doFormat(putc, (&valti)[0 .. 1], p);
             version (Win64)
             {
-                argptr = p;
+                void* q = void;
+
+                if (tsize > 8 && m != Mangle.Tsarray)
+                {   q = p;
+                    argptr = &q;
+                }
+                else
+                    argptr = p;
                 formatArg('s');
-                p += size_t.sizeof;
+                p += tsize;
             }
             else
             {
@@ -704,32 +713,49 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             void* pvalue = pkey + keysizet;
 
             //doFormat(putc, (&keyti)[0..1], pkey);
+            m = getMan(keyti);
             version (X86)
                 argptr = pkey;
             else version (Win64)
+            {
+                void* q = void;
+                if (keysize > 8 && m != Mangle.Tsarray)
+                {   q = pkey;
+                    argptr = &q;
+                }
+                else
                 argptr = pkey;
+            }
             else
             {   __va_list va;
                 va.stack_args = pkey;
                 argptr = &va;
             }
             ti = keyti;
-            m = getMan(keyti);
             formatArg('s');
 
             putc(':');
             //doFormat(putc, (&valti)[0..1], pvalue);
+            m = getMan(valti);
             version (X86)
                 argptr = pvalue;
             else version (Win64)
+            {
+                void* q2 = void;
+                auto valuesize = valti.tsize();
+                if (valuesize > 8 && m != Mangle.Tsarray)
+                {   q2 = pvalue;
+                    argptr = &q2;
+                }
+                else
                 argptr = pvalue;
+            }
             else
             {   __va_list va2;
                 va2.stack_args = pvalue;
                 argptr = &va2;
             }
             ti = valti;
-            m = getMan(valti);
             formatArg('s');
           }
           m = mSave;
