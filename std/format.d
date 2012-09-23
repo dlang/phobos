@@ -151,7 +151,7 @@ $(I Integer):
 $(I Digit):
     $(B '0')|$(B '1')|$(B '2')|$(B '3')|$(B '4')|$(B '5')|$(B '6')|$(B '7')|$(B '8')|$(B '9')
 $(I FormatChar):
-    $(B 's')|$(B 'b')|$(B 'd')|$(B 'o')|$(B 'x')|$(B 'X')|$(B 'e')|$(B 'E')|$(B 'f')|$(B 'F')|$(B 'g')|$(B 'G')|$(B 'a')|$(B 'A')
+    $(B 's')|$(B 'b')|$(B 'd')|$(B 'o')|$(B 'x')|$(B 'X')|$(B 'e')|$(B 'E')|$(B 'f')|$(B 'F')|$(B 'g')|$(B 'G')|$(B 'a')|$(B 'A')|$(B 'm')
 )
 
     $(BOOKTABLE Flags affect formatting depending on the specifier as
@@ -283,7 +283,27 @@ $(I FormatChar):
         The exponent for zero is zero.
         The hexadecimal digits, x and p are in upper case if the
         $(I FormatChar) is upper case.
-    </dl>
+
+        $(DT $(B 'm')) $(DD Formats integral and floating point
+        numbers using $(LUCKY SI prefixes) ($(D 'm') stands for
+        "metric"). Numbers between $(D 1E-18) (inclusive) and $(D
+        999E18) (exclusive) are represented as a number between $(D 1)
+        (inclusive) and $(D 1000) (exclusive) followed by a letter
+        denoting a power of $(D 10) multiplier. For example, the
+        number $(D 7255) is represented as $(D 7.255K). For numbers
+        with absolute value strictly less than $(D 1), the multipliers
+        are $(D 'f') for $(D 1E-18) (femto), $(D 'p') for $(D 1E-15)
+        (pico), $(D 'n') for $(D 1E-12) (nano), $(D 'μ') for $(D 1E-9)
+        (micro), and $(D 'm') for $(D 1E-3) (milli). For numbers with
+        absolute value greater than or equal to $(D 1) and strictly
+        less than $(D 1000) no suffix is printed. For numbers equal to
+        or greater than $(D 1000) in absolute value, the suffixes $(D
+        'K'), $(D 'M'), $(D 'G'), $(D 'T'), $(D 'P'), and $(D 'X') are
+        used for multipliers equal to $(D 1E3) (Kilo), $(D 1E6)
+        (Mega), $(D 1E9), (Giga), $(D 1E12) (Tera), $(D 1E15) (Peta),
+        and $(D 1E18) (eXa) respectively.)
+
+        </dl>
 
     Floating point NaN's are formatted as $(B nan) if the
     $(I FormatChar) is lower case, or $(B NAN) if upper.
@@ -1277,6 +1297,13 @@ if (isIntegral!T && !is(T == enum) && !hasToString!(T, Char))
         return;
     }
 
+    // Metric
+    if (f.spec == 'm')
+    {
+        formatValue(w, cast(real) val, f);
+        return;
+    }
+
     // Forward on to formatIntegral to handle both T and const(T)
     // Saves duplication of code for both versions.
     static if (isSigned!T)
@@ -1295,11 +1322,11 @@ private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, ref FormatS
         fs.spec == 'x' || fs.spec == 'X' ? 16 :
         fs.spec == 'o' ? 8 :
         fs.spec == 'b' ? 2 :
-        fs.spec == 's' || fs.spec == 'd' || fs.spec == 'u' ? 10 :
+        fs.spec == 's' || fs.spec == 'd' || fs.spec == 'u' || fs.spec == 'm' ? 10 :
         0;
     enforceEx!FormatException(
             base > 0,
-            "integral");
+            "integral %" ~ fs.spec);
 
     bool negative = (base == 10 && arg < 0);
     if (negative)
@@ -1331,7 +1358,6 @@ private void formatUnsigned(Writer, Char)(Writer w, ulong arg, ref FormatSpec!Ch
         leftPad = '0';
     else
         leftPad = 0;
-
     // figure out sign and continue in unsigned mode
     char forcedPrefix = void;
     if (fs.flPlus) forcedPrefix = '+';
@@ -1414,6 +1440,22 @@ private void formatUnsigned(Writer, Char)(Writer w, ulong arg, ref FormatSpec!Ch
 
 unittest
 {
+    auto w = appender!string();
+    formattedWrite(w, "%.0m", 10);
+    assert(w.data == "10 ", "["~w.data~"]");
+    w.clear();
+
+    formattedWrite(w, "%m", 1000);
+    assert(w.data == "1.000000K", w.data);
+    w.clear();
+
+    formattedWrite(w, "%m", 4_538_284);
+    assert(w.data == "4.538284M", w.data);
+    w.clear();
+}
+
+unittest
+{
     formatTest( 10, "10" );
 
     class C1 { long val; alias val this; this(long v){ val = v; } }
@@ -1456,9 +1498,96 @@ if (isFloatingPoint!T && !is(T == enum) && !hasToString!(T, Char))
         }
         return;
     }
+
+    // Metric
+    if (fs.spec == 'm')
+    {
+        fs.spec = 'f';
+        Unqual!T copy = obj;
+        real absVal = std.math.abs(copy);
+
+        string suffix;
+        if (absVal >= 1_000_000_000_000_000_000)
+        {
+            // "EXA" written with suffix 'X' so as to not create
+            // confusion with scientific notation.
+            suffix = "X";
+            copy /= 1E18;
+        }
+        else if (absVal >= 1_000_000_000_000_000)
+        {
+            // "PETA"
+            suffix = "P";
+            copy /= 1E15;
+        }
+        else if (absVal >= 1_000_000_000_000)
+        {
+            // "TERA"
+            suffix = "T";
+            copy /= 1E12;
+        }
+        else if (absVal >= 1_000_000_000)
+        {
+            // "GIGA"
+            suffix = "G";
+            copy /= 1E9;
+        }
+        else if (absVal >= 1_000_000)
+        {
+            // "MEGA"
+            suffix = "M";
+            copy /= 1E6;
+        }
+        else if (absVal >= 1_000)
+        {
+            // "KILO"
+            suffix = "K";
+            copy /= 1E3;
+        }
+        else if (absVal >= 1)
+        {
+            suffix = " ";
+        }
+        else if (absVal >= 1E-3)
+        {
+            // "mili"
+            suffix = "m";
+            copy *= 1E3;
+        }
+        else if (absVal >= 1E-6)
+        {
+            // "micro"
+            suffix = "μ";
+            copy *= 1E6;
+        }
+        else if (absVal >= 1E-9)
+        {
+            // "nano"
+            suffix = "n";
+            copy *= 1E9;
+        }
+        else if (absVal >= 1E-12)
+        {
+            // "pico"
+            suffix = "p";
+            copy *= 1E12;
+        }
+        else
+        {
+            // "femto"
+            suffix = "f";
+            copy *= 1E18;
+        }
+        // Decrement minimum width to account for the suffix.
+        if (fs.width > 0) --fs.width;
+        formatValue(w, copy, fs);
+        put(w, suffix);
+        return;
+    }
+
     enforceEx!FormatException(
             std.algorithm.find("fgFGaAeEs", fs.spec).length,
-            "floating");
+            "floating: %" ~ fs.spec);
     if (fs.spec == 's') fs.spec = 'g';
     char sprintfSpec[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
                      + 1 /*\0*/] = void;
@@ -1490,6 +1619,20 @@ if (isFloatingPoint!T && !is(T == enum) && !hasToString!(T, Char))
 
 unittest
 {
+    auto a = appender!(string)();
+    immutable real x = 5.5;
+    FormatSpec!char f;
+    formatValue(a, x, f);
+    assert(a.data == "5.5");
+
+    a.clear();
+    formattedWrite(a, "%m", 1001);
+    assert(a.data == "1.001000K", a.data);
+
+    a.clear();
+    formattedWrite(a, "%.4m", 5_235_567.34);
+    assert(a.data == "5.2356M", a.data);
+
     foreach (T; TypeTuple!(float, double, real))
     {
         formatTest( to!(          T)(5.5), "5.5" );
@@ -1498,7 +1641,7 @@ unittest
     }
 }
 
-unittest
+version(none) unittest
 {
     formatTest( 2.25, "2.25" );
 

@@ -1555,11 +1555,11 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
 }
 
 /++
-    Same as above, but outputs the result via OutputRange $(D sink). 
+    Same as above, but outputs the result via OutputRange $(D sink).
     If no match is found the original array is transfered to $(D sink) as is.
 +/
 void replaceInto(E, Sink, R1, R2)(Sink sink, E[] subject, R1 from, R2 to)
-if (isOutputRange!(Sink, E) && isDynamicArray!(E[]) 
+if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
     && isForwardRange!R1 && isForwardRange!R2
     && (hasLength!R2 || isSomeString!R2))
 {
@@ -2213,36 +2213,46 @@ Appends an entire range to the managed array.
     }
 
     // only allow overwriting data on non-immutable and non-const data
-    static if(!is(T == immutable) && !is(T == const))
-    {
 /**
 Clears the managed array.  This allows the elements of the array to be reused
 for appending.
-
-Note that clear is disabled for immutable or const element types, due to the
-possibility that $(D Appender) might overwrite immutable data.
 */
-        void clear()
+    void clear()
+    {
+        static if (!is(T == immutable))
         {
             if (_data)
             {
                 _data.arr = _data.arr.ptr[0..0];
             }
         }
+        else
+        {
+            _data = new Data;
+        }
+    }
 
 /**
 Shrinks the managed array to the given length.  Passing in a length that's
 greater than the current array length throws an enforce exception.
 */
-        void shrinkTo(size_t newlength)
+    void shrinkTo(size_t newlength)
+    {
+        if(_data)
         {
-            if(_data)
+            enforce(newlength <= _data.arr.length);
+            _data.arr = _data.arr.ptr[0..newlength];
+            static if (is(T == immutable))
             {
-                enforce(newlength <= _data.arr.length);
-                _data.arr = _data.arr.ptr[0..newlength];
+                // Duplicate data to avoid future overwriting of
+                // immutable data (overwriting const stuff is fine)
+                _data.arr = _data.arr.dup;
+                _data.capacity = _data.arr.length;
             }
-            else
-                enforce(newlength == 0);
+        }
+        else
+        {
+            enforce(newlength == 0);
         }
     }
 }
