@@ -228,12 +228,12 @@ private
 /* ========================================================== */
 
 /**
- * Replace the current process by executing a different command,
- * pathname, with the arguments in argv. Typically, the first element
- * of argv is the command being executed, i.e. argv[0] == pathname.
- * The 'p' versions of exec search the PATH environment variable for
- * pathname. The 'e' versions additionally take the new process'
- * environment variables as an array of strings of the form key=value.
+ * Replace the current process by executing a command, pathname, with
+ * the arguments in argv. Typically, the first element of argv is the
+ * command being executed, i.e. argv[0] == pathname. The 'p' versions
+ * of exec search the PATH environment variable for pathname. The 'e'
+ * versions additionally take the new process' environment variables
+ * as an array of strings of the form key=value.
  *
  * Does not return on success (the current process will have been
  * replaced). Returns -1 on failure with no indication of the
