@@ -422,7 +422,7 @@ alias ParameterStorageClass STC; // shorten the enum name
 void func(ref int ctx, out real result, real param)
 {
 }
-alias ParameterStorageClassTuple!func pstc;
+alias parameterStorageClassTuple!func pstc;
 static assert(pstc.length == 3); // three parameters
 static assert(pstc[0] == STC.ref_);
 static assert(pstc[1] == STC.out_);
@@ -443,7 +443,7 @@ enum ParameterStorageClass : uint
 }
 
 /// ditto
-template ParameterStorageClassTuple(func...)
+template parameterStorageClassTuple(func...)
     if (func.length == 1 && isCallable!func)
 {
     alias Unqual!(FunctionTypeOf!func) Func;
@@ -477,18 +477,21 @@ template ParameterStorageClassTuple(func...)
         }
     }
 
-    alias demangleNextParameter!margs ParameterStorageClassTuple;
+    alias demangleNextParameter!margs parameterStorageClassTuple;
 }
+
+/// $(RED Scheduled for deprecation. Please use $(LREF parameterStorageClassTuple) instead.)
+alias parameterStorageClassTuple ParameterStorageClassTuple;
 
 unittest
 {
     alias ParameterStorageClass STC;
 
     void noparam() {}
-    static assert(ParameterStorageClassTuple!noparam.length == 0);
+    static assert(parameterStorageClassTuple!noparam.length == 0);
 
     void test(scope int, ref int, out int, lazy int, int) { }
-    alias ParameterStorageClassTuple!test test_pstc;
+    alias parameterStorageClassTuple!test test_pstc;
     static assert(test_pstc.length == 5);
     static assert(test_pstc[0] == STC.scope_);
     static assert(test_pstc[1] == STC.ref_);
@@ -503,15 +506,15 @@ unittest
     }
     Test testi;
 
-    alias ParameterStorageClassTuple!(Test.test_const) test_const_pstc;
+    alias parameterStorageClassTuple!(Test.test_const) test_const_pstc;
     static assert(test_const_pstc.length == 1);
     static assert(test_const_pstc[0] == STC.none);
 
-    alias ParameterStorageClassTuple!(testi.test_sharedconst) test_sharedconst_pstc;
+    alias parameterStorageClassTuple!(testi.test_sharedconst) test_sharedconst_pstc;
     static assert(test_sharedconst_pstc.length == 1);
     static assert(test_sharedconst_pstc[0] == STC.none);
 
-    alias ParameterStorageClassTuple!((ref int a) {}) dglit_pstc;
+    alias parameterStorageClassTuple!((ref int a) {}) dglit_pstc;
     static assert(dglit_pstc.length == 1);
     static assert(dglit_pstc[0] == STC.ref_);
 }
@@ -524,10 +527,10 @@ Example:
 ---
 import std.traits;
 int foo(int num, string name);
-static assert([ParameterIdentifierTuple!foo] == ["num", "name"]);
+static assert([parameterIdentifierTuple!foo] == ["num", "name"]);
 ---
  */
-template ParameterIdentifierTuple(func...)
+template parameterIdentifierTuple(func...)
     if (func.length == 1 && isCallable!func)
 {
     static if (is(typeof(func[0]) PT == __parameters))
@@ -555,19 +558,22 @@ template ParameterIdentifierTuple(func...)
             alias TypeTuple!(Get!i, Impl!(i+1)) Impl;
     }
 
-    alias Impl!() ParameterIdentifierTuple;
+    alias Impl!() parameterIdentifierTuple;
 }
+
+/// $(RED Scheduled for deprecation. Please use $(LREF parameterIdentifierTuple) instead.)
+alias parameterIdentifierTuple ParameterIdentifierTuple;
 
 unittest
 {
     // Test for ddoc example
     import std.traits;
     int foo(int num, string name);
-    static assert([ParameterIdentifierTuple!foo] == ["num", "name"]);
+    static assert([parameterIdentifierTuple!foo] == ["num", "name"]);
 }
 unittest
 {
-    alias ParameterIdentifierTuple PIT;
+    alias parameterIdentifierTuple PIT;
 
     void bar(int num, string name, int[] array){}
     static assert([PIT!bar] == ["num", "name", "array"]);
@@ -1349,7 +1355,7 @@ unittest
             static assert(functionAttributes!T1 == FA.safe);
 
             // Add all known attributes, excluding conflicting ones.
-            enum allAttrs = reduce!"a | b"([EnumMembers!FA]) & ~FA.safe & ~FA.property;
+            enum allAttrs = reduce!"a | b"([enumMembers!FA]) & ~FA.safe & ~FA.property;
             alias SetFunctionAttributes!(T1, functionLinkage!T, allAttrs) T2;
             static assert(functionAttributes!T2 == allAttrs);
 
@@ -2582,7 +2588,7 @@ Note:
  does not work without the explicit cast:
 --------------------
 enum E : int { a, b, c }
-int[] abc = cast(int[]) [ EnumMembers!E ];
+int[] abc = cast(int[]) [ enumMembers!E ];
 --------------------
  Cast is not necessary if the type of the variable is inferred. See the
  example below.
@@ -2596,7 +2602,7 @@ enum Sqrts : real
     two   = 1.41421,
     three = 1.73205,
 }
-auto sqrts = [ EnumMembers!Sqrts ];
+auto sqrts = [ enumMembers!Sqrts ];
 assert(sqrts == [ Sqrts.one, Sqrts.two, Sqrts.three ]);
 --------------------
 
@@ -2607,7 +2613,7 @@ assert(sqrts == [ Sqrts.one, Sqrts.two, Sqrts.three ]);
 size_t rank(E)(E e)
     if (is(E == enum))
 {
-    foreach (i, member; EnumMembers!E)
+    foreach (i, member; enumMembers!E)
     {
         if (e == member)
             return i;
@@ -2626,7 +2632,7 @@ assert(rank(Mode.write) == 1);
 assert(rank(Mode.map  ) == 2);
 --------------------
  */
-template EnumMembers(E)
+template enumMembers(E)
     if (is(E == enum))
 {
     // Supply the specified identifier to an constant value.
@@ -2664,21 +2670,24 @@ template EnumMembers(E)
         }
     }
 
-    alias enumSpecificMembers!(__traits(allMembers, E)) EnumMembers;
+    alias enumSpecificMembers!(__traits(allMembers, E)) enumMembers;
 }
+
+/// $(RED Scheduled for deprecation. Please use $(LREF enumMembers) instead.)
+alias enumMembers EnumMembers;
 
 unittest
 {
     enum A { a }
-    static assert([ EnumMembers!A ] == [ A.a ]);
+    static assert([ enumMembers!A ] == [ A.a ]);
     enum B { a, b, c, d, e }
-    static assert([ EnumMembers!B ] == [ B.a, B.b, B.c, B.d, B.e ]);
+    static assert([ enumMembers!B ] == [ B.a, B.b, B.c, B.d, B.e ]);
 }
 
 unittest    // typed enums
 {
     enum A : string { a = "alpha", b = "beta" }
-    static assert([ EnumMembers!A ] == [ A.a, A.b ]);
+    static assert([ enumMembers!A ] == [ A.a, A.b ]);
 
     static struct S
     {
@@ -2686,7 +2695,7 @@ unittest    // typed enums
         int opCmp(S rhs) const nothrow { return value - rhs.value; }
     }
     enum B : S { a = S(1), b = S(2), c = S(3) }
-    static assert([ EnumMembers!B ] == [ B.a, B.b, B.c ]);
+    static assert([ enumMembers!B ] == [ B.a, B.b, B.c ]);
 }
 
 unittest    // duplicated values
@@ -2696,15 +2705,15 @@ unittest    // duplicated values
         a = 0, b = 0,
         c = 1, d = 1, e
     }
-    static assert([ EnumMembers!A ] == [ A.a, A.b, A.c, A.d, A.e ]);
+    static assert([ enumMembers!A ] == [ A.a, A.b, A.c, A.d, A.e ]);
 }
 
 unittest
 {
     enum E { member, a = 0, b = 0 }
-    static assert(__traits(identifier, EnumMembers!E[0]) == "member");
-    static assert(__traits(identifier, EnumMembers!E[1]) == "a");
-    static assert(__traits(identifier, EnumMembers!E[2]) == "b");
+    static assert(__traits(identifier, enumMembers!E[0]) == "member");
+    static assert(__traits(identifier, enumMembers!E[1]) == "a");
+    static assert(__traits(identifier, enumMembers!E[2]) == "b");
 }
 
 
@@ -3445,8 +3454,8 @@ template isCovariantWith(F, G)
             alias ParameterStorageClass STC;
             alias ParameterTypeTuple!Upr UprParams;
             alias ParameterTypeTuple!Lwr LwrParams;
-            alias ParameterStorageClassTuple!Upr UprPSTCs;
-            alias ParameterStorageClassTuple!Lwr LwrPSTCs;
+            alias parameterStorageClassTuple!Upr UprPSTCs;
+            alias parameterStorageClassTuple!Lwr LwrPSTCs;
             //
             template checkNext(size_t i)
             {

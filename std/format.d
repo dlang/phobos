@@ -2615,7 +2615,7 @@ if (is(T == enum))
 {
     if (f.spec == 's')
     {
-        foreach (i, e; EnumMembers!T)
+        foreach (i, e; enumMembers!T)
         {
             if (val == e)
             {

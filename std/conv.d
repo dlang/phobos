@@ -2078,7 +2078,7 @@ Target parse(Target, Source)(ref Source s)
     Target result;
     size_t longest_match = 0;
 
-    foreach (i, e; EnumMembers!Target)
+    foreach (i, e; enumMembers!Target)
     {
         auto ident = __traits(allMembers, Target)[i];
         if (longest_match < ident.length && s.startsWith(ident))

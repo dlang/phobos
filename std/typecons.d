@@ -2323,7 +2323,7 @@ private static:
     private string generateParameters(string myFuncInfo, func...)() @property
     {
         alias ParameterStorageClass STC;
-        alias ParameterStorageClassTuple!(func) stcs;
+        alias parameterStorageClassTuple!(func) stcs;
         enum nparams = stcs.length;
 
         string params = ""; // the result
