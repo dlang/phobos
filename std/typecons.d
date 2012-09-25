@@ -2158,12 +2158,12 @@ private static:
     }
 
     // Returns a tuple consisting of 0,1,2,...,n-1.  For static foreach.
-    template CountUp(size_t n)
+    template countUp(size_t n)
     {
         static if (n > 0)
-            alias TypeTuple!(CountUp!(n - 1), n - 1) CountUp;
+            alias TypeTuple!(countUp!(n - 1), n - 1) countUp;
         else
-            alias TypeTuple!() CountUp;
+            alias TypeTuple!() countUp;
     }
 
 
@@ -2180,7 +2180,7 @@ private static:
         string code = "";
 
         // run through all the overload sets
-        foreach (i_; CountUp!(0 + overloads.length)) // workaround
+        foreach (i_; countUp!(0 + overloads.length)) // workaround
         {
             enum i = 0 + i_; // workaround
             alias overloads[i] oset;
@@ -2205,7 +2205,7 @@ private static:
     {
         string code = "";
 
-        foreach (i_; CountUp!(0 + oset.contents.length)) // workaround
+        foreach (i_; countUp!(0 + oset.contents.length)) // workaround
         {
             enum i = 0 + i_; // workaround
             code ~= generateFunction!(
@@ -2370,7 +2370,7 @@ private static:
     {
         string params = "";
 
-        foreach (i_; CountUp!(n))
+        foreach (i_; countUp!n)
         {
             enum i = 0 + i_; // workaround
             if (i > 0) params ~= ", ";

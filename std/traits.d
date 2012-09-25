@@ -1381,8 +1381,8 @@ template FieldTypeTuple(S)
         //static assert(0, "argument is not struct or class");
 }
 
-// // FieldOffsetsTuple
-// private template FieldOffsetsTupleImpl(size_t n, T...)
+// // fieldOffsetsTuple
+// private template fieldOffsetsTupleImpl(size_t n, T...)
 // {
 //     static if (T.length == 0)
 //     {
@@ -1396,7 +1396,7 @@ template FieldTypeTuple(S)
 //         static if (is(T[0] == struct))
 //         {
 //             alias FieldTypeTuple!(T[0]) MyRep;
-//             alias FieldOffsetsTupleImpl!(myOffset, MyRep, T[1 .. $]).Result
+//             alias fieldOffsetsTupleImpl!(myOffset, MyRep, T[1 .. $]).Result
 //                 Result;
 //         }
 //         else
@@ -1405,12 +1405,12 @@ template FieldTypeTuple(S)
 //             alias TypeTuple!myOffset Head;
 //             static if (is(T == union))
 //             {
-//                 alias FieldOffsetsTupleImpl!(myOffset, T[1 .. $]).Result
+//                 alias fieldOffsetsTupleImpl!(myOffset, T[1 .. $]).Result
 //                     Tail;
 //             }
 //             else
 //             {
-//                 alias FieldOffsetsTupleImpl!(myOffset + mySize,
+//                 alias fieldOffsetsTupleImpl!(myOffset + mySize,
 //                                              T[1 .. $]).Result
 //                     Tail;
 //             }
@@ -1419,18 +1419,18 @@ template FieldTypeTuple(S)
 //     }
 // }
 
-// template FieldOffsetsTuple(T...)
+// template fieldOffsetsTuple(T...)
 // {
-//     alias FieldOffsetsTupleImpl!(0, T).Result FieldOffsetsTuple;
+//     alias fieldOffsetsTupleImpl!(0, T).Result fieldOffsetsTuple;
 // }
 
 // unittest
 // {
-//     alias FieldOffsetsTuple!int T1;
+//     alias fieldOffsetsTuple!int T1;
 //     assert(T1.length == 1 && T1[0] == 0);
 //     //
 //     struct S2 { char a; int b; char c; double d; char e, f; }
-//     alias FieldOffsetsTuple!S2 T2;
+//     alias fieldOffsetsTuple!S2 T2;
 //     //pragma(msg, T2);
 //     static assert(T2.length == 6
 //            && T2[0] == 0 && T2[1] == 4 && T2[2] == 8 && T2[3] == 16
@@ -1438,13 +1438,13 @@ template FieldTypeTuple(S)
 //     //
 //     class C { int a, b, c, d; }
 //     struct S3 { char a; C b; char c; }
-//     alias FieldOffsetsTuple!S3 T3;
+//     alias fieldOffsetsTuple!S3 T3;
 //     //pragma(msg, T2);
 //     static assert(T3.length == 3
 //            && T3[0] == 0 && T3[1] == 4 && T3[2] == 8);
 //     //
 //     struct S4 { char a; union { int b; char c; } int d; }
-//     alias FieldOffsetsTuple!S4 T4;
+//     alias fieldOffsetsTuple!S4 T4;
 //     //pragma(msg, FieldTypeTuple!S4);
 //     static assert(T4.length == 4
 //            && T4[0] == 0 && T4[1] == 4 && T4[2] == 8);
@@ -1454,7 +1454,7 @@ template FieldTypeTuple(S)
 // Get the offsets of the fields of a struct or class.
 // */
 
-// template FieldOffsetsTuple(S)
+// template fieldOffsetsTuple(S)
 // {
 //     static if (is(S == struct) || is(S == class))
 //         alias typeof(S.tupleof) FieldTypeTuple;
@@ -1553,7 +1553,7 @@ unittest
 }
 
 /*
-RepresentationOffsets
+representationOffsets
 */
 
 // private template Repeat(size_t n, T...)
@@ -1562,7 +1562,7 @@ RepresentationOffsets
 //     else alias TypeTuple!(T, Repeat!(n - 1, T)) Repeat;
 // }
 
-// template RepresentationOffsetsImpl(size_t n, T...)
+// template representationOffsetsImpl(size_t n, T...)
 // {
 //     static if (T.length == 0)
 //     {
@@ -1579,7 +1579,7 @@ RepresentationOffsets
 //         }
 //         static if (is(T[0] == struct))
 //         {
-//             alias .RepresentationOffsetsImpl!(n, FieldTypeTuple!(T[0])).Result
+//             alias .representationOffsetsImpl!(n, FieldTypeTuple!(T[0])).Result
 //                 Head;
 //         }
 //         else
@@ -1587,22 +1587,22 @@ RepresentationOffsets
 //             alias TypeTuple!myOffset Head;
 //         }
 //         alias TypeTuple!(Head,
-//                          RepresentationOffsetsImpl!(
+//                          representationOffsetsImpl!(
 //                              myOffset + T[0].sizeof, T[1 .. $]).Result)
 //             Result;
 //     }
 // }
 
-// template RepresentationOffsets(T)
+// template representationOffsets(T)
 // {
-//     alias RepresentationOffsetsImpl!(0, T).Result
-//         RepresentationOffsets;
+//     alias representationOffsetsImpl!(0, T).Result
+//         representationOffsets;
 // }
 
 // unittest
 // {
 //     struct S1 { char c; int i; }
-//     alias RepresentationOffsets!S1 Offsets;
+//     alias representationOffsets!S1 Offsets;
 //     static assert(Offsets[0] == 0);
 //     //pragma(msg, Offsets[1]);
 //     static assert(Offsets[1] == 4);
@@ -2648,23 +2648,23 @@ template EnumMembers(E)
         }
     }
 
-    template EnumSpecificMembers(names...)
+    template enumSpecificMembers(names...)
     {
         static if (names.length > 0)
         {
             alias TypeTuple!(
                     WithIdentifier!(names[0])
                         .Symbolize!(__traits(getMember, E, names[0])),
-                    EnumSpecificMembers!(names[1 .. $])
-                ) EnumSpecificMembers;
+                    enumSpecificMembers!(names[1 .. $])
+                ) enumSpecificMembers;
         }
         else
         {
-            alias TypeTuple!() EnumSpecificMembers;
+            alias TypeTuple!() enumSpecificMembers;
         }
     }
 
-    alias EnumSpecificMembers!(__traits(allMembers, E)) EnumMembers;
+    alias enumSpecificMembers!(__traits(allMembers, E)) EnumMembers;
 }
 
 unittest

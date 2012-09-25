@@ -647,7 +647,7 @@ enum RegexOption: uint {
     multiline = 0x10,
     singleline = 0x20
 };
-alias TypeTuple!('g', 'i', 'x', 'U', 'm', 's') RegexOptionNames;//do not reorder this list
+alias TypeTuple!('g', 'i', 'x', 'U', 'm', 's') regexOptionNames;//do not reorder this list
 static assert( RegexOption.max < 0x80);
 enum RegexInfo : uint { oneShot = 0x80 };
 
@@ -977,7 +977,7 @@ struct Parser(R, bool CTFE=false)
 
                 foreach(i, op; __traits(allMembers, RegexOption))
                 {
-                    case RegexOptionNames[i]:
+                    case regexOptionNames[i]:
                             if(re_flags & mixin("RegexOption."~op))
                                 throw new RegexException(text("redundant flag specified: ",ch));
                             re_flags |= mixin("RegexOption."~op);
@@ -4216,11 +4216,11 @@ template BacktrackingMatcher(bool CTregex)
         s ~= ", ";
         s ~= to!string(i);
     }
-    return s ~") Sequence;";
+    return s ~") sequence;";
 }
 
 //alias to TypeTuple(S, S+1, S+2, ... E)
-template Sequence(int S, int E)
+template sequence(int S, int E)
 {
     mixin(ctGenSeq(S,E));
 }
