@@ -30667,7 +30667,7 @@ void foo()
     real sum = 0;
     // To know the number of seconds,
     // use properties of TickDuration.
-    // (seconds, mseconds, useconds, hnsecs)
+    // (seconds, msecs, usecs, hnsecs)
     foreach(t; times)
        sum += t.hnsecs;
     writeln("Average time: ", sum/n, " hnsecs");
@@ -30702,7 +30702,7 @@ public:
         real sum = 0;
         // To get the number of seconds,
         // use properties of TickDuration.
-        // (seconds, mseconds, useconds, hnsecs)
+        // (seconds, msecs, usecs, hnsecs)
         foreach(t; times)
            sum += t.hnsecs;
         writeln("Average time: ", sum/n, " hnsecs");
