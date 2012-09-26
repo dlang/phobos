@@ -1912,14 +1912,15 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   *
   * // Put with data senders
   * auto msg = "Hello world";
+  * http.contentLength = msg.length;
   * http.onSend = (void[] data)
   * {
   *     auto m = cast(void[])msg;
-  *     size_t length = m.length > data.length ? data.length : m.length;
-  *     if (length == 0) return 0;
-  *     data[0..length] = m[0..length];
-  *     msg = msg[length..$];
-  *     return length;
+  *     size_t len = m.length > data.length ? data.length : m.length;
+  *     if (len == 0) return len;
+  *     data[0..len] = m[0..len];
+  *     msg = msg[len..$];
+  *     return len;
   * };
   * http.perform();
   *
