@@ -173,6 +173,8 @@ version(unittest)
     import std.stdio;
     import std.range;
     import std.process : environment;
+    import std.file : tempDir;
+    import std.path : buildPath;
     enum testUrl1 = "http://d-lang.appspot.com/testUrl1";
     enum testUrl2 = "http://d-lang.appspot.com/testUrl2";
     enum testUrl3 = "ftp://ftp.digitalmars.com/sieve.ds";
@@ -266,8 +268,8 @@ void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn co
 unittest
 {
     if (!netAllowed()) return;
-    download("ftp.digitalmars.com/sieve.ds", getTempPath() ~ "downloaded-ftp-file");
-    download("d-lang.appspot.com/testUrl1", getTempPath() ~ "downloaded-http-file");
+    download("ftp.digitalmars.com/sieve.ds", buildPath(tempDir(), "downloaded-ftp-file"));
+    download("d-lang.appspot.com/testUrl1", buildPath(tempDir(), "downloaded-http-file"));
 }
 
 /** Upload file from local files system using the HTTP or FTP protocol.
@@ -322,8 +324,8 @@ void upload(Conn = AutoProtocol)(string loadFromPath, const(char)[] url, Conn co
 unittest
 {
     if (!netAllowed()) return;
-    //    upload(getTempPath() ~ "downloaded-ftp-file", "ftp.digitalmars.com/sieve.ds");
-    upload(getTempPath() ~ "downloaded-http-file", "d-lang.appspot.com/testUrl2");
+    //    upload(buildPath(tempDir(), "downloaded-ftp-file"), "ftp.digitalmars.com/sieve.ds");
+    upload(buildPath(tempDir(), "downloaded-http-file"), "d-lang.appspot.com/testUrl2");
 }
 
 /** HTTP/FTP get content.
@@ -4129,17 +4131,7 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     fromTid.send(thisTid(), curlMessage(true)); // signal done
 }
 
-version (unittest)
+version (unittest) private auto netAllowed()
 {
-    private auto netAllowed()
-    {
-        return environment.get("PHOBOS_TEST_ALLOW_NET") != null;
-    }
-    private string getTempPath()
-    {
-        version (Windows)
-            return environment["TEMP"] ~ `\`;
-        else
-            return "/tmp/";
-    }
+    return environment.get("PHOBOS_TEST_ALLOW_NET") != null;
 }
