@@ -5,11 +5,14 @@ $(VERSION 061, ddd mm, 2012, =================================================,
         $(LI std.digest.sha: Added SHA1 digest implementation.)
         $(LI std.uuid: Support SHA1 UUIDs.)
         $(LI std.uuid: md5UUID and sha1UUID can now be used in pure code.)
+        $(LI std.net.curl: Added operationTimeout.)
         $(LI std.md5 has been scheduled for deprecation (Use std.digest.md instead).)
         $(LI crc32 has been scheduled for deprecation (Use std.digest.crc instead).)
     )
 
     $(LIBBUGSFIXED
+        $(LI Unlisted Bug: std.net.curl dataTimeout fixed. (Used to set operation timeout
+             instead of inactivity timeout))
     )
 )
 

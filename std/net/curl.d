@@ -1544,6 +1544,15 @@ private mixin template Protocol()
     /// Set timeout for activity on connection.
     @property void dataTimeout(Duration d)
     {
+        p.curl.set(CurlOption.low_speed_limit, 1);
+        p.curl.set(CurlOption.low_speed_time, d.total!"seconds"());
+    }
+
+    /** Set maximum time an operation is allowed to take.
+        This includes dns resolution, connecting, data transfer, etc.
+     */
+    @property void operationTimeout(Duration d)
+    {
         p.curl.set(CurlOption.timeout_ms, d.total!"msecs"());
     }
 
@@ -2089,6 +2098,11 @@ struct HTTP
 
         /// Set timeout for activity on connection.
         @property void dataTimeout(Duration d);
+
+        /** Set maximum time an operation is allowed to take.
+            This includes dns resolution, connecting, data transfer, etc.
+          */
+        @property void operationTimeout(Duration d);
 
         /// Set timeout for connecting.
         @property void connectTimeout(Duration d);
@@ -2729,6 +2743,11 @@ struct FTP
         /// Set timeout for activity on connection.
         @property void dataTimeout(Duration d);
 
+        /** Set maximum time an operation is allowed to take.
+            This includes dns resolution, connecting, data transfer, etc.
+          */
+        @property void operationTimeout(Duration d);
+
         /// Set timeout for connecting.
         @property void connectTimeout(Duration d);
 
@@ -3012,6 +3031,11 @@ struct SMTP
 
         /// Set timeout for activity on connection.
         @property void dataTimeout(Duration d);
+
+        /** Set maximum time an operation is allowed to take.
+            This includes dns resolution, connecting, data transfer, etc.
+          */
+        @property void operationTimeout(Duration d);
 
         /// Set timeout for connecting.
         @property void connectTimeout(Duration d);
