@@ -3607,3 +3607,499 @@ template hardDeprec(string vers, string date, string oldFunc, string newFunc)
                               "It will be removed in %s. Please use %s instead.",
                               vers, oldFunc, date, newFunc);
 }
+
+
+/++
+    Constructs T generically. This function is mainly for eliminating the
+    construction differences between structs and classes, but it will work with
+    all types.
+
+    When allocating a static array, it does not allocate anything on the heap,
+    which is not currently true when initializing a static array with an array
+    literal.
+
+    Examples:
+--------------------
+static struct S { int i; string s; }
+static class C { string _s; bool _b;
+                 this(string s, bool b) { _s = s; _b = b; } }
+
+S s = make!S(42, "hello");
+C c = make!C("goodbye", false);
+
+string str = make!string('h', 'e', 'l', 'l', 'o');
+int[] arr1 = make!(int[])(1, 2, 3, 4, 5);
+
+//No heap allocations
+uint[4] sArr = make!(uint[4])(4, 9, 22, 7);
+
+int i = make!int(5);
+real r = make!real(42.2);
+bool b = make!(const bool)(true);
+--------------------
+  +/
+T make(T, Args...)(Args args)
+    if(is(T == struct))
+{
+    return T(args);
+}
+
+T make(T, Args...)(Args args)
+    if(is(T == class))
+{
+    return new T(args);
+}
+
+T make(T, Args...)(Args args)
+    if(isDynamicArray!T)
+{
+    return _makeArray!(ElementEncodingType!T, true)(args);
+}
+
+T make(T, Args...)(Args args)
+    if(isStaticArray!T)
+{
+    static assert(Args.length == T.init.length,
+                  "Number of arguments does not match the length of " ~ T.stringof);
+    return _makeStaticArray!(ElementEncodingType!T, true)(args);
+}
+
+T make(T, Args...)(Args args)
+    if(isScalarType!T && Args.length == 1 && is(Args[0] : T))
+{
+    return args[0];
+}
+
+//Verify Examples.
+unittest
+{
+    static struct S { int i; string s; }
+    static class C { string _s; bool _b;
+                     this(string s, bool b) { _s = s; _b = b; } }
+
+    S s = make!S(42, "hello");
+    C c = make!C("goodbye", false);
+
+    string str = make!string('h', 'e', 'l', 'l', 'o');
+    int[] arr1 = make!(int[])(1, 2, 3, 4, 5);
+
+    //No heap allocations
+    uint[4] sArr = make!(uint[4])(4, 9, 22, 7);
+
+    int i = make!int(5);
+    real r = make!real(42.2);
+    bool b = make!(const bool)(true);
+}
+
+unittest
+{
+    static struct S
+    {
+        string s;
+        dchar c;
+        int[] a;
+
+        //@@@BUG@@@ 3789 makes this necessary.
+        bool opEquals(const S rhs) { return rhs.s == s && rhs.c == c && rhs.a == a; }
+    }
+
+    auto s = make!S("hello", 'Q', [1, 2, 3]);
+    assert(s == S("hello", 'Q', [1, 2, 3]));
+
+    static class C
+    {
+        this(int i, float f, string s)
+        {
+            _i = i;
+            _f = f;
+            _s = s;
+        }
+
+        override bool opEquals(Object obj)
+        {
+            auto rhs = cast(C)obj;
+            return rhs._i == _i && rhs._f == _f && rhs._s == _s;
+        }
+
+        int _i;
+        float _f;
+        string _s;
+    }
+
+    auto c = make!C(12, 13.7, "goodbye");
+    assert(c == new C(12, 13.7, "goodbye"));
+
+    auto arr1 = make!(const int[])();
+    assert(arr1 is null);
+
+    auto arr2 = make!(const uint[])(48, 49, 50, 51, 52);
+    assert(arr2 == [48, 49, 50, 51, 52]);
+
+    auto arr3 = make!(const int[])(cast(byte)1, cast(byte)2, cast(byte)3);
+    assert(arr3 == [1, 2, 3]);
+
+    auto arr4 = make!(const C[])(new C(9, 5, "h"), new const(C)(1, 2, "w"));
+    assert(arr4 == [new const(C)(9, 5, "h"), new const(C)(1, 2, "w")]);
+
+    auto sArr1 = make!(const int[0])();
+    assert(sArr1.length == 0);
+
+    auto sArr2 = make!(const int[5])(6, 7, 8, 9, 10);
+    assert(sArr2 == [6, 7, 8, 9, 10]);
+
+    auto sArr3 = make!(const int[3])(cast(byte)1, cast(byte)2, cast(byte)3);
+    assert(sArr3 == [1, 2, 3]);
+
+    auto sArr4 = make!(const C[2])(new C(9, 5, "h"), new const(C)(1, 2, "w"));
+    assert(sArr4 == arr4);
+
+    foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
+                          char, wchar, dchar, float, double, real))
+    {
+        auto t1 = make!T(cast(T)42);
+        assert(t1 == cast(T)42);
+
+        auto t2 = make!(const T)(cast(T)22);
+        assert(t2 == cast(T)22);
+    }
+
+    auto larger = make!long(5);
+    assert(larger == 5);
+}
+
+
+/++
+    Constructs T generically on the heap with new. This function is mainly for
+    eliminating the construction differences between types. It will work with
+    all types except for static arrays.
+
+    This is particularly advantageous for scalar types, because it makes it
+    possible to allocate their memory and assign them a value in one statement
+    instead of several.
+
+    Examples:
+--------------------
+static struct S { int _i; string _s;
+                 this(int i, string s) { _i = i; _s = s; } }
+static class C { string _s; bool _b;
+                 this(string s, bool b) { _s = s; _b = b; } }
+
+S* s = makeNew!S(42, "hello");
+C c = makeNew!C("goodbye", false);
+
+string str = makeNew!string('h', 'e', 'l', 'l', 'o');
+int[] arr1 = makeNew!(int[])(1, 2, 3, 4, 5);
+
+int* i = makeNew!int(5);
+real* r = makeNew!real(42.2);
+const bool* b = makeNew!(const bool)(false);
+--------------------
+  +/
+auto makeNew(T, Args...)(Args args)
+    if(is(T == struct) || is(T == class))
+{
+    return new T(args);
+}
+
+T makeNew(T, Args...)(Args args)
+    if(isDynamicArray!T)
+{
+    return make!T(args);
+}
+
+T* makeNew(T, Args...)(Args args) @trusted
+    if(isScalarType!T && Args.length == 1 && is(Args[0] : T))
+{
+    auto retval = new Unqual!T;
+    *retval = args[0];
+    return cast(T*)retval;
+}
+
+//Verify Examples.
+unittest
+{
+    static struct S { int _i; string _s;
+                     this(int i, string s) { _i = i; _s = s; } }
+    static class C { string _s; bool _b;
+                     this(string s, bool b) { _s = s; _b = b; } }
+
+    S* s = makeNew!S(42, "hello");
+    C c = makeNew!C("goodbye", false);
+
+    string str = makeNew!string('h', 'e', 'l', 'l', 'o');
+    int[] arr1 = makeNew!(int[])(1, 2, 3, 4, 5);
+
+    int* i = makeNew!int(5);
+    real* r = makeNew!real(42.2);
+    const bool* b = makeNew!(const bool)(false);
+}
+
+unittest
+{
+    static struct S
+    {
+        string s;
+        dchar c;
+        int[] a;
+
+        this(string s, dchar c, int[] a)
+        {
+            this.s = s;
+            this.c = c;
+            this.a = a;
+        }
+
+        //@@@BUG@@@ 3789 makeNews this necessary.
+        bool opEquals(const S rhs) { return rhs.s == s && rhs.c == c && rhs.a == a; }
+    }
+
+    auto s = makeNew!S("hello", 'Q', [1, 2, 3]);
+    assert(*s == S("hello", 'Q', [1, 2, 3]));
+
+    static class C
+    {
+        this(int i, float f, string s)
+        {
+            _i = i;
+            _f = f;
+            _s = s;
+        }
+
+        override bool opEquals(Object obj)
+        {
+            auto rhs = cast(C)obj;
+            return rhs._i == _i && rhs._f == _f && rhs._s == _s;
+        }
+
+        int _i;
+        float _f;
+        string _s;
+    }
+
+    auto c = makeNew!C(12, 13.7, "goodbye");
+    assert(c == new C(12, 13.7, "goodbye"));
+
+    auto arr1 = make!(const int[])();
+    assert(arr1 is null);
+
+    auto arr2 = make!(const uint[])(48, 49, 50, 51, 52);
+    assert(arr2 == [48, 49, 50, 51, 52]);
+
+    auto arr3 = make!(const int[])(cast(byte)1, cast(byte)2, cast(byte)3);
+    assert(arr3 == [1, 2, 3]);
+
+    auto arr4 = make!(const C[])(new C(9, 5, "h"), new const(C)(1, 2, "w"));
+    assert(arr4 == [new const(C)(9, 5, "h"), new const(C)(1, 2, "w")]);
+
+    foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
+                          char, wchar, dchar, float, double, real))
+    {
+        auto t1 = makeNew!T(cast(T)42);
+        assert(*t1 == cast(T)42);
+
+        auto t2 = makeNew!(const T)(cast(T)22);
+        assert(*t2 == cast(T)22);
+    }
+
+    auto larger = makeNew!long(5);
+    assert(*larger == 5);
+}
+
+
+/++
+    This constructs a dynamic array with the given elements. It's similar to
+    make except that it takes the element type of the array rather than the
+    whole array type, and it explicitly casts each element to the element type.
+
+    This is particularly useful for constructing arrays of integral types other
+    than $(D int) without having to cast each of the elements individually.
+    However, since it $(I does) cast each element, it is unsafe and must be used
+    with care.
+
+    Examples:
+--------------------
+byte[] arr1 = makeArray!byte(1, 2, 3, 4, 5);
+assert(arr1 == [cast(byte)1, cast(byte)2, cast(byte)3,
+                cast(byte)4, cast(byte)5]);
+
+const(ushort)[] arr2 = makeArray!(const ushort)(1, 2, 3, 4, 5);
+assert(arr2 == [cast(ushort)1, cast(ushort)2, cast(ushort)3,
+                cast(ushort)4, cast(ushort)5]);
+--------------------
+  +/
+T[] makeArray(T, Args...)(Args args)
+    if(allSatisfy!(_canCast!T, Args))
+{
+    return _makeArray!(T, false)(args);
+}
+
+private template _canCast(T)
+{
+    template _canCast(U)
+    {
+        enum _canCast = __traits(compiles, {U u = void; auto t = cast(Unqual!T)u;});
+    }
+}
+
+private T[] _makeArray(T, bool check, Args...)(Args args)
+{
+    static if(Args.length == 0)
+        return null;
+    else static if(is(typeof([args]) == T[]))
+        return [args];
+    else
+    {
+        alias Unqual!T UT;
+        auto retval = uninitializedArray!(UT[])(Args.length);
+        foreach(i, arg; args)
+        {
+            static assert(!check || is(typeof({T t = arg;})),
+                          Format!("Argument# %s is not implicitly convertible to %s",
+                                  i, ElementEncodingType!T.stringof));
+            retval[i] = cast(UT)arg;
+        }
+        return cast(T[])retval;
+    }
+}
+
+//Verify Examples.
+unittest
+{
+    byte[] arr1 = makeArray!byte(1, 2, 3, 4, 5);
+    assert(arr1 == [cast(byte)1, cast(byte)2, cast(byte)3,
+                    cast(byte)4, cast(byte)5]);
+
+    const(ushort)[] arr2 = makeArray!(const ushort)(1, 2, 3, 4, 5);
+    assert(arr2 == [cast(ushort)1, cast(ushort)2, cast(ushort)3,
+                    cast(ushort)4, cast(ushort)5]);
+}
+
+unittest
+{
+    static class C
+    {
+        this(int i, float f, string s)
+        {
+            _i = i;
+            _f = f;
+            _s = s;
+        }
+
+        override bool opEquals(Object obj)
+        {
+            auto rhs = cast(C)obj;
+            return rhs._i == _i && rhs._f == _f && rhs._s == _s;
+        }
+
+        int _i;
+        float _f;
+        string _s;
+    }
+
+    auto arr1 = makeArray!(const int)();
+    assert(arr1 is null);
+
+    auto arr2 = makeArray!(const uint)(48, 49, 50, 51, 52);
+    assert(arr2 == [48, 49, 50, 51, 52]);
+
+    auto arr3 = makeArray!(const int)(cast(byte)1, cast(byte)2, cast(byte)3);
+    assert(arr3 == [1, 2, 3]);
+
+    auto arr4 = makeArray!(const C)(new C(9, 5, "h"), new const(C)(1, 2, "w"));
+    assert(arr4 == [new const(C)(9, 5, "h"), new const(C)(1, 2, "w")]);
+
+    auto arr5 = makeArray!(immutable ubyte)(42, 22, 9);
+    assert(arr5 == [42, 22, 9]);
+}
+
+
+/++
+    This constructs a static array with the given elements. It's the same as
+    $(LREF makeArray) (including the casting) except that it creates a static
+    array. The size of the static array is inferred.
+
+    Examples:
+--------------------
+//No heap allocations
+ushort[4] sArr1 = makeStaticArray!ushort(4, 9, 22, 7);
+assert(sArr1 == [4, 9, 22, 7]);
+
+//No heap allocations
+byte[3] sArr2 = makeStaticArray!byte(1, 2, 3);
+assert(sArr2 == [1, 2, 3]);
+--------------------
+  +/
+auto makeStaticArray(T, Args...)(Args args)
+    if(allSatisfy!(_canCast!T, Args))
+{
+    return _makeStaticArray!(T, false)(args);
+}
+
+private auto _makeStaticArray(T, bool check, Args...)(Args args)
+{
+    static if(Args.length == 0)
+        return (T[0]).init;
+    else
+    {
+        alias Unqual!T UT;
+        UT[Args.length] retval = void;
+        foreach(i, arg; args)
+        {
+            static assert(!check || is(typeof({T t = arg;})),
+                          Format!("Argument# %s is not implicitly convertable to %s",
+                                  i, ElementEncodingType!T.stringof));
+            retval[i] = cast(UT)arg;
+        }
+        return cast(T[Args.length])retval;
+    }
+}
+
+//Verify Examples.
+unittest
+{
+    //No heap allocations
+    ushort[4] sArr1 = makeStaticArray!ushort(4, 9, 22, 7);
+    assert(sArr1 == [4, 9, 22, 7]);
+
+    //No heap allocations
+    byte[3] sArr2 = makeStaticArray!byte(1, 2, 3);
+    assert(sArr2 == [1, 2, 3]);
+}
+
+unittest
+{
+    static class C
+    {
+        this(int i, float f, string s)
+        {
+            _i = i;
+            _f = f;
+            _s = s;
+        }
+
+        override bool opEquals(Object obj)
+        {
+            auto rhs = cast(C)obj;
+            return rhs._i == _i && rhs._f == _f && rhs._s == _s;
+        }
+
+        int _i;
+        float _f;
+        string _s;
+    }
+
+    auto sArr1 = makeStaticArray!(const int)();
+    assert(sArr1.length == 0);
+
+    auto sArr2 = makeStaticArray!(const int)(6, 7, 8, 9, 10);
+    assert(sArr2 == [6, 7, 8, 9, 10]);
+
+    auto sArr3 = makeStaticArray!(const int)(cast(byte)1, cast(byte)2, cast(byte)3);
+    assert(sArr3 == [1, 2, 3]);
+
+    auto sArr4 = makeStaticArray!(const C)(new C(9, 5, "h"), new const(C)(1, 2, "w"));
+    assert(sArr4 == [new const(C)(9, 5, "h"), new const(C)(1, 2, "w")]);
+
+    auto sArr5 = makeArray!(immutable ubyte)(42, 22, 9);
+    assert(sArr5 == [42, 22, 9]);
+}
