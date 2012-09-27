@@ -1554,21 +1554,21 @@ unittest
  * -----------------------
  *   Algebraic!(int, string) variant;
  *
- *   int strfunc(string s) {
- *     return cast(int)s.length;
- *   }
- *
  *   variant = 10;
- *   assert(visit!(strfunc, (int i) { return i; })(variant) == 10);
+ *   assert(variant.visit!((string s) => cast(int)s.length,
+ *                         (int i)    => i)
+ *                         == 10);
  *   variant = "string";
- *   assert(visit!((int i) { return i; }, strfunc)(variant) == 6);
+ *   assert(variant.visit!((int i) => return i,
+ *                         (string s) => cast(int)s.length)
+ *                         == 6);
  *
- *   int errorfunc() {
- *     return -1;
- *   }
- *
+ *   // Error function usage
  *   Algebraic!(int, string) emptyVar;
- *   assert(visit!(strfunc, (int i) { return i; }, errorfunc)(emptyVar) == -1);
+ *   assert(variant.visit!((string s) => cast(int)s.length,
+ *                         (int i)    => i,
+ *                         () => -1)
+ *                         == -1);
  * ----------------------
  * Returns: The return type of applyVisitor is deduced from the visiting functions and must be
  * the same accross all overloads.
@@ -1587,69 +1587,61 @@ template visit(Delegate ...)
 
 unittest
 {
-    Algebraic!(int, string) variant;
+    Algebraic!(size_t, string) variant;
 
     // not all handled check
-    static assert(!__traits(compiles, visit!((int i){ })(variant) ));
+    static assert(!__traits(compiles, variant.visit!((size_t i){ }) ));
 
-    variant = 10;
+    variant = cast(size_t)10;
     auto which = 0;
-    visit!( (string s){ which = 1; },
-            (int i){ which = 0; }
-          )(variant);
+    variant.visit!( (string s) => which = 1,
+                    (size_t i) => which = 0
+                    );
 
     // integer overload was called
     assert(which == 0);
 
     // mustn't compile as generic Variant not supported
     Variant v;
-    static assert(!__traits(compiles, visit!(
-                                            (string s){ which = 1; },
-                                            (int i){ which = 0; }
-                                            )
-                                            (v)
-                                            ));
+    static assert(!__traits(compiles, v.visit!((string s) => which = 1,
+                                               (size_t i) => which = 0
+                                                )
+                                                ));
 
-    static int func(string s) {
-        return cast(int)s.length;
+    static size_t func(string s) {
+        return s.length;
     }
 
     variant = "test";
-    assert( 4 == visit!(func,
-                        (int i) { return i; }
-                        )(variant));
+    assert( 4 == variant.visit!(func,
+                                (size_t i) => i
+                                ));
 
     Algebraic!(int, float, string) variant2 = 5.0f;
     // Shouldn' t compile as float not handled by visitor.
-    static assert(!__traits(compiles, visit!(
+    static assert(!__traits(compiles, variant2.visit!(
                         (int) {},
-                        (string) {})
-                        (variant2)));
+                        (string) {})));
 
     //==========================================================================
 
-    Algebraic!(int, string, float) variant3;
+    Algebraic!(size_t, string, float) variant3;
     variant3 = 10.0f;
-    static int floatVisit(float f) {
+    static size_t floatVisit(float f) {
         return 42;
     }
 
-    assert(visit!(
+    assert(variant3.visit!(
                  floatVisit,
                  func,
-                 (int i) { return i; }
-                 )
-                (variant3) == 42);
+                 (size_t i) { return i; }
+                 ) == 42);
 
     //===========================================================================
 
     Algebraic!(float, string) variant4;
-    int errorfunc()
-    {
-        return -1;
-    }
 
-    assert(visit!(func, floatVisit, errorfunc)(variant4) == -1);
+    assert(variant4.visit!(func, floatVisit, () => size_t.max) == size_t.max);
 
     //===========================================================================
 
@@ -1666,6 +1658,22 @@ unittest
  * If a parameter-less function is specified it is called when
  * either $(D_PARAM variant) doesn't hold a value or holds a type
  * which isn't handled by the visiting functions.
+ *
+ * Example:
+ * -----------------------
+ *   Algebraic!(int, string) variant;
+ *
+ *   variant = 10;
+ *   auto which = -1;
+ *   variant.tryVisit!((int i) { which = 0; });
+ *   assert(which = 0);
+ *
+ *   // Error function usage
+ *   variant = "test";
+ *   variant.tryVisit!((int i) { which = 0; },
+ *                     ()      { which = -100; });
+ *   assert(which == -100);
+ * ----------------------
  *
  * Returns: The return type of applyVisitor is deduced from the visiting functions and must be
  * the same accross all overloads.
@@ -1690,7 +1698,7 @@ unittest
 
     variant = 10;
     auto which = -1;
-    tryVisit!((int i){ which = 0; })(variant);
+    variant.tryVisit!((int i){ which = 0; });
 
     assert(which == 0);
 
@@ -1698,7 +1706,7 @@ unittest
 
     try
     {
-        tryVisit!((int i) { which = 0; })(variant);
+        variant.tryVisit!((int i) { which = 0; });
         assert(false);
     }
     catch(VariantException)
@@ -1711,15 +1719,11 @@ unittest
         which = -1;
     }
 
-    tryVisit!((int i) { which = 0; }, errorfunc)(variant);
+    variant.tryVisit!((int i) { which = 0; }, errorfunc);
 
     assert(which == -1);
 }
 
-/**
- * Returns: true, if template parameter is an Algebraic type, otherwise
- *          false.
- */
 private template isAlgebraic(Type)
 {
     enum isAlgebraic = __traits(hasMember, Type, "AllowedTypes")
@@ -1745,7 +1749,7 @@ private auto visitImpl(bool Strict, VariantType, Delegate...)(VariantType varian
     auto visitGetOverloadMap()
     {
         struct Result {
-            int indices[];
+            int[AllowedTypes.length] indices;
             int exceptionFuncIdx = -1;
         }
 
@@ -1779,7 +1783,7 @@ private auto visitImpl(bool Strict, VariantType, Delegate...)(VariantType varian
                             assert(false, "duplicate overload specified for type '" ~ T.stringof ~ "'");
 
                         added = true;
-                        result.indices ~= dgidx;
+                        result.indices[tidx] = dgidx;
                     }
                 }
                 // Handle composite visitors with opCall overloads
@@ -1790,7 +1794,7 @@ private auto visitImpl(bool Strict, VariantType, Delegate...)(VariantType varian
             }
 
             if (!added)
-                result.indices ~= -1;
+                result.indices[tidx] = -1;
         }
 
         return result;
@@ -1801,8 +1805,8 @@ private auto visitImpl(bool Strict, VariantType, Delegate...)(VariantType varian
     if (!variant.hasValue())
     {
         // Call the exception function. The DelegateOverloadMap
-        // will have a size of Delegate.length + 1 if we have a
-        // exception function specified, otherwise we just through an exception.
+        // will have its exceptionFuncIdx field set to value != -1 if an
+        // exception function has been specified; otherwise we just through an exception.
         static if (DelegateOverloadMap.exceptionFuncIdx != -1)
             return Delegate[ DelegateOverloadMap.exceptionFuncIdx ]();
         else
