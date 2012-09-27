@@ -5016,7 +5016,10 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 }
                 else version(Win64)
                 {
-                    s = tis.xtoString(argptr);
+                    void* p = argptr;
+                    if (tis.tsize() > 8)
+                        p = *cast(void**)p;
+                    s = tis.xtoString(p);
                     argptr += size_t.sizeof;
                 }
                 else version (X86_64)
