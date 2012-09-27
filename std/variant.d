@@ -1726,10 +1726,17 @@ unittest
 
 private template isAlgebraic(Type)
 {
-    enum isAlgebraic = __traits(hasMember, Type, "AllowedTypes")
-                        && Type.AllowedTypes.length > 0
-                        && __traits(hasMember, Type, "hasValue")
-                        && __traits(hasMember, Type, "peek");
+    static if (is(Type _ == VariantN!T, T...))
+        enum isAlgebraic = T.length >= 2; // T[0] == maxDataSize, T[1..$] == AllowedTypesX
+    else
+        enum isAlgebraic = false;
+}
+
+unittest
+{
+    static assert(!isAlgebraic!(Variant));
+    static assert( isAlgebraic!(Algebraic!(string)));
+    static assert( isAlgebraic!(Algebraic!(int, int[])));
 }
 
 private auto visitImpl(bool Strict, VariantType, Delegate...)(VariantType variant)
