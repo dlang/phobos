@@ -1176,8 +1176,8 @@ class Exception : Object
     }
 
     void print()
-    {
-        printf("%.*s\n", toString());
+    {   char[] s = toString();
+        printf("%.*s\n", s.length, s.ptr);
     }
 
     char[] toString() { return msg; }

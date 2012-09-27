@@ -106,6 +106,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	internal\arrayfloat.d internal\arraydouble.d internal\arrayreal.d \
 	internal\arraybyte.d internal\arrayshort.d internal\arrayint.d \
 	internal\cmath2.d \
+	internal\llmath.d \
 	etc\gamma.d \
 	std\c\math.d \
 	std\c\stdarg.d \
