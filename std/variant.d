@@ -1533,14 +1533,14 @@ unittest
 }
 
 /**
- * Applies a delegate to the given Algebraic depending on the held type, ensuring that
- * all types are handled by the visiting functions.
+ * Applies a delegate or function to the given Algebraic depending on the held type,
+ * ensuring that all types are handled by the visiting functions.
  *
- * The delegate having the currently held value as parameter is called
- * with $(D_PARM variant)'s current value. Visiting functions are passed
+ * The delegate or function having the currently held value as parameter is called
+ * with $(D_PARM variant)'s current value. Visiting handlers are passed
  * in the template parameter list.
  * It is statically ensured that all types of
- * $(D_PARAM variant) are handled accross all delegates.
+ * $(D_PARAM variant) are handled accross all handlers.
  * $(D_PARAM visit) allows delegates and static functions to be passed
  * as parameters.
  *
@@ -1570,18 +1570,18 @@ unittest
  *                         () => -1)()
  *                         == -1);
  * ----------------------
- * Returns: The return type of applyVisitor is deduced from the visiting functions and must be
+ * Returns: The return type of visit is deduced from the visiting functions and must be
  * the same accross all overloads.
  * Throws: If no parameter-less, error function is specified:
  * $(D_PARAM VariantException) if $(D_PARAM variant) doesn't hold a value.
  */
-template visit(Delegate ...)
-    if (Delegate.length > 0)
+template visit(Handler ...)
+    if (Handler.length > 0)
 {
     auto visit(VariantType)(VariantType variant)
         if (isAlgebraic!VariantType)
     {
-        return visitImpl!(true, VariantType, Delegate)(variant);
+        return visitImpl!(true, VariantType, Handler)(variant);
     }
 }
 
@@ -1623,31 +1623,24 @@ unittest
                         (int) {},
                         (string) {})()));
 
-    //==========================================================================
-
     Algebraic!(size_t, string, float) variant3;
     variant3 = 10.0f;
-    static size_t floatVisit(float f) {
-        return 42;
-    }
+    auto floatVisited = false;
 
     assert(variant3.visit!(
-                 floatVisit,
+                 (float f) { floatVisited = true; return cast(size_t)f; },
                  func,
                  (size_t i) { return i; }
-                 )() == 42);
-
-    //===========================================================================
+                 )() == 10);
+    assert(floatVisited == true);
 
     Algebraic!(float, string) variant4;
 
-    assert(variant4.visit!(func, floatVisit, () => size_t.max)() == size_t.max);
-
-    //===========================================================================
+    assert(variant4.visit!(func, (float f) => cast(size_t)f, () => size_t.max)() == size_t.max);
 
     // double error func check
     static assert(!__traits(compiles,
-                            visit!(errorfunc, func, floatVisit, errorfunc)(variant4))
+                            visit!(() => size_t.max, func, (float f) => cast(size_t)f, () => size_t.max)(variant4))
                  );
 }
 
@@ -1675,20 +1668,20 @@ unittest
  *   assert(which == -100);
  * ----------------------
  *
- * Returns: The return type of applyVisitor is deduced from the visiting functions and must be
+ * Returns: The return type of tryVisit is deduced from the visiting functions and must be
  * the same accross all overloads.
  * Throws: If no parameter-less, error function is specified: $(D_PARAM VariantException) if
  *         $(D_PARAM variant) doesn't hold a value or
  *         if $(D_PARAM variant) holds a value which isn't handled by the visiting
  *         functions.
  */
-template tryVisit(Delegate ...)
-    if (Delegate.length > 0)
+template tryVisit(Handler ...)
+    if (Handler.length > 0)
 {
     auto tryVisit(VariantType)(VariantType variant)
         if (isAlgebraic!VariantType)
     {
-        return visitImpl!(false, VariantType, Delegate)(variant);
+        return visitImpl!(false, VariantType, Handler)(variant);
     }
 }
 
@@ -1704,15 +1697,7 @@ unittest
 
     variant = "test";
 
-    try
-    {
-        variant.tryVisit!((int i) { which = 0; })();
-        assert(false);
-    }
-    catch(VariantException)
-    {
-        assert(true);
-    }
+    assertThrown!VariantException(variant.tryVisit!((int i) { which = 0; })());
 
     void errorfunc()
     {
@@ -1739,16 +1724,16 @@ unittest
     static assert( isAlgebraic!(Algebraic!(int, int[])));
 }
 
-private auto visitImpl(bool Strict, VariantType, Delegate...)(VariantType variant)
-    if (isAlgebraic!VariantType && Delegate.length > 0)
+private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant)
+    if (isAlgebraic!VariantType && Handler.length > 0)
 {
     alias VariantType.AllowedTypes AllowedTypes;
 
 
     /**
      * Returns: Struct where $(D_PARAM indices)  is an array which
-     * contains at the n-th position the index in Delegate which takes the
-     * n-th type of AllowedTypes. If an Delegate doesn't match an
+     * contains at the n-th position the index in Handler which takes the
+     * n-th type of AllowedTypes. If an Handler doesn't match an
      * AllowedType, -1 is set. If a function in the delegates doesn't
      * have parameters, the field $(D_PARAM exceptionFuncIdx) is set;
      * otherwise it's -1.
@@ -1765,7 +1750,7 @@ private auto visitImpl(bool Strict, VariantType, Delegate...)(VariantType varian
         foreach(tidx, T; AllowedTypes)
         {
             bool added = false;
-            foreach(dgidx, dg; Delegate)
+            foreach(dgidx, dg; Handler)
             {
                 // Handle normal function objects
                 static if (isSomeFunction!dg)
@@ -1807,15 +1792,15 @@ private auto visitImpl(bool Strict, VariantType, Delegate...)(VariantType varian
         return result;
     }
 
-    enum DelegateOverloadMap = visitGetOverloadMap();
+    enum HandlerOverloadMap = visitGetOverloadMap();
 
     if (!variant.hasValue())
     {
-        // Call the exception function. The DelegateOverloadMap
+        // Call the exception function. The HandlerOverloadMap
         // will have its exceptionFuncIdx field set to value != -1 if an
         // exception function has been specified; otherwise we just through an exception.
-        static if (DelegateOverloadMap.exceptionFuncIdx != -1)
-            return Delegate[ DelegateOverloadMap.exceptionFuncIdx ]();
+        static if (HandlerOverloadMap.exceptionFuncIdx != -1)
+            return Handler[ HandlerOverloadMap.exceptionFuncIdx ]();
         else
             throw new VariantException("variant must hold a value before being visited.");
     }
@@ -1824,7 +1809,7 @@ private auto visitImpl(bool Strict, VariantType, Delegate...)(VariantType varian
     {
         if (T* ptr = variant.peek!T())
         {
-            enum dgIdx = DelegateOverloadMap.indices[idx];
+            enum dgIdx = HandlerOverloadMap.indices[idx];
 
             static if (dgIdx == -1)
             {
@@ -1832,15 +1817,15 @@ private auto visitImpl(bool Strict, VariantType, Delegate...)(VariantType varian
                     static assert(false, "overload for type '" ~ T.stringof ~ "' hasn't been specified");
                 else
                 {
-                    static if (DelegateOverloadMap.exceptionFuncIdx != -1)
-                        return Delegate[ DelegateOverloadMap.exceptionFuncIdx ]();
+                    static if (HandlerOverloadMap.exceptionFuncIdx != -1)
+                        return Handler[ HandlerOverloadMap.exceptionFuncIdx ]();
                     else
                         throw new VariantException("variant holds value of type '" ~ T.stringof ~ "' but no visitor has been provided");
                 }
             }
             else
             {
-                return Delegate[ dgIdx ](*ptr);
+                return Handler[ dgIdx ](*ptr);
             }
         }
     }
