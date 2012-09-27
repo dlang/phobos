@@ -1556,19 +1556,19 @@ unittest
  *
  *   variant = 10;
  *   assert(variant.visit!((string s) => cast(int)s.length,
- *                         (int i)    => i)
- *                         == 10)();
+ *                         (int i)    => i)()
+ *                         == 10);
  *   variant = "string";
  *   assert(variant.visit!((int i) => return i,
- *                         (string s) => cast(int)s.length)
- *                         == 6)();
+ *                         (string s) => cast(int)s.length)()
+ *                         == 6);
  *
  *   // Error function usage
  *   Algebraic!(int, string) emptyVar;
  *   assert(variant.visit!((string s) => cast(int)s.length,
  *                         (int i)    => i,
- *                         () => -1)
- *                         == -1)();
+ *                         () => -1)()
+ *                         == -1);
  * ----------------------
  * Returns: The return type of applyVisitor is deduced from the visiting functions and must be
  * the same accross all overloads.
