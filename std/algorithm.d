@@ -873,37 +873,51 @@ Fills a range with a value.
 Example:
 ----
 int[] a = [ 1, 2, 3, 4 ];
-fill(a, 5);
+a.fill(5);
 assert(a == [ 5, 5, 5, 5 ]);
 ----
+
+Return:
+Nothing.
+
+If $(D range) uses reference semantics and models a $(D RandomAccessRange)
+with $(D hasLength), it will not be modified. Otherwise, $(D fill) will empty
+$(D range) with successive calls to $(D popFront).
  */
 void fill(Range, Value)(Range range, Value filler)
-if (isInputRange!Range && is(typeof(range.front = filler)))
+    if (isInputRange!Range && is(typeof(range.front = filler)))
 {
     alias ElementType!Range T;
-    static if (hasElaborateCopyConstructor!T || !isDynamicArray!Range)
+
+    static if (isArray!Range && is(T == Unqual!Value))
     {
-        for (; !range.empty; range.popFront())
+        //Raw array, opSliceAssign will work just fine.
+        range[] = filler;
+    }
+    else static if (isArray!Range && isAssignable!(T, T))
+    {
+        // Special case for @@@ER@@@ 8638: Slice assign only works with same type.
+        // To bypass this, we create a first object of type T, then assign it...
+        // ...Provided the precondition that T is self assignable
+        if (range.empty) return;
+        range.front = filler;
+        range[1 .. $] = range.front;
+    }
+    else static if (isRandomAccessRange!Range && hasLength!Range)
+    {
+        //This case is to avoid emptying range
+        auto len = range.length;
+        for( typeof(len) i ; i < len ; ++i )
         {
-            range.front = filler;
+            range[i] = filler;
         }
     }
     else
     {
-        if (range.empty) return;
-        // Range is a dynamic array of bald values, just fill memory
-        // Can't use memcpy or memmove coz ranges overlap
-        range.front = filler;
-        auto bytesToFill = T.sizeof * (range.length - 1);
-        auto bytesFilled = T.sizeof;
-        while (bytesToFill)
+        //generic case
+        for ( ; !range.empty; range.popFront() )
         {
-            auto fillNow = min(bytesToFill, bytesFilled);
-            memcpy(cast(void*) range.ptr + bytesFilled,
-                    cast(void*) range.ptr,
-                  fillNow);
-            bytesToFill -= fillNow;
-            bytesFilled += fillNow;
+            range.front = filler;
         }
     }
 }
@@ -933,6 +947,34 @@ unittest
     foreach(value;range.arr)
     	assert(value == filler);
 }
+version(unittest)
+{
+    //ER8638_1 IS_NOT self assignable
+    struct ER8638_1
+    {
+        void opAssign(int){}
+    }
+
+    //ER8638_1 IS self assignable
+    struct ER8638_2
+    {
+        void opAssign(ER8638_2){}
+        void opAssign(int){}
+    }
+}
+unittest
+{
+    auto er8638_1 = new ER8638_1[](10);
+    auto er8638_2 = new ER8638_2[](10);
+    er8638_1.fill(5); //generic case
+    er8638_2.fill(5); //fast special case
+}
+unittest
+{
+    int[] a = [1, 2, 3];
+    immutable(int) b = 0;
+    assert(__traits(compiles, a.fill(b))); 
+}
 
 /**
 Fills $(D range) with a pattern copied from $(D filler). The length of
@@ -946,58 +988,69 @@ int[] b = [ 8, 9 ];
 fill(a, b);
 assert(a == [ 8, 9, 8, 9, 8 ]);
 ----
+
+Return:
+Nothing.
+
+If $(D range) uses reference semantics and models a $(D RandomAccessRange)
+with $(D hasLength), it will not be modified. Otherwise, $(D fill) with empty
+$(D range) with successive calls to $(D popFront).
+
+If $(D filler) uses reference semantics, $(D fill) will empty it with
+with successive calls to $(D popFront).
  */
 void fill(Range1, Range2)(Range1 range, Range2 filler)
     if (isInputRange!Range1
         && (isForwardRange!Range2
             || (isInputRange!Range2 && isInfinite!Range2))
-        && is(typeof(Range1.init.front = Range2.init.front)))
+        && is(typeof(range.front = filler.front)))
 {
+    alias ElementType!Range1 T1;
+    alias ElementType!Range2 T2;
+
     static if(isInfinite!Range2)
     {
-        //Range2 is infinite, no need for bounds checking or saving
-        static if(hasSlicing!Range2 && hasLength!Range1
-            && is(typeof(filler[0 .. range.length])))
+        static if (isRandomAccessRange!Range1 && hasLength!Range1)
         {
-            copy(filler[0..range.length], range);
+            //range is RA with length, so don't modify
+            auto len = range.length, i = 0;
+            for( ; i < len ; ++i, filler.popFront() )
+               range[i] = filler.front;
         }
         else
         {
-            //manual feed
-            for ( ; !range.empty; range.popFront(), filler.popFront())
-            {
+            //shrink range
+            for ( ; !range.empty; range.popFront(), filler.popFront() )
                 range.front = filler.front;
-            }
         }
     }
     else
     {
         enforce(!filler.empty, "Cannot fill range with an empty filler");
 
-        static if(hasLength!Range1 && hasLength!Range2
-            && is(typeof(range.length > filler.length)))
+        static if (isRandomAccessRange!Range1 && hasLength!Range1)
         {
-            //Case we have access to length
-            auto len = filler.length;
-            //Start by bulk copies
-            for( ; range.length > len ; )
+            static if (isArray!Range1 && isArray!Range2)
             {
-                range = copy(filler.save, range);
-            }
-
-            //and finally fill the partial range. No need to save here.
-            static if (hasSlicing!Range2 && is(typeof(filler[0 .. range.length])))
-            {
-                //use a quick copy
-                auto len2 = range.length;
-                range = copy(filler[0 .. len2], range);
+                auto len = filler.length;
+                //Arrays! use optimized copy. Don't fret about references
+                //Start by bulk copies
+                for( ; range.length > len ; )
+                {
+                    range = copy(filler, range);
+                }
+                //and fill the remaining partial range.
+                copy(filler[0 .. range.length], range);
             }
             else
             {
-                //iterate. No need to check filler, it's length is longer than range's
-                for (; !range.empty; range.popFront(), filler.popFront())
+                //Consume filler while writing to range
+                auto bck = filler.save;
+                auto len = range.length, i = 0;
+                for ( ; i < len; ++i, filler.popFront() )
                 {
-                    range.front = filler.front;
+                    if (filler.empty) filler = bck.save;
+                    range[i] = filler.front;
                 }
             }
         }
@@ -1005,13 +1058,23 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
         {
             //Most basic case.
             auto bck = filler.save;
-            for (; !range.empty; range.popFront(), filler.popFront())
+            for ( ; !range.empty; range.popFront(), filler.popFront() )
             {
                 if (filler.empty) filler = bck.save;
                 range.front = filler.front;
             }
         }
     }
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    int[] a = [ 1, 2, 3, 4, 5 ];
+    int[] b = [1, 2];
+    fill(a, b);
+    assert(a == [ 1, 2, 1, 2, 1 ]);
 }
 
 unittest
@@ -5899,49 +5962,84 @@ auto c = copy(filter!("(a & 1) == 1")(a), b);
 assert(b[0 .. $ - c.length] == [ 1, 5, 9, 1 ]);
 ----
 
+Return:
+The unfilled part of $(D target) is returned.
+
+If $(D target) uses reference semantics and models a $(D RandomAccessRange)
+with $(D hasSlicing) $(D hasLength), it will not be modified. Otherwise,
+$(D copy) with empty $(D range) with successive calls to $(D popFront).
+
+if $(D source) uses reference semantics, $(D copy) will empty $(D source)
+with successive calls to $(D popFront);
  */
 Range2 copy(Range1, Range2)(Range1 source, Range2 target)
 if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 {
+    alias ElementType!Range1 T1;
+    static if (isInputRange!Range2)
+        alias ElementType!Range2 T2;
 
-    static Range2 genericImpl(Range1 source, Range2 target)
+    static if (isRandomAccessRange!Range2 && hasSlicing!Range2 && hasLength!Range2)
     {
-        for (; !source.empty; source.popFront())
+        //target is RA and has length/slicing, so it should not be advanced
+
+        auto len = target.length;
+        static if (hasLength!Range1)
+            enforce(len >= source.length, "Cannot copy a source array into a smaller target array.");
+
+        //In the case of Array to Array copy, we can have a massive optimization opportunity
+        static if (isArray!Range1 && isArray!Range2 && is(T2 == Unqual!T1))
         {
-            put(target, source.front);
-        }
+            auto overlaps = !(source.ptr + source.length <= target.ptr ||
+                            target.ptr + target.length <= source.ptr);
 
-        return target;
-    }
-
-    static if (isArray!Range1 && isArray!Range2 &&
-               is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
-    {
-        immutable overlaps =
-            (source.ptr >= target.ptr &&
-             source.ptr < target.ptr + target.length) ||
-            (target.ptr >= source.ptr &&
-             target.ptr < source.ptr + source.length);
-
-        if (overlaps)
-        {
-            return genericImpl(source, target);
+            auto len2 = source.length;
+            if(overlaps)
+            {
+                size_t step = abs(source.ptr - target.ptr);
+                if(step > 2) //Note: Built-in opSliceAssign is pretty good at deciding the best
+                             //implementation depending on the length of the slice.
+                             //_OUR_ only performance consideration is the actual cost of the iteration itself,
+                             //Which will be quite high when step == 1
+                {
+                    size_t low = 0;
+                    for( ; low + step < len2 ; low += step)
+                    {
+                        target[low .. low + step] = source[low .. low + step];
+                    }
+                    target[low .. len2] = source[low .. len2];
+                }
+                else if(step > 0)
+                {
+                    foreach( i ; 0..len2 )
+                        target[i] = source[i];
+                }
+                //else do nothing 
+            }
+            else
+            {
+                target[0..len2] = source[];
+            }
+            return target.drop(len2); //slice to end. hasSlicing so cheap
         }
         else
         {
-            // Array specialization.  This uses optimized memory copying
-            // routines under the hood and is about 10-20x faster than the
-            // generic implementation.
-            enforce(target.length >= source.length,
-                "Cannot copy a source array into a smaller target array.");
-            target[0..source.length] = source;
-
-            return target[source.length..$];
+            //Not arrays, just copy source into target, one by one.
+            //Use RA indexing to avoid advancing target
+            typeof(target.length) i;
+            for( ; !source.empty ; ++i, source.popFront() )
+            {
+                target[i] = source.front;
+            }
+            return target.drop(i); //slice to end. hasSlicing so cheap
         }
     }
     else
     {
-        return genericImpl(source, target);
+        //Advance both target and source
+        for ( ; !source.empty ; source.popFront() )
+            put(target, source.front);
+        return target;
     }
 }
 
@@ -9062,7 +9160,7 @@ version(unittest)
         return result;
     }
 
-        //Reference type input range
+    //Reference type input range
     private class ReferenceInputRange(T)
     {
         this(Range)(Range r) if (isInputRange!Range) {_payload = array(r);}
