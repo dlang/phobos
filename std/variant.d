@@ -813,6 +813,8 @@ public:
                 result = mixin("get!(ulong) " ~ op ~ " other.get!(ulong)");
             else if (convertsTo!(long) && other.convertsTo!(long))
                 result = mixin("get!(long) " ~ op ~ " other.get!(long)");
+            else if (convertsTo!(float) && other.convertsTo!(float))
+                result = mixin("get!(float) " ~ op ~ " other.get!(float)");
             else if (convertsTo!(double) && other.convertsTo!(double))
                 result = mixin("get!(double) " ~ op ~ " other.get!(double)");
             else
@@ -829,6 +831,8 @@ public:
                 result = mixin("get!(ulong) " ~ op ~ " other");
             else if (is(typeof(T.max) : long) && T.min < 0 && convertsTo!(long))
                 result = mixin("get!(long) " ~ op ~ " other");
+            else if (is(T : float) && convertsTo!(float))
+                result = mixin("get!(float) " ~ op ~ " other");
             else if (is(T : double) && convertsTo!(double))
                 result = mixin("get!(double) " ~ op ~ " other");
             else
