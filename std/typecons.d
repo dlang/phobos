@@ -416,11 +416,9 @@ public:
    must be implicitly assignable to the respective element of the
    target.
  */
-    this(U)(U another) if (isTuple!U)
+    this(U)(U another)
+        if (isTuple!U && isCompatibleTuples!(typeof(this), U, "="))
     {
-        static assert(field.length == another.field.length,
-                      "Length mismatch in attempting to construct a "
-                      ~ typeof(this).stringof ~" with a "~ U.stringof);
         foreach (i, T; Types)
         {
             field[i] = another.field[i];
@@ -689,6 +687,14 @@ unittest
             assert(0 <= a[0] && a[0] < 10);
             assert(a[1] == 0);
         }
+    }
+    // Construction with compatible elements
+    {
+        auto t1 = Tuple!(int, double)(1, 1);
+
+        // 8702
+        auto t8702a = tuple(tuple(1));
+        auto t8702b = Tuple!(Tuple!(int))(Tuple!(int)(1));
     }
     // Construction with compatible tuple
     {
