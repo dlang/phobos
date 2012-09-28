@@ -2552,14 +2552,15 @@ if (isInputRange!(Unqual!Range)
 
     @property auto ref front()
     {
-        assert(_maxAvailable > 0,
-                "Attempting to fetch the front of an empty " ~ Take.stringof);
+        assert(!empty,
+            "Attempting to fetch the front of an empty "
+            ~ Take.stringof);
         return source.front;
     }
 
     void popFront()
     {
-        assert(_maxAvailable > 0,
+        assert(!empty,
             "Attempting to popFront() past the end of a "
             ~ Take.stringof);
         source.popFront();
@@ -2575,7 +2576,9 @@ if (isInputRange!(Unqual!Range)
     static if (hasAssignableElements!R)
         @property auto front(ElementType!R v)
         {
-            assert(_maxAvailable);
+            assert(!empty,
+                "Attempting to assign to the front of an empty "
+                ~ Take.stringof);
             // This has to return auto instead of void because of Bug 4706.
             source.front = v;
         }
@@ -2584,7 +2587,9 @@ if (isInputRange!(Unqual!Range)
     {
         auto moveFront()
         {
-            assert(_maxAvailable);
+            assert(!empty,
+                "Attempting to move the front of an empty "
+                ~ Take.stringof);
             return .moveFront(source);
         }
     }
@@ -2612,7 +2617,7 @@ if (isInputRange!(Unqual!Range)
     {
         void popBack()
         {
-            assert(_maxAvailable > 0,
+            assert(!empty,
                 "Attempting to popBack() past the beginning of a "
                 ~ Take.stringof);
             --_maxAvailable;
@@ -2620,13 +2625,15 @@ if (isInputRange!(Unqual!Range)
 
         @property auto ref back()
         {
-            assert(_maxAvailable);
+            assert(!empty,
+                "Attempting to fetch the back of an empty "
+                ~ Take.stringof);
             return source[this.length - 1];
         }
 
         auto ref opIndex(size_t index)
         {
-            assert(index < this.length,
+            assert(index < length,
                 "Attempting to index out of the bounds of a "
                 ~ Take.stringof);
             return source[index];
@@ -2637,15 +2644,17 @@ if (isInputRange!(Unqual!Range)
             auto back(ElementType!R v)
             {
                 // This has to return auto instead of void because of Bug 4706.
-                assert(_maxAvailable);
+                assert(!empty, 
+                    "Attempting to assign to the back of an empty "
+                    ~ Take.stringof);
                 source[this.length - 1] = v;
             }
 
             void opIndexAssign(ElementType!R v, size_t index)
             {
-                assert(index < this.length,
-                        "Attempting to index out of the bounds of a "
-                        ~ Take.stringof);
+                assert(index < length,
+                    "Attempting to index out of the bounds of a "
+                    ~ Take.stringof);
                 source[index] = v;
             }
         }
@@ -2654,13 +2663,15 @@ if (isInputRange!(Unqual!Range)
         {
             auto moveBack()
             {
-                assert(_maxAvailable);
+                assert(!empty, 
+                    "Attempting to move the back of an empty "
+                    ~ Take.stringof);
                 return .moveAt(source, this.length - 1);
             }
 
             auto moveAt(size_t index)
             {
-                assert(index < this.length,
+                assert(index < length,
                     "Attempting to index out of the bounds of a "
                     ~ Take.stringof);
                 return .moveAt(source, index);
