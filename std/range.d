@@ -4228,6 +4228,8 @@ private string lockstepApply(Ranges...)(bool withIndex) if (Ranges.length > 0)
    exception.  $(D s) may not be $(D StoppingPolicy.longest), and passing this
    will throw an exception.
 
+   By default StoppingPolicy is set to $(D StoppingPolicy.shortest).
+
    BUGS:  If a range does not offer lvalue access, but $(D ref) is used in the
    $(D foreach) loop, it will be silently accepted but any modifications
    to the variable will not be propagated to the underlying range.
