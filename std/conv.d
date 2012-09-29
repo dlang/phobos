@@ -134,7 +134,7 @@ class ConvOverflowException : ConvException
     }
 }
 
-/* **************************************************************
+/**
 
 The $(D_PARAM to) family of functions converts a value from type
 $(D_PARAM Source) to type $(D_PARAM Target). The source type is
