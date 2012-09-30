@@ -8394,11 +8394,8 @@ unittest
     assert(canFind([0, 1, 2, 3], [1, 3], [2, 4]) == 0);
 }
 
-/**
-Forwards to $(D any) for backwards compatibility.
-
-$(RED Scheduled for deprecation in September 2012. Please use $(D any) instead.)
-*/
+//Explictly Undocumented. Do not use. It may be deprecated in the future.
+//Use any instead.
 bool canFind(alias pred, Range)(Range range)
 {
     return any!pred(range);
@@ -8420,7 +8417,6 @@ unittest
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto a = [ 1, 2, 0, 4 ];
-    assert(canFind!"a == 2"(a));
     assert(any!"a == 2"(a));
 }
 
