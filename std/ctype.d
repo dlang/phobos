@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
- * $(RED Deprecated. It will be removed in September 2012. Please use
+ * $(RED Deprecated. It will be removed in March 2013. Please use
  *  $(LINK2 std_ascii.html, std.ascii) instead.)
  *
  * Simple ASCII character classification functions.
@@ -22,7 +22,7 @@ module std.ctype;
 import std.ascii;
 
 pragma(msg, "Notice: As of Phobos 2.058, std.ctype has been " ~
-            "deprecated. It will be removed in September 2012. " ~
+            "deprecated. It will be removed in March 2013. " ~
             "Please use std.ascii instead.");
 
 deprecated:

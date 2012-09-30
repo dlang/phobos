@@ -121,6 +121,9 @@ D language compiler. Also, check out the
 
 	<dl>
 
+	<dt><a href="std_ascii.html"><b>std.base64</b></a>
+	<dd>Functions that operate on ASCII characters.
+
 	<dt><a href="std_base64.html"><b>std.base64</b></a>
 	<dd>Encode/decode base64 format.
 
@@ -139,9 +142,6 @@ $(V1
 
 	<dt><a href="std_conv.html"><b>std.conv</b></a>
 	<dd>Conversion of strings to integers.
-
-	<dt><a href="std_ctype.html"><b>std.ctype</b></a>
-	<dd>Simple character classification
 
 	<dt><a href="std_date.html"><b>std.date</b></a>
 	<dd>Date and time functions. Support locales.
@@ -217,6 +217,9 @@ $(V1
 
 	<!--dt><a href="std_thread.html"><b>std.thread</b></a>
 	<dd>One per thread. Operations to do on a thread.-->
+
+	<dt><a href="std_uni.html"><b>std.base64</b></a>
+	<dd>Functions that operate on Unicode characters.
 
 	<dt><a href="std_uri.html"><b>std.uri</b></a>
 	<dd>Encode and decode Uniform Resource Identifiers (URIs).
