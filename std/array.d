@@ -1030,7 +1030,7 @@ unittest
         foreach (j, U; TypeTuple!(char, wchar, dchar
             , immutable(char), immutable(wchar), immutable(dchar)))
         {
-            testStr!(T[], U[]);
+            testStr!(T[], U[])();
         }
 
     }    
