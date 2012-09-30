@@ -18,7 +18,6 @@
  * Status:
  * The semantics and names of feqrel and approxEqual will be revised.
  *
- * Source: $(PHOBOSSRC std/_math.d)
  * Macros:
  *      WIKI = Phobos/StdMath
  *
