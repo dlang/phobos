@@ -828,6 +828,19 @@ unittest
 }
 +/
 
+private void copyBackwards(T)(T[] src, T[] dest)
+{
+    import core.stdc.string;    
+    assert(src.length == dest.length);
+    if(!__ctfe)
+        memmove(dest.ptr, src.ptr, src.length * T.sizeof);
+    else
+    {
+        foreach_reverse(i, v; src)
+            dest[i] = v;
+    }
+}
+
 /++
     Inserts $(D stuff) (which must be an input range or any number of
     implicitly convertible items) in $(D array) at position $(D pos).
@@ -846,7 +859,7 @@ assert(a == [ 1, 2, 1, 10, 11, 2, 3, 4]);
  +/
 void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
     if(!isSomeString!(T[]) 
-        && allSatisfy!(isInputRangeOrConvertible!T, U))
+        && allSatisfy!(isInputRangeOrConvertible!T, U) && U.length > 0)
 {
     static if(allSatisfy!(isInputRangeWithLengthOrConvertible!T, U))
     {
@@ -860,17 +873,19 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
                 to_insert += stuff[i].length;
         }
         array.length += to_insert;
+        copyBackwards(array[pos..oldLen], array[pos+to_insert..$]);
         auto ptr = array.ptr + pos;
-        import core.stdc.string;
-        memmove(ptr + to_insert, ptr, (oldLen - pos) * T.sizeof);
-
         foreach (i, E; U)
         {
             static if (is(E : T)) //ditto
+            {
                 emplace(ptr++, stuff[i]);
+            }
             else
+            {
                 foreach (j, v; stuff[i])
                     emplace(ptr++, v);
+            }
         }
     }
     else
@@ -879,7 +894,7 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
         // then the array that can be arbitrary big        
         // TODO: needs a better implemenation as there is no need to build an _array_
         // a singly-linked list of memory blocks (rope, etc.) will do
-        auto app = appender!(T[]); 
+        auto app = appender!(T[])(); 
         foreach (i, E; U)
             app.put(stuff[i]);
         insertInPlace(array, pos, app.data);
@@ -932,10 +947,8 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
         foreach (i, E; U)
             to_insert += codeLength!T(stuff[i]);
         array.length += to_insert;
+        copyBackwards(array[pos..oldLen], array[pos+to_insert..$]);
         auto ptr = array.ptr + pos;
-        import core.stdc.string;
-        memmove(ptr + to_insert, ptr, (oldLen - pos) * T.sizeof);
-
         foreach (i, E; U)
         {
             static if(is(E : dchar))
@@ -952,7 +965,7 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
     }
     else
     {// immutable/const, just construct a new array
-        auto app = appender!(T[]);
+        auto app = appender!(T[])();
         app.put(array[0..pos]);
         foreach (i, E; U)
             app.put(stuff[i]);
@@ -1086,6 +1099,49 @@ unittest
     assert(testVar("flipflop"d.idup, 4, '_',
                     "xyz"w, '\U00010143', '_', "abc"d, "__",
                     "flip_xyz\U00010143_abc__flop"));
+}
+
+unittest
+{// isnertInPlace interop with postblit
+    struct Int
+    {
+        int* payload;
+        this(int k)
+        { 
+            payload = new int; 
+            *payload = k;
+        }
+        this(this)
+        {
+            int* np = new int;
+            *np = *payload;
+            payload = np;
+        }
+        ~this()
+        {
+            *payload = 0; //'destroy' it
+        }
+        @property int getPayload(){ return *payload; }        
+        alias getPayload this;
+    }
+
+    Int[] arr;// = [Int(1), Int(4), Int(5)]; //@@BUG 8740
+    arr ~= [Int(1), Int(4), Int(5)];
+    assert(arr[0] == 1);
+    insertInPlace(arr, 1, Int(2), Int(3));
+    assert(equal(arr, [1, 2, 3, 4, 5]));  //check it works with postblit  
+}
+
+unittest
+{
+    static int[] testCTFE()
+    {
+        int[] a = [1, 2];
+        a.insertInPlace(2, 3);
+        a.insertInPlace(0, -1, 0);
+        return a;
+    }
+    static assert(testCTFE() == [-1, 0, 1, 2, 3]);
 }
 
 unittest // bugzilla 6874
