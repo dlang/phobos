@@ -1375,14 +1375,19 @@ T toImpl(T, S)(S value)
     if (isAssociativeArray!S &&
         isAssociativeArray!T && !is(T == enum))
 {
-    alias typeof(T.keys[0]) K2;
-    alias typeof(T.values[0]) V2;
-    T result;
+    //While we are "building" the AA, we need to unqualify, and only re-qualify at the end
+    alias KeyType!T          K2;
+    alias Unqual!(KeyType!T) MK2;   //Mutable key
+    alias ValueType!T          V2;
+    alias Unqual!(ValueType!T) MV2; //Mutable Value
+    Unqual!T result;
     foreach (k1, v1; value)
     {
-        result[to!K2(k1)] = to!V2(v1);
+        K2 k2 = cast(K2) to!MK2(k1); //Call to with mutable type, but store in non mutable
+        MV2 mv2 = to!MV2(v1); //Value must be kept mutable for insertion
+        result[k2] = mv2;
     }
-    return result;
+    return cast(T)result;
 }
 
 unittest
@@ -1393,6 +1398,17 @@ unittest
     a["1"] = 2;
     auto b = to!(double[dstring])(a);
     assert(b["0"d] == 1 && b["1"d] == 2);
+}
+unittest //8709, from doc
+{
+    int[string][double[int[]]] a;
+    auto b = to!(short[wstring][string[double[]]])(a);
+    auto c = to!(immutable(short[immutable(wstring)])[immutable(string[double[]])])(a); //extra difficulty
+}
+unittest //Extra 8709 constness sanity check for non-AA with const-non-AA key/value types
+{
+    int[][int[]] a;
+    auto c = to!(immutable(short[])[immutable(short[])])(a);
 }
 
 private void testIntegralToFloating(Integral, Floating)()
