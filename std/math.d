@@ -86,6 +86,71 @@ else version(D_InlineAsm_X86_64){
 }
 
 
+version(unittest)
+{
+    import core.stdc.stdio;
+
+    static if(real.sizeof > double.sizeof)
+        enum uint useDigits = 16;
+    else
+        enum uint useDigits = 15;
+
+    /******************************************
+     * Compare floating point numbers to n decimal digits of precision.
+     * Returns:
+     *	1	match
+     *	0	nomatch
+     */
+
+    private bool equalsDigit(real x, real y, uint ndigits)
+    {
+        if (signbit(x) != signbit(y))
+            return 0;
+
+        if (isinf(x) && isinf(y))
+            return 1;
+        if (isinf(x) || isinf(y))
+            return 0;
+
+        if (isnan(x) && isnan(y))
+            return 1;
+        if (isnan(x) || isnan(y))
+            return 0;
+
+        char bufx[30];
+        char bufy[30];
+        assert(ndigits < bufx.length);
+
+        int ix;
+        int iy;
+        ix = sprintf(bufx.ptr, "%.*Lg", ndigits, x);
+        assert(ix < bufx.length && ix > 0);
+        iy = sprintf(bufy.ptr, "%.*Lg", ndigits, y);
+        assert(ix < bufy.length && ix > 0);
+
+        return bufx[0 .. ix] == bufy[0 .. iy];
+    }
+
+    /****************************************
+     * Simple function to compare two floating point values
+     * to a specified precision.
+     * Returns:
+     *	true	match
+     *	false	nomatch
+     */
+
+    private bool mfeq(real x, real y, real precision)
+    {
+        if (x == y)
+            return true;
+        if (isnan(x))
+            return isnan(y);
+        if (isnan(y))
+            return false;
+        return fabs(x - y) <= precision;
+    }
+}
+
 
 
 private:
@@ -529,6 +594,11 @@ unittest
     assert(isIdentical( tan(NaN(0x0123L)), NaN(0x0123L) ));
 }
 
+unittest
+{
+    assert(equalsDigit(tan(PI / 3), std.math.sqrt(3.0), useDigits));
+}
+
 /***************
  * Calculates the arc cosine of x,
  * returning a value ranging from 0 to $(PI).
@@ -550,6 +620,11 @@ double acos(double x) @safe pure nothrow { return acos(cast(real)x); }
 /// ditto
 float acos(float x) @safe pure nothrow  { return acos(cast(real)x); }
 
+unittest
+{
+    assert(equalsDigit(acos(0.5), std.math.PI / 3, useDigits));
+}
+
 /***************
  * Calculates the arc sine of x,
  * returning a value ranging from -$(PI)/2 to $(PI)/2.
@@ -570,6 +645,11 @@ double asin(double x) @safe pure nothrow { return asin(cast(real)x); }
 /// ditto
 float asin(float x) @safe pure nothrow  { return asin(cast(real)x); }
 
+unittest
+{
+    assert(equalsDigit(asin(0.5), PI / 6, useDigits));
+}
+
 /***************
  * Calculates the arc tangent of x,
  * returning a value ranging from -$(PI)/2 to $(PI)/2.
@@ -585,6 +665,11 @@ real atan(real x) @safe pure nothrow { return atan2(x, 1.0L); }
 double atan(double x) @safe pure nothrow { return atan(cast(real)x); }
 /// ditto
 float atan(float x)  @safe pure nothrow { return atan(cast(real)x); }
+
+unittest
+{
+    assert(equalsDigit(atan(std.math.sqrt(3.0)), PI / 3, useDigits));
+}
 
 /***************
  * Calculates the arc tangent of y / x,
@@ -635,6 +720,11 @@ float atan2(float y, float x) @safe pure nothrow
     return atan2(cast(real)y, cast(real)x);
 }
 
+unittest
+{
+    assert(equalsDigit(atan2(1.0L, std.math.sqrt(3.0L)), PI / 6, useDigits));
+}
+
 /***********************************
  * Calculates the hyperbolic cosine of x.
  *
@@ -655,6 +745,10 @@ double cosh(double x) @safe pure nothrow { return cosh(cast(real)x); }
 /// ditto
 float cosh(float x) @safe pure nothrow  { return cosh(cast(real)x); }
 
+unittest
+{
+    assert(equalsDigit(cosh(1.0), (E + 1.0 / E) / 2, useDigits));
+}
 
 /***********************************
  * Calculates the hyperbolic sine of x.
@@ -682,6 +776,10 @@ double sinh(double x) @safe pure nothrow { return sinh(cast(real)x); }
 /// ditto
 float sinh(float x) @safe pure nothrow  { return sinh(cast(real)x); }
 
+unittest
+{
+    assert(equalsDigit(sinh(1.0), (E - 1.0 / E) / 2, useDigits));
+}
 
 /***********************************
  * Calculates the hyperbolic tangent of x.
@@ -705,6 +803,11 @@ real tanh(real x) @safe pure nothrow
 double tanh(double x) @safe pure nothrow { return tanh(cast(real)x); }
 /// ditto
 float tanh(float x) @safe pure nothrow { return tanh(cast(real)x); }
+
+unittest
+{
+    assert(equalsDigit(tanh(1.0), sinh(1.0) / cosh(1.0), 15));
+}
 
 package:
 /* Returns cosh(x) + I * sinh(x)
@@ -765,6 +868,8 @@ unittest
     assert(isNaN(acosh(real.nan)));
     assert(acosh(1.0)==0.0);
     assert(acosh(real.infinity) == real.infinity);
+    assert(isNaN(acosh(0.5)));
+    assert(equalsDigit(acosh(cosh(3.0)), 3, useDigits));
 }
 
 /***********************************
@@ -803,6 +908,7 @@ unittest
     assert(asinh(real.infinity) == real.infinity);
     assert(asinh(-real.infinity) == -real.infinity);
     assert(isNaN(asinh(real.nan)));
+    assert(equalsDigit(asinh(sinh(3.0)), 3, useDigits));
 }
 
 /***********************************
@@ -839,6 +945,8 @@ unittest
     assert(isIdentical(atanh(-0.0),-0.0));
     assert(isNaN(atanh(real.nan)));
     assert(isNaN(atanh(-real.infinity)));
+    assert(atanh(0.0) == 0);
+    assert(equalsDigit(atanh(tanh(0.5L)), 0.5, useDigits));
 }
 
 /*****************************************
@@ -871,6 +979,14 @@ extern (C) real rndtonl(real x);
 float sqrt(float x) @safe pure nothrow;    /* intrinsic */
 double sqrt(double x) @safe pure nothrow;  /* intrinsic */ /// ditto
 real sqrt(real x) @safe pure nothrow;      /* intrinsic */ /// ditto
+
+unittest
+{
+    //ctfe
+    enum ZX80 = sqrt(7.0f);
+    enum ZX81 = sqrt(7.0);
+    enum ZX82 = sqrt(7.0L);
+}
 
 creal sqrt(creal z) @safe pure nothrow
 {
@@ -947,6 +1063,10 @@ double exp(double x) @safe pure nothrow  { return exp(cast(real)x); }
 /// ditto
 float exp(float x)  @safe pure nothrow   { return exp(cast(real)x); }
 
+unittest
+{
+    assert(equalsDigit(exp(3.0), E * E * E, useDigits));
+}
 
 /**
  * Calculates the value of the natural logarithm base (e)
@@ -1296,6 +1416,9 @@ unittest{
     assert(exp2(8.0L) == 256.0);
     assert(exp2(-9.0L)== 1.0L/512.0);
     assert(exp(3.0L) == E*E*E);
+    assert( core.stdc.math.exp2f(0.0f) == 1 );
+    assert( core.stdc.math.exp2 (0.0)  == 1 );
+    assert( core.stdc.math.exp2l(0.0L) == 1 );
 }
 
 unittest
@@ -1557,6 +1680,20 @@ unittest
     }
 }
 
+unittest
+{
+    int exp;
+    real mantissa = frexp(123.456, exp);
+    assert(equalsDigit(mantissa * pow(2.0L, cast(real)exp), 123.456, 19));
+
+    assert(frexp(-real.nan, exp) && exp == int.min);
+    assert(frexp(real.nan, exp) && exp == int.min);
+    assert(frexp(-real.infinity, exp) == -real.infinity && exp == int.min);
+    assert(frexp(real.infinity, exp) == real.infinity && exp == int.max);
+    assert(frexp(-0.0, exp) == -0.0 && exp == 0);
+    assert(frexp(0.0, exp) == 0.0 && exp == 0);
+}
+
 /******************************************
  * Extracts the exponent of x as a signed integral value.
  *
@@ -1592,6 +1729,48 @@ unittest {
     assert(x==-16383);
     assert(ldexp(n, x)==0x1p-16384L);
 
+}
+
+unittest
+{
+    static real vals[][3] =    // value,exp,ldexp
+    [
+    [    0,    0,    0],
+    [    1,    0,    1],
+    [    -1,    0,    -1],
+    [    1,    1,    2],
+    [    123,    10,    125952],
+    [    real.max,    int.max,    real.infinity],
+    [    real.max,    -int.max,    0],
+    [    real.min,    -int.max,    0],
+    ];
+    int i;
+
+    for (i = 0; i < vals.length; i++)
+    {
+        real x = vals[i][0];
+        int exp = cast(int)vals[i][1];
+        real z = vals[i][2];
+        real l = ldexp(x, exp);
+
+        assert(equalsDigit(z, l, 7));
+    }
+}
+
+unittest
+{
+    real r;
+
+    r = ldexp(3.0L, 3);
+    assert(r == 24);
+
+    r = ldexp(cast(real) 3.0, cast(int) 3);
+    assert(r == 24);
+
+    real n = 3.0;
+    int exp = 3;
+    r = ldexp(n, exp);
+    assert(r == 24);
 }
 
 /**************************************
@@ -1689,6 +1868,11 @@ real log2(real x) @safe pure nothrow
         return yl2x(x, 1);
     else
         return core.stdc.math.log2l(x);
+}
+
+unittest
+{
+    assert(equalsDigit(log2(1024), 10, 19));
 }
 
 /*****************************************
@@ -1898,11 +2082,23 @@ unittest
  */
 real ceil(real x)  @trusted nothrow    { return core.stdc.math.ceill(x); }
 
+unittest
+{
+    assert(ceil(+123.456) == +124);
+    assert(ceil(-123.456) == -123);
+}
+
 /**************************************
  * Returns the value of x rounded downward to the next integer
  * (toward negative infinity).
  */
 real floor(real x) @trusted nothrow    { return core.stdc.math.floorl(x); }
+
+unittest
+{
+    assert(floor(+123.456) == +123);
+    assert(floor(-123.456) == -124);
+}
 
 /******************************************
  * Rounds x to the nearest integer value, using the current rounding
@@ -3170,6 +3366,11 @@ unittest
     assert(pow(x, neg3) == 1 / (x * x * x));
 }
 
+unittest
+{
+    assert(equalsDigit(pow(2.0L, 10.0L), 1024, 19));
+}
+
 /** Compute the value of an integer x, raised to the power of a positive
  * integer n.
  *
@@ -4015,4 +4216,68 @@ unittest
     real num = real.infinity;
     assert(num == real.infinity);  // Passes.
     assert(approxEqual(num, real.infinity));  // Fails.
+}
+
+
+unittest
+{
+    float f = sqrt(2.0f);
+    assert(fabs(f * f - 2.0f) < .00001);
+
+    double d = sqrt(2.0);
+    assert(fabs(d * d - 2.0) < .00001);
+
+    real r = sqrt(2.0L);
+    assert(fabs(r * r - 2.0) < .00001);
+}
+
+unittest
+{
+    float f = fabs(-2.0f);
+    assert(f == 2);
+
+    double d = fabs(-2.0);
+    assert(d == 2);
+
+    real r = fabs(-2.0L);
+    assert(r == 2);
+}
+
+
+unittest
+{
+    float f = sin(-2.0f);
+    assert(fabs(f - -0.909297f) < .00001);
+
+    double d = sin(-2.0);
+    assert(fabs(d - -0.909297f) < .00001);
+
+    real r = sin(-2.0L);
+    assert(fabs(r - -0.909297f) < .00001);
+}
+
+
+unittest
+{
+    float f = cos(-2.0f);
+    assert(fabs(f - -0.416147f) < .00001);
+
+    double d = cos(-2.0);
+    assert(fabs(d - -0.416147f) < .00001);
+
+    real r = cos(-2.0L);
+    assert(fabs(r - -0.416147f) < .00001);
+}
+
+
+unittest
+{
+    float f = tan(-2.0f);
+    assert(fabs(f - 2.18504f) < .00001);
+
+    double d = tan(-2.0);
+    assert(fabs(d - 2.18504f) < .00001);
+
+    real r = tan(-2.0L);
+    assert(fabs(r - 2.18504f) < .00001);
 }
