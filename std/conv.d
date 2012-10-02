@@ -68,7 +68,7 @@ private void parseError(lazy string msg, string fn = __FILE__, size_t ln = __LIN
 
 private void parseCheck(alias source)(dchar c, string fn = __FILE__, size_t ln = __LINE__)
 {
-    if(source.empty) parseError(text("unexpected end of input when expecting", "\"", c, "\""));
+    if (source.empty) parseError(text("unexpected end of input when expecting", "\"", c, "\""));
     if (source.front != c)
         parseError(text("\"", c, "\" is missing"), fn, ln);
     source.popFront();
@@ -2605,7 +2605,7 @@ Target parse(Target, Source)(ref Source s)
     if (isSomeString!Source && !is(Source == enum) &&
         staticIndexOf!(Unqual!Target, dchar, Unqual!(ElementEncodingType!Source)) >= 0)
 {
-    if(s.empty) convError!(Source, Target)(s);
+    if (s.empty) convError!(Source, Target)(s);
     static if (is(Unqual!Target == dchar))
     {
         Target result = s.front;
@@ -2642,7 +2642,7 @@ Target parse(Target, Source)(ref Source s)
     if (!isSomeString!Source && isInputRange!Source && isSomeChar!(ElementType!Source) &&
         isSomeChar!Target && Target.sizeof >= ElementType!Source.sizeof && !is(Target == enum))
 {
-    if(s.empty) convError!(Source, Target)(s);
+    if (s.empty) convError!(Source, Target)(s);
     Target result = s.front;
     s.popFront();
     return result;
@@ -2732,12 +2732,12 @@ unittest
 //Used internally by parse Array/AA, to remove ascii whites
 private void skipWS(R)(ref R r)
 {
-    static if(isSomeString!R)
+    static if (isSomeString!R)
     {
         //Implementation inspired from stripLeft.
         foreach(i, dchar c; r)
         {
-            if(!std.ascii.isWhite(c))
+            if (!std.ascii.isWhite(c))
             {
                 r = r[i .. $];
                 return;
@@ -2766,7 +2766,7 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
 
     parseCheck!s(lbracket);
     skipWS(s);
-    if(s.empty) convError!(Source, Target)(s);
+    if (s.empty) convError!(Source, Target)(s);
     if (s.front == rbracket)
     {
         s.popFront();
@@ -2776,7 +2776,7 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     {
         result ~= parseElement!(ElementType!Target)(s);
         skipWS(s);
-        if(s.empty) convError!(Source, Target)(s);
+        if (s.empty) convError!(Source, Target)(s);
         if (s.front != comma)
             break;
     }
@@ -2839,7 +2839,7 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
 
     parseCheck!s(lbracket);
     skipWS(s);
-    if(s.empty) convError!(Source, Target)(s);
+    if (s.empty) convError!(Source, Target)(s);
     if (s.front == rbracket)
     {
         static if (result.length != 0)
@@ -2856,7 +2856,7 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
             goto Lmanyerr;
         result[i++] = parseElement!(ElementType!Target)(s);
         skipWS(s);
-        if(s.empty) convError!(Source, Target)(s);
+        if (s.empty) convError!(Source, Target)(s);
         if (s.front != comma)
         {
             if (i != result.length)
@@ -2910,7 +2910,7 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
 
     parseCheck!s(lbracket);
     skipWS(s);
-    if(s.empty) convError!(Source, Target)(s);
+    if (s.empty) convError!(Source, Target)(s);
     if (s.front == rbracket)
     {
         s.popFront();
@@ -2925,7 +2925,7 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
         auto val = parseElement!ValueType(s);
         skipWS(s);
         result[key] = val;
-        if(s.empty) convError!(Source, Target)(s);
+        if (s.empty) convError!(Source, Target)(s);
         if (s.front != comma) break;
     }
     parseCheck!s(rbracket);
@@ -3026,12 +3026,12 @@ Target parseElement(Target, Source)(ref Source s)
     auto result = appender!Target();
 
     // parse array of chars
-    if(s.empty) convError!(Source, Target)(s);
+    if (s.empty) convError!(Source, Target)(s);
     if (s.front == '[')
         return parse!Target(s);
 
     parseCheck!s('\"');
-    if(s.empty) convError!(Source, Target)(s);
+    if (s.empty) convError!(Source, Target)(s);
     if (s.front == '\"')
     {
         s.popFront();
@@ -3066,7 +3066,7 @@ Target parseElement(Target, Source)(ref Source s)
     Target c;
 
     parseCheck!s('\'');
-    if(s.empty) convError!(Source, Target)(s);
+    if (s.empty) convError!(Source, Target)(s);
     if (s.front != '\\')
     {
         c = s.front;
