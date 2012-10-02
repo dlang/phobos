@@ -2916,7 +2916,7 @@ unittest
  * Example:
  * string ss = "123 12.5";
  * int i = parse!int(ss);
- * skipWhite(s);
+ * skipWhite(ss);
  * double d = parse!double(ss);
  *
  * Example:
