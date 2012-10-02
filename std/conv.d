@@ -1681,13 +1681,16 @@ unittest
  * occurred during conversion or if no character of the input
  * was meaningfully converted.
  *
+ * $(D_PARAM parse) will not strip its input of leading whitespaces.
+ * This can be done manually if required with $(D skipWhite).
+ *
  * Example:
 --------------
 string test = "123 \t  76.14";
 auto a = parse!uint(test);
 assert(a == 123);
 assert(test == " \t  76.14"); // parse bumps string
-munch(test, " \t\n\r"); // skip ws
+skipWhite(test); // skip ws
 assert(test == "76.14");
 auto b = parse!double(test);
 assert(b == 76.14);
@@ -2900,6 +2903,74 @@ unittest
     auto s3 = `["aaa":[1], "bbb":[2,3], "ccc":[4,5,6]]`;
     auto aa3 = parse!(int[][string])(s3);
     assert(aa3 == ["aaa":[1], "bbb":[2,3], "ccc":[4,5,6]]);
+}
+
+/**
+ * Strips the leading white spaces off of the Source $(D s).
+ * Unlike $(D std.string.stripLeft), $(D skipWhite) will work on any range of
+ * characters, and takes its arguments and returns by reference.
+ * It is meant as a
+ * convenient way to strip leading white spaces before calling another
+ * $(D parse).
+ *
+ * Example:
+ * string ss = "123 12.5";
+ * int i = parse!int(ss);
+ * skipWhite(ss);
+ * double d = parse!double(ss);
+ *
+ * Example:
+ * string ss = "1 2 3 4 5   ";
+ * int[] arr;
+ * while(!ss.skipWhite().empty)
+ *   arr ~= ss.parse!int());
+ */
+ref Source skipWhite(Source)(ref Source s)
+    if ((isSomeString!Source) ||
+        (isInputRange!Source && isSomeChar!(ElementType!Source)))
+{
+    static if(isSomeString!Source)
+    {
+        s = stripLeft(s);
+    }
+    else
+    {
+        for ( ; !s.empty && std.uni.isWhite(s.front) ; s.popFront())
+            { }
+    }
+    return s;
+}
+
+unittest
+{
+    string ss = "123 12.5";
+    int i = parse!int(ss);
+    skipWhite(ss);
+    double d = parse!double(ss);
+    assert(i == 123);
+    assert(d == 12.5);
+
+    string ss2 = "1 2 3 4 5   ";
+    int[] arr;
+    while(!ss2.skipWhite().empty)
+        arr ~= ss2.parse!int();
+    assert(arr == [1, 2, 3, 4, 5]);
+}
+
+unittest //From ticket 8729
+{
+   auto str = " 123 123 456.7 false";
+
+   auto i = str.skipWhite().parse!int();
+   auto j = str.skipWhite().parse!int(4);
+   auto d = str.skipWhite().parse!double();
+   auto b = str.skipWhite().parse!bool();
+
+   assert(i == 123);
+   assert(j == 27);
+   assert(d == 456.7);
+   assert(b == false);
+   assertThrown!ConvException(parse!double(str));
 }
 
 private dchar parseEscape(Source)(ref Source s)
