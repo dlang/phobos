@@ -1623,20 +1623,6 @@ unittest
     assert(n == 255);
 }
 
-unittest // Unittest for bug 8729
-{
-    assertThrown!ConvException(to!byte  (" 1"));
-    assertThrown!ConvException(to!byte  (" 1", 4));
-    assertThrown!ConvException(to!int   (" 1"));
-    assertThrown!ConvException(to!int   (" 1", 4));
-    assertThrown!ConvException(to!long  (" 1"));
-    assertThrown!ConvException(to!long  (" 1", 4));
-    assertThrown!ConvException(to!double(" 1"));
-    assertThrown!ConvException(to!bool  (" false"));
-    assertThrown!ConvException(to!int   (" "));
-    assertThrown!ConvException(to!int   (""));
-}
-
 /***************************************************************
  Rounded conversion from floating point to integral.
 
@@ -2144,7 +2130,13 @@ Target parse(Target, Source)(ref Source p)
         return new ConvException(text(msg, " for input \"", p, "\"."), fn, ln);
     }
 
-    enforce(!p.empty && !std.uni.isWhite(p.front), bailOut());
+    for (;;)
+    {
+        enforce(!p.empty, bailOut());
+        if (!std.uni.isWhite(p.front))
+            break;
+        p.popFront();
+    }
 
     char sign = 0;                       /* indicating +                 */
     switch (p.front)
@@ -2727,6 +2719,7 @@ unittest
     assert(parse!(const(NullType))(s) is null);
 }
 
+//Used internally by parse Array/AA, to remove ascii whites
 private void skipWS(R)(ref R r)
 {
     static if(isSomeString!R)
@@ -2824,6 +2817,7 @@ unittest
     auto ss = "[ 1 , 2 , 3 ]";
     foreach(i ; 0..ss.length-1)
         assertThrown!ConvException(parse!(int[])(ss[0 .. i]));
+    int[] arr = parse!(int[])(ss);
 }
 
 /// ditto
@@ -2921,6 +2915,7 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
         auto val = parseElement!ValueType(s);
         skipWS(s);
         result[key] = val;
+        if(s.empty) convError!(Source, Target)(s);
         if (s.front != comma) break;
     }
     parseCheck!s(rbracket);
@@ -2943,16 +2938,26 @@ unittest
     assert(aa3 == ["aaa":[1], "bbb":[2,3], "ccc":[4,5,6]]);
 }
 
+unittest
+{
+    //Check proper failure
+    auto ss = "[1:10, 2:20, 3:30]";
+    foreach(i ; 0..ss.length-1)
+        assertThrown!ConvException(parse!(int[int])(ss[0 .. i]));
+    int[int] aa = parse!(int[int])(ss);
+}
+
 private dchar parseEscape(Source)(ref Source s)
     if (isInputRange!Source && isSomeChar!(ElementType!Source))
 {
     parseCheck!s('\\');
+    if (s.empty) parseError("Unterminated escape sequence");
 
     dchar getHexDigit()
     {
+        if (s.empty) parseError("Unterminated escape sequence");
         s.popFront();
-        if (s.empty)
-            parseError("Unterminated escape sequence");
+        if (s.empty) parseError("Unterminated escape sequence");
         dchar c = s.front;
         if (!isHexDigit(c))
             parseError("Hex digit is missing");
@@ -2973,12 +2978,14 @@ private dchar parseEscape(Source)(ref Source s)
         case 'x':
             result  = getHexDigit() << 4;
             result |= getHexDigit();
+            if (s.empty) parseError("Unterminated escape sequence");
             break;
         case 'u':
             result  = getHexDigit() << 12;
             result |= getHexDigit() << 8;
             result |= getHexDigit() << 4;
             result |= getHexDigit();
+            if (s.empty) parseError("Unterminated escape sequence");
             break;
         case 'U':
             result  = getHexDigit() << 28;
@@ -2989,6 +2996,7 @@ private dchar parseEscape(Source)(ref Source s)
             result |= getHexDigit() << 8;
             result |= getHexDigit() << 4;
             result |= getHexDigit();
+            if (s.empty) parseError("Unterminated escape sequence");
             break;
         default:
             parseError("Unknown escape character " ~ to!string(s.front));
