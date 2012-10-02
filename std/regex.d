@@ -2378,7 +2378,7 @@ int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
     A $(D StaticRegex) is $(D Regex) object that contains specially
     generated machine code to speed up matching.
     Implicitly convertible to normal $(D Regex),
-    however doing so will result in loosing this additional capability.
+    however doing so will result in losing this additional capability.
 +/
 public struct StaticRegex(Char)
 {
