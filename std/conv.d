@@ -2137,7 +2137,6 @@ Target parse(Target, Source)(ref Source p)
             break;
         p.popFront();
     }
-
     char sign = 0;                       /* indicating +                 */
     switch (p.front)
     {
