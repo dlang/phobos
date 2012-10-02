@@ -2137,6 +2137,7 @@ Target parse(Target, Source)(ref Source p)
             break;
         p.popFront();
     }
+
     char sign = 0;                       /* indicating +                 */
     switch (p.front)
     {
@@ -2584,6 +2585,16 @@ unittest
 unittest
 {
     assertThrown!ConvException(to!float("INF2"));
+}
+unittest
+{
+    //extra stress testing
+    auto ssOK    = ["1.", "1.1.1", "1.e5", "2e1e", "2a", "2e1_1"];
+    auto ssKO    = ["2e", "2e+", "2e-", "2ee", "2e++1", "2e--1", "2e_1"];
+    foreach(s; ssOK)
+        parse!double(s);
+    foreach(s; ssKO)
+        assertThrown!ConvException(parse!double(s));
 }
 
 /**
