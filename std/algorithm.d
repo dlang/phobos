@@ -1328,7 +1328,7 @@ unittest
 
 /**
  * $(D auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(Unqual!Range));)
- * 
+ *
  * Similar to $(D filter), except it defines a bidirectional
  * range. There is a speed disadvantage - the constructor spends time
  * finding the last element in the range that satisfies the filtering
@@ -7619,7 +7619,7 @@ private void sortImpl(alias less, SwapStrategy ss, Range)(Range r)
 Sorts a range using an algorithm akin to the $(WEB
 wikipedia.org/wiki/Schwartzian_transform, Schwartzian transform), also
 known as the decorate-sort-undecorate pattern in Python and Lisp. (Not
-to be confused with $(WEB youtube.com/watch?v=S25Zf8svHZQ, the other
+to be confused with $(WEB youtube.com/watch?v=UHw6KXbvazs, the other
 Schwartz).) This function is helpful when the sort comparison includes
 an expensive computation. The complexity is the same as that of the
 corresponding $(D sort), but $(D schwartzSort) evaluates $(D
