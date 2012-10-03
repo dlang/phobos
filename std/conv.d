@@ -293,6 +293,31 @@ unittest
     assert(text(null) == "null");
 }
 
+// Tests for issue 8729: do NOT skip leading WS
+unittest
+{
+    foreach(T;TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    {
+        assertThrown!ConvException(to!T(" 0"));
+        assertThrown!ConvException(to!T(" 0", 8));
+    }
+    foreach(T;TypeTuple!(float, double, real))
+    {
+        assertThrown!ConvException(to!T(" 0"));
+    }
+
+    assertThrown!ConvException(to!bool  (" true"));
+
+    alias typeof(null) NullType;
+    assertThrown!ConvException(to!NullType(" null"));
+
+    alias int[] ARR;
+    assertThrown!ConvException(to!ARR(" [1]"));
+
+    alias int[int] AA;
+    assertThrown!ConvException(to!AA(" [1:1]"));
+}
+
 /**
 If the source type is implicitly convertible to the target type, $(D
 to) simply performs the implicit conversion.
@@ -2130,13 +2155,7 @@ Target parse(Target, Source)(ref Source p)
         return new ConvException(text(msg, " for input \"", p, "\"."), fn, ln);
     }
 
-    for (;;)
-    {
-        enforce(!p.empty, bailOut());
-        if (!std.uni.isWhite(p.front))
-            break;
-        p.popFront();
-    }
+    enforce(!p.empty, bailOut());
 
     char sign = 0;                       /* indicating +                 */
     switch (p.front)
@@ -2589,8 +2608,8 @@ unittest
 unittest
 {
     //extra stress testing
-    auto ssOK    = ["1.", "1.1.1", "1.e5", "2e1e", "2a", "2e1_1"];
-    auto ssKO    = ["2e", "2e+", "2e-", "2ee", "2e++1", "2e--1", "2e_1"];
+    auto ssOK    = ["1.", "1.1.1", "1.e5", "2e1e", "2a", "2e1_1", "inf2e", "-inf2e", "+inf2"];
+    auto ssKO    = ["", " ", "2e", "2e+", "2e-", "2ee", "2e++1", "2e--1", "2e_1"];
     foreach(s; ssOK)
         parse!double(s);
     foreach(s; ssKO)
