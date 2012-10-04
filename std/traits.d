@@ -2079,6 +2079,7 @@ unittest
 
     struct S1 { this(this) {} }
     static assert( hasElaborateCopyConstructor!S1);
+    static assert( hasElaborateCopyConstructor!(immutable(S1)));
 
     struct S2 { uint num; }
     struct S3 { uint num; S1 s; }
@@ -2115,6 +2116,7 @@ unittest
 
     struct S  { void opAssign(S) {} }
     static assert( hasElaborateAssign!S);
+    static assert(!hasElaborateAssign!(const(S)));
 
     struct S1 { void opAssign(ref S1) {} }
     struct S2 { void opAssign(S1) {} }
@@ -2973,6 +2975,21 @@ unittest
 
     struct S { @disable this(); this(int n){} }
     static assert( isAssignable!(S, S));
+
+    struct S2 { this(int n){} }
+    static assert( isAssignable!(S2, S2));
+    static assert(!isAssignable!(S2, int));
+
+    struct S3 { @disable void opAssign(); }
+    static assert(!isAssignable!(S3, S3));
+
+    struct S4 { void opAssign(int); }
+    static assert( isAssignable!(S4, int));
+
+    struct S5 { @disable this(); @disable this(this); }
+    struct S6 { void opAssign(in ref S5); }
+    static assert( isAssignable!(S6, S5));
+    static assert( isAssignable!(S6, immutable(S5)));
 }
 
 
