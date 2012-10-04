@@ -3651,10 +3651,13 @@ unittest
 void toTextRange(T, W)(T value, W writer)
     if (isIntegral!T && isOutputRange!(W, char))
 {
+    char[value.sizeof * 4] buffer = void;
+    uint i = cast(uint) (buffer.length - 1);
+
     Unqual!(Unsigned!T) v = void;
     if (value < 0)
     {
-        put(writer, '-');
+        buffer[i--] = '-';
         v = -value;
     }
     else
@@ -3662,23 +3665,14 @@ void toTextRange(T, W)(T value, W writer)
         v = value;
     }
 
-    if (v < 10 && v < hexDigits.length)
+    while (v >= 10)
     {
-        put(writer, hexDigits[cast(size_t) v]);
-        return;
+        auto c = cast(uint) (v % 10);
+        v /= 10;
+        buffer[i--] = cast(char) (c + '0');
     }
 
-    char[v.sizeof * 4] buffer = void;
-    auto i = buffer.length;
-
-    do
-    {
-        auto c = cast(ubyte) (v % 10);
-        v = v / 10;
-        i--;
-        buffer[i] = cast(char) (c + '0');
-    } while (v);
-
+    buffer[i] = cast(char) (v + '0'); //hexDigits[cast(uint) v];
     put(writer, buffer[i .. $]);
 }
 
