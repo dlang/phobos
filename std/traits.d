@@ -216,7 +216,7 @@ unittest
  */
 template fullyQualifiedName(alias T)
 {
-    static if (is(typeof(__traits(parent, T))))
+    static if ((__traits(compiles, __traits(parent, T))))
     {
         static if (T.stringof.length >= 9 && T.stringof[0..8] == "package ")
         {
@@ -252,11 +252,22 @@ template fullyQualifiedName(alias T)
     }
 }
 
+version(unittest)
+{
+    struct Outer
+    {
+        struct Inner
+        {
+        }
+    }
+}
+
 unittest
 {
     import etc.c.curl;
     static assert(fullyQualifiedName!(fullyQualifiedName) == "std.traits.fullyQualifiedName");
     static assert(fullyQualifiedName!(curl_httppost) == "etc.c.curl.curl_httppost");
+    static assert(fullyQualifiedName!(Outer.Inner) == "std.traits.Outer.Inner");
 }
 
 /***
