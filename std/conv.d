@@ -1966,6 +1966,9 @@ body
 {
     if (radix == 10)
         return parse!Target(s);
+    else
+    if (radix == 16 && s.startsWith("0x"))
+        s.popFrontN(2);
 
     immutable uint beyond = (radix < 10 ? '0' : 'a'-10) + radix;
 
@@ -2041,6 +2044,12 @@ unittest
     // 6609
     s = "-42";
     assert(parse!int(s, 10) == -42);
+
+    // 7692
+    s = "ff";
+    assert(parse!uint(s, 16) == 0xff);
+    s = "0xff";
+    assert(parse!uint(s, 16) == 0xff);
 }
 
 unittest // bugzilla 7302
