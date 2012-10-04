@@ -4390,22 +4390,32 @@ static assert(is(Unqual!(shared(const int)) == int));
  */
 template Unqual(T)
 {
-    version (none) // Error: recursive alias declaration @@@BUG1308@@@
+    static if (!isAssociativeArray!T)
     {
-             static if (is(T U ==     const U)) alias Unqual!U Unqual;
-        else static if (is(T U == immutable U)) alias Unqual!U Unqual;
-        else static if (is(T U ==     inout U)) alias Unqual!U Unqual;
-        else static if (is(T U ==    shared U)) alias Unqual!U Unqual;
-        else                                    alias        T Unqual;
+        version (none) // Error: recursive alias declaration @@@BUG1308@@@
+        {
+                 static if (is(T U ==     const U)) alias Unqual!U Unqual;
+            else static if (is(T U == immutable U)) alias Unqual!U Unqual;
+            else static if (is(T U ==     inout U)) alias Unqual!U Unqual;
+            else static if (is(T U ==    shared U)) alias Unqual!U Unqual;
+            else                                    alias        T Unqual;
+        }
+        else // workaround
+        {
+                 static if (is(T U == shared(const U))) alias U Unqual;
+            else static if (is(T U ==        const U )) alias U Unqual;
+            else static if (is(T U ==    immutable U )) alias U Unqual;
+            else static if (is(T U ==        inout U )) alias U Unqual;
+            else static if (is(T U ==       shared U )) alias U Unqual;
+            else                                        alias T Unqual;
+        }
     }
-    else // workaround
+    else
     {
-             static if (is(T U == shared(const U))) alias U Unqual;
-        else static if (is(T U ==        const U )) alias U Unqual;
-        else static if (is(T U ==    immutable U )) alias U Unqual;
-        else static if (is(T U ==        inout U )) alias U Unqual;
-        else static if (is(T U ==       shared U )) alias U Unqual;
-        else                                        alias T Unqual;
+        //An AA's mutability is defined by its key's mutability.
+        alias KeyType!T K;
+        alias Unqual!(ValueType!T) V;
+        alias V[K] Unqual;
     }
 }
 
@@ -4419,6 +4429,18 @@ unittest
     static assert(is(Unqual!(shared(const int)) == int));
     alias immutable(int[]) ImmIntArr;
     static assert(is(Unqual!(ImmIntArr) == immutable(int)[]));
+}
+unittest //8737 AA
+{
+    alias const(int[int]) AA;
+    alias const(int)[int] BB;
+    alias const(int)[const(int)] CC;
+    static assert(is(Unqual!AA == int[int]));
+    static assert(is(Unqual!BB == int[int]));
+    static assert(is(Unqual!CC == int[const(int)]));
+    alias int[int[int]] DD;
+    static assert(is(KeyType!DD == const(int)[int]));
+    static assert(is(Unqual!(KeyType!DD) == int[int]));
 }
 
 // [For internal use]
