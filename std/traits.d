@@ -2090,6 +2090,7 @@ unittest
 
     struct S1 { this(this) {} }
     static assert( hasElaborateCopyConstructor!S1);
+    static assert( hasElaborateCopyConstructor!(immutable(S1)));
 
     struct S2 { uint num; }
     struct S3 { uint num; S1 s; }
@@ -2102,7 +2103,7 @@ unittest
 
 /**
    True if $(D S) or any type directly embedded in the representation of $(D S)
-   defines an elaborate assignmentq. Elaborate assignments are introduced by
+   defines an elaborate assignment. Elaborate assignments are introduced by
    defining $(D opAssign(typeof(this))) or $(D opAssign(ref typeof(this)))
    for a $(D struct). (Non-struct types never have elaborate assignments.)
  */
@@ -2126,6 +2127,7 @@ unittest
 
     struct S  { void opAssign(S) {} }
     static assert( hasElaborateAssign!S);
+    static assert(!hasElaborateAssign!(const(S)));
 
     struct S1 { void opAssign(ref S1) {} }
     struct S2 { void opAssign(S1) {} }
@@ -2968,8 +2970,7 @@ template isAssignable(Lhs, Rhs)
 {
     enum bool isAssignable = is(typeof({
         Lhs l = void;
-        Rhs r = void;
-        l = r;
+        void f(Rhs r) { l = r; }
         return l;
     }));
 }
@@ -2982,8 +2983,27 @@ unittest
     static assert(!isAssignable!(int, long));
     static assert(!isAssignable!(string, char[]));
 
+    static assert(!isAssignable!(immutable(int), int));
+    static assert( isAssignable!(int, immutable(int)));
+
     struct S { @disable this(); this(int n){} }
     static assert( isAssignable!(S, S));
+
+    struct S2 { this(int n){} }
+    static assert( isAssignable!(S2, S2));
+    static assert(!isAssignable!(S2, int));
+
+    struct S3 { @disable void opAssign(); }
+    static assert(!isAssignable!(S3, S3));
+
+    struct S4 { void opAssign(int); }
+    static assert( isAssignable!(S4, int));
+    static assert( isAssignable!(S4, immutable(int)));
+
+    struct S5 { @disable this(); @disable this(this); }
+    struct S6 { void opAssign(in ref S5); }
+    static assert( isAssignable!(S6, S5));
+    static assert( isAssignable!(S6, immutable(S5)));
 }
 
 
