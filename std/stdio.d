@@ -262,16 +262,16 @@ struct File
         uint refs = uint.max / 2;
         bool isPipe;
     }
-    private Impl* p;
+    private Impl* _p;
     private string _name;
 
     private this(FILE* handle, string name, uint refs = 1, bool isPipe = false)
     {
-        assert(!p);
-        p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
-        p.handle = handle;
-        p.refs = refs;
-        p.isPipe = isPipe;
+        assert(!_p);
+        _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
+        _p.handle = handle;
+        _p.refs = refs;
+        _p.isPipe = isPipe;
         _name = name;
     }
 
@@ -302,9 +302,9 @@ object refers to it anymore.
 
     this(this)
     {
-        if (!p) return;
-        assert(p.refs);
-        ++p.refs;
+        if (!_p) return;
+        assert(_p.refs);
+        ++_p.refs;
     }
 
 /**
@@ -346,7 +346,7 @@ opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
 /** Returns $(D true) if the file is opened. */
     @property bool isOpen() const pure nothrow
     {
-        return p !is null && p.handle;
+        return _p !is null && _p.handle;
     }
 
 /**
@@ -356,8 +356,8 @@ must be opened, otherwise an exception is thrown.
  */
     @property bool eof() const pure
     {
-        enforce(p && p.handle, "Calling eof() against an unopened file.");
-        return .feof(cast(FILE*) p.handle) != 0;
+        enforce(_p && _p.handle, "Calling eof() against an unopened file.");
+        return .feof(cast(FILE*) _p.handle) != 0;
     }
 
 /** Returns the name of the last opened file, if any.
@@ -375,7 +375,7 @@ the file handle.
  */
     @property bool error() const pure nothrow
     {
-        return !p.handle || .ferror(cast(FILE*) p.handle);
+        return !_p.handle || .ferror(cast(FILE*) _p.handle);
     }
 
 /**
@@ -384,14 +384,14 @@ and throws if that fails.
   */
     void detach()
     {
-        if (!p) return;
-        if (p.refs == 1)
+        if (!_p) return;
+        if (_p.refs == 1)
             close();
         else
         {
-            assert(p.refs);
-            --p.refs;
-            p = null;
+            assert(_p.refs);
+            --_p.refs;
+            _p = null;
         }
     }
 
@@ -404,7 +404,7 @@ and throws if that fails.
             auto f2 = f;
             f2.detach();
         }
-        assert(f.p.refs == 1);
+        assert(f._p.refs == 1);
         f.close();
     }
 
@@ -419,29 +419,29 @@ referring to the same handle will see a closed file henceforth.
  */
     void close()
     {
-        if (!p) return; // succeed vacuously
+        if (!_p) return; // succeed vacuously
         scope(exit)
         {
-            assert(p.refs);
-            if(!--p.refs)
-                free(p);
-            p = null; // start a new life
+            assert(_p.refs);
+            if(!--_p.refs)
+                free(_p);
+            _p = null; // start a new life
         }
-        if (!p.handle) return; // Impl is closed by another File 
+        if (!_p.handle) return; // Impl is closed by another File 
 
-        scope(exit) p.handle = null; // nullify the handle anyway
+        scope(exit) _p.handle = null; // nullify the handle anyway
         version (Posix)
         {
-            if (p.isPipe)
+            if (_p.isPipe)
             {
                 // Ignore the result of the command
-                errnoEnforce(.pclose(p.handle) != -1,
+                errnoEnforce(.pclose(_p.handle) != -1,
                         "Could not close pipe `"~_name~"'");
                 return;
             }
         }
         //fprintf(std.c.stdio.stderr, ("Closing file `"~name~"`.\n\0").ptr);
-        errnoEnforce(.fclose(p.handle) == 0,
+        errnoEnforce(.fclose(_p.handle) == 0,
                 "Could not close file `"~_name~"'");
     }
 
@@ -452,8 +452,8 @@ _clearerr) for the file handle.
  */
     void clearerr() pure nothrow
     {
-        p is null || p.handle is null ||
-        .clearerr(p.handle);
+        _p is null || _p.handle is null ||
+        .clearerr(_p.handle);
     }
 
 /**
@@ -464,7 +464,7 @@ file handle and throws on error.
     void flush()
     {
         errnoEnforce
-        (.fflush(enforce(p.handle, "Calling fflush() on an unopened file"))
+        (.fflush(enforce(_p.handle, "Calling fflush() on an unopened file"))
                 == 0);
     }
 
@@ -485,7 +485,7 @@ $(D rawRead) always reads in binary mode on Windows.
         enforce(buffer.length, "rawRead must take a non-empty buffer");
         version(Windows)
         {
-            immutable fd = ._fileno(p.handle);
+            immutable fd = ._fileno(_p.handle);
             immutable mode = ._setmode(fd, _O_BINARY);
             scope(exit) ._setmode(fd, mode);
             version(DIGITAL_MARS_STDIO)
@@ -497,7 +497,7 @@ $(D rawRead) always reads in binary mode on Windows.
             }
         }
         immutable result =
-            .fread(buffer.ptr, T.sizeof, buffer.length, p.handle);
+            .fread(buffer.ptr, T.sizeof, buffer.length, _p.handle);
         errnoEnforce(!error);
         return result ? buffer[0 .. result] : null;
     }
@@ -531,7 +531,7 @@ $(D rawWrite) always writes in binary mode on Windows.
         version(Windows)
         {
             flush(); // before changing translation mode
-            immutable fd = ._fileno(p.handle);
+            immutable fd = ._fileno(_p.handle);
             immutable mode = ._setmode(fd, _O_BINARY);
             scope(exit) ._setmode(fd, mode);
             version(DIGITAL_MARS_STDIO)
@@ -544,7 +544,7 @@ $(D rawWrite) always writes in binary mode on Windows.
             scope(exit) flush(); // before restoring translation mode
         }
         auto result =
-            .fwrite(buffer.ptr, T.sizeof, buffer.length, p.handle);
+            .fwrite(buffer.ptr, T.sizeof, buffer.length, _p.handle);
         if (result == result.max) result = 0;
         errnoEnforce(result == buffer.length,
                 text("Wrote ", result, " instead of ", buffer.length,
@@ -572,13 +572,13 @@ file handle. Throws on error.
         enforce(isOpen, "Attempting to seek() in an unopened file");
         version (Windows)
         {
-            errnoEnforce(fseek(p.handle, to!int(offset), origin) == 0,
+            errnoEnforce(fseek(_p.handle, to!int(offset), origin) == 0,
                     "Could not seek in file `"~_name~"'");
         }
         else
         {
             //static assert(off_t.sizeof == 8);
-            errnoEnforce(fseeko(p.handle, offset, origin) == 0,
+            errnoEnforce(fseeko(_p.handle, offset, origin) == 0,
                     "Could not seek in file `"~_name~"'");
         }
     }
@@ -618,11 +618,11 @@ managed file handle. Throws on error.
         enforce(isOpen, "Attempting to tell() in an unopened file");
         version (Windows)
         {
-            immutable result = ftell(cast(FILE*) p.handle);
+            immutable result = ftell(cast(FILE*) _p.handle);
         }
         else
         {
-            immutable result = ftello(cast(FILE*) p.handle);
+            immutable result = ftello(cast(FILE*) _p.handle);
         }
         errnoEnforce(result != -1,
                 "Query ftell() failed for file `"~_name~"'");
@@ -648,7 +648,7 @@ file handle. Throws on error.
     void rewind()
     {
         enforce(isOpen, "Attempting to rewind() an unopened file");
-        .rewind(p.handle);
+        .rewind(_p.handle);
     }
 
 /**
@@ -659,7 +659,7 @@ the file handle.
     void setvbuf(size_t size, int mode = _IOFBF)
     {
         enforce(isOpen, "Attempting to call setvbuf() on an unopened file");
-        errnoEnforce(.setvbuf(p.handle, null, mode, size) == 0,
+        errnoEnforce(.setvbuf(_p.handle, null, mode, size) == 0,
                 "Could not set buffering for file `"~_name~"'");
     }
 
@@ -670,7 +670,7 @@ _setvbuf) for the file handle. */
     void setvbuf(void[] buf, int mode = _IOFBF)
     {
         enforce(isOpen, "Attempting to call setvbuf() on an unopened file");
-        errnoEnforce(.setvbuf(p.handle,
+        errnoEnforce(.setvbuf(_p.handle,
                         cast(char*) buf.ptr, mode, buf.length) == 0,
                 "Could not set buffering for file `"~_name~"'");
     }
@@ -718,7 +718,7 @@ arguments in text format to the file, followed by a newline. */
     void writeln(S...)(S args)
     {
         write(args, '\n');
-        errnoEnforce(.fflush(p.handle) == 0,
+        errnoEnforce(.fflush(_p.handle) == 0,
                     "Could not flush file `"~_name~"'");
     }
 
@@ -733,8 +733,8 @@ arguments in text format to the file, according to the format in the
 first argument. */
     void writef(S...)(S args) // if (isSomeString!(S[0]))
     {
-        assert(p);
-        assert(p.handle);
+        assert(_p);
+        assert(_p.handle);
         static assert(S.length>0, errorMessage);
         static assert(isSomeString!(S[0]) && !is(S[0] == enum), errorMessage);
         auto w = lockingTextWriter;
@@ -750,7 +750,7 @@ Same as writef, plus adds a newline. */
         auto w = lockingTextWriter;
         std.format.formattedWrite(w, args);
         w.put('\n');
-        .fflush(p.handle);
+        .fflush(_p.handle);
     }
 
 /**********************************
@@ -822,8 +822,8 @@ with every line.  */
     {
         static if (is(C == char))
         {
-            enforce(p && p.handle, "Attempt to read from an unopened file.");
-            return readlnImpl(p.handle, buf, terminator);
+            enforce(_p && _p.handle, "Attempt to read from an unopened file.");
+            return readlnImpl(_p.handle, buf, terminator);
         }
         else
         {
@@ -925,9 +925,9 @@ Returns the $(D FILE*) corresponding to this object.
  */
     FILE* getFP() pure
     {
-        enforce(p && p.handle,
+        enforce(_p && _p.handle,
                 "Attempting to call getFP() on an unopened file");
-        return p.handle;
+        return _p.handle;
     }
 
     unittest
@@ -941,7 +941,7 @@ Returns the file number corresponding to this object.
     /*version(Posix) */int fileno() const
     {
         enforce(isOpen, "Attempting to call fileno() on an unopened file");
-        return .fileno(cast(FILE*) p.handle);
+        return .fileno(cast(FILE*) _p.handle);
     }
 
 /**
@@ -1220,8 +1220,8 @@ $(D Range) that locks the file and allows fast writing to it.
 
         this(ref File f)
         {
-            enforce(f.p && f.p.handle);
-            fps = f.p.handle;
+            enforce(f._p && f._p.handle);
+            fps = f._p.handle;
             orientation = fwide(fps, 0);
             FLOCK(fps);
             handle = cast(_iobuf*)fps;
@@ -1379,18 +1379,18 @@ struct LockingTextReader
     {
         enforce(f.isOpen);
         _f = f;
-        FLOCK(_f.p.handle);
+        FLOCK(_f._p.handle);
     }
 
     this(this)
     {
-        FLOCK(_f.p.handle);
+        FLOCK(_f._p.handle);
     }
 
     ~this()
     {
         // File locking has its own reference count
-        if (_f.isOpen) FUNLOCK(_f.p.handle);
+        if (_f.isOpen) FUNLOCK(_f._p.handle);
     }
 
     void opAssign(LockingTextReader r)
@@ -1403,7 +1403,7 @@ struct LockingTextReader
         if (!_f.isOpen || _f.eof) return true;
         if (_crt == _crt.init)
         {
-            _crt = FGETC(cast(_iobuf*) _f.p.handle);
+            _crt = FGETC(cast(_iobuf*) _f._p.handle);
             if (_crt == -1)
             {
                 .destroy(_f);
@@ -1411,7 +1411,7 @@ struct LockingTextReader
             }
             else
             {
-                enforce(ungetc(_crt, cast(FILE*) _f.p.handle) == _crt);
+                enforce(ungetc(_crt, cast(FILE*) _f._p.handle) == _crt);
             }
         }
         return false;
@@ -1426,7 +1426,7 @@ struct LockingTextReader
     void popFront()
     {
         enforce(!empty);
-        if (FGETC(cast(_iobuf*) _f.p.handle) == -1)
+        if (FGETC(cast(_iobuf*) _f._p.handle) == -1)
         {
             enforce(_f.eof);
         }
@@ -1435,7 +1435,7 @@ struct LockingTextReader
 
     // void unget(dchar c)
     // {
-    //     ungetc(c, cast(FILE*) _f.p.handle);
+    //     ungetc(c, cast(FILE*) _f._p.handle);
     // }
 }
 
@@ -1593,7 +1593,7 @@ void writeln(T...)(T args)
 {
     static if (T.length == 0)
     {
-        enforce(fputc('\n', .stdout.p.handle) == '\n');
+        enforce(fputc('\n', .stdout._p.handle) == '\n');
     }
     else static if (T.length == 1 &&
                     is(typeof(args[0]) : const(char)[]) &&
@@ -1601,7 +1601,7 @@ void writeln(T...)(T args)
                     !isAggregateType!(typeof(args[0])))
     {
         // Specialization for strings - a very frequent case
-        enforce(fprintf(.stdout.p.handle, "%.*s\n",
+        enforce(fprintf(.stdout._p.handle, "%.*s\n",
                         cast(int) args[0].length, args[0].ptr) >= 0);
     }
     else
@@ -2021,12 +2021,12 @@ struct lines
         enum duplicate = is(Parms[$ - 1] : immutable(ubyte)[]);
         int result = 1;
         int c = void;
-        FLOCK(f.p.handle);
-        scope(exit) FUNLOCK(f.p.handle);
+        FLOCK(f._p.handle);
+        scope(exit) FUNLOCK(f._p.handle);
         ubyte[] buffer;
         static if (Parms.length == 2)
             Parms[0] line = 0;
-        while ((c = FGETC(cast(_iobuf*)f.p.handle)) != -1)
+        while ((c = FGETC(cast(_iobuf*)f._p.handle)) != -1)
         {
             buffer ~= to!(ubyte)(c);
             if (c == terminator)
@@ -2036,8 +2036,8 @@ struct lines
                 else
                     alias buffer arg;
                 // unlock the file while calling the delegate
-                FUNLOCK(f.p.handle);
-                scope(exit) FLOCK(f.p.handle);
+                FUNLOCK(f._p.handle);
+                scope(exit) FLOCK(f._p.handle);
                 static if (Parms.length == 1)
                 {
                     result = dg(arg);
@@ -2232,7 +2232,7 @@ struct chunks
         int result = 1;
         uint tally = 0;
         while ((r = core.stdc.stdio.fread(buffer.ptr,
-                                buffer[0].sizeof, size, f.p.handle)) > 0)
+                                buffer[0].sizeof, size, f._p.handle)) > 0)
         {
             assert(r <= size);
             if (r != size)
@@ -2334,15 +2334,15 @@ extern(C) void std_stdio_static_this()
     //Bind stdin, stdout, stderr
     __gshared File.Impl stdinImpl;
     stdinImpl.handle = core.stdc.stdio.stdin;
-    .stdin.p = &stdinImpl;
+    .stdin._p = &stdinImpl;
     // stdout
     __gshared File.Impl stdoutImpl;
     stdoutImpl.handle = core.stdc.stdio.stdout;
-    .stdout.p = &stdoutImpl;
+    .stdout._p = &stdoutImpl;
     // stderr
     __gshared File.Impl stderrImpl;
     stderrImpl.handle = core.stdc.stdio.stderr;
-    .stderr.p = &stderrImpl;
+    .stderr._p = &stderrImpl;
 }
 
 //---------
