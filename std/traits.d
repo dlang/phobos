@@ -2092,7 +2092,7 @@ unittest
 
 /**
    True if $(D S) or any type directly embedded in the representation of $(D S)
-   defines an elaborate assignmentq. Elaborate assignments are introduced by
+   defines an elaborate assignment. Elaborate assignments are introduced by
    defining $(D opAssign(typeof(this))) or $(D opAssign(ref typeof(this)))
    for a $(D struct). (Non-struct types never have elaborate assignments.)
  */
