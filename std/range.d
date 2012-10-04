@@ -6748,7 +6748,7 @@ enum SearchPolicy
    ----
 */
 struct SortedRange(Range, alias pred = "a < b")
-if (isRandomAccessRange!Range)
+if (isRandomAccessRange!Range && hasLength!Range)
 {
     private alias binaryFun!pred predFun;
     private bool geq(L, R)(L lhs, R rhs)
@@ -6829,13 +6829,14 @@ if (isRandomAccessRange!Range)
     }
 
     /// Ditto
-    auto opSlice(size_t a, size_t b)
-    {
-        assert(a <= b);
-        typeof(this) result;
-        result._input = _input[a .. b];// skip checking
-        return result;
-    }
+    static if (hasSlicing!Range)
+        auto opSlice(size_t a, size_t b)
+        {
+            assert(a <= b);
+            typeof(this) result;
+            result._input = _input[a .. b];// skip checking
+            return result;
+        }
 
     /// Ditto
     @property size_t length()          //const
