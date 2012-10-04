@@ -2608,8 +2608,9 @@ unittest
 unittest
 {
     //extra stress testing
-    auto ssOK    = ["1.", "1.1.1", "1.e5", "2e1e", "2a", "2e1_1", "inf2e", "-inf2e", "+inf2"];
-    auto ssKO    = ["", " ", "2e", "2e+", "2e-", "2ee", "2e++1", "2e--1", "2e_1"];
+    auto ssOK    = ["1.", "1.1.1", "1.e5", "2e1e", "2a", "2e1_1",
+                    "inf", "-inf", "infa", "-infa", "inf2e2", "-inf2e2"];
+    auto ssKO    = ["", " ", "2e", "2e+", "2e-", "2ee", "2e++1", "2e--1", "2e_1", "+inf"];
     foreach(s; ssOK)
         parse!double(s);
     foreach(s; ssKO)
