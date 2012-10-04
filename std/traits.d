@@ -2959,8 +2959,7 @@ template isAssignable(Lhs, Rhs)
 {
     enum bool isAssignable = is(typeof({
         Lhs l = void;
-        Rhs r = void;
-        l = r;
+        void f(Rhs r) { l = r; }
         return l;
     }));
 }
@@ -2972,6 +2971,9 @@ unittest
 
     static assert(!isAssignable!(int, long));
     static assert(!isAssignable!(string, char[]));
+
+    static assert(!isAssignable!(immutable(int), int));
+    static assert( isAssignable!(int, immutable(int)));
 
     struct S { @disable this(); this(int n){} }
     static assert( isAssignable!(S, S));
@@ -2985,6 +2987,7 @@ unittest
 
     struct S4 { void opAssign(int); }
     static assert( isAssignable!(S4, int));
+    static assert( isAssignable!(S4, immutable(int)));
 
     struct S5 { @disable this(); @disable this(this); }
     struct S6 { void opAssign(in ref S5); }
