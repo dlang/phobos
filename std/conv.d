@@ -1425,17 +1425,17 @@ unittest
     auto b = to!(double[dstring])(a);
     assert(b["0"d] == 1 && b["1"d] == 2);
 }
-unittest //8709, from doc
+unittest //8705, from doc
 {
     int[string][double[int[]]] a;
     auto b = to!(short[wstring][string[double[]]])(a);
-    auto c = to!(immutable(short[immutable(wstring)])[immutable(string[double[]])])(a); //extra difficulty
+    //auto c = to!(immutable(short[immutable(wstring)])[immutable(string[double[]])])(a); //extra difficulty
 }
-unittest //Extra 8709 constness sanity check for non-AA with const-non-AA key/value types
-{
-    int[][int[]] a;
-    auto c = to!(immutable(short[])[immutable(short[])])(a);
-}
+//unittest //Extra 8705 constness sanity check for non-AA with const-non-AA key/value types
+//{
+//    int[][int[]] a;
+//    auto c = to!(immutable(short[])[immutable(short[])])(a);
+//}
 
 private void testIntegralToFloating(Integral, Floating)()
 {
