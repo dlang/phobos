@@ -125,7 +125,8 @@ SRC_STD_3a= std\signals.d std\typetuple.d std\traits.d \
     std\system.d std\concurrency.d
 
 #can't place SRC_STD_DIGEST in SRC_STD_REST because of out-of-memory issues
-SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d std\digest\digest.d
+SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d \
+    std\digest\ripemd.d std\digest\digest.d
 SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST)
 
 SRC_STD_5_HEAVY= std\algorithm.d
@@ -285,6 +286,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_digest_crc.html \
 	$(DOC)\std_digest_sha.html \
 	$(DOC)\std_digest_md.html \
+	$(DOC)\std_digest_ripemd.html \
 	$(DOC)\std_digest_digest.html \
 	$(DOC)\std_cstream.html \
 	$(DOC)\std_ctype.html \
@@ -653,6 +655,9 @@ $(DOC)\std_digest_sha.html : $(STDDOC) std\digest\sha.d
 $(DOC)\std_digest_md.html : $(STDDOC) std\digest\md.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_md.html $(STDDOC) std\digest\md.d
 
+$(DOC)\std_digest_ripemd.html : $(STDDOC) std\digest\ripemd.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_ripemd.html $(STDDOC) std\digest\ripemd.d
+
 $(DOC)\std_digest_digest.html : $(STDDOC) std\digest\digest.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_digest.html $(STDDOC) std\digest\digest.d
 
@@ -745,7 +750,7 @@ cleanhtml:
 	del $(DOCS)
 
 install: phobos.zip
-	$(CP) phobos.lib phobos64.lib $(DIR)\windows\lib\ 
-	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DRUNTIME)\lib\gcstub64.obj $(DIR)\windows\lib\ 
-	+rd/s/q $(DIR)\src\phobos\ 
-	unzip -o phobos.zip -d $(DIR)\src\phobos\ 
+	$(CP) phobos.lib phobos64.lib $(DIR)\windows\lib\
+	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DRUNTIME)\lib\gcstub64.obj $(DIR)\windows\lib\
+	+rd/s/q $(DIR)\src\phobos\
+	unzip -o phobos.zip -d $(DIR)\src\phobos\
