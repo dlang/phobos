@@ -868,7 +868,7 @@ unittest
 }
 
 /**
-Fills a range with a value.
+Fills $(D range) with a $(D filler).
 
 Example:
 ----
@@ -878,32 +878,21 @@ assert(a == [ 5, 5, 5, 5 ]);
 ----
  */
 void fill(Range, Value)(Range range, Value filler)
-if (isInputRange!Range && is(typeof(range.front = filler)))
+    if (isInputRange!Range && is(typeof(range.front = filler)))
 {
-    alias ElementType!Range T;
-    static if (hasElaborateCopyConstructor!T || !isDynamicArray!Range)
+    static if (is(typeof(range[] = filler)))
     {
-        for (; !range.empty; range.popFront())
-        {
-            range.front = filler;
-        }
+        range[] = filler;
+    }
+    else static if (is(typeof(range[] = T(filler))))
+    {
+        range[] = T(filler);
     }
     else
     {
-        if (range.empty) return;
-        // Range is a dynamic array of bald values, just fill memory
-        // Can't use memcpy or memmove coz ranges overlap
-        range.front = filler;
-        auto bytesToFill = T.sizeof * (range.length - 1);
-        auto bytesFilled = T.sizeof;
-        while (bytesToFill)
+        for ( ; !range.empty; range.popFront() )
         {
-            auto fillNow = min(bytesToFill, bytesFilled);
-            memcpy(cast(void*) range.ptr + bytesFilled,
-                    cast(void*) range.ptr,
-                  fillNow);
-            bytesToFill -= fillNow;
-            bytesFilled += fillNow;
+            range.front = filler;
         }
     }
 }
@@ -932,6 +921,39 @@ unittest
     fill(range,filler);
     foreach(value;range.arr)
     	assert(value == filler);
+}
+unittest
+{
+    //ER8638_1 IS_NOT self assignable
+    static struct ER8638_1
+    {
+        void opAssign(int){}
+    }
+
+    //ER8638_1 IS self assignable
+    static struct ER8638_2
+    {
+        void opAssign(ER8638_2){}
+        void opAssign(int){}
+    }
+
+    auto er8638_1 = new ER8638_1[](10);
+    auto er8638_2 = new ER8638_2[](10);
+    er8638_1.fill(5); //generic case
+    er8638_2.fill(5); //opSlice(T.init) case
+}
+unittest
+{
+    {
+        int[] a = [1, 2, 3];
+        immutable(int) b = 0;
+        static assert(__traits(compiles, a.fill(b))); 
+    }
+    {
+        double[] a = [1, 2, 3];
+        immutable(int) b = 0;
+        static assert(__traits(compiles, a.fill(b))); 
+    }
 }
 
 /**
