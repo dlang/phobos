@@ -1406,7 +1406,7 @@ T toImpl(T, S)(S value)
     alias Unqual!K2   MK2;
     alias ValueType!T V2;
     alias Unqual!V2   MV2;
-    Unqual!T result;
+    MV2[MK2] result;
     foreach (k1, v1; value)
     {
         K2 k2   = cast(K2) to!MK2(k1); //Call to with mutable type, but store in non mutable
