@@ -946,31 +946,40 @@ Defines the container's primary range, which embodies a forward range.
     {
         private Node * _head;
         private this(Node * p) { _head = p; }
-        /// Forward range primitives.
+
+        /// Input range primitives.
         @property bool empty() const { return !_head; }
+
         /// ditto
-        @property Range save() { return this; }
-        /// ditto
-        @property T front() { return _head._payload; }
+        @property T front()
+        {
+            assert(!empty, "SList.Range.front: Range is empty");
+            return _head._payload;
+        }
+
         /// ditto
         static if (isAssignable!(T, T))
         {
             @property void front(T value)
             {
-                enforce(_head);
-                _head._payload = value;
+                assert(!empty, "SList.Range.front: Range is empty");
+                move(value, _head._payload);
             }
         }
+
         /// ditto
         void popFront()
         {
-            enforce(_head);
+            assert(!empty, "SList.Range.popFront: Range is empty");
             _head = _head._next;
         }
 
+        /// Forward range primitive.
+        @property Range save() { return this; }
+
         T moveFront()
         {
-            enforce(_head);
+            assert(!empty, "SList.Range.moveFront: Range is empty");
             return move(_head._payload);
         }
 
@@ -1025,7 +1034,7 @@ Complexity: $(BIGOH 1)
      */
     @property T front()
     {
-        enforce(_root);
+        assert(!empty, "SList.front: List is empty");
         return _root._payload;
     }
 
@@ -1038,8 +1047,8 @@ Complexity: $(BIGOH 1)
     {
         @property void front(T value)
         {
-            enforce(_root);
-            _root._payload = value;
+            assert(!empty, "SList.front: List is empty");
+            move(value, _root._payload);
         }
     }
 
@@ -1142,7 +1151,7 @@ Complexity: $(BIGOH 1).
      */
     T removeAny()
     {
-        enforce(!empty);
+        assert(!empty, "SList.removeAny: List is empty");
         auto result = move(_root._payload);
         _root = _root._next;
         return result;
@@ -1161,7 +1170,7 @@ Complexity: $(BIGOH 1).
      */
     void removeFront()
     {
-        enforce(_root);
+        assert(!empty, "SList.removeFront: List is empty");
         _root = _root._next;
     }
 
@@ -1452,7 +1461,6 @@ unittest
     assert(equal(r2, [8, 9, 10]));
 }
 
-
 unittest
 {
     auto lst = SList!int(1, 5, 42, 9);
@@ -1480,6 +1488,16 @@ unittest
         const int val;
     }
     SList!Data list;
+}
+
+unittest
+{
+    auto s = SList!int([1, 2, 3]);
+    s.front = 5; //test frontAssign
+    assert(s.front == 5);
+    auto r = s[];
+    r.front = 1; //test frontAssign
+    assert(r.front == 1);
 }
 
 /**
@@ -1548,13 +1566,35 @@ elements in $(D rhs).
         private Node * _last;
         private this(Node* first, Node* last) { _first = first; _last = last; }
         private this(Node* n) { _first = _last = n; }
-        /// Forward range primitives.
-        @property bool empty() const { return !_first; }
-        @property T front() { return _first._payload; }
+
+        /// Input range primitives.
+        @property bool empty() const
+        {
+            assert(!!_first == !!_last, "DList.Range: Internal error, inconsistent state");
+            return !_first;
+        }
+
+        /// ditto
+        @property T front()
+        {
+            assert(!empty, "DList.Range.front: Range is empty");
+            return _first._payload;
+        }
+
+        /// ditto
+        static if(isAssignable!(T, T))
+        {
+            @property void front(T value)
+            {
+                assert(!empty, "DList.Range.front: Range is empty");
+                move(value, _first._payload);
+            }
+        }
+
+        /// ditto
         void popFront()
         {
-            enforce(_first);
-            assert(_last);
+            assert(!empty, "DList.Range.popFront: Range is empty");
             if (_first is _last)
             {
                 _first = _last = null;
@@ -1564,13 +1604,31 @@ elements in $(D rhs).
                 _first = _first._next;
             }
         }
+
+        /// Forward range primitive.
         @property Range save() { return this; }
+
         /// Bidirectional range primitives.
-        @property T back() { return _last._payload; }
+        @property T back()
+        {
+            assert(!empty, "DList.Range.back: Range is empty");
+            return _last._payload;
+        }
+
+        /// ditto
+        static if(isAssignable!(T, T))
+        {
+            @property void back(T value)
+            {
+                assert(!empty, "DList.Range.back: Range is empty");
+                move(value, _last._payload);
+            }
+        }
+
+        /// ditto
         void popBack()
         {
-            enforce(_first);
-            assert(_last);
+            assert(!empty, "DList.Range.popBack: Range is empty");
             if (_first is _last)
             {
                 _first = _last = null;
@@ -1595,6 +1653,7 @@ Complexity: $(BIGOH 1)
      */
     @property bool empty() const
     {
+        assert(!!_first == !!_last, "DList: Internal error, inconsistant list");
         return _first is null;
     }
 
@@ -1627,14 +1686,47 @@ Complexity: $(BIGOH 1)
      */
     @property T front()
     {
-        enforce(_first);
+        assert(!empty, "DList.front: List is empty");
         return _first._payload;
     }
 
+/**
+Forward to $(D opSlice().front(value)).
+
+Complexity: $(BIGOH 1)
+     */
+    static if(isAssignable!(T,T))
+    {
+        @property void front(T value)
+        {
+            assert(!empty, "DList.front: List is empty");
+            move(value, _first._payload);
+        }
+    }
+
+/**
+Forward to $(D opSlice().back).
+
+Complexity: $(BIGOH 1)
+     */
     @property T back()
     {
-        enforce(_last);
+        assert(!empty, "DList.back: List is empty");
         return _last._payload;
+    }
+
+/**
+Forward to $(D opSlice().back(value)).
+
+Complexity: $(BIGOH 1)
+     */
+    static if(isAssignable!(T,T))
+    {
+        @property void back(T value)
+        {
+            assert(!empty, "DList.back: List is empty");
+            move(value, _last._payload);
+        }
     }
 
 /**
@@ -1720,9 +1812,13 @@ Complexity: $(BIGOH 1).
      */
     T removeAny()
     {
-        enforce(!empty);
+        assert(!empty, "DList.removeAny: List is empty");
         auto result = move(_last._payload);
         _last = _last._prev;
+        if (_last is null)
+        {
+            _first = null;
+        }
         return result;
     }
     /// ditto
@@ -1739,7 +1835,7 @@ Complexity: $(BIGOH 1).
      */
     void removeFront()
     {
-        enforce(_first);
+        assert(!empty, "DList.removeFront: List is empty");
         _first = _first._next;
         if (_first is null)
         {
@@ -1753,7 +1849,7 @@ Complexity: $(BIGOH 1).
     /// ditto
     void removeBack()
     {
-        enforce(_last);
+        assert(!empty, "DList.removeBack: List is empty");
         _last = _last._prev;
         if (_last is null)
         {
@@ -2056,6 +2152,16 @@ unittest
     dlr.popFront(); dlr.popFront();
     dl.insertBefore(dlr, "c"); // insert before "b"
     assert(equal(dl[], ["e", "a", "c", "b", "d"]));
+}
+
+unittest
+{
+    auto d = DList!int([1, 2, 3]);
+    d.front = 5; //test frontAssign
+    assert(d.front == 5);
+    auto r = d[];
+    r.back = 1;
+    assert(r.back == 1);
 }
 
 /**
