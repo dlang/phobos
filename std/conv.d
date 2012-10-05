@@ -1401,18 +1401,18 @@ T toImpl(T, S)(S value)
     if (isAssociativeArray!S &&
         isAssociativeArray!T && !is(T == enum))
 {
-    //While we are "building" the AA, we need to unqualify, and only re-qualify at the end
     alias KeyType!T   K2;
-    alias Unqual!K2   MK2;
     alias ValueType!T V2;
-    alias Unqual!V2   MV2;
-    MV2[MK2] result;
+
+    // While we are "building" the AA, we need to unqualify its values, and only re-qualify at the end
+    Unqual!V2[K2] result;
+
     foreach (k1, v1; value)
     {
-        K2 k2   = cast(K2) to!MK2(k1); //Call to with mutable type, but store in non mutable
-        MV2 mv2 = to!MV2(v1);          //Value must be kept mutable for insertion
-        result[k2] = mv2;
+        // Cast values temporarily to Unqual!V2 to store them to result variable
+        result[to!K2(k1)] = cast(Unqual!V2) to!V2(v1);
     }
+    // Cast back to original type
     return cast(T)result;
 }
 
@@ -1425,17 +1425,21 @@ unittest
     auto b = to!(double[dstring])(a);
     assert(b["0"d] == 1 && b["1"d] == 2);
 }
-unittest //8705, from doc
+unittest // Bugzilla 8705, from doc
 {
     int[string][double[int[]]] a;
     auto b = to!(short[wstring][string[double[]]])(a);
-    //auto c = to!(immutable(short[immutable(wstring)])[immutable(string[double[]])])(a); //extra difficulty
+    a = [null:["hello":int.max]];
+    assertThrown!ConvOverflowException(to!(short[wstring][string[double[]]])(a));
 }
-//unittest //Extra 8705 constness sanity check for non-AA with const-non-AA key/value types
-//{
-//    int[][int[]] a;
-//    auto c = to!(immutable(short[])[immutable(short[])])(a);
-//}
+unittest // Extra cases for AA with qualifiers conversion
+{
+    int[][int[]] a;// = [[], []];
+    auto b = to!(immutable(short[])[immutable short[]])(a);
+
+    double[dstring][int[long[]]] c;
+    auto d = to!(immutable(short[immutable wstring])[immutable string[double[]]])(c);
+}
 
 private void testIntegralToFloating(Integral, Floating)()
 {
