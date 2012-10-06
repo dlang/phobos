@@ -4067,6 +4067,8 @@ unittest
     static assert( isAssignable!(int, shared int));
     static assert( isAssignable!(shared int));
 
+    static assert( isAssignable!(void[1], void[1]));
+
     struct S { @disable this(); this(int n){} }
     static assert( isAssignable!(S, S));
 
