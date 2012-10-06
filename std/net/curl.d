@@ -1019,7 +1019,7 @@ private T[] _getForRange(T,Conn)(const(char)[] url, Conn conn)
 {
     static if (is(Conn : HTTP))
     {
-        conn.method = conn.method == Method.undefined ? HTTP.Method.get : conn.method;
+        conn.method = conn.method == HTTP.Method.undefined ? HTTP.Method.get : conn.method;
         return _basicHTTP!(T)(url, null, conn);
     }
     else static if (is(Conn : FTP))
