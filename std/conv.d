@@ -3405,6 +3405,10 @@ as $(D chunk)).
 T* emplace(T)(T* chunk)
     if (!is(T == class))
 {
+    //Do not remove this assert. Ever. emplace(chunk) creates an un-inialized
+    //Object, so it would be a violation of @disable this()
+    static assert(is(typeof((inout int _dummy=0){static T i;})),
+                  text("Cannot emplace because ", T.stringof, ".this() is annotated with @disable."));
     auto result = cast(typeof(return)) chunk;
     static T i;
     memcpy(result, &i, T.sizeof);
@@ -3443,32 +3447,69 @@ T* emplace(T, Args...)(T* chunk, Args args)
 {
     auto result = cast(typeof(return)) chunk;
 
-    void initialize()
+    //Copies T.init over destination
+    //Templated to assert only when actually used
+    void initialize()(T* dest, size_t size = T.sizeof)
     {
+        static assert(is(typeof((inout int _dummy=0){static T i;})),
+                      text("Cannot emplace because ", T.stringof, ".this() is annotated with @disable."));
         static T i;
-        memcpy(chunk, &i, T.sizeof);
+        memcpy(dest, &i, size);
     }
 
+    //From std.algorithm.move, but without destroying destination (since it is uninitialized).
+    void moveOver(ref T source)
+    {
+        memcpy(result, &source, T.sizeof);
+        // If the source defines a destructor or a postblit hook, we must obliterate the
+        // object in order to avoid double freeing and undue aliasing
+        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
+        {
+            static if (T.tupleof[$-1].stringof.endsWith("this"))
+            {
+                // Keep original context pointer
+                initialize(&source, T.sizeof - (void*).sizeof);
+            }
+            else
+            {
+                initialize(&source);
+            }
+        }
+    }
+    
     static if (is(typeof(result.__ctor(args))))
     {
         // T defines a genuine constructor accepting args
         // Go the classic route: write .init first, then call ctor
-        initialize();
+        initialize(result);
         result.__ctor(args);
     }
     else static if (is(typeof(T(args))))
     {
         // Struct without constructor that has one matching field for
-        // each argument
-        *result = T(args);
+        // each argument. Construct and move over
+        auto t = T(args);
+        moveOver(t);
     }
-    else //static if (Args.length == 1 && is(Args[0] : T))
+    else static if (Args.length == 1 && is(Args[0] == T))
     {
-        static assert(Args.length == 1);
-        //static assert(0, T.stringof ~ " " ~ Args.stringof);
-        // initialize();
+        //Exact type match: Move args[0] directly (not a copy)
+        moveOver(args[0]);
+    }
+    else static if (Args.length == 1 && isAssignable!(T, Args[0]))
+    {
+        //T does not have any form of constructor that accepts args[0],
+        //But it has an opAssign that accepts it. Use it.
+        static if (is(typeof(result.opAssign(args[0]))))
+            initialize(result); //result has elaborate assignment, so init first.
         *result = args[0];
     }
+    else
+    {
+        //Give up
+        static assert(0, text("Don't know how to emplace a ", T.stringof, " with ", Args[].stringof, "."));
+    }
+
     return result;
 }
 
@@ -3640,6 +3681,130 @@ unittest
     assert(i is null);
     emplace!I(&i, k);
     assert(i is k);
+}
+
+unittest
+{
+    //Test various flavours of emplace from int with/without:
+    //Agglomerate assign
+    //this(int)
+    //opAssign(int)
+    struct S{}
+    static struct S1 //Calls agglomerate assign
+    {
+        int i;
+    }
+    static struct S2 //calls this(int)
+    {
+        int i;
+        this(int j){i = j;}
+    }
+    static struct S3 //opAssign
+    {
+        int i;
+        void opAssign(int j)
+        {
+            assert(i == 0);
+            i = j;
+        }
+    }
+    static struct S4 //calls this(int)
+    {
+        int i;
+        this(int j){i = j;}
+        void opAssign(int j)
+        {
+            assert(i == 0);
+            i = j;
+        }
+    }
+    static struct S5 //opAssign
+    {
+        int i;
+        this(S){}
+        void opAssign(int j)
+        {
+            assert(i == 0);
+            i = j;
+        }
+    }
+    static struct S6 //calls this(int)
+    {
+        int k, i;
+        this(int j){i = j;}
+    }
+    static struct S7 //calls agglomerate assign
+    {
+        int i, k;
+        void opAssign(int j)
+        {
+            assert(i == 0);
+            i = j;
+        }
+    }
+    foreach(SS; TypeTuple!(S1, S2, S3, S4, S5, S6, S7))
+    {
+        SS ss1 = void;
+        emplace(&ss1);
+        assert(ss1 == SS.init);
+        SS ss2 = void;
+        emplace(&ss2, 2);
+        assert(ss2.i == 2);
+    }
+}
+
+unittest
+{
+    //Test various flavours of emplace from a third party type S,
+    //with/without explicit opAssign/this(S)
+    static struct S
+    {
+        int i;
+    }
+    static struct S1
+    {
+        int i;
+        this(S s){i = s.i;}
+    }
+    static struct S2
+    {
+        int i;
+        void opAssign(S s)
+        {
+            assert(i == 0);
+            i = s.i;
+        }
+    }
+    static struct S3
+    {
+        int i;
+        this(S s){i = s.i;}
+        void opAssign(S s){i = s.i;}
+    }
+    foreach(SS; TypeTuple!(S1, S2, S3))
+    {
+        SS ss = void;
+        S s = S(1);
+        emplace(&ss, s);
+        assert(ss.i == 1);
+    }
+}
+
+unittest
+{
+    //Limited support for "@disable this();" objects,
+    //Provided: No Elaborate Destructor
+    //Provided: no Elaborate Copy Constructor
+    static struct S
+    {
+        int i, j;
+        @disable this();
+        this(int, int){}
+    }
+    S s1 = void, s2 = void;
+    
+    emplace(&s1, S.init); //Fine, explicit caller request for S.init
+    emplace(&s2, S(1, 2)); //Fine, valid initialization without S.init
 }
 
 // Undocumented for the time being
