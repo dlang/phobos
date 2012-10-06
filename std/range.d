@@ -522,7 +522,7 @@ template isInputRange(R)
     enum bool isInputRange = is(typeof(
     (inout int = 0)
     {
-        R r = void;       // can define a range object
+        R r = R.init;     // can define a range object
         if (r.empty) {}   // can test for empty
         r.popFront();     // can invoke popFront()
         auto h = r.front; // can get the front of the range
@@ -1050,8 +1050,8 @@ template isOutputRange(R, E)
     enum bool isOutputRange = is(typeof(
     (inout int = 0)
     {
-        R r = void;
-        E e = void;
+        R r = R.init;
+        E e = E.init;
         put(r, e);
     }));
 }
@@ -1124,7 +1124,7 @@ template isForwardRange(R)
     enum bool isForwardRange = isInputRange!R && is(typeof(
     (inout int = 0)
     {
-        R r1 = void;
+        R r1 = R.init;
         static assert (is(typeof(r1.save) == R));
     }));
 }
@@ -1164,7 +1164,7 @@ template isBidirectionalRange(R)
     enum bool isBidirectionalRange = isForwardRange!R && is(typeof(
     (inout int = 0)
     {
-        R r = void;
+        R r = R.init;
         r.popBack();
         auto t = r.back;
         auto w = r.front;
@@ -1247,7 +1247,7 @@ template isRandomAccessRange(R)
     {
         static assert(isBidirectionalRange!R ||
                       isForwardRange!R && isInfinite!R);
-        R r = void;
+        R r = R.init;
         auto e = r[1];
         static assert(is(typeof(e) == typeof(r.front)));
         static assert(!isNarrowString!R);
@@ -1308,8 +1308,6 @@ unittest
     {
         @disable this();
 
-        @disable static @property R init();
-
         @property bool empty() const { return false; }
         @property int front() const { return 0; }
         void popFront() {}
@@ -1344,19 +1342,19 @@ template hasMobileElements(R)
     enum bool hasMobileElements = is(typeof(
     (inout int = 0)
     {
-        R r = void;
+        R r = R.init;
         return moveFront(r);
     }))
     && (!isBidirectionalRange!R || is(typeof(
     (inout int = 0)
     {
-        R r = void;
+        R r = R.init;
         return moveBack(r);
     })))
     && (!isRandomAccessRange!R || is(typeof(
     (inout int = 0)
     {
-        R r = void;
+        R r = R.init;
         return moveAt(r, 0);
     })));
 }
@@ -1470,8 +1468,8 @@ $(D ElementType).
  */
 template ElementEncodingType(R)
 {
-    static if (isNarrowString!R)
-        alias ElementEncodingType = typeof(*lvalueOf!R.ptr);
+    static if (isNarrowString!R && is(R : E[], E))
+        alias ElementEncodingType = E;
     else
         alias ElementEncodingType = ElementType!R;
 }
@@ -1541,7 +1539,7 @@ template hasSwappableElements(R)
     enum bool hasSwappableElements = isForwardRange!R && is(typeof(
     (inout int = 0)
     {
-        R r = void;
+        R r = R.init;
         swap(r.front, r.front);             // can swap elements of the range
     }));
 }
@@ -1572,7 +1570,7 @@ template hasAssignableElements(R)
     enum bool hasAssignableElements = isForwardRange!R && is(typeof(
     (inout int = 0)
     {
-        R r = void;
+        R r = R.init;
         static assert(isForwardRange!(R)); // range is forward
         auto e = r.front;
         r.front = e;                       // can assign elements of the range
@@ -1598,7 +1596,7 @@ template hasLvalueElements(R)
     (inout int = 0)
     {
         void checkRef(ref ElementType!R stuff) {}
-        R r = void;
+        R r = R.init;
         static assert(is(typeof(checkRef(r.front))));
     }));
 }
@@ -1644,7 +1642,7 @@ template hasLength(R)
     enum bool hasLength = !isNarrowString!R && is(typeof(
     (inout int = 0)
     {
-        R r = void;
+        R r = R.init;
         static assert(is(typeof(r.length) : ulong));
     }));
 }
@@ -1746,7 +1744,7 @@ template hasSlicing(R)
     enum bool hasSlicing = isForwardRange!R && !isNarrowString!R && is(typeof(
     (inout int = 0)
     {
-        R r = void;
+        R r = R.init;
 
         static if(isInfinite!R)
             typeof(take(r, 1)) s = r[1 .. 2];
@@ -4589,7 +4587,7 @@ unittest //10845
    assert(equal(cycle(a).take(10), [0, 1, 2, 0, 1, 2, 0, 1, 2, 0]));
 }
 
-private alias lengthType(R) = typeof((inout int = 0){ R r = void; return r.length; }());
+private alias lengthType(R) = typeof(R.init.length.init);
 
 /**
    Iterate several ranges in lockstep. The element type is a proxy tuple
