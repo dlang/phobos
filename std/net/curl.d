@@ -953,6 +953,11 @@ unittest
     auto line = res.front();
     assert(line == "Hello world",
            "byLine!HTTP() returns unexpected content: " ~ line);
+
+    auto res2 = byLine(testUrl1, KeepTerminator.no, '\n', HTTP());
+    line = res2.front();
+    assert(line == "Hello world",
+           "byLine!HTTP() returns unexpected content: " ~ line);
 }
 
 /** HTTP/FTP fetch content as a range of chunks.
@@ -1015,11 +1020,26 @@ auto byChunk(Conn = AutoProtocol)
     return SyncChunkInputRange(result, chunkSize);
 }
 
+unittest
+{
+    if (!netAllowed()) return;
+
+    auto res = byChunk(testUrl1);
+    auto line = res.front();
+    assert(line == cast(ubyte[])"Hello world\n",
+           "byLineAsync!HTTP() returns unexpected content " ~ to!string(line));
+
+    auto res2 = byChunk(testUrl1, 1024, HTTP());
+    line = res2.front();
+    assert(line == cast(ubyte[])"Hello world\n",
+           "byLineAsync!HTTP() returns unexpected content: " ~ to!string(line));
+}
+
 private T[] _getForRange(T,Conn)(const(char)[] url, Conn conn)
 {
     static if (is(Conn : HTTP))
     {
-        conn.method = conn.method == Method.undefined ? HTTP.Method.get : conn.method;
+        conn.method = conn.method == HTTP.Method.undefined ? HTTP.Method.get : conn.method;
         return _basicHTTP!(T)(url, null, conn);
     }
     else static if (is(Conn : FTP))
