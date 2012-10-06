@@ -1741,7 +1741,7 @@ unittest
     [    123,    10,    125952],
     [    real.max,    int.max,    real.infinity],
     [    real.max,    -int.max,    0],
-    [    real.min,    -int.max,    0],
+    [    real.min_normal,    -int.max,    0],
     ];
     int i;
 
