@@ -43,19 +43,16 @@ version (linux)
 {
     // Specific to the way Gnu C does stdio
     version = GCC_IO;
-    extern(C) FILE* fopen64(const char*, const char*);
 }
 
 version (OSX)
 {
     version = GENERIC_IO;
-    alias core.stdc.stdio.fopen fopen64;
 }
 
 version (FreeBSD)
 {
     version = GENERIC_IO;
-    alias core.stdc.stdio.fopen fopen64;
 }
 
 version(Windows)
@@ -63,14 +60,9 @@ version(Windows)
     // core.stdc.stdio.fopen expects file names to be
     // encoded in CP_ACP on Windows instead of UTF-8.
     /+ Waiting for druntime pull 299
-    alias core.sys.windows.c.stdio._wfopen fopen64; 
-    +/ extern (C) nothrow FILE* _wfopen(in wchar* filename, in wchar* mode);
-    alias _wfopen fopen64;
-
-    alias std.utf.toUTF16z toOSStringz;
+    +/
+    extern (C) nothrow FILE* _wfopen(in wchar* filename, in wchar* mode);
 }
-else
-    alias std.string.toStringz toOSStringz;
 
 version (DIGITAL_MARS_STDIO)
 {
@@ -122,13 +114,6 @@ else version (GCC_IO)
 
         private size_t fwrite_unlocked(const(void)* ptr,
                 size_t size, size_t n, _iobuf *stream);
-    }
-
-    version (linux)
-    {
-        // declare fopen64 if not already
-        static if (!is(typeof(fopen64)))
-            extern (C) FILE* fopen64(in char*, in char*);
     }
 
     alias fputc_unlocked FPUTC;
@@ -1862,26 +1847,41 @@ size_t readln(ref char[] buf, dchar terminator = '\n')
 }
 
 /*
- * Convenience function that forwards to $(D std.c.stdio.fopen)
- * (to $(D std.c.stdio._wfopen) on Windows)
+ * Convenience function that forwards to $(D core.stdc.stdio.fopen)
+ * (to $(D _wfopen) on Windows)
  * with appropriately-constructed C-style strings.
  */
 private FILE* fopen(in char[] name, in char[] mode = "r")
 {
-    return fopen64(toOSStringz(name), toOSStringz(mode));
+    version(Windows)
+        return _wfopen(toUTF16z(name), toUTF16z(mode));
+    else version(Posix)
+    {
+        /* 
+         * The new opengroup large file support API is transparently
+         * included in the normal C bindings. http://opengroup.org/platform/lfs.html#1.0
+         * if _FILE_OFFSET_BITS in druntime is 64, off_t is 64 bit and  
+         * the normal functions work fine. If not, then large file support
+         * probably isn't available. Do not use the old transitional API
+         * (the native extern(C) fopen64, http://www.unix.org/version2/whatsnew/lfs20mar.html#3.0)
+         */
+        return core.sys.posix.stdio.fopen(toStringz(name), toStringz(mode));
+    }
+    else
+    {
+        return core.stdc.stdio.fopen(toStringz(name), toStringz(mode));
+    }
 }
 
 version (Posix)
 {
-    extern(C) FILE* popen(const char*, const char*);
-
-/***********************************
- * Convenience function that forwards to $(D std.c.stdio.popen)
- * with appropriately-constructed C-style strings.
- */
+    /***********************************
+     * Convenience function that forwards to $(D std.c.stdio.popen)
+     * with appropriately-constructed C-style strings.
+     */
     FILE* popen(in char[] name, in char[] mode = "r")
     {
-        return popen(toOSStringz(name), toOSStringz(mode));
+        return core.sys.posix.stdio.popen(toStringz(name), toStringz(mode));
     }
 }
 
