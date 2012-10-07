@@ -73,110 +73,7 @@ version (Windows)
 }
 else version (Posix)
 {
-    version (OSX)
-    {
-        import core.stdc.config : c_long;
-        // struct prefix to distinguish it from the stat() function.
-        // Ported from /usr/include/sys/stat.h on an OS X Lion box.
-        struct struct_stat64
-        {
-            dev_t st_dev;        /// device
-            mode_t st_mode;
-            nlink_t st_nlink;    /// link count
-            ulong st_ino;        /// file serial number
-            uid_t st_uid;        /// user ID of file's owner
-            gid_t st_gid;        /// user ID of group's owner
-            dev_t st_rdev;       /// if device then device number
-
-            time_t st_atime;
-            c_long st_atimensec;
-            time_t st_mtime;
-            c_long st_mtimensec;
-            time_t st_ctime;
-            c_long st_ctimensec;
-            time_t st_birthtime;
-            c_long st_birthtimensec;
-
-            off_t st_size;
-            blkcnt_t st_blocks;      /// number of allocated 512 byte blocks
-            blksize_t st_blksize;    /// optimal I/O block size
-
-            uint st_flags;
-            uint st_gen;
-            int st_lspare; /* RESERVED: DO NOT USE! */
-            long st_qspare[2]; /* RESERVED: DO NOT USE! */
-        }
-
-        extern(C) int fstat64(int, struct_stat64*);
-        extern(C) int stat64(in char*, struct_stat64*);
-        extern(C) int lstat64(in char*, struct_stat64*);
-    }
-    else version (FreeBSD)
-    {
-        alias core.sys.posix.sys.stat.stat_t struct_stat64;
-        alias core.sys.posix.sys.stat.fstat  fstat64;
-        alias core.sys.posix.sys.stat.stat   stat64;
-        alias core.sys.posix.sys.stat.lstat  lstat64;
-    }
-    else
-    {
-        version(D_LP64)
-        {
-            struct struct_stat64
-            {
-                ulong st_dev;
-                ulong st_ino;
-                ulong st_nlink;
-                uint  st_mode;
-                uint  st_uid;
-                uint  st_gid;
-                int   __pad0;
-                ulong st_rdev;
-                long  st_size;
-                long  st_blksize;
-                long  st_blocks;
-                long  st_atime;
-                ulong st_atimensec;
-                long  st_mtime;
-                ulong st_mtimensec;
-                long  st_ctime;
-                ulong st_ctimensec;
-                long[3]  __unused;
-            }
-            static assert(struct_stat64.sizeof == 144);
-        }
-        else
-        {
-            struct struct_stat64        // distinguish it from the stat() function
-            {
-                ulong st_dev;        /// device
-                uint __pad1;
-                uint st_ino;        /// file serial number
-                uint st_mode;        /// file mode
-                uint st_nlink;        /// link count
-                uint st_uid;        /// user ID of file's owner
-                uint st_gid;        /// user ID of group's owner
-                ulong st_rdev;        /// if device then device number
-                uint __pad2;
-                align(4) ulong st_size;
-                int st_blksize;        /// optimal I/O block size
-                ulong st_blocks;        /// number of allocated 512 byte blocks
-                int st_atime;
-                uint st_atimensec;
-                int st_mtime;
-                uint st_mtimensec;
-                int st_ctime;
-                uint st_ctimensec;
-
-                ulong st_ino64;
-            }
-            //static assert(struct_stat64.sizeof == 88); // copied from d1, but it's currently 96 bytes, not 88.
-        }
-
-        extern(C) int fstat64(int, struct_stat64*);
-        extern(C) int stat64(in char*, struct_stat64*);
-        extern(C) int lstat64(in char*, struct_stat64*);
-    }
+    deprecated alias stat_t struct_stat64;
 }
 // }}}
 
@@ -319,9 +216,8 @@ void[] read(in char[] name, size_t upTo = size_t.max)
         cenforce(fd != -1, name);
         scope(exit) core.sys.posix.unistd.close(fd);
 
-        struct_stat64 statbuf = void;
-        cenforce(fstat64(fd, &statbuf) == 0, name);
-        //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, name);
+        stat_t statbuf = void;
+        cenforce(fstat(fd, &statbuf) == 0, name);
 
         immutable initialAlloc = to!size_t(statbuf.st_size
             ? min(statbuf.st_size + 1, maxInitialAlloc)
@@ -556,8 +452,8 @@ ulong getSize(in char[] name)
     }
     else version(Posix)
     {
-        struct_stat64 statbuf = void;
-        cenforce(stat64(toStringz(name), &statbuf) == 0, name);
+        stat_t statbuf = void;
+        cenforce(stat(toStringz(name), &statbuf) == 0, name);
         return statbuf.st_size;
     }
 }
@@ -599,9 +495,9 @@ void getTimes(in char[] name,
     }
     else version(Posix)
     {
-        struct_stat64 statbuf = void;
+        stat_t statbuf = void;
 
-        cenforce(stat64(toStringz(name), &statbuf) == 0, name);
+        cenforce(stat(toStringz(name), &statbuf) == 0, name);
 
         fileAccessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
         fileModificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
@@ -777,9 +673,9 @@ SysTime timeLastModified(in char[] name)
     }
     else version(Posix)
     {
-        struct_stat64 statbuf = void;
+        stat_t statbuf = void;
 
-        cenforce(stat64(toStringz(name), &statbuf) == 0, name);
+        cenforce(stat(toStringz(name), &statbuf) == 0, name);
 
         return SysTime(unixTimeToStdTime(statbuf.st_mtime));
     }
@@ -832,9 +728,9 @@ SysTime timeLastModified(in char[] name, SysTime returnIfMissing)
     }
     else version(Posix)
     {
-        struct_stat64 statbuf = void;
+        stat_t statbuf = void;
 
-        return stat64(toStringz(name), &statbuf) != 0 ?
+        return stat(toStringz(name), &statbuf) != 0 ?
                returnIfMissing :
                SysTime(unixTimeToStdTime(statbuf.st_mtime));
     }
@@ -893,8 +789,8 @@ unittest
             so it's safer to use stat instead.
         */
 
-        struct_stat64 statbuf = void;
-        return stat64(toStringz(name), &statbuf) == 0;
+        stat_t statbuf = void;
+        return stat(toStringz(name), &statbuf) == 0;
     }
 }
 
@@ -938,9 +834,9 @@ uint getAttributes(in char[] name)
     }
     else version(Posix)
     {
-        struct_stat64 statbuf = void;
+        stat_t statbuf = void;
 
-        cenforce(stat64(toStringz(name), &statbuf) == 0, name);
+        cenforce(stat(toStringz(name), &statbuf) == 0, name);
 
         return statbuf.st_mode;
     }
@@ -971,8 +867,8 @@ uint getLinkAttributes(in char[] name)
     }
     else version(Posix)
     {
-        struct_stat64 lstatbuf = void;
-        cenforce(lstat64(toStringz(name), &lstatbuf) == 0, name);
+        stat_t lstatbuf = void;
+        cenforce(lstat(toStringz(name), &lstatbuf) == 0, name);
         return lstatbuf.st_mode;
     }
 }
@@ -1742,15 +1638,16 @@ assert(!de2.isFile);
             Windows when dealing with symbolic links.
           +/
         @property uint linkAttributes();
-
-        version(Windows) alias void* struct_stat64;
+        
+        version(Windows)
+            alias void* stat_t;
 
         /++
             $(BLUE This function is Posix-Only.)
 
             The $(D stat) struct gotten from calling $(D stat).
           +/
-        @property struct_stat64 statBuf();
+        @property stat_t statBuf();
     }
 }
 else version(Windows)
@@ -1945,7 +1842,7 @@ else version(Posix)
             return _lstatMode;
         }
 
-        @property struct_stat64 statBuf()
+        @property stat_t statBuf()
         {
             _ensureStatDone();
 
@@ -1997,7 +1894,7 @@ else version(Posix)
             if(_didStat)
                 return;
 
-            enforce(stat64(toStringz(_name), &_statBuf) == 0,
+            enforce(stat(toStringz(_name), &_statBuf) == 0,
                     "Failed to stat file `" ~ _name ~ "'");
 
             _didStat = true;
@@ -2012,9 +1909,9 @@ else version(Posix)
             if(_didLStat)
                 return;
 
-            struct_stat64 statbuf = void;
+            stat_t statbuf = void;
 
-            enforce(lstat64(toStringz(_name), &statbuf) == 0,
+            enforce(lstat(toStringz(_name), &statbuf) == 0,
                 "Failed to stat file `" ~ _name ~ "'");
 
             _lstatMode = statbuf.st_mode;
@@ -2026,7 +1923,7 @@ else version(Posix)
 
         string _name; /// The file or directory represented by this DirEntry.
 
-        struct_stat64 _statBuf = void;  /// The result of stat().
+        stat_t _statBuf = void;  /// The result of stat().
         uint  _lstatMode;               /// The stat mode from lstat().
         ubyte _dType;                   /// The type of the file.
 
@@ -2151,8 +2048,8 @@ void copy(in char[] from, in char[] to)
         cenforce(fd != -1, from);
         scope(exit) core.sys.posix.unistd.close(fd);
 
-        struct_stat64 statbuf = void;
-        cenforce(fstat64(fd, &statbuf) == 0, from);
+        stat_t statbuf = void;
+        cenforce(fstat(fd, &statbuf) == 0, from);
         //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, from);
 
         auto toz = toStringz(to);
