@@ -3670,16 +3670,8 @@ void toTextRange(T, W)(T value, W writer)
     char[value.sizeof * 4] buffer = void;
     uint i = cast(uint) (buffer.length - 1);
 
-    Unqual!(Unsigned!T) v = void;
-    if (value < 0)
-    {
-        buffer[i--] = '-';
-        v = -value;
-    }
-    else
-    {
-        v = value;
-    }
+    bool negative = value < 0;
+    Unqual!(Unsigned!T) v = negative ? -value : value;
 
     while (v >= 10)
     {
@@ -3689,9 +3681,17 @@ void toTextRange(T, W)(T value, W writer)
     }
 
     buffer[i] = cast(char) (v + '0'); //hexDigits[cast(uint) v];
+    if (negative)
+        buffer[--i] = '-';
     put(writer, buffer[i .. $]);
 }
 
+unittest
+{
+    auto result = appender!(char[])();
+    toTextRange(-1, result);
+    assert(result.data == "-1");
+}
 
 template hardDeprec(string vers, string date, string oldFunc, string newFunc)
 {
