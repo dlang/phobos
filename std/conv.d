@@ -441,33 +441,7 @@ unittest
     assert(to!string(test) == test);
 }
 
-/**
-$(RED Deprecated. It will be removed in September 2012. Please define $(D opCast)
-      for user-defined types instead of a $(D to) function.
-      $(LREF to) will now use $(D opCast).)
-
-Object-_to-non-object conversions look for a method "to" of the source
-object.
-
-Example:
-----
-class Date
-{
-    T to(T)() if(is(T == long))
-    {
-        return timestamp;
-    }
-    ...
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    auto d = new Date;
-    auto ts = to!long(d); // same as d.to!long()
-}
-----
- */
+//Explicitly undocumented. Do not use. To be removed in March 2013.
 deprecated T toImpl(T, S)(S value)
     if (is(S : Object) && !is(T : Object) && !isSomeString!T &&
         hasMember!(S, "to") && is(typeof(S.init.to!T()) : T))

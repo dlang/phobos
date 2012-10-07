@@ -646,10 +646,7 @@ receiveOnlyRet!(T) receiveOnly(T...)()
 }
 
 
-/**
- * $(RED Deprecated. It will be removed in September 2012. Please use the version
- *       which takes a $(CXREF time, Duration) instead.)
- */
+//Explicitly undocumented. Do not use. To be removed in March 2013.
 deprecated bool receiveTimeout(T...)( long ms, T ops )
 {
     return receiveTimeout( dur!"msecs"( ms ), ops );
@@ -671,18 +668,18 @@ unittest
 {
     assert( __traits( compiles,
                       {
-                          receiveTimeout( 0, (Variant x) {} );
-                          receiveTimeout( 0, (int x) {}, (Variant x) {} );
+                          receiveTimeout( dur!"msecs"(0), (Variant x) {} );
+                          receiveTimeout( dur!"msecs"(0), (int x) {}, (Variant x) {} );
                       } ) );
 
     assert( !__traits( compiles,
                        {
-                           receiveTimeout( 0, (Variant x) {}, (int x) {} );
+                           receiveTimeout( dur!"msecs"(0), (Variant x) {}, (int x) {} );
                        } ) );
 
     assert( !__traits( compiles,
                        {
-                           receiveTimeout( 0, (int x) {}, (int x) {} );
+                           receiveTimeout( dur!"msecs"(0), (int x) {}, (int x) {} );
                        } ) );
 
     assert( __traits( compiles,
