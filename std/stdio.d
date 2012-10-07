@@ -26,11 +26,18 @@ import std.algorithm, std.array, std.conv, std.exception, std.format,
     std.typetuple, std.utf;
 version(unittest) import std.file;
 
-version (DigitalMars) version (Windows)
+version (DigitalMars)
 {
-    // Specific to the way Digital Mars C does stdio
-    version = DIGITAL_MARS_STDIO;
-    import std.c.stdio : __fhnd_info, FHND_WCHAR, FHND_TEXT;
+    version (Win32)
+    {
+        // Specific to the way Digital Mars C does stdio
+        version = DIGITAL_MARS_STDIO;
+        import std.c.stdio : __fhnd_info, FHND_WCHAR, FHND_TEXT;
+    }
+    else version (Win64)
+    {
+        version = MICROSOFT_STDIO;
+    }
 }
 
 version (Posix)
@@ -94,6 +101,28 @@ version (DIGITAL_MARS_STDIO)
     enum _O_BINARY = 0x8000;
     int _fileno(FILE* f) { return f._file; }
     alias _fileno fileno;
+}
+else version (MICROSOFT_STDIO)
+{
+    extern (C)
+    {
+        /* **
+         * Microsoft under-the-hood C I/O functions
+         */
+        int _fputc_nolock(int, _iobuf*);
+        int _fputwc_nolock(int, _iobuf*);
+        int _fgetc_nolock(_iobuf*);
+        int _fgetwc_nolock(_iobuf*);
+        void _lock_file(FILE*);
+        void _unlock_file(FILE*);
+    }
+    alias _fputc_nolock FPUTC;
+    alias _fputwc_nolock FPUTWC;
+    alias _fgetc_nolock FGETC;
+    alias _fgetwc_nolock FGETWC;
+
+    alias _lock_file FLOCK;
+    alias _unlock_file FUNLOCK;
 }
 else version (GCC_IO)
 {
@@ -421,7 +450,7 @@ referring to the same handle will see a closed file henceforth.
                 free(_p);
             _p = null; // start a new life
         }
-        if (!_p.handle) return; // Impl is closed by another File 
+        if (!_p.handle) return; // Impl is closed by another File
 
         scope(exit) _p.handle = null; // nullify the handle anyway
         version (Posix)
@@ -477,7 +506,7 @@ $(D rawRead) always reads in binary mode on Windows.
     T[] rawRead(T)(T[] buffer)
     {
         enforce(buffer.length, "rawRead must take a non-empty buffer");
-        version(Windows)
+        version(Win32)
         {
             immutable fd = ._fileno(_p.handle);
             immutable mode = ._setmode(fd, _O_BINARY);
@@ -880,7 +909,7 @@ with every line.  */
 
 /**
  Returns a temporary file by calling $(WEB
- cplusplus.com/reference/clibrary/cstdio/_tmpfile.html, _tmpfile). 
+ cplusplus.com/reference/clibrary/cstdio/_tmpfile.html, _tmpfile).
  Note that the created file has no $(LREF name).*/
     static File tmpfile()
     {
@@ -1034,9 +1063,9 @@ to this file. */
                 assert(!f.isOpen);
             }
             auto lines = f.byLine(kt);
-            if (popFirstLine) 
+            if (popFirstLine)
             {
-                lines.popFront(); 
+                lines.popFront();
                 i = 1;
             }
             foreach (line; lines)
@@ -1857,10 +1886,10 @@ private FILE* fopen(in char[] name, in char[] mode = "r")
         return _wfopen(toUTF16z(name), toUTF16z(mode));
     else version(Posix)
     {
-        /* 
+        /*
          * The new opengroup large file support API is transparently
          * included in the normal C bindings. http://opengroup.org/platform/lfs.html#1.0
-         * if _FILE_OFFSET_BITS in druntime is 64, off_t is 64 bit and  
+         * if _FILE_OFFSET_BITS in druntime is 64, off_t is 64 bit and
          * the normal functions work fine. If not, then large file support
          * probably isn't available. Do not use the old transitional API
          * (the native extern(C) fopen64, http://www.unix.org/version2/whatsnew/lfs20mar.html#3.0)
@@ -2507,6 +2536,42 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
         fp._ptr += i;
         return i;
     }
+}
+
+version (MICROSOFT_STDIO)
+private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
+{
+    FLOCK(fps);
+    scope(exit) FUNLOCK(fps);
+
+    /* Since fps is now locked, we can create an "unshared" version
+     * of fp.
+     */
+    auto fp = cast(_iobuf*)fps;
+
+    auto sz = GC.sizeOf(buf.ptr);
+    //auto sz = buf.length;
+    buf = buf.ptr[0 .. sz];
+
+    auto app = appender(buf);
+    app.clear();
+    if(app.capacity == 0)
+        app.reserve(128); // get at least 128 bytes available
+
+    int c;
+    while((c = FGETC(fp)) != -1) {
+        app.put(cast(char) c);
+        if(c == terminator) {
+            buf = app.data;
+            return buf.length;
+        }
+
+    }
+
+    if (ferror(fps))
+        StdioException();
+    buf = app.data;
+    return buf.length;
 }
 
 version (GCC_IO)
