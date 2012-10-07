@@ -128,7 +128,7 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.xml;
 
-import std.algorithm : count;
+import std.algorithm : count, startsWith;
 import std.array;
 import std.ascii;
 import std.string;

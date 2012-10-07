@@ -134,6 +134,7 @@ private
     import core.stdc.stdio;
     import core.stdc.stdlib;
     import core.stdc.string;
+    import std.algorithm;
     import std.array;
     import std.stdio;
     import std.string;
@@ -1008,17 +1009,17 @@ private:
         result = r.split("ab");
 
         assert(result.length == 2);
-        i = std.string.cmp(result[0], "a");
+        i = std.algorithm.cmp(result[0], "a");
         assert(i == 0);
-        i = std.string.cmp(result[1], "b");
+        i = std.algorithm.cmp(result[1], "b");
         assert(i == 0);
 
         r = new RegExp("a*", null);
         result = r.split("ab");
         assert(result.length == 2);
-        i = std.string.cmp(result[0], "");
+        i = std.algorithm.cmp(result[0], "");
         assert(i == 0);
-        i = std.string.cmp(result[1], "b");
+        i = std.algorithm.cmp(result[1], "b");
         assert(i == 0);
 
         r = new RegExp("<(\\/)?([^<>]+)>", null);
@@ -1032,18 +1033,18 @@ private:
 
         j = join(result, ",");
         //printf("j = '%.*s'\n", j.length, j.ptr);
-        i = std.string.cmp(j, "a,,b,font,/,b,bar,,TAG,hello,/,TAG,");
+        i = std.algorithm.cmp(j, "a,,b,font,/,b,bar,,TAG,hello,/,TAG,");
         assert(i == 0);
 
         r = new RegExp("a[bc]", null);
         result = r.match("123ab");
         j = join(result, ",");
-        i = std.string.cmp(j, "ab");
+        i = std.algorithm.cmp(j, "ab");
         assert(i == 0);
 
         result = r.match("ac");
         j = join(result, ",");
-        i = std.string.cmp(j, "ac");
+        i = std.algorithm.cmp(j, "ac");
         assert(i == 0);
     }
 
@@ -1120,13 +1121,13 @@ private:
         r = new RegExp("a[bc]", null);
         result = r.match("1ab2ac3");
         j = join(result, ",");
-        i = std.string.cmp(j, "ab");
+        i = std.algorithm.cmp(j, "ab");
         assert(i == 0);
 
         r = new RegExp("a[bc]", "g");
         result = r.match("1ab2ac3");
         j = join(result, ",");
-        i = std.string.cmp(j, "ab,ac");
+        i = std.algorithm.cmp(j, "ab,ac");
         assert(i == 0);
     }
 
@@ -1203,12 +1204,12 @@ private:
 
         r = new RegExp("a[bc]", "g");
         result = r.replace("1ab2ac3", "x$&y");
-        i = std.string.cmp(result, "1xaby2xacy3");
+        i = std.algorithm.cmp(result, "1xaby2xacy3");
         assert(i == 0);
 
         r = new RegExp("ab", "g");
         result = r.replace("1ab2ac3", "xy");
-        i = std.string.cmp(result, "1xy2ac3");
+        i = std.algorithm.cmp(result, "1xy2ac3");
         assert(i == 0);
     }
 

@@ -77,6 +77,7 @@ enum SeekPos {
 
 private {
   import std.conv;
+  import std.algorithm;
   import std.ascii;
   import std.format;
   import std.system;    // for Endian enumeration
@@ -2082,14 +2083,14 @@ class File: Stream {
     char[] exp = "Testing stream.d:".dup;
     assert(line[0] == 'T');
     assert(line.length == exp.length);
-    assert(!std.string.cmp(line, "Testing stream.d:"));
+    assert(!std.algorithm.cmp(line, "Testing stream.d:"));
     // jump over "Hello, "
     file.seek(7, SeekPos.Current);
     version (Windows)
       assert(file.position == 19 + 7);
     version (Posix)
       assert(file.position == 18 + 7);
-    assert(!std.string.cmp(file.readString(6), "world!"));
+    assert(!std.algorithm.cmp(file.readString(6), "world!"));
     i = 0; file.read(i);
     assert(i == 666);
     // string#1 + string#2 + int should give exacly that
@@ -2199,14 +2200,14 @@ class BufferedFile: BufferedStream {
     char c1 = file.getc();
     file.ungetc(c1);
     assert( file.size == oldsize );
-    assert(!std.string.cmp(file.readLine(), "Testing stream.d:"));
+    assert(!std.algorithm.cmp(file.readLine(), "Testing stream.d:"));
     // jump over "Hello, "
     file.seek(7, SeekPos.Current);
     version (Windows)
       assert(file.position == 19 + 7);
     version (Posix)
       assert(file.position == 18 + 7);
-    assert(!std.string.cmp(file.readString(6), "world!"));
+    assert(!std.algorithm.cmp(file.readString(6), "world!"));
     i = 0; file.read(i);
     assert(i == 666);
     // string#1 + string#2 + int should give exacly that

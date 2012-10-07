@@ -285,7 +285,7 @@ version(Posix)
     else
     {
         // No, so must traverse PATHs, looking for first match
-        string[]    envPaths    =   std.string.split(
+        string[]    envPaths    =   std.array.split(
             to!string(core.stdc.stdlib.getenv("PATH")), ":");
         int         iRet        =   0;
 
