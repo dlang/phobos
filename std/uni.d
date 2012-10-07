@@ -44,12 +44,7 @@ bool isWhite(dchar c) @safe pure nothrow
 }
 
 
-/++
-   $(RED Deprecated. It will be removed in September 2012. Please use
-   $(D isLower) instead.)
-
-    Return whether $(D c) is a Unicode lowercase character.
-  +/
+//Explicitly undocumented. Do not use. To be removed in March 2013.
 deprecated bool isUniLower(dchar c) @safe pure nothrow
 {
     return isLower(c);
@@ -67,12 +62,7 @@ bool isLower(dchar c) @safe pure nothrow
 }
 
 
-/++
-   $(RED Deprecated. It will be removed in September 2012. Please use
-   $(D isUpper) instead.)
-
-    Return whether $(D c) is a Unicode uppercase character.
-  +/
+//Explicitly undocumented. Do not use. To be removed in March 2013.
 deprecated bool isUniUpper(dchar c) @safe pure nothrow
 {
     return isUpper(c);
@@ -90,13 +80,7 @@ bool isUpper(dchar c) @safe pure nothrow
 }
 
 
-/++
-   $(RED Deprecated. It will be removed in September 2012. Please use
-   $(D toLower) instead.)
-
-    If $(D c) is a Unicode uppercase character, then its lowercase equivalent
-    is returned. Otherwise $(D c) is returned.
-  +/
+//Explicitly undocumented. Do not use. To be removed in March 2013.
 deprecated dchar toUniLower(dchar c) @safe pure nothrow
 {
     return toLower(c);
@@ -162,13 +146,7 @@ dchar toLower(dchar c) @safe pure nothrow
 }
 
 
-/++
-   $(RED Deprecated. It will be removed in September 2012. Please use
-   $(D toUpper) instead.)
-
-    If $(D c) is a Unicode lowercase character, then its uppercase equivalent
-    is returned. Otherwise $(D c) is returned.
-  +/
+//Explicitly undocumented. Do not use. To be removed in March 2013.
 deprecated dchar toUniUpper(dchar c) @safe pure nothrow
 {
     return toUpper(c);
@@ -234,15 +212,7 @@ dchar toUpper(dchar c) @safe pure nothrow
 }
 
 
-/++
-   $(RED Deprecated. It will be removed in September 2012. Please use
-   $(D isAlpha) instead.)
-
-    Returns whether $(D c) is a Unicode alpha character
-    (general Unicode category: Lu, Ll, Lt, Lm, and Lo).
-
-    Standards: Unicode 5.0.0.
-  +/
+//Explicitly undocumented. Do not use. To be removed in March 2013.
 deprecated bool isUniAlpha(dchar c) @safe pure nothrow
 {
     return isAlpha(c);
