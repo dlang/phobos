@@ -71,7 +71,7 @@ deprecated alias FormatException FormatError;
 /**********************************************************************
    Interprets variadic argument list $(D args), formats them according
    to $(D fmt), and sends the resulting characters to $(D w). The
-   encoding of the output is the same as $(D Char). type $(D Writer)
+   encoding of the output is the same as $(D Char). The type $(D Writer)
    must satisfy $(XREF range,isOutputRange!(Writer, Char)).
 
    The variadic arguments are normally consumed in order. POSIX-style
