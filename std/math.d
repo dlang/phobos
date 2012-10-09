@@ -54,6 +54,7 @@
  */
 module std.math;
 
+static import core.math;
 import core.stdc.math;
 import std.range, std.traits;
 
@@ -381,8 +382,10 @@ unittest
  * Bugs:
  *      Results are undefined if |x| >= $(POWER 2,64).
  */
-
-real cos(real x) @safe pure nothrow;       /* intrinsic */
+version (StdDdoc)
+    real cos(real x) @safe pure nothrow;
+else
+    alias core.math.cos cos;
 
 /***********************************
  * Returns sine of x. x is in radians.
@@ -396,8 +399,10 @@ real cos(real x) @safe pure nothrow;       /* intrinsic */
  * Bugs:
  *      Results are undefined if |x| >= $(POWER 2,64).
  */
-
-real sin(real x) @safe pure nothrow;       /* intrinsic */
+version (StdDdoc)
+    real sin(real x) @safe pure nothrow;
+else
+    alias core.math.sin sin;
 
 
 /***********************************
@@ -954,7 +959,10 @@ unittest
  * greater than long.max, the result is
  * indeterminate.
  */
-long rndtol(real x) @safe pure nothrow;    /* intrinsic */
+version (StdDdoc)
+    long rndtol(real x) @safe pure nothrow;
+else
+    alias core.math.rndtol rndtol;
 
 
 /*****************************************
@@ -975,9 +983,14 @@ extern (C) real rndtonl(real x);
  *      $(TR $(TD +$(INFIN)) $(TD +$(INFIN)) $(TD no))
  *      )
  */
-float sqrt(float x) @safe pure nothrow;    /* intrinsic */
-double sqrt(double x) @safe pure nothrow;  /* intrinsic */ /// ditto
-real sqrt(real x) @safe pure nothrow;      /* intrinsic */ /// ditto
+version (StdDdoc)
+{
+    float sqrt(float x) @safe pure nothrow;
+    double sqrt(double x) @safe pure nothrow; /// ditto
+    real sqrt(real x) @safe pure nothrow; /// ditto
+}
+else
+    alias core.math.sqrt sqrt;
 
 unittest
 {
@@ -1716,8 +1729,10 @@ alias core.stdc.math.FP_ILOGBNAN FP_ILOGBNAN;
  * Compute n * 2$(SUP exp)
  * References: frexp
  */
-
-real ldexp(real n, int exp) @safe pure nothrow;    /* intrinsic */
+version (StdDdoc)
+    real ldexp(real n, int exp) @safe pure nothrow;
+else
+    alias core.math.ldexp ldexp;
 
 unittest {
     assert(ldexp(1, -16384) == 0x1p-16384L);
@@ -1972,7 +1987,10 @@ real cbrt(real x) @trusted nothrow    { return core.stdc.math.cbrtl(x); }
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD +$(INFIN)) )
  *      )
  */
-real fabs(real x) @safe pure nothrow;      /* intrinsic */
+version (StdDdoc)
+    real fabs(real x) @safe pure nothrow;
+else
+    alias core.math.fabs fabs;
 
 
 /***********************************************************************
@@ -2116,7 +2134,10 @@ real nearbyint(real x) @trusted nothrow { return core.stdc.math.nearbyintl(x); }
  * $(B nearbyint) performs
  * the same operation, but does not set the FE_INEXACT exception.
  */
-real rint(real x) @safe pure nothrow;      /* intrinsic */
+version (StdDdoc)
+    real rint(real x) @safe pure nothrow;
+else
+    alias core.math.rint rint;
 
 /***************************************
  * Rounds x to the nearest integer value, using the current rounding
@@ -4198,8 +4219,16 @@ alias isInfinity isinf;
  * translate to a single x87 instruction.
  */
 
-real yl2x(real x, real y)   @safe pure nothrow;       // y * log2(x)
-real yl2xp1(real x, real y) @safe pure nothrow;       // y * log2(x + 1)
+version (StdDdoc)
+{
+    real yl2x(real x, real y)   @safe pure nothrow;       // y * log2(x)
+    real yl2xp1(real x, real y) @safe pure nothrow;       // y * log2(x + 1)
+}
+else
+{
+    alias core.math.yl2x yl2x;
+    alias core.math.yl2xp1 yl2xp1;
+}
 
 unittest
 {
