@@ -710,13 +710,27 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
         (client.method == HTTP.Method.post || client.method == HTTP.Method.put))
     {
         client.contentLength = sendData.length;
+        auto remainingData = sendData;
         client.onSend = delegate size_t(void[] buf)
         {
-            size_t minLen = min(buf.length, sendData.length);
+            size_t minLen = min(buf.length, remainingData.length);
             if (minLen == 0) return 0;
-            buf[0..minLen] = sendData[0..minLen];
-            sendData = sendData[minLen..$];
+            buf[0..minLen] = remainingData[0..minLen];
+            remainingData = remainingData[minLen..$];
             return minLen;
+        };
+        client.handle.onSeek = delegate(long offset, CurlSeekPos mode)
+        {
+            switch (mode)
+            {
+                case CurlSeekPos.set:
+                    remainingData = sendData[cast(size_t)offset..$];
+                    return CurlSeek.ok;
+                default:
+                    // As of curl 7.18.0, libcurl will not pass
+                    // anything other than CurlSeekPos.set.
+                    return CurlSeek.cantseek;
+            }
         };
     }
 
