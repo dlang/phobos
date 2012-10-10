@@ -2718,6 +2718,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
                 Result copy;
                 copy._items = _items.save;
                 copy._current = _current.save;
+                copy._valid_current = _valid_current;
                 return copy;
             }
         }
