@@ -28,7 +28,7 @@ partition) $(MYREF partition3) $(MYREF schwartzSort) $(MYREF sort)
 $(MYREF topN) $(MYREF topNCopy) $(MYREF nextPermutation)
 $(MYREF nextEvenPermutation) )
 )
-$(TR $(TDNW Set&nbsp;operations) $(TD $(MYREF
+$(TR $(TDNW Set&nbsp;operations) $(TD $(MYREF cartesianProduct) $(MYREF
 largestPartialIntersection) $(MYREF largestPartialIntersectionWeighted)
 $(MYREF nWayUnion) $(MYREF setDifference) $(MYREF setIntersection) $(MYREF
 setSymmetricDifference) $(MYREF setUnion) )
@@ -11220,3 +11220,166 @@ unittest
     }
     assert(n == 60);
 }
+
+// cartesianProduct
+/**
+Lazily computes the Cartesian product of two ranges $(D range1) and $(D
+range2). The product is a _range of tuples of elements from each respective
+range.
+
+If both ranges are finite, then one must be (at least) a forward range and the
+other an input range.
+
+If one _range is infinite and the other finite, then the finite _range must
+be a forward _range, and the infinite range can be an input _range.
+
+If both ranges are infinite, then both must be forward ranges, and at least one
+must return a reversible _range when passed to $(D take).
+
+Examples:
+---
+auto N = sequence!"n"(0);         // the range of natural numbers
+auto N2 = cartesianProduct(N, N); // the range of all pairs of natural numbers
+
+// Various arbitrary number pairs can be found in the range in finite time.
+assert(canFind(N2, tuple(0, 0)));
+assert(canFind(N2, tuple(123, 321)));
+assert(canFind(N2, tuple(11, 35)));
+assert(canFind(N2, tuple(279, 172)));
+---
+
+---
+auto B = [ 1, 2, 3 ];
+auto C = [ 4, 5, 6 ];
+auto BC = cartesianProduct(B, C);
+
+foreach (n; [[1, 4], [2, 4], [3, 4], [1, 5], [2, 5], [3, 5], [1, 6],
+             [2, 6], [3, 6]])
+{
+    assert(canFind(BC, tuple(n[0], n[1])));
+}
+---
+*/
+auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
+{
+    static if (isInfinite!R1 && isInfinite!R2)
+    {
+        static if (isForwardRange!R1 && isForwardRange!R2)
+        {
+            // This algorithm traverses the cartesian product by alternately
+            // covering the right and bottom edges of an increasing square area
+            // over the infinite table of combinations. This schedule allows us
+            // to require only forward ranges.
+            return zip(sequence!"n"(cast(size_t)0), range1.save, range2.save,
+                       repeat(range1), repeat(range2))
+                .map!(function(a) => chain(
+                    zip(repeat(a[1]), take(a[4].save, a[0])),
+                    zip(take(a[3].save, a[0]+1), repeat(a[2]))
+                ))
+                .joiner;
+        }
+        else static assert(0, "cartesianProduct of infinite ranges requires "~
+                              "forward ranges");
+    }
+    else static if (isInputRange!R2 && isForwardRange!R1 && !isInfinite!R1)
+    {
+        return joiner(map!((ElementType!R2 a) => zip(range1.save, repeat(a)))
+                          (range2));
+    }
+    else static if (isInputRange!R1 && isForwardRange!R2 && !isInfinite!R2)
+    {
+        return joiner(map!((ElementType!R1 a) => zip(repeat(a), range2.save))
+                          (range1));
+    }
+    else static assert(0, "cartesianProduct involving finite ranges must "~
+                          "have at least one finite forward range");
+}
+
+unittest {
+    auto N = sequence!"n"(0);
+
+    // To force the template to fall to the second case, we wrap N in a struct
+    // that doesn't allow bidirectional access.
+    struct FwdRangeWrapper(R)
+    {
+        R impl;
+
+        // Input range API
+        @property auto front() { return impl.front; }
+        void popFront() { impl.popFront(); }
+        static if (isInfinite!R)
+            enum empty = false;
+        else
+            @property bool empty() { return impl.empty; }
+
+        // Forward range API
+        @property auto save() { return typeof(this)(impl.save); }
+    }
+    auto fwdWrap(R)(R range) { return FwdRangeWrapper!R(range); }
+
+    // General test: two infinite bidirectional ranges
+    auto N2 = cartesianProduct(N, N);
+
+    assert(canFind(N2, tuple(0, 0)));
+    assert(canFind(N2, tuple(123, 321)));
+    assert(canFind(N2, tuple(11, 35)));
+    assert(canFind(N2, tuple(279, 172)));
+
+    // Test first case: forward range with bidirectional range
+    auto fwdN = fwdWrap(N);
+    auto N2_a = cartesianProduct(fwdN, N);
+
+    assert(canFind(N2_a, tuple(0, 0)));
+    assert(canFind(N2_a, tuple(123, 321)));
+    assert(canFind(N2_a, tuple(11, 35)));
+    assert(canFind(N2_a, tuple(279, 172)));
+
+    // Test second case: bidirectional range with forward range
+    auto N2_b = cartesianProduct(N, fwdN);
+
+    assert(canFind(N2_b, tuple(0, 0)));
+    assert(canFind(N2_b, tuple(123, 321)));
+    assert(canFind(N2_b, tuple(11, 35)));
+    assert(canFind(N2_b, tuple(279, 172)));
+
+    // Test third case: finite forward range with (infinite) input range
+    static struct InpRangeWrapper(R)
+    {
+        R impl;
+
+        // Input range API
+        @property auto front() { return impl.front; }
+        void popFront() { impl.popFront(); }
+        static if (isInfinite!R)
+            enum empty = false;
+        else
+            @property bool empty() { return impl.empty; }
+    }
+    auto inpWrap(R)(R r) { return InpRangeWrapper!R(r); }
+
+    auto inpN = inpWrap(N);
+    auto B = [ 1, 2, 3 ];
+    auto fwdB = fwdWrap(B);
+    auto BN = cartesianProduct(fwdB, inpN);
+
+    assert(equal(map!"[a[0],a[1]]"(BN.take(10)), [[1, 0], [2, 0], [3, 0],
+                 [1, 1], [2, 1], [3, 1], [1, 2], [2, 2], [3, 2], [1, 3]]));
+
+    // Test fourth case: (infinite) input range with finite forward range
+    auto NB = cartesianProduct(inpN, fwdB);
+
+    assert(equal(map!"[a[0],a[1]]"(NB.take(10)), [[0, 1], [0, 2], [0, 3],
+                 [1, 1], [1, 2], [1, 3], [2, 1], [2, 2], [2, 3], [3, 1]]));
+
+    // General finite range case
+    auto C = [ 4, 5, 6 ];
+    auto BC = cartesianProduct(B, C);
+
+    foreach (n; [[1, 4], [2, 4], [3, 4], [1, 5], [2, 5], [3, 5], [1, 6],
+                 [2, 6], [3, 6]])
+    {
+        assert(canFind(BC, tuple(n[0], n[1])));
+    }
+}
+
+// vim:set sw=4 ts=4 expandtab:
