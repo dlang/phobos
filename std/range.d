@@ -2840,7 +2840,10 @@ if (isInputRange!R && !hasSlicing!R)
             alias length opDollar;
 
             static if (isForwardRange!R)
-                @property auto save() { return this; }
+                @property auto save()
+                {
+                    return Result(_input.save, _n);
+                }
         }
 
         return Result(range, n);
@@ -3385,7 +3388,7 @@ assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
 Tip: This is a great way to implement simple circular buffers.
 */
 struct Cycle(Range)
-if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
+    if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
 {
     alias Unqual!Range R;
 
@@ -3444,9 +3447,9 @@ if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
             }
         }
 
-        @property Cycle!R save()
+        @property Cycle save()
         {
-            return Cycle!R(this._original.save, this._index);
+            return Cycle(this._original.save, this._index);
         }
     }
     else
@@ -3480,9 +3483,9 @@ if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
             if (_current.empty) _current = _original;
         }
 
-        @property Cycle!R save()
+        @property Cycle save()
         {
-            Cycle!R ret;
+            Cycle ret;
             ret._original = this._original.save;
             ret._current =  this._current.save;
             return ret;
@@ -3523,7 +3526,7 @@ struct Cycle(R)
         return _ptr[(n + _index) % R.length];
     }
 
-    @property Cycle!R save()
+    @property Cycle save()
     {
         return this;
     }
@@ -5117,8 +5120,9 @@ enum TransverseOptions
 struct FrontTransversal(Ror,
         TransverseOptions opt = TransverseOptions.assumeJagged)
 {
-    alias Unqual!(Ror) RangeOfRanges;
-    alias typeof(RangeOfRanges.init.front.front) ElementType;
+    alias Unqual!(Ror)               RangeOfRanges;
+    alias .ElementType!RangeOfRanges RangeType;
+    alias .ElementType!RangeType     ElementType;
 
     private void prime()
     {
@@ -5147,7 +5151,7 @@ struct FrontTransversal(Ror,
         prime();
         static if (opt == TransverseOptions.enforceNotJagged)
             // (isRandomAccessRange!RangeOfRanges
-            //     && hasLength!(.ElementType!RangeOfRanges))
+            //     && hasLength!RangeType)
         {
             if (empty) return;
             immutable commonLength = _input.front.length;
@@ -5181,7 +5185,7 @@ struct FrontTransversal(Ror,
     }
 
     /// Ditto
-    static if (hasMobileElements!(.ElementType!RangeOfRanges))
+    static if (hasMobileElements!RangeType)
     {
         ElementType moveFront()
         {
@@ -5189,7 +5193,7 @@ struct FrontTransversal(Ror,
         }
     }
 
-    static if (hasAssignableElements!(.ElementType!RangeOfRanges))
+    static if (hasAssignableElements!RangeType)
     {
         @property auto front(ElementType val)
         {
@@ -5205,14 +5209,16 @@ struct FrontTransversal(Ror,
         prime();
     }
 
-    /// Ditto
+/**
+   Duplicates this $(D frontTransversal). Note that only the encapsulating
+   range of range will be duplicated. Underlying ranges will not be
+   duplicated.
+*/
     static if (isForwardRange!RangeOfRanges)
     {
-        @property typeof(this) save()
+        @property FrontTransversal save()
         {
-            auto ret = this;
-            ret._input = _input.save;
-            return ret;
+            return FrontTransversal(_input.save);
         }
     }
 
@@ -5236,7 +5242,7 @@ struct FrontTransversal(Ror,
         }
 
         /// Ditto
-        static if (hasMobileElements!(.ElementType!RangeOfRanges))
+        static if (hasMobileElements!RangeType)
         {
             ElementType moveBack()
             {
@@ -5244,7 +5250,7 @@ struct FrontTransversal(Ror,
             }
         }
 
-        static if (hasAssignableElements!(.ElementType!RangeOfRanges))
+        static if (hasAssignableElements!RangeType)
         {
             @property auto back(ElementType val)
             {
@@ -5269,7 +5275,7 @@ struct FrontTransversal(Ror,
         }
 
         /// Ditto
-        static if (hasMobileElements!(.ElementType!RangeOfRanges))
+        static if (hasMobileElements!RangeType)
         {
             ElementType moveAt(size_t n)
             {
@@ -5277,7 +5283,7 @@ struct FrontTransversal(Ror,
             }
         }
         /// Ditto
-        static if (hasAssignableElements!(.ElementType!RangeOfRanges))
+        static if (hasAssignableElements!RangeType)
         {
             void opIndexAssign(ElementType val, size_t n)
             {
@@ -5749,8 +5755,8 @@ assert(ind[5] == 6);
 ---
 */
 struct Indexed(Source, Indices)
-if(isRandomAccessRange!Source && isInputRange!Indices &&
-  is(typeof(Source.init[ElementType!(Indices).init])))
+    if(isRandomAccessRange!Source && isInputRange!Indices &&
+        is(typeof(Source.init[ElementType!(Indices).init])))
 {
     this(Source source, Indices indices)
     {
@@ -5945,8 +5951,7 @@ private:
 }
 
 /// Ditto
-Indexed!(Source, Indices) indexed(Source, Indices)
-(Source source, Indices indices)
+Indexed!(Source, Indices) indexed(Source, Indices)(Source source, Indices indices)
 {
     return typeof(return)(source, indices);
 }
