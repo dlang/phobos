@@ -2218,7 +2218,7 @@ private
         mixin Check!("Comment");
 
         try { checkLiteral("<!--",s); } catch(Err e) { fail(e); }
-        sizediff_t n = s.indexOf("--");
+        ptrdiff_t n = s.indexOf("--");
         if (n == -1) fail("unterminated comment");
         s = s[n..$];
         try { checkLiteral("-->",s); } catch(Err e) { fail(e); }
@@ -2792,7 +2792,7 @@ class CheckException : XMLException
     private void complete(string entire)
     {
         string head = entire[0..$-tail.length];
-        sizediff_t n = head.lastIndexOf('\n') + 1;
+        ptrdiff_t n = head.lastIndexOf('\n') + 1;
         line = head.count("\n") + 1;
         dstring t;
         transcode(head[n..$],t);

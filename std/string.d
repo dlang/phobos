@@ -331,9 +331,9 @@ enum CaseSensitive { no, yes }
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
-sizediff_t indexOf(Char)(in Char[] s,
-                         dchar c,
-                         CaseSensitive cs = CaseSensitive.yes) pure
+ptrdiff_t indexOf(Char)(in Char[] s,
+                      dchar c,
+                      CaseSensitive cs = CaseSensitive.yes) pure
     if(isSomeChar!Char)
 {
     if (cs == CaseSensitive.yes)
@@ -351,7 +351,7 @@ sizediff_t indexOf(Char)(in Char[] s,
         }
 
         // c is a universal character
-        foreach (sizediff_t i, dchar c2; s)
+        foreach (ptrdiff_t i, dchar c2; s)
         {
             if (c == c2)
                 return i;
@@ -363,7 +363,7 @@ sizediff_t indexOf(Char)(in Char[] s,
         {                                                   // Plain old ASCII
             auto c1 = cast(char) std.ascii.toLower(c);
 
-            foreach (sizediff_t i, c2; s)
+            foreach (ptrdiff_t i, c2; s)
             {
                 auto c3 = std.ascii.toLower(c2);
                 if (c1 == c3)
@@ -374,7 +374,7 @@ sizediff_t indexOf(Char)(in Char[] s,
         {                                                   // c is a universal character
             auto c1 = std.uni.toLower(c);
 
-            foreach (sizediff_t i, dchar c2; s)
+            foreach (ptrdiff_t i, dchar c2; s)
             {
                 auto c3 = std.uni.toLower(c2);
                 if (c1 == c3)
@@ -421,9 +421,9 @@ unittest
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
-sizediff_t indexOf(Char1, Char2)(const(Char1)[] s,
-                                 const(Char2)[] sub,
-                                 CaseSensitive cs = CaseSensitive.yes)
+ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s,
+                              const(Char2)[] sub,
+                              CaseSensitive cs = CaseSensitive.yes)
     if(isSomeChar!Char1 && isSomeChar!Char2)
 {
     const(Char1)[] balance;
@@ -495,9 +495,9 @@ unittest
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
-sizediff_t lastIndexOf(Char)(const(Char)[] s,
-                             dchar c,
-                             CaseSensitive cs = CaseSensitive.yes)
+ptrdiff_t lastIndexOf(Char)(const(Char)[] s,
+                          dchar c,
+                          CaseSensitive cs = CaseSensitive.yes)
     if(isSomeChar!Char)
 {
     if(cs == CaseSensitive.yes)
@@ -507,7 +507,7 @@ sizediff_t lastIndexOf(Char)(const(Char)[] s,
             for(auto i = s.length; i-- != 0;)
             {
                 if(s[i] == c)
-                    return cast(sizediff_t)i;
+                    return cast(ptrdiff_t)i;
             }
         }
         else
@@ -515,7 +515,7 @@ sizediff_t lastIndexOf(Char)(const(Char)[] s,
             for(size_t i = s.length; !s.empty;)
             {
                 if(s.back == c)
-                    return cast(sizediff_t)i - codeLength!Char(c);
+                    return cast(ptrdiff_t)i - codeLength!Char(c);
 
                 i -= strideBack(s, i);
                 s = s[0 .. i];
@@ -532,7 +532,7 @@ sizediff_t lastIndexOf(Char)(const(Char)[] s,
             {
                 immutable c2 = std.ascii.toLower(s[i]);
                 if(c1 == c2)
-                    return cast(sizediff_t)i;
+                    return cast(ptrdiff_t)i;
             }
         }
         else
@@ -542,7 +542,7 @@ sizediff_t lastIndexOf(Char)(const(Char)[] s,
             for(size_t i = s.length; !s.empty;)
             {
                 if(std.uni.toLower(s.back) == c1)
-                    return cast(sizediff_t)i - codeLength!Char(c);
+                    return cast(ptrdiff_t)i - codeLength!Char(c);
 
                 i -= strideBack(s, i);
                 s = s[0 .. i];
@@ -590,9 +590,9 @@ unittest
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
-sizediff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
-                                     const(Char2)[] sub,
-                                     CaseSensitive cs = CaseSensitive.yes)
+ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
+                                  const(Char2)[] sub,
+                                  CaseSensitive cs = CaseSensitive.yes)
     if(isSomeChar!Char1 && isSomeChar!Char2)
 {
     if(sub.empty)
@@ -607,7 +607,7 @@ sizediff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
         {
             immutable c = sub[0];
 
-            for(sizediff_t i = s.length - sub.length; i >= 0; --i)
+            for(ptrdiff_t i = s.length - sub.length; i >= 0; --i)
             {
                 if(s[i] == c && memcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
                     return i;
@@ -618,7 +618,7 @@ sizediff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
             for(size_t i = s.length; !s.empty;)
             {
                 if(s.endsWith(sub))
-                    return cast(sizediff_t)i - to!(const(Char1)[])(sub).length;
+                    return cast(ptrdiff_t)i - to!(const(Char1)[])(sub).length;
 
                 i -= strideBack(s, i);
                 s = s[0 .. i];
@@ -632,7 +632,7 @@ sizediff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
             if(endsWith!((dchar a, dchar b) {return std.uni.toLower(a) == std.uni.toLower(b);})
                         (s, sub))
             {
-                return cast(sizediff_t)i - to!(const(Char1)[])(sub).length;
+                return cast(ptrdiff_t)i - to!(const(Char1)[])(sub).length;
             }
 
             i -= strideBack(s, i);
@@ -1950,7 +1950,7 @@ S detab(S)(S s, size_t tabSize = 8) @trusted pure
             }
             else
             {
-                sizediff_t j = result.length;
+                ptrdiff_t j = result.length;
                 result.length = j + nspaces;
                 result[j .. j + nspaces] = ' ';
             }
@@ -2042,7 +2042,7 @@ S entab(S)(S s, size_t tabSize = 8) @trusted pure
                 if (!changes)
                     change();
 
-                sizediff_t j = result.length - nspaces;
+                ptrdiff_t j = result.length - nspaces;
                 auto ntabs = (((column - nspaces) % tabSize) + nspaces) / tabSize;
                 result.length = j + ntabs;
                 result[j .. j + ntabs] = '\t';
@@ -3397,7 +3397,7 @@ unittest
 
 bool isNumeric(const(char)[] s, in bool bAllowSep = false)
 {
-    sizediff_t iLen = s.length;
+    ptrdiff_t iLen = s.length;
     bool   bDecimalPoint = false;
     bool   bExponent = false;
     bool   bComplex = false;

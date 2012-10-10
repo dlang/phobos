@@ -248,7 +248,7 @@ public:
     {
         auto predictlength = 20+20*(data.length/2); // just over 19
         char [] buff = new char[frontExtraBytes + predictlength];
-        sizediff_t sofar = biguintToDecimal(buff, data.dup);
+        ptrdiff_t sofar = biguintToDecimal(buff, data.dup);
         return buff[sofar-frontExtraBytes..$];
     }
 
@@ -1001,7 +1001,7 @@ BigDigit [] sub(BigDigit[] x, BigDigit[] y, bool *negative)
     if (x.length == y.length)
     {
         // There's a possibility of cancellation, if x and y are almost equal.
-        sizediff_t last = highestDifferentDigit(x, y);
+        ptrdiff_t last = highestDifferentDigit(x, y);
         BigDigit [] result = new BigDigit[last+1];
         if (x[last] < y[last])
         {   // we know result is negative

@@ -3521,10 +3521,10 @@ struct BoyerMooreFinder(alias pred, Range)
 {
 private:
     size_t skip[];
-    sizediff_t[ElementType!(Range)] occ;
+    ptrdiff_t[ElementType!(Range)] occ;
     Range needle;
 
-    sizediff_t occurrence(ElementType!(Range) c)
+    ptrdiff_t occurrence(ElementType!(Range) c)
     {
         auto p = c in occ;
         return p ? *p : -1;
@@ -3541,8 +3541,8 @@ is ignored.
     static bool needlematch(R)(R needle,
                               size_t portion, size_t offset)
     {
-        sizediff_t virtual_begin = needle.length - offset - portion;
-        sizediff_t ignore = 0;
+        ptrdiff_t virtual_begin = needle.length - offset - portion;
+        ptrdiff_t ignore = 0;
         if (virtual_begin < 0) {
             ignore = -virtual_begin;
             virtual_begin = 0;
@@ -3964,7 +3964,7 @@ assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
 assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
 --------------------
   +/
-sizediff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
+ptrdiff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
 if (is(typeof(startsWith!pred(haystack, needle))))
 {
     static if (isNarrowString!R)
@@ -4012,7 +4012,7 @@ assert(countUntil!(std.ascii.isDigit)("hello world") == -1);
 assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
 --------------------
   +/
-sizediff_t countUntil(alias pred, R)(R haystack)
+ptrdiff_t countUntil(alias pred, R)(R haystack)
 if (isForwardRange!R && is(typeof(unaryFun!pred(haystack.front)) == bool))
 {
     static if (isNarrowString!R)
@@ -4054,7 +4054,7 @@ unittest
  * because it is easily confused with the homonym function
  * in $(D std.string).
  */
-deprecated sizediff_t indexOf(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+deprecated ptrdiff_t indexOf(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (is(typeof(startsWith!pred(haystack, needle))))
 {
     return countUntil!pred(haystack, needle);
@@ -7178,7 +7178,7 @@ unittest
     //scope(failure) writeln(stderr, "Failure testing algorithm");
     //auto v = ([ 25, 7, 9, 2, 0, 5, 21 ]).dup;
     int[] v = [ 7, 6, 5, 4, 3, 2, 1, 0 ];
-    sizediff_t n = 3;
+    ptrdiff_t n = 3;
     topN!("a < b")(v, n);
     assert(reduce!max(v[0 .. n]) <= v[n]);
     assert(reduce!min(v[n + 1 .. $]) >= v[n]);
@@ -8538,11 +8538,11 @@ unittest
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto r = Random(unpredictableSeed);
-    sizediff_t[] a = new sizediff_t[uniform(1, 1000, r)];
+    ptrdiff_t[] a = new ptrdiff_t[uniform(1, 1000, r)];
     foreach (i, ref e; a) e = i;
     randomShuffle(a, r);
     auto n = uniform(0, a.length, r);
-    sizediff_t[] b = new sizediff_t[n];
+    ptrdiff_t[] b = new ptrdiff_t[n];
     topNCopy!(binaryFun!("a < b"))(a, b, SortOutput.yes);
     assert(isSorted!(binaryFun!("a < b"))(b));
 }
