@@ -2749,6 +2749,12 @@ unittest
 
     // bugzilla 8240
     assert(equal(joiner([inputRangeObject("")]), ""));
+
+    // issue 8792
+    auto b = [[1], [2], [3]];
+    auto jb = joiner(b);
+    auto js = jb.save;
+    assert(equal(jb, js));
 }
 
 // uniq
