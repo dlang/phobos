@@ -3330,7 +3330,7 @@ unittest
 
     bool haystackTooShort()
     {
-        static if (hasLength!R1)
+        static if (estimateNeedleLength)
         {
             return haystack.length < estimatedNeedleLength;
         }
