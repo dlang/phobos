@@ -748,6 +748,7 @@ install:
 	mkdir $(DIR)\src\phobos\ 
 	mkdir $(DIR)\src\phobos\std\ 
 	mkdir $(DIR)\src\phobos\std\net\ 
+	mkdir $(DIR)\src\phobos\std\digest\ 
 	mkdir $(DIR)\src\phobos\std\c\ 
 	mkdir $(DIR)\src\phobos\std\windows\ 
 	mkdir $(DIR)\src\phobos\std\c\windows\ 
@@ -773,7 +774,7 @@ install:
 	$(CP) $(SRC_STD_C_OSX) $(DIR)\src\phobos\std\c\osx\ 
 	$(CP) $(SRC_STD_C_FREEBSD) $(DIR)\src\phobos\std\c\freebsd\ 
 	$(CP) $(SRC_STD_INTERNAL) $(DIR)\src\phobos\std\internal\ 
-	$(CP) $(SRC_STD_INTERNAL_MATH) $(DIR)\src\phobos\std\internal\math\
+	$(CP) $(SRC_STD_INTERNAL_MATH) $(DIR)\src\phobos\std\internal\math\ 
 	$(CP) $(SRC_STD_INTERNAL_WINDOWS) $(DIR)\src\phobos\std\internal\windows\ 
 	#$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc\ 
 	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c\ 
