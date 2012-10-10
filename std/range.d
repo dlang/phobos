@@ -2512,8 +2512,10 @@ assert(equal(s, [ 1, 2, 3, 4, 5 ][]));
 ----
  */
 struct Take(Range)
-if (isInputRange!(Unqual!Range)
-        && !(hasSlicing!(Unqual!Range) || is(Range T == Take!T)))
+if (isInputRange!(Unqual!Range) &&
+    //take _cannot_ test hasSlicing on infinite ranges, because hasSlicing uses
+    //take for slicing infinite ranges.
+    !((!isInfinite!(Unqual!Range) && hasSlicing!(Unqual!Range)) || is(Range T == Take!T)))
 {
     private alias Unqual!Range R;
 
@@ -2668,32 +2670,24 @@ if (isInputRange!(Unqual!Range)
 // This template simply aliases itself to R and is useful for consistency in
 // generic code.
 template Take(R)
-if (isInputRange!(Unqual!R) && (hasSlicing!(Unqual!R) || is(R T == Take!T)))
+if (isInputRange!(Unqual!R) &&
+    ((!isInfinite!(Unqual!R) && hasSlicing!(Unqual!R)) || is(R T == Take!T)))
 {
     alias R Take;
 }
 
-// take for ranges with slicing (finite or infinite)
+// take for finite ranges with slicing
 /// ditto
 Take!R take(R)(R input, size_t n)
-if (isInputRange!(Unqual!R) && hasSlicing!(Unqual!R))
+if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R))
 {
-    static if (hasLength!R)
-    {
-        // @@@BUG@@@
-        //return input[0 .. min(n, $)];
-        return input[0 .. min(n, input.length)];
-    }
-    else
-    {
-        static assert(isInfinite!R,
-                "Nonsensical finite range with slicing but no length");
-        return input[0 .. n];
-    }
+    // @@@BUG@@@
+    //return input[0 .. min(n, $)];
+    return input[0 .. min(n, input.length)];
 }
 
 // take(take(r, n1), n2)
-Take!(R) take(R)(R input, size_t n)
+Take!R take(R)(R input, size_t n)
 if (is(R T == Take!T))
 {
     return R(input.source, min(n, input._maxAvailable));
@@ -2701,7 +2695,7 @@ if (is(R T == Take!T))
 
 // Regular take for input ranges
 Take!(R) take(R)(R input, size_t n)
-if (isInputRange!(Unqual!R) && !hasSlicing!(Unqual!R) && !is(R T == Take!T))
+if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) && !is(R T == Take!T)))
 {
     return Take!R(input, n);
 }
@@ -2731,7 +2725,6 @@ unittest
     takeMyStrAgain = take(takeMyStr, 10);
     assert(equal(takeMyStrAgain, "This is"));
 
-
     foreach(DummyType; AllDummyRanges) {
         DummyType dummy;
         auto t = take(dummy, 5);
@@ -2756,6 +2749,9 @@ unittest
         // also have random access.
 
         assert(equal(t, [1,2,3,4,5]));
+
+        //Test that take doesn't wrap the result of take.
+        assert(take(t, 4) == take(dummy, 4));
     }
 
     immutable myRepeat = repeat(1);
@@ -2785,22 +2781,30 @@ n) elements. Consequently, the result of $(D takeExactly(range, n))
 always defines the $(D length) property (and initializes it to $(D n))
 even when $(D range) itself does not define $(D length).
 
-If $(D R) has slicing, $(D takeExactly) simply returns a slice of $(D
-range). Otherwise if $(D R) is an input range, the type of the result
-is an input range with length. Finally, if $(D R) is a forward range
-(including bidirectional), the type of the result is a forward range
-with length.
+The result of $(D takeExactly) is identical to that of $(LREF take) in
+cases where the original range defines $(D length) or is infinite.
  */
 auto takeExactly(R)(R range, size_t n)
-if (isInputRange!R && !hasSlicing!R)
+if (isInputRange!R)
 {
     static if (is(typeof(takeExactly(range._input, n)) == R))
     {
+        assert(n <= range._n,
+               "Attempted to take more than the length of the range with takeExactly.");
         // takeExactly(takeExactly(r, n1), n2) has the same type as
         // takeExactly(r, n1) and simply returns takeExactly(r, n2)
         range._n = n;
         return range;
     }
+    //Also covers hasSlicing!R for finite ranges.
+    else static if (hasLength!R)
+    {
+        assert(n <= range.length,
+               "Attempted to take more than the length of the range with takeExactly.");
+        return take(range, n);
+    }
+    else static if (isInfinite!R)
+        return Take!R(range, n);
     else
     {
         static struct Result
@@ -2829,12 +2833,6 @@ if (isInputRange!R && !hasSlicing!R)
     }
 }
 
-auto takeExactly(R)(R range, size_t n)
-if (hasSlicing!R)
-{
-    return range[0 .. n];
-}
-
 unittest
 {
     auto a = [ 1, 2, 3, 4, 5 ];
@@ -2855,8 +2853,42 @@ unittest
     assert(e.length == 3);
     assert(e.front == 1);
 
-    assert(equal(takeExactly(e, 4), [1, 2, 3, 4]));
-    // b[1]++;
+    assert(equal(takeExactly(e, 3), [1, 2, 3]));
+
+    //Test that take and takeExactly are the same for ranges which define length
+    //but aren't sliceable.
+    struct L
+    {
+        @property auto front() { return _arr[0]; }
+        @property bool empty() { return _arr.empty; }
+        void popFront() { _arr.popFront(); }
+        @property size_t length() { return _arr.length; }
+        int[] _arr;
+    }
+    static assert(is(typeof(take(L(a), 3)) == typeof(takeExactly(L(a), 3))));
+    assert(take(L(a), 3) == takeExactly(L(a), 3));
+
+    //Test that take and takeExactly are the same for ranges which are sliceable.
+    static assert(is(typeof(take(a, 3)) == typeof(takeExactly(a, 3))));
+    assert(take(a, 3) == takeExactly(a, 3));
+
+    //Test that take and takeExactly are the same for infinite ranges.
+    auto inf = repeat(1);
+    static assert(is(typeof(take(inf, 5)) == Take!(typeof(inf))));
+    assert(take(inf, 5) == takeExactly(inf, 5));
+
+    //Test that take and takeExactly are _not_ the same for ranges which don't
+    //define length.
+    static assert(!is(typeof(take(filter!"true"(a), 3)) == typeof(takeExactly(filter!"true"(a), 3))));
+
+    foreach(DummyType; AllDummyRanges)
+    {
+        DummyType dummy;
+        auto t = takeExactly(dummy, 5);
+
+        //Test that takeExactly doesn't wrap the result of takeExactly.
+        assert(takeExactly(t, 4) == takeExactly(dummy, 4));
+    }
 }
 
 /**
