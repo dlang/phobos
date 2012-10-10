@@ -920,7 +920,7 @@ unittest
     InputRange range;
     fill(range, filler);
     foreach (value; range.arr)
-    	assert(value == filler);
+        assert(value == filler);
 }
 unittest
 {
@@ -947,12 +947,12 @@ unittest
     {
         int[] a = [1, 2, 3];
         immutable(int) b = 0;
-        static assert(__traits(compiles, a.fill(b))); 
+        static assert(__traits(compiles, a.fill(b)));
     }
     {
         double[] a = [1, 2, 3];
         immutable(int) b = 0;
-        static assert(__traits(compiles, a.fill(b))); 
+        static assert(__traits(compiles, a.fill(b)));
     }
 }
 
