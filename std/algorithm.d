@@ -451,7 +451,7 @@ private struct MapResult(alias fun, Range)
         alias length opDollar;
     }
 
-    static if (hasSlicing!R)
+    static if (!isInfinite!R && hasSlicing!R)
     {
         static if (is(typeof(_input[ulong.max .. ulong.max])))
             private alias ulong opSlice_t;
