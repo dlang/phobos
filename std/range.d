@@ -1211,14 +1211,29 @@ unittest
 }
 
 /**
-Returns $(D true) if $(D R) offers a slicing operator with
-integral boundaries, that in turn returns an input range type. The
-following code should compile for $(D hasSlicing) to be $(D true):
+Returns $(D true) if $(D R) offers a slicing operator with integral boundaries
+that returns a forward range type.
+
+For infinite ranges, the result of $(D opSlice) must be the result of
+$(LREF take) or $(LREF takeExactly) on the original range (they both return the
+same type for infinite ranges), and for finite ranges, the result must be
+implicitly convertible to the original range type so that it can be reassigned
+to the original range and the original range can be constructed from it.
+
+The following code should compile for $(D hasSlicing) to be $(D true):
 
 ----
-R r;
-auto s = r[1 .. 2];
-static assert(isInputRange!(typeof(s)));
+R r = void;
+
+static if(isInfinite!R)
+    typeof(take(r, 1)) s = r[1 .. 2];
+else
+    R s = r[1 .. 2];
+
+s = r[1 .. 2];
+
+static assert(isForwardRange!(typeof(r[1 .. 2])));
+static assert(hasLength!(typeof(r[1 .. 2])));
 ----
  */
 template hasSlicing(R)
@@ -1227,23 +1242,56 @@ template hasSlicing(R)
     (inout int = 0)
     {
         R r = void;
-        auto s = r[1 .. 2];
-        static assert(isInputRange!(typeof(s)));
+
+        static if(isInfinite!R)
+            typeof(take(r, 1)) s = r[1 .. 2];
+        else
+            R s = r[1 .. 2];
+
+        s = r[1 .. 2];
+
+        static assert(isForwardRange!(typeof(r[1 .. 2])));
+        static assert(hasLength!(typeof(r[1 .. 2])));
     }));
 }
 
 unittest
 {
     static assert( hasSlicing!(int[]));
+    static assert( hasSlicing!(const(int)[]));
+    static assert(!hasSlicing!(const int[]));
     static assert( hasSlicing!(inout(int)[]));
+    static assert(!hasSlicing!(inout int []));
+    static assert( hasSlicing!(immutable(int)[]));
+    static assert(!hasSlicing!(immutable int[]));
     static assert(!hasSlicing!string);
+    static assert( hasSlicing!dstring);
 
-    struct A { int opSlice(uint, uint); }
-    struct B { int[] opSlice(uint, uint); }
-    struct C { @disable this(); int[] opSlice(size_t, size_t); }
+    enum rangeFuncs = "@property int front();" ~
+                      "void popFront();" ~
+                      "@property bool empty();" ~
+                      "@property auto save() { return this; }" ~
+                      "@property size_t length();";
+
+    struct A { mixin(rangeFuncs); int opSlice(size_t, size_t); }
+    struct B { mixin(rangeFuncs); B opSlice(size_t, size_t); }
+    struct C { mixin(rangeFuncs); @disable this(); C opSlice(size_t, size_t); }
+    struct D { mixin(rangeFuncs); int[] opSlice(size_t, size_t); }
     static assert(!hasSlicing!(A));
     static assert( hasSlicing!(B));
     static assert( hasSlicing!(C));
+    static assert(!hasSlicing!(D));
+
+    struct InfOnes
+    {
+        enum empty = false;
+        void popFront() {}
+        @property int front() { return 1; }
+        @property InfOnes save() { return this; }
+        auto opSlice(size_t i, size_t j) { return takeExactly(this, j - i); }
+    }
+
+    static assert(hasSlicing!InfOnes);
 }
 
 /**
@@ -3069,7 +3117,9 @@ unittest
         @disable this();
         this(int[] arr) { _arr = arr; }
         mixin(genInput());
+        @property auto save() { return this; }
         auto opSlice(size_t i, size_t j) { return typeof(this)(_arr[i .. j]); }
+        @property size_t length() { return _arr.length; }
         int[] _arr;
     }
 
@@ -3099,7 +3149,9 @@ unittest
     {
         this(int[] arr) { _arr = arr; }
         mixin(genInput());
+        @property auto save() { return new typeof(this)(_arr); }
         auto opSlice(size_t i, size_t j) { return new typeof(this)(_arr[i .. j]); }
+        @property size_t length() { return _arr.length; }
         int[] _arr;
     }
 
@@ -4886,6 +4938,7 @@ unittest
 unittest
 {
     auto odds = sequence!("a[0] + n * a[1]")(1, 2);
+    static assert(hasSlicing!(typeof(odds)));
 
     // static slicing tests
     assert(equal(odds[0 .. 5], take(odds, 5)));
