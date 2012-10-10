@@ -3384,6 +3384,34 @@ unittest
     return haystack;
 }
 
+unittest
+{
+    // Test simpleMindedFind for the case where both haystack and needle have
+    // length.
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+
+    struct CustomString {
+        string _impl;
+
+        // This is what triggers issue 7992.
+        @property size_t length() const { return _impl.length; }
+        @property void length(size_t len) { _impl.length = len; }
+
+        // This is for conformance to the forward range API (we deliberately
+        // make it non-random access so that we will end up in
+        // simpleMindedFind).
+        @property bool empty() const { return _impl.empty; }
+        @property dchar front() const { return _impl.front; }
+        void popFront() { _impl.popFront(); }
+        @property CustomString save() { return this; }
+    }
+
+    // If issue 7992 occurs, this will throw an exception from calling
+    // popFront() on an empty range.
+    auto r = find(CustomString("a"), CustomString("b"));
+}
+
 /**
 Finds two or more $(D needles) into a $(D haystack). The predicate $(D
 pred) is used throughout to compare elements. By default, elements are
