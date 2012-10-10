@@ -836,8 +836,10 @@ private void copyBackwards(T)(T[] src, T[] dest)
         memmove(dest.ptr, src.ptr, src.length * T.sizeof);
     else
     {
-        foreach_reverse(i, v; src)
-            dest[i] = v;
+		immutable len = src.length;
+        for(size_t i = len - 1; i < len; i--) {			
+            dest[i] = src[i];
+		}
     }
 }
 
@@ -961,7 +963,7 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
                     ptr = putDChar(ptr, ch);
             }
         }
-        assert(ptr == array.ptr + pos + to_insert);
+        assert(ptr == array.ptr + pos + to_insert, text(ptr - array.ptr, " vs ", pos + to_insert ));
     }
     else
     {// immutable/const, just construct a new array
@@ -1102,7 +1104,7 @@ unittest
 }
 
 unittest
-{// isnertInPlace interop with postblit
+{// insertInPlace interop with postblit
     struct Int
     {
         int* payload;
