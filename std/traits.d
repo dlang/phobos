@@ -330,6 +330,35 @@ unittest
 }
 
 /***
+Check if given function returns using ref
+ 
+Example:
+---
+import std.traits;
+ref int foo();
+int bar();
+static assert(returnsRef!foo);
+static assert(!returnsRef!bar);
+---
+*/
+template returnsRef(alias f)
+{
+    enum bool returnsRef = is(typeof(
+    {
+        ParameterTypeTuple!f param;
+        auto ptr = &f(param);
+    }));
+}
+	
+unittest
+{
+   ref int foo();
+   int bar();
+   static assert(returnsRef!foo);
+   static assert(!returnsRef!bar);
+}
+
+/***
 Get, as a tuple, the types of the parameters to a function, a pointer
 to function, a delegate, a struct with an $(D opCall), a pointer to a
 struct with an $(D opCall), or a class with an $(D opCall).
