@@ -53,7 +53,7 @@ PHOBOSLIB=phobos64.lib
 .asm.obj:
 	$(CC) -c $*
 
-targets : $(PHOBOSLIB) gcstub.obj
+targets : $(PHOBOSLIB) gcstub$(MODEL).obj
 
 test : test.exe
 
@@ -429,8 +429,8 @@ deh2.obj : internal\deh2.d
 dmain2.obj : internal\dmain2.d
 	$(DMD) -c $(DFLAGS) internal\dmain2.d
 
-gcstub.obj : internal\gc\gcstub.d
-	$(DMD) -c $(DFLAGS) -Iinternal\gc internal\gc\gcstub.d
+gcstub$(MODEL).obj : internal\gc\gcstub.d
+	$(DMD) -c $(DFLAGS) -Iinternal\gc internal\gc\gcstub.d -ofgcstub$(MODEL).obj
 
 invariant.obj : internal\invariant.d
 	$(DMD) -c $(DFLAGS) internal\invariant.d
@@ -1005,7 +1005,7 @@ tolf:
 	$(SRC_STDLINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_SOLARIS)
 
 install:
-	$(CP) phobos.lib phobos64.lib gcstub.obj $(DIR)\windows\lib
+	$(CP) phobos.lib phobos64.lib gcstub.obj gcstub64.obj $(DIR)\windows\lib
 	$(CP) $(MAKEFILES) phoboslicense.txt minit.obj std.ddoc $(DIR)\src\phobos
 	$(CP) $(SRC) $(DIR)\src\phobos
 	$(CP) $(SRC_STD) $(DIR)\src\phobos\std

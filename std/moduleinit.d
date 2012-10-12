@@ -113,6 +113,8 @@ version (Win64)
     {
         extern void* _minfo_beg;
         extern void* _minfo_end;
+
+        void _minit() { }
     }
 }
 

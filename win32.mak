@@ -994,7 +994,7 @@ tolf:
 	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
 
 install:
-	$(CP) phobos.lib phobos64.lib gcstub.obj $(DIR)\windows\lib
+	$(CP) phobos.lib phobos64.lib gcstub.obj gcstub64.obj $(DIR)\windows\lib
 	$(CP) $(MAKEFILES) phoboslicense.txt minit.obj std.ddoc $(DIR)\src\phobos
 	$(CP) $(SRC) $(DIR)\src\phobos
 	$(CP) $(SRC_STD) $(DIR)\src\phobos\std
