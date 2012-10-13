@@ -70,17 +70,17 @@ class StringException : Exception
 /* ************* Constants *************** */
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated immutable char[16] hexdigits = "0123456789ABCDEF";
-deprecated immutable digits = "0123456789";
-deprecated immutable char[8]  octdigits = "01234567";
-deprecated immutable char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";
-deprecated immutable char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-deprecated immutable char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-deprecated alias std.ascii.whitespace whitespace;
-deprecated enum dchar LS = '\u2028';
-deprecated enum dchar PS = '\u2029';
-deprecated alias std.ascii.newline newline;
-deprecated bool iswhite(dchar c)
+deprecated("Please use std.ascii.hexDigits instead.")   immutable char[16] hexdigits = "0123456789ABCDEF";
+deprecated("Please use std.ascii.digits instead.")      immutable digits = "0123456789";
+deprecated("Please use std.ascii.octalDigits instead.") immutable char[8]  octdigits = "01234567";
+deprecated("Please use std.ascii.lowercase instead.")   immutable char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";
+deprecated("Please use std.ascii.letters instead.")     immutable char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+deprecated("Please use std.ascii.uppercase instead.")   immutable char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+deprecated("Please use std.ascii.whitespace instead.")  alias std.ascii.whitespace whitespace;
+deprecated("Please use std.uni.lineSep instead.")       enum dchar LS = '\u2028';
+deprecated("Please use std.uni.paraSep instead.")       enum dchar PS = '\u2029';
+deprecated("Please use std.ascii.newline instead.")     alias std.ascii.newline newline;
+deprecated("Please use std.uni.isWhite instead.")       bool iswhite(dchar c)
 {
     return c <= 0x7F
         ? indexOf(whitespace, c) != -1
@@ -756,7 +756,7 @@ unittest
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated S tolower(S)(S s) if (isSomeString!S)
+deprecated("Please use std.string.toLower instead.") S tolower(S)(S s) if (isSomeString!S)
 {
     return toLower!S(s);
 }
@@ -809,7 +809,7 @@ unittest
 }
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated void tolowerInPlace(C)(ref C[] s) if (isSomeChar!C)
+deprecated("Please use std.string.toLowerInPlace instead.") void tolowerInPlace(C)(ref C[] s) if (isSomeChar!C)
 {
     toLowerInPlace!C(s);
 }
@@ -919,7 +919,7 @@ unittest
 }
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated S toupper(S)(S s) if (isSomeString!S)
+deprecated("Please use std.string.toUpper instead.") S toupper(S)(S s) if (isSomeString!S)
 {
     return toUpper!S(s);
 }
@@ -972,7 +972,7 @@ unittest
 }
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated void toupperInPlace(C)(ref C[] s) if (isSomeChar!C)
+deprecated("Please use std.string.toUpperInPlace instead.") void toupperInPlace(C)(ref C[] s) if (isSomeChar!C)
 {
     toUpperInPlace!C(s);
 }
@@ -1201,15 +1201,14 @@ unittest
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated S repeat(S)(S s, size_t n)
+deprecated("Please use std.array.replicate instead.") S repeat(S)(S s, size_t n)
 {
-    pragma(msg, hardDeprec!("2.055", "March 2012", "repeat", "std.array.replicate"));
     return std.array.replicate(s, n);
 }
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated S[] splitlines(S)(S s)
+deprecated("Please use std.string.splitLines instead.") S[] splitlines(S)(S s)
 {
     return splitLines!S(s);
 }
@@ -1305,7 +1304,7 @@ unittest
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated String stripl(String)(String s)
+deprecated("Please use std.string.stripLeft instead.") String stripl(String)(String s)
 {
     return stripLeft!String(s);
 }
@@ -1356,7 +1355,7 @@ unittest
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated String stripr(String)(String s)
+deprecated("Please use std.string.stripRight instead.") String stripr(String)(String s)
 {
     return stripRight!String(s);
 }
@@ -1746,7 +1745,7 @@ unittest
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated S ljustify(S)(S s, size_t width) if (isSomeString!S)
+deprecated("Please use std.string.leftJustify instead.") S ljustify(S)(S s, size_t width) if (isSomeString!S)
 {
     return leftJustify!S(s, width);
 }
@@ -1787,7 +1786,7 @@ S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated S rjustify(S)(S s, size_t width) if (isSomeString!S)
+deprecated("Please use std.string.rightJustify instead.") S rjustify(S)(S s, size_t width) if (isSomeString!S)
 {
     return rightJustify!S(s, width);
 }
@@ -1893,14 +1892,15 @@ unittest
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated S zfill(S)(S s, int width) if (isSomeString!S)
+deprecated("Please use std.string.rightJustify with a fill character of '0' instead.")
+S zfill(S)(S s, int width) if (isSomeString!S)
 {
     return rightJustify!S(s, width, '0');
 }
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated S insert(S)(S s, size_t index, S sub)
+deprecated("Please use std.array.insertInPlace instead.") S insert(S)(S s, size_t index, S sub)
 in
 {
     assert(0 <= index && index <= s.length);
@@ -1913,7 +1913,7 @@ body
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
+deprecated("Please use std.string.detab instead.") S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
 {
     return detab!S(str, tabsize);
 }
@@ -2473,7 +2473,7 @@ unittest
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated alias makeTrans maketrans;
+deprecated("Please use std.string.makeTrans instead.") alias makeTrans maketrans;
 
 unittest
 {
@@ -4274,11 +4274,4 @@ unittest
         assert(testStr6.outdent() == expected6);
         static assert(testStr6.outdent() == expected6);
     }
-}
-
-private template hardDeprec(string vers, string date, string oldFunc, string newFunc)
-{
-    enum hardDeprec = Format!("Notice: As of Phobos %s, std.string.%s has been deprecated " ~
-                              "It will be removed in %s. Please use %s instead.",
-                              vers, oldFunc, date, newFunc);
 }
