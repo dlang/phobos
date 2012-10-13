@@ -3391,7 +3391,8 @@ unittest
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
-    struct CustomString {
+    struct CustomString
+    {
         string _impl;
 
         // This is what triggers issue 7992.
