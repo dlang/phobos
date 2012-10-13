@@ -2718,6 +2718,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
                 Result copy;
                 copy._items = _items.save;
                 copy._current = _current.save;
+                copy._valid_current = _valid_current;
                 return copy;
             }
         }
@@ -2748,6 +2749,12 @@ unittest
 
     // bugzilla 8240
     assert(equal(joiner([inputRangeObject("")]), ""));
+
+    // issue 8792
+    auto b = [[1], [2], [3]];
+    auto jb = joiner(b);
+    auto js = jb.save;
+    assert(equal(jb, js));
 }
 
 // uniq
