@@ -749,6 +749,7 @@ install:
 	mkdir $(DIR)\src\phobos\ 
 	mkdir $(DIR)\src\phobos\std\ 
 	mkdir $(DIR)\src\phobos\std\net\ 
+	mkdir $(DIR)\src\phobos\std\digest\ 
 	mkdir $(DIR)\src\phobos\std\c\ 
 	mkdir $(DIR)\src\phobos\std\windows\ 
 	mkdir $(DIR)\src\phobos\std\c\windows\ 
