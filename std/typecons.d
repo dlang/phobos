@@ -869,15 +869,15 @@ break the soundness of D's type system and does not incur any of the
 risks usually associated with $(D cast).
 
  */
-template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!(T))
+template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!T)
 {
-    static if (!is(T X == const(U), U) && !is(T X == immutable(U), U))
+    static if (!is(T X == const U, U) && !is(T X == immutable U, U))
     {
         alias T Rebindable;
     }
-    else static if (isArray!(T))
+    else static if (isArray!T)
     {
-        alias const(ElementType!(T))[] Rebindable;
+        alias const(ElementType!T)[] Rebindable;
     }
     else
     {
@@ -924,8 +924,8 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!(T))
 Convenience function for creating a $(D Rebindable) using automatic type
 inference.
 */
-Rebindable!(T) rebindable(T)(T obj)
-if (is(T == class) || is(T == interface) || isArray!(T))
+Rebindable!T rebindable(T)(T obj)
+if (is(T == class) || is(T == interface) || isArray!T)
 {
     typeof(return) ret;
     ret = obj;
@@ -937,7 +937,7 @@ This function simply returns the $(D Rebindable) object passed in.  It's useful
 in generic programming cases when a given object may be either a regular
 $(D class) or a $(D Rebindable).
 */
-Rebindable!(T) rebindable(T)(Rebindable!(T) obj)
+Rebindable!T rebindable(T)(Rebindable!T obj)
 {
     return obj;
 }
