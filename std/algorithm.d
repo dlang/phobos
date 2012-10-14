@@ -2755,6 +2755,14 @@ unittest
     auto jb = joiner(b);
     auto js = jb.save;
     assert(equal(jb, js));
+
+    auto js2 = jb.save;
+    jb.popFront();
+    assert(!equal(jb, js));
+    assert(equal(js2, js));
+    js.popFront();
+    assert(equal(jb, js));
+    assert(!equal(js2, js));
 }
 
 // uniq
