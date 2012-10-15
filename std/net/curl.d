@@ -175,10 +175,16 @@ version(unittest)
     import std.process : environment;
     import std.file : tempDir;
     import std.path : buildPath;
-    enum testUrl1 = "http://d-lang.appspot.com/testUrl1";
-    enum testUrl2 = "http://d-lang.appspot.com/testUrl2";
+
+    // Source code for the test service is available at
+    // https://github.com/jcd/d-lang-testservice
+    enum testService = "d-lang.appspot.com";
+
+    enum testUrl1 = "http://"~testService~"/testUrl1";
+    enum testUrl2 = "http://"~testService~"/testUrl2";
     enum testUrl3 = "ftp://ftp.digitalmars.com/sieve.ds";
-    enum testUrl4 = "d-lang.appspot.com/testUrl1";
+    enum testUrl4 = testService~"/testUrl1";
+    enum testUrl5 = "http://"~testService~"/testUrl3";
 }
 version(StdDdoc) import std.stdio;
 
@@ -425,7 +431,7 @@ unittest
         string data = "Hello world";
         auto res = post(testUrl2, data);
         assert(res == data,
-               "put!HTTP() returns unexpected content " ~ res);
+               "post!HTTP() returns unexpected content " ~ res);
     }
 
     {
@@ -434,7 +440,14 @@ unittest
             data ~= cast(ubyte)n;
         auto res = post!ubyte(testUrl2, data);
         assert(res == data,
-               "put!HTTP() with binary data returns unexpected content (" ~ text(res.length) ~ " bytes)");
+               "post!HTTP() with binary data returns unexpected content (" ~ text(res.length) ~ " bytes)");
+    }
+
+    {
+        string data = "Hello world";
+        auto res = post(testUrl5, data);
+        assert(res == data,
+               "post!HTTP() returns unexpected content after redirect " ~ res);
     }
 }
 
