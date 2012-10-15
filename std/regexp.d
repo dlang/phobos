@@ -174,8 +174,8 @@ class RegExpException : Exception
 
 struct regmatch_t
 {
-    sizediff_t rm_so; // index of start of match
-    sizediff_t rm_eo; // index past end of match
+    ptrdiff_t rm_so; // index of start of match
+    ptrdiff_t rm_eo; // index past end of match
 }
 
 private alias char rchar;   // so we can make a wchar version
@@ -334,7 +334,7 @@ unittest
  * ---
  */
 
-sizediff_t find(string s, RegExp pattern)
+ptrdiff_t find(string s, RegExp pattern)
 {
     return pattern.test(s)
         ? pattern.pmatch[0].rm_so
@@ -364,7 +364,7 @@ unittest
    find(s, RegExp(p, a))).
 */
 
-sizediff_t
+ptrdiff_t
 find(string s, string pattern, string attributes = null)
 {
     auto r = new RegExp(pattern, attributes);
@@ -397,9 +397,9 @@ unittest
  * ---
  */
 
-sizediff_t rfind(string s, RegExp pattern)
+ptrdiff_t rfind(string s, RegExp pattern)
 {
-    sizediff_t i = -1, lastindex = 0;
+    ptrdiff_t i = -1, lastindex = 0;
 
     while (pattern.test(s, lastindex))
     {
@@ -415,7 +415,7 @@ sizediff_t rfind(string s, RegExp pattern)
 
 unittest
 {
-    sizediff_t i;
+    ptrdiff_t i;
 
     debug(regexp) printf("regexp.rfind.unittest\n");
     i = rfind("abcdefcdef", RegExp("c"));
@@ -443,7 +443,7 @@ $(D_PARAM std.regexp.rfind(s, p, a)), you may want to use $(D_PARAM
 rfind(s, RegExp(p, a))).
 */
 
-sizediff_t
+ptrdiff_t
 rfind(string s, string pattern, string attributes = null)
 {
     typeof(return) i = -1, lastindex = 0;
@@ -464,7 +464,7 @@ rfind(string s, string pattern, string attributes = null)
 
 unittest
 {
-    sizediff_t i;
+    ptrdiff_t i;
 
     debug(regexp) printf("regexp.rfind.unittest\n");
     i = rfind("abcdefcdef", "c");
@@ -964,7 +964,7 @@ private:
 
         if (s.length)
         {
-            sizediff_t p, q;
+            ptrdiff_t p, q;
             for (q = p; q != s.length;)
             {
                 if (test(s, q))
@@ -1054,7 +1054,7 @@ private:
  *  index of match if successful, -1 if not found
  */
 
-    public sizediff_t find(string string)
+    public ptrdiff_t find(string string)
     {
         if (test(string))
             return pmatch[0].rm_so;
@@ -1089,7 +1089,7 @@ private:
 
         if (attributes & REA.global)
         {
-            sizediff_t lastindex = 0;
+            ptrdiff_t lastindex = 0;
 
             while (test(s, lastindex))
             {
@@ -1145,7 +1145,7 @@ private:
         debug(regexp) printf("string = %.*s, format = %.*s\n", s.length, s.ptr, format.length, format.ptr);
 
         string result = s;
-        sizediff_t lastindex = 0;
+        ptrdiff_t lastindex = 0;
         size_t offset = 0;
 
         for (;;)
@@ -3132,7 +3132,7 @@ private:
     {
         string result;
         size_t c2;
-        sizediff_t rm_so, rm_eo, i;
+        ptrdiff_t rm_so, rm_eo, i;
 
 //    printf("replace3(format = '%.*s', input = '%.*s')\n", format.length, format.ptr, input.length, input.ptr);
         result.length = format.length;
