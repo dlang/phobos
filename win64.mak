@@ -730,6 +730,8 @@ zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_STD_NET)
 	zip32 -u phobos $(SRC_STD_DIGEST)
 
+phobos.zip : zip
+
 clean:
 	cd etc\c\zlib
 	make -f win$(MODEL).mak clean
@@ -742,43 +744,8 @@ clean:
 cleanhtml:
 	del $(DOCS)
 
-install:
-	$(CP) $(LIB) $(DIR)\windows\lib\ 
-	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DIR)\windows\lib\ 
+install: phobos.zip
+	$(CP) phobos.lib phobos64.lib $(DIR)\windows\lib\ 
+	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DRUNTIME)\lib\gcstub64.obj $(DIR)\windows\lib\ 
 	+rd/s/q $(DIR)\src\phobos\ 
-	mkdir $(DIR)\src\phobos\ 
-	mkdir $(DIR)\src\phobos\std\ 
-	mkdir $(DIR)\src\phobos\std\net\ 
-	mkdir $(DIR)\src\phobos\std\c\ 
-	mkdir $(DIR)\src\phobos\std\windows\ 
-	mkdir $(DIR)\src\phobos\std\c\windows\ 
-	mkdir $(DIR)\src\phobos\std\c\linux\ 
-	mkdir $(DIR)\src\phobos\std\c\osx\ 
-	mkdir $(DIR)\src\phobos\std\c\freebsd\ 
-	mkdir $(DIR)\src\phobos\std\internal\ 
-	mkdir $(DIR)\src\phobos\std\internal\math\ 
-	mkdir $(DIR)\src\phobos\std\internal\windows\ 
-	mkdir $(DIR)\src\phobos\etc\ 
-	mkdir $(DIR)\src\phobos\etc\c\ 
-	mkdir $(DIR)\src\phobos\etc\c\zlib\ 
-	mkdir $(DIR)\html\d\phobos\ 
-	$(CP) win32.mak win64.mak posix.mak $(STDDOC) $(DIR)\src\phobos\ 
-	$(CP) $(SRC) $(DIR)\src\phobos\ 
-	$(CP) $(SRC_STD) $(DIR)\src\phobos\std\ 
-	$(CP) $(SRC_STD_NET) $(DIR)\src\phobos\std\net\ 
-	$(CP) $(SRC_STD_DIGEST) $(DIR)\src\phobos\std\digest\ 
-	$(CP) $(SRC_STD_C) $(DIR)\src\phobos\std\c\ 
-	$(CP) $(SRC_STD_WIN) $(DIR)\src\phobos\std\windows\ 
-	$(CP) $(SRC_STD_C_WIN) $(DIR)\src\phobos\std\c\windows\ 
-	$(CP) $(SRC_STD_C_LINUX) $(DIR)\src\phobos\std\c\linux\ 
-	$(CP) $(SRC_STD_C_OSX) $(DIR)\src\phobos\std\c\osx\ 
-	$(CP) $(SRC_STD_C_FREEBSD) $(DIR)\src\phobos\std\c\freebsd\ 
-	$(CP) $(SRC_STD_INTERNAL) $(DIR)\src\phobos\std\internal\ 
-	$(CP) $(SRC_STD_INTERNAL_MATH) $(DIR)\src\phobos\std\internal\math\ 
-	$(CP) $(SRC_STD_INTERNAL_WINDOWS) $(DIR)\src\phobos\std\internal\windows\ 
-	#$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc\ 
-	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c\ 
-	$(CP) $(SRC_ZLIB) $(DIR)\src\phobos\etc\c\zlib\ 
-	$(CP) $(DOCS) $(DIR)\html\d\phobos\ 
-
-
+	unzip -o phobos.zip -d $(DIR)\src\phobos\ 
