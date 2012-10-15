@@ -1,4 +1,4 @@
-# Makefile to build D runtime library phobos.lib for Win64
+# Makefile to build D runtime library phobos64.lib for Win64
 # Designed to work with \dm\bin\make.exe
 # Targets:
 #	make
@@ -15,8 +15,8 @@
 #	This relies on LIB.EXE 8.00 or later, and MAKE.EXE 5.01 or later.
 
 MODEL=64
-
 DIR=\dmd
+PHOBOSGIT=walter@mercury:dpl/phobos1
 VCDIR="\Program Files (x86)\Microsoft Visual Studio 10.0\VC"
 SDKDIR="\Program Files (x86)\Microsoft SDKs\Windows\v7.0A"
 
@@ -24,6 +24,7 @@ CC=$(VCDIR)\bin\amd64\cl
 LD=$(VCDIR)\bin\amd64\link
 LIB=$(VCDIR)\bin\amd64\lib
 CP=cp
+SCP=\putty\pscp -i c:\.ssh\colossus.ppk
 
 #CFLAGS=/O2 /I$(VCDIR)\INCLUDE /I$(SDKDIR)\Include
 CFLAGS=/Zi /I$(VCDIR)\INCLUDE /I$(SDKDIR)\Include
@@ -381,12 +382,12 @@ html : $(DOCS)
 
 internal\gc\dmgc64.lib:
 	cd internal\gc
-	make DMD=$(DMD) -f win64.mak dmgc64.lib
+	make DMD=$(DMD) -f win$(MODEL).mak dmgc64.lib
 	cd ..\..
 
 etc\c\zlib\zlib64.lib:
 	cd etc\c\zlib
-	make -f win64.mak zlib64.lib
+	make -f win$(MODEL).mak zlib64.lib
 	cd ..\..\..
 
 errno.obj : errno.c
@@ -958,7 +959,7 @@ zip : $(MAKEFILES) phoboslicense.txt std.ddoc $(SRC) \
 	$(SRC_STDLINUX) $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC) \
 	$(MAKEFILES_ZLIB) $(MAKEFILES_GC)
 	del phobos.zip
-	zip32 -u phobos $(MAKEFILES) std.ddoc
+	zip32 -u phobos $(MAKEFILES) std.ddoc phoboslicense.txt
 	zip32 -u phobos $(SRC)
 	zip32 -u phobos $(SRC_TI)
 	zip32 -u phobos $(SRC_INT)
@@ -1002,32 +1003,17 @@ tolf:
 	tolf $(MAKEFILES) $(MAKEFILES_ZLIB) $(MAKEFILES_GC) \
 	$(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
-	$(SRC_STDLINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_SOLARIS)
+	$(SRC_STDLINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_SOLARIS) \
+	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
 
-install:
+install: zip minit.obj
 	$(CP) phobos.lib phobos64.lib gcstub.obj gcstub64.obj $(DIR)\windows\lib
-	$(CP) $(MAKEFILES) phoboslicense.txt minit.obj std.ddoc $(DIR)\src\phobos
-	$(CP) $(SRC) $(DIR)\src\phobos
-	$(CP) $(SRC_STD) $(DIR)\src\phobos\std
-	$(CP) $(SRC_STD_C) $(DIR)\src\phobos\std\c
-	$(CP) $(SRC_TI) $(DIR)\src\phobos\std\typeinfo
-	$(CP) $(SRC_INT) $(DIR)\src\phobos\internal
-	$(CP) $(SRC_STD_WIN) $(DIR)\src\phobos\std\windows
-	$(CP) $(SRC_STD_C_WIN) $(DIR)\src\phobos\std\c\windows
-	$(CP) $(SRC_STD_C_LINUX) $(DIR)\src\phobos\std\c\linux
-	$(CP) $(SRC_STD_C_OSX) $(DIR)\src\phobos\std\c\osx
-	$(CP) $(SRC_STD_C_FREEBSD) $(DIR)\src\phobos\std\c\freebsd
-	$(CP) $(SRC_STD_C_OPENBSD) $(DIR)\src\phobos\std\c\openbsd
-	$(CP) $(SRC_STD_C_SOLARIS) $(DIR)\src\phobos\std\c\solaris
-	$(CP) $(SRC_STD_C_POSIX) $(DIR)\src\phobos\std\c\posix
-	$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc
-	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c
-	$(CP) $(SRC_ZLIB) $(DIR)\src\phobos\etc\c\zlib
-	$(CP) $(MAKEFILES_ZLIB) $(DIR)\src\phobos\etc\c\zlib
-	$(CP) $(SRC_GC) $(DIR)\src\phobos\internal\gc
-	$(CP) $(MAKEFILES_GC) $(DIR)\src\phobos\internal\gc
+	+rd/s/q $(DIR)\src\phobos\ 
+	mkdir $(DIR)\src\phobos\ 
+	unzip -o phobos.zip -d $(DIR)\src\phobos\ 
+	copy minit.obj $(DIR)\src\phobos\ 
 
-################# Write to SVN ####################
+################# Write to Git ####################
 
 git:	detab tolf git2
 

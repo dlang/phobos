@@ -17,6 +17,12 @@
 MODEL=32
 DIR=\dmd
 PHOBOSGIT=walter@mercury:dpl/phobos1
+VCDIR="\Program Files (x86)\Microsoft Visual Studio 10.0\VC"
+SDKDIR="\Program Files (x86)\Microsoft SDKs\Windows\v7.0A"
+
+CC=dmc
+CP=cp
+SCP=\putty\pscp -i c:\.ssh\colossus.ppk
 
 CFLAGS=-mn -6 -r
 #CFLAGS=-g -mn -6 -r
@@ -26,9 +32,6 @@ DFLAGS=-m$(MODEL) -O -release -nofloat -w
 #DFLAGS=-m$(MODEL) -unittest -g -w
 #DFLAGS=-m$(MODEL) -unittest -cov -g
 
-CC=dmc
-CP=cp
-SCP=\putty\pscp -i c:\.ssh\colossus.ppk
 DMD=$(DIR)\windows\bin\dmd
 #DMD=..\dmd
 
@@ -946,7 +949,7 @@ zip : $(MAKEFILES) phoboslicense.txt std.ddoc $(SRC) \
 	$(SRC_STDLINUX) $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC) \
 	$(MAKEFILES_ZLIB) $(MAKEFILES_GC)
 	del phobos.zip
-	zip32 -u phobos $(MAKEFILES) std.ddoc
+	zip32 -u phobos $(MAKEFILES) std.ddoc phoboslicense.txt
 	zip32 -u phobos $(SRC)
 	zip32 -u phobos $(SRC_TI)
 	zip32 -u phobos $(SRC_INT)
@@ -993,30 +996,14 @@ tolf:
 	$(SRC_STDLINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_SOLARIS) \
 	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
 
-install:
+install: zip minit.obj
 	$(CP) phobos.lib phobos64.lib gcstub.obj gcstub64.obj $(DIR)\windows\lib
-	$(CP) $(MAKEFILES) phoboslicense.txt minit.obj std.ddoc $(DIR)\src\phobos
-	$(CP) $(SRC) $(DIR)\src\phobos
-	$(CP) $(SRC_STD) $(DIR)\src\phobos\std
-	$(CP) $(SRC_STD_C) $(DIR)\src\phobos\std\c
-	$(CP) $(SRC_TI) $(DIR)\src\phobos\std\typeinfo
-	$(CP) $(SRC_INT) $(DIR)\src\phobos\internal
-	$(CP) $(SRC_STD_WIN) $(DIR)\src\phobos\std\windows
-	$(CP) $(SRC_STD_C_WIN) $(DIR)\src\phobos\std\c\windows
-	$(CP) $(SRC_STD_C_LINUX) $(DIR)\src\phobos\std\c\linux
-	$(CP) $(SRC_STD_C_OSX) $(DIR)\src\phobos\std\c\osx
-	$(CP) $(SRC_STD_C_FREEBSD) $(DIR)\src\phobos\std\c\freebsd
-	$(CP) $(SRC_STD_C_OPENBSD) $(DIR)\src\phobos\std\c\openbsd
-	$(CP) $(SRC_STD_C_SOLARIS) $(DIR)\src\phobos\std\c\solaris
-	$(CP) $(SRC_STD_C_POSIX) $(DIR)\src\phobos\std\c\posix
-	$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc
-	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c
-	$(CP) $(SRC_ZLIB) $(DIR)\src\phobos\etc\c\zlib
-	$(CP) $(MAKEFILES_ZLIB) $(DIR)\src\phobos\etc\c\zlib
-	$(CP) $(SRC_GC) $(DIR)\src\phobos\internal\gc
-	$(CP) $(MAKEFILES_GC) $(DIR)\src\phobos\internal\gc
+	+rd/s/q $(DIR)\src\phobos\ 
+	mkdir $(DIR)\src\phobos\ 
+	unzip -o phobos.zip -d $(DIR)\src\phobos\ 
+	copy minit.obj $(DIR)\src\phobos\ 
 
-################# Write to SVN ####################
+################# Write to Git ####################
 
 git:	detab tolf git2
 
