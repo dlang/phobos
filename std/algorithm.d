@@ -1898,7 +1898,8 @@ void swapFront(R1, R2)(R1 r1, R2 r2)
 // splitter
 /**
 Splits a range using an element as a separator. This can be used with
-any sliceable range type, but is most popular with string types.
+any narrow string type or sliceable range type, but is most popular
+with string types.
 
 Two adjacent separators are considered to surround an empty element in
 the split range.
@@ -2138,7 +2139,8 @@ unittest
 
 /**
 Splits a range using another range as a separator. This can be used
-with any sliceable range type, but is most popular with string types.
+with any narrow string type or sliceable range type, but is most popular
+with string types.
  */
 auto splitter(Range, Separator)(Range r, Separator s)
 if (is(typeof(Range.init.front == Separator.init.front) : bool)
