@@ -398,9 +398,9 @@ struct CodepointSet
     }
 
     //ditto
-    hash_t toHash() const pure nothrow @safe
+    size_t toHash() const pure nothrow @safe
     {
-        hash_t hash = 5381+7*ivals.length;
+        size_t hash = 5381+7*ivals.length;
         if(!empty)
             hash = 31*ivals[0] + 17*ivals[$-1];
         return hash;
