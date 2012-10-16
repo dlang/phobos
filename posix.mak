@@ -107,7 +107,7 @@ endif
 
 # Set CFLAGS
 CFLAGS :=
-ifeq ($(CC),cc)
+ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
 	CFLAGS += -m$(MODEL)
 	ifeq ($(BUILD),debug)
 		CFLAGS += -g
