@@ -56,6 +56,8 @@ ifeq (,$(MODEL))
 	MODEL:=32
 endif
 
+override PIC:=$(if $(PIC),-fPIC,)
+
 # Configurable stuff that's rarely edited
 DRUNTIME_PATH = ../druntime
 ZIPFILE = phobos.zip
@@ -108,7 +110,7 @@ endif
 # Set CFLAGS
 CFLAGS :=
 ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
-	CFLAGS += -m$(MODEL)
+	CFLAGS += -m$(MODEL) $(PIC)
 	ifeq ($(BUILD),debug)
 		CFLAGS += -g
 	else
@@ -117,7 +119,7 @@ ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
 endif
 
 # Set DFLAGS
-DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -property -m$(MODEL)
+DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -property -m$(MODEL) $(PIC)
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
