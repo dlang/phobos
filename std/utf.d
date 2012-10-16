@@ -98,7 +98,7 @@ class UTFException : Exception
     $(RED Deprecated. It will be removed in January 2013.
           Please use $(LREF UTFException) instead.)
   +/
-deprecated alias UTFException UtfException;
+deprecated("Please use std.utf.UTFException instead.") alias UTFException UtfException;
 
 
 /++

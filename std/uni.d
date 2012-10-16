@@ -45,7 +45,7 @@ bool isWhite(dchar c) @safe pure nothrow
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated bool isUniLower(dchar c) @safe pure nothrow
+deprecated("Please use std.uni.isLower instead.") bool isUniLower(dchar c) @safe pure nothrow
 {
     return isLower(c);
 }
@@ -63,7 +63,7 @@ bool isLower(dchar c) @safe pure nothrow
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated bool isUniUpper(dchar c) @safe pure nothrow
+deprecated("Please use std.uni.isUpper instead.") bool isUniUpper(dchar c) @safe pure nothrow
 {
     return isUpper(c);
 }
@@ -81,7 +81,7 @@ bool isUpper(dchar c) @safe pure nothrow
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated dchar toUniLower(dchar c) @safe pure nothrow
+deprecated("Please use std.uni.toLower instead.")  dchar toUniLower(dchar c) @safe pure nothrow
 {
     return toLower(c);
 }
@@ -147,7 +147,7 @@ dchar toLower(dchar c) @safe pure nothrow
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated dchar toUniUpper(dchar c) @safe pure nothrow
+deprecated("Please use std.uni.toUpper instead.")   dchar toUniUpper(dchar c) @safe pure nothrow
 {
     return toUpper(c);
 }
@@ -213,7 +213,7 @@ dchar toUpper(dchar c) @safe pure nothrow
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated bool isUniAlpha(dchar c) @safe pure nothrow
+deprecated("Please use std.uni.isAlpha instead.")  bool isUniAlpha(dchar c) @safe pure nothrow
 {
     return isAlpha(c);
 }
