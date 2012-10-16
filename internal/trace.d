@@ -9,7 +9,7 @@
 
 module internal.trace;
 
-version (Win32)
+version (none)
 {
     // The code in Digital Mars C++'s runtime library is used for Win32
 }
@@ -178,7 +178,7 @@ static void trace_place(Symbol *s, uint count)
     {   size_t num;
         uint u;
 
-        //printf("\t%.*s\t%u\n", s.Sident, count);
+        //printf("\t%.*s\t%u\n", s.Sident.length, s.Sident.ptr, count);
         fprintf(fpdef,"\t%.*s\n", s.Sident.length, s.Sident.ptr);
         s.Sflags |= SFvisited;
 
@@ -369,7 +369,7 @@ else
             calls,tl,tr,fl,fr,pl,pr,id);
 }
         if (id.ptr != s.Sident.ptr)
-            free(cast(void*)id.ptr);
+            std.c.stdlib.free(cast(void*)id.ptr);
     }
 }
 
@@ -480,7 +480,7 @@ static void *trace_malloc(size_t nbytes)
 
 static void trace_free(void *p)
 {
-    free(p);
+    std.c.stdlib.free(p);
 }
 
 //////////////////////////////////////////////
@@ -584,16 +584,22 @@ static void trace_pro(string id)
     //  trace_tos.ohd,trace_ohd,t,starttime);
 }
 
+extern (C) void _c_trace_pro(size_t idlen, char* idptr)
+{
+    char[] id = idptr[0 .. idlen];
+    trace_pro(id);
+}
+
 /////////////////////////////////////////
 //
 
-static void trace_epi()
+extern (C) void _c_trace_epi()
 {   Stack* n;
     timer_t endtime;
     timer_t t;
     timer_t ohd;
 
-    //printf("trace_epi()\n");
+    //printf("_c_trace_epi()\n");
     if (trace_tos)
     {
         timer_t starttime;
@@ -654,7 +660,7 @@ static char* trace_readline(FILE* fp)
 
             dim += 80;
             p = cast(char *)trace_malloc(dim);
-            memcpy(p,buf,i);
+            std.c.string.memcpy(p,buf,i);
             trace_free(buf);
             buf = p;
         }
@@ -1003,7 +1009,7 @@ void _trace_epi_n()
         pushad  ;
         sub     ESP,12  ;
     }
-    trace_epi();
+    _c_trace_epi();
     asm
     {
         add     ESP,12  ;
@@ -1028,7 +1034,7 @@ void _trace_epi_n()
          * Hope trace_epi() doesn't change them
          */
     }
-    trace_epi();
+    _c_trace_epi();
     asm
     {
         pop     R11     ;
@@ -1054,7 +1060,7 @@ void _trace_epi_n()
     {   naked   ;
         pushad  ;
     }
-    trace_epi();
+    _c_trace_epi();
     asm
     {
         popad   ;
@@ -1078,7 +1084,7 @@ void _trace_epi_n()
          * Hope trace_epi() doesn't change them
          */
     }
-    trace_epi();
+    _c_trace_epi();
     asm
     {
         pop     R11     ;

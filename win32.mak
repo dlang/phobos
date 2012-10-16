@@ -64,6 +64,7 @@ test.exe : test.obj $(PHOBOSLIB)
 
 OBJS= deh.obj complex.obj gcstats.obj \
 	critical.obj object.obj monitor.obj \
+	trace.obj \
 	crc32.obj \
 	Czlib.obj Dzlib.obj process.obj \
 	oldsyserror.obj \
@@ -449,6 +450,9 @@ qsort.obj : internal\qsort.d
 
 switch.obj : internal\switch.d
 	$(DMD) -c $(DFLAGS) internal\switch.d
+
+trace.obj : internal\trace.d
+	$(DMD) -c $(DFLAGS) internal\trace.d
 
 ### std
 
