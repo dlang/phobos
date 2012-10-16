@@ -7318,14 +7318,23 @@ unittest
 
 // sort
 /**
-Sorts a random-access range according to predicate $(D less). Performs
+Sorts a random-access range according to the predicate $(D less). Performs
 $(BIGOH r.length * log(r.length)) (if unstable) or $(BIGOH r.length *
 log(r.length) * log(r.length)) (if stable) evaluations of $(D less)
 and $(D swap). See also STL's $(WEB sgi.com/tech/stl/_sort.html, _sort)
 and $(WEB sgi.com/tech/stl/stable_sort.html, stable_sort).
 
-Example:
+$(D sort) returns a $(XREF range, SortedRange) over the original range, which
+functions that can take advantage of sorted data can then use to know that the
+range is sorted and adjust accordingly. The $(XREF range, SortedRange) is a
+wrapper around the original range, so both it and the original range are sorted,
+but other functions won't know that the original range has been sorted, whereas
+they $(I can) know that $(XREF range, SortedRange) has been sorted.
 
+See_Also:
+    $(XREF range, assumeSorted)
+
+Example:
 ----
 int[] array = [ 1, 2, 3, 4 ];
 // sort in descending order
