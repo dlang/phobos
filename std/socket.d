@@ -150,7 +150,7 @@ class SocketException: Exception
      *
      * Provided for compatibility with older code using $(D SocketException).
      */
-    deprecated @property int errorCode() const
+    deprecated("Please use std.socket.SocketOSException instead.") @property int errorCode() const
     {
         auto osException = cast(SocketOSException)this;
         if (osException)
@@ -1911,7 +1911,7 @@ struct TimeVal
     $(RED Deprecated. It will be removed in January 2013.
           Please use $(LREF TimeVal) instead.)
   +/
-deprecated alias TimeVal timeval;
+deprecated("Please use std.socket.TimeVal instead.") alias TimeVal timeval;
 
 
 /**
@@ -2142,7 +2142,7 @@ struct Linger
     $(RED Deprecated. It will be removed in January 2013.
           Please use $(LREF Linger) instead.)
   +/
-deprecated alias Linger linger;
+deprecated("Please use std.socket.Linger instead.") alias Linger linger;
 
 /// Specifies a socket option:
 enum SocketOption: int
