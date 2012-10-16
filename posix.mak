@@ -71,10 +71,6 @@ STDDOC = $(DOCSRC)/std.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc
 DDOCFLAGS=-m$(MODEL) -d -c -o- -version=StdDdoc -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
-# Variable defined in an OS-dependent manner (see below)
-CFLAGS =
-DFLAGS =
-
 # BUILD can be debug or release, but is unset by default; recursive
 # invocation will set it. See the debug and release targets below.
 BUILD =
@@ -110,6 +106,7 @@ else
 endif
 
 # Set CFLAGS
+CFLAGS :=
 ifeq ($(CC),cc)
 	CFLAGS += -m$(MODEL)
 	ifeq ($(BUILD),debug)
