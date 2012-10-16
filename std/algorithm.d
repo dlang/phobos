@@ -2690,7 +2690,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
             _items = r;
             prepare();
         }
-        static if (isInfinite!(ElementType!RoR))
+        static if (isInfinite!RoR)
         {
             enum bool empty = false;
         }
