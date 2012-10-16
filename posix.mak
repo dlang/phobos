@@ -22,6 +22,8 @@
 # OS can be linux, win32, win32remote, win32wine, osx, or freebsd. If left
 # blank, the system will be determined by using uname
 
+# To enable compillation of PIC code use "make PIC=true"
+
 ifeq (,$(OS))
     OS:=$(shell uname)
     ifeq (Darwin,$(OS))
@@ -33,19 +35,7 @@ ifeq (,$(OS))
             ifeq (FreeBSD,$(OS))
                 OS:=freebsd
             else
-                ifeq (OpenBSD,$(OS))
-                    TARGET=OPENBSD
-                else
-                    ifeq (Solaris,$(OS))
-                        TARGET=SOLARIS
-                    else
-                        ifeq (SunOS,$(OS))
-                            TARGET=SOLARIS
-                        else
-                            $(error Unrecognized or unsupported OS for uname: $(OS))
-                        endif
-                    endif
-                endif
+                $(error Unrecognized or unsupported OS for uname: $(OS))
             endif
         endif
     endif
@@ -54,6 +44,11 @@ endif
 # For now, 32 bit is the default model
 ifeq (,$(MODEL))
 	MODEL:=32
+endif
+
+PICFLAG=
+ifeq ($(PIC),true)
+	PICFLAG=-fPIC
 endif
 
 # Configurable stuff that's rarely edited
@@ -66,7 +61,7 @@ DOCSRC = ../d-programming-language.org
 WEBSITE_DIR = ../web
 DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
 BIGDOC_OUTPUT_DIR = /tmp
-SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES) $(EXTRA_DOCUMENTABLES))
+SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(EXTRA_DOCUMENTABLES))
 STDDOC = $(DOCSRC)/std.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc
 DDOCFLAGS=-m$(MODEL) -d -c -o- -version=StdDdoc -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
@@ -110,6 +105,7 @@ else
 endif
 
 # Set CFLAGS
+CFLAGS := $(PICFLAG)
 ifeq ($(CC),cc)
 	CFLAGS += -m$(MODEL)
 	ifeq ($(BUILD),debug)
@@ -120,7 +116,7 @@ ifeq ($(CC),cc)
 endif
 
 # Set DFLAGS
-DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -property -m$(MODEL)
+DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -property -m$(MODEL) $(PICFLAG)
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
@@ -174,8 +170,6 @@ STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
 
 STD_NET_MODULES = $(addprefix std/net/, isemail curl)
 
-STD_DIGEST_MODULES = $(addprefix std/digest/, digest crc md sha)
-
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
 EXTRA_MODULES_OSX := $(addprefix std/c/osx/, socket)
@@ -198,7 +192,7 @@ EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	processinit uni uni_tab)
 
 # Aggregate all D modules relevant to this build
-D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES)
+D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES)
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
@@ -216,7 +210,6 @@ C_FILES = $(addsuffix .c,$(C_MODULES))
 C_EXTRAS = $(addprefix etc/c/zlib/, algorithm.txt ChangeLog crc32.h	\
 deflate.h example.c inffast.h inffixed.h inflate.h inftrees.h		\
 linux.mak minigzip.c osx.mak README trees.h win32.mak zconf.h		\
-win64.mak \
 gzguts.h zlib.3 zlib.h zutil.h)
 # Aggregate all C files over all OSs (this is for the zip file)
 ALL_C_FILES = $(C_FILES) $(C_EXTRAS)
@@ -290,7 +283,7 @@ clean :
 	rm -rf $(ROOT_OF_THEM_ALL) $(ZIPFILE) $(DOC_OUTPUT_DIR)
 
 zip :
-	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES) win32.mak win64.mak
+	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES) win32.mak
 
 install : release
 	sudo cp $(LIB) /usr/lib/
@@ -324,9 +317,6 @@ $(DOC_OUTPUT_DIR)/std_c_windows_%.html : std/c/windows/%.d $(STDDOC)
 $(DOC_OUTPUT_DIR)/std_net_%.html : std/net/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
 
-$(DOC_OUTPUT_DIR)/std_digest_%.html : std/digest/%.d $(STDDOC)
-	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
-
 $(DOC_OUTPUT_DIR)/etc_c_%.html : etc/c/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
 
@@ -345,4 +335,3 @@ html_consolidated :
 	$(MAKE) DOC_OUTPUT_DIR=$(BIGDOC_OUTPUT_DIR) STDDOC=$(BIGSTDDOC) html -j 8
 	cat $(DOCSRC)/std_consolidated_header.html $(BIGHTMLS)	\
 	$(DOCSRC)/std_consolidated_footer.html > $(DOC_OUTPUT_DIR)/std_consolidated.html
-
