@@ -3476,8 +3476,13 @@ T* emplace(T, Args...)(T* chunk, Args args)
             }
         }
     }
-    
-    static if (is(typeof(result.__ctor(args))))
+
+    static if (Args.length == 1 && is(Args[0] == T))
+    {
+        //Exact type match: Move args[0] over directly
+        moveOver(args[0]);
+    }
+    else static if (is(typeof(result.__ctor(args))))
     {
         // T defines a genuine constructor accepting args
         // Go the classic route: write .init first, then call ctor
@@ -3487,27 +3492,24 @@ T* emplace(T, Args...)(T* chunk, Args args)
     else static if (is(typeof(T(args))))
     {
         // Struct without constructor that has one matching field for
-        // each argument. Construct and move over
-        auto t = T(args);
+        // each argument: This is an agglomerate construction.
+        T t = T(args);
         moveOver(t);
-    }
-    else static if (Args.length == 1 && is(Args[0] == T))
-    {
-        //Exact type match: Move args[0] directly (not a copy)
-        moveOver(args[0]);
-    }
-    else static if (Args.length == 1 && isAssignable!(T, Args[0]))
-    {
-        //T does not have any form of constructor that accepts args[0],
-        //But it has an opAssign that accepts it. Use it.
-        static if (is(typeof(result.opAssign(args[0]))))
-            initialize(result); //result has elaborate assignment, so init first.
-        *result = args[0];
+        //Note: This creates a temporary t. We *could* improve this
+        //by initializing to T.init, and then emplacing each arg individually:
+        //
+        //initialize(result);
+        //foreach(i, ref v; args)
+        //    emplace(&result.tupleof[i], v);
+        //
+        //However, to *really* be efficient, we'd need a helper emplace that takes
+        //by reference, and doesn't copy over T.init again. This would make emplace
+        //more complicated, so we stick to this for now.
     }
     else
     {
         //Give up
-        static assert(0, text("Don't know how to emplace a ", T.stringof, " with ", Args[].stringof, "."));
+        static assert(0, text("Don't know how to emplace a ", T.stringof, " with ", Args[].stringof));
     }
 
     return result;
@@ -3688,61 +3690,40 @@ unittest
     //Test various flavours of emplace from int with/without:
     //Agglomerate assign
     //this(int)
-    //opAssign(int)
+    //Must NOT call opAssign(int)
     struct S{}
-    static struct S1 //Calls agglomerate assign
+    static struct S1
     {
         int i;
+        void opAssign(int){assert(0);}
     }
-    static struct S2 //calls this(int)
+    static struct S2
+    {
+        int i, j;
+        void opAssign(int){assert(0);}
+    }
+    static struct S3
     {
         int i;
-        this(int j){i = j;}
+        this(int k){i = k;}
+        void opAssign(int){assert(0);}
+        
     }
-    static struct S3 //opAssign
+    static struct S4
+    {
+        int i, j;
+        this(int k){i = k;}
+        void opAssign(int){assert(0);}
+    }
+    static struct S5
     {
         int i;
-        void opAssign(int j)
-        {
-            assert(i == 0);
-            i = j;
-        }
+        this(int k){i = k;}
+        this(S5 s5){i = s5.i;}
+        void opAssign(int){assert(0);}
+        
     }
-    static struct S4 //calls this(int)
-    {
-        int i;
-        this(int j){i = j;}
-        void opAssign(int j)
-        {
-            assert(i == 0);
-            i = j;
-        }
-    }
-    static struct S5 //opAssign
-    {
-        int i;
-        this(S){}
-        void opAssign(int j)
-        {
-            assert(i == 0);
-            i = j;
-        }
-    }
-    static struct S6 //calls this(int)
-    {
-        int k, i;
-        this(int j){i = j;}
-    }
-    static struct S7 //calls agglomerate assign
-    {
-        int i, k;
-        void opAssign(int j)
-        {
-            assert(i == 0);
-            i = j;
-        }
-    }
-    foreach(SS; TypeTuple!(S1, S2, S3, S4, S5, S6, S7))
+    foreach(SS; TypeTuple!(S1, S2, S3, S4, S5))
     {
         SS ss1 = void;
         emplace(&ss1);
@@ -3750,46 +3731,74 @@ unittest
         SS ss2 = void;
         emplace(&ss2, 2);
         assert(ss2.i == 2);
+        SS ss3 = void;
+        emplace(&ss3, ss2);
+        assert(ss3.i == ss2.i);
     }
 }
 
 unittest
 {
     //Test various flavours of emplace from a third party type S,
-    //with/without explicit opAssign/this(S)
     static struct S
     {
         int i;
     }
     static struct S1
     {
-        int i;
-        this(S s){i = s.i;}
+        S s;
+        void opAssign(S s){assert(0);}
     }
     static struct S2
     {
-        int i;
-        void opAssign(S s)
-        {
-            assert(i == 0);
-            i = s.i;
-        }
+        S s;
+        this(S s){this.s = s;}
+        void opAssign(S s){assert(0);}
     }
-    static struct S3
-    {
-        int i;
-        this(S s){i = s.i;}
-        void opAssign(S s){i = s.i;}
-    }
-    foreach(SS; TypeTuple!(S1, S2, S3))
+    foreach(SS; TypeTuple!(S1, S2))
     {
         SS ss = void;
         S s = S(1);
         emplace(&ss, s);
-        assert(ss.i == 1);
+        assert(ss.s.i == 1);
     }
 }
+unittest
+{
+    //Test complex agglomerate assign.
+    import std.container : Array;
+    struct K1
+    {
+        int i;
+        this(this){}
+    }
+    struct K2
+    {
+        int i;
+    }
 
+    struct S
+    {
+        Array!int a;
+        double b;
+        K1 k1;
+        K2 k2;
+        int z;
+    }
+    S s = void;
+    emplace(&s,
+        Array!int([1, 2, 3]), //Emplaces an array inside a
+        5, //emplaces the int 5 in bool b;
+        K1(1), //emplaces using postblit
+        K2(2), //emplaces using move over
+    );
+    assert(
+      s.a[].equal([1, 2, 3]) &&
+      s.b.approxEqual(5) &&
+      s.k1.i == 1 &&
+      s.k2.i == 2
+    );
+}
 unittest
 {
     //Limited support for "@disable this();" objects,
