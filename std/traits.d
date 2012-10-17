@@ -343,19 +343,15 @@ static assert(!returnsRef!bar);
 */
 template returnsRef(alias f)
 {
-    enum bool returnsRef = is(typeof(
-    {
-        ParameterTypeTuple!f param;
-        auto ptr = &f(param);
-    }));
+    enum returnsRef = (functionAttributes!f & FunctionAttribute.ref_) != 0;
 }
 	
 unittest
 {
-   ref int foo();
-   int bar();
-   static assert(returnsRef!foo);
-   static assert(!returnsRef!bar);
+    ref int foo();
+    int bar();
+    static assert(returnsRef!foo);
+    static assert(!returnsRef!bar);  
 }
 
 /***
