@@ -1302,42 +1302,74 @@ unittest
 This is a best-effort implementation of $(D length) for any kind of
 range.
 
-If $(D hasLength!(Range)), simply returns $(D range.length) without
-checking $(D upTo).
+If $(D hasLength!Range), simply returns $(D range.length) without
+checking $(D upTo) (when specified).
 
 Otherwise, walks the range through its length and returns the number
 of elements seen. Performes $(BIGOH n) evaluations of $(D range.empty)
 and $(D range.popFront()), where $(D n) is the effective length of $(D
-range). The $(D upTo) parameter is useful to "cut the losses" in case
+range).
+
+The $(D upTo) parameter is useful to "cut the losses" in case
 the interest is in seeing whether the range has at least some number
 of elements. If the parameter $(D upTo) is specified, stops if $(D
 upTo) steps have been taken and returns $(D upTo).
+
+Infinite ranges are compatible, provided the parameter $(D upTo) is
+specified, in which case the implementation simply returns upTo.
  */
-auto walkLength(Range)(Range range, const size_t upTo = size_t.max)
-if (isInputRange!Range)
+auto walkLength(Range)(Range range)
+    if (isInputRange!Range && !isInfinite!Range)
 {
     static if (hasLength!Range)
-    {
         return range.length;
-    }
     else
     {
         size_t result;
-        // Optimize this tight loop by specializing for the common
-        // case upTo == default parameter
-        if (upTo == size_t.max)
-            for (; !range.empty; range.popFront()) ++result;
-        else
-            for (; result < upTo && !range.empty; range.popFront()) ++result;
+        for ( ; !range.empty ; range.popFront() )
+            ++result;
+        return result;
+    }
+}
+/// ditto
+auto walkLength(Range)(Range range, const size_t upTo)
+    if (isInputRange!Range)
+{
+    static if (hasLength!Range)
+        return range.length;
+    else static if (isInfinite!Range)
+        return upTo;
+    else
+    {
+        size_t result;
+        for ( ; result < upTo && !range.empty ; range.popFront() )
+            ++result;
         return result;
     }
 }
 
 unittest
 {
+    //hasLength Range
     int[] a = [ 1, 2, 3 ];
     assert(walkLength(a) == 3);
     assert(walkLength(a, 0) == 3);
+    assert(walkLength(a, 2) == 3);
+    assert(walkLength(a, 4) == 3);
+
+    //Forward Range
+    auto b = filter!"true"([1, 2, 3, 4]);
+    assert(b.save.walkLength() == 4);
+    assert(b.save.walkLength(0) == 0);
+    assert(b.save.walkLength(2) == 2);
+    assert(b.save.walkLength(4) == 4);
+    assert(b.save.walkLength(6) == 4);
+
+    //Infinite Range
+    auto fibs = recurrence!"a[n-1] + a[n-2]"(1, 1);
+    assert(!__traits(compiles, fibs.save.walkLength()));
+    assert(fibs.save.take(10).walkLength() == 10);
+    assert(fibs.save.walkLength(55) == 55);
 }
 
 /**
