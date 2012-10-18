@@ -636,7 +636,7 @@ class Document : Element
          * You should rarely need to call this function. It exists so that
          * Documents can be used as associative array keys.
          */
-        override hash_t toHash() @trusted
+        override size_t toHash() @trusted
         {
             return hash(prolog, hash(epilog, (cast()super).toHash()));
         }
@@ -869,9 +869,9 @@ class Element : Item
      * You should rarely need to call this function. It exists so that Elements
      * can be used as associative array keys.
      */
-    override const hash_t toHash()
+    override const size_t toHash()
     {
-        hash_t hash = tag.toHash();
+        size_t hash = tag.toHash();
         foreach(item;items) hash += item.toHash();
         return hash;
     }
@@ -1128,7 +1128,7 @@ class Tag
          * You should rarely need to call this function. It exists so that Tags
          * can be used as associative array keys.
          */
-        override hash_t toHash()
+        override size_t toHash()
         {
             return typeid(name).getHash(&name);
         }
@@ -1268,7 +1268,7 @@ class Comment : Item
      * You should rarely need to call this function. It exists so that Comments
      * can be used as associative array keys.
      */
-    override const hash_t toHash() { return hash(content); }
+    override const size_t toHash() { return hash(content); }
 
     /**
      * Returns a string representation of this comment
@@ -1347,7 +1347,7 @@ class CData : Item
      * You should rarely need to call this function. It exists so that CDatas
      * can be used as associative array keys.
      */
-    override const hash_t toHash() { return hash(content); }
+    override const size_t toHash() { return hash(content); }
 
     /**
      * Returns a string representation of this CData section
@@ -1424,7 +1424,7 @@ class Text : Item
      * You should rarely need to call this function. It exists so that Texts
      * can be used as associative array keys.
      */
-    override const hash_t toHash() { return hash(content); }
+    override const size_t toHash() { return hash(content); }
 
     /**
      * Returns a string representation of this Text section
@@ -1506,7 +1506,7 @@ class XMLInstruction : Item
      * You should rarely need to call this function. It exists so that
      * XmlInstructions can be used as associative array keys.
      */
-    override const hash_t toHash() { return hash(content); }
+    override const size_t toHash() { return hash(content); }
 
     /**
      * Returns a string representation of this XmlInstruction
@@ -1585,7 +1585,7 @@ class ProcessingInstruction : Item
      * You should rarely need to call this function. It exists so that
      * ProcessingInstructions can be used as associative array keys.
      */
-    override const hash_t toHash() { return hash(content); }
+    override const size_t toHash() { return hash(content); }
 
     /**
      * Returns a string representation of this ProcessingInstruction
@@ -1607,7 +1607,7 @@ abstract class Item
     abstract override int opCmp(Object o);
 
     /// Returns the hash of this item
-    abstract override const hash_t toHash();
+    abstract override const size_t toHash();
 
     /// Returns a string representation of this item
     abstract override const string toString();
@@ -2218,7 +2218,7 @@ private
         mixin Check!("Comment");
 
         try { checkLiteral("<!--",s); } catch(Err e) { fail(e); }
-        sizediff_t n = s.indexOf("--");
+        ptrdiff_t n = s.indexOf("--");
         if (n == -1) fail("unterminated comment");
         s = s[n..$];
         try { checkLiteral("-->",s); } catch(Err e) { fail(e); }
@@ -2792,7 +2792,7 @@ class CheckException : XMLException
     private void complete(string entire)
     {
         string head = entire[0..$-tail.length];
-        sizediff_t n = head.lastIndexOf('\n') + 1;
+        ptrdiff_t n = head.lastIndexOf('\n') + 1;
         line = head.count("\n") + 1;
         dstring t;
         transcode(head[n..$],t);
@@ -2849,7 +2849,7 @@ private
         s = s[1..$];
     }
 
-    hash_t hash(string s,hash_t h=0) @trusted nothrow
+    size_t hash(string s,size_t h=0) @trusted nothrow
     {
         return typeid(s).getHash(&s) + h;
     }

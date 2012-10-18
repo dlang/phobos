@@ -855,7 +855,7 @@ template EncoderInstance(CharType : Windows1252Char)
         else if (c >= 0xFFFD) { c = '?'; }
         else
         {
-            sizediff_t n = -1;
+            ptrdiff_t n = -1;
             foreach (i, wchar d; charMap)
             {
                 if (c == d)
@@ -1515,7 +1515,7 @@ unittest
  Params:
     s = the string to be counted
  */
-sizediff_t index(E)(const(E)[] s,int n)
+ptrdiff_t index(E)(const(E)[] s,int n)
 in
 {
     assert(isValid(s));
@@ -2334,7 +2334,7 @@ abstract class EncodingScheme
      * Params:
      *    s = the string to be counted
      */
-    sizediff_t index(const(ubyte)[] s, size_t n)
+    ptrdiff_t index(const(ubyte)[] s, size_t n)
     in
     {
         assert(isValid(s));

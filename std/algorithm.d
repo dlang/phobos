@@ -332,9 +332,7 @@ Implements the homonym function (also known as $(D transform)) present
 in many languages of functional flavor. The call $(D map!(fun)(range))
 returns a range of which elements are obtained by applying $(D fun(x))
 left to right for all $(D x) in $(D range). The original ranges are
-not changed. Evaluation is done lazily. The range returned by $(D map)
-caches the last value such that evaluating $(D front) multiple times
-does not result in multiple calls to $(D fun).
+not changed. Evaluation is done lazily.
 
 Example:
 ----
@@ -1898,7 +1896,8 @@ void swapFront(R1, R2)(R1 r1, R2 r2)
 // splitter
 /**
 Splits a range using an element as a separator. This can be used with
-any range type, but is most popular with string types.
+any narrow string type or sliceable range type, but is most popular
+with string types.
 
 Two adjacent separators are considered to surround an empty element in
 the split range.
@@ -2138,10 +2137,12 @@ unittest
 
 /**
 Splits a range using another range as a separator. This can be used
-with any range type, but is most popular with string types.
+with any narrow string type or sliceable range type, but is most popular
+with string types.
  */
 auto splitter(Range, Separator)(Range r, Separator s)
-if (is(typeof(Range.init.front == Separator.init.front) : bool))
+if (is(typeof(Range.init.front == Separator.init.front) : bool)
+        && (hasSlicing!Range || isNarrowString!Range))
 {
     static struct Result
     {
@@ -2689,7 +2690,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
             _items = r;
             prepare();
         }
-        static if (isInfinite!(ElementType!RoR))
+        static if (isInfinite!RoR)
         {
             enum bool empty = false;
         }
@@ -2718,6 +2719,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
                 Result copy;
                 copy._items = _items.save;
                 copy._current = _current.save;
+                copy._valid_current = _valid_current;
                 return copy;
             }
         }
@@ -2748,6 +2750,20 @@ unittest
 
     // bugzilla 8240
     assert(equal(joiner([inputRangeObject("")]), ""));
+
+    // issue 8792
+    auto b = [[1], [2], [3]];
+    auto jb = joiner(b);
+    auto js = jb.save;
+    assert(equal(jb, js));
+
+    auto js2 = jb.save;
+    jb.popFront();
+    assert(!equal(jb, js));
+    assert(equal(js2, js));
+    js.popFront();
+    assert(equal(jb, js));
+    assert(!equal(js2, js));
 }
 
 // uniq
@@ -3323,7 +3339,7 @@ unittest
 
     bool haystackTooShort()
     {
-        static if (hasLength!R1)
+        static if (estimateNeedleLength)
         {
             return haystack.length < estimatedNeedleLength;
         }
@@ -3375,6 +3391,35 @@ unittest
         break;
     }
     return haystack;
+}
+
+unittest
+{
+    // Test simpleMindedFind for the case where both haystack and needle have
+    // length.
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+
+    struct CustomString
+    {
+        string _impl;
+
+        // This is what triggers issue 7992.
+        @property size_t length() const { return _impl.length; }
+        @property void length(size_t len) { _impl.length = len; }
+
+        // This is for conformance to the forward range API (we deliberately
+        // make it non-random access so that we will end up in
+        // simpleMindedFind).
+        @property bool empty() const { return _impl.empty; }
+        @property dchar front() const { return _impl.front; }
+        void popFront() { _impl.popFront(); }
+        @property CustomString save() { return this; }
+    }
+
+    // If issue 7992 occurs, this will throw an exception from calling
+    // popFront() on an empty range.
+    auto r = find(CustomString("a"), CustomString("b"));
 }
 
 /**
@@ -3521,10 +3566,10 @@ struct BoyerMooreFinder(alias pred, Range)
 {
 private:
     size_t skip[];
-    sizediff_t[ElementType!(Range)] occ;
+    ptrdiff_t[ElementType!(Range)] occ;
     Range needle;
 
-    sizediff_t occurrence(ElementType!(Range) c)
+    ptrdiff_t occurrence(ElementType!(Range) c)
     {
         auto p = c in occ;
         return p ? *p : -1;
@@ -3541,8 +3586,8 @@ is ignored.
     static bool needlematch(R)(R needle,
                               size_t portion, size_t offset)
     {
-        sizediff_t virtual_begin = needle.length - offset - portion;
-        sizediff_t ignore = 0;
+        ptrdiff_t virtual_begin = needle.length - offset - portion;
+        ptrdiff_t ignore = 0;
         if (virtual_begin < 0) {
             ignore = -virtual_begin;
             virtual_begin = 0;
@@ -3964,7 +4009,7 @@ assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
 assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
 --------------------
   +/
-sizediff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
+ptrdiff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
 if (is(typeof(startsWith!pred(haystack, needle))))
 {
     static if (isNarrowString!R)
@@ -4012,7 +4057,7 @@ assert(countUntil!(std.ascii.isDigit)("hello world") == -1);
 assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
 --------------------
   +/
-sizediff_t countUntil(alias pred, R)(R haystack)
+ptrdiff_t countUntil(alias pred, R)(R haystack)
 if (isForwardRange!R && is(typeof(unaryFun!pred(haystack.front)) == bool))
 {
     static if (isNarrowString!R)
@@ -4054,7 +4099,7 @@ unittest
  * because it is easily confused with the homonym function
  * in $(D std.string).
  */
-deprecated sizediff_t indexOf(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+deprecated ptrdiff_t indexOf(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (is(typeof(startsWith!pred(haystack, needle))))
 {
     return countUntil!pred(haystack, needle);
@@ -7178,7 +7223,7 @@ unittest
     //scope(failure) writeln(stderr, "Failure testing algorithm");
     //auto v = ([ 25, 7, 9, 2, 0, 5, 21 ]).dup;
     int[] v = [ 7, 6, 5, 4, 3, 2, 1, 0 ];
-    sizediff_t n = 3;
+    ptrdiff_t n = 3;
     topN!("a < b")(v, n);
     assert(reduce!max(v[0 .. n]) <= v[n]);
     assert(reduce!min(v[n + 1 .. $]) >= v[n]);
@@ -7271,14 +7316,23 @@ unittest
 
 // sort
 /**
-Sorts a random-access range according to predicate $(D less). Performs
+Sorts a random-access range according to the predicate $(D less). Performs
 $(BIGOH r.length * log(r.length)) (if unstable) or $(BIGOH r.length *
 log(r.length) * log(r.length)) (if stable) evaluations of $(D less)
 and $(D swap). See also STL's $(WEB sgi.com/tech/stl/_sort.html, _sort)
 and $(WEB sgi.com/tech/stl/stable_sort.html, stable_sort).
 
-Example:
+$(D sort) returns a $(XREF range, SortedRange) over the original range, which
+functions that can take advantage of sorted data can then use to know that the
+range is sorted and adjust accordingly. The $(XREF range, SortedRange) is a
+wrapper around the original range, so both it and the original range are sorted,
+but other functions won't know that the original range has been sorted, whereas
+they $(I can) know that $(XREF range, SortedRange) has been sorted.
 
+See_Also:
+    $(XREF range, assumeSorted)
+
+Example:
 ----
 int[] array = [ 1, 2, 3, 4 ];
 // sort in descending order
@@ -8538,11 +8592,11 @@ unittest
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto r = Random(unpredictableSeed);
-    sizediff_t[] a = new sizediff_t[uniform(1, 1000, r)];
+    ptrdiff_t[] a = new ptrdiff_t[uniform(1, 1000, r)];
     foreach (i, ref e; a) e = i;
     randomShuffle(a, r);
     auto n = uniform(0, a.length, r);
-    sizediff_t[] b = new sizediff_t[n];
+    ptrdiff_t[] b = new ptrdiff_t[n];
     topNCopy!(binaryFun!("a < b"))(a, b, SortOutput.yes);
     assert(isSorted!(binaryFun!("a < b"))(b));
 }

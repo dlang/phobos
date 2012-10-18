@@ -70,17 +70,17 @@ class StringException : Exception
 /* ************* Constants *************** */
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated immutable char[16] hexdigits = "0123456789ABCDEF";
-deprecated immutable digits = "0123456789";
-deprecated immutable char[8]  octdigits = "01234567";
-deprecated immutable char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";
-deprecated immutable char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-deprecated immutable char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-deprecated alias std.ascii.whitespace whitespace;
-deprecated enum dchar LS = '\u2028';
-deprecated enum dchar PS = '\u2029';
-deprecated alias std.ascii.newline newline;
-deprecated bool iswhite(dchar c)
+deprecated("Please use std.ascii.hexDigits instead.")   immutable char[16] hexdigits = "0123456789ABCDEF";
+deprecated("Please use std.ascii.digits instead.")      immutable digits = "0123456789";
+deprecated("Please use std.ascii.octalDigits instead.") immutable char[8]  octdigits = "01234567";
+deprecated("Please use std.ascii.lowercase instead.")   immutable char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";
+deprecated("Please use std.ascii.letters instead.")     immutable char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+deprecated("Please use std.ascii.uppercase instead.")   immutable char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+deprecated("Please use std.ascii.whitespace instead.")  alias std.ascii.whitespace whitespace;
+deprecated("Please use std.uni.lineSep instead.")       enum dchar LS = '\u2028';
+deprecated("Please use std.uni.paraSep instead.")       enum dchar PS = '\u2029';
+deprecated("Please use std.ascii.newline instead.")     alias std.ascii.newline newline;
+deprecated("Please use std.uni.isWhite instead.")       bool iswhite(dchar c)
 {
     return c <= 0x7F
         ? indexOf(whitespace, c) != -1
@@ -331,9 +331,9 @@ enum CaseSensitive { no, yes }
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
-sizediff_t indexOf(Char)(in Char[] s,
-                         dchar c,
-                         CaseSensitive cs = CaseSensitive.yes) pure
+ptrdiff_t indexOf(Char)(in Char[] s,
+                      dchar c,
+                      CaseSensitive cs = CaseSensitive.yes) pure
     if(isSomeChar!Char)
 {
     if (cs == CaseSensitive.yes)
@@ -351,7 +351,7 @@ sizediff_t indexOf(Char)(in Char[] s,
         }
 
         // c is a universal character
-        foreach (sizediff_t i, dchar c2; s)
+        foreach (ptrdiff_t i, dchar c2; s)
         {
             if (c == c2)
                 return i;
@@ -363,7 +363,7 @@ sizediff_t indexOf(Char)(in Char[] s,
         {                                                   // Plain old ASCII
             auto c1 = cast(char) std.ascii.toLower(c);
 
-            foreach (sizediff_t i, c2; s)
+            foreach (ptrdiff_t i, c2; s)
             {
                 auto c3 = std.ascii.toLower(c2);
                 if (c1 == c3)
@@ -374,7 +374,7 @@ sizediff_t indexOf(Char)(in Char[] s,
         {                                                   // c is a universal character
             auto c1 = std.uni.toLower(c);
 
-            foreach (sizediff_t i, dchar c2; s)
+            foreach (ptrdiff_t i, dchar c2; s)
             {
                 auto c3 = std.uni.toLower(c2);
                 if (c1 == c3)
@@ -421,9 +421,9 @@ unittest
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
-sizediff_t indexOf(Char1, Char2)(const(Char1)[] s,
-                                 const(Char2)[] sub,
-                                 CaseSensitive cs = CaseSensitive.yes)
+ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s,
+                              const(Char2)[] sub,
+                              CaseSensitive cs = CaseSensitive.yes)
     if(isSomeChar!Char1 && isSomeChar!Char2)
 {
     const(Char1)[] balance;
@@ -495,9 +495,9 @@ unittest
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
-sizediff_t lastIndexOf(Char)(const(Char)[] s,
-                             dchar c,
-                             CaseSensitive cs = CaseSensitive.yes)
+ptrdiff_t lastIndexOf(Char)(const(Char)[] s,
+                          dchar c,
+                          CaseSensitive cs = CaseSensitive.yes)
     if(isSomeChar!Char)
 {
     if(cs == CaseSensitive.yes)
@@ -507,7 +507,7 @@ sizediff_t lastIndexOf(Char)(const(Char)[] s,
             for(auto i = s.length; i-- != 0;)
             {
                 if(s[i] == c)
-                    return cast(sizediff_t)i;
+                    return cast(ptrdiff_t)i;
             }
         }
         else
@@ -515,7 +515,7 @@ sizediff_t lastIndexOf(Char)(const(Char)[] s,
             for(size_t i = s.length; !s.empty;)
             {
                 if(s.back == c)
-                    return cast(sizediff_t)i - codeLength!Char(c);
+                    return cast(ptrdiff_t)i - codeLength!Char(c);
 
                 i -= strideBack(s, i);
                 s = s[0 .. i];
@@ -532,7 +532,7 @@ sizediff_t lastIndexOf(Char)(const(Char)[] s,
             {
                 immutable c2 = std.ascii.toLower(s[i]);
                 if(c1 == c2)
-                    return cast(sizediff_t)i;
+                    return cast(ptrdiff_t)i;
             }
         }
         else
@@ -542,7 +542,7 @@ sizediff_t lastIndexOf(Char)(const(Char)[] s,
             for(size_t i = s.length; !s.empty;)
             {
                 if(std.uni.toLower(s.back) == c1)
-                    return cast(sizediff_t)i - codeLength!Char(c);
+                    return cast(ptrdiff_t)i - codeLength!Char(c);
 
                 i -= strideBack(s, i);
                 s = s[0 .. i];
@@ -590,9 +590,9 @@ unittest
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
-sizediff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
-                                     const(Char2)[] sub,
-                                     CaseSensitive cs = CaseSensitive.yes)
+ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
+                                  const(Char2)[] sub,
+                                  CaseSensitive cs = CaseSensitive.yes)
     if(isSomeChar!Char1 && isSomeChar!Char2)
 {
     if(sub.empty)
@@ -607,7 +607,7 @@ sizediff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
         {
             immutable c = sub[0];
 
-            for(sizediff_t i = s.length - sub.length; i >= 0; --i)
+            for(ptrdiff_t i = s.length - sub.length; i >= 0; --i)
             {
                 if(s[i] == c && memcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
                     return i;
@@ -618,7 +618,7 @@ sizediff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
             for(size_t i = s.length; !s.empty;)
             {
                 if(s.endsWith(sub))
-                    return cast(sizediff_t)i - to!(const(Char1)[])(sub).length;
+                    return cast(ptrdiff_t)i - to!(const(Char1)[])(sub).length;
 
                 i -= strideBack(s, i);
                 s = s[0 .. i];
@@ -632,7 +632,7 @@ sizediff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
             if(endsWith!((dchar a, dchar b) {return std.uni.toLower(a) == std.uni.toLower(b);})
                         (s, sub))
             {
-                return cast(sizediff_t)i - to!(const(Char1)[])(sub).length;
+                return cast(ptrdiff_t)i - to!(const(Char1)[])(sub).length;
             }
 
             i -= strideBack(s, i);
@@ -756,7 +756,7 @@ unittest
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated S tolower(S)(S s) if (isSomeString!S)
+deprecated("Please use std.string.toLower instead.") S tolower(S)(S s) if (isSomeString!S)
 {
     return toLower!S(s);
 }
@@ -809,7 +809,7 @@ unittest
 }
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated void tolowerInPlace(C)(ref C[] s) if (isSomeChar!C)
+deprecated("Please use std.string.toLowerInPlace instead.") void tolowerInPlace(C)(ref C[] s) if (isSomeChar!C)
 {
     toLowerInPlace!C(s);
 }
@@ -919,7 +919,7 @@ unittest
 }
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated S toupper(S)(S s) if (isSomeString!S)
+deprecated("Please use std.string.toUpper instead.") S toupper(S)(S s) if (isSomeString!S)
 {
     return toUpper!S(s);
 }
@@ -972,7 +972,7 @@ unittest
 }
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated void toupperInPlace(C)(ref C[] s) if (isSomeChar!C)
+deprecated("Please use std.string.toUpperInPlace instead.") void toupperInPlace(C)(ref C[] s) if (isSomeChar!C)
 {
     toUpperInPlace!C(s);
 }
@@ -1201,15 +1201,14 @@ unittest
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated S repeat(S)(S s, size_t n)
+deprecated("Please use std.array.replicate instead.") S repeat(S)(S s, size_t n)
 {
-    pragma(msg, hardDeprec!("2.055", "March 2012", "repeat", "std.array.replicate"));
     return std.array.replicate(s, n);
 }
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated S[] splitlines(S)(S s)
+deprecated("Please use std.string.splitLines instead.") S[] splitlines(S)(S s)
 {
     return splitLines!S(s);
 }
@@ -1305,7 +1304,7 @@ unittest
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated String stripl(String)(String s)
+deprecated("Please use std.string.stripLeft instead.") String stripl(String)(String s)
 {
     return stripLeft!String(s);
 }
@@ -1356,7 +1355,7 @@ unittest
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated String stripr(String)(String s)
+deprecated("Please use std.string.stripRight instead.") String stripr(String)(String s)
 {
     return stripRight!String(s);
 }
@@ -1746,7 +1745,7 @@ unittest
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated S ljustify(S)(S s, size_t width) if (isSomeString!S)
+deprecated("Please use std.string.leftJustify instead.") S ljustify(S)(S s, size_t width) if (isSomeString!S)
 {
     return leftJustify!S(s, width);
 }
@@ -1787,7 +1786,7 @@ S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated S rjustify(S)(S s, size_t width) if (isSomeString!S)
+deprecated("Please use std.string.rightJustify instead.") S rjustify(S)(S s, size_t width) if (isSomeString!S)
 {
     return rightJustify!S(s, width);
 }
@@ -1893,14 +1892,15 @@ unittest
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated S zfill(S)(S s, int width) if (isSomeString!S)
+deprecated("Please use std.string.rightJustify with a fill character of '0' instead.")
+S zfill(S)(S s, int width) if (isSomeString!S)
 {
     return rightJustify!S(s, width, '0');
 }
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated S insert(S)(S s, size_t index, S sub)
+deprecated("Please use std.array.insertInPlace instead.") S insert(S)(S s, size_t index, S sub)
 in
 {
     assert(0 <= index && index <= s.length);
@@ -1913,7 +1913,7 @@ body
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
+deprecated("Please use std.string.detab instead.") S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
 {
     return detab!S(str, tabsize);
 }
@@ -1950,7 +1950,7 @@ S detab(S)(S s, size_t tabSize = 8) @trusted pure
             }
             else
             {
-                sizediff_t j = result.length;
+                ptrdiff_t j = result.length;
                 result.length = j + nspaces;
                 result[j .. j + nspaces] = ' ';
             }
@@ -2042,7 +2042,7 @@ S entab(S)(S s, size_t tabSize = 8) @trusted pure
                 if (!changes)
                     change();
 
-                sizediff_t j = result.length - nspaces;
+                ptrdiff_t j = result.length - nspaces;
                 auto ntabs = (((column - nspaces) % tabSize) + nspaces) / tabSize;
                 result.length = j + ntabs;
                 result[j .. j + ntabs] = '\t';
@@ -2473,7 +2473,7 @@ unittest
 
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated alias makeTrans maketrans;
+deprecated("Please use std.string.makeTrans instead.") alias makeTrans maketrans;
 
 unittest
 {
@@ -3397,7 +3397,7 @@ unittest
 
 bool isNumeric(const(char)[] s, in bool bAllowSep = false)
 {
-    sizediff_t iLen = s.length;
+    ptrdiff_t iLen = s.length;
     bool   bDecimalPoint = false;
     bool   bExponent = false;
     bool   bComplex = false;
@@ -4274,11 +4274,4 @@ unittest
         assert(testStr6.outdent() == expected6);
         static assert(testStr6.outdent() == expected6);
     }
-}
-
-private template hardDeprec(string vers, string date, string oldFunc, string newFunc)
-{
-    enum hardDeprec = Format!("Notice: As of Phobos %s, std.string.%s has been deprecated " ~
-                              "It will be removed in %s. Please use %s instead.",
-                              vers, oldFunc, date, newFunc);
 }

@@ -869,15 +869,15 @@ break the soundness of D's type system and does not incur any of the
 risks usually associated with $(D cast).
 
  */
-template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!(T))
+template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!T)
 {
-    static if (!is(T X == const(U), U) && !is(T X == immutable(U), U))
+    static if (!is(T X == const U, U) && !is(T X == immutable U, U))
     {
         alias T Rebindable;
     }
-    else static if (isArray!(T))
+    else static if (isArray!T)
     {
-        alias const(ElementType!(T))[] Rebindable;
+        alias const(ElementType!T)[] Rebindable;
     }
     else
     {
@@ -910,11 +910,7 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!(T))
                 opAssign(initializer);
             }
 
-            @property ref T get() pure nothrow
-            {
-                return original;
-            }
-            @property ref const(T) get() const pure nothrow
+            @property ref inout(T) get() inout pure nothrow
             {
                 return original;
             }
@@ -928,8 +924,8 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!(T))
 Convenience function for creating a $(D Rebindable) using automatic type
 inference.
 */
-Rebindable!(T) rebindable(T)(T obj)
-if (is(T == class) || is(T == interface) || isArray!(T))
+Rebindable!T rebindable(T)(T obj)
+if (is(T == class) || is(T == interface) || isArray!T)
 {
     typeof(return) ret;
     ret = obj;
@@ -941,7 +937,7 @@ This function simply returns the $(D Rebindable) object passed in.  It's useful
 in generic programming cases when a given object may be either a regular
 $(D class) or a $(D Rebindable).
 */
-Rebindable!(T) rebindable(T)(Rebindable!(T) obj)
+Rebindable!T rebindable(T)(Rebindable!T obj)
 {
     return obj;
 }
@@ -2513,7 +2509,7 @@ if (!is(T == class))
            Returns $(D true) if and only if the underlying store has been
            allocated and initialized.
         */
-        @property nothrow
+        @property nothrow @safe
         bool isInitialized() const
         {
             return _store !is null;
@@ -2611,41 +2607,53 @@ Assignment operators
         move(rhs, RefCounted._store._payload);
     }
 
-// Conditional method attributes: throw or nothrow
-    static if (autoInit == RefCountedAutoInitialize.yes)
+    //version to have a single properly ddoc'ed function (w/ correct sig)
+    version(StdDdoc)
     {
-        //These methods can throw
-        @property
-        ref T refCountedPayloadInternal()
-        {
-            RefCounted.ensureInitialized();
-            return RefCounted._store._payload;
-        }
+        /**
+        Returns a reference to the payload. If (autoInit ==
+        RefCountedAutoInitialize.yes), calls $(D
+        refCountedEnsureInitialized). Otherwise, just issues $(D
+        assert(refCountedIsInitialized)). Used with $(D alias
+        refCountedPayload this;), so callers can just use the $(D RefCounted)
+        object as a $(D T).
 
+        If $(D autoInit == RefCountedAutoInitialize.no), then
+        $(D refCountedPayload) will also be qualified as safe and nothrow
+        (but will still assert if not initialized).
+         */
         @property
-        ref const(T) refCountedPayloadInternal() const
-        {
-            // @@@
-            //refCountedEnsureInitialized();
-            assert(RefCounted.isInitialized);
-            return RefCounted._store._payload;
-        }
+        ref inout(T) refCountedPayload() inout;
     }
     else
     {
-        //These methods don't throw (they assert)
-        @property nothrow
-        ref T refCountedPayloadInternal()
+        static if (autoInit == RefCountedAutoInitialize.yes)
         {
-            assert(RefCounted.isInitialized);
-            return RefCounted._store._payload;
-        }
+            //Can't use inout here because of potential mutation
+            @property
+            ref T refCountedPayload()
+            {
+                RefCounted.ensureInitialized();
+                return RefCounted._store._payload;
+            }
 
-        @property nothrow
-        ref const(T) refCountedPayloadInternal() const
+            @property nothrow @safe
+            ref const(T) refCountedPayload() const
+            {
+                // @@@
+                //refCounted.ensureInitialized();
+                assert(RefCounted.isInitialized);
+                return RefCounted._store._payload;
+            }
+        }
+        else
         {
-            assert(RefCounted.isInitialized);
-            return RefCounted._store._payload;
+            @property nothrow @safe
+            ref inout(T) refCountedPayload() inout
+            {
+                assert(RefCounted.isInitialized);
+                return RefCounted._store._payload;
+            }
         }
     }
 
@@ -2655,17 +2663,7 @@ RefCountedAutoInitialize.yes), calls $(D
 refCountedEnsureInitialized). Otherwise, just issues $(D
 assert(refCountedIsInitialized)).
  */
-    alias refCountedPayloadInternal this;
-
-/**
-Returns a reference to the payload. If (autoInit ==
-RefCountedAutoInitialize.yes), calls $(D
-refCountedEnsureInitialized). Otherwise, just issues $(D
-assert(refCountedIsInitialized)). Used with $(D alias
-refCountedPayload this;), so callers can just use the $(D RefCounted)
-object as a $(D T).
- */
-    alias refCountedPayloadInternal refCountedPayload;
+    alias refCountedPayload this;
 }
 
 unittest

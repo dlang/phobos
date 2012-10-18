@@ -71,7 +71,7 @@ deprecated alias FormatException FormatError;
 /**********************************************************************
    Interprets variadic argument list $(D args), formats them according
    to $(D fmt), and sends the resulting characters to $(D w). The
-   encoding of the output is the same as $(D Char). type $(D Writer)
+   encoding of the output is the same as $(D Char). The type $(D Writer)
    must satisfy $(XREF range,isOutputRange!(Writer, Char)).
 
    The variadic arguments are normally consumed in order. POSIX-style
@@ -1373,12 +1373,12 @@ private void formatUnsigned(Writer, Char)(Writer w, ulong arg, ref FormatSpec!Ch
     // write left pad; write sign; write 0x or 0X; write digits;
     //   write right pad
     // Writing left pad
-    sizediff_t spacesToPrint =
+    ptrdiff_t spacesToPrint =
         fs.width // start with the minimum width
         - digits.length  // take away digits to print
         - (forcedPrefix != 0) // take away the sign if any
         - (base == 16 && fs.flHash && arg ? 2 : 0); // 0x or 0X
-    const sizediff_t delta = fs.precision - digits.length;
+    const ptrdiff_t delta = fs.precision - digits.length;
     if (delta > 0) spacesToPrint -= delta;
     if (spacesToPrint > 0) // need to do some padding
     {
@@ -1404,7 +1404,7 @@ private void formatUnsigned(Writer, Char)(Writer w, ulong arg, ref FormatSpec!Ch
     // write the digits
     if (arg || fs.precision)
     {
-        sizediff_t zerosToPrint = fs.precision - digits.length;
+        ptrdiff_t zerosToPrint = fs.precision - digits.length;
         foreach (i ; 0 .. zerosToPrint) put(w, '0');
         put(w, digits);
     }
@@ -4510,10 +4510,10 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
         void putstr(const char[] s)
         {
             //printf("putstr: s = %.*s, flags = x%x\n", s.length, s.ptr, flags);
-            sizediff_t padding = field_width -
+            ptrdiff_t padding = field_width -
                 (strlen(prefix) + toUCSindex(s, s.length));
-            sizediff_t prepad = 0;
-            sizediff_t postpad = 0;
+            ptrdiff_t prepad = 0;
+            ptrdiff_t postpad = 0;
             if (padding > 0)
             {
                 if (flags & FLdash)
@@ -4582,7 +4582,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             }
             else
             {
-                sizediff_t sl;
+                ptrdiff_t sl;
                 char[] fbuf = tmpbuf;
                 char[12] format;
                 format[0] = '%';
@@ -5142,7 +5142,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             }
         }
 
-        sizediff_t n = tmpbuf.length;
+        ptrdiff_t n = tmpbuf.length;
         char c;
         int hexoffset = uc ? ('A' - ('9' + 1)) : ('a' - ('9' + 1));
 
@@ -5156,7 +5156,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
         }
         if (tmpbuf.length - n < precision && precision < tmpbuf.length)
         {
-            sizediff_t m = tmpbuf.length - precision;
+            ptrdiff_t m = tmpbuf.length - precision;
             tmpbuf[m .. n] = '0';
             n = m;
         }

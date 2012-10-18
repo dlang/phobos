@@ -888,7 +888,7 @@ if(is(typeof(delegateOrFp(args))) && !isSafeTask!F)
 
 /**
 Version of $(D task) usable from $(D @safe) code.  Usage mechanics are
-identical to the non-@safe case, but safety introduces the some restrictions.
+identical to the non-@safe case, but safety introduces some restrictions:
 
 1.  $(D fun) must be @safe or @trusted.
 
