@@ -1780,7 +1780,15 @@ unittest
  *      $(TR $(TD $(NAN))            $(TD FP_ILOGBNAN) $(TD no))
  *      )
  */
-int ilogb(real x)  @trusted nothrow    { return core.stdc.math.ilogbl(x); }
+int ilogb(real x)  @trusted nothrow
+{
+    version (Win64)
+    {
+        assert(0);      // not implemented in C library
+    }
+    else
+        return core.stdc.math.ilogbl(x);
+}
 
 alias core.stdc.math.FP_ILOGB0   FP_ILOGB0;
 alias core.stdc.math.FP_ILOGBNAN FP_ILOGBNAN;
@@ -1962,7 +1970,15 @@ unittest
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD -$(INFIN)) $(TD yes) )
  *      )
  */
-real logb(real x) @trusted nothrow    { return core.stdc.math.logbl(x); }
+real logb(real x) @trusted nothrow
+{
+    version (Win64)
+    {
+        assert(0);      // not implemented in C library
+    }
+    else
+        return core.stdc.math.logbl(x);
+}
 
 /************************************
  * Calculates the remainder from the calculation x/y.
@@ -1978,7 +1994,15 @@ real logb(real x) @trusted nothrow    { return core.stdc.math.logbl(x); }
  *  $(TR $(TD !=$(PLUSMNINF)) $(TD $(PLUSMNINF))  $(TD x)            $(TD no))
  * )
  */
-real fmod(real x, real y) @trusted nothrow { return core.stdc.math.fmodl(x, y); }
+real fmod(real x, real y) @trusted nothrow
+{
+    version (Win64)
+    {
+        assert(0);      // not implemented in C library
+    }
+    else
+        return core.stdc.math.fmodl(x, y);
+}
 
 /************************************
  * Breaks x into an integral part and a fractional part, each of which has
@@ -1991,7 +2015,15 @@ real fmod(real x, real y) @trusted nothrow { return core.stdc.math.fmodl(x, y); 
  *  $(TR $(TD $(PLUSMNINF))   $(TD anything)      $(TD $(PLUSMN)0.0) $(TD $(PLUSMNINF)))
  * )
  */
-real modf(real x, ref real i) @trusted nothrow { return core.stdc.math.modfl(x,&i); }
+real modf(real x, ref real i) @trusted nothrow
+{
+    version (Win64)
+    {
+        assert(0);      // not implemented in C library
+    }
+    else
+        return core.stdc.math.modfl(x,&i);
+}
 
 /*************************************
  * Efficiently calculates x * 2$(SUP n).
@@ -2049,7 +2081,15 @@ unittest {
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)$(INFIN)) $(TD no) )
  *      )
  */
-real cbrt(real x) @trusted nothrow    { return core.stdc.math.cbrtl(x); }
+real cbrt(real x) @trusted nothrow
+{
+    version (Win64)
+    {
+        assert(0);      // not implemented in C library
+    }
+    else
+        return core.stdc.math.cbrtl(x);
+}
 
 
 /*******************************
@@ -2168,7 +2208,15 @@ unittest
  * Returns the value of x rounded upward to the next integer
  * (toward positive infinity).
  */
-real ceil(real x)  @trusted nothrow    { return core.stdc.math.ceill(x); }
+real ceil(real x)  @trusted nothrow
+{
+    version (Win64)
+    {
+        assert(0);      // not implemented in C library
+    }
+    else
+        return core.stdc.math.ceill(x);
+}
 
 unittest
 {
@@ -2180,7 +2228,15 @@ unittest
  * Returns the value of x rounded downward to the next integer
  * (toward negative infinity).
  */
-real floor(real x) @trusted nothrow    { return core.stdc.math.floorl(x); }
+real floor(real x) @trusted nothrow
+{
+    version (Win64)
+    {
+        assert(0);      // not implemented in C library
+    }
+    else
+        return core.stdc.math.floorl(x);
+}
 
 unittest
 {
@@ -2195,7 +2251,15 @@ unittest
  * Unlike the rint functions, nearbyint does not raise the
  * FE_INEXACT exception.
  */
-real nearbyint(real x) @trusted nothrow { return core.stdc.math.nearbyintl(x); }
+real nearbyint(real x) @trusted nothrow
+{
+    version (Win64)
+    {
+        assert(0);      // not implemented in C library
+    }
+    else
+        return core.stdc.math.nearbyintl(x);
+}
 
 /**********************************
  * Rounds x to the nearest integer value, using the current rounding
@@ -2295,7 +2359,15 @@ version(Posix)
  *
  * This is also known as "chop" rounding.
  */
-real trunc(real x) @trusted nothrow { return core.stdc.math.truncl(x); }
+real trunc(real x) @trusted nothrow
+{
+    version (Win64)
+    {
+        assert(0);      // not implemented in C library
+    }
+    else
+        return core.stdc.math.truncl(x);
+}
 
 /****************************************************
  * Calculate the remainder x REM y, following IEC 60559.
@@ -2319,7 +2391,15 @@ real trunc(real x) @trusted nothrow { return core.stdc.math.truncl(x); }
  *
  * Note: remquo not supported on windows
  */
-real remainder(real x, real y) @trusted nothrow { return core.stdc.math.remainderl(x, y); }
+real remainder(real x, real y) @trusted nothrow
+{
+    version (Win64)
+    {
+        assert(0);      // not implemented in C library
+    }
+    else
+        return core.stdc.math.remainderl(x, y);
+}
 
 real remquo(real x, real y, out int n) @trusted nothrow  /// ditto
 {
