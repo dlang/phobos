@@ -1359,17 +1359,17 @@ unittest
 
     //Forward Range
     auto b = filter!"true"([1, 2, 3, 4]);
-    assert(b.save.walkLength() == 4);
-    assert(b.save.walkLength(0) == 0);
-    assert(b.save.walkLength(2) == 2);
-    assert(b.save.walkLength(4) == 4);
-    assert(b.save.walkLength(6) == 4);
+    assert(b.walkLength() == 4);
+    assert(b.walkLength(0) == 0);
+    assert(b.walkLength(2) == 2);
+    assert(b.walkLength(4) == 4);
+    assert(b.walkLength(6) == 4);
 
     //Infinite Range
     auto fibs = recurrence!"a[n-1] + a[n-2]"(1, 1);
-    assert(!__traits(compiles, fibs.save.walkLength()));
-    assert(fibs.save.take(10).walkLength() == 10);
-    assert(fibs.save.walkLength(55) == 55);
+    assert(!__traits(compiles, fibs.walkLength()));
+    assert(fibs.take(10).walkLength() == 10);
+    assert(fibs.walkLength(55) == 55);
 }
 
 /**
