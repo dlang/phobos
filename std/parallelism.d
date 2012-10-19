@@ -1395,13 +1395,12 @@ private:
         task.taskStatus = TaskStatus.inProgress;
         this.head = task;
         singleTaskThread = new Thread(&doSingleTask);
+        singleTaskThread.start();
 
         if(priority != int.max)
         {
             singleTaskThread.priority = priority;
         }
-
-        singleTaskThread.start();
     }
 
 public:
@@ -3973,7 +3972,7 @@ unittest
 
     // Test executeInNewThread().
     auto ct = scopedTask!refFun(x);
-    ct.executeInNewThread();
+    ct.executeInNewThread(Thread.PRIORITY_MAX);
     ct.yieldForce();
     assert(ct.args[0] == 1);
 
