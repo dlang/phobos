@@ -2916,7 +2916,7 @@ int fcmp(alias pred = "a < b", S1, S2)(S1 s1, S2 s2)
  * version(Posix)
  * {
  *     getExt(r"/home/user.name/bar.")  // ""
- *     getExt(r"d:\\path.two\\bar")     // "two\\bar"
+ *     getExt(r"d:\\path.two\\bar")     // r"two\\bar"
  *     getExt(r"/home/user/.resource")  // "resource"
  * }
  * -----
@@ -3008,13 +3008,13 @@ version (OldStdPathUnittest) unittest
  * -----
  * version(Windows)
  * {
- *     getName(r"d:\path\foo.bat") => "d:\path\foo"
+ *     getName(r"d:\path\foo.bat") => r"d:\path\foo"
  *     getName(r"d:\path.two\bar") => null
  * }
  * version(Posix)
  * {
  *     getName("/home/user.name/bar.")  => "/home/user.name/bar"
- *     getName(r"d:\path.two\bar") => "d:\path"
+ *     getName(r"d:\path.two\bar") => r"d:\path"
  *     getName("/home/user/.resource") => "/home/user/"
  * }
  * -----
