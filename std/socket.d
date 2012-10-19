@@ -1102,7 +1102,7 @@ unittest
  *         address.toAddrString());
  *     try
  *     {
- *         string reverse = address.toHostNameString());
+ *         string reverse = address.toHostNameString();
  *         if (reverse)
  *             writefln("  Reverse name: %s", reverse);
  *         else

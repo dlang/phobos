@@ -3774,7 +3774,7 @@ ranges. $(D result[0]) is the portion of $(D haystack) before $(D
 needle), $(D result[1]) is the portion of $(D haystack) that matches
 $(D needle), and $(D result[2]) is the portion of $(D haystack) after
 the match. If $(D needle) was not found, $(D result[0])
-comprehends $(D haystack) entirely and $(D result[1]) and $(D result[2]
+comprehends $(D haystack) entirely and $(D result[1]) and $(D result[2])
 are empty.
 
 $(D findSplitBefore) returns a tuple $(D result) containing two
@@ -5045,7 +5045,7 @@ nesting is allowed.
 
 Example:
 ----
-auto s = "1 + (2 * (3 + 1 / 2)";
+auto s = "1 + $(LPAREN)2 * (3 + 1 / 2)";
 assert(!balancedParens(s, '(', ')'));
 s = "1 + (2 * (3 + 1) / 2)";
 assert(balancedParens(s, '(', ')'));
@@ -7053,7 +7053,7 @@ Example:
 ----
 auto a = [ 8, 3, 4, 1, 4, 7, 4 ];
 auto pieces = partition3(a, 4);
-assert(a == [ 1, 3, 4, 4, 4, 7, 8 ];
+assert(a == [ 1, 3, 4, 4, 4, 7, 8 ]);
 assert(pieces[0] == [ 1, 3 ]);
 assert(pieces[1] == [ 4, 4, 4 ]);
 assert(pieces[2] == [ 7, 8 ]);

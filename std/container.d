@@ -2739,7 +2739,7 @@ Complexity: $(BIGOH 1)
 /**
 Slicing operations execute an operation on an entire slice.
 
-Precondition: $(D $(D i < j && j < length)
+Precondition: $(D i < j && j < length)
 
 Complexity: $(BIGOH slice.length)
      */

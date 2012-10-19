@@ -1362,7 +1362,7 @@ unittest
     Encodes $(D c) into the static array, $(D buf), and returns the actual
     length of the encoded character (a number between $(D 1) and $(D 4) for
     $(D char[4]) buffers and a number between $(D 1) and $(D 2) for
-    $(D wchar[2]) buffers.
+    $(D wchar[2]) buffers).
 
     Throws:
         $(D UTFException) if $(D c) is not a valid UTF code point.
