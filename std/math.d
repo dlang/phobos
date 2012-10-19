@@ -1784,7 +1784,35 @@ int ilogb(real x)  @trusted nothrow
 {
     version (Win64)
     {
-        assert(0);      // not implemented in C library
+        asm
+        {
+            naked                       ;
+            fld     real ptr [RCX]      ;
+            fxam                        ;
+            fstsw   AX                  ;
+            and     AH,0x45             ;
+            cmp     AH,0x40             ;
+            jz      Lzeronan            ;
+            cmp     AH,5                ;
+            jz      Linfinity           ;
+            cmp     AH,1                ;
+            jz      Lzeronan            ;
+            fxtract                     ;
+            fstp    ST(0)               ;
+            fistp   dword ptr 8[RSP]    ;
+            mov     EAX,8[RSP]          ;
+            ret                         ;
+
+          Lzeronan:
+            mov     EAX,0x80000000      ;
+            fstp    ST(0)               ;
+            ret                         ;
+
+          Linfinity:
+            mov     EAX,0x7FFFFFFF      ;
+            fstp    ST(0)               ;
+            ret                         ;
+        }
     }
     else
         return core.stdc.math.ilogbl(x);
@@ -1974,7 +2002,14 @@ real logb(real x) @trusted nothrow
 {
     version (Win64)
     {
-        assert(0);      // not implemented in C library
+        asm
+        {
+            naked                       ;
+            fld     real ptr [RCX]      ;
+            fxtract                     ;
+            fstp    ST(0)               ;
+            ret                         ;
+        }
     }
     else
         return core.stdc.math.logbl(x);
@@ -1998,7 +2033,7 @@ real fmod(real x, real y) @trusted nothrow
 {
     version (Win64)
     {
-        assert(0);      // not implemented in C library
+        return x % y;
     }
     else
         return core.stdc.math.fmodl(x, y);
@@ -2019,7 +2054,8 @@ real modf(real x, ref real i) @trusted nothrow
 {
     version (Win64)
     {
-        assert(0);      // not implemented in C library
+        i = trunc(x);
+        return copysign(isInfinity(x) ? 0.0 : x - i, x);
     }
     else
         return core.stdc.math.modfl(x,&i);
@@ -2044,13 +2080,13 @@ real scalbn(real x, int n) @trusted nothrow
         version (Win64)
         {
             asm {
-                naked;
-                mov     16[RSP],RCX;
-                fild    word ptr 16[RSP];
-                fld     real ptr [RDX];
-                fscale;
-                fstp ST(1);
-                ret;
+                naked                           ;
+                mov     16[RSP],RCX             ;
+                fild    word ptr 16[RSP]        ;
+                fld     real ptr [RDX]          ;
+                fscale                          ;
+                fstp    ST(1)                   ;
+                ret                             ;
             }
         }
         else
@@ -2085,7 +2121,7 @@ real cbrt(real x) @trusted nothrow
 {
     version (Win64)
     {
-        assert(0);      // not implemented in C library
+        return copysign(exp2(yl2x(fabs(x), 1.0L/3.0L)), x);
     }
     else
         return core.stdc.math.cbrtl(x);
@@ -2212,7 +2248,22 @@ real ceil(real x)  @trusted nothrow
 {
     version (Win64)
     {
-        assert(0);      // not implemented in C library
+        asm
+        {
+            naked                       ;
+            fld     real ptr [RCX]      ;
+            fstcw   8[RSP]              ;
+            mov     AL,9[RSP]           ;
+            mov     DL,AL               ;
+            and     AL,0xC3             ;
+            or      AL,0x08             ; // round to +infinity
+            mov     9[RSP],AL           ;
+            fldcw   8[RSP]              ;
+            frndint                     ;
+            mov     9[RSP],DL           ;
+            fldcw   8[RSP]              ;
+            ret                         ;
+        }
     }
     else
         return core.stdc.math.ceill(x);
@@ -2232,7 +2283,22 @@ real floor(real x) @trusted nothrow
 {
     version (Win64)
     {
-        assert(0);      // not implemented in C library
+        asm
+        {
+            naked                       ;
+            fld     real ptr [RCX]      ;
+            fstcw   8[RSP]              ;
+            mov     AL,9[RSP]           ;
+            mov     DL,AL               ;
+            and     AL,0xC3             ;
+            or      AL,0x04             ; // round to -infinity
+            mov     9[RSP],AL           ;
+            fldcw   8[RSP]              ;
+            frndint                     ;
+            mov     9[RSP],DL           ;
+            fldcw   8[RSP]              ;
+            ret                         ;
+        }
     }
     else
         return core.stdc.math.floorl(x);
@@ -2363,7 +2429,22 @@ real trunc(real x) @trusted nothrow
 {
     version (Win64)
     {
-        assert(0);      // not implemented in C library
+        asm
+        {
+            naked                       ;
+            fld     real ptr [RCX]      ;
+            fstcw   8[RSP]              ;
+            mov     AL,9[RSP]           ;
+            mov     DL,AL               ;
+            and     AL,0xC3             ;
+            or      AL,0x0C             ; // round to 0
+            mov     9[RSP],AL           ;
+            fldcw   8[RSP]              ;
+            frndint                     ;
+            mov     9[RSP],DL           ;
+            fldcw   8[RSP]              ;
+            ret                         ;
+        }
     }
     else
         return core.stdc.math.truncl(x);
@@ -2395,7 +2476,8 @@ real remainder(real x, real y) @trusted nothrow
 {
     version (Win64)
     {
-        assert(0);      // not implemented in C library
+        int n;
+        return remquo(x, y, n);
     }
     else
         return core.stdc.math.remainderl(x, y);
