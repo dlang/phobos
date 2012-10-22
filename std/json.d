@@ -5,7 +5,9 @@ JavaScript Object Notation
 
 Copyright: Copyright Jeremie Pelletier 2008 - 2009.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
-Authors:   Jeremie Pelletier
+Authors:   Jeremie Pelletier,
+           T. Jameson Little
+
 References: $(LINK http://json.org/)
 Source:    $(PHOBOSSRC std/_json.d)
 */
@@ -21,6 +23,11 @@ import std.ascii;
 import std.conv;
 import std.range;
 import std.utf;
+
+// additions for marshalling
+import std.traits;
+import std.typetuple;
+import std.string;
 
 private {
         // Prevent conflicts from these generic names
@@ -504,4 +511,791 @@ unittest {
         assert(toJSON(&val) == "\"\&Alpha;\&Beta;\&Gamma;\"");
         val = parseJSON(`"\u2660\u2666"`);
         assert(toJSON(&val) == "\"\&spades;\&diams;\"");
+}
+
+
+/* Marshal */
+
+/**
+  Encodes a D string value as a JSON string.
+  */
+auto marshalJSON(T)(in T val) if (isSomeString!T) {
+        JSONValue ret;
+        ret.str = val;
+        ret.type = JSON_TYPE.STRING;
+        return ret;
+}
+
+unittest {
+        auto a = marshalJSON!string("hello");
+        assert(a.type == JSON_TYPE.STRING);
+        assert(a.str == "hello");
+}
+
+/**
+  Encodes a D signed integral value as a JSON number.
+  */
+auto marshalJSON(T)(in T val) if (isIntegral!T && isSigned!T) {
+        JSONValue ret;
+        ret.integer = val;
+        ret.type = JSON_TYPE.INTEGER;
+        return ret;
+}
+
+unittest {
+        auto a = marshalJSON!int(5);
+        assert(a.type == JSON_TYPE.INTEGER);
+        assert(a.integer == 5);
+
+        auto b = marshalJSON!int(-5);
+        assert(b.type == JSON_TYPE.INTEGER);
+        assert(b.integer == -5);
+}
+
+/**
+  Encodes a D unsigned integral value as a JSON number.
+  */
+auto marshalJSON(T)(in T val) if (isIntegral!T && isUnsigned!T) {
+        JSONValue ret;
+        ret.uinteger = val;
+        ret.type = JSON_TYPE.UINTEGER;
+        return ret;
+}
+
+unittest {
+        uint t = 5;
+        auto a = marshalJSON!uint(t);
+        assert(a.type == JSON_TYPE.UINTEGER);
+        assert(a.uinteger == 5);
+}
+
+/**
+  Encodes a D floating point value as a JSON number.
+  */
+auto marshalJSON(T)(in T val) if (isFloatingPoint!T) {
+        JSONValue ret;
+        ret.floating = val;
+        ret.type = JSON_TYPE.FLOAT;
+        return ret;
+}
+
+unittest {
+        auto a = marshalJSON!float(5);
+        assert(a.type == JSON_TYPE.FLOAT);
+        assert(a.floating == 5f);
+}
+
+/**
+  Encodes a D boolean value as a JSON true/false.
+  */
+auto marshalJSON(T)(in T val) if (isBoolean!T) {
+        JSONValue ret;
+        ret.type = val ? JSON_TYPE.TRUE : JSON_TYPE.FALSE;
+        return ret;
+}
+
+unittest {
+        auto a = marshalJSON!bool(true);
+        assert(a.type == JSON_TYPE.TRUE);
+
+        auto b = marshalJSON!bool(false);
+        assert(b.type == JSON_TYPE.FALSE);
+}
+
+/**
+  Encodes a D pointer value as a JSON null or recursively marshals whatever
+  value the pointer points to.
+  */
+auto marshalJSON(T)(in T val) if (isPointer!T) {
+        if (val == null) {
+                JSONValue v;
+                v.type = JSON_TYPE.NULL;
+                return v;
+        }
+
+        return marshalJSON!(PointerTarget!T)(*val);
+}
+
+// JSON types to pointers
+unittest {
+        int* a = new int;
+        *a = 5;
+        auto j = marshalJSON!(int*)(a);
+
+        assert(j.type == JSON_TYPE.INTEGER);
+        assert(j.integer == *a);
+}
+
+/**
+  Encodes a D array as a JSON array.
+  */
+auto marshalJSON(T)(in T val) if (!isSomeString!T && isArray!T) {
+        JSONValue ret;
+        ret.type = JSON_TYPE.ARRAY;
+        ret.array.length = val.length;
+        foreach (i, elem; val) {
+                ret.array[i] = marshalJSON!(ForeachType!T)(elem);
+        }
+
+        return ret;
+}
+
+// JSON array: static array, dynamic array
+unittest {
+        auto arr = [2, 5];
+        auto a = marshalJSON!(int[])(arr);
+        assert(a.type == JSON_TYPE.ARRAY);
+        foreach (i, _; a.array) {
+                assert(a.array[i].type == JSON_TYPE.INTEGER);
+                assert(a.array[i].integer == arr[i]);
+        }
+}
+
+/**
+  Encodes a D associative array as a JSON object.
+  */
+auto marshalJSON(T)(in T val) if (isAssociativeArray!T && is(KeyType!T : string)) {
+        JSONValue ret;
+        ret.type = JSON_TYPE.OBJECT;
+        foreach (k, v; val) {
+                ret.object[k] = marshalJSON!(ValueType!(T))(v);
+        }
+
+        return ret;
+}
+
+// JSON object: associative array where key must be a string
+unittest {
+        auto aMap = ["one": 1];
+        auto a = marshalJSON!(int[string])(aMap);
+        assert(a.type == JSON_TYPE.OBJECT);
+        foreach (k, v; a.object) {
+                assert(v.type == JSON_TYPE.INTEGER);
+                assert(aMap[k] == v.integer);
+        }
+
+        auto bMap = ["one": 1f];
+        auto b = marshalJSON!(float[string])(bMap);
+        assert(b.type == JSON_TYPE.OBJECT);
+        foreach (k, v; b.object) {
+                assert(v.type == JSON_TYPE.FLOAT);
+                assert(bMap[k] == v.floating);
+        }
+}
+
+/**
+  Encodes a D struct or class as a JSON object.
+  */
+auto marshalJSON(T)(in T val) if (is(T == class) || is(T == struct)) {
+        JSONValue ret;
+        ret.type = JSON_TYPE.OBJECT;
+
+        // make sure to cover all base classes
+        static if (is(T == class)) {
+                alias TypeTuple!(T, BaseClassesTuple!T) Types;
+                if (!val) {
+                        ret.type = JSON_TYPE.NULL;
+                        return ret;
+                }
+        } else {
+                alias TypeTuple!T Types;
+        }
+
+        foreach (BT; Types) {
+                foreach (i, type; typeof(BT.tupleof)) {
+                        enum name = BT.tupleof[i].stringof[1 + BT.stringof.length + 2 .. $];
+                        static if (name != "this") {
+                                ret.object[name] = marshalJSON!type(mixin("val." ~ name));
+                        }
+                }
+        }
+
+        return ret;
+}
+
+// JSON object: class
+unittest {
+        import std.array;
+        import std.format;
+
+        class A {
+                int z;
+                float y;
+                uint x;
+                uint[3] w;
+
+                override string toString() {
+                        auto writer = appender!string();
+                        formattedWrite(writer, "%d %f %d %s", z, y, x, w);
+                        return writer.data;
+                }
+        }
+
+        A a = new A;
+        a.z = 3;
+        a.y = 3.3f;
+        a.x = 7;
+        a.w = [8, 7, 2];
+
+        auto j = marshalJSON!A(a);
+
+        assert(j.type == JSON_TYPE.OBJECT);
+        assert(j.object["z"].type == JSON_TYPE.INTEGER);
+        assert(j.object["z"].integer == a.z);
+        assert(j.object["y"].type == JSON_TYPE.FLOAT);
+        assert(j.object["y"].floating == a.y);
+        assert(j.object["x"].type == JSON_TYPE.UINTEGER);
+        assert(j.object["x"].uinteger == a.x);
+        assert(j.object["w"].type == JSON_TYPE.ARRAY);
+        foreach (i, v; j.object["w"].array) {
+                assert(v.type == JSON_TYPE.UINTEGER);
+                assert(a.w[i] == v.uinteger);
+        }
+
+        // test null classes
+        A b;
+        auto j2 = marshalJSON!A(a);
+        assert(j2.type == JSON_TYPE.OBJECT);
+}
+
+// JSON objects: structs
+unittest {
+        import std.array;
+        import std.format;
+
+        struct A {
+                int a;
+                double b;
+                string c;
+                int[] d;
+                int[string] e;
+
+                string toString() {
+                        auto writer = appender!string();
+                        formattedWrite(writer, "%d %f '%s' %s %s", a, b, c, d, e);
+                        return writer.data;
+                }
+        }
+
+        A a = {a: 5, b: 6., c: "hello", d: [1, 2, 3]};
+        a.e = ["one": 1, "two": 2];
+
+        auto j = marshalJSON!A(a);
+        assert(j.type == JSON_TYPE.OBJECT);
+
+        assert(j.object["a"].type == JSON_TYPE.INTEGER);
+        assert(j.object["a"].integer == a.a);
+
+        assert(j.object["b"].type == JSON_TYPE.FLOAT);
+        assert(j.object["b"].floating == a.b);
+
+        assert(j.object["c"].type == JSON_TYPE.STRING);
+        assert(j.object["c"].str == a.c);
+
+        assert(j.object["d"].type == JSON_TYPE.ARRAY);
+        foreach (i, v; j.object["d"].array) {
+                assert(v.type == JSON_TYPE.INTEGER);
+                assert(v.integer == a.d[i]);
+        }
+
+        assert(j.object["e"].type == JSON_TYPE.OBJECT);
+        foreach (k, v; j.object["e"].object) {
+                assert(v.type == JSON_TYPE.INTEGER);
+                assert(v.integer == a.e[k]);
+        }
+}
+
+// embedded struct in class
+unittest {
+        struct A {
+                int c;
+        }
+
+        class B {
+                A a;
+                A* b;
+        }
+
+        auto b = new B;
+        b.a.c = 1;
+        b.b = new A;
+        b.b.c = 2;
+
+        auto j = marshalJSON!B(b);
+        assert(j.type == JSON_TYPE.OBJECT);
+
+        assert(j["a"].type == JSON_TYPE.OBJECT);
+        assert(j["a"].object["c"].type == JSON_TYPE.INTEGER);
+        assert(j["a"].object["c"].integer == b.a.c);
+
+        assert(j["b"].type == JSON_TYPE.OBJECT);
+        assert(j["b"].object["c"].type == JSON_TYPE.INTEGER);
+        assert(j["b"].object["c"].integer == b.b.c);
+}
+
+// Subclasses
+unittest {
+        class A {
+                int a;
+        }
+
+        class B : A {
+                int b;
+        }
+
+        auto b = new B;
+        b.a = 1;
+        b.b = 2;
+
+        auto j = marshalJSON!B(b);
+        assert(j.type == JSON_TYPE.OBJECT);
+
+        assert(j.object["a"].type == JSON_TYPE.INTEGER);
+        assert(j.object["a"].integer == b.a);
+
+        assert(j.object["b"].type == JSON_TYPE.INTEGER);
+        assert(j.object["b"].integer == b.b);
+}
+
+// Inner classes
+unittest {
+        class A {
+                class B {
+                        int c;
+                }
+        }
+
+        auto a = new A;
+        auto b = a.new A.B;
+        b.c = 5;
+
+        auto j = marshalJSON!(A.B)(b);
+        assert(j.type == JSON_TYPE.OBJECT);
+        assert(j.object["c"].type == JSON_TYPE.INTEGER);
+        assert(j.object["c"].integer == 5);
+
+        A.B b2;
+        auto j2 = marshalJSON!(A.B)(b2);
+        assert(j2.type == JSON_TYPE.NULL);
+}
+
+/* Unmarshal */
+
+/**
+  Thrown on unmarshalling errors such as incompatible types.
+  */
+class JSONUnmashalException : Exception {
+        this(string message) {
+                super(message);
+        }
+}
+
+/**
+  Decodes a JSON string into a D string.
+  */
+auto unmarshalJSON(T)(JSONValue val, out T ret) if (isSomeString!T) {
+        if (val.type != JSON_TYPE.STRING) {
+                throw new JSONUnmashalException(format("Expected string value, but given JSON type: %s", val.type));
+        }
+        ret = to!T(val.str);
+}
+
+// JSON type: int, float, string etc.
+unittest {
+        string s;
+        unmarshalJSON(`"5"`, s);
+        assert(s == "5");
+}
+
+/**
+  Decodes a JSON number into a D signed integer type.
+  */
+auto unmarshalJSON(T)(JSONValue val, out T ret) if (isIntegral!T && isSigned!T) {
+        if (val.type != JSON_TYPE.INTEGER) {
+                throw new JSONUnmashalException(format("Expected signed integral value, but given JSON type: %s", val.type));
+        }
+        ret = to!T(val.integer);
+}
+
+unittest {
+        int a;
+        unmarshalJSON(`5`, a);
+        assert(a == 5);
+
+        int b;
+        unmarshalJSON(`-5`, b);
+        assert(b == -5);
+}
+
+/**
+  Decodes a JSON number into a D unsigned integer type.
+  */
+auto unmarshalJSON(T)(JSONValue val, out T ret) if (isIntegral!T && isUnsigned!T) {
+        if (val.type != JSON_TYPE.UINTEGER && val.type != JSON_TYPE.INTEGER) {
+                throw new JSONUnmashalException(format("Expected unsigned integral value, but given JSON type: %s", val.type));
+        }
+        // we know it's unsigned, and uinteger & integer are in the same union,
+        // so both uinteger & integer will be equivalent
+        ret = to!T(val.uinteger);
+}
+
+unittest {
+        uint a;
+        unmarshalJSON(`5`, a);
+        assert(a == 5);
+}
+
+/**
+  Decodes a JSON number into a D floating point type.
+  */
+auto unmarshalJSON(T)(JSONValue val, out T ret) if (isFloatingPoint!T) {
+        if (val.type != JSON_TYPE.FLOAT && val.type != JSON_TYPE.UINTEGER && val.type != JSON_TYPE.INTEGER) {
+                throw new JSONUnmashalException(format("Expected floating point value, but given JSON type: %s", val.type));
+        }
+
+        switch (val.type) {
+        case JSON_TYPE.FLOAT:
+                ret = to!T(val.floating);
+                break;
+
+        case JSON_TYPE.INTEGER:
+                ret = to!T(val.integer);
+                break;
+
+        case JSON_TYPE.UINTEGER:
+                ret = to!T(val.uinteger);
+                break;
+
+        default:
+                // won't ever happen
+                assert(0);
+        }
+}
+
+unittest {
+        float a;
+        unmarshalJSON(`5.0`, a);
+        assert(a == 5.0f);
+}
+
+/**
+  Decodes a JSON true/false into a D boolean type.
+  */
+auto unmarshalJSON(T)(JSONValue val, out T ret) if (isBoolean!T) {
+        if (val.type != JSON_TYPE.TRUE && val.type != JSON_TYPE.FALSE) {
+                throw new JSONUnmashalException(format("Expected boolean value, but given JSON type: %s", val.type));
+        }
+        ret = val.type == JSON_TYPE.TRUE;
+}
+
+unittest {
+        bool a;
+        unmarshalJSON(`true`, a);
+        assert(a);
+
+        bool b;
+        unmarshalJSON(`false`, b);
+        assert(!b);
+}
+
+/**
+  Recursively handles D pointers, instantiating where necessary.
+  */
+auto unmarshalJSON(T)(JSONValue val, ref T ret) if (isPointer!T) {
+        if (ret == null) {
+                ret = new PointerTarget!T;
+        }
+
+        PointerTarget!T ret2;
+        unmarshalJSON!(PointerTarget!T)(val, ret2);
+        *ret = ret2;
+}
+
+// JSON types to pointers
+unittest {
+        int* b;
+        unmarshalJSON(`5`, b);
+        assert(*b == 5);
+}
+
+/**
+  Decodes a JSON array into a D array.
+  */
+auto unmarshalJSON(T)(JSONValue val, ref T ret) if (!isSomeString!T && isArray!T) {
+        if (val.type != JSON_TYPE.ARRAY) {
+                throw new JSONUnmashalException(format("Expected array value, but given JSON type: %s", val.type));
+        }
+        static if (isStaticArray!(T)) {
+                if (val.array.length > T.length) {
+                        throw new JSONUnmashalException(format("JSON array of size %d cannot fit in static array of size %d.", val.array.length, T.length));
+                }
+        }
+
+        T ret2;
+        static if (isDynamicArray!T) {
+                ret2.length = val.array.length;
+        }
+
+        foreach (i, elem; val.array) {
+                unmarshalJSON!(ForeachType!T)(elem, ret2[i]);
+        }
+
+        ret = ret2;
+}
+
+// JSON array: static array, dynamic array
+unittest {
+        import std.exception;
+
+        int[] arr;
+        unmarshalJSON(`[2, 5]`, arr);
+        assert(arr == [2, 5]);
+
+        float[] arr2;
+        unmarshalJSON(`[2.0, 5.0]`, arr2);
+        assert(arr2 == [2.0f, 5.0f]);
+
+        int[2] arr3;
+        unmarshalJSON(`[1, 2]`, arr3);
+        assert(arr3 == [1, 2]);
+
+        int[2] arr4;
+        unmarshalJSON(`[1]`, arr4);
+        assert(arr4 == [1, 0]);
+
+        int[2] arr5;
+        assertThrown!JSONUnmashalException(unmarshalJSON(`[1, 2, 3]`, arr5), "Cannot unmarshal into static array smaller than the data");
+}
+
+/**
+  Decodes a JSON object into a D associative array.
+  */
+auto unmarshalJSON(T)(JSONValue val, out T ret) if (isAssociativeArray!T && is(KeyType!T : string)) {
+        if (val.type != JSON_TYPE.OBJECT) {
+                throw new JSONUnmashalException(format("Expected object value, but given JSON type: %s", val.type));
+        }
+        T ret2;
+        foreach (k, v; val.object) {
+                ValueType!(T) va;
+                unmarshalJSON!(ValueType!(T))(v, va);
+                ret2[k] = va;
+        }
+
+        ret = ret2;
+}
+
+// JSON object: associative array where key must be a string
+unittest {
+        int[string] a;
+        unmarshalJSON(`{"one": 1}`, a);
+        assert(a == ["one": 1]);
+
+        float[string] b;
+        unmarshalJSON(`{"one": 1}`, b);
+        assert(b == ["one": 1f]);
+}
+
+/**
+  Decodes a JSON object into a D class or struct, instantiating where necessary.
+  */
+auto unmarshalJSON(T)(JSONValue val, ref T ret) if (is(T == class) || is(T == struct)) {
+        if (val.type != JSON_TYPE.OBJECT) {
+                throw new JSONUnmashalException(format("Expected object value, but given JSON type: %s", val.type));
+        }
+
+        // if it's a class, make sure we account for all super classes
+        // we'll start with the base cass first
+        static if (is(T == class)) {
+                alias TypeTuple!(T, BaseClassesTuple!T) Types;
+                if (!ret) {
+                        static if (__traits(compiles, new T)) {
+                                ret = new T;
+                        } else {
+                                throw new JSONUnmashalException(format("Cannot instantiate %s, but reference needed to unmarshal type %s", T.stringof, val.type));
+                        }
+                }
+        } else {
+                alias TypeTuple!T Types;
+        }
+
+objloop:
+        foreach (k, v; val.object) {
+                // check all base classes
+                foreach (BT; Types) {
+                        // iterate over all fields
+                        foreach (i, type; typeof(BT.tupleof)) {
+                                enum name = BT.tupleof[i].stringof[1 + BT.stringof.length + 2 .. $];
+
+                                static if (name != "this") {
+                                        if (k == name) {
+                                                static if (isPointer!type) {
+                                                        if (!mixin("ret." ~ name)) {
+                                                                mixin("ret." ~ name) = new PointerTarget!type;
+                                                        }
+                                                } else static if (is(type == class)) {
+                                                        if (!mixin("ret." ~ name)) {
+                                                                static if (__traits(compiles, mixin("BT." ~ type.stringof))) {
+                                                                        mixin("ret." ~ name) = ret.new type;
+                                                                } else {
+                                                                        mixin("ret." ~ name) = new type;
+                                                                }
+                                                        }
+                                                }
+
+                                                unmarshalJSON(v, mixin("ret." ~ name));
+
+                                                // ignore all super classes because we've satisfied k
+                                                continue objloop;
+                                        }
+                                }
+                        }
+                }
+        }
+}
+
+// JSON object: class
+unittest {
+        import std.array;
+        import std.format;
+
+        class A {
+                int z;
+                float y;
+                uint x;
+                uint[3] w;
+
+                override string toString() {
+                        auto writer = appender!string();
+                        formattedWrite(writer, "%d %f %d %s", z, y, x, w);
+                        return writer.data;
+                }
+        }
+
+        auto a = new A;
+        unmarshalJSON(`{"z": 3, "y": 3.3, "x": 7, "w": [8, 7, 2]}`, a);
+
+        assert(a.z == 3);
+        assert(a.y == 3.3f);
+        assert(a.x == 7);
+        assert(a.w == [8, 7, 2]);
+}
+
+// JSON objects: structs
+unittest {
+        import std.array;
+        import std.format;
+
+        struct A {
+                int a;
+                double b;
+                string c;
+                int[] d;
+                int[string] e;
+                double* f;
+
+                // this breaks on latest DMD HEAD
+                version (none) {
+                string toString() {
+                        auto writer = appender!string();
+                        formattedWrite(writer, "%d %f '%s' %s %s", a, b, c, d, e);
+                        return writer.data;
+                }
+                }
+        }
+
+        A a;
+
+        unmarshalJSON(`{"a": 5, "b": 6.0, "c": "hello", "d": [1, 2, 3], "e": {"one": 1, "two": 2}, "f": 7}`, a);
+
+        assert(a.a == 5);
+        assert(a.b == 6.0f);
+        assert(a.c == "hello");
+        assert(a.d == [1, 2, 3]);
+        assert(a.e == ["one": 1, "two": 2]);
+        assert(*a.f == 7f);
+}
+
+// embedded struct in class
+unittest {
+        struct A {
+                int c;
+        }
+
+        class B {
+                A a;
+                A* b;
+        }
+
+        auto b = new B;
+        unmarshalJSON(`{"a": {"c": 3}, "b": {"c": 4}}`, b);
+
+        assert(b.a.c == 3);
+        assert(b.b.c == 4);
+}
+
+// Subclasses
+unittest {
+        class A {
+                int a;
+        }
+
+        class B : A {
+                int b;
+        }
+
+        auto b = new B;
+        unmarshalJSON(`{"a": 5, "b": 3}`, b);
+
+        assert(b.a == 5);
+        assert(b.b == 3);
+}
+
+// Internal class
+unittest {
+        class A {
+                class B {
+                        int b;
+                }
+
+                int a;
+                B b;
+        }
+
+        auto a = new A;
+        unmarshalJSON(`{"a": 5, "b": {"b": 3}}`, a);
+
+        assert(a.a == 5);
+        assert(a.b.b == 3);
+}
+
+// Lots of nested classes
+unittest {
+        import std.exception;
+
+        class A {
+                class B {
+                        class C {
+                                int d;
+                        }
+
+                        C c;
+                }
+
+                B b;
+        }
+
+        auto a = new A;
+        unmarshalJSON(`{"b": {"c": {"d": 5}}}`, a);
+
+        assert(a.b.c.d == 5);
+
+        A.B b;
+        assertThrown!JSONUnmashalException(unmarshalJSON(`{}`, b), "Cannot instantiate inner class without outer class instance");
+}
+
+/**
+  Decodes a JSON string (InputRange) into a D data type.
+  */
+auto unmarshalJSON(J, T)(J json, ref T ret, int maxDepth = -1) if(isInputRange!J) {
+        unmarshalJSON(parseJSON(json, maxDepth), ret);
 }
