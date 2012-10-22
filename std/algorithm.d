@@ -878,6 +878,8 @@ assert(a == [ 5, 5, 5, 5 ]);
 void fill(Range, Value)(Range range, Value filler)
     if (isInputRange!Range && is(typeof(range.front = filler)))
 {
+    alias ElementType!Range T;
+
     static if (is(typeof(range[] = filler)))
     {
         range[] = filler;
