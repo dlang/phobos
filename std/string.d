@@ -4000,49 +4000,50 @@ S wrap(S)(S s, size_t columns = 80, S firstindent = null,
     auto col = column(result.idup, tabsize);
     foreach (size_t i, dchar c; s)
     {
-    if (std.uni.isWhite(c))
-    {
-        if (inword)
+        if (std.uni.isWhite(c))
         {
-        if (first)
-        {
-        }
-        else if (col + 1 + (i - wordstart) > columns)
-        {
-            result ~= '\n';
-            result ~= indent;
-            col = column(indent, tabsize);
+            if (inword)
+            {
+                if (first)
+                {
+                }
+                else if (col + 1 + (i - wordstart) > columns)
+                {
+                    result ~= '\n';
+                    result ~= indent;
+                    col = column(indent, tabsize);
+                }
+                else
+                {
+                    result ~= ' ';
+                    col += 1;
+                }
+                result ~= s[wordstart .. i];
+                col += i - wordstart;
+                inword = false;
+                first = false;
+            }
         }
         else
-        {   result ~= ' ';
-            col += 1;
-        }
-        result ~= s[wordstart .. i];
-        col += i - wordstart;
-        inword = false;
-        first = false;
-        }
-    }
-    else
-    {
-        if (!inword)
         {
-        wordstart = i;
-        inword = true;
+            if (!inword)
+            {
+                wordstart = i;
+                inword = true;
+            }
         }
-    }
     }
 
     if (inword)
     {
-    if (col + 1 + (s.length - wordstart) >= columns)
-    {
-        result ~= '\n';
-        result ~= indent;
-    }
-    else if (result.length != firstindent.length)
-        result ~= ' ';
-    result ~= s[wordstart .. s.length];
+        if (col + 1 + (s.length - wordstart) >= columns)
+        {
+            result ~= '\n';
+            result ~= indent;
+        }
+        else if (result.length != firstindent.length)
+            result ~= ' ';
+        result ~= s[wordstart .. s.length];
     }
     result ~= '\n';
 
