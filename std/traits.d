@@ -341,19 +341,38 @@ static assert(returnsRef!foo);
 static assert(!returnsRef!bar);
 ---
 */
-template returnsRef(alias f)
+template returnsRef(func...)
+    if (func.length == 1 && isCallable!func)
 {
-    enum returnsRef = (functionAttributes!f & FunctionAttribute.ref_) != 0;
-}
-	
-unittest
-{
-    ref int foo();
-    int bar();
-    static assert(returnsRef!foo);
-    static assert(!returnsRef!bar);  
+    enum returnsRef = (functionAttributes!func & FunctionAttribute.ref_) != 0;
 }
 
+unittest
+{
+    ref int foo1();
+    int foo2();
+    @property ref int foo3();
+    @property int foo4();
+
+    struct S
+    {
+        ref int bar1();
+        int bar2();
+        @property ref int bar3();
+        @property int bar4();
+    }
+
+    static assert( returnsRef!foo1);
+    static assert(!returnsRef!foo2);
+    static assert( returnsRef!foo3);
+    static assert(!returnsRef!foo4);
+
+    static assert( returnsRef!(S.bar1));
+    static assert(!returnsRef!(S.bar2));
+    static assert( returnsRef!(S.bar3));
+    static assert(!returnsRef!(S.bar4));
+}
+	
 /***
 Get, as a tuple, the types of the parameters to a function, a pointer
 to function, a delegate, a struct with an $(D opCall), a pointer to a
