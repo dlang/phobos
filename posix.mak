@@ -173,7 +173,7 @@ STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
 
 STD_NET_MODULES = $(addprefix std/net/, isemail curl)
 
-STD_DIGEST_MODULES = $(addprefix std/digest/, digest crc md sha)
+STD_DIGEST_MODULES = $(addprefix std/digest/, digest crc md ripemd sha)
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
