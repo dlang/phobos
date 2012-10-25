@@ -3179,7 +3179,7 @@ if (isRandomAccessRange!R1 && isBidirectionalRange!R2
         && is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
     if (needle.empty) return haystack;
-    const needleLength = walkLength(needle);
+    const needleLength = walkLength(needle.save);
     if (needleLength > haystack.length)
     {
         // @@@BUG@@@
@@ -5743,7 +5743,7 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
 
     CostType distance(Range s, Range t)
     {
-        auto slen = walkLength(s), tlen = walkLength(t);
+        auto slen = walkLength(s.save), tlen = walkLength(t.save);
         AllocMatrix(slen + 1, tlen + 1);
         foreach (i; 1 .. rows)
         {
