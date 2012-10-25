@@ -842,6 +842,54 @@ uint getAttributes(in char[] name)
     }
 }
 
+/++
+    Sets the attributes of a given file.
+
+    Note that the file attributes on Windows and Posix systems are
+    completely different. On Windows, their meaning is as if they
+    were set using $(D SetFileAttributes)
+    $(WEB msdn.microsoft.com/en-us/library/aa365535(v=vs.85).aspx, SetFileAttributes).
+    On Posix systems, they are directly passed as the
+    $(D mode) argument to the $(D chmod) system call.
+
+    On Posix systems, if the given file is a symbolic link,
+    then attributes are set for the file pointed to by the symbolic link.
++/
+void setAttributes(in char[] name, uint attr)
+{
+    dirEntry(name).attributes = attr;
+}
+
+unittest
+{
+    string testfile = "deleteme.dmd.unittest.std.file" ~ to!string(getpid());
+    write(testfile, null);
+    scope(exit) remove(testfile);
+    auto attr = getAttributes(testfile);
+    version(Windows)
+    {
+        // On Windows, converting a file into directory is not possible;
+        // an error should be returned.
+        assertThrown(setAttributes(testfile, attr | FILE_ATTRIBUTE_DIRECTORY));
+
+        setAttributes(testfile, attr | FILE_ATTRIBUTE_ARCHIVE);
+        assert((getAttributes(testfile) & FILE_ATTRIBUTE_ARCHIVE) != 0);
+        setAttributes(testfile, attr & ~FILE_ATTRIBUTE_ARCHIVE);
+        assert((getAttributes(testfile) & FILE_ATTRIBUTE_ARCHIVE) == 0);
+    }
+    else version(Posix)
+    {
+        // On Posix, setting the S_IFDIR attribute should be ignored.
+        setAttributes(testfile, (attr & ~S_IFMT) | S_IFDIR);
+        assert((getAttributes(testfile) & S_IFDIR) == 0);
+
+        setAttributes(testfile, attr | S_IWOTH);
+        assert((getAttributes(testfile) & S_IWOTH) != 0);
+        setAttributes(testfile, attr & ~S_IWOTH);
+        assert((getAttributes(testfile) & S_IWOTH) == 0);
+    }
+}
+
 
 /++
     If the given file is a symbolic link, then this returns the attributes of the
@@ -1612,20 +1660,36 @@ assert(!de2.isFile);
         @property SysTime timeLastModified();
 
         /++
-            Returns the attributes of the file represented by this $(D DirEntry).
+            Returns the _attributes of the file represented by this $(D DirEntry).
 
-            Note that the file attributes on Windows and Posix systems are
-            completely different. On, Windows, they're what is returned by
+            Note that the file _attributes on Windows and Posix systems are
+            completely different. On Windows, they're what is returned by
             $(D GetFileAttributes)
-            $(WEB msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx, GetFileAttributes)
-            Whereas, an Posix systems, they're the $(D st_mode) value which is
+            $(WEB msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx, GetFileAttributes).
+            On Posix systems, they're the $(D st_mode) value which is
             part of the $(D stat) struct gotten by calling $(D stat).
 
             On Posix systems, if the file represented by this $(D DirEntry) is a
-            symbolic link, then attributes are the attributes of the file
+            symbolic link, then attributes are the _attributes of the file
             pointed to by the symbolic link.
           +/
         @property uint attributes();
+
+        /++
+            Sets the _attributes of the file represented by this $(D DirEntry).
+
+            Note that the file _attributes on Windows and Posix systems are
+            completely different. On Windows, their meaning is as if they
+            were set using $(D SetFileAttributes)
+            $(WEB msdn.microsoft.com/en-us/library/aa365535(v=vs.85).aspx, SetFileAttributes).
+            On Posix systems, they are directly passed as the
+            $(D mode) argument to the $(D chmod) system call.
+
+            On Posix systems, if the file represented by this $(D DirEntry) is a
+            symbolic link, then _attributes are set for the file
+            pointed to by the symbolic link.
+          +/
+        @property void attributes(uint attr);
 
         /++
             On Posix systems, if the file represented by this $(D DirEntry) is a
@@ -1703,6 +1767,13 @@ else version(Windows)
         @property uint attributes() const pure nothrow
         {
             return _attributes;
+        }
+
+        @property void attributes(uint attr)
+        {
+            scope (success) _attributes = getFileAttributesWin(_name).dwFileAttributes;
+            enforce(SetFileAttributesW(std.utf.toUTF16z(_name), attr),
+                new FileException(_name));
         }
 
         @property uint linkAttributes() const pure nothrow
@@ -1835,6 +1906,11 @@ else version(Posix)
             return _statBuf.st_mode;
         }
 
+        @property void attributes(uint attr)
+        {
+            _chmod(attr);
+        }
+
         @property uint linkAttributes()
         {
             _ensureLStatDone();
@@ -1898,6 +1974,13 @@ else version(Posix)
                     "Failed to stat file `" ~ _name ~ "'");
 
             _didStat = true;
+        }
+
+        void _chmod(mode_t mode)
+        {
+            scope (success) _didStat = false;
+            enforce(chmod(toStringz(_name), mode) == 0,
+                    "chmod failed on file `" ~ _name ~ "'");
         }
 
         /++
