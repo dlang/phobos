@@ -124,7 +124,8 @@ SRC_STD_3a= std\signals.d std\typetuple.d std\traits.d \
     std\system.d std\concurrency.d
 
 #can't place SRC_STD_DIGEST in SRC_STD_REST because of out-of-memory issues
-SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d std\digest\digest.d
+SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d \
+    std\digest\ripemd.d std\digest\digest.d
 SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST)
 
 SRC_STD_5_HEAVY= std\algorithm.d
@@ -284,6 +285,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_digest_crc.html \
 	$(DOC)\std_digest_sha.html \
 	$(DOC)\std_digest_md.html \
+	$(DOC)\std_digest_ripemd.html \
 	$(DOC)\std_digest_digest.html \
 	$(DOC)\std_cstream.html \
 	$(DOC)\std_ctype.html \
@@ -652,6 +654,9 @@ $(DOC)\std_digest_sha.html : $(STDDOC) std\digest\sha.d
 $(DOC)\std_digest_md.html : $(STDDOC) std\digest\md.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_md.html $(STDDOC) std\digest\md.d
 
+$(DOC)\std_digest_ripemd.html : $(STDDOC) std\digest\ripemd.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_ripemd.html $(STDDOC) std\digest\ripemd.d
+
 $(DOC)\std_digest_digest.html : $(STDDOC) std\digest\digest.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_digest.html $(STDDOC) std\digest\digest.d
 
@@ -729,6 +734,8 @@ zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_STD_NET)
 	zip32 -u phobos $(SRC_STD_DIGEST)
 
+phobos.zip : zip
+
 clean:
 	cd etc\c\zlib
 	make -f win$(MODEL).mak clean
@@ -741,43 +748,8 @@ clean:
 cleanhtml:
 	del $(DOCS)
 
-install:
-	$(CP) $(LIB) $(DIR)\windows\lib\ 
-	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DIR)\windows\lib\ 
-	+rd/s/q $(DIR)\src\phobos\ 
-	mkdir $(DIR)\src\phobos\ 
-	mkdir $(DIR)\src\phobos\std\ 
-	mkdir $(DIR)\src\phobos\std\net\ 
-	mkdir $(DIR)\src\phobos\std\c\ 
-	mkdir $(DIR)\src\phobos\std\windows\ 
-	mkdir $(DIR)\src\phobos\std\c\windows\ 
-	mkdir $(DIR)\src\phobos\std\c\linux\ 
-	mkdir $(DIR)\src\phobos\std\c\osx\ 
-	mkdir $(DIR)\src\phobos\std\c\freebsd\ 
-	mkdir $(DIR)\src\phobos\std\internal\ 
-	mkdir $(DIR)\src\phobos\std\internal\math\ 
-	mkdir $(DIR)\src\phobos\std\internal\windows\ 
-	mkdir $(DIR)\src\phobos\etc\ 
-	mkdir $(DIR)\src\phobos\etc\c\ 
-	mkdir $(DIR)\src\phobos\etc\c\zlib\ 
-	mkdir $(DIR)\html\d\phobos\ 
-	$(CP) win32.mak win64.mak posix.mak $(STDDOC) $(DIR)\src\phobos\ 
-	$(CP) $(SRC) $(DIR)\src\phobos\ 
-	$(CP) $(SRC_STD) $(DIR)\src\phobos\std\ 
-	$(CP) $(SRC_STD_NET) $(DIR)\src\phobos\std\net\ 
-	$(CP) $(SRC_STD_DIGEST) $(DIR)\src\phobos\std\digest\ 
-	$(CP) $(SRC_STD_C) $(DIR)\src\phobos\std\c\ 
-	$(CP) $(SRC_STD_WIN) $(DIR)\src\phobos\std\windows\ 
-	$(CP) $(SRC_STD_C_WIN) $(DIR)\src\phobos\std\c\windows\ 
-	$(CP) $(SRC_STD_C_LINUX) $(DIR)\src\phobos\std\c\linux\ 
-	$(CP) $(SRC_STD_C_OSX) $(DIR)\src\phobos\std\c\osx\ 
-	$(CP) $(SRC_STD_C_FREEBSD) $(DIR)\src\phobos\std\c\freebsd\ 
-	$(CP) $(SRC_STD_INTERNAL) $(DIR)\src\phobos\std\internal\ 
-	$(CP) $(SRC_STD_INTERNAL_MATH) $(DIR)\src\phobos\std\internal\math\
-	$(CP) $(SRC_STD_INTERNAL_WINDOWS) $(DIR)\src\phobos\std\internal\windows\ 
-	#$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc\ 
-	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c\ 
-	$(CP) $(SRC_ZLIB) $(DIR)\src\phobos\etc\c\zlib\ 
-	$(CP) $(DOCS) $(DIR)\html\d\phobos\ 
-
-
+install: phobos.zip
+	$(CP) phobos.lib phobos64.lib $(DIR)\windows\lib\
+	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DRUNTIME)\lib\gcstub64.obj $(DIR)\windows\lib\
+	+rd/s/q $(DIR)\src\phobos\
+	unzip -o phobos.zip -d $(DIR)\src\phobos\

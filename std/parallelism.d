@@ -888,7 +888,7 @@ if(is(typeof(delegateOrFp(args))) && !isSafeTask!F)
 
 /**
 Version of $(D task) usable from $(D @safe) code.  Usage mechanics are
-identical to the non-@safe case, but safety introduces the some restrictions.
+identical to the non-@safe case, but safety introduces some restrictions:
 
 1.  $(D fun) must be @safe or @trusted.
 
@@ -1395,13 +1395,12 @@ private:
         task.taskStatus = TaskStatus.inProgress;
         this.head = task;
         singleTaskThread = new Thread(&doSingleTask);
+        singleTaskThread.start();
 
         if(priority != int.max)
         {
             singleTaskThread.priority = priority;
         }
-
-        singleTaskThread.start();
     }
 
 public:
@@ -3973,7 +3972,7 @@ unittest
 
     // Test executeInNewThread().
     auto ct = scopedTask!refFun(x);
-    ct.executeInNewThread();
+    ct.executeInNewThread(Thread.PRIORITY_MAX);
     ct.yieldForce();
     assert(ct.args[0] == 1);
 

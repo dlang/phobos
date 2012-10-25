@@ -97,8 +97,8 @@ version(unittest)
     /******************************************
      * Compare floating point numbers to n decimal digits of precision.
      * Returns:
-     *	1	match
-     *	0	nomatch
+     *  1       match
+     *  0       nomatch
      */
 
     private bool equalsDigit(real x, real y, uint ndigits)
@@ -134,8 +134,8 @@ version(unittest)
      * Simple function to compare two floating point values
      * to a specified precision.
      * Returns:
-     *	true	match
-     *	false	nomatch
+     *  true    match
+     *  false   nomatch
      */
 
     private bool mfeq(real x, real y, real precision)
@@ -501,9 +501,22 @@ Lret:
     }
     else version(D_InlineAsm_X86_64)
     {
+        version (Win64)
+        {
+            asm
+            {
+                fld     real ptr [RCX]  ; // load theta
+            }
+        }
+        else
+        {
+            asm
+            {
+                fld     x[RBP]          ; // load theta
+            }
+        }
     asm
     {
-        fld     x[RBP]                  ; // load theta
         fxam                            ; // test for oddball values
         fstsw   AX                      ;
         test    AH,1                    ;
@@ -695,10 +708,23 @@ real atan2(real y, real x) @trusted pure nothrow
 {
     version(InlineAsm_X86_Any)
     {
-        asm {
-            fld y;
-            fld x;
-            fpatan;
+        version (Win64)
+        {
+            asm {
+                naked;
+                fld real ptr [RDX]; // y
+                fld real ptr [RCX]; // x
+                fpatan;
+                ret;
+            }
+        }
+        else
+        {
+            asm {
+                fld y;
+                fld x;
+                fpatan;
+            }
         }
     }
     else
@@ -1156,6 +1182,26 @@ L_largenegative:
     } else version(D_InlineAsm_X86_64) {
         asm
         {
+            naked;
+        }
+        version (Win64)
+        {
+            asm
+            {
+                fld   real ptr [RCX];  // x
+                mov   AX,[RCX+8];      // AX = exponent and sign
+            }
+        }
+        else
+        {
+            asm
+            {
+                fld   real ptr [RSP+8];  // x
+                mov   AX,[RSP+8+8];      // AX = exponent and sign
+            }
+        }
+        asm
+        {
             /*  expm1() for x87 80-bit reals, IEEE754-2008 conformant.
              * Author: Don Clugston.
              *
@@ -1165,9 +1211,6 @@ L_largenegative:
              *    If 2rndy  < 0.5*real.epsilon, result is -1.
              *    Implementation is otherwise the same as for exp2()
              */
-            naked;
-            fld real ptr [RSP+8] ; // x
-            mov AX, [RSP+8+8]; // AX = exponent and sign
             sub RSP, 24;       // Create scratch space on the stack
             // [RSP,RSP+2] = scratchint
             // [RSP+4..+6, +8..+10, +10] = scratchreal
@@ -1325,6 +1368,26 @@ L_was_nan:
             ret PARAMSIZE;
         }
     } else version(D_InlineAsm_X86_64) {
+        asm
+        {
+            naked;
+        }
+        version (Win64)
+        {
+            asm
+            {
+                fld   real ptr [RCX];  // x
+                mov   AX,[RCX+8];      // AX = exponent and sign
+            }
+        }
+        else
+        {
+            asm
+            {
+                fld   real ptr [RSP+8];  // x
+                mov   AX,[RSP+8+8];      // AX = exponent and sign
+            }
+        }
         asm {
             /*  exp2() for x87 80-bit reals, IEEE754-2008 conformant.
              * Author: Don Clugston.
@@ -1341,9 +1404,6 @@ L_was_nan:
              * work for the (very rare) cases where the result is subnormal. So we fall back
              * to the slow method in that case.
              */
-            naked;
-            fld real ptr [RSP+8] ; // x
-            mov AX, [RSP+8+8]; // AX = exponent and sign
             sub RSP, 24; // Create scratch space on the stack
             // [RSP,RSP+2] = scratchint
             // [RSP+4..+6, +8..+10, +10] = scratchreal
@@ -1497,11 +1557,25 @@ creal expi(real y) @trusted pure nothrow
 {
     version(InlineAsm_X86_Any)
     {
-        asm
+        version (Win64)
         {
-            fld y;
-            fsincos;
-            fxch ST(1), ST(0);
+            asm
+            {
+                naked;
+                fld     real ptr [ECX];
+                fsincos;
+                fxch    ST(1), ST(0);
+                ret;
+            }
+        }
+        else
+        {
+            asm
+            {
+                fld y;
+                fsincos;
+                fxch ST(1), ST(0);
+            }
         }
     }
     else
@@ -1706,7 +1780,43 @@ unittest
  *      $(TR $(TD $(NAN))            $(TD FP_ILOGBNAN) $(TD no))
  *      )
  */
-int ilogb(real x)  @trusted nothrow    { return core.stdc.math.ilogbl(x); }
+int ilogb(real x)  @trusted nothrow
+{
+    version (Win64)
+    {
+        asm
+        {
+            naked                       ;
+            fld     real ptr [RCX]      ;
+            fxam                        ;
+            fstsw   AX                  ;
+            and     AH,0x45             ;
+            cmp     AH,0x40             ;
+            jz      Lzeronan            ;
+            cmp     AH,5                ;
+            jz      Linfinity           ;
+            cmp     AH,1                ;
+            jz      Lzeronan            ;
+            fxtract                     ;
+            fstp    ST(0)               ;
+            fistp   dword ptr 8[RSP]    ;
+            mov     EAX,8[RSP]          ;
+            ret                         ;
+
+          Lzeronan:
+            mov     EAX,0x80000000      ;
+            fstp    ST(0)               ;
+            ret                         ;
+
+          Linfinity:
+            mov     EAX,0x7FFFFFFF      ;
+            fstp    ST(0)               ;
+            ret                         ;
+        }
+    }
+    else
+        return core.stdc.math.ilogbl(x);
+}
 
 alias core.stdc.math.FP_ILOGB0   FP_ILOGB0;
 alias core.stdc.math.FP_ILOGBNAN FP_ILOGBNAN;
@@ -1888,7 +1998,22 @@ unittest
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD -$(INFIN)) $(TD yes) )
  *      )
  */
-real logb(real x) @trusted nothrow    { return core.stdc.math.logbl(x); }
+real logb(real x) @trusted nothrow
+{
+    version (Win64)
+    {
+        asm
+        {
+            naked                       ;
+            fld     real ptr [RCX]      ;
+            fxtract                     ;
+            fstp    ST(0)               ;
+            ret                         ;
+        }
+    }
+    else
+        return core.stdc.math.logbl(x);
+}
 
 /************************************
  * Calculates the remainder from the calculation x/y.
@@ -1904,7 +2029,15 @@ real logb(real x) @trusted nothrow    { return core.stdc.math.logbl(x); }
  *  $(TR $(TD !=$(PLUSMNINF)) $(TD $(PLUSMNINF))  $(TD x)            $(TD no))
  * )
  */
-real fmod(real x, real y) @trusted nothrow { return core.stdc.math.fmodl(x, y); }
+real fmod(real x, real y) @trusted nothrow
+{
+    version (Win64)
+    {
+        return x % y;
+    }
+    else
+        return core.stdc.math.fmodl(x, y);
+}
 
 /************************************
  * Breaks x into an integral part and a fractional part, each of which has
@@ -1917,7 +2050,16 @@ real fmod(real x, real y) @trusted nothrow { return core.stdc.math.fmodl(x, y); 
  *  $(TR $(TD $(PLUSMNINF))   $(TD anything)      $(TD $(PLUSMN)0.0) $(TD $(PLUSMNINF)))
  * )
  */
-real modf(real x, ref real i) @trusted nothrow { return core.stdc.math.modfl(x,&i); }
+real modf(real x, ref real i) @trusted nothrow
+{
+    version (Win64)
+    {
+        i = trunc(x);
+        return copysign(isInfinity(x) ? 0.0 : x - i, x);
+    }
+    else
+        return core.stdc.math.modfl(x,&i);
+}
 
 /*************************************
  * Efficiently calculates x * 2$(SUP n).
@@ -1935,11 +2077,26 @@ real scalbn(real x, int n) @trusted nothrow
 {
     version(InlineAsm_X86_Any) {
         // scalbnl is not supported on DMD-Windows, so use asm.
-        asm {
-            fild n;
-            fld x;
-            fscale;
-            fstp ST(1);
+        version (Win64)
+        {
+            asm {
+                naked                           ;
+                mov     16[RSP],RCX             ;
+                fild    word ptr 16[RSP]        ;
+                fld     real ptr [RDX]          ;
+                fscale                          ;
+                fstp    ST(1)                   ;
+                ret                             ;
+            }
+        }
+        else
+        {
+            asm {
+                fild n;
+                fld x;
+                fscale;
+                fstp ST(1);
+            }
         }
     } else {
         return core.stdc.math.scalbnl(x, n);
@@ -1960,7 +2117,15 @@ unittest {
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)$(INFIN)) $(TD no) )
  *      )
  */
-real cbrt(real x) @trusted nothrow    { return core.stdc.math.cbrtl(x); }
+real cbrt(real x) @trusted nothrow
+{
+    version (Win64)
+    {
+        return copysign(exp2(yl2x(fabs(x), 1.0L/3.0L)), x);
+    }
+    else
+        return core.stdc.math.cbrtl(x);
+}
 
 
 /*******************************
@@ -2079,7 +2244,30 @@ unittest
  * Returns the value of x rounded upward to the next integer
  * (toward positive infinity).
  */
-real ceil(real x)  @trusted nothrow    { return core.stdc.math.ceill(x); }
+real ceil(real x)  @trusted nothrow
+{
+    version (Win64)
+    {
+        asm
+        {
+            naked                       ;
+            fld     real ptr [RCX]      ;
+            fstcw   8[RSP]              ;
+            mov     AL,9[RSP]           ;
+            mov     DL,AL               ;
+            and     AL,0xC3             ;
+            or      AL,0x08             ; // round to +infinity
+            mov     9[RSP],AL           ;
+            fldcw   8[RSP]              ;
+            frndint                     ;
+            mov     9[RSP],DL           ;
+            fldcw   8[RSP]              ;
+            ret                         ;
+        }
+    }
+    else
+        return core.stdc.math.ceill(x);
+}
 
 unittest
 {
@@ -2091,7 +2279,30 @@ unittest
  * Returns the value of x rounded downward to the next integer
  * (toward negative infinity).
  */
-real floor(real x) @trusted nothrow    { return core.stdc.math.floorl(x); }
+real floor(real x) @trusted nothrow
+{
+    version (Win64)
+    {
+        asm
+        {
+            naked                       ;
+            fld     real ptr [RCX]      ;
+            fstcw   8[RSP]              ;
+            mov     AL,9[RSP]           ;
+            mov     DL,AL               ;
+            and     AL,0xC3             ;
+            or      AL,0x04             ; // round to -infinity
+            mov     9[RSP],AL           ;
+            fldcw   8[RSP]              ;
+            frndint                     ;
+            mov     9[RSP],DL           ;
+            fldcw   8[RSP]              ;
+            ret                         ;
+        }
+    }
+    else
+        return core.stdc.math.floorl(x);
+}
 
 unittest
 {
@@ -2106,7 +2317,15 @@ unittest
  * Unlike the rint functions, nearbyint does not raise the
  * FE_INEXACT exception.
  */
-real nearbyint(real x) @trusted nothrow { return core.stdc.math.nearbyintl(x); }
+real nearbyint(real x) @trusted nothrow
+{
+    version (Win64)
+    {
+        assert(0);      // not implemented in C library
+    }
+    else
+        return core.stdc.math.nearbyintl(x);
+}
 
 /**********************************
  * Rounds x to the nearest integer value, using the current rounding
@@ -2132,13 +2351,27 @@ long lrint(real x) @trusted pure nothrow
 {
     version(InlineAsm_X86_Any)
     {
-        long n;
-        asm
+        version (Win64)
         {
-            fld x;
-            fistp n;
+            asm
+            {
+                naked;
+                fld     real ptr [RCX];
+                fistp   8[RSP];
+                mov     RAX,8[RSP];
+                ret;
+            }
         }
-        return n;
+        else
+        {
+            long n;
+            asm
+            {
+                fld x;
+                fistp n;
+            }
+            return n;
+        }
     } else {
         return core.stdc.math.llrintl(x);
     }
@@ -2149,7 +2382,19 @@ long lrint(real x) @trusted pure nothrow
  * If the fractional part of x is exactly 0.5, the return value is rounded to
  * the even integer.
  */
-real round(real x) @trusted nothrow { return core.stdc.math.roundl(x); }
+real round(real x) @trusted nothrow
+{
+    version (Win64)
+    {
+        auto old = FloatingPointControl.getControlState();
+        FloatingPointControl.setControlState((old & ~FloatingPointControl.ROUNDING_MASK) | FloatingPointControl.roundToZero);
+        x = rint((x >= 0) ? x + 0.5 : x - 0.5);
+        FloatingPointControl.setControlState(old);
+        return x;
+    }
+    else
+        return core.stdc.math.roundl(x);
+}
 
 /**********************************************
  * Return the value of x rounded to the nearest integer.
@@ -2180,7 +2425,30 @@ version(Posix)
  *
  * This is also known as "chop" rounding.
  */
-real trunc(real x) @trusted nothrow { return core.stdc.math.truncl(x); }
+real trunc(real x) @trusted nothrow
+{
+    version (Win64)
+    {
+        asm
+        {
+            naked                       ;
+            fld     real ptr [RCX]      ;
+            fstcw   8[RSP]              ;
+            mov     AL,9[RSP]           ;
+            mov     DL,AL               ;
+            and     AL,0xC3             ;
+            or      AL,0x0C             ; // round to 0
+            mov     9[RSP],AL           ;
+            fldcw   8[RSP]              ;
+            frndint                     ;
+            mov     9[RSP],DL           ;
+            fldcw   8[RSP]              ;
+            ret                         ;
+        }
+    }
+    else
+        return core.stdc.math.truncl(x);
+}
 
 /****************************************************
  * Calculate the remainder x REM y, following IEC 60559.
@@ -2204,7 +2472,16 @@ real trunc(real x) @trusted nothrow { return core.stdc.math.truncl(x); }
  *
  * Note: remquo not supported on windows
  */
-real remainder(real x, real y) @trusted nothrow { return core.stdc.math.remainderl(x, y); }
+real remainder(real x, real y) @trusted nothrow
+{
+    version (Win64)
+    {
+        int n;
+        return remquo(x, y, n);
+    }
+    else
+        return core.stdc.math.remainderl(x, y);
+}
 
 real remquo(real x, real y, out int n) @trusted nothrow  /// ditto
 {
@@ -2488,7 +2765,7 @@ private:
             assert(0, "Not yet supported");
     }
     // Read from the control register
-    static ushort getControlState()
+    static ushort getControlState() @trusted nothrow
     {
         version (D_InlineAsm_X86)
         {
@@ -2515,14 +2792,28 @@ private:
             assert(0, "Not yet supported");
     }
     // Set the control register
-    static void setControlState(ushort newState)
+    static void setControlState(ushort newState) @trusted nothrow
     {
         version (InlineAsm_X86_Any)
         {
-            asm
+            version (Win64)
             {
-                 fclex;
-                 fldcw newState;
+                asm
+                {
+                    naked;
+                    mov     8[RSP],RCX;
+                    fclex;
+                    fldcw   8[RSP];
+                    ret;
+                }
+            }
+            else
+            {
+                asm
+                {
+                    fclex;
+                    fldcw newState;
+                }
             }
         }
         else
@@ -4081,7 +4372,7 @@ body
     }
     else
     {
-        sizediff_t i = A.length - 1;
+        ptrdiff_t i = A.length - 1;
         real r = A[i];
         while (--i >= 0)
         {

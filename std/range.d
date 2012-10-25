@@ -1302,42 +1302,74 @@ unittest
 This is a best-effort implementation of $(D length) for any kind of
 range.
 
-If $(D hasLength!(Range)), simply returns $(D range.length) without
-checking $(D upTo).
+If $(D hasLength!Range), simply returns $(D range.length) without
+checking $(D upTo) (when specified).
 
 Otherwise, walks the range through its length and returns the number
 of elements seen. Performes $(BIGOH n) evaluations of $(D range.empty)
 and $(D range.popFront()), where $(D n) is the effective length of $(D
-range). The $(D upTo) parameter is useful to "cut the losses" in case
+range).
+
+The $(D upTo) parameter is useful to "cut the losses" in case
 the interest is in seeing whether the range has at least some number
 of elements. If the parameter $(D upTo) is specified, stops if $(D
 upTo) steps have been taken and returns $(D upTo).
+
+Infinite ranges are compatible, provided the parameter $(D upTo) is
+specified, in which case the implementation simply returns upTo.
  */
-auto walkLength(Range)(Range range, const size_t upTo = size_t.max)
-if (isInputRange!Range)
+auto walkLength(Range)(Range range)
+    if (isInputRange!Range && !isInfinite!Range)
 {
     static if (hasLength!Range)
-    {
         return range.length;
-    }
     else
     {
         size_t result;
-        // Optimize this tight loop by specializing for the common
-        // case upTo == default parameter
-        if (upTo == size_t.max)
-            for (; !range.empty; range.popFront()) ++result;
-        else
-            for (; result < upTo && !range.empty; range.popFront()) ++result;
+        for ( ; !range.empty ; range.popFront() )
+            ++result;
+        return result;
+    }
+}
+/// ditto
+auto walkLength(Range)(Range range, const size_t upTo)
+    if (isInputRange!Range)
+{
+    static if (hasLength!Range)
+        return range.length;
+    else static if (isInfinite!Range)
+        return upTo;
+    else
+    {
+        size_t result;
+        for ( ; result < upTo && !range.empty ; range.popFront() )
+            ++result;
         return result;
     }
 }
 
 unittest
 {
+    //hasLength Range
     int[] a = [ 1, 2, 3 ];
     assert(walkLength(a) == 3);
     assert(walkLength(a, 0) == 3);
+    assert(walkLength(a, 2) == 3);
+    assert(walkLength(a, 4) == 3);
+
+    //Forward Range
+    auto b = filter!"true"([1, 2, 3, 4]);
+    assert(b.walkLength() == 4);
+    assert(b.walkLength(0) == 0);
+    assert(b.walkLength(2) == 2);
+    assert(b.walkLength(4) == 4);
+    assert(b.walkLength(6) == 4);
+
+    //Infinite Range
+    auto fibs = recurrence!"a[n-1] + a[n-2]"(1, 1);
+    assert(!__traits(compiles, fibs.walkLength()));
+    assert(fibs.take(10).walkLength() == 10);
+    assert(fibs.walkLength(55) == 55);
 }
 
 /**
@@ -2840,7 +2872,10 @@ if (isInputRange!R && !hasSlicing!R)
             alias length opDollar;
 
             static if (isForwardRange!R)
-                @property auto save() { return this; }
+                @property auto save()
+                {
+                    return Result(_input.save, _n);
+                }
         }
 
         return Result(range, n);
@@ -3358,7 +3393,7 @@ Take!(Repeat!T) repeat(T)(T value, size_t n)
     $(RED Deprecated. It will be removed in January 2013.
           Please use $(LREF repeat) instead.)
   +/
-deprecated Take!(Repeat!T) replicate(T)(T value, size_t n)
+deprecated("Please use std.range.repeat instead.") Take!(Repeat!T) replicate(T)(T value, size_t n)
 {
     return repeat(value, n);
 }
@@ -3385,7 +3420,7 @@ assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
 Tip: This is a great way to implement simple circular buffers.
 */
 struct Cycle(Range)
-if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
+    if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
 {
     alias Unqual!Range R;
 
@@ -3444,9 +3479,9 @@ if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
             }
         }
 
-        @property Cycle!R save()
+        @property Cycle save()
         {
-            return Cycle!R(this._original.save, this._index);
+            return Cycle(this._original.save, this._index);
         }
     }
     else
@@ -3480,9 +3515,9 @@ if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
             if (_current.empty) _current = _original;
         }
 
-        @property Cycle!R save()
+        @property Cycle save()
         {
-            Cycle!R ret;
+            Cycle ret;
             ret._original = this._original.save;
             ret._current =  this._current.save;
             return ret;
@@ -3523,7 +3558,7 @@ struct Cycle(R)
         return _ptr[(n + _index) % R.length];
     }
 
-    @property Cycle!R save()
+    @property Cycle save()
     {
         return this;
     }
@@ -5117,8 +5152,9 @@ enum TransverseOptions
 struct FrontTransversal(Ror,
         TransverseOptions opt = TransverseOptions.assumeJagged)
 {
-    alias Unqual!(Ror) RangeOfRanges;
-    alias typeof(RangeOfRanges.init.front.front) ElementType;
+    alias Unqual!(Ror)               RangeOfRanges;
+    alias .ElementType!RangeOfRanges RangeType;
+    alias .ElementType!RangeType     ElementType;
 
     private void prime()
     {
@@ -5147,7 +5183,7 @@ struct FrontTransversal(Ror,
         prime();
         static if (opt == TransverseOptions.enforceNotJagged)
             // (isRandomAccessRange!RangeOfRanges
-            //     && hasLength!(.ElementType!RangeOfRanges))
+            //     && hasLength!RangeType)
         {
             if (empty) return;
             immutable commonLength = _input.front.length;
@@ -5181,7 +5217,7 @@ struct FrontTransversal(Ror,
     }
 
     /// Ditto
-    static if (hasMobileElements!(.ElementType!RangeOfRanges))
+    static if (hasMobileElements!RangeType)
     {
         ElementType moveFront()
         {
@@ -5189,7 +5225,7 @@ struct FrontTransversal(Ror,
         }
     }
 
-    static if (hasAssignableElements!(.ElementType!RangeOfRanges))
+    static if (hasAssignableElements!RangeType)
     {
         @property auto front(ElementType val)
         {
@@ -5205,14 +5241,16 @@ struct FrontTransversal(Ror,
         prime();
     }
 
-    /// Ditto
+/**
+   Duplicates this $(D frontTransversal). Note that only the encapsulating
+   range of range will be duplicated. Underlying ranges will not be
+   duplicated.
+*/
     static if (isForwardRange!RangeOfRanges)
     {
-        @property typeof(this) save()
+        @property FrontTransversal save()
         {
-            auto ret = this;
-            ret._input = _input.save;
-            return ret;
+            return FrontTransversal(_input.save);
         }
     }
 
@@ -5236,7 +5274,7 @@ struct FrontTransversal(Ror,
         }
 
         /// Ditto
-        static if (hasMobileElements!(.ElementType!RangeOfRanges))
+        static if (hasMobileElements!RangeType)
         {
             ElementType moveBack()
             {
@@ -5244,7 +5282,7 @@ struct FrontTransversal(Ror,
             }
         }
 
-        static if (hasAssignableElements!(.ElementType!RangeOfRanges))
+        static if (hasAssignableElements!RangeType)
         {
             @property auto back(ElementType val)
             {
@@ -5269,7 +5307,7 @@ struct FrontTransversal(Ror,
         }
 
         /// Ditto
-        static if (hasMobileElements!(.ElementType!RangeOfRanges))
+        static if (hasMobileElements!RangeType)
         {
             ElementType moveAt(size_t n)
             {
@@ -5277,7 +5315,7 @@ struct FrontTransversal(Ror,
             }
         }
         /// Ditto
-        static if (hasAssignableElements!(.ElementType!RangeOfRanges))
+        static if (hasAssignableElements!RangeType)
         {
             void opIndexAssign(ElementType val, size_t n)
             {
@@ -5749,8 +5787,8 @@ assert(ind[5] == 6);
 ---
 */
 struct Indexed(Source, Indices)
-if(isRandomAccessRange!Source && isInputRange!Indices &&
-  is(typeof(Source.init[ElementType!(Indices).init])))
+    if(isRandomAccessRange!Source && isInputRange!Indices &&
+        is(typeof(Source.init[ElementType!(Indices).init])))
 {
     this(Source source, Indices indices)
     {
@@ -5945,8 +5983,7 @@ private:
 }
 
 /// Ditto
-Indexed!(Source, Indices) indexed(Source, Indices)
-(Source source, Indices indices)
+Indexed!(Source, Indices) indexed(Source, Indices)(Source source, Indices indices)
 {
     return typeof(return)(source, indices);
 }
@@ -7169,7 +7206,7 @@ sgi.com/tech/stl/binary_search.html, binary_search).
     $(RED Deprecated. It will be removed in January 2013.
           Please use $(LREF contains) instead.)
   +/
-    deprecated alias contains canFind;
+    deprecated("Please use contains instead.") alias contains canFind;
 }
 
 // Doc examples

@@ -2304,7 +2304,7 @@ class EndianStream : FilterStream {
       if (j == bom.length) // found a match
         result = i;
     }
-    sizediff_t m = 0;
+    ptrdiff_t m = 0;
     if (result != -1) {
       endian = BOMEndian[result]; // set stream endianness
       m = ByteOrderMarks[result].length;

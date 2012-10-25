@@ -127,10 +127,10 @@ version(Posix) private alias isDirSeparator isSeparator;
     drive/directory separator in a string.  Returns -1 if none
     is found.
 */
-private sizediff_t lastSeparator(C)(in C[] path)  @safe pure nothrow
+private ptrdiff_t lastSeparator(C)(in C[] path)  @safe pure nothrow
     if (isSomeChar!C)
 {
-    auto i = (cast(sizediff_t) path.length) - 1;
+    auto i = (cast(ptrdiff_t) path.length) - 1;
     while (i >= 0 && !isSeparator(path[i])) --i;
     return i;
 }
@@ -144,11 +144,11 @@ version (Windows)
             && !isDirSeparator(path[2]);
     }
 
-    private sizediff_t uncRootLength(C)(in C[] path) @safe pure nothrow  if (isSomeChar!C)
+    private ptrdiff_t uncRootLength(C)(in C[] path) @safe pure nothrow  if (isSomeChar!C)
         in { assert (isUNC(path)); }
         body
     {
-        sizediff_t i = 3;
+        ptrdiff_t i = 3;
         while (i < path.length && !isDirSeparator(path[i])) ++i;
         if (i < path.length)
         {
@@ -190,7 +190,7 @@ private inout(C)[] ltrimDirSeparators(C)(inout(C)[] path)  @safe pure nothrow
 private inout(C)[] rtrimDirSeparators(C)(inout(C)[] path)  @safe pure nothrow
     if (isSomeChar!C)
 {
-    auto i = (cast(sizediff_t) path.length) - 1;
+    auto i = (cast(ptrdiff_t) path.length) - 1;
     while (i >= 0 && isDirSeparator(path[i])) --i;
     return path[0 .. i+1];
 }
@@ -618,10 +618,10 @@ unittest
 /*  Helper function that returns the position of the filename/extension
     separator dot in path.  If not found, returns -1.
 */
-private sizediff_t extSeparatorPos(C)(in C[] path)  @safe pure nothrow
+private ptrdiff_t extSeparatorPos(C)(in C[] path)  @safe pure nothrow
     if (isSomeChar!C)
 {
-    auto i = (cast(sizediff_t) path.length) - 1;
+    auto i = (cast(ptrdiff_t) path.length) - 1;
     while (i >= 0 && !isSeparator(path[i]))
     {
         if (path[i] == '.' && i > 0 && !isSeparator(path[i-1])) return i;
@@ -1112,7 +1112,7 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     // Now, we have ensured that all segments in path are relative to the
     // root we found earlier.
     bool hasParents = rooted;
-    sizediff_t i;
+    ptrdiff_t i;
     foreach (path; paths2)
     {
         path = trimDirSeparators(path);
@@ -1464,7 +1464,7 @@ auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
             }
             else
             {
-                sizediff_t i = 0;
+                ptrdiff_t i = 0;
                 while (i < _path.length && !isDirSeparator(_path[i])) ++i;
                 _front = _path[0 .. i];
                 _path = ltrimDirSeparators(_path[i .. $]);
@@ -1495,7 +1495,7 @@ auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
             }
             else
             {
-                auto i = (cast(sizediff_t) _path.length) - 1;
+                auto i = (cast(ptrdiff_t) _path.length) - 1;
                 while (i >= 0 && !isDirSeparator(_path[i])) --i;
                 _back = _path[i + 1 .. $];
                 _path = rtrimDirSeparators(_path[0 .. i+1]);
@@ -2916,7 +2916,7 @@ int fcmp(alias pred = "a < b", S1, S2)(S1 s1, S2 s2)
  * version(Posix)
  * {
  *     getExt(r"/home/user.name/bar.")  // ""
- *     getExt(r"d:\\path.two\\bar")     // "two\\bar"
+ *     getExt(r"d:\\path.two\\bar")     // r"two\\bar"
  *     getExt(r"/home/user/.resource")  // "resource"
  * }
  * -----
@@ -3008,13 +3008,13 @@ version (OldStdPathUnittest) unittest
  * -----
  * version(Windows)
  * {
- *     getName(r"d:\path\foo.bat") => "d:\path\foo"
+ *     getName(r"d:\path\foo.bat") => r"d:\path\foo"
  *     getName(r"d:\path.two\bar") => null
  * }
  * version(Posix)
  * {
  *     getName("/home/user.name/bar.")  => "/home/user.name/bar"
- *     getName(r"d:\path.two\bar") => "d:\path"
+ *     getName(r"d:\path.two\bar") => r"d:\path"
  *     getName("/home/user/.resource") => "/home/user/"
  * }
  * -----
@@ -3745,7 +3745,7 @@ version (OldStdPathUnittest) unittest
     debug(path) printf("path.join.unittest\n");
 
     string p;
-    sizediff_t i;
+    ptrdiff_t i;
 
     p = join("foo", "bar");
     version (Windows)

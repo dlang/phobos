@@ -115,7 +115,7 @@ private template createAccessors(
                 ~"assert(v >= "~name~"_min); "
                 ~"assert(v <= "~name~"_max); "
                 ~store~" = cast(typeof("~store~"))"
-                " (("~store~" & ~"~myToString(maskAllElse)~")"
+                " (("~store~" & ~cast(typeof("~store~"))"~myToString(maskAllElse)~")"
                 " | ((cast(typeof("~store~")) v << "~myToString(offset)~")"
                 " & "~myToString(maskAllElse)~"));}\n"
             // constants
@@ -259,6 +259,29 @@ unittest
     assert(i.checkExpectations(true, 7, -8));
     i.s = 7;
     assert(i.checkExpectations(true, 7, 7));
+
+    //Bug# 8876
+    {
+        struct MoreIntegrals {
+            bool checkExpectations(uint eu, ushort es, uint ei) { return u == eu && s == es && i == ei; }
+            
+            mixin(bitfields!(
+                  uint, "u", 24,
+                  short, "s", 16,
+                  int, "i", 24));
+        }
+
+        MoreIntegrals i;
+        assert(i.checkExpectations(0, 0, 0));
+        i.s = 20;
+        assert(i.checkExpectations(0, 20, 0));
+        i.i = 72;
+        assert(i.checkExpectations(0, 20, 72));
+        i.u = 8;
+        assert(i.checkExpectations(8, 20, 72));
+        i.s = 7;
+        assert(i.checkExpectations(8, 7, 72));
+    }
 
     enum A { True, False }
     enum B { One, Two, Three, Four }
@@ -824,9 +847,9 @@ struct BitArray
     /***************************************
      * Support for hashing for $(D BitArray).
      */
-    hash_t toHash() const pure nothrow
+    size_t toHash() const pure nothrow
     {
-        hash_t hash = 3557;
+        size_t hash = 3557;
         auto n  = len / 8;
         for (int i = 0; i < n; i++)
         {

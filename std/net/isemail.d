@@ -1807,9 +1807,9 @@ unittest
  *
  * Returns: the extracted part of string, or an empty string.
  */
-T[] substr (T) (T[] str, sizediff_t start = 0, sizediff_t length = sizediff_t.min)
+T[] substr (T) (T[] str, ptrdiff_t start = 0, ptrdiff_t length = ptrdiff_t.min)
 {
-    sizediff_t end = length;
+    ptrdiff_t end = length;
 
     if (start < 0)
     {
@@ -1817,7 +1817,7 @@ T[] substr (T) (T[] str, sizediff_t start = 0, sizediff_t length = sizediff_t.mi
 
         if (end < 0)
         {
-            if (end == sizediff_t.min)
+            if (end == ptrdiff_t.min)
                 end = 0;
 
             end = str.length + end;
@@ -1830,7 +1830,7 @@ T[] substr (T) (T[] str, sizediff_t start = 0, sizediff_t length = sizediff_t.mi
 
     else
     {
-        if (end == sizediff_t.min)
+        if (end == ptrdiff_t.min)
             end = str.length;
 
         if (end < 0)
@@ -2020,7 +2020,7 @@ bool isNumeric (dchar c)
 // Issue 5744
 import core.stdc.string : memcmp;
 
-sizediff_t lastIndexOf(Char1, Char2)(in Char1[] s, const(Char2)[] sub,
+ptrdiff_t lastIndexOf(Char1, Char2)(in Char1[] s, const(Char2)[] sub,
         CaseSensitive cs = CaseSensitive.yes) if (isSomeChar!Char1 && isSomeChar!Char2)
 {
     if (cs == CaseSensitive.yes)

@@ -17,7 +17,7 @@ Source:    $(PHOBOSSRC std/_conv.d)
 */
 module std.conv;
 
-import core.stdc.math : ldexpl;
+import std.math : ldexp;
 import core.stdc.string;
 import std.algorithm, std.array, std.ascii, std.exception, std.math, std.range,
     std.string, std.traits, std.typecons, std.typetuple, std.uni,
@@ -2320,7 +2320,7 @@ Target parse(Target, Source)(ref Source p)
             (cast(ushort *)&ldval)[4] = cast(ushort) e2;
 
             // Exponent is power of 2, not power of 10
-            ldval = ldexpl(ldval,exp);
+            ldval = ldexp(ldval,exp);
         }
         goto L6;
     }

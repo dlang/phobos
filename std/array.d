@@ -393,16 +393,8 @@ if (isNarrowString!S && isMutable!S && !isStaticArray!S)
         immutable c = str[0];
         if(c < 0x80)
         {
-            if(__ctfe)
-            {
-                //The ptr trick doesn't work in CTFE.
-                str = str[1 .. $];
-            }
-            else
-            {
-                //ptr is used to avoid unnnecessary bounds checking.
-                str = str.ptr[1 .. str.length];
-            }
+            //ptr is used to avoid unnnecessary bounds checking.
+            str = str.ptr[1 .. str.length];
         }
         else
         {

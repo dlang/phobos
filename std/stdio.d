@@ -138,8 +138,8 @@ else version (GCC_IO)
         int fgetwc_unlocked(_iobuf*);
         void flockfile(FILE*);
         void funlockfile(FILE*);
-        ssize_t getline(char**, size_t*, FILE*);
-        ssize_t getdelim (char**, size_t*, int, FILE*);
+        ptrdiff_t getline(char**, size_t*, FILE*);
+        ptrdiff_t getdelim (char**, size_t*, int, FILE*);
 
         private size_t fwrite_unlocked(const(void)* ptr,
                 size_t size, size_t n, _iobuf *stream);
