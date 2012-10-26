@@ -2500,7 +2500,7 @@ if (!is(T == class))
             _store = cast(Impl*) enforce(malloc(Impl.sizeof));
             if (hasIndirections!T)
             {
-                GC.addRange(&_store._payload, Impl.sizeof);
+                GC.addRange(&_store._payload, T.sizeof);
             }
             emplace(&_store._payload, args);
             _store._count = 1;
