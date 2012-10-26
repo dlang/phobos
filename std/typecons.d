@@ -2559,7 +2559,7 @@ to deallocate the corresponding resource.
  */
     ~this()
     {
-        if (!_refCounted._store) return;
+        if (!_refCounted.isInitialized) return;
         assert(_refCounted._store._count > 0);
         if (--_refCounted._store._count)
         {
@@ -2576,9 +2576,8 @@ to deallocate the corresponding resource.
             stdout.flush();
         }
         // Done, deallocate
-        assert(_refCounted._store);
         .destroy(_refCounted._store._payload);
-        if (hasIndirections!T && _refCounted._store)
+        if (hasIndirections!T)
             GC.removeRange(_refCounted._store);
         free(_refCounted._store);
         _refCounted._store = null;
