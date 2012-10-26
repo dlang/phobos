@@ -3601,6 +3601,16 @@ unittest
     assert(foo.num == 2);
 }
 
+private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
+{
+    enforceEx!ConvException(chunk.length >= typeSize,
+        xformat("emplace: Chunk size too small: %s < %s size = %s",
+        chunk.length, typeName, typeSize));
+    enforceEx!ConvException((cast(size_t) chunk.ptr) % typeAlignment == 0,
+        xformat("emplace: Misaligned memory block (0x%X): it must be %s-byte aligned for type %s",
+        chunk.ptr, typeAlignment, typeName));
+}
+
 /**
 Given a raw memory area $(D chunk), constructs an object of $(D class)
 type $(D T) at that address. The constructor is passed the arguments
@@ -3617,10 +3627,7 @@ Returns: A pointer to the newly constructed object.
 T emplace(T, Args...)(void[] chunk, auto ref Args args) if (is(T == class))
 {
     enum classSize = __traits(classInstanceSize, T);
-    enforce(chunk.length >= classSize,
-           new ConvException("emplace: chunk size too small"));
-    auto a = cast(size_t) chunk.ptr;
-    enforce(a % T.alignof == 0, text(a, " vs. ", T.alignof));
+    testEmplaceChunk(chunk, classSize, T.alignof, T.stringof);
     auto result = cast(T) chunk.ptr;
 
     // Initialize the object in its pre-ctor state
@@ -3665,10 +3672,7 @@ Returns: A pointer to the newly constructed object.
 T* emplace(T, Args...)(void[] chunk, auto ref Args args)
     if (!is(T == class))
 {
-    enforce(chunk.length >= T.sizeof,
-           new ConvException("emplace: chunk size too small"));
-    auto a = cast(size_t) chunk.ptr;
-    enforce(a % T.alignof == 0, text(a, " vs. ", T.alignof));
+    testEmplaceChunk(chunk, T.sizeof, T.alignof, T.stringof);
     return emplace(cast(T*) chunk.ptr, args);
 }
 
