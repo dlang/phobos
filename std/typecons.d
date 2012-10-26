@@ -2583,11 +2583,17 @@ Assignment operators
         refCountedPayload this;), so callers can just use the $(D RefCounted)
         object as a $(D T).
 
-        If $(D autoInit == RefCountedAutoInitialize.no), then
+        $(BLUE The first overload exists only if $(D autoInit == RefCountedAutoInitialize.yes).)
+        So if $(D autoInit == RefCountedAutoInitialize.no)
+        or called for a constant or immutable object, then
         $(D refCountedPayload) will also be qualified as safe and nothrow
         (but will still assert if not initialized).
          */
         @property
+        ref T refCountedPayload();
+
+        /// ditto
+        @property nothrow @safe
         ref inout(T) refCountedPayload() inout;
     }
     else
@@ -2601,24 +2607,13 @@ Assignment operators
                 _refCounted.ensureInitialized();
                 return _refCounted._store._payload;
             }
-
-            @property nothrow @safe
-            ref const(T) refCountedPayload() const
-            {
-                // @@@
-                //refCounted.ensureInitialized();
-                assert(_refCounted.isInitialized);
-                return _refCounted._store._payload;
-            }
         }
-        else
+
+        @property nothrow @safe
+        ref inout(T) refCountedPayload() inout
         {
-            @property nothrow @safe
-            ref inout(T) refCountedPayload() inout
-            {
-                assert(_refCounted.isInitialized);
-                return _refCounted._store._payload;
-            }
+            assert(_refCounted.isInitialized);
+            return _refCounted._store._payload;
         }
     }
 
