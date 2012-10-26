@@ -2582,10 +2582,9 @@ to deallocate the corresponding resource.
         // Done, deallocate
         .destroy(_refCounted._store._payload);
         if (hasIndirections!T)
-            GC.removeRange(_refCounted._store);
+            GC.removeRange(&_refCounted._store._payload);
         free(_refCounted._store);
         _refCounted._store = null;
-        debug(RefCounted) if (_refCounted.debugging) writeln("done!");
     }
 
 /**
