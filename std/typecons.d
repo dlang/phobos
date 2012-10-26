@@ -3069,7 +3069,7 @@ unittest
         {
             // _d_newclass now use default GC alignment (looks like (void*).sizeof * 2 for
             // small objects). We will just use the maximum of filed alignments.
-            alias maxAlignment!(void*, typeof(T.tupleof)) alignment;
+            alias classInstanceAlignment!T alignment;
 
             static size_t aligned(size_t n)
             {
@@ -3101,14 +3101,6 @@ unittest
     Scoped!T result;
     emplace!(Unqual!T)(cast(void[])result.Scoped_store, args);
     return result;
-}
-
-private template maxAlignment(U...) if(isTypeTuple!U)
-{
-    static if(U.length == 1)
-        enum maxAlignment = U[0].alignof;
-    else
-        enum maxAlignment = max(U[0].alignof, .maxAlignment!(U[1 .. $]));
 }
 
 unittest // Issue 6580 testcase
