@@ -2467,7 +2467,7 @@ struct RefCounted(T, RefCountedAutoInitialize autoInit =
         RefCountedAutoInitialize.yes)
 if (!is(T == class))
 {
-    /// $(D RefCounted) storage implementation
+    /// $(D RefCounted) storage implementation.
     struct RefCountedStore
     {
         private struct Impl
@@ -2500,7 +2500,7 @@ if (!is(T == class))
         }
 
         /**
-           Returns underlying store reference count if it is allocated and initialized
+           Returns underlying reference count if it is allocated and initialized
            (a positive integer), and $(D 0) otherwise.
         */
         @property nothrow @safe
@@ -2521,7 +2521,7 @@ if (!is(T == class))
     }
     RefCountedStore _refCounted;
 
-    /// Returns storage implementation struct
+    /// Returns storage implementation struct.
     @property nothrow @safe
     ref inout(RefCountedStore) refCountedStore() inout
     {
