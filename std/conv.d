@@ -3417,6 +3417,28 @@ T* emplace(T)(T* chunk)
     return chunk;
 }
 
+version(unittest) struct EmplaceTest
+{
+    int i = 3;
+    this(int i)
+    {
+        assert(this.i == 3 && i == 5);
+        this.i = i;
+    }
+
+@disable:
+    this();
+    this(this);
+    void opAssign();
+}
+
+unittest
+{
+    struct S { @disable this(); }
+    S s = void;
+    static assert(!__traits(compiles, emplace(&s)));
+}
+
 unittest
 {
     interface I {}
@@ -3480,8 +3502,10 @@ T* emplace(T, Args...)(T* chunk, Args args)
 {
     void initialize()
     {
-        static T i;
-        memcpy(chunk, &i, T.sizeof);
+        if(auto p = typeid(T).init().ptr)
+            memcpy(chunk, p, T.sizeof);
+        else
+            memset(chunk, 0, T.sizeof);
     }
 
     static if (is(typeof(chunk.__ctor(args))))
@@ -3525,6 +3549,13 @@ unittest
     auto s2 = S(42, 43);
     assert(*emplace!S(cast(S*) s1.ptr, s2) == s2);
     assert(*emplace!S(cast(S*) s1, 44, 45) == S(44, 45));
+}
+
+unittest
+{
+    EmplaceTest k = void;
+    emplace(&k, 5);
+    assert(k.i == 5);
 }
 
 unittest
