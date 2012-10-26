@@ -3425,11 +3425,33 @@ version(unittest) struct EmplaceTest
         assert(this.i == 3 && i == 5);
         this.i = i;
     }
+    this(int i, ref int j)
+    {
+        assert(i == 5 && j == 6);
+        this.i = i;
+        ++j;
+    }
 
 @disable:
     this();
     this(this);
     void opAssign();
+}
+
+version(unittest) class EmplaceTestClass
+{
+    int i = 3;
+    this(int i)
+    {
+        assert(this.i == 3 && i == 5);
+        this.i = i;
+    }
+    this(int i, ref int j)
+    {
+        assert(i == 5 && j == 6);
+        this.i = i;
+        ++j;
+    }
 }
 
 unittest
@@ -3497,7 +3519,7 @@ unittest
 }
 
 // Specialization for struct
-T* emplace(T, Args...)(T* chunk, Args args)
+T* emplace(T, Args...)(T* chunk, auto ref Args args)
     if (is(T == struct))
 {
     void initialize()
@@ -3560,6 +3582,15 @@ unittest
 
 unittest
 {
+    int var = 6;
+    EmplaceTest k = void;
+    emplace(&k, 5, var);
+    assert(k.i == 5);
+    assert(var == 7);
+}
+
+unittest
+{
     struct Foo
     {
         uint num;
@@ -3583,7 +3614,7 @@ $(D T) is $(D @safe).
 
 Returns: A pointer to the newly constructed object.
  */
-T emplace(T, Args...)(void[] chunk, Args args) if (is(T == class))
+T emplace(T, Args...)(void[] chunk, auto ref Args args) if (is(T == class))
 {
     enum classSize = __traits(classInstanceSize, T);
     enforce(chunk.length >= classSize,
@@ -3611,6 +3642,14 @@ T emplace(T, Args...)(void[] chunk, Args args) if (is(T == class))
     return result;
 }
 
+unittest
+{
+    int var = 6;
+    auto k = emplace!EmplaceTestClass(new void[__traits(classInstanceSize, EmplaceTestClass)], 5, var);
+    assert(k.i == 5);
+    assert(var == 7);
+}
+
 /**
 Given a raw memory area $(D chunk), constructs an object of non-$(D
 class) type $(D T) at that address. The constructor is passed the
@@ -3623,7 +3662,7 @@ $(D T) is $(D @safe).
 
 Returns: A pointer to the newly constructed object.
  */
-T* emplace(T, Args...)(void[] chunk, Args args)
+T* emplace(T, Args...)(void[] chunk, auto ref Args args)
     if (!is(T == class))
 {
     enforce(chunk.length >= T.sizeof,
@@ -3645,6 +3684,14 @@ unittest
     s.b = 43;
     auto s1 = emplace!S(p, s);
     assert(s1.a == 42 && s1.b == 43);
+}
+
+unittest
+{
+    int var = 6;
+    auto k = emplace!EmplaceTest(new void[EmplaceTest.sizeof], 5, var);
+    assert(k.i == 5);
+    assert(var == 7);
 }
 
 unittest
