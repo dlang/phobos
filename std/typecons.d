@@ -2478,7 +2478,7 @@ if (!is(T == class))
 
         private Impl* _store;
 
-        private void initialize(A...)(A args)
+        private void initialize(A...)(auto ref A args)
         {
             _store = cast(Impl*) enforce(malloc(Impl.sizeof));
             if (hasIndirections!T)
@@ -2533,7 +2533,7 @@ Constructor that initializes the payload.
 
 Postcondition: $(D refCountedIsInitialized)
  */
-    this(A...)(A args) if (A.length > 0)
+    this(A...)(auto ref A args) if (A.length > 0)
     {
         _refCounted.initialize(args);
     }
@@ -2702,6 +2702,16 @@ unittest
     }
 
     alias RefCounted!S SRC;
+}
+
+// 6436
+unittest
+{
+    struct S { this(ref int val) { assert(val == 3); ++val; } }
+
+    int val = 3;
+    auto s = RefCounted!S(val);
+    assert(val == 4);
 }
 
 unittest
