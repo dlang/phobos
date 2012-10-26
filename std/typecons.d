@@ -2467,7 +2467,8 @@ struct RefCounted(T, RefCountedAutoInitialize autoInit =
         RefCountedAutoInitialize.yes)
 if (!is(T == class))
 {
-    struct _RefCounted
+    /// $(D RefCounted) storage implementation
+    struct RefCountedStore
     {
         private struct Impl
         {
@@ -2508,7 +2509,7 @@ if (!is(T == class))
         }
 
     }
-    _RefCounted _refCounted;
+    RefCountedStore _refCounted;
 
 /**
 Constructor that initializes the payload.
