@@ -2467,42 +2467,26 @@ struct RefCounted(T, RefCountedAutoInitialize autoInit =
         RefCountedAutoInitialize.yes)
 if (!is(T == class))
 {
-    struct _RefCounted
+    /// $(D RefCounted) storage implementation.
+    struct RefCountedStore
     {
-        private Tuple!(T, "_payload", size_t, "_count") * _store;
-        debug(RefCounted)
+        private struct Impl
         {
-            private bool _debugging = false;
-            @property bool debugging() const
-            {
-                return _debugging;
-            }
-            @property void debugging(bool d)
-            {
-                if (d != _debugging)
-                {
-                    writeln(typeof(this).stringof, "@",
-                            cast(void*) _store,
-                            d ? ": starting debug" : ": ending debug");
-                }
-                _debugging = d;
-            }
+            T _payload;
+            size_t _count;
         }
+
+        private Impl* _store;
 
         private void initialize(A...)(A args)
         {
-            const sz = (*_store).sizeof;
-            auto p = malloc(sz)[0 .. sz];
-            if (sz >= size_t.sizeof && p.ptr)
+            _store = cast(Impl*) enforce(malloc(Impl.sizeof));
+            if (hasIndirections!T)
             {
-                GC.addRange(p.ptr, sz);
+                GC.addRange(&_store._payload, T.sizeof);
             }
-            emplace(cast(T*) p.ptr, args);
-            _store = cast(typeof(_store)) p.ptr;
+            emplace(&_store._payload, args);
             _store._count = 1;
-            debug(RefCounted) if (debugging) writeln(typeof(this).stringof,
-                "@", cast(void*) _store, ": initialized with ",
-                    A.stringof);
         }
 
         /**
@@ -2516,6 +2500,16 @@ if (!is(T == class))
         }
 
         /**
+           Returns underlying reference count if it is allocated and initialized
+           (a positive integer), and $(D 0) otherwise.
+        */
+        @property nothrow @safe
+        size_t refCount() const
+        {
+            return isInitialized ? _store._count : 0;
+        }
+
+        /**
            Makes sure the payload was properly initialized. Such a
            call is typically inserted before using the payload.
         */
@@ -2525,7 +2519,14 @@ if (!is(T == class))
         }
 
     }
-    _RefCounted RefCounted;
+    RefCountedStore _refCounted;
+
+    /// Returns storage implementation struct.
+    @property nothrow @safe
+    ref inout(RefCountedStore) refCountedStore() inout
+    {
+        return _refCounted;
+    }
 
 /**
 Constructor that initializes the payload.
@@ -2534,7 +2535,7 @@ Postcondition: $(D refCountedIsInitialized)
  */
     this(A...)(A args) if (A.length > 0)
     {
-        RefCounted.initialize(args);
+        _refCounted.initialize(args);
     }
 
 /**
@@ -2543,12 +2544,8 @@ Constructor that tracks the reference count appropriately. If $(D
  */
     this(this)
     {
-        if (!RefCounted.isInitialized) return;
-        ++RefCounted._store._count;
-        debug(RefCounted) if (RefCounted.debugging)
-                 writeln(typeof(this).stringof,
-                "@", cast(void*) RefCounted._store, ": bumped refcount to ",
-                RefCounted._store._count);
+        if (!_refCounted.isInitialized) return;
+        ++_refCounted._store._count;
     }
 
 /**
@@ -2559,30 +2556,16 @@ to deallocate the corresponding resource.
  */
     ~this()
     {
-        if (!RefCounted._store) return;
-        assert(RefCounted._store._count > 0);
-        if (--RefCounted._store._count)
-        {
-            debug(RefCounted) if (RefCounted.debugging)
-                     writeln(typeof(this).stringof,
-                    "@", cast(void*)RefCounted._store,
-                    ": decrement refcount to ", RefCounted._store._count);
+        if (!_refCounted.isInitialized) return;
+        assert(_refCounted._store._count > 0);
+        if (--_refCounted._store._count)
             return;
-        }
-        debug(RefCounted) if (RefCounted.debugging)
-        {
-            write(typeof(this).stringof,
-                    "@", cast(void*)RefCounted._store, ": freeing... ");
-            stdout.flush();
-        }
         // Done, deallocate
-        assert(RefCounted._store);
-        .destroy(RefCounted._store._payload);
-        if (hasIndirections!T && RefCounted._store)
-            GC.removeRange(RefCounted._store);
-        free(RefCounted._store);
-        RefCounted._store = null;
-        debug(RefCounted) if (RefCounted.debugging) writeln("done!");
+        .destroy(_refCounted._store._payload);
+        if (hasIndirections!T)
+            GC.removeRange(&_refCounted._store._payload);
+        free(_refCounted._store);
+        _refCounted._store = null;
     }
 
 /**
@@ -2590,7 +2573,7 @@ Assignment operators
  */
     void opAssign(typeof(this) rhs)
     {
-        swap(RefCounted._store, rhs.RefCounted._store);
+        swap(_refCounted._store, rhs._refCounted._store);
     }
 
 /// Ditto
@@ -2598,13 +2581,13 @@ Assignment operators
     {
         static if (autoInit == RefCountedAutoInitialize.yes)
         {
-            RefCounted.ensureInitialized();
+            _refCounted.ensureInitialized();
         }
         else
         {
-            assert(RefCounted.isInitialized);
+            assert(_refCounted.isInitialized);
         }
-        move(rhs, RefCounted._store._payload);
+        move(rhs, _refCounted._store._payload);
     }
 
     //version to have a single properly ddoc'ed function (w/ correct sig)
@@ -2618,11 +2601,17 @@ Assignment operators
         refCountedPayload this;), so callers can just use the $(D RefCounted)
         object as a $(D T).
 
-        If $(D autoInit == RefCountedAutoInitialize.no), then
+        $(BLUE The first overload exists only if $(D autoInit == RefCountedAutoInitialize.yes).)
+        So if $(D autoInit == RefCountedAutoInitialize.no)
+        or called for a constant or immutable object, then
         $(D refCountedPayload) will also be qualified as safe and nothrow
         (but will still assert if not initialized).
          */
         @property
+        ref T refCountedPayload();
+
+        /// ditto
+        @property nothrow @safe
         ref inout(T) refCountedPayload() inout;
     }
     else
@@ -2633,27 +2622,16 @@ Assignment operators
             @property
             ref T refCountedPayload()
             {
-                RefCounted.ensureInitialized();
-                return RefCounted._store._payload;
-            }
-
-            @property nothrow @safe
-            ref const(T) refCountedPayload() const
-            {
-                // @@@
-                //refCounted.ensureInitialized();
-                assert(RefCounted.isInitialized);
-                return RefCounted._store._payload;
+                _refCounted.ensureInitialized();
+                return _refCounted._store._payload;
             }
         }
-        else
+
+        @property nothrow @safe
+        ref inout(T) refCountedPayload() inout
         {
-            @property nothrow @safe
-            ref inout(T) refCountedPayload() inout
-            {
-                assert(RefCounted.isInitialized);
-                return RefCounted._store._payload;
-            }
+            assert(_refCounted.isInitialized);
+            return _refCounted._store._payload;
         }
     }
 
@@ -2673,18 +2651,18 @@ unittest
         auto rc1 = RefCounted!int(5);
         p = &rc1;
         assert(rc1 == 5);
-        assert(rc1.RefCounted._store._count == 1);
+        assert(rc1._refCounted._store._count == 1);
         auto rc2 = rc1;
-        assert(rc1.RefCounted._store._count == 2);
+        assert(rc1._refCounted._store._count == 2);
         // Reference semantics
         rc2 = 42;
         assert(rc1 == 42);
         rc2 = rc2;
-        assert(rc2.RefCounted._store._count == 2);
+        assert(rc2._refCounted._store._count == 2);
         rc1 = rc2;
-        assert(rc1.RefCounted._store._count == 2);
+        assert(rc1._refCounted._store._count == 2);
     }
-    assert(p.RefCounted._store == null);
+    assert(p._refCounted._store == null);
 
     // RefCounted as a member
     struct A
@@ -2692,7 +2670,7 @@ unittest
         RefCounted!int x;
         this(int y)
         {
-            x.RefCounted.initialize(y);
+            x._refCounted.initialize(y);
         }
         A copy()
         {
@@ -2702,7 +2680,7 @@ unittest
     }
     auto a = A(4);
     auto b = a.copy();
-    assert(a.x.RefCounted._store._count == 2, "BUG 4356 still unfixed");
+    assert(a.x._refCounted._store._count == 2, "BUG 4356 still unfixed");
 }
 
 unittest
