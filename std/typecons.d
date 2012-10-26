@@ -2491,7 +2491,7 @@ if (!is(T == class))
 
         private void initialize(A...)(A args)
         {
-            const sz = (*_store).sizeof;
+            enum sz = (*_store).sizeof;
             auto p = malloc(sz)[0 .. sz];
             if (sz >= size_t.sizeof && p.ptr)
             {
