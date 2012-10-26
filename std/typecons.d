@@ -2493,7 +2493,7 @@ if (!is(T == class))
         {
             enum sz = (*_store).sizeof;
             auto p = enforce(malloc(sz))[0 .. sz];
-            if (sz >= size_t.sizeof)
+            if (hasIndirections!T)
             {
                 GC.addRange(p.ptr, sz);
             }
