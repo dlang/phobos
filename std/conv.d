@@ -3418,6 +3418,20 @@ T* emplace(T)(T* chunk)
     return chunk;
 }
 
+unittest
+{
+    interface I {}
+    class K : I {}
+
+    K k = void;
+    emplace!K(&k);
+    assert(k is null);
+
+    I i = void;
+    emplace!I(&i);
+    assert(i is null);
+}
+
 
 /**
 Given a pointer $(D chunk) to uninitialized memory (but already typed
@@ -3450,17 +3464,13 @@ unittest
     interface I {}
     class K : I {}
 
-    K k = void;
-    emplace!K(&k);
-    assert(k is null);
-    K k2 = new K;
-    assert(k2 !is null);
+    K k = null, k2 = new K;
+    assert(k !is k2);
     emplace!K(&k, k2);
     assert(k is k2);
 
-    I i = void;
-    emplace!I(&i);
-    assert(i is null);
+    I i = null;
+    assert(i !is k);
     emplace!I(&i, k);
     assert(i is k);
 }
