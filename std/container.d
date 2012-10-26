@@ -2558,7 +2558,7 @@ Complexity: $(BIGOH n).
      */
     @property Array dup()
     {
-        if (!_data.RefCounted.isInitialized) return this;
+        if (!_data.refCountedStore.isInitialized) return this;
         return Array(_data._payload);
     }
 
@@ -2570,7 +2570,7 @@ Complexity: $(BIGOH 1)
      */
     @property bool empty() const
     {
-        return !_data.RefCounted.isInitialized || _data._payload.empty;
+        return !_data.refCountedStore.isInitialized || _data._payload.empty;
     }
 
 /**
@@ -2580,7 +2580,7 @@ Complexity: $(BIGOH 1).
      */
     @property size_t length() const
     {
-        return _data.RefCounted.isInitialized ? _data._payload.length : 0;
+        return _data.refCountedStore.isInitialized ? _data._payload.length : 0;
     }
 
     /// ditto
@@ -2598,7 +2598,7 @@ Complexity: $(BIGOH 1)
      */
     @property size_t capacity()
     {
-        return _data.RefCounted.isInitialized ? _data._capacity : 0;
+        return _data.refCountedStore.isInitialized ? _data._capacity : 0;
     }
 
 /**
@@ -2610,7 +2610,7 @@ Complexity: $(BIGOH 1)
      */
     void reserve(size_t elements)
     {
-        if (!_data.RefCounted.isInitialized)
+        if (!_data.refCountedStore.isInitialized)
         {
             if (!elements) return;
             immutable sz = elements * T.sizeof;
@@ -2702,7 +2702,7 @@ Complexity: $(BIGOH 1)
      */
     T opIndex(size_t i)
     {
-        enforce(_data.RefCounted.isInitialized);
+        enforce(_data.refCountedStore.isInitialized);
         return _data._payload[i];
     }
 
@@ -2710,7 +2710,7 @@ Complexity: $(BIGOH 1)
     void opIndexUnary(string op)(size_t i)
         if(op == "++" || op == "--")
     {
-        enforce(_data.RefCounted.isInitialized);
+        enforce(_data.refCountedStore.isInitialized);
         mixin(op~"_data._payload[i];");
     }
 
@@ -2718,21 +2718,21 @@ Complexity: $(BIGOH 1)
     T opIndexUnary(string op)(size_t i)
         if(op != "++" && op != "--")
     {
-        enforce(_data.RefCounted.isInitialized);
+        enforce(_data.refCountedStore.isInitialized);
         mixin("return "~op~"_data._payload[i];");
     }
 
     /// ditto
     void opIndexAssign(T value, size_t i)
     {
-        enforce(_data.RefCounted.isInitialized);
+        enforce(_data.refCountedStore.isInitialized);
         _data._payload[i] = value;
     }
 
     /// ditto
     void opIndexOpAssign(string op)(T value, size_t i)
     {
-        enforce(_data.RefCounted.isInitialized);
+        enforce(_data.refCountedStore.isInitialized);
         mixin("_data._payload[i] "~op~"= value;");
     }
 
@@ -2746,20 +2746,20 @@ Complexity: $(BIGOH slice.length)
 
     void opSliceAssign(T value)
     {
-        if(!_data.RefCounted.isInitialized) return;
+        if(!_data.refCountedStore.isInitialized) return;
         _data._payload[] = value;
     }
 
     void opSliceAssign(T value, size_t i, size_t j)
     {
-        enforce(_data.RefCounted.isInitialized || (i == 0 && j == 0));
+        enforce(_data.refCountedStore.isInitialized || (i == 0 && j == 0));
         _data._payload[i .. j] = value;
     }
 
     void opSliceUnary(string op)()
         if(op == "++" || op == "--")
     {
-        if(!_data.RefCounted.isInitialized) return;
+        if(!_data.refCountedStore.isInitialized) return;
         mixin(op~"_data._payload[];");
     }
 
@@ -2767,21 +2767,21 @@ Complexity: $(BIGOH slice.length)
     void opSliceUnary(string op)(size_t i, size_t j)
         if(op == "++" || op == "--")
     {
-        enforce(_data.RefCounted.isInitialized || (i == 0 && j == 0));
+        enforce(_data.refCountedStore.isInitialized || (i == 0 && j == 0));
         mixin(op~"_data._payload[i .. j];");
     }
 
     /// ditto
     void opSliceOpAssign(string op)(T value)
     {
-        if(!_data.RefCounted.isInitialized) return;
+        if(!_data.refCountedStore.isInitialized) return;
         mixin("_data._payload[] "~op~"= value;");
     }
 
     /// ditto
     void opSliceOpAssign(string op)(T value, size_t i, size_t j)
     {
-        enforce(_data.RefCounted.isInitialized || (i == 0 && j == 0));
+        enforce(_data.refCountedStore.isInitialized || (i == 0 && j == 0));
         mixin("_data._payload[i .. j] "~op~"= value;");
     }
 
@@ -2847,7 +2847,7 @@ Postcondition: $(D length == newLength)
      */
     @property void length(size_t newLength)
     {
-        _data.RefCounted.ensureInitialized();
+        _data.refCountedStore.ensureInitialized();
         _data.length = newLength;
     }
 
@@ -2888,7 +2888,7 @@ elements in $(D stuff)
     if (isImplicitlyConvertible!(Stuff, T) ||
             isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
-        _data.RefCounted.ensureInitialized();
+        _data.refCountedStore.ensureInitialized();
         return _data.insertBack(stuff);
     }
     /// ditto
@@ -2962,7 +2962,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     {
         enforce(r._outer._data is _data && r._a <= length);
         reserve(length + 1);
-        assert(_data.RefCounted.isInitialized);
+        assert(_data.refCountedStore.isInitialized);
         // Move elements over by one slot
         memmove(_data._payload.ptr + r._a + 1,
                 _data._payload.ptr + r._a,
@@ -2983,7 +2983,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
             auto extra = walkLength(stuff);
             if (!extra) return 0;
             reserve(length + extra);
-            assert(_data.RefCounted.isInitialized);
+            assert(_data.refCountedStore.isInitialized);
             // Move elements over by extra slots
             memmove(_data._payload.ptr + r._a + extra,
                     _data._payload.ptr + r._a,
@@ -3078,7 +3078,7 @@ $(D r)
     Range linearRemove(Range r)
     {
         enforce(r._outer._data is _data);
-        enforce(_data.RefCounted.isInitialized);
+        enforce(_data.refCountedStore.isInitialized);
         enforce(r._a <= r._b && r._b <= length);
         immutable offset1 = r._a;
         immutable offset2 = r._b;
@@ -3412,12 +3412,12 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
     // Convenience accessors
     private @property ref Store _store()
     {
-        assert(_payload.RefCounted.isInitialized);
+        assert(_payload.refCountedStore.isInitialized);
         return _payload._store;
     }
     private @property ref size_t _length()
     {
-        assert(_payload.RefCounted.isInitialized);
+        assert(_payload.refCountedStore.isInitialized);
         return _payload._length;
     }
 
@@ -3426,7 +3426,7 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
     {
         debug
         {
-            if (!_payload.RefCounted.isInitialized) return;
+            if (!_payload.refCountedStore.isInitialized) return;
             if (_length < 2) return;
             for (size_t n = _length - 1; n >= 1; --n)
             {
@@ -3515,7 +3515,7 @@ the heap work incorrectly.
      */
     void acquire(Store s, size_t initialSize = size_t.max)
     {
-        _payload.RefCounted.ensureInitialized();
+        _payload.refCountedStore.ensureInitialized();
         _store() = move(s);
         _length() = min(_store.length, initialSize);
         if (_length < 2) return;
@@ -3533,7 +3533,7 @@ heap.
      */
     void assume(Store s, size_t initialSize = size_t.max)
     {
-        _payload.RefCounted.ensureInitialized();
+        _payload.refCountedStore.ensureInitialized();
         _store() = s;
         _length() = min(_store.length, initialSize);
         assertValid();
@@ -3545,7 +3545,7 @@ $(D length), which satisfies the $(LUCKY heap property).
      */
     auto release()
     {
-        if (!_payload.RefCounted.isInitialized)
+        if (!_payload.refCountedStore.isInitialized)
         {
             return typeof(_store[0 .. _length]).init;
         }
@@ -3570,7 +3570,7 @@ support a $(D dup) method.
     @property BinaryHeap dup()
     {
         BinaryHeap result;
-        if (!_payload.RefCounted.isInitialized) return result;
+        if (!_payload.refCountedStore.isInitialized) return result;
         result.assume(_store.dup, length);
         return result;
     }
@@ -3580,7 +3580,7 @@ Returns the _length of the heap.
      */
     @property size_t length()
     {
-        return _payload.RefCounted.isInitialized ? _length : 0;
+        return _payload.refCountedStore.isInitialized ? _length : 0;
     }
 
 /**
@@ -3590,7 +3590,7 @@ underlying store (if the store is a container).
      */
     @property size_t capacity()
     {
-        if (!_payload.RefCounted.isInitialized) return 0;
+        if (!_payload.refCountedStore.isInitialized) return 0;
         static if (is(typeof(_store.capacity) : size_t))
         {
             return _store.capacity;
@@ -3627,7 +3627,7 @@ and $(D length == capacity), throws an exception.
     {
         static if (is(typeof(_store.insertBack(value))))
         {
-            _payload.RefCounted.ensureInitialized();
+            _payload.refCountedStore.ensureInitialized();
             if (length == _store.length)
             {
                 // reallocate
@@ -3712,7 +3712,7 @@ must be collected.
      */
     bool conditionalInsert(ElementType!Store value)
     {
-        _payload.RefCounted.ensureInitialized();
+        _payload.refCountedStore.ensureInitialized();
         if (_length < _store.length)
         {
             insert(value);
@@ -3782,7 +3782,7 @@ struct Array(T) if (is(T == bool))
 
     private @property ref size_t[] data()
     {
-        assert(_store.RefCounted.isInitialized);
+        assert(_store.refCountedStore.isInitialized);
         return _store._backend._payload;
     }
 
@@ -3926,7 +3926,7 @@ struct Array(T) if (is(T == bool))
     */
     @property ulong length()
     {
-        return _store.RefCounted.isInitialized ? _store._length : 0;
+        return _store.refCountedStore.isInitialized ? _store._length : 0;
     }
 
     unittest
@@ -3946,7 +3946,7 @@ struct Array(T) if (is(T == bool))
      */
     @property ulong capacity()
     {
-        return _store.RefCounted.isInitialized
+        return _store.refCountedStore.isInitialized
             ? cast(ulong) bitsPerWord * _store._backend.capacity
             : 0;
     }
@@ -3972,7 +3972,7 @@ struct Array(T) if (is(T == bool))
      */
     void reserve(ulong e)
     {
-        _store.RefCounted.ensureInitialized();
+        _store.refCountedStore.ensureInitialized();
         _store._backend.reserve(to!size_t((e + bitsPerWord - 1) / bitsPerWord));
     }
 
@@ -4219,7 +4219,7 @@ struct Array(T) if (is(T == bool))
      */
     @property void length(ulong newLength)
     {
-        _store.RefCounted.ensureInitialized();
+        _store.refCountedStore.ensureInitialized();
         auto newDataLength =
             to!size_t((newLength + bitsPerWord - 1) / bitsPerWord);
         _store._backend.length = newDataLength;
@@ -4309,7 +4309,7 @@ struct Array(T) if (is(T == bool))
      */
     ulong insertBack(Stuff)(Stuff stuff) if (is(Stuff : bool))
     {
-        _store.RefCounted.ensureInitialized();
+        _store.refCountedStore.ensureInitialized();
         auto rem = _store._length % bitsPerWord;
         if (rem)
         {
