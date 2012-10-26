@@ -5055,25 +5055,39 @@ unittest
  * false).
  */
 bool findSkip(alias pred = "a == b", R1, R2)(ref R1 haystack, R2 needle)
-if (isForwardRange!R1 && isForwardRange!R2
-        && is(typeof(binaryFun!pred(haystack.front, needle.front))))
+    if (isForwardRange!R1 &&
+        isForwardRange!R2 && !isInfinite!R2 &&
+        is(typeof(binaryFun!pred(haystack.front, needle.front))))
 {
-    auto parts = findSplit!pred(haystack, needle);
-    if (parts[1].empty) return false;
+    auto parts = findSplitAfter!pred(haystack.save, needle);
+    if (parts[0].empty) return false;
     // found
-    haystack = parts[2];
+    haystack = parts[1];
     return true;
 }
 
 ///
 unittest
 {
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     string s = "abcdef";
     assert(findSkip(s, "cd") && s == "ef");
     s = "abcdef";
     assert(!findSkip(s, "cxd") && s == "abcdef");
     s = "abcdef";
     assert(findSkip(s, "def") && s.empty);
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    auto a = new ReferenceForwardRange!int([1, 2, 3]);
+    a.findSkip([0]);
+    assert(a.save.equal([1, 2, 3]));
+    a.findSkip([2]);
+    assert(a.save.equal([3]));
 }
 
 /**
@@ -5107,19 +5121,39 @@ If $(D haystack) is a random-access range, all three components of the
 tuple have the same type as $(D haystack). Otherwise, $(D haystack)
 must be a forward range and the type of $(D result[0]) and $(D
 result[1]) is the same as $(XREF range,takeExactly).
+
+Example:
+----
+auto a = "Carl Sagan Memorial Station";
+auto r = findSplit(a, "Velikovsky");
+assert(r[0] == a);
+assert(r[1].empty);
+assert(r[2].empty);
+r = findSplit(a, " ");
+assert(r[0] == "Carl");
+assert(r[1] == " ");
+assert(r[2] == "Sagan Memorial Station");
+auto r1 = findSplitBefore(a, "Sagan");
+assert(r1[0] == "Carl ", r1[0]);
+assert(r1[1] == "Sagan Memorial Station");
+auto r2 = findSplitAfter(a, "Sagan");
+assert(r2[0] == "Carl Sagan");
+assert(r2[1] == " Memorial Station");
+----
  */
 auto findSplit(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
-if (isForwardRange!R1 && isForwardRange!R2)
+    if (isForwardRange!R1 && isForwardRange!R2 &&
+        is(typeof(binaryFun!pred(haystack.front, needle.front))))
 {
-    static if (isSomeString!R1 && isSomeString!R2
-            || isRandomAccessRange!R1 && hasLength!R2)
+    static if ((isSomeString!R1 && isSomeString!R2)
+            || (isRandomAccessRange!R1 && hasSlicing!R1 && hasLength!R1 && hasLength!R2))
     {
-        auto balance = find!pred(haystack, needle);
+        auto balance = find!pred(haystack.save, needle);
         immutable pos1 = haystack.length - balance.length;
         immutable pos2 = balance.empty ? pos1 : pos1 + needle.length;
         return tuple(haystack[0 .. pos1],
-                haystack[pos1 .. pos2],
-                haystack[pos2 .. haystack.length]);
+                     haystack[pos1 .. pos2],
+                     haystack[pos2 .. haystack.length]);
     }
     else
     {
@@ -5127,8 +5161,25 @@ if (isForwardRange!R1 && isForwardRange!R2)
         auto h = haystack.save;
         auto n = needle.save;
         size_t pos1, pos2;
-        while (!n.empty && !h.empty)
+        for ( ;; )
         {
+            //Check the status of our ranges
+            if (n.empty)
+            {
+                //full match found!
+                return tuple(takeExactly(original, pos1),
+                             takeExactly(haystack, pos2 - pos1),
+                             h);
+            }
+            if (h.empty)
+            {
+                //Haystack empty, match NOT found
+                return tuple(takeExactly(original, pos2),
+                             takeExactly(haystack, 0),
+                             h);
+            }
+
+            //Do the search
             if (binaryFun!pred(h.front, n.front))
             {
                 h.popFront();
@@ -5143,20 +5194,18 @@ if (isForwardRange!R1 && isForwardRange!R2)
                 pos2 = ++pos1;
             }
         }
-        return tuple(takeExactly(original, pos1),
-                takeExactly(haystack, pos2 - pos1),
-                h);
     }
 }
 
 /// Ditto
 auto findSplitBefore(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
-if (isForwardRange!R1 && isForwardRange!R2)
+    if (isForwardRange!R1 && isForwardRange!R2 &&
+        is(typeof(binaryFun!pred(haystack.front, needle.front))))
 {
-    static if (isSomeString!R1 && isSomeString!R2
-            || isRandomAccessRange!R1 && hasLength!R2)
+    static if ((isSomeString!R1 && isSomeString!R2)
+            || (isRandomAccessRange!R1 && hasSlicing!R1 && hasLength!R1 && hasLength!R2))
     {
-        auto balance = find!pred(haystack, needle);
+        auto balance = find!pred(haystack.save, needle);
         immutable pos = haystack.length - balance.length;
         return tuple(haystack[0 .. pos], haystack[pos .. haystack.length]);
     }
@@ -5165,34 +5214,51 @@ if (isForwardRange!R1 && isForwardRange!R2)
         auto original = haystack.save;
         auto h = haystack.save;
         auto n = needle.save;
-        size_t pos;
-        while (!n.empty && !h.empty)
+        size_t pos1;
+        size_t pos2;
+        for ( ;; )
         {
+            //Check the status of our ranges
+            if (n.empty)
+            {
+                //full match found!
+                return tuple(takeExactly(original, pos1),
+                             haystack);
+            }
+            if (h.empty)
+            {
+                //Haystack empty, match NOT found
+                return tuple(takeExactly(original, pos2),
+                             h);
+            }
+
+            //Do the search
             if (binaryFun!pred(h.front, n.front))
             {
                 h.popFront();
                 n.popFront();
+                ++pos2;
             }
             else
             {
                 haystack.popFront();
                 n = needle.save;
                 h = haystack.save;
-                ++pos;
+                pos2 = ++pos1;
             }
         }
-        return tuple(takeExactly(original, pos), haystack);
     }
 }
 
 /// Ditto
 auto findSplitAfter(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
-if (isForwardRange!R1 && isForwardRange!R2)
+    if (isForwardRange!R1 && isForwardRange!R2 &&
+        is(typeof(binaryFun!pred(haystack.front, needle.front))))
 {
-    static if (isSomeString!R1 && isSomeString!R2
-            || isRandomAccessRange!R1 && hasLength!R2)
+    static if ((isSomeString!R1 && isSomeString!R2)
+            || (isRandomAccessRange!R1 && hasSlicing!R1 && hasLength!R1 && hasLength!R2))
     {
-        auto balance = find!pred(haystack, needle);
+        auto balance = find!pred(haystack.save, needle.save);
         immutable pos = balance.empty ? 0 : haystack.length - balance.length + needle.length;
         return tuple(haystack[0 .. pos], haystack[pos .. haystack.length]);
     }
@@ -5202,13 +5268,23 @@ if (isForwardRange!R1 && isForwardRange!R2)
         auto h = haystack.save;
         auto n = needle.save;
         size_t pos1, pos2;
-        while (!n.empty)
+        for ( ;; )
         {
+            //Check the status of our ranges
+            if (n.empty)
+            {
+                //full match found!
+                return tuple(takeExactly(original, pos2),
+                             h);
+            }
             if (h.empty)
             {
-                // Failed search
-                return tuple(takeExactly(original, 0), original);
+                //Haystack empty, match NOT found
+                return tuple(takeExactly(original, 0),
+                             original);
             }
+
+            //Do the search
             if (binaryFun!pred(h.front, n.front))
             {
                 h.popFront();
@@ -5223,7 +5299,6 @@ if (isForwardRange!R1 && isForwardRange!R2)
                 pos2 = ++pos1;
             }
         }
-        return tuple(takeExactly(original, pos2), h);
     }
 }
 
@@ -5249,57 +5324,275 @@ unittest
 
 unittest
 {
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    //RA split range
     auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
-    auto r = findSplit(a, [9, 1]);
-    assert(r[0] == a);
-    assert(r[1].empty);
-    assert(r[2].empty);
-    r = findSplit(a, [3]);
-    assert(r[0] == a[0 .. 2]);
-    assert(r[1] == a[2 .. 3]);
-    assert(r[2] == a[3 .. $]);
-
-    auto r1 = findSplitBefore(a, [9, 1]);
-    assert(r1[0] == a);
+    
+    auto r1 = findSplit(a, [9, 1]);
+    assert(equal(r1[0], a));
     assert(r1[1].empty);
-    r1 = findSplitBefore(a, [3, 4]);
-    assert(r1[0] == a[0 .. 2]);
-    assert(r1[1] == a[2 .. $]);
+    assert(r1[2].empty);
+    r1 = findSplit(a, [3, 4]);
+    assert(equal(r1[0],  a[0 .. 2]));
+    assert(equal(r1[1], a[2 .. 4]));
+    assert(equal(r1[2], a[4 .. $]));
 
-    r1 = findSplitAfter(a, [9, 1]);
-    assert(r1[0].empty);
-    assert(r1[1] == a);
-    r1 = findSplitAfter(a, [3, 4]);
-    assert(r1[0] == a[0 .. 4]);
-    assert(r1[1] == a[4 .. $]);
+    auto r2 = findSplitBefore(a, [9, 1]);
+    assert(equal(r2[0], a));
+    assert(r2[1].empty);
+    r2 = findSplitBefore(a, [3, 4]);
+    assert(equal(r2[0], a[0 .. 2]));
+    assert(equal(r2[1], a[2 .. $]));
+
+    auto r3 = findSplitAfter(a, [9, 1]);
+    assert(r3[0].empty);
+    assert(equal(r3[1], a));
+    r3 = findSplitAfter(a, [3, 4]);
+    assert(equal(r3[0], a[0 .. 4]));
+    assert(equal(r3[1], a[4 .. $]));
 }
 
 unittest
 {
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    //Forward Reference split range
     auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
-    auto fwd = filter!"a > 0"(a);
-    auto r = findSplit(fwd, [9, 1]);
-    assert(equal(r[0], a));
+    auto fwd = new ReferenceForwardRange!int(a);
+    
+    auto r1 = findSplit(fwd.save, [9, 1]);
+    assert(equal(r1[0], [ 1, 2, 3, 4, 5, 6, 7, 8 ]));
+    assert(r1[1].empty);
+    assert(r1[2].empty);
+    r1 = findSplit(fwd.save, [3, 4]);
+    assert(equal(r1[0],  a[0 .. 2]));
+    assert(equal(r1[1], a[2 .. 4]));
+    assert(equal(r1[2], a[4 .. $]));
+
+    auto r2 = findSplitBefore(fwd.save, [9, 1]);
+    assert(equal(r2[0], a));
+    assert(r2[1].empty);
+    r2 = findSplitBefore(fwd.save, [3, 4]);
+    assert(equal(r2[0], a[0 .. 2]));
+    assert(equal(r2[1], a[2 .. $]));
+
+    auto r3 = findSplitAfter(fwd.save, [9, 1]);
+    assert(r3[0].empty);
+    assert(equal(r3[1], a));
+    r3 = findSplitAfter(fwd.save, [3, 4]);
+    assert(equal(r3[0], a[0 .. 4]));
+    assert(equal(r3[1], a[4 .. $]));
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    //test forward ranges on mismatch
+
+    auto h = [1];
+    auto n = [1, 1];
+    
+    auto fh = filter!"true"(h);
+    auto fn = filter!"true"(n);
+
+    auto r1 = h.findSplit(n);
+    auto rf1 = fh.findSplit(fn);
+    assert(r1[0].equal(r1[0]));
+    assert(r1[1].equal(r1[1]));
+    assert(r1[2].equal(r1[2]));
+
+    auto r2 = h.findSplitBefore(n);
+    auto rf2 = fh.findSplitBefore(fn);
+    assert(r2[0].equal(rf2[0]));
+    assert(r2[1].equal(rf2[1]));
+
+    auto r3 = h.findSplitAfter(n);
+    auto rf3 = fh.findSplitAfter(fn);
+    assert(r3[0].equal(rf3[0]));
+    assert(r3[1].equal(rf3[1]));
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    //test reference ranges
+
+    auto a = new ReferenceForwardRange!(immutable(dchar))("Carl Sagan Memorial Station"d);
+    auto n  = new ReferenceForwardRange!(immutable(dchar))("Velikovsky"d);
+    auto ns = new ReferenceForwardRange!(immutable(dchar))(" "d);
+    auto nb = new ReferenceForwardRange!(immutable(dchar))("Sagan"d);
+    auto na = new ReferenceForwardRange!(immutable(dchar))("Sagan"d);
+    
+    auto r = a.save.findSplit(n);
+    assert(r[0].equal(a.save));
     assert(r[1].empty);
     assert(r[2].empty);
-    r = findSplit(fwd, [3]);
-    assert(equal(r[0],  a[0 .. 2]));
-    assert(equal(r[1], a[2 .. 3]));
-    assert(equal(r[2], a[3 .. $]));
 
-    auto r1 = findSplitBefore(fwd, [9, 1]);
-    assert(equal(r1[0], a));
-    assert(r1[1].empty);
-    r1 = findSplitBefore(fwd, [3, 4]);
-    assert(equal(r1[0], a[0 .. 2]));
-    assert(equal(r1[1], a[2 .. $]));
+    auto r1 = a.save.findSplit(ns);
+    assert(r1[0].equal("Carl"));
+    assert(r1[1].equal(" "));
+    assert(r1[2].equal("Sagan Memorial Station"));
 
-    r1 = findSplitAfter(fwd, [9, 1]);
-    assert(r1[0].empty);
-    assert(equal(r1[1], a));
-    r1 = findSplitAfter(fwd, [3, 4]);
-    assert(equal(r1[0], a[0 .. 4]));
-    assert(equal(r1[1], a[4 .. $]));
+    auto r2 = a.save.findSplitBefore(nb);
+    assert(r2[0].equal("Carl "));
+    assert(r2[1].equal("Sagan Memorial Station"));
+
+    auto r3 = a.save.findSplitAfter(na);
+    assert(r3[0].equal("Carl Sagan"));
+    assert(r3[1].equal(" Memorial Station"));
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    //test forward forward ranges on mismatch
+
+    auto h = [1];
+    auto n = [1, 1];
+    
+    auto fh = new ReferenceForwardRange!int(h);
+    auto fn = new ReferenceForwardRange!int(n);
+
+    auto r1 = h.findSplit(n);
+    auto rf1 = fh.save.findSplit(fn.save);
+    assert(r1[0].equal(r1[0]));
+    assert(r1[1].equal(r1[1]));
+    assert(r1[2].equal(r1[2]));
+
+    auto r2 = h.findSplitBefore(n);
+    auto rf2 = fh.save.findSplitBefore(fn.save);
+    assert(r2[0].equal(rf2[0]));
+    assert(r2[1].equal(rf2[1]));
+
+    auto r3 = h.findSplitAfter(n);
+    auto rf3 = fh.save.findSplitAfter(fn.save);
+    assert(r3[0].equal(rf3[0]));
+    assert(r3[1].equal(rf3[1]));
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    //test with infinite ranges
+
+    auto h = new ReferenceInfiniteForwardRange!int(0);
+    auto n = new ReferenceForwardRange!int([3, 4]);
+
+    auto rfs = h.save.findSplit(n.save);
+    assert(rfs[0].equal([0, 1, 2]));
+    assert(rfs[1].equal([3, 4]));
+
+    auto rfb = h.save.findSplitBefore(n.save);
+    assert(rfb[0].equal([0, 1, 2]));
+    assert(rfb[1].take(3).equal([3, 4, 5]));
+
+    auto rfa = h.save.findSplitAfter(n.save);
+    assert(rfa[0].equal([0, 1, 2, 3, 4]));
+    assert(rfa[1].take(3).equal([5, 6, 7])); //etc...
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    //Test special case empty haystack/needle
+    {
+        int[] r;
+        auto t1 = r.findSplit([0]);
+        assert(t1[0].empty);
+        assert(t1[1].empty);
+        assert(t1[2].empty);
+        auto t2 = r.findSplitBefore([0]);
+        assert(t2[0].empty);
+        assert(t2[1].empty);
+        auto t3 = r.findSplitAfter([0]);
+        assert(t3[0].empty);
+        assert(t3[1].empty);
+    }
+    {
+        int[] a;
+        auto r = new ReferenceForwardRange!int(a);
+        auto t1 = r.save.findSplit([0]);
+        assert(t1[0].empty);
+        assert(t1[1].empty);
+        assert(t1[2].empty);
+        auto t2 = r.save.findSplitBefore([0]);
+        assert(t2[0].empty);
+        assert(t2[1].empty);
+        auto t3 = r.save.findSplitAfter([0]);
+        assert(t3[0].empty);
+        assert(t3[1].empty);
+    }
+    {
+        int[] a;
+        int[] r = [1];
+        auto t1 = r.findSplit(a);
+        assert(t1[0].empty);
+        assert(t1[1].empty);
+        assert(t1[2].equal([1]));
+        auto t2 = r.findSplitBefore(a);
+        assert(t2[0].empty);
+        assert(t2[1].equal([1]));
+        auto t3 = r.findSplitAfter(a);
+        assert(t3[0].empty);
+        assert(t3[1].equal([1]));
+    }
+    {
+        int[] a;
+        auto r = new ReferenceForwardRange!int([1]);
+        auto t1 = r.save.findSplit(a);
+        assert(t1[0].empty);
+        assert(t1[1].empty);
+        assert(t1[2].equal([1]));
+        auto t2 = r.save.findSplitBefore(a);
+        assert(t2[0].empty);
+        assert(t2[1].equal([1]));
+        auto t3 = r.save.findSplitAfter(a);
+        assert(t3[0].empty);
+        assert(t3[1].equal([1]));
+    }
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    //Try to confuse find split by matching at end/begining of range
+
+    auto h = filter!"true"("abcd"d);
+    auto nl = filter!"true"("ab"d);
+    auto nr = filter!"true"("cd"d);
+
+    auto rfs1 = h.findSplit(nl);
+    assert(rfs1[0].equal(""));
+    assert(rfs1[1].equal("ab"));
+    assert(rfs1[2].equal("cd"));
+
+    auto rfs2 = h.findSplit(nr);
+    assert(rfs2[0].equal("ab"));
+    assert(rfs2[1].equal("cd"));
+    assert(rfs2[2].equal(""));
+
+    auto rfb1 = h.findSplitBefore(nl);
+    assert(rfb1[0].equal(""));
+    assert(rfb1[1].equal("abcd"));
+
+    auto rfb2 = h.findSplitBefore(nr);
+    assert(rfb2[0].equal("ab"));
+    assert(rfb2[1].equal("cd"));
+
+    auto rfa1 = h.findSplitAfter(nl);
+    assert(rfa1[0].equal("ab"));
+    assert(rfa1[1].equal("cd"));
+
+    auto rfa2 = h.findSplitAfter(nr);
+    assert(rfa2[0].equal("abcd"));
+    assert(rfa2[1].equal(""));
 }
 
 /++
@@ -11874,7 +12167,7 @@ version(unittest)
         //Reference type input range
     private class ReferenceInputRange(T)
     {
-        this(Range)(Range r) if (isInputRange!Range) {_payload = array(r);}
+        this(T)(T[] r) {_payload = r;}
         final @property ref T front(){return _payload.front;}
         final void popFront(){_payload.popFront();}
         final @property bool empty(){return _payload.empty;}
@@ -11884,7 +12177,7 @@ version(unittest)
     //Reference forward range
     private class ReferenceForwardRange(T) : ReferenceInputRange!T
     {
-        this(Range)(Range r) if (isInputRange!Range) {super(r);}
+        this(T)(T[] r) {super(r);}
         final @property ReferenceForwardRange save()
         {return new ReferenceForwardRange!T(_payload);}
     }
