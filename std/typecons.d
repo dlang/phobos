@@ -3071,7 +3071,7 @@ unittest
 }
 ----
  */
-@system auto scoped(T, Args...)(Args args) if (is(T == class))
+@system auto scoped(T, Args...)(auto ref Args args) if (is(T == class))
 {
     static struct Scoped(T)
     {
@@ -3322,6 +3322,15 @@ unittest
     const c3 = scoped!(immutable(A))();
     assert(c3.foo == 1);
     static assert(is(typeof(c3.foo) == immutable(int)));
+}
+
+unittest
+{
+    class C { this(ref int val) { assert(val == 3); ++val; } }
+
+    int val = 3;
+    auto s = scoped!C(val);
+    assert(val == 4);
 }
 
 /**
