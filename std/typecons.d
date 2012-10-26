@@ -2469,7 +2469,13 @@ if (!is(T == class))
 {
     struct _RefCounted
     {
-        private Tuple!(T, "_payload", size_t, "_count") * _store;
+        private struct Impl
+        {
+            T _payload;
+            size_t _count;
+        }
+
+        private Impl* _store;
         debug(RefCounted)
         {
             private bool _debugging = false;
@@ -2491,14 +2497,12 @@ if (!is(T == class))
 
         private void initialize(A...)(A args)
         {
-            enum sz = (*_store).sizeof;
-            auto p = enforce(malloc(sz))[0 .. sz];
+            _store = cast(Impl*) enforce(malloc(Impl.sizeof));
             if (hasIndirections!T)
             {
-                GC.addRange(p.ptr, sz);
+                GC.addRange(&_store._payload, Impl.sizeof);
             }
-            emplace(cast(T*) p.ptr, args);
-            _store = cast(typeof(_store)) p.ptr;
+            emplace(&_store._payload, args);
             _store._count = 1;
             debug(RefCounted) if (debugging) writeln(typeof(this).stringof,
                 "@", cast(void*) _store, ": initialized with ",
