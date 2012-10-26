@@ -2492,8 +2492,8 @@ if (!is(T == class))
         private void initialize(A...)(A args)
         {
             enum sz = (*_store).sizeof;
-            auto p = malloc(sz)[0 .. sz];
-            if (sz >= size_t.sizeof && p.ptr)
+            auto p = enforce(malloc(sz))[0 .. sz];
+            if (sz >= size_t.sizeof)
             {
                 GC.addRange(p.ptr, sz);
             }
