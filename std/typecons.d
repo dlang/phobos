@@ -2500,6 +2500,16 @@ if (!is(T == class))
         }
 
         /**
+           Returns underlying store reference count if it is allocated and initialized
+           (a positive integer), and $(D 0) otherwise.
+        */
+        @property nothrow @safe
+        size_t refCount() const
+        {
+            return isInitialized ? _store._count : 0;
+        }
+
+        /**
            Makes sure the payload was properly initialized. Such a
            call is typically inserted before using the payload.
         */
