@@ -2476,24 +2476,6 @@ if (!is(T == class))
         }
 
         private Impl* _store;
-        debug(RefCounted)
-        {
-            private bool _debugging = false;
-            @property bool debugging() const
-            {
-                return _debugging;
-            }
-            @property void debugging(bool d)
-            {
-                if (d != _debugging)
-                {
-                    writeln(typeof(this).stringof, "@",
-                            cast(void*) _store,
-                            d ? ": starting debug" : ": ending debug");
-                }
-                _debugging = d;
-            }
-        }
 
         private void initialize(A...)(A args)
         {
@@ -2504,9 +2486,6 @@ if (!is(T == class))
             }
             emplace(&_store._payload, args);
             _store._count = 1;
-            debug(RefCounted) if (debugging) writeln(typeof(this).stringof,
-                "@", cast(void*) _store, ": initialized with ",
-                    A.stringof);
         }
 
         /**
@@ -2549,10 +2528,6 @@ Constructor that tracks the reference count appropriately. If $(D
     {
         if (!_refCounted.isInitialized) return;
         ++_refCounted._store._count;
-        debug(RefCounted) if (_refCounted.debugging)
-                 writeln(typeof(this).stringof,
-                "@", cast(void*) _refCounted._store, ": bumped refcount to ",
-                _refCounted._store._count);
     }
 
 /**
@@ -2566,19 +2541,7 @@ to deallocate the corresponding resource.
         if (!_refCounted.isInitialized) return;
         assert(_refCounted._store._count > 0);
         if (--_refCounted._store._count)
-        {
-            debug(RefCounted) if (_refCounted.debugging)
-                     writeln(typeof(this).stringof,
-                    "@", cast(void*)_refCounted._store,
-                    ": decrement refcount to ", _refCounted._store._count);
             return;
-        }
-        debug(RefCounted) if (_refCounted.debugging)
-        {
-            write(typeof(this).stringof,
-                    "@", cast(void*)_refCounted._store, ": freeing... ");
-            stdout.flush();
-        }
         // Done, deallocate
         .destroy(_refCounted._store._payload);
         if (hasIndirections!T)
