@@ -3437,6 +3437,34 @@ T* emplace(T, Args...)(T* chunk, Args args)
     return chunk;
 }
 
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    int a;
+    int b = 42;
+    assert(*emplace!int(&a, b) == 42);
+}
+
+unittest
+{
+    interface I {}
+    class K : I {}
+
+    K k = void;
+    emplace!K(&k);
+    assert(k is null);
+    K k2 = new K;
+    assert(k2 !is null);
+    emplace!K(&k, k2);
+    assert(k is k2);
+
+    I i = void;
+    emplace!I(&i);
+    assert(i is null);
+    emplace!I(&i, k);
+    assert(i is k);
+}
+
 // Specialization for struct
 T* emplace(T, Args...)(T* chunk, Args args)
     if (is(T == struct))
@@ -3470,6 +3498,38 @@ T* emplace(T, Args...)(T* chunk, Args args)
         *result = args[0];
     }
     return result;
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    struct S
+    {
+        double x = 5, y = 6;
+        this(int a, int b)
+        {
+            assert(x == 5 && y == 6);
+            x = a;
+            y = b;
+        }
+    }
+
+    auto s1 = new void[S.sizeof];
+    auto s2 = S(42, 43);
+    assert(*emplace!S(cast(S*) s1.ptr, s2) == s2);
+    assert(*emplace!S(cast(S*) s1, 44, 45) == S(44, 45));
+}
+
+unittest
+{
+    struct Foo
+    {
+        uint num;
+    }
+
+    Foo foo;
+    emplace!Foo(&foo, 2U);
+    assert(foo.num == 2);
 }
 
 /**
@@ -3553,30 +3613,6 @@ unittest
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    int a;
-    int b = 42;
-    assert(*emplace!int(&a, b) == 42);
-
-    struct S
-    {
-        double x = 5, y = 6;
-        this(int a, int b)
-        {
-            assert(x == 5 && y == 6);
-            x = a;
-            y = b;
-        }
-    }
-
-    auto s1 = new void[S.sizeof];
-    auto s2 = S(42, 43);
-    assert(*emplace!S(cast(S*) s1.ptr, s2) == s2);
-    assert(*emplace!S(cast(S*) s1, 44, 45) == S(44, 45));
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     class A
     {
         int x = 5;
@@ -3608,38 +3644,6 @@ unittest
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     // Check fix for http://d.puremagic.com/issues/show_bug.cgi?id=2971
     assert(equal(map!(to!int)(["42", "34", "345"]), [42, 34, 345]));
-}
-
-unittest
-{
-    struct Foo
-    {
-        uint num;
-    }
-
-    Foo foo;
-    emplace!Foo(&foo, 2U);
-    assert(foo.num == 2);
-}
-
-unittest
-{
-    interface I {}
-    class K : I {}
-
-    K k = void;
-    emplace!K(&k);
-    assert(k is null);
-    K k2 = new K;
-    assert(k2 !is null);
-    emplace!K(&k, k2);
-    assert(k is k2);
-
-    I i = void;
-    emplace!I(&i);
-    assert(i is null);
-    emplace!I(&i, k);
-    assert(i is k);
 }
 
 // Undocumented for the time being
