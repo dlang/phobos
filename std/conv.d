@@ -3627,7 +3627,7 @@ Returns: A pointer to the newly constructed object.
 T emplace(T, Args...)(void[] chunk, auto ref Args args) if (is(T == class))
 {
     enum classSize = __traits(classInstanceSize, T);
-    testEmplaceChunk(chunk, classSize, T.alignof, T.stringof);
+    testEmplaceChunk(chunk, classSize, classInstanceAlignment!T, T.stringof);
     auto result = cast(T) chunk.ptr;
 
     // Initialize the object in its pre-ctor state
