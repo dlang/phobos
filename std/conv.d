@@ -3405,10 +3405,9 @@ as $(D chunk)).
 T* emplace(T)(T* chunk)
     if (!is(T == class))
 {
-    auto result = cast(typeof(return)) chunk;
     static T i;
-    memcpy(result, &i, T.sizeof);
-    return result;
+    memcpy(chunk, &i, T.sizeof);
+    return chunk;
 }
 ///ditto
 T* emplace(T)(T* chunk)
@@ -3479,35 +3478,33 @@ unittest
 T* emplace(T, Args...)(T* chunk, Args args)
     if (is(T == struct))
 {
-    auto result = cast(typeof(return)) chunk;
-
     void initialize()
     {
         static T i;
         memcpy(chunk, &i, T.sizeof);
     }
 
-    static if (is(typeof(result.__ctor(args))))
+    static if (is(typeof(chunk.__ctor(args))))
     {
         // T defines a genuine constructor accepting args
         // Go the classic route: write .init first, then call ctor
         initialize();
-        result.__ctor(args);
+        chunk.__ctor(args);
     }
     else static if (is(typeof(T(args))))
     {
         // Struct without constructor that has one matching field for
         // each argument
-        *result = T(args);
+        *chunk = T(args);
     }
     else //static if (Args.length == 1 && is(Args[0] : T))
     {
         static assert(Args.length == 1);
         //static assert(0, T.stringof ~ " " ~ Args.stringof);
         // initialize();
-        *result = args[0];
+        *chunk = args[0];
     }
-    return result;
+    return chunk;
 }
 
 unittest
@@ -3562,7 +3559,7 @@ T emplace(T, Args...)(void[] chunk, Args args) if (is(T == class))
            new ConvException("emplace: chunk size too small"));
     auto a = cast(size_t) chunk.ptr;
     enforce(a % T.alignof == 0, text(a, " vs. ", T.alignof));
-    auto result = cast(typeof(return)) chunk.ptr;
+    auto result = cast(T) chunk.ptr;
 
     // Initialize the object in its pre-ctor state
     (cast(byte[]) chunk)[0 .. classSize] = typeid(T).init[];
@@ -3602,8 +3599,7 @@ T* emplace(T, Args...)(void[] chunk, Args args)
            new ConvException("emplace: chunk size too small"));
     auto a = cast(size_t) chunk.ptr;
     enforce(a % T.alignof == 0, text(a, " vs. ", T.alignof));
-    auto result = cast(typeof(return)) chunk.ptr;
-    return emplace(result, args);
+    return emplace(cast(T*) chunk.ptr, args);
 }
 
 unittest
