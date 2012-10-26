@@ -671,31 +671,25 @@ unittest
 }
 
 
-// : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : //
-private:
-
 /*
- * [internal] With the builtin alias declaration, you cannot declare
+ * With the builtin alias declaration, you cannot declare
  * aliases of, for example, literal values. You can alias anything
  * including literal values via this template.
  */
-private
+// symbols and literal values
+template Alias(alias a)
 {
-    // symbols and literal values
-    template Alias(alias a)
-    {
-        static if (__traits(compiles, { alias a x; }))
-            alias a Alias;
-        else static if (__traits(compiles, { enum x = a; }))
-            enum Alias = a;
-        else
-            static assert(0, "Cannot alias " ~ a.stringof);
-    }
-    // types and tuples
-    template Alias(a...)
-    {
+    static if (__traits(compiles, { alias a x; }))
         alias a Alias;
-    }
+    else static if (__traits(compiles, { enum x = a; }))
+        enum Alias = a;
+    else
+        static assert(0, "Cannot alias " ~ a.stringof);
+}
+// types and tuples
+template Alias(a...)
+{
+    alias a Alias;
 }
 
 unittest
@@ -707,6 +701,9 @@ unittest
     static assert(__traits(compiles, { alias Alias!(1,abc,int) a; }));
 }
 
+
+// : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : //
+private:
 
 /*
  * [internal] Returns true if a and b are the same thing, or false if
