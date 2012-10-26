@@ -2511,6 +2511,13 @@ if (!is(T == class))
     }
     RefCountedStore _refCounted;
 
+    /// Returns storage implementation struct
+    @property nothrow @safe
+    ref inout(RefCountedStore) refCountedStore() inout
+    {
+        return _refCounted;
+    }
+
 /**
 Constructor that initializes the payload.
 
