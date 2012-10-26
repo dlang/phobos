@@ -2525,7 +2525,7 @@ if (!is(T == class))
         }
 
     }
-    _RefCounted RefCounted;
+    _RefCounted _refCounted;
 
 /**
 Constructor that initializes the payload.
@@ -2534,7 +2534,7 @@ Postcondition: $(D refCountedIsInitialized)
  */
     this(A...)(A args) if (A.length > 0)
     {
-        RefCounted.initialize(args);
+        _refCounted.initialize(args);
     }
 
 /**
@@ -2543,12 +2543,12 @@ Constructor that tracks the reference count appropriately. If $(D
  */
     this(this)
     {
-        if (!RefCounted.isInitialized) return;
-        ++RefCounted._store._count;
-        debug(RefCounted) if (RefCounted.debugging)
+        if (!_refCounted.isInitialized) return;
+        ++_refCounted._store._count;
+        debug(RefCounted) if (_refCounted.debugging)
                  writeln(typeof(this).stringof,
-                "@", cast(void*) RefCounted._store, ": bumped refcount to ",
-                RefCounted._store._count);
+                "@", cast(void*) _refCounted._store, ": bumped refcount to ",
+                _refCounted._store._count);
     }
 
 /**
@@ -2559,30 +2559,30 @@ to deallocate the corresponding resource.
  */
     ~this()
     {
-        if (!RefCounted._store) return;
-        assert(RefCounted._store._count > 0);
-        if (--RefCounted._store._count)
+        if (!_refCounted._store) return;
+        assert(_refCounted._store._count > 0);
+        if (--_refCounted._store._count)
         {
-            debug(RefCounted) if (RefCounted.debugging)
+            debug(RefCounted) if (_refCounted.debugging)
                      writeln(typeof(this).stringof,
-                    "@", cast(void*)RefCounted._store,
-                    ": decrement refcount to ", RefCounted._store._count);
+                    "@", cast(void*)_refCounted._store,
+                    ": decrement refcount to ", _refCounted._store._count);
             return;
         }
-        debug(RefCounted) if (RefCounted.debugging)
+        debug(RefCounted) if (_refCounted.debugging)
         {
             write(typeof(this).stringof,
-                    "@", cast(void*)RefCounted._store, ": freeing... ");
+                    "@", cast(void*)_refCounted._store, ": freeing... ");
             stdout.flush();
         }
         // Done, deallocate
-        assert(RefCounted._store);
-        .destroy(RefCounted._store._payload);
-        if (hasIndirections!T && RefCounted._store)
-            GC.removeRange(RefCounted._store);
-        free(RefCounted._store);
-        RefCounted._store = null;
-        debug(RefCounted) if (RefCounted.debugging) writeln("done!");
+        assert(_refCounted._store);
+        .destroy(_refCounted._store._payload);
+        if (hasIndirections!T && _refCounted._store)
+            GC.removeRange(_refCounted._store);
+        free(_refCounted._store);
+        _refCounted._store = null;
+        debug(RefCounted) if (_refCounted.debugging) writeln("done!");
     }
 
 /**
@@ -2590,7 +2590,7 @@ Assignment operators
  */
     void opAssign(typeof(this) rhs)
     {
-        swap(RefCounted._store, rhs.RefCounted._store);
+        swap(_refCounted._store, rhs._refCounted._store);
     }
 
 /// Ditto
@@ -2598,13 +2598,13 @@ Assignment operators
     {
         static if (autoInit == RefCountedAutoInitialize.yes)
         {
-            RefCounted.ensureInitialized();
+            _refCounted.ensureInitialized();
         }
         else
         {
-            assert(RefCounted.isInitialized);
+            assert(_refCounted.isInitialized);
         }
-        move(rhs, RefCounted._store._payload);
+        move(rhs, _refCounted._store._payload);
     }
 
     //version to have a single properly ddoc'ed function (w/ correct sig)
@@ -2633,8 +2633,8 @@ Assignment operators
             @property
             ref T refCountedPayload()
             {
-                RefCounted.ensureInitialized();
-                return RefCounted._store._payload;
+                _refCounted.ensureInitialized();
+                return _refCounted._store._payload;
             }
 
             @property nothrow @safe
@@ -2642,8 +2642,8 @@ Assignment operators
             {
                 // @@@
                 //refCounted.ensureInitialized();
-                assert(RefCounted.isInitialized);
-                return RefCounted._store._payload;
+                assert(_refCounted.isInitialized);
+                return _refCounted._store._payload;
             }
         }
         else
@@ -2651,8 +2651,8 @@ Assignment operators
             @property nothrow @safe
             ref inout(T) refCountedPayload() inout
             {
-                assert(RefCounted.isInitialized);
-                return RefCounted._store._payload;
+                assert(_refCounted.isInitialized);
+                return _refCounted._store._payload;
             }
         }
     }
@@ -2673,18 +2673,18 @@ unittest
         auto rc1 = RefCounted!int(5);
         p = &rc1;
         assert(rc1 == 5);
-        assert(rc1.RefCounted._store._count == 1);
+        assert(rc1._refCounted._store._count == 1);
         auto rc2 = rc1;
-        assert(rc1.RefCounted._store._count == 2);
+        assert(rc1._refCounted._store._count == 2);
         // Reference semantics
         rc2 = 42;
         assert(rc1 == 42);
         rc2 = rc2;
-        assert(rc2.RefCounted._store._count == 2);
+        assert(rc2._refCounted._store._count == 2);
         rc1 = rc2;
-        assert(rc1.RefCounted._store._count == 2);
+        assert(rc1._refCounted._store._count == 2);
     }
-    assert(p.RefCounted._store == null);
+    assert(p._refCounted._store == null);
 
     // RefCounted as a member
     struct A
@@ -2692,7 +2692,7 @@ unittest
         RefCounted!int x;
         this(int y)
         {
-            x.RefCounted.initialize(y);
+            x._refCounted.initialize(y);
         }
         A copy()
         {
@@ -2702,7 +2702,7 @@ unittest
     }
     auto a = A(4);
     auto b = a.copy();
-    assert(a.x.RefCounted._store._count == 2, "BUG 4356 still unfixed");
+    assert(a.x._refCounted._store._count == 2, "BUG 4356 still unfixed");
 }
 
 unittest
