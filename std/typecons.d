@@ -3109,7 +3109,8 @@ unittest
     }
 
     Scoped!T result;
-    emplace!(Unqual!T)(cast(void[])result.Scoped_store, args);
+    immutable size_t d = cast(void*) result.Scoped_payload - result.Scoped_store.ptr;
+    emplace!(Unqual!T)(result.Scoped_store[d .. $], args);
     return result;
 }
 
