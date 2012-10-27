@@ -5506,6 +5506,40 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     }
 
     /**
+     * Compares two trees for equality.
+     *
+     * Complexity: $(BIGOH n*log(n))
+     */
+    override bool opEquals(Object rhs)
+    {
+        RedBlackTree that = cast(RedBlackTree)rhs;
+        if (that is null) return false;
+
+        // If there aren't the same number of nodes, we can't be equal.
+        if (this._length != that._length) return false;
+
+        // FIXME: use a more efficient algo (if one exists?)
+        auto thisRange = this[];
+        auto thatRange = that[];
+        return equal!(function(Elem a, Elem b) => !_less(a,b) && !_less(b,a))
+                     (thisRange, thatRange);
+    }
+
+    static if(doUnittest) unittest
+    {
+        auto t1 = new RedBlackTree(1,2,3,4);
+        auto t2 = new RedBlackTree(1,2,3,4);
+        auto t3 = new RedBlackTree(1,2,3,5);
+        auto t4 = new RedBlackTree(1,2,3,4,5);
+        auto o = new Object();
+
+        assert(t1==t2);
+        assert(t1!=t3);
+        assert(t1!=t4);
+        assert(t1!=o);  // pathological case, must not crash
+    }
+
+    /**
      * Removes all elements from the container.
      *
      * Complexity: $(BIGOH 1)
