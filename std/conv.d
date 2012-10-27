@@ -3595,14 +3595,17 @@ unittest
 
 unittest
 {
-    struct Foo
-    {
-        uint num;
-    }
+    struct S { uint n; }
+    S s;
+    emplace!S(&s, 2U);
+    assert(s.n == 2);
+}
 
-    Foo foo;
-    emplace!Foo(&foo, 2U);
-    assert(foo.num == 2);
+unittest
+{
+    struct S { int a, b; this(int){} }
+    S s;
+    static assert(!__traits(compiles, emplace!S(&s, 2, 3)));
 }
 
 // Test assignment branch
