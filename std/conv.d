@@ -3553,6 +3553,8 @@ T* emplace(T, Args...)(T* chunk, auto ref Args args)
     return chunk;
 }
 
+// Test constructor branch
+
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -3589,6 +3591,8 @@ unittest
     assert(var == 7);
 }
 
+// Test matching fields branch
+
 unittest
 {
     struct Foo
@@ -3600,6 +3604,10 @@ unittest
     emplace!Foo(&foo, 2U);
     assert(foo.num == 2);
 }
+
+// Test assignment branch
+
+// FIXME: no tests
 
 private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
 {
