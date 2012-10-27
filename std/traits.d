@@ -4138,7 +4138,7 @@ unittest
     static assert(!isIterable!(uint));
 }
 
-/*
+/**
  * Returns true if T is not const or immutable.  Note that isMutable is true for
  * string, or immutable(char)[], because the 'head' is mutable.
  */
