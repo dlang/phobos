@@ -3477,12 +3477,7 @@ T* emplace(T, Args...)(T* chunk, Args args)
         }
     }
 
-    static if (Args.length == 1 && is(Args[0] == T))
-    {
-        //Exact type match: Move args[0] over directly
-        moveOver(args[0]);
-    }
-    else static if (is(typeof(result.__ctor(args))))
+    static if (is(typeof(result.__ctor(args))))
     {
         // T defines a genuine constructor accepting args
         // Go the classic route: write .init first, then call ctor
@@ -3505,6 +3500,11 @@ T* emplace(T, Args...)(T* chunk, Args args)
         //However, to *really* be efficient, we'd need a helper emplace that takes
         //by reference, and doesn't copy over T.init again. This would make emplace
         //more complicated, so we stick to this for now.
+    }
+    else static if (Args.length == 1 && is(Args[0] == T))
+    {
+        //Exact type match, with no CC. Just memcpy it construct.
+        memcpy(chunk, &args[0], T.sizeof);
     }
     else
     {
