@@ -3434,7 +3434,7 @@ $(D T) is $(D @safe).
 Returns: A pointer to the newly constructed object (which is the same
 as $(D chunk)).
  */
-T* emplace(T, Args...)(T* chunk, Args args)
+T* emplace(T, Args...)(T* chunk, auto ref Args args)
     if (!is(T == struct) && Args.length == 1)
 {
     *chunk = args[0];
