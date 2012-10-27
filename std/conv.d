@@ -3608,6 +3608,18 @@ unittest
     static assert(!__traits(compiles, emplace!S(&s, 2, 3)));
 }
 
+unittest
+{
+    struct S { int a, b = 7; }
+    S s1 = void, s2 = void;
+
+    emplace!S(&s1, 2);
+    assert(s1.a == 2 && s1.b == 7);
+
+    emplace!S(&s2, 2, 3);
+    assert(s2.a == 2 && s2.b == 3);
+}
+
 // Test assignment branch
 
 // FIXME: no tests
