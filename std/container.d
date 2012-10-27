@@ -1548,12 +1548,14 @@ elements in $(D rhs).
      */
     bool opEquals(ref const DList rhs) const
     {
-        auto nthis = _first, nrhs = rhs._first;
+        const(Node)* nthis = _first, nrhs = rhs._first;
 
         while(true)
         {
             if (!nthis) return !nrhs;
             if (!nrhs || nthis._payload != nrhs._payload) return false;
+            nthis = nthis._next;
+            nrhs = nrhs._next;
         }
     }
 
@@ -2162,6 +2164,18 @@ unittest
     auto r = d[];
     r.back = 1;
     assert(r.back == 1);
+}
+
+// Issue 8895
+unittest
+{
+    auto a = make!(DList!int)(1,2,3,4);
+    auto b = make!(DList!int)(1,2,3,4);
+    auto c = make!(DList!int)(1,2,3,5);
+    auto d = make!(DList!int)(1,2,3,4,5);
+    assert(a == b); // this better terminate!
+    assert(!(a == c));
+    assert(!(a == d));
 }
 
 /**
