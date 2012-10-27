@@ -1932,7 +1932,7 @@ if (isInputRange!T)
                     // right align
                     auto len = val.length;
                 }
-                else static if (isForwardRange!T)
+                else static if (isForwardRange!T && !isInfinite!T)
                 {
                     auto len = walkLength(val.save);
                 }
