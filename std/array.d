@@ -1051,6 +1051,16 @@ unittest
         assert(!sameHead(a, c));
         assert(sameHead(a, d));
         assert(!sameHead(a, e));
+
+        assert(sameTail(a, a));
+        assert(sameTail(a, b));
+        assert(sameTail(a, c));
+        assert(!sameTail(a, d));
+        assert(!sameTail(a, e));
+
+        //verifies R-value compatibilty
+        assert(a.sameHead(a[0 .. 0]));
+        assert(a.sameTail(a[$ .. $]));
     }
 }
 
