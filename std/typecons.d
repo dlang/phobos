@@ -3073,22 +3073,20 @@ unittest
  */
 @system auto scoped(T, Args...)(auto ref Args args) if (is(T == class))
 {
+    // _d_newclass now use default GC alignment (looks like (void*).sizeof * 2 for
+    // small objects). We will just use the maximum of filed alignments.
+    alias classInstanceAlignment!T alignment;
+
+    static size_t aligned(size_t n)
+    {
+        enum badEnd = alignment - 1; // 0b11, 0b111, ...
+        return (n + badEnd) & ~badEnd;
+    }
+
     static struct Scoped(T)
     {
-        private
-        {
-            // _d_newclass now use default GC alignment (looks like (void*).sizeof * 2 for
-            // small objects). We will just use the maximum of filed alignments.
-            alias classInstanceAlignment!T alignment;
+        private void[aligned(__traits(classInstanceSize, T)) + alignment] Scoped_store = void;
 
-            static size_t aligned(size_t n)
-            {
-                enum badEnd = alignment - 1; // 0b11, 0b111, ...
-                return (n + badEnd) & ~badEnd;
-            }
-
-            void[aligned(__traits(classInstanceSize, T)) + alignment] Scoped_store = void;
-        }
         @property inout(T) Scoped_payload() inout
         {
             return cast(inout(T)) cast(void*) aligned(cast(size_t) Scoped_store.ptr);
