@@ -3076,12 +3076,7 @@ unittest
     // _d_newclass now use default GC alignment (looks like (void*).sizeof * 2 for
     // small objects). We will just use the maximum of filed alignments.
     alias classInstanceAlignment!T alignment;
-
-    static size_t aligned(size_t n)
-    {
-        enum badEnd = alignment - 1; // 0b11, 0b111, ...
-        return (n + badEnd) & ~badEnd;
-    }
+    alias _aligned!alignment aligned;
 
     static struct Scoped(T)
     {
@@ -3110,6 +3105,12 @@ unittest
     immutable size_t d = cast(void*) result.Scoped_payload - result.Scoped_store.ptr;
     emplace!(Unqual!T)(result.Scoped_store[d .. $], args);
     return result;
+}
+
+private size_t _aligned(size_t alignment)(size_t n)
+{
+    enum badEnd = alignment - 1; // 0b11, 0b111, ...
+    return (n + badEnd) & ~badEnd;
 }
 
 unittest // Issue 6580 testcase
