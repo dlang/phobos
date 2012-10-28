@@ -3135,7 +3135,6 @@ unittest // Issue 6580 testcase
 
     void alignmentTest()
     {
-        // Enshure `forAlignmentOnly` field really helps
         auto c1long = scoped!C1long();
         auto c2long = scoped!C2long();
         assert(cast(size_t)&c1long.l % longAlignment == 0);
