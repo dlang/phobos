@@ -1161,6 +1161,13 @@ unittest
     assert(equal(split(s), ["peter", "paul", "jerry"]));
 }
 
+unittest
+{
+    //Testing @@@7689
+    char[] s = cast(char[])[131, 64, 32, 251, 22];
+    assertThrown(std.string.split(s).length == 2);
+}
+
 /**
 Splits a string by whitespace.
 
