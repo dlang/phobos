@@ -2492,7 +2492,8 @@ for the array is reclaimed as soon as possible; there is no reliance
 on the garbage collector. $(D Array) uses $(D malloc) and $(D free)
 for managing its own memory.
  */
-struct Array(T) if (!is(T : const(bool)))
+struct Array(T)
+    if (!is(T : const(bool)))
 {
     // This structure is not copyable.
     private struct Payload
@@ -2533,7 +2534,8 @@ struct Array(T) if (!is(T : const(bool)))
         // }
 
         // length
-        @property size_t length() const
+        @safe nothrow const
+        @property size_t length()
         {
             return _payload.length;
         }
@@ -2673,202 +2675,248 @@ Comparison for equality.
     {
         if (empty) return rhs.empty;
         if (rhs.empty) return false;
-        return _data._payload == rhs._data._payload;
+        return _payload == rhs._payload;
     }
 
 /**
 Defines the container's primary range, which is a random-access range.
      */
-    struct Range
+    static struct Range
     {
-        private Array _outer;
+        private Data _data;
         private size_t _a, _b;
 
-        this(Array data, size_t a, size_t b)
+        invariant()
         {
-            _outer = data;
+            assert(_a <= _b, "Array.Range: Upper Bound is smaller than Lower Bound");
+            assert(_b <= (_data.refCountedStore.isInitialized ? _data.length : 0),
+                "Array.Range: Range references past the end of the Array.");
+        }
+
+        private this(Data data, size_t a, size_t b)
+        {
+            _data = data;
             _a = a;
             _b = b;
         }
 
         @property Range save()
         {
-            assert(_b <= _outer.length);
             return this;
         }
 
-        @property bool empty() const
+        const @safe nothrow
+        @property bool empty()
         {
-            assert(_b <= _outer.length);
             return _a >= _b;
         }
 
-        @property size_t length() const
+        const @safe nothrow
+        @property size_t length()
         {
-            assert(_b <= _outer.length);
             return _b - _a;
         }
 
-        size_t opDollar() const
+        @safe nothrow const
+        size_t opDollar()
         {
             return length;
         }
 
         @property T front()
         {
-            enforce(!empty);
-            return _outer[_a];
+            assert(_notEmpty, _emptyMessage);
+            return _payload[_a];
         }
 
         @property T back()
         {
-            enforce(!empty);
-            return _outer[_b - 1];
+            assert(_notEmpty, _emptyMessage);
+            return _payload[_b - 1];
         }
 
         @property void front(T value)
         {
-            enforce(!empty);
-            _outer[_a] = move(value);
+            assert(_notEmpty, _emptyMessage);
+            move(value, _payload[_a]);
         }
 
         @property void back(T value)
         {
-            enforce(!empty);
-            _outer[_b - 1] = move(value);
+            assert(_notEmpty, _emptyMessage);
+            move(value, _payload[_b - 1]);
         }
 
         void popFront()
         {
-            enforce(!empty);
+            assert(_notEmpty, _emptyMessage);
             ++_a;
         }
 
         void popBack()
         {
-            enforce(!empty);
+            assert(_notEmpty, _emptyMessage);
             --_b;
         }
 
         T moveFront()
         {
-            enforce(!empty);
-            return move(_outer._data._payload[_a]);
+            assert(_notEmpty, _emptyMessage);
+            return move(_payload[_a]);
         }
 
         T moveBack()
         {
-            enforce(!empty);
-            return move(_outer._data._payload[_b - 1]);
+            assert(_notEmpty, _emptyMessage);
+            return move(_payload[_b - 1]);
         }
 
         T moveAt(size_t i)
         {
+            assert(_validIndex(i), _indexMessage);
             i += _a;
-            enforce(i < _b && !empty);
-            return move(_outer._data._payload[i]);
+            return move(_payload[i]);
         }
 
         T opIndex(size_t i)
         {
+            assert(_validIndex(i), _indexMessage);
             i += _a;
-            enforce(i < _b && _b <= _outer.length);
-            return _outer._data._payload[i];
+            return _payload[i];
         }
 
         void opIndexUnary(string op)(size_t i)
             if(op == "++" || op == "--")
         {
+            assert(_validIndex(i), _indexMessage);
             i += _a;
-            enforce(i < _b && _b <= _outer.length);
-            mixin(op~"_outer._data._payload[i];");
+            mixin(op~"_payload[i];");
         }
 
         T opIndexUnary(string op)(size_t i)
             if(op != "++" && op != "--")
         {
+            assert(_validIndex(i), _indexMessage);
             i += _a;
-            enforce(i < _b && _b <= _outer.length);
-            mixin("return "~op~"_outer._data._payload[i];");
+            mixin("return "~op~"_payload[i];");
         }
 
         void opIndexAssign(T value, size_t i)
         {
+            assert(_validIndex(i), _indexMessage);
             i += _a;
-            enforce(i < _b && _b <= _outer.length);
-            _outer[i] = value;
+            move(value, _payload[i]);
         }
 
         void opIndexOpAssign(string op)(T value, size_t i)
         {
+            assert(_validIndex(i), _indexMessage);
             i += _a;
-            enforce(i < _b && _b <= _outer.length);
-            mixin("_outer._data._payload[i] "~op~"= value;");
+            mixin("_payload[i] "~op~"= value;");
         }
 
         typeof(this) opSlice()
         {
-            assert(_b <= _outer.length);
             return this;
         }
 
-        typeof(this) opSlice(size_t a, size_t b)
+        typeof(this) opSlice(size_t i, size_t j)
         {
-            assert(_b <= _outer.length);
-            a += _a;
-            b += _a;
-            enforce(a <= b && b <= _b);
-            return typeof(this)(_outer, a, b);
+            assert(_validSlice(i, j), _sliceMessage);
+            i += _a;
+            j += _a;
+            return typeof(this)(_data, i, j);
         }
 
         void opSliceAssign(T value)
         {
-            assert(_b <= _outer.length);
-            _outer._data._payload[_a .. _b] = value;
+            if(_data.refCountedStore.isInitialized)
+                _payload[] = value;
         }
 
         void opSliceAssign(T value, size_t i, size_t j)
         {
-            assert(_b <= _outer.length);
-            if(i == 0 && j == 0 ) return;
-            i += _a;
-            j += _a;
-            enforce(i <= j && j <= _b);
-            _outer._data._payload[i .. j] = value;
+            assert(_validSlice(i, j), _sliceMessage);
+            if(j != 0 )
+            {
+                i += _a;
+                j += _a;
+                _payload[i .. j] = value;
+            }
         }
 
         void opSliceUnary(string op)()
             if(op == "++" || op == "--")
         {
-            assert(_b <= _outer.length);
-            mixin(op~"_outer._data._payload[_a .. _b];");
+            if(_data.refCountedStore.isInitialized)
+                mixin(op~"_payload[];");
         }
 
         void opSliceUnary(string op)(size_t i, size_t j)
             if(op == "++" || op == "--")
         {
-            assert(_b <= _outer.length);
-            if(i == 0 && j == 0 ) return;
-            i += _a;
-            j += _a;
-            enforce(i <= j && j <= _b);
-            mixin(op~"_outer._data._payload[i .. j];");
+            assert(_validSlice(i, j), _sliceMessage);
+            if(j != 0 )
+            {
+                i += _a;
+                j += _a;
+                mixin(op~"_payload[i .. j];");
+            }
         }
 
         void opSliceOpAssign(string op)(T value)
         {
-            assert(_b <= _outer.length);
-            mixin("_outer._data._payload[_a .. _b] "~op~"= value;");
+            if(_data.refCountedStore.isInitialized)
+                mixin("_payload[] "~op~"= value;");
         }
 
         void opSliceOpAssign(string op)(T value, size_t i, size_t j)
         {
-            assert(_b <= _outer.length);
-            if(i == 0 && j == 0 ) return;
-            i += _a;
-            j += _a;
-            enforce(i <= j && j <= _b);
-            mixin("_outer._data._payload[i .. j] "~op~"= value;");
+            assert(_validSlice(i, j), _sliceMessage);
+            if(j != 0 )
+            {
+                i += _a;
+                j += _a;
+                mixin("_payload[i .. j] "~op~"= value;");
+            }
+        }
+
+        //Convenience
+        private @safe nothrow
+        @property ref inout(T[]) _payload() inout
+        {
+            assert(_data.refCountedStore.isInitialized, "Array.Range internal error.");
+            return _data._payload;
+        }
+
+        version(assert) private //Entire section dedicated to assertions
+        {
+            //Messages printed out by the asserts
+            enum _emptyMessage = "Array.Range: range is empty";
+            enum _indexMessage = "Array.Range: input index is out of bounds";
+            enum _sliceMessage = "Array.Range: input slice is invalid";
+
+            //These methods don't ever assert themselves: The client will have a better idea of the actual asserted line
+            @property @safe nothrow const
+            {
+                bool _notEmpty() //vs !empty: Avoids calling invariant
+                {
+                    return _a < _b;
+                }
+
+                bool _validIndex(size_t i)
+                {
+                    i += _a;
+                    return _a + i < _b;
+                }
+
+                bool _validSlice(size_t i, size_t j)
+                {
+                    i += _a;
+                    j += _a;
+                    return i <= j && j <= _b;
+                }
+            }
         }
     }
 
@@ -2881,7 +2929,7 @@ Complexity: $(BIGOH n).
     @property Array dup()
     {
         if (!_data.refCountedStore.isInitialized) return this;
-        return Array(_data._payload);
+        return Array(_payload);
     }
 
 /**
@@ -2890,9 +2938,10 @@ elements.
 
 Complexity: $(BIGOH 1)
      */
-    @property bool empty() const
+    const @safe nothrow
+    @property bool empty()
     {
-        return !_data.refCountedStore.isInitialized || _data._payload.empty;
+        return !_data.refCountedStore.isInitialized || _payload.empty;
     }
 
 /**
@@ -2900,13 +2949,15 @@ Returns the number of elements in the container.
 
 Complexity: $(BIGOH 1).
      */
-    @property size_t length() const
+    const @safe nothrow
+    @property size_t length()
     {
-        return _data.refCountedStore.isInitialized ? _data._payload.length : 0;
+        return _data.refCountedStore.isInitialized ? _payload.length : 0;
     }
 
     /// ditto
-    size_t opDollar() const
+    const @safe nothrow
+    size_t opDollar()
     {
         // @@@BUG@@@ This doesn't work yet
         return length;
@@ -2959,8 +3010,8 @@ Complexity: $(BIGOH 1)
     Range opSlice()
     {
         // Workaround for bug 4356
-        Array copy;
-        copy._data = this._data;
+        Data copy;
+        copy = this._data;
         return Range(copy, 0, length);
     }
 
@@ -2972,13 +3023,13 @@ Precondition: $(D a <= b && b <= length)
 
 Complexity: $(BIGOH 1)
      */
-    Range opSlice(size_t a, size_t b)
+    Range opSlice(size_t i, size_t j)
     {
-        enforce(a <= b && b <= length);
+        assert(_validSlice(i, j), _sliceMessage);
         // Workaround for bug 4356
-        Array copy;
-        copy._data = this._data;
-        return Range(copy, a, b);
+        Data copy;
+        copy = this._data;
+        return Range(copy, i, j);
     }
 
 /**
@@ -2990,29 +3041,29 @@ Complexity: $(BIGOH 1)
      */
     @property T front()
     {
-        enforce(!empty);
-        return *_data._payload.ptr;
+        assert(_notEmpty, _emptyMessage);
+        return _payload[0];
     }
 
     /// ditto
     @property void front(T value)
     {
-        enforce(!empty);
-        *_data._payload.ptr = value;
+        assert(_notEmpty, _emptyMessage);
+        move(value, _payload[0]);
     }
 
     /// ditto
     @property T back()
     {
-        enforce(!empty);
-        return _data._payload[$ - 1];
+        assert(_notEmpty, _emptyMessage);
+        return _payload[$ - 1];
     }
 
     /// ditto
     @property void back(T value)
     {
-        enforce(!empty);
-        _data._payload[$ - 1] = value;
+        assert(_notEmpty, _emptyMessage);
+        move(value, _payload[$ - 1]);
     }
 
 /**
@@ -3024,38 +3075,38 @@ Complexity: $(BIGOH 1)
      */
     T opIndex(size_t i)
     {
-        enforce(_data.refCountedStore.isInitialized);
-        return _data._payload[i];
+        assert(_validIndex(i), _indexMessage);
+        return _payload[i];
     }
 
     /// ditto
     void opIndexUnary(string op)(size_t i)
         if(op == "++" || op == "--")
     {
-        enforce(_data.refCountedStore.isInitialized);
-        mixin(op~"_data._payload[i];");
+        assert(_validIndex(i), _indexMessage);
+        mixin(op~"_payload[i];");
     }
 
     /// ditto
     T opIndexUnary(string op)(size_t i)
         if(op != "++" && op != "--")
     {
-        enforce(_data.refCountedStore.isInitialized);
-        mixin("return "~op~"_data._payload[i];");
+        assert(_validIndex(i), _indexMessage);
+        mixin("return "~op~"_payload[i];");
     }
 
     /// ditto
     void opIndexAssign(T value, size_t i)
     {
-        enforce(_data.refCountedStore.isInitialized);
-        _data._payload[i] = value;
+        assert(_validIndex(i), _indexMessage);
+        move(value, _payload[i]);
     }
 
     /// ditto
     void opIndexOpAssign(string op)(T value, size_t i)
     {
-        enforce(_data.refCountedStore.isInitialized);
-        mixin("_data._payload[i] "~op~"= value;");
+        assert(_validIndex(i), _indexMessage);
+        mixin("_payload[i] "~op~"= value;");
     }
 
 /**
@@ -3069,42 +3120,45 @@ Complexity: $(BIGOH slice.length)
     void opSliceAssign(T value)
     {
         if(!_data.refCountedStore.isInitialized) return;
-        _data._payload[] = value;
+        _payload[] = value;
     }
 
     void opSliceAssign(T value, size_t i, size_t j)
     {
-        enforce(_data.refCountedStore.isInitialized || (i == 0 && j == 0));
-        _data._payload[i .. j] = value;
+        assert(_validSlice(i, j), _sliceMessage);
+        if(j != 0)
+            _payload[i .. j] = value;
     }
 
     void opSliceUnary(string op)()
         if(op == "++" || op == "--")
     {
         if(!_data.refCountedStore.isInitialized) return;
-        mixin(op~"_data._payload[];");
+        mixin(op~"_payload[];");
     }
 
     /// ditto
     void opSliceUnary(string op)(size_t i, size_t j)
         if(op == "++" || op == "--")
     {
-        enforce(_data.refCountedStore.isInitialized || (i == 0 && j == 0));
-        mixin(op~"_data._payload[i .. j];");
+        assert(_validSlice(i, j), _sliceMessage);
+        if(j != 0)
+            mixin(op~"_payload[i .. j];");
     }
 
     /// ditto
     void opSliceOpAssign(string op)(T value)
     {
         if(!_data.refCountedStore.isInitialized) return;
-        mixin("_data._payload[] "~op~"= value;");
+        mixin("_payload[] "~op~"= value;");
     }
 
     /// ditto
     void opSliceOpAssign(string op)(T value, size_t i, size_t j)
     {
-        enforce(_data.refCountedStore.isInitialized || (i == 0 && j == 0));
-        mixin("_data._payload[i .. j] "~op~"= value;");
+        assert(_validSlice(i, j), _sliceMessage);
+        if(j != 0)
+            mixin("_payload[i .. j] "~op~"= value;");
     }
 
 /**
@@ -3154,7 +3208,8 @@ Complexity: $(BIGOH n)
      */
     void clear()
     {
-        .destroy(_data);
+        //Clear the actual elements, so that other referencing arrays/ranges are impacted.
+        length(0);
     }
 
 /**
@@ -3188,6 +3243,7 @@ Complexity: $(BIGOH log(n)).
      */
     T removeAny()
     {
+        assert(_notEmpty, _emptyMessage);
         auto result = back;
         removeBack();
         return result;
@@ -3227,13 +3283,13 @@ Complexity: $(BIGOH log(n)).
      */
     void removeBack()
     {
-        enforce(!empty);
+        assert(_notEmpty, _emptyMessage);
         static if (is(T == struct))
         {
             // Destroy this guy
-            .destroy(_data._payload[$ - 1]);
+            .destroy(_payload[$ - 1]);
         }
-        _data._payload = _data._payload[0 .. $ - 1];
+        _payload = _payload[0 .. $ - 1];
     }
     /// ditto
     alias removeBack stableRemoveBack;
@@ -3253,16 +3309,17 @@ Complexity: $(BIGOH howMany).
      */
     size_t removeBack(size_t howMany)
     {
-        if (howMany > length) howMany = length;
+        if(!_data.refCountedStore.isInitialized) return 0;
+        if (howMany > _length) howMany = _length;
         static if (is(T == struct))
         {
             // Destroy this guy
-            foreach (ref e; _data._payload[$ - howMany .. $])
+            foreach (ref e; _payload[$ - howMany .. $])
             {
                 .destroy(e);
             }
         }
-        _data._payload = _data._payload[0 .. $ - howMany];
+        _payload = _payload[0 .. $ - howMany];
         return howMany;
     }
     /// ditto
@@ -3282,15 +3339,16 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     if (isImplicitlyConvertible!(Stuff, T))
     {
-        enforce(r._outer._data is _data && r._a <= length);
+        assert(&r);
+        assert(_ownsRange(r), _ownsRangeMessage);
         reserve(length + 1);
         assert(_data.refCountedStore.isInitialized);
         // Move elements over by one slot
-        memmove(_data._payload.ptr + r._a + 1,
-                _data._payload.ptr + r._a,
+        memmove(_payload.ptr + r._a + 1,
+                _payload.ptr + r._a,
                 T.sizeof * (length - r._a));
-        emplace(_data._payload.ptr + r._a, stuff);
-        _data._payload = _data._payload.ptr[0 .. _data._payload.length + 1];
+        emplace(_payload.ptr + r._a, stuff);
+        _payload = _payload.ptr[0 .. _length + 1];
         return 1;
     }
 
@@ -3298,7 +3356,8 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
-        enforce(r._outer._data is _data && r._a <= length);
+        assert(&r);
+        assert(_ownsRange(r), _ownsRangeMessage);
         static if (isForwardRange!Stuff)
         {
             // Can find the length in advance
@@ -3307,27 +3366,25 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
             reserve(length + extra);
             assert(_data.refCountedStore.isInitialized);
             // Move elements over by extra slots
-            memmove(_data._payload.ptr + r._a + extra,
-                    _data._payload.ptr + r._a,
+            memmove(_payload.ptr + r._a + extra,
+                    _payload.ptr + r._a,
                     T.sizeof * (length - r._a));
-            foreach (p; _data._payload.ptr + r._a ..
-                    _data._payload.ptr + r._a + extra)
+            foreach (p; _payload.ptr + r._a ..
+                    _payload.ptr + r._a + extra)
             {
                 emplace(p, stuff.front);
                 stuff.popFront();
             }
-            _data._payload =
-                _data._payload.ptr[0 .. _data._payload.length + extra];
+            _payload =
+                _payload.ptr[0 .. _length + extra];
             return extra;
         }
         else
         {
-            enforce(_data);
             immutable offset = r._a;
-            enforce(offset <= length);
             auto result = insertBack(stuff);
-            bringToFront(this[offset .. length - result],
-                    this[length - result .. length]);
+            bringToFront(_payload[offset .. _length - result],
+                         _payload[_length - result .. _length]);
             return result;
         }
     }
@@ -3335,13 +3392,13 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     /// ditto
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
     {
-        enforce(r._outer._data is _data);
+        assert(&r);
+        assert(_ownsRange(r), _ownsRangeMessage);
         // TODO: optimize
         immutable offset = r._b;
-        enforce(offset <= length);
         auto result = insertBack(stuff);
-        bringToFront(this[offset .. length - result],
-                this[length - result .. length]);
+        bringToFront(_payload[offset .. _length - result],
+                     _payload[_length - result .. _length]);
         return result;
     }
 
@@ -3349,7 +3406,8 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     size_t replace(Stuff)(Range r, Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
-        enforce(r._outer._data is _data);
+        assert(&r);
+        assert(_ownsRange(r), _ownsRangeMessage);
         size_t result;
         for (; !stuff.empty; stuff.popFront())
         {
@@ -3371,7 +3429,8 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     size_t replace(Stuff)(Range r, Stuff stuff)
     if (isImplicitlyConvertible!(Stuff, T))
     {
-        enforce(r._outer._data is _data);
+        assert(&r);
+        assert(_ownsRange(r), _ownsRangeMessage);
         if (r.empty)
         {
             insertBefore(r, stuff);
@@ -3399,19 +3458,73 @@ $(D r)
      */
     Range linearRemove(Range r)
     {
-        enforce(r._outer._data is _data);
-        enforce(_data.refCountedStore.isInitialized);
-        enforce(r._a <= r._b && r._b <= length);
+        assert(&r);
+        assert(_ownsRange(r), _ownsRangeMessage);
+        if(!_data.refCountedStore.isInitialized) return this[];
+
         immutable offset1 = r._a;
         immutable offset2 = r._b;
-        immutable tailLength = length - offset2;
+        immutable tailLength = _length - offset2;
         // Use copy here, not a[] = b[] because the ranges may overlap
-        copy(this[offset2 .. length], this[offset1 .. offset1 + tailLength]);
+        // Use _payload to access the underlying array directly, for copy
+        copy(_payload[offset2 .. _length],
+             _payload[offset1 .. offset1 + tailLength]);
         length = offset1 + tailLength;
-        return this[length - tailLength .. length];
+        return this[offset1 .. _length];
     }
     /// ditto
     alias remove stableLinearRemove;
+
+    //Convenicence
+    private @safe nothrow
+    {
+        //Slightly faster than "length".
+        //Can be used inside of arrays without .this
+        @property size_t _length() const
+        {
+            assert(_data.refCountedStore.isInitialized, "Array internal error.");
+            return _data._payload.length;
+        }
+
+        @property ref inout(T[]) _payload() inout
+        {
+            assert(_data.refCountedStore.isInitialized, "Array internal error.");
+            return _data._payload;
+        }
+    }
+
+    //Helper functions for asserting
+    version(assert) private
+    {
+        enum _emptyMessage      = "Array: Array is empty";
+        enum _indexMessage      = "Array: input index is out of bounds";
+        enum _sliceMessage      = "Array: input slice is invalid";
+        enum _ownsRangeMessage  = "Array: Array does not own this range";
+
+        @property @safe nothrow const
+        {
+            bool _notEmpty() //Mostly for allignement with this.Range.
+            {
+                return _data.refCountedStore.isInitialized && !_payload.empty;
+            }
+
+            bool _validIndex(size_t i)
+            {
+                 return i < length;
+            }
+
+            bool _validSlice(size_t i, size_t j)
+            {
+                return i <= j && j <= length;
+            }
+
+            //This also returns true if r is not initialized
+            bool _ownsRange(ref Range r) //Range is passed by value, to avoid un-safe Range.~this
+            {
+                return r._data is _data || !r._data.refCountedStore.isInitialized;
+            }
+        }
+    }
 }
 
 // unittest
@@ -3612,17 +3725,29 @@ unittest
     a.replace(a[], 1);
     assert(equal(a[], [1]));
 }
-// make sure that Array instances refuse ranges that don't belong to them
 unittest
 {
-	Array!int a = [1, 2, 3];
-	auto r = a.dup[];
-	assertThrown(a.insertBefore(r, 42));
-	assertThrown(a.insertBefore(r, [42]));
-	assertThrown(a.insertAfter(r, 42));
-	assertThrown(a.replace(r, 42));
-	assertThrown(a.replace(r, [42]));
-	assertThrown(a.linearRemove(r));
+    //Check that an empty (and payload-less) range can correctly be used
+    Array!int a;
+    auto r = a[];
+
+    a.linearRemove(r);
+
+    a = Array!int();
+    a.insertBefore(r, [1]);
+    assert(equal(a[], [1]));
+
+    a = Array!int();
+    a.insertBefore(r, 1);
+    assert(equal(a[], [1]));
+
+    a = Array!int();
+    a.replace(r, 1);
+    assert(equal(a[], [1]));
+
+    a = Array!int();
+    a.replace(r, [1]);
+    assert(equal(a[], [1]));
 }
 unittest
 {
@@ -3677,6 +3802,76 @@ unittest
     assert(r.equal([6, 35, 40]));
     r[0 .. 2] = 0;
     assert(r.equal([0, 0, 40]));
+}
+unittest
+{
+    //Make sure everything gets compiled (check for typos in mixins...)
+    void _dummy()
+    {
+        Array!int a;
+        auto r = a[];
+        r = a[0 .. 1];
+
+        a.empty();
+        a.length();
+        a.length(1);
+        a.dup;
+        a.capacity();
+        a.reserve(1);
+        a[];
+        a[0 .. 1];
+        a.front;
+        a.front = 1;
+        a.back;
+        a.back = 1;
+        a[1];
+        a[1] = 1;
+        a[1] += 1;
+        ++a[1];
+        -a[1];
+        a[] = 1;
+        a[0 .. 1] = 1;
+        a[] += 1;
+        a[0 .. 1] += 1;
+        ++a[];
+        ++a[0 .. 1];
+        a.clear();
+        a.removeAny();
+        a.insertBack(1);
+        a.insertBack([1]);
+        a.removeBack();
+        a.removeBack(1);
+        a.insertBefore(r, 1);
+        a.insertBefore(r, [1]);
+        a.insertAfter(r, 1);
+        a.insertAfter(r, [1]);
+        a.replace(r, 1);
+        a.replace(r, [1]);
+        a.linearRemove(r);
+
+        r.empty;
+        r.length;
+        r.front;
+        r.front = 1;
+        r.back;
+        r.back = 1;
+        r.moveFront();
+        r.moveBack();
+        r.moveAt(1);
+        r[1];
+        r[1] = 1;
+        r[1] += 1;
+        ++r[1];
+        -r[1];
+        r[] = 1;
+        r[0 .. 1] = 1;
+        r[] += 1;
+        r[0 .. 1] += 1;
+        ++r[];
+        ++r[0 .. 1];
+        r = r[];
+        r = r[1 .. 2];
+    }
 }
 
 // BinaryHeap
