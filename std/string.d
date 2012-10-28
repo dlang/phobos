@@ -1335,7 +1335,7 @@ C[] stripLeft(C)(C[] str) @safe pure
             return str[i .. $];
     }
 
-    return str[0 .. 0]; //Empty string with correct type.
+    return str[$ .. $]; //Empty string with correct type.
 }
 
 //Verify Example.
