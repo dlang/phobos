@@ -241,24 +241,26 @@ unittest
 
 unittest
 {
-    static struct Integrals {
-        bool checkExpectations(bool eb, int ei, short es) { return b == eb && i == ei && s == es; }
+    {
+        static struct Integrals {
+            bool checkExpectations(bool eb, int ei, short es) { return b == eb && i == ei && s == es; }
 
-        mixin(bitfields!(
-                  bool, "b", 1,
-                  uint, "i", 3,
-                  short, "s", 4));
+            mixin(bitfields!(
+                      bool, "b", 1,
+                      uint, "i", 3,
+                      short, "s", 4));
+        }
+        Integrals i;
+        assert(i.checkExpectations(false, 0, 0));
+        i.b = true;
+        assert(i.checkExpectations(true, 0, 0));
+        i.i = 7;
+        assert(i.checkExpectations(true, 7, 0));
+        i.s = -8;
+        assert(i.checkExpectations(true, 7, -8));
+        i.s = 7;
+        assert(i.checkExpectations(true, 7, 7));
     }
-    Integrals i;
-    assert(i.checkExpectations(false, 0, 0));
-    i.b = true;
-    assert(i.checkExpectations(true, 0, 0));
-    i.i = 7;
-    assert(i.checkExpectations(true, 7, 0));
-    i.s = -8;
-    assert(i.checkExpectations(true, 7, -8));
-    i.s = 7;
-    assert(i.checkExpectations(true, 7, 7));
 
     //Bug# 8876
     {
