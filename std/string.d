@@ -1473,6 +1473,13 @@ unittest
     }
 }
 
+unittest
+{
+    wstring s = " ";
+    assert(s.sameTail(s.stripLeft()));
+    assert(s.sameHead(s.stripRight()));
+}
+
 
 /++
     If $(D str) ends with $(D delimiter), then $(D str) is returned without
