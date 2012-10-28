@@ -3132,7 +3132,7 @@ unittest // Issue 6580 testcase
     {
         long l; byte b = 4;
         this() { }
-        this(long _l) { l = _l; }
+        this(long _l, ref int i) { l = _l; ++i; }
     }
     static class C2long { byte[2] b = [5, 6]; long l = 7; }
     static assert(scoped!C1long().sizeof % longAlignment == 0);
@@ -3140,7 +3140,9 @@ unittest // Issue 6580 testcase
 
     void alignmentTest()
     {
-        auto c1long = scoped!C1long(3);
+        int var = 5;
+        auto c1long = scoped!C1long(3, var);
+        assert(var == 6);
         auto c2long = scoped!C2long();
         assert(cast(size_t)&c1long.l % longAlignment == 0);
         assert(cast(size_t)&c2long.l % longAlignment == 0);
