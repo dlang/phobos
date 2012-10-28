@@ -1025,6 +1025,17 @@ pure bool sameHead(T)(T[] lhs, T[] rhs)
     return lhs.ptr == rhs.ptr;
 }
 
+
+/++
+    Returns whether the $(D back)s of $(D lhs) and $(D rhs) both refer to the
+    same place in memory, making one of the arrays a slice of the other which
+    end at index $(D $).
+  +/
+pure bool sameTail(T)(T[] lhs, T[] rhs)
+{
+    return lhs.ptr + lhs.length == rhs.ptr + rhs.length;
+}
+
 unittest
 {
     foreach(T; TypeTuple!(int[], const(int)[], immutable(int)[], const int[], immutable int[]))
