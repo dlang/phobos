@@ -1149,6 +1149,12 @@ unittest
 
         S s2 = " \t\npeter paul\tjerry";
         assert(equal(split(s2), [ to!S("peter"), to!S("paul"), to!S("jerry") ]));
+        
+        S s3 = " 日 本 語 ";
+        assert(equal(split(s3), [ to!S("日"), to!S("本"), to!S("語") ]));
+        
+        S s4 = "\u3000日\u3000本\u3000語\u3000"; //Japanese unicode wide-space: "　日　本　語　";
+        assert(equal(split(s4), [ to!S("日"), to!S("本"), to!S("語") ]));
     }
 
     immutable string s = " \t\npeter paul\tjerry \n";
