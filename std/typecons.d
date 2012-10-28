@@ -2481,10 +2481,8 @@ if (!is(T == class))
         private void initialize(A...)(A args)
         {
             _store = cast(Impl*) enforce(malloc(Impl.sizeof));
-            if (hasIndirections!T)
-            {
+            static if (hasIndirections!T)
                 GC.addRange(&_store._payload, T.sizeof);
-            }
             emplace(&_store._payload, args);
             _store._count = 1;
         }
@@ -2562,7 +2560,7 @@ to deallocate the corresponding resource.
             return;
         // Done, deallocate
         .destroy(_refCounted._store._payload);
-        if (hasIndirections!T)
+        static if (hasIndirections!T)
             GC.removeRange(&_refCounted._store._payload);
         free(_refCounted._store);
         _refCounted._store = null;
