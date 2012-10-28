@@ -1101,35 +1101,42 @@ unittest
 Split the string $(D s) into an array of words, using whitespace as
 delimiter. Runs of whitespace are merged together (no empty words are produced).
  */
-S[] split(S)(S s) if (isSomeString!S)
+S[] split(S)(S s)
+    if (isSomeString!S)
 {
-    size_t istart;
-    bool inword = false;
-    S[] result;
+    alias ElementEncodingType!S C;
 
-    foreach (i; 0 .. s.length)
+    auto app = appender!(S[])();
+
+    s = s.strip(); //Means there is no trailing ws: because it means that
+                   //finding a ws => there are still non-whites in the stream
+    if(!s.empty)
     {
-        switch (s[i])
+        //Search individual tokens
+        findToken: for(;;)
         {
-        case ' ': case '\t': case '\f': case '\r': case '\n': case '\v':
-            if (inword)
+            //search for a WS
+            foreach (size_t i, dchar c; s)
             {
-                result ~= s[istart .. i];
-                inword = false;
+                if(std.uni.isWhite(c))
+                {
+                    //put int the word
+                    app.put(s.ptr[0 .. i]);
+                    //Slice s at i+1 to manually remove the item we already know is white
+                    s = s.ptr[i + c.codeLength!C() .. s.length];
+                    //Then remove the rest of the whites
+                    s = s.stripLeft();
+                    continue findToken; //And look for the next one
+                }
             }
-            break;
-        default:
-            if (!inword)
-            {
-                istart = i;
-                inword = true;
-            }
-            break;
+            //Failed to find a ws
+            break findToken;
         }
+        //Put the last word in
+        app.put(s);
     }
-    if (inword)
-        result ~= s[istart .. $];
-    return result;
+
+    return app.data;
 }
 
 unittest
