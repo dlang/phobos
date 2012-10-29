@@ -1322,7 +1322,7 @@ assert(odds.take(3).equal([21, 23, 25]));
  */
 template isdroppable(R)
 {
-    enum bool isdroppable = hasMember!(R, "popFrontN") || (hasSlicing!R && !isInfinite!R);
+    enum bool isdroppable = hasMember!(R, "popFrontN") || (hasSlicing!R && hasLength!R);
 }
 
 unittest
