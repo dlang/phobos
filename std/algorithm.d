@@ -5054,9 +5054,19 @@ unittest
  * true). Otherwise, leaves $(D haystack) as is and returns $(D
  * false).
  */
+bool findSkip(alias pred = "a == b", R, E)(ref R haystack, E needle)
+    if (isForwardRange!R &&
+        is(typeof(binaryFun!pred(haystack.front, needle))))
+{
+    auto parts = findSplitAfter!pred(haystack.save, needle);
+    if (parts[0].empty) return false;
+    // found
+    haystack = parts[1];
+    return true;
+}
+/// ditto
 bool findSkip(alias pred = "a == b", R1, R2)(ref R1 haystack, R2 needle)
-    if (isForwardRange!R1 &&
-        isForwardRange!R2 && !isInfinite!R2 &&
+    if (isForwardRange!R1 && isForwardRange!R2 &&
         is(typeof(binaryFun!pred(haystack.front, needle.front))))
 {
     auto parts = findSplitAfter!pred(haystack.save, needle);
@@ -5077,6 +5087,19 @@ unittest
     assert(!findSkip(s, "cxd") && s == "abcdef");
     s = "abcdef";
     assert(findSkip(s, "def") && s.empty);
+}
+
+unittest
+{
+    //Single element + UTF
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    string s = "日本語";
+    assert(findSkip(s, '本') && s == "語");
+    s = "日本語";
+    assert(!findSkip(s, '五') && s == "日本語");
+    s = "日本語";
+    assert(findSkip(s, '語') && s.empty);
 }
 
 unittest
@@ -5141,6 +5164,43 @@ assert(r2[0] == "Carl Sagan");
 assert(r2[1] == " Memorial Station");
 ----
  */
+auto findSplit(alias pred = "a == b", R, E)(R haystack, E needle)
+    if (isForwardRange!R && is(typeof(binaryFun!pred(haystack.front, needle))))
+{
+    static if (isSomeString!R || (isRandomAccessRange!R && hasSlicing!R && hasLength!R))
+    {
+        auto balance = find!pred(haystack.save, needle);
+        immutable pos1 = haystack.length - balance.length;
+        static if (isNarrowString!R)
+            immutable size_t needleLength = needle.codeLength!(ElementEncodingType!R)();
+        else
+            immutable size_t needleLength = 1;
+        immutable pos2 = pos1 + (balance.empty ? 0 : needleLength);
+        return tuple(haystack[0 .. pos1],
+                     haystack[pos1 .. pos2],
+                     haystack[pos2 .. haystack.length]);
+    }
+    else
+    {
+        auto original = haystack.save;
+        size_t pos;
+        for ( ; !haystack.empty ; haystack.popFront(), ++pos)
+        {
+            if (binaryFun!pred(haystack.front, needle))
+            {
+                auto h = haystack.save;
+                h.popFront();
+                return tuple(takeExactly(original, pos),
+                             takeExactly(haystack, 1),
+                             h);
+            }
+        }
+        return tuple(takeExactly(original, pos),
+                     takeExactly(haystack, 0),
+                     haystack);
+    }
+}
+/// ditto
 auto findSplit(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
     if (isForwardRange!R1 && isForwardRange!R2 &&
         is(typeof(binaryFun!pred(haystack.front, needle.front))))
@@ -5198,6 +5258,30 @@ auto findSplit(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 }
 
 /// Ditto
+auto findSplitBefore(alias pred = "a == b", R, E)(R haystack, E needle)
+    if (isForwardRange!R && is(typeof(binaryFun!pred(haystack.front, needle))))
+{
+    static if (isSomeString!R || (isRandomAccessRange!R && hasSlicing!R && hasLength!R))
+    {
+        auto balance = find!pred(haystack.save, needle);
+        immutable pos = haystack.length - balance.length;
+        return tuple(haystack[0 .. pos], haystack[pos .. haystack.length]);
+    }
+    else
+    {
+        auto original = haystack.save;
+        size_t pos;
+        for ( ; !haystack.empty ; haystack.popFront(), ++pos)
+        {
+            if (binaryFun!pred(haystack.front, needle))
+                break;
+        }
+        //This works in both cases actually.
+        return tuple(takeExactly(original, pos),
+                     haystack);
+    }
+}
+/// Ditto
 auto findSplitBefore(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
     if (isForwardRange!R1 && isForwardRange!R2 &&
         is(typeof(binaryFun!pred(haystack.front, needle.front))))
@@ -5250,6 +5334,39 @@ auto findSplitBefore(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
     }
 }
 
+/// Ditto
+auto findSplitAfter(alias pred = "a == b", R, E)(R haystack, E needle)
+    if (isForwardRange!R && is(typeof(binaryFun!pred(haystack.front, needle))))
+{
+    static if (isSomeString!R || (isRandomAccessRange!R && hasSlicing!R && hasLength!R))
+    {
+        auto balance = find!pred(haystack.save, needle);
+        static if (isNarrowString!R)
+            immutable size_t needleLength = needle.codeLength!(ElementEncodingType!R)();
+        else
+            immutable size_t needleLength = 1;
+        immutable pos = balance.empty ? 0 : (haystack.length - balance.length + needleLength);
+        return tuple(haystack[0 .. pos],
+                     haystack[pos .. haystack.length]);
+    }
+    else
+    {
+        auto original = haystack.save;
+        size_t pos;
+        for ( ; !haystack.empty ; haystack.popFront(), ++pos)
+        {
+            if (binaryFun!pred(haystack.front, needle))
+            {
+                ++pos;
+                haystack.popFront();
+                return tuple(takeExactly(original, pos),
+                             haystack);
+            }
+        }
+        return tuple(takeExactly(original, 0),
+                     original);
+    }
+}
 /// Ditto
 auto findSplitAfter(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
     if (isForwardRange!R1 && isForwardRange!R2 &&
@@ -5320,6 +5437,110 @@ unittest
     auto r2 = findSplitAfter(a, "Sagan");
     assert(r2[0] == "Carl Sagan");
     assert(r2[1] == " Memorial Station");
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    //RA split on element
+    auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
+
+    auto r1 = findSplit(a, 0);
+    assert(r1[0].equal(a));
+    assert(r1[1].empty);
+    assert(r1[2].empty);
+    r1 = findSplit(a, 3);
+    assert(r1[0].equal(a[0 .. 2]));
+    assert(r1[1].equal(a[2 .. 3]));
+    assert(r1[2].equal(a[3 .. $]));
+
+    auto r2 = findSplitBefore(a, 0);
+    assert(r2[0].equal(a));
+    assert(r2[1].empty);
+    r2 = findSplitBefore(a, 3);
+    assert(r2[0].equal(a[0 .. 2]));
+    assert(r2[1].equal(a[2 .. $]));
+    
+    auto r3 = findSplitAfter(a, 0);
+    assert(r3[0].empty);
+    assert(r3[1].equal(a));
+    r3 = findSplitAfter(a, 4);
+    assert(r3[0].equal(a[0 .. 4]));
+    assert(r3[1].equal(a[4 .. $]));
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    //Fwd reference split on element
+    auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
+    auto fwd = new ReferenceForwardRange!int(a);
+
+    auto r1 = findSplit(fwd.save, 0);
+    assert(r1[0].equal(a));
+    assert(r1[1].empty);
+    assert(r1[2].empty);
+    r1 = findSplit(fwd.save, 3);
+    assert(r1[0].equal(a[0 .. 2]));
+    assert(r1[1].equal(a[2 .. 3]));
+    assert(r1[2].equal(a[3 .. $]));
+
+    auto r2 = findSplitBefore(fwd.save, 0);
+    assert(r2[0].equal(a));
+    assert(r2[1].empty);
+    r2 = findSplitBefore(fwd.save, 3);
+    assert(r2[0].equal(a[0 .. 2]));
+    assert(r2[1].equal(a[2 .. $]));
+    
+    auto r3 = findSplitAfter(fwd.save, 0);
+    assert(r3[0].empty);
+    assert(r3[1].equal(a));
+    r3 = findSplitAfter(fwd.save, 4);
+    assert(r3[0].equal(a[0 .. 4]));
+    assert(r3[1].equal(a[4 .. $]));
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    //Check unicode with split element
+    {
+        //Standard RA string
+        string a = "日本語";
+
+        auto r1 = findSplit(a, '本');
+        assert(r1[0] == "日");
+        assert(r1[1] == "本");
+        assert(r1[2] == "語");
+
+        auto r2 = findSplitBefore(a, '本');
+        assert(r2[0] == "日");
+        assert(r2[1] == "本語");
+
+        auto r3 = findSplitAfter(a, '本');
+        assert(r3[0] == "日本");
+        assert(r3[1] == "語");
+    }
+    {
+        //Forward reference
+        auto a = new ReferenceForwardRange!(immutable(dchar))("日本語"d);
+
+        auto r1 = findSplit(a.save, '本');
+        assert(r1[0].equal("日"));
+        assert(r1[1].equal("本"));
+        assert(r1[2].equal("語"));
+
+        auto r2 = findSplitBefore(a.save, '本');
+        assert(r2[0].equal("日"));
+        assert(r2[1].equal("本語"));
+
+        auto r3 = findSplitAfter(a.save, '本');
+        assert(r3[0].equal("日本"));
+        assert(r3[1].equal("語"));
+    }
 }
 
 unittest
