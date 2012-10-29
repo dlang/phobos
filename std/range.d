@@ -3217,25 +3217,32 @@ unittest
 Eagerly advances $(D r) itself (not a copy) up to $(D n) times (by calling
 $(D r.popFront) at most $(D n) times). The pass of $(D r) into $(D
 popFrontN) is by reference, so the original range is
-affected. Completes in $(BIGOH 1) steps for ranges that have both length 
+affected.
+
+If $(D Range) defines Range.popFrontN, then that function is called.
+Otherwise completes in $(BIGOH 1) steps for ranges that have both length 
 and support slicing, and in $(BIGOH n) time for all other ranges.
 
 Returns:
 
-How much $(D r) was actually advanced, which may be less than $(D n) if $(D r) did not have $(D n) element.
+How much $(D r) was actually advanced, which may be less than $(D n)
+if $(D r) did not have $(D n) element.
 
 Example:
 ----
 int[] a = [ 1, 2, 3, 4, 5 ];
 a.popFrontN(2);
 assert(a == [ 3, 4, 5 ]);
-a.popFrontN(7);
-assert(a == [ ]);
 ----
 */
-size_t popFrontN(Range)(ref Range r, size_t n) if (isInputRange!(Range))
+size_t popFrontN(Range)(ref Range r, size_t n)
+    if (isInputRange!Range)
 {
-    static if (hasSlicing!Range && hasLength!Range)
+    static if (hasMember!(Range, "popFrontN"))
+    {
+        return r.popFrontN(n);
+    }
+    else static if (hasSlicing!Range && hasLength!Range)
     {
         n = min(n, r.length);
         r = r[n .. r.length];
