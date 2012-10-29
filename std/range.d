@@ -3504,6 +3504,12 @@ struct Cycle(Range)
             return _original[(n + _index) % _original.length];
         }
 
+        size_t popFrontN(size_t n)
+        {
+            _index += n;
+            return n;
+        }
+
         static if (is(typeof((cast(const R)_original)[0])) &&
                    is(typeof((cast(const R)_original).length)))
         {
@@ -3594,6 +3600,12 @@ struct Cycle(R)
     enum bool empty = false;
 
     void popFront() { ++_index; }
+
+    size_t popFrontN(size_t n)
+    {
+        _index += n;
+        return n;
+    }
 
     ref inout(ElementType) opIndex(size_t n) inout
     {
@@ -4659,6 +4671,12 @@ public:
     void popFront()
     {
         this._cache = compute(this._state, ++this._n);
+    }
+
+    size_t popFrontN(size_t n)
+    {
+        this._cache = compute(this._state, this._n += n);
+        return n;
     }
 
     auto opSlice(size_t lower, size_t upper)
