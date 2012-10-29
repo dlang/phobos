@@ -3268,6 +3268,8 @@ Example:
 int[] a = [ 1, 2, 3, 4, 5 ];
 a.popFrontN(2);
 assert(a == [ 3, 4, 5 ]);
+a.popFrontN(7);
+assert(a == [ ]);
 ----
 */
 size_t popFrontN(Range)(ref Range r, size_t n)
