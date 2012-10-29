@@ -2803,17 +2803,16 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     private:
         RoR _items;
         ElementType!RoR _current;
-        bool _valid_current;
         void prepare()
         {
-            for (;; _items.popFront())
+            // Skip over empty subranges.
+            if (_items.empty) return;
+            while (_items.front.empty)
             {
+                _items.popFront();
                 if (_items.empty) return;
-                if (!_items.front.empty) break;
             }
             _current = _items.front;
-            _valid_current = true;
-            _items.popFront();
         }
     public:
         this(RoR r)
@@ -2829,7 +2828,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
         {
             @property auto empty()
             {
-                return !_valid_current || _current.empty;
+                return _items.empty;
             }
         }
         @property auto ref front()
@@ -2841,7 +2840,12 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
         {
             assert(!_current.empty);
             _current.popFront();
-            if (_current.empty) prepare();
+            if (_current.empty)
+            {
+                assert(!_items.empty);
+                _items.popFront();
+                prepare();
+            }
         }
         static if (isForwardRange!RoR && isForwardRange!(ElementType!RoR))
         {
@@ -2850,7 +2854,6 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
                 Result copy;
                 copy._items = _items.save;
                 copy._current = _current.save;
-                copy._valid_current = _valid_current;
                 return copy;
             }
         }
