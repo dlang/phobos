@@ -670,6 +670,8 @@ unittest
     static assert(is(Filter!isPointer == TypeTuple!()));
 }
 
+// : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : //
+package:
 
 /*
  * With the builtin alias declaration, you cannot declare
