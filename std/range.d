@@ -3279,7 +3279,7 @@ size_t popFrontN(Range)(ref Range r, size_t n)
 {
     static if (hasMember!(Range, "popFrontN"))
     {
-        return r.popFrontN(n);
+        n = r.popFrontN(n);
     }
     else static if (hasSlicing!Range && hasLength!Range)
     {
