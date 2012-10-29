@@ -92,7 +92,7 @@ $(TR $(TD $(D $(LREF hasSlicing)))
 $(TD Tests if a given _range supports the array slicing operation $(D R[x..y]).
 ))
 
-$(TR $(TD $(D $(LREF isDropable)))
+$(TR $(TD $(D $(LREF isdroppable)))
 $(TD Tests if a given _range naturally supports calls to $(D popFrontN) and $(D drop).
 ))
 
@@ -1306,7 +1306,7 @@ unittest
 Returns $(D true) if $(D R) verifies hasSlicing!R, or if it
 implemenents $(D popFrontN).
 
-Ranges that verify isDropable can assume $(BIGOH 1) performance for the call
+Ranges that verify isdroppable can assume $(BIGOH 1) performance for the call
 to $(D popFrontN) and/or $(D drop).
 
 popFrontN and/or drop can be used as a convenient way to "slice to end". This
@@ -1315,20 +1315,20 @@ primitive.
 
 ----
 auto odds = sequence!("a[0] + n * a[1]")(1, 2);
-assert(isDropable!(typeof(odds)));
+assert(isdroppable!(typeof(odds)));
 odds.popFrontN(10);
 assert(odds.take(3).equal([21, 23, 25]));
 ----
  */
-template isDropable(R)
+template isdroppable(R)
 {
-    enum bool isDropable = hasMember!(R, "popFrontN") || (hasSlicing!R && !isInfinite!R);
+    enum bool isdroppable = hasMember!(R, "popFrontN") || (hasSlicing!R && !isInfinite!R);
 }
 
 unittest
 {
     auto odds = sequence!("a[0] + n * a[1]")(1, 2);
-    assert(isDropable!(typeof(odds)));
+    assert(isdroppable!(typeof(odds)));
     odds.popFrontN(10);
     assert(odds.take(3).equal([21, 23, 25]));
 }
