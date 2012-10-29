@@ -2900,6 +2900,47 @@ unittest
     assert(!equal(js2, js));
 }
 
+unittest
+{
+    struct TransientRange
+    {
+        dchar[128] _buf;
+        dstring[] _values;
+        this(dstring[] values)
+        {
+            _values = values;
+        }
+        @property bool empty()
+        {
+            return _values.length == 0;
+        }
+        @property auto front()
+        {
+            foreach (i; 0 .. _values.front.length)
+            {
+                _buf[i] = _values[0][i];
+            }
+            return _buf[0 .. _values.front.length];
+        }
+        void popFront()
+        {
+            _values = _values[1 .. $];
+        }
+    }
+
+    auto rr = TransientRange(["abc"d, "12"d, "def"d, "34"d]);
+
+    // Can't use array() or equal() directly because they fail with transient
+    // .front.
+    dchar[] result;
+    foreach (c; rr.joiner()) {
+        result ~= c;
+    }
+
+    assert(equal(result, "abc12def34"),
+    	"Unexpected result: '%s'".format(result));
+}
+
 // uniq
 /**
 Iterates unique consecutive elements of the given range (functionality
