@@ -194,28 +194,31 @@ version(unittest)
  * Example:
  * ---
  * import std.traits;
- * static assert(moduleName!(moduleName) == "std.traits");
+ * static assert(moduleName!moduleName == "std.traits");
  * ---
  */
 template moduleName(alias T)
 {
-    static if (T.stringof.length >= 9)
-        static assert(T.stringof[0..8] != "package ", "cannot get the module name for a package");
+    static assert(!T.stringof.startsWith("package "), "cannot get the module name for a package");
 
-    static if (T.stringof.length >= 8 && T.stringof[0..7] == "module ")
-        static if (__traits(compiles, packageName!(T)))
-            enum moduleName = packageName!(T) ~ '.' ~ T.stringof[7..$];
+    static if (T.stringof.startsWith("module "))
+    {
+        static if (__traits(compiles, packageName!T))
+            enum packagePrefix = packageName!T ~ '.';
         else
-            enum moduleName = T.stringof[7..$];
+            enum packagePrefix = "";
+
+        enum moduleName = packagePrefix ~ T.stringof[7..$];
+    }
     else
         alias moduleName!(__traits(parent, T)) moduleName;
 }
 
 unittest
 {
+    static assert(moduleName!moduleName == "std.traits");
     import etc.c.curl;
-    static assert(moduleName!(moduleName) == "std.traits");
-    static assert(moduleName!(curl_httppost) == "etc.c.curl");
+    static assert(moduleName!curl_httppost == "etc.c.curl");
 }
 
 
