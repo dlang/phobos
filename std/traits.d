@@ -168,9 +168,24 @@ template packageName(alias T)
 
 unittest
 {
-    static assert(packageName!packageName == "std");
+    // Commented out because of dmd @@@BUG8922@@@
+    // static assert(packageName!std == "std");  // this package (currently: "std.std")
+    static assert(packageName!(std.traits) == "std");     // this module
+    static assert(packageName!packageName == "std");      // symbol in this module
+    static assert(packageName!(std.algorithm) == "std");  // other module from same package
 
-    import etc.c.curl;
+    import etc.c.curl;  // local import
+    static assert(packageName!etc == "etc");
+    static assert(packageName!(etc.c) == "etc.c");
+    static assert(packageName!curl_httppost == "etc.c");
+}
+
+version(unittest)
+{
+    import etc.c.curl;  // global import
+    // Commented out because of dmd @@@BUG8922@@@
+    // static assert(packageName!etc == "etc"); // (currently: "std.etc")
+    static assert(packageName!(etc.c) == "etc.c");
     static assert(packageName!curl_httppost == "etc.c");
 }
 
