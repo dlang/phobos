@@ -2364,10 +2364,8 @@ template hasElaborateCopyConstructor(S)
     }
     else
     {
-        enum hasElaborateCopyConstructor = is(typeof({
-            S s = void;
-            return &s.__postblit;
-        })) || anySatisfy!(.hasElaborateCopyConstructor, typeof(S.tupleof));
+        enum hasElaborateCopyConstructor = hasMember!(S, "__postblit")
+            || anySatisfy!(.hasElaborateCopyConstructor, typeof(S.tupleof));
     }
 }
 
