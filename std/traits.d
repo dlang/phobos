@@ -2358,14 +2358,18 @@ unittest
  */
 template hasElaborateCopyConstructor(S)
 {
-    static if(!is(S == struct))
+    static if(isStaticArray!S && S.length)
     {
-        enum bool hasElaborateCopyConstructor = false;
+        enum bool hasElaborateCopyConstructor = hasElaborateCopyConstructor!(typeof(S[0]));
     }
-    else
+    else static if(is(S == struct))
     {
         enum hasElaborateCopyConstructor = hasMember!(S, "__postblit")
             || anySatisfy!(.hasElaborateCopyConstructor, typeof(S.tupleof));
+    }
+    else
+    {
+        enum bool hasElaborateCopyConstructor = false;
     }
 }
 
@@ -2373,17 +2377,23 @@ unittest
 {
     static assert(!hasElaborateCopyConstructor!int);
 
-    struct S1 { this(this) {} }
-    static assert( hasElaborateCopyConstructor!S1);
-    static assert( hasElaborateCopyConstructor!(immutable(S1)));
-
-    struct S2 { uint num; }
-    struct S3 { uint num; S1 s; }
-    static assert(!hasElaborateCopyConstructor!S2);
+    static struct S1 { }
+    static struct S2 { this(this) {} }
+    static struct S3 { S2 field; }
+    static struct S4 { S3[1] field; }
+    static struct S5 { S3[] field; }
+    static struct S6 { S3[0] field; }
+    static struct S7 { @disable this(); S3 field; }
+    static assert(!hasElaborateCopyConstructor!S1);
+    static assert( hasElaborateCopyConstructor!S2);
+    static assert( hasElaborateCopyConstructor!(immutable S2));
     static assert( hasElaborateCopyConstructor!S3);
-
-    struct S4 { @disable this(); this(int n){} this(this){} }
+    static assert( hasElaborateCopyConstructor!(S3[1]));
+    static assert(!hasElaborateCopyConstructor!(S3[0]));
     static assert( hasElaborateCopyConstructor!S4);
+    static assert(!hasElaborateCopyConstructor!S5);
+    static assert(!hasElaborateCopyConstructor!S6);
+    static assert( hasElaborateCopyConstructor!S7);
 }
 
 /**
