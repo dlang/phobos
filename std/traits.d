@@ -148,33 +148,30 @@ version(unittest)
  * Example:
  * ---
  * import std.traits;
- * static assert(packageName!(packageName) == "std");
+ * static assert(packageName!packageName == "std");
  * ---
  */
 template packageName(alias T)
 {
-    static if (T.stringof.length >= 9 && T.stringof[0..8] == "package ")
-    {
-        static if (is(typeof(__traits(parent, T))))
-        {
-            enum packageName = packageName!(__traits(parent, T)) ~ '.' ~ T.stringof[8..$];
-        }
-        else
-        {
-            enum packageName = T.stringof[8..$];
-        }
-    }
-    else static if (is(typeof(__traits(parent, T))))
-        alias packageName!(__traits(parent, T)) packageName;
+    static if (is(typeof(__traits(parent, T))))
+        enum parent = packageName!(__traits(parent, T));
+    else
+        enum string parent = null;
+
+    static if (T.stringof.startsWith("package "))
+        enum packageName = (parent ? parent ~ '.' : "") ~ T.stringof[8 .. $];
+    else static if (parent)
+        enum packageName = parent;
     else
         static assert(false, T.stringof ~ " has no parent");
 }
 
 unittest
 {
+    static assert(packageName!packageName == "std");
+
     import etc.c.curl;
-    static assert(packageName!(packageName) == "std");
-    static assert(packageName!(curl_httppost) == "etc.c");
+    static assert(packageName!curl_httppost == "etc.c");
 }
 
 /**
