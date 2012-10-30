@@ -15,7 +15,8 @@
  *            Shin Fujishiro,
  *            $(WEB octarineparrot.com, Robert Clipsham),
  *            $(WEB klickverbot.at, David Nadlinger),
- *            Kenji Hara
+ *            Kenji Hara,
+ *            Shoichi Kato
  * Source:    $(PHOBOSSRC std/_traits.d)
  */
 /*          Copyright Digital Mars 2005 - 2009.
@@ -1681,6 +1682,21 @@ unittest
     union S7 { int a; int * b; }
     static assert(!hasRawAliasing!S6);
     static assert( hasRawAliasing!S7);
+    
+    static assert(!hasRawAliasing!(void delegate()));
+    static assert(!hasRawAliasing!(void delegate() const));
+    static assert(!hasRawAliasing!(void delegate() immutable));
+    static assert(!hasRawAliasing!(void delegate() shared));
+    static assert(!hasRawAliasing!(void delegate() shared const));
+    static assert(!hasRawAliasing!(const(void delegate())));
+    static assert(!hasRawAliasing!(immutable(void delegate())));
+    
+    struct S8 { void delegate() a; int b; Object c; }
+    class S12 { typeof(S8.tupleof) a; }
+    class S13 { typeof(S8.tupleof) a; int* b; }
+    static assert(!hasRawAliasing!S8);
+    static assert(!hasRawAliasing!S12);
+    static assert( hasRawAliasing!S13);
 
     //typedef int* S8;
     //static assert(hasRawAliasing!S8);
@@ -1794,6 +1810,33 @@ unittest
     static assert(!hasRawUnsharedAliasing!S8);
     static assert( hasRawUnsharedAliasing!S9);
     static assert(!hasRawUnsharedAliasing!S10);
+    
+    static assert(!hasRawUnsharedAliasing!(void delegate()));
+    static assert(!hasRawUnsharedAliasing!(void delegate() const));
+    static assert(!hasRawUnsharedAliasing!(void delegate() immutable));
+    static assert(!hasRawUnsharedAliasing!(void delegate() shared));
+    static assert(!hasRawUnsharedAliasing!(void delegate() shared const));
+    static assert(!hasRawUnsharedAliasing!(const(void delegate())));
+    static assert(!hasRawUnsharedAliasing!(const(void delegate() const)));
+    static assert(!hasRawUnsharedAliasing!(const(void delegate() immutable)));
+    static assert(!hasRawUnsharedAliasing!(const(void delegate() shared)));
+    static assert(!hasRawUnsharedAliasing!(const(void delegate() shared const)));
+    static assert(!hasRawUnsharedAliasing!(immutable(void delegate())));
+    static assert(!hasRawUnsharedAliasing!(immutable(void delegate() const)));
+    static assert(!hasRawUnsharedAliasing!(immutable(void delegate() immutable)));
+    static assert(!hasRawUnsharedAliasing!(immutable(void delegate() shared)));
+    static assert(!hasRawUnsharedAliasing!(immutable(void delegate() shared const)));
+    static assert(!hasRawUnsharedAliasing!(shared(void delegate())));
+    static assert(!hasRawUnsharedAliasing!(shared(void delegate() const)));
+    static assert(!hasRawUnsharedAliasing!(shared(void delegate() immutable)));
+    static assert(!hasRawUnsharedAliasing!(shared(void delegate() shared)));
+    static assert(!hasRawUnsharedAliasing!(shared(void delegate() shared const)));
+    static assert(!hasRawUnsharedAliasing!(shared(const(void delegate()))));
+    static assert(!hasRawUnsharedAliasing!(shared(const(void delegate() const))));
+    static assert(!hasRawUnsharedAliasing!(shared(const(void delegate() immutable))));
+    static assert(!hasRawUnsharedAliasing!(shared(const(void delegate() shared))));
+    static assert(!hasRawUnsharedAliasing!(shared(const(void delegate() shared const))));
+    static assert(!hasRawUnsharedAliasing!(void function()));
 
     //typedef int* S11;
     //typedef shared int* S12;
@@ -1814,6 +1857,64 @@ unittest
     static assert( hasRawUnsharedAliasing!(int[string]));
     static assert(!hasRawUnsharedAliasing!(shared(int[string])));
     static assert(!hasRawUnsharedAliasing!(immutable(int[string])));
+    
+    struct S17
+    {
+        void delegate() shared a;
+        void delegate() immutable b;
+        void delegate() shared const c;
+        shared(void delegate()) d;
+        shared(void delegate() shared) e;
+        shared(void delegate() immutable) f;
+        shared(void delegate() shared const) g;
+        immutable(void delegate()) h;
+        immutable(void delegate() shared) i;
+        immutable(void delegate() immutable) j;
+        immutable(void delegate() shared const) k;
+        shared(const(void delegate())) l;
+        shared(const(void delegate() shared)) m;
+        shared(const(void delegate() immutable)) n;
+        shared(const(void delegate() shared const)) o;
+    }
+    struct S18 { typeof(S17.tupleof) a; void delegate() p; }
+    struct S19 { typeof(S17.tupleof) a; Object p; }
+    struct S20 { typeof(S17.tupleof) a; int* p; }
+    class S21 { typeof(S17.tupleof) a; }
+    class S22 { typeof(S17.tupleof) a; void delegate() p; }
+    class S23 { typeof(S17.tupleof) a; Object p; }
+    class S24 { typeof(S17.tupleof) a; int* p; }
+    static assert(!hasRawUnsharedAliasing!S17);
+    static assert(!hasRawUnsharedAliasing!(immutable(S17)));
+    static assert(!hasRawUnsharedAliasing!(shared(S17)));
+    static assert(!hasRawUnsharedAliasing!S18);
+    static assert(!hasRawUnsharedAliasing!(immutable(S18)));
+    static assert(!hasRawUnsharedAliasing!(shared(S18)));
+    static assert(!hasRawUnsharedAliasing!S19);
+    static assert(!hasRawUnsharedAliasing!(immutable(S19)));
+    static assert(!hasRawUnsharedAliasing!(shared(S19)));
+    static assert( hasRawUnsharedAliasing!S20);
+    static assert(!hasRawUnsharedAliasing!(immutable(S20)));
+    static assert(!hasRawUnsharedAliasing!(shared(S20)));
+    static assert(!hasRawUnsharedAliasing!S21);
+    static assert(!hasRawUnsharedAliasing!(immutable(S21)));
+    static assert(!hasRawUnsharedAliasing!(shared(S21)));
+    static assert(!hasRawUnsharedAliasing!S22);
+    static assert(!hasRawUnsharedAliasing!(immutable(S22)));
+    static assert(!hasRawUnsharedAliasing!(shared(S22)));
+    static assert(!hasRawUnsharedAliasing!S23);
+    static assert(!hasRawUnsharedAliasing!(immutable(S23)));
+    static assert(!hasRawUnsharedAliasing!(shared(S23)));
+    static assert( hasRawUnsharedAliasing!S24);
+    static assert(!hasRawUnsharedAliasing!(immutable(S24)));
+    static assert(!hasRawUnsharedAliasing!(shared(S24)));
+    struct S25 {}
+    class S26 {}
+    interface S27 {}
+    union S28 {}
+    static assert(!hasRawUnsharedAliasing!S25);
+    static assert(!hasRawUnsharedAliasing!S26);
+    static assert(!hasRawUnsharedAliasing!S27);
+    static assert(!hasRawUnsharedAliasing!S28);
 }
 
 /*
@@ -1883,8 +1984,14 @@ $(LI a delegate.))
 
 template hasAliasing(T...)
 {
+    template isAliasingDelegate(T)
+    {
+        enum isAliasingDelegate = isDelegate!T
+                              && !is(T == immutable)
+                              && !is(FunctionTypeOf!T == immutable);
+    }
     enum hasAliasing = hasRawAliasing!(T) || hasObjects!(T) ||
-        anySatisfy!(isDelegate, T);
+        anySatisfy!(isAliasingDelegate, T, RepresentationTypeTuple!T);
 }
 
 // Specialization to special-case std.typecons.Rebindable.
@@ -1907,6 +2014,25 @@ unittest
     static assert( hasAliasing!(uint[uint]));
     static assert(!hasAliasing!(immutable(uint[uint])));
     static assert( hasAliasing!(void delegate()));
+    static assert( hasAliasing!(void delegate() const));
+    static assert(!hasAliasing!(void delegate() immutable));
+    static assert( hasAliasing!(void delegate() shared));
+    static assert( hasAliasing!(void delegate() shared const));
+    static assert( hasAliasing!(const(void delegate())));
+    static assert( hasAliasing!(const(void delegate() const)));
+    static assert(!hasAliasing!(const(void delegate() immutable)));
+    static assert( hasAliasing!(const(void delegate() shared)));
+    static assert( hasAliasing!(const(void delegate() shared const)));
+    static assert(!hasAliasing!(immutable(void delegate())));
+    static assert(!hasAliasing!(immutable(void delegate() const)));
+    static assert(!hasAliasing!(immutable(void delegate() immutable)));
+    static assert(!hasAliasing!(immutable(void delegate() shared)));
+    static assert(!hasAliasing!(immutable(void delegate() shared const)));
+    static assert( hasAliasing!(shared(const(void delegate()))));
+    static assert( hasAliasing!(shared(const(void delegate() const))));
+    static assert(!hasAliasing!(shared(const(void delegate() immutable))));
+    static assert( hasAliasing!(shared(const(void delegate() shared))));
+    static assert( hasAliasing!(shared(const(void delegate() shared const))));
     static assert(!hasAliasing!(void function()));
 
     interface I;
@@ -1916,6 +2042,34 @@ unittest
     static assert(!hasAliasing!(Rebindable!(immutable Object)));
     static assert( hasAliasing!(Rebindable!(shared Object)));
     static assert( hasAliasing!(Rebindable!(Object)));
+    
+    struct S5
+    {
+        void delegate() immutable b;
+        shared(void delegate() immutable) f;
+        immutable(void delegate() immutable) j;
+        shared(const(void delegate() immutable)) n;
+    }
+    struct S6 { typeof(S5.tupleof) a; void delegate() p; }
+    static assert(!hasAliasing!S5);
+    static assert( hasAliasing!S6);
+
+    struct S7 { void delegate() a; int b; Object c; }
+    class S8 { int a; int b; }
+    class S9 { typeof(S8.tupleof) a; }
+    class S10 { typeof(S8.tupleof) a; int* b; }
+    static assert( hasAliasing!S7);
+    static assert( hasAliasing!S8);
+    static assert( hasAliasing!S9);
+    static assert( hasAliasing!S10);
+    struct S11 {}
+    class S12 {}
+    interface S13 {}
+    union S14 {}
+    static assert(!hasAliasing!S11);
+    static assert( hasAliasing!S12);
+    static assert( hasAliasing!S13);
+    static assert(!hasAliasing!S14);
 }
 /**
 Returns $(D true) if and only if $(D T)'s representation includes at
@@ -1953,23 +2107,16 @@ template hasIndirections(T)
         }
     }
 
-    enum hasIndirections = Impl!(RepresentationTypeTuple!T);
+    enum hasIndirections = Impl!(T, RepresentationTypeTuple!T);
 }
 
 unittest
 {
-    struct S1 { int a; Object b; }
-    struct S2 { string a; }
-    struct S3 { int a; immutable Object b; }
-    static assert( hasIndirections!S1);
-    static assert( hasIndirections!S2);
-    static assert( hasIndirections!S3);
-
     static assert( hasIndirections!(int[string]));
     static assert( hasIndirections!(void delegate()));
-
-    interface I;
-    static assert( hasIndirections!I);
+    static assert( hasIndirections!(void delegate() immutable));
+    static assert( hasIndirections!(immutable(void delegate())));
+    static assert( hasIndirections!(immutable(void delegate() immutable)));
 
     static assert(!hasIndirections!(void function()));
     static assert( hasIndirections!(void*[1]));
@@ -1977,6 +2124,59 @@ unittest
 
     // void static array hides actual type of bits, so "may have indirections".
     static assert( hasIndirections!(void[1]));
+    interface I;
+    struct S1 {}
+    struct S2 { int a; }
+    struct S3 { int a; int b; }
+    struct S4 { int a; int* b; }
+    struct S5 { int a; Object b; }
+    struct S6 { int a; string b; }
+    struct S7 { int a; immutable Object b; }
+    struct S8 { int a; immutable I b; }
+    struct S9 { int a; void delegate() b; }
+    struct S10 { int a; immutable(void delegate()) b; }
+    struct S11 { int a; void delegate() immutable b; }
+    struct S12 { int a; immutable(void delegate() immutable) b; }
+    class S13 {}
+    class S14 { int a; }
+    class S15 { int a; int b; }
+    class S16 { int a; Object b; }
+    class S17 { string a; }
+    class S18 { int a; immutable Object b; }
+    class S19 { int a; immutable(void delegate() immutable) b; }
+    union S20 {}
+    union S21 { int a; }
+    union S22 { int a; int b; }
+    union S23 { int a; Object b; }
+    union S24 { string a; }
+    union S25 { int a; immutable Object b; }
+    union S26 { int a; immutable(void delegate() immutable) b; }
+    static assert( hasIndirections!I);
+    static assert(!hasIndirections!S1);
+    static assert(!hasIndirections!S2);
+    static assert(!hasIndirections!S3);
+    static assert( hasIndirections!S4);
+    static assert( hasIndirections!S5);
+    static assert( hasIndirections!S6);
+    static assert( hasIndirections!S7);
+    static assert( hasIndirections!S8);
+    static assert( hasIndirections!S9);
+    static assert( hasIndirections!S10);
+    static assert( hasIndirections!S12);
+    static assert( hasIndirections!S13);
+    static assert( hasIndirections!S14);
+    static assert( hasIndirections!S15);
+    static assert( hasIndirections!S16);
+    static assert( hasIndirections!S17);
+    static assert( hasIndirections!S18);
+    static assert( hasIndirections!S19);
+    static assert(!hasIndirections!S20);
+    static assert(!hasIndirections!S21);
+    static assert(!hasIndirections!S22);
+    static assert( hasIndirections!S23);
+    static assert( hasIndirections!S24);
+    static assert( hasIndirections!S25);
+    static assert( hasIndirections!S26);
 }
 
 // These are for backwards compatibility, are intentionally lacking ddoc,
@@ -2008,12 +2208,17 @@ template hasUnsharedAliasing(T...)
     {
         template unsharedDelegate(T)
         {
-            enum bool unsharedDelegate = isDelegate!T && !is(T == shared);
+            enum bool unsharedDelegate = isDelegate!T
+                                     && !is(T == shared)
+                                     && !is(T == shared)
+                                     && !is(T == immutable)
+                                     && !is(FunctionTypeOf!(T) == shared)
+                                     && !is(FunctionTypeOf!(T) == immutable);
         }
 
         enum hasUnsharedAliasing =
             hasRawUnsharedAliasing!(T[0]) ||
-            anySatisfy!(unsharedDelegate, T[0]) ||
+            anySatisfy!(unsharedDelegate, RepresentationTypeTuple!(T[0])) ||
             hasUnsharedObjects!(T[0]) ||
             hasUnsharedAliasing!(T[1..$]);
     }
@@ -2042,8 +2247,32 @@ unittest
     static assert(!hasUnsharedAliasing!S8);
 
     static assert( hasUnsharedAliasing!(uint[uint]));
+    
     static assert( hasUnsharedAliasing!(void delegate()));
+    static assert( hasUnsharedAliasing!(void delegate() const));
+    static assert(!hasUnsharedAliasing!(void delegate() immutable));
+    static assert(!hasUnsharedAliasing!(void delegate() shared));
+    static assert(!hasUnsharedAliasing!(void delegate() shared const));
+    static assert( hasUnsharedAliasing!(const(void delegate())));
+    static assert( hasUnsharedAliasing!(const(void delegate() const)));
+    static assert(!hasUnsharedAliasing!(const(void delegate() immutable)));
+    static assert(!hasUnsharedAliasing!(const(void delegate() shared)));
+    static assert(!hasUnsharedAliasing!(const(void delegate() shared const)));
+    static assert(!hasUnsharedAliasing!(immutable(void delegate())));
+    static assert(!hasUnsharedAliasing!(immutable(void delegate() const)));
+    static assert(!hasUnsharedAliasing!(immutable(void delegate() immutable)));
+    static assert(!hasUnsharedAliasing!(immutable(void delegate() shared)));
+    static assert(!hasUnsharedAliasing!(immutable(void delegate() shared const)));
     static assert(!hasUnsharedAliasing!(shared(void delegate())));
+    static assert(!hasUnsharedAliasing!(shared(void delegate() const)));
+    static assert(!hasUnsharedAliasing!(shared(void delegate() immutable)));
+    static assert(!hasUnsharedAliasing!(shared(void delegate() shared)));
+    static assert(!hasUnsharedAliasing!(shared(void delegate() shared const)));
+    static assert(!hasUnsharedAliasing!(shared(const(void delegate()))));
+    static assert(!hasUnsharedAliasing!(shared(const(void delegate() const))));
+    static assert(!hasUnsharedAliasing!(shared(const(void delegate() immutable))));
+    static assert(!hasUnsharedAliasing!(shared(const(void delegate() shared))));
+    static assert(!hasUnsharedAliasing!(shared(const(void delegate() shared const))));
     static assert(!hasUnsharedAliasing!(void function()));
 
     interface I {}
@@ -2061,6 +2290,64 @@ unittest
     static assert( hasUnsharedAliasing!(int, shared(int)*, Rebindable!(Object)));
     static assert(!hasUnsharedAliasing!(shared(int)*, Rebindable!(shared Object)));
     static assert(!hasUnsharedAliasing!());
+    
+    struct S9
+    {
+        void delegate() shared a;
+        void delegate() immutable b;
+        void delegate() shared const c;
+        shared(void delegate()) d;
+        shared(void delegate() shared) e;
+        shared(void delegate() immutable) f;
+        shared(void delegate() shared const) g;
+        immutable(void delegate()) h;
+        immutable(void delegate() shared) i;
+        immutable(void delegate() immutable) j;
+        immutable(void delegate() shared const) k;
+        shared(const(void delegate())) l;
+        shared(const(void delegate() shared)) m;
+        shared(const(void delegate() immutable)) n;
+        shared(const(void delegate() shared const)) o;
+    }
+    struct S10 { typeof(S9.tupleof) a; void delegate() p; }
+    struct S11 { typeof(S9.tupleof) a; Object p; }
+    struct S12 { typeof(S9.tupleof) a; int* p; }
+    class S13 { typeof(S9.tupleof) a; }
+    class S14 { typeof(S9.tupleof) a; void delegate() p; }
+    class S15 { typeof(S9.tupleof) a; Object p; }
+    class S16 { typeof(S9.tupleof) a; int* p; }
+    static assert(!hasUnsharedAliasing!S9);
+    static assert(!hasUnsharedAliasing!(immutable(S9)));
+    static assert(!hasUnsharedAliasing!(shared(S9)));
+    static assert( hasUnsharedAliasing!S10);
+    static assert(!hasUnsharedAliasing!(immutable(S10)));
+    static assert(!hasUnsharedAliasing!(shared(S10)));
+    static assert( hasUnsharedAliasing!S11);
+    static assert(!hasUnsharedAliasing!(immutable(S11)));
+    static assert(!hasUnsharedAliasing!(shared(S11)));
+    static assert( hasUnsharedAliasing!S12);
+    static assert(!hasUnsharedAliasing!(immutable(S12)));
+    static assert(!hasUnsharedAliasing!(shared(S12)));
+    static assert( hasUnsharedAliasing!S13);
+    static assert(!hasUnsharedAliasing!(immutable(S13)));
+    static assert(!hasUnsharedAliasing!(shared(S13)));
+    static assert( hasUnsharedAliasing!S14);
+    static assert(!hasUnsharedAliasing!(immutable(S14)));
+    static assert(!hasUnsharedAliasing!(shared(S14)));
+    static assert( hasUnsharedAliasing!S15);
+    static assert(!hasUnsharedAliasing!(immutable(S15)));
+    static assert(!hasUnsharedAliasing!(shared(S15)));
+    static assert( hasUnsharedAliasing!S16);
+    static assert(!hasUnsharedAliasing!(immutable(S16)));
+    static assert(!hasUnsharedAliasing!(shared(S16)));
+    struct S17 {}
+    class S18 {}
+    interface S19 {}
+    union S20 {}
+    static assert(!hasUnsharedAliasing!S17);
+    static assert( hasUnsharedAliasing!S18);
+    static assert( hasUnsharedAliasing!S19);
+    static assert(!hasUnsharedAliasing!S20);
 }
 
 /**
