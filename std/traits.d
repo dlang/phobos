@@ -248,21 +248,16 @@ version(unittest)
 template fullyQualifiedName(alias T)
 {
     static if (__traits(compiles, __traits(parent, T)))
-		enum parentPrefix = fullyQualifiedName!(__traits(parent, T)) ~ '.';
-	else
-		enum parentPrefix = null;
-
-    static if (T.stringof.startsWith("package "))
-        enum fullyQualifiedName = parentPrefix ~ T.stringof[8 .. $];
-
-    else static if (T.stringof.startsWith("module "))
-        enum fullyQualifiedName = parentPrefix ~ T.stringof[7 .. $];
-
-    else static if (T.stringof.canFind('('))
-        enum fullyQualifiedName = parentPrefix ~ T.stringof[0 .. T.stringof.countUntil('(')];
-
+        enum parentPrefix = fullyQualifiedName!(__traits(parent, T)) ~ '.';
     else
-        enum fullyQualifiedName = parentPrefix ~ T.stringof;
+        enum parentPrefix = null;
+
+    enum fullyQualifiedName = parentPrefix ~ (s)
+    {
+        if(s.skipOver("package ") || s.skipOver("module "))
+            return s;
+        return s.findSplit("(")[0];
+    }(T.stringof);
 }
 
 version(unittest)
