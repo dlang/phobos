@@ -2466,14 +2466,17 @@ unittest
     static struct S4 { S3[1] field; }
     static struct S5 { S3[] field; }
     static struct S6 { S3[0] field; }
+    static struct S7 { @disable this(); S3 field; }
     static assert(!hasElaborateDestructor!S1);
     static assert( hasElaborateDestructor!S2);
+    static assert( hasElaborateDestructor!(immutable S2));
     static assert( hasElaborateDestructor!S3);
     static assert( hasElaborateDestructor!(S3[1]));
     static assert(!hasElaborateDestructor!(S3[0]));
     static assert( hasElaborateDestructor!S4);
     static assert(!hasElaborateDestructor!S5);
     static assert(!hasElaborateDestructor!S6);
+    static assert( hasElaborateDestructor!S7);
 }
 
 template Identity(alias A) { alias A Identity; }
