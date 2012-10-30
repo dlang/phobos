@@ -216,8 +216,23 @@ template moduleName(alias T)
 
 unittest
 {
-    static assert(moduleName!moduleName == "std.traits");
-    import etc.c.curl;
+    static assert(!__traits(compiles, moduleName!std));
+    static assert(moduleName!(std.traits) == "std.traits");            // this module
+    static assert(moduleName!moduleName == "std.traits");              // symbol in this module
+    static assert(moduleName!(std.algorithm) == "std.algorithm");      // other module
+    static assert(moduleName!(std.algorithm.map) == "std.algorithm");  // symbol in other module
+
+    import etc.c.curl;  // local import
+    static assert(!__traits(compiles, moduleName!(etc.c)));
+    static assert(moduleName!(etc.c.curl) == "etc.c.curl");
+    static assert(moduleName!curl_httppost == "etc.c.curl");
+}
+
+version(unittest)
+{
+    import etc.c.curl;  // global import
+    static assert(!__traits(compiles, moduleName!(etc.c)));
+    static assert(moduleName!(etc.c.curl) == "etc.c.curl");
     static assert(moduleName!curl_httppost == "etc.c.curl");
 }
 
