@@ -247,40 +247,22 @@ version(unittest)
  */
 template fullyQualifiedName(alias T)
 {
-    static if ((__traits(compiles, __traits(parent, T))))
-    {
-        static if (T.stringof.length >= 9 && T.stringof[0..8] == "package ")
-        {
-            enum fullyQualifiedName = fullyQualifiedName!(__traits(parent, T)) ~ '.' ~ T.stringof[8..$];
-        }
-        else static if (T.stringof.length >= 8 && T.stringof[0..7] == "module ")
-        {
-            enum fullyQualifiedName = fullyQualifiedName!(__traits(parent, T)) ~ '.' ~ T.stringof[7..$];
-        }
-        else static if (T.stringof.countUntil('(') == -1)
-        {
-            enum fullyQualifiedName = fullyQualifiedName!(__traits(parent, T)) ~ '.' ~ T.stringof;
-        }
-        else
-            enum fullyQualifiedName = fullyQualifiedName!(__traits(parent, T)) ~ '.' ~ T.stringof[0..T.stringof.countUntil('(')];
-    }
+    static if (__traits(compiles, __traits(parent, T)))
+		enum parentPrefix = fullyQualifiedName!(__traits(parent, T)) ~ '.';
+	else
+		enum parentPrefix = null;
+
+    static if (T.stringof.startsWith("package "))
+        enum fullyQualifiedName = parentPrefix ~ T.stringof[8 .. $];
+
+    else static if (T.stringof.startsWith("module "))
+        enum fullyQualifiedName = parentPrefix ~ T.stringof[7 .. $];
+
+    else static if (T.stringof.canFind('('))
+        enum fullyQualifiedName = parentPrefix ~ T.stringof[0 .. T.stringof.countUntil('(')];
+
     else
-    {
-        static if (T.stringof.length >= 9 && T.stringof[0..8] == "package ")
-        {
-            enum fullyQualifiedName = T.stringof[8..$];
-        }
-        else static if (T.stringof.length >= 8 && T.stringof[0..7] == "module ")
-        {
-            enum fullyQualifiedName = T.stringof[7..$];
-        }
-        else static if (T.stringof.countUntil('(') == -1)
-        {
-            enum fullyQualifiedName = T.stringof;
-        }
-        else
-            enum fullyQualifiedName = T.stringof[0..T.stringof.countUntil('(')];
-    }
+        enum fullyQualifiedName = parentPrefix ~ T.stringof;
 }
 
 version(unittest)
@@ -295,10 +277,11 @@ version(unittest)
 
 unittest
 {
-    import etc.c.curl;
-    static assert(fullyQualifiedName!(fullyQualifiedName) == "std.traits.fullyQualifiedName");
-    static assert(fullyQualifiedName!(curl_httppost) == "etc.c.curl.curl_httppost");
+    static assert(fullyQualifiedName!fullyQualifiedName == "std.traits.fullyQualifiedName");
     static assert(fullyQualifiedName!(Outer.Inner) == "std.traits.Outer.Inner");
+
+    import etc.c.curl;
+    static assert(fullyQualifiedName!curl_httppost == "etc.c.curl.curl_httppost");
 }
 
 /***
