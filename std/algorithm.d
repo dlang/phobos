@@ -1472,7 +1472,7 @@ void move(T)(ref T source, ref T target)
         {
             static T empty;
             static if (T.tupleof.length > 0 &&
-                       T.tupleof[$-1].stringof.endsWith("this"))
+                       T.tupleof[$-1].stringof.endsWith(".this"))
             {
                 // If T is nested struct, keep original context pointer
                 memcpy(&source, &empty, T.sizeof - (void*).sizeof);
@@ -1732,6 +1732,11 @@ unittest
 
     //Make sure the original Forest does not have a lecythis anymore
     assert(wa.lecythis is null);
+    
+    Forest wc;
+    wc = move(wb);
+    assert(*wc.lecythis == 5);
+    assert(wb.lecythis is null);
 }
 
 // moveAll
