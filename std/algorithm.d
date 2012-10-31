@@ -1672,11 +1672,25 @@ unittest
 
     //Make sure the original Forest does not have a lecythis anymore
     assert(wa.lecythis is null);
-    
+
     Forest wc;
     wc = move(wb);
     assert(*wc.lecythis == 5);
     assert(wb.lecythis is null);
+
+    //test static array move
+    int* p1 = [1].ptr;
+    int* p2 = [2].ptr;
+    Forest[2] trees;
+    trees[0].lecythis = p1;
+    trees[1].lecythis = p2;
+
+    Forest[2] otherTrees;
+    move(trees, otherTrees);
+
+    //verify that the pointers were actually moved (and not post-blitted)
+    assert(otherTrees[0].lecythis is p1);
+    assert(otherTrees[1].lecythis is p2);
 }
 
 /*
