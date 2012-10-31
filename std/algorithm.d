@@ -1458,7 +1458,10 @@ void move(T)(ref T source, ref T target)
     static if (is(T == struct) && hasElaborateDestructor!T)
     {
         // Most complicated case. Destroy whatever target had in it
-        typeid(T).destroy(&target);
+        static if (hasMember!(T, "__dtor"))
+            target.__dtor();
+        else
+            typeid(T).destroy(&target);
     }
     uninitializedMove(source, target);
 }
