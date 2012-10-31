@@ -1457,42 +1457,13 @@ void move(T)(ref T source, ref T target)
 {
     if (&source == &target) return;
     assert(!pointsTo(source, source));
-    static if (is(T == struct))
-    {
-        // Most complicated case. Destroy whatever target had in it
-        // and bitblast source over it
-        static if (hasElaborateDestructor!T) typeid(T).destroy(&target);
-
-        memcpy(&target, &source, T.sizeof);
-
-        // If the source defines a destructor or a postblit hook, we must obliterate the
-        // object in order to avoid double freeing and undue aliasing
-        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
+    static if (is(T == struct) || isStaticArray!T)
+        static if (hasElaborateDestructor!T)
         {
-            static T empty;
-            static if (T.tupleof.length > 0 &&
-                       T.tupleof[$-1].stringof.endsWith(".this"))
-            {
-                // If T is nested struct, keep original context pointer
-                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
-            }
-            else
-            {
-                memcpy(&source, &empty, T.sizeof);
-            }
+            // Most complicated case. Destroy whatever target had in it
+            typeid(T).destroy(&target);
         }
-    }
-    else
-    {
-        // Primitive data (including pointers and arrays) or class -
-        // assignment works great
-        target = source;
-        // static if (is(typeof(source = null)))
-        // {
-        //     // Nullify the source to help the garbage collector
-        //     source = null;
-        // }
-    }
+    uninitializedMove(source, target);
 }
 
 unittest
@@ -1548,38 +1519,8 @@ unittest
 /// Ditto
 T move(T)(ref T source)
 {
-    // Can avoid to check aliasing.
-
     T result = void;
-    static if (is(T == struct))
-    {
-        // Can avoid destructing result.
-
-        memcpy(&result, &source, T.sizeof);
-
-        // If the source defines a destructor or a postblit hook, we must obliterate the
-        // object in order to avoid double freeing and undue aliasing
-        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
-        {
-            static T empty;
-            static if (T.tupleof.length > 0 &&
-                       T.tupleof[$-1].stringof.endsWith(".this"))
-            {
-                // If T is nested struct, keep original context pointer
-                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
-            }
-            else
-            {
-                memcpy(&source, &empty, T.sizeof);
-            }
-        }
-    }
-    else
-    {
-        // Primitive data (including pointers and arrays) or class -
-        // assignment works great
-        result = source;
-    }
+    uninitializedMove(source, result);
     return result;
 }
 
@@ -1736,6 +1677,42 @@ unittest
     wc = move(wb);
     assert(wc.lecythis == p);
     assert(wb.lecythis is null);
+}
+
+/*
+Like move, but assumes that source does not contain meaningful content.
+
+Currently private
+*/
+private void uninitializedMove(T)(ref T source, ref T target)
+{
+    static if (is(T == struct))
+    {
+        memcpy(&target, &source, T.sizeof);
+
+        // If the source defines a destructor or a postblit hook, we must obliterate the
+        // object in order to avoid double freeing and undue aliasing
+        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
+        {
+            static T empty;
+            static if (T.tupleof.length > 0 &&
+                       T.tupleof[$-1].stringof.endsWith(".this"))
+            {
+                // If T is nested struct, keep original context pointer
+                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
+            }
+            else
+            {
+                memcpy(&source, &empty, T.sizeof);
+            }
+        }
+    }
+    else
+    {
+        // Primitive data (including pointers and arrays) or class -
+        // assignment works great
+        target = source;
+    }
 }
 
 // moveAll
