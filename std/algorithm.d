@@ -322,6 +322,7 @@ import std.array, std.ascii, std.container, std.conv, std.exception,
 version(unittest)
 {
     import std.random, std.stdio, std.string;
+    import core.memory;
     mixin(dummyRanges);
 }
 
@@ -1471,7 +1472,7 @@ void move(T)(ref T source, ref T target)
         {
             static T empty;
             static if (T.tupleof.length > 0 &&
-                       T.tupleof[$-1].stringof.endsWith("this"))
+                       T.tupleof[$-1].stringof.endsWith(".this"))
             {
                 // If T is nested struct, keep original context pointer
                 memcpy(&source, &empty, T.sizeof - (void*).sizeof);
@@ -1563,7 +1564,7 @@ T move(T)(ref T source)
         {
             static T empty;
             static if (T.tupleof.length > 0 &&
-                       T.tupleof[$-1].stringof.endsWith("this"))
+                       T.tupleof[$-1].stringof.endsWith(".this"))
             {
                 // If T is nested struct, keep original context pointer
                 memcpy(&source, &empty, T.sizeof - (void*).sizeof);
@@ -1690,6 +1691,52 @@ unittest// Issue 8057
     Array!int.Payload x = void;
     static assert(__traits(compiles, move(x)    ));
     static assert(__traits(compiles, move(x, x) ));
+}
+
+unittest
+{
+    //Make sure there is no funny business with empty structs
+    static struct S1
+    {}
+    static struct S2
+    { 
+        ~this(){}
+    }
+
+    S1 a1, b1;
+    S2 a2, b2;
+    a1.move(b1);
+    a2.move(b2);
+}
+
+unittest
+{
+    //Test funny structure whose last attribute ends in "this"...
+    static struct Forest
+    {
+        int* lecythis;
+        ~this()
+        {
+            if(lecythis)
+                core.memory.GC.free(lecythis);
+        }
+    }
+
+    int* p = [5].ptr;
+    Forest wa = Forest(p);
+    Forest wb;
+    wa.move(wb);
+
+    //Make sure the lecythis was correctly moved
+    assert(*wb.lecythis == 5);
+
+    //Make sure the original Forest does not have a lecythis anymore
+    assert(wa.lecythis is null);
+    
+    Forest wc;
+    wc = move(wb);
+    assert(*wc.lecythis == 5);
+    assert(wb.lecythis is null);
 }
 
 // moveAll
