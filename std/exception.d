@@ -892,7 +892,6 @@ bool pointsTo(S, T)(ref const shared S source, ref const shared T target) @trust
     alias pointsTo!(shared(S), shared(T), void) ptsTo;  // do instantiate explicitly
     return ptsTo(source, target);
 }
-
 unittest
 {
     struct S1 { int a; S1 * b; }
@@ -931,16 +930,65 @@ unittest
     assert(pointsTo(sh3sub, sh3));
 
     int[] darr = [1, 2, 3, 4];
+
+    //dynamic arrays don't point to each other, or slices of themselves
+    assert(!pointsTo(darr, darr));
+    assert(!pointsTo(darr, darr[0 .. 1]));
+    assert(!pointsTo(darr[0 .. 1], darr));
+
+    //But they do point their elements
     foreach(i; 0 .. 4)
         assert(pointsTo(darr, darr[i]));
     assert(pointsTo(darr[0..3], darr[2]));
     assert(!pointsTo(darr[0..3], darr[3]));
+}
 
-    int[4] sarr = [1, 2, 3, 4];
-    foreach(i; 0 .. 4)
-        assert(pointsTo(sarr, sarr[i]));
-    assert(pointsTo(sarr[0..3], sarr[2]));
-    assert(!pointsTo(sarr[0..3], sarr[3]));
+unittest
+{
+    //tests with static arrays
+    //Static arrays themselves are just objects, and don't really *point* to anything.
+    //They aggregate their contents, much the same way a structure aggregates its attributes.
+    //*However* The elements inside the static array may themselves point to stuff.
+
+    //Standard array
+    int[2] k;
+    assert(!pointsTo(k, k)); //an array doesn't point to itself
+    //Technically, k doesn't point its elements, although it does alias them
+    assert(!pointsTo(k, k[0]));
+    assert(!pointsTo(k, k[1]));
+    //But an extracted slice will point to the same array.
+    assert(pointsTo(k[], k));
+    assert(pointsTo(k[], k[1]));
+
+    //An array of pointers
+    int*[2] pp;
+    int a;
+    int b;
+    pp[0] = &a;
+    assert( pointsTo(pp, a));  //The array contains a pointer to a
+    assert(!pointsTo(pp, b));  //The array does NOT contain a pointer to b
+    assert(!pointsTo(pp, pp)); //The array does not point itslef
+
+    //A struct containing a static array of pointers
+    static struct S
+    {
+        int*[2] p;
+    }
+    S s;
+    s.p[0] = &a;
+    assert( pointsTo(s, a)); //The struct contains an array that points a
+    assert(!pointsTo(s, b)); //But doesn't point b
+    assert(!pointsTo(s, s)); //The struct doesn't actually point itslef.
+
+    //An array containing structs that have pointers
+    static struct SS
+    {
+        int* p;
+    }
+    SS[2] ss = [SS(&a), SS(null)];
+    assert( pointsTo(ss, a));  //The array contains a struct that points to a
+    assert(!pointsTo(ss, b));  //The array doesn't contains a struct that points to b
+    assert(!pointsTo(ss, ss)); //The array doesn't point itself.
 }
 
 /*********************
