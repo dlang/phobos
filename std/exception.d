@@ -868,10 +868,7 @@ bool pointsTo(S, T, Tdummy=void)(ref const S source, ref const T target) @truste
     else static if (is(S == struct))
     {
         foreach (i, Subobj; typeof(source.tupleof))
-        {
-            static if (!isStaticArray!(Subobj))
-                if (pointsTo(source.tupleof[i], target)) return true;
-        }
+            if (pointsTo(source.tupleof[i], target)) return true;
         return false;
     }
     else static if (isStaticArray!S)
