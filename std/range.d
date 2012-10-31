@@ -1214,11 +1214,17 @@ unittest
 Returns $(D true) if $(D R) offers a slicing operator with integral boundaries
 that returns a forward range type.
 
-For infinite ranges, the result of $(D opSlice) must be the result of
-$(LREF take) or $(LREF takeExactly) on the original range (they both return the
-same type for infinite ranges), and for finite ranges, the result must be
-implicitly convertible to the original range type so that it can be reassigned
-to the original range and the original range can be constructed from it.
+For finite ranges, the result of $(D opSlice) must be implicitly convertible
+to the original range type so that it can be reassigned to the original range
+and so that the original range can be constructed from it. If the range defines
+$(D opDollar), then it must support subtraction.
+
+For infinite ranges, when $(I not) using $(D opDollar), the result of
+$(D opSlice) must be the result of $(LREF take) or $(LREF takeExactly) on the
+original range (they both return the same type for infinite ranges). However,
+when using $(D opDollar), the result of $(D opSlice) must be implicitly
+convertible to the original range type so that it can be reassigned to the
+original range and so that the original range can be constructed from it.
 
 The following code should compile for $(D hasSlicing) to be $(D true):
 
@@ -1231,6 +1237,18 @@ else
     R s = r[1 .. 2];
 
 s = r[1 .. 2];
+
+static if(is(typeof(r[0 .. $])))
+{
+    R t = r[0 .. $];
+    t = r[0 .. $];
+
+    static if(!isInfinite!R)
+    {
+        R u = r[0 .. $ - 1];
+        u = r[0 .. $ - 1];
+    }
+}
 
 static assert(isForwardRange!(typeof(r[1 .. 2])));
 static assert(hasLength!(typeof(r[1 .. 2])));
@@ -1249,6 +1267,18 @@ template hasSlicing(R)
             R s = r[1 .. 2];
 
         s = r[1 .. 2];
+
+        static if(is(typeof(r[0 .. $])))
+        {
+            R t = r[0 .. $];
+            t = r[0 .. $];
+
+            static if(!isInfinite!R)
+            {
+                R u = r[0 .. $ - 1];
+                u = r[0 .. $ - 1];
+            }
+        }
 
         static assert(isForwardRange!(typeof(r[1 .. 2])));
         static assert(hasLength!(typeof(r[1 .. 2])));
@@ -1289,6 +1319,10 @@ unittest
         @property int front() { return 1; }
         @property InfOnes save() { return this; }
         auto opSlice(size_t i, size_t j) { return takeExactly(this, j - i); }
+        auto opSlice(size_t i, Dollar d) { return this; }
+
+        struct Dollar {}
+        Dollar opDollar() const { return Dollar.init; }
     }
 
     static assert(hasSlicing!InfOnes);
