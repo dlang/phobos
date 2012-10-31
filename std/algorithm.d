@@ -1454,9 +1454,13 @@ Preconditions:
 $(D &source == &target || !pointsTo(source, source))
 */
 void move(T)(ref T source, ref T target)
+in
 {
-    if (&source == &target) return;
-    assert(!pointsTo(source, source));
+    assert(&source != &target, "Cannot move the same object to itself");
+    assert(!pointsTo(source, source), "Move: object contains self pointer");
+}
+body
+{
     static if (is(T == struct))
     {
         // Most complicated case. Destroy whatever target had in it
