@@ -850,8 +850,12 @@ version(none) unittest
 /**
 Returns $(D true) if $(D source)'s representation embeds a pointer
 that points to $(D target)'s representation or somewhere inside
-it. Note that evaluating $(D pointsTo(x, x)) checks whether $(D x) has
-internal pointers.
+it.
+
+Note that evaluating $(D pointsTo(x, x)) checks whether $(D x) has
+internal pointers. This should only be done as an assertive test,
+as the language is free to assume objects don't have internal pointers
+(TDPL 7.1.3.5).
 */
 bool pointsTo(S, T, Tdummy=void)(ref const S source, ref const T target) @trusted pure nothrow
 {
@@ -870,7 +874,13 @@ bool pointsTo(S, T, Tdummy=void)(ref const S source, ref const T target) @truste
         }
         return false;
     }
-    else static if (isArray!(S))
+    else static if (isStaticArray!S)
+    {
+        foreach (size_t i; 0 .. S.length)
+            if (pointsTo(source[i], target)) return true;
+        return false;
+    }
+    else static if (isDynamicArray!S)
     {
         return overlap(cast(void[])source, cast(void[])(&target)[0 .. 1]).length != 0;
     }
