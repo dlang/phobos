@@ -66,7 +66,7 @@
   $(REG_TABLE
     $(REG_TITLE Pattern element, Semantics )
     $(REG_TITLE Atoms, Match single characters )
-    $(REG_ROW any character except [|*+?(), Matches the character itself. )
+    $(REG_ROW any character except [{|*+?()^$, Matches the character itself. )
     $(REG_ROW ., In single line mode matches any charcter.
       Otherwise it matches any character except '\n' and '\r'. )
     $(REG_ROW [class], Matches a single character
