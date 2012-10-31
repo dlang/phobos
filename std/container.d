@@ -2196,20 +2196,33 @@ Complexity: $(BIGOH 1)
 
     /// ditto
     Range linearRemove(R)(R r)
-    if (isInputRange!R && is(typeof(r.source)))
+        if (is(R == Range))
+    {
+         return remove(r);
+    }
+
+/**
+$(D linearRemove) functions as $(D remove), but also accepts ranges that are
+result the of a $(D take) operation. This is a convenient way to remove a
+fixed amount of elements from the range.
+
+Complexity: $(BIGOH r.walkLength)
+     */
+    Range linearRemove(R)(R r)
+        if (is(R == Take!Range))
     {
         if (r.empty)
-        {
             return Range(null,null);
-        }
-        enforce(r.source._first);
+        assert(r.source._first);
+
         Node* first = r.source._first;
-        Node* last;
-        while(!r.empty)
+        Node* last = void;
+        do
         {
             last = r.source._first;
             r.popFront();
-        }
+        } while ( !r.empty );
+
         return remove(Range(first, last));
     }
 
