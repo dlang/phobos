@@ -322,6 +322,7 @@ import std.array, std.ascii, std.container, std.conv, std.exception,
 version(unittest)
 {
     import std.random, std.stdio, std.string;
+    import core.memory;
     mixin(dummyRanges);
 }
 
@@ -1717,7 +1718,7 @@ unittest
         ~this()
         {
             if(lecythis)
-                delete lecythis;
+                core.memory.GC.free(lecythis);
         }
     }
 
