@@ -1528,14 +1528,14 @@ b.stableInsertFront(1); //insert before of b
 b.stableInsertBack(5); //insert after of b
 // (2 - (3 - 4) - 5)
 assert(a[].equal([3, 4])); //a is not changed
-assert(b[].equal([1, 3, 4, 5])); // but a is
+assert(b[].equal([1, 3, 4, 5])); // but b is changed
 
 a.stableInsertFront(2); //insert in front of a, this will insert "inside" the chain
 // (1 - (2 - 3 - 4) - 5)
 assert(a[].equal([2, 3, 4])); //a is modified
 assert(b[].equal([1, 2, 3, 4, 5])); //and so is b;
 
-a.remove(a[]); //remove all the elements of a;
+a.remove(a[]); //remove all the elements of a: This will cut them from the chain;
 // (1 - 5)
 assert(a[].empty); //a is empty
 assert(b[].equal([1, 5])); //b has lost some of its elements;
@@ -1543,8 +1543,8 @@ assert(b[].equal([1, 5])); //b has lost some of its elements;
 a.insert(2); //insert in a. This will create a new chain
 // (2)
 // (1 - 5)
-assert(a[].equal([2])); //a is empty
-assert(b[].equal([1, 5])); //b has lost some of its elements;
+assert(a[].equal([2])); //a is a new chain
+assert(b[].equal([1, 5])); //b is unchanged;
 ----
  */
 struct DList(T)
@@ -2233,14 +2233,14 @@ unittest
     b.stableInsertBack(5); //insert after of b
     // (2 - (3 - 4) - 5)
     assert(a[].equal([3, 4])); //a is not changed
-    assert(b[].equal([1, 3, 4, 5])); // but a is
+    assert(b[].equal([1, 3, 4, 5])); // but b is changed
 
     a.stableInsertFront(2); //insert in front of a, this will insert "inside" the chain
     // (1 - (2 - 3 - 4) - 5)
     assert(a[].equal([2, 3, 4])); //a is modified
     assert(b[].equal([1, 2, 3, 4, 5])); //and so is b;
 
-    a.remove(a[]); //remove all the elements of a;
+    a.remove(a[]); //remove all the elements of a: This will cut them from the chain;
     // (1 - 5)
     assert(a[].empty); //a is empty
     assert(b[].equal([1, 5])); //b has lost some of its elements;
@@ -2248,8 +2248,8 @@ unittest
     a.insert(2); //insert in a. This will create a new chain
     // (2)
     // (1 - 5)
-    assert(a[].equal([2])); //a is empty
-    assert(b[].equal([1, 5])); //b has lost some of its elements;
+    assert(a[].equal([2])); //a is a new chain
+    assert(b[].equal([1, 5])); //b is unchanged;
 }
 
 unittest
