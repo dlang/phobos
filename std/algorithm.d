@@ -1713,6 +1713,16 @@ body
             }
         }
     }
+    else static if (isStaticArray!T)
+    {
+        //Static array assignement will destroy and postblit. We want to avoid that.
+        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
+            foreach(size_t i; 0..T.length)
+                uninitializedMove(source[i], target[i]);
+        else
+            //No postblit nor destructor, so opassign is fine
+            target = source;
+    }
     else
     {
         // Primitive data (including pointers and arrays) or class -
