@@ -125,9 +125,25 @@ unittest
     hash = sha.finish();
 }
 
+version(OSX)
+{
+    // Do not use.
+}
+else version(D_InlineAsm_X86)
+{
+    private version = USE_SSSE3;
+}
+else version(D_InlineAsm_X86_64)
+{
+    private version = USE_SSSE3;
+}
+
 import std.ascii : hexDigits;
 import std.exception : assumeUnique;
 import core.bitop : bswap;
+version(USE_SSSE3) import core.cpuid : hasSSSE3Support = ssse3;
+version(USE_SSSE3) import std.internal.digest.sha_SSSE3 : transformSSSE3;
+
 
 version(unittest)
 {
@@ -212,7 +228,19 @@ private nothrow pure uint rotateLeft(uint x, uint n)
  */
 struct SHA1
 {
-    alias transformX86 transform;
+    version(USE_SSSE3)
+    {
+        private __gshared immutable nothrow pure void function(uint[5]* state, const(ubyte[64])* block) transform;
+
+        shared static this()
+        {
+            transform = hasSSSE3Support() ? &transformSSSE3 : &transformX86;
+        }
+    }
+    else
+    {
+        alias transformX86 transform;
+    }
 
     private:
         uint state[5] =                                   /* state (ABCDE) */
