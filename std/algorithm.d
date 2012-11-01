@@ -5970,48 +5970,49 @@ assert(b[0 .. $ - c.length] == [ 1, 5, 9, 1 ]);
 
  */
 Range2 copy(Range1, Range2)(Range1 source, Range2 target)
-if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
+    if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 {
-
-    static Range2 genericImpl(Range1 source, Range2 target)
+    static if (isArray!Range1 && isArray!Range2 && is(typeof(target[] = source[])))
     {
-        for (; !source.empty; source.popFront())
-        {
-            put(target, source.front);
-        }
+        //Optimization possible for arrays, because they can use "opSliceSliceAssign"
+        auto len = source.length;
+        assert(target.length >= len, "source array is smaller than target array: can not copy.");
 
-        return target;
-    }
-
-    static if (isArray!Range1 && isArray!Range2 &&
-               is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
-    {
-        immutable overlaps =
-            (source.ptr >= target.ptr &&
-             source.ptr < target.ptr + target.length) ||
-            (target.ptr >= source.ptr &&
-             target.ptr < source.ptr + source.length);
+        //Check that source[] and target[0 .. len] don't overlap
+        //Can't use std.array.overlap because of @@@BUG@@@ 7898,
+        auto overlaps = !(source.ptr + len <= target.ptr ||
+                          target.ptr + len <= source.ptr);
 
         if (overlaps)
         {
-            return genericImpl(source, target);
+            //Overlaps, see if we can copy chunk by chunk
+            size_t step = abs(source.ptr - target.ptr);
+            if (step > 1) //Anything containing 2 or more elements should profit from slice copy.
+            {
+                size_t low = 0;
+                for( ; low + step < len ; low += step)
+                    target[low .. low + step] = source[low .. low + step];
+                target[low .. len] = source[low .. len];
+            }
+            else if (step != 0) // => step == 1
+            {
+                //Too much overlap, just copy 1 by 1.
+                foreach (i ; 0 .. len)
+                    target[i] = source[i];
+            }
         }
         else
         {
-            // Array specialization.  This uses optimized memory copying
-            // routines under the hood and is about 10-20x faster than the
-            // generic implementation.
-            enforce(target.length >= source.length,
-                "Cannot copy a source array into a smaller target array.");
-            target[0..source.length] = source;
-
-            return target[source.length..$];
+            //No overlap. Do a straight up slice copy
+            target[0 .. len] = source[];
         }
+        target = target[len .. $];
     }
     else
     {
-        return genericImpl(source, target);
+        put(target, source);
     }
+    return target;
 }
 
 unittest
@@ -6032,13 +6033,18 @@ unittest
         auto e = copy(filter!("a > 1")(a), b);
         assert(b[0] == 5 && e.length == 1);
     }
-
     {
+        //Overlap testing
         int[] a = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
         copy(a[5..10], a[4..9]);
         assert(a[4..9] == [6, 7, 8, 9, 10]);
+        copy(a[4..9], a[0..5]);
+        assert(a[0..5] == [6, 7, 8, 9, 10]);
+        copy(a[4..9], a[5..10]);
+        assert(a[5..10] == [10, 10, 10, 10, 10]);
+        copy(a[5..10], a[5..10]);
+        assert(a[5..10] == [10, 10, 10, 10, 10]);
     }
-
     {   // Test for bug 7898
         enum v =
         {
