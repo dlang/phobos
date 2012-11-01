@@ -493,9 +493,8 @@ private:
     // Generate a runtime error if division by zero occurs
     void checkDivByZero() pure const
     {
-        assert(!isZero(), "BigInt division by zero");
         if (isZero())
-           auto x = 1/toInt(); // generate a div by zero error
+            throw new Error("BigInt division by zero");
     }
 }
 
