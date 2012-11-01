@@ -1501,7 +1501,51 @@ unittest
 }
 
 /**
-   Implements a doubly-linked list.
+Implements a doubly-linked list.
+
+$(D DList) uses neither reference nor value semantics. They can be seen as
+several different handles into an external chain of nodes. Several different
+$(D DList)s can all reference different points in a same chain.
+
+$(D DList.Range) is, for all intents and purposes, a DList with range
+semantics. The $(D DList.Range) has a view directly into the chain itself.
+It is not tied to its parent $(D DList), and may be used to operate on
+other lists (that point to the same chain).
+
+The ONLY operation that can invalidate a $(D DList) or $(D DList.Range), but
+which will invalidate BOTH, is the $(D remove) operation, if the cut Range
+overlaps with the boundaries of another DList or DList.Range.
+
+Example:
+----
+auto a = DList!int([3, 4]); //Create a new chain
+auto b = a; //Point to the same chain
+// (3 - 4)
+assert(a[].equal([3, 4]));
+assert(b[].equal([3, 4]));
+
+b.stableInsertFront(1); //insert before of b
+b.stableInsertBack(5); //insert after of b
+// (2 - (3 - 4) - 5)
+assert(a[].equal([3, 4])); //a is not changed
+assert(b[].equal([1, 3, 4, 5])); // but b is changed
+
+a.stableInsertFront(2); //insert in front of a, this will insert "inside" the chain
+// (1 - (2 - 3 - 4) - 5)
+assert(a[].equal([2, 3, 4])); //a is modified
+assert(b[].equal([1, 2, 3, 4, 5])); //and so is b;
+
+a.remove(a[]); //remove all the elements of a: This will cut them from the chain;
+// (1 - 5)
+assert(a[].empty); //a is empty
+assert(b[].equal([1, 5])); //b has lost some of its elements;
+
+a.insert(2); //insert in a. This will create a new chain
+// (2)
+// (1 - 5)
+assert(a[].equal([2])); //a is a new chain
+assert(b[].equal([1, 5])); //b is unchanged;
+----
  */
 struct DList(T)
 {
@@ -1548,8 +1592,10 @@ elements in $(D rhs).
      */
     bool opEquals(ref const DList rhs) const
     {
-        const(Node)* nthis = _first, nrhs = rhs._first;
+        if(_first == rhs._first) return _last == rhs._last;
+        if(_last == rhs._last) return false;
 
+        const(Node)* nthis = _first, nrhs = rhs._first;
         while(true)
         {
             if (!nthis) return !nrhs;
@@ -1566,13 +1612,18 @@ elements in $(D rhs).
     {
         private Node * _first;
         private Node * _last;
-        private this(Node* first, Node* last) { _first = first; _last = last; }
+        private this(Node* first, Node* last)
+        {
+            assert(!!_first == !!_last, "Dlist.Rangethis: Invalid arguments");
+            _first = first; _last = last;
+        }
         private this(Node* n) { _first = _last = n; }
 
         /// Input range primitives.
-        @property bool empty() const
+        @property const nothrow
+        bool empty()
         {
-            assert(!!_first == !!_last, "DList.Range: Internal error, inconsistent state");
+            assert(!!_first == !!_last, "DList.Range: chain is in an inconsistent state (maybe it was cut?)");
             return !_first;
         }
 
@@ -1653,7 +1704,8 @@ elements.
 
 Complexity: $(BIGOH 1)
      */
-    @property bool empty() const
+    @property const nothrow
+    bool empty()
     {
         assert(!!_first == !!_last, "DList: Internal error, inconsistant list");
         return _first is null;
@@ -1733,9 +1785,16 @@ Complexity: $(BIGOH 1)
 
 /**
 Returns a new $(D DList) that's the concatenation of $(D this) and its
-argument. $(D opBinaryRight) is only defined if $(D Stuff) does not
-define $(D opBinary).
+argument.
      */
+    DList opBinary(string op, Stuff)(Stuff rhs)
+    if (op == "~" && isImplicitlyConvertible!(Stuff, T))
+    {
+        auto ret = this.dup;
+        ret ~= rhs;
+        return ret;
+    }
+    /// ditto
     DList opBinary(string op, Stuff)(Stuff rhs)
     if (op == "~" && (is(Stuff == DList) || is(typeof(DList(rhs)))))
     {
@@ -1744,17 +1803,50 @@ define $(D opBinary).
         return ret;
     }
 
-    DList opOpassign(string op, Stuff)(Stuff rhs)
-    if (op == "~" && is(Stuff == DList))
+/**
+Returns a new $(D DList) that's the concatenation of the argument and $(D this)
+     */
+    DList opBinaryRight(string op, Stuff)(Stuff rhs)
+    if (op == "~" && isImplicitlyConvertible!(Stuff, T))
+    {
+        auto ret = this.dup;
+        ret.opOpAssignRightPrivate!"~"(rhs);
+        return ret;
+    }
+
+/// ditto
+    DList opBinaryRight(string op, Stuff)(Stuff rhs)
+    if (op == "~" && isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
+    {
+        auto ret = this.dup;
+        ret.opOpAssignRightPrivate!"~"(rhs);
+        return ret;
+    }
+
+/**
+Appends the contents of stuff into this.
+     */
+    DList opOpAssign(string op, Stuff)(Stuff rhs)
+    if (op == "~" && isImplicitlyConvertible!(Stuff, T))
     {
         if (_last) _last._next = rhs._first;
         if (rhs._first) rhs_.first._prev = _last;
     }
 
-    DList opOpassign(string op, Stuff)(Stuff rhs)
-    if (op == "~" && is(typeof(DList(rhs))))
+/// ditto
+    DList opOpAssign(string op, Stuff)(Stuff rhs)
+    if (op == "~" && isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
-        opOpassign!(op)(DList(rhs));
+        insertBack(rhs);
+        return this;
+    }
+    
+// Private implementations helpers for opOpBinaryRight
+    DList opOpAssignRightPrivate(string op, Stuff)(Stuff lhs)
+    if (op == "~" && isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
+    {
+        this.insertFront(lhs);
+        return this;
     }
 
 /**
@@ -1766,7 +1858,8 @@ Complexity: $(BIGOH 1)
      */
     void clear()
     {
-        _first = _last = null;
+        //remove actual elements.
+        remove(this[]);
     }
 
 /**
@@ -1784,7 +1877,7 @@ Complexity: $(BIGOH log(n))
         return insertBeforeNode(_first, stuff);
     }
 
-    // ditto
+    /// ditto
     size_t insertBack(Stuff)(Stuff stuff)
     {
         return insertBeforeNode(null, stuff);
@@ -1805,6 +1898,9 @@ Complexity: $(BIGOH log(n))
 /**
 Picks one value from the front of the container, removes it from the
 container, and returns it.
+
+Elements are not actually removed from the chain, but the $(D DList)'s,
+first/last pointer is advanced.
 
 Precondition: $(D !empty)
 
@@ -1830,6 +1926,9 @@ Complexity: $(BIGOH 1).
 Removes the value at the front/back of the container. The stable version
 behaves the same, but guarantees that ranges iterating over the
 container are never invalidated.
+
+Elements are not actually removed from the chain, but the $(D DList)'s,
+first/last pointer is advanced.
 
 Precondition: $(D !empty)
 
@@ -1870,6 +1969,9 @@ if $(D howMany > n), all elements are removed. The returned value is
 the effective number of elements removed. The stable version behaves
 the same, but guarantees that ranges iterating over the container are
 never invalidated.
+
+Elements are not actually removed from the chain, but the $(D DList)'s,
+first/last pointer is advanced.
 
 Returns: The number of elements removed
 
@@ -1921,21 +2023,24 @@ convertible to $(D T). The stable version behaves the same, but
 guarantees that ranges iterating over the container are never
 invalidated.
 
+Elements are not actually removed from the chain, but the $(D DList)'s,
+first/last pointer is advanced.
+
 Returns: The number of values inserted.
 
 Complexity: $(BIGOH k + m), where $(D k) is the number of elements in
 $(D r) and $(D m) is the length of $(D stuff).
      */
-
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     {
         Node* n = (r._first) ? r._first : _first;
         return insertBeforeNode(n, stuff);
     }
+
     /// ditto
     alias insertBefore stableInsertBefore;
 
-
+    /// ditto
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
     {
         Node* n = (r._last) ? r._last._next : null;
@@ -1945,100 +2050,145 @@ $(D r) and $(D m) is the length of $(D stuff).
     /// ditto
     alias insertAfter stableInsertAfter;
 
-    /// Helper: insert $(D stuff) before Node $(D n). If $(D n) is $(D null) then insert at end.
+    // Helper: insert $(D stuff) before Node $(D n). If $(D n) is $(D null) then insert at end.
     private size_t insertBeforeNode(Stuff)(Node* n, Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
-    {
-        size_t result;
-        Node* prev = (n) ? n._prev : _last;
-        foreach (item; stuff)
+    {        size_t result;
+        if(stuff.empty) return result;
+
+        Node* first;
+        Node* last;
+        //scope block
         {
-            if (_first is null)
-            {
-                prev = _first = new Node(item, null, null);
-            }
-            else if (n is _first)
-            {
-                prev = _first = new Node(item, prev, _first);
-            }
-            else
-            {
-                prev = new Node(item, prev, n);
-            }
+            auto item = stuff.front;
+            stuff.popFront();
+            last = first = new Node(item, null, null);
             ++result;
         }
-        if (!_last || !n)
+        foreach (item; stuff)
         {
-            _last = prev;
+            last = new Node(item, last, null);
+            ++result;
         }
-        return result;
-    }
-
-    /// Helper: insert $(D stuff) before Node $(D n). If $(D n) is $(D null) then insert at end.
-    private size_t insertBeforeNode(Stuff)(Node* n, Stuff stuff)
-    if (isImplicitlyConvertible!(Stuff, T))
-    {
-        Node* prev = (n !is null) ? n._prev : _last;
-        if (_first is null)
+        
+        //We have created a first-last chain. Now we insert it.
+        if(!_first)
         {
-            prev = _first = new Node(stuff, null, null);
-        }
-        else if (n is _first)
-        {
-            prev = _first = new Node(stuff, prev, _first);
+            _first = first;
+            _last = last;
         }
         else
         {
-            prev = new Node(stuff, prev, n);
+            assert(_last);
+            if(n)
+            {
+                if(n._prev)
+                {
+                    n._prev._next = first;
+                    first._prev = n._prev;
+                }
+                n._prev = last;
+                last._next = n;
+                if(n is _first)
+                  _first = first;
+            }
+            else
+            {
+                if(_last._next)
+                {
+                    _last._next._prev = last;
+                    last._next = _last._next;
+                }
+                _last._next = first;
+                first._prev = _last;
+                _last = last;
+            }
         }
-        if (!_last || !n)
-        {
-            _last = prev;
-        }
-        return 1;
+        assert(_first);
+        assert(_last);
+        return result;
+    }
+
+    // Helper: insert $(D stuff) before Node $(D n). If $(D n) is $(D null) then insert at end.
+    private size_t insertBeforeNode(Stuff)(Node* n, Stuff stuff)
+    if (isImplicitlyConvertible!(Stuff, T))
+    {
+        Stuff[] stuffs = (&stuff)[0 .. 1];
+        return insertBeforeNode(n, stuffs);
     }
 
 /**
 Removes all elements belonging to $(D r), which must be a range
-obtained originally from this container. The stable version behaves the
-same, but guarantees that ranges iterating over the container are
-never invalidated.
+obtained originally from this container.
+
+This function actually removes the elements from the chain. This is the
+only function that may invalidate a range, as it cuts the chain of elements:
+*Ranges (and other DList) that contain $(D r) or that are inside $(D r),
+as well a $(D r) itself, are never invalidated.
+*Ranges (and other DList) which partially overlap with $(D r) will be cut,
+and invalidated.
 
 Returns: A range spanning the remaining elements in the container that
 initially were right after $(D r).
 
 Complexity: $(BIGOH 1)
- */
+     */
     Range remove(Range r)
     {
         if (r.empty)
         {
             return r;
         }
-        enforce(_first);
+        assert(!empty, "DList.remove: Range is empty");
+
+        //Note about the unusual complexity here:
+        //The first and last nodes are not necessarilly the actual last nodes
+        //of the "chain".
+        //If we merelly excise the range from the chain, we can run into odd behavior,
+        //in particlar, when the range's front and/or back coincide with the List's...
+
         Node* before = r._first._prev;
         Node* after = r._last._next;
+
+        Node* oldFirst = _first;
+        Node* oldLast = _last;
+
         if (before)
         {
-            before._next = after;
+            if (after)
+            {
+                before._next = after;
+                after._prev = before;
+            }
+            if (_first == r._first)
+                _first = (oldLast != r._last) ? after : null ;
         }
         else
         {
-            _first = after;
+            assert(oldFirst == r._first, "Dlist.remove: Range is not part of the list");
+            _first = (oldLast != r._last) ? after : null ;
         }
+
         if (after)
         {
-            after._prev = before;
+            if (before)
+            {
+                after._prev = before;
+                before._next = after;
+            }
+            if (_last == r._last)
+                _last = (oldFirst != r._first) ? before : null ;
         }
         else
         {
-            _last = before;
+            assert(oldLast == r._last, "Dlist.remove: Range is not part of the list");
+            _last = (oldFirst != r._first) ? before : null ;
         }
+
         return Range(after, _last);
     }
 
     /// ditto
-    alias remove stableRemove;
     template linearRemove(R) if (is(R == Range))
     {
         Range linearRemove(R r) { return remove(r); };
@@ -2046,25 +2196,73 @@ Complexity: $(BIGOH 1)
 
     /// ditto
     Range linearRemove(R)(R r)
-    if (isInputRange!R && is(typeof(r.source)))
+        if (is(R == Range))
+    {
+         return remove(r);
+    }
+
+/**
+$(D linearRemove) functions as $(D remove), but also accepts ranges that are
+result the of a $(D take) operation. This is a convenient way to remove a
+fixed amount of elements from the range.
+
+Complexity: $(BIGOH r.walkLength)
+     */
+    Range linearRemove(R)(R r)
+        if (is(R == Take!Range))
     {
         if (r.empty)
-        {
             return Range(null,null);
-        }
-        enforce(r.source._first);
+        assert(r.source._first);
+
         Node* first = r.source._first;
-        Node* last;
-        while(!r.empty)
+        Node* last = void;
+        do
         {
             last = r.source._first;
             r.popFront();
-        }
+        } while ( !r.empty );
+
         return remove(Range(first, last));
     }
 
+    /** $(RED Scheduled for deprecation. These methods are not actually stable.
+    Use the standard $(D remove) or $(D linearRemove) instead.
+         */
+    alias remove stableRemove;
     /// ditto
     alias linearRemove stableLinearRemove;
+}
+
+unittest
+{
+    auto a = DList!int([3, 4]); //Create a new chain
+    auto b = a; //Point to the same chain
+    // (3 - 4)
+    assert(a[].equal([3, 4]));
+    assert(b[].equal([3, 4]));
+
+    b.stableInsertFront(1); //insert before of b
+    b.stableInsertBack(5); //insert after of b
+    // (2 - (3 - 4) - 5)
+    assert(a[].equal([3, 4])); //a is not changed
+    assert(b[].equal([1, 3, 4, 5])); // but b is changed
+
+    a.stableInsertFront(2); //insert in front of a, this will insert "inside" the chain
+    // (1 - (2 - 3 - 4) - 5)
+    assert(a[].equal([2, 3, 4])); //a is modified
+    assert(b[].equal([1, 2, 3, 4, 5])); //and so is b;
+
+    a.remove(a[]); //remove all the elements of a: This will cut them from the chain;
+    // (1 - 5)
+    assert(a[].empty); //a is empty
+    assert(b[].equal([1, 5])); //b has lost some of its elements;
+
+    a.insert(2); //insert in a. This will create a new chain
+    // (2)
+    // (1 - 5)
+    assert(a[].equal([2])); //a is a new chain
+    assert(b[].equal([1, 5])); //b is unchanged;
 }
 
 unittest
@@ -2176,6 +2374,74 @@ unittest
     assert(a == b); // this better terminate!
     assert(!(a == c));
     assert(!(a == d));
+}
+
+unittest
+{
+    auto d = DList!int([1, 2, 3]);
+    d.front = 5; //test frontAssign
+    assert(d.front == 5);
+    auto r = d[];
+    r.back = 1;
+    assert(r.back == 1);
+}
+
+unittest
+{
+    auto a = DList!int();
+    assert(a.removeFront(10) == 0);
+    a.insert([1, 2, 3]);
+    assert(a.removeFront(10) == 3);
+    assert(a[].empty);
+}
+
+unittest
+{
+    //Verify all flavors of ~
+    auto a = DList!int();
+    auto b = DList!int();
+    auto c = DList!int([1, 2, 3]);
+    auto d = DList!int([4, 5, 6]);
+
+    assert((a ~ b[])[].empty);
+    
+    assert((c ~ d[])[].equal([1, 2, 3, 4, 5, 6]));
+    assert(c[].equal([1, 2, 3]));
+    assert(d[].equal([4, 5, 6]));
+
+    assert((c[] ~ d)[].equal([1, 2, 3, 4, 5, 6]));
+    assert(c[].equal([1, 2, 3]));
+    assert(d[].equal([4, 5, 6]));
+
+    a~=c[];
+    assert(a[].equal([1, 2, 3]));
+    assert(c[].equal([1, 2, 3]));
+
+    a~=d[];
+    assert(a[].equal([1, 2, 3, 4, 5, 6]));
+    assert(d[].equal([4, 5, 6]));
+
+    a~=[7, 8, 9];
+    assert(a[].equal([1, 2, 3, 4, 5, 6, 7, 8, 9]));
+
+    //trick test:
+    auto r = c[];
+    c.removeFront();
+    c.removeBack();
+    c~=d[];
+    assert(c[].equal([2, 4, 5, 6]));
+    assert(r.equal([1, 2, 4, 5, 6, 3]));
+}
+
+unittest
+{
+    //8905
+    auto a = DList!int([1, 2, 3, 4]);
+    auto r = a[];
+    a.stableRemoveBack();
+    a.stableInsertBack(7);
+    assert(a[].equal([1, 2, 3, 7]));
+    assert(r.equal([1, 2, 3, 7, 4]));
 }
 
 /**
