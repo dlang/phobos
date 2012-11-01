@@ -6623,7 +6623,8 @@ if (isBidirectionalRange!Range && hasLength!Range && s != SwapStrategy.stable
     auto rid = min(lDelta, rDelta);
     foreach (i; 0 .. rid)
     {
-        move(range.back, t.front);
+        if (&range.back != &t.front)
+            move(range.back, t.front);
         range.popBack();
         t.popFront();
     }
@@ -6683,8 +6684,9 @@ if ((isForwardRange!Range && !isBidirectionalRange!Range
         && Offset.length >= 1)
 {
     auto result = range;
-    auto src = range, tgt = range;
+    auto src = range.save, tgt = range.save;
     size_t pos;
+    size_t total; //Total elements removed already, to avoid useless self-move when no elements removed yet
     foreach (i; offset)
     {
         static if (is(typeof(i[0])) && is(typeof(i[1])))
@@ -6697,17 +6699,21 @@ if ((isForwardRange!Range && !isBidirectionalRange!Range
             enum delta = 1;
         }
         assert(pos <= from);
-        for (; pos < from; ++pos, src.popFront(), tgt.popFront())
-        {
-            move(src.front, tgt.front);
-        }
+        if (total != 0)
+            for (; pos < from; ++pos, src.popFront(), tgt.popFront())
+                move(src.front, tgt.front);
+        else
+            for (; pos < from; ++pos, src.popFront(), tgt.popFront())
+            {}
         // now skip source to the "to" position
         src.popFrontN(delta);
         pos += delta;
         foreach (j; 0 .. delta) result.popBack();
+        total += delta;
     }
     // leftover move
-    moveAll(src, tgt);
+    if(total != 0)
+        moveAll(src, tgt);
     return result;
 }
 
@@ -6765,7 +6771,7 @@ Range remove(alias pred, SwapStrategy s = SwapStrategy.stable, Range)
 (Range range)
 if (isBidirectionalRange!Range)
 {
-    auto result = range;
+    auto result = range.save;
     static if (s != SwapStrategy.stable)
     {
         for (;!range.empty;)
@@ -6775,14 +6781,28 @@ if (isBidirectionalRange!Range)
                 range.popFront();
                 continue;
             }
-            move(range.back, range.front);
+            if(&range.back != &range.front)
+                move(range.back, range.front);
             range.popBack();
             result.popBack();
         }
     }
-    else
+    else //stable
     {
-        auto tgt = range;
+        auto tgt = range.save;
+        //look for the first item that doesn't match. Don't move anything yet
+        while ( !range.empty )
+        {
+            scope(success) range.popFront();
+            if (unaryFun!(pred)(range.front))
+            {
+                // yank this guy
+                result.popBack();
+                break;
+            }
+            tgt.popFront();
+        }
+        //start moving stuff now
         for (; !range.empty; range.popFront())
         {
             if (unaryFun!(pred)(range.front))
