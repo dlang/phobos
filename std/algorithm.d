@@ -1455,44 +1455,15 @@ $(D &source == &target || !pointsTo(source, source))
 */
 void move(T)(ref T source, ref T target)
 {
-    if (&source == &target) return;
-    assert(!pointsTo(source, source));
-    static if (is(T == struct))
+    static if (is(T == struct) && hasElaborateDestructor!T)
     {
         // Most complicated case. Destroy whatever target had in it
-        // and bitblast source over it
-        static if (hasElaborateDestructor!T) typeid(T).destroy(&target);
-
-        memcpy(&target, &source, T.sizeof);
-
-        // If the source defines a destructor or a postblit hook, we must obliterate the
-        // object in order to avoid double freeing and undue aliasing
-        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
-        {
-            static T empty;
-            static if (T.tupleof.length > 0 &&
-                       T.tupleof[$-1].stringof.endsWith("this"))
-            {
-                // If T is nested struct, keep original context pointer
-                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
-            }
-            else
-            {
-                memcpy(&source, &empty, T.sizeof);
-            }
-        }
+        static if (hasMember!(T, "__dtor"))
+            target.__dtor();
+        else
+            typeid(T).destroy(&target);
     }
-    else
-    {
-        // Primitive data (including pointers and arrays) or class -
-        // assignment works great
-        target = source;
-        // static if (is(typeof(source = null)))
-        // {
-        //     // Nullify the source to help the garbage collector
-        //     source = null;
-        // }
-    }
+    uninitializedMove(source, target);
 }
 
 unittest
@@ -1548,38 +1519,8 @@ unittest
 /// Ditto
 T move(T)(ref T source)
 {
-    // Can avoid to check aliasing.
-
     T result = void;
-    static if (is(T == struct))
-    {
-        // Can avoid destructing result.
-
-        memcpy(&result, &source, T.sizeof);
-
-        // If the source defines a destructor or a postblit hook, we must obliterate the
-        // object in order to avoid double freeing and undue aliasing
-        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
-        {
-            static T empty;
-            static if (T.tupleof.length > 0 &&
-                       T.tupleof[$-1].stringof.endsWith("this"))
-            {
-                // If T is nested struct, keep original context pointer
-                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
-            }
-            else
-            {
-                memcpy(&source, &empty, T.sizeof);
-            }
-        }
-    }
-    else
-    {
-        // Primitive data (including pointers and arrays) or class -
-        // assignment works great
-        result = source;
-    }
+    uninitializedMove(source, result);
     return result;
 }
 
@@ -1690,6 +1631,118 @@ unittest// Issue 8057
     Array!int.Payload x = void;
     static assert(__traits(compiles, move(x)    ));
     static assert(__traits(compiles, move(x, x) ));
+}
+
+unittest
+{
+    //Make sure there is no funny business with empty structs
+    static struct S1
+    {}
+    static struct S2
+    { 
+        ~this(){}
+    }
+
+    S1 a1, b1;
+    S2 a2, b2;
+    a1.move(b1);
+    a2.move(b2);
+}
+
+unittest
+{
+    //Test funny structure whose last attribute ends in "this"...
+    static struct Forest
+    {
+        int* lecythis;
+        this(this)
+        {
+            if(lecythis)
+                lecythis = [*lecythis].ptr;
+        }
+    }
+
+    int* p = [5].ptr;
+    Forest wa = Forest(p);
+    Forest wb;
+    wa.move(wb);
+
+    //Make sure the lecythis was correctly moved
+    assert(*wb.lecythis == 5);
+
+    //Make sure the original Forest does not have a lecythis anymore
+    assert(wa.lecythis is null);
+
+    Forest wc;
+    wc = move(wb);
+    assert(*wc.lecythis == 5);
+    assert(wb.lecythis is null);
+
+    //test static array move
+    int* p1 = [1].ptr;
+    int* p2 = [2].ptr;
+    Forest[2] trees;
+    trees[0].lecythis = p1;
+    trees[1].lecythis = p2;
+
+    Forest[2] otherTrees;
+    move(trees, otherTrees);
+
+    //verify that the pointers were actually moved (and not post-blitted)
+    assert(otherTrees[0].lecythis is p1);
+    assert(otherTrees[1].lecythis is p2);
+}
+
+/*
+Like move, but assumes that source does not contain meaningful content.
+
+Currently private
+*/
+private void uninitializedMove(T)(ref T source, ref T target)
+in
+{
+    assert(&source != &target, "Cannot move the same object to itself");
+    assert(!pointsTo(source, source), "Move: object contains self pointer");
+}
+body
+{
+    static if (is(T == struct))
+    {
+        memcpy(&target, &source, T.sizeof);
+
+        // If the source defines a destructor or a postblit hook, we must obliterate the
+        // object in order to avoid double freeing and undue aliasing
+        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
+        {
+            static T empty;
+            static if (T.tupleof.length > 0 &&
+                       T.tupleof[$-1].stringof.endsWith(".this"))
+            {
+                // If T is nested struct, keep original context pointer
+                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
+            }
+            else
+            {
+                memcpy(&source, &empty, T.sizeof);
+            }
+        }
+    }
+    else static if (isStaticArray!T)
+    {
+        //Static array assignement will destroy and postblit. We want to avoid that.
+        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
+            foreach(size_t i; 0..T.length)
+                uninitializedMove(source[i], target[i]);
+        else
+            //No postblit nor destructor, so opassign is fine
+            target = source;
+    }
+    else
+    {
+        // Primitive data (including pointers and arrays) or class -
+        // assignment works great
+        target = source;
+    }
 }
 
 // moveAll
@@ -6570,7 +6623,8 @@ if (isBidirectionalRange!Range && hasLength!Range && s != SwapStrategy.stable
     auto rid = min(lDelta, rDelta);
     foreach (i; 0 .. rid)
     {
-        move(range.back, t.front);
+        if (&range.back != &t.front)
+            move(range.back, t.front);
         range.popBack();
         t.popFront();
     }
@@ -6630,8 +6684,9 @@ if ((isForwardRange!Range && !isBidirectionalRange!Range
         && Offset.length >= 1)
 {
     auto result = range;
-    auto src = range, tgt = range;
+    auto src = range.save, tgt = range.save;
     size_t pos;
+    size_t total; //Total elements removed already, to avoid useless self-move when no elements removed yet
     foreach (i; offset)
     {
         static if (is(typeof(i[0])) && is(typeof(i[1])))
@@ -6644,17 +6699,21 @@ if ((isForwardRange!Range && !isBidirectionalRange!Range
             enum delta = 1;
         }
         assert(pos <= from);
-        for (; pos < from; ++pos, src.popFront(), tgt.popFront())
-        {
-            move(src.front, tgt.front);
-        }
+        if (total != 0)
+            for (; pos < from; ++pos, src.popFront(), tgt.popFront())
+                move(src.front, tgt.front);
+        else
+            for (; pos < from; ++pos, src.popFront(), tgt.popFront())
+            {}
         // now skip source to the "to" position
         src.popFrontN(delta);
         pos += delta;
         foreach (j; 0 .. delta) result.popBack();
+        total += delta;
     }
     // leftover move
-    moveAll(src, tgt);
+    if(total != 0)
+        moveAll(src, tgt);
     return result;
 }
 
@@ -6712,7 +6771,7 @@ Range remove(alias pred, SwapStrategy s = SwapStrategy.stable, Range)
 (Range range)
 if (isBidirectionalRange!Range)
 {
-    auto result = range;
+    auto result = range.save;
     static if (s != SwapStrategy.stable)
     {
         for (;!range.empty;)
@@ -6722,14 +6781,28 @@ if (isBidirectionalRange!Range)
                 range.popFront();
                 continue;
             }
-            move(range.back, range.front);
+            if(&range.back != &range.front)
+                move(range.back, range.front);
             range.popBack();
             result.popBack();
         }
     }
-    else
+    else //stable
     {
-        auto tgt = range;
+        auto tgt = range.save;
+        //look for the first item that doesn't match. Don't move anything yet
+        while ( !range.empty )
+        {
+            scope(success) range.popFront();
+            if (unaryFun!(pred)(range.front))
+            {
+                // yank this guy
+                result.popBack();
+                break;
+            }
+            tgt.popFront();
+        }
+        //start moving stuff now
         for (; !range.empty; range.popFront())
         {
             if (unaryFun!(pred)(range.front))
