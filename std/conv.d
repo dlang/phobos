@@ -3417,7 +3417,7 @@ T* emplace(T)(T* chunk)
     return chunk;
 }
 
-version(unittest) struct EmplaceTest
+version(unittest) private struct __conv_EmplaceTest
 {
     int i = 3;
     this(int i)
@@ -3438,7 +3438,7 @@ version(unittest) struct EmplaceTest
     void opAssign();
 }
 
-version(unittest) class EmplaceTestClass
+version(unittest) private class __conv_EmplaceTestClass
 {
     int i = 3;
     this(int i)
@@ -3577,7 +3577,7 @@ unittest
 
 unittest
 {
-    EmplaceTest k = void;
+    __conv_EmplaceTest k = void;
     emplace(&k, 5);
     assert(k.i == 5);
 }
@@ -3585,7 +3585,7 @@ unittest
 unittest
 {
     int var = 6;
-    EmplaceTest k = void;
+    __conv_EmplaceTest k = void;
     emplace(&k, 5, var);
     assert(k.i == 5);
     assert(var == 7);
@@ -3675,7 +3675,7 @@ T emplace(T, Args...)(void[] chunk, auto ref Args args) if (is(T == class))
 unittest
 {
     int var = 6;
-    auto k = emplace!EmplaceTestClass(new void[__traits(classInstanceSize, EmplaceTestClass)], 5, var);
+    auto k = emplace!__conv_EmplaceTestClass(new void[__traits(classInstanceSize, __conv_EmplaceTestClass)], 5, var);
     assert(k.i == 5);
     assert(var == 7);
 }
@@ -3716,7 +3716,7 @@ unittest
 unittest
 {
     int var = 6;
-    auto k = emplace!EmplaceTest(new void[EmplaceTest.sizeof], 5, var);
+    auto k = emplace!__conv_EmplaceTest(new void[__conv_EmplaceTest.sizeof], 5, var);
     assert(k.i == 5);
     assert(var == 7);
 }
