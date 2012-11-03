@@ -1454,9 +1454,10 @@ Preconditions:
 $(D &source == &target || !pointsTo(source, source))
 */
 void move(T)(ref T source, ref T target)
+in { assert(&source == &target || !pointsTo(source, source)); }
+body
 {
     if (&source == &target) return;
-    assert(!pointsTo(source, source));
     static if (is(T == struct))
     {
         // Most complicated case. Destroy whatever target had in it
@@ -1548,7 +1549,7 @@ unittest
 /// Ditto
 T move(T)(ref T source)
 {
-    // Can avoid to check aliasing.
+    // Can avoid to check aliasing here.
 
     T result = void;
     static if (is(T == struct))
