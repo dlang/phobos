@@ -1672,11 +1672,25 @@ unittest
 
     //Make sure the original Forest does not have a lecythis anymore
     assert(wa.lecythis is null);
-    
+
     Forest wc;
     wc = move(wb);
     assert(wc.lecythis == p);
     assert(wb.lecythis is null);
+
+    //test static array move
+    int* p1 = [1].ptr;
+    int* p2 = [2].ptr;
+    Forest[2] trees;
+    trees[0].lecythis = p1;
+    trees[1].lecythis = p2;
+
+    Forest[2] otherTrees;
+    move(trees, otherTrees);
+
+    //verify that the pointers were actually moved (and not post-blitted)
+    assert(otherTrees[0].lecythis is p1);
+    assert(otherTrees[1].lecythis is p2);
 }
 
 /*
@@ -1686,33 +1700,54 @@ Currently private
 */
 private void uninitializedMove(T)(ref T source, ref T target)
 {
-    static if (is(T == struct))
-    {
-        memcpy(&target, &source, T.sizeof);
+    //memcpy *always* works great!
+    memcpy(&target, &source, T.sizeof);
 
-        // If the source defines a destructor or a postblit hook, we must obliterate the
-        // object in order to avoid double freeing and undue aliasing
+    // If the source defines a destructor or a postblit hook, we must obliterate the
+    // object in order to avoid double freeing and undue aliasing
+    static if (is(T == struct) || isStaticArray!T)
         static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
         {
             static T empty;
-            static if (T.tupleof.length > 0 &&
-                       T.tupleof[$-1].stringof.endsWith(".this"))
-            {
-                // If T is nested struct, keep original context pointer
-                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
-            }
+            deinitialize(source, empty);
+        }
+}
+
+/*
+copies $(D source) over $(D target), while keeping any context pointers intact;
+
+Currently private
+*/
+private void deinitialize(T)(ref T target, ref T source)
+{
+    static if (isStaticArray!T && hasContextPointer!T)
+    {
+        foreach(i; 0 .. T.length)
+                deinitialize(target[i], source[i]);
+    }
+    else static if (is(T == struct) && hasContextPointer!T)
+    {
+        //Our T has a context pointer. Is it here, or lower?
+        static if (T.tupleof[$-1].stringof.endsWith(".this"))
+        {
+            //It's here, but are there any *other*, lower?
+            static if (anySatisfy!(.hasContextPointer, typeof(T.tupleof[$-1])))
+                //yes, deinitialize each inidividually
+                foreach(i; 0 .. T.tupleof.length - 1)
+                    deinitialize(target.tupleof[i], source.tupleof[i]);
             else
-            {
-                memcpy(&source, &empty, T.sizeof);
-            }
+                //nope, shortcut.
+                memcpy(&target, &source, T.sizeof - (void*).sizeof);
+        }
+        else
+        {
+            //It's not this, so it must be lower, deinitialize each inidividually
+            foreach(i; 0 .. T.tupleof.length)
+                deinitialize(target.tupleof[i], source.tupleof[i]);
         }
     }
     else
-    {
-        // Primitive data (including pointers and arrays) or class -
-        // assignment works great
-        target = source;
-    }
+        memcpy(&target, &source, T.sizeof);
 }
 
 // moveAll
