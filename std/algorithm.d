@@ -1458,42 +1458,19 @@ in { assert(&source == &target || !pointsTo(source, source)); }
 body
 {
     if (&source == &target) return;
-    static if (is(T == struct))
-    {
-        // Most complicated case. Destroy whatever target had in it
-        // and bitblast source over it
-        static if (hasElaborateDestructor!T) typeid(T).destroy(&target);
 
-        memcpy(&target, &source, T.sizeof);
+    static if (hasElaborateDestructor!T)
+        destruct(target, false);
 
-        // If the source defines a destructor or a postblit hook, we must obliterate the
-        // object in order to avoid double freeing and undue aliasing
-        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
-        {
-            static T empty;
-            static if (T.tupleof.length > 0 &&
-                       T.tupleof[$-1].stringof.endsWith("this"))
-            {
-                // If T is nested struct, keep original context pointer
-                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
-            }
-            else
-            {
-                memcpy(&source, &empty, T.sizeof);
-            }
-        }
-    }
+    // If there is no elaborate assign and no elaborate copy constructor,
+    // `target = source` has no side effects.
+    static if (hasElaborateAssign!T || hasElaborateCopyConstructor!T || !isAssignable!T)
+        memcpy(cast(void*) &target, cast(const void*) &source, T.sizeof);
     else
-    {
-        // Primitive data (including pointers and arrays) or class -
-        // assignment works great
         target = source;
-        // static if (is(typeof(source = null)))
-        // {
-        //     // Nullify the source to help the garbage collector
-        //     source = null;
-        // }
-    }
+
+    static if (hasElaborateCopyConstructor!T || hasElaborateDestructor!T)
+        setInitialState(source);
 }
 
 unittest
@@ -1511,6 +1488,12 @@ unittest
     S1 s12;
     move(s11, s12);
     assert(s11.a == 10 && s11.b == 11 && s12.a == 10 && s12.b == 11);
+
+    shared S1 sharedS11, sharedS12;
+    move(sharedS11, sharedS12);
+
+    const int constI11, constI12;
+    void constTest(in int ci1) { const ci2 = move(ci1); }
 
     static struct S2 { int a = 1; int * b; }
     S2 s21 = { 10, null };
@@ -1551,37 +1534,17 @@ T move(T)(ref T source)
 {
     // Can avoid to check aliasing here.
 
-    T result = void;
-    static if (is(T == struct))
+    static if (hasElaborateCopyConstructor!T || hasElaborateDestructor!T)
     {
-        // Can avoid destructing result.
-
-        memcpy(&result, &source, T.sizeof);
-
-        // If the source defines a destructor or a postblit hook, we must obliterate the
-        // object in order to avoid double freeing and undue aliasing
-        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
-        {
-            static T empty;
-            static if (T.tupleof.length > 0 &&
-                       T.tupleof[$-1].stringof.endsWith("this"))
-            {
-                // If T is nested struct, keep original context pointer
-                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
-            }
-            else
-            {
-                memcpy(&source, &empty, T.sizeof);
-            }
-        }
+        T result = void;
+        memcpy(cast(void*) &result, cast(const void*) &source, T.sizeof);
+        setInitialState(source);
+        return result;
     }
     else
     {
-        // Primitive data (including pointers and arrays) or class -
-        // assignment works great
-        result = source;
+        return source;
     }
-    return result;
 }
 
 unittest
@@ -1597,6 +1560,9 @@ unittest
     S1 s11 = { 10, 11 };
     S1 s12 = move(s11);
     assert(s11.a == 10 && s11.b == 11 && s12.a == 10 && s12.b == 11);
+
+    shared S1 sharedS11, sharedS12 = move(sharedS11);
+    void constTest(in int ci1, in int ci2) { move(ci1, ci2); }
 
     static struct S2 { int a = 1; int * b; }
     S2 s21 = { 10, null };
@@ -1665,6 +1631,8 @@ unittest// Issue 8057
         int x;
         ~this()
         {
+            // Struct always can equal to its `init`
+            if(this == S.init) return;
             // Access to enclosing scope
             assert(n == 10);
         }
