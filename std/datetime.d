@@ -6632,7 +6632,7 @@ assert(SysTime(DateTime(2010, 12, 31, 15, 45, 50)).dayOfGregorianCal == 734_137)
         if(adjustedTime > 0)
             return cast(int)getUnitsFromHNSecs!"days"(adjustedTime) + 1;
 
-        auto hnsecs = adjustedTime;
+        long hnsecs = adjustedTime;
         immutable days = cast(int)splitUnitsFromHNSecs!"days"(hnsecs);
 
         return hnsecs == 0 ? days + 1 : days;
