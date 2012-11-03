@@ -2798,7 +2798,7 @@ Example:
 class A { byte b; }
 class B { long l; }
 
-// As class instancec always has a hidden pointer
+// As class instance always has a hidden pointer
 static assert(classInstanceAlignment!A == (void*).alignof);
 static assert(classInstanceAlignment!B == long.alignof);
 ---
