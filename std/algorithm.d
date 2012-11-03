@@ -1457,42 +1457,13 @@ void move(T)(ref T source, ref T target)
 {
     if (&source == &target) return;
     assert(!pointsTo(source, source));
-    static if (is(T == struct))
-    {
-        // Most complicated case. Destroy whatever target had in it
-        // and bitblast source over it
-        static if (hasElaborateDestructor!T) typeid(T).destroy(&target);
-
-        memcpy(&target, &source, T.sizeof);
-
-        // If the source defines a destructor or a postblit hook, we must obliterate the
-        // object in order to avoid double freeing and undue aliasing
-        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
+    static if (is(T == struct) || isStaticArray!T)
+        static if (hasElaborateDestructor!T)
         {
-            static T empty;
-            static if (T.tupleof.length > 0 &&
-                       T.tupleof[$-1].stringof.endsWith("this"))
-            {
-                // If T is nested struct, keep original context pointer
-                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
-            }
-            else
-            {
-                memcpy(&source, &empty, T.sizeof);
-            }
+            // Most complicated case. Destroy whatever target had in it
+            typeid(T).destroy(&target);
         }
-    }
-    else
-    {
-        // Primitive data (including pointers and arrays) or class -
-        // assignment works great
-        target = source;
-        // static if (is(typeof(source = null)))
-        // {
-        //     // Nullify the source to help the garbage collector
-        //     source = null;
-        // }
-    }
+    uninitializedMove(source, target);
 }
 
 unittest
@@ -1548,38 +1519,8 @@ unittest
 /// Ditto
 T move(T)(ref T source)
 {
-    // Can avoid to check aliasing.
-
     T result = void;
-    static if (is(T == struct))
-    {
-        // Can avoid destructing result.
-
-        memcpy(&result, &source, T.sizeof);
-
-        // If the source defines a destructor or a postblit hook, we must obliterate the
-        // object in order to avoid double freeing and undue aliasing
-        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
-        {
-            static T empty;
-            static if (T.tupleof.length > 0 &&
-                       T.tupleof[$-1].stringof.endsWith("this"))
-            {
-                // If T is nested struct, keep original context pointer
-                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
-            }
-            else
-            {
-                memcpy(&source, &empty, T.sizeof);
-            }
-        }
-    }
-    else
-    {
-        // Primitive data (including pointers and arrays) or class -
-        // assignment works great
-        result = source;
-    }
+    uninitializedMove(source, result);
     return result;
 }
 
@@ -1690,6 +1631,123 @@ unittest// Issue 8057
     Array!int.Payload x = void;
     static assert(__traits(compiles, move(x)    ));
     static assert(__traits(compiles, move(x, x) ));
+}
+
+unittest
+{
+    //Make sure there is no funny business with empty structs
+    static struct S1
+    {}
+    static struct S2
+    { 
+        ~this(){}
+    }
+
+    S1 a1, b1;
+    S2 a2, b2;
+    a1.move(b1);
+    a2.move(b2);
+}
+
+unittest
+{
+    //Test funny structure whose last attribute ends in "this"...
+    static struct Forest
+    {
+        int* lecythis;
+        this(this)
+        {
+            assert(0);
+        }
+    }
+
+    int* p = [5].ptr;
+    Forest wa = Forest(p);
+    Forest wb;
+    wa.move(wb);
+
+    //Make sure the lecythis was correctly moved
+    // (points the original pointer
+    assert(wb.lecythis == p);
+
+    //Make sure the original Forest does not have a lecythis anymore
+    assert(wa.lecythis is null);
+
+    Forest wc;
+    wc = move(wb);
+    assert(wc.lecythis == p);
+    assert(wb.lecythis is null);
+
+    //test static array move
+    int* p1 = [1].ptr;
+    int* p2 = [2].ptr;
+    Forest[2] trees;
+    trees[0].lecythis = p1;
+    trees[1].lecythis = p2;
+
+    Forest[2] otherTrees;
+    move(trees, otherTrees);
+
+    //verify that the pointers were actually moved (and not post-blitted)
+    assert(otherTrees[0].lecythis is p1);
+    assert(otherTrees[1].lecythis is p2);
+}
+
+/*
+Like move, but assumes that source does not contain meaningful content.
+
+Currently private
+*/
+private void uninitializedMove(T)(ref T source, ref T target)
+{
+    //memcpy *always* works great!
+    memcpy(&target, &source, T.sizeof);
+
+    // If the source defines a destructor or a postblit hook, we must obliterate the
+    // object in order to avoid double freeing and undue aliasing
+    static if (is(T == struct) || isStaticArray!T)
+        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
+        {
+            static T empty;
+            deinitialize(source, empty);
+        }
+}
+
+/*
+copies $(D source) over $(D target), while keeping any context pointers intact;
+
+Currently private
+*/
+private void deinitialize(T)(ref T target, ref T source)
+{
+    static if (isStaticArray!T && hasContextPointer!T)
+    {
+        foreach(i; 0 .. T.length)
+                deinitialize(target[i], source[i]);
+    }
+    else static if (is(T == struct) && hasContextPointer!T)
+    {
+        //Our T has a context pointer. Is it here, or lower?
+        static if (T.tupleof[$-1].stringof.endsWith(".this"))
+        {
+            //It's here, but are there any *other*, lower?
+            static if (anySatisfy!(.hasContextPointer, typeof(T.tupleof[$-1])))
+                //yes, deinitialize each inidividually
+                foreach(i; 0 .. T.tupleof.length - 1)
+                    deinitialize(target.tupleof[i], source.tupleof[i]);
+            else
+                //nope, shortcut.
+                memcpy(&target, &source, T.sizeof - (void*).sizeof);
+        }
+        else
+        {
+            //It's not this, so it must be lower, deinitialize each inidividually
+            foreach(i; 0 .. T.tupleof.length)
+                deinitialize(target.tupleof[i], source.tupleof[i]);
+        }
+    }
+    else
+        memcpy(&target, &source, T.sizeof);
 }
 
 // moveAll
