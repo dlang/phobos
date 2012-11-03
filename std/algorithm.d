@@ -1443,12 +1443,58 @@ unittest
 
 // move
 /**
-Moves $(D source) into $(D target) via a destructive
-copy. Specifically: $(UL $(LI If $(D hasAliasing!T) is true (see
-$(XREF traits, hasAliasing)), then the representation of $(D source)
-is bitwise copied into $(D target) and then $(D source = T.init) is
-evaluated.)  $(LI Otherwise, $(D target = source) is evaluated.)) See
-also $(XREF exception, pointsTo).
+Moves $(D source) into $(D target).
+
+Specifically:
+$(UL
+    $(LI Does nothing if $(D &source is &target) (for the first overload only).)
+
+    $(LI Destroys $(D target) if needed (for the first overload only, see
+        $(XREF traits, hasElaborateDestructor)))
+
+    $(LI Bitwise copies $(D source) into $(D target).)
+
+    $(LI If $(D hasElaborateCopyConstructor!T || hasElaborateDestructor!T)
+        is $(D true) (see $(XREF traits, hasElaborateCopyConstructor)),
+        then sets $(D source) to $(D T.init).)
+)
+
+Note:
+
+move is $(RED dangerous) as it works for $(B every) type $(D T) whatever
+qualifiers or $(D const)/$(D immutable) members it has.
+So it's the caller responsibility to use move properly.
+
+Example:
+---
+// Consider two logically equal functions except `f1` and `f2` require
+// type `S` to not disable default construction.
+void f1(S s)
+{
+    { S tmp; } // <- Destructor (if any) call for `S.init` here
+    g(s);
+}
+
+void f2(S s)
+{
+    S moved;
+    move(s, moved);
+    g(moved);
+    // <- Same destructor call here
+}
+
+void f3(S s)
+{
+    S moved = move(s); // <- Same destructor call here
+    // Also a temporary for `move` return value may be created, resulting
+    // in a postblit and, then, a destructor call for a bitwise copy of `s`,
+    // but it likely will be removed by optimizer (e.i. no temporary created).
+    // This optimization is called NRVO (Named Return Value Optimization).
+    g(moved);
+}
+---
+
+See also $(XREF exception, pointsTo), $(GLOSSARY nrvo).
 
 Preconditions:
 $(D &source == &target || !pointsTo(source, source))
