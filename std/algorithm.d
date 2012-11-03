@@ -1503,7 +1503,13 @@ void move(T)(ref T source, ref T target)
 in { assert(&source == &target || !pointsTo(source, source)); }
 body
 {
-    if (&source == &target) return;
+    // Performance optimization:
+    // Do not compare addresses if we don't have side effects,
+    // will not need addresses in `memcpy`, and T fits in register.
+    static if (hasElaborateCopyConstructor!T || hasElaborateAssign!T ||
+               hasElaborateDestructor!T || !isAssignable!T ||
+               T.sizeof > size_t.sizeof)
+        if (&source == &target) return;
 
     static if (hasElaborateDestructor!T)
         destruct(target, false);
