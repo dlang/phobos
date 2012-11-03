@@ -2568,6 +2568,63 @@ version(none) unittest
     static assert(hasMember!(R2!S, "T"));
 }
 
+//For internal use
+/*
+Returns $(D true) if the type $(D T) contains an internal context pointer.
+*/
+template hasContextPointer(S)
+{
+    static if (is(S == struct) || is(S == class))
+    {
+        static if (S.tupleof.length > 0)
+        {
+            static if (S.tupleof[$-1].stringof.endsWith(".this"))
+                enum hasContextPointer = true;
+            else
+                enum hasContextPointer = anySatisfy!(.hasContextPointer, typeof(S.tupleof));
+        }
+        else
+            enum hasContextPointer = false;
+    }
+    else static if(isStaticArray!S && S.length)
+    {
+        enum hasContextPointer = hasContextPointer!(typeof(S[0]));
+    }
+    else
+    {
+        enum hasContextPointer = false;
+    }
+}
+
+unittest
+{
+    //basic types
+    static assert(!hasContextPointer!int);
+    static assert(!hasContextPointer!(void*));
+    static assert(!hasContextPointer!string);
+
+    //structs && (static)arrays
+    int a;
+    static struct S1{}
+    struct S2{this(int){++a;}}
+    
+    static assert(!hasContextPointer!S1);
+    static assert( hasContextPointer!S2);
+    static assert(!hasContextPointer!(S1[2]));
+    static assert( hasContextPointer!(S2[2]));
+    
+    static struct S3{S1 s1;}
+    static struct S4{S2 s2;} //Static struct aggregating a struct that has a context pointer (!)
+    static assert(!hasContextPointer!S3);
+    static assert( hasContextPointer!S4);
+    static assert(!hasContextPointer!(S3[2]));
+    static assert( hasContextPointer!(S4[2]));
+    
+    //classes: Bugged?
+    class C{this(){++a;}}    
+    static assert(!hasContextPointer!C);
+}
+
 /**
 Retrieves the members of an enumerated type $(D enum E).
 
