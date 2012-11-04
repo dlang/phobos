@@ -48,7 +48,7 @@ enum SQLITE_SOURCE_ID         = "2011-04-17 17:25:17 154ddbc17120be2915eb03edc52
 ** CAPI3REF: Run-Time Library Version Numbers
 */
 extern immutable(char)* sqlite3_version;
-/// Ditt
+/// Ditto
 immutable(char)* sqlite3_libversion();
 /// Ditto
 immutable(char)* sqlite3_sourceid();
