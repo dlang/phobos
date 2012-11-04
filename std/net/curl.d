@@ -175,10 +175,16 @@ version(unittest)
     import std.process : environment;
     import std.file : tempDir;
     import std.path : buildPath;
-    enum testUrl1 = "http://d-lang.appspot.com/testUrl1";
-    enum testUrl2 = "http://d-lang.appspot.com/testUrl2";
+
+    // Source code for the test service is available at
+    // https://github.com/jcd/d-lang-testservice
+    enum testService = "d-lang.appspot.com";
+
+    enum testUrl1 = "http://"~testService~"/testUrl1";
+    enum testUrl2 = "http://"~testService~"/testUrl2";
     enum testUrl3 = "ftp://ftp.digitalmars.com/sieve.ds";
-    enum testUrl4 = "d-lang.appspot.com/testUrl1";
+    enum testUrl4 = testService~"/testUrl1";
+    enum testUrl5 = "http://"~testService~"/testUrl3";
 }
 version(StdDdoc) import std.stdio;
 
@@ -425,7 +431,7 @@ unittest
         string data = "Hello world";
         auto res = post(testUrl2, data);
         assert(res == data,
-               "put!HTTP() returns unexpected content " ~ res);
+               "post!HTTP() returns unexpected content " ~ res);
     }
 
     {
@@ -434,7 +440,14 @@ unittest
             data ~= cast(ubyte)n;
         auto res = post!ubyte(testUrl2, data);
         assert(res == data,
-               "put!HTTP() with binary data returns unexpected content (" ~ text(res.length) ~ " bytes)");
+               "post!HTTP() with binary data returns unexpected content (" ~ text(res.length) ~ " bytes)");
+    }
+
+    {
+        string data = "Hello world";
+        auto res = post(testUrl5, data);
+        assert(res == data,
+               "post!HTTP() returns unexpected content after redirect " ~ res);
     }
 }
 
@@ -710,13 +723,27 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
         (client.method == HTTP.Method.post || client.method == HTTP.Method.put))
     {
         client.contentLength = sendData.length;
+        auto remainingData = sendData;
         client.onSend = delegate size_t(void[] buf)
         {
-            size_t minLen = min(buf.length, sendData.length);
+            size_t minLen = min(buf.length, remainingData.length);
             if (minLen == 0) return 0;
-            buf[0..minLen] = sendData[0..minLen];
-            sendData = sendData[minLen..$];
+            buf[0..minLen] = remainingData[0..minLen];
+            remainingData = remainingData[minLen..$];
             return minLen;
+        };
+        client.handle.onSeek = delegate(long offset, CurlSeekPos mode)
+        {
+            switch (mode)
+            {
+                case CurlSeekPos.set:
+                    remainingData = sendData[cast(size_t)offset..$];
+                    return CurlSeek.ok;
+                default:
+                    // As of curl 7.18.0, libcurl will not pass
+                    // anything other than CurlSeekPos.set.
+                    return CurlSeek.cantseek;
+            }
         };
     }
 

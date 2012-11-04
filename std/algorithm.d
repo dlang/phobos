@@ -878,6 +878,8 @@ assert(a == [ 5, 5, 5, 5 ]);
 void fill(Range, Value)(Range range, Value filler)
     if (isInputRange!Range && is(typeof(range.front = filler)))
 {
+    alias ElementType!Range T;
+
     static if (is(typeof(range[] = filler)))
     {
         range[] = filler;
@@ -3177,7 +3179,7 @@ if (isRandomAccessRange!R1 && isBidirectionalRange!R2
         && is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
     if (needle.empty) return haystack;
-    const needleLength = walkLength(needle);
+    const needleLength = walkLength(needle.save);
     if (needleLength > haystack.length)
     {
         // @@@BUG@@@
@@ -3774,7 +3776,7 @@ ranges. $(D result[0]) is the portion of $(D haystack) before $(D
 needle), $(D result[1]) is the portion of $(D haystack) that matches
 $(D needle), and $(D result[2]) is the portion of $(D haystack) after
 the match. If $(D needle) was not found, $(D result[0])
-comprehends $(D haystack) entirely and $(D result[1]) and $(D result[2]
+comprehends $(D haystack) entirely and $(D result[1]) and $(D result[2])
 are empty.
 
 $(D findSplitBefore) returns a tuple $(D result) containing two
@@ -5045,7 +5047,7 @@ nesting is allowed.
 
 Example:
 ----
-auto s = "1 + (2 * (3 + 1 / 2)";
+auto s = "1 + $(LPAREN)2 * (3 + 1 / 2)";
 assert(!balancedParens(s, '(', ')'));
 s = "1 + (2 * (3 + 1) / 2)";
 assert(balancedParens(s, '(', ')'));
@@ -5741,7 +5743,7 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
 
     CostType distance(Range s, Range t)
     {
-        auto slen = walkLength(s), tlen = walkLength(t);
+        auto slen = walkLength(s.save), tlen = walkLength(t.save);
         AllocMatrix(slen + 1, tlen + 1);
         foreach (i; 1 .. rows)
         {
@@ -7053,7 +7055,7 @@ Example:
 ----
 auto a = [ 8, 3, 4, 1, 4, 7, 4 ];
 auto pieces = partition3(a, 4);
-assert(a == [ 1, 3, 4, 4, 4, 7, 8 ];
+assert(a == [ 1, 3, 4, 4, 4, 7, 8 ]);
 assert(pieces[0] == [ 1, 3 ]);
 assert(pieces[1] == [ 4, 4, 4 ]);
 assert(pieces[2] == [ 7, 8 ]);

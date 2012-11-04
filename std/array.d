@@ -393,16 +393,8 @@ if (isNarrowString!S && isMutable!S && !isStaticArray!S)
         immutable c = str[0];
         if(c < 0x80)
         {
-            if(__ctfe)
-            {
-                //The ptr trick doesn't work in CTFE.
-                str = str[1 .. $];
-            }
-            else
-            {
-                //ptr is used to avoid unnnecessary bounds checking.
-                str = str.ptr[1 .. str.length];
-            }
+            //ptr is used to avoid unnnecessary bounds checking.
+            str = str.ptr[1 .. str.length];
         }
         else
         {
@@ -623,6 +615,7 @@ unittest
 
 // overlap
 /*
+NOTE: Undocumented for now, overlap does not yet work with ctfe.
 Returns the overlapping portion, if any, of two arrays. Unlike $(D
 equal), $(D overlap) only compares the pointers in the ranges, not the
 values referred by them. If $(D r1) and $(D r2) have an overlapping
@@ -1555,11 +1548,11 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
 }
 
 /++
-    Same as above, but outputs the result via OutputRange $(D sink). 
+    Same as above, but outputs the result via OutputRange $(D sink).
     If no match is found the original array is transfered to $(D sink) as is.
 +/
 void replaceInto(E, Sink, R1, R2)(Sink sink, E[] subject, R1 from, R2 to)
-if (isOutputRange!(Sink, E) && isDynamicArray!(E[]) 
+if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
     && isForwardRange!R1 && isForwardRange!R2
     && (hasLength!R2 || isSomeString!R2))
 {

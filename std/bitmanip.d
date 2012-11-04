@@ -115,7 +115,7 @@ private template createAccessors(
                 ~"assert(v >= "~name~"_min); "
                 ~"assert(v <= "~name~"_max); "
                 ~store~" = cast(typeof("~store~"))"
-                " (("~store~" & ~"~myToString(maskAllElse)~")"
+                " (("~store~" & ~cast(typeof("~store~"))"~myToString(maskAllElse)~")"
                 " | ((cast(typeof("~store~")) v << "~myToString(offset)~")"
                 " & "~myToString(maskAllElse)~"));}\n"
             // constants
@@ -241,24 +241,49 @@ unittest
 
 unittest
 {
-    static struct Integrals {
-        bool checkExpectations(bool eb, int ei, short es) { return b == eb && i == ei && s == es; }
+    {
+        static struct Integrals {
+            bool checkExpectations(bool eb, int ei, short es) { return b == eb && i == ei && s == es; }
 
-        mixin(bitfields!(
-                  bool, "b", 1,
-                  uint, "i", 3,
-                  short, "s", 4));
+            mixin(bitfields!(
+                      bool, "b", 1,
+                      uint, "i", 3,
+                      short, "s", 4));
+        }
+        Integrals i;
+        assert(i.checkExpectations(false, 0, 0));
+        i.b = true;
+        assert(i.checkExpectations(true, 0, 0));
+        i.i = 7;
+        assert(i.checkExpectations(true, 7, 0));
+        i.s = -8;
+        assert(i.checkExpectations(true, 7, -8));
+        i.s = 7;
+        assert(i.checkExpectations(true, 7, 7));
     }
-    Integrals i;
-    assert(i.checkExpectations(false, 0, 0));
-    i.b = true;
-    assert(i.checkExpectations(true, 0, 0));
-    i.i = 7;
-    assert(i.checkExpectations(true, 7, 0));
-    i.s = -8;
-    assert(i.checkExpectations(true, 7, -8));
-    i.s = 7;
-    assert(i.checkExpectations(true, 7, 7));
+
+    //Bug# 8876
+    {
+        struct MoreIntegrals {
+            bool checkExpectations(uint eu, ushort es, uint ei) { return u == eu && s == es && i == ei; }
+            
+            mixin(bitfields!(
+                  uint, "u", 24,
+                  short, "s", 16,
+                  int, "i", 24));
+        }
+
+        MoreIntegrals i;
+        assert(i.checkExpectations(0, 0, 0));
+        i.s = 20;
+        assert(i.checkExpectations(0, 20, 0));
+        i.i = 72;
+        assert(i.checkExpectations(0, 20, 72));
+        i.u = 8;
+        assert(i.checkExpectations(8, 20, 72));
+        i.s = 7;
+        assert(i.checkExpectations(8, 7, 72));
+    }
 
     enum A { True, False }
     enum B { One, Two, Three, Four }
