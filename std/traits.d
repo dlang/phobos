@@ -525,8 +525,7 @@ template ParameterIdentifierTuple(func...)
     {
         template Get(size_t i)
         {
-            enum get = (PT[i..i+1] args) => __traits(identifier, args[0]);
-            enum Get = get(PT[i].init);
+            enum Get = __traits(identifier, PT[i..i+1]);
         }
     }
     else static if (is(FunctionTypeOf!func PT == __parameters))
