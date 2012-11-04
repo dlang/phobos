@@ -832,14 +832,15 @@ private void copyBackwards(T)(T[] src, T[] dest)
 {
     import core.stdc.string;    
     assert(src.length == dest.length);
-    if(!__ctfe)
+    if (!__ctfe)
         memmove(dest.ptr, src.ptr, src.length * T.sizeof);
     else
     {
-		immutable len = src.length;
-        for(size_t i = len - 1; i < len; i--) {			
+        immutable len = src.length;
+        for (size_t i = len - 1; i < len; i--) 
+        {			
             dest[i] = src[i];
-		}
+        }
     }
 }
 
@@ -885,16 +886,17 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
             }
             else
             {
-                foreach (j, v; stuff[i])
+                foreach (v; stuff[i])
                     emplace(ptr++, v);
             }
         }
     }
     else
-    {   // stuff has some InputRanges in it that don't have length
+    {
+        // stuff has some InputRanges in it that don't have length
         // assume that stuff to be inserted is typically shorter 
         // then the array that can be arbitrary big        
-        // TODO: needs a better implemenation as there is no need to build an _array_
+        // TODO: needs a better implementation as there is no need to build an _array_
         // a singly-linked list of memory blocks (rope, etc.) will do
         auto app = appender!(T[])(); 
         foreach (i, E; U)
@@ -909,7 +911,8 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
 {
     static if(is(Unqual!T == T)
         && allSatisfy!(isInputRangeWithLengthOrConvertible!dchar, U))
-    {// mutable, can do in place
+    {
+        // mutable, can do in place
         //helper function: re-encode dchar to Ts and store at *ptr
         static T* putDChar(T* ptr, dchar ch)
         {
@@ -924,15 +927,15 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
                 size_t len = encode(buf, ch);
                 final switch(len)
                 {
-                static if(T.sizeof == char.sizeof)
-                {
-                case 4:
-                    ptr[3] = buf[3];
-                    goto case;
-                case 3:
-                    ptr[2] = buf[2];
-                    goto case;
-                }
+                    static if(T.sizeof == char.sizeof)
+                    {
+                    case 4:
+                        ptr[3] = buf[3];
+                        goto case;
+                    case 3:
+                        ptr[2] = buf[2];
+                        goto case;
+                    }
                 case 2:
                     ptr[1] = buf[1];
                     goto case;
@@ -954,7 +957,7 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
         foreach (i, E; U)
         {
             static if(is(E : dchar))
-            {                
+            {
                 ptr = putDChar(ptr, stuff[i]);
             }
             else
@@ -966,7 +969,8 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
         assert(ptr == array.ptr + pos + to_insert, text(ptr - array.ptr, " vs ", pos + to_insert ));
     }
     else
-    {// immutable/const, just construct a new array
+    {
+        // immutable/const, just construct a new array
         auto app = appender!(T[])();
         app.put(array[0..pos]);
         foreach (i, E; U)
@@ -1063,11 +1067,11 @@ unittest
                 new AssertError("testStr failure 3", file, line));
     }
 
-    foreach (i, T; TypeTuple!(char, wchar, dchar
-        , immutable(char), immutable(wchar), immutable(dchar)))
+    foreach (T; TypeTuple!(char, wchar, dchar,
+        immutable(char), immutable(wchar), immutable(dchar)))
     {
-        foreach (j, U; TypeTuple!(char, wchar, dchar
-            , immutable(char), immutable(wchar), immutable(dchar)))
+        foreach (U; TypeTuple!(char, wchar, dchar,
+            immutable(char), immutable(wchar), immutable(dchar)))
         {
             testStr!(T[], U[])();
         }
@@ -1084,7 +1088,7 @@ unittest
         auto result = args[$-1];
 
         a.insertInPlace(pos, args[0..$-1]);
-        if(!std.algorithm.equal(a, result))
+        if (!std.algorithm.equal(a, result))
             return false;
         return true;
     }
