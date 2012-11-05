@@ -2774,45 +2774,39 @@ Defines the container's primary range, which is a random-access range.
         T moveAt(size_t i)
         {
             assert(_validIndex(i), _indexMessage);
-            i += _a;
-            return move(_payload[i]);
+            return move(_payload[_a + i]);
         }
 
         T opIndex(size_t i)
         {
             assert(_validIndex(i), _indexMessage);
-            i += _a;
-            return _payload[i];
+            return _payload[_a + i];
         }
 
         void opIndexUnary(string op)(size_t i)
             if(op == "++" || op == "--")
         {
             assert(_validIndex(i), _indexMessage);
-            i += _a;
-            mixin(op~"_payload[i];");
+            mixin(op~"_payload[_a + i];");
         }
 
         T opIndexUnary(string op)(size_t i)
             if(op != "++" && op != "--")
         {
             assert(_validIndex(i), _indexMessage);
-            i += _a;
-            mixin("return "~op~"_payload[i];");
+            mixin("return "~op~"_payload[_a + i];");
         }
 
         void opIndexAssign(T value, size_t i)
         {
             assert(_validIndex(i), _indexMessage);
-            i += _a;
-            move(value, _payload[i]);
+            move(value, _payload[_a + i]);
         }
 
         void opIndexOpAssign(string op)(T value, size_t i)
         {
             assert(_validIndex(i), _indexMessage);
-            i += _a;
-            mixin("_payload[i] "~op~"= value;");
+            mixin("_payload[_a + i] "~op~"= value;");
         }
 
         typeof(this) opSlice()
@@ -2823,9 +2817,7 @@ Defines the container's primary range, which is a random-access range.
         typeof(this) opSlice(size_t i, size_t j)
         {
             assert(_validSlice(i, j), _sliceMessage);
-            i += _a;
-            j += _a;
-            return typeof(this)(_data, i, j);
+            return typeof(this)(_data, _a + i, _a + j);
         }
 
         void opSliceAssign(T value)
@@ -2838,11 +2830,7 @@ Defines the container's primary range, which is a random-access range.
         {
             assert(_validSlice(i, j), _sliceMessage);
             if(j != 0 )
-            {
-                i += _a;
-                j += _a;
-                _payload[i .. j] = value;
-            }
+                _payload[_a + i .. _a + j] = value;
         }
 
         void opSliceUnary(string op)()
@@ -2857,11 +2845,7 @@ Defines the container's primary range, which is a random-access range.
         {
             assert(_validSlice(i, j), _sliceMessage);
             if(j != 0 )
-            {
-                i += _a;
-                j += _a;
-                mixin(op~"_payload[i .. j];");
-            }
+                mixin(op~"_payload[_a + i .. _a + j];");
         }
 
         void opSliceOpAssign(string op)(T value)
@@ -2874,11 +2858,7 @@ Defines the container's primary range, which is a random-access range.
         {
             assert(_validSlice(i, j), _sliceMessage);
             if(j != 0 )
-            {
-                i += _a;
-                j += _a;
-                mixin("_payload[i .. j] "~op~"= value;");
-            }
+                mixin("_payload[_a + i .. _a + j] "~op~"= value;");
         }
 
         //Convenience
@@ -2906,15 +2886,12 @@ Defines the container's primary range, which is a random-access range.
 
                 bool _validIndex(size_t i)
                 {
-                    i += _a;
                     return _a + i < _b;
                 }
 
                 bool _validSlice(size_t i, size_t j)
                 {
-                    i += _a;
-                    j += _a;
-                    return i <= j && j <= _b;
+                    return (i <= j) && (_a + j <= _b);
                 }
             }
         }
@@ -3475,20 +3452,20 @@ $(D r)
     /// ditto
     alias remove stableLinearRemove;
 
-    //Convenicence
+    //convenience
     private @safe nothrow
     {
         //Slightly faster than "length".
         //Can be used inside of arrays without .this
         @property size_t _length() const
         {
-            assert(_data.refCountedStore.isInitialized, "Array internal error.");
+            assert(_data.refCountedStore.isInitialized, "Array internal error");
             return _data._payload.length;
         }
 
         @property ref inout(T[]) _payload() inout
         {
-            assert(_data.refCountedStore.isInitialized, "Array internal error.");
+            assert(_data.refCountedStore.isInitialized, "Array internal error");
             return _data._payload;
         }
     }
