@@ -159,9 +159,16 @@ class SocketException: Exception
             return 0;
     }
 
-    this(string msg)
+    ///
+    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
     {
-        super(msg);
+        super(msg, file, line, next);
+    }
+
+    ///
+    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__)
+    {
+        super(msg, next, file, line);
     }
 }
 
@@ -223,24 +230,58 @@ class SocketOSException: SocketException
 {
     int errorCode;     /// Platform-specific error code.
 
-    this(string msg, int err = _lasterr(),
-        string function(int) errorFormatter = &formatSocketError)
+    ///
+    this(string msg,
+         string file = __FILE__,
+         size_t line = __LINE__,
+         Throwable next = null,
+         int err = _lasterr(),
+         string function(int) errorFormatter = &formatSocketError)
     {
         errorCode = err;
 
         if (msg.length)
-            super(msg ~ ": " ~ errorFormatter(err));
+            super(msg ~ ": " ~ errorFormatter(err), file, line, next);
         else
-            super(errorFormatter(err));
+            super(errorFormatter(err), file, line, next);
+    }
+
+    ///
+    this(string msg,
+         Throwable next,
+         string file = __FILE__,
+         size_t line = __LINE__,
+         int err = _lasterr(),
+         string function(int) errorFormatter = &formatSocketError)
+    {
+        this(msg, file, line, next, err, errorFormatter);
+    }
+
+    ///
+    this(string msg,
+         int err,
+         string function(int) errorFormatter = &formatSocketError,
+         string file = __FILE__,
+         size_t line = __LINE__,
+         Throwable next = null)
+    {
+        this(msg, file, line, next, err, errorFormatter);
     }
 }
 
 /// Socket exceptions representing invalid parameters specified by user code.
 class SocketParameterException: SocketException
 {
-    this(string msg)
+    ///
+    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
     {
-        super(msg);
+        super(msg, file, line, next);
+    }
+
+    ///
+    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__)
+    {
+        super(msg, next, file, line);
     }
 }
 
@@ -248,9 +289,16 @@ class SocketParameterException: SocketException
 /// available on the current system.
 class SocketFeatureException: SocketException
 {
-    this(string msg)
+    ///
+    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
     {
-        super(msg);
+        super(msg, file, line, next);
+    }
+
+    ///
+    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__)
+    {
+        super(msg, next, file, line);
     }
 }
 
@@ -570,9 +618,22 @@ unittest
  */
 class HostException: SocketOSException
 {
-    this(string msg, int err = _lasterr())
+    ///
+    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null, int err = _lasterr())
     {
-        super(msg, err);
+        super(msg, file, line, next, err);
+    }
+
+    ///
+    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__, int err = _lasterr())
+    {
+        super(msg, next, file, line, err);
+    }
+
+    ///
+    this(string msg, int err, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
+    {
+        super(msg, next, file, line, err);
     }
 }
 
@@ -1168,9 +1229,22 @@ unittest
  */
 class AddressException: SocketOSException
 {
-    this(string msg, int err = _lasterr())
+    ///
+    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null, int err = _lasterr())
     {
-        super(msg, err);
+        super(msg, file, line, next, err);
+    }
+
+    ///
+    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__, int err = _lasterr())
+    {
+        super(msg, next, file, line, err);
+    }
+
+    ///
+    this(string msg, int err, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
+    {
+        super(msg, next, file, line, err);
     }
 }
 
@@ -1844,9 +1918,22 @@ static if (is(sockaddr_un))
  */
 class SocketAcceptException: SocketOSException
 {
-    this(string msg, int err = _lasterr())
+    ///
+    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null, int err = _lasterr())
     {
-        super(msg, err);
+        super(msg, file, line, next, err);
+    }
+
+    ///
+    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__, int err = _lasterr())
+    {
+        super(msg, next, file, line, err);
+    }
+
+    ///
+    this(string msg, int err, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
+    {
+        super(msg, next, file, line, err);
     }
 }
 
