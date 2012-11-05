@@ -2446,7 +2446,7 @@ unittest
     }
     static assert( hasElaborateAssign!S4);
 
-    struct S5 { @disable this(); this(int n){} S s; }
+    struct S5 { @disable this(); this(int n){ s = S(); } S s; }
     static assert( hasElaborateAssign!S5);
 }
 
