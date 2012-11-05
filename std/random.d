@@ -55,14 +55,21 @@ Distributed under the Boost Software License, Version 1.0.
          http://www.boost.org/LICENSE_1_0.txt)
 */
 module std.random;
+//debug = std_random;
 
 import std.algorithm, std.c.time, std.conv, std.exception,
        std.math, std.numeric, std.range, std.traits,
        core.thread, core.time;
 import std.string : format;
 
-version(unittest) import std.typetuple;
+version(unittest) import std.stdio, std.typetuple;
 
+version(unittest) enum debug_std_random = `debug(std_random)`
+`{`
+    `scope (success) writeln("Success.");`
+    `scope (failure) writeln("Failure.");`
+    `scope (exit) write("unittest @", __FILE__, " L.", __LINE__, ": ");`
+`}`;
 
 // Segments of the code in this file Copyright (c) 1997 by Rick Booth
 // From "Inner Loops" by Rick Booth, Addison-Wesley
@@ -178,6 +185,8 @@ template isSeedable(Rng)
 
 unittest
 {
+    mixin(debug_std_random);
+
     struct NoRng
     {
         @property uint front() {return 0;}
@@ -241,28 +250,230 @@ unittest
     assert(isSeedable!(seedRng));
 }
 
+version(StdDdoc)
+{
+/**
+The PRNGEngine is meant as documentation object for all random number
+generator engines. It should not actually be used.
+
+A random number generator engine is a range that models at least
+$(D InputRange) and $(D InfiniteRange). Calling the $(D front) of the
+engine should return a number
+based on the engine's algorithm. Calling $(D popFront) will provide the
+next random number in the sequence.
+
+Random number generator engines are modeled as reference ranges. This
+is to avoid accidently generating the same sequence more than once.
+It furthermore avoids expensive copy semantics. Random number generators
+can safelly be used inside algorithms. They will lazilly initialize
+(to a default seed) if needed.
+
+----
+    foreach(PRNGEngine; TypeTuple!(Xorshift, Mt19937, MinstdRand0, MinstdRand, Random))
+    {
+        auto rand = PRNGEngine(unpredictableSeed);
+
+        uint[] a;
+        uint[10] b;
+
+        a = rand.take(10).array(); //Create a new array of 10 numbers
+        b[].fill(rand); //Fill an existing array
+
+        assert(a[] != b[]); //Both arrays should be different
+    }
+----
+ */
+struct PRNGEngine
+{
+    alias uint ElementType;
+
+    /**
+    This tag serves to mark the range as a uniform random generator.
+    ($(D_PARAM true))
+     */
+    enum bool isUniformRandom = true;
+
+    /// Random number generators are infinite. ($(D_PARAM false))
+    enum bool empty = false;
+
+    /**
+    Constructs and seeds the engine. Both signatues are optional.
+
+    Usually just forwards to $(D seed).
+     */
+    this(T)(T s);
+    /// ditto
+    this(R)(R r) if (isInputRange!R);
+
+    /**
+    (Re)-seeds the engine. All three signatures are optional.
+
+    The Range version usually requires that $(D r) provide a minimal
+    amount of elements.
+     */
+    void seed()();
+    /// ditto
+    void seed(T)(T s);
+    /// ditto
+    void seed(R)(R r) if (isInputRange!R);
+
+    /**
+    Returns the current random number.
+
+    This operation is usally safe/trusted, nothrow, and $(BIGOH 1), except
+    if the range must first be initialized.
+     */
+    @property ElementType front();
+
+    /**
+    Advances to the next random number in the sequence.
+
+    This operation is usally safe/trusted and nothrow, except
+    if the range must first be initialized.
+
+    Complexity is an amortized constant time (there may be a costly
+    worst case scenario).
+     */
+    void popFront();
+
+    /**
+    Some pseudo random number generator engines offer the $(D save)
+    functionality. Note that this can be costly operation.
+
+    Furhtermore note that saving an engine implies that the same
+    random sequence will be generated more than once.
+     */
+    @property PRNGEngine save();
+}
+
+}//End version(StdDdoc)
+
+unittest
+{
+    mixin(debug_std_random);
+    foreach(PRNGEngine; TypeTuple!(Xorshift, Mt19937, MinstdRand0, Random))
+    {
+        auto rand = PRNGEngine(unpredictableSeed);
+
+        uint[] a;
+        uint[10] b;
+
+        a = rand.take(10).array(); //Create a new array of 10 numbers
+        b[].fill(rand); //Fill an existing array
+
+        assert(a[] != b[]); //Both arrays should be different
+    }
+}
 /**
 Linear Congruential generator.
  */
 struct LinearCongruentialEngine(UIntType, UIntType a, UIntType c, UIntType m)
     if(isUnsigned!UIntType)
 {
-    ///Mark this as a Rng
-    enum bool isUniformRandom = true;
+    private alias LinearCongruentialEnginePayload!(UIntType, a, c, m) Payload;
+    private Payload* _payload;
+
+    /// Mark this as a Rng
+    enum bool isUniformRandom = Payload.isUniformRandom;
     /// Does this generator have a fixed range? ($(D_PARAM true)).
-    enum bool hasFixedRange = true;
+    enum bool hasFixedRange = Payload.hasFixedRange;
     /// Lowest generated value ($(D 1) if $(D c == 0), $(D 0) otherwise).
-    enum UIntType min = ( c == 0 ? 1 : 0 );
+    enum UIntType min = Payload.min;
     /// Highest generated value ($(D modulus - 1)).
-    enum UIntType max = m - 1;
+    enum UIntType max = Payload.max;
+
 /**
 The parameters of this distribution. The random number is $(D_PARAM x
 = (x * multipler + increment) % modulus).
  */
+    enum UIntType multiplier = Payload.multiplier;
+    ///ditto
+    enum UIntType increment = Payload.increment;
+    ///ditto
+    enum UIntType modulus = Payload.modulus;
+
+/**
+Constructs a $(D_PARAM LinearCongruentialEngine) generator seeded with
+$(D x0).
+ */
+    this(UIntType x0)
+    {
+        _payload = new Payload(x0);
+    }
+
+/**
+   (Re)seeds the generator.
+*/
+    void seed(UIntType x0 = 1)
+    {
+        if(!_payload)
+            _payload = new Payload(x0);
+        else
+            _payload.seed(x0);
+    }
+
+/**
+   Advances the random sequence.
+*/
+    void popFront()
+    {
+        if(!_payload) _payload = new Payload(1);
+        _payload.popFront();
+    }
+
+/**
+   Returns the current number in the random sequence.
+*/
+    @property UIntType front()
+    {
+        if(!_payload) _payload = new Payload(1);
+        return _payload.front();
+    }
+
+///
+    @property Unqual!(typeof(this)) save() const
+    {
+        alias Unqual!(typeof(this)) Ret;
+        Ret ret;
+        if(_payload) ret._payload = [_payload.save].ptr;
+        return ret;
+    }
+
+/**
+Always $(D false) (random generators are infinite ranges).
+ */
+    enum bool empty = false;
+
+/**
+   Compares against $(D_PARAM rhs) for equality.
+ */
+    bool opEquals(ref const LinearCongruentialEngine rhs) const
+    {
+        return (_payload == rhs._payload) ||
+               (_payload && rhs._payload && *_payload == *rhs._payload);
+    }
+}
+
+//Actual stack-based implementation
+private struct LinearCongruentialEnginePayload(UIntType, UIntType a, UIntType c, UIntType m)
+    if(isUnsigned!UIntType)
+{
+    // Mark this as a Rng
+    enum bool isUniformRandom = true;
+    // Does this generator have a fixed range? ($(D_PARAM true)).
+    enum bool hasFixedRange = true;
+    // Lowest generated value ($(D 1) if $(D c == 0), $(D 0) otherwise).
+    enum UIntType min = ( c == 0 ? 1 : 0 );
+    // Highest generated value ($(D modulus - 1)).
+    enum UIntType max = m - 1;
+/*
+The parameters of this distribution. The random number is $(D_PARAM x
+= (x * multipler + increment) % modulus).
+*/
     enum UIntType multiplier = a;
-    ///ditto
+    // ditto
     enum UIntType increment = c;
-    ///ditto
+    // ditto
     enum UIntType modulus = m;
 
     static assert(isIntegral!(UIntType));
@@ -272,6 +483,7 @@ The parameters of this distribution. The random number is $(D_PARAM x
             (cast(ulong)a * (m-1) + c) % m == (c < a ? c - a + m : c - a));
 
     // Check for maximum range
+    @safe nothrow
     private static ulong gcd(ulong a, ulong b)
     {
         while (b)
@@ -283,6 +495,7 @@ The parameters of this distribution. The random number is $(D_PARAM x
         return a;
     }
 
+    @safe nothrow
     private static ulong primeFactorsOnly(ulong n)
     {
         ulong result = 1;
@@ -301,6 +514,7 @@ The parameters of this distribution. The random number is $(D_PARAM x
 
     unittest
     {
+        mixin(debug_std_random);
         static assert(primeFactorsOnly(100) == 10);
         //writeln(primeFactorsOnly(11));
         static assert(primeFactorsOnly(11) == 11);
@@ -310,6 +524,7 @@ The parameters of this distribution. The random number is $(D_PARAM x
         // static assert(x == 7 * 11 * 15);
     }
 
+    @safe nothrow
     private static bool properLinearCongruentialParameters(ulong m,
             ulong a, ulong c)
     {
@@ -331,7 +546,7 @@ The parameters of this distribution. The random number is $(D_PARAM x
         if (c > 0 && gcd(c, m) != 1) return false;
         // a - 1 is divisible by all prime factors of m
         if ((a - 1) % primeFactorsOnly(m)) return false;
-        // if a - 1 is multiple of 4, then m is a  multiple of 4 too.
+        // if a - 1 is multiple of 4, then m is a multiple of 4 too.
         if ((a - 1) % 4 == 0 && m % 4) return false;
         // Passed all tests
         return true;
@@ -341,32 +556,35 @@ The parameters of this distribution. The random number is $(D_PARAM x
     static assert(c == 0 || properLinearCongruentialParameters(m, a, c),
             "Incorrect instantiation of LinearCongruentialEngine");
 
-/**
+/*
 Constructs a $(D_PARAM LinearCongruentialEngine) generator seeded with
 $(D x0).
  */
+    @safe nothrow
     this(UIntType x0)
     {
         seed(x0);
     }
 
-/**
+/*
    (Re)seeds the generator.
 */
+    @safe nothrow
     void seed(UIntType x0 = 1)
     {
         static if (c == 0)
         {
-            enforce(x0, "Invalid (zero) seed for "
+            assert(x0, "Invalid (zero) seed for "
                     ~ LinearCongruentialEngine.stringof);
         }
         _x = modulus ? (x0 % modulus) : x0;
         popFront();
     }
 
-/**
+/*
    Advances the random sequence.
 */
+    @trusted nothrow
     void popFront()
     {
         static if (m)
@@ -400,29 +618,31 @@ $(D x0).
         }
     }
 
-/**
+/*
    Returns the current number in the random sequence.
 */
-    @property UIntType front()
+    @safe nothrow
+    @property UIntType front() const
     {
         return _x;
     }
 
-///
-    @property typeof(this) save()
+//
+    @property Unqual!(typeof(this)) save() const
     {
         return this;
     }
 
-/**
+/*
 Always $(D false) (random generators are infinite ranges).
  */
     enum bool empty = false;
 
-/**
+/*
    Compares against $(D_PARAM rhs) for equality.
  */
-    bool opEquals(ref const LinearCongruentialEngine rhs) const
+    @safe nothrow
+    bool opEquals(ref const LinearCongruentialEnginePayload rhs) const
     {
         return _x == rhs._x;
     }
@@ -456,6 +676,7 @@ alias LinearCongruentialEngine!(uint, 48271, 0, 2147483647) MinstdRand;
 
 unittest
 {
+    mixin(debug_std_random);
     assert(isForwardRange!MinstdRand);
     assert(isUniformRNG!MinstdRand);
     assert(isUniformRNG!MinstdRand0);
@@ -510,49 +731,49 @@ unittest
 /**
 The $(LUCKY Mersenne Twister) generator.
  */
-struct MersenneTwisterEngine(UIntType, size_t w, size_t n, size_t m, size_t r,
-                             UIntType a, size_t u, size_t s,
-                             UIntType b, size_t t,
-                             UIntType c, size_t l)
+struct MersenneTwisterEngine(UIntType, size_t w,   size_t n, size_t m, size_t r,
+                                       UIntType a, size_t u, size_t s,
+                                       UIntType b, size_t t,
+                                       UIntType c, size_t l)
     if(isUnsigned!UIntType)
 {
+    private alias MersenneTwisterEnginePayload!(UIntType, w, n, m, r,
+                                                          a, u, s,
+                                                          b, t,
+                                                          c, l) Payload;
+    private Payload* _payload;
+
     ///Mark this as a Rng
-    enum bool isUniformRandom = true;
+    enum bool isUniformRandom = Payload.isUniformRandom;
+
 /**
-Parameter for the generator.
+Parameters for the generator.
 */
-    enum size_t wordSize = w;
-    enum size_t stateSize = n;
-    enum size_t shiftSize = m;
-    enum size_t maskBits = r;
-    enum UIntType xorMask = a;
-    enum UIntType temperingU = u;
-    enum size_t temperingS = s;
-    enum UIntType temperingB = b;
-    enum size_t temperingT = t;
-    enum UIntType temperingC = c;
-    enum size_t temperingL = l;
+    enum size_t   wordSize   = Payload.wordSize;
+    enum size_t   stateSize  = Payload.stateSize;  /// ditto
+    enum size_t   shiftSize  = Payload.shiftSize;  /// ditto
+    enum size_t   maskBits   = Payload.maskBits;   /// ditto
+    enum UIntType xorMask    = Payload.xorMask;    /// ditto
+    enum UIntType temperingU = Payload.temperingU; /// ditto
+    enum size_t   temperingS = Payload.temperingS; /// ditto
+    enum UIntType temperingB = Payload.temperingB; /// ditto
+    enum size_t   temperingT = Payload.temperingT; /// ditto
+    enum UIntType temperingC = Payload.temperingC; /// ditto
+    enum size_t   temperingL = Payload.temperingL; /// ditto
 
     /// Smallest generated value (0).
-    enum UIntType min = 0;
+    enum UIntType min = Payload.min;
     /// Largest generated value.
-    enum UIntType max =
-        w == UIntType.sizeof * 8 ? UIntType.max : (1u << w) - 1;
+    enum UIntType max = Payload.max;
     /// The default seed value.
-    enum UIntType defaultSeed = 5489u;
-
-    static assert(1 <= m && m <= n);
-    static assert(0 <= r && 0 <= u && 0 <= s && 0 <= t && 0 <= l);
-    static assert(r <= w && u <= w && s <= w && t <= w && l <= w);
-    static assert(0 <= a && 0 <= b && 0 <= c);
-    static assert(a <= max && b <= max && c <= max);
+    enum UIntType defaultSeed = Payload.defaultSeed;
 
 /**
    Constructs a MersenneTwisterEngine object.
 */
     this(UIntType value)
     {
-        seed(value);
+        _payload = new Payload(value);
     }
 
 /**
@@ -561,6 +782,131 @@ Parameter for the generator.
    This seed function gives 2^32 starting points. To allow the RNG to be started in any one of its
    internal states use the seed overload taking an InputRange.
 */
+    void seed()(UIntType value = defaultSeed)
+    {
+        if(!_payload)
+            _payload = new Payload(value);
+        else
+            _payload.seed(value);
+    }
+
+/**
+   Seeds a MersenneTwisterEngine object using an InputRange.
+
+   Throws:
+   $(D Exception) if the InputRange didn't provide enough elements to seed the generator.
+   The number of elements required is the 'n' template parameter of the MersenneTwisterEngine struct.
+   
+   Examples:
+   ----------------
+   Mt19937 gen;
+   gen.seed(map!((a) => unpredictableSeed)(repeat(0)));
+   ----------------
+ */
+    void seed(T)(T range)
+        if(isInputRange!T && is(Unqual!(ElementType!T) == UIntType))
+    {
+        if(!_payload) _payload = [Payload.init].ptr;
+        _payload.seed(range);
+    }
+
+/**
+   Advances the generator.
+*/
+    void popFront()
+    {
+        if(!_payload) _payload = new Payload(defaultSeed);
+        _payload.popFront();
+    }
+
+/**
+   Returns the current random value.
+ */
+    @property UIntType front()
+    {
+        if(!_payload) _payload = new Payload(defaultSeed);
+        return _payload.front();
+    }
+
+///
+    @property Unqual!(typeof(this)) save() const
+    {
+        alias Unqual!(typeof(this)) Ret;
+        Ret ret;
+        if(_payload) ret._payload = [_payload.save].ptr;
+        return ret;
+    }
+
+/**
+Always $(D false).
+*/
+    enum bool empty = false;
+
+/**
+   Compares against $(D_PARAM rhs) for equality.
+ */
+    bool opEquals(ref const MersenneTwisterEngine rhs) const
+    {
+        return (_payload == rhs._payload) ||
+               (_payload && rhs._payload && *_payload == *rhs._payload);
+    }
+}
+
+//Actual stack-based implementation
+private struct MersenneTwisterEnginePayload(UIntType, size_t w,   size_t n, size_t m, size_t r,
+                                              UIntType a, size_t u, size_t s,
+                                              UIntType b, size_t t,
+                                              UIntType c, size_t l)
+    if(isUnsigned!UIntType)
+{
+    // Mark this as a Rng
+    enum bool isUniformRandom = true;
+
+/*
+Parameters for the generator.
+*/
+    enum size_t   wordSize   = w;
+    enum size_t   stateSize  = n; // ditto
+    enum size_t   shiftSize  = m; // ditto
+    enum size_t   maskBits   = r; // ditto
+    enum UIntType xorMask    = a; // ditto
+    enum UIntType temperingU = u; // ditto
+    enum size_t   temperingS = s; // ditto
+    enum UIntType temperingB = b; // ditto
+    enum size_t   temperingT = t; // ditto
+    enum UIntType temperingC = c; // ditto
+    enum size_t   temperingL = l; // ditto
+
+    // Smallest generated value (0).
+    enum UIntType min = 0;
+    // Largest generated value.
+    enum UIntType max =
+        w == UIntType.sizeof * 8 ? UIntType.max : (1u << w) - 1;
+    // The default seed value.
+    enum UIntType defaultSeed = 5489u;
+
+    static assert(1 <= m && m <= n);
+    static assert(0 <= r && 0 <= u && 0 <= s && 0 <= t && 0 <= l);
+    static assert(r <= w && u <= w && s <= w && t <= w && l <= w);
+    static assert(0 <= a && 0 <= b && 0 <= c);
+    static assert(a <= max && b <= max && c <= max);
+
+/*
+   Constructs a MersenneTwisterEngine object.
+*/
+    @safe nothrow
+    this(UIntType value)
+    {
+        seed(value);
+    }
+
+/*
+   Seeds a MersenneTwisterEngine object.
+   Note:
+   This seed function gives 2^32 starting points. To allow the RNG to be started in any one of its
+   internal states use the seed overload taking an InputRange.
+*/
+    @safe nothrow
     void seed()(UIntType value = defaultSeed)
     {
         static if (w == UIntType.sizeof * 8)
@@ -587,7 +933,7 @@ Parameter for the generator.
         popFront();
     }
 
-/**
+/*
    Seeds a MersenneTwisterEngine object using an InputRange.
 
    Throws:
@@ -600,7 +946,8 @@ Parameter for the generator.
    gen.seed(map!((a) => unpredictableSeed)(repeat(0)));
    ----------------
  */
-    void seed(T)(T range) if(isInputRange!T && is(Unqual!(ElementType!T) == UIntType))
+    void seed(T)(T range)
+        if(isInputRange!T && is(Unqual!(ElementType!T) == UIntType))
     {
         size_t j;
         for(j = 0; j < n && !range.empty; ++j, range.popFront())
@@ -618,9 +965,10 @@ Parameter for the generator.
         popFront();
     }
 
-/**
+/*
    Advances the generator.
 */
+    @safe nothrow
     void popFront()
     {
         if (mti == size_t.max) seed();
@@ -669,22 +1017,24 @@ Parameter for the generator.
         _y = cast(UIntType) y;
     }
 
-/**
+/*
    Returns the current random value.
  */
-    @property UIntType front()
+    @safe nothrow
+    @property UIntType front() const
     {
-        if (mti == size_t.max) seed();
+        //if (mti == size_t.max) seed();
         return _y;
     }
 
-///
-    @property typeof(this) save()
+//
+    @safe nothrow
+    @property Unqual!(typeof(this)) save() const
     {
         return this;
     }
-
-/**
+    
+/*
 Always $(D false).
  */
     enum bool empty = false;
@@ -719,6 +1069,7 @@ alias MersenneTwisterEngine!(uint, 32, 624, 397, 31, 0x9908b0df, 11, 7,
 
 unittest
 {
+    mixin(debug_std_random);
     assert(isUniformRNG!Mt19937);
     assert(isUniformRNG!(Mt19937, uint));
     assert(isSeedable!Mt19937);
@@ -731,6 +1082,7 @@ unittest
 
 unittest
 {
+    mixin(debug_std_random);
     Mt19937 gen;
 
     assertThrown(gen.seed(map!((a) => unpredictableSeed)(repeat(0, 623))));
@@ -742,6 +1094,7 @@ unittest
 
 unittest
 {
+    mixin(debug_std_random);
     uint a, b;
     {
         Mt19937 gen;
@@ -775,20 +1128,95 @@ unittest
 struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType c)
     if(isUnsigned!UIntType)
 {
+    private alias XorshiftEnginePayload!(UIntType, bits, a, b, c) Payload;
+    private Payload* _payload;
+
+    /// Mark this as a Rng
+    enum bool isUniformRandom = Payload.isUniformRandom;
+    /// Always $(D false) (random generators are infinite ranges).
+    enum bool empty = Payload.empty;
+    /// Smallest generated value.
+    enum UIntType min = Payload.min;
+    /// Largest generated value.
+    enum UIntType max = Payload.max;
+
+    /**
+     * Constructs a $(D XorshiftEngine) generator seeded with $(D_PARAM x0).
+     */
+    this(UIntType x0)
+    {
+        _payload = new Payload(x0);
+    }
+
+    /**
+     * (Re)seeds the generator.
+     */
+    void seed(UIntType x0)
+    {
+        if(!_payload)
+            _payload = new Payload(x0);
+        else
+            _payload.seed(x0);
+    }
+
+
+    /**
+     * Returns the current number in the random sequence.
+     */
+    @property UIntType front()
+    {
+        if(!_payload) _payload = [Payload.init].ptr;
+        return _payload.front();
+    }
+
+    /**
+     * Advances the random sequence.
+     */
+    void popFront()
+    {
+        if(!_payload) _payload = [Payload.init].ptr;
+        _payload.popFront();
+    }
+
+    /**
+     * Captures a range state.
+     */
+    @property Unqual!(typeof(this)) save() const
+    {
+        alias Unqual!(typeof(this)) Ret;
+        Ret ret;
+        if(_payload) ret._payload = [_payload.save].ptr;
+        return ret;
+    }
+
+    /**
+     * Compares against $(D_PARAM rhs) for equality.
+     */
+    @safe nothrow
+    bool opEquals(ref const XorshiftEngine rhs) const
+    {
+        return (_payload == rhs._payload) ||
+               (_payload && rhs._payload && *_payload == *rhs._payload);
+    }
+}
+
+//Actual stack-based implementation
+private struct XorshiftEnginePayload(UIntType, UIntType bits, UIntType a, UIntType b, UIntType c)
+    if(isUnsigned!UIntType)
+{
     static assert(bits == 32 || bits == 64 || bits == 96 || bits == 128 || bits == 160 || bits == 192,
                   "Supporting bits are 32, 64, 96, 128, 160 and 192. " ~ to!string(bits) ~ " is not supported.");
 
 
   public:
-    ///Mark this as a Rng
+    // Mark this as a Rng
     enum bool isUniformRandom = true;
-    /// Always $(D false) (random generators are infinite ranges).
+    // Always $(D false) (random generators are infinite ranges).
     enum empty = false;
-    /// Smallest generated value.
+    // Smallest generated value.
     enum UIntType min = 0;
-    /// Largest generated value.
+    // Largest generated value.
     enum UIntType max = UIntType.max;
-
 
   private:
     enum size = bits / 32;
@@ -809,23 +1237,21 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
         UIntType       value_;
     }
 
-
   public:
-    /**
+    /*
      * Constructs a $(D XorshiftEngine) generator seeded with $(D_PARAM x0).
      */
-    @safe
+    @safe nothrow
     this(UIntType x0)
     {
         seed(x0);
     }
 
-
-    /**
+    /*
      * (Re)seeds the generator.
      */
-    @safe
-    nothrow void seed(UIntType x0)
+    @safe nothrow
+    void seed(UIntType x0)
     {
         // Initialization routine from MersenneTwisterEngine.
         foreach (i, e; seeds_)
@@ -837,12 +1263,11 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
         popFront();
     }
 
-
-    /**
+    /*
      * Returns the current number in the random sequence.
      */
-    @property @safe
-    nothrow UIntType front()
+    @safe nothrow
+    @property UIntType front()
     {
         static if (bits == 192)
             return value_;
@@ -850,12 +1275,11 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
             return seeds_[size - 1];
     }
 
-
-    /**
+    /*
      * Advances the random sequence.
      */
-    @safe
-    nothrow void popFront()
+    @safe nothrow
+    void popFront()
     {
         UIntType temp;
 
@@ -907,30 +1331,26 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
         }
     }
 
-
-    /**
+    /*
      * Captures a range state.
      */
-    @property
-    typeof(this) save()
+    @property Unqual!(typeof(this)) save() const
     {
         return this;
     }
 
-
-    /**
+    /*
      * Compares against $(D_PARAM rhs) for equality.
      */
-    @safe
-    nothrow bool opEquals(ref const XorshiftEngine rhs) const
+    @safe nothrow
+    bool opEquals(ref const XorshiftEnginePayload rhs) const
     {
         return seeds_ == rhs.seeds_;
     }
 
-
   private:
-    @safe
-    static nothrow void sanitizeSeeds(ref UIntType[size] seeds)
+    @safe nothrow
+    static void sanitizeSeeds(ref UIntType[size] seeds)
     {
         for (uint i; i < seeds.length; i++)
         {
@@ -939,9 +1359,9 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
         }
     }
 
-
     unittest
     {
+        mixin(debug_std_random);
         static if (size  ==  4)  // Other bits too
         {
             UIntType[size] seeds = [1, 0, 0, 4];
@@ -952,7 +1372,6 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
         }
     }
 }
-
 
 /**
  * Define $(D XorshiftEngine) generators with well-chosen parameters. See each bits examples of "Xorshift RNGs".
@@ -980,6 +1399,7 @@ alias Xorshift128 Xorshift;                                /// ditto
 
 unittest
 {
+    mixin(debug_std_random);
     assert(isForwardRange!Xorshift);
     assert(isUniformRNG!Xorshift);
     assert(isUniformRNG!(Xorshift, uint));
@@ -1039,6 +1459,7 @@ auto n = rnd.front;
 
 unittest
 {
+    mixin(debug_std_random);
     // not much to test here
     auto a = unpredictableSeed;
     static assert(is(typeof(a) == uint));
@@ -1056,6 +1477,7 @@ alias Mt19937 Random;
 
 unittest
 {
+    mixin(debug_std_random);
     assert(isUniformRNG!Random);
     assert(isUniformRNG!(Random, uint));
     assert(isSeedable!Random);
@@ -1070,14 +1492,12 @@ and initialized to an unpredictable value for each thread.
 @property ref Random rndGen()
 {
     static Random result;
-    static bool initialized;
-    if (!initialized)
+    if (!result._payload)
     {
         static if(isSeedable!(Random, typeof(map!((a) => unpredictableSeed)(repeat(0)))))
             result.seed(map!((a) => unpredictableSeed)(repeat(0)));
         else
             result = Random(unpredictableSeed);
-        initialized = true;
     }
     return result;
 }
@@ -1108,6 +1528,7 @@ auto uniform(string boundaries = "[)", T1, T2)
 
 unittest
 {
+    mixin(debug_std_random);
     MinstdRand0 gen;
     foreach (i; 0 .. 20)
     {
@@ -1225,6 +1646,7 @@ if (isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2)))
 
 unittest
 {
+    mixin(debug_std_random);
     auto gen = Mt19937(unpredictableSeed);
     static assert(isForwardRange!(typeof(gen)));
 
@@ -1279,6 +1701,7 @@ if (isIntegral!T || isSomeChar!T)
 
 unittest
 {
+    mixin(debug_std_random);
     foreach(T; TypeTuple!(char, wchar, dchar, byte, ubyte, short, ushort,
                           int, uint, long, ulong))
     {
@@ -1308,6 +1731,7 @@ F[] uniformDistribution(F = double)(size_t n, F[] useThis = null)
 
 unittest
 {
+    mixin(debug_std_random);
     static assert(is(CommonType!(double, int) == double));
     auto a = uniformDistribution(5);
     enforce(a.length == 5);
@@ -1331,6 +1755,7 @@ void randomShuffle(Range, RandomGen = Random)(Range r,
 
 unittest
 {
+    mixin(debug_std_random);
     // Also tests partialShuffle indirectly.
     auto a = ([ 1, 2, 3, 4, 5, 6, 7, 8, 9 ]).dup;
     auto b = a.dup;
@@ -1425,6 +1850,7 @@ if (isForwardRange!Range && isNumeric!(ElementType!Range) && isForwardRange!Rng)
 
 unittest
 {
+    mixin(debug_std_random);
     auto rnd = Random(unpredictableSeed);
     auto i = dice(rnd, 0.0, 100.0);
     assert(i == 1);
@@ -1527,6 +1953,7 @@ RandomCover!(Range, Random) randomCover(Range, Random)(Range r, Random rnd)
 
 unittest
 {
+    mixin(debug_std_random);
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
     auto rnd = Random(unpredictableSeed);
     RandomCover!(int[], Random) rc = randomCover(a, rnd);
@@ -1913,6 +2340,7 @@ if (isInputRange!R && hasLength!R && isUniformRNG!Random)
 
 unittest
 {
+    mixin(debug_std_random);
     Random gen;
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
     static assert(isForwardRange!(typeof(randomSample(a, 5))));
