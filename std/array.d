@@ -169,6 +169,47 @@ unittest
     }
 }
 
+/**
+Returns a newly allocated associative array out of elements of the input range.
+The input range must be a range or array of tuples (Key, Value).
+
+Example:
+
+$(D_RUN_CODE
+$(ARGS
+----
+auto a = assocArray(zip([0, 1, 2], ["a", "b", "c"]));
+assert(a == [0:"a", 1:"b", 2:"c"]);
+auto b = assocArray([ tuple("foo", "bar"), tuple("baz", "quux") ]);
+assert(b == ["foo":"bar", "baz":"quux"]);
+----
+), $(ARGS), $(ARGS), $(ARGS import std.array;))
+ */
+
+auto assocArray(Range)(Range r)
+    if (isInputRange!Range && isTuple!(ElementType!Range)
+     && __traits(compiles, ElementType!Range.Types[0])
+     && __traits(compiles, ElementType!Range.Types[1])
+     && !__traits(compiles, ElementType!Range.Types[2]))
+{
+    alias ElementType!Range.Types[0] KeyType;
+    alias ElementType!Range.Types[1] ValueType;
+    ValueType[KeyType] aa;
+    foreach (t; r)
+        aa[t[0]] = t[1];
+    return aa;
+}
+
+unittest
+{
+    auto aa1 = [ tuple("foo", "bar"), tuple("baz", "quux") ].assocArray();
+    assert(is(typeof(aa1) == string[string]));
+    assert(aa1 == ["foo":"bar", "baz":"quux"]);
+    auto aa2 = zip([0, 1, 2], ["a", "b", "c"]).assocArray();
+    assert(is(typeof(aa2) == string[int]));
+    assert(aa2 == [0:"a", 1:"b", 2:"c"]);
+}
+
 private template blockAttribute(T)
 {
     static if (hasIndirections!(T) || is(T == void))
