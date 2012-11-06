@@ -1782,16 +1782,12 @@ else version(Posix)
 
         @property bool isDir()
         {
-            _ensureStatDone();
-
-            return (_statBuf.st_mode & S_IFMT) == S_IFDIR;
+            return _doStat() && (_statBuf.st_mode & S_IFMT) == S_IFDIR;
         }
 
         @property bool isFile()
         {
-            _ensureStatDone();
-
-            return (_statBuf.st_mode & S_IFMT) == S_IFREG;
+            return _doStat() && (_statBuf.st_mode & S_IFMT) == S_IFREG;
         }
 
         @property bool isSymlink()
@@ -1883,6 +1879,19 @@ else version(Posix)
             }
             else
                 _dTypeSet = false;
+        }
+
+        /++
+            This is to support lazy evaluation, because doing stat's is
+            expensive and not always needed.
+            Return value determines whether the _statBuf structure contains
+            correct data.
+         +/
+        bool _doStat()
+        {
+            if (!_didStat)
+                _didStat = stat(toStringz(_name), &_statBuf) == 0;
+            return _didStat;
         }
 
         /++
@@ -1989,6 +1998,80 @@ unittest
             assert(de.isFile);
             assert(!de.isDir);
             assert(!de.isSymlink);
+        }
+
+        {
+            immutable linkedfile = deleteme ~ "_linkedfile\0";
+            scope(exit) if(linkedfile.exists) linkedfile.remove();
+            immutable symfile = deleteme ~ "_symfile\0";
+            scope(exit)
+            {
+                stat_t lstatbuf = void;
+                if(lstat(toStringz(symfile), &lstatbuf) == 0)
+                    symfile.remove();
+            }
+            write(linkedfile, null);
+            symlink(linkedfile, symfile);
+
+            {
+                auto symde = dirEntry(symfile);
+                auto filede = dirEntry(linkedfile);
+
+                assert(filede.isFile);
+                assert(!filede.isDir);
+                assert(!filede.isSymlink);
+
+                assert(!symde.isDir);
+                assert(symde.isFile);
+                assert(symde.isSymlink);
+
+                symde._didStat = false;
+                assert(symde._doStat());
+                linkedfile.remove();
+                symde._didStat = false;
+                assert(!symde._doStat());
+
+                assert(!symde.isFile);
+                assert(!symde.isDir);
+                assert(symde.isSymlink);
+            }
+        }
+
+        {
+            immutable linkeddir = deleteme ~ "_linkeddir\0";
+            scope(exit) if(linkeddir.exists) linkeddir.rmdir();
+            immutable symdir = deleteme ~ "_symdir\0";
+            scope(exit)
+            {
+                stat_t lstatbuf = void;
+                if(lstat(toStringz(symdir), &lstatbuf) == 0)
+                    symdir.remove();
+            }
+            mkdir(linkeddir);
+            symlink(linkeddir, symdir);
+
+            {
+                auto symde = dirEntry(symdir);
+                auto dirde = dirEntry(linkeddir);
+
+                assert(!dirde.isFile);
+                assert(dirde.isDir);
+                assert(!dirde.isSymlink);
+
+                assert(!symde.isFile);
+                assert(symde.isDir);
+                assert(symde.isSymlink);
+
+                symde._didStat = false;
+                assert(symde._doStat());
+                linkeddir.rmdir();
+                symde._didStat = false;
+                assert(!symde._doStat());
+
+                assert(!symde.isFile);
+                assert(!symde.isDir);
+                assert(symde.isSymlink);
+            }
         }
     }
 }
