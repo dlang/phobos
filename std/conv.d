@@ -3642,6 +3642,96 @@ unittest
     assert(i is k);
 }
 
+
+/** Sets the passed object to its `init` state.
+
+Use this function instead of dealing with tricky $(D typeid(T).init()).
+
+Note: be careful as it also changes memory marked as $(D const)/$(D immutable).
+*/
+package void setToInitialState(T)(ref T t)
+{
+    alias Unqual!T U;
+
+    // If there is a compiler-generated elaborate assign, `T` isn't nested, and
+    // either elaborate copy constructor or elaborate destructor is absent 
+    // `t = T.init` has no side effects. It is either an optimization
+    // opportunity or a compiler bug.
+    static if(hasElaborateAssign!T || (!isAssignable!T && !isAssignable!U))
+    {
+        import core.stdc.string;
+
+        // `typeid(T)` will also work but will cost a virtual call per each array
+        // dimension. We will not be here for [static arrays of] classes so
+        // there is no problems with `TypeInfo_Class.init` field name clash.
+        if(auto p = typeid(MultidimensionalStaticArrayElementType!U).init().ptr)
+            foreach(ref el; asFlatStaticArray((*cast(U*) &t)))
+                memcpy(&el, p, typeof(el).sizeof);
+        else
+            memset(cast(void*) &t, 0, T.sizeof);
+    }
+    else static if(!isAssignable!T)
+    {
+        (*cast(U*) &t) = U.init;
+    }
+    else
+    {
+        t = T.init;
+    }
+}
+
+unittest
+{
+    int i = -1;
+    setToInitialState(i);
+    assert(i == 0);
+
+    static assert(!__traits(compiles, setToInitialState(5))); // doesn't accept rvalue
+
+    static bool exited = false;
+
+    static struct S(int def)
+    {
+        int i = def;
+        @disable this();
+        this(this)  { assert(0); }
+        ~this()     { assert(exited); }
+    }
+
+    S!0 s0 = void; s0.i = -1;
+    setToInitialState(s0);
+    assert(s0.i == 0);
+
+    S!1 s1 = void; s1.i = -1;
+    setToInitialState(s1);
+    assert(s1.i == 1);
+
+    S!1[2][1] sArr = void;
+    foreach(ref el; sArr[0])
+        el.i = -1;
+    setToInitialState(sArr);
+    assert(sArr == (S!1[2][1]).init);
+
+    exited = true;
+}
+
+unittest // const
+{
+    static struct Int1
+    { int i = 1; }
+
+    static struct S
+    { const Int1 i; }
+
+    int i = 0;
+    static assert(S.sizeof == i.sizeof);
+    setToInitialState(*cast(S*) &i);
+    assert(i == 1); i = 0;
+
+    setToInitialState(*cast(const S*) &i);
+    assert(i == 1); i = 0;
+}
+
 // Undocumented for the time being
 void toTextRange(T, W)(T value, W writer)
     if (isIntegral!T && isOutputRange!(W, char))
