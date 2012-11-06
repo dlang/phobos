@@ -2686,13 +2686,6 @@ Defines the container's primary range, which is a random-access range.
         private Data _data;
         private size_t _a, _b;
 
-        invariant()
-        {
-            assert(_a <= _b, "Array.Range: Upper Bound is smaller than Lower Bound");
-            assert(_b <= (_data.refCountedStore.isInitialized ? _data.length : 0),
-                "Array.Range: Range references past the end of the Array.");
-        }
-
         private this(Data data, size_t a, size_t b)
         {
             _data = data;
@@ -2702,24 +2695,28 @@ Defines the container's primary range, which is a random-access range.
 
         @property Range save()
         {
+            assert(_isValid, _invalidMessage);
             return this;
         }
 
         const @safe nothrow
         @property bool empty()
         {
+            assert(_isValid, _invalidMessage);
             return _a >= _b;
         }
 
         const @safe nothrow
         @property size_t length()
         {
+            assert(_isValid, _invalidMessage);
             return _b - _a;
         }
 
         @safe nothrow const
         size_t opDollar()
         {
+            assert(_isValid, _invalidMessage);
             return length;
         }
 
@@ -2811,6 +2808,7 @@ Defines the container's primary range, which is a random-access range.
 
         typeof(this) opSlice()
         {
+            assert(_isValid, _invalidMessage);
             return this;
         }
 
@@ -2822,6 +2820,7 @@ Defines the container's primary range, which is a random-access range.
 
         void opSliceAssign(T value)
         {
+            assert(_isValid, _invalidMessage);
             if(_data.refCountedStore.isInitialized)
                 _payload[] = value;
         }
@@ -2836,6 +2835,7 @@ Defines the container's primary range, which is a random-access range.
         void opSliceUnary(string op)()
             if(op == "++" || op == "--")
         {
+            assert(_isValid, _invalidMessage);
             if(_data.refCountedStore.isInitialized)
                 mixin(op~"_payload[];");
         }
@@ -2850,6 +2850,7 @@ Defines the container's primary range, which is a random-access range.
 
         void opSliceOpAssign(string op)(T value)
         {
+            assert(_isValid, _invalidMessage);
             if(_data.refCountedStore.isInitialized)
                 mixin("_payload[] "~op~"= value;");
         }
@@ -2872,25 +2873,34 @@ Defines the container's primary range, which is a random-access range.
         version(assert) private //Entire section dedicated to assertions
         {
             //Messages printed out by the asserts
-            enum _emptyMessage = "Array.Range: range is empty";
-            enum _indexMessage = "Array.Range: input index is out of bounds";
-            enum _sliceMessage = "Array.Range: input slice is invalid";
+            enum _invalidMessage = "Array.Range: range has been invalidated (points past the end of the Array)";
+            enum _emptyMessage   = "Array.Range: range is empty";
+            enum _indexMessage   = "Array.Range: input index is out of bounds";
+            enum _sliceMessage   = "Array.Range: input slice is invalid";
 
             //These methods don't ever assert themselves: The client will have a better idea of the actual asserted line
             @property @safe nothrow const
             {
+                bool _isValid()
+                {
+                    assert(_a <= _b, "Array.Range: Upper Bound is smaller than Lower Bound");
+                    return _b <= (_data.refCountedStore.isInitialized ? _data.length : 0);
+                }
                 bool _notEmpty() //vs !empty: Avoids calling invariant
                 {
+                    assert(_isValid, _invalidMessage);
                     return _a < _b;
                 }
 
                 bool _validIndex(size_t i)
                 {
+                    assert(_isValid, _invalidMessage);
                     return _a + i < _b;
                 }
 
                 bool _validSlice(size_t i, size_t j)
                 {
+                    assert(_isValid, _invalidMessage);
                     return (i <= j) && (_a + j <= _b);
                 }
             }
@@ -3316,7 +3326,6 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     if (isImplicitlyConvertible!(Stuff, T))
     {
-        assert(&r);
         assert(_ownsRange(r), _ownsRangeMessage);
         reserve(length + 1);
         assert(_data.refCountedStore.isInitialized);
@@ -3333,7 +3342,6 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
-        assert(&r);
         assert(_ownsRange(r), _ownsRangeMessage);
         static if (isForwardRange!Stuff)
         {
@@ -3369,7 +3377,6 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     /// ditto
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
     {
-        assert(&r);
         assert(_ownsRange(r), _ownsRangeMessage);
         // TODO: optimize
         immutable offset = r._b;
@@ -3383,7 +3390,6 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     size_t replace(Stuff)(Range r, Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
-        assert(&r);
         assert(_ownsRange(r), _ownsRangeMessage);
         size_t result;
         for (; !stuff.empty; stuff.popFront())
@@ -3406,7 +3412,6 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     size_t replace(Stuff)(Range r, Stuff stuff)
     if (isImplicitlyConvertible!(Stuff, T))
     {
-        assert(&r);
         assert(_ownsRange(r), _ownsRangeMessage);
         if (r.empty)
         {
@@ -3435,7 +3440,6 @@ $(D r)
      */
     Range linearRemove(Range r)
     {
-        assert(&r);
         assert(_ownsRange(r), _ownsRangeMessage);
         if(!_data.refCountedStore.isInitialized) return this[];
 
@@ -3498,17 +3502,18 @@ $(D r)
             //This also returns true if r is not initialized
             bool _ownsRange(ref Range r) //Range is passed by value, to avoid un-safe Range.~this
             {
+                assert(r._isValid, Range._invalidMessage);
                 return r._data is _data || !r._data.refCountedStore.isInitialized;
             }
         }
     }
 }
 
-// unittest
-// {
-//     Array!int a;
-//     assert(a.empty);
-// }
+unittest
+{
+    Array!int a;
+    assert(a.empty);
+}
 
 unittest
 {
@@ -3779,6 +3784,14 @@ unittest
     assert(r.equal([6, 35, 40]));
     r[0 .. 2] = 0;
     assert(r.equal([0, 0, 40]));
+}
+unittest
+{
+    auto arr = Array!int([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    auto r = arr[2 .. 6];
+    // r gets invalidated during the remove.
+    // we also verify overwriting an invalidated range.
+    r = arr.linearRemove(r);
 }
 unittest
 {
