@@ -2540,7 +2540,8 @@ private struct DirIteratorImpl
 
         bool mayStepIn()
         {
-            return _followSymlink ? _cur.isDir : attrIsDir(_cur.linkAttributes);
+            return (_followSymlink ? _cur.isDir : attrIsDir(_cur.linkAttributes))
+                && access(_cur.name.toStringz(), X_OK) == 0;
         }
     }
 
@@ -2709,6 +2710,32 @@ unittest
     {
         //writeln(name);
         assert(e.isFile || e.isDir, e.name);
+    }
+
+    version(Posix)
+    {
+        // should not throw if access to a directory is denied
+        {
+            auto somedir = toStringz(buildPath(testdir, "somedir"));
+            assert(access(somedir, X_OK) == 0);
+            scope(exit) chmod(somedir, octal!755);
+            assert(chmod(somedir, octal!000) == 0);
+            assert(access(somedir, X_OK) != 0);
+            assert(equalEntries(testdir, SpanMode.shallow) == 2);
+            assert(equalEntries(testdir, SpanMode.depth) == 2);
+            assert(equalEntries(testdir, SpanMode.breadth) == 2);
+        }
+        // should not throw if a broken symlink is found
+        {
+            assert(walkLength(dirEntries(testdir, SpanMode.depth)) == 3);
+            assert(walkLength(dirEntries(testdir, SpanMode.depth).filter!(de => de.isFile)()) == 2);
+            symlink("somedeepfile", buildPath(testdir, "somedir", "somesymlink"));
+            assert(walkLength(dirEntries(testdir, SpanMode.depth)) == 4);
+            assert(walkLength(dirEntries(testdir, SpanMode.depth).filter!(de => de.isFile)()) == 3);
+            buildPath(testdir, "somedir", "somedeepfile").remove();
+            assert(walkLength(dirEntries(testdir, SpanMode.depth)) == 3);
+            assert(walkLength(dirEntries(testdir, SpanMode.depth).filter!(de => de.isFile)()) == 1);
+        }
     }
 }
 
