@@ -3732,6 +3732,148 @@ unittest // const
     assert(i == 1); i = 0;
 }
 
+
+/** Calls the postblit of the given object, if any.
+
+Faster and convenient replacement for $(D typeid(T).postblit(&t)).
+*/
+package void callPostblits(T)(ref T t)
+{
+    static if(hasElaborateCopyConstructor!T)
+    {
+        foreach(ref el; asFlatStaticArray(t))
+        {
+            foreach(ref field; el.tupleof)
+                static if(hasElaborateCopyConstructor!(typeof(field)))
+                    callPostblits(field);
+
+            static if(hasMember!(typeof(el), "__postblit"))
+                el.__postblit();
+        }
+    }
+}
+
+unittest
+{
+    int i = -1;
+    callPostblits(i); // no-op for non-elaborate types
+
+    static assert(!__traits(compiles, callPostblits(5))); // doesn't accept rvalue
+
+    static int[] log;
+    static void checkLog(int[] arr...)
+    { assert(log == arr); log = null; }
+
+    static bool exited = false;
+
+    static struct S
+    {
+        int i;
+        @disable this();
+        this(this)  { log ~= i; }
+        ~this()     { assert(exited); }
+    }
+
+    S s = void; s.i = -1;
+    callPostblits(s);
+    checkLog(-1);
+
+    S[3][2][1] sArr = void;
+    foreach(j, ref el; *cast(S[6]*) sArr.ptr)
+        el.i = j;
+    callPostblits(sArr);
+    checkLog(0, 1, 2, 3, 4, 5);
+
+    static struct S2
+    {
+        S s;
+        S[2] sArr;
+
+        @disable this();
+        this(this)  { log ~= -1; }
+        ~this()     { assert(exited); }
+    }
+
+    S2 s2 = void;
+    foreach(j, ref el; *cast(S[3]*) &s2)
+        el.i = j;
+    callPostblits(s2);
+    checkLog(0, 1, 2, -1);
+
+    exited = true;
+}
+
+
+/** Calls the destructor of the given object, if any.
+
+Faster and convenient replacement for $(D typeid(T).destroy(&t)).
+*/
+package void callDestructors(T)(ref T t)
+{
+    static if(hasElaborateDestructor!T)
+    {
+        foreach_reverse(ref el; asFlatStaticArray(t))
+        {
+            static if(hasMember!(typeof(el), "__dtor"))
+                el.__dtor();
+
+            foreach_reverse(ref field; el.tupleof)
+                static if(hasElaborateDestructor!(typeof(field)))
+                    callDestructors(field);
+        }
+    }
+}
+
+unittest
+{
+    int i = -1;
+    callDestructors(i); // no-op for non-elaborate types
+
+    static assert(!__traits(compiles, callDestructors(5))); // doesn't accept rvalue
+
+    static int[] log;
+    static void checkLog(int[] arr...)
+    { assert(log == arr); log = null; }
+
+    static bool exited = false;
+
+    static struct S
+    {
+        int i;
+        @disable this();
+        this(this)  { assert(exited); }
+        ~this()     { log ~= i; }
+    }
+
+    S s = void; s.i = -1;
+    callDestructors(s);
+    checkLog(-1);
+
+    S[3][2][1] sArr = void;
+    foreach(j, ref el; *cast(S[6]*) sArr.ptr)
+        el.i = j;
+    callDestructors(sArr);
+    checkLog(5, 4, 3, 2, 1, 0);
+
+    static struct S2
+    {
+        S s;
+        S[2] sArr;
+
+        @disable this();
+        this(this)  { assert(exited); }
+        ~this()     { log ~= -1; }
+    }
+
+    S2 s2 = void;
+    foreach(j, ref el; *cast(S[3]*) &s2)
+        el.i = j;
+    callDestructors(s2);
+    checkLog(-1, 2, 1, 0);
+
+    exited = true;
+}
+
 // Undocumented for the time being
 void toTextRange(T, W)(T value, W writer)
     if (isIntegral!T && isOutputRange!(W, char))
