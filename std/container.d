@@ -2553,14 +2553,19 @@ struct Array(T)
                         .destroy(e);
                     }
                 }
+                // Zero out unused capacity to prevent gc from seeing false pointers
+                static if (hasIndirections!T)
+                    memset(_payload.ptr + newLength,
+                           0,
+                           (length - newLength) * T.sizeof);
                 _payload = _payload.ptr[0 .. newLength];
                 return;
             }
             // enlarge
-            auto startEmplace = length;
-            _payload = (cast(T*) realloc(_payload.ptr,
-                            T.sizeof * newLength))[0 .. newLength];
-            initializeAll(_payload.ptr[startEmplace .. length]);
+            if (newLength > capacity)
+                reserve(max(capacity + capacity / 2, newLength));
+            initializeAll(_payload.ptr[length .. newLength]);
+            _payload = _payload.ptr[0 .. newLength];
         }
 
         // capacity
@@ -2614,7 +2619,7 @@ struct Array(T)
         {
             if (_capacity == length)
             {
-                reserve(1 + capacity * 3 / 2);
+                reserve(1 + capacity + capacity / 2);
             }
             assert(capacity > length && _payload.ptr);
             emplace(_payload.ptr + _payload.length, stuff);
@@ -2978,6 +2983,7 @@ Complexity: $(BIGOH 1)
             static if (hasIndirections!T)
             {
                 GC.addRange(p, sz);
+                memset(p, 0, sz);
             }
             _data = Data(cast(T[]) p[0 .. 0]);
             _data._capacity = elements;
@@ -3271,12 +3277,7 @@ Complexity: $(BIGOH log(n)).
     void removeBack()
     {
         assert(_notEmpty, _emptyMessage);
-        static if (is(T == struct))
-        {
-            // Destroy this guy
-            .destroy(_payload[$ - 1]);
-        }
-        _payload = _payload[0 .. $ - 1];
+        _data.length = _length - 1;
     }
     /// ditto
     alias removeBack stableRemoveBack;
@@ -3298,15 +3299,7 @@ Complexity: $(BIGOH howMany).
     {
         if(!_data.refCountedStore.isInitialized) return 0;
         if (howMany > _length) howMany = _length;
-        static if (is(T == struct))
-        {
-            // Destroy this guy
-            foreach (ref e; _payload[$ - howMany .. $])
-            {
-                .destroy(e);
-            }
-        }
-        _payload = _payload[0 .. $ - howMany];
+        _data.length = _length - howMany;
         return howMany;
     }
     /// ditto
