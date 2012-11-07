@@ -463,7 +463,10 @@ class JSONException : Exception {
     }
 }
 
-version(unittest) import std.stdio;
+version(unittest) {
+	import std.stdio;
+	import std.exception;
+}
 
 unittest {
     // An overly simple test suite, if it can parse a serializated string and
@@ -519,7 +522,7 @@ unittest {
 /**
   Encodes a D string value as a JSON string.
   */
-auto marshalJSON(T)(in T val) if (isSomeString!T) {
+private auto marshalJSON(T)(in T val) if (isSomeString!T) {
     JSONValue ret;
     ret.str = val;
     ret.type = JSON_TYPE.STRING;
@@ -535,7 +538,7 @@ unittest {
 /**
   Encodes a D signed integral value as a JSON number.
   */
-auto marshalJSON(T)(in T val) if (isIntegral!T && isSigned!T) {
+private auto marshalJSON(T)(in T val) if (isIntegral!T && isSigned!T) {
     JSONValue ret;
     ret.integer = val;
     ret.type = JSON_TYPE.INTEGER;
@@ -555,7 +558,7 @@ unittest {
 /**
   Encodes a D unsigned integral value as a JSON number.
   */
-auto marshalJSON(T)(in T val) if (isIntegral!T && isUnsigned!T) {
+private auto marshalJSON(T)(in T val) if (isIntegral!T && isUnsigned!T) {
     JSONValue ret;
     ret.uinteger = val;
     ret.type = JSON_TYPE.UINTEGER;
@@ -572,7 +575,7 @@ unittest {
 /**
   Encodes a D floating point value as a JSON number.
   */
-auto marshalJSON(T)(in T val) if (isFloatingPoint!T) {
+private auto marshalJSON(T)(in T val) if (isFloatingPoint!T) {
     JSONValue ret;
     ret.floating = val;
     ret.type = JSON_TYPE.FLOAT;
@@ -588,7 +591,7 @@ unittest {
 /**
   Encodes a D boolean value as a JSON true/false.
   */
-auto marshalJSON(T)(in T val) if (isBoolean!T) {
+private auto marshalJSON(T)(in T val) if (isBoolean!T) {
     JSONValue ret;
     ret.type = val ? JSON_TYPE.TRUE : JSON_TYPE.FALSE;
     return ret;
@@ -606,7 +609,7 @@ unittest {
   Encodes a D pointer value as a JSON null or recursively marshals whatever
   value the pointer points to.
   */
-auto marshalJSON(T)(in T val) if (isPointer!T) {
+private auto marshalJSON(T)(in T val) if (isPointer!T) {
     if (val == null) {
         JSONValue v;
         v.type = JSON_TYPE.NULL;
@@ -629,7 +632,7 @@ unittest {
 /**
   Encodes a D array as a JSON array.
   */
-auto marshalJSON(T)(in T val) if (!isSomeString!T && isArray!T) {
+private auto marshalJSON(T)(in T val) if (!isSomeString!T && isArray!T) {
     JSONValue ret;
     ret.type = JSON_TYPE.ARRAY;
     ret.array.length = val.length;
@@ -654,7 +657,7 @@ unittest {
 /**
   Encodes a D associative array as a JSON object.
   */
-auto marshalJSON(T)(in T val) if (isAssociativeArray!T && is(KeyType!T : string)) {
+private auto marshalJSON(T)(in T val) if (isAssociativeArray!T && is(KeyType!T : string)) {
     JSONValue ret;
     ret.type = JSON_TYPE.OBJECT;
     foreach (k, v; val) {
@@ -686,7 +689,7 @@ unittest {
 /**
   Encodes a D struct or class as a JSON object.
   */
-auto marshalJSON(T)(in T val) if (is(T == class) || is(T == struct)) {
+private auto marshalJSON(T)(in T val) if (is(T == class) || is(T == struct)) {
     JSONValue ret;
     ret.type = JSON_TYPE.OBJECT;
 
@@ -893,7 +896,7 @@ class JSONUnmashalException : Exception {
 /**
   Decodes a JSON string into a D string.
   */
-auto unmarshalJSON(T)(JSONValue val, out T ret) if (isSomeString!T) {
+private auto unmarshalJSON(T)(JSONValue val, out T ret) if (isSomeString!T) {
     if (val.type != JSON_TYPE.STRING) {
         throw new JSONUnmashalException(format("Expected string value, but given JSON type: %s", val.type));
     }
@@ -910,7 +913,7 @@ unittest {
 /**
   Decodes a JSON number into a D signed integer type.
   */
-auto unmarshalJSON(T)(JSONValue val, out T ret) if (isIntegral!T && isSigned!T) {
+private auto unmarshalJSON(T)(JSONValue val, out T ret) if (isIntegral!T && isSigned!T) {
     if (val.type != JSON_TYPE.INTEGER) {
         throw new JSONUnmashalException(format("Expected signed integral value, but given JSON type: %s", val.type));
     }
@@ -930,7 +933,7 @@ unittest {
 /**
   Decodes a JSON number into a D unsigned integer type.
   */
-auto unmarshalJSON(T)(JSONValue val, out T ret) if (isIntegral!T && isUnsigned!T) {
+private auto unmarshalJSON(T)(JSONValue val, out T ret) if (isIntegral!T && isUnsigned!T) {
     if (val.type != JSON_TYPE.UINTEGER && val.type != JSON_TYPE.INTEGER) {
         throw new JSONUnmashalException(format("Expected unsigned integral value, but given JSON type: %s", val.type));
     }
@@ -948,7 +951,7 @@ unittest {
 /**
   Decodes a JSON number into a D floating point type.
   */
-auto unmarshalJSON(T)(JSONValue val, out T ret) if (isFloatingPoint!T) {
+private auto unmarshalJSON(T)(JSONValue val, out T ret) if (isFloatingPoint!T) {
     if (val.type != JSON_TYPE.FLOAT && val.type != JSON_TYPE.UINTEGER && val.type != JSON_TYPE.INTEGER) {
         throw new JSONUnmashalException(format("Expected floating point value, but given JSON type: %s", val.type));
     }
@@ -981,7 +984,7 @@ unittest {
 /**
   Decodes a JSON true/false into a D boolean type.
   */
-auto unmarshalJSON(T)(JSONValue val, out T ret) if (isBoolean!T) {
+private auto unmarshalJSON(T)(JSONValue val, out T ret) if (isBoolean!T) {
     if (val.type != JSON_TYPE.TRUE && val.type != JSON_TYPE.FALSE) {
         throw new JSONUnmashalException(format("Expected boolean value, but given JSON type: %s", val.type));
     }
@@ -1001,7 +1004,7 @@ unittest {
 /**
   Recursively handles D pointers, instantiating where necessary.
   */
-auto unmarshalJSON(T)(JSONValue val, ref T ret) if (isPointer!T) {
+private auto unmarshalJSON(T)(JSONValue val, ref T ret) if (isPointer!T) {
     if (ret == null) {
         ret = new PointerTarget!T;
     }
@@ -1021,7 +1024,7 @@ unittest {
 /**
   Decodes a JSON array into a D array.
   */
-auto unmarshalJSON(T)(JSONValue val, ref T ret) if (!isSomeString!T && isArray!T) {
+private auto unmarshalJSON(T)(JSONValue val, ref T ret) if (!isSomeString!T && isArray!T) {
     if (val.type != JSON_TYPE.ARRAY) {
         throw new JSONUnmashalException(format("Expected array value, but given JSON type: %s", val.type));
     }
@@ -1045,8 +1048,6 @@ auto unmarshalJSON(T)(JSONValue val, ref T ret) if (!isSomeString!T && isArray!T
 
 // JSON array: static array, dynamic array
 unittest {
-    import std.exception;
-
     int[] arr;
     unmarshalJSON(`[2, 5]`, arr);
     assert(arr == [2, 5]);
@@ -1070,7 +1071,7 @@ unittest {
 /**
   Decodes a JSON object into a D associative array.
   */
-auto unmarshalJSON(T)(JSONValue val, out T ret) if (isAssociativeArray!T && is(KeyType!T : string)) {
+private auto unmarshalJSON(T)(JSONValue val, out T ret) if (isAssociativeArray!T && is(KeyType!T : string)) {
     if (val.type != JSON_TYPE.OBJECT) {
         throw new JSONUnmashalException(format("Expected object value, but given JSON type: %s", val.type));
     }
@@ -1098,7 +1099,7 @@ unittest {
 /**
   Decodes a JSON object into a D class or struct, instantiating where necessary.
   */
-auto unmarshalJSON(T)(JSONValue val, ref T ret) if (is(T == class) || is(T == struct)) {
+private auto unmarshalJSON(T)(JSONValue val, ref T ret) if (is(T == class) || is(T == struct)) {
     if (val.type != JSON_TYPE.OBJECT) {
         throw new JSONUnmashalException(format("Expected object value, but given JSON type: %s", val.type));
     }
@@ -1270,8 +1271,6 @@ unittest {
 
 // Lots of nested classes
 unittest {
-    import std.exception;
-
     class A {
         class B {
             class C {
@@ -1296,6 +1295,29 @@ unittest {
 /**
   Decodes a JSON string (InputRange) into a D data type.
   */
-auto unmarshalJSON(J, T)(J json, ref T ret, int maxDepth = -1) if(isInputRange!J) {
-    unmarshalJSON(parseJSON(json, maxDepth), ret);
+auto unmarshalJSON(I, T)(in I str, ref T ret) if(isInputRange!I) {
+    unmarshalJSON(parseJSON(str), ret);
+}
+
+unittest {
+	int[string] ret;
+	unmarshalJSON(`{"hello": 5}`, ret);
+	assert("hello" in ret);
+	assert(ret["hello"] == 5);
+}
+
+/**
+  Encodes a D data type into a JSON string (OutputRange).
+  */
+auto marshalJSON(O, T)(in T val, ref O str) if (isOutputRange!(O, string)) {
+	auto root = marshalJSON(val);
+	auto s = toJSON(&root);
+	str.put(s);
+}
+
+unittest {
+	int[string] ret = ["hello": 5];
+	auto s = appender!string();
+	marshalJSON(ret, s);
+	assert(s.data == `{"hello":5}`);
 }
