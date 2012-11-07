@@ -106,9 +106,9 @@ SRC_STD_1_HEAVY= std\stdio.d std\stdiobase.d \
 	std\string.d std\format.d \
 	std\file.d
 
-SRC_STD_2_HEAVY= std\array.d std\functional.d std\range.d
+SRC_STD_2_HEAVY= std\range.d
 
-SRC_STD_2a_HEAVY= std\path.d std\outbuffer.d std\utf.d
+SRC_STD_2a_HEAVY= std\array.d std\functional.d std\path.d std\outbuffer.d std\utf.d
 
 SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
     std\datetime.d \
