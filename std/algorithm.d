@@ -1970,7 +1970,7 @@ By using these, the above implementations only need to define:
 */
 
 //For RA splitter
-mixin template SplitterRAImpl(bool usePopN)
+mixin template SplitterRAImpl(bool popN)
 {
 private:
     Range _input;
@@ -2001,7 +2001,7 @@ public:
             _frontLength = size_t.max;
             return;
         }
-        static if (usePopN)
+        static if (popN)
             _input = _input[_separatorLength .. _input.length];
         else
             _input.popFront();
@@ -2009,7 +2009,7 @@ public:
     }
 }
 //The "back" primitives of Splitter RA
-private mixin template SplitterRAImplBack(bool usePopN = false, bool deprecate = false)
+private mixin template SplitterRAImplBack(bool popN, bool deprecate = false)
 {
     static if (deprecate)
     {
@@ -2038,7 +2038,7 @@ private mixin template SplitterRAImplBack(bool usePopN = false, bool deprecate =
             _frontLength = size_t.max;
             return;
         }
-        static if (usePopN)
+        static if (popN)
             _input = _input[0 .. _input.length - _separatorLength];
         else
             _input.popBack();
@@ -2088,14 +2088,6 @@ public:
         else
             _frontLength = size_t.max;
     }
-}
-
-//For seperating with a range as input.
-private mixin template SplitterSeparator()
-{
-    Separator _separator;
-    static if (!hasLength!Separator) size_t _separatorLength; //Save the length once and for all
-    else @property size_t _separatorLength(){return _separator.length;} //just call .length
 }
 
 //splitter Payloads:
@@ -2181,7 +2173,9 @@ private struct SplitterResultRAR(Range, Separator)
     static if (isBidirectionalRange!Separator)
         mixin SplitterRAImplBack!(true, true);
 
-    mixin SplitterSeparator;
+    Separator _separator;
+    static if (!hasLength!Separator && !isNarrowString!Separator) size_t _separatorLength; //Save the length once and for all
+    else @property size_t _separatorLength(){return _separator.length;} //just call .length
 
 private:
     void getFirst()
@@ -2200,7 +2194,7 @@ public:
         enforce(!separator.empty, "cannot split on empty separator");
         _input = input;
         _separator = separator;
-        static if (!hasLength!Separator) _separatorLength = _separator.save.walkLength();
+        static if (!hasLength!Separator && !isNarrowString!Separator) _separatorLength = _separator.save.walkLength();
         getFirst();
         getLast();
     }
@@ -2209,7 +2203,8 @@ public:
     {
         auto ret = this;
         ret._input = _input.save;
-        static if (!hasLength!Separator) ret._separatorLength = _separatorLength;
+        ret._separator = _separator; //no need to save
+        static if (!hasLength!Separator && !isNarrowString!Separator) ret._separatorLength = _separatorLength;
         return ret;
     }
 }
@@ -2218,7 +2213,10 @@ public:
 private struct SplitterResultFRR(Range, Separator)
 {
     mixin SplitterFRImpl!true;
-    mixin SplitterSeparator;
+
+    Separator _separator;
+    static if (!hasLength!Separator) size_t _separatorLength; //Save the length once and for all
+    else @property size_t _separatorLength(){return _separator.length;} //just call .length
 
 private:
     void getFirst()
@@ -2243,7 +2241,7 @@ public:
     {
         auto ret = this;
         ret._input = _input.save;
-        ret._separator = _separator;
+        ret._separator = _separator; //no need to save
         static if (!hasLength!Separator) _ret._separatorLength = _separatorLength;
         return ret;
     }
@@ -2526,6 +2524,11 @@ unittest
             assert(equal(rangeSplit.front, [6,7,8,9,10]));
         }
     }
+}
+unittest
+{
+    //verify tricky utf string-string split
+    assert("日本語".splitter("本").equal(["日", "語"]));
 }
 
 /**
