@@ -588,7 +588,7 @@ unittest
         nosh[0] = 5;
         nosh[1] = 0;
         assert(nosh[0] == 5 && nosh[1] == 0);
-        assert(nosh.toString() == "Tuple!(int,real)(5, 0)", nosh.toString());
+        assert(nosh.toString() == "Tuple!(int, real)(5, 0)", nosh.toString());
         Tuple!(int, int) yessh;
         nosh = yessh;
     }
@@ -597,7 +597,7 @@ unittest
         t[0] = 10;
         t[1] = "str";
         assert(t[0] == 10 && t[1] == "str");
-        assert(t.toString() == `Tuple!(int,string)(10, "str")`, t.toString());
+        assert(t.toString() == `Tuple!(int, string)(10, "str")`, t.toString());
     }
     {
         Tuple!(int, "a", double, "b") x;
