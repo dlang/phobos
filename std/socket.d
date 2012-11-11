@@ -172,7 +172,12 @@ class SocketException: Exception
     }
 }
 
-private string formatSocketError(int err)
+
+// Needs to be public so that SocketOSException can be thrown outside of
+// std.socket (since it uses it as a default argument), but it probably doesn't
+// need to actually show up in the docs, since there's not really any public
+// need for it outside of being a default argument.
+string formatSocketError(int err)
 {
     version(Posix)
     {
