@@ -1318,6 +1318,106 @@ unittest
 }
 
 /**
+Generates a random floating-point number drawn from a
+normal (Gaussian) distribution with specified mean and
+standard deviation (sigma).
+*/
+auto normal(T = real, alias NormalRandomNumberEngine = NormalBoxMullerEngine, UniformRandomNumberGenerator = Random)
+(T mean, T sigma, ref UniformRandomNumberGenerator urng = rndGen)
+if (isFloatingPoint!T && isUniformRNG!UniformRandomNumberGenerator)
+{
+    static NormalRandomNumberEngine!T engine;
+    return normal(mean, sigma, engine, urng);
+}
+
+/**
+ditto
+*/
+auto normal(T = real, alias NormalRandomNumberEngine = NormalBoxMullerEngine, UniformRandomNumberGenerator = Random)
+(T mean, T sigma, ref NormalRandomNumberEngine!T normalEngine, ref UniformRandomNumberGenerator urng = rndGen)
+if (isFloatingPoint!T && isUniformRNG!UniformRandomNumberGenerator)
+{
+    enforce(0 <= sigma, text("std.random.normal(): standard deviation ", sigma, " is less than zero"));
+    return sigma * normalEngine(urng) + mean;
+}
+
+unittest
+{
+    //need unittests for normal random number generation
+}
+
+/**
+Struct implementation of normal (Gaussian) random number
+generation that stores the distribution parameters of mean
+and standard deviation (sigma)
+*/
+struct Normal(T = real, alias NormalRandomNumberEngine = NormalBoxMullerEngine)
+if (isFloatingPoint!T)
+{
+    private T _mean, _sigma;
+    private NormalRandomNumberEngine!T _engine;
+
+    this(T mean, T sigma)
+    {
+        _mean = mean;
+        _sigma = sigma;
+    }
+
+    @property T mean()
+    {
+        return _mean;
+    }
+
+    @property T stddev()
+    {
+        return _sigma;
+    }
+
+    T opCall(UniformRandomNumberGenerator = Random)(ref UniformRandomNumberGenerator urng)
+    if(isUniformRNG!UniformRandomNumberGenerator)
+    {
+        return normal!(T, NormalRandomNumberEngine, UniformRandomNumberGenerator)(_mean, _sigma, _engine, urng);
+    }
+}
+
+/**
+Generates a random floating-point number drawn from a
+normal (Gaussian) distribution with mean 0 and standard
+deviation (sigma) 1, using the Box-Muller Transform method.
+
+This version is closely based on the Boost.Random Box-Muller
+implementation by Jens Maurer and Steven Wanatabe, and
+should produce identical results within the limits of
+floating-point rounding.
+*/
+struct NormalBoxMullerEngine(T = real)
+if(isFloatingPoint!T)
+{
+    private bool _valid = false;
+    private T _rho, _r1, _r2;
+
+    T opCall(UniformRandomNumberGenerator)(ref UniformRandomNumberGenerator urng)
+    if(isUniformRNG!UniformRandomNumberGenerator)
+    {
+        if(_valid)
+            _valid = false;
+        else
+        {
+            /* N.B. Traditional Box-Muller asks for random numbers
+               in (0, 1], which D can readily provide.  We use this
+               form to match the output of Boost.Random. */
+            _r1 = uniform!("[)", T, T)(0, 1, urng);
+            _r2 = uniform!("[)", T, T)(0, 1, urng);
+            _rho = sqrt(-2 * log((cast(T) 1) - _r2));
+            _valid = true;
+        }
+
+        return _rho * (_valid ? cos((cast(T) 2) * PI * _r1)
+                              : sin((cast(T) 2) * PI * _r1));
+    }
+}
+
+/**
 Shuffles elements of $(D r) using $(D gen) as a shuffler. $(D r) must be
 a random-access range with length.
  */
