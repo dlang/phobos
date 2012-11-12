@@ -57,8 +57,9 @@ Distributed under the Boost Software License, Version 1.0.
 module std.random;
 
 import std.algorithm, std.c.time, std.conv, std.exception,
-       std.math, std.numeric, std.range, std.traits,
-       core.thread, core.time;
+       std.math, std.numeric, std.range, std.traits, 
+       std.typecons, std.mathspecial,
+       core.thread, core.time, core.bitop;
 import std.string : format;
 
 version(unittest) import std.typetuple;
@@ -1322,20 +1323,37 @@ Generates a random floating-point number drawn from a
 normal (Gaussian) distribution with specified mean and
 standard deviation (sigma).
 */
-auto normal(T = real, alias NormalRandomNumberEngine = NormalBoxMullerEngine, UniformRandomNumberGenerator = Random)
-(T mean, T sigma, ref UniformRandomNumberGenerator urng = rndGen)
+auto normal(alias NormalRandomNumberEngine = NormalBoxMullerEngine, T)
+(T mean, T sigma)
+if (isFloatingPoint!T && isUniformRNG!UniformRandomNumberGenerator)
+{
+    return normal!NormalRandomNumberEngine(mean, sigma, rndGen);
+}
+
+auto normal(alias NormalRandomNumberEngine = NormalBoxMullerEngine, T,  UniformRandomNumberGenerator)
+(T mean, T sigma, ref UniformRandomNumberGenerator urng)
 if (isFloatingPoint!T && isUniformRNG!UniformRandomNumberGenerator)
 {
     static NormalRandomNumberEngine!T engine;
-    return normal(mean, sigma, engine, urng);
+    static if(is(typeof(engine.initialize())))
+    {
+        static bool initialized;
+        if(!initialized)
+        {
+            initialized = true;
+            engine.initialize();
+        }
+    }
+
+    return normal(mean, sigma, urng, engine);
 }
 
 /**
 ditto
 */
-auto normal(T = real, alias NormalRandomNumberEngine = NormalBoxMullerEngine, UniformRandomNumberGenerator = Random)
-(T mean, T sigma, ref NormalRandomNumberEngine!T normalEngine, ref UniformRandomNumberGenerator urng = rndGen)
-if (isFloatingPoint!T && isUniformRNG!UniformRandomNumberGenerator)
+auto normal(T, UniformRandomNumberGenerator, NormalRandomNumberEngine)
+(T mean, T sigma, ref UniformRandomNumberGenerator urng, ref NormalRandomNumberEngine normalEngine)
+//if (isFloatingPoint!T && isUniformRNG!UniformRandomNumberGenerator)
 {
     enforce(0 <= sigma, text("std.random.normal(): standard deviation ", sigma, " is less than zero"));
     return sigma * normalEngine(urng) + mean;
@@ -1361,6 +1379,9 @@ if (isFloatingPoint!T)
     {
         _mean = mean;
         _sigma = sigma;
+
+        static if(is(typeof(_engine.initialize())))
+            _engine.initialize();
     }
 
     @property T mean()
@@ -1373,11 +1394,19 @@ if (isFloatingPoint!T)
         return _sigma;
     }
 
-    T opCall(UniformRandomNumberGenerator = Random)(ref UniformRandomNumberGenerator urng)
+    T opCall(UniformRandomNumberGenerator)(ref UniformRandomNumberGenerator urng)
     if(isUniformRNG!UniformRandomNumberGenerator)
     {
-        return normal!(T, NormalRandomNumberEngine, UniformRandomNumberGenerator)(_mean, _sigma, _engine, urng);
+        return normal(_mean, _sigma, urng, _engine);
     }
+}
+
+auto normalRNG(
+    alias NormalRandomNumberEngine = NormalBoxMullerEngine, T)(
+    T mean, T sigma)
+if (isFloatingPoint!T)
+{
+    return Normal!(T, NormalRandomNumberEngine)(mean, sigma);
 }
 
 /**
@@ -1416,6 +1445,341 @@ if(isFloatingPoint!T)
                               : sin((cast(T) 2) * PI * _r1));
     }
 }
+
+private template hasCompileTimeMinMax(alias a)
+{
+    template ct(alias a){ enum ct = a; }
+
+    enum hasCompileTimeMinMax = 
+        is(typeof(ct!(a.max))) && is(typeof(ct!(a.min)));
+}
+
+private auto isPowerOfTwo(I)(I i){ return (i & (i - 1)) == 0; }
+
+private template rngMask(alias r) 
+    if(hasCompileTimeMinMax!r && ((r.max - r.min) & (r.max - r.min + 1)) == 0)
+{
+    enum rngMask = r.max - r.min;
+}
+
+private T randomFloat(T, Rng)(ref Rng r)
+{
+    static if(hasCompileTimeMinMax!r)
+    {
+        enum denom = 1 / (to!T(1) + r.max - r.min);
+        T x = (r.front -r.min) * denom; 
+    } 
+    else
+        T x = cast(T)(r.front - r.min)  / (to!T(1) + r.max - r.min);
+    
+    r.popFront();
+    return x;
+}
+
+private int randomInt(int n, Rng)(ref Rng r)
+{
+    static if(
+        is(typeof(rngMask!r)) && isPowerOfTwo(n) && 
+        (rngMask!r & (n - 1)) == n - 1)
+    {
+        auto x = (r.front - r.min) & (n - 1);
+        r.popFront();
+        return x;
+    }
+    else 
+        return uniform(0, n, r);
+}
+
+private void randomIntAndFloat(int n, T, Rng)(ref Rng r, ref int i, ref T a)
+{
+    static if(
+        is(typeof(rngMask!r)) && isPowerOfTwo(n) && 
+        bsr(rngMask!r) >= bsr(n - 1) + T.mant_dig)
+    {
+        auto rand = r.front - r.min;
+        r.popFront(); 
+        i = rand & (n - 1);
+        enum denom = 1 / (to!T(1) + r.max - r.min);
+        a = rand * denom;
+    }
+    else
+    {
+        i = randomInt!n(r);
+        a = randomFloat!T(r);
+    }
+}
+
+private auto intervalMinMax(alias f, alias fderiv, T)(T x0, T x1)
+{
+    T d0 = fderiv(x0), d1 = fderiv(x1);
+    if(d0 * d1 < 0)
+    {
+        auto ex = f(findRoot((T x) => fderiv(x), x0, x1));
+        return tuple(min(0, ex), max(0, ex)) ;
+    }
+
+    T y0 = f(x0), y1 = f(x1);
+    while(true)
+    {
+        T xmid = 0.5 * (x0 + x1);
+        T dmid = fderiv(xmid);
+        if(dmid * d0 < 0)
+        {
+            auto ex0 = f(findRoot((T x) => fderiv(x), x0, xmid));
+            auto ex1 = f(findRoot((T x) => fderiv(x), xmid, x1));
+            return tuple(min(ex0, ex1), max(ex0, ex1));
+        }
+
+        T ymid = f(xmid);
+        if((ymid - y0) * d0 > 0)
+        {
+            x0 = xmid;
+            y0 = ymid;
+            d0 = dmid;
+        }
+        else
+        {
+            x1 = xmid;
+            y1 = ymid;
+            d1 = dmid;
+        }
+    }
+}
+
+private struct ZigguratLayer(T)
+{
+    // X coordinate of the crossection of upper layer bound and f
+    T x;
+
+    // Upper bound of an interval from which we will select x
+    T xInterval;
+    
+    T lowOffset;
+    
+    T highOffset;
+}
+
+private auto zigguratInitialize(T)
+(ZigguratLayer!(T)[] layers, ref T tailX, ref T tailXInterval, T totalArea,
+    scope T delegate(T) f, scope T delegate(T) fint, scope T delegate(T) fderiv)
+{
+    auto zigguratInnerWidth(int i, int nlayers, T totalArea)
+    {
+        auto ai = totalArea * (cast(T)(nlayers - (i + 1)) + cast(T)0.5) / (nlayers);
+        auto func = (T x) => fint(x) - x * f(x) - ai; 
+     
+        T x0 = 0;
+        T x1= 1;
+        while(func(x1) < 0)
+            x1 += x1;
+
+        return findRoot(func, x0, x1);
+    }
+    
+    auto zigguratOffsets(T x0, T x1)
+    {
+        auto y0 = f(x0), y1 = f(x1);
+        auto k = (y1 - y0) / (x1 - x0);
+        auto n = y0 - x0*k;
+        auto mm = intervalMinMax!(
+                (T x) => f(x) - (k * x + n), (T x) => fderiv(x) - k)(x0, x1);
+        return tuple(-mm[0] / k, -mm[1] / k);
+    }
+
+    alias ZigguratLayer!(T) L; 
+    auto nlayers = cast(int) layers.length;
+
+    T yprev = 0;
+    T xprev;
+    foreach(i; 0 .. nlayers)
+    {
+        T x = zigguratInnerWidth(i, nlayers, totalArea);
+        T y = f(x);
+        T dy = y - yprev;
+        T innerArea = x * dy;
+        T xInterval = x * (totalArea / nlayers) / innerArea;
+        T dx = xprev - x;
+        T scaleY = dy / dx;
+        
+        if(i == 0)
+        {
+            layers[i] = L(0, 2, T.nan, T.nan);
+            tailX = x;
+            tailXInterval = xInterval / 2;
+        }
+        else
+        {
+            auto tmp = zigguratOffsets(x, xprev);
+            layers[i] = L(x, xInterval, tmp[0] / dx, tmp[1] / dx);
+        }
+ 
+        yprev = y;
+        xprev = x;
+    }
+}
+
+private template fraction(T, alias a, alias b)
+{
+    enum fraction = cast(T) a / cast(T) b;
+}
+
+private auto zigguratAlgorithmImpl
+(alias f, alias tail, alias head, alias zs, alias rng)
+(int layer, ReturnType!f x) 
+{
+    alias ReturnType!f T;
+    
+    x *= zs.layers[layer].xInterval;
+    T layerX = zs.layers[layer].x;
+    if(x < layerX)
+        return x;
+
+    if(layer == 0)
+    {
+        if(x < cast(T) 1)
+        {
+            x *= zs.tailXInterval;
+            return x < zs.tailX ? x : tail(zs.tailX, rng);
+        }
+        else 
+            return head(x - 1, rng);
+    }
+
+    T belowX = layer == 1 ? zs.tailX : zs.layers[layer - 1].x;
+    T dx = belowX - layerX;
+    T highOffset = zs.layers[layer].highOffset;
+    T lowOffset = zs.layers[layer].lowOffset;
+    T uInterval = 1 + highOffset;
+
+    while(true)
+    {
+        T uy = uInterval * randomFloat!T(rng);
+        T ux = uInterval * randomFloat!T(rng);
+      
+        T tmp = max(ux, uy);
+        ux = min(ux, uy);
+        uy = highOffset - tmp;
+
+        x = layerX + ux * dx;
+
+        if(uy > 0 || ux > 1)
+            continue; 
+
+        if(uy < lowOffset - ux)
+            return x;
+     
+        T layerY = f(layerX);
+        T dy = layerY - f(layerX + dx);
+        T y = layerY + uy * dy;
+        if(y < f(x))
+            return x;
+    }
+}
+
+private auto zigguratAlgorithm
+(alias f, alias tail, alias head, alias zs, bool isSymetric, alias rng)()
+{
+    alias ReturnType!f T;
+
+    //auto rand = randomInt!(2 * zs.nlayers)(rng);
+    int rand;
+    T a;
+    randomIntAndFloat!(2 * zs.nlayers)(rng, rand, a);
+ 
+    auto r = zigguratAlgorithmImpl!(
+        f, tail, head, zs, rng)(rand >> 1, a);
+        //f, tail, head, zs, rng)(rand >> 1, randomFloat!T(rng));
+ 
+    static if(isSymetric)
+        return rand & 1 ? r : -r;
+    else
+        return r;
+}
+
+template NormalZigguratEngineImpl(int n)
+{
+    struct NormalZigguratEngineImpl(T)
+    {
+        void initialize()
+        {
+            //layers = new L[nlayers];
+            zigguratInitialize(
+                layers, tailX, tailXInterval, area, 
+                delegate (T x) => f(x), 
+                delegate (T x) => fint(x), 
+                delegate (T x) => fderiv(x)); 
+            
+            headDx = layers.back.x;
+            headDy = cast(T) 1 - exp(- (headDx) ^^ 2 * cast(T) 0.5);
+        }
+            
+        T opCall(Rng)(ref Rng rng)
+        {
+            return zigguratAlgorithm!(f, tail, head, this, true, rng)();
+        }
+      
+      private:
+
+        static T f(T x)
+        {
+            return exp(-x ^^ 2 / 2) / sqrt(2 * PI);
+        }
+
+        static T fint(T x)
+        {
+            return erf(x / sqrt(2.0)) / 2 ;
+        }
+
+        static T fderiv(T x)
+        {
+            return -x * exp(-x ^^ 2 / 2) / sqrt(2 * PI);
+        }
+
+        enum area = cast(T) 0.5;
+
+        enum nlayers = n;
+        alias ZigguratLayer!T L;
+
+        L[n] layers;
+        T tailX;
+        T tailXInterval;
+        T headDx;
+        T headDy;
+     
+        auto head(Rng)(T x, ref Rng rng)
+        {
+            x *= headDx;
+
+            while(true)
+            {
+                T y = randomFloat!T(rng) * headDy;
+                T x2 = x * x;
+                T approx = fraction!(T, 1, 2) * x2;
+                if(y > approx)
+                    return x;
+
+                approx -= fraction!(T, 1, 8) * x2 * x2;
+                if(y > approx && y > cast(T) 1 - exp(-x * x * cast(T) 0.5))
+                    return x;
+
+                x = randomFloat!T(rng) * headDx;
+            }
+        }
+        
+        static T tail(Rng)(T x0, ref Rng rng)
+        {
+            while(true)
+            {
+                T x = -log(randomFloat!T(rng)) / x0;
+                T y = -log(randomFloat!T(rng));
+                if(y + y > x * x)
+                    return x0 + x;
+            }
+        }
+    }
+}
+
+alias NormalZigguratEngineImpl!64 NormalZigguratEngine64;
 
 /**
 Shuffles elements of $(D r) using $(D gen) as a shuffler. $(D r) must be
