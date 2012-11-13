@@ -58,7 +58,7 @@ import core.stdc.math;
 import std.range, std.traits;
 
 version(unittest) {
-    import std.typetuple;
+    import std.generictuple;
 }
 
 version(LDC) {

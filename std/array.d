@@ -14,7 +14,7 @@ module std.array;
 
 import core.memory, core.bitop;
 import std.algorithm, std.ascii, std.conv, std.exception, std.range, std.string,
-       std.traits, std.typecons, std.typetuple, std.uni, std.utf;
+       std.traits, std.typecons, std.generictuple, std.uni, std.utf;
 import std.c.string : memcpy;
 version(unittest) import core.exception, std.stdio;
 

@@ -319,7 +319,7 @@ module std.range;
 public import std.array;
 import core.bitop;
 import std.algorithm, std.conv, std.exception,  std.functional,
-    std.traits, std.typecons, std.typetuple;
+    std.traits, std.typecons, std.generictuple;
 
 // For testing only.  This code is included in a string literal to be included
 // in whatever module it's needed in, so that each module that uses it can be
@@ -3132,7 +3132,7 @@ unittest
         int[] _arr;
     }
 
-    foreach(range; TypeTuple!(`[1, 2, 3, 4, 5]`,
+    foreach(range; expressionTuple!(`[1, 2, 3, 4, 5]`,
                               `"hello world"`,
                               `"hello world"w`,
                               `"hello world"d`,
@@ -3148,7 +3148,7 @@ unittest
                       range, range, range));
     }
 
-    foreach(range; TypeTuple!(`NormalStruct([1, 2, 3])`,
+    foreach(range; expressionTuple!(`NormalStruct([1, 2, 3])`,
                               `InitStruct([1, 2, 3])`))
     {
         mixin(Format!("enum a = takeNone(%s).empty;", range));
@@ -5068,7 +5068,7 @@ unittest
 
 unittest
 {
-    foreach(range; TypeTuple!(iota(2, 27, 4),
+    foreach(range; expressionTuple!(iota(2, 27, 4),
                               iota(3, 9),
                               iota(2.7, 12.3, .1),
                               iota(3.2, 9.7)))

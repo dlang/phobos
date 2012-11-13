@@ -393,7 +393,7 @@ public struct UUID
         unittest
         {
             import std.exception;
-            import std.typetuple;
+            import std.generictuple;
 
             foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
                                   wchar[], const(wchar)[], immutable(wchar)[],
@@ -1323,7 +1323,7 @@ UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
 unittest
 {
     import std.exception;
-    import std.typetuple;
+    import std.generictuple;
 
     struct TestRange(bool forward)
     {

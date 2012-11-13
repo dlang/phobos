@@ -89,7 +89,7 @@ import std.math;
 import std.range;
 import std.traits;
 import std.typecons;
-import std.typetuple;
+import std.generictuple;
 
 version(OSX)
 {
@@ -2513,7 +2513,7 @@ public:
                 // since we're assuming functions are associative anyhow.
 
                 // This is so that loops can be unrolled automatically.
-                enum ilpTuple = TypeTuple!(0, 1, 2, 3, 4, 5);
+                enum ilpTuple = expressionTuple!(0, 1, 2, 3, 4, 5);
                 enum nILP = ilpTuple.length;
                 immutable subSize = (upperBound - lowerBound) / nILP;
 

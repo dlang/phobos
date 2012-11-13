@@ -224,7 +224,7 @@ module std.regex;
 
 import std.internal.uni, std.internal.uni_tab;//unicode property tables
 import std.array, std.algorithm, std.range,
-       std.conv, std.exception, std.traits, std.typetuple,
+       std.conv, std.exception, std.traits, std.generictuple,
        std.uni, std.utf, std.format, std.typecons, std.bitmanip,
        std.functional, std.exception;
 import core.bitop, core.stdc.string, core.stdc.stdlib;
@@ -647,7 +647,7 @@ enum RegexOption: uint {
     multiline = 0x10,
     singleline = 0x20
 };
-alias TypeTuple!('g', 'i', 'x', 'U', 'm', 's') RegexOptionNames;//do not reorder this list
+alias expressionTuple!('g', 'i', 'x', 'U', 'm', 's') RegexOptionNames;//do not reorder this list
 static assert( RegexOption.max < 0x80);
 enum RegexInfo : uint { oneShot = 0x80 };
 
@@ -2889,7 +2889,7 @@ unittest
     }
     @trusted void test_flex(alias Kick)()
     {
-        foreach(i, v;TypeTuple!(char, wchar, dchar))
+        foreach(i, v; TypeTuple!(char, wchar, dchar))
         {
             alias v Char;
             alias immutable(v)[] String;
@@ -4205,10 +4205,10 @@ template BacktrackingMatcher(bool CTregex)
     return format;
 }
 
-//generate code for TypeTuple(S, S+1, S+2, ... E)
+//generate code for expressionTuple(S, S+1, S+2, ... E)
 @system string ctGenSeq(int S, int E)
 {
-    string s = "alias TypeTuple!(";
+    string s = "alias expressionTuple!(";
     if(S < E)
         s ~= to!string(S);
     for(int i=S+1; i<E;i++)
@@ -4219,7 +4219,7 @@ template BacktrackingMatcher(bool CTregex)
     return s ~") Sequence;";
 }
 
-//alias to TypeTuple(S, S+1, S+2, ... E)
+//alias to expressionTuple(S, S+1, S+2, ... E)
 template Sequence(int S, int E)
 {
     mixin(ctGenSeq(S,E));
@@ -7180,7 +7180,7 @@ unittest
     void run_tests(alias matchFn)()
     {
         int i;
-        foreach(Char; TypeTuple!( char, wchar, dchar))
+        foreach(Char; TypeTuple!(char, wchar, dchar))
         {
             alias immutable(Char)[] String;
             String produceExpected(M,Range)(auto ref M m, Range fmt)
@@ -7225,7 +7225,7 @@ unittest
     }
     static string generate(uint n,uint[] black_list...)
     {
-        string s = "TypeTuple!(";
+        string s = "expressionTuple!(";
         for(uint i=0; i<n; i++)
         {
             uint j;

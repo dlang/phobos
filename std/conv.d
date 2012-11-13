@@ -20,7 +20,7 @@ module std.conv;
 import std.math : ldexp;
 import core.stdc.string;
 import std.algorithm, std.array, std.ascii, std.exception, std.math, std.range,
-    std.string, std.traits, std.typecons, std.typetuple, std.uni,
+    std.string, std.traits, std.typecons, std.generictuple, std.uni,
     std.utf;
 import std.format;
 import std.metastrings;
@@ -707,8 +707,8 @@ unittest
     class C : B, I, J {}
     class D : I {}
 
-    foreach (m1; TypeTuple!(0,1,2,3,4)) // enumerate modifiers
-    foreach (m2; TypeTuple!(0,1,2,3,4)) // ditto
+    foreach (m1; expressionTuple!(0,1,2,3,4)) // enumerate modifiers
+    foreach (m2; expressionTuple!(0,1,2,3,4)) // ditto
     {
         alias AddModifier!m1 srcmod;
         alias AddModifier!m2 tgtmod;

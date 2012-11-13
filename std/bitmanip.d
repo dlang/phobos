@@ -34,7 +34,7 @@ import std.traits;
 version(unittest)
 {
     import std.stdio;
-    import std.typetuple;
+    import std.generictuple;
 }
 
 
@@ -3132,7 +3132,7 @@ unittest
 {
     import std.string;
 
-    foreach(endianness; TypeTuple!(Endian.bigEndian, Endian.littleEndian))
+    foreach(endianness; expressionTuple!(Endian.bigEndian, Endian.littleEndian))
     {
         auto toWrite = appender!(ubyte[])();
         alias TypeTuple!(uint, int, long, ulong, short, ubyte, ushort, byte, uint) Types;

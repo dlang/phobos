@@ -45,7 +45,7 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
 module std.typecons;
 import core.memory, core.stdc.stdlib;
 import std.algorithm, std.array, std.conv, std.exception, std.format,
-    std.metastrings, std.traits, std.typetuple, std.range;
+    std.metastrings, std.traits, std.generictuple, std.range;
 
 debug(Unique) import std.stdio;
 
@@ -278,18 +278,18 @@ private:
     {
         static if (Specs.length == 0)
         {
-            alias TypeTuple!() parseSpecs;
+            alias GenericTuple!() parseSpecs;
         }
         else static if (is(Specs[0]))
         {
             static if (is(typeof(Specs[1]) : string))
             {
-                alias TypeTuple!(FieldSpec!(Specs[0 .. 2]),
+                alias GenericTuple!(FieldSpec!(Specs[0 .. 2]),
                                  parseSpecs!(Specs[2 .. $])) parseSpecs;
             }
             else
             {
-                alias TypeTuple!(FieldSpec!(Specs[0]),
+                alias GenericTuple!(FieldSpec!(Specs[0]),
                                  parseSpecs!(Specs[1 .. $])) parseSpecs;
             }
         }
@@ -346,11 +346,11 @@ private:
     {
         static if (spec.name.length == 0)
         {
-            alias TypeTuple!(spec.Type) expandSpec;
+            alias GenericTuple!(spec.Type) expandSpec;
         }
         else
         {
-            alias TypeTuple!(spec.Type, spec.name) expandSpec;
+            alias GenericTuple!(spec.Type, spec.name) expandSpec;
         }
     }
 
@@ -1815,12 +1815,12 @@ private static:
             alias staticFilter!(pred, lst[1 .. $]) tail;
             //
             static if (pred!(lst[0]))
-                alias TypeTuple!(lst[0], tail) staticFilter;
+                alias GenericTuple!(lst[0], tail) staticFilter;
             else
                 alias tail staticFilter;
         }
         else
-            alias TypeTuple!() staticFilter;
+            alias GenericTuple!() staticFilter;
     }
 
     // Returns function overload sets in the class C, filtered with pred.
@@ -1834,12 +1834,12 @@ private static:
                 alias Impl!(names[1 .. $]) next;
 
                 static if (methods.length > 0)
-                    alias TypeTuple!(OverloadSet!(names[0], methods), next) Impl;
+                    alias GenericTuple!(OverloadSet!(names[0], methods), next) Impl;
                 else
                     alias next Impl;
             }
             else
-                alias TypeTuple!() Impl;
+                alias GenericTuple!() Impl;
         }
 
         alias Impl!(__traits(allMembers, C)) enumerateOverloads;
@@ -2157,13 +2157,13 @@ private static:
         }
     }
 
-    // Returns a tuple consisting of 0,1,2,...,n-1.  For static foreach.
+    // Returns an expression tuple consisting of 0,1,2,...,n-1.  For static foreach.
     template CountUp(size_t n)
     {
         static if (n > 0)
-            alias TypeTuple!(CountUp!(n - 1), n - 1) CountUp;
+            alias expressionTuple!(CountUp!(n - 1), n - 1) CountUp;
         else
-            alias TypeTuple!() CountUp;
+            alias expressionTuple!() CountUp;
     }
 
 
@@ -2293,7 +2293,7 @@ private static:
             /* Declare keywords: args, self and parent. */
             string preamble;
 
-            preamble ~= "alias TypeTuple!(" ~ enumerateParameters!(nparams) ~ ") args;\n";
+            preamble ~= "alias expressionTuple!(" ~ enumerateParameters!(nparams) ~ ") args;\n";
             if (!isCtor)
             {
                 preamble ~= "alias " ~ name ~ " self;\n";
@@ -3159,7 +3159,7 @@ unittest // Issue 6580 testcase
             byte[size] arr;
             alignmentTest();
         }
-        foreach(i; TypeTuple!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
+        foreach(i; expressionTuple!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
             test!i();
     }
 }

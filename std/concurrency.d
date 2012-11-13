@@ -75,7 +75,7 @@ private
     import std.range;
     import std.traits;
     import std.typecons;
-    import std.typetuple;
+    import std.generictuple;
 
     template hasLocalAliasing(T...)
     {
@@ -1015,7 +1015,7 @@ private
             }
             else
             {
-                alias TypeTuple!(T) Ops;
+                alias TypeTuple!T Ops;
                 alias vals[0 .. $] ops;
                 enum timedWait = false;
             }
