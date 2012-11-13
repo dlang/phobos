@@ -143,8 +143,10 @@ $(V1
 	<dt><a href="std_conv.html"><b>std.conv</b></a>
 	<dd>Conversion of strings to integers.
 
+$(V1
 	<dt><a href="std_date.html"><b>std.date</b></a>
 	<dd>Date and time functions. Support locales.
+)
 
 	<dt><a href="std_datetime.html"><b>std.datetime</b></a>
 	<dd>Date and time-related types and functions.
