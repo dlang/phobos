@@ -1281,11 +1281,11 @@ class AddressException: SocketOSException
 abstract class Address
 {
     /// Returns pointer to underlying $(D sockaddr) structure.
-    sockaddr* name();
-    abstract const(sockaddr)* name() const; /// ditto
+    abstract @property sockaddr* name();
+    abstract @property const(sockaddr)* name() const; /// ditto
 
     /// Returns actual size of underlying $(D sockaddr) structure.
-    abstract socklen_t nameLen() const;
+    abstract @property socklen_t nameLen() const;
 
     /// Family of this address.
     @property AddressFamily addressFamily() const
@@ -1432,18 +1432,18 @@ protected:
 
 
 public:
-    override sockaddr* name()
+    override @property sockaddr* name()
     {
         return &sa;
     }
 
-    override const(sockaddr)* name() const
+    override @property const(sockaddr)* name() const
     {
         return &sa;
     }
 
 
-    override socklen_t nameLen() const
+    override @property socklen_t nameLen() const
     {
         return cast(socklen_t) sa.sizeof;
     }
@@ -1476,18 +1476,18 @@ public:
         this.len = len;
     }
 
-    override sockaddr* name()
+    override @property sockaddr* name()
     {
         return sa;
     }
 
-    override const(sockaddr)* name() const
+    override @property const(sockaddr)* name() const
     {
         return sa;
     }
 
 
-    override socklen_t nameLen() const
+    override @property socklen_t nameLen() const
     {
         return cast(socklen_t) len;
     }
@@ -1513,18 +1513,18 @@ protected:
 
 
 public:
-    override sockaddr* name()
+    override @property sockaddr* name()
     {
         return cast(sockaddr*)&sin;
     }
 
-    override const(sockaddr)* name() const
+    override @property const(sockaddr)* name() const
     {
         return cast(const(sockaddr)*)&sin;
     }
 
 
-    override socklen_t nameLen() const
+    override @property socklen_t nameLen() const
     {
         return cast(socklen_t) sin.sizeof;
     }
@@ -1535,13 +1535,13 @@ public:
     enum ushort PORT_ANY = 0;                /// Any IPv4 port number.
 
     /// Returns the IPv4 _port number (in host byte order).
-    ushort port() const
+    @property ushort port() const
     {
         return ntohs(sin.sin_port);
     }
 
     /// Returns the IPv4 address number (in host byte order).
-    uint addr() const
+    @property uint addr() const
     {
         return ntohl(sin.sin_addr.s_addr);
     }
@@ -1722,18 +1722,18 @@ protected:
 
 
 public:
-    override sockaddr* name()
+    override @property sockaddr* name()
     {
         return cast(sockaddr*)&sin6;
     }
 
-    override const(sockaddr)* name() const
+    override @property const(sockaddr)* name() const
     {
         return cast(const(sockaddr)*)&sin6;
     }
 
 
-    override socklen_t nameLen() const
+    override @property socklen_t nameLen() const
     {
         return cast(socklen_t) sin6.sizeof;
     }
@@ -1756,13 +1756,13 @@ public:
     enum ushort PORT_ANY = 0;
 
     /// Returns the IPv6 port number.
-    ushort port() const
+    @property ushort port() const
     {
         return ntohs(sin6.sin6_port);
     }
 
     /// Returns the IPv6 address.
-    ubyte[16] addr() const
+    @property ubyte[16] addr() const
     {
         return sin6.sin6_addr.s6_addr;
     }
@@ -1879,18 +1879,18 @@ static if (is(sockaddr_un))
 
 
     public:
-        override sockaddr* name()
+        override @property sockaddr* name()
         {
             return cast(sockaddr*)sun;
         }
 
-        override const(sockaddr)* name() const
+        override @property const(sockaddr)* name() const
         {
             return cast(const(sockaddr)*)sun;
         }
 
 
-        override socklen_t nameLen() const
+        override @property socklen_t nameLen() const
         {
             return len;
         }
@@ -2597,7 +2597,7 @@ public:
 
     /// Returns the local machine's host name.
     // Idea from mango.
-    static string hostName()     // getter
+    static @property string hostName()     // getter
     {
         char[256] result;         // Host names are limited to 255 chars.
         if(_SOCKET_ERROR == .gethostname(result.ptr, result.length))
@@ -2606,7 +2606,7 @@ public:
     }
 
     /// Remote endpoint $(D Address).
-    Address remoteAddress()
+    @property Address remoteAddress()
     {
         Address addr = createAddress();
         socklen_t nameLen = addr.nameLen();
@@ -2619,7 +2619,7 @@ public:
     }
 
     /// Local endpoint $(D Address).
-    Address localAddress()
+    @property Address localAddress()
     {
         Address addr = createAddress();
         socklen_t nameLen = addr.nameLen();
