@@ -5404,10 +5404,10 @@ unittest
 
     debug(format) printf("std.format.format.unittest\n");
 
-    s = std.string.format("hello world! %s %s ", true, 57, 1_000_000_000, 'x', " foo");
+    s = std.string.format("hello world! %s %s %s%s%s", true, 57, 1_000_000_000, 'x', " foo");
     assert(s == "hello world! true 57 1000000000x foo");
 
-    s = std.string.format(1.67, " %A ", -1.28, float.nan);
+    s = std.string.format("%s %A %s", 1.67, -1.28, float.nan);
     /* The host C library is used to format floats.
      * C99 doesn't specify what the hex digit before the decimal point
      * is for %A.
@@ -5417,7 +5417,7 @@ unittest
     else version (OSX)
         assert(s == "1.67 -0XA.3D70A3D70A3D8P-3 nan", s);
     else
-        assert(s == "1.67 -0X1.47AE147AE147BP+0 nan");
+        assert(s == "1.67 -0X1.47AE147AE147BP+0 nan", s);
 
     s = std.string.format("%x %X", 0x1234AF, 0xAFAFAFAF);
     assert(s == "1234af AFAFAFAF");
@@ -5435,7 +5435,7 @@ unittest
     else
     {
         s = std.string.format("%s", 1.2 + 3.4i);
-        assert(s == "1.2+3.4i");
+        assert(s == "1.2+3.4i", s);
 
         s = std.string.format("%x %X", 1.32, 6.78f);
         assert(s == "3ff51eb851eb851f 40D8F5C3");
@@ -5508,62 +5508,56 @@ unittest
     arrbyte[0] = 100;
     arrbyte[1] = -99;
     arrbyte[3] = 0;
-    r = std.string.format(arrbyte);
+    r = std.string.format("%s", arrbyte);
     assert(r == "[100,-99,0,0]");
 
     ubyte[] arrubyte = new ubyte[4];
     arrubyte[0] = 100;
     arrubyte[1] = 200;
     arrubyte[3] = 0;
-    r = std.string.format(arrubyte);
+    r = std.string.format("%s", arrubyte);
     assert(r == "[100,200,0,0]");
 
     short[] arrshort = new short[4];
     arrshort[0] = 100;
     arrshort[1] = -999;
     arrshort[3] = 0;
-    r = std.string.format(arrshort);
-    assert(r == "[100,-999,0,0]");
-    r = std.string.format("%s",arrshort);
+    r = std.string.format("%s", arrshort);
     assert(r == "[100,-999,0,0]");
 
     ushort[] arrushort = new ushort[4];
     arrushort[0] = 100;
     arrushort[1] = 20_000;
     arrushort[3] = 0;
-    r = std.string.format(arrushort);
+    r = std.string.format("%s", arrushort);
     assert(r == "[100,20000,0,0]");
 
     int[] arrint = new int[4];
     arrint[0] = 100;
     arrint[1] = -999;
     arrint[3] = 0;
-    r = std.string.format(arrint);
-    assert(r == "[100,-999,0,0]");
-    r = std.string.format("%s",arrint);
+    r = std.string.format("%s", arrint);
     assert(r == "[100,-999,0,0]");
 
     long[] arrlong = new long[4];
     arrlong[0] = 100;
     arrlong[1] = -999;
     arrlong[3] = 0;
-    r = std.string.format(arrlong);
-    assert(r == "[100,-999,0,0]");
-    r = std.string.format("%s",arrlong);
+    r = std.string.format("%s", arrlong);
     assert(r == "[100,-999,0,0]");
 
     ulong[] arrulong = new ulong[4];
     arrulong[0] = 100;
     arrulong[1] = 999;
     arrulong[3] = 0;
-    r = std.string.format(arrulong);
+    r = std.string.format("%s", arrulong);
     assert(r == "[100,999,0,0]");
 
     string[] arr2 = new string[4];
     arr2[0] = "hello";
     arr2[1] = "world";
     arr2[3] = "foo";
-    r = std.string.format(arr2);
+    r = std.string.format("%s", arr2);
     assert(r == "[hello,world,,foo]");
 
     r = std.string.format("%.8d", 7);
@@ -5593,7 +5587,7 @@ unittest
     assert(r == "ghi");
 
     void* p = cast(void*)0xDEADBEEF;
-    r = std.string.format(p);
+    r = std.string.format("%s", p);
     assert(r == "DEADBEEF");
 
     r = std.string.format("%#x", 0xabcd);
@@ -5666,12 +5660,12 @@ unittest
     assert(r == "F");
 
     Object c = null;
-    r = std.string.format(c);
+    r = std.string.format("%s", c);
     assert(r == "null");
 
     enum TestEnum
     {
-            Value1, Value2
+        Value1, Value2
     }
     r = std.string.format("%s", TestEnum.Value2);
     assert(r == "1");
@@ -5692,7 +5686,7 @@ unittest
             assert(r == " 98");
     }
 
-    r = std.string.format(">%14d<, ", 15, [1,2,3]);
+    r = std.string.format(">%14d<, %s", 15, [1,2,3]);
     assert(r == ">            15<, [1,2,3]");
 
     assert(std.string.format("%8s", "bar") == "     bar");
