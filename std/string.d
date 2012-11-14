@@ -1179,7 +1179,7 @@ deprecated S capwords(S)(S s) if (isSomeString!S)
     return cast(S)retval.data;
 }
 
-unittest
+deprecated unittest
 {
     debug(string) printf("string.capwords.unittest\n");
 
@@ -2475,7 +2475,7 @@ unittest
 //Explicitly undocumented. Do not use. To be removed in March 2013.
 deprecated("Please use std.string.makeTrans instead.") alias makeTrans maketrans;
 
-unittest
+deprecated unittest
 {
     debug(string) printf("string.translate.unittest\n");
 
@@ -2658,7 +2658,7 @@ string xformat(Char, Args...)(in Char[] fmt, Args args)
     return w.data;
 }
 
-unittest
+deprecated unittest
 {
     debug(string) printf("std.string.xformat.unittest\n");
 
@@ -2734,7 +2734,7 @@ char[] xsformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
     return buf[0 .. i];
 }
 
-unittest
+deprecated unittest
 {
     debug(string) printf("std.string.xsformat.unittest\n");
 
@@ -3631,7 +3631,10 @@ unittest
     assert(isNumeric(s[1..s.length - 2]) == true);
     assert(isNumeric(s) == false);
     assert(isNumeric(s[0..s.length - 1]) == false);
+}
 
+deprecated unittest
+{
     // These test calling the isNumeric(...) function
     assert(isNumeric(1,123UL) == true);
     assert(isNumeric('2') == true);
