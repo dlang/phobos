@@ -170,8 +170,8 @@ unittest
 }
 
 /**
-Returns a newly allocated associative array out of elements of the input range.
-The input range must be a range or array of tuples (Key, Value).
+Returns a newly allocated associative array out of elements of the input range,
+which must be a range of tuples (Key, Value).
 
 Example:
 
