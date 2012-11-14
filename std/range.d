@@ -549,7 +549,7 @@ calling $(D r.empty) has, or would have, returned $(D false).))
 template isInputRange(R)
 {
     enum bool isInputRange = is(typeof(
-    (inout int _dummy=0)
+    (inout int = 0)
     {
         R r = void;       // can define a range object
         if (r.empty) {}   // can test for empty
@@ -757,7 +757,7 @@ supports the operation $(D put(r, e)) as defined above.
 template isOutputRange(R, E)
 {
     enum bool isOutputRange = is(typeof(
-    (inout int _dummy=0)
+    (inout int = 0)
     {
         R r = void;
         E e;
@@ -815,7 +815,7 @@ object with $(D save) and using it later.
 template isForwardRange(R)
 {
     enum bool isForwardRange = isInputRange!R && is(typeof(
-    (inout int _dummy=0)
+    (inout int = 0)
     {
         R r1 = void;
         R r2 = r1.save; // can call "save" against a range object
@@ -855,7 +855,7 @@ $(D r.empty) has, or would have, returned $(D false).))
 template isBidirectionalRange(R)
 {
     enum bool isBidirectionalRange = isForwardRange!R && is(typeof(
-    (inout int _dummy=0)
+    (inout int = 0)
     {
         R r = void;
         r.popBack();
@@ -922,7 +922,7 @@ are bidirectional ranges only.
 template isRandomAccessRange(R)
 {
     enum bool isRandomAccessRange = is(typeof(
-    (inout int _dummy=0)
+    (inout int = 0)
     {
         static assert(isBidirectionalRange!R ||
                       isForwardRange!R && isInfinite!R);
@@ -1013,16 +1013,19 @@ and friends.
 template hasMobileElements(R)
 {
     enum bool hasMobileElements = is(typeof(
+    (inout int = 0)
     {
         R r = void;
         return moveFront(r);
     }))
     && (!isBidirectionalRange!R || is(typeof(
+    (inout int = 0)
     {
         R r = void;
         return moveBack(r);
     })))
     && (!isRandomAccessRange!R || is(typeof(
+    (inout int = 0)
     {
         R r = void;
         return moveAt(r, 0);
@@ -1039,6 +1042,7 @@ unittest
     auto nonMobile = map!"a"(repeat(HasPostblit.init));
     static assert(!hasMobileElements!(typeof(nonMobile)));
     static assert( hasMobileElements!(int[]));
+    static assert( hasMobileElements!(inout(int)[]));
     static assert( hasMobileElements!(typeof(iota(1000))));
 }
 
@@ -1050,7 +1054,7 @@ $(D T). If $(D R) is not a range, $(D ElementType!R) is $(D void).
  */
 template ElementType(R)
 {
-    static if (is(typeof((inout int _dummy=0){ R r = void; return r.front; }()) T))
+    static if (is(typeof((inout int = 0){ R r = void; return r.front; }()) T))
         alias T ElementType;
     else
         alias void ElementType;
@@ -1080,7 +1084,7 @@ $(D ElementType).
 template ElementEncodingType(R)
 {
     static if (isNarrowString!R)
-        alias typeof((inout int _dummy=0){ R r = void; return r[0]; }()) ElementEncodingType;
+        alias typeof((inout int = 0){ R r = void; return r[0]; }()) ElementEncodingType;
     else
         alias ElementType!R ElementEncodingType;
 }
@@ -1117,7 +1121,7 @@ swap(r.front, r.front);              // can swap elements of the range
 template hasSwappableElements(R)
 {
     enum bool hasSwappableElements = isForwardRange!R && is(typeof(
-    (inout int _dummy=0)
+    (inout int = 0)
     {
         R r = void;
         swap(r.front, r.front);             // can swap elements of the range
@@ -1148,7 +1152,7 @@ r.front = e;                      // can assign elements of the range
 template hasAssignableElements(R)
 {
     enum bool hasAssignableElements = isForwardRange!R && is(typeof(
-    (inout int _dummy=0)
+    (inout int = 0)
     {
         R r = void;
         static assert(isForwardRange!(R)); // range is forward
@@ -1172,7 +1176,7 @@ can be passed by reference and have their address taken.
 template hasLvalueElements(R)
 {
     enum bool hasLvalueElements = is(typeof(
-    (inout int _dummy=0)
+    (inout int = 0)
     {
         void checkRef(ref ElementType!R stuff) {}
         R r = void;
@@ -1214,7 +1218,7 @@ range-oriented algorithms.
 template hasLength(R)
 {
     enum bool hasLength = !isNarrowString!R && is(typeof(
-    (inout int _dummy=0)
+    (inout int = 0)
     {
         R r = void;
         static assert(is(typeof(r.length) : ulong));
@@ -1278,7 +1282,7 @@ static assert(isInputRange!(typeof(s)));
 template hasSlicing(R)
 {
     enum bool hasSlicing = !isNarrowString!R && is(typeof(
-    (inout int _dummy=0)
+    (inout int = 0)
     {
         R r = void;
         auto s = r[1 .. 2];
@@ -3662,7 +3666,7 @@ unittest // For infinite ranges
     assert (c == i);
 }
 
-private template lengthType(R) { alias typeof({ R r = void; return r.length; }()) lengthType; }
+private template lengthType(R) { alias typeof((inout int = 0){ R r = void; return r.length; }()) lengthType; }
 
 /**
    Iterate several ranges in lockstep. The element type is a proxy tuple
