@@ -1105,8 +1105,8 @@ unittest
 
 /**
 Returns $(D true) if $(D R) is a forward range and has swappable
-elements. The following code should compile for any random-access
-range.
+elements. The following code should compile for any range
+with swappable elements.
 
 ----
 R r;
@@ -1135,8 +1135,8 @@ unittest
 
 /**
 Returns $(D true) if $(D R) is a forward range and has mutable
-elements. The following code should compile for any random-access
-range.
+elements. The following code should compile for any range
+with assignable elements.
 
 ----
 R r;
