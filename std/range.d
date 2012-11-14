@@ -604,6 +604,8 @@ $(TR $(TD $(D r([ e ]);)) $(TD $(D R) is e.g. a $(D delegate)
 accepting an $(D E[]).))
 
 )
+
+Note that $(D R) does not have to be a range.
  */
 void put(R, E)(ref R r, E e)
 {
@@ -1002,11 +1004,13 @@ unittest
 }
 
 /**
-Returns $(D true) iff the range supports the $(D moveFront) primitive,
+Returns $(D true) iff $(D R) supports the $(D moveFront) primitive,
 as well as $(D moveBack) and $(D moveAt) if it's a bidirectional or
 random access range.  These may be explicitly implemented, or may work
 via the default behavior of the module level functions $(D moveFront)
 and friends.
+
+Note that $(D R) does not have to be a range.
  */
 template hasMobileElements(R)
 {
@@ -1047,6 +1051,8 @@ object $(D r) of type $(D R). For example, $(D ElementType!(T[])) is
 $(D T) if $(D T[]) isn't a narrow string; if it is, the element type is
 $(D dchar). If $(D R) doesn't have $(D front), $(D ElementType!R) is
 $(D void).
+
+Note that $(D R) does not have to be a range.
  */
 template ElementType(R)
 {
@@ -1074,8 +1080,10 @@ unittest
 The encoding element type of $(D R). For narrow strings ($(D char[]),
 $(D wchar[]) and their qualified variants including $(D string) and
 $(D wstring)), $(D ElementEncodingType) is the character type of the
-string. For all other ranges, $(D ElementEncodingType) is the same as
+string. For all other types, $(D ElementEncodingType) is the same as
 $(D ElementType).
+
+Note that $(D R) does not have to be a range.
  */
 template ElementEncodingType(R)
 {
@@ -1168,6 +1176,8 @@ unittest
 /**
 Tests whether $(D R) has lvalue elements.  These are defined as elements that
 can be passed by reference and have their address taken.
+
+Note that $(D R) does not have to be a range.
 */
 template hasLvalueElements(R)
 {
@@ -1210,6 +1220,8 @@ hasLength) yields $(D false) for them. This is because a narrow
 string's length does not reflect the number of characters, but instead
 the number of encoding units, and as such is not useful with
 range-oriented algorithms.
+
+Note that $(D R) does not have to be a range.
  */
 template hasLength(R)
 {
@@ -1274,6 +1286,8 @@ R r;
 auto s = r[1 .. 2];
 static assert(isInputRange!(typeof(s)));
 ----
+
+Note that $(D R) does not have to be a range.
  */
 template hasSlicing(R)
 {
@@ -2845,6 +2859,8 @@ range). Otherwise if $(D R) is an input range, the type of the result
 is an input range with length. Finally, if $(D R) is a forward range
 (including bidirectional), the type of the result is a forward range
 with length.
+
+Note that $(D R) does not have to be a range in case it has slicing.
  */
 auto takeExactly(R)(R range, size_t n)
 if (isInputRange!R && !hasSlicing!R)
@@ -3420,6 +3436,9 @@ assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
 ----
 
 Tip: This is a great way to implement simple circular buffers.
+
+Note that $(D Range) does not have to be a range as $(D Cycle) also
+accepts static arrays which aren't ranges (see $(LREF isInputRange)).
 */
 struct Cycle(Range)
     if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
@@ -6174,6 +6193,8 @@ unittest
    Moves the front of $(D r) out and returns it. Leaves $(D r.front) in a
    destroyable state that does not allocate any resources (usually equal
    to its $(D .init) value).
+
+   Note that $(D R) does not have to be a range.
 */
 ElementType!R moveFront(R)(R r)
 {
@@ -6204,6 +6225,8 @@ unittest
    Moves the back of $(D r) out and returns it. Leaves $(D r.back) in a
    destroyable state that does not allocate any resources (usually equal
    to its $(D .init) value).
+
+   Note that $(D R) does not have to be a range.
 */
 ElementType!R moveBack(R)(R r)
 {
@@ -6240,6 +6263,8 @@ unittest
    Moves element at index $(D i) of $(D r) out and returns it. Leaves $(D
    r.front) in a destroyable state that does not allocate any resources
    (usually equal to its $(D .init) value).
+
+   Note that $(D R) does not have to be a range.
 */
 ElementType!R moveAt(R, I)(R r, I i) if (isIntegral!I)
 {
