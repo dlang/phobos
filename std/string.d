@@ -2494,83 +2494,55 @@ unittest
 }
 
 
-// @@@BUG@@@ workaround for bugzilla 2479
-private string bug2479format(TypeInfo[] arguments, va_list argptr)
-{
-    char[] s;
-
-    void putc(dchar c)
-    {
-        std.utf.encode(s, c);
-    }
-    std.format.doFormat(&putc, arguments, argptr);
-    return assumeUnique(s);
-}
-
-// @@@BUG@@@ workaround for bugzilla 2479
-private char[] bug2479sformat(char[] s, TypeInfo[] arguments, va_list argptr)
-{
-    size_t i;
-
-    void putc(dchar c)
-    {
-        if(std.ascii.isASCII(c))
-        {
-            if (i >= s.length)
-                onRangeError("std.string.sformat", 0);
-            s[i] = cast(char)c;
-            ++i;
-        }
-        else
-        {   char[4] buf;
-            auto b = std.utf.toUTF8(buf, c);
-            if (i + b.length > s.length)
-                onRangeError("std.string.sformat", 0);
-            s[i..i+b.length] = b[];
-            i += b.length;
-        }
-    }
-
-    std.format.doFormat(&putc, arguments, argptr);
-    return s[0 .. i];
-}
-
-
 /*****************************************************
  * Format arguments into a string.
  *
- *  $(RED format's current implementation is scheduled for replacement in
- *        November 2012. It will then be replaced with $(LREF xformat)'s implementation.
- *        This will be seamless for most code, but it will make it so that the
- *        only argument that can be a format string is the first one, so any
- *        code which uses multiple format strings will break. Please change
+ *  $(RED format's current implementation has been replaced with $(LREF xformat)'s
+ *        implementation. in November 2012.
+ *        This is seamless for most code, but it makes it so that the only
+ *        argument that can be a format string is the first one, so any
+ *        code which used multiple format strings has broken. Please change
  *        your calls to format accordingly.
  *
  *        e.g.:
 ----
 format("key = %s", key, ", value = %s", value)
 ----
- *        will need to be rewritten as:
+ *        needs to be rewritten as:
 ----
 format("key = %s, value = %s", key, value)
 ----
  *   )
  */
-
-string format(...)
+string format(Char, Args...)(in Char[] fmt, Args args)
 {
-/+ // @@@BUG@@@ Fails due to regression bug 2479.
-    char[] s;
-
-    void putc(dchar c)
+    auto w = appender!string();
+    auto n = formattedWrite(w, fmt, args);
+    version (all)
     {
-        std.utf.encode(s, c);
+        // In the future, this check will be removed to increase consistency
+        // with formattedWrite
+        enforce(n == args.length, new FormatException(
+            text("Orphan format arguments: args[", n, "..", args.length, "]")));
     }
+    return w.data;
+}
 
-    std.format.doFormat(&putc, _arguments, _argptr);
-    return assumeUnique(s);
-    +/
-    return bug2479format(_arguments, _argptr);
+unittest
+{
+    debug(string) printf("std.string.format.unittest\n");
+
+//  assert(format(null) == "");
+    assert(format("foo") == "foo");
+    assert(format("foo%%") == "foo%");
+    assert(format("foo%s", 'C') == "fooC");
+    assert(format("%s foo", "bar") == "bar foo");
+    assert(format("%s foo %s", "bar", "abc") == "bar foo abc");
+    assert(format("foo %d", -123) == "foo -123");
+    assert(format("foo %d", 123) == "foo 123");
+
+    assertThrown!FormatError(format("foo %s"));
+    assertThrown!FormatError(format("foo %s", 123, 456));
 }
 
 
@@ -2579,103 +2551,97 @@ string format(...)
  * enough to hold the result. Throws RangeError if it is not.
  * Returns: s
  *
- *  $(RED sformat's current implementation is scheduled for replacement in
- *        November 2012. It will then be replaced with $(LREF xsformat)'s implementation.
- *        This will be seamless for most code, but it will make it so that the
- *        only argument that can be a format string is the first one, so any
- *        code which uses multiple format strings will break. Please change
+ *  $(RED sformat's current implementation has been replaced with $(LREF xsformat)'s
+ *        implementation. in November 2012.
+ *        This is seamless for most code, but it makes it so that the only
+ *        argument that can be a format string is the first one, so any
+ *        code which used multiple format strings has broken. Please change
  *        your calls to sformat accordingly.
  *
  *        e.g.:
 ----
 sformat(buf, "key = %s", key, ", value = %s", value)
 ----
- *        will need to be rewritten as:
+ *        needs to be rewritten as:
 ----
 sformat(buf, "key = %s, value = %s", key, value)
 ----
  *   )
  */
-char[] sformat(char[] s, ...)
+char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
 {
-/+ // @@@BUG@@@ Fails due to regression bug 2479.
+    size_t i;
 
-  size_t i;
-
-    void putc(dchar c)
+    struct Sink
     {
-    if(std.ascii.isASCII(c))
-    {
-        if (i >= s.length)
-            onRangeError("std.string.sformat", 0);
-        s[i] = cast(char)c;
-        ++i;
-    }
-    else
-    {   char[4] buf;
-        auto b = std.utf.toUTF8(buf, c);
-        if (i + b.length > s.length)
-            onRangeError("std.string.sformat", 0);
-        s[i..i+b.length] = b[];
-        i += b.length;
-    }
-    }
+        void put(dchar c)
+        {
+            char[4] enc;
+            auto n = encode(enc, c);
 
-    std.format.doFormat(&putc, _arguments, _argptr);
-    return s[0 .. i];
-    +/
-    return bug2479sformat(s, _arguments, _argptr);
+            if (buf.length < i + n)
+                onRangeError("std.string.sformat", 0);
+
+            buf[i .. i + n] = enc[0 .. n];
+            i += n;
+        }
+        void put(const(char)[] s)
+        {
+            if (buf.length < i + s.length)
+                onRangeError("std.string.sformat", 0);
+
+            buf[i .. i + s.length] = s[];
+            i += s.length;
+        }
+        void put(const(wchar)[] s)
+        {
+            for (; !s.empty; s.popFront())
+                put(s.front);
+        }
+        void put(const(dchar)[] s)
+        {
+            for (; !s.empty; s.popFront())
+                put(s.front);
+        }
+    }
+    auto n = formattedWrite(Sink(), fmt, args);
+    version (all)
+    {
+        // In the future, this check will be removed to increase consistency
+        // with formattedWrite
+        enforce(n == args.length, new FormatException(
+            text("Orphan format arguments: args[", n, "..", args.length, "]")));
+    }
+    return buf[0 .. i];
 }
 
 unittest
 {
-    debug(string) printf("std.string.format.unittest\n");
+    debug(string) printf("std.string.sformat.unittest\n");
 
-    string r;
-    int i;
-/+
-    r = format(null);
-    i = cmp(r, "");
-    assert(i == 0);
-+/
-    r = format("foo");
-    i = cmp(r, "foo");
-    assert(i == 0);
+    char[10] buf;
 
-    r = format("foo%%");
-    i = cmp(r, "foo%");
-    assert(i == 0);
+    assert(sformat(buf[], "foo") == "foo");
+    assert(sformat(buf[], "foo%%") == "foo%");
+    assert(sformat(buf[], "foo%s", 'C') == "fooC");
+    assert(sformat(buf[], "%s foo", "bar") == "bar foo");
+    assertThrown!RangeError(sformat(buf[], "%s foo %s", "bar", "abc"));
+    assert(sformat(buf[], "foo %d", -123) == "foo -123");
+    assert(sformat(buf[], "foo %d", 123) == "foo 123");
 
-    r = format("foo%s", 'C');
-    i = cmp(r, "fooC");
-    assert(i == 0);
+    assertThrown!FormatError(sformat(buf[], "foo %s"));
+    assertThrown!FormatError(sformat(buf[], "foo %s", 123, 456));
 
-    r = format("%s foo", "bar");
-    i = cmp(r, "bar foo");
-    assert(i == 0);
-
-    r = format("%s foo %s", "bar", "abc");
-    i = cmp(r, "bar foo abc");
-    assert(i == 0);
-
-    r = format("foo %d", -123);
-    i = cmp(r, "foo -123");
-    assert(i == 0);
-
-    r = format("foo %d", 123);
-    i = cmp(r, "foo 123");
-    assert(i == 0);
+    assert(sformat(buf[], "%s %s %s", "c"c, "w"w, "d"d) == "c w d");
 }
 
 
 /*****************************************************
  * Format arguments into a string.
  *
- * xformat is a version of $(LREF format) whose behavior matches that of
- * $(XREF stdio, writef). $(LREF format) will be changed to use this
- * implementation in November 2012. In the interim, xformat is provided for
- * those who need the improved implementation. It will be scheduled for
- * deprecation once format has been updated.
+ * $(LREF format) has been changed to use this implementation in November 2012. 
+ * Then xformat has been scheduled for deprecation at the same time.
+ * It will be deprecateed in May 2013.
  */
 
 string xformat(Char, Args...)(in Char[] fmt, Args args)
@@ -2714,11 +2680,9 @@ unittest
  * Format arguments into string $(D_PARAM buf) which must be large
  * enough to hold the result. Throws RangeError if it is not.
  *
- * xsformat is a version of $(LREF sformat) whose behavior matches that of
- * $(XREF stdio, writef). $(LREF sformat) will be changed to use this
- * implementation in November 2012. In the interim, xsformat is provided for
- * those who need the improved implementation. It will be scheduled for
- * deprecation once sformat has been updated.
+ * $(LREF sformat) has been changed to use this implementation in November 2012. 
+ * Then xsformat has been scheduled for deprecation at the same time.
+ * It will be deprecateed in May 2013.
  *
  * Returns: filled slice of $(D_PARAM buf)
  */
