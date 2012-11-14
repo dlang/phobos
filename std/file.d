@@ -2541,7 +2541,7 @@ private struct DirIteratorImpl
         bool mayStepIn()
         {
             return (_followSymlink ? _cur.isDir : attrIsDir(_cur.linkAttributes))
-                && access(_cur.name.toStringz(), X_OK) == 0;
+                && access(_cur.name.toStringz(), X_OK | R_OK) == 0;
         }
     }
 
@@ -2718,9 +2718,17 @@ unittest
         {
             auto somedir = toStringz(buildPath(testdir, "somedir"));
             assert(access(somedir, X_OK) == 0);
+            assert(access(somedir, R_OK) == 0);
             scope(exit) chmod(somedir, octal!755);
+            assert(chmod(somedir, octal!100) == 0);
+            assert(access(somedir, X_OK) == 0);
+            assert(access(somedir, R_OK) != 0);
+            assert(equalEntries(testdir, SpanMode.shallow) == 2);
+            assert(equalEntries(testdir, SpanMode.depth) == 2);
+            assert(equalEntries(testdir, SpanMode.breadth) == 2);
             assert(chmod(somedir, octal!000) == 0);
             assert(access(somedir, X_OK) != 0);
+            assert(access(somedir, R_OK) != 0);
             assert(equalEntries(testdir, SpanMode.shallow) == 2);
             assert(equalEntries(testdir, SpanMode.depth) == 2);
             assert(equalEntries(testdir, SpanMode.breadth) == 2);
