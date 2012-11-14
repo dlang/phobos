@@ -616,7 +616,7 @@ void put(R, E)(ref R r, E e)
         {
             r.put(e);
         }
-        else static if (is(typeof(r.put((&e)[0..1]))))
+        else static if (is(typeof(r.put((E[]).init))))
         {
             r.put((&e)[0..1]);
         }
@@ -657,7 +657,7 @@ void put(R, E)(ref R r, E e)
             {
                 r(e);
             }
-            else static if (is(typeof(r((&e)[0..1]))))
+            else static if (is(typeof(r((E[]).init))))
             {
                 r((&e)[0..1]);
             }
