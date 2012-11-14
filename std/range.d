@@ -531,27 +531,26 @@ are attempted in order, and the first to compile "wins" and gets
 evaluated.
 
 $(BOOKTABLE ,
-
-$(TR $(TH Code Snippet) $(TH Scenario))
-
+$(TR $(TH Code Snippet) $(TH Scenario
+))
 $(TR $(TD $(D r.put(e);)) $(TD $(D R) specifically defines a method
-$(D put) accepting an $(D E).))
-
+    $(D put) accepting an $(D E).
+))
 $(TR $(TD $(D r.put([ e ]);)) $(TD $(D R) specifically defines a
-method $(D put) accepting an $(D E[]).))
-
+    method $(D put) accepting an $(D E[]).
+))
 $(TR $(TD $(D r.front = e; r.popFront();)) $(TD $(D R) is an input
-range and $(D e) is assignable to $(D r.front).))
-
+    range and $(D e) is assignable to $(D r.front).
+))
 $(TR $(TD $(D for (; !e.empty; e.popFront()) put(r, e.front);)) $(TD
-Copying range $(D E) to range $(D R).))
-
+    Copying range $(D E) to range $(D R).
+))
 $(TR $(TD $(D r(e);)) $(TD $(D R) is e.g. a delegate accepting an $(D
-E).))
-
+    E).
+))
 $(TR $(TD $(D r([ e ]);)) $(TD $(D R) is e.g. a $(D delegate)
-accepting an $(D E[]).))
-
+    accepting an $(D E[]).
+))
 )
  */
 void put(R, E)(ref R r, E e)
