@@ -1043,8 +1043,10 @@ unittest
 /**
 The element type of $(D R). $(D R) does not have to be a range. The
 element type is determined as the type yielded by $(D r.front) for an
-object $(D r) or type $(D R). For example, $(D ElementType!(T[])) is
-$(D T). If $(D R) is not a range, $(D ElementType!R) is $(D void).
+object $(D r) of type $(D R). For example, $(D ElementType!(T[])) is
+$(D T) if $(D T[]) isn't a narrow string; if it is, the element type is
+$(D dchar). If $(D R) doesn't have $(D front), $(D ElementType!R) is
+$(D void).
  */
 template ElementType(R)
 {
