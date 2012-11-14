@@ -6056,7 +6056,7 @@ assert(chunks.front == chunks[0]);
 assert(chunks.length == 3);
 ---
 */
-struct Chunks(Source) if(hasSlicing!Source && hasLength!Source)
+struct Chunks(Source) if(isInputRange!Source && hasSlicing!Source && hasLength!Source)
 {
     ///
     this(Source source, size_t chunkSize)
