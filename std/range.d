@@ -1270,14 +1270,21 @@ unittest
 
 /**
 Returns $(D true) if $(D R) offers a slicing operator with
-integral boundaries, that in turn returns an input range type. The
-following code should compile for $(D hasSlicing) to be $(D true):
+integral boundaries, that in turn returns an input range type with a length.
+The following code should compile for $(D hasSlicing) to be $(D true):
 
 ----
 R r;
 auto s = r[1 .. 2];
 static assert(isInputRange!(typeof(s)));
+static assert(hasLength!(typeof(s)));
 ----
+
+The semantics of a range with slicing (not checkable during compilation) are
+assumed to be the following ($(D r) is an object of type $(D R)):
+
+$(UL $(LI $(D r[a .. b]) returns a range with $(D length == b - a) of
+consecutive $(D r) elements from $(D a)-nth inclusive to $(D b)-nth exclusive.))
  */
 template hasSlicing(R)
 {
@@ -1287,6 +1294,7 @@ template hasSlicing(R)
         R r = void;
         auto s = r[1 .. 2];
         static assert(isInputRange!(typeof(s)));
+        static assert(hasLength!(typeof(s)));
     }));
 }
 
@@ -3097,6 +3105,7 @@ unittest
         this(int[] arr) { _arr = arr; }
         mixin(genInput());
         auto opSlice(size_t i, size_t j) { return typeof(this)(_arr[i .. j]); }
+        @property size_t length() const { return _arr.length; }
         int[] _arr;
     }
 
@@ -3127,6 +3136,7 @@ unittest
         this(int[] arr) { _arr = arr; }
         mixin(genInput());
         auto opSlice(size_t i, size_t j) { return new typeof(this)(_arr[i .. j]); }
+        @property size_t length() const { return _arr.length; }
         int[] _arr;
     }
 
