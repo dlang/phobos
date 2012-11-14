@@ -1279,6 +1279,12 @@ auto s = r[1 .. 2];
 static assert(isInputRange!(typeof(s)));
 static assert(hasLength!(typeof(s)));
 ----
+
+The semantics of a range with slicing (not checkable during compilation) are
+assumed to be the following ($(D r) is an object of type $(D R)):
+
+$(UL $(LI $(D r[a .. b]) returns a range with $(D length == b - a) of
+consecutive $(D r) elements from $(D a)-nth inclusive to $(D b)-nth exclusive.))
  */
 template hasSlicing(R)
 {
