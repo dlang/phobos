@@ -2854,13 +2854,15 @@ n) elements. Consequently, the result of $(D takeExactly(range, n))
 always defines the $(D length) property (and initializes it to $(D n))
 even when $(D range) itself does not define $(D length).
 
-If $(D R) has slicing, $(D takeExactly) simply returns a slice of $(D
-range). Otherwise if $(D R) is an input range, the type of the result
+If $(D R) has slicing and its slice has length, $(D takeExactly) simply
+returns a slice of $(D range).
+Otherwise if $(D R) is an input range, the type of the result
 is an input range with length. Finally, if $(D R) is a forward range
 (including bidirectional), the type of the result is a forward range
 with length.
 
-Note that $(D R) does not have to be a range in case it has slicing.
+Note that $(D R) does not have to be a range in case it has slicing and
+its slice has length.
  */
 auto takeExactly(R)(R range, size_t n)
 if (isInputRange!R && !hasSlicing!R)
@@ -2901,7 +2903,7 @@ if (isInputRange!R && !hasSlicing!R)
 }
 
 auto takeExactly(R)(R range, size_t n)
-if (hasSlicing!R)
+if (hasSlicing!R && hasLength!(typeof(range[0 .. n])))
 {
     return range[0 .. n];
 }
