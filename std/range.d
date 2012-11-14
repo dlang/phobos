@@ -607,66 +607,43 @@ accepting an $(D E[]).))
  */
 void put(R, E)(ref R r, E e)
 {
-    static if (hasMember!(R, "put") ||
-    (is(PointerTarget!R == struct) &&
-     hasMember!(PointerTarget!R, "put")))
+    static if(is(PointerTarget!R == struct))
+        enum usingPut = hasMember!(PointerTarget!R, "put");
+    else
+        enum usingPut = hasMember!(R, "put");
+
+    enum usingFront = !usingPut && isInputRange!R;
+    enum usingCall = !usingPut && !usingFront;
+
+    static if (usingPut && is(typeof(r.put(e))))
     {
-        // commit to using the "put" method
-        static if (is(typeof(r.put(e))))
-        {
-            r.put(e);
-        }
-        else static if (is(typeof(r.put((E[]).init))))
-        {
-            r.put((&e)[0..1]);
-        }
-        else static if (isInputRange!E && is(typeof(put(r, e.front))))
-        {
-            for (; !e.empty; e.popFront()) put(r, e.front);
-        }
-        else
-        {
-            static assert(false,
-                    "Cannot put a "~E.stringof~" into a "~R.stringof);
-        }
+        r.put(e);
+    }
+    else static if (usingPut && is(typeof(r.put((E[]).init))))
+    {
+        r.put((&e)[0..1]);
+    }
+    else static if (usingFront && is(typeof(r.front = e, r.popFront())))
+    {
+        r.front = e;
+        r.popFront();
+    }
+    else static if ((usingPut || usingFront) && isInputRange!E && is(typeof(put(r, e.front))))
+    {
+        for (; !e.empty; e.popFront()) put(r, e.front);
+    }
+    else static if (usingCall && is(typeof(r(e))))
+    {
+        r(e);
+    }
+    else static if (usingCall && is(typeof(r((E[]).init))))
+    {
+        r((&e)[0..1]);
     }
     else
     {
-        static if (isInputRange!R)
-        {
-            // Commit to using assignment to front
-            static if (is(typeof(r.front = e, r.popFront())))
-            {
-                r.front = e;
-                r.popFront();
-            }
-            else static if (isInputRange!E && is(typeof(put(r, e.front))))
-            {
-                for (; !e.empty; e.popFront()) put(r, e.front);
-            }
-            else
-            {
-                static assert(false,
-                        "Cannot put a "~E.stringof~" into a "~R.stringof);
-            }
-        }
-        else
-        {
-            // Commit to using opCall
-            static if (is(typeof(r(e))))
-            {
-                r(e);
-            }
-            else static if (is(typeof(r((E[]).init))))
-            {
-                r((&e)[0..1]);
-            }
-            else
-            {
-                static assert(false,
-                        "Cannot put a "~E.stringof~" into a "~R.stringof);
-            }
-        }
+        static assert(false,
+                "Cannot put a "~E.stringof~" into a "~R.stringof);
     }
 }
 
