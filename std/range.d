@@ -905,6 +905,7 @@ static assert(isForwardRange!R);  // range is forward
 static assert(isBidirectionalRange!R || isInfinite!R);
                                   // range is bidirectional or infinite
 auto e = r[1];                    // can index
+static assert(is(typeof(e) == typeof(r.front))); // same type for indexed and front
 ----
 
 The semantics of a random-access range (not checkable during
@@ -927,6 +928,7 @@ template isRandomAccessRange(R)
                       isForwardRange!R && isInfinite!R);
         R r = void;
         auto e = r[1];
+        static assert(is(typeof(e) == typeof(r.front)));
         static assert(!isNarrowString!R);
         static assert(hasLength!R || isInfinite!R);
     }));
