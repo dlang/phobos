@@ -1011,16 +1011,19 @@ and friends.
 template hasMobileElements(R)
 {
     enum bool hasMobileElements = is(typeof(
+    (inout int = 0)
     {
         R r = void;
         return moveFront(r);
     }))
     && (!isBidirectionalRange!R || is(typeof(
+    (inout int = 0)
     {
         R r = void;
         return moveBack(r);
     })))
     && (!isRandomAccessRange!R || is(typeof(
+    (inout int = 0)
     {
         R r = void;
         return moveAt(r, 0);
@@ -1037,6 +1040,7 @@ unittest
     auto nonMobile = map!"a"(repeat(HasPostblit.init));
     static assert(!hasMobileElements!(typeof(nonMobile)));
     static assert( hasMobileElements!(int[]));
+    static assert( hasMobileElements!(inout(int)[]));
     static assert( hasMobileElements!(typeof(iota(1000))));
 }
 
@@ -3660,7 +3664,7 @@ unittest // For infinite ranges
     assert (c == i);
 }
 
-private template lengthType(R) { alias typeof({ R r = void; return r.length; }()) lengthType; }
+private template lengthType(R) { alias typeof((inout int = 0){ R r = void; return r.length; }()) lengthType; }
 
 /**
    Iterate several ranges in lockstep. The element type is a proxy tuple
