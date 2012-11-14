@@ -608,15 +608,15 @@ accepting an $(D E[]).))
 void put(R, E)(ref R r, E e)
 {
     static if (hasMember!(R, "put") ||
-    (isPointer!R && is(PointerTarget!R == struct) &&
+    (is(PointerTarget!R == struct) &&
      hasMember!(PointerTarget!R, "put")))
     {
         // commit to using the "put" method
-        static if (!isArray!R && is(typeof(r.put(e))))
+        static if (is(typeof(r.put(e))))
         {
             r.put(e);
         }
-        else static if (!isArray!R && is(typeof(r.put((&e)[0..1]))))
+        else static if (is(typeof(r.put((&e)[0..1]))))
         {
             r.put((&e)[0..1]);
         }
