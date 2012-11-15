@@ -5177,8 +5177,8 @@ auto findSplit(alias pred = "a == b", R, E)(R haystack, E needle)
             immutable size_t needleLength = 1;
         immutable pos2 = pos1 + (balance.empty ? 0 : needleLength);
         return tuple(haystack[0 .. pos1],
-                     haystack[pos1 .. pos2],
-                     haystack[pos2 .. haystack.length]);
+            haystack[pos1 .. pos2],
+            haystack[pos2 .. haystack.length]);
     }
     else
     {
@@ -5191,13 +5191,13 @@ auto findSplit(alias pred = "a == b", R, E)(R haystack, E needle)
                 auto h = haystack.save;
                 h.popFront();
                 return tuple(takeExactly(original, pos),
-                             takeExactly(haystack, 1),
-                             h);
+                    takeExactly(haystack, 1),
+                    h);
             }
         }
         return tuple(takeExactly(original, pos),
-                     takeExactly(haystack, 0),
-                     haystack);
+            takeExactly(haystack, 0),
+            haystack);
     }
 }
 /// ditto
@@ -5212,8 +5212,8 @@ auto findSplit(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
         immutable pos1 = haystack.length - balance.length;
         immutable pos2 = balance.empty ? pos1 : pos1 + needle.length;
         return tuple(haystack[0 .. pos1],
-                     haystack[pos1 .. pos2],
-                     haystack[pos2 .. haystack.length]);
+            haystack[pos1 .. pos2],
+            haystack[pos2 .. haystack.length]);
     }
     else
     {
@@ -5228,15 +5228,15 @@ auto findSplit(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
             {
                 //full match found!
                 return tuple(takeExactly(original, pos1),
-                             takeExactly(haystack, pos2 - pos1),
-                             h);
+                    takeExactly(haystack, pos2 - pos1),
+                    h);
             }
             if (h.empty)
             {
                 //Haystack empty, match NOT found
                 return tuple(takeExactly(original, pos2),
-                             takeExactly(haystack, 0),
-                             h);
+                    takeExactly(haystack, 0),
+                    h);
             }
 
             //Do the search
@@ -5278,7 +5278,7 @@ auto findSplitBefore(alias pred = "a == b", R, E)(R haystack, E needle)
         }
         //This works in both cases actually.
         return tuple(takeExactly(original, pos),
-                     haystack);
+            haystack);
     }
 }
 /// Ditto
@@ -5307,13 +5307,13 @@ auto findSplitBefore(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
             {
                 //full match found!
                 return tuple(takeExactly(original, pos1),
-                             haystack);
+                    haystack);
             }
             if (h.empty)
             {
                 //Haystack empty, match NOT found
                 return tuple(takeExactly(original, pos2),
-                             h);
+                    h);
             }
 
             //Do the search
@@ -5347,7 +5347,7 @@ auto findSplitAfter(alias pred = "a == b", R, E)(R haystack, E needle)
             immutable size_t needleLength = 1;
         immutable pos = balance.empty ? 0 : (haystack.length - balance.length + needleLength);
         return tuple(haystack[0 .. pos],
-                     haystack[pos .. haystack.length]);
+            haystack[pos .. haystack.length]);
     }
     else
     {
@@ -5360,11 +5360,11 @@ auto findSplitAfter(alias pred = "a == b", R, E)(R haystack, E needle)
                 ++pos;
                 haystack.popFront();
                 return tuple(takeExactly(original, pos),
-                             haystack);
+                    haystack);
             }
         }
         return tuple(takeExactly(original, 0),
-                     original);
+            original);
     }
 }
 /// Ditto
@@ -5392,13 +5392,13 @@ auto findSplitAfter(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
             {
                 //full match found!
                 return tuple(takeExactly(original, pos2),
-                             h);
+                    h);
             }
             if (h.empty)
             {
                 //Haystack empty, match NOT found
                 return tuple(takeExactly(original, 0),
-                             original);
+                    original);
             }
 
             //Do the search
