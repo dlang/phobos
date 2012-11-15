@@ -126,6 +126,14 @@ $(BOOKTABLE ,
         $(TD Creates the _range that results from discarding the first $(I n)
         elements from the given _range.
     ))
+    $(TR $(TD $(D $(LREF dropFront)))
+        $(TD Creates the _range that results from discarding the first $(I n)
+        elements from the given _range.
+    ))
+    $(TR $(TD $(D $(LREF dropBack)))
+        $(TD Creates the _range that results from discarding the last $(I n)
+        elements from the given _range.
+    ))
     $(TR $(TD $(D $(LREF repeat)))
         $(TD Creates a _range that consists of a single element repeated $(I n)
         times, or an infinite _range repeating that element indefinitely.
@@ -3151,10 +3159,14 @@ unittest
     //static assert(is(typeof(filtered) == typeof(takeNone(filtered))), typeof(filtered).stringof);
 }
 
-
 /++
     Convenience function which calls $(D $(LREF popFrontN)(range, n)) and
-    returns $(D range).
+    returns $(D range). This makes it easier to pop elements from a range
+    and then pass it to another function within a single expression,
+    whereas $(D popFrontN) would require multiple statements.
+
+    Note: $(D drop) and $(D dropFront) cover the same functionality, and
+    are aliases of each other. Both names are provided for convenience.
 
     Examples:
 --------------------
@@ -3163,6 +3175,12 @@ assert(drop("hello world", 6) == "world");
 assert(drop("hello world", 50).empty);
 assert(equal(drop(take("hello world", 6), 3), "lo "));
 --------------------
+--------------------
+//Remove all but the first two elements
+auto a = DList!int(0, 1, 9, 9, 9);
+a.remove(a[].dropFront(2));
+assert(a[].equal(a[].take(2)));
+--------------------
   +/
 R drop(R)(R range, size_t n)
     if(isInputRange!R)
@@ -3170,6 +3188,9 @@ R drop(R)(R range, size_t n)
     popFrontN(range, n);
     return range;
 }
+/// ditto
+version(StdDdoc){R dropFront(R)(R range, size_t n);} //Documentation does not need to know who aliases who
+else {alias drop dropFront;} //Implementation defined alias
 
 //Verify Examples
 unittest
@@ -3179,11 +3200,60 @@ unittest
     assert(drop("hello world", 50).empty);
     assert(equal(drop(take("hello world", 6), 3), "lo "));
 }
+unittest
+{
+    //Remove all but the first two elements
+    auto a = DList!int(0, 1, 9, 9, 9, 9);
+    a.remove(a[].dropFront(2));
+    assert(a[].equal(a[].take(2)));
+}
 
 unittest
 {
     assert(drop("", 5).empty);
     assert(equal(drop(filter!"true"([0, 2, 1, 5, 0, 3]), 3), [5, 0, 3]));
+}
+
+/++
+    Convenience function which calls $(D $(LREF popBackN)(range, n)) and
+    returns $(D range). This makes it easier to pop elements from the back
+    of a range and then pass it to another function within a single
+    expression, whereas $(D popBackN) would require multiple statements.
+
+    Examples:
+--------------------
+assert([0, 2, 1, 5, 0, 3].dropBack(3) == [0, 2, 1]);
+assert("hello world".dropBack(6) == "hello");
+assert("hello world".dropBack(50).empty);
+assert("hello world".dropFront(4).dropBack(4).equal("o w"));
+--------------------
+--------------------
+//insert before the last two elements
+auto a = DList!int(0, 1, 2, 5, 6);
+a.insertAfter(a[].dropBack(2), [3, 4]);
+assert(a[].equal(iota(0, 7)));
+--------------------
+  +/
+R dropBack(R)(R range, size_t n)
+    if(isBidirectionalRange!R)
+{
+    range.popBackN(n);
+    return range;
+}
+//Verify Examples
+unittest
+{
+    assert([0, 2, 1, 5, 0, 3].dropBack(3) == [0, 2, 1]);
+    assert("hello world".dropBack(6) == "hello");
+    assert("hello world".dropBack(50).empty);
+    assert("hello world".dropFront(4).dropBack(4).equal("o w"));
+}
+unittest
+{
+    //insert before the last two elements
+    auto a = DList!int(0, 1, 2, 5, 6);
+    a.insertAfter(a[].dropBack(2), [3, 4]);
+    assert(a[].equal(iota(0, 7)));
 }
 
 
@@ -3207,13 +3277,16 @@ a.popFrontN(7);
 assert(a == [ ]);
 ----
 */
-size_t popFrontN(Range)(ref Range r, size_t n) if (isInputRange!(Range))
+size_t popFrontN(Range)(ref Range r, size_t n)
+    if (isInputRange!Range)
 {
     static if (hasSlicing!Range && hasLength!Range)
     {
         n = min(n, r.length);
         r = r[n .. r.length];
     }
+    else static if (hasSlicing!Range && isInfinite!Range && is(typeof(r = r[n .. $])))
+        r = r[n .. $];
     else
     {
         static if (hasLength!Range)
@@ -3272,7 +3345,8 @@ unittest
    assert(a == [ ]);
    ----
 */
-size_t popBackN(Range)(ref Range r, size_t n) if (isInputRange!(Range))
+size_t popBackN(Range)(ref Range r, size_t n)
+    if (isBidirectionalRange!Range)
 {
     static if (hasSlicing!(Range) && hasLength!(Range))
     {
