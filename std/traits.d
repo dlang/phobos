@@ -517,7 +517,7 @@ unittest
 }
 
 
-/*
+/**
 Get, as a tuple, the identifiers of the parameters to a function symbol.
 
 Example:
@@ -591,7 +591,7 @@ unittest
 }
 
 
-/*
+/**
 Get, as a tuple, the default value of the parameters to a function symbol.
 If a parameter doesn't have the default value, $(D void) is returned instead.
 
