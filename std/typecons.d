@@ -2704,7 +2704,7 @@ unittest
 // 6436
 unittest
 {
-    struct S { this(ref int val) { assert(val == 3); ++val; } }
+    static struct S { this(ref int val) { assert(val == 3); ++val; } }
 
     int val = 3;
     auto s = RefCounted!S(val);
