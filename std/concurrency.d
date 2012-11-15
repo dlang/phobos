@@ -478,48 +478,48 @@ private Tid _spawn(F, T...)( bool linked, F fn, T args )
 
 unittest
 {
-	void function()                                fn1;
-	void function(int)                             fn2;
-	static assert( __traits(compiles, spawn(fn1)));
-	static assert( __traits(compiles, spawn(fn2, 2)));
-	static assert(!__traits(compiles, spawn(fn1, 1)));
-	static assert(!__traits(compiles, spawn(fn2)));
-	
-	void delegate(int) shared                      dg1;
-	shared(void delegate(int))                     dg2;
-	shared(void delegate(long) shared)             dg3;
-	shared(void delegate(real, int , long) shared) dg4;
-	void delegate(int) immutable                   dg5;
-	void delegate(int)                             dg6;
-	static assert( __traits(compiles, spawn(dg1, 1)));
-	static assert( __traits(compiles, spawn(dg2, 2)));
-	static assert( __traits(compiles, spawn(dg3, 3)));
-	static assert( __traits(compiles, spawn(dg4, 4, 4, 4)));
-	static assert( __traits(compiles, spawn(dg5, 5)));
-	static assert(!__traits(compiles, spawn(dg6, 6)));
-	
-	auto callable1  = new class{ void opCall(int) shared {} };
-	auto callable2  = cast(shared)new class{ void opCall(int) shared {} };
-	auto callable3  = new class{ void opCall(int) immutable {} };
-	auto callable4  = cast(immutable)new class{ void opCall(int) immutable {} };
-	auto callable5  = new class{ void opCall(int) {} };
-	auto callable6  = cast(shared)new class{ void opCall(int) immutable {} };
-	auto callable7  = cast(immutable)new class{ void opCall(int) shared {} };
-	auto callable8  = cast(shared)new class{ void opCall(int) const shared {} };
-	auto callable9  = cast(const shared)new class{ void opCall(int) shared {} };
-	auto callable10 = cast(const shared)new class{ void opCall(int) const shared {} };
-	auto callable11 = cast(immutable)new class{ void opCall(int) const shared {} };
-	static assert(!__traits(compiles, spawn(callable1,  1)));
-	static assert( __traits(compiles, spawn(callable2,  2)));
-	static assert(!__traits(compiles, spawn(callable3,  3)));
-	static assert( __traits(compiles, spawn(callable4,  4)));
-	static assert(!__traits(compiles, spawn(callable5,  5)));
-	static assert(!__traits(compiles, spawn(callable6,  6)));
-	static assert(!__traits(compiles, spawn(callable7,  7)));
-	static assert( __traits(compiles, spawn(callable8,  8)));
-	static assert(!__traits(compiles, spawn(callable9,  9)));
-	static assert( __traits(compiles, spawn(callable10, 10)));
-	static assert( __traits(compiles, spawn(callable11, 11)));
+    void function()                                fn1;
+    void function(int)                             fn2;
+    static assert( __traits(compiles, spawn(fn1)));
+    static assert( __traits(compiles, spawn(fn2, 2)));
+    static assert(!__traits(compiles, spawn(fn1, 1)));
+    static assert(!__traits(compiles, spawn(fn2)));
+    
+    void delegate(int) shared                      dg1;
+    shared(void delegate(int))                     dg2;
+    shared(void delegate(long) shared)             dg3;
+    shared(void delegate(real, int , long) shared) dg4;
+    void delegate(int) immutable                   dg5;
+    void delegate(int)                             dg6;
+    static assert( __traits(compiles, spawn(dg1, 1)));
+    static assert( __traits(compiles, spawn(dg2, 2)));
+    static assert( __traits(compiles, spawn(dg3, 3)));
+    static assert( __traits(compiles, spawn(dg4, 4, 4, 4)));
+    static assert( __traits(compiles, spawn(dg5, 5)));
+    static assert(!__traits(compiles, spawn(dg6, 6)));
+    
+    auto callable1  = new class{ void opCall(int) shared {} };
+    auto callable2  = cast(shared)new class{ void opCall(int) shared {} };
+    auto callable3  = new class{ void opCall(int) immutable {} };
+    auto callable4  = cast(immutable)new class{ void opCall(int) immutable {} };
+    auto callable5  = new class{ void opCall(int) {} };
+    auto callable6  = cast(shared)new class{ void opCall(int) immutable {} };
+    auto callable7  = cast(immutable)new class{ void opCall(int) shared {} };
+    auto callable8  = cast(shared)new class{ void opCall(int) const shared {} };
+    auto callable9  = cast(const shared)new class{ void opCall(int) shared {} };
+    auto callable10 = cast(const shared)new class{ void opCall(int) const shared {} };
+    auto callable11 = cast(immutable)new class{ void opCall(int) const shared {} };
+    static assert(!__traits(compiles, spawn(callable1,  1)));
+    static assert( __traits(compiles, spawn(callable2,  2)));
+    static assert(!__traits(compiles, spawn(callable3,  3)));
+    static assert( __traits(compiles, spawn(callable4,  4)));
+    static assert(!__traits(compiles, spawn(callable5,  5)));
+    static assert(!__traits(compiles, spawn(callable6,  6)));
+    static assert(!__traits(compiles, spawn(callable7,  7)));
+    static assert( __traits(compiles, spawn(callable8,  8)));
+    static assert(!__traits(compiles, spawn(callable9,  9)));
+    static assert( __traits(compiles, spawn(callable10, 10)));
+    static assert( __traits(compiles, spawn(callable11, 11)));
 }
 
 
