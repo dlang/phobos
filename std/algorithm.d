@@ -4006,35 +4006,34 @@ unittest
 assert(countUntil("hello world", "world") == 6);
 assert(countUntil("hello world", 'r') == 8);
 assert(countUntil("hello world", "programming") == -1);
+assert(countUntil("日本語", "本語") == 1);
+assert(countUntil("日本語", '語')   == 2);
+assert(countUntil("日本語", "五") == -1);
+assert(countUntil("日本語", '五') == -1);
 assert(countUntil([0, 7, 12, 22, 9], [12, 22]) == 2);
 assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
 assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
 --------------------
   +/
-ptrdiff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
-if (is(typeof(startsWith!pred(haystack, needle))))
+ptrdiff_t countUntil(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+    if (isForwardRange!R1 && isForwardRange!R2 &&
+        is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
-    static if (isNarrowString!R)
-    {
-        // Narrow strings are handled a bit differently
-        auto length = haystack.length;
-        for (; !haystack.empty; haystack.popFront())
-        {
-            if (startsWith!pred(haystack, needle))
-            {
-                return length - haystack.length;
-            }
-        }
-    }
-    else
-    {
-        typeof(return) result;
-        for (; !haystack.empty; ++result, haystack.popFront())
-        {
-            if (startsWith!pred(haystack, needle)) return result;
-        }
-    }
-    return -1;
+    //Note: This implementation does take narrow strings into consideration
+    typeof(return) result;
+    for (; !haystack.empty; ++result, haystack.popFront())
+        if (startsWith!pred(haystack.save, needle.save)) return result;
+    
+    static if (isInfinite!R1) assert(0); // @@@8804@@@
+    else return -1;
+}
+/// ditto
+ptrdiff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
+    if (isInputRange!R &&
+        is(typeof(binaryFun!pred(haystack.front, needle)) : bool))
+{
+    bool pred2(ElementType!R a) { return binaryFun!pred(a, needle); }
+    return countUntil!pred2(haystack);
 }
 
 //Verify Examples.
@@ -4043,6 +4042,10 @@ unittest
     assert(countUntil("hello world", "world") == 6);
     assert(countUntil("hello world", 'r') == 8);
     assert(countUntil("hello world", "programming") == -1);
+    assert(countUntil("日本語", "本語") == 1);
+    assert(countUntil("日本語", '語')   == 2);
+    assert(countUntil("日本語", "五") == -1);
+    assert(countUntil("日本語", '五') == -1);
     assert(countUntil([0, 7, 12, 22, 9], [12, 22]) == 2);
     assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
     assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
@@ -4060,29 +4063,32 @@ assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
 --------------------
   +/
 ptrdiff_t countUntil(alias pred, R)(R haystack)
-if (isForwardRange!R && is(typeof(unaryFun!pred(haystack.front)) == bool))
+    if (isInputRange!R &&
+        is(typeof(unaryFun!pred(haystack.front)) : bool))
 {
-    static if (isNarrowString!R)
+    typeof(return) i;
+    static if (isRandomAccessRange!R)
     {
-        // Narrow strings are handled a bit differently
-        auto length = haystack.length;
-        for (; !haystack.empty; haystack.popFront())
+        static if (hasLength!R)
         {
-            if (unaryFun!pred(haystack.front))
-            {
-                return length - haystack.length;
-            }
+            auto len = cast(typeof(return)) haystack.length;
+            for ( ; i < len ; ++i)
+                if (unaryFun!pred(haystack[i])) return i;
+        }
+        else //if (isInfinite!R)
+        {
+            for ( ;  ; ++i )
+                if (unaryFun!pred(haystack[i])) return i;
         }
     }
-    else
+    else //everything else (including narrow strings)
     {
-        typeof(return) result;
-        for (; !haystack.empty; ++result, haystack.popFront())
-        {
-            if (unaryFun!pred(haystack.front)) return result;
-        }
+        for ( ; !haystack.empty; ++i, haystack.popFront())
+            if (unaryFun!pred(haystack.front)) return i;
     }
-    return -1;
+    
+    static if (isInfinite!R) assert(0); // @@@8804@@@
+    else return -1;
 }
 
 //Verify Examples.
@@ -4091,6 +4097,32 @@ unittest
     assert(countUntil!(std.uni.isWhite)("hello world") == 5);
     assert(countUntil!(std.ascii.isDigit)("hello world") == -1);
     assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
+}
+unittest
+{
+    // References
+    {
+        // input
+        ReferenceInputRange!int r;
+        r = new ReferenceInputRange!int([0, 1, 2, 3, 4, 5, 6]);
+        assert(r.countUntil(3) == 3);
+        r = new ReferenceInputRange!int([0, 1, 2, 3, 4, 5, 6]);
+        assert(r.countUntil(7) == -1);
+    }
+    {
+        // forward
+        auto r = new ReferenceForwardRange!int([0, 1, 2, 3, 4, 5, 6]);
+        assert(r.save.countUntil([3, 4]) == 3);
+        assert(r.save.countUntil(3) == 3);
+        assert(r.save.countUntil([3, 7]) == -1);
+        assert(r.save.countUntil(7) == -1);
+    }
+    {
+        // infinite forward
+        auto r = new ReferenceInfiniteForwardRange!int(0);
+        assert(r.save.countUntil([3, 4]) == 3);
+        assert(r.save.countUntil(3) == 3);
+    }
 }
 
 /**
@@ -4952,6 +4984,9 @@ $(D 2).
 The third version counts the elements for which $(D pred(x)) is $(D
 true). Performs $(BIGOH r.length) evaluations of $(D pred).
 
+Note: Regardless of the version, $(D count) will not accept infinite ranges
+as a $(D haystack).
+
 Example:
 ----
 // count elements in range
@@ -4962,15 +4997,18 @@ assert(count!("a > b")(a, 2) == 5);
 assert(count("abcadfabf", "ab") == 2);
 assert(count("ababab", "abab") == 1);
 assert(count("ababab", "abx") == 0);
+// fuzzy count range in range
+assert(count!"std.uni.toLower(a) == std.uni.toLower(b)"("AbcAdFaBf", "ab") == 2);
 // count predicate in range
 assert(count!("a > 1")(a) == 8);
 ----
 */
-size_t count(alias pred = "a == b", Range, E)(Range r, E value)
-if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, value)) == bool))
+size_t count(alias pred = "a == b", Range, E)(Range haystack, E needle)
+    if (isInputRange!Range && !isInfinite!Range &&
+        is(typeof(binaryFun!pred(haystack.front, needle)) : bool))
 {
-    bool pred2(ElementType!(Range) a) { return binaryFun!pred(a, value); }
-    return count!(pred2)(r);
+    bool pred2(ElementType!Range a) { return binaryFun!pred(a, needle); }
+    return count!pred2(haystack);
 }
 
 unittest
@@ -5001,14 +5039,20 @@ unittest
 
 /// Ditto
 size_t count(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
-if (isInputRange!R1 && isForwardRange!R2 && is(typeof(binaryFun!pred(haystack, needle)) == bool))
+    if (isForwardRange!R1 && !isInfinite!R1 &&
+        isForwardRange!R2 &&
+        is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
     enforce(!needle.empty, "Cannot count occurrences of an empty range");
-    size_t result;
-    for (; findSkip!pred(haystack, needle); ++result)
+    static if (isInfinite!R2)
+        return 0;
+    else
     {
+        size_t result;
+        for (; findSkip!pred(haystack, needle.save); ++result)
+        {}
+        return result;
     }
-    return result;
 }
 
 unittest
@@ -5016,16 +5060,18 @@ unittest
     assert(count("abcadfabf", "ab") == 2);
     assert(count("ababab", "abab") == 1);
     assert(count("ababab", "abx") == 0);
+    assert(count!"std.uni.toLower(a) == std.uni.toLower(b)"("AbcAdFaBf", "ab") == 2);
 }
 
 /// Ditto
-size_t count(alias pred = "true", Range)(Range r) if (isInputRange!(Range))
+size_t count(alias pred = "true", R)(R haystack)
+    if (isInputRange!R && !isInfinite!R &&
+        is(typeof(unaryFun!pred(haystack.front)) : bool))
 {
     size_t result;
-    for (; !r.empty; r.popFront())
-    {
-        if (unaryFun!pred(r.front)) ++result;
-    }
+    alias ElementType!R T; //For narrow strings
+    foreach (T elem; haystack)
+        if (unaryFun!pred(elem)) ++result;
     return result;
 }
 
@@ -5035,6 +5081,7 @@ unittest
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 4, 3, 2, 5, 3, 2, 4 ];
     assert(count!("a == 3")(a) == 2);
+    assert(count("日本語") == 3);
 }
 
 // balancedParens
