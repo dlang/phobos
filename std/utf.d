@@ -153,13 +153,21 @@ unittest
         The number of bytes in the UTF-8 sequence.
 
     Throws:
-        $(D UTFException) if $(D str[index]) is not the start of a valid UTF-8
-        sequence.
+        May throw a $(D UTFException) if $(D str[index]) is not the start of a
+        valid UTF-8 sequence.
+
+    Notes:
+        $(D stride) will only analize the first $(D str[index]) element. It
+        will not fully verify the validity of UTF-8 sequence, nor even verify
+        the presence of the sequence: it will not actually guarantee that
+        $(D index + stride(str, index) <= str.length).
   +/
 uint stride(S)(auto ref S str, size_t index)
     if (is(S : const char[]) ||
         (isRandomAccessRange!S && is(Unqual!(ElementType!S) == char)))
 {
+    static if (hasLength!S)
+        assert(index < str.length, "Past the end of the UTF-8 sequence");
     immutable c = str[index];
 
     if (c < 0x80)
@@ -256,23 +264,43 @@ unittest
         The number of bytes in the UTF-8 sequence.
 
     Throws:
-        $(D UTFException) if $(D str[index]) is not one past the end of a valid
-        UTF-8 sequence.
+        May throw a $(D UTFException) if $(D str[index]) is not one past the
+        end of a valid UTF-8 sequence.
+
+    Notes:
+        $(D strideBack) will not fully verify the validity of the UTF-8
+        sequence. It will, however, gurantee that
+        $(D index - stride(str, index)) is a valid index.
   +/
 uint strideBack(S)(auto ref S str, size_t index)
     if (is(S : const char[]) ||
         (isRandomAccessRange!S && is(Unqual!(ElementType!S) == char)))
 {
-    if (index >= 1 && (str[index-1] & 0b1100_0000) != 0b1000_0000)
+    static if (hasLength!S)
+        assert(index <= str.length, "Past the end of the UTF-8 sequence");
+    assert (index > 0, "Not the end of the UTF-8 sequence");
+
+    if ((str[index-1] & 0b1100_0000) != 0b1000_0000)
         return 1;
-    else if (index >= 2 && (str[index-2] & 0b1100_0000) != 0b1000_0000)
-        return 2;
-    else if (index >= 3 && (str[index-3] & 0b1100_0000) != 0b1000_0000)
-        return 3;
-    else if (index >= 4 && (str[index-4] & 0b1100_0000) != 0b1000_0000)
-        return 4;
+    if (index >= 4) //single verification for most common case
+    {
+        if ((str[index-2] & 0b1100_0000) != 0b1000_0000)
+            return 2;
+        if ((str[index-3] & 0b1100_0000) != 0b1000_0000)
+            return 3;
+        if ((str[index-4] & 0b1100_0000) != 0b1000_0000)
+            return 4;
+    }
     else
-        throw new UTFException("Not the end of the UTF sequence", index);
+    {
+        if (index >= 2 && (str[index-2] & 0b1100_0000) != 0b1000_0000)
+            return 2;
+        if (index >= 3 && (str[index-3] & 0b1100_0000) != 0b1000_0000)
+            return 3;
+        //if (index >= 4 && (str[index-4] & 0b1100_0000) != 0b1000_0000)
+        //    return 4;
+    }
+    throw new UTFException("Not the end of the UTF sequence", index);
 }
 
 /// Ditto
@@ -286,23 +314,21 @@ uint strideBack(S)(auto ref S str)
 uint strideBack(S)(auto ref S str)
     if (isBidirectionalRange!S && is(Unqual!(ElementType!S) == char) && !isRandomAccessRange!S)
 {
-    if (!str.empty && (str.back & 0b1100_0000) != 0b1000_0000)
+    assert(!str.empty, "Past the end of the UTF-8 sequence");
+
+    if ((str.back & 0b1100_0000) != 0b1000_0000)
         return 1;
 
-    auto temp = str.save;
-    temp.popBack();
-
-    if (!temp.empty && (temp.back & 0b1100_0000) != 0b1000_0000)
+    str.popBack();
+    if (!str.empty && (str.back & 0b1100_0000) != 0b1000_0000)
         return 2;
 
-    temp.popBack();
-
-    if (!temp.empty && (temp.back & 0b1100_0000) != 0b1000_0000)
+    str.popBack();
+    if (!str.empty && (str.back & 0b1100_0000) != 0b1000_0000)
         return 3;
 
-    temp.popBack();
-
-    if (!temp.empty && (temp.back & 0b1100_0000) != 0b1000_0000)
+    str.popBack();
+    if (!str.empty && (str.back & 0b1100_0000) != 0b1000_0000)
         return 4;
 
     throw new UTFException("The last code unit is not the end of the UTF-8 sequence");
@@ -367,11 +393,23 @@ unittest
 
     Returns:
         The number of bytes in the UTF-16 sequence.
+
+    Throws:
+        May throw a $(D UTFException) if $(D str[index]) is not the start of a
+        valid UTF-16 sequence.
+
+    Notes:
+        $(D stride) will only analize the first $(D str[index]) element. It
+        will not fully verify the validity of UTF-16 sequence, nor even verify
+        the presence of the sequence: it will not actually guarantee that
+        $(D index + stride(str, index) <= str.length).
   +/
 uint stride(S)(auto ref S str, size_t index)
     if (is(S : const wchar[]) ||
         (isRandomAccessRange!S && is(Unqual!(ElementType!S) == wchar)))
 {
+    static if (hasLength!S)
+        assert(index < str.length, "Past the end of the UTF-16 sequence");
     immutable uint u = str[index];
     return 1 + (u >= 0xD800 && u <= 0xDBFF);
 }
@@ -386,6 +424,7 @@ uint stride(S)(auto ref S str) @safe pure
 uint stride(S)(auto ref S str)
     if (isInputRange!S && is(Unqual!(ElementType!S) == wchar))
 {
+    assert (!str.empty, "UTF-16 sequence is empty");
     immutable uint u = str.front;
     return 1 + (u >= 0xD800 && u <= 0xDBFF);
 }
@@ -451,54 +490,42 @@ uint stride(S)(auto ref S str)
         The number of bytes in the UTF-16 sequence.
 
     Throws:
-        $(D UTFException) if $(D str[index]) is not one past the end of a valid
-        UTF-16 sequence.
+        May throw a $(D UTFException) if $(D str[index]) is not one past the
+        end of a valid UTF-16 sequence.
+
+    Notes:
+        $(D stride) will only analize the element at $(D str[index - 1])
+        element. It will not fully verify the validity of UTF-16 sequence, nor
+        even verify the presence of the sequence: it will not actually
+        guarantee that $(D stride(str, index) <= index).
   +/
+//UTF-16 is self synchronizing: The length of strideBack can be found from
+//the value of a single wchar
 uint strideBack(S)(auto ref S str, size_t index)
     if (is(S : const wchar[]) ||
         (isRandomAccessRange!S && is(Unqual!(ElementType!S) == wchar)))
 {
-    if (index == 0 || !(str[index-1] < 0xD800 || str[index-1] > 0xDBFF))
-        throw new UTFException("Not the end of the UTF-16 sequence", index);
-    if (index == 1)
-        return 1;
-    immutable c = str[index - 2];
-    return 1 + (c >= 0xD800 && c <= 0xDBFF);
+    static if (hasLength!S)
+        assert(index <= str.length, "Past the end of the UTF-16 sequence");
+    assert (index > 0, "Not the end of a UTF-16 sequence");
+
+    immutable c2 = str[index-1];
+    return 1 + (0xDC00 <= c2 && c2 < 0xE000);
 }
 
 /// Ditto
 uint strideBack(S)(auto ref S str)
     if (is(S : const wchar[]) ||
-        (isInputRange!S && is(Unqual!(ElementType!S) == wchar)))
+        (isBidirectionalRange!S && is(Unqual!(ElementType!S) == wchar)))
 {
+    assert (!str.empty, "UTF-16 sequence is empty");
+
     static if (is(S : const(wchar)[]))
-        immutable valid = !str.empty && str[$ - 1] < 0xD800 || str[$ - 1] > 0xDBFF;
+        immutable c2 = str[$ - 1];
     else
-        immutable valid = !str.empty && str.back < 0xD800 || str.back > 0xDBFF;
+        immutable c2 = str.back;
 
-    if (!valid)
-        throw new UTFException("The last code unit is not the end of the UTF-16 sequence");
-
-    static if (is(S : const(wchar)[]) || hasLength!S)
-    {
-       if (str.length == 1)
-           return 1;
-    }
-
-    static if (is(S : const(wchar)[]) || (isRandomAccessRange!S && hasLength!R))
-        immutable c = str[$ - 2];
-    else
-    {
-        auto temp = str.save;
-        temp.popBack();
-
-        if (temp.empty)
-            return 1;
-
-        immutable c = temp.back;
-    }
-
-    return 1 + (c >= 0xD800 && c <= 0xDBFF);
+    return 1 + (0xDC00 <= c2 && c2 <= 0xE000);
 }
 
 unittest
@@ -556,13 +583,18 @@ unittest
 
     Returns:
         The number of bytes in the UTF-32 sequence (always $(D 1)).
+
+    Throws:
+        Never.
   +/
 uint stride(S)(auto ref S str, size_t index = 0)
     if (is(S : const dchar[]) ||
         (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
 {
     static if (hasLength!S)
-        assert(index < str.length);
+        assert(index < str.length, "Past the end of the UTF-32 sequence");
+    else
+        assert(!str.empty, "UTF-32 sequence is empty.");
     return 1;
 }
 
@@ -625,12 +657,16 @@ unittest
 
     Returns:
         The number of bytes in the UTF-32 sequence (always $(D 1)).
+
+    Throws:
+        Never.
   +/
 uint strideBack(S)(auto ref S str, size_t index)
     if (isRandomAccessRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
 {
     static if (hasLength!S)
-        assert(index <= str.length);
+        assert(index <= str.length, "Past the end of the UTF-32 sequence");
+    assert (index > 0, "Not the end of the UTF-32 sequence");
     return 1;
 }
 
@@ -638,7 +674,7 @@ uint strideBack(S)(auto ref S str, size_t index)
 uint strideBack(S)(auto ref S str)
     if (isBidirectionalRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
 {
-    assert(!str.empty);
+    assert(!str.empty, "Empty UTF-32 sequence");
     return 1;
 }
 
