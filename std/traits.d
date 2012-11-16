@@ -2863,10 +2863,8 @@ template hasElaborateAssign(S)
     }
     else static if(is(S == struct))
     {
-        @property auto ref lvalueOf() { static S s = void; return s; }
-
-        enum hasElaborateAssign = is(typeof(S.init.opAssign(S.init))) ||
-                                  is(typeof(S.init.opAssign(lvalueOf))) ||
+        enum hasElaborateAssign = is(typeof(S.init.opAssign(rvalueOf!S))) ||
+                                  is(typeof(S.init.opAssign(lvalueOf!S))) ||
             anySatisfy!(.hasElaborateAssign, FieldTypeTuple!S);
     }
     else
@@ -2898,6 +2896,13 @@ unittest
         @disable void opAssign(U)(ref U u);
     }
     static assert( hasElaborateAssign!S4);
+
+    static struct S41
+    {
+        void opAssign(U)(ref U u) {}
+        @disable void opAssign(U)(U u);
+    }
+    static assert( hasElaborateAssign!S41);
 
     static struct S5 { @disable this(); this(int n){ s = S(); } S s; }
     static assert( hasElaborateAssign!S5);
