@@ -1753,21 +1753,22 @@ unittest
 
 
 /***
- * Get the types of the fields of a struct or class.
+ * Get as a typetuple the types of the fields of a struct, class, or union.
  * This consists of the fields that take up memory space,
  * excluding the hidden fields like the virtual function
- * table pointer.
+ * table pointer or a context pointer for nested types.
+ * If $(D T) isn't a struct, class, or union returns typetuple
+ * with one element $(D T).
  */
 
-template FieldTypeTuple(S)
+template FieldTypeTuple(T)
 {
-    static if (is(S == struct) || is(S == union))
-        alias typeof(S.tupleof[0 .. $ - isNested!S]) FieldTypeTuple;
-    else static if (is(S == class))
-        alias typeof(S.tupleof) FieldTypeTuple;
+    static if (is(T == struct) || is(T == union))
+        alias typeof(T.tupleof[0 .. $ - isNested!T]) FieldTypeTuple;
+    else static if (is(T == class))
+        alias typeof(T.tupleof) FieldTypeTuple;
     else
-        alias TypeTuple!S FieldTypeTuple;
-        //static assert(0, "argument is not struct or class");
+        alias TypeTuple!T FieldTypeTuple;
 }
 
 unittest
