@@ -2786,7 +2786,7 @@ template hasElaborateCopyConstructor(S)
     else static if(is(S == struct))
     {
         enum hasElaborateCopyConstructor = hasMember!(S, "__postblit")
-            || anySatisfy!(.hasElaborateCopyConstructor, typeof(S.tupleof));
+            || anySatisfy!(.hasElaborateCopyConstructor, FieldTypeTuple!S);
     }
     else
     {
@@ -2839,7 +2839,7 @@ template hasElaborateAssign(S)
 
         enum hasElaborateAssign = is(typeof(S.init.opAssign(S.init))) ||
                                   is(typeof(S.init.opAssign(lvalueOf))) ||
-            anySatisfy!(.hasElaborateAssign, typeof(S.tupleof));
+            anySatisfy!(.hasElaborateAssign, FieldTypeTuple!S);
     }
 }
 
@@ -2902,7 +2902,7 @@ template hasElaborateDestructor(S)
     else static if(is(S == struct))
     {
         enum hasElaborateDestructor = hasMember!(S, "__dtor")
-            || anySatisfy!(.hasElaborateDestructor, typeof(S.tupleof));
+            || anySatisfy!(.hasElaborateDestructor, FieldTypeTuple!S);
     }
     else
     {
