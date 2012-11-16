@@ -1164,8 +1164,18 @@ unittest
 unittest
 {
     //Testing @@@7689
+    //Note: Split does not guarantee an actual exception,
+    //So this unittest is just a "stability" test.
     char[] s = cast(char[])[131, 64, 32, 251, 22];
     assertThrown(std.string.split(s).length == 2);
+}
+
+unittest
+{
+    enum rw = split("\u3000日\u3000本\u3000語\u3000");
+    static assert(rw[0] == "日");
+    static assert(rw[1] == "本");
+    static assert(rw[2] == "語");
 }
 
 /**
