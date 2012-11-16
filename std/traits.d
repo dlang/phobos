@@ -5027,6 +5027,112 @@ unittest
     //static assert( isAssociativeArray!EAA);
 }
 
+
+// Returns the element type of an array.
+private alias _ArrayElementType(T : T[]) = T;
+
+
+/**
+Gets the rank (number of dimensions) of a static array type.
+
+If $(D T) isn't a static array assumes it to be a $(I zero-dimensional)
+static array with single element and returns zero.
+*/
+template staticArrayDims(T)
+{
+    static if(isStaticArray!T)
+        enum staticArrayDims = 1 + staticArrayDims!(_ArrayElementType!T);
+    else
+        enum staticArrayDims = 0;
+}
+
+///
+unittest
+{
+    static assert(staticArrayDims!int == 0);
+    static assert(staticArrayDims!(int[]) == 0);
+    static assert(staticArrayDims!(int[0]) == 1);
+    static assert(staticArrayDims!(int[7][8]) == 2);
+    static assert(staticArrayDims!(int[0][]) == 0);
+    static assert(staticArrayDims!(int[][0]) == 1);
+}
+
+unittest
+{
+    static assert(staticArrayDims!string == 0);
+    static assert(staticArrayDims!(int[0][0]) == 2);
+}
+
+
+/**
+Gets the element type of the innermost array in a multidimensional static array type. 
+Considers $(D T) to be an $(D n)-dimensional static array type.
+
+If $(D T) isn't a static array assumes it to be a $(I zero-dimensional)
+static array with single element and returns $(D T).
+*/
+template MultidimStaticArrayElementType(T, size_t n = staticArrayDims!T)
+{
+    static assert(staticArrayDims!T >= n, "Not enough static array dimensions");
+    static if(n)
+        alias MultidimStaticArrayElementType = MultidimStaticArrayElementType!(_ArrayElementType!T, n-1);
+    else
+        alias MultidimStaticArrayElementType = T;
+}
+
+///
+unittest
+{
+    static assert(is(MultidimStaticArrayElementType!int == int));
+    static assert(is(MultidimStaticArrayElementType!(int[]) == int[]));
+    static assert(is(MultidimStaticArrayElementType!(int[0]) == int));
+    static assert(!__traits(compiles, MultidimStaticArrayElementType!(int[7][8], 3)));
+    static assert(is(MultidimStaticArrayElementType!(int[7][8]) == int));
+    static assert(is(MultidimStaticArrayElementType!(int[7][8], 1) == int[7]));
+    static assert(is(MultidimStaticArrayElementType!(int[7][8], 0) == int[7][8]));
+    static assert(is(MultidimStaticArrayElementType!(int[0][]) == int[0][]));
+    static assert(is(MultidimStaticArrayElementType!(int[][0]) == int[]));
+}
+
+unittest
+{
+    static assert(is(MultidimStaticArrayElementType!string == string));
+}
+
+
+/**
+Calculates the total element count of a multidimensional static array.
+Considers $(D T) to be an $(D n)-dimensional static array type.
+
+If $(D T) isn't a static array assumes it to be a $(I zero-dimensional)
+static array with single element and returns 1.
+*/
+template multidimStaticArrayElementCount(T, size_t n = staticArrayDims!T)
+{
+    static assert(staticArrayDims!T >= n, "Not enough static array dimensions");
+    enum multidimStaticArrayElementCount = T.sizeof / MultidimStaticArrayElementType!(T, n).sizeof;
+}
+
+///
+unittest
+{
+    static assert(multidimStaticArrayElementCount!int == 1);
+    static assert(multidimStaticArrayElementCount!(int[]) == 1);
+    static assert(multidimStaticArrayElementCount!(int[0]) == 0);
+    static assert(!__traits(compiles, multidimStaticArrayElementCount!(int[7][8], 3)));
+    static assert(multidimStaticArrayElementCount!(int[7][8]) == 7 * 8);
+    static assert(multidimStaticArrayElementCount!(int[7][8], 1) == 8);
+    static assert(multidimStaticArrayElementCount!(int[7][8], 0) == 1);
+    static assert(multidimStaticArrayElementCount!(int[0][]) == 1);
+    static assert(multidimStaticArrayElementCount!(int[][0]) == 0);
+}
+
+unittest
+{
+    static assert(multidimStaticArrayElementCount!string == 1);
+}
+
+
 template isBuiltinType(T)
 {
     enum isBuiltinType = is(BuiltinTypeOf!T) && !isAggregateType!T;
