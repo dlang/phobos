@@ -2774,8 +2774,9 @@ unittest
 /**
  True if $(D S) or any type embedded directly in the representation of $(D S)
  defines an elaborate copy constructor. Elaborate copy constructors are
- introduced by defining $(D this(this)) for a $(D struct). (Non-struct types
- never have elaborate copy constructors.)
+ introduced by defining $(D this(this)) for a $(D struct).
+
+ Classes and unions never have elaborate copy constructors.
  */
 template hasElaborateCopyConstructor(S)
 {
@@ -2821,7 +2822,9 @@ unittest
    True if $(D S) or any type directly embedded in the representation of $(D S)
    defines an elaborate assignment. Elaborate assignments are introduced by
    defining $(D opAssign(typeof(this))) or $(D opAssign(ref typeof(this)))
-   for a $(D struct). (Non-struct types never have elaborate assignments.)
+   for a $(D struct).
+
+   Classes and unions never have elaborate assignments.
 
    Note: Structs with (possibly nested) postblit operator(s) will have a
    hidden yet elaborate compiler generated assignement operator (unless
@@ -2890,8 +2893,10 @@ unittest
    True if $(D S) or any type directly embedded in the representation
    of $(D S) defines an elaborate destructor. Elaborate destructors
    are introduced by defining $(D ~this()) for a $(D
-   struct). (Non-struct types never have elaborate destructors, even
-   though classes may define $(D ~this()).)
+   struct).
+
+   Classes and unions never have elaborate destructors, even
+   though classes may define $(D ~this()).
  */
 template hasElaborateDestructor(S)
 {
