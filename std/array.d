@@ -1021,9 +1021,20 @@ unittest // bugzilla 6874
     same place in memory, making one of the arrays a slice of the other which
     starts at index $(D 0).
   +/
-pure bool sameHead(T)(in T[] lhs, in T[] rhs)
+pure bool sameHead(T)(T[] lhs, T[] rhs)
 {
     return lhs.ptr == rhs.ptr;
+}
+
+
+/++
+    Returns whether the $(D back)s of $(D lhs) and $(D rhs) both refer to the
+    same place in memory, making one of the arrays a slice of the other which
+    end at index $(D $).
+  +/
+pure bool sameTail(T)(T[] lhs, T[] rhs)
+{
+    return lhs.ptr + lhs.length == rhs.ptr + rhs.length;
 }
 
 unittest
@@ -1041,6 +1052,16 @@ unittest
         assert(!sameHead(a, c));
         assert(sameHead(a, d));
         assert(!sameHead(a, e));
+
+        assert(sameTail(a, a));
+        assert(sameTail(a, b));
+        assert(sameTail(a, c));
+        assert(!sameTail(a, d));
+        assert(!sameTail(a, e));
+
+        //verifies R-value compatibilty
+        assert(a.sameHead(a[0 .. 0]));
+        assert(a.sameTail(a[$ .. $]));
     }
 }
 

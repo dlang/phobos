@@ -1335,7 +1335,7 @@ C[] stripLeft(C)(C[] str) @safe pure
             return str[i .. $];
     }
 
-    return str[0 .. 0]; //Empty string with correct type.
+    return str[$ .. $]; //Empty string with correct type.
 }
 
 //Verify Example.
@@ -1471,6 +1471,13 @@ unittest
         assert(equal(strip(to!S("\U0010FFFE")), "\U0010FFFE"));
         assert(equal(strip(to!S("")), ""));
     }
+}
+
+unittest
+{
+    wstring s = " ";
+    assert(s.sameTail(s.stripLeft()));
+    assert(s.sameHead(s.stripRight()));
 }
 
 
