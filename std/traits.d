@@ -2822,7 +2822,8 @@ unittest
    True if $(D S) or any type directly embedded in the representation of $(D S)
    defines an elaborate assignment. Elaborate assignments are introduced by
    defining $(D opAssign(typeof(this))) or $(D opAssign(ref typeof(this)))
-   for a $(D struct).
+   for a $(D struct) or when there is a compiler-generated $(D opAssign)
+   (in case $(D S) has an elaborate copy constructor or destructor).
 
    Classes and unions never have elaborate assignments.
 
@@ -2875,10 +2876,12 @@ unittest
     static struct S7 { this(this) {} @disable void opAssign(S7); }
     static struct S8 { this(this) {} @disable void opAssign(S8); void opAssign(int) {} }
     static struct S9 { this(this) {}                             void opAssign(int) {} }
+    static struct S10 { ~this() { } }
     static assert( hasElaborateAssign!S6);
     static assert(!hasElaborateAssign!S7);
     static assert(!hasElaborateAssign!S8);
     static assert( hasElaborateAssign!S9);
+    static assert( hasElaborateAssign!S10);
     static struct SS6 { S6 s; }
     static struct SS7 { S7 s; }
     static struct SS8 { S8 s; }
