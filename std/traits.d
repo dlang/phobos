@@ -1761,12 +1761,37 @@ unittest
 
 template FieldTypeTuple(S)
 {
-    static if (is(S == struct) || is(S == class) || is(S == union))
+    static if (is(S == struct) || is(S == union))
+        alias typeof(S.tupleof[0 .. $ - isNested!S]) FieldTypeTuple;
+    else static if (is(S == class))
         alias typeof(S.tupleof) FieldTypeTuple;
     else
         alias TypeTuple!S FieldTypeTuple;
         //static assert(0, "argument is not struct or class");
 }
+
+unittest
+{
+    static assert(is(FieldTypeTuple!int == TypeTuple!int));
+
+    static struct StaticStruct1 { }
+    static assert(is(FieldTypeTuple!StaticStruct1 == TypeTuple!()));
+
+    static struct StaticStruct2 { int a, b; }
+    static assert(is(FieldTypeTuple!StaticStruct2 == TypeTuple!(int, int)));
+
+    int i;
+
+    struct NestedStruct1 { void f() { ++i; } }
+    static assert(is(FieldTypeTuple!NestedStruct1 == TypeTuple!()));
+
+    struct NestedStruct2 { int a; void f() { ++i; } }
+    static assert(is(FieldTypeTuple!NestedStruct2 == TypeTuple!int));
+
+    class NestedClass { int a; void f() { ++i; } }
+    static assert(is(FieldTypeTuple!NestedClass == TypeTuple!int));
+}
+
 
 // // FieldOffsetsTuple
 // private template FieldOffsetsTupleImpl(size_t n, T...)
