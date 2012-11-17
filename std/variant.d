@@ -66,10 +66,6 @@
 module std.variant;
 
 import std.traits, std.c.string, std.typetuple, std.conv, std.exception;
-// version(unittest)
-// {
-    import std.exception, std.stdio;
-//}
 
 @trusted:
 
