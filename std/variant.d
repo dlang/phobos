@@ -322,10 +322,16 @@ private:
                     {
                         return *zis < *rhsPA ? -1 : 1;
                     }
+                    else
+                    {
+                        // Not equal, and type does not support ordering
+                        // comparisons.
+                        return ptrdiff_t.min;
+                    }
                 }
                 else
                 {
-                    // type doesn't support ordering comparisons
+                    // Type does not support comparisons at all.
                     return ptrdiff_t.min;
                 }
             } else if (rhsType == typeid(void))
@@ -360,10 +366,16 @@ private:
                     {
                         return *zis < *rhsPA ? -1 : 1;
                     }
+                    else
+                    {
+                        // Not equal, and type does not support ordering
+                        // comparisons.
+                        return ptrdiff_t.min;
+                    }
                 }
                 else
                 {
-                    // type doesn't support ordering comparisons
+                    // Type does not support comparisons at all.
                     return ptrdiff_t.min;
                 }
             }
@@ -1541,6 +1553,18 @@ unittest
 
     assertThrown!VariantException(Variant.init < Variant(3));
     assertThrown!VariantException(Variant(3) < Variant.init);
+}
+
+// Handling of unordered types, e.g. issue 9043.
+unittest
+{
+    static struct A { int a; }
+
+    assert(Variant(A(3)) != A(4));
+
+    assertThrown!VariantException(Variant(A(3)) < A(4));
+    assertThrown!VariantException(A(3) < Variant(A(4)));
+    assertThrown!VariantException(Variant(A(3)) < Variant(A(4)));
 }
 
 /**
