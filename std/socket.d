@@ -2993,11 +2993,10 @@ public:
     }
 
     /**
-     * Wait for a socket to change status. A wait timeout $(D TimeVal),
-     * $(D Duration) or $(D long) microseconds may be specified; if a timeout
-     * is not specified or the $(D TimeVal) is $(D null), the maximum timeout
-     * is used. The $(D TimeVal) timeout has an unspecified value when
-     * $(D select) returns.
+     * Wait for a socket to change status. A wait timeout of $(Duration) or
+     * $(D TimeVal, may be specified; if a timeout is not specified or the
+     * $(D TimeVal) is $(D null), the maximum timeout is used. The $(D TimeVal)
+     * timeout has an unspecified value when $(D select) returns.
      * Returns: The number of sockets with status changes, $(D 0) on timeout,
      * or $(D -1) on interruption. If the return value is greater than $(D 0),
      * the $(D SocketSets) are updated to only contain the sockets having status
@@ -3011,7 +3010,23 @@ public:
     //for a connect()ing socket, writeability means connected
     //for a listen()ing socket, readability means listening
     //Winsock: possibly internally limited to 64 sockets per set
-    static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, TimeVal* tv)
+    static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, Duration timeout)
+    {
+        TimeVal tv;
+        tv.seconds      = to!(tv.tv_sec_t )(timeout.total!"seconds"());
+        tv.microseconds = to!(tv.tv_usec_t)(timeout.fracSec.usecs);
+        return select(checkRead, checkWrite, checkError, &tv);
+    }
+
+    /// ditto
+    //maximum timeout
+    static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError)
+    {
+        return select(checkRead, checkWrite, checkError, null);
+    }
+
+    /// Ditto
+    static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, TimeVal* timeout)
     in
     {
         //make sure none of the SocketSet's are the same object
@@ -3076,7 +3091,7 @@ public:
             }
         }
 
-        int result = .select(n, fr, fw, fe, &tv.ctimeval);
+        int result = .select(n, fr, fw, fe, &timeout.ctimeval);
 
         version(Windows)
         {
@@ -3099,32 +3114,15 @@ public:
         return result;
     }
 
-
-    /// ditto
+    // This overload is explicitly not documented. Please do not use it. It will
+    // likely be deprecated in the future. It is against Phobos policy to have
+    // functions which use naked numbers for time values.
     static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, long microseconds)
     {
         TimeVal tv;
         tv.seconds      = to!(tv.tv_sec_t )(microseconds / 1_000_000);
         tv.microseconds = to!(tv.tv_usec_t)(microseconds % 1_000_000);
         return select(checkRead, checkWrite, checkError, &tv);
-    }
-
-
-    /// ditto
-    static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, Duration duration)
-    {
-        TimeVal tv;
-        tv.seconds      = to!(tv.tv_sec_t )(duration.total!"seconds"());
-        tv.microseconds = to!(tv.tv_usec_t)(duration.fracSec.usecs);
-        return select(checkRead, checkWrite, checkError, &tv);
-    }
-
-
-    /// ditto
-    //maximum timeout
-    static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError)
-    {
-        return select(checkRead, checkWrite, checkError, null);
     }
 
 
