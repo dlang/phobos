@@ -1924,7 +1924,7 @@ assert(equal(splitter(a, 0), [ [], [1] ]));
 */
 auto splitter(Range, Separator)(Range r, Separator s)
 if (is(typeof(ElementType!Range.init == Separator.init))
-        && (hasSlicing!Range || isNarrowString!Range))
+        && ((hasSlicing!Range && hasLength!Range) || isNarrowString!Range))
 {
     static struct Result
     {
@@ -1941,8 +1941,8 @@ if (is(typeof(ElementType!Range.init == Separator.init))
         {
             static IndexType lastIndexOf(Range haystack, Separator needle)
             {
-                immutable index = countUntil(retro(haystack), needle);
-                return (index == -1) ? -1 : haystack.length - 1 - index;
+                auto r = haystack.retro().find(needle);
+                return r.retro().length - 1;
             }
         }
 
@@ -1970,8 +1970,8 @@ if (is(typeof(ElementType!Range.init == Separator.init))
             assert(!empty);
             if (_frontLength == _unComputed)
             {
-                _frontLength = countUntil(_input, _separator);
-                if (_frontLength == -1) _frontLength = _input.length;
+                auto r = _input.find(_separator);
+                _frontLength = _input.length - r.length;
             }
             return _input[0 .. _frontLength];
         }
