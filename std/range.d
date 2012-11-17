@@ -3175,6 +3175,7 @@ assert(drop("hello world", 6) == "world");
 assert(drop("hello world", 50).empty);
 assert(equal(drop(take("hello world", 6), 3), "lo "));
 --------------------
+
 --------------------
 //Remove all but the first two elements
 auto a = DList!int(0, 1, 9, 9, 9);
@@ -3227,6 +3228,7 @@ assert("hello world".dropBack(6) == "hello");
 assert("hello world".dropBack(50).empty);
 assert("hello world".dropFront(4).dropBack(4).equal("o w"));
 --------------------
+
 --------------------
 //insert before the last two elements
 auto a = DList!int(0, 1, 2, 5, 6);
