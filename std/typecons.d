@@ -3132,11 +3132,11 @@ unittest // Issue 6580 testcase
     enum longAlignment = long.alignof;
     static class C1long
     {
-        long l; byte b = 4;
+        long long_; byte byte_ = 4;
         this() { }
-        this(long _l, ref int i) { l = _l; ++i; }
+        this(long _long, ref int i) { long_ = _long; ++i; }
     }
-    static class C2long { byte[2] b = [5, 6]; long l = 7; }
+    static class C2long { byte[2] byte_ = [5, 6]; long long_ = 7; }
     static assert(scoped!C1long().sizeof % longAlignment == 0);
     static assert(scoped!C2long().sizeof % longAlignment == 0);
 
@@ -3146,10 +3146,10 @@ unittest // Issue 6580 testcase
         auto c1long = scoped!C1long(3, var);
         assert(var == 6);
         auto c2long = scoped!C2long();
-        assert(cast(size_t)&c1long.l % longAlignment == 0);
-        assert(cast(size_t)&c2long.l % longAlignment == 0);
-        assert(c1long.l == 3 && c1long.b == 4);
-        assert(c2long.b == [5, 6] && c2long.l == 7);
+        assert(cast(size_t)&c1long.long_ % longAlignment == 0);
+        assert(cast(size_t)&c2long.long_ % longAlignment == 0);
+        assert(c1long.long_ == 3 && c1long.byte_ == 4);
+        assert(c2long.byte_ == [5, 6] && c2long.long_ == 7);
     }
 
     alignmentTest();
