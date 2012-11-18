@@ -1310,7 +1310,7 @@ abstract class Address
         {
             auto buf = new char[NI_MAXHOST];
             auto ret = getnameinfoPointer(
-                        name(), nameLen(),
+                        name, nameLen,
                         buf.ptr, cast(uint)buf.length,
                         null, 0,
                         numeric ? NI_NUMERICHOST : NI_NAMEREQD);
@@ -1341,7 +1341,7 @@ abstract class Address
         {
             auto buf = new char[NI_MAXSERV];
             enforce(getnameinfoPointer(
-                        name(), nameLen(),
+                        name, nameLen,
                         null, 0,
                         buf.ptr, cast(uint)buf.length,
                         numeric ? NI_NUMERICSERV : NI_NAMEREQD
@@ -1601,7 +1601,7 @@ public:
     /// Human readable string representing the IPv4 port.
     override string toPortString() const
     {
-        return std.conv.to!string(port());
+        return std.conv.to!string(port);
     }
 
     /**
@@ -1778,7 +1778,7 @@ public:
     {
         auto results = getAddressInfo(node, service, AddressFamily.INET6);
         assert(results.length && results[0].family == AddressFamily.INET6);
-        sin6 = *cast(sockaddr_in6*)results[0].address.name();
+        sin6 = *cast(sockaddr_in6*)results[0].address.name;
     }
 
     /**
@@ -1830,7 +1830,7 @@ public:
         // instead.
         auto results = getAddressInfo(addr, AddressInfoFlags.NUMERICHOST);
         if (results.length && results[0].family == AddressFamily.INET6)
-            return (cast(sockaddr_in6*)results[0].address.name()).sin6_addr.s6_addr;
+            return (cast(sockaddr_in6*)results[0].address.name).sin6_addr.s6_addr;
         throw new AddressException("Not an IPv6 address", 0);
     }
 }
@@ -2467,7 +2467,7 @@ public:
     /// Associate a local address with this socket.
     void bind(Address addr)
     {
-        if(_SOCKET_ERROR == .bind(sock, addr.name(), addr.nameLen()))
+        if(_SOCKET_ERROR == .bind(sock, addr.name, addr.nameLen))
             throw new SocketOSException("Unable to bind socket");
     }
 
@@ -2478,7 +2478,7 @@ public:
      */
     void connect(Address to)
     {
-        if(_SOCKET_ERROR == .connect(sock, to.name(), to.nameLen()))
+        if(_SOCKET_ERROR == .connect(sock, to.name, to.nameLen))
         {
             int err;
             err = _lasterr();
@@ -2609,12 +2609,12 @@ public:
     @property Address remoteAddress()
     {
         Address addr = createAddress();
-        socklen_t nameLen = addr.nameLen();
-        if(_SOCKET_ERROR == .getpeername(sock, addr.name(), &nameLen))
+        socklen_t nameLen = addr.nameLen;
+        if(_SOCKET_ERROR == .getpeername(sock, addr.name, &nameLen))
             throw new SocketOSException("Unable to obtain remote socket address");
-        if(nameLen > addr.nameLen())
+        if(nameLen > addr.nameLen)
             throw new SocketParameterException("Not enough socket address storage");
-        assert(addr.addressFamily() == _family);
+        assert(addr.addressFamily == _family);
         return addr;
     }
 
@@ -2622,12 +2622,12 @@ public:
     @property Address localAddress()
     {
         Address addr = createAddress();
-        socklen_t nameLen = addr.nameLen();
-        if(_SOCKET_ERROR == .getsockname(sock, addr.name(), &nameLen))
+        socklen_t nameLen = addr.nameLen;
+        if(_SOCKET_ERROR == .getsockname(sock, addr.name, &nameLen))
             throw new SocketOSException("Unable to obtain local socket address");
-        if(nameLen > addr.nameLen())
+        if(nameLen > addr.nameLen)
             throw new SocketParameterException("Not enough socket address storage");
-        assert(addr.addressFamily() == _family);
+        assert(addr.addressFamily == _family);
         return addr;
     }
 
@@ -2680,10 +2680,10 @@ public:
         version( Windows )
             return .sendto(
                        sock, buf.ptr, std.conv.to!int(buf.length),
-                       cast(int)flags, to.name(), to.nameLen()
+                       cast(int)flags, to.name, to.nameLen
                        );
         else
-            return .sendto(sock, buf.ptr, buf.length, cast(int)flags, to.name(), to.nameLen());
+            return .sendto(sock, buf.ptr, buf.length, cast(int)flags, to.name, to.nameLen);
     }
 
     /// ditto
@@ -2756,16 +2756,16 @@ public:
             return 0;
         if (from is null || from.addressFamily != _family)
             from = createAddress();
-        socklen_t nameLen = from.nameLen();
+        socklen_t nameLen = from.nameLen;
         version(Windows)
         {
-            auto read = .recvfrom(sock, buf.ptr, to!int(buf.length), cast(int)flags, from.name(), &nameLen);
-            assert(from.addressFamily() == _family);
+            auto read = .recvfrom(sock, buf.ptr, to!int(buf.length), cast(int)flags, from.name, &nameLen);
+            assert(from.addressFamily == _family);
             // if(!read) //connection closed
             return read;
         } else {
-            auto read = .recvfrom(sock, buf.ptr, buf.length, cast(int)flags, from.name(), &nameLen);
-            assert(from.addressFamily() == _family);
+            auto read = .recvfrom(sock, buf.ptr, buf.length, cast(int)flags, from.name, &nameLen);
+            assert(from.addressFamily == _family);
             // if(!read) //connection closed
             return read;
         }
@@ -3048,9 +3048,9 @@ public:
         version(Windows)
         {
             // Windows has a problem with empty fd_set`s that aren't null.
-            fr = (checkRead && checkRead.count()) ? checkRead.toFd_set() : null;
-            fw = (checkWrite && checkWrite.count()) ? checkWrite.toFd_set() : null;
-            fe = (checkError && checkError.count()) ? checkError.toFd_set() : null;
+            fr = checkRead  && checkRead.count  ? checkRead.toFd_set()  : null;
+            fw = checkWrite && checkWrite.count ? checkWrite.toFd_set() : null;
+            fe = checkError && checkError.count ? checkError.toFd_set() : null;
         }
         else
         {
@@ -3170,7 +3170,7 @@ class TcpSocket: Socket
     /// Constructs a blocking TCP Socket and connects to an $(D Address).
     this(Address connectTo)
     {
-        this(connectTo.addressFamily());
+        this(connectTo.addressFamily);
         connect(connectTo);
     }
 }
@@ -3240,7 +3240,7 @@ Socket[2] socketPair()
         auto listener = new TcpSocket();
         listener.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
         listener.bind(new InternetAddress(INADDR_LOOPBACK, InternetAddress.PORT_ANY));
-        auto addr = listener.localAddress();
+        auto addr = listener.localAddress;
         listener.listen(1);
 
         result[0] = new TcpSocket(addr);
