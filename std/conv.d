@@ -3467,11 +3467,11 @@ unittest
     class K : I {}
 
     K k = void;
-    emplace!K(&k);
+    emplace(&k);
     assert(k is null);
 
     I i = void;
-    emplace!I(&i);
+    emplace(&i);
     assert(i is null);
 }
 
