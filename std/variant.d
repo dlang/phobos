@@ -66,10 +66,6 @@
 module std.variant;
 
 import std.traits, std.c.string, std.typetuple, std.conv, std.exception;
-// version(unittest)
-// {
-    import std.exception, std.stdio;
-//}
 
 @trusted:
 
@@ -215,7 +211,7 @@ private:
             auto rhs = cast(VariantN *) parm;
             return rhs.peek!(A)
                 ? 0 // all uninitialized are equal
-                : int.min; // uninitialized variant is not comparable otherwise
+                : ptrdiff_t.min; // uninitialized variant is not comparable otherwise
         case OpID.toString:
             string * target = cast(string*) parm;
             *target = "<Uninitialized VariantN>";
@@ -326,17 +322,23 @@ private:
                     {
                         return *zis < *rhsPA ? -1 : 1;
                     }
+                    else
+                    {
+                        // Not equal, and type does not support ordering
+                        // comparisons.
+                        return ptrdiff_t.min;
+                    }
                 }
                 else
                 {
-                    // type doesn't support ordering comparisons
-                    return int.min;
+                    // Type does not support comparisons at all.
+                    return ptrdiff_t.min;
                 }
             } else if (rhsType == typeid(void))
             {
                 // No support for ordering comparisons with
                 // uninitialized vars
-                return int.min;
+                return ptrdiff_t.min;
             }
             VariantN temp;
             // Do I convert to rhs?
@@ -364,14 +366,20 @@ private:
                     {
                         return *zis < *rhsPA ? -1 : 1;
                     }
+                    else
+                    {
+                        // Not equal, and type does not support ordering
+                        // comparisons.
+                        return ptrdiff_t.min;
+                    }
                 }
                 else
                 {
-                    // type doesn't support ordering comparisons
-                    return int.min;
+                    // Type does not support comparisons at all.
+                    return ptrdiff_t.min;
                 }
             }
-            return int.min; // dunno
+            return ptrdiff_t.min; // dunno
         case OpID.toString:
             auto target = cast(string*) parm;
             static if (is(typeof(to!(string)(*zis))))
@@ -1534,6 +1542,29 @@ unittest
     // bug 7070
     Variant v;
     v = null;
+}
+
+// Ordering comparisons of incompatible types, e.g. issue 7990.
+unittest
+{
+    assertThrown!VariantException(Variant(3) < "a");
+    assertThrown!VariantException("a" < Variant(3));
+    assertThrown!VariantException(Variant(3) < Variant("a"));
+
+    assertThrown!VariantException(Variant.init < Variant(3));
+    assertThrown!VariantException(Variant(3) < Variant.init);
+}
+
+// Handling of unordered types, e.g. issue 9043.
+unittest
+{
+    static struct A { int a; }
+
+    assert(Variant(A(3)) != A(4));
+
+    assertThrown!VariantException(Variant(A(3)) < A(4));
+    assertThrown!VariantException(A(3) < Variant(A(4)));
+    assertThrown!VariantException(Variant(A(3)) < Variant(A(4)));
 }
 
 /**
