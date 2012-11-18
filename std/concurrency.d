@@ -348,7 +348,7 @@ private:
 // Thread Creation
 //////////////////////////////////////////////////////////////////////////////
 
-private template Spawnable(F, T...)
+private template isSpawnable(F, T...)
 {
     template isParamsImplicitlyConvertible(F1, F2, int i=0)
     {
@@ -363,7 +363,7 @@ private template Spawnable(F, T...)
         else
             enum isParamsImplicitlyConvertible = false;
     }
-    enum Spawnable = isCallable!F
+    enum isSpawnable = isCallable!F
       && is(ReturnType!F == void)
       && isParamsImplicitlyConvertible!(F, void function(T))
       && ( isFunctionPointer!F
@@ -420,7 +420,7 @@ private template Spawnable(F, T...)
  *), $(ARGS), $(ARGS), $(ARGS))
  */
 Tid spawn(F, T...)( F fn, T args )
-    if ( Spawnable!(F, T) )
+    if ( isSpawnable!(F, T) )
 {
     static assert( !hasLocalAliasing!(T),
                    "Aliases to mutable thread-local data not allowed." );
@@ -445,7 +445,7 @@ Tid spawn(F, T...)( F fn, T args )
  *  A Tid representing the new context.
  */
 Tid spawnLinked(F, T...)( F fn, T args )
-    if ( Spawnable!(F, T) )
+    if ( isSpawnable!(F, T) )
 {
     static assert( !hasLocalAliasing!(T),
                    "Aliases to mutable thread-local data not allowed." );
@@ -457,7 +457,7 @@ Tid spawnLinked(F, T...)( F fn, T args )
  *
  */
 private Tid _spawn(F, T...)( bool linked, F fn, T args )
-    if ( Spawnable!(F, T) )
+    if ( isSpawnable!(F, T) )
 {
     // TODO: MessageList and &exec should be shared.
     auto spawnTid = Tid( new MessageBox );
