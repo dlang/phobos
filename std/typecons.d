@@ -3076,7 +3076,7 @@ unittest
     // _d_newclass now use default GC alignment (looks like (void*).sizeof * 2 for
     // small objects). We will just use the maximum of filed alignments.
     alias classInstanceAlignment!T alignment;
-    alias _aligned!alignment aligned;
+    alias _alignUp!alignment aligned;
 
     static struct Scoped(T)
     {
@@ -3107,7 +3107,8 @@ unittest
     return result;
 }
 
-private size_t _aligned(size_t alignment)(size_t n)
+private size_t _alignUp(size_t alignment)(size_t n)
+    if(alignment > 0 && !((alignment - 1) & alignment))
 {
     enum badEnd = alignment - 1; // 0b11, 0b111, ...
     return (n + badEnd) & ~badEnd;
