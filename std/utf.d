@@ -282,23 +282,22 @@ uint strideBack(S)(auto ref S str, size_t index)
 
     if ((str[index-1] & 0b1100_0000) != 0b1000_0000)
         return 1;
+
     if (index >= 4) //single verification for most common case
     {
-        if ((str[index-2] & 0b1100_0000) != 0b1000_0000)
-            return 2;
-        if ((str[index-3] & 0b1100_0000) != 0b1000_0000)
-            return 3;
-        if ((str[index-4] & 0b1100_0000) != 0b1000_0000)
-            return 4;
+        foreach(i; TypeTuple!(2, 3, 4))
+        {
+            if ((str[index-i] & 0b1100_0000) != 0b1000_0000)
+                return i;
+        }
     }
     else
     {
-        if (index >= 2 && (str[index-2] & 0b1100_0000) != 0b1000_0000)
-            return 2;
-        if (index >= 3 && (str[index-3] & 0b1100_0000) != 0b1000_0000)
-            return 3;
-        //if (index >= 4 && (str[index-4] & 0b1100_0000) != 0b1000_0000)
-        //    return 4;
+        foreach(i; TypeTuple!(2, 3))
+        {
+            if (index >= i && (str[index-i] & 0b1100_0000) != 0b1000_0000)
+                return i;
+        }
     }
     throw new UTFException("Not the end of the UTF sequence", index);
 }
@@ -315,22 +314,12 @@ uint strideBack(S)(auto ref S str)
     if (isBidirectionalRange!S && is(Unqual!(ElementType!S) == char) && !isRandomAccessRange!S)
 {
     assert(!str.empty, "Past the end of the UTF-8 sequence");
-
-    if ((str.back & 0b1100_0000) != 0b1000_0000)
-        return 1;
-
-    str.popBack();
-    if (!str.empty && (str.back & 0b1100_0000) != 0b1000_0000)
-        return 2;
-
-    str.popBack();
-    if (!str.empty && (str.back & 0b1100_0000) != 0b1000_0000)
-        return 3;
-
-    str.popBack();
-    if (!str.empty && (str.back & 0b1100_0000) != 0b1000_0000)
-        return 4;
-
+    foreach(i; TypeTuple!(1, 2, 3, 4))
+    {
+        if ((str.back & 0b1100_0000) != 0b1000_0000) return i;
+        str.popBack();
+        if (str.empty) break;
+    }
     throw new UTFException("The last code unit is not the end of the UTF-8 sequence");
 }
 
