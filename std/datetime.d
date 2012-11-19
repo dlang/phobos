@@ -33037,14 +33037,16 @@ unittest
   +/
 template hasOverloadedOpAssignWithDuration(T)
 {
-    enum hasOverloadedOpAssignWithDuration = __traits(compiles, T.init += dur!"days"(5)) &&
-                                             is(typeof(T.init += dur!"days"(5)) == Unqual!T) &&
-                                             __traits(compiles, T.init -= dur!"days"(5)) &&
-                                             is(typeof(T.init -= dur!"days"(5)) == Unqual!T) &&
-                                             __traits(compiles, T.init += TickDuration.from!"hnsecs"(5)) &&
-                                             is(typeof(T.init += TickDuration.from!"hnsecs"(5)) == Unqual!T) &&
-                                             __traits(compiles, T.init -= TickDuration.from!"hnsecs"(5)) &&
-                                             is(typeof(T.init -= TickDuration.from!"hnsecs"(5)) == Unqual!T);
+    enum hasOverloadedOpAssignWithDuration = is(typeof(
+    {
+        auto  d = dur!"days"(5);
+        auto td = TickDuration.from!"hnsecs"(5);
+        alias U = Unqual!T;
+        static assert(is(typeof(U.init +=  d) == U));
+        static assert(is(typeof(U.init -=  d) == U));
+        static assert(is(typeof(U.init += td) == U));
+        static assert(is(typeof(U.init -= td) == U));
+    }));
 }
 
 unittest
