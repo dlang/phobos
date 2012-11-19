@@ -1134,7 +1134,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
     string msg;
     assert(u >= 0xD800);
 
-    if (u >= 0xD800 && u <= 0xDBFF)
+    if (u <= 0xDBFF)
     {
         static if (canIndex)
             immutable onlyOneCodeUnit = length == 1;
