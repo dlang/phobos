@@ -3081,13 +3081,21 @@ unittest
     static struct Scoped(T)
     {
         // Addition of `alignment` is required as `Scoped_store` can be misaligned in memory.
-        private void[aligned(__traits(classInstanceSize, T)) + alignment] Scoped_store = void;
+        private void[aligned(__traits(classInstanceSize, T) + size_t.sizeof) + alignment] Scoped_store = void;
 
         @property inout(T) Scoped_payload() inout
         {
-            // FIXME: It's assumed here `Scoped` will not be arbitrarily moved in memory.
-            // ("arbitrarily" means an unaligned move)
-            return cast(inout(T)) cast(void*) aligned(cast(size_t) Scoped_store.ptr);
+            void* alignedStore = cast(void*) aligned(cast(size_t) Scoped_store.ptr);
+            // As `Scoped` can be unaligned moved in memory class instance should be moved accordingly.
+            immutable size_t d = alignedStore - Scoped_store.ptr;
+            size_t* currD = cast(size_t*) &Scoped_store[$ - size_t.sizeof];
+            if(d != *currD)
+            {
+                import core.stdc.string;
+                memmove(alignedStore, Scoped_store.ptr + *currD, __traits(classInstanceSize, T));
+                *currD = d;
+            }
+            return cast(inout(T)) alignedStore;
         }
         alias Scoped_payload this;
 
@@ -3106,7 +3114,8 @@ unittest
 
     Scoped!T result;
     immutable size_t d = cast(void*) result.Scoped_payload - result.Scoped_store.ptr;
-    emplace!(Unqual!T)(result.Scoped_store[d .. $], args);
+    *cast(size_t*) &result.Scoped_store[$ - size_t.sizeof] = d;
+    emplace!(Unqual!T)(result.Scoped_store[d .. $ - size_t.sizeof], args);
     return result;
 }
 
