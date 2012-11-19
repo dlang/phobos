@@ -348,6 +348,27 @@ private:
 // Thread Creation
 //////////////////////////////////////////////////////////////////////////////
 
+private template isSpawnable(F, T...)
+{
+    template isParamsImplicitlyConvertible(F1, F2, int i=0)
+    {
+        alias ParameterTypeTuple!F1 param1;
+        alias ParameterTypeTuple!F2 param2;
+        static if (param1.length != param2.length)
+            enum isParamsImplicitlyConvertible = false;
+        else static if (param1.length == i)
+            enum isParamsImplicitlyConvertible = true;
+        else static if (isImplicitlyConvertible!(param2[i], param1[i]))
+            enum isParamsImplicitlyConvertible = isParamsImplicitlyConvertible!(F1, F2, i+1);
+        else
+            enum isParamsImplicitlyConvertible = false;
+    }
+    enum isSpawnable = isCallable!F
+      && is(ReturnType!F == void)
+      && isParamsImplicitlyConvertible!(F, void function(T))
+      && ( isFunctionPointer!F
+        || !hasUnsharedAliasing!F);
+}
 
 /**
  * Executes the supplied function in a new context represented by $(D Tid).  The
@@ -398,7 +419,8 @@ private:
  * ---
  *), $(ARGS), $(ARGS), $(ARGS))
  */
-Tid spawn(T...)( void function(T) fn, T args )
+Tid spawn(F, T...)( F fn, T args )
+    if ( isSpawnable!(F, T) )
 {
     static assert( !hasLocalAliasing!(T),
                    "Aliases to mutable thread-local data not allowed." );
@@ -422,7 +444,8 @@ Tid spawn(T...)( void function(T) fn, T args )
  * Returns:
  *  A Tid representing the new context.
  */
-Tid spawnLinked(T...)( void function(T) fn, T args )
+Tid spawnLinked(F, T...)( F fn, T args )
+    if ( isSpawnable!(F, T) )
 {
     static assert( !hasLocalAliasing!(T),
                    "Aliases to mutable thread-local data not allowed." );
@@ -433,7 +456,8 @@ Tid spawnLinked(T...)( void function(T) fn, T args )
 /*
  *
  */
-private Tid _spawn(T...)( bool linked, void function(T) fn, T args )
+private Tid _spawn(F, T...)( bool linked, F fn, T args )
+    if ( isSpawnable!(F, T) )
 {
     // TODO: MessageList and &exec should be shared.
     auto spawnTid = Tid( new MessageBox );
@@ -450,6 +474,52 @@ private Tid _spawn(T...)( bool linked, void function(T) fn, T args )
     auto t = new Thread( &exec ); t.start();
     links[spawnTid] = linked;
     return spawnTid;
+}
+
+unittest
+{
+    void function()                                fn1;
+    void function(int)                             fn2;
+    static assert( __traits(compiles, spawn(fn1)));
+    static assert( __traits(compiles, spawn(fn2, 2)));
+    static assert(!__traits(compiles, spawn(fn1, 1)));
+    static assert(!__traits(compiles, spawn(fn2)));
+    
+    void delegate(int) shared                      dg1;
+    shared(void delegate(int))                     dg2;
+    shared(void delegate(long) shared)             dg3;
+    shared(void delegate(real, int , long) shared) dg4;
+    void delegate(int) immutable                   dg5;
+    void delegate(int)                             dg6;
+    static assert( __traits(compiles, spawn(dg1, 1)));
+    static assert( __traits(compiles, spawn(dg2, 2)));
+    static assert( __traits(compiles, spawn(dg3, 3)));
+    static assert( __traits(compiles, spawn(dg4, 4, 4, 4)));
+    static assert( __traits(compiles, spawn(dg5, 5)));
+    static assert(!__traits(compiles, spawn(dg6, 6)));
+    
+    auto callable1  = new class{ void opCall(int) shared {} };
+    auto callable2  = cast(shared)new class{ void opCall(int) shared {} };
+    auto callable3  = new class{ void opCall(int) immutable {} };
+    auto callable4  = cast(immutable)new class{ void opCall(int) immutable {} };
+    auto callable5  = new class{ void opCall(int) {} };
+    auto callable6  = cast(shared)new class{ void opCall(int) immutable {} };
+    auto callable7  = cast(immutable)new class{ void opCall(int) shared {} };
+    auto callable8  = cast(shared)new class{ void opCall(int) const shared {} };
+    auto callable9  = cast(const shared)new class{ void opCall(int) shared {} };
+    auto callable10 = cast(const shared)new class{ void opCall(int) const shared {} };
+    auto callable11 = cast(immutable)new class{ void opCall(int) const shared {} };
+    static assert(!__traits(compiles, spawn(callable1,  1)));
+    static assert( __traits(compiles, spawn(callable2,  2)));
+    static assert(!__traits(compiles, spawn(callable3,  3)));
+    static assert( __traits(compiles, spawn(callable4,  4)));
+    static assert(!__traits(compiles, spawn(callable5,  5)));
+    static assert(!__traits(compiles, spawn(callable6,  6)));
+    static assert(!__traits(compiles, spawn(callable7,  7)));
+    static assert( __traits(compiles, spawn(callable8,  8)));
+    static assert(!__traits(compiles, spawn(callable9,  9)));
+    static assert( __traits(compiles, spawn(callable10, 10)));
+    static assert( __traits(compiles, spawn(callable11, 11)));
 }
 
 
