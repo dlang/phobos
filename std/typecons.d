@@ -3080,10 +3080,13 @@ unittest
 
     static struct Scoped(T)
     {
+        // Addition of `alignment` is required as `Scoped_store` can be misaligned in memory.
         private void[aligned(__traits(classInstanceSize, T)) + alignment] Scoped_store = void;
 
         @property inout(T) Scoped_payload() inout
         {
+            // FIXME: It's assumed here `Scoped` will not be arbitrarily moved in memory.
+            // ("arbitrarily" means an unaligned move)
             return cast(inout(T)) cast(void*) aligned(cast(size_t) Scoped_store.ptr);
         }
         alias Scoped_payload this;
