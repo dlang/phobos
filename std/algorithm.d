@@ -4019,12 +4019,23 @@ ptrdiff_t countUntil(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
     if (isForwardRange!R1 && isForwardRange!R2 &&
         is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
-    //Note: This implementation does take narrow strings into consideration
     typeof(return) result;
-    for (; !haystack.empty; ++result, haystack.popFront())
-        if (startsWith!pred(haystack.save, needle.save)) return result;
-    
-    static if (isInfinite!R1) assert(0); // @@@8804@@@
+    static if (hasLength!R1) //Note: String don't have length
+    {
+        //Delegate to find. Find is very efficient
+        //We save haystack, but we don't care for needle
+        auto r2 = find!pred(haystack.save, needle);
+        if (!r2.empty) return cast(typeof(return)) (haystack.length - r2.length);
+    }
+    else
+    {
+        //Default case, slower route doing startsWith iteration
+        for (; !haystack.empty; ++result, haystack.popFront())
+            if (startsWith!pred(haystack.save, needle.save)) return result;
+    }
+
+    //Because of @@@8804@@@: Avoids both "unreachable code" or "no return statement"
+    static if (isInfinite!R1) assert(0);
     else return -1;
 }
 /// ditto
@@ -4069,6 +4080,8 @@ ptrdiff_t countUntil(alias pred, R)(R haystack)
     typeof(return) i;
     static if (isRandomAccessRange!R)
     {
+        //Optimized RA implementation. Since we want to count *and* iterate at
+        //the same time, it is more efficient this way.
         static if (hasLength!R)
         {
             auto len = cast(typeof(return)) haystack.length;
@@ -4081,13 +4094,25 @@ ptrdiff_t countUntil(alias pred, R)(R haystack)
                 if (unaryFun!pred(haystack[i])) return i;
         }
     }
-    else //everything else (including narrow strings)
+    else static if (hasLength!R)
     {
-        for ( ; !haystack.empty; ++i, haystack.popFront())
-            if (unaryFun!pred(haystack.front)) return i;
+        //For those odd ranges that have a length, but aren't RA.
+        //It is faster to quick find, and then compare the lengths
+        auto r2 = find!pred(haystack.save);
+        if (!r2.empty) return cast(typeof(return)) (haystack.length - r2.length);
     }
-    
-    static if (isInfinite!R) assert(0); // @@@8804@@@
+    else //Everything else
+    {
+        alias ElementType!R T; //For narrow strings forces dchar iteration
+        foreach (T elem; haystack)
+        {
+            if (unaryFun!pred(elem)) return i;
+            ++i;
+        }
+    }
+
+    //Because of @@@8804@@@: Avoids both "unreachable code" or "no return statement"
+    static if (isInfinite!R) assert(0);
     else return -1;
 }
 
@@ -5045,11 +5070,16 @@ size_t count(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 {
     enforce(!needle.empty, "Cannot count occurrences of an empty range");
     static if (isInfinite!R2)
+    {
+        //Note: This is the special case of looking for an infinite inside a finite...
+        //"How many instances of the Fibonacci sequence can you count in [1, 2, 3]?" - "None."
         return 0;
+    }
     else
     {
         size_t result;
-        for (; findSkip!pred(haystack, needle.save); ++result)
+        //Note: haystack is not saved, because findskip is designed to modify it
+        for ( ; findSkip!pred(haystack, needle.save) ; ++result)
         {}
         return result;
     }
@@ -5069,7 +5099,7 @@ size_t count(alias pred = "true", R)(R haystack)
         is(typeof(unaryFun!pred(haystack.front)) : bool))
 {
     size_t result;
-    alias ElementType!R T; //For narrow strings
+    alias ElementType!R T; //For narrow strings forces dchar iteration
     foreach (T elem; haystack)
         if (unaryFun!pred(elem)) ++result;
     return result;
