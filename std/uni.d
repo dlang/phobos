@@ -36,11 +36,15 @@ enum dchar paraSep = '\u2029'; /// UTF paragraph separator
   +/
 bool isWhite(dchar c) @safe pure nothrow
 {
-    return std.ascii.isWhite(c) ||
-           c == lineSep || c == paraSep ||
-           c == '\u0085' || c == '\u00A0' || c == '\u1680' || c == '\u180E' ||
-           (c >= '\u2000' && c <= '\u200A') ||
-           c == '\u202F' || c == '\u205F' || c == '\u3000';
+    return c < 0x80 ? std.ascii._fastIsWhite(c) : std.uni._fastIsWhite(c);
+}
+//Internal function: Checks isWhite, pre-supposing c >= 0x80
+package bool _fastIsWhite(dchar c) @safe pure nothrow
+{
+    return  c == lineSep || c == paraSep ||
+            c == '\u0085' || c == '\u00A0' || c == '\u1680' || c == '\u180E' ||
+            (c >= '\u2000' && c <= '\u200A') ||
+            c == '\u202F' || c == '\u205F' || c == '\u3000';
 }
 
 
