@@ -1323,18 +1323,35 @@ Generates a random floating-point number drawn from a
 normal (Gaussian) distribution with specified mean and
 standard deviation (sigma).
 */
-auto normal(alias NormalRandomNumberEngine = NormalBoxMullerEngine, T)
-(T mean, T sigma)
-if (isFloatingPoint!T && isUniformRNG!UniformRandomNumberGenerator)
+auto normal(alias NormalRandomNumberEngine = NormalBoxMullerEngine, T1, T2)
+(T1 mean, T1 sigma)
+if(isNumeric!T1 && isNumeric!T2)
 {
     return normal!NormalRandomNumberEngine(mean, sigma, rndGen);
 }
 
-auto normal(alias NormalRandomNumberEngine = NormalBoxMullerEngine, T,  UniformRandomNumberGenerator)
-(T mean, T sigma, ref UniformRandomNumberGenerator urng)
-if (isFloatingPoint!T && isUniformRNG!UniformRandomNumberGenerator)
+/// Ditto
+auto normal(RealT = void, alias NormalRandomNumberEngine = NormalBoxMullerEngine, T1, T2)
+(T1 mean, T2 sigma)
+if((is(RealT==void) || isFloatingPoint!RealT) && isNumeric!T1 && isNumeric!T2)
 {
-    static NormalRandomNumberEngine!T engine;
+    return normal!(RealT, NormalRandomNumberEngine)(mean, sigma, rndGen);
+}
+
+/// Ditto
+auto normal(RealT = void, alias NormalRandomNumberEngine = NormalBoxMullerEngine, T1, T2,  UniformRandomNumberGenerator)
+(T1 mean, T2 sigma, ref UniformRandomNumberGenerator urng)
+if ((is(RealT==void) || isFloatingPoint!RealT) && isNumeric!T1 && isNumeric!T2 && isUniformRNG!UniformRandomNumberGenerator)
+{
+    static if(!is(RealT==void) && isFloatingPoint!RealT)
+        alias Unqual!(CommonType!(RealT, T1, T2)) ReturnType;
+    else static if(isFloatingPoint!(CommonType!(T1, T2)))
+        alias Unqual!(CommonType!(T1, T2)) ReturnType;
+    else
+        alias double ReturnType;
+
+    static NormalRandomNumberEngine!ReturnType engine;
+
     static if(is(typeof(engine.initialize())))
     {
         static bool initialized;
@@ -1348,12 +1365,10 @@ if (isFloatingPoint!T && isUniformRNG!UniformRandomNumberGenerator)
     return normal(mean, sigma, urng, engine);
 }
 
-/**
-ditto
-*/
-auto normal(T, UniformRandomNumberGenerator, NormalRandomNumberEngine)
-(T mean, T sigma, ref UniformRandomNumberGenerator urng, ref NormalRandomNumberEngine normalEngine)
-//if (isFloatingPoint!T && isUniformRNG!UniformRandomNumberGenerator)
+/// Ditto
+auto normal(UniformRandomNumberGenerator, NormalRandomNumberEngine, T1, T2)
+(T1 mean, T2 sigma, ref UniformRandomNumberGenerator urng, ref NormalRandomNumberEngine normalEngine)
+if (isNumeric!T1 && isNumeric!T2 && isUniformRNG!UniformRandomNumberGenerator)
 {
     enforce(0 <= sigma, text("std.random.normal(): standard deviation ", sigma, " is less than zero"));
     return sigma * normalEngine(urng) + mean;
@@ -1361,7 +1376,25 @@ auto normal(T, UniformRandomNumberGenerator, NormalRandomNumberEngine)
 
 unittest
 {
-    //need unittests for normal random number generation
+    assert(is(typeof(normal(0, 1)) == double));
+    assert(is(typeof(normal(0.0f, 1.0f)) == float));
+    assert(is(typeof(normal(0.0, 1.0)) == double));
+    assert(is(typeof(normal(0.0L, 1.0L)) == real));
+
+    assert(is(typeof(normal!float(0, 1)) == float));
+    assert(is(typeof(normal!float(0.0f, 1.0f)) == float));
+    assert(is(typeof(normal!float(0.0, 1.0)) == double));
+    assert(is(typeof(normal!float(0.0L, 1.0L)) == real));
+
+    assert(is(typeof(normal!double(0, 1)) == double));
+    assert(is(typeof(normal!double(0.0f, 1.0f)) == double));
+    assert(is(typeof(normal!double(0.0, 1.0)) == double));
+    assert(is(typeof(normal!double(0.0L, 1.0L)) == real));
+
+    assert(is(typeof(normal!real(0, 1)) == real));
+    assert(is(typeof(normal!real(0.0f, 1.0f)) == real));
+    assert(is(typeof(normal!real(0.0, 1.0)) == real));
+    assert(is(typeof(normal!real(0.0L, 1.0L)) == real));
 }
 
 /**
@@ -1369,7 +1402,7 @@ Struct implementation of normal (Gaussian) random number
 generation that stores the distribution parameters of mean
 and standard deviation (sigma)
 */
-struct Normal(T = real, alias NormalRandomNumberEngine = NormalBoxMullerEngine)
+struct Normal(T = double, alias NormalRandomNumberEngine = NormalBoxMullerEngine)
 if (isFloatingPoint!T)
 {
     private T _mean, _sigma;
@@ -1401,12 +1434,91 @@ if (isFloatingPoint!T)
     }
 }
 
-auto normalRNG(
-    alias NormalRandomNumberEngine = NormalBoxMullerEngine, T)(
-    T mean, T sigma)
-if (isFloatingPoint!T)
+/// Ditto
+auto normalRNG(RealT = void, alias NormalRandomNumberEngine = NormalBoxMullerEngine, T1, T2)
+(T1 mean, T2 sigma)
+if ((is(RealT==void) || isFloatingPoint!RealT) && isNumeric!T1 && isNumeric!T2)
 {
-    return Normal!(T, NormalRandomNumberEngine)(mean, sigma);
+    static if(!is(RealT==void) && isFloatingPoint!RealT)
+        alias Unqual!(CommonType!(RealT, T1, T2)) ReturnType;
+    else static if(isFloatingPoint!(CommonType!(T1, T2)))
+        alias Unqual!(CommonType!(T1, T2)) ReturnType;
+    else
+        alias double ReturnType;
+
+    return Normal!(ReturnType, NormalRandomNumberEngine)(mean, sigma);
+}
+
+unittest
+{
+    // These unittests fail -- need to track down why.
+    {
+        auto nrng = normalRNG(0, 1);
+        assert(is(typeof(nrng(rndGen)) == double));
+    }
+    {
+        auto nrng = normalRNG(0.0f, 1.0f);
+        assert(is(typeof(nrng(rndGen)) == double));
+    }
+    {
+        auto nrng = normalRNG(0.0, 1.0);
+        assert(is(typeof(nrng(rndGen)) == double));
+    }
+    {
+        auto nrng = normalRNG(0.0L, 1.0L);
+        assert(is(typeof(nrng(rndGen)) == real));
+    }
+
+    {
+        auto nrng = normalRNG!float(0, 1);
+        assert(is(typeof(nrng(rndGen)) == float));
+    }
+    {
+        auto nrng = normalRNG!float(0.0f, 1.0f);
+        assert(is(typeof(nrng(rndGen)) == float));
+    }
+    {
+        auto nrng = normalRNG!float(0.0, 1.0);
+        assert(is(typeof(nrng(rndGen)) == double));
+    }
+    {
+        auto nrng = normalRNG(0.0L, 1.0L);
+        assert(is(typeof(nrng(rndGen)) == real));
+    }
+
+    {
+        auto nrng = normalRNG!double(0, 1);
+        assert(is(typeof(nrng(rndGen)) == double));
+    }
+    {
+        auto nrng = normalRNG!double(0.0f, 1.0f);
+        assert(is(typeof(nrng(rndGen)) == double));
+    }
+    {
+        auto nrng = normalRNG!double(0.0, 1.0);
+        assert(is(typeof(nrng(rndGen)) == double));
+    }
+    {
+        auto nrng = normalRNG!double(0.0L, 1.0L);
+        assert(is(typeof(nrng(rndGen)) == real));
+    }
+
+    {
+        auto nrng = normalRNG!real(0, 1);
+        assert(is(typeof(nrng(rndGen)) == real));
+    }
+    {
+        auto nrng = normalRNG!real(0.0f, 1.0f);
+        assert(is(typeof(nrng(rndGen)) == real));
+    }
+    {
+        auto nrng = normalRNG!real(0.0, 1.0);
+        assert(is(typeof(nrng(rndGen)) == real));
+    }
+    {
+        auto nrng = normalRNG!real(0.0L, 1.0L);
+        assert(is(typeof(nrng(rndGen)) == real));
+    }
 }
 
 /**
@@ -1419,7 +1531,7 @@ implementation by Jens Maurer and Steven Wanatabe, and
 should produce identical results within the limits of
 floating-point rounding.
 */
-struct NormalBoxMullerEngine(T = real)
+struct NormalBoxMullerEngine(T = double)
 if(isFloatingPoint!T)
 {
     private bool _valid = false;
