@@ -5058,22 +5058,18 @@ bool findSkip(alias pred = "a == b", R, E)(ref R haystack, E needle)
     if (isForwardRange!R &&
         is(typeof(binaryFun!pred(haystack.front, needle))))
 {
-    auto parts = findSplitAfter!pred(haystack.save, needle);
-    if (parts[0].empty) return false;
-    // found
+    auto parts = findSplitAfter!pred(haystack, needle);
     haystack = parts[1];
-    return true;
+    return !parts[0].empty;
 }
 /// ditto
 bool findSkip(alias pred = "a == b", R1, R2)(ref R1 haystack, R2 needle)
     if (isForwardRange!R1 && isForwardRange!R2 &&
         is(typeof(binaryFun!pred(haystack.front, needle.front))))
 {
-    auto parts = findSplitAfter!pred(haystack.save, needle);
-    if (parts[0].empty) return false;
-    // found
+    auto parts = findSplitAfter!pred(haystack, needle);
     haystack = parts[1];
-    return true;
+    return !parts[0].empty;
 }
 
 ///
@@ -5081,25 +5077,38 @@ unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    string s = "abcdef";
+    string s;
+    s = "abcdef";
     assert(findSkip(s, "cd") && s == "ef");
+    s = "abcdef";
+    assert(findSkip(s, 'd') && s == "ef");
     s = "abcdef";
     assert(!findSkip(s, "cxd") && s == "abcdef");
     s = "abcdef";
+    assert(!findSkip(s, 'x') && s == "abcdef");
+    s = "abcdef";
     assert(findSkip(s, "def") && s.empty);
+    s = "abcdef";
+    assert(findSkip(s, 'f') && s.empty);
 }
 
 unittest
 {
-    //Single element + UTF
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    string s = "日本語";
+    string s;
+    s = "日本語";
     assert(findSkip(s, '本') && s == "語");
+    s = "日本語";
+    assert(findSkip(s, "本") && s == "語");
     s = "日本語";
     assert(!findSkip(s, '五') && s == "日本語");
     s = "日本語";
+    assert(!findSkip(s, "五") && s == "日本語");
+    s = "日本語";
     assert(findSkip(s, '語') && s.empty);
+    s = "日本語";
+    assert(findSkip(s, "語") && s.empty);
 }
 
 unittest
@@ -12385,7 +12394,7 @@ version(unittest)
         return result;
     }
 
-        //Reference type input range
+    //Reference type input range
     private class ReferenceInputRange(T)
     {
         this(T)(T[] r) {_payload = r;}
