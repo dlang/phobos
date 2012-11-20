@@ -1330,7 +1330,7 @@ if(isNumeric!T1 && isNumeric!T2)
     return normal!NormalRandomNumberEngine(mean, sigma, rndGen);
 }
 
-struct StaticInstance(T)
+private struct StaticInstance(T)
 {
     static T instance;
 }
