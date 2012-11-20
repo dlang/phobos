@@ -2812,7 +2812,7 @@ mixin template Proxy(alias a)
         static if (is(typeof(__traits(getMember, a, name)) == function))
         {
             // non template function
-            auto ref opDispatch(this X, Args...)(Args args) { return mixin("a."~name~"(args)"); }
+            auto ref opDispatch(this X, Args...)(auto ref Args args) { return mixin("a."~name~"(args)"); }
         }
         else static if (is(typeof(mixin("a."~name))) || __traits(getOverloads, a, name).length != 0)
         {
@@ -2825,7 +2825,7 @@ mixin template Proxy(alias a)
             // member template
             template opDispatch(T...)
             {
-                auto ref opDispatch(this X, Args...)(Args args){ return mixin("a."~name~"!T(args)"); }
+                auto ref opDispatch(this X, Args...)(auto ref Args args){ return mixin("a."~name~"!T(args)"); }
             }
         }
     }
