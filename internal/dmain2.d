@@ -165,7 +165,7 @@ extern (C) int _d_run_main(size_t argc, char **argv, void *p)
             char*     cargp = null;
             size_t    cargl = WideCharToMultiByte(65001, 0, wcbuf, cast(int)wclen, null, 0, null, null);
 
-            cargp = cast(char*) alloca(cargl);
+            cargp = cast(char*) malloc(cargl);
 
             for (size_t i = 0, p = 0; i < wargc; i++)
             {
