@@ -226,7 +226,7 @@ deprecated("Please use std.uni.isAlpha instead.")  bool isUniAlpha(dchar c) @saf
   +/
 bool isAlpha(dchar c) @safe pure nothrow
 {
-    static immutable dchar table[][2] =
+    static immutable dchar[2][] table =
     [
     [ 'A', 'Z' ],
     [ 'a', 'z' ],
@@ -627,7 +627,7 @@ unittest
 
 bool isMark(dchar c) @safe pure nothrow
 {
-    static immutable dchar tableMn[][2] =
+    static immutable dchar[2][] tableMn =
     [
     [ 0x0300, 0x036F ],
     [ 0x0483, 0x0487 ],
@@ -834,7 +834,7 @@ bool isMark(dchar c) @safe pure nothrow
     [ 0xE0100, 0xE01EF ],
     ];
 
-    static immutable dchar tableMe[][2] =
+    static immutable dchar[2][] tableMe =
     [
     [ 0x0488, 0x0489 ],
     [ 0x20DD, 0x20E0 ],
@@ -842,7 +842,7 @@ bool isMark(dchar c) @safe pure nothrow
     [ 0xA670, 0xA672 ],
     ];
 
-    static immutable dchar tableMc[][2] =
+    static immutable dchar[2][] tableMc =
     [
     [ 0x0903, 0x0903 ],
     [ 0x093B, 0x093B ],
@@ -979,7 +979,7 @@ unittest
 
 bool isNumber(dchar c) @safe pure nothrow
 {
-    static immutable dchar tableNd[][2] =
+    static immutable dchar[2][] tableNd =
     [
     [ 0x0030, 0x0039 ],
     [ 0x0660, 0x0669 ],
@@ -1021,7 +1021,7 @@ bool isNumber(dchar c) @safe pure nothrow
     [ 0x1D7CE, 0x1D7FF ],
     ];
 
-    static immutable dchar tableNl[][2] =
+    static immutable dchar[2][] tableNl =
     [
     [ 0x16EE, 0x16F0 ],
     [ 0x2160, 0x2182 ],
@@ -1037,7 +1037,7 @@ bool isNumber(dchar c) @safe pure nothrow
     [ 0x12400, 0x12462 ],
     ];
 
-    static immutable dchar tableNo[][2] =
+    static immutable dchar[2][] tableNo =
     [
     [ 0x00B2, 0x00B3 ],
     [ 0x00B9, 0x00B9 ],
@@ -1105,7 +1105,7 @@ unittest
 
 bool isPunctuation(dchar c) @safe pure nothrow
 {
-    static immutable dchar tablePd[][2] =
+    static immutable dchar[2][] tablePd =
     [
     [ 0x002D, 0x002D ],
     [ 0x058A, 0x058A ],
@@ -1124,7 +1124,7 @@ bool isPunctuation(dchar c) @safe pure nothrow
     [ 0xFF0D, 0xFF0D ],
     ];
 
-    static immutable dchar tablePs[][2] =
+    static immutable dchar[2][] tablePs =
     [
     [ 0x0028, 0x0028 ],
     [ 0x005B, 0x005B ],
@@ -1200,7 +1200,7 @@ bool isPunctuation(dchar c) @safe pure nothrow
     [ 0xFF62, 0xFF62 ],
     ];
 
-    static immutable dchar tablePe[][2] =
+    static immutable dchar[2][] tablePe =
     [
     [ 0x0029, 0x0029 ],
     [ 0x005D, 0x005D ],
@@ -1274,7 +1274,7 @@ bool isPunctuation(dchar c) @safe pure nothrow
     [ 0xFF63, 0xFF63 ],
     ];
 
-    static immutable dchar tablePc[][2] =
+    static immutable dchar[2][] tablePc =
     [
     [ 0x005F, 0x005F ],
     [ 0x203F, 0x2040 ],
@@ -1284,7 +1284,7 @@ bool isPunctuation(dchar c) @safe pure nothrow
     [ 0xFF3F, 0xFF3F ],
     ];
 
-    static immutable dchar tablePo[][2] =
+    static immutable dchar[2][] tablePo =
     [
     [ 0x0021, 0x0023 ],
     [ 0x0025, 0x0027 ],
@@ -1416,7 +1416,7 @@ bool isPunctuation(dchar c) @safe pure nothrow
     [ 0x12470, 0x12473 ],
     ];
 
-    static immutable dchar tablePi[][2] =
+    static immutable dchar[2][] tablePi =
     [
     [ 0x00AB, 0x00AB ],
     [ 0x2018, 0x2018 ],
@@ -1431,7 +1431,7 @@ bool isPunctuation(dchar c) @safe pure nothrow
     [ 0x2E20, 0x2E20 ],
     ];
 
-    static immutable dchar tablePf[][2] =
+    static immutable dchar[2][] tablePf =
     [
     [ 0x00BB, 0x00BB ],
     [ 0x2019, 0x2019 ],
@@ -1474,7 +1474,7 @@ unittest
   +/
 bool isSymbol(dchar c) @safe pure nothrow
 {
-    static immutable dchar tableSm[][2] =
+    static immutable dchar[2][] tableSm =
     [
     [ 0x002B, 0x002B ],
     [ 0x003C, 0x003E ],
@@ -1544,7 +1544,7 @@ bool isSymbol(dchar c) @safe pure nothrow
     [ 0x1D7C3, 0x1D7C3 ],
     ];
 
-    static immutable dchar tableSc[][2] =
+    static immutable dchar[2][] tableSc =
     [
     [ 0x0024, 0x0024 ],
     [ 0x00A2, 0x00A5 ],
@@ -1564,7 +1564,7 @@ bool isSymbol(dchar c) @safe pure nothrow
     [ 0xFFE5, 0xFFE6 ],
     ];
 
-    static immutable dchar tableSk[][2] =
+    static immutable dchar[2][] tableSk =
     [
     [ 0x005E, 0x005E ],
     [ 0x0060, 0x0060 ],
@@ -1595,7 +1595,7 @@ bool isSymbol(dchar c) @safe pure nothrow
     [ 0xFFE3, 0xFFE3 ],
     ];
 
-    static immutable dchar tableSo[][2] =
+    static immutable dchar[2][] tableSo =
     [
     [ 0x00A6, 0x00A7 ],
     [ 0x00A9, 0x00A9 ],
@@ -1842,7 +1842,7 @@ unittest
   +/
 bool isFormat(dchar c) @safe pure nothrow
 {
-    static immutable dchar tableCf[][2] =
+    static immutable dchar[2][] tableCf =
     [
     [ 0x00AD, 0x00AD ],
     [ 0x0600, 0x0603 ],
@@ -1933,7 +1933,7 @@ unittest
   +/
 bool isNonCharacter(dchar c) @safe pure nothrow
 {
-    static immutable dchar table[][2] =
+    static immutable dchar[2][] table =
     [
     [ 0x0378, 0x0379 ],
     [ 0x037F, 0x0383 ],
