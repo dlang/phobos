@@ -2905,6 +2905,7 @@ unittest
         @property ref int val2(){ return field; }
 
         const int func(int x, int y){ return x; }
+        void func1(ref int a){ a = 9; }
 
         T opCast(T)(){ return T.init; }
 
@@ -2946,6 +2947,8 @@ unittest
 
     // member function
     assert(h.func(2,4) == 2);
+    h.func1(n);
+    assert(n == 9);
 
     // bug5896 test
     assert(h.opCast!int() == 0);
