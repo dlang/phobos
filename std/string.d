@@ -270,7 +270,7 @@ body
 
     // Need to make a copy
     auto copy = new char[s.length + 1];
-    copy[0..s.length] = s;
+    copy[0..s.length] = s[];
     copy[s.length] = 0;
 
     return assumeUnique(copy).ptr;

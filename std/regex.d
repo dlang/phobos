@@ -3785,7 +3785,7 @@ template BacktrackingMatcher(bool CTregex)
                 *cast(State*)&memory[lastState] =
                     State(index, pc, counter, infiniteNesting);
                 lastState += stateSize;
-                memory[lastState..lastState+2*matches.length] = cast(size_t[])matches[];
+                memory[lastState..lastState+2*matches.length] = (cast(size_t[])matches)[];
                 lastState += 2*matches.length;
                 debug(fred_matching)
                     writefln("Saved(pc=%s) front: %s src: %s"

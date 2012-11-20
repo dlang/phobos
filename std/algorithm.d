@@ -6003,7 +6003,7 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
             // generic implementation.
             enforce(target.length >= source.length,
                 "Cannot copy a source array into a smaller target array.");
-            target[0..source.length] = source;
+            target[0..source.length] = source[];
 
             return target[source.length..$];
         }

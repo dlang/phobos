@@ -1778,7 +1778,7 @@ void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff
     {
         // replacement reduces length
         immutable stuffEnd = from + stuff.length;
-        array[from .. stuffEnd] = stuff;
+        array[from .. stuffEnd] = stuff[];
         array = remove(array, tuple(stuffEnd, to));
     }
     else
@@ -1957,7 +1957,7 @@ body
     auto result = new T[s.length - slice.length + replacement.length];
     immutable so = slice.ptr - s.ptr;
     result[0 .. so] = s[0 .. so];
-    result[so .. so + replacement.length] = replacement;
+    result[so .. so + replacement.length] = replacement[];
     result[so + replacement.length .. result.length] =
         s[so + slice.length .. s.length];
 
@@ -2205,9 +2205,9 @@ Appends an entire range to the managed array.
             immutable len = _data.arr.length;
             immutable newlen = len + items.length;
             _data.arr = _data.arr.ptr[0..newlen];
-            static if(is(typeof(_data.arr[] = items)))
+            static if(is(typeof(_data.arr[] = items[])))
             {
-                _data.arr.ptr[len..newlen] = items;
+                _data.arr.ptr[len..newlen] = items[];
             }
             else
             {
