@@ -148,12 +148,12 @@ unittest
 
 extern (C) wchar[] _adReverseWchar(wchar[] a)
 {
-    //printf("adReverseWchar(%d %p)\n", a.length, a.ptr);
     if (a.length > 1)
     {
-        wchar[2] tmp;
+        wchar[2] tmplo = void;
+        wchar[2] tmphi = void;
         wchar* lo = a.ptr;
-        wchar* hi = &a[length - 1];
+        wchar* hi = &a[$ - 1];
 
         while (lo < hi)
         {   auto clo = *lo;
@@ -196,20 +196,22 @@ extern (C) wchar[] _adReverseWchar(wchar[] a)
 
             /* Shift the whole array. This is woefully inefficient
              */
-            memcpy(tmp.ptr, hi, stridehi * wchar.sizeof);
-            memcpy(hi + stridehi - stridelo, lo, stridelo * wchar.sizeof);
+            memcpy(tmplo.ptr, lo, stridelo * wchar.sizeof);
+            memcpy(tmphi.ptr, hi, stridehi * wchar.sizeof);
             memmove(lo + stridehi, lo + stridelo , (hi - (lo + stridelo)) * wchar.sizeof);
-            memcpy(lo, tmp.ptr, stridehi * wchar.sizeof);
+            memcpy(lo, tmphi.ptr, stridehi * wchar.sizeof);
+            memcpy(hi + (stridehi - stridelo), tmplo.ptr, stridelo * wchar.sizeof);
 
             lo += stridehi;
             hi = hi - 1 + (stridehi - stridelo);
         }
     }
-    return *cast(wchar[]*)(&a);
+    return a;
 }
 
 unittest
 {
+  {
     wstring a = "abcd";
     wstring r;
 
@@ -223,6 +225,15 @@ unittest
     a = "ab\U00012345c";
     r = a.dup.reverse;
     assert(r == "c\U00012345ba");
+  }
+  {
+   wstring a = "a\U00000081b\U00002000c\U00010000";
+   wchar[] b = a.dup;
+
+   b.reverse; // OK
+   b.reverse; // fails
+   assert(b == "a\U00000081b\U00002000c\U00010000");
+  }
 }
 
 
