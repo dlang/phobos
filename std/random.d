@@ -1333,6 +1333,12 @@ if(isNumeric!T1 && isNumeric!T2)
 private struct StaticInstance(T)
 {
     static T instance;
+
+    static if(is(typeof(instance.initialize())))
+        static this()
+        {
+            instance.initialize();
+        }
 }
 
 /// Ditto
@@ -1346,16 +1352,6 @@ if (isNumeric!T1 && isNumeric!T2 && isUniformRNG!UniformRandomNumberGenerator)
         alias double ReturnType;
 
     alias StaticInstance!(NormalRandomNumberEngine!ReturnType).instance engine;
-
-    static if(is(typeof(engine.initialize())))
-    {
-        static bool initialized;
-        if(!initialized)
-        {
-            initialized = true;
-            engine.initialize();
-        }
-    }
 
     return normal(mean, sigma, urng, engine);
 }
@@ -1496,17 +1492,17 @@ private template hasCompileTimeMinMax(alias a)
 private auto isPowerOfTwo(I)(I i){ return (i & (i - 1)) == 0; }
 
 private template rngMask(alias r) 
-    if(hasCompileTimeMinMax!r && ((r.max - r.min) & (r.max - r.min + 1)) == 0)
+    if(hasCompileTimeMinMax!r && isPowerOfTwo(r.max - r.min + 1))
 {
     enum rngMask = r.max - r.min;
 }
 
-private T randomFloat(T, Rng)(ref Rng r)
+private T fastUniformFloat(T, Rng)(ref Rng r)
 {
     static if(hasCompileTimeMinMax!r)
     {
         enum denom = 1 / (to!T(1) + r.max - r.min);
-        T x = (r.front -r.min) * denom; 
+        T x = (r.front - r.min) * denom; 
     } 
     else
         T x = cast(T)(r.front - r.min)  / (to!T(1) + r.max - r.min);
@@ -1515,7 +1511,7 @@ private T randomFloat(T, Rng)(ref Rng r)
     return x;
 }
 
-private int randomInt(int n, Rng)(ref Rng r)
+private int fastUniformInt(int n, Rng)(ref Rng r)
 {
     static if(
         is(typeof(rngMask!r)) && isPowerOfTwo(n) && 
@@ -1529,7 +1525,7 @@ private int randomInt(int n, Rng)(ref Rng r)
         return uniform(0, n, r);
 }
 
-private void randomIntAndFloat(int n, T, Rng)(ref Rng r, ref int i, ref T a)
+private void fastUniformIntAndFloat(int n, T, Rng)(ref Rng r, ref int i, ref T a)
 {
     static if(
         is(typeof(rngMask!r)) && isPowerOfTwo(n) && 
@@ -1543,8 +1539,8 @@ private void randomIntAndFloat(int n, T, Rng)(ref Rng r, ref int i, ref T a)
     }
     else
     {
-        i = randomInt!n(r);
-        a = randomFloat!T(r);
+        i = fastUniformInt!n(r);
+        a = fastUniformFloat!T(r);
     }
 }
 
@@ -1692,8 +1688,8 @@ private auto zigguratAlgorithmImpl
 
     while(true)
     {
-        T uy = uInterval * randomFloat!T(rng);
-        T ux = uInterval * randomFloat!T(rng);
+        T uy = uInterval * fastUniformFloat!T(rng);
+        T ux = uInterval * fastUniformFloat!T(rng);
       
         T tmp = max(ux, uy);
         ux = min(ux, uy);
@@ -1720,14 +1716,12 @@ private auto zigguratAlgorithm
 {
     alias ReturnType!f T;
 
-    //auto rand = randomInt!(2 * zs.nlayers)(rng);
     int rand;
     T a;
-    randomIntAndFloat!(2 * zs.nlayers)(rng, rand, a);
+    fastUniformIntAndFloat!(2 * zs.nlayers)(rng, rand, a);
  
     auto r = zigguratAlgorithmImpl!(
         f, tail, head, zs, rng)(rand >> 1, a);
-        //f, tail, head, zs, rng)(rand >> 1, randomFloat!T(rng));
  
     static if(isSymetric)
         return rand & 1 ? r : -r;
@@ -1738,10 +1732,11 @@ private auto zigguratAlgorithm
 template NormalZigguratEngineImpl(int n)
 {
     struct NormalZigguratEngineImpl(T)
+    if(isFloatingPoint!T && isPowerOfTwo(n))
     {
         void initialize()
         {
-            //layers = new L[nlayers];
+            layers = new L[nlayers];
             zigguratInitialize(
                 layers, tailX, tailXInterval, area, 
                 delegate (T x) => f(x), 
@@ -1753,6 +1748,7 @@ template NormalZigguratEngineImpl(int n)
         }
             
         T opCall(Rng)(ref Rng rng)
+        if(isUniformRNG!Rng)
         {
             return zigguratAlgorithm!(f, tail, head, this, true, rng)();
         }
@@ -1779,7 +1775,7 @@ template NormalZigguratEngineImpl(int n)
         enum nlayers = n;
         alias ZigguratLayer!T L;
 
-        L[n] layers;
+        L[] layers;
         T tailX;
         T tailXInterval;
         T headDx;
@@ -1791,7 +1787,7 @@ template NormalZigguratEngineImpl(int n)
 
             while(true)
             {
-                T y = randomFloat!T(rng) * headDy;
+                T y = fastUniformFloat!T(rng) * headDy;
                 T x2 = x * x;
                 T approx = fraction!(T, 1, 2) * x2;
                 if(y > approx)
@@ -1801,7 +1797,7 @@ template NormalZigguratEngineImpl(int n)
                 if(y > approx && y > cast(T) 1 - exp(-x * x * cast(T) 0.5))
                     return x;
 
-                x = randomFloat!T(rng) * headDx;
+                x = fastUniformFloat!T(rng) * headDx;
             }
         }
         
@@ -1809,8 +1805,8 @@ template NormalZigguratEngineImpl(int n)
         {
             while(true)
             {
-                T x = -log(randomFloat!T(rng)) / x0;
-                T y = -log(randomFloat!T(rng));
+                T x = -log(fastUniformFloat!T(rng)) / x0;
+                T y = -log(fastUniformFloat!T(rng));
                 if(y + y > x * x)
                     return x0 + x;
             }
