@@ -2812,7 +2812,7 @@ mixin template Proxy(alias a)
         static if (is(typeof(__traits(getMember, a, name)) == function))
         {
             // non template function
-            auto ref opDispatch(this X, Args...)(Args args) { return mixin("a."~name~"(args)"); }
+            auto ref opDispatch(this X, Args...)(auto ref Args args) { return mixin("a."~name~"(args)"); }
         }
         else static if (is(typeof(mixin("a."~name))) || __traits(getOverloads, a, name).length != 0)
         {
@@ -2825,7 +2825,7 @@ mixin template Proxy(alias a)
             // member template
             template opDispatch(T...)
             {
-                auto ref opDispatch(this X, Args...)(Args args){ return mixin("a."~name~"!T(args)"); }
+                auto ref opDispatch(this X, Args...)(auto ref Args args){ return mixin("a."~name~"!T(args)"); }
             }
         }
     }
@@ -2905,6 +2905,7 @@ unittest
         @property ref int val2(){ return field; }
 
         const int func(int x, int y){ return x; }
+        void func1(ref int a){ a = 9; }
 
         T opCast(T)(){ return T.init; }
 
@@ -2946,6 +2947,8 @@ unittest
 
     // member function
     assert(h.func(2,4) == 2);
+    h.func1(n);
+    assert(n == 9);
 
     // bug5896 test
     assert(h.opCast!int() == 0);
