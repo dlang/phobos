@@ -7784,7 +7784,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
 
 
     /++ +/
-    @property void popFront()
+    void popFront()
     {
         return (*_range).popFront();
     }
@@ -7888,7 +7888,8 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
 
 
     /++ Ditto +/
-    static if(isBidirectionalRange!R) @property void popBack()
+    static if(isBidirectionalRange!R)
+    void popBack()
     {
         return (*_range).popBack();
     }
