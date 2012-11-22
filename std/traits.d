@@ -669,7 +669,7 @@ unittest
     {
         ubyte a,r,g,b;
 
-        immutable Colour white = Colour(255,255,255,255);
+        static immutable Colour white = Colour(255,255,255,255);
     }
     void bug8106(Colour c = Colour.white){}
     //pragma(msg, PDVT!bug8106);
