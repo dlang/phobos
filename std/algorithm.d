@@ -4020,7 +4020,7 @@ ptrdiff_t countUntil(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
         is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
     typeof(return) result;
-    static if (hasLength!R1) //Note: String don't have length
+    static if (hasLength!R1) //Note: Narrow strings don't have length.
     {
         //Delegate to find. Find is very efficient
         //We save haystack, but we don't care for needle
@@ -4030,7 +4030,7 @@ ptrdiff_t countUntil(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
     else
     {
         //Default case, slower route doing startsWith iteration
-        for (; !haystack.empty; ++result, haystack.popFront())
+        for ( ; !haystack.empty ; ++result, haystack.popFront() )
             if (startsWith!pred(haystack.save, needle.save)) return result;
     }
 
@@ -4084,8 +4084,8 @@ ptrdiff_t countUntil(alias pred, R)(R haystack)
         //the same time, it is more efficient this way.
         static if (hasLength!R)
         {
-            auto len = cast(typeof(return)) haystack.length;
-            for ( ; i < len ; ++i)
+            immutable len = cast(typeof(return)) haystack.length;
+            for ( ; i < len ; ++i )
                 if (unaryFun!pred(haystack[i])) return i;
         }
         else //if (isInfinite!R)
@@ -4154,7 +4154,7 @@ unittest
  *  $(RED Deprecated. It will be removed in January 2013.
  *        Currently defaults to $(LREF countUntil) instead.)
  *
- * Not to be confused with it's homonym function
+ * Not to be confused with its homonym function
  * in $(D std.string).
  *
  * Please use $(D std.string.indexOf) if you wish to find
@@ -5020,8 +5020,8 @@ $(D 2).
 The third version counts the elements for which $(D pred(x)) is $(D
 true). Performs $(BIGOH r.length) evaluations of $(D pred).
 
-Note: Regardless of the version, $(D count) will not accept infinite ranges
-as a $(D haystack).
+Note: Regardless of the overload, $(D count) will not accept
+infinite ranges for $(D haystack).
 
 Example:
 ----
