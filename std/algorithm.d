@@ -5058,14 +5058,19 @@ bool findSkip(alias pred = "a == b", R, E)(ref R haystack, E needle)
     if (isForwardRange!R &&
         is(typeof(binaryFun!pred(haystack.front, needle))))
 {
-    auto parts = findSplitAfter!pred(haystack, needle);
-    haystack = parts[1];
-    return !parts[0].empty;
+    return findSkipImpl!pred(haystack, needle);
 }
 /// ditto
 bool findSkip(alias pred = "a == b", R1, R2)(ref R1 haystack, R2 needle)
     if (isForwardRange!R1 && isForwardRange!R2 &&
         is(typeof(binaryFun!pred(haystack.front, needle.front))))
+{
+    return findSkipImpl!pred(haystack, needle);
+}
+//Both findSkip actually just forward to findSplitAfter, so they have the same
+//Implementation. There are two declarations of "findSkip", only for
+//documentation and template restraints reasons.
+private bool findSkipImpl(alias pred, R1, N)(ref R1 haystack, N needle)
 {
     auto parts = findSplitAfter!pred(haystack, needle);
     haystack = parts[1];
@@ -5077,38 +5082,48 @@ unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    string s;
-    s = "abcdef";
-    assert(findSkip(s, "cd") && s == "ef");
-    s = "abcdef";
-    assert(findSkip(s, 'd') && s == "ef");
-    s = "abcdef";
-    assert(!findSkip(s, "cxd") && s == "abcdef");
-    s = "abcdef";
-    assert(!findSkip(s, 'x') && s == "abcdef");
-    s = "abcdef";
-    assert(findSkip(s, "def") && s.empty);
-    s = "abcdef";
-    assert(findSkip(s, 'f') && s.empty);
+    {
+        string s1 = "abcdef";
+        string s2 = "abcdef";
+        assert( findSkip(s1, "cd") && s1 == "ef", format(`expected "ef", got "%s".`, s1));
+        assert( findSkip(s2,  'd') && s2 == "ef", format(`expected "ef", got "%s".`, s2));
+    }
+    {
+        string s1 = "abcdef";
+        string s2 = "abcdef";
+        assert(!findSkip(s1, "cxd") && s1 == "abcdef", format(`expected "abcdef", got "%s".`, s1));
+        assert(!findSkip(s2,  'x' ) && s2 == "abcdef", format(`expected "abcdef", got "%s".`, s2));
+    }
+    {
+        string s1 = "abcdef";
+        string s2 = "abcdef";
+        assert( findSkip(s1, "def") && s1 == "", text(`expected "", got `, s1));
+        assert( findSkip(s2,   'f') && s2 == "", text(`expected "", got `, s2));
+    }
 }
 
 unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    string s;
-    s = "日本語";
-    assert(findSkip(s, '本') && s == "語");
-    s = "日本語";
-    assert(findSkip(s, "本") && s == "語");
-    s = "日本語";
-    assert(!findSkip(s, '五') && s == "日本語");
-    s = "日本語";
-    assert(!findSkip(s, "五") && s == "日本語");
-    s = "日本語";
-    assert(findSkip(s, '語') && s.empty);
-    s = "日本語";
-    assert(findSkip(s, "語") && s.empty);
+    {
+        string s1 = "日本語";
+        string s2 = "日本語";
+        assert( findSkip(s1, "本") && s1 == "語", format(`expected "語", got "%s".`, s1));
+        assert( findSkip(s2, '本') && s2 == "語", format(`expected "語", got "%s".`, s2));
+    }
+    {
+        string s1 = "日本語";
+        string s2 = "日本語";
+        assert(!findSkip(s1, "五") && s1 == "日本語", format(`expected "日本語", got "%s".`, s1));
+        assert(!findSkip(s2, '五') && s2 == "日本語", format(`expected "日本語", got "%s".`, s2));
+    }
+    {
+        string s1 = "日本語";
+        string s2 = "日本語";
+        assert( findSkip(s1, "語") && s1 == "", text(`expected "", got `, s1));
+        assert( findSkip(s2, '語') && s2 == "", text(`expected "", got `, s2));
+    }
 }
 
 unittest
@@ -5192,7 +5207,7 @@ auto findSplit(alias pred = "a == b", R, E)(R haystack, E needle)
     else
     {
         auto original = haystack.save;
-        size_t pos;
+        size_t pos = 0;
         for ( ; !haystack.empty ; haystack.popFront(), ++pos)
         {
             if (binaryFun!pred(haystack.front, needle))
@@ -5229,8 +5244,8 @@ auto findSplit(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
         auto original = haystack.save;
         auto h = haystack.save;
         auto n = needle.save;
-        size_t pos1, pos2;
-        for ( ;; )
+        size_t pos1 = 0, pos2 = 0;
+        for ( ; ; )
         {
             //Check the status of our ranges
             if (n.empty)
@@ -5279,15 +5294,14 @@ auto findSplitBefore(alias pred = "a == b", R, E)(R haystack, E needle)
     else
     {
         auto original = haystack.save;
-        size_t pos;
+        size_t pos = 0;
         for ( ; !haystack.empty ; haystack.popFront(), ++pos)
         {
             if (binaryFun!pred(haystack.front, needle))
                 break;
         }
         //This works in both cases actually.
-        return tuple(takeExactly(original, pos),
-            haystack);
+        return tuple(takeExactly(original, pos), haystack);
     }
 }
 /// Ditto
@@ -5307,22 +5321,19 @@ auto findSplitBefore(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
         auto original = haystack.save;
         auto h = haystack.save;
         auto n = needle.save;
-        size_t pos1;
-        size_t pos2;
-        for ( ;; )
+        size_t pos1 = 0, pos2 = 0;
+        for ( ; ; )
         {
             //Check the status of our ranges
             if (n.empty)
             {
                 //full match found!
-                return tuple(takeExactly(original, pos1),
-                    haystack);
+                return tuple(takeExactly(original, pos1), haystack);
             }
             if (h.empty)
             {
                 //Haystack empty, match NOT found
-                return tuple(takeExactly(original, pos2),
-                    h);
+                return tuple(takeExactly(original, pos2), h);
             }
 
             //Do the search
@@ -5355,25 +5366,22 @@ auto findSplitAfter(alias pred = "a == b", R, E)(R haystack, E needle)
         else
             immutable size_t needleLength = 1;
         immutable pos = balance.empty ? 0 : (haystack.length - balance.length + needleLength);
-        return tuple(haystack[0 .. pos],
-            haystack[pos .. haystack.length]);
+        return tuple(haystack[0 .. pos], haystack[pos .. haystack.length]);
     }
     else
     {
         auto original = haystack.save;
-        size_t pos;
+        size_t pos = 0;
         for ( ; !haystack.empty ; haystack.popFront(), ++pos)
         {
             if (binaryFun!pred(haystack.front, needle))
             {
                 ++pos;
                 haystack.popFront();
-                return tuple(takeExactly(original, pos),
-                    haystack);
+                return tuple(takeExactly(original, pos), haystack);
             }
         }
-        return tuple(takeExactly(original, 0),
-            original);
+        return tuple(takeExactly(original, 0), original);
     }
 }
 /// Ditto
@@ -5393,21 +5401,19 @@ auto findSplitAfter(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
         auto original = haystack.save;
         auto h = haystack.save;
         auto n = needle.save;
-        size_t pos1, pos2;
-        for ( ;; )
+        size_t pos1 = 0, pos2 = 0;
+        for ( ; ; )
         {
             //Check the status of our ranges
             if (n.empty)
             {
                 //full match found!
-                return tuple(takeExactly(original, pos2),
-                    h);
+                return tuple(takeExactly(original, pos2), h);
             }
             if (h.empty)
             {
                 //Haystack empty, match NOT found
-                return tuple(takeExactly(original, 0),
-                    original);
+                return tuple(takeExactly(original, 0), original);
             }
 
             //Do the search
