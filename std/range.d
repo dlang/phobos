@@ -2785,9 +2785,8 @@ n) elements. Consequently, the result of $(D takeExactly(range, n))
 always defines the $(D length) property (and initializes it to $(D n))
 even when $(D range) itself does not define $(D length).
 
-If $(D R) has slicing and its slice has length, $(D takeExactly) simply
-returns a slice of $(D range).
-Otherwise if $(D R) is an input range, the type of the result
+If $(D R) has slicing, $(D takeExactly) simply returns a slice of $(D
+range). Otherwise if $(D R) is an input range, the type of the result
 is an input range with length. Finally, if $(D R) is a forward range
 (including bidirectional), the type of the result is a forward range
 with length.
@@ -2831,7 +2830,7 @@ if (isInputRange!R && !hasSlicing!R)
 }
 
 auto takeExactly(R)(R range, size_t n)
-if (hasSlicing!R && hasLength!(typeof(range[0 .. n])))
+if (hasSlicing!R)
 {
     return range[0 .. n];
 }
@@ -7866,8 +7865,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
 
 
     /++ Ditto +/
-    static if(isBidirectionalRange!R)
-    void popBack()
+    static if(isBidirectionalRange!R) @property void popBack()
     {
         return (*_range).popBack();
     }
@@ -7903,8 +7901,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
         Only defined if $(D hasMobileElements!R) and $(D isForwardRange!R) are
         $(D true).
       +/
-    static if(hasMobileElements!R && isForwardRange!R)
-    auto moveFront()
+    static if(hasMobileElements!R && isForwardRange!R) @property auto moveFront()
     {
         return (*_range).moveFront();
     }
@@ -7914,8 +7911,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
         Only defined if $(D hasMobileElements!R) and $(D isBidirectionalRange!R)
         are $(D true).
       +/
-    static if(hasMobileElements!R && isBidirectionalRange!R)
-    auto moveBack()
+    static if(hasMobileElements!R && isBidirectionalRange!R) @property auto moveBack()
     {
         return (*_range).moveBack();
     }
@@ -7925,8 +7921,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
         Only defined if $(D hasMobileElements!R) and $(D isRandomAccessRange!R)
         are $(D true).
       +/
-    static if(hasMobileElements!R && isRandomAccessRange!R)
-    auto moveAt(IndexType)(IndexType index)
+    static if(hasMobileElements!R && isRandomAccessRange!R) @property auto moveAt(IndexType)(IndexType index)
         if(is(typeof((*_range).moveAt(index))))
     {
         return (*_range).moveAt(index);
