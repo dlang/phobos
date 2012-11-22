@@ -412,7 +412,7 @@ enum dummyRanges = q{
             }
             else
             {
-                @property uint opIndex(size_t index) const
+                uint opIndex(size_t index) const
                 {
                     return arr[index];
                 }
@@ -7899,20 +7899,20 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
         /++
             Only defined if $(D isRandomAccesRange!R) is $(D true).
           +/
-        @property auto ref opIndex(IndexType)(IndexType index) {assert(0);}
+        auto ref opIndex(IndexType)(IndexType index) {assert(0);}
 
         /++ Ditto +/
-        @property auto ref opIndex(IndexType)(IndexType index) const {assert(0);}
+        auto ref opIndex(IndexType)(IndexType index) const {assert(0);}
     }
     else static if(isRandomAccessRange!R)
     {
-        @property auto ref opIndex(IndexType)(IndexType index)
+        auto ref opIndex(IndexType)(IndexType index)
             if(is(typeof((*_range)[index])))
         {
             return (*_range)[index];
         }
 
-        @property auto ref opIndex(IndexType)(IndexType index) const
+        auto ref opIndex(IndexType)(IndexType index) const
             if(is(typeof((*cast(const R*)_range)[index])))
         {
             return (*_range)[index];
@@ -7983,24 +7983,24 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
         /++
             Only defined if $(D hasSlicing!R) is $(D true).
           +/
-        @property auto opSlice(IndexType1, IndexType2)
-                              (IndexType1 begin, IndexType2 end) {assert(0);}
+        auto opSlice(IndexType1, IndexType2)
+                    (IndexType1 begin, IndexType2 end) {assert(0);}
 
         /++ Ditto +/
-        @property auto opSlice(IndexType1, IndexType2)
-                              (IndexType1 begin, IndexType2 end) const {assert(0);}
+        auto opSlice(IndexType1, IndexType2)
+                    (IndexType1 begin, IndexType2 end) const {assert(0);}
     }
     else static if(hasSlicing!R)
     {
-        @property auto opSlice(IndexType1, IndexType2)
-                              (IndexType1 begin, IndexType2 end)
+        auto opSlice(IndexType1, IndexType2)
+                    (IndexType1 begin, IndexType2 end)
             if(is(typeof((*_range)[begin .. end])))
         {
             mixin(_genOpSlice());
         }
 
-        @property auto opSlice(IndexType1, IndexType2)
-                              (IndexType1 begin, IndexType2 end) const
+        auto opSlice(IndexType1, IndexType2)
+                    (IndexType1 begin, IndexType2 end) const
             if(is(typeof((*cast(const R*)_range)[begin .. end])))
         {
             mixin(_genOpSlice());
