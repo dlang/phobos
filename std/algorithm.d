@@ -1133,17 +1133,17 @@ void initializeAll(Range)(Range range)
 if (isForwardRange!Range && is(typeof(range.front = range.front)))
 {
     alias ElementType!Range T;
-    static assert(is(typeof(&(range.front()))) || !hasElaborateAssign!T,
+    static assert(is(typeof(&(range.front))) || !hasElaborateAssign!T,
             "Cannot initialize a range that does not expose"
             " references to its elements");
     static if (!isDynamicArray!Range)
     {
-        static if (is(typeof(&(range.front()))))
+        static if (is(typeof(&(range.front))))
         {
             // Range exposes references
             for (; !range.empty; range.popFront())
             {
-                memcpy(&(range.front()), &T.init, T.sizeof);
+                memcpy(&(range.front), &T.init, T.sizeof);
             }
         }
         else
