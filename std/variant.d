@@ -1842,7 +1842,7 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
 
     foreach(idx, T; AllowedTypes)
     {
-        if (T* ptr = variant.peek!T())
+        if (T* ptr = variant.peek!T)
         {
             enum dgIdx = HandlerOverloadMap.indices[idx];
 
