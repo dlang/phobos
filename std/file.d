@@ -248,7 +248,7 @@ void[] read(in char[] name, size_t upTo = size_t.max)
 unittest
 {
     write(deleteme, "1234");
-    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
+    scope(exit) { assert(deleteme.exists); remove(deleteme); }
     assert(read(deleteme, 2) == "12");
     assert(read(deleteme) == "1234");
 }
@@ -292,7 +292,7 @@ S readText(S = string)(in char[] name)
 unittest
 {
     write(deleteme, "abc\n");
-    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
+    scope(exit) { assert(deleteme.exists); remove(deleteme); }
     enforce(chomp(readText(deleteme)) == "abc");
 }
 
@@ -462,7 +462,7 @@ unittest
 {
     // create a file of size 1
     write(deleteme, "a");
-    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
+    scope(exit) { assert(deleteme.exists); remove(deleteme); }
     assert(getSize(deleteme) == 1);
     // create a file of size 3
     write(deleteme, "abc");
@@ -509,7 +509,7 @@ unittest
     auto currTime = Clock.currTime();
 
     write(deleteme, "a");
-    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
+    scope(exit) { assert(deleteme.exists); remove(deleteme); }
 
     SysTime accessTime1 = void;
     SysTime modificationTime1 = void;
@@ -595,7 +595,7 @@ version(Windows) unittest
     auto currTime = Clock.currTime();
 
     write(deleteme, "a");
-    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
+    scope(exit) { assert(deleteme.exists); remove(deleteme); }
 
     SysTime creationTime1 = void;
     SysTime accessTime1 = void;
@@ -716,7 +716,7 @@ SysTime timeLastModified(in char[] name, SysTime returnIfMissing)
 {
     version(Windows)
     {
-        if(!exists(name))
+        if(!name.exists)
             return returnIfMissing;
 
         SysTime dummy = void;
@@ -739,14 +739,14 @@ SysTime timeLastModified(in char[] name, SysTime returnIfMissing)
 unittest
 {
     //std.process.system("echo a > deleteme") == 0 || assert(false);
-    if(exists(deleteme))
+    if(deleteme.exists)
         remove(deleteme);
 
     write(deleteme, "a\n");
 
     scope(exit)
     {
-        assert(exists(deleteme));
+        assert(deleteme.exists);
         remove(deleteme);
     }
 
@@ -796,11 +796,11 @@ unittest
 
 unittest
 {
-    assert(exists("."));
-    assert(!exists("this file does not exist"));
+    assert(".".exists);
+    assert(!"this file does not exist".exists);
     write(deleteme, "a\n");
-    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
-    assert(exists(deleteme));
+    scope(exit) { assert(deleteme.exists); remove(deleteme); }
+    assert(deleteme.exists);
 }
 
 
@@ -1265,7 +1265,7 @@ void mkdir(in char[] pathname)
 void mkdirRecurse(in char[] pathname)
 {
     const left = dirName(pathname);
-    if (!exists(left))
+    if (!left.exists)
     {
         version (Windows)
         {   /* Prevent infinite recursion if left is "d:\" and
@@ -2140,7 +2140,7 @@ void setTimes(in char[] name,
 unittest
 {
     write(deleteme, "a\n");
-    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
+    scope(exit) { assert(deleteme.exists); remove(deleteme); }
     SysTime ftc1, fta1, ftm1;
     getTimes(deleteme, ftc1, fta1, ftm1);
     enforce(collectException(setTimes("nonexistent", fta1, ftm1)));
@@ -2202,7 +2202,7 @@ version(Windows) unittest
     auto d = deleteme ~ r".dir\a\b\c\d\e\f\g";
     mkdirRecurse(d);
     rmdirRecurse(deleteme ~ ".dir");
-    enforce(!exists(deleteme ~ ".dir"));
+    enforce(!(deleteme ~ ".dir").exists);
 }
 
 version(Posix) unittest
@@ -2214,15 +2214,15 @@ version(Posix) unittest
     core.sys.posix.unistd.symlink((deleteme~"/a/b/c\0").ptr,
             (deleteme~"/link\0").ptr);
     rmdirRecurse(deleteme~"/link");
-    enforce(exists(d));
+    enforce(d.exists);
     rmdirRecurse(deleteme);
-    enforce(!exists(deleteme));
+    enforce(!deleteme.exists);
 
     d = deleteme~"/a/b/c/d/e/f/g";
     mkdirRecurse(d);
     std.process.system("ln -sf "~deleteme~"/a/b/c "~deleteme~"/link");
     rmdirRecurse(deleteme);
-    enforce(!exists(deleteme));
+    enforce(!deleteme.exists);
 }
 
 unittest
@@ -2231,7 +2231,7 @@ unittest
 
     buf = new void[10];
     (cast(byte[])buf)[] = 3;
-    if (exists("unittest_write.tmp")) remove("unittest_write.tmp");
+    if ("unittest_write.tmp".exists) remove("unittest_write.tmp");
     write("unittest_write.tmp", buf);
     void buf2[] = read("unittest_write.tmp");
     assert(buf == buf2);
@@ -2241,9 +2241,9 @@ unittest
     assert(buf == buf2);
 
     remove("unittest_write.tmp");
-    assert(!exists("unittest_write.tmp"));
+    assert(!"unittest_write.tmp".exists);
     remove("unittest_write2.tmp");
-    assert(!exists("unittest_write2.tmp"));
+    assert(!"unittest_write2.tmp".exists);
 }
 
 //Remove this when _listDir is removed. It's not needed to test
@@ -2922,7 +2922,7 @@ unittest
     // Tuple!(int, double)[] x;
     // auto app = appender(&x);
     write(deleteme, "12 12.25\n345 1.125");
-    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
+    scope(exit) { assert(deleteme.exists); remove(deleteme); }
     auto a = slurp!(int, double)(deleteme, "%s %s");
     assert(a.length == 2);
     assert(a[0] == tuple(12, 12.25));
@@ -2977,7 +2977,7 @@ string tempDir()
             static string findExistingDir(T...)(lazy T alternatives)
             {
                 foreach (dir; alternatives)
-                    if (!dir.empty && exists(dir)) return dir;
+                    if (!dir.empty && dir.exists) return dir;
                 return null;
             }
 

@@ -364,7 +364,7 @@ string shell(string cmd)
             rndGen.popFront();
         }
         auto filename = a.data;
-        scope(exit) if (exists(filename)) remove(filename);
+        scope(exit) if (filename.exists) remove(filename);
         // We can't use escapeShellCommands here because we don't know
         // if cmd is escaped (wrapped in quotes) or not, without relying
         // on shady heuristics. The current code shouldn't cause much
