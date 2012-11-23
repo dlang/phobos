@@ -1689,7 +1689,7 @@ unittest
     union S7 { int a; int * b; }
     static assert(!hasRawAliasing!S6);
     static assert( hasRawAliasing!S7);
-    
+
     static assert(!hasRawAliasing!(void delegate()));
     static assert(!hasRawAliasing!(void delegate() const));
     static assert(!hasRawAliasing!(void delegate() immutable));
@@ -1697,7 +1697,7 @@ unittest
     static assert(!hasRawAliasing!(void delegate() shared const));
     static assert(!hasRawAliasing!(const(void delegate())));
     static assert(!hasRawAliasing!(immutable(void delegate())));
-    
+
     struct S8 { void delegate() a; int b; Object c; }
     class S12 { typeof(S8.tupleof) a; }
     class S13 { typeof(S8.tupleof) a; int* b; }
@@ -1817,7 +1817,7 @@ unittest
     static assert(!hasRawUnsharedAliasing!S8);
     static assert( hasRawUnsharedAliasing!S9);
     static assert(!hasRawUnsharedAliasing!S10);
-    
+
     static assert(!hasRawUnsharedAliasing!(void delegate()));
     static assert(!hasRawUnsharedAliasing!(void delegate() const));
     static assert(!hasRawUnsharedAliasing!(void delegate() immutable));
@@ -1864,7 +1864,7 @@ unittest
     static assert( hasRawUnsharedAliasing!(int[string]));
     static assert(!hasRawUnsharedAliasing!(shared(int[string])));
     static assert(!hasRawUnsharedAliasing!(immutable(int[string])));
-    
+
     struct S17
     {
         void delegate() shared a;
@@ -2049,7 +2049,7 @@ unittest
     static assert(!hasAliasing!(Rebindable!(immutable Object)));
     static assert( hasAliasing!(Rebindable!(shared Object)));
     static assert( hasAliasing!(Rebindable!Object));
-    
+
     struct S5
     {
         void delegate() immutable b;
@@ -2254,7 +2254,7 @@ unittest
     static assert(!hasUnsharedAliasing!S8);
 
     static assert( hasUnsharedAliasing!(uint[uint]));
-    
+
     static assert( hasUnsharedAliasing!(void delegate()));
     static assert( hasUnsharedAliasing!(void delegate() const));
     static assert(!hasUnsharedAliasing!(void delegate() immutable));
@@ -2297,7 +2297,7 @@ unittest
     static assert( hasUnsharedAliasing!(int, shared(int)*, Rebindable!Object));
     static assert(!hasUnsharedAliasing!(shared(int)*, Rebindable!(shared Object)));
     static assert(!hasUnsharedAliasing!());
-    
+
     struct S9
     {
         void delegate() shared a;
@@ -4464,6 +4464,31 @@ unittest
     static assert(!isMutable!(shared(const int)));
     static assert(!isMutable!(shared(inout int)));
     static assert(!isMutable!(immutable string));
+}
+
+/**
+ * Returns true if T is an instance of the template S.
+ */
+template isInstanceOf(alias S, T)
+{
+    static if (is(T x == S!Args, Args...))
+        enum bool isInstanceOf = true;
+    else
+        enum bool isInstanceOf = false;
+}
+
+unittest
+{
+    static struct Foo(T...) { }
+    static struct Bar(T...) { }
+    static struct Doo(T) { }
+    static struct ABC(int x) { }
+    static assert(isInstanceOf!(Foo, Foo!int));
+    static assert(!isInstanceOf!(Foo, Bar!int));
+    static assert(!isInstanceOf!(Foo, int));
+    static assert(isInstanceOf!(Doo, Doo!int));
+    static assert(isInstanceOf!(ABC, ABC!1));
+    static assert(!__traits(compiles, isInstanceOf!(Foo, Foo)));
 }
 
 /**
