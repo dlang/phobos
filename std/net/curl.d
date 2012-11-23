@@ -1308,7 +1308,7 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char, PostUnit)
     {
         // 50 is just an arbitrary number for now
         setMaxMailboxSize(thisTid, 50, OnCrowding.block);
-        auto tid = spawn(&(_spawnAsync!(Conn, Char, Terminator)));
+        auto tid = spawn(&_spawnAsync!(Conn, Char, Terminator));
         tid.send(thisTid);
         tid.send(terminator);
         tid.send(keepTerminator == KeepTerminator.yes);
@@ -1461,7 +1461,7 @@ auto byChunkAsync(Conn = AutoProtocol, PostUnit)
     {
         // 50 is just an arbitrary number for now
         setMaxMailboxSize(thisTid, 50, OnCrowding.block);
-        auto tid = spawn(&(_spawnAsync!(Conn, ubyte)));
+        auto tid = spawn(&_spawnAsync!(Conn, ubyte));
         tid.send(thisTid);
 
         _asyncDuplicateConnection(url, conn, postData, tid);
