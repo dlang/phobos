@@ -555,7 +555,7 @@ unittest
     auto intRange = map!"a"([1,2,3]);
     static assert(isRandomAccessRange!(typeof(intRange)));
 
-    foreach(DummyType; AllDummyRanges)
+    foreach (DummyType; AllDummyRanges)
     {
         DummyType d;
         auto m = map!"a * a"(d);
@@ -666,7 +666,7 @@ template reduce(fun...) if (fun.length >= 1)
     auto reduce(Args...)(Args args)
     if (Args.length > 0 && Args.length <= 2 && isIterable!(Args[$ - 1]))
     {
-        static if(isInputRange!(Args[$ - 1]))
+        static if (isInputRange!(Args[$ - 1]))
         {
             static if (Args.length == 2)
             {
@@ -724,9 +724,9 @@ template reduce(fun...) if (fun.length >= 1)
             alias Args[$ - 1] R;
             alias ForeachType!R E;
 
-            static if(args.length == 2)
+            static if (args.length == 2)
             {
-                static if(fun.length == 1)
+                static if (fun.length == 1)
                 {
                     auto result = Tuple!(Unqual!(Args[0]))(args[0]);
                 }
@@ -737,7 +737,7 @@ template reduce(fun...) if (fun.length >= 1)
 
                 enum bool initialized = true;
             }
-            else static if(fun.length == 1)
+            else static if (fun.length == 1)
             {
                 Tuple!(typeof(binaryFun!fun(E.init, E.init))) result = void;
                 bool initialized = false;
@@ -751,18 +751,18 @@ template reduce(fun...) if (fun.length >= 1)
 
             // For now, just iterate using ref to avoid unnecessary copying.
             // When Bug 2443 is fixed, this may need to change.
-            foreach(ref elem; r)
+            foreach (ref elem; r)
             {
-                if(initialized)
+                if (initialized)
                 {
-                    foreach(i, T; result.Types)
+                    foreach (i, T; result.Types)
                     {
                         result[i] = binaryFun!(fun[i])(result[i], elem);
                     }
                 }
                 else
                 {
-                    static if(is(typeof(&initialized)))
+                    static if (is(typeof(&initialized)))
                     {
                         initialized = true;
                     }
@@ -777,7 +777,7 @@ template reduce(fun...) if (fun.length >= 1)
             enforce(initialized,
                 "Cannot reduce an empty iterable w/o an explicit seed value.");
 
-            static if(fun.length == 1)
+            static if (fun.length == 1)
             {
                 return result[0];
             }
@@ -823,12 +823,12 @@ unittest
         int opApply(int delegate(ref int) dg)
         {
             int res;
-            if(actEmpty) return res;
+            if (actEmpty) return res;
 
-            foreach(i; 0..100)
+            foreach (i; 0..100)
             {
                 res = dg(i);
-                if(res) break;
+                if (res) break;
             }
             return res;
         }
@@ -918,8 +918,8 @@ unittest
     alias DummyRange!(ReturnBy.Reference, Length.No, RangeType.Input) InputRange;
     enum filler = uint.max;
     InputRange range;
-    fill(range,filler);
-    foreach(value;range.arr)
+    fill(range, filler);
+    foreach (value; range.arr)
     	assert(value == filler);
 }
 unittest
@@ -975,13 +975,13 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
             || (isInputRange!Range2 && isInfinite!Range2))
         && is(typeof(Range1.init.front = Range2.init.front)))
 {
-    static if(isInfinite!Range2)
+    static if (isInfinite!Range2)
     {
         //Range2 is infinite, no need for bounds checking or saving
-        static if(hasSlicing!Range2 && hasLength!Range1
+        static if (hasSlicing!Range2 && hasLength!Range1
             && is(typeof(filler[0 .. range.length])))
         {
-            copy(filler[0..range.length], range);
+            copy(filler[0 .. range.length], range);
         }
         else
         {
@@ -996,7 +996,7 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
     {
         enforce(!filler.empty, "Cannot fill range with an empty filler");
 
-        static if(hasLength!Range1 && hasLength!Range2
+        static if (hasLength!Range1 && hasLength!Range2
             && is(typeof(range.length > filler.length)))
         {
             //Case we have access to length
@@ -1048,7 +1048,7 @@ unittest
     alias DummyRange!(ReturnBy.Reference, Length.No, RangeType.Input) InputRange;
     InputRange range;
     fill(range,[1,2]);
-    foreach(i,value;range.arr)
+    foreach (i,value;range.arr)
     assert(value == (i%2==0?1:2));
 
     //test with a input being a "reference forward" range
@@ -1253,7 +1253,7 @@ private struct FilterResult(alias pred, Range)
         return _input.front;
     }
 
-    static if(isForwardRange!R)
+    static if (isForwardRange!R)
     {
         @property auto save()
         {
@@ -1285,7 +1285,7 @@ unittest
     static assert(isInfinite!(typeof(infinite)));
     static assert(isForwardRange!(typeof(infinite)));
 
-    foreach(DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges) {
         DummyType d;
         auto f = filter!"a & 1"(d);
         assert(equal(f, [1,3,5,7,9]));
@@ -1803,9 +1803,9 @@ if (isMutable!T && !is(typeof(T.init.proxySwap(T.init))))
         //types and therefore all of their elements get copied as part of
         //assigning them, which would be assigning overlapping arrays if lhs
         //and rhs were the same array.
-        static if(isStaticArray!T)
+        static if (isStaticArray!T)
         {
-            if(lhs.ptr == rhs.ptr)
+            if (lhs.ptr == rhs.ptr)
                 return;
         }
 
@@ -1949,7 +1949,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
         IndexType _frontLength = _unComputed;
         IndexType _backLength = _unComputed;
 
-        static if(isBidirectionalRange!Range)
+        static if (isBidirectionalRange!Range)
         {
             static IndexType lastIndexOf(Range haystack, Separator needle)
             {
@@ -2012,7 +2012,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
             }
         }
 
-        static if(isForwardRange!Range)
+        static if (isForwardRange!Range)
         {
             @property typeof(this) save()
             {
@@ -2022,7 +2022,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
             }
         }
 
-        static if(isBidirectionalRange!Range)
+        static if (isBidirectionalRange!Range)
         {
             @property Range back()
             {
@@ -2030,7 +2030,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
                 if (_backLength == _unComputed)
                 {
                     immutable lastIndex = lastIndexOf(_input, _separator);
-                    if(lastIndex == -1)
+                    if (lastIndex == -1)
                     {
                         _backLength = _input.length;
                     }
@@ -2123,8 +2123,8 @@ unittest
     assert(split.front == "b ");
     assert(split.back == "r ");
 
-    foreach(DummyType; AllDummyRanges) {  // Bug 4408
-        static if(isRandomAccessRange!DummyType) {
+    foreach (DummyType; AllDummyRanges) {  // Bug 4408
+        static if (isRandomAccessRange!DummyType) {
             static assert(isBidirectionalRange!DummyType);
             DummyType d;
             auto s = splitter(d, 5);
@@ -2250,7 +2250,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
             _frontLength = _frontLength.max;
         }
 
-        static if(isForwardRange!Range)
+        static if (isForwardRange!Range)
         {
             @property typeof(this) save()
             {
@@ -2432,7 +2432,7 @@ private struct SplitterResult(alias isTerminator, Range)
         }
     }
 
-    static if(isForwardRange!Range)
+    static if (isForwardRange!Range)
     {
         @property typeof(this) save()
         {
@@ -2479,9 +2479,9 @@ unittest
 
     static assert(isForwardRange!(typeof(splitter!"a == ' '"("ABC"))));
 
-    foreach(DummyType; AllDummyRanges)
+    foreach (DummyType; AllDummyRanges)
     {
-        static if(isRandomAccessRange!DummyType)
+        static if (isRandomAccessRange!DummyType)
         {
             auto rangeSplit = splitter!"a == 5"(DummyType.init);
             assert(equal(rangeSplit.front, [1,2,3,4]));
@@ -2869,7 +2869,7 @@ unittest
     assert(equal(r, [ 1, 2, 3, 4, 5 ][]));
     assert(equal(retro(r), retro([ 1, 2, 3, 4, 5 ][])));
 
-    foreach(DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges) {
         DummyType d;
         auto u = uniq(d);
         assert(equal(u, [1,2,3,4,5,6,7,8,9,10]));
@@ -2974,7 +2974,7 @@ unittest
                             tuple(4, 3u), tuple(5, 1u) ][]));
     static assert(isForwardRange!(typeof(group(arr))));
 
-    foreach(DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges) {
         DummyType d;
         auto g = group(d);
 
@@ -3568,7 +3568,7 @@ unittest
     assert(find(a, b) == [ 1, 2, 3, 4, 5 ]);
     assert(find(b, a).empty);
 
-    foreach(DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges) {
         DummyType d;
         auto findRes = find(d, 5);
         assert(equal(findRes, [5,6,7,8,9,10]));
@@ -4372,7 +4372,7 @@ if (isInputRange!R1 &&
     alias doesThisStart haystack;
     alias withThis needle;
 
-    static if(is(typeof(pred) : string))
+    static if (is(typeof(pred) : string))
         enum isDefaultPred = pred == "a == b";
     else
         enum isDefaultPred = false;
@@ -4464,7 +4464,7 @@ unittest
         }
     }
 
-    foreach(T; TypeTuple!(int, short))
+    foreach (T; TypeTuple!(int, short))
     {
         immutable arr = cast(T[])[0, 1, 2, 3, 4, 5];
 
@@ -4677,7 +4677,7 @@ if (isInputRange!R1 &&
     alias doesThisEnd haystack;
     alias withThis needle;
 
-    static if(is(typeof(pred) : string))
+    static if (is(typeof(pred) : string))
         enum isDefaultPred = pred == "a == b";
     else
         enum isDefaultPred = false;
@@ -4783,7 +4783,7 @@ unittest
         }
     }
 
-    foreach(T; TypeTuple!(int, short))
+    foreach (T; TypeTuple!(int, short))
     {
         immutable arr = cast(T[])[0, 1, 2, 3, 4, 5];
 
@@ -5277,7 +5277,7 @@ if (isInputRange!R1 && isInputRange!R2 && !(isSomeString!R1 && isSomeString!R2))
 // Specialization for strings (for speed purposes)
 int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSomeString!R2)
 {
-    static if(is(typeof(pred) : string))
+    static if (is(typeof(pred) : string))
         enum isLessThan = pred == "a < b";
     else
         enum isLessThan = false;
@@ -5403,7 +5403,7 @@ Returns the minimum of the passed-in values. The type of the result is
 computed by using $(XREF traits, CommonType).
 */
 MinType!(T1, T2, T) min(T1, T2, T...)(T1 a, T2 b, T xs)
-    if(is(typeof(a < b)))
+    if (is(typeof(a < b)))
 {
     static if (T.length == 0)
     {
@@ -5494,7 +5494,7 @@ assert(e == 2);
 ----
 */
 MaxType!(T1, T2, T) max(T1, T2, T...)(T1 a, T2 b, T xs)
-    if(is(typeof(a < b)))
+    if (is(typeof(a < b)))
 {
     static if (T.length == 0)
     {
@@ -7602,16 +7602,16 @@ private size_t getPivot(alias less, Range)(Range r)
 private void optimisticInsertionSort(alias less, Range)(Range r)
 {
     alias binaryFun!(less) pred;
-    if(r.length < 2) {
+    if (r.length < 2) {
         return ;
     }
 
     immutable maxJ = r.length - 1;
-    for(size_t i = r.length - 2; i != size_t.max; --i) {
+    for (size_t i = r.length - 2; i != size_t.max; --i) {
         size_t j = i;
         auto temp = r[i];
 
-        for(; j < maxJ && pred(r[j + 1], temp); ++j) {
+        for (; j < maxJ && pred(r[j + 1], temp); ++j) {
             r[j] = r[j + 1];
         }
 
@@ -7633,7 +7633,7 @@ unittest
     assert(isSorted(a));
 }
 
-// private
+//private
 void swapAt(R)(R r, size_t i1, size_t i2)
 {
     static if (is(typeof(&r[i1])))
@@ -8620,7 +8620,7 @@ void makeIndex(
     alias Unqual!(ElementType!RangeIndex) I;
     enforce(r.length == index.length,
         "r and index must be same length for makeIndex.");
-    static if(I.sizeof < size_t.sizeof)
+    static if (I.sizeof < size_t.sizeof)
     {
         enforce(r.length <= I.max, "Cannot create an index with " ~
             "element type " ~ I.stringof ~ " with length " ~
@@ -8628,7 +8628,7 @@ void makeIndex(
         );
     }
 
-    for(I i = 0; i < r.length; ++i)
+    for (I i = 0; i < r.length; ++i)
     {
         index[cast(size_t) i] = i;
     }
@@ -9112,7 +9112,7 @@ assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
 ---
 */
 bool all(alias pred, R)(R range)
-if(isInputRange!R && is(typeof(unaryFun!pred(range.front))))
+if (isInputRange!R && is(typeof(unaryFun!pred(range.front))))
 {
     return find!(not!(unaryFun!pred))(range).empty;
 }
@@ -9303,12 +9303,12 @@ public:
         assert(false);
     }
 
-    static if(allSatisfy!(isForwardRange, Rs))
+    static if (allSatisfy!(isForwardRange, Rs))
     {
         @property typeof(this) save()
         {
             auto ret = this;
-            foreach(ti, elem; _r)
+            foreach (ti, elem; _r)
             {
                 ret._r[ti] = elem.save;
             }
@@ -9433,12 +9433,12 @@ public:
         return _input[0].front;
     }
 
-    static if(allSatisfy!(isForwardRange, Rs))
+    static if (allSatisfy!(isForwardRange, Rs))
     {
         @property typeof(this) save()
         {
             auto ret = this;
-            foreach(ti, elem; _input)
+            foreach (ti, elem; _input)
             {
                 ret._input[ti] = elem.save;
             }
@@ -9536,7 +9536,7 @@ public:
         return r1.front;
     }
 
-    static if(isForwardRange!R1 && isForwardRange!R2)
+    static if (isForwardRange!R1 && isForwardRange!R2)
     {
         @property typeof(this) save()
         {
@@ -9646,7 +9646,7 @@ public:
         return r2.front;
     }
 
-    static if(isForwardRange!R1 && isForwardRange!R2)
+    static if (isForwardRange!R1 && isForwardRange!R2)
     {
         @property typeof(this) save()
         {
