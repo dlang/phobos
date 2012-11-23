@@ -754,7 +754,7 @@ auto toDelegate(F)(auto ref F fp) if (isCallable!(F))
         df.contextPtr = cast(void*) fp;
 
         DelegateFaker!(F) dummy;
-        auto dummyDel = &(dummy.doIt);
+        auto dummyDel = &dummy.doIt;
         df.funcPtr = dummyDel.funcptr;
 
         return df.del;

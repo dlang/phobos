@@ -6209,9 +6209,9 @@ ElementType!R moveFront(R)(R r)
 {
     static if (is(typeof(&r.moveFront))) {
         return r.moveFront();
-    } else static if (!hasElaborateCopyConstructor!(ElementType!(R))) {
+    } else static if (!hasElaborateCopyConstructor!(ElementType!R)) {
         return r.front;
-    } else static if (is(typeof(&r.front()) == ElementType!R*)) {
+    } else static if (is(typeof(&(r.front())) == ElementType!R*)) {
         return move(r.front);
     } else {
         static assert(0,
@@ -6241,9 +6241,9 @@ ElementType!R moveBack(R)(R r)
 {
     static if (is(typeof(&r.moveBack))) {
         return r.moveBack();
-    } else static if (!hasElaborateCopyConstructor!(ElementType!(R))) {
+    } else static if (!hasElaborateCopyConstructor!(ElementType!R)) {
         return r.back;
-    } else static if (is(typeof(&r.back()) == ElementType!R*)) {
+    } else static if (is(typeof(&(r.back())) == ElementType!R*)) {
         return move(r.back);
     } else {
         static assert(0,
