@@ -8295,6 +8295,17 @@ unittest
 
 }
 
+unittest
+{
+    //test stable sort + zip
+    auto x = [10, 50, 60, 60, 20];
+    dchar[] y = "abcde"d.dup;
+
+    sort!("a[0] < b[0]", SwapStrategy.stable)(zip(x, y));
+    assert(x == [10, 20, 50, 60, 60]);
+    assert(y == "aebcd"d);
+}
+
 // schwartzSort
 /**
 Sorts a range using an algorithm akin to the $(WEB
