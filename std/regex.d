@@ -1773,7 +1773,7 @@ struct Parser(R, bool CTFE=false)
     //try to generate optimal IR code for this CodepointSet
     @trusted void charsetToIr(in CodepointSet set)
     {//@@@BUG@@@ writeln is @system
-        uint chars = set.chars();
+        uint chars = set.chars;
         if(chars < Bytecode.maxSequence)
         {
             switch(chars)
@@ -6774,7 +6774,7 @@ private:
 public:
     auto ref opSlice()
     {
-        return this.save();
+        return this.save;
     }
 
     ///Forward range primitives.

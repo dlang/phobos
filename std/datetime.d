@@ -485,7 +485,7 @@ public:
     @safe
     static @property TickDuration currSystemTick()
     {
-        return TickDuration.currSystemTick();
+        return TickDuration.currSystemTick;
     }
 
     version(testStdDateTime) unittest
@@ -29275,7 +29275,7 @@ assert(tz.dstName == "PDT");
             foreach(ref inUTC; transitionInUTC)
                 inUTC = readVal!bool(tzFile);
 
-            _enforceValidTZFile(!tzFile.eof());
+            _enforceValidTZFile(!tzFile.eof);
 
             //If version 2, the information is duplicated in 64-bit.
             if(tzFileVersion == '2')
@@ -29365,12 +29365,12 @@ assert(tz.dstName == "PDT");
                     inUTC = readVal!bool(tzFile);
             }
 
-            _enforceValidTZFile(tzFile.readln().strip().empty());
+            _enforceValidTZFile(tzFile.readln().strip().empty);
 
             auto posixEnvStr = tzFile.readln().strip();
 
-            _enforceValidTZFile(tzFile.readln().strip().empty());
-            _enforceValidTZFile(tzFile.eof());
+            _enforceValidTZFile(tzFile.readln().strip().empty);
+            _enforceValidTZFile(tzFile.eof);
 
 
             auto transitionTypes = new TransitionType*[](tempTTInfos.length);
@@ -29505,7 +29505,7 @@ assert(tz.dstName == "PDT");
             {
                 auto tzName = dentry.name[tzDatabaseDir.length .. $];
 
-                if(!tzName.extension().empty() ||
+                if(!tzName.extension().empty ||
                    !tzName.startsWith(subName) ||
                    tzName == "+VERSION")
                 {
@@ -29684,7 +29684,7 @@ private:
         import std.bitmanip;
         T[1] buff;
 
-        _enforceValidTZFile(!tzFile.eof());
+        _enforceValidTZFile(!tzFile.eof);
         tzFile.rawRead(buff);
 
         return bigEndianToNative!T(cast(ubyte[T.sizeof])buff);
@@ -29698,7 +29698,7 @@ private:
     {
         auto buff = new T(length);
 
-        _enforceValidTZFile(!tzFile.eof());
+        _enforceValidTZFile(!tzFile.eof);
         tzFile.rawRead(buff);
 
         return buff;
@@ -30093,7 +30093,7 @@ else version(Windows)
                                                    otherTime.wMinute,
                                                    otherTime.wSecond);
                 immutable diff = utcDateTime - otherDateTime;
-                immutable minutes = diff.total!"minutes"() - tzInfo.Bias;
+                immutable minutes = diff.total!"minutes" - tzInfo.Bias;
 
                 if(minutes == tzInfo.DaylightBias)
                     return true;
@@ -30185,7 +30185,7 @@ else version(Windows)
                                                          utcTime.wSecond);
 
                         immutable diff = localDateTime - utcDateTime;
-                        immutable minutes = -tzInfo.Bias - diff.total!"minutes"();
+                        immutable minutes = -tzInfo.Bias - diff.total!"minutes";
 
                         if(minutes == tzInfo.DaylightBias)
                             return true;

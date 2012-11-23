@@ -3065,7 +3065,7 @@ Target parseElement(Target, Source)(ref Source s)
                 result.put(parseEscape(s));
                 break;
             default:
-                result.put(s.front());
+                result.put(s.front);
                 s.popFront();
                 break;
         }

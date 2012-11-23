@@ -1004,7 +1004,7 @@ template ElementType(R)
 unittest
 {
     enum XYZ : string { a = "foo" }
-    auto x = front(XYZ.a);
+    auto x = XYZ.a.front;
     immutable char[3] a = "abc";
     int[] i;
     void[] buf;
@@ -1035,7 +1035,7 @@ template ElementEncodingType(R)
 unittest
 {
     enum XYZ : string { a = "foo" }
-    auto x = front(XYZ.a);
+    auto x = XYZ.a.front;
     immutable char[3] a = "abc";
     int[] i;
     void[] buf;
@@ -2487,7 +2487,7 @@ unittest
     {
         assert(rr.front == moveFront(rr));
     }
-    r.front() = 5;
+    r.front = 5;
     assert(r.front == 5);
 
     // Test instantiation without lvalue elements.
@@ -2528,7 +2528,6 @@ if (isInputRange!(Unqual!Range)
     public R source;
 
     private size_t _maxAvailable;
-    private enum bool byRef = is(typeof(&_input.front) == ElementType!(R)*);
 
     alias R Source;
 
@@ -2631,7 +2630,7 @@ if (isInputRange!(Unqual!Range)
             auto back(ElementType!R v)
             {
                 // This has to return auto instead of void because of Bug 4706.
-                assert(!empty, 
+                assert(!empty,
                     "Attempting to assign to the back of an empty "
                     ~ Take.stringof);
                 source[this.length - 1] = v;
@@ -2650,7 +2649,7 @@ if (isInputRange!(Unqual!Range)
         {
             auto moveBack()
             {
-                assert(!empty, 
+                assert(!empty,
                     "Attempting to move the back of an empty "
                     ~ Take.stringof);
                 return .moveAt(source, this.length - 1);
@@ -2824,7 +2823,7 @@ if (isInputRange!R && !hasSlicing!R)
             @property auto ref front()
             {
                 assert(_n > 0, "front() on an empty " ~ Result.stringof);
-                return _input.front();
+                return _input.front;
             }
             void popFront() { _input.popFront(); --_n; }
             @property size_t length() const { return _n; }
@@ -5083,11 +5082,11 @@ unittest
 
     // unsigned reverse iota can be buggy if .length doesn't take them into
     // account (issue 7982).
-    assert(iota(10u, 0u, -1).length() == 10);
-    assert(iota(10u, 0u, -2).length() == 5);
-    assert(iota(uint.max, uint.max-10, -1).length() == 10);
-    assert(iota(uint.max, uint.max-10, -2).length() == 5);
-    assert(iota(uint.max, 0u, -1).length() == uint.max);
+    assert(iota(10u, 0u, -1).length == 10);
+    assert(iota(10u, 0u, -2).length == 5);
+    assert(iota(uint.max, uint.max-10, -1).length == 10);
+    assert(iota(uint.max, uint.max-10, -2).length == 5);
+    assert(iota(uint.max, 0u, -1).length == uint.max);
 }
 
 unittest

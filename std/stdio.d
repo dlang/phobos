@@ -851,7 +851,7 @@ with every line.  */
     size_t readln(C, R)(ref C[] buf, R terminator)
         if (isBidirectionalRange!R && is(typeof(terminator.front == buf[0])))
     {
-        auto last = terminator.back();
+        auto last = terminator.back;
         C[] buf2;
         swap(buf, buf2);
         for (;;) {

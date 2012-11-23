@@ -687,7 +687,7 @@ unittest
 
         @property auto empty()
         {
-            return text.empty();
+            return text.empty;
         }
 
         auto popFront()
