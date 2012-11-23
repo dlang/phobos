@@ -721,7 +721,7 @@ AbstractTask base = {runTask :
                     stderr.writeln("Yield from workForce.");
                 }
 
-                return yieldForce();
+                return yieldForce;
             }
         }
     }
@@ -761,7 +761,7 @@ AbstractTask base = {runTask :
     {
         if(isScoped && pool !is null && taskStatus != TaskStatus.done)
         {
-            yieldForce();
+            yieldForce;
         }
     }
 
@@ -802,7 +802,7 @@ void main()
     auto file2Data = read("bar.txt");
 
     // Get the results of reading foo.txt.
-    auto file1Data = file1Task.yieldForce();
+    auto file1Data = file1Task.yieldForce;
 }
 ---
 
@@ -840,7 +840,7 @@ void parallelSort(T)(T[] data)
     auto recurseTask = task!(parallelSort)(greaterEqual);
     taskPool.put(recurseTask);
     parallelSort(less);
-    recurseTask.yieldForce();
+    recurseTask.yieldForce;
 }
 ---
 */
@@ -871,7 +871,7 @@ void main()
     auto file2Data = read("bar.txt");
 
     // Get the results of reading foo.txt.
-    auto file1Data = file1Task.yieldForce();
+    auto file1Data = file1Task.yieldForce;
 }
 ---
 
@@ -2042,7 +2042,7 @@ public:
                 }
 
                 buf2 = buf1;
-                buf1 = nextBufTask.yieldForce();
+                buf1 = nextBufTask.yieldForce;
                 bufPos = 0;
 
                 if(source.empty)
@@ -2222,7 +2222,7 @@ public:
                 }
 
                 buf2 = buf1;
-                buf1 = nextBufTask.yieldForce();
+                buf1 = nextBufTask.yieldForce;
                 bufPos = 0;
 
                 if(source.empty)
@@ -2714,7 +2714,7 @@ public:
             {
                 try
                 {
-                    task.yieldForce();
+                    task.yieldForce;
                 }
                 catch(Throwable e)
                 {
@@ -3232,7 +3232,7 @@ public:
     {
         queueLock();
         scope(exit) queueUnlock();
-        return (size == 0) ? true : pool[0].isDaemon();
+        return (size == 0) ? true : pool[0].isDaemon;
     }
 
     /// Ditto
@@ -3258,7 +3258,7 @@ public:
     int priority() @property @trusted
     {
         return (size == 0) ? core.thread.Thread.PRIORITY_MIN :
-        pool[0].priority();
+        pool[0].priority;
     }
 
     /// Ditto
@@ -3268,7 +3268,7 @@ public:
         {
             foreach(t; pool)
             {
-                t.priority(newPriority);
+                t.priority = newPriority;
             }
         }
     }
@@ -3466,7 +3466,7 @@ private void submitAndExecute(
     {
         try
         {
-            task.yieldForce();
+            task.yieldForce;
         }
         catch(Throwable e)
         {
@@ -3951,29 +3951,29 @@ unittest
     // Test task().
     auto t = task!refFun(x);
     poolInstance.put(t);
-    t.yieldForce();
+    t.yieldForce;
     assert(t.args[0] == 1);
 
     auto t2 = task(&refFun, x);
     poolInstance.put(t2);
-    t2.yieldForce();
+    t2.yieldForce;
     assert(t2.args[0] == 1);
 
     // Test scopedTask().
     auto st = scopedTask!refFun(x);
     poolInstance.put(st);
-    st.yieldForce();
+    st.yieldForce;
     assert(st.args[0] == 1);
 
     auto st2 = scopedTask(&refFun, x);
     poolInstance.put(st2);
-    st2.yieldForce();
+    st2.yieldForce;
     assert(st2.args[0] == 1);
 
     // Test executeInNewThread().
     auto ct = scopedTask!refFun(x);
     ct.executeInNewThread(Thread.PRIORITY_MAX);
-    ct.yieldForce();
+    ct.yieldForce;
     assert(ct.args[0] == 1);
 
     // Test ref return.
@@ -3998,11 +3998,11 @@ unittest
         auto safePool = new TaskPool(0);
         auto t = task(&bump, 1);
         taskPool.put(t);
-        assert(t.yieldForce() == 2);
+        assert(t.yieldForce == 2);
 
         auto st = scopedTask(&bump, 1);
         taskPool.put(st);
-        assert(st.yieldForce() == 2);
+        assert(st.yieldForce == 2);
         safePool.stop();
     }
 
@@ -4032,8 +4032,8 @@ unittest
     auto addScopedTask = scopedTask(&add, addLhs, addRhs);
     poolInstance.put(addTask);
     poolInstance.put(addScopedTask);
-    assert(addTask.yieldForce() == 3);
-    assert(addScopedTask.yieldForce() == 3);
+    assert(addTask.yieldForce == 3);
+    assert(addScopedTask.yieldForce == 3);
 
     // Test parallel foreach with non-random access range.
     auto range = filter!"a != 666"([0, 1, 2, 3, 4]);
@@ -4117,7 +4117,7 @@ unittest
         pool1.put(tSlow);
         pool1.finish();
         assert(!tSlow.done);
-        tSlow.yieldForce();
+        tSlow.yieldForce;
         // Can't assert that pool1.status == PoolState.stopNow because status 
         // doesn't change until after the "done" flag is set and the waiting
         // thread is woken up.

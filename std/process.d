@@ -1076,7 +1076,7 @@ string escapeWindowsShellCommand(in char[] command)
             default:
                 result.put(c);
         }
-    return result.data();
+    return result.data;
 }
 
 private string escapeShellCommandString(string command)

@@ -1074,7 +1074,7 @@ unittest
  * //provide a custom RNG. Must be seeded manually.
  * Xorshift192 gen;
  *
- * gen.seed(unpredictableSeed());
+ * gen.seed(unpredictableSeed);
  * auto uuid3 = randomUUID(gen);
  * ------------------------------------------
  */
@@ -1127,7 +1127,7 @@ unittest
 
     //provide a custom RNG. Must be seeded manually.
     Xorshift192 gen;
-    gen.seed(unpredictableSeed());
+    gen.seed(unpredictableSeed);
     auto uuid3 = randomUUID(gen);
 
     auto u1 = randomUUID();

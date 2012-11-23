@@ -1275,11 +1275,11 @@ unittest
     auto under10 = filter!("a < 10")(a);
     assert(equal(under10, [1, 3, 5][]));
     static assert(isForwardRange!(typeof(under10)));
-    under10.front() = 4;
+    under10.front = 4;
     assert(equal(under10, [4, 3, 5][]));
-    under10.front() = 40;
+    under10.front = 40;
     assert(equal(under10, [40, 3, 5][]));
-    under10.front() = 1;
+    under10.front = 1;
 
     auto infinite = filter!"a > 2"(repeat(3));
     static assert(isInfinite!(typeof(infinite)));
@@ -2747,7 +2747,7 @@ unittest
     // joiner allows in-place mutation!
     auto a = [ [1, 2, 3], [42, 43] ];
     auto j = joiner(a);
-    j.front() = 44;
+    j.front = 44;
     assert(a == [ [44, 2, 3], [42, 43] ]);
 
     // bugzilla 8240
@@ -7737,7 +7737,7 @@ void schwartzSort(alias transform, alias less = "a < b",
         xform[i] = transform(e);
     }
     auto z = zip(xform, r);
-    alias typeof(z.front()) ProxyType;
+    alias typeof(z.front) ProxyType;
     bool myLess(ProxyType a, ProxyType b)
     {
         return binaryFun!less(a[0], b[0]);

@@ -89,7 +89,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
         JSONValue root = void;
         root.type = JSON_TYPE.NULL;
 
-        if(json.empty()) return root;
+        if(json.empty) return root;
 
         int depth = -1;
         dchar next = 0;
@@ -101,8 +101,8 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
 
         dchar peekChar() {
                 if(!next) {
-                        if(json.empty()) return '\0';
-                        next = json.front();
+                        if(json.empty) return '\0';
+                        next = json.front;
                         json.popFront();
                 }
                 return next;
@@ -121,8 +121,8 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
                         next = 0;
                 }
                 else {
-                        if(json.empty()) error("Unexpected end of data.");
-                        c = json.front();
+                        if(json.empty) error("Unexpected end of data.");
+                        c = json.front;
                         json.popFront();
                 }
 

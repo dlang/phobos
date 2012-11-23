@@ -77,8 +77,8 @@ version (all)
     OutBuffer b = new OutBuffer();      // outbuffer
     std.ctype.tolower('A');             // ctype
     RegExp r = new RegExp(null, null);  // regexp
-    uint ranseed = std.random.unpredictableSeed();
-    thisTid();
+    uint ranseed = std.random.unpredictableSeed;
+    thisTid;
     int a[];
     a.reverse;                          // adi
     a.sort;                             // qsort

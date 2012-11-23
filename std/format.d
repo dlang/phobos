@@ -1811,7 +1811,7 @@ unittest
     {
         string value;
         const @property bool empty(){ return !value.length; }
-        const @property dchar front(){ return value.front(); }
+        const @property dchar front(){ return value.front; }
         void popFront(){ value.popFront(); }
 
         const @property size_t length(){ return value.length; }
@@ -2103,7 +2103,7 @@ if (isSomeString!T && !is(T == enum))
                 formatChar(app, c, '"');
             }
             put(app, '\"');
-            put(w, app.data());
+            put(w, app.data);
             return;
         }
         catch (UTFException)
@@ -4645,10 +4645,10 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
          */
         void putArray(void* p, size_t len, TypeInfo valti)
         {
-          //printf("\nputArray(len = %u), tsize = %u\n", len, valti.tsize());
+          //printf("\nputArray(len = %u), tsize = %u\n", len, valti.tsize);
           putc('[');
           valti = skipCI(valti);
-          size_t tsize = valti.tsize();
+          size_t tsize = valti.tsize;
           auto argptrSave = argptr;
           auto tiSave = ti;
           auto mSave = m;
@@ -4753,7 +4753,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 else version (Win64)
                 {
                     void* q2 = void;
-                    auto valuesize = valti.tsize();
+                    auto valuesize = valti.tsize;
                     if (valuesize > 8 && m != Mangle.Tsarray)
                     {   q2 = pvalue;
                         argptr = &q2;
@@ -5012,12 +5012,12 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 version(X86)
                 {
                     s = tis.xtoString(argptr);
-                    argptr += (tis.tsize() + 3) & ~3;
+                    argptr += (tis.tsize + 3) & ~3;
                 }
                 else version(Win64)
                 {
                     void* p = argptr;
-                    if (tis.tsize() > 8)
+                    if (tis.tsize > 8)
                         p = *cast(void**)p;
                     s = tis.xtoString(p);
                     argptr += size_t.sizeof;
@@ -5026,7 +5026,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 {
                     void[32] parmn = void; // place to copy struct if passed in regs
                     void* p;
-                    auto tsize = tis.tsize();
+                    auto tsize = tis.tsize;
                     TypeInfo arg1, arg2;
                     if (!tis.argTypes(arg1, arg2))      // if could be passed in regs
                     {   assert(tsize <= parmn.length);
@@ -5038,7 +5038,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                          * it always being passed in memory
                          */
                         // The arg may have more strict alignment than the stack
-                        auto talign = tis.talign();
+                        auto talign = tis.talign;
                         __va_list* ap = cast(__va_list*)argptr;
                         p = cast(void*)((cast(size_t)ap.stack_args + talign - 1) & ~(talign - 1));
                         ap.stack_args = cast(void*)(cast(size_t)p + ((tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1)));

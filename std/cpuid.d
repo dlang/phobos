@@ -79,8 +79,8 @@ version(D_InlineAsm_X86)
             "Signature:        Family=%d Model=%d Stepping=%d\n"~
             "Features:         %s\n"~
             "Multithreading:   %d threads / %d cores\n",
-                vendor(),
-                processor(),
+                vendor,
+                processor,
                 family, model, stepping,
                 feats,
                 threadsPerCPU, coresPerCPU);
@@ -141,7 +141,7 @@ version(D_InlineAsm_X86)
 
     shared static this()
     {
-        switch (vendor())
+        switch (vendor)
         {
         case "GenuineIntel":
             manufac = INTEL;
