@@ -1290,7 +1290,7 @@ abstract class Address
     /// Family of this address.
     @property AddressFamily addressFamily() const
     {
-        return cast(AddressFamily) name().sa_family;
+        return cast(AddressFamily) name.sa_family;
     }
 
     // Common code for toAddrString and toHostNameString
@@ -2928,7 +2928,7 @@ public:
 
         version (Windows)
         {
-            auto msecs = to!int(value.total!"msecs"());
+            auto msecs = to!int(value.total!"msecs");
             if (msecs != 0 && option == SocketOption.RCVTIMEO)
                 msecs = max(1, msecs - WINSOCK_TIMEOUT_SKEW);
             setOption(level, option, msecs);
@@ -3013,7 +3013,7 @@ public:
     static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, Duration timeout)
     {
         TimeVal tv;
-        tv.seconds      = to!(tv.tv_sec_t )(timeout.total!"seconds"());
+        tv.seconds      = to!(tv.tv_sec_t )(timeout.total!"seconds");
         tv.microseconds = to!(tv.tv_usec_t)(timeout.fracSec.usecs);
         return select(checkRead, checkWrite, checkError, &tv);
     }

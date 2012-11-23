@@ -633,7 +633,7 @@ unittest
 @system unittest
 {
     import std.conv, std.random, std.range;
-    immutable seed = unpredictableSeed();
+    immutable seed = unpredictableSeed;
     auto rnd = Random(seed);
 
     auto testCases = randomSample(unicodeProperties, 10, rnd);

@@ -704,7 +704,7 @@ public:
     {
         static if (isNumeric!(T))
         {
-            if (convertsTo!real())
+            if (convertsTo!real)
             {
                 // maybe optimize this fella; handle ints separately
                 return to!T(get!real);
@@ -725,7 +725,7 @@ public:
 
             else
             {
-                enforce(false, text("Type ", type(), " does not convert to ",
+                enforce(false, text("Type ", type, " does not convert to ",
                                 typeid(T)));
                 assert(0);
             }
@@ -1055,7 +1055,7 @@ public:
     int opApply(Delegate)(scope Delegate dg) if (is(Delegate == delegate))
     {
         alias ParameterTypeTuple!(Delegate)[0] A;
-        if (type() == typeid(A[]))
+        if (type == typeid(A[]))
         {
             auto arr = get!(A[]);
             foreach (ref e; arr)
@@ -1077,7 +1077,7 @@ public:
         }
         else
         {
-            enforce(false, text("Variant type ", type(),
+            enforce(false, text("Variant type ", type,
                             " not iterable with values of type ",
                             A.stringof));
         }
@@ -1497,7 +1497,7 @@ unittest
 unittest
 {
     const x = Variant(42);
-    auto y1 = x.get!(const int)();
+    auto y1 = x.get!(const int);
     // @@@BUG@@@
     //auto y2 = x.get!(immutable int)();
 }
@@ -1829,7 +1829,7 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
 
     enum HandlerOverloadMap = visitGetOverloadMap();
 
-    if (!variant.hasValue())
+    if (!variant.hasValue)
     {
         // Call the exception function. The HandlerOverloadMap
         // will have its exceptionFuncIdx field set to value != -1 if an

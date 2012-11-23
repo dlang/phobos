@@ -160,9 +160,9 @@ class CFile : Stream {
     file.write(i);
     // string#1 + string#2 + int should give exacly that
     version (Windows)
-        assert(file.position() == 19 + 13 + 4);
+        assert(file.position == 19 + 13 + 4);
     version (Posix)
-        assert(file.position() == 18 + 13 + 4);
+        assert(file.position == 18 + 13 + 4);
     file.close();
     // no operations are allowed when file is closed
     assert(!file.readable && !file.writeable && !file.seekable);
@@ -178,17 +178,17 @@ class CFile : Stream {
     // jump over "Hello, "
     file.seek(7, SeekPos.Current);
     version (Windows)
-      assert(file.position() == 19 + 7);
+      assert(file.position == 19 + 7);
     version (Posix)
-      assert(file.position() == 18 + 7);
+      assert(file.position == 18 + 7);
     assert(!std.algorithm.cmp(file.readString(6), "world!"));
     i = 0; file.read(i);
     assert(i == 666);
     // string#1 + string#2 + int should give exacly that
     version (Windows)
-      assert(file.position() == 19 + 13 + 4);
+      assert(file.position == 19 + 13 + 4);
     version (Posix)
-      assert(file.position() == 18 + 13 + 4);
+      assert(file.position == 18 + 13 + 4);
     // we must be at the end of file
     file.close();
     f = fopen("stream.txt","w+");

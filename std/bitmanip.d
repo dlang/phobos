@@ -1385,7 +1385,7 @@ struct BitArray
     {
         BitArray r;
 
-        r = this.dup();
+        r = this.dup;
         r ~= b;
         return r;
     }

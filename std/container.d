@@ -3796,8 +3796,8 @@ the heap work incorrectly.
     void acquire(Store s, size_t initialSize = size_t.max)
     {
         _payload.refCountedStore.ensureInitialized();
-        _store() = move(s);
-        _length() = min(_store.length, initialSize);
+        _store = move(s);
+        _length = min(_store.length, initialSize);
         if (_length < 2) return;
         for (auto i = (_length - 2) / 2; ; )
         {
@@ -3814,8 +3814,8 @@ heap.
     void assume(Store s, size_t initialSize = size_t.max)
     {
         _payload.refCountedStore.ensureInitialized();
-        _store() = s;
-        _length() = min(_store.length, initialSize);
+        _store = s;
+        _length = min(_store.length, initialSize);
         assertValid();
     }
 
@@ -4557,7 +4557,7 @@ struct Array(T) if (is(T == bool))
      */
     T removeAny()
     {
-        auto result = back();
+        auto result = back;
         removeBack();
         return result;
     }

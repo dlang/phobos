@@ -1597,7 +1597,7 @@ unittest
 
     // save()
     auto ps1 = pathSplitter("foo/bar/baz");
-    auto ps2 = ps1.save();
+    auto ps2 = ps1.save;
     ps1.popFront();
     assert (equal2(ps1, ["bar", "baz"]));
     assert (equal2(ps2, ["foo", "bar", "baz"]));

@@ -2320,7 +2320,7 @@ private static:
      * Returns D code which declares function parameters.
      * "ref int a0, real a1, ..."
      */
-    private string generateParameters(string myFuncInfo, func...)() @property
+    private string generateParameters(string myFuncInfo, func...)()
     {
         alias ParameterStorageClass STC;
         alias ParameterStorageClassTuple!(func) stcs;

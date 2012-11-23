@@ -1030,11 +1030,11 @@ auto n = rnd.front;
     if (!seeded)
     {
         uint threadID = cast(uint) cast(void*) Thread.getThis();
-        rand.seed((getpid() + threadID) ^ cast(uint) TickDuration.currSystemTick().length);
+        rand.seed((getpid() + threadID) ^ cast(uint) TickDuration.currSystemTick.length);
         seeded = true;
     }
     rand.popFront();
-    return cast(uint) (TickDuration.currSystemTick().length ^ rand.front);
+    return cast(uint) (TickDuration.currSystemTick.length ^ rand.front);
 }
 
 unittest

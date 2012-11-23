@@ -977,12 +977,12 @@ unittest
 {
     if (!netAllowed()) return;
     auto res = byLine(testUrl1);
-    auto line = res.front();
+    auto line = res.front;
     assert(line == "Hello world",
            "byLine!HTTP() returns unexpected content: " ~ line);
 
     auto res2 = byLine(testUrl1, KeepTerminator.no, '\n', HTTP());
-    line = res2.front();
+    line = res2.front;
     assert(line == "Hello world",
            "byLine!HTTP() returns unexpected content: " ~ line);
 }
@@ -1052,12 +1052,12 @@ unittest
     if (!netAllowed()) return;
 
     auto res = byChunk(testUrl1);
-    auto line = res.front();
+    auto line = res.front;
     assert(line == cast(ubyte[])"Hello world\n",
            "byLineAsync!HTTP() returns unexpected content " ~ to!string(line));
 
     auto res2 = byChunk(testUrl1, 1024, HTTP());
-    line = res2.front();
+    line = res2.front;
     assert(line == cast(ubyte[])"Hello world\n",
            "byLineAsync!HTTP() returns unexpected content: " ~ to!string(line));
 }
@@ -1346,11 +1346,11 @@ unittest
 {
     if (!netAllowed()) return;
     auto res = byLineAsync(testUrl2, "Hello world");
-    auto line = res.front();
+    auto line = res.front;
     assert(line == "Hello world",
            "byLineAsync!HTTP() returns unexpected content " ~ line);
     res = byLineAsync(testUrl1);
-    line = res.front();
+    line = res.front;
     assert(line == "Hello world",
            "byLineAsync!HTTP() returns unexpected content: " ~ line);
 }
@@ -1497,11 +1497,11 @@ unittest
 {
     if (!netAllowed()) return;
     auto res = byChunkAsync(testUrl2, "Hello world");
-    auto line = res.front();
+    auto line = res.front;
     assert(line == cast(ubyte[])"Hello world",
            "byLineAsync!HTTP() returns unexpected content " ~ to!string(line));
     res = byChunkAsync(testUrl1);
-    line = res.front();
+    line = res.front;
     assert(line == cast(ubyte[])"Hello world\n",
            "byLineAsync!HTTP() returns unexpected content: " ~ to!string(line));
 }
@@ -1607,7 +1607,7 @@ private mixin template Protocol()
     @property void dataTimeout(Duration d)
     {
         p.curl.set(CurlOption.low_speed_limit, 1);
-        p.curl.set(CurlOption.low_speed_time, d.total!"seconds"());
+        p.curl.set(CurlOption.low_speed_time, d.total!"seconds");
     }
 
     /** Set maximum time an operation is allowed to take.
@@ -1615,13 +1615,13 @@ private mixin template Protocol()
      */
     @property void operationTimeout(Duration d)
     {
-        p.curl.set(CurlOption.timeout_ms, d.total!"msecs"());
+        p.curl.set(CurlOption.timeout_ms, d.total!"msecs");
     }
 
     /// Set timeout for connecting.
     @property void connectTimeout(Duration d)
     {
-        p.curl.set(CurlOption.connecttimeout_ms, d.total!"msecs"());
+        p.curl.set(CurlOption.connecttimeout_ms, d.total!"msecs");
     }
 
     // Network settings
@@ -1656,7 +1656,7 @@ private mixin template Protocol()
     /// DNS lookup timeout.
     @property void dnsTimeout(Duration d)
     {
-        p.curl.set(CurlOption.dns_cache_timeout, d.total!"msecs"());
+        p.curl.set(CurlOption.dns_cache_timeout, d.total!"msecs");
     }
 
     /**
@@ -1679,13 +1679,13 @@ private mixin template Protocol()
     @property void netInterface(const(ubyte)[4] i)
     {
         auto str = format("%d.%d.%d.%d", i[0], i[1], i[2], i[3]);
-        netInterface(str);
+        netInterface = str;
     }
 
     /// ditto
     @property void netInterface(InternetAddress i)
     {
-        netInterface(i.toAddrString());
+        netInterface = i.toAddrString();
     }
 
     /**
@@ -1786,7 +1786,7 @@ private mixin template Protocol()
     @property void onSend(size_t delegate(void[]) callback)
     {
         p.curl.clear(CurlOption.postfields); // cannot specify data when using callback
-        p.curl.onSend(callback);
+        p.curl.onSend = callback;
     }
 
     /**
@@ -1814,7 +1814,7 @@ private mixin template Protocol()
       */
     @property void onReceive(size_t delegate(ubyte[]) callback)
     {
-        p.curl.onReceive(callback);
+        p.curl.onReceive = callback;
     }
 
     /**
@@ -1845,7 +1845,7 @@ private mixin template Protocol()
     @property void onProgress(int delegate(size_t dlTotal, size_t dlNow,
                                            size_t ulTotal, size_t ulNow) callback)
     {
-        p.curl.onProgress(callback);
+        p.curl.onProgress = callback;
     }
 }
 
@@ -2062,7 +2062,7 @@ struct HTTP
         copy.p.curl.set(CurlOption.httpheader, copy.p.headersOut);
         copy.p.curl = p.curl.dup();
         copy.dataTimeout = _defaultDataTimeout;
-        copy.onReceiveHeader(null);
+        copy.onReceiveHeader = null;
         return copy;
     }
 
@@ -2073,8 +2073,8 @@ struct HTTP
         p.charset = "ISO-8859-1"; // Default charset defined in HTTP RFC
         p.method = Method.undefined;
         dataTimeout = _defaultDataTimeout;
-        onReceiveHeader(null);
-        version (unittest) verbose(true);
+        onReceiveHeader = null;
+        version (unittest) verbose = true;
     }
 
     /**
@@ -2576,7 +2576,7 @@ struct HTTP
                 callback(fieldName, m.captures[2]);
             p.headersIn[fieldName] = m.captures[2].idup;
         };
-        p.curl.onReceiveHeader(dg);
+        p.curl.onReceiveHeader = dg;
     }
 
     /**
@@ -2763,7 +2763,7 @@ struct FTP
         p.curl.initialize();
         p.encoding = "ISO-8859-1";
         dataTimeout = _defaultDataTimeout;
-        version (unittest) verbose(true);
+        version (unittest) verbose = true;
     }
 
     /**
@@ -3949,7 +3949,7 @@ private static size_t _receiveAsyncChunks(ubyte[] data, ref ubyte[] outdata,
         data = data[copyBytes..$];
 
         if (outdata.empty)
-            fromTid.send(thisTid(), curlMessage(cast(immutable(ubyte)[])buffer));
+            fromTid.send(thisTid, curlMessage(cast(immutable(ubyte)[])buffer));
     }
 
     return datalen;
@@ -3963,7 +3963,7 @@ private static void _finalizeAsyncChunks(ubyte[] outdata, ref ubyte[] buffer,
     {
         // Resize the last buffer
         buffer.length = buffer.length - outdata.length;
-        fromTid.send(thisTid(), curlMessage(cast(immutable(ubyte)[])buffer));
+        fromTid.send(thisTid, curlMessage(cast(immutable(ubyte)[])buffer));
     }
 }
 
@@ -4021,17 +4021,17 @@ private static size_t _receiveAsyncLines(Terminator, Unit)
             {
                 if (keepTerminator)
                 {
-                    fromTid.send(thisTid(),
+                    fromTid.send(thisTid,
                                  curlMessage(cast(immutable(Unit)[])buffer));
                 }
                 else
                 {
                     static if (isArray!Terminator)
-                        fromTid.send(thisTid(),
+                        fromTid.send(thisTid,
                                      curlMessage(cast(immutable(Unit)[])
                                              buffer[0..$-terminator.length]));
                     else
-                        fromTid.send(thisTid(),
+                        fromTid.send(thisTid,
                                      curlMessage(cast(immutable(Unit)[])
                                              buffer[0..$-1]));
                 }
@@ -4067,7 +4067,7 @@ private static
 void _finalizeAsyncLines(Unit)(bool bufferValid, Unit[] buffer, Tid fromTid)
 {
     if (bufferValid && buffer.length != 0)
-        fromTid.send(thisTid(), curlMessage(cast(immutable(Unit)[])buffer[0..$]));
+        fromTid.send(thisTid, curlMessage(cast(immutable(Unit)[])buffer[0..$]));
 }
 
 
@@ -4150,7 +4150,7 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     catch (Exception ex)
     {
         prioritySend(fromTid, cast(immutable(Exception)) ex);
-        fromTid.send(thisTid(), curlMessage(true)); // signal done
+        fromTid.send(thisTid, curlMessage(true)); // signal done
         return;
     }
 
@@ -4159,13 +4159,13 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
         if (aborted && (code == CurlError.aborted_by_callback ||
                         code == CurlError.write_error))
         {
-            fromTid.send(thisTid(), curlMessage(true)); // signal done
+            fromTid.send(thisTid, curlMessage(true)); // signal done
             return;
         }
         prioritySend(fromTid, cast(immutable(CurlException))
                      new CurlException(client.p.curl.errorString(code)));
 
-        fromTid.send(thisTid(), curlMessage(true)); // signal done
+        fromTid.send(thisTid, curlMessage(true)); // signal done
         return;
     }
 
@@ -4175,7 +4175,7 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     else
         _finalizeAsyncLines(bufferValid, buffer, fromTid);
 
-    fromTid.send(thisTid(), curlMessage(true)); // signal done
+    fromTid.send(thisTid, curlMessage(true)); // signal done
 }
 
 version (unittest) private auto netAllowed()

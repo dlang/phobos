@@ -2182,7 +2182,7 @@ void rmdirRecurse(ref DirEntry de)
     if(!de.isDir)
         throw new FileException(text("File ", de.name, " is not a directory"));
 
-    if(de.isSymlink())
+    if(de.isSymlink)
         remove(de.name);
     else
     {
