@@ -4608,11 +4608,17 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 while (1)
                 {
                     sl = fbuf.length;
+                    int n;
                     version (Win64)
-                        auto n = snprintf(fbuf.ptr, sl, format.ptr, field_width,
+                    {
+                        if(isnan(v)) // snprintf writes 1.#QNAN
+                            n = snprintf(fbuf.ptr, sl, "nan");
+                        else
+                            n = snprintf(fbuf.ptr, sl, format.ptr, field_width,
                                 precision, cast(double)v);
+                    }
                     else
-                        auto n = snprintf(fbuf.ptr, sl, format.ptr, field_width,
+                        n = snprintf(fbuf.ptr, sl, format.ptr, field_width,
                                 precision, v);
                     //printf("format = '%s', n = %d\n", cast(char*)format, n);
                     if (n >= 0 && n < sl)
