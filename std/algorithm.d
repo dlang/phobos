@@ -2000,6 +2000,18 @@ unittest
     assert(baz(S(), makeS(), n, s) == "LLRRRL");
 }
 
+unittest
+{
+    ref int foo(ref int a) { return a; }
+    ref int bar(Args)(auto ref Args args)
+    {
+        return foo(forward!args);
+    }
+    static assert(!__traits(compiles, { auto x1 = bar(3); })); // case of NG
+    int value = 3;
+    auto x2 = bar(value); // case of OK
+}
+
 // splitter
 /**
 Splits a range using an element as a separator. This can be used with
