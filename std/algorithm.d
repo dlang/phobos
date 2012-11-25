@@ -1940,14 +1940,14 @@ template forward(args...)
         alias forward = TypeTuple!();
 }
 
-version(unittest) private
-{
-    int foo(int n) { return 1; }
-    int foo(ref int n) { return 2; }
-}
 unittest
 {
-    int bar()(auto ref int x) { return foo(forward!x); }
+    class C
+    {
+        static int foo(int n) { return 1; }
+        static int foo(ref int n) { return 2; }
+    }
+    int bar()(auto ref int x) { return C.foo(forward!x); }
 
     assert(bar(1) == 1);
     int i;
