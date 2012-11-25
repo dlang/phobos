@@ -1895,6 +1895,111 @@ void swapFront(R1, R2)(R1 r1, R2 r2)
     }
 }
 
+/**
+Forwards function arguments with saving ref-ness.
+
+Example:
+---
+int foo(int n) { return 1; }
+int foo(ref int n) { return 2; }
+int bar()(auto ref int x) { return foo(forward!x); }
+
+assert(bar(1) == 1);
+int i;
+assert(bar(i) == 2);
+---
+
+---
+void foo(int n, ref string s) { s = null; foreach (i; 0..n) s ~= "Hello"; }
+
+// forwards all arguments which are bound to parameter tuple
+void bar(Args...)(auto ref Args args) { return foo(forward!args); }
+
+// forwards all arguments with swapping order
+void baz(Args...)(auto ref Args args) { return foo(forward!args[$/2..$], forward!args[0..$/2]); }
+
+string s;
+bar(1, s);
+assert(s == "Hello");
+baz(s, 2);
+assert(s == "HelloHello");
+---
+*/
+template forward(args...)
+{
+    static if (args.length)
+    {
+        alias arg = args[0];
+        static if (__traits(isRef, arg))
+            alias fwd = arg;
+        else
+            @property fwd()(){ return move(arg); }
+        alias forward = TypeTuple!(fwd, forward!(args[1..$]));
+    }
+    else
+        alias forward = TypeTuple!();
+}
+
+version(unittest) private
+{
+    int foo(int n) { return 1; }
+    int foo(ref int n) { return 2; }
+}
+unittest
+{
+    int bar()(auto ref int x) { return foo(forward!x); }
+
+    assert(bar(1) == 1);
+    int i;
+    assert(bar(i) == 2);
+}
+
+unittest
+{
+    void foo(int n, ref string s) { s = null; foreach (i; 0..n) s ~= "Hello"; }
+
+    void bar(Args...)(auto ref Args args) { return foo(forward!args); }
+
+    void baz(Args...)(auto ref Args args) { return foo(forward!args[$/2..$], forward!args[0..$/2]); }
+
+    string s;
+    bar(1, s);
+    assert(s == "Hello");
+    baz(s, 2);
+    assert(s == "HelloHello");
+}
+
+unittest
+{
+    auto foo(TL...)(auto ref TL args)
+    {
+        string result = "";
+        foreach (i, _; args)
+        {
+            //pragma(msg, "[",i,"] ", __traits(isRef, args[i]) ? "L" : "R");
+            result ~= __traits(isRef, args[i]) ? "L" : "R";
+        }
+        return result;
+    }
+
+    string bar(TL...)(auto ref TL args)
+    {
+        return foo(forward!args);
+    }
+    string baz(TL...)(auto ref TL args)
+    {
+        int x;
+        return foo(forward!args[3], forward!args[2], 1, forward!args[1], forward!args[0], x);
+    }
+
+    struct S {}
+    S makeS(){ return S(); }
+    int n;
+    string s;
+    assert(bar(S(), makeS(), n, s) == "RRLL");
+    assert(baz(S(), makeS(), n, s) == "LLRRRL");
+}
+
 // splitter
 /**
 Splits a range using an element as a separator. This can be used with
