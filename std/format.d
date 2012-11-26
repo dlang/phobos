@@ -2350,7 +2350,7 @@ if (is(T == class) && !is(T == enum))
         put(w, "null");
     else
     {
-        static if (hasToString!(T, Char) > 1 || (!isInputRange!T && !isBuiltinType!T))
+        static if (hasToString!(T, Char) > 1 || (!isInputRange!T && !is(BuiltinTypeOf!T)))
         {
             formatObject!(Writer, T, Char)(w, val, f);
         }
@@ -2442,7 +2442,7 @@ unittest
 
 /// ditto
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(T == interface) && (hasToString!(T, Char) || !isBuiltinType!T) && !is(T == enum))
+if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is(T == enum))
 {
     if (val is null)
         put(w, "null");
@@ -2485,7 +2485,7 @@ unittest
 /// ditto
 // Maybe T is noncopyable struct, so receive it by 'auto ref'.
 void formatValue(Writer, T, Char)(Writer w, auto ref T val, ref FormatSpec!Char f)
-if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !isBuiltinType!T) && !is(T == enum))
+if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is(T == enum))
 {
     static if (hasToString!(T, Char))
     {

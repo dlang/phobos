@@ -3998,15 +3998,15 @@ unittest
  */
 template BuiltinTypeOf(T)
 {
-         static if (is(T : void))               alias void BuiltinTypeOf;
-    else static if (is(BooleanTypeOf!T X))      alias X BuiltinTypeOf;
-    else static if (is(IntegralTypeOf!T X))     alias X BuiltinTypeOf;
-    else static if (is(FloatingPointTypeOf!T X))alias X BuiltinTypeOf;
-    else static if (is(T : const(ireal)))       alias ireal BuiltinTypeOf;  //TODO
-    else static if (is(T : const(creal)))       alias creal BuiltinTypeOf;  //TODO
-    else static if (is(CharTypeOf!T X))         alias X BuiltinTypeOf;
-    else static if (is(ArrayTypeOf!T X))        alias X BuiltinTypeOf;
-    else static if (is(AssocArrayTypeOf!T X))   alias X BuiltinTypeOf;
+         static if (is(T : void))               alias BuiltinTypeOf = void;
+    else static if (is(BooleanTypeOf!T X))      alias BuiltinTypeOf = X;
+    else static if (is(IntegralTypeOf!T X))     alias BuiltinTypeOf = X;
+    else static if (is(FloatingPointTypeOf!T X))alias BuiltinTypeOf = X;
+    else static if (is(T : const(ireal)))       alias BuiltinTypeOf = ireal;  //TODO
+    else static if (is(T : const(creal)))       alias BuiltinTypeOf = creal;  //TODO
+    else static if (is(CharTypeOf!T X))         alias BuiltinTypeOf = X;
+    else static if (is(ArrayTypeOf!T X))        alias BuiltinTypeOf = X;
+    else static if (is(AssocArrayTypeOf!T X))   alias BuiltinTypeOf = X;
     else                                        static assert(0);
 }
 
@@ -4382,7 +4382,7 @@ unittest
 
 template isBuiltinType(T)
 {
-    enum isBuiltinType = is(BuiltinTypeOf!T);
+    enum isBuiltinType = is(BuiltinTypeOf!T) && !isAggregateType!T;
 }
 
 /**
