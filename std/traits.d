@@ -4390,20 +4390,22 @@ template isBuiltinType(T)
  */
 template isPointer(T)
 {
-    static if (is(T P == U*, U))
-    {
-        enum bool isPointer = true;
-    }
+    static if (is(T P == U*, U) && !isAggregateType!T)
+        enum isPointer = true;
     else
-    {
-        enum bool isPointer = false;
-    }
+        enum isPointer = false;
 }
 
 unittest
 {
-    static assert( isPointer!(int*));
-    static assert( isPointer!(void*));
+    foreach (T; TypeTuple!(int*, void*, char[]*))
+    {
+        foreach (Q; TypeQualifierList)
+        {
+            static assert( isPointer!(Q!T));
+            static assert(!isPointer!(SubTypeOf!(Q!T)));
+        }
+    }
 
     static assert(!isPointer!uint);
     static assert(!isPointer!(uint[uint]));
