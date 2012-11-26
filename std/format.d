@@ -1254,7 +1254,7 @@ unittest
    Integrals are formatted like $(D printf) does.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (isIntegral!T && !is(T == enum) && !hasToString!(T, Char))
+if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     IntegralTypeOf!T val = obj;
 

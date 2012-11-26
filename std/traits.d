@@ -4008,63 +4008,24 @@ unittest
 }
 
 /**
- * Detect whether we can treat T as a built-in integral type. Types $(D bool),
+ * Detect whether $(D T) is a built-in integral type. Types $(D bool),
  * $(D char), $(D wchar), and $(D dchar) are not considered integral.
  */
 template isIntegral(T)
 {
-    enum bool isIntegral = is(IntegralTypeOf!T);
+    enum bool isIntegral = is(IntegralTypeOf!T) && !isAggregateType!T;
 }
 
 unittest
 {
-    static assert(isIntegral!byte);
-    static assert(isIntegral!(const(byte)));
-    static assert(isIntegral!(immutable(byte)));
-    static assert(isIntegral!(shared(byte)));
-    static assert(isIntegral!(shared(const(byte))));
-
-    static assert(isIntegral!ubyte);
-    static assert(isIntegral!(const(ubyte)));
-    static assert(isIntegral!(immutable(ubyte)));
-    static assert(isIntegral!(shared(ubyte)));
-    static assert(isIntegral!(shared(const(ubyte))));
-
-    static assert(isIntegral!short);
-    static assert(isIntegral!(const(short)));
-    static assert(isIntegral!(immutable(short)));
-    static assert(isIntegral!(shared(short)));
-    static assert(isIntegral!(shared(const(short))));
-
-    static assert(isIntegral!ushort);
-    static assert(isIntegral!(const(ushort)));
-    static assert(isIntegral!(immutable(ushort)));
-    static assert(isIntegral!(shared(ushort)));
-    static assert(isIntegral!(shared(const(ushort))));
-
-    static assert(isIntegral!int);
-    static assert(isIntegral!(const(int)));
-    static assert(isIntegral!(immutable(int)));
-    static assert(isIntegral!(shared(int)));
-    static assert(isIntegral!(shared(const(int))));
-
-    static assert(isIntegral!uint);
-    static assert(isIntegral!(const(uint)));
-    static assert(isIntegral!(immutable(uint)));
-    static assert(isIntegral!(shared(uint)));
-    static assert(isIntegral!(shared(const(uint))));
-
-    static assert(isIntegral!long);
-    static assert(isIntegral!(const(long)));
-    static assert(isIntegral!(immutable(long)));
-    static assert(isIntegral!(shared(long)));
-    static assert(isIntegral!(shared(const(long))));
-
-    static assert(isIntegral!ulong);
-    static assert(isIntegral!(const(ulong)));
-    static assert(isIntegral!(immutable(ulong)));
-    static assert(isIntegral!(shared(ulong)));
-    static assert(isIntegral!(shared(const(ulong))));
+    foreach (T; IntegralTypeList)
+    {
+        foreach (Q; TypeQualifierList)
+        {
+            static assert( isIntegral!(Q!T));
+            static assert(!isIntegral!(SubTypeOf!(Q!T)));
+        }
+    }
 
     static assert(!isIntegral!float);
 
