@@ -4036,36 +4036,32 @@ unittest
 }
 
 /**
- * Detect whether we can treat T as a built-in floating point type.
+ * Detect whether $(D T) is a built-in floating point type.
  */
 template isFloatingPoint(T)
 {
-    enum bool isFloatingPoint = is(FloatingPointTypeOf!T);
+    enum bool isFloatingPoint = is(FloatingPointTypeOf!T) && !isAggregateType!T;
 }
 
 unittest
 {
-    foreach (F; TypeTuple!(float, double, real))
-    {
-        F a = 5.5;
-        const F b = 5.5;
-        immutable F c = 5.5;
-        static assert(isFloatingPoint!(typeof(a)));
-        static assert(isFloatingPoint!(typeof(b)));
-        static assert(isFloatingPoint!(typeof(c)));
-    }
-    foreach (T; TypeTuple!(int, long, char))
-    {
-        T a;
-        const T b = 0;
-        immutable T c = 0;
-        static assert(!isFloatingPoint!(typeof(a)));
-        static assert(!isFloatingPoint!(typeof(b)));
-        static assert(!isFloatingPoint!(typeof(c)));
-    }
-
     enum EF : real { a = 1.414, b = 1.732, c = 2.236 }
-    static assert( isFloatingPoint!EF);
+
+    foreach (T; TypeTuple!(FloatingPointTypeList, EF))
+    {
+        foreach (Q; TypeQualifierList)
+        {
+            static assert( isFloatingPoint!(Q!T));
+            static assert(!isFloatingPoint!(SubTypeOf!(Q!T)));
+        }
+    }
+    foreach (T; IntegralTypeList)
+    {
+        foreach (Q; TypeQualifierList)
+        {
+            static assert(!isFloatingPoint!(Q!T));
+        }
+    }
 }
 
 /**
