@@ -1637,7 +1637,7 @@ unittest
    Strings are formatted like $(D printf) does.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (isSomeString!T && !isStaticArray!T && !is(T == enum) && !hasToString!(T, Char))
+if (is(StringTypeOf!T) && !isStaticArray!T && !is(T == enum) && !hasToString!(T, Char))
 {
     Unqual!(StringTypeOf!T) val = obj;  // for `alias this`, see bug5371
     formatRange(w, val, f);
@@ -1703,7 +1703,7 @@ unittest    // Test for issue 8310
           $(LI Const array is converted to input range by removing its qualifier.))
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (isDynamicArray!T && !isSomeString!T && !is(T == enum) && !hasToString!(T, Char))
+if (isDynamicArray!T && !is(StringTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     static if (is(const(ArrayTypeOf!T) == const(void[])))
     {
@@ -1906,7 +1906,7 @@ if (isInputRange!T)
     static if (is(CharTypeOf!(ElementType!T)))
     if (f.spec == 's')
     {
-        static if (isSomeString!T)
+        static if (is(StringTypeOf!T))
         {
             auto s = val[0 .. f.precision < $ ? f.precision : $];
             if (!f.flDash)
@@ -2083,7 +2083,7 @@ private void formatChar(Writer)(Writer w, in dchar c, in char quote)
 // undocumented
 // string elements are formatted like UTF-8 string literals.
 void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (isSomeString!T && !is(T == enum))
+if (is(StringTypeOf!T) && !is(T == enum))
 {
     StringTypeOf!T str = val;   // bug 8015
 
@@ -2168,7 +2168,7 @@ if (is(CharTypeOf!T) && !is(T == enum))
 // undocumented
 // Maybe T is noncopyable struct, so receive it by 'auto ref'.
 void formatElement(Writer, T, Char)(Writer w, auto ref T val, ref FormatSpec!Char f)
-if (!isSomeString!T && !is(CharTypeOf!T) || is(T == enum))
+if (!is(StringTypeOf!T) && !is(CharTypeOf!T) || is(T == enum))
 {
     formatValue(w, val, f);
 }

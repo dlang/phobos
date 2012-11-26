@@ -3801,7 +3801,9 @@ template StaticArrayTypeOf(T)
 {
     inout(U[n]) idx(U, size_t n)( inout(U[n]) );
 
-    static if (is(typeof(idx(defaultInit!T)) X))
+    static if (is(T == enum))
+        alias .StaticArrayTypeOf!(OriginalType!T) StaticArrayTypeOf;
+    else static if (is(typeof(idx(defaultInit!T)) X))
         alias X StaticArrayTypeOf;
     else
         static assert(0, T.stringof~" is not a static array type");
@@ -3832,7 +3834,9 @@ template DynamicArrayTypeOf(T)
 {
     inout(U[]) idx(U)( inout(U[]) );
 
-    static if (is(typeof(idx(defaultInit!T)) X))
+    static if (is(T == enum))
+        alias .DynamicArrayTypeOf!(OriginalType!T) DynamicArrayTypeOf;
+    else static if (is(typeof(idx(defaultInit!T)) X))
     {
         alias typeof(defaultInit!T[0]) E;
 
@@ -3884,9 +3888,21 @@ unittest
 
 /*
  */
-template StringTypeOf(T) if (isSomeString!T)
+template StringTypeOf(T)
 {
-    alias ArrayTypeOf!T StringTypeOf;
+    static if (is(T == typeof(null)))
+    {
+        // It is impossible to determine exact string type from typeof(null) -
+        // it means that StringTypeOf!(typeof(null)) is undefined.
+        // Then this behavior is convenient for template constraint.
+        static assert(0, T.stringof~" is not a string type");
+    }
+    else static if (is(T : const char[]) || is(T : const wchar[]) || is(T : const dchar[]))
+    {
+        alias ArrayTypeOf!T StringTypeOf;
+    }
+    else
+        static assert(0, T.stringof~" is not a string type");
 }
 
 unittest
@@ -4191,29 +4207,20 @@ unittest
 }
 
 /**
-Detect whether we can treat T as one of the built-in string types.
+Detect whether $(D T) is one of the built-in string types.
  */
 template isSomeString(T)
 {
-    static if (is(T == typeof(null)))
-    {
-        // It is impossible to determine exact string type from typeof(null) -
-        // it means that StringTypeOf!(typeof(null)) is undefined.
-        // Then this behavior is convenient for template constraint.
-        enum isSomeString = false;
-    }
-    else
-        enum isSomeString = isNarrowString!T || is(T : const(dchar[]));
+    enum isSomeString = is(StringTypeOf!T) && !isAggregateType!T;
 }
 
 unittest
 {
-    static assert( isSomeString!(char[]));
-    static assert( isSomeString!(dchar[]));
-    static assert( isSomeString!string);
-    static assert( isSomeString!wstring);
-    static assert( isSomeString!dstring);
-    static assert( isSomeString!(char[4]));
+    foreach (T; TypeTuple!(char[], dchar[], string, wstring, dstring, char[4]))
+    {
+        static assert( isSomeString!(           T ));
+        static assert(!isSomeString!(SubTypeOf!(T)));
+    }
 
     static assert(!isSomeString!int);
     static assert(!isSomeString!(int[]));

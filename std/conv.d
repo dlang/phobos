@@ -465,7 +465,7 @@ When source type supports member template function opCast, is is used.
 */
 T toImpl(T, S)(S value)
     if (is(typeof(S.init.opCast!T()) : T) &&
-        !(isSomeString!T && !is(T == enum) && !isAggregateType!T))
+        !(isSomeString!T && !is(T == enum)))
 {
     return value.opCast!T();
 }
@@ -780,7 +780,7 @@ $(UL
 T toImpl(T, S)(S value)
     if (!(isImplicitlyConvertible!(S, T) &&
           !isEnumStrToStr!(S, T) && !isNullToStr!(S, T)) &&
-        (isSomeString!T && !is(T == enum) && !isAggregateType!T))
+        (isSomeString!T && !is(T == enum)))
 {
     static if (isSomeString!S && !is(S == enum) && value[0].sizeof == ElementEncodingType!T.sizeof)
     {
