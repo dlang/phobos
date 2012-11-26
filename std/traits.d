@@ -4233,21 +4233,28 @@ unittest
 
 template isNarrowString(T)
 {
-    enum isNarrowString = is(T : const(char[])) || is(T : const(wchar[]));
+    enum isNarrowString = (is(T : const char[]) || is(T : const wchar[])) && !isAggregateType!T;
 }
 
 unittest
 {
-    static assert( isNarrowString!(char[]));
-    static assert( isNarrowString!string);
-    static assert( isNarrowString!wstring);
-    static assert( isNarrowString!(char[4]));
+    foreach (T; TypeTuple!(char[], string, wstring, char[4]))
+    {
+        foreach (Q; TypeTuple!(MutableOf, ConstOf, ImmutableOf)/*TypeQualifierList*/)
+        {
+            static assert( isNarrowString!(            Q!T  ));
+            static assert(!isNarrowString!( SubTypeOf!(Q!T) ));
+        }
+    }
 
-    static assert(!isNarrowString!int);
-    static assert(!isNarrowString!(int[]));
-    static assert(!isNarrowString!(byte[]));
-    static assert(!isNarrowString!(dchar[]));
-    static assert(!isNarrowString!dstring);
+    foreach (T; TypeTuple!(int, int[], byte[], dchar[], dstring))
+    {
+        foreach (Q; TypeQualifierList)
+        {
+            static assert(!isNarrowString!(            Q!T  ));
+            static assert(!isNarrowString!( SubTypeOf!(Q!T) ));
+        }
+    }
 }
 
 /**
