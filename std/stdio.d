@@ -575,6 +575,7 @@ $(D rawWrite) always writes in binary mode on Windows.
                         _name, "'"));
     }
 
+    version(Win64) {} else
     unittest
     {
         auto deleteme = testFilename();
@@ -606,6 +607,7 @@ file handle. Throws on error.
         }
     }
 
+    version(Win64) {} else
     unittest
     {
         auto deleteme = testFilename();
