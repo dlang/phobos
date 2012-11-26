@@ -4162,29 +4162,32 @@ unittest
 }
 
 /**
-Detect whether we can treat T as one of the built-in character types.
+Detect whether $(D T) is one of the built-in character types.
  */
 template isSomeChar(T)
 {
-    enum isSomeChar = is(CharTypeOf!T);
+    enum isSomeChar = is(CharTypeOf!T) && !isAggregateType!T;
 }
 
 unittest
 {
-    static assert( isSomeChar!char);
-    static assert( isSomeChar!dchar);
-    static assert( isSomeChar!(immutable(char)));
+    enum EC : char { a = 'x', b = 'y' }
 
-    static assert(!isSomeChar!int);
+    foreach (T; TypeTuple!(CharTypeList, EC))
+    {
+        foreach (Q; TypeQualifierList)
+        {
+            static assert( isSomeChar!(            Q!T  ));
+            static assert(!isSomeChar!( SubTypeOf!(Q!T) ));
+        }
+    }
+
     static assert(!isSomeChar!int);
     static assert(!isSomeChar!byte);
     static assert(!isSomeChar!string);
     static assert(!isSomeChar!wstring);
     static assert(!isSomeChar!dstring);
     static assert(!isSomeChar!(char[4]));
-
-    enum EC : char { a = 'x', b = 'y' }
-    static assert( isSomeChar!EC);
 }
 
 /**

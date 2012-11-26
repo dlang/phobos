@@ -1602,7 +1602,7 @@ unittest
    integral-specific format specs.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (isSomeChar!T && !is(T == enum) && !hasToString!(T, Char))
+if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     CharTypeOf!T val = obj;
 
@@ -1903,7 +1903,7 @@ private void formatRange(Writer, T, Char)(ref Writer w, ref T val, ref FormatSpe
 if (isInputRange!T)
 {
     // Formatting character ranges like string
-    static if (isSomeChar!(ElementType!T))
+    static if (is(CharTypeOf!(ElementType!T)))
     if (f.spec == 's')
     {
         static if (isSomeString!T)
@@ -2153,7 +2153,7 @@ unittest
 // undocumented
 // character elements are formatted like UTF-8 character literals.
 void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (isSomeChar!T && !is(T == enum))
+if (is(CharTypeOf!T) && !is(T == enum))
 {
     if (f.spec == 's')
     {
@@ -2168,7 +2168,7 @@ if (isSomeChar!T && !is(T == enum))
 // undocumented
 // Maybe T is noncopyable struct, so receive it by 'auto ref'.
 void formatElement(Writer, T, Char)(Writer w, auto ref T val, ref FormatSpec!Char f)
-if (!isSomeString!T && !isSomeChar!T || is(T == enum))
+if (!isSomeString!T && !is(CharTypeOf!T) || is(T == enum))
 {
     formatValue(w, val, f);
 }
