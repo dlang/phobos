@@ -3700,7 +3700,7 @@ template NumericTypeOf(T)
 
 unittest
 {
-    foreach (T; TypeTuple!(IntegralTypeList, FloatingPointTypeList))
+    foreach (T; NumericTypeList)
     foreach (Q; TypeQualifierList)
     {
         static assert( is(Q!T == NumericTypeOf!(            Q!T  )));
@@ -4065,12 +4065,24 @@ unittest
 }
 
 /**
-Detect whether we can treat T as a built-in numeric type (integral or floating
+Detect whether $(D T) is a built-in numeric type (integral or floating
 point).
  */
 template isNumeric(T)
 {
-    enum bool isNumeric = is(NumericTypeOf!T);
+    enum bool isNumeric = is(NumericTypeOf!T) && !isAggregateType!T;
+}
+
+unittest
+{
+    foreach (T; TypeTuple!(NumericTypeList))
+    {
+        foreach (Q; TypeQualifierList)
+        {
+            static assert( isNumeric!(Q!T));
+            static assert(!isNumeric!(SubTypeOf!(Q!T)));
+        }
+    }
 }
 
 /**
