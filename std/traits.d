@@ -4088,7 +4088,7 @@ unittest
 }
 
 /**
-Detect whether T is a scalar type.
+Detect whether $(D T) is a scalar type.
  */
 template isScalarType(T)
 {
