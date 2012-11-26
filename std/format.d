@@ -1703,7 +1703,7 @@ unittest    // Test for issue 8310
           $(LI Const array is converted to input range by removing its qualifier.))
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (isDynamicArray!T && !is(StringTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
+if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     static if (is(const(ArrayTypeOf!T) == const(void[])))
     {

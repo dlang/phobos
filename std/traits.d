@@ -3836,7 +3836,8 @@ template DynamicArrayTypeOf(T)
 
     static if (is(T == enum))
         alias .DynamicArrayTypeOf!(OriginalType!T) DynamicArrayTypeOf;
-    else static if (is(typeof(idx(defaultInit!T)) X))
+    else static if (!is(StaticArrayTypeOf!T) &&
+                     is(typeof(idx(defaultInit!T)) X))
     {
         alias typeof(defaultInit!T[0]) E;
 
@@ -3868,6 +3869,10 @@ unittest
         static assert(is( Q!(P!(T[])) == DynamicArrayTypeOf!( Q!(SubTypeOf!(P!(T[]))) ) ));
       }
     }
+
+    static assert(!is(DynamicArrayTypeOf!(int[3])));
+    static assert(!is(DynamicArrayTypeOf!(void[3])));
+    static assert(!is(DynamicArrayTypeOf!(typeof(null))));
 }
 
 /*
@@ -4292,21 +4297,24 @@ unittest
 }
 
 /**
- * Detect whether type T is a dynamic array.
+ * Detect whether type $(D T) is a dynamic array.
  */
-template isDynamicArray(T, U = void)
+template isDynamicArray(T)
 {
-    enum bool isDynamicArray = false;
-}
-
-template isDynamicArray(T : U[], U)
-{
-    enum bool isDynamicArray = !isStaticArray!T;
+    enum isDynamicArray = is(DynamicArrayTypeOf!T) && !isAggregateType!T;
 }
 
 unittest
 {
-    static assert( isDynamicArray!(int[]));
+    foreach (T; TypeTuple!(int[], char[], string, long[3][], double[string][]))
+    {
+        foreach (Q; TypeQualifierList)
+        {
+            static assert( isDynamicArray!(            Q!T  ));
+            static assert(!isDynamicArray!( SubTypeOf!(Q!T) ));
+        }
+    }
+
     static assert(!isDynamicArray!(int[5]));
     static assert(!isDynamicArray!(typeof(null)));
 
