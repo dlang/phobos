@@ -4323,7 +4323,7 @@ unittest
 }
 
 /**
- * Detect whether type T is an array.
+ * Detect whether type $(D T) is an array.
  */
 template isArray(T)
 {
@@ -4332,9 +4332,14 @@ template isArray(T)
 
 unittest
 {
-    static assert( isArray!(int[]));
-    static assert( isArray!(int[5]));
-    static assert( isArray!(void[]));
+    foreach (T; TypeTuple!(int[], int[5], void[]))
+    {
+        foreach (Q; TypeQualifierList)
+        {
+            static assert( isArray!(Q!T));
+            static assert(!isArray!(SubTypeOf!(Q!T)));
+        }
+    }
 
     static assert(!isArray!uint);
     static assert(!isArray!(uint[uint]));
