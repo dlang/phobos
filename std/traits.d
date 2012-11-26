@@ -4105,7 +4105,7 @@ unittest
 }
 
 /**
-Detect whether T is a basic type.
+Detect whether $(D T) is a basic type.
  */
 template isBasicType(T)
 {
