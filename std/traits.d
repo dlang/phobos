@@ -3559,9 +3559,9 @@ template BooleanTypeOf(T)
 
     static if (is(T == enum))
         alias .BooleanTypeOf!(OriginalType!T) BooleanTypeOf;
-    else static if (is(typeof(idx(T.init)) X) && !isIntegral!T)
+    else static if (is(typeof(idx(T.init)) X) && !is(IntegralTypeOf!T))
         alias X BooleanTypeOf;
-    else static if (is(typeof(idy(T.init)) X) && is(Unqual!X == bool) && !isIntegral!T)
+    else static if (is(typeof(idy(T.init)) X) && is(Unqual!X == bool) && !is(IntegralTypeOf!T))
         alias X BooleanTypeOf;
     else
         static assert(0, T.stringof~" is not boolean type");
@@ -3992,17 +3992,19 @@ template BuiltinTypeOf(T)
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
 /**
- * Detect whether we can treat T as a built-in boolean type.
+ * Detect whether $(D T) is a built-in boolean type.
  */
 template isBoolean(T)
 {
-    enum bool isBoolean = is(BooleanTypeOf!T);
+    enum bool isBoolean = is(BooleanTypeOf!T) && !isAggregateType!T;
 }
 
 unittest
 {
+    static assert( isBoolean!bool);
     enum EB : bool { a = true }
-    static assert(isBoolean!EB);
+    static assert( isBoolean!EB);
+    static assert(!isBoolean!(SubTypeOf!bool));
 }
 
 /**
