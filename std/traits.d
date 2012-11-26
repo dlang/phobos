@@ -4347,11 +4347,11 @@ unittest
 }
 
 /**
- * Detect whether T is an associative array type
+ * Detect whether $(D T) is an associative array type
  */
 template isAssociativeArray(T)
 {
-    enum bool isAssociativeArray = is(AssocArrayTypeOf!T);
+    enum bool isAssociativeArray = is(AssocArrayTypeOf!T) && !isAggregateType!T;
 }
 
 unittest
@@ -4362,9 +4362,14 @@ unittest
         @property uint[] values() { return null; }
     }
 
-    static assert( isAssociativeArray!(int[int]));
-    static assert( isAssociativeArray!(int[string]));
-    static assert( isAssociativeArray!(immutable(char[5])[int]));
+    foreach (T; TypeTuple!(int[int], int[string], immutable(char[5])[int]))
+    {
+        foreach (Q; TypeQualifierList)
+        {
+            static assert( isAssociativeArray!(Q!T));
+            static assert(!isAssociativeArray!(SubTypeOf!(Q!T)));
+        }
+    }
 
     static assert(!isAssociativeArray!Foo);
     static assert(!isAssociativeArray!int);

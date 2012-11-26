@@ -2178,7 +2178,7 @@ if (!is(StringTypeOf!T) && !is(CharTypeOf!T) || is(T == enum))
    separators, and enclosed by $(D '[') and $(D ']').
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (isAssociativeArray!T && !is(T == enum) && !hasToString!(T, Char))
+if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     AssocArrayTypeOf!T val = obj;
 
