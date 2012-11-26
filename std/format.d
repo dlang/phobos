@@ -1637,7 +1637,7 @@ unittest
    Strings are formatted like $(D printf) does.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (is(StringTypeOf!T) && !isStaticArray!T && !is(T == enum) && !hasToString!(T, Char))
+if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     Unqual!(StringTypeOf!T) val = obj;  // for `alias this`, see bug5371
     formatRange(w, val, f);
@@ -1678,7 +1678,7 @@ unittest
    Static-size arrays are formatted as dynamic arrays.
  */
 void formatValue(Writer, T, Char)(Writer w, auto ref T obj, ref FormatSpec!Char f)
-if (isStaticArray!T && !is(T == enum) && !hasToString!(T, Char))
+if (is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     formatValue(w, obj[], f);
 }

@@ -4258,27 +4258,25 @@ unittest
 }
 
 /**
- * Detect whether type T is a static array.
+ * Detect whether type $(D T) is a static array.
  */
-template isStaticArray(T : U[N], U, size_t N)
-{
-    enum bool isStaticArray = true;
-}
-
 template isStaticArray(T)
 {
-    enum bool isStaticArray = false;
+    enum isStaticArray = is(StaticArrayTypeOf!T) && !isAggregateType!T;
 }
 
 unittest
 {
-    static assert( isStaticArray!(int[51]));
-    static assert( isStaticArray!(int[][2]));
-    static assert( isStaticArray!(char[][int][11]));
-    static assert( isStaticArray!(immutable char[13u]));
-    static assert( isStaticArray!(const(real)[1]));
-    static assert( isStaticArray!(const(real)[1][1]));
-    static assert( isStaticArray!(void[0]));
+    foreach (T; TypeTuple!(int[51], int[][2],
+                           char[][int][11], immutable char[13u],
+                           const(real)[1], const(real)[1][1], void[0]))
+    {
+        foreach (Q; TypeQualifierList)
+        {
+            static assert( isStaticArray!(            Q!T  ));
+            static assert(!isStaticArray!( SubTypeOf!(Q!T) ));
+        }
+    }
 
     static assert(!isStaticArray!(const(int)[]));
     static assert(!isStaticArray!(immutable(int)[]));
