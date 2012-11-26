@@ -1256,7 +1256,8 @@ unittest
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
-    IntegralTypeOf!T val = obj;
+    alias U = IntegralTypeOf!T;
+    U val = obj;
 
     if (f.spec == 'r')
     {
@@ -1277,12 +1278,12 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         return;
     }
 
-    // Forward on to formatIntegral to handle both T and const(T)
+    // Forward on to formatIntegral to handle both U and const(U)
     // Saves duplication of code for both versions.
-    static if (isSigned!T)
-        formatIntegral(w, cast(long) val, f, Unsigned!(T).max);
+    static if (isSigned!U)
+        formatIntegral(w, cast(long) val, f, Unsigned!U.max);
     else
-        formatIntegral(w, cast(ulong) val, f, T.max);
+        formatIntegral(w, cast(ulong) val, f, U.max);
 }
 
 private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, ref FormatSpec!Char f, ulong mask)

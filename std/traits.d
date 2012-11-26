@@ -3725,6 +3725,8 @@ template UnsignedTypeOf(T)
         static assert(0, T.stringof~" is not an unsigned type.");
 }
 
+/*
+ */
 template SignedTypeOf(T)
 {
     static if (is(IntegralTypeOf!T X) &&
@@ -4124,7 +4126,19 @@ Detect whether $(D T) is a built-in unsigned numeric type.
  */
 template isUnsigned(T)
 {
-    enum bool isUnsigned = is(UnsignedTypeOf!T);
+    enum bool isUnsigned = is(UnsignedTypeOf!T) && !isAggregateType!T;
+}
+
+unittest
+{
+    foreach (T; TypeTuple!(UnsignedIntTypeList))
+    {
+        foreach (Q; TypeQualifierList)
+        {
+            static assert( isUnsigned!(Q!T));
+            static assert(!isUnsigned!(SubTypeOf!(Q!T)));
+        }
+    }
 }
 
 /**
@@ -4132,7 +4146,19 @@ Detect whether $(D T) is a built-in signed numeric type.
  */
 template isSigned(T)
 {
-    enum bool isSigned = is(SignedTypeOf!T);
+    enum bool isSigned = is(SignedTypeOf!T) && !isAggregateType!T;
+}
+
+unittest
+{
+    foreach (T; TypeTuple!(SignedIntTypeList))
+    {
+        foreach (Q; TypeQualifierList)
+        {
+            static assert( isSigned!(Q!T));
+            static assert(!isSigned!(SubTypeOf!(Q!T)));
+        }
+    }
 }
 
 /**
@@ -4869,14 +4895,14 @@ template Unsigned(T)
 {
     template Impl(T)
     {
-        static if (is(UnsignedTypeOf!T X))
-            alias X Impl;
-        else static if (is(SignedTypeOf!T X))
+        static if (isUnsigned!T)
+            alias Impl = T;
+        else static if (isSigned!T)
         {
-            static if (is(X == byte )) alias ubyte  Impl;
-            static if (is(X == short)) alias ushort Impl;
-            static if (is(X == int  )) alias uint   Impl;
-            static if (is(X == long )) alias ulong  Impl;
+            static if (is(T == byte )) alias Impl = ubyte;
+            static if (is(T == short)) alias Impl = ushort;
+            static if (is(T == int  )) alias Impl = uint;
+            static if (is(T == long )) alias Impl = ulong;
         }
         else
             static assert(false, "Type " ~ T.stringof ~
@@ -4943,14 +4969,14 @@ template Signed(T)
 {
     template Impl(T)
     {
-        static if (is(SignedTypeOf!T X))
-            alias X Impl;
-        else static if (is(UnsignedTypeOf!T X))
+        static if (isSigned!T)
+            alias Impl = T;
+        else static if (isUnsigned!T)
         {
-            static if (is(X == ubyte )) alias byte  Impl;
-            static if (is(X == ushort)) alias short Impl;
-            static if (is(X == uint  )) alias int   Impl;
-            static if (is(X == ulong )) alias long  Impl;
+            static if (is(T == ubyte )) alias Impl = byte;
+            static if (is(T == ushort)) alias Impl = short;
+            static if (is(T == uint  )) alias Impl = int;
+            static if (is(T == ulong )) alias Impl = long;
         }
         else
             static assert(false, "Type " ~ T.stringof ~
