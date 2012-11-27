@@ -130,12 +130,13 @@ SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST)
 
 SRC_STD_5_HEAVY= std\algorithm.d
 
-SRC_STD_REST= std\variant.d \
+SRC_STD_6= std\variant.d \
 	std\syserror.d std\zlib.d \
 	std\stream.d std\socket.d std\socketstream.d \
 	std\perf.d std\container.d std\conv.d \
-	std\zip.d std\cstream.d \
-	std\regex.d \
+	std\zip.d std\cstream.d
+
+SRC_STD_REST= std\regex.d \
 	std\stdint.d \
 	std\json.d \
 	std\parallelism.d \
@@ -144,7 +145,7 @@ SRC_STD_REST= std\variant.d \
 
 SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_3) $(SRC_STD_3a) $(SRC_STD_4) \
-	$(SRC_STD_5_HEAVY) $(SRC_STD_REST)
+	$(SRC_STD_5_HEAVY) $(SRC_STD_6) $(SRC_STD_REST)
 
 SRC=	unittest.d crc32.d index.d
 
@@ -362,7 +363,7 @@ $(LIB) : $(SRC_TO_COMPILE) \
 
 UNITTEST_OBJS= unittest1.obj unittest2.obj unittest2a.obj \
 		unittest3.obj unittest3a.obj unittest4.obj \
-		unittest5.obj unittest6.obj unittest7.obj
+		unittest5.obj unittest6.obj unittest7.obj unittest8.obj
 
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
@@ -372,8 +373,9 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3a.obj $(SRC_STD_3a)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest4.obj $(SRC_STD_4)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest5.obj $(SRC_STD_5_HEAVY)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest6.obj $(SRC_STD_REST)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest7.obj $(SRC_TO_COMPILE_NOT_STD)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest6.obj $(SRC_STD_6)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest7.obj $(SRC_STD_REST)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8.obj $(SRC_TO_COMPILE_NOT_STD)
 	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(UNITTEST_OBJS) \
 		$(ZLIB) $(DRUNTIMELIB)
 	unittest
