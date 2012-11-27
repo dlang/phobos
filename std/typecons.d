@@ -3392,8 +3392,8 @@ template Flag(string name) {
 }
 
 /**
-Convenience names that allow using e.g. $(D yes!"encryption") instead of
-$(D Flag!"encryption".yes) and $(D no!"encryption") instead of $(D
+Convenience names that allow using e.g. $(D Yes.encryption) instead of
+$(D Flag!"encryption".yes) and $(D No.encryption) instead of $(D
 Flag!"encryption".no).
 */
 struct Yes
