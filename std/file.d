@@ -1782,16 +1782,12 @@ else version(Posix)
 
         @property bool isDir()
         {
-            _ensureStatDone();
-
-            return (_statBuf.st_mode & S_IFMT) == S_IFDIR;
+            return _doStat() && (_statBuf.st_mode & S_IFMT) == S_IFDIR;
         }
 
         @property bool isFile()
         {
-            _ensureStatDone();
-
-            return (_statBuf.st_mode & S_IFMT) == S_IFREG;
+            return _doStat() && (_statBuf.st_mode & S_IFMT) == S_IFREG;
         }
 
         @property bool isSymlink()
@@ -1883,6 +1879,19 @@ else version(Posix)
             }
             else
                 _dTypeSet = false;
+        }
+
+        /++
+            This is to support lazy evaluation, because doing stat's is
+            expensive and not always needed.
+            Return value determines whether the _statBuf structure contains
+            correct data.
+         +/
+        bool _doStat()
+        {
+            if (!_didStat)
+                _didStat = stat(toStringz(_name), &_statBuf) == 0;
+            return _didStat;
         }
 
         /++
@@ -1989,6 +1998,80 @@ unittest
             assert(de.isFile);
             assert(!de.isDir);
             assert(!de.isSymlink);
+        }
+
+        {
+            immutable linkedfile = deleteme ~ "_linkedfile\0";
+            scope(exit) if(linkedfile.exists) linkedfile.remove();
+            immutable symfile = deleteme ~ "_symfile\0";
+            scope(exit)
+            {
+                stat_t lstatbuf = void;
+                if(lstat(toStringz(symfile), &lstatbuf) == 0)
+                    symfile.remove();
+            }
+            write(linkedfile, null);
+            symlink(linkedfile, symfile);
+
+            {
+                auto symde = dirEntry(symfile);
+                auto filede = dirEntry(linkedfile);
+
+                assert(filede.isFile);
+                assert(!filede.isDir);
+                assert(!filede.isSymlink);
+
+                assert(!symde.isDir);
+                assert(symde.isFile);
+                assert(symde.isSymlink);
+
+                symde._didStat = false;
+                assert(symde._doStat());
+                linkedfile.remove();
+                symde._didStat = false;
+                assert(!symde._doStat());
+
+                assert(!symde.isFile);
+                assert(!symde.isDir);
+                assert(symde.isSymlink);
+            }
+        }
+
+        {
+            immutable linkeddir = deleteme ~ "_linkeddir\0";
+            scope(exit) if(linkeddir.exists) linkeddir.rmdir();
+            immutable symdir = deleteme ~ "_symdir\0";
+            scope(exit)
+            {
+                stat_t lstatbuf = void;
+                if(lstat(toStringz(symdir), &lstatbuf) == 0)
+                    symdir.remove();
+            }
+            mkdir(linkeddir);
+            symlink(linkeddir, symdir);
+
+            {
+                auto symde = dirEntry(symdir);
+                auto dirde = dirEntry(linkeddir);
+
+                assert(!dirde.isFile);
+                assert(dirde.isDir);
+                assert(!dirde.isSymlink);
+
+                assert(!symde.isFile);
+                assert(symde.isDir);
+                assert(symde.isSymlink);
+
+                symde._didStat = false;
+                assert(symde._doStat());
+                linkeddir.rmdir();
+                symde._didStat = false;
+                assert(!symde._doStat());
+
+                assert(!symde.isFile);
+                assert(!symde.isDir);
+                assert(symde.isSymlink);
+            }
         }
     }
 }
@@ -2457,7 +2540,8 @@ private struct DirIteratorImpl
 
         bool mayStepIn()
         {
-            return _followSymlink ? _cur.isDir : attrIsDir(_cur.linkAttributes);
+            return (_followSymlink ? _cur.isDir : attrIsDir(_cur.linkAttributes))
+                && access(_cur.name.toStringz(), X_OK | R_OK) == 0;
         }
     }
 
@@ -2626,6 +2710,40 @@ unittest
     {
         //writeln(name);
         assert(e.isFile || e.isDir, e.name);
+    }
+
+    version(Posix)
+    {
+        // should not throw if access to a directory is denied
+        {
+            auto somedir = toStringz(buildPath(testdir, "somedir"));
+            assert(access(somedir, X_OK) == 0);
+            assert(access(somedir, R_OK) == 0);
+            scope(exit) chmod(somedir, octal!755);
+            assert(chmod(somedir, octal!100) == 0);
+            assert(access(somedir, X_OK) == 0);
+            assert(access(somedir, R_OK) != 0);
+            assert(equalEntries(testdir, SpanMode.shallow) == 2);
+            assert(equalEntries(testdir, SpanMode.depth) == 2);
+            assert(equalEntries(testdir, SpanMode.breadth) == 2);
+            assert(chmod(somedir, octal!000) == 0);
+            assert(access(somedir, X_OK) != 0);
+            assert(access(somedir, R_OK) != 0);
+            assert(equalEntries(testdir, SpanMode.shallow) == 2);
+            assert(equalEntries(testdir, SpanMode.depth) == 2);
+            assert(equalEntries(testdir, SpanMode.breadth) == 2);
+        }
+        // should not throw if a broken symlink is found
+        {
+            assert(walkLength(dirEntries(testdir, SpanMode.depth)) == 3);
+            assert(walkLength(dirEntries(testdir, SpanMode.depth).filter!(de => de.isFile)()) == 2);
+            symlink("somedeepfile", buildPath(testdir, "somedir", "somesymlink"));
+            assert(walkLength(dirEntries(testdir, SpanMode.depth)) == 4);
+            assert(walkLength(dirEntries(testdir, SpanMode.depth).filter!(de => de.isFile)()) == 3);
+            buildPath(testdir, "somedir", "somedeepfile").remove();
+            assert(walkLength(dirEntries(testdir, SpanMode.depth)) == 3);
+            assert(walkLength(dirEntries(testdir, SpanMode.depth).filter!(de => de.isFile)()) == 1);
+        }
     }
 }
 
