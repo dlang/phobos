@@ -2048,30 +2048,9 @@ done.
             // need to increase capacity
             immutable len = _data.arr.length;
             if (__ctfe)
-            {
-                _data.arr.length = newCapacity;
-                _data.arr = _data.arr[0..len];
-                _data.capacity = newCapacity;
-                return;
-            }
-            immutable growsize = (newCapacity - len) * T.sizeof;
-            auto u = GC.extend(_data.arr.ptr, growsize, growsize);
-            if(u)
-            {
-                // extend worked, update the capacity
-                _data.capacity = u / T.sizeof;
-            }
+                ctferelocate(len, newCapacity);
             else
-            {
-                // didn't work, must reallocate
-                auto bi = GC.qalloc(newCapacity * T.sizeof,
-                        (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
-                _data.capacity = bi.size / T.sizeof;
-                if(len)
-                    memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
-                _data.arr = (cast(Unqual!T*)bi.base)[0..len];
-                // leave the old data, for safety reasons
-            }
+                relocate(len, newCapacity, newCapacity);
         }
     }
 
@@ -2103,34 +2082,9 @@ Returns the managed array.
         if (reqlen > _data.capacity)
         {
             if (__ctfe)
-            {
-                _data.arr.length = reqlen;
-                _data.arr = _data.arr[0..len];
-                _data.capacity = reqlen;
-                return;
-            }
-            // Time to reallocate.
-            // We need to almost duplicate what's in druntime, except we
-            // have better access to the capacity field.
-            auto newlen = newCapacity(reqlen);
-            // first, try extending the current block
-            auto u = GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
-            if(u)
-            {
-                // extend worked, update the capacity
-                _data.capacity = u / T.sizeof;
-            }
+                ctferelocate(len, reqlen);
             else
-            {
-                // didn't work, must reallocate
-                auto bi = GC.qalloc(newlen * T.sizeof,
-                        (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
-                _data.capacity = bi.size / T.sizeof;
-                if(len)
-                    memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
-                _data.arr = (cast(Unqual!T*)bi.base)[0..len];
-                // leave the old data, for safety reasons
-            }
+                relocate(len, reqlen, newCapacity(reqlen));
         }
     }
 
@@ -2142,6 +2096,40 @@ Returns the managed array.
             mult = 200;
         auto newext = cast(size_t)((newlength * mult + 99) / 100);
         return newext > newlength ? newext : newlength;
+    }
+
+    private void ctferelocate(size_t len, size_t size)
+    {
+        _data.arr.length = size;
+        _data.arr = _data.arr[0..len];
+        _data.capacity = size;
+        return;
+    }
+    private void relocate(size_t len, size_t minimum, size_t wanted)
+    {
+        // We need to almost duplicate what's in druntime, except we
+        // have better access to the capacity field.
+
+        // first, try extending the current block
+        auto u = GC.extend(_data.arr.ptr,
+                           (minimum - len) * T.sizeof,
+                           (wanted  - len) * T.sizeof);
+        if(u)
+        {
+            // extend worked, update the capacity
+            _data.capacity = u / T.sizeof;
+        }
+        else
+        {
+            // didn't work, must reallocate
+            auto bi = GC.qalloc(wanted * T.sizeof,
+                    (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
+            _data.capacity = bi.size / T.sizeof;
+            if(len)
+                memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
+            _data.arr = (cast(Unqual!T*)bi.base)[0..len];
+            // leave the old data, for safety reasons
+        }
     }
 
 /**
