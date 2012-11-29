@@ -2004,9 +2004,8 @@ struct Appender(A : T[], T)
     private struct Data
     {
         size_t capacity;
-        Unqual!(T)[] arr;
+        Unqual!T[] arr;
     }
-
     private Data* _data;
 
 /**
@@ -2019,7 +2018,7 @@ appending to the original array will reallocate.
     {
         // initialize to a given array.
         _data = new Data;
-        _data.arr = cast(Unqual!(T)[])arr;
+        _data.arr = cast(Unqual!T[])arr;
 
         if (__ctfe)
             return;
@@ -2070,7 +2069,7 @@ done.
                 _data.capacity = bi.size / T.sizeof;
                 if(len)
                     memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
-                _data.arr = (cast(Unqual!(T)*)bi.base)[0..len];
+                _data.arr = (cast(Unqual!T*)bi.base)[0..len];
                 // leave the old data, for safety reasons
             }
         }
@@ -2129,7 +2128,7 @@ Returns the managed array.
                 _data.capacity = bi.size / T.sizeof;
                 if(len)
                     memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
-                _data.arr = (cast(Unqual!(T)*)bi.base)[0..len];
+                _data.arr = (cast(Unqual!T*)bi.base)[0..len];
                 // leave the old data, for safety reasons
             }
         }
