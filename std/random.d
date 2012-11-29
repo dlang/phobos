@@ -1641,6 +1641,11 @@ private auto intervalMinMax(alias f, alias fderiv, T)(T x0, T x1)
             y1 = ymid;
             d1 = dmid;
         }
+   
+        // this can happen if the function is completelly flat on the interval
+        // this happens when called from zigguratInitialize using 256 layers 
+        // and floating point.
+        assert(x0 == x1, "fderiv has the same sign on the entire interval");
     }
 }
 
@@ -1657,54 +1662,51 @@ private struct ZigguratLayer(T)
     T highOffset;
 }
 
-private auto zigguratInitialize(T)
-(ZigguratLayer!(T)[] layers, ref T tailX, ref T tailXInterval, T totalArea,
-    scope T delegate(T) f, scope T delegate(T) fint, scope T delegate(T) fderiv)
+private auto zigguratInitialize(T, U, F)
+(ZigguratLayer!(T)[] layers, U totalArea,
+    F f, F fint, F fderiv)
 {
-    auto zigguratInnerWidth(int i, int nlayers, T totalArea)
+    auto zigguratInnerWidth(int i, int nlayers, U totalArea)
     {
-        auto ai = totalArea * (cast(T)(nlayers - (i + 1)) + cast(T)0.5) / nlayers;
-        auto func = (T x) => fint(x) - x * f(x) - ai; 
+        auto ai = totalArea * (cast(U)(nlayers - (i + 1)) + cast(U)0.5) / nlayers;
+        auto func = (U x) => fint(x) - x * f(x) - ai; 
 
-        T x0 = 0;
-        T x1= 1;
+        U x0 = 0;
+        U x1= 1;
         while(func(x1) < 0)
             x1 += x1;
 
         return findRoot(func, x0, x1);
     }
 
-    auto zigguratOffsets(T x0, T x1)
+    auto zigguratOffsets(U x0, U x1)
     {
         auto y0 = f(x0), y1 = f(x1);
         auto k = (y1 - y0) / (x1 - x0);
         auto n = y0 - x0*k;
         auto mm = intervalMinMax!(
-                (T x) => f(x) - (k * x + n), (T x) => fderiv(x) - k)(x0, x1);
+                (U x) => f(x) - (k * x + n), (U x) => fderiv(x) - k)(x0, x1);
         return tuple(-mm[0] / k, -mm[1] / k);
     }
 
     alias ZigguratLayer!(T) L; 
     auto nlayers = cast(int) layers.length;
 
-    T yprev = 0;
-    T xprev;
+    U yprev = 0;
+    U xprev;
     foreach(i; 0 .. nlayers)
     {
-        T x = zigguratInnerWidth(i, nlayers, totalArea);
-        T y = f(x);
-        T dy = y - yprev;
-        T innerArea = x * dy;
-        T xInterval = x * (totalArea / nlayers) / innerArea;
-        T dx = xprev - x;
-        T scaleY = dy / dx;
+        //writefln("layer %s", i);
+        U x = zigguratInnerWidth(i, nlayers, totalArea);
+        U y = f(x);
+        U dy = y - yprev;
+        U innerArea = x * dy;
+        U xInterval = x * (totalArea / nlayers) / innerArea;
+        U dx = xprev - x;
+        U scaleY = dy / dx;
 
         if(i == 0)
-        {
-            layers[i] = L(0, 2, T.nan, T.nan);
-            tailX = x;
-            tailXInterval = xInterval / 2;
-        }
+            layers[i] = L(x, xInterval, xInterval / 2, U.nan);
         else
         {
             auto tmp = zigguratOffsets(x, xprev);
@@ -1734,17 +1736,13 @@ private auto zigguratAlgorithmImpl
 
     if(layer == 0)
     {
-        if(x < cast(T) 1)
-        {
-            x *= zs.tailXInterval;
-            return x < zs.tailX ? x : tail(zs.tailX, rng);
-        }
+        if(x < zs.layers[layer].lowOffset)
+            return tail(layerX, rng);
         else 
-            return head(x - 1, rng);
+            return head(rng);
     }
 
-    T belowX = layer == 1 ? zs.tailX : zs.layers[layer - 1].x;
-    T dx = belowX - layerX;
+    T dx = zs.layers[layer - 1].x - layerX;
     T highOffset = zs.layers[layer].highOffset;
     T lowOffset = zs.layers[layer].lowOffset;
     T uInterval = 1 + highOffset;
@@ -1787,7 +1785,21 @@ private auto zigguratAlgorithm
         f, tail, head, zs, rng)(rand >> 1, a);
  
     static if(isSymetric)
-        return rand & 1 ? r : -r;
+    {
+        // flip the highest bit to change the sign, if possible
+        static if(is(T == float))
+        {
+            auto rint = (rand << 31) ^ *cast(uint*) &r;
+            return *cast(T*) &rint;
+        }
+        else static if(is(T == double) && is(size_t == ulong))
+        {
+            auto rint = (cast(ulong)rand << 63) ^ *cast(ulong*) &r;
+            return *cast(T*) &rint;
+        }
+        else
+            return rand & 1 ? r : -r;
+    }
     else
         return r;
 }
@@ -1799,12 +1811,25 @@ template NormalZigguratEngineImpl(int n)
     {
         void initialize()
         {
+            alias Select!(is(T == float), double, T) U;
+
+            static U f(U x)
+            {
+                return exp(-x ^^ 2 / 2) / sqrt(2 * PI);
+            }
+
+            static U fint(U x)
+            {
+                return erf(x / sqrt(2.0)) / 2 ;
+            }
+
+            static U fderiv(U x)
+            {
+                return -x * exp(-x ^^ 2 / 2) / sqrt(2 * PI);
+            }
+
             layers = new L[nlayers];
-            zigguratInitialize(
-                layers, tailX, tailXInterval, area, 
-                delegate (T x) => f(x), 
-                delegate (T x) => fint(x), 
-                delegate (T x) => fderiv(x)); 
+            zigguratInitialize!(T, U)( layers,  0.5, &f, &fint, &fderiv); 
             
             headDx = layers.back.x;
             headDy = cast(T) 1 - exp(- (headDx) ^^ 2 * cast(T) 0.5);
@@ -1823,33 +1848,18 @@ template NormalZigguratEngineImpl(int n)
             return exp(-x ^^ 2 / 2) / sqrt(2 * PI);
         }
 
-        static T fint(T x)
-        {
-            return erf(x / sqrt(2.0)) / 2 ;
-        }
-
-        static T fderiv(T x)
-        {
-            return -x * exp(-x ^^ 2 / 2) / sqrt(2 * PI);
-        }
-
-        enum area = cast(T) 0.5;
-
         enum nlayers = n;
         alias ZigguratLayer!T L;
 
         L[] layers;
-        T tailX;
-        T tailXInterval;
         T headDx;
         T headDy;
      
-        auto head(Rng)(T x, ref Rng rng)
+        auto head(Rng)(ref Rng rng)
         {
-            x *= headDx;
-
             while(true)
             {
+                T x = fastUniformFloat!T(rng) * headDx;
                 T y = fastUniformFloat!T(rng) * headDy;
                 T x2 = x * x;
                 T approx = fraction!(T, 1, 2) * x2;
@@ -1859,8 +1869,6 @@ template NormalZigguratEngineImpl(int n)
                 approx -= fraction!(T, 1, 8) * x2 * x2;
                 if(y > approx && y > cast(T) 1 - exp(-x * x * cast(T) 0.5))
                     return x;
-
-                x = fastUniformFloat!T(rng) * headDx;
             }
         }
         
@@ -1877,7 +1885,7 @@ template NormalZigguratEngineImpl(int n)
     }
 }
 
-alias NormalZigguratEngineImpl!64 NormalZigguratEngine64;
+alias NormalZigguratEngineImpl!128  NormalZigguratEngine128;
 
 /**
 Shuffles elements of $(D r) using $(D gen) as a shuffler. $(D r) must be
