@@ -126,13 +126,13 @@ $(BOOKTABLE ,
         $(TD Creates the _range that results from discarding the first $(I n)
         elements from the given _range.
     ))
-    $(TR $(TD $(D $(LREF dropFront)))
-        $(TD Creates the _range that results from discarding the first $(I n)
-        elements from the given _range.
+    $(TR $(TD $(D $(LREF dropExactly)))
+        $(TD Creates the _range that results from discarding exactly $(I n)
+        of the first elements from the given _range.
     ))
-    $(TR $(TD $(D $(LREF dropBack)))
-        $(TD Creates the _range that results from discarding the last $(I n)
-        elements from the given _range.
+    $(TR $(TD $(D $(LREF dropOne)))
+        $(TD Creates the _range that results from discarding
+        the first elements from the given _range.
     ))
     $(TR $(TD $(D $(LREF repeat)))
         $(TD Creates a _range that consists of a single element repeated $(I n)
@@ -240,11 +240,18 @@ manipulating ranges:
 
 $(BOOKTABLE ,
     $(TR $(TD $(D $(LREF popFrontN)))
-        $(TD Advances a given _range by $(I n) elements.
+        $(TD Advances a given _range by up to $(I n) elements.
     ))
     $(TR $(TD $(D $(LREF popBackN)))
-        $(TD Advances a given bidirectional _range from the right by $(I n)
-        elements.
+        $(TD Advances a given bidirectional _range from the right by up to
+        $(I n) elements.
+    ))
+    $(TR $(TD $(D $(LREF popFrontExactly)))
+        $(TD Advances a given _range by up exactly $(I n) elements.
+    ))
+    $(TR $(TD $(D $(LREF popBackExactly)))
+        $(TD Advances a given bidirectional _range from the right by exactly
+        $(I n) elements.
     ))
     $(TR $(TD $(D $(LREF moveFront)))
         $(TD Removes the front element of a _range.
@@ -3136,73 +3143,38 @@ unittest
 }
 
 /++
-    Convenience function which calls $(D $(LREF popFrontN)(range, n)) and
-    returns $(D range). This makes it easier to pop elements from a range
+    Convenience function which calls
+    $(D range.$(LREF popFrontN)(n)) and returns $(D range). $(D drop)
+    makes it easier to pop elements from a range
     and then pass it to another function within a single expression,
     whereas $(D popFrontN) would require multiple statements.
 
-    Note: $(D drop) and $(D dropFront) cover the same functionality, and
-    are aliases of each other. Both names are provided for convenience.
+    $(D dropBack) provides the same functionality but instead calls
+    $(D range.popBackN(n)).
+
+    Note: $(D drop) and $(D dropBack) will only pop $(I up to)
+    $(D n) elements but will stop if the range is empty first.
 
     Examples:
 --------------------
-assert(drop([0, 2, 1, 5, 0, 3], 3) == [5, 0, 3]);
-assert(drop("hello world", 6) == "world");
-assert(drop("hello world", 50).empty);
-assert(equal(drop(take("hello world", 6), 3), "lo "));
+assert([0, 2, 1, 5, 0, 3].drop(3) == [5, 0, 3]);
+assert("hello world".drop(6) == "world");
+assert("hello world".drop(50).empty);
+assert("hello world".take(6).drop(3).equal("lo "));
 --------------------
 
 --------------------
 //Remove all but the first two elements
 auto a = DList!int(0, 1, 9, 9, 9);
-a.remove(a[].dropFront(2));
+a.remove(a[].drop(2));
 assert(a[].equal(a[].take(2)));
 --------------------
-  +/
-R drop(R)(R range, size_t n)
-    if(isInputRange!R)
-{
-    popFrontN(range, n);
-    return range;
-}
-/// ditto
-version(StdDdoc){R dropFront(R)(R range, size_t n);} //Documentation does not need to know who aliases who
-else {alias drop dropFront;} //Implementation defined alias
 
-//Verify Examples
-unittest
-{
-    assert(drop([0, 2, 1, 5, 0, 3], 3) == [5, 0, 3]);
-    assert(drop("hello world", 6) == "world");
-    assert(drop("hello world", 50).empty);
-    assert(equal(drop(take("hello world", 6), 3), "lo "));
-}
-unittest
-{
-    //Remove all but the first two elements
-    auto a = DList!int(0, 1, 9, 9, 9, 9);
-    a.remove(a[].dropFront(2));
-    assert(a[].equal(a[].take(2)));
-}
-
-unittest
-{
-    assert(drop("", 5).empty);
-    assert(equal(drop(filter!"true"([0, 2, 1, 5, 0, 3]), 3), [5, 0, 3]));
-}
-
-/++
-    Convenience function which calls $(D $(LREF popBackN)(range, n)) and
-    returns $(D range). This makes it easier to pop elements from the back
-    of a range and then pass it to another function within a single
-    expression, whereas $(D popBackN) would require multiple statements.
-
-    Examples:
 --------------------
 assert([0, 2, 1, 5, 0, 3].dropBack(3) == [0, 2, 1]);
 assert("hello world".dropBack(6) == "hello");
 assert("hello world".dropBack(50).empty);
-assert("hello world".dropFront(4).dropBack(4).equal("o w"));
+assert("hello world".drop(4).dropBack(4).equal("o w"));
 --------------------
 
 --------------------
@@ -3212,19 +3184,46 @@ a.insertAfter(a[].dropBack(2), [3, 4]);
 assert(a[].equal(iota(0, 7)));
 --------------------
   +/
+R drop(R)(R range, size_t n)
+    if(isInputRange!R)
+{
+    range.popFrontN(n);
+    return range;
+}
+/// ditto
 R dropBack(R)(R range, size_t n)
     if(isBidirectionalRange!R)
 {
     range.popBackN(n);
     return range;
 }
+
 //Verify Examples
+unittest
+{
+    assert([0, 2, 1, 5, 0, 3].drop(3) == [5, 0, 3]);
+    assert("hello world".drop(6) == "world");
+    assert("hello world".drop(50).empty);
+    assert("hello world".take(6).drop(3).equal("lo "));
+}
+unittest
+{
+    //Remove all but the first two elements
+    auto a = DList!int(0, 1, 9, 9, 9, 9);
+    a.remove(a[].drop(2));
+    assert(a[].equal(a[].take(2)));
+}
+unittest
+{
+    assert(drop("", 5).empty);
+    assert(equal(drop(filter!"true"([0, 2, 1, 5, 0, 3]), 3), [5, 0, 3]));
+}
 unittest
 {
     assert([0, 2, 1, 5, 0, 3].dropBack(3) == [0, 2, 1]);
     assert("hello world".dropBack(6) == "hello");
     assert("hello world".dropBack(50).empty);
-    assert("hello world".dropFront(4).dropBack(4).equal("o w"));
+    assert("hello world".drop(4).dropBack(4).equal("o w"));
 }
 unittest
 {
@@ -3234,19 +3233,119 @@ unittest
     assert(a[].equal(iota(0, 7)));
 }
 
+/++
+    Similar to $(LREF drop) and $(D dropBack) but they call
+    $(D range.$(LREF popFrontExactly)(n)) and $(D range.popBackExactly(n))
+    instead.
+
+    Note: Unlike $(D drop), $(D dropExactly) will assume that the
+    range holds at least $(D n) elements. This makes $(D dropExactly)
+    faster than $(D drop), but it also means that if $(D range) does
+    not contain at least $(D n) elements, it will attempt to call $(D popFront)
+    on an empty range, which is undefined behavior. So, only use
+    $(D popFrontExactly) when it is guaranteed that $(D range) holds at least
+    $(D n) elements.
++/
+R dropExactly(R)(R range, size_t n)
+    if(isInputRange!R)
+{
+    popFrontExactly(range, n);
+    return range;
+}
+/// ditto
+R dropBackExactly(R)(R range, size_t n)
+    if(isBidirectionalRange!R)
+{
+    popBackExactly(range, n);
+    return range;
+}
+
+unittest
+{
+    //RA+slicing
+    auto a = [1, 2, 3];
+    assert(a.dropExactly(1) == [2, 3]);
+    assert(a.dropBackExactly(1) == [1, 2]);
+    
+    //UTF string
+    string s = "日本語";
+    assert(s.dropExactly(1) == "本語");
+    assert(s.dropBackExactly(1) == "日本");
+
+    //Bidirectional
+    auto bd = filterBidirectional!"true"([1, 2, 3]);
+    assert(bd.dropExactly(1).equal([2, 3]));
+    assert(bd.dropBackExactly(1).equal([1, 2]));
+}
+
+/++
+    Convenience function which calls
+    $(D range.popFront()) and returns $(D range). $(D dropOne)
+    makes it easier to pop an element from a range
+    and then pass it to another function within a single expression,
+    whereas $(D popFront) would require multiple statements.
+    
+    $(D dropBackOne) provides the same functionality but instead calls
+    $(D range.popBack()).
+
+    Example:
+----
+auto dl = DList!int(9, 1, 2, 3, 9);
+assert(dl[].dropOne().dropBackOne().equal([1, 2, 3]));
+----
++/
+R dropOne(R)(R range)
+    if (isInputRange!R)
+{
+    range.popFront();
+    return range;
+}
+/// ditto
+R dropBackOne(R)(R range)
+    if (isBidirectionalRange!R)
+{
+    range.popBack();
+    return range;
+}
+
+unittest
+{
+    auto dl = DList!int(9, 1, 2, 3, 9);
+    assert(dl[].dropOne().dropBackOne().equal([1, 2, 3]));
+}
+unittest
+{
+    //RA+slicing
+    auto a = [1, 2, 3];
+    assert(a.dropOne() == [2, 3]);
+    assert(a.dropBackOne() == [1, 2]);
+    
+    //UTF string
+    string s = "日本語";
+    assert(s.dropOne() == "本語");
+    assert(s.dropBackOne() == "日本");
+
+    //Bidirectional
+    auto bd = filterBidirectional!"true"([1, 2, 3]);
+    assert(bd.dropOne().equal([2, 3]));
+    assert(bd.dropBackOne().equal([1, 2]));
+}
 
 /**
-Eagerly advances $(D r) itself (not a copy) up to $(D n) times (by calling
-$(D r.popFront) at most $(D n) times). The pass of $(D r) into $(D
-popFrontN) is by reference, so the original range is
-affected. Completes in $(BIGOH 1) steps for ranges that have both length 
-and support slicing, and in $(BIGOH n) time for all other ranges.
+    Eagerly advances $(D r) itself (not a copy) up to $(D n) times (by
+    calling $(D r.popFront()). $(D popFrontN) takes $(D r) by $(D ref),
+    so it mutates the original range. Completes in $(BIGOH 1) steps for ranges
+    that support slicing and have length.
+    Completes in $(BIGOH n) time for all other ranges.
 
-Returns:
+    Returns:
+    How much $(D r) was actually advanced, which may be less than $(D n) if
+    $(D r) did not have at least $(D n) element.
 
-How much $(D r) was actually advanced, which may be less than $(D n) if $(D r) did not have $(D n) element.
+    $(D popBackN) will behave the same but instead removes elements from
+    the back of the (bidirectional) range instead of the front.
 
-Example:
+    Example:
 ----
 int[] a = [ 1, 2, 3, 4, 5 ];
 a.popFrontN(2);
@@ -3254,26 +3353,35 @@ assert(a == [ 3, 4, 5 ]);
 a.popFrontN(7);
 assert(a == [ ]);
 ----
+
+----
+int[] a = [ 1, 2, 3, 4, 5 ];
+a.popBackN(2);
+assert(a == [ 1, 2, 3 ]);
+a.popBackN(7);
+assert(a == [ ]);
+----
 */
 size_t popFrontN(Range)(ref Range r, size_t n)
     if (isInputRange!Range)
 {
-    static if (hasSlicing!Range && hasLength!Range)
-    {
+    static if (hasLength!Range)
         n = min(n, r.length);
+
+    static if (hasSlicing!Range && is(typeof(r = r[n .. $])))
+    {
+        r = r[n .. $];
+    }
+    else static if (hasSlicing!Range && hasLength!Range) //TODO: Remove once hasSlicing forces opDollar.
+    {
         r = r[n .. r.length];
     }
-    else static if (hasSlicing!Range && isInfinite!Range && is(typeof(r = r[n .. $])))
-        r = r[n .. $];
     else
     {
         static if (hasLength!Range)
         {
-            n = min(n, r.length);
             foreach (i; 0 .. n)
-            {
                 r.popFront();
-            }
         }
         else
         {
@@ -3281,6 +3389,39 @@ size_t popFrontN(Range)(ref Range r, size_t n)
             {
                 if (r.empty) return i;
                 r.popFront();
+            }
+        }
+    }
+    return n;
+}
+/// ditto
+size_t popBackN(Range)(ref Range r, size_t n)
+    if (isBidirectionalRange!Range)
+{
+    static if (hasLength!Range)
+        n = min(n, r.length);
+
+    static if (hasSlicing!Range && is(typeof(r = r[0 .. $ - n])))
+    {
+        r = r[0 .. $ - n];
+    }
+    else static if (hasSlicing!Range && hasLength!Range) //TODO: Remove once hasSlicing forces opDollar.
+    {
+        r = r[0 .. r.length - n];
+    }
+    else
+    {
+        static if (hasLength!Range)
+        {
+            foreach (i; 0 .. n)
+                r.popBack();
+        }
+        else
+        {
+            foreach (i; 0 .. n)
+            {
+                if (r.empty) return i;
+                r.popBack();
             }
         }
     }
@@ -3302,58 +3443,6 @@ unittest
     assert(equal(LL, [3L, 4L, 5L, 6L]));
     assert(r == 2);
 }
-
-/**
-   Eagerly reduces $(D r) itself (not a copy) up to $(D n) times from its right
-   side (by calling $(D r.popBack) $(D n) times). The pass of $(D r) into
-   $(D popBackN) is by reference, so the original range is
-   affected. Completes in $(BIGOH 1) steps for ranges that have both length 
-   and support slicing, and in $(BIGOH n) time for all other ranges.
-
-   Returns:
-
-   The actual number of elements popped, which may be less than $(D n) if $(D r) did not have $(D n) element.
-
-   Example:
-   ----
-   int[] a = [ 1, 2, 3, 4, 5 ];
-   a.popBackN(2);
-   assert(a == [ 1, 2, 3 ]);
-   a.popBackN(7);
-   assert(a == [ ]);
-   ----
-*/
-size_t popBackN(Range)(ref Range r, size_t n)
-    if (isBidirectionalRange!Range)
-{
-    static if (hasSlicing!(Range) && hasLength!(Range))
-    {
-        n = min(n, r.length);
-        auto newLen = r.length - n;
-        r = r[0 .. newLen];
-    }
-    else
-    {
-        static if (hasLength!Range)
-        {
-            n = min(n, r.length);
-            foreach (i; 0 .. n)
-            {
-                r.popBack();
-            }
-        }
-        else
-        {
-            foreach (i; 0 .. n)
-            {
-                if (r.empty) return i;
-                r.popBack();
-            }
-        }
-    }
-    return n;
-}
-
 unittest
 {
     int[] a = [ 1, 2, 3, 4, 5 ];
@@ -3368,6 +3457,78 @@ unittest
     auto r = popBackN(LL, 2);
     assert(equal(LL, [1L, 2L, 3L, 4L]));
     assert(r == 2);
+}
+
+/**
+    Eagerly advances $(D r) itself (not a copy) exactly $(D n) times (by
+    calling $(D r.popFront). $(D popFrontExactly) takes $(D r) by $(D ref),
+    so it mutates the original range. Completes in $(BIGOH 1) steps for ranges
+    that support slicing, and have either length or are infinite.
+    Completes in $(BIGOH n) time for all other ranges.
+
+    Note: Unlike $(LREF popFrontN), $(D popFrontExactly) will assume that the
+    range holds at least $(D n) elements. This makes $(D popFrontExactly)
+    faster than $(D popFrontN), but it also means that if $(D range) does
+    not contain at least $(D n) elements, it will attempt to call $(D popFront)
+    on an empty range, which is undefined behavior. So, only use
+    $(D popFrontExactly) when it is guaranteed that $(D range) holds at least
+    $(D n) elements.
+
+    $(D popBackExactly) will behave the same but instead removes elements from
+    the back of the (bidirectional) range instead of the front.
+*/
+void popFrontExactly(Range)(ref Range r, size_t n)
+    if (isInputRange!Range)
+{
+    static if (hasLength!Range)
+        assert(n <= r.length, "range is smaller than amount of items to pop");
+
+    static if (hasSlicing!Range && is(typeof(r = r[n .. $])))
+        r = r[n .. $];
+    else static if (hasSlicing!Range && hasLength!Range) //TODO: Remove once hasSlicing forces opDollar.
+        r = r[n .. r.length];
+    else
+        foreach (i; 0 .. n)
+            r.popFront();
+}
+/// ditto
+void popBackExactly(Range)(ref Range r, size_t n)
+    if (isBidirectionalRange!Range)
+{
+    static if (hasLength!Range)
+        assert(n <= r.length, "range is smaller than amount of items to pop");
+
+    static if (hasSlicing!Range && is(typeof(r = r[0 .. $ - n])))
+        r = r[0 .. $ - n];
+    else static if (hasSlicing!Range && hasLength!Range) //TODO: Remove once hasSlicing forces opDollar.
+        r = r[0 .. r.length - n];
+    else
+        foreach (i; 0 .. n)
+            r.popBack();
+}
+
+unittest
+{
+    //RA+slicing
+    auto a = [1, 2, 3];
+    a.popFrontExactly(1);
+    assert(a == [2, 3]);
+    a.popBackExactly(1);
+    assert(a == [2]);
+    
+    //UTF string
+    string s = "日本語";
+    s.popFrontExactly(1);
+    assert(s == "本語");
+    s.popBackExactly(1);
+    assert(s == "本");
+
+    //Bidirectional
+    auto bd = filterBidirectional!"true"([1, 2, 3]);
+    bd.popFrontExactly(1);
+    assert(bd.equal([2, 3]));
+    bd.popBackExactly(1);
+    assert(bd.equal([2]));
 }
 
 /**
