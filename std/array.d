@@ -1169,6 +1169,8 @@ delimiter. Runs of whitespace are merged together (no empty words are produced).
 S[] split(S)(S s)
     if (isSomeString!S)
 {
+    alias C = Unqual!(ElementEncodingType!S);
+
     s = s.stripRight(); //Means there is no trailing ws: There is *always* text after a white
     if (s.empty) return (S[]).init;
 
@@ -1179,18 +1181,39 @@ S[] split(S)(S s)
     size_t startIndex; //start word
     size_t currIndex;  //current index
     size_t nextIndex;  //look-ahead index
-
-    for ( ; ; startIndex = nextIndex )
-        if(!decodeIsWhite(s, nextIndex)) break;
-
-    find_token: for ( currIndex = nextIndex ; currIndex < len ; currIndex = nextIndex )
+    
+    static if (!is(C == dchar))
     {
-        if (decodeIsWhite(s, nextIndex))
+        for ( ; ; startIndex = nextIndex )
+            if(!decodeIsWhite(s, nextIndex)) break;
+
+        find_token: for ( currIndex = nextIndex ; currIndex < len ; currIndex = nextIndex )
         {
-            app.put(p[startIndex .. currIndex]);
-            for ( startIndex = nextIndex ; ; startIndex = nextIndex )
-                if (!decodeIsWhite(s, nextIndex))
-                    continue find_token;
+            if (decodeIsWhite(s, nextIndex))
+            {
+                app.put(p[startIndex .. currIndex]);
+                for ( startIndex = nextIndex ; ; startIndex = nextIndex )
+                    if (!decodeIsWhite(s, nextIndex))
+                        continue find_token;
+            }
+        }
+    }
+    else
+    {
+        //lighter impl for dchars.
+        for ( ; ; ++startIndex)
+            if(!std.uni.isWhite(p[startIndex])) break;
+
+        find_token:
+        for ( currIndex = startIndex + 1 ; currIndex < len ; ++currIndex)
+        {
+            if (std.uni.isWhite(p[currIndex]))
+            {
+                app.put(p[startIndex .. currIndex]);
+                for ( startIndex = currIndex + 1 ; ; ++startIndex)
+                    if(!std.uni.isWhite(p[startIndex]))
+                        goto find_token;
+            }
         }
     }
     app.put(p[startIndex .. len]);
