@@ -1329,13 +1329,26 @@ assert(stripLeft([paraSep] ~ "hello world" ~ paraSep) ==
 C[] stripLeft(C)(C[] str) @safe pure
     if(isSomeChar!C)
 {
-    foreach(i, dchar c; str)
+    static if (is(Unqual!C == dchar))
     {
-        if(!std.uni.isWhite(c))
-            return str[i .. $];
+        foreach (currIndex, dchar c; str)
+        {
+            if (!std.uni.isWhite(c))
+                return str[currIndex .. $];
+        }
     }
-
-    return str[$ .. $]; //Empty string with correct type.
+    else
+    {
+        immutable len = str.length;
+        for ( size_t currIndex = 0, nextIndex = 0;
+              currIndex < len;
+              currIndex = nextIndex)
+        {
+            if (!decodeIsWhite(str, nextIndex))
+                return str[currIndex .. $];
+        }
+    }
+    return str[$ .. $];
 }
 
 //Verify Example.
@@ -1351,6 +1364,12 @@ unittest
            "hello world" ~ [lineSep]);
     assert(stripLeft([paraSep] ~ "hello world" ~ paraSep) ==
            "hello world" ~ [paraSep]);
+}
+unittest
+{
+    assert(stripLeft("  hello world  "d) == "hello world  ");
+    static assert(stripLeft("  hello world  ") == "hello world  ");
+    static assert(stripLeft("  hello world  "d) == "hello world  "d);
 }
 
 
