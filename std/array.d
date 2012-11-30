@@ -1166,20 +1166,22 @@ unittest
 Split the string $(D s) into an array of words, using whitespace as
 delimiter. Runs of whitespace are merged together (no empty words are produced).
  */
-S[] split(S)(S s) if (isSomeString!S)
+S[] split(S)(S s)
+    if (isSomeString!S)
 {
-    size_t istart;
+    auto result = appender!(S[])();
+    size_t istart = 0;
     bool inword = false;
-    S[] result;
-
-    foreach (i; 0 .. s.length)
+    auto p = s.ptr;
+    immutable len = s.length;
+    foreach (i; 0 .. len)
     {
-        switch (s[i])
+        switch (p[i])
         {
         case ' ': case '\t': case '\f': case '\r': case '\n': case '\v':
             if (inword)
             {
-                result ~= s[istart .. i];
+                result.put(p[istart .. i]);
                 inword = false;
             }
             break;
@@ -1193,8 +1195,8 @@ S[] split(S)(S s) if (isSomeString!S)
         }
     }
     if (inword)
-        result ~= s[istart .. $];
-    return result;
+        result.put(p[istart .. len]);
+    return result.data;
 }
 
 unittest
