@@ -1355,6 +1355,59 @@ unittest
     }
 }
 
+/+
+    decodeIsWhite is a specialized (and currently internal) function.
+    It exploits data from the decode to speed up evaluation of isWhite.
+    Provides the exact same guarantees as decode. Used by split and
+    stripLeft.
+
+    Only implemented for raw strings.
+
+    Throws:
+        May throw a $(D UTFException) if $(D str[index]) is not the
+        start of a valid UTF sequence.
+  +/
+package bool decodeIsWhite(S)(auto ref S str, ref size_t index) @trusted pure
+    if (isSomeString!S)
+{
+    assert(index < str.length, "decode index out of bounds");
+    alias C = Unqual!(ElementEncodingType!S);
+    static if (is(C == char))
+    {
+        auto p = str.ptr;
+        char c = p[index];
+        if (c < 0x80)
+        {
+            ++index;
+            return std.ascii._fastIsWhite(c);
+        }
+        return std.uni._fastIsWhite(decodeImpl!true(str, index));
+    }
+    else static if (is(C == wchar))
+    {
+        immutable wc = str.ptr[index];
+        if (wc < 0xD800) //single wchar sequence
+        {
+            ++index;
+            return std.uni.isWhite(wc);
+        }
+        decodeImpl!true(str, index);
+        return false;
+    }
+    else static if (is(C == dchar))
+    {
+        immutable wc = str.ptr[index];
+        if (wc < 0xD800) //single wchar sequence
+        {
+            ++index;
+            return std.uni.isWhite(wc);
+        }
+        decodeImpl!true(str, index);
+        return false;
+    }
+    else
+        static assert(0, format("%s is not a character type", C.stringof));
+}
 
 /* =================== Encode ======================= */
 
