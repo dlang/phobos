@@ -1174,9 +1174,9 @@ S[] split(S)(S s)
     bool inword = false;
     auto p = s.ptr;
     immutable len = s.length;
-    foreach (i; 0 .. len)
+    foreach (i, dchar c; s)
     {
-        switch (p[i])
+        if (std.uni.isWhite(c))
         {
         case ' ': case '\t': case '\f': case '\r': case '\n': case '\v':
             if (inword)
