@@ -1409,6 +1409,31 @@ package bool decodeIsWhite(S)(auto ref S str, ref size_t index) @trusted pure
         static assert(0, format("%s is not a character type", C.stringof));
 }
 
+unittest
+{
+    foreach (S; TypeTuple!(string, wstring, dstring))
+    {
+        S[] strings = 
+        [
+          "",
+          "h l\rw\norld",
+          "日\u1680日\u180E日\u2000日\u200A日\u2028日\u2029日\u202F日\u205F日\u3000",
+          "　　哈・郎博尔德｝　　　　___一个"
+        ];
+        foreach(s; strings)
+        {
+            size_t i = 0;
+            size_t j = 0;
+            immutable k = s.length;
+            while(i < k)
+            {
+                assert(decodeIsWhite(s, i) == std.uni.isWhite(decode(s, j)));
+                assert(i == j);
+            }
+        }
+    }
+}
+
 /* =================== Encode ======================= */
 
 /++
