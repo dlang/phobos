@@ -1181,15 +1181,15 @@ S[] split(S)(S s)
     size_t nextIndex;  //look-ahead index
 
     for ( ; ; startIndex = nextIndex )
-        if(!std.uni.isWhite(decode(s, nextIndex))) break;
+        if(!decodeIsWhite(s, nextIndex)) break;
 
     find_token: for ( currIndex = nextIndex ; currIndex < len ; currIndex = nextIndex )
     {
-        if (std.uni.isWhite(decode(s, nextIndex)))
+        if (decodeIsWhite(s, nextIndex))
         {
             app.put(p[startIndex .. currIndex]);
             for ( startIndex = nextIndex ; ; startIndex = nextIndex )
-                if (!std.uni.isWhite(decode(s, nextIndex)))
+                if (!decodeIsWhite(s, nextIndex))
                     continue find_token;
         }
     }
