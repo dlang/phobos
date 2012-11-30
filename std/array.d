@@ -1169,34 +1169,32 @@ delimiter. Runs of whitespace are merged together (no empty words are produced).
 S[] split(S)(S s)
     if (isSomeString!S)
 {
-    auto result = appender!(S[])();
-    size_t istart = 0;
-    bool inword = false;
+    s = s.stripRight(); //Means there is no trailing ws: There is *always* text after a white
+    if (s.empty) return (S[]).init;
+
+    auto app = appender!(S[])();
     auto p = s.ptr;
     immutable len = s.length;
-    foreach (i, dchar c; s)
+
+    size_t startIndex; //start word
+    size_t currIndex;  //current index
+    size_t nextIndex;  //look-ahead index
+
+    for ( ; ; startIndex = nextIndex )
+        if(!std.uni.isWhite(decode(s, nextIndex))) break;
+
+    find_token: for ( currIndex = nextIndex ; currIndex < len ; currIndex = nextIndex )
     {
-        if (std.uni.isWhite(c))
+        if (std.uni.isWhite(decode(s, nextIndex)))
         {
-        case ' ': case '\t': case '\f': case '\r': case '\n': case '\v':
-            if (inword)
-            {
-                result.put(p[istart .. i]);
-                inword = false;
-            }
-            break;
-        default:
-            if (!inword)
-            {
-                istart = i;
-                inword = true;
-            }
-            break;
+            app.put(p[startIndex .. currIndex]);
+            for ( startIndex = nextIndex ; ; startIndex = nextIndex )
+                if (!std.uni.isWhite(decode(s, nextIndex)))
+                    continue find_token;
         }
     }
-    if (inword)
-        result.put(p[istart .. len]);
-    return result.data;
+    app.put(p[startIndex .. len]);
+    return app.data;
 }
 
 unittest
