@@ -1194,7 +1194,7 @@ struct Parser(R, bool CTFE=false)
 
     //parse and store IR for atom-quantifier pair
     @trusted void parseQuantifier(uint offset)
-    {//moveAll is @system
+    {//copy is @system
         uint replace = ir[offset].code == IR.Nop;
         if(empty && !replace)
             return;
@@ -1238,7 +1238,7 @@ struct Parser(R, bool CTFE=false)
         default:
             if(replace)
             {
-                moveAll(ir[offset+1..$],ir[offset..$-1]);
+                copyForwardAlt(ir[offset+1..$],ir[offset..$-1]);
                 ir.length -= 1;
             }
             return;
@@ -1287,7 +1287,7 @@ struct Parser(R, bool CTFE=false)
             }
             else if(replace)
             {
-                moveAll(ir[offset+1 .. $],ir[offset .. $-1]);
+                copyForwardAlt(ir[offset+1 .. $],ir[offset .. $-1]);
                 ir.length -= 1;
             }
             put(Bytecode(greedy ? IR.InfiniteStart : IR.InfiniteQStart, len));
@@ -2717,7 +2717,7 @@ public:
                     break;
                 default:
                 L_StopThread:
-                    assert(re.ir[t.pc].code >= 0x80);
+                    assert(re.ir[t.pc].code >= 0x80, text(re.ir[t.pc].code));
                     debug (fred_search) writeln("ShiftOr stumbled on ",re.ir[t.pc].mnemonic);
                     n_length = min(t.idx, n_length);
                     break L_Eval_Thread;
@@ -7460,7 +7460,7 @@ else
             assert(!m);
             debug(fred_test) writeln("!!! FReD REGRESSION test done "~matchFn.stringof~" !!!");
             auto rprealloc = regex(`((.){5}.{1,10}){5}`);
-            auto arr = array(replicate('0',100));
+            auto arr = array(repeat('0',100));
             auto m2 = matchFn(arr, rprealloc);
             assert(m2);
             assert(collectException(
@@ -7598,6 +7598,28 @@ else
     {// bugzilla 8637 purity of enforce
         auto m = match("hello world", regex("world"));
         enforce(m);
+    }
+
+    // bugzilla 8725 
+    unittest
+    {        
+      static italic = regex( r"\*
+                    (?!\s+)
+                    (.*?)
+                    (?!\s+)
+                    \*", "gx" );
+      string input = "this * is* interesting, *very* interesting";
+      assert(replace(input, italic, "<i>$1</i>") == 
+          "this * is* interesting, <i>very</i> interesting");
+    }
+
+    // bugzilla 8349
+    unittest
+    {
+        enum peakRegexStr = r"\>(wgEncode.*Tfbs.*\.(?:narrow)|(?:broad)Peak.gz)</a>";
+        enum peakRegex = ctRegex!(peakRegexStr);
+        //note that the regex pattern itself is probably bogus
+        assert(match(r"\>wgEncode-blah-Tfbs.narrow</a>", peakRegex));
     }
 }
 
