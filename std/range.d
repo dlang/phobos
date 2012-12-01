@@ -1214,19 +1214,17 @@ unittest
 Returns $(D true) if $(D R) offers a slicing operator with integral boundaries
 that returns a forward range type.
 
-For finite ranges, the result of $(D opSlice) must be implicitly convertible
-to the original range type so that it can be reassigned to the original range
-and so that the original range can be constructed from it. If the range defines
-$(D opDollar), then it must support subtraction.
+For finite ranges, the result of $(D opSlice) must be of the same type as the
+original range type. If the range defines $(D opDollar), then it must support
+subtraction.
 
 For infinite ranges, when $(I not) using $(D opDollar), the result of
 $(D opSlice) must be the result of $(LREF take) or $(LREF takeExactly) on the
 original range (they both return the same type for infinite ranges). However,
-when using $(D opDollar), the result of $(D opSlice) must be implicitly
-convertible to the original range type so that it can be reassigned to the
-original range and so that the original range can be constructed from it.
+when using $(D opDollar), the result of $(D opSlice) must be that of the
+original range type.
 
-The following code should compile for $(D hasSlicing) to be $(D true):
+The following code must compile for $(D hasSlicing) to be $(D true):
 
 ----
 R r = void;
@@ -1234,17 +1232,22 @@ R r = void;
 static if(isInfinite!R)
     typeof(take(r, 1)) s = r[1 .. 2];
 else
+{
+    static assert(is(typeof(r[1 .. 2]) == R));
     R s = r[1 .. 2];
+}
 
 s = r[1 .. 2];
 
 static if(is(typeof(r[0 .. $])))
 {
+    static assert(is(typeof(r[0 .. $]) == R));
     R t = r[0 .. $];
     t = r[0 .. $];
 
     static if(!isInfinite!R)
     {
+        static assert(is(typeof(r[0 .. $ - 1]) == R));
         R u = r[0 .. $ - 1];
         u = r[0 .. $ - 1];
     }
@@ -1256,7 +1259,7 @@ static assert(hasLength!(typeof(r[1 .. 2])));
  */
 template hasSlicing(R)
 {
-    enum bool hasSlicing = !isNarrowString!R && is(typeof(
+    enum bool hasSlicing = isForwardRange!R && !isNarrowString!R && is(typeof(
     (inout int = 0)
     {
         R r = void;
@@ -1264,17 +1267,25 @@ template hasSlicing(R)
         static if(isInfinite!R)
             typeof(take(r, 1)) s = r[1 .. 2];
         else
+        {
+            //@@@BUG@@@ 8847 makes it so that the three commented out lines
+            //cause Phobos to fail to compile - hence why they're commented
+            //out. They should be uncommented once that bug has been fixed.
+            //static assert(is(typeof(r[1 .. 2]) == R));
             R s = r[1 .. 2];
+        }
 
         s = r[1 .. 2];
 
         static if(is(typeof(r[0 .. $])))
         {
+            //static assert(is(typeof(r[0 .. $]) == R));
             R t = r[0 .. $];
             t = r[0 .. $];
 
             static if(!isInfinite!R)
             {
+                //static assert(is(typeof(r[0 .. $ - 1]) == R));
                 R u = r[0 .. $ - 1];
                 u = r[0 .. $ - 1];
             }
