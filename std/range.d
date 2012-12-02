@@ -412,7 +412,7 @@ enum dummyRanges = q{
             }
             else
             {
-                @property uint opIndex(size_t index) const
+                uint opIndex(size_t index) const
                 {
                     return arr[index];
                 }
@@ -4048,7 +4048,7 @@ if(Ranges.length && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
 */
         static if (allSatisfy!(hasMobileElements, R))
         {
-            @property ElementType moveBack()
+            ElementType moveBack()
             {
                 ElementType result = void;
                 foreach (i, Unused; R)
@@ -4943,14 +4943,16 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
                 this.step = 1;
             }
         }
+
         @property bool empty() const { return current == pastLast; }
         @property inout(Value) front() inout { assert(!empty); return current; }
-        alias front moveFront;
         void popFront() { assert(!empty); current += step; }
+
         @property inout(Value) back() inout { assert(!empty); return pastLast - step; }
-        alias back moveBack;
         void popBack() { assert(!empty); pastLast -= step; }
+
         @property auto save() { return this; }
+
         inout(Value) opIndex(ulong n) inout
         {
             assert(n < this.length);
@@ -5017,14 +5019,16 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
                 this.current = this.pastLast = current;
             }
         }
+
         @property bool empty() const { return current == pastLast; }
         @property inout(Value) front() inout { assert(!empty); return current; }
-        alias front moveFront;
         void popFront() { assert(!empty); ++current; }
+
         @property inout(Value) back() inout { assert(!empty); return pastLast - 1; }
-        alias back moveBack;
         void popBack() { assert(!empty); --pastLast; }
+
         @property auto save() { return this; }
+
         inout(Value) opIndex(ulong n) inout
         {
             assert(n < this.length);
@@ -5068,6 +5072,7 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
     {
         private Value start, step;
         private size_t index, count;
+
         this(Value start, Value end, Value step)
         {
             this.start = start;
@@ -5088,9 +5093,9 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
                 assert(start + count * step <= end);
             }
         }
+
         @property bool empty() const { return index == count; }
         @property Value front() const { assert(!empty); return start + step * index; }
-        alias front moveFront;
         void popFront()
         {
             assert(!empty);
@@ -5101,13 +5106,14 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
             assert(!empty);
             return start + step * (count - 1);
         }
-        alias back moveBack;
         void popBack()
         {
             assert(!empty);
             --count;
         }
+
         @property auto save() { return this; }
+
         Value opIndex(size_t n) const
         {
             assert(n < count);
@@ -7778,7 +7784,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
 
 
     /++ +/
-    @property void popFront()
+    void popFront()
     {
         return (*_range).popFront();
     }
@@ -7882,7 +7888,8 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
 
 
     /++ Ditto +/
-    static if(isBidirectionalRange!R) @property void popBack()
+    static if(isBidirectionalRange!R)
+    void popBack()
     {
         return (*_range).popBack();
     }
@@ -7893,20 +7900,20 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
         /++
             Only defined if $(D isRandomAccesRange!R) is $(D true).
           +/
-        @property auto ref opIndex(IndexType)(IndexType index) {assert(0);}
+        auto ref opIndex(IndexType)(IndexType index) {assert(0);}
 
         /++ Ditto +/
-        @property auto ref opIndex(IndexType)(IndexType index) const {assert(0);}
+        auto ref opIndex(IndexType)(IndexType index) const {assert(0);}
     }
     else static if(isRandomAccessRange!R)
     {
-        @property auto ref opIndex(IndexType)(IndexType index)
+        auto ref opIndex(IndexType)(IndexType index)
             if(is(typeof((*_range)[index])))
         {
             return (*_range)[index];
         }
 
-        @property auto ref opIndex(IndexType)(IndexType index) const
+        auto ref opIndex(IndexType)(IndexType index) const
             if(is(typeof((*cast(const R*)_range)[index])))
         {
             return (*_range)[index];
@@ -7918,7 +7925,8 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
         Only defined if $(D hasMobileElements!R) and $(D isForwardRange!R) are
         $(D true).
       +/
-    static if(hasMobileElements!R && isForwardRange!R) @property auto moveFront()
+    static if(hasMobileElements!R && isForwardRange!R)
+    auto moveFront()
     {
         return (*_range).moveFront();
     }
@@ -7928,7 +7936,8 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
         Only defined if $(D hasMobileElements!R) and $(D isBidirectionalRange!R)
         are $(D true).
       +/
-    static if(hasMobileElements!R && isBidirectionalRange!R) @property auto moveBack()
+    static if(hasMobileElements!R && isBidirectionalRange!R)
+    auto moveBack()
     {
         return (*_range).moveBack();
     }
@@ -7938,7 +7947,8 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
         Only defined if $(D hasMobileElements!R) and $(D isRandomAccessRange!R)
         are $(D true).
       +/
-    static if(hasMobileElements!R && isRandomAccessRange!R) @property auto moveAt(IndexType)(IndexType index)
+    static if(hasMobileElements!R && isRandomAccessRange!R)
+    auto moveAt(IndexType)(IndexType index)
         if(is(typeof((*_range).moveAt(index))))
     {
         return (*_range).moveAt(index);
@@ -7974,24 +7984,24 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
         /++
             Only defined if $(D hasSlicing!R) is $(D true).
           +/
-        @property auto opSlice(IndexType1, IndexType2)
-                              (IndexType1 begin, IndexType2 end) {assert(0);}
+        auto opSlice(IndexType1, IndexType2)
+                    (IndexType1 begin, IndexType2 end) {assert(0);}
 
         /++ Ditto +/
-        @property auto opSlice(IndexType1, IndexType2)
-                              (IndexType1 begin, IndexType2 end) const {assert(0);}
+        auto opSlice(IndexType1, IndexType2)
+                    (IndexType1 begin, IndexType2 end) const {assert(0);}
     }
     else static if(hasSlicing!R)
     {
-        @property auto opSlice(IndexType1, IndexType2)
-                              (IndexType1 begin, IndexType2 end)
+        auto opSlice(IndexType1, IndexType2)
+                    (IndexType1 begin, IndexType2 end)
             if(is(typeof((*_range)[begin .. end])))
         {
             mixin(_genOpSlice());
         }
 
-        @property auto opSlice(IndexType1, IndexType2)
-                              (IndexType1 begin, IndexType2 end) const
+        auto opSlice(IndexType1, IndexType2)
+                    (IndexType1 begin, IndexType2 end) const
             if(is(typeof((*cast(const R*)_range)[begin .. end])))
         {
             mixin(_genOpSlice());
