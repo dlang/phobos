@@ -39,15 +39,20 @@ private class MangleException : Exception
  *        This program reads standard in and writes it to standard out,
  *        pretty-printing any found D mangled names.
 -------------------
+import core.stdc.stdio : stdin;
 import std.stdio;
 import std.ascii;
 import std.demangle;
 
+void test(int x, float y) { }
+
 int main()
-{   char[] buffer;
+{   
+    string buffer;
     bool inword;
     int c;
-
+    
+    writefln("Try typing in: %s", test.mangleof);
     while ((c = fgetc(stdin)) != EOF)
     {
         if (inword)
@@ -57,21 +62,22 @@ int main()
             else
             {
                 inword = false;
-                writef(demangle(buffer), cast(char) c);
+                write(demangle(buffer), cast(char) c);
             }
         }
         else
         {   if (c == '_' || isAlpha(c))
-            {        inword = true;
+            {   
+                inword = true;
                 buffer.length = 0;
                 buffer ~= cast(char) c;
             }
             else
-                writef(cast(char) c);
+                write(cast(char) c);
         }
     }
     if (inword)
-        writef(demangle(buffer));
+        write(demangle(buffer));
     return 0;
 }
 -------------------
