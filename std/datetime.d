@@ -28767,7 +28767,7 @@ public:
       +/
     override long utcToTZ(long stdTime) const nothrow
     {
-        return stdTime + _utcOffset.total!"hnsecs"();
+        return stdTime + _utcOffset.total!"hnsecs";
     }
 
     version(testStdDateTime) unittest
@@ -28795,7 +28795,7 @@ public:
       +/
     override long tzToUTC(long adjTime) const nothrow
     {
-        return adjTime - _utcOffset.total!"hnsecs"();
+        return adjTime - _utcOffset.total!"hnsecs";
     }
 
     version(testStdDateTime) unittest
@@ -28869,7 +28869,7 @@ public:
       +/
     @property int utcOffset() @safe const pure nothrow
     {
-        return cast(int)_utcOffset.total!"minutes"();
+        return cast(int)_utcOffset.total!"minutes";
     }
 
 

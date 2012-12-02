@@ -2463,7 +2463,7 @@ bool binarySearch(alias table)(dchar c) @safe pure nothrow
         }
         return true;
     }
-    static assert(checkTableEntry!table());
+    static assert(checkTableEntry!table);
 
     return binarySearch2(c, table);
 }

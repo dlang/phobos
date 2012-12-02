@@ -6479,7 +6479,6 @@ unittest
                 bool empty() { return i >= data.length; }
                 T front() { return data[i]; }
                 T front(real e) { return data[i] = cast(T) e; }
-                alias front moveFront;
             }
             void popFront() { ++i; }
         }
