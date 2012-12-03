@@ -124,7 +124,7 @@ else
 
     std.uni.isUniAlpha('A');
 
-    "foo".exists;
+    std.file.exists("foo");
 
     foreach_reverse (dchar d; "hello"c) { }
     foreach_reverse (k, dchar d; "hello"c) { }
