@@ -1122,35 +1122,42 @@ unittest
 Split the string $(D s) into an array of words, using whitespace as
 delimiter. Runs of whitespace are merged together (no empty words are produced).
  */
-S[] split(S)(S s) if (isSomeString!S)
+S[] split(S)(S s)
+    if (isSomeString!S)
 {
-    size_t istart;
-    bool inword = false;
-    S[] result;
+    alias ElementEncodingType!S C;
 
-    foreach (i; 0 .. s.length)
+    auto app = appender!(S[])();
+
+    s = s.strip(); //Means there is no trailing ws: because it means that
+                   //finding a ws => there are still non-whites in the stream
+    if(!s.empty)
     {
-        switch (s[i])
+        //Search individual tokens
+        findToken: for(;;)
         {
-        case ' ': case '\t': case '\f': case '\r': case '\n': case '\v':
-            if (inword)
+            //search for a WS
+            foreach (size_t i, dchar c; s)
             {
-                result ~= s[istart .. i];
-                inword = false;
+                if(std.uni.isWhite(c))
+                {
+                    //put int the word
+                    app.put(s.ptr[0 .. i]);
+                    //Slice s at i+1 to manually remove the item we already know is white
+                    s = s.ptr[i + c.codeLength!C() .. s.length];
+                    //Then remove the rest of the whites
+                    s = s.stripLeft();
+                    continue findToken; //And look for the next one
+                }
             }
-            break;
-        default:
-            if (!inword)
-            {
-                istart = i;
-                inword = true;
-            }
-            break;
+            //Failed to find a ws
+            break findToken;
         }
+        //Put the last word in
+        app.put(s);
     }
-    if (inword)
-        result ~= s[istart .. $];
-    return result;
+
+    return app.data;
 }
 
 unittest
@@ -1163,10 +1170,33 @@ unittest
 
         S s2 = " \t\npeter paul\tjerry";
         assert(equal(split(s2), [ to!S("peter"), to!S("paul"), to!S("jerry") ]));
+        
+        S s3 = " 日 本 語 ";
+        assert(equal(split(s3), [ to!S("日"), to!S("本"), to!S("語") ]));
+        
+        S s4 = "\u3000日\u3000本\u3000語\u3000"; //Japanese unicode wide-space: "　日　本　語　";
+        assert(equal(split(s4), [ to!S("日"), to!S("本"), to!S("語") ]));
     }
 
     immutable string s = " \t\npeter paul\tjerry \n";
     assert(equal(split(s), ["peter", "paul", "jerry"]));
+}
+
+unittest
+{
+    //Testing @@@7689
+    //Note: Split does not guarantee an actual exception,
+    //So this unittest is just a "stability" test.
+    char[] s = cast(char[])[131, 64, 32, 251, 22];
+    assertThrown(std.string.split(s).length == 2);
+}
+
+unittest
+{
+    enum rw = split("\u3000日\u3000本\u3000語\u3000");
+    static assert(rw[0] == "日");
+    static assert(rw[1] == "本");
+    static assert(rw[2] == "語");
 }
 
 /**
