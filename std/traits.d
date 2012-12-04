@@ -2417,8 +2417,10 @@ template hasElaborateAssign(S)
     }
     else
     {
+        @property auto ref lvalueOf() { static S s = void; return s; }
+
         enum hasElaborateAssign = is(typeof(S.init.opAssign(S.init))) ||
-                                  is(typeof(S.init.opAssign({ S s = void; return s; }()))) ||
+                                  is(typeof(S.init.opAssign(lvalueOf))) ||
             anySatisfy!(.hasElaborateAssign, typeof(S.tupleof));
     }
 }
