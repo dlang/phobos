@@ -2467,6 +2467,105 @@ unittest
     }
 }
 
+unittest
+{
+    //Flavors of assign/postblit and destructor.
+    static struct S0
+    {
+        int i = 1;
+        //this(this){}
+        //void opAssign(typeof(this) other) {i = other.i;}
+        //~this(){}
+    }
+    static struct S1
+    {
+        int i = 1;
+        this(this){}
+        //void opAssign(typeof(this) other) {i = other.i;}
+        //~this(){}
+    }
+    static struct S2
+    {
+        int i = 1;
+        //this(this){}
+        void opAssign(typeof(this) other) {i = other.i;}
+        //~this(){}
+    }
+    static struct S3
+    {
+        int i = 1;
+        //this(this){}
+        //void opAssign(typeof(this) other) {i = other.i;}
+        ~this(){}
+    }
+    static struct S4
+    {
+        int i = 1;
+        this(this){}
+        void opAssign(typeof(this) other) {i = other.i;}
+        //~this(){}
+    }
+    static struct S5
+    {
+        int i = 1;
+        this(this){}
+        //void opAssign(typeof(this) other) {i = other.i;}
+        ~this(){}
+    }
+    static struct S6
+    {
+        int i = 1;
+        //this(this){}
+        void opAssign(typeof(this) other) {i = other.i;}
+        ~this(){}
+    }
+    static struct S7
+    {
+        int i = 1;
+        this(this){}
+        void opAssign(typeof(this) other) {i = other.i;}
+        ~this(){}
+    }
+
+    foreach (SS; TypeTuple!(S0, S1, S2, S3, S4, S5, S6, S7))
+    {
+        //Test various flavours off appender
+        foreach (S; TypeTuple!(SS, const(SS), immutable(SS)))
+        {
+            auto app1 = appender!(S[])();
+
+            foreach(i; 0 .. 0x20000)
+                app1.put(S(i));
+
+            auto data1 = app1.data;
+            static assert(is(typeof(data1) == S[]));
+            foreach(i; 0 .. 0x20000)
+                assert(data1[i] == S(i));
+
+            auto app2 = appender(data1);
+
+            app2.put([S(0x20000), S(0x20001)]); //Array
+            app2.put([S(0x20002), S(0x20003)].filter!"true"()); //Forward Range
+            app2.put([S(0x20004), S(0x20005)].filter!"true"().takeExactly(2)); //Forward range with length
+
+            foreach(i; 0x20006 .. 0x40000)
+                app2.put(S(i));
+
+            auto data2 = app2.data;
+            static assert(is(typeof(data2) == S[]));
+            foreach(i; 0 .. 0x40000)
+                assert(data2[i] == S(i));
+        }
+
+        //Test various flavours off RefAppender
+        auto dat = [SS(0), SS(1)];
+        auto refApp = appender(&dat);
+        refApp.put(SS(2));
+        refApp.put([SS(3), SS(4)]);
+        assert(dat == [SS(0), SS(1), SS(2), SS(3), SS(4)]);
+    }
+}
+
 /++
     Convenience function that returns a $(D RefAppender!(A)) object initialized
     with $(D array).  Don't use null for the $(D array) pointer, use the other
