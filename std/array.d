@@ -2148,8 +2148,22 @@ Appends one item to the managed array.
         else
         {
             ensureAddable(1);
+            putImpl(item);
+        }
+    }
+
+    //Same as put(item), but assumes the capacity is already reserved.
+    private void putImpl(U)(U item)
+    {
+        static if (isSomeChar!T && isSomeChar!U && T.sizeof < U.sizeof)
+            put(item);
+        else
+        {
             immutable len = _data.arr.length;
-            _data.arr.ptr[len] = cast(Unqual!T)item;
+            static if (hasElaborateCopyConstructor!UT)
+                emplace(_data.arr.ptr + len, cast(UT) item);
+            else
+                _data.arr.ptr[len] = cast(UT) item;
             _data.arr = _data.arr.ptr[0 .. len + 1];
         }
     }
@@ -2204,12 +2218,18 @@ Appends an entire range to the managed array.
         }
         else
         {
-            //pragma(msg, Range.stringof);
-            // Generic input range
-            for (; !items.empty; items.popFront())
+            // Generic range
+            static if (hasLength!Range)
             {
-                put(items.front);
+                //Has length, so ensure ensureAddable once
+                ensureAddable(items.length);
+                for ( ; !items.empty; items.popFront() )
+                    putImpl(items.front); //Put without ensureAddable on each call
             }
+            else
+                //Just put one by one
+                for ( ; !items.empty; items.popFront() )
+                    put(items.front);
         }
     }
 
