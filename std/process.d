@@ -103,17 +103,6 @@ else version(Windows)
     // and POSIX, only the spawnProcessImpl() function has to be
     // different.
     LPVOID environ = null;
-
-    // TODO: This should be in druntime!
-    extern(Windows)
-    {
-        alias WCHAR* LPWCH;
-        LPWCH GetEnvironmentStringsW();
-        BOOL FreeEnvironmentStringsW(LPWCH lpszEnvironmentBlock);
-        DWORD GetEnvironmentVariableW(LPCWSTR lpName, LPWSTR lpBuffer,
-            DWORD nSize);
-        BOOL SetEnvironmentVariableW(LPCWSTR lpName, LPCWSTR lpValue);
-    }
 }
 
 
