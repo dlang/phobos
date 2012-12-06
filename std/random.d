@@ -58,7 +58,7 @@ module std.random;
 
 import std.algorithm, std.c.time, std.conv, std.exception,
        std.math, std.numeric, std.range, std.traits,
-       core.thread, core.time;
+       core.thread, core.time, std.process;
 import std.string : format;
 
 version(unittest) import std.typetuple;
@@ -1030,7 +1030,7 @@ auto n = rnd.front;
     if (!seeded)
     {
         uint threadID = cast(uint) cast(void*) Thread.getThis();
-        rand.seed((getpid() + threadID) ^ cast(uint) TickDuration.currSystemTick.length);
+        rand.seed((thisProcessID + threadID) ^ cast(uint) TickDuration.currSystemTick.length);
         seeded = true;
     }
     rand.popFront();
