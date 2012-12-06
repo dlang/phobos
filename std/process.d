@@ -741,12 +741,14 @@ version(Posix) Pipe pipe()
     // but the File.wrapFile() function disables automatic closing of
     // the file.  Perhaps there should be a protected version of
     // wrapFile() that fills this purpose?
-    p._read.p = new File.Impl(
-        errnoEnforce(fdopen(fds[0], "r"), "Cannot open read end of pipe"),
-        1, null);
-    p._write.p = new File.Impl(
-        errnoEnforce(fdopen(fds[1], "w"), "Cannot open write end of pipe"),
-        1, null);
+    p._read = File(errnoEnforce(fdopen(fds[0], "r"), "Cannot open read end of pipe"),
+                   null,
+                   1,
+                   true);
+    p._write = File(errnoEnforce(fdopen(fds[1], "w"), "Cannot open write end of pipe"),
+                    null,
+                    1,
+                    true);
 
     return p;
 }
@@ -789,21 +791,25 @@ else version(Windows) Pipe pipe()
             return fp;
         }
 
-        p._read.p = new File.Impl(
-            errnoEnforce(local_fdopen(readfd, "r"), "Cannot open read end of pipe"),
-            1, null);
-        p._write.p = new File.Impl(
-            errnoEnforce(local_fdopen(writefd, "a"), "Cannot open write end of pipe"),
-            1, null);
+        p._read = File(errnoEnforce(local_fdopen(readfd, "r"), "Cannot open read end of pipe"),
+                       null,
+                       1,
+                       true);
+        p._write = File(errnoEnforce(local_fdopen(writefd, "a"), "Cannot open write end of pipe"),
+                        null,
+                        1,
+                        true);
     }
     else
     {
-        p._read.p = new File.Impl(
-            errnoEnforce(fdopen(readfd, "r"), "Cannot open read end of pipe"),
-            1, null);
-        p._write.p = new File.Impl(
-            errnoEnforce(fdopen(writefd, "a"), "Cannot open write end of pipe"),
-            1, null);
+        p._read = File(errnoEnforce(fdopen(readfd, "r"), "Cannot open read end of pipe"),
+                       null,
+                       1,
+                       true);
+        p._write = File(errnoEnforce(fdopen(writefd, "a"), "Cannot open write end of pipe"),
+                        null,
+                        1,
+                        true);
     }
 
     return p;
