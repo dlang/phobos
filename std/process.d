@@ -737,10 +737,6 @@ version(Posix) Pipe pipe()
 
     Pipe p;
 
-    // TODO: Using the internals of File like this feels like a hack,
-    // but the File.wrapFile() function disables automatic closing of
-    // the file.  Perhaps there should be a protected version of
-    // wrapFile() that fills this purpose?
     p._read = File(errnoEnforce(fdopen(fds[0], "r"), "Cannot open read end of pipe"),
                    null,
                    1,
