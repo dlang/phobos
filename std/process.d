@@ -837,6 +837,7 @@ unittest
 {
     auto p = pipe();
     p.writeEnd.writeln("Hello World");
+    p.writeEnd.flush();
     assert (p.readEnd.readln().chomp() == "Hello World");
 }
 
