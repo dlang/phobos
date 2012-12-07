@@ -1430,6 +1430,49 @@ unittest
     formatTest( S2(10), "S" );
 }
 
+// bugzilla 9117
+unittest
+{
+    static struct Frop {}
+
+    static struct Foo
+    {
+        int n = 0;
+        alias n this;
+        T opCast(T) () if (is(T == Frop))
+        {
+            return Frop();
+        }
+        string toString()
+        {
+            return "Foo";
+        }
+    }
+
+    static struct Bar
+    {
+        Foo foo;
+        alias foo this;
+        string toString()
+        {
+            return "Bar";
+        }
+    }
+
+    const(char)[] result;
+    void put(const char[] s){ result ~= s; }
+
+    Foo foo;
+    formattedWrite(&put, "%s", foo);    // OK
+    assert(result == "Foo");
+
+    result = null;
+
+    Bar bar;
+    formattedWrite(&put, "%s", bar);    // NG
+    assert(result == "Bar");
+}
+
 /**
  * Floating-point values are formatted like $(D printf) does.
  */
@@ -2831,9 +2874,9 @@ private int getNthInt(A...)(uint index, A args)
         {
             return getNthInt(index - 1, args[1 .. $]);
         }
-        static if (is(typeof(args[0]) : long) || is(typeof(arg) : ulong))
+        static if (isIntegral!(typeof(args[0])))
         {
-            return to!(int)(args[0]);
+            return to!int(args[0]);
         }
         else
         {
