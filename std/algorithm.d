@@ -2015,8 +2015,7 @@ unittest
 // splitter
 /**
 Splits a range using an element as a separator. This can be used with
-any narrow string type or sliceable range type, but is most popular
-with string types.
+any forward range type, but is most popular with string types.
 
 Two adjacent separators are considered to surround an empty element in
 the split range.
@@ -2040,146 +2039,393 @@ assert(equal(splitter(a, 0), [ [], [1] ]));
 ----
 */
 auto splitter(Range, Separator)(Range r, Separator s)
-if (is(typeof(ElementType!Range.init == Separator.init))
-        && (hasSlicing!Range || isNarrowString!Range))
+    if (isForwardRange!Range && is(typeof(r.front == s) : bool))
 {
-    static struct Result
+    static if((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range) ||
+              isNarrowString!Range)
+        return SplitterResultRAE!(Range, Separator)(r, s);
+    else
+        return SplitterResultFRE!(Range, Separator)(r, s);
+}
+
+/**
+Splits a range using another range as a separator. This can be used
+with any range type, but is most popular with string types.
+ */
+auto splitter(Range, Separator)(Range r, Separator s)
+    if (isForwardRange!Range && isForwardRange!Separator &&
+        is(typeof(r.front == s.front) : bool))
+{
+    static if((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range) ||
+              isNarrowString!Range)
+        return SplitterResultRAR!(Range, Separator)(r, s);
+    else
+        return SplitterResultFRR!(Range, Separator)(r, s);
+}
+
+/**
+Splits a range using a predicate as a separator.
+ */
+auto splitter(alias isTerminator, Range)(Range r)
+    if (isForwardRange!Range &&
+        is(typeof(unaryFun!isTerminator(r.front)) : bool))
+{
+    static if((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range) ||
+              isNarrowString!Range)
+        return SplitterResultRAP!(unaryFun!isTerminator, Range)(r);
+    else
+        return SplitterResultFRP!(unaryFun!isTerminator, Range)(r);
+}
+
+/*
+The following section contains the "splitter building blocks".
+
+By using these, the above implementations only need to define:
+-The constructor.
+-Save
+-The methods getFirst and getLast
+*/
+
+//For RA splitter
+mixin template SplitterRAImpl(bool popN)
+{
+private:
+    Range _input;
+
+    alias typeof(unsigned(_input.length)) IndexType;
+    IndexType _frontLength = size_t.max;
+    IndexType _backLength = size_t.max;
+
+public:
+    @property bool empty()
     {
-    private:
-        Range _input;
-        Separator _separator;
-        // Do we need hasLength!Range? popFront uses _input.length...
-        alias typeof(unsigned(_input.length)) IndexType;
-        enum IndexType _unComputed = IndexType.max - 1, _atEnd = IndexType.max;
-        IndexType _frontLength = _unComputed;
-        IndexType _backLength = _unComputed;
+        return _frontLength == size_t.max;
+    }
 
-        static if(isBidirectionalRange!Range)
-        {
-            static IndexType lastIndexOf(Range haystack, Separator needle)
-            {
-                immutable index = countUntil(retro(haystack), needle);
-                return (index == -1) ? -1 : haystack.length - 1 - index;
-            }
-        }
+    @property Range front()
+    {
+        assert(!empty);
+        return _input[0 .. _frontLength];
+    }
 
-    public:
-        this(Range input, Separator separator)
+    void popFront()
+    {
+        assert(!empty);
+        assert(_frontLength <= _input.length);
+        _input = _input[_frontLength .. _input.length];
+        if (_input.empty)
         {
-            _input = input;
-            _separator = separator;
+            _frontLength = size_t.max;
+            return;
         }
-
-        static if (isInfinite!Range)
-        {
-            enum bool empty = false;
-        }
+        static if (popN)
+            _input = _input[_separatorLength .. _input.length];
         else
+            _input.popFront();
+        getFirst();
+    }
+}
+//The "back" primitives of Splitter RA
+private mixin template SplitterRAImplBack(bool popN, bool deprecate = false)
+{
+    static if (deprecate)
+    {
+        deprecated @property Range back(){return _back;}
+        deprecated void popBack(){return _popBack();}
+    }
+    else
+    {
+        @property Range back(){return _back;}
+        void popBack(){return _popBack();}
+    }
+
+    @property Range _back()
+    {
+        assert(!empty);
+        return _input[_input.length - _backLength .. _input.length];
+    }
+
+    void _popBack()
+    {
+        assert(!empty);
+        assert(_backLength <= _input.length);
+        _input = _input[0 .. _input.length - _backLength];
+        if (_input.empty)
         {
-            @property bool empty()
-            {
-                return _frontLength == _atEnd;
-            }
+            _frontLength = size_t.max;
+            return;
         }
+        static if (popN)
+            _input = _input[0 .. _input.length - _separatorLength];
+        else
+            _input.popBack();
+        getLast();
+    }
+}
 
-        @property Range front()
+//For Forward Range splitter
+private mixin template SplitterFRImpl(bool popN)
+{
+private:
+    Range _input;
+    Range _next;
+    size_t _frontLength;
+
+public:
+    static if (isInfinite!Range)
+    {
+        enum bool empty = false;  // Propagate infiniteness.
+    }
+    else
+    {
+        @property bool empty()
         {
-            assert(!empty);
-            if (_frontLength == _unComputed)
-            {
-                _frontLength = countUntil(_input, _separator);
-                if (_frontLength == -1) _frontLength = _input.length;
-            }
-            return _input[0 .. _frontLength];
-        }
-
-        void popFront()
-        {
-            assert(!empty);
-            if (_frontLength == _unComputed)
-            {
-                front;
-            }
-            assert(_frontLength <= _input.length);
-            if (_frontLength == _input.length)
-            {
-                // no more input and need to fetch => done
-                _frontLength = _atEnd;
-
-                // Probably don't need this, but just for consistency:
-                _backLength = _atEnd;
-            }
-            else
-            {
-                _input = _input[_frontLength .. _input.length];
-                skipOver(_input, _separator) || assert(false);
-                _frontLength = _unComputed;
-            }
-        }
-
-        static if(isForwardRange!Range)
-        {
-            @property typeof(this) save()
-            {
-                auto ret = this;
-                ret._input = _input.save;
-                return ret;
-            }
-        }
-
-        static if(isBidirectionalRange!Range)
-        {
-            @property Range back()
-            {
-                assert(!empty);
-                if (_backLength == _unComputed)
-                {
-                    immutable lastIndex = lastIndexOf(_input, _separator);
-                    if(lastIndex == -1)
-                    {
-                        _backLength = _input.length;
-                    }
-                    else
-                    {
-                        _backLength = _input.length - lastIndex - 1;
-                    }
-                }
-                return _input[_input.length - _backLength .. _input.length];
-            }
-
-            void popBack()
-            {
-                assert(!empty);
-                if (_backLength == _unComputed)
-                {
-                    // evaluate back to make sure it's computed
-                    back;
-                }
-                assert(_backLength <= _input.length);
-                if (_backLength == _input.length)
-                {
-                    // no more input and need to fetch => done
-                    _frontLength = _atEnd;
-                    _backLength = _atEnd;
-                }
-                else
-                {
-                    _input = _input[0 .. _input.length - _backLength];
-                    if (!_input.empty && _input.back == _separator)
-                    {
-                        _input.popBack();
-                    }
-                    else
-                    {
-                        assert(false);
-                    }
-                    _backLength = _unComputed;
-                }
-            }
+            return _frontLength == size_t.max;
         }
     }
 
-    return Result(r, s);
+    @property auto front()
+    {
+        assert(!empty);
+
+        return _input.takeExactly(_frontLength);
+    }
+
+    void popFront()
+    {
+        if(!_next.empty)
+        {
+            static if (popN)
+                _next.popFrontN(_separatorLength);
+            else
+                _next.popFront();
+            _input = _next;
+            getFirst();
+        }
+        else
+            _frontLength = size_t.max;
+    }
+}
+
+//splitter Payloads:
+//SplitterResultRAE: Random Access Element
+//SplitterResultFRE: Forward Range Element
+//SplitterResultRAR: Random Access Range
+//SplitterResultFRR: Forward Range Range
+//SplitterResultRAP: Random Access Predicate
+//SplitterResultFRP: Forward Range Predicate
+
+//RA implementation for Element splitter
+private struct SplitterResultRAE(Range, Separator)
+{
+    mixin SplitterRAImpl!false;
+    mixin SplitterRAImplBack!false;
+
+private:
+    Separator _separator;
+
+    void getFirst()
+    {
+        _frontLength = _input.length - find(_input.save, _separator).length;
+    }
+    void getLast()
+    {
+        _backLength = _input.length - find(_input.save.retro(), _separator).retro().length;
+        //Note: call retro twice instead of source, to extract a string's length's (string.retro does not have length...)
+    }
+
+public:
+    this(Range input, Separator separator)
+    {
+        _input = input;
+        _separator = separator;
+        getFirst();
+        getLast();
+    }
+
+    @property typeof(this) save()
+    {
+        auto ret = this;
+        ret._input = _input.save;
+        ret._separator = _separator;
+        return ret;
+    }
+}
+//F range implementation for Element splitter
+private struct SplitterResultFRE(Range, Separator)
+{
+    mixin SplitterFRImpl!false;
+    Separator _separator;
+
+    void getFirst()
+    {
+        _frontLength = 0;
+        _next = _input.save;
+        for ( ; !_next.empty ; _next.popFront(), ++_frontLength)
+            if (_next.front == _separator) return;
+    }
+
+public:
+    this(Range input, Separator separator)
+    {
+        _input = input;
+        _separator = separator;
+        getFirst();
+    }
+
+    @property typeof(this) save()
+    {
+        auto ret = this;
+        ret._input = _input.save;
+        ret._next  = _next.save;
+        ret._separator = _separator;
+        return ret;
+    }
+}
+
+//RA implementation for Range splitter
+private struct SplitterResultRAR(Range, Separator)
+{
+    mixin SplitterRAImpl!true;
+    static if (isBidirectionalRange!Separator)
+        mixin SplitterRAImplBack!(true, true);
+
+    Separator _separator;
+    static if (!hasLength!Separator && !isNarrowString!Separator) size_t _separatorLength; //Save the length once and for all
+    else @property size_t _separatorLength(){return _separator.length;} //just call .length
+
+private:
+    void getFirst()
+    {
+        _frontLength = _input.length - find(_input.save, _separator.save).length;
+    }
+    void getLast()
+    {
+        _backLength = _input.length - find(_input.save.retro(), _separator.save.retro()).retro().length;
+        //Note: call retro again after the find, because a retro!string does not have length
+    }
+
+public:
+    this(Range input, Separator separator)
+    {
+        enforce(!separator.empty, "cannot split on empty separator");
+        _input = input;
+        _separator = separator;
+        static if (!hasLength!Separator && !isNarrowString!Separator) _separatorLength = _separator.save.walkLength();
+        getFirst();
+        getLast();
+    }
+
+    @property typeof(this) save()
+    {
+        auto ret = this;
+        ret._input = _input.save;
+        ret._separator = _separator; //no need to save
+        static if (!hasLength!Separator && !isNarrowString!Separator) ret._separatorLength = _separatorLength;
+        return ret;
+    }
+}
+
+//Forward range implementation for Range splitter
+private struct SplitterResultFRR(Range, Separator)
+{
+    mixin SplitterFRImpl!true;
+
+    Separator _separator;
+    static if (!hasLength!Separator) size_t _separatorLength; //Save the length once and for all
+    else @property size_t _separatorLength(){return _separator.length;} //just call .length
+
+private:
+    void getFirst()
+    {
+        _frontLength = 0;
+        _next = _input.save;
+        for ( ; !_next.empty ; _next.popFront(), ++_frontLength)
+            if(startsWith(_next.save, _separator.save)) return;
+    }
+
+public:
+    this(Range input, Separator separator)
+    {
+        enforce(!separator.empty, "cannot split on empty separator");
+        _input = input;
+        _separator = separator;
+        static if (!hasLength!Separator) _separatorLength = _separator.save.walkLength();
+        getFirst();
+    }
+
+    @property typeof(this) save()
+    {
+        auto ret = this;
+        ret._input = _input.save;
+        ret._separator = _separator; //no need to save
+        static if (!hasLength!Separator) _ret._separatorLength = _separatorLength;
+        return ret;
+    }
+}
+
+//RA implementation for predicate splitter
+private struct SplitterResultRAP(alias isTerminator, Range)
+{
+    mixin SplitterRAImpl!false;
+    mixin SplitterRAImplBack!false;
+
+private:
+    void getFirst()
+    {
+        _frontLength = _input.length - find!isTerminator(_input.save).length;
+    }
+    void getLast()
+    {
+        _backLength = _input.length - find!isTerminator(_input.save.retro()).retro().length;
+        //Note: call retro twice instead of source, to extract a string's length's (string.retro does not have length...)
+    }
+
+public:
+    this(Range input)
+    {
+        _input = input;
+        getFirst();
+        getLast();
+    }
+
+    @property typeof(this) save()
+    {
+        auto ret = this;
+        ret._input = _input.save;
+        return ret;
+    }
+}
+
+//Forward range implementation for Predicate splitter
+private struct SplitterResultFRP(alias isTerminator, Range)
+{
+    mixin SplitterFRImpl!false;
+
+    void getFirst()
+    {
+        _frontLength = 0;
+        _next = _input.save;
+        for ( ; !_next.empty ; _next.popFront(), ++_frontLength)
+        {
+            if(isTerminator(_next.front)) return;
+        }
+    }
+
+public:
+    this(Range input)
+    {
+        _input = input;
+        getFirst();
+    }
+
+    @property typeof(this) save()
+    {
+        auto ret = this;
+        ret._input = _input.save;
+        ret._next = _next.save;
+        return ret;
+    }
 }
 
 unittest
@@ -2204,6 +2450,7 @@ unittest
 
     // Thoroughly exercise the bidirectional stuff.
     auto str = "abc abcd abcde ab abcdefg abcdefghij ab ac ar an at ada";
+
     assert(equal(
         retro(splitter(str, 'a')),
         retro(array(splitter(str, 'a')))
@@ -2236,15 +2483,17 @@ unittest
             assert(equal(s.front, [1,2,3,4]));
             assert(equal(s.back, [6,7,8,9,10]));
 
-
+            //Note, this actually tests splitter(R, R)
             auto s2 = splitter(d, [4, 5]);
             assert(equal(s2.front, [1,2,3]));
-            assert(equal(s2.back, [6,7,8,9,10]));
+            //assert(equal(s2.back, [6,7,8,9,10]));
         }
     }
 }
 unittest
 {
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto L = retro(iota(1L, 10L));
     auto s = splitter(L, 5L);
     assert(equal(s.front, [9L, 8L, 7L, 6L]));
@@ -2253,157 +2502,24 @@ unittest
     s.popFront();
     assert(s.empty);
 }
-
-/**
-Splits a range using another range as a separator. This can be used
-with any narrow string type or sliceable range type, but is most popular
-with string types.
- */
-auto splitter(Range, Separator)(Range r, Separator s)
-if (is(typeof(Range.init.front == Separator.init.front) : bool)
-        && (hasSlicing!Range || isNarrowString!Range))
+unittest
 {
-    static struct Result
-    {
-    private:
-        Range _input;
-        Separator _separator;
-        alias typeof(unsigned(_input.length)) RIndexType;
-        // _frontLength == size_t.max means empty
-        RIndexType _frontLength = RIndexType.max;
-        static if (isBidirectionalRange!Range)
-            RIndexType _backLength = RIndexType.max;
-
-        @property auto separatorLength() { return _separator.length; }
-
-        void ensureFrontLength()
-        {
-            if (_frontLength != _frontLength.max) return;
-            assert(!_input.empty);
-            // compute front length
-            _frontLength = _input.length - find(_input, _separator).length;
-            static if (isBidirectionalRange!Range)
-                if (_frontLength == _input.length) _backLength = _frontLength;
-        }
-
-        void ensureBackLength()
-        {
-            static if (isBidirectionalRange!Range)
-                if (_backLength != _backLength.max) return;
-            assert(!_input.empty);
-            // compute back length
-            static if (isBidirectionalRange!Range)
-            {
-                _backLength = _input.length -
-                    find(retro(_input), retro(_separator)).source.length;
-            }
-        }
-
-    public:
-        this(Range input, Separator separator)
-        {
-            _input = input;
-            _separator = separator;
-        }
-
-        @property Range front()
-        {
-            assert(!empty);
-            ensureFrontLength();
-            return _input[0 .. _frontLength];
-        }
-
-        static if (isInfinite!Range)
-        {
-            enum bool empty = false;  // Propagate infiniteness
-        }
-        else
-        {
-            @property bool empty()
-            {
-                return _frontLength == RIndexType.max && _input.empty;
-            }
-        }
-
-        void popFront()
-        {
-            assert(!empty);
-            ensureFrontLength();
-            if (_frontLength == _input.length)
-            {
-                // done, there's no separator in sight
-                _input = _input[_frontLength .. _frontLength];
-                _frontLength = _frontLength.max;
-                static if (isBidirectionalRange!Range)
-                    _backLength = _backLength.max;
-                return;
-            }
-            if (_frontLength + separatorLength == _input.length)
-            {
-                // Special case: popping the first-to-last item; there is
-                // an empty item right after this.
-                _input = _input[_input.length .. _input.length];
-                _frontLength = 0;
-                static if (isBidirectionalRange!Range)
-                    _backLength = 0;
-                return;
-            }
-            // Normal case, pop one item and the separator, get ready for
-            // reading the next item
-            _input = _input[_frontLength + separatorLength .. _input.length];
-            // mark _frontLength as uninitialized
-            _frontLength = _frontLength.max;
-        }
-
-        static if(isForwardRange!Range)
-        {
-            @property typeof(this) save()
-            {
-                auto ret = this;
-                ret._input = _input.save;
-                return ret;
-            }
-        }
-
-// Bidirectional functionality as suggested by Brad Roberts.
-        static if (isBidirectionalRange!Range)
-        {
-            @property Range back()
-            {
-                ensureBackLength();
-                return _input[_input.length - _backLength .. _input.length];
-            }
-
-            void popBack()
-            {
-                ensureBackLength();
-                if (_backLength == _input.length)
-                {
-                    // done
-                    _input = _input[0 .. 0];
-                    _frontLength = _frontLength.max;
-                    _backLength = _backLength.max;
-                    return;
-                }
-                if (_backLength + separatorLength == _input.length)
-                {
-                    // Special case: popping the first-to-first item; there is
-                    // an empty item right before this. Leave the separator in.
-                    _input = _input[0 .. 0];
-                    _frontLength = 0;
-                    _backLength = 0;
-                    return;
-                }
-                // Normal case
-                _input = _input[0 .. _input.length - _backLength - separatorLength];
-                _backLength = _backLength.max;
-            }
-        }
-    }
-
-    return Result(r, s);
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    auto s1 = "日a本a語";
+    auto s2 = 'a';
+    auto s3 = s1.splitter(s2);
+    assert(s3.equal(["日", "本", "語"]));
 }
-
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    auto s1 = filter!"true"(" a a ");
+    auto s2 = 'a';
+    auto s3 = s1.splitter(' ');
+    assert(s3.equal!("a.equal(b)")(["", "a", "a", ""]));
+}
 unittest
 {
     debug(std_algorithm) scope(success)
@@ -2442,7 +2558,6 @@ unittest
     auto words = split(names, ",");
     assert(walkLength(words) == 5, text(walkLength(words)));
 }
-
 unittest
 {
     debug(std_algorithm) scope(success)
@@ -2455,101 +2570,34 @@ unittest
     }
     assert(equal(sp6, ["", ""][]));
 }
-
-auto splitter(alias isTerminator, Range)(Range input)
-if (is(typeof(unaryFun!(isTerminator)(ElementType!(Range).init))))
-{
-    return SplitterResult!(unaryFun!isTerminator, Range)(input);
-}
-
-private struct SplitterResult(alias isTerminator, Range)
-{
-    private Range _input;
-    private size_t _end;
-
-    this(Range input)
-    {
-        _input = input;
-        if (_input.empty)
-        {
-            _end = _end.max;
-        }
-        else
-        {
-            // Chase first terminator
-            while (_end < _input.length && !isTerminator(_input[_end]))
-            {
-                ++_end;
-            }
-        }
-    }
-
-    static if (isInfinite!Range)
-    {
-        enum bool empty = false;  // Propagate infiniteness.
-    }
-    else
-    {
-        @property bool empty()
-        {
-            return _end == _end.max;
-        }
-    }
-
-    @property Range front()
-    {
-        assert(!empty);
-        return _input[0 .. _end];
-    }
-
-    void popFront()
-    {
-        assert(!empty);
-        if (_input.empty)
-        {
-            _end = _end.max;
-            return;
-        }
-        // Skip over existing word
-        _input = _input[_end .. _input.length];
-        // Skip terminator
-        for (;;)
-        {
-            if (_input.empty)
-            {
-                // Nothing following the terminator - done
-                _end = _end.max;
-                return;
-            }
-            if (!isTerminator(_input.front))
-            {
-                // Found a legit next field
-                break;
-            }
-            _input.popFront();
-        }
-        assert(!_input.empty && !isTerminator(_input.front));
-        // Prepare _end
-        _end = 1;
-        while (_end < _input.length && !isTerminator(_input[_end]))
-        {
-            ++_end;
-        }
-    }
-
-    static if(isForwardRange!Range)
-    {
-        @property typeof(this) save()
-        {
-            auto ret = this;
-            ret._input = _input.save;
-            return ret;
-        }
-    }
-}
-
 unittest
 {
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    auto a = [1, 2, 2, 2, 3];
+    auto sep = [2, 2];
+
+    auto r1 = a.splitter([2, 2]);
+    assert(r1.equal([[1], [2, 3]]));
+
+    //@@@BUG@@@ 8866
+    //auto r2 = a.splitter([2, 2]).retro().array().retro();
+    //assert(r2.equal([[1, 2], [3]]));
+}
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    auto r = [1, 2, 3, 4].cycle();
+    auto r2 = r.splitter([2, 3]);
+    assert(r2.take(3).equal!"equal(a, b)"([[1], [4, 1], [4, 1]]));
+    auto r3 = r.splitter([1, 2]);
+    assert(r3.take(3).equal!"equal(a, b)"([[], [3, 4], [3, 4]]));
+}
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto L = iota(1L, 10L);
     auto s = splitter(L, [5L, 6L]);
     assert(equal(s.front, [1L, 2L, 3L, 4L]));
@@ -2558,7 +2606,6 @@ unittest
     s.popFront();
     assert(s.empty);
 }
-
 unittest
 {
     debug(std_algorithm) scope(success)
@@ -2573,14 +2620,14 @@ unittest
         assert(witness.empty, witness[0]);
     }
 
-    compare(" Mary    has a little lamb.   ",
-            ["", "Mary", "has", "a", "little", "lamb."]);
-    compare("Mary    has a little lamb.   ",
-            ["Mary", "has", "a", "little", "lamb."]);
-    compare("Mary    has a little lamb.",
-            ["Mary", "has", "a", "little", "lamb."]);
-    compare("", []);
-    compare(" ", [""]);
+    compare(" Mary  has a little lamb.   ",
+            ["", "Mary", "", "has", "a", "little", "lamb.", "", "", ""]);
+    compare("Mary  has a little lamb.   ",
+            ["Mary", "", "has", "a", "little", "lamb.", "", "", ""]);
+    compare("Mary  has a little lamb.",
+            ["Mary", "", "has", "a", "little", "lamb."]);
+    compare("", [""]);
+    compare(" ", ["", ""]);
 
     static assert(isForwardRange!(typeof(splitter!"a == ' '"("ABC"))));
 
@@ -2595,26 +2642,237 @@ unittest
         }
     }
 }
-
-auto splitter(Range)(Range input)
-if (isSomeString!Range)
-{
-    return splitter!(std.uni.isWhite)(input);
-}
-
 unittest
 {
-    // TDPL example, page 8
+    //verify tricky utf string-string split
+    assert("日本語".splitter("本").equal(["日", "語"]));
+}
+
+/**
+Lazily splits the string $(D s) into words, using whitespace as
+delimiter. Runs of whitespace are merged together (no empty words are produced).
+
+Note that this will not produce the same results as $(D std.algorithm.splitter!isWhite),
+which will create empty tokens.
+
+Note: $(D std.algorithm.splitter) will not operate on raw string. This functionality
+is covered by $(D std.array.splitter).
+*/
+auto splitter(Range)(Range input)
+    if (isForwardRange!Range && isSomeChar!(ElementType!Range) &&
+        !isSomeString!Range)
+{
+    static if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
+        return SplitterStringResultRA!Range(input);
+    else
+        return SplitterStringResultFR!Range(input);
+}
+
+private struct SplitterStringResultRA(Range)
+{
+private:
+    Range _input;
+
+    alias typeof(unsigned(_input.length)) IndexType;
+    IndexType _frontLength = size_t.max;
+    IndexType _backLength = size_t.max;
+
+    void stripLeft()
+    {
+        for ( ; !_input.empty && std.uni.isWhite(_input.front) ; _input.popFront() ){}
+    }
+    void stripRight()
+    {
+        for ( ; !_input.empty && std.uni.isWhite(_input.back) ; _input.popBack() ){}
+    }
+
+    void getFirst()
+    {
+        if (empty) return;
+        foreach (size_t i; 0 .. _input.length)
+        {
+            if(std.uni.isWhite(_input[i]))
+            {
+                _frontLength = i;
+                return;
+            }
+        }
+        _frontLength = _input.length;
+    }
+
+    void getLast()
+    {
+        if (empty) return;
+        foreach_reverse (size_t i; 0 .. _input.length)
+        {
+            if(std.uni.isWhite(_input[i]))
+            {
+                _backLength = _input.length - (i + 1);
+                return;
+            }
+        }
+        _backLength = _input.length;
+    }
+
+public:
+    this(Range input)
+    {
+        _input = input;
+        stripLeft();
+        stripRight();
+        getFirst();
+        getLast();
+    }
+
+    @property bool empty()
+    {
+        return _input.empty;
+    }
+
+    @property Range front()
+    {
+        assert(!empty);
+        return _input[0 .. _frontLength];
+    }
+
+    void popFront()
+    {
+        assert(!empty);
+        _input = _input[_frontLength .. _input.length];
+        stripLeft();
+        getFirst();
+    }
+
+    @property Range back()
+    {
+        assert(!empty);
+        return _input[_input.length - _backLength .. _input.length];
+    }
+
+    void popBack()
+    {
+        assert(!empty);
+        _input = _input[0 .. _input.length - _backLength];
+        stripRight();
+        getLast();
+    }
+
+    @property typeof(this) save()
+    {
+        auto ret = this;
+        ret._input = _input.save;
+        return ret;
+    }
+}
+
+//Forward range implementation for Range splitter
+private struct SplitterStringResultFR(Range)
+{
+private:
+    Range _input;
+    Range _next;
+
+    size_t _frontLength;
+
+    void stripLeft()
+    {
+        for ( ; !_input.empty && std.uni.isWhite(_input.front) ; _input.popFront() ){}
+    }
+
+    void getFirst()
+    {
+        if (empty) return;
+        _next = _input.save;
+        size_t i;
+        for (; !_next.empty ; _next.popFront(), ++i)
+        {
+            if(std.uni.isWhite(_next.front)) break;
+        }
+        _frontLength = i;
+    }
+
+public:
+    this(Range input)
+    {
+        _input = input;
+        stripLeft();
+        getFirst();
+    }
+
+    @property auto front()
+    {
+        assert(!empty);
+        return _input.takeExactly(_frontLength);
+    }
+
+    static if (isInfinite!Range)
+    {
+        enum bool empty = false;  // Propagate infiniteness
+    }
+    else
+    {
+        @property bool empty()
+        {
+            return _input.empty;
+        }
+    }
+
+    void popFront()
+    {
+        assert(!empty);
+        _input = _next;
+        stripLeft();
+        getFirst();
+    }
+
+    @property typeof(this) save()
+    {
+        auto ret = this;
+        ret._input = _input.save;
+        return ret;
+    }
+}
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    auto text = Array!dchar("  hello  beautiful world ! "d)[];
+    auto spli = splitter(text);
+    assert(spli.equal!"equal(a, b)"(["hello"d, "beautiful"d, "world"d, "!"d]));
+    assert(spli.retro().equal!"equal(a, b)"(["hello"d, "beautiful"d, "world"d, "!"d].retro()));
+
+    auto text2 = Array!dchar(""d)[];
+    auto spli2 = splitter(text2);
+    assert(spli2.empty);
+    assert(spli2.retro().empty());
+}
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    auto text = new ReferenceForwardRange!(immutable(dchar))("  hello  beautiful world ! "d);
+    auto spli = splitter(text);
+    assert(spli.equal!"equal(a, b)"(["hello"d, "beautiful"d, "world"d, "!"d]));
+
+    auto text2 = new ReferenceForwardRange!(immutable(dchar))(""d);
+    auto spli2 = splitter(text2);
+    assert(spli2.empty);
+}
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    // TDPL example, page 8 (improved)
     uint[string] dictionary;
-    char[][3] lines;
-    lines[0] = "line one".dup;
-    lines[1] = "line \ttwo".dup;
-    lines[2] = "yah            last   line\ryah".dup;
+    string[3] lines;
+    lines[0] = "line one";
+    lines[1] = "line \ttwo";
+    lines[2] = "yah            last   line\ryah";
     foreach (line; lines) {
-       foreach (word; splitter(strip(line))) {
+       foreach (word; std.array.splitter(line)) {
             if (word in dictionary) continue; // Nothing to do
             auto newID = dictionary.length;
-            dictionary[to!string(word)] = cast(uint)newID;
+            dictionary[word] = cast(uint)newID;
         }
     }
     assert(dictionary.length == 5);

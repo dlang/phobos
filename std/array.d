@@ -1170,21 +1170,104 @@ unittest
 }
 
 /**
-Splits a string by whitespace.
+Lazily splits the string $(D s) into words, using whitespace as
+delimiter. Runs of whitespace are merged together (no empty words are produced).
 
 Example:
 $(D_RUN_CODE
 $(ARGS
 ----
 auto a = " a     bcd   ef gh ";
-assert(equal(splitter(a), ["", "a", "bcd", "ef", "gh"][]));
+assert(equal(splitter(a), ["a", "bcd", "ef", "gh"][]));
 ----
 ), $(ARGS), $(ARGS), $(ARGS import std.array, std.algorithm: equal;))
  */
 auto splitter(C)(C[] s)
-    if(isSomeString!(C[]))
+    if(isSomeChar!C)
 {
-    return std.algorithm.splitter!(std.uni.isWhite)(s);
+    return SplitterStringResult!C(s);
+}
+
+private struct SplitterStringResult(C)
+{
+private:
+    alias C[] S;
+
+    S _s;
+    size_t _frontLength;
+    size_t _backLength;
+
+    void getFirst()
+    {
+        if (empty) return;
+        foreach (size_t i, dchar c; _s)
+        {
+            if(std.uni.isWhite(c))
+            {
+                _frontLength = i;
+                return;
+            }
+        }
+        _frontLength = _s.length;
+    }
+
+    void getLast()
+    {
+        if (empty) return;
+        foreach_reverse (size_t i, dchar c; _s)
+        {
+            if(std.uni.isWhite(c))
+            {
+                _backLength = _s.length - (i + c.codeLength!C());
+                return;
+            }
+        }
+        _backLength = _s.length;
+    }
+
+public:
+    this(C[] s)
+    {
+        _s = s.strip();
+        getFirst();
+        getLast();
+    }
+
+    @property C[] front()
+    {
+        assert(!empty, "front called on empty Splitter");
+        return _s[0 .. _frontLength];
+    }
+
+    @property C[] back()
+    {
+        assert(!empty, "back called on empty Splitter");
+        return _s[$ - _backLength .. $];
+    }
+
+    void popFront()
+    {
+        assert(!empty, "popFront called on empty Splitter");
+        _s = _s[_frontLength .. $].stripLeft();
+        getFirst();
+    }
+
+    void popBack()
+    {
+        assert(!empty, "popBack called on empty Splitter");
+        _s = _s[0 .. $ - _backLength].stripRight();
+        getLast();
+    }
+
+    @property empty()
+    {
+        return _s.empty();
+    }
+
+    @property SplitterStringResult save()
+    {
+        return this;
+    }
 }
 
 unittest
@@ -1192,27 +1275,43 @@ unittest
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
         S a = " a     bcd   ef gh ";
-        assert(equal(splitter(a), [to!S(""), to!S("a"), to!S("bcd"), to!S("ef"), to!S("gh")][]));
+        S[] r = [to!S("a"), to!S("bcd"), to!S("ef"), to!S("gh")];
+        assert(equal(splitter(a),         r));
+        assert(equal(splitter(a).retro(), r.retro()));
+
+        assert(equal(splitter(a),         split(a)));
+        assert(equal(splitter(a).retro(), split(a).retro()));
+
         a = "";
         assert(splitter(a).empty);
     }
 
     immutable string s = " a     bcd   ef gh ";
-    assert(equal(splitter(s), ["", "a", "bcd", "ef", "gh"][]));
+    assert(equal(splitter(s), ["a", "bcd", "ef", "gh"][]));
 }
 
 /**************************************
- * Splits $(D s) into an array, using $(D delim) as the delimiter.
+ * Splits $(D s) into an array, using $(D delim) as the delimiter,
+ * or isTerminator as a condition.
+ * Does not work if $(D isInfinite!R)
  */
-Unqual!(S1)[] split(S1, S2)(S1 s, S2 delim)
-if (isForwardRange!(Unqual!S1) && isForwardRange!S2)
+Unqual!(R)[] split(R, D)(R r, D delim)
+    if (is(typeof(std.algorithm.splitter(r, delim))))
 {
-    Unqual!S1 us = s;
-    auto app = appender!(Unqual!(S1)[])();
-    foreach (word; std.algorithm.splitter(us, delim))
-    {
-        app.put(word);
-    }
+    Unqual!R ur = r;
+    auto app = appender!(Unqual!(R)[])();
+    auto spl = std.algorithm.splitter(ur, delim);
+    app.put(spl);
+    return app.data;
+}
+/// ditto
+Unqual!(R)[] split(isTerminator, R)(R r)
+    if (is(typeof(std.algorithm.splitter!isTerminator(r))))
+{
+    Unqual!R ur = r;
+    auto app = appender!(Unqual!(R)[])();
+    auto spl = std.algorithm.splitter!isTerminator(ur);
+    app.put(spl);
     return app.data;
 }
 
