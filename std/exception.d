@@ -817,7 +817,11 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  * assumeUnique) is simple and rare enough to be tolerable.
  *
  */
-
+immutable(T)[] assumeUnique(T)(T[] array) pure nothrow
+{
+    return .assumeUnique(array);    // call ref version
+}
+/// ditto
 immutable(T)[] assumeUnique(T)(ref T[] array) pure nothrow
 {
     auto result = cast(immutable(T)[]) array;
@@ -857,7 +861,9 @@ internal pointers. This should only be done as an assertive test,
 as the language is free to assume objects don't have internal pointers
 (TDPL 7.1.3.5).
 */
-bool pointsTo(S, T, Tdummy=void)(ref const S source, ref const T target) @trusted pure nothrow
+bool pointsTo(S, T, Tdummy=void)(auto ref const S source, auto ref const T target) @trusted pure nothrow
+    if ((__traits(isRef, source) || isDynamicArray!S) &&    // lvalue or slice rvalue
+        (__traits(isRef, target) || isDynamicArray!T))      // lvalue or slice rvalue
 {
     static if (is(S P : U*, U))
     {
@@ -889,8 +895,7 @@ bool pointsTo(S, T, Tdummy=void)(ref const S source, ref const T target) @truste
 // for shared objects
 bool pointsTo(S, T)(ref const shared S source, ref const shared T target) @trusted pure nothrow
 {
-    alias pointsTo!(shared(S), shared(T), void) ptsTo;  // do instantiate explicitly
-    return ptsTo(source, target);
+    return pointsTo!(shared S, shared T, void)(source, target);
 }
 unittest
 {

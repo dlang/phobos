@@ -3765,6 +3765,10 @@ template BacktrackingMatcher(bool CTregex)
             debug(fred_matching) writeln("pop element SP= ", lastState);
         }
 
+        void stackPop(T)(T[] val)
+        {
+            stackPop(val);  // call ref version
+        }
         void stackPop(T)(ref T[] val)
         {
             lastState -= val.length*(T.sizeof/size_t.sizeof);
@@ -4388,6 +4392,10 @@ struct CtContext
 
     // generate fixup code for instruction in ir,
     // fixup means it has an alternative way for control flow
+    string ctGenFixupCode(Bytecode[] ir, int addr, int fixup)
+    {
+        return ctGenFixupCode(ir, addr, fixup); // call ref Bytecode[] version
+    }
     string ctGenFixupCode(ref Bytecode[] ir, int addr, int fixup)
     {
         string r;

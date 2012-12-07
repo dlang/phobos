@@ -2844,10 +2844,13 @@ unittest
 unittest
 {
     //Check proper failure
-    auto ss = "[ 1 , 2 , 3 ]";
-    foreach(i ; 0..ss.length-1)
-        assertThrown!ConvException(parse!(int[])(ss[0 .. i]));
-    int[] arr = parse!(int[])(ss);
+    auto s = "[ 1 , 2 , 3 ]";
+    foreach(i ; 0..s.length-1)
+    {
+        auto ss = s[0 .. i];
+        assertThrown!ConvException(parse!(int[])(ss));
+    }
+    int[] arr = parse!(int[])(s);
 }
 
 /// ditto
@@ -2971,10 +2974,13 @@ unittest
 unittest
 {
     //Check proper failure
-    auto ss = "[1:10, 2:20, 3:30]";
-    foreach(i ; 0..ss.length-1)
-        assertThrown!ConvException(parse!(int[int])(ss[0 .. i]));
-    int[int] aa = parse!(int[int])(ss);
+    auto s = "[1:10, 2:20, 3:30]";
+    foreach(i ; 0..s.length-1)
+    {
+        auto ss = s[0 .. i];
+        assertThrown!ConvException(parse!(int[int])(ss));
+    }
+    int[int] aa = parse!(int[int])(s);
 }
 
 private dchar parseEscape(Source)(ref Source s)
