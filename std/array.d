@@ -1998,46 +1998,90 @@ app2.put([ 4, 5, 6 ]);
 assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
 ----
 ), $(ARGS), $(ARGS), $(ARGS import std.array;))
- */
-struct Appender(A : T[], T)
+ */struct Appender(A : T[], T)
 {
+    private alias UT = Unqual!T;
     private struct Data
     {
         size_t capacity;
-        Unqual!(T)[] arr;
+        UT[] arr;
     }
-
     private Data* _data;
 
 /**
-Construct an appender with a given array.  Note that this does not copy the
-data.  If the array has a larger capacity as determined by arr.capacity,
-it will be used by the appender.  After initializing an appender on an array,
+Construct an appender with a given array. Appender will try to use $(D arr),
+directly, but may instead copy its contents into another structure.
+If the array has a larger capacity as determined by $(D arr.capacity),
+it will be used by the appender. After initializing an appender on an array,
 appending to the original array will reallocate.
 */
     this(T[] arr)
     {
         // initialize to a given array.
         _data = new Data;
-        _data.arr = cast(Unqual!(T)[])arr;
-
+        
         if (__ctfe)
+        {
+            _data.arr = cast(UT[])arr;
             return;
+        }
 
-        // We want to use up as much of the block the array is in as possible.
-        // if we consume all the block that we can, then array appending is
-        // safe WRT built-in append, and we can use the entire block.
-        auto cap = arr.capacity;
-        if(cap > arr.length)
-            arr.length = cap;
-        // we assume no reallocation occurred
-        assert(arr.ptr is _data.arr.ptr);
-        _data.capacity = arr.length;
+        immutable len = arr.length;
+        static if (hasElaborateDestructor!UT)
+        {
+            //Has elaborate destructor means the data must be left in a array
+            //so the GC can destroy on release.
+            static if (is(UT == T))
+            {
+                //T is not qualified, so we can use arr raw.
+                _data.arr = arr;
+        
+                // We want to use up as much of the block the array is in as possible.
+                // if we consume all the block that we can, then array appending is
+                // safe WRT built-in append, and we can use the entire block.
+                auto cap = arr.capacity;
+                if(cap > len)
+                    arr.length = cap;
+                // we assume no reallocation occurred
+                assert(arr.ptr is _data.arr.ptr);
+                _data.capacity = arr.length;
+            }
+            else
+            {
+                //T is qualified. This will create problems when we relocate.
+                //To avoid the problems, we just duplicate now.
+                _data.capacity = newCapacity(len);
+                _data.arr = (new UT[](_data.capacity)).ptr[0 .. len];
+                foreach (i; 0 .. len)
+                    emplace!UT(_data.arr.ptr + i, arr.ptr[i]);
+            }
+        }
+        else
+        {
+            //No elaborate destructor means we can speed up appender by
+            //allocating inside a manually allocated bloc, which will later
+            //auto-extend
+            if(len)
+            {
+                //Allocate a new bloc
+                auto newCap = newCapacity(len) + 1;
+                auto bi = GC.qalloc(newCap * T.sizeof,
+                        (typeid(UT[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
+                _data.capacity = bi.size / T.sizeof;
+                _data.arr = (cast(UT*)bi.base)[0..len];
+                //Copy into the bloc
+                memcpy(_data.arr.ptr, arr.ptr, len * T.sizeof);
+                //Postblit if needed
+                static if (hasElaborateCopyConstructor!UT)
+                    foreach(ref val; _data.arr)
+                        val.__postblit();
+            }
+        }
     }
 
 /**
-Reserve at least newCapacity elements for appending.  Note that more elements
-may be reserved than requested.  If newCapacity < capacity, then nothing is
+Reserve at least newCapacity elements for appending. Note that more elements
+may be reserved than requested. If newCapacity < capacity, then nothing is
 done.
 */
     void reserve(size_t newCapacity)
@@ -2049,38 +2093,17 @@ done.
             // need to increase capacity
             immutable len = _data.arr.length;
             if (__ctfe)
-            {
-                _data.arr.length = newCapacity;
-                _data.arr = _data.arr[0..len];
-                _data.capacity = newCapacity;
-                return;
-            }
-            immutable growsize = (newCapacity - len) * T.sizeof;
-            auto u = GC.extend(_data.arr.ptr, growsize, growsize);
-            if(u)
-            {
-                // extend worked, update the capacity
-                _data.capacity = u / T.sizeof;
-            }
+                ctferelocate(len, newCapacity);
             else
-            {
-                // didn't work, must reallocate
-                auto bi = GC.qalloc(newCapacity * T.sizeof,
-                        (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
-                _data.capacity = bi.size / T.sizeof;
-                if(len)
-                    memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
-                _data.arr = (cast(Unqual!(T)*)bi.base)[0..len];
-                // leave the old data, for safety reasons
-            }
+                relocate(len, newCapacity, newCapacity);
         }
     }
 
 /**
 Returns the capacity of the array (the maximum number of elements the
-managed array can accommodate before triggering a reallocation).  If any
+managed array can accommodate before triggering a reallocation). If any
 appending will reallocate, $(D capacity) returns $(D 0).
- */
+*/
     @property size_t capacity() const
     {
         return _data ? _data.capacity : 0;
@@ -2088,7 +2111,7 @@ appending will reallocate, $(D capacity) returns $(D 0).
 
 /**
 Returns the managed array.
- */
+*/
     @property inout(T)[] data() inout
     {
         return cast(typeof(return))(_data ? _data.arr : null);
@@ -2104,34 +2127,9 @@ Returns the managed array.
         if (reqlen > _data.capacity)
         {
             if (__ctfe)
-            {
-                _data.arr.length = reqlen;
-                _data.arr = _data.arr[0..len];
-                _data.capacity = reqlen;
-                return;
-            }
-            // Time to reallocate.
-            // We need to almost duplicate what's in druntime, except we
-            // have better access to the capacity field.
-            auto newlen = newCapacity(reqlen);
-            // first, try extending the current block
-            auto u = GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
-            if(u)
-            {
-                // extend worked, update the capacity
-                _data.capacity = u / T.sizeof;
-            }
+                ctferelocate(len, reqlen);
             else
-            {
-                // didn't work, must reallocate
-                auto bi = GC.qalloc(newlen * T.sizeof,
-                        (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
-                _data.capacity = bi.size / T.sizeof;
-                if(len)
-                    memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
-                _data.arr = (cast(Unqual!(T)*)bi.base)[0..len];
-                // leave the old data, for safety reasons
-            }
+                relocate(len, reqlen, newCapacity(reqlen));
         }
     }
 
@@ -2145,24 +2143,104 @@ Returns the managed array.
         return newext > newlength ? newext : newlength;
     }
 
+    private void ctferelocate(size_t len, size_t size)
+    {
+        _data.arr.length = size;
+        _data.arr = _data.arr[0..len];
+        _data.capacity = size;
+        return;
+    }
+    private void relocate(size_t len, size_t minimum, size_t wanted)
+    {
+        static if (hasElaborateDestructor!UT)
+        {
+            auto bi = new UT[] (wanted);
+            if (len)
+            {
+                auto bistart  = bi.ptr;
+                auto bimiddle = bi.ptr + len;
+                auto start    = _data.arr.ptr;
+                auto end      = _data.arr.ptr + _data.arr.length;
+
+                //Now, we copy into the new location
+                memcpy(bi.ptr, start, len * T.sizeof);
+
+                //Because there is a destructor, we must set it to the old slice to init.
+                //The good news is that the new "padding" is perfect for massive memcpy reset.
+                immutable pad = wanted - len;
+                for ( ; end - start > pad ; start += pad)
+                    memcpy(start, bimiddle, pad * T.sizeof);
+
+                //Do the last copy.
+                memcpy(start, bimiddle, (end - start) * T.sizeof);
+            }
+            //...and relocate
+            _data.arr = bi[0..len];
+            _data.capacity = wanted;
+        }
+        else
+        {
+            //Basic object: Use quick extend + manual allocation
+
+            // We need to almost duplicate what's in druntime, except we
+            // have better access to the capacity field.
+
+            // first, try extending the current block
+            auto u = GC.extend(_data.arr.ptr,
+                               (minimum - len) * T.sizeof,
+                               (wanted - len) * T.sizeof);
+            if(u)
+            {
+                // extend worked, update the capacity
+                _data.capacity = u / T.sizeof;
+            }
+            else
+            {
+                // didn't work, must reallocate
+                auto bi = GC.qalloc(wanted * T.sizeof,
+                        (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
+                _data.capacity = bi.size / T.sizeof;
+                if(len)
+                    memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
+                _data.arr = (cast(UT*)bi.base)[0..len];
+                // leave the old data, for safety reasons
+            }
+        }
+    }
+
 /**
 Appends one item to the managed array.
- */
-    void put(U)(U item) if (isImplicitlyConvertible!(U, T) ||
+*/
+    void put(U)(U item)
+        if (isImplicitlyConvertible!(U, T) ||
             isSomeChar!T && isSomeChar!U)
     {
         static if (isSomeChar!T && isSomeChar!U && T.sizeof < U.sizeof)
         {
             // must do some transcoding around here
-            Unqual!T[T.sizeof == 1 ? 4 : 2] encoded;
+            UT[T.sizeof == 1 ? 4 : 2] encoded;
             auto len = std.utf.encode(encoded, item);
             put(encoded[0 .. len]);
         }
         else
         {
             ensureAddable(1);
+            putImpl(item);
+        }
+    }
+
+    //Same as put(item), but assumes the capacity is already reserved.
+    private void putImpl(U)(U item)
+    {
+        static if (isSomeChar!T && isSomeChar!U && T.sizeof < U.sizeof)
+            put(item);
+        else
+        {
             immutable len = _data.arr.length;
-            _data.arr.ptr[len] = cast(Unqual!T)item;
+            static if (hasElaborateCopyConstructor!UT)
+                emplace(_data.arr.ptr + len, cast(UT) item);
+            else
+                _data.arr.ptr[len] = cast(UT) item;
             _data.arr = _data.arr.ptr[0 .. len + 1];
         }
     }
@@ -2176,7 +2254,7 @@ Appends one item to the managed array.
 
 /**
 Appends an entire range to the managed array.
- */
+*/
     void put(Range)(Range items) if (isInputRange!Range
             && is(typeof(Appender.init.put(items.front))))
     {
@@ -2192,37 +2270,55 @@ Appends an entire range to the managed array.
             // and we are adding exactly one element, call the version for one
             // element.
             static if(!isSomeChar!T)
-            {
                 if(items.length == 1)
                 {
                     put(items.front);
                     return;
                 }
-            }
 
             // make sure we have enough space, then add the items
-            ensureAddable(items.length);
+            immutable rlen = items.length;
+            ensureAddable(rlen);
             immutable len = _data.arr.length;
-            immutable newlen = len + items.length;
-            _data.arr = _data.arr.ptr[0..newlen];
+            immutable newlen = len + rlen;
+            _data.arr = _data.arr.ptr[0 .. newlen];
             static if(is(typeof(_data.arr[] = items[])))
             {
-                _data.arr.ptr[len..newlen] = items[];
+                //Exact type match: We can speed things up with a massive blit,
+                //followed by a manual postblit if neccessary
+
+                //First: blit into the array
+                static if (hasElaborateAssign!UT)
+                    memcpy(_data.arr.ptr + len, items.ptr, rlen * UT.sizeof);
+                else
+                    _data.arr.ptr[len .. newlen] = items[];
+
+                //Then manually postblit if necessary
+                static if (hasElaborateCopyConstructor!UT)
+                    foreach(ref val; _data.arr.ptr[len .. newlen])
+                        val.__postblit();
             }
             else
             {
+                //Types do not match. Just emplace each element
                 for(size_t i = len; !items.empty; items.popFront(), ++i)
-                    _data.arr.ptr[i] = cast(Unqual!T)items.front;
+                    emplace!UT(_data.arr.ptr + i, items.front);
             }
         }
         else
         {
-            //pragma(msg, Range.stringof);
-            // Generic input range
-            for (; !items.empty; items.popFront())
+            // Generic range
+            static if (hasLength!Range)
             {
-                put(items.front);
+                //Has length, so ensure ensureAddable once
+                ensureAddable(items.length);
+                for ( ; !items.empty; items.popFront() )
+                    putImpl(items.front); //Put without ensureAddable on each call
             }
+            else
+                //Just put one by one
+                for ( ; !items.empty; items.popFront() )
+                    put(items.front);
         }
     }
 
@@ -2230,7 +2326,7 @@ Appends an entire range to the managed array.
     static if(!is(T == immutable) && !is(T == const))
     {
 /**
-Clears the managed array.  This allows the elements of the array to be reused
+Clears the managed array. This allows the elements of the array to be reused
 for appending.
 
 Note that clear is disabled for immutable or const element types, due to the
@@ -2245,7 +2341,7 @@ possibility that $(D Appender) might overwrite immutable data.
         }
 
 /**
-Shrinks the managed array to the given length.  Passing in a length that's
+Shrinks the managed array to the given length. Passing in a length that's
 greater than the current array length throws an enforce exception.
 */
         void shrinkTo(size_t newlength)
@@ -2287,7 +2383,7 @@ those appends.
     this(T[] *arr)
     {
         impl = Appender!(A, T)(*arr);
-        this.arr = arr;
+        *(this.arr = arr) = impl.data;
     }
 
     auto opDispatch(string fn, Args...)(Args args) if (is(typeof(mixin("impl." ~ fn ~ "(args)"))))
@@ -2368,6 +2464,105 @@ unittest
         Appender!(char[]) app5663m;
         assertNotThrown(app5663m.put(cast(char[])"\xE3"));
         assert(app5663m.data == "\xE3");
+    }
+}
+
+unittest
+{
+    //Flavors of assign/postblit and destructor.
+    static struct S0
+    {
+        int i = 1;
+        //this(this){}
+        //void opAssign(typeof(this) other) {i = other.i;}
+        //~this(){}
+    }
+    static struct S1
+    {
+        int i = 1;
+        this(this){}
+        //void opAssign(typeof(this) other) {i = other.i;}
+        //~this(){}
+    }
+    static struct S2
+    {
+        int i = 1;
+        //this(this){}
+        void opAssign(typeof(this) other) {i = other.i;}
+        //~this(){}
+    }
+    static struct S3
+    {
+        int i = 1;
+        //this(this){}
+        //void opAssign(typeof(this) other) {i = other.i;}
+        ~this(){}
+    }
+    static struct S4
+    {
+        int i = 1;
+        this(this){}
+        void opAssign(typeof(this) other) {i = other.i;}
+        //~this(){}
+    }
+    static struct S5
+    {
+        int i = 1;
+        this(this){}
+        //void opAssign(typeof(this) other) {i = other.i;}
+        ~this(){}
+    }
+    static struct S6
+    {
+        int i = 1;
+        //this(this){}
+        void opAssign(typeof(this) other) {i = other.i;}
+        ~this(){}
+    }
+    static struct S7
+    {
+        int i = 1;
+        this(this){}
+        void opAssign(typeof(this) other) {i = other.i;}
+        ~this(){}
+    }
+
+    foreach (SS; TypeTuple!(S0, S1, S2, S3, S4, S5, S6, S7))
+    {
+        //Test various flavours off appender
+        foreach (S; TypeTuple!(SS, const(SS), immutable(SS)))
+        {
+            auto app1 = appender!(S[])();
+
+            foreach(i; 0 .. 0x20000)
+                app1.put(S(i));
+
+            auto data1 = app1.data;
+            static assert(is(typeof(data1) == S[]));
+            foreach(i; 0 .. 0x20000)
+                assert(data1[i] == S(i));
+
+            auto app2 = appender(data1);
+
+            app2.put([S(0x20000), S(0x20001)]); //Array
+            app2.put([S(0x20002), S(0x20003)].filter!"true"()); //Forward Range
+            app2.put([S(0x20004), S(0x20005)].filter!"true"().takeExactly(2)); //Forward range with length
+
+            foreach(i; 0x20006 .. 0x40000)
+                app2.put(S(i));
+
+            auto data2 = app2.data;
+            static assert(is(typeof(data2) == S[]));
+            foreach(i; 0 .. 0x40000)
+                assert(data2[i] == S(i));
+        }
+
+        //Test various flavours off RefAppender
+        auto dat = [SS(0), SS(1)];
+        auto refApp = appender(&dat);
+        refApp.put(SS(2));
+        refApp.put([SS(3), SS(4)]);
+        assert(dat == [SS(0), SS(1), SS(2), SS(3), SS(4)]);
     }
 }
 
