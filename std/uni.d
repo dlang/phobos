@@ -47,6 +47,36 @@ package bool _fastIsWhite(dchar c) @safe pure nothrow
             c == '\u202F' || c == '\u205F' || c == '\u3000';
 }
 
+unittest
+{
+    //Whites. From http://en.wikipedia.org/wiki/Whitespace_character#Unicode , which sources Unicode 6.0, chapter 4.6
+    dstring whites =
+        "\u0009\u000A\u000B\u000C\u000D\u0020"                               //ASCII wihtes
+        "\u0085\u00A0\u1680\u180E"                                           //Random whites (NEL, nbsp, ogham and monoglian)
+        "\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A" //Typography spaces (en space...) 
+        "\u2028\u2029"                                                       //lineSep and paraSep
+        "\u202F\u205F\u3000";                                                //misc.
+
+    foreach (c; whites)
+        assert(isWhite(c));
+
+    foreach (c; 0 .. 80)
+        assert (!_fastIsWhite(c));
+    foreach (c; whites[6 .. $])
+        assert ( _fastIsWhite(c));
+
+    loop: foreach (c; 0 .. 0x10FFFF)
+    {
+        if (isWhite(c))
+        {
+            foreach (cc; whites)
+                if (cc == c)
+                    continue loop;
+            assert (0);
+        }
+    }
+}
+
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
 deprecated("Please use std.uni.isLower instead.") bool isUniLower(dchar c) @safe pure nothrow
