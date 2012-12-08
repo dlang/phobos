@@ -88,13 +88,18 @@ version(Posix)
     version(OSX)
     {
         // https://www.gnu.org/software/gnulib/manual/html_node/environ.html
-        private extern(C) extern __gshared char*** _NSGetEnviron();
-        // need to declare environ = *_NSGetEnviron() in static this()
+        private extern(C) char*** _NSGetEnviron();
+        private __gshared char** environ;
+
+        shared static this()
+        {
+            environ = *_NSGetEnviron();
+        }
     }
     else
     {
         // Made available by the C runtime:
-        private extern(C) extern __gshared const char** environ;
+        private extern(C) extern __gshared char** environ;
     }
 }
 else version(Windows)
@@ -102,7 +107,7 @@ else version(Windows)
     // Use the same spawnProcess() implementations on both Windows
     // and POSIX, only the spawnProcessImpl() function has to be
     // different.
-    LPVOID environ = null;
+    private __gshared LPVOID environ = null;
 }
 
 
@@ -1174,17 +1179,6 @@ alias Environment environment;
 
 abstract final class Environment
 {
-    // initiaizes the value of environ for OSX
-    version(OSX)
-    {
-        static private char** environ;
-        static this()
-        {
-            environ = * _NSGetEnviron();
-        }
-    }
-
-
 static:
 
     // Retrieves an environment variable, throws on failure.
@@ -1286,7 +1280,6 @@ static:
                 if (name !in aa)  aa[name] = value;
             }
         }
-
         else version(Windows)
         {
             auto envBlock = GetEnvironmentStringsW();
