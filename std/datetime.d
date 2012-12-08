@@ -33660,7 +33660,7 @@ unittest
                 this.value = value;
             }
 
-            string toString()
+            string toString() const
             {
                 return to!string(value);
             }
@@ -33963,7 +33963,7 @@ unittest
                 return this;
             }
 
-            string toString()
+            string toString() const
             {
                 return to!string(value);
             }
@@ -33987,7 +33987,7 @@ unittest
                 return IntWrapper_BadAssign(mixin("old " ~ op ~ " rhs.value"));
             }
 
-            string toString()
+            string toString() const
             {
                 return to!string(value);
             }
@@ -34009,7 +34009,7 @@ unittest
                 return IntWrapper_BadReturn(rhs.value);
             }
 
-            string toString()
+            string toString() const
             {
                 return to!string(value);
             }
