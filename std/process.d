@@ -390,6 +390,8 @@ version(Posix) private Pid spawnProcessImpl
     auto stderrFD = core.stdc.stdio.fileno(stderr_.getFP());
     errnoEnforce(stderrFD != -1, "Invalid stderr stream");
 
+    auto namez = toStringz(name);
+    auto argz = toArgz(name, args);
 
     auto id = fork();
     errnoEnforce (id >= 0, "Cannot spawn new process");
@@ -414,7 +416,7 @@ version(Posix) private Pid spawnProcessImpl
         if (stderrFD > STDERR_FILENO)  close(stderrFD);
 
         // Execute program
-        execve(toStringz(name), toArgz(name, args), envz);
+        execve(namez, argz, envz);
 
         // If execution fails, exit as quick as possible.
         perror("spawnProcess(): Failed to execute program");
