@@ -1755,28 +1755,22 @@ Target parse(Target, Source)(ref Source s)
                     goto Loverflow;
                 v = cast(Target) (v * 10 + (c - '0'));
                 s.popFront();
+                atStart = false;
             }
             else static if (Target.min < 0)
             {
                 if (c == '-' && atStart)
                 {
                     s.popFront();
-                    if (s.empty)
-                        goto Lerr;
                     sign = -1;
                 }
                 else if (c == '+' && atStart)
-                {
                     s.popFront();
-                    if (s.empty)
-                        goto Lerr;
-                }
                 else
                     break;
             }
             else
                 break;
-            atStart = false;
         }
         if (atStart)
             goto Lerr;
