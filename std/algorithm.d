@@ -9350,7 +9350,7 @@ struct NWayUnion(alias less, RangeOfRanges)
 
     @property bool empty() { return _ror.empty; }
 
-    @property ref ElementType front()
+    @property auto ref front()
     {
         return _heap.front.front;
     }
