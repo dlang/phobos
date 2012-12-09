@@ -1503,6 +1503,11 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     enforceEx!FormatException(
             std.algorithm.find("fgFGaAeEs", fs.spec).length,
             "floating");
+    version (Win64)
+    {
+        if (isnan(val)) // snprintf writes 1.#QNAN
+            return formatValue(w, "nan", f);
+    }
     if (fs.spec == 's') fs.spec = 'g';
     char sprintfSpec[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
                      + 1 /*\0*/] = void;
@@ -1557,6 +1562,14 @@ unittest
                 string toString() const { return "S"; } }
     formatTest( S1(2.25), "2.25" );
     formatTest( S2(2.25), "S" );
+}
+
+unittest
+{
+    foreach (T; TypeTuple!(float, double, real))
+    {
+        formatTest( T.nan, "nan" );
+    }
 }
 
 /*
