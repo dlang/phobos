@@ -65,7 +65,7 @@ version(Windows)
     import core.sys.windows.windows;
     import std.utf;
     import std.windows.syserror;
-    import std.c.stdio;
+    import core.stdc.stdio;
     version(DigitalMars)
     {
         // this helps on Wine
