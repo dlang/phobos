@@ -495,7 +495,7 @@ unittest
 {
     assert(a.length, "Attempting to popBack() past the front of an array of " ~
                      typeof(a[0]).stringof);
-    a = a[0 .. $ - std.utf.strideBack(a, a.length)];
+    a = a[0 .. $ - std.utf.strideBack(a, $)];
 }
 
 unittest
@@ -1235,12 +1235,12 @@ unittest
         assert(cmp(words[3], "jerry") == 0);
         assert(cmp(words[4], "") == 0);
 
-        auto s1 = s[0 .. s.length - 1];   // lop off trailing ','
+        auto s1 = s[0 .. $ - 1];   // lop off trailing ','
         words = split(s1, ",");
         assert(words.length == 4);
         assert(cmp(words[3], "jerry") == 0);
 
-        auto s2 = s1[1 .. s1.length];   // lop off leading ','
+        auto s2 = s1[1 .. $];   // lop off leading ','
         words = split(s2, ",");
         assert(words.length == 3);
         assert(cmp(words[0], "peter") == 0);
@@ -1255,12 +1255,12 @@ unittest
         assert(cmp(words[3], "jerry") == 0);
         assert(cmp(words[4], "") == 0);
 
-        auto s4 = s3[0 .. s3.length - 2];    // lop off trailing ',,'
+        auto s4 = s3[0 .. $ - 2];    // lop off trailing ',,'
         words = split(s4, ",,");
         assert(words.length == 4);
         assert(cmp(words[3], "jerry") == 0);
 
-        auto s5 = s4[2 .. s4.length];    // lop off leading ',,'
+        auto s5 = s4[2 .. $];    // lop off leading ',,'
         words = split(s5, ",,");
         assert(words.length == 3);
         assert(cmp(words[0], "peter") == 0);
@@ -1561,7 +1561,7 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
         return subject;
 
     auto app = appender!(E[])();
-    app.put(subject[0 .. subject.length - balance.length]);
+    app.put(subject[0 .. $ - balance.length]);
     app.put(to.save);
     replaceInto(app, balance[from.length .. $], from, to);
 
@@ -1590,7 +1590,7 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
             sink.put(subject);
             break;
         }
-        sink.put(subject[0 .. subject.length - balance.length]);
+        sink.put(subject[0 .. $ - balance.length]);
         sink.put(to.save);
         subject = balance[from.length .. $];
     }
@@ -1901,7 +1901,7 @@ if (isDynamicArray!(E[]) &&
     auto balance = std.algorithm.find(subject, from.save);
     if (balance.empty) return subject;
     auto app = appender!(E[])();
-    app.put(subject[0 .. subject.length - balance.length]);
+    app.put(subject[0 .. $ - balance.length]);
     app.put(to.save);
     app.put(balance[from.length .. $]);
 
@@ -1958,8 +1958,7 @@ body
     immutable so = slice.ptr - s.ptr;
     result[0 .. so] = s[0 .. so];
     result[so .. so + replacement.length] = replacement[];
-    result[so + replacement.length .. result.length] =
-        s[so + slice.length .. s.length];
+    result[so + replacement.length .. $] = s[so + slice.length .. $];
 
     return cast(inout(T)[]) result;
 }
@@ -2555,7 +2554,7 @@ struct SimpleSlice(T)
             core.memory.GC.malloc(newLen * T.sizeof);
         result._e = result._b + newLen;
         result[0 .. this.length] = this;
-        result[this.length .. result.length] = another;
+        result[this.length .. $] = another;
         return result;
     }
 
@@ -2609,8 +2608,8 @@ unittest
     // assert(s[2] == 6);
 
     // assert(s[] == s);
-    // assert(s[0 .. s.length] == s);
-    // assert(equal(s[0 .. s.length - 1], [4, 5][]));
+    // assert(s[0 .. $] == s);
+    // assert(equal(s[0 .. $ - 1], [4, 5][]));
 
     // auto s1 = s ~ s[0 .. 1];
     // assert(equal(s1, [4, 5, 6, 4][]));
