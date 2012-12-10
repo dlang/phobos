@@ -1743,9 +1743,9 @@ Target parse(Target, Source)(ref Source s)
         else
             enum int sign = 0;
         Target v = 0;
-        size_t i = 0;
+        bool atStart = true;
         enum char maxLastDigit = Target.min < 0 ? '7' : '5';
-        for (; !s.empty; ++i)
+        while (!s.empty)
         {
             immutable c = s.front;
             if (c >= '0' && c <= '9')
@@ -1755,29 +1755,24 @@ Target parse(Target, Source)(ref Source s)
                     goto Loverflow;
                 v = cast(Target) (v * 10 + (c - '0'));
                 s.popFront();
+                atStart = false;
             }
             else static if (Target.min < 0)
             {
-                if (c == '-' && i == 0)
+                if (c == '-' && atStart)
                 {
                     s.popFront();
-                    if (s.empty)
-                        goto Lerr;
                     sign = -1;
                 }
-                else if (c == '+' && i == 0)
-                {
+                else if (c == '+' && atStart)
                     s.popFront();
-                    if (s.empty)
-                        goto Lerr;
-                }
                 else
                     break;
             }
             else
                 break;
         }
-        if (i == 0)
+        if (atStart)
             goto Lerr;
         static if (Target.min < 0)
         {
@@ -1995,9 +1990,9 @@ body
     immutable uint beyond = (radix < 10 ? '0' : 'a'-10) + radix;
 
     Target v = 0;
-    size_t i = 0;
+    size_t atStart = true;
 
-    for (; !s.empty; s.popFront(), ++i)
+    for (; !s.empty; s.popFront())
     {
         uint c = s.front;
         if (c < '0')
@@ -2021,8 +2016,9 @@ body
         if (blah < v)
             goto Loverflow;
         v = blah;
+        atStart = false;
     }
-    if (!i)
+    if (atStart)
         goto Lerr;
     return v;
 
