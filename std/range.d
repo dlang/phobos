@@ -603,6 +603,10 @@ void put(R, E)(ref R r, E e)
     {
         r((&e)[0..1]);
     }
+    else static if (usingCall && is(typeof(r(e.front))))
+    {
+        for (; !e.empty; e.popFront()) r(e.front);
+    }
     else
     {
         static assert(false,
@@ -735,8 +739,8 @@ unittest
         auto sinkdc = &putdc.put;
         put(putdc, s);
         assert(putdc.result == "test");
-        //put(sinkdc, s);
-        //assert(putdc.result == "testtest");
+        put(sinkdc, s);
+        assert(putdc.result == "testtest");
     }
 }
 
