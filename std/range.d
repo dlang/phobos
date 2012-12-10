@@ -586,6 +586,10 @@ void put(R, E)(ref R r, E e)
     {
         r.put((&e)[0..1]);
     }
+    else static if (usingPut && isSomeString!E && is(typeof(r.put(e[0]))))
+    {
+        foreach (i; 0..e.length) r.put(e[i]);
+    }
     else static if (usingFront && is(typeof(r.front = e, r.popFront())))
     {
         r.front = e;
@@ -602,6 +606,10 @@ void put(R, E)(ref R r, E e)
     else static if (usingCall && is(typeof(r((E[]).init))))
     {
         r((&e)[0..1]);
+    }
+    else static if (usingCall && isSomeString!E && is(typeof(r(e[0]))))
+    {
+        foreach (i; 0..e.length) r(e[i]);
     }
     else static if (usingCall && is(typeof(r(e.front))))
     {
@@ -741,6 +749,14 @@ unittest
         assert(putdc.result == "test");
         put(sinkdc, s);
         assert(putdc.result == "testtest");
+
+        //  char[] put-to ( char)
+        // wchar[] put-to (wchar)
+        // dchar[] put-to (dchar)  <--- already supported
+        put(putc, s);
+        assert(putc.result == "cctest");
+        put(sinkc, s);
+        assert(putc.result == "cctesttest");
     }
 }
 
