@@ -2937,8 +2937,8 @@ unittest
         result ~= c;
     }
 
-    assert(equal(result, "abc12def34"),
-    	"Unexpected result: '%s'".format(result));
+    assert(equal(result, "abc12def34"d),
+    	"Unexpected result: '%s'"d.format(result));
 }
 
 // uniq
