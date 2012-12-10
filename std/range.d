@@ -689,6 +689,57 @@ unittest
     put(w, r);
 }
 
+unittest
+{
+    struct PutC(C)
+    {
+        string result;
+        void put(const(C) c) { result ~= to!string((&c)[0..1]); }
+    }
+    struct PutS(C)
+    {
+        string result;
+        void put(const(C)[] s) { result ~= to!string(s); }
+    }
+
+    // Current put-able combinations
+    foreach (E; TypeTuple!(char, wchar, dchar))
+    {
+        E ch = 'c';
+        const(E)[] s = "test";
+
+        //  char put-to ( char)
+        // wchar put-to (wchar)
+        // dchar put-to (dchar)
+        PutC!E putc;
+        auto sinkc = &putc.put;
+        put(putc, ch);
+        assert(putc.result == "c");
+        put(sinkc, ch);
+        assert(putc.result == "cc");
+
+        //  char[] put-to ( char[])
+        // wchar[] put-to (wchar[])
+        // dchar[] put-to (dchar[])
+        PutS!E puts;
+        auto sinks = &puts.put;
+        put(puts, s);
+        assert(puts.result == "test");
+        put(sinks, s);
+        assert(puts.result == "testtest");
+
+        //  char[] put-to (dchar)
+        // wchar[] put-to (dchar)
+        // dchar[] put-to (dchar)
+        PutC!dchar putdc;
+        auto sinkdc = &putdc.put;
+        put(putdc, s);
+        assert(putdc.result == "test");
+        //put(sinkdc, s);
+        //assert(putdc.result == "testtest");
+    }
+}
+
 /**
 Returns $(D true) if $(D R) is an output range for elements of type
 $(D E). An output range is defined functionally as a range that
