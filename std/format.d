@@ -398,7 +398,7 @@ My items are -1-, -2-, -3-.
         writefln("My friends are %-(%s, %).", ["John", "Nancy"]);
     }
     -------------------------
-   which gives the output:
+    which gives the output:
 <pre class=console>
 My friends are ["John", "Nancy"].
 My friends are "John", "Nancy".
@@ -528,14 +528,14 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
    matching failure happens.
 
    Example:
-----
-string s = "hello!124:34.5";
-string a;
-int b;
-double c;
-formattedRead(s, "%s!%s:%s", &a, &b, &c);
-assert(a == "hello" && b == 124 && c == 34.5);
-----
+   ----
+   string s = "hello!124:34.5";
+   string a;
+   int b;
+   double c;
+   formattedRead(s, "%s!%s:%s", &a, &b, &c);
+   assert(a == "hello" && b == 124 && c == 34.5);
+   ----
  */
 uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, S args)
 {
@@ -2525,12 +2525,12 @@ unittest
    basically formatted by calling $(D toString).
    $(D toString) should have one of the following signatures:
 
----
-const void toString(scope void delegate(const(char)[]) sink, FormatSpec fmt);
-const void toString(scope void delegate(const(char)[]) sink, string fmt);
-const void toString(scope void delegate(const(char)[]) sink);
-const string toString();
----
+   ---
+   const void toString(scope void delegate(const(char)[]) sink, FormatSpec fmt);
+   const void toString(scope void delegate(const(char)[]) sink, string fmt);
+   const void toString(scope void delegate(const(char)[]) sink);
+   const string toString();
+   ---
 
    For the class objects which have input range interface,
    $(UL $(LI If the instance $(D toString) has overridden
@@ -4648,28 +4648,27 @@ $(I FormatChar):
     $(I FormatChar) is lower case, or $(B INF) or $(B INFINITY) if upper.
     </dl>
 
-Example:
+    Example:
+    -------------------------
+    import std.c.stdio;
+    import std.format;
 
--------------------------
-import std.c.stdio;
-import std.format;
-
-void myPrint(...)
-{
-    void putc(char c)
+    void myPrint(...)
     {
-        fputc(c, stdout);
+        void putc(char c)
+        {
+            fputc(c, stdout);
+        }
+
+        std.format.doFormat(&putc, _arguments, _argptr);
     }
 
-    std.format.doFormat(&putc, _arguments, _argptr);
-}
+    ...
 
-...
-
-int x = 27;
-// prints 'The answer is 27:6'
-myPrint("The answer is %s:", x, 6);
-------------------------
+    int x = 27;
+    // prints 'The answer is 27:6'
+    myPrint("The answer is %s:", x, 6);
+    ------------------------
  */
 void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 {

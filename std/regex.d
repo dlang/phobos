@@ -39,8 +39,6 @@
   // The result of the match is directly testable with if/assert/while.
   // e.g. test if a string consists of letters:
   assert(match("Letter", `^\p{L}+$`));
-
-
   ---
   $(SECTION Syntax and general information)
   The general usage guideline is to keep regex complexity on the side of simplicity,

@@ -89,8 +89,8 @@ void main(string[] args)
  an "=" sign:
 
 ---------
-  bool verbose = false, debugging = true;
-  getopt(args, "verbose", &verbose, "debug", &debugging);
+bool verbose = false, debugging = true;
+getopt(args, "verbose", &verbose, "debug", &debugging);
 ---------
 
  To set $(D verbose) to $(D true), invoke the program with either $(D
@@ -103,8 +103,8 @@ void main(string[] args)
  separated with an "=" sign:
 
 ---------
-  uint timeout;
-  getopt(args, "timeout", &timeout);
+uint timeout;
+getopt(args, "timeout", &timeout);
 ---------
 
 To set $(D timeout) to $(D 5), invoke the program with either $(D
@@ -115,8 +115,8 @@ To set $(D timeout) to $(D 5), invoke the program with either $(D
  of times the option occurred on the command line:
 
 ---------
-  uint paranoid;
-  getopt(args, "paranoid+", &paranoid);
+uint paranoid;
+getopt(args, "paranoid+", &paranoid);
 ---------
 
  Invoking the program with "--paranoid --paranoid --paranoid" will set
@@ -131,9 +131,9 @@ To set $(D timeout) to $(D 5), invoke the program with either $(D
  with an "=" sign:
 
 ---------
-  enum Color { no, yes };
-  Color color; // default initialized to Color.no
-  getopt(args, "color", &color);
+enum Color { no, yes };
+Color color; // default initialized to Color.no
+getopt(args, "color", &color);
 ---------
 
 To set $(D color) to $(D Color.yes), invoke the program with either $(D

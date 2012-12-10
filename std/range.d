@@ -3137,11 +3137,11 @@ unittest
     capabilities.
 
     Examples:
---------------------
-auto range = takeNone!(int[])();
-assert(range.length == 0);
-assert(range.empty);
---------------------
+    --------------------
+    auto range = takeNone!(int[])();
+    assert(range.length == 0);
+    assert(range.empty);
+    --------------------
   +/
 auto takeNone(R)()
     if(isInputRange!R)
@@ -3167,11 +3167,11 @@ unittest
     $(D takeExactly(range, 0)).
 
     Examples:
---------------------
-assert(takeNone([42, 27, 19]).empty);
-assert(takeNone("dlang.org").empty);
-assert(takeNone(filter!"true"([42, 27, 19])).empty);
---------------------
+    --------------------
+    assert(takeNone([42, 27, 19]).empty);
+    assert(takeNone("dlang.org").empty);
+    assert(takeNone(filter!"true"([42, 27, 19])).empty);
+    --------------------
   +/
 auto takeNone(R)(R range)
     if(isInputRange!R)
@@ -3334,33 +3334,33 @@ unittest
     $(D n) elements but will stop if the range is empty first.
 
     Examples:
---------------------
-assert([0, 2, 1, 5, 0, 3].drop(3) == [5, 0, 3]);
-assert("hello world".drop(6) == "world");
-assert("hello world".drop(50).empty);
-assert("hello world".take(6).drop(3).equal("lo "));
---------------------
+    --------------------
+    assert([0, 2, 1, 5, 0, 3].drop(3) == [5, 0, 3]);
+    assert("hello world".drop(6) == "world");
+    assert("hello world".drop(50).empty);
+    assert("hello world".take(6).drop(3).equal("lo "));
+    --------------------
 
---------------------
-//Remove all but the first two elements
-auto a = DList!int(0, 1, 9, 9, 9);
-a.remove(a[].drop(2));
-assert(a[].equal(a[].take(2)));
---------------------
+    --------------------
+    //Remove all but the first two elements
+    auto a = DList!int(0, 1, 9, 9, 9);
+    a.remove(a[].drop(2));
+    assert(a[].equal(a[].take(2)));
+    --------------------
 
---------------------
-assert([0, 2, 1, 5, 0, 3].dropBack(3) == [0, 2, 1]);
-assert("hello world".dropBack(6) == "hello");
-assert("hello world".dropBack(50).empty);
-assert("hello world".drop(4).dropBack(4).equal("o w"));
---------------------
+    --------------------
+    assert([0, 2, 1, 5, 0, 3].dropBack(3) == [0, 2, 1]);
+    assert("hello world".dropBack(6) == "hello");
+    assert("hello world".dropBack(50).empty);
+    assert("hello world".drop(4).dropBack(4).equal("o w"));
+    --------------------
 
---------------------
-//insert before the last two elements
-auto a = DList!int(0, 1, 2, 5, 6);
-a.insertAfter(a[].dropBack(2), [3, 4]);
-assert(a[].equal(iota(0, 7)));
---------------------
+    --------------------
+    //insert before the last two elements
+    auto a = DList!int(0, 1, 2, 5, 6);
+    a.insertAfter(a[].dropBack(2), [3, 4]);
+    assert(a[].equal(iota(0, 7)));
+    --------------------
   +/
 R drop(R)(R range, size_t n)
     if(isInputRange!R)
@@ -3467,10 +3467,10 @@ unittest
     $(D range.popBack()).
 
     Example:
-----
-auto dl = DList!int(9, 1, 2, 3, 9);
-assert(dl[].dropOne().dropBackOne().equal([1, 2, 3]));
-----
+    ----
+    auto dl = DList!int(9, 1, 2, 3, 9);
+    assert(dl[].dropOne().dropBackOne().equal([1, 2, 3]));
+    ----
 +/
 R dropOne(R)(R range)
     if (isInputRange!R)
@@ -3524,21 +3524,21 @@ unittest
     the back of the (bidirectional) range instead of the front.
 
     Example:
-----
-int[] a = [ 1, 2, 3, 4, 5 ];
-a.popFrontN(2);
-assert(a == [ 3, 4, 5 ]);
-a.popFrontN(7);
-assert(a == [ ]);
-----
+    ----
+    int[] a = [ 1, 2, 3, 4, 5 ];
+    a.popFrontN(2);
+    assert(a == [ 3, 4, 5 ]);
+    a.popFrontN(7);
+    assert(a == [ ]);
+    ----
 
-----
-int[] a = [ 1, 2, 3, 4, 5 ];
-a.popBackN(2);
-assert(a == [ 1, 2, 3 ]);
-a.popBackN(7);
-assert(a == [ ]);
-----
+    ----
+    int[] a = [ 1, 2, 3, 4, 5 ];
+    a.popBackN(2);
+    assert(a == [ 1, 2, 3 ]);
+    a.popBackN(7);
+    assert(a == [ ]);
+    ----
 */
 size_t popFrontN(Range)(ref Range r, size_t n)
     if (isInputRange!Range)
@@ -7453,7 +7453,6 @@ enum SearchPolicy
    $(LREF assumeSorted) described below.
 
    Example:
-
    ----
    auto a = [ 1, 2, 3, 42, 52, 64 ];
    auto r = assumeSorted(a);
@@ -7474,7 +7473,6 @@ enum SearchPolicy
    that break its sortedness, $(D SortedRange) will work erratically.
 
    Example:
-
    ----
    auto a = [ 1, 2, 3, 42, 52, 64 ];
    auto r = assumeSorted(a);
@@ -8083,30 +8081,30 @@ unittest
     range will affect the original.
 
     Examples:
---------------------
-import std.algorithm;
-ubyte[] buffer = [1, 9, 45, 12, 22];
-auto found1 = find(buffer, 45);
-assert(found1 == [45, 12, 22]);
-assert(buffer == [1, 9, 45, 12, 22]);
+    --------------------
+    import std.algorithm;
+    ubyte[] buffer = [1, 9, 45, 12, 22];
+    auto found1 = find(buffer, 45);
+    assert(found1 == [45, 12, 22]);
+    assert(buffer == [1, 9, 45, 12, 22]);
 
-auto wrapped1 = refRange(&buffer);
-auto found2 = find(wrapped1, 45);
-assert(*found2.ptr == [45, 12, 22]);
-assert(buffer == [45, 12, 22]);
+    auto wrapped1 = refRange(&buffer);
+    auto found2 = find(wrapped1, 45);
+    assert(*found2.ptr == [45, 12, 22]);
+    assert(buffer == [45, 12, 22]);
 
-auto found3 = find(wrapped2.save, 22);
-assert(*found3.ptr == [22]);
-assert(buffer == [45, 12, 22]);
+    auto found3 = find(wrapped2.save, 22);
+    assert(*found3.ptr == [22]);
+    assert(buffer == [45, 12, 22]);
 
-string str = "hello world";
-auto wrappedStr = refRange(&str);
-assert(str.front == 'h');
-str.popFrontN(5);
-assert(str == " world");
-assert(wrappedStr.front == ' ');
-assert(*wrappedStr.ptr == " world");
---------------------
+    string str = "hello world";
+    auto wrappedStr = refRange(&str);
+    assert(str.front == 'h');
+    str.popFrontN(5);
+    assert(str == " world");
+    assert(wrappedStr.front == ' ');
+    assert(*wrappedStr.ptr == " world");
+    --------------------
   +/
 struct RefRange(R)
     if(isForwardRange!R)
@@ -8129,50 +8127,50 @@ public:
         directly or because $(D rhs) is $(D null). In that case, $(D RefRange)
         no longer refers to the original range but is $(D null).
 
-    Examples:
---------------------
-ubyte[] buffer1 = [1, 2, 3, 4, 5];
-ubyte[] buffer2 = [6, 7, 8, 9, 10];
-auto wrapped1 = refRange(&buffer1);
-auto wrapped2 = refRange(&buffer2);
-assert(wrapped1.ptr is &buffer1);
-assert(wrapped2.ptr is &buffer2);
-assert(wrapped1.ptr !is wrapped2.ptr);
-assert(buffer1 != buffer2);
+        Examples:
+        --------------------
+        ubyte[] buffer1 = [1, 2, 3, 4, 5];
+        ubyte[] buffer2 = [6, 7, 8, 9, 10];
+        auto wrapped1 = refRange(&buffer1);
+        auto wrapped2 = refRange(&buffer2);
+        assert(wrapped1.ptr is &buffer1);
+        assert(wrapped2.ptr is &buffer2);
+        assert(wrapped1.ptr !is wrapped2.ptr);
+        assert(buffer1 != buffer2);
 
-wrapped1 = wrapped2;
+        wrapped1 = wrapped2;
 
-//Everything points to the same stuff as before.
-assert(wrapped1.ptr is &buffer1);
-assert(wrapped2.ptr is &buffer2);
-assert(wrapped1.ptr !is wrapped2.ptr);
+        //Everything points to the same stuff as before.
+        assert(wrapped1.ptr is &buffer1);
+        assert(wrapped2.ptr is &buffer2);
+        assert(wrapped1.ptr !is wrapped2.ptr);
 
-//But buffer1 has changed due to the assignment.
-assert(buffer1 == [6, 7, 8, 9, 10]);
-assert(buffer2 == [6, 7, 8, 9, 10]);
+        //But buffer1 has changed due to the assignment.
+        assert(buffer1 == [6, 7, 8, 9, 10]);
+        assert(buffer2 == [6, 7, 8, 9, 10]);
 
-buffer2 = [11, 12, 13, 14, 15];
+        buffer2 = [11, 12, 13, 14, 15];
 
-//Everything points to the same stuff as before.
-assert(wrapped1.ptr is &buffer1);
-assert(wrapped2.ptr is &buffer2);
-assert(wrapped1.ptr !is wrapped2.ptr);
+        //Everything points to the same stuff as before.
+        assert(wrapped1.ptr is &buffer1);
+        assert(wrapped2.ptr is &buffer2);
+        assert(wrapped1.ptr !is wrapped2.ptr);
 
-//But buffer2 has changed due to the assignment.
-assert(buffer1 == [6, 7, 8, 9, 10]);
-assert(buffer2 == [11, 12, 13, 14, 15]);
+        //But buffer2 has changed due to the assignment.
+        assert(buffer1 == [6, 7, 8, 9, 10]);
+        assert(buffer2 == [11, 12, 13, 14, 15]);
 
-wrapped2 = null;
+        wrapped2 = null;
 
-//The pointer changed for wrapped2 but not wrapped1.
-assert(wrapped1.ptr is &buffer1);
-assert(wrapped2.ptr is null);
-assert(wrapped1.ptr !is wrapped2.ptr);
+        //The pointer changed for wrapped2 but not wrapped1.
+        assert(wrapped1.ptr is &buffer1);
+        assert(wrapped2.ptr is null);
+        assert(wrapped1.ptr !is wrapped2.ptr);
 
-//buffer2 is not affected by the assignment.
-assert(buffer1 == [6, 7, 8, 9, 10]);
-assert(buffer2 == [11, 12, 13, 14, 15]);
---------------------
+        //buffer2 is not affected by the assignment.
+        assert(buffer1 == [6, 7, 8, 9, 10]);
+        assert(buffer2 == [11, 12, 13, 14, 15]);
+        --------------------
       +/
     auto opAssign(RefRange rhs)
     {

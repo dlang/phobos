@@ -24,7 +24,7 @@ and its subclasses.  To construct a run-time encoder/decoder, one does
 e.g.
 
 ----------------------------------------------------
-    auto e = EncodingScheme.create("utf-8");
+auto e = EncodingScheme.create("utf-8");
 ----------------------------------------------------
 
 This library supplies $(D EncodingScheme) subclasses for ASCII,
@@ -1987,7 +1987,7 @@ size_t encode(Tgt, Src, R)(in Src[] s, R range)
  Latin1String ls;
  transcode(ws, ls);
      // transcode from UTF-16 to ISO-8859-1
-  --------------------------------------------------------
+ --------------------------------------------------------
  */
 void transcode(Src,Dst)(immutable(Src)[] s,out immutable(Dst)[] r)
 in

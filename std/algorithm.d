@@ -57,7 +57,6 @@ comparison predicates is $(D "a == b") for unordered operations and
 $(D "a < b") for ordered operations.
 
 Example:
-
 ----
 int[] a = ...;
 static bool greater(int a, int b)
@@ -363,7 +362,6 @@ element type of $(D map) is a tuple containing one element for each
 function.
 
 Example:
-
 ----
 auto arr1 = [ 1, 2, 3, 4 ];
 foreach (e; map!("a + a", "a * a")(arr1))
@@ -1498,19 +1496,19 @@ unittest
  * that the filtered range can be spanned from both directions. Also,
  * $(XREF range, retro) can be applied against the filtered range.
  *
-Example:
-----
-int[] arr = [ 1, 2, 3, 4, 5 ];
-auto small = filterBidirectional!("a < 3")(arr);
-assert(small.back == 2);
-assert(equal(small, [ 1, 2 ]));
-assert(equal(retro(small), [ 2, 1 ]));
-// In combination with chain() to span multiple ranges
-int[] a = [ 3, -2, 400 ];
-int[] b = [ 100, -101, 102 ];
-auto r = filterBidirectional!("a > 0")(chain(a, b));
-assert(r.back == 102);
-----
+ * Example:
+ * ----
+ * int[] arr = [ 1, 2, 3, 4, 5 ];
+ * auto small = filterBidirectional!("a < 3")(arr);
+ * assert(small.back == 2);
+ * assert(equal(small, [ 1, 2 ]));
+ * assert(equal(retro(small), [ 2, 1 ]));
+ * // In combination with chain() to span multiple ranges
+ * int[] a = [ 3, -2, 400 ];
+ * int[] b = [ 100, -101, 102 ];
+ * auto r = filterBidirectional!("a > 0")(chain(a, b));
+ * assert(r.back == 102);
+ * ----
  */
 template filterBidirectional(alias pred)
 {
@@ -3578,7 +3576,6 @@ needle)) is $(D true) (if no such position exists, returns $(D
 haystack) after exhaustion).
 
 Example:
-
 ----
 assert(find("hello, world", ',') == ", world");
 assert(find([1, 2, 3, 5], 4) == []);
@@ -4267,13 +4264,13 @@ unittest
  * false).
  *
  * Example:
-----
-string s = "abcdef";
-assert(findSkip(s, "cd") && s == "ef");
-s = "abcdef";
-assert(!findSkip(s, "cxd") && s == "abcdef");
-assert(findSkip(s, "def") && s.empty);
-----
+ * ----
+ * string s = "abcdef";
+ * assert(findSkip(s, "cd") && s == "ef");
+ * s = "abcdef";
+ * assert(!findSkip(s, "cxd") && s == "abcdef");
+ * assert(findSkip(s, "def") && s.empty);
+ * ----
  */
 bool findSkip(alias pred = "a == b", R1, R2)(ref R1 haystack, R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2
@@ -9784,7 +9781,6 @@ predicate $(D less(*a, *b));) $(LI Indexes of an integral type
 predicate $(D less(source[a], source[b])).))
 
 Example:
-
 ----
 immutable arr = [ 2, 3, 1 ];
 int* index[3];
@@ -9865,9 +9861,8 @@ unittest
 // /**
 // Similar to $(D makeIndex) but using $(D schwartzSort) to sort the
 // index.
-
+//
 // Example:
-
 // ----
 // string[] arr = [ "ab", "c", "Ab", "C" ];
 // auto index = schwartzMakeIndex!(toUpper, less, SwapStrategy.stable)(arr);

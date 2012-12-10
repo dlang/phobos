@@ -34,8 +34,8 @@ A = tuple of constants, which can be strings, characters, or integral
     values.
 
 Formats:
- *    The formats supported are %s for strings, and %%
- *    for the % character.
+    The formats supported are %s for strings, and %%
+    for the % character.
 Example:
 ---
 import std.metastrings;
@@ -46,7 +46,7 @@ void main()
   string s = Format!("Arg %s = %s", "foo", 27);
   writefln(s); // "Arg foo = 27"
 }
- * ---
+---
  */
 
 deprecated("std.string.format now works in CTFE. Please use it instead.")

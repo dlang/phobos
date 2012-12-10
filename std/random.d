@@ -439,7 +439,6 @@ implements a variant that has slightly better spectral behavior by
 using the multiplier 48271. Both generators are rather simplistic.
 
 Example:
-
 ----
 // seed with a constant
 auto rnd0 = MinstdRand0(1);
@@ -713,7 +712,6 @@ generation unless memory is severely restricted, in which case a $(D
 LinearCongruentialEngine) would be the generator of choice.
 
 Example:
-
 ----
 // seed with a constant
 Mt19937 gen;
@@ -1093,7 +1091,6 @@ with $(D_PARAM unpredictableSeed) makes engines generate different
 random number sequences every run.
 
 Example:
-
 ----
 auto rnd = Random(unpredictableSeed);
 auto n = rnd.front;
@@ -1169,7 +1166,6 @@ is closed to the left and open to the right. The version that does not
 take $(D urng) uses the default generator $(D rndGen).
 
 Example:
-
 ----
 auto gen = Random(unpredictableSeed);
 // Generate an integer in [0, 1023]
@@ -1493,7 +1489,6 @@ Rolls a dice with relative probabilities stored in $(D
 proportions). Returns the index in $(D proportions) that was chosen.
 
 Example:
-
 ----
 auto x = dice(0.5, 0.5);   // x is 0 or 1 in equal proportions
 auto y = dice(50, 50);     // y is 0 or 1 in equal proportions
