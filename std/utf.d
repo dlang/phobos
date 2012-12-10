@@ -166,7 +166,7 @@ uint stride(S)(auto ref S str, size_t index)
     if (is(S : const char[]) ||
         (isRandomAccessRange!S && is(Unqual!(ElementType!S) == char)))
 {
-    static if (hasLength!S)
+    static if (is(typeof(str.length) : ulong))
         assert(index < str.length, "Past the end of the UTF-8 sequence");
     immutable c = str[index];
 
@@ -397,7 +397,7 @@ uint stride(S)(auto ref S str, size_t index)
     if (is(S : const wchar[]) ||
         (isRandomAccessRange!S && is(Unqual!(ElementType!S) == wchar)))
 {
-    static if (hasLength!S)
+    static if (is(typeof(str.length) : ulong))
         assert(index < str.length, "Past the end of the UTF-16 sequence");
     immutable uint u = str[index];
     return 1 + (u >= 0xD800 && u <= 0xDBFF);
@@ -580,7 +580,7 @@ uint stride(S)(auto ref S str, size_t index = 0)
     if (is(S : const dchar[]) ||
         (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
 {
-    static if (hasLength!S)
+    static if (is(typeof(str.length) : ulong))
         assert(index < str.length, "Past the end of the UTF-32 sequence");
     else
         assert(!str.empty, "UTF-32 sequence is empty.");
@@ -653,7 +653,7 @@ unittest
 uint strideBack(S)(auto ref S str, size_t index)
     if (isRandomAccessRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
 {
-    static if (hasLength!S)
+    static if (is(typeof(str.length) : ulong))
         assert(index <= str.length, "Past the end of the UTF-32 sequence");
     assert (index > 0, "Not the end of the UTF-32 sequence");
     return 1;
