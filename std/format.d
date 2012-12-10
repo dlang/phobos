@@ -1507,29 +1507,8 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     {
         if (isnan(val)) // snprintf writes 1.#QNAN
         {
-          version(none)
-          {
-            return formatValue(w, "nan", f);
-          }
-          else  // FIXME:workaroun
-          {
-            auto s = "nan"[0 .. f.precision < $ ? f.precision : $];
-            if (!f.flDash)
-            {
-                // right align
-                if (f.width > s.length)
-                    foreach (j ; 0 .. f.width - s.length) put(w, ' ');
-                put(w, s);
-            }
-            else
-            {
-                // left align
-                put(w, s);
-                if (f.width > s.length)
-                    foreach (j ; 0 .. f.width - s.length) put(w, ' ');
-            }
-            return;
-          }
+            fs.spec = 's';
+            return formatValue(w, "nan", fs);
         }
     }
     if (fs.spec == 's') fs.spec = 'g';
