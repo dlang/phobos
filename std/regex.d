@@ -567,7 +567,7 @@ static assert(Bytecode.sizeof == 4);
             if(indent>0)
             {
                 string spaces="             ";
-                put(sink, spaces[0..(indent%$)]);
+                put(sink,spaces[0..(indent%spaces.length)]);
                 for (size_t i=indent/spaces.length;i>0;--i)
                     put(sink,spaces);
             }

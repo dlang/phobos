@@ -1425,7 +1425,7 @@ if (isBidirectionalRange!(Unqual!Range))
                 static if (hasSlicing!R)
                     typeof(this) opSlice(IndexType a, IndexType b)
                     {
-                        return typeof(this)(source[$ - b .. $ - a]);
+                        return typeof(this)(source[source.length - b .. source.length - a]);
                     }
             }
 
@@ -1583,7 +1583,7 @@ if (isInputRange!(Unqual!Range))
                     if (!slack) return;
                     static if (isRandomAccessRange!R && hasSlicing!R)
                     {
-                        source = source[0 .. $ - slack];
+                        source = source[0 .. source.length - slack];
                     }
                     else static if (isBidirectionalRange!R)
                     {
@@ -1639,7 +1639,7 @@ if (isInputRange!(Unqual!Range))
             {
                 static if (isRandomAccessRange!R && hasLength!R && hasSlicing!R)
                 {
-                    source = source[min(_n, $) .. $];
+                    source = source[min(_n, source.length) .. source.length];
                 }
                 else
                 {
@@ -1770,7 +1770,8 @@ unittest
     assert(s1[1..5].length == 4);
     assert(s1[0..0].empty);
     assert(s1[3..3].empty);
-    assert(s1[$ .. $].empty);
+    // assert(s1[$ .. $].empty);
+    assert(s1[s1.opDollar() .. s1.opDollar()].empty);
 
     auto s2 = stride(arr, 2);
     assert(equal(s2[0..2], [1,3]));
@@ -1779,7 +1780,8 @@ unittest
     assert(s2[1..5].length == 4);
     assert(s2[0..0].empty);
     assert(s2[3..3].empty);
-    assert(s2[$ .. $].empty);
+    // assert(s2[$ .. $].empty);
+    assert(s2[s2.opDollar() .. s2.opDollar()].empty);
 
     // Test fix for Bug 5035
     auto m = [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4]; // 3 rows, 4 columns
@@ -2444,7 +2446,7 @@ auto radial(Range, I)(Range r, I startingIndex)
 if (isRandomAccessRange!(Unqual!Range) && hasLength!(Unqual!Range) && isIntegral!I)
 {
     if (!r.empty) ++startingIndex;
-    return roundRobin(retro(r[0 .. startingIndex]), r[startingIndex .. $]);
+    return roundRobin(retro(r[0 .. startingIndex]), r[startingIndex .. r.length]);
 }
 
 /// Ditto
@@ -2678,7 +2680,9 @@ if (isInputRange!(Unqual!R) && hasSlicing!(Unqual!R))
 {
     static if (hasLength!R)
     {
-        return input[0 .. min(n, $)];
+        // @@@BUG@@@
+        //return input[0 .. min(n, $)];
+        return input[0 .. min(n, input.length)];
     }
     else
     {
@@ -6220,7 +6224,7 @@ struct Chunks(Source) if(isInputRange!Source && hasSlicing!Source && hasLength!S
     @property auto front()
     {
         assert(!empty);
-        return _source[0..min(_chunkSize, $)];
+        return _source[0..min(_chunkSize, _source.length)];
     }
 
     /// Ditto
@@ -7220,7 +7224,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
     auto upperBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V))
     {
-        return this[getTransitionIndex!(sp, gt)(value) .. $];
+        return this[getTransitionIndex!(sp, gt)(value) .. length];
     }
 
 // equalRange
@@ -7333,11 +7337,11 @@ assert(equal(r[2], [ 4, 4, 5, 6 ]));
                     - this[it + 1 .. first]
                     .upperBound!(SearchPolicy.gallop)(value).length;
                 return tuple(this[0 .. left], this[left .. right],
-                        this[right .. $]);
+                        this[right .. length]);
             }
         }
         // No equal element was found
-        return tuple(this[0 .. first], this.init, this[first .. $]);
+        return tuple(this[0 .. first], this.init, this[first .. length]);
     }
 
 // contains
@@ -7934,9 +7938,6 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
 
         /++ Ditto +/
         @property auto length() const {assert(0);}
-
-        /++ Ditto +/
-        alias opDollar = length;
     }
     else static if(hasLength!R)
     {
@@ -7945,13 +7946,10 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
             return (*_range).length;
         }
 
-        static if(is(typeof((*cast(const R*)_range).length)))
-        @property auto length() const
+        static if(is(typeof((*cast(const R*)_range).length))) @property auto length() const
         {
             return (*_range).length;
         }
-
-        alias opDollar = length;
     }
 
 
