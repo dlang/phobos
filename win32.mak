@@ -191,6 +191,8 @@ SRC_STD_C_FREEBSD= std\c\freebsd\socket.d
 
 SRC_STD_INTERNAL= std\internal\processinit.d std\internal\uni.d std\internal\uni_tab.d
 
+SRC_STD_INTERNAL_DIGEST= std\internal\digest\sha_SSSE3.d
+
 SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
 	std\internal\math\gammafunction.d std\internal\math\errorfunction.d
@@ -207,6 +209,7 @@ SRC_TO_COMPILE_NOT_STD= crc32.d \
 	$(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) \
 	$(SRC_STD_INTERNAL) \
+	$(SRC_STD_INTERNAL_DIGEST) \
 	$(SRC_STD_INTERNAL_MATH) \
 	$(SRC_STD_INTERNAL_WINDOWS) \
 	$(SRC_ETC) \
@@ -719,7 +722,8 @@ zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
 	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST) \
-	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
+	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) \
+	$(SRC_STD_INTERNAL_WINDOWS)
 	del phobos.zip
 	zip32 -u phobos win32.mak win64.mak posix.mak $(STDDOC)
 	zip32 -u phobos $(SRC)
@@ -731,6 +735,7 @@ zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_STD_C_OSX)
 	zip32 -u phobos $(SRC_STD_C_FREEBSD)
 	zip32 -u phobos $(SRC_STD_INTERNAL)
+	zip32 -u phobos $(SRC_STD_INTERNAL_DIGEST)
 	zip32 -u phobos $(SRC_STD_INTERNAL_MATH)
 	zip32 -u phobos $(SRC_STD_INTERNAL_WINDOWS)
 	zip32 -u phobos $(SRC_ETC) $(SRC_ETC_C)
