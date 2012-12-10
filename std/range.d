@@ -567,8 +567,6 @@ $(TR $(TD $(D r([ e ]);)) $(TD $(D R) is e.g. a $(D delegate)
     accepting an $(D E[]).
 ))
 )
-
-Note that $(D R) does not have to be a range.
  */
 void put(R, E)(ref R r, E e)
 {
@@ -951,8 +949,6 @@ as well as $(D moveBack) and $(D moveAt) if it's a bidirectional or
 random access range.  These may be explicitly implemented, or may work
 via the default behavior of the module level functions $(D moveFront)
 and friends.
-
-Note that $(D R) does not have to be a range.
  */
 template hasMobileElements(R)
 {
@@ -997,8 +993,6 @@ object $(D r) of type $(D R). For example, $(D ElementType!(T[])) is
 $(D T) if $(D T[]) isn't a narrow string; if it is, the element type is
 $(D dchar). If $(D R) doesn't have $(D front), $(D ElementType!R) is
 $(D void).
-
-Note that $(D R) does not have to be a range.
  */
 template ElementType(R)
 {
@@ -1028,8 +1022,6 @@ $(D wchar[]) and their qualified variants including $(D string) and
 $(D wstring)), $(D ElementEncodingType) is the character type of the
 string. For all other types, $(D ElementEncodingType) is the same as
 $(D ElementType).
-
-Note that $(D R) does not have to be a range.
  */
 template ElementEncodingType(R)
 {
@@ -1122,8 +1114,6 @@ unittest
 /**
 Tests whether $(D R) has lvalue elements.  These are defined as elements that
 can be passed by reference and have their address taken.
-
-Note that $(D R) does not have to be a range.
 */
 template hasLvalueElements(R)
 {
@@ -1166,8 +1156,6 @@ hasLength) yields $(D false) for them. This is because a narrow
 string's length does not reflect the number of characters, but instead
 the number of encoding units, and as such is not useful with
 range-oriented algorithms.
-
-Note that $(D R) does not have to be a range.
  */
 template hasLength(R)
 {
@@ -1232,8 +1220,6 @@ R r;
 auto s = r[1 .. 2];
 static assert(isInputRange!(typeof(s)));
 ----
-
-Note that $(D R) does not have to be a range.
  */
 template hasSlicing(R)
 {
@@ -1439,7 +1425,7 @@ if (isBidirectionalRange!(Unqual!Range))
                 static if (hasSlicing!R)
                     typeof(this) opSlice(IndexType a, IndexType b)
                     {
-                        return typeof(this)(source[$ - b .. $ - a]);
+                        return typeof(this)(source[source.length - b .. source.length - a]);
                     }
             }
 
@@ -1597,7 +1583,7 @@ if (isInputRange!(Unqual!Range))
                     if (!slack) return;
                     static if (isRandomAccessRange!R && hasSlicing!R)
                     {
-                        source = source[0 .. $ - slack];
+                        source = source[0 .. source.length - slack];
                     }
                     else static if (isBidirectionalRange!R)
                     {
@@ -1653,7 +1639,7 @@ if (isInputRange!(Unqual!Range))
             {
                 static if (isRandomAccessRange!R && hasLength!R && hasSlicing!R)
                 {
-                    source = source[min(_n, $) .. $];
+                    source = source[min(_n, source.length) .. source.length];
                 }
                 else
                 {
@@ -1784,7 +1770,8 @@ unittest
     assert(s1[1..5].length == 4);
     assert(s1[0..0].empty);
     assert(s1[3..3].empty);
-    assert(s1[$ .. $].empty);
+    // assert(s1[$ .. $].empty);
+    assert(s1[s1.opDollar() .. s1.opDollar()].empty);
 
     auto s2 = stride(arr, 2);
     assert(equal(s2[0..2], [1,3]));
@@ -1793,7 +1780,8 @@ unittest
     assert(s2[1..5].length == 4);
     assert(s2[0..0].empty);
     assert(s2[3..3].empty);
-    assert(s2[$ .. $].empty);
+    // assert(s2[$ .. $].empty);
+    assert(s2[s2.opDollar() .. s2.opDollar()].empty);
 
     // Test fix for Bug 5035
     auto m = [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4]; // 3 rows, 4 columns
@@ -2458,7 +2446,7 @@ auto radial(Range, I)(Range r, I startingIndex)
 if (isRandomAccessRange!(Unqual!Range) && hasLength!(Unqual!Range) && isIntegral!I)
 {
     if (!r.empty) ++startingIndex;
-    return roundRobin(retro(r[0 .. startingIndex]), r[startingIndex .. $]);
+    return roundRobin(retro(r[0 .. startingIndex]), r[startingIndex .. r.length]);
 }
 
 /// Ditto
@@ -2692,7 +2680,9 @@ if (isInputRange!(Unqual!R) && hasSlicing!(Unqual!R))
 {
     static if (hasLength!R)
     {
-        return input[0 .. min(n, $)];
+        // @@@BUG@@@
+        //return input[0 .. min(n, $)];
+        return input[0 .. min(n, input.length)];
     }
     else
     {
@@ -2801,9 +2791,6 @@ Otherwise if $(D R) is an input range, the type of the result
 is an input range with length. Finally, if $(D R) is a forward range
 (including bidirectional), the type of the result is a forward range
 with length.
-
-Note that $(D R) does not have to be a range in case it has slicing and
-its slice has length.
  */
 auto takeExactly(R)(R range, size_t n)
 if (isInputRange!R && !hasSlicing!R)
@@ -3592,7 +3579,7 @@ infinite (fact that would make $(D Cycle) the identity application),
 $(D Cycle) detects that and aliases itself to the range type
 itself. If the original range has random access, $(D Cycle) offers
 random access and also offers a constructor taking an initial position
-$(D index). $(D Cycle) is specialized for statically-sized arrays,
+$(D index). $(D Cycle) works with static arrays in addition to ranges,
 mostly for performance reasons.
 
 Example:
@@ -3601,9 +3588,6 @@ assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
 ----
 
 Tip: This is a great way to implement simple circular buffers.
-
-Note that $(D Range) does not have to be a range as $(D Cycle) also
-accepts static arrays which aren't ranges (see $(LREF isInputRange)).
 */
 struct Cycle(Range)
     if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
@@ -6240,7 +6224,7 @@ struct Chunks(Source) if(isInputRange!Source && hasSlicing!Source && hasLength!S
     @property auto front()
     {
         assert(!empty);
-        return _source[0..min(_chunkSize, $)];
+        return _source[0..min(_chunkSize, _source.length)];
     }
 
     /// Ditto
@@ -6364,8 +6348,6 @@ unittest
    Moves the front of $(D r) out and returns it. Leaves $(D r.front) in a
    destroyable state that does not allocate any resources (usually equal
    to its $(D .init) value).
-
-   Note that $(D R) does not have to be a range.
 */
 ElementType!R moveFront(R)(R r)
 {
@@ -6396,8 +6378,6 @@ unittest
    Moves the back of $(D r) out and returns it. Leaves $(D r.back) in a
    destroyable state that does not allocate any resources (usually equal
    to its $(D .init) value).
-
-   Note that $(D R) does not have to be a range.
 */
 ElementType!R moveBack(R)(R r)
 {
@@ -6434,8 +6414,6 @@ unittest
    Moves element at index $(D i) of $(D r) out and returns it. Leaves $(D
    r.front) in a destroyable state that does not allocate any resources
    (usually equal to its $(D .init) value).
-
-   Note that $(D R) does not have to be a range.
 */
 ElementType!R moveAt(R, I)(R r, I i) if (isIntegral!I)
 {
@@ -7246,7 +7224,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
     auto upperBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V))
     {
-        return this[getTransitionIndex!(sp, gt)(value) .. $];
+        return this[getTransitionIndex!(sp, gt)(value) .. length];
     }
 
 // equalRange
@@ -7359,11 +7337,11 @@ assert(equal(r[2], [ 4, 4, 5, 6 ]));
                     - this[it + 1 .. first]
                     .upperBound!(SearchPolicy.gallop)(value).length;
                 return tuple(this[0 .. left], this[left .. right],
-                        this[right .. $]);
+                        this[right .. length]);
             }
         }
         // No equal element was found
-        return tuple(this[0 .. first], this.init, this[first .. $]);
+        return tuple(this[0 .. first], this.init, this[first .. length]);
     }
 
 // contains
@@ -7960,9 +7938,6 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
 
         /++ Ditto +/
         @property auto length() const {assert(0);}
-
-        /++ Ditto +/
-        alias opDollar = length;
     }
     else static if(hasLength!R)
     {
@@ -7971,13 +7946,10 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
             return (*_range).length;
         }
 
-        static if(is(typeof((*cast(const R*)_range).length)))
-        @property auto length() const
+        static if(is(typeof((*cast(const R*)_range).length))) @property auto length() const
         {
             return (*_range).length;
         }
-
-        alias opDollar = length;
     }
 
 

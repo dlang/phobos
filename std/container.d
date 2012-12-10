@@ -2667,7 +2667,10 @@ Defines the container's primary range, which is a random-access range.
             return _b - _a;
         }
 
-        alias opDollar = length;
+        size_t opDollar() const
+        {
+            return length;
+        }
 
         @property T front()
         {
@@ -2861,7 +2864,11 @@ Complexity: $(BIGOH 1).
     }
 
     /// ditto
-    alias opDollar = length;
+    size_t opDollar() const
+    {
+        // @@@BUG@@@ This doesn't work yet
+        return length;
+    }
 
 /**
 Returns the maximum number of elements the container can store without
@@ -3277,7 +3284,8 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
             immutable offset = r._a;
             enforce(offset <= length);
             auto result = insertBack(stuff);
-            bringToFront(this[offset .. $ - result], this[$ - result .. $]);
+            bringToFront(this[offset .. length - result],
+                    this[length - result .. length]);
             return result;
         }
     }
@@ -3290,7 +3298,8 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
         immutable offset = r._b;
         enforce(offset <= length);
         auto result = insertBack(stuff);
-        bringToFront(this[offset .. $ - result], this[$ - result .. $]);
+        bringToFront(this[offset .. length - result],
+                this[length - result .. length]);
         return result;
     }
 
@@ -3355,9 +3364,9 @@ $(D r)
         immutable offset2 = r._b;
         immutable tailLength = length - offset2;
         // Use copy here, not a[] = b[] because the ranges may overlap
-        copy(this[offset2 .. $], this[offset1 .. offset1 + tailLength]);
+        copy(this[offset2 .. length], this[offset1 .. offset1 + tailLength]);
         length = offset1 + tailLength;
-        return this[$ - tailLength .. $];
+        return this[length - tailLength .. length];
     }
     /// ditto
     alias remove stableLinearRemove;
@@ -3436,7 +3445,7 @@ unittest
 unittest
 {
     auto a = Array!int(1, 2, 3, 4, 5);
-    auto r = a[2 .. $];
+    auto r = a[2 .. a.length];
     assert(a.insertBefore(r, 42) == 1);
     assert(a == Array!int(1, 2, 42, 3, 4, 5));
     r = a[2 .. 2];
@@ -4145,8 +4154,6 @@ struct Array(T) if (is(T == bool))
             assert(_a <= _b);
             return _b - _a;
         }
-        /// Ditto
-        alias opDollar = length;
     }
 
     /**
@@ -4201,9 +4208,6 @@ struct Array(T) if (is(T == bool))
     {
         return _store.refCountedStore.isInitialized ? _store._length : 0;
     }
-
-    /// ditto
-    alias opDollar = length;
 
     unittest
     {
@@ -4796,9 +4800,9 @@ struct Array(T) if (is(T == bool))
      */
     Range linearRemove(Range r)
     {
-        copy(this[r._b .. $], this[r._a .. $]);
+        copy(this[r._b .. length], this[r._a .. length]);
         length = length - r.length;
-        return this[r._a .. $];
+        return this[r._a .. length];
     }
     /// ditto
     alias linearRemove stableLinearRemove;

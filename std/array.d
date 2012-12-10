@@ -169,6 +169,50 @@ unittest
     }
 }
 
+/**
+Returns a newly allocated associative array out of elements of the input range,
+which must be a range of tuples (Key, Value).
+
+Example:
+
+$(D_RUN_CODE
+$(ARGS
+----
+auto a = assocArray(zip([0, 1, 2], ["a", "b", "c"]));
+assert(a == [0:"a", 1:"b", 2:"c"]);
+auto b = assocArray([ tuple("foo", "bar"), tuple("baz", "quux") ]);
+assert(b == ["foo":"bar", "baz":"quux"]);
+----
+), $(ARGS), $(ARGS), $(ARGS import std.array;))
+ */
+
+auto assocArray(Range)(Range r)
+    if (isInputRange!Range && isTuple!(ElementType!Range)
+     && ElementType!Range.length == 2)
+{
+    alias ElementType!Range.Types[0] KeyType;
+    alias ElementType!Range.Types[1] ValueType;
+    ValueType[KeyType] aa;
+    foreach (t; r)
+        aa[t[0]] = t[1];
+    return aa;
+}
+
+unittest
+{
+    static assert(!__traits(compiles, [ tuple("foo", "bar", "baz") ].assocArray()));
+    static assert(!__traits(compiles, [ tuple("foo") ].assocArray()));
+    static assert(__traits(compiles, [ tuple("foo", "bar") ].assocArray()));
+
+    auto aa1 = [ tuple("foo", "bar"), tuple("baz", "quux") ].assocArray();
+    assert(is(typeof(aa1) == string[string]));
+    assert(aa1 == ["foo":"bar", "baz":"quux"]);
+
+    auto aa2 = zip([0, 1, 2], ["a", "b", "c"]).assocArray();
+    assert(is(typeof(aa2) == string[int]));
+    assert(aa2 == [0:"a", 1:"b", 2:"c"]);
+}
+
 private template blockAttribute(T)
 {
     static if (hasIndirections!(T) || is(T == void))
@@ -495,7 +539,7 @@ unittest
 {
     assert(a.length, "Attempting to popBack() past the front of an array of " ~
                      typeof(a[0]).stringof);
-    a = a[0 .. $ - std.utf.strideBack(a, $)];
+    a = a[0 .. $ - std.utf.strideBack(a, a.length)];
 }
 
 unittest
@@ -1235,12 +1279,12 @@ unittest
         assert(cmp(words[3], "jerry") == 0);
         assert(cmp(words[4], "") == 0);
 
-        auto s1 = s[0 .. $ - 1];   // lop off trailing ','
+        auto s1 = s[0 .. s.length - 1];   // lop off trailing ','
         words = split(s1, ",");
         assert(words.length == 4);
         assert(cmp(words[3], "jerry") == 0);
 
-        auto s2 = s1[1 .. $];   // lop off leading ','
+        auto s2 = s1[1 .. s1.length];   // lop off leading ','
         words = split(s2, ",");
         assert(words.length == 3);
         assert(cmp(words[0], "peter") == 0);
@@ -1255,12 +1299,12 @@ unittest
         assert(cmp(words[3], "jerry") == 0);
         assert(cmp(words[4], "") == 0);
 
-        auto s4 = s3[0 .. $ - 2];    // lop off trailing ',,'
+        auto s4 = s3[0 .. s3.length - 2];    // lop off trailing ',,'
         words = split(s4, ",,");
         assert(words.length == 4);
         assert(cmp(words[3], "jerry") == 0);
 
-        auto s5 = s4[2 .. $];    // lop off leading ',,'
+        auto s5 = s4[2 .. s4.length];    // lop off leading ',,'
         words = split(s5, ",,");
         assert(words.length == 3);
         assert(cmp(words[0], "peter") == 0);
@@ -1561,7 +1605,7 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
         return subject;
 
     auto app = appender!(E[])();
-    app.put(subject[0 .. $ - balance.length]);
+    app.put(subject[0 .. subject.length - balance.length]);
     app.put(to.save);
     replaceInto(app, balance[from.length .. $], from, to);
 
@@ -1590,7 +1634,7 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
             sink.put(subject);
             break;
         }
-        sink.put(subject[0 .. $ - balance.length]);
+        sink.put(subject[0 .. subject.length - balance.length]);
         sink.put(to.save);
         subject = balance[from.length .. $];
     }
@@ -1901,7 +1945,7 @@ if (isDynamicArray!(E[]) &&
     auto balance = std.algorithm.find(subject, from.save);
     if (balance.empty) return subject;
     auto app = appender!(E[])();
-    app.put(subject[0 .. $ - balance.length]);
+    app.put(subject[0 .. subject.length - balance.length]);
     app.put(to.save);
     app.put(balance[from.length .. $]);
 
@@ -1958,7 +2002,8 @@ body
     immutable so = slice.ptr - s.ptr;
     result[0 .. so] = s[0 .. so];
     result[so .. so + replacement.length] = replacement[];
-    result[so + replacement.length .. $] = s[so + slice.length .. $];
+    result[so + replacement.length .. result.length] =
+        s[so + slice.length .. s.length];
 
     return cast(inout(T)[]) result;
 }
@@ -2554,7 +2599,7 @@ struct SimpleSlice(T)
             core.memory.GC.malloc(newLen * T.sizeof);
         result._e = result._b + newLen;
         result[0 .. this.length] = this;
-        result[this.length .. $] = another;
+        result[this.length .. result.length] = another;
         return result;
     }
 
@@ -2608,8 +2653,8 @@ unittest
     // assert(s[2] == 6);
 
     // assert(s[] == s);
-    // assert(s[0 .. $] == s);
-    // assert(equal(s[0 .. $ - 1], [4, 5][]));
+    // assert(s[0 .. s.length] == s);
+    // assert(equal(s[0 .. s.length - 1], [4, 5][]));
 
     // auto s1 = s ~ s[0 .. 1];
     // assert(equal(s1, [4, 5, 6, 4][]));

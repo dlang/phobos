@@ -534,7 +534,7 @@ unittest
     assert(squares[3] == 16);
 
     // Test slicing.
-    auto squareSlice = squares[1..$-1];
+    auto squareSlice = squares[1..squares.length - 1];
     assert(equal(squareSlice, [4, 9][]));
     assert(squareSlice.back == 9);
     assert(squareSlice[1] == 9);
@@ -2111,7 +2111,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
             }
             else
             {
-                _input = _input[_frontLength .. $];
+                _input = _input[_frontLength .. _input.length];
                 skipOver(_input, _separator) || assert(false);
                 _frontLength = _unComputed;
             }
@@ -2144,7 +2144,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
                         _backLength = _input.length - lastIndex - 1;
                     }
                 }
-                return _input[$ - _backLength .. $];
+                return _input[_input.length - _backLength .. _input.length];
             }
 
             void popBack()
@@ -2164,7 +2164,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
                 }
                 else
                 {
-                    _input = _input[0 .. $ - _backLength];
+                    _input = _input[0 .. _input.length - _backLength];
                     if (!_input.empty && _input.back == _separator)
                     {
                         _input.popBack();
@@ -2342,7 +2342,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
             {
                 // Special case: popping the first-to-last item; there is
                 // an empty item right after this.
-                _input = _input[$ .. $];
+                _input = _input[_input.length .. _input.length];
                 _frontLength = 0;
                 static if (isBidirectionalRange!Range)
                     _backLength = 0;
@@ -2350,7 +2350,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
             }
             // Normal case, pop one item and the separator, get ready for
             // reading the next item
-            _input = _input[_frontLength + separatorLength .. $];
+            _input = _input[_frontLength + separatorLength .. _input.length];
             // mark _frontLength as uninitialized
             _frontLength = _frontLength.max;
         }
@@ -2371,7 +2371,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
             @property Range back()
             {
                 ensureBackLength();
-                return _input[$ - _backLength .. $];
+                return _input[_input.length - _backLength .. _input.length];
             }
 
             void popBack()
@@ -2395,7 +2395,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
                     return;
                 }
                 // Normal case
-                _input = _input[0 .. $ - _backLength - separatorLength];
+                _input = _input[0 .. _input.length - _backLength - separatorLength];
                 _backLength = _backLength.max;
             }
         }
@@ -2511,7 +2511,7 @@ private struct SplitterResult(alias isTerminator, Range)
             return;
         }
         // Skip over existing word
-        _input = _input[_end .. $];
+        _input = _input[_end .. _input.length];
         // Skip terminator
         for (;;)
         {
@@ -3299,7 +3299,9 @@ if (isRandomAccessRange!R1 && isBidirectionalRange!R2
     const needleLength = walkLength(needle.save);
     if (needleLength > haystack.length)
     {
-        return haystack[$ .. $];
+        // @@@BUG@@@
+        //return haystack[$ .. $];
+        return haystack[haystack.length .. haystack.length];
     }
     // @@@BUG@@@
     // auto needleBack = moveBack(needle);
@@ -3317,7 +3319,7 @@ if (isRandomAccessRange!R1 && isBidirectionalRange!R2
     {
         if (scout >= haystack.length)
         {
-            return haystack[$ .. $];
+            return haystack[haystack.length .. haystack.length];
         }
         if (!binaryFun!pred(haystack[scout], needleBack))
         {
@@ -3325,7 +3327,7 @@ if (isRandomAccessRange!R1 && isBidirectionalRange!R2
             continue;
         }
         // Found a match with the last element in the needle
-        auto cand = haystack[scout + 1 - needleLength .. $];
+        auto cand = haystack[scout + 1 - needleLength .. haystack.length];
         if (startsWith!pred(cand, needle))
         {
             // found
@@ -3474,8 +3476,9 @@ unittest
             // Failed search
             static if (hasLength!R1)
             {
-                static if (is(typeof(haystack[$ .. $]) : R1))
-                    return haystack[$ .. $];
+                static if (is(typeof(haystack[haystack.length ..
+                                                haystack.length]) : R1))
+                    return haystack[haystack.length .. haystack.length];
                 else
                     return R1.init;
             }
@@ -3715,7 +3718,7 @@ is ignored.
             return 0;
 
         immutable delta = portion - ignore;
-        return equal(needle[$ - delta .. $],
+        return equal(needle[needle.length - delta .. needle.length],
                 needle[virtual_begin .. virtual_begin + delta]);
     }
 
@@ -3945,7 +3948,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
         immutable pos2 = balance.empty ? pos1 : pos1 + needle.length;
         return tuple(haystack[0 .. pos1],
                 haystack[pos1 .. pos2],
-                haystack[pos2 .. $]);
+                haystack[pos2 .. haystack.length]);
     }
     else
     {
@@ -3984,7 +3987,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     {
         auto balance = find!pred(haystack, needle);
         immutable pos = haystack.length - balance.length;
-        return tuple(haystack[0 .. pos], haystack[pos .. $]);
+        return tuple(haystack[0 .. pos], haystack[pos .. haystack.length]);
     }
     else
     {
@@ -4020,7 +4023,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     {
         auto balance = find!pred(haystack, needle);
         immutable pos = balance.empty ? 0 : haystack.length - balance.length + needle.length;
-        return tuple(haystack[0 .. pos], haystack[pos .. $]);
+        return tuple(haystack[0 .. pos], haystack[pos .. haystack.length]);
     }
     else
     {
@@ -7021,8 +7024,8 @@ Range partition(alias predicate,
         alias .partition!(pred, ss, Range) recurse;
         auto lower = recurse(r[0 .. middle]);
         auto upper = recurse(r[middle .. $]);
-        bringToFront(lower, r[middle .. $ - upper.length]);
-        return r[$ - lower.length - upper.length .. $];
+        bringToFront(lower, r[middle .. r.length - upper.length]);
+        return r[r.length - lower.length - upper.length .. r.length];
     }
     else static if (ss == SwapStrategy.semistable)
     {
@@ -7223,10 +7226,10 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
     auto swapLen = min(i, strictlyLess);
     swapRanges(r[0 .. swapLen], r[j - swapLen .. j]);
     swapLen = min(r.length - l, strictlyGreater);
-    swapRanges(r[k .. k + swapLen], r[$ - swapLen .. $]);
+    swapRanges(r[k .. k + swapLen], r[r.length - swapLen .. r.length]);
     return tuple(r[0 .. strictlyLess],
-            r[strictlyLess .. $ - strictlyGreater],
-            r[$ - strictlyGreater .. $]);
+            r[strictlyLess .. r.length - strictlyGreater],
+            r[r.length - strictlyGreater .. r.length]);
 }
 
 unittest
@@ -7483,7 +7486,7 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
             enum maxLen = 8;
             assert(isSorted!lessFun(r), text("Failed to sort range of type ",
                             Range.stringof, ". Actual result is: ",
-                            r[0 .. $ > maxLen ? maxLen : $],
+                            r[0 .. r.length > maxLen ? maxLen : r.length ],
                             r.length > maxLen ? "..." : ""));
         }
         else
@@ -7759,7 +7762,7 @@ private void sortImpl(alias less, SwapStrategy ss, Range)(Range r)
             }
 
             swapAt(r, r.length - 1, lessI);
-            auto right = r[lessI + 1 .. $];
+            auto right = r[lessI + 1..r.length];
 
             auto left = r[0..min(lessI, greaterI + 1)];
             if (right.length > left.length)
@@ -7795,7 +7798,7 @@ private void sortImpl(alias less, SwapStrategy ss, Range)(Range r)
             }
             else
             {
-                .sortImpl!(less, ss, Range)(r[0 .. $ - right.length]);
+                .sortImpl!(less, ss, Range)(r[0 .. r.length - right.length]);
                 r = right;
             }
         }
@@ -7922,7 +7925,7 @@ unittest
 /**
 Reorders the random-access range $(D r) such that the range $(D r[0
 .. mid]) is the same as if the entire $(D r) were sorted, and leaves
-the range $(D r[mid .. $(DOLLAR)]) in no particular order. Performs
+the range $(D r[mid .. r.length]) in no particular order. Performs
 $(BIGOH r.length * log(mid)) evaluations of $(D pred). The
 implementation simply calls $(D topN!(less, ss)(r, n)) and then $(D
 sort!(less, ss)(r[0 .. n])).
@@ -9350,7 +9353,7 @@ struct NWayUnion(alias less, RangeOfRanges)
 
     @property bool empty() { return _ror.empty; }
 
-    @property ref ElementType front()
+    @property auto ref front()
     {
         return _heap.front.front;
     }

@@ -3,7 +3,7 @@
   $(LUCKY Regular expressions) are a commonly used method of pattern matching
   on strings, with $(I regex) being a catchy word for a pattern in this domain
   specific language. Typical problems usually solved by regular expressions
-  include validation of user input and ubiquitous find & replace
+  include validation of user input and the ubiquitous find & replace
   in text processing utilities.
 
   Synposis:
@@ -12,31 +12,31 @@
   import std.stdio;
   void main()
   {
-      //print out all possible dd/mm/yy(yy) dates found in user input
-      //g - global, find all matches
+      // Print out all possible dd/mm/yy(yy) dates found in user input.
+      // g - global: find all matches.
       auto r = regex(r"\b[0-9][0-9]?/[0-9][0-9]?/[0-9][0-9](?:[0-9][0-9])?\b", "g");
       foreach(line; stdin.byLine)
       {
-        //match returns a range that can be iterated
-        //to get all subsequent matches
+        // Match returns a range that can be iterated
+        // to get all subsequent matches.
         foreach(c; match(line, r))
             writeln(c.hit);
       }
   }
   ...
 
-  //create static regex at compile-time, contains fast native code
+  // Create a static regex at compile-time, which contains fast native code.
   enum ctr = ctRegex!(`^.*/([^/]+)/?$`);
 
-  //works just like normal regex:
-  auto m2 = match("foo/bar", ctr);   //first match found here if any
-  assert(m2);   // be sure to check if there is a match before examining contents!
-  assert(m2.captures[1] == "bar");   //captures is a range of submatches, 0 - full match
+  // It works just like a normal regex:
+  auto m2 = match("foo/bar", ctr);   // First match found here, if any
+  assert(m2);   // Be sure to check if there is a match before examining contents!
+  assert(m2.captures[1] == "bar");   // Captures is a range of submatches: 0 = full match.
 
   ...
 
-  //result of match is directly testable with if/assert/while
-  //e.g. test if a string consists of letters:
+  // The result of the match is directly testable with if/assert/while.
+  // e.g. test if a string consists of letters:
   assert(match("Letter", `^\p{L}+$`));
 
 
@@ -567,7 +567,7 @@ static assert(Bytecode.sizeof == 4);
             if(indent>0)
             {
                 string spaces="             ";
-                put(sink, spaces[0..(indent%$)]);
+                put(sink,spaces[0..(indent%spaces.length)]);
                 for (size_t i=indent/spaces.length;i>0;--i)
                     put(sink,spaces);
             }
@@ -1967,7 +1967,7 @@ public struct Regex(Char)
         ---
         Regex!char r;
         assert(r.empty);
-        r = regex("");//note: "" is a valid regex pattern
+        r = regex(""); // Note: "" is a valid regex pattern.
         assert(!r.empty);
         ---
     +/
@@ -6151,9 +6151,9 @@ enum OneShot { Fwd, Bwd };
     {
         auto m = match("@abc#", regex(`(\w)(\w)(\w)`));
         auto c = m.captures;
-        assert(c.pre == "@");// part of input preceeding match
-        assert(c.post == "#"); // immediately after match
-        assert(c.hit == c[0] && c.hit == "abc");// the whole match
+        assert(c.pre == "@"); // Part of input preceeding match
+        assert(c.post == "#"); // Immediately after match
+        assert(c.hit == c[0] && c.hit == "abc"); // The whole match
         assert(c[2] =="b");
         assert(c.front == "abc");
         c.popFront();
@@ -6596,7 +6596,7 @@ public auto bmatch(R, RegEx)(R input, RegEx re)
 
     Example:
     ---
-    //Comify a number
+    // Comify a number
     auto com = regex(r"(?<=\d)(?=(\d\d\d)+\b)","g");
     assert(replace("12000 + 42100 = 54100", com, ",") == "12,000 + 42,100 = 54,100");
     ---
