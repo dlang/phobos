@@ -269,14 +269,14 @@ unittest
 
     Notes:
         $(D strideBack) will not fully verify the validity of the UTF-8
-        sequence. It will, however, gurantee that
+        sequence. It will, however, guarantee that
         $(D index - stride(str, index)) is a valid index.
   +/
 uint strideBack(S)(auto ref S str, size_t index)
     if (is(S : const char[]) ||
         (isRandomAccessRange!S && is(Unqual!(ElementType!S) == char)))
 {
-    static if (hasLength!S)
+    static if (is(typeof(str.length) : ulong))
         assert(index <= str.length, "Past the end of the UTF-8 sequence");
     assert (index > 0, "Not the end of the UTF-8 sequence");
 
@@ -494,7 +494,7 @@ uint strideBack(S)(auto ref S str, size_t index)
     if (is(S : const wchar[]) ||
         (isRandomAccessRange!S && is(Unqual!(ElementType!S) == wchar)))
 {
-    static if (hasLength!S)
+    static if (is(typeof(str.length) : ulong))
         assert(index <= str.length, "Past the end of the UTF-16 sequence");
     assert (index > 0, "Not the end of a UTF-16 sequence");
 
