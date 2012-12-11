@@ -36,11 +36,45 @@ enum dchar paraSep = '\u2029'; /// UTF paragraph separator
   +/
 bool isWhite(dchar c) @safe pure nothrow
 {
-    return std.ascii.isWhite(c) ||
-           c == lineSep || c == paraSep ||
-           c == '\u0085' || c == '\u00A0' || c == '\u1680' || c == '\u180E' ||
-           (c >= '\u2000' && c <= '\u200A') ||
-           c == '\u202F' || c == '\u205F' || c == '\u3000';
+    return c < 0x80 ? std.ascii._fastIsWhite(c) : std.uni._fastIsWhite(c);
+}
+//Internal function: Checks isWhite, pre-supposing c >= 0x80
+package bool _fastIsWhite(dchar c) @safe pure nothrow
+{
+    return  c == lineSep || c == paraSep ||
+            c == '\u0085' || c == '\u00A0' || c == '\u1680' || c == '\u180E' ||
+            (c >= '\u2000' && c <= '\u200A') ||
+            c == '\u202F' || c == '\u205F' || c == '\u3000';
+}
+
+unittest
+{
+    //Whites. From http://en.wikipedia.org/wiki/Whitespace_character#Unicode , which sources Unicode 6.0, chapter 4.6
+    dstring whites =
+        "\u0009\u000A\u000B\u000C\u000D\u0020"                               //ASCII wihtes
+        "\u0085\u00A0\u1680\u180E"                                           //Random whites (NEL, nbsp, ogham and monoglian)
+        "\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A" //Typography spaces (en space...) 
+        "\u2028\u2029"                                                       //lineSep and paraSep
+        "\u202F\u205F\u3000";                                                //misc.
+
+    foreach (c; whites)
+        assert(isWhite(c));
+
+    foreach (c; 0 .. 80)
+        assert (!_fastIsWhite(c));
+    foreach (c; whites[6 .. $])
+        assert ( _fastIsWhite(c));
+
+    loop: foreach (c; 0 .. 0x10FFFF)
+    {
+        if (isWhite(c))
+        {
+            foreach (cc; whites)
+                if (cc == c)
+                    continue loop;
+            assert (0);
+        }
+    }
 }
 
 

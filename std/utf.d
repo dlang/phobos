@@ -1380,6 +1380,147 @@ unittest
     }
 }
 
+/+
+    $(D decodeIsWhite) is a specialized (and currently internal) function.
+    It exploits data from the decode to speed up evaluation of isWhite.
+
+    $(D decodeIsWhite) will not fully decode nor verify that the code points
+    are valid. It will just check if the codepoint corresponds to a white,
+    and stride the correct amount.
+
+    Only implemented for raw strings.
+
+    Throws:
+        May throw a $(D UTFException) if $(D str[index]) is not the
+        start of a valid UTF sequence.
+  +/
+package bool decodeIsWhite(S)(auto ref S str, ref size_t index) @trusted pure
+    if (isSomeString!S)
+{
+    assert(index < str.length, "decode index out of bounds");
+    alias C = Unqual!(ElementEncodingType!S);
+    static if (is(C == char))
+    {
+        auto p = str.ptr;
+        auto c1 = p[index];
+        if (c1 < 0x80)
+        {
+            ++index;
+            return std.ascii._fastIsWhite(c1);
+        }
+        import core.bitop;
+        immutable n = 7 - bsr(~c1);
+        //Note: n is validated in the switch statement below
+        enforce (index + n <= str.length, new UTFException("Short UTF-8 sequence"));
+        bool ret;
+        switch (n)
+        {
+            case 2:
+            {
+                // '\u0085'; 0xC2 0x85
+                // '\u00A0'; 0xC2 0xA0
+                if (c1 == 0xC2)
+                    if (p[index+1] == 0x85 || p[index+1] == 0xA0) ret = true;
+                break;
+            }
+            
+            case 3:
+            {
+                if (c1 == 0xE1)
+                {
+                    // '\u1680'; 0xE1 0x9A 0x80
+                    // '\u180E'; 0xE1 0xA0 0x8E
+                    auto c2 = p[index+1];
+                    if ((c2 == 0x9A && p[index+2] == 0x80) ||
+                        (c2 == 0xA0 && p[index+2] == 0x8E)) ret = true;
+                }
+                else if (c1 == 0xE2)
+                {
+                    // '\u2000'; 0xE2 0x80 0x80
+                    // '\u200X'; 0xE2 0x80 0x8X
+                    // '\u200A'; 0xE2 0x80 0x8A
+                    // '\u2028'; 0xE2 0x80 0xA8
+                    // '\u2029'; 0xE2 0x80 0xA9
+                    // '\u202F'; 0xE2 0x80 0xAF
+                    auto c2 = p[index+1];
+                    if (c2 == 0x80)
+                    {
+                        auto c3 = p[index+2];
+                        if ((c3 >= 0x80 && c3 <= 0x8A) || c3 == 0xA8 || c3 == 0xA9 || c3 == 0xAF) ret = true;
+                    }
+                    // '\u205F'; 0xE2 0x81 0x9F
+                    else if (c2 == 0x81)
+                    {
+                        auto c3 = p[index+2];
+                        if (c3 == 0x9f) ret = true;
+                    }
+                }
+                else if (c1 == 0xE3)
+                {
+                    // '\u3000'; 0xE3 0x80 0x80
+                    auto c2 = p[index+1];
+                    if (c2 == 0x80 && p[index+2] == 0x80) ret = true;
+                }
+                break;
+            }
+            
+            //No whites in quad
+            case 4: break;
+
+            //Invalid length
+            default: throw new UTFException("invalid UTF-8 sequence");
+        }
+        index += n;
+        return ret;
+    }
+    else static if (is(C == wchar))
+    {
+        immutable wc = str.ptr[index];
+        if (wc < 0xD800) //single wchar sequence
+        {
+            ++index;
+            return std.uni.isWhite(wc);
+        }
+        if (wc < 0xDC00)
+        {
+            enforce (index + 2 <= str.length, new UTFException("Short UTF-8 sequence"));
+            ++index;
+        }
+        ++index;
+        return false;
+    }
+    else static if (is(C == dchar))
+    {
+        return std.uni.isWhite(str.ptr[index++]);
+    }
+    else
+        static assert(0, format("%s is not a character type", C.stringof));
+}
+
+unittest
+{
+    foreach (S; TypeTuple!(string, wstring, dstring))
+    {
+        S[] strings = 
+        [
+          "",
+          "h l\rw\norld",
+          "日\u1680日\u180E日\u2000日\u200A日\u2028日\u2029日\u202F日\u205F日\u3000",
+          "　　哈・郎博尔德｝　　　　___一个"
+        ];
+        foreach(s; strings)
+        {
+            size_t i = 0;
+            size_t j = 0;
+            immutable k = s.length;
+            while(i < k)
+            {
+                assert(decodeIsWhite(s, i) == std.uni.isWhite(decode(s, j)));
+                assert(i == j);
+            }
+        }
+    }
+}
 
 /* =================== Encode ======================= */
 

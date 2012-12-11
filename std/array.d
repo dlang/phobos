@@ -1166,51 +1166,91 @@ unittest
 Split the string $(D s) into an array of words, using whitespace as
 delimiter. Runs of whitespace are merged together (no empty words are produced).
  */
-S[] split(S)(S s) if (isSomeString!S)
+S[] split(S)(S s)
+    if (isSomeString!S)
 {
-    size_t istart;
-    bool inword = false;
-    S[] result;
+    alias C = Unqual!(ElementEncodingType!S);
 
-    foreach (i; 0 .. s.length)
+    s = s.stripRight(); //Means there is no trailing ws: There is *always* text after a white
+    if (s.empty) return (S[]).init;
+
+    auto app = appender!(S[])();
+    auto p = s.ptr;
+    immutable len = s.length;
+
+    size_t startIndex; //start word
+    size_t currIndex;  //current index
+    size_t nextIndex;  //look-ahead index
+    
+    static if (!is(C == dchar))
     {
-        switch (s[i])
+        for ( ; ; startIndex = nextIndex )
+            if(!decodeIsWhite(s, nextIndex)) break;
+
+        find_token: for ( currIndex = nextIndex ; currIndex < len ; currIndex = nextIndex )
         {
-        case ' ': case '\t': case '\f': case '\r': case '\n': case '\v':
-            if (inword)
+            if (decodeIsWhite(s, nextIndex))
             {
-                result ~= s[istart .. i];
-                inword = false;
+                app.put(p[startIndex .. currIndex]);
+                for ( startIndex = nextIndex ; ; startIndex = nextIndex )
+                    if (!decodeIsWhite(s, nextIndex))
+                        continue find_token;
             }
-            break;
-        default:
-            if (!inword)
-            {
-                istart = i;
-                inword = true;
-            }
-            break;
         }
     }
-    if (inword)
-        result ~= s[istart .. $];
-    return result;
+    else
+    {
+        //lighter impl for dchars.
+        for ( ; ; ++startIndex)
+            if(!std.uni.isWhite(p[startIndex])) break;
+
+        find_token:
+        for ( currIndex = startIndex + 1 ; currIndex < len ; ++currIndex)
+        {
+            if (std.uni.isWhite(p[currIndex]))
+            {
+                app.put(p[startIndex .. currIndex]);
+                for ( startIndex = currIndex + 1 ; ; ++startIndex)
+                    if(!std.uni.isWhite(p[startIndex]))
+                        goto find_token;
+            }
+        }
+    }
+    app.put(p[startIndex .. len]);
+    return app.data;
 }
 
 unittest
 {
-    foreach (S; TypeTuple!(string, wstring, dstring))
-    {
-        debug(std_array) printf("array.split1\n");
-        S s = " \t\npeter paul\tjerry \n";
-        assert(equal(split(s), [ to!S("peter"), to!S("paul"), to!S("jerry") ]));
+    static auto makeEntry(S)(string l, string[] r)
+    {return tuple(l.to!S(),  r.to!(S[])());}
 
-        S s2 = " \t\npeter paul\tjerry";
-        assert(equal(split(s2), [ to!S("peter"), to!S("paul"), to!S("jerry") ]));
+    foreach (S; TypeTuple!(string, wstring, dstring,))
+    {
+        auto entries =
+        [
+            makeEntry!S("",                                  []),
+            makeEntry!S("     ",                             []),
+            makeEntry!S("hello",                             ["hello"]),
+            makeEntry!S("    hello    ",                     ["hello"]),
+            makeEntry!S("peter\t\npaul\rjerry",              ["peter", "paul", "jerry"]),
+            makeEntry!S(" \t\npeter paul\tjerry \n",         ["peter", "paul", "jerry"]),
+            makeEntry!S("\u2000日\u202F本\u205F語\u3000",    ["日", "本", "語"]),
+            makeEntry!S("　　哈・郎博尔德｝　　　　___一个", ["哈・郎博尔德｝", "___一个"])
+        ];
+        foreach (entry; entries)
+            assert(entry[0].split() == entry[1], format("got: %s, expected: %s.", entry[0].split(), entry[1]));
     }
 
+    //Just to test that an immutable is split-able
     immutable string s = " \t\npeter paul\tjerry \n";
     assert(equal(split(s), ["peter", "paul", "jerry"]));
+
+    //Test ctfe
+    enum ctfe1 = "\u2000日\u202F本\u205F語\u3000".split();
+    enum ctfe2 = "\u2000日\u202F本\u205F語\u3000"d.split();
+    static assert(ctfe1 == ["日", "本", "語"]);
+    static assert(ctfe2 == ["日"d, "本", "語"]);
 }
 
 /**
