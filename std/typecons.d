@@ -323,12 +323,11 @@ private:
         string decl = "";
         foreach (i, name; staticMap!(extractName, fieldSpecs))
         {
-            enum    field = Format!("Identity!(field[%s])",i);
-            enum numbered = Format!("_%s", i);
-            decl ~= Format!("alias %s %s;", field, numbered);
+            enum numbered = toStringNow!(i);
+            decl ~= "alias Identity!(field[" ~ numbered ~ "]) _" ~ numbered ~ ";";
             if (name.length != 0)
             {
-                decl ~= Format!("alias %s %s;", numbered, name);
+                decl ~= "alias _" ~ numbered ~ " " ~ name ~ ";";
             }
         }
         return decl;
