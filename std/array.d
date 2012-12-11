@@ -1198,21 +1198,38 @@ S[] split(S)(S s)
         result ~= s[istart .. $];
     return result;
 }
-
 unittest
 {
-    foreach (S; TypeTuple!(string, wstring, dstring))
-    {
-        debug(std_array) printf("array.split1\n");
-        S s = " \t\npeter paul\tjerry \n";
-        assert(equal(split(s), [ to!S("peter"), to!S("paul"), to!S("jerry") ]));
+    static auto makeEntry(S)(string l, string[] r)
+    {return tuple(l.to!S(), r.to!(S[])());}
 
-        S s2 = " \t\npeter paul\tjerry";
-        assert(equal(split(s2), [ to!S("peter"), to!S("paul"), to!S("jerry") ]));
+    foreach (S; TypeTuple!(string, wstring, dstring,))
+    {
+        auto entries =
+        [
+            makeEntry!S("", []),
+            makeEntry!S(" ", []),
+            makeEntry!S("hello", ["hello"]),
+            makeEntry!S(" hello ", ["hello"]),
+            makeEntry!S("  h  e  l  l  o ", ["h", "e", "l", "l", "o"]),
+            makeEntry!S("peter\t\npaul\rjerry", ["peter", "paul", "jerry"]),
+            makeEntry!S(" \t\npeter paul\tjerry \n", ["peter", "paul", "jerry"]),
+            makeEntry!S("\u2000日\u202F本\u205F語\u3000", ["日", "本", "語"]),
+            makeEntry!S("　　哈・郎博尔德｝　　　　___一个", ["哈・郎博尔德｝", "___一个"])
+        ];
+        foreach (entry; entries)
+            assert(entry[0].split() == entry[1], format("got: %s, expected: %s.", entry[0].split(), entry[1]));
     }
 
+    //Just to test that an immutable is split-able
     immutable string s = " \t\npeter paul\tjerry \n";
     assert(equal(split(s), ["peter", "paul", "jerry"]));
+
+    //Test ctfe
+    enum ctfe1 = "\u2000日\u202F本\u205F語\u3000".split();
+    enum ctfe2 = "\u2000日\u202F本\u205F語\u3000"d.split();
+    static assert(ctfe1 == ["日", "本", "語"]);
+    static assert(ctfe2 == ["日"d, "本", "語"]);
 }
 
 /**
