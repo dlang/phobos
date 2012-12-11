@@ -1166,30 +1166,32 @@ unittest
 Split the string $(D s) into an array of words, using whitespace as
 delimiter. Runs of whitespace are merged together (no empty words are produced).
  */
-S[] split(S)(S s) if (isSomeString!S)
+@safe //pure
+S[] split(S)(S s)
+    if (isSomeString!S)
 {
+    S[] result; //TODO: use appender once safe and pure
+
     size_t istart;
     bool inword = false;
-    S[] result;
 
-    foreach (i; 0 .. s.length)
+    foreach (size_t i, dchar c; s)
     {
-        switch (s[i])
+        if (std.uni.isWhite(c))
         {
-        case ' ': case '\t': case '\f': case '\r': case '\n': case '\v':
             if (inword)
             {
                 result ~= s[istart .. i];
                 inword = false;
             }
-            break;
-        default:
+        }
+        else
+        {
             if (!inword)
             {
                 istart = i;
                 inword = true;
             }
-            break;
         }
     }
     if (inword)
