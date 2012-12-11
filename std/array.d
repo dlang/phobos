@@ -1166,36 +1166,67 @@ unittest
 Split the string $(D s) into an array of words, using whitespace as
 delimiter. Runs of whitespace are merged together (no empty words are produced).
  */
-@safe //pure
+@safe pure
 S[] split(S)(S s)
-    if (isSomeString!S)
+    if (isNarrowString!S)
 {
     S[] result; //TODO: use appender once safe and pure
 
-    size_t istart;
-    bool inword = false;
+    s = s.stripRight(); //Means there is no trailing ws: There is *always* text after a white
+    if (s.empty)
+        return result;
 
-    foreach (size_t i, dchar c; s)
+    size_t startIndex; //start word
+    size_t nextIndex; //look-ahead index
+
+    for ( ; ; startIndex = nextIndex )
+        if(!std.uni.isWhite(decode(s, nextIndex)))
+            break;
+
+    immutable len = s.length;
+    find_token:
+    for ( size_t currIndex = nextIndex ; currIndex < len ; currIndex = nextIndex )
     {
-        if (std.uni.isWhite(c))
+        if (std.uni.isWhite(decode(s, nextIndex)))
         {
-            if (inword)
-            {
-                result ~= s[istart .. i];
-                inword = false;
-            }
-        }
-        else
-        {
-            if (!inword)
-            {
-                istart = i;
-                inword = true;
-            }
+            result ~= s[startIndex .. currIndex];
+            for ( startIndex = nextIndex ; ; startIndex = nextIndex )
+                if(!std.uni.isWhite(decode(s, nextIndex)))
+                    goto find_token;
         }
     }
-    if (inword)
-        result ~= s[istart .. $];
+    result ~= s[startIndex .. len];
+    return result;
+}
+/// ditto
+@safe pure nothrow
+S[] split(S)(S s)
+    if (is(S : const dchar[]) && !isAggregateType!S)
+{
+    S[] result; //TODO: use appender once safe and pure and nothrow
+
+    s = s.stripRight(); //Means there is no trailing ws: There is *always* text after a white
+    if (s.empty) 
+        return result;
+
+    size_t startIndex;
+    for ( ; ; ++startIndex )
+        if (!std.uni.isWhite(s[startIndex]))
+            break;
+
+    immutable len = s.length;
+    find_token:
+    for ( size_t currIndex = startIndex + 1 ; currIndex < len ; ++currIndex )
+    {
+        if (std.uni.isWhite(s[currIndex]))
+        {
+            result ~= s[startIndex .. currIndex];
+            for ( startIndex = currIndex + 1 ; ; ++startIndex )
+                if (!std.uni.isWhite(s[startIndex]))
+                    goto find_token;
+        }
+    }
+    result ~= s[startIndex .. len];
     return result;
 }
 unittest
