@@ -1443,56 +1443,86 @@ unittest
 
 // move
 /**
-Moves $(D source) into $(D target) via a destructive
-copy. Specifically: $(UL $(LI If $(D hasAliasing!T) is true (see
-$(XREF traits, hasAliasing)), then the representation of $(D source)
-is bitwise copied into $(D target) and then $(D source = T.init) is
-evaluated.)  $(LI Otherwise, $(D target = source) is evaluated.)) See
-also $(XREF exception, pointsTo).
+Moves $(D source) into $(D target).
+
+Specifically:
+$(UL
+    $(LI Does nothing if $(D &source is &target) (for the first overload only).)
+
+    $(LI Destroys $(D target) if needed (for the first overload only, see
+        $(XREF traits, hasElaborateDestructor)))
+
+    $(LI Bitwise copies $(D source) into $(D target).)
+
+    $(LI If $(D hasElaborateCopyConstructor!T || hasElaborateDestructor!T)
+        is $(D true) (see $(XREF traits, hasElaborateCopyConstructor)),
+        then sets $(D source) to $(D T.init).)
+)
+
+Note:
+
+move is $(RED dangerous) as it works for $(B every) type $(D T) whatever
+qualifiers or $(D const)/$(D immutable) members it has.
+So it's the caller responsibility to use move properly.
+
+Example:
+---
+// Consider two logically equal functions except `f1` and `f2` require
+// type `S` to not disable default construction.
+void f1(S s)
+{
+    { S tmp; } // <- Destructor (if any) call for `S.init` here
+    g(s);
+}
+
+void f2(S s)
+{
+    S moved;
+    move(s, moved);
+    g(moved);
+    // <- Same destructor call here
+}
+
+void f3(S s)
+{
+    S moved = move(s); // <- Same destructor call here
+    // Also a temporary for `move` return value may be created, resulting
+    // in a postblit and, then, a destructor call for a bitwise copy of `s`,
+    // but it likely will be removed by optimizer (e.i. no temporary created).
+    // This optimization is called NRVO (Named Return Value Optimization).
+    g(moved);
+}
+---
+
+See also $(XREF exception, pointsTo), $(GLOSSARY nrvo).
 
 Preconditions:
 $(D &source == &target || !pointsTo(source, source))
 */
 void move(T)(ref T source, ref T target)
+in { assert(&source == &target || !pointsTo(source, source)); }
+body
 {
-    if (&source == &target) return;
-    assert(!pointsTo(source, source));
-    static if (is(T == struct))
-    {
-        // Most complicated case. Destroy whatever target had in it
-        // and bitblast source over it
-        static if (hasElaborateDestructor!T) typeid(T).destroy(&target);
+    // Performance optimization:
+    // Do not compare addresses if we don't have side effects,
+    // will not need addresses in `memcpy`, and T fits in register.
+    static if (hasElaborateCopyConstructor!T || hasElaborateAssign!T ||
+               hasElaborateDestructor!T || !isAssignable!T ||
+               T.sizeof > size_t.sizeof)
+        if (&source == &target) return;
 
-        memcpy(&target, &source, T.sizeof);
+    static if (hasElaborateDestructor!T)
+        destruct(target, false);
 
-        // If the source defines a destructor or a postblit hook, we must obliterate the
-        // object in order to avoid double freeing and undue aliasing
-        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
-        {
-            static T empty;
-            static if (T.tupleof.length > 0 &&
-                       T.tupleof[$-1].stringof.endsWith("this"))
-            {
-                // If T is nested struct, keep original context pointer
-                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
-            }
-            else
-            {
-                memcpy(&source, &empty, T.sizeof);
-            }
-        }
-    }
+    // If there is no elaborate assign and no elaborate copy constructor,
+    // `target = source` has no side effects.
+    static if (hasElaborateAssign!T || hasElaborateCopyConstructor!T || !isAssignable!T)
+        memcpy(cast(void*) &target, cast(const void*) &source, T.sizeof);
     else
-    {
-        // Primitive data (including pointers and arrays) or class -
-        // assignment works great
         target = source;
-        // static if (is(typeof(source = null)))
-        // {
-        //     // Nullify the source to help the garbage collector
-        //     source = null;
-        // }
-    }
+
+    static if (hasElaborateCopyConstructor!T || hasElaborateDestructor!T)
+        setInitialState(source);
 }
 
 unittest
@@ -1510,6 +1540,12 @@ unittest
     S1 s12;
     move(s11, s12);
     assert(s11.a == 10 && s11.b == 11 && s12.a == 10 && s12.b == 11);
+
+    shared S1 sharedS11, sharedS12;
+    move(sharedS11, sharedS12);
+
+    const int constI11, constI12;
+    void constTest(in int ci1) { const ci2 = move(ci1); }
 
     static struct S2 { int a = 1; int * b; }
     S2 s21 = { 10, null };
@@ -1548,39 +1584,19 @@ unittest
 /// Ditto
 T move(T)(ref T source)
 {
-    // Can avoid to check aliasing.
+    // Can avoid to check aliasing here.
 
-    T result = void;
-    static if (is(T == struct))
+    static if (hasElaborateCopyConstructor!T || hasElaborateDestructor!T)
     {
-        // Can avoid destructing result.
-
-        memcpy(&result, &source, T.sizeof);
-
-        // If the source defines a destructor or a postblit hook, we must obliterate the
-        // object in order to avoid double freeing and undue aliasing
-        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
-        {
-            static T empty;
-            static if (T.tupleof.length > 0 &&
-                       T.tupleof[$-1].stringof.endsWith("this"))
-            {
-                // If T is nested struct, keep original context pointer
-                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
-            }
-            else
-            {
-                memcpy(&source, &empty, T.sizeof);
-            }
-        }
+        T result = void;
+        memcpy(cast(void*) &result, cast(const void*) &source, T.sizeof);
+        setInitialState(source);
+        return result;
     }
     else
     {
-        // Primitive data (including pointers and arrays) or class -
-        // assignment works great
-        result = source;
+        return source;
     }
-    return result;
 }
 
 unittest
@@ -1596,6 +1612,9 @@ unittest
     S1 s11 = { 10, 11 };
     S1 s12 = move(s11);
     assert(s11.a == 10 && s11.b == 11 && s12.a == 10 && s12.b == 11);
+
+    shared S1 sharedS11, sharedS12 = move(sharedS11);
+    void constTest(in int ci1, in int ci2) { move(ci1, ci2); }
 
     static struct S2 { int a = 1; int * b; }
     S2 s21 = { 10, null };
@@ -1664,6 +1683,8 @@ unittest// Issue 8057
         int x;
         ~this()
         {
+            // Struct always can equal to its `init`
+            if(this == S.init) return;
             // Access to enclosing scope
             assert(n == 10);
         }
