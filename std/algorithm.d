@@ -314,7 +314,7 @@ Source: $(PHOBOSSRC std/_algorithm.d)
 module std.algorithm;
 //debug = std_algorithm;
 
-import std.c.string;
+import std.c.string, core.bitop;
 import std.array, std.ascii, std.container, std.conv, std.exception,
     std.functional, std.math, std.metastrings, std.range, std.string,
     std.traits, std.typecons, std.typetuple, std.uni;
@@ -555,7 +555,7 @@ unittest
     auto intRange = map!"a"([1,2,3]);
     static assert(isRandomAccessRange!(typeof(intRange)));
 
-    foreach(DummyType; AllDummyRanges)
+    foreach (DummyType; AllDummyRanges)
     {
         DummyType d;
         auto m = map!"a * a"(d);
@@ -666,7 +666,7 @@ template reduce(fun...) if (fun.length >= 1)
     auto reduce(Args...)(Args args)
     if (Args.length > 0 && Args.length <= 2 && isIterable!(Args[$ - 1]))
     {
-        static if(isInputRange!(Args[$ - 1]))
+        static if (isInputRange!(Args[$ - 1]))
         {
             static if (Args.length == 2)
             {
@@ -724,9 +724,9 @@ template reduce(fun...) if (fun.length >= 1)
             alias Args[$ - 1] R;
             alias ForeachType!R E;
 
-            static if(args.length == 2)
+            static if (args.length == 2)
             {
-                static if(fun.length == 1)
+                static if (fun.length == 1)
                 {
                     auto result = Tuple!(Unqual!(Args[0]))(args[0]);
                 }
@@ -737,7 +737,7 @@ template reduce(fun...) if (fun.length >= 1)
 
                 enum bool initialized = true;
             }
-            else static if(fun.length == 1)
+            else static if (fun.length == 1)
             {
                 Tuple!(typeof(binaryFun!fun(E.init, E.init))) result = void;
                 bool initialized = false;
@@ -751,18 +751,18 @@ template reduce(fun...) if (fun.length >= 1)
 
             // For now, just iterate using ref to avoid unnecessary copying.
             // When Bug 2443 is fixed, this may need to change.
-            foreach(ref elem; r)
+            foreach (ref elem; r)
             {
-                if(initialized)
+                if (initialized)
                 {
-                    foreach(i, T; result.Types)
+                    foreach (i, T; result.Types)
                     {
                         result[i] = binaryFun!(fun[i])(result[i], elem);
                     }
                 }
                 else
                 {
-                    static if(is(typeof(&initialized)))
+                    static if (is(typeof(&initialized)))
                     {
                         initialized = true;
                     }
@@ -777,7 +777,7 @@ template reduce(fun...) if (fun.length >= 1)
             enforce(initialized,
                 "Cannot reduce an empty iterable w/o an explicit seed value.");
 
-            static if(fun.length == 1)
+            static if (fun.length == 1)
             {
                 return result[0];
             }
@@ -823,12 +823,12 @@ unittest
         int opApply(int delegate(ref int) dg)
         {
             int res;
-            if(actEmpty) return res;
+            if (actEmpty) return res;
 
-            foreach(i; 0..100)
+            foreach (i; 0..100)
             {
                 res = dg(i);
-                if(res) break;
+                if (res) break;
             }
             return res;
         }
@@ -918,8 +918,8 @@ unittest
     alias DummyRange!(ReturnBy.Reference, Length.No, RangeType.Input) InputRange;
     enum filler = uint.max;
     InputRange range;
-    fill(range,filler);
-    foreach(value;range.arr)
+    fill(range, filler);
+    foreach (value; range.arr)
     	assert(value == filler);
 }
 unittest
@@ -975,13 +975,13 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
             || (isInputRange!Range2 && isInfinite!Range2))
         && is(typeof(Range1.init.front = Range2.init.front)))
 {
-    static if(isInfinite!Range2)
+    static if (isInfinite!Range2)
     {
         //Range2 is infinite, no need for bounds checking or saving
-        static if(hasSlicing!Range2 && hasLength!Range1
+        static if (hasSlicing!Range2 && hasLength!Range1
             && is(typeof(filler[0 .. range.length])))
         {
-            copy(filler[0..range.length], range);
+            copy(filler[0 .. range.length], range);
         }
         else
         {
@@ -996,13 +996,13 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
     {
         enforce(!filler.empty, "Cannot fill range with an empty filler");
 
-        static if(hasLength!Range1 && hasLength!Range2
+        static if (hasLength!Range1 && hasLength!Range2
             && is(typeof(range.length > filler.length)))
         {
             //Case we have access to length
             auto len = filler.length;
             //Start by bulk copies
-            for( ; range.length > len ; )
+            while (range.length > len)
             {
                 range = copy(filler.save, range);
             }
@@ -1048,7 +1048,7 @@ unittest
     alias DummyRange!(ReturnBy.Reference, Length.No, RangeType.Input) InputRange;
     InputRange range;
     fill(range,[1,2]);
-    foreach(i,value;range.arr)
+    foreach (i,value;range.arr)
     assert(value == (i%2==0?1:2));
 
     //test with a input being a "reference forward" range
@@ -1253,7 +1253,7 @@ private struct FilterResult(alias pred, Range)
         return _input.front;
     }
 
-    static if(isForwardRange!R)
+    static if (isForwardRange!R)
     {
         @property auto save()
         {
@@ -1285,7 +1285,7 @@ unittest
     static assert(isInfinite!(typeof(infinite)));
     static assert(isForwardRange!(typeof(infinite)));
 
-    foreach(DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges) {
         DummyType d;
         auto f = filter!"a & 1"(d);
         assert(equal(f, [1,3,5,7,9]));
@@ -1455,10 +1455,10 @@ $(D &source == &target || !pointsTo(source, source))
 */
 void move(T)(ref T source, ref T target)
 {
-    if (&source == &target) return;
     assert(!pointsTo(source, source));
     static if (is(T == struct))
     {
+        if (&source == &target) return;    
         // Most complicated case. Destroy whatever target had in it
         // and bitblast source over it
         static if (hasElaborateDestructor!T) typeid(T).destroy(&target);
@@ -1706,12 +1706,24 @@ Range2 moveAll(Range1, Range2)(Range1 src, Range2 tgt)
 if (isInputRange!Range1 && isInputRange!Range2
         && is(typeof(move(src.front, tgt.front))))
 {
-    for (; !src.empty; src.popFront(), tgt.popFront())
+    static if (isRandomAccessRange!Range1 && hasLength!Range1 && hasLength!Range2
+         && hasSlicing!Range2 && isRandomAccessRange!Range2)
     {
-        enforce(!tgt.empty);
-        move(src.front, tgt.front);
+        auto toMove = src.length;
+        enforce(toMove <= tgt.length);  // shouldn't this be an assert?
+        foreach (idx; 0 .. toMove)
+            move(src[idx], tgt[idx]);
+        return tgt[toMove .. tgt.length];
     }
-    return tgt;
+    else
+    {
+        for (; !src.empty; src.popFront(), tgt.popFront())
+        {
+            enforce(!tgt.empty);  //ditto?
+            move(src.front, tgt.front);
+        }
+        return tgt;
+    }    
 }
 
 unittest
@@ -1791,9 +1803,9 @@ if (isMutable!T && !is(typeof(T.init.proxySwap(T.init))))
         //types and therefore all of their elements get copied as part of
         //assigning them, which would be assigning overlapping arrays if lhs
         //and rhs were the same array.
-        static if(isStaticArray!T)
+        static if (isStaticArray!T)
         {
-            if(lhs.ptr == rhs.ptr)
+            if (lhs.ptr == rhs.ptr)
                 return;
         }
 
@@ -2054,7 +2066,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
         IndexType _frontLength = _unComputed;
         IndexType _backLength = _unComputed;
 
-        static if(isBidirectionalRange!Range)
+        static if (isBidirectionalRange!Range)
         {
             static IndexType lastIndexOf(Range haystack, Separator needle)
             {
@@ -2117,7 +2129,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
             }
         }
 
-        static if(isForwardRange!Range)
+        static if (isForwardRange!Range)
         {
             @property typeof(this) save()
             {
@@ -2127,7 +2139,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
             }
         }
 
-        static if(isBidirectionalRange!Range)
+        static if (isBidirectionalRange!Range)
         {
             @property Range back()
             {
@@ -2135,7 +2147,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
                 if (_backLength == _unComputed)
                 {
                     immutable lastIndex = lastIndexOf(_input, _separator);
-                    if(lastIndex == -1)
+                    if (lastIndex == -1)
                     {
                         _backLength = _input.length;
                     }
@@ -2228,8 +2240,8 @@ unittest
     assert(split.front == "b ");
     assert(split.back == "r ");
 
-    foreach(DummyType; AllDummyRanges) {  // Bug 4408
-        static if(isRandomAccessRange!DummyType) {
+    foreach (DummyType; AllDummyRanges) {  // Bug 4408
+        static if (isRandomAccessRange!DummyType) {
             static assert(isBidirectionalRange!DummyType);
             DummyType d;
             auto s = splitter(d, 5);
@@ -2355,7 +2367,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
             _frontLength = _frontLength.max;
         }
 
-        static if(isForwardRange!Range)
+        static if (isForwardRange!Range)
         {
             @property typeof(this) save()
             {
@@ -2537,7 +2549,7 @@ private struct SplitterResult(alias isTerminator, Range)
         }
     }
 
-    static if(isForwardRange!Range)
+    static if (isForwardRange!Range)
     {
         @property typeof(this) save()
         {
@@ -2584,9 +2596,9 @@ unittest
 
     static assert(isForwardRange!(typeof(splitter!"a == ' '"("ABC"))));
 
-    foreach(DummyType; AllDummyRanges)
+    foreach (DummyType; AllDummyRanges)
     {
-        static if(isRandomAccessRange!DummyType)
+        static if (isRandomAccessRange!DummyType)
         {
             auto rangeSplit = splitter!"a == 5"(DummyType.init);
             assert(equal(rangeSplit.front, [1,2,3,4]));
@@ -2974,7 +2986,7 @@ unittest
     assert(equal(r, [ 1, 2, 3, 4, 5 ][]));
     assert(equal(retro(r), retro([ 1, 2, 3, 4, 5 ][])));
 
-    foreach(DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges) {
         DummyType d;
         auto u = uniq(d);
         assert(equal(u, [1,2,3,4,5,6,7,8,9,10]));
@@ -3079,7 +3091,7 @@ unittest
                             tuple(4, 3u), tuple(5, 1u) ][]));
     static assert(isForwardRange!(typeof(group(arr))));
 
-    foreach(DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges) {
         DummyType d;
         auto g = group(d);
 
@@ -3675,7 +3687,7 @@ unittest
     assert(find(a, b) == [ 1, 2, 3, 4, 5 ]);
     assert(find(b, a).empty);
 
-    foreach(DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges) {
         DummyType d;
         auto findRes = find(d, 5);
         assert(equal(findRes, [5,6,7,8,9,10]));
@@ -4479,7 +4491,7 @@ if (isInputRange!R1 &&
     alias doesThisStart haystack;
     alias withThis needle;
 
-    static if(is(typeof(pred) : string))
+    static if (is(typeof(pred) : string))
         enum isDefaultPred = pred == "a == b";
     else
         enum isDefaultPred = false;
@@ -4571,7 +4583,7 @@ unittest
         }
     }
 
-    foreach(T; TypeTuple!(int, short))
+    foreach (T; TypeTuple!(int, short))
     {
         immutable arr = cast(T[])[0, 1, 2, 3, 4, 5];
 
@@ -4784,7 +4796,7 @@ if (isInputRange!R1 &&
     alias doesThisEnd haystack;
     alias withThis needle;
 
-    static if(is(typeof(pred) : string))
+    static if (is(typeof(pred) : string))
         enum isDefaultPred = pred == "a == b";
     else
         enum isDefaultPred = false;
@@ -4890,7 +4902,7 @@ unittest
         }
     }
 
-    foreach(T; TypeTuple!(int, short))
+    foreach (T; TypeTuple!(int, short))
     {
         immutable arr = cast(T[])[0, 1, 2, 3, 4, 5];
 
@@ -5384,7 +5396,7 @@ if (isInputRange!R1 && isInputRange!R2 && !(isSomeString!R1 && isSomeString!R2))
 // Specialization for strings (for speed purposes)
 int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSomeString!R2)
 {
-    static if(is(typeof(pred) : string))
+    static if (is(typeof(pred) : string))
         enum isLessThan = pred == "a < b";
     else
         enum isLessThan = false;
@@ -5510,7 +5522,7 @@ Returns the minimum of the passed-in values. The type of the result is
 computed by using $(XREF traits, CommonType).
 */
 MinType!(T1, T2, T) min(T1, T2, T...)(T1 a, T2 b, T xs)
-    if(is(typeof(a < b)))
+    if (is(typeof(a < b)))
 {
     static if (T.length == 0)
     {
@@ -5601,7 +5613,7 @@ assert(e == 2);
 ----
 */
 MaxType!(T1, T2, T) max(T1, T2, T...)(T1 a, T2 b, T xs)
-    if(is(typeof(a < b)))
+    if (is(typeof(a < b)))
 {
     static if (T.length == 0)
     {
@@ -6094,12 +6106,22 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 
     static Range2 genericImpl(Range1 source, Range2 target)
     {
-        for (; !source.empty; source.popFront())
+        // Specialize for 2 random access ranges.
+        // Typically 2 random access ranges are faster iterated by common 
+        // index then by x.popFront(), y.popFront() pair
+        static if (isRandomAccessRange!Range1 && hasLength!Range1
+            && hasSlicing!Range2 && isRandomAccessRange!Range2 && hasLength!Range2)
         {
-            put(target, source.front);
+            auto len = source.length;
+            foreach (idx; 0 .. len)
+                target[idx] = source[idx];
+            return target[len .. target.length];
         }
-
-        return target;
+        else
+        {
+            put(target, source);
+            return target;
+        }
     }
 
     static if (isArray!Range1 && isArray!Range2 &&
@@ -6226,7 +6248,8 @@ assert(arr == [ 3, 2, 1 ]);
 ----
 */
 void reverse(Range)(Range r)
-if (isBidirectionalRange!(Range) && hasSwappableElements!(Range))
+if (isBidirectionalRange!Range && !isRandomAccessRange!Range
+    && hasSwappableElements!Range)
 {
     while (!r.empty)
     {
@@ -6234,6 +6257,19 @@ if (isBidirectionalRange!(Range) && hasSwappableElements!(Range))
         r.popFront();
         if (r.empty) break;
         r.popBack();
+    }
+}
+
+///ditto
+void reverse(Range)(Range r)
+if (isRandomAccessRange!Range && hasLength!Range)
+{
+    //swapAt is in fact the only way to swap non lvalue ranges
+    immutable last = r.length-1;
+    immutable steps = r.length/2;
+    for (size_t i = 0; i < steps; i++)
+    {
+        swapAt(r, i, last-i);
     }
 }
 
@@ -7452,6 +7488,9 @@ they $(I can) know that $(XREF range, SortedRange) has been sorted.
 See_Also:
     $(XREF range, assumeSorted)
 
+Remark: Stable sort is implementated as Timsort, the original code at
+$(WEB github.com/Xinok/XSort, XSort) by Xinok, public domain.
+
 Example:
 ----
 int[] array = [ 1, 2, 3, 4 ];
@@ -7480,8 +7519,11 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
     alias typeof(lessFun(r.front, r.front)) LessRet;    // instantiate lessFun
     static if (is(LessRet == bool))
     {
-        sortImpl!(lessFun, ss)(r);
-        static if(is(typeof(text(r))))
+        static if (ss == SwapStrategy.unstable)
+            quickSortImpl!(lessFun)(r);
+        else //use Tim Sort for semistable & stable
+            TimSortImpl!(lessFun, Range).sort(r, null);
+        static if (is(typeof(text(r))))
         {
             enum maxLen = 8;
             assert(isSorted!lessFun(r), text("Failed to sort range of type ",
@@ -7678,16 +7720,16 @@ private size_t getPivot(alias less, Range)(Range r)
 private void optimisticInsertionSort(alias less, Range)(Range r)
 {
     alias binaryFun!(less) pred;
-    if(r.length < 2) {
+    if (r.length < 2) {
         return ;
     }
 
     immutable maxJ = r.length - 1;
-    for(size_t i = r.length - 2; i != size_t.max; --i) {
+    for (size_t i = r.length - 2; i != size_t.max; --i) {
         size_t j = i;
         auto temp = r[i];
 
-        for(; j < maxJ && pred(r[j + 1], temp); ++j) {
+        for (; j < maxJ && pred(r[j + 1], temp); ++j) {
             r[j] = r[j + 1];
         }
 
@@ -7709,7 +7751,7 @@ unittest
     assert(isSorted(a));
 }
 
-// private
+//private
 void swapAt(R)(R r, size_t i1, size_t i2)
 {
     static if (is(typeof(&r[i1])))
@@ -7726,88 +7768,660 @@ void swapAt(R)(R r, size_t i1, size_t i2)
     }
 }
 
-private void sortImpl(alias less, SwapStrategy ss, Range)(Range r)
+private void quickSortImpl(alias less, Range)(Range r)
 {
     alias ElementType!(Range) Elem;
     enum size_t optimisticInsertionSortGetsBetter = 25;
     static assert(optimisticInsertionSortGetsBetter >= 1);
-
+    
+    // partition
     while (r.length > optimisticInsertionSortGetsBetter)
     {
         const pivotIdx = getPivot!(less)(r);
         auto pivot = r[pivotIdx];
 
+        alias binaryFun!(less) pred;
+
         // partition
-        static if (ss == SwapStrategy.unstable)
+        swapAt(r, pivotIdx, r.length - 1);
+        size_t lessI = size_t.max, greaterI = r.length - 1;
+
+        while (true)
         {
-            alias binaryFun!(less) pred;
+            while (pred(r[++lessI], pivot)) {}
+            while (greaterI > 0 && pred(pivot, r[--greaterI])) {}
 
-            // partition
-            swapAt(r, pivotIdx, r.length - 1);
-            size_t lessI = size_t.max, greaterI = r.length - 1;
-
-            while(true)
+            if (lessI >= greaterI)
             {
-                while(pred(r[++lessI], pivot)) {}
-                while(greaterI > 0 && pred(pivot, r[--greaterI])) {}
-
-                if(lessI < greaterI)
-                {
-                    swapAt(r, lessI, greaterI);
-                }
-                else
-                {
-                    break;
-                }
+                break;
             }
-
-            swapAt(r, r.length - 1, lessI);
-            auto right = r[lessI + 1..r.length];
-
-            auto left = r[0..min(lessI, greaterI + 1)];
-            if (right.length > left.length)
-            {
-                swap(left, right);
-            }
-            .sortImpl!(less, ss, Range)(right);
-            r = left;
+            swapAt(r, lessI, greaterI);            
         }
-        else // handle semistable and stable the same
+
+        swapAt(r, r.length - 1, lessI);
+        auto right = r[lessI + 1 .. r.length];
+
+        auto left = r[0 .. min(lessI, greaterI + 1)];
+        if (right.length > left.length)
         {
-            static assert(ss != SwapStrategy.semistable);
-            bool pred(Elem a) { return less(a, pivot); }
-            auto right = partition!(pred, ss)(r);
-            if (r.length == right.length)
-            {
-                // bad, bad pivot. pivot <= everything
-                // find the first occurrence of the pivot
-                bool pred1(Elem a) { return !less(pivot, a); }
-                //auto firstPivotPos = find!(pred1)(r).ptr;
-                auto pivotSpan = find!(pred1)(r);
-                assert(!pivotSpan.empty);
-                assert(!less(pivotSpan.front, pivot)
-                       && !less(pivot, pivotSpan.front));
-                // find the last occurrence of the pivot
-                bool pred2(Elem a) { return less(pivot, a); }
-                //auto lastPivotPos = find!(pred2)(pivotsRight[1 .. $]).ptr;
-                auto pivotRunLen = find!(pred2)(pivotSpan[1 .. $]).length;
-                pivotSpan = pivotSpan[0 .. pivotRunLen + 1];
-                // now rotate firstPivotPos..lastPivotPos to the front
-                bringToFront(r, pivotSpan);
-                r = r[pivotSpan.length .. $];
-            }
-            else
-            {
-                .sortImpl!(less, ss, Range)(r[0 .. r.length - right.length]);
-                r = right;
-            }
+            swap(left, right);
         }
+        .quickSortImpl!(less, Range)(right);
+        r = left;
     }
     // residual sort
     static if (optimisticInsertionSortGetsBetter > 1)
     {
         optimisticInsertionSort!(less, Range)(r);
     }
+}
+
+
+/+
+    Tim Sort for Random-Access Ranges
+    
+    Written and tested for DMD 2.059 and Phobos
+    
+    Authors:  Xinok
+    License:  Public Domain
+    
++/
+
+// Tim Sort implementation
+private template TimSortImpl(alias pred, R)
+{
+    static assert(isRandomAccessRange!R);
+    static assert(hasLength!R);
+    static assert(hasSlicing!R);
+    static assert(hasAssignableElements!R);
+        
+    alias ElementType!R T;
+    
+    alias binaryFun!pred less;
+    bool greater(T a, T b){ return less(b, a); }
+    bool greaterEqual(T a, T b){ return !less(a, b); }
+    bool lessEqual(T a, T b){ return !less(b, a); }
+
+    enum minimalMerge = 128;
+    enum minimalGallop = 7;
+    enum minimalStorage = 256;
+    enum stackSize = 40;
+    
+    struct Slice{ size_t base, length; }
+    
+    // Entry point for tim sort
+    void sort(R range, T[] temp)
+    {
+        // Do insertion sort on small range
+        if (range.length <= minimalMerge)
+        {
+            binaryInsertionSort(range);
+            return;
+        }
+        
+        immutable minRun = minRunLength(range.length);
+        immutable minTemp = min(range.length / 2, minimalStorage);
+        size_t minGallop = minimalGallop;
+        Slice[stackSize] stack = void;
+        size_t stackLen = 0;
+        
+        // Allocate temporary memory if not provided by user
+        if (temp.length < minTemp)
+        {
+            if (__ctfe) temp.length = minTemp;
+            else temp = uninitializedArray!(T[])(minTemp);
+        }
+        
+        for (size_t i = 0; i < range.length; )
+        {
+            // Find length of first run in list
+            size_t runLen = firstRun(range[i .. range.length]);
+            
+            // If run has less than minRun elements, extend using insertion sort
+            if (runLen < minRun)
+            {
+                // Do not run farther than the length of the range
+                immutable force = range.length - i > minRun ? minRun : range.length - i;
+                binaryInsertionSort(range[i .. i + force], runLen);
+                runLen = force;
+            }
+            
+            // Push run onto stack
+            stack[stackLen++] = Slice(i, runLen);
+            i += runLen;
+            
+            // Collapse stack so that (e1 >= e2 + e3 && e2 >= e3)
+            // STACK is | ... e1 e2 e3 >
+            while (stackLen > 1)
+            {
+                immutable run3 = stackLen - 1;
+                immutable run2 = stackLen - 2;
+                immutable run1 = stackLen - 3;
+                if (stackLen >= 3 && stack[run1].length <= stack[run2].length + stack[run3].length)
+                {
+                    immutable at = stack[run1].length <= stack[run3].length 
+                        ? run1 : run2;
+                    mergeAt(range, stack[0 .. stackLen], at, minGallop, temp);
+                    --stackLen;
+                }
+                else if (stack[run2].length <= stack[run3].length)
+                {
+                    mergeAt(range, stack[0 .. stackLen], run2, minGallop, temp);
+                    --stackLen;
+                }
+                else break;
+            }
+        }
+        
+        // Force collapse stack until there is only one run left
+        while (stackLen > 1)
+        {
+            immutable run3 = stackLen - 1;
+            immutable run2 = stackLen - 2;
+            immutable run1 = stackLen - 3;
+            immutable at = stackLen >= 3 && stack[run1].length <= stack[run3].length 
+                ? run1 : run2;
+            mergeAt(range, stack[0 .. stackLen], at, minGallop, temp);
+            --stackLen;
+        }
+    }
+    
+    // Calculates optimal value for minRun:
+    // take first 6 bits of n and add 1 if any lower bits are set
+    pure size_t minRunLength(size_t n)
+    {
+        immutable shift = bsr(n)-5;
+        auto result = (n>>shift) + !!(n & ~((1<<shift)-1));  
+        return result;
+    }
+    
+    // Returns length of first run in range
+    size_t firstRun(R range)
+    out(ret)
+    {
+        assert(ret <= range.length);
+    }
+    body
+    {
+        if (range.length < 2) return range.length;
+        
+        size_t i = 2;
+        if (lessEqual(range[0], range[1]))
+        {
+            while (i < range.length && lessEqual(range[i-1], range[i])) ++i;
+        }
+        else
+        {
+            while (i < range.length && greater(range[i-1], range[i])) ++i;
+            reverse(range[0 .. i]);
+        }
+        return i;
+    }
+
+    // A binary insertion sort for building runs up to minRun length
+    void binaryInsertionSort(R range, size_t sortedLen = 1)
+    out
+    {
+        if (!__ctfe) assert(isSorted!pred(range));
+    }
+    body
+    {
+        for (; sortedLen < range.length; ++sortedLen)
+        {
+            T item = moveAt(range, sortedLen);
+            size_t lower = 0;
+            size_t upper = sortedLen;
+            while (upper != lower)
+            {
+                size_t center = (lower + upper) / 2;
+                if (less(item, range[center])) upper = center;
+                else lower = center + 1;
+            }
+            //Currently (DMD 2.061) moveAll+retro is slightly less
+            //efficient then stright 'for' loop
+            //11 instructions vs 7 in the innermost loop [checked on Win32]
+            //moveAll(retro(range[lower .. sortedLen]), 
+            //            retro(range[lower+1 .. sortedLen+1]));
+            for(upper=sortedLen; upper>lower; upper--)
+                range[upper] = moveAt(range, upper-1);
+            range[lower] = move(item);
+        }
+    }
+    
+    // Merge two runs in stack (at, at + 1)
+    void mergeAt(R range, Slice[] stack, immutable size_t at, ref size_t minGallop, ref T[] temp)
+    in
+    {
+        assert(stack.length >= 2);
+        assert(at == stack.length - 2 || at == stack.length - 3);
+    }
+    body
+    {
+        immutable base = stack[at].base;
+        immutable mid  = stack[at].length;
+        immutable len  = stack[at + 1].length + mid;
+        
+        // Pop run from stack
+        stack[at] = Slice(base, len);
+        if (at == stack.length - 3) stack[$ - 2] = stack[$ - 1];
+        
+        // Merge runs (at, at + 1)
+        return merge(range[base .. base + len], mid, minGallop, temp);
+    }
+    
+    // Merge two runs in a range. Mid is the starting index of the second run.
+    // minGallop and temp are references; The calling function must receive the updated values.
+    void merge(R range, size_t mid, ref size_t minGallop, ref T[] temp)
+    in
+    {
+        if (!__ctfe)
+        {
+            assert(isSorted!pred(range[0 .. mid]));
+            assert(isSorted!pred(range[mid .. range.length]));
+        }
+    }
+    body
+    {
+        assert(mid < range.length);
+        
+        // Reduce range of elements
+        immutable firstElement = gallopForwardUpper(range[0 .. mid], range[mid]);
+        immutable lastElement  = gallopReverseLower(range[mid .. range.length], range[mid - 1]) + mid;
+        range = range[firstElement .. lastElement];
+        mid -= firstElement;
+        
+        
+        if (mid == 0 || mid == range.length) return;
+        
+        // Call function which will copy smaller run into temporary memory
+        if (mid <= range.length / 2)
+        {
+            temp = ensureCapacity(mid, temp);
+            minGallop = mergeLo(range, mid, minGallop, temp);
+        }
+        else
+        {
+            temp = ensureCapacity(range.length - mid, temp);
+            minGallop = mergeHi(range, mid, minGallop, temp);
+        }
+    }
+    
+    // Enlarge size of temporary memory if needed
+    T[] ensureCapacity(size_t minCapacity, T[] temp)
+    out(ret)
+    {
+        assert(ret.length >= minCapacity);
+    }
+    body
+    {
+        if (temp.length < minCapacity)
+        {
+            size_t newSize = 1<<(bsr(minCapacity)+1);
+            //Test for overflow
+            if (newSize < minCapacity) newSize = minCapacity;
+
+            if (__ctfe) temp.length = newSize;
+            else temp = uninitializedArray!(T[])(newSize);
+        }
+        return temp;
+    }
+    
+    // Merge front to back. Returns new value of minGallop.
+    // temp must be large enough to store range[0 .. mid]
+    size_t mergeLo(R range, immutable size_t mid, size_t minGallop, T[] temp)
+    out
+    {
+        if (!__ctfe) assert(isSorted!pred(range));
+    }
+    body
+    {
+        assert(mid <= range.length);
+        assert(temp.length >= mid);
+        
+        // Copy run into temporary memory
+        temp = temp[0 .. mid];
+        copy(range[0 .. mid], temp);
+        
+        // Move first element into place
+        range[0] = range[mid];
+        
+        size_t i = 1, lef = 0, rig = mid + 1;
+        size_t count_lef, count_rig;
+        immutable lef_end = temp.length - 1;
+        
+        if (lef < lef_end && rig < range.length)
+        outer: while(true)
+        {
+            count_lef = 0;
+            count_rig = 0;
+            
+            // Linear merge
+            while ((count_lef | count_rig) < minGallop)
+            {
+                if (lessEqual(temp[lef], range[rig]))
+                {
+                    range[i++] = temp[lef++];
+                    if(lef >= lef_end) break outer;
+                    ++count_lef;
+                    count_rig = 0;
+                }
+                else
+                {
+                    range[i++] = range[rig++];
+                    if(rig >= range.length) break outer;
+                    count_lef = 0;
+                    ++count_rig;
+                }
+            }
+            
+            // Gallop merge
+            do
+            {
+                count_lef = gallopForwardUpper(temp[lef .. $], range[rig]);
+                foreach (j; 0 .. count_lef) range[i++] = temp[lef++];
+                if(lef >= temp.length) break outer;
+                
+                count_rig = gallopForwardLower(range[rig .. range.length], temp[lef]);
+                foreach (j; 0 .. count_rig) range[i++] = range[rig++];
+                if (rig >= range.length) while(true)
+                {
+                    range[i++] = temp[lef++];
+                    if(lef >= temp.length) break outer;
+                }
+                
+                if (minGallop > 0) --minGallop;
+            }
+            while (count_lef >= minimalGallop || count_rig >= minimalGallop);
+            
+            minGallop += 2;
+        }
+        
+        // Move remaining elements from right
+        while (rig < range.length)
+            range[i++] = range[rig++];
+        
+        // Move remaining elements from left
+        while (lef < temp.length)
+            range[i++] = temp[lef++];
+        
+        return minGallop > 0 ? minGallop : 1;
+    }
+    
+    // Merge back to front. Returns new value of minGallop.
+    // temp must be large enough to store range[mid .. range.length]
+    size_t mergeHi(R range, immutable size_t mid, size_t minGallop, T[] temp)
+    out
+    {
+        if (!__ctfe) assert(isSorted!pred(range));
+    }
+    body
+    {
+        assert(mid <= range.length);
+        assert(temp.length >= range.length - mid);
+        
+        // Copy run into temporary memory
+        temp = temp[0 .. range.length - mid];
+        copy(range[mid .. range.length], temp);
+        
+        // Move first element into place
+        range[range.length - 1] = range[mid - 1];
+        
+        size_t i = range.length - 2, lef = mid - 2, rig = temp.length - 1;
+        size_t count_lef, count_rig;
+        
+        outer:
+        while(true)
+        {
+            count_lef = 0;
+            count_rig = 0;
+            
+            // Linear merge
+            while((count_lef | count_rig) < minGallop)
+            {
+                if(greaterEqual(temp[rig], range[lef]))
+                {
+                    range[i--] = temp[rig];
+                    if(rig == 1)
+                    {
+                        // Move remaining elements from left
+                        while(true)
+                        {
+                            range[i--] = range[lef];
+                            if(lef == 0) break;
+                            --lef;
+                        }
+                        
+                        // Move last element into place
+                        range[i] = temp[0];
+                        
+                        break outer;
+                    }
+                    --rig;
+                    count_lef = 0;
+                    ++count_rig;
+                }
+                else
+                {
+                    range[i--] = range[lef];
+                    if(lef == 0) while(true)
+                    {
+                        range[i--] = temp[rig];
+                        if(rig == 0) break outer;
+                        --rig;
+                    }
+                    --lef;
+                    ++count_lef;
+                    count_rig = 0;
+                }
+            }
+            
+            // Gallop merge
+            do
+            {
+                count_rig = rig - gallopReverseLower(temp[0 .. rig], range[lef]);
+                foreach(j; 0 .. count_rig)
+                {
+                    range[i--] = temp[rig];
+                    if(rig == 0) break outer;
+                    --rig;
+                }
+                
+                count_lef = lef - gallopReverseUpper(range[0 .. lef], temp[rig]);
+                foreach(j; 0 .. count_lef)
+                {
+                    range[i--] = range[lef];
+                    if(lef == 0) while(true)
+                    {
+                        range[i--] = temp[rig];
+                        if(rig == 0) break outer;
+                        --rig;
+                    }
+                    --lef;
+                }
+                
+                if(minGallop > 0) --minGallop;
+            }
+            while(count_lef >= minimalGallop || count_rig >= minimalGallop);
+            
+            minGallop += 2;
+        }
+        
+        return minGallop > 0 ? minGallop : 1;
+    }
+    
+    // false = forward / lower, true = reverse / upper
+    template gallopSearch(bool forwardReverse, bool lowerUpper)
+    {
+        // Gallop search on range according to attributes forwardReverse and lowerUpper
+        size_t gallopSearch(R)(R range, T value)
+        out(ret)
+        {
+            assert(ret <= range.length);
+        }
+        body
+        {
+            size_t lower = 0, center = 1, upper = range.length;
+            alias center gap;
+            
+            static if (forwardReverse)
+            {
+                static if (!lowerUpper) alias lessEqual comp; // reverse lower
+                static if (lowerUpper)  alias less comp;      // reverse upper
+                
+                // Gallop Search Reverse
+                while (gap <= upper)
+                {
+                    if (comp(value, range[upper - gap]))
+                    {
+                        upper -= gap;
+                        gap *= 2;
+                    }
+                    else
+                    {
+                        lower = upper - gap;
+                        break;
+                    }
+                }
+                
+                // Binary Search Reverse
+                while (upper != lower)
+                {
+                    center = lower + (upper - lower) / 2;
+                    if (comp(value, range[center])) upper = center;
+                    else lower = center + 1;
+                }
+            }
+            else
+            {
+                static if (!lowerUpper) alias greater comp;      // forward lower
+                static if (lowerUpper)  alias greaterEqual comp; // forward upper
+                
+                // Gallop Search Forward
+                while (lower + gap < upper)
+                {
+                    if (comp(value, range[lower + gap]))
+                    {
+                        lower += gap;
+                        gap *= 2;
+                    }
+                    else
+                    {
+                        upper = lower + gap;
+                        break;
+                    }
+                }
+                
+                // Binary Search Forward
+                while (lower != upper)
+                {
+                    center = lower + (upper - lower) / 2;
+                    if (comp(value, range[center])) lower = center + 1;
+                    else upper = center;
+                }
+            }
+            
+            return lower;
+        }
+    }
+    
+    alias gallopSearch!(false, false) gallopForwardLower;
+    alias gallopSearch!(false, true)  gallopForwardUpper;
+    alias gallopSearch!(true, false)  gallopReverseLower;
+    alias gallopSearch!(true, true)   gallopReverseUpper;   
+}
+
+unittest
+{
+    import std.random;
+
+    // Element type with two fields
+    static struct E
+    {
+        size_t value, index;
+    }
+
+    // Generates data especially for testing sorting with Timsort
+    static E[] genSampleData(uint seed)
+    {
+        auto rnd = Random(seed);
+
+        E[] arr;
+        arr.length = 64 * 64;
+
+        // We want duplicate values for testing stability
+        foreach(i, ref v; arr) v.value = i / 64;
+
+        // Swap ranges at random middle point (test large merge operation)
+        immutable mid = uniform(arr.length / 4, arr.length / 4 * 3, rnd);
+        swapRanges(arr[0 .. mid], arr[mid .. $]);
+
+        // Shuffle last 1/8 of the array (test insertion sort and linear merge)
+        randomShuffle(arr[$ / 8 * 7 .. $], rnd);
+
+        // Swap few random elements (test galloping mode)
+        foreach(i; 0 .. arr.length / 64)
+        {
+            immutable a = uniform(0, arr.length, rnd), b = uniform(0, arr.length, rnd);
+            swap(arr[a], arr[b]);
+        }
+
+        // Now that our test array is prepped, store original index value
+        // This will allow us to confirm the array was sorted stably
+        foreach(i, ref v; arr) v.index = i;
+
+        return arr;
+    }
+
+    // Tests the Timsort function for correctness and stability
+    static bool testSort(uint seed)
+    {
+        auto arr = genSampleData(seed);
+
+        // Now sort the array!
+        static bool comp(E a, E b)
+        {
+            return a.value < b.value;
+        }
+
+        sort!(comp, SwapStrategy.stable)(arr);
+
+        // Test that the array was sorted correctly
+        assert(isSorted!comp(arr));
+
+        // Test that the array was sorted stably
+        foreach(i; 0 .. arr.length - 1)
+        {
+            if(arr[i].value == arr[i + 1].value) assert(arr[i].index < arr[i + 1].index);
+        }
+
+        return true;
+    }
+
+    enum seed = 310614065;
+    testSort(seed);
+
+    //@@BUG: Timsort fails with CTFE as of DMD 2.060
+    // enum result = testSort(seed);
+}
+
+unittest
+{//bugzilla 4584
+    assert(isSorted!"a<b"(sort!("a<b", SwapStrategy.stable)(
+       [83, 42, 85, 86, 87, 22, 89, 30, 91, 46, 93, 94, 95, 6,
+         97, 14, 33, 10, 101, 102, 103, 26, 105, 106, 107, 6]
+    )));
+
+}
+
+unittest
+{
+    //test stable sort + zip
+    auto x = [10, 50, 60, 60, 20];
+    dchar[] y = "abcde"d.dup;
+
+    sort!("a[0] < b[0]", SwapStrategy.stable)(zip(x, y));
+    assert(x == [10, 20, 50, 60, 60]);
+    assert(y == "aebcd"d);
 }
 
 // schwartzSort
@@ -8135,7 +8749,7 @@ void makeIndex(
     alias Unqual!(ElementType!RangeIndex) I;
     enforce(r.length == index.length,
         "r and index must be same length for makeIndex.");
-    static if(I.sizeof < size_t.sizeof)
+    static if (I.sizeof < size_t.sizeof)
     {
         enforce(r.length <= I.max, "Cannot create an index with " ~
             "element type " ~ I.stringof ~ " with length " ~
@@ -8143,7 +8757,7 @@ void makeIndex(
         );
     }
 
-    for(I i = 0; i < r.length; ++i)
+    for (I i = 0; i < r.length; ++i)
     {
         index[cast(size_t) i] = i;
     }
@@ -8627,7 +9241,7 @@ assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
 ---
 */
 bool all(alias pred, R)(R range)
-if(isInputRange!R && is(typeof(unaryFun!pred(range.front))))
+if (isInputRange!R && is(typeof(unaryFun!pred(range.front))))
 {
     return find!(not!(unaryFun!pred))(range).empty;
 }
@@ -8818,12 +9432,12 @@ public:
         assert(false);
     }
 
-    static if(allSatisfy!(isForwardRange, Rs))
+    static if (allSatisfy!(isForwardRange, Rs))
     {
         @property typeof(this) save()
         {
             auto ret = this;
-            foreach(ti, elem; _r)
+            foreach (ti, elem; _r)
             {
                 ret._r[ti] = elem.save;
             }
@@ -8948,12 +9562,12 @@ public:
         return _input[0].front;
     }
 
-    static if(allSatisfy!(isForwardRange, Rs))
+    static if (allSatisfy!(isForwardRange, Rs))
     {
         @property typeof(this) save()
         {
             auto ret = this;
-            foreach(ti, elem; _input)
+            foreach (ti, elem; _input)
             {
                 ret._input[ti] = elem.save;
             }
@@ -9051,7 +9665,7 @@ public:
         return r1.front;
     }
 
-    static if(isForwardRange!R1 && isForwardRange!R2)
+    static if (isForwardRange!R1 && isForwardRange!R2)
     {
         @property typeof(this) save()
         {
@@ -9161,7 +9775,7 @@ public:
         return r2.front;
     }
 
-    static if(isForwardRange!R1 && isForwardRange!R2)
+    static if (isForwardRange!R1 && isForwardRange!R2)
     {
         @property typeof(this) save()
         {
