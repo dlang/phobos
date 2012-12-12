@@ -439,7 +439,7 @@ struct CodepointSet
                     j = ivals[0];
             }
         }
-        @property auto ref save() const { return this; }
+        @property ByCodepoint save() const { return this; }
     }
     static assert(isForwardRange!ByCodepoint);
 
