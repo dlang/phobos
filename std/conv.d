@@ -3412,10 +3412,9 @@ as $(D chunk)).
 T* emplace(T)(T* chunk)
     if (!is(T == class))
 {
-    auto result = cast(typeof(return)) chunk;
-    static T i;
-    memcpy(result, &i, T.sizeof);
-    return result;
+    static T i; // Can't use `= T.init` here because of @@@BUG8902@@@.
+    memcpy(chunk, &i, T.sizeof);
+    return chunk;
 }
 ///ditto
 T* emplace(T)(T* chunk)
@@ -3423,6 +3422,64 @@ T* emplace(T)(T* chunk)
 {
     *chunk = null;
     return chunk;
+}
+
+version(unittest) private struct __conv_EmplaceTest
+{
+    int i = 3;
+    this(int i)
+    {
+        assert(this.i == 3 && i == 5);
+        this.i = i;
+    }
+    this(int i, ref int j)
+    {
+        assert(i == 5 && j == 6);
+        this.i = i;
+        ++j;
+    }
+
+@disable:
+    this();
+    this(this);
+    void opAssign();
+}
+
+version(unittest) private class __conv_EmplaceTestClass
+{
+    int i = 3;
+    this(int i)
+    {
+        assert(this.i == 3 && i == 5);
+        this.i = i;
+    }
+    this(int i, ref int j)
+    {
+        assert(i == 5 && j == 6);
+        this.i = i;
+        ++j;
+    }
+}
+
+unittest
+{
+    struct S { @disable this(); }
+    S s = void;
+    static assert(!__traits(compiles, emplace(&s)));
+}
+
+unittest
+{
+    interface I {}
+    class K : I {}
+
+    K k = void;
+    emplace(&k);
+    assert(k is null);
+
+    I i = void;
+    emplace(&i);
+    assert(i is null);
 }
 
 
@@ -3444,39 +3501,144 @@ T* emplace(T, Args...)(T* chunk, Args args)
     return chunk;
 }
 
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    int a;
+    int b = 42;
+    assert(*emplace!int(&a, b) == 42);
+}
+
+unittest
+{
+    interface I {}
+    class K : I {}
+
+    K k = null, k2 = new K;
+    assert(k !is k2);
+    emplace!K(&k, k2);
+    assert(k is k2);
+
+    I i = null;
+    assert(i !is k);
+    emplace!I(&i, k);
+    assert(i is k);
+}
+
 // Specialization for struct
-T* emplace(T, Args...)(T* chunk, Args args)
+T* emplace(T, Args...)(T* chunk, auto ref Args args)
     if (is(T == struct))
 {
-    auto result = cast(typeof(return)) chunk;
-
     void initialize()
     {
-        static T i;
-        memcpy(chunk, &i, T.sizeof);
+        if(auto p = typeid(T).init().ptr)
+            memcpy(chunk, p, T.sizeof);
+        else
+            memset(chunk, 0, T.sizeof);
     }
 
-    static if (is(typeof(result.__ctor(args))))
+    static if (is(typeof(chunk.__ctor(args))))
     {
         // T defines a genuine constructor accepting args
         // Go the classic route: write .init first, then call ctor
         initialize();
-        result.__ctor(args);
+        chunk.__ctor(args);
     }
     else static if (is(typeof(T(args))))
     {
         // Struct without constructor that has one matching field for
         // each argument
-        *result = T(args);
+        *chunk = T(args);
     }
     else //static if (Args.length == 1 && is(Args[0] : T))
     {
         static assert(Args.length == 1);
         //static assert(0, T.stringof ~ " " ~ Args.stringof);
         // initialize();
-        *result = args[0];
+        *chunk = args[0];
     }
-    return result;
+    return chunk;
+}
+
+// Test constructor branch
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    struct S
+    {
+        double x = 5, y = 6;
+        this(int a, int b)
+        {
+            assert(x == 5 && y == 6);
+            x = a;
+            y = b;
+        }
+    }
+
+    auto s1 = new void[S.sizeof];
+    auto s2 = S(42, 43);
+    assert(*emplace!S(cast(S*) s1.ptr, s2) == s2);
+    assert(*emplace!S(cast(S*) s1, 44, 45) == S(44, 45));
+}
+
+unittest
+{
+    __conv_EmplaceTest k = void;
+    emplace(&k, 5);
+    assert(k.i == 5);
+}
+
+unittest
+{
+    int var = 6;
+    __conv_EmplaceTest k = void;
+    emplace(&k, 5, var);
+    assert(k.i == 5);
+    assert(var == 7);
+}
+
+// Test matching fields branch
+
+unittest
+{
+    struct S { uint n; }
+    S s;
+    emplace!S(&s, 2U);
+    assert(s.n == 2);
+}
+
+unittest
+{
+    struct S { int a, b; this(int){} }
+    S s;
+    static assert(!__traits(compiles, emplace!S(&s, 2, 3)));
+}
+
+unittest
+{
+    struct S { int a, b = 7; }
+    S s1 = void, s2 = void;
+
+    emplace!S(&s1, 2);
+    assert(s1.a == 2 && s1.b == 7);
+
+    emplace!S(&s2, 2, 3);
+    assert(s2.a == 2 && s2.b == 3);
+}
+
+// Test assignment branch
+
+// FIXME: no tests
+
+private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
+{
+    enforceEx!ConvException(chunk.length >= typeSize,
+        xformat("emplace: Chunk size too small: %s < %s size = %s",
+        chunk.length, typeName, typeSize));
+    enforceEx!ConvException((cast(size_t) chunk.ptr) % typeAlignment == 0,
+        xformat("emplace: Misaligned memory block (0x%X): it must be %s-byte aligned for type %s",
+        chunk.ptr, typeAlignment, typeName));
 }
 
 /**
@@ -3492,14 +3654,11 @@ $(D T) is $(D @safe).
 
 Returns: A pointer to the newly constructed object.
  */
-T emplace(T, Args...)(void[] chunk, Args args) if (is(T == class))
+T emplace(T, Args...)(void[] chunk, auto ref Args args) if (is(T == class))
 {
     enum classSize = __traits(classInstanceSize, T);
-    enforce(chunk.length >= classSize,
-           new ConvException("emplace: chunk size too small"));
-    auto a = cast(size_t) chunk.ptr;
-    enforce(a % T.alignof == 0, text(a, " vs. ", T.alignof));
-    auto result = cast(typeof(return)) chunk.ptr;
+    testEmplaceChunk(chunk, classSize, classInstanceAlignment!T, T.stringof);
+    auto result = cast(T) chunk.ptr;
 
     // Initialize the object in its pre-ctor state
     (cast(byte[]) chunk)[0 .. classSize] = typeid(T).init[];
@@ -3520,6 +3679,14 @@ T emplace(T, Args...)(void[] chunk, Args args) if (is(T == class))
     return result;
 }
 
+unittest
+{
+    int var = 6;
+    auto k = emplace!__conv_EmplaceTestClass(new void[__traits(classInstanceSize, __conv_EmplaceTestClass)], 5, var);
+    assert(k.i == 5);
+    assert(var == 7);
+}
+
 /**
 Given a raw memory area $(D chunk), constructs an object of non-$(D
 class) type $(D T) at that address. The constructor is passed the
@@ -3532,15 +3699,11 @@ $(D T) is $(D @safe).
 
 Returns: A pointer to the newly constructed object.
  */
-T* emplace(T, Args...)(void[] chunk, Args args)
+T* emplace(T, Args...)(void[] chunk, auto ref Args args)
     if (!is(T == class))
 {
-    enforce(chunk.length >= T.sizeof,
-           new ConvException("emplace: chunk size too small"));
-    auto a = cast(size_t) chunk.ptr;
-    enforce(a % T.alignof == 0, text(a, " vs. ", T.alignof));
-    auto result = cast(typeof(return)) chunk.ptr;
-    return emplace(result, args);
+    testEmplaceChunk(chunk, T.sizeof, T.alignof, T.stringof);
+    return emplace(cast(T*) chunk.ptr, args);
 }
 
 unittest
@@ -3559,26 +3722,10 @@ unittest
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    int a;
-    int b = 42;
-    assert(*emplace!int(&a, b) == 42);
-
-    struct S
-    {
-        double x = 5, y = 6;
-        this(int a, int b)
-        {
-            assert(x == 5 && y == 6);
-            x = a;
-            y = b;
-        }
-    }
-
-    auto s1 = new void[S.sizeof];
-    auto s2 = S(42, 43);
-    assert(*emplace!S(cast(S*) s1.ptr, s2) == s2);
-    assert(*emplace!S(cast(S*) s1, 44, 45) == S(44, 45));
+    int var = 6;
+    auto k = emplace!__conv_EmplaceTest(new void[__conv_EmplaceTest.sizeof], 5, var);
+    assert(k.i == 5);
+    assert(var == 7);
 }
 
 unittest
@@ -3615,38 +3762,6 @@ unittest
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     // Check fix for http://d.puremagic.com/issues/show_bug.cgi?id=2971
     assert(equal(map!(to!int)(["42", "34", "345"]), [42, 34, 345]));
-}
-
-unittest
-{
-    struct Foo
-    {
-        uint num;
-    }
-
-    Foo foo;
-    emplace!Foo(&foo, 2U);
-    assert(foo.num == 2);
-}
-
-unittest
-{
-    interface I {}
-    class K : I {}
-
-    K k = void;
-    emplace!K(&k);
-    assert(k is null);
-    K k2 = new K;
-    assert(k2 !is null);
-    emplace!K(&k, k2);
-    assert(k is k2);
-
-    I i = void;
-    emplace!I(&i);
-    assert(i is null);
-    emplace!I(&i, k);
-    assert(i is k);
 }
 
 // Undocumented for the time being
