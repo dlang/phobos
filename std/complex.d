@@ -150,6 +150,18 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 @safe pure nothrow:
 
+    this(R : T)(R x, R y)
+    {
+        re = x;
+        im = y;
+    }
+
+    this(R : T)(R r)
+    {
+        re = r;
+        im = 0;
+    }
+
     // ASSIGNMENT OPERATORS
 
     // this = complex
