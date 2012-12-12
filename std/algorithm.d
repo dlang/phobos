@@ -2693,8 +2693,8 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
             }
         }
 
-        private void useItem()
-        {
+        private enum useItem =
+        q{
             assert(_currentSep.empty && _current.empty,
                     "joiner: internal error");
             // Use the input
@@ -2708,13 +2708,13 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
             // No data in the current item - toggle to use the
             // separator
             useSeparator();
-        }
+        };
 
         this(RoR items, Separator sep)
         {
             _items = items;
             _sep = sep;
-            useItem();
+            mixin(useItem); // _current should be initialized in place
             // We need the separator if the input has at least two
             // elements
             if (_current.empty && _items.empty)
@@ -2744,7 +2744,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
             {
                 _currentSep.popFront();
                 if (!_currentSep.empty) return;
-                useItem();
+                mixin(useItem);
             }
             else
             {
@@ -2759,7 +2759,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
         {
             @property auto save()
             {
-                Result copy;
+                Result copy = this;
                 copy._items = _items.save;
                 copy._current = _current.save;
                 copy._sep = _sep.save;
@@ -2803,8 +2803,8 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     private:
         RoR _items;
         ElementType!RoR _current;
-        void prepare()
-        {
+        enum prepare =
+        q{
             // Skip over empty subranges.
             if (_items.empty) return;
             while (_items.front.empty)
@@ -2813,12 +2813,12 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
                 if (_items.empty) return;
             }
             _current = _items.front;
-        }
+        };
     public:
         this(RoR r)
         {
             _items = r;
-            prepare();
+            mixin(prepare); // _current should be initialized in place
         }
         static if (isInfinite!RoR)
         {
@@ -2844,14 +2844,14 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
             {
                 assert(!_items.empty);
                 _items.popFront();
-                prepare();
+                mixin(prepare);
             }
         }
         static if (isForwardRange!RoR && isForwardRange!(ElementType!RoR))
         {
             @property auto save()
             {
-                Result copy;
+                Result copy = this;
                 copy._items = _items.save;
                 copy._current = _current.save;
                 return copy;
@@ -3154,10 +3154,9 @@ struct Group(alias pred, R) if (isInputRange!R)
 
     static if (isForwardRange!R) {
         @property typeof(this) save() {
-            typeof(this) ret;
+            typeof(this) ret = this;
             ret._input = this._input.save;
             ret._current = this._current;
-
             return ret;
         }
     }
@@ -4488,24 +4487,20 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
         static if (!is(Sentinel == void))
             @property Until save()
             {
-                Until result;
-
+                Until result = this;
                 result._input     = _input.save;
                 result._sentinel  = _sentinel;
                 result._openRight = _openRight;
                 result._done      = _done;
-
                 return result;
             }
         else
             @property Until save()
             {
-                Until result;
-
+                Until result = this;
                 result._input     = _input.save;
                 result._openRight = _openRight;
                 result._done      = _done;
-
                 return result;
             }
     }
@@ -9634,14 +9629,13 @@ public:
 
     static if (allSatisfy!(isForwardRange, Rs))
     {
-        @property typeof(this) save()
+        @property auto save()
         {
             auto ret = this;
             foreach (ti, elem; _r)
             {
                 ret._r[ti] = elem.save;
             }
-
             return ret;
         }
     }
@@ -9764,14 +9758,13 @@ public:
 
     static if (allSatisfy!(isForwardRange, Rs))
     {
-        @property typeof(this) save()
+        @property auto save()
         {
             auto ret = this;
             foreach (ti, elem; _input)
             {
                 ret._input[ti] = elem.save;
             }
-
             return ret;
         }
     }
