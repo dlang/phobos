@@ -3088,6 +3088,43 @@ unittest
 }
 
 
+private template maxAlignment(U...) if(isTypeTuple!U)
+{
+    static if(U.length == 1)
+        enum maxAlignment = U[0].alignof;
+    else
+        enum maxAlignment = max(U[0].alignof, .maxAlignment!(U[1 .. $]));
+}
+
+
+/**
+Returns class instance alignment.
+
+Example:
+---
+class A { byte b; }
+class B { long l; }
+
+// As class instance always has a hidden pointer
+static assert(classInstanceAlignment!A == (void*).alignof);
+static assert(classInstanceAlignment!B == long.alignof);
+---
+ */
+template classInstanceAlignment(T) if(is(T == class))
+{
+    alias maxAlignment!(void*, typeof(T.tupleof)) classInstanceAlignment;
+}
+
+unittest
+{
+    class A { byte b; }
+    class B { long l; }
+
+    static assert(classInstanceAlignment!A == (void*).alignof);
+    static assert(classInstanceAlignment!B == long.alignof);
+}
+
+
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 // Type Conversion
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
