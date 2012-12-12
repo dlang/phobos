@@ -150,7 +150,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 @safe pure nothrow:
 
-    this(R : T)(R x, R y)
+    this(Rx : T, Ry : T)(Rx x, Ry y)
     {
         re = x;
         im = y;
