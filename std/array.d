@@ -828,6 +828,22 @@ unittest
 }
 +/
 
+private void copyBackwards(T)(T[] src, T[] dest)
+{
+    import core.stdc.string;    
+    assert(src.length == dest.length);
+    if (!__ctfe)
+        memmove(dest.ptr, src.ptr, src.length * T.sizeof);
+    else
+    {
+        immutable len = src.length;
+        for (size_t i = len; i-- > 0;)
+        {
+            dest[i] = src[i];
+        }
+    }
+}
+
 /++
     Inserts $(D stuff) (which must be an input range or any number of
     implicitly convertible items) in $(D array) at position $(D pos).
@@ -844,59 +860,146 @@ assert(a == [ 1, 2, 1, 10, 11, 2, 3, 4]);
 ---
 ), $(ARGS), $(ARGS), $(ARGS import std.array;))
  +/
-void insertInPlace(T, Range)(ref T[] array, size_t pos, Range stuff)
-    if(isInputRange!Range &&
-       (is(ElementType!Range : T) ||
-        isSomeString!(T[]) && is(ElementType!Range : dchar)))
+void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
+    if(!isSomeString!(T[]) 
+        && allSatisfy!(isInputRangeOrConvertible!T, U) && U.length > 0)
 {
-    insertInPlaceImpl(array, pos, stuff);
+    static if(allSatisfy!(isInputRangeWithLengthOrConvertible!T, U))
+    {
+        immutable oldLen = array.length;
+        size_t to_insert = 0;
+        foreach (i, E; U)
+        {
+            static if (is(E : T)) //a single convertible value, not a range
+                to_insert += 1;
+            else
+                to_insert += stuff[i].length;
+        }
+        array.length += to_insert;
+        copyBackwards(array[pos..oldLen], array[pos+to_insert..$]);
+        auto ptr = array.ptr + pos;
+        foreach (i, E; U)
+        {
+            static if (is(E : T)) //ditto
+            {
+                emplace(ptr++, stuff[i]);
+            }
+            else
+            {
+                foreach (v; stuff[i])
+                    emplace(ptr++, v);
+            }
+        }
+    }
+    else
+    {
+        // stuff has some InputRanges in it that don't have length
+        // assume that stuff to be inserted is typically shorter 
+        // then the array that can be arbitrary big        
+        // TODO: needs a better implementation as there is no need to build an _array_
+        // a singly-linked list of memory blocks (rope, etc.) will do
+        auto app = appender!(T[])(); 
+        foreach (i, E; U)
+            app.put(stuff[i]);
+        insertInPlace(array, pos, app.data);
+    }
 }
 
 /++ Ditto +/
 void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
-    if(isSomeString!(T[]) && allSatisfy!(isCharOrString, U))
+    if(isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
 {
-    dchar[staticConvertible!(dchar, U)] stackSpace = void;
-    auto range = chain(makeRangeTuple(stackSpace[], stuff).expand);
-    insertInPlaceImpl(array, pos, range);
-}
-
-/++ Ditto +/
-void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
-    if(!isSomeString!(T[]) && allSatisfy!(isInputRangeOrConvertible!T, U))
-{
-    T[staticConvertible!(T, U)] stackSpace = void;
-    auto range = chain(makeRangeTuple(stackSpace[], stuff).expand);
-    insertInPlaceImpl(array, pos, range);
-}
-
-// returns number of consecutive elements at front of U that are convertible to E
-private template staticFrontConvertible(E, U...)
-{
-    static if(U.length == 0)
-        enum staticFrontConvertible = 0;
-    else static if(isImplicitlyConvertible!(U[0],E))
-        enum staticFrontConvertible = 1 + staticFrontConvertible!(E, U[1..$]);
+    static if(is(Unqual!T == T)
+        && allSatisfy!(isInputRangeWithLengthOrConvertible!dchar, U))
+    {
+        // mutable, can do in place
+        //helper function: re-encode dchar to Ts and store at *ptr
+        static T* putDChar(T* ptr, dchar ch)
+        {
+            static if(is(T == dchar))
+            {
+                *ptr++ = ch;
+                return ptr;
+            }
+            else
+            {
+                T[dchar.sizeof/T.sizeof] buf;
+                size_t len = encode(buf, ch);
+                final switch(len)
+                {
+                    static if(T.sizeof == char.sizeof)
+                    {
+                case 4:
+                        ptr[3] = buf[3];
+                        goto case;
+                case 3:
+                        ptr[2] = buf[2];
+                        goto case;
+                    }
+                case 2:
+                    ptr[1] = buf[1];
+                    goto case;
+                case 1:
+                    ptr[0] = buf[0];
+                }
+                ptr += len;
+                return ptr;
+            }
+        }
+        immutable oldLen = array.length;
+        size_t to_insert = 0;
+        //count up the number of *codeunits* to insert
+        foreach (i, E; U)
+            to_insert += codeLength!T(stuff[i]);
+        array.length += to_insert;
+        copyBackwards(array[pos..oldLen], array[pos+to_insert..$]);
+        auto ptr = array.ptr + pos;
+        foreach (i, E; U)
+        {
+            static if(is(E : dchar))
+            {
+                ptr = putDChar(ptr, stuff[i]);
+            }
+            else
+            {
+                foreach (dchar ch; stuff[i])
+                    ptr = putDChar(ptr, ch);
+            }
+        }
+        assert(ptr == array.ptr + pos + to_insert, text(ptr - array.ptr, " vs ", pos + to_insert ));
+    }
     else
-        enum staticFrontConvertible = 0;
+    {
+        // immutable/const, just construct a new array
+        auto app = appender!(T[])();
+        app.put(array[0..pos]);
+        foreach (i, E; U)
+            app.put(stuff[i]);
+        app.put(array[pos..$]);
+        array = app.data;
+    }
 }
 
-// returns total number of elements in U that are convertible to E
-private template staticConvertible(E, U...)
+//constraint helpers
+private template isInputRangeWithLengthOrConvertible(E)
 {
-    static if (U.length == 0)
-        enum staticConvertible = 0;
-    else static if(isImplicitlyConvertible!(U[0], E))
-        enum staticConvertible = 1 + staticConvertible!(E, U[1..$]);
-    else
-        enum staticConvertible = staticConvertible!(E, U[1..$]);
+    template isInputRangeWithLengthOrConvertible(R)
+    {
+        //hasLength not defined for char[], wchar[] and dchar[]
+        enum isInputRangeWithLengthOrConvertible =
+            (isInputRange!R && is(typeof(R.init.length))
+                && is(ElementType!R : E))  || is(R : E);
+    }
 }
 
-private template isCharOrString(T)
+//ditto
+private template isCharOrStringOrDcharRange(T)
 {
-    enum isCharOrString = isSomeString!T || isSomeChar!T;
+    enum isCharOrStringOrDcharRange = isSomeString!T || isSomeChar!T || 
+        (isInputRange!T && is(ElementType!T : dchar));
 }
 
+//ditto
 private template isInputRangeOrConvertible(E)
 {
     template isInputRangeOrConvertible(R)
@@ -904,44 +1007,6 @@ private template isInputRangeOrConvertible(E)
         enum isInputRangeOrConvertible =
             (isInputRange!R && is(ElementType!R : E))  || is(R : E);
     }
-}
-
-//packs individual convertible elements into provided slack array,
-//and chains them with the rest into a tuple
-private auto makeRangeTuple(E, U...)(E[] place, U stuff)
-    if(U.length > 0 && is(U[0] : E) )
-{
-    enum toPack = staticFrontConvertible!(E, U);
-    foreach(i, v; stuff[0..toPack])
-        emplace!E(&place[i], v);
-    assert(place.length >= toPack);
-    static if(U.length != staticFrontConvertible!(E,U))
-        return tuple(place[0..toPack],
-                makeRangeTuple(place[toPack..$], stuff[toPack..$]).expand);
-    else
-        return tuple(place[0..toPack]);
-}
-//ditto
-private auto makeRangeTuple(E, U...)(E[] place, U stuff)
-    if(U.length > 0 && isInputRange!(U[0]) && is(ElementType!(U[0]) : E))
-{
-    static if(U.length == 1)
-        return tuple(stuff[0]);
-    else
-        return tuple(stuff[0],makeRangeTuple(place, stuff[1..$]).expand);
-}
-
-
-private void insertInPlaceImpl(T, Range)(ref T[] array, size_t pos, Range stuff)
-    if(isInputRange!Range &&
-       (is(ElementType!Range : T) ||
-        isSomeString!(T[]) && is(ElementType!Range : dchar)))
-{
-    auto app = appender!(T[])();
-    app.put(array[0 .. pos]);
-    app.put(stuff);
-    app.put(array[pos .. $]);
-    array = app.data;
 }
 
 
@@ -993,25 +1058,26 @@ unittest
     {
 
         auto l = to!T("hello");
-        auto r = to!U(" world");
+        auto r = to!U(" વિશ્વ");
 
-        enforce(test(l, 0, r, " worldhello"),
+        enforce(test(l, 0, r, " વિશ્વhello"),
                 new AssertError("testStr failure 1", file, line));
-        enforce(test(l, 3, r, "hel worldlo"),
+        enforce(test(l, 3, r, "hel વિશ્વlo"),
                 new AssertError("testStr failure 2", file, line));
-        enforce(test(l, l.length, r, "hello world"),
+        enforce(test(l, l.length, r, "hello વિશ્વ"),
                 new AssertError("testStr failure 3", file, line));
     }
 
-    testStr!(string, string)();
-    testStr!(string, wstring)();
-    testStr!(string, dstring)();
-    testStr!(wstring, string)();
-    testStr!(wstring, wstring)();
-    testStr!(wstring, dstring)();
-    testStr!(dstring, string)();
-    testStr!(dstring, wstring)();
-    testStr!(dstring, dstring)();
+    foreach (T; TypeTuple!(char, wchar, dchar,
+        immutable(char), immutable(wchar), immutable(dchar)))
+    {
+        foreach (U; TypeTuple!(char, wchar, dchar,
+            immutable(char), immutable(wchar), immutable(dchar)))
+        {
+            testStr!(T[], U[])();
+        }
+
+    }    
 
     // variadic version
     bool testVar(T, U...)(T orig, size_t pos, U args)
@@ -1023,7 +1089,7 @@ unittest
         auto result = args[$-1];
 
         a.insertInPlace(pos, args[0..$-1]);
-        if(!std.algorithm.equal(a, result))
+        if (!std.algorithm.equal(a, result))
             return false;
         return true;
     }
@@ -1040,6 +1106,50 @@ unittest
     assert(testVar("flipflop"d.idup, 4, '_',
                     "xyz"w, '\U00010143', '_', "abc"d, "__",
                     "flip_xyz\U00010143_abc__flop"));
+}
+
+unittest
+{
+    // insertInPlace interop with postblit
+    struct Int
+    {
+        int* payload;
+        this(int k)
+        { 
+            payload = new int; 
+            *payload = k;
+        }
+        this(this)
+        {
+            int* np = new int;
+            *np = *payload;
+            payload = np;
+        }
+        ~this()
+        {
+            *payload = 0; //'destroy' it
+        }
+        @property int getPayload(){ return *payload; }        
+        alias getPayload this;
+    }
+
+    Int[] arr;// = [Int(1), Int(4), Int(5)]; //@@BUG 8740
+    arr ~= [Int(1), Int(4), Int(5)];
+    assert(arr[0] == 1);
+    insertInPlace(arr, 1, Int(2), Int(3));
+    assert(equal(arr, [1, 2, 3, 4, 5]));  //check it works with postblit  
+}
+
+unittest
+{
+    static int[] testCTFE()
+    {
+        int[] a = [1, 2];
+        a.insertInPlace(2, 3);
+        a.insertInPlace(0, -1, 0);
+        return a;
+    }
+    static assert(testCTFE() == [-1, 0, 1, 2, 3]);
 }
 
 unittest // bugzilla 6874
