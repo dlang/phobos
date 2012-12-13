@@ -2053,7 +2053,7 @@ assert(equal(splitter(a, 0), [ [], [1] ]));
 */
 auto splitter(Range, Separator)(Range r, Separator s)
 if (is(typeof(ElementType!Range.init == Separator.init))
-        && (hasSlicing!Range || isNarrowString!Range))
+        && ((hasSlicing!Range && hasLength!Range) || isNarrowString!Range))
 {
     static struct Result
     {
@@ -2070,8 +2070,8 @@ if (is(typeof(ElementType!Range.init == Separator.init))
         {
             static IndexType lastIndexOf(Range haystack, Separator needle)
             {
-                immutable index = countUntil(retro(haystack), needle);
-                return (index == -1) ? -1 : haystack.length - 1 - index;
+                auto r = haystack.retro().find(needle);
+                return r.retro().length - 1;
             }
         }
 
@@ -2099,8 +2099,8 @@ if (is(typeof(ElementType!Range.init == Separator.init))
             assert(!empty);
             if (_frontLength == _unComputed)
             {
-                _frontLength = countUntil(_input, _separator);
-                if (_frontLength == -1) _frontLength = _input.length;
+                auto r = _input.find(_separator);
+                _frontLength = _input.length - r.length;
             }
             return _input[0 .. _frontLength];
         }
@@ -4137,35 +4137,45 @@ unittest
 assert(countUntil("hello world", "world") == 6);
 assert(countUntil("hello world", 'r') == 8);
 assert(countUntil("hello world", "programming") == -1);
+assert(countUntil("日本語", "本語") == 1);
+assert(countUntil("日本語", '語')   == 2);
+assert(countUntil("日本語", "五") == -1);
+assert(countUntil("日本語", '五') == -1);
 assert(countUntil([0, 7, 12, 22, 9], [12, 22]) == 2);
 assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
 assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
 --------------------
   +/
-ptrdiff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
-if (is(typeof(startsWith!pred(haystack, needle))))
+ptrdiff_t countUntil(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+    if (isForwardRange!R1 && isForwardRange!R2 &&
+        is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
-    static if (isNarrowString!R)
+    typeof(return) result;
+    static if (hasLength!R1) //Note: Narrow strings don't have length.
     {
-        // Narrow strings are handled a bit differently
-        auto length = haystack.length;
-        for (; !haystack.empty; haystack.popFront())
-        {
-            if (startsWith!pred(haystack, needle))
-            {
-                return length - haystack.length;
-            }
-        }
+        //Delegate to find. Find is very efficient
+        //We save haystack, but we don't care for needle
+        auto r2 = find!pred(haystack.save, needle);
+        if (!r2.empty) return cast(typeof(return)) (haystack.length - r2.length);
     }
     else
     {
-        typeof(return) result;
-        for (; !haystack.empty; ++result, haystack.popFront())
-        {
-            if (startsWith!pred(haystack, needle)) return result;
-        }
+        //Default case, slower route doing startsWith iteration
+        for ( ; !haystack.empty ; ++result, haystack.popFront() )
+            if (startsWith!pred(haystack.save, needle.save)) return result;
     }
-    return -1;
+
+    //Because of @@@8804@@@: Avoids both "unreachable code" or "no return statement"
+    static if (isInfinite!R1) assert(0);
+    else return -1;
+}
+/// ditto
+ptrdiff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
+    if (isInputRange!R &&
+        is(typeof(binaryFun!pred(haystack.front, needle)) : bool))
+{
+    bool pred2(ElementType!R a) { return binaryFun!pred(a, needle); }
+    return countUntil!pred2(haystack);
 }
 
 //Verify Examples.
@@ -4174,6 +4184,10 @@ unittest
     assert(countUntil("hello world", "world") == 6);
     assert(countUntil("hello world", 'r') == 8);
     assert(countUntil("hello world", "programming") == -1);
+    assert(countUntil("日本語", "本語") == 1);
+    assert(countUntil("日本語", '語')   == 2);
+    assert(countUntil("日本語", "五") == -1);
+    assert(countUntil("日本語", '五') == -1);
     assert(countUntil([0, 7, 12, 22, 9], [12, 22]) == 2);
     assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
     assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
@@ -4191,29 +4205,46 @@ assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
 --------------------
   +/
 ptrdiff_t countUntil(alias pred, R)(R haystack)
-if (isForwardRange!R && is(typeof(unaryFun!pred(haystack.front)) == bool))
+    if (isInputRange!R &&
+        is(typeof(unaryFun!pred(haystack.front)) : bool))
 {
-    static if (isNarrowString!R)
+    typeof(return) i;
+    static if (isRandomAccessRange!R)
     {
-        // Narrow strings are handled a bit differently
-        auto length = haystack.length;
-        for (; !haystack.empty; haystack.popFront())
+        //Optimized RA implementation. Since we want to count *and* iterate at
+        //the same time, it is more efficient this way.
+        static if (hasLength!R)
         {
-            if (unaryFun!pred(haystack.front))
-            {
-                return length - haystack.length;
-            }
+            immutable len = cast(typeof(return)) haystack.length;
+            for ( ; i < len ; ++i )
+                if (unaryFun!pred(haystack[i])) return i;
+        }
+        else //if (isInfinite!R)
+        {
+            for ( ;  ; ++i )
+                if (unaryFun!pred(haystack[i])) return i;
         }
     }
-    else
+    else static if (hasLength!R)
     {
-        typeof(return) result;
-        for (; !haystack.empty; ++result, haystack.popFront())
+        //For those odd ranges that have a length, but aren't RA.
+        //It is faster to quick find, and then compare the lengths
+        auto r2 = find!pred(haystack.save);
+        if (!r2.empty) return cast(typeof(return)) (haystack.length - r2.length);
+    }
+    else //Everything else
+    {
+        alias ElementType!R T; //For narrow strings forces dchar iteration
+        foreach (T elem; haystack)
         {
-            if (unaryFun!pred(haystack.front)) return result;
+            if (unaryFun!pred(elem)) return i;
+            ++i;
         }
     }
-    return -1;
+
+    //Because of @@@8804@@@: Avoids both "unreachable code" or "no return statement"
+    static if (isInfinite!R) assert(0);
+    else return -1;
 }
 
 //Verify Examples.
@@ -4223,14 +4254,51 @@ unittest
     assert(countUntil!(std.ascii.isDigit)("hello world") == -1);
     assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
 }
+unittest
+{
+    // References
+    {
+        // input
+        ReferenceInputRange!int r;
+        r = new ReferenceInputRange!int([0, 1, 2, 3, 4, 5, 6]);
+        assert(r.countUntil(3) == 3);
+        r = new ReferenceInputRange!int([0, 1, 2, 3, 4, 5, 6]);
+        assert(r.countUntil(7) == -1);
+    }
+    {
+        // forward
+        auto r = new ReferenceForwardRange!int([0, 1, 2, 3, 4, 5, 6]);
+        assert(r.save.countUntil([3, 4]) == 3);
+        assert(r.save.countUntil(3) == 3);
+        assert(r.save.countUntil([3, 7]) == -1);
+        assert(r.save.countUntil(7) == -1);
+    }
+    {
+        // infinite forward
+        auto r = new ReferenceInfiniteForwardRange!int(0);
+        assert(r.save.countUntil([3, 4]) == 3);
+        assert(r.save.countUntil(3) == 3);
+    }
+}
 
 /**
  *  $(RED Deprecated. It will be removed in January 2013.
- *        Please use $(LREF countUntil) instead.)
+ *        Currently defaults to $(LREF countUntil) instead.)
  *
- * Same as $(D countUntil). This symbol has been deprecated
- * because it is easily confused with the homonym function
+ * Not to be confused with its homonym function
  * in $(D std.string).
+ *
+ * Please use $(D std.string.indexOf) if you wish to find
+ * the index of a character in a string.
+ *
+ * Otherwise, please use $(D std.string.countUntil) to find
+ * an element's logical position in a range.
+ *
+ * Example:
+ * --------
+ * assert(std.string.indexOf("日本語", '本') == 3);
+ * assert(std.algorithm.countUntil("日本語", '本') == 1);
+ * --------
  */
 deprecated ptrdiff_t indexOf(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (is(typeof(startsWith!pred(haystack, needle))))
@@ -5083,6 +5151,9 @@ $(D 2).
 The third version counts the elements for which $(D pred(x)) is $(D
 true). Performs $(BIGOH r.length) evaluations of $(D pred).
 
+Note: Regardless of the overload, $(D count) will not accept
+infinite ranges for $(D haystack).
+
 Example:
 ----
 // count elements in range
@@ -5093,15 +5164,18 @@ assert(count!("a > b")(a, 2) == 5);
 assert(count("abcadfabf", "ab") == 2);
 assert(count("ababab", "abab") == 1);
 assert(count("ababab", "abx") == 0);
+// fuzzy count range in range
+assert(count!"std.uni.toLower(a) == std.uni.toLower(b)"("AbcAdFaBf", "ab") == 2);
 // count predicate in range
 assert(count!("a > 1")(a) == 8);
 ----
 */
-size_t count(alias pred = "a == b", Range, E)(Range r, E value)
-if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, value)) == bool))
+size_t count(alias pred = "a == b", Range, E)(Range haystack, E needle)
+    if (isInputRange!Range && !isInfinite!Range &&
+        is(typeof(binaryFun!pred(haystack.front, needle)) : bool))
 {
-    bool pred2(ElementType!(Range) a) { return binaryFun!pred(a, value); }
-    return count!(pred2)(r);
+    bool pred2(ElementType!Range a) { return binaryFun!pred(a, needle); }
+    return count!pred2(haystack);
 }
 
 unittest
@@ -5132,14 +5206,25 @@ unittest
 
 /// Ditto
 size_t count(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
-if (isInputRange!R1 && isForwardRange!R2 && is(typeof(binaryFun!pred(haystack, needle)) == bool))
+    if (isForwardRange!R1 && !isInfinite!R1 &&
+        isForwardRange!R2 &&
+        is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
     enforce(!needle.empty, "Cannot count occurrences of an empty range");
-    size_t result;
-    for (; findSkip!pred(haystack, needle); ++result)
+    static if (isInfinite!R2)
     {
+        //Note: This is the special case of looking for an infinite inside a finite...
+        //"How many instances of the Fibonacci sequence can you count in [1, 2, 3]?" - "None."
+        return 0;
     }
-    return result;
+    else
+    {
+        size_t result;
+        //Note: haystack is not saved, because findskip is designed to modify it
+        for ( ; findSkip!pred(haystack, needle.save) ; ++result)
+        {}
+        return result;
+    }
 }
 
 unittest
@@ -5147,16 +5232,18 @@ unittest
     assert(count("abcadfabf", "ab") == 2);
     assert(count("ababab", "abab") == 1);
     assert(count("ababab", "abx") == 0);
+    assert(count!"std.uni.toLower(a) == std.uni.toLower(b)"("AbcAdFaBf", "ab") == 2);
 }
 
 /// Ditto
-size_t count(alias pred = "true", Range)(Range r) if (isInputRange!(Range))
+size_t count(alias pred = "true", R)(R haystack)
+    if (isInputRange!R && !isInfinite!R &&
+        is(typeof(unaryFun!pred(haystack.front)) : bool))
 {
     size_t result;
-    for (; !r.empty; r.popFront())
-    {
-        if (unaryFun!pred(r.front)) ++result;
-    }
+    alias ElementType!R T; //For narrow strings forces dchar iteration
+    foreach (T elem; haystack)
+        if (unaryFun!pred(elem)) ++result;
     return result;
 }
 
@@ -5166,6 +5253,7 @@ unittest
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 4, 3, 2, 5, 3, 2, 4 ];
     assert(count!("a == 3")(a) == 2);
+    assert(count("日本語") == 3);
 }
 
 // balancedParens

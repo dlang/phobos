@@ -2682,7 +2682,7 @@ string expandTilde(string inputPath)
 
             // Extract username, searching for path separator.
             string username;
-            auto last_char = std.algorithm.countUntil(path, dirSeparator[0]);
+            auto last_char = std.string.indexOf(path, dirSeparator[0]);
 
             if (last_char == -1)
             {
