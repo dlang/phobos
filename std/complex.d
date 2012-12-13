@@ -487,6 +487,14 @@ unittest
 
 unittest
 {
+    // Initialization
+    Complex!double a = 1;
+    Complex!double b = 1.0;
+    Complex!double c = Complex!real(1.0, 1);
+}
+
+unittest
+{    
     // Assignments and comparisons
     Complex!double z;
 
