@@ -1757,21 +1757,23 @@ assert(haystack[codeLength!char(needle) .. $] ==
        `, ça, ce ne serait pas bien.`);
 ------
   +/
-size_t codeLength(C1, C2)(C2[] str) @safe pure
-    if(isSomeChar!C1 && isSomeChar!C2)
+size_t codeLength(C, InputRange)(InputRange input)
+	if(isInputRange!InputRange && is(ElementType!InputRange : dchar))
 {
-    static if(is(Unqual!C1 == Unqual!C2))
-        return str.length;
-    else
-    {
+	alias Unqual!(ElementEncodingType!InputRange) EncType;
+	static if(isSomeString!InputRange && is(EncType == C) && is(typeof(input.length)))
+		return input.length;
+	else
+	{
         size_t total = 0;
 
-        foreach(dchar c; str)
-            total += codeLength!C1(c);
+        foreach(dchar c; input)
+            total += codeLength!C(c);
 
         return total;
-    }
+	}
 }
+   
 
 //Verify Examples.
 unittest
@@ -1807,6 +1809,8 @@ unittest
             assert(codeLength!C(to!S("Walter Bright")) == to!(C[])("Walter Bright").length);
             assert(codeLength!C(to!S(`言語`)) == to!(C[])(`言語`).length);
             assert(codeLength!C(to!S(`ウェブサイト@La_Verité.com`)) ==
+                   to!(C[])(`ウェブサイト@La_Verité.com`).length);
+			assert(codeLength!C(to!S(`ウェブサイト@La_Verité.com`).filter!(x => true)()) ==
                    to!(C[])(`ウェブサイト@La_Verité.com`).length);
         }
     }
