@@ -683,7 +683,6 @@ struct FormatSpec(Char)
     {
         union
         {
-            ubyte allFlags;
             mixin(bitfields!(
                         bool, "flDash", 1,
                         bool, "flZero", 1,
@@ -691,6 +690,7 @@ struct FormatSpec(Char)
                         bool, "flPlus", 1,
                         bool, "flHash", 1,
                         ubyte, "", 3));
+            ubyte allFlags;
         }
     }
 
