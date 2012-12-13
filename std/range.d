@@ -4320,6 +4320,10 @@ unittest
         assert(zLongest.empty);
     }
 
+    // BUG 8900
+    static assert(__traits(compiles, zip([1, 2], repeat('a'))));
+    static assert(__traits(compiles, zip(repeat('a'), [1, 2])));
+
     // Doesn't work yet.  Issues w/ emplace.
     // static assert(is(Zip!(immutable int[], immutable float[])));
 
