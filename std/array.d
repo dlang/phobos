@@ -837,8 +837,8 @@ private void copyBackwards(T)(T[] src, T[] dest)
     else
     {
         immutable len = src.length;
-        for (size_t i = len - 1; i < len; i--) 
-        {			
+        for (size_t i = len; i-- > 0;)
+        {
             dest[i] = src[i];
         }
     }
@@ -929,10 +929,10 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
                 {
                     static if(T.sizeof == char.sizeof)
                     {
-                    case 4:
+                case 4:
                         ptr[3] = buf[3];
                         goto case;
-                    case 3:
+                case 3:
                         ptr[2] = buf[2];
                         goto case;
                     }
@@ -984,7 +984,8 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
 private template isInputRangeWithLengthOrConvertible(E)
 {
     template isInputRangeWithLengthOrConvertible(R)
-    { //hasLength not defined for char[], wchar[] and dchar[]
+    {
+        //hasLength not defined for char[], wchar[] and dchar[]
         enum isInputRangeWithLengthOrConvertible =
             (isInputRange!R && is(typeof(R.init.length))
                 && is(ElementType!R : E))  || is(R : E);
@@ -1108,7 +1109,8 @@ unittest
 }
 
 unittest
-{// insertInPlace interop with postblit
+{
+    // insertInPlace interop with postblit
     struct Int
     {
         int* payload;
