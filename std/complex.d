@@ -489,8 +489,11 @@ unittest
 {
     // Initialization
     Complex!double a = 1;
+    assert (a.re == 1 && a.im == 0);
     Complex!double b = 1.0;
-    Complex!double c = Complex!real(1.0, 1);
+    assert (b.re == 1.0 && b.im == 0);
+    Complex!double c = Complex!real(1.0, 2);
+    assert (c.re == 1.0 && c.im == 2);
 }
 
 unittest
