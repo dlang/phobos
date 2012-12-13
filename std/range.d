@@ -840,12 +840,26 @@ infinite. The following code should compile for any random-access
 range.
 
 ----
-R r;
-static assert(isForwardRange!R);  // range is forward
-static assert(isBidirectionalRange!R || isInfinite!R);
-                                  // range is bidirectional or infinite
-auto e = r[1];                    // can index
+// range is finite and bidirectional or infinite and forward.
+static assert(isBidirectionalRange!R ||
+              isForwardRange!R && isInfinite!R);
+
+R r = void;
+auto e = r[1]; // can index
 static assert(is(typeof(e) == typeof(r.front))); // same type for indexed and front
+static assert(!isNarrowString!R); // narrow strings cannot be indexed as ranges
+static assert(hasLength!R || isInfinite!R); // must have length or be infinite
+
+// $ must work as it does with arrays if opIndex works with $
+static if(is(typeof(r[$])))
+{
+    static assert(is(typeof(r.front) == typeof(r[$])));
+
+    // $ - 1 doesn't make sense with infinite ranges but needs to work
+    // with finite ones.
+    static if(!isInfinite!R)
+        static assert(is(typeof(r.front) == typeof(r[$ - 1])));
+}
 ----
 
 The semantics of a random-access range (not checkable during
@@ -871,6 +885,14 @@ template isRandomAccessRange(R)
         static assert(is(typeof(e) == typeof(r.front)));
         static assert(!isNarrowString!R);
         static assert(hasLength!R || isInfinite!R);
+
+        static if(is(typeof(r[$])))
+        {
+            static assert(is(typeof(r.front) == typeof(r[$])));
+
+            static if(!isInfinite!R)
+                static assert(is(typeof(r.front) == typeof(r[$ - 1])));
+        }
     }));
 }
 
