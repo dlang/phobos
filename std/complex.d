@@ -150,6 +150,24 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 @safe pure nothrow:
 
+    this(R : T)(Complex!R z)
+    {
+        re = z.re;
+        im = z.im;
+    }
+    
+    this(Rx : T, Ry : T)(Rx x, Ry y)
+    {
+        re = x;
+        im = y;
+    }
+
+    this(R : T)(R r)
+    {
+        re = r;
+        im = 0;
+    }
+
     // ASSIGNMENT OPERATORS
 
     // this = complex
@@ -469,6 +487,17 @@ unittest
 
 unittest
 {
+    // Initialization
+    Complex!double a = 1;
+    assert (a.re == 1 && a.im == 0);
+    Complex!double b = 1.0;
+    assert (b.re == 1.0 && b.im == 0);
+    Complex!double c = Complex!real(1.0, 2);
+    assert (c.re == 1.0 && c.im == 2);
+}
+
+unittest
+{    
     // Assignments and comparisons
     Complex!double z;
 
