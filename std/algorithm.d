@@ -7683,8 +7683,8 @@ private template validPredicates(E, less...) {
         enum validPredicates = true;
     else
         enum validPredicates =
-            is(typeof(binaryFun!(less[0])(E.init, E.init)) == bool) &&
-            validPredicates!(E, less[1 .. $]);
+            is(typeof((E a, E b){ bool r = binaryFun!(less[0])(a, b); }))
+            && validPredicates!(E, less[1 .. $]);
 }
 
 /**
@@ -7763,6 +7763,30 @@ unittest
     auto pts3 = indexed(pts1, iota(pts1.length));
     multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts3);
     assert(equal(pts3, pts2));
+}
+
+unittest //issue 9160 (L-value only comparators)
+{    
+    static struct A
+    {
+        int x;
+        int y;        
+    }    
+
+    static bool byX(const ref A lhs, const ref A rhs)
+    {
+        return lhs.x < rhs.x;
+    }
+
+    static bool byY(const ref A lhs, const ref A rhs)
+    {
+        return lhs.y < rhs.y;
+    }
+    
+    auto points = [ A(4, 1), A(2, 4)];
+    multiSort!(byX, byY)(points);
+    assert(points[0] == A(2, 4));
+    assert(points[1] == A(4, 1));
 }
 
 private size_t getPivot(alias less, Range)(Range r)
