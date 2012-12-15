@@ -4789,7 +4789,7 @@ assert(endsWith("abc", "x", "aaa", 'c', "sab") == 3);
  */
 uint endsWith(alias pred = "a == b", Range, Ranges...)
              (Range doesThisEnd, Ranges withOneOfThese)
-if (isInputRange!Range && Ranges.length > 1 &&
+if (isBidirectionalRange!Range && Ranges.length > 1 &&
     is(typeof(.endsWith!pred(doesThisEnd, withOneOfThese[0])) : bool) &&
     is(typeof(.endsWith!pred(doesThisEnd, withOneOfThese[1 .. $])) : uint))
 {
@@ -4857,8 +4857,8 @@ if (isInputRange!Range && Ranges.length > 1 &&
 /// Ditto
 bool endsWith(alias pred = "a == b", R1, R2)
              (R1 doesThisEnd, R2 withThis)
-if (isInputRange!R1 &&
-    isInputRange!R2 &&
+if (isBidirectionalRange!R1 &&
+    isBidirectionalRange!R2 &&
     is(typeof(binaryFun!pred(doesThisEnd.back, withThis.back)) : bool))
 {
     alias doesThisEnd haystack;
@@ -4911,7 +4911,7 @@ if (isInputRange!R1 &&
 /// Ditto
 bool endsWith(alias pred = "a == b", R, E)
              (R doesThisEnd, E withThis)
-if (isInputRange!R &&
+if (isBidirectionalRange!R &&
     is(typeof(binaryFun!pred(doesThisEnd.back, withThis)) : bool))
 {
     return doesThisEnd.empty
@@ -4938,6 +4938,7 @@ unittest
             @property bool empty() {return _range.empty;}
             void popFront() {_range.popFront();}
             void popBack() {_range.popBack();}
+            @property auto save() {return this;}
             R _range;
         }
 
