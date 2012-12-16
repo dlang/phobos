@@ -4134,6 +4134,79 @@ S[] outdent(S)(S[] lines) if(isSomeString!S)
     return lines;
 }
 
+/******************************************
+ * Returns the indicator of an ordinal number.
+ *
+ * Example:
+ * ---
+ * foreach (i; 1..5)
+ *     writeln(i, ordinalIndicator(i))
+ * ---
+ *
+ * Output:
+ * ---
+ * 1st
+ * 2nd
+ * 3rd
+ * 4th
+ * ---
+ */
+string ordinalIndicator(Integer)(Integer n)
+    if (is(typeof(n % 2 == 0) : bool))
+{
+    assert(n >= 0, "Ordinals cannot be negative.");
+    auto mod10 = n % 10;
+    if (mod10 == 0 || mod10 > 3)
+        return "th";
+
+    auto mod100 = n % 100;
+    if (mod10 == 1 && mod100 != 11)
+        return "st";
+    else if (mod10 == 2 && mod100 != 12)
+        return "nd";
+    else if (mod10 == 3 && mod100 != 13)
+        return "rd";
+    else
+        return "th";
+}
+
+unittest
+{
+    debug(string) printf("string.ordinalIndicator.unittest\n");
+
+    alias TypeTuple!(byte, short, int, long, ubyte, ushort, uint, ulong) Types;
+    foreach (T; Types)
+    {
+        assert(ordinalIndicator!T(0) == "th");
+        assert(ordinalIndicator!T(1) == "st");
+        assert(ordinalIndicator!T(2) == "nd");
+        assert(ordinalIndicator!T(3) == "rd");
+        assert(ordinalIndicator!T(4) == "th");
+        assert(ordinalIndicator!T(10) == "th");
+        assert(ordinalIndicator!T(11) == "th");
+        assert(ordinalIndicator!T(12) == "th");
+        assert(ordinalIndicator!T(13) == "th");
+        assert(ordinalIndicator!T(20) == "th");
+        assert(ordinalIndicator!T(21) == "st");
+        assert(ordinalIndicator!T(22) == "nd");
+        assert(ordinalIndicator!T(23) == "rd");
+    }
+
+    import std.bigint;
+    assert(ordinalIndicator(BigInt("56783581982865981755459125799682980167520800")) == "th");
+    assert(ordinalIndicator(BigInt("56783581982865981755459125799682980167520801")) == "st");
+    assert(ordinalIndicator(BigInt("56783581982865981755459125799682980167520802")) == "nd");
+    assert(ordinalIndicator(BigInt("56783581982865981755459125799682980167520803")) == "rd");
+    assert(ordinalIndicator(BigInt("56783581982865981755459125799682980167520810")) == "th");
+    assert(ordinalIndicator(BigInt("56783581982865981755459125799682980167520811")) == "th");
+    assert(ordinalIndicator(BigInt("56783581982865981755459125799682980167520812")) == "th");
+    assert(ordinalIndicator(BigInt("56783581982865981755459125799682980167520813")) == "th");
+    assert(ordinalIndicator(BigInt("56783581982865981755459125799682980167520820")) == "th");
+    assert(ordinalIndicator(BigInt("56783581982865981755459125799682980167520821")) == "st");
+    assert(ordinalIndicator(BigInt("56783581982865981755459125799682980167520822")) == "nd");
+    assert(ordinalIndicator(BigInt("56783581982865981755459125799682980167520823")) == "rd");
+}
+
 // TODO: Remove this and use std.string.strip when retro() becomes ctfe-able.
 private S ctfe_strip(S)(S str) if(isSomeString!(Unqual!S))
 {
