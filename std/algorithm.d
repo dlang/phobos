@@ -1455,10 +1455,15 @@ $(D &source == &target || !pointsTo(source, source))
 */
 void move(T)(ref T source, ref T target)
 {
-    assert(!pointsTo(source, source));
+    if (__ctfe)
+    {        
+        target = source;
+        return; 
+    }
     static if (is(T == struct))
     {
-        if (&source == &target) return;    
+        assert(!pointsTo(source, source));
+        if (&source == &target) return;
         // Most complicated case. Destroy whatever target had in it
         // and bitblast source over it
         static if (hasElaborateDestructor!T) typeid(T).destroy(&target);
@@ -1543,14 +1548,28 @@ unittest
     move(s41, s42);
     assert(s41.x.n == 0);
     assert(s42.x.n == 1);
+
+    static assert((){ 
+        S1 x, y;
+        x.a = 123;
+        move(x, y);
+        return y;
+    }().a == 123);
 }
 
-/// Ditto
-T move(T)(ref T source)
+// Fake a move via copy
+// TODO: need a better way to actually move stuff at CTFE
+T ctfeMove(T)(ref T source)
+{
+    return source;
+}
+
+T realMove(T)(ref T source)
 {
     // Can avoid to check aliasing.
-
+    
     T result = void;
+    
     static if (is(T == struct))
     {
         // Can avoid destructing result.
@@ -1581,6 +1600,12 @@ T move(T)(ref T source)
         result = source;
     }
     return result;
+}
+
+/// Ditto
+T move(T)(ref T source)
+{
+    return __ctfe ? ctfeMove(source) : realMove(source);
 }
 
 unittest
@@ -1628,6 +1653,12 @@ unittest
     S4 s42 = move(s41);
     assert(s41.x.n == 0);
     assert(s42.x.n == 1);
+
+    static assert((){
+        S1 s = S1(22, 33);
+        auto s2 = move(s);
+        return s2;
+    }().b == 33);
 }
 
 unittest//Issue 6217
