@@ -2904,6 +2904,49 @@ unittest
 {
     struct TransientRange
     {
+        int[128] _buf;
+        int[][] _values;
+        this(int[][] values)
+        {
+            _values = values;
+        }
+        @property bool empty()
+        {
+            return _values.length == 0;
+        }
+        @property auto front()
+        {
+            foreach (i; 0 .. _values.front.length)
+            {
+                _buf[i] = _values[0][i];
+            }
+            return _buf[0 .. _values.front.length];
+        }
+        void popFront()
+        {
+            _values = _values[1 .. $];
+        }
+    }
+
+    auto rr = TransientRange([[1,2], [3,4,5], [], [6,7]]);
+
+    // Can't use array() or equal() directly because they fail with transient
+    // .front.
+    int[] result;
+    foreach (c; rr.joiner()) {
+        result ~= c;
+    }
+
+    assert(equal(result, [1,2,3,4,5,6,7]));
+}
+
+// Temporarily disable this unittest due to issue 9131 on OSX/64.
+version = Issue9131;
+version(Issue9131) {} else
+unittest
+{
+    struct TransientRange
+    {
         dchar[128] _buf;
         dstring[] _values;
         this(dstring[] values)
