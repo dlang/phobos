@@ -6879,11 +6879,11 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
             static if (isBidirectionalRange!R) {
                 @property E back() { return _range.back; }
 
-                @property E moveBack() {
+                E moveBack() {
                     return .moveBack(_range);
                 }
 
-                @property void popBack() { return _range.popBack(); }
+                void popBack() { return _range.popBack(); }
 
                 static if (hasAssignableElements!R) {
                     @property void back(E newVal) {
@@ -8017,7 +8017,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
 
 
     /++ Ditto +/
-    static if(isBidirectionalRange!R) @property void popBack()
+    static if(isBidirectionalRange!R) void popBack()
     {
         return (*_range).popBack();
     }
@@ -8053,7 +8053,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
         Only defined if $(D hasMobileElements!R) and $(D isForwardRange!R) are
         $(D true).
       +/
-    static if(hasMobileElements!R && isForwardRange!R) @property auto moveFront()
+    static if(hasMobileElements!R && isForwardRange!R) auto moveFront()
     {
         return (*_range).moveFront();
     }
@@ -8063,7 +8063,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
         Only defined if $(D hasMobileElements!R) and $(D isBidirectionalRange!R)
         are $(D true).
       +/
-    static if(hasMobileElements!R && isBidirectionalRange!R) @property auto moveBack()
+    static if(hasMobileElements!R && isBidirectionalRange!R) auto moveBack()
     {
         return (*_range).moveBack();
     }
@@ -8073,7 +8073,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
         Only defined if $(D hasMobileElements!R) and $(D isRandomAccessRange!R)
         are $(D true).
       +/
-    static if(hasMobileElements!R && isRandomAccessRange!R) @property auto moveAt(IndexType)(IndexType index)
+    static if(hasMobileElements!R && isRandomAccessRange!R) auto moveAt(IndexType)(IndexType index)
         if(is(typeof((*_range).moveAt(index))))
     {
         return (*_range).moveAt(index);
