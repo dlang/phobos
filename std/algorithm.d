@@ -2803,17 +2803,16 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     private:
         RoR _items;
         ElementType!RoR _current;
-        bool _valid_current;
         void prepare()
         {
-            for (;; _items.popFront())
+            // Skip over empty subranges.
+            if (_items.empty) return;
+            while (_items.front.empty)
             {
+                _items.popFront();
                 if (_items.empty) return;
-                if (!_items.front.empty) break;
             }
             _current = _items.front;
-            _valid_current = true;
-            _items.popFront();
         }
     public:
         this(RoR r)
@@ -2829,7 +2828,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
         {
             @property auto empty()
             {
-                return !_valid_current || _current.empty;
+                return _items.empty;
             }
         }
         @property auto ref front()
@@ -2841,7 +2840,12 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
         {
             assert(!_current.empty);
             _current.popFront();
-            if (_current.empty) prepare();
+            if (_current.empty)
+            {
+                assert(!_items.empty);
+                _items.popFront();
+                prepare();
+            }
         }
         static if (isForwardRange!RoR && isForwardRange!(ElementType!RoR))
         {
@@ -2850,7 +2854,6 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
                 Result copy;
                 copy._items = _items.save;
                 copy._current = _current.save;
-                copy._valid_current = _valid_current;
                 return copy;
             }
         }
@@ -2895,6 +2898,90 @@ unittest
     js.popFront();
     assert(equal(jb, js));
     assert(!equal(js2, js));
+}
+
+unittest
+{
+    struct TransientRange
+    {
+        int[128] _buf;
+        int[][] _values;
+        this(int[][] values)
+        {
+            _values = values;
+        }
+        @property bool empty()
+        {
+            return _values.length == 0;
+        }
+        @property auto front()
+        {
+            foreach (i; 0 .. _values.front.length)
+            {
+                _buf[i] = _values[0][i];
+            }
+            return _buf[0 .. _values.front.length];
+        }
+        void popFront()
+        {
+            _values = _values[1 .. $];
+        }
+    }
+
+    auto rr = TransientRange([[1,2], [3,4,5], [], [6,7]]);
+
+    // Can't use array() or equal() directly because they fail with transient
+    // .front.
+    int[] result;
+    foreach (c; rr.joiner()) {
+        result ~= c;
+    }
+
+    assert(equal(result, [1,2,3,4,5,6,7]));
+}
+
+// Temporarily disable this unittest due to issue 9131 on OSX/64.
+version = Issue9131;
+version(Issue9131) {} else
+unittest
+{
+    struct TransientRange
+    {
+        dchar[128] _buf;
+        dstring[] _values;
+        this(dstring[] values)
+        {
+            _values = values;
+        }
+        @property bool empty()
+        {
+            return _values.length == 0;
+        }
+        @property auto front()
+        {
+            foreach (i; 0 .. _values.front.length)
+            {
+                _buf[i] = _values[0][i];
+            }
+            return _buf[0 .. _values.front.length];
+        }
+        void popFront()
+        {
+            _values = _values[1 .. $];
+        }
+    }
+
+    auto rr = TransientRange(["abc"d, "12"d, "def"d, "34"d]);
+
+    // Can't use array() or equal() directly because they fail with transient
+    // .front.
+    dchar[] result;
+    foreach (c; rr.joiner()) {
+        result ~= c;
+    }
+
+    assert(equal(result, "abc12def34"d),
+    	"Unexpected result: '%s'"d.format(result));
 }
 
 // uniq
