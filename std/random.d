@@ -1319,9 +1319,55 @@ unittest
 }
 
 /**
-Generates a random floating-point number drawn from a
-normal (Gaussian) distribution with specified mean and
-standard deviation (sigma).
+Generates a random floating-point number drawn from a normal (Gaussian)
+distribution with specified mean and standard deviation (sigma).
+
+Many different algorithms are available for normal random number generation,
+and the optimal choice depends on a variety of different factors [see e.g.
+$(LINK2 http://www.cse.cuhk.edu.hk/~phwl/mt/public/archives/papers/grng_acmcs07.pdf,
+  Thomas et al. (2007)), $(I ACM Comput. Surv.) $(B 39)(4) 11].  For this reason,
+std.random provides a selection of different internal engines implementing different
+algorithms.  The default choice is currently a Box-Muller implementation that closely
+follows the C++ implementation in Boost.Random.  Alternatives can be specified as
+a template parameter.  The function implementations for normal random number generation
+use a thread-local static instance of the specified engine type.
+
+Example:
+
+----
+// Generate a normally-distributed random number
+// with mean 5 and standard deviation 7
+auto x = normal(5.0, 7.0);
+
+// Generate a normally-distributed random number
+// using the Ziggurat algorithm
+auto z = normal!NormalZigguratEngine64(5.0, 7.0);
+----
+
+The struct implementations for normal random number generation store the mean and
+standard deviation and contain their own internal instances of the specified engine.
+The convenience function normalRNG() is provided to facilitate construction of Normal
+struct instances.
+
+Example:
+
+----
+// Create a normal random number generator with mean 0
+// and standard deviation 4
+auto nrng = normalRNG(0.0, 4.0);
+
+// Generate a number using this generator
+auto x = nrng(rndGen);
+
+// Create a normal random number generator that uses
+// the Ziggurat algorithm
+auto nZig = normalRNG!NormalZigguratEngine64(0.0, 4.0);
+
+auto y = nZig(rndGen);
+----
+
+Return values for normal random numbers are based on the common type of mean and
+standard deviation if at least one is floating point, defaulting to double otherwise.
 */
 auto normal(alias NormalRandomNumberEngine = NormalBoxMullerEngine, T1, T2)
 (T1 mean, T2 sigma)
@@ -1437,11 +1483,7 @@ unittest
     }
 }
 
-/**
-Struct implementation of normal (Gaussian) random number
-generation that stores the distribution parameters of mean
-and standard deviation (sigma)
-*/
+/// Ditto
 struct Normal(T = double, alias NormalRandomNumberEngine = NormalBoxMullerEngine)
 if (isFloatingPoint!T)
 {
