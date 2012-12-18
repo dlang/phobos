@@ -1413,12 +1413,17 @@ if (isNumeric!T1 && isNumeric!T2 && isUniformRNG!UniformRandomNumberGenerator)
 
 unittest
 {
+    // Check the type rules for normal()
     assert(is(typeof(normal(0, 1)) == double));
     assert(is(typeof(normal(0.0f, 1.0f)) == float));
     assert(is(typeof(normal(0.0f, 1.0)) == double));
     assert(is(typeof(normal(0.0, 1.0)) == double));
+    assert(is(typeof(normal(0.0L, 1.0)) == real));
     assert(is(typeof(normal(0.0L, 1.0L)) == real));
 
+    /* Check that different engines are used for
+       double, float and real-valued normal random
+       number generation */
     {
         auto rng = Random(0);
 
@@ -1531,6 +1536,7 @@ if (isNumeric!T1 && isNumeric!T2)
 
 unittest
 {
+    // Check the type rules for Normal
     {
         auto nrng = normalRNG(0, 1);
         assert(is(typeof(nrng(rndGen)) == double));
