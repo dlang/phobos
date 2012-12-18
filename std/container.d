@@ -1100,7 +1100,7 @@ iterating over the container are never invalidated.
 
 Returns: The number of elements inserted
 
-Complexity: $(BIGOH log(n))
+Complexity: $(BIGOH m), where $(D m) is the length of $(D stuff)
      */
     size_t insertFront(Stuff)(Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
