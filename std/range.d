@@ -1978,10 +1978,10 @@ if (Ranges.length > 0 && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
             static if (allSatisfy!(isForwardRange, R))
                 @property auto save()
                 {
-                    typeof(this) result;
+                    typeof(this) result = this;
                     foreach (i, Unused; R)
                     {
-                        result.source[i] = source[i].save;
+                        result.source[i] = result.source[i].save;
                     }
                     return result;
                 }
@@ -2392,11 +2392,10 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
         static if (allSatisfy!(isForwardRange, staticMap!(Unqual, Rs)))
             @property auto save()
             {
-                Result result;
-                result._current = _current;
+                Result result = this;
                 foreach (i, Unused; Rs)
                 {
-                    result.source[i] = source[i].save;
+                    result.source[i] = result.source[i].save;
                 }
                 return result;
             }
@@ -3687,7 +3686,7 @@ struct Cycle(Range)
 
         @property Cycle save()
         {
-            Cycle ret;
+            Cycle ret = this;
             ret._original = this._original.save;
             ret._current =  this._current.save;
             return ret;
@@ -3929,11 +3928,10 @@ if(Ranges.length && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
     static if (allSatisfy!(isForwardRange, R))
         @property Zip save()
         {
-            Zip result;
-            result.stoppingPolicy = stoppingPolicy;
+            Zip result = this;
             foreach (i, Unused; R)
             {
-                result.ranges[i] = ranges[i].save;
+                result.ranges[i] = result.ranges[i].save;
             }
             return result;
         }
@@ -7038,7 +7036,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
     @property auto save()
     {
         // Avoid the constructor
-        typeof(this) result;
+        typeof(this) result = this;
         result._input = _input.save;
         return result;
     }
@@ -7078,7 +7076,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
         auto opSlice(size_t a, size_t b)
         {
             assert(a <= b);
-            typeof(this) result;
+            typeof(this) result = this;
             result._input = _input[a .. b];// skip checking
             return result;
         }
@@ -8362,4 +8360,46 @@ auto refRange(R)(R* range)
        is(R == class))
 {
     return *range;
+}
+
+/*****************************************************************************/
+
+unittest    // bug 9060
+{
+    // fix for std.algorithm
+    auto r = map!(x => 0)([1]);
+    chain(r, r);
+    zip(r, r);
+    roundRobin(r, r);
+
+    struct NRAR {
+        typeof(r) input;
+        @property empty() { return input.empty; }
+        @property front() { return input.front; }
+        void popFront()   { input.popFront(); }
+        @property save()  { return NRAR(input.save); }
+    }
+    auto n1 = NRAR(r);
+    cycle(n1);  // non random access range version
+
+    assumeSorted(r);
+
+    // fix for std.range
+    joiner([r], [9]);
+
+    struct NRAR2 {
+        NRAR input;
+        @property empty() { return true; }
+        @property front() { return input; }
+        void popFront() { }
+        @property save()  { return NRAR2(input.save); }
+    }
+    auto n2 = NRAR2(n1);
+    joiner(n2);
+
+    group(r);
+
+    until(r, 7);
+    static void foo(R)(R r) { until!(x => x > 7)(r); }
+    foo(r);
 }
