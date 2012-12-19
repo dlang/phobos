@@ -1,7 +1,7 @@
 $(VERSION 061, ddd mm, 2012, =================================================,
     $(WHATSNEW
         $(LI std.string: $(RED The implementations of std.string.format and string.sformat have
-             been replaced with with improved implementations which conform to writef. In some,
+             been replaced with improved implementations which conform to writef. In some,
              rare cases, this will break code. Please see the documentation for std.string.format
              and std.string.sformat for details.))
         $(LI std.range.hasSlicing has been made stricter in an effort to make it more reliable.
@@ -21,8 +21,8 @@ $(VERSION 061, ddd mm, 2012, =================================================,
         $(LI std.md5 has been scheduled for deprecation (Use std.digest.md instead).)
         $(LI crc32 has been scheduled for deprecation (Use std.digest.crc instead).)
         $(LI std.string.xformat and std.string.xsformat have been scheduled for deprecation. Please
-             use std.string and std.string.xsformat instead (which now use the same implementation
-             as xformat and xsformat).)
+             use std.string.format and std.string.xsformat instead (which now use the same
+             implementation as xformat and xsformat).)
     )
 
     $(LIBBUGSFIXED
