@@ -1,5 +1,16 @@
 $(VERSION 061, ddd mm, 2012, =================================================,
     $(WHATSNEW
+        $(LI std.string: $(RED The implementations of std.string.format and string.sformat have
+             been replaced with with improved implementations which conform to writef. In some,
+             rare cases, this will break code. Please see the documentation for std.string.format
+             and std.string.sformat for details.))
+        $(LI std.range.hasSlicing has been made stricter in an effort to make it more reliable.
+             opSlice for infinite ranges must now return the result of std.range.take, and any
+             range with slicing which supports $(D $) must now support it with the same semantics
+             as arrays (including supporting subtraction for finite ranges).)
+        $(LI std.range.isRandomAccessRange now requires hasLength for finite ranges, as it makes no
+             sense for such ranges not to define length and many random-access algorithms rely
+             on length.)
         $(LI std.digest: Added new package for digests. This replaces std.md5 and the internal crc32
              implementation.)
         $(LI std.digest.sha: Added SHA1 digest implementation, including a fast SSSE3 version.)
@@ -9,6 +20,9 @@ $(VERSION 061, ddd mm, 2012, =================================================,
         $(LI std.net.curl: Added operationTimeout.)
         $(LI std.md5 has been scheduled for deprecation (Use std.digest.md instead).)
         $(LI crc32 has been scheduled for deprecation (Use std.digest.crc instead).)
+        $(LI std.string.xformat and std.string.xsformat have been scheduled for deprecation. Please
+             use std.string and std.string.xsformat instead (which now use the same implementation
+             as xformat and xsformat).)
     )
 
     $(LIBBUGSFIXED
