@@ -2814,7 +2814,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
             // We cannot export .save method unless we ensure subranges are not
             // consumed when a .save'd copy of ourselves is iterated over. So
             // we need to .save each subrange we traverse.
-            static if (isForwardRange!(ElementType!RoR))
+            static if (isForwardRange!RoR && isForwardRange!(ElementType!RoR))
                 _current = _items.front.save;
             else
                 _current = _items.front;
