@@ -5264,7 +5264,7 @@ if (isForwardRange!R1 && isForwardRange!R2 &&
 
 auto commonPrefix(alias pred, R1, R2)(R1 r1, R2 r2)
 if (isSomeString!R1 && isSomeString!R2 &&
-    !(!isNarrowString!R1 && !isNarrowString!R2) &&
+    (isNarrowString!R1 || isNarrowString!R2) &&
     is(typeof(binaryFun!pred(r1.front, r2.front))))
 {
     auto result = r1.save;
@@ -5282,7 +5282,7 @@ if (isSomeString!R1 && isSomeString!R2 &&
 }
 
 auto commonPrefix(R1, R2)(R1 r1, R2 r2)
-if (isSomeString!R1 && isSomeString!R2 && !(!isNarrowString!R1 && !isNarrowString!R2))
+if (isSomeString!R1 && isSomeString!R2 && (isNarrowString!R1 || isNarrowString!R2))
 {
     static if (ElementEncodingType!R1.sizeof == ElementEncodingType!R2.sizeof)
     {
