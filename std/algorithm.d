@@ -2811,7 +2811,13 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
                 _items.popFront();
                 if (_items.empty) return;
             }
-            _current = _items.front;
+            // We cannot export .save method unless we ensure subranges are not
+            // consumed when a .save'd copy of ourselves is iterated over. So
+            // we need to .save each subrange we traverse.
+            static if (isForwardRange!(ElementType!RoR))
+                _current = _items.front.save;
+            else
+                _current = _items.front;
         };
     public:
         this(RoR r)
@@ -2981,6 +2987,16 @@ unittest
 
     assert(equal(result, "abc12def34"d),
     	"Unexpected result: '%s'"d.format(result));
+}
+
+// Issue 8061
+unittest
+{
+    auto r = joiner([inputRangeObject("ab"), inputRangeObject("cd")]);
+    assert(isForwardRange!(typeof(r)));
+
+    auto str = to!string(r);
+    assert(str == "abcd");
 }
 
 // uniq
