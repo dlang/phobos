@@ -2665,28 +2665,45 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
         private ElementType!RoR _current;
         private Separator _sep, _currentSep;
 
+        private enum setItem =
+        q{
+            if (!_items.empty)
+            {
+                // If we're exporting .save, we must not consume any of the
+                // subranges, since RoR.save does not guarantee that the states
+                // of the subranges are also saved.
+                static if (isForwardRange!RoR &&
+                           isForwardRange!(ElementType!RoR))
+                    _current = _items.front.save;
+                else
+                    _current = _items.front;
+            }
+        };
+
         private void useSeparator()
         {
-            assert(_currentSep.empty && _current.empty,
+            // Separator must always come after an item.
+            assert(_currentSep.empty && !_items.empty,
                     "joiner: internal error");
+            _items.popFront();
+
+            // If there are no more items, we're done, since separators are not
+            // terminators.
+            if (_items.empty) return;
+
             if (_sep.empty)
             {
                 // Advance to the next range in the
                 // input
-                //_items.popFront();
-                for (;; _items.popFront())
+                while (_items.front.empty)
                 {
+                    _items.popFront();
                     if (_items.empty) return;
-                    if (!_items.front.empty) break;
                 }
-                _current = _items.front;
-                _items.popFront();
+                mixin(setItem);
             }
             else
             {
-                // Must make sure something is coming after the
-                // separator - it's a separator, not a terminator!
-                if (_items.empty) return;
                 _currentSep = _sep.save;
                 assert(!_currentSep.empty);
             }
@@ -2698,15 +2715,12 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
                     "joiner: internal error");
             // Use the input
             if (_items.empty) return;
-            _current = _items.front;
-            _items.popFront();
-            if (!_current.empty)
+            mixin(setItem);
+            if (_current.empty)
             {
-                return;
+                // No data in the current item - toggle to use the separator
+                useSeparator();
             }
-            // No data in the current item - toggle to use the
-            // separator
-            useSeparator();
         };
 
         this(RoR items, Separator sep)
@@ -2714,18 +2728,11 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
             _items = items;
             _sep = sep;
             mixin(useItem); // _current should be initialized in place
-            // We need the separator if the input has at least two
-            // elements
-            if (_current.empty && _items.empty)
-            {
-                // Vacate the whole thing
-                _currentSep = _currentSep.init;
-            }
         }
 
         @property auto empty()
         {
-            return _current.empty && _currentSep.empty;
+            return _items.empty;
         }
 
         @property ElementType!(ElementType!RoR) front()
@@ -2737,7 +2744,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 
         void popFront()
         {
-            assert(!empty);
+            assert(!_items.empty);
             // Using separator?
             if (!_currentSep.empty)
             {
