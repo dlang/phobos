@@ -2940,17 +2940,18 @@ unittest
 }
 
 // Temporarily disable this unittest due to issue 9131 on OSX/64.
-version = Issue9131;
+//version = Issue9131;
 version(Issue9131) {} else
 unittest
 {
     struct TransientRange
     {
-        dchar[128] _buf;
+        dchar[] _buf;
         dstring[] _values;
         this(dstring[] values)
         {
             _values = values;
+	    _buf.length = 128;
         }
         @property bool empty()
         {
@@ -2979,8 +2980,8 @@ unittest
         result ~= c;
     }
 
-    assert(equal(result, "abc12def34"d),
-    	"Unexpected result: '%s'"d.format(result));
+    assert(equal(result, "abc12def34"),
+    	"Unexpected result: '%s'".format(result));
 }
 
 // uniq
