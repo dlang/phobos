@@ -10509,3 +10509,141 @@ unittest
 
     assert(arrayOne == arrayTwo);
 }
+
+// nextPermutation
+/**
+ * Permutes the range in-place to the next lexicographically greater
+ * permutation.
+ *
+ * The predicate less defines the lexicographical ordering to be used on the
+ * range.
+ *
+ * Returns: false if the range was lexicographically the greatest, in which
+ * case the range is reversed back to the lexicographically smallest
+ * permutation; otherwise returns true.
+ */
+bool nextPermutation(alias less="a<b", BidirectionalRange)
+                    (ref BidirectionalRange range)
+    if (isBidirectionalRange!BidirectionalRange &&
+        hasSwappableElements!BidirectionalRange)
+{
+    // Ranges of 0 or 1 element have no distinct permutations.
+    if (range.empty) return false;
+
+    auto i = retro(range);
+    auto last = i.save;
+
+    // Find last occurring increasing pair of elements
+    size_t n = 1;
+    for (i.popFront(); !i.empty; i.popFront(), last.popFront(), n++)
+    {
+        if (binaryFun!less(i.front, last.front))
+            break;
+    }
+
+    if (i.empty) {
+        // Entire range is decreasing: it's lexicographically the greatest. So
+        // wrap it around.
+        range.reverse();
+        return false;
+    }
+
+    // Find last element greater than i.front.
+    auto j = find!((a) => binaryFun!less(i.front, a))(
+                   takeExactly(retro(range), n));
+
+    assert(!j.empty);   // shouldn't happen since i.front < last.front
+    swap(i.front, j.front);
+    reverse(takeExactly(retro(range), n));
+
+    return true;
+}
+
+unittest
+{
+    // Boundary cases: arrays of 0 or 1 element.
+    int[] a1 = [];
+    assert(!nextPermutation(a1));
+    assert(a1 == []);
+
+    int[] a2 = [1];
+    assert(!nextPermutation(a2));
+    assert(a2 == [1]);
+}
+
+unittest
+{
+    auto a1 = [1, 2, 3, 4];
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [1, 2, 4, 3]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [1, 3, 2, 4]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [1, 3, 4, 2]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [1, 4, 2, 3]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [1, 4, 3, 2]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [2, 1, 3, 4]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [2, 1, 4, 3]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [2, 3, 1, 4]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [2, 3, 4, 1]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [2, 4, 1, 3]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [2, 4, 3, 1]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [3, 1, 2, 4]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [3, 1, 4, 2]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [3, 2, 1, 4]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [3, 2, 4, 1]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [3, 4, 1, 2]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [3, 4, 2, 1]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [4, 1, 2, 3]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [4, 1, 3, 2]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [4, 2, 1, 3]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [4, 2, 3, 1]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [4, 3, 1, 2]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [4, 3, 2, 1]));
+
+    assert(!nextPermutation(a1));
+    assert(equal(a1, [1, 2, 3, 4]));
+}
