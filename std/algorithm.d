@@ -2711,8 +2711,12 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 
         private enum useItem =
         q{
-            assert(_currentSep.empty && _current.empty,
-                    "joiner: internal error");
+            // FIXME: this will crash if either _currentSep or _current are
+            // class objects, because .init is null when the ctor invokes this
+            // mixin.
+            //assert(_currentSep.empty && _current.empty,
+            //        "joiner: internal error");
+
             // Use the input
             if (_items.empty) return;
             mixin(setItem);
@@ -2798,6 +2802,90 @@ unittest
     // joiner() should work for non-forward ranges too.
     InputRange!string r = inputRangeObject(["abc", "def"]);
     assert (equal(joiner(r, "xyz"), "abcxyzdef"));
+}
+
+unittest
+{
+    // Related to issue 8061
+    auto r = joiner([
+        inputRangeObject("abc"),
+        inputRangeObject("def"),
+    ], "-*-");
+
+    assert(equal(r, "abc-*-def"));
+
+    // Test case where separator is specified but is empty.
+    auto s = joiner([
+        inputRangeObject("abc"),
+        inputRangeObject("def"),
+    ], "");
+
+    assert(equal(s, "abcdef"));
+
+    // Test empty separator with some empty elements
+    auto t = joiner([
+        inputRangeObject("abc"),
+        inputRangeObject(""),
+        inputRangeObject("def"),
+        inputRangeObject(""),
+    ], "");
+
+    assert(equal(t, "abcdef"));
+
+    // Test empty elements with non-empty separator
+    auto u = joiner([
+        inputRangeObject(""),
+        inputRangeObject("abc"),
+        inputRangeObject(""),
+        inputRangeObject("def"),
+        inputRangeObject(""),
+    ], "+-");
+
+    assert(equal(u, "+-abc+-+-def+-"));
+}
+
+unittest
+{
+    // Transience correctness test
+    struct TransientRange
+    {
+        int[][] src;
+        int[] buf;
+
+        this(int[][] _src)
+        {
+            src = _src;
+            buf.length = 100;
+        }
+        @property bool empty() { return src.empty; }
+        @property int[] front()
+        {
+            assert(src.front.length <= buf.length);
+            buf[0 .. src.front.length] = src.front[0..$];
+            return buf[0 .. src.front.length];
+        }
+        void popFront() { src.popFront(); }
+    }
+
+    // Test embedded empty elements
+    auto tr1 = TransientRange([[], [1,2,3], [], [4]]);
+    assert(equal(joiner(tr1, [0]), [0,1,2,3,0,0,4]));
+
+    // Test trailing empty elements
+    auto tr2 = TransientRange([[], [1,2,3], []]);
+    assert(equal(joiner(tr2, [0]), [0,1,2,3,0]));
+
+    // Test no empty elements
+    auto tr3 = TransientRange([[1,2], [3,4]]);
+    assert(equal(joiner(tr3, [0,1]), [1,2,0,1,3,4]));
+
+    // Test consecutive empty elements
+    auto tr4 = TransientRange([[1,2], [], [], [], [3,4]]);
+    assert(equal(joiner(tr4, [0,1]), [1,2,0,1,0,1,0,1,0,1,3,4]));
+
+    // Test consecutive trailing empty elements
+    auto tr5 = TransientRange([[1,2], [3,4], [], []]);
+    assert(equal(joiner(tr5, [0,1]), [1,2,0,1,3,4,0,1,0,1]));
 }
 
 /// Ditto
