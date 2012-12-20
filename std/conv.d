@@ -127,6 +127,19 @@ private
             !is(T == struct) &&
             !is(T == union);
     }
+
+    template isCharToInt(S, T)
+    {
+        enum isCharToInt = isImplicitlyConvertible!(S, T) &&
+                           (is(S == char) || is(S == wchar) || is(S == dchar))
+                           && isIntegral!T;
+    }
+
+    template isCharToFloat(S, T)
+    {
+        enum isCharToFloat = (is(S == char) || is(S == wchar) || is(S == dchar))
+                             && isFloatingPoint!T;
+    }
 }
 
 /**
@@ -329,7 +342,8 @@ to) simply performs the implicit conversion.
  */
 T toImpl(T, S)(S value)
     if (isImplicitlyConvertible!(S, T) &&
-        !isEnumStrToStr!(S, T) && !isNullToStr!(S, T))
+        !isEnumStrToStr!(S, T) && !isNullToStr!(S, T) &&
+        !isCharToInt!(S, T) && !isCharToFloat!(S, T) && !isCharToInt!(T, S))
 {
     alias isUnsigned isUnsignedInt;
 
@@ -428,6 +442,50 @@ unittest
             assertThrown!ConvOverflowException(to!Uint(sn));
         }
     }
+}
+
+/**
+Convert char to integral or floating-point by interpreting the char as a string of length 1.
+ */
+T toImpl(T, S)(S value)
+    if (isCharToInt!(S, T) || isCharToFloat!(S, T))
+{
+    immutable(S)[1] src = value;
+    return to!T(src);
+}
+
+unittest
+{
+    char one = '1';
+    wchar two = '2';
+    dchar three = '3';
+    assert(to!int(one) == 1);
+    assert(to!int(two) == 2);
+    assert(to!int(three) == 3);
+    assert(to!int(to!float(one)) == 1);
+    assertThrown!ConvException(to!int('a'));
+}
+
+/**
+Convert an integral to char.
+ */
+T toImpl(T, S)(S value)
+    if (isCharToInt!(T, S) && isIntegral!S)
+{
+    enforce(value >= 0 && value <= 9,
+            new ConvException(format("Value cannot be converted to char because it is out of range: %s", value)));
+
+    return cast(T)(value + 48);
+}
+
+unittest
+{
+    assert(to!char(0) == '0');
+    assert(to!char(9) == '9');
+    assert(to!wchar(9) == '9');
+    assert(to!dchar(9) == '9');
+    assertThrown!ConvException(to!char(10));
+    assertThrown!ConvException(to!char(-1));
 }
 
 /*
@@ -1271,7 +1329,7 @@ fit in the narrower type.
 T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
         (isNumeric!S || isSomeChar!S) && !is(S == enum) &&
-        (isNumeric!T || isSomeChar!T) && !is(T == enum))
+        (isNumeric!T || isSomeChar!T) && !is(T == enum) && !isCharToInt!(T, S))
 {
     enum sSmallest = mostNegative!S;
     enum tSmallest = mostNegative!T;
