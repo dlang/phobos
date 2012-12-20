@@ -1908,10 +1908,13 @@ private auto zigguratAlgorithm
 }
 
 /**
-This is a normal distribution engine for use with normal() and Normal.
-It uses the Ziggurat algorithm. This algorithm has high sampling speed,
-but uses more memory (a kilobyte or so) than the alternatives and has long
-initialization time (somewhere around a millisecond on a modern X86 CPU).
+Generates a random floating-point number drawn from a
+normal (Gaussian) distribution with mean 0 and standard
+deviation (sigma) 1, using the Ziggurat algorithm.
+
+This engine has high sampling speed, but uses more memory (a kilobyte or so) 
+than the alternatives and has a relatively long initialization time (somewhere 
+around a millisecond on a modern X86 CPU).
  */
 struct NormalZigguratEngine(T) if(isFloatingPoint!T)
 {
@@ -1919,7 +1922,7 @@ struct NormalZigguratEngine(T) if(isFloatingPoint!T)
     // trade off. We could have multiple NormalZigguratEngines with 
     // different numbers of layers, but if the user isn't willing to trade
     // initialization time and size for sampling speed, he should use
-    // some other algorithm, like Box-Muller
+    // some other engine, like Box-Muller
     enum int n = 128;
 
     /// Initializes the engine. This must be called before the first call to
