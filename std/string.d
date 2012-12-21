@@ -705,6 +705,7 @@ unittest
 string s = "hello";
 static assert(is(typeof(representation(s)) == immutable(ubyte)[]));
 assert(representation(s) is cast(immutable(ubyte)[]) s);
+assert(representation(s) == [0x68, 0x65, 0x6c, 0x6c, 0x6f]);
 ----
  */
 auto representation(Char)(Char[] s) pure nothrow
@@ -727,31 +728,34 @@ auto representation(Char)(Char[] s) pure nothrow
 
 unittest
 {
+    //test example
+    string s = "hello";
+    static assert(is(typeof(representation(s)) == immutable(ubyte)[]));
+    assert(representation(s) is cast(immutable(ubyte)[]) s);
+    assert(representation(s) == [0x68, 0x65, 0x6c, 0x6c, 0x6f]);
+}
+unittest
+{
     void test(Char, T)(Char[] str)
     {
         static assert(is(typeof(representation(str)) == T[]));
         assert(representation(str) is cast(T[]) str);
     }
 
-    test!(immutable(char) , immutable(ubyte) )("hello" );
-    test!(immutable(wchar), immutable(ushort))("hello"w);
-    test!(immutable(dchar), immutable(uint)  )("hello"d);
+    foreach(Type; TypeTuple!(Tuple!(char , ubyte ),
+                             Tuple!(wchar, ushort),
+                             Tuple!(dchar, uint  )))
+    {
+        alias Char = FieldTypeTuple!Type[0];
+        alias Int  = FieldTypeTuple!Type[1];
+        enum immutable(Char)[] hello = "hello";
 
-    test!(const(char) , const(ubyte) )("hello" );
-    test!(const(wchar), const(ushort))("hello"w);
-    test!(const(dchar), const(uint)  )("hello"d);
-
-    test!(char , ubyte )("hello" .dup);
-    test!(wchar, ushort)("hello"w.dup);
-    test!(dchar, uint  )("hello"d.dup);
-
-    test!(shared(char) , shared(ubyte) )(cast(shared) "hello" .dup);
-    test!(shared(wchar), shared(ushort))(cast(shared) "hello"w.dup);
-    test!(shared(dchar), shared(uint)  )(cast(shared) "hello"d.dup);
-
-    test!(const(shared(char)) , const(shared(ubyte)) )("hello" );
-    test!(const(shared(wchar)), const(shared(ushort)))("hello"w);
-    test!(const(shared(dchar)), const(shared(uint))  )("hello"d);
+        test!(   immutable(Char) ,    immutable(Int) )(hello);
+        test!(       const(Char) ,        const(Int) )(hello);
+        test!(             Char  ,              Int  )(hello.dup);
+        test!(      shared(Char) ,       shared(Int) )(cast(shared) hello.dup);
+        test!(const(shared(Char)), const(shared(Int)))(hello);
+    }
 }
 
 
