@@ -2548,8 +2548,8 @@ unittest
     assert(format("foo %d", -123) == "foo -123");
     assert(format("foo %d", 123) == "foo 123");
 
-    assertThrown!FormatError(format("foo %s"));
-    assertThrown!FormatError(format("foo %s", 123, 456));
+    assertThrown!FormatException(format("foo %s"));
+    assertThrown!FormatException(format("foo %s", 123, 456));
 }
 
 
@@ -2636,8 +2636,8 @@ unittest
     assert(sformat(buf[], "foo %d", -123) == "foo -123");
     assert(sformat(buf[], "foo %d", 123) == "foo 123");
 
-    assertThrown!FormatError(sformat(buf[], "foo %s"));
-    assertThrown!FormatError(sformat(buf[], "foo %s", 123, 456));
+    assertThrown!FormatException(sformat(buf[], "foo %s"));
+    assertThrown!FormatException(sformat(buf[], "foo %s", 123, 456));
 
     assert(sformat(buf[], "%s %s %s", "c"c, "w"w, "d"d) == "c w d");
 }
@@ -2678,8 +2678,8 @@ deprecated unittest
     assert(xformat("foo %d", -123) == "foo -123");
     assert(xformat("foo %d", 123) == "foo 123");
 
-    assertThrown!FormatError(xformat("foo %s"));
-    assertThrown!FormatError(xformat("foo %s", 123, 456));
+    assertThrown!FormatException(xformat("foo %s"));
+    assertThrown!FormatException(xformat("foo %s", 123, 456));
 }
 
 
@@ -2755,8 +2755,8 @@ deprecated unittest
     assert(xsformat(buf[], "foo %d", -123) == "foo -123");
     assert(xsformat(buf[], "foo %d", 123) == "foo 123");
 
-    assertThrown!FormatError(xsformat(buf[], "foo %s"));
-    assertThrown!FormatError(xsformat(buf[], "foo %s", 123, 456));
+    assertThrown!FormatException(xsformat(buf[], "foo %s"));
+    assertThrown!FormatException(xsformat(buf[], "foo %s", 123, 456));
 
     assert(xsformat(buf[], "%s %s %s", "c"c, "w"w, "d"d) == "c w d");
 }
