@@ -29,7 +29,7 @@ import core.exception : RangeError, onRangeError;
 import core.vararg, core.stdc.stdlib, core.stdc.string,
     std.algorithm, std.ascii, std.conv, std.exception, std.format, std.functional,
     std.metastrings, std.range, std.regex, std.traits,
-    std.typetuple, std.uni, std.utf;
+    std.typecons, std.typetuple, std.uni, std.utf;
 
 //Remove when repeat is finally removed. They're only here as part of the
 //deprecation of these functions in std.string.
@@ -705,6 +705,7 @@ unittest
 string s = "hello";
 static assert(is(typeof(representation(s)) == immutable(ubyte)[]));
 assert(representation(s) is cast(immutable(ubyte)[]) s);
+assert(representation(s) == [0x68, 0x65, 0x6c, 0x6c, 0x6f]);
 ----
  */
 auto representation(Char)(Char[] s) pure nothrow
@@ -727,31 +728,34 @@ auto representation(Char)(Char[] s) pure nothrow
 
 unittest
 {
+    //test example
+    string s = "hello";
+    static assert(is(typeof(representation(s)) == immutable(ubyte)[]));
+    assert(representation(s) is cast(immutable(ubyte)[]) s);
+    assert(representation(s) == [0x68, 0x65, 0x6c, 0x6c, 0x6f]);
+}
+unittest
+{
     void test(Char, T)(Char[] str)
     {
         static assert(is(typeof(representation(str)) == T[]));
         assert(representation(str) is cast(T[]) str);
     }
 
-    test!(immutable(char) , immutable(ubyte) )("hello" );
-    test!(immutable(wchar), immutable(ushort))("hello"w);
-    test!(immutable(dchar), immutable(uint)  )("hello"d);
+    foreach(Type; TypeTuple!(Tuple!(char , ubyte ),
+                             Tuple!(wchar, ushort),
+                             Tuple!(dchar, uint  )))
+    {
+        alias Char = FieldTypeTuple!Type[0];
+        alias Int  = FieldTypeTuple!Type[1];
+        enum immutable(Char)[] hello = "hello";
 
-    test!(const(char) , const(ubyte) )("hello" );
-    test!(const(wchar), const(ushort))("hello"w);
-    test!(const(dchar), const(uint)  )("hello"d);
-
-    test!(char , ubyte )("hello" .dup);
-    test!(wchar, ushort)("hello"w.dup);
-    test!(dchar, uint  )("hello"d.dup);
-
-    test!(shared(char) , shared(ubyte) )(cast(shared) "hello" .dup);
-    test!(shared(wchar), shared(ushort))(cast(shared) "hello"w.dup);
-    test!(shared(dchar), shared(uint)  )(cast(shared) "hello"d.dup);
-
-    test!(const(shared(char)) , const(shared(ubyte)) )("hello" );
-    test!(const(shared(wchar)), const(shared(ushort)))("hello"w);
-    test!(const(shared(dchar)), const(shared(uint))  )("hello"d);
+        test!(   immutable(Char) ,    immutable(Int) )(hello);
+        test!(       const(Char) ,        const(Int) )(hello);
+        test!(             Char  ,              Int  )(hello.dup);
+        test!(      shared(Char) ,       shared(Int) )(cast(shared) hello.dup);
+        test!(const(shared(Char)), const(shared(Int)))(hello);
+    }
 }
 
 
@@ -2548,8 +2552,8 @@ unittest
     assert(format("foo %d", -123) == "foo -123");
     assert(format("foo %d", 123) == "foo 123");
 
-    assertThrown!FormatError(format("foo %s"));
-    assertThrown!FormatError(format("foo %s", 123, 456));
+    assertThrown!FormatException(format("foo %s"));
+    assertThrown!FormatException(format("foo %s", 123, 456));
 }
 
 
@@ -2636,8 +2640,8 @@ unittest
     assert(sformat(buf[], "foo %d", -123) == "foo -123");
     assert(sformat(buf[], "foo %d", 123) == "foo 123");
 
-    assertThrown!FormatError(sformat(buf[], "foo %s"));
-    assertThrown!FormatError(sformat(buf[], "foo %s", 123, 456));
+    assertThrown!FormatException(sformat(buf[], "foo %s"));
+    assertThrown!FormatException(sformat(buf[], "foo %s", 123, 456));
 
     assert(sformat(buf[], "%s %s %s", "c"c, "w"w, "d"d) == "c w d");
 }
@@ -2678,8 +2682,8 @@ deprecated unittest
     assert(xformat("foo %d", -123) == "foo -123");
     assert(xformat("foo %d", 123) == "foo 123");
 
-    assertThrown!FormatError(xformat("foo %s"));
-    assertThrown!FormatError(xformat("foo %s", 123, 456));
+    assertThrown!FormatException(xformat("foo %s"));
+    assertThrown!FormatException(xformat("foo %s", 123, 456));
 }
 
 
@@ -2755,8 +2759,8 @@ deprecated unittest
     assert(xsformat(buf[], "foo %d", -123) == "foo -123");
     assert(xsformat(buf[], "foo %d", 123) == "foo 123");
 
-    assertThrown!FormatError(xsformat(buf[], "foo %s"));
-    assertThrown!FormatError(xsformat(buf[], "foo %s", 123, 456));
+    assertThrown!FormatException(xsformat(buf[], "foo %s"));
+    assertThrown!FormatException(xsformat(buf[], "foo %s", 123, 456));
 
     assert(xsformat(buf[], "%s %s %s", "c"c, "w"w, "d"d) == "c w d");
 }
