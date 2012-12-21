@@ -4237,16 +4237,33 @@ ptrdiff_t countUntil(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
     typeof(return) result;
     static if (hasLength!R1) //Note: Narrow strings don't have length.
     {
-        //Delegate to find. Find is very efficient
-        //We save haystack, but we don't care for needle
-        auto r2 = find!pred(haystack.save, needle);
-        if (!r2.empty) return cast(typeof(return)) (haystack.length - r2.length);
+        //We delegate to find because find is very efficient.
+        //We store the length of the haystack so we don't have to save it.
+        auto len = haystack.length;
+        auto r2 = find!pred(haystack, needle);
+        if (!r2.empty)
+            return cast(typeof(return)) (len - r2.length);
     }
     else
     {
         //Default case, slower route doing startsWith iteration
-        for ( ; !haystack.empty ; ++result, haystack.popFront() )
-            if (startsWith!pred(haystack.save, needle.save)) return result;
+        for ( ; !haystack.empty ; ++result )
+        {
+            //We compare the first elements of the ranges here before
+            //forwarding to startsWith. This avoids making useless saves to
+            //haystack/needle if they aren't even going to be mutated anyways.
+            //It also cuts down on the amount of pops on haystack.
+            if (haystack.front == needle.front)
+            {
+                //Here, we need to save the needle before popping it.
+                //haystack we pop in all paths, so we do that, and then save.
+                haystack.popFront();
+                if (startsWith!pred(haystack.save, needle.save.dropOne()))
+                    return result;
+            }
+            else
+                haystack.popFront();
+        }
     }
 
     //Because of @@@8804@@@: Avoids both "unreachable code" or "no return statement"
@@ -4275,6 +4292,16 @@ unittest
     assert(countUntil([0, 7, 12, 22, 9], [12, 22]) == 2);
     assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
     assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
+}
+unittest
+{
+    auto r = new ReferenceForwardRange!int([0, 1, 2, 3, 4, 5, 6]);
+    auto r2 = new ReferenceForwardRange!int([3, 4]);
+    auto r3 = new ReferenceForwardRange!int([3, 5]);
+    assert(r.save.countUntil(3)  == 3);
+    assert(r.save.countUntil(r2) == 3);
+    assert(r.save.countUntil(7)  == -1);
+    assert(r.save.countUntil(r3) == -1);
 }
 
 /++
