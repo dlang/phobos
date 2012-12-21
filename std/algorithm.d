@@ -10525,6 +10525,23 @@ unittest
  * The predicate $(D less) defines the lexicographical ordering to be used on
  * the range.
  *
+ * If the range is currently the lexicographically greatest permutation, it is
+ * permuted back to the least permutation and false is returned.  Otherwise,
+ * true is returned. One can thus generate all permutations of a range by
+ * sorting it according to $(D less), which produces the lexicographically
+ * least permutation, and then calling nextPermutation until it returns false.
+ * This is guaranteed to generate all distinct permutations of the range
+ * exactly once.  If there are $(I N) elements in the range and all of them are
+ * unique, then $(I N)! permutations will be generated. Otherwise, if there are
+ * some duplicated elements, fewer permutations will be produced.
+----
+// Enumerate all permutations
+int[] a = [1,2,3,4,5];
+while (nextPermutation(a))
+{
+    // a now contains the next permutation of the array.
+}
+----
  * Returns: false if the range was lexicographically the greatest, in which
  * case the range is reversed back to the lexicographically smallest
  * permutation; otherwise returns true.
@@ -10545,6 +10562,16 @@ assert(nextPermutation(a) == true);
 assert(a == [3,2,1]);
 assert(nextPermutation(a) == false);
 assert(a == [1,2,3]);
+----
+----
+// Step through permutations of an array containing duplicate elements:
+int[] a = [1,1,2];
+assert(nextPermutation(a) == true);
+assert(a == [1,2,1]);
+assert(nextPermutation(a) == true);
+assert(a == [2,1,1]);
+assert(nextPermutation(a) == false);
+assert(a == [1,1,2]);
 ----
  */
 bool nextPermutation(alias less="a<b", BidirectionalRange)
@@ -10690,24 +10717,73 @@ unittest
     assert(equal(a1, [1, 2, 3, 4]));
 }
 
+unittest
+{
+    // Test array with duplicate elements
+	int[] a = [1,1,2];
+	assert(nextPermutation(a) == true);
+	assert(a == [1,2,1]);
+	assert(nextPermutation(a) == true);
+	assert(a == [2,1,1]);
+	assert(nextPermutation(a) == false);
+	assert(a == [1,1,2]);
+}
+
 // nextEvenPermutation
 /**
  * Permutes $(D range) in-place to the next lexicographically greater $(I even)
  * permutation.
  *
- * An even permutation is one in which an even number of elements in the
- * original range are swapped. The set of even permutations is only distinct
- * from the set of all permutations when there are no duplicate elements in the
- * range.
- *
  * The predicate $(D less) defines the lexicographical ordering to be used on
  * the range.
+ *
+ * An even permutation is one which is produced by swapping an even number of
+ * pairs of elements in the original range. The set of $(I even) permutations
+ * is distinct from the set of $(I all) permutations only when there are no
+ * duplicate elements in the range. If the range has $(I N) unique elements,
+ * then there are exactly $(I N)!/2 even permutations.
+ *
+ * If the range is already the lexicographically greatest even permutation, it
+ * is permuted back to the least even permutation and false is returned.
+ * Otherwise, true is returned, and the range is modified in-place to be the
+ * lexicographically next even permutation.
+ *
+ * One can thus generate the even permutations of a range with unique elements
+ * by starting with the lexicographically smallest permutation, and repeatedly
+ * calling nextEvenPermutation until it returns false.
+----
+// Enumerate even permutations
+int[] a = [1,2,3,4,5];
+while (nextEvenPermutation(a))
+{
+    // a now contains the next even permutation of the array.
+}
+----
+ * One can also generate the $(I odd) permutations of a range by noting that
+ * permutations obey the rule that even + even = even, and odd + even = odd.
+ * Thus, by swapping the last two elements of a lexicographically least range,
+ * it is turned into the first odd permutation. Then calling
+ * nextEvenPermutation on this first odd permutation will generate the next
+ * even permutation relative to this odd permutation, which is actually the
+ * next odd permutation of the original range. Thus, by repeatedly calling
+ * nextEvenPermutation until it returns false, one enumerates the odd
+ * permutations of the original range.
+----
+// Enumerate odd permutations
+int[] a = [1,2,3,4,5];
+swap(a[$-2], a[$-1]);    // a is now the first odd permutation of [1,2,3,4,5]
+while (nextEvenPermutation(a))
+{
+    // a now contains the next odd permutation of the original array
+    // (which is an even permutation of the first odd permutation).
+}
+----
  *
  * Warning: Since even permutations are only distinct from all permutations
  * when the range elements are unique, this function assumes that there are no
  * duplicate elements under the specified ordering. If this is not _true, some
- * permutations may fail to be generated. When there are duplicate elements,
- * you should be using $(MYREF nextPermutation) anyway.
+ * permutations may fail to be generated. When the range has non-unique
+ * elements, you should use $(MYREF nextPermutation) instead.
  *
  * Returns: false if the range was lexicographically the greatest, in which
  * case the range is reversed back to the lexicographically smallest
