@@ -10647,3 +10647,92 @@ unittest
     assert(!nextPermutation(a1));
     assert(equal(a1, [1, 2, 3, 4]));
 }
+
+// nextEvenPermutation
+/**
+ * Permutes the range in-place to the next lexicographically greater even
+ * permutation.
+ *
+ * The predicate less defines the lexicographical ordering to be used on the
+ * range.
+ *
+ * Since even permutations are only distinct from all permutations when the
+ * range elements are unique, this function assumes that there are no duplicate
+ * elements under the specified ordering. If this is not true, some
+ * permutations may fail to be generated.
+ *
+ * Returns: false if the range was lexicographically the greatest, in which
+ * case the range is reversed back to the lexicographically smallest
+ * permutation; otherwise returns true.
+ */
+bool nextEvenPermutation(alias less="a<b", BidirectionalRange)
+                        (ref BidirectionalRange range)
+    if (isBidirectionalRange!BidirectionalRange &&
+        hasSwappableElements!BidirectionalRange)
+{
+    // Ranges of 0 or 1 element have no distinct permutations.
+    if (range.empty) return false;
+
+    bool oddParity = false;
+    bool ret = true;
+    do
+    {
+        auto i = retro(range);
+        auto last = i.save;
+
+        // Find last occurring increasing pair of elements
+        size_t n = 1;
+        for (i.popFront(); !i.empty;
+            i.popFront(), last.popFront(), n++)
+        {
+            if (binaryFun!less(i.front, last.front))
+                break;
+        }
+
+        if (!i.empty)
+        {
+            // Find last element greater than i.front.
+            auto j = find!((a) => binaryFun!less(i.front, a))(
+                           takeExactly(retro(range), n));
+
+            // shouldn't happen since i.front < last.front
+            assert(!j.empty);
+
+            swap(i.front, j.front);
+            oddParity = !oddParity;
+
+            ret = true;
+        }
+        else
+        {
+            // Entire range is decreasing: it's lexicographically
+            // the greatest.
+            ret = false;
+        }
+
+        reverse(takeExactly(retro(range), n));
+        if ((n / 2) % 2 == 1)
+            oddParity = !oddParity;
+    } while(oddParity);
+
+    return ret;
+}
+
+unittest
+{
+    auto a2 = [ 1, 2, 3 ];
+
+    assert(nextEvenPermutation(a2));
+    assert(equal(a2, [ 2, 3, 1 ]));
+
+    assert(nextEvenPermutation(a2));
+    assert(equal(a2, [ 3, 1, 2 ]));
+
+    assert(!nextEvenPermutation(a2));
+    assert(equal(a2, [ 1, 2, 3 ]));
+
+    auto a3 = [ 1, 2, 3, 4 ];
+    int count = 1;
+    while (nextEvenPermutation(a3)) count++;
+    assert(count == 12);
+}
