@@ -25,7 +25,8 @@ splitter) $(MYREF uniq) )
 $(TR $(TDNW Sorting) $(TD $(MYREF completeSort) $(MYREF isPartitioned)
 $(MYREF isSorted) $(MYREF makeIndex) $(MYREF partialSort) $(MYREF
 partition) $(MYREF partition3) $(MYREF schwartzSort) $(MYREF sort)
-$(MYREF topN) $(MYREF topNCopy) )
+$(MYREF topN) $(MYREF topNCopy) $(MYREF nextPermutation)
+$(MYREF nextEvenPermutation) )
 )
 $(TR $(TDNW Set&nbsp;operations) $(TD $(MYREF
 largestPartialIntersection) $(MYREF largestPartialIntersectionWeighted)
@@ -234,6 +235,12 @@ range.)
 )
 $(TR $(TDNW $(LREF topNCopy)) $(TD Copies out the top elements
 of a range.)
+)
+$(TR $(TDNW $(LREF nextPermutation)) $(TD Computes the next lexicographically
+greater permutation of a range in-place.)
+)
+$(TR $(TDNW $(LREF nextEvenPermutation)) $(TD Computes the next
+lexicographically greater even permutation of a range in-place.)
 )
 $(LEADINGROW Set operations
 )
@@ -10512,15 +10519,33 @@ unittest
 
 // nextPermutation
 /**
- * Permutes the range in-place to the next lexicographically greater
+ * Permutes $(D range) in-place to the next lexicographically greater
  * permutation.
  *
- * The predicate less defines the lexicographical ordering to be used on the
- * range.
+ * The predicate $(D less) defines the lexicographical ordering to be used on
+ * the range.
  *
  * Returns: false if the range was lexicographically the greatest, in which
  * case the range is reversed back to the lexicographically smallest
  * permutation; otherwise returns true.
+ *
+ * Example:
+----
+// Step through all permutations of a sorted array in lexicographic order
+int[] a = [1,2,3];
+assert(nextPermutation(a) == true);
+assert(a == [1,3,2]);
+assert(nextPermutation(a) == true);
+assert(a == [2,1,3]);
+assert(nextPermutation(a) == true);
+assert(a == [2,3,1]);
+assert(nextPermutation(a) == true);
+assert(a == [3,1,2]);
+assert(nextPermutation(a) == true);
+assert(a == [3,2,1]);
+assert(nextPermutation(a) == false);
+assert(a == [1,2,3]);
+----
  */
 bool nextPermutation(alias less="a<b", BidirectionalRange)
                     (ref BidirectionalRange range)
@@ -10569,6 +10594,23 @@ unittest
     int[] a2 = [1];
     assert(!nextPermutation(a2));
     assert(a2 == [1]);
+}
+
+unittest
+{
+    int[] a = [1,2,3];
+    assert(nextPermutation(a) == true);
+    assert(a == [1,3,2]);
+    assert(nextPermutation(a) == true);
+    assert(a == [2,1,3]);
+    assert(nextPermutation(a) == true);
+    assert(a == [2,3,1]);
+    assert(nextPermutation(a) == true);
+    assert(a == [3,1,2]);
+    assert(nextPermutation(a) == true);
+    assert(a == [3,2,1]);
+    assert(nextPermutation(a) == false);
+    assert(a == [1,2,3]);
 }
 
 unittest
@@ -10650,20 +10692,38 @@ unittest
 
 // nextEvenPermutation
 /**
- * Permutes the range in-place to the next lexicographically greater even
+ * Permutes $(D range) in-place to the next lexicographically greater $(I even)
  * permutation.
  *
- * The predicate less defines the lexicographical ordering to be used on the
+ * An even permutation is one in which an even number of elements in the
+ * original range are swapped. The set of even permutations is only distinct
+ * from the set of all permutations when there are no duplicate elements in the
  * range.
  *
- * Since even permutations are only distinct from all permutations when the
- * range elements are unique, this function assumes that there are no duplicate
- * elements under the specified ordering. If this is not true, some
- * permutations may fail to be generated.
+ * The predicate $(D less) defines the lexicographical ordering to be used on
+ * the range.
+ *
+ * Warning: Since even permutations are only distinct from all permutations
+ * when the range elements are unique, this function assumes that there are no
+ * duplicate elements under the specified ordering. If this is not _true, some
+ * permutations may fail to be generated. When there are duplicate elements,
+ * you should be using $(MYREF nextPermutation) anyway.
  *
  * Returns: false if the range was lexicographically the greatest, in which
  * case the range is reversed back to the lexicographically smallest
  * permutation; otherwise returns true.
+ *
+ * Example:
+----
+// Step through even permutations of a sorted array in lexicographic order
+int[] a = [1,2,3];
+assert(nextPermutation(a) == true);
+assert(a == [2,3,1]);
+assert(nextPermutation(a) == true);
+assert(a == [3,1,2]);
+assert(nextPermutation(a) == false);
+assert(a == [1,2,3]);
+----
  */
 bool nextEvenPermutation(alias less="a<b", BidirectionalRange)
                         (ref BidirectionalRange range)
