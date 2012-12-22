@@ -5226,14 +5226,17 @@ Returns the common prefix of two ranges. Example:
 assert(commonPrefix("hello, world", "hello, there") == "hello, ");
 ----
 
-For strings, the result is a slice of $(D r1) which contains the characters that
-both strings start with. For all other types, the type of the result is the
-same as the result of $(D takeExactly(r1, n)), where $(D n) is the number of
-elements that both ranges start with.
+If the first argument is a string, then the result is a slice of $(D r1) which
+contains the characters that both ranges start with. For all other types, the
+type of the result is the same as the result of $(D takeExactly(r1, n)), where
+$(D n) is the number of elements that both ranges start with.
+
+See_Also:
+    $(XREF range, takeExactly)
  */
 auto commonPrefix(alias pred = "a == b", R1, R2)(R1 r1, R2 r2)
-if (isForwardRange!R1 && isForwardRange!R2 &&
-    !isNarrowString!R1 && !isNarrowString!R2 &&
+if (isForwardRange!R1 && isInputRange!R2 &&
+    !isNarrowString!R1 &&
     is(typeof(binaryFun!pred(r1.front, r2.front))))
 {
     static if (isRandomAccessRange!R1 && isRandomAccessRange!R2 &&
@@ -5263,8 +5266,7 @@ if (isForwardRange!R1 && isForwardRange!R2 &&
 }
 
 auto commonPrefix(alias pred, R1, R2)(R1 r1, R2 r2)
-if (isSomeString!R1 && isSomeString!R2 &&
-    (isNarrowString!R1 || isNarrowString!R2) &&
+if (isNarrowString!R1 && isInputRange!R2 &&
     is(typeof(binaryFun!pred(r1.front, r2.front))))
 {
     auto result = r1.save;
@@ -5282,7 +5284,14 @@ if (isSomeString!R1 && isSomeString!R2 &&
 }
 
 auto commonPrefix(R1, R2)(R1 r1, R2 r2)
-if (isSomeString!R1 && isSomeString!R2 && (isNarrowString!R1 || isNarrowString!R2))
+if (isNarrowString!R1 && isInputRange!R2 && !isNarrowString!R2 &&
+    is(typeof(r1.front == r2.front)))
+{
+    return commonPrefix!"a == b"(r1, r2);
+}
+
+auto commonPrefix(R1, R2)(R1 r1, R2 r2)
+if (isNarrowString!R1 && isNarrowString!R2)
 {
     static if (ElementEncodingType!R1.sizeof == ElementEncodingType!R2.sizeof)
     {
@@ -5344,9 +5353,25 @@ unittest
             assert(commonPrefix!"a != b"(to!S("Пиво"), to!T("онво")) == to!S("Пи"));
             assert(commonPrefix!"a != b"(to!S("онво"), to!T("Пиво")) == to!S("он"));
         }
+
+        static assert(is(typeof(commonPrefix(to!S("Пиво"), filter!"true"("Пони"))) == S));
+        assert(equal(commonPrefix(to!S("Пиво"), filter!"true"("Пони")), to!S("П")));
+
+        static assert(is(typeof(commonPrefix(filter!"true"("Пиво"), to!S("Пони"))) ==
+                      typeof(takeExactly(filter!"true"("П"), 1))));
+        assert(equal(commonPrefix(filter!"true"("Пиво"), to!S("Пони")), takeExactly(filter!"true"("П"), 1)));
     }
 
     assertThrown!UTFException(commonPrefix("\U0010FFFF\U0010FFFB", "\U0010FFFF\U0010FFFB"[0 .. $ - 1]));
+
+    assert(commonPrefix("12345"d, [49, 50, 51, 60, 60]) == "123"d);
+    assert(commonPrefix([49, 50, 51, 60, 60], "12345" ) == [49, 50, 51]);
+    assert(commonPrefix([49, 50, 51, 60, 60], "12345"d) == [49, 50, 51]);
+
+    assert(commonPrefix!"a == ('0' + b)"("12345" , [1, 2, 3, 9, 9]) == "123");
+    assert(commonPrefix!"a == ('0' + b)"("12345"d, [1, 2, 3, 9, 9]) == "123"d);
+    assert(commonPrefix!"('0' + a) == b"([1, 2, 3, 9, 9], "12345" ) == [1, 2, 3]);
+    assert(commonPrefix!"('0' + a) == b"([1, 2, 3, 9, 9], "12345"d) == [1, 2, 3]);
 }
 
 // findAdjacent
