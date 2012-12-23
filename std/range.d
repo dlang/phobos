@@ -4019,10 +4019,10 @@ private template lengthType(R) { alias typeof((inout int = 0){ R r = void; retur
    ----
 */
 struct Zip(Ranges...)
-if(Ranges.length && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
+    if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 {
-    alias staticMap!(Unqual, Ranges) R;
-    Tuple!R ranges;
+    alias R = Ranges;
+    R ranges;
     alias Tuple!(staticMap!(.ElementType, R)) ElementType;
     StoppingPolicy stoppingPolicy = StoppingPolicy.shortest;
 
@@ -4072,7 +4072,7 @@ if(Ranges.length && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
                 foreach (i, Unused; R[1 .. $])
                 {
                     enforce(ranges[0].empty ==
-                            ranges.field[i + 1].empty,
+                            ranges[i + 1].empty,
                             "Inequal-length ranges passed to Zip");
                 }
                 return ranges[0].empty;
@@ -4295,12 +4295,12 @@ if(Ranges.length && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
             {
                 if (stoppingPolicy == StoppingPolicy.shortest)
                 {
-                    result = min(ranges.field[i + 1].length, result);
+                    result = min(ranges[i + 1].length, result);
                 }
                 else
                 {
                     assert(stoppingPolicy == StoppingPolicy.longest);
-                    result = max(ranges.field[i + 1].length, result);
+                    result = max(ranges[i + 1].length, result);
                 }
             }
             return result;
@@ -4378,17 +4378,17 @@ if(Ranges.length && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
 }
 
 /// Ditto
-auto zip(R...)(R ranges)
-if (allSatisfy!(isInputRange, staticMap!(Unqual, R)))
+auto zip(Ranges...)(Ranges ranges)
+    if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 {
-    return Zip!R(ranges);
+    return Zip!Ranges(ranges);
 }
 
 /// Ditto
-auto zip(R...)(StoppingPolicy sp, R ranges)
-if (allSatisfy!(isInputRange, staticMap!(Unqual, R)))
+auto zip(Ranges...)(StoppingPolicy sp, Ranges ranges)
+    if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 {
-    return Zip!R(ranges, sp);
+    return Zip!Ranges(ranges, sp);
 }
 
 /**
@@ -4400,10 +4400,10 @@ enum StoppingPolicy
     /// Stop when the shortest range is exhausted
     shortest,
     /// Stop when the longest range is exhausted
-        longest,
+    longest,
     /// Require that all ranges are equal
-        requireSameLength,
-        }
+    requireSameLength,
+}
 
 unittest
 {
@@ -4445,7 +4445,7 @@ unittest
     auto stuff = tuple(tuple(a1, a2),
             tuple(filter!"a"(a1), filter!"a"(a2)));
 
-    alias Zip!(immutable int[], immutable float[]) FOO;
+    alias Zip!(immutable(int)[], immutable(float)[]) FOO;
 
     foreach(t; stuff.expand) {
         auto arr1 = t[0];
@@ -4653,10 +4653,10 @@ private string lockstepApply(Ranges...)(bool withIndex) if (Ranges.length > 0)
    ---
 */
 struct Lockstep(Ranges...)
-if(Ranges.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
+    if (Ranges.length > 1 && allSatisfy!(isInputRange, Ranges))
 {
 private:
-    alias staticMap!(Unqual, Ranges) R;
+    alias R = Ranges;
     R _ranges;
     StoppingPolicy _s;
 
@@ -4680,50 +4680,24 @@ template Lockstep(Range)
     alias Range Lockstep;
 }
 
-version(StdDdoc)
+/// Ditto
+Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges)
+    if (allSatisfy!(isInputRange, Ranges))
 {
-    /// Ditto
-    Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges) { assert(0); }
-    /// Ditto
-    Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges, StoppingPolicy s)
-    {
-        assert(0);
-    }
+    return Lockstep!(Ranges)(ranges);
 }
-else
+/// Ditto
+Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges, StoppingPolicy s)
+    if (allSatisfy!(isInputRange, Ranges))
 {
-    // Work around DMD bugs 4676, 4652.
-    auto lockstep(Args...)(Args args)
-        if (allSatisfy!(isInputRange, staticMap!(Unqual, Args)) || (
-                    allSatisfy!(isInputRange, staticMap!(Unqual, Args[0..$ - 1])) &&
-                    is(Args[$ - 1] == StoppingPolicy))
-            )
-        {
-            static if (is(Args[$ - 1] == StoppingPolicy))
-            {
-                alias args[0..$ - 1] ranges;
-                alias Args[0..$ - 1] Ranges;
-                alias args[$ - 1] stoppingPolicy;
-            }
-            else
-            {
-                alias Args Ranges;
-                alias args ranges;
-                auto stoppingPolicy = StoppingPolicy.shortest;
-            }
-
-            static if (Ranges.length > 1)
-            {
-                return Lockstep!(Ranges)(ranges, stoppingPolicy);
-            }
-            else
-            {
-                return ranges[0];
-            }
-        }
+    static if (Ranges.length > 1)
+        return Lockstep!Ranges(ranges, s);
+    else
+        return ranges[0];
 }
 
-unittest {
+unittest
+{
     // The filters are to make these the lowest common forward denominator ranges,
     // i.e. w/o ref return, random access, length, etc.
     auto foo = filter!"a"([1,2,3,4,5]);
