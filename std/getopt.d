@@ -497,6 +497,11 @@ private void getoptImpl(T...)(ref string[] args,
 private void handleOption(R)(string option, R receiver, ref string[] args,
     ref configuration cfg, bool incremental)
 {
+    static if (!isDelegate!(typeof(receiver)))
+        alias typeof(*receiver) ReceiverType;
+    else
+        alias typeof(receiver) ReceiverType;
+
     // Scan arguments looking for a match for this option
     for (size_t i = 1; i < args.length; ) {
         auto a = args[i];
@@ -519,12 +524,7 @@ private void handleOption(R)(string option, R receiver, ref string[] args,
             continue;
         }
         string val;
-        bool isNumericOption;
-        static if (!isDelegate!(typeof(receiver)))
-        {
-            isNumericOption = isNumeric!(typeof(*receiver));
-        }
-        if (!isValidOption(a, option, val, cfg, isNumericOption))
+        if (!isValidOption(a, option, val, cfg, isNumeric!ReceiverType))
         {
             ++i;
             continue;
@@ -534,7 +534,7 @@ private void handleOption(R)(string option, R receiver, ref string[] args,
         // (and potentially args[i + 1] too, but that comes later)
         args = args[0 .. i] ~ args[i + 1 .. $];
 
-        static if (is(typeof(*receiver) == bool))
+        static if (is(ReceiverType == bool))
         {
             // enforce that no value was given
             enforce(val is null);
@@ -546,8 +546,7 @@ private void handleOption(R)(string option, R receiver, ref string[] args,
             // non-boolean option, which might include an argument
             //enum isDelegateWithOneParameter = is(typeof(receiver("")) : void);
             enum isDelegateWithLessThanTwoParameters =
-                is(typeof(receiver) == delegate) &&
-                !is(typeof(receiver("", "")));
+                isDelegate!ReceiverType && !is(typeof(receiver("", "")));
             if (!isDelegateWithLessThanTwoParameters && !(val.length) && !incremental) {
                 // Eat the next argument too.  Check to make sure there's one
                 // to be eaten first, though.
@@ -556,18 +555,18 @@ private void handleOption(R)(string option, R receiver, ref string[] args,
                 val = args[i];
                 args = args[0 .. i] ~ args[i + 1 .. $];
             }
-            static if (is(typeof(*receiver) == enum))
+            static if (is(ReceiverType == enum))
             {
                 // enum receiver
-                *receiver = parse!(typeof(*receiver))(val);
+                *receiver = parse!ReceiverType(val);
             }
-            else static if (is(typeof(*receiver) : real))
+            else static if (is(ReceiverType : real))
             {
                 // numeric receiver
                 if (incremental) ++*receiver;
-                else *receiver = to!(typeof(*receiver))(val);
+                else *receiver = to!ReceiverType(val);
             }
-            else static if (is(typeof(receiver) == delegate))
+            else static if (isDelegate!ReceiverType)
             {
                 static if (is(typeof(receiver("", "")) : void))
                 {
@@ -576,7 +575,6 @@ private void handleOption(R)(string option, R receiver, ref string[] args,
                 }
                 else static if (is(typeof(receiver("")) : void))
                 {
-                    static assert(is(typeof(receiver("")) : void));
                     // boolean-style receiver
                     receiver(option);
                 }
@@ -592,22 +590,25 @@ private void handleOption(R)(string option, R receiver, ref string[] args,
                 // string receiver
                 *receiver = to!(typeof(*receiver))(val);
             }
-            else static if (isDynamicArray!(typeof(*receiver)))
+            else static if (isDynamicArray!ReceiverType)
             {
                 // array receiver
                 foreach (elem; split(val, arraySep))
                     *receiver ~= [ to!(typeof(*receiver[0]))(elem) ];
             }
-            else static if (isAssociativeArray!(typeof(*receiver)))
+            else static if (isAssociativeArray!ReceiverType)
             {
                 // hash receiver
                 alias typeof(receiver.keys[0]) K;
                 alias typeof(receiver.values[0]) V;
-                auto j = std.string.indexOf(val, assignChar);
-                enforce(j > 0,
-                        "Illegal argument " ~ a ~ ".");
-                auto key = to!K(val[0 .. j]), value = to!V(val[j + 1 .. $]);
-                (*receiver)[key] = value;
+                foreach (elem; split(val, arraySep))
+                {
+                    auto j = std.string.indexOf(elem, assignChar);
+                    enforce(j > 0,
+                            "Illegal argument " ~ a ~ ".");
+                    auto key = to!K(elem[0 .. j]), value = to!V(elem[j + 1 .. $]);
+                    (*receiver)[key] = value;
+                }
             }
             else
             {
