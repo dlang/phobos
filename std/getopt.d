@@ -1072,7 +1072,61 @@ unittest {
     }
 }
 
-// with no space only for short numeric options, i.e. config.noSpaceOnlyForShortNumericOptions
+// bundling tests
+unittest
+{
+    bool verbose;
+    string filename;
+
+    auto args = ["program.name",
+                 "-fzv"];
+    getopt(args, config.bundling,
+                 "f", &filename,
+                 "v", &verbose);
+    assert(verbose, to!string(verbose));
+    assert(filename == "-z", to!string(filename)); // due to unbundling
+
+    verbose = verbose.init;
+    filename = filename.init;
+    args = ["program.name",
+            "-vf", "filename"].dup;
+    getopt(args, config.bundling,
+                 "f", &filename,
+                 "v", &verbose);
+    assert(verbose, to!string(verbose));
+    assert(filename == "filename", to!string(filename));
+
+    verbose = verbose.init;
+    filename = filename.init;
+    args = ["program.name",
+            "-fvz", "filename"].dup;
+    assertThrown!Exception(getopt(args, config.bundling,
+                                        "f", &filename,
+                                        "v", &verbose));
+    assert(!verbose, to!string(verbose));
+    assert(filename == "-v", to!string(filename));
+
+    string str;
+    args = ["program.name",
+            "--a=-0x12"].dup;
+    assertThrown!Exception(getopt(args, config.bundling,
+                                        "a|addr", &str));
+    assert(str == "", to!string(str));
+
+    str = str.init;
+    args = ["program.name",
+            "-a=-0x12"].dup;
+    getopt(args, config.bundling,
+                 "a|addr", &str);
+    assert(str == "-0x12", to!string(str));
+
+    str = str.init;
+    args = ["program.name",
+            "-a=-0x12"].dup;
+    getopt(args, "a|addr", &str);
+    assert(str == "-0x12", to!string(str));
+}
+
 unittest {
     bool isEqual(T)(const(T) a, const(T) b) pure nothrow
     {
