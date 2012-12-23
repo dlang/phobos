@@ -1341,7 +1341,7 @@ auto x = normal(5.0, 7.0);
 
 // Generate a normally-distributed random number
 // using the Ziggurat algorithm
-auto z = normal!NormalZigguratEngine64(5.0, 7.0);
+auto z = normal!NormalZigguratEngine(5.0, 7.0);
 ----
 
 The struct implementations for normal random number generation store the mean and
@@ -1361,7 +1361,7 @@ auto x = nrng(rndGen);
 
 // Create a normal random number generator that uses
 // the Ziggurat algorithm
-auto nZig = normalRNG!NormalZigguratEngine64(0.0, 4.0);
+auto nZig = normalRNG!NormalZigguratEngine(0.0, 4.0);
 
 auto y = nZig(rndGen);
 ----
