@@ -10720,13 +10720,31 @@ unittest
 unittest
 {
     // Test array with duplicate elements
-	int[] a = [1,1,2];
-	assert(nextPermutation(a) == true);
-	assert(a == [1,2,1]);
-	assert(nextPermutation(a) == true);
-	assert(a == [2,1,1]);
-	assert(nextPermutation(a) == false);
-	assert(a == [1,1,2]);
+    int[] a = [1,1,2];
+    assert(nextPermutation(a) == true);
+    assert(a == [1,2,1]);
+    assert(nextPermutation(a) == true);
+    assert(a == [2,1,1]);
+    assert(nextPermutation(a) == false);
+    assert(a == [1,1,2]);
+}
+
+unittest
+{
+    // Test with non-default sorting order
+    int[] a = [3,2,1];
+    assert(nextPermutation!"a > b"(a) == true);
+    assert(a == [3,1,2]);
+    assert(nextPermutation!"a > b"(a) == true);
+    assert(a == [2,3,1]);
+    assert(nextPermutation!"a > b"(a) == true);
+    assert(a == [2,1,3]);
+    assert(nextPermutation!"a > b"(a) == true);
+    assert(a == [1,3,2]);
+    assert(nextPermutation!"a > b"(a) == true);
+    assert(a == [1,2,3]);
+    assert(nextPermutation!"a > b"(a) == false);
+    assert(a == [3,2,1]);
 }
 
 // nextEvenPermutation
@@ -10871,4 +10889,17 @@ unittest
     int count = 1;
     while (nextEvenPermutation(a3)) count++;
     assert(count == 12);
+}
+
+unittest
+{
+    // Test with non-default sorting order
+    auto a = [ 3, 2, 1 ];
+
+    assert(nextEvenPermutation!"a > b"(a) == true);
+    assert(a == [ 2, 1, 3 ]);
+    assert(nextEvenPermutation!"a > b"(a) == true);
+    assert(a == [ 1, 3, 2 ]);
+    assert(nextEvenPermutation!"a > b"(a) == false);
+    assert(a == [ 3, 2, 1 ]);
 }
