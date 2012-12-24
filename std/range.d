@@ -3758,7 +3758,7 @@ struct Cycle(Range)
         static if (is(typeof((cast(const R)_original)[0])) &&
                    is(typeof((cast(const R)_original).length)))
         {
-            @property auto const ref front() const
+            @property auto ref front() const
             {
                 return _original[_index % _original.length];
             }
@@ -3784,7 +3784,7 @@ struct Cycle(Range)
         static if (is(typeof((cast(const R)_original)[0])) &&
                    is(typeof((cast(const R)_original).length)))
         {
-            const ref opIndex(size_t n) const
+            auto ref opIndex(size_t n) const
             {
                 return _original[(n + _index) % _original.length];
             }
@@ -3813,7 +3813,7 @@ struct Cycle(Range)
         @property auto ref front() { return _current.front; }
 
         static if (is(typeof((cast(const R)_current).front)))
-            @property auto const ref front() const
+            @property auto ref front() const
             {
                 return _current.front;
             }
