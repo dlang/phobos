@@ -478,7 +478,7 @@ private void getoptImpl(T...)(ref string[] args,
 private void handleOption(R)(string option, R receiver, ref string[] args,
     ref configuration cfg, bool incremental)
 {
-    static if (!isDelegate!(typeof(receiver)))
+    static if (!isCallable!(typeof(receiver)))
         alias typeof(*receiver) ReceiverType;
     else
         alias typeof(receiver) ReceiverType;
@@ -529,10 +529,10 @@ private void handleOption(R)(string option, R receiver, ref string[] args,
         else
         {
             // non-boolean option, which might include an argument
-            //enum isDelegateWithOneParameter = is(typeof(receiver("")) : void);
-            enum isDelegateWithLessThanTwoParameters =
-                isDelegate!ReceiverType && !is(typeof(receiver("", "")));
-            if (!isDelegateWithLessThanTwoParameters && !(val.length) && !incremental) {
+            //enum isCallableWithOneParameter = is(typeof(receiver("")) : void);
+            enum isCallableWithLessThanTwoParameters =
+                isCallable!ReceiverType && !is(typeof(receiver("", "")));
+            if (!isCallableWithLessThanTwoParameters && !(val.length) && !incremental) {
                 // Eat the next argument too.  Check to make sure there's one
                 // to be eaten first, though.
                 enforce(i < args.length,
@@ -554,7 +554,7 @@ private void handleOption(R)(string option, R receiver, ref string[] args,
                     if (incremental) ++*receiver;
                     else *receiver = to!ReceiverType(val);
                 }
-                else static if (isDelegate!ReceiverType)
+                else static if (isCallable!ReceiverType)
                 {
                     static if (is(typeof(receiver("", "")) : void))
                     {
@@ -1803,7 +1803,7 @@ private string humanReadable(T)()
     {
         return format("<%s>=<%s>", humanReadable!(typeof(T.keys[0])), humanReadable!(typeof(T.values[0])));
     }
-    else static if (isDelegate!T)
+    else static if (isCallable!T)
     {
         assert(false); // for delegates there is no exception thrown
     }
@@ -1996,4 +1996,12 @@ unittest
        getopt(args,
               "foo" &foo // note the missing comma
     )));
+}
+
+unittest
+{
+    // From bugzilla 7526
+    static void usage() {}
+    auto args = ["", "--help"];
+    getopt(args, "help", {usage();});
 }
