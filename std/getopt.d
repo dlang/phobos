@@ -445,6 +445,7 @@ private void getoptImpl(T...)(ref string[] args,
         {
             // it's an option string
             auto option = to!string(opts[0]);
+            static assert(opts.length >= 2, "Missing argument for option");
             auto receiver = opts[1];
             bool incremental;
             // Handle options of the form --blah+
@@ -1984,4 +1985,15 @@ unittest
     assert(ex.failedOption == "--foo", ex.failedOption);
     assert(ex.next);
     assert(cast(ConvException) ex.next);
+}
+
+unittest
+{
+    // From bugzilla 8417
+    string foo;
+    auto args = ["", "--foo", "bar"];
+    static assert(!__traits(compiles,
+       getopt(args,
+              "foo" &foo // note the missing comma
+    )));
 }
