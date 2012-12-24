@@ -1270,6 +1270,9 @@ static:
                 assert (eq >= 0);
 
                 immutable name = varDef[0 .. eq];
+                if (!name.length)
+                    continue;
+
                 immutable value = varDef[eq+1 .. $];
 
                 // In POSIX, environment variables may be defined more
@@ -1298,7 +1301,8 @@ static:
 
                 start = i+1;
                 while (envBlock[i] != '\0') ++i;
-                aa[name] = toUTF8(envBlock[start .. i]);
+                if (name.length)
+                    aa[name] = toUTF8(envBlock[start .. i]);
             }
         }
 
@@ -1322,6 +1326,9 @@ private:
     // Retrieves the environment variable, returns false on failure.
     bool getImpl(string name, out string value)
     {
+        if (!name.length)
+            return true;  // return empty
+
         version(Posix)
         {
             const vz = core.sys.posix.stdlib.getenv(toStringz(name));
@@ -1391,6 +1398,8 @@ unittest
         //    0, indicating the variable doesn't exist.
         version(Windows)  if (n.length == 0 || v.length == 0) continue;
 
-        assert (v == environment[n]);
+        import std.string;
+        auto rhs = environment[n];
+        assert (v == rhs, format("key %s -- '%s' != '%s'", n, v, rhs));
     }
 }
