@@ -4971,35 +4971,9 @@ if (isBidirectionalRange!R1 &&
 
         return haystack[$ - needle.length .. $] == needle;
     }
-    else static if (isArray!R1 && isArray!R2 &&
-                    !isNarrowString!R1 && !isNarrowString!R2)
-    {
-        if (haystack.length < needle.length) return false;
-        immutable diff = haystack.length - needle.length;
-        foreach (j; 0 .. needle.length)
-        {
-            if (!binaryFun!pred(needle[j], haystack[j + diff]))
-                // not found
-                return false;
-        }
-        // found!
-        return true;
-    }
     else
     {
-        static if (hasLength!R1 && hasLength!R2)
-        {
-            if (haystack.length < needle.length) return false;
-        }
-
-        if (needle.empty) return true;
-        for (; !haystack.empty; haystack.popBack())
-        {
-            if (!binaryFun!pred(haystack.back, needle.back)) break;
-            needle.popBack();
-            if (needle.empty) return true;
-        }
-        return false;
+        return startsWith!pred(retro(doesThisEnd), retro(withThis));
     }
 }
 
@@ -5092,6 +5066,9 @@ unittest
         assert(endsWith(arr, wrap([4, 5]), 7) == 1);
         assert(!endsWith(arr, wrap([2, 4, 5])));
         assert(endsWith(arr, [2, 4, 5], wrap([3, 4, 5])) == 2);
+
+        assert(endsWith!("a%10 == b%10")(arr, [14, 15]));
+        assert(!endsWith!("a%10 == b%10")(arr, [15, 14]));
     }
 }
 
