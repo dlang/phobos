@@ -82,7 +82,10 @@ options are not touched, so a common idiom is to initialize options
 to their defaults and then invoke $(D getopt). If a
 command-line argument is recognized as an option with a parameter and
 the parameter cannot be parsed properly (e.g. a number is expected
-but not present), a $(D ConvException) exception is thrown.
+but not present), a $(D ConvException) exception is thrown. If an option
+is not recognized an $(D Exception) is thrown. Further an $(D Exception)
+is thrown if there was an argument expected but non given or an argument
+was given but non was expected.
 
 Depending on the type of the pointer being bound, $(D getopt)
 recognizes the following kinds of options:
