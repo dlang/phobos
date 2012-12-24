@@ -545,7 +545,7 @@ private void handleOption(R)(string option, R receiver, ref string[] args,
                 static if (is(ReceiverType == enum))
                 {
                     // enum receiver
-                    *receiver = parse!ReceiverType(val);
+                    *receiver = to!ReceiverType(val);
                 }
                 else static if (is(ReceiverType : real))
                 {
@@ -1965,4 +1965,23 @@ unittest
     auto args = ["", "-t", "a=1"];
     getopt(args, "t", &foo);
     assert(foo == ["a":1]);
+}
+
+unittest
+{
+    // From bugzilla 7693
+    enum Foo { bar, baz }
+    Foo foo;
+
+    auto args = ["", "--foo", "barThatIDrinkAt"];
+    assertThrown!ConvException(getopt(args, "foo", &foo));
+
+    args = ["", "--foo", "barThatIDrinkAt"];
+    auto ex = collectException!IllegalArgumentException(getOptions(args, "foo", &foo));
+    assert(ex !is null);
+    assert(ex.msg == "Illegal argument 'barThatIDrinkAt' for '--foo'. " ~
+	                 "Expected value in [\"bar\", \"baz\"].", ex.msg);
+    assert(ex.failedOption == "--foo", ex.failedOption);
+    assert(ex.next);
+    assert(cast(ConvException) ex.next);
 }
