@@ -3706,20 +3706,50 @@ The complexity of the search is $(BIGOH haystack.length *
 max(needles.length)). (For needles that are individual items, length
 is considered to be 1.) The strategy used in searching several
 subranges at once maximizes cache usage by moving in $(D haystack) as
-few times as possible.
+few times as possible. Note that to maintain consistency of the needles,
+find will only accept needles that are elements, or satisfy $(I at least)
+forward range requirements. It will, however, turn down needles that only
+satisfy input range requirements.
  */
-Tuple!(Range, size_t) find(alias pred = "a == b", Range, Ranges...)
-(Range haystack, Ranges needles)
-if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
+Tuple!(Range, size_t) find(alias pred = "a == b", Range, Needles...) (Range haystack, Needles needles)
+    if (isForwardRange!Range && Needles.length > 1 &&
+        areValidNeedles!(pred, Range, Needles))
 {
     for (;; haystack.popFront())
     {
-        size_t r = startsWith!pred(haystack, needles);
+        //Save the needles (when applicable)
+        Needles savedNeedles = needles;
+        foreach (Index, Type; Needles)
+            static if (is(typeof(binaryFun!pred(haystack.front, needles[Index]))))
+                {} //Element, not a range, nothing to do
+            else
+                savedNeedles[Index] = needles[Index].save; //Not an emement => forward range garanteed
+
+        size_t r = startsWith!pred(haystack.save, savedNeedles);
         if (r || haystack.empty)
         {
             return tuple(haystack, r);
         }
     }
+}
+private template areValidNeedles(alias pred, Range, Needles...)
+{
+    enum areValidNeedles = is(typeof(
+    (inout int = 0)
+    {
+        @property ref Range haystack();
+        @property ref Needles[i] needle(int i)();
+        foreach (Index, Type; Needles)
+        {
+            alias Needle = Needles[Index];
+            static if (is(typeof(binaryFun!pred(haystack.front, needle!Index))))
+            {}
+            else static if (is(typeof(binaryFun!pred(haystack.front, needle!Index.front))))
+                static assert(isForwardRange!Needle);
+            else
+                static assert(false);
+        }
+    }));
 }
 
 unittest
@@ -3793,6 +3823,21 @@ unittest
         auto findRes = find(d, 5);
         assert(equal(findRes, [5,6,7,8,9,10]));
     }
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    auto r = new ReferenceForwardRange!int([1, 2, 2, 3, 4, 4, 4, 5, 6]);
+    auto s1 = new ReferenceForwardRange!int([4, 4, 1]);
+    auto s2 = new ReferenceForwardRange!int([6, 9]);
+    auto s3 = new ReferenceForwardRange!int([4, 5]); //First match
+    auto e4 = 9;
+    auto e5 = 6; //matches, but too late
+    auto result = r.find(s1, s2, s3, e4, e5);
+    assert(result[1] == 3);
+    assert(result[0].equal([4, 5, 6]));
 }
 
 /// Ditto
