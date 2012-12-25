@@ -2903,11 +2903,12 @@ unittest
 {
     struct TransientRange
     {
-        int[128] _buf;
+        int[] _buf;
         int[][] _values;
         this(int[][] values)
         {
             _values = values;
+            _buf = new int[128];
         }
         @property bool empty()
         {
@@ -2980,7 +2981,7 @@ unittest
     }
 
     assert(equal(result, "abc12def34"d),
-    	"Unexpected result: '%s'"d.format(result));
+        "Unexpected result: '%s'"d.format(result));
 }
 
 // uniq
