@@ -2811,7 +2811,13 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
                 _items.popFront();
                 if (_items.empty) return;
             }
-            _current = _items.front;
+            // We cannot export .save method unless we ensure subranges are not
+            // consumed when a .save'd copy of ourselves is iterated over. So
+            // we need to .save each subrange we traverse.
+            static if (isForwardRange!RoR && isForwardRange!(ElementType!RoR))
+                _current = _items.front.save;
+            else
+                _current = _items.front;
         };
     public:
         this(RoR r)
@@ -2982,6 +2988,16 @@ unittest
 
     assert(equal(result, "abc12def34"d),
         "Unexpected result: '%s'"d.format(result));
+}
+
+// Issue 8061
+unittest
+{
+    auto r = joiner([inputRangeObject("ab"), inputRangeObject("cd")]);
+    assert(isForwardRange!(typeof(r)));
+
+    auto str = to!string(r);
+    assert(str == "abcd");
 }
 
 // uniq
@@ -4238,16 +4254,33 @@ ptrdiff_t countUntil(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
     typeof(return) result;
     static if (hasLength!R1) //Note: Narrow strings don't have length.
     {
-        //Delegate to find. Find is very efficient
-        //We save haystack, but we don't care for needle
-        auto r2 = find!pred(haystack.save, needle);
-        if (!r2.empty) return cast(typeof(return)) (haystack.length - r2.length);
+        //We delegate to find because find is very efficient.
+        //We store the length of the haystack so we don't have to save it.
+        auto len = haystack.length;
+        auto r2 = find!pred(haystack, needle);
+        if (!r2.empty)
+            return cast(typeof(return)) (len - r2.length);
     }
     else
     {
         //Default case, slower route doing startsWith iteration
-        for ( ; !haystack.empty ; ++result, haystack.popFront() )
-            if (startsWith!pred(haystack.save, needle.save)) return result;
+        for ( ; !haystack.empty ; ++result )
+        {
+            //We compare the first elements of the ranges here before
+            //forwarding to startsWith. This avoids making useless saves to
+            //haystack/needle if they aren't even going to be mutated anyways.
+            //It also cuts down on the amount of pops on haystack.
+            if (haystack.front == needle.front)
+            {
+                //Here, we need to save the needle before popping it.
+                //haystack we pop in all paths, so we do that, and then save.
+                haystack.popFront();
+                if (startsWith!pred(haystack.save, needle.save.dropOne()))
+                    return result;
+            }
+            else
+                haystack.popFront();
+        }
     }
 
     //Because of @@@8804@@@: Avoids both "unreachable code" or "no return statement"
@@ -4276,6 +4309,16 @@ unittest
     assert(countUntil([0, 7, 12, 22, 9], [12, 22]) == 2);
     assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
     assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
+}
+unittest
+{
+    auto r = new ReferenceForwardRange!int([0, 1, 2, 3, 4, 5, 6]);
+    auto r2 = new ReferenceForwardRange!int([3, 4]);
+    auto r3 = new ReferenceForwardRange!int([3, 5]);
+    assert(r.save.countUntil(3)  == 3);
+    assert(r.save.countUntil(r2) == 3);
+    assert(r.save.countUntil(7)  == -1);
+    assert(r.save.countUntil(r3) == -1);
 }
 
 /++
@@ -4956,35 +4999,9 @@ if (isBidirectionalRange!R1 &&
 
         return haystack[$ - needle.length .. $] == needle;
     }
-    else static if (isArray!R1 && isArray!R2 &&
-                    !isNarrowString!R1 && !isNarrowString!R2)
-    {
-        if (haystack.length < needle.length) return false;
-        immutable diff = haystack.length - needle.length;
-        foreach (j; 0 .. needle.length)
-        {
-            if (!binaryFun!pred(needle[j], haystack[j + diff]))
-                // not found
-                return false;
-        }
-        // found!
-        return true;
-    }
     else
     {
-        static if (hasLength!R1 && hasLength!R2)
-        {
-            if (haystack.length < needle.length) return false;
-        }
-
-        if (needle.empty) return true;
-        for (; !haystack.empty; haystack.popBack())
-        {
-            if (!binaryFun!pred(haystack.back, needle.back)) break;
-            needle.popBack();
-            if (needle.empty) return true;
-        }
-        return false;
+        return startsWith!pred(retro(doesThisEnd), retro(withThis));
     }
 }
 
@@ -5077,6 +5094,9 @@ unittest
         assert(endsWith(arr, wrap([4, 5]), 7) == 1);
         assert(!endsWith(arr, wrap([2, 4, 5])));
         assert(endsWith(arr, [2, 4, 5], wrap([3, 4, 5])) == 2);
+
+        assert(endsWith!("a%10 == b%10")(arr, [14, 15]));
+        assert(!endsWith!("a%10 == b%10")(arr, [15, 14]));
     }
 }
 

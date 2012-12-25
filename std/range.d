@@ -3758,7 +3758,7 @@ struct Cycle(Range)
         static if (is(typeof((cast(const R)_original)[0])) &&
                    is(typeof((cast(const R)_original).length)))
         {
-            @property auto const ref front() const
+            @property auto ref front() const
             {
                 return _original[_index % _original.length];
             }
@@ -3784,7 +3784,7 @@ struct Cycle(Range)
         static if (is(typeof((cast(const R)_original)[0])) &&
                    is(typeof((cast(const R)_original).length)))
         {
-            const ref opIndex(size_t n) const
+            auto ref opIndex(size_t n) const
             {
                 return _original[(n + _index) % _original.length];
             }
@@ -3813,7 +3813,7 @@ struct Cycle(Range)
         @property auto ref front() { return _current.front; }
 
         static if (is(typeof((cast(const R)_current).front)))
-            @property auto const ref front() const
+            @property auto ref front() const
             {
                 return _current.front;
             }
@@ -4917,18 +4917,19 @@ private:
     size_t _n;
     ElementType _cache;
 
+    static struct DollarToken{}
+
 public:
     this(State initial, size_t n = 0)
     {
-        this._state = initial;
-        this._n = n;
-        this._cache = compute(this._state, this._n);
+        _state = initial;
+        _n = n;
+        _cache = compute(_state, _n);
     }
 
     @property ElementType front()
     {
-        //return ElementType.init;
-        return this._cache;
+        return _cache;
     }
 
     ElementType moveFront()
@@ -4938,7 +4939,12 @@ public:
 
     void popFront()
     {
-        this._cache = compute(this._state, ++this._n);
+        _cache = compute(_state, ++_n);
+    }
+
+    DollarToken opDollar()
+    {
+        return DollarToken();
     }
 
     auto opSlice(size_t lower, size_t upper)
@@ -4948,14 +4954,17 @@ public:
     }
     body
     {
-        auto s = typeof(this)(this._state, this._n + lower);
-        return takeExactly(s, upper - lower);
+        return typeof(this)(_state, _n + lower).take(upper - lower);
+    }
+
+    auto opSlice(size_t lower, DollarToken)
+    {
+        return typeof(this)(_state, _n + lower);
     }
 
     ElementType opIndex(size_t n)
     {
-        //return ElementType.init;
-        return compute(this._state, n + this._n);
+        return compute(_state, n + _n);
     }
 
     enum bool empty = false;
@@ -4989,6 +4998,8 @@ unittest
     }
 }
 
+
+
 unittest
 {
     // documentation example
@@ -5005,13 +5016,21 @@ unittest
     auto odds = sequence!("a[0] + n * a[1]")(1, 2);
     static assert(hasSlicing!(typeof(odds)));
 
+    //Note: don't use drop or take as the target of an equal,
+    //since they'll both just forward to opSlice, making the tests irrelevant
+
     // static slicing tests
-    assert(equal(odds[0 .. 5], take(odds, 5)));
-    assert(equal(odds[3 .. 7], take(drop(odds, 3), 4)));
+    assert(equal(odds[0 .. 5], [1,  3,  5,  7,  9]));
+    assert(equal(odds[3 .. 7], [7,  9, 11, 13]));
 
     // relative slicing test, testing slicing is NOT agnostic of state
-    auto odds_less5 = drop(odds, 5);
+    auto odds_less5 = odds.drop(5); //this should actually call odds[5 .. $]
+    assert(equal(odds_less5[0 ..  3], [11, 13, 15]));
     assert(equal(odds_less5[0 .. 10], odds[5 .. 15]));
+
+    //Infinite slicing tests
+    odds = odds[10 .. $];
+    assert(equal(odds.take(3), [21, 23, 25]));
 }
 
 /**
