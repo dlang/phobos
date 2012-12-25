@@ -1319,6 +1319,33 @@ unittest
 }
 
 /**
+Returns a uniformly distributed floating-point number of type T from the interval [0, 1).
+Using this function should be faster than calling $(LREF uniform)!"[)"(0.0, 1.0).
+*/
+T uniform01(T, Rng)(ref Rng r)
+if(isFloatingPoint!T && isUniformRNG!Rng)
+{
+    static if(is(typeof(rngMask!r)))
+    {
+        while(true)
+        {
+            enum denom = 1 / (to!T(1) + r.max - r.min);
+            T x = (r.front - r.min) * denom;
+            r.popFront();
+
+            // ensure that we always return less than 1
+            // this is taken from Boost's uniform_01
+            if(x < to!T(1))
+                return x;
+        }
+    }
+    else
+        // just use uniform() here, we would need to do something equivalent
+        // to what it does anyway.
+        return uniform(to!T(0), to!T(1), r);
+}
+
+/**
 Generates a random floating-point number drawn from a normal (Gaussian)
 distribution with specified mean and standard deviation (sigma).
 
@@ -1330,44 +1357,29 @@ std.random provides a selection of different internal engines implementing diffe
 algorithms.  The default choice is currently a Box-Muller implementation that closely
 follows the C++ implementation in Boost.Random.  Alternatives can be specified as
 a template parameter.  The function implementations for normal random number generation
-use a thread-local static instance of the specified engine type.
+use a thread-local static instance of the specified engine type.  A struct
+implementation is provided by $(LREF Normal).
 
 Example:
 
 ----
-// Generate a normally-distributed random number
-// with mean 5 and standard deviation 7
+// Generate a normally-distributed random number with mean 5 and standard deviation 7
 auto x = normal(5.0, 7.0);
 
-// Generate a normally-distributed random number
-// using the Ziggurat algorithm
+// Generate a normally-distributed random number using the Ziggurat algorithm
 auto z = normal!NormalZigguratEngine(5.0, 7.0);
-----
-
-The struct implementations for normal random number generation store the mean and
-standard deviation and contain their own internal instances of the specified engine.
-The convenience function normalRNG() is provided to facilitate construction of Normal
-struct instances.
-
-Example:
-
-----
-// Create a normal random number generator with mean 0
-// and standard deviation 4
-auto nrng = normalRNG(0.0, 4.0);
-
-// Generate a number using this generator
-auto x = nrng(rndGen);
-
-// Create a normal random number generator that uses
-// the Ziggurat algorithm
-auto nZig = normalRNG!NormalZigguratEngine(0.0, 4.0);
-
-auto y = nZig(rndGen);
 ----
 
 Return values for normal random numbers are based on the common type of mean and
 standard deviation if at least one is floating point, defaulting to double otherwise.
+
+Example:
+
+----
+static assert(is(typeof(normal(0, 1)) == double));
+static assert(is(typeof(normal(0.0f, 1.0f)) == float));
+static assert(is(typeof(normal(0.0L, 1.0)) == real));
+----
 */
 auto normal(alias NormalRandomNumberEngine = NormalBoxMullerEngine, T1, T2)
 (T1 mean, T2 sigma)
@@ -1488,13 +1500,42 @@ unittest
     }
 }
 
-/// Ditto
+/**
+The struct implementations for normal random number generation store the mean and
+standard deviation and contain their own internal instances of the specified engine.
+Both the (floating-point) return type and the engine type are template parameters.
+
+Example:
+
+----
+// Create a normal random number generator with mean 2 and standard deviation 5,
+// using the default algorithm and returning a number of type real
+auto nrng = Normal!real(2, 5);
+
+// Generate a number using this generator
+auto x = nrng(rndGen);
+static assert(is(typeof(x) == real));
+
+// Check that mean and standard deviation have correct values
+assert(nrng.mean == 2.0L);
+assert(nrng.stddev == 5.0L);
+
+// Create a normal random number generator with mean 10 and standard deviation 3,
+// using the Ziggurat algorithm and returning a number of type float
+auto nZig = Normal!(float, NormalZigguratEngine)(10, 3);
+auto z = nZig(rndGen);
+----
+
+The convenience function $(LREF normalRNG) is provided to facilitate construction of Normal
+struct instances.
+*/
 struct Normal(T = double, alias NormalRandomNumberEngine = NormalBoxMullerEngine)
 if (isFloatingPoint!T)
 {
     private T _mean, _sigma;
     private NormalRandomNumberEngine!T _engine;
 
+    /// Constructor takes mean and standard deviation (sigma) as input.
     this(T mean, T sigma)
     {
         enforce(0 <= sigma, text("std.random.normal(): standard deviation ", sigma, " is less than zero"));
@@ -1505,24 +1546,72 @@ if (isFloatingPoint!T)
             _engine.initialize();
     }
 
-    @property T mean()
-    {
-        return _mean;
-    }
-
-    @property T stddev()
-    {
-        return _sigma;
-    }
-
+    /// Computes a random variate drawn from the normal distribution with mean and standard deviation as specified
     T opCall(UniformRandomNumberGenerator)(ref UniformRandomNumberGenerator urng)
     if(isUniformRNG!UniformRandomNumberGenerator)
     {
         return _sigma * _engine(urng) + _mean;
     }
+
+    /// Returns the mean of the normal distribution variates are being drawn from.
+    @property T mean()
+    {
+        return _mean;
+    }
+
+    /// Returns the standard deviation of the normal distribution variates are being drawn from.
+    @property T stddev()
+    {
+        return _sigma;
+    }
 }
 
-/// Ditto
+unittest
+{
+    // Create a normal random number generator with mean 2 and standard deviation 5,
+    // using the default algorithm and returning a number of type real
+    auto nrng = Normal!real(2, 5);
+
+    // Generate a number using this generator
+    auto x = nrng(rndGen);
+    static assert(is(typeof(x) == real));
+
+    // Check that mean and standard deviation have correct values
+    assert(nrng.mean == 2.0L);
+    assert(nrng.stddev == 5.0L);
+
+    // Create a normal random number generator with mean 10 and standard deviation 3,
+    // using the Ziggurat algorithm and returning a number of type float
+    auto nZig = Normal!(float, NormalZigguratEngine)(10, 3);
+    auto z = nZig(rndGen);
+    static assert(is(typeof(z) == float));
+    assert(nZig.mean == 10.0f);
+    assert(nZig.stddev == 3.0f);
+}
+
+
+/**
+Returns an instance of a $(LREF Normal) struct with specified mean and standard
+deviation (sigma).  The engine type can be passed as a template parameter.  The
+type of the variates to be generated is inferred from the CommonType of mean and
+standard deviation (sigma) if this is floating point, defaulting to double
+otherwise, just as with the $(LREF normal) function.
+
+Example:
+
+----
+// Create a normal random number generator with mean 0 and standard deviation 4,
+// using the default algorithm
+auto nrng = normalRNG(0.0, 4.0);
+
+// Generate a number using this generator
+auto x = nrng(rndGen);
+
+// Create a normal random number generator that uses the Ziggurat algorithm
+auto nZig = normalRNG!NormalZigguratEngine(0.0, 4.0);
+auto z = nZig(rndGen);
+----
+*/
 auto normalRNG(alias NormalRandomNumberEngine = NormalBoxMullerEngine, T1, T2)
 (T1 mean, T2 sigma)
 if (isNumeric!T1 && isNumeric!T2)
@@ -1557,14 +1646,12 @@ unittest
 }
 
 /**
-Generates a random floating-point number drawn from a
-normal (Gaussian) distribution with mean 0 and standard
-deviation (sigma) 1, using the Box-Muller Transform method.
+Generates a random floating-point number drawn from a normal (Gaussian) distribution
+with mean 0 and standard deviation (sigma) 1, using the Box-Muller Transform method.
 
-This version is closely based on the Boost.Random Box-Muller
-implementation by Jens Maurer and Steven Wanatabe, and
-should produce identical results within the limits of
-floating-point rounding.
+This version is closely based on the Boost.Random C++ Box-Muller implementation by
+Jens Maurer and Steven Wanatabe, and should produce identical results within the
+limits of floating-point rounding.
 */
 struct NormalBoxMullerEngine(T = double)
 if(isFloatingPoint!T)
@@ -1572,6 +1659,7 @@ if(isFloatingPoint!T)
     private bool _valid = false;
     private T _rho, _r1, _r2;
 
+    /// Computes a random variate using the random number generator provided
     T opCall(UniformRandomNumberGenerator)(ref UniformRandomNumberGenerator urng)
     if(isUniformRNG!UniformRandomNumberGenerator)
     {
@@ -1608,30 +1696,6 @@ if(hasCompileTimeMinMax!r &&
     enum rngMask = r.max - r.min;
 }
  
-/// Returns a unformly distributed number of type T from the interval [0, 1).
-T uniform01(T, Rng)(ref Rng r)
-if(isFloatingPoint!T && isUniformRNG!Rng)
-{
-    static if(is(typeof(rngMask!r)))
-    {
-        while(true)
-        {
-            enum denom = 1 / (to!T(1) + r.max - r.min);
-            T x = (r.front - r.min) * denom;
-            r.popFront();
-
-            // ensure that we always return less than 1
-            // this is taken from Boost's uniform_01
-            if(x < to!T(1))
-                return x;
-        }
-    } 
-    else
-        // just use uniform() here, we would need to do something equivalent
-        // to what it does anyway.
-        return uniform(to!T(0), to!T(1), r);
-}
-
 private int fastUniformInt(int n, Rng)(ref Rng r)
 {
     static if(
@@ -1917,13 +1981,13 @@ private auto zigguratAlgorithm
 }
 
 /**
-Generates a random floating-point number drawn from a
-normal (Gaussian) distribution with mean 0 and standard
-deviation (sigma) 1, using the Ziggurat algorithm.
+Generates a random floating-point number drawn from a normal (Gaussian) distribution
+with mean 0 and standard deviation (sigma) 1, using the Ziggurat algorithm.
 
 This engine has high sampling speed, but uses more memory (a kilobyte or so) 
 than the alternatives and has a relatively long initialization time (somewhere 
-around a millisecond on a modern X86 CPU).
+around a millisecond on a modern x86 CPU).  Its use is recommended where statistical
+precision is a priority.
  */
 struct NormalZigguratEngine(T) if(isFloatingPoint!T)
 {
@@ -1934,8 +1998,7 @@ struct NormalZigguratEngine(T) if(isFloatingPoint!T)
     // some other engine, like Box-Muller
     enum int n = 128;
 
-    /// Initializes the engine. This must be called before the first call to
-    /// opCall
+    /// Initializes the engine. This must be called before the first call to opCall
     void initialize()
     {
         alias Select!(is(T == float), double, T) U;
@@ -1962,7 +2025,7 @@ struct NormalZigguratEngine(T) if(isFloatingPoint!T)
         headDy = cast(T) 1 - exp(- (headDx) ^^ 2 * cast(T) 0.5);
     }
     
-    /// Computes a random sample using rng 
+    /// Computes a random variate using the random number generator provided
     T opCall(Rng)(ref Rng rng)
     if(isUniformRNG!Rng)
     {
