@@ -1511,18 +1511,16 @@ ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR, R)(RoR ror, R sep)
                           sepArr.length * (ror.length - 1);
     auto result = new Unqual!RetElem[](resultLen);
 
-    size_t i = 0;
-    size_t j = 0;
+    auto first = ror.front;
+    result[0 .. first.length] = first[];
+    size_t i = first.length;
+    ror.popFront();
     foreach(r; ror)
     {
+        result[i .. i + sepArr.length] = sepArr[];
+        i += sepArr.length;
         result[i .. i + r.length] = r[];
         i += r.length;
-
-        if(++j < ror.length)
-        {
-            result[i .. i + sepArr.length] = sepArr[];
-            i += sepArr.length;
-        }
     }
 
     return cast(RetType)result;
@@ -1539,30 +1537,14 @@ ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR, R)(RoR ror, R sep)
         return typeof(return).init;
 
     auto result = appender!(typeof(return))();
-
-    static if(isForwardRange!RoR)
+    result.put(ror.front);
+    ror.popFront();
+    foreach (r; ror)
     {
-        immutable numRanges = walkLength(ror);
-        size_t j = 0;
-    }
-
-    foreach(r; ror)
-    {
+        result.put(sep);
         result.put(r);
-
-        static if(isForwardRange!RoR)
-        {
-            if(++j < numRanges)
-                result.put(sep);
-        }
-        else
-            result.put(sep);
     }
-
-    static if(isForwardRange!RoR)
-        return result.data;
-    else
-        return result.data[0 .. $ - sep.length];
+    return result.data;
 }
 
 ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR)(RoR ror)
