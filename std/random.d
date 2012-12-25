@@ -1414,12 +1414,12 @@ if (isNumeric!T1 && isNumeric!T2 && isUniformRNG!UniformRandomNumberGenerator)
 unittest
 {
     // Check the type rules for normal()
-    assert(is(typeof(normal(0, 1)) == double));
-    assert(is(typeof(normal(0.0f, 1.0f)) == float));
-    assert(is(typeof(normal(0.0f, 1.0)) == double));
-    assert(is(typeof(normal(0.0, 1.0)) == double));
-    assert(is(typeof(normal(0.0L, 1.0)) == real));
-    assert(is(typeof(normal(0.0L, 1.0L)) == real));
+    static assert(is(typeof(normal(0, 1)) == double));
+    static assert(is(typeof(normal(0.0f, 1.0f)) == float));
+    static assert(is(typeof(normal(0.0f, 1.0)) == double));
+    static assert(is(typeof(normal(0.0, 1.0)) == double));
+    static assert(is(typeof(normal(0.0L, 1.0)) == real));
+    static assert(is(typeof(normal(0.0L, 1.0L)) == real));
 
     /* Check that different engines are used for
        double, float and real-valued normal random
@@ -1430,36 +1430,36 @@ unittest
         auto normalDouble = normalRNG(0.0, 1.0);
         auto d1 = normalDouble(rng);
         auto d2 = normalDouble(rng);
-        assert(is(typeof(d1) == double));
-        assert(is(typeof(d2) == double));
+        static assert(is(typeof(d1) == double));
+        static assert(is(typeof(d2) == double));
 
         rng.seed(0);
         rng.popFront();
         rng.popFront();
         auto normalFloat = normalRNG(0.0f, 1.0f);
         auto f1 = normalFloat(rng);
-        assert(is(typeof(f1) == float));
+        static assert(is(typeof(f1) == float));
 
         rng.seed(0);
         rng.popFront();
         rng.popFront();
         auto normalReal = normalRNG(0.0L, 1.0L);
         auto r1 = normalReal(rng);
-        assert(is(typeof(r1) == real));
+        static assert(is(typeof(r1) == real));
 
         rng.seed(0);
         auto t1 = normal(0.0, 1.0, rng);   // these two calls should use
         auto t2 = normal(0.0f, 1.0, rng);  // the same static engine (double)
-        assert(is(typeof(t1) == double));
-        assert(is(typeof(t2) == double));
+        static assert(is(typeof(t1) == double));
+        static assert(is(typeof(t2) == double));
         assert(t1 == d1);
         assert(t2 == d2);
 
         rng.seed(0);
         auto u1 = normal(0.0, 1.0, rng);   // these two calls shoud also use
         auto u2 = normal(0, 1, rng);       // the same static engine (double)
-        assert(is(typeof(u1) == double));
-        assert(is(typeof(u2) == double));
+        static assert(is(typeof(u1) == double));
+        static assert(is(typeof(u2) == double));
         assert(u1 == d1);
         assert(u2 == d2);
 
@@ -1467,8 +1467,8 @@ unittest
         auto v1 = normal(0.0, 1.0, rng);   // should use double engine
         auto v2 = normal(0.0f, 1.0f, rng); // should use new (float) engine
         auto v3 = normal(0.0, 1.0, rng);   // should use double engine
-        assert(is(typeof(v1) == double));
-        assert(is(typeof(v2) == float));
+        static assert(is(typeof(v1) == double));
+        static assert(is(typeof(v2) == float));
         assert(v1 == d1);
         assert(v2 != d2);
         assert(v2 == f1);
@@ -1478,8 +1478,8 @@ unittest
         auto w1 = normal(0.0, 1.0, rng);   // should use double engine
         auto w2 = normal(0.0, 1.0L, rng);  // should use new (real) engine
         auto w3 = normal(0.0, 1.0, rng);   // should use double engine
-        assert(is(typeof(w1) == double));
-        assert(is(typeof(w2) == real));
+        static assert(is(typeof(w1) == double));
+        static assert(is(typeof(w2) == real));
         assert(w1 == d1);
         assert(w2 != d2);
         assert(w2 != v2);   // because real is higher-precision than float
