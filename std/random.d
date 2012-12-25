@@ -1582,8 +1582,8 @@ if(isFloatingPoint!T)
             /* N.B. Traditional Box-Muller asks for random numbers
                in (0, 1], which D can readily provide.  We use this
                form to match the output of Boost.Random. */
-            _r1 = fastUniformFloat!T(urng);
-            _r2 = fastUniformFloat!T(urng);
+            _r1 = uniform01!T(urng);
+            _r2 = uniform01!T(urng);
             _rho = sqrt(-2 * log((cast(T) 1) - _r2));
             _valid = true;
         }
@@ -1601,32 +1601,41 @@ private template hasCompileTimeMinMax(alias a)
         is(typeof(ct!(a.max))) && is(typeof(ct!(a.min)));
 }
 
-private bool isPowerOfTwo(I)(I i){ return (i & (i - 1)) == 0; }
-
 private template rngMask(alias r) 
-    if(hasCompileTimeMinMax!r && isPowerOfTwo(r.max - r.min + 1))
+if(hasCompileTimeMinMax!r && 
+    ((r.max - r.min + 1 == 0) || isPow2(r.max - r.min + 1)))
 {
     enum rngMask = r.max - r.min;
 }
-
-private T fastUniformFloat(T, Rng)(ref Rng r)
+ 
+/// Returns a unformly distributed number of type T from the interval [0, 1).
+T uniform01(T, Rng)(ref Rng r)
+if(isFloatingPoint!T && isUniformRNG!Rng)
 {
-    static if(hasCompileTimeMinMax!r)
+    static if(is(typeof(rngMask!r)))
     {
-        enum denom = 1 / (to!T(1) + r.max - r.min);
-        T x = (r.front - r.min) * denom; 
+        while(true)
+        {
+            enum denom = 1 / (to!T(1) + r.max - r.min);
+            T x = (r.front - r.min) * denom;
+            r.popFront();
+
+            // ensure that we always return less than 1
+            // this is taken from Boost's uniform_01
+            if(x < to!T(1))
+                return x;
+        }
     } 
     else
-        T x = cast(T)(r.front - r.min)  / (to!T(1) + r.max - r.min);
-    
-    r.popFront();
-    return x;
+        // just use uniform() here, we would need to do something equivalent
+        // to what it does anyway.
+        return uniform(to!T(0), to!T(1), r);
 }
 
 private int fastUniformInt(int n, Rng)(ref Rng r)
 {
     static if(
-        is(typeof(rngMask!r)) && isPowerOfTwo(n) && 
+        is(typeof(rngMask!r)) && isPow2(n) && 
         (rngMask!r & (n - 1)) == n - 1)
     {
         auto x = (r.front - r.min) & (n - 1);
@@ -1640,7 +1649,7 @@ private int fastUniformInt(int n, Rng)(ref Rng r)
 private void fastUniformIntAndFloat(int n, T, Rng)(ref Rng r, ref int i, ref T a)
 {
     static if(
-        is(typeof(rngMask!r)) && isPowerOfTwo(n) && 
+        is(typeof(rngMask!r)) && isPow2(n) && 
         bsr(rngMask!r) >= bsr(n - 1) + T.mant_dig)
     {
         auto rand = r.front - r.min;
@@ -1652,7 +1661,7 @@ private void fastUniformIntAndFloat(int n, T, Rng)(ref Rng r, ref int i, ref T a
     else
     {
         i = fastUniformInt!n(r);
-        a = fastUniformFloat!T(r);
+        a = uniform01!T(r);
     }
 }
 
@@ -1838,8 +1847,8 @@ private auto zigguratAlgorithmImpl
     {
         // Choose a random point in the triangle described by
         // ux > 0, uy > -1, uy < highOffset - ux 
-        T uy = uInterval * fastUniformFloat!T(rng);
-        T ux = uInterval * fastUniformFloat!T(rng);
+        T uy = uInterval * uniform01!T(rng);
+        T ux = uInterval * uniform01!T(rng);
       
         T tmp = max(ux, uy);
         ux = min(ux, uy);
@@ -1978,8 +1987,8 @@ struct NormalZigguratEngine(T) if(isFloatingPoint!T)
     {
         while(true)
         {
-            T x = fastUniformFloat!T(rng) * headDx;
-            T y = fastUniformFloat!T(rng) * headDy;
+            T x = uniform01!T(rng) * headDx;
+            T y = uniform01!T(rng) * headDy;
             T x2 = x * x;
             // An approximation for 1 - f  using one term of the Taylor series. 
             // This is an upper bound.
@@ -2000,8 +2009,8 @@ struct NormalZigguratEngine(T) if(isFloatingPoint!T)
         // the new Marsaglia Tail Method
         while(true)
         {
-            T x = -log(fastUniformFloat!T(rng)) / x0;
-            T y = -log(fastUniformFloat!T(rng));
+            T x = -log(uniform01!T(rng)) / x0;
+            T y = -log(uniform01!T(rng));
             if(y + y > x * x)
                 return x0 + x;
         }
