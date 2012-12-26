@@ -4603,10 +4603,11 @@ if (isInputRange!Range && Needles.length > 1 &&
                 // Single-element
                 if (binaryFun!pred(haystack.front, needles[i]))
                 {
-                    // found, but continue to account for one-element
+                    // found, but instead of returning, we just stop searching.
+                    // This is to account for one-element
                     // range matches (consider startsWith("ab", "a",
                     // 'a') should return 1, not 2).
-                    continue;
+                    break;
                 }
             }
             else
@@ -4625,8 +4626,11 @@ if (isInputRange!Range && Needles.length > 1 &&
         }
 
         // If execution reaches this point, then the front matches for all
-        // needles ranges. What we need to do now is to lop off the front of
-        // all ranges involved and recurse.
+        // needle ranges, or a needle element has been matched.
+        // What we need to do now is iterate, lopping off the front of
+        // the range and checking if the result is empty, or finding an
+        // element needle and returning.
+        // If neither happens, we drop to the end and loop.
         foreach (i, Unused; Needles)
         {
             static if (is(typeof(binaryFun!pred(haystack.front, needles[i])) : bool))
