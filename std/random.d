@@ -1322,16 +1322,16 @@ unittest
 Returns a uniformly distributed floating-point number of type T from the interval [0, 1).
 Using this function should be faster than calling $(LREF uniform)!"[)"(0.0, 1.0).
 */
-T uniform01(T, Rng)(ref Rng r)
-if(isFloatingPoint!T && isUniformRNG!Rng)
+T uniform01(T, UniformRandomNumberGenerator)(ref UniformRandomNumberGenerator urng)
+if(isFloatingPoint!T && isUniformRNG!UniformRandomNumberGenerator)
 {
-    static if(is(typeof(rngMask!r)))
+    static if(is(typeof(rngMask!urng)))
     {
         while(true)
         {
-            enum denom = 1 / (to!T(1) + r.max - r.min);
-            T x = (r.front - r.min) * denom;
-            r.popFront();
+            enum denom = 1 / (to!T(1) + urng.max - urng.min);
+            T x = (urng.front - urng.min) * denom;
+            urng.popFront();
 
             // ensure that we always return less than 1
             // this is taken from Boost's uniform_01
@@ -1342,7 +1342,7 @@ if(isFloatingPoint!T && isUniformRNG!Rng)
     else
         // just use uniform() here, we would need to do something equivalent
         // to what it does anyway.
-        return uniform(to!T(0), to!T(1), r);
+        return uniform(to!T(0), to!T(1), urng);
 }
 
 /**
@@ -1695,37 +1695,40 @@ if(hasCompileTimeMinMax!r &&
 {
     enum rngMask = r.max - r.min;
 }
- 
-private int fastUniformInt(int n, Rng)(ref Rng r)
+
+private int fastUniformInt(int n, UniformRandomNumberGenerator)(ref UniformRandomNumberGenerator urng)
+if(isUniformRNG!UniformRandomNumberGenerator)
 {
     static if(
-        is(typeof(rngMask!r)) && isPow2(n) && 
-        (rngMask!r & (n - 1)) == n - 1)
+        is(typeof(rngMask!urng)) && isPow2(n) && 
+        (rngMask!urng & (n - 1)) == n - 1)
     {
-        auto x = (r.front - r.min) & (n - 1);
-        r.popFront();
+        auto x = (urng.front - urng.min) & (n - 1);
+        urng.popFront();
         return x;
     }
     else 
-        return uniform(0, n, r);
+        return uniform(0, n, urng);
 }
 
-private void fastUniformIntAndFloat(int n, T, Rng)(ref Rng r, ref int i, ref T a)
+private void fastUniformIntAndFloat(int n, T, UniformRandomNumberGenerator)
+(ref UniformRandomNumberGenerator urng, ref int i, ref T a)
+if(isUniformRNG!UniformRandomNumberGenerator)
 {
     static if(
-        is(typeof(rngMask!r)) && isPow2(n) && 
-        bsr(rngMask!r) >= bsr(n - 1) + T.mant_dig)
+        is(typeof(rngMask!urng)) && isPow2(n) &&
+        bsr(rngMask!urng) >= bsr(n - 1) + T.mant_dig)
     {
-        auto rand = r.front - r.min;
-        r.popFront(); 
+        auto rand = urng.front - urng.min;
+        urng.popFront();
         i = rand & (n - 1);
-        enum denom = 1 / (to!T(1) + r.max - r.min);
+        enum denom = 1 / (to!T(1) + urng.max - urng.min);
         a = rand * denom;
     }
     else
     {
-        i = fastUniformInt!n(r);
-        a = uniform01!T(r);
+        i = fastUniformInt!n(urng);
+        a = uniform01!T(urng);
     }
 }
 
@@ -2026,10 +2029,10 @@ struct NormalZigguratEngine(T) if(isFloatingPoint!T)
     }
     
     /// Computes a random variate using the random number generator provided
-    T opCall(Rng)(ref Rng rng)
-    if(isUniformRNG!Rng)
+    T opCall(UniformRandomNumberGenerator)(ref UniformRandomNumberGenerator urng)
+    if(isUniformRNG!UniformRandomNumberGenerator)
     {
-        return zigguratAlgorithm!(f, tail, head, this, true, rng)();
+        return zigguratAlgorithm!(f, tail, head, this, true, urng)();
     }
   
     private:
@@ -2046,12 +2049,12 @@ struct NormalZigguratEngine(T) if(isFloatingPoint!T)
     T headDx;
     T headDy;
 
-    auto head(Rng)(ref Rng rng)
+    auto head(UniformRandomNumberGenerator)(ref UniformRandomNumberGenerator urng)
     {
         while(true)
         {
-            T x = uniform01!T(rng) * headDx;
-            T y = uniform01!T(rng) * headDy;
+            T x = uniform01!T(urng) * headDx;
+            T y = uniform01!T(urng) * headDy;
             T x2 = x * x;
             // An approximation for 1 - f  using one term of the Taylor series. 
             // This is an upper bound.
@@ -2067,13 +2070,13 @@ struct NormalZigguratEngine(T) if(isFloatingPoint!T)
         }
     }
    
-    static T tail(Rng)(T x0, ref Rng rng)
+    static T tail(UniformRandomNumberGenerator)(T x0, ref UniformRandomNumberGenerator urng)
     {
         // the new Marsaglia Tail Method
         while(true)
         {
-            T x = -log(uniform01!T(rng)) / x0;
-            T y = -log(uniform01!T(rng));
+            T x = -log(uniform01!T(urng)) / x0;
+            T y = -log(uniform01!T(urng));
             if(y + y > x * x)
                 return x0 + x;
         }
