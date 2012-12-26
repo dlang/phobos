@@ -1444,14 +1444,47 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
        isForwardRange!R &&
        is(Unqual!(ElementType!(ElementType!RoR)) == Unqual!(ElementType!R)))
 {
-    return joinImpl(ror, sep);
+    if (ror.empty)
+        return typeof(return).init;
+
+    alias ElementType!RoR RoRElem;
+    auto result = appender!(typeof(return))();
+    static if(isForwardRange!RoR &&
+              hasLength!RoR &&
+              (hasLength!RoRElem || isDynamicArray!RoRElem) &&
+              (hasLength!R || isDynamicArray!R))
+    {
+        immutable resultLen = reduce!"a + b.length"(cast(size_t) 0, ror.save)
+            + sep.length * (ror.length - 1);
+        result.reserve(resultLen);
+    }
+    put(result, ror.front);
+    ror.popFront();
+    foreach (r; ror)
+    {
+        put(result, sep);
+        put(result, r);
+    }
+    return result.data;
 }
 
 /// Ditto
 ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
-    if(isInputRange!RoR && isInputRange!(ElementType!RoR))
+    if(isInputRange!RoR &&
+       isInputRange!(ElementType!RoR))
 {
-    return joinImpl(ror);
+    if (ror.empty)
+        return typeof(return).init;
+
+    alias ElementType!RoR R;
+    auto result = appender!(typeof(return))();
+    static if(isForwardRange!RoR && (hasLength!R || isDynamicArray!R))
+    {
+        result.reserve(reduce!("a + b.length")(cast(size_t) 0, ror.save));
+    }
+    foreach (r; ror)
+        put(result, r);
+    return result.data;
 }
 
 //Verify Examples.
@@ -1462,149 +1495,6 @@ unittest
 
     assert(join([[1, 2, 3], [4, 5]], [72, 73]) == [1, 2, 3, 72, 73, 4, 5]);
     assert(join([[1, 2, 3], [4, 5]]) == [1, 2, 3, 4, 5]);
-}
-
-// We have joinImpl instead of just making them all join in order to simplify
-// the template constraint that the user will see on errors (it's condensed down
-// to the conditions that are common to all).
-ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR, R)(RoR ror, R sep)
-    if(isInputRange!RoR &&
-       isInputRange!(ElementType!RoR) &&
-       !isDynamicArray!(ElementType!RoR) &&
-       isForwardRange!R &&
-       is(Unqual!(ElementType!(ElementType!RoR)) == Unqual!(ElementType!R)))
-{
-    if(ror.empty)
-        return typeof(return).init;
-    auto iter = joiner(ror, sep);
-
-    static if(isForwardRange!RoR &&
-              hasLength!RoR &&
-              hasLength!(ElementType!RoR) &&
-              hasLength!R)
-    {
-        immutable resultLen = reduce!"a + b.length"(cast(size_t) 0, ror.save)
-            + sep.length * (ror.length - 1);
-        auto result = new ElementEncodingType!(ElementType!RoR)[resultLen];
-        copy(iter, result);
-        return result;
-    }
-    else
-        return copy(iter, appender!(typeof(return))()).data;
-}
-
-ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR, R)(RoR ror, R sep)
-    if(isForwardRange!RoR &&
-       hasLength!RoR &&
-       isDynamicArray!(ElementType!RoR) &&
-       isForwardRange!R &&
-       is(Unqual!(ElementType!(ElementType!RoR)) == Unqual!(ElementType!R)))
-{
-    alias ElementEncodingType!(ElementType!RoR) RetElem;
-    alias RetElem[] RetType;
-
-    if(ror.empty)
-        return RetType.init;
-
-    auto sepArr = to!RetType(sep);
-    immutable resultLen = reduce!"a + b.length"(cast(size_t) 0, ror) +
-                          sepArr.length * (ror.length - 1);
-    auto result = new Unqual!RetElem[](resultLen);
-
-    auto first = ror.front;
-    result[0 .. first.length] = first[];
-    size_t i = first.length;
-    ror.popFront();
-    foreach(r; ror)
-    {
-        result[i .. i + sepArr.length] = sepArr[];
-        i += sepArr.length;
-        result[i .. i + r.length] = r[];
-        i += r.length;
-    }
-
-    return cast(RetType)result;
-}
-
-ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR, R)(RoR ror, R sep)
-    if(isInputRange!RoR &&
-       ((isForwardRange!RoR && !hasLength!RoR) || !isForwardRange!RoR) &&
-       isDynamicArray!(ElementType!RoR) &&
-       isForwardRange!R &&
-       is(Unqual!(ElementType!(ElementType!RoR)) == Unqual!(ElementType!R)))
-{
-    if(ror.empty)
-        return typeof(return).init;
-
-    auto result = appender!(typeof(return))();
-    result.put(ror.front);
-    ror.popFront();
-    foreach (r; ror)
-    {
-        result.put(sep);
-        result.put(r);
-    }
-    return result.data;
-}
-
-ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR)(RoR ror)
-    if(isInputRange!RoR &&
-       isInputRange!(ElementType!RoR) &&
-       !isDynamicArray!(ElementType!RoR))
-{
-    auto iter = joiner(ror);
-
-    static if(isForwardRange!RoR &&
-              hasLength!RoR &&
-              hasLength!(ElementType!RoR))
-    {
-        immutable resultLen = reduce!"a + b.length"(cast(size_t) 0, ror);
-        auto result = new Unqual!(ElementEncodingType!(ElementType!RoR))[resultLen];
-        copy(iter, result);
-        return cast(typeof(return)) result;
-    }
-    else
-        return copy(iter, appender!(typeof(return))()).data;
-}
-
-ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR)(RoR ror)
-    if(isForwardRange!RoR &&
-       hasLength!RoR &&
-       isDynamicArray!(ElementType!RoR))
-{
-    alias ElementEncodingType!(ElementType!RoR) RetElem;
-    alias RetElem[] RetType;
-
-    if(ror.empty)
-        return RetType.init;
-
-    immutable resultLen = reduce!"a + b.length"(cast(size_t) 0, ror);
-    auto result = new Unqual!RetElem[](resultLen);
-
-    size_t i = 0;
-    foreach(r; ror)
-    {
-        result[i .. i + r.length] = r[];
-        i += r.length;
-    }
-
-    return cast(RetType)result;
-}
-
-ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR)(RoR ror)
-    if(isInputRange!RoR &&
-       ((isForwardRange!RoR && !hasLength!RoR) || !isForwardRange!RoR) &&
-       isDynamicArray!(ElementType!RoR))
-{
-    if(ror.empty)
-        return typeof(return).init;
-
-    auto result = appender!(typeof(return))();
-
-    foreach(r; ror)
-        result.put(r);
-
-    return result.data;
 }
 
 unittest
