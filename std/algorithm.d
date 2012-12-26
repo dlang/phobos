@@ -4741,6 +4741,9 @@ unittest
             assert(startsWith(to!S("abc"), 'x', to!T("aaa"), 'a', "sab") == 3);
             assert(startsWith(to!S("\uFF28el\uFF4co"), to!T("\uFF28el")));
             assert(startsWith(to!S("\uFF28el\uFF4co"), to!T("Hel"), to!T("\uFF28el")) == 2);
+            assert(startsWith(to!S("日本語"), to!T("日本")));
+            assert(startsWith(to!S("日本語"), to!T("日本語")));
+            assert(!startsWith(to!S("日本"), to!T("日本語")));
         }
     }
 
@@ -5010,6 +5013,9 @@ unittest
             assert(endsWith(to!S("abc"), to!T("x"), "aaa", "c", "sab") == 3);
             assert(endsWith(to!S("\uFF28el\uFF4co"), to!T("l\uFF4co")));
             assert(endsWith(to!S("\uFF28el\uFF4co"), to!T("lo"), to!T("l\uFF4co")) == 2);
+            assert(endsWith(to!S("日本語"), to!T("本語")));
+            assert(endsWith(to!S("日本語"), to!T("日本語")));
+            assert(!endsWith(to!S("本語"), to!T("日本語")));
         }
     }
 
