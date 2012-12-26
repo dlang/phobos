@@ -4576,17 +4576,16 @@ assert(startsWith("abc", "x", "aaa", "sab") == 0);
 assert(startsWith("abc", "x", "aaa", "a", "sab") == 3);
 ----
  */
-uint startsWith(alias pred = "a == b", Range, Ranges...)
-               (Range doesThisStart, Ranges withOneOfThese)
-if (isInputRange!Range && Ranges.length > 1 &&
+uint startsWith(alias pred = "a == b", Range, Needles...)(Range doesThisStart, Needles withOneOfThese)
+if (isInputRange!Range && Needles.length > 1 &&
     is(typeof(.startsWith!pred(doesThisStart, withOneOfThese[0])) : bool ) &&
     is(typeof(.startsWith!pred(doesThisStart, withOneOfThese[1 .. $])) : uint))
 {
     alias doesThisStart haystack;
     alias withOneOfThese needles;
 
-    // Make one pass looking for empty ranges
-    foreach (i, Unused; Ranges)
+    // Make one pass looking for empty ranges in needles
+    foreach (i, Unused; Needles)
     {
         // Empty range matches everything
         static if (!is(typeof(binaryFun!pred(haystack.front, needles[i])) : bool))
@@ -4597,7 +4596,7 @@ if (isInputRange!Range && Ranges.length > 1 &&
 
     for (; !haystack.empty; haystack.popFront())
     {
-        foreach (i, Unused; Ranges)
+        foreach (i, Unused; Needles)
         {
             static if (is(typeof(binaryFun!pred(haystack.front, needles[i])) : bool))
             {
@@ -4628,7 +4627,7 @@ if (isInputRange!Range && Ranges.length > 1 &&
         // If execution reaches this point, then the front matches for all
         // needles ranges. What we need to do now is to lop off the front of
         // all ranges involved and recurse.
-        foreach (i, Unused; Ranges)
+        foreach (i, Unused; Needles)
         {
             static if (is(typeof(binaryFun!pred(haystack.front, needles[i])) : bool))
             {
@@ -4646,8 +4645,7 @@ if (isInputRange!Range && Ranges.length > 1 &&
 }
 
 /// Ditto
-bool startsWith(alias pred = "a == b", R1, R2)
-               (R1 doesThisStart, R2 withThis)
+bool startsWith(alias pred = "a == b", R1, R2)(R1 doesThisStart, R2 withThis)
 if (isInputRange!R1 &&
     isInputRange!R2 &&
     is(typeof(binaryFun!pred(doesThisStart.front, withThis.front)) : bool))
@@ -4701,8 +4699,7 @@ if (isInputRange!R1 &&
 }
 
 /// Ditto
-bool startsWith(alias pred = "a == b", R, E)
-               (R doesThisStart, E withThis)
+bool startsWith(alias pred = "a == b", R, E)(R doesThisStart, E withThis)
 if (isInputRange!R &&
     is(typeof(binaryFun!pred(doesThisStart.front, withThis)) : bool))
 {
@@ -4882,17 +4879,16 @@ assert(endsWith("abc", "x", "aaa", "sab") == 0);
 assert(endsWith("abc", "x", "aaa", 'c', "sab") == 3);
 ----
  */
-uint endsWith(alias pred = "a == b", Range, Ranges...)
-             (Range doesThisEnd, Ranges withOneOfThese)
-if (isBidirectionalRange!Range && Ranges.length > 1 &&
+uint endsWith(alias pred = "a == b", Range, Needles...)(Range doesThisEnd, Needles withOneOfThese)
+if (isBidirectionalRange!Range && Needles.length > 1 &&
     is(typeof(.endsWith!pred(doesThisEnd, withOneOfThese[0])) : bool) &&
     is(typeof(.endsWith!pred(doesThisEnd, withOneOfThese[1 .. $])) : uint))
 {
     alias doesThisEnd haystack;
     alias withOneOfThese needles;
 
-    // Make one pass looking for empty ranges
-    foreach (i, Unused; Ranges)
+    // Make one pass looking for empty ranges in needles
+    foreach (i, Unused; Needles)
     {
         // Empty range matches everything
         static if (!is(typeof(binaryFun!pred(haystack.back, needles[i])) : bool))
@@ -4903,7 +4899,7 @@ if (isBidirectionalRange!Range && Ranges.length > 1 &&
 
     for (; !haystack.empty; haystack.popBack())
     {
-        foreach (i, Unused; Ranges)
+        foreach (i, Unused; Needles)
         {
             static if (is(typeof(binaryFun!pred(haystack.back, needles[i])) : bool))
             {
@@ -4932,7 +4928,7 @@ if (isBidirectionalRange!Range && Ranges.length > 1 &&
         // If execution reaches this point, then the back matches for all
         // needles ranges. What we need to do now is to lop off the back of
         // all ranges involved and recurse.
-        foreach (i, Unused; Ranges)
+        foreach (i, Unused; Needles)
         {
             static if (is(typeof(binaryFun!pred(haystack.back, needles[i])) : bool))
             {
@@ -4950,8 +4946,7 @@ if (isBidirectionalRange!Range && Ranges.length > 1 &&
 }
 
 /// Ditto
-bool endsWith(alias pred = "a == b", R1, R2)
-             (R1 doesThisEnd, R2 withThis)
+bool endsWith(alias pred = "a == b", R1, R2)(R1 doesThisEnd, R2 withThis)
 if (isBidirectionalRange!R1 &&
     isBidirectionalRange!R2 &&
     is(typeof(binaryFun!pred(doesThisEnd.back, withThis.back)) : bool))
@@ -4978,8 +4973,7 @@ if (isBidirectionalRange!R1 &&
 }
 
 /// Ditto
-bool endsWith(alias pred = "a == b", R, E)
-             (R doesThisEnd, E withThis)
+bool endsWith(alias pred = "a == b", R, E)(R doesThisEnd, E withThis)
 if (isBidirectionalRange!R &&
     is(typeof(binaryFun!pred(doesThisEnd.back, withThis)) : bool))
 {
