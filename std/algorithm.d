@@ -4987,27 +4987,6 @@ unittest
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
-    //This is because we need to run some tests on ranges which _aren't_ arrays,
-    //and as far as I can tell, all of the functions which would wrap an array
-    //in a range (such as filter) don't return bidirectional ranges, so I'm
-    //creating one here.
-    auto static wrap(R)(R r)
-    if (isBidirectionalRange!R)
-    {
-        static struct Result
-        {
-            @property auto ref front() {return _range.front;}
-            @property auto ref back() {return _range.back;}
-            @property bool empty() {return _range.empty;}
-            void popFront() {_range.popFront();}
-            void popBack() {_range.popBack();}
-            @property auto save() {return this;}
-            R _range;
-        }
-
-        return Result(r);
-    }
-
     foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         assert(!endsWith(to!S("abc"), 'a'));
@@ -5049,17 +5028,17 @@ unittest
         assert(!endsWith(arr, [2, 4, 5]));
         assert(endsWith(arr, [2, 4, 5], [3, 4, 5]) == 2);
 
-        assert(!endsWith(wrap(arr), 4));
-        assert(endsWith(wrap(arr), 5));
-        assert(endsWith(wrap(arr), [5]));
-        assert(endsWith(wrap(arr), [4, 5]));
-        assert(endsWith(wrap(arr), [4, 5], 7) == 1);
-        assert(!endsWith(wrap(arr), [2, 4, 5]));
-        assert(endsWith(wrap(arr), [2, 4, 5], [3, 4, 5]) == 2);
-        assert(endsWith(arr, wrap([4, 5])));
-        assert(endsWith(arr, wrap([4, 5]), 7) == 1);
-        assert(!endsWith(arr, wrap([2, 4, 5])));
-        assert(endsWith(arr, [2, 4, 5], wrap([3, 4, 5])) == 2);
+        assert(!endsWith(filterBidirectional!"true"(arr), 4));
+        assert(endsWith(filterBidirectional!"true"(arr), 5));
+        assert(endsWith(filterBidirectional!"true"(arr), [5]));
+        assert(endsWith(filterBidirectional!"true"(arr), [4, 5]));
+        assert(endsWith(filterBidirectional!"true"(arr), [4, 5], 7) == 1);
+        assert(!endsWith(filterBidirectional!"true"(arr), [2, 4, 5]));
+        assert(endsWith(filterBidirectional!"true"(arr), [2, 4, 5], [3, 4, 5]) == 2);
+        assert(endsWith(arr, filterBidirectional!"true"([4, 5])));
+        assert(endsWith(arr, filterBidirectional!"true"([4, 5]), 7) == 1);
+        assert(!endsWith(arr, filterBidirectional!"true"([2, 4, 5])));
+        assert(endsWith(arr, [2, 4, 5], filterBidirectional!"true"([3, 4, 5])) == 2);
 
         assert(endsWith!("a%10 == b%10")(arr, [14, 15]));
         assert(!endsWith!("a%10 == b%10")(arr, [15, 14]));
