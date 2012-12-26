@@ -6316,11 +6316,8 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
     static if (isArray!Range1 && isArray!Range2 &&
                is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
     {
-        immutable overlaps =
-            (source.ptr >= target.ptr &&
-             source.ptr < target.ptr + target.length) ||
-            (target.ptr >= source.ptr &&
-             target.ptr < source.ptr + source.length);
+        immutable overlaps = source.ptr < target.ptr + target.length &&
+                             target.ptr < source.ptr + source.length;
 
         if (overlaps)
         {
