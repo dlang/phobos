@@ -4658,18 +4658,22 @@ if (isInputRange!R1 &&
     else
         enum isDefaultPred = false;
 
+    static if ((hasLength!R1 && hasLength!R2) ||
+               (isNarrowString!R1 && isNarrowString!R2 && ElementEncodingType!R1.sizeof == ElementEncodingType!R2.sizeof))
+    {
+        //Note: While narrow strings don't have a "true" length, for a narrow string to start with another
+        //narrow string *of the same type*, it must have *at least* as many encoding elements.
+        if (haystack.length < needle.length)
+            return false;
+    }
+
     static if (isDefaultPred && isArray!R1 && isArray!R2 &&
                is(Unqual!(ElementEncodingType!R1) == Unqual!(ElementEncodingType!R2)))
     {
-        if (haystack.length < needle.length) return false;
-
         return haystack[0 .. needle.length] == needle;
     }
-    else static if (isArray!R1 && isArray!R2 &&
-                    !isNarrowString!R1 && !isNarrowString!R2)
+    else static if (isRandomAccessRange!R1 && isRandomAccessRange!R2 && hasLength!R2)
     {
-        if (haystack.length < needle.length) return false;
-
         foreach (j; 0 .. needle.length)
         {
             if (!binaryFun!pred(needle[j], haystack[j]))
@@ -4681,12 +4685,8 @@ if (isInputRange!R1 &&
     }
     else
     {
-        static if (hasLength!R1 && hasLength!R2)
-        {
-            if (haystack.length < needle.length) return false;
-        }
-
-        if (needle.empty) return true;
+        if (needle.empty)
+            return true;
 
         for (; !haystack.empty; haystack.popFront())
         {
