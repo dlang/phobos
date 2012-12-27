@@ -1441,7 +1441,7 @@ assert(join([[1, 2, 3], [4, 5]]) == [1, 2, 3, 4, 5]);
 ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     if(isInputRange!RoR &&
        isInputRange!(ElementType!RoR) &&
-       isForwardRange!R &&
+       isInputRange!R &&
        is(Unqual!(ElementType!(ElementType!RoR)) == Unqual!(ElementType!R)))
 {
     alias ElementType!RoR RoRElem;
@@ -1450,15 +1450,11 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     if (ror.empty)
         return RetType.init;
 
-    static if (isNarrowString!R || isNarrowString!RetType)
-        auto sepArr = to!(RetType)(sep);
-    else
-        alias sep sepArr;
-
+    auto sepArr = to!(RetType)(sep);
     auto result = appender!(RetType)();
     static if(isForwardRange!RoR &&
               hasLength!RoR &&
-              (isNarrowString!RetType || hasLength!RoRElem && hasLength!R))
+              (isNarrowString!RetType || hasLength!RoRElem))
     {
         immutable resultLen = reduce!"a + b.length"(cast(size_t) 0, ror.save)
             + sepArr.length * (ror.length - 1);
