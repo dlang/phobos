@@ -2163,7 +2163,7 @@ bool startOfLine(dchar back, bool seenNl)
 }
 
 //Test if bytecode starting at pc in program 're' can match given codepoint
-//Returns: length of matched atom if test is positive, 0 - can't tell, -1 if doesn't match
+//Returns: 0 - can't tell, -1 if doesn't match
 int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
 {
     static assert(IRL!(IR.OrChar) == 1);//used in code processing IR.OrChar
@@ -2199,7 +2199,7 @@ int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
             break;
         case IR.Trie:
             if(re.tries[re.ir[pc].data][front])
-                return IRL!(IR.Trie);
+                return 0;
             else
                 return -1;
         default:
@@ -5097,7 +5097,7 @@ enum OneShot { Fwd, Bwd };
     void eval(bool withInput)(Thread!DataIndex* t, Group!DataIndex[] matches)
     {
         ThreadList!DataIndex worklist;
-        debug(fred_matching) writeln("Evaluating thread");
+        debug(fred_matching) writeln("---- Evaluating thread");
         for(;;)
         {
             debug(fred_matching)
@@ -5312,12 +5312,7 @@ enum OneShot { Fwd, Bwd };
                 static if(withInput)
                 {
                     int test = quickTestFwd(pc1, front, re);
-                    if(test > 0)
-                    {
-                        nlist.insertBack(fork(t, pc1 + test, t.counter));
-                        t.pc = pc2;
-                    }
-                    else if(test == 0)
+                    if(test >= 0)
                     {
                         worklist.insertFront(fork(t, pc2, t.counter));
                         t.pc = pc1;
@@ -5490,7 +5485,7 @@ enum OneShot { Fwd, Bwd };
                             break;
                     if(t.pc != end)
                     {
-                       t.pc = end;
+                        t.pc = end;
                         nlist.insertBack(t);
                     }
                     else
@@ -5559,7 +5554,7 @@ enum OneShot { Fwd, Bwd };
                     recycle(t);
                     t = worklist.fetch();
                     if(t)
-                       break;
+                        break;
                     else
                         return;
             }
@@ -5588,26 +5583,27 @@ enum OneShot { Fwd, Bwd };
             startPc = cast(uint)re.ir.length-IRL!(IR.LookbehindEnd);
         if(!atEnd)//if no char
         {
-            if (startPc!=RestartPc){
+            debug(fred_matching)
+            {
+                static if(direction == OneShot.Fwd)
+                    writefln("-- Threaded matching (forward) threads at  %s",  s[index..s.lastIndex]);
+                else
+                    writefln("-- Threaded matching (backward) threads at  %s", retro(s[index..s.lastIndex])); 
+            }
+            if(startPc!=RestartPc){
                 auto startT = createStart(index, startPc);
                 genCounter++;
                 evalFn!true(startT, matches);
             }
             for(;;)
             {
-                genCounter++;
+                debug(fred_matching) writeln("\n-- Started iteration of main cycle");
+                genCounter++;                
                 debug(fred_matching)
                 {
-                    static if(direction == OneShot.Fwd)
-                        writefln("Threaded matching (forward) threads at  %s",  s[index..s.lastIndex]);
-                    else
-                        writefln("Threaded matching (backward) threads at  %s", retro(s[index..s.lastIndex]));
                     foreach(t; clist[])
                     {
                         assert(t);
-                        writef("pc=%s ",t.pc);
-                        write(t.matches);
-                        writeln();
                     }
                 }
                 for(Thread!DataIndex* t = clist.fetch(); t; t = clist.fetch())
@@ -5625,10 +5621,11 @@ enum OneShot { Fwd, Bwd };
                     if (!atEnd) return MatchResult.PartialMatch;
                     break;
                 }
+                debug(fred_matching) writeln("-- Ended iteration of main cycle\n");
             }
         }
         genCounter++; //increment also on each end
-        debug(fred_matching) writefln("Threaded matching (%s) threads at end",
+        debug(fred_matching) writefln("-- Threaded matching (%s) threads at end",
                                       direction == OneShot.Fwd ? "forward" : "backward");
         //try out all zero-width posibilities
         for(Thread!DataIndex* t = clist.fetch(); t; t = clist.fetch())
@@ -5647,7 +5644,7 @@ enum OneShot { Fwd, Bwd };
     void evalBack(bool withInput)(Thread!DataIndex* t, Group!DataIndex[] matches)
     {
         ThreadList!DataIndex worklist;
-        debug(fred_matching) writeln("Evaluating thread backwards");
+        debug(fred_matching) writeln("---- Evaluating thread backwards");
         do
         {
             debug(fred_matching)
@@ -7628,6 +7625,17 @@ else
         enum peakRegex = ctRegex!(peakRegexStr);
         //note that the regex pattern itself is probably bogus
         assert(match(r"\>wgEncode-blah-Tfbs.narrow</a>", peakRegex));
+    }
+
+    // bugzilla 9211
+    unittest
+    {
+        auto rx_1 =  regex(r"^(\w)*(\d)");
+        auto m = match("1234", rx_1);  
+        assert(equal(m.front, ["1234", "3", "4"]));
+        auto rx_2 = regex(r"^([0-9])*(\d)");
+        auto m2 = match("1234", rx_2);      
+        assert(equal(m2.front, ["1234", "3", "4"]));
     }
 }
 
