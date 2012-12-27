@@ -1638,7 +1638,7 @@ assert(!de2.isFile);
             Windows when dealing with symbolic links.
           +/
         @property uint linkAttributes();
-        
+
         version(Windows)
             alias void* stat_t;
 
@@ -2556,6 +2556,9 @@ public:
         followSymlink = Whether symbolic links which point to directories
                          should be treated as directories and their contents
                          iterated over.
+
+    Throws:
+        $(D FileException) if the directory does not exist.
 
 Examples:
 --------------------
