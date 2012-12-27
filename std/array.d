@@ -1450,7 +1450,10 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     if (ror.empty)
         return RetType.init;
 
-    auto sepArr = to!(RetType)(sep);
+    static if (isSomeString!RetType)
+        auto sepArr = to!RetType(sep);
+    else
+        auto sepArr = array(sep);
     auto result = appender!(RetType)();
     static if(isForwardRange!RoR &&
               hasLength!RoR &&
@@ -1590,6 +1593,16 @@ unittest
 
     assert(join([[1, 2], [41, 42]]) == [1, 2, 41, 42]);
     assert(join(cast(int[][])[]).empty);
+
+    alias filter!"true" f;
+    assert(join([[1, 2], [41, 42]],          [5, 6]) == [1, 2, 5, 6, 41, 42]);
+    assert(join(f([[1, 2], [41, 42]]),       [5, 6]) == [1, 2, 5, 6, 41, 42]);
+    assert(join([f([1, 2]), f([41, 42])],    [5, 6]) == [1, 2, 5, 6, 41, 42]);
+    assert(join(f([f([1, 2]), f([41, 42])]), [5, 6]) == [1, 2, 5, 6, 41, 42]);
+    assert(join([[1, 2], [41, 42]],          f([5, 6])) == [1, 2, 5, 6, 41, 42]);
+    assert(join(f([[1, 2], [41, 42]]),       f([5, 6])) == [1, 2, 5, 6, 41, 42]);
+    assert(join([f([1, 2]), f([41, 42])],    f([5, 6])) == [1, 2, 5, 6, 41, 42]);
+    assert(join(f([f([1, 2]), f([41, 42])]), f([5, 6])) == [1, 2, 5, 6, 41, 42]);
 }
 
 
