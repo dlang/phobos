@@ -576,12 +576,14 @@ static assert(Bytecode.sizeof == 4);
         {
             put(sink,`"`);
             int i=0;
-            do{
+            do
+            {
                 put(sink,cast(char[])([cast(dchar)irb[i].data]));
                 ++i;
             } while(i<irb.length && irb[i].code==IR.Char);
             put(sink,"\"");
-            if (pc<i){
+            if(pc<i)
+            {
                 put(sink,"\n");
                 for (int ii=indent+pc+1;ii>0;++ii)
                     put(sink,"=");
@@ -3042,7 +3044,8 @@ struct StreamTester(Char)
         refStream=Input!(Char)(input,splits);
         stream=new StreamCBuf!(Char)();
         pos=0;
-        if (splits.length) {
+        if (splits.length) 
+        {
             stream.addChunk(allStr);
             stream.hasEnd=true;
         }
@@ -5042,7 +5045,8 @@ enum OneShot { Fwd, Bwd };
                     if(!searchFn())
                         break;
                 }
-                else if(!next()){
+                else if(!next())
+                {
                     if (!atEnd) return false;
                     exhausted = true;
                     break;
@@ -5553,9 +5557,7 @@ enum OneShot { Fwd, Bwd };
                 default:
                     recycle(t);
                     t = worklist.fetch();
-                    if(t)
-                        break;
-                    else
+                    if(!t)
                         return;
             }
             }
@@ -5590,7 +5592,8 @@ enum OneShot { Fwd, Bwd };
                 else
                     writefln("-- Threaded matching (backward) threads at  %s", retro(s[index..s.lastIndex])); 
             }
-            if(startPc!=RestartPc){
+            if(startPc!=RestartPc)
+            {
                 auto startT = createStart(index, startPc);
                 genCounter++;
                 evalFn!true(startT, matches);
@@ -5617,7 +5620,8 @@ enum OneShot { Fwd, Bwd };
                 }
                 clist = nlist;
                 nlist = (ThreadList!DataIndex).init;
-                if(!next()){
+                if(!next())
+                {
                     if (!atEnd) return MatchResult.PartialMatch;
                     break;
                 }
