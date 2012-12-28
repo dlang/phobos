@@ -1450,17 +1450,26 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     if (ror.empty)
         return RetType.init;
 
-    static if (isSomeString!RetType)
+    // Constraint only requires input range for sep.
+    // This converts sep to an array (forward range) if it isn't one,
+    // and makes sure it has the same string encoding for string types.
+    static if (isSomeString!RetType &&
+               !is(Unqual!(ElementEncodingType!RetType) == Unqual!(ElementEncodingType!R)))
         auto sepArr = to!RetType(sep);
-    else
+    else static if (!isArray!R)
         auto sepArr = array(sep);
+    else
+        alias sep sepArr;
+
     auto result = appender!(RetType)();
     static if(isForwardRange!RoR &&
-              hasLength!RoR &&
               (isNarrowString!RetType || hasLength!RoRElem))
     {
-        immutable resultLen = reduce!"a + b.length"(cast(size_t) 0, ror.save)
-            + sepArr.length * (ror.length - 1);
+        // Reserve appender length if it can be computed.
+        size_t resultLen = 0;
+        foreach (r; ror.save)
+            resultLen += r.length + sepArr.length;
+        resultLen -= sepArr.length;
         result.reserve(resultLen);
         version(unittest) scope(exit) assert(result.data.length == resultLen);
     }
@@ -1486,6 +1495,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
     auto result = appender!(typeof(return))();
     static if(isForwardRange!RoR && (hasLength!R || isNarrowString!R))
     {
+        // Reserve appender length if it can be computed.
         immutable resultLen = reduce!("a + b.length")(cast(size_t) 0, ror.save);
         result.reserve(resultLen);
         version(unittest) scope(exit) assert(result.data.length == resultLen);
