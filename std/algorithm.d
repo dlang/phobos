@@ -4263,7 +4263,7 @@ ptrdiff_t countUntil(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
     }
     else
     {
-        if (r2.empty)
+        if (needle.empty)
             return 0;
 
         //Default case, slower route doing startsWith iteration
