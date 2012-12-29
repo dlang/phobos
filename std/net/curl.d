@@ -2133,6 +2133,11 @@ struct HTTP
         p.curl.set(CurlOption.url, url);
     }
 
+    @property void caInfo(const(char)[] caFile)
+    {
+		p.curl.set(CurlOption.cainfo, caFile);
+    }
+	
     // This is a workaround for mixed in content not having its
     // docs mixed in.
     version (StdDdoc)
