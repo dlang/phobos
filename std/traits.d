@@ -270,14 +270,22 @@ version(unittest)
         {
         }
 
-        ref const(Inner[string]) func( ref Inner var1, lazy scope string var2 );        
+        ref const(Inner[string]) func( ref Inner var1, lazy scope string var2 );
         shared(const(Inner[string])[]) data;
-        const Inner delegate(double, string) deleg;
-        Inner function(double, string) funcPtr;
+        const Inner delegate(double, string) @safe nothrow deleg;
+        Inner function(out double, string) funcPtr;
+        extern(C) Inner function(double, string) cFuncPtr;
+
+        extern(C) void cVarArg(int, ...);
+        void dVarArg(...);
+        void dVarArg2(int, ...);
+        void typesafeVarArg(int[] ...);
 
         Inner[] array;
         Inner[16] sarray;
         Inner[Inner] aarray;
+
+        shared(immutable(Inner) delegate(ref double, scope string) const shared @trusted nothrow) attrDeleg;
     }
 }
 
@@ -306,26 +314,92 @@ private template fullyQualifiedNameImplForTypes(T,
     alias TypeTuple!(is(T == const), is(T == immutable), is(T == shared)) qualifiers;
     alias TypeTuple!(false, false, false) noQualifiers;
 
-    template parametersTypeString(T)
+    string storageClassesString(uint psc)()
     {
-        import std.array;
-        import std.algorithm;
+        alias ParameterStorageClass PSC;
+
+        return format("%s%s%s%s",
+            psc & PSC.scope_ ? "scope " : "",
+            psc & PSC.out_ ? "out " : "",
+            psc & PSC.ref_ ? "ref " : "",
+            psc & PSC.lazy_ ? "lazy " : ""
+        );
+    }
+
+    string parametersTypeString(T)()
+    {
+        import std.array, std.algorithm, std.range;
 
         alias ParameterTypeTuple!(T) parameters;
-        enum parametersTypeString = join([staticMap!(fullyQualifiedName, parameters)], ", ");
+        alias ParameterStorageClassTuple!(T) parameterStC;
+
+        enum variadic = variadicFunctionStyle!T;
+        static if (variadic == Variadic.no)
+            enum variadicStr = "";
+        else static if (variadic == Variadic.c) 
+            enum variadicStr = ", ...";
+        else static if (variadic == Variadic.d)
+            enum variadicStr = parameters.length ? ", ..." : "...";
+        else static if (variadic == Variadic.typesafe)
+            enum variadicStr = " ...";
+        else
+            static assert(0, "New variadic style has been added, please update fullyQualifiedName implementation");
+
+        static if (parameters.length)
+        {
+            string result = join(
+                map!(a => format("%s%s", a[0], a[1]))(
+                    zip([staticMap!(storageClassesString, parameterStC)],
+                        [staticMap!(fullyQualifiedName, parameters)])
+                ),
+                ", "
+            );
+
+            return result ~= variadicStr;
+        }
+        else
+            return variadicStr;
+    }
+
+    string linkageString(T)()
+    {
+        enum linkage = functionLinkage!T;
+        
+        if (linkage != "D")
+            return format("extern(%s) ", linkage);
+        else
+            return "";
+    }
+
+    string functionAttributeString(T)()
+    {
+        alias FunctionAttribute FA;
+        enum attrs = functionAttributes!T;
+
+        if (attrs == FA.none)
+            return "";
+
+        return format("%s%s%s%s%s%s",
+             attrs & FA.pure_ ? " pure" : "",
+             attrs & FA.nothrow_ ? " nothrow" : "",
+             attrs & FA.ref_ ? " ref" : "",
+             attrs & FA.property ? " @property" : "",
+             attrs & FA.trusted ? " @trusted" : "",
+             attrs & FA.safe ? " @safe" : ""
+        );
     }
 
     template addQualifiers(string typeString,
         bool addConst, bool addImmutable, bool addShared)
     {
         static if (addConst)
-            enum addQualifiers = addQualifiers!(xformat("const(%s)", typeString),
+            enum addQualifiers = addQualifiers!(format("const(%s)", typeString),
                 false, addImmutable, addShared);
         else static if (addImmutable)
-            enum addQualifiers = addQualifiers!(xformat("immutable(%s)", typeString),
+            enum addQualifiers = addQualifiers!(format("immutable(%s)", typeString),
                 addConst, false, addShared);
         else static if (addShared)
-            enum addQualifiers = addQualifiers!(xformat("shared(%s)", typeString),
+            enum addQualifiers = addQualifiers!(format("shared(%s)", typeString),
                 addConst, addImmutable, false);
         else
             enum addQualifiers = typeString;
@@ -365,38 +439,53 @@ private template fullyQualifiedNameImplForTypes(T,
         import std.conv;
             
         enum fullyQualifiedNameImplForTypes = chain!(
-            xformat("%s[%s]", fullyQualifiedNameImplForTypes!(typeof(T.init[0]), qualifiers), to!string(T.length))
+            format("%s[%s]", fullyQualifiedNameImplForTypes!(typeof(T.init[0]), qualifiers), to!string(T.length))
         );
     }
     else static if (isArray!T)
     {   
         enum fullyQualifiedNameImplForTypes = chain!(
-            xformat("%s[]", fullyQualifiedNameImplForTypes!(typeof(T.init[0]), qualifiers))
+            format("%s[]", fullyQualifiedNameImplForTypes!(typeof(T.init[0]), qualifiers))
         );
     }   
     else static if (isAssociativeArray!T)
     {   
         enum fullyQualifiedNameImplForTypes = chain!(
-            xformat("%s[%s]", fullyQualifiedNameImplForTypes!(ValueType!T, qualifiers), fullyQualifiedNameImplForTypes!(KeyType!T, qualifiers))
+            format("%s[%s]", fullyQualifiedNameImplForTypes!(ValueType!T, qualifiers), fullyQualifiedNameImplForTypes!(KeyType!T, qualifiers))
         );
     }   
     else static if (isSomeFunction!T)
     {   
-        static if (isDelegate!T)
-            enum format_str = "%s delegate(%s)";
-        else static if (isFunctionPointer!T)
-            enum format_str = "%s function(%s)";
+        static if (is(T F == delegate))
+        {
+            enum qualifierString = format("%s%s%s",
+                is(F == const) ? " const" : "",
+                is(F == immutable) ? " immutable" : "",
+                is(F == shared) ? " shared" : ""
+            );
+            enum formatStr = "%s%s delegate(%s)%s%s";
+            enum fullyQualifiedNameImplForTypes = chain!(
+                format(formatStr, linkageString!T, fullyQualifiedNameImplForTypes!(ReturnType!T, noQualifiers),
+                    parametersTypeString!(T), functionAttributeString!T, qualifierString)
+            );
+        }
         else
-            enum format_str = "%s(%s)";
+        {
+            static if (isFunctionPointer!T)
+                enum formatStr = "%s%s function(%s)%s";
+            else
+                enum formatStr = "%s%s(%s)%s";
 
-        enum fullyQualifiedNameImplForTypes = chain!(
-            xformat(format_str, fullyQualifiedNameImplForTypes!(ReturnType!T, noQualifiers), parametersTypeString!(T))
-        );
+            enum fullyQualifiedNameImplForTypes = chain!(
+                format(formatStr, linkageString!T, fullyQualifiedNameImplForTypes!(ReturnType!T, noQualifiers),
+                    parametersTypeString!(T), functionAttributeString!T)
+            );
+        }
     }
     else static if (isPointer!T)
     {
         enum fullyQualifiedNameImplForTypes = chain!(
-            xformat("%s*", fullyQualifiedNameImplForTypes!(PointerTarget!T, qualifiers))
+            format("%s*", fullyQualifiedNameImplForTypes!(PointerTarget!T, qualifiers))
         );
     }
     else
@@ -427,16 +516,38 @@ unittest
     enum inner_name = "std.traits.QualifiedNameTests.Inner";
     with (QualifiedNameTests)
     {
+        // Special cases
         static assert(fqn!(string) == "string");
+        static assert(fqn!(wstring) == "wstring");
+        static assert(fqn!(dstring) == "dstring");
+
+        // Basic qualified name
         static assert(fqn!(Inner) == inner_name);
-        static assert(fqn!(typeof(array)) == xformat("%s[]", inner_name));
-        static assert(fqn!(typeof(sarray)) == xformat("%s[16]", inner_name));
-        static assert(fqn!(typeof(aarray)) == xformat("%s[%s]", inner_name, inner_name));
-        static assert(fqn!(ReturnType!(func)) == xformat("const(%s[string])", inner_name));
-        static assert(fqn!(typeof(func)) == xformat("const(%s[string])(%s, string)", inner_name, inner_name));
-        static assert(fqn!(typeof(data)) == xformat("shared(const(%s[string])[])", inner_name));
-        static assert(fqn!(typeof(deleg)) == xformat("const(%s delegate(double, string))", inner_name));
-        static assert(fqn!(typeof(funcPtr)) == xformat("%s function(double, string)", inner_name));
+
+        // Array types
+        static assert(fqn!(typeof(array)) == format("%s[]", inner_name));
+        static assert(fqn!(typeof(sarray)) == format("%s[16]", inner_name));
+        static assert(fqn!(typeof(aarray)) == format("%s[%s]", inner_name, inner_name));
+
+        // Qualified composed data types
+        static assert(fqn!(typeof(data)) == format("shared(const(%s[string])[])", inner_name));
+
+        // Function types + function attributes
+        static assert(fqn!(typeof(func)) == format("const(%s[string])(ref %s, scope lazy string) ref", inner_name, inner_name));
+        static assert(fqn!(typeof(deleg)) == format("const(%s delegate(double, string) nothrow @safe)", inner_name));
+        static assert(fqn!(typeof(funcPtr)) == format("%s function(out double, string)", inner_name));
+        static assert(fqn!(typeof(cFuncPtr)) == format("extern(C) %s function(double, string)", inner_name));
+
+        // Delegate type with qualified function type 
+        static assert(fqn!(typeof(attrDeleg)) == format("shared(immutable(%s) "
+            "delegate(ref double, scope string) nothrow @trusted const shared)", inner_name));
+
+
+        // Variable argument function types
+        static assert(fqn!(typeof(cVarArg)) == "extern(C) void(int, ...)");
+        static assert(fqn!(typeof(dVarArg)) == "void(...)");
+        static assert(fqn!(typeof(dVarArg2)) == "void(int, ...)");
+        static assert(fqn!(typeof(typesafeVarArg)) == "void(int[] ...)");
     }
 }
 
