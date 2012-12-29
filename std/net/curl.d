@@ -2135,7 +2135,7 @@ struct HTTP
 
     @property void caInfo(const(char)[] caFile)
     {
-		p.curl.set(CurlOption.cainfo, caFile);
+        p.curl.set(CurlOption.cainfo, caFile);
     }
 	
     // This is a workaround for mixed in content not having its
