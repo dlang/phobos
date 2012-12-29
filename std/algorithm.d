@@ -4263,6 +4263,9 @@ ptrdiff_t countUntil(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
     }
     else
     {
+        if (r2.empty)
+            return 0;
+
         //Default case, slower route doing startsWith iteration
         for ( ; !haystack.empty ; ++result )
         {
@@ -4270,7 +4273,7 @@ ptrdiff_t countUntil(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
             //forwarding to startsWith. This avoids making useless saves to
             //haystack/needle if they aren't even going to be mutated anyways.
             //It also cuts down on the amount of pops on haystack.
-            if (haystack.front == needle.front)
+            if (binaryFun!pred(haystack.front, needle.front))
             {
                 //Here, we need to save the needle before popping it.
                 //haystack we pop in all paths, so we do that, and then save.
@@ -4312,6 +4315,19 @@ unittest
 }
 unittest
 {
+    assert(countUntil("日本語", "") == 0);
+    assert(countUntil("日本語"d, "") == 0);
+
+    assert(countUntil("", "") == 0);
+    assert(countUntil("".filter!"true"(), "") == 0);
+
+    auto rf = [0, 20, 12, 22, 9].filter!"true"();
+    assert(rf.countUntil!"a > b"((int[]).init) == 0);
+    assert(rf.countUntil!"a > b"(20) == 3);
+    assert(rf.countUntil!"a > b"([20, 8]) == 3);
+    assert(rf.countUntil!"a > b"([20, 10]) == -1);
+    assert(rf.countUntil!"a > b"([20, 8, 0]) == -1);
+
     auto r = new ReferenceForwardRange!int([0, 1, 2, 3, 4, 5, 6]);
     auto r2 = new ReferenceForwardRange!int([3, 4]);
     auto r3 = new ReferenceForwardRange!int([3, 5]);
