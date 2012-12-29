@@ -5478,88 +5478,89 @@ enum OneShot { Fwd, Bwd };
             case IR.Nop:
                 t.pc += IRL!(IR.Nop);
                 break;
-            static if(withInput)
-            {
-                case IR.OrChar:
-                    uint len = re.ir[t.pc].sequence;
-                    uint end = t.pc + len;
-                    static assert(IRL!(IR.OrChar) == 1);
-                    for(; t.pc<end; t.pc++)
-                        if(re.ir[t.pc].data == front)
-                            break;
-                    if(t.pc != end)
-                    {
-                        t.pc = end;
-                        nlist.insertBack(t);
-                    }
-                    else
+
+                static if(withInput)
+                {
+            case IR.OrChar:
+                      uint len = re.ir[t.pc].sequence;
+                      uint end = t.pc + len;
+                      static assert(IRL!(IR.OrChar) == 1);
+                      for(; t.pc<end; t.pc++)
+                          if(re.ir[t.pc].data == front)
+                              break;
+                      if(t.pc != end)
+                      {
+                          t.pc = end;
+                          nlist.insertBack(t);
+                      }
+                      else
+                          recycle(t);
+                      t = worklist.fetch();
+                      if(!t)
+                          return;
+                      break;
+            case IR.Char:
+                      if(front == re.ir[t.pc].data)
+                      {
+                          t.pc += IRL!(IR.Char);
+                          nlist.insertBack(t);
+                      }
+                      else
+                          recycle(t);
+                      t = worklist.fetch();
+                      if(!t)
+                          return;
+                      break;
+            case IR.Any:
+                      t.pc += IRL!(IR.Any);
+                      if(!(re.flags & RegexOption.singleline)
+                              && (front == '\r' || front == '\n'))
+                          recycle(t);
+                      else
+                          nlist.insertBack(t);
+                      t = worklist.fetch();
+                      if(!t)
+                          return;
+                      break;
+            case IR.CodepointSet:
+                      if(re.charsets[re.ir[t.pc].data].scanFor(front))
+                      {
+                          t.pc += IRL!(IR.CodepointSet);
+                          nlist.insertBack(t);
+                      }
+                      else
+                      {
+                          recycle(t);
+                      }
+                      t = worklist.fetch();
+                      if(!t)
+                          return;
+                      break;
+            case IR.Trie:
+                      if(re.tries[re.ir[t.pc].data][front])
+                      {
+                          t.pc += IRL!(IR.Trie);
+                          nlist.insertBack(t);
+                      }
+                      else
+                      {
+                          recycle(t);
+                      }
+                      t = worklist.fetch();
+                      if(!t)
+                          return;
+                      break;
+                  default:
+                      assert(0, "Unrecognized instruction " ~ re.ir[t.pc].mnemonic);
+                }
+                else
+                {
+                    default:
                         recycle(t);
-                    t = worklist.fetch();
-                    if(!t)
-                        return;
-                    break;
-                case IR.Char:
-                    if(front == re.ir[t.pc].data)
-                    {
-                        t.pc += IRL!(IR.Char);
-                        nlist.insertBack(t);
-                    }
-                    else
-                        recycle(t);
-                    t = worklist.fetch();
-                    if(!t)
-                        return;
-                    break;
-                case IR.Any:
-                    t.pc += IRL!(IR.Any);
-                    if(!(re.flags & RegexOption.singleline)
-                            && (front == '\r' || front == '\n'))
-                        recycle(t);
-                    else
-                        nlist.insertBack(t);
-                    t = worklist.fetch();
-                    if(!t)
-                        return;
-                    break;
-                case IR.CodepointSet:
-                    if(re.charsets[re.ir[t.pc].data].scanFor(front))
-                    {
-                        t.pc += IRL!(IR.CodepointSet);
-                        nlist.insertBack(t);
-                    }
-                    else
-                    {
-                        recycle(t);
-                    }
-                    t = worklist.fetch();
-                    if(!t)
-                        return;
-                    break;
-                case IR.Trie:
-                    if(re.tries[re.ir[t.pc].data][front])
-                    {
-                        t.pc += IRL!(IR.Trie);
-                        nlist.insertBack(t);
-                    }
-                    else
-                    {
-                        recycle(t);
-                    }
-                    t = worklist.fetch();
-                    if(!t)
-                        return;
-                    break;
-                default:
-                    assert(0, "Unrecognized instruction " ~ re.ir[t.pc].mnemonic);
-            }
-            else
-            {
-                default:
-                    recycle(t);
-                    t = worklist.fetch();
-                    if(!t)
-                        return;
-            }
+                        t = worklist.fetch();
+                        if(!t)
+                            return;
+                }
             }
         }
 
