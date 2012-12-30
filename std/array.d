@@ -1441,17 +1441,71 @@ assert(join([[1, 2, 3], [4, 5]]) == [1, 2, 3, 4, 5]);
 ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     if(isInputRange!RoR &&
        isInputRange!(ElementType!RoR) &&
-       isForwardRange!R &&
+       isInputRange!R &&
        is(Unqual!(ElementType!(ElementType!RoR)) == Unqual!(ElementType!R)))
 {
-    return joinImpl(ror, sep);
+    alias ElementType!RoR RoRElem;
+    alias typeof(return) RetType;
+
+    if (ror.empty)
+        return RetType.init;
+
+    // Constraint only requires input range for sep.
+    // This converts sep to an array (forward range) if it isn't one,
+    // and makes sure it has the same string encoding for string types.
+    static if (isSomeString!RetType &&
+               !is(Unqual!(ElementEncodingType!RetType) == Unqual!(ElementEncodingType!R)))
+        auto sepArr = to!RetType(sep);
+    else static if (!isArray!R)
+        auto sepArr = array(sep);
+    else
+        alias sep sepArr;
+
+    auto result = appender!RetType();
+    static if(isForwardRange!RoR &&
+              (isNarrowString!RetType || hasLength!RoRElem))
+    {
+        // Reserve appender length if it can be computed.
+        size_t resultLen = 0;
+        immutable sepArrLength = sepArr.length;
+        for (auto temp = ror.save; !temp.empty; temp.popFront())
+            resultLen += temp.front.length + sepArrLength;
+        resultLen -= sepArrLength;
+        result.reserve(resultLen);
+        version(unittest) scope(exit) assert(result.data.length == resultLen);
+    }
+    put(result, ror.front);
+    ror.popFront();
+    for (; !ror.empty; ror.popFront())
+    {
+        put(result, sepArr);
+        put(result, ror.front);
+    }
+    return result.data;
 }
 
 /// Ditto
 ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
-    if(isInputRange!RoR && isInputRange!(ElementType!RoR))
+    if(isInputRange!RoR &&
+       isInputRange!(ElementType!RoR))
 {
-    return joinImpl(ror);
+    alias typeof(return) RetType;
+
+    if (ror.empty)
+        return RetType.init;
+
+    alias ElementType!RoR R;
+    auto result = appender!RetType();
+    static if(isForwardRange!RoR && (hasLength!R || isNarrowString!R))
+    {
+        // Reserve appender length if it can be computed.
+        immutable resultLen = reduce!("a + b.length")(cast(size_t) 0, ror.save);
+        result.reserve(resultLen);
+        version(unittest) scope(exit) assert(result.data.length == resultLen);
+    }
+    for (; !ror.empty; ror.popFront())
+        put(result, ror.front);
+    return result.data;
 }
 
 //Verify Examples.
@@ -1464,212 +1518,86 @@ unittest
     assert(join([[1, 2, 3], [4, 5]]) == [1, 2, 3, 4, 5]);
 }
 
-// We have joinImpl instead of just making them all join in order to simplify
-// the template constraint that the user will see on errors (it's condensed down
-// to the conditions that are common to all).
-ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR, R)(RoR ror, R sep)
-    if(isInputRange!RoR &&
-       isInputRange!(ElementType!RoR) &&
-       !isDynamicArray!(ElementType!RoR) &&
-       isForwardRange!R &&
-       is(Unqual!(ElementType!(ElementType!RoR)) == Unqual!(ElementType!R)))
-{
-    if(ror.empty)
-        return typeof(return).init;
-    auto iter = joiner(ror, sep);
-
-    static if(isForwardRange!RoR &&
-              hasLength!RoR &&
-              hasLength!(ElementType!RoR) &&
-              hasLength!R)
-    {
-        immutable resultLen = reduce!"a + b.length"(cast(size_t) 0, ror.save)
-            + sep.length * (ror.length - 1);
-        auto result = new ElementEncodingType!(ElementType!RoR)[resultLen];
-        copy(iter, result);
-        return result;
-    }
-    else
-        return copy(iter, appender!(typeof(return))()).data;
-}
-
-ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR, R)(RoR ror, R sep)
-    if(isForwardRange!RoR &&
-       hasLength!RoR &&
-       isDynamicArray!(ElementType!RoR) &&
-       isForwardRange!R &&
-       is(Unqual!(ElementType!(ElementType!RoR)) == Unqual!(ElementType!R)))
-{
-    alias ElementEncodingType!(ElementType!RoR) RetElem;
-    alias RetElem[] RetType;
-
-    if(ror.empty)
-        return RetType.init;
-
-    auto sepArr = to!RetType(sep);
-    immutable resultLen = reduce!"a + b.length"(cast(size_t) 0, ror) +
-                          sepArr.length * (ror.length - 1);
-    auto result = new Unqual!RetElem[](resultLen);
-
-    auto first = ror.front;
-    result[0 .. first.length] = first[];
-    size_t i = first.length;
-    ror.popFront();
-    foreach(r; ror)
-    {
-        result[i .. i + sepArr.length] = sepArr[];
-        i += sepArr.length;
-        result[i .. i + r.length] = r[];
-        i += r.length;
-    }
-
-    return cast(RetType)result;
-}
-
-ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR, R)(RoR ror, R sep)
-    if(isInputRange!RoR &&
-       ((isForwardRange!RoR && !hasLength!RoR) || !isForwardRange!RoR) &&
-       isDynamicArray!(ElementType!RoR) &&
-       isForwardRange!R &&
-       is(Unqual!(ElementType!(ElementType!RoR)) == Unqual!(ElementType!R)))
-{
-    if(ror.empty)
-        return typeof(return).init;
-
-    auto result = appender!(typeof(return))();
-    result.put(ror.front);
-    ror.popFront();
-    foreach (r; ror)
-    {
-        result.put(sep);
-        result.put(r);
-    }
-    return result.data;
-}
-
-ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR)(RoR ror)
-    if(isInputRange!RoR &&
-       isInputRange!(ElementType!RoR) &&
-       !isDynamicArray!(ElementType!RoR))
-{
-    auto iter = joiner(ror);
-
-    static if(isForwardRange!RoR &&
-              hasLength!RoR &&
-              hasLength!(ElementType!RoR))
-    {
-        immutable resultLen = reduce!"a + b.length"(cast(size_t) 0, ror);
-        auto result = new Unqual!(ElementEncodingType!(ElementType!RoR))[resultLen];
-        copy(iter, result);
-        return cast(typeof(return)) result;
-    }
-    else
-        return copy(iter, appender!(typeof(return))()).data;
-}
-
-ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR)(RoR ror)
-    if(isForwardRange!RoR &&
-       hasLength!RoR &&
-       isDynamicArray!(ElementType!RoR))
-{
-    alias ElementEncodingType!(ElementType!RoR) RetElem;
-    alias RetElem[] RetType;
-
-    if(ror.empty)
-        return RetType.init;
-
-    immutable resultLen = reduce!"a + b.length"(cast(size_t) 0, ror);
-    auto result = new Unqual!RetElem[](resultLen);
-
-    size_t i = 0;
-    foreach(r; ror)
-    {
-        result[i .. i + r.length] = r[];
-        i += r.length;
-    }
-
-    return cast(RetType)result;
-}
-
-ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR)(RoR ror)
-    if(isInputRange!RoR &&
-       ((isForwardRange!RoR && !hasLength!RoR) || !isForwardRange!RoR) &&
-       isDynamicArray!(ElementType!RoR))
-{
-    if(ror.empty)
-        return typeof(return).init;
-
-    auto result = appender!(typeof(return))();
-
-    foreach(r; ror)
-        result.put(r);
-
-    return result.data;
-}
-
 unittest
 {
     debug(std_array) printf("array.join.unittest\n");
 
-    string word1   = "peter";
-    string word2   = "paul";
-    string word3   = "jerry";
-    string[] words = [word1, word2, word3];
-
-    auto filteredWord1    = filter!"true"(word1);
-    auto filteredLenWord1 = takeExactly(filteredWord1, word1.length);
-    auto filteredWord2    = filter!"true"(word2);
-    auto filteredLenWord2 = takeExactly(filteredWord2, word2.length);
-    auto filteredWord3    = filter!"true"(word3);
-    auto filteredLenWord3 = takeExactly(filteredWord3, word3.length);
-    auto filteredWordsArr = [filteredWord1, filteredWord2, filteredWord3];
-    auto filteredLenWordsArr = [filteredLenWord1, filteredLenWord2, filteredLenWord3];
-    auto filteredWords    = filter!"true"(filteredWordsArr);
-
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach(R; TypeTuple!(string, wstring, dstring))
     {
-        assert(join(filteredWords, to!S(", ")) == "peter, paul, jerry");
-        assert(join(filteredWordsArr, to!S(", ")) == "peter, paul, jerry");
-        assert(join(filteredLenWordsArr, to!S(", ")) == "peter, paul, jerry");
-        assert(join(filter!"true"(words), to!S(", ")) == "peter, paul, jerry");
-        assert(join(words, to!S(", ")) == "peter, paul, jerry");
+        R word1 = "日本語";
+        R word2 = "paul";
+        R word3 = "jerry";
+        R[] words = [word1, word2, word3];
 
-        assert(join(filteredWords, to!S("")) == "peterpauljerry");
-        assert(join(filteredWordsArr, to!S("")) == "peterpauljerry");
-        assert(join(filteredLenWordsArr, to!S("")) == "peterpauljerry");
-        assert(join(filter!"true"(words), to!S("")) == "peterpauljerry");
-        assert(join(words, to!S("")) == "peterpauljerry");
+        auto filteredWord1    = filter!"true"(word1);
+        auto filteredLenWord1 = takeExactly(filteredWord1, word1.walkLength());
+        auto filteredWord2    = filter!"true"(word2);
+        auto filteredLenWord2 = takeExactly(filteredWord2, word2.walkLength());
+        auto filteredWord3    = filter!"true"(word3);
+        auto filteredLenWord3 = takeExactly(filteredWord3, word3.walkLength());
+        auto filteredWordsArr = [filteredWord1, filteredWord2, filteredWord3];
+        auto filteredLenWordsArr = [filteredLenWord1, filteredLenWord2, filteredLenWord3];
+        auto filteredWords    = filter!"true"(filteredWordsArr);
 
-        assert(join(filter!"true"([word1]), to!S(", ")) == "peter");
-        assert(join([filteredWord1], to!S(", ")) == "peter");
-        assert(join([filteredLenWord1], to!S(", ")) == "peter");
-        assert(join(filter!"true"([filteredWord1]), to!S(", ")) == "peter");
-        assert(join([word1], to!S(", ")) == "peter");
+        foreach(S; TypeTuple!(string, wstring, dstring))
+        {
+            assert(join(filteredWords, to!S(", ")) == "日本語, paul, jerry");
+            assert(join(filteredWordsArr, to!S(", ")) == "日本語, paul, jerry");
+            assert(join(filteredLenWordsArr, to!S(", ")) == "日本語, paul, jerry");
+            assert(join(filter!"true"(words), to!S(", ")) == "日本語, paul, jerry");
+            assert(join(words, to!S(", ")) == "日本語, paul, jerry");
+
+            assert(join(filteredWords, to!S("")) == "日本語pauljerry");
+            assert(join(filteredWordsArr, to!S("")) == "日本語pauljerry");
+            assert(join(filteredLenWordsArr, to!S("")) == "日本語pauljerry");
+            assert(join(filter!"true"(words), to!S("")) == "日本語pauljerry");
+            assert(join(words, to!S("")) == "日本語pauljerry");
+
+            assert(join(filter!"true"([word1]), to!S(", ")) == "日本語");
+            assert(join([filteredWord1], to!S(", ")) == "日本語");
+            assert(join([filteredLenWord1], to!S(", ")) == "日本語");
+            assert(join(filter!"true"([filteredWord1]), to!S(", ")) == "日本語");
+            assert(join([word1], to!S(", ")) == "日本語");
+
+            assert(join(filteredWords, to!S(word1)) == "日本語日本語paul日本語jerry");
+            assert(join(filteredWordsArr, to!S(word1)) == "日本語日本語paul日本語jerry");
+            assert(join(filteredLenWordsArr, to!S(word1)) == "日本語日本語paul日本語jerry");
+            assert(join(filter!"true"(words), to!S(word1)) == "日本語日本語paul日本語jerry");
+            assert(join(words, to!S(word1)) == "日本語日本語paul日本語jerry");
+
+            auto filterComma = filter!"true"(to!S(", "));
+            assert(join(filteredWords, filterComma) == "日本語, paul, jerry");
+            assert(join(filteredWordsArr, filterComma) == "日本語, paul, jerry");
+            assert(join(filteredLenWordsArr, filterComma) == "日本語, paul, jerry");
+            assert(join(filter!"true"(words), filterComma) == "日本語, paul, jerry");
+            assert(join(words, filterComma) == "日本語, paul, jerry");
+        }
+
+        assert(join(filteredWords) == "日本語pauljerry");
+        assert(join(filteredWordsArr) == "日本語pauljerry");
+        assert(join(filteredLenWordsArr) == "日本語pauljerry");
+        assert(join(filter!"true"(words)) == "日本語pauljerry");
+        assert(join(words) == "日本語pauljerry");
+
+        assert(join(filteredWords, filter!"true"(", ")) == "日本語, paul, jerry");
+        assert(join(filteredWordsArr, filter!"true"(", ")) == "日本語, paul, jerry");
+        assert(join(filteredLenWordsArr, filter!"true"(", ")) == "日本語, paul, jerry");
+        assert(join(filter!"true"(words), filter!"true"(", ")) == "日本語, paul, jerry");
+        assert(join(words, filter!"true"(", ")) == "日本語, paul, jerry");
+
+        assert(join(filter!"true"(cast(typeof(filteredWordsArr))[]), ", ").empty);
+        assert(join(cast(typeof(filteredWordsArr))[], ", ").empty);
+        assert(join(cast(typeof(filteredLenWordsArr))[], ", ").empty);
+        assert(join(filter!"true"(cast(R[])[]), ", ").empty);
+        assert(join(cast(R[])[], ", ").empty);
+
+        assert(join(filter!"true"(cast(typeof(filteredWordsArr))[])).empty);
+        assert(join(cast(typeof(filteredWordsArr))[]).empty);
+        assert(join(cast(typeof(filteredLenWordsArr))[]).empty);
+
+        assert(join(filter!"true"(cast(R[])[])).empty);
+        assert(join(cast(R[])[]).empty);
     }
-
-    assert(join(filteredWords) == "peterpauljerry");
-    assert(join(filteredWordsArr) == "peterpauljerry");
-    assert(join(filteredLenWordsArr) == "peterpauljerry");
-    assert(join(filter!"true"(words)) == "peterpauljerry");
-    assert(join(words) == "peterpauljerry");
-
-    assert(join(filteredWords, filter!"true"(", ")) == "peter, paul, jerry");
-    assert(join(filteredWordsArr, filter!"true"(", ")) == "peter, paul, jerry");
-    assert(join(filteredLenWordsArr, filter!"true"(", ")) == "peter, paul, jerry");
-    assert(join(filter!"true"(words), filter!"true"(", ")) == "peter, paul, jerry");
-    assert(join(words, filter!"true"(", ")) == "peter, paul, jerry");
-
-    assert(join(filter!"true"(cast(typeof(filteredWordsArr))[]), ", ").empty);
-    assert(join(cast(typeof(filteredWordsArr))[], ", ").empty);
-    assert(join(cast(typeof(filteredLenWordsArr))[], ", ").empty);
-    assert(join(filter!"true"(cast(string[])[]), ", ").empty);
-    assert(join(cast(string[])[], ", ").empty);
-
-    assert(join(filter!"true"(cast(typeof(filteredWordsArr))[])).empty);
-    assert(join(cast(typeof(filteredWordsArr))[]).empty);
-    assert(join(cast(typeof(filteredLenWordsArr))[]).empty);
-    assert(join(filter!"true"(cast(string[])[])).empty);
-    assert(join(cast(string[])[]).empty);
 
     assert(join([[1, 2], [41, 42]], [5, 6]) == [1, 2, 5, 6, 41, 42]);
     assert(join([[1, 2], [41, 42]], cast(int[])[]) == [1, 2, 41, 42]);
@@ -1678,6 +1606,16 @@ unittest
 
     assert(join([[1, 2], [41, 42]]) == [1, 2, 41, 42]);
     assert(join(cast(int[][])[]).empty);
+
+    alias filter!"true" f;
+    assert(join([[1, 2], [41, 42]],          [5, 6]) == [1, 2, 5, 6, 41, 42]);
+    assert(join(f([[1, 2], [41, 42]]),       [5, 6]) == [1, 2, 5, 6, 41, 42]);
+    assert(join([f([1, 2]), f([41, 42])],    [5, 6]) == [1, 2, 5, 6, 41, 42]);
+    assert(join(f([f([1, 2]), f([41, 42])]), [5, 6]) == [1, 2, 5, 6, 41, 42]);
+    assert(join([[1, 2], [41, 42]],          f([5, 6])) == [1, 2, 5, 6, 41, 42]);
+    assert(join(f([[1, 2], [41, 42]]),       f([5, 6])) == [1, 2, 5, 6, 41, 42]);
+    assert(join([f([1, 2]), f([41, 42])],    f([5, 6])) == [1, 2, 5, 6, 41, 42]);
+    assert(join(f([f([1, 2]), f([41, 42])]), f([5, 6])) == [1, 2, 5, 6, 41, 42]);
 }
 
 
