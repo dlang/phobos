@@ -1461,24 +1461,25 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     else
         alias sep sepArr;
 
-    auto result = appender!(RetType)();
+    auto result = appender!RetType();
     static if(isForwardRange!RoR &&
               (isNarrowString!RetType || hasLength!RoRElem))
     {
         // Reserve appender length if it can be computed.
         size_t resultLen = 0;
-        foreach (r; ror.save)
-            resultLen += r.length + sepArr.length;
-        resultLen -= sepArr.length;
+        immutable sepArrLength = sepArr.length;
+        for (auto temp = ror.save; !temp.empty; temp.popFront())
+            resultLen += temp.front.length + sepArrLength;
+        resultLen -= sepArrLength;
         result.reserve(resultLen);
         version(unittest) scope(exit) assert(result.data.length == resultLen);
     }
     put(result, ror.front);
     ror.popFront();
-    foreach (r; ror)
+    for (; !ror.empty; ror.popFront())
     {
         put(result, sepArr);
-        put(result, r);
+        put(result, ror.front);
     }
     return result.data;
 }
@@ -1488,11 +1489,13 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
     if(isInputRange!RoR &&
        isInputRange!(ElementType!RoR))
 {
+    alias typeof(return) RetType;
+
     if (ror.empty)
-        return typeof(return).init;
+        return RetType.init;
 
     alias ElementType!RoR R;
-    auto result = appender!(typeof(return))();
+    auto result = appender!RetType();
     static if(isForwardRange!RoR && (hasLength!R || isNarrowString!R))
     {
         // Reserve appender length if it can be computed.
@@ -1500,8 +1503,8 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
         result.reserve(resultLen);
         version(unittest) scope(exit) assert(result.data.length == resultLen);
     }
-    foreach (r; ror)
-        put(result, r);
+    for (; !ror.empty; ror.popFront())
+        put(result, ror.front);
     return result.data;
 }
 
