@@ -244,6 +244,9 @@ lexicographically greater even permutation of a range in-place.)
 )
 $(LEADINGROW Set operations
 )
+$(TR $(TDNW $(LREF cartesianProduct)) $(TD Computes Cartesian product of two
+ranges.)
+)
 $(TR $(TDNW $(LREF largestPartialIntersection)) $(TD Copies out
 the values that occur most frequently in a range of ranges.)
 )
