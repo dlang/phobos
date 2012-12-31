@@ -2665,6 +2665,14 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
         private ElementType!RoR _current;
         private Separator _sep, _currentSep;
 
+        // This is a mixin instead of a function for the following reason (as
+        // explained by Kenji Hara): "This is necessary from 2.061.  If a
+        // struct has a nested struct member, it must be directly initialized
+        // in its constructor to avoid leaving undefined state.  If you change
+        // setItem to a function, the initialization of _current field is
+        // wrapped into private member function, then compiler could not detect
+        // that is correctly initialized while constructing.  To avoid the
+        // compiler error check, string mixin is used."
         private enum setItem =
         q{
             if (!_items.empty)
