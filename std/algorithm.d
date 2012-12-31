@@ -2665,28 +2665,53 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
         private ElementType!RoR _current;
         private Separator _sep, _currentSep;
 
+        // This is a mixin instead of a function for the following reason (as
+        // explained by Kenji Hara): "This is necessary from 2.061.  If a
+        // struct has a nested struct member, it must be directly initialized
+        // in its constructor to avoid leaving undefined state.  If you change
+        // setItem to a function, the initialization of _current field is
+        // wrapped into private member function, then compiler could not detect
+        // that is correctly initialized while constructing.  To avoid the
+        // compiler error check, string mixin is used."
+        private enum setItem =
+        q{
+            if (!_items.empty)
+            {
+                // If we're exporting .save, we must not consume any of the
+                // subranges, since RoR.save does not guarantee that the states
+                // of the subranges are also saved.
+                static if (isForwardRange!RoR &&
+                           isForwardRange!(ElementType!RoR))
+                    _current = _items.front.save;
+                else
+                    _current = _items.front;
+            }
+        };
+
         private void useSeparator()
         {
-            assert(_currentSep.empty && _current.empty,
+            // Separator must always come after an item.
+            assert(_currentSep.empty && !_items.empty,
                     "joiner: internal error");
+            _items.popFront();
+
+            // If there are no more items, we're done, since separators are not
+            // terminators.
+            if (_items.empty) return;
+
             if (_sep.empty)
             {
                 // Advance to the next range in the
                 // input
-                //_items.popFront();
-                for (;; _items.popFront())
+                while (_items.front.empty)
                 {
+                    _items.popFront();
                     if (_items.empty) return;
-                    if (!_items.front.empty) break;
                 }
-                _current = _items.front;
-                _items.popFront();
+                mixin(setItem);
             }
             else
             {
-                // Must make sure something is coming after the
-                // separator - it's a separator, not a terminator!
-                if (_items.empty) return;
                 _currentSep = _sep.save;
                 assert(!_currentSep.empty);
             }
@@ -2694,19 +2719,20 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 
         private enum useItem =
         q{
-            assert(_currentSep.empty && _current.empty,
-                    "joiner: internal error");
+            // FIXME: this will crash if either _currentSep or _current are
+            // class objects, because .init is null when the ctor invokes this
+            // mixin.
+            //assert(_currentSep.empty && _current.empty,
+            //        "joiner: internal error");
+
             // Use the input
             if (_items.empty) return;
-            _current = _items.front;
-            _items.popFront();
-            if (!_current.empty)
+            mixin(setItem);
+            if (_current.empty)
             {
-                return;
+                // No data in the current item - toggle to use the separator
+                useSeparator();
             }
-            // No data in the current item - toggle to use the
-            // separator
-            useSeparator();
         };
 
         this(RoR items, Separator sep)
@@ -2714,18 +2740,11 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
             _items = items;
             _sep = sep;
             mixin(useItem); // _current should be initialized in place
-            // We need the separator if the input has at least two
-            // elements
-            if (_current.empty && _items.empty)
-            {
-                // Vacate the whole thing
-                _currentSep = _currentSep.init;
-            }
         }
 
         @property auto empty()
         {
-            return _current.empty && _currentSep.empty;
+            return _items.empty;
         }
 
         @property ElementType!(ElementType!RoR) front()
@@ -2737,7 +2756,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 
         void popFront()
         {
-            assert(!empty);
+            assert(!_items.empty);
             // Using separator?
             if (!_currentSep.empty)
             {
@@ -2791,6 +2810,90 @@ unittest
     // joiner() should work for non-forward ranges too.
     InputRange!string r = inputRangeObject(["abc", "def"]);
     assert (equal(joiner(r, "xyz"), "abcxyzdef"));
+}
+
+unittest
+{
+    // Related to issue 8061
+    auto r = joiner([
+        inputRangeObject("abc"),
+        inputRangeObject("def"),
+    ], "-*-");
+
+    assert(equal(r, "abc-*-def"));
+
+    // Test case where separator is specified but is empty.
+    auto s = joiner([
+        inputRangeObject("abc"),
+        inputRangeObject("def"),
+    ], "");
+
+    assert(equal(s, "abcdef"));
+
+    // Test empty separator with some empty elements
+    auto t = joiner([
+        inputRangeObject("abc"),
+        inputRangeObject(""),
+        inputRangeObject("def"),
+        inputRangeObject(""),
+    ], "");
+
+    assert(equal(t, "abcdef"));
+
+    // Test empty elements with non-empty separator
+    auto u = joiner([
+        inputRangeObject(""),
+        inputRangeObject("abc"),
+        inputRangeObject(""),
+        inputRangeObject("def"),
+        inputRangeObject(""),
+    ], "+-");
+
+    assert(equal(u, "+-abc+-+-def+-"));
+}
+
+unittest
+{
+    // Transience correctness test
+    struct TransientRange
+    {
+        int[][] src;
+        int[] buf;
+
+        this(int[][] _src)
+        {
+            src = _src;
+            buf.length = 100;
+        }
+        @property bool empty() { return src.empty; }
+        @property int[] front()
+        {
+            assert(src.front.length <= buf.length);
+            buf[0 .. src.front.length] = src.front[0..$];
+            return buf[0 .. src.front.length];
+        }
+        void popFront() { src.popFront(); }
+    }
+
+    // Test embedded empty elements
+    auto tr1 = TransientRange([[], [1,2,3], [], [4]]);
+    assert(equal(joiner(tr1, [0]), [0,1,2,3,0,0,4]));
+
+    // Test trailing empty elements
+    auto tr2 = TransientRange([[], [1,2,3], []]);
+    assert(equal(joiner(tr2, [0]), [0,1,2,3,0]));
+
+    // Test no empty elements
+    auto tr3 = TransientRange([[1,2], [3,4]]);
+    assert(equal(joiner(tr3, [0,1]), [1,2,0,1,3,4]));
+
+    // Test consecutive empty elements
+    auto tr4 = TransientRange([[1,2], [], [], [], [3,4]]);
+    assert(equal(joiner(tr4, [0,1]), [1,2,0,1,0,1,0,1,0,1,3,4]));
+
+    // Test consecutive trailing empty elements
+    auto tr5 = TransientRange([[1,2], [3,4], [], []]);
+    assert(equal(joiner(tr5, [0,1]), [1,2,0,1,3,4,0,1,0,1]));
 }
 
 /// Ditto
