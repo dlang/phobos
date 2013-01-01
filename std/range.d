@@ -180,6 +180,9 @@ $(BOOKTABLE ,
         $(TD Creates a _range that returns fixed-size chunks of the original
         _range.
     ))
+    $(TR $(TD $(D $(LREF only)))
+        $(TD Creates a _range that iterates over a single value.
+    ))
 )
 
 These _range-construction tools are implemented using templates; but sometimes
@@ -6514,6 +6517,101 @@ unittest
     assert(chunks2.length == 2);
 
     static assert(isRandomAccessRange!(typeof(chunks)));
+}
+
+/**
+This range iterates a single element. This is useful when an interface
+requires a range, and you only need a single value.
+
+Example:
+----
+assert(equal([1, 2, 3].take(1), only(1)));
+assert(equal(chain("Only", only(' '), "one"), "Only one"));
+----
+ */
+struct Only(T)
+{
+    this(T value) { _value = value; }
+
+    @property T front() { return _value; }
+    @property T back() { return _value; }
+    @property bool empty() const { return _empty; }
+    @property size_t length() const { return _empty ? 0 : 1; }
+    @property auto save() { return this; }
+    void popFront() { _empty = true; }
+    void popBack() { _empty = true; }
+    auto opSlice() { return this; }
+
+    T opIndex(size_t i)
+    {
+        assert(!_empty && i == 0);
+        return _value;
+    }
+
+    auto opSlice(size_t from, size_t to)
+    {
+        assert(from <= to && to <= length);
+        Only!T copy = this;
+        copy._empty = _empty || from == to;
+        return copy;
+    }
+
+    private Unqual!T _value;
+    private bool _empty = false;
+}
+
+Only!T only(T)(T value)
+{
+    return Only!T(value);
+}
+
+unittest
+{
+    // Examples
+    assert(equal([1, 2, 3].take(1), only(1)));
+    assert(equal(chain("Only", only(' '), "one"), "Only one"));
+
+    foreach (x; tuple(1, '1', 1.0, "1", [1]))
+    {
+        auto a = only(x);
+        typeof(x)[] e = [];
+        assert(a.front == x);
+        assert(a.back == x);
+        assert(!a.empty);
+        assert(a.length == 1);
+        assert(equal(a, a[]));
+        assert(equal(a, a[0..1]));
+        assert(equal(a[0..0], e));
+        assert(equal(a[1..1], e));
+        assert(a[0] == x);
+
+        auto b = a.save;
+        assert(equal(a, b));
+        a.popFront();
+        assert(a.empty && a.length == 0 && a[].empty);
+        b.popBack();
+        assert(b.empty && b.length == 0 && b[].empty);
+
+        alias typeof(a) A;
+        static assert(isInputRange!A);
+        static assert(isForwardRange!A);
+        static assert(isBidirectionalRange!A);
+        static assert(isRandomAccessRange!A);
+        static assert(hasLength!A);
+        static assert(hasSlicing!A);
+    }
+
+    auto imm = Only!(immutable int)(1);
+    immutable int[] imme = [];
+    assert(imm.front == 1);
+    assert(imm.back == 1);
+    assert(!imm.empty);
+    assert(imm.length == 1);
+    assert(equal(imm, imm[]));
+    assert(equal(imm, imm[0..1]));
+    assert(equal(imm[0..0], imme));
+    assert(equal(imm[1..1], imme));
+    assert(imm[0] == 1);
 }
 
 /**
