@@ -10811,11 +10811,11 @@ while (nextEvenPermutation(a))
 ----
 // Step through even permutations of a sorted array in lexicographic order
 int[] a = [1,2,3];
-assert(nextPermutation(a) == true);
+assert(nextEvenPermutation(a) == true);
 assert(a == [2,3,1]);
-assert(nextPermutation(a) == true);
+assert(nextEvenPermutation(a) == true);
 assert(a == [3,1,2]);
-assert(nextPermutation(a) == false);
+assert(nextEvenPermutation(a) == false);
 assert(a == [1,2,3]);
 ----
  * Even permutations are useful for generating coordinates of certain geometric
