@@ -10807,7 +10807,7 @@ while (nextEvenPermutation(a))
  * case the range is reversed back to the lexicographically smallest
  * permutation; otherwise returns true.
  *
- * Example:
+ * Examples:
 ----
 // Step through even permutations of a sorted array in lexicographic order
 int[] a = [1,2,3];
@@ -10817,6 +10817,41 @@ assert(nextPermutation(a) == true);
 assert(a == [3,1,2]);
 assert(nextPermutation(a) == false);
 assert(a == [1,2,3]);
+----
+ * Even permutations are useful for generating coordinates of certain geometric
+ * shapes. Here's a non-trivial example:
+----
+// Print the 60 vertices of a uniform truncated icosahedron (soccer ball)
+import std.math, std.stdio;
+enum real Phi = (1.0 + sqrt(5.0)) / 2.0;    // Golden ratio
+real[][] seeds = [
+    [0.0, 1.0, 3.0*Phi],
+    [1.0, 2.0+Phi, 2.0*Phi],
+    [Phi, 2.0, Phi^^3]
+];
+foreach (seed; seeds)
+{
+    // Loop over even permutations of each seed
+    do
+    {
+        // Loop over all sign changes of each permutation
+        size_t i;
+        do
+        {
+            // Generate all possible sign changes
+            for (i=0; i < seed.length; i++)
+            {
+                if (seed[i] != 0.0)
+                {
+                    seed[i] = -seed[i];
+                    if (seed[i] < 0.0)
+                        break;
+                }
+            }
+            writeln(seed);
+        } while (i < seed.length);
+    } while (nextEvenPermutation(seed));
+}
 ----
  */
 bool nextEvenPermutation(alias less="a<b", BidirectionalRange)
@@ -10912,4 +10947,40 @@ unittest
     auto b = [ 3, 2, 1 ];
     assert(nextEvenPermutation(b) == false);
     assert(b == [ 1, 3, 2 ]);
+}
+
+unittest
+{
+    // Verify correctness of ddoc example.
+    enum real Phi = (1.0 + sqrt(5.0)) / 2.0;    // Golden ratio
+    real[][] seeds = [
+        [0.0, 1.0, 3.0*Phi],
+        [1.0, 2.0+Phi, 2.0*Phi],
+        [Phi, 2.0, Phi^^3]
+    ];
+    size_t n;
+    foreach (seed; seeds)
+    {
+        // Loop over even permutations of each seed
+        do
+        {
+            // Loop over all sign changes of each permutation
+            size_t i;
+            do
+            {
+                // Generate all possible sign changes
+                for (i=0; i < seed.length; i++)
+                {
+                    if (seed[i] != 0.0)
+                    {
+                        seed[i] = -seed[i];
+                        if (seed[i] < 0.0)
+                            break;
+                    }
+                }
+                n++;
+            } while (i < seed.length);
+        } while (nextEvenPermutation(seed));
+    }
+    assert(n == 60);
 }
