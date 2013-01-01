@@ -11298,7 +11298,51 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
                           "have at least one finite forward range");
 }
 
-unittest {
+unittest
+{
+    // Test cartesian product of two infinite ranges
+    auto Even = sequence!"2*n"(0);
+    auto Odd = sequence!"2*n+1"(0);
+    auto EvenOdd = cartesianProduct(Even, Odd);
+
+    //writeln(map!"[a[0],a[1]]"(EvenOdd.take(12)));
+
+    // Note: this is dependent on the exact order produced by cartesianProduct.
+    assert(equal(map!"[a[0],a[1]]"(EvenOdd.take(12)), [
+        [0, 1], [2, 1], [0, 3], [2, 3], [4, 1], [4, 3], [0, 5], [2, 5], [4, 5],
+        [6, 1], [6, 3], [6, 5]
+    ]));
+}
+
+unittest
+{
+    // Test cartesian product of an infinite input range and a finite forward
+    // range.
+    auto N = sequence!"n"(0);
+    auto M = [100, 200, 300];
+    auto NM = cartesianProduct(N,M);
+
+    assert(equal(map!"[a[0],a[1]]"(NM.take(12)), [
+        [0, 100], [0, 200], [0, 300],
+        [1, 100], [1, 200], [1, 300],
+        [2, 100], [2, 200], [2, 300],
+        [3, 100], [3, 200], [3, 300]
+    ]));
+
+    auto MN = cartesianProduct(M,N);
+    assert(equal(map!"[a[0],a[1]]"(MN.take(12)), [
+        [100, 0], [200, 0], [300, 0],
+        [100, 1], [200, 1], [300, 1],
+        [100, 2], [200, 2], [300, 2],
+        [100, 3], [200, 3], [300, 3]
+    ]));
+
+}
+
+// FIXME: this unittest has been disabled because of issue 8542.
+version(none)
+unittest
+{
     auto N = sequence!"n"(0);
 
     // To force the template to fall to the second case, we wrap N in a struct
