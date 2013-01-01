@@ -11305,13 +11305,16 @@ unittest
     auto Odd = sequence!"2*n+1"(0);
     auto EvenOdd = cartesianProduct(Even, Odd);
 
-    //writeln(map!"[a[0],a[1]]"(EvenOdd.take(12)));
+    foreach (pair; [[0, 1], [2, 1], [0, 3], [2, 3], [4, 1], [4, 3], [0, 5],
+                    [2, 5], [4, 5], [6, 1], [6, 3], [6, 5]])
+    {
+        assert(canFind(EvenOdd, tuple(pair[0], pair[1])));
+    }
 
-    // Note: this is dependent on the exact order produced by cartesianProduct.
-    assert(equal(map!"[a[0],a[1]]"(EvenOdd.take(12)), [
-        [0, 1], [2, 1], [0, 3], [2, 3], [4, 1], [4, 3], [0, 5], [2, 5], [4, 5],
-        [6, 1], [6, 3], [6, 5]
-    ]));
+    // This should terminate in finite time
+    assert(canFind(EvenOdd, tuple(124, 73)));
+    assert(canFind(EvenOdd, tuple(0, 97)));
+    assert(canFind(EvenOdd, tuple(42, 1)));
 }
 
 unittest
@@ -11322,21 +11325,56 @@ unittest
     auto M = [100, 200, 300];
     auto NM = cartesianProduct(N,M);
 
-    assert(equal(map!"[a[0],a[1]]"(NM.take(12)), [
-        [0, 100], [0, 200], [0, 300],
-        [1, 100], [1, 200], [1, 300],
-        [2, 100], [2, 200], [2, 300],
-        [3, 100], [3, 200], [3, 300]
-    ]));
+    foreach (pair; [[0, 100], [0, 200], [0, 300], [1, 100], [1, 200], [1, 300],
+                    [2, 100], [2, 200], [2, 300], [3, 100], [3, 200],
+                    [3, 300]])
+    {
+        assert(canFind(NM, tuple(pair[0], pair[1])));
+    }
+
+    // We can't solve the halting problem, so we can only check a finite
+    // initial segment here.
+    assert(!canFind(NM.take(100), tuple(100, 0)));
+    assert(!canFind(NM.take(100), tuple(1, 1)));
+    assert(!canFind(NM.take(100), tuple(100, 200)));
 
     auto MN = cartesianProduct(M,N);
-    assert(equal(map!"[a[0],a[1]]"(MN.take(12)), [
-        [100, 0], [200, 0], [300, 0],
-        [100, 1], [200, 1], [300, 1],
-        [100, 2], [200, 2], [300, 2],
-        [100, 3], [200, 3], [300, 3]
-    ]));
+    foreach (pair; [[100, 0], [200, 0], [300, 0], [100, 1], [200, 1], [300, 1],
+                    [100, 2], [200, 2], [300, 2], [100, 3], [200, 3],
+                    [300, 3]])
+    {
+        assert(canFind(MN, tuple(pair[0], pair[1])));
+    }
 
+    // We can't solve the halting problem, so we can only check a finite
+    // initial segment here.
+    assert(!canFind(MN.take(100), tuple(0, 100)));
+    assert(!canFind(MN.take(100), tuple(0, 1)));
+    assert(!canFind(MN.take(100), tuple(100, 200)));
+}
+
+unittest
+{
+    // Test cartesian product of two finite ranges.
+    auto X = [1, 2, 3];
+    auto Y = [4, 5, 6];
+    auto XY = cartesianProduct(X, Y);
+    auto Expected = [[1, 4], [1, 5], [1, 6], [2, 4], [2, 5], [2, 6], [3, 4],
+                     [3, 5], [3, 6]];
+
+    // Verify Expected ⊆ XY
+    foreach (pair; Expected)
+    {
+        assert(canFind(XY, tuple(pair[0], pair[1])));
+    }
+
+    // Verify XY ⊆ Expected
+    foreach (pair; XY)
+    {
+        assert(canFind(Expected, [pair[0], pair[1]]));
+    }
+
+    // And therefore, by set comprehension, XY == Expected
 }
 
 // FIXME: this unittest has been disabled because of issue 8542.
