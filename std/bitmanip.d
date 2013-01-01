@@ -11,24 +11,37 @@ Copyright: Copyright Digital Mars 2007 - 2011.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors:   $(WEB digitalmars.com, Walter Bright),
            $(WEB erdani.org, Andrei Alexandrescu),
+           Jonathan M Davis,
+           Alex Rønne Petersen,
+           Damian Ziemba
            Era Scarecrow
 Source: $(PHOBOSSRC std/_bitmanip.d)
 */
 /*
-         Copyright Digital Mars 2007 - 2011.
+         Copyright Digital Mars 2007 - 2012.
 Distributed under the Boost Software License, Version 1.0.
    (See accompanying file LICENSE_1_0.txt or copy at
          http://www.boost.org/LICENSE_1_0.txt)
 */
-module std.bitmanip;
+module bitmanip;
 
 //debug = bitarray;                // uncomment to turn on debugging printf's
 
 import core.bitop;
 import std.traits;
-import std.stdio : writeln, writefln, writef;
+import std.algorithm;
+import std.string;
+import std.ascii;
 
-private pure int indexOf(string str, char letter)
+version(unittest)
+{
+    import std.stdio;
+    import std.typetuple;
+    import core.stdc.stdio;
+}
+
+//CTFE has issues if you use the std.string version at present
+private int indexOf(string str, char letter) pure
 {
     foreach(i, c; str)
         if (c == letter)
@@ -36,17 +49,7 @@ private pure int indexOf(string str, char letter)
     return -1;
 }
 
-//remove spaces from beginning/end of string
-private pure string trim(string str)
-{
-    while (str.length && str[0] == ' ')
-        str = str[1 .. $];
-    while (str.length && str[$-1] == ' ')
-        str = str[0 .. $-1];
-    return str;
-}
-
-private pure string myToStringHex(ulong n)
+private string myToStringHex(ulong n) pure
 {
     enum s = "0123456789abcdef";
     enum len = s.length;
@@ -57,7 +60,7 @@ private pure string myToStringHex(ulong n)
 }
 
 //for debugging
-private pure string myToStringx(long n)
+private string myToStringx(long n) pure
 {
     enum s = "0123456789";
     enum len = s.length;
@@ -71,7 +74,7 @@ private pure string myToStringx(long n)
         return myToStringx(n / len) ~ myToStringx(n % len);
 }
 
-private pure ulong myToLongFromHex(string str)
+private ulong myToLongFromHex(string str) pure
 {
     enum l = "0123456789abcdef";
     enum u = "0123456789ABCDEF";
@@ -81,7 +84,7 @@ private pure ulong myToLongFromHex(string str)
     foreach(ch; str[2 .. $]) {
         assert(l.indexOf(ch) != -1 || u.indexOf(ch) != -1);
         sum <<= 4;
-        
+
         if (l.indexOf(ch) != -1)
             sum += l.indexOf(ch);
         else if (u.indexOf(ch) != -1)
@@ -91,31 +94,31 @@ private pure ulong myToLongFromHex(string str)
     return sum;
 }
 
-private pure ulong myToLong(string str)
+private ulong myToLong(string str) pure
 {
     ulong sum;
 
     enum d = "0123456789";
     enum len = d.length;
-    
+
     if (str == "true")
         return 1;
     if (str == "false")
         return 0;
-        
+
     if (str.length > 2 && str[0 .. 2] == "0x") {
         return myToLongFromHex(str);
     }
-        
+
     if (str[0] == '-')
         return -myToLong(str[1 .. $]);
-    
+
     foreach(ch; str) {
         assert(d.indexOf(ch) != -1);
         sum *= len;
         sum += d.indexOf(ch);
     }
-    
+
     return sum;
 }
 
@@ -123,15 +126,15 @@ unittest
 {
     assert("01234".indexOf('2') == 2);
     assert("01234".indexOf('x') == -1);
-    
+
     assert(myToStringHex(0x12340deed) == "0x12340deed");
-    
+
     assert(myToStringx(-100) == "-100");
     assert(myToStringx(5) == "5");
     assert(myToStringx(512) == "512");
     assert(myToStringx(123) == "123");
     assert(myToStringx(-123) == "-123");
-    
+
     assert(myToLongFromHex("0x1234") == 0x1234);
     assert(myToLongFromHex("0x90dead") == 0x90dead);
     assert(myToLongFromHex("0x90BEEF") == 0x90beef);
@@ -141,16 +144,22 @@ unittest
     assert(myToLong("true") == 1);
     assert(myToLong("false") == 0);
     assert(myToLong("0x123") == 0x123);
-    
+
     assert(myToString(45) == "45");
     assert(myToString(1UL << 32) == "0x100000000UL");
 
-    assert(trim("   123   ") == "123");
+    assert(strip("   123   ") == "123");
 }
 
-private pure string myToString(long n)
+
+//within a certain size we don't need to bother with hex, right?
+//if you print the mixin data out it makes a bit more sense this way.
+private string myToString(long n, bool force64 = false) pure
 {
-    //within a certain size we don't need to bother with hex, right?
+    //useful for the masks, specifically if you invert it. Fixes 8876
+    if (force64)
+        return myToStringHex(n) ~ "UL";
+
     if (n >= short.min && n <= short.max)
         return myToStringx(n);
 
@@ -158,20 +167,20 @@ private pure string myToString(long n)
 }
 
 //pair to split name=value into their two halfs safely.
-//add built in 'trim' to them?
-private pure string getName(string nameAndValue)
+private string getName(string nameAndValue)
 {
     int equalsChar = nameAndValue.indexOf('=');
     if (equalsChar != -1)
-        return trim(nameAndValue[0 .. equalsChar]);
-    return trim(nameAndValue);
+        return strip(nameAndValue[0 .. equalsChar]);
+    return strip(nameAndValue);
 }
 
-private pure ulong getValue(string nameAndValue)
+
+private ulong getValue(string nameAndValue)
 {
     int equalsChar = nameAndValue.indexOf('=');
     if (equalsChar != -1)
-        return myToLong(trim(nameAndValue[equalsChar+1 .. $]));
+        return myToLong(strip(nameAndValue[equalsChar+1 .. $]));
     return 0;
 }
 
@@ -182,7 +191,7 @@ unittest
 
     assert(getName("test=100") == "test");
     assert(getValue("test=100") == 100);
-    
+
     assert(getName("  test  =  100  ") == "test");
     assert(getValue("  test  =  100  ") == 100);
 }
@@ -193,7 +202,7 @@ private template createAccessors(
 {
     enum name = getName(nameAndValue),
                 defaultValue = getValue(nameAndValue);
-    
+
     static if (!name.length)
     {
         // No need to create any accessor
@@ -246,26 +255,27 @@ private template createAccessors(
             enum result =
             // constants
                 //only optional for cleaner namespace
-                (defVal ? "enum " ~ name ~ "_def = " ~ myToString(defVal) ~ ";\n" : "\n")
+                //two underscores used since much less likely to clash with other fields
+                (defVal ? "enum " ~ name ~ "__def = " ~ myToString(defVal) ~ ";\n" : "\n")
             // getter
-                ~"@property @safe pure nothrow bool " ~ name ~ "() const { return "
-                ~"("~store~" & "~myToString(maskAllElse)~") != 0;}\n"
+                ~"bool " ~ name ~ "() @property @safe pure const nothrow { return "
+                ~"("~store~" & "~myToString(maskAllElse, true)~") != 0;}\n"
             // setter
-                ~"@property @safe pure nothrow void " ~ name ~ "(bool v){"
-                ~"if (v) "~store~" |= "~myToString(maskAllElse)~";"
-                ~"else "~store~" &= ~"~myToString(maskAllElse)~";}\n\n";
+                ~"void " ~ name ~ "(bool v) @property @safe pure nothrow {"
+                ~"if (v) "~store~" |= "~myToString(maskAllElse, true)~";"
+                ~"else "~store~" &= ~"~myToString(maskAllElse, true)~";}\n";
         }
         else
         {
             // constants
-            enum result = "enum "~T.stringof~" "~name~"_min = cast("~T.stringof~")"
+            enum result = "enum "~T.stringof~" "~name~"__min = cast("~T.stringof~")"
                 ~(minVal < 0 ? myToString(cast(long) minVal) : myToString(minVal))~"; "
-                ~" enum "~T.stringof~" "~name~"_max = cast("~T.stringof~")"
+                ~" enum "~T.stringof~" "~name~"__max = cast("~T.stringof~")"
                 ~myToString(maxVal)~"; "
                 //only optional for cleaner namespace
-                ~ (defVal ? "enum " ~ name ~ "_def = " ~ myToString(defVal) ~ ";\n" : "\n")
+                ~ (defVal ? "enum " ~ name ~ "__def = " ~ myToString(defVal) ~ ";\n" : "\n")
             // getter
-                ~ "@property @safe pure nothrow "~T.stringof~" "~name~"() const { auto result = "
+                ~ ""~T.stringof~" "~name~"() @property @safe pure const nothrow { auto result = "
                 ~ "("~store~" & "
                 ~ myToString(maskAllElse) ~ ") >>"
                 ~ myToString(offset) ~ ";"
@@ -275,13 +285,13 @@ private template createAccessors(
                    : "")
                 ~ " return cast("~T.stringof~") result;}\n"
             // setter
-                ~"@property @safe pure nothrow void "~name~"("~T.stringof~" v){ "
-                ~"assert(v >= "~name~"_min); "
-                ~"assert(v <= "~name~"_max); "
+                ~"void "~name~"("~T.stringof~" v) @property @safe pure nothrow { "
+                ~"assert(v >= "~name~"__min); "
+                ~"assert(v <= "~name~"__max); "
                 ~store~" = cast(typeof("~store~"))"
-                " (("~store~" & ~"~myToString(maskAllElse)~")"
+                " (("~store~" & ~"~myToString(maskAllElse, true)~")"
                 " | ((cast(typeof("~store~")) v << "~myToString(offset)~")"
-                " & "~myToString(maskAllElse)~"));}\n\n";
+                " & "~myToString(maskAllElse, true)~"));}\n\n";
         }
     }
 }
@@ -334,7 +344,7 @@ private template createFields(string store, size_t offset, string defaults, Ts..
                     getValue(Ts[1]) ? (
                         //if we have a previous value, OR it, appending our new value
                         (defaults.length ? " | " : "")
-                        ~getName(Ts[1]) ~ "_def"
+                        ~getName(Ts[1]) ~ "__def"
                     ) : ""
                 ) : ""),
                 Ts[3 .. $]).result;
@@ -358,9 +368,9 @@ struct A
         bool, "flag", 1));
 }
 A obj;
+assert(obj.z == 1);
 obj.x = 2;
 obj.z = obj.x;
-assert(obj.z == 1);
 ----
 
 The example above creates a bitfield pack of eight bits, which fit in
@@ -402,24 +412,75 @@ template bitfields(T...)
 
 unittest
 {
-    static struct Integrals {
-        bool checkExpectations(bool eb, int ei, short es) { return b == eb && i == ei && s == es; }
-
-        mixin(bitfields!(
-                bool, "b", 1,
-                uint, "i", 3,
-                short, "s", 4));
+    struct Test
+    {
+        mixin(bitfields!(bool, "a", 1,
+                         uint, "b", 3,
+                         short, "c", 4));
     }
-    Integrals i;
-    assert(i.checkExpectations(false, 0, 0));
-    i.b = true;
-    assert(i.checkExpectations(true, 0, 0));
-    i.i = 7;
-    assert(i.checkExpectations(true, 7, 0));
-    i.s = -8;
-    assert(i.checkExpectations(true, 7, -8));
-    i.s = 7;
-    assert(i.checkExpectations(true, 7, 7));
+
+
+    @safe void test() pure nothrow
+    {
+        Test t;
+
+        t.a = true;
+        t.b = 5;
+        t.c = 2;
+
+        assert(t.a);
+        assert(t.b == 5);
+        assert(t.c == 2);
+    }
+
+    test();
+}
+
+unittest
+{
+    {
+        static struct Integrals {
+            bool checkExpectations(bool eb, int ei, short es) { return b == eb && i == ei && s == es; }
+
+            mixin(bitfields!(
+                      bool, "b", 1,
+                      uint, "i", 3,
+                      short, "s", 4));
+        }
+        Integrals i;
+        assert(i.checkExpectations(false, 0, 0));
+        i.b = true;
+        assert(i.checkExpectations(true, 0, 0));
+        i.i = 7;
+        assert(i.checkExpectations(true, 7, 0));
+        i.s = -8;
+        assert(i.checkExpectations(true, 7, -8));
+        i.s = 7;
+        assert(i.checkExpectations(true, 7, 7));
+    }
+
+    //Bug# 8876
+    {
+        struct MoreIntegrals {
+            bool checkExpectations(uint eu, ushort es, uint ei) { return u == eu && s == es && i == ei; }
+            
+            mixin(bitfields!(
+                  uint, "u", 24,
+                  short, "s", 16,
+                  int, "i", 24));
+        }
+        
+        MoreIntegrals i;
+        assert(i.checkExpectations(0, 0, 0));
+        i.s = 20;
+        assert(i.checkExpectations(0, 20, 0));
+        i.i = 72;
+        assert(i.checkExpectations(0, 20, 72));
+        i.u = 8;
+        assert(i.checkExpectations(8, 20, 72));
+        i.s = 7;
+        assert(i.checkExpectations(8, 7, 72));
+    }
 
     enum A { True, False }
     enum B { One, Two, Three, Four }
@@ -427,9 +488,9 @@ unittest
         bool checkExpectations(A ea, B eb) { return a == ea && b == eb; }
 
         mixin(bitfields!(
-                A, "a", 1,
-                B, "b", 2,
-                uint, "", 5));
+                  A, "a", 1,
+                  B, "b", 2,
+                  uint, "", 5));
     }
     Enums e;
     assert(e.checkExpectations(A.True, B.One));
@@ -442,69 +503,72 @@ unittest
         bool checkExpectations(bool eb) { return b == eb; }
 
         mixin(bitfields!(
-                bool, "b", 1,
-                uint, "", 7));
+                  bool, "b", 1,
+                  uint, "", 7));
     }
     SingleMember f;
     assert(f.checkExpectations(false));
     f.b = true;
     assert(f.checkExpectations(true));
-    
+
     //test default values
     struct WithDefaults {
         mixin(bitfields!(
                 bool, "b_f=false", 1,
                 bool, "b_t=true", 1,
-                uint, "i_min=0", 3,
-                uint, "i_max=7", 3,
+                uint, "ii_min=0", 3,
+                uint, "ii_max=7", 3,
                 short, "  s_min  =  -8  ", 4,   //test spaces
                 short, "s_max=7", 4));
 
         mixin(bitfields!(
-                bool, "b_", 1,
-                uint, "i_", 3,
-                short, "  s_  ", 4));
+                bool, "b", 1,
+                uint, "ii", 3,
+                short, "  s  ", 4));
     }
     WithDefaults wd;
 
     with(wd) {
         //non-specified variables go to 0
-        assert(b_ == false);
-        assert(i_ == 0);
-        assert(s_ == 0);
-        
+        assert(b == false);
+        assert(ii == 0);
+        assert(s == 0);
+
         //assigned defaults should be set.
         assert(b_f == false);
         assert(b_t == true);
-        assert(i_min == 0);
-        assert(i_max == 7);
+        assert(ii_min == 0);
+        assert(ii_max == 7);
         assert(s_min == -8);
         assert(s_max == 7);
-        
-        assert(i_min_max == i_max_max);
-        assert(i_max_min == i_min_min);
-        
-        assert(i_min_min == i_min);
-        assert(i_max_max == i_max);
-        assert(s_min_min == s_min);
-        assert(s_max_max == s_max);
+
+        assert(ii_min__max == ii_max__max);
+        assert(ii_max__min == ii_min__min);
+
+        assert(ii_min__min == ii_min);
+        assert(ii_max__max == ii_max);
+        assert(s_min__min == s_min);
+        assert(s_max__max == s_max);
     }
 
+/+
     /*
-      from format.d; Ensures there's no 'overlapping initialization'.
+      Ensures there's no 'overlapping initialization'.
       Compiling is enough to ensure it works. If any of these has a
       default; say 'flDash=true', then the problem would appear.
     */
-    union xxx {
-        ubyte allFlags;
-        mixin(bitfields!(
-                bool, "flDash", 1,
-                bool, "flZero", 1,
-                bool, "flSpace", 1,
-                bool, "flPlus", 1,
-                bool, "flHash", 1,
-                ubyte, "", 3));
-    }
+    static assert(__traits(compiles, {
+        union xxx {
+            ubyte allFlags;
+            mixin(bitfields!(
+                    bool, "flDash", 1,
+                    bool, "flZero", 1,
+                    bool, "flSpace", 1,
+                    bool, "flPlus", 1,
+                    bool, "flHash", 1,
+                    ubyte, "", 3));
+        }}));
++/
 }
 
 /**
@@ -518,9 +582,9 @@ struct FloatRep
     {
         float value;
         mixin(bitfields!(
-                uint,  "fraction", 23,
-                ubyte, "exponent",  8,
-                bool,  "sign",      1));
+                  uint,  "fraction", 23,
+                  ubyte, "exponent",  8,
+                  bool,  "sign",      1));
     }
     enum uint bias = 127, fractionBits = 23, exponentBits = 8, signBits = 1;
 }
@@ -533,9 +597,9 @@ struct FloatRep
     {
         float value;
         mixin(bitfields!(
-                uint,  "fraction", 23,
-                ubyte, "exponent",  8,
-                bool,  "sign",      1));
+                  uint,  "fraction", 23,
+                  ubyte, "exponent",  8,
+                  bool,  "sign",      1));
     }
     enum uint bias = 127, fractionBits = 23, exponentBits = 8, signBits = 1;
 }
@@ -551,9 +615,9 @@ struct DoubleRep
     {
         double value;
         mixin(bitfields!(
-                ulong,   "fraction", 52,
-                ushort,  "exponent", 11,
-                bool,    "sign",      1));
+                  ulong,   "fraction", 52,
+                  ushort,  "exponent", 11,
+                  bool,    "sign",      1));
     }
     enum uint bias = 1023, signBits = 1, fractionBits = 52, exponentBits = 11;
 }
@@ -566,9 +630,9 @@ struct DoubleRep
     {
         double value;
         mixin(bitfields!(
-                ulong,  "fraction", 52,
-                ushort, "exponent", 11,
-                bool,   "sign",      1));
+                  ulong,  "fraction", 52,
+                  ushort, "exponent", 11,
+                  bool,   "sign",      1));
     }
     enum uint bias = 1023, signBits = 1, fractionBits = 52, exponentBits = 11;
 }
@@ -585,7 +649,7 @@ unittest
     assert(x.fraction == 0 && x.exponent == 1022 && !x.sign);
 
     // test writing
-    x.fraction = 0x4UL << 48;
+    x.fraction = 1125899906842624;
     x.exponent = 1025;
     x.sign = true;
     assert(x.value == -5.0);
@@ -595,9 +659,9 @@ unittest
     struct EnumTest
     {
         mixin(bitfields!(
-                ABC, "x", 2,
-                bool, "y", 1,
-                ubyte, "z", 5));
+                  ABC, "x", 2,
+                  bool, "y", 1,
+                  ubyte, "z", 5));
     }
 }
 
@@ -621,7 +685,7 @@ if(isArray!(T) == false && (isNumeric!(T) || is(T == void)))
         logT = log2(bitsPerT),
         logTMask = (1 << logT) - 1,
     }
-    
+
     /**
      used for dividing the lower bit offset and the array offset, removing magic numbers
      ----
@@ -632,7 +696,7 @@ if(isArray!(T) == false && (isNumeric!(T) || is(T == void)))
      assert(enumUByte.arrayIndex(16) == 2);
      ----
     */
-    @safe static pure nothrow size_t arrayIndex(ulong index)
+    static size_t arrayIndex(ulong index) @safe pure nothrow
     {
         return cast(size_t) (index >> logT);
     }
@@ -646,18 +710,18 @@ if(isArray!(T) == false && (isNumeric!(T) || is(T == void)))
      assert(enumUByte.bitIndex(12) == 4); //12 % 8
      ----
     */
-    @safe static pure nothrow size_t bitIndex(ulong index)
+    static size_t bitIndex(ulong index) @safe pure nothrow
     {
         return cast(size_t) (index & logTMask);
     }
 }
 
-//simple log2 function not requiring floating point.
-private @property @safe pure nothrow size_t log2(T)(T val)
+//simple log2 function not requiring floating point/real
+private nothrow size_t log2(T)(T val) @property @safe pure
 if(isIntegral!(T) && isFloatingPoint!(T) == false)
 {
     size_t shifts;
-    
+
     if (val) {
         val--;
 
@@ -666,14 +730,14 @@ if(isIntegral!(T) && isFloatingPoint!(T) == false)
             shifts++;
         }
     }
-    
+
     return shifts;
 }
 
 unittest
 {
-    assert(log2(0) == 0);    //correct?
-    assert(log2(1) == 0);    //correct?
+//    assert(log2(0) == 0);    //correct?
+//    assert(log2(1) == 0);    //correct?
     assert(log2(2) == 1);
     assert(log2(3) == 2);
     assert(log2(4) == 2);
@@ -682,7 +746,6 @@ unittest
     assert(log2(7) == 3);
     assert(log2(8) == 3);
     assert(log2(9) == 4);
-
 }
 
 unittest
@@ -700,9 +763,9 @@ unittest
         assert(bitIndex(70) == 70 % bitsPerT);
         assert(bitIndex(63) == 63 % bitsPerT);
     }
-    
+
     assert(enumBits!void.bitsPerT == 8);
-    
+
     with(enumBits!byte)
     {
         assert(bitsPerT == byte.sizeof * 8);
@@ -719,13 +782,13 @@ unittest
 }
 
 //returns how many bits a particular array (in it's entirety) has.
-@property @safe pure nothrow ulong totalBits(T)(T[] arr)
+ulong totalBits(T)(T[] arr) @property @safe pure nothrow
 {
     return enumBits!T.bitsPerT * arr.length;
 }
 
 //returns how many bits a particular type has
-@property @safe pure nothrow ulong totalBits(T)(T e)
+ulong totalBits(T)(T e) @property @safe pure nothrow
 if(isArray!(T) == false)
 {
     return enumBits!T.bitsPerT;
@@ -737,11 +800,11 @@ unittest
     size_t[2] b;
     ubyte[] c;
     c.length = 3;
-    
+
     assert(a.totalBits == (ubyte.sizeof * a.length * 8));
     assert(b.totalBits == (size_t.sizeof * b.length * 8));
     assert(c.totalBits == (ubyte.sizeof * c.length * 8));
-    
+
     int i;
     assert(i.totalBits == (int.sizeof * 8));
 }
@@ -750,7 +813,7 @@ unittest
  * Returns the true/false value of the bit
  * replacement so ulong can be used for the bit number offset.
  */
-@safe pure bool getBit(T)(in T[] array, ulong bitnum)
+bool getBit(T)(in T[] array, ulong bitnum) @safe pure
 if(isIntegral!(T) && isFloatingPoint!(T) == false)
 {
     with (enumBits!T)
@@ -763,7 +826,7 @@ if(isIntegral!(T) && isFloatingPoint!(T) == false)
 /**
  * Sets the bit to the bool value
  */
-@safe pure void setBit(T)(T[] array, ulong bitnum, bool value)
+void setBit(T)(T[] array, ulong bitnum, bool value) @safe pure
 if(isIntegral!(T) && isFloatingPoint!(T) == false)
 {
     with (enumBits!T)
@@ -778,7 +841,7 @@ if(isIntegral!(T) && isFloatingPoint!(T) == false)
 /**
  * xor/flips the specific bit
  */
-@safe pure void xorBit(T)(T[] array, ulong bitnum)
+void xorBit(T)(T[] array, ulong bitnum) @safe pure
 if(isIntegral!(T) && isFloatingPoint!(T) == false)
 {
     with (enumBits!T)
@@ -791,21 +854,21 @@ if(isIntegral!(T) && isFloatingPoint!(T) == false)
  * checks for the first true/on bit.
  * If there is no on bit, returns -1
  */
-@safe pure long firstOnBit(T)(in T[] array)
+long firstOnBit(T)(in T[] array) @safe pure
 if(isIntegral!(T) && isFloatingPoint!(T) == false)
 {
     ulong i;
-    
+
     with(enumBits!T)
     {
         ulong length = array.length * bitsPerT;
-        
+
         //bulk check
         while(i < array.length && !array[cast(size_t) i])
             i++;
-        
+
         i *= bitsPerT;
-        
+
         for(; i < length; i++)
         {
             if (getBit(array, i))
@@ -819,7 +882,7 @@ if(isIntegral!(T) && isFloatingPoint!(T) == false)
 unittest
 {
     size_t[1] bits;
-    
+
     bits = 0x00005555;
     //getBit
     assert(getBit(bits, 0) == true);
@@ -841,170 +904,174 @@ unittest
 
     xorBit(bits, 7);
     assert(bits[0] == 0x00005555);
-    
+
     bits = 32;
     assert(firstOnBit(bits) == 5);
-    
+
     //bulk
     ubyte[4] ub;
-    
+
     assert(firstOnBit(ub) == -1);
 
     ub[3] = 255;
     assert(firstOnBit(ub) == 24);
 }
  
-//for the life of me I can't find this anywhere..
-auto ref min(T, U)(auto ref T lhs, auto ref U rhs) { return lhs > rhs ? rhs : lhs; }
- 
 /**
  * An array for bits
  */
-
 struct BitArray {
     mixin(bitfields!(
         bool, "isCompact=true", 1,
         bool, "canExpand=true", 1,
         //from 0
-        ulong, "_offset", 7,
-        //from end, so (length - _maxOffset) = maxOffset
-        ulong, "_maxOffset=" ~ myToStringx(compact.sizeof * 8), 7)
-    );    
-        
+        ulong, "_startBit", 7,
+        //from end, so (length - _maxOffset) = endBit
+        ulong, "_endBit=" ~ myToStringx(compact.sizeof * 8), 7)
+    );
+
     union {
         size_t[] normal;
-        size_t[normal.sizeof / size_t.sizeof] compact;    //always be 2?
+        ubyte[normal.sizeof] compact_ubyte;
+        
+        /*Some explaination needed here. It's intended to dynamically figure
+          out the proper number of bytes/bits that's already used by normal (above).
+          convert to raw byte count, then figure out how many size_t's there are.
+          In should be 2 (8/4, or 16/8), but magic numbers aren't good.
+          Plus if array/fat pointers change...*/
+        size_t[normal.sizeof / size_t.sizeof] compact;
     }
-    
+
     enum maxCompactBits = compact.sizeof * 8;
     enum bitsPerSizeT = enumBits!(size_t).bitsPerT;
     alias enumBits!(size_t).arrayIndex arrayIndex;
     alias enumBits!(size_t).bitIndex bitIndex;
-    
-    /// Offset determines the starting 'bit' at the beginning of the $(D BitArray)
-    @property @trusted pure ulong offset() const
+    alias length opDollar;
+
+    /// Determines the offset of the starting bit in the $(D BitArray)
+    ulong startBit() @property @safe pure const nothrow
     {
-        return _offset;
+        return _startBit;
     }
 
     /**********************************************
-     *    Changing the offset (starting bit) may cause the array bounds to change/shrink.
-     *    You cannot go lower than the offset if 'canExpand' is false,
-     *    but you can always shrink it up to maxOffset
+     *    Changing the startBit may cause the array bounds to change/shrink.
+     *    You cannot go lower than the startBit if 'canExpand' is false,
+     *    but you can always shrink it up to endBit
      */
-    @property @trusted pure ulong offset(ulong start)
+    ulong startBit(ulong newStartingBit) @property @safe pure
     in
     {
-        if (start < offset)
+        if (newStartingBit < startBit)
             assert(canExpand, "Range Violation");
     }
     body
     {
-        if (start < _offset)
+        if (newStartingBit < _startBit)
         {
-            _offset = start;
-            return start;
+            _startBit = newStartingBit;
+            return newStartingBit;
         }
 
         //is shrinking an option?
-        if (!isCompact && start >= bitsPerSizeT)
+        if (!isCompact && newStartingBit >= bitsPerSizeT)
         {
-            size_t st = cast(size_t) start / bitsPerSizeT;
+            size_t st = cast(size_t) newStartingBit / bitsPerSizeT;
             normal = normal[st .. $];    //shorten
-            start = bitIndex(start);    //truncate to new bit offset
+            newStartingBit = bitIndex(newStartingBit);    //truncate to new bit startBit
         }
-        
-        _offset = start;
-        return start;
+
+        _startBit = newStartingBit;
+        return newStartingBit;
     }
 
     /// Location for the end (one past) of the $(D BitArray)
-    @property @trusted pure ulong maxOffset() const
+    ulong endBit() @property @safe pure const nothrow
     {
         if(isCompact)
-            return compact.totalBits - _maxOffset;
-        
-        return normal.totalBits - _maxOffset;
+            return compact.totalBits - _endBit;
+
+        return normal.totalBits - _endBit;
     }
-    
+
     /**********************************************
-     * Sets the location of the end of the bit Array. You can shrink down to offset,
-     * and you go past maxOffset unless 'canExpand' is true.
+     * Sets the location of the end of the bit Array. You can shrink down to startBit,
+     * and you go past endBit unless 'canExpand' is true.
      */
-    @property @trusted pure ulong maxOffset(ulong end)
+    ulong endBit(ulong newEndingBit) @property @trusted pure
     {
-        ulong bits = maxBits();
-        if (end > maxOffset)
+        ulong bits = maxBits;
+        if (newEndingBit > endBit)
         {
             //movable to 'in' contract?
-            if(!canExpand || end > bits)
+            if(!canExpand || newEndingBit > bits)
             {
                 debug
                 {
                     this.print();
-                    writeln("maxOffset = ", end);
+                    writeln("endBit = ", newEndingBit);
                 }
                 throw new Exception("Range Violation");
             }
 
-            _maxOffset = bits - end;
-            return end;
+            _endBit = bits - newEndingBit;
+            return newEndingBit;
         }
 
         //see if we can shorten the array if it's shrinking enough
-        if (!isCompact && (maxOffset - end) >= bitsPerSizeT)
+        if (!isCompact && (endBit - newEndingBit) >= bitsPerSizeT)
         {
-            size_t newEnd = cast(size_t) (end / bitsPerSizeT) + (bitIndex(end) ? 1 : 0);
+            size_t newEnd = cast(size_t) (newEndingBit / bitsPerSizeT) + (bitIndex(newEndingBit) ? 1 : 0);
             normal = normal[0 .. newEnd];    //shorten
             bits = normal.totalBits;
         }
-            
-        _maxOffset = bits - end;
-        return end;
+
+        _endBit = bits - newEndingBit;
+        return newEndingBit;
     }
-    
-    ///Returns the number of bits accessible in the array, ignoring offset and maxOffset
-    @property pure ulong maxBits() const
+
+    ///Returns the number of bits accessible in the array, ignoring startBit and endBit
+    ulong maxBits() @safe @property pure const nothrow
     {
         if (isCompact)
             return compact.totalBits;
         else
             return normal.totalBits;
     }
-    
+
     //issue 4123 - setting length during initialization
     ///
     this(ulong size)
     {
         if (size <= compact.totalBits)
         {
-            this.isCompact = true;
-            this.maxOffset = size;
+            isCompact = true;
+            endBit = size;
         }
         else
-            this.length = size;
+            length = size;
 
-        this.canExpand = true;
+        canExpand = true;
     }
 
     //without this, const bool[] and void[] get confused and errors during compile time.
     this(bool[] source)
     {
-        this.init(source);
+        init(source);
     }
-    
+
     ///
     this(const bool[] source)
     {
-        this.init(source);
+        init(source);
     }
-    
+
     ///
     this(void[] source)
     {
         this(source, 0, source.totalBits);
     }
-    
+
     ///
     this(void[] source, ulong start, ulong end)
     {
@@ -1018,14 +1085,14 @@ struct BitArray {
             start = bitIndex(start);
             end = start + len;
         }
-        
+
         //shrink off end (if we can)
         if (source.totalBits - end > bitsPerSizeT)
         {
             size_t last = (arrayIndex(end) + 1) * size_t.sizeof;
             source = source[0 .. last];
         }
-        
+
         //if uneven, dup and resize.
         if (source.length % size_t.sizeof)
         {
@@ -1035,45 +1102,45 @@ struct BitArray {
             normal = cast(size_t[]) source;
             isCompact = false;
             canExpand = true;
-            maxOffset = end;
-            offset = start;
+            endBit = end;
+            startBit = start;
             return;
         }
 
-        this.length = source.totalBits;
+        length = source.totalBits;
         size_t[] t = cast(size_t[]) source;
 
         for(size_t i; i < t.length; ++i)
             setBulk(i, t[i]);
-        
-        offset = start;
-        maxOffset = end;
+
+        startBit = start;
+        endBit = end;
     }
 
     unittest {
         auto b = BitArray(10);
         assert(b.length == 10);
-        
+
         ubyte[2] ub_2;
         ubyte[4] ub_4;
-        
+
         auto b2 = BitArray(ub_2);
         auto b4 = BitArray(ub_4);
 
         assert(b2.length == 16, myToStringx(b2.length));
         assert(b4.length == 32);
-        
+
         b = BitArray(ub_4, 5, 15);
-        
+
         assert(b.length == 10);
-        assert(b.offset == 5);
-        
+        assert(b.startBit == 5);
+
         bool[] boolArray = [0,0,1,1];
-        
+
         b = BitArray(boolArray);
         assert(b.length == 4);
         assert(b.getBulk(0) == 12);
-        
+
         //non-compact versions
         b = BitArray(maxCompactBits * 2);
         assert(!b.isCompact());
@@ -1081,97 +1148,92 @@ struct BitArray {
 
         ubyte[64] ub_64;
         ubyte[128] ub_128;
-        
+
         b2 = BitArray(ub_64);
         b4 = BitArray(ub_128);
-        
+
         assert(b2.length == ub_64.totalBits, myToStringx(b2.length));
         assert(b4.length == ub_128.totalBits, myToStringx(b4.length));
-        
+
         b = BitArray(ub_64, 100, 200);
         assert(b.length == 100);
         assert(!b.isCompact());
-        
+
         bool[maxCompactBits * 2] boolArray2;
-        
+
         b = BitArray(boolArray2);
         assert(b.length == boolArray2.length);
-        
+
         //confirm shrinking
         char[16] shrink = "can_you_do__this";
-        
+
         BitArray sh = BitArray(shrink, 32, 96);
         assert(!sh.isCompact());
         assert(cast(char[]) sh.normal == "you_do__");
-        
+
         //confirm odd shape
         char[] oddShape = shrink ~ "_too?";
-        
+
         sh = BitArray(oddShape);
         assert(cast(char[]) sh.normal == "can_you_do__this_too?\0\0\0");
-        
+
         //odd shape + shrink
         sh = BitArray(oddShape, 32, 96);
         assert(cast(char[]) sh.normal == "you_do__");
     }
-    
-    /**********************************************
+
+    /* *********************************************
      * Gets the amount of native words backing this $(D BitArray).
      */
-    @property @trusted pure size_t dim() const
+    size_t dim() @property @safe pure const nothrow
     {
         //Todo: Check math and add unittest!
-        return cast(size_t)(this.length + bitsPerSizeT - 1 + this.offset) / bitsPerSizeT;
+        return cast(size_t)(length + bitsPerSizeT - 1 + startBit) / bitsPerSizeT;
     }
 
     /**********************************************
      * Gets the amount of bits in the $(D BitArray).
      */
-    @property @trusted pure ulong length() const
+    ulong length() @property @safe pure const nothrow
     {
-        return maxOffset - offset;
+        return endBit - startBit;
     }
 
     /**********************************************
      * Sets the length in bits for the $(D BitArray).
      * May cause memory reallocation.
      */
-    @property @trusted pure void length(ulong newlen)
+    ulong length(ulong newLength) @property @safe pure
     {
         //shrink without changing type or resizing
-        if ((newlen + offset) <= maxOffset)
+        if ((newLength + startBit) <= endBit)
         {
-            maxOffset = newlen + offset;
-            return;
+            endBit = newLength + startBit;
+            return newLength;
         }
-    
+
         //can grow in place?
-        if (canExpand && (newlen + offset) <= maxBits())
+        if (canExpand && (newLength + startBit) <= maxBits)
         {
-            maxOffset = newlen + offset;
-            return;
+            endBit = newLength + startBit;
+            return newLength;
         }
 
         BitArray orig = this;
-        //compact version special rules
-        if (newlen <= maxCompactBits)
-        {
-                isCompact = true;
-                canExpand = true;
-                offset = 0;
-                maxOffset = newlen;
-                compact[] = false;
 
-                if (orig.length)
-                    this[0 .. orig.length] = orig[];
 
-            return;
-        }
 
-        size_t newdim = cast(size_t) ((offset + newlen + bitsPerSizeT - 1) / bitsPerSizeT);
+
+
+
+
+
+
+
+        size_t newdim = cast(size_t) ((startBit + newLength + bitsPerSizeT - 1) / bitsPerSizeT);
         isCompact = false;
         canExpand = true;
-        _maxOffset = 0;
+        _endBit = 0;
 
         //is it compact? Convert and copy to new memory space
         //otherwise our old data is nulled out
@@ -1179,16 +1241,17 @@ struct BitArray {
         {
             normal = null;
             normal.length = newdim;
-            
+
             normal[0 .. orig.compact.length] = orig.compact[0 .. $];
         }
         else
             normal.length = newdim;
 
 
-        maxOffset = newlen + offset;
+        endBit = newLength + startBit;
+        return newLength;
     }
-    
+
     unittest
     {
         //compact
@@ -1196,35 +1259,35 @@ struct BitArray {
         BitArray ba = BitArray([1,0,0,1,1,0,1,1]);
         BitArray slice;
         ba ~= ba; ba ~= ba;
-        
+
         slice = ba;
-        
+
         assert(ba.isCompact);
         ba.length = 30;
-        
+
         assert(ba.length == 30);
         assert(ba == slice[0..30]);
-        
+
         //grow in place
         ba.length = 32;
         assert(ba.length == 32);
         assert(ba == slice);
-        
+
         //grow, requires copy
         BitArray blank = BitArray(256);
         assert(blank.toHash == 0);
-        
+
         ba.length = 256;
         assert(ba.length == 256);
         assert(ba[0 .. 32] == slice);
         assert(ba[32 .. ba.length] == blank[32 .. blank.length]);
-        
+
         //non compact.
         //shrink in place
         ba.init([1,0,0,1,1,0,1,1]);
         for(int i; i < 5; ++i)  //32*8 = 256
             ba ~= ba;
-        
+
         ba = ba.dup;    //force 'can expand'
         assert(!ba.isCompact);
         slice = ba;
@@ -1232,116 +1295,137 @@ struct BitArray {
         assert(ba.length == 246);
         assert(ba == slice[0 .. 246]);
         assert(ba.normal is slice.normal);
-        
+
         //grow in place
         ba.length = 256;
         assert(ba.length == 256);
         assert(ba == slice);
         assert(ba.normal is slice.normal);
-        
+
         //grow, but should only increase the inner length
         ba.length = 512;
         assert(ba.length == 512);
         assert(ba[0 .. 256] == slice);
         assert(ba[256 .. ba.length] == blank);
-        
+
         assert(!ba.isCompact);
         ba = ba[1 .. 17];   //slice, cannot naturally expand
         assert(!ba.isCompact);
-        ba.length = 32;     //within bounds, so should copy and convert
-        assert(ba.isCompact);
-        assert(ba.offset == 0);
-        assert(ba[0 .. 16] == slice[1 .. 17]);
-        assert(ba[16 .. 32] == blank[16 .. 32]);
+
+        //auto compacting no longer valid, 'sometimes ref' not an option.
+        //so removed from test suite
     }
-    
+
     /**********************************************
      * Tries to reserve space for this growing $(D BitArray).
      * returns if it tried to reserve space or not.
      */
-    @trusted bool reserve(ulong size)
+    bool reserve(ulong bitsSize) @trusted pure
     {
         /* Ensure it's not compact, or the size is larger than our current compact/visible.
           If we force it to not be compact, then if the length is updated it may convert back to
           the compact version.*/
-        if (isCompact() || (size + offset) < (canExpand ? maxBits : maxOffset))
+        if ((isCompact || canExpand) && bitsSize <= maxBits)
             return false;
-        
-        //not compact, so....
-        size_t len = cast(size_t)((size + bitsPerSizeT - 1) / bitsPerSizeT);    //elements rounded up
-        
-        size_t[] ptr = normal;
-        normal.reserve(len);
-        if (normal !is ptr)    //if it's relocated, it's expandable
+
+        //not compact; Rounded up
+        size_t len = cast(size_t)((bitsSize + bitsPerSizeT - 1) / bitsPerSizeT);
+
+        if (isCompact)
+        {
+            BitArray orig = this;
+            isCompact = false;
+
+            normal = null;
+            normal.reserve(len);
+            normal.length = compact.length;
+
+            //raw copy no need to adjust lengths.
+            normal[] = orig.compact[];
             canExpand = true;
-        
+        }
+        else
+        {
+            //non-compact resize possible
+            size_t[] ptr = normal;
+            normal.reserve(len);    //not @safe: TODO: fix when reserve is pure and safe/trusted
+            if (normal !is ptr)    //if it's relocated, it's expandable
+                canExpand = true;
+        }
+
         return true;
     }
-    
+
     unittest
     {
-        //no reserve while in isCompact
         BitArray ba;
-        assert(!ba.reserve(128));
         
-        ba.length = 128;
-        //no shorter
+        //no expansion when it's bigger or the same.
         assert(!ba.reserve(32));
-        
-        assert(ba.reserve(256));
+        assert(!ba.reserve(64));
+
+        //give compact some data for expansion
+        //(errors in code more obvious with non-zero)
+        ba = BitArray(cast(bool[])[1,0,1,0,1,0]);
+        const bb = ba;
+                
+        //larger, converts from compact to allocated
+        assert(ba.reserve(1024));
+        assert(ba.length == 6); //actual length hasn't changed.
+        assert(ba == bb);
     }
-    
-    /**********************************************
+
+    /* *********************************************
      * Gives indirect raw read access to the data this $(D BitArray) holds.
      */
-    @trusted pure size_t getBulk(size_t index) const
+    size_t getBulk(size_t index) @safe pure const
     in
     {
-        if (isCompact()) {
+        if (isCompact) {
             assert(index < compact.length);
         } else
             assert(index < normal.length);
-    
+
     }
     body
     {
-        if (isCompact())
+        if (isCompact)
             return compact[index];
 
         return normal[index];
     }
 
-    /**********************************************
+    /* *********************************************
      * Gives indirect raw write access to the data this $(D BitArray) holds.
      */
-    @trusted pure size_t setBulk(size_t index, size_t setValue)
+    size_t setBulk(size_t index, size_t setValue) @safe pure
     in
     {
-        if (isCompact()) {
+        if (isCompact) {
             assert(index < compact.length);
         } else
             assert(index < normal.length);
-    
+
     }
     body
     {
-        if (isCompact())
+        if (isCompact)
             return compact[index] = setValue;
 
         return normal[index] = setValue;
     }
-    
+
     unittest
     {
         BitArray ba;
-       
+   
         ba.compact[0] = 100;
         ba.compact[1] = 200;
         assert(ba.getBulk(0) == 100);
         assert(ba.getBulk(1) == 200);
         ba.setBulk(0, 300);
         assert(ba.getBulk(0) == 300);
-        
+
         ba.length = maxCompactBits * 2;
         assert(!ba.isCompact);
         ba.normal[0] = 300;
@@ -1351,37 +1435,36 @@ struct BitArray {
         ba.setBulk(0,500);
         assert(ba.getBulk(0) == 500);
     }
-    
-    /**********************************************
+
+    /* *********************************************
     * Determines if a bulk (full size_t read/write) is possible, if so it
       activates the action on every bulk-able section it can.
-      
+  
       sliceStart/sliceEnd are for the current object (only). Index is the
-      offset within the slice and all following bitarrays.
-      
+      startBit within the slice and all following bitarrays.
+  
       The action is a given operation, like 'l = r[0]'. l represents the
       current bitarray, and r is the arrays given afterwards. You can
       modify the r contents, but they won't be reflected in their source
       counterparts.
-      
+  
       you can also use break/continue to skip saving the result of l,
       (and go to the next bulk section) or break to immediately exit.
-      
-      The output is how many bits it went through using the bulk function.      
+  
+      The output is how many bits it went through using the bulk function.  
       ----
       BitArray ba;  //filled with data somewhere
       BitArray inp1, inp2;
       ulong i = canUseBulk!("l ^= r[0] & r[1]")(0, ba.length, 0, inp1, inp2);
       ----
     */
- 
-    @trusted pure ulong canUseBulk(string action)(ulong sliceStart, ulong sliceEnd, ulong index, const BitArray[] baInputs ...)
+    ulong canUseBulk(string action)(ulong sliceStart, ulong sliceEnd, ulong index, const BitArray[] baInputs ...) @trusted pure
     in
     {
         assert(sliceStart <= length, "slice outside of range");
         assert(sliceStart <= sliceEnd, "Slice start/end are backwards");
         assert(sliceEnd <= length, "slice outside of range");
-        assert((sliceEnd - sliceStart) + offset >= index, "Starting index larger than slice area");
+        assert((sliceEnd - sliceStart) + startBit >= index, "Starting index larger than slice area");
     }
     out(o)
     {
@@ -1389,14 +1472,14 @@ struct BitArray {
     }
     body
     {
-        ulong off = offset + sliceStart;    //slice data
+        ulong off = startBit + sliceStart;    //slice data
         ulong len = sliceEnd - sliceStart;
         ulong[] rLen;                       //lengths of arrays.
-        size_t lIndex = arrayIndex(off + index);   //indexes offset for bulk
+        size_t lIndex = arrayIndex(off + index);   //indexes startBit for bulk
         size_t[] rIndex;            //ditto, only for the right BitArray(s)
         size_t l = void;            //value for bulk (Left/current)
         size_t[] r;                 //value(s) for bulks (right BitArray(s))
-        
+
         //there has to be at least size_t left to consider it
         if ((len - index) < bitsPerSizeT ||
                 bitIndex(off + index))
@@ -1411,21 +1494,21 @@ struct BitArray {
 
             foreach(i, ba; baInputs)
             {
-                if (bitIndex(ba.offset + index))
+                if (bitIndex(ba.startBit + index))
                     return 0;
-                rIndex[i] = arrayIndex(ba.offset + index);
+                rIndex[i] = arrayIndex(ba.startBit + index);
                 rLen[i] = ba.length;
             }
         }
-        
+
         size_t bulk;            //basically an index, also represents how many 'bulks' we've processed.
-        ulong position = index; //bit offset in question.
-        
+        ulong position = index; //bit startBit in question.
+
         for(; position < len &&
                 len - position >= bitsPerSizeT;
                 ++bulk, position += bitsPerSizeT)
         {
-            
+
             //get all current 'bulk blocks'
             //return if not all the (current) blocks can be calculated in bulk
             foreach(i, ba; baInputs)
@@ -1435,24 +1518,26 @@ struct BitArray {
                 else
                     return bulk * bitsPerSizeT;
             }
-            
+
             l = getBulk(lIndex + bulk);
 
             //the action
             mixin(action ~ ";");
-            
+
             setBulk(lIndex + bulk, l);
         }
 
         return bulk * bitsPerSizeT;
     }
-    
-    /**
+
+    /*
      * ditto. In const version l/r[] can't be modified. Mostly useful for some calculations or comparing
      */
-    @trusted pure ulong canUseBulk(string action)(ulong sliceStart, ulong sliceEnd, ulong index, const BitArray[] baInputs ...) const
+
+    ulong canUseBulk(string action)(ulong sliceStart, ulong sliceEnd, ulong index, const BitArray[] baInputs ...) @trusted pure const
     in
     {
+
         assert(sliceStart <= length, "slice outside of range");
         assert(sliceStart <= sliceEnd, "Slice start/end are backwards");
         assert(sliceEnd <= length, "slice outside of range");
@@ -1460,17 +1545,19 @@ struct BitArray {
     }
     out(o)
     {
+
         assert(o <= sliceEnd - sliceStart);
     }
     body
     {
-        ulong off = offset + sliceStart;    //slice data
+
+        ulong off = startBit + sliceStart;    //slice data
         ulong len = sliceEnd - sliceStart;
         ulong[] rLen;                       //lengths of arrays.
-        size_t lIndex = arrayIndex(off + index);   //indexes offset for bulk
+        size_t lIndex = arrayIndex(off + index);   //indexes startBit for bulk
         size_t[] rIndex;            //ditto, only for the right BitArray(s)
         size_t[] rr;                 //value(s) for bulks (right BitArray(s))
-        
+
         //there has to be at least size_t left to consider it
         if ((len - index) < bitsPerSizeT ||
                 bitIndex(off + index))
@@ -1485,21 +1572,20 @@ struct BitArray {
 
             foreach(i, ba; baInputs)
             {
-                if (bitIndex(ba.offset + index))
+                if (bitIndex(ba.startBit + index))
                     return 0;
-                rIndex[i] = arrayIndex(ba.offset + index);
+                rIndex[i] = arrayIndex(ba.startBit + index);
                 rLen[i] = ba.length;
             }
         }
-        
+
         size_t bulk;            //basically an index, also represents how many 'bulks' we've processed.
-        ulong position = index; //bit offset in question.
-        
+        ulong position = index; //bit startBit in question.
+
         for(; position < len &&
                 len - position >= bitsPerSizeT;
                 ++bulk, position += bitsPerSizeT)
         {
-            
             //get all current 'bulk blocks'
             //return if not all the (current) blocks can be calculated in bulk
             foreach(i, ba; baInputs)
@@ -1509,7 +1595,7 @@ struct BitArray {
                 else
                     return bulk * bitsPerSizeT;
             }
-            
+
             //being const it will error during compiling if either
             //are attempted to be changed.
             const size_t l = getBulk(lIndex + bulk);
@@ -1521,7 +1607,7 @@ struct BitArray {
 
         return bulk * bitsPerSizeT;
     }
-    
+
     unittest {
         int bpst2 = bitsPerSizeT / 2;
         BitArray a = BitArray(bitsPerSizeT * 3 + 1);    //+1 prevents dup from making it compact.
@@ -1529,25 +1615,25 @@ struct BitArray {
         BitArray ba = a[bpst2 .. a.length - bpst2];
         BitArray bb = b[bpst2 .. b.length - bpst2].dup;
         bb[] = true;
-        
+
         const BitArray b_ba = ba.dup;
         const BitArray b_bb = bb.dup;
-        
+
         //too small for size_t
         assert(!ba.canUseBulk!("l=r[0]")(0,0,0, bb));
         assert(!ba.canUseBulk!("l=r[0]")(0,16,0, bb));
         assert(!ba.canUseBulk!("l=r[0]")(0,bpst2,0, bb));
         assert(ba == b_ba);
-        
-        //large enough for size_t, but offset wrong
+
+        //large enough for size_t, but startBit wrong
         assert(!ba.canUseBulk!("l=r[0]")(0,ba.length, 0, bb));
         assert(!ba.canUseBulk!("l=r[0]")(0,ba.length, 5, bb));
         assert(!ba.canUseBulk!("l=r[0]")(0,ba.length, 10, bb));
         assert(!ba.canUseBulk!("l=r[0]")(0,ba.length, 15, bb));
         assert(!ba.canUseBulk!("l=r[0]")(0,ba.length, bpst2-1, bb));
         assert(ba == b_ba);
-        
-        //offset of one is off
+
+        //startBit of one is off
         assert(!ba.canUseBulk!("l=r[0]^r[1]")(0,ba.length, bpst2, b));
         assert(ba == b_ba);
         assert(bb == b_bb);
@@ -1556,18 +1642,18 @@ struct BitArray {
         assert(ba.canUseBulk!("l=r[0]")(0,ba.length, bpst2, bb) == bitsPerSizeT);
         assert(ba[bpst2 .. (bpst2 + bitsPerSizeT)] == b_bb[bpst2 .. (bpst2 + bitsPerSizeT)]);
    
-        //slice allow offset to match
+        //slice allow startBit to match
         BitArray c = BitArray(bitsPerSizeT);
         c[bpst2 .. c.length] = true;
-        
+
         assert(ba.canUseBulk!("l^=r[0]")(bpst2, ba.length, 0, c) == bitsPerSizeT);
         assert(ba[bpst2 .. (bpst2 + bitsPerSizeT)] == ~c);
-        
+
         //const version check (real fast)
         const BitArray cb = b;
         assert(cb.canUseBulk!("if (l) break")(0, b.length, 0) == bitsPerSizeT * 3); //96 bulk is not 97 length..
         assert(b.canUseBulk!("if (l) break")(0, b.length, 0) == bitsPerSizeT * 3);
-        
+
         b[bitsPerSizeT] = 1;
         assert(b.canUseBulk!("if (l) break")(0, b.length, 0) == bitsPerSizeT);
 
@@ -1576,28 +1662,28 @@ struct BitArray {
         b = BitArray(bitsPerSizeT * 3);
         const cca = a;
         const ccb = b;
-        
+
         assert(a.canUseBulk!("")(0, a.length, 0, b) == bitsPerSizeT * 2);
         assert(b.canUseBulk!("")(0, b.length, 0, a) == bitsPerSizeT * 2);
 
         assert(cca.canUseBulk!("")(0, cca.length, 0, ccb) == bitsPerSizeT * 2);
         assert(ccb.canUseBulk!("")(0, ccb.length, 0, cca) == bitsPerSizeT * 2);
     }
-    
+
     /**********************************************
      * Gets the $(D i)'th bit in the $(D BitArray).
      */
-    @trusted pure bool opIndex(ulong i) const
+    bool opIndex(ulong index) @trusted pure const
     in
     {
-        assert(i + offset < maxOffset);
+        assert(index + startBit < endBit);
     }
     body
     {
         if (isCompact)
-            return compact.getBit(i + offset);
+            return compact_ubyte.getBit(index + startBit);
 
-        return normal.getBit(i + offset);
+        return (cast(const(ubyte)[]) normal).getBit(index + startBit);
     }
 
     unittest
@@ -1611,77 +1697,72 @@ struct BitArray {
         a.length = 3;
         a[0] = 1;
         Fun(a);
-        
+
         a = BitArray(maxCompactBits * 2); //non compact version
         a[0] = 1;
         Fun(a);
     }
 
     /**********************************************
-     * Sets the $(D i)'th bit in the $(D BitArray).
+     * Sets the $(D index)'th bit in the $(D BitArray).
      */
-    @trusted pure bool opIndexAssign(bool b, ulong i)
+    bool opIndexAssign(bool b, ulong index) @trusted pure
     in
     {
-        assert(i + offset < maxOffset);
+        assert(index + startBit < endBit);
     }
     body
     {
         if (isCompact)
-            compact.setBit(i + offset, b);
+            compact_ubyte.setBit(index + startBit, b);
         else
-            normal.setBit(i + offset, b);
+            (cast(ubyte[]) normal).setBit(index + startBit, b);
 
         return b;
     }
-    
+
     /**********************************************
      * Duplicates the $(D BitArray) and its contents.
      */
-    @property @trusted pure BitArray dup() const
+    BitArray dup() @property @trusted pure const
     {
         BitArray ba;
-        
-        if (this.isCompact)
+
+        //if it's already compact, no need to do anything special.
+        if (isCompact)
             return cast(BitArray) this;
 
-        if (this.length <= maxCompactBits)
+        //convert & shrink
+        if (length <= maxCompactBits)
         {
-            //convert & shrink
-            ba.isCompact = true;        
-            ba.canExpand = true;
-            ba.length = this.length;            
+            //these two already true by default
+//            ba.isCompact = true;
+//            ba.canExpand = true;
+            ba.length = length;
             ba[] = this[];
             return ba;
         }
-        
+
         //attempt to shrink the block, and only dup that
-        size_t startBlock = arrayIndex(offset);
-        size_t bitOff = bitIndex(offset);
-        size_t endBlock = arrayIndex(maxOffset) + (bitIndex(offset) ? 1 : 0);
-        
+        size_t startBlock = arrayIndex(startBit);
+        size_t bitOff = bitIndex(startBit);
+        size_t endBlock = arrayIndex(endBit) + (bitIndex(startBit) ? 1 : 0);
+
         auto b = normal[startBlock .. endBlock].dup;
         ba.isCompact = false;
         ba.canExpand = true;
         ba.normal = b;
-        ba.offset = bitOff;
-        ba.maxOffset = bitOff + length();
-        
+        ba.startBit = bitOff;
+        ba.endBit = bitOff + length;
+
         return ba;
     }
-    
+
     ///ditto, but immutable
-    @property @trusted pure immutable(BitArray) idup() const
+    immutable(BitArray) idup() @property @trusted pure const
     {
         BitArray ba = this.dup;
         return cast(immutable(BitArray)) ba;
-    }
-    
-    ///ditto, but immutables don't need to be duplicated.. do they?
-   @property @trusted pure immutable(BitArray) idup() immutable
-   {
-        //should this result in an error instead? Could be a logic issue for later.
-        return this;
     }
 
     unittest
@@ -1695,7 +1776,7 @@ struct BitArray {
         a.length = 3;
         a[0] = 1; a[1] = 0; a[2] = 1;
         b = a.dup;
-        
+
         assert(b.length == 3);
         for (i = 0; i < 3; i++)
         {
@@ -1716,11 +1797,23 @@ struct BitArray {
             assert(a[i] == (((i ^ 1) & 1) ? true : false));
             assert(b[i] == (((i ^ 1) & 1) ? true : false));
         }
-        
+
         immutable x1 = a.idup;
         immutable x2 = x1.idup;    //special idup
-        
+
         assert(x1 == x2);
+        
+        //dup can end up creating a compact,
+        //safe to assume so...
+        assert(a.length >= 21, "Length too short for unittest (But not a test itself)");
+        assert(!a.isCompact);
+
+        a = a[5 .. 21]; //16 bits long, just randomly selected
+        b = a.dup;
+
+        assert(a.length == 16 && b.length == 16 && a.length == b.length, "length of dup doesn't match original array");
+        assert(b.isCompact, "dup did not compact small array");
+        assert(a == b, "dup not equalling original slice");
     }
 
     /**********************************************
@@ -1729,7 +1822,7 @@ struct BitArray {
     int opApply(scope int delegate(ref bool) dg)
     {
         int result;
-        ulong len = length();
+        ulong len = length;
         ulong i;
 
         for (; i < len; i++)
@@ -1752,7 +1845,7 @@ struct BitArray {
     {
         int result;
         ulong i;
-        ulong len = length();
+        ulong len = length;
 
         for (; i < len; i++)
         {
@@ -1760,7 +1853,7 @@ struct BitArray {
             bool b = orig = this[i];
 
             result = dg(i, b);
-            
+
             if (b != orig)
                 this[i] = b;
 
@@ -1769,7 +1862,7 @@ struct BitArray {
         }
         return result;
     }
-    
+
     /**********************************************
      * Support for $(D foreach) loops, for const/immutable arrays.
      */
@@ -1777,8 +1870,8 @@ struct BitArray {
     {
         int result;
         ulong i;
-        ulong len = length();
-        
+        ulong len = length;
+
         for (; i < len; i++)
         {
             result = dg(this[i]);
@@ -1794,12 +1887,12 @@ struct BitArray {
     {
         int result;
         ulong i;
-        ulong len = length();
+        ulong len = length;
 
         for (; i < len; i++)
         {
             result = dg(i, this[i]);
-            
+
             if (result)
                 break;
         }
@@ -1815,11 +1908,9 @@ struct BitArray {
         BitArray a; a.init(ba);
         const BitArray ac = BitArray (ba);
         immutable BitArray ai = ac.idup;
-        
-        //compact versions
-        int i;
-        foreach (b; a)
-        {
+
+        //identical switch-case on every check.
+        static void sw_i(bool b, ulong i) {
             switch (i)
             {
                 case 0: assert(b == true); break;
@@ -1827,71 +1918,33 @@ struct BitArray {
                 case 2: assert(b == true); break;
                 default: assert(0);
             }
-            i++;
         }
 
+        //compact versions
+        int i;
+        foreach (b; a)
+            sw_i(b, i++);
+
         foreach (j, b; a)
-        {
-            switch (j)
-            {
-                case 0: assert(b == true); break;
-                case 1: assert(b == false); break;
-                case 2: assert(b == true); break;
-                default: assert(0);
-            }
-        }
+            sw_i(b, j);
 
         //const versions
         i = 0;
         foreach (b; ac)
-        {
-            switch (i)
-            {
-                case 0: assert(b == true); break;
-                case 1: assert(b == false); break;
-                case 2: assert(b == true); break;
-                default: assert(0);
-            }
-            i++;
-        }
+            sw_i(b, i++);
 
         foreach (j,b;ac)
-        {
-            switch (j)
-            {
-                case 0: assert(b == true); break;
-                case 1: assert(b == false); break;
-                case 2: assert(b == true); break;
-                default: assert(0);
-            }
-        }
-        
+            sw_i(b, j);
+
         //immutable versions
         i = 0;
         foreach (b; ai)
-        {
-            switch (i)
-            {
-                case 0: assert(b == true); break;
-                case 1: assert(b == false); break;
-                case 2: assert(b == true); break;
-                default: assert(0);
-            }
-            i++;
-        }
+            sw_i(b, i++);
 
         foreach (j,b;ai)
-        {
-            switch (j)
-            {
-                case 0: assert(b == true); break;
-                case 1: assert(b == false); break;
-                case 2: assert(b == true); break;
-                default: assert(0);
-            }
-        }    
+            sw_i(b, j);
 
-        
+
         //non-compact versions
         a.init(ba);
         a.length = maxCompactBits * 2;
@@ -1900,98 +1953,47 @@ struct BitArray {
 
         i = 0;
         foreach (b;a)
-        {
-            switch (i)
-            {
-                case 0: assert(b == true); break;
-                case 1: assert(b == false); break;
-                case 2: assert(b == true); break;
-                default: assert(0);
-            }
-            i++;
-        }
+            sw_i(b, i++);
 
         foreach (j, b; a)
-        {
-            switch (j)
-            {
-                case 0: assert(b == true); break;
-                case 1: assert(b == false); break;
-                case 2: assert(b == true); break;
-                default: assert(0);
-            }
-        }
+            sw_i(b, j);
 
         //const version non-compact
         const BitArray slice = a;
         i = 0;
         foreach (b; slice)
-        {
-            switch (i)
-            {
-                case 0: assert(b == true); break;
-                case 1: assert(b == false); break;
-                case 2: assert(b == true); break;
-                default: assert(0);
-            }
-            i++;
-        }
+            sw_i(b, i++);
 
         foreach (j, b; slice)
-        {
-            switch (j)
-            {
-                case 0: assert(b == true); break;
-                case 1: assert(b == false); break;
-                case 2: assert(b == true); break;
-                default: assert(0);
-            }
-        }
-        
+            sw_i(b, j);
+
         immutable BitArray slice2 = a.idup;
         i = 0;
         foreach (b; slice2)
-        {
-            switch (i)
-            {
-                case 0: assert(b == true); break;
-                case 1: assert(b == false); break;
-                case 2: assert(b == true); break;
-                default: assert(0);
-            }
-            i++;
-        }
+            sw_i(b, i++);
 
         foreach (j, b; slice2)
-        {
-            switch (j)
-            {
-                case 0: assert(b == true); break;
-                case 1: assert(b == false); break;
-                case 2: assert(b == true); break;
-                default: assert(0);
-            }
-        }
+            sw_i(b, j);
     }
 
 
     /**********************************************
      * Reverses the bits of the $(D BitArray).
      */
-    @property @trusted deprecated BitArray reverse()
+    deprecated BitArray reverse() @trusted @property
     out (result)
     {
         assert(result == this);
     }
     body
     {
-        if (length() >= 2)
+        if (length >= 2)
         {
             bool t;
             ulong lo, hi;
-            
+
             lo = 0;
-            hi = length() - 1;
+            hi = length - 1;
             for (; lo < hi; lo++, hi--)
             {
                 t = this[lo];
@@ -2013,46 +2015,45 @@ struct BitArray {
         b.init(data);
         assert(b.isCompact());
         //slice aware version
-        b = b[1 .. b.length];
-        
+        b = b[1 .. $];
+
         b.reverse;
         for (; i < b.length; i++)
         {
             assert(b[i] == data[5 - i]);
         }
-        
+
         //non-compact version.
         b.length = maxCompactBits * 2;
         b[] = 0;
         b[0 .. data.length] = data[0 .. $];
         //still slice aware
-        b = b[1 .. b.length];
-        
+        b = b[1 .. $];
+
         assert(!b.isCompact());
         b.reverse;
         for (; i < data.length; i++)
         {
             assert(b[i] == data[5 - i]);
-        }        
+        }
     }
 
 
     /**********************************************
      * Sorts the $(D BitArray)'s elements.
      */
-    @property @trusted deprecated BitArray sort()
+    deprecated BitArray sort() @trusted @property
     out (result)
     {
         assert(result == this);
     }
     body
     {
-        if (length() >= 2)
+        if (length >= 2)
         {
             ulong lo, hi;
-            
             lo = 0;
-            hi = length() - 1;
+            hi = length - 1;
             while (1)
             {
                 while (1)
@@ -2109,33 +2110,31 @@ struct BitArray {
             assert(ba[i] == false);
         for (size_t i = 6; i < 10; i++)
             assert(ba[i] == true);
-        
     }
-
 
     /***************************************
      * Support for operators == and != for $(D BitArray).
      */
-    @trusted bool opEquals(const BitArray a2) const
+    bool opEquals(const BitArray rhs) @trusted pure const
     {
-        if (this.length != a2.length)
+        if (length != rhs.length)
             return false;
 
-        return opCmp(a2) == 0;
+        return opCmp(rhs) == 0;
     }
-    
+
     /// Ditto
-    @trusted bool opEquals(const bool[] b2) const
+    bool opEquals(const bool[] b_rhs) @trusted const
     {
-        if (this.length != b2.length)
+        if (length != b_rhs.length)
             return false;
-        
+
         foreach(i, b; this)
         {
-            if (b2[cast(size_t) i] != b)
+            if (b_rhs[cast(size_t) i] != b)
                 return false;
         }
-        
+
         return true;
     }
 
@@ -2154,10 +2153,10 @@ struct BitArray {
         BitArray c; c.init(bc);
         BitArray d; d.init(bd);
         BitArray e; e.init(be);
-        
+
         //slice aware
-        d = d[1 .. d.length];
-        e = e[1 .. e.length];
+        d = d[1 .. $];
+        e = e[1 .. $];
 
         assert(a != b);
         assert(a != c);
@@ -2168,14 +2167,14 @@ struct BitArray {
         c.init(bc);
         d.init(bd);
         e.init(be);
-        
+
         c.length = maxCompactBits * 2;
         d.length = maxCompactBits * 2;
         e.length = maxCompactBits * 2;
         assert(!c.isCompact());
         assert(!d.isCompact());
         assert(!e.isCompact());
-        
+
         a = c[0 .. 5];
         b = a[2 .. 5];
         c = c[0 .. bc.length];
@@ -2185,49 +2184,50 @@ struct BitArray {
         assert(a != c);
         assert(a != d);
         assert(a == e);
-        
+
         //bool checks
         assert(ba == a);
         assert(c == bc);
         assert(a != be);
-        
+
         assert(a == [1,0,1,0,1]);
         assert(a != [1,0,1,1,0]);
-        
+
     }
 
     /***************************************
      * Supports comparison operators for $(D BitArray).
      */
-    @trusted int opCmp(const BitArray a2) const
+    int opCmp(const BitArray rhs) @trusted pure const
     {
-        if (this.length != a2.length)
-            return (this.length > a2.length) - (this.length < a2.length);
+        if (length != rhs.length)
+            return (length > rhs.length) - (length < rhs.length);
 
         ulong i, cub;
-        auto len = this.length;
+        auto len = length;
 
         //not aligned and remainder
         size_t l, r;
         for (;i < len; i++)
         {
-            cub = canUseBulk!("if (l != r[0]) break")(0, len, i, a2);
+            cub = canUseBulk!("if (l != r[0]) break")(0, len, i, rhs);
             if (cub)
                 i += cub - 1;    //jump forward, compensate for ++
-            else if (this[i] != a2[i])
+            else if (this[i] != rhs[i])
             {
                 //only converted to numbers for the math result
                 l = this[i] ? 1 : 0;
-                r = a2[i] ? 1 : 0;
-                
+                r = rhs[i] ? 1 : 0;
+
                 return (l > r) - (l < r);
             }
         }
-        
+
         return 0;    //at this point they are equal
     }
 
-    unittest {
+    unittest
+    {
         debug(bitarray) printf("BitArray.opCmp unittest\n");
 
         static bool[] ba = [1,0,1,0,1];
@@ -2237,11 +2237,11 @@ struct BitArray {
         static bool[] be = [1,0,1,0,1];
 
         BitArray a; a.init(ba);
-        BitArray b; b = a[2 .. a.length];    //slice aware
+        BitArray b; b = a[2 .. $];    //slice aware
         BitArray c; c.init(bc);
         BitArray d; d.init(bd);
         BitArray e; e.init(be);
-        
+
         assert(a >  b);
         assert(a >= b);
         assert(a <  c);
@@ -2252,12 +2252,13 @@ struct BitArray {
         assert(a <= e);
         assert(a >= e);
 
+
         assert(a.isCompact());
-        assert(b.isCompact());
+        assert(!b.isCompact());    //reference so not compact
         assert(c.isCompact());
         assert(d.isCompact());
         assert(e.isCompact());
-        
+
         //non-compact versions
         a.length = maxCompactBits * 2;
         c.length = maxCompactBits * 2;
@@ -2268,12 +2269,12 @@ struct BitArray {
         c = c[0 .. bc.length];
         d = d[0 .. bd.length];
         e = e[0 .. be.length];
-        
+
         assert(!a.isCompact());
         assert(!b.isCompact());
         assert(!c.isCompact());
         assert(!d.isCompact());
-        assert(!e.isCompact());        
+        assert(!e.isCompact());
 
         assert(a >  b);
         assert(a >= b);
@@ -2289,69 +2290,52 @@ struct BitArray {
     /***************************************
      * Set this $(D BitArray) to the contents of $(D ba).
      */
-    @trusted void init(const bool[] ba)
+    void init(const bool[] b_rhs) @trusted
     {
-        canExpand = true;
-        
-        if (ba.length <= maxCompactBits)
-        {
-            isCompact = true;
-            offset = 0;
-            maxOffset = ba.length;
-        }
-        else
-        {
-            if (isCompact)    //if it's compact, the buffer pointer is invalid
-                normal = null;
+        this = BitArray();
+        length = b_rhs.length;
 
-            isCompact = false;
-            normal.length = (ba.length + bitsPerSizeT - 1) / bitsPerSizeT;
-            offset = 0;
-            maxOffset = ba.length;
-        }
-
-        foreach (i, b; ba)
+        foreach (i, b; b_rhs)
         {
             this[i] = b;
         }
     }
-
 
     /***************************************
      * Map the $(D BitArray) onto $(D v), with $(D numbits) being the number of bits
      * in the array. Does not copy the data. (Unless it can fit as compact).
      * if numbits is 0, it defaults to the full range offered by the array.
      */
-    @trusted void init(void[] v, ulong numbits)
+    void init(void[] inputBuffer, ulong numbits) @trusted
     in
     {
-        assert(numbits <= v.totalBits);
-        assert(v.length % size_t.sizeof == 0);
+        assert(numbits <= inputBuffer.totalBits);
+        assert(inputBuffer.length % size_t.sizeof == 0);
     }
     body
     {
         if (!numbits)
-            numbits = v.totalBits;
-        
-        if(v.totalBits <= maxCompactBits)
+            numbits = inputBuffer.totalBits;
+
+        this = BitArray();
+
+        if(inputBuffer.totalBits <= maxCompactBits)
         {
-            isCompact = true;
-            canExpand = true;
-            compact[0 .. (v.length / size_t.sizeof)] = cast(size_t[]) v[0 .. v.length]; //raw copy
-            maxOffset = numbits;
-            offset = 0;
+            compact[0 .. (inputBuffer.length / size_t.sizeof)] = cast(size_t[]) inputBuffer[0 .. inputBuffer.length]; //raw copy
+            endBit = numbits;
+            startBit = 0;
             return;
         }
 
         isCompact = false;
         canExpand = false;
-        normal = cast(size_t[]) v;
-        offset = 0;
-        _maxOffset = 0; //reset to largest size
+        normal = cast(size_t[]) inputBuffer;
+        startBit = 0;
+        _endBit = 0; //reset to largest size
 
-        maxOffset = numbits;
+        endBit = numbits;
     }
-    
+
     unittest
     {
         debug(bitarray) printf("BitArray.init unittest\n");
@@ -2373,15 +2357,15 @@ struct BitArray {
 
         a[0] = 0;
         assert(b[0] != a[0]);    //compact
-        
+
         a.length = maxCompactBits * 2;
         b = a;
-        
+
         a[0] = 0;
         assert(b[0] == 0);
 
         assert(a == b);
-        
+
         //non-compact
         size_t[128] large;
         a = BitArray(); //reset
@@ -2397,10 +2381,10 @@ struct BitArray {
     /***************************************
      * since opCast is removed (due to problems otherwise for the moment) this returns a slice of the buffer
      */
-    @property inout(T)[] getBuffer(T)(ref inout(T)[] outBuffer) inout
+    inout(T)[] getBuffer(T)(ref inout(T)[] outBuffer) @property pure inout
     if (isArray!(T) == false)
     {
-        if (this.isCompact())
+        if (isCompact)
             outBuffer = cast(inout(T)[]) compact[0 .. $].dup;    //potentially unsafe without dup
         else
             outBuffer = cast(inout(T)[]) normal[0 .. $];
@@ -2409,26 +2393,26 @@ struct BitArray {
     }
 
     /***************************************
-     * Allows alignemnt (or reallignment) on a particular offset.
+     * Allows alignemnt (or reallignment) on a particular startBit.
      * Most likely in cases where you've sliced or added bools before the beginning
      */
-    @property ref BitArray realign(ulong byOffset = 0)
+    ref BitArray realign(ulong byOffset = 0) @property pure
     {
-        if (offset != byOffset)
+        if (startBit != byOffset)
         {
-            BitArray tmp = this.dup;
-            
-            offset = byOffset;
-            this.length = tmp.length;
-            this[] = tmp[];
-            
+            BitArray ba = this.dup;
+
+            startBit = byOffset;
+            length = ba.length;
+            this[] = ba[];
+
             //hash shouldn't change.
-            assert(this.toHash == tmp.toHash);
+            assert(toHash == ba.toHash);
         }
-        
+
         return this;
     }
-    
+
     unittest
     {
         //getbuffer
@@ -2439,41 +2423,41 @@ struct BitArray {
         assert(ba.isCompact);
         assert(x.length == ba.compact.length * size_t.sizeof);
         assert(cast(size_t[]) x !is ba.compact);
-        
+
         ba.length = 256;
         assert(!ba.isCompact);
         assert(ba.length == 256);
         ba.getBuffer(x);
         assert(x.length == (ba.length / 8));
         assert(cast(size_t[]) x is ba.normal);
-        
+
         size_t[] y;
         ba.getBuffer(y);
         assert(y.length == (ba.length / size_t.sizeof / 8));
         assert(y is ba.normal);
     }
-    
+
     unittest
     {
         //realign
         bool[] array = [1,1,1,0,0,0,1,0,1,0];
         BitArray ba = BitArray(array);
         assert(array == ba);
-        assert(ba.offset == 0);
-        
+        assert(ba.startBit == 0);
+
         ba.realign = 5;
         assert(array == ba);
-        assert(ba.offset == 5);
-        
+        assert(ba.startBit == 5);
+
         ba.realign;
         assert(array == ba);
-        assert(ba.offset == 0);
+        assert(ba.startBit == 0);
     }
 
     /***************************************
      * Support for unary operator ~ for $(D BitArray).
      */
-    @trusted BitArray opUnary(string op)() const
+    BitArray opUnary(string op)() @trusted pure const
     if (op == "~")
     {
         auto dim = this.dim;
@@ -2488,7 +2472,7 @@ struct BitArray {
                 result.compact[i] ^= -1;
             return result;
         }
-        
+
         for (ulong i; i < len; i++)
         {
             cub = result.canUseBulk!("l = ~l")(0, len, i);
@@ -2498,7 +2482,7 @@ struct BitArray {
             else
                 result[i] = !result[i];
         }
-        
+
         return result;
     }
 
@@ -2517,50 +2501,49 @@ struct BitArray {
         assert(b[3] == 1);
         assert(b[4] == 0);
         assert(b == ba_c);
-        
+
         //should do bulk compare with a larger set
         //results already known and just duplicated
         a = BitArray(ba);
         b = BitArray(ba_c);
-        
+
         for(int i; i<6; i++)
         {
             a ~= a;
             b ~= b;
         }
-        
-        a = a[1 .. a.length-1]; //forces non bulk to work
-        b = b[1 .. b.length-1];
-        
+
+        a = a[1 .. $-1]; //forces non bulk to work
+        b = b[1 .. $-1];
+
         assert(b == ~a);
     }
-
 
     /***************************************
      * Support for binary operators & | and ^ for $(D BitArray).
      */
-    @trusted BitArray opBinary(string op)(const BitArray e2) const
+    BitArray opBinary(string op)(const BitArray rhs) @trusted pure const
     if (op == "&" || op == "|" || op == "^")
     in
     {
-        assert(length() == e2.length);
+        assert(length == rhs.length);
     }
     body
     {
         BitArray result = this.dup;
         ulong len = result.length;
         ulong i, cub;
-        
+
         for (; i < len; i++)
         {
-            cub = result.canUseBulk!("l " ~ op ~ "= r[0]")(0, len, i, e2);
-        
+            cub = result.canUseBulk!("l " ~ op ~ "= r[0]")(0, len, i, rhs);
+
             if (cub)
                 i += cub - 1;
             else
-                mixin("result[i] = result[i] " ~ op ~ " e2[i];");
+                mixin("result[i] = result[i] " ~ op ~ " rhs[i];");
         }
-        
+
         return result;
     }
 
@@ -2569,31 +2552,31 @@ struct BitArray {
      *
      * $(D a - b) for $(D BitArray) means the same thing as $(D a &amp; ~b).
      */
-    @trusted BitArray opBinary(string op)(const BitArray e2) const
+    BitArray opBinary(string op)(const BitArray rhs) @trusted pure const
     if (op == "-")
     in
     {
-        assert(length() == e2.length);
+        assert(length == rhs.length);
     }
     body
     {
         BitArray result = this.dup;
         ulong len = result.length;
         ulong i, cub;
-        
+
         for (; i < len; i++)
         {
-            cub = result.canUseBulk!("l &= ~r[0]")(0, len, i, e2);
-        
+            cub = result.canUseBulk!("l &= ~r[0]")(0, len, i, rhs);
+
             if (cub)
                 i += cub - 1;
             else
-                result[i] = result[i] & !e2[i];
+                result[i] = result[i] & !rhs[i];
         }
-        
+
         return result;
     }
-    
+
     unittest
     {
         debug(bitarray) printf("BitArray.opAnd unittest\n");
@@ -2603,10 +2586,10 @@ struct BitArray {
 
         BitArray a; a.init(ba);
         BitArray b; b.init(bb);
-        
+
         //slice aware
-        a = a[2 .. a.length];
-        b = b[1 .. b.length];
+        a = a[2 .. $];
+        b = b[1 .. $];
 
         BitArray c = a & b;
 
@@ -2615,19 +2598,20 @@ struct BitArray {
         assert(c[2] == 1);
         assert(c[3] == 0);
         assert(c[4] == 0);
-        
+
+
         //check bulk
         a = BitArray(ba[2 .. $]);
         b = BitArray(bb[1 .. $]);
         c = BitArray([1,0,1,0,0]);
-        
+
         for(int i; i<6; i++)
         {
             a ~= a;
             b ~= b;
             c ~= c;
         }
-        
+
         assert(c == (a&b));
     }
 
@@ -2640,10 +2624,10 @@ struct BitArray {
 
         BitArray a; a.init(ba);
         BitArray b; b.init(bb);
-        
+
         //slice aware
-        a = a[2 .. a.length];
-        b = b[1 .. b.length];
+        a = a[2 .. $];
+        b = b[1 .. $];
 
         BitArray c = a | b;
 
@@ -2652,19 +2636,20 @@ struct BitArray {
         assert(c[2] == 1);
         assert(c[3] == 1);
         assert(c[4] == 1);
-        
+
+
         //check bulk
         a = BitArray(ba[2 .. $]);
         b = BitArray(bb[1 .. $]);
         c = BitArray([1,0,1,1,1]);
-        
+
         for(int i; i < 8; i++)
         {
             a ~= a;
             b ~= b;
             c ~= c;
         }
-        
+
         assert(c == (a|b));
     }
 
@@ -2677,10 +2662,10 @@ struct BitArray {
 
         BitArray a; a.init(ba);
         BitArray b; b.init(bb);
-        
+
         //slice aware
-        a = a[2 .. a.length];
-        b = b[1 .. b.length];
+        a = a[2 .. $];
+        b = b[1 .. $];
 
         BitArray c = a ^ b;
 
@@ -2689,23 +2674,25 @@ struct BitArray {
         assert(c[2] == 0);
         assert(c[3] == 1);
         assert(c[4] == 1);
-        
+
+
         //check bulk
         a = BitArray(ba[2 .. $]);
         b = BitArray(bb[1 .. $]);
         c = BitArray([0,0,0,1,1]);
-        
+
         for(int i; i < 8; i++)
         {
             a ~= a;
             b ~= b;
             c ~= c;
         }
-        
+
         assert(c == (a^b));
     }
-    
-    unittest {
+
+    unittest
+    {
         debug(bitarray) printf("BitArray.opSub unittest\n");
 
         static bool[] ba = [0,0, 1,0,1,0,1];
@@ -2713,10 +2700,10 @@ struct BitArray {
 
         BitArray a; a.init(ba);
         BitArray b; b.init(bb);
-        
+
         //slice aware
-        a = a[2 .. a.length];
-        b = b[1 .. b.length];
+        a = a[2 .. $];
+        b = b[1 .. $];
 
         BitArray c = a - b;
 
@@ -2725,45 +2712,45 @@ struct BitArray {
         assert(c[2] == 0);
         assert(c[3] == 0);
         assert(c[4] == 1);
-        
+
+
         //check bulk
         a = BitArray(ba[2 .. $]);
         b = BitArray(bb[1 .. $]);
         c = BitArray([0,0,0,0,1]);
-        
+
         for(int i; i<6; i++)
         {
             a ~= a;
             b ~= b;
             c ~= c;
         }
-        
-        assert(c == (a-b));
 
+        assert(c == (a-b));
     }
 
     /***************************************
      * Support for operator &= |= -= and ^= for $(D BitArray).
      */
-    @trusted pure BitArray opOpAssign(string op)(const BitArray e2)
+    BitArray opOpAssign(string op)(const BitArray rhs) @trusted pure
     if (op == "&" || op == "|" || op == "^")
     in
     {
-        assert(length() == e2.length);
+        assert(length == rhs.length);
     }
     body
     {
         auto dim = this.dim;
         ulong i, cub;
-        ulong len = length();
-        
+        ulong len = length;
+
         for (; i < len; i++)
         {
-            cub = canUseBulk!("l " ~ op ~ "= r[0]")(0, len, i, e2);
+            cub = canUseBulk!("l " ~ op ~ "= r[0]")(0, len, i, rhs);
             if (cub)
                 i += cub - 1;
             else
-                mixin("this[i] = this[i] " ~ op ~ " e2[i];");
+                mixin("this[i] = this[i] " ~ op ~ " rhs[i];");
         }
 
         return this;
@@ -2774,30 +2761,30 @@ struct BitArray {
      *
      * $(D a -= b) for $(D BitArray) means the same thing as $(D a &amp;= ~b).
      */
-    @trusted pure BitArray opOpAssign(string op)(const BitArray e2)
+    BitArray opOpAssign(string op)(const BitArray rhs) @trusted pure
     if (op == "-")
     in
     {
-        assert(length() == e2.length);
+        assert(length == rhs.length);
     }
     body
     {
         auto dim = this.dim;
         ulong i, cub;
-        ulong len = length();
-        
+        ulong len = length;
+
         for (; i < len; i++)
         {
-            cub = canUseBulk!("l &= ~r[0]")(0, len, i, e2);
+            cub = canUseBulk!("l &= ~r[0]")(0, len, i, rhs);
             if (cub)
                 i += cub - 1;
             else
-                this[i] = this[i] & !e2[i];
+                this[i] = this[i] & !rhs[i];
         }
 
         return this;
     }
-    
+
     unittest
     {
         debug(bitarray) printf("BitArray.opAndAssign unittest\n");
@@ -2808,10 +2795,10 @@ struct BitArray {
 
         BitArray a; a.init(ba);
         BitArray b; b.init(bb);
-        
+
         //slice aware
-        a = a[2 .. a.length];
-        b = b[1 .. b.length];
+        a = a[2 .. $];
+        b = b[1 .. $];
 
         a &= b;
         assert(a[0] == 1);
@@ -2819,19 +2806,19 @@ struct BitArray {
         assert(a[2] == 1);
         assert(a[3] == 0);
         assert(a[4] == 0);
-        
+
         //check bulk
         a = BitArray(ba[2 .. $]);
         b = BitArray(bb[1 .. $]);
         BitArray c = BitArray([1,0,1,0,0]);
-        
+
         for(int i; i < 6; i++)
         {
             a ~= a;
             b ~= b;
             c ~= c;
         }
-        
+
         a &= b;
         assert(c == a);
     }
@@ -2845,10 +2832,10 @@ struct BitArray {
 
         BitArray a; a.init(ba);
         BitArray b; b.init(bb);
-        
+
         //slice aware
-        a = a[2 .. a.length];
-        b = b[1 .. b.length];
+        a = a[2 .. $];
+        b = b[1 .. $];
 
         a |= b;
         assert(a[0] == 1);
@@ -2856,22 +2843,21 @@ struct BitArray {
         assert(a[2] == 1);
         assert(a[3] == 1);
         assert(a[4] == 1);
-        
+
         //check bulk
         a = BitArray(ba[2 .. $]);
         b = BitArray(bb[1 .. $]);
         BitArray c = BitArray([1,0,1,1,1]);
-        
+
         for(int i; i < 6; i++)
         {
             a ~= a;
             b ~= b;
             c ~= c;
         }
-        
+
         a |= b;
         assert(c == a);
-
     }
 
     unittest
@@ -2883,10 +2869,10 @@ struct BitArray {
 
         BitArray a; a.init(ba);
         BitArray b; b.init(bb);
-        
+
         //slice aware
-        a = a[2 .. a.length];
-        b = b[1 .. b.length];
+        a = a[2 .. $];
+        b = b[1 .. $];
 
         a ^= b;
         assert(a[0] == 0);
@@ -2894,24 +2880,23 @@ struct BitArray {
         assert(a[2] == 0);
         assert(a[3] == 1);
         assert(a[4] == 1);
-        
+
         //check bulk
         a = BitArray(ba[2 .. $]);
         b = BitArray(bb[1 .. $]);
         BitArray c = BitArray([0,0,0,1,1]);
-        
+
         for(int i; i<6; i++)
         {
             a ~= a;
             b ~= b;
             c ~= c;
         }
-        
+
         a ^= b;
         assert(c == a);
-
     }
-    
+
     unittest
     {
         debug(bitarray) printf("BitArray.opSubAssign unittest\n");
@@ -2921,10 +2906,10 @@ struct BitArray {
 
         BitArray a; a.init(ba);
         BitArray b; b.init(bb);
-        
+
         //slice aware
-        a = a[2 .. a.length];
-        b = b[1 .. b.length];
+        a = a[2 .. $];
+        b = b[1 .. $];
 
         a -= b;
         assert(a[0] == 0);
@@ -2932,31 +2917,32 @@ struct BitArray {
         assert(a[2] == 0);
         assert(a[3] == 0);
         assert(a[4] == 1);
-        
+
         //check bulk
         a = BitArray(ba[2 .. $]);
         b = BitArray(bb[1 .. $]);
         BitArray c = BitArray([0,0,0,0,1]);
-        
+
         for(int i; i < 6; i++)
         {
             a ~= a;
             b ~= b;
             c ~= c;
         }
-        
+
         a -= b;
         assert(c == a);
-
     }
+    
+    
     /***************************************
      * Support for operator ~= for $(D BitArray).
      */
-    @trusted pure BitArray opOpAssign(string op)(bool b)
+    BitArray opOpAssign(string op)(bool b) @trusted pure
     if (op == "~")
     {
-        this.length = length() + 1;
-        this[this.length - 1] = b;
+        length = length + 1;
+        this[$-1] = b;
         return this;
     }
 
@@ -2968,8 +2954,8 @@ struct BitArray {
 
         BitArray a; a.init(ba);
         BitArray b;
-        
-        a = a[2 .. a.length];
+
+        a = a[2 .. $];
 
         b = (a ~= true);
         assert(a[0] == 1);
@@ -2985,22 +2971,21 @@ struct BitArray {
     /***************************************
      * ditto
      */
-    @trusted pure BitArray opOpAssign(string op)(const BitArray e2)
+    BitArray opOpAssign(string op)(const BitArray rhs) @trusted pure
     if (op == "~")
     {
         ulong i, cub;
+        auto lOffset = length;
+        auto len = rhs.length;
+        length = length + len;
 
-        auto lOffset = length();
-        auto len = e2.length;
-        this.length = length() + len;
-        
         for (; i < len; i++)
         {
-            cub = canUseBulk!("l = r[0]")(lOffset, lOffset + len, i, e2);
+            cub = canUseBulk!("l = r[0]")(lOffset, lOffset + len, i, rhs);
             if (cub)
                 i += cub - 1;
             else
-                this[lOffset + i] = e2[i];
+                this[lOffset + i] = rhs[i];
         }
         return this;
     }
@@ -3015,7 +3000,7 @@ struct BitArray {
         BitArray a; a.init(ba);
         BitArray b; b.init(bb);
         BitArray c;
-        
+
         a = a[0 .. 2];
 
         c = (a ~= b);
@@ -3027,35 +3012,34 @@ struct BitArray {
         assert(a[4] == 0);
 
         assert(c == a);
-        
+
         a = BitArray(bb);
         b = a;
         for(int i; i < 20; i++)
             a ~= b;
-        
+
         assert(a.length == (21*3));
         c = BitArray();
         b = a.dup;
         assert(a == b);
-        
+
         a ~= b;
-        assert(a[0 .. a.length / 2] == a[a.length / 2 .. a.length]);
-        assert(b == a[a.length / 2 .. a.length]);
-        assert(a[a.length / 2 .. a.length] == b);
-        
+        assert(a[0 .. $/2] == a[$/2 .. $]);
+        assert(b == a[$/2 .. $]);
+        assert(a[$/2 .. $] == b);
+
         b = a;
         a ~= a;
         assert(a.length == b.length*2);
-        assert(a[0 .. a.length/2] == b);
-        assert(a[a.length/2 .. a.length] == b);
+        assert(a[0 .. $/2] == b);
+        assert(a[$/2 .. $] == b);
     }
 
     /***************************************
      * Support for binary operator ~ for $(D BitArray).
      */
-//doesn't want to call right...
-//    BitArray opBinary(string op)(bool b) const if (op == "~") {
-    BitArray opCat(bool b) const
+    BitArray opBinary(string op)(bool b) const pure
+    if (op == "~")
     {
         BitArray r = this.dup;
 
@@ -3064,31 +3048,31 @@ struct BitArray {
     }
 
     /** ditto */
-    BitArray opBinaryRight(string op)(bool b) const
+    BitArray opBinaryRight(string op)(bool b) pure const
     if (op == "~")
     {
         BitArray left;
-        
+
         //check if we have leftmost bits leftover
-        if (bitIndex(offset) > 0)
+        if (bitIndex(startBit) > 0)
         {
             left = this.dup;
             left.canExpand = true;
-            left.offset = left.offset - 1;
-            left[0] = b;    //0 not offset, offset is taken into consideration in opIndex
+            left.startBit = left.startBit - 1;
+            left[0] = b;    //0 not startBit, startBit is taken into consideration in opIndex
         }
         else
         {
             const BitArray orig = this;
-            left.length = this.length + bitsPerSizeT;
-            left.offset = bitsPerSizeT;
-            left.maxOffset = maxOffset + bitsPerSizeT;
-            if (left.isCompact())
-                left[0 .. left.length] = orig[0 .. orig.length];
+            left.length = length + bitsPerSizeT;
+            left.startBit = bitsPerSizeT;
+            left.endBit = endBit + bitsPerSizeT;
+            if (left.isCompact)
+                left[0 .. $] = orig[0 .. $];
             else
                 left.normal[1 .. $] = orig.normal[0 .. $ - 1];
 
-            left.offset = left.offset - 1;
+            left.startBit = left.startBit - 1;
             left[0] = b;
         }
 
@@ -3096,13 +3080,14 @@ struct BitArray {
     }
 
     /** ditto */
-    BitArray opCat(const BitArray b) const
+    BitArray opBinary(string op)(const BitArray rhs) const pure
+    if (op == "~")
     {
-        BitArray r;
+        BitArray ba;
 
-        r = this.dup();
-        r ~= b;
-        return r;
+        ba = this.dup();
+        ba ~= rhs;
+        return ba;
     }
 
     unittest
@@ -3115,7 +3100,7 @@ struct BitArray {
         BitArray a; a.init(ba);
         BitArray b; b.init(bb);
         BitArray c;
-        
+
         a = a[0 .. 2];
 
         c = (a ~ b);
@@ -3150,7 +3135,28 @@ struct BitArray {
     /***************************************
      * Support for slices $(D BitArray).
      */
-    @trusted pure inout(BitArray) opSlice() inout
+    BitArray opSlice() @trusted pure
+    {
+        //to support reference on a compact, we convert it first.
+        BitArray sl = this;
+        if (isCompact)
+        {
+            size_t[] allocated;
+            allocated.length = compact.length;
+            allocated[] = compact[];
+            
+            sl.isCompact = false;
+            sl.normal = allocated;
+        }
+
+        sl.canExpand = false;
+        return sl;
+    }
+    
+    /**
+     * ditto. Being const we can't modify the original
+     */
+    const(BitArray) opSlice() @trusted pure const
     {
         return this;
     }
@@ -3158,22 +3164,44 @@ struct BitArray {
     /**
      * ditto
      */
-    @trusted pure inout(BitArray) opSlice(ulong s, ulong e) inout
+    const(BitArray) opSlice(ulong sliceStart, ulong sliceEnd) @trusted pure const
     {
-        assert(s + offset <= maxOffset, "s = " ~ myToStringx(s));
-        assert(e + offset <= maxOffset, "e = " ~ myToStringx(s));
-        ulong len = e - s;
-        
-        if (s == 0 && e == this.length)
+        assert(sliceStart + startBit <= endBit, "sliceStart = " ~ myToStringx(sliceStart));
+        assert(sliceEnd + startBit <= endBit, "sliceEnd = " ~ myToStringx(sliceStart));
+        ulong len = sliceEnd - sliceStart;
+
+        if (sliceStart == 0 && sliceEnd == length)
             return this;
 
-        Unqual!BitArray sl;
-        sl = cast(Unqual!BitArray)this;
-        
-        sl.offset = sl.offset + s;
-        sl.maxOffset = sl.offset + len;
+        BitArray sl = cast(BitArray) this[];
 
-        return cast(inout(BitArray)) sl;
+        sl.startBit = sl.startBit + sliceStart;
+        sl.endBit = sl.startBit + len;
+
+        return cast(const BitArray) sl;
+    }
+    
+    immutable(BitArray) opSlice(ulong sliceStart, ulong sliceEnd) @trusted pure immutable
+    {
+        const BitArray tmp = cast(const BitArray) this;
+        return cast(immutable BitArray) tmp[sliceStart .. sliceEnd];
+    }
+    
+    BitArray opSlice(ulong sliceStart, ulong sliceEnd) @trusted pure
+    {
+        assert(sliceStart + startBit <= endBit, "sliceStart = " ~ myToStringx(sliceStart));
+        assert(sliceEnd + startBit <= endBit, "sliceEnd = " ~ myToStringx(sliceStart));
+        ulong len = sliceEnd - sliceStart;
+
+        if (sliceStart == 0 && sliceEnd == length)
+            return this;
+
+        BitArray sl = this[];
+
+        sl.startBit = sl.startBit + sliceStart;
+        sl.endBit = sl.startBit + len;
+
+        return sl;
     }
 
     unittest
@@ -3183,62 +3211,59 @@ struct BitArray {
         BitArray bc; bc.init([1,1,0,0]);
         BitArray bd; bd.init([1,0]);
 
-//        until $ is properly supported        
-//        BitArray bs = ba[1 .. $];
-        BitArray bs = ba[1 .. ba.length]; //11000
+        BitArray bs = ba[1 .. $]; //11000
         assert(bs == bb);
 
-//        bs = bs[0 .. $-1];
-        bs = bs[0 .. bs.length-1]; //1100
+        bs = bs[0 .. $-1];  //1100
         assert(bs == bc);
 
-//        bs = bs[1 .. $-1];
-        bs = bs[1 .. bs.length-1];    //10
-        
+        bs = bs[1 .. $-1];  //10
+
         assert(bs == bd);
     }
 
-    @trusted pure ref BitArray opSliceAssign(const bool[] setSlice, ulong s, ulong e)
+    ref BitArray opSliceAssign(const bool[] setSlice, ulong sliceStart, ulong sliceEnd) @trusted pure
     {
-        assert(e - s == setSlice.length);
-        
-        ulong i = s;
-        
-        for(; i < e; i++)
-            this[i + offset + s] = setSlice[cast(size_t) i];
+        assert(sliceEnd - sliceStart == setSlice.length);
+
+        ulong i = sliceStart;
+
+        for(; i < sliceEnd; i++)
+            this[i + startBit + sliceStart] = setSlice[cast(size_t) i];
 
         return this;
     }
-    
-    @trusted pure ref BitArray opSliceAssign(const BitArray setSlice, ulong s, ulong e)
+
+    ref BitArray opSliceAssign(const BitArray setSlice, ulong sliceStart, ulong sliceEnd) @trusted pure
     {
-        assert(e - s == setSlice.length);
-        
+        assert(sliceEnd - sliceStart == setSlice.length);
+
         ulong i, cub;
-        ulong len = e - s;
-        
+        ulong len = sliceEnd - sliceStart;
+
         for(; i < len; i++)
         {
-            cub = canUseBulk!("l = r[0]")(s, e, i, setSlice);
+            cub = canUseBulk!("l = r[0]")(sliceStart, sliceEnd, i, setSlice);
             if (cub)
                 i += cub - 1;
             else
-                this[i + s] = setSlice[i];
+                this[i + sliceStart] = setSlice[i];
         }
 
         return this;
     }
-    
-    @trusted pure ref BitArray opSliceAssign(bool setValue, ulong s, ulong e)
+
+    ref BitArray opSliceAssign(bool setValue, ulong sliceStart, ulong sliceEnd) @trusted pure
     {
-        ulong cub, i = s;
-        
-        for(; i < e; i++)
+        ulong cub, i = sliceStart;
+
+        for(; i < sliceEnd; i++)
         {
             if (setValue)
-                cub = canUseBulk!(" l = -1")(0, e, i);
+                //rather than -1, should use type.max? or type.min for signed?
+                cub = canUseBulk!(" l = -1")(0, sliceEnd, i);
             else
-                cub = canUseBulk!(" l = 0")(0, e, i);
+                cub = canUseBulk!(" l = 0")(0, sliceEnd, i);
 
             if (cub)
                 i += cub - 1;
@@ -3247,57 +3272,57 @@ struct BitArray {
         }
         return this;
     }
-    
+
     //issue 1998 - opSliceAssign - Let's you set all bits to on or off
-    @trusted pure BitArray opSliceAssign(bool setValue)
+    BitArray opSliceAssign(bool setValue) @trusted pure
     {
-        return opSliceAssign(setValue, 0, this.length);
+        return opSliceAssign(setValue, 0, length);
     }
 
     //a[] = b[]; if the length is the same.
-    @trusted pure BitArray opSliceAssign(const BitArray setSlice)
+    BitArray opSliceAssign(const BitArray setSlice) @trusted pure
     {
-        assert(this.length == setSlice.length);
-        this.opSliceAssign(setSlice, 0, this.length);
-        
+        assert(length == setSlice.length);
+        this.opSliceAssign(setSlice, 0, length);
+
         return this;
-    }    
-    
+    }
+
     unittest
     {
         BitArray ba = BitArray(24);
-        BitArray bb = ba[4 .. ba.length - 4];    //2 bytes in the middle, overlapping
-    
+        BitArray bb = ba[4 .. $-4];    //2 bytes in the middle, overlapping
+
         assert(ba.isCompact);    //value semantics
-        assert(bb.isCompact);
+//        assert(bb.isCompact);    //referenced so this fails...
 
         ba[] = true;
         assert(ba.getBulk(0) == 0x00ffffff);
         assert(ba.compact[0] == 0x00ffffff);
 
-        bb = ba[4 .. ba.length - 4];    //compact leaves them separate
+        bb = ba[4 .. $-4];    //compact leaves them separate
         bb[] = false;
-        
+
         assert(ba.getBulk(0) == 0x00ffffff);
         assert(bb.getBulk(0) == 0x00f0000f);
 
         bb[4 .. 8] = true;
 
         assert(bb.getBulk(0) == 0x00f00f0f);
-        
+
         ba[] = 0;
 
         ba[0 .. 4] = [0,1,1,0]; //least to most significant
         assert(ba.getBulk(0) == 0x06);
-        
+
         ba[8 .. 12] = ba[0 .. 4];
         assert(ba.getBulk(0) == 0x0606);
-        
+
 
         //test slices
         ba = BitArray(maxCompactBits * 2);    //force normal
         ba = ba[0 .. 24];
-        bb = ba[4 .. ba.length - 4];    //2 bytes in the middle, overlapping
+        bb = ba[4 .. $-4];    //2 bytes in the middle, overlapping
 
         assert(!ba.isCompact);
         assert(!bb.isCompact);
@@ -3310,23 +3335,23 @@ struct BitArray {
 
         bb[4 .. 8] = true;
         assert(bb.getBulk(0) == 0x00f00f0f);
-        
+
         ba[] = 0;
 
         ba[0 .. 4] = [0,1,1,0]; //least to most significant
         assert(ba.getBulk(0) == 0x06);
-        
+
         ba[8 .. 12] = ba[0 .. 4];
         assert(ba.getBulk(0) == 0x0606);
-        
-        
+
+
         //bulk slice copy test
         static bool[] a = [1,0,1,0,1];
         static bool[] b = [1,0,1,1,0];
-        
+
         ba = BitArray(a);
         bb = BitArray(b);
-        
+
         for(int i; i < 5; i++) 
         {
             ba ~= ba;
@@ -3335,29 +3360,29 @@ struct BitArray {
 
         assert(ba != bb);
         BitArray b_ba = ba;
-        
+
         ba[] = bb[];
         assert(ba == bb);
         assert(ba.normal !is bb.normal);
         assert(b_ba.normal is ba.normal);
-    
+
     }
-    
+
     /**
      * simple toString, like "1010111"
      */
-    pure string toString() const
+    string toString() const
     {
         char[] str;
-        
-        str.length = cast(size_t) length();
-        
+
+        str.length = cast(size_t) length;
+
         //opApply not pure...
-        foreach(i, ref ch; str)
+        foreach(i, b; this)
         {
-            ch = this[i] ? '1' : '0';
+            str[cast(size_t) i] = b ? '1' : '0';
         }
-    
+
         return cast(string) (str);
     }
 
@@ -3367,7 +3392,7 @@ struct BitArray {
         bool[] b = [1,0,1,0,1,1,1];
         ba.init(b);
         string str = ba.toString();
-        
+
         assert(str == "1010111");
     }
 
@@ -3375,15 +3400,18 @@ struct BitArray {
      * Reading/writing of basic types. 
      * allowRemainingBits is useful if there is a remainder of bits that you still need to read
      * like the toHash uses. Otherwise, you will get an error if there isn't enough room in the array.
+     * Types allow any basic type, along with value types (no indirection/pointers)
      */
-    size_t rawRead(T)(out T val, ulong position, bool allowRemainingBits = false) const
-    if (isNumeric!(T))
+    size_t rawRead(T)(out T val, ulong position, bool allowRemainingBits = false) @trusted pure const
+    if (!hasIndirections!(T))
     in
     {
+        enum bits = T.sizeof * 8;
         assert(allowRemainingBits ||
-                maxOffset - (position + offset) >= enumBits!(T).bitsPerT,
+                endBit - (position + startBit) >= bits,
                 "Not enough left in BitArray for read");
-        assert(position + offset < maxOffset, "Outside of range!");    //ensure it's not past the end of the array.
+        assert(position + startBit < endBit,
+                "Outside of range!");    //ensure it's not past the end of the array.
     }
     body
     {
@@ -3391,35 +3419,35 @@ struct BitArray {
             ubyte[T.sizeof] rawData;
             T rawType;
         }
-        
-        XX x;    //non-aggregate annonymous enum... Annoying workaround.
-        
-        size_t bits;
+
+        XX Union;    //non-aggregate annonymous enum... Annoying workaround.
+
+        size_t bits = T.sizeof * 8;
         if(allowRemainingBits)
             //another min template would be nice..
-            bits = cast(size_t) min(maxOffset - (position + offset), enumBits!(T).bitsPerT);
-        else
-            bits = enumBits!(T).bitsPerT;
+            bits = cast(size_t) min(endBit - (position + startBit), bits);
 
-            
-        with(x)
+        with(Union)
         {
             for(ulong i; i < bits; ++i) {
                 setBit(rawData, i, this[position + i]);
             }
-            
+
             val = rawType;
         }
         return bits;
     }
 
     //writes at the specific location. No reallocation, if outside of bounds it will utterly fail
-    size_t rawWrite(T)(const T val, ulong position)
-    if (isNumeric!(T))
+    size_t rawWrite(T)(const T val, ulong position) @trusted pure
+    if (!hasIndirections!(T))
     in
     {
-        assert(maxOffset - (position + offset) >= enumBits!(T).bitsPerT, "Not enough left in BitArray for read");
-        assert(position + offset < maxOffset, "Outside of range!");    //ensure it's not past the end of the array.
+        enum bits = T.sizeof * 8;
+        assert(endBit - (position + startBit) >= bits,
+                "Not enough left in BitArray for write");
+        assert(position + startBit < endBit,
+                "Outside of range!");    //ensure it's not past the end of the array.
     }
     body
     {
@@ -3427,38 +3455,38 @@ struct BitArray {
             ubyte[T.sizeof] tmp;
             T rawType;
         }
-        
-        XX x;    //non-aggregate annonymous enum... Annoying workaround.
-        
-        with(x)
+
+        XX Union;    //non-aggregate annonymous enum... Annoying workaround.
+
+        enum bits = T.sizeof * 8;
+        with(Union)
         {
-            enum bits = enumBits!(T).bitsPerT;
             rawType = val;
-            
+
             for(ulong i; i < bits; ++i) {
                 this[position + i] = getBit(tmp, i);
             }
         }
 
-        return enumBits!(T).bitsPerT;
+        return bits;
     }
-    
+
     ///Appends to the end of the BitArray
-    size_t rawWrite(T)(const T val)
-    if (isNumeric!(T))
+    size_t rawWrite(T)(const T val) @trusted pure
+    if (!hasIndirections!(T))
     {
-        ulong position = this.length;
-        this.length = position + enumBits!(T).bitsPerT;
-        
+        ulong position = length;
+        length = position + (T.sizeof * 8);
+
         return rawWrite(val, position);
     }
 
     unittest
     {
         BitArray ba = BitArray(256);
-        ba = ba[5 .. ba.length];    //force slicing
-        size_t off = 0;    //ensure offset is working too.
-        
+        ba = ba[5 .. $];    //force slicing
+        size_t off = 0;    //ensure startBit is working too.
+
         //pi just as a working point, nothing special :P
         //3.1 41 5926 53589 793238462 6433832795
         const byte i_b = -31;
@@ -3469,11 +3497,19 @@ struct BitArray {
         const uint i_ui = 643_383_279;
         const long i_l = -314_159_265_358_979;
         const ulong i_ul = 323_834_626_433_832_795;
-        
+
         //bug in compare preventing proper use with const
         //so these are non-const, which work properly.
         float i_f = 3.14159265;
         double i_d = 3.1415926535897932384626433832795;
+        
+        struct PointXY {
+            int x;
+            int y;
+            int color;
+        }
+        
+        const PointXY i_pxy = PointXY(314, 159, 265);
 
         off += ba.rawWrite(i_b, off);
         off += ba.rawWrite(i_ub, off);
@@ -3482,19 +3518,22 @@ struct BitArray {
         off += ba.rawWrite(i_i, off);
         off += ba.rawWrite(i_ui, off);
         off += ba.rawWrite(i_l, off);
-        off += ba.rawWrite(i_ul, off);
-        
+        off += ba.rawWrite(i_ul, off); //takes 251 bits at this point
+
         ba.length = off;    //test rawWrite appending
+
+        ba.rawWrite(i_pxy);
         ba.rawWrite(i_f);
         ba.rawWrite(i_d);
         ba ~= true;        //works up from least significant bit, so 1 instead of 128.
-        
+
         ubyte uneven;
         byte m_b;       ubyte m_ub;
         short m_sh;     ushort m_ush;
         int m_i;        uint m_ui;
         long m_l;       ulong m_ul;
         float m_f;      double m_d;
+        PointXY m_pxy;
 
         off = 0;
         off += ba.rawRead(m_b, off);
@@ -3505,9 +3544,10 @@ struct BitArray {
         off += ba.rawRead(m_ui, off);
         off += ba.rawRead(m_l, off);
         off += ba.rawRead(m_ul, off);
+        off += ba.rawRead(m_pxy, off);          //custom struct
         off += ba.rawRead(m_f, off);
         off += ba.rawRead(m_d, off);
-        off += ba.rawRead(uneven, off, true);    //remaining
+        off += ba.rawRead(uneven, off, true);   //remaining
 
         assert(i_b == m_b);
         assert(i_ub == m_ub);
@@ -3517,17 +3557,21 @@ struct BitArray {
         assert(i_ui == m_ui);
         assert(i_l == m_l);
         assert(i_ul == m_ul);
-        
+
         //const float causes it to fail...
+        //true floats are inexact matching but a raw compare would confirm...
         assert(i_f == m_f);
         assert(i_d == m_d);
-        
+
         assert(uneven == 1);
+        
+        //custom type
+        assert(i_pxy == m_pxy);
     }
-    
+
     ///toHash for BitArray
     //Jenkins_one_at_a_time_hash from wikipedia
-    pure uint toHash() const
+    uint toHash() @property pure const
     {
         ulong len = length;
         uint hash;
@@ -3559,11 +3603,11 @@ struct BitArray {
         //ported from C version, they all pass the same. Good :)
         assert(upper.toHash == 0x819f9dcc);
         assert(lower.toHash == 0x85873cce);
-        assert(upper[0 .. upper.length-8].toHash == 0x57d3e2fd);    //Balloo
-        
-        assert(upper[upper.length - 8 .. upper.length].toHash == 0xd98832f1);    //01110110
-        assert(upper[upper.length - 7 .. upper.length].toHash == 0xecc9d984);    //1110110
-        assert(upper[upper.length - 6 .. upper.length].toHash == 0xedbfdb78);    //110110
+        assert(upper[0 .. $-8].toHash == 0x57d3e2fd);    //Balloo
+
+        assert(upper[$-8 .. $].toHash == 0xd98832f1);    //01110110
+        assert(upper[$-7 .. $].toHash == 0xecc9d984);    //1110110
+        assert(upper[$-6 .. $].toHash == 0xedbfdb78);    //110110
 
         debug {
             //visually shows how each bit is part of the hash, even if it isn't divisible by 8.
@@ -3577,36 +3621,39 @@ struct BitArray {
                     writefln("0x%08x - %s", hash, tmp);
                 }
             }
-            
+
             for(size_t i; i < upper.length; ++i)
             {
-                BitArray tmp = upper[i .. upper.length];
+                BitArray tmp = upper[i .. $];
                 writefln("0x%08x - %s", tmp.toHash, tmp);
             }
         }
     }
-    
+
     //informational output for debugging.
     void print(string header = null) const
     {
         writefln("%s\n", header);
         writeln("isCompact:", isCompact);
         writeln("canExpand:", canExpand);
-        writefln("offset: %s (%s)", offset, _offset);
-        writefln("maxOffset: %s (%s)", maxOffset, _maxOffset);
+        writefln("startBit: %s (%s)", startBit, _startBit);
+        writefln("endBit: %s (%s)", endBit, _endBit);
         writefln("length: %s", length);
         if (isCompact)
         {
-            writefln("Compact Length: %s / %s(bits)", compact.length, compact.totalBits);
+            writefln("Compact Length: %s / %s(bits)", compact_ubyte.length, compact_ubyte.totalBits);
             writeln(compact);
+            writeln(compact_ubyte);
             writeln(toString());
         }
         else
         {
-            writefln("Normal  Length: %s / %s(bits)", normal.length, normal.totalBits);
+            writefln("Normal  Length: %s / %s(bits)", normal.length * size_t.sizeof, normal.totalBits);
+            writeln(normal, "\t", normal.length);
+            writeln(cast(const(ubyte)[]) normal, "\t", (cast(const(ubyte)[]) normal).length);
             writeln(toString());
         }
-        
+
         writefln("toHash: 0x%08x", toHash);
     }
 
@@ -3618,41 +3665,41 @@ struct BitArray {
         const BitArray cba = BitArray(boolArray);
         BitArray ba;
         BitArray bb;
-        
+
         bb = BitArray(boolArray2);
-                
+
         ba = cba.dup;
         assert(ba == cba);
-        
+
         foreach(i, b; cba)
             assert(boolArray[cast(size_t) i] == b);
-        
+
         bool[] answer = [1, 1, 0, 0];
         BitArray a = BitArray(answer);
-        
+
         //Unary ~
         ba = ~cba;
-        
+
         assert(a == ba);
-        
+
         //And
         answer = [0, 0, 1, 0];
         a = BitArray(answer);
 
         ba = cba & bb;
         assert(a == ba);
-        
+
         ba = BitArray(boolArray2);
         ba &= cba;
         assert(a == ba, ba.toString());
-        
+
         //Or
         answer = [1, 0, 1, 1];
         a = BitArray(answer);
 
         ba = cba | bb;
         assert(a == ba);
-        
+
         ba = BitArray(boolArray2);
         ba |= cba;
         assert(a == ba);
@@ -3663,51 +3710,50 @@ struct BitArray {
 
         ba = cba ^ bb;
         assert(a == ba);
-        
+
         ba = BitArray(boolArray2);
         ba ^= cba;
         assert(a == ba);
 
-    
         //concat
         ba = cba ~ false;
         assert(ba == [0,0,1,1,0]);
-        
+
         ba = true ~ cba;
         assert(ba == [1,0,0,1,1]);
-        
+
         ba ~= cba;
         assert(ba == [1,0,0,1,1,  0,0,1,1]);
-        
+
         //slice compares and copy
         ba[] = false;
 
         ba = ba[0 .. 4];        //size is wrong from following tests; fixing now...
-        
+
         ba[] = cba[];
         assert(ba == cba);
         ba[2 .. 4] = cba[0 .. 2];
         ba[0 .. 2] = cba[2 .. 4];
-        
+
         assert(ba[0 .. 2] == cba[2 .. 4]);
         assert(ba[2 .. 4] == cba[0 .. 2]);
-        
+
         //const slices compares
         const BitArray cba0 = cba[0 .. 2]; //const slice to const slice
         const BitArray cba2 = cba[2 .. 4];
         const BitArray ba0 = ba[0 .. 2];    //normal to const slice
         const BitArray ba2 = ba[2 .. 4];
-        
+
         assert(cba0.toHash == 0);
         assert(cba2.toHash);
         assert(ba0.toHash);    //backwards of cba
         assert(ba2.toHash == 0);
-        
+
         assert(ba[0 .. 2] == cba2);    //still holds true to above
         assert(ba[2 .. 4] == cba0);
         assert(ba0 == cba2);        //should be true as well, only const
         assert(ba2 == cba0);
-        
+
         //immutability. idup, and compares and access and slices, beyond that not much...
         //sorry for being so verbose and repetative..
         immutable BitArray icba = cba.idup;
@@ -3720,14 +3766,14 @@ struct BitArray {
         assert(icba2.toHash);
         assert(iba0.toHash);
         assert(iba2.toHash == 0);    //backwards of cba
-        
+
         assert(ba[0 .. 2] == icba2);    //similar tests from above.
         assert(icba0 == ba[2 .. 4]);
         assert(iba0 == icba2);
         assert(iba2 == icba0);
-        
+
         immutable BitArray iba1 = icba[1 .. 4];
-        
+
         assert(iba1.length == 3);
         assert(iba1 == icba[1 .. 4]);
         assert(iba1 == cba[1 .. 4]);
@@ -3738,11 +3784,11 @@ struct BitArray {
         //regular ops (Obviously not opassign..
         answer = [1, 1, 0, 0];
         a = BitArray(answer);
-        
+
         //Unary ~
         ba = ~icba;
         assert(a == ba);
-        
+
         //And
         answer = [0, 0, 1, 0];
         a = BitArray(answer);
@@ -3752,7 +3798,7 @@ struct BitArray {
 
         ba = bb & icba;    //forward and reverse...
         assert(a == ba);
-        
+
         //Or
         answer = [1, 0, 1, 1];
         a = BitArray(answer);
@@ -3762,7 +3808,7 @@ struct BitArray {
 
         ba = bb | icba;
         assert(a == ba);
-        
+
         //xor
         answer = [1, 0, 0, 1];
         a = BitArray(answer);
@@ -3776,10 +3822,10 @@ struct BitArray {
         //concat
         ba = icba ~ false;
         assert(ba == [0,0,1,1,0]);
-        
+
         ba = true ~ icba;
         assert(ba == [1,0,0,1,1]);
-        
+
         ba ~= icba;
         assert(ba == [1,0,0,1,1,  0,0,1,1]);
 
@@ -3798,6 +3844,35 @@ struct BitArray {
     }
 }
 
+/** converts string of 0's and 1's to the new bitarray.
+  * If it isn't 0's or 1's then it throws an exception.
+  * spaces, newlines and _'s are ignored for the purpose of formatting.
+  * Constructors confuse between array types
+  */
+BitArray toBitArray(string source) @property
+{
+    BitArray ba = BitArray(source.length);
+
+    ulong offset;
+    foreach(ch; source) {
+        if (isWhite(ch) || ch == '_')
+            continue;
+
+        assert(ch == '0' || ch == '1');
+        ba[offset++] = (ch == '1');
+    }
+
+    ba.length = offset;   //final resize
+    return ba;
+}
+
+unittest {
+    BitArray ba = "1_1_1
+             \t\r  0 0 0
+             \v\n  1_1_1".toBitArray;
+    assert(ba.length == 9);
+    assert(ba == [1,1,1,0,0,0,1,1,1]);
+}
 
 /++
     Swaps the endianness of the given integral value or character.
@@ -4325,3 +4400,11 @@ private auto floatEndianImpl(size_t n, bool swap)(ubyte[n] val) @safe pure nothr
 
     return es.value;
 }
+
+
+
+
+
+
+
+
