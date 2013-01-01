@@ -7819,6 +7819,12 @@ assert(words == [ "a", "aBc", "abc", "ABC", "b", "c" ]);
 SortedRange!(Range, less)
 sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         Range)(Range r)
+    if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
+                                          hasAssignableElements!Range)) ||
+         (ss != SwapStrategy.unstable && hasAssignableElements!Range)) &&
+        isRandomAccessRange!Range &&
+        hasSlicing!Range &&
+        hasLength!Range)
 {
     alias binaryFun!(less) lessFun;
     alias typeof(lessFun(r.front, r.front)) LessRet;    // instantiate lessFun
