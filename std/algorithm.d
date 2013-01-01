@@ -11466,5 +11466,3 @@ unittest
         assert(canFind(BC, tuple(n[0], n[1])));
     }
 }
-
-// vim:set sw=4 ts=4 expandtab:
