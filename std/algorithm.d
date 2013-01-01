@@ -10854,8 +10854,6 @@ bool nextEvenPermutation(alias less="a<b", BidirectionalRange)
 
             swap(i.front, j.front);
             oddParity = !oddParity;
-
-            ret = true;
         }
         else
         {
@@ -10902,4 +10900,16 @@ unittest
     assert(a == [ 1, 3, 2 ]);
     assert(nextEvenPermutation!"a > b"(a) == false);
     assert(a == [ 3, 2, 1 ]);
+}
+
+unittest
+{
+    // Test various cases of rollover
+    auto a = [ 3, 1, 2 ];
+    assert(nextEvenPermutation(a) == false);
+    assert(a == [ 1, 2, 3 ]);
+
+    auto b = [ 3, 2, 1 ];
+    assert(nextEvenPermutation(b) == false);
+    assert(b == [ 1, 3, 2 ]);
 }
