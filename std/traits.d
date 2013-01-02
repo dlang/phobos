@@ -283,7 +283,9 @@ unittest
  * Get the type of the return value from a function,
  * a pointer to function, a delegate, a struct
  * with an opCall, a pointer to a struct with an opCall,
- * or a class with an opCall.
+ * or a class with an $(D opCall). Please note that $(D_KEYWORD ref)
+ * is not part of a type, but the attribute of the function 
+ * (see template $(LREF functionAttributes)).
  * Example:
  * ---
  * import std.traits;
