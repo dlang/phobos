@@ -6520,41 +6520,44 @@ unittest
 }
 
 /**
-This range iterates a single element. This is useful when an interface
-requires a range, and you only need a single value.
+This range iterates a single element. This is useful when a sole value
+must be passed to an algorithm expecting a range.
 
 Example:
 ----
-assert(equal([1, 2, 3].take(1), only(1)));
-assert(equal(chain("Only", only(' '), "one"), "Only one"));
+assert(equal(only('♡'), "♡"));
+assert([1, 2, 3, 4].findSplitBefore(only(3))[0] == [1, 2]);
+
+string title = "The D Programming Language";
+assert(filter!isUpper(title).map!only().join(".") == "T.D.P.L");
 ----
  */
 struct Only(T)
 {
     this(T value) { _value = value; }
 
-    @property T front() { return _value; }
-    @property T back() { return _value; }
+    @property T front() { assert(!_empty); return _value; }
+    @property T back() { assert(!_empty); return _value; }
     @property bool empty() const { return _empty; }
     @property size_t length() const { return !_empty; }
     @property auto save() { return this; }
-    void popFront() { _empty = true; }
-    void popBack() { _empty = true; }
+    void popFront() { assert(!_empty); _empty = true; }
+    void popBack() { assert(!_empty); _empty = true; }
     auto opSlice() { return this; }
 
     T opIndex(size_t i)
     {
-        version (D_NoBoundsChecks) {}
-        else if (_empty || i != 0)
-            throw new RangeError;
+        version (assert)
+            if (_empty || i != 0)
+                throw new RangeError;
         return _value;
     }
 
     auto opSlice(size_t from, size_t to)
     {
-        version (D_NoBoundsChecks) {}
-        else if (from > to || to > length)
-            throw new RangeError;
+        version (assert)
+            if (from > to || to > length)
+                throw new RangeError;
         Only!T copy = this;
         copy._empty = _empty || from == to;
         return copy;
@@ -6573,8 +6576,12 @@ Only!T only(T)(T value)
 unittest
 {
     // Examples
-    assert(equal([1, 2, 3].take(1), only(1)));
-    assert(equal(chain("Only", only(' '), "one"), "Only one"));
+    assert(equal(only('♡'), "♡"));
+    assert([1, 2, 3, 4].findSplitBefore(only(3))[0] == [1, 2]);
+
+    import std.uni;
+    string title = "The D Programming Language";
+    assert(filter!isUpper(title).map!only().join(".") == "T.D.P.L");
 
     foreach (x; tuple(1, '1', 1.0, "1", [1]))
     {
