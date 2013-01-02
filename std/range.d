@@ -284,7 +284,7 @@ to $(WEB fantascienza.net/leonardo/so/, Leonardo Maffi).
 module std.range;
 
 public import std.array;
-import core.bitop;
+import core.bitop, core.exception;
 import std.algorithm, std.conv, std.exception,  std.functional,
     std.traits, std.typecons, std.typetuple;
 
@@ -6536,7 +6536,7 @@ struct Only(T)
     @property T front() { return _value; }
     @property T back() { return _value; }
     @property bool empty() const { return _empty; }
-    @property size_t length() const { return _empty ? 0 : 1; }
+    @property size_t length() const { return !_empty; }
     @property auto save() { return this; }
     void popFront() { _empty = true; }
     void popBack() { _empty = true; }
@@ -6544,13 +6544,17 @@ struct Only(T)
 
     T opIndex(size_t i)
     {
-        assert(!_empty && i == 0);
+        version (assert)
+            if (_empty || i != 0)
+                throw new RangeError;
         return _value;
     }
 
     auto opSlice(size_t from, size_t to)
     {
-        assert(from <= to && to <= length);
+        version (assert)
+            if (from > to || to > length)
+                throw new RangeError;
         Only!T copy = this;
         copy._empty = _empty || from == to;
         return copy;
@@ -6560,6 +6564,7 @@ struct Only(T)
     private bool _empty = false;
 }
 
+/// ditto
 Only!T only(T)(T value)
 {
     return Only!T(value);
