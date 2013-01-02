@@ -314,7 +314,7 @@ private template fullyQualifiedNameImplForTypes(T,
     alias TypeTuple!(is(T == const), is(T == immutable), is(T == shared)) qualifiers;
     alias TypeTuple!(false, false, false) noQualifiers;
 
-    string storageClassesString(uint psc)()
+    string storageClassesString(uint psc)() @property
     {
         alias ParameterStorageClass PSC;
 
@@ -326,7 +326,7 @@ private template fullyQualifiedNameImplForTypes(T,
         );
     }
 
-    string parametersTypeString(T)()
+    string parametersTypeString(T)() @property
     {
         import std.array, std.algorithm, std.range;
 
@@ -361,7 +361,7 @@ private template fullyQualifiedNameImplForTypes(T,
             return variadicStr;
     }
 
-    string linkageString(T)()
+    string linkageString(T)() @property
     {
         enum linkage = functionLinkage!T;
         
@@ -371,22 +371,22 @@ private template fullyQualifiedNameImplForTypes(T,
             return "";
     }
 
-    string functionAttributeString(T)()
+    string functionAttributeString(T)() @property
     {
         alias FunctionAttribute FA;
         enum attrs = functionAttributes!T;
 
-        if (attrs == FA.none)
+        static if (attrs == FA.none)
             return "";
-
-        return format("%s%s%s%s%s%s",
-             attrs & FA.pure_ ? " pure" : "",
-             attrs & FA.nothrow_ ? " nothrow" : "",
-             attrs & FA.ref_ ? " ref" : "",
-             attrs & FA.property ? " @property" : "",
-             attrs & FA.trusted ? " @trusted" : "",
-             attrs & FA.safe ? " @safe" : ""
-        );
+        else
+            return format("%s%s%s%s%s%s",
+                 attrs & FA.pure_ ? " pure" : "",
+                 attrs & FA.nothrow_ ? " nothrow" : "",
+                 attrs & FA.ref_ ? " ref" : "",
+                 attrs & FA.property ? " @property" : "",
+                 attrs & FA.trusted ? " @trusted" : "",
+                 attrs & FA.safe ? " @safe" : ""
+            );
     }
 
     template addQualifiers(string typeString,
