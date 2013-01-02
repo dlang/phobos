@@ -6544,17 +6544,17 @@ struct Only(T)
 
     T opIndex(size_t i)
     {
-        version (assert)
-            if (_empty || i != 0)
-                throw new RangeError;
+        version (D_NoBoundsChecks) {}
+        else if (_empty || i != 0)
+            throw new RangeError;
         return _value;
     }
 
     auto opSlice(size_t from, size_t to)
     {
-        version (assert)
-            if (from > to || to > length)
-                throw new RangeError;
+        version (D_NoBoundsChecks) {}
+        else if (from > to || to > length)
+            throw new RangeError;
         Only!T copy = this;
         copy._empty = _empty || from == to;
         return copy;
