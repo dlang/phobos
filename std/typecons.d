@@ -477,28 +477,35 @@ template Tuple(Specs...)
         int opCmp(R)(R rhs)
         if (areCompatibleTuples!(typeof(this), R, "<"))
         {
-            foreach (i, Unused; Types)
-            {
-                if (field[i] != rhs.field[i])
-                {
-                    return field[i] < rhs.field[i] ? -1 : 1;
-                }
-            }
-            return 0;
+            mixin(opCmpImpl);
         }
         /// ditto
         int opCmp(R)(R rhs) const
         if (areCompatibleTuples!(typeof(this), R, "<"))
         {
+            mixin(opCmpImpl);
+        }
+        private enum string opCmpImpl = q{
             foreach (i, Unused; Types)
             {
-                if (field[i] != rhs.field[i])
+                static if (is(typeof(field[i].opCmp(rhs.field[i]))))
                 {
-                    return field[i] < rhs.field[i] ? -1 : 1;
+                    immutable c = field[i].opCmp(rhs.field[i]);
+                    if (c != 0) return c;
+                }
+                else static if (is(typeof(rhs.field[i].opCmp(field[i]))))
+                {
+                    immutable c = rhs.field[i].opCmp(field[i]);
+                    if (c != 0) return -c;
+                }
+                else
+                {
+                    if (field[i] != rhs.field[i])
+                        return (field[i] < rhs.field[i]) ? -1 : 1;
                 }
             }
             return 0;
-        }
+        };
 
         /**
          * Assignment from another tuple. Each element of the source must be
