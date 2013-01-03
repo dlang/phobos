@@ -6525,7 +6525,8 @@ must be passed to an algorithm expecting a range.
 
 Example:
 ----
-assert(equal(only('♡'), "♡"));
+assert(equal(
+('♡'), "♡"));
 assert([1, 2, 3, 4].findSplitBefore(only(3))[0] == [1, 2]);
 
 string title = "The D Programming Language";
@@ -6534,7 +6535,7 @@ assert(filter!isUpper(title).map!only().join(".") == "T.D.P.L");
  */
 auto only(T)(T value)
 {
-    struct Result
+    static struct Result
     {
         this(T value) { _value = value; }
 
