@@ -6525,8 +6525,7 @@ must be passed to an algorithm expecting a range.
 
 Example:
 ----
-assert(equal(
-('♡'), "♡"));
+assert(equal(only('♡'), "♡"));
 assert([1, 2, 3, 4].findSplitBefore(only(3))[0] == [1, 2]);
 
 string title = "The D Programming Language";
