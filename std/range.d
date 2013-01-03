@@ -6532,45 +6532,43 @@ string title = "The D Programming Language";
 assert(filter!isUpper(title).map!only().join(".") == "T.D.P.L");
 ----
  */
-struct Only(T)
+auto only(T)(T value)
 {
-    this(T value) { _value = value; }
-
-    @property T front() { assert(!_empty); return _value; }
-    @property T back() { assert(!_empty); return _value; }
-    @property bool empty() const { return _empty; }
-    @property size_t length() const { return !_empty; }
-    @property auto save() { return this; }
-    void popFront() { assert(!_empty); _empty = true; }
-    void popBack() { assert(!_empty); _empty = true; }
-    auto opSlice() { return this; }
-
-    T opIndex(size_t i)
+    struct Result
     {
-        version (assert)
-            if (_empty || i != 0)
-                throw new RangeError;
-        return _value;
+        this(T value) { _value = value; }
+
+        @property T front() { assert(!_empty); return _value; }
+        @property T back() { assert(!_empty); return _value; }
+        @property bool empty() const { return _empty; }
+        @property size_t length() const { return !_empty; }
+        @property auto save() { return this; }
+        void popFront() { assert(!_empty); _empty = true; }
+        void popBack() { assert(!_empty); _empty = true; }
+        auto opSlice() { return this; }
+
+        T opIndex(size_t i)
+        {
+            version (assert)
+                if (_empty || i != 0)
+                    throw new RangeError;
+            return _value;
+        }
+
+        auto opSlice(size_t from, size_t to)
+        {
+            version (assert)
+                if (from > to || to > length)
+                    throw new RangeError;
+            Result copy = this;
+            copy._empty = _empty || from == to;
+            return copy;
+        }
+
+        private Unqual!T _value;
+        private bool _empty = false;
     }
-
-    auto opSlice(size_t from, size_t to)
-    {
-        version (assert)
-            if (from > to || to > length)
-                throw new RangeError;
-        Only!T copy = this;
-        copy._empty = _empty || from == to;
-        return copy;
-    }
-
-    private Unqual!T _value;
-    private bool _empty = false;
-}
-
-/// ditto
-Only!T only(T)(T value)
-{
-    return Only!T(value);
+    return Result(value);
 }
 
 unittest
@@ -6613,7 +6611,7 @@ unittest
         static assert(hasSlicing!A);
     }
 
-    auto imm = Only!(immutable int)(1);
+    auto imm = only!(immutable int)(1);
     immutable int[] imme = [];
     assert(imm.front == 1);
     assert(imm.back == 1);
