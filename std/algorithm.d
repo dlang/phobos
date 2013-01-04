@@ -11278,8 +11278,8 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
                 .map!(function(a) => chain(
                     zip(repeat(a[1]), take(a[4].save, a[0])),
                     zip(take(a[3].save, a[0]+1), repeat(a[2]))
-                ))
-                .joiner;
+                ))()
+                .joiner();
         }
         else static assert(0, "cartesianProduct of infinite ranges requires "~
                               "forward ranges");
