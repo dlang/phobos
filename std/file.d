@@ -2589,7 +2589,6 @@ foreach(d; parallel(dFiles, 1)) //passes by 1 file to each thread
     std.process.system(cmd);
 }
 --------------------
-//
  +/
 auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 {
@@ -2662,6 +2661,9 @@ unittest
                          should be treated as directories and their contents
                          iterated over.
 
+    Throws:
+        $(D FileException) if the directory does not exist.
+
 Examples:
 --------------------
 // Iterate over all D source files in current directory and all its
@@ -2670,7 +2672,6 @@ auto dFiles = dirEntries(".","*.{d,di}",SpanMode.depth);
 foreach(d; dFiles)
     writeln(d.name);
 --------------------
-//
  +/
 auto dirEntries(string path, string pattern, SpanMode mode,
     bool followSymlink = true)
