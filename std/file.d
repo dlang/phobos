@@ -2661,6 +2661,9 @@ unittest
                          should be treated as directories and their contents
                          iterated over.
 
+    Throws:
+        $(D FileException) if the directory does not exist.
+
 Examples:
 --------------------
 // Iterate over all D source files in current directory and all its
