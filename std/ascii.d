@@ -277,6 +277,34 @@ unittest
     }
 }
 
+/++
+    Returns whether $(D c) is an ASCII numerical character.
+  +/
+bool isNumber(dchar c) @safe pure nothrow
+{
+    return ('0' <= c) && (c <= '9');
+}
+
+/++
+    If $(D c) is an ASCII digit, returns the
+    corresponding numeric value. Returns -1 otherwise.
+  +/
+int numericValue(dchar c) @safe pure nothrow
+{
+    return (('0' <= c) && (c <= '9')) ? (c - '0') : -1;
+}
+
+unittest
+{
+    int counter = 0;
+    foreach (char c; 0 .. 80)
+    {
+        if (isDigit(c))
+            assert(numericValue(c) == counter++);
+        else
+            assert(numericValue(c) == -1);
+    }
+}
 
 /++
     Whether or not $(D c) is in the ASCII character set - i.e. in the range
