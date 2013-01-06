@@ -3468,7 +3468,7 @@ unittest
 
 /**
     Eagerly advances $(D r) itself (not a copy) up to $(D n) times (by
-    calling $(D r.popFront()). $(D popFrontN) takes $(D r) by $(D ref),
+    calling $(D r.popFront)). $(D popFrontN) takes $(D r) by $(D ref),
     so it mutates the original range. Completes in $(BIGOH 1) steps for ranges
     that support slicing and have length.
     Completes in $(BIGOH n) time for all other ranges.
@@ -3596,7 +3596,7 @@ unittest
 
 /**
     Eagerly advances $(D r) itself (not a copy) exactly $(D n) times (by
-    calling $(D r.popFront). $(D popFrontExactly) takes $(D r) by $(D ref),
+    calling $(D r.popFront)). $(D popFrontExactly) takes $(D r) by $(D ref),
     so it mutates the original range. Completes in $(BIGOH 1) steps for ranges
     that support slicing, and have either length or are infinite.
     Completes in $(BIGOH n) time for all other ranges.
