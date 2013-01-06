@@ -1066,6 +1066,7 @@ unittest
     assert(to!dstring(o) == "cast(EU)5"d);
 }
 
+
 /// ditto
 T toImpl(T, S)(S value, uint radix)
     if (isIntegral!S &&
@@ -1080,8 +1081,8 @@ body
     {
         enforce(radix >= 2 && radix <= 36, new ConvException("Radix error"));
         if (radix == 10)
-            return to!string(value);     // handle signed cases only for radix 10
-        return to!string(cast(ulong) value, radix);
+            return to!T(value);     // handle signed cases only for radix 10
+        return to!T(cast(ulong) value, radix);
     }
     else
     {
@@ -1089,8 +1090,16 @@ body
         uint i = buffer.length;
 
         if (value < radix && value < hexDigits.length)
-            return hexDigits[cast(size_t)value .. cast(size_t)value + 1];
-
+	{
+		static if (isAssignable!(T, string))
+		{
+			return hexDigits[cast(size_t)value .. cast(size_t)value + 1];
+		}
+		else
+		{
+			return to!T(hexDigits[cast(size_t)value .. cast(size_t)value + 1]);
+		}
+	}
         do
         {
             ubyte c;
@@ -1099,9 +1108,17 @@ body
             i--;
             buffer[i] = cast(char)((c < 10) ? c + '0' : c + 'A' - 10);
         } while (value);
-        return to!T(buffer[i .. $].dup);
+	static if (isAssignable!(T,char[]))
+	{
+		return to!T(buffer[i .. $].dup);
+	}
+	else
+	{
+		return to!T(buffer[i .. $]);
+	}
     }
 }
+
 
 unittest
 {
