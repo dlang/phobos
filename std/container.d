@@ -2227,7 +2227,7 @@ Complexity: $(BIGOH r.walkLength)
     }
 
     /** $(RED Scheduled for deprecation. These methods are not actually stable.
-    Use the standard $(D remove) or $(D linearRemove) instead.
+    Use the standard $(D remove) or $(D linearRemove) instead.)
          */
     alias remove stableRemove;
     /// ditto
