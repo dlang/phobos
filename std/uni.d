@@ -26,7 +26,16 @@ module std.uni;
 
 static import std.ascii;
 
-import std.typecons : Tuple;
+//Note: Importing std.typecons prevents std.format from properly building.
+//import std.typecons : Tuple;
+static struct PoorTuple(Types...)
+{
+    Types field;
+    alias field this;
+    alias name_0 = field[0];
+    alias name_1 = field[1];
+    alias name_2 = field[2];
+}
 
 enum dchar lineSep = '\u2028'; /// UTF line separator
 enum dchar paraSep = '\u2029'; /// UTF paragraph separator
@@ -101,7 +110,7 @@ deprecated("Please use std.uni.toLower instead.")  dchar toUniLower(dchar c) @sa
 
 dchar toLower(dchar c) @safe pure nothrow
 {
-    alias DDI = Tuple!(dchar, dchar, int);
+    alias DDI = PoorTuple!(dchar, dchar, int);
 
     static immutable DDI[] tableToLowerOdd =
     [
@@ -187,7 +196,7 @@ dchar toLower(dchar c) @safe pure nothrow
     DDI(0xff21, 0xff39,     32),
     DDI(0x10401, 0x10427,     40),
     ];
-    
+
     static immutable DDI[] tableToLowerEven =
     [
     DDI(0x0042, 0x005a,     32),
@@ -318,7 +327,7 @@ deprecated("Please use std.uni.toUpper instead.")   dchar toUniUpper(dchar c) @s
   +/
 dchar toUpper(dchar c) @safe pure nothrow
 {
-    alias DDI = Tuple!(dchar, dchar, int);
+    alias DDI = PoorTuple!(dchar, dchar, int);
 
     static immutable DDI[] tableToUpperOdd =
     [
@@ -551,7 +560,7 @@ dchar toUpper(dchar c) @safe pure nothrow
 //            assert(one.toLower() == to!int(charData[13], 16), format("%x.toLower() : %x != %x", one, one.toLower(), to!int(charData[13], 16)));
 //        else
 //            assert(one == one.toLower(), format("%x.toUpper() : %x", one, one.toUpper()));
-//        
+//
 //        if (charData[14].length)
 //            assert(one.toUpper() == to!int(charData[14], 16), format("%x.toUpper() : %x != %x", one, one.toUpper(), to!int(charData[13], 16)));
 //        else
