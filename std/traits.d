@@ -1214,7 +1214,7 @@ unittest
  * Constructs a new function or delegate type with the same basic signature
  * as the given one, but different attributes (including linkage).
  *
- * This is especially useful for adding/removing attributes from/to types in
+ * This is especially useful for adding/removing attributes to/from types in
  * generic code, where the actual type name cannot be spelt out.
  *
  * Params:

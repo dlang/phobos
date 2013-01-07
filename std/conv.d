@@ -754,7 +754,7 @@ unittest
 }
 
 /**
-Stringnize conversion from all types is supported.
+Stringize conversion from all types is supported.
 $(UL
   $(LI String _to string conversion works for any two string types having
        ($(D char), $(D wchar), $(D dchar)) character widths and any
