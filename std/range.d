@@ -1646,9 +1646,9 @@ unittest
 
 /**
 Iterates range $(D r) with stride $(D n). If the range is a
-random-access range, moves by indexing into the range; otehrwise,
+random-access range, moves by indexing into the range; otherwise,
 moves by successive calls to $(D popFront). Applying stride twice to
-the same range results in a stride that with a step that is the
+the same range results in a stride with a step that is the
 product of the two applications.
 
 Throws: $(D Exception) if $(D n == 0).
@@ -3475,7 +3475,7 @@ unittest
 
     Returns:
     How much $(D r) was actually advanced, which may be less than $(D n) if
-    $(D r) did not have at least $(D n) element.
+    $(D r) did not have at least $(D n) elements.
 
     $(D popBackN) will behave the same but instead removes elements from
     the back of the (bidirectional) range instead of the front.

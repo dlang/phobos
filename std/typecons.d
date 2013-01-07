@@ -3053,7 +3053,7 @@ it is the responsibility of the user to not escape a reference to the
 object outside the scope.
 
 Note: it's illegal to move a class reference even if you are sure there
-is no pointers to it.
+are no pointers to it.
 
 Example:
 ----
