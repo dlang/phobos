@@ -3589,7 +3589,7 @@ unittest
     assert(a[1] == 0);
     a[1] += 1; //Check Array.opIndexOpAssign
     assert(a[1] == 1);
-    
+
     //Check Array.opIndexUnary
     ++a[0];
     //a[0]++ //op++ doesn't return, so this shouldn't work, even with 5044 fixed
@@ -3597,13 +3597,13 @@ unittest
     assert(+a[0] == +2);
     assert(-a[0] == -2);
     assert(~a[0] == ~2);
-    
+
     auto r = a[];
     r[1]  = 0; //Check Array.Range.opIndexAssign
     assert(r[1] == 0);
     r[1] += 1; //Check Array.Range.opIndexOpAssign
     assert(r[1] == 1);
-    
+
     //Check Array.Range.opIndexUnary
     ++r[0];
     //r[0]++ //op++ doesn't return, so this shouldn't work, even with 5044 fixed
@@ -4012,9 +4012,10 @@ must be collected.
 Convenience function that returns a $(D BinaryHeap!Store) object
 initialized with $(D s) and $(D initialSize).
  */
-BinaryHeap!Store heapify(Store)(Store s, size_t initialSize = size_t.max)
+BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
+        size_t initialSize = size_t.max)
 {
-    return BinaryHeap!Store(s, initialSize);
+    return BinaryHeap!(Store, less)(s, initialSize);
 }
 
 unittest
@@ -4023,6 +4024,7 @@ unittest
         // example from "Introduction to Algorithms" Cormen et al., p 146
         int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
         auto h = heapify(a);
+        h = heapify!"a < b"(a);
         assert(h.front == 16);
         assert(a == [ 16, 14, 10, 8, 7, 9, 3, 2, 4, 1 ]);
         auto witness = [ 16, 14, 10, 9, 8, 7, 4, 3, 2, 1 ];
