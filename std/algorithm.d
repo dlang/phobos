@@ -377,14 +377,19 @@ template map(fun...) if (fun.length >= 1)
             alias unaryFun!fun _fun;
         }
 
-        return MapResult!(_fun, Range)(r);
+        alias R = Unqual!Range;
+        static if (is(Range == immutable))
+            return immutable MapResult!(_fun, R)(r);
+        else static if (is(Range == const))
+            return const MapResult!(_fun, R)(r);
+        else
+            return MapResult!(_fun, R)(r);
     }
 }
 
 private struct MapResult(alias fun, Range)
 {
-    alias Unqual!Range R;
-    //alias typeof(fun(.ElementType!R.init)) ElementType;
+    alias R = Range;
     R _input;
 
     static if (isBidirectionalRange!R)
@@ -398,11 +403,6 @@ private struct MapResult(alias fun, Range)
         {
             _input.popBack();
         }
-    }
-
-    this(R input)
-    {
-        _input = input;
     }
 
     static if (isInfinite!R)
@@ -578,11 +578,68 @@ unittest
     assert(equal(ms2[0..2], "日本"w));
     assert(equal(ms3[0..2], "HE"));
 }
+
 unittest
 {
     auto LL = iota(1L, 4L);
     auto m = map!"a*a"(LL);
     assert(equal(m, [1L, 4L, 9L]));
+}
+
+unittest
+{
+    //Testing const ranges
+
+    //Tests with SS: SS does *NOT* allow "strip immutable on copy"
+    //Certain ranges (such as iota), can be silently stripped of their top
+    //immutability on copy, so make for a bad test.
+    //S's pointer prevents "strip immutable on copy"
+    static struct SS
+    {
+        int* pay;
+        enum empty = false;
+        @property ref inout(int) front() inout
+        {return *pay;}
+        void popFront(){};
+    }
+    static assert(isInputRange!SS);
+
+    immutable iss = SS();
+    const     css = SS();
+    auto       ss = SS();
+    //Verify we can't strip iss of its immutability
+    static assert(!is(typeof(ss = iss)));
+
+    ref T tunnel(T)(ref T a)
+    {return a;}
+
+    auto im = map!"a*a"(iss);
+    auto cm = map!"a*a"(css);
+    auto  m = map!"a*a"( ss);
+
+    //Map successfully defaults to simply returning a const map
+    static assert( is(typeof(im) == immutable));
+    static assert( is(typeof(cm) == const));
+    static assert(!is(typeof( m) == immutable) && !is(typeof( m) == const));
+
+    //Verify the returned map isof the form "qual Map!R" and not "qual Map!(qual R)"
+    static assert(is (Unqual!(typeof(im)) == typeof(m)));
+    static assert(is (Unqual!(typeof(cm)) == typeof(m)));
+
+    //static assert ( !is(typeof(im.front))); //Note: This works because front is inout.
+    //static assert ( !is(typeof(cm.front))); //Note: This works because front is inout.
+    static assert ( is(typeof( m.front)));
+    static assert (!is(typeof(im.popFront())));
+    static assert (!is(typeof(cm.popFront())));
+    static assert ( is(typeof( m.popFront())));
+
+    alias LL = typeof(iota(1, 4));
+    immutable ill = iota(1, 4);
+    alias mapper = map!"a * a";
+    auto imll = mapper(ill);    //Initialize map to imutable LL.
+    auto  mll = mapper!LL(ill); //Explicit initialization to LL.
+    static assert (!is(typeof(imll.popFront())));
+    static assert ( is(typeof( mll.popFront())));
 }
 
 /**
@@ -1183,7 +1240,7 @@ unittest
 }
 
 /**
-$(D auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range));)
+$(D auto filter(Range)(Range rs) if (isInputRange!Range);)
 
 Implements the homonym function present in various programming
 languages of functional flavor. The call $(D filter!(predicate)(range))
@@ -1209,7 +1266,7 @@ assert(equal(r1, [ 2.5 ]));
  */
 template filter(alias pred) if (is(typeof(unaryFun!pred)))
 {
-    auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range))
+    auto filter(Range)(Range rs) if (isInputRange!Range)
     {
         return FilterResult!(unaryFun!pred, Range)(rs);
     }
@@ -1217,10 +1274,9 @@ template filter(alias pred) if (is(typeof(unaryFun!pred)))
 
 private struct FilterResult(alias pred, Range)
 {
-    alias Unqual!Range R;
-    R _input;
+    Range _input;
 
-    this(R r)
+    this(Range r)
     {
         _input = r;
         while (!_input.empty && !pred(_input.front))
@@ -1253,7 +1309,7 @@ private struct FilterResult(alias pred, Range)
         return _input.front;
     }
 
-    static if (isForwardRange!R)
+    static if (isForwardRange!Range)
     {
         @property auto save()
         {
@@ -1348,8 +1404,20 @@ unittest
     assert(equal(filter!underX(list), [ 1, 2, 3, 4 ]));
 }
 
+unittest
+{
+    alias LL = typeof(iota(1, 4));
+    immutable ill = iota(1, 4);
+    alias filter2 = filter!"true";
+    static assert(!is(typeof(filter2(ill))));
+    static assert( is(typeof(filter2!LL(ill))));
+    alias filterBidirectional2 = filterBidirectional!"true";
+    static assert(!is(typeof(filterBidirectional2(ill))));
+    static assert( is(typeof(filterBidirectional2!LL(ill))));
+}
+
 /**
- * $(D auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(Unqual!Range));)
+ * $(D auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!Range);)
  *
  * Similar to $(D filter), except it defines a bidirectional
  * range. There is a speed disadvantage - the constructor spends time
@@ -1374,7 +1442,7 @@ assert(r.back == 102);
  */
 template filterBidirectional(alias pred)
 {
-    auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(Unqual!Range))
+    auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!Range)
     {
         return FilterBidiResult!(unaryFun!pred, Range)(r);
     }
@@ -1382,10 +1450,9 @@ template filterBidirectional(alias pred)
 
 private struct FilterBidiResult(alias pred, Range)
 {
-    alias Unqual!Range R;
-    R _input;
+    Range _input;
 
-    this(R r)
+    this(Range r)
     {
         _input = r;
         while (!_input.empty && !pred(_input.front)) _input.popFront();
