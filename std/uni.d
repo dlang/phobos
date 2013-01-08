@@ -28,11 +28,11 @@ static import std.ascii;
 
 //Note: Importing std.typecons prevents std.format from properly building.
 import std.typecons : Tuple;
-//static struct PoorTuple(Types...)
-//{
-//    Types field;
-//    alias field this;
-//}
+static struct PoorTuple(Types...)
+{
+    Types field;
+    alias field this;
+}
 
 enum dchar lineSep = '\u2028'; /// UTF line separator
 enum dchar paraSep = '\u2029'; /// UTF paragraph separator
@@ -107,8 +107,10 @@ deprecated("Please use std.uni.toLower instead.")  dchar toUniLower(dchar c) @sa
 
 dchar toLower(dchar c) @safe pure nothrow
 {
-    alias DDI = Tuple!(dchar, dchar, int);
-    //alias DDI = PoorTuple!(dchar, dchar, int);
+    alias DD = Tuple!dchar;               //HERE
+    static immutable DD ddt = DD(0x0041); //HERE   
+
+    alias DDI = PoorTuple!(dchar, dchar, int);
 
     static immutable DDI[] tableToLowerOdd =
     [
@@ -325,8 +327,7 @@ deprecated("Please use std.uni.toUpper instead.")   dchar toUniUpper(dchar c) @s
   +/
 dchar toUpper(dchar c) @safe pure nothrow
 {
-    alias DDI = Tuple!(dchar, dchar, int);
-    //alias DDI = PoorTuple!(dchar, dchar, int);
+    alias DDI = PoorTuple!(dchar, dchar, int);
 
     static immutable DDI[] tableToUpperOdd =
     [
