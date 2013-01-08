@@ -3979,7 +3979,7 @@ public:
                 if (npos == 0) return haystack[hpos .. $];
                 --npos;
             }
-            hpos += max(skip[npos], npos - occurrence(haystack[npos+hpos]));
+            hpos += max(skip[npos], cast(sizediff_t) npos - occurrence(haystack[npos+hpos]));
         }
         return haystack[$ .. $];
     }
@@ -4025,6 +4025,13 @@ unittest
     //writeln(find(a, boyerMooreFinder(b)));
     assert(find(a, boyerMooreFinder(b)) == [ 1, 2, 3, 4, 5 ]);
     assert(find(b, boyerMooreFinder(a)).empty);
+}
+
+unittest
+{
+    auto bm = boyerMooreFinder("for");
+    auto match = find("Moor", bm);
+    assert(match.empty);
 }
 
 /**
