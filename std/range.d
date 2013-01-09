@@ -2019,7 +2019,9 @@ assert(equal(s, [1, 2, 3, 4, 5, 6, 7][]));
 ----
  */
 auto chain(Ranges...)(Ranges rs)
-if (Ranges.length > 0 && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
+if (Ranges.length > 0 &&
+    allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)) &&
+    !is(CommonType!(staticMap!(ElementType, staticMap!(Unqual, Ranges))) == void))
 {
     static if (Ranges.length == 1)
     {
