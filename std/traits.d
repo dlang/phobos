@@ -2792,12 +2792,13 @@ unittest
  */
 
 template BaseClassesTuple(T)
+    if (is(T == class))
 {
     static if (is(T == Object))
     {
         alias TypeTuple!() BaseClassesTuple;
     }
-    static if (is(BaseTypeTuple!T[0] == Object))
+    else static if (is(BaseTypeTuple!T[0] == Object))
     {
         alias TypeTuple!Object BaseClassesTuple;
     }
@@ -2807,6 +2808,25 @@ template BaseClassesTuple(T)
                          BaseClassesTuple!(BaseTypeTuple!T[0]))
             BaseClassesTuple;
     }
+}
+
+unittest
+{
+    class C1 { }
+    class C2 : C1 { }
+    class C3 : C2 { }
+    static assert(!BaseClassesTuple!Object.length);
+    static assert(is(BaseClassesTuple!C1 == TypeTuple!(Object)));
+    static assert(is(BaseClassesTuple!C2 == TypeTuple!(C1, Object)));
+    static assert(is(BaseClassesTuple!C3 == TypeTuple!(C2, C1, Object)));
+    static assert(!BaseClassesTuple!Object.length);
+    struct S { }
+    static assert(!__traits(compiles, BaseClassesTuple!S));
+    interface I { }
+    static assert(!__traits(compiles, BaseClassesTuple!I));
+    class C4 : I { }
+    class C5 : C4, I { }
+    static assert(is(BaseClassesTuple!C5 == TypeTuple!(C4, Object)));
 }
 
 /**
