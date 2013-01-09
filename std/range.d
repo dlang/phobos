@@ -1162,9 +1162,10 @@ unittest
     auto c = chain([1, 2, 3], [4, 5, 6]);
     static assert( hasLvalueElements!(typeof(c)));
 
-    // Disabled test by bug 6336
-    // struct S { immutable int value; }
-    // static assert( hasLvalueElements!(S[]));
+    // bugfix 6336
+    struct S { immutable int value; }
+    static assert( isInputRange!(S[]));
+    static assert( hasLvalueElements!(S[]));
 }
 
 /**
