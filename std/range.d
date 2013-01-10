@@ -4947,10 +4947,7 @@ public:
         _cache = compute(_state, ++_n);
     }
 
-    DollarToken opDollar()
-    {
-        return DollarToken();
-    }
+    enum opDollar = DollarToken();
 
     auto opSlice(size_t lower, size_t upper)
     in
