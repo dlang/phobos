@@ -545,7 +545,13 @@ template ParameterIdentifierTuple(func...)
         }
     }
     else
+    {
         static assert(0, func[0].stringof ~ "is not a function");
+
+        // Define dummy entities to avoid pointless errors
+        template Get(size_t i) { enum Get = ""; }
+        alias TypeTuple!() PT;
+    }
 
     template Impl(size_t i = 0)
     {
@@ -627,7 +633,13 @@ template ParameterDefaultValueTuple(func...)
         }
     }
     else
+    {
         static assert(0, func[0].stringof ~ "is not a function");
+
+        // Define dummy entities to avoid pointless errors
+        template Get(size_t i) { enum Get = ""; }
+        alias TypeTuple!() PT;
+    }
 
     template Impl(size_t i = 0)
     {
