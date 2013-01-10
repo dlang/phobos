@@ -3687,6 +3687,21 @@ struct Repeat(T)
     @property Repeat!T save() { return this; }
     /// Ditto
     T opIndex(size_t) { return _value; }
+    /// Ditto
+    auto opSlice(size_t i, size_t j)
+    {
+        version (assert)
+            if (i > j) throw new RangeError();
+        return this.takeExactly(j - i);
+    }
+    /// Ditto
+    version (StdDdoc)
+        auto opDollar(){return DollarToken();} //Opaque signature for Ddoc
+    else
+        enum opDollar = DollarToken(); //Implementation defined signature
+
+    private static struct DollarToken{}
+    auto opSlice(size_t, DollarToken){return this;}
 }
 
 /// Ditto
@@ -3694,8 +3709,16 @@ Repeat!(T) repeat(T)(T value) { return Repeat!(T)(value); }
 
 unittest
 {
-    enforce(equal(take(repeat(5), 4), [ 5, 5, 5, 5 ][]));
-    static assert(isForwardRange!(Repeat!(uint)));
+    auto  r = repeat(5);
+    alias R = typeof(r);
+    static assert(isForwardRange!R);
+    static assert(isInfinite!R);
+    static assert(hasSlicing!R);
+
+    assert(r.take(4).equal([ 5, 5, 5, 5 ]));
+    assert(r[0 .. 4].equal([ 5, 5, 5, 5 ]));
+
+    R r2 = r[5 .. $];
 }
 
 /**
