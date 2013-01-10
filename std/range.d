@@ -3680,13 +3680,9 @@ struct Repeat(T)
     /// Range primitive implementations.
     @property T front() { return _value; }
     /// Ditto
-    @property T back() { return _value; }
-    /// Ditto
     enum bool empty = false;
     /// Ditto
     void popFront() {}
-    /// Ditto
-    void popBack() {}
     /// Ditto
     @property Repeat!T save() { return this; }
     /// Ditto
