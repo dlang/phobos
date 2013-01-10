@@ -7825,6 +7825,11 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         isRandomAccessRange!Range &&
         hasSlicing!Range &&
         hasLength!Range)
+    /+ Unstable sorting uses the quicksort algorithm, which uses swapAt,
+       which either uses swap(...), requiring swappable elements, or just
+       swaps using assignment.
+       Stable sorting uses TimSort, which needs to copy elements into a buffer,
+       requiring assignable elements. +/
 {
     alias binaryFun!(less) lessFun;
     alias typeof(lessFun(r.front, r.front)) LessRet;    // instantiate lessFun
