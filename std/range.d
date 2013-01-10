@@ -4311,9 +4311,11 @@ if(Ranges.length && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
    slicing.
 */
     static if (allSatisfy!(hasSlicing, R))
-        Zip opSlice(size_t from, size_t to)
+        auto opSlice(size_t from, size_t to)
         {
-            Zip result = void;
+            //Slicing an infinite range yields the type Take!R
+            //For finite ranges, the type Take!R aliases to R
+            Zip!(staticMap!(Take, R)) result = void;
             emplace(&result.stoppingPolicy, stoppingPolicy);
             foreach (i, Unused; R)
             {
