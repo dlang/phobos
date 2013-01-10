@@ -1888,8 +1888,7 @@ unittest
     assert(s1[1..5].length == 4);
     assert(s1[0..0].empty);
     assert(s1[3..3].empty);
-    // assert(s1[$ .. $].empty);
-    assert(s1[s1.opDollar() .. s1.opDollar()].empty);
+    assert(s1[$ .. $].empty);
 
     auto s2 = stride(arr, 2);
     assert(equal(s2[0..2], [1,3]));
@@ -1898,8 +1897,7 @@ unittest
     assert(s2[1..5].length == 4);
     assert(s2[0..0].empty);
     assert(s2[3..3].empty);
-    // assert(s2[$ .. $].empty);
-    assert(s2[s2.opDollar() .. s2.opDollar()].empty);
+    assert(s2[$ .. $].empty);
 
     // Test fix for Bug 5035
     auto m = [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4]; // 3 rows, 4 columns
@@ -6637,7 +6635,7 @@ ElementType!R moveFront(R)(R r)
         return r.moveFront();
     } else static if (!hasElaborateCopyConstructor!(ElementType!R)) {
         return r.front;
-    } else static if (is(typeof(&(r.front())) == ElementType!R*)) {
+    } else static if (is(typeof(&(r.front)) == ElementType!R*)) {
         return move(r.front);
     } else {
         static assert(0,
@@ -6667,7 +6665,7 @@ ElementType!R moveBack(R)(R r)
         return r.moveBack();
     } else static if (!hasElaborateCopyConstructor!(ElementType!R)) {
         return r.back;
-    } else static if (is(typeof(&(r.back())) == ElementType!R*)) {
+    } else static if (is(typeof(&(r.back)) == ElementType!R*)) {
         return move(r.back);
     } else {
         static assert(0,
