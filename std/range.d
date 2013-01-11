@@ -3807,6 +3807,27 @@ struct Cycle(Range)
         {
             return Cycle(this._original.save, this._index);
         }
+
+        static struct DollarToken {}
+
+        DollarToken opDollar()
+        {
+            return DollarToken.init;
+        }
+
+        auto opSlice(size_t i, size_t j)
+        {
+            auto retval = this.save;
+            retval._index += i;
+            return takeExactly(retval, j - i);
+        }
+
+        auto opSlice(size_t i, DollarToken)
+        {
+            auto retval = this.save;
+            retval._index += i;
+            return retval;
+        }
     }
     else
     {
@@ -3885,6 +3906,27 @@ struct Cycle(R)
     @property Cycle save()
     {
         return this;
+    }
+
+    static struct DollarToken {}
+
+    DollarToken opDollar()
+    {
+        return DollarToken.init;
+    }
+
+    auto opSlice(size_t i, size_t j)
+    {
+        auto retval = this.save;
+        retval._index += i;
+        return takeExactly(retval, j - i);
+    }
+
+    auto opSlice(size_t i, DollarToken)
+    {
+        auto retval = this.save;
+        retval._index += i;
+        return retval;
     }
 }
 
@@ -3965,6 +4007,17 @@ unittest
 
                     assert(cRange[10] == 1);
                 }
+            }
+
+            static if(hasSlicing!DummyType)
+            {
+                auto slice = cy[5 .. 15];
+                assert(equal(slice, [6, 7, 8, 9, 10, 1, 2, 3, 4, 5]));
+                static assert(is(typeof(slice) == typeof(takeExactly(cy, 5))));
+
+                auto infSlice = cy[7 .. $];
+                assert(equal(take(infSlice, 5), [8, 9, 10, 1, 2]));
+                static assert(isInfinite!(typeof(infSlice)));
             }
         }
     }
