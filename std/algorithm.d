@@ -1142,6 +1142,7 @@ void initializeAll(Range)(Range range)
     else
         fill(range, T.init);
 }
+
 // ditto
 void initializeAll(Range)(Range range)
     if (is(Range == char[]) || is(Range == wchar[]))
@@ -1163,7 +1164,7 @@ unittest
     assert(a[] == [char.init, char.init, char.init]);
     string s;
     assert(!__traits(compiles, s.initializeAll()));
-    
+
     //Note: Cannot call uninitializedFill on narrow strings
 
     enum e {e1, e2}
