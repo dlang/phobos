@@ -22,33 +22,28 @@
 # OS can be linux, win32, win32remote, win32wine, osx, or freebsd. If left
 # blank, the system will be determined by using uname
 
+OS:=
+uname_S:=$(shell uname -s)
+ifeq (Darwin,$(uname_S))
+	OS:=osx
+endif
+ifeq (Linux,$(uname_S))
+	OS:=linux
+endif
+ifeq (FreeBSD,$(uname_S))
+	OS:=freebsd
+endif
+ifeq (OpenBSD,$(uname_S))
+	OS:=openbsd
+endif
+ifeq (Solaris,$(uname_S))
+	OS:=solaris
+endif
+ifeq (SunOS,$(uname_S))
+	OS:=solaris
+endif
 ifeq (,$(OS))
-    OS:=$(shell uname)
-    ifeq (Darwin,$(OS))
-        OS:=osx
-    else
-        ifeq (Linux,$(OS))
-            OS:=linux
-        else
-            ifeq (FreeBSD,$(OS))
-                OS:=freebsd
-            else
-                ifeq (OpenBSD,$(OS))
-                    TARGET=OPENBSD
-                else
-                    ifeq (Solaris,$(OS))
-                        TARGET=SOLARIS
-                    else
-                        ifeq (SunOS,$(OS))
-                            TARGET=SOLARIS
-                        else
-                            $(error Unrecognized or unsupported OS for uname: $(OS))
-                        endif
-                    endif
-                endif
-            endif
-        endif
-    endif
+	$(error Unrecognized or unsupported OS for uname: $(uname_S))
 endif
 
 # For now, 32 bit is the default model
