@@ -1070,6 +1070,9 @@ contain meaningful content. This is of interest for structs that
 define copy constructors (for all other types, fill and
 uninitializedFill are equivalent).
 
+uninitializedFill will only operate on ranges that expose references to its
+members and have assignable elements.
+
 Example:
 ----
 struct S { ... }
@@ -1079,47 +1082,33 @@ assert(s == [ 42, 42, 42, 42, 42 ]);
 ----
  */
 void uninitializedFill(Range, Value)(Range range, Value filler)
-if (isForwardRange!Range && is(typeof(range.front = filler)))
+    if (isInputRange!Range && hasLvalueElements!Range && is(typeof(range.front = filler)))
 {
     alias ElementType!Range T;
-    static if (hasElaborateCopyConstructor!T)
-    {
+    static if (hasElaborateAssign!T)
         // Must construct stuff by the book
         for (; !range.empty; range.popFront())
-        {
-            emplace(&range.front, filler);
-        }
-    }
+            emplace(&range.front(), filler);
     else
-    {
         // Doesn't matter whether fill is initialized or not
         return fill(range, filler);
-    }
 }
 
-unittest
+deprecated("Cannot reliably call uninitializedFill on range that does not expose references. Use fill instead.")
+void uninitializedFill(Range, Value)(Range range, Value filler)
+    if (isInputRange!Range && !hasLvalueElements!Range && is(typeof(range.front = filler)))
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    int[] a = [ 1, 2, 3 ];
-    uninitializedFill(a, 6);
-    assert(a == [ 6, 6, 6 ]);
-    void fun0()
-    {
-        foreach (i; 0 .. 1000)
-        {
-            foreach (ref e; a) e = 6;
-        }
-    }
-    void fun1() { foreach (i; 0 .. 1000) fill(a, 6); }
-    //void fun2() { foreach (i; 0 .. 1000) fill2(a, 6); }
-    //writeln(benchmark!(fun0, fun1, fun2)(10000));
+    static assert(hasElaborateAssign!T, "Cannot execute uninitializedFill a range that does not expose references, and whose objects have an elaborate assign.");
+    return fill(range, filler);
 }
 
 /**
 Initializes all elements of a range with their $(D .init)
 value. Assumes that the range does not currently contain meaningful
 content.
+
+initializeAll will operate on ranges that expose references to its
+members and have assignable elements, as well as on (mutable) strings.
 
 Example:
 ----
@@ -1130,56 +1119,119 @@ assert(s == [ 0, 0, 0, 0, 0 ]);
 ----
  */
 void initializeAll(Range)(Range range)
-if (isForwardRange!Range && is(typeof(range.front = range.front)))
+    if (isInputRange!Range && hasLvalueElements!Range && hasAssignableElements!Range)
 {
     alias ElementType!Range T;
-    static assert(is(typeof(&(range.front()))) || !hasElaborateAssign!T,
-            "Cannot initialize a range that does not expose"
-            " references to its elements");
-    static if (!isDynamicArray!Range)
+    static if (hasElaborateAssign!T)
     {
-        static if (is(typeof(&(range.front()))))
-        {
-            // Range exposes references
-            for (; !range.empty; range.popFront())
-            {
-                memcpy(&(range.front()), &T.init, T.sizeof);
-            }
-        }
+        //Elaborate opAssign. Must go the memcpy road.
+        //We avoid calling emplace here, because our goal is to initialize to
+        //the static state of T.init,
+        //So we want to avoid any un-necassarilly CC'ing of T.init
+        auto p = typeid(T).init().ptr;
+        if (p)
+            for ( ; !range.empty ; range.popFront() )
+                memcpy(&range.front(), p, T.sizeof);
         else
-        {
-            // Go the slow route
-            for (; !range.empty; range.popFront())
-            {
-                range.front = filler;
-            }
-        }
+            static if (isDynamicArray!Range)
+                memset(range.ptr, 0, range.length * T.sizeof);
+            else
+                for ( ; !range.empty ; range.popFront() )
+                    memset(&range.front(), 0, T.sizeof);
     }
     else
-    {
         fill(range, T.init);
-    }
+}
+
+// ditto
+void initializeAll(Range)(Range range)
+    if (is(Range == char[]) || is(Range == wchar[]))
+{
+    alias ElementEncodingType!Range T;
+    range[] = T.init;
 }
 
 unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    int[] a = [ 1, 2, 3 ];
-    uninitializedFill(a, 6);
-    assert(a == [ 6, 6, 6 ]);
-    initializeAll(a);
-    assert(a == [ 0, 0, 0 ]);
-    void fun0()
+
+    //Test strings:
+    //Must work on narrow strings.
+    //Must reject const
+    char[3] a = void;
+    a[].initializeAll();
+    assert(a[] == [char.init, char.init, char.init]);
+    string s;
+    assert(!__traits(compiles, s.initializeAll()));
+
+    //Note: Cannot call uninitializedFill on narrow strings
+
+    enum e {e1, e2}
+    e[3] b1 = void;
+    b1[].initializeAll();
+    assert(b1[] == [e.e1, e.e1, e.e1]);
+    e[3] b2 = void;
+    b2[].uninitializedFill(e.e2);
+    assert(b2[] == [e.e2, e.e2, e.e2]);
+
+    static struct S1
     {
-        foreach (i; 0 .. 1000)
+        int i;
+    }
+    static struct S2
+    {
+        int i = 1;
+    }
+    static struct S3
+    {
+        int i;
+        this(this){};
+    }
+    static struct S4
+    {
+        int i = 1;
+        this(this){};
+    }
+    static assert (!hasElaborateAssign!S1);
+    static assert (!hasElaborateAssign!S2);
+    static assert ( hasElaborateAssign!S3);
+    static assert ( hasElaborateAssign!S4);
+    assert (!typeid(S1).init().ptr);
+    assert ( typeid(S2).init().ptr);
+    assert (!typeid(S3).init().ptr);
+    assert ( typeid(S4).init().ptr);
+
+    foreach(S; TypeTuple!(S1, S2, S3, S4))
+    {
+        //initializeAll
         {
-            foreach (ref e; a) e = 6;
+            //Array
+            S[3] ss1 = void;
+            ss1[].initializeAll();
+            assert(ss1[] == [S.init, S.init, S.init]);
+
+            //Not array
+            S[3] ss2 = void;
+            auto sf = ss2[].filter!"true"();
+
+            sf.initializeAll();
+            assert(ss2[] == [S.init, S.init, S.init]);
+        }
+        //uninitializedFill
+        {
+            //Array
+            S[3] ss1 = void;
+            ss1[].uninitializedFill(S(2));
+            assert(ss1[] == [S(2), S(2), S(2)]);
+
+            //Not array
+            S[3] ss2 = void;
+            auto sf = ss2[].filter!"true"();
+            sf.uninitializedFill(S(2));
+            assert(ss2[] == [S(2), S(2), S(2)]);
         }
     }
-    void fun1() { foreach (i; 0 .. 1000) fill(a, 6); }
-    //void fun2() { foreach (i; 0 .. 1000) fill2(a, 6); }
-    //writeln(benchmark!(fun0, fun1, fun2)(10000));
 }
 
 /**
