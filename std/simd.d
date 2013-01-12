@@ -1,8 +1,8 @@
 module std.simd;
 
-pure:
+/*pure:
 nothrow:
-@safe:
+@safe:*/
 
 ///////////////////////////////////////////////////////////////////////////////
 // Version mess
@@ -1186,9 +1186,9 @@ T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
 							// TODO: is this most efficient?
 							// No it is not... we should use a single shuflw/shufhw followed by a 64bit unpack...
 							enum int[] shufValues = [0x00, 0x55, 0xAA, 0xFF];
-							T t = __simd(XMM.PSHUFD, v, shufValues[elements[0] >> 1]);
-							t = __simd(XMM.PSHUFLW, t, (elements[0] & 1) ? 0x55 : 0x00);
-							return __simd(XMM.PSHUFHW, t, (elements[0] & 1) ? 0x55 : 0x00);
+							T t = __simd(XMM.PSHUFD, v, v, shufValues[elements[0] >> 1]);
+							t = __simd(XMM.PSHUFLW, t, t, (elements[0] & 1) ? 0x55 : 0x00);
+							return __simd(XMM.PSHUFHW, t, t, (elements[0] & 1) ? 0x55 : 0x00);
 						}
 					}
 					else static if(is8bitElement!T)
@@ -1213,7 +1213,7 @@ T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
 						return __simd(XMM.SHUFPD, v, v, shufMask!(elements)); // swizzle: YX
 					else static if(is64bitElement!(T)) // (u)long2
 						// use a 32bit integer shuffle for swizzle: YZ
-						return __simd(XMM.PSHUFD, v, shufMask!([elements[0]*2, elements[0]*2 + 1, elements[1]*2, elements[1]*2 + 1]));
+						return __simd(XMM.PSHUFD, v, v, shufMask!([elements[0]*2, elements[0]*2 + 1, elements[1]*2, elements[1]*2 + 1]));
 					else static if(is(T == float4))
 					{
 						static if(elements == [0,0,2,2] && Ver >= SIMDVer.SSE3)
@@ -1224,13 +1224,16 @@ T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
 							return __simd(XMM.SHUFPS, v, v, shufMask!(elements));
 					}
 					else static if(is32bitElement!(T))
-						return __simd(XMM.PSHUFD, v, shufMask!(elements));
+						return __simd(XMM.PSHUFD, v, v, shufMask!(elements));
 					else static if(is8bitElement!T || is16bitElement!T)
 					{
 						static if(Ver >= SIMDVer.SSSE3)
 						{
-							static ubyte[16] mask = [pshufbMask!elements];
-							auto vmask = cast(ubyte16) __simd(XMM.LOADDQU, cast(char*) mask.ptr);
+							// static ubyte[16] mask = [pshufbMask!elements];
+							// auto vmask = cast(ubyte16) __simd(XMM.LOADDQU, cast(char*) mask.ptr);
+                            // XMM.LOADDQU does not exist, and I don't know of anything equivalent in DMD.
+                            // this compiles (I hope ther aren't any alignment issues):
+							__gshared static ubyte16 vmask = [pshufbMask!elements];
 							return cast(T) __simd(XMM.PSHUFB, cast(ubyte16) v, vmask);
 						}
 						else
@@ -1325,7 +1328,7 @@ T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
 					{
 						static if(Ver >= SIMDVer.SSSE3)
 						{
-							static ubyte[16] mask = [pshufbMask!elements];
+							__gshared static ubyte[16] mask = [pshufbMask!elements];
 							auto vmask = cast(ubyte16) __builtin_ia32_loaddqu(cast(char*) mask.ptr);
 							return cast(T) __builtin_ia32_pshufb128(cast(ubyte16) v, vmask);
 						}
@@ -1363,7 +1366,7 @@ T permute(SIMDVer Ver = sseVer, T)(T v, ubyte16 control)
 		version(DigitalMars)
 		{
 			static if(Ver >= SIMDVer.SSE3)
-				return __simd(PSHUFB, v, control);
+				return __simd(XMM.PSHUFB, v, control);
 			else
 				static assert(0, "Only supported in SSSE3 and above");
 		}
@@ -1537,15 +1540,15 @@ PromotionOf!T unpackLow(SIMDVer Ver = sseVer, T)(T v)
 			static if(is(T == int4))
 				return cast(PromotionOf!T)interleaveLow!Ver(v, shiftRightImmediate!(31, Ver)(v));
 			else static if(is(T == uint4))
-				return cast(PromotionOf!T)interleaveLow!Ver(v, 0);
+				return cast(PromotionOf!T)interleaveLow!(Ver, T)(v, 0);
 			else static if(is(T == short8))
 				return shiftRightImmediate!(16, Ver)(cast(int4)interleaveLow!Ver(v, v));
 			else static if(is(T == ushort8))
-				return cast(PromotionOf!T)interleaveLow!Ver(v, 0);
+				return cast(PromotionOf!T)interleaveLow!(Ver, T)(v, 0);
 			else static if(is(T == byte16))
 				return shiftRightImmediate!(8, Ver)(cast(short8)interleaveLow!Ver(v, v));
 			else static if(is(T == ubyte16))
-				return cast(PromotionOf!T)interleaveLow!Ver(v, 0);
+				return cast(PromotionOf!T)interleaveLow!(Ver, T)(v, 0);
 			else
 				static assert(0, "Unsupported vector type: " ~ T.stringof);
 		}
@@ -1578,15 +1581,15 @@ PromotionOf!T unpackHigh(SIMDVer Ver = sseVer, T)(T v)
 			static if(is(T == int4))
 				return cast(PromotionOf!T)interleaveHigh!Ver(v, shiftRightImmediate!(31, Ver)(v));
 			else static if(is(T == uint4))
-				return cast(PromotionOf!T)interleaveHigh!Ver(v, cast(uint4)0);
+				return cast(PromotionOf!T)interleaveHigh!(Ver, T)(v, 0);
 			else static if(is(T == short8))
 				return shiftRightImmediate!(16, Ver)(cast(int4)interleaveHigh!Ver(v, v));
 			else static if(is(T == ushort8))
-				return cast(PromotionOf!T)interleaveHigh!Ver(v, cast(ushort8)0);
+				return cast(PromotionOf!T)interleaveHigh!(Ver, T)(v, 0);
 			else static if(is(T == byte16))
 				return shiftRightImmediate!(8, Ver)(cast(short8)interleaveHigh!Ver(v, v));
 			else static if(is(T == ubyte16))
-				return cast(PromotionOf!T)interleaveHigh!Ver(v, cast(ubyte16)0);
+				return cast(PromotionOf!T)interleaveHigh!(Ver, T)(v, 0);
 			else
 				static assert(0, "Unsupported vector type: " ~ T.stringof);
 		}
@@ -1833,7 +1836,41 @@ T abs(SIMDVer Ver = sseVer, T)(T v)
 	{
 		version(DigitalMars)
 		{
-			static assert(0, "TODO");
+			static if(is(T == double2))
+			{
+                return __simd(XMM.ANDNPD, cast(double2)signMask2, v);
+			}
+			else static if(is(T == float4))
+			{
+                return __simd(XMM.ANDNPS, cast(float4)signMask4, v);
+			}
+			else static if(Ver >= SIMDVer.SSSE3)
+			{
+				static if(is64bitElement!(T))
+					static assert(0, "Unsupported: abs(" ~ T.stringof ~ "). Should we emulate?");
+				else static if(is32bitElement!(T))
+                    return __simd(XMM.PABSD, v);
+				else static if(is16bitElement!(T))
+                    return __simd(XMM.PABSW, v);
+				else static if(is8bitElement!(T))
+                    return __simd(XMM.PABSB, v);
+			}
+			else static if(is(T == int4))
+			{
+				int4 t = shiftRightImmediate!(31, Ver)(v);
+				return sub!Ver(xor!Ver(v, t), t);
+			}
+			else static if(is(T == short8))
+			{
+				return max!Ver(v, sub!Ver(0, v));
+			}
+			else static if(is(T == byte16))
+			{
+				byte16 t = maskGreater!Ver(0, v);
+				return sub!Ver(xor!Ver(v, t), t);
+			}
+			else
+				static assert(0, "Unsupported vector type: " ~ T.stringof);
 		}
 		else version(GNU_OR_LDC)
 		{
@@ -2734,7 +2771,7 @@ T rcp(SIMDVer Ver = sseVer, T)(T v)
 		version(DigitalMars)
 		{
 			static if(is(T == double2))
-				return div!Ver(1.0, v);
+				return div!(Ver, T)(1.0, v);
 			else static if(is(T == float4))
 				return __simd(XMM.RCPPS, v);
 			else
@@ -3568,7 +3605,7 @@ T shiftBytesLeftImmediate(size_t bytes, SIMDVer Ver = sseVer, T)(T v)
 			version(DigitalMars)
 			{
 				// little endian reads the bytes into the register in reverse, so we need to flip the operations
-				return __simd_ib(XMM.PSRLDQ, v, bytes * 8); // TODO: *8? WAT?
+				return __simd_ib(XMM.PSRLDQ, v, bytes);
 			}
 			else version(GNU_OR_LDC)
 			{
@@ -3600,7 +3637,7 @@ T shiftBytesRightImmediate(size_t bytes, SIMDVer Ver = sseVer, T)(T v)
 			version(DigitalMars)
 			{
 				// little endian reads the bytes into the register in reverse, so we need to flip the operations
-				return __simd_ib(XMM.PSLLDQ, v, bytes * 8); // TODO: *8? WAT?
+				return __simd_ib(XMM.PSLLDQ, v, bytes);
 			}
 			else version(GNU_OR_LDC)
 			{
@@ -3981,6 +4018,8 @@ void16 maskGreater(SIMDVer Ver = sseVer, T)(T a, T b)
 				return __simd(XMM.PCMPGTW, a + signMask8, b + signMask8);
 			else static if(is(T == byte16))
 				return __simd(XMM.PCMPGTB, a, b);
+			else static if(is(T == ubyte16))
+				return __simd(XMM.PCMPGTB, a + signMask16, b + signMask16);
 			else
 				static assert(0, "Unsupported vector type: " ~ T.stringof);
 		}
@@ -4004,6 +4043,8 @@ void16 maskGreater(SIMDVer Ver = sseVer, T)(T a, T b)
 				return __builtin_ia32_pcmpgtw128(a + signMask8, b + signMask8);
 			else static if(is(T == byte16))
 				return __builtin_ia32_pcmpgtb128(a, b);
+			else static if(is(T == ubyte16))
+				return __builtin_ia32_pcmpgtb128(a + signMask16, b + signMask16);
 			else
 				static assert(0, "Unsupported vector type: " ~ T.stringof);
 		}
