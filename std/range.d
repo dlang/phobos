@@ -3683,17 +3683,28 @@ struct Repeat(T)
     /// Range primitive implementations.
     @property T front() { return _value; }
     /// Ditto
-    @property T back() { return _value; }
-    /// Ditto
     enum bool empty = false;
     /// Ditto
     void popFront() {}
     /// Ditto
-    void popBack() {}
-    /// Ditto
     @property Repeat!T save() { return this; }
     /// Ditto
     T opIndex(size_t) { return _value; }
+    /// Ditto
+    auto opSlice(size_t i, size_t j)
+    {
+        version (assert)
+            if (i > j) throw new RangeError();
+        return this.takeExactly(j - i);
+    }
+    /// Ditto
+    version (StdDdoc)
+        auto opDollar(){return DollarToken();} //Opaque signature for Ddoc
+    else
+        enum opDollar = DollarToken(); //Implementation defined signature
+
+    private static struct DollarToken{}
+    auto opSlice(size_t, DollarToken){return this;}
 }
 
 /// Ditto
@@ -3701,8 +3712,16 @@ Repeat!(T) repeat(T)(T value) { return Repeat!(T)(value); }
 
 unittest
 {
-    enforce(equal(take(repeat(5), 4), [ 5, 5, 5, 5 ][]));
-    static assert(isForwardRange!(Repeat!(uint)));
+    auto  r = repeat(5);
+    alias R = typeof(r);
+    static assert(isForwardRange!R);
+    static assert(isInfinite!R);
+    static assert(hasSlicing!R);
+
+    assert(r.take(4).equal([ 5, 5, 5, 5 ]));
+    assert(r[0 .. 4].equal([ 5, 5, 5, 5 ]));
+
+    R r2 = r[5 .. $];
 }
 
 /**
@@ -4367,9 +4386,11 @@ struct Zip(Ranges...)
    slicing.
 */
     static if (allSatisfy!(hasSlicing, R))
-        Zip opSlice(size_t from, size_t to)
+        auto opSlice(size_t from, size_t to)
         {
-            Zip result = void;
+            //Slicing an infinite range yields the type Take!R
+            //For finite ranges, the type Take!R aliases to R
+            Zip!(staticMap!(Take, R)) result = void;
             emplace(&result.stoppingPolicy, stoppingPolicy);
             foreach (i, Unused; R)
             {
@@ -4975,10 +4996,7 @@ public:
         _cache = compute(_state, ++_n);
     }
 
-    DollarToken opDollar()
-    {
-        return DollarToken();
-    }
+    enum opDollar = DollarToken();
 
     auto opSlice(size_t lower, size_t upper)
     in
