@@ -1632,10 +1632,7 @@ unittest
 S[] splitLines(S)(S s, KeepTerminator keepTerm = KeepTerminator.no)
     if(isSomeString!S)
 {
-    auto retval = appender!(S[])();
-    foreach( line; splitter(s,keepTerm) )
-        retval.put(line);
-    return retval.data;
+    return array(splitter(s,keepTerm));
 }
 
 unittest
