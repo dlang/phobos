@@ -2089,6 +2089,8 @@ If the empty range is given, the result is a range with one empty
 element. If a range with one separator is given, the result is a range
 with two empty elements.
 
+To split strings into lines, see $(XREF string, _splitter).
+
 Example:
 ---
 assert(equal(splitter("hello  world", ' '), [ "hello", "", "world" ]));
@@ -2275,19 +2277,32 @@ unittest
 
     // Test interleaving front and back.
     auto split = splitter(str, 'a');
+
+    // []abc abcd abcde ab abcdefg abcdefghij ab ac ar an at ada[]
     assert(split.front == "");
     assert(split.back == "");
+
+    // []abc abcd abcde ab abcdefg abcdefghij ab ac ar an at a[d]a
     split.popBack();
     assert(split.back == "d");
+
+    // a[bc ]abcd abcde ab abcdefg abcdefghij ab ac ar an at a[d]a
     split.popFront();
     assert(split.front == "bc ");
     assert(split.back == "d");
+
+    // abc a[bcd ]abcde ab abcdefg abcdefghij ab ac ar an a[t ]ada
     split.popFront();
     split.popBack();
     assert(split.back == "t ");
+
+    // abc a[bcd ]abcde ab abcdefg abcdefghij ab ac ar a[n ]at ada
     split.popBack();
+    // abc a[bcd ]abcde ab abcdefg abcdefghij ab ac a[r ]an at ada
     split.popBack();
+    // abc abcd a[bcde ]ab abcdefg abcdefghij ab ac a[r ]an at ada
     split.popFront();
+    // abc abcd abcde a[b ]abcdefg abcdefghij ab ac a[r ]an at ada
     split.popFront();
     assert(split.front == "b ");
     assert(split.back == "r ");
@@ -2321,6 +2336,8 @@ unittest
 Splits a range using another range as a separator. This can be used
 with any narrow string type or sliceable range type, but is most popular
 with string types.
+
+To split strings into lines, see $(XREF string, _splitter).
  */
 auto splitter(Range, Separator)(Range r, Separator s)
 if (is(typeof(Range.init.front == Separator.init.front) : bool)
