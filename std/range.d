@@ -3828,7 +3828,7 @@ struct Cycle(Range)
             return Cycle(this._original.save, this._index);
         }
 
-        static struct DollarToken {}
+        private static struct DollarToken {}
 
         DollarToken opDollar()
         {
@@ -3928,7 +3928,7 @@ struct Cycle(R)
         return this;
     }
 
-    static struct DollarToken {}
+    private static struct DollarToken {}
 
     DollarToken opDollar()
     {
