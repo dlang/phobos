@@ -293,7 +293,6 @@ unittest
 {
     static assert(fullyQualifiedName!fullyQualifiedName == "std.traits.fullyQualifiedName");
     static assert(fullyQualifiedName!(QualifiedNameTests.Inner) == "std.traits.QualifiedNameTests.Inner");
-    static assert(fullyQualifiedName!(QualifiedNameTests.Inner) == "std.traits.QualifiedNameTests.Inner");
 
     import etc.c.curl;
     static assert(fullyQualifiedName!curl_httppost == "etc.c.curl.curl_httppost");
