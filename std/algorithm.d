@@ -8008,6 +8008,17 @@ assert(words == [ "a", "aBc", "abc", "ABC", "b", "c" ]);
 SortedRange!(Range, less)
 sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         Range)(Range r)
+    if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
+                                          hasAssignableElements!Range)) ||
+         (ss != SwapStrategy.unstable && hasAssignableElements!Range)) &&
+        isRandomAccessRange!Range &&
+        hasSlicing!Range &&
+        hasLength!Range)
+    /+ Unstable sorting uses the quicksort algorithm, which uses swapAt,
+       which either uses swap(...), requiring swappable elements, or just
+       swaps using assignment.
+       Stable sorting uses TimSort, which needs to copy elements into a buffer,
+       requiring assignable elements. +/
 {
     alias binaryFun!(less) lessFun;
     alias typeof(lessFun(r.front, r.front)) LessRet;    // instantiate lessFun
