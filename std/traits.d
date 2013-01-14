@@ -271,6 +271,7 @@ version(unittest)
         }
 
         ref const(Inner[string]) func( ref Inner var1, lazy scope string var2 );
+        inout Inner inoutFunc(inout Inner);
         shared(const(Inner[string])[]) data;
         const Inner delegate(double, string) @safe nothrow deleg;
         Inner function(out double, string) funcPtr;
@@ -457,10 +458,11 @@ private template fullyQualifiedNameImplForTypes(T,
     {   
         static if (is(T F == delegate))
         {
-            enum qualifierString = format("%s%s%s",
-                is(F == const) ? " const" : "",
-                is(F == immutable) ? " immutable" : "",
-                is(F == shared) ? " shared" : ""
+            enum qualifierString = format("%s%s",
+                is(F == shared) ? " shared" : "",
+                is(F == inout) ? " inout" :
+                is(F == immutable) ? " immutable" :
+                is(F == const) ? " const" : ""
             );
             enum formatStr = "%s%s delegate(%s)%s%s";
             enum fullyQualifiedNameImplForTypes = chain!(
@@ -533,13 +535,14 @@ unittest
 
         // Function types + function attributes
         static assert(fqn!(typeof(func)) == format("const(%s[string])(ref %s, scope lazy string) ref", inner_name, inner_name));
+        static assert(fqn!(typeof(inoutFunc)) == format("inout %s(inout %s)", inner_name, inner_name));
         static assert(fqn!(typeof(deleg)) == format("const(%s delegate(double, string) nothrow @safe)", inner_name));
         static assert(fqn!(typeof(funcPtr)) == format("%s function(out double, string)", inner_name));
         static assert(fqn!(typeof(cFuncPtr)) == format("extern(C) %s function(double, string)", inner_name));
 
         // Delegate type with qualified function type 
         static assert(fqn!(typeof(attrDeleg)) == format("shared(immutable(%s) "
-            "delegate(ref double, scope string) nothrow @trusted const shared)", inner_name));
+            "delegate(ref double, scope string) nothrow @trusted shared const)", inner_name));
 
 
         // Variable argument function types
