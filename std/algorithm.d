@@ -6155,21 +6155,22 @@ assert(minCount(a) == tuple(1, 3));
 assert(minCount!("a > b")(a) == tuple(4, 2));
 ----
  */
-Tuple!(ElementType!(Range), size_t)
+Tuple!(ElementType!Range, size_t)
 minCount(alias pred = "a < b", Range)(Range range)
-    if (isInputRange!Range && !isInfinite!Range)
+    if (isInputRange!Range && !isInfinite!Range && 
+        is(typeof(binaryFun!pred(range.front, range.front))))
 {
     enforce(!range.empty, "Can't count elements from an empty range");
     size_t occurrences = 1;
-    auto p = range.front;
+    auto v = range.front;
     for (range.popFront(); !range.empty; range.popFront())
     {
-        auto p2 = range.front;
-        if (binaryFun!(pred)(p, p2)) continue;
-        if (binaryFun!(pred)(p2, p))
+        auto v2 = range.front;
+        if (binaryFun!pred(v, v2)) continue;
+        if (binaryFun!pred(v2, v))
         {
             // change the min
-            move(p2, p);
+            move(v2, v);
             occurrences = 1;
         }
         else
@@ -6177,7 +6178,7 @@ minCount(alias pred = "a < b", Range)(Range range)
             ++occurrences;
         }
     }
-    return tuple(p, occurrences);
+    return typeof(return)(v, occurrences);
 }
 
 unittest
@@ -6218,21 +6219,19 @@ assert(minPos!("a > b")(a) == [ 4, 1, 2, 4, 1, 1, 2 ]);
 ----
  */
 Range minPos(alias pred = "a < b", Range)(Range range)
-    if (isForwardRange!Range && !isInfinite!Range)
+    if (isForwardRange!Range && !isInfinite!Range && 
+        is(typeof(binaryFun!pred(range.front, range.front))))
 {
     if (range.empty) return range;
     auto result = range.save;
-    auto p = result.front;
+
     for (range.popFront(); !range.empty; range.popFront())
     {
-        auto p2 = range.front;
-
         //Note: Unlike minCount, we do not care to find equivalence, so a single pred call is enough
-        if (binaryFun!pred(p2, p))
+        if (binaryFun!pred(range.front, result.front))
         {
             // change the min
             result = range.save;
-            move(p2, p);
         }
     }
     return result;
@@ -6254,6 +6253,30 @@ unittest
 
     //test with reference range.
     assert( equal( minPos(new ReferenceForwardRange!int([1, 2, 1, 0, 2, 0])), [0, 2, 0] ) );
+}
+unittest
+{
+    //Rvalue range
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    assert(Array!int(2, 3, 4, 1, 2, 4, 1, 1, 2)
+               []
+               .minPos()
+               .equal([ 1, 2, 4, 1, 1, 2 ]));
+}
+unittest
+{
+    //BUG 9299
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    immutable a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
+    // Minimum is 1 and first occurs in position 3
+    assert(minPos(a) == [ 1, 2, 4, 1, 1, 2 ]);
+    // Maximum is 4 and first occurs in position 5
+    assert(minPos!("a > b")(a) == [ 4, 1, 2, 4, 1, 1, 2 ]);
+
+    immutable(int[])[] b = [ [4], [2, 4], [4], [4] ];
+    assert(minPos!("a[0] < b[0]")(b) == [ [2, 4], [4], [4] ]);
 }
 
 // mismatch
