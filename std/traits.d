@@ -92,7 +92,8 @@ private
 
         // FuncAttrs --> FuncAttr | FuncAttr FuncAttrs
         // FuncAttr  --> empty | Na | Nb | Nc | Nd | Ne | Nf
-        while (mstr.length >= 2 && mstr[0] == 'N')
+        // except 'Ng' == inout, because it is a qualifier of function type
+        while (mstr.length >= 2 && mstr[0] == 'N' && mstr[1] != 'g')
         {
             if (FunctionAttribute att = LOOKUP_ATTRIBUTE[ mstr[1] ])
             {
@@ -516,6 +517,10 @@ unittest
     alias ParameterStorageClassTuple!((ref int a) {}) dglit_pstc;
     static assert(dglit_pstc.length == 1);
     static assert(dglit_pstc[0] == STC.ref_);
+
+    // Bugzilla 9317
+    static inout int func(inout int param) { return param; }
+    static assert(ParameterStorageClassTuple!(typeof(func))[0] == STC.none);
 }
 
 
