@@ -237,33 +237,30 @@ version(unittest)
     static assert(moduleName!curl_httppost == "etc.c.curl");
 }
 
-
-/**
- * Get the fully qualified name of a symbol.
+/***
+ * Get the fully qualified name of a type or a symbol. Can act as an intelligent type/symbol to string  converter.
  * Example:
  * ---
+ * module mymodule;
  * import std.traits;
+ * struct MyStruct {}
+ * static assert(fullyQualifiedName!(const MyStruct[]) == "const(mymodule.MyStruct[])");
  * static assert(fullyQualifiedName!fullyQualifiedName == "std.traits.fullyQualifiedName");
  * ---
  */
-template fullyQualifiedName(alias T)
+template fullyQualifiedName(T...)
 {
-    static if (__traits(compiles, __traits(parent, T)))
-        enum parentPrefix = fullyQualifiedName!(__traits(parent, T)) ~ '.';
-    else
-        enum parentPrefix = null;
+    static assert(T.length == 1);
 
-    enum fullyQualifiedName = parentPrefix ~ (s)
-    {
-        if(s.skipOver("package ") || s.skipOver("module "))
-            return s;
-        return s.findSplit("(")[0];
-    }(T.stringof);
+    static if (is(T))
+        enum fullyQualifiedName = fullyQualifiedNameImplForTypes!(T[0], false, false, false, false);
+    else
+        enum fullyQualifiedName = fullyQualifiedNameImplForSymbols!(T[0]);
 }
 
 version(unittest)
 {
-    // Used for both fullyQualifiedName and fullyQualifiedName unittests
+    // Used for both fullyQualifiedNameImplForTypes and fullyQualifiedNameImplForSymbols unittests
     private struct QualifiedNameTests
     {
         struct Inner
@@ -291,11 +288,30 @@ version(unittest)
     }
 }
 
+private template fullyQualifiedNameImplForSymbols(alias T)
+{
+    static if (__traits(compiles, __traits(parent, T)))
+        enum parentPrefix = fullyQualifiedNameImplForSymbols!(__traits(parent, T)) ~ '.';
+    else
+        enum parentPrefix = null;
+
+    enum fullyQualifiedNameImplForSymbols = parentPrefix ~ (s)
+    {
+        if(s.skipOver("package ") || s.skipOver("module "))
+            return s;
+        return s.findSplit("(")[0];
+    }(T.stringof);
+}
+
 unittest
 {
+    // Make sure those 2 are the same
+    static assert(fullyQualifiedNameImplForSymbols!fullyQualifiedName 
+        == fullyQualifiedName!fullyQualifiedName);
+
+    // Main tests
     static assert(fullyQualifiedName!fullyQualifiedName == "std.traits.fullyQualifiedName");
     static assert(fullyQualifiedName!(QualifiedNameTests.Inner) == "std.traits.QualifiedNameTests.Inner");
-
     import etc.c.curl;
     static assert(fullyQualifiedName!curl_httppost == "etc.c.curl.curl_httppost");
 }
@@ -438,7 +454,7 @@ private template fullyQualifiedNameImplForTypes(T,
     }
     else static if (isAggregateType!T)
     {
-        enum fullyQualifiedNameImplForTypes = chain!(fullyQualifiedName!T);
+        enum fullyQualifiedNameImplForTypes = chain!(fullyQualifiedNameImplForSymbols!T);
     }
     else static if (isStaticArray!T)
     {
@@ -500,25 +516,15 @@ private template fullyQualifiedNameImplForTypes(T,
         static assert(0, "Unrecognized type " ~ T.stringof ~ ", can't convert to fully qualified string");
 }
 
-/***
- * Get the fully qualified name of a type. Technically, an intelligent type to string converter.
- * Example:
- * ---
- * module mymodule;
- * import std.traits;
- * struct MyStruct {}
- * static assert(fullyQualifiedTypename!(const MyStruct[]) == "const(mymodule.MyStruct[])");
- * ---
- */
-template fullyQualifiedName(T)
-{
-    enum fullyQualifiedName = fullyQualifiedNameImplForTypes!(T, false, false, false, false);
-}
-
 unittest
 {
     import std.string;
 
+    // Verify those 2 are the same for simple case
+    alias Ambiguous = const(QualifiedNameTests.Inner);
+    static assert(fullyQualifiedName!Ambiguous == fullyQualifiedNameImplForTypes!(Ambiguous, false, false, false, false));
+
+    // Main tests
     alias fullyQualifiedName fqn;
     enum inner_name = "std.traits.QualifiedNameTests.Inner";
     with (QualifiedNameTests)
