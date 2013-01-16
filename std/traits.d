@@ -274,6 +274,7 @@ version(unittest)
         inout Inner inoutFunc(inout Inner);
         shared(const(Inner[string])[]) data;
         const Inner delegate(double, string) @safe nothrow deleg;
+        inout int delegate(inout int) inout inoutDeleg;
         Inner function(out double, string) funcPtr;
         extern(C) Inner function(double, string) cFuncPtr;
 
@@ -300,7 +301,7 @@ unittest
 }
 
 private template fullyQualifiedNameImplForTypes(T,
-    bool alreadyConst, bool alreadyImmutable, bool alreadyShared)
+    bool alreadyConst, bool alreadyImmutable, bool alreadyShared, bool alreadyInout)
 {
     import std.string;
 
@@ -308,11 +309,12 @@ private template fullyQualifiedNameImplForTypes(T,
     enum {
         _const = 0,
         _immutable = 1,
-        _shared = 2
+        _shared = 2,
+        _inout = 3
     }
 
-    alias TypeTuple!(is(T == const), is(T == immutable), is(T == shared)) qualifiers;
-    alias TypeTuple!(false, false, false) noQualifiers;
+    alias TypeTuple!(is(T == const), is(T == immutable), is(T == shared), is(T == inout)) qualifiers;
+    alias TypeTuple!(false, false, false, false) noQualifiers;
 
     string storageClassesString(uint psc)() @property
     {
@@ -389,29 +391,33 @@ private template fullyQualifiedNameImplForTypes(T,
             );
     }
 
-    template addQualifiers(string typeString,
-        bool addConst, bool addImmutable, bool addShared)
+    string addQualifiers(string typeString,
+        bool addConst, bool addImmutable, bool addShared, bool addInout)
     {
-        static if (addConst)
-            enum addQualifiers = addQualifiers!(format("const(%s)", typeString),
-                false, addImmutable, addShared);
-        else static if (addImmutable)
-            enum addQualifiers = addQualifiers!(format("immutable(%s)", typeString),
-                addConst, false, addShared);
-        else static if (addShared)
-            enum addQualifiers = addQualifiers!(format("shared(%s)", typeString),
-                addConst, addImmutable, false);
-        else
-            enum addQualifiers = typeString;
+        auto result = typeString;
+        if (addShared)
+        {
+            result = format("shared(%s)", result);
+        }
+        if (addConst || addImmutable || addInout)
+        {
+            result = format("%s(%s)",
+                addConst ? "const" :
+                    addImmutable ? "immutable" : "inout",
+                result
+            );
+        }
+        return result;
     }
 
     // Convenience template to avoid copy-paste
     template chain(string current)
     {
-        enum chain = addQualifiers!(current,
+        enum chain = addQualifiers(current,
             qualifiers[_const]     && !alreadyConst,
             qualifiers[_immutable] && !alreadyImmutable,
-            qualifiers[_shared]    && !alreadyShared);
+            qualifiers[_shared]    && !alreadyShared,
+            qualifiers[_inout]     && !alreadyInout);
     }
     
     static if (is(T == string))
@@ -506,7 +512,7 @@ private template fullyQualifiedNameImplForTypes(T,
  */
 template fullyQualifiedName(T)
 {
-    enum fullyQualifiedName = fullyQualifiedNameImplForTypes!(T, false, false, false);
+    enum fullyQualifiedName = fullyQualifiedNameImplForTypes!(T, false, false, false, false);
 }
 
 unittest
@@ -535,15 +541,15 @@ unittest
 
         // Function types + function attributes
         static assert(fqn!(typeof(func)) == format("const(%s[string])(ref %s, scope lazy string) ref", inner_name, inner_name));
-        static assert(fqn!(typeof(inoutFunc)) == format("inout %s(inout %s)", inner_name, inner_name));
+        static assert(fqn!(typeof(inoutFunc)) == format("inout(%s(inout(%s)))", inner_name, inner_name));
         static assert(fqn!(typeof(deleg)) == format("const(%s delegate(double, string) nothrow @safe)", inner_name));
+        static assert(fqn!(typeof(inoutDeleg)) == "inout(int delegate(inout(int)) inout)");
         static assert(fqn!(typeof(funcPtr)) == format("%s function(out double, string)", inner_name));
         static assert(fqn!(typeof(cFuncPtr)) == format("extern(C) %s function(double, string)", inner_name));
 
         // Delegate type with qualified function type 
         static assert(fqn!(typeof(attrDeleg)) == format("shared(immutable(%s) "
             "delegate(ref double, scope string) nothrow @trusted shared const)", inner_name));
-
 
         // Variable argument function types
         static assert(fqn!(typeof(cVarArg)) == "extern(C) void(int, ...)");
