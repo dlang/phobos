@@ -260,8 +260,8 @@ of sets implemented as a range of sorted ranges.)
 $(TR $(TDNW $(LREF setDifference)) $(TD Lazily computes the set
 difference of two or more sorted ranges.)
 )
-$(TR $(TDNW $(LREF setIntersection)) $(TD Lazily computes the
-set difference of two or more sorted ranges.)
+$(TR $(TDNW $(LREF setIntersection)) $(TD Lazily computes the 
+intesection of two or more sorted ranges.)
 )
 $(TR $(TDNW $(LREF setSymmetricDifference)) $(TD Lazily
 computes the symmetric set difference of two or more sorted ranges.)
