@@ -249,8 +249,8 @@ version(unittest)
  * ---
  */
 template fullyQualifiedName(T...)
+    if (T.length == 1)
 {
-    static assert(T.length == 1);
 
     static if (is(T))
         enum fullyQualifiedName = fullyQualifiedNameImplForTypes!(T[0], false, false, false, false);
@@ -283,6 +283,7 @@ version(unittest)
         Inner[] array;
         Inner[16] sarray;
         Inner[Inner] aarray;
+        const(Inner[const(Inner)]) qualAarray;
 
         shared(immutable(Inner) delegate(ref double, scope string) const shared @trusted nothrow) attrDeleg;
     }
@@ -310,10 +311,11 @@ unittest
         == fullyQualifiedName!fullyQualifiedName);
 
     // Main tests
-    static assert(fullyQualifiedName!fullyQualifiedName == "std.traits.fullyQualifiedName");
-    static assert(fullyQualifiedName!(QualifiedNameTests.Inner) == "std.traits.QualifiedNameTests.Inner");
+    alias fqn = fullyQualifiedName;
+    static assert(fqn!fqn == "std.traits.fullyQualifiedName");
+    static assert(fqn!(QualifiedNameTests.Inner) == "std.traits.QualifiedNameTests.Inner");
     import etc.c.curl;
-    static assert(fullyQualifiedName!curl_httppost == "etc.c.curl.curl_httppost");
+    static assert(fqn!curl_httppost == "etc.c.curl.curl_httppost");
 }
 
 private template fullyQualifiedNameImplForTypes(T,
@@ -461,7 +463,7 @@ private template fullyQualifiedNameImplForTypes(T,
         import std.conv;
             
         enum fullyQualifiedNameImplForTypes = chain!(
-            format("%s[%s]", fullyQualifiedNameImplForTypes!(typeof(T.init[0]), qualifiers), to!string(T.length))
+            format("%s[%s]", fullyQualifiedNameImplForTypes!(typeof(T.init[0]), qualifiers), T.length)
         );
     }
     else static if (isArray!T)
@@ -473,7 +475,7 @@ private template fullyQualifiedNameImplForTypes(T,
     else static if (isAssociativeArray!T)
     {   
         enum fullyQualifiedNameImplForTypes = chain!(
-            format("%s[%s]", fullyQualifiedNameImplForTypes!(ValueType!T, qualifiers), fullyQualifiedNameImplForTypes!(KeyType!T, qualifiers))
+            format("%s[%s]", fullyQualifiedNameImplForTypes!(ValueType!T, qualifiers), fullyQualifiedNameImplForTypes!(KeyType!T, noQualifiers))
         );
     }   
     else static if (isSomeFunction!T)
@@ -541,6 +543,9 @@ unittest
         static assert(fqn!(typeof(array)) == format("%s[]", inner_name));
         static assert(fqn!(typeof(sarray)) == format("%s[16]", inner_name));
         static assert(fqn!(typeof(aarray)) == format("%s[%s]", inner_name, inner_name));
+
+        // qualified key for AA
+        static assert(fqn!(typeof(qualAarray)) == format("const(%s[const(%s)])", inner_name, inner_name));
 
         // Qualified composed data types
         static assert(fqn!(typeof(data)) == format("shared(const(%s[string])[])", inner_name));
