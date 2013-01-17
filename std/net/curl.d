@@ -2071,6 +2071,7 @@ struct HTTP
         p.curl.initialize();
         maxRedirects = HTTP.defaultMaxRedirects;
         p.charset = "ISO-8859-1"; // Default charset defined in HTTP RFC
+        p.curl.set(CurlOption.ssl_verifypeer, false);
         p.method = Method.undefined;
         dataTimeout = _defaultDataTimeout;
         onReceiveHeader = null;
@@ -3048,7 +3049,7 @@ struct SMTP
     /**
         Sets to the URL of the SMTP server.
     */
-    this(string url)
+    this(const(char)[] url)
     {
         p.curl.initialize();
         auto lowered = url.toLower();
