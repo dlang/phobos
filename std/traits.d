@@ -237,23 +237,66 @@ version(unittest)
     static assert(moduleName!curl_httppost == "etc.c.curl");
 }
 
-
-/**
- * Get the fully qualified name of a symbol.
+/***
+ * Get the fully qualified name of a type or a symbol. Can act as an intelligent type/symbol to string  converter.
  * Example:
  * ---
+ * module mymodule;
  * import std.traits;
+ * struct MyStruct {}
+ * static assert(fullyQualifiedName!(const MyStruct[]) == "const(mymodule.MyStruct[])");
  * static assert(fullyQualifiedName!fullyQualifiedName == "std.traits.fullyQualifiedName");
  * ---
  */
-template fullyQualifiedName(alias T)
+template fullyQualifiedName(T...)
+    if (T.length == 1)
+{
+
+    static if (is(T))
+        enum fullyQualifiedName = fullyQualifiedNameImplForTypes!(T[0], false, false, false, false);
+    else
+        enum fullyQualifiedName = fullyQualifiedNameImplForSymbols!(T[0]);
+}
+
+version(unittest)
+{
+    // Used for both fullyQualifiedNameImplForTypes and fullyQualifiedNameImplForSymbols unittests
+    private struct QualifiedNameTests
+    {
+        struct Inner
+        {
+        }
+
+        ref const(Inner[string]) func( ref Inner var1, lazy scope string var2 );
+        inout Inner inoutFunc(inout Inner);
+        shared(const(Inner[string])[]) data;
+        const Inner delegate(double, string) @safe nothrow deleg;
+        inout int delegate(inout int) inout inoutDeleg;
+        Inner function(out double, string) funcPtr;
+        extern(C) Inner function(double, string) cFuncPtr;
+
+        extern(C) void cVarArg(int, ...);
+        void dVarArg(...);
+        void dVarArg2(int, ...);
+        void typesafeVarArg(int[] ...);
+
+        Inner[] array;
+        Inner[16] sarray;
+        Inner[Inner] aarray;
+        const(Inner[const(Inner)]) qualAarray;
+
+        shared(immutable(Inner) delegate(ref double, scope string) const shared @trusted nothrow) attrDeleg;
+    }
+}
+
+private template fullyQualifiedNameImplForSymbols(alias T)
 {
     static if (__traits(compiles, __traits(parent, T)))
-        enum parentPrefix = fullyQualifiedName!(__traits(parent, T)) ~ '.';
+        enum parentPrefix = fullyQualifiedNameImplForSymbols!(__traits(parent, T)) ~ '.';
     else
         enum parentPrefix = null;
 
-    enum fullyQualifiedName = parentPrefix ~ (s)
+    enum fullyQualifiedNameImplForSymbols = parentPrefix ~ (s)
     {
         if(s.skipOver("package ") || s.skipOver("module "))
             return s;
@@ -261,23 +304,270 @@ template fullyQualifiedName(alias T)
     }(T.stringof);
 }
 
-version(unittest)
+unittest
 {
-    struct Outer
+    // Make sure those 2 are the same
+    static assert(fullyQualifiedNameImplForSymbols!fullyQualifiedName 
+        == fullyQualifiedName!fullyQualifiedName);
+
+    // Main tests
+    alias fqn = fullyQualifiedName;
+    static assert(fqn!fqn == "std.traits.fullyQualifiedName");
+    static assert(fqn!(QualifiedNameTests.Inner) == "std.traits.QualifiedNameTests.Inner");
+    import etc.c.curl;
+    static assert(fqn!curl_httppost == "etc.c.curl.curl_httppost");
+}
+
+private template fullyQualifiedNameImplForTypes(T,
+    bool alreadyConst, bool alreadyImmutable, bool alreadyShared, bool alreadyInout)
+{
+    import std.string;
+
+    // Convenience tags
+    enum {
+        _const = 0,
+        _immutable = 1,
+        _shared = 2,
+        _inout = 3
+    }
+
+    alias TypeTuple!(is(T == const), is(T == immutable), is(T == shared), is(T == inout)) qualifiers;
+    alias TypeTuple!(false, false, false, false) noQualifiers;
+
+    string storageClassesString(uint psc)() @property
     {
-        struct Inner
+        alias ParameterStorageClass PSC;
+
+        return format("%s%s%s%s",
+            psc & PSC.scope_ ? "scope " : "",
+            psc & PSC.out_ ? "out " : "",
+            psc & PSC.ref_ ? "ref " : "",
+            psc & PSC.lazy_ ? "lazy " : ""
+        );
+    }
+
+    string parametersTypeString(T)() @property
+    {
+        import std.array, std.algorithm, std.range;
+
+        alias ParameterTypeTuple!(T) parameters;
+        alias ParameterStorageClassTuple!(T) parameterStC;
+
+        enum variadic = variadicFunctionStyle!T;
+        static if (variadic == Variadic.no)
+            enum variadicStr = "";
+        else static if (variadic == Variadic.c) 
+            enum variadicStr = ", ...";
+        else static if (variadic == Variadic.d)
+            enum variadicStr = parameters.length ? ", ..." : "...";
+        else static if (variadic == Variadic.typesafe)
+            enum variadicStr = " ...";
+        else
+            static assert(0, "New variadic style has been added, please update fullyQualifiedName implementation");
+
+        static if (parameters.length)
         {
+            string result = join(
+                map!(a => format("%s%s", a[0], a[1]))(
+                    zip([staticMap!(storageClassesString, parameterStC)],
+                        [staticMap!(fullyQualifiedName, parameters)])
+                ),
+                ", "
+            );
+
+            return result ~= variadicStr;
+        }
+        else
+            return variadicStr;
+    }
+
+    string linkageString(T)() @property
+    {
+        enum linkage = functionLinkage!T;
+        
+        if (linkage != "D")
+            return format("extern(%s) ", linkage);
+        else
+            return "";
+    }
+
+    string functionAttributeString(T)() @property
+    {
+        alias FunctionAttribute FA;
+        enum attrs = functionAttributes!T;
+
+        static if (attrs == FA.none)
+            return "";
+        else
+            return format("%s%s%s%s%s%s",
+                 attrs & FA.pure_ ? " pure" : "",
+                 attrs & FA.nothrow_ ? " nothrow" : "",
+                 attrs & FA.ref_ ? " ref" : "",
+                 attrs & FA.property ? " @property" : "",
+                 attrs & FA.trusted ? " @trusted" : "",
+                 attrs & FA.safe ? " @safe" : ""
+            );
+    }
+
+    string addQualifiers(string typeString,
+        bool addConst, bool addImmutable, bool addShared, bool addInout)
+    {
+        auto result = typeString;
+        if (addShared)
+        {
+            result = format("shared(%s)", result);
+        }
+        if (addConst || addImmutable || addInout)
+        {
+            result = format("%s(%s)",
+                addConst ? "const" :
+                    addImmutable ? "immutable" : "inout",
+                result
+            );
+        }
+        return result;
+    }
+
+    // Convenience template to avoid copy-paste
+    template chain(string current)
+    {
+        enum chain = addQualifiers(current,
+            qualifiers[_const]     && !alreadyConst,
+            qualifiers[_immutable] && !alreadyImmutable,
+            qualifiers[_shared]    && !alreadyShared,
+            qualifiers[_inout]     && !alreadyInout);
+    }
+    
+    static if (is(T == string))
+    {
+        enum fullyQualifiedNameImplForTypes = "string";
+    }
+    else static if (is(T == wstring))
+    {
+        enum fullyQualifiedNameImplForTypes = "wstring";
+    }
+    else static if (is(T == dstring))
+    {
+        enum fullyQualifiedNameImplForTypes = "dstring";
+    }
+    else static if (isBasicType!T || is(T == enum))
+    {
+        enum fullyQualifiedNameImplForTypes = chain!((Unqual!T).stringof);
+    }
+    else static if (isAggregateType!T)
+    {
+        enum fullyQualifiedNameImplForTypes = chain!(fullyQualifiedNameImplForSymbols!T);
+    }
+    else static if (isStaticArray!T)
+    {
+        import std.conv;
+            
+        enum fullyQualifiedNameImplForTypes = chain!(
+            format("%s[%s]", fullyQualifiedNameImplForTypes!(typeof(T.init[0]), qualifiers), T.length)
+        );
+    }
+    else static if (isArray!T)
+    {   
+        enum fullyQualifiedNameImplForTypes = chain!(
+            format("%s[]", fullyQualifiedNameImplForTypes!(typeof(T.init[0]), qualifiers))
+        );
+    }   
+    else static if (isAssociativeArray!T)
+    {   
+        enum fullyQualifiedNameImplForTypes = chain!(
+            format("%s[%s]", fullyQualifiedNameImplForTypes!(ValueType!T, qualifiers), fullyQualifiedNameImplForTypes!(KeyType!T, noQualifiers))
+        );
+    }   
+    else static if (isSomeFunction!T)
+    {   
+        static if (is(T F == delegate))
+        {
+            enum qualifierString = format("%s%s",
+                is(F == shared) ? " shared" : "",
+                is(F == inout) ? " inout" :
+                is(F == immutable) ? " immutable" :
+                is(F == const) ? " const" : ""
+            );
+            enum formatStr = "%s%s delegate(%s)%s%s";
+            enum fullyQualifiedNameImplForTypes = chain!(
+                format(formatStr, linkageString!T, fullyQualifiedNameImplForTypes!(ReturnType!T, noQualifiers),
+                    parametersTypeString!(T), functionAttributeString!T, qualifierString)
+            );
+        }
+        else
+        {
+            static if (isFunctionPointer!T)
+                enum formatStr = "%s%s function(%s)%s";
+            else
+                enum formatStr = "%s%s(%s)%s";
+
+            enum fullyQualifiedNameImplForTypes = chain!(
+                format(formatStr, linkageString!T, fullyQualifiedNameImplForTypes!(ReturnType!T, noQualifiers),
+                    parametersTypeString!(T), functionAttributeString!T)
+            );
         }
     }
+    else static if (isPointer!T)
+    {
+        enum fullyQualifiedNameImplForTypes = chain!(
+            format("%s*", fullyQualifiedNameImplForTypes!(PointerTarget!T, qualifiers))
+        );
+    }
+    else
+        // In case something is forgotten
+        static assert(0, "Unrecognized type " ~ T.stringof ~ ", can't convert to fully qualified string");
 }
 
 unittest
 {
-    static assert(fullyQualifiedName!fullyQualifiedName == "std.traits.fullyQualifiedName");
-    static assert(fullyQualifiedName!(Outer.Inner) == "std.traits.Outer.Inner");
+    import std.string;
 
-    import etc.c.curl;
-    static assert(fullyQualifiedName!curl_httppost == "etc.c.curl.curl_httppost");
+    // Verify those 2 are the same for simple case
+    alias Ambiguous = const(QualifiedNameTests.Inner);
+    static assert(fullyQualifiedName!Ambiguous == fullyQualifiedNameImplForTypes!(Ambiguous, false, false, false, false));
+
+    // Main tests
+    alias fullyQualifiedName fqn;
+    enum inner_name = "std.traits.QualifiedNameTests.Inner";
+    with (QualifiedNameTests)
+    {
+        // Special cases
+        static assert(fqn!(string) == "string");
+        static assert(fqn!(wstring) == "wstring");
+        static assert(fqn!(dstring) == "dstring");
+
+        // Basic qualified name
+        static assert(fqn!(Inner) == inner_name);
+
+        // Array types
+        static assert(fqn!(typeof(array)) == format("%s[]", inner_name));
+        static assert(fqn!(typeof(sarray)) == format("%s[16]", inner_name));
+        static assert(fqn!(typeof(aarray)) == format("%s[%s]", inner_name, inner_name));
+
+        // qualified key for AA
+        static assert(fqn!(typeof(qualAarray)) == format("const(%s[const(%s)])", inner_name, inner_name));
+
+        // Qualified composed data types
+        static assert(fqn!(typeof(data)) == format("shared(const(%s[string])[])", inner_name));
+
+        // Function types + function attributes
+        static assert(fqn!(typeof(func)) == format("const(%s[string])(ref %s, scope lazy string) ref", inner_name, inner_name));
+        static assert(fqn!(typeof(inoutFunc)) == format("inout(%s(inout(%s)))", inner_name, inner_name));
+        static assert(fqn!(typeof(deleg)) == format("const(%s delegate(double, string) nothrow @safe)", inner_name));
+        static assert(fqn!(typeof(inoutDeleg)) == "inout(int delegate(inout(int)) inout)");
+        static assert(fqn!(typeof(funcPtr)) == format("%s function(out double, string)", inner_name));
+        static assert(fqn!(typeof(cFuncPtr)) == format("extern(C) %s function(double, string)", inner_name));
+
+        // Delegate type with qualified function type 
+        static assert(fqn!(typeof(attrDeleg)) == format("shared(immutable(%s) "
+            "delegate(ref double, scope string) nothrow @trusted shared const)", inner_name));
+
+        // Variable argument function types
+        static assert(fqn!(typeof(cVarArg)) == "extern(C) void(int, ...)");
+        static assert(fqn!(typeof(dVarArg)) == "void(...)");
+        static assert(fqn!(typeof(dVarArg2)) == "void(int, ...)");
+        static assert(fqn!(typeof(typesafeVarArg)) == "void(int[] ...)");
+    }
 }
 
 /***
