@@ -2676,7 +2676,7 @@ template hasElaborateCopyConstructor(S)
 {
     static if(isStaticArray!S && S.length)
     {
-        enum bool hasElaborateCopyConstructor = hasElaborateCopyConstructor!(typeof(S[0]));
+        enum bool hasElaborateCopyConstructor = hasElaborateCopyConstructor!(typeof(S.init[0]));
     }
     else static if(is(S == struct))
     {
@@ -2771,7 +2771,7 @@ template hasElaborateDestructor(S)
 {
     static if(isStaticArray!S && S.length)
     {
-        enum bool hasElaborateDestructor = hasElaborateDestructor!(typeof(S[0]));
+        enum bool hasElaborateDestructor = hasElaborateDestructor!(typeof(S.init[0]));
     }
     else static if(is(S == struct))
     {
