@@ -5460,7 +5460,8 @@ Range findAdjacent(alias pred = "a == b", Range)(Range r)
             if (binaryFun!(pred)(r.front, ahead.front)) return r;
         }
     }
-    return ahead;
+    static if (!isInfinite!Range)
+        return ahead;
 }
 
 unittest
