@@ -1769,7 +1769,7 @@ deprecated("Please use std.string.leftJustify instead.") S ljustify(S)(S s, size
 S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
     if(isSomeString!S)
 {
-    alias typeof(S[0]) C;
+    alias typeof(s[0]) C;
 
     if(cast(dchar)(cast(C)fillChar) == fillChar)
     {
@@ -1810,7 +1810,7 @@ deprecated("Please use std.string.rightJustify instead.") S rjustify(S)(S s, siz
 S rightJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
     if(isSomeString!S)
 {
-    alias typeof(S[0]) C;
+    alias typeof(s[0]) C;
 
     if(cast(dchar)(cast(C)fillChar) == fillChar)
     {
@@ -1845,7 +1845,7 @@ S rightJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
 S center(S)(S s, size_t width, dchar fillChar = ' ') @trusted
     if(isSomeString!S)
 {
-    alias typeof(S[0]) C;
+    alias typeof(s[0]) C;
 
     if(cast(dchar)(cast(C)fillChar) == fillChar)
     {

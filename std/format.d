@@ -2172,7 +2172,7 @@ if (is(StringTypeOf!T) && !is(T == enum))
         try
         {
             // ignore other specifications and quote
-            auto app = appender!(typeof(T[0])[])();
+            auto app = appender!(typeof(val[0])[])();
             put(app, '\"');
             for (size_t i = 0; i < str.length; )
             {
