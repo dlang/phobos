@@ -5485,6 +5485,8 @@ unittest
     ReferenceForwardRange!int rfr = new ReferenceForwardRange!int([1, 2, 3, 2, 2, 3]);
     assert(equal(findAdjacent(rfr), [2, 2, 3]));
 
+    // Issue 9350
+    assert(!repeat(1).findAdjacent().empty);
 }
 
 // findAmong
