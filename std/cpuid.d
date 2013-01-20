@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
- * $(RED Scheduled for deprecation. Please use core.cpuid instead.)
+ * $(RED Deprecated. It will be removed in January 2013. Please use core.cpuid instead.)
  *
  * Identify the characteristics of the host CPU.
  *
@@ -45,9 +45,14 @@ Source:    $(PHOBOSSRC std/_cpuid.d)
  */
 module std.cpuid;
 
+pragma(msg, "std.cpuid has been deprecated. It will be removed in January 2013. " ~
+            "Please use core.cpuid instead.");
+
 import std.string;
 import std.conv;
 private import core.cpuid;
+
+deprecated:
 
 version(D_InlineAsm_X86)
 {
@@ -69,11 +74,16 @@ version(D_InlineAsm_X86)
         if (hyperThreading)     feats ~= "HTT";
 
         return format(
-            "Vendor string:    %s\n", vendor(),
-            "Processor string: %s\n", processor(),
-            "Signature:        Family=%d Model=%d Stepping=%d\n", family, model, stepping,
-            "Features:         %s\n", feats,
-            "Multithreading:   %d threads / %d cores\n", threadsPerCPU, coresPerCPU);
+            "Vendor string:    %s\n"~
+            "Processor string: %s\n"~
+            "Signature:        Family=%d Model=%d Stepping=%d\n"~
+            "Features:         %s\n"~
+            "Multithreading:   %d threads / %d cores\n",
+                vendor,
+                processor,
+                family, model, stepping,
+                feats,
+                threadsPerCPU, coresPerCPU);
 
     }
 
@@ -131,7 +141,7 @@ version(D_InlineAsm_X86)
 
     shared static this()
     {
-        switch (vendor())
+        switch (vendor)
         {
         case "GenuineIntel":
             manufac = INTEL;

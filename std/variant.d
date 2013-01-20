@@ -66,10 +66,8 @@
 module std.variant;
 
 import std.traits, std.c.string, std.typetuple, std.conv, std.exception;
-// version(unittest)
-// {
-    import std.exception, std.stdio;
-//}
+
+@trusted:
 
 private template maxSize(T...)
 {
@@ -185,7 +183,7 @@ private:
             apply }
 
     // state
-    sizediff_t function(OpID selector, ubyte[size]* store, void* data) fptr
+    ptrdiff_t function(OpID selector, ubyte[size]* store, void* data) fptr
         = &handler!(void);
     union
     {
@@ -197,7 +195,7 @@ private:
 
     // internals
     // Handler for an uninitialized value
-    static sizediff_t handler(A : void)(OpID selector, ubyte[size]*, void* parm)
+    static ptrdiff_t handler(A : void)(OpID selector, ubyte[size]*, void* parm)
     {
         switch (selector)
         {
@@ -213,7 +211,7 @@ private:
             auto rhs = cast(VariantN *) parm;
             return rhs.peek!(A)
                 ? 0 // all uninitialized are equal
-                : int.min; // uninitialized variant is not comparable otherwise
+                : ptrdiff_t.min; // uninitialized variant is not comparable otherwise
         case OpID.toString:
             string * target = cast(string*) parm;
             *target = "<Uninitialized VariantN>";
@@ -232,7 +230,7 @@ private:
     }
 
     // Handler for all of a type's operations
-    static sizediff_t handler(A)(OpID selector, ubyte[size]* pStore, void* parm)
+    static ptrdiff_t handler(A)(OpID selector, ubyte[size]* pStore, void* parm)
     {
         static A* getPtr(void* untyped)
         {
@@ -324,17 +322,23 @@ private:
                     {
                         return *zis < *rhsPA ? -1 : 1;
                     }
+                    else
+                    {
+                        // Not equal, and type does not support ordering
+                        // comparisons.
+                        return ptrdiff_t.min;
+                    }
                 }
                 else
                 {
-                    // type doesn't support ordering comparisons
-                    return int.min;
+                    // Type does not support comparisons at all.
+                    return ptrdiff_t.min;
                 }
             } else if (rhsType == typeid(void))
             {
                 // No support for ordering comparisons with
                 // uninitialized vars
-                return int.min;
+                return ptrdiff_t.min;
             }
             VariantN temp;
             // Do I convert to rhs?
@@ -362,14 +366,20 @@ private:
                     {
                         return *zis < *rhsPA ? -1 : 1;
                     }
+                    else
+                    {
+                        // Not equal, and type does not support ordering
+                        // comparisons.
+                        return ptrdiff_t.min;
+                    }
                 }
                 else
                 {
-                    // type doesn't support ordering comparisons
-                    return int.min;
+                    // Type does not support comparisons at all.
+                    return ptrdiff_t.min;
                 }
             }
-            return int.min; // dunno
+            return ptrdiff_t.min; // dunno
         case OpID.toString:
             auto target = cast(string*) parm;
             static if (is(typeof(to!(string)(*zis))))
@@ -560,7 +570,7 @@ public:
      * ----
      */
 
-    @property bool hasValue() const
+    @property bool hasValue() const pure nothrow
     {
         // @@@BUG@@@ in compiler, the cast shouldn't be needed
         return cast(typeof(&handler!(void))) fptr != &handler!(void);
@@ -608,7 +618,7 @@ public:
      * $(LINK2 std_traits.html#ImplicitConversionTargets,ImplicitConversionTargets).
      */
 
-    @property bool convertsTo(T)()
+    @property bool convertsTo(T)() const
     {
         TypeInfo info = typeid(T);
         return fptr(OpID.testConversion, null, &info) == 0;
@@ -694,7 +704,7 @@ public:
     {
         static if (isNumeric!(T))
         {
-            if (convertsTo!real())
+            if (convertsTo!real)
             {
                 // maybe optimize this fella; handle ints separately
                 return to!T(get!real);
@@ -715,7 +725,7 @@ public:
 
             else
             {
-                enforce(false, text("Type ", type(), " does not convert to ",
+                enforce(false, text("Type ", type, " does not convert to ",
                                 typeid(T)));
                 assert(0);
             }
@@ -763,7 +773,7 @@ public:
         static if (is(T == VariantN))
             alias rhs temp;
         else
-            auto temp = Variant(rhs);
+            auto temp = VariantN(rhs);
         return fptr(OpID.compare, &store, &temp) == 0;
     }
 
@@ -778,9 +788,9 @@ public:
         static if (is(T == VariantN))
             alias rhs temp;
         else
-            auto temp = Variant(rhs);
+            auto temp = VariantN(rhs);
         auto result = fptr(OpID.compare, &store, &temp);
-        if (result == sizediff_t.min)
+        if (result == ptrdiff_t.min)
         {
             throw new VariantException(type, temp.type);
         }
@@ -811,6 +821,8 @@ public:
                 result = mixin("get!(ulong) " ~ op ~ " other.get!(ulong)");
             else if (convertsTo!(long) && other.convertsTo!(long))
                 result = mixin("get!(long) " ~ op ~ " other.get!(long)");
+            else if (convertsTo!(float) && other.convertsTo!(float))
+                result = mixin("get!(float) " ~ op ~ " other.get!(float)");
             else if (convertsTo!(double) && other.convertsTo!(double))
                 result = mixin("get!(double) " ~ op ~ " other.get!(double)");
             else
@@ -827,6 +839,8 @@ public:
                 result = mixin("get!(ulong) " ~ op ~ " other");
             else if (is(typeof(T.max) : long) && T.min < 0 && convertsTo!(long))
                 result = mixin("get!(long) " ~ op ~ " other");
+            else if (is(T : float) && convertsTo!(float))
+                result = mixin("get!(float) " ~ op ~ " other");
             else if (is(T : double) && convertsTo!(double))
                 result = mixin("get!(double) " ~ op ~ " other");
             else
@@ -1041,7 +1055,7 @@ public:
     int opApply(Delegate)(scope Delegate dg) if (is(Delegate == delegate))
     {
         alias ParameterTypeTuple!(Delegate)[0] A;
-        if (type() == typeid(A[]))
+        if (type == typeid(A[]))
         {
             auto arr = get!(A[]);
             foreach (ref e; arr)
@@ -1063,12 +1077,32 @@ public:
         }
         else
         {
-            enforce(false, text("Variant type ", type(),
+            enforce(false, text("Variant type ", type,
                             " not iterable with values of type ",
                             A.stringof));
         }
         return 0;
     }
+}
+
+//Issue# 8195
+unittest
+{
+    struct S
+    {
+        int a;
+        long b;
+        string c;
+        real d;
+        bool e;
+    }
+
+    static assert(S.sizeof >= Variant.sizeof);
+    alias TypeTuple!(string, int, S) Types;
+    alias VariantN!(maxSize!Types, Types) MyVariant;
+
+    auto v = MyVariant(S.init);
+    assert(v == S.init);
 }
 
 /**
@@ -1463,7 +1497,7 @@ unittest
 unittest
 {
     const x = Variant(42);
-    auto y1 = x.get!(const int)();
+    auto y1 = x.get!(const int);
     // @@@BUG@@@
     //auto y2 = x.get!(immutable int)();
 }
@@ -1509,3 +1543,328 @@ unittest
     Variant v;
     v = null;
 }
+
+// Ordering comparisons of incompatible types, e.g. issue 7990.
+unittest
+{
+    assertThrown!VariantException(Variant(3) < "a");
+    assertThrown!VariantException("a" < Variant(3));
+    assertThrown!VariantException(Variant(3) < Variant("a"));
+
+    assertThrown!VariantException(Variant.init < Variant(3));
+    assertThrown!VariantException(Variant(3) < Variant.init);
+}
+
+// Handling of unordered types, e.g. issue 9043.
+unittest
+{
+    static struct A { int a; }
+
+    assert(Variant(A(3)) != A(4));
+
+    assertThrown!VariantException(Variant(A(3)) < A(4));
+    assertThrown!VariantException(A(3) < Variant(A(4)));
+    assertThrown!VariantException(Variant(A(3)) < Variant(A(4)));
+}
+
+/**
+ * Applies a delegate or function to the given Algebraic depending on the held type,
+ * ensuring that all types are handled by the visiting functions.
+ *
+ * The delegate or function having the currently held value as parameter is called
+ * with $(D_PARM variant)'s current value. Visiting handlers are passed
+ * in the template parameter list.
+ * It is statically ensured that all types of
+ * $(D_PARAM variant) are handled accross all handlers.
+ * $(D_PARAM visit) allows delegates and static functions to be passed
+ * as parameters.
+ *
+ * If a function without parameters is specified, this function is called
+ * when variant doesn't hold a value. Exactly one parameter-less function
+ * is allowed.
+ *
+ * Duplicate overloads matching the same type in one of the visitors are disallowed.
+ *
+ * Example:
+ * -----------------------
+ *   Algebraic!(int, string) variant;
+ *
+ *   variant = 10;
+ *   assert(variant.visit!((string s) => cast(int)s.length,
+ *                         (int i)    => i)()
+ *                         == 10);
+ *   variant = "string";
+ *   assert(variant.visit!((int i) => return i,
+ *                         (string s) => cast(int)s.length)()
+ *                         == 6);
+ *
+ *   // Error function usage
+ *   Algebraic!(int, string) emptyVar;
+ *   assert(variant.visit!((string s) => cast(int)s.length,
+ *                         (int i)    => i,
+ *                         () => -1)()
+ *                         == -1);
+ * ----------------------
+ * Returns: The return type of visit is deduced from the visiting functions and must be
+ * the same accross all overloads.
+ * Throws: If no parameter-less, error function is specified:
+ * $(D_PARAM VariantException) if $(D_PARAM variant) doesn't hold a value.
+ */
+template visit(Handler ...)
+    if (Handler.length > 0)
+{
+    auto visit(VariantType)(VariantType variant)
+        if (isAlgebraic!VariantType)
+    {
+        return visitImpl!(true, VariantType, Handler)(variant);
+    }
+}
+
+unittest
+{
+    Algebraic!(size_t, string) variant;
+
+    // not all handled check
+    static assert(!__traits(compiles, variant.visit!((size_t i){ })() ));
+
+    variant = cast(size_t)10;
+    auto which = 0;
+    variant.visit!( (string s) => which = 1,
+                    (size_t i) => which = 0
+                    )();
+
+    // integer overload was called
+    assert(which == 0);
+
+    // mustn't compile as generic Variant not supported
+    Variant v;
+    static assert(!__traits(compiles, v.visit!((string s) => which = 1,
+                                               (size_t i) => which = 0
+                                                )()
+                                                ));
+
+    static size_t func(string s) {
+        return s.length;
+    }
+
+    variant = "test";
+    assert( 4 == variant.visit!(func,
+                                (size_t i) => i
+                                )());
+
+    Algebraic!(int, float, string) variant2 = 5.0f;
+    // Shouldn' t compile as float not handled by visitor.
+    static assert(!__traits(compiles, variant2.visit!(
+                        (int) {},
+                        (string) {})()));
+
+    Algebraic!(size_t, string, float) variant3;
+    variant3 = 10.0f;
+    auto floatVisited = false;
+
+    assert(variant3.visit!(
+                 (float f) { floatVisited = true; return cast(size_t)f; },
+                 func,
+                 (size_t i) { return i; }
+                 )() == 10);
+    assert(floatVisited == true);
+
+    Algebraic!(float, string) variant4;
+
+    assert(variant4.visit!(func, (float f) => cast(size_t)f, () => size_t.max)() == size_t.max);
+
+    // double error func check
+    static assert(!__traits(compiles,
+                            visit!(() => size_t.max, func, (float f) => cast(size_t)f, () => size_t.max)(variant4))
+                 );
+}
+
+/**
+ * Behaves as $(D_PARAM visit) but doesn't enforce that all types are handled
+ * by the visiting functions.
+ *
+ * If a parameter-less function is specified it is called when
+ * either $(D_PARAM variant) doesn't hold a value or holds a type
+ * which isn't handled by the visiting functions.
+ *
+ * Example:
+ * -----------------------
+ *   Algebraic!(int, string) variant;
+ *
+ *   variant = 10;
+ *   auto which = -1;
+ *   variant.tryVisit!((int i) { which = 0; })();
+ *   assert(which = 0);
+ *
+ *   // Error function usage
+ *   variant = "test";
+ *   variant.tryVisit!((int i) { which = 0; },
+ *                     ()      { which = -100; })();
+ *   assert(which == -100);
+ * ----------------------
+ *
+ * Returns: The return type of tryVisit is deduced from the visiting functions and must be
+ * the same accross all overloads.
+ * Throws: If no parameter-less, error function is specified: $(D_PARAM VariantException) if
+ *         $(D_PARAM variant) doesn't hold a value or
+ *         if $(D_PARAM variant) holds a value which isn't handled by the visiting
+ *         functions.
+ */
+template tryVisit(Handler ...)
+    if (Handler.length > 0)
+{
+    auto tryVisit(VariantType)(VariantType variant)
+        if (isAlgebraic!VariantType)
+    {
+        return visitImpl!(false, VariantType, Handler)(variant);
+    }
+}
+
+unittest
+{
+    Algebraic!(int, string) variant;
+
+    variant = 10;
+    auto which = -1;
+    variant.tryVisit!((int i){ which = 0; })();
+
+    assert(which == 0);
+
+    variant = "test";
+
+    assertThrown!VariantException(variant.tryVisit!((int i) { which = 0; })());
+
+    void errorfunc()
+    {
+        which = -1;
+    }
+
+    variant.tryVisit!((int i) { which = 0; }, errorfunc)();
+
+    assert(which == -1);
+}
+
+private template isAlgebraic(Type)
+{
+    static if (is(Type _ == VariantN!T, T...))
+        enum isAlgebraic = T.length >= 2; // T[0] == maxDataSize, T[1..$] == AllowedTypesX
+    else
+        enum isAlgebraic = false;
+}
+
+unittest
+{
+    static assert(!isAlgebraic!(Variant));
+    static assert( isAlgebraic!(Algebraic!(string)));
+    static assert( isAlgebraic!(Algebraic!(int, int[])));
+}
+
+private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant)
+    if (isAlgebraic!VariantType && Handler.length > 0)
+{
+    alias VariantType.AllowedTypes AllowedTypes;
+
+
+    /**
+     * Returns: Struct where $(D_PARAM indices)  is an array which
+     * contains at the n-th position the index in Handler which takes the
+     * n-th type of AllowedTypes. If an Handler doesn't match an
+     * AllowedType, -1 is set. If a function in the delegates doesn't
+     * have parameters, the field $(D_PARAM exceptionFuncIdx) is set;
+     * otherwise it's -1.
+     */
+    auto visitGetOverloadMap()
+    {
+        struct Result {
+            int[AllowedTypes.length] indices;
+            int exceptionFuncIdx = -1;
+        }
+
+        Result result;
+
+        foreach(tidx, T; AllowedTypes)
+        {
+            bool added = false;
+            foreach(dgidx, dg; Handler)
+            {
+                // Handle normal function objects
+                static if (isSomeFunction!dg)
+                {
+                    alias ParameterTypeTuple!dg Params;
+                    static if (Params.length == 0)
+                    {
+                        // Just check exception functions in the first
+                        // inner iteration (over delegates)
+                        if (tidx > 0)
+                            continue;
+                        else
+                        {
+                            if (result.exceptionFuncIdx != -1)
+                                assert(false, "duplicate parameter-less (error-)function specified");
+                            result.exceptionFuncIdx = dgidx;
+                        }
+                    }
+                    else if (is(Unqual!(Params[0]) == T))
+                    {
+                        if (added)
+                            assert(false, "duplicate overload specified for type '" ~ T.stringof ~ "'");
+
+                        added = true;
+                        result.indices[tidx] = dgidx;
+                    }
+                }
+                // Handle composite visitors with opCall overloads
+                else
+                {
+                    static assert(false, dg.stringof ~ " is not a function or delegate");
+                }
+            }
+
+            if (!added)
+                result.indices[tidx] = -1;
+        }
+
+        return result;
+    }
+
+    enum HandlerOverloadMap = visitGetOverloadMap();
+
+    if (!variant.hasValue)
+    {
+        // Call the exception function. The HandlerOverloadMap
+        // will have its exceptionFuncIdx field set to value != -1 if an
+        // exception function has been specified; otherwise we just through an exception.
+        static if (HandlerOverloadMap.exceptionFuncIdx != -1)
+            return Handler[ HandlerOverloadMap.exceptionFuncIdx ]();
+        else
+            throw new VariantException("variant must hold a value before being visited.");
+    }
+
+    foreach(idx, T; AllowedTypes)
+    {
+        if (T* ptr = variant.peek!T)
+        {
+            enum dgIdx = HandlerOverloadMap.indices[idx];
+
+            static if (dgIdx == -1)
+            {
+                static if (Strict)
+                    static assert(false, "overload for type '" ~ T.stringof ~ "' hasn't been specified");
+                else
+                {
+                    static if (HandlerOverloadMap.exceptionFuncIdx != -1)
+                        return Handler[ HandlerOverloadMap.exceptionFuncIdx ]();
+                    else
+                        throw new VariantException("variant holds value of type '" ~ T.stringof ~ "' but no visitor has been provided");
+                }
+            }
+            else
+            {
+                return Handler[ dgIdx ](*ptr);
+            }
+        }
+    }
+
+    assert(false);
+}
+

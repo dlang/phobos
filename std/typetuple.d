@@ -8,6 +8,10 @@
  * type tuple. TL[$(I lwr) .. $(I upr)] returns a new type
  * list that is a slice of the old one.
  *
+ * Several templates in this module use or operate on eponymous templates that
+ * take a single argument and evaluate to a boolean constant. Such templates
+ * are referred to as $(I template predicates).
+ *
  * References:
  *  Based on ideas in Table 3.1 from
  *  $(LINK2 http://amazon.com/exec/obidos/ASIN/0201704315/ref=ase_classicempire/102-2957199-2585768,
@@ -18,7 +22,9 @@
  *
  * Copyright: Copyright Digital Mars 2005 - 2009.
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
- * Authors:   $(WEB digitalmars.com, Walter Bright)
+ * Authors:
+ *     $(WEB digitalmars.com, Walter Bright),
+ *     $(WEB klickverbot.at, David Nadlinger)
  * Source:    $(PHOBOSSRC std/_typetuple.d)
  */
 /*          Copyright Digital Mars 2005 - 2009.
@@ -553,7 +559,11 @@ unittest
 }
 
 /**
-Evaluates to $(D F!(T[0]) && F!(T[1]) && ... && F!(T[$ - 1])).
+Tests whether all given items satisfy a template predicate, i.e. evaluates to
+$(D F!(T[0]) && F!(T[1]) && ... && F!(T[$ - 1])).
+
+Evaluation is $(I not) short-circuited if a false result is encountered; the
+template predicate must be instantiable with all the given items.
 
 Example:
 ----
@@ -584,7 +594,11 @@ unittest
 }
 
 /**
-Evaluates to $(D F!(T[0]) || F!(T[1]) || ... || F!(T[$ - 1])).
+Tests whether all given items satisfy a template predicate, i.e. evaluates to
+$(D F!(T[0]) || F!(T[1]) || ... || F!(T[$ - 1])).
+
+Evaluation is $(I not) short-circuited if a true result is encountered; the
+template predicate must be instantiable with all the given items.
 
 Example:
 ----
@@ -614,31 +628,267 @@ unittest
     static assert(anySatisfy!(isIntegral, int, double));
 }
 
+
+/++
+    Filters a $(D TypeTuple) using a template predicate. Returns a
+    $(D TypeTuple) of the elements which satisfy the predicate.
+
+    Examples:
+--------------------
+static assert(is(Filter!(isNarrowString, string, wstring,
+                         dchar[], char[], dstring, int) ==
+                 TypeTuple!(string, wstring, char[])));
+static assert(is(Filter!(isUnsigned, int, byte, ubyte,
+                         dstring, dchar, uint, ulong) ==
+                 TypeTuple!(ubyte, uint, ulong)));
+--------------------
+  +/
+template Filter(alias pred, TList...)
+{
+    static if(TList.length == 0)
+        alias TypeTuple!() Filter;
+    else static if(pred!(TList[0]))
+        alias TypeTuple!(TList[0], Filter!(pred, TList[1 .. $])) Filter;
+    else
+        alias Filter!(pred, TList[1 .. $]) Filter;
+}
+
+//Verify Examples
+unittest
+{
+    static assert(is(Filter!(isNarrowString, string, wstring,
+                             dchar[], char[], dstring, int) ==
+                     TypeTuple!(string, wstring, char[])));
+    static assert(is(Filter!(isUnsigned, int, byte, ubyte,
+                             dstring, dchar, uint, ulong) ==
+                     TypeTuple!(ubyte, uint, ulong)));
+}
+
+unittest
+{
+    static assert(is(Filter!(isPointer, int, void*, char[], int*) == TypeTuple!(void*, int*)));
+    static assert(is(Filter!isPointer == TypeTuple!()));
+}
+
+
+// Used in template predicate unit tests below.
+private version (unittest)
+{
+    template testAlways(T...)
+    {
+        enum testAlways = true;
+    }
+
+    template testNever(T...)
+    {
+        enum testNever = false;
+    }
+
+    template testError(T...)
+    {
+        static assert(false, "Should never be instantiated.");
+    }
+}
+
+
+/**
+ * Negates the passed template predicate.
+ *
+ * Examples:
+ * ---
+ * alias templateNot!isPointer isNoPointer;
+ * static assert(!isNoPointer!(int*));
+ * static assert(allSatisfy!(isNoPointer, string, char, float));
+ * ---
+ */
+template templateNot(alias pred)
+{
+    template templateNot(T...)
+    {
+        enum templateNot = !pred!T;
+    }
+}
+
+// Verify examples.
+unittest
+{
+    import std.traits;
+
+    alias templateNot!isPointer isNoPointer;
+    static assert(!isNoPointer!(int*));
+    static assert(allSatisfy!(isNoPointer, string, char, float));
+}
+
+unittest
+{
+    foreach (T; TypeTuple!(int, staticMap, 42))
+    {
+        static assert(!Instantiate!(templateNot!testAlways, T));
+        static assert(Instantiate!(templateNot!testNever, T));
+    }
+}
+
+
+/**
+ * Combines several template predicates using logical AND, i.e. constructs a new
+ * predicate which evaluates to true for a given input T if and only if all of
+ * the passed predicates are true for T.
+ *
+ * The predicates are evaluated from left to right, aborting evaluation in a
+ * short-cut manner if a false result is encountered, in which case the latter
+ * instantiations do not need to compile.
+ *
+ * Examples:
+ * ---
+ * alias templateAnd!(isNumeric, templateNot!isUnsigned) storesNegativeNumbers;
+ * static assert(storesNegativeNumbers!int);
+ * static assert(!storesNegativeNumbers!string && !storesNegativeNumbers!uint);
+ *
+ * // An empty list of predicates always yields true.
+ * alias templateAnd!() alwaysTrue;
+ * static assert(alwaysTrue!int);
+ * ---
+ */
+template templateAnd(Preds...)
+{
+    template templateAnd(T...)
+    {
+        static if (Preds.length == 0)
+        {
+            enum templateAnd = true;
+        }
+        else
+        {
+            static if (Instantiate!(Preds[0], T))
+                alias Instantiate!(.templateAnd!(Preds[1 .. $]), T) templateAnd;
+            else
+                enum templateAnd = false;
+        }
+    }
+}
+
+// Verify examples.
+unittest
+{
+    alias templateAnd!(isNumeric, templateNot!isUnsigned) storesNegativeNumbers;
+    static assert(storesNegativeNumbers!int);
+    static assert(!storesNegativeNumbers!string && !storesNegativeNumbers!uint);
+
+    // An empty list of predicates always yields true.
+    alias templateAnd!() alwaysTrue;
+    static assert(alwaysTrue!int);
+}
+
+unittest
+{
+    foreach (T; TypeTuple!(int, staticMap, 42))
+    {
+        static assert(Instantiate!(templateAnd!(), T));
+        static assert(Instantiate!(templateAnd!(testAlways), T));
+        static assert(Instantiate!(templateAnd!(testAlways, testAlways), T));
+        static assert(!Instantiate!(templateAnd!(testNever), T));
+        static assert(!Instantiate!(templateAnd!(testAlways, testNever), T));
+        static assert(!Instantiate!(templateAnd!(testNever, testAlways), T));
+
+        static assert(!Instantiate!(templateAnd!(testNever, testError), T));
+        static assert(!is(typeof(Instantiate!(templateAnd!(testAlways, testError), T))));
+    }
+}
+
+
+/**
+ * Combines several template predicates using logical OR, i.e. constructs a new
+ * predicate which evaluates to true for a given input T if and only at least
+ * one of the passed predicates is true for T.
+ *
+ * The predicates are evaluated from left to right, aborting evaluation in a
+ * short-cut manner if a true result is encountered, in which case the latter
+ * instantiations do not need to compile.
+ *
+ * Examples:
+ * ---
+ * alias templateOr!(isPointer, isUnsigned) isPtrOrUnsigned;
+ * static assert(isPtrOrUnsigned!uint && isPtrOrUnsigned!(short*));
+ * static assert(!isPtrOrUnsigned!int && !isPtrOrUnsigned!string);
+ *
+ * // An empty list of predicates never yields true.
+ * alias templateOr!() alwaysFalse;
+ * static assert(!alwaysFalse!int);
+ * ---
+ */
+template templateOr(Preds...)
+{
+    template templateOr(T...)
+    {
+        static if (Preds.length == 0)
+        {
+            enum templateOr = false;
+        }
+        else
+        {
+            static if (Instantiate!(Preds[0], T))
+                enum templateOr = true;
+            else
+                alias Instantiate!(.templateOr!(Preds[1 .. $]), T) templateOr;
+        }
+    }
+}
+
+// Verify examples.
+unittest
+{
+    alias templateOr!(isPointer, isUnsigned) isPtrOrUnsigned;
+    static assert(isPtrOrUnsigned!uint && isPtrOrUnsigned!(short*));
+    static assert(!isPtrOrUnsigned!int && !isPtrOrUnsigned!string);
+
+    // An empty list of predicates never yields true.
+    alias templateOr!() alwaysFalse;
+    static assert(!alwaysFalse!int);
+}
+
+unittest
+{
+    foreach (T; TypeTuple!(int, staticMap, 42))
+    {
+        static assert(Instantiate!(templateOr!(testAlways), T));
+        static assert(Instantiate!(templateOr!(testAlways, testAlways), T));
+        static assert(Instantiate!(templateOr!(testAlways, testNever), T));
+        static assert(Instantiate!(templateOr!(testNever, testAlways), T));
+        static assert(!Instantiate!(templateOr!(), T));
+        static assert(!Instantiate!(templateOr!(testNever), T));
+
+        static assert(Instantiate!(templateOr!(testAlways, testError), T));
+        static assert(Instantiate!(templateOr!(testNever, testAlways, testError), T));
+        // DMD @@BUG@@: Assertion fails for int, seems like a error gagging
+        // problem. The bug goes away when removing some of the other template
+        // instantiations in the module.
+        // static assert(!is(typeof(Instantiate!(templateOr!(testNever, testError), T))));
+    }
+}
+
+
 // : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : //
-private:
+package:
 
 /*
- * [internal] With the builtin alias declaration, you cannot declare
+ * With the builtin alias declaration, you cannot declare
  * aliases of, for example, literal values. You can alias anything
  * including literal values via this template.
  */
-private
+// symbols and literal values
+template Alias(alias a)
 {
-    // symbols and literal values
-    template Alias(alias a)
-    {
-        static if (__traits(compiles, { alias a x; }))
-            alias a Alias;
-        else static if (__traits(compiles, { enum x = a; }))
-            enum Alias = a;
-        else
-            static assert(0, "Cannot alias " ~ a.stringof);
-    }
-    // types and tuples
-    template Alias(a...)
-    {
+    static if (__traits(compiles, { alias a x; }))
         alias a Alias;
-    }
+    else static if (__traits(compiles, { enum x = a; }))
+        enum Alias = a;
+    else
+        static assert(0, "Cannot alias " ~ a.stringof);
+}
+// types and tuples
+template Alias(a...)
+{
+    alias a Alias;
 }
 
 unittest
@@ -650,6 +900,9 @@ unittest
     static assert(__traits(compiles, { alias Alias!(1,abc,int) a; }));
 }
 
+
+// : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : //
+private:
 
 /*
  * [internal] Returns true if a and b are the same thing, or false if
@@ -764,3 +1017,16 @@ unittest
     static assert(!Pack!(1, int, "abc").equals!(1, int, "cba"));
 }
 
+/*
+ * Instantiates the given template with the given list of parameters.
+ *
+ * Used to work around syntactic limitations of D with regard to instantiating
+ * a template from a type tuple (e.g. T[0]!(...) is not valid) or a template
+ * returning another template (e.g. Foo!(Bar)!(Baz) is not allowed).
+ */
+// TODO: Consider publicly exposing this, maybe even if only for better
+// understandability of error messages.
+template Instantiate(alias Template, Params...)
+{
+    alias Template!Params Instantiate;
+}

@@ -687,7 +687,7 @@ unittest
 
         @property auto empty()
         {
-            return text.empty();
+            return text.empty;
         }
 
         auto popFront()
@@ -1027,6 +1027,7 @@ public:
                         {
                             if(indices[ti] == colIndex)
                             {
+                                static if (!isSomeString!ToType) skipWS(colData);
                                 recordContent.tupleof[ti] = to!ToType(colData);
                             }
                         }
@@ -1036,7 +1037,10 @@ public:
                         foreach(ti, ToType; FieldTypeTuple!(Contents))
                         {
                             if(ti == colIndex)
+                            {
+                                static if (!isSomeString!ToType) skipWS(colData);
                                 recordContent.tupleof[ti] = to!ToType(colData);
+                            }
                         }
                     }
                     recordRange.popFront();
@@ -1258,7 +1262,9 @@ public:
         if(skipNum)
             prime(skipNum);
 
-        try curContentsoken = to!Contents(_front.data);
+        auto data = _front.data;
+        static if (!isSomeString!Contents) skipWS(data);
+        try curContentsoken = to!Contents(data);
         catch(ConvException e)
         {
             throw new CSVException(e.msg, _input.row, _input.col, e);
@@ -1549,7 +1555,6 @@ unittest
     assert(a.data == " two \"quoted\" end");
 }
 
-
 // Test modifying token delimiter
 unittest
 {
@@ -1576,4 +1581,37 @@ unittest
     a.shrinkTo(0);
     csvNextToken(str,a, '|','/');
     assert(a.data == ""d);
+}
+
+// Bugzilla 8908
+unittest
+{
+    string csv = `  1.0, 2.0, 3.0
+                    4.0, 5.0, 6.0`;
+
+    static struct Data { real a, b, c; }
+    size_t i = 0;
+    foreach (data; csvReader!Data(csv)) with (data)
+    {
+        int[] row = [cast(int)a, cast(int)b, cast(int)c];
+        if (i == 0)
+            assert(row == [1, 2, 3]);
+        else
+            assert(row == [4, 5, 6]);
+        ++i;
+    }
+
+    i = 0;
+    foreach (data; csvReader!real(csv))
+    {
+        auto a = data.front;    data.popFront();
+        auto b = data.front;    data.popFront();
+        auto c = data.front;
+        int[] row = [cast(int)a, cast(int)b, cast(int)c];
+        if (i == 0)
+            assert(row == [1, 2, 3]);
+        else
+            assert(row == [4, 5, 6]);
+        ++i;
+    }
 }

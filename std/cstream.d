@@ -1,6 +1,10 @@
 // Written in the D programming language.
 
 /**
+ * $(RED Warning: This module is considered out-dated and not up to Phobos'
+ *       current standards. It will remain until we have a suitable replacement,
+ *       but be aware that it will not remain long term.)
+ *
  * The std.cstream module bridges std.c.stdio (or std.stdio) and std.stream.
  * Both std.c.stdio and std.stream are publicly imported by std.cstream.
  *
@@ -22,6 +26,8 @@ module std.cstream;
 public import std.stream;
 public import std.c.stdio;
 version(unittest) import std.stdio;
+
+import std.algorithm;
 
 /**
  * A Stream wrapper for a C file of type FILE*.
@@ -154,9 +160,9 @@ class CFile : Stream {
     file.write(i);
     // string#1 + string#2 + int should give exacly that
     version (Windows)
-        assert(file.position() == 19 + 13 + 4);
+        assert(file.position == 19 + 13 + 4);
     version (Posix)
-        assert(file.position() == 18 + 13 + 4);
+        assert(file.position == 18 + 13 + 4);
     file.close();
     // no operations are allowed when file is closed
     assert(!file.readable && !file.writeable && !file.seekable);
@@ -168,21 +174,21 @@ class CFile : Stream {
     auto exp = "Testing stream.d:";
     assert(line[0] == 'T');
     assert(line.length == exp.length);
-    assert(!.std.string.cmp(line, "Testing stream.d:"));
+    assert(!std.algorithm.cmp(line, "Testing stream.d:"));
     // jump over "Hello, "
     file.seek(7, SeekPos.Current);
     version (Windows)
-      assert(file.position() == 19 + 7);
+      assert(file.position == 19 + 7);
     version (Posix)
-      assert(file.position() == 18 + 7);
-    assert(!.std.string.cmp(file.readString(6), "world!"));
+      assert(file.position == 18 + 7);
+    assert(!std.algorithm.cmp(file.readString(6), "world!"));
     i = 0; file.read(i);
     assert(i == 666);
     // string#1 + string#2 + int should give exacly that
     version (Windows)
-      assert(file.position() == 19 + 13 + 4);
+      assert(file.position == 19 + 13 + 4);
     version (Posix)
-      assert(file.position() == 18 + 13 + 4);
+      assert(file.position == 18 + 13 + 4);
     // we must be at the end of file
     file.close();
     f = fopen("stream.txt","w+");

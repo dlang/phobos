@@ -171,12 +171,20 @@ version(unittest)
     // Run unit test with the PHOBOS_TEST_ALLOW_NET=1 set in order to
     // allow net traffic
     import std.stdio;
-    import std.c.stdlib;
     import std.range;
-    enum testUrl1 = "http://d-lang.appspot.com/testUrl1";
-    enum testUrl2 = "http://d-lang.appspot.com/testUrl2";
+    import std.process : environment;
+    import std.file : tempDir;
+    import std.path : buildPath;
+
+    // Source code for the test service is available at
+    // https://github.com/jcd/d-lang-testservice
+    enum testService = "d-lang.appspot.com";
+
+    enum testUrl1 = "http://"~testService~"/testUrl1";
+    enum testUrl2 = "http://"~testService~"/testUrl2";
     enum testUrl3 = "ftp://ftp.digitalmars.com/sieve.ds";
-    enum testUrl4 = "d-lang.appspot.com/testUrl1";
+    enum testUrl4 = testService~"/testUrl1";
+    enum testUrl5 = "http://"~testService~"/testUrl3";
 }
 version(StdDdoc) import std.stdio;
 
@@ -266,8 +274,8 @@ void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn co
 unittest
 {
     if (!netAllowed()) return;
-    download("ftp.digitalmars.com/sieve.ds", "/tmp/downloaded-ftp-file");
-    download("d-lang.appspot.com/testUrl1", "/tmp/downloaded-http-file");
+    download("ftp.digitalmars.com/sieve.ds", buildPath(tempDir(), "downloaded-ftp-file"));
+    download("d-lang.appspot.com/testUrl1", buildPath(tempDir(), "downloaded-http-file"));
 }
 
 /** Upload file from local files system using the HTTP or FTP protocol.
@@ -322,8 +330,8 @@ void upload(Conn = AutoProtocol)(string loadFromPath, const(char)[] url, Conn co
 unittest
 {
     if (!netAllowed()) return;
-    //    upload("/tmp/downloaded-ftp-file", "ftp.digitalmars.com/sieve.ds");
-    upload("/tmp/downloaded-http-file", "d-lang.appspot.com/testUrl2");
+    //    upload(buildPath(tempDir(), "downloaded-ftp-file"), "ftp.digitalmars.com/sieve.ds");
+    upload(buildPath(tempDir(), "downloaded-http-file"), "d-lang.appspot.com/testUrl2");
 }
 
 /** HTTP/FTP get content.
@@ -418,9 +426,29 @@ if (is(T == char) || is(T == ubyte))
 unittest
 {
     if (!netAllowed()) return;
-    auto res = post(testUrl2, "Hello world");
-    assert(res == "Hello world",
-           "put!HTTP() returns unexpected content " ~ res);
+
+    {
+        string data = "Hello world";
+        auto res = post(testUrl2, data);
+        assert(res == data,
+               "post!HTTP() returns unexpected content " ~ res);
+    }
+
+    {
+        ubyte[] data;
+        foreach (n; 0..256)
+            data ~= cast(ubyte)n;
+        auto res = post!ubyte(testUrl2, data);
+        assert(res == data,
+               "post!HTTP() with binary data returns unexpected content (" ~ text(res.length) ~ " bytes)");
+    }
+
+    {
+        string data = "Hello world";
+        auto res = post(testUrl5, data);
+        assert(res == data,
+               "post!HTTP() returns unexpected content after redirect " ~ res);
+    }
 }
 
 
@@ -695,13 +723,27 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
         (client.method == HTTP.Method.post || client.method == HTTP.Method.put))
     {
         client.contentLength = sendData.length;
+        auto remainingData = sendData;
         client.onSend = delegate size_t(void[] buf)
         {
-            size_t minLen = min(buf.length, sendData.length);
+            size_t minLen = min(buf.length, remainingData.length);
             if (minLen == 0) return 0;
-            buf[0..minLen] = sendData[0..minLen];
-            sendData = sendData[minLen..$];
+            buf[0..minLen] = remainingData[0..minLen];
+            remainingData = remainingData[minLen..$];
             return minLen;
+        };
+        client.handle.onSeek = delegate(long offset, CurlSeekPos mode)
+        {
+            switch (mode)
+            {
+                case CurlSeekPos.set:
+                    remainingData = sendData[cast(size_t)offset..$];
+                    return CurlSeek.ok;
+                default:
+                    // As of curl 7.18.0, libcurl will not pass
+                    // anything other than CurlSeekPos.set.
+                    return CurlSeek.cantseek;
+            }
         };
     }
 
@@ -935,7 +977,12 @@ unittest
 {
     if (!netAllowed()) return;
     auto res = byLine(testUrl1);
-    auto line = res.front();
+    auto line = res.front;
+    assert(line == "Hello world",
+           "byLine!HTTP() returns unexpected content: " ~ line);
+
+    auto res2 = byLine(testUrl1, KeepTerminator.no, '\n', HTTP());
+    line = res2.front;
     assert(line == "Hello world",
            "byLine!HTTP() returns unexpected content: " ~ line);
 }
@@ -1000,11 +1047,26 @@ auto byChunk(Conn = AutoProtocol)
     return SyncChunkInputRange(result, chunkSize);
 }
 
+unittest
+{
+    if (!netAllowed()) return;
+
+    auto res = byChunk(testUrl1);
+    auto line = res.front;
+    assert(line == cast(ubyte[])"Hello world\n",
+           "byLineAsync!HTTP() returns unexpected content " ~ to!string(line));
+
+    auto res2 = byChunk(testUrl1, 1024, HTTP());
+    line = res2.front;
+    assert(line == cast(ubyte[])"Hello world\n",
+           "byLineAsync!HTTP() returns unexpected content: " ~ to!string(line));
+}
+
 private T[] _getForRange(T,Conn)(const(char)[] url, Conn conn)
 {
     static if (is(Conn : HTTP))
     {
-        conn.method = conn.method == Method.undefined ? HTTP.Method.get : conn.method;
+        conn.method = conn.method == HTTP.Method.undefined ? HTTP.Method.get : conn.method;
         return _basicHTTP!(T)(url, null, conn);
     }
     else static if (is(Conn : FTP))
@@ -1246,7 +1308,7 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char, PostUnit)
     {
         // 50 is just an arbitrary number for now
         setMaxMailboxSize(thisTid, 50, OnCrowding.block);
-        auto tid = spawn(&(_spawnAsync!(Conn, Char, Terminator)));
+        auto tid = spawn(&_spawnAsync!(Conn, Char, Terminator));
         tid.send(thisTid);
         tid.send(terminator);
         tid.send(keepTerminator == KeepTerminator.yes);
@@ -1284,11 +1346,11 @@ unittest
 {
     if (!netAllowed()) return;
     auto res = byLineAsync(testUrl2, "Hello world");
-    auto line = res.front();
+    auto line = res.front;
     assert(line == "Hello world",
            "byLineAsync!HTTP() returns unexpected content " ~ line);
     res = byLineAsync(testUrl1);
-    line = res.front();
+    line = res.front;
     assert(line == "Hello world",
            "byLineAsync!HTTP() returns unexpected content: " ~ line);
 }
@@ -1399,7 +1461,7 @@ auto byChunkAsync(Conn = AutoProtocol, PostUnit)
     {
         // 50 is just an arbitrary number for now
         setMaxMailboxSize(thisTid, 50, OnCrowding.block);
-        auto tid = spawn(&(_spawnAsync!(Conn, ubyte)));
+        auto tid = spawn(&_spawnAsync!(Conn, ubyte));
         tid.send(thisTid);
 
         _asyncDuplicateConnection(url, conn, postData, tid);
@@ -1435,11 +1497,11 @@ unittest
 {
     if (!netAllowed()) return;
     auto res = byChunkAsync(testUrl2, "Hello world");
-    auto line = res.front();
+    auto line = res.front;
     assert(line == cast(ubyte[])"Hello world",
            "byLineAsync!HTTP() returns unexpected content " ~ to!string(line));
     res = byChunkAsync(testUrl1);
-    line = res.front();
+    line = res.front;
     assert(line == cast(ubyte[])"Hello world\n",
            "byLineAsync!HTTP() returns unexpected content: " ~ to!string(line));
 }
@@ -1544,13 +1606,22 @@ private mixin template Protocol()
     /// Set timeout for activity on connection.
     @property void dataTimeout(Duration d)
     {
-        p.curl.set(CurlOption.timeout_ms, d.total!"msecs"());
+        p.curl.set(CurlOption.low_speed_limit, 1);
+        p.curl.set(CurlOption.low_speed_time, d.total!"seconds");
+    }
+
+    /** Set maximum time an operation is allowed to take.
+        This includes dns resolution, connecting, data transfer, etc.
+     */
+    @property void operationTimeout(Duration d)
+    {
+        p.curl.set(CurlOption.timeout_ms, d.total!"msecs");
     }
 
     /// Set timeout for connecting.
     @property void connectTimeout(Duration d)
     {
-        p.curl.set(CurlOption.connecttimeout_ms, d.total!"msecs"());
+        p.curl.set(CurlOption.connecttimeout_ms, d.total!"msecs");
     }
 
     // Network settings
@@ -1585,7 +1656,7 @@ private mixin template Protocol()
     /// DNS lookup timeout.
     @property void dnsTimeout(Duration d)
     {
-        p.curl.set(CurlOption.dns_cache_timeout, d.total!"msecs"());
+        p.curl.set(CurlOption.dns_cache_timeout, d.total!"msecs");
     }
 
     /**
@@ -1608,13 +1679,13 @@ private mixin template Protocol()
     @property void netInterface(const(ubyte)[4] i)
     {
         auto str = format("%d.%d.%d.%d", i[0], i[1], i[2], i[3]);
-        netInterface(str);
+        netInterface = str;
     }
 
     /// ditto
     @property void netInterface(InternetAddress i)
     {
-        netInterface(i.toAddrString());
+        netInterface = i.toAddrString();
     }
 
     /**
@@ -1715,7 +1786,7 @@ private mixin template Protocol()
     @property void onSend(size_t delegate(void[]) callback)
     {
         p.curl.clear(CurlOption.postfields); // cannot specify data when using callback
-        p.curl.onSend(callback);
+        p.curl.onSend = callback;
     }
 
     /**
@@ -1743,7 +1814,7 @@ private mixin template Protocol()
       */
     @property void onReceive(size_t delegate(ubyte[]) callback)
     {
-        p.curl.onReceive(callback);
+        p.curl.onReceive = callback;
     }
 
     /**
@@ -1774,7 +1845,7 @@ private mixin template Protocol()
     @property void onProgress(int delegate(size_t dlTotal, size_t dlNow,
                                            size_t ulTotal, size_t ulNow) callback)
     {
-        p.curl.onProgress(callback);
+        p.curl.onProgress = callback;
     }
 }
 
@@ -1890,14 +1961,15 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   *
   * // Put with data senders
   * auto msg = "Hello world";
+  * http.contentLength = msg.length;
   * http.onSend = (void[] data)
   * {
   *     auto m = cast(void[])msg;
-  *     size_t length = m.length > data.length ? data.length : m.length;
-  *     if (length == 0) return 0;
-  *     data[0..length] = m[0..length];
-  *     msg = msg[length..$];
-  *     return length;
+  *     size_t len = m.length > data.length ? data.length : m.length;
+  *     if (len == 0) return len;
+  *     data[0..len] = m[0..len];
+  *     msg = msg[len..$];
+  *     return len;
   * };
   * http.perform();
   *
@@ -1990,7 +2062,7 @@ struct HTTP
         copy.p.curl.set(CurlOption.httpheader, copy.p.headersOut);
         copy.p.curl = p.curl.dup();
         copy.dataTimeout = _defaultDataTimeout;
-        copy.onReceiveHeader(null);
+        copy.onReceiveHeader = null;
         return copy;
     }
 
@@ -1999,10 +2071,11 @@ struct HTTP
         p.curl.initialize();
         maxRedirects = HTTP.defaultMaxRedirects;
         p.charset = "ISO-8859-1"; // Default charset defined in HTTP RFC
+        p.curl.set(CurlOption.ssl_verifypeer, false);
         p.method = Method.undefined;
         dataTimeout = _defaultDataTimeout;
-        onReceiveHeader(null);
-        version (unittest) verbose(true);
+        onReceiveHeader = null;
+        version (unittest) verbose = true;
     }
 
     /**
@@ -2061,6 +2134,11 @@ struct HTTP
         p.curl.set(CurlOption.url, url);
     }
 
+    @property void caInfo(const(char)[] caFile)
+    {
+        p.curl.set(CurlOption.cainfo, caFile);
+    }
+
     // This is a workaround for mixed in content not having its
     // docs mixed in.
     version (StdDdoc)
@@ -2089,6 +2167,11 @@ struct HTTP
 
         /// Set timeout for activity on connection.
         @property void dataTimeout(Duration d);
+
+        /** Set maximum time an operation is allowed to take.
+            This includes dns resolution, connecting, data transfer, etc.
+          */
+        @property void operationTimeout(Duration d);
 
         /// Set timeout for connecting.
         @property void connectTimeout(Duration d);
@@ -2384,7 +2467,7 @@ struct HTTP
       */
     @property void postData(const(void)[] data)
     {
-        _postData(cast(void*)data.ptr, "application/octet-stream");
+        _postData(data, "application/octet-stream");
     }
 
     /** Specifying data to post when not using the onSend callback.
@@ -2403,19 +2486,34 @@ struct HTTP
       */
     @property void postData(const(char)[] data)
     {
-        _postData(cast(void*)data.ptr, "text/plain");
+        _postData(data, "text/plain");
     }
 
     // Helper for postData property
-    private void _postData(void* data, string contentType)
+    private void _postData(const(void)[] data, string contentType)
     {
         // cannot use callback when specifying data directly so it is disabled here.
-        // here.
         p.curl.clear(CurlOption.readfunction);
         addRequestHeader("Content-Type", contentType);
-        p.curl.set(CurlOption.postfields, data);
+        p.curl.set(CurlOption.postfields, cast(void*)data.ptr);
+        p.curl.set(CurlOption.postfieldsize, data.length);
         if (method == Method.undefined)
             method = Method.post;
+    }
+
+    unittest
+    {
+        if (!netAllowed()) return;
+        ubyte[] data;
+        foreach (n; 0..256)
+            data ~= cast(ubyte)n;
+        auto http = HTTP(testUrl2);
+        http.postData = data;
+        ubyte[] result;
+        http.onReceive = (ubyte[] data) { result ~= data; return data.length; };
+        http.perform();
+        assert(data == result,
+               "HTTP POST with binary data returns unexpected content (" ~ text(result.length) ~ " bytes)");
     }
 
     /**
@@ -2484,7 +2582,7 @@ struct HTTP
                 callback(fieldName, m.captures[2]);
             p.headersIn[fieldName] = m.captures[2].idup;
         };
-        p.curl.onReceiveHeader(dg);
+        p.curl.onReceiveHeader = dg;
     }
 
     /**
@@ -2605,7 +2703,6 @@ struct HTTP
 
 } // HTTP
 
-
 /**
    FTP client functionality.
 
@@ -2672,7 +2769,7 @@ struct FTP
         p.curl.initialize();
         p.encoding = "ISO-8859-1";
         dataTimeout = _defaultDataTimeout;
-        version (unittest) verbose(true);
+        version (unittest) verbose = true;
     }
 
     /**
@@ -2728,6 +2825,11 @@ struct FTP
 
         /// Set timeout for activity on connection.
         @property void dataTimeout(Duration d);
+
+        /** Set maximum time an operation is allowed to take.
+            This includes dns resolution, connecting, data transfer, etc.
+          */
+        @property void operationTimeout(Duration d);
 
         /// Set timeout for connecting.
         @property void connectTimeout(Duration d);
@@ -2947,7 +3049,7 @@ struct SMTP
     /**
         Sets to the URL of the SMTP server.
     */
-    this(string url)
+    this(const(char)[] url)
     {
         p.curl.initialize();
         auto lowered = url.toLower();
@@ -3012,6 +3114,11 @@ struct SMTP
 
         /// Set timeout for activity on connection.
         @property void dataTimeout(Duration d);
+
+        /** Set maximum time an operation is allowed to take.
+            This includes dns resolution, connecting, data transfer, etc.
+          */
+        @property void operationTimeout(Duration d);
 
         /// Set timeout for connecting.
         @property void connectTimeout(Duration d);
@@ -3848,7 +3955,7 @@ private static size_t _receiveAsyncChunks(ubyte[] data, ref ubyte[] outdata,
         data = data[copyBytes..$];
 
         if (outdata.empty)
-            fromTid.send(thisTid(), curlMessage(cast(immutable(ubyte)[])buffer));
+            fromTid.send(thisTid, curlMessage(cast(immutable(ubyte)[])buffer));
     }
 
     return datalen;
@@ -3862,7 +3969,7 @@ private static void _finalizeAsyncChunks(ubyte[] outdata, ref ubyte[] buffer,
     {
         // Resize the last buffer
         buffer.length = buffer.length - outdata.length;
-        fromTid.send(thisTid(), curlMessage(cast(immutable(ubyte)[])buffer));
+        fromTid.send(thisTid, curlMessage(cast(immutable(ubyte)[])buffer));
     }
 }
 
@@ -3920,17 +4027,17 @@ private static size_t _receiveAsyncLines(Terminator, Unit)
             {
                 if (keepTerminator)
                 {
-                    fromTid.send(thisTid(),
+                    fromTid.send(thisTid,
                                  curlMessage(cast(immutable(Unit)[])buffer));
                 }
                 else
                 {
                     static if (isArray!Terminator)
-                        fromTid.send(thisTid(),
+                        fromTid.send(thisTid,
                                      curlMessage(cast(immutable(Unit)[])
                                              buffer[0..$-terminator.length]));
                     else
-                        fromTid.send(thisTid(),
+                        fromTid.send(thisTid,
                                      curlMessage(cast(immutable(Unit)[])
                                              buffer[0..$-1]));
                 }
@@ -3966,7 +4073,7 @@ private static
 void _finalizeAsyncLines(Unit)(bool bufferValid, Unit[] buffer, Tid fromTid)
 {
     if (bufferValid && buffer.length != 0)
-        fromTid.send(thisTid(), curlMessage(cast(immutable(Unit)[])buffer[0..$]));
+        fromTid.send(thisTid, curlMessage(cast(immutable(Unit)[])buffer[0..$]));
 }
 
 
@@ -4049,7 +4156,7 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     catch (Exception ex)
     {
         prioritySend(fromTid, cast(immutable(Exception)) ex);
-        fromTid.send(thisTid(), curlMessage(true)); // signal done
+        fromTid.send(thisTid, curlMessage(true)); // signal done
         return;
     }
 
@@ -4058,13 +4165,13 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
         if (aborted && (code == CurlError.aborted_by_callback ||
                         code == CurlError.write_error))
         {
-            fromTid.send(thisTid(), curlMessage(true)); // signal done
+            fromTid.send(thisTid, curlMessage(true)); // signal done
             return;
         }
         prioritySend(fromTid, cast(immutable(CurlException))
                      new CurlException(client.p.curl.errorString(code)));
 
-        fromTid.send(thisTid(), curlMessage(true)); // signal done
+        fromTid.send(thisTid, curlMessage(true)); // signal done
         return;
     }
 
@@ -4074,10 +4181,10 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     else
         _finalizeAsyncLines(bufferValid, buffer, fromTid);
 
-    fromTid.send(thisTid(), curlMessage(true)); // signal done
+    fromTid.send(thisTid, curlMessage(true)); // signal done
 }
 
 version (unittest) private auto netAllowed()
 {
-      return getenv("PHOBOS_TEST_ALLOW_NET") != null;
+    return environment.get("PHOBOS_TEST_ALLOW_NET") != null;
 }

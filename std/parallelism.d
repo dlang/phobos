@@ -39,10 +39,13 @@ Synopsis:
 import std.algorithm, std.parallelism, std.range;
 
 void main() {
-    // Parallel reduce can be combined with std.algorithm.map to interesting
-    // effect.  The following example (thanks to Russel Winder) calculates
-    // pi by quadrature using std.algorithm.map and TaskPool.reduce.
-    // getTerm is evaluated in parallel as needed by TaskPool.reduce.
+    // Parallel reduce can be combined with 
+    // std.algorithm.map to interesting effect.  
+    // The following example (thanks to Russel Winder) 
+    // calculates pi by quadrature  using 
+    // std.algorithm.map and TaskPool.reduce.
+    // getTerm is evaluated in parallel as needed by 
+    // TaskPool.reduce.
     //
     // Timings on an Athlon 64 X2 dual core machine:
     //
@@ -64,6 +67,7 @@ void main() {
 }
 ---
 
+Source:    $(PHOBOSSRC std/_parallelism.d)
 Author:  David Simcha
 Copyright:  Copyright (c) 2009-2011, David Simcha.
 License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
@@ -717,7 +721,7 @@ AbstractTask base = {runTask :
                     stderr.writeln("Yield from workForce.");
                 }
 
-                return yieldForce();
+                return yieldForce;
             }
         }
     }
@@ -757,7 +761,7 @@ AbstractTask base = {runTask :
     {
         if(isScoped && pool !is null && taskStatus != TaskStatus.done)
         {
-            yieldForce();
+            yieldForce;
         }
     }
 
@@ -789,7 +793,8 @@ import std.file;
 
 void main()
 {
-    // Create and execute a Task for reading foo.txt.
+    // Create and execute a Task for reading 
+    // foo.txt.
     auto file1Task = task!read("foo.txt");
     file1Task.executeInNewThread();
 
@@ -797,17 +802,17 @@ void main()
     auto file2Data = read("bar.txt");
 
     // Get the results of reading foo.txt.
-    auto file1Data = file1Task.yieldForce();
+    auto file1Data = file1Task.yieldForce;
 }
 ---
 
 ---
-// Sorts an array using a parallel quick sort algorithm.  The first partition
-// is done serially.  Both recursion branches are then executed in
-// parallel.
+// Sorts an array using a parallel quick sort algorithm.
+// The first partition is done serially.  Both recursion 
+// branches are then executed in parallel.
 //
-// Timings for sorting an array of 1,000,000 doubles on an Athlon 64 X2
-// dual core machine:
+// Timings for sorting an array of 1,000,000 doubles on 
+// an Athlon 64 X2 dual core machine:
 //
 // This implementation:               176 milliseconds.
 // Equivalent serial implementation:  280 milliseconds
@@ -835,7 +840,7 @@ void parallelSort(T)(T[] data)
     auto recurseTask = task!(parallelSort)(greaterEqual);
     taskPool.put(recurseTask);
     parallelSort(less);
-    recurseTask.yieldForce();
+    recurseTask.yieldForce;
 }
 ---
 */
@@ -850,13 +855,15 @@ class/struct with overloaded opCall.
 
 Examples:
 ---
-// Read two files in at the same time again, but this time use a function
-// pointer instead of an alias to represent std.file.read.
+// Read two files in at the same time again, 
+// but this time use a function pointer instead 
+// of an alias to represent std.file.read.
 import std.file;
 
 void main()
 {
-    // Create and execute a Task for reading foo.txt.
+    // Create and execute a Task for reading 
+    // foo.txt.
     auto file1Task = task(&read, "foo.txt");
     file1Task.executeInNewThread();
 
@@ -864,7 +871,7 @@ void main()
     auto file2Data = read("bar.txt");
 
     // Get the results of reading foo.txt.
-    auto file1Data = file1Task.yieldForce();
+    auto file1Data = file1Task.yieldForce;
 }
 ---
 
@@ -881,7 +888,7 @@ if(is(typeof(delegateOrFp(args))) && !isSafeTask!F)
 
 /**
 Version of $(D task) usable from $(D @safe) code.  Usage mechanics are
-identical to the non-@safe case, but safety introduces the some restrictions.
+identical to the non-@safe case, but safety introduces some restrictions:
 
 1.  $(D fun) must be @safe or @trusted.
 
@@ -1091,9 +1098,10 @@ private:
         doJob(t);
     }
 
-    // This work loop is used for a "normal" task pool where a worker thread
-    // does more than one task.
-    void workLoop()
+    // This function performs initialization for each thread that affects
+    // thread local storage and therefore must be done from within the
+    // worker thread.  It then calls executeWorkLoop().  
+    void startWorkLoop()
     {
         // Initialize thread index.
         {
@@ -1102,7 +1110,15 @@ private:
             threadIndex = nextThreadIndex;
             nextThreadIndex++;
         }
+        
+        executeWorkLoop();
+    }
 
+    // This is the main work loop that worker threads spend their time in
+    // until they terminate.  It's also entered by non-worker threads when
+    // finish() is called with the blocking variable set to true.
+    void executeWorkLoop()
+    {    
         while(atomicReadUbyte(status) != PoolState.stopNow)
         {
             AbstractTask* task = pop();
@@ -1172,7 +1188,7 @@ private:
     void abstractPut(AbstractTask* task)
     {
         queueLock();
-        scope(exit) queueUnlock();
+        scope(exit) queueUnlock();        
         abstractPutNoSync(task);
     }
 
@@ -1192,6 +1208,16 @@ private:
     }
     body
     {
+        // Not using enforce() to save on function call overhead since this
+        // is a performance critical function.
+        if(status != PoolState.running)
+        {
+            throw new Error(
+                "Cannot submit a new task to a pool after calling " ~
+                "finish() or stop()."
+            );
+        }
+        
         task.next = null;
         if (head is null)   //Queue is empty.
         {
@@ -1210,6 +1236,14 @@ private:
 
     void abstractPutGroupNoSync(AbstractTask* h, AbstractTask* t)
     {
+        if(status != PoolState.running)
+        {
+            throw new Error(
+                "Cannot submit a new task to a pool after calling " ~
+                "finish() or stop()."
+            );
+        }
+        
         if(head is null)
         {
             head = h;
@@ -1361,13 +1395,12 @@ private:
         task.taskStatus = TaskStatus.inProgress;
         this.head = task;
         singleTaskThread = new Thread(&doSingleTask);
+        singleTaskThread.start();
 
         if(priority != int.max)
         {
             singleTaskThread.priority = priority;
         }
-
-        singleTaskThread.start();
     }
 
 public:
@@ -1376,25 +1409,25 @@ public:
     size_t defaultWorkUnitSize(size_t rangeLen) const pure nothrow @safe
     {
         if(this.size == 0)
-{
-    return rangeLen;
-}
+        {
+            return rangeLen;
+        }
 
-immutable size_t eightSize = 4 * (this.size + 1);
-auto ret = (rangeLen / eightSize) +
-           ((rangeLen % eightSize == 0) ? 0 : 1);
-return max(ret, 1);
-}
+        immutable size_t eightSize = 4 * (this.size + 1);
+        auto ret = (rangeLen / eightSize) +
+                   ((rangeLen % eightSize == 0) ? 0 : 1);
+        return max(ret, 1);
+    }
 
-/**
-Default constructor that initializes a $(D TaskPool) with
-$(D totalCPUs) - 1 worker threads.  The minus 1 is included because the
-main thread will also be available to do work.
+    /**
+    Default constructor that initializes a $(D TaskPool) with
+    $(D totalCPUs) - 1 worker threads.  The minus 1 is included because the
+    main thread will also be available to do work.
 
-Note:  On single-core machines, the primitives provided by $(D TaskPool)
-       operate transparently in single-threaded mode.
- */
-this() @trusted
+    Note:  On single-core machines, the primitives provided by $(D TaskPool)
+           operate transparently in single-threaded mode.
+     */
+    this() @trusted
     {
         this(totalCPUs - 1);
     }
@@ -1423,7 +1456,7 @@ this() @trusted
         pool = new ParallelismThread[nWorkers];
         foreach(ref poolThread; pool)
         {
-            poolThread = new ParallelismThread(&workLoop);
+            poolThread = new ParallelismThread(&startWorkLoop);
             poolThread.pool = this;
             poolThread.start();
         }
@@ -1624,7 +1657,7 @@ this() @trusted
             static if(
                 Args.length > 1 &&
                 randAssignable!(Args[$ - 1]) &&
-                is(MapType!(Args[0], functions) : typeof(Args[$ - 1].init[0]))
+                is(MapType!(Args[0], functions) : ElementType!(Args[$ - 1]))
                 )
             {
                 alias args[$ - 1] buf;
@@ -1757,9 +1790,10 @@ this() @trusted
 
     Examples:
     ---
-    // Pipeline reading a file, converting each line to a number, taking the
-    // logarithms of the numbers, and performing the additions necessary to
-    // find the sum of the logarithms.
+    // Pipeline reading a file, converting each line 
+    // to a number, taking the logarithms of the numbers, 
+    // and performing the additions necessary to find 
+    // the sum of the logarithms.
 
     auto lineRange = File("numberList.txt").byLine();
     auto dupedLines = std.algorithm.map!"a.idup"(lineRange);
@@ -2008,7 +2042,7 @@ this() @trusted
                 }
 
                 buf2 = buf1;
-                buf1 = nextBufTask.yieldForce();
+                buf1 = nextBufTask.yieldForce;
                 bufPos = 0;
 
                 if(source.empty)
@@ -2188,7 +2222,7 @@ public:
                 }
 
                 buf2 = buf1;
-                buf1 = nextBufTask.yieldForce();
+                buf1 = nextBufTask.yieldForce;
                 bufPos = 0;
 
                 if(source.empty)
@@ -2267,8 +2301,9 @@ public:
 
     Examples:
     ---
-    // Fetch lines of a file in a background thread while processing prevously
-    // fetched lines, without duplicating any lines.
+    // Fetch lines of a file in a background 
+    // thread while processing prevously fetched 
+    // lines, without duplicating any lines.
     auto file = File("foo.txt");
 
     void next(ref char[] buf)
@@ -2276,8 +2311,9 @@ public:
         file.readln(buf);
     }
 
-    // Fetch more lines in the background while we process the lines already
-    // read into memory into a matrix of doubles.
+    // Fetch more lines in the background while we 
+    // process the lines already read into memory 
+    // into a matrix of doubles.
     double[][] matrix;
     auto asyncReader = taskPool.asyncBuf(&next, &file.eof);
 
@@ -2344,7 +2380,8 @@ public:
     those generated by $(XREF algorithm, _reduce) or depending on how many work
     units are used.  The next argument must be the range to be reduced.
     ---
-    // Find the sum of squares of a range in parallel, using an explicit seed.
+    // Find the sum of squares of a range in parallel, using 
+    // an explicit seed.
     //
     // Timings on an Athlon 64 X2 dual core machine:
     //
@@ -2360,8 +2397,8 @@ public:
     is used as a seed.  For the final reduction, the result from the first
     work unit is used as the seed.
     ---
-    // Find the sum of a range in parallel, using the first element of each
-    // work unit as the seed.
+    // Find the sum of a range in parallel, using the first 
+    // element of each work unit as the seed.
     auto sum = taskPool.reduce!"a + b"(nums);
     ---
 
@@ -2677,7 +2714,7 @@ public:
             {
                 try
                 {
-                    task.yieldForce();
+                    task.yieldForce;
                 }
                 catch(Throwable e)
                 {
@@ -2703,12 +2740,13 @@ public:
 
     Examples:
     ---
-    // Execute a loop that computes the greatest common divisor of every
-    // number from 0 through 999 with 42 in parallel.  Write the results out to
-    // a set of files, one for each thread.  This allows results to be written
-    // out without any synchronization.
+    // Execute a loop that computes the greatest common 
+    // divisor of every number from 0 through 999 with 
+    // 42 in parallel.  Write the results out to
+    // a set of files, one for each thread.  This allows 
+    // results to be written out without any synchronization.
 
-    import std.stdio, std.conv, std.range, std.numeric;
+    import std.conv, std.range, std.numeric, std.stdio;
 
     void main()
     {
@@ -3064,56 +3102,47 @@ public:
         notifyAll();
     }
 
-    /*
-    Waits for all jobs to finish, then terminates all worker threads.  Blocks
-    until all worker threads have terminated.
+    /**
+    Signals worker threads to terminate when the queue becomes empty.
 
-    Example:
-    ---
-    import std.file;
-
-    auto pool = new TaskPool();
-    auto task1 = task!read("foo.txt");
-    pool.put(task1);
-    auto task2 = task!read("bar.txt");
-    pool.put(task2);
-    auto task3 = task!read("baz.txt");
-    pool.put(task3);
-
-    // Call join() to guarantee that all tasks are done running, the worker
-    // threads have terminated and that the results of all of the tasks can
-    // be accessed without any synchronization primitives.
-    pool.join();
-
-    // Use spinForce() since the results are guaranteed to have been computed
-    // and spinForce() is the cheapest of the force functions.
-    auto result1 = task1.spinForce();
-    auto result2 = task2.spinForce();
-    auto result3 = task3.spinForce();
-    ---
-    */
-    version(none)
+    If blocking argument is true, wait for all worker threads to terminate
+    before returning.  This option might be used in applications where
+    task results are never consumed-- e.g. when $(D TaskPool) is employed as a
+    rudimentary scheduler for tasks which communicate by means other than
+    return values.  
+    
+    Warning:  Calling this function with $(D blocking = true) from a worker
+              thread that is a member of the same $(D TaskPool) that 
+              $(D finish) is being called on will result in a deadlock.
+     */
+    void finish(bool blocking = false) @trusted
     {
-        void join() @trusted
         {
-            finish();
-            foreach(t; pool)
+            queueLock();
+            scope(exit) queueUnlock();
+            atomicCasUbyte(status, PoolState.running, PoolState.finishing);
+            notifyAll();
+        }
+        if (blocking) 
+        {
+            // Use this thread as a worker until everything is finished.
+            executeWorkLoop();
+            
+            foreach(t; pool) 
             {
+                // Maybe there should be something here to prevent a thread
+                // from calling join() on itself if this function is called
+                // from a worker thread in the same pool, but:
+                //
+                // 1.  Using an if statement to skip join() would result in 
+                //     finish() returning without all tasks being finished.
+                //
+                // 2.  If an exception were thrown, it would bubble up to the
+                //     Task from which finish() was called and likely be
+                //     swallowed.                
                 t.join();
             }
         }
-    }
-
-    /**
-    Signals worker threads to terminate when the queue becomes empty.  Does
-    not block.
-     */
-    void finish() @trusted
-    {
-        queueLock();
-        scope(exit) queueUnlock();
-        atomicCasUbyte(status, PoolState.running, PoolState.finishing);
-        notifyAll();
     }
 
     /// Returns the number of worker threads in the pool.
@@ -3203,7 +3232,7 @@ public:
     {
         queueLock();
         scope(exit) queueUnlock();
-        return (size == 0) ? true : pool[0].isDaemon();
+        return (size == 0) ? true : pool[0].isDaemon;
     }
 
     /// Ditto
@@ -3229,7 +3258,7 @@ public:
     int priority() @property @trusted
     {
         return (size == 0) ? core.thread.Thread.PRIORITY_MIN :
-        pool[0].priority();
+        pool[0].priority;
     }
 
     /// Ditto
@@ -3239,7 +3268,7 @@ public:
         {
             foreach(t; pool)
             {
-                t.priority(newPriority);
+                t.priority = newPriority;
             }
         }
     }
@@ -3304,8 +3333,9 @@ readable.
 
 Example:
 ---
-// Find the logarithm of every number from 1 to 1_000_000 in parallel,
-// using the default TaskPool instance.
+// Find the logarithm of every number from 
+// 1 to 1_000_000 in parallel, using the 
+// default TaskPool instance.
 auto logs = new double[1_000_000];
 
 foreach(i, ref elem; parallel(logs)) {
@@ -3436,7 +3466,7 @@ private void submitAndExecute(
     {
         try
         {
-            task.yieldForce();
+            task.yieldForce;
         }
         catch(Throwable e)
         {
@@ -3921,29 +3951,29 @@ unittest
     // Test task().
     auto t = task!refFun(x);
     poolInstance.put(t);
-    t.yieldForce();
+    t.yieldForce;
     assert(t.args[0] == 1);
 
     auto t2 = task(&refFun, x);
     poolInstance.put(t2);
-    t2.yieldForce();
+    t2.yieldForce;
     assert(t2.args[0] == 1);
 
     // Test scopedTask().
     auto st = scopedTask!refFun(x);
     poolInstance.put(st);
-    st.yieldForce();
+    st.yieldForce;
     assert(st.args[0] == 1);
 
     auto st2 = scopedTask(&refFun, x);
     poolInstance.put(st2);
-    st2.yieldForce();
+    st2.yieldForce;
     assert(st2.args[0] == 1);
 
     // Test executeInNewThread().
     auto ct = scopedTask!refFun(x);
-    ct.executeInNewThread();
-    ct.yieldForce();
+    ct.executeInNewThread(Thread.PRIORITY_MAX);
+    ct.yieldForce;
     assert(ct.args[0] == 1);
 
     // Test ref return.
@@ -3968,11 +3998,11 @@ unittest
         auto safePool = new TaskPool(0);
         auto t = task(&bump, 1);
         taskPool.put(t);
-        assert(t.yieldForce() == 2);
+        assert(t.yieldForce == 2);
 
         auto st = scopedTask(&bump, 1);
         taskPool.put(st);
-        assert(st.yieldForce() == 2);
+        assert(st.yieldForce == 2);
         safePool.stop();
     }
 
@@ -4002,8 +4032,8 @@ unittest
     auto addScopedTask = scopedTask(&add, addLhs, addRhs);
     poolInstance.put(addTask);
     poolInstance.put(addScopedTask);
-    assert(addTask.yieldForce() == 3);
-    assert(addScopedTask.yieldForce() == 3);
+    assert(addTask.yieldForce == 3);
+    assert(addScopedTask.yieldForce == 3);
 
     // Test parallel foreach with non-random access range.
     auto range = filter!"a != 666"([0, 1, 2, 3, 4]);
@@ -4077,6 +4107,38 @@ unittest
     assert(parallelSum == 499500);
     assert(wlRange[0..1][0] == wlRange[0]);
     assert(wlRange[1..2][0] == wlRange[1]);
+
+    // Test finish()
+    {
+        static void slowFun() { Thread.sleep(dur!"msecs"(1)); }
+
+        auto pool1 = new TaskPool();
+        auto tSlow = task!slowFun();
+        pool1.put(tSlow);
+        pool1.finish();
+        tSlow.yieldForce();
+        // Can't assert that pool1.status == PoolState.stopNow because status 
+        // doesn't change until after the "done" flag is set and the waiting
+        // thread is woken up.
+
+        auto pool2 = new TaskPool();
+        auto tSlow2 = task!slowFun();
+        pool2.put(tSlow2);
+        pool2.finish(true); // blocking
+        assert(tSlow2.done);
+        
+        // Test fix for Bug 8582 by making pool size zero.
+        auto pool3 = new TaskPool(0);
+        auto tSlow3 = task!slowFun();
+        pool3.put(tSlow3);
+        pool3.finish(true); // blocking
+        assert(tSlow3.done);
+        
+        // This is correct because no thread will terminate unless pool2.status
+        // and pool3.status have already been set to stopNow.
+        assert(pool2.status == TaskPool.PoolState.stopNow);
+        assert(pool3.status == TaskPool.PoolState.stopNow);
+    }
 
     // Test default pool stuff.
     assert(taskPool.size == totalCPUs - 1);

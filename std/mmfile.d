@@ -122,8 +122,8 @@ class MmFile
         fd = fildes;
 
         // Adjust size
-        struct_stat64 statbuf = void;
-        errnoEnforce(fstat64(fd, &statbuf) == 0);
+        stat_t statbuf = void;
+        errnoEnforce(fstat(fd, &statbuf) == 0);
         if (prot & PROT_WRITE && size > statbuf.st_size)
         {
             // Need to make the file size bytes big
@@ -316,10 +316,10 @@ class MmFile
                 fd = .open(namez, oflag, fmode);
                 errnoEnforce(fd != -1, "Could not open file "~filename);
 
-                struct_stat64 statbuf;
-                if (fstat64(fd, &statbuf))
+                stat_t statbuf;
+                if (fstat(fd, &statbuf))
                 {
-                    //printf("\tfstat error, errno = %d\n",getErrno());
+                    //printf("\tfstat error, errno = %d\n", errno);
                     .close(fd);
                     errnoEnforce(false, "Could not stat file "~filename);
                 }
@@ -586,7 +586,7 @@ private:
     //     }
     //     else version (linux)
     //     {
-    //         throw new FileException(filename, getErrno());
+    //         throw new FileException(filename, errno);
     //     }
     //     else
     //     {

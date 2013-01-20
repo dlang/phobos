@@ -1,10 +1,7 @@
 // Written in the D programming language.
 
 /**
-Facilities for random number generation. The old-style functions
-$(D_PARAM rand_seed) and $(D_PARAM rand) will soon be deprecated as
-they rely on global state and as such are subjected to various
-thread-related issues.
+Facilities for random number generation.
 
 The new-style generator objects hold their own state so they are
 immune of threading issues. The generators feature a number of
@@ -41,10 +38,11 @@ Macros:
 WIKI = Phobos/StdRandom
 
 
-Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
+Copyright: Copyright Andrei Alexandrescu 2008 - 2009, Joseph Rushton Wakeling 2012.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors:   $(WEB erdani.org, Andrei Alexandrescu)
            Masahiro Nakagawa (Xorshift randome generator)
+           $(WEB braingam.es, Joseph Rushton Wakeling) (Algorithm D for random sampling)
 Credits:   The entire random number library architecture is derived from the
            excellent $(WEB open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf, C++0X)
            random number facility proposed by Jens Maurer and contributed to by
@@ -61,6 +59,7 @@ module std.random;
 import std.algorithm, std.c.time, std.conv, std.exception,
        std.math, std.numeric, std.range, std.traits,
        core.thread, core.time;
+import std.string : format;
 
 version(unittest) import std.typetuple;
 
@@ -113,15 +112,6 @@ version(unittest) import std.typetuple;
    email: m-mat @ math.sci.hiroshima-u.ac.jp (remove space)
 */
 
-version (Windows)
-{
-    extern(Windows) int QueryPerformanceCounter(ulong *count);
-}
-
-version (Posix)
-{
-    private import core.sys.posix.sys.time;
-}
 
 /**
  * Test if Rng is a random-number generator. The overload
@@ -158,21 +148,20 @@ template isUniformRNG(Rng)
 
 /**
  * Test if Rng is seedable. The overload
- * taking a ElementType also makes sure that the Rng generates
- * values of that type.
+ * taking a SeedType also makes sure that the Rng can be seeded with SeedType.
  *
  * A seedable random-number generator has the following additional features:
  * $(UL
  *   $(LI it has a 'seed(ElementType)' function)
  * )
  */
-template isSeedable(Rng, ElementType)
+template isSeedable(Rng, SeedType)
 {
-    enum bool isSeedable = isUniformRNG!(Rng, ElementType) &&
+    enum bool isSeedable = isUniformRNG!(Rng) &&
         is(typeof(
         {
-            Rng r = void;                 // can define a Rng object
-            r.seed(ElementType.init);     // can seed a Rng
+            Rng r = void;              // can define a Rng object
+            r.seed(SeedType.init);     // can seed a Rng
         }));
 }
 
@@ -182,7 +171,7 @@ template isSeedable(Rng)
     enum bool isSeedable = isUniformRNG!Rng &&
         is(typeof(
         {
-            Rng r = void;                       // can define a Rng object
+            Rng r = void;                     // can define a Rng object
             r.seed(typeof(r.front).init);     // can seed a Rng
         }));
 }
@@ -199,38 +188,38 @@ unittest
     assert(!isUniformRNG!(NoRng));
     assert(!isSeedable!(NoRng, uint));
     assert(!isSeedable!(NoRng));
-    
+
     struct NoRng2
     {
         @property uint front() {return 0;}
         @property bool empty() {return false;}
         void popFront() {}
-        
+
         enum isUniformRandom = false;
     }
     assert(!isUniformRNG!(NoRng2, uint));
     assert(!isUniformRNG!(NoRng2));
     assert(!isSeedable!(NoRng2, uint));
     assert(!isSeedable!(NoRng2));
-    
+
     struct NoRng3
     {
         @property bool empty() {return false;}
         void popFront() {}
-        
+
         enum isUniformRandom = true;
     }
     assert(!isUniformRNG!(NoRng3, uint));
     assert(!isUniformRNG!(NoRng3));
     assert(!isSeedable!(NoRng3, uint));
     assert(!isSeedable!(NoRng3));
-    
+
     struct validRng
     {
         @property uint front() {return 0;}
         @property bool empty() {return false;}
         void popFront() {}
-        
+
         enum isUniformRandom = true;
     }
     assert(isUniformRNG!(validRng, uint));
@@ -256,6 +245,7 @@ unittest
 Linear Congruential generator.
  */
 struct LinearCongruentialEngine(UIntType, UIntType a, UIntType c, UIntType m)
+    if(isUnsigned!UIntType)
 {
     ///Mark this as a Rng
     enum bool isUniformRandom = true;
@@ -282,8 +272,10 @@ The parameters of this distribution. The random number is $(D_PARAM x
             (cast(ulong)a * (m-1) + c) % m == (c < a ? c - a + m : c - a));
 
     // Check for maximum range
-    private static ulong gcd(ulong a, ulong b) {
-        while (b) {
+    private static ulong gcd(ulong a, ulong b)
+    {
+        while (b)
+        {
             auto t = b;
             b = a % b;
             a = t;
@@ -291,20 +283,24 @@ The parameters of this distribution. The random number is $(D_PARAM x
         return a;
     }
 
-    private static ulong primeFactorsOnly(ulong n) {
+    private static ulong primeFactorsOnly(ulong n)
+    {
         ulong result = 1;
         ulong iter = 2;
-        for (; n >= iter * iter; iter += 2 - (iter == 2)) {
+        for (; n >= iter * iter; iter += 2 - (iter == 2))
+        {
             if (n % iter) continue;
             result *= iter;
-            do {
+            do
+            {
                 n /= iter;
             } while (n % iter == 0);
         }
         return result * n;
     }
 
-    unittest {
+    unittest
+    {
         static assert(primeFactorsOnly(100) == 10);
         //writeln(primeFactorsOnly(11));
         static assert(primeFactorsOnly(11) == 11);
@@ -315,7 +311,8 @@ The parameters of this distribution. The random number is $(D_PARAM x
     }
 
     private static bool properLinearCongruentialParameters(ulong m,
-            ulong a, ulong c) {
+            ulong a, ulong c)
+    {
         if (m == 0)
         {
             static if (is(UIntType == uint))
@@ -513,14 +510,12 @@ unittest
 /**
 The $(LUCKY Mersenne Twister) generator.
  */
-struct MersenneTwisterEngine(
-    UIntType, size_t w, size_t n, size_t m, size_t r,
-    UIntType a, size_t u, size_t s,
-    UIntType b, size_t t,
-    UIntType c, size_t l)
+struct MersenneTwisterEngine(UIntType, size_t w, size_t n, size_t m, size_t r,
+                             UIntType a, size_t u, size_t s,
+                             UIntType b, size_t t,
+                             UIntType c, size_t l)
+    if(isUnsigned!UIntType)
 {
-    static assert(UIntType.min == 0);
-
     ///Mark this as a Rng
     enum bool isUniformRandom = true;
 /**
@@ -562,8 +557,11 @@ Parameter for the generator.
 
 /**
    Seeds a MersenneTwisterEngine object.
+   Note:
+   This seed function gives 2^32 starting points. To allow the RNG to be started in any one of its
+   internal states use the seed overload taking an InputRange.
 */
-    void seed(UIntType value = defaultSeed)
+    void seed()(UIntType value = defaultSeed)
     {
         static if (w == UIntType.sizeof * 8)
         {
@@ -574,7 +572,8 @@ Parameter for the generator.
             static assert(max + 1 > 0);
             mt[0] = value % (max + 1);
         }
-        for (mti = 1; mti < n; ++mti) {
+        for (mti = 1; mti < n; ++mti)
+        {
             mt[mti] =
                 cast(UIntType)
                 (1812433253UL * (mt[mti-1] ^ (mt[mti-1] >> (w - 2))) + mti);
@@ -585,6 +584,37 @@ Parameter for the generator.
             //mt[mti] &= ResultType.max;
             /* for >32 bit machines */
         }
+        popFront();
+    }
+
+/**
+   Seeds a MersenneTwisterEngine object using an InputRange.
+
+   Throws:
+   $(D Exception) if the InputRange didn't provide enough elements to seed the generator.
+   The number of elements required is the 'n' template parameter of the MersenneTwisterEngine struct.
+   
+   Examples:
+   ----------------
+   Mt19937 gen;
+   gen.seed(map!((a) => unpredictableSeed)(repeat(0)));
+   ----------------
+ */
+    void seed(T)(T range) if(isInputRange!T && is(Unqual!(ElementType!T) == UIntType))
+    {
+        size_t j;
+        for(j = 0; j < n && !range.empty; ++j, range.popFront())
+        {
+            mt[j] = range.front;
+        }
+
+        mti = n;
+        if(range.empty && j < n)
+        {
+            throw new Exception(format("MersenneTwisterEngine.seed: Input range didn't provide enough"
+                " elements: Need %s elemnets.", n));
+        }
+
         popFront();
     }
 
@@ -693,9 +723,21 @@ unittest
     assert(isUniformRNG!(Mt19937, uint));
     assert(isSeedable!Mt19937);
     assert(isSeedable!(Mt19937, uint));
+    assert(isSeedable!(Mt19937, typeof(map!((a) => unpredictableSeed)(repeat(0)))));
     Mt19937 gen;
     popFrontN(gen, 9999);
     assert(gen.front == 4123659995);
+}
+
+unittest
+{
+    Mt19937 gen;
+
+    assertThrown(gen.seed(map!((a) => unpredictableSeed)(repeat(0, 623))));
+
+    gen.seed(map!((a) => unpredictableSeed)(repeat(0, 624)));
+    //infinite Range
+    gen.seed(map!((a) => unpredictableSeed)(repeat(0)));
 }
 
 unittest
@@ -731,6 +773,7 @@ unittest
  * )
  */
 struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType c)
+    if(isUnsigned!UIntType)
 {
     static assert(bits == 32 || bits == 64 || bits == 96 || bits == 128 || bits == 160 || bits == 192,
                   "Supporting bits are 32, 64, 96, 128, 160 and 192. " ~ to!string(bits) ~ " is not supported.");
@@ -748,20 +791,21 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
 
 
   private:
-    enum Size = bits / 32;
+    enum size = bits / 32;
 
-    static if (bits == 32) {
-        UIntType[Size] seeds_ = [2463534242];
-    } else static if (bits == 64) {
-        UIntType[Size] seeds_ = [123456789, 362436069];
-    } else static if (bits == 96) {
-        UIntType[Size] seeds_ = [123456789, 362436069, 521288629];
-    } else static if (bits == 128) {
-        UIntType[Size] seeds_ = [123456789, 362436069, 521288629, 88675123];
-    } else static if (bits == 160) {
-        UIntType[Size] seeds_ = [123456789, 362436069, 521288629, 88675123, 5783321];
-    } else { // 192bits
-        UIntType[Size] seeds_ = [123456789, 362436069, 521288629, 88675123, 5783321, 6615241];
+    static if (bits == 32)
+        UIntType[size] seeds_ = [2463534242];
+    else static if (bits == 64)
+        UIntType[size] seeds_ = [123456789, 362436069];
+    else static if (bits == 96)
+        UIntType[size] seeds_ = [123456789, 362436069, 521288629];
+    else static if (bits == 128)
+        UIntType[size] seeds_ = [123456789, 362436069, 521288629, 88675123];
+    else static if (bits == 160)
+        UIntType[size] seeds_ = [123456789, 362436069, 521288629, 88675123, 5783321];
+    else
+    { // 192bits
+        UIntType[size] seeds_ = [123456789, 362436069, 521288629, 88675123, 5783321, 6615241];
         UIntType       value_;
     }
 
@@ -800,11 +844,10 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
     @property @safe
     nothrow UIntType front()
     {
-        static if (bits == 192) {
+        static if (bits == 192)
             return value_;
-        } else {
-            return seeds_[Size - 1];
-        }
+        else
+            return seeds_[size - 1];
     }
 
 
@@ -816,33 +859,44 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
     {
         UIntType temp;
 
-        static if (bits == 32) {
+        static if (bits == 32)
+        {
             temp      = seeds_[0] ^ (seeds_[0] << a);
             temp      = temp >> b;
             seeds_[0] = temp ^ (temp << c);
-        } else static if (bits == 64) {
+        }
+        else static if (bits == 64)
+        {
             temp      = seeds_[0] ^ (seeds_[0] << a);
             seeds_[0] = seeds_[1];
             seeds_[1] = seeds_[1] ^ (seeds_[1] >> c) ^ temp ^ (temp >> b);
-        } else static if (bits == 96) {
+        }
+        else static if (bits == 96)
+        {
             temp      = seeds_[0] ^ (seeds_[0] << a);
             seeds_[0] = seeds_[1];
             seeds_[1] = seeds_[2];
             seeds_[2] = seeds_[2] ^ (seeds_[2] >> c) ^ temp ^ (temp >> b);
-        } else static if (bits == 128){
+        }
+        else static if (bits == 128)
+        {
             temp      = seeds_[0] ^ (seeds_[0] << a);
             seeds_[0] = seeds_[1];
             seeds_[1] = seeds_[2];
             seeds_[2] = seeds_[3];
             seeds_[3] = seeds_[3] ^ (seeds_[3] >> c) ^ temp ^ (temp >> b);
-        } else static if (bits == 160){
+        }
+        else static if (bits == 160)
+        {
             temp      = seeds_[0] ^ (seeds_[0] >> a);
             seeds_[0] = seeds_[1];
             seeds_[1] = seeds_[2];
             seeds_[2] = seeds_[3];
             seeds_[3] = seeds_[4];
             seeds_[4] = seeds_[4] ^ (seeds_[4] >> c) ^ temp ^ (temp >> b);
-        } else { // 192bits
+        }
+        else
+        { // 192bits
             temp      = seeds_[0] ^ (seeds_[0] >> a);
             seeds_[0] = seeds_[1];
             seeds_[1] = seeds_[2];
@@ -876,9 +930,10 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
 
   private:
     @safe
-    static nothrow void sanitizeSeeds(ref UIntType[Size] seeds)
+    static nothrow void sanitizeSeeds(ref UIntType[size] seeds)
     {
-        for (uint i; i < seeds.length; i++) {
+        for (uint i; i < seeds.length; i++)
+        {
             if (seeds[i] == 0)
                 seeds[i] = i + 1;
         }
@@ -887,9 +942,9 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
 
     unittest
     {
-        static if (Size  ==  4)  // Other bits too
+        static if (size  ==  4)  // Other bits too
         {
-            UIntType[Size] seeds = [1, 0, 0, 4];
+            UIntType[size] seeds = [1, 0, 0, 4];
 
             sanitizeSeeds(seeds);
 
@@ -941,10 +996,12 @@ unittest
         [0UL, 246875399, 3690007200, 1264581005, 3906711041, 1866187943, 2481925219, 2464530826, 1604040631, 3653403911]
     ];
 
-    foreach (I, Type; TypeTuple!(Xorshift32, Xorshift64, Xorshift96, Xorshift128, Xorshift160, Xorshift192)) {
+    foreach (I, Type; TypeTuple!(Xorshift32, Xorshift64, Xorshift96, Xorshift128, Xorshift160, Xorshift192))
+    {
         Type rnd;
 
-        foreach (e; checking[I]) {
+        foreach (e; checking[I])
+        {
             assert(rnd.front == e);
             rnd.popFront();
         }
@@ -970,13 +1027,14 @@ auto n = rnd.front;
 {
     static bool seeded;
     static MinstdRand0 rand;
-    if (!seeded) {
+    if (!seeded)
+    {
         uint threadID = cast(uint) cast(void*) Thread.getThis();
-        rand.seed((getpid() + threadID) ^ cast(uint) TickDuration.currSystemTick().length);
+        rand.seed((getpid() + threadID) ^ cast(uint) TickDuration.currSystemTick.length);
         seeded = true;
     }
     rand.popFront();
-    return cast(uint) (TickDuration.currSystemTick().length ^ rand.front);
+    return cast(uint) (TickDuration.currSystemTick.length ^ rand.front);
 }
 
 unittest
@@ -1015,7 +1073,10 @@ and initialized to an unpredictable value for each thread.
     static bool initialized;
     if (!initialized)
     {
-        result = Random(unpredictableSeed);
+        static if(isSeedable!(Random, typeof(map!((a) => unpredictableSeed)(repeat(0)))))
+            result.seed(map!((a) => unpredictableSeed)(repeat(0)));
+        else
+            result = Random(unpredictableSeed);
         initialized = true;
     }
     return result;
@@ -1050,7 +1111,7 @@ unittest
     MinstdRand0 gen;
     foreach (i; 0 .. 20)
     {
-        auto x = uniform(0., 15., gen);
+        auto x = uniform(0.0, 15.0, gen);
         assert(0 <= x && x < 15);
     }
     foreach (i; 0 .. 20)
@@ -1059,18 +1120,19 @@ unittest
         assert('a' <= x && x <= 'z');
     }
 
-        foreach (i; 0 .. 20)
+    foreach (i; 0 .. 20)
     {
         auto x = uniform('a', 'z', gen);
         assert('a' <= x && x < 'z');
     }
 
-        foreach(i; 0 .. 20) {
-            immutable ubyte a = 0;
-                immutable ubyte b = 15;
-            auto x = uniform(a, b, gen);
-                assert(a <= x && x < b);
-        }
+    foreach(i; 0 .. 20)
+    {
+        immutable ubyte a = 0;
+            immutable ubyte b = 15;
+        auto x = uniform(a, b, gen);
+            assert(a <= x && x < b);
+    }
 }
 
 // Implementation of uniform for floating-point types
@@ -1233,6 +1295,7 @@ array of size $(D n) of positive numbers of type $(D F) that sum to
 $(D 1). If $(D useThis) is provided, it is used as storage.
  */
 F[] uniformDistribution(F = double)(size_t n, F[] useThis = null)
+    if(isFloatingPoint!F)
 {
     useThis.length = n;
     foreach (ref e; useThis)
@@ -1260,16 +1323,15 @@ a random-access range with length.
  */
 
 void randomShuffle(Range, RandomGen = Random)(Range r,
-        ref RandomGen gen = rndGen)
+                                              ref RandomGen gen = rndGen)
+    if(isRandomAccessRange!Range && isUniformRNG!RandomGen)
 {
-    foreach (i; 0 .. r.length)
-    {
-        swapAt(r, i, i + uniform(0, r.length - i, gen));
-    }
+    return partialShuffle!(Range, RandomGen)(r, r.length, gen);
 }
 
 unittest
 {
+    // Also tests partialShuffle indirectly.
     auto a = ([ 1, 2, 3, 4, 5, 6, 7, 8, 9 ]).dup;
     auto b = a.dup;
     Mt19937 gen;
@@ -1277,6 +1339,28 @@ unittest
     assert(a.sort == b.sort);
     randomShuffle(a);
     assert(a.sort == b.sort);
+}
+
+/**
+Partially shuffles the elements of $(D r) such that upon returning $(D r[0..n]) 
+is a random subset of $(D r) and is randomly ordered.  $(D r[n..r.length]) 
+will contain the elements not in $(D r[0..n]).  These will be in an undefined 
+order, but will not be random in the sense that their order after 
+$(D partialShuffle) returns will not be independent of their order before 
+$(D partialShuffle) was called.
+
+$(D r) must be a random-access range with length.  $(D n) must be less than
+or equal to $(D r.length).  
+*/
+void partialShuffle(Range, RandomGen = Random)(Range r, size_t n,
+                                              ref RandomGen gen = rndGen)
+    if(isRandomAccessRange!Range && isUniformRNG!RandomGen)
+{
+    enforce(n <= r.length, "n must be <= r.length for partialShuffle.");
+    foreach (i; 0 .. n)
+    {
+        swapAt(r, i, i + uniform(0, r.length - i, gen));
+    }
 }
 
 /**
@@ -1329,7 +1413,8 @@ if (isForwardRange!Range && isNumeric!(ElementType!Range) && isForwardRange!Rng)
     auto mass = 0.0;
 
     size_t i = 0;
-    foreach (e; proportions) {
+    foreach (e; proportions)
+    {
         mass += e;
         if (point < mass) return i;
         i++;
@@ -1338,7 +1423,8 @@ if (isForwardRange!Range && isNumeric!(ElementType!Range) && isForwardRange!Rng)
     assert(false);
 }
 
-unittest {
+unittest
+{
     auto rnd = Random(unpredictableSeed);
     auto i = dice(rnd, 0.0, 100.0);
     assert(i == 1);
@@ -1364,7 +1450,8 @@ foreach (e; randomCover(a, rnd))
 }
 ----
  */
-struct RandomCover(Range, Random) if (isUniformRNG!Random)
+struct RandomCover(Range, Random)
+    if(isRandomAccessRange!Range && isUniformRNG!Random)
 {
     private Range _input;
     private Random _rnd;
@@ -1433,7 +1520,7 @@ struct RandomCover(Range, Random) if (isUniformRNG!Random)
 
 /// Ditto
 RandomCover!(Range, Random) randomCover(Range, Random)(Range r, Random rnd)
-    if(isUniformRNG!Random)
+    if(isRandomAccessRange!Range && isUniformRNG!Random)
 {
     return typeof(return)(r, rnd);
 }
@@ -1478,11 +1565,20 @@ foreach (e; randomSample(a, 5))
     writeln(e);
 }
 ----
- */
+
+$(D RandomSample) implements Jeffrey Scott Vitter's Algorithm D
+(see Vitter $(WEB dx.doi.org/10.1145/358105.893, 1984), $(WEB
+dx.doi.org/10.1145/23002.23003, 1987)), which selects a sample
+of size $(D n) in O(n) steps and requiring O(n) random variates,
+regardless of the size of the data being sampled.
+*/
 struct RandomSample(R, Random = void)
-    if(isUniformRNG!Random || is(Random == void))
+    if(isInputRange!R && (isUniformRNG!Random || is(Random == void)))
 {
     private size_t _available, _toSelect;
+    private immutable ushort _alphaInverse = 13; // Vitter's recommended value.
+    private bool _first, _algorithmA;
+    private double _Vprime;
     private R _input;
     private size_t _index;
 
@@ -1492,27 +1588,46 @@ struct RandomSample(R, Random = void)
     // choice but to store a copy.
     static if(!is(Random == void))
     {
-        Random gen;
-    }
+        Random _gen;
 
-/**
-Constructor.
-*/
-    static if (hasLength!R)
-        this(R input, size_t howMany)
+        static if (hasLength!R)
         {
-            this(input, howMany, input.length);
+            this(R input, size_t howMany, Random gen)
+            {
+                _gen = gen;
+                initialize(input, howMany, input.length);
+            }
         }
 
-    this(R input, size_t howMany, size_t total)
+        this(R input, size_t howMany, size_t total, Random gen)
+        {
+            _gen = gen;
+            initialize(input, howMany, total);
+        }
+    }
+    else
+    {
+        static if (hasLength!R)
+        {
+            this(R input, size_t howMany)
+            {
+                initialize(input, howMany, input.length);
+            }
+        }
+
+        this(R input, size_t howMany, size_t total)
+        {
+            initialize(input, howMany, total);
+        }
+    }
+
+    private void initialize(R input, size_t howMany, size_t total)
     {
         _input = input;
         _available = total;
         _toSelect = howMany;
         enforce(_toSelect <= _available);
-        // we should skip some elements initially so we don't always
-        // start with the first
-        prime();
+        _first = true;
     }
 
 /**
@@ -1526,6 +1641,26 @@ Constructor.
     @property auto ref front()
     {
         assert(!empty);
+        // The first sample point must be determined here to avoid
+        // having it always correspond to the first element of the
+        // input.  The rest of the sample points are determined each
+        // time we call popFront().
+        if(_first)
+        {
+            // We can save ourselves a random variate by checking right
+            // at the beginning if we should use Algorithm A.
+            if((_alphaInverse * _toSelect) > _available)
+            {
+                _algorithmA = true;
+            }
+            else
+            {
+                _Vprime = newVprime(_toSelect);
+                _algorithmA = false;
+            }
+            prime();
+            _first = false;
+        }
         return _input.front;
     }
 
@@ -1561,33 +1696,190 @@ Returns the index of the visited record.
         return _index;
     }
 
+/*
+Vitter's Algorithm A, used when the ratio of needed sample values
+to remaining data values is sufficiently large.
+*/
+    private size_t skipA()
+    {
+        size_t s;
+        double v, quot, top;
+
+        if(_toSelect==1)
+        {
+            static if(is(Random==void))
+            {
+                s = uniform(0, _available);
+            }
+            else
+            {
+                s = uniform(0, _available, _gen);
+            }
+        }
+        else
+        {
+            v = 0;
+            top = _available - _toSelect;
+            quot = top / _available;
+
+            static if(is(Random==void))
+            {
+                v = uniform!"()"(0.0, 1.0);
+            }
+            else
+            {
+                v = uniform!"()"(0.0, 1.0, _gen);
+            }
+
+            while (quot > v)
+            {
+                ++s;
+                quot *= (top - s) / (_available - s);
+            }
+        }
+
+        return s;
+    }
+
+/*
+Randomly reset the value of _Vprime.
+*/
+    private double newVprime(size_t remaining)
+    {
+        static if(is(Random == void))
+        {
+            double r = uniform!"()"(0.0, 1.0);
+        }
+        else
+        {
+            double r = uniform!"()"(0.0, 1.0, _gen);
+        }
+
+        return r ^^ (1.0 / remaining);
+    }
+
+/*
+Vitter's Algorithm D.  For an extensive description of the algorithm
+and its rationale, see:
+
+  * Vitter, J.S. (1984), "Faster methods for random sampling",
+    Commun. ACM 27(7): 703--718
+
+  * Vitter, J.S. (1987) "An efficient algorithm for sequential random
+    sampling", ACM Trans. Math. Softw. 13(1): 58-67.
+
+Variable names are chosen to match those in Vitter's paper.
+*/
+    private size_t skip()
+    {
+        // Step D1: if the number of points still to select is greater
+        // than a certain proportion of the remaining data points, i.e.
+        // if n >= alpha * N where alpha = 1/13, we carry out the
+        // sampling with Algorithm A.
+        if(_algorithmA)
+        {
+            return skipA();
+        }
+        else if((_alphaInverse * _toSelect) > _available)
+        {
+            _algorithmA = true;
+            return skipA();
+        }
+        // Otherwise, we use the standard Algorithm D mechanism.
+        else if ( _toSelect > 1 )
+        {
+            size_t s;
+            size_t qu1 = 1 + _available - _toSelect;
+            double x, y1;
+
+            while(true)
+            {
+                // Step D2: set values of x and u.
+                for(x = _available * (1-_Vprime), s = cast(size_t) trunc(x);
+                    s >= qu1;
+                    x = _available * (1-_Vprime), s = cast(size_t) trunc(x))
+                {
+                    _Vprime = newVprime(_toSelect);
+                }
+
+                static if(is(Random == void))
+                {
+                    double u = uniform!"()"(0.0, 1.0);
+                }
+                else
+                {
+                    double u = uniform!"()"(0.0, 1.0, _gen);
+                }
+
+                y1 = (u * (cast(double) _available) / qu1) ^^ (1.0/(_toSelect - 1));
+
+                _Vprime = y1 * ((-x/_available)+1.0) * ( qu1/( (cast(double) qu1) - s ) );
+
+                // Step D3: if _Vprime <= 1.0 our work is done and we return S.
+                // Otherwise ...
+                if(_Vprime > 1.0)
+                {
+                    size_t top = _available - 1, limit;
+                    double y2 = 1.0, bottom;
+
+                    if(_toSelect > (s+1) )
+                    {
+                        bottom = _available - _toSelect;
+                        limit = _available - s;
+                    }
+                    else
+                    {
+                        bottom = _available - (s+1);
+                        limit = qu1;
+                    }
+
+                    foreach(size_t t; limit.._available)
+                    {
+                        y2 *= top/bottom;
+                        top--;
+                        bottom--;
+                    }
+
+                    // Step D4: decide whether or not to accept the current value of S.
+                    if( (_available/(_available-x)) < (y1 * (y2 ^^ (1.0/(_toSelect-1)))) )
+                    {
+                        // If it's not acceptable, we generate a new value of _Vprime
+                        // and go back to the start of the for(;;) loop.
+                        _Vprime = newVprime(_toSelect);
+                    }
+                    else
+                    {
+                        // If it's acceptable we generate a new value of _Vprime
+                        // based on the remaining number of sample points needed,
+                        // and return S.
+                        _Vprime = newVprime(_toSelect-1);
+                        return s;
+                    }
+                }
+                else
+                {
+                    // Return if condition D3 satisfied.
+                    return s;
+                }
+            }
+        }
+        else
+        {
+            // If only one sample point remains to be taken ...
+            return cast(size_t) trunc(_available * _Vprime);
+        }
+    }
+
     private void prime()
     {
         if (empty) return;
         assert(_available && _available >= _toSelect);
-        for (;;)
-        {
-            static if(is(Random == void))
-            {
-                auto r = uniform(0, _available);
-            }
-            else
-            {
-                auto r = uniform(0, _available, gen);
-            }
-
-            if (r < _toSelect)
-            {
-                // chosen!
-                return;
-            }
-            // not chosen, retry
-            assert(!_input.empty);
-            _input.popFront();
-            ++_index;
-            --_available;
-            assert(_available > 0);
-        }
+        immutable size_t s = skip();
+        _input.popFrontN(s);
+        _index += s;
+        _available -= s;
+        assert(_available > 0);
+        return;
     }
 }
 
@@ -1599,7 +1891,8 @@ if(isInputRange!R)
 }
 
 /// Ditto
-auto randomSample(R)(R r, size_t n) if (hasLength!R)
+auto randomSample(R)(R r, size_t n)
+    if(isInputRange!R && hasLength!R)
 {
     return RandomSample!(R, void)(r, n, r.length);
 }
@@ -1608,18 +1901,14 @@ auto randomSample(R)(R r, size_t n) if (hasLength!R)
 auto randomSample(R, Random)(R r, size_t n, size_t total, Random gen)
 if(isInputRange!R && isUniformRNG!Random)
 {
-    auto ret = RandomSample!(R, Random)(r, n, total);
-    ret.gen = gen;
-    return ret;
+    return RandomSample!(R, Random)(r, n, total, gen);
 }
 
 /// Ditto
 auto randomSample(R, Random)(R r, size_t n, Random gen)
 if (isInputRange!R && hasLength!R && isUniformRNG!Random)
 {
-    auto ret = RandomSample!(R, Random)(r, n, r.length);
-    ret.gen = gen;
-    return ret;
+    return RandomSample!(R, Random)(r, n, r.length, gen);
 }
 
 unittest
@@ -1640,4 +1929,14 @@ unittest
         //writeln(e);
     }
     assert(i == 5);
+
+    // Bugzilla 8314
+    {
+        auto sample(uint seed) { return randomSample(a, 1, Random(seed)).front; }
+
+        immutable fst = sample(0);
+        uint n;
+        while (sample(++n) == fst && n < n.max) {}
+        assert(n < n.max);
+    }
 }

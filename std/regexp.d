@@ -134,6 +134,7 @@ private
     import core.stdc.stdio;
     import core.stdc.stdlib;
     import core.stdc.string;
+    import std.algorithm;
     import std.array;
     import std.stdio;
     import std.string;
@@ -173,8 +174,8 @@ class RegExpException : Exception
 
 struct regmatch_t
 {
-    sizediff_t rm_so; // index of start of match
-    sizediff_t rm_eo; // index past end of match
+    ptrdiff_t rm_so; // index of start of match
+    ptrdiff_t rm_eo; // index past end of match
 }
 
 private alias char rchar;   // so we can make a wchar version
@@ -333,7 +334,7 @@ unittest
  * ---
  */
 
-sizediff_t find(string s, RegExp pattern)
+ptrdiff_t find(string s, RegExp pattern)
 {
     return pattern.test(s)
         ? pattern.pmatch[0].rm_so
@@ -363,7 +364,7 @@ unittest
    find(s, RegExp(p, a))).
 */
 
-sizediff_t
+ptrdiff_t
 find(string s, string pattern, string attributes = null)
 {
     auto r = new RegExp(pattern, attributes);
@@ -396,9 +397,9 @@ unittest
  * ---
  */
 
-sizediff_t rfind(string s, RegExp pattern)
+ptrdiff_t rfind(string s, RegExp pattern)
 {
-    sizediff_t i = -1, lastindex = 0;
+    ptrdiff_t i = -1, lastindex = 0;
 
     while (pattern.test(s, lastindex))
     {
@@ -414,7 +415,7 @@ sizediff_t rfind(string s, RegExp pattern)
 
 unittest
 {
-    sizediff_t i;
+    ptrdiff_t i;
 
     debug(regexp) printf("regexp.rfind.unittest\n");
     i = rfind("abcdefcdef", RegExp("c"));
@@ -442,7 +443,7 @@ $(D_PARAM std.regexp.rfind(s, p, a)), you may want to use $(D_PARAM
 rfind(s, RegExp(p, a))).
 */
 
-sizediff_t
+ptrdiff_t
 rfind(string s, string pattern, string attributes = null)
 {
     typeof(return) i = -1, lastindex = 0;
@@ -463,7 +464,7 @@ rfind(string s, string pattern, string attributes = null)
 
 unittest
 {
-    sizediff_t i;
+    ptrdiff_t i;
 
     debug(regexp) printf("regexp.rfind.unittest\n");
     i = rfind("abcdefcdef", "c");
@@ -963,7 +964,7 @@ private:
 
         if (s.length)
         {
-            sizediff_t p, q;
+            ptrdiff_t p, q;
             for (q = p; q != s.length;)
             {
                 if (test(s, q))
@@ -1008,17 +1009,17 @@ private:
         result = r.split("ab");
 
         assert(result.length == 2);
-        i = std.string.cmp(result[0], "a");
+        i = std.algorithm.cmp(result[0], "a");
         assert(i == 0);
-        i = std.string.cmp(result[1], "b");
+        i = std.algorithm.cmp(result[1], "b");
         assert(i == 0);
 
         r = new RegExp("a*", null);
         result = r.split("ab");
         assert(result.length == 2);
-        i = std.string.cmp(result[0], "");
+        i = std.algorithm.cmp(result[0], "");
         assert(i == 0);
-        i = std.string.cmp(result[1], "b");
+        i = std.algorithm.cmp(result[1], "b");
         assert(i == 0);
 
         r = new RegExp("<(\\/)?([^<>]+)>", null);
@@ -1032,18 +1033,18 @@ private:
 
         j = join(result, ",");
         //printf("j = '%.*s'\n", j.length, j.ptr);
-        i = std.string.cmp(j, "a,,b,font,/,b,bar,,TAG,hello,/,TAG,");
+        i = std.algorithm.cmp(j, "a,,b,font,/,b,bar,,TAG,hello,/,TAG,");
         assert(i == 0);
 
         r = new RegExp("a[bc]", null);
         result = r.match("123ab");
         j = join(result, ",");
-        i = std.string.cmp(j, "ab");
+        i = std.algorithm.cmp(j, "ab");
         assert(i == 0);
 
         result = r.match("ac");
         j = join(result, ",");
-        i = std.string.cmp(j, "ac");
+        i = std.algorithm.cmp(j, "ac");
         assert(i == 0);
     }
 
@@ -1053,7 +1054,7 @@ private:
  *  index of match if successful, -1 if not found
  */
 
-    public sizediff_t find(string string)
+    public ptrdiff_t find(string string)
     {
         if (test(string))
             return pmatch[0].rm_so;
@@ -1088,7 +1089,7 @@ private:
 
         if (attributes & REA.global)
         {
-            sizediff_t lastindex = 0;
+            ptrdiff_t lastindex = 0;
 
             while (test(s, lastindex))
             {
@@ -1120,13 +1121,13 @@ private:
         r = new RegExp("a[bc]", null);
         result = r.match("1ab2ac3");
         j = join(result, ",");
-        i = std.string.cmp(j, "ab");
+        i = std.algorithm.cmp(j, "ab");
         assert(i == 0);
 
         r = new RegExp("a[bc]", "g");
         result = r.match("1ab2ac3");
         j = join(result, ",");
-        i = std.string.cmp(j, "ab,ac");
+        i = std.algorithm.cmp(j, "ab,ac");
         assert(i == 0);
     }
 
@@ -1144,7 +1145,7 @@ private:
         debug(regexp) printf("string = %.*s, format = %.*s\n", s.length, s.ptr, format.length, format.ptr);
 
         string result = s;
-        sizediff_t lastindex = 0;
+        ptrdiff_t lastindex = 0;
         size_t offset = 0;
 
         for (;;)
@@ -1203,12 +1204,12 @@ private:
 
         r = new RegExp("a[bc]", "g");
         result = r.replace("1ab2ac3", "x$&y");
-        i = std.string.cmp(result, "1xaby2xacy3");
+        i = std.algorithm.cmp(result, "1xaby2xacy3");
         assert(i == 0);
 
         r = new RegExp("ab", "g");
         result = r.replace("1ab2ac3", "xy");
-        i = std.string.cmp(result, "1xy2ac3");
+        i = std.algorithm.cmp(result, "1xy2ac3");
         assert(i == 0);
     }
 
@@ -3131,7 +3132,7 @@ private:
     {
         string result;
         size_t c2;
-        sizediff_t rm_so, rm_eo, i;
+        ptrdiff_t rm_so, rm_eo, i;
 
 //    printf("replace3(format = '%.*s', input = '%.*s')\n", format.length, format.ptr, input.length, input.ptr);
         result.length = format.length;

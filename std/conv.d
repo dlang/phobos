@@ -17,7 +17,7 @@ Source:    $(PHOBOSSRC std/_conv.d)
 */
 module std.conv;
 
-import core.stdc.math : ldexpl;
+import std.math : ldexp;
 import core.stdc.string;
 import std.algorithm, std.array, std.ascii, std.exception, std.math, std.range,
     std.string, std.traits, std.typecons, std.typetuple, std.uni,
@@ -39,8 +39,6 @@ class ConvException : Exception
         super(s, fn, ln);
     }
 }
-
-deprecated alias ConvException ConvError;   /// ditto
 
 private string convError_unexpected(S)(S source) {
     return source.empty ? "end of input" : text("'", source.front, "'");
@@ -70,6 +68,7 @@ private void parseError(lazy string msg, string fn = __FILE__, size_t ln = __LIN
 
 private void parseCheck(alias source)(dchar c, string fn = __FILE__, size_t ln = __LINE__)
 {
+    if (source.empty) parseError(text("unexpected end of input when expecting", "\"", c, "\""));
     if (source.front != c)
         parseError(text("\"", c, "\" is missing"), fn, ln);
     source.popFront();
@@ -97,9 +96,36 @@ private
         if (isSomeString!T)
     {
         auto w = appender!T();
-        FormatSpec!(typeof(T.init[0])) f;
+        FormatSpec!(ElementEncodingType!T) f;
         formatValue(w, src, f);
         return w.data;
+    }
+
+    template isExactSomeString(T)
+    {
+        enum isExactSomeString = isSomeString!T && !is(T == enum);
+    }
+
+    template isEnumStrToStr(S, T)
+    {
+        enum isEnumStrToStr = isImplicitlyConvertible!(S, T) &&
+                              is(S == enum) && isExactSomeString!T;
+    }
+    template isNullToStr(S, T)
+    {
+        enum isNullToStr = isImplicitlyConvertible!(S, T) &&
+                           is(S == typeof(null)) && isExactSomeString!T;
+    }
+
+    template isRawStaticArray(T, A...)
+    {
+        enum isRawStaticArray =
+            A.length == 0 &&
+            isStaticArray!T &&
+            !is(T == class) &&
+            !is(T == interface) &&
+            !is(T == struct) &&
+            !is(T == union);
     }
 }
 
@@ -114,9 +140,7 @@ class ConvOverflowException : ConvException
     }
 }
 
-deprecated alias ConvOverflowException ConvOverflowError;   /// ditto
-
-/* **************************************************************
+/**
 
 The $(D_PARAM to) family of functions converts a value from type
 $(D_PARAM Source) to type $(D_PARAM Target). The source type is
@@ -130,18 +154,22 @@ any checking because any int fits in a double.
 
 Converting a value to its own type (useful mostly for generic code)
 simply returns its argument.
+
 Example:
 -------------------------
 int a = 42;
 auto b = to!int(a); // b is int with value 42
 auto c = to!double(3.14); // c is double with value 3.14
 -------------------------
+
 Converting among numeric types is a safe way to cast them around.
+
 Conversions from floating-point types to integral types allow loss of
 precision (the fractional part of a floating-point number). The
 conversion is truncating towards zero, the same way a cast would
 truncate. (To round a floating point value when casting to an
 integral, use $(D_PARAM roundTo).)
+
 Examples:
 -------------------------
 int a = 420;
@@ -187,6 +215,7 @@ $(I Sign):
     $(B +)
     $(B -)
 </pre>
+
 For conversion to unsigned types, the grammar recognized is:
 <pre>
 $(I UnsignedInteger):
@@ -240,9 +269,58 @@ Macros: WIKI=Phobos/StdConv
 template to(T)
 {
     T to(A...)(A args)
+        if (!isRawStaticArray!A)
     {
         return toImpl!T(args);
     }
+
+    // Fix issue 6175
+    T to(S)(ref S arg)
+        if (isRawStaticArray!S)
+    {
+        return toImpl!T(arg);
+    }
+}
+
+// Tests for issue 6175
+unittest
+{
+    char[9] sarr = "blablabla";
+    auto darr = to!(char[])(sarr);
+    assert(sarr.ptr == darr.ptr);
+    assert(sarr.length == darr.length);
+}
+
+// Tests for issue 7348
+unittest
+{
+    assert(to!string(null) == "null");
+    assert(text(null) == "null");
+}
+
+// Tests for issue 8729: do NOT skip leading WS
+unittest
+{
+    foreach(T;TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    {
+        assertThrown!ConvException(to!T(" 0"));
+        assertThrown!ConvException(to!T(" 0", 8));
+    }
+    foreach(T;TypeTuple!(float, double, real))
+    {
+        assertThrown!ConvException(to!T(" 0"));
+    }
+
+    assertThrown!ConvException(to!bool  (" true"));
+
+    alias typeof(null) NullType;
+    assertThrown!ConvException(to!NullType(" null"));
+
+    alias int[] ARR;
+    assertThrown!ConvException(to!ARR(" [1]"));
+
+    alias int[int] AA;
+    assertThrown!ConvException(to!AA(" [1:1]"));
 }
 
 /**
@@ -250,7 +328,8 @@ If the source type is implicitly convertible to the target type, $(D
 to) simply performs the implicit conversion.
  */
 T toImpl(T, S)(S value)
-    if (isImplicitlyConvertible!(S, T))
+    if (isImplicitlyConvertible!(S, T) &&
+        !isEnumStrToStr!(S, T) && !isNullToStr!(S, T))
 {
     alias isUnsigned isUnsignedInt;
 
@@ -355,7 +434,7 @@ unittest
   Converting static arrays forwards to their dynamic counterparts.
  */
 T toImpl(T, S)(ref S s)
-    if (isStaticArray!S)
+    if (isRawStaticArray!S)
 {
     return toImpl!(T, typeof(s[0])[])(s);
 }
@@ -367,33 +446,7 @@ unittest
     assert(to!string(test) == test);
 }
 
-/**
-$(RED Deprecated. It will be removed in August 2012. Please define $(D opCast)
-      for user-defined types instead of a $(D to) function.
-      $(LREF to) will now use $(D opCast).)
-
-Object-_to-non-object conversions look for a method "to" of the source
-object.
-
-Example:
-----
-class Date
-{
-    T to(T)() if(is(T == long))
-    {
-        return timestamp;
-    }
-    ...
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    auto d = new Date;
-    auto ts = to!long(d); // same as d.to!long()
-}
-----
- */
+//Explicitly undocumented. Do not use. To be removed in March 2013.
 deprecated T toImpl(T, S)(S value)
     if (is(S : Object) && !is(T : Object) && !isSomeString!T &&
         hasMember!(S, "to") && is(typeof(S.init.to!T()) : T))
@@ -417,7 +470,7 @@ When source type supports member template function opCast, is is used.
 */
 T toImpl(T, S)(S value)
     if (is(typeof(S.init.opCast!T()) : T) &&
-        !isSomeString!T)
+        !isExactSomeString!T)
 {
     return value.opCast!T();
 }
@@ -443,14 +496,14 @@ unittest
 
 /**
 When target type supports 'converting construction', it is used.
-$(UL $(LI If target type is struct, $(D T(src)) is used.)
-     $(LI If target type is class, $(D new T(src)) is used.))
+$(UL $(LI If target type is struct, $(D T(value)) is used.)
+     $(LI If target type is class, $(D new T(value)) is used.))
 */
-T toImpl(T, S)(S src)
+T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
-        is(T == struct) && is(typeof(T(src))))
+        is(T == struct) && is(typeof(T(value))))
 {
-    return T(src);
+    return T(value);
 }
 
 // Bugzilla 3961
@@ -496,11 +549,11 @@ unittest
 }
 
 /// ditto
-T toImpl(T, S)(S src)
+T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
-        is(T : Object) && is(typeof(new T(src))))
+        is(T == class) && is(typeof(new T(value))))
 {
-    return new T(src);
+    return new T(value);
 }
 
 unittest
@@ -701,25 +754,22 @@ unittest
 }
 
 /**
-Stringnize conversion from all types is supported.
+Stringize conversion from all types is supported.
 $(UL
   $(LI String _to string conversion works for any two string types having
        ($(D char), $(D wchar), $(D dchar)) character widths and any
        combination of qualifiers (mutable, $(D const), or $(D immutable)).)
-  $(LI Converts array (other than strings) to string. The left bracket,
-       separator, and right bracket are configurable. Each element is
-       converted by calling $(D to!T).)
-  $(LI Associative array to string conversion. The left bracket, key-value
-       separator, element separator, and right bracket are configurable.
+  $(LI Converts array (other than strings) to string.
+       Each element is converted by calling $(D to!T).)
+  $(LI Associative array to string conversion.
        Each element is printed by calling $(D to!T).)
   $(LI Object to string conversion calls $(D toString) against the object or
-       returns $(D nullstr) if the object is null.)
+       returns $(D "null") if the object is null.)
   $(LI Struct to string conversion calls $(D toString) against the struct if
        it is defined.)
   $(LI For structs that do not define $(D toString), the conversion to string
        produces the list of fields.)
   $(LI Enumerated types are converted to strings as their symbolic names.)
-  $(LI A $(D typedef Type Symbol) is converted to string as $(D "Type(value)").)
   $(LI Boolean values are printed as $(D "true") or $(D "false").)
   $(LI $(D char), $(D wchar), $(D dchar) to a string type.)
   $(LI Unsigned or signed integers to strings.
@@ -732,35 +782,59 @@ $(UL
   $(LI Pointer to string conversions prints the pointer as a $(D size_t) value.
        If pointer is $(D char*), treat it as C-style strings.))
 */
-T toImpl(T, S)(S s)
-    if (!isImplicitlyConvertible!(S, T) &&
-        isInputRange!(Unqual!S) && isSomeChar!(ElementType!S) &&
-        isSomeString!T)
+T toImpl(T, S)(S value)
+    if (!(isImplicitlyConvertible!(S, T) &&
+          !isEnumStrToStr!(S, T) && !isNullToStr!(S, T)) &&
+        isExactSomeString!T)
 {
-    static if (isSomeString!S && s[0].sizeof == T.init[0].sizeof)
+    static if (isExactSomeString!S && value[0].sizeof == ElementEncodingType!T.sizeof)
     {
         // string-to-string with incompatible qualifier conversion
-        static if (is(typeof(T.init[0]) == immutable))
+        static if (is(ElementEncodingType!T == immutable))
         {
             // conversion (mutable|const) -> immutable
-            return s.idup;
+            return value.idup;
         }
         else
         {
             // conversion (immutable|const) -> mutable
-            return s.dup;
+            return value.dup;
         }
+    }
+    else static if (isExactSomeString!S)
+    {
+        // other string-to-string conversions always run decode/encode
+        return toStr!T(value);
+    }
+    else static if (is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[]))
+    {
+        // Converting void array to string
+        alias Unqual!(ElementEncodingType!T) Char;
+        auto raw = cast(const(ubyte)[]) value;
+        enforce(raw.length % Char.sizeof == 0,
+                new ConvException("Alignment mismatch in converting a "
+                        ~ S.stringof ~ " to a "
+                        ~ T.stringof));
+        auto result = new Char[raw.length / Char.sizeof];
+        memcpy(result.ptr, value.ptr, value.length);
+        return cast(T) result;
+    }
+    else static if (isPointer!S && is(S : const(char)*))
+    {
+        return value ? cast(T) value[0 .. strlen(value)].dup : cast(string)null;
     }
     else
     {
-        // other conversions always run decode/encode
-        return toStr!T(s);
+        // other non-string values runs formatting
+        return toStr!T(value);
     }
 }
 
 unittest
 {
+    // string to string conversion
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+
     alias TypeTuple!(char, wchar, dchar) Chars;
     foreach (LhsC; Chars)
     {
@@ -781,16 +855,10 @@ unittest
             }
         }
     }
-}
 
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    // string tests
-    alias TypeTuple!(char, wchar, dchar) AllChars;
-    foreach (T; AllChars)
+    foreach (T; Chars)
     {
-        foreach (U; AllChars)
+        foreach (U; Chars)
         {
             T[] s1 = to!(T[])("Hello, world!");
             auto s2 = to!(U[])(s1);
@@ -803,302 +871,45 @@ unittest
     }
 }
 
-/// ditto
-T toImpl(T, S)(S s)
-    if (!isSomeChar!(ElementType!S) && (isInputRange!S || isInputRange!(Unqual!S)) &&
-        isSomeString!T)
-{
-    return toStr!T(s);
-}
-
-T toImpl(T, S)(S s, in T leftBracket, in T separator = ", ", in T rightBracket = "]")
-    if (!isSomeChar!(ElementType!S) && (isInputRange!S || isInputRange!(Unqual!S)) &&
-        isSomeString!T)
-{
-    pragma(msg, softDeprec!("2.056", "May 2012", "std.conv.toImpl with extra parameters",
-                                                 "std.format.formattedWrite"));
-
-    static if (!isInputRange!S)
-    {
-        alias toImpl!(T, Unqual!S) ti;
-        return ti(s, leftBracket, separator, rightBracket);
-    }
-    else
-    {
-        alias Unqual!(typeof(T.init[0])) Char;
-        // array-to-string conversion
-        auto result = appender!(Char[])();
-        result.put(leftBracket);
-        bool first = true;
-        for (; !s.empty; s.popFront())
-        {
-            if (!first)
-            {
-                result.put(separator);
-            }
-            else
-            {
-                first = false;
-            }
-            result.put(to!T(s.front));
-        }
-        result.put(rightBracket);
-        return cast(T) result.data;
-    }
-}
-
 unittest
 {
+    // Conversion reinterpreting void array to string
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    long[] b = [ 1, 3, 5 ];
-    auto s = to!string(b);
-//printf("%d, |%*s|\n", s.length, s.length, s.ptr);
-    assert(to!string(b) == "[1, 3, 5]", s);
-    double[2] a = [ 1.5, 2.5 ];
-//writeln(to!string(a));
-    assert(to!string(a) == "[1.5, 2.5]");
-}
 
-// Converting arrays of void
-T toImpl(T, S)(ref S s)
-    if ((is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[])) &&
-        isSomeString!T)
-{
-    alias Unqual!(typeof(T.init[0])) Char;
-    auto raw = cast(const(ubyte)[]) s;
-    enforce(raw.length % Char.sizeof == 0,
-            new ConvException("Alignment mismatch in converting a "
-                    ~ S.stringof ~ " to a "
-                    ~ T.stringof));
-    auto result = new Char[raw.length / Char.sizeof];
-    memcpy(result.ptr, s.ptr, s.length);
-    return cast(T) result;
-}
-
-T toImpl(T, S)(ref S s, in T leftBracket, in T separator = " ", in T rightBracket = "]")
-    if ((is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[])) &&
-        isSomeString!T)
-{
-    pragma(msg, softDeprec!("2.056", "May 2012", "std.conv.toImpl with extra parameters",
-                                                 "std.format.formattedWrite"));
-
-    return toImpl(s);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     auto a = "abcx"w;
     const(void)[] b = a;
     assert(b.length == 8);
+
     auto c = to!(wchar[])(b);
     assert(c == "abcx");
 }
 
-/// ditto
-T toImpl(T, S)(S s)
-    if (isAssociativeArray!S &&
-        isSomeString!T)
+unittest
 {
-    return toStr!T(s);
-}
+    // char* to string conversion
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) printf("string.to!string(char*).unittest\n");
 
-T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separator = ", ", in T rightBracket = "]")
-    if (isAssociativeArray!S &&
-        isSomeString!T)
-{
-    pragma(msg, softDeprec!("2.056", "May 2012", "std.conv.toImpl with extra parameters",
-                                                 "std.format.formattedWrite"));
-
-    alias Unqual!(typeof(T.init[0])) Char;
-    auto result = appender!(Char[])();
-// hash-to-string conversion
-    result.put(leftBracket);
-    bool first = true;
-    foreach (k, v; s)
-    {
-        if (!first)
-            result.put(separator);
-        else first = false;
-        result.put(to!T(k));
-        result.put(keyval);
-        result.put(to!T(v));
-    }
-    result.put(rightBracket);
-    return cast(T) result.data;
-}
-
-/// ditto
-T toImpl(T, S)(S s)
-    if (is(S : Object) &&
-        isSomeString!T)
-{
-    return toStr!T(s);
-}
-
-T toImpl(T, S)(S s, in T nullstr)
-    if (is(S : Object) &&
-        isSomeString!T)
-{
-    pragma(msg, softDeprec!("2.056", "May 2012", "std.conv.toImpl with extra parameters",
-                                                 "std.format.formattedWrite"));
-
-    if (!s)
-        return nullstr;
-    return to!T(s.toString());
+    assert(to!string(cast(char*) null) == "");
+    assert(to!string("foo\0".ptr) == "foo");
 }
 
 unittest
 {
+    // Conversion representing bool value with string
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    class A
-    {
-        override string toString() { return "an A"; }
-    }
-    A a;
-    assert(to!string(a) == "null");
-    a = new A;
-    assert(to!string(a) == "an A");
-}
 
-/// ditto
-T toImpl(T, S)(S s)
-    if (is(S == struct) && is(typeof(&S.init.toString)) &&
-        isSomeString!T)
-{
-    return toStr!T(s);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    struct S
-    {
-        string toString() { return "wyda"; }
-    }
-    assert(to!string(S()) == "wyda");
-}
-
-/// ditto
-T toImpl(T, S)(S s)
-    if (is(S == struct) && !is(typeof(&S.init.toString)) && !isInputRange!S &&
-        isSomeString!T)
-{
-    return toStr!T(s);
-}
-
-T toImpl(T, S)(S s, in T left, in T separator = ", ", in T right = ")")
-    if (is(S == struct) && !is(typeof(&S.init.toString)) && !isInputRange!S &&
-        isSomeString!T)
-{
-    pragma(msg, softDeprec!("2.056", "May 2012", "std.conv.toImpl with extra parameters",
-                                                 "std.format.formattedWrite"));
-
-    Tuple!(FieldTypeTuple!S) * t = void;
-    static if ((*t).sizeof == S.sizeof)
-    {
-        // ok, attempt to forge the tuple
-        t = cast(typeof(t)) &s;
-        alias Unqual!(typeof(T.init[0])) Char;
-        auto app = appender!(Char[])();
-        app.put(left);
-        foreach (i, e; t.field)
-        {
-            if (i > 0)
-                app.put(to!T(separator));
-            app.put(to!T(e));
-        }
-        app.put(right);
-        return cast(T) app.data;
-    }
-    else
-    {
-        // struct with weird alignment
-        return to!T(S.stringof);
-    }
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    struct S
-    {
-        int a = 42;
-        float b = 43.5;
-    }
-    S s;
-    assert(to!string(s) == "S(42, 43.5)");
-}
-
-/// ditto
-T toImpl(T, S)(S s)
-    if (!isImplicitlyConvertible!(S, T) &&
-        is(S == enum) &&
-        isSomeString!T)
-{
-    return toStr!T(s);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    enum E { a, b, c }
-    assert(to! string(E.a) == "a"c);
-    assert(to!wstring(E.b) == "b"w);
-    assert(to!dstring(E.c) == "c"d);
-
-    enum F : real { x = 1.414, y = 1.732, z = 2.236 }
-    assert(to! string(F.x) == "x"c);
-    assert(to!wstring(F.y) == "y"w);
-    assert(to!dstring(F.z) == "z"d);
-
-    // Test an value not corresponding to an enum member.
-    auto o = cast(E)5;
-    assert(to! string(o) == "cast(E)5"c);
-    assert(to!wstring(o) == "cast(E)5"w);
-    assert(to!dstring(o) == "cast(E)5"d);
-}
-
-/// ditto
-deprecated T toImpl(T, S)(S s, in T left = to!T(S.stringof~"("), in T right = ")")
-    if (is(S == typedef) &&
-        isSomeString!T)
-{
-    static if (is(S Original == typedef))
-    {
-        // typedef
-        return left ~ to!T(cast(Original) s) ~ right;
-    }
-}
-
-/// ditto
-T toImpl(T, S)(S b)
-    if (is(Unqual!S == bool) &&
-        isSomeString!T)
-{
-    return toStr!T(b);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     bool b;
     assert(to!string(b) == "false");
     b = true;
     assert(to!string(b) == "true");
 }
 
-/// ditto
-T toImpl(T, S)(S c)
-    if (isSomeChar!(Unqual!S) &&
-        isSomeString!T)
-{
-    return toStr!T(c);
-}
-
 unittest
 {
+    // Conversion representing character value with string
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+
     alias TypeTuple!(
         char, wchar, dchar,
         const(char), const(wchar), const(dchar),
@@ -1113,12 +924,6 @@ unittest
         uint x = 4;
         assert(to!(Char1[])(x) == "4");
     }
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("string.to!string(char).unittest\n");
 
     string s = "foo";
     string s2;
@@ -1130,16 +935,10 @@ unittest
     assert(s2 == "foo");
 }
 
-/// ditto
-T toImpl(T, S)(S input)
-    if (isIntegral!S && isUnsigned!S &&
-        isSomeString!T)
-{
-    return toStr!T(input);
-}
-
 unittest
 {
+    // Conversion representing integer values with string
+
     foreach (Int; TypeTuple!(ubyte, ushort, uint, ulong))
     {
         debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -1149,26 +948,7 @@ unittest
         assert(to!string(to!Int(9)) == "9");
         assert(to!string(to!Int(123)) == "123");
     }
-}
 
-/// ditto
-T toImpl(T, S)(S value)
-    if (isIntegral!S && isSigned!S &&
-        isSomeString!T)
-{
-    return toStr!T(value);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    assert(wtext(int.max) == "2147483647"w);
-    assert(wtext(int.min) == "-2147483648"w);
-    assert(to!string(0L) == "0");
-}
-
-unittest
-{
     foreach (Int; TypeTuple!(byte, short, int, long))
     {
         debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -1182,19 +962,121 @@ unittest
         assert(to!string(to!Int(-123)) == "-123");
         assert(to!string(to!(const Int)(6)) == "6");
     }
+
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    assert(wtext(int.max) == "2147483647"w);
+    assert(wtext(int.min) == "-2147483648"w);
+    assert(to!string(0L) == "0");
+}
+
+unittest
+{
+    // Conversion representing dynamic/static array with string
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+
+    long[] b = [ 1, 3, 5 ];
+    auto s = to!string(b);
+    assert(to!string(b) == "[1, 3, 5]", s);
+
+    double[2] a = [ 1.5, 2.5 ];
+    assert(to!string(a) == "[1.5, 2.5]");
+}
+
+unittest
+{
+    // Conversion representing associative array with string
+    int[string] a = ["0":1, "1":2];
+    assert(to!string(a) == `["0":1, "1":2]`);
+}
+
+unittest
+{
+    // Conversion representing class object with string
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+
+    class A
+    {
+        override string toString() const { return "an A"; }
+    }
+    A a;
+    assert(to!string(a) == "null");
+    a = new A;
+    assert(to!string(a) == "an A");
+
+    // Bug 7660
+    class C { override string toString() const { return "C"; } }
+    struct S { C c; alias c this; }
+    S s; s.c = new C();
+    assert(to!string(s) == "C");
+}
+
+unittest
+{
+    // Conversion representing struct object with string
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+
+    struct S1
+    {
+        string toString() { return "wyda"; }
+    }
+    assert(to!string(S1()) == "wyda");
+
+    struct S2
+    {
+        int a = 42;
+        float b = 43.5;
+    }
+    S2 s2;
+    assert(to!string(s2) == "S2(42, 43.5)");
+
+    // Test for issue 8080
+    struct S8080
+    {
+        short[4] data;
+        alias data this;
+        string toString() { return "<S>"; }
+    }
+    S8080 s8080;
+    assert(to!string(s8080) == "<S>");
+}
+
+unittest
+{
+    // Conversion representing enum value with string
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+
+    enum EB : bool { a = true }
+    enum EU : uint { a = 0, b = 1, c = 2 }  // base type is unsigned
+    enum EI : int { a = -1, b = 0, c = 1 }  // base type is signed (bug 7909)
+    enum EF : real { a = 1.414, b = 1.732, c = 2.236 }
+    enum EC : char { a = 'x', b = 'y' }
+    enum ES : string { a = "aaa", b = "bbb" }
+
+    foreach (E; TypeTuple!(EB, EU, EI, EF, EC, ES))
+    {
+        assert(to! string(E.a) == "a"c);
+        assert(to!wstring(E.a) == "a"w);
+        assert(to!dstring(E.a) == "a"d);
+    }
+
+    // Test an value not corresponding to an enum member.
+    auto o = cast(EU)5;
+    assert(to! string(o) == "cast(EU)5"c);
+    assert(to!wstring(o) == "cast(EU)5"w);
+    assert(to!dstring(o) == "cast(EU)5"d);
 }
 
 /// ditto
 T toImpl(T, S)(S value, uint radix)
-    if (isIntegral!(Unqual!S) &&
-        isSomeString!T)
+    if (isIntegral!S &&
+        isExactSomeString!T)
 in
 {
     assert(radix >= 2 && radix <= 36);
 }
 body
 {
-    static if (!is(Unqual!S == ulong))
+    static if (!is(IntegralTypeOf!S == ulong))
     {
         enforce(radix >= 2 && radix <= 36, new ConvException("Radix error"));
         if (radix == 10)
@@ -1243,37 +1125,142 @@ unittest
     }
 }
 
-/// ditto
-T toImpl(T, S)(S value)
-    if ((isFloatingPoint!S || isImaginary!S || isComplex!S) &&
-        isSomeString!T)
+/**
+    $(RED Deprecated. It will be removed in January 2013.
+          Please use $(XREF format, formattedWrite) instead.)
+
+    Conversions to string with optional configures.
+*/
+deprecated T toImpl(T, S)(S s, in T leftBracket, in T separator = ", ", in T rightBracket = "]")
+    if (!isSomeChar!(ElementType!S) && (isInputRange!S || isInputRange!(Unqual!S)) &&
+        isExactSomeString!T)
 {
-    return toStr!T(value);
+    pragma(msg, hardDeprec!("2.060", "January 2013", "std.conv.toImpl with extra parameters",
+                                                 "std.format.formattedWrite"));
+
+    static if (!isInputRange!S)
+    {
+        alias toImpl!(T, Unqual!S) ti;
+        return ti(s, leftBracket, separator, rightBracket);
+    }
+    else
+    {
+        alias Unqual!(ElementEncodingType!T) Char;
+        // array-to-string conversion
+        auto result = appender!(Char[])();
+        result.put(leftBracket);
+        bool first = true;
+        for (; !s.empty; s.popFront())
+        {
+            if (!first)
+            {
+                result.put(separator);
+            }
+            else
+            {
+                first = false;
+            }
+            result.put(to!T(s.front));
+        }
+        result.put(rightBracket);
+        return cast(T) result.data;
+    }
 }
 
 /// ditto
-T toImpl(T, S)(S value)
-    if (isPointer!S && (!is(typeof(*S.init)) || !isSomeChar!(typeof(*S.init))) &&
-        isSomeString!T)
+deprecated T toImpl(T, S)(ref S s, in T leftBracket, in T separator = " ", in T rightBracket = "]")
+    if ((is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[])) &&
+        isExactSomeString!T)
 {
-    return toStr!T(cast(size_t) value);
+    pragma(msg, hardDeprec!("2.060", "January 2013", "std.conv.toImpl with extra parameters",
+                                                 "std.format.formattedWrite"));
+
+    return toImpl(s);
 }
 
 /// ditto
-T toImpl(T, S)(S s)
-    if (isPointer!S && is(S : const(char)*) &&
-        isSomeString!T)
+deprecated T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separator = ", ", in T rightBracket = "]")
+    if (isAssociativeArray!S && !is(S == enum) &&
+        isExactSomeString!T)
 {
-    return s ? cast(T) s[0 .. strlen(s)].dup : cast(string)null;
+    pragma(msg, hardDeprec!("2.060", "January 2013", "std.conv.toImpl with extra parameters",
+                                                 "std.format.formattedWrite"));
+
+    alias Unqual!(ElementEncodingType!T) Char;
+    auto result = appender!(Char[])();
+// hash-to-string conversion
+    result.put(leftBracket);
+    bool first = true;
+    foreach (k, v; s)
+    {
+        if (!first)
+            result.put(separator);
+        else first = false;
+        result.put(to!T(k));
+        result.put(keyval);
+        result.put(to!T(v));
+    }
+    result.put(rightBracket);
+    return cast(T) result.data;
 }
 
-unittest
+/// ditto
+deprecated T toImpl(T, S)(S s, in T nullstr)
+    if (is(S : Object) &&
+        isExactSomeString!T)
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("string.to!string(char*).unittest\n");
+    pragma(msg, hardDeprec!("2.060", "January 2013", "std.conv.toImpl with extra parameters",
+                                                 "std.format.formattedWrite"));
 
-    assert(to!string(cast(char*) null) == "");
-    assert(to!string("foo\0".ptr) == "foo");
+    if (!s)
+        return nullstr;
+    return to!T(s.toString());
+}
+
+/// ditto
+deprecated T toImpl(T, S)(S s, in T left, in T separator = ", ", in T right = ")")
+    if (is(S == struct) && !is(typeof(&S.init.toString)) && !isInputRange!S &&
+        isExactSomeString!T)
+{
+    pragma(msg, hardDeprec!("2.060", "January 2013", "std.conv.toImpl with extra parameters",
+                                                 "std.format.formattedWrite"));
+
+    Tuple!(FieldTypeTuple!S) * t = void;
+    static if ((*t).sizeof == S.sizeof)
+    {
+        // ok, attempt to forge the tuple
+        t = cast(typeof(t)) &s;
+        alias Unqual!(ElementEncodingType!T) Char;
+        auto app = appender!(Char[])();
+        app.put(left);
+        foreach (i, e; t.field)
+        {
+            if (i > 0)
+                app.put(to!T(separator));
+            app.put(to!T(e));
+        }
+        app.put(right);
+        return cast(T) app.data;
+    }
+    else
+    {
+        // struct with weird alignment
+        return to!T(S.stringof);
+    }
+}
+
+/*
+  $(LI A $(D typedef Type Symbol) is converted to string as $(D "Type(value)").)
+*/
+deprecated T toImpl(T, S)(S s, in T left = to!T(S.stringof~"("), in T right = ")")
+    if (is(S == typedef) &&
+        isExactSomeString!T)
+{
+    static if (is(S Original == typedef))
+    {
+        // typedef
+        return left ~ to!T(cast(Original) s) ~ right;
+    }
 }
 
 
@@ -1283,8 +1270,8 @@ fit in the narrower type.
  */
 T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
-        (isNumeric!S || isSomeChar!S) &&
-        (isNumeric!T || isSomeChar!T))
+        (isNumeric!S || isSomeChar!S) && !is(S == enum) &&
+        (isNumeric!T || isSomeChar!T) && !is(T == enum))
 {
     enum sSmallest = mostNegative!S;
     enum tSmallest = mostNegative!T;
@@ -1339,14 +1326,14 @@ unittest
 Array-to-array conversion (except when target is a string type)
 converts each element in turn by using $(D to).
  */
-T toImpl(T, S)(S src)
+T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
         !isSomeString!S && isDynamicArray!S &&
-        !isSomeString!T && isArray!T)
+        !isExactSomeString!T && isArray!T)
 {
     alias typeof(T.init[0]) E;
-    auto result = new E[src.length];
-    foreach (i, e; src)
+    auto result = new E[value.length];
+    foreach (i, e; value)
     {
         /* Temporarily cast to mutable type, so we can get it initialized,
          * this is ok because there are no other references to result[]
@@ -1358,49 +1345,80 @@ T toImpl(T, S)(S src)
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     // array to array conversions
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+
     uint[] a = ([ 1u, 2, 3 ]).dup;
     auto b = to!(float[])(a);
     assert(b == [ 1.0f, 2, 3 ]);
+
     auto c = to!(string[])(b);
     assert(c[0] == "1" && c[1] == "2" && c[2] == "3");
+
     immutable(int)[3] d = [ 1, 2, 3 ];
     b = to!(float[])(d);
     assert(b == [ 1.0f, 2, 3 ]);
+
     uint[][] e = [ a, a ];
     auto f = to!(float[][])(e);
     assert(f[0] == b && f[1] == b);
+
+    // Test for bug 8264
+    struct Wrap
+    {
+        string wrap;
+        alias wrap this;
+    }
+    Wrap[] warr = to!(Wrap[])(["foo", "bar"]);  // should work
 }
 
 /**
 Associative array to associative array conversion converts each key
 and each value in turn.
  */
-T toImpl(T, S)(S src)
+T toImpl(T, S)(S value)
     if (isAssociativeArray!S &&
-        isAssociativeArray!T)
+        isAssociativeArray!T && !is(T == enum))
 {
-    alias typeof(T.keys[0]) K2;
-    alias typeof(T.values[0]) V2;
-    T result;
-    foreach (k1, v1; src)
+    alias KeyType!T   K2;
+    alias ValueType!T V2;
+
+    // While we are "building" the AA, we need to unqualify its values, and only re-qualify at the end
+    Unqual!V2[K2] result;
+
+    foreach (k1, v1; value)
     {
-        result[to!K2(k1)] = to!V2(v1);
+        // Cast values temporarily to Unqual!V2 to store them to result variable
+        result[to!K2(k1)] = cast(Unqual!V2) to!V2(v1);
     }
-    return result;
+    // Cast back to original type
+    return cast(T)result;
 }
 
 unittest
 {
-    //hash to hash conversions
+    // hash to hash conversions
     int[string] a;
     a["0"] = 1;
     a["1"] = 2;
     auto b = to!(double[dstring])(a);
     assert(b["0"d] == 1 && b["1"d] == 2);
-    //hash to string conversion
-    assert(to!string(a) == `["0":1, "1":2]`);
+}
+unittest // Bugzilla 8705, from doc
+{
+    int[string][double[int[]]] a;
+    auto b = to!(short[wstring][string[double[]]])(a);
+    a = [null:["hello":int.max]];
+    assertThrown!ConvOverflowException(to!(short[wstring][string[double[]]])(a));
+}
+version(none) // masked by unexpected linker error in posix platforms
+unittest // Extra cases for AA with qualifiers conversion
+{
+    int[][int[]] a;// = [[], []];
+    auto b = to!(immutable(short[])[immutable short[]])(a);
+
+    double[dstring][int[long[]]] c;
+    auto d = to!(immutable(short[immutable wstring])[immutable string[double[]]])(c);
 }
 
 private void testIntegralToFloating(Integral, Floating)()
@@ -1587,8 +1605,8 @@ $(UL
   $(LI When the source is a narrow string, normal text parsing occurs.))
 */
 T toImpl(T, S)(S value)
-    if (isDynamicArray!S && isSomeString!S &&
-        !isSomeString!T && is(typeof(parse!T(value))))
+    if ( isExactSomeString!S && isDynamicArray!S &&
+        !isExactSomeString!T && is(typeof(parse!T(value))))
 {
     scope(exit)
     {
@@ -1602,8 +1620,8 @@ T toImpl(T, S)(S value)
 
 /// ditto
 T toImpl(T, S)(S value, uint radix)
-    if (isDynamicArray!S && isSomeString!S &&
-        !isSomeString!T && is(typeof(parse!T(value, radix))))
+    if ( isExactSomeString!S && isDynamicArray!S &&
+        !isExactSomeString!T && is(typeof(parse!T(value, radix))))
 {
     scope(exit)
     {
@@ -1705,7 +1723,7 @@ assert(test == "");
 
 Target parse(Target, Source)(ref Source s)
     if (isSomeChar!(ElementType!Source) &&
-        isIntegral!Target)
+        isIntegral!Target && !is(Target == enum))
 {
     static if (Target.sizeof < int.sizeof)
     {
@@ -1719,17 +1737,15 @@ Target parse(Target, Source)(ref Source s)
     else
     {
         // Larger than int types
-        if (s.empty)
-            goto Lerr;
 
         static if (Target.min < 0)
             int sign = 0;
         else
             enum int sign = 0;
         Target v = 0;
-        size_t i = 0;
+        bool atStart = true;
         enum char maxLastDigit = Target.min < 0 ? '7' : '5';
-        for (; !s.empty; ++i)
+        while (!s.empty)
         {
             immutable c = s.front;
             if (c >= '0' && c <= '9')
@@ -1739,29 +1755,24 @@ Target parse(Target, Source)(ref Source s)
                     goto Loverflow;
                 v = cast(Target) (v * 10 + (c - '0'));
                 s.popFront();
+                atStart = false;
             }
             else static if (Target.min < 0)
             {
-                if (c == '-' && i == 0)
+                if (c == '-' && atStart)
                 {
                     s.popFront();
-                    if (s.empty)
-                        goto Lerr;
                     sign = -1;
                 }
-                else if (c == '+' && i == 0)
-                {
+                else if (c == '+' && atStart)
                     s.popFront();
-                    if (s.empty)
-                        goto Lerr;
-                }
                 else
                     break;
             }
             else
                 break;
         }
-        if (i == 0)
+        if (atStart)
             goto Lerr;
         static if (Target.min < 0)
         {
@@ -1966,7 +1977,7 @@ unittest
 /// ditto
 Target parse(Target, Source)(ref Source s, uint radix)
     if (isSomeChar!(ElementType!Source) &&
-        isIntegral!Target)
+        isIntegral!Target && !is(Target == enum))
 in
 {
     assert(radix >= 2 && radix <= 36);
@@ -1979,9 +1990,9 @@ body
     immutable uint beyond = (radix < 10 ? '0' : 'a'-10) + radix;
 
     Target v = 0;
-    size_t i = 0;
-    
-    for (; !s.empty; s.popFront(), ++i)
+    size_t atStart = true;
+
+    for (; !s.empty; s.popFront())
     {
         uint c = s.front;
         if (c < '0')
@@ -2005,8 +2016,9 @@ body
         if (blah < v)
             goto Loverflow;
         v = blah;
+        atStart = false;
     }
-    if (!i)
+    if (atStart)
         goto Lerr;
     return v;
 
@@ -2061,43 +2073,55 @@ unittest // bugzilla 7302
 }
 
 Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source &&
+    if (isExactSomeString!Source &&
         is(Target == enum))
 {
-    // TODO: BUG4744
+    Target result;
+    size_t longest_match = 0;
+
     foreach (i, e; EnumMembers!Target)
     {
         auto ident = __traits(allMembers, Target)[i];
-        if (s.skipOver(ident))
-            return e;
+        if (longest_match < ident.length && s.startsWith(ident))
+        {
+            result = e;
+            longest_match = ident.length ;
+        }
     }
+
+    if( longest_match > 0 )
+    {
+        s = s[longest_match..$];
+        return result ;
+    }
+
     throw new ConvException(
         Target.stringof ~ " does not have a member named '"
         ~ to!string(s) ~ "'");
 }
 
-//@@@BUG4737@@@: typeid doesn't work for scoped enum with initializer
-version(unittest)
-{
-    private enum F : real { x = 1.414, y = 1.732, z = 2.236 }
-}
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    enum E { a, b, c }
-    assert(to!E("a"c) == E.a);
-    assert(to!E("b"w) == E.b);
-    assert(to!E("c"d) == E.c);
 
-    assert(to!F("x"c) == F.x);
-    assert(to!F("y"w) == F.y);
-    assert(to!F("z"d) == F.z);
+    enum EB : bool { a = true, b = false, c = a }
+    enum EU { a, b, c }
+    enum EI { a = -1, b = 0, c = 1 }
+    enum EF : real { a = 1.414, b = 1.732, c = 2.236 }
+    enum EC : char { a = 'a', b = 'b', c = 'c' }
+    enum ES : string { a = "aaa", b = "bbb", c = "ccc" }
 
-    assertThrown!ConvException(to!E("d"));
+    foreach (E; TypeTuple!(EB, EU, EI, EF, EC, ES))
+    {
+        assert(to!E("a"c) == E.a);
+        assert(to!E("b"w) == E.b);
+        assert(to!E("c"d) == E.c);
+
+        assertThrown!ConvException(to!E("d"));
+    }
 }
 
-version (none)  // TODO: BUG4744
-unittest
+unittest // bugzilla 4744
 {
     enum A { member1, member11, member111 }
     assert(to!A("member1"  ) == A.member1  );
@@ -2108,8 +2132,8 @@ unittest
 }
 
 Target parse(Target, Source)(ref Source p)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
-        isFloatingPoint!Target)
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
+        isFloatingPoint!Target && !is(Target == enum))
 {
     static immutable real negtab[14] =
         [ 1e-4096L,1e-2048L,1e-1024L,1e-512L,1e-256L,1e-128L,1e-64L,1e-32L,
@@ -2127,13 +2151,8 @@ Target parse(Target, Source)(ref Source p)
         return new ConvException(text(msg, " for input \"", p, "\"."), fn, ln);
     }
 
-    for (;;)
-    {
-        enforce(!p.empty, bailOut());
-        if (!std.uni.isWhite(p.front))
-            break;
-        p.popFront();
-    }
+    enforce(!p.empty, bailOut());
+
     char sign = 0;                       /* indicating +                 */
     switch (p.front)
     {
@@ -2302,7 +2321,7 @@ Target parse(Target, Source)(ref Source p)
             (cast(ushort *)&ldval)[4] = cast(ushort) e2;
 
             // Exponent is power of 2, not power of 10
-            ldval = ldexpl(ldval,exp);
+            ldval = ldexp(ldval,exp);
         }
         goto L6;
     }
@@ -2463,7 +2482,7 @@ unittest
         assert(to!Float("123e2") == Literal!Float(123e2));
         assert(to!Float("123e+2") == Literal!Float(123e+2));
         assert(to!Float("123e-2") == Literal!Float(123e-2));
-        assert(to!Float("123.") == Literal!Float(123.));
+        assert(to!Float("123.") == Literal!Float(123.0));
         assert(to!Float(".456") == Literal!Float(.456));
 
         assert(to!Float("1.23456E+2") == Literal!Float(1.23456E+2));
@@ -2582,15 +2601,27 @@ unittest
 {
     assertThrown!ConvException(to!float("INF2"));
 }
+unittest
+{
+    //extra stress testing
+    auto ssOK    = ["1.", "1.1.1", "1.e5", "2e1e", "2a", "2e1_1",
+                    "inf", "-inf", "infa", "-infa", "inf2e2", "-inf2e2"];
+    auto ssKO    = ["", " ", "2e", "2e+", "2e-", "2ee", "2e++1", "2e--1", "2e_1", "+inf"];
+    foreach(s; ssOK)
+        parse!double(s);
+    foreach(s; ssKO)
+        assertThrown!ConvException(parse!double(s));
+}
 
 /**
 Parsing one character off a string returns the character and bumps the
 string up one position.
  */
 Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source &&
-        staticIndexOf!(Unqual!Target, dchar, Unqual!(typeof(Source.init[0]))) >= 0)
+    if (isExactSomeString!Source &&
+        staticIndexOf!(Unqual!Target, dchar, Unqual!(ElementEncodingType!Source)) >= 0)
 {
+    if (s.empty) convError!(Source, Target)(s);
     static if (is(Unqual!Target == dchar))
     {
         Target result = s.front;
@@ -2613,7 +2644,7 @@ unittest
         foreach (Char; TypeTuple!(char, wchar, dchar))
         {
             static if (is(Unqual!Char == dchar) ||
-                       Char.sizeof == Str.init[0].sizeof)
+                       Char.sizeof == ElementEncodingType!Str.sizeof)
             {
                 Str s = "aaa";
                 assert(parse!Char(s) == 'a');
@@ -2625,8 +2656,9 @@ unittest
 
 Target parse(Target, Source)(ref Source s)
     if (!isSomeString!Source && isInputRange!Source && isSomeChar!(ElementType!Source) &&
-        isSomeChar!Target && Target.sizeof >= ElementType!Source.sizeof)
+        isSomeChar!Target && Target.sizeof >= ElementType!Source.sizeof && !is(Target == enum))
 {
+    if (s.empty) convError!(Source, Target)(s);
     Target result = s.front;
     s.popFront();
     return result;
@@ -2634,7 +2666,7 @@ Target parse(Target, Source)(ref Source s)
 
 // string to bool conversions
 Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source &&
+    if (isExactSomeString!Source &&
         is(Unqual!Target == bool))
 {
     if (s.length >= 4 && icmp(s[0 .. 4], "true")==0)
@@ -2647,7 +2679,7 @@ Target parse(Target, Source)(ref Source s)
         s = s[5 .. $];
         return false;
     }
-    parseError("bool should be case-insensive 'true' or 'false'");
+    parseError("bool should be case-insensitive 'true' or 'false'");
     assert(0);
 }
 
@@ -2680,35 +2712,77 @@ unittest
     assert(b == true);
 }
 
-// Parsing typedefs forwards to their host types
-deprecated Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source &&
-        is(Target == typedef))
+// string to null literal conversions
+Target parse(Target, Source)(ref Source s)
+    if (isExactSomeString!Source &&
+        is(Unqual!Target == typeof(null)))
 {
-    static if (is(Target T == typedef))
-        return cast(Target) parse!T(s);
-    else
-        static assert(0);
+    if (s.length >= 4 && icmp(s[0 .. 4], "null")==0)
+    {
+        s = s[4 .. $];
+        return null;
+    }
+    parseError("null should be case-insensitive 'null'");
+    assert(0);
 }
 
-private void skipWS(R)(ref R r)
+unittest
 {
-    skipAll(r, ' ', '\n', '\t', '\r');
+    alias typeof(null) NullType;
+    auto s1 = "null";
+    assert(parse!NullType(s1) is null);
+    assert(s1 == "");
+
+    auto s2 = "NUll"d;
+    assert(parse!NullType(s2) is null);
+    assert(s2 == "");
+
+    auto m = "maybe";
+    assertThrown!ConvException(parse!NullType(m));
+    assert(m == "maybe");  // m shouldn't change on failure
+
+    auto s = "NULL";
+    assert(parse!(const(NullType))(s) is null);
+}
+
+//Used internally by parse Array/AA, to remove ascii whites
+package void skipWS(R)(ref R r)
+{
+    static if (isSomeString!R)
+    {
+        //Implementation inspired from stripLeft.
+        foreach(i, dchar c; r)
+        {
+            if (!std.ascii.isWhite(c))
+            {
+                r = r[i .. $];
+                return;
+            }
+        }
+        r = r[0 .. 0]; //Empty string with correct type.
+        return;
+    }
+    else
+    {
+        for ( ; !r.empty && std.ascii.isWhite(r.front) ; r.popFront())
+            { }
+    }
 }
 
 /**
  * Parses an array from a string given the left bracket (default $(D
- * '[')), right bracket (default $(D ']')), and element seprator (by
+ * '[')), right bracket (default $(D ']')), and element separator (by
  * default $(D ',')).
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
-    if (isSomeString!Source &&
-        isDynamicArray!Target)
+    if (isExactSomeString!Source &&
+        isDynamicArray!Target && !is(Target == enum))
 {
     Target result;
 
     parseCheck!s(lbracket);
     skipWS(s);
+    if (s.empty) convError!(Source, Target)(s);
     if (s.front == rbracket)
     {
         s.popFront();
@@ -2718,6 +2792,7 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     {
         result ~= parseElement!(ElementType!Target)(s);
         skipWS(s);
+        if (s.empty) convError!(Source, Target)(s);
         if (s.front != comma)
             break;
     }
@@ -2762,15 +2837,28 @@ unittest
     assert(a2 == ["aaa", "bbb", "ccc"]);
 }
 
+unittest
+{
+    //Check proper failure
+    auto s = "[ 1 , 2 , 3 ]";
+    foreach(i ; 0..s.length-1)
+    {
+        auto ss = s[0 .. i];
+        assertThrown!ConvException(parse!(int[])(ss));
+    }
+    int[] arr = parse!(int[])(s);
+}
+
 /// ditto
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
-    if (isSomeString!Source &&
-        isStaticArray!Target)
+    if (isExactSomeString!Source &&
+        isStaticArray!Target && !is(Target == enum))
 {
     Target result = void;
 
     parseCheck!s(lbracket);
     skipWS(s);
+    if (s.empty) convError!(Source, Target)(s);
     if (s.front == rbracket)
     {
         static if (result.length != 0)
@@ -2787,6 +2875,7 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
             goto Lmanyerr;
         result[i++] = parseElement!(ElementType!Target)(s);
         skipWS(s);
+        if (s.empty) convError!(Source, Target)(s);
         if (s.front != comma)
         {
             if (i != result.length)
@@ -2830,8 +2919,8 @@ unittest
  * ':')), and element seprator (by default $(D ',')).
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
-    if (isSomeString!Source &&
-        isAssociativeArray!Target)
+    if (isExactSomeString!Source &&
+        isAssociativeArray!Target && !is(Target == enum))
 {
     alias typeof(Target.keys[0]) KeyType;
     alias typeof(Target.values[0]) ValueType;
@@ -2840,6 +2929,7 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
 
     parseCheck!s(lbracket);
     skipWS(s);
+    if (s.empty) convError!(Source, Target)(s);
     if (s.front == rbracket)
     {
         s.popFront();
@@ -2854,6 +2944,7 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
         auto val = parseElement!ValueType(s);
         skipWS(s);
         result[key] = val;
+        if (s.empty) convError!(Source, Target)(s);
         if (s.front != comma) break;
     }
     parseCheck!s(rbracket);
@@ -2876,16 +2967,29 @@ unittest
     assert(aa3 == ["aaa":[1], "bbb":[2,3], "ccc":[4,5,6]]);
 }
 
+unittest
+{
+    //Check proper failure
+    auto s = "[1:10, 2:20, 3:30]";
+    foreach(i ; 0..s.length-1)
+    {
+        auto ss = s[0 .. i];
+        assertThrown!ConvException(parse!(int[int])(ss));
+    }
+    int[int] aa = parse!(int[int])(s);
+}
+
 private dchar parseEscape(Source)(ref Source s)
     if (isInputRange!Source && isSomeChar!(ElementType!Source))
 {
     parseCheck!s('\\');
+    if (s.empty) parseError("Unterminated escape sequence");
 
     dchar getHexDigit()
     {
+        if (s.empty) parseError("Unterminated escape sequence");
         s.popFront();
-        if (s.empty)
-            parseError("Unterminated escape sequence");
+        if (s.empty) parseError("Unterminated escape sequence");
         dchar c = s.front;
         if (!isHexDigit(c))
             parseError("Hex digit is missing");
@@ -2906,12 +3010,14 @@ private dchar parseEscape(Source)(ref Source s)
         case 'x':
             result  = getHexDigit() << 4;
             result |= getHexDigit();
+            if (s.empty) parseError("Unterminated escape sequence");
             break;
         case 'u':
             result  = getHexDigit() << 12;
             result |= getHexDigit() << 8;
             result |= getHexDigit() << 4;
             result |= getHexDigit();
+            if (s.empty) parseError("Unterminated escape sequence");
             break;
         case 'U':
             result  = getHexDigit() << 28;
@@ -2922,6 +3028,7 @@ private dchar parseEscape(Source)(ref Source s)
             result |= getHexDigit() << 8;
             result |= getHexDigit() << 4;
             result |= getHexDigit();
+            if (s.empty) parseError("Unterminated escape sequence");
             break;
         default:
             parseError("Unknown escape character " ~ to!string(s.front));
@@ -2935,16 +3042,18 @@ private dchar parseEscape(Source)(ref Source s)
 
 // Undocumented
 Target parseElement(Target, Source)(ref Source s)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
-        isSomeString!Target)
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
+        isExactSomeString!Target)
 {
     auto result = appender!Target();
 
     // parse array of chars
+    if (s.empty) convError!(Source, Target)(s);
     if (s.front == '[')
         return parse!Target(s);
 
     parseCheck!s('\"');
+    if (s.empty) convError!(Source, Target)(s);
     if (s.front == '\"')
     {
         s.popFront();
@@ -2963,7 +3072,7 @@ Target parseElement(Target, Source)(ref Source s)
                 result.put(parseEscape(s));
                 break;
             default:
-                result.put(s.front());
+                result.put(s.front);
                 s.popFront();
                 break;
         }
@@ -2973,12 +3082,13 @@ Target parseElement(Target, Source)(ref Source s)
 
 // ditto
 Target parseElement(Target, Source)(ref Source s)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
-        isSomeChar!Target)
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
+        isSomeChar!Target && !is(Target == enum))
 {
     Target c;
 
     parseCheck!s('\'');
+    if (s.empty) convError!(Source, Target)(s);
     if (s.front != '\\')
     {
         c = s.front;
@@ -3302,10 +3412,9 @@ as $(D chunk)).
 T* emplace(T)(T* chunk)
     if (!is(T == class))
 {
-    auto result = cast(typeof(return)) chunk;
-    static T i;
-    memcpy(result, &i, T.sizeof);
-    return result;
+    static T i; // Can't use `= T.init` here because of @@@BUG8902@@@.
+    memcpy(chunk, &i, T.sizeof);
+    return chunk;
 }
 ///ditto
 T* emplace(T)(T* chunk)
@@ -3313,6 +3422,64 @@ T* emplace(T)(T* chunk)
 {
     *chunk = null;
     return chunk;
+}
+
+version(unittest) private struct __conv_EmplaceTest
+{
+    int i = 3;
+    this(int i)
+    {
+        assert(this.i == 3 && i == 5);
+        this.i = i;
+    }
+    this(int i, ref int j)
+    {
+        assert(i == 5 && j == 6);
+        this.i = i;
+        ++j;
+    }
+
+@disable:
+    this();
+    this(this);
+    void opAssign();
+}
+
+version(unittest) private class __conv_EmplaceTestClass
+{
+    int i = 3;
+    this(int i)
+    {
+        assert(this.i == 3 && i == 5);
+        this.i = i;
+    }
+    this(int i, ref int j)
+    {
+        assert(i == 5 && j == 6);
+        this.i = i;
+        ++j;
+    }
+}
+
+unittest
+{
+    struct S { @disable this(); }
+    S s = void;
+    static assert(!__traits(compiles, emplace(&s)));
+}
+
+unittest
+{
+    interface I {}
+    class K : I {}
+
+    K k = void;
+    emplace(&k);
+    assert(k is null);
+
+    I i = void;
+    emplace(&i);
+    assert(i is null);
 }
 
 
@@ -3334,39 +3501,144 @@ T* emplace(T, Args...)(T* chunk, Args args)
     return chunk;
 }
 
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    int a;
+    int b = 42;
+    assert(*emplace!int(&a, b) == 42);
+}
+
+unittest
+{
+    interface I {}
+    class K : I {}
+
+    K k = null, k2 = new K;
+    assert(k !is k2);
+    emplace!K(&k, k2);
+    assert(k is k2);
+
+    I i = null;
+    assert(i !is k);
+    emplace!I(&i, k);
+    assert(i is k);
+}
+
 // Specialization for struct
-T* emplace(T, Args...)(T* chunk, Args args)
+T* emplace(T, Args...)(T* chunk, auto ref Args args)
     if (is(T == struct))
 {
-    auto result = cast(typeof(return)) chunk;
-
     void initialize()
     {
-        static T i;
-        memcpy(chunk, &i, T.sizeof);
+        if(auto p = typeid(T).init().ptr)
+            memcpy(chunk, p, T.sizeof);
+        else
+            memset(chunk, 0, T.sizeof);
     }
 
-    static if (is(typeof(result.__ctor(args))))
+    static if (is(typeof(chunk.__ctor(args))))
     {
         // T defines a genuine constructor accepting args
         // Go the classic route: write .init first, then call ctor
         initialize();
-        result.__ctor(args);
+        chunk.__ctor(args);
     }
     else static if (is(typeof(T(args))))
     {
         // Struct without constructor that has one matching field for
         // each argument
-        *result = T(args);
+        *chunk = T(args);
     }
     else //static if (Args.length == 1 && is(Args[0] : T))
     {
         static assert(Args.length == 1);
         //static assert(0, T.stringof ~ " " ~ Args.stringof);
         // initialize();
-        *result = args[0];
+        *chunk = args[0];
     }
-    return result;
+    return chunk;
+}
+
+// Test constructor branch
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    struct S
+    {
+        double x = 5, y = 6;
+        this(int a, int b)
+        {
+            assert(x == 5 && y == 6);
+            x = a;
+            y = b;
+        }
+    }
+
+    auto s1 = new void[S.sizeof];
+    auto s2 = S(42, 43);
+    assert(*emplace!S(cast(S*) s1.ptr, s2) == s2);
+    assert(*emplace!S(cast(S*) s1, 44, 45) == S(44, 45));
+}
+
+unittest
+{
+    __conv_EmplaceTest k = void;
+    emplace(&k, 5);
+    assert(k.i == 5);
+}
+
+unittest
+{
+    int var = 6;
+    __conv_EmplaceTest k = void;
+    emplace(&k, 5, var);
+    assert(k.i == 5);
+    assert(var == 7);
+}
+
+// Test matching fields branch
+
+unittest
+{
+    struct S { uint n; }
+    S s;
+    emplace!S(&s, 2U);
+    assert(s.n == 2);
+}
+
+unittest
+{
+    struct S { int a, b; this(int){} }
+    S s;
+    static assert(!__traits(compiles, emplace!S(&s, 2, 3)));
+}
+
+unittest
+{
+    struct S { int a, b = 7; }
+    S s1 = void, s2 = void;
+
+    emplace!S(&s1, 2);
+    assert(s1.a == 2 && s1.b == 7);
+
+    emplace!S(&s2, 2, 3);
+    assert(s2.a == 2 && s2.b == 3);
+}
+
+// Test assignment branch
+
+// FIXME: no tests
+
+private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
+{
+    enforceEx!ConvException(chunk.length >= typeSize,
+        xformat("emplace: Chunk size too small: %s < %s size = %s",
+        chunk.length, typeName, typeSize));
+    enforceEx!ConvException((cast(size_t) chunk.ptr) % typeAlignment == 0,
+        xformat("emplace: Misaligned memory block (0x%X): it must be %s-byte aligned for type %s",
+        chunk.ptr, typeAlignment, typeName));
 }
 
 /**
@@ -3382,14 +3654,11 @@ $(D T) is $(D @safe).
 
 Returns: A pointer to the newly constructed object.
  */
-T emplace(T, Args...)(void[] chunk, Args args) if (is(T == class))
+T emplace(T, Args...)(void[] chunk, auto ref Args args) if (is(T == class))
 {
     enum classSize = __traits(classInstanceSize, T);
-    enforce(chunk.length >= classSize,
-           new ConvException("emplace: chunk size too small"));
-    auto a = cast(size_t) chunk.ptr;
-    enforce(a % T.alignof == 0, text(a, " vs. ", T.alignof));
-    auto result = cast(typeof(return)) chunk.ptr;
+    testEmplaceChunk(chunk, classSize, classInstanceAlignment!T, T.stringof);
+    auto result = cast(T) chunk.ptr;
 
     // Initialize the object in its pre-ctor state
     (cast(byte[]) chunk)[0 .. classSize] = typeid(T).init[];
@@ -3410,6 +3679,14 @@ T emplace(T, Args...)(void[] chunk, Args args) if (is(T == class))
     return result;
 }
 
+unittest
+{
+    int var = 6;
+    auto k = emplace!__conv_EmplaceTestClass(new void[__traits(classInstanceSize, __conv_EmplaceTestClass)], 5, var);
+    assert(k.i == 5);
+    assert(var == 7);
+}
+
 /**
 Given a raw memory area $(D chunk), constructs an object of non-$(D
 class) type $(D T) at that address. The constructor is passed the
@@ -3422,15 +3699,11 @@ $(D T) is $(D @safe).
 
 Returns: A pointer to the newly constructed object.
  */
-T* emplace(T, Args...)(void[] chunk, Args args)
+T* emplace(T, Args...)(void[] chunk, auto ref Args args)
     if (!is(T == class))
 {
-    enforce(chunk.length >= T.sizeof,
-           new ConvException("emplace: chunk size too small"));
-    auto a = cast(size_t) chunk.ptr;
-    enforce(a % T.alignof == 0, text(a, " vs. ", T.alignof));
-    auto result = cast(typeof(return)) chunk.ptr;
-    return emplace(result, args);
+    testEmplaceChunk(chunk, T.sizeof, T.alignof, T.stringof);
+    return emplace(cast(T*) chunk.ptr, args);
 }
 
 unittest
@@ -3449,26 +3722,10 @@ unittest
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    int a;
-    int b = 42;
-    assert(*emplace!int(&a, b) == 42);
-
-    struct S
-    {
-        double x = 5, y = 6;
-        this(int a, int b)
-        {
-            assert(x == 5 && y == 6);
-            x = a;
-            y = b;
-        }
-    }
-
-    auto s1 = new void[S.sizeof];
-    auto s2 = S(42, 43);
-    assert(*emplace!S(cast(S*) s1.ptr, s2) == s2);
-    assert(*emplace!S(cast(S*) s1, 44, 45) == S(44, 45));
+    int var = 6;
+    auto k = emplace!__conv_EmplaceTest(new void[__conv_EmplaceTest.sizeof], 5, var);
+    assert(k.i == 5);
+    assert(var == 7);
 }
 
 unittest
@@ -3507,77 +3764,39 @@ unittest
     assert(equal(map!(to!int)(["42", "34", "345"]), [42, 34, 345]));
 }
 
-unittest
-{
-    struct Foo
-    {
-        uint num;
-    }
-
-    Foo foo;
-    emplace!Foo(&foo, 2U);
-    assert(foo.num == 2);
-}
-
-unittest
-{
-    interface I {}
-    class K : I {}
-
-    K k = void;
-    emplace!K(&k);
-    assert(k is null);
-    K k2 = new K;
-    assert(k2 !is null);
-    emplace!K(&k, k2);
-    assert(k is k2);
-
-    I i = void;
-    emplace!I(&i);
-    assert(i is null);
-    emplace!I(&i, k);
-    assert(i is k);
-}
-
 // Undocumented for the time being
 void toTextRange(T, W)(T value, W writer)
     if (isIntegral!T && isOutputRange!(W, char))
 {
-    Unqual!(Unsigned!T) v = void;
-    if (value < 0)
-    {
-        put(writer, '-');
-        v = -value;
-    }
-    else
-    {
-        v = value;
-    }
+    char[value.sizeof * 4] buffer = void;
+    uint i = cast(uint) (buffer.length - 1);
 
-    if (v < 10 && v < hexDigits.length)
+    bool negative = value < 0;
+    Unqual!(Unsigned!T) v = negative ? -value : value;
+
+    while (v >= 10)
     {
-        put(writer, hexDigits[cast(size_t) v]);
-        return;
+        auto c = cast(uint) (v % 10);
+        v /= 10;
+        buffer[i--] = cast(char) (c + '0');
     }
 
-    char[v.sizeof * 4] buffer = void;
-    auto i = buffer.length;
-
-    do
-    {
-        auto c = cast(ubyte) (v % 10);
-        v = v / 10;
-        i--;
-        buffer[i] = cast(char) (c + '0');
-    } while (v);
-
+    buffer[i] = cast(char) (v + '0'); //hexDigits[cast(uint) v];
+    if (negative)
+        buffer[--i] = '-';
     put(writer, buffer[i .. $]);
 }
 
-
-template softDeprec(string vers, string date, string oldFunc, string newFunc)
+unittest
 {
-    enum softDeprec = Format!("Notice: As of Phobos %s, %s has been scheduled " ~
-                              "for deprecation in %s. Please use %s instead.",
+    auto result = appender!(char[])();
+    toTextRange(-1, result);
+    assert(result.data == "-1");
+}
+
+template hardDeprec(string vers, string date, string oldFunc, string newFunc)
+{
+    enum hardDeprec = Format!("Notice: As of Phobos %s, %s has been deprecated. " ~
+                              "It will be removed in %s. Please use %s instead.",
                               vers, oldFunc, date, newFunc);
 }

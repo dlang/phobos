@@ -3,7 +3,7 @@
   $(LUCKY Regular expressions) are a commonly used method of pattern matching
   on strings, with $(I regex) being a catchy word for a pattern in this domain
   specific language. Typical problems usually solved by regular expressions
-  include validation of user input and ubiquitous find & replace
+  include validation of user input and the ubiquitous find & replace
   in text processing utilities.
 
   Synposis:
@@ -12,31 +12,31 @@
   import std.stdio;
   void main()
   {
-      //print out all possible dd/mm/yy(yy) dates found in user input
-      //g - global, find all matches
+      // Print out all possible dd/mm/yy(yy) dates found in user input.
+      // g - global: find all matches.
       auto r = regex(r"\b[0-9][0-9]?/[0-9][0-9]?/[0-9][0-9](?:[0-9][0-9])?\b", "g");
       foreach(line; stdin.byLine)
       {
-        //match returns a range that can be iterated
-        //to get all subsequent matches
+        // Match returns a range that can be iterated
+        // to get all subsequent matches.
         foreach(c; match(line, r))
             writeln(c.hit);
       }
   }
   ...
 
-  //create static regex at compile-time, contains fast native code
+  // Create a static regex at compile-time, which contains fast native code.
   enum ctr = ctRegex!(`^.*/([^/]+)/?$`);
 
-  //works just like normal regex:
-  auto m2 = match("foo/bar", ctr);   //first match found here if any
-  assert(m2);   // be sure to check if there is a match before examining contents!
-  assert(m2.captures[1] == "bar");   //captures is a range of submatches, 0 - full match
+  // It works just like a normal regex:
+  auto m2 = match("foo/bar", ctr);   // First match found here, if any
+  assert(m2);   // Be sure to check if there is a match before examining contents!
+  assert(m2.captures[1] == "bar");   // Captures is a range of submatches: 0 = full match.
 
   ...
 
-  //result of match is directly testable with if/assert/while
-  //e.g. test if a string consists of letters:
+  // The result of the match is directly testable with if/assert/while.
+  // e.g. test if a string consists of letters:
   assert(match("Letter", `^\p{L}+$`));
 
 
@@ -66,7 +66,7 @@
   $(REG_TABLE
     $(REG_TITLE Pattern element, Semantics )
     $(REG_TITLE Atoms, Match single characters )
-    $(REG_ROW any character except [|*+?(), Matches the character itself. )
+    $(REG_ROW any character except [{|*+?()^$, Matches the character itself. )
     $(REG_ROW ., In single line mode matches any charcter.
       Otherwise it matches any character except '\n' and '\r'. )
     $(REG_ROW [class], Matches a single character
@@ -202,6 +202,8 @@
   are slices of the original input, with the notable exception of the $(D replace)
   family of functions which generate a new string from the input.
 
+  Copyright: Copyright Dmitry Olshansky, 2011
+
   License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
   Authors: Dmitry Olshansky,
@@ -209,7 +211,7 @@
   API and utility constructs are based on original $(D std.regex)
   by Walter Bright and Andrei Alexandrescu.
 
-  Copyright: Copyright Dmitry Olshansky, 2011
+  Source: $(PHOBOSSRC std/_regex.d)
 
 Macros:
     REG_ROW = $(TR $(TD $(I $1 )) $(TD $+) )
@@ -574,12 +576,14 @@ static assert(Bytecode.sizeof == 4);
         {
             put(sink,`"`);
             int i=0;
-            do{
+            do
+            {
                 put(sink,cast(char[])([cast(dchar)irb[i].data]));
                 ++i;
             } while(i<irb.length && irb[i].code==IR.Char);
             put(sink,"\"");
-            if (pc<i){
+            if(pc<i)
+            {
                 put(sink,"\n");
                 for (int ii=indent+pc+1;ii>0;++ii)
                     put(sink,"=");
@@ -695,7 +699,7 @@ Trie[const(CodepointSet)] trieCache;
             return *p;
         if(trieCache.length == maxCachedTries)
         {
-            trieCache.clear();
+            // flush entries in trieCache
             trieCache = null;
         }
         return (trieCache[set] = Trie(set));
@@ -1139,7 +1143,7 @@ struct Parser(R, bool CTFE=false)
                 if(fixupStack.length == 1)
                 {//only root entry, effectively no fixup
                     len = cast(uint)ir.length + IRL!(IR.GotoEndOr);
-                    orStart = 0;   
+                    orStart = 0;
                 }
                 else
                 {//IR.lookahead, etc. fixups that have length > 1, thus check ir[x].length
@@ -1192,7 +1196,7 @@ struct Parser(R, bool CTFE=false)
 
     //parse and store IR for atom-quantifier pair
     @trusted void parseQuantifier(uint offset)
-    {//moveAll is @system
+    {//copy is @system
         uint replace = ir[offset].code == IR.Nop;
         if(empty && !replace)
             return;
@@ -1236,7 +1240,7 @@ struct Parser(R, bool CTFE=false)
         default:
             if(replace)
             {
-                moveAll(ir[offset+1..$],ir[offset..$-1]);
+                copyForwardAlt(ir[offset+1..$],ir[offset..$-1]);
                 ir.length -= 1;
             }
             return;
@@ -1285,7 +1289,7 @@ struct Parser(R, bool CTFE=false)
             }
             else if(replace)
             {
-                moveAll(ir[offset+1 .. $],ir[offset .. $-1]);
+                copyForwardAlt(ir[offset+1 .. $],ir[offset .. $-1]);
                 ir.length -= 1;
             }
             put(Bytecode(greedy ? IR.InfiniteStart : IR.InfiniteQStart, len));
@@ -1409,7 +1413,7 @@ struct Parser(R, bool CTFE=false)
             else
                 set.add(ch);
         }
-        
+
         static Operator twinSymbolOperator(dchar symbol)
         {
             switch(symbol)
@@ -1422,7 +1426,7 @@ struct Parser(R, bool CTFE=false)
                 return Operator.SymDifference;
             case '&':
                 return Operator.Intersection;
-            default: 
+            default:
                 assert(false);
             }
         }
@@ -1464,7 +1468,7 @@ struct Parser(R, bool CTFE=false)
                 case '&':
                     // then last is treated as normal char and added as implicit union
                     state = State.PotentialTwinSymbolOperator;
-                    addWithFlags(set, last, re_flags); 
+                    addWithFlags(set, last, re_flags);
                     last = current;
                     break;
                 case '-': // still need more info
@@ -1771,7 +1775,7 @@ struct Parser(R, bool CTFE=false)
     //try to generate optimal IR code for this CodepointSet
     @trusted void charsetToIr(in CodepointSet set)
     {//@@@BUG@@@ writeln is @system
-        uint chars = set.chars();
+        uint chars = set.chars;
         if(chars < Bytecode.maxSequence)
         {
             switch(chars)
@@ -1965,7 +1969,7 @@ public struct Regex(Char)
         ---
         Regex!char r;
         assert(r.empty);
-        r = regex("");//note: "" is a valid regex pattern
+        r = regex(""); // Note: "" is a valid regex pattern.
         assert(!r.empty);
         ---
     +/
@@ -2161,7 +2165,7 @@ bool startOfLine(dchar back, bool seenNl)
 }
 
 //Test if bytecode starting at pc in program 're' can match given codepoint
-//Returns: length of matched atom if test is positive, 0 - can't tell, -1 if doesn't match
+//Returns: 0 - can't tell, -1 if doesn't match
 int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
 {
     static assert(IRL!(IR.OrChar) == 1);//used in code processing IR.OrChar
@@ -2197,7 +2201,7 @@ int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
             break;
         case IR.Trie:
             if(re.tries[re.ir[pc].data][front])
-                return IRL!(IR.Trie);
+                return 0;
             else
                 return -1;
         default:
@@ -2376,7 +2380,7 @@ int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
     A $(D StaticRegex) is $(D Regex) object that contains specially
     generated machine code to speed up matching.
     Implicitly convertible to normal $(D Regex),
-    however doing so will result in loosing this additional capability.
+    however doing so will result in losing this additional capability.
 +/
 public struct StaticRegex(Char)
 {
@@ -2715,7 +2719,7 @@ public:
                     break;
                 default:
                 L_StopThread:
-                    assert(re.ir[t.pc].code >= 0x80);
+                    assert(re.ir[t.pc].code >= 0x80, text(re.ir[t.pc].code));
                     debug (fred_search) writeln("ShiftOr stumbled on ",re.ir[t.pc].mnemonic);
                     n_length = min(t.idx, n_length);
                     break L_Eval_Thread;
@@ -3040,7 +3044,8 @@ struct StreamTester(Char)
         refStream=Input!(Char)(input,splits);
         stream=new StreamCBuf!(Char)();
         pos=0;
-        if (splits.length) {
+        if (splits.length) 
+        {
             stream.addChunk(allStr);
             stream.hasEnd=true;
         }
@@ -3268,16 +3273,28 @@ template BacktrackingMatcher(bool CTregex)
             memory = chunk[1..$];
         }
 
+        void initExternalMemory(void[] memBlock)
+        {
+            trackers = arrayInChunk!(DataIndex)(re.ngroup+1, memBlock);
+            memory = cast(size_t[])memBlock;
+            memory[0] = 0; //hidden pointer
+            memory = memory[1..$];
+        }
+
         void initialize(ref RegEx program, Stream stream, void[] memBlock)
         {
             re = program;
             s = stream;
             exhausted = false;
-            trackers = arrayInChunk!(DataIndex)(re.ngroup+1, memBlock);
-            memory = cast(size_t[])memBlock;
-            memory[0] = 0; //hidden pointer
-            memory = memory[1..$];
+            initExternalMemory(memBlock);
             backrefed = null;
+        }
+
+        auto dupTo(void[] memory)
+        {
+            typeof(this) tmp = this;
+            tmp.initExternalMemory(memory);
+            return tmp;
         }
 
         //
@@ -3751,6 +3768,10 @@ template BacktrackingMatcher(bool CTregex)
             debug(fred_matching) writeln("pop element SP= ", lastState);
         }
 
+        void stackPop(T)(T[] val)
+        {
+            stackPop(val);  // call ref version
+        }
         void stackPop(T)(ref T[] val)
         {
             lastState -= val.length*(T.sizeof/size_t.sizeof);
@@ -3771,7 +3792,7 @@ template BacktrackingMatcher(bool CTregex)
                 *cast(State*)&memory[lastState] =
                     State(index, pc, counter, infiniteNesting);
                 lastState += stateSize;
-                memory[lastState..lastState+2*matches.length] = cast(size_t[])matches[];
+                memory[lastState..lastState+2*matches.length] = (cast(size_t[])matches)[];
                 lastState += 2*matches.length;
                 debug(fred_matching)
                     writefln("Saved(pc=%s) front: %s src: %s"
@@ -4374,6 +4395,10 @@ struct CtContext
 
     // generate fixup code for instruction in ir,
     // fixup means it has an alternative way for control flow
+    string ctGenFixupCode(Bytecode[] ir, int addr, int fixup)
+    {
+        return ctGenFixupCode(ir, addr, fixup); // call ref Bytecode[] version
+    }
     string ctGenFixupCode(ref Bytecode[] ir, int addr, int fixup)
     {
         string r;
@@ -4915,10 +4940,8 @@ enum OneShot { Fwd, Bwd };
         }
     }
 
-    this()(Regex!Char program, Stream stream, void[] memory)
+    void initExternalMemory(void[] memory)
     {
-        re = program;
-        s = stream;
         threadSize = getThreadSize(re);
         prepareFreeList(re.threadCount, memory);
         if(re.hotspotTableSize)
@@ -4926,6 +4949,13 @@ enum OneShot { Fwd, Bwd };
             merge = arrayInChunk!(DataIndex)(re.hotspotTableSize, memory);
             merge[] = 0;
         }
+    }
+
+    this()(Regex!Char program, Stream stream, void[] memory)
+    {
+        re = program;
+        s = stream;
+        initExternalMemory(memory);
         genCounter = 0;
     }
 
@@ -4940,11 +4970,12 @@ enum OneShot { Fwd, Bwd };
         freelist = matcher.freelist;
     }
 
-    this(this)
+    auto dupTo(void[] memory)
     {
-        merge[] = 0;
-        debug(fred_allocation) writeln("ThompsonVM postblit!");
-        //free list is  efectively shared ATM
+        typeof(this) tmp = this;//bitblit
+        tmp.initExternalMemory(memory);
+        tmp.genCounter = 0;
+        return tmp;
     }
 
     enum MatchResult{
@@ -5014,7 +5045,8 @@ enum OneShot { Fwd, Bwd };
                     if(!searchFn())
                         break;
                 }
-                else if(!next()){
+                else if(!next())
+                {
                     if (!atEnd) return false;
                     exhausted = true;
                     break;
@@ -5039,7 +5071,7 @@ enum OneShot { Fwd, Bwd };
             exhausted = atEnd || !(re.flags & RegexOption.global);
             //+ empty match advances the input
             if(!exhausted && matches[0].begin == matches[0].end)
-                next(); 
+                next();
         }
         return matched;
     }
@@ -5069,7 +5101,7 @@ enum OneShot { Fwd, Bwd };
     void eval(bool withInput)(Thread!DataIndex* t, Group!DataIndex[] matches)
     {
         ThreadList!DataIndex worklist;
-        debug(fred_matching) writeln("Evaluating thread");
+        debug(fred_matching) writeln("---- Evaluating thread");
         for(;;)
         {
             debug(fred_matching)
@@ -5284,12 +5316,7 @@ enum OneShot { Fwd, Bwd };
                 static if(withInput)
                 {
                     int test = quickTestFwd(pc1, front, re);
-                    if(test > 0)
-                    {
-                        nlist.insertBack(fork(t, pc1 + test, t.counter));
-                        t.pc = pc2;
-                    }
-                    else if(test == 0)
+                    if(test >= 0)
                     {
                         worklist.insertFront(fork(t, pc2, t.counter));
                         t.pc = pc1;
@@ -5451,90 +5478,89 @@ enum OneShot { Fwd, Bwd };
             case IR.Nop:
                 t.pc += IRL!(IR.Nop);
                 break;
-            static if(withInput)
-            {
-                case IR.OrChar:
-                    uint len = re.ir[t.pc].sequence;
-                    uint end = t.pc + len;
-                    static assert(IRL!(IR.OrChar) == 1);
-                    for(; t.pc<end; t.pc++)
-                        if(re.ir[t.pc].data == front)
-                            break;
-                    if(t.pc != end)
-                    {
-                       t.pc = end;
-                        nlist.insertBack(t);
-                    }
-                    else
+
+                static if(withInput)
+                {
+            case IR.OrChar:
+                      uint len = re.ir[t.pc].sequence;
+                      uint end = t.pc + len;
+                      static assert(IRL!(IR.OrChar) == 1);
+                      for(; t.pc<end; t.pc++)
+                          if(re.ir[t.pc].data == front)
+                              break;
+                      if(t.pc != end)
+                      {
+                          t.pc = end;
+                          nlist.insertBack(t);
+                      }
+                      else
+                          recycle(t);
+                      t = worklist.fetch();
+                      if(!t)
+                          return;
+                      break;
+            case IR.Char:
+                      if(front == re.ir[t.pc].data)
+                      {
+                          t.pc += IRL!(IR.Char);
+                          nlist.insertBack(t);
+                      }
+                      else
+                          recycle(t);
+                      t = worklist.fetch();
+                      if(!t)
+                          return;
+                      break;
+            case IR.Any:
+                      t.pc += IRL!(IR.Any);
+                      if(!(re.flags & RegexOption.singleline)
+                              && (front == '\r' || front == '\n'))
+                          recycle(t);
+                      else
+                          nlist.insertBack(t);
+                      t = worklist.fetch();
+                      if(!t)
+                          return;
+                      break;
+            case IR.CodepointSet:
+                      if(re.charsets[re.ir[t.pc].data].scanFor(front))
+                      {
+                          t.pc += IRL!(IR.CodepointSet);
+                          nlist.insertBack(t);
+                      }
+                      else
+                      {
+                          recycle(t);
+                      }
+                      t = worklist.fetch();
+                      if(!t)
+                          return;
+                      break;
+            case IR.Trie:
+                      if(re.tries[re.ir[t.pc].data][front])
+                      {
+                          t.pc += IRL!(IR.Trie);
+                          nlist.insertBack(t);
+                      }
+                      else
+                      {
+                          recycle(t);
+                      }
+                      t = worklist.fetch();
+                      if(!t)
+                          return;
+                      break;
+                  default:
+                      assert(0, "Unrecognized instruction " ~ re.ir[t.pc].mnemonic);
+                }
+                else
+                {
+                    default:
                         recycle(t);
-                    t = worklist.fetch();
-                    if(!t)
-                        return;
-                    break;
-                case IR.Char:
-                    if(front == re.ir[t.pc].data)
-                    {
-                        t.pc += IRL!(IR.Char);
-                        nlist.insertBack(t);
-                    }
-                    else
-                        recycle(t);
-                    t = worklist.fetch();
-                    if(!t)
-                        return;
-                    break;
-                case IR.Any:
-                    t.pc += IRL!(IR.Any);
-                    if(!(re.flags & RegexOption.singleline)
-                            && (front == '\r' || front == '\n'))
-                        recycle(t);
-                    else
-                        nlist.insertBack(t);
-                    t = worklist.fetch();
-                    if(!t)
-                        return;
-                    break;
-                case IR.CodepointSet:
-                    if(re.charsets[re.ir[t.pc].data].scanFor(front))
-                    {
-                        t.pc += IRL!(IR.CodepointSet);
-                        nlist.insertBack(t);
-                    }
-                    else
-                    {
-                        recycle(t);
-                    }
-                    t = worklist.fetch();
-                    if(!t)
-                        return;
-                    break;
-                case IR.Trie:
-                    if(re.tries[re.ir[t.pc].data][front])
-                    {
-                        t.pc += IRL!(IR.Trie);
-                        nlist.insertBack(t);
-                    }
-                    else
-                    {
-                        recycle(t);
-                    }
-                    t = worklist.fetch();
-                    if(!t)
-                        return;
-                    break;
-                default:
-                    assert(0, "Unrecognized instruction " ~ re.ir[t.pc].mnemonic);
-            }
-            else
-            {
-                default:
-                    recycle(t);
-                    t = worklist.fetch();
-                    if(t)
-                       break;
-                    else
-                        return;
-            }
+                        t = worklist.fetch();
+                        if(!t)
+                            return;
+                }
             }
         }
 
@@ -5560,26 +5586,28 @@ enum OneShot { Fwd, Bwd };
             startPc = cast(uint)re.ir.length-IRL!(IR.LookbehindEnd);
         if(!atEnd)//if no char
         {
-            if (startPc!=RestartPc){
+            debug(fred_matching)
+            {
+                static if(direction == OneShot.Fwd)
+                    writefln("-- Threaded matching (forward) threads at  %s",  s[index..s.lastIndex]);
+                else
+                    writefln("-- Threaded matching (backward) threads at  %s", retro(s[index..s.lastIndex])); 
+            }
+            if(startPc!=RestartPc)
+            {
                 auto startT = createStart(index, startPc);
                 genCounter++;
                 evalFn!true(startT, matches);
             }
             for(;;)
             {
-                genCounter++;
+                debug(fred_matching) writeln("\n-- Started iteration of main cycle");
+                genCounter++;                
                 debug(fred_matching)
                 {
-                    static if(direction == OneShot.Fwd)
-                        writefln("Threaded matching (forward) threads at  %s",  s[index..s.lastIndex]);
-                    else
-                        writefln("Threaded matching (backward) threads at  %s", retro(s[index..s.lastIndex]));
                     foreach(t; clist[])
                     {
                         assert(t);
-                        writef("pc=%s ",t.pc);
-                        write(t.matches);
-                        writeln();
                     }
                 }
                 for(Thread!DataIndex* t = clist.fetch(); t; t = clist.fetch())
@@ -5593,14 +5621,16 @@ enum OneShot { Fwd, Bwd };
                 }
                 clist = nlist;
                 nlist = (ThreadList!DataIndex).init;
-                if(!next()){
+                if(!next())
+                {
                     if (!atEnd) return MatchResult.PartialMatch;
                     break;
                 }
+                debug(fred_matching) writeln("-- Ended iteration of main cycle\n");
             }
         }
         genCounter++; //increment also on each end
-        debug(fred_matching) writefln("Threaded matching (%s) threads at end",
+        debug(fred_matching) writefln("-- Threaded matching (%s) threads at end",
                                       direction == OneShot.Fwd ? "forward" : "backward");
         //try out all zero-width posibilities
         for(Thread!DataIndex* t = clist.fetch(); t; t = clist.fetch())
@@ -5609,7 +5639,7 @@ enum OneShot { Fwd, Bwd };
         }
         if(!matched)
             evalFn!false(createStart(index, startPc), matches);
-   
+
         return (matched?MatchResult.Match:MatchResult.NoMatch);
     }
 
@@ -5619,7 +5649,7 @@ enum OneShot { Fwd, Bwd };
     void evalBack(bool withInput)(Thread!DataIndex* t, Group!DataIndex[] matches)
     {
         ThreadList!DataIndex worklist;
-        debug(fred_matching) writeln("Evaluating thread backwards");
+        debug(fred_matching) writeln("---- Evaluating thread backwards");
         do
         {
             debug(fred_matching)
@@ -6123,9 +6153,9 @@ enum OneShot { Fwd, Bwd };
     {
         auto m = match("@abc#", regex(`(\w)(\w)(\w)`));
         auto c = m.captures;
-        assert(c.pre == "@");// part of input preceeding match
-        assert(c.post == "#"); // immediately after match
-        assert(c.hit == c[0] && c.hit == "abc");// the whole match
+        assert(c.pre == "@"); // Part of input preceeding match
+        assert(c.post == "#"); // Immediately after match
+        assert(c.hit == c[0] && c.hit == "abc"); // The whole match
         assert(c[2] =="b");
         assert(c.front == "abc");
         c.popFront();
@@ -6261,7 +6291,7 @@ public:
     }
 
     ///Number of matches in this object.
-    @property size_t length() const { return b-f;  }
+    @property size_t length() const { return _empty ? 0 : b-f;  }
 
     ///A hook for compatibility with original std.regex.
     @property ref captures(){ return this; }
@@ -6303,7 +6333,7 @@ private:
     EngineType _engine;
     R _input;
     Captures!(R,EngineType.DataIndex) _captures;
-    void[] _memory;
+    void[] _memory;//is ref-counted
 
     this(RegEx)(RegEx prog, R input)
     {
@@ -6315,16 +6345,18 @@ private:
         _engine = EngineType(prog, Input!Char(input), _memory[size_t.sizeof..$]);
         _captures = Captures!(R,EngineType.DataIndex)(this);
         _captures._empty = !_engine.match(_captures.matches);
-        debug(fred_counter) writefln("RefCount (ctor): %d", *cast(size_t*)_memory.ptr);
+        debug(fred_allocation) writefln("RefCount (ctor): %x %d", _memory.ptr, counter);
     }
 
+    @property ref size_t counter(){ return *cast(size_t*)_memory.ptr; }
 public:
     this(this)
     {
         if(_memory.ptr)
         {
-            ++*cast(size_t*)_memory.ptr;
-            debug(fred_counter) writefln("RefCount (postblit): %d", *cast(size_t*)_memory.ptr);
+            ++counter;
+            debug(fred_allocation) writefln("RefCount (postblit): %x %d"
+                                            , _memory.ptr, *cast(size_t*)_memory.ptr);
         }
     }
 
@@ -6332,8 +6364,9 @@ public:
     {
         if(_memory.ptr && --*cast(size_t*)_memory.ptr == 0)
         {
+            debug(fred_allocation) writefln("RefCount (dtor): %x %d"
+                                            , _memory.ptr, *cast(size_t*)_memory.ptr);
             free(cast(void*)_memory.ptr);
-            debug(fred_counter) writefln("RefCount (dtor): %d", *cast(size_t*)_memory.ptr);
         }
     }
 
@@ -6374,7 +6407,17 @@ public:
 
     ///ditto
     void popFront()
-    { //previous one can have escaped references from Capture object
+    {
+
+        if(counter != 1)
+        {//do cow magic first
+            counter--;//we abandon this reference
+            immutable size = EngineType.initialMemory(_engine.re)+size_t.sizeof;
+            _memory = (enforce(malloc(size))[0..size]);
+            _engine = _engine.dupTo(_memory[size_t.sizeof..size]);
+            counter = 1;//points to new chunk
+        }
+        //previous _captures can have escaped references from Capture object
         _captures.newMatches();
         _captures._empty = !_engine.match(_captures.matches);
     }
@@ -6545,8 +6588,8 @@ public auto bmatch(R, RegEx)(R input, RegEx re)
     Construct a new string from $(D input) by replacing each match with
     a string generated from match according to $(D format) specifier.
 
-    To replace all occurances use regex with "g" flag, otherwise
-    only first occurrence gets replaced.
+    To replace all occurrences use regex with "g" flag, otherwise
+    only the first occurrence gets replaced.
 
     Params:
     input = string to search
@@ -6555,9 +6598,9 @@ public auto bmatch(R, RegEx)(R input, RegEx re)
 
     Example:
     ---
-    //Comify a number
+    // Comify a number
     auto com = regex(r"(?<=\d)(?=(\d\d\d)+\b)","g");
-    assert(replace("12000 + 42100 = 56000", com, ",") == "12,000 + 42,100 = 56,100");
+    assert(replace("12000 + 42100 = 54100", com, ",") == "12,000 + 42,100 = 54,100");
     ---
 
     The format string can reference parts of match using the following notation.
@@ -6723,7 +6766,7 @@ private:
     alias typeof(match(Range.init,RegEx.init)) Rx;
     Rx _match;
 
-    @trusted this(Range input, RegEx separator)  
+    @trusted this(Range input, RegEx separator)
     {//@@@BUG@@@ generated opAssign of RegexMatch is not @trusted
         _input = input;
         separator.flags |= RegexOption.global;
@@ -6741,7 +6784,7 @@ private:
 public:
     auto ref opSlice()
     {
-        return this.save();
+        return this.save;
     }
 
     ///Forward range primitives.
@@ -6783,7 +6826,7 @@ public:
 }
 
 /**
-    A helper function, creates a $(D Splitter) on range $(D r) separated by regex $(D pat). 
+    A helper function, creates a $(D Splitter) on range $(D r) separated by regex $(D pat).
     Captured subexpressions have no effect on the resulting range.
 */
 public Splitter!(Range, RegEx) splitter(Range, RegEx)(Range r, RegEx pat)
@@ -7427,7 +7470,7 @@ else
             assert(!m);
             debug(fred_test) writeln("!!! FReD REGRESSION test done "~matchFn.stringof~" !!!");
             auto rprealloc = regex(`((.){5}.{1,10}){5}`);
-            auto arr = array(replicate('0',100));
+            auto arr = array(repeat('0',100));
             auto m2 = matchFn(arr, rprealloc);
             assert(m2);
             assert(collectException(
@@ -7515,7 +7558,7 @@ else
         assert(equal(split(s1, regex(", *")), w1[]));
     }
 
-    unittest 
+    unittest
     { // bugzilla 7141
         string pattern = `[a\--b]`;
         assert(match("-", pattern));
@@ -7530,7 +7573,7 @@ else
     unittest
     {//bugzilla 7300
         assert(!match("a"d, "aa"d));
-    }    
+    }
 
     unittest
     {//bugzilla 7674
@@ -7547,6 +7590,57 @@ else
             assert(equal(std.regex.splitter(str, re), [to!S("a"), to!S("b")]));
             assert(split(str, re) == [to!S("a"), to!S("b")]);
         }
+    }
+    unittest
+    {//bugzilla 8203
+        string data = "
+        NAME   = XPAW01_STA:STATION
+        NAME   = XPAW01_STA
+        ";
+            auto uniFileOld = data;
+            auto r = regex(
+               r"^NAME   = (?P<comp>[a-zA-Z0-9_]+):*(?P<blk>[a-zA-Z0-9_]*)","gm");
+            auto uniCapturesNew = match(uniFileOld, r);
+            for(int i=0; i<20; i++)
+                foreach (matchNew; uniCapturesNew) {}
+    }
+    unittest
+    {// bugzilla 8637 purity of enforce
+        auto m = match("hello world", regex("world"));
+        enforce(m);
+    }
+
+    // bugzilla 8725 
+    unittest
+    {        
+      static italic = regex( r"\*
+                    (?!\s+)
+                    (.*?)
+                    (?!\s+)
+                    \*", "gx" );
+      string input = "this * is* interesting, *very* interesting";
+      assert(replace(input, italic, "<i>$1</i>") == 
+          "this * is* interesting, <i>very</i> interesting");
+    }
+
+    // bugzilla 8349
+    unittest
+    {
+        enum peakRegexStr = r"\>(wgEncode.*Tfbs.*\.(?:narrow)|(?:broad)Peak.gz)</a>";
+        enum peakRegex = ctRegex!(peakRegexStr);
+        //note that the regex pattern itself is probably bogus
+        assert(match(r"\>wgEncode-blah-Tfbs.narrow</a>", peakRegex));
+    }
+
+    // bugzilla 9211
+    unittest
+    {
+        auto rx_1 =  regex(r"^(\w)*(\d)");
+        auto m = match("1234", rx_1);  
+        assert(equal(m.front, ["1234", "3", "4"]));
+        auto rx_2 = regex(r"^([0-9])*(\d)");
+        auto m2 = match("1234", rx_2);      
+        assert(equal(m2.front, ["1234", "3", "4"]));
     }
 }
 

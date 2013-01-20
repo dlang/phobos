@@ -333,6 +333,7 @@ unittest
     }
 }
 
+
 /++
     If $(D !!value) is true, $(D value) is returned. Otherwise,
     $(D new Exception(msg)) is thrown.
@@ -352,8 +353,20 @@ auto line = readln(f);
 enforce(line.length, "Expected a non-empty line.");
 --------------------
  +/
-T enforce(T, string file = __FILE__, size_t line = __LINE__)
-    (T value, lazy const(char)[] msg = null) @safe pure
+T enforce(T)(T value, lazy const(char)[] msg = null, string file = __FILE__, size_t line = __LINE__)
+{
+    if (!value) bailOut(file, line, msg);
+    return value;
+}
+
+/++
+   $(RED Scheduled for deprecation in January 2013. If passing the file or line
+         number explicitly, please use the version of enforce which takes them as
+         function arguments. Taking them as template arguments causes
+         unnecessary template bloat.)
+ +/
+T enforce(T, string file, size_t line = __LINE__)
+    (T value, lazy const(char)[] msg = null)
 {
     if (!value) bailOut(file, line, msg);
     return value;
@@ -430,6 +443,41 @@ unittest
     }
 }
 
+// Test for bugzilla 8637
+unittest
+{
+    struct S
+    {
+        static int g;
+        ~this() {}  // impure & unsafe destructor
+        bool opCast(T:bool)() {
+            int* p = cast(int*)0;   // unsafe operation
+            int n = g;              // impure operation
+            return true;
+        }
+    }
+    S s;
+
+    enforce(s);
+    enforce!(S, __FILE__, __LINE__)(s, ""); // scheduled for deprecation
+    enforce(s, {});
+    enforce(s, new Exception(""));
+
+    errnoEnforce(s);
+
+    alias Exception E1;
+    static class E2 : Exception
+    {
+        this(string fn, size_t ln) { super("", fn, ln); }
+    }
+    static class E3 : Exception
+    {
+        this(string msg) { super(msg, __FILE__, __LINE__); }
+    }
+    enforceEx!E1(s);
+    enforceEx!E2(s);
+    enforceEx!E3(s, "");    // deprecated
+}
 
 /++
     If $(D !!value) is true, $(D value) is returned. Otherwise, $(D ex) is thrown.
@@ -441,7 +489,7 @@ auto line = readln(f);
 enforce(line.length, new IOException); // expect a non-empty line
 --------------------
  +/
-T enforce(T)(T value, lazy Throwable ex) @safe pure
+T enforce(T)(T value, lazy Throwable ex)
 {
     if (!value) throw ex();
     return value;
@@ -466,7 +514,7 @@ enforce(line.length); // expect a non-empty line
 --------------------
  +/
 T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
-    (T value, lazy string msg = null) @safe pure
+    (T value, lazy string msg = null)
 {
     if (!value) throw new ErrnoException(msg, file, line);
     return value;
@@ -475,7 +523,9 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
 
 /++
     If $(D !!value) is $(D true), $(D value) is returned. Otherwise,
-    $(D new E(msg, file, line)) is thrown.
+    $(D new E(msg, file, line)) is thrown. Or if $(D E) doesn't take a message
+    and can be constructed with $(D new E(file, line)), then
+    $(D new E(file, line)) will be thrown.
 
    Example:
 --------------------
@@ -487,9 +537,19 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
 template enforceEx(E)
     if (is(typeof(new E("", __FILE__, __LINE__))))
 {
-    T enforceEx(T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__) @safe pure
+    T enforceEx(T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__)
     {
         if (!value) throw new E(msg, file, line);
+        return value;
+    }
+}
+
+template enforceEx(E)
+    if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LINE__))))
+{
+    T enforceEx(T)(T value, string file = __FILE__, size_t line = __LINE__)
+    {
+        if (!value) throw new E(file, line);
         return value;
     }
 }
@@ -503,9 +563,9 @@ template enforceEx(E)
     $(D new E(msg)) is thrown.
   +/
 deprecated template enforceEx(E)
-    if (is(typeof(new E(""))) && !is(typeof(new E("", __FILE__, __LINE__))))
+    if (is(typeof(new E(""))) && !is(typeof(new E("", __FILE__, __LINE__))) && !is(typeof(new E(__FILE__, __LINE__))))
 {
-    T enforceEx(T)(T value, lazy string msg = "") @safe pure
+    T enforceEx(T)(T value, lazy string msg = "")
     {
         if (!value) throw new E(msg);
         return value;
@@ -516,6 +576,7 @@ unittest
 {
     assertNotThrown(enforceEx!Exception(true));
     assertNotThrown(enforceEx!Exception(true, "blah"));
+    assertNotThrown(enforceEx!OutOfMemoryError(true));
 
     {
         auto e = collectException(enforceEx!Exception(false));
@@ -756,7 +817,11 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  * assumeUnique) is simple and rare enough to be tolerable.
  *
  */
-
+immutable(T)[] assumeUnique(T)(T[] array) pure nothrow
+{
+    return .assumeUnique(array);    // call ref version
+}
+/// ditto
 immutable(T)[] assumeUnique(T)(ref T[] array) pure nothrow
 {
     auto result = cast(immutable(T)[]) array;
@@ -789,10 +854,16 @@ version(none) unittest
 /**
 Returns $(D true) if $(D source)'s representation embeds a pointer
 that points to $(D target)'s representation or somewhere inside
-it. Note that evaluating $(D pointsTo(x, x)) checks whether $(D x) has
-internal pointers.
+it.
+
+Note that evaluating $(D pointsTo(x, x)) checks whether $(D x) has
+internal pointers. This should only be done as an assertive test,
+as the language is free to assume objects don't have internal pointers
+(TDPL 7.1.3.5).
 */
-bool pointsTo(S, T, Tdummy=void)(ref const S source, ref const T target) @trusted pure nothrow
+bool pointsTo(S, T, Tdummy=void)(auto ref const S source, auto ref const T target) @trusted pure nothrow
+    if ((__traits(isRef, source) || isDynamicArray!S) &&    // lvalue or slice rvalue
+        (__traits(isRef, target) || isDynamicArray!T))      // lvalue or slice rvalue
 {
     static if (is(S P : U*, U))
     {
@@ -803,13 +874,16 @@ bool pointsTo(S, T, Tdummy=void)(ref const S source, ref const T target) @truste
     else static if (is(S == struct))
     {
         foreach (i, Subobj; typeof(source.tupleof))
-        {
-            static if (!isStaticArray!(Subobj))
-                if (pointsTo(source.tupleof[i], target)) return true;
-        }
+            if (pointsTo(source.tupleof[i], target)) return true;
         return false;
     }
-    else static if (isArray!(S))
+    else static if (isStaticArray!S)
+    {
+        foreach (size_t i; 0 .. S.length)
+            if (pointsTo(source[i], target)) return true;
+        return false;
+    }
+    else static if (isDynamicArray!S)
     {
         return overlap(cast(void[])source, cast(void[])(&target)[0 .. 1]).length != 0;
     }
@@ -821,10 +895,8 @@ bool pointsTo(S, T, Tdummy=void)(ref const S source, ref const T target) @truste
 // for shared objects
 bool pointsTo(S, T)(ref const shared S source, ref const shared T target) @trusted pure nothrow
 {
-    alias pointsTo!(shared(S), shared(T), void) ptsTo;  // do instantiate explicitly
-    return ptsTo(source, target);
+    return pointsTo!(shared S, shared T, void)(source, target);
 }
-
 unittest
 {
     struct S1 { int a; S1 * b; }
@@ -863,16 +935,65 @@ unittest
     assert(pointsTo(sh3sub, sh3));
 
     int[] darr = [1, 2, 3, 4];
+
+    //dynamic arrays don't point to each other, or slices of themselves
+    assert(!pointsTo(darr, darr));
+    assert(!pointsTo(darr, darr[0 .. 1]));
+    assert(!pointsTo(darr[0 .. 1], darr));
+
+    //But they do point their elements
     foreach(i; 0 .. 4)
         assert(pointsTo(darr, darr[i]));
     assert(pointsTo(darr[0..3], darr[2]));
     assert(!pointsTo(darr[0..3], darr[3]));
+}
 
-    int[4] sarr = [1, 2, 3, 4];
-    foreach(i; 0 .. 4)
-        assert(pointsTo(sarr, sarr[i]));
-    assert(pointsTo(sarr[0..3], sarr[2]));
-    assert(!pointsTo(sarr[0..3], sarr[3]));
+unittest
+{
+    //tests with static arrays
+    //Static arrays themselves are just objects, and don't really *point* to anything.
+    //They aggregate their contents, much the same way a structure aggregates its attributes.
+    //*However* The elements inside the static array may themselves point to stuff.
+
+    //Standard array
+    int[2] k;
+    assert(!pointsTo(k, k)); //an array doesn't point to itself
+    //Technically, k doesn't point its elements, although it does alias them
+    assert(!pointsTo(k, k[0]));
+    assert(!pointsTo(k, k[1]));
+    //But an extracted slice will point to the same array.
+    assert(pointsTo(k[], k));
+    assert(pointsTo(k[], k[1]));
+
+    //An array of pointers
+    int*[2] pp;
+    int a;
+    int b;
+    pp[0] = &a;
+    assert( pointsTo(pp, a));  //The array contains a pointer to a
+    assert(!pointsTo(pp, b));  //The array does NOT contain a pointer to b
+    assert(!pointsTo(pp, pp)); //The array does not point itslef
+
+    //A struct containing a static array of pointers
+    static struct S
+    {
+        int*[2] p;
+    }
+    S s;
+    s.p[0] = &a;
+    assert( pointsTo(s, a)); //The struct contains an array that points a
+    assert(!pointsTo(s, b)); //But doesn't point b
+    assert(!pointsTo(s, s)); //The struct doesn't actually point itslef.
+
+    //An array containing structs that have pointers
+    static struct SS
+    {
+        int* p;
+    }
+    SS[2] ss = [SS(&a), SS(null)];
+    assert( pointsTo(ss, a));  //The array contains a struct that points to a
+    assert(!pointsTo(ss, b));  //The array doesn't contains a struct that points to b
+    assert(!pointsTo(ss, ss)); //The array doesn't point itself.
 }
 
 /*********************
@@ -883,7 +1004,7 @@ class ErrnoException : Exception
     uint errno;                 // operating system error code
     this(string msg, string file = null, size_t line = 0)
     {
-        errno = getErrno();
+        errno = .errno;
         version (linux)
         {
             char[1024] buf = void;

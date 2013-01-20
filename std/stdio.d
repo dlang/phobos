@@ -11,11 +11,12 @@ WIKI=Phobos/StdStdio
 Copyright: Copyright Digital Mars 2007-.
 License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB digitalmars.com, Walter Bright),
-           $(WEB erdani.org, Andrei Alexandrescu)
+           $(WEB erdani.org, Andrei Alexandrescu),
+           Alex Rønne Petersen
  */
 module std.stdio;
 
-public import core.stdc.stdio;
+public import core.stdc.stdio, std.string : KeepTerminator;
 static import std.c.stdio;
 import std.stdiobase;
 import core.stdc.errno, core.stdc.stddef, core.stdc.stdlib, core.memory,
@@ -25,11 +26,18 @@ import std.algorithm, std.array, std.conv, std.exception, std.format,
     std.typetuple, std.utf;
 version(unittest) import std.file;
 
-version (DigitalMars) version (Windows)
+version (DigitalMars)
 {
-    // Specific to the way Digital Mars C does stdio
-    version = DIGITAL_MARS_STDIO;
-    import std.c.stdio : __fhnd_info, FHND_WCHAR, FHND_TEXT;
+    version (Win32)
+    {
+        // Specific to the way Digital Mars C does stdio
+        version = DIGITAL_MARS_STDIO;
+        import std.c.stdio : __fhnd_info, FHND_WCHAR, FHND_TEXT;
+    }
+    else version (Win64)
+    {
+        version = MICROSOFT_STDIO;
+    }
 }
 
 version (Posix)
@@ -42,24 +50,25 @@ version (linux)
 {
     // Specific to the way Gnu C does stdio
     version = GCC_IO;
-    extern(C) FILE* fopen64(const char*, const char*);
 }
 
 version (OSX)
 {
     version = GENERIC_IO;
-    alias core.stdc.stdio.fopen fopen64;
 }
 
 version (FreeBSD)
 {
     version = GENERIC_IO;
-    alias core.stdc.stdio.fopen fopen64;
 }
 
 version(Windows)
 {
-    alias core.stdc.stdio.fopen fopen64;
+    // core.stdc.stdio.fopen expects file names to be
+    // encoded in CP_ACP on Windows instead of UTF-8.
+    /+ Waiting for druntime pull 299
+    +/
+    extern (C) nothrow FILE* _wfopen(in wchar* filename, in wchar* mode);
 }
 
 version (DIGITAL_MARS_STDIO)
@@ -93,6 +102,28 @@ version (DIGITAL_MARS_STDIO)
     int _fileno(FILE* f) { return f._file; }
     alias _fileno fileno;
 }
+else version (MICROSOFT_STDIO)
+{
+    extern (C)
+    {
+        /* **
+         * Microsoft under-the-hood C I/O functions
+         */
+        int _fputc_nolock(int, _iobuf*);
+        int _fputwc_nolock(int, _iobuf*);
+        int _fgetc_nolock(_iobuf*);
+        int _fgetwc_nolock(_iobuf*);
+        void _lock_file(FILE*);
+        void _unlock_file(FILE*);
+    }
+    alias _fputc_nolock FPUTC;
+    alias _fputwc_nolock FPUTWC;
+    alias _fgetc_nolock FGETC;
+    alias _fgetwc_nolock FGETWC;
+
+    alias _lock_file FLOCK;
+    alias _unlock_file FUNLOCK;
+}
 else version (GCC_IO)
 {
     /* **
@@ -107,18 +138,11 @@ else version (GCC_IO)
         int fgetwc_unlocked(_iobuf*);
         void flockfile(FILE*);
         void funlockfile(FILE*);
-        ssize_t getline(char**, size_t*, FILE*);
-        ssize_t getdelim (char**, size_t*, int, FILE*);
+        ptrdiff_t getline(char**, size_t*, FILE*);
+        ptrdiff_t getdelim (char**, size_t*, int, FILE*);
 
         private size_t fwrite_unlocked(const(void)* ptr,
                 size_t size, size_t n, _iobuf *stream);
-    }
-
-    version (linux)
-    {
-        // declare fopen64 if not already
-        static if (!is(typeof(fopen64)))
-            extern (C) FILE* fopen64(in char*, in char*);
     }
 
     alias fputc_unlocked FPUTC;
@@ -255,21 +279,24 @@ Hello, Jimmy!
  */
 struct File
 {
-    package struct Impl
+    private struct Impl
     {
-        FILE * handle = null;
+        FILE * handle = null; // Is null iff this Impl is closed by another File
         uint refs = uint.max / 2;
-        string name = null;
         bool isPipe;
-        this(FILE* h, uint r, string n, bool pipe = false)
-        {
-            handle = h;
-            refs = r;
-            name = n;
-            isPipe = pipe;
-        }
     }
-    package Impl * p;
+    private Impl* _p;
+    private string _name;
+
+    private this(FILE* handle, string name, uint refs = 1, bool isPipe = false)
+    {
+        assert(!_p);
+        _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
+        _p.handle = handle;
+        _p.refs = refs;
+        _p.isPipe = isPipe;
+        _name = name;
+    }
 
 /**
 Constructor taking the name of the file to open and the open mode
@@ -285,24 +312,22 @@ object refers to it anymore.
  */
     this(string name, in char[] stdioOpenmode = "rb")
     {
-        p = new Impl(errnoEnforce(.fopen(name, stdioOpenmode),
+        this(errnoEnforce(.fopen(name, stdioOpenmode),
                         text("Cannot open file `", name, "' in mode `",
                                 stdioOpenmode, "'")),
-                1, name);
+                name);
     }
 
     ~this()
     {
-        if (!p) return;
-        if (p.refs == 1) close();
-        else --p.refs;
+        detach();
     }
 
     this(this)
     {
-        if (!p) return;
-        assert(p.refs);
-        ++p.refs;
+        if (!_p) return;
+        assert(_p.refs);
+        ++_p.refs;
     }
 
 /**
@@ -312,7 +337,7 @@ file.
  */
     void opAssign(File rhs)
     {
-        swap(p, rhs.p);
+        swap(this, rhs);
     }
 
 /**
@@ -325,8 +350,7 @@ Throws exception in case of error.
     void open(string name, in char[] stdioOpenmode = "rb")
     {
         detach();
-        auto another = File(name, stdioOpenmode);
-        swap(this, another);
+        this = File(name, stdioOpenmode);
     }
 
 /**
@@ -337,15 +361,15 @@ opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
     version(Posix) void popen(string command, in char[] stdioOpenmode = "r")
     {
         detach();
-        p = new Impl(errnoEnforce(.popen(command, stdioOpenmode),
+        this = File(errnoEnforce(.popen(command, stdioOpenmode),
                         "Cannot run command `"~command~"'"),
-                1, command, true);
+                command, 1, true);
     }
 
 /** Returns $(D true) if the file is opened. */
-    @property bool isOpen() const
+    @property bool isOpen() const pure nothrow
     {
-        return p !is null && p.handle;
+        return _p !is null && _p.handle;
     }
 
 /**
@@ -353,16 +377,18 @@ Returns $(D true) if the file is at end (see $(WEB
 cplusplus.com/reference/clibrary/cstdio/feof.html, feof)). The file
 must be opened, otherwise an exception is thrown.
  */
-    @property bool eof() const
+    @property bool eof() const pure
     {
-        enforce(p && p.handle, "Calling eof() against an unopened file.");
-        return .feof(cast(FILE*) p.handle) != 0;
+        enforce(_p && _p.handle, "Calling eof() against an unopened file.");
+        return .feof(cast(FILE*) _p.handle) != 0;
     }
 
-/** Returns the name of the file, if any. */
-    @property string name() const
+/** Returns the name of the last opened file, if any.
+If a $(D File) was created with $(LREF tmpfile) and $(LREF wrapFile)
+it has no name.*/
+    @property string name() const pure nothrow
     {
-        return p.name;
+        return _name;
     }
 
 /**
@@ -370,9 +396,9 @@ If the file is not opened, returns $(D false). Otherwise, returns
 $(WEB cplusplus.com/reference/clibrary/cstdio/ferror.html, ferror) for
 the file handle.
  */
-    @property bool error() const
+    @property bool error() const pure nothrow
     {
-        return !p.handle || .ferror(cast(FILE*) p.handle);
+        return !_p.handle || .ferror(cast(FILE*) _p.handle);
     }
 
 /**
@@ -381,10 +407,28 @@ and throws if that fails.
   */
     void detach()
     {
-        if (!p) return;
-        // @@@BUG
-        //if (p.refs == 1) close();
-        p = null;
+        if (!_p) return;
+        if (_p.refs == 1)
+            close();
+        else
+        {
+            assert(_p.refs);
+            --_p.refs;
+            _p = null;
+        }
+    }
+
+    unittest
+    {
+        auto deleteme = testFilename();
+        scope(exit) std.file.remove(deleteme);
+        auto f = File(deleteme, "w");
+        {
+            auto f2 = f;
+            f2.detach();
+        }
+        assert(f._p.refs == 1);
+        f.close();
     }
 
 /**
@@ -398,32 +442,30 @@ referring to the same handle will see a closed file henceforth.
  */
     void close()
     {
-        if (!p) return; // succeed vacuously
-        if (!p.handle)
-        {
-            p = null; // start a new life
-            return;
-        }
+        if (!_p) return; // succeed vacuously
         scope(exit)
         {
-            p.handle = null; // nullify the handle anyway
-            p.name = null;
-            --p.refs;
-            p = null;
+            assert(_p.refs);
+            if(!--_p.refs)
+                free(_p);
+            _p = null; // start a new life
         }
+        if (!_p.handle) return; // Impl is closed by another File
+
+        scope(exit) _p.handle = null; // nullify the handle anyway
         version (Posix)
         {
-            if (p.isPipe)
+            if (_p.isPipe)
             {
                 // Ignore the result of the command
-                errnoEnforce(.pclose(p.handle) != -1,
-                        "Could not close pipe `"~p.name~"'");
+                errnoEnforce(.pclose(_p.handle) != -1,
+                        "Could not close pipe `"~_name~"'");
                 return;
             }
         }
         //fprintf(std.c.stdio.stderr, ("Closing file `"~name~"`.\n\0").ptr);
-        errnoEnforce(.fclose(p.handle) == 0,
-                "Could not close file `"~p.name~"'");
+        errnoEnforce(.fclose(_p.handle) == 0,
+                "Could not close file `"~_name~"'");
     }
 
 /**
@@ -431,10 +473,10 @@ If the file is not opened, succeeds vacuously. Otherwise, returns
 $(WEB cplusplus.com/reference/clibrary/cstdio/_clearerr.html,
 _clearerr) for the file handle.
  */
-    void clearerr()
+    void clearerr() pure nothrow
     {
-        p is null || p.handle is null ||
-        .clearerr(p.handle);
+        _p is null || _p.handle is null ||
+        .clearerr(_p.handle);
     }
 
 /**
@@ -445,7 +487,7 @@ file handle and throws on error.
     void flush()
     {
         errnoEnforce
-        (.fflush(enforce(p.handle, "Calling fflush() on an unopened file"))
+        (.fflush(enforce(_p.handle, "Calling fflush() on an unopened file"))
                 == 0);
     }
 
@@ -464,9 +506,9 @@ $(D rawRead) always reads in binary mode on Windows.
     T[] rawRead(T)(T[] buffer)
     {
         enforce(buffer.length, "rawRead must take a non-empty buffer");
-        version(Windows)
+        version(Win32)
         {
-            immutable fd = ._fileno(p.handle);
+            immutable fd = ._fileno(_p.handle);
             immutable mode = ._setmode(fd, _O_BINARY);
             scope(exit) ._setmode(fd, mode);
             version(DIGITAL_MARS_STDIO)
@@ -478,7 +520,7 @@ $(D rawRead) always reads in binary mode on Windows.
             }
         }
         immutable result =
-            .fread(buffer.ptr, T.sizeof, buffer.length, p.handle);
+            .fread(buffer.ptr, T.sizeof, buffer.length, _p.handle);
         errnoEnforce(!error);
         return result ? buffer[0 .. result] : null;
     }
@@ -512,7 +554,7 @@ $(D rawWrite) always writes in binary mode on Windows.
         version(Windows)
         {
             flush(); // before changing translation mode
-            immutable fd = ._fileno(p.handle);
+            immutable fd = ._fileno(_p.handle);
             immutable mode = ._setmode(fd, _O_BINARY);
             scope(exit) ._setmode(fd, mode);
             version(DIGITAL_MARS_STDIO)
@@ -525,14 +567,15 @@ $(D rawWrite) always writes in binary mode on Windows.
             scope(exit) flush(); // before restoring translation mode
         }
         auto result =
-            .fwrite(buffer.ptr, T.sizeof, buffer.length, p.handle);
+            .fwrite(buffer.ptr, T.sizeof, buffer.length, _p.handle);
         if (result == result.max) result = 0;
         errnoEnforce(result == buffer.length,
                 text("Wrote ", result, " instead of ", buffer.length,
                         " objects of type ", T.stringof, " to file `",
-                        p.name, "'"));
+                        _name, "'"));
     }
 
+    version(Win64) {} else
     unittest
     {
         auto deleteme = testFilename();
@@ -553,17 +596,18 @@ file handle. Throws on error.
         enforce(isOpen, "Attempting to seek() in an unopened file");
         version (Windows)
         {
-            errnoEnforce(fseek(p.handle, to!int(offset), origin) == 0,
-                    "Could not seek in file `"~p.name~"'");
+            errnoEnforce(fseek(_p.handle, to!int(offset), origin) == 0,
+                    "Could not seek in file `"~_name~"'");
         }
         else
         {
             //static assert(off_t.sizeof == 8);
-            errnoEnforce(fseeko(p.handle, offset, origin) == 0,
-                    "Could not seek in file `"~p.name~"'");
+            errnoEnforce(fseeko(_p.handle, offset, origin) == 0,
+                    "Could not seek in file `"~_name~"'");
         }
     }
 
+    version(Win64) {} else
     unittest
     {
         auto deleteme = testFilename();
@@ -599,14 +643,14 @@ managed file handle. Throws on error.
         enforce(isOpen, "Attempting to tell() in an unopened file");
         version (Windows)
         {
-            immutable result = ftell(cast(FILE*) p.handle);
+            immutable result = ftell(cast(FILE*) _p.handle);
         }
         else
         {
-            immutable result = ftello(cast(FILE*) p.handle);
+            immutable result = ftello(cast(FILE*) _p.handle);
         }
         errnoEnforce(result != -1,
-                "Query ftell() failed for file `"~p.name~"'");
+                "Query ftell() failed for file `"~_name~"'");
         return result;
     }
 
@@ -629,7 +673,7 @@ file handle. Throws on error.
     void rewind()
     {
         enforce(isOpen, "Attempting to rewind() an unopened file");
-        .rewind(p.handle);
+        .rewind(_p.handle);
     }
 
 /**
@@ -640,8 +684,8 @@ the file handle.
     void setvbuf(size_t size, int mode = _IOFBF)
     {
         enforce(isOpen, "Attempting to call setvbuf() on an unopened file");
-        errnoEnforce(.setvbuf(p.handle, null, mode, size) == 0,
-                "Could not set buffering for file `"~p.name~"'");
+        errnoEnforce(.setvbuf(_p.handle, null, mode, size) == 0,
+                "Could not set buffering for file `"~_name~"'");
     }
 
 /**
@@ -651,9 +695,9 @@ _setvbuf) for the file handle. */
     void setvbuf(void[] buf, int mode = _IOFBF)
     {
         enforce(isOpen, "Attempting to call setvbuf() on an unopened file");
-        errnoEnforce(.setvbuf(p.handle,
+        errnoEnforce(.setvbuf(_p.handle,
                         cast(char*) buf.ptr, mode, buf.length) == 0,
-                "Could not set buffering for file `"~p.name~"'");
+                "Could not set buffering for file `"~_name~"'");
     }
 
 /**
@@ -665,19 +709,23 @@ arguments in text format to the file. */
         foreach (arg; args)
         {
             alias typeof(arg) A;
-            static if (isSomeString!A && !is(A == enum))
+            static if (isAggregateType!A || is(A == enum))
+            {
+                std.format.formattedWrite(w, "%s", arg);
+            }
+            else static if (isSomeString!A)
             {
                 put(w, arg);
             }
-            else static if (isIntegral!A && !is(A == enum))
+            else static if (isIntegral!A)
             {
                 toTextRange(arg, w);
             }
-            else static if (isBoolean!A && !is(A == enum))
+            else static if (isBoolean!A)
             {
                 put(w, arg ? "true" : "false");
             }
-            else static if (isSomeChar!A && !is(A == enum))
+            else static if (isSomeChar!A)
             {
                 put(w, arg);
             }
@@ -695,39 +743,24 @@ arguments in text format to the file, followed by a newline. */
     void writeln(S...)(S args)
     {
         write(args, '\n');
-        errnoEnforce(.fflush(p.handle) == 0,
-                    "Could not flush file `"~p.name~"'");
     }
-
-    private enum errorMessage =
-        "You must pass a formatting string as the first"
-        " argument to writef or writefln. If no formatting is needed,"
-        " you may want to use write or writeln.";
 
 /**
 If the file is not opened, throws an exception. Otherwise, writes its
 arguments in text format to the file, according to the format in the
 first argument. */
-    void writef(S...)(S args) // if (isSomeString!(S[0]))
+    void writef(Char, A...)(in Char[] fmt, A args)
     {
-        assert(p);
-        assert(p.handle);
-        static assert(S.length>0, errorMessage);
-        static assert(isSomeString!(S[0]), errorMessage);
-        auto w = lockingTextWriter;
-        std.format.formattedWrite(w, args);
+        std.format.formattedWrite(lockingTextWriter, fmt, args);
     }
 
 /**
 Same as writef, plus adds a newline. */
-    void writefln(S...)(S args)
+    void writefln(Char, A...)(in Char[] fmt, A args)
     {
-        static assert(S.length>0, errorMessage);
-        static assert(isSomeString!(S[0]), errorMessage);
         auto w = lockingTextWriter;
-        std.format.formattedWrite(w, args);
+        std.format.formattedWrite(w, fmt, args);
         w.put('\n');
-        .fflush(p.handle);
     }
 
 /**********************************
@@ -769,7 +802,7 @@ by $(D buf), whereas $(D buf = stdin.readln()) makes a new memory allocation
 with every line.  */
     S readln(S = string)(dchar terminator = '\n')
     {
-        Unqual!(typeof(S.init[0]))[] buf;
+        Unqual!(ElementEncodingType!S)[] buf;
         readln(buf, terminator);
         return assumeUnique(buf);
     }
@@ -795,12 +828,12 @@ with every line.  */
     }
 
 /** ditto */
-    size_t readln(C)(ref C[] buf, dchar terminator = '\n') if (isSomeChar!C)
+    size_t readln(C)(ref C[] buf, dchar terminator = '\n') if (isSomeChar!C && !is(C == enum))
     {
         static if (is(C == char))
         {
-            enforce(p && p.handle, "Attempt to read from an unopened file.");
-            return readlnImpl(p.handle, buf, terminator);
+            enforce(_p && _p.handle, "Attempt to read from an unopened file.");
+            return readlnImpl(_p.handle, buf, terminator);
         }
         else
         {
@@ -820,7 +853,7 @@ with every line.  */
     size_t readln(C, R)(ref C[] buf, R terminator)
         if (isBidirectionalRange!R && is(typeof(terminator.front == buf[0])))
     {
-        auto last = terminator.back();
+        auto last = terminator.back;
         C[] buf2;
         swap(buf, buf2);
         for (;;) {
@@ -878,35 +911,33 @@ with every line.  */
 
 /**
  Returns a temporary file by calling $(WEB
- cplusplus.com/reference/clibrary/cstdio/_tmpfile.html, _tmpfile). */
+ cplusplus.com/reference/clibrary/cstdio/_tmpfile.html, _tmpfile).
+ Note that the created file has no $(LREF name).*/
     static File tmpfile()
     {
-        auto h = errnoEnforce(core.stdc.stdio.tmpfile(),
-                "Could not create temporary file with tmpfile()");
-        File result = void;
-        result.p = new Impl(h, 1, null);
-        return result;
+        return File(errnoEnforce(core.stdc.stdio.tmpfile(),
+                "Could not create temporary file with tmpfile()"),
+            null);
     }
 
 /**
 Unsafe function that wraps an existing $(D FILE*). The resulting $(D
-File) never takes the initiative in closing the file. */
+File) never takes the initiative in closing the file.
+Note that the created file has no $(LREF name)*/
     /*private*/ static File wrapFile(FILE* f)
     {
-        File result = void;
-        //result.p = new Impl(f, uint.max / 2, null);
-        result.p = new Impl(f, 9999, null);
-        return result;
+        return File(enforce(f, "Could not wrap null FILE*"),
+            null, /*uint.max / 2*/ 9999);
     }
 
 /**
 Returns the $(D FILE*) corresponding to this object.
  */
-    FILE* getFP()
+    FILE* getFP() pure
     {
-        enforce(p && p.handle,
+        enforce(_p && _p.handle,
                 "Attempting to call getFP() on an unopened file");
-        return p.handle;
+        return _p.handle;
     }
 
     unittest
@@ -920,12 +951,11 @@ Returns the file number corresponding to this object.
     /*version(Posix) */int fileno() const
     {
         enforce(isOpen, "Attempting to call fileno() on an unopened file");
-        return .fileno(cast(FILE*) p.handle);
+        return .fileno(cast(FILE*) _p.handle);
     }
 
 /**
 Range that reads one line at a time. */
-    alias std.string.KeepTerminator KeepTerminator;
     /// ditto
     struct ByLine(Char, Terminator)
     {
@@ -933,6 +963,7 @@ Range that reads one line at a time. */
         Char[] line;
         Terminator terminator;
         KeepTerminator keepTerminator;
+        bool first_call = true;
 
         this(File f, KeepTerminator kt = KeepTerminator.no,
                 Terminator terminator = '\n')
@@ -968,7 +999,11 @@ Range that reads one line at a time. */
         /// Ditto
         @property Char[] front()
         {
-            if (line is null) popFront();
+            if (first_call)
+            {
+                popFront();
+                first_call = false;
+            }
             return line;
         }
 
@@ -1018,7 +1053,8 @@ to this file. */
         f.close();
 
         void test(string txt, string[] witness,
-                KeepTerminator kt = KeepTerminator.no)
+                KeepTerminator kt = KeepTerminator.no,
+                bool popFirstLine = false)
         {
             uint i;
             std.file.write(deleteme, txt);
@@ -1028,7 +1064,13 @@ to this file. */
                 f.close();
                 assert(!f.isOpen);
             }
-            foreach (line; f.byLine(kt))
+            auto lines = f.byLine(kt);
+            if (popFirstLine)
+            {
+                lines.popFront();
+                i = 1;
+            }
+            foreach (line; lines)
             {
                 assert(line == witness[i++]);
             }
@@ -1038,12 +1080,14 @@ to this file. */
         test("", null);
         test("\n", [ "" ]);
         test("asd\ndef\nasdf", [ "asd", "def", "asdf" ]);
+        test("asd\ndef\nasdf", [ "asd", "def", "asdf" ], KeepTerminator.no, true);
         test("asd\ndef\nasdf\n", [ "asd", "def", "asdf" ]);
 
         test("", null, KeepTerminator.yes);
         test("\n", [ "\n" ], KeepTerminator.yes);
         test("asd\ndef\nasdf", [ "asd\n", "def\n", "asdf" ], KeepTerminator.yes);
         test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes);
+        test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes, true);
     }
 
     template byRecord(Fields...)
@@ -1186,8 +1230,8 @@ $(D Range) that locks the file and allows fast writing to it.
 
         this(ref File f)
         {
-            enforce(f.p && f.p.handle);
-            fps = f.p.handle;
+            enforce(f._p && f._p.handle);
+            fps = f._p.handle;
             orientation = fwide(fps, 0);
             FLOCK(fps);
             handle = cast(_iobuf*)fps;
@@ -1209,10 +1253,7 @@ $(D Range) that locks the file and allows fast writing to it.
         /// Range primitive implementations.
         void put(A)(A writeme) if (is(ElementType!A : const(dchar)))
         {
-            static if (isSomeString!A)
-                alias typeof(writeme[0]) C;
-            else
-                alias ElementType!A C;
+            alias ElementEncodingType!A C;
             static assert(!is(C == void));
             if (writeme[0].sizeof == 1 && orientation <= 0)
             {
@@ -1348,18 +1389,18 @@ struct LockingTextReader
     {
         enforce(f.isOpen);
         _f = f;
-        FLOCK(_f.p.handle);
+        FLOCK(_f._p.handle);
     }
 
     this(this)
     {
-        FLOCK(_f.p.handle);
+        FLOCK(_f._p.handle);
     }
 
     ~this()
     {
         // File locking has its own reference count
-        if (_f.isOpen) FUNLOCK(_f.p.handle);
+        if (_f.isOpen) FUNLOCK(_f._p.handle);
     }
 
     void opAssign(LockingTextReader r)
@@ -1372,15 +1413,15 @@ struct LockingTextReader
         if (!_f.isOpen || _f.eof) return true;
         if (_crt == _crt.init)
         {
-            _crt = FGETC(cast(_iobuf*) _f.p.handle);
+            _crt = FGETC(cast(_iobuf*) _f._p.handle);
             if (_crt == -1)
             {
-                clear(_f);
+                .destroy(_f);
                 return true;
             }
             else
             {
-                enforce(ungetc(_crt, cast(FILE*) _f.p.handle) == _crt);
+                enforce(ungetc(_crt, cast(FILE*) _f._p.handle) == _crt);
             }
         }
         return false;
@@ -1395,7 +1436,7 @@ struct LockingTextReader
     void popFront()
     {
         enforce(!empty);
-        if (FGETC(cast(_iobuf*) _f.p.handle) == -1)
+        if (FGETC(cast(_iobuf*) _f._p.handle) == -1)
         {
             enforce(_f.eof);
         }
@@ -1404,7 +1445,7 @@ struct LockingTextReader
 
     // void unget(dchar c)
     // {
-    //     ungetc(c, cast(FILE*) _f.p.handle);
+    //     ungetc(c, cast(FILE*) _f._p.handle);
     // }
 }
 
@@ -1495,11 +1536,26 @@ void writefx(FILE* fps, TypeInfo[] arguments, void* argptr, int newline=false)
     }
 }
 
-template isStreamingDevice(T)
+/**
+ * Indicates whether $(D T) is a file handle of some kind.
+ */
+template isFileHandle(T)
 {
-    enum isStreamingDevice = is(T : FILE*) ||
+    enum isFileHandle = is(T : FILE*) ||
         is(T : File);
 }
+
+unittest
+{
+    static assert(isFileHandle!(FILE*));
+    static assert(isFileHandle!(File));
+}
+
+/**
+ * $(RED Scheduled for deprecation in January 2013.
+ *       Please use $(D isFileHandle) instead.)
+ */
+alias isFileHandle isStreamingDevice;
 
 /***********************************
 For each argument $(D arg) in $(D args), format the argument (as per
@@ -1543,41 +1599,45 @@ unittest
  * arguments is valid and just prints a newline to the standard
  * output.
  */
-void writeln(T...)(T args) if (T.length == 0)
+void writeln(T...)(T args)
 {
-    enforce(fputc('\n', .stdout.p.handle) == '\n');
+    static if (T.length == 0)
+    {
+        enforce(fputc('\n', .stdout._p.handle) == '\n');
+    }
+    else static if (T.length == 1 &&
+                    is(typeof(args[0]) : const(char)[]) &&
+                    !is(typeof(args[0]) == enum) && !is(typeof(args[0]) == typeof(null)) &&
+                    !isAggregateType!(typeof(args[0])))
+    {
+        // Specialization for strings - a very frequent case
+        enforce(fprintf(.stdout._p.handle, "%.*s\n",
+                        cast(int) args[0].length, args[0].ptr) >= 0);
+    }
+    else
+    {
+        // Most general instance
+        stdout.write(args, '\n');
+    }
 }
 
 unittest
 {
     // Just make sure the call compiles
     if (false) writeln();
-}
 
-// Specialization for strings - a very frequent case
-void writeln(T...)(T args)
-if (T.length == 1 && is(typeof(args[0]) : const(char)[]) && !is(typeof(args[0]) == enum))
-{
-    enforce(fprintf(.stdout.p.handle, "%.*s\n",
-                    cast(int) args[0].length, args[0].ptr) >= 0);
-}
-
-unittest
-{
     if (false) writeln("wyda");
-}
 
-// Most general instance
-void writeln(T...)(T args)
-if (T.length > 1 || T.length == 1 && !(is(typeof(args[0]) : const(char)[]) && !is(typeof(args[0]) == enum)))
-{
-    stdout.write(args, '\n');
+    // bug 8040
+    if (false) writeln(null);
+    if (false) writeln(">", null, "<");
 }
 
 unittest
 {
-        //printf("Entering test at line %d\n", __LINE__);
+    //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
+
     // test writeln
     auto deleteme = testFilename();
     auto f = File(deleteme, "w");
@@ -1590,6 +1650,7 @@ unittest
     else
         assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, world number 42!\n");
+
     // test writeln on stdout
     auto saveStdout = stdout;
     scope(exit) stdout = saveStdout;
@@ -1602,6 +1663,18 @@ unittest
     else
         assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, world number 42!\n");
+
+    stdout.open(deleteme, "w");
+    writeln("Hello!"c);
+    writeln("Hello!"w);    // bug 8386
+    writeln("Hello!"d);    // bug 8386
+    stdout.close();
+    version (Windows)
+        assert(cast(char[]) std.file.read(deleteme) ==
+            "Hello!\r\nHello!\r\nHello!\r\n");
+    else
+        assert(cast(char[]) std.file.read(deleteme) ==
+            "Hello!\nHello!\nHello!\n");
 }
 
 unittest
@@ -1805,26 +1878,41 @@ size_t readln(ref char[] buf, dchar terminator = '\n')
 }
 
 /*
- * Convenience function that forwards to $(D std.c.stdio.fopen)
+ * Convenience function that forwards to $(D core.stdc.stdio.fopen)
+ * (to $(D _wfopen) on Windows)
  * with appropriately-constructed C-style strings.
  */
 private FILE* fopen(in char[] name, in char[] mode = "r")
 {
-    const namez = toStringz(name), modez = toStringz(mode);
-    return fopen64(namez, modez);
+    version(Windows)
+        return _wfopen(toUTF16z(name), toUTF16z(mode));
+    else version(Posix)
+    {
+        /*
+         * The new opengroup large file support API is transparently
+         * included in the normal C bindings. http://opengroup.org/platform/lfs.html#1.0
+         * if _FILE_OFFSET_BITS in druntime is 64, off_t is 64 bit and
+         * the normal functions work fine. If not, then large file support
+         * probably isn't available. Do not use the old transitional API
+         * (the native extern(C) fopen64, http://www.unix.org/version2/whatsnew/lfs20mar.html#3.0)
+         */
+        return core.sys.posix.stdio.fopen(toStringz(name), toStringz(mode));
+    }
+    else
+    {
+        return core.stdc.stdio.fopen(toStringz(name), toStringz(mode));
+    }
 }
 
 version (Posix)
 {
-    extern(C) FILE* popen(const char*, const char*);
-
-/***********************************
- * Convenience function that forwards to $(D std.c.stdio.popen)
- * with appropriately-constructed C-style strings.
- */
+    /***********************************
+     * Convenience function that forwards to $(D std.c.stdio.popen)
+     * with appropriately-constructed C-style strings.
+     */
     FILE* popen(in char[] name, in char[] mode = "r")
     {
-        return popen(toStringz(name), toStringz(mode));
+        return core.sys.posix.stdio.popen(toStringz(name), toStringz(mode));
     }
 }
 
@@ -1958,12 +2046,12 @@ struct lines
         enum duplicate = is(Parms[$ - 1] : immutable(ubyte)[]);
         int result = 1;
         int c = void;
-        FLOCK(f.p.handle);
-        scope(exit) FUNLOCK(f.p.handle);
+        FLOCK(f._p.handle);
+        scope(exit) FUNLOCK(f._p.handle);
         ubyte[] buffer;
         static if (Parms.length == 2)
             Parms[0] line = 0;
-        while ((c = FGETC(cast(_iobuf*)f.p.handle)) != -1)
+        while ((c = FGETC(cast(_iobuf*)f._p.handle)) != -1)
         {
             buffer ~= to!(ubyte)(c);
             if (c == terminator)
@@ -1973,8 +2061,8 @@ struct lines
                 else
                     alias buffer arg;
                 // unlock the file while calling the delegate
-                FUNLOCK(f.p.handle);
-                scope(exit) FLOCK(f.p.handle);
+                FUNLOCK(f._p.handle);
+                scope(exit) FLOCK(f._p.handle);
                 static if (Parms.length == 1)
                 {
                     result = dg(arg);
@@ -2169,7 +2257,7 @@ struct chunks
         int result = 1;
         uint tally = 0;
         while ((r = core.stdc.stdio.fread(buffer.ptr,
-                                buffer[0].sizeof, size, f.p.handle)) > 0)
+                                buffer[0].sizeof, size, f._p.handle)) > 0)
         {
             assert(r <= size);
             if (r != size)
@@ -2229,7 +2317,7 @@ class StdioException : Exception
 
 /**
 Initialize with a message and an error code. */
-    this(string message, uint e = .getErrno())
+    this(string message, uint e = .errno)
     {
         errno = e;
         version (Posix)
@@ -2262,7 +2350,7 @@ Initialize with a message and an error code. */
 /// ditto
     static void opCall()
     {
-        throw new StdioException(null, .getErrno());
+        throw new StdioException(null, .errno);
     }
 }
 
@@ -2271,23 +2359,23 @@ extern(C) void std_stdio_static_this()
     //Bind stdin, stdout, stderr
     __gshared File.Impl stdinImpl;
     stdinImpl.handle = core.stdc.stdio.stdin;
-    .stdin.p = &stdinImpl;
+    .stdin._p = &stdinImpl;
     // stdout
     __gshared File.Impl stdoutImpl;
     stdoutImpl.handle = core.stdc.stdio.stdout;
-    .stdout.p = &stdoutImpl;
+    .stdout._p = &stdoutImpl;
     // stderr
     __gshared File.Impl stderrImpl;
     stderrImpl.handle = core.stdc.stdio.stderr;
-    .stderr.p = &stderrImpl;
+    .stderr._p = &stderrImpl;
 }
 
 //---------
 __gshared
 {
-    File stdin;
-    File stdout;
-    File stderr;
+    File stdin; /// The standard input stream.
+    File stdout; /// The standard output stream.
+    File stderr; /// The standard error stream.
 }
 
 unittest
@@ -2450,6 +2538,42 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
         fp._ptr += i;
         return i;
     }
+}
+
+version (MICROSOFT_STDIO)
+private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
+{
+    FLOCK(fps);
+    scope(exit) FUNLOCK(fps);
+
+    /* Since fps is now locked, we can create an "unshared" version
+     * of fp.
+     */
+    auto fp = cast(_iobuf*)fps;
+
+    auto sz = GC.sizeOf(buf.ptr);
+    //auto sz = buf.length;
+    buf = buf.ptr[0 .. sz];
+
+    auto app = appender(buf);
+    app.clear();
+    if(app.capacity == 0)
+        app.reserve(128); // get at least 128 bytes available
+
+    int c;
+    while((c = FGETC(fp)) != -1) {
+        app.put(cast(char) c);
+        if(c == terminator) {
+            buf = app.data;
+            return buf.length;
+        }
+
+    }
+
+    if (ferror(fps))
+        StdioException();
+    buf = app.data;
+    return buf.length;
 }
 
 version (GCC_IO)
@@ -2674,17 +2798,20 @@ version(linux) {
         enforce(sock.connect(s, cast(sock.sockaddr*) &addr, addr.sizeof) != -1,
             new StdioException("Connect failed"));
 
-        FILE* fp = enforce(fdopen(s, "w+".ptr));
-
-        File f;
-        f.p = new File.Impl(fp, 1, host ~ ":" ~ to!string(port));
-
-        return f;
+        return File(enforce(fdopen(s, "w+".ptr)),
+            host ~ ":" ~ to!string(port));
     }
 }
 
 version(unittest) string testFilename(string file = __FILE__, size_t line = __LINE__)
 {
     import std.path;
-    return text("deleteme.", baseName(file), ".", line);
+
+    // Non-ASCII characters can't be used because of snn.lib @@@BUG8643@@@
+    version(DIGITAL_MARS_STDIO)
+        return text("deleteme-.", baseName(file), ".", line);
+    else
+
+        // filename intentionally contains non-ASCII (Russian) characters
+        return text("deleteme-детка.", baseName(file), ".", line);
 }

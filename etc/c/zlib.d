@@ -3,6 +3,8 @@
 
 module etc.c.zlib;
 
+import core.stdc.config;
+
 /* zlib.h -- interface of the 'zlib' general purpose compression library
    version 1.2.3, July 18th, 2005
 
@@ -79,11 +81,11 @@ struct z_stream
 {
     ubyte    *next_in;  /* next input byte */
     uint     avail_in;  /* number of bytes available at next_in */
-    size_t   total_in;  /* total nb of input bytes read so far */
+    c_ulong  total_in;  /* total nb of input bytes read so far */
 
     ubyte    *next_out; /* next output byte should be put there */
     uint     avail_out; /* remaining free space at next_out */
-    size_t   total_out; /* total nb of bytes output so far */
+    c_ulong  total_out; /* total nb of bytes output so far */
 
     char     *msg;      /* last error message, NULL if no error */
     void*    state;     /* not visible by applications */
@@ -92,9 +94,9 @@ struct z_stream
     free_func  zfree;   /* used to free the internal state */
     void*      opaque;  /* private data object passed to zalloc and zfree */
 
-    int    data_type;  /* best guess about the data type: binary or text */
-    size_t adler;      /* adler32 value of the uncompressed data */
-    size_t reserved;   /* reserved for future use */
+    int     data_type;  /* best guess about the data type: binary or text */
+    c_ulong adler;      /* adler32 value of the uncompressed data */
+    c_ulong reserved;   /* reserved for future use */
 }
 
 alias z_stream* z_streamp;
@@ -105,7 +107,7 @@ alias z_stream* z_streamp;
 */
 struct gz_header {
     int     text;       /* true if compressed data believed to be text */
-    ulong   time;       /* modification time */
+    c_ulong time;       /* modification time */
     int     xflags;     /* extra flags (not used when writing a gzip file) */
     int     os;         /* operating system */
     byte    *extra;     /* pointer to extra field or Z_NULL if none */

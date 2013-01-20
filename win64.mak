@@ -1,27 +1,22 @@
-# Makefile to build D runtime library phobos.lib for Win32
+# Makefile to build D runtime library phobos64.lib for Win64
 # Prerequisites:
-#	Digital Mars dmc, lib, and make that are unzipped from Digital Mars C:
-#	    http://ftp.digitalmars.com/Digital_Mars_C++/Patch/dm850c.zip
-#	and are in the \dm\bin directory.
+#	Microsoft Visual Studio
 # Targets:
 #	make
 #		Same as make unittest
-#	make phobos.lib
-#		Build phobos.lib
+#	make phobos64.lib
+#		Build phobos64.lib
 #	make clean
 #		Delete unneeded files created by build process
 #	make unittest
-#		Build phobos.lib, build and run unit tests
+#		Build phobos64.lib, build and run unit tests
 #	make cov
 #		Build for coverage tests, run coverage tests
 #	make html
 #		Build documentation
-# Notes:
-#	minit.obj requires Microsoft MASM386.EXE to build from minit.asm,
-#	or just use the supplied minit.obj
 
 ## Memory model (32 or 64)
-MODEL=32
+MODEL=64
 
 ## Copy command
 
@@ -31,24 +26,30 @@ CP=cp
 
 DIR=\dmd2
 
-## Flags for dmc C compiler
+## Visual C directories
+VCDIR="\Program Files (x86)\Microsoft Visual Studio 10.0\VC"
+SDKDIR="\Program Files (x86)\Microsoft SDKs\Windows\v7.0A"
 
-CFLAGS=-mn -6 -r
-#CFLAGS=-g -mn -6 -r
+## Flags for VC compiler
+
+#CFLAGS=/O2 /I$(VCDIR)\INCLUDE /I$(SDKDIR)\Include
+CFLAGS=/Zi /I$(VCDIR)\INCLUDE /I$(SDKDIR)\Include
 
 ## Flags for dmd D compiler
 
-DFLAGS=-O -release -w -d -property
-#DFLAGS=-unittest -g -d
-#DFLAGS=-unittest -cov -g -d
+DFLAGS=-m$(MODEL) -O -release -w -d -property
+#DFLAGS=-m$(MODEL) -unittest -g -d
+#DFLAGS=-m$(MODEL) -unittest -cov -g -d
 
 ## Flags for compiling unittests
 
-UDFLAGS=-O -w -d -property
+UDFLAGS=-g -m$(MODEL) -O -w -d -property
 
-## C compiler
+## C compiler, linker, librarian
 
-CC=dmc
+CC=$(VCDIR)\bin\amd64\cl
+LD=$(VCDIR)\bin\amd64\link
+LIB=$(VCDIR)\bin\amd64\lib
 
 ## D compiler
 
@@ -67,17 +68,17 @@ DOC=..\..\html\d\phobos
 ## Location of druntime tree
 
 DRUNTIME=..\druntime
-DRUNTIMELIB=$(DRUNTIME)\lib\druntime.lib
+DRUNTIMELIB=$(DRUNTIME)\lib\druntime64.lib
 
 ## Zlib library
 
-ZLIB=etc\c\zlib\zlib.lib
+ZLIB=etc\c\zlib\zlib$(MODEL).lib
 
 .c.obj:
-	$(CC) -c $(CFLAGS) $*
+	$(CC) -c $(CFLAGS) $*.c
 
 .cpp.obj:
-	$(CC) -c $(CFLAGS) $*
+	$(CC) -c $(CFLAGS) $*.cpp
 
 .d.obj:
 	$(DMD) -c $(DFLAGS) $*
@@ -85,17 +86,17 @@ ZLIB=etc\c\zlib\zlib.lib
 .asm.obj:
 	$(CC) -c $*
 
-LIB=phobos.lib
+LIB=phobos$(MODEL).lib
 
 targets : $(LIB)
 
 test : test.exe
 
 test.obj : test.d
-	$(DMD) -c test -g -unittest
+	$(DMD) -c -m$(MODEL) test -g -unittest
 
 test.exe : test.obj $(LIB)
-	$(DMD) test.obj -g -L/map
+	$(DMD) test.obj -m$(MODEL) -g -L/map
 
 #	ti_bit.obj ti_Abit.obj
 
@@ -110,19 +111,19 @@ SRC_STD_2_HEAVY= std\range.d
 
 SRC_STD_2a_HEAVY= std\array.d std\functional.d std\path.d std\outbuffer.d std\utf.d
 
-SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
-    std\metastrings.d std\bitmanip.d std\typecons.d \
-    std\uni.d std\base64.d std\md5.d std\ctype.d std\ascii.d \
+SRC_STD_math=std\math.d
+SRC_STD_3= std\csv.d std\complex.d std\numeric.d std\bigint.d
+SRC_STD_3c= std\datetime.d std\metastrings.d std\bitmanip.d std\typecons.d
+
+SRC_STD_3a= std\uni.d std\base64.d std\md5.d std\ctype.d std\ascii.d \
     std\demangle.d std\uri.d std\mmfile.d std\getopt.d
 
-SRC_STD_3a= std\signals.d std\typetuple.d std\traits.d \
+SRC_STD_3b= std\signals.d std\typetuple.d std\traits.d \
     std\encoding.d std\xml.d \
     std\random.d std\regexp.d \
     std\exception.d \
     std\compiler.d std\cpuid.d \
     std\system.d std\concurrency.d
-
-SRC_STD_3b= std\datetime.d
 
 #can't place SRC_STD_DIGEST in SRC_STD_REST because of out-of-memory issues
 SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d \
@@ -131,13 +132,20 @@ SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST)
 
 SRC_STD_5_HEAVY= std\algorithm.d
 
-SRC_STD_6= std\variant.d \
-	std\syserror.d std\zlib.d \
-	std\stream.d std\socket.d std\socketstream.d \
-	std\perf.d std\container.d std\conv.d \
-	std\zip.d std\cstream.d
+SRC_STD_6a=std\variant.d
+SRC_STD_6b=std\syserror.d
+SRC_STD_6c=std\zlib.d
+SRC_STD_6d=std\stream.d
+SRC_STD_6e=std\socket.d
+SRC_STD_6f=std\socketstream.d
+SRC_STD_6g=std\perf.d
+SRC_STD_6h=std\container.d
+SRC_STD_6i=std\conv.d
+SRC_STD_6j=std\zip.d
+SRC_STD_6k=std\cstream.d
+SRC_STD_6l=std\regex.d
 
-SRC_STD_REST= std\regex.d \
+SRC_STD_7= \
 	std\stdint.d \
 	std\json.d \
 	std\parallelism.d \
@@ -145,8 +153,22 @@ SRC_STD_REST= std\regex.d \
 	std\process.d
 
 SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_2a_HEAVY) \
-	$(SRC_STD_3) $(SRC_STD_3a) $(SRC_STD_3b) $(SRC_STD_4) \
-	$(SRC_STD_5_HEAVY) $(SRC_STD_6) $(SRC_STD_REST)
+	$(SRC_STD_math) \
+	$(SRC_STD_3) $(SRC_STD_3a) $(SRC_STD_3b) $(SRC_STD_3c) $(SRC_STD_4) \
+	$(SRC_STD_5_HEAVY) \
+	$(SRC_STD_6a) \
+	$(SRC_STD_6b) \
+	$(SRC_STD_6c) \
+	$(SRC_STD_6d) \
+	$(SRC_STD_6e) \
+	$(SRC_STD_6f) \
+	$(SRC_STD_6g) \
+	$(SRC_STD_6h) \
+	$(SRC_STD_6i) \
+	$(SRC_STD_6j) \
+	$(SRC_STD_6k) \
+	$(SRC_STD_6l) \
+	$(SRC_STD_7)
 
 SRC=	unittest.d crc32.d index.d
 
@@ -195,7 +217,7 @@ SRC_STD_INTERNAL_DIGEST= std\internal\digest\sha_SSSE3.d
 
 SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
-	std\internal\math\gammafunction.d std\internal\math\errorfunction.d
+    std\internal\math\gammafunction.d std\internal\math\errorfunction.d
 
 SRC_STD_INTERNAL_WINDOWS= std\internal\windows\advapi32.d
 
@@ -366,24 +388,55 @@ $(LIB) : $(SRC_TO_COMPILE) \
 		$(ZLIB) $(DRUNTIMELIB)
 
 UNITTEST_OBJS= unittest1.obj unittest2.obj unittest2a.obj \
-		unittest3.obj unittest3a.obj unittest3b.obj unittest4.obj \
-		unittest5.obj unittest6.obj unittest7.obj unittest8.obj
+	       unittestM.obj \
+		unittest3.obj \
+		unittest3a.obj \
+		unittest3b.obj \
+		unittest3c.obj \
+		unittest4.obj \
+		unittest5.obj \
+		unittest6a.obj \
+		unittest6b.obj \
+		unittest6c.obj \
+		unittest6d.obj \
+		unittest6e.obj \
+		unittest6f.obj \
+		unittest6g.obj \
+		unittest6h.obj \
+		unittest6i.obj \
+		unittest6j.obj \
+		unittest6k.obj \
+		unittest6l.obj \
+		unittest7.obj 
 
 unittest : $(LIB)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRC_STD_2_HEAVY)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2a.obj $(SRC_STD_2a_HEAVY)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3.obj $(SRC_STD_3)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3a.obj $(SRC_STD_3a)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3b.obj $(SRC_STD_3b)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest4.obj $(SRC_STD_4)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest5.obj $(SRC_STD_5_HEAVY)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest6.obj $(SRC_STD_6)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest7.obj $(SRC_STD_REST)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8.obj $(SRC_TO_COMPILE_NOT_STD)
-	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(UNITTEST_OBJS) \
-		$(ZLIB) $(DRUNTIMELIB)
-	unittest
+	$(DMD) $(UDFLAGS) -c           -ofunittest1.obj $(SRC_STD_1_HEAVY)
+	$(DMD) $(UDFLAGS) -c           -ofunittest2.obj $(SRC_STD_2_HEAVY)
+	$(DMD) $(UDFLAGS) -c           -ofunittest2a.obj $(SRC_STD_2a_HEAVY)
+	$(DMD) $(UDFLAGS) -c           -ofunittestM.obj $(SRC_STD_math)
+	$(DMD) $(UDFLAGS) -c           -ofunittest3.obj $(SRC_STD_3)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3a.obj $(SRC_STD_3a)
+	$(DMD) $(UDFLAGS) -c           -ofunittest3b.obj $(SRC_STD_3b)
+	$(DMD) $(UDFLAGS) -c           -ofunittest3c.obj $(SRC_STD_3c)
+	$(DMD) $(UDFLAGS) -c           -ofunittest4.obj $(SRC_STD_4)
+	$(DMD) $(UDFLAGS) -c           -ofunittest5.obj $(SRC_STD_5_HEAVY)
+	$(DMD) $(UDFLAGS) -c           -ofunittest6a.obj $(SRC_STD_6a)
+	$(DMD) $(UDFLAGS) -c           -ofunittest6b.obj $(SRC_STD_6b)
+	$(DMD) $(UDFLAGS) -c           -ofunittest6c.obj $(SRC_STD_6c)
+	$(DMD) $(UDFLAGS) -c           -ofunittest6d.obj $(SRC_STD_6d)
+	$(DMD) $(UDFLAGS) -c           -ofunittest6e.obj $(SRC_STD_6e)
+	$(DMD) $(UDFLAGS) -c           -ofunittest6h.obj $(SRC_STD_6h)
+	$(DMD) $(UDFLAGS) -c           -ofunittest6i.obj $(SRC_STD_6i)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6f.obj $(SRC_STD_6f)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6g.obj $(SRC_STD_6g)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6j.obj $(SRC_STD_6j)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6k.obj $(SRC_STD_6k)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6l.obj $(SRC_STD_6l)
+	$(DMD) $(UDFLAGS) -c           -ofunittest7.obj $(SRC_STD_7)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8.obj $(SRC_TO_COMPILE_NOT_STD)
+	$(DMD) $(UDFLAGS)    -unittest unittest.d $(UNITTEST_OBJS) \
+	    $(ZLIB) $(DRUNTIMELIB)
+	.\unittest.exe
 
 #unittest : unittest.exe
 #	unittest
@@ -393,7 +446,7 @@ unittest : $(LIB)
 #	dmc unittest.obj -g
 
 cov : $(SRC_TO_COMPILE) $(LIB)
-	$(DMD) -cov -unittest -ofcov.exe unittest.d $(SRC_TO_COMPILE) $(LIB)
+	$(DMD) -m$(MODEL) -cov -unittest -ofcov.exe unittest.d $(SRC_TO_COMPILE) $(LIB)
 	cov
 
 html : $(DOCS)
@@ -402,7 +455,7 @@ html : $(DOCS)
 
 $(ZLIB): $(SRC_ZLIB)
 	cd etc\c\zlib
-	make -f win$(MODEL).mak zlib.lib
+	make -f win$(MODEL).mak zlib$(MODEL).lib
 	cd ..\..\..
 
 ################## DOCS ####################################
@@ -721,7 +774,7 @@ $(DOC)\etc_c_zlib.html : $(STDDOC) etc\c\zlib.d
 zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
-	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST) \
+	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST)\
 	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) \
 	$(SRC_STD_INTERNAL_WINDOWS)
 	del phobos.zip

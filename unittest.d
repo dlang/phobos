@@ -13,11 +13,12 @@
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
+version(Win64) {}
+else
+{
 public import std.base64;
-public import std.bind;
 public import std.compiler;
 public import std.concurrency;
-public import std.contracts;
 public import std.conv;
 public import std.cpuid;
 public import std.cstream;
@@ -27,7 +28,6 @@ public import std.demangle;
 public import std.file;
 public import std.format;
 public import std.getopt;
-public import std.loader;
 public import std.math;
 public import std.mathspecial;
 public import std.md5;
@@ -55,14 +55,24 @@ public import std.typetuple;
 public import std.uni;
 public import std.uri;
 public import std.utf;
+public import std.uuid;
 public import std.variant;
 public import std.zip;
 public import std.zlib;
+public import std.net.isemail;
+public import std.net.curl;
+public import std.digest.digest;
+public import std.digest.crc;
+public import std.digest.sha;
+public import std.digest.md;
+
+}
 
 int main(char[][] args)
 {
 
-version (all)
+version(Win64) {}
+else
 {
     // Bring in unit test for module by referencing function in it
 
@@ -73,8 +83,8 @@ version (all)
     OutBuffer b = new OutBuffer();      // outbuffer
     std.ctype.tolower('A');             // ctype
     RegExp r = new RegExp(null, null);  // regexp
-    uint ranseed = std.random.unpredictableSeed();
-    thisTid();
+    uint ranseed = std.random.unpredictableSeed;
+    thisTid;
     int a[];
     a.reverse;                          // adi
     a.sort;                             // qsort
@@ -122,7 +132,16 @@ version (all)
     std.signals.linkin();
 
     writefln(std.cpuid.toString());
+
+    bool isEmail = std.net.isemail.isEmail("abc");
+    auto http = std.net.curl.HTTP("dlang.org");
+    auto uuid = randomUUID();
+
+    auto md5 = md5Of("hello");
+    auto sha1 = sha1Of("hello");
+    auto crc = crc32Of("hello");
+    auto string = toHexString(crc);
+    puts("Success!");
 }
-    printf("Success!\n");
     return 0;
 }

@@ -1,4 +1,4 @@
-﻿// Written in the D programming language.
+// Written in the D programming language.
 
 /**
  * Elementary mathematical functions
@@ -18,7 +18,6 @@
  * Status:
  * The semantics and names of feqrel and approxEqual will be revised.
  *
- * Source: $(PHOBOSSRC std/_math.d)
  * Macros:
  *      WIKI = Phobos/StdMath
  *
@@ -85,6 +84,71 @@ else version(D_InlineAsm_X86_64){
     version = InlineAsm_X86_Any;
 }
 
+
+version(unittest)
+{
+    import core.stdc.stdio;
+
+    static if(real.sizeof > double.sizeof)
+        enum uint useDigits = 16;
+    else
+        enum uint useDigits = 15;
+
+    /******************************************
+     * Compare floating point numbers to n decimal digits of precision.
+     * Returns:
+     *  1       match
+     *  0       nomatch
+     */
+
+    private bool equalsDigit(real x, real y, uint ndigits)
+    {
+        if (signbit(x) != signbit(y))
+            return 0;
+
+        if (isinf(x) && isinf(y))
+            return 1;
+        if (isinf(x) || isinf(y))
+            return 0;
+
+        if (isnan(x) && isnan(y))
+            return 1;
+        if (isnan(x) || isnan(y))
+            return 0;
+
+        char bufx[30];
+        char bufy[30];
+        assert(ndigits < bufx.length);
+
+        int ix;
+        int iy;
+        ix = sprintf(bufx.ptr, "%.*Lg", ndigits, x);
+        assert(ix < bufx.length && ix > 0);
+        iy = sprintf(bufy.ptr, "%.*Lg", ndigits, y);
+        assert(ix < bufy.length && ix > 0);
+
+        return bufx[0 .. ix] == bufy[0 .. iy];
+    }
+
+    /****************************************
+     * Simple function to compare two floating point values
+     * to a specified precision.
+     * Returns:
+     *  true    match
+     *  false   nomatch
+     */
+
+    private bool mfeq(real x, real y, real precision)
+    {
+        if (x == y)
+            return true;
+        if (isnan(x))
+            return isnan(y);
+        if (isnan(y))
+            return false;
+        return fabs(x - y) <= precision;
+    }
+}
 
 
 
@@ -437,9 +501,22 @@ Lret:
     }
     else version(D_InlineAsm_X86_64)
     {
+        version (Win64)
+        {
+            asm
+            {
+                fld     real ptr [RCX]  ; // load theta
+            }
+        }
+        else
+        {
+            asm
+            {
+                fld     x[RBP]          ; // load theta
+            }
+        }
     asm
     {
-        fld     x[RBP]                  ; // load theta
         fxam                            ; // test for oddball values
         fstsw   AX                      ;
         test    AH,1                    ;
@@ -529,6 +606,11 @@ unittest
     assert(isIdentical( tan(NaN(0x0123L)), NaN(0x0123L) ));
 }
 
+unittest
+{
+    assert(equalsDigit(tan(PI / 3), std.math.sqrt(3.0), useDigits));
+}
+
 /***************
  * Calculates the arc cosine of x,
  * returning a value ranging from 0 to $(PI).
@@ -550,6 +632,11 @@ double acos(double x) @safe pure nothrow { return acos(cast(real)x); }
 /// ditto
 float acos(float x) @safe pure nothrow  { return acos(cast(real)x); }
 
+unittest
+{
+    assert(equalsDigit(acos(0.5), std.math.PI / 3, useDigits));
+}
+
 /***************
  * Calculates the arc sine of x,
  * returning a value ranging from -$(PI)/2 to $(PI)/2.
@@ -570,6 +657,11 @@ double asin(double x) @safe pure nothrow { return asin(cast(real)x); }
 /// ditto
 float asin(float x) @safe pure nothrow  { return asin(cast(real)x); }
 
+unittest
+{
+    assert(equalsDigit(asin(0.5), PI / 6, useDigits));
+}
+
 /***************
  * Calculates the arc tangent of x,
  * returning a value ranging from -$(PI)/2 to $(PI)/2.
@@ -585,6 +677,11 @@ real atan(real x) @safe pure nothrow { return atan2(x, 1.0L); }
 double atan(double x) @safe pure nothrow { return atan(cast(real)x); }
 /// ditto
 float atan(float x)  @safe pure nothrow { return atan(cast(real)x); }
+
+unittest
+{
+    assert(equalsDigit(atan(std.math.sqrt(3.0)), PI / 3, useDigits));
+}
 
 /***************
  * Calculates the arc tangent of y / x,
@@ -611,10 +708,23 @@ real atan2(real y, real x) @trusted pure nothrow
 {
     version(InlineAsm_X86_Any)
     {
-        asm {
-            fld y;
-            fld x;
-            fpatan;
+        version (Win64)
+        {
+            asm {
+                naked;
+                fld real ptr [RDX]; // y
+                fld real ptr [RCX]; // x
+                fpatan;
+                ret;
+            }
+        }
+        else
+        {
+            asm {
+                fld y;
+                fld x;
+                fpatan;
+            }
         }
     }
     else
@@ -633,6 +743,11 @@ double atan2(double y, double x) @safe pure nothrow
 float atan2(float y, float x) @safe pure nothrow
 {
     return atan2(cast(real)y, cast(real)x);
+}
+
+unittest
+{
+    assert(equalsDigit(atan2(1.0L, std.math.sqrt(3.0L)), PI / 6, useDigits));
 }
 
 /***********************************
@@ -655,6 +770,10 @@ double cosh(double x) @safe pure nothrow { return cosh(cast(real)x); }
 /// ditto
 float cosh(float x) @safe pure nothrow  { return cosh(cast(real)x); }
 
+unittest
+{
+    assert(equalsDigit(cosh(1.0), (E + 1.0 / E) / 2, useDigits));
+}
 
 /***********************************
  * Calculates the hyperbolic sine of x.
@@ -682,6 +801,10 @@ double sinh(double x) @safe pure nothrow { return sinh(cast(real)x); }
 /// ditto
 float sinh(float x) @safe pure nothrow  { return sinh(cast(real)x); }
 
+unittest
+{
+    assert(equalsDigit(sinh(1.0), (E - 1.0 / E) / 2, useDigits));
+}
 
 /***********************************
  * Calculates the hyperbolic tangent of x.
@@ -705,6 +828,11 @@ real tanh(real x) @safe pure nothrow
 double tanh(double x) @safe pure nothrow { return tanh(cast(real)x); }
 /// ditto
 float tanh(float x) @safe pure nothrow { return tanh(cast(real)x); }
+
+unittest
+{
+    assert(equalsDigit(tanh(1.0), sinh(1.0) / cosh(1.0), 15));
+}
 
 package:
 /* Returns cosh(x) + I * sinh(x)
@@ -765,6 +893,8 @@ unittest
     assert(isNaN(acosh(real.nan)));
     assert(acosh(1.0)==0.0);
     assert(acosh(real.infinity) == real.infinity);
+    assert(isNaN(acosh(0.5)));
+    assert(equalsDigit(acosh(cosh(3.0)), 3, useDigits));
 }
 
 /***********************************
@@ -803,6 +933,7 @@ unittest
     assert(asinh(real.infinity) == real.infinity);
     assert(asinh(-real.infinity) == -real.infinity);
     assert(isNaN(asinh(real.nan)));
+    assert(equalsDigit(asinh(sinh(3.0)), 3, useDigits));
 }
 
 /***********************************
@@ -839,6 +970,8 @@ unittest
     assert(isIdentical(atanh(-0.0),-0.0));
     assert(isNaN(atanh(real.nan)));
     assert(isNaN(atanh(-real.infinity)));
+    assert(atanh(0.0) == 0);
+    assert(equalsDigit(atanh(tanh(0.5L)), 0.5, useDigits));
 }
 
 /*****************************************
@@ -871,6 +1004,14 @@ extern (C) real rndtonl(real x);
 float sqrt(float x) @safe pure nothrow;    /* intrinsic */
 double sqrt(double x) @safe pure nothrow;  /* intrinsic */ /// ditto
 real sqrt(real x) @safe pure nothrow;      /* intrinsic */ /// ditto
+
+unittest
+{
+    //ctfe
+    enum ZX80 = sqrt(7.0f);
+    enum ZX81 = sqrt(7.0);
+    enum ZX82 = sqrt(7.0L);
+}
 
 creal sqrt(creal z) @safe pure nothrow
 {
@@ -923,7 +1064,7 @@ creal sqrt(creal z) @safe pure nothrow
  *    $(TR $(TD $(NAN))        $(TD $(NAN))    )
  *  )
  */
-real exp(real x) @safe pure nothrow
+real exp(real x) @trusted pure nothrow
 {
     version(D_InlineAsm_X86)
     {
@@ -939,7 +1080,7 @@ real exp(real x) @safe pure nothrow
         // and exp2 are so similar).
         return exp2(LOG2E*x);
     } else {
-        return core.stdc.math.exp(x);
+        return core.stdc.math.expl(x);
     }
 }
 /// ditto
@@ -947,6 +1088,10 @@ double exp(double x) @safe pure nothrow  { return exp(cast(real)x); }
 /// ditto
 float exp(float x)  @safe pure nothrow   { return exp(cast(real)x); }
 
+unittest
+{
+    assert(equalsDigit(exp(3.0), E * E * E, useDigits));
+}
 
 /**
  * Calculates the value of the natural logarithm base (e)
@@ -1037,6 +1182,26 @@ L_largenegative:
     } else version(D_InlineAsm_X86_64) {
         asm
         {
+            naked;
+        }
+        version (Win64)
+        {
+            asm
+            {
+                fld   real ptr [RCX];  // x
+                mov   AX,[RCX+8];      // AX = exponent and sign
+            }
+        }
+        else
+        {
+            asm
+            {
+                fld   real ptr [RSP+8];  // x
+                mov   AX,[RSP+8+8];      // AX = exponent and sign
+            }
+        }
+        asm
+        {
             /*  expm1() for x87 80-bit reals, IEEE754-2008 conformant.
              * Author: Don Clugston.
              *
@@ -1046,9 +1211,6 @@ L_largenegative:
              *    If 2rndy  < 0.5*real.epsilon, result is -1.
              *    Implementation is otherwise the same as for exp2()
              */
-            naked;
-            fld real ptr [RSP+8] ; // x
-            mov AX, [RSP+8+8]; // AX = exponent and sign
             sub RSP, 24;       // Create scratch space on the stack
             // [RSP,RSP+2] = scratchint
             // [RSP+4..+6, +8..+10, +10] = scratchreal
@@ -1105,7 +1267,7 @@ L_largenegative:
             ret;
         }
     } else {
-        return core.stdc.math.expm1(x);
+        return core.stdc.math.expm1l(x);
     }
 }
 
@@ -1206,6 +1368,26 @@ L_was_nan:
             ret PARAMSIZE;
         }
     } else version(D_InlineAsm_X86_64) {
+        asm
+        {
+            naked;
+        }
+        version (Win64)
+        {
+            asm
+            {
+                fld   real ptr [RCX];  // x
+                mov   AX,[RCX+8];      // AX = exponent and sign
+            }
+        }
+        else
+        {
+            asm
+            {
+                fld   real ptr [RSP+8];  // x
+                mov   AX,[RSP+8+8];      // AX = exponent and sign
+            }
+        }
         asm {
             /*  exp2() for x87 80-bit reals, IEEE754-2008 conformant.
              * Author: Don Clugston.
@@ -1222,9 +1404,6 @@ L_was_nan:
              * work for the (very rare) cases where the result is subnormal. So we fall back
              * to the slow method in that case.
              */
-            naked;
-            fld real ptr [RSP+8] ; // x
-            mov AX, [RSP+8+8]; // AX = exponent and sign
             sub RSP, 24; // Create scratch space on the stack
             // [RSP,RSP+2] = scratchint
             // [RSP+4..+6, +8..+10, +10] = scratchreal
@@ -1287,7 +1466,7 @@ L_was_nan:
             ret;
         }
     } else {
-        return core.stdc.math.exp2(x);
+        return core.stdc.math.exp2l(x);
     }
 }
 
@@ -1296,6 +1475,9 @@ unittest{
     assert(exp2(8.0L) == 256.0);
     assert(exp2(-9.0L)== 1.0L/512.0);
     assert(exp(3.0L) == E*E*E);
+    assert( core.stdc.math.exp2f(0.0f) == 1 );
+    assert( core.stdc.math.exp2 (0.0)  == 1 );
+    assert( core.stdc.math.exp2l(0.0L) == 1 );
 }
 
 unittest
@@ -1330,9 +1512,9 @@ unittest
         f = ieeeFlags;
         assert(x == exptestpoints[i][1]);
         // Check the overflow bit
-        assert(f.overflow() == (fabs(x) == real.infinity));
+        assert(f.overflow == (fabs(x) == real.infinity));
         // Check the underflow bit
-        assert(f.underflow() == (fabs(x) < real.min_normal));
+        assert(f.underflow == (fabs(x) < real.min_normal));
         // Invalid and div by zero shouldn't be affected.
         assert(!f.invalid);
         assert(!f.divByZero);
@@ -1375,11 +1557,25 @@ creal expi(real y) @trusted pure nothrow
 {
     version(InlineAsm_X86_Any)
     {
-        asm
+        version (Win64)
         {
-            fld y;
-            fsincos;
-            fxch ST(1), ST(0);
+            asm
+            {
+                naked;
+                fld     real ptr [ECX];
+                fsincos;
+                fxch    ST(1), ST(0);
+                ret;
+            }
+        }
+        else
+        {
+            asm
+            {
+                fld y;
+                fsincos;
+                fxch ST(1), ST(0);
+            }
         }
     }
     else
@@ -1557,6 +1753,20 @@ unittest
     }
 }
 
+unittest
+{
+    int exp;
+    real mantissa = frexp(123.456, exp);
+    assert(equalsDigit(mantissa * pow(2.0L, cast(real)exp), 123.456, 19));
+
+    assert(frexp(-real.nan, exp) && exp == int.min);
+    assert(frexp(real.nan, exp) && exp == int.min);
+    assert(frexp(-real.infinity, exp) == -real.infinity && exp == int.min);
+    assert(frexp(real.infinity, exp) == real.infinity && exp == int.max);
+    assert(frexp(-0.0, exp) == -0.0 && exp == 0);
+    assert(frexp(0.0, exp) == 0.0 && exp == 0);
+}
+
 /******************************************
  * Extracts the exponent of x as a signed integral value.
  *
@@ -1570,7 +1780,43 @@ unittest
  *      $(TR $(TD $(NAN))            $(TD FP_ILOGBNAN) $(TD no))
  *      )
  */
-int ilogb(real x)  @trusted nothrow    { return core.stdc.math.ilogbl(x); }
+int ilogb(real x)  @trusted nothrow
+{
+    version (Win64)
+    {
+        asm
+        {
+            naked                       ;
+            fld     real ptr [RCX]      ;
+            fxam                        ;
+            fstsw   AX                  ;
+            and     AH,0x45             ;
+            cmp     AH,0x40             ;
+            jz      Lzeronan            ;
+            cmp     AH,5                ;
+            jz      Linfinity           ;
+            cmp     AH,1                ;
+            jz      Lzeronan            ;
+            fxtract                     ;
+            fstp    ST(0)               ;
+            fistp   dword ptr 8[RSP]    ;
+            mov     EAX,8[RSP]          ;
+            ret                         ;
+
+          Lzeronan:
+            mov     EAX,0x80000000      ;
+            fstp    ST(0)               ;
+            ret                         ;
+
+          Linfinity:
+            mov     EAX,0x7FFFFFFF      ;
+            fstp    ST(0)               ;
+            ret                         ;
+        }
+    }
+    else
+        return core.stdc.math.ilogbl(x);
+}
 
 alias core.stdc.math.FP_ILOGB0   FP_ILOGB0;
 alias core.stdc.math.FP_ILOGBNAN FP_ILOGBNAN;
@@ -1592,6 +1838,48 @@ unittest {
     assert(x==-16383);
     assert(ldexp(n, x)==0x1p-16384L);
 
+}
+
+unittest
+{
+    static real vals[][3] =    // value,exp,ldexp
+    [
+    [    0,    0,    0],
+    [    1,    0,    1],
+    [    -1,    0,    -1],
+    [    1,    1,    2],
+    [    123,    10,    125952],
+    [    real.max,    int.max,    real.infinity],
+    [    real.max,    -int.max,    0],
+    [    real.min_normal,    -int.max,    0],
+    ];
+    int i;
+
+    for (i = 0; i < vals.length; i++)
+    {
+        real x = vals[i][0];
+        int exp = cast(int)vals[i][1];
+        real z = vals[i][2];
+        real l = ldexp(x, exp);
+
+        assert(equalsDigit(z, l, 7));
+    }
+}
+
+unittest
+{
+    real r;
+
+    r = ldexp(3.0L, 3);
+    assert(r == 24);
+
+    r = ldexp(cast(real) 3.0, cast(int) 3);
+    assert(r == 24);
+
+    real n = 3.0;
+    int exp = 3;
+    r = ldexp(n, exp);
+    assert(r == 24);
 }
 
 /**************************************
@@ -1691,6 +1979,11 @@ real log2(real x) @safe pure nothrow
         return core.stdc.math.log2l(x);
 }
 
+unittest
+{
+    assert(equalsDigit(log2(1024), 10, 19));
+}
+
 /*****************************************
  * Extracts the exponent of x as a signed integral value.
  *
@@ -1705,7 +1998,22 @@ real log2(real x) @safe pure nothrow
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD -$(INFIN)) $(TD yes) )
  *      )
  */
-real logb(real x) @trusted nothrow    { return core.stdc.math.logbl(x); }
+real logb(real x) @trusted nothrow
+{
+    version (Win64)
+    {
+        asm
+        {
+            naked                       ;
+            fld     real ptr [RCX]      ;
+            fxtract                     ;
+            fstp    ST(0)               ;
+            ret                         ;
+        }
+    }
+    else
+        return core.stdc.math.logbl(x);
+}
 
 /************************************
  * Calculates the remainder from the calculation x/y.
@@ -1721,7 +2029,15 @@ real logb(real x) @trusted nothrow    { return core.stdc.math.logbl(x); }
  *  $(TR $(TD !=$(PLUSMNINF)) $(TD $(PLUSMNINF))  $(TD x)            $(TD no))
  * )
  */
-real fmod(real x, real y) @trusted nothrow { return core.stdc.math.fmodl(x, y); }
+real fmod(real x, real y) @trusted nothrow
+{
+    version (Win64)
+    {
+        return x % y;
+    }
+    else
+        return core.stdc.math.fmodl(x, y);
+}
 
 /************************************
  * Breaks x into an integral part and a fractional part, each of which has
@@ -1734,7 +2050,16 @@ real fmod(real x, real y) @trusted nothrow { return core.stdc.math.fmodl(x, y); 
  *  $(TR $(TD $(PLUSMNINF))   $(TD anything)      $(TD $(PLUSMN)0.0) $(TD $(PLUSMNINF)))
  * )
  */
-real modf(real x, ref real i) @trusted nothrow { return core.stdc.math.modfl(x,&i); }
+real modf(real x, ref real i) @trusted nothrow
+{
+    version (Win64)
+    {
+        i = trunc(x);
+        return copysign(isInfinity(x) ? 0.0 : x - i, x);
+    }
+    else
+        return core.stdc.math.modfl(x,&i);
+}
 
 /*************************************
  * Efficiently calculates x * 2$(SUP n).
@@ -1752,11 +2077,26 @@ real scalbn(real x, int n) @trusted nothrow
 {
     version(InlineAsm_X86_Any) {
         // scalbnl is not supported on DMD-Windows, so use asm.
-        asm {
-            fild n;
-            fld x;
-            fscale;
-            fstp ST(1);
+        version (Win64)
+        {
+            asm {
+                naked                           ;
+                mov     16[RSP],RCX             ;
+                fild    word ptr 16[RSP]        ;
+                fld     real ptr [RDX]          ;
+                fscale                          ;
+                fstp    ST(1)                   ;
+                ret                             ;
+            }
+        }
+        else
+        {
+            asm {
+                fild n;
+                fld x;
+                fscale;
+                fstp ST(1);
+            }
         }
     } else {
         return core.stdc.math.scalbnl(x, n);
@@ -1777,7 +2117,15 @@ unittest {
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)$(INFIN)) $(TD no) )
  *      )
  */
-real cbrt(real x) @trusted nothrow    { return core.stdc.math.cbrtl(x); }
+real cbrt(real x) @trusted nothrow
+{
+    version (Win64)
+    {
+        return copysign(exp2(yl2x(fabs(x), 1.0L/3.0L)), x);
+    }
+    else
+        return core.stdc.math.cbrtl(x);
+}
 
 
 /*******************************
@@ -1892,29 +2240,75 @@ unittest
         }
 }
 
-deprecated
-{
-// Deprecated: use std.mathspecial.erf instead
-real erf(real x)  @trusted nothrow   { return core.stdc.math.erfl(x); }
-// Deprecated: use std.mathspecial.erfc instead
-real erfc(real x)  @trusted nothrow  { return core.stdc.math.erfcl(x); }
-// Deprecated: use std.mathspecial.logGamma instead
-real lgamma(real x) @trusted nothrow { return core.stdc.math.lgammal(x); }
-// Deprecated: use std.mathspecial.gamma instead
-real tgamma(real x) @trusted nothrow { return core.stdc.math.tgammal(x); }
-}
-
 /**************************************
  * Returns the value of x rounded upward to the next integer
  * (toward positive infinity).
  */
-real ceil(real x)  @trusted nothrow    { return core.stdc.math.ceill(x); }
+real ceil(real x)  @trusted nothrow
+{
+    version (Win64)
+    {
+        asm
+        {
+            naked                       ;
+            fld     real ptr [RCX]      ;
+            fstcw   8[RSP]              ;
+            mov     AL,9[RSP]           ;
+            mov     DL,AL               ;
+            and     AL,0xC3             ;
+            or      AL,0x08             ; // round to +infinity
+            mov     9[RSP],AL           ;
+            fldcw   8[RSP]              ;
+            frndint                     ;
+            mov     9[RSP],DL           ;
+            fldcw   8[RSP]              ;
+            ret                         ;
+        }
+    }
+    else
+        return core.stdc.math.ceill(x);
+}
+
+unittest
+{
+    assert(ceil(+123.456) == +124);
+    assert(ceil(-123.456) == -123);
+}
 
 /**************************************
  * Returns the value of x rounded downward to the next integer
  * (toward negative infinity).
  */
-real floor(real x) @trusted nothrow    { return core.stdc.math.floorl(x); }
+real floor(real x) @trusted nothrow
+{
+    version (Win64)
+    {
+        asm
+        {
+            naked                       ;
+            fld     real ptr [RCX]      ;
+            fstcw   8[RSP]              ;
+            mov     AL,9[RSP]           ;
+            mov     DL,AL               ;
+            and     AL,0xC3             ;
+            or      AL,0x04             ; // round to -infinity
+            mov     9[RSP],AL           ;
+            fldcw   8[RSP]              ;
+            frndint                     ;
+            mov     9[RSP],DL           ;
+            fldcw   8[RSP]              ;
+            ret                         ;
+        }
+    }
+    else
+        return core.stdc.math.floorl(x);
+}
+
+unittest
+{
+    assert(floor(+123.456) == +123);
+    assert(floor(-123.456) == -124);
+}
 
 /******************************************
  * Rounds x to the nearest integer value, using the current rounding
@@ -1923,7 +2317,15 @@ real floor(real x) @trusted nothrow    { return core.stdc.math.floorl(x); }
  * Unlike the rint functions, nearbyint does not raise the
  * FE_INEXACT exception.
  */
-real nearbyint(real x) @trusted nothrow { return core.stdc.math.nearbyintl(x); }
+real nearbyint(real x) @trusted nothrow
+{
+    version (Win64)
+    {
+        assert(0);      // not implemented in C library
+    }
+    else
+        return core.stdc.math.nearbyintl(x);
+}
 
 /**********************************
  * Rounds x to the nearest integer value, using the current rounding
@@ -1949,13 +2351,27 @@ long lrint(real x) @trusted pure nothrow
 {
     version(InlineAsm_X86_Any)
     {
-        long n;
-        asm
+        version (Win64)
         {
-            fld x;
-            fistp n;
+            asm
+            {
+                naked;
+                fld     real ptr [RCX];
+                fistp   8[RSP];
+                mov     RAX,8[RSP];
+                ret;
+            }
         }
-        return n;
+        else
+        {
+            long n;
+            asm
+            {
+                fld x;
+                fistp n;
+            }
+            return n;
+        }
     } else {
         return core.stdc.math.llrintl(x);
     }
@@ -1966,7 +2382,19 @@ long lrint(real x) @trusted pure nothrow
  * If the fractional part of x is exactly 0.5, the return value is rounded to
  * the even integer.
  */
-real round(real x) @trusted nothrow { return core.stdc.math.roundl(x); }
+real round(real x) @trusted nothrow
+{
+    version (Win64)
+    {
+        auto old = FloatingPointControl.getControlState();
+        FloatingPointControl.setControlState((old & ~FloatingPointControl.ROUNDING_MASK) | FloatingPointControl.roundToZero);
+        x = rint((x >= 0) ? x + 0.5 : x - 0.5);
+        FloatingPointControl.setControlState(old);
+        return x;
+    }
+    else
+        return core.stdc.math.roundl(x);
+}
 
 /**********************************************
  * Return the value of x rounded to the nearest integer.
@@ -1997,7 +2425,30 @@ version(Posix)
  *
  * This is also known as "chop" rounding.
  */
-real trunc(real x) @trusted nothrow { return core.stdc.math.truncl(x); }
+real trunc(real x) @trusted nothrow
+{
+    version (Win64)
+    {
+        asm
+        {
+            naked                       ;
+            fld     real ptr [RCX]      ;
+            fstcw   8[RSP]              ;
+            mov     AL,9[RSP]           ;
+            mov     DL,AL               ;
+            and     AL,0xC3             ;
+            or      AL,0x0C             ; // round to 0
+            mov     9[RSP],AL           ;
+            fldcw   8[RSP]              ;
+            frndint                     ;
+            mov     9[RSP],DL           ;
+            fldcw   8[RSP]              ;
+            ret                         ;
+        }
+    }
+    else
+        return core.stdc.math.truncl(x);
+}
 
 /****************************************************
  * Calculate the remainder x REM y, following IEC 60559.
@@ -2021,7 +2472,16 @@ real trunc(real x) @trusted nothrow { return core.stdc.math.truncl(x); }
  *
  * Note: remquo not supported on windows
  */
-real remainder(real x, real y) @trusted nothrow { return core.stdc.math.remainderl(x, y); }
+real remainder(real x, real y) @trusted nothrow
+{
+    version (Win64)
+    {
+        int n;
+        return remquo(x, y, n);
+    }
+    else
+        return core.stdc.math.remainderl(x, y);
+}
 
 real remquo(real x, real y, out int n) @trusted nothrow  /// ditto
 {
@@ -2088,6 +2548,8 @@ private:
             DIVBYZERO_MASK = 0x020,
             INVALID_MASK   = 0xF80 // PowerPC has five types of invalid exceptions.
         }
+    } else version (ARM) {
+        // TODO: Fill this in for VFP.
     } else version(SPARC) { // SPARC FSR is a 32bit register
              //(64 bits for Sparc 7 & 8, but high 32 bits are uninteresting).
         enum : int {
@@ -2125,6 +2587,8 @@ private:
                return retval;
             */
            assert(0, "Not yet supported");
+        } else version (ARM) {
+            assert(false, "Not yet supported.");
         } else
             assert(0, "Not yet supported");
     }
@@ -2145,6 +2609,7 @@ private:
         }
     }
 public:
+     version (X86_Any) { // TODO: Lift this version condition when we support !x86.
      /// The result cannot be represented exactly, so rounding occured.
      /// (example: x = sin(0.1); )
      @property bool inexact() { return (flags & INEXACT_MASK) != 0; }
@@ -2156,6 +2621,7 @@ public:
      @property bool divByZero() { return (flags & DIVBYZERO_MASK) != 0; }
      /// A machine NaN was generated. (example: x = real.infinity * 0.0; )
      @property bool invalid() { return (flags & INVALID_MASK) != 0; }
+     }
 }
 
 
@@ -2299,7 +2765,7 @@ private:
             assert(0, "Not yet supported");
     }
     // Read from the control register
-    static ushort getControlState()
+    static ushort getControlState() @trusted nothrow
     {
         version (D_InlineAsm_X86)
         {
@@ -2326,14 +2792,28 @@ private:
             assert(0, "Not yet supported");
     }
     // Set the control register
-    static void setControlState(ushort newState)
+    static void setControlState(ushort newState) @trusted nothrow
     {
         version (InlineAsm_X86_Any)
         {
-            asm
+            version (Win64)
             {
-                 fclex;
-                 fldcw newState;
+                asm
+                {
+                    naked;
+                    mov     8[RSP],RCX;
+                    fclex;
+                    fldcw   8[RSP];
+                    ret;
+                }
+            }
+            else
+            {
+                asm
+                {
+                    fclex;
+                    fldcw newState;
+                }
             }
         }
         else
@@ -2347,7 +2827,7 @@ unittest
         FloatingPointControl ctrl;
         ctrl.enableExceptions(FloatingPointControl.divByZeroException
                            | FloatingPointControl.overflowException);
-        assert(ctrl.enabledExceptions() ==
+        assert(ctrl.enabledExceptions ==
             (FloatingPointControl.divByZeroException
           | FloatingPointControl.overflowException));
 
@@ -2356,7 +2836,7 @@ unittest
     }
     assert(FloatingPointControl.rounding
        == FloatingPointControl.roundToNearest);
-    assert(FloatingPointControl.enabledExceptions() ==0);
+    assert(FloatingPointControl.enabledExceptions ==0);
 }
 
 
@@ -3176,6 +3656,11 @@ unittest
     assert(pow(x, neg3) == 1 / (x * x * x));
 }
 
+unittest
+{
+    assert(equalsDigit(pow(2.0L, 10.0L), 1024, 19));
+}
+
 /** Compute the value of an integer x, raised to the power of a positive
  * integer n.
  *
@@ -3487,18 +3972,27 @@ int feqrel(X)(X x, X y) @trusted pure nothrow
 {
     /* Public Domain. Author: Don Clugston, 18 Aug 2005.
      */
-    static if (X.mant_dig == 106) { // doubledouble.
-        if (cast(double*)(&x)[MANTISSA_MSB] == cast(double*)(&y)[MANTISSA_MSB]) {
+    static if (X.mant_dig == 106)   // doubledouble
+    {
+        if (cast(double*)(&x)[MANTISSA_MSB] == cast(double*)(&y)[MANTISSA_MSB])
+        {
             return double.mant_dig
             + feqrel(cast(double*)(&x)[MANTISSA_LSB],
                     cast(double*)(&y)[MANTISSA_LSB]);
-        } else {
+        }
+        else
+        {
             return feqrel(cast(double*)(&x)[MANTISSA_MSB],
                     cast(double*)(&y)[MANTISSA_MSB]);
         }
-    } else static if (X.mant_dig==64 || X.mant_dig==113 || X.mant_dig==53) {
+    }
+    else
+    {
+        static assert( X.mant_dig == 64 || X.mant_dig == 113
+            || X.mant_dig == double.mant_dig || X.mant_dig == float.mant_dig);
 
-        if (x == y) return X.mant_dig; // ensure diff!=0, cope with INF.
+        if (x == y)
+            return X.mant_dig; // ensure diff!=0, cope with INF.
 
         X diff = fabs(x - y);
 
@@ -3518,16 +4012,25 @@ int feqrel(X)(X x, X y) @trusted pure nothrow
         // always 1 lower than we want, except that if bitsdiff==0,
         // they could have 0 or 1 bits in common.
 
-        static if (X.mant_dig==64 || X.mant_dig==113) { // real80 or quadruple
+        static if (X.mant_dig == 64 || X.mant_dig == 113)
+        {   // real80 or quadruple
             int bitsdiff = ( ((pa[F.EXPPOS_SHORT] & F.EXPMASK)
                               + (pb[F.EXPPOS_SHORT] & F.EXPMASK) - 1) >> 1)
                               - pd[F.EXPPOS_SHORT];
-        } else static if (X.mant_dig==53) { // double
+        }
+        else static if (X.mant_dig == double.mant_dig)
+        {   // double
             int bitsdiff = (( ((pa[F.EXPPOS_SHORT]&0x7FF0)
                                + (pb[F.EXPPOS_SHORT]&0x7FF0)-0x10)>>1)
                                - (pd[F.EXPPOS_SHORT]&0x7FF0))>>4;
         }
-        if (pd[F.EXPPOS_SHORT] == 0)
+        else static if (X.mant_dig == float.mant_dig)
+        {   // float
+            int bitsdiff = (( ((pa[F.EXPPOS_SHORT]&0x7F80)
+                               + (pb[F.EXPPOS_SHORT]&0x7F80)-0x80)>>1)
+                               - (pd[F.EXPPOS_SHORT]&0x7F80))>>7;
+        }
+        if ( (pd[F.EXPPOS_SHORT] & F.EXPMASK) == 0)
         {   // Difference is subnormal
             // For subnormals, we need to add the number of zeros that
             // lie at the start of diff's significand.
@@ -3540,11 +4043,15 @@ int feqrel(X)(X x, X y) @trusted pure nothrow
             return bitsdiff + 1; // add the 1 we subtracted before
 
         // Avoid out-by-1 errors when factor is almost 2.
-        static if (X.mant_dig==64 || X.mant_dig==113) { // real80 or quadruple
+        static if (X.mant_dig == 64 || X.mant_dig == 113)
+        {   // real80 or quadruple
             return (bitsdiff == 0) ? (pa[F.EXPPOS_SHORT] == pb[F.EXPPOS_SHORT]) : 0;
-        } else static if (X.mant_dig==53) { // double
+        }
+        else static if (X.mant_dig == double.mant_dig || X.mant_dig == float.mant_dig)
+        {
             if (bitsdiff == 0
-                && !((pa[F.EXPPOS_SHORT] ^ pb[F.EXPPOS_SHORT])& F.EXPMASK)) {
+                && !((pa[F.EXPPOS_SHORT] ^ pb[F.EXPPOS_SHORT]) & F.EXPMASK))
+            {
                 return 1;
             } else return 0;
         }
@@ -3553,53 +4060,55 @@ int feqrel(X)(X x, X y) @trusted pure nothrow
 
 unittest
 {
-   // Exact equality
-   assert(feqrel(real.max,real.max)==real.mant_dig);
-   assert(feqrel(0.0L,0.0L)==real.mant_dig);
-   assert(feqrel(7.1824L,7.1824L)==real.mant_dig);
-   assert(feqrel(real.infinity,real.infinity)==real.mant_dig);
+    void testFeqrel(F)()
+    {
+       // Exact equality
+       assert(feqrel(F.max, F.max) == F.mant_dig);
+       assert(feqrel!(F)(0.0, 0.0) == F.mant_dig);
+       assert(feqrel(F.infinity, F.infinity) == F.mant_dig);
 
-   // a few bits away from exact equality
-   real w=1;
-   for (int i=1; i<real.mant_dig-1; ++i) {
-      assert(feqrel(1+w*real.epsilon,1.0L)==real.mant_dig-i);
-      assert(feqrel(1-w*real.epsilon,1.0L)==real.mant_dig-i);
-      assert(feqrel(1.0L,1+(w-1)*real.epsilon)==real.mant_dig-i+1);
-      w*=2;
-   }
-   assert(feqrel(1.5+real.epsilon,1.5L)==real.mant_dig-1);
-   assert(feqrel(1.5-real.epsilon,1.5L)==real.mant_dig-1);
-   assert(feqrel(1.5-real.epsilon,1.5+real.epsilon)==real.mant_dig-2);
+       // a few bits away from exact equality
+       F w=1;
+       for (int i = 1; i < F.mant_dig - 1; ++i)
+       {
+          assert(feqrel!(F)(1.0 + w * F.epsilon, 1.0) == F.mant_dig-i);
+          assert(feqrel!(F)(1.0 - w * F.epsilon, 1.0) == F.mant_dig-i);
+          assert(feqrel!(F)(1.0, 1 + (w-1) * F.epsilon) == F.mant_dig - i + 1);
+          w*=2;
+       }
 
-   version(X86_64)
-   {
-       pragma(msg, "test disabled, see bug 5628");
-   }
-   else
-   {
-       assert(feqrel(real.min_normal/8,real.min_normal/17)==3);
-   }
+       assert(feqrel!(F)(1.5+F.epsilon, 1.5) == F.mant_dig-1);
+       assert(feqrel!(F)(1.5-F.epsilon, 1.5) == F.mant_dig-1);
+       assert(feqrel!(F)(1.5-F.epsilon, 1.5+F.epsilon) == F.mant_dig-2);
 
-   // Numbers that are close
-   assert(feqrel(0x1.Bp+84, 0x1.B8p+84)==5);
-   assert(feqrel(0x1.8p+10, 0x1.Cp+10)==2);
-   assert(feqrel(1.5*(1-real.epsilon), 1.0L)==2);
-   assert(feqrel(1.5, 1.0)==1);
-   assert(feqrel(2*(1-real.epsilon), 1.0L)==1);
 
-   // Factors of 2
-   assert(feqrel(real.max,real.infinity)==0);
-   assert(feqrel(2*(1-real.epsilon), 1.0L)==1);
-   assert(feqrel(1.0, 2.0)==0);
-   assert(feqrel(4.0, 1.0)==0);
+       // Numbers that are close
+       assert(feqrel!(F)(0x1.Bp+84, 0x1.B8p+84) == 5);
+       assert(feqrel!(F)(0x1.8p+10, 0x1.Cp+10) == 2);
+       assert(feqrel!(F)(1.5 * (1 - F.epsilon), 1.0L) == 2);
+       assert(feqrel!(F)(1.5, 1.0) == 1);
+       assert(feqrel!(F)(2 * (1 - F.epsilon), 1.0L) == 1);
 
-   // Extreme inequality
-   assert(feqrel(real.nan,real.nan)==0);
-   assert(feqrel(0.0L,-real.nan)==0);
-   assert(feqrel(real.nan,real.infinity)==0);
-   assert(feqrel(real.infinity,-real.infinity)==0);
-   assert(feqrel(-real.max,real.infinity)==0);
-   assert(feqrel(real.max,-real.max)==0);
+       // Factors of 2
+       assert(feqrel(F.max, F.infinity) == 0);
+       assert(feqrel!(F)(2 * (1 - F.epsilon), 1.0L) == 1);
+       assert(feqrel!(F)(1.0, 2.0) == 0);
+       assert(feqrel!(F)(4.0, 1.0) == 0);
+
+       // Extreme inequality
+       assert(feqrel(F.nan, F.nan) == 0);
+       assert(feqrel!(F)(0.0L, -F.nan) == 0);
+       assert(feqrel(F.nan, F.infinity) == 0);
+       assert(feqrel(F.infinity, -F.infinity) == 0);
+       assert(feqrel(F.max, -F.max) == 0);
+    }
+
+    assert(feqrel(7.1824L, 7.1824L) == real.mant_dig);
+    assert(feqrel(real.min_normal / 8, real.min_normal / 17) == 3);
+
+    testFeqrel!(real)();
+    testFeqrel!(double)();
+    testFeqrel!(float)();
 }
 
 package: // Not public yet
@@ -3863,7 +4372,7 @@ body
     }
     else
     {
-        sizediff_t i = A.length - 1;
+        ptrdiff_t i = A.length - 1;
         real r = A[i];
         while (--i >= 0)
         {
@@ -3997,4 +4506,68 @@ unittest
     real num = real.infinity;
     assert(num == real.infinity);  // Passes.
     assert(approxEqual(num, real.infinity));  // Fails.
+}
+
+
+unittest
+{
+    float f = sqrt(2.0f);
+    assert(fabs(f * f - 2.0f) < .00001);
+
+    double d = sqrt(2.0);
+    assert(fabs(d * d - 2.0) < .00001);
+
+    real r = sqrt(2.0L);
+    assert(fabs(r * r - 2.0) < .00001);
+}
+
+unittest
+{
+    float f = fabs(-2.0f);
+    assert(f == 2);
+
+    double d = fabs(-2.0);
+    assert(d == 2);
+
+    real r = fabs(-2.0L);
+    assert(r == 2);
+}
+
+
+unittest
+{
+    float f = sin(-2.0f);
+    assert(fabs(f - -0.909297f) < .00001);
+
+    double d = sin(-2.0);
+    assert(fabs(d - -0.909297f) < .00001);
+
+    real r = sin(-2.0L);
+    assert(fabs(r - -0.909297f) < .00001);
+}
+
+
+unittest
+{
+    float f = cos(-2.0f);
+    assert(fabs(f - -0.416147f) < .00001);
+
+    double d = cos(-2.0);
+    assert(fabs(d - -0.416147f) < .00001);
+
+    real r = cos(-2.0L);
+    assert(fabs(r - -0.416147f) < .00001);
+}
+
+
+unittest
+{
+    float f = tan(-2.0f);
+    assert(fabs(f - 2.18504f) < .00001);
+
+    double d = tan(-2.0);
+    assert(fabs(d - 2.18504f) < .00001);
+
+    real r = tan(-2.0L);
+    assert(fabs(r - 2.18504f) < .00001);
 }

@@ -20,49 +20,16 @@ Authors: $(WEB digitalmars.com, Walter Bright),
 
 Source:    $(PHOBOSSRC std/_string.d)
 
-$(B $(RED IMPORTANT NOTE:)) Beginning with version 2.052, the
-following symbols have been generalized beyond strings and moved to
-different modules. This action was prompted by the fact that
-generalized routines belong better in other places, although they
-still work for strings as expected. In order to use moved symbols, you
-will need to import the respective modules as follows:
-
-$(BOOKTABLE ,
-
-$(TR $(TH Symbol) $(TH Comment))
-
-$(TR $(TD $(D cmp)) $(TD Moved to $(XREF algorithm, cmp) and
-generalized to work for all input ranges and accept a custom
-predicate.))
-
-$(TR $(TD $(D count)) $(TD Moved to $(XREF algorithm, count) and
-generalized to accept a custom predicate.))
-
-$(TR $(TD $(D ByCodeUnit)) $(TD Removed.))
-
-$(TR $(TD $(D insert)) $(TD Use $(XREF array, insertInPlace) instead.))
-
-$(TR $(TD $(D join)) $(TD Use $(XREF array, join) instead.))
-
-$(TR $(TD $(D repeat)) $(TD Use $(XREF array, replicate) instead.))
-
-$(TR $(TD $(D replace)) $(TD Use $(XREF array, replace) instead.))
-
-$(TR $(TD $(D replaceSlice)) $(TD Use $(XREF array, replace) instead.))
-
-$(TR $(TD $(D split)) $(TD Use $(XREF array, split) instead.))
-)
-
 */
 module std.string;
 
 //debug=string;                 // uncomment to turn on debugging printf's
 
-import core.exception : onRangeError;
+import core.exception : RangeError, onRangeError;
 import core.vararg, core.stdc.stdlib, core.stdc.string,
     std.algorithm, std.ascii, std.conv, std.exception, std.format, std.functional,
     std.metastrings, std.range, std.regex, std.traits,
-    std.typetuple, std.uni, std.utf;
+    std.typecons, std.typetuple, std.uni, std.utf;
 
 //Remove when repeat is finally removed. They're only here as part of the
 //deprecation of these functions in std.string.
@@ -102,96 +69,18 @@ class StringException : Exception
 
 /* ************* Constants *************** */
 
-/++
-    $(RED Deprecated. It will be removed in August 2012.
-          Please use $(XREF ascii, hexDigits) instead.)
-
-    0..9A..F
-  +/
-deprecated immutable char[16] hexdigits = "0123456789ABCDEF";
-
-/++
-    $(RED Deprecated. It will be removed in August 2012.
-          Please use $(XREF ascii, _digits) instead.)
-
-    0..9
-  +/
-deprecated immutable digits = "0123456789";
-
-/++
-    $(RED Deprecated. It will be removed in August 2012.
-          Please use $(XREF ascii, octDigits) instead.)
-
-    0..7
-  +/
-deprecated immutable char[8]  octdigits = "01234567";
-
-/++
-    $(RED Deprecated. It will be removed in August 2012.
-          Please use $(XREF ascii, _lowercase) instead.)
-
-    a..z
-  +/
-deprecated immutable char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";
-
-/++
-    $(RED Deprecated. It will be removed in August 2012.
-          Please use $(XREF ascii, _letters) instead.)
-
-    A..Za..z
-  +/
-deprecated immutable char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    "abcdefghijklmnopqrstuvwxyz";
-
-/++
-    $(RED Deprecated. It will be removed in August 2012.
-          Please use $(XREF ascii, _uppercase) instead.)
-
-    A..Z
-  +/
-deprecated immutable char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-/++
-    $(RED Deprecated. It will be removed in August 2012.
-          Please use $(XREF ascii, _whitespace) instead.)
-
-    ASCII whitespace.
-  +/
-deprecated alias std.ascii.whitespace whitespace;
-
-/++
-    $(RED Deprecated. It will be removed in August 2012.
-          Please use $(XREF uni, lineSep) instead.)
-
-    UTF line separator.
-  +/
-deprecated enum dchar LS = '\u2028';
-
-/++
-    $(RED Deprecated. It will be removed in August 2012.
-          Please use $(XREF uni, paraSep) instead.)
-
-    UTF paragraph separator.
-  +/
-deprecated enum dchar PS = '\u2029';
-
-/++
-    $(RED Deprecated. It will be removed in August 2012.
-          Please use $(XREF ascii, _newline) instead.)
-
-    Newline sequence for this system.
-  +/
-deprecated alias std.ascii.newline newline;
-
-/**********************************
- * $(RED Deprecated. It will be removed in August 2012.
- *       Please use $(XREF ascii, isWhite) or $(XREF uni, isWhite) instead.)
- *
- * Returns true if c is ASCII whitespace or unicode LS or PS.
- */
-version(StdDdoc) deprecated bool iswhite(dchar c);
-else deprecated bool iswhite(C)(C c)
-    if(is(Unqual!C : dchar))
+//Explicitly undocumented. Do not use. To be removed in March 2013.
+deprecated("Please use std.ascii.hexDigits instead.")   immutable char[16] hexdigits = "0123456789ABCDEF";
+deprecated("Please use std.ascii.digits instead.")      immutable digits = "0123456789";
+deprecated("Please use std.ascii.octalDigits instead.") immutable char[8]  octdigits = "01234567";
+deprecated("Please use std.ascii.lowercase instead.")   immutable char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";
+deprecated("Please use std.ascii.letters instead.")     immutable char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+deprecated("Please use std.ascii.uppercase instead.")   immutable char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+deprecated("Please use std.ascii.whitespace instead.")  alias std.ascii.whitespace whitespace;
+deprecated("Please use std.uni.lineSep instead.")       enum dchar LS = '\u2028';
+deprecated("Please use std.uni.paraSep instead.")       enum dchar PS = '\u2029';
+deprecated("Please use std.ascii.newline instead.")     alias std.ascii.newline newline;
+deprecated("Please use std.uni.isWhite instead.")       bool iswhite(dchar c)
 {
     return c <= 0x7F
         ? indexOf(whitespace, c) != -1
@@ -335,10 +224,10 @@ unittest
 
 
 /++
-    Returns a C-style 0-terminated string equivalent to $(D s). $(D s) must not
-    contain embedded $(D 0)'s as any C functions will treat the first $(D 0)
-    that it sees a the end of the string. I $(D s) is $(D null) or empty, then
-    a string containing only $(D '\0') is returned.
+    Returns a C-style zero-terminated string equivalent to $(D s). $(D s)
+    must not contain embedded $(D '\0')'s as any C function will treat the first
+    $(D '\0') that it sees as the end of the string. If $(D s.empty) is
+    $(D true), then a string containing only $(D '\0') is returned.
 
     $(RED Important Note:) When passing a $(D char*) to a C function, and the C
     function keeps it around for any reason, make sure that you keep a reference
@@ -381,7 +270,7 @@ body
 
     // Need to make a copy
     auto copy = new char[s.length + 1];
-    copy[0..s.length] = s;
+    copy[0..s.length] = s[];
     copy[s.length] = 0;
 
     return assumeUnique(copy).ptr;
@@ -442,9 +331,9 @@ enum CaseSensitive { no, yes }
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
-sizediff_t indexOf(Char)(in Char[] s,
-                         dchar c,
-                         CaseSensitive cs = CaseSensitive.yes) pure
+ptrdiff_t indexOf(Char)(in Char[] s,
+                      dchar c,
+                      CaseSensitive cs = CaseSensitive.yes) pure
     if(isSomeChar!Char)
 {
     if (cs == CaseSensitive.yes)
@@ -462,7 +351,7 @@ sizediff_t indexOf(Char)(in Char[] s,
         }
 
         // c is a universal character
-        foreach (sizediff_t i, dchar c2; s)
+        foreach (ptrdiff_t i, dchar c2; s)
         {
             if (c == c2)
                 return i;
@@ -474,7 +363,7 @@ sizediff_t indexOf(Char)(in Char[] s,
         {                                                   // Plain old ASCII
             auto c1 = cast(char) std.ascii.toLower(c);
 
-            foreach (sizediff_t i, c2; s)
+            foreach (ptrdiff_t i, c2; s)
             {
                 auto c3 = std.ascii.toLower(c2);
                 if (c1 == c3)
@@ -485,7 +374,7 @@ sizediff_t indexOf(Char)(in Char[] s,
         {                                                   // c is a universal character
             auto c1 = std.uni.toLower(c);
 
-            foreach (sizediff_t i, dchar c2; s)
+            foreach (ptrdiff_t i, dchar c2; s)
             {
                 auto c3 = std.uni.toLower(c2);
                 if (c1 == c3)
@@ -532,9 +421,9 @@ unittest
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
-sizediff_t indexOf(Char1, Char2)(const(Char1)[] s,
-                                 const(Char2)[] sub,
-                                 CaseSensitive cs = CaseSensitive.yes)
+ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s,
+                              const(Char2)[] sub,
+                              CaseSensitive cs = CaseSensitive.yes)
     if(isSomeChar!Char1 && isSomeChar!Char2)
 {
     const(Char1)[] balance;
@@ -606,9 +495,9 @@ unittest
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
-sizediff_t lastIndexOf(Char)(const(Char)[] s,
-                             dchar c,
-                             CaseSensitive cs = CaseSensitive.yes)
+ptrdiff_t lastIndexOf(Char)(const(Char)[] s,
+                          dchar c,
+                          CaseSensitive cs = CaseSensitive.yes)
     if(isSomeChar!Char)
 {
     if(cs == CaseSensitive.yes)
@@ -618,7 +507,7 @@ sizediff_t lastIndexOf(Char)(const(Char)[] s,
             for(auto i = s.length; i-- != 0;)
             {
                 if(s[i] == c)
-                    return cast(sizediff_t)i;
+                    return cast(ptrdiff_t)i;
             }
         }
         else
@@ -626,7 +515,7 @@ sizediff_t lastIndexOf(Char)(const(Char)[] s,
             for(size_t i = s.length; !s.empty;)
             {
                 if(s.back == c)
-                    return cast(sizediff_t)i - codeLength!Char(c);
+                    return cast(ptrdiff_t)i - codeLength!Char(c);
 
                 i -= strideBack(s, i);
                 s = s[0 .. i];
@@ -643,7 +532,7 @@ sizediff_t lastIndexOf(Char)(const(Char)[] s,
             {
                 immutable c2 = std.ascii.toLower(s[i]);
                 if(c1 == c2)
-                    return cast(sizediff_t)i;
+                    return cast(ptrdiff_t)i;
             }
         }
         else
@@ -653,7 +542,7 @@ sizediff_t lastIndexOf(Char)(const(Char)[] s,
             for(size_t i = s.length; !s.empty;)
             {
                 if(std.uni.toLower(s.back) == c1)
-                    return cast(sizediff_t)i - codeLength!Char(c);
+                    return cast(ptrdiff_t)i - codeLength!Char(c);
 
                 i -= strideBack(s, i);
                 s = s[0 .. i];
@@ -701,9 +590,9 @@ unittest
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
-sizediff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
-                                     const(Char2)[] sub,
-                                     CaseSensitive cs = CaseSensitive.yes)
+ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
+                                  const(Char2)[] sub,
+                                  CaseSensitive cs = CaseSensitive.yes)
     if(isSomeChar!Char1 && isSomeChar!Char2)
 {
     if(sub.empty)
@@ -718,7 +607,7 @@ sizediff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
         {
             immutable c = sub[0];
 
-            for(sizediff_t i = s.length - sub.length; i >= 0; --i)
+            for(ptrdiff_t i = s.length - sub.length; i >= 0; --i)
             {
                 if(s[i] == c && memcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
                     return i;
@@ -729,7 +618,7 @@ sizediff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
             for(size_t i = s.length; !s.empty;)
             {
                 if(s.endsWith(sub))
-                    return cast(sizediff_t)i - to!(const(Char1)[])(sub).length;
+                    return cast(ptrdiff_t)i - to!(const(Char1)[])(sub).length;
 
                 i -= strideBack(s, i);
                 s = s[0 .. i];
@@ -743,7 +632,7 @@ sizediff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
             if(endsWith!((dchar a, dchar b) {return std.uni.toLower(a) == std.uni.toLower(b);})
                         (s, sub))
             {
-                return cast(sizediff_t)i - to!(const(Char1)[])(sub).length;
+                return cast(ptrdiff_t)i - to!(const(Char1)[])(sub).length;
             }
 
             i -= strideBack(s, i);
@@ -807,7 +696,7 @@ unittest
 
 
 /**
- * Returns the representation type of a string, which is the same type
+ * Returns the representation of a string, which has the same type
  * as the string except the character type is replaced by $(D ubyte),
  * $(D ushort), or $(D uint) depending on the character width.
  *
@@ -815,68 +704,63 @@ unittest
 ----
 string s = "hello";
 static assert(is(typeof(representation(s)) == immutable(ubyte)[]));
+assert(representation(s) is cast(immutable(ubyte)[]) s);
+assert(representation(s) == [0x68, 0x65, 0x6c, 0x6c, 0x6f]);
 ----
  */
 auto representation(Char)(Char[] s) pure nothrow
     if(isSomeChar!Char)
 {
     // Get representation type
-    static if (Char.sizeof == 1) enum t = "ubyte";
-    else static if (Char.sizeof == 2) enum t = "ushort";
-    else static if (Char.sizeof == 4) enum t = "uint";
-    else static assert(false); // can't happen due to isSomeChar!Char
+    alias TypeTuple!(ubyte, ushort, uint)[Char.sizeof / 2] U;
 
-    // Get representation qualifier
-    static if (is(Char == immutable)) enum q = "immutable";
-    else static if (is(Char == const)) enum q = "const";
-    else static if (is(Char == shared)) enum q = "shared";
-    else enum q = "";
+    // const and immutable storage classes
+    static if (is(Char == immutable)) alias immutable(U) T;
+    else static if (is(Char == const)) alias const(U) T;
+    else alias U T;
 
-    // Result type is qualifier(RepType)[]
-    static if (q.length)
-        return mixin("cast(" ~ q ~ "(" ~ t ~ ")[]) s");
-    else
-        return mixin("cast(" ~ t ~ "[]) s");
+    // shared storage class (because shared(const(T)) is possible)
+    static if (is(Char == shared)) alias shared(T) ST;
+    else alias T ST;
+
+    return cast(ST[]) s;
 }
 
 unittest
 {
-    auto c = to!(char[])("hello");
-    static assert(is(typeof(representation(c)) == ubyte[]));
-
-    auto w = to!(wchar[])("hello");
-    static assert(is(typeof(representation(w)) == ushort[]));
-
-    auto d = to!(dchar[])("hello");
-    static assert(is(typeof(representation(d)) == uint[]));
-
-    const(char[]) cc = "hello";
-    static assert(is(typeof(representation(cc)) == const(ubyte)[]));
-
-    const(wchar[]) cw = "hello"w;
-    static assert(is(typeof(representation(cw)) == const(ushort)[]));
-
-    const(dchar[]) cd = "hello"d;
-    static assert(is(typeof(representation(cd)) == const(uint)[]));
-
+    //test example
     string s = "hello";
     static assert(is(typeof(representation(s)) == immutable(ubyte)[]));
+    assert(representation(s) is cast(immutable(ubyte)[]) s);
+    assert(representation(s) == [0x68, 0x65, 0x6c, 0x6c, 0x6f]);
+}
+unittest
+{
+    void test(Char, T)(Char[] str)
+    {
+        static assert(is(typeof(representation(str)) == T[]));
+        assert(representation(str) is cast(T[]) str);
+    }
 
-    wstring iw = "hello"w;
-    static assert(is(typeof(representation(iw)) == immutable(ushort)[]));
+    foreach(Type; TypeTuple!(Tuple!(char , ubyte ),
+                             Tuple!(wchar, ushort),
+                             Tuple!(dchar, uint  )))
+    {
+        alias Char = FieldTypeTuple!Type[0];
+        alias Int  = FieldTypeTuple!Type[1];
+        enum immutable(Char)[] hello = "hello";
 
-    dstring id = "hello"d;
-    static assert(is(typeof(representation(id)) == immutable(uint)[]));
+        test!(   immutable(Char) ,    immutable(Int) )(hello);
+        test!(       const(Char) ,        const(Int) )(hello);
+        test!(             Char  ,              Int  )(hello.dup);
+        test!(      shared(Char) ,       shared(Int) )(cast(shared) hello.dup);
+        test!(const(shared(Char)), const(shared(Int)))(hello);
+    }
 }
 
 
-/************************************
- * $(RED Deprecated. It will be removed in August 2012.
- *       Please use $(D toLower) instead.)
- *
- * Convert string s[] to lower case.
- */
-deprecated S tolower(S)(S s) if (isSomeString!S)
+//Explicitly undocumented. Do not use. To be removed in March 2013.
+deprecated("Please use std.string.toLower instead.") S tolower(S)(S s) if (isSomeString!S)
 {
     return toLower!S(s);
 }
@@ -928,13 +812,8 @@ unittest
     }
 }
 
-/**
-   $(RED Deprecated. It will be removed in August 2012.
-         Please use $(D toLowerInPlace) instead.)
-
-   Converts $(D s) to lowercase in place.
- */
-deprecated void tolowerInPlace(C)(ref C[] s) if (isSomeChar!C)
+//Explicitly undocumented. Do not use. To be removed in March 2013.
+deprecated("Please use std.string.toLowerInPlace instead.") void tolowerInPlace(C)(ref C[] s) if (isSomeChar!C)
 {
     toLowerInPlace!C(s);
 }
@@ -1043,13 +922,8 @@ unittest
     assert(toLower("Some String"d) == "some string"d);
 }
 
-/************************************
- * $(RED Deprecated. It will be removed in August 2012.
- *       Please use $(D toUpper) instead.)
- *
- * Convert string s[] to upper case.
- */
-deprecated S toupper(S)(S s) if (isSomeString!S)
+//Explicitly undocumented. Do not use. To be removed in March 2013.
+deprecated("Please use std.string.toUpper instead.") S toupper(S)(S s) if (isSomeString!S)
 {
     return toUpper!S(s);
 }
@@ -1101,13 +975,8 @@ unittest
     }
 }
 
-/**
-    $(RED Deprecated. It will be removed in August 2012.
-          Please use $(D toUpperInPlace) instead.)
-
-   Converts $(D s) to uppercase in place.
- */
-deprecated void toupperInPlace(C)(ref C[] s) if (isSomeChar!C)
+//Explicitly undocumented. Do not use. To be removed in March 2013.
+deprecated("Please use std.string.toUpperInPlace instead.") void toupperInPlace(C)(ref C[] s) if (isSomeChar!C)
 {
     toUpperInPlace!C(s);
 }
@@ -1280,13 +1149,7 @@ unittest
 }
 
 
-/********************************************
- *  $(RED Deprecated. It will be removed in August 2012.)
- *
- * Capitalize all words in string s[].
- * Remove leading and trailing whitespace.
- * Replace all sequences of whitespace with a single space.
- */
+//Explicitly undocumented. Do not use. To be removed in March 2013.
 deprecated S capwords(S)(S s) if (isSomeString!S)
 {
     alias typeof(s[0]) C;
@@ -1320,7 +1183,7 @@ deprecated S capwords(S)(S s) if (isSomeString!S)
     return cast(S)retval.data;
 }
 
-unittest
+deprecated unittest
 {
     debug(string) printf("string.capwords.unittest\n");
 
@@ -1341,28 +1204,15 @@ unittest
 }
 
 
-/********************************************
- * $(RED Deprecated. It will be removed in March 2012.
- *        Please use $(XREF array, replicate) instead.)
- *
- * Repeat $(D s) for $(D n) times.
- */
-deprecated S repeat(S)(S s, size_t n)
+//Explicitly undocumented. Do not use. To be removed in March 2013.
+deprecated("Please use std.array.replicate instead.") S repeat(S)(S s, size_t n)
 {
-    pragma(msg, hardDeprec!("2.055", "March 2012", "repeat", "std.array.replicate"));
     return std.array.replicate(s, n);
 }
 
 
-/**************************************
- * $(RED Deprecated. It will be removed in August 2012.
- *       Please use $(LREF splitLines) instead.)
- *
- * Split s[] into an array of lines,
- * using CR, LF, or CR-LF as the delimiter.
- * The delimiter is not included in the line.
- */
-deprecated S[] splitlines(S)(S s)
+//Explicitly undocumented. Do not use. To be removed in March 2013.
+deprecated("Please use std.string.splitLines instead.") S[] splitlines(S)(S s)
 {
     return splitLines!S(s);
 }
@@ -1457,149 +1307,292 @@ unittest
 }
 
 
-/*****************************************
- *  $(RED Deprecated. It will be removed in August 2012.
- *        Please use $(D stripLeft) instead.)
- *
- * Strips leading whitespace.
- */
-deprecated String stripl(String)(String s)
+//Explicitly undocumented. Do not use. To be removed in March 2013.
+deprecated("Please use std.string.stripLeft instead.") String stripl(String)(String s)
 {
     return stripLeft!String(s);
 }
 
 /++
     Strips leading whitespace.
+
+    Examples:
+--------------------
+assert(stripLeft("     hello world     ") ==
+       "hello world     ");
+assert(stripLeft("\n\t\v\rhello world\n\t\v\r") ==
+       "hello world\n\t\v\r");
+assert(stripLeft("hello world") ==
+       "hello world");
+assert(stripLeft([lineSep] ~ "hello world" ~ lineSep) ==
+       "hello world" ~ [lineSep]);
+assert(stripLeft([paraSep] ~ "hello world" ~ paraSep) ==
+       "hello world" ~ [paraSep]);
+--------------------
   +/
-S stripLeft(S)(S s) @safe pure
-    if(isSomeString!S)
+C[] stripLeft(C)(C[] str) @safe pure
+    if(isSomeChar!C)
 {
-    bool foundIt;
-    size_t nonWhite;
-    foreach(i, dchar c; s)
+    foreach(i, dchar c; str)
     {
         if(!std.uni.isWhite(c))
-        {
-            foundIt = true;
-            nonWhite = i;
-            break;
-        }
+            return str[i .. $];
     }
 
-    if(foundIt)
-        return s[nonWhite .. $];
-
-    return s[0 .. 0]; //Empty string with correct type.
+    return str[$ .. $]; //Empty string with correct type.
 }
 
-/*****************************************
- *  $(RED Deprecated. It will be removed in August 2012.
- *        Please use $(D stripRight) instead.)
- *
- * Strips trailing whitespace.
- */
-deprecated String stripr(String)(String s)
+//Verify Example.
+unittest
+{
+    assert(stripLeft("     hello world     ") ==
+           "hello world     ");
+    assert(stripLeft("\n\t\v\rhello world\n\t\v\r") ==
+           "hello world\n\t\v\r");
+    assert(stripLeft("hello world") ==
+           "hello world");
+    assert(stripLeft([lineSep] ~ "hello world" ~ lineSep) ==
+           "hello world" ~ [lineSep]);
+    assert(stripLeft([paraSep] ~ "hello world" ~ paraSep) ==
+           "hello world" ~ [paraSep]);
+}
+
+
+//Explicitly undocumented. Do not use. To be removed in March 2013.
+deprecated("Please use std.string.stripRight instead.") String stripr(String)(String s)
 {
     return stripRight!String(s);
 }
 
 /++
     Strips trailing whitespace.
+
+    Examples:
+--------------------
+assert(stripRight("     hello world     ") ==
+       "     hello world");
+assert(stripRight("\n\t\v\rhello world\n\t\v\r") ==
+       "\n\t\v\rhello world");
+assert(stripRight("hello world") ==
+       "hello world");
+assert(stripRight([lineSep] ~ "hello world" ~ lineSep) ==
+       [lineSep] ~ "hello world");
+assert(stripRight([paraSep] ~ "hello world" ~ paraSep) ==
+       [paraSep] ~ "hello world");
+--------------------
   +/
-S stripRight(S)(S s)
-    if(isSomeString!S)
+C[] stripRight(C)(C[] str)
+    if(isSomeChar!C)
 {
-    alias typeof(s[0]) C;
-    size_t codeLen;
-    foreach(dchar c; retro(s))
+    foreach_reverse(i, dchar c; str)
     {
-        if(std.uni.isWhite(c))
-            codeLen += codeLength!C(c);
-        else
-            break;
+        if(!std.uni.isWhite(c))
+            return str[0 .. i + codeLength!C(c)];
     }
 
-    return s[0 .. $ - codeLen];
+    return str[0 .. 0];
 }
+
+//Verify Example.
+unittest
+{
+    assert(stripRight("     hello world     ") ==
+           "     hello world");
+    assert(stripRight("\n\t\v\rhello world\n\t\v\r") ==
+           "\n\t\v\rhello world");
+    assert(stripRight("hello world") ==
+           "hello world");
+    assert(stripRight([lineSep] ~ "hello world" ~ lineSep) ==
+           [lineSep] ~ "hello world");
+    assert(stripRight([paraSep] ~ "hello world" ~ paraSep) ==
+           [paraSep] ~ "hello world");
+}
+
 
 /++
     Strips both leading and trailing whitespace.
+
+    Examples:
+--------------------
+assert(strip("     hello world     ") ==
+       "hello world");
+assert(strip("\n\t\v\rhello world\n\t\v\r") ==
+       "hello world");
+assert(strip("hello world") ==
+       "hello world");
+assert(strip([lineSep] ~ "hello world" ~ [lineSep]) ==
+       "hello world");
+assert(strip([paraSep] ~ "hello world" ~ [paraSep]) ==
+       "hello world");
+--------------------
   +/
-S strip(S)(S s)
-    if(isSomeString!S)
+C[] strip(C)(C[] str)
+    if(isSomeChar!C)
 {
-    return stripRight(stripLeft(s));
+    return stripRight(stripLeft(str));
+}
+
+//Verify Example.
+unittest
+{
+    assert(strip("     hello world     ") ==
+           "hello world");
+    assert(strip("\n\t\v\rhello world\n\t\v\r") ==
+           "hello world");
+    assert(strip("hello world") ==
+           "hello world");
+    assert(strip([lineSep] ~ "hello world" ~ [lineSep]) ==
+           "hello world");
+    assert(strip([paraSep] ~ "hello world" ~ [paraSep]) ==
+           "hello world");
 }
 
 unittest
 {
     debug(string) printf("string.strip.unittest\n");
 
-    assert(stripLeft("  foo\t ") == "foo\t ");
-    assert(stripLeft("\u2008  foo\t \u2007") == "foo\t \u2007");
-    assert(stripLeft("1") == "1");
+    foreach(S; TypeTuple!(char[], const char[], string,
+                          wchar[], const wchar[], wstring,
+                          dchar[], const dchar[], dstring))
+    {
+        assert(equal(stripLeft(to!S("  foo\t ")), "foo\t "));
+        assert(equal(stripLeft(to!S("\u2008  foo\t \u2007")), "foo\t \u2007"));
+        assert(equal(stripLeft(to!S("\u0085 μ \u0085 \u00BB \r")), "μ \u0085 \u00BB \r"));
+        assert(equal(stripLeft(to!S("1")), "1"));
+        assert(equal(stripLeft(to!S("\U0010FFFE")), "\U0010FFFE"));
+        assert(equal(stripLeft(to!S("")), ""));
 
-    assert(stripRight("  foo\t ") == "  foo");
-    assert(stripRight("\u2008  foo\t \u2007") == "\u2008  foo");
-    assert(stripRight("1") == "1");
+        assert(equal(stripRight(to!S("  foo\t ")), "  foo"));
+        assert(equal(stripRight(to!S("\u2008  foo\t \u2007")), "\u2008  foo"));
+        assert(equal(stripRight(to!S("\u0085 μ \u0085 \u00BB \r")), "\u0085 μ \u0085 \u00BB"));
+        assert(equal(stripRight(to!S("1")), "1"));
+        assert(equal(stripRight(to!S("\U0010FFFE")), "\U0010FFFE"));
+        assert(equal(stripRight(to!S("")), ""));
 
-    assert(strip("  foo\t ") == "foo");
-    assert(strip("\u2008  foo\t \u2007") == "foo");
-    assert(strip("1") == "1");
+        assert(equal(strip(to!S("  foo\t ")), "foo"));
+        assert(equal(strip(to!S("\u2008  foo\t \u2007")), "foo"));
+        assert(equal(strip(to!S("\u0085 μ \u0085 \u00BB \r")), "μ \u0085 \u00BB"));
+        assert(equal(strip(to!S("\U0010FFFE")), "\U0010FFFE"));
+        assert(equal(strip(to!S("")), ""));
+    }
+}
+
+unittest
+{
+    wstring s = " ";
+    assert(s.sameTail(s.stripLeft()));
+    assert(s.sameHead(s.stripRight()));
 }
 
 
 /++
-    Returns $(D s) sans the trailing $(D delimiter), if any. If no $(D delimiter)
-    is given, then any trailing  $(D '\r'), $(D '\n'), $(D "\r\n"),
-    $(XREF uni, lineSep), or $(XREF uni, paraSep)s are removed.
-  +/
-S chomp(S)(S s)
-    if(isSomeString!S)
-{
-    if(s.empty)
-        return s;
+    If $(D str) ends with $(D delimiter), then $(D str) is returned without
+    $(D delimiter) on its end. If it $(D str) does $(I not) end with
+    $(D delimiter), then it is returned unchanged.
 
-    switch(s.back)
+    If no $(D delimiter) is given, then one trailing  $(D '\r'), $(D '\n'),
+    $(D "\r\n"), $(XREF uni, lineSep), or $(XREF uni, paraSep) is removed from
+    the end of $(D str). If $(D str) does not end with any of those characters,
+    then it is returned unchanged.
+
+    Examples:
+--------------------
+assert(chomp(" hello world  \n\r") == " hello world  \n");
+assert(chomp(" hello world  \r\n") == " hello world  ");
+assert(chomp(" hello world  \n\n") == " hello world  \n");
+assert(chomp(" hello world  \n\n ") == " hello world  \n\n ");
+assert(chomp(" hello world  \n\n" ~ [lineSep]) == " hello world  \n\n");
+assert(chomp(" hello world  \n\n" ~ [paraSep]) == " hello world  \n\n");
+assert(chomp(" hello world") == " hello world");
+assert(chomp("") == "");
+
+assert(chomp(" hello world", "orld") == " hello w");
+assert(chomp(" hello world", " he") == " hello world");
+assert(chomp("", "hello") == "");
+--------------------
+  +/
+C[] chomp(C)(C[] str)
+    if(isSomeChar!C)
+{
+    if(str.empty)
+        return str;
+
+    switch(str[$ - 1])
     {
         case '\n':
         {
-            s.popBack();
-
-            if(!s.empty && s.back == '\r')
-                s.popBack();
-
-            break;
+            if(str.length > 1 && str[$ - 2] == '\r')
+                return str[0 .. $ - 2];
+            goto case;
         }
         case '\r':
-        case lineSep:
-        case paraSep:
+            return str[0 .. $ - 1];
+
+        //Pops off the last character if it's lineSep or paraSep.
+        static if(is(C : const char))
         {
-            s.popBack();
-            break;
+            //In UTF-8, lineSep and paraSep are [226, 128, 168], and
+            //[226, 128, 169] respectively, so their first two bytes are the same.
+            case 168: //Last byte of lineSep
+            case 169: //Last byte of paraSep
+            {
+                if(str.length > 2 && str[$ - 2] == 128 && str[$ - 3] == 226)
+                    return str [0 .. $ - 3];
+                goto default;
+            }
+        }
+        else
+        {
+            case lineSep:
+            case paraSep:
+                return str[0 .. $ - 1];
         }
         default:
-            break;
+            return str;
     }
-
-    return s;
 }
 
 /// Ditto
-S chomp(S, C)(S s, const(C)[] delimiter)
-    if(isSomeString!S && isSomeString!(C[]))
+C1[] chomp(C1, C2)(C1[] str, const(C2)[] delimiter)
+    if(isSomeChar!C1 && isSomeChar!C2)
 {
     if(delimiter.empty)
-        return chomp(s);
-    else if(endsWith(s, delimiter))
+        return chomp(str);
+
+    static if(is(Unqual!C1 == Unqual!C2))
     {
-        static if(is(Unqual!(typeof(s[0])) == Unqual!C))
-            return s[0 .. $ - delimiter.length];
-        else
-            return s[0 .. $ - to!S(delimiter).length];
+        if(str.endsWith(delimiter))
+            return str[0 .. $ - delimiter.length];
     }
 
-    return s;
+    auto orig = str;
+
+    foreach_reverse(dchar c; delimiter)
+    {
+        if(str.empty || str.back != c)
+            return orig;
+
+        str.popBack();
+    }
+
+    return str;
+}
+
+//Verify Example.
+unittest
+{
+    assert(chomp(" hello world  \n\r") == " hello world  \n");
+    assert(chomp(" hello world  \r\n") == " hello world  ");
+    assert(chomp(" hello world  \n\n") == " hello world  \n");
+    assert(chomp(" hello world  \n\n ") == " hello world  \n\n ");
+    assert(chomp(" hello world  \n\n" ~ [lineSep]) == " hello world  \n\n");
+    assert(chomp(" hello world  \n\n" ~ [paraSep]) == " hello world  \n\n");
+    assert(chomp(" hello world") == " hello world");
+    assert(chomp("") == "");
+
+    assert(chomp(" hello world", "orld") == " hello w");
+    assert(chomp(" hello world", " he") == " hello world");
+    assert(chomp("", "hello") == "");
 }
 
 unittest
@@ -1628,7 +1621,7 @@ unittest
         {
             // @@@ BUG IN COMPILER, MUST INSERT CAST
             assert(chomp(cast(S)null, cast(T)null) is null);
-            assert(chomp("hello\n", cast(T)null) == "hello");
+            assert(chomp(to!S("hello\n"), cast(T)null) == "hello");
             assert(chomp(to!S("hello"), to!T("o")) == "hell");
             assert(chomp(to!S("hello"), to!T("p")) == "hello");
             // @@@ BUG IN COMPILER, MUST INSERT CAST
@@ -1642,57 +1635,128 @@ unittest
 
 
 /++
-    If $(D longer.startsWith(shorter)), returns $(D longer[shorter.length .. $]).
-    Otherwise, returns $(D longer).
+    If $(D str) starts with $(D delimiter), then the part of $(D str) following
+    $(D delimiter) is returned. If it $(D str) does $(I not) start with
+    $(D delimiter), then it is returned unchanged.
+
+    Examples:
+--------------------
+assert(chompPrefix("hello world", "he") == "llo world");
+assert(chompPrefix("hello world", "hello w") == "orld");
+assert(chompPrefix("hello world", " world") == "hello world");
+assert(chompPrefix("", "hello") == "");
+--------------------
  +/
-C1[] chompPrefix(C1, C2)(C1[] longer, C2[] shorter)
-    if(isSomeString!(C1[]) && isSomeString!(C2[]))
+C1[] chompPrefix(C1, C2)(C1[] str, C2[] delimiter)
+    if(isSomeChar!C1 && isSomeChar!C2)
 {
-    return startsWith(longer, shorter) ? longer[shorter.length .. $] : longer;
+    static if(is(Unqual!C1 == Unqual!C2))
+    {
+        if(str.startsWith(delimiter))
+            return str[delimiter.length .. $];
+        return str;
+    }
+    else
+    {
+        auto orig = str;
+        size_t index = 0;
+
+        foreach(dchar c; delimiter)
+        {
+            if(index >= str.length || decode(str, index) != c)
+                return orig;
+        }
+
+        return str[index .. $];
+    }
+}
+
+//Verify Example.
+unittest
+{
+    assert(chompPrefix("hello world", "he") == "llo world");
+    assert(chompPrefix("hello world", "hello w") == "orld");
+    assert(chompPrefix("hello world", " world") == "hello world");
+    assert(chompPrefix("", "hello") == "");
 }
 
 unittest
 {
-    assert(chompPrefix("abcdefgh", "abcde") == "fgh");
-    assert(chompPrefix("abcde", "abcdefgh") == "abcde");
-    assert(chompPrefix("\uFF28el\uFF4co", "\uFF28el\uFF4co") == "");
-    assert(chompPrefix("\uFF28el\uFF4co", "\uFF28el") == "\uFF4co");
-    assert(chompPrefix("\uFF28el", "\uFF28el\uFF4co") == "\uFF28el");
+    foreach(S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    {
+        foreach(T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        {
+            assert(equal(chompPrefix(to!S("abcdefgh"), to!T("abcde")), "fgh"));
+            assert(equal(chompPrefix(to!S("abcde"), to!T("abcdefgh")), "abcde"));
+            assert(equal(chompPrefix(to!S("\uFF28el\uFF4co"), to!T("\uFF28el\uFF4co")), ""));
+            assert(equal(chompPrefix(to!S("\uFF28el\uFF4co"), to!T("\uFF28el")), "\uFF4co"));
+            assert(equal(chompPrefix(to!S("\uFF28el"), to!T("\uFF28el\uFF4co")), "\uFF28el"));
+        }
+    }
 }
 
 
 /++
-    Returns $(D s) sans its last character, if there is one.
-    If $(D s) ends in "\r\n", then both are removed.
+    Returns $(D str) without its last character, if there is one. If $(D str)
+    ends with $(D "\r\n"), then both are removed. If $(D str) is empty, then
+    then it is returned unchanged.
+
+    Examples:
+--------------------
+assert(chop("hello world") == "hello worl");
+assert(chop("hello world\n") == "hello world");
+assert(chop("hello world\r") == "hello world");
+assert(chop("hello world\n\r") == "hello world\n");
+assert(chop("hello world\r\n") == "hello world");
+assert(chop("Walter Bright") == "Walter Brigh");
+assert(chop("") == "");
+--------------------
  +/
-S chop(S)(S s) if (isSomeString!S)
+S chop(S)(S str)
+    if(isSomeString!S)
 {
-    auto len = s.length;
-    if (!len) return s;
-    if (len >= 2 && s[len - 1] == '\n' && s[len - 2] == '\r')
-        return s[0 .. len - 2];
-    s.popBack();
-    return s;
+    if(str.empty)
+        return str;
+
+    if(str.length >= 2 && str[$ - 1] == '\n' && str[$ - 2] == '\r')
+        return str[0 .. $ - 2];
+
+    str.popBack();
+
+    return str;
+}
+
+//Verify Example.
+unittest
+{
+    assert(chop("hello world") == "hello worl");
+    assert(chop("hello world\n") == "hello world");
+    assert(chop("hello world\r") == "hello world");
+    assert(chop("hello world\n\r") == "hello world\n");
+    assert(chop("hello world\r\n") == "hello world");
+    assert(chop("Walter Bright") == "Walter Brigh");
+    assert(chop("") == "");
 }
 
 unittest
 {
     debug(string) printf("string.chop.unittest\n");
 
-    assert(chop(cast(string) null) is null);
-    assert(chop("hello") == "hell");
-    assert(chop("hello\r\n") == "hello");
-    assert(chop("hello\n\r") == "hello\n");
+    foreach(S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    {
+        assert(chop(cast(S) null) is null);
+        assert(equal(chop(to!S("hello")), "hell"));
+        assert(equal(chop(to!S("hello\r\n")), "hello"));
+        assert(equal(chop(to!S("hello\n\r")), "hello\n"));
+        assert(equal(chop(to!S("Verité")), "Verit"));
+        assert(equal(chop(to!S(`さいごの果実`)), "さいごの果"));
+        assert(equal(chop(to!S(`ミツバチと科学者`)), "ミツバチと科学"));
+    }
 }
 
 
-/*******************************************
- *  $(RED Deprecated. It will be removed in August 2012.
- *        Please use $(D leftJustify) instead.)
- *
- * Left justify string s[] in field width chars wide.
- */
-deprecated S ljustify(S)(S s, size_t width) if (isSomeString!S)
+//Explicitly undocumented. Do not use. To be removed in March 2013.
+deprecated("Please use std.string.leftJustify instead.") S ljustify(S)(S s, size_t width) if (isSomeString!S)
 {
     return leftJustify!S(s, width);
 }
@@ -1705,7 +1769,7 @@ deprecated S ljustify(S)(S s, size_t width) if (isSomeString!S)
 S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
     if(isSomeString!S)
 {
-    alias typeof(S[0]) C;
+    alias typeof(s[0]) C;
 
     if(cast(dchar)(cast(C)fillChar) == fillChar)
     {
@@ -1732,13 +1796,8 @@ S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
 }
 
 
-/*******************************************
- *  $(RED Deprecated. It will be removed in August 2012.
- *        Please use $(D rightJustify) instead.)
- *
- * Left right string s[] in field width chars wide.
- */
-deprecated S rjustify(S)(S s, size_t width) if (isSomeString!S)
+//Explicitly undocumented. Do not use. To be removed in March 2013.
+deprecated("Please use std.string.rightJustify instead.") S rjustify(S)(S s, size_t width) if (isSomeString!S)
 {
     return rightJustify!S(s, width);
 }
@@ -1751,7 +1810,7 @@ deprecated S rjustify(S)(S s, size_t width) if (isSomeString!S)
 S rightJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
     if(isSomeString!S)
 {
-    alias typeof(S[0]) C;
+    alias typeof(s[0]) C;
 
     if(cast(dchar)(cast(C)fillChar) == fillChar)
     {
@@ -1786,7 +1845,7 @@ S rightJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
 S center(S)(S s, size_t width, dchar fillChar = ' ') @trusted
     if(isSomeString!S)
 {
-    alias typeof(S[0]) C;
+    alias typeof(s[0]) C;
 
     if(cast(dchar)(cast(C)fillChar) == fillChar)
     {
@@ -1843,26 +1902,16 @@ unittest
 }
 
 
-/*****************************************
- * $(RED Deprecated. It will be removed in August 2012.
- *       Please use $(D rightJustify) with a fill character of '0' instead.)
- *
- * Same as rjustify(), but fill with '0's.
- *
- */
-deprecated S zfill(S)(S s, int width) if (isSomeString!S)
+//Explicitly undocumented. Do not use. To be removed in March 2013.
+deprecated("Please use std.string.rightJustify with a fill character of '0' instead.")
+S zfill(S)(S s, int width) if (isSomeString!S)
 {
     return rightJustify!S(s, width, '0');
 }
 
 
-/**********************************************
- * $(RED Deprecated. It will be removed in March 2012.
- *       Please use $(XREF array, insertInPlace) instead.)
- *
- * Insert sub[] into s[] at location index.
- */
-deprecated S insert(S)(S s, size_t index, S sub)
+//Explicitly undocumented. Do not use. To be removed in March 2013.
+deprecated("Please use std.array.insertInPlace instead.") S insert(S)(S s, size_t index, S sub)
 in
 {
     assert(0 <= index && index <= s.length);
@@ -1874,14 +1923,8 @@ body
 }
 
 
-/************************************************
- * $(RED Deprecated. It will be removed in August 2012.
- *       Please use $(D detab) instead.)
- *
- * Replace tabs with the appropriate number of spaces.
- * tabsize is the distance between tab stops.
- */
-deprecated S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
+//Explicitly undocumented. Do not use. To be removed in March 2013.
+deprecated("Please use std.string.detab instead.") S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
 {
     return detab!S(str, tabsize);
 }
@@ -1918,7 +1961,7 @@ S detab(S)(S s, size_t tabSize = 8) @trusted pure
             }
             else
             {
-                sizediff_t j = result.length;
+                ptrdiff_t j = result.length;
                 result.length = j + nspaces;
                 result[j .. j + nspaces] = ' ';
             }
@@ -2010,7 +2053,7 @@ S entab(S)(S s, size_t tabSize = 8) @trusted pure
                 if (!changes)
                     change();
 
-                sizediff_t j = result.length - nspaces;
+                ptrdiff_t j = result.length - nspaces;
                 auto ntabs = (((column - nspaces) % tabSize) + nspaces) / tabSize;
                 result.length = j + ntabs;
                 result[j .. j + ntabs] = '\t';
@@ -2139,11 +2182,10 @@ unittest
 dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
 assert(translate("hello world", transTable1) == "h5ll7 w7rld");
 
-dchar[dchar] transTable2 = ['e' : '5', 'o' : '7', '5': 'q'];
-assert(translate("hello world", transTable2, "low") == "h5 rd");
+assert(translate("hello world", transTable1, "low") == "h5 rd");
 
-string[dchar] transTable3 = ['e' : "5", 'o' : "orange"];
-assert(translate("hello world", transTable3) == "h5llorange worangerld");
+string[dchar] transTable2 = ['e' : "5", 'o' : "orange"];
+assert(translate("hello world", transTable2) == "h5llorange worangerld");
 --------------------
   +/
 C1[] translate(C1, C2 = immutable char)(C1[] str,
@@ -2160,11 +2202,10 @@ unittest
     dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
     assert(translate("hello world", transTable1) == "h5ll7 w7rld");
 
-    dchar[dchar] transTable2 = ['e' : '5', 'o' : '7', '5': 'q'];
-    assert(translate("hello world", transTable2, "low") == "h5 rd");
+    assert(translate("hello world", transTable1, "low") == "h5 rd");
 
-    string[dchar] transTable3 = ['e' : "5", 'o' : "orange"];
-    assert(translate("hello world", transTable3) == "h5llorange worangerld");
+    string[dchar] transTable2 = ['e' : "5", 'o' : "orange"];
+    assert(translate("hello world", transTable2) == "h5llorange worangerld");
 }
 
 unittest
@@ -2254,6 +2295,10 @@ unittest
                              ['o' : "owl", '\U00010143' : "\n"],
                              to!T("\U00010143 ")) ==
                    to!S("hellowlwowlrld"));
+            assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"], to!T("hello world")) ==
+                   to!S(""));
+            assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"], to!T("42")) ==
+                   to!S("yellowe4242o wor42d"));
         }
 
         auto s = to!S("hello world");
@@ -2290,83 +2335,158 @@ private auto translateImpl(C1, T, C2)(C1[] str,
 }
 
 
+/++
+    This is an $(I $(RED ASCII-only)) overload of $(LREF _translate). It
+    will $(I not) work with Unicode. It exists as an optimization for the
+    cases where Unicode processing is not necessary.
 
-/************************************
- * $(RED Scheduled for deprecation in March 2012.)
- *
- * Construct translation table for translate().
- * BUGS: only works with ASCII
- */
+    Unlike the other overloads of $(LREF _translate), this one does not take
+    an AA. Rather, it takes a $(D string) generated by $(LREF makeTrans).
 
-string maketrans(in char[] from, in char[] to)
+    The array generated by $(D makeTrans) is $(D 256) elements long such that
+    the index is equal to the ASCII character being replaced and the value is
+    equal to the character that it's being replaced with. Note that translate
+    does not decode any of the characters, so you can actually pass it Extended
+    ASCII characters if you want to (ASCII only actually uses $(D 128)
+    characters), but be warned that Extended ASCII characters are not valid
+    Unicode and therefore will result in a $(D UTFException) being thrown from
+    most other Phobos functions.
+
+    Also, because no decoding occurs, it is possible to use this overload to
+    translate ASCII characters within a proper UTF-8 string without altering the
+    other, non-ASCII characters. It's replacing any code unit greater than
+    $(D 127) with another code unit or replacing any code unit with another code
+    unit greater than $(D 127) which will cause UTF validation issues.
+
+    See_Also:
+        $(LREF tr)
+        $(XREF array, replace)
+
+    Params:
+        str        = The original string.
+        transTable = The string indicating which characters to replace and what
+                     to replace them with. It is generated by $(LREF makeTrans).
+        toRemove   = The characters to remove from the string.
+
+        Examples:
+--------------------
+auto transTable1 = makeTrans("eo5", "57q");
+assert(translate("hello world", transTable1) == "h5ll7 w7rld");
+
+assert(translate("hello world", transTable1, "low") == "h5 rd");
+--------------------
+  +/
+C[] translate(C = immutable char)(in char[] str, in char[] transTable, in char[] toRemove = null) @trusted nothrow
+    if(is(Unqual!C == char))
+in
+{
+    assert(transTable.length == 256);
+    foreach(char c; str)
+        assert(c <= 256);
+    foreach(char c; transTable)
+        assert(c <= 256);
+    foreach(char c; toRemove)
+        assert(c <= 256);
+}
+body
+{
+    bool[256] remTable = false;
+
+    foreach(char c; toRemove)
+        remTable[c] = true;
+
+    size_t count = 0;
+    foreach(char c; str)
+    {
+        if(!remTable[c])
+            ++count;
+    }
+
+    auto retval = new char[count];
+    size_t i = 0;
+    foreach(char c; str)
+    {
+        if(!remTable[c])
+            retval[i++] = transTable[c];
+    }
+
+    return cast(C[])(retval);
+}
+
+
+/++ Ditto +/
+string makeTrans(in char[] from, in char[] to) @trusted pure nothrow
 in
 {
     assert(from.length == to.length);
-    assert(from.length <= 128);
-    foreach (char c; from)
+    assert(from.length <= 256);
+    foreach(char c; from)
         assert(std.ascii.isASCII(c));
-    foreach (char c; to)
+    foreach(char c; to)
         assert(std.ascii.isASCII(c));
 }
 body
 {
-    char[] t = new char[256];
+    char[] transTable = new char[256];
 
-    foreach (i; 0 .. t.length)
-        t[i] = cast(char)i;
-    foreach (i; 0 .. from.length)
-        t[from[i]] = to[i];
+    foreach(i; 0 .. transTable.length)
+        transTable[i] = cast(char)i;
+    foreach(i; 0 .. from.length)
+        transTable[from[i]] = to[i];
 
-    return assumeUnique(t);
+    return assumeUnique(transTable);
 }
 
-/******************************************
- * $(RED Scheduled for deprecation in March 2012.
- *   Please use the version of $(D translate) which takes an AA instead.)
- *
- * Translate characters in s[] using table created by maketrans().
- * Delete chars in delchars[].
- * BUGS: only works with ASCII
- */
-
-string translate()(in char[] s, in char[] transtab, in char[] delchars)
-in
+// Verify Examples.
+unittest
 {
-    assert(transtab.length == 256);
-}
-body
-{
-    bool[256] deltab;
+    auto transTable1 = makeTrans("eo5", "57q");
+    assert(translate("hello world", transTable1) == "h5ll7 w7rld");
 
-    deltab[] = false;
-    foreach (char c; delchars)
-    {
-        deltab[c] = true;
-    }
-
-    size_t count = 0;
-    foreach (char c; s)
-    {
-        if (!deltab[c])
-            count++;
-        //printf("s[%d] = '%c', count = %d\n", i, s[i], count);
-    }
-
-    auto r = new char[count];
-    count = 0;
-    foreach (char c; s)
-    {
-        if (!deltab[c])
-        {
-            r[count] = transtab[c];
-            count++;
-        }
-    }
-
-    return assumeUnique(r);
+    assert(translate("hello world", transTable1, "low") == "h5 rd");
 }
 
 unittest
+{
+    foreach(C; TypeTuple!(char, const char, immutable char))
+    {
+        assert(translate!C("hello world", makeTrans("hl", "q5")) == to!(C[])("qe55o wor5d"));
+
+        auto s = to!(C[])("hello world");
+        auto transTable = makeTrans("hl", "q5");
+        static assert(is(typeof(s) == typeof(translate!C(s, transTable))));
+    }
+
+    foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[]))
+    {
+        assert(translate(to!S("hello world"), makeTrans("hl", "q5")) == to!S("qe55o wor5d"));
+        assert(translate(to!S("hello \U00010143 world"), makeTrans("hl", "q5")) ==
+               to!S("qe55o \U00010143 wor5d"));
+        assert(translate(to!S("hello world"), makeTrans("ol", "1o")), to!S("heool wlrdd"));
+        assert(translate(to!S("hello world"), makeTrans("", "")) == to!S("hello world"));
+        assert(translate(to!S("hello world"), makeTrans("12345", "67890")) == to!S("hello world"));
+        assert(translate(to!S("hello \U00010143 world"), makeTrans("12345", "67890")) ==
+               to!S("hello \U00010143 world"));
+
+        foreach(T; TypeTuple!(char[], const(char)[], immutable(char)[]))
+        {
+            assert(translate(to!S("hello world"), makeTrans("hl", "q5"), to!T("r")) ==
+                   to!S("qe55o wo5d"));
+            assert(translate(to!S("hello \U00010143 world"), makeTrans("hl", "q5"), to!T("r")) ==
+                   to!S("qe55o \U00010143 wo5d"));
+            assert(translate(to!S("hello world"), makeTrans("hl", "q5"), to!T("helo")) ==
+                   to!S(" wrd"));
+            assert(translate(to!S("hello world"), makeTrans("hl", "q5"), to!T("q5")) ==
+                   to!S("qe55o wor5d"));
+        }
+    }
+}
+
+
+//Explicitly undocumented. Do not use. To be removed in March 2013.
+deprecated("Please use std.string.makeTrans instead.") alias makeTrans maketrans;
+
+deprecated unittest
 {
     debug(string) printf("string.translate.unittest\n");
 
@@ -2385,68 +2505,55 @@ unittest
 }
 
 
-private:
-
-// @@@BUG@@@ workaround for bugzilla 2479
-string bug2479format(TypeInfo[] arguments, va_list argptr)
-{
-    char[] s;
-
-    void putc(dchar c)
-    {
-        std.utf.encode(s, c);
-    }
-    std.format.doFormat(&putc, arguments, argptr);
-    return assumeUnique(s);
-}
-
-// @@@BUG@@@ workaround for bugzilla 2479
-char[] bug2479sformat(char[] s, TypeInfo[] arguments, va_list argptr)
-{   size_t i;
-
-    void putc(dchar c)
-    {
-    if(std.ascii.isASCII(c))
-    {
-        if (i >= s.length)
-            onRangeError("std.string.sformat", 0);
-        s[i] = cast(char)c;
-        ++i;
-    }
-    else
-    {   char[4] buf;
-        auto b = std.utf.toUTF8(buf, c);
-        if (i + b.length > s.length)
-            onRangeError("std.string.sformat", 0);
-        s[i..i+b.length] = b[];
-        i += b.length;
-    }
-    }
-
-    std.format.doFormat(&putc, arguments, argptr);
-    return s[0 .. i];
-}
-public:
-
-
 /*****************************************************
  * Format arguments into a string.
+ *
+ *  $(RED format's current implementation has been replaced with $(LREF xformat)'s
+ *        implementation. in November 2012.
+ *        This is seamless for most code, but it makes it so that the only
+ *        argument that can be a format string is the first one, so any
+ *        code which used multiple format strings has broken. Please change
+ *        your calls to format accordingly.
+ *
+ *        e.g.:
+----
+format("key = %s", key, ", value = %s", value)
+----
+ *        needs to be rewritten as:
+----
+format("key = %s, value = %s", key, value)
+----
+ *   )
  */
-
-string format(...)
+string format(Char, Args...)(in Char[] fmt, Args args)
 {
-/+ // @@@BUG@@@ Fails due to regression bug 2479.
-    char[] s;
-
-    void putc(dchar c)
+    auto w = appender!string();
+    auto n = formattedWrite(w, fmt, args);
+    version (all)
     {
-        std.utf.encode(s, c);
+        // In the future, this check will be removed to increase consistency
+        // with formattedWrite
+        enforce(n == args.length, new FormatException(
+            text("Orphan format arguments: args[", n, "..", args.length, "]")));
     }
+    return w.data;
+}
 
-    std.format.doFormat(&putc, _arguments, _argptr);
-    return assumeUnique(s);
-    +/
-    return bug2479format(_arguments, _argptr);
+unittest
+{
+    debug(string) printf("std.string.format.unittest\n");
+
+//  assert(format(null) == "");
+    assert(format("foo") == "foo");
+    assert(format("foo%%") == "foo%");
+    assert(format("foo%s", 'C') == "fooC");
+    assert(format("%s foo", "bar") == "bar foo");
+    assert(format("%s foo %s", "bar", "abc") == "bar foo abc");
+    assert(format("foo %d", -123) == "foo -123");
+    assert(format("foo %d", 123) == "foo 123");
+
+    assertThrown!FormatException(format("foo %s"));
+    assertThrown!FormatException(format("foo %s", 123, 456));
 }
 
 
@@ -2454,76 +2561,208 @@ string format(...)
  * Format arguments into string <i>s</i> which must be large
  * enough to hold the result. Throws RangeError if it is not.
  * Returns: s
+ *
+ *  $(RED sformat's current implementation has been replaced with $(LREF xsformat)'s
+ *        implementation. in November 2012.
+ *        This is seamless for most code, but it makes it so that the only
+ *        argument that can be a format string is the first one, so any
+ *        code which used multiple format strings has broken. Please change
+ *        your calls to sformat accordingly.
+ *
+ *        e.g.:
+----
+sformat(buf, "key = %s", key, ", value = %s", value)
+----
+ *        needs to be rewritten as:
+----
+sformat(buf, "key = %s, value = %s", key, value)
+----
+ *   )
  */
-char[] sformat(char[] s, ...)
+char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
 {
-/+ // @@@BUG@@@ Fails due to regression bug 2479.
+    size_t i;
 
-  size_t i;
-
-    void putc(dchar c)
+    struct Sink
     {
-    if(std.ascii.isASCII(c))
-    {
-        if (i >= s.length)
-            onRangeError("std.string.sformat", 0);
-        s[i] = cast(char)c;
-        ++i;
-    }
-    else
-    {   char[4] buf;
-        auto b = std.utf.toUTF8(buf, c);
-        if (i + b.length > s.length)
-            onRangeError("std.string.sformat", 0);
-        s[i..i+b.length] = b[];
-        i += b.length;
-    }
-    }
+        void put(dchar c)
+        {
+            char[4] enc;
+            auto n = encode(enc, c);
 
-    std.format.doFormat(&putc, _arguments, _argptr);
-    return s[0 .. i];
-    +/
-    return bug2479sformat(s, _arguments, _argptr);
+            if (buf.length < i + n)
+                onRangeError("std.string.sformat", 0);
+
+            buf[i .. i + n] = enc[0 .. n];
+            i += n;
+        }
+        void put(const(char)[] s)
+        {
+            if (buf.length < i + s.length)
+                onRangeError("std.string.sformat", 0);
+
+            buf[i .. i + s.length] = s[];
+            i += s.length;
+        }
+        void put(const(wchar)[] s)
+        {
+            for (; !s.empty; s.popFront())
+                put(s.front);
+        }
+        void put(const(dchar)[] s)
+        {
+            for (; !s.empty; s.popFront())
+                put(s.front);
+        }
+    }
+    auto n = formattedWrite(Sink(), fmt, args);
+    version (all)
+    {
+        // In the future, this check will be removed to increase consistency
+        // with formattedWrite
+        enforce(n == args.length, new FormatException(
+            text("Orphan format arguments: args[", n, "..", args.length, "]")));
+    }
+    return buf[0 .. i];
 }
 
 unittest
 {
-    debug(string) printf("std.string.format.unittest\n");
+    debug(string) printf("std.string.sformat.unittest\n");
 
-    string r;
-    int i;
-/+
-    r = format(null);
-    i = cmp(r, "");
-    assert(i == 0);
-+/
-    r = format("foo");
-    i = cmp(r, "foo");
-    assert(i == 0);
+    char[10] buf;
 
-    r = format("foo%%");
-    i = cmp(r, "foo%");
-    assert(i == 0);
+    assert(sformat(buf[], "foo") == "foo");
+    assert(sformat(buf[], "foo%%") == "foo%");
+    assert(sformat(buf[], "foo%s", 'C') == "fooC");
+    assert(sformat(buf[], "%s foo", "bar") == "bar foo");
+    assertThrown!RangeError(sformat(buf[], "%s foo %s", "bar", "abc"));
+    assert(sformat(buf[], "foo %d", -123) == "foo -123");
+    assert(sformat(buf[], "foo %d", 123) == "foo 123");
 
-    r = format("foo%s", 'C');
-    i = cmp(r, "fooC");
-    assert(i == 0);
+    assertThrown!FormatException(sformat(buf[], "foo %s"));
+    assertThrown!FormatException(sformat(buf[], "foo %s", 123, 456));
 
-    r = format("%s foo", "bar");
-    i = cmp(r, "bar foo");
-    assert(i == 0);
+    assert(sformat(buf[], "%s %s %s", "c"c, "w"w, "d"d) == "c w d");
+}
 
-    r = format("%s foo %s", "bar", "abc");
-    i = cmp(r, "bar foo abc");
-    assert(i == 0);
 
-    r = format("foo %d", -123);
-    i = cmp(r, "foo -123");
-    assert(i == 0);
+/*****************************************************
+ * Format arguments into a string.
+ *
+ * $(LREF format) has been changed to use this implementation in November 2012. 
+ * Then xformat has been scheduled for deprecation at the same time.
+ * It will be deprecateed in May 2013.
+ */
 
-    r = format("foo %d", 123);
-    i = cmp(r, "foo 123");
-    assert(i == 0);
+string xformat(Char, Args...)(in Char[] fmt, Args args)
+{
+    auto w = appender!string();
+    auto n = formattedWrite(w, fmt, args);
+    version (all)
+    {
+        // In the future, this check will be removed to increase consistency
+        // with formattedWrite
+        enforce(n == args.length, new FormatException(
+            text("Orphan format arguments: args[", n, "..", args.length, "]")));
+    }
+    return w.data;
+}
+
+deprecated unittest
+{
+    debug(string) printf("std.string.xformat.unittest\n");
+
+//  assert(xformat(null) == "");
+    assert(xformat("foo") == "foo");
+    assert(xformat("foo%%") == "foo%");
+    assert(xformat("foo%s", 'C') == "fooC");
+    assert(xformat("%s foo", "bar") == "bar foo");
+    assert(xformat("%s foo %s", "bar", "abc") == "bar foo abc");
+    assert(xformat("foo %d", -123) == "foo -123");
+    assert(xformat("foo %d", 123) == "foo 123");
+
+    assertThrown!FormatException(xformat("foo %s"));
+    assertThrown!FormatException(xformat("foo %s", 123, 456));
+}
+
+
+/*****************************************************
+ * Format arguments into string $(D_PARAM buf) which must be large
+ * enough to hold the result. Throws RangeError if it is not.
+ *
+ * $(LREF sformat) has been changed to use this implementation in November 2012. 
+ * Then xsformat has been scheduled for deprecation at the same time.
+ * It will be deprecateed in May 2013.
+ *
+ * Returns: filled slice of $(D_PARAM buf)
+ */
+
+char[] xsformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
+{
+    size_t i;
+
+    struct Sink
+    {
+        void put(dchar c)
+        {
+            char[4] enc;
+            auto n = encode(enc, c);
+
+            if (buf.length < i + n)
+                onRangeError("std.string.xsformat", 0);
+
+            buf[i .. i + n] = enc[0 .. n];
+            i += n;
+        }
+        void put(const(char)[] s)
+        {
+            if (buf.length < i + s.length)
+                onRangeError("std.string.xsformat", 0);
+
+            buf[i .. i + s.length] = s[];
+            i += s.length;
+        }
+        void put(const(wchar)[] s)
+        {
+            for (; !s.empty; s.popFront())
+                put(s.front);
+        }
+        void put(const(dchar)[] s)
+        {
+            for (; !s.empty; s.popFront())
+                put(s.front);
+        }
+    }
+    auto n = formattedWrite(Sink(), fmt, args);
+    version (all)
+    {
+        // In the future, this check will be removed to increase consistency
+        // with formattedWrite
+        enforce(n == args.length, new FormatException(
+            text("Orphan format arguments: args[", n, "..", args.length, "]")));
+    }
+    return buf[0 .. i];
+}
+
+deprecated unittest
+{
+    debug(string) printf("std.string.xsformat.unittest\n");
+
+    char[10] buf;
+
+    assert(xsformat(buf[], "foo") == "foo");
+    assert(xsformat(buf[], "foo%%") == "foo%");
+    assert(xsformat(buf[], "foo%s", 'C') == "fooC");
+    assert(xsformat(buf[], "%s foo", "bar") == "bar foo");
+    assertThrown!RangeError(xsformat(buf[], "%s foo %s", "bar", "abc"));
+    assert(xsformat(buf[], "foo %d", -123) == "foo -123");
+    assert(xsformat(buf[], "foo %d", 123) == "foo 123");
+
+    assertThrown!FormatException(xsformat(buf[], "foo %s"));
+    assertThrown!FormatException(xsformat(buf[], "foo %s", 123, 456));
+
+    assert(xsformat(buf[], "%s %s %s", "c"c, "w"w, "d"d) == "c w d");
 }
 
 
@@ -3133,7 +3372,7 @@ unittest
 
 bool isNumeric(const(char)[] s, in bool bAllowSep = false)
 {
-    sizediff_t iLen = s.length;
+    ptrdiff_t iLen = s.length;
     bool   bDecimalPoint = false;
     bool   bExponent = false;
     bool   bComplex = false;
@@ -3273,21 +3512,13 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false)
     return true;
 }
 
-/++
-    $(RED Deprecated. It will be removed in August 2012.)
-
-    Allow any object as a parameter
-  +/
+//Explicitly undocumented. Do not use. To be removed in March 2013.
 deprecated bool isNumeric(...)
 {
     return isNumeric(_arguments, _argptr);
 }
 
-/++
-    $(RED Deprecated. It will be removed in August 2012.)
-
-    Check only the first parameter, all others will be ignored.
-  +/
+//Explicitly undocumented. Do not use. To be removed in March 2013.
 deprecated bool isNumeric(TypeInfo[] _arguments, va_list _argptr)
 {
     auto  s = ""c;
@@ -3411,7 +3642,10 @@ unittest
     assert(isNumeric(s[1..s.length - 2]) == true);
     assert(isNumeric(s) == false);
     assert(isNumeric(s[0..s.length - 1]) == false);
+}
 
+deprecated unittest
+{
     // These test calling the isNumeric(...) function
     assert(isNumeric(1,123UL) == true);
     assert(isNumeric('2') == true);
@@ -3744,49 +3978,50 @@ S wrap(S)(S s, size_t columns = 80, S firstindent = null,
     auto col = column(result.idup, tabsize);
     foreach (size_t i, dchar c; s)
     {
-    if (std.uni.isWhite(c))
-    {
-        if (inword)
+        if (std.uni.isWhite(c))
         {
-        if (first)
-        {
-        }
-        else if (col + 1 + (i - wordstart) > columns)
-        {
-            result ~= '\n';
-            result ~= indent;
-            col = column(indent, tabsize);
+            if (inword)
+            {
+                if (first)
+                {
+                }
+                else if (col + 1 + (i - wordstart) > columns)
+                {
+                    result ~= '\n';
+                    result ~= indent;
+                    col = column(indent, tabsize);
+                }
+                else
+                {
+                    result ~= ' ';
+                    col += 1;
+                }
+                result ~= s[wordstart .. i];
+                col += i - wordstart;
+                inword = false;
+                first = false;
+            }
         }
         else
-        {   result ~= ' ';
-            col += 1;
-        }
-        result ~= s[wordstart .. i];
-        col += i - wordstart;
-        inword = false;
-        first = false;
-        }
-    }
-    else
-    {
-        if (!inword)
         {
-        wordstart = i;
-        inword = true;
+            if (!inword)
+            {
+                wordstart = i;
+                inword = true;
+            }
         }
-    }
     }
 
     if (inword)
     {
-    if (col + 1 + (s.length - wordstart) >= columns)
-    {
-        result ~= '\n';
-        result ~= indent;
-    }
-    else if (result.length != firstindent.length)
-        result ~= ' ';
-    result ~= s[wordstart .. s.length];
+        if (col + 1 + (s.length - wordstart) >= columns)
+        {
+            result ~= '\n';
+            result ~= indent;
+        }
+        else if (result.length != firstindent.length)
+            result ~= ' ';
+        result ~= s[wordstart .. s.length];
     }
     result ~= '\n';
 
@@ -4018,11 +4253,4 @@ unittest
         assert(testStr6.outdent() == expected6);
         static assert(testStr6.outdent() == expected6);
     }
-}
-
-private template hardDeprec(string vers, string date, string oldFunc, string newFunc)
-{
-    enum hardDeprec = Format!("Notice: As of Phobos %s, std.string.%s has been deprecated " ~
-                              "It will be removed in %s. Please use %s instead.",
-                              vers, oldFunc, date, newFunc);
 }

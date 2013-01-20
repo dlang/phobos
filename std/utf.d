@@ -13,7 +13,7 @@
     Macros:
         WIKI = Phobos/StdUtf
 
-    Copyright: Copyright Digital Mars 2000 - 2010.
+    Copyright: Copyright Digital Mars 2000 - 2012.
     License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   $(WEB digitalmars.com, Walter Bright) and Jonathan M Davis
     Source:    $(PHOBOSSRC std/_utf.d)
@@ -95,10 +95,10 @@ class UTFException : Exception
 
 
 /++
-    $(RED Scheduled for deprecation in December 2012.
+    $(RED Deprecated. It will be removed in January 2013.
           Please use $(LREF UTFException) instead.)
   +/
-alias UTFException UtfException;
+deprecated("Please use std.utf.UTFException instead.") alias UTFException UtfException;
 
 
 /++
@@ -143,52 +143,84 @@ unittest
     $(D stride) returns the length of the UTF-8 sequence starting at $(D index)
     in $(D str).
 
+    $(D stride) works with both UTF-8 strings and ranges of $(D char). If no
+    index is passed, then an input range will work, but if an index is passed,
+    then a random-access range is required.
+
+    $(D index) defaults to $(D 0) if none is passed.
+
     Returns:
         The number of bytes in the UTF-8 sequence.
 
     Throws:
-        $(D UTFException) if $(D str[index]) is not the start of a valid UTF-8
-        sequence.
+        May throw a $(D UTFException) if $(D str[index]) is not the start of a
+        valid UTF-8 sequence.
+
+    Notes:
+        $(D stride) will only analize the first $(D str[index]) element. It
+        will not fully verify the validity of UTF-8 sequence, nor even verify
+        the presence of the sequence: it will not actually guarantee that
+        $(D index + stride(str, index) <= str.length).
   +/
-uint stride(S)(in S str, size_t index) @safe pure
-    if (is(S : const(char[])))
+uint stride(S)(auto ref S str, size_t index)
+    if (is(S : const char[]) ||
+        (isRandomAccessRange!S && is(Unqual!(ElementType!S) == char)))
 {
+    static if (is(typeof(str.length) : ulong))
+        assert(index < str.length, "Past the end of the UTF-8 sequence");
     immutable c = str[index];
+
     if (c < 0x80)
         return 1;
     else
         return strideImpl(c, index);
- }
+}
+
+/// Ditto
+uint stride(S)(auto ref S str)
+    if (is(S : const char[]) ||
+        (isInputRange!S && is(Unqual!(ElementType!S) == char)))
+{
+    static if (is(S : const char[]))
+        immutable c = str[0];
+    else
+        immutable c = str.front;
+
+    if (c < 0x80)
+        return 1;
+    else
+        return strideImpl(c, 0);
+}
 
 private uint strideImpl(char c, size_t index) @trusted pure
 in { assert(c & 0x80); }
 body
 {
-    static if (__traits(compiles, {import core.bitop; bsr(1);}))
-    {
-        import core.bitop;
-        immutable msbs = 7 - bsr(~c);
-        if (msbs >= 2 && msbs <= 6) return msbs;
-    }
-    else
-    {
-        if (!(c & 0x40)) goto Lerr;
-        if (!(c & 0x20)) return 2;
-        if (!(c & 0x10)) return 3;
-        if (!(c & 0x08)) return 4;
-        if (!(c & 0x04)) return 5;
-        if (!(c & 0x02)) return 6;
-    }
- Lerr:
-    throw new UTFException("Invalid UTF-8 sequence", index);
+    import core.bitop;
+    immutable msbs = 7 - bsr(~c);
+    if (msbs < 2 || msbs > 6)
+        throw new UTFException("Invalid UTF-8 sequence", index);
+    return msbs;
 }
 
-@trusted unittest
+unittest
 {
     static void test(string s, dchar c, size_t i = 0, size_t line = __LINE__)
     {
         enforce(stride(s, i) == codeLength!char(c),
-                new AssertError(format("Unit test failure: %s", s), __FILE__, line));
+                new AssertError(format("Unit test failure string: %s", s), __FILE__, line));
+
+        enforce(stride(RandomCU!char(s), i) == codeLength!char(c),
+                new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
+
+        if (i == 0)
+        {
+            enforce(stride(s) == codeLength!char(c),
+                    new AssertError(format("Unit test failure string 0: %s", s), __FILE__, line));
+
+            enforce(stride(InputCU!char(s)) == codeLength!char(c),
+                    new AssertError(format("Unit test failure range 0: %s", s), __FILE__, line));
+        }
     }
 
     test("a", 'a');
@@ -206,6 +238,15 @@ body
     test("hello\U00010143\u0100\U00010143", '\U00010143', 5);
     test("hello\U00010143\u0100\U00010143", '\u0100', 9);
     test("hello\U00010143\u0100\U00010143", '\U00010143', 11);
+
+    foreach(S; TypeTuple!(char[], const char[], string))
+    {
+        enum str = to!S("hello world");
+        static assert(isSafe!((){stride(str, 0);}));
+        static assert(isSafe!((){stride(str);}));
+        static assert((functionAttributes!((){stride(str, 0);}) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!((){stride(str);}) & FunctionAttribute.pure_) != 0);
+    }
 }
 
 
@@ -213,25 +254,73 @@ body
     $(D strideBack) returns the length of the UTF-8 sequence ending one code
     unit before $(D index) in $(D str).
 
+    $(D strideBack) works with both UTF-8 strings and bidirectional ranges of
+    $(D char). If no index is passed, then a bidirectional range will work, but
+    if an index is passed, then a random-access range is required.
+
+    $(D index) defaults to $(D str.length) if none is passed.
+
     Returns:
         The number of bytes in the UTF-8 sequence.
 
     Throws:
-        $(D UTFException) if $(D str[index]) is not one past the end of a valid
-        UTF-8 sequence.
+        May throw a $(D UTFException) if $(D str[index]) is not one past the
+        end of a valid UTF-8 sequence.
+
+    Notes:
+        $(D strideBack) will not fully verify the validity of the UTF-8
+        sequence. It will, however, guarantee that
+        $(D index - stride(str, index)) is a valid index.
   +/
-uint strideBack(in char[] str, size_t index) @safe pure
+uint strideBack(S)(auto ref S str, size_t index)
+    if (is(S : const char[]) ||
+        (isRandomAccessRange!S && is(Unqual!(ElementType!S) == char)))
 {
-    if (index >= 1 && (str[index-1] & 0b1100_0000) != 0b1000_0000)
+    static if (is(typeof(str.length) : ulong))
+        assert(index <= str.length, "Past the end of the UTF-8 sequence");
+    assert (index > 0, "Not the end of the UTF-8 sequence");
+
+    if ((str[index-1] & 0b1100_0000) != 0b1000_0000)
         return 1;
-    else if (index >= 2 && (str[index-2] & 0b1100_0000) != 0b1000_0000)
-        return 2;
-    else if (index >= 3 && (str[index-3] & 0b1100_0000) != 0b1000_0000)
-        return 3;
-    else if (index >= 4 && (str[index-4] & 0b1100_0000) != 0b1000_0000)
-        return 4;
+
+    if (index >= 4) //single verification for most common case
+    {
+        foreach(i; TypeTuple!(2, 3, 4))
+        {
+            if ((str[index-i] & 0b1100_0000) != 0b1000_0000)
+                return i;
+        }
+    }
     else
-        throw new UTFException("Not the end of the UTF sequence", index);
+    {
+        foreach(i; TypeTuple!(2, 3))
+        {
+            if (index >= i && (str[index-i] & 0b1100_0000) != 0b1000_0000)
+                return i;
+        }
+    }
+    throw new UTFException("Not the end of the UTF sequence", index);
+}
+
+/// Ditto
+uint strideBack(S)(auto ref S str)
+    if (is(S : const char[]) ||
+       (isRandomAccessRange!S && hasLength!S && is(Unqual!(ElementType!S) == char)))
+{
+    return strideBack(str, str.length);
+}
+
+uint strideBack(S)(auto ref S str)
+    if (isBidirectionalRange!S && is(Unqual!(ElementType!S) == char) && !isRandomAccessRange!S)
+{
+    assert(!str.empty, "Past the end of the UTF-8 sequence");
+    foreach(i; TypeTuple!(1, 2, 3, 4))
+    {
+        if ((str.back & 0b1100_0000) != 0b1000_0000) return i;
+        str.popBack();
+        if (str.empty) break;
+    }
+    throw new UTFException("The last code unit is not the end of the UTF-8 sequence");
 }
 
 unittest
@@ -239,7 +328,19 @@ unittest
     static void test(string s, dchar c, size_t i = size_t.max, size_t line = __LINE__)
     {
         enforce(strideBack(s, i == size_t.max ? s.length : i) == codeLength!char(c),
-                new AssertError(format("Unit test failure: %s", s), __FILE__, line));
+                new AssertError(format("Unit test failure string: %s", s), __FILE__, line));
+
+        enforce(strideBack(RandomCU!char(s), i == size_t.max ? s.length : i) == codeLength!char(c),
+                new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
+
+        if (i == size_t.max)
+        {
+            enforce(strideBack(s) == codeLength!char(c),
+                    new AssertError(format("Unit test failure string length: %s", s), __FILE__, line));
+
+            enforce(strideBack(BidirCU!char(s)) == codeLength!char(c),
+                    new AssertError(format("Unit test failure range length: %s", s), __FILE__, line));
+        }
     }
 
     test("a", 'a');
@@ -257,6 +358,15 @@ unittest
     test("\U00010143\u0100\U00010143hello", '\U00010143', 10);
     test("\U00010143\u0100\U00010143hello", '\u0100', 6);
     test("\U00010143\u0100\U00010143hello", '\U00010143', 4);
+
+    foreach(S; TypeTuple!(char[], const char[], string))
+    {
+        enum str = to!S("hello world");
+        static assert(isSafe!((){strideBack(str, 0);}));
+        static assert(isSafe!((){strideBack(str);}));
+        static assert((functionAttributes!((){strideBack(str, 0);}) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!((){strideBack(str);}) & FunctionAttribute.pure_) != 0);
+    }
 }
 
 
@@ -264,13 +374,47 @@ unittest
     $(D stride) returns the length of the UTF-16 sequence starting at $(D index)
     in $(D str).
 
+    $(D stride) works with both UTF-16 strings and ranges of $(D wchar). If no
+    index is passed, then an input range will work, but if an index is passed,
+    then a random-access range is required.
+
+    $(D index) defaults to $(D 0) if none is passed.
+
     Returns:
         The number of bytes in the UTF-16 sequence.
+
+    Throws:
+        May throw a $(D UTFException) if $(D str[index]) is not the start of a
+        valid UTF-16 sequence.
+
+    Notes:
+        $(D stride) will only analize the first $(D str[index]) element. It
+        will not fully verify the validity of UTF-16 sequence, nor even verify
+        the presence of the sequence: it will not actually guarantee that
+        $(D index + stride(str, index) <= str.length).
   +/
-uint stride(S)(in S str, size_t index) @safe pure nothrow
-    if (is(S : const(wchar[])))
+uint stride(S)(auto ref S str, size_t index)
+    if (is(S : const wchar[]) ||
+        (isRandomAccessRange!S && is(Unqual!(ElementType!S) == wchar)))
 {
+    static if (is(typeof(str.length) : ulong))
+        assert(index < str.length, "Past the end of the UTF-16 sequence");
     immutable uint u = str[index];
+    return 1 + (u >= 0xD800 && u <= 0xDBFF);
+}
+
+/// Ditto
+uint stride(S)(auto ref S str) @safe pure
+    if (is(S : const wchar[]))
+{
+    return stride(str, 0);
+}
+
+uint stride(S)(auto ref S str)
+    if (isInputRange!S && is(Unqual!(ElementType!S) == wchar))
+{
+    assert (!str.empty, "UTF-16 sequence is empty");
+    immutable uint u = str.front;
     return 1 + (u >= 0xD800 && u <= 0xDBFF);
 }
 
@@ -279,7 +423,19 @@ uint stride(S)(in S str, size_t index) @safe pure nothrow
     static void test(wstring s, dchar c, size_t i = 0, size_t line = __LINE__)
     {
         enforce(stride(s, i) == codeLength!wchar(c),
-                new AssertError(format("Unit test failure: %s", s), __FILE__, line));
+                new AssertError(format("Unit test failure string: %s", s), __FILE__, line));
+
+        enforce(stride(RandomCU!wchar(s), i) == codeLength!wchar(c),
+                new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
+
+        if (i == 0)
+        {
+            enforce(stride(s) == codeLength!wchar(c),
+                    new AssertError(format("Unit test failure string 0: %s", s), __FILE__, line));
+
+            enforce(stride(InputCU!wchar(s)) == codeLength!wchar(c),
+                    new AssertError(format("Unit test failure range 0: %s", s), __FILE__, line));
+        }
     }
 
     test("a", 'a');
@@ -297,6 +453,15 @@ uint stride(S)(in S str, size_t index) @safe pure nothrow
     test("hello\U00010143\u0100\U00010143", '\U00010143', 5);
     test("hello\U00010143\u0100\U00010143", '\u0100', 7);
     test("hello\U00010143\u0100\U00010143", '\U00010143', 8);
+
+    foreach(S; TypeTuple!(wchar[], const wchar[], wstring))
+    {
+        enum str = to!S("hello world");
+        static assert(isSafe!((){stride(str, 0);}));
+        static assert(isSafe!((){stride(str);}));
+        static assert((functionAttributes!((){stride(str, 0);}) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!((){stride(str);}) & FunctionAttribute.pure_) != 0);
+    }
 }
 
 
@@ -304,21 +469,52 @@ uint stride(S)(in S str, size_t index) @safe pure nothrow
     $(D strideBack) returns the length of the UTF-16 sequence ending one code
     unit before $(D index) in $(D str).
 
+    $(D strideBack) works with both UTF-16 strings and ranges of $(D wchar). If
+    no index is passed, then a bidirectional range will work, but if an index is
+    passed, then a random-access range is required.
+
+    $(D index) defaults to $(D str.length) if none is passed.
+
     Returns:
         The number of bytes in the UTF-16 sequence.
 
     Throws:
-        $(D UTFException) if $(D str[index]) is not one past the end of a valid
-        UTF-16 sequence.
+        May throw a $(D UTFException) if $(D str[index]) is not one past the
+        end of a valid UTF-16 sequence.
+
+    Notes:
+        $(D stride) will only analize the element at $(D str[index - 1])
+        element. It will not fully verify the validity of UTF-16 sequence, nor
+        even verify the presence of the sequence: it will not actually
+        guarantee that $(D stride(str, index) <= index).
   +/
-uint strideBack(in wchar[] str, size_t index) @safe pure
+//UTF-16 is self synchronizing: The length of strideBack can be found from
+//the value of a single wchar
+uint strideBack(S)(auto ref S str, size_t index)
+    if (is(S : const wchar[]) ||
+        (isRandomAccessRange!S && is(Unqual!(ElementType!S) == wchar)))
 {
-    enforce(index != 0 && (str[index-1] < 0xD800 || str[index-1] > 0xDBFF),
-            new UTFException("Not the end of the UTF-16 sequence", index));
-    if (index <= 1)
-        return 1;
-    immutable c = str[index - 2];
-    return 1 + (c >= 0xD800 && c <= 0xDBFF);
+    static if (is(typeof(str.length) : ulong))
+        assert(index <= str.length, "Past the end of the UTF-16 sequence");
+    assert (index > 0, "Not the end of a UTF-16 sequence");
+
+    immutable c2 = str[index-1];
+    return 1 + (0xDC00 <= c2 && c2 < 0xE000);
+}
+
+/// Ditto
+uint strideBack(S)(auto ref S str)
+    if (is(S : const wchar[]) ||
+        (isBidirectionalRange!S && is(Unqual!(ElementType!S) == wchar)))
+{
+    assert (!str.empty, "UTF-16 sequence is empty");
+
+    static if (is(S : const(wchar)[]))
+        immutable c2 = str[$ - 1];
+    else
+        immutable c2 = str.back;
+
+    return 1 + (0xDC00 <= c2 && c2 <= 0xE000);
 }
 
 unittest
@@ -326,7 +522,19 @@ unittest
     static void test(wstring s, dchar c, size_t i = size_t.max, size_t line = __LINE__)
     {
         enforce(strideBack(s, i == size_t.max ? s.length : i) == codeLength!wchar(c),
-                new AssertError(format("Unit test failure: %s", s), __FILE__, line));
+                new AssertError(format("Unit test failure string: %s", s), __FILE__, line));
+
+        enforce(strideBack(RandomCU!wchar(s), i == size_t.max ? s.length : i) == codeLength!wchar(c),
+                new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
+
+        if (i == size_t.max)
+        {
+            enforce(strideBack(s) == codeLength!wchar(c),
+                    new AssertError(format("Unit test failure string length: %s", s), __FILE__, line));
+
+            enforce(strideBack(BidirCU!wchar(s)) == codeLength!wchar(c),
+                    new AssertError(format("Unit test failure range length: %s", s), __FILE__, line));
+        }
     }
 
     test("a", 'a');
@@ -344,6 +552,15 @@ unittest
     test("\U00010143\u0100\U00010143hello", '\U00010143', 5);
     test("\U00010143\u0100\U00010143hello", '\u0100', 3);
     test("\U00010143\u0100\U00010143hello", '\U00010143', 2);
+
+    foreach(S; TypeTuple!(wchar[], const wchar[], wstring))
+    {
+        enum str = to!S("hello world");
+        static assert(isSafe!((){strideBack(str, 0);}));
+        static assert(isSafe!((){strideBack(str);}));
+        static assert((functionAttributes!((){strideBack(str, 0);}) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!((){strideBack(str);}) & FunctionAttribute.pure_) != 0);
+    }
 }
 
 
@@ -351,13 +568,22 @@ unittest
     $(D stride) returns the length of the UTF-32 sequence starting at $(D index)
     in $(D str).
 
+    $(D stride) works with both UTF-32 strings and ranges of $(D dchar).
+
     Returns:
         The number of bytes in the UTF-32 sequence (always $(D 1)).
+
+    Throws:
+        Never.
   +/
-uint stride(S)(in S str, size_t index) @safe pure nothrow
-    if (is(S : const(dchar[])))
+uint stride(S)(auto ref S str, size_t index = 0)
+    if (is(S : const dchar[]) ||
+        (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
 {
-    assert(index < str.length);
+    static if (is(typeof(str.length) : ulong))
+        assert(index < str.length, "Past the end of the UTF-32 sequence");
+    else
+        assert(!str.empty, "UTF-32 sequence is empty.");
     return 1;
 }
 
@@ -366,7 +592,19 @@ unittest
     static void test(dstring s, dchar c, size_t i = 0, size_t line = __LINE__)
     {
         enforce(stride(s, i) == codeLength!dchar(c),
-                new AssertError(format("Unit test failure: %s", s), __FILE__, line));
+                new AssertError(format("Unit test failure string: %s", s), __FILE__, line));
+
+        enforce(stride(RandomCU!dchar(s), i) == codeLength!dchar(c),
+                new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
+
+        if (i == 0)
+        {
+            enforce(stride(s) == codeLength!dchar(c),
+                    new AssertError(format("Unit test failure string 0: %s", s), __FILE__, line));
+
+            enforce(stride(InputCU!dchar(s)) == codeLength!dchar(c),
+                    new AssertError(format("Unit test failure range 0: %s", s), __FILE__, line));
+        }
     }
 
     test("a", 'a');
@@ -384,6 +622,15 @@ unittest
     test("hello\U00010143\u0100\U00010143", '\U00010143', 5);
     test("hello\U00010143\u0100\U00010143", '\u0100', 6);
     test("hello\U00010143\u0100\U00010143", '\U00010143', 7);
+
+    foreach(S; TypeTuple!(dchar[], const dchar[], dstring))
+    {
+        enum str = to!S("hello world");
+        static assert(isSafe!((){stride(str, 0);}));
+        static assert(isSafe!((){stride(str);}));
+        static assert((functionAttributes!((){stride(str, 0);}) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!((){stride(str);}) & FunctionAttribute.pure_) != 0);
+    }
 }
 
 
@@ -391,12 +638,32 @@ unittest
     $(D strideBack) returns the length of the UTF-32 sequence ending one code
     unit before $(D index) in $(D str).
 
+    $(D strideBack) works with both UTF-32 strings and ranges of $(D dchar). If
+    no index is passed, then a bidirectional range will work, but if an index is
+    passed, then a random-access range is required.
+
+    $(D index) defaults to $(D str.length) if none is passed.
+
     Returns:
         The number of bytes in the UTF-32 sequence (always $(D 1)).
+
+    Throws:
+        Never.
   +/
-uint strideBack(in dchar[] str, size_t index) @safe pure nothrow
+uint strideBack(S)(auto ref S str, size_t index)
+    if (isRandomAccessRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
 {
-    assert(index <= str.length);
+    static if (is(typeof(str.length) : ulong))
+        assert(index <= str.length, "Past the end of the UTF-32 sequence");
+    assert (index > 0, "Not the end of the UTF-32 sequence");
+    return 1;
+}
+
+/// Ditto
+uint strideBack(S)(auto ref S str)
+    if (isBidirectionalRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
+{
+    assert(!str.empty, "Empty UTF-32 sequence");
     return 1;
 }
 
@@ -405,7 +672,19 @@ unittest
     static void test(dstring s, dchar c, size_t i = size_t.max, size_t line = __LINE__)
     {
         enforce(strideBack(s, i == size_t.max ? s.length : i) == codeLength!dchar(c),
-                new AssertError(format("Unit test failure: %s", s), __FILE__, line));
+                new AssertError(format("Unit test failure string: %s", s), __FILE__, line));
+
+        enforce(strideBack(RandomCU!dchar(s), i == size_t.max ? s.length : i) == codeLength!dchar(c),
+                new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
+
+        if (i == size_t.max)
+        {
+            enforce(strideBack(s) == codeLength!dchar(c),
+                    new AssertError(format("Unit test failure string length: %s", s), __FILE__, line));
+
+            enforce(strideBack(BidirCU!dchar(s)) == codeLength!dchar(c),
+                    new AssertError(format("Unit test failure range length: %s", s), __FILE__, line));
+        }
     }
 
     test("a", 'a');
@@ -423,6 +702,15 @@ unittest
     test("\U00010143\u0100\U00010143hello", '\U00010143', 3);
     test("\U00010143\u0100\U00010143hello", '\u0100', 2);
     test("\U00010143\u0100\U00010143hello", '\U00010143', 1);
+
+    foreach(S; TypeTuple!(dchar[], const dchar[], dstring))
+    {
+        enum str = to!S("hello world");
+        static assert(isSafe!((){strideBack(str, 0);}));
+        static assert(isSafe!((){strideBack(str);}));
+        static assert((functionAttributes!((){strideBack(str, 0);}) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!((){strideBack(str);}) & FunctionAttribute.pure_) != 0);
+    }
 }
 
 
@@ -547,12 +835,19 @@ size_t toUTFindex(in dchar[] str, size_t n) @safe pure nothrow
     well-formed, then a $(D UTFException) is thrown and $(D index) remains
     unchanged.
 
+    $(D decodeFront) is a variant of $(D decode) which specifically decodes
+    the first character.
+
+    $(D decode) will only work with strings and random access ranges of
+    code units with length and slicing, whereas $(D decodeFront) will also work
+    with any input range of code units.
+
     Throws:
         $(D UTFException) if $(D str[index]) is not the start of a valid UTF
         sequence.
   +/
-dchar decode(S)(in S str, ref size_t index) @trusted pure
-    if(is(S : const(char[])))
+dchar decode(S)(auto ref S str, ref size_t index) @trusted pure
+    if (isSomeString!S)
 in
 {
     assert(index < str.length, "Attempted to decode past the end of a string");
@@ -563,24 +858,103 @@ out (result)
 }
 body
 {
-    if (str[index] < 0x80)
+    if (str[index] < codeUnitLimit!S)
         return str[index++];
+    return decodeImpl!true(str, index);
+}
+
+dchar decode(S)(auto ref S str, ref size_t index)
+    if (!isSomeString!S &&
+       (isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S)))
+in
+{
+    assert(index < str.length, "Attempted to decode past the end of a string");
+}
+out (result)
+{
+    assert(isValidDchar(result));
+}
+body
+{
+    if (str[index] < codeUnitLimit!S)
+        return str[index++];
+    return decodeImpl!true(str, index);
+}
+
+/// Ditto
+dchar decodeFront(S)(auto ref S str, out size_t index) @trusted pure
+    if (isSomeString!S)
+in
+{
+    assert(!str.empty);
+}
+out (result)
+{
+    assert(isValidDchar(result));
+}
+body
+{
+    if (str[0] < codeUnitLimit!S)
+    {
+        index = 1;
+        return str[0];
+    }
+
+    return decodeImpl!true(str, index);
+}
+
+/// Ditto
+dchar decodeFront(S)(auto ref S str, out size_t index)
+    if (!isSomeString!S)
+in
+{
+    assert(!str.empty);
+}
+out (result)
+{
+    assert(isValidDchar(result));
+}
+body
+{
+    //@@@BUG@@@ 8521 forces canIndex to be down outside of decodeImpl, which
+    //is undesirable, since not all overloads of decodeImpl need it. So, it
+    //should be moved back into decodeImpl once bug# 8521 has been fixed.
+    enum canIndex = isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S);
+    //static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S))
+    static if (canIndex)
+        immutable fst = str[0];
     else
-        return decodeImpl(str.ptr + index, str.length - index, index);
+        immutable fst = str.front;
+
+    if (fst < codeUnitLimit!S)
+    {
+        index = 1;
+        return fst;
+    }
+
+    return decodeImpl!canIndex(str, index);
+}
+
+// Gives the maximum value that a code unit for the given range type can hold.
+private template codeUnitLimit(S)
+   if (isSomeChar!(ElementEncodingType!S))
+{
+    static if (is(Unqual!(ElementEncodingType!S) == char))
+        enum char codeUnitLimit = 0x80;
+    else static if (is(Unqual!(ElementEncodingType!S) == wchar))
+        enum wchar codeUnitLimit = 0xD800;
+    else
+        enum dchar codeUnitLimit = 0xD800;
 }
 
 /*
- * This function does it's own bounds checking to give a more useful
- * error message when attempting to decode past the end of a string.
+ * For strings, this function does its own bounds checking to give a
+ * more useful error message when attempting to decode past the end of a string.
  * Subsequently it uses a pointer instead of an array to avoid
  * redundant bounds checking.
  */
-private dchar decodeImpl(const(char)* pstr, size_t length, ref size_t index) @trusted pure
-in
-{
-    assert(pstr[0] & 0x80);
-}
-body
+private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
+    if (is(S : const char[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == char)))
 {
     /* The following encodings are valid, except for the 5 and 6 byte
      * combinations:
@@ -596,19 +970,97 @@ body
      */
     enum bitMask = [(1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1];
 
-    ubyte fst = pstr[0], tmp=void;
+    static if (is(S : const char[]))
+        auto pstr = str.ptr + index;
+    else static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
+        auto pstr = str[index .. str.length];
+    else
+        alias str pstr;
+
+    //@@@BUG@@@ 8521 forces this to be down outside of decodeImpl
+    //enum canIndex = is(S : const char[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S);
+
+    static if (canIndex)
+    {
+        immutable length = str.length - index;
+        ubyte fst = pstr[0];
+    }
+    else
+    {
+        ubyte fst = pstr.front;
+        pstr.popFront();
+    }
+
+    static if (canIndex)
+    {
+        static UTFException exception(S)(S str, string msg)
+        {
+            uint[4] sequence = void;
+            size_t i;
+
+            do
+            {
+                sequence[i] = str[i];
+            } while (++i < str.length && i < 4 && (str[i] & 0xC0) == 0x80);
+
+            return (new UTFException(msg, i)).setSequence(sequence[0 .. i]);
+        }
+    }
+
+    UTFException invalidUTF()
+    {
+        static if (canIndex)
+           return exception(pstr[0 .. length], "Invalid UTF-8 sequence");
+        else
+        {
+            //We can't include the invalid sequence with input strings without
+            //saving each of the code units along the way, and we can't do it with
+            //forward ranges without saving the entire range. Both would incur a
+            //cost for the decoding of every character just to provide a better
+            //error message for the (hopefully) rare case when an invalid UTF-8
+            //sequence is encountered, so we don't bother trying to include the
+            //invalid sequence here, unlike with strings and sliceable ranges.
+           return new UTFException("Invalid UTF-8 sequence");
+        }
+    }
+
+    UTFException outOfBounds()
+    {
+        static if (canIndex)
+           return exception(pstr[0 .. length], "Attempted to decode past the end of a string");
+        else
+           return new UTFException("Attempted to decode past the end of a string");
+    }
+
+    assert(fst & 0x80);
+    ubyte tmp = void;
     dchar d = fst; // upper control bits are masked out later
     fst <<= 1;
 
     foreach(i; TypeTuple!(1, 2, 3))
     {
-        if (i == length)
-            goto Ebounds;
 
-        tmp = pstr[i];
+        static if (canIndex)
+        {
+            if (i == length)
+                throw outOfBounds();
+        }
+        else
+        {
+            if (pstr.empty)
+                throw outOfBounds();
+        }
+
+        static if (canIndex)
+            tmp = pstr[i];
+        else
+        {
+            tmp = pstr.front;
+            pstr.popFront();
+        }
 
         if ((tmp & 0xC0) != 0x80)
-            goto Eutf;
+            throw invalidUTF();
 
         d = (d << 6) | (tmp & 0x3F);
         fst <<= 1;
@@ -619,13 +1071,13 @@ body
 
             // overlong, could have been encoded with i bytes
             if ((d & ~bitMask[i - 1]) == 0)
-                goto Eutf;
+                throw invalidUTF();
 
             // check for surrogates only needed for 3 bytes
             static if (i == 2)
             {
                 if (!isValidDchar(d))
-                    goto Eutf;
+                    throw invalidUTF();
             }
 
             index += i + 1;
@@ -633,188 +1085,301 @@ body
         }
     }
 
-    static UTFException exception(in char[] str, string msg)
-    {
-        uint[4] sequence = void;
-        size_t i;
-        do
-        {
-            sequence[i] = str[i];
-        } while (++i < str.length && i < 4 && (str[i] & 0xC0) == 0x80);
-
-        return (new UTFException(msg, i)).setSequence(sequence[0 .. i]);
-    }
-
- Eutf:
-    throw exception(pstr[0 .. length], "Invalid UTF-8 sequence");
- Ebounds:
-    throw exception(pstr[0 .. length], "Attempted to decode past the end of a string");
+    throw invalidUTF();
 }
 
-unittest
+private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
+    if (is(S : const wchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == wchar)))
 {
-    size_t i;
-    dchar c;
-
-    debug(utf) printf("utf.decode.unittest\n");
-
-    static string s1 = "abcd";
-    i = 0;
-    c = decode(s1, i);
-    assert(c == cast(dchar)'a');
-    assert(i == 1);
-    c = decode(s1, i);
-    assert(c == cast(dchar)'b');
-    assert(i == 2);
-
-    static string s2 = "\xC2\xA9";
-    i = 0;
-    c = decode(s2, i);
-    assert(c == cast(dchar)'\u00A9');
-    assert(i == 2);
-
-    static string s3 = "\xE2\x89\xA0";
-    i = 0;
-    c = decode(s3, i);
-    assert(c == cast(dchar)'\u2260');
-    assert(i == 3);
-
-    static string[] s4 = [
-        "\xE2\x89",     // too short
-        "\xC0\x8A",
-        "\xE0\x80\x8A",
-        "\xF0\x80\x80\x8A",
-        "\xF8\x80\x80\x80\x8A",
-        "\xFC\x80\x80\x80\x80\x8A",
-    ];
-
-    for (int j = 0; j < s4.length; j++)
-    {
-        try
-        {
-            i = 0;
-            c = decode(s4[j], i);
-            assert(0);
-        }
-        catch (UTFException u)
-        {
-            i = 23;
-            delete u;
-        }
-
-        assert(i == 23);
-    }
-}
-
-unittest
-{
-    size_t i;
-
-    i = 0; assert(decode("\xEF\xBF\xBE"c, i) == cast(dchar)0xFFFE);
-    i = 0; assert(decode("\xEF\xBF\xBF"c, i) == cast(dchar)0xFFFF);
-    i = 0;
-    assertThrown!UTFException(decode("\xED\xA0\x80"c, i));
-    assertThrown!UTFException(decode("\xED\xAD\xBF"c, i));
-    assertThrown!UTFException(decode("\xED\xAE\x80"c, i));
-    assertThrown!UTFException(decode("\xED\xAF\xBF"c, i));
-    assertThrown!UTFException(decode("\xED\xB0\x80"c, i));
-    assertThrown!UTFException(decode("\xED\xBE\x80"c, i));
-    assertThrown!UTFException(decode("\xED\xBF\xBF"c, i));
-}
-
-/// ditto
-dchar decode(S)(in S str, ref size_t index) @trusted pure
-    if(is(S : const(wchar[])))
-in
-{
-    assert(index < str.length, "Attempted to decode past the end of a string");
-}
-out (result)
-{
-    assert(isValidDchar(result));
-}
-body
-{
-    if (str[index] < 0xD800)
-        return str[index++];
+    static if (is(S : const wchar[]))
+        auto pstr = str.ptr + index;
+    else static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
+        auto pstr = str[index .. str.length];
     else
-        return decodeImpl(str.ptr + index, str.length - index, index);
-}
+        alias str pstr;
 
-/// ditto
-private dchar decodeImpl(const(wchar)* pstr, size_t length, ref size_t index) @trusted pure
-in
-{
-    assert(pstr[0] >= 0xD800);
-}
-body
-{
-    string msg;
-    uint u = pstr[0];
+    //@@@BUG@@@ 8521 forces this to be down outside of decodeImpl
+    //enum canIndex = is(S : const wchar[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S);
 
-    if (u >= 0xD800 && u <= 0xDBFF)
+    static if (canIndex)
     {
-        if (length == 1)
+        immutable length = str.length - index;
+        uint u = pstr[0];
+    }
+    else
+    {
+        uint u = pstr.front;
+        pstr.popFront();
+    }
+
+    UTFException exception(string msg)
+    {
+        static if (canIndex)
+            return (new UTFException(msg)).setSequence(pstr[0]);
+        else
+            return new UTFException(msg);
+    }
+
+    string msg;
+    assert(u >= 0xD800);
+
+    if (u <= 0xDBFF)
+    {
+        static if (canIndex)
+            immutable onlyOneCodeUnit = length == 1;
+        else
+            immutable onlyOneCodeUnit = pstr.empty;
+
+        if (onlyOneCodeUnit)
+            throw exception("surrogate UTF-16 high value past end of string");
+
+        static if (canIndex)
+            immutable uint u2 = pstr[1];
+        else
         {
-            msg = "surrogate UTF-16 high value past end of string";
-            goto Lerr;
+            immutable uint u2 = pstr.front;
+            pstr.popFront();
         }
-        immutable uint u2 = pstr[1];
+
         if (u2 < 0xDC00 || u2 > 0xDFFF)
-        {
-            msg = "surrogate UTF-16 low value out of range";
-            goto Lerr;
-        }
+            throw exception("surrogate UTF-16 low value out of range");
+
         u = ((u - 0xD7C0) << 10) + (u2 - 0xDC00);
         index += 2;
     }
     else if (u >= 0xDC00 && u <= 0xDFFF)
-    {
-        msg = "unpaired surrogate UTF-16 value";
-        goto Lerr;
-    }
+        throw exception("unpaired surrogate UTF-16 value");
     else
         ++index;
+
     // Note: u+FFFE and u+FFFF are specifically permitted by the
     // Unicode standard for application internal use (see isValidDchar)
 
     return cast(dchar)u;
+}
 
-  Lerr:
-    throw (new UTFException(msg)).setSequence(pstr[0]);
+private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
+    if (is(S : const dchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
+{
+    static if (is(S : const dchar[]))
+        auto pstr = str.ptr;
+    else
+        alias str pstr;
+
+    static if (is(S : const dchar[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S))
+    {
+        if (!isValidDchar(pstr[index]))
+            throw (new UTFException("Invalid UTF-32 value")).setSequence(pstr[index]);
+        return pstr[index++];
+    }
+    else
+    {
+        if (!isValidDchar(pstr.front))
+            throw (new UTFException("Invalid UTF-32 value")).setSequence(pstr.front);
+        ++index;
+        return pstr.front;
+    }
+}
+
+unittest
+{
+    foreach(S; TypeTuple!(to!string, RandomCU!char))
+    {
+        size_t i;
+        dchar c;
+
+        debug(utf) printf("utf.decode.unittest\n");
+
+        auto s1 = S("abcd");
+        i = 0;
+        c = decode(s1, i);
+        assert(c == cast(dchar)'a');
+        assert(i == 1);
+        c = decode(s1, i);
+        assert(c == cast(dchar)'b');
+        assert(i == 2);
+
+        auto s2 = S("\xC2\xA9");
+        i = 0;
+        c = decode(s2, i);
+        assert(c == cast(dchar)'\u00A9');
+        assert(i == 2);
+
+        auto s3 = S("\xE2\x89\xA0");
+        i = 0;
+        c = decode(s3, i);
+        assert(c == cast(dchar)'\u2260');
+        assert(i == 3);
+
+        string[] s4 = [
+            "\xE2\x89",     // too short
+            "\xC0\x8A",
+            "\xE0\x80\x8A",
+            "\xF0\x80\x80\x8A",
+            "\xF8\x80\x80\x80\x8A",
+            "\xFC\x80\x80\x80\x80\x8A",
+        ];
+
+        for (int j = 0; j < s4.length; j++)
+        {
+            i = 0;
+            assertThrown!UTFException(decode(S(s4[j]), i));
+        }
+    }
+
+    foreach(S; TypeTuple!(to!string, RandomCU!char, InputCU!char))
+    {
+        size_t i;
+        dchar c;
+
+        debug(utf) printf("utf.decode.unittest\n");
+
+        auto s1 = S("abcd");
+        i = 42;
+        c = decodeFront(s1, i);
+        assert(c == cast(dchar)'a');
+        assert(i == 1);
+
+        auto s2 = S("\xC2\xA9");
+        i = 42;
+        c = decodeFront(s2, i);
+        assert(c == cast(dchar)'\u00A9');
+        assert(i == 2);
+
+        auto s3 = S("\xE2\x89\xA0");
+        i = 42;
+        c = decodeFront(s3, i);
+        assert(c == cast(dchar)'\u2260');
+        assert(i == 3);
+
+        string[] s4 = [
+            "\xE2\x89",     // too short
+            "\xC0\x8A",
+            "\xE0\x80\x8A",
+            "\xF0\x80\x80\x8A",
+            "\xF8\x80\x80\x80\x8A",
+            "\xFC\x80\x80\x80\x80\x8A",
+        ];
+
+        for (int j = 0; j < s4.length; j++)
+        {
+            i = 0;
+            assertThrown!UTFException(decodeFront(S(s4[j]), i));
+        }
+    }
 }
 
 unittest
 {
     size_t i;
 
-    i = 0; assert(decode([ cast(wchar)0xFFFE ], i) == cast(dchar)0xFFFE && i == 1);
-    i = 0; assert(decode([ cast(wchar)0xFFFF ], i) == cast(dchar)0xFFFF && i == 1);
+    foreach(S; TypeTuple!(to!string, RandomCU!char, InputCU!char))
+    {
+        static if (is(S == InputCU!char))
+            alias TypeTuple!(decodeFront) funcs;
+        else
+            alias TypeTuple!(decode, decodeFront) funcs;
+
+        foreach(func; funcs)
+        {
+            i = 0; assert(func(S("\xEF\xBF\xBE"c), i) == cast(dchar)0xFFFE);
+            i = 0; assert(func(S("\xEF\xBF\xBF"c), i) == cast(dchar)0xFFFF);
+            i = 0;
+
+            assertThrown!UTFException(func(S("\xED\xA0\x80"c), i));
+            assertThrown!UTFException(func(S("\xED\xAD\xBF"c), i));
+            assertThrown!UTFException(func(S("\xED\xAE\x80"c), i));
+            assertThrown!UTFException(func(S("\xED\xAF\xBF"c), i));
+            assertThrown!UTFException(func(S("\xED\xB0\x80"c), i));
+            assertThrown!UTFException(func(S("\xED\xBE\x80"c), i));
+            assertThrown!UTFException(func(S("\xED\xBF\xBF"c), i));
+        }
+    }
 }
 
+unittest
+{
+    size_t i;
 
-/// ditto
-dchar decode(S)(in S str, ref size_t index) @safe pure
-    if(is(S : const(dchar[])))
-in
-{
-    assert(index < str.length, "Attempted to decode past the end of a string");
-}
-body
-{
-    if (str[index] < 0xD800)
-        return str[index++];
-    else
-        return decodeImpl(str, index);
+    foreach(S; TypeTuple!(to!wstring, RandomCU!wchar, InputCU!wchar))
+    {
+        static if (is(S == InputCU!wchar))
+            alias TypeTuple!(decodeFront) funcs;
+        else
+            alias TypeTuple!(decode, decodeFront) funcs;
+
+        foreach(func; funcs)
+        {
+            i = 0; assert(func(S([ cast(wchar)0x1111 ]), i) == cast(dchar)0x1111 && i == 1);
+            i = 0; assert(func(S([ cast(wchar)0xD800, cast(wchar)0xDC00 ]), i) == cast(dchar)0x10000 && i == 2);
+            i = 0; assert(func(S([ cast(wchar)0xDBFF, cast(wchar)0xDFFF ]), i) == cast(dchar)0x10FFFF && i == 2);
+            i = 0; assert(func(S([ cast(wchar)0xFFFE ]), i) == cast(dchar)0xFFFE && i == 1);
+            i = 0; assert(func(S([ cast(wchar)0xFFFF ]), i) == cast(dchar)0xFFFF && i == 1);
+            i = 0; assertThrown!UTFException(func(S([ cast(wchar)0xD801 ]), i));
+            i = 0; assertThrown!UTFException(func(S([ cast(wchar)0xD800, cast(wchar)0x1200 ]), i));
+        }
+    }
+
+    foreach(S; TypeTuple!(to!wstring, RandomCU!wchar))
+    {
+        auto str = S([ cast(wchar)0xD800, cast(wchar)0xDC00,
+                       cast(wchar)0x1400,
+                       cast(wchar)0xDAA7, cast(wchar)0xDDDE ]);
+        i = 0;
+        assert(decode(str, i) == 0x10000 && i == 2);
+        assert(decode(str, i) == 0x1400  && i == 3);
+        assert(decode(str, i) == 0xB9DDE && i == 5);
+    }
 }
 
-/// ditto
-private dchar decodeImpl(in dchar[] str, ref size_t index) @safe pure
+unittest
 {
-    if (!isValidDchar(str[index]))
-        throw (new UTFException("Invalid UTF-32 value")).setSequence(str[index]);
-    return str[index++];
+    size_t i;
+
+    foreach(S; TypeTuple!(to!dstring, RandomCU!dchar, InputCU!dchar))
+    {
+        static if (is(S == InputCU!dchar))
+            alias TypeTuple!(decodeFront) funcs;
+        else
+            alias TypeTuple!(decode, decodeFront) funcs;
+
+        foreach(func; funcs)
+        {
+            i = 0; assert(func(S([ cast(dchar)0x1111 ]), i) == cast(dchar)0x1111 && i == 1);
+            i = 0; assert(func(S([ cast(dchar)0x10000 ]), i) == cast(dchar)0x10000 && i == 1);
+            i = 0; assert(func(S([ cast(dchar)0x10FFFF ]), i) == cast(dchar)0x10FFFF && i == 1);
+            i = 0; assert(func(S([ cast(dchar)0xFFFE ]), i) == cast(dchar)0xFFFE && i == 1);
+            i = 0; assert(func(S([ cast(dchar)0xFFFF ]), i) == cast(dchar)0xFFFF && i == 1);
+            i = 0; assertThrown!UTFException(func(S([ cast(dchar)0xD800 ]), i));
+            i = 0; assertThrown!UTFException(func(S([ cast(dchar)0xDFFE ]), i));
+            i = 0; assertThrown!UTFException(func(S([ cast(dchar)0x110000 ]), i));
+        }
+    }
+
+    foreach(S; TypeTuple!(to!dstring, RandomCU!dchar))
+    {
+        auto str = S([ cast(dchar)0x10000, cast(dchar)0x1400, cast(dchar)0xB9DDE ]);
+        i = 0;
+        assert(decode(str, i) == 0x10000 && i == 1);
+        assert(decode(str, i) == 0x1400  && i == 2);
+        assert(decode(str, i) == 0xB9DDE && i == 3);
+    }
 }
+
+unittest
+{
+    foreach(S; TypeTuple!(char[], const char[], string,
+                          wchar[], const wchar[], wstring,
+                          dchar[], const dchar[], dstring))
+    {
+        enum str = to!S("hello world");
+        static assert(isSafe!((){size_t i = 0; decode(str, i);}));
+        static assert(isSafe!((){size_t i = 0; decodeFront(str, i);}));
+        static assert((functionAttributes!((){size_t i = 0; decode(str, i);}) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!((){size_t i = 0; decodeFront(str, i);}) & FunctionAttribute.pure_) != 0);
+    }
+}
+
 
 /* =================== Encode ======================= */
 
@@ -822,7 +1387,7 @@ private dchar decodeImpl(in dchar[] str, ref size_t index) @safe pure
     Encodes $(D c) into the static array, $(D buf), and returns the actual
     length of the encoded character (a number between $(D 1) and $(D 4) for
     $(D char[4]) buffers and a number between $(D 1) and $(D 2) for
-    $(D wchar[2]) buffers.
+    $(D wchar[2]) buffers).
 
     Throws:
         $(D UTFException) if $(D c) is not a valid UTF code point.
@@ -1129,6 +1694,7 @@ assert(codeLength!dchar('\U0010FFFF') == 1);
 ------
   +/
 ubyte codeLength(C)(dchar c) @safe pure nothrow
+    if(isSomeChar!C)
 {
     static if (C.sizeof == 1)
     {
@@ -1160,6 +1726,94 @@ unittest
     assert(codeLength!char('\U0010FFFF') == 4);
     assert(codeLength!wchar('\U0010FFFF') == 2);
     assert(codeLength!dchar('\U0010FFFF') == 1);
+}
+
+
+/++
+    Returns the number of code units that are required to encode $(D str)
+    in a string whose character type is $(D C). This is particularly useful
+    when slicing one string with the length of another and the two string
+    types use different character types.
+
+Examples:
+------
+assert(codeLength!char("hello world") ==
+       to!string("hello world").length);
+assert(codeLength!wchar("hello world") ==
+       to!wstring("hello world").length);
+assert(codeLength!dchar("hello world") ==
+       to!dstring("hello world").length);
+
+assert(codeLength!char(`プログラミング`) ==
+       to!string(`プログラミング`).length);
+assert(codeLength!wchar(`プログラミング`) ==
+       to!wstring(`プログラミング`).length);
+assert(codeLength!dchar(`プログラミング`) ==
+       to!dstring(`プログラミング`).length);
+
+string haystack = `Être sans la verité, ça, ce ne serait pas bien.`;
+wstring needle = `Être sans la verité`;
+assert(haystack[codeLength!char(needle) .. $] ==
+       `, ça, ce ne serait pas bien.`);
+------
+  +/
+size_t codeLength(C, InputRange)(InputRange input)
+	if(isInputRange!InputRange && is(ElementType!InputRange : dchar))
+{
+	alias Unqual!(ElementEncodingType!InputRange) EncType;
+	static if(isSomeString!InputRange && is(EncType == C) && is(typeof(input.length)))
+		return input.length;
+	else
+	{
+        size_t total = 0;
+
+        foreach(dchar c; input)
+            total += codeLength!C(c);
+
+        return total;
+	}
+}
+   
+
+//Verify Examples.
+unittest
+{
+    assert(codeLength!char("hello world") ==
+           to!string("hello world").length);
+    assert(codeLength!wchar("hello world") ==
+           to!wstring("hello world").length);
+    assert(codeLength!dchar("hello world") ==
+           to!dstring("hello world").length);
+
+    assert(codeLength!char(`プログラミング`) ==
+           to!string(`プログラミング`).length);
+    assert(codeLength!wchar(`プログラミング`) ==
+           to!wstring(`プログラミング`).length);
+    assert(codeLength!dchar(`プログラミング`) ==
+           to!dstring(`プログラミング`).length);
+
+    string haystack = `Être sans la verité, ça, ce ne serait pas bien.`;
+    wstring needle = `Être sans la verité`;
+    assert(haystack[codeLength!char(needle) .. $] ==
+           `, ça, ce ne serait pas bien.`);
+}
+
+unittest
+{
+    foreach(S; TypeTuple!(char[], const char[], string,
+                          wchar[], const wchar[], wstring,
+                          dchar[], const dchar[], dstring))
+    {
+        foreach(C; TypeTuple!(char, wchar, dchar))
+        {
+            assert(codeLength!C(to!S("Walter Bright")) == to!(C[])("Walter Bright").length);
+            assert(codeLength!C(to!S(`言語`)) == to!(C[])(`言語`).length);
+            assert(codeLength!C(to!S(`ウェブサイト@La_Verité.com`)) ==
+                   to!(C[])(`ウェブサイト@La_Verité.com`).length);
+			assert(codeLength!C(to!S(`ウェブサイト@La_Verité.com`).filter!(x => true)()) ==
+                   to!(C[])(`ウェブサイト@La_Verité.com`).length);
+        }
+    }
 }
 
 
@@ -1424,7 +2078,7 @@ dstring toUTF32(in dchar[] s) @safe
 /++
     Returns a C-style zero-terminated string equivalent to $(D str). $(D str)
     must not contain embedded $(D '\0')'s as any C function will treat the first
-    $(D '\0') that it sees a the end of the string. If $(D str.empty) is
+    $(D '\0') that it sees as the end of the string. If $(D str.empty) is
     $(D true), then a string containing only $(D '\0') is returned.
 
     $(D toUTFz) accepts any type of string and is templated on the type of
@@ -1604,7 +2258,7 @@ unittest
 
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
-        alias Unqual!(typeof(S.init[0])) C;
+        alias Unqual!(ElementEncodingType!S) C;
 
         auto s1 = to!S("hello\U00010143\u0100\U00010143");
         auto temp = new C[](s1.length + 1);
@@ -1779,3 +2433,58 @@ unittest
     assert(count("\u20AC100") == 4);
 }
 
+
+// Ranges of code units for testing.
+version(unittest)
+{
+    struct InputCU(C)
+    {
+        @property bool empty() { return _str.empty; }
+        @property C front() { return _str[0]; }
+        void popFront() { _str = _str[1 .. $]; }
+
+        this(inout(C)[] str)
+        {
+            _str = to!(C[])(str);
+        }
+
+        C[] _str;
+    }
+
+    struct BidirCU(C)
+    {
+        @property bool empty() { return _str.empty; }
+        @property C front() { return _str[0]; }
+        void popFront() { _str = _str[1 .. $]; }
+        @property C back() { return _str[$ - 1]; }
+        void popBack() { _str = _str[0 .. $ - 1]; }
+        @property auto save() { return BidirCU(_str); }
+
+        this(inout(C)[] str)
+        {
+            _str = to!(C[])(str);
+        }
+
+        C[] _str;
+    }
+
+    struct RandomCU(C)
+    {
+        @property bool empty() { return _str.empty; }
+        @property C front() { return _str[0]; }
+        void popFront() { _str = _str[1 .. $]; }
+        @property C back() { return _str[$ - 1]; }
+        void popBack() { _str = _str[0 .. $ - 1]; }
+        @property auto save() { return RandomCU(_str); }
+        @property size_t length() { return _str.length; }
+        C opIndex(size_t i) { return _str[i]; }
+        auto opSlice(size_t i, size_t j) { return RandomCU(_str[i .. j]); }
+
+        this(inout(C)[] str)
+        {
+            _str = to!(C[])(str);
+        }
+
+        C[] _str;
+    }
+}
