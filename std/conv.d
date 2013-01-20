@@ -1608,7 +1608,7 @@ T toImpl(T, S)(S value)
     if ( isExactSomeString!S && isDynamicArray!S &&
         !isExactSomeString!T && is(typeof(parse!T(value))))
 {
-    scope(exit)
+    scope(success)
     {
         if (value.length)
         {
@@ -1623,7 +1623,7 @@ T toImpl(T, S)(S value, uint radix)
     if ( isExactSomeString!S && isDynamicArray!S &&
         !isExactSomeString!T && is(typeof(parse!T(value, radix))))
 {
-    scope(exit)
+    scope(success)
     {
         if (value.length)
         {
@@ -1631,6 +1631,13 @@ T toImpl(T, S)(S value, uint radix)
         }
     }
     return parse!T(value, radix);
+}
+
+unittest
+{
+    // Issue 6668 - ensure no collaterals thrown
+    try { to!uint("-1"); }
+    catch (ConvException e) { assert(e.next is null); }
 }
 
 unittest
