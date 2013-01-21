@@ -183,6 +183,10 @@ $(BOOKTABLE ,
     $(TR $(TD $(D $(LREF only)))
         $(TD Creates a _range that iterates over a single value.
     ))
+    $(TR $(TD $(D $(LREF orbit)))
+        $(TD Creates a _range that iterates a value under repeated application
+        of a function.
+    ))
 )
 
 These _range-construction tools are implemented using templates; but sometimes
@@ -6670,6 +6674,69 @@ unittest
     assert(equal(imm[0..0], imme));
     assert(equal(imm[1..1], imme));
     assert(imm[0] == 1);
+}
+
+/**
+This range infinitely iterates the orbit of $(D start) under application of
+$(D action). An orbit is the sequence of values obtained by repeated
+applications of a function to a starting value. For example, the orbit of the
+value $(I 1) under application of $(I multiplication by 2) is $(D 1, 2, 4, 8, 16, 32, ...)
+
+$(D orbit!f(x)) is semantically equivalent to
+$(D recurrence!((a, n) => f(a[n-1]))(x)).
+
+Example:
+----
+assert(equal(orbit!(a => 2 * a)(1).take(6), [1, 2, 4, 8, 16, 32]));
+
+// The sequence a(n+1) = 1 + 1 / a(n) converges to the golden ratio.
+auto goldenRatio = orbit!(a => 1 + 1 / a)(1.0);
+assert(goldenRatio.drop(10).front.approxEqual(1.6180339887));
+----
+  */
+auto orbit(alias action, T)(T start)
+    if (is(typeof(unaryFun!action(start)) : Unqual!T))
+{
+    static struct Result
+    {
+        this(T start) { _front = start; }
+
+        @property T front() { return _front; }
+        @property enum bool empty = false;
+        @property auto save() { return Result(_front); }
+        void popFront() { _front = unaryFun!action(_front); }
+
+        private Unqual!T _front;
+    }
+    return Result(start);
+}
+
+unittest
+{
+    assert(equal(orbit!(a => 2 * a)(1).take(6), [1, 2, 4, 8, 16, 32]));
+    auto goldenRatio = orbit!(a => 1 + 1 / a)(1.0);
+    assert(goldenRatio.drop(10).front.approxEqual(1.6180339887));
+
+    auto rot = orbit!(a => a << 8 | a >> 24)(0xDEADBEEF);
+    assert(equal(rot.take(4), [0xDEADBEEF, 0xADBEEFDE, 0xBEEFDEAD, 0xEFDEADBE]));
+    assert(equal(orbit!(a => a * a)(2).take(4), [2, 4, 16, 256]));
+
+    alias hailstones = orbit!(a => a % 2 == 0 ? a / 2 : 3 * a + 1, int);
+    assert(hailstones(6).until(1).walkLength() == 8);
+    assert(hailstones(11).until(1).walkLength() == 14);
+    assert(hailstones(27).until(1).walkLength() == 111);
+    assert(hailstones(27).drop(11).save.until(1).walkLength() == 100);
+
+    assert(equal(orbit!(a => a ~ a)("a").take(3), ["a", "aa", "aaaa"]));
+
+    assert(equal(orbit!(a => array(a.map!(b => b * b)()))([1, 2, 3]).take(3),
+        [[1, 2, 3], [1, 4, 9], [1, 16, 81]]));
+
+    // Use Newton method to iterate towards root of x^2-4.
+    static real f(real x) { return x * x - 4; }
+    static real df_dx(real x) { return 2 * x; }
+    auto newton = orbit!(x => x - f(x) / df_dx(x))(100.0);
+    assert(newton.drop(10).front.approxEqual(2.0));
 }
 
 /**
