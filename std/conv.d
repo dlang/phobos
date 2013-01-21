@@ -3780,7 +3780,7 @@ T* emplace(T, Args...)(T* chunk, auto ref Args args)
     else static if (is(typeof(T(args))))
     {
         // Struct without constructor that has one matching field for
-        // each argument. Individually emplace each attribute
+        // each argument. Individually emplace each field
         emplaceInitializer(chunk);
         foreach (i, ref field; chunk.tupleof[0 .. Args.length])
             emplacePostblitter(field, args[i]);
@@ -3794,9 +3794,9 @@ T* emplace(T, Args...)(T* chunk, auto ref Args args)
     }
     else
     {
-        //We can't emplace. Try to diagnosticate a disabled postblit.
+        //We can't emplace. Try to diagnose a disabled postblit.
         static assert(!(Args.length == 1 && is(Args[0] : T)),
-            "struct " ~ T.stringof ~ " is not emplaceable because its copy is anotated with disable");
+            "struct " ~ T.stringof ~ " is not emplaceable because its copy is annotated with @disable");
 
         //Some other error
         static assert(false,
@@ -3824,7 +3824,7 @@ private void emplacePostblitter(T, Arg)(ref T chunk, auto ref Arg arg)
     static assert(is(Arg : T), "emplace internal error");
 
     static assert(is(typeof({T t = arg;})),
-        "struct " ~ T.stringof ~ " is not emplaceable because it's copy is anotated with disable");
+        "struct " ~ T.stringof ~ " is not emplaceable because its copy is annotated with @disable");
 
     static if (isAssignable!T && !hasElaborateAssign!T)
         chunk = arg;
