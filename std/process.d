@@ -46,6 +46,8 @@
     search for the executable in the directories specified in the PATH
     environment variable.
 
+    Note that this module does not yet work on Win64.
+
     Macros:
     WIKI=Phobos/StdProcess
 */
@@ -61,6 +63,9 @@ version(Posix)
 }
 version(Windows)
 {
+    version (Win64)
+        static assert(false, "std.process does not yet work on Win64");
+
     import core.sys.windows.windows;
     import std.utf;
     import std.windows.syserror;
