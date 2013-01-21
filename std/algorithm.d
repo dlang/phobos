@@ -8971,7 +8971,7 @@ Example:
 uint hashFun(string) { ... expensive computation ... }
 string[] array = ...;
 // Sort strings by hash, slow
-sort!((a, b) => hashFun(a) < hashFun(b)")(array);
+sort!((a, b) => hashFun(a) < hashFun(b))(array);
 // Sort strings by hash, fast (only computes arr.length hashes):
 schwartzSort!(hashFun, "a < b")(array);
 ----
