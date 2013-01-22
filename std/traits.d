@@ -809,7 +809,7 @@ unittest
     static assert(dglit_pstc[0] == STC.ref_);
 
     // Bugzilla 9317
-    static inout int func(inout int param) { return param; }
+    static inout(int) func(inout int param) { return param; }
     static assert(ParameterStorageClassTuple!(typeof(func))[0] == STC.none);
 }
 
