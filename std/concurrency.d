@@ -304,9 +304,10 @@ class MailboxFull : Exception
 
 
 /**
- * Thrown when $(D ownerTid) doesn't find an owner thread.
+ * Thrown when a Tid is missing, e.g. when $(D ownerTid) doesn't
+ * find an owner thread.
  */
-class OwnerTidMissing : Exception
+class TidMissingException : Exception
 {
     this(string msg, string file = __FILE__, size_t line = __LINE__)
     {
@@ -325,14 +326,6 @@ class OwnerTidMissing : Exception
  */
 struct Tid
 {
-    void send(T...)( T vals )
-    {
-        static assert( !hasLocalAliasing!(T),
-                       "Aliases to mutable thread-local data not allowed." );
-        _send( this, vals );
-    }
-
-
 private:
     this( MessageBox m )
     {
@@ -359,12 +352,12 @@ private:
  * Return the Tid of the thread which
  * spawned the caller's thread.
  *
- * Throws: A $(D OwnerTidMissing) exception if
+ * Throws: A $(D TidMissingException) exception if
  * there is no owner thread.
  */
 @property Tid ownerTid()
 {
-    enforceEx!OwnerTidMissing(owner.mbox !is null, "Error: Thread has no owner thread.");
+    enforceEx!TidMissingException(owner.mbox !is null, "Error: Thread has no owner thread.");
     return owner;
 }
 
@@ -377,7 +370,7 @@ unittest
         ownerTid.send("Child responding");
     }
 
-    assertThrown!OwnerTidMissing(ownerTid);
+    assertThrown!TidMissingException(ownerTid);
     auto child = spawn(&fun);
     child.send("Main calling");
     string res = receiveOnly!string();
