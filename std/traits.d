@@ -175,19 +175,18 @@ unittest
     static assert(packageName!packageName == "std");      // symbol in this module
     static assert(packageName!(std.algorithm) == "std");  // other module from same package
 
-    import etc.c.curl;  // local import
-    static assert(packageName!etc == "etc");
-    static assert(packageName!(etc.c) == "etc.c");
-    static assert(packageName!curl_httppost == "etc.c");
+    import core.sync.barrier;  // local import
+    static assert(packageName!core == "core");
+    static assert(packageName!(core.sync) == "core.sync");
+    static assert(packageName!Barrier == "core.sync");
 }
 
 version(unittest)
 {
-    import etc.c.curl;  // global import
-    // Commented out because of dmd @@@BUG8922@@@
-    // static assert(packageName!etc == "etc"); // (currently: "std.etc")
-    static assert(packageName!(etc.c) == "etc.c");
-    static assert(packageName!curl_httppost == "etc.c");
+    import core.sync.barrier;  // global import
+    static assert(packageName!core == "core");
+    static assert(packageName!(core.sync) == "core.sync");
+    static assert(packageName!Barrier == "core.sync");
 }
 
 /**
@@ -223,18 +222,18 @@ unittest
     static assert(moduleName!(std.algorithm) == "std.algorithm");      // other module
     static assert(moduleName!(std.algorithm.map) == "std.algorithm");  // symbol in other module
 
-    import etc.c.curl;  // local import
-    static assert(!__traits(compiles, moduleName!(etc.c)));
-    static assert(moduleName!(etc.c.curl) == "etc.c.curl");
-    static assert(moduleName!curl_httppost == "etc.c.curl");
+    import core.sync.barrier;  // local import
+    static assert(!__traits(compiles, moduleName!(core.sync)));
+    static assert(moduleName!(core.sync.barrier) == "core.sync.barrier");
+    static assert(moduleName!Barrier == "core.sync.barrier");
 }
 
 version(unittest)
 {
-    import etc.c.curl;  // global import
-    static assert(!__traits(compiles, moduleName!(etc.c)));
-    static assert(moduleName!(etc.c.curl) == "etc.c.curl");
-    static assert(moduleName!curl_httppost == "etc.c.curl");
+    import core.sync.barrier;  // global import
+    static assert(!__traits(compiles, moduleName!(core.sync)));
+    static assert(moduleName!(core.sync.barrier) == "core.sync.barrier");
+    static assert(moduleName!Barrier == "core.sync.barrier");
 }
 
 /***
@@ -307,15 +306,15 @@ private template fullyQualifiedNameImplForSymbols(alias T)
 unittest
 {
     // Make sure those 2 are the same
-    static assert(fullyQualifiedNameImplForSymbols!fullyQualifiedName 
+    static assert(fullyQualifiedNameImplForSymbols!fullyQualifiedName
         == fullyQualifiedName!fullyQualifiedName);
 
     // Main tests
     alias fqn = fullyQualifiedName;
     static assert(fqn!fqn == "std.traits.fullyQualifiedName");
     static assert(fqn!(QualifiedNameTests.Inner) == "std.traits.QualifiedNameTests.Inner");
-    import etc.c.curl;
-    static assert(fqn!curl_httppost == "etc.c.curl.curl_httppost");
+    import core.sync.barrier;
+    static assert(fullyQualifiedName!Barrier == "core.sync.barrier.Barrier");
 }
 
 private template fullyQualifiedNameImplForTypes(T,
@@ -356,7 +355,7 @@ private template fullyQualifiedNameImplForTypes(T,
         enum variadic = variadicFunctionStyle!T;
         static if (variadic == Variadic.no)
             enum variadicStr = "";
-        else static if (variadic == Variadic.c) 
+        else static if (variadic == Variadic.c)
             enum variadicStr = ", ...";
         else static if (variadic == Variadic.d)
             enum variadicStr = parameters.length ? ", ..." : "...";
@@ -384,7 +383,7 @@ private template fullyQualifiedNameImplForTypes(T,
     string linkageString(T)() @property
     {
         enum linkage = functionLinkage!T;
-        
+
         if (linkage != "D")
             return format("extern(%s) ", linkage);
         else
@@ -437,7 +436,7 @@ private template fullyQualifiedNameImplForTypes(T,
             qualifiers[_shared]    && !alreadyShared,
             qualifiers[_inout]     && !alreadyInout);
     }
-    
+
     static if (is(T == string))
     {
         enum fullyQualifiedNameImplForTypes = "string";
@@ -461,25 +460,25 @@ private template fullyQualifiedNameImplForTypes(T,
     else static if (isStaticArray!T)
     {
         import std.conv;
-            
+
         enum fullyQualifiedNameImplForTypes = chain!(
             format("%s[%s]", fullyQualifiedNameImplForTypes!(typeof(T.init[0]), qualifiers), T.length)
         );
     }
     else static if (isArray!T)
-    {   
+    {
         enum fullyQualifiedNameImplForTypes = chain!(
             format("%s[]", fullyQualifiedNameImplForTypes!(typeof(T.init[0]), qualifiers))
         );
-    }   
+    }
     else static if (isAssociativeArray!T)
-    {   
+    {
         enum fullyQualifiedNameImplForTypes = chain!(
             format("%s[%s]", fullyQualifiedNameImplForTypes!(ValueType!T, qualifiers), fullyQualifiedNameImplForTypes!(KeyType!T, noQualifiers))
         );
-    }   
+    }
     else static if (isSomeFunction!T)
-    {   
+    {
         static if (is(T F == delegate))
         {
             enum qualifierString = format("%s%s",
@@ -558,7 +557,7 @@ unittest
         static assert(fqn!(typeof(funcPtr)) == format("%s function(out double, string)", inner_name));
         static assert(fqn!(typeof(cFuncPtr)) == format("extern(C) %s function(double, string)", inner_name));
 
-        // Delegate type with qualified function type 
+        // Delegate type with qualified function type
         static assert(fqn!(typeof(attrDeleg)) == format("shared(immutable(%s) "
             "delegate(ref double, scope string) nothrow @trusted shared const)", inner_name));
 
@@ -575,7 +574,7 @@ unittest
  * a pointer to function, a delegate, a struct
  * with an opCall, a pointer to a struct with an opCall,
  * or a class with an $(D opCall). Please note that $(D_KEYWORD ref)
- * is not part of a type, but the attribute of the function 
+ * is not part of a type, but the attribute of the function
  * (see template $(LREF functionAttributes)).
  * Example:
  * ---
