@@ -1207,7 +1207,23 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     BooleanTypeOf!T val = obj;
 
     if (f.spec == 's')
-        put(w, val ? "true" : "false");
+    {
+        string s = val ? "true" : "false";
+        if (!f.flDash)
+        {
+            // right align
+            if (f.width > s.length)
+                foreach (i ; 0 .. f.width - s.length) put(w, ' ');
+            put(w, s);
+        }
+        else
+        {
+            // left align
+            put(w, s);
+            if (f.width > s.length)
+                foreach (i ; 0 .. f.width - s.length) put(w, ' ');
+        }
+    }
     else
         formatValue(w, cast(int) val, f);
 }
@@ -1232,6 +1248,15 @@ unittest
     formatTest( S1(true),  "true"  );
     formatTest( S2(false), "S" );
     formatTest( S2(true),  "S" );
+}
+
+unittest
+{
+    string t1 = format("[%6s] [%6s] [%-6s]", true, false, true);
+    assert(t1 == "[  true] [ false] [true  ]");
+
+    string t2 = format("[%3s] [%-2s]", true, false);
+    assert(t2 == "[true] [false]");
 }
 
 /**
