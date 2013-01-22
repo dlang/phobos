@@ -303,6 +303,18 @@ class MailboxFull : Exception
 }
 
 
+/**
+ * Thrown when $(D ownerTid) doesn't find an owner thread.
+ */
+class OwnerTidMissing : Exception
+{
+    this(string msg, string file = __FILE__, size_t line = __LINE__)
+    {
+        super(msg, file, line);
+    }
+}
+
+
 //////////////////////////////////////////////////////////////////////////////
 // Thread ID
 //////////////////////////////////////////////////////////////////////////////
@@ -343,6 +355,34 @@ private:
     return Tid( mbox );
 }
 
+/**
+ * Return the Tid of the thread which
+ * spawned the caller's thread.
+ *
+ * Throws: A $(D OwnerTidMissing) exception if
+ * there is no owner thread.
+ */
+@property Tid ownerTid()
+{
+    enforceEx!OwnerTidMissing(owner.mbox !is null, "Error: Thread has no owner thread.");
+    return owner;
+}
+
+unittest
+{
+    static void fun()
+    {
+        string res = receiveOnly!string();
+        assert(res == "Main calling");
+        ownerTid.send("Child responding");
+    }
+
+    assertThrown!OwnerTidMissing(ownerTid);
+    auto child = spawn(&fun);
+    child.send("Main calling");
+    string res = receiveOnly!string();
+    assert(res == "Child responding");
+}
 
 //////////////////////////////////////////////////////////////////////////////
 // Thread Creation
