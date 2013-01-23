@@ -218,6 +218,17 @@ ALL_C_FILES = $(C_FILES) $(C_EXTRAS)
 
 OBJS = $(addsuffix $(DOTOBJ),$(addprefix $(ROOT)/,$(C_MODULES)))
 
+# The compiler command line to use in the std.process unittests. It should take
+# a single D source file and compile it into an executable file.  The following
+# placeholders may be used in the command-line arguments:
+#   {indir}    The directory in which the source file is located
+#   {infile}   The name of the source file (without directory)
+#   {outdir}   The directory in which output file(s) should be placed
+#   {outfile}  The name of the executable output file (without directory)
+# If the compiler leaves behind an object file, it, too, is expected to be in
+# the output directory.
+export STD_PROCESS_UNITTEST_COMPILER=dmd {indir}/{infile} -od{outdir} -of{outdir}/{outfile}
+
 ################################################################################
 # Rules begin here
 ################################################################################

@@ -639,7 +639,77 @@ version(Posix) private bool isExecutable(string path)
     return (access(toStringz(path), X_OK) == 0);
 }
 
+unittest
+{
+    TestProg prog1 = q{
+        void main() { }
+    };
+    assert (wait(spawnProcess(prog1.exe)) == 0);
 
+    TestProg prog2 = q{
+        int main() { return 123; }
+    };
+    auto pid2 = spawnProcess(prog2.exe);
+    assert (wait(pid2) == 123);
+    assert (wait(pid2) == 123);
+
+    TestProg prog3 = q{
+        int main(string[] args)
+        {
+            if (args.length == 3 && args[1] == "foo" && args[2] == "bar")
+                return 0;
+            return 1;
+        }
+    };
+    assert (wait(spawnProcess(prog3.exe, ["foo", "bar"])) == 0);
+    assert (wait(spawnProcess(prog3.exe~" foo bar")) == 0);
+    assert (wait(spawnProcess(prog3.exe)) == 1);
+
+    TestProg prog4 = q{
+        import core.stdc.stdlib, std.conv;
+        int main()
+        {
+            if (to!string(getenv("PATH")).length > 0) return 1;
+            if (to!string(getenv("hello")) != "world") return 2;
+            return 0;
+        }
+    };
+    auto env = [ "hello" : "world" ];
+    assert (wait(spawnProcess(prog4.exe, null, env)) == 0);
+    assert (wait(spawnProcess(prog4.exe, env)) == 0);
+
+    TestProg prog5 = q{
+        import std.stdio, std.string;
+        void main(string[] args)
+        {
+            auto s = stdin.readln().chomp();
+            stdout.writeln(s~" output "~args[1]);
+            stderr.writeln(s~" error "~args[2]);
+        }
+    };
+    auto pipe5i = pipe();
+    auto pipe5o = pipe();
+    auto pipe5e = pipe();
+    auto pid5 = spawnProcess(prog5.exe, ["foo", "bar" ],
+                             pipe5i.readEnd, pipe5o.writeEnd, pipe5e.writeEnd);
+    pipe5i.writeEnd.writeln("input");
+    pipe5i.writeEnd.flush();
+    assert (pipe5o.readEnd.readln().chomp() == "input output foo");
+    assert (pipe5e.readEnd.readln().chomp() == "input error bar");
+    wait(pid5);
+}
+
+version (Posix) unittest
+{
+    // Termination by signal.
+    import core.sys.posix.signal;
+    TestProg prog = q{
+        void main() { while(true) { } }
+    };
+    auto pid = spawnProcess(prog.exe);
+    kill(pid.processID, SIGTERM);
+    assert (wait(pid) == -SIGTERM);
+}
 
 
 /** Flags that control the behaviour of $(LREF spawnProcess).
@@ -985,6 +1055,57 @@ enum Redirect
     stdoutToStderr = 16,                    /// ditto
 }
 
+unittest
+{
+    TestProg prog = q{
+        import std.stdio, std.string;
+        int main(string[] args)
+        {
+            for (int i = 0; ; ++i)
+            {
+                auto s = stdin.readln().chomp();
+                if (s == "stop") return i;
+                stdout.writeln(s, args[1]);
+                stdout.flush();
+                stderr.writeln(s, args[2]);
+                stderr.flush();
+            }
+        }
+    };
+
+    auto pp = pipeProcess(prog.exe, ["bar", "baz"]);
+    pp.stdin.writeln("foo");
+    pp.stdin.flush();
+    assert (pp.stdout.readln().chomp() == "foobar");
+    assert (pp.stderr.readln().chomp() == "foobaz");
+    pp.stdin.writeln("1234567890");
+    pp.stdin.flush();
+    assert (pp.stdout.readln().chomp() == "1234567890bar");
+    assert (pp.stderr.readln().chomp() == "1234567890baz");
+    pp.stdin.writeln("stop");
+    pp.stdin.flush();
+    assert (wait(pp.pid) == 2);
+
+    pp = pipeProcess(prog.exe, ["12345", "67890"],
+                     Redirect.stdin | Redirect.stdout | Redirect.stderrToStdout);
+    pp.stdin.writeln("xyz");
+    pp.stdin.flush();
+    assert (pp.stdout.readln().chomp() == "xyz12345");
+    assert (pp.stdout.readln().chomp() == "xyz67890");
+    pp.stdin.writeln("stop");
+    pp.stdin.flush();
+    assert (wait(pp.pid) == 1);
+
+    pp = pipeShell(prog.exe~" AAAAA BBB",
+                   Redirect.stdin | Redirect.stdoutToStderr | Redirect.stderr);
+    pp.stdin.writeln("ab");
+    pp.stdin.flush();
+    assert (pp.stderr.readln().chomp() == "abAAAAA");
+    assert (pp.stderr.readln().chomp() == "abBBB");
+    pp.stdin.writeln("stop");
+    pp.stdin.flush();
+    assert (wait(pp.pid) == 1);
+}
 
 
 
@@ -1084,7 +1205,26 @@ Tuple!(int, "status", string, "output") execute(string name, string[] args...)
     return r;
 }
 
-
+unittest
+{
+    TestProg prog = q{
+        import std.stdio;
+        int main(string[] args)
+        {
+            stdout.write(args[1]);
+            stdout.flush();
+            stderr.write(args[2]);
+            stderr.flush();
+            return 123;
+        }
+    };
+    auto r = execute(prog.exe~" foo bar");
+    assert (r.status == 123);
+    assert (r.output == "foobar");
+    auto s = execute(prog.exe, "Hello", "World");
+    assert (s.status == 123);
+    assert (s.output == "HelloWorld");
+}
 
 
 // ============================== shell() ==============================
@@ -1128,7 +1268,23 @@ Tuple!(int, "status", string, "output") shell(string command)
     else assert(0);
 }
 
-
+unittest
+{
+    auto r1 = shell("echo foo");
+    assert (r1.status == 0);
+    assert (r1.output.chomp() == "foo");
+    auto r2 = shell("echo bar 1>&2");
+    assert (r2.status == 0);
+//    writeln("***");
+//    foreach (c; r2.output)
+//        writeln(c, " ", cast(int) c);
+//    writeln("***");
+    // stripRight() is needed because a space follows "bar" on some platforms.
+    assert (r2.output.chomp().stripRight() == "bar");
+    auto r3 = shell("exit 123");
+    assert (r3.status == 123);
+    assert (r3.output.empty);
+}
 
 
 // ============================== thisProcessID ==============================
@@ -1145,6 +1301,63 @@ version(Windows) @property int thisProcessID()
     return GetCurrentProcessId();
 }
 
+
+// ========================= unittest support code ===========================
+version(unittest) private struct TestProg
+{
+    this(string code)
+    {
+        import std.file;
+        auto dir = std.file.tempDir();
+        int i = 0;
+        string fileStem;
+        do
+        {
+            fileStem = "std_process_unittest_"~to!string(i++);
+            _srcPath = buildPath(dir, fileStem~".d");
+        } while (exists(_srcPath));
+        version (Windows)
+        {
+            auto objName = fileStem~".obj";
+            auto exeName = fileStem~".exe";
+        }
+        else
+        {
+            auto objName = fileStem~".o";
+            auto exeName = fileStem;
+        }
+        _exePath = buildPath(dir, exeName);
+        auto objPath = buildPath(dir, objName);
+
+        auto cmd = environment["STD_PROCESS_UNITTEST_COMPILER"]
+                    .replace("{indir}", dirName(_srcPath))
+                    .replace("{infile}", baseName(_srcPath))
+                    .replace("{outdir}", dirName(_exePath))
+                    .replace("{outfile}", baseName(_exePath));
+
+        std.file.write(_srcPath, code);
+        writeln(cmd);
+        auto result = shell(cmd);
+        if (exists(objPath)) remove(objPath);
+        if (result.status != 0)
+        {
+            std.stdio.stderr.writeln(result.output);
+            throw new Exception("TestProg compilation failed");
+        }
+    }
+
+    ~this()
+    {
+        import std.file;
+        if (!_srcPath.empty && exists(_srcPath)) remove(_srcPath);
+        if (!_exePath.empty && exists(_exePath)) remove(_exePath);
+    }
+
+    @property string exe() const @safe pure nothrow { return _exePath; }
+
+private:
+    string _srcPath, _exePath;
+}
 
 
 
