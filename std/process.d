@@ -46,10 +46,17 @@
     search for the executable in the directories specified in the PATH
     environment variable.
 
-    Note that this module does not yet work on Win64.
-
+    Bugs:
+        This module does not yet work on Win64.
+    Authors:
+        $(LINK2 https://github.com/kyllingstad, Lars Tandle Kyllingstad),
+        $(LINK2 https://github.com/schveiguy, Steven Schveighoffer)
+    Copyright:
+        Copyright (c) 2013, the authors. All rights reserved.
+    Source:
+        $(PHOBOSSRC std/_process.d)
     Macros:
-    WIKI=Phobos/StdProcess
+        WIKI=Phobos/StdProcess
 */
 module std.process;
 
