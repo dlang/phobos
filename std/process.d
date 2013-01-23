@@ -51,7 +51,6 @@
 */
 module std.process;
 
-
 version(Posix)
 {
     import core.stdc.errno;
@@ -111,8 +110,6 @@ else version(Windows)
 }
 
 
-
-
 /** A handle corresponding to a spawned process. */
 final class Pid
 {
@@ -126,12 +123,10 @@ final class Pid
         return _processID;
     }
 
-
     // See module-level wait() for documentation.
     version(Posix) int wait()
     {
         if (_processID == terminated) return _exitCode;
-
         int exitCode;
         while(true)
         {
@@ -139,7 +134,6 @@ final class Pid
             auto check = waitpid(processID, &status, 0);
             enforce (check != -1  ||  errno != ECHILD,
                 "Process does not exist or is not a child process.");
-
             if (WIFEXITED(status))
             {
                 exitCode = WEXITSTATUS(status);
@@ -152,7 +146,6 @@ final class Pid
             }
             // Process has stopped, but not terminated, so we continue waiting.
         }
-
         // Mark Pid as terminated, and cache and return exit code.
         _processID = terminated;
         _exitCode = exitCode;
@@ -163,7 +156,6 @@ final class Pid
         int wait()
         {
             if (_processID == terminated) return _exitCode;
-
             if(_handle != INVALID_HANDLE_VALUE)
             {
                 auto result = WaitForSingleObject(_handle, INFINITE);
@@ -187,9 +179,7 @@ final class Pid
         }
     }
 
-
 private:
-
     // Special values for _processID.
     enum invalid = -1, terminated = -2;
 
@@ -197,11 +187,9 @@ private:
     // running processes.
     int _processID = invalid;
 
-
     // Exit code cached by wait().  This is only expected to hold a
     // sensible value if _processID == terminated.
     int _exitCode;
-
 
     // Pids are only meant to be constructed inside this module, so
     // we make the constructor private.
@@ -222,8 +210,6 @@ private:
         }
     }
 }
-
-
 
 
 /** Spawns a new process.
@@ -329,7 +315,6 @@ Pid spawnProcess(string command,
         stdin_, stdout_, stderr_, config);
 }
 
-
 /// ditto
 Pid spawnProcess(string command, string[string] environmentVars,
     File stdin_ = std.stdio.stdin,
@@ -343,7 +328,6 @@ Pid spawnProcess(string command, string[string] environmentVars,
         stdin_, stdout_, stderr_, config);
 }
 
-
 /// ditto
 Pid spawnProcess(string name, const string[] args,
     File stdin_ = std.stdio.stdin,
@@ -355,7 +339,6 @@ Pid spawnProcess(string name, const string[] args,
         environ,
         stdin_, stdout_, stderr_, config);
 }
-
 
 /// ditto
 Pid spawnProcess(string name, const string[] args,
@@ -631,7 +614,6 @@ else version(Windows) private LPVOID toEnvz(const string[string] env)
     return envz.ptr;
 }
 
-
 // Checks whether the file exists and can be executed by the
 // current user.
 version(Posix) private bool isExecutable(string path)
@@ -754,8 +736,6 @@ enum Config
 }
 
 
-
-
 /** Waits for a specific spawned process to terminate and returns
     its exit status.
 
@@ -780,8 +760,6 @@ int wait(Pid pid)
 }
 
 
-
-
 /** Creates a unidirectional _pipe.
 
     Data is written to one end of the _pipe and read from the other.
@@ -800,9 +778,7 @@ version(Posix) Pipe pipe()
     int[2] fds;
     errnoEnforce(core.sys.posix.unistd.pipe(fds) == 0,
                  "Unable to create pipe");
-
     Pipe p;
-
     p._read = File(errnoEnforce(fdopen(fds[0], "r"), "Cannot open read end of pipe"),
                    null,
                    1,
@@ -811,7 +787,6 @@ version(Posix) Pipe pipe()
                     null,
                     1,
                     true);
-
     return p;
 }
 else version(Windows) Pipe pipe()
@@ -842,8 +817,7 @@ else version(Windows) Pipe pipe()
         FILE * local_fdopen(int fd, const(char)* mode)
         {
             auto fp = core.stdc.stdio.fopen("NUL", mode);
-            if(!fp)
-                return null;
+            if(!fp) return null;
             FLOCK(fp);
             auto iob = cast(_iobuf*)fp;
             .close(iob._file);
@@ -873,10 +847,8 @@ else version(Windows) Pipe pipe()
                         1,
                         true);
     }
-
     return p;
 }
-
 
 /// ditto
 struct Pipe
@@ -904,11 +876,9 @@ struct Pipe
         _write.close();
     }
 
-
 private:
     File _read, _write;
 }
-
 
 unittest
 {
@@ -917,11 +887,6 @@ unittest
     p.writeEnd.flush();
     assert (p.readEnd.readln().chomp() == "Hello World");
 }
-
-
-
-
-// ============================== pipeProcess() ==============================
 
 
 /** Starts a new process, creating pipes to redirect its standard
@@ -951,7 +916,6 @@ ProcessPipes pipeProcess(string command,
     auto splitCmd = split(command);
     return pipeProcess(splitCmd[0], splitCmd[1 .. $], redirectFlags);
 }
-
 
 /// ditto
 ProcessPipes pipeProcess(string name, string[] args,
@@ -1024,14 +988,11 @@ ProcessPipes pipeProcess(string name, string[] args,
     return pipes;
 }
 
-
 /// ditto
 ProcessPipes pipeShell(string command, Redirect redirectFlags = Redirect.all)
 {
     return pipeProcess(getShell(), [shellSwitch, command], redirectFlags);
 }
-
-
 
 
 /** Flags that can be passed to $(LREF pipeProcess) and $(LREF pipeShell)
@@ -1108,9 +1069,8 @@ unittest
 }
 
 
-
-/** Object containing $(XREF stdio,File) handles that allow communication with
-    a child process through its standard streams.
+/** Object which contains $(XREF stdio,File) handles that allow communication
+    with a child process through its standard streams.
 */
 struct ProcessPipes
 {
@@ -1121,7 +1081,6 @@ struct ProcessPipes
         return _pid;
     }
 
-
     /** Returns an $(XREF stdio,File) that allows writing to the child process'
         standard input stream.
     */
@@ -1131,7 +1090,6 @@ struct ProcessPipes
             "Child process' standard input stream hasn't been redirected.");
         return _stdin;
     }
-
 
     /** Returns an $(XREF stdio,File) that allows reading from the child
         process' standard output/error stream.
@@ -1151,18 +1109,11 @@ struct ProcessPipes
         return _stderr;
     }
 
-
 private:
-
     Redirect _redirectFlags;
     Pid _pid;
     File _stdin, _stdout, _stderr;
 }
-
-
-
-
-// ============================== execute() ==============================
 
 
 /** Executes the given program and returns its exit code and output.
@@ -1188,7 +1139,6 @@ Tuple!(int, "status", string, "output") execute(string command)
     r.status = wait(p.pid);
     return r;
 }
-
 
 /// ditto
 Tuple!(int, "status", string, "output") execute(string name, string[] args...)
@@ -1227,12 +1177,8 @@ unittest
 }
 
 
-// ============================== shell() ==============================
-
-
 version(Posix)   private immutable string shellSwitch = "-c";
 version(Windows) private immutable string shellSwitch = "/C";
-
 
 // Gets the user's default shell.
 version(Posix)  private string getShell()
@@ -1244,8 +1190,6 @@ version(Windows) private string getShell()
 {
     return "cmd.exe";
 }
-
-
 
 
 /** Executes $(D _command) in the user's default _shell and returns its
@@ -1275,19 +1219,12 @@ unittest
     assert (r1.output.chomp() == "foo");
     auto r2 = shell("echo bar 1>&2");
     assert (r2.status == 0);
-//    writeln("***");
-//    foreach (c; r2.output)
-//        writeln(c, " ", cast(int) c);
-//    writeln("***");
     // stripRight() is needed because a space follows "bar" on some platforms.
     assert (r2.output.chomp().stripRight() == "bar");
     auto r3 = shell("exit 123");
     assert (r3.status == 123);
     assert (r3.output.empty);
 }
-
-
-// ============================== thisProcessID ==============================
 
 
 /** Returns the process ID number of the current process. */
@@ -1302,7 +1239,11 @@ version(Windows) @property int thisProcessID()
 }
 
 
-// ========================= unittest support code ===========================
+// Unittest support code:  TestProg takes a string that contains an
+// entire D program, main() function and all, and compiles it using
+// the compiler command line specified in the environment variable
+// STD_PROCESS_UNITTEST_COMPILER.  It removes the source and the
+// output file upon destruction.
 version(unittest) private struct TestProg
 {
     this(string code)
@@ -1329,14 +1270,12 @@ version(unittest) private struct TestProg
         _exePath = buildPath(dir, exeName);
         auto objPath = buildPath(dir, objName);
 
+        std.file.write(_srcPath, code);
         auto cmd = environment["STD_PROCESS_UNITTEST_COMPILER"]
                     .replace("{indir}", dirName(_srcPath))
                     .replace("{infile}", baseName(_srcPath))
                     .replace("{outdir}", dirName(_exePath))
                     .replace("{outfile}", baseName(_exePath));
-
-        std.file.write(_srcPath, code);
-        writeln(cmd);
         auto result = shell(cmd);
         if (exists(objPath)) remove(objPath);
         if (result.status != 0)
@@ -1358,10 +1297,6 @@ version(unittest) private struct TestProg
 private:
     string _srcPath, _exePath;
 }
-
-
-
-// ============================== environment ==============================
 
 
 /** Manipulates environment variables using an associative-array-like
@@ -1402,8 +1337,6 @@ static:
         return value;
     }
 
-
-
     // Assigns a value to an environment variable.  If the variable
     // exists, it is overwritten.
     string opIndexAssign(string value, string name)
@@ -1415,7 +1348,6 @@ static:
             {
                 return value;
             }
-
             // The default errno error message is very uninformative
             // in the most common case, so we handle it manually.
             enforce(errno != EINVAL,
@@ -1424,7 +1356,6 @@ static:
                 "Failed to add environment variable");
             assert(0);
         }
-
         else version(Windows)
         {
             enforce(
@@ -1433,11 +1364,8 @@ static:
             );
             return value;
         }
-
         else static assert(0);
     }
-
-
 
     // Removes an environment variable.  The function succeeds even
     // if the variable isn't in the environment.
@@ -1447,16 +1375,12 @@ static:
         {
             core.sys.posix.stdlib.unsetenv(toStringz(name));
         }
-
         else version(Windows)
         {
             SetEnvironmentVariableW(toUTF16z(name), null);
         }
-
         else static assert(0);
     }
-
-
 
     // Same as opIndex, except it returns a default value if
     // the variable doesn't exist.
@@ -1467,13 +1391,10 @@ static:
         return found ? value : defaultValue;
     }
 
-
-
     // Returns all environment variables in an associative array.
     string[string] toAA()
     {
         string[string] aa;
-
         version(Posix)
         {
             for (int i=0; environ[i] != null; ++i)
@@ -1514,15 +1435,11 @@ static:
                 aa[name] = toUTF8(envBlock[start .. i]);
             }
         }
-
         else static assert(0);
-
         return aa;
     }
 
-
 private:
-
     // Returns the length of an environment variable (in number of
     // wchars, including the null terminator), or 0 if it doesn't exist.
     version(Windows)
@@ -1530,7 +1447,6 @@ private:
     {
         return GetEnvironmentVariableW(namez, null, 0);
     }
-
 
     // Retrieves the environment variable, returns false on failure.
     bool getImpl(string name, out string value)
@@ -1547,7 +1463,6 @@ private:
             value = lastResult;
             return true;
         }
-
         else version(Windows)
         {
             const namez = toUTF16z(name);
@@ -1560,11 +1475,9 @@ private:
             value = toUTF8(buf[0 .. $-1]);
             return true;
         }
-
         else static assert(0);
     }
 }
-
 
 unittest
 {
