@@ -744,7 +744,8 @@ unittest
 }
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated bool receiveTimeout(T...)( long ms, T ops )
+deprecated("Please use the overload of receiveTimeout which takes a Duration.")
+bool receiveTimeout(T...)( long ms, T ops )
 {
     return receiveTimeout( dur!"msecs"( ms ), ops );
 }

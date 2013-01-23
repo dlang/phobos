@@ -4606,7 +4606,8 @@ unittest
  * assert(std.algorithm.countUntil("日本語", '本') == 1);
  * --------
  */
-deprecated ptrdiff_t indexOf(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+deprecated("Please use std.algorithm.countUntil instead.")
+ptrdiff_t indexOf(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (is(typeof(startsWith!pred(haystack, needle))))
 {
     return countUntil!pred(haystack, needle);
@@ -6160,7 +6161,7 @@ assert(minCount!("a > b")(a) == tuple(4, 2));
  */
 Tuple!(ElementType!Range, size_t)
 minCount(alias pred = "a < b", Range)(Range range)
-    if (isInputRange!Range && !isInfinite!Range && 
+    if (isInputRange!Range && !isInfinite!Range &&
         is(typeof(binaryFun!pred(range.front, range.front))))
 {
     enforce(!range.empty, "Can't count elements from an empty range");
@@ -6222,7 +6223,7 @@ assert(minPos!("a > b")(a) == [ 4, 1, 2, 4, 1, 1, 2 ]);
 ----
  */
 Range minPos(alias pred = "a < b", Range)(Range range)
-    if (isForwardRange!Range && !isInfinite!Range && 
+    if (isForwardRange!Range && !isInfinite!Range &&
         is(typeof(binaryFun!pred(range.front, range.front))))
 {
     if (range.empty) return range;
@@ -9781,30 +9782,26 @@ unittest
 }
 
 // Deprecated. It will be removed in January 2013.  Use std.range.SortedRange.canFind.
-deprecated bool canFindSorted(alias pred = "a < b", Range, V)(Range range, V value) {
-    pragma(msg, "std.algorithm.canFindSorted has been deprecated. " ~
-        "Please use std.range.SortedRange.canFind instead.");
+deprecated("Please use std.range.SortedRange.canFind instead.")
+bool canFindSorted(alias pred = "a < b", Range, V)(Range range, V value) {
     return assumeSorted!pred(range).canFind!V(value);
 }
 
 // Deprecated. It will be removed in January 2013.  Use std.range.SortedRange.lowerBound.
-deprecated Range lowerBound(alias pred = "a < b", Range, V)(Range range, V value) {
-    pragma(msg, "std.algorithm.lowerBound has been deprecated. " ~
-        "Please use std.range.SortedRange.lowerBound instead.");
+deprecated("Please use std.range.SortedRange.lowerBound instead.")
+Range lowerBound(alias pred = "a < b", Range, V)(Range range, V value) {
     return assumeSorted!pred(range).lowerBound!V(value).release;
 }
 
 // Deprecated. It will be removed in January 2013.  Use std.range.SortedRange.upperBound.
-deprecated Range upperBound(alias pred = "a < b", Range, V)(Range range, V value) {
-    pragma(msg, "std.algorithm.upperBound has been deprecated. " ~
-        "Please use std.range.SortedRange.upperBound instead.");
+deprecated("Please use std.range.SortedRange.upperBound instead.")
+Range upperBound(alias pred = "a < b", Range, V)(Range range, V value) {
     return assumeSorted!pred(range).upperBound!V(value).release;
 }
 
 // Deprecated. It will be removed in January 2013.  Use std.range.SortedRange.equalRange.
-deprecated Range equalRange(alias pred = "a < b", Range, V)(Range range, V value) {
-    pragma(msg, "std.algorithm.equalRange has been deprecated. " ~
-        "Please use std.range.SortedRange.equalRange instead.");
+deprecated("Please use std.range.SortedRange.equalRange instead.")
+Range equalRange(alias pred = "a < b", Range, V)(Range range, V value) {
     return assumeSorted!pred(range).equalRange!V(value).release;
 }
 

@@ -1265,12 +1265,14 @@ public:
         return value;
     }
 
-    deprecated uint value_DWORD_LITTLEENDIAN()
+    deprecated("Please use value_DWORD instead.")
+    uint value_DWORD_LITTLEENDIAN()
     {
         return value_DWORD;
     }
 
-    deprecated uint value_DWORD_BIGENDIAN()
+    deprecated("Please use value_DWORD instead.")
+    uint value_DWORD_BIGENDIAN()
     {
         return value_DWORD;
     }
@@ -1293,7 +1295,8 @@ public:
         return value;
     }
 
-    deprecated ulong value_QWORD_LITTLEENDIAN()
+    deprecated("Please use value_QWORD instead.")
+    ulong value_QWORD_LITTLEENDIAN()
     {
         return value_QWORD;
     }
