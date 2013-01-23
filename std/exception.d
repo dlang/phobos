@@ -562,7 +562,8 @@ template enforceEx(E)
     If $(D !!value) is $(D true), $(D value) is returned. Otherwise,
     $(D new E(msg)) is thrown.
   +/
-deprecated template enforceEx(E)
+deprecated("Please use the version of enforceEx which takes an exception that constructs with new E(msg, file, line).")
+template enforceEx(E)
     if (is(typeof(new E(""))) && !is(typeof(new E("", __FILE__, __LINE__))) && !is(typeof(new E(__FILE__, __LINE__))))
 {
     T enforceEx(T)(T value, lazy string msg = "")
