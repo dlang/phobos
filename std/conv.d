@@ -1131,13 +1131,11 @@ unittest
 
     Conversions to string with optional configures.
 */
-deprecated T toImpl(T, S)(S s, in T leftBracket, in T separator = ", ", in T rightBracket = "]")
+deprecated("Please use std.format.formattedWrite instead.")
+T toImpl(T, S)(S s, in T leftBracket, in T separator = ", ", in T rightBracket = "]")
     if (!isSomeChar!(ElementType!S) && (isInputRange!S || isInputRange!(Unqual!S)) &&
         isExactSomeString!T)
 {
-    pragma(msg, hardDeprec!("2.060", "January 2013", "std.conv.toImpl with extra parameters",
-                                                 "std.format.formattedWrite"));
-
     static if (!isInputRange!S)
     {
         alias toImpl!(T, Unqual!S) ti;
@@ -1168,24 +1166,20 @@ deprecated T toImpl(T, S)(S s, in T leftBracket, in T separator = ", ", in T rig
 }
 
 /// ditto
-deprecated T toImpl(T, S)(ref S s, in T leftBracket, in T separator = " ", in T rightBracket = "]")
+deprecated("Please use std.format.formattedWrite instead.")
+T toImpl(T, S)(ref S s, in T leftBracket, in T separator = " ", in T rightBracket = "]")
     if ((is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[])) &&
         isExactSomeString!T)
 {
-    pragma(msg, hardDeprec!("2.060", "January 2013", "std.conv.toImpl with extra parameters",
-                                                 "std.format.formattedWrite"));
-
     return toImpl(s);
 }
 
 /// ditto
-deprecated T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separator = ", ", in T rightBracket = "]")
+deprecated("Please use std.format.formattedWrite instead.")
+T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separator = ", ", in T rightBracket = "]")
     if (isAssociativeArray!S && !is(S == enum) &&
         isExactSomeString!T)
 {
-    pragma(msg, hardDeprec!("2.060", "January 2013", "std.conv.toImpl with extra parameters",
-                                                 "std.format.formattedWrite"));
-
     alias Unqual!(ElementEncodingType!T) Char;
     auto result = appender!(Char[])();
 // hash-to-string conversion
@@ -1205,26 +1199,22 @@ deprecated T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separat
 }
 
 /// ditto
-deprecated T toImpl(T, S)(S s, in T nullstr)
+deprecated("Please use std.format.formattedWrite instead.")
+T toImpl(T, S)(S s, in T nullstr)
     if (is(S : Object) &&
         isExactSomeString!T)
 {
-    pragma(msg, hardDeprec!("2.060", "January 2013", "std.conv.toImpl with extra parameters",
-                                                 "std.format.formattedWrite"));
-
     if (!s)
         return nullstr;
     return to!T(s.toString());
 }
 
 /// ditto
-deprecated T toImpl(T, S)(S s, in T left, in T separator = ", ", in T right = ")")
+deprecated("Please use std.format.formattedWrite instead.")
+T toImpl(T, S)(S s, in T left, in T separator = ", ", in T right = ")")
     if (is(S == struct) && !is(typeof(&S.init.toString)) && !isInputRange!S &&
         isExactSomeString!T)
 {
-    pragma(msg, hardDeprec!("2.060", "January 2013", "std.conv.toImpl with extra parameters",
-                                                 "std.format.formattedWrite"));
-
     Tuple!(FieldTypeTuple!S) * t = void;
     static if ((*t).sizeof == S.sizeof)
     {
@@ -3799,11 +3789,4 @@ unittest
     auto result = appender!(char[])();
     toTextRange(-1, result);
     assert(result.data == "-1");
-}
-
-template hardDeprec(string vers, string date, string oldFunc, string newFunc)
-{
-    enum hardDeprec = Format!("Notice: As of Phobos %s, %s has been deprecated. " ~
-                              "It will be removed in %s. Please use %s instead.",
-                              vers, oldFunc, date, newFunc);
 }

@@ -2028,7 +2028,8 @@ unittest
  * }
  * ----
  */
-deprecated alias listDir listdir;
+deprecated("Please use dirEntries instead.")
+alias listDir listdir;
 
 
 /***************************************************
@@ -3027,7 +3028,8 @@ void main(string[] args)
 }
 --------------------
  +/
-deprecated string[] listDir(C)(in C[] pathname)
+deprecated("Please use dirEntries instead.")
+string[] listDir(C)(in C[] pathname)
 {
     auto result = appender!(string[])();
 
@@ -3097,7 +3099,8 @@ void main(string[] args)
 }
 --------------------
  +/
-deprecated string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
+deprecated("Please use dirEntries instead.")
+string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
     if(is(C : char) && !is(U: bool delegate(string filename)))
 {
     import std.regexp;
@@ -3169,7 +3172,8 @@ deprecated string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink 
  * }
  * ----
  */
-deprecated void listDir(C, U)(in C[] pathname, U callback)
+deprecated("Please use dirEntries instead.")
+void listDir(C, U)(in C[] pathname, U callback)
     if(is(C : char) && is(U: bool delegate(string filename)))
 {
     _listDir(pathname, callback);
