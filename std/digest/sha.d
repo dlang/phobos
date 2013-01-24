@@ -125,9 +125,9 @@ unittest
     hash = sha.finish();
 }
 
-version(OSX)
+version(D_PIC)
 {
-    // Do not use.
+    // Do not use (Bug9378).
 }
 else version(D_InlineAsm_X86)
 {
