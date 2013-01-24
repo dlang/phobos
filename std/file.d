@@ -276,7 +276,7 @@ decoding error.
 Example:
 
 ----
-enforce(system("echo abc>deleteme") == 0);
+enforce(execute("echo abc>deleteme") == 0);
 scope(exit) remove("deleteme");
 enforce(chomp(readText("deleteme")) == "abc");
 ----
@@ -2221,7 +2221,7 @@ version(Posix) unittest
 
     d = deleteme~"/a/b/c/d/e/f/g";
     mkdirRecurse(d);
-    std.process.system("ln -sf "~deleteme~"/a/b/c "~deleteme~"/link");
+    std.process.execute("ln -sf "~deleteme~"/a/b/c "~deleteme~"/link");
     rmdirRecurse(deleteme);
     enforce(!exists(deleteme));
 }
