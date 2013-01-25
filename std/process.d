@@ -78,7 +78,8 @@ version(Windows)
         // to convert between Windows file handles and FILE*s.
         version = DMC_RUNTIME;
     }
-    else
+
+    version (DMC_RUNTIME) { } else
     {
         // Some MSVCRT functions and constants.
         import core.stdc.stdint;
