@@ -5103,15 +5103,23 @@ unittest
 
 
 /**
-Exactly the same as the builtin traits:
-$(D ___traits(_isAbstractFunction, method)).
+ * Detect whether $(D T) is a an abstract function.
  */
-template isAbstractFunction(method...)
-    if (method.length == 1)
+template isAbstractFunction(T...)
+    if (T.length == 1)
 {
-    enum bool isAbstractFunction  = __traits(isAbstractFunction, method[0]);
+    enum bool isAbstractFunction = __traits(isAbstractFunction, T[0]);
 }
 
+unittest
+{
+    struct S { void foo() { } }
+    class C { void foo() { } }
+    class AC { abstract void foo(); }
+    static assert(!isAbstractFunction!(S.foo));
+    static assert(!isAbstractFunction!(C.foo));
+    static assert(isAbstractFunction!(AC.foo));
+}
 
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
