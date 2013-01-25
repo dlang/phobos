@@ -2842,7 +2842,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
         }
         else
         {
-            const void * p = val;
+            const p = val;
             if (f.spec == 's')
             {
                 FormatSpec!Char fs = f; // fs is copy for change its values.
@@ -2899,6 +2899,12 @@ unittest
     formatTest( B.init, "null" );
 }
 
+unittest
+{
+    // Test for issue 9336
+    shared int i;
+    format("%s", &i);
+}
 
 /**
    Delegates are formatted by 'Attributes ReturnType delegate(Parameters)'
