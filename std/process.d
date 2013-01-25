@@ -46,8 +46,6 @@
     search for the executable in the directories specified in the PATH
     environment variable.
 
-    Bugs:
-        This module does not yet work on Win64.
     Authors:
         $(LINK2 https://github.com/kyllingstad, Lars Tandle Kyllingstad),
         $(LINK2 https://github.com/schveiguy, Steven Schveighoffer)
@@ -70,17 +68,29 @@ version(Posix)
 }
 version(Windows)
 {
-    version (Win64)
-        static assert(false, "std.process does not yet work on Win64");
-
+    import core.stdc.stdio;
     import core.sys.windows.windows;
     import std.utf;
     import std.windows.syserror;
-    import core.stdc.stdio;
-    version(DigitalMars)
+    version(Win32) version(DigitalMars)
     {
-        // this helps on Wine
-        version = PIPE_USE_ALT_FDOPEN;
+        // When the DMC runtime is used, we have to use some custom functions
+        // to convert between Windows file handles and FILE*s.
+        version = DMC_RUNTIME;
+    }
+    else
+    {
+        // Some MSVCRT functions and constants.
+        import core.stdc.stdint;
+        extern(C) intptr_t _get_osfhandle(int fd);
+        extern(C) int _open_osfhandle(intptr_t osfhandle, int flags);
+        extern(C) FILE* _fdopen(int fd, const (char)* mode);
+        enum
+        {
+            _O_RDONLY = 0x0000,
+            _O_APPEND = 0x0004,
+            _O_TEXT   = 0x4000
+        }
     }
 }
 
@@ -533,9 +543,18 @@ else version(Windows) private Pid spawnProcessImpl
     errnoEnforce(stderrFD != -1, "Invalid stderr stream");
 
     // need to convert file descriptors to HANDLEs
-    startinfo.hStdInput = _fdToHandle(stdinFD);
-    startinfo.hStdOutput = _fdToHandle(stdoutFD);
-    startinfo.hStdError = _fdToHandle(stderrFD);
+    version (DMC_RUNTIME)
+    {
+        startinfo.hStdInput = _fdToHandle(stdinFD);
+        startinfo.hStdOutput = _fdToHandle(stdoutFD);
+        startinfo.hStdError = _fdToHandle(stderrFD);
+    }
+    else // MSVCRT
+    {
+        startinfo.hStdInput = _get_osfhandle(stdinFD);
+        startinfo.hStdOutput = _get_osfhandle(stdoutFD);
+        startinfo.hStdError = _get_osfhandle(stderrFD);
+    }
 
     // TODO: need to fix this for unicode
     if(!CreateProcessA(null, cmdline.ptr, null, null, true, (config & Config.gui) ? CREATE_NO_WINDOW : 0, envz, null, &startinfo, &pi))
@@ -816,11 +835,19 @@ else version(Windows) Pipe pipe()
     }
 
     // Create file descriptors from the handles
-    auto readfd = _handleToFD(readHandle, FHND_DEVICE);
-    auto writefd = _handleToFD(writeHandle, FHND_DEVICE);
+    version (DMC_RUNTIME)
+    {
+        auto readfd = _handleToFD(readHandle, FHND_DEVICE);
+        auto writefd = _handleToFD(writeHandle, FHND_DEVICE);
+    }
+    else // MSVCRT
+    {
+        auto readfd = _open_osfhandle(readHandle, _O_RDONLY);
+        auto writefd = _open_osfhandle(writeHandle, _O_APPEND);
+    }
 
     Pipe p;
-    version(PIPE_USE_ALT_FDOPEN)
+    version(DMC_RUNTIME)
     {
         // This is a re-implementation of DMC's fdopen, but without the
         // mucking with the file descriptor.  POSIX standard requires the
@@ -848,13 +875,13 @@ else version(Windows) Pipe pipe()
                         1,
                         true);
     }
-    else
+    else // MSVCRT
     {
-        p._read = File(errnoEnforce(fdopen(readfd, "r"), "Cannot open read end of pipe"),
+        p._read = File(errnoEnforce(_fdopen(readfd, "r"), "Cannot open read end of pipe"),
                        null,
                        1,
                        true);
-        p._write = File(errnoEnforce(fdopen(writefd, "a"), "Cannot open write end of pipe"),
+        p._write = File(errnoEnforce(_fdopen(writefd, "a"), "Cannot open write end of pipe"),
                         null,
                         1,
                         true);
