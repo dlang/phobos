@@ -3551,8 +3551,18 @@ T* emplace(T, Args...)(T* chunk, auto ref Args args)
     {
         static assert(Args.length == 1);
         //static assert(0, T.stringof ~ " " ~ Args.stringof);
-        // initialize();
-        *chunk = args[0];
+        static if (is(T == Args[0]))
+        {
+            memcpy(chunk, &args[0], T.sizeof);
+            static if (hasElaborateCopyConstructor!T)
+                chunk.__postblit();
+        }
+        else
+        {
+            static if (hasElaborateAssign!T)
+                initialize();
+            *chunk = args[0];
+        }
     }
     return chunk;
 }
@@ -3577,6 +3587,43 @@ unittest
     auto s2 = S(42, 43);
     assert(*emplace!S(cast(S*) s1.ptr, s2) == s2);
     assert(*emplace!S(cast(S*) s1, 44, 45) == S(44, 45));
+}
+
+unittest
+{
+    static struct Postblit
+    {
+        this(this)
+        {
+            if (ptr) ++*ptr;
+        }
+        size_t* ptr;
+    }
+
+    // fake uninitialized memory
+    Postblit mem = Postblit(cast(size_t*)0x1);
+    auto p = new size_t;
+    emplace(&mem, Postblit(p));
+    assert(mem.ptr == p && *p == 1);
+}
+
+unittest
+{
+    static struct Assign
+    {
+        void opAssign(Assign rhs)
+        {
+            if (ptr && rhs.ptr) *ptr = *rhs.ptr;
+            else ptr = rhs.ptr;
+        }
+        size_t* ptr;
+    }
+
+    // fake uninitialized memory
+    Assign mem = Assign(cast(size_t*)0x1);
+    auto p = new size_t;
+    emplace(&mem, Assign(p));
+    assert(mem.ptr == p);
 }
 
 unittest
