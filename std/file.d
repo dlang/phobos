@@ -2206,35 +2206,6 @@ unittest
     assert(!exists("unittest_write2.tmp"));
 }
 
-//Remove this when _listDir is removed. It's not needed to test
-//DirEntry. Plenty of other tests to do that already.
-unittest
-{
-    _listDir(".", delegate bool (DirEntry * de)
-    {
-        version(Windows)
-        {
-            auto s = std.string.format("%s : c %s, w %s, a %s",
-                                       de.name,
-                                       de.timeCreated,
-                                       de.timeLastModified,
-                                       de.timeLastAccessed);
-        }
-        else version(Posix)
-        {
-            auto s = std.string.format("%s : c %s, w %s, a %s",
-                                       de.name,
-                                       de.timeStatusChanged,
-                                       de.timeLastModified,
-                                       de.timeLastAccessed);
-        }
-
-        return true;
-    }
-    );
-}
-
-
 /**
  * Dictates directory spanning policy for $(D_PARAM dirEntries) (see below).
  */
