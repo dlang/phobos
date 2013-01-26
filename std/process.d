@@ -83,14 +83,24 @@ version(Windows)
     {
         // Some MSVCRT functions and constants.
         import core.stdc.stdint;
-        extern(C) intptr_t _get_osfhandle(int fd);
-        extern(C) int _open_osfhandle(intptr_t osfhandle, int flags);
-        extern(C) FILE* _fdopen(int fd, const (char)* mode);
+        @trusted extern(C)
+        {
+            int _fileno(FILE* stream);
+            HANDLE _get_osfhandle(int fd);
+            int _open_osfhandle(HANDLE osfhandle, int flags);
+            FILE* _fdopen(int fd, const (char)* mode);
+        }
+        enum
+        {
+            STDIN_FILENO  = 0,
+            STDOUT_FILENO = 1,
+            STDERR_FILENO = 2,
+        }
         enum
         {
             _O_RDONLY = 0x0000,
             _O_APPEND = 0x0004,
-            _O_TEXT   = 0x4000
+            _O_TEXT   = 0x4000,
         }
     }
 }
@@ -1511,7 +1521,7 @@ private:
             if (len == 1) return true;
 
             auto buf = new WCHAR[len];
-            GetEnvironmentVariableW(namez, buf.ptr, buf.length);
+            GetEnvironmentVariableW(namez, buf.ptr, cast(DWORD) buf.length);
             value = toUTF8(buf[0 .. $-1]);
             return true;
         }
