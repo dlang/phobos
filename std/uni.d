@@ -122,6 +122,25 @@ dchar toLower(dchar c) @safe pure nothrow
             if((c & 1) == 0)
                 ++c;
         }
+		else if( c >= 0x386 && c <= 0x3AB ) // Greek characters
+		{
+			if( c >= 'Α' && c <= 'Ω' )
+			{
+				c += 32;
+			}
+			else
+			{
+				if( c == 'Ά' ) c = 'ά';
+				else if( c == 'Έ' ) c = 'έ';
+				else if( c == 'Ή' ) c = 'ή';
+				else if( c == 'Ί' ) c = 'ί';
+				else if( c == 'Ό' ) c = 'ό';
+				else if( c == 'Ύ' ) c = 'ύ';
+				else if( c == 'Ώ' ) c = 'ώ';
+				else if( c == 'Ϊ' ) c = 'ϊ';
+				else if( c == 'Ϋ' ) c = 'ϋ';
+			}
+		}
         else if((c >= 0x0401 && c <= 0x040C) ||
                 (c>= 0x040E && c <= 0x040F))
         {
@@ -190,6 +209,26 @@ dchar toUpper(dchar c) @safe pure nothrow
             if(c & 1)
                 --c;
         }
+        else if( c >= 0x3AC && c <= 0x3CE ) // Greek characters
+		{
+			if( c >= 'α' && c <= 'ω' )
+			{
+				if( c == 'ς' )c = 'Σ';
+				else c -= 32;
+			}
+			else
+			{
+				if( c == 'ά' ) c = 'Ά';
+				else if( c == 'έ' ) c = 'Έ';
+				else if( c == 'ή' ) c = 'Ή';
+				else if( c == 'ί' ) c = 'Ί';
+				else if( c == 'ό' ) c = 'Ό';
+				else if( c == 'ύ' ) c = 'Ύ';
+				else if( c == 'ώ' ) c = 'Ώ';
+				else if( c == 'ϊ' || c == 'ΐ' ) c = 'Ϊ';
+				else if( c == 'ϋ' || c == 'ΰ' ) c = 'Ϋ';
+			}
+		}
         else if(c >= 0x0430 && c<= 0x044F)
             c -= 32;
         else if((c >= 0x0451 && c <= 0x045C) ||
