@@ -821,14 +821,8 @@ version(Posix) Pipe pipe()
     errnoEnforce(core.sys.posix.unistd.pipe(fds) == 0,
                  "Unable to create pipe");
     Pipe p;
-    p._read = File(errnoEnforce(fdopen(fds[0], "r"), "Cannot open read end of pipe"),
-                   null,
-                   1,
-                   true);
-    p._write = File(errnoEnforce(fdopen(fds[1], "w"), "Cannot open write end of pipe"),
-                    null,
-                    1,
-                    true);
+    p._read = File(errnoEnforce(fdopen(fds[0], "r"), "Cannot open read end of pipe"), null, 1);
+    p._write = File(errnoEnforce(fdopen(fds[1], "w"), "Cannot open write end of pipe"), null, 1);
     return p;
 }
 else version(Windows) Pipe pipe()
@@ -877,25 +871,13 @@ else version(Windows) Pipe pipe()
             return fp;
         }
 
-        p._read = File(errnoEnforce(local_fdopen(readfd, "r"), "Cannot open read end of pipe"),
-                       null,
-                       1,
-                       true);
-        p._write = File(errnoEnforce(local_fdopen(writefd, "a"), "Cannot open write end of pipe"),
-                        null,
-                        1,
-                        true);
+        p._read = File(errnoEnforce(local_fdopen(readfd, "r"), "Cannot open read end of pipe"), null, 1);
+        p._write = File(errnoEnforce(local_fdopen(writefd, "a"), "Cannot open write end of pipe"), null, 1);
     }
     else // MSVCRT
     {
-        p._read = File(errnoEnforce(_fdopen(readfd, "r"), "Cannot open read end of pipe"),
-                       null,
-                       1,
-                       true);
-        p._write = File(errnoEnforce(_fdopen(writefd, "a"), "Cannot open write end of pipe"),
-                        null,
-                        1,
-                        true);
+        p._read = File(errnoEnforce(_fdopen(readfd, "r"), "Cannot open read end of pipe"), null, 1);
+        p._write = File(errnoEnforce(_fdopen(writefd, "a"), "Cannot open write end of pipe"), null, 1);
     }
     return p;
 }

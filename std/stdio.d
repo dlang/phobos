@@ -283,7 +283,7 @@ struct File
     {
         FILE * handle = null; // Is null iff this Impl is closed by another File
         uint refs = uint.max / 2;
-        bool isPipe;
+        bool isPipe; // true iff the stream has been created by popen()
     }
     private Impl* _p;
     private string _name;
