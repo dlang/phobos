@@ -122,47 +122,47 @@ dchar toLower(dchar c) @safe pure nothrow
             if((c & 1) == 0)
                 ++c;
         }
-		else if( c >= 0x386 && c <= 0x3AB ) // Greek characters
-		{
-			if( c >= 'Α' && c <= 'Ω' )
-			{
+	    else if( c >= 0x386 && c <= 0x3AB ) // Greek characters
+	    {
+		    if( c >= 'Α' && c <= 'Ω' )
+		    {
 			    c += 32;
-			}
-			else
-			{
-				switch(c)
-				{
-				case 'Ά':
+		    }
+		    else
+		    {
+			    switch(c)
+			    {
+			    case 'Ά':
 				    return 'ά';
 				
-				case 'Έ':
+			    case 'Έ':
 				    return 'έ';
 				   
-				case 'Ή':
+			    case 'Ή':
 				    return 'ή';
 				    
-				case 'Ί':
+			    case 'Ί':
 				    return 'ί';
 				    
-				case 'Ό':
+			    case 'Ό':
 				    return 'ό';
 				    
-				case 'Ύ':
+			    case 'Ύ':
 				    return 'ύ';
 				    
-				case 'Ώ':
+			    case 'Ώ':
 				    return 'ώ';
 				    
-				case 'Ϊ':
+			    case 'Ϊ':
 				    return 'ϊ';
 				    
-				case 'Ϋ':
+			    case 'Ϋ':
 				    return 'ϋ';
 						
-				default:
-				}
-			}
-		}
+			    default:
+			    }
+		    }
+	    }
         else if((c >= 0x0401 && c <= 0x040C) ||
                 (c>= 0x040E && c <= 0x040F))
         {
@@ -233,55 +233,54 @@ dchar toUpper(dchar c) @safe pure nothrow
         }
 		else if( c >= 0x3AC && c <= 0x3CE ) // Greek characters
 		{
-			if( c >= 'α' && c <= 'ω' )
-			{
+		    if( c >= 'α' && c <= 'ω' )
+		    {
 				switch(c)
 				{
-				case 'ς':
+			    case 'ς':
 				    return 'Σ';
 				
-				default:	
+			    default:	
 				    c -= 32;
-				}
-			}
+			    }
+		    }
 			else
 			{
-				switch(c)
-				{
-				case 'ά':
+			    switch(c)
+			    {
+			    case 'ά':
 				    return 'Ά';
 						
-				case 'έ':
+			    case 'έ':
 				    return 'Έ';
 				
-				case 'ή':
+			    case 'ή':
 				    return 'Ή';
 				
-				case 'ί':
+			    case 'ί':
 				    return 'Ί';
 						
-				case 'ό':
+			    case 'ό':
 				    return 'Ό';
 						
-				case 'ύ':
+			    case 'ύ':
 				    return 'Ύ';
 				
-				case 'ώ':
+			    case 'ώ':
 				    return 'Ώ';
 				
-				case 'ϊ':
-				case 'ΐ':
+			    case 'ϊ':
+			    case 'ΐ':
 				    return 'Ϊ';
 				
-				case 'ϋ':
-				case 'ΰ':
+			    case 'ϋ':
+			    case 'ΰ':
      			    return 'Ϋ';
 						
-				default:
-				}
-				
-			}
-		}
+			    default:
+			    }
+		    }
+	    }
         else if(c >= 0x0430 && c<= 0x044F)
             c -= 32;
         else if((c >= 0x0451 && c <= 0x045C) ||
