@@ -5103,16 +5103,87 @@ unittest
 
 
 /**
-Exactly the same as the builtin traits:
-$(D ___traits(_isAbstractFunction, method)).
+ * Detect whether $(D T) is a an abstract function.
  */
-template isAbstractFunction(method...)
-    if (method.length == 1)
+template isAbstractFunction(T...)
+    if (T.length == 1)
 {
-    enum bool isAbstractFunction  = __traits(isAbstractFunction, method[0]);
+    enum bool isAbstractFunction = __traits(isAbstractFunction, T[0]);
 }
 
+unittest
+{
+    struct S { void foo() { } }
+    class C { void foo() { } }
+    class AC { abstract void foo(); }
+    static assert(!isAbstractFunction!(S.foo));
+    static assert(!isAbstractFunction!(C.foo));
+    static assert(isAbstractFunction!(AC.foo));
+}
 
+/**
+ * Detect whether $(D T) is a a final function.
+ */
+template isFinalFunction(T...)
+    if (T.length == 1)
+{
+    enum bool isFinalFunction = __traits(isFinalFunction, T[0]);
+}
+
+unittest
+{
+    struct S { void bar() { } }
+    final class FC { void foo(); }
+    class C
+    {
+        void bar() { }
+        final void foo();
+    }
+    static assert(!isFinalFunction!(S.bar));
+    static assert(isFinalFunction!(FC.foo));
+    static assert(!isFinalFunction!(C.bar));
+    static assert(isFinalFunction!(C.foo));
+}
+
+/**
+ * Detect whether $(D T) is a an abstract class.
+ */
+template isAbstractClass(T...)
+    if (T.length == 1)
+{
+    enum bool isAbstractClass = __traits(isAbstractClass, T[0]);
+}
+
+unittest
+{
+    struct S { }
+    class C { }
+    abstract class AC { }
+    static assert(!isAbstractClass!S);
+    static assert(!isAbstractClass!C);
+    static assert(isAbstractClass!AC);
+}
+
+/**
+ * Detect whether $(D T) is a a final class.
+ */
+template isFinalClass(T...)
+    if (T.length == 1)
+{
+    enum bool isFinalClass = __traits(isFinalClass, T[0]);
+}
+
+unittest
+{
+    class C { }
+    abstract class AC { }
+    final class FC1 : C { }
+    final class FC2 { }
+    static assert(!isFinalClass!C);
+    static assert(!isFinalClass!AC);
+    static assert(isFinalClass!FC1);
+    static assert(isFinalClass!FC2);
+}
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 // General Types
