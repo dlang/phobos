@@ -1154,13 +1154,6 @@ Forces $(D this) to the null state.
         _isNull = true;
     }
 
-    //@@@BUG4424@@@
-    private mixin template _workaround4424()
-    {
-        @disable void opAssign(ref const Nullable);
-    }
-    mixin _workaround4424;
-
 /**
 Assigns $(D value) to the internally-held state. If the assignment
 succeeds, $(D this) becomes non-null.
@@ -1172,19 +1165,19 @@ succeeds, $(D this) becomes non-null.
     }
 
 /**
-Gets the value. Throws an exception if $(D this) is in the null
-state. This function is also called for the implicit conversion to $(D
-T).
+Gets the value. $(D this) must not be in the null state.
+This function is also called for the implicit conversion to $(D T).
  */
-    @property ref inout(T) get() inout pure @safe
+    @property ref inout(T) get() inout pure nothrow @safe
     {
-        enforce(!isNull);
+        enum message = "Called `get' on null Nullable!" ~ T.stringof ~ ".";
+        assert(!isNull, message);
         return _value;
     }
 
 /**
-Implicitly converts to $(D T). Throws an exception if $(D this) is in
-the null state.
+Implicitly converts to $(D T).
+$(D this) must not be in the null state.
  */
     alias get this;
 }
@@ -1193,7 +1186,7 @@ unittest
 {
     Nullable!int a;
     assert(a.isNull);
-    assertThrown(a.get);
+    assertThrown!Throwable(a.get);
     a = 5;
     assert(!a.isNull);
     assert(a == 5);
@@ -1208,7 +1201,7 @@ unittest
     a = a;
     assert(a == 18);
     a.nullify();
-    assertThrown(a += 2);
+    assertThrown!Throwable(a += 2);
 }
 unittest
 {
@@ -1241,7 +1234,7 @@ unittest
     s.x = 9190;
     assert(s.x == 9190);
     s.nullify();
-    assertThrown(s.x = 9441);
+    assertThrown!Throwable(s.x = 9441);
 }
 unittest
 {
@@ -1252,7 +1245,7 @@ unittest
         assert(n.isNull);
         n = 4;
         assert(!n.isNull);
-        try { assert(n == 4); } catch (Exception) { assert(false); }
+        assert(n == 4);
         n.nullify();
         assert(n.isNull);
     }();
@@ -1286,6 +1279,91 @@ unittest
     }
     N n;
     foo(n);
+}
+unittest
+{
+    //Check nullable immutable is constructable
+    {
+        auto a1 = Nullable!(immutable int)();
+        auto a2 = Nullable!(immutable int)(1);
+        auto i = a2.get;
+    }
+    //Check immutable nullable is constructable
+    {
+        auto a1 = immutable (Nullable!int)();
+        auto a2 = immutable (Nullable!int)(1);
+        auto i = a2.get;
+    }
+}
+unittest
+{
+    alias NInt   = Nullable!int;
+
+    //Construct tests
+    {
+        //from other Nullable null
+        NInt a1;
+        NInt b1 = a1;
+        assert(b1.isNull);
+
+        //from other Nullable non-null
+        NInt a2 = NInt(1);
+        NInt b2 = a2;
+        assert(b2 == 1);
+
+        //Construct from similar nullable
+        auto a3 = immutable(NInt)();
+        NInt b3 = a3;
+        assert(b3.isNull);
+    }
+
+    //Assign tests
+    {
+        //from other Nullable null
+        NInt a1;
+        NInt b1;
+        b1 = a1;
+        assert(b1.isNull);
+
+        //from other Nullable non-null
+        NInt a2 = NInt(1);
+        NInt b2;
+        b2 = a2;
+        assert(b2 == 1);
+
+        //Construct from similar nullable
+        auto a3 = immutable(NInt)();
+        NInt b3 = a3;
+        b3 = a3;
+        assert(b3.isNull);
+    }
+}
+unittest
+{
+    //Check nullable is nicelly embedable in a struct
+    static struct S1
+    {
+        Nullable!int ni;
+    }
+    static struct S2 //inspired from 9404
+    {
+        Nullable!int ni;
+        this(S2 other)
+        {
+            ni = other.ni;
+        }
+        void opAssign(S2 other)
+        {
+            ni = other.ni;
+        }
+    }
+    foreach (S; TypeTuple!(S1, S2))
+    {
+        S a;
+        S b = a;
+        S c;
+        c = a;
+    }
 }
 
 /**
@@ -1325,7 +1403,7 @@ Forces $(D this) to the null state.
 
 /**
 Assigns $(D value) to the internally-held state. No null checks are
-made.
+made. Note that the assignment may leave $(D this) in the null state.
  */
     void opAssign()(T value)
     {
@@ -1333,19 +1411,21 @@ made.
     }
 
 /**
-Gets the value. Throws an exception if $(D this) is in the null
-state. This function is also called for the implicit conversion to $(D
-T).
+Gets the value. $(D this) must not be in the null state.
+This function is also called for the implicit conversion to $(D T).
  */
     @property ref inout(T) get()() inout
     {
-        enforce(!isNull);
+        //@@@6169@@@: We avoid any call that might evaluate nullValue's %s,
+        //Because it might messup get's purity and safety inference.
+        enum message = "Called `get' on null Nullable!(" ~ T.stringof ~ ",nullValue).";
+        assert(!isNull, message);
         return _value;
     }
 
 /**
-Implicitly converts to $(D T). Throws an exception if $(D this) is in
-the null state.
+Implicitly converts to $(D T).
+Gets the value. $(D this) must not be in the null state.
  */
     alias get this;
 }
@@ -1354,7 +1434,7 @@ unittest
 {
     Nullable!(int, int.min) a;
     assert(a.isNull);
-    assertThrown(a.get);
+    assertThrown!Throwable(a.get);
     a = 5;
     assert(!a.isNull);
     assert(a == 5);
@@ -1385,12 +1465,10 @@ unittest
     function() pure nothrow @safe
     {
         Nullable!(int, int.min) n;
-        pragma(msg, typeof(&n.get!()));
-
         assert(n.isNull);
         n = 4;
         assert(!n.isNull);
-        try { assert(n == 4); } catch (Exception) { assert(false); }
+        assert(n == 4);
         n.nullify();
         assert(n.isNull);
     }();
@@ -1412,6 +1490,33 @@ unittest
     s.nullify();
     assert(s.isNull);
 }
+unittest
+{
+    //Check nullable is nicelly embedable in a struct
+    static struct S1
+    {
+        Nullable!(int, 0) ni;
+    }
+    static struct S2 //inspired from 9404
+    {
+        Nullable!(int, 0) ni;
+        this(S2 other)
+        {
+            ni = other.ni;
+        }
+        void opAssign(S2 other)
+        {
+            ni = other.ni;
+        }
+    }
+    foreach (S; TypeTuple!(S1, S2))
+    {
+        S a;
+        S b = a;
+        S c;
+        c = a;
+    }
+}
 
 /**
 Just like $(D Nullable!T), except that the object refers to a value
@@ -1426,7 +1531,7 @@ struct NullableRef(T)
 /**
 Constructor binding $(D this) with $(D value).
  */
-    this(T * value) pure nothrow @safe
+    this(T* value) pure nothrow @safe
     {
         _value = value;
     }
@@ -1434,7 +1539,7 @@ Constructor binding $(D this) with $(D value).
 /**
 Binds the internal state to $(D value).
  */
-    void bind(T * value) pure nothrow @safe
+    void bind(T* value) pure nothrow @safe
     {
         _value = value;
     }
@@ -1459,25 +1564,27 @@ Forces $(D this) to the null state.
 Assigns $(D value) to the internally-held state.
  */
     void opAssign()(T value)
+        if (isAssignable!T) //@@@9416@@@
     {
-        enforce(_value);
+        enum message = "Called `opAssign' on null NullableRef!" ~ T.stringof ~ ".";
+        assert(!isNull, message);
         *_value = value;
     }
 
 /**
-Gets the value. Throws an exception if $(D this) is in the null
-state. This function is also called for the implicit conversion to $(D
-T).
+Gets the value. $(D this) must not be in the null state.
+This function is also called for the implicit conversion to $(D T).
  */
-    @property ref inout(T) get()() inout
+    @property ref inout(T) get() inout pure nothrow @safe
     {
-        enforce(!isNull);
+        enum message = "Called `get' on null NullableRef!" ~ T.stringof ~ ".";
+        assert(!isNull, message);
         return *_value;
     }
 
 /**
-Implicitly converts to $(D T). Throws an exception if $(D this) is in
-the null state.
+Implicitly converts to $(D T).
+$(D this) must not be in the null state.
  */
     alias get this;
 }
@@ -1496,8 +1603,8 @@ unittest
     a.nullify();
     assert(x == 42);
     assert(a.isNull);
-    assertThrown(a.get);
-    assertThrown(a = 71);
+    assertThrown!Throwable(a.get);
+    assertThrown!Throwable(a = 71);
     a.bind(&y);
     assert(a == 7);
     y = 135;
@@ -1525,16 +1632,9 @@ unittest
         assert(n.isNull);
         n.bind(storage);
         assert(!n.isNull);
-        try
-        {
-            assert(n == 19902);
-            n = 2294;
-            assert(n == 2294);
-        }
-        catch (Exception)
-        {
-            assert(false);
-        }
+        assert(n == 19902);
+        n = 2294;
+        assert(n == 2294);
         assert(*storage == 2294);
         n.nullify();
         assert(n.isNull);
@@ -1559,6 +1659,33 @@ unittest
     assert(s.x == 5);
     s.nullify();
     assert(s.isNull);
+}
+unittest
+{
+    //Check nullable is nicelly embedable in a struct
+    static struct S1
+    {
+        NullableRef!int ni;
+    }
+    static struct S2 //inspired from 9404
+    {
+        NullableRef!int ni;
+        this(S2 other)
+        {
+            ni = other.ni;
+        }
+        void opAssign(S2 other)
+        {
+            ni = other.ni;
+        }
+    }
+    foreach (S; TypeTuple!(S1, S2))
+    {
+        S a;
+        S b = a;
+        S c;
+        c = a;
+    }
 }
 
 /**
