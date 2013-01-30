@@ -3674,9 +3674,13 @@ unittest
     static assert(!isAssignable!(S2, int));
 
     struct S3 { @disable void opAssign(); }
-    static assert(!isAssignable!(S3, S3));
+    static assert( isAssignable!(S3, S3));
+
+    struct S3X { @disable void opAssign(S3X); }
+    static assert(!isAssignable!(S3X, S3X));
 
     struct S4 { void opAssign(int); }
+    static assert( isAssignable!(S4, S4));
     static assert( isAssignable!(S4, int));
     static assert( isAssignable!(S4, immutable(int)));
 
