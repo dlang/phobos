@@ -1274,6 +1274,19 @@ unittest
     s.nullify();
     assert(s.isNull);
 }
+unittest
+{
+    // Bugzilla 9404
+    alias N = Nullable!int;
+
+    void foo(N a)
+    {
+        N b;
+        b = a; // `N b = a;` works fine
+    }
+    N n;
+    foo(n);
+}
 
 /**
 Just like $(D Nullable!T), except that the null state is defined as a
