@@ -4783,17 +4783,16 @@ assert(startsWith("abc", "x", "aaa", "sab") == 0);
 assert(startsWith("abc", "x", "aaa", "a", "sab") == 3);
 ----
  */
-uint startsWith(alias pred = "a == b", Range, Ranges...)
-               (Range doesThisStart, Ranges withOneOfThese)
-if (isInputRange!Range && Ranges.length > 1 &&
+uint startsWith(alias pred = "a == b", Range, Needles...)(Range doesThisStart, Needles withOneOfThese)
+if (isInputRange!Range && Needles.length > 1 &&
     is(typeof(.startsWith!pred(doesThisStart, withOneOfThese[0])) : bool ) &&
     is(typeof(.startsWith!pred(doesThisStart, withOneOfThese[1 .. $])) : uint))
 {
     alias doesThisStart haystack;
     alias withOneOfThese needles;
 
-    // Make one pass looking for empty ranges
-    foreach (i, Unused; Ranges)
+    // Make one pass looking for empty ranges in needles
+    foreach (i, Unused; Needles)
     {
         // Empty range matches everything
         static if (!is(typeof(binaryFun!pred(haystack.front, needles[i])) : bool))
@@ -4804,17 +4803,18 @@ if (isInputRange!Range && Ranges.length > 1 &&
 
     for (; !haystack.empty; haystack.popFront())
     {
-        foreach (i, Unused; Ranges)
+        foreach (i, Unused; Needles)
         {
             static if (is(typeof(binaryFun!pred(haystack.front, needles[i])) : bool))
             {
                 // Single-element
                 if (binaryFun!pred(haystack.front, needles[i]))
                 {
-                    // found, but continue to account for one-element
+                    // found, but instead of returning, we just stop searching.
+                    // This is to account for one-element
                     // range matches (consider startsWith("ab", "a",
                     // 'a') should return 1, not 2).
-                    continue;
+                    break;
                 }
             }
             else
@@ -4833,9 +4833,12 @@ if (isInputRange!Range && Ranges.length > 1 &&
         }
 
         // If execution reaches this point, then the front matches for all
-        // needles ranges. What we need to do now is to lop off the front of
-        // all ranges involved and recurse.
-        foreach (i, Unused; Ranges)
+        // needle ranges, or a needle element has been matched.
+        // What we need to do now is iterate, lopping off the front of
+        // the range and checking if the result is empty, or finding an
+        // element needle and returning.
+        // If neither happens, we drop to the end and loop.
+        foreach (i, Unused; Needles)
         {
             static if (is(typeof(binaryFun!pred(haystack.front, needles[i])) : bool))
             {
@@ -4853,8 +4856,7 @@ if (isInputRange!Range && Ranges.length > 1 &&
 }
 
 /// Ditto
-bool startsWith(alias pred = "a == b", R1, R2)
-               (R1 doesThisStart, R2 withThis)
+bool startsWith(alias pred = "a == b", R1, R2)(R1 doesThisStart, R2 withThis)
 if (isInputRange!R1 &&
     isInputRange!R2 &&
     is(typeof(binaryFun!pred(doesThisStart.front, withThis.front)) : bool))
@@ -4867,18 +4869,24 @@ if (isInputRange!R1 &&
     else
         enum isDefaultPred = false;
 
+    //Note: While narrow strings don't have a "true" length, for a narrow string to start with another
+    //narrow string *of the same type*, it must have *at least* as many code units.
+    static if ((hasLength!R1 && hasLength!R2) ||
+        (isNarrowString!R1 && isNarrowString!R2 && ElementEncodingType!R1.sizeof == ElementEncodingType!R2.sizeof))
+    {
+        if (haystack.length < needle.length)
+            return false;
+    }
+
     static if (isDefaultPred && isArray!R1 && isArray!R2 &&
                is(Unqual!(ElementEncodingType!R1) == Unqual!(ElementEncodingType!R2)))
     {
-        if (haystack.length < needle.length) return false;
-
+        //Array slice comparison mode
         return haystack[0 .. needle.length] == needle;
     }
-    else static if (isArray!R1 && isArray!R2 &&
-                    !isNarrowString!R1 && !isNarrowString!R2)
+    else static if (isRandomAccessRange!R1 && isRandomAccessRange!R2 && hasLength!R2)
     {
-        if (haystack.length < needle.length) return false;
-
+        //RA dual indexing mode
         foreach (j; 0 .. needle.length)
         {
             if (!binaryFun!pred(needle[j], haystack[j]))
@@ -4890,26 +4898,34 @@ if (isInputRange!R1 &&
     }
     else
     {
+        //Standard input range mode
+        if (needle.empty) return true;
         static if (hasLength!R1 && hasLength!R2)
         {
-            if (haystack.length < needle.length) return false;
+            //We have previously checked that haystack.length > needle.length,
+            //So no need to check haystack.empty during iteration
+            for ( ; ; haystack.popFront() )
+            {
+                if (!binaryFun!pred(haystack.front, needle.front)) break;
+                needle.popFront();
+                if (needle.empty) return true;
+            }
         }
-
-        if (needle.empty) return true;
-
-        for (; !haystack.empty; haystack.popFront())
+        else
         {
-            if (!binaryFun!pred(haystack.front, needle.front)) break;
-            needle.popFront();
-            if (needle.empty) return true;
+            for ( ; !haystack.empty ; haystack.popFront() )
+            {
+                if (!binaryFun!pred(haystack.front, needle.front)) break;
+                needle.popFront();
+                if (needle.empty) return true;
+            }
         }
         return false;
     }
 }
 
 /// Ditto
-bool startsWith(alias pred = "a == b", R, E)
-               (R doesThisStart, E withThis)
+bool startsWith(alias pred = "a == b", R, E)(R doesThisStart, E withThis)
 if (isInputRange!R &&
     is(typeof(binaryFun!pred(doesThisStart.front, withThis)) : bool))
 {
@@ -4933,6 +4949,7 @@ unittest
 
         foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
         {
+            //Lots of strings
             assert(startsWith(to!S("abc"), to!T("")));
             assert(startsWith(to!S("ab"), to!T("a")));
             assert(startsWith(to!S("abc"), to!T("a")));
@@ -4949,15 +4966,34 @@ unittest
             assert(startsWith(to!S("abc"), 'a'));
             assert(!startsWith(to!S("abc"), to!T("sab")));
             assert(startsWith(to!S("abc"), 'x', to!T("aaa"), 'a', "sab") == 3);
+
+            //Unicode
             assert(startsWith(to!S("\uFF28el\uFF4co"), to!T("\uFF28el")));
             assert(startsWith(to!S("\uFF28el\uFF4co"), to!T("Hel"), to!T("\uFF28el")) == 2);
+            assert(startsWith(to!S("日本語"), to!T("日本")));
+            assert(startsWith(to!S("日本語"), to!T("日本語")));
+            assert(!startsWith(to!S("日本"), to!T("日本語")));
+
+            //Empty
+            assert(startsWith(to!S(""),  T.init));
+            assert(!startsWith(to!S(""), 'a'));
+            assert(startsWith(to!S("a"), T.init));
+            assert(startsWith(to!S("a"), T.init, "") == 1);
+            assert(startsWith(to!S("a"), T.init, 'a') == 1);
+            assert(startsWith(to!S("a"), 'a', T.init) == 2);
         }
     }
+
+    //Length but no RA
+    assert(!startsWith("abc".takeExactly(3), "abcd".takeExactly(4)));
+    assert(startsWith("abc".takeExactly(3), "abcd".takeExactly(3)));
+    assert(startsWith("abc".takeExactly(3), "abcd".takeExactly(1)));
 
     foreach (T; TypeTuple!(int, short))
     {
         immutable arr = cast(T[])[0, 1, 2, 3, 4, 5];
 
+        //RA range
         assert(startsWith(arr, cast(int[])null));
         assert(!startsWith(arr, 5));
         assert(!startsWith(arr, 1));
@@ -4969,6 +5005,7 @@ unittest
         assert(!startsWith(arr, [0, 1, 7]));
         assert(startsWith(arr, [0, 1, 7], [0, 1, 2]) == 2);
 
+        //Normal input range
         assert(!startsWith(filter!"true"(arr), 1));
         assert(startsWith(filter!"true"(arr), 0));
         assert(startsWith(filter!"true"(arr), [0]));
@@ -4980,6 +5017,10 @@ unittest
         assert(startsWith(arr, filter!"true"([0, 1]), 7) == 1);
         assert(!startsWith(arr, filter!"true"([0, 1, 7])));
         assert(startsWith(arr, [0, 1, 7], filter!"true"([0, 1, 2])) == 2);
+
+        //Non-default pred
+        assert(startsWith!("a%10 == b%10")(arr, [10, 11]));
+        assert(!startsWith!("a%10 == b%10")(arr, [10, 12]));
     }
 }
 
@@ -5089,17 +5130,16 @@ assert(endsWith("abc", "x", "aaa", "sab") == 0);
 assert(endsWith("abc", "x", "aaa", 'c', "sab") == 3);
 ----
  */
-uint endsWith(alias pred = "a == b", Range, Ranges...)
-             (Range doesThisEnd, Ranges withOneOfThese)
-if (isBidirectionalRange!Range && Ranges.length > 1 &&
+uint endsWith(alias pred = "a == b", Range, Needles...)(Range doesThisEnd, Needles withOneOfThese)
+if (isBidirectionalRange!Range && Needles.length > 1 &&
     is(typeof(.endsWith!pred(doesThisEnd, withOneOfThese[0])) : bool) &&
     is(typeof(.endsWith!pred(doesThisEnd, withOneOfThese[1 .. $])) : uint))
 {
     alias doesThisEnd haystack;
     alias withOneOfThese needles;
 
-    // Make one pass looking for empty ranges
-    foreach (i, Unused; Ranges)
+    // Make one pass looking for empty ranges in needles
+    foreach (i, Unused; Needles)
     {
         // Empty range matches everything
         static if (!is(typeof(binaryFun!pred(haystack.back, needles[i])) : bool))
@@ -5110,7 +5150,7 @@ if (isBidirectionalRange!Range && Ranges.length > 1 &&
 
     for (; !haystack.empty; haystack.popBack())
     {
-        foreach (i, Unused; Ranges)
+        foreach (i, Unused; Needles)
         {
             static if (is(typeof(binaryFun!pred(haystack.back, needles[i])) : bool))
             {
@@ -5139,7 +5179,7 @@ if (isBidirectionalRange!Range && Ranges.length > 1 &&
         // If execution reaches this point, then the back matches for all
         // needles ranges. What we need to do now is to lop off the back of
         // all ranges involved and recurse.
-        foreach (i, Unused; Ranges)
+        foreach (i, Unused; Needles)
         {
             static if (is(typeof(binaryFun!pred(haystack.back, needles[i])) : bool))
             {
@@ -5157,8 +5197,7 @@ if (isBidirectionalRange!Range && Ranges.length > 1 &&
 }
 
 /// Ditto
-bool endsWith(alias pred = "a == b", R1, R2)
-             (R1 doesThisEnd, R2 withThis)
+bool endsWith(alias pred = "a == b", R1, R2)(R1 doesThisEnd, R2 withThis)
 if (isBidirectionalRange!R1 &&
     isBidirectionalRange!R2 &&
     is(typeof(binaryFun!pred(doesThisEnd.back, withThis.back)) : bool))
@@ -5185,8 +5224,7 @@ if (isBidirectionalRange!R1 &&
 }
 
 /// Ditto
-bool endsWith(alias pred = "a == b", R, E)
-             (R doesThisEnd, E withThis)
+bool endsWith(alias pred = "a == b", R, E)(R doesThisEnd, E withThis)
 if (isBidirectionalRange!R &&
     is(typeof(binaryFun!pred(doesThisEnd.back, withThis)) : bool))
 {
@@ -5200,27 +5238,6 @@ unittest
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
-    //This is because we need to run some tests on ranges which _aren't_ arrays,
-    //and as far as I can tell, all of the functions which would wrap an array
-    //in a range (such as filter) don't return bidirectional ranges, so I'm
-    //creating one here.
-    auto static wrap(R)(R r)
-    if (isBidirectionalRange!R)
-    {
-        static struct Result
-        {
-            @property auto ref front() {return _range.front;}
-            @property auto ref back() {return _range.back;}
-            @property bool empty() {return _range.empty;}
-            void popFront() {_range.popFront();}
-            void popBack() {_range.popBack();}
-            @property auto save() {return this;}
-            R _range;
-        }
-
-        return Result(r);
-    }
-
     foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         assert(!endsWith(to!S("abc"), 'a'));
@@ -5231,6 +5248,7 @@ unittest
 
         foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
         {
+            //Lots of strings
             assert(endsWith(to!S("abc"), to!T("")));
             assert(!endsWith(to!S("abc"), to!T("a")));
             assert(!endsWith(to!S("abc"), to!T("b")));
@@ -5244,6 +5262,21 @@ unittest
             assert(endsWith(to!S("abc"), to!T("x"), "aaa", "c", "sab") == 3);
             assert(endsWith(to!S("\uFF28el\uFF4co"), to!T("l\uFF4co")));
             assert(endsWith(to!S("\uFF28el\uFF4co"), to!T("lo"), to!T("l\uFF4co")) == 2);
+
+            //Unicode
+            assert(endsWith(to!S("\uFF28el\uFF4co"), to!T("l\uFF4co")));
+            assert(endsWith(to!S("\uFF28el\uFF4co"), to!T("lo"), to!T("l\uFF4co")) == 2);
+            assert(endsWith(to!S("日本語"), to!T("本語")));
+            assert(endsWith(to!S("日本語"), to!T("日本語")));
+            assert(!endsWith(to!S("本語"), to!T("日本語")));
+
+            //Empty
+            assert(endsWith(to!S(""),  T.init));
+            assert(!endsWith(to!S(""), 'a'));
+            assert(endsWith(to!S("a"), T.init));
+            assert(endsWith(to!S("a"), T.init, "") == 1);
+            assert(endsWith(to!S("a"), T.init, 'a') == 1);
+            assert(endsWith(to!S("a"), 'a', T.init) == 2);
         }
     }
 
@@ -5251,6 +5284,7 @@ unittest
     {
         immutable arr = cast(T[])[0, 1, 2, 3, 4, 5];
 
+        //RA range
         assert(endsWith(arr, cast(int[])null));
         assert(!endsWith(arr, 0));
         assert(!endsWith(arr, 4));
@@ -5262,18 +5296,20 @@ unittest
         assert(!endsWith(arr, [2, 4, 5]));
         assert(endsWith(arr, [2, 4, 5], [3, 4, 5]) == 2);
 
-        assert(!endsWith(wrap(arr), 4));
-        assert(endsWith(wrap(arr), 5));
-        assert(endsWith(wrap(arr), [5]));
-        assert(endsWith(wrap(arr), [4, 5]));
-        assert(endsWith(wrap(arr), [4, 5], 7) == 1);
-        assert(!endsWith(wrap(arr), [2, 4, 5]));
-        assert(endsWith(wrap(arr), [2, 4, 5], [3, 4, 5]) == 2);
-        assert(endsWith(arr, wrap([4, 5])));
-        assert(endsWith(arr, wrap([4, 5]), 7) == 1);
-        assert(!endsWith(arr, wrap([2, 4, 5])));
-        assert(endsWith(arr, [2, 4, 5], wrap([3, 4, 5])) == 2);
+        //Normal input range
+        assert(!endsWith(filterBidirectional!"true"(arr), 4));
+        assert(endsWith(filterBidirectional!"true"(arr), 5));
+        assert(endsWith(filterBidirectional!"true"(arr), [5]));
+        assert(endsWith(filterBidirectional!"true"(arr), [4, 5]));
+        assert(endsWith(filterBidirectional!"true"(arr), [4, 5], 7) == 1);
+        assert(!endsWith(filterBidirectional!"true"(arr), [2, 4, 5]));
+        assert(endsWith(filterBidirectional!"true"(arr), [2, 4, 5], [3, 4, 5]) == 2);
+        assert(endsWith(arr, filterBidirectional!"true"([4, 5])));
+        assert(endsWith(arr, filterBidirectional!"true"([4, 5]), 7) == 1);
+        assert(!endsWith(arr, filterBidirectional!"true"([2, 4, 5])));
+        assert(endsWith(arr, [2, 4, 5], filterBidirectional!"true"([3, 4, 5])) == 2);
 
+        //Non-default pred
         assert(endsWith!("a%10 == b%10")(arr, [14, 15]));
         assert(!endsWith!("a%10 == b%10")(arr, [15, 14]));
     }
