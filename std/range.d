@@ -3404,7 +3404,7 @@ unittest
     auto a = [1, 2, 3];
     assert(a.dropExactly(1) == [2, 3]);
     assert(a.dropBackExactly(1) == [1, 2]);
-    
+
     //UTF string
     string s = "日本語";
     assert(s.dropExactly(1) == "本語");
@@ -3422,7 +3422,7 @@ unittest
     makes it easier to pop an element from a range
     and then pass it to another function within a single expression,
     whereas $(D popFront) would require multiple statements.
-    
+
     $(D dropBackOne) provides the same functionality but instead calls
     $(D range.popBack()).
 
@@ -3457,7 +3457,7 @@ unittest
     auto a = [1, 2, 3];
     assert(a.dropOne() == [2, 3]);
     assert(a.dropBackOne() == [1, 2]);
-    
+
     //UTF string
     string s = "日本語";
     assert(s.dropOne() == "本語");
@@ -3653,7 +3653,7 @@ unittest
     assert(a == [2, 3]);
     a.popBackExactly(1);
     assert(a == [2]);
-    
+
     //UTF string
     string s = "日本語";
     s.popFrontExactly(1);
@@ -5227,7 +5227,7 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         @property inout(Value) front() inout { assert(!empty); return current; }
         void popFront() { assert(!empty); ++current; }
 
-        @property inout(Value) back() inout { assert(!empty); return pastLast - 1; }
+        @property inout(Value) back() inout { assert(!empty); return cast(inout(Value))(pastLast - 1); }
         void popBack() { assert(!empty); --pastLast; }
 
         @property auto save() { return this; }
@@ -5457,6 +5457,15 @@ unittest
     assert(iota(uint.max, uint.max-10, -1).length == 10);
     assert(iota(uint.max, uint.max-10, -2).length == 5);
     assert(iota(uint.max, 0u, -1).length == uint.max);
+
+    // Issue 8920
+    foreach (Type; TypeTuple!(byte, ubyte, short, ushort,
+        int, uint, long, ulong))
+    {
+        Type val;
+        foreach (i; iota(cast(Type)0, cast(Type)10)) { val++; }
+        assert(val == 10);
+    }
 }
 
 unittest
