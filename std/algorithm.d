@@ -11236,8 +11236,7 @@ other an input range.
 If one _range is infinite and the other finite, then the finite _range must
 be a forward _range, and the infinite range can be an input _range.
 
-If both ranges are infinite, then both must be forward ranges, and at least one
-must return a reversible _range when passed to $(D take).
+If both ranges are infinite, then both must be forward ranges.
 
 Examples:
 ---
