@@ -1294,10 +1294,7 @@ template hasSlicing(R)
             typeof(take(r, 1)) s = r[1 .. 2];
         else
         {
-            //@@@BUG@@@ 8847 makes it so that the three commented out lines
-            //cause Phobos to fail to compile - hence why they're commented
-            //out. They should be uncommented once that bug has been fixed.
-            //static assert(is(typeof(r[1 .. 2]) == R));
+            static assert(is(typeof(r[1 .. 2]) == R));
             R s = r[1 .. 2];
         }
 
