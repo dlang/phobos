@@ -2471,11 +2471,11 @@ unittest
     static struct S6 { this(this) {} }
     static struct S7 { this(this) {} @disable void opAssign(S7); }
     static struct S8 { this(this) {} @disable void opAssign(S8); void opAssign(int) {} }
-    static struct S9 { this(this) {}                             void opAssign(int) {} } //generates hidden opAssign(S9)
+    static struct S9 { this(this) {}                             void opAssign(int) {} }
     static assert( hasElaborateAssign!S6);
     static assert(!hasElaborateAssign!S7);
     static assert(!hasElaborateAssign!S8);
-    static assert( hasElaborateAssign!S9); //Notice how this constrasts with S2
+    static assert( hasElaborateAssign!S9);
     static struct SS6 { S6 s; }
     static struct SS7 { S7 s; }
     static struct SS8 { S8 s; }
