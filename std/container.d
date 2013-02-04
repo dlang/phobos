@@ -209,9 +209,9 @@ $(TR  $(TDNW $(D )) $(TDNW $(D )) $(TD ))
  */
 module std.container;
 
-import core.memory, core.stdc.stdlib, core.stdc.string, std.algorithm,
-    std.conv, std.exception, std.functional, std.range, std.traits,
-    std.typecons, std.typetuple;
+import core.exception, core.memory, core.stdc.stdlib, core.stdc.string,
+    std.algorithm, std.conv, std.exception, std.functional, std.range,
+    std.traits, std.typecons, std.typetuple;
 version(unittest) import std.stdio;
 
 version(unittest) version = RBDoChecks;
@@ -2700,139 +2700,139 @@ Defines the container's primary range, which is a random-access range.
 
         @property Range save()
         {
-            assert(_isValid, _invalidMessage);
+            version(assert) if (!_isValid) assert(false, _invalidMessage);
             return this;
         }
 
-        const @safe nothrow
-        @property bool empty()
+        @property @safe nothrow
+        bool empty() const
         {
-            assert(_isValid, _invalidMessage);
+            version(assert) if (!_isValid) assert(false, _invalidMessage);
             return _a >= _b;
         }
 
-        const @safe nothrow
-        @property size_t length()
+        @property @safe nothrow
+        size_t length() const
         {
-            assert(_isValid, _invalidMessage);
+            version(assert) if (!_isValid) assert(false, _invalidMessage);
             return _b - _a;
         }
 
-        @safe nothrow const
-        size_t opDollar()
+        @safe nothrow
+        size_t opDollar() const
         {
-            assert(_isValid, _invalidMessage);
+            version(assert) if (!_isValid) assert(false, _invalidMessage);
             return length;
         }
 
         @property T front()
         {
-            assert(_notEmpty, _emptyMessage);
+            version(assert) if (empty) throw new RangeError();
             return _payload[_a];
         }
 
         @property T back()
         {
-            assert(_notEmpty, _emptyMessage);
+            version(assert) if (empty) throw new RangeError();
             return _payload[_b - 1];
         }
 
         @property void front(T value)
         {
-            assert(_notEmpty, _emptyMessage);
+            version(assert) if (empty) throw new RangeError();
             move(value, _payload[_a]);
         }
 
         @property void back(T value)
         {
-            assert(_notEmpty, _emptyMessage);
+            version(assert) if (empty) throw new RangeError();
             move(value, _payload[_b - 1]);
         }
 
         void popFront()
         {
-            assert(_notEmpty, _emptyMessage);
+            version(assert) if (empty) throw new RangeError();
             ++_a;
         }
 
         void popBack()
         {
-            assert(_notEmpty, _emptyMessage);
+            version(assert) if (empty) throw new RangeError();
             --_b;
         }
 
         T moveFront()
         {
-            assert(_notEmpty, _emptyMessage);
+            version(assert) if (empty) throw new RangeError();
             return move(_payload[_a]);
         }
 
         T moveBack()
         {
-            assert(_notEmpty, _emptyMessage);
+            version(assert) if (empty) throw new RangeError();
             return move(_payload[_b - 1]);
         }
 
         T moveAt(size_t i)
         {
-            assert(_validIndex(i), _indexMessage);
+            version(assert) if (!_validIndex(i)) throw new RangeError();
             return move(_payload[_a + i]);
         }
 
         T opIndex(size_t i)
         {
-            assert(_validIndex(i), _indexMessage);
+            version(assert) if (!_validIndex(i)) throw new RangeError();
             return _payload[_a + i];
         }
 
         void opIndexUnary(string op)(size_t i)
             if(op == "++" || op == "--")
         {
-            assert(_validIndex(i), _indexMessage);
+            version(assert) if (!_validIndex(i)) throw new RangeError();
             mixin(op~"_payload[_a + i];");
         }
 
         T opIndexUnary(string op)(size_t i)
             if(op != "++" && op != "--")
         {
-            assert(_validIndex(i), _indexMessage);
+            version(assert) if (!_validIndex(i)) throw new RangeError();
             mixin("return "~op~"_payload[_a + i];");
         }
 
         void opIndexAssign(T value, size_t i)
         {
-            assert(_validIndex(i), _indexMessage);
+            version(assert) if (!_validIndex(i)) throw new RangeError();
             move(value, _payload[_a + i]);
         }
 
         void opIndexOpAssign(string op)(T value, size_t i)
         {
-            assert(_validIndex(i), _indexMessage);
+            version(assert) if (!_validIndex(i)) throw new RangeError();
             mixin("_payload[_a + i] "~op~"= value;");
         }
 
         typeof(this) opSlice()
         {
-            assert(_isValid, _invalidMessage);
+            version(assert) if (!_isValid) assert(false, _invalidMessage);
             return this;
         }
 
         typeof(this) opSlice(size_t i, size_t j)
         {
-            assert(_validSlice(i, j), _sliceMessage);
+            version(assert) if (!_validSlice(i, j)) throw new RangeError();
             return typeof(this)(_data, _a + i, _a + j);
         }
 
         void opSliceAssign(T value)
         {
-            assert(_isValid, _invalidMessage);
+            version(assert) if (!_isValid) assert(false, _invalidMessage);
             if(_data.refCountedStore.isInitialized)
                 _payload[] = value;
         }
 
         void opSliceAssign(T value, size_t i, size_t j)
         {
-            assert(_validSlice(i, j), _sliceMessage);
+            version(assert) if (!_validSlice(i, j)) throw new RangeError();
             if(j != 0 )
                 _payload[_a + i .. _a + j] = value;
         }
@@ -2840,7 +2840,7 @@ Defines the container's primary range, which is a random-access range.
         void opSliceUnary(string op)()
             if(op == "++" || op == "--")
         {
-            assert(_isValid, _invalidMessage);
+            version(assert) if (!_isValid) assert(false, _invalidMessage);
             if(_data.refCountedStore.isInitialized)
                 mixin(op~"_payload[];");
         }
@@ -2848,26 +2848,27 @@ Defines the container's primary range, which is a random-access range.
         void opSliceUnary(string op)(size_t i, size_t j)
             if(op == "++" || op == "--")
         {
-            assert(_validSlice(i, j), _sliceMessage);
+            version(assert) if (!_validSlice(i, j)) throw new RangeError();
             if(j != 0 )
                 mixin(op~"_payload[_a + i .. _a + j];");
         }
 
         void opSliceOpAssign(string op)(T value)
         {
-            assert(_isValid, _invalidMessage);
+            version(assert) if (!_isValid) assert(false, _invalidMessage);
             if(_data.refCountedStore.isInitialized)
                 mixin("_payload[] "~op~"= value;");
         }
 
         void opSliceOpAssign(string op)(T value, size_t i, size_t j)
         {
-            assert(_validSlice(i, j), _sliceMessage);
+            version(assert) if (!_validSlice(i, j)) throw new RangeError();
             if(j != 0 )
                 mixin("_payload[_a + i .. _a + j] "~op~"= value;");
         }
 
-        //Convenience
+        //Convenience:
+        //Quickly aquires the payload, assuming it is already initialized
         private @safe nothrow
         @property ref inout(T[]) _payload() inout
         {
@@ -2879,22 +2880,14 @@ Defines the container's primary range, which is a random-access range.
         {
             //Messages printed out by the asserts
             enum _invalidMessage = "Array.Range: range has been invalidated (points past the end of the Array)";
-            enum _emptyMessage   = "Array.Range: range is empty";
-            enum _indexMessage   = "Array.Range: input index is out of bounds";
-            enum _sliceMessage   = "Array.Range: input slice is invalid";
 
             //These methods don't ever assert themselves: The client will have a better idea of the actual asserted line
             @property @safe nothrow const
             {
                 bool _isValid()
                 {
-                    assert(_a <= _b, "Array.Range: Upper Bound is smaller than Lower Bound");
+                    assert(_a <= _b, "Array.Range internal error: _a is smaller than _b.");
                     return _b <= (_data.refCountedStore.isInitialized ? _data.length : 0);
-                }
-                bool _notEmpty() //vs !empty: Avoids calling invariant
-                {
-                    assert(_isValid, _invalidMessage);
-                    return _a < _b;
                 }
 
                 bool _validIndex(size_t i)
@@ -3002,10 +2995,7 @@ Complexity: $(BIGOH 1)
      */
     Range opSlice()
     {
-        // Workaround for bug 4356
-        Data copy;
-        copy = this._data;
-        return Range(copy, 0, length);
+        return Range(_data, 0, length);
     }
 
 /**
@@ -3018,11 +3008,8 @@ Complexity: $(BIGOH 1)
      */
     Range opSlice(size_t i, size_t j)
     {
-        assert(_validSlice(i, j), _sliceMessage);
-        // Workaround for bug 4356
-        Data copy;
-        copy = this._data;
-        return Range(copy, i, j);
+        version(assert) if (!_validSlice(i, j)) throw new RangeError();
+        return Range(_data, i, j);
     }
 
 /**
@@ -3034,28 +3021,28 @@ Complexity: $(BIGOH 1)
      */
     @property T front()
     {
-        assert(_notEmpty, _emptyMessage);
+        version(assert) if (empty) throw new RangeError();
         return _payload[0];
     }
 
     /// ditto
     @property void front(T value)
     {
-        assert(_notEmpty, _emptyMessage);
+        version(assert) if (empty) throw new RangeError();
         move(value, _payload[0]);
     }
 
     /// ditto
     @property T back()
     {
-        assert(_notEmpty, _emptyMessage);
+        version(assert) if (empty) throw new RangeError();
         return _payload[$ - 1];
     }
 
     /// ditto
     @property void back(T value)
     {
-        assert(_notEmpty, _emptyMessage);
+        version(assert) if (empty) throw new RangeError();
         move(value, _payload[$ - 1]);
     }
 
@@ -3068,7 +3055,7 @@ Complexity: $(BIGOH 1)
      */
     T opIndex(size_t i)
     {
-        assert(_validIndex(i), _indexMessage);
+        version(assert) if (!_validIndex(i)) throw new RangeError();
         return _payload[i];
     }
 
@@ -3076,7 +3063,7 @@ Complexity: $(BIGOH 1)
     void opIndexUnary(string op)(size_t i)
         if(op == "++" || op == "--")
     {
-        assert(_validIndex(i), _indexMessage);
+        version(assert) if (!_validIndex(i)) throw new RangeError();
         mixin(op~"_payload[i];");
     }
 
@@ -3084,21 +3071,21 @@ Complexity: $(BIGOH 1)
     T opIndexUnary(string op)(size_t i)
         if(op != "++" && op != "--")
     {
-        assert(_validIndex(i), _indexMessage);
+        version(assert) if (!_validIndex(i)) throw new RangeError();
         mixin("return "~op~"_payload[i];");
     }
 
     /// ditto
     void opIndexAssign(T value, size_t i)
     {
-        assert(_validIndex(i), _indexMessage);
+        version(assert) if (!_validIndex(i)) throw new RangeError();
         move(value, _payload[i]);
     }
 
     /// ditto
     void opIndexOpAssign(string op)(T value, size_t i)
     {
-        assert(_validIndex(i), _indexMessage);
+        version(assert) if (!_validIndex(i)) throw new RangeError();
         mixin("_payload[i] "~op~"= value;");
     }
 
@@ -3109,20 +3096,21 @@ Precondition: $(D i < j && j < length)
 
 Complexity: $(BIGOH slice.length)
      */
-
     void opSliceAssign(T value)
     {
         if(!_data.refCountedStore.isInitialized) return;
         _payload[] = value;
     }
 
+    /// ditto
     void opSliceAssign(T value, size_t i, size_t j)
     {
-        assert(_validSlice(i, j), _sliceMessage);
+        version(assert) if (!_validSlice(i, j)) throw new RangeError();
         if(j != 0)
             _payload[i .. j] = value;
     }
 
+    /// ditto
     void opSliceUnary(string op)()
         if(op == "++" || op == "--")
     {
@@ -3134,7 +3122,7 @@ Complexity: $(BIGOH slice.length)
     void opSliceUnary(string op)(size_t i, size_t j)
         if(op == "++" || op == "--")
     {
-        assert(_validSlice(i, j), _sliceMessage);
+        version(assert) if (!_validSlice(i, j)) throw new RangeError();
         if(j != 0)
             mixin(op~"_payload[i .. j];");
     }
@@ -3149,7 +3137,7 @@ Complexity: $(BIGOH slice.length)
     /// ditto
     void opSliceOpAssign(string op)(T value, size_t i, size_t j)
     {
-        assert(_validSlice(i, j), _sliceMessage);
+        version(assert) if (!_validSlice(i, j)) throw new RangeError();
         if(j != 0)
             mixin("_payload[i .. j] "~op~"= value;");
     }
@@ -3236,8 +3224,8 @@ Complexity: $(BIGOH log(n)).
      */
     T removeAny()
     {
-        assert(_notEmpty, _emptyMessage);
-        auto result = back;
+        version(assert) if(empty) throw new RangeError();
+        auto result = move(_payload[$ - 1]);
         removeBack();
         return result;
     }
@@ -3276,7 +3264,7 @@ Complexity: $(BIGOH log(n)).
      */
     void removeBack()
     {
-        assert(_notEmpty, _emptyMessage);
+        version(assert) if (empty) throw new RangeError();
         _data.length = _length - 1;
     }
     /// ditto
@@ -3433,7 +3421,7 @@ $(D r)
      */
     Range linearRemove(Range r)
     {
-        assert(_ownsRange(r), _ownsRangeMessage);
+        version(assert) assert(_ownsRange(r), _ownsRangeMessage);
         if(!_data.refCountedStore.isInitialized) return this[];
 
         immutable offset1 = r._a;
@@ -3470,18 +3458,10 @@ $(D r)
     //Helper functions for asserting
     version(assert) private
     {
-        enum _emptyMessage      = "Array: Array is empty";
-        enum _indexMessage      = "Array: input index is out of bounds";
-        enum _sliceMessage      = "Array: input slice is invalid";
-        enum _ownsRangeMessage  = "Array: Array does not own this range";
+        enum _ownsRangeMessage = "Array: Array does not own this range";
 
         @property @safe nothrow const
         {
-            bool _notEmpty() //Mostly for allignement with this.Range.
-            {
-                return _data.refCountedStore.isInitialized && !_payload.empty;
-            }
-
             bool _validIndex(size_t i)
             {
                  return i < length;
