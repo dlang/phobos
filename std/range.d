@@ -1302,13 +1302,13 @@ template hasSlicing(R)
 
         static if(is(typeof(r[0 .. $])))
         {
-            //static assert(is(typeof(r[0 .. $]) == R));
+            static assert(is(typeof(r[0 .. $]) == R));
             R t = r[0 .. $];
             t = r[0 .. $];
 
             static if(!isInfinite!R)
             {
-                //static assert(is(typeof(r[0 .. $ - 1]) == R));
+                static assert(is(typeof(r[0 .. $ - 1]) == R));
                 R u = r[0 .. $ - 1];
                 u = r[0 .. $ - 1];
             }
