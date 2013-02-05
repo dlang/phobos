@@ -665,61 +665,63 @@ version(Posix) private bool isExecutable(string path)
 
 unittest
 {
-    TestProg prog1 = q{
-        void main() { }
+    TestScript prog1 = q{
+        exit 0
     };
-    assert (wait(spawnProcess(prog1.exe)) == 0);
+    assert (wait(spawnProcess(prog1.path)) == 0);
 
-    TestProg prog2 = q{
-        int main() { return 123; }
+    TestScript prog2 = q{
+        exit 123
     };
-    auto pid2 = spawnProcess(prog2.exe);
+    auto pid2 = spawnProcess(prog2.path);
     assert (wait(pid2) == 123);
     assert (wait(pid2) == 123);
 
-    TestProg prog3 = q{
-        int main(string[] args)
-        {
-            if (args.length == 3 && args[1] == "foo" && args[2] == "bar")
-                return 0;
-            return 1;
-        }
+    version (Windows) TestScript prog3 = q{
+        if not -%1-==-foo- ( exit 1 )
+        if not -%2-==-bar- ( exit 1 )
+        exit 0
     };
-    assert (wait(spawnProcess(prog3.exe, ["foo", "bar"])) == 0);
-    assert (wait(spawnProcess(prog3.exe~" foo bar")) == 0);
-    assert (wait(spawnProcess(prog3.exe)) == 1);
+    else version (Posix) TestScript prog3 = q{
+        if test "$1" != "foo"; then exit 1; fi
+        if test "$2" != "bar"; then exit 1; fi
+        exit 0
+    };
+    assert (wait(spawnProcess(prog3.path, ["foo", "bar"])) == 0);
+    assert (wait(spawnProcess(prog3.path~" foo bar")) == 0);
+    assert (wait(spawnProcess(prog3.path)) == 1);
 
-    TestProg prog4 = q{
-        import core.stdc.stdlib, std.conv;
-        int main()
-        {
-            if (to!string(getenv("PATH")).length > 0) return 1;
-            if (to!string(getenv("hello")) != "world") return 2;
-            return 0;
-        }
+    version (Windows) TestScript prog4 = q{
+        if %hello%==world ( exit 0 )
+        exit 1
+    };
+    version (Posix) TestScript prog4 = q{
+        if test $hello = world; then exit 0; fi
+        exit 1
     };
     auto env = [ "hello" : "world" ];
-    assert (wait(spawnProcess(prog4.exe, null, env)) == 0);
-    assert (wait(spawnProcess(prog4.exe, env)) == 0);
+    assert (wait(spawnProcess(prog4.path, null, env)) == 0);
+    assert (wait(spawnProcess(prog4.path, env)) == 0);
 
-    TestProg prog5 = q{
-        import std.stdio, std.string;
-        void main(string[] args)
-        {
-            auto s = stdin.readln().chomp();
-            stdout.writeln(s~" output "~args[1]);
-            stderr.writeln(s~" error "~args[2]);
-        }
+    version (Windows) TestScript prog5 = q{
+        set /p INPUT=
+        echo %INPUT% output %1
+        echo %INPUT% error %2 1>&2
+    };
+    else version (Posix) TestScript prog5 = q{
+        read INPUT
+        echo $INPUT output $1
+        echo $INPUT error $2 >&2
     };
     auto pipe5i = pipe();
     auto pipe5o = pipe();
     auto pipe5e = pipe();
-    auto pid5 = spawnProcess(prog5.exe, ["foo", "bar" ],
+    auto pid5 = spawnProcess(prog5.path, ["foo", "bar" ],
                              pipe5i.readEnd, pipe5o.writeEnd, pipe5e.writeEnd);
     pipe5i.writeEnd.writeln("input");
     pipe5i.writeEnd.flush();
     assert (pipe5o.readEnd.readln().chomp() == "input output foo");
-    assert (pipe5e.readEnd.readln().chomp() == "input error bar");
+    assert (pipe5e.readEnd.readln().chomp().stripRight() == "input error bar");
     wait(pid5);
 }
 
@@ -727,10 +729,10 @@ version (Posix) unittest
 {
     // Termination by signal.
     import core.sys.posix.signal;
-    TestProg prog = q{
-        void main() { while(true) { } }
+    TestScript prog = q{
+        while true; do; done;
     };
-    auto pid = spawnProcess(prog.exe);
+    auto pid = spawnProcess(prog.path);
     kill(pid.processID, SIGTERM);
     assert (wait(pid) == -SIGTERM);
 }
@@ -1050,51 +1052,58 @@ enum Redirect
 
 unittest
 {
-    TestProg prog = q{
-        import std.stdio, std.string;
-        int main(string[] args)
-        {
-            for (int i = 0; ; ++i)
-            {
-                auto s = stdin.readln().chomp();
-                if (s == "stop") return i;
-                stdout.writeln(s, args[1]);
-                stdout.flush();
-                stderr.writeln(s, args[2]);
-                stderr.flush();
-            }
-        }
+    version (Windows) TestScript prog = q{
+        call :sub %1 %2 0
+        call :sub %1 %2 1
+        call :sub %1 %2 2
+        call :sub %1 %2 3
+        exit 3
+
+        :sub
+        set /p INPUT=
+        if -%INPUT%-==-stop- ( exit %3 )
+        echo %INPUT% %1
+        echo %INPUT% %2 1>&2
+    };
+    else version (Posix) TestScript prog = q{
+        for EXITCODE in 0 1 2 3; do
+            read INPUT
+            if test "$INPUT" = stop; then break; fi
+            echo "$INPUT $1"
+            echo "$INPUT $2" >&2
+        done
+        exit $EXITCODE
     };
 
-    auto pp = pipeProcess(prog.exe, ["bar", "baz"]);
+    auto pp = pipeProcess(prog.path, ["bar", "baz"]);
     pp.stdin.writeln("foo");
     pp.stdin.flush();
-    assert (pp.stdout.readln().chomp() == "foobar");
-    assert (pp.stderr.readln().chomp() == "foobaz");
+    assert (pp.stdout.readln().chomp() == "foo bar");
+    assert (pp.stderr.readln().chomp().stripRight() == "foo baz");
     pp.stdin.writeln("1234567890");
     pp.stdin.flush();
-    assert (pp.stdout.readln().chomp() == "1234567890bar");
-    assert (pp.stderr.readln().chomp() == "1234567890baz");
+    assert (pp.stdout.readln().chomp() == "1234567890 bar");
+    assert (pp.stderr.readln().chomp().stripRight() == "1234567890 baz");
     pp.stdin.writeln("stop");
     pp.stdin.flush();
     assert (wait(pp.pid) == 2);
 
-    pp = pipeProcess(prog.exe, ["12345", "67890"],
+    pp = pipeProcess(prog.path, ["12345", "67890"],
                      Redirect.stdin | Redirect.stdout | Redirect.stderrToStdout);
     pp.stdin.writeln("xyz");
     pp.stdin.flush();
-    assert (pp.stdout.readln().chomp() == "xyz12345");
-    assert (pp.stdout.readln().chomp() == "xyz67890");
+    assert (pp.stdout.readln().chomp() == "xyz 12345");
+    assert (pp.stdout.readln().chomp().stripRight() == "xyz 67890");
     pp.stdin.writeln("stop");
     pp.stdin.flush();
     assert (wait(pp.pid) == 1);
 
-    pp = pipeShell(prog.exe~" AAAAA BBB",
+    pp = pipeShell(prog.path~" AAAAA BBB",
                    Redirect.stdin | Redirect.stdoutToStderr | Redirect.stderr);
     pp.stdin.writeln("ab");
     pp.stdin.flush();
-    assert (pp.stderr.readln().chomp() == "abAAAAA");
-    assert (pp.stderr.readln().chomp() == "abBBB");
+    assert (pp.stderr.readln().chomp() == "ab AAAAA");
+    assert (pp.stderr.readln().chomp().stripRight() == "ab BBB");
     pp.stdin.writeln("stop");
     pp.stdin.flush();
     assert (wait(pp.pid) == 1);
@@ -1189,23 +1198,24 @@ Tuple!(int, "status", string, "output") execute(string name, string[] args...)
 
 unittest
 {
-    TestProg prog = q{
-        import std.stdio;
-        int main(string[] args)
-        {
-            stdout.write(args[1]);
-            stdout.flush();
-            stderr.write(args[2]);
-            stderr.flush();
-            return 123;
-        }
+    // The funky echo statements are due to Windows' lack of an equivalent
+    // to POSIX' echo -n.
+    version(Windows) TestScript prog = q{
+        echo|set /p=%1
+        echo|set /p=%2 1>&2
+        exit 123
     };
-    auto r = execute(prog.exe~" foo bar");
+    else version (Posix) TestScript prog = q{
+        echo -n $1
+        echo -n $2 >&2
+        exit 123
+    };
+    auto r = execute(prog.path~" foo bar");
     assert (r.status == 123);
-    assert (r.output == "foobar");
-    auto s = execute(prog.exe, "Hello", "World");
+    assert (r.output.stripRight() == "foobar");
+    auto s = execute(prog.path, "Hello", "World");
     assert (s.status == 123);
-    assert (s.output == "HelloWorld");
+    assert (s.output.stripRight() == "HelloWorld");
 }
 
 
@@ -1251,7 +1261,6 @@ unittest
     assert (r1.output.chomp() == "foo");
     auto r2 = shell("echo bar 1>&2");
     assert (r2.status == 0);
-    // stripRight() is needed because a space follows "bar" on some platforms.
     assert (r2.output.chomp().stripRight() == "bar");
     auto r3 = shell("exit 123");
     assert (r3.status == 123);
@@ -1271,63 +1280,42 @@ version(Windows) @property int thisProcessID()
 }
 
 
-// Unittest support code:  TestProg takes a string that contains an
-// entire D program, main() function and all, and compiles it using
-// the compiler command line specified in the environment variable
-// STD_PROCESS_UNITTEST_COMPILER.  It removes the source and the
-// output file upon destruction.
-version(unittest) private struct TestProg
+// Unittest support code:  TestScript takes a string that contains a
+// shell script for the current platform, and writes it to a temporary
+// file. On Windows the file name gets a .cmd extension, while on
+// POSIX its executable permission bit is set.  The file is
+// automatically deleted when the object goes out of scope.
+version(unittest) private struct TestScript
 {
     this(string code)
     {
-        import std.file;
-        auto dir = std.file.tempDir();
-        int i = 0;
-        string fileStem;
-        do
-        {
-            fileStem = "std_process_unittest_"~to!string(i++);
-            _srcPath = buildPath(dir, fileStem~".d");
-        } while (exists(_srcPath));
+        import std.file, std.uuid;
         version (Windows)
         {
-            auto objName = fileStem~".obj";
-            auto exeName = fileStem~".exe";
+            auto ext = ".cmd";
+            auto firstLine = "@echo off\r\n";
         }
-        else
+        else version (Posix)
         {
-            auto objName = fileStem~".o";
-            auto exeName = fileStem;
+            auto ext = "";
+            auto firstLine = "#!/bin/sh\n";
         }
-        _exePath = buildPath(dir, exeName);
-        auto objPath = buildPath(dir, objName);
-
-        std.file.write(_srcPath, code);
-        auto cmd = environment["STD_PROCESS_UNITTEST_COMPILER"]
-                    .replace("{indir}", dirName(_srcPath))
-                    .replace("{infile}", baseName(_srcPath))
-                    .replace("{outdir}", dirName(_exePath))
-                    .replace("{outfile}", baseName(_exePath));
-        auto result = shell(cmd);
-        if (exists(objPath)) remove(objPath);
-        if (result.status != 0)
+        path = buildPath(tempDir(), randomUUID().toString()~ext);
+        std.file.write(path, firstLine~code);
+        version (Posix)
         {
-            std.stdio.stderr.writeln(result.output);
-            throw new Exception("TestProg compilation failed");
+            import core.sys.posix.sys.stat;
+            chmod(toStringz(path), octal!777);
         }
     }
 
     ~this()
     {
         import std.file;
-        if (!_srcPath.empty && exists(_srcPath)) remove(_srcPath);
-        if (!_exePath.empty && exists(_exePath)) remove(_exePath);
+        if (!path.empty && exists(path)) remove(path);
     }
 
-    @property string exe() const @safe pure nothrow { return _exePath; }
-
-private:
-    string _srcPath, _exePath;
+    string path;
 }
 
 
