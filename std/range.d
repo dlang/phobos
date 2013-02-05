@@ -743,7 +743,7 @@ The following code should compile for any forward range.
 ----
 static assert(isInputRange!R);
 R r1;
-R r2 = r1.save; // can save the current position into another range
+static assert (is(typeof(r1.save) == R));
 ----
 
 Saving a range is not duplicating it; in the example above, $(D r1)
@@ -761,7 +761,7 @@ template isForwardRange(R)
     (inout int = 0)
     {
         R r1 = void;
-        R r2 = r1.save; // can call "save" against a range object
+        static assert (is(typeof(r1.save) == R));
     }));
 }
 
