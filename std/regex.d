@@ -1975,6 +1975,40 @@ public struct Regex(Char)
     +/
     @property bool empty() const nothrow {  return ir is null; }
 
+    /++
+       A range of the names of the named subgroups in the regex. Order
+       is not guaranteed.
+     +/
+    @property auto namedGroups()
+    {
+        static struct NamedGroupRange
+        {
+        private:
+            NamedGroup[] groups;
+            size_t start;
+            size_t end;
+        public:
+            this(NamedGroup[] g)
+            {
+                groups = g;
+                start = 0;
+                end = groups.length;
+            }
+
+            @property string front() { return groups[start].name; };
+            @property string back() { return groups[end].name; }
+            @property bool empty() { return start >= end; }
+            void popFront() { assert(!empty); start++; }
+            void popBack() { assert(!empty); end--; }
+            string opIndex()(size_t i)
+            {
+                assert(start + i < end, "Request named group is out of range.");
+                return groups[start+i];
+            }
+        }
+        return NamedGroupRange(dict);
+    }
+
 private:
     NamedGroup[] dict;  //maps name -> user group number
     uint ngroup;        //number of internal groups
