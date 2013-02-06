@@ -11479,8 +11479,27 @@ auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
      * returns 3-element tuples instead of nested 2-element tuples.
      */
     enum string denest = format("tuple(a[0], %(a[1][%d]%|,%))",
-                                iota(0, others.length+1));
+                                iota(0, otherRanges.length+1));
     return map!denest(
         cartesianProduct(range1, cartesianProduct(range2, otherRanges))
     );
+}
+
+unittest
+{
+    auto N = sequence!"n"(0);
+    auto N3 = cartesianProduct(N, N, N);
+    auto N4 = cartesianProduct(N, N, N, N);
+
+    // Check that tuples are properly denested
+    assert(is(ElementType!(typeof(N3)) == Tuple!(size_t,size_t,size_t)));
+    assert(is(ElementType!(typeof(N4)) == Tuple!(size_t,size_t,size_t,size_t)));
+
+    assert(canFind(N3, tuple(0, 27, 7)));
+    assert(canFind(N3, tuple(50, 23, 71)));
+    assert(canFind(N3, tuple(9, 3, 0)));
+
+    assert(canFind(N4, tuple(1, 2, 3, 4)));
+    assert(canFind(N4, tuple(4, 3, 2, 1)));
+    assert(canFind(N4, tuple(10, 31, 7, 12)));
 }
