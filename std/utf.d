@@ -314,11 +314,12 @@ uint strideBack(S)(auto ref S str)
     if (isBidirectionalRange!S && is(Unqual!(ElementType!S) == char) && !isRandomAccessRange!S)
 {
     assert(!str.empty, "Past the end of the UTF-8 sequence");
+    auto temp = str.save;
     foreach(i; TypeTuple!(1, 2, 3, 4))
     {
-        if ((str.back & 0b1100_0000) != 0b1000_0000) return i;
-        str.popBack();
-        if (str.empty) break;
+        if ((temp.back & 0b1100_0000) != 0b1000_0000) return i;
+        temp.popBack();
+        if (temp.empty) break;
     }
     throw new UTFException("The last code unit is not the end of the UTF-8 sequence");
 }
@@ -333,13 +334,27 @@ unittest
         enforce(strideBack(RandomCU!char(s), i == size_t.max ? s.length : i) == codeLength!char(c),
                 new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
 
+        auto refRandom = new RefRandomCU!char(s);
+        immutable randLen = refRandom.length;
+        enforce(strideBack(refRandom, i == size_t.max ? s.length : i) == codeLength!char(c),
+                new AssertError(format("Unit test failure rand ref range: %s", s), __FILE__, line));
+        enforce(refRandom.length == randLen,
+                new AssertError(format("Unit test failure rand ref range length: %s", s), __FILE__, line));
+
         if (i == size_t.max)
         {
             enforce(strideBack(s) == codeLength!char(c),
-                    new AssertError(format("Unit test failure string length: %s", s), __FILE__, line));
+                    new AssertError(format("Unit test failure string code length: %s", s), __FILE__, line));
 
             enforce(strideBack(BidirCU!char(s)) == codeLength!char(c),
-                    new AssertError(format("Unit test failure range length: %s", s), __FILE__, line));
+                    new AssertError(format("Unit test failure range code length: %s", s), __FILE__, line));
+
+            auto refBidir = new RefBidirCU!char(s);
+            immutable bidirLen = refBidir.length;
+            enforce(strideBack(refBidir) == codeLength!char(c),
+                    new AssertError(format("Unit test failure bidir ref range code length: %s", s), __FILE__, line));
+            enforce(refBidir.length == bidirLen,
+                    new AssertError(format("Unit test failure bidir ref range length: %s", s), __FILE__, line));
         }
     }
 
@@ -527,13 +542,27 @@ unittest
         enforce(strideBack(RandomCU!wchar(s), i == size_t.max ? s.length : i) == codeLength!wchar(c),
                 new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
 
+        auto refRandom = new RefRandomCU!wchar(s);
+        immutable randLen = refRandom.length;
+        enforce(strideBack(refRandom, i == size_t.max ? s.length : i) == codeLength!wchar(c),
+                new AssertError(format("Unit test failure rand ref range: %s", s), __FILE__, line));
+        enforce(refRandom.length == randLen,
+                new AssertError(format("Unit test failure rand ref range length: %s", s), __FILE__, line));
+
         if (i == size_t.max)
         {
             enforce(strideBack(s) == codeLength!wchar(c),
-                    new AssertError(format("Unit test failure string length: %s", s), __FILE__, line));
+                    new AssertError(format("Unit test failure string code length: %s", s), __FILE__, line));
 
             enforce(strideBack(BidirCU!wchar(s)) == codeLength!wchar(c),
-                    new AssertError(format("Unit test failure range length: %s", s), __FILE__, line));
+                    new AssertError(format("Unit test failure range code length: %s", s), __FILE__, line));
+
+            auto refBidir = new RefBidirCU!wchar(s);
+            immutable bidirLen = refBidir.length;
+            enforce(strideBack(refBidir) == codeLength!wchar(c),
+                    new AssertError(format("Unit test failure bidir ref range code length: %s", s), __FILE__, line));
+            enforce(refBidir.length == bidirLen,
+                    new AssertError(format("Unit test failure bidir ref range length: %s", s), __FILE__, line));
         }
     }
 
@@ -677,13 +706,27 @@ unittest
         enforce(strideBack(RandomCU!dchar(s), i == size_t.max ? s.length : i) == codeLength!dchar(c),
                 new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
 
+        auto refRandom = new RefRandomCU!dchar(s);
+        immutable randLen = refRandom.length;
+        enforce(strideBack(refRandom, i == size_t.max ? s.length : i) == codeLength!dchar(c),
+                new AssertError(format("Unit test failure rand ref range: %s", s), __FILE__, line));
+        enforce(refRandom.length == randLen,
+                new AssertError(format("Unit test failure rand ref range length: %s", s), __FILE__, line));
+
         if (i == size_t.max)
         {
             enforce(strideBack(s) == codeLength!dchar(c),
-                    new AssertError(format("Unit test failure string length: %s", s), __FILE__, line));
+                    new AssertError(format("Unit test failure string code length: %s", s), __FILE__, line));
 
             enforce(strideBack(BidirCU!dchar(s)) == codeLength!dchar(c),
-                    new AssertError(format("Unit test failure range length: %s", s), __FILE__, line));
+                    new AssertError(format("Unit test failure range code length: %s", s), __FILE__, line));
+
+            auto refBidir = new RefBidirCU!dchar(s);
+            immutable bidirLen = refBidir.length;
+            enforce(strideBack(refBidir) == codeLength!dchar(c),
+                    new AssertError(format("Unit test failure bidir ref range code length: %s", s), __FILE__, line));
+            enforce(refBidir.length == bidirLen,
+                    new AssertError(format("Unit test failure bidir ref range length: %s", s), __FILE__, line));
         }
     }
 
@@ -2479,6 +2522,44 @@ version(unittest)
         @property size_t length() { return _str.length; }
         C opIndex(size_t i) { return _str[i]; }
         auto opSlice(size_t i, size_t j) { return RandomCU(_str[i .. j]); }
+
+        this(inout(C)[] str)
+        {
+            _str = to!(C[])(str);
+        }
+
+        C[] _str;
+    }
+
+    class RefBidirCU(C)
+    {
+        @property bool empty() { return _str.empty; }
+        @property C front() { return _str[0]; }
+        void popFront() { _str = _str[1 .. $]; }
+        @property C back() { return _str[$ - 1]; }
+        void popBack() { _str = _str[0 .. $ - 1]; }
+        @property auto save() { return new RefBidirCU(_str); }
+        @property size_t length() { return _str.length; }
+
+        this(inout(C)[] str)
+        {
+            _str = to!(C[])(str);
+        }
+
+        C[] _str;
+    }
+
+    class RefRandomCU(C)
+    {
+        @property bool empty() { return _str.empty; }
+        @property C front() { return _str[0]; }
+        void popFront() { _str = _str[1 .. $]; }
+        @property C back() { return _str[$ - 1]; }
+        void popBack() { _str = _str[0 .. $ - 1]; }
+        @property auto save() { return new RefRandomCU(_str); }
+        @property size_t length() { return _str.length; }
+        C opIndex(size_t i) { return _str[i]; }
+        auto opSlice(size_t i, size_t j) { return new RefRandomCU(_str[i .. j]); }
 
         this(inout(C)[] str)
         {
