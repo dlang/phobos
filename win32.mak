@@ -370,16 +370,6 @@ UNITTEST_OBJS= unittest1.obj unittest2.obj unittest2a.obj \
 		unittest5.obj unittest6.obj unittest7.obj unittest8.obj
 
 unittest : $(LIB)
-# The compiler command line to use in the std.process unittests. It should take
-# a single D source file and compile it into an executable file.  The following
-# placeholders may be used in the command-line arguments:
-#   {indir}    The directory in which the source file is located
-#   {infile}   The name of the source file (without directory)
-#   {outdir}   The directory in which output file(s) should be placed
-#   {outfile}  The name of the executable output file (without directory)
-# If the compiler leaves behind an object file, it, too, is expected to be in
-# the output directory.
-	set STD_PROCESS_UNITTEST_COMPILER=dmd {indir}\{infile} -od{outdir} -of{outdir}\{outfile}
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRC_STD_2_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2a.obj $(SRC_STD_2a_HEAVY)
