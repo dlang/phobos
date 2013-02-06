@@ -32,8 +32,8 @@ SDKDIR="\Program Files (x86)\Microsoft SDKs\Windows\v7.0A"
 
 ## Flags for VC compiler
 
-#CFLAGS=/O2 /I$(VCDIR)\INCLUDE /I$(SDKDIR)\Include
-CFLAGS=/Zi /I$(VCDIR)\INCLUDE /I$(SDKDIR)\Include
+#CFLAGS=/Zi /nologo /I$(VCDIR)\INCLUDE /I$(SDKDIR)\Include
+CFLAGS=/O2 /nologo /I$(VCDIR)\INCLUDE /I$(SDKDIR)\Include
 
 ## Flags for dmd D compiler
 
