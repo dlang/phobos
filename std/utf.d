@@ -213,6 +213,13 @@ unittest
         enforce(stride(RandomCU!char(s), i) == codeLength!char(c),
                 new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
 
+        auto refRandom = new RefRandomCU!char(s);
+        immutable randLen = refRandom.length;
+        enforce(stride(refRandom, i) == codeLength!char(c),
+                new AssertError(format("Unit test failure rand ref range: %s", s), __FILE__, line));
+        enforce(refRandom.length == randLen,
+                new AssertError(format("Unit test failure rand ref range length: %s", s), __FILE__, line));
+
         if (i == 0)
         {
             enforce(stride(s) == codeLength!char(c),
@@ -220,6 +227,13 @@ unittest
 
             enforce(stride(InputCU!char(s)) == codeLength!char(c),
                     new AssertError(format("Unit test failure range 0: %s", s), __FILE__, line));
+
+            auto refBidir = new RefBidirCU!char(s);
+            immutable bidirLen = refBidir.length;
+            enforce(stride(refBidir) == codeLength!char(c),
+                    new AssertError(format("Unit test failure bidir ref range code length: %s", s), __FILE__, line));
+            enforce(refBidir.length == bidirLen,
+                    new AssertError(format("Unit test failure bidir ref range length: %s", s), __FILE__, line));
         }
     }
 
@@ -443,6 +457,13 @@ uint stride(S)(auto ref S str)
         enforce(stride(RandomCU!wchar(s), i) == codeLength!wchar(c),
                 new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
 
+        auto refRandom = new RefRandomCU!wchar(s);
+        immutable randLen = refRandom.length;
+        enforce(stride(refRandom, i) == codeLength!wchar(c),
+                new AssertError(format("Unit test failure rand ref range: %s", s), __FILE__, line));
+        enforce(refRandom.length == randLen,
+                new AssertError(format("Unit test failure rand ref range length: %s", s), __FILE__, line));
+
         if (i == 0)
         {
             enforce(stride(s) == codeLength!wchar(c),
@@ -450,6 +471,13 @@ uint stride(S)(auto ref S str)
 
             enforce(stride(InputCU!wchar(s)) == codeLength!wchar(c),
                     new AssertError(format("Unit test failure range 0: %s", s), __FILE__, line));
+
+            auto refBidir = new RefBidirCU!wchar(s);
+            immutable bidirLen = refBidir.length;
+            enforce(stride(refBidir) == codeLength!wchar(c),
+                    new AssertError(format("Unit test failure bidir ref range code length: %s", s), __FILE__, line));
+            enforce(refBidir.length == bidirLen,
+                    new AssertError(format("Unit test failure bidir ref range length: %s", s), __FILE__, line));
         }
     }
 
@@ -626,6 +654,13 @@ unittest
         enforce(stride(RandomCU!dchar(s), i) == codeLength!dchar(c),
                 new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
 
+        auto refRandom = new RefRandomCU!dchar(s);
+        immutable randLen = refRandom.length;
+        enforce(stride(refRandom, i) == codeLength!dchar(c),
+                new AssertError(format("Unit test failure rand ref range: %s", s), __FILE__, line));
+        enforce(refRandom.length == randLen,
+                new AssertError(format("Unit test failure rand ref range length: %s", s), __FILE__, line));
+
         if (i == 0)
         {
             enforce(stride(s) == codeLength!dchar(c),
@@ -633,6 +668,13 @@ unittest
 
             enforce(stride(InputCU!dchar(s)) == codeLength!dchar(c),
                     new AssertError(format("Unit test failure range 0: %s", s), __FILE__, line));
+
+            auto refBidir = new RefBidirCU!dchar(s);
+            immutable bidirLen = refBidir.length;
+            enforce(stride(refBidir) == codeLength!dchar(c),
+                    new AssertError(format("Unit test failure bidir ref range code length: %s", s), __FILE__, line));
+            enforce(refBidir.length == bidirLen,
+                    new AssertError(format("Unit test failure bidir ref range length: %s", s), __FILE__, line));
         }
     }
 
