@@ -915,20 +915,17 @@ size_t toUTFindex(in dchar[] str, size_t n) @safe pure nothrow
 /* =================== Decode ======================= */
 
 /++
-    Decodes and returns the character starting at $(D str[index]). $(D index)
-    is advanced to one past the decoded character. If the character is not
+    Decodes and returns the code point starting at $(D str[index]). $(D index)
+    is advanced to one past the decoded code point. If the code point is not
     well-formed, then a $(D UTFException) is thrown and $(D index) remains
     unchanged.
 
-    $(D decodeFront) is a variant of $(D decode) which specifically decodes
-    the first character.
-
-    $(D decode) will only work with strings and random access ranges of
-    code units with length and slicing, whereas $(D decodeFront) will also work
-    with any input range of code units.
+    decode will only work with strings and random access ranges of code units
+    with length and slicing, whereas $(LREF decodeFront) will work with any
+    input range of code units.
 
     Throws:
-        $(D UTFException) if $(D str[index]) is not the start of a valid UTF
+        $(LREF UTFException) if $(D str[index]) is not the start of a valid UTF
         sequence.
   +/
 dchar decode(S)(auto ref S str, ref size_t index) @trusted pure
@@ -950,7 +947,7 @@ body
 
 dchar decode(S)(auto ref S str, ref size_t index)
     if (!isSomeString!S &&
-       (isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S)))
+        isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S))
 in
 {
     assert(index < str.length, "Attempted to decode past the end of a string");
@@ -966,8 +963,22 @@ body
     return decodeImpl!true(str, index);
 }
 
-/// Ditto
-dchar decodeFront(S)(auto ref S str, out size_t index) @trusted pure
+/++
+    $(D decodeFront) is a variant of $(LREF decode) which specifically decodes
+    the first code point. Unlike $(LREF decode), $(D decodeFront) accepts any
+    input range of code units (rather than just a string or random access
+    range). It also takes the range by $(D ref) and pops off the elements as it
+    decodes them. If $(D numCodeUnits) is passed in, it gets set to the number
+    of code units which were in the code point which was decoded.
+
+    Throws:
+        $(LREF UTFException) if $(D str.front) is not the start of a valid UTF
+        sequence. If an exception is thrown, then there is no guarantee as to
+        the number of code units which were popped off, as it depends on the
+        type of range being used and how many code units had to be popped off
+        before the code point was determined to be invalid.
+  +/
+dchar decodeFront(S)(ref S str, out size_t numCodeUnits) @trusted pure
     if (isSomeString!S)
 in
 {
@@ -981,16 +992,19 @@ body
 {
     if (str[0] < codeUnitLimit!S)
     {
-        index = 1;
-        return str[0];
+        numCodeUnits = 1;
+        immutable retval = str[0];
+        str = str[1 .. $];
+        return retval;
     }
 
-    return decodeImpl!true(str, index);
+    immutable retval = decodeImpl!true(str, numCodeUnits);
+    str = str[numCodeUnits .. $];
+    return retval;
 }
 
-/// Ditto
-dchar decodeFront(S)(auto ref S str, out size_t index)
-    if (!isSomeString!S)
+dchar decodeFront(S)(ref S str, out size_t numCodeUnits)
+    if (!isSomeString!S && isInputRange!S && isSomeChar!(ElementType!S))
 in
 {
     assert(!str.empty);
@@ -1001,7 +1015,7 @@ out (result)
 }
 body
 {
-    //@@@BUG@@@ 8521 forces canIndex to be down outside of decodeImpl, which
+    //@@@BUG@@@ 8521 forces canIndex to be done outside of decodeImpl, which
     //is undesirable, since not all overloads of decodeImpl need it. So, it
     //should be moved back into decodeImpl once bug# 8521 has been fixed.
     enum canIndex = isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S);
@@ -1013,11 +1027,26 @@ body
 
     if (fst < codeUnitLimit!S)
     {
-        index = 1;
+        str.popFront();
+        numCodeUnits = 1;
         return fst;
     }
 
-    return decodeImpl!canIndex(str, index);
+    immutable retval = decodeImpl!canIndex(str, numCodeUnits);
+
+    // The other range types were already popped by decodeImpl.
+    static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
+        str = str[numCodeUnits .. str.length];
+
+    return retval;
+}
+
+/++ Ditto +/
+dchar decodeFront(S)(ref S str)
+    if (isInputRange!S && isSomeChar!(ElementType!S))
+{
+    size_t numCodeUnits;
+    return decodeFront(str, numCodeUnits);
 }
 
 // Gives the maximum value that a code unit for the given range type can hold.
@@ -1062,7 +1091,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
     else
         alias str pstr;
 
-    //@@@BUG@@@ 8521 forces this to be down outside of decodeImpl
+    //@@@BUG@@@ 8521 forces this to be done outside of decodeImpl
     //enum canIndex = is(S : const char[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S);
 
     static if (canIndex)
@@ -1183,7 +1212,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
     else
         alias str pstr;
 
-    //@@@BUG@@@ 8521 forces this to be down outside of decodeImpl
+    //@@@BUG@@@ 8521 forces this to be done outside of decodeImpl
     //enum canIndex = is(S : const wchar[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S);
 
     static if (canIndex)
@@ -1262,206 +1291,236 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
         if (!isValidDchar(pstr.front))
             throw (new UTFException("Invalid UTF-32 value")).setSequence(pstr.front);
         ++index;
-        return pstr.front;
+        immutable retval = pstr.front;
+        pstr.popFront();
+        return retval;
     }
+}
+
+version(unittest) private void testDecode(R)(R range,
+                                             size_t index,
+                                             dchar expectedChar,
+                                             size_t expectedIndex,
+                                             size_t line = __LINE__)
+{
+    static if(hasLength!R)
+        immutable lenBefore = range.length;
+
+    static if (isRandomAccessRange!R)
+    {
+        {
+            immutable result = decode(range, index);
+            enforce(result == expectedChar,
+                    new AssertError(format("decode: Wrong character: %s", result), __FILE__, line));
+            enforce(index == expectedIndex,
+                    new AssertError(format("decode: Wrong index: %s", index), __FILE__, line));
+            static if(hasLength!R)
+            {
+                enforce(range.length == lenBefore,
+                        new AssertError(format("decode: length changed: %s", range.length), __FILE__, line));
+            }
+        }
+    }
+}
+
+version(unittest) private void testDecodeFront(R)(ref R range,
+                                                  dchar expectedChar,
+                                                  size_t expectedNumCodeUnits,
+                                                  size_t line = __LINE__)
+{
+    static if(hasLength!R)
+        immutable lenBefore = range.length;
+
+    size_t numCodeUnits;
+    immutable result = decodeFront(range, numCodeUnits);
+    enforce(result == expectedChar,
+            new AssertError(format("decodeFront: Wrong character: %s", result), __FILE__, line));
+    enforce(numCodeUnits == expectedNumCodeUnits,
+            new AssertError(format("decodeFront: Wrong numCodeUnits: %s", numCodeUnits), __FILE__, line));
+
+    static if (hasLength!R)
+    {
+        enforce(range.length == lenBefore - numCodeUnits,
+                new AssertError(format("decodeFront: wrong length: %s", range.length), __FILE__, line));
+    }
+}
+
+version(unittest) private void testBothDecode(R)(R range,
+                                                 dchar expectedChar,
+                                                 size_t expectedIndex,
+                                                 size_t line = __LINE__)
+{
+    testDecode(range, 0, expectedChar, expectedIndex, line);
+    testDecodeFront(range, expectedChar, expectedIndex, line);
+}
+
+version(unittest) private void testBadDecode(R)(R range, size_t index, size_t line = __LINE__)
+{
+    immutable initialIndex = index;
+
+    static if (hasLength!R)
+        immutable lenBefore = range.length;
+
+    static if (isRandomAccessRange!R)
+    {
+        assertThrown!UTFException(decode(range, index), null, __FILE__, line);
+        enforce(index == initialIndex,
+                new AssertError(format("decode: Wrong index: %s", index), __FILE__, line));
+        static if (hasLength!R)
+        {
+            enforce(range.length == lenBefore,
+                    new AssertError(format("decode: length changed:", range.length), __FILE__, line));
+        }
+    }
+
+    if (initialIndex == 0)
+        assertThrown!UTFException(decodeFront(range, index), null, __FILE__, line);
 }
 
 unittest
 {
-    foreach(S; TypeTuple!(to!string, RandomCU!char))
+    foreach (S; TypeTuple!(to!string, InputCU!char, RandomCU!char,
+                           (string s) => new RefBidirCU!char(s),
+                           (string s) => new RefRandomCU!char(s)))
     {
-        size_t i;
-        dchar c;
-
         debug(utf) printf("utf.decode.unittest\n");
+        enum sHasLength = hasLength!(typeof(S("abcd")));
 
-        auto s1 = S("abcd");
-        i = 0;
-        c = decode(s1, i);
-        assert(c == cast(dchar)'a');
-        assert(i == 1);
-        c = decode(s1, i);
-        assert(c == cast(dchar)'b');
-        assert(i == 2);
-
-        auto s2 = S("\xC2\xA9");
-        i = 0;
-        c = decode(s2, i);
-        assert(c == cast(dchar)'\u00A9');
-        assert(i == 2);
-
-        auto s3 = S("\xE2\x89\xA0");
-        i = 0;
-        c = decode(s3, i);
-        assert(c == cast(dchar)'\u2260');
-        assert(i == 3);
-
-        string[] s4 = [
-            "\xE2\x89",     // too short
-            "\xC0\x8A",
-            "\xE0\x80\x8A",
-            "\xF0\x80\x80\x8A",
-            "\xF8\x80\x80\x80\x8A",
-            "\xFC\x80\x80\x80\x80\x8A",
-        ];
-
-        for (int j = 0; j < s4.length; j++)
         {
-            i = 0;
-            assertThrown!UTFException(decode(S(s4[j]), i));
+            auto range = S("abcd");
+            testDecode(range, 0, 'a', 1);
+            testDecode(range, 1, 'b', 2);
+            testDecodeFront(range, 'a', 1);
+            testDecodeFront(range, 'b', 1);
+            assert(decodeFront(range) == 'c');
+            assert(decodeFront(range) == 'd');
         }
-    }
 
-    foreach(S; TypeTuple!(to!string, RandomCU!char, InputCU!char))
-    {
-        size_t i;
-        dchar c;
-
-        debug(utf) printf("utf.decode.unittest\n");
-
-        auto s1 = S("abcd");
-        i = 42;
-        c = decodeFront(s1, i);
-        assert(c == cast(dchar)'a');
-        assert(i == 1);
-
-        auto s2 = S("\xC2\xA9");
-        i = 42;
-        c = decodeFront(s2, i);
-        assert(c == cast(dchar)'\u00A9');
-        assert(i == 2);
-
-        auto s3 = S("\xE2\x89\xA0");
-        i = 42;
-        c = decodeFront(s3, i);
-        assert(c == cast(dchar)'\u2260');
-        assert(i == 3);
-
-        string[] s4 = [
-            "\xE2\x89",     // too short
-            "\xC0\x8A",
-            "\xE0\x80\x8A",
-            "\xF0\x80\x80\x8A",
-            "\xF8\x80\x80\x80\x8A",
-            "\xFC\x80\x80\x80\x80\x8A",
-        ];
-
-        for (int j = 0; j < s4.length; j++)
         {
-            i = 0;
-            assertThrown!UTFException(decodeFront(S(s4[j]), i));
+            auto range = S("ウェブサイト");
+            testDecode(range, 0, 'ウ', 3);
+            testDecode(range, 3, 'ェ', 6);
+            testDecodeFront(range, 'ウ', 3);
+            testDecodeFront(range, 'ェ', 3);
+            assert(decodeFront(range) == 'ブ');
+            assert(decodeFront(range) == 'サ');
         }
+
+        testBothDecode(S("\xC2\xA9"), '\u00A9', 2);
+        testBothDecode(S("\xE2\x89\xA0"), '\u2260', 3);
+
+        foreach (str; ["\xE2\x89", // too short
+                       "\xC0\x8A",
+                       "\xE0\x80\x8A",
+                       "\xF0\x80\x80\x8A",
+                       "\xF8\x80\x80\x80\x8A",
+                       "\xFC\x80\x80\x80\x80\x8A"])
+        {
+            testBadDecode(S(str), 0);
+            testBadDecode(S(str), 1);
+        }
+
+        //Invalid UTF-8 sequence where the first code unit is valid.
+        testBothDecode(S("\xEF\xBF\xBE"), cast(dchar)0xFFFE, 3);
+        testBothDecode(S("\xEF\xBF\xBF"), cast(dchar)0xFFFF, 3);
+
+        //Invalid UTF-8 sequence where the first code unit isn't valid.
+        testBadDecode(S("\xED\xA0\x80"), 0);
+        testBadDecode(S("\xED\xAD\xBF"), 0);
+        testBadDecode(S("\xED\xAE\x80"), 0);
+        testBadDecode(S("\xED\xAF\xBF"), 0);
+        testBadDecode(S("\xED\xB0\x80"), 0);
+        testBadDecode(S("\xED\xBE\x80"), 0);
+        testBadDecode(S("\xED\xBF\xBF"), 0);
     }
 }
 
 unittest
 {
-    size_t i;
-
-    foreach(S; TypeTuple!(to!string, RandomCU!char, InputCU!char))
+    foreach (S; TypeTuple!(to!wstring, InputCU!wchar, RandomCU!wchar,
+                           (wstring s) => new RefBidirCU!wchar(s),
+                           (wstring s) => new RefRandomCU!wchar(s)))
     {
-        static if (is(S == InputCU!char))
-            alias TypeTuple!(decodeFront) funcs;
-        else
-            alias TypeTuple!(decode, decodeFront) funcs;
+        testBothDecode(S([cast(wchar)0x1111]), cast(dchar)0x1111, 1);
+        testBothDecode(S([cast(wchar)0xD800, cast(wchar)0xDC00]), cast(dchar)0x10000, 2);
+        testBothDecode(S([cast(wchar)0xDBFF, cast(wchar)0xDFFF]), cast(dchar)0x10FFFF, 2);
+        testBothDecode(S([cast(wchar)0xFFFE]), cast(dchar)0xFFFE, 1);
+        testBothDecode(S([cast(wchar)0xFFFF]), cast(dchar)0xFFFF, 1);
 
-        foreach(func; funcs)
+        testBadDecode(S([ cast(wchar)0xD801 ]), 0);
+        testBadDecode(S([ cast(wchar)0xD800, cast(wchar)0x1200 ]), 0);
+
         {
-            i = 0; assert(func(S("\xEF\xBF\xBE"c), i) == cast(dchar)0xFFFE);
-            i = 0; assert(func(S("\xEF\xBF\xBF"c), i) == cast(dchar)0xFFFF);
-            i = 0;
-
-            assertThrown!UTFException(func(S("\xED\xA0\x80"c), i));
-            assertThrown!UTFException(func(S("\xED\xAD\xBF"c), i));
-            assertThrown!UTFException(func(S("\xED\xAE\x80"c), i));
-            assertThrown!UTFException(func(S("\xED\xAF\xBF"c), i));
-            assertThrown!UTFException(func(S("\xED\xB0\x80"c), i));
-            assertThrown!UTFException(func(S("\xED\xBE\x80"c), i));
-            assertThrown!UTFException(func(S("\xED\xBF\xBF"c), i));
+            auto range = S("ウェブサイト");
+            testDecode(range, 0, 'ウ', 1);
+            testDecode(range, 1, 'ェ', 2);
+            testDecodeFront(range, 'ウ', 1);
+            testDecodeFront(range, 'ェ', 1);
+            assert(decodeFront(range) == 'ブ');
+            assert(decodeFront(range) == 'サ');
         }
+    }
+
+    foreach (S; TypeTuple!(to!wstring, RandomCU!wchar, (wstring s) => new RefRandomCU!wchar(s)))
+    {
+        auto str = S([cast(wchar)0xD800, cast(wchar)0xDC00,
+                      cast(wchar)0x1400,
+                      cast(wchar)0xDAA7, cast(wchar)0xDDDE]);
+        testDecode(str, 0, cast(dchar)0x10000, 2);
+        testDecode(str, 2, cast(dchar)0x1400, 3);
+        testDecode(str, 3, cast(dchar)0xB9DDE, 5);
     }
 }
 
 unittest
 {
-    size_t i;
-
-    foreach(S; TypeTuple!(to!wstring, RandomCU!wchar, InputCU!wchar))
+    foreach(S; TypeTuple!(to!dstring, RandomCU!dchar, InputCU!dchar,
+                          (dstring s) => new RefBidirCU!dchar(s),
+                          (dstring s) => new RefRandomCU!dchar(s)))
     {
-        static if (is(S == InputCU!wchar))
-            alias TypeTuple!(decodeFront) funcs;
-        else
-            alias TypeTuple!(decode, decodeFront) funcs;
+        testBothDecode(S([cast(dchar)0x1111]), cast(dchar)0x1111, 1);
+        testBothDecode(S([cast(dchar)0x10000]), cast(dchar)0x10000, 1);
+        testBothDecode(S([cast(dchar)0x10FFFF]), cast(dchar)0x10FFFF, 1);
+        testBothDecode(S([cast(dchar)0xFFFE]), cast(dchar)0xFFFE, 1);
+        testBothDecode(S([cast(dchar)0xFFFF]), cast(dchar)0xFFFF, 1);
 
-        foreach(func; funcs)
+        testBadDecode(S([cast(dchar)0xD800]), 0);
+        testBadDecode(S([cast(dchar)0xDFFE]), 0);
+        testBadDecode(S([cast(dchar)0x110000]), 0);
+
         {
-            i = 0; assert(func(S([ cast(wchar)0x1111 ]), i) == cast(dchar)0x1111 && i == 1);
-            i = 0; assert(func(S([ cast(wchar)0xD800, cast(wchar)0xDC00 ]), i) == cast(dchar)0x10000 && i == 2);
-            i = 0; assert(func(S([ cast(wchar)0xDBFF, cast(wchar)0xDFFF ]), i) == cast(dchar)0x10FFFF && i == 2);
-            i = 0; assert(func(S([ cast(wchar)0xFFFE ]), i) == cast(dchar)0xFFFE && i == 1);
-            i = 0; assert(func(S([ cast(wchar)0xFFFF ]), i) == cast(dchar)0xFFFF && i == 1);
-            i = 0; assertThrown!UTFException(func(S([ cast(wchar)0xD801 ]), i));
-            i = 0; assertThrown!UTFException(func(S([ cast(wchar)0xD800, cast(wchar)0x1200 ]), i));
+            auto range = S("ウェブサイト");
+            testDecode(range, 0, 'ウ', 1);
+            testDecode(range, 1, 'ェ', 2);
+            testDecodeFront(range, 'ウ', 1);
+            testDecodeFront(range, 'ェ', 1);
+            assert(decodeFront(range) == 'ブ');
+            assert(decodeFront(range) == 'サ');
         }
     }
 
-    foreach(S; TypeTuple!(to!wstring, RandomCU!wchar))
+    foreach (S; TypeTuple!(to!dstring, RandomCU!dchar, (dstring s) => new RefRandomCU!dchar(s)))
     {
-        auto str = S([ cast(wchar)0xD800, cast(wchar)0xDC00,
-                       cast(wchar)0x1400,
-                       cast(wchar)0xDAA7, cast(wchar)0xDDDE ]);
-        i = 0;
-        assert(decode(str, i) == 0x10000 && i == 2);
-        assert(decode(str, i) == 0x1400  && i == 3);
-        assert(decode(str, i) == 0xB9DDE && i == 5);
+        auto str = S([cast(dchar)0x10000, cast(dchar)0x1400, cast(dchar)0xB9DDE]);
+        testDecode(str, 0, 0x10000, 1);
+        testDecode(str, 1, 0x1400, 2);
+        testDecode(str, 2, 0xB9DDE, 3);
     }
 }
 
 unittest
 {
-    size_t i;
-
-    foreach(S; TypeTuple!(to!dstring, RandomCU!dchar, InputCU!dchar))
+    foreach(S; TypeTuple!(char[], const(char)[], string,
+                          wchar[], const(wchar)[], wstring,
+                          dchar[], const(dchar)[], dstring))
     {
-        static if (is(S == InputCU!dchar))
-            alias TypeTuple!(decodeFront) funcs;
-        else
-            alias TypeTuple!(decode, decodeFront) funcs;
-
-        foreach(func; funcs)
-        {
-            i = 0; assert(func(S([ cast(dchar)0x1111 ]), i) == cast(dchar)0x1111 && i == 1);
-            i = 0; assert(func(S([ cast(dchar)0x10000 ]), i) == cast(dchar)0x10000 && i == 1);
-            i = 0; assert(func(S([ cast(dchar)0x10FFFF ]), i) == cast(dchar)0x10FFFF && i == 1);
-            i = 0; assert(func(S([ cast(dchar)0xFFFE ]), i) == cast(dchar)0xFFFE && i == 1);
-            i = 0; assert(func(S([ cast(dchar)0xFFFF ]), i) == cast(dchar)0xFFFF && i == 1);
-            i = 0; assertThrown!UTFException(func(S([ cast(dchar)0xD800 ]), i));
-            i = 0; assertThrown!UTFException(func(S([ cast(dchar)0xDFFE ]), i));
-            i = 0; assertThrown!UTFException(func(S([ cast(dchar)0x110000 ]), i));
-        }
-    }
-
-    foreach(S; TypeTuple!(to!dstring, RandomCU!dchar))
-    {
-        auto str = S([ cast(dchar)0x10000, cast(dchar)0x1400, cast(dchar)0xB9DDE ]);
-        i = 0;
-        assert(decode(str, i) == 0x10000 && i == 1);
-        assert(decode(str, i) == 0x1400  && i == 2);
-        assert(decode(str, i) == 0xB9DDE && i == 3);
-    }
-}
-
-unittest
-{
-    foreach(S; TypeTuple!(char[], const char[], string,
-                          wchar[], const wchar[], wstring,
-                          dchar[], const dchar[], dstring))
-    {
-        enum str = to!S("hello world");
-        static assert(isSafe!((){size_t i = 0; decode(str, i);}));
-        static assert(isSafe!((){size_t i = 0; decodeFront(str, i);}));
-        static assert((functionAttributes!((){size_t i = 0; decode(str, i);}) & FunctionAttribute.pure_) != 0);
-        static assert((functionAttributes!((){size_t i = 0; decodeFront(str, i);}) & FunctionAttribute.pure_) != 0);
+        static assert(isSafe!((){S str; size_t i = 0; decode(str, i);}));
+        static assert(isSafe!((){S str; size_t i = 0; decodeFront(str, i);}));
+        static assert(isSafe!((){S str; decodeFront(str);}));
+        static assert((functionAttributes!((){S str; size_t i = 0; decode(str, i);}) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!((){S str; size_t i = 0; decodeFront(str, i);}) &
+                      FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!((){S str; decodeFront(str);}) & FunctionAttribute.pure_) != 0);
     }
 }
 
@@ -2543,6 +2602,7 @@ version(unittest)
         @property C back() { return _str[$ - 1]; }
         void popBack() { _str = _str[0 .. $ - 1]; }
         @property auto save() { return BidirCU(_str); }
+        @property size_t length() { return _str.length; }
 
         this(inout(C)[] str)
         {
