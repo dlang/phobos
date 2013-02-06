@@ -142,7 +142,8 @@ SRC_STD_REST= std\regex.d \
 	std\json.d \
 	std\parallelism.d \
 	std\mathspecial.d \
-	std\process.d
+	std\process.d \
+	std\process2.d
 
 SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_3) $(SRC_STD_3a) $(SRC_STD_3b) $(SRC_STD_4) \
@@ -156,7 +157,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\outbuffer.d std\md5.d std\base64.d \
 	std\mmfile.d \
 	std\syserror.d \
-	std\regexp.d std\random.d std\stream.d std\process.d \
+	std\regexp.d std\random.d std\stream.d std\process.d std\process2.d \
 	std\socket.d std\socketstream.d std\format.d \
 	std\stdio.d std\perf.d std\uni.d std\uuid.d \
 	std\cstream.d std\demangle.d \
@@ -316,6 +317,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_path.html \
 	$(DOC)\std_perf.html \
 	$(DOC)\std_process.html \
+	$(DOC)\std_process2.html \
 	$(DOC)\std_random.html \
 	$(DOC)\std_range.html \
 	$(DOC)\std_regex.html \
@@ -570,6 +572,9 @@ $(DOC)\std_perf.html : $(STDDOC) std\perf.d
 
 $(DOC)\std_process.html : $(STDDOC) std\process.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_process.html $(STDDOC) std\process.d
+
+$(DOC)\std_process2.html : $(STDDOC) std\process2.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_process2.html $(STDDOC) std\process2.d
 
 $(DOC)\std_random.html : $(STDDOC) std\random.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_random.html $(STDDOC) std\random.d
