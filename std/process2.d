@@ -1537,6 +1537,20 @@ unittest
         //    0, indicating the variable doesn't exist.
         version(Windows)  if (n.length == 0 || v.length == 0) continue;
 
+        // Windows environment variables are supposed to be case insensitive,
+        // and the GetEnvironmentVariable() function used by environment[]
+        // works like that.  The GetEnvironmentStrings() function used by
+        // toAA(), however, returns the environment block verbatim, and it
+        // may contain multiple variables whose names differ only in case.
+        // This seems to happen with the temp/tmp/TEMP/TMP variables on
+        // systems that run Cygwin.  Pending a better solution, we just
+        // skip them.
+        version(Windows)
+        {
+            if (n == "temp" || n == "tmp" || n == "TEMP" || n == "TMP")
+                continue;
+        }
+
         assert (v == environment[n]);
     }
 }
