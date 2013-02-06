@@ -11226,9 +11226,10 @@ unittest
 
 // cartesianProduct
 /**
-Lazily computes the Cartesian product of two ranges $(D range1) and $(D
-range2). The product is a _range of tuples of elements from each respective
-range.
+Lazily computes the Cartesian product of two or more ranges. The product is a
+_range of tuples of elements from each respective range.
+
+The conditions for the two-range case are as follows:
 
 If both ranges are finite, then one must be (at least) a forward range and the
 other an input range.
@@ -11237,6 +11238,9 @@ If one _range is infinite and the other finite, then the finite _range must
 be a forward _range, and the infinite range can be an input _range.
 
 If both ranges are infinite, then both must be forward ranges.
+
+When there are more than two ranges, the above conditions apply to each
+adjacent pair of ranges.
 
 Examples:
 ---
@@ -11464,4 +11468,19 @@ unittest
     {
         assert(canFind(BC, tuple(n[0], n[1])));
     }
+}
+
+/// ditto
+auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
+{
+    /* We implement the n-ary cartesian product by recursively invoking the
+     * binary cartesian product. To make the resulting range nicer, we denest
+     * one level of tuples so that a ternary cartesian product, for example,
+     * returns 3-element tuples instead of nested 2-element tuples.
+     */
+    enum string denest = format("tuple(a[0], %(a[1][%d]%|,%))",
+                                iota(0, others.length+1));
+    return map!denest(
+        cartesianProduct(range1, cartesianProduct(range2, otherRanges))
+    );
 }
