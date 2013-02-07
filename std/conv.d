@@ -3133,6 +3133,11 @@ dstring dtext(T...)(T args)
     return textImpl!dstring(args);
 }
 
+private S textImpl(S, U...)(U args) if (U.length == 0)
+{
+    return null;
+}
+
 private S textImpl(S, U...)(U args) if (U.length > 0)
 {
     auto result = to!S(args[0]);
@@ -3146,6 +3151,9 @@ unittest
     assert(text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz");
     assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
     assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
+    assert(text() is null);
+    assert(wtext() is null);
+    assert(dtext() is null);
 }
 
 /***************************************************************
