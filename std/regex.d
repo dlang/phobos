@@ -1976,8 +1976,18 @@ public struct Regex(Char)
     @property bool empty() const nothrow {  return ir is null; }
 
     /++
-       A range of the names of the named subgroups in the regex. Order
-       is not guaranteed.
+       A range of the names of the named subgroups in the regex.
+
+       ---
+       auto re = regex(`(?P<name>\w+) = (?P<var>\d+)`);
+       auto ng = re.namedGroups;
+       static assert(isRandomAccessRange!(typeof(ng)));
+       assert(!ng.empty);
+       assert(ng.length == 2);
+       foreach(name; ng) {
+           writeln(name);
+       }
+       ---
      +/
     @property auto namedGroups()
     {
@@ -1988,25 +1998,33 @@ public struct Regex(Char)
             size_t start;
             size_t end;
         public:
-            this(NamedGroup[] g)
+            this(NamedGroup[] g, size_t s, size_t e)
             {
+                assert(s <= e);
+                assert(e <= g.length);
                 groups = g;
-                start = 0;
-                end = groups.length;
+                start = s;
+                end = e;
             }
 
             @property string front() { return groups[start].name; };
             @property string back() { return groups[end].name; }
             @property bool empty() { return start >= end; }
+            @property size_t length() { return end - start; }
+            alias length opDollar;
+            @property NamedGroupRange save()
+            {
+                return NamedGroupRange(groups, start, end);
+            };
             void popFront() { assert(!empty); start++; }
             void popBack() { assert(!empty); end--; }
             string opIndex()(size_t i)
             {
                 assert(start + i < end, "Request named group is out of range.");
-                return groups[start+i];
+                return groups[start+i].name;
             }
         }
-        return NamedGroupRange(dict);
+        return NamedGroupRange(dict, 0, dict.length);
     }
 
 private:
