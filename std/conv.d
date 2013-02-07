@@ -3133,13 +3133,10 @@ dstring dtext(T...)(T args)
     return textImpl!dstring(args);
 }
 
-private S textImpl(S, U...)(U args)
+private S textImpl(S, U...)(U args) if (U.length > 0)
 {
-    S result;
-    foreach (i, arg; args)
-    {
-        result ~= to!S(args[i]);
-    }
+    auto result = to!S(args[0]);
+    foreach (arg; args[1 .. $]) result ~= to!S(arg);
     return result;
 }
 
