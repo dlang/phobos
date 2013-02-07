@@ -849,9 +849,16 @@ template make(T)
 if (is(T == struct) || is(T == class))
 {
     T make(Args...)(Args arguments)
-    if (is(T == struct) && __traits(compiles, T(arguments)))
+    if (is(T == struct) && __traits(compiles, T(arguments)) && Args.length > 0)
     {
         return T(arguments);
+    }
+
+    //@@@BUG@@@ 8763 makes this extra function necessary.
+    T make()()
+    if (is(T == struct))
+    {
+        return T();
     }
 
     T make(Args...)(Args arguments)
@@ -873,6 +880,19 @@ unittest
     alias make!(DList!int) makeList;
     auto list = makeList([1, 7, 42]);
     assert(equal(list[], [1, 7, 42]));
+}
+
+unittest
+{
+    auto arr1 = make!(Array!dchar)();
+    assert(arr1.empty);
+    auto arr2 = make!(Array!dchar)("hello"d);
+    assert(equal(arr2[], "hello"d));
+
+    auto rtb1 = make!(RedBlackTree!dchar)();
+    assert(rtb1.empty);
+    auto rtb2 = make!(RedBlackTree!dchar)('h', 'e', 'l', 'l', 'o');
+    assert(equal(rtb2[], "ehlo"d));
 }
 
 /**
