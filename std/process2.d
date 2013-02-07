@@ -1183,15 +1183,15 @@ Tuple!(int, "status", string, "output") execute(string name, string[] args...)
 
 unittest
 {
-    // The funky echo statements are due to Windows' lack of an equivalent
-    // to POSIX' echo ...\c
+    // To avoid printing the newline characters, we use the echo|set trick on
+    // Windows, and printf on POSIX (neither echo -n nor echo \c are portable).
     version(Windows) TestScript prog =
        "echo|set /p=%1
         echo|set /p=%2 1>&2
         exit 123";
     else version (Posix) TestScript prog =
-       `echo $1\\c
-        echo $2\\c >&2
+       `printf '%s' $1
+        printf '%s' $2 >&2
         exit 123`;
     auto r = execute(prog.path~" foo bar");
     assert (r.status == 123);
