@@ -1195,13 +1195,10 @@ unittest
         exit 123`;
     auto r = execute(prog.path~" foo bar");
     assert (r.status == 123);
-    auto rout = r.output.stripRight();
-    writeln("==={", rout, "}===");
-    assert (rout == "foobar" || rout == "barfoo");
+    assert (r.output.stripRight() == "foobar");
     auto s = execute(prog.path, "Hello", "World");
     assert (s.status == 123);
-    auto sout = s.output.stripRight();
-    assert (sout == "HelloWorld" || sout == "WorldHello");
+    assert (s.output.stripRight() == "HelloWorld");
 }
 
 
