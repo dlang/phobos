@@ -1859,8 +1859,8 @@ import std.stdio;
 
 int main()
 {
-    char[] buf;
-    while ((buf = readln()) != null)
+    string buf;
+    while ((buf = stdin.readln()) !is null)
         write(buf);
     return 0;
 }
