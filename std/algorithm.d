@@ -11226,9 +11226,10 @@ unittest
 
 // cartesianProduct
 /**
-Lazily computes the Cartesian product of two ranges $(D range1) and $(D
-range2). The product is a _range of tuples of elements from each respective
-range.
+Lazily computes the Cartesian product of two or more ranges. The product is a
+_range of tuples of elements from each respective range.
+
+The conditions for the two-range case are as follows:
 
 If both ranges are finite, then one must be (at least) a forward range and the
 other an input range.
@@ -11237,6 +11238,9 @@ If one _range is infinite and the other finite, then the finite _range must
 be a forward _range, and the infinite range can be an input _range.
 
 If both ranges are infinite, then both must be forward ranges.
+
+When there are more than two ranges, the above conditions apply to each
+adjacent pair of ranges.
 
 Examples:
 ---
@@ -11260,6 +11264,25 @@ foreach (n; [[1, 4], [2, 4], [3, 4], [1, 5], [2, 5], [3, 5], [1, 6],
 {
     assert(canFind(BC, tuple(n[0], n[1])));
 }
+---
+
+---
+auto A = [ 1, 2, 3 ];
+auto B = [ 'a', 'b', 'c' ];
+auto C = [ "x", "y", "z" ];
+auto ABC = cartesianProduct(A, B, C);
+
+assert(ABC.equal([
+    tuple(1, 'a', "x"), tuple(2, 'a', "x"), tuple(3, 'a', "x"),
+    tuple(1, 'b', "x"), tuple(2, 'b', "x"), tuple(3, 'b', "x"),
+    tuple(1, 'c', "x"), tuple(2, 'c', "x"), tuple(3, 'c', "x"),
+    tuple(1, 'a', "y"), tuple(2, 'a', "y"), tuple(3, 'a', "y"),
+    tuple(1, 'b', "y"), tuple(2, 'b', "y"), tuple(3, 'b', "y"),
+    tuple(1, 'c', "y"), tuple(2, 'c', "y"), tuple(3, 'c', "y"),
+    tuple(1, 'a', "z"), tuple(2, 'a', "z"), tuple(3, 'a', "z"),
+    tuple(1, 'b', "z"), tuple(2, 'b', "z"), tuple(3, 'b', "z"),
+    tuple(1, 'c', "z"), tuple(2, 'c', "z"), tuple(3, 'c', "z")
+]));
 ---
 */
 auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
@@ -11464,4 +11487,67 @@ unittest
     {
         assert(canFind(BC, tuple(n[0], n[1])));
     }
+}
+
+/// ditto
+auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
+{
+    /* We implement the n-ary cartesian product by recursively invoking the
+     * binary cartesian product. To make the resulting range nicer, we denest
+     * one level of tuples so that a ternary cartesian product, for example,
+     * returns 3-element tuples instead of nested 2-element tuples.
+     */
+    enum string denest = format("tuple(a[0], %(a[1][%d]%|,%))",
+                                iota(0, otherRanges.length+1));
+    return map!denest(
+        cartesianProduct(range1, cartesianProduct(range2, otherRanges))
+    );
+}
+
+unittest
+{
+    auto N = sequence!"n"(0);
+    auto N3 = cartesianProduct(N, N, N);
+
+    // Check that tuples are properly denested
+    assert(is(ElementType!(typeof(N3)) == Tuple!(size_t,size_t,size_t)));
+
+    assert(canFind(N3, tuple(0, 27, 7)));
+    assert(canFind(N3, tuple(50, 23, 71)));
+    assert(canFind(N3, tuple(9, 3, 0)));
+}
+
+version(none)
+// This unittest causes `make -f posix.mak unittest` to run out of memory. Why?
+unittest
+{
+    auto N = sequence!"n"(0);
+    auto N4 = cartesianProduct(N, N, N, N);
+
+    // Check that tuples are properly denested
+    assert(is(ElementType!(typeof(N4)) == Tuple!(size_t,size_t,size_t,size_t)));
+
+    assert(canFind(N4, tuple(1, 2, 3, 4)));
+    assert(canFind(N4, tuple(4, 3, 2, 1)));
+    assert(canFind(N4, tuple(10, 31, 7, 12)));
+}
+
+unittest
+{
+    auto A = [ 1, 2, 3 ];
+    auto B = [ 'a', 'b', 'c' ];
+    auto C = [ "x", "y", "z" ];
+    auto ABC = cartesianProduct(A, B, C);
+
+    assert(ABC.equal([
+        tuple(1, 'a', "x"), tuple(2, 'a', "x"), tuple(3, 'a', "x"),
+        tuple(1, 'b', "x"), tuple(2, 'b', "x"), tuple(3, 'b', "x"),
+        tuple(1, 'c', "x"), tuple(2, 'c', "x"), tuple(3, 'c', "x"),
+        tuple(1, 'a', "y"), tuple(2, 'a', "y"), tuple(3, 'a', "y"),
+        tuple(1, 'b', "y"), tuple(2, 'b', "y"), tuple(3, 'b', "y"),
+        tuple(1, 'c', "y"), tuple(2, 'c', "y"), tuple(3, 'c', "y"),
+        tuple(1, 'a', "z"), tuple(2, 'a', "z"), tuple(3, 'a', "z"),
+        tuple(1, 'b', "z"), tuple(2, 'b', "z"), tuple(3, 'b', "z"),
+        tuple(1, 'c', "z"), tuple(2, 'c', "z"), tuple(3, 'c', "z"),
+    ]));
 }
