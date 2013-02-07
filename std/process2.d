@@ -665,54 +665,44 @@ version(Posix) private bool isExecutable(string path)
 
 unittest
 {
-    TestScript prog1 = q{
-        exit 0
-    };
+    TestScript prog1 = "exit 0";
     assert (wait(spawnProcess(prog1.path)) == 0);
 
-    TestScript prog2 = q{
-        exit 123
-    };
+    TestScript prog2 = "exit 123";
     auto pid2 = spawnProcess(prog2.path);
     assert (wait(pid2) == 123);
     assert (wait(pid2) == 123);
 
-    version (Windows) TestScript prog3 = q{
-        if not -%1-==-foo- ( exit 1 )
+    version (Windows) TestScript prog3 =
+       "if not -%1-==-foo- ( exit 1 )
         if not -%2-==-bar- ( exit 1 )
-        exit 0
-    };
-    else version (Posix) TestScript prog3 = q{
-        if test "$1" != "foo"; then exit 1; fi
+        exit 0";
+    else version (Posix) TestScript prog3 =
+       `if test "$1" != "foo"; then exit 1; fi
         if test "$2" != "bar"; then exit 1; fi
-        exit 0
-    };
+        exit 0`;
     assert (wait(spawnProcess(prog3.path, ["foo", "bar"])) == 0);
     assert (wait(spawnProcess(prog3.path~" foo bar")) == 0);
     assert (wait(spawnProcess(prog3.path)) == 1);
 
-    version (Windows) TestScript prog4 = q{
-        if %hello%==world ( exit 0 )
-        exit 1
-    };
-    version (Posix) TestScript prog4 = q{
-        if test $hello = world; then exit 0; fi
-        exit 1
-    };
+    version (Windows) TestScript prog4 =
+       "if %hello%==world ( exit 0 )
+        exit 1";
+    version (Posix) TestScript prog4 =
+       "if test $hello = world; then exit 0; fi
+        exit 1";
     auto env = [ "hello" : "world" ];
     assert (wait(spawnProcess(prog4.path, null, env)) == 0);
     assert (wait(spawnProcess(prog4.path, env)) == 0);
 
-    version (Windows) TestScript prog5 = q{
-        set /p INPUT=
+    version (Windows) TestScript prog5 =
+       "set /p INPUT=
         echo %INPUT% output %1
-        echo %INPUT% error %2 1>&2
-    };
-    else version (Posix) TestScript prog5 = q{
-        read INPUT
+        echo %INPUT% error %2 1>&2";
+    else version (Posix) TestScript prog5 =
+       "read INPUT
         echo $INPUT output $1
-        echo $INPUT error $2 >&2
-    };
+        echo $INPUT error $2 >&2";
     auto pipe5i = pipe();
     auto pipe5o = pipe();
     auto pipe5e = pipe();
@@ -729,9 +719,7 @@ version (Posix) unittest
 {
     // Termination by signal.
     import core.sys.posix.signal;
-    TestScript prog = q{
-        while true; do; done;
-    };
+    TestScript prog = "while true; do; done"; // Infinite loop
     auto pid = spawnProcess(prog.path);
     kill(pid.processID, SIGTERM);
     assert (wait(pid) == -SIGTERM);
@@ -1052,8 +1040,8 @@ enum Redirect
 
 unittest
 {
-    version (Windows) TestScript prog = q{
-        call :sub %1 %2 0
+    version (Windows) TestScript prog =
+       "call :sub %1 %2 0
         call :sub %1 %2 1
         call :sub %1 %2 2
         call :sub %1 %2 3
@@ -1063,18 +1051,15 @@ unittest
         set /p INPUT=
         if -%INPUT%-==-stop- ( exit %3 )
         echo %INPUT% %1
-        echo %INPUT% %2 1>&2
-    };
-    else version (Posix) TestScript prog = q{
-        for EXITCODE in 0 1 2 3; do
+        echo %INPUT% %2 1>&2";
+    else version (Posix) TestScript prog =
+       `for EXITCODE in 0 1 2 3; do
             read INPUT
             if test "$INPUT" = stop; then break; fi
             echo "$INPUT $1"
             echo "$INPUT $2" >&2
         done
-        exit $EXITCODE
-    };
-
+        exit $EXITCODE`;
     auto pp = pipeProcess(prog.path, ["bar", "baz"]);
     pp.stdin.writeln("foo");
     pp.stdin.flush();
@@ -1200,16 +1185,14 @@ unittest
 {
     // The funky echo statements are due to Windows' lack of an equivalent
     // to POSIX' echo -n.
-    version(Windows) TestScript prog = q{
-        echo|set /p=%1
+    version(Windows) TestScript prog =
+       "echo|set /p=%1
         echo|set /p=%2 1>&2
-        exit 123
-    };
-    else version (Posix) TestScript prog = q{
-        echo -n $1
+        exit 123";
+    else version (Posix) TestScript prog =
+       "echo -n $1
         echo -n $2 >&2
-        exit 123
-    };
+        exit 123";
     auto r = execute(prog.path~" foo bar");
     assert (r.status == 123);
     auto rout = r.output.stripRight();
@@ -1292,19 +1275,19 @@ version(unittest) private struct TestScript
 {
     this(string code)
     {
-        import std.file, std.uuid;
+        import std.ascii, std.file, std.uuid;
         version (Windows)
         {
             auto ext = ".cmd";
-            auto firstLine = "@echo off\r\n";
+            auto firstLine = "@echo off";
         }
         else version (Posix)
         {
             auto ext = "";
-            auto firstLine = "#!/bin/sh\n";
+            auto firstLine = "#!/bin/sh";
         }
         path = buildPath(tempDir(), randomUUID().toString()~ext);
-        std.file.write(path, firstLine~code);
+        std.file.write(path, firstLine~std.ascii.newline~code~std.ascii.newline);
         version (Posix)
         {
             import core.sys.posix.sys.stat;
