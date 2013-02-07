@@ -1980,16 +1980,16 @@ public struct Regex(Char)
 
        ---
        auto re = regex(`(?P<name>\w+) = (?P<var>\d+)`);
-       auto ng = re.namedGroups;
-       static assert(isRandomAccessRange!(typeof(ng)));
-       assert(!ng.empty);
-       assert(ng.length == 2);
-       foreach(name; ng) {
+       auto nc = re.namedCaptures;
+       static assert(isRandomAccessRange!(typeof(nc)));
+       assert(!nc.empty);
+       assert(nc.length == 2);
+       foreach(name; nc) {
            writeln(name);
        }
        ---
      +/
-    @property auto namedGroups()
+    @property auto namedCaptures()
     {
         static struct NamedGroupRange
         {
