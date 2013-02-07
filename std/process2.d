@@ -1213,6 +1213,7 @@ unittest
     auto r = execute(prog.path~" foo bar");
     assert (r.status == 123);
     auto rout = r.output.stripRight();
+    writeln("==={", rout, "}===");
     assert (rout == "foobar" || rout == "barfoo");
     auto s = execute(prog.path, "Hello", "World");
     assert (s.status == 123);
