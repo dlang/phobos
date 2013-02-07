@@ -828,22 +828,51 @@ unittest {
 }
 
 /**
-Returns an initialized container. This function is mainly for
-eliminating construction differences between $(D class) containers and
-$(D struct) containers.
+Returns an initialized object. This function is mainly for eliminating
+construction differences between structs and classes. It allows code to not
+worry about whether the type it's constructing is a struct or a class.
+
+Examples:
+--------------------
+auto arr = make!(Array!int)([4, 2, 3, 1]);
+assert(equal(arr[], [4, 2, 3, 1]));
+
+auto rbt = make!(RedBlackTree!(int, "a > b"))([4, 2, 3, 1]);
+assert(equal(rbt[], [4, 3, 2, 1]));
+
+alias make!(DList!int) makeList;
+auto list = makeList([1, 7, 42]);
+assert(equal(list[], [1, 7, 42]));
+--------------------
  */
-Container make(Container, T...)(T arguments) if (is(Container == struct))
+template make(T)
+if (is(T == struct) || is(T == class))
 {
-    static if (T.length == 0)
-        static assert(false, "You must pass at least one argument");
-    else
-        return Container(arguments);
+    T make(Args...)(Args arguments)
+    if (is(T == struct) && __traits(compiles, T(arguments)))
+    {
+        return T(arguments);
+    }
+
+    T make(Args...)(Args arguments)
+    if (is(T == class) && __traits(compiles, new T(arguments)))
+    {
+        return new T(arguments);
+    }
 }
 
-/// ditto
-Container make(Container, T...)(T arguments) if (is(Container == class))
+//Verify Examples.
+unittest
 {
-    return new Container(arguments);
+    auto arr = make!(Array!int)([4, 2, 3, 1]);
+    assert(equal(arr[], [4, 2, 3, 1]));
+
+    auto rbt = make!(RedBlackTree!(int, "a > b"))([4, 2, 3, 1]);
+    assert(equal(rbt[], [4, 3, 2, 1]));
+
+    alias make!(DList!int) makeList;
+    auto list = makeList([1, 7, 42]);
+    assert(equal(list[], [1, 7, 42]));
 }
 
 /**
