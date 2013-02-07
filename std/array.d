@@ -2219,11 +2219,28 @@ Returns the managed array.
         return newext > newlength ? newext : newlength;
     }
 
+    private template canPutItem(U)
+    {
+        enum bool canPutItem = isImplicitlyConvertible!(U, T) ||
+            isSomeChar!T && isSomeChar!U;
+    }
+
+    private template canPutConstRange(Range)
+    {
+        enum bool canPutConstRange = isInputRange!(Unqual!Range) &&
+            !isInputRange!Range;
+    }
+
+    private template canPutRange(Range)
+    {
+        enum bool canPutRange = isInputRange!Range &&
+            is(typeof(Appender.init.put(Range.init.front)));
+    }
+
 /**
 Appends one item to the managed array.
  */
-    void put(U)(U item) if (isImplicitlyConvertible!(U, T) ||
-            isSomeChar!T && isSomeChar!U)
+    void put(U)(U item) if (canPutItem!U)
     {
         static if (isSomeChar!T && isSomeChar!U && T.sizeof < U.sizeof)
         {
@@ -2242,8 +2259,8 @@ Appends one item to the managed array.
     }
 
     // Const fixing hack.
-    void put(Range)(Range items)
-    if(isInputRange!(Unqual!Range) && !isInputRange!Range) {
+    void put(Range)(Range items) if (canPutConstRange!Range)
+    {
         alias put!(Unqual!Range) p;
         p(items);
     }
@@ -2251,8 +2268,7 @@ Appends one item to the managed array.
 /**
 Appends an entire range to the managed array.
  */
-    void put(Range)(Range items) if (isInputRange!Range
-            && is(typeof(Appender.init.put(items.front))))
+    void put(Range)(Range items) if (canPutRange!Range)
     {
         // note, we disable this branch for appending one type of char to
         // another because we can't trust the length portion.
@@ -2298,6 +2314,28 @@ Appends an entire range to the managed array.
                 put(items.front);
             }
         }
+    }
+
+/**
+Appends one item to the managed array.
+ */
+    void opOpAssign(string op : "~", U)(U item) if (canPutItem!U)
+    {
+        put(item);
+    }
+
+    // Const fixing hack.
+    void opOpAssign(string op : "~", Range)(Range items) if (canPutConstRange!Range)
+    {
+        put(items);
+    }
+
+/**
+Appends an entire range to the managed array.
+ */
+    void opOpAssign(string op : "~", Range)(Range items) if (canPutRange!Range)
+    {
+        put(items);
     }
 
     // only allow overwriting data on non-immutable and non-const data
@@ -2371,6 +2409,33 @@ those appends.
         mixin("return impl." ~ fn ~ "(args);");
     }
 
+    private alias Appender!(A, T) AppenderType;
+
+/**
+Appends one item to the managed array.
+ */
+    void opOpAssign(string op : "~", U)(U item) if (AppenderType.canPutItem!U)
+    {
+        scope(exit) *this.arr = impl.data;
+        impl.put(item);
+    }
+
+    // Const fixing hack.
+    void opOpAssign(string op : "~", Range)(Range items) if (AppenderType.canPutConstRange!Range)
+    {
+        scope(exit) *this.arr = impl.data;
+        impl.put(items);
+    }
+
+/**
+Appends an entire range to the managed array.
+ */
+    void opOpAssign(string op : "~", Range)(Range items) if (AppenderType.canPutRange!Range)
+    {
+        scope(exit) *this.arr = impl.data;
+        impl.put(items);
+    }
+
 /**
 Returns the capacity of the array (the maximum number of elements the
 managed array can accommodate before triggering a reallocation).  If any
@@ -2401,18 +2466,36 @@ Appender!(E[]) appender(A : E[], E)(A array = null)
 
 unittest
 {
-    auto app = appender!(char[])();
-    string b = "abcdefg";
-    foreach (char c; b) app.put(c);
-    assert(app.data == "abcdefg");
+    {
+        auto app = appender!(char[])();
+        string b = "abcdefg";
+        foreach (char c; b) app.put(c);
+        assert(app.data == "abcdefg");
+    }
+    {
+        auto app = appender!(char[])();
+        string b = "abcdefg";
+        foreach (char c; b) app ~= c;
+        assert(app.data == "abcdefg");
+    }
+    {
+        int[] a = [ 1, 2 ];
+        auto app2 = appender(a);
+        assert(app2.data == [ 1, 2 ]);
+        app2.put(3);
+        app2.put([ 4, 5, 6 ][]);
+        assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
+        app2.put([ 7 ]);
+        assert(app2.data == [ 1, 2, 3, 4, 5, 6, 7 ]);
+    }
 
     int[] a = [ 1, 2 ];
     auto app2 = appender(a);
     assert(app2.data == [ 1, 2 ]);
-    app2.put(3);
-    app2.put([ 4, 5, 6 ][]);
+    app2 ~= 3;
+    app2 ~= [ 4, 5, 6 ][];
     assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
-    app2.put([ 7 ]);
+    app2 ~= [ 7 ];
     assert(app2.data == [ 1, 2, 3, 4, 5, 6, 7 ]);
 
     app2.reserve(5);
@@ -2443,6 +2526,20 @@ unittest
         assertNotThrown(app5663m.put(cast(char[])"\xE3"));
         assert(app5663m.data == "\xE3");
     }
+    // ditto for ~=
+    {
+        Appender!(char[]) app5663i;
+        assertNotThrown(app5663i ~= "\xE3");
+        assert(app5663i.data == "\xE3");
+
+        Appender!(char[]) app5663c;
+        assertNotThrown(app5663c ~= cast(const(char)[])"\xE3");
+        assert(app5663c.data == "\xE3");
+
+        Appender!(char[]) app5663m;
+        assertNotThrown(app5663m ~= cast(char[])"\xE3");
+        assert(app5663m.data == "\xE3");
+    }
 }
 
 /++
@@ -2457,19 +2554,39 @@ RefAppender!(E[]) appender(A : E[]*, E)(A array)
 
 unittest
 {
-    auto arr = new char[0];
-    auto app = appender(&arr);
-    string b = "abcdefg";
-    foreach (char c; b) app.put(c);
-    assert(app.data == "abcdefg");
-    assert(arr == "abcdefg");
+    {
+        auto arr = new char[0];
+        auto app = appender(&arr);
+        string b = "abcdefg";
+        foreach (char c; b) app.put(c);
+        assert(app.data == "abcdefg");
+        assert(arr == "abcdefg");
+    }
+    {
+        auto arr = new char[0];
+        auto app = appender(&arr);
+        string b = "abcdefg";
+        foreach (char c; b) app ~= c;
+        assert(app.data == "abcdefg");
+        assert(arr == "abcdefg");
+    }
+    {
+        int[] a = [ 1, 2 ];
+        auto app2 = appender(&a);
+        assert(app2.data == [ 1, 2 ]);
+        assert(a == [ 1, 2 ]);
+        app2.put(3);
+        app2.put([ 4, 5, 6 ][]);
+        assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
+        assert(a == [ 1, 2, 3, 4, 5, 6 ]);
+    }
 
     int[] a = [ 1, 2 ];
     auto app2 = appender(&a);
     assert(app2.data == [ 1, 2 ]);
     assert(a == [ 1, 2 ]);
-    app2.put(3);
-    app2.put([ 4, 5, 6 ][]);
+    app2 ~= 3;
+    app2 ~= [ 4, 5, 6 ][];
     assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
     assert(a == [ 1, 2, 3, 4, 5, 6 ]);
 
