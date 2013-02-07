@@ -1212,10 +1212,12 @@ unittest
     };
     auto r = execute(prog.path~" foo bar");
     assert (r.status == 123);
-    assert (r.output.stripRight() == "foobar");
+    auto rout = r.output.stripRight();
+    assert (rout == "foobar" || rout == "barfoo");
     auto s = execute(prog.path, "Hello", "World");
     assert (s.status == 123);
-    assert (s.output.stripRight() == "HelloWorld");
+    auto sout = s.output.stripRight();
+    assert (sout == "HelloWorld" || sout == "WorldHello");
 }
 
 
