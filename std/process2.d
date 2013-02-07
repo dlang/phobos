@@ -1184,24 +1184,21 @@ Tuple!(int, "status", string, "output") execute(string name, string[] args...)
 unittest
 {
     // The funky echo statements are due to Windows' lack of an equivalent
-    // to POSIX' echo -n.
+    // to POSIX' echo ...\c
     version(Windows) TestScript prog =
        "echo|set /p=%1
         echo|set /p=%2 1>&2
         exit 123";
     else version (Posix) TestScript prog =
-       "echo -n $1
-        echo -n $2 >&2
-        exit 123";
+       `echo $1\\c
+        echo $2\\c >&2
+        exit 123`;
     auto r = execute(prog.path~" foo bar");
     assert (r.status == 123);
-    auto rout = r.output.stripRight();
-    writeln("==={", rout, "}===");
-    assert (rout == "foobar" || rout == "barfoo");
+    assert (r.output.stripRight() == "foobar");
     auto s = execute(prog.path, "Hello", "World");
     assert (s.status == 123);
-    auto sout = s.output.stripRight();
-    assert (sout == "HelloWorld" || sout == "WorldHello");
+    assert (s.output.stripRight() == "HelloWorld");
 }
 
 
