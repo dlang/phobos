@@ -830,7 +830,7 @@ unittest
 
 private void copyBackwards(T)(T[] src, T[] dest)
 {
-    import core.stdc.string;    
+    import core.stdc.string;
     assert(src.length == dest.length);
     if (!__ctfe)
         memmove(dest.ptr, src.ptr, src.length * T.sizeof);
@@ -861,7 +861,7 @@ assert(a == [ 1, 2, 1, 10, 11, 2, 3, 4]);
 ), $(ARGS), $(ARGS), $(ARGS import std.array;))
  +/
 void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
-    if(!isSomeString!(T[]) 
+    if(!isSomeString!(T[])
         && allSatisfy!(isInputRangeOrConvertible!T, U) && U.length > 0)
 {
     static if(allSatisfy!(isInputRangeWithLengthOrConvertible!T, U))
@@ -894,11 +894,11 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
     else
     {
         // stuff has some InputRanges in it that don't have length
-        // assume that stuff to be inserted is typically shorter 
-        // then the array that can be arbitrary big        
+        // assume that stuff to be inserted is typically shorter
+        // then the array that can be arbitrary big
         // TODO: needs a better implementation as there is no need to build an _array_
         // a singly-linked list of memory blocks (rope, etc.) will do
-        auto app = appender!(T[])(); 
+        auto app = appender!(T[])();
         foreach (i, E; U)
             app.put(stuff[i]);
         insertInPlace(array, pos, app.data);
@@ -995,7 +995,7 @@ private template isInputRangeWithLengthOrConvertible(E)
 //ditto
 private template isCharOrStringOrDcharRange(T)
 {
-    enum isCharOrStringOrDcharRange = isSomeString!T || isSomeChar!T || 
+    enum isCharOrStringOrDcharRange = isSomeString!T || isSomeChar!T ||
         (isInputRange!T && is(ElementType!T : dchar));
 }
 
@@ -1077,7 +1077,7 @@ unittest
             testStr!(T[], U[])();
         }
 
-    }    
+    }
 
     // variadic version
     bool testVar(T, U...)(T orig, size_t pos, U args)
@@ -1115,8 +1115,8 @@ unittest
     {
         int* payload;
         this(int k)
-        { 
-            payload = new int; 
+        {
+            payload = new int;
             *payload = k;
         }
         this(this)
@@ -1129,7 +1129,7 @@ unittest
         {
             *payload = 0; //'destroy' it
         }
-        @property int getPayload(){ return *payload; }        
+        @property int getPayload(){ return *payload; }
         alias getPayload this;
     }
 
@@ -1137,7 +1137,7 @@ unittest
     arr ~= [Int(1), Int(4), Int(5)];
     assert(arr[0] == 1);
     insertInPlace(arr, 1, Int(2), Int(3));
-    assert(equal(arr, [1, 2, 3, 4, 5]));  //check it works with postblit  
+    assert(equal(arr, [1, 2, 3, 4, 5]));  //check it works with postblit
 }
 
 unittest
