@@ -1567,9 +1567,9 @@ unittest
         }
         auto o = new WhiteHole!I_1;
         uint trap;
-        try { o.foo(); } catch (Error e) { ++trap; }
+        try { o.foo(); } catch (Error) { ++trap; }
         assert(trap == 1);
-        try { o.bar(); } catch (Error e) { ++trap; }
+        try { o.bar(); } catch (Error) { ++trap; }
         assert(trap == 2);
     }
     // doc example
@@ -1585,7 +1585,7 @@ unittest
             c.notYetImplemented();
             assert(0);
         }
-        catch (Error e) {}
+        catch (Error) {}
     }
 }
 
