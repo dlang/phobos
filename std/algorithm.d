@@ -11399,8 +11399,6 @@ unittest
     // And therefore, by set comprehension, XY == Expected
 }
 
-// FIXME: this unittest has been disabled because of issue 8542.
-version(none)
 unittest
 {
     auto N = sequence!"n"(0);
