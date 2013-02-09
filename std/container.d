@@ -849,16 +849,9 @@ template make(T)
 if (is(T == struct) || is(T == class))
 {
     T make(Args...)(Args arguments)
-    if (is(T == struct) && __traits(compiles, T(arguments)) && Args.length > 0)
+    if (is(T == struct) && __traits(compiles, T(arguments)))
     {
         return T(arguments);
-    }
-
-    //@@@BUG@@@ 8763 makes this extra function necessary.
-    T make()()
-    if (is(T == struct))
-    {
-        return T();
     }
 
     T make(Args...)(Args arguments)
