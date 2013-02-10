@@ -160,13 +160,16 @@ extern (C)
     }
     else version( GENERIC_IO )
     {
+        int    getc_unlocked(_iobuf*);
+        int    putc_unlocked(int, _iobuf*);
         void   flockfile(FILE*);
         void   funlockfile(FILE*);
 
-        int    fgetc_unlocked (_iobuf* fp)            { return fgetc(cast(shared) fp);     }
         wint_t fgetwc_unlocked(_iobuf* fp)            { return fgetwc(cast(shared) fp);    }
-        int    fputc_unlocked (int     c, _iobuf* fp) { return fputc(c, cast(shared) fp);  }
         wint_t fputwc_unlocked(wchar_t c, _iobuf* fp) { return fputwc(c, cast(shared) fp); }
+
+        alias  getc_unlocked fgetc_unlocked;
+        alias  putc_unlocked fputc_unlocked;
     }
     else
     {
