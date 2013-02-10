@@ -2716,6 +2716,10 @@ unittest
    defines an elaborate assignment. Elaborate assignments are introduced by
    defining $(D opAssign(typeof(this))) or $(D opAssign(ref typeof(this)))
    for a $(D struct). (Non-struct types never have elaborate assignments.)
+
+   Note: Structs with (possibly nested) postblit operator(s) will have a
+   hidden yet elaborate compiler generated assignement operator (unless
+   explicitly disabled).
  */
 template hasElaborateAssign(S)
 {
@@ -2737,26 +2741,43 @@ unittest
 {
     static assert(!hasElaborateAssign!int);
 
-    struct S  { void opAssign(S) {} }
+    static struct S  { void opAssign(S) {} }
     static assert( hasElaborateAssign!S);
     static assert(!hasElaborateAssign!(const(S)));
 
-    struct S1 { void opAssign(ref S1) {} }
-    struct S2 { void opAssign(S1) {} }
-    struct S3 { S s; }
+    static struct S1 { void opAssign(ref S1) {} }
+    static struct S2 { void opAssign(int) {} }
+    static struct S3 { S s; }
     static assert( hasElaborateAssign!S1);
     static assert(!hasElaborateAssign!S2);
     static assert( hasElaborateAssign!S3);
 
-    struct S4
+    static struct S4
     {
         void opAssign(U)(U u) {}
         @disable void opAssign(U)(ref U u);
     }
     static assert( hasElaborateAssign!S4);
 
-    struct S5 { @disable this(); this(int n){ s = S(); } S s; }
+    static struct S5 { @disable this(); this(int n){ s = S(); } S s; }
     static assert( hasElaborateAssign!S5);
+
+    static struct S6 { this(this) {} }
+    static struct S7 { this(this) {} @disable void opAssign(S7); }
+    static struct S8 { this(this) {} @disable void opAssign(S8); void opAssign(int) {} }
+    static struct S9 { this(this) {}                             void opAssign(int) {} }
+    static assert( hasElaborateAssign!S6);
+    static assert(!hasElaborateAssign!S7);
+    static assert(!hasElaborateAssign!S8);
+    static assert( hasElaborateAssign!S9);
+    static struct SS6 { S6 s; }
+    static struct SS7 { S7 s; }
+    static struct SS8 { S8 s; }
+    static struct SS9 { S9 s; }
+    static assert( hasElaborateAssign!SS6);
+    static assert( hasElaborateAssign!SS7);
+    static assert( hasElaborateAssign!SS8);
+    static assert( hasElaborateAssign!SS9);
 }
 
 /**
