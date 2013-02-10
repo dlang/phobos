@@ -696,7 +696,7 @@ void setTimes(in char[] name,
         t[0] = accessTime.toTimeVal();
         t[1] = modificationTime.toTimeVal();
 
-        enforce(utimes(toStringz(name), t) == 0);
+        cenforce(utimes(toStringz(name), t) == 0, name);
     }
 }
 
