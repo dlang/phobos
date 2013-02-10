@@ -469,26 +469,26 @@ unittest
 
 
 /++
-    Get the access and modified times of file $(D name).
+    Get the access and modified times of file or folder $(D name).
 
     Params:
-        name                 = File name to get times for.
-        fileAccessTime       = Time the file was last accessed.
-        fileModificationTime = Time the file was last modified.
+        name             = File/Folder name to get times for.
+        accessTime       = Time the file/folder was last accessed.
+        modificationTime = Time the file/folder was last modified.
 
     Throws:
         $(D FileException) on error.
  +/
 void getTimes(in char[] name,
-              out SysTime fileAccessTime,
-              out SysTime fileModificationTime)
+              out SysTime accessTime,
+              out SysTime modificationTime)
 {
     version(Windows)
     {
         with (getFileAttributesWin(name))
         {
-            fileAccessTime = std.datetime.FILETIMEToSysTime(&ftLastAccessTime);
-            fileModificationTime = std.datetime.FILETIMEToSysTime(&ftLastWriteTime);
+            accessTime = std.datetime.FILETIMEToSysTime(&ftLastAccessTime);
+            modificationTime = std.datetime.FILETIMEToSysTime(&ftLastWriteTime);
         }
     }
     else version(Posix)
@@ -497,8 +497,8 @@ void getTimes(in char[] name,
 
         cenforce(stat(toStringz(name), &statbuf) == 0, name);
 
-        fileAccessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
-        fileModificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
+        accessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
+        modificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
     }
 }
 
@@ -696,7 +696,7 @@ void setTimes(in char[] name,
         t[0] = accessTime.toTimeVal();
         t[1] = modificationTime.toTimeVal();
 
-        cenforce(utimes(toStringz(name), t) == 0, name);
+        enforce(utimes(toStringz(name), t) == 0);
     }
 }
 
