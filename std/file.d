@@ -469,26 +469,26 @@ unittest
 
 
 /++
-    Get the access and modified times of file $(D name).
+    Get the access and modified times of file or folder $(D name).
 
     Params:
-        name                 = File name to get times for.
-        fileAccessTime       = Time the file was last accessed.
-        fileModificationTime = Time the file was last modified.
+        name             = File/Folder name to get times for.
+        accessTime       = Time the file/folder was last accessed.
+        modificationTime = Time the file/folder was last modified.
 
     Throws:
         $(D FileException) on error.
  +/
 void getTimes(in char[] name,
-              out SysTime fileAccessTime,
-              out SysTime fileModificationTime)
+              out SysTime accessTime,
+              out SysTime modificationTime)
 {
     version(Windows)
     {
         with (getFileAttributesWin(name))
         {
-            fileAccessTime = std.datetime.FILETIMEToSysTime(&ftLastAccessTime);
-            fileModificationTime = std.datetime.FILETIMEToSysTime(&ftLastWriteTime);
+            accessTime = std.datetime.FILETIMEToSysTime(&ftLastAccessTime);
+            modificationTime = std.datetime.FILETIMEToSysTime(&ftLastWriteTime);
         }
     }
     else version(Posix)
@@ -497,8 +497,8 @@ void getTimes(in char[] name,
 
         cenforce(stat(toStringz(name), &statbuf) == 0, name);
 
-        fileAccessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
-        fileModificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
+        accessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
+        modificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
     }
 }
 
@@ -651,6 +651,78 @@ version(Windows) unittest
     }
 }
 
+
+/++
+    Set access/modified times of file or folder $(D name).
+
+    Params:
+        name             = File/Folder name to get times for.
+        accessTime       = Time the file/folder was last accessed.
+        modificationTime = Time the file/folder was last modified.
+
+    Throws:
+        $(D FileException) on error.
+ +/
+void setTimes(in char[] name,
+              SysTime accessTime,
+              SysTime modificationTime)
+{
+    version(Windows)
+    {
+        const ta = SysTimeToFILETIME(accessTime);
+        const tm = SysTimeToFILETIME(modificationTime);
+        alias TypeTuple!(GENERIC_WRITE,
+                         0,
+                         null,
+                         OPEN_EXISTING,
+                         FILE_ATTRIBUTE_NORMAL |
+                         FILE_ATTRIBUTE_DIRECTORY |
+                         FILE_FLAG_BACKUP_SEMANTICS,
+                         HANDLE.init)
+              defaults;
+        auto h = CreateFileW(std.utf.toUTF16z(name), defaults);
+
+        cenforce(h != INVALID_HANDLE_VALUE, name);
+
+        scope(exit)
+            cenforce(CloseHandle(h), name);
+
+        cenforce(SetFileTime(h, null, &ta, &tm), name);
+    }
+    else version(Posix)
+    {
+        timeval[2] t = void;
+
+        t[0] = accessTime.toTimeVal();
+        t[1] = modificationTime.toTimeVal();
+
+        cenforce(utimes(toStringz(name), t) == 0, name);
+    }
+}
+
+unittest
+{
+    string dir = deleteme ~ r".dir/a/b/c";
+    string file = dir ~ "/file";
+
+    if (!exists(dir)) mkdirRecurse(dir);
+    { auto f = File(file, "w"); }
+
+    foreach (path; [file, dir])  // test file and dir
+    {
+        SysTime atime = SysTime(DateTime(2010, 10, 4, 0, 0, 30));
+        SysTime mtime = SysTime(DateTime(2011, 10, 4, 0, 0, 30));
+        setTimes(path, atime, mtime);
+
+        SysTime atime_res;
+        SysTime mtime_res;
+        getTimes(path, atime_res, mtime_res);
+        assert(atime == atime_res);
+        assert(mtime == mtime_res);
+    }
+
+    rmdirRecurse(dir);
+}
 
 /++
     Returns the time that the given file was last modified.
@@ -2050,67 +2122,6 @@ void copy(in char[] from, in char[] to)
         cenforce(utime(toz, &utim) != -1, from);
     }
 }
-
-
-/++
-    Set access/modified times of file $(D name).
-
-    Params:
-        fileAccessTime       = Time the file was last accessed.
-        fileModificationTime = Time the file was last modified.
-
-    Throws:
-        $(D FileException) on error.
- +/
-void setTimes(in char[] name,
-              SysTime fileAccessTime,
-              SysTime fileModificationTime)
-{
-    version(Windows)
-    {
-        const ta = SysTimeToFILETIME(fileAccessTime);
-        const tm = SysTimeToFILETIME(fileModificationTime);
-        alias TypeTuple!(GENERIC_WRITE,
-                         0,
-                         null,
-                         OPEN_EXISTING,
-                         FILE_ATTRIBUTE_NORMAL, HANDLE.init)
-              defaults;
-        auto h = CreateFileW(std.utf.toUTF16z(name), defaults);
-
-        cenforce(h != INVALID_HANDLE_VALUE, name);
-
-        scope(exit)
-            cenforce(CloseHandle(h), name);
-
-        cenforce(SetFileTime(h, null, &ta, &tm), name);
-    }
-    else version(Posix)
-    {
-        timeval[2] t = void;
-
-        t[0] = fileAccessTime.toTimeVal();
-        t[1] = fileModificationTime.toTimeVal();
-
-        enforce(utimes(toStringz(name), t) == 0);
-    }
-}
-
-/+
-unittest
-{
-    write(deleteme, "a\n");
-    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
-    SysTime ftc1, fta1, ftm1;
-    getTimes(deleteme, ftc1, fta1, ftm1);
-    enforce(collectException(setTimes("nonexistent", fta1, ftm1)));
-    setTimes(deleteme, fta1 + dur!"seconds"(50), ftm1 + dur!"seconds"(50));
-    SysTime ftc2, fta2, ftm2;
-    getTimes(deleteme, ftc2, fta2, ftm2);
-    assert(fta1 + dur!"seconds(50) == fta2, text(fta1 + dur!"seconds(50), "!=", fta2));
-    assert(ftm1 + dur!"seconds(50) == ftm2);
-}
-+/
 
 
 /++
