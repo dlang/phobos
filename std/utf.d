@@ -928,8 +928,9 @@ size_t toUTFindex(in dchar[] str, size_t n) @safe pure nothrow
         $(LREF UTFException) if $(D str[index]) is not the start of a valid UTF
         sequence.
   +/
-dchar decode(S)(auto ref S str, ref size_t index) @trusted pure
-    if (isSomeString!S)
+dchar decode(S)(auto ref S str, ref size_t index)
+    if (!isSomeString!S &&
+        isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S))
 in
 {
     assert(index < str.length, "Attempted to decode past the end of a string");
@@ -945,9 +946,8 @@ body
     return decodeImpl!true(str, index);
 }
 
-dchar decode(S)(auto ref S str, ref size_t index)
-    if (!isSomeString!S &&
-        isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S))
+dchar decode(S)(auto ref S str, ref size_t index) @trusted pure
+    if (isSomeString!S)
 in
 {
     assert(index < str.length, "Attempted to decode past the end of a string");
@@ -978,31 +978,6 @@ body
         type of range being used and how many code units had to be popped off
         before the code point was determined to be invalid.
   +/
-dchar decodeFront(S)(ref S str, out size_t numCodeUnits) @trusted pure
-    if (isSomeString!S)
-in
-{
-    assert(!str.empty);
-}
-out (result)
-{
-    assert(isValidDchar(result));
-}
-body
-{
-    if (str[0] < codeUnitLimit!S)
-    {
-        numCodeUnits = 1;
-        immutable retval = str[0];
-        str = str[1 .. $];
-        return retval;
-    }
-
-    immutable retval = decodeImpl!true(str, numCodeUnits);
-    str = str[numCodeUnits .. $];
-    return retval;
-}
-
 dchar decodeFront(S)(ref S str, out size_t numCodeUnits)
     if (!isSomeString!S && isInputRange!S && isSomeChar!(ElementType!S))
 in
@@ -1038,6 +1013,31 @@ body
     static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
         str = str[numCodeUnits .. str.length];
 
+    return retval;
+}
+
+dchar decodeFront(S)(ref S str, out size_t numCodeUnits) @trusted pure
+    if (isSomeString!S)
+in
+{
+    assert(!str.empty);
+}
+out (result)
+{
+    assert(isValidDchar(result));
+}
+body
+{
+    if (str[0] < codeUnitLimit!S)
+    {
+        numCodeUnits = 1;
+        immutable retval = str[0];
+        str = str[1 .. $];
+        return retval;
+    }
+
+    immutable retval = decodeImpl!true(str, numCodeUnits);
+    str = str[numCodeUnits .. $];
     return retval;
 }
 
