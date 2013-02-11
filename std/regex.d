@@ -6261,7 +6261,7 @@ public:
     ///ditto
     R opIndex()(size_t i) /*const*/ //@@@BUG@@@
     {
-        assert(f+i < b,text("requested submatch number ", i,"is out of range"));
+        assert(f+i < b,text("requested submatch number ", i," is out of range"));
         assert(matches[f+i].begin <= matches[f+i].end, text("wrong match: ", matches[f+i].begin, "..", matches[f+i].end));
         return _input[matches[f+i].begin..matches[f+i].end];
     }
