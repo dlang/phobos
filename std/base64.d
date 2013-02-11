@@ -806,6 +806,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         immutable srcLen = source.length;
         if (srcLen == 0)
             return [];
+        static if (Padding != NoPadding)
+            enforce(srcLen % 4 == 0, "Invalid length of encoded data");
 
         immutable blocks = srcLen / 4;
         auto      srcptr = source.ptr;
@@ -872,6 +874,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         immutable srcLen = source.length;
         if (srcLen == 0)
             return [];
+        static if (Padding != NoPadding)
+            enforce(srcLen % 4 == 0, "Invalid length of encoded data");
 
         immutable blocks = srcLen / 4;
         auto      bufptr = buffer.ptr;
@@ -948,6 +952,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         immutable srcLen = source.length;
         if (srcLen == 0)
             return 0;
+        static if (Padding != NoPadding)
+            enforce(srcLen % 4 == 0, "Invalid length of encoded data");
 
         immutable blocks = srcLen / 4;
         auto      srcptr = source.ptr;
@@ -1016,6 +1022,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         immutable srcLen = source.length;
         if (srcLen == 0)
             return 0;
+        static if (Padding != NoPadding)
+            enforce(srcLen % 4 == 0, "Invalid length of encoded data");
 
         immutable blocks = srcLen / 4;
         size_t    pcount;
@@ -1478,9 +1486,10 @@ unittest
         assert(Base64.decodeLength(3) <= 2);
 
         // may throw Exceptions, may not throw Errors
-        collectException(Base64.decode("Zg"));
-        collectException(Base64.decode("Zg="));
-        collectException(Base64.decode("Zm8"));
+        assertThrown(Base64.decode("Zg"));
+        assertThrown(Base64.decode("Zg="));
+        assertThrown(Base64.decode("Zm8"));
+        assertThrown(Base64.decode("Zg==;"));
     }
 
     { // No padding
