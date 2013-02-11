@@ -2993,7 +2993,7 @@ public:
     }
 
     /**
-     * Wait for a socket to change status. A wait timeout of $(Duration) or
+     * Wait for a socket to change status. A wait timeout of $(D Duration) or
      * $(D TimeVal), may be specified; if a timeout is not specified or the
      * $(D TimeVal) is $(D null), the maximum timeout is used. The $(D TimeVal)
      * timeout has an unspecified value when $(D select) returns.
