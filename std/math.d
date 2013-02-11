@@ -863,7 +863,7 @@ public:
  *
  *  Mathematically, acosh(x) = log(x + sqrt( x*x - 1))
  *
- * $(TABLE_DOMRG
+ * $(COMMENT $(TABLE_DOMRG
  *  $(DOMAIN 1..$(INFIN))
  *  $(RANGE  1..log(real.max), $(INFIN)) )
  *      $(TABLE_SV
@@ -872,7 +872,7 @@ public:
  *    $(SV  $(LT)1,     $(NAN) )
  *    $(SV  1,      0       )
  *    $(SV  +$(INFIN),+$(INFIN))
- *  )
+ *  ))
  */
 real acosh(real x) @safe pure nothrow
 {
@@ -943,7 +943,7 @@ unittest
  * Mathematically, atanh(x) = log( (1+x)/(1-x) ) / 2
  *
  *
- * $(TABLE_DOMRG
+ * $(COMMENT $(TABLE_DOMRG
  *  $(DOMAIN -$(INFIN)..$(INFIN))
  *  $(RANGE  -1..1) )
  * $(TABLE_SV
@@ -951,7 +951,7 @@ unittest
  *    $(SV  $(NAN), $(NAN) )
  *    $(SV  $(PLUSMN)0, $(PLUSMN)0)
  *    $(SV  -$(INFIN), -0)
- * )
+ * ))
  */
 real atanh(real x) @safe pure nothrow
 {

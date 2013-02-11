@@ -40,7 +40,7 @@ swapRanges) $(MYREF uninitializedFill) ))
 
 Implements algorithms oriented mainly towards processing of
 sequences. Some functions are semantic equivalents or supersets of
-those found in the $(D $(LESS)_algorithm$(GREATER)) header in $(WEB
+those found in the $(D $(LT)_algorithm$(GT)) header in $(WEB
 sgi.com/tech/stl/, Alexander Stepanov's Standard Template Library) for
 C++.
 

@@ -593,7 +593,7 @@ Parameter for the generator.
    Throws:
    $(D Exception) if the InputRange didn't provide enough elements to seed the generator.
    The number of elements required is the 'n' template parameter of the MersenneTwisterEngine struct.
-   
+
    Examples:
    ----------------
    Mt19937 gen;
@@ -762,7 +762,7 @@ unittest
  *
  * Implemented according to $(WEB www.jstatsoft.org/v08/i14/paper, Xorshift RNGs).
  *
- * $(BOOKTABLE $(TEXTWITHCOMMAS Supporting bits are below, $(D bits) means second parameter of XorshiftEngine.),
+ * $(BOOKTABLE $(ARGS Supporting bits are below, $(D bits) means second parameter of XorshiftEngine.),
  *  $(TR $(TH bits) $(TH period))
  *  $(TR $(TD 32)   $(TD 2^32 - 1))
  *  $(TR $(TD 64)   $(TD 2^64 - 1))
@@ -1342,15 +1342,15 @@ unittest
 }
 
 /**
-Partially shuffles the elements of $(D r) such that upon returning $(D r[0..n]) 
-is a random subset of $(D r) and is randomly ordered.  $(D r[n..r.length]) 
-will contain the elements not in $(D r[0..n]).  These will be in an undefined 
-order, but will not be random in the sense that their order after 
-$(D partialShuffle) returns will not be independent of their order before 
+Partially shuffles the elements of $(D r) such that upon returning $(D r[0..n])
+is a random subset of $(D r) and is randomly ordered.  $(D r[n..r.length])
+will contain the elements not in $(D r[0..n]).  These will be in an undefined
+order, but will not be random in the sense that their order after
+$(D partialShuffle) returns will not be independent of their order before
 $(D partialShuffle) was called.
 
 $(D r) must be a random-access range with length.  $(D n) must be less than
-or equal to $(D r.length).  
+or equal to $(D r.length).
 */
 void partialShuffle(Range, RandomGen = Random)(Range r, size_t n,
                                               ref RandomGen gen = rndGen)

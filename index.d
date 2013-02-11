@@ -130,23 +130,11 @@ D language compiler. Also, check out the
 	<dt><a href="std_bigint.html"><b>std.bigint</b></a>
 	<dd>Arbitrary-precision ('bignum') arithmetic
 
-$(V1
-	<dt><a href="std_bitarray.html"><b>std.bitarray</b></a>
-	<dd>Arrays of bits.
-
-	<dt><a href="std_boxer.html"><b>std.boxer</b></a>
-	<dd>Box/unbox types.
-)
 	<dt><a href="std_compiler.html"><b>std.compiler</b></a>
 	<dd>Information about the D compiler implementation.
 
 	<dt><a href="std_conv.html"><b>std.conv</b></a>
 	<dd>Conversion of strings to integers.
-
-$(V1
-	<dt><a href="std_date.html"><b>std.date</b></a>
-	<dd>Date and time functions. Support locales.
-)
 
 	<dt><a href="std_datetime.html"><b>std.datetime</b></a>
 	<dd>Date and time-related types and functions.
@@ -157,10 +145,6 @@ $(V1
 	<dt><a href="std_format.html"><b>std.format</b></a>
 	<dd>Formatted conversions of values to strings.
 
-$(V1
-	<dt><a href="std_gc.html"><b>std.gc</b></a>
-	<dd>Control the garbage collector.
-)
 	<dt><a href="std_math.html"><b>std.math</b></a>
 	<dd>Include all the usual math functions like sin, cos, atan, etc.
 
@@ -185,11 +169,6 @@ $(V1
 	<dt><a href="std_random.html"><b>std.random</b></a>
 	<dd>Random number generation.
 
-$(V1
-	<dt><a href="std_recls.html"><b>std.recls</b></a>
-	<dd>Recursively search file system and (currently Windows
-	only) FTP sites.
-)
 	<dt><a href="std_regexp.html"><b>std.regexp</b></a>
 	<dd>The usual regular expression functions.
 
