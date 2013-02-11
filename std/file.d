@@ -25,8 +25,6 @@ import core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
        std.range, std.stdio, std.string, std.traits,
        std.typecons, std.typetuple, std.utf;
 
-import std.metastrings; //For generating deprecation messages only. Remove once
-                        //deprecation path complete.
 
 version (Windows)
 {
@@ -1638,7 +1636,7 @@ assert(!de2.isFile);
             Windows when dealing with symbolic links.
           +/
         @property uint linkAttributes();
-        
+
         version(Windows)
             alias void* stat_t;
 
@@ -1993,44 +1991,6 @@ unittest
     }
 }
 
-
-/******************************************************
- * $(RED Deprecated. It will be removed in November 2012.
- *       Please use $(LREF dirEntries) instead.)
- *
- * For each file and directory $(D DirEntry) in $(D pathname[])
- * pass it to the callback delegate.
- *
- * Params:
- *        callback =        Delegate that processes each
- *                        DirEntry in turn. Returns true to
- *                        continue, false to stop.
- * Example:
- *        This program lists all the files in its
- *        path argument and all subdirectories thereof.
- * ----
- * import std.stdio;
- * import std.file;
- *
- * void main(string[] args)
- * {
- *    bool callback(DirEntry* de)
- *    {
- *      if(de.isDir)
- *        listdir(de.name, &callback);
- *      else
- *        writefln(de.name);
-
- *      return true;
- *    }
- *
- *    listdir(args[1], &callback);
- * }
- * ----
- */
-deprecated alias listDir listdir;
-
-
 /***************************************************
 Copy file $(D from) to file $(D to). File timestamps are preserved.
  */
@@ -2245,35 +2205,6 @@ unittest
     remove("unittest_write2.tmp");
     assert(!exists("unittest_write2.tmp"));
 }
-
-//Remove this when _listDir is removed. It's not needed to test
-//DirEntry. Plenty of other tests to do that already.
-unittest
-{
-    _listDir(".", delegate bool (DirEntry * de)
-    {
-        version(Windows)
-        {
-            auto s = std.string.format("%s : c %s, w %s, a %s",
-                                       de.name,
-                                       de.timeCreated,
-                                       de.timeLastModified,
-                                       de.timeLastAccessed);
-        }
-        else version(Posix)
-        {
-            auto s = std.string.format("%s : c %s, w %s, a %s",
-                                       de.name,
-                                       de.timeStatusChanged,
-                                       de.timeLastModified,
-                                       de.timeLastAccessed);
-        }
-
-        return true;
-    }
-    );
-}
-
 
 /**
  * Dictates directory spanning policy for $(D_PARAM dirEntries) (see below).
@@ -2557,6 +2488,9 @@ public:
                          should be treated as directories and their contents
                          iterated over.
 
+    Throws:
+        $(D FileException) if the directory does not exist.
+
 Examples:
 --------------------
 // Iterate a directory in depth
@@ -2586,7 +2520,6 @@ foreach(d; parallel(dFiles, 1)) //passes by 1 file to each thread
     std.process.system(cmd);
 }
 --------------------
-//
  +/
 auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 {
@@ -2659,6 +2592,9 @@ unittest
                          should be treated as directories and their contents
                          iterated over.
 
+    Throws:
+        $(D FileException) if the directory does not exist.
+
 Examples:
 --------------------
 // Iterate over all D source files in current directory and all its
@@ -2667,7 +2603,6 @@ auto dFiles = dirEntries(".","*.{d,di}",SpanMode.depth);
 foreach(d; dFiles)
     writeln(d.name);
 --------------------
-//
  +/
 auto dirEntries(string path, string pattern, SpanMode mode,
     bool followSymlink = true)
@@ -2993,256 +2928,4 @@ string tempDir()
         if (cache is null) cache = ".";
     }
     return cache;
-}
-
-
-/++
-    $(RED Deprecated. It will be removed in November 2012.
-          Please use $(LREF dirEntries) instead.)
-
-    Returns the contents of the given directory.
-
-    The names in the contents do not include the pathname.
-
-    Throws:
-        $(D FileException) on error.
-
-Examples:
-    This program lists all the files and subdirectories in its
-    path argument.
---------------------
-import std.stdio;
-import std.file;
-
-void main(string[] args)
-{
-    auto dirs = std.file.listDir(args[1]);
-
-    foreach(d; dirs)
-        writefln(d);
-}
---------------------
- +/
-deprecated string[] listDir(C)(in C[] pathname)
-{
-    auto result = appender!(string[])();
-
-    bool listing(string filename)
-    {
-        result.put(filename);
-        return true; // continue
-    }
-
-    _listDir(pathname, &listing);
-
-    return result.data;
-}
-
-unittest
-{
-    assert(listDir(".").length > 0);
-}
-
-
-/++
-    $(RED Deprecated. It will be removed in November 2012.
-          Please use $(LREF dirEntries) instead.)
-
-    Returns all the files in the directory and its sub-directories
-    which match pattern or regular expression r.
-
-    Params:
-        pathname = The path of the directory to search.
-        pattern  = String with wildcards, such as $(RED "*.d"). The supported
-                   wildcard strings are described under fnmatch() in
-                   $(LINK2 std_path.html, std.path).
-        r        = Regular expression, for more powerful pattern matching.
-        followSymlink = Whether symbolic links which point to directories
-                         should be treated as directories and their contents
-                         iterated over. Ignored on Windows.
-
-Examples:
-    This program lists all the files with a "d" extension in
-    the path passed as the first argument.
---------------------
-import std.stdio;
-import std.file;
-
-void main(string[] args)
-{
-  auto d_source_files = std.file.listDir(args[1], "*.d");
-
-  foreach(d; d_source_files)
-      writefln(d);
-}
---------------------
-
-    A regular expression version that searches for all files with "d" or
-    "obj" extensions:
---------------------
-import std.stdio;
-import std.file;
-import std.regexp;
-
-void main(string[] args)
-{
-  auto d_source_files = std.file.listDir(args[1], RegExp(r"\.(d|obj)$"));
-
-  foreach(d; d_source_files)
-      writefln(d);
-}
---------------------
- +/
-deprecated string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
-    if(is(C : char) && !is(U: bool delegate(string filename)))
-{
-    import std.regexp;
-    auto result = appender!(string[])();
-    bool callback(DirEntry* de)
-    {
-        if(followSymlink ? de.isDir : attrIsDir(de.linkAttributes))
-        {
-            _listDir(de.name, &callback);
-        }
-        else
-        {
-            static if(is(U : const(C[])))
-            {//pattern version
-                if(std.path.fnmatch(de.name, filter))
-                    result.put(de.name);
-            }
-            else static if(is(U : RegExp))
-            {//RegExp version
-
-                if(filter.test(de.name))
-                    result.put(de.name);
-            }
-            else
-                static assert(0,"There is no version of listDir that takes " ~ U.stringof);
-        }
-        return true; // continue
-    }
-
-    _listDir(pathname, &callback);
-
-    return result.data;
-}
-
-/******************************************************
- * $(RED Deprecated. It will be removed in November 2012.
- *       Please use $(LREF dirEntries) instead.)
- *
- * For each file and directory name in pathname[],
- * pass it to the callback delegate.
- *
- * Params:
- *        callback =        Delegate that processes each
- *                        filename in turn. Returns true to
- *                        continue, false to stop.
- * Example:
- *        This program lists all the files in its
- *        path argument, including the path.
- * ----
- * import std.stdio;
- * import std.path;
- * import std.file;
- *
- * void main(string[] args)
- * {
- *    auto pathname = args[1];
- *    string[] result;
- *
- *    bool listing(string filename)
- *    {
- *      result ~= buildPath(pathname, filename);
- *      return true; // continue
- *    }
- *
- *    listdir(pathname, &listing);
- *
- *    foreach (name; result)
- *      writefln("%s", name);
- * }
- * ----
- */
-deprecated void listDir(C, U)(in C[] pathname, U callback)
-    if(is(C : char) && is(U: bool delegate(string filename)))
-{
-    _listDir(pathname, callback);
-}
-
-
-//==============================================================================
-// Private Section.
-//==============================================================================
-private:
-
-
-deprecated void _listDir(in char[] pathname, bool delegate(string filename) callback)
-{
-    bool listing(DirEntry* de)
-    {
-        return callback(baseName(de.name));
-    }
-
-    _listDir(pathname, &listing);
-}
-
-
-version(Windows)
-{
-    deprecated void _listDir(in char[] pathname, bool delegate(DirEntry* de) callback)
-    {
-        DirEntry de;
-        auto c = buildPath(pathname, "*.*");
-
-        WIN32_FIND_DATAW fileinfo;
-
-        auto h = FindFirstFileW(std.utf.toUTF16z(c), &fileinfo);
-        if(h == INVALID_HANDLE_VALUE)
-            return;
-
-        scope(exit) FindClose(h);
-
-        do
-        {
-            // Skip "." and ".."
-            if(std.string.wcscmp(fileinfo.cFileName.ptr, ".") == 0 ||
-               std.string.wcscmp(fileinfo.cFileName.ptr, "..") == 0)
-            {
-                continue;
-            }
-
-            de._init(pathname, &fileinfo);
-
-            if(!callback(&de))
-                break;
-
-        } while(FindNextFileW(h, &fileinfo) != FALSE);
-    }
-}
-else version(Posix)
-{
-    deprecated void _listDir(in char[] pathname, bool delegate(DirEntry* de) callback)
-    {
-        auto h = cenforce(opendir(toStringz(pathname)), pathname);
-        scope(exit) closedir(h);
-
-        DirEntry de;
-
-        for(dirent* fdata; (fdata = readdir(h)) != null; )
-        {
-            // Skip "." and ".."
-            if(!core.stdc.string.strcmp(fdata.d_name.ptr, ".") ||
-               !core.stdc.string.strcmp(fdata.d_name.ptr, ".."))
-            {
-                continue;
-            }
-
-            de._init(pathname, fdata);
-
-            if(!callback(&de))
-                break;
-        }
-    }
 }

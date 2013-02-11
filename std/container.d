@@ -828,22 +828,71 @@ unittest {
 }
 
 /**
-Returns an initialized container. This function is mainly for
-eliminating construction differences between $(D class) containers and
-$(D struct) containers.
+Returns an initialized object. This function is mainly for eliminating
+construction differences between structs and classes. It allows code to not
+worry about whether the type it's constructing is a struct or a class.
+
+Examples:
+--------------------
+auto arr = make!(Array!int)([4, 2, 3, 1]);
+assert(equal(arr[], [4, 2, 3, 1]));
+
+auto rbt = make!(RedBlackTree!(int, "a > b"))([4, 2, 3, 1]);
+assert(equal(rbt[], [4, 3, 2, 1]));
+
+alias make!(DList!int) makeList;
+auto list = makeList([1, 7, 42]);
+assert(equal(list[], [1, 7, 42]));
+--------------------
  */
-Container make(Container, T...)(T arguments) if (is(Container == struct))
+template make(T)
+if (is(T == struct) || is(T == class))
 {
-    static if (T.length == 0)
-        static assert(false, "You must pass at least one argument");
-    else
-        return Container(arguments);
+    T make(Args...)(Args arguments)
+    if (is(T == struct) && __traits(compiles, T(arguments)) && Args.length > 0)
+    {
+        return T(arguments);
+    }
+
+    //@@@BUG@@@ 8763 makes this extra function necessary.
+    T make()()
+    if (is(T == struct))
+    {
+        return T();
+    }
+
+    T make(Args...)(Args arguments)
+    if (is(T == class) && __traits(compiles, new T(arguments)))
+    {
+        return new T(arguments);
+    }
 }
 
-/// ditto
-Container make(Container, T...)(T arguments) if (is(Container == class))
+//Verify Examples.
+unittest
 {
-    return new Container(arguments);
+    auto arr = make!(Array!int)([4, 2, 3, 1]);
+    assert(equal(arr[], [4, 2, 3, 1]));
+
+    auto rbt = make!(RedBlackTree!(int, "a > b"))([4, 2, 3, 1]);
+    assert(equal(rbt[], [4, 3, 2, 1]));
+
+    alias make!(DList!int) makeList;
+    auto list = makeList([1, 7, 42]);
+    assert(equal(list[], [1, 7, 42]));
+}
+
+unittest
+{
+    auto arr1 = make!(Array!dchar)();
+    assert(arr1.empty);
+    auto arr2 = make!(Array!dchar)("hello"d);
+    assert(equal(arr2[], "hello"d));
+
+    auto rtb1 = make!(RedBlackTree!dchar)();
+    assert(rtb1.empty);
+    auto rtb2 = make!(RedBlackTree!dchar)('h', 'e', 'l', 'l', 'o');
+    assert(equal(rtb2[], "ehlo"d));
 }
 
 /**
@@ -2227,7 +2276,7 @@ Complexity: $(BIGOH r.walkLength)
     }
 
     /** $(RED Scheduled for deprecation. These methods are not actually stable.
-    Use the standard $(D remove) or $(D linearRemove) instead.
+    Use the standard $(D remove) or $(D linearRemove) instead.)
          */
     alias remove stableRemove;
     /// ditto
@@ -3589,7 +3638,7 @@ unittest
     assert(a[1] == 0);
     a[1] += 1; //Check Array.opIndexOpAssign
     assert(a[1] == 1);
-    
+
     //Check Array.opIndexUnary
     ++a[0];
     //a[0]++ //op++ doesn't return, so this shouldn't work, even with 5044 fixed
@@ -3597,13 +3646,13 @@ unittest
     assert(+a[0] == +2);
     assert(-a[0] == -2);
     assert(~a[0] == ~2);
-    
+
     auto r = a[];
     r[1]  = 0; //Check Array.Range.opIndexAssign
     assert(r[1] == 0);
     r[1] += 1; //Check Array.Range.opIndexOpAssign
     assert(r[1] == 1);
-    
+
     //Check Array.Range.opIndexUnary
     ++r[0];
     //r[0]++ //op++ doesn't return, so this shouldn't work, even with 5044 fixed
@@ -4012,9 +4061,10 @@ must be collected.
 Convenience function that returns a $(D BinaryHeap!Store) object
 initialized with $(D s) and $(D initialSize).
  */
-BinaryHeap!Store heapify(Store)(Store s, size_t initialSize = size_t.max)
+BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
+        size_t initialSize = size_t.max)
 {
-    return BinaryHeap!Store(s, initialSize);
+    return BinaryHeap!(Store, less)(s, initialSize);
 }
 
 unittest
@@ -4023,6 +4073,7 @@ unittest
         // example from "Introduction to Algorithms" Cormen et al., p 146
         int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
         auto h = heapify(a);
+        h = heapify!"a < b"(a);
         assert(h.front == 16);
         assert(a == [ 16, 14, 10, 8, 7, 9, 3, 2, 4, 1 ]);
         auto witness = [ 16, 14, 10, 9, 8, 7, 4, 3, 2, 1 ];

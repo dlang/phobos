@@ -1274,6 +1274,19 @@ unittest
     s.nullify();
     assert(s.isNull);
 }
+unittest
+{
+    // Bugzilla 9404
+    alias N = Nullable!int;
+
+    void foo(N a)
+    {
+        N b;
+        b = a; // `N b = a;` works fine
+    }
+    N n;
+    foo(n);
+}
 
 /**
 Just like $(D Nullable!T), except that the null state is defined as a
@@ -3053,7 +3066,7 @@ it is the responsibility of the user to not escape a reference to the
 object outside the scope.
 
 Note: it's illegal to move a class reference even if you are sure there
-is no pointers to it.
+are no pointers to it.
 
 Example:
 ----

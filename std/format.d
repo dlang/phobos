@@ -66,7 +66,8 @@ class FormatException : Exception
     $(RED Deprecated. It will be removed In January 2013.
           Please use $(D FormatException) instead.)
  +/
-deprecated alias FormatException FormatError;
+deprecated("Please use FormatException instead.")
+alias FormatException FormatError;
 
 /**********************************************************************
    Interprets variadic argument list $(D args), formats them according
@@ -1207,7 +1208,23 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     BooleanTypeOf!T val = obj;
 
     if (f.spec == 's')
-        put(w, val ? "true" : "false");
+    {
+        string s = val ? "true" : "false";
+        if (!f.flDash)
+        {
+            // right align
+            if (f.width > s.length)
+                foreach (i ; 0 .. f.width - s.length) put(w, ' ');
+            put(w, s);
+        }
+        else
+        {
+            // left align
+            put(w, s);
+            if (f.width > s.length)
+                foreach (i ; 0 .. f.width - s.length) put(w, ' ');
+        }
+    }
     else
         formatValue(w, cast(int) val, f);
 }
@@ -1232,6 +1249,15 @@ unittest
     formatTest( S1(true),  "true"  );
     formatTest( S2(false), "S" );
     formatTest( S2(true),  "S" );
+}
+
+unittest
+{
+    string t1 = format("[%6s] [%6s] [%-6s]", true, false, true);
+    assert(t1 == "[  true] [ false] [true  ]");
+
+    string t2 = format("[%3s] [%-2s]", true, false);
+    assert(t2 == "[true] [false]");
 }
 
 /**
@@ -2172,7 +2198,7 @@ if (is(StringTypeOf!T) && !is(T == enum))
         try
         {
             // ignore other specifications and quote
-            auto app = appender!(typeof(T[0])[])();
+            auto app = appender!(typeof(val[0])[])();
             put(app, '\"');
             for (size_t i = 0; i < str.length; )
             {
@@ -2397,6 +2423,61 @@ if (hasToString!(T, Char))
         static assert(0);
 }
 
+void enforceValidFormatSpec(T, Char)(ref FormatSpec!Char f)
+{
+    static if (!isInputRange!T && hasToString!(T, Char) != 4)
+    {
+        enforceEx!FormatException(f.spec == 's',
+            format("Expected '%%s' format specifier for type '%s'", T.stringof));
+    }
+}
+
+unittest
+{
+    static interface IF1 { }
+    class CIF1 : IF1 { }
+    static struct SF1 { }
+    static union UF1 { }
+    static class CF1 { }
+
+    static interface IF2 { string toString(); }
+    static class CIF2 : IF2 { override string toString() { return ""; } }
+    static struct SF2 { string toString() { return ""; } }
+    static union UF2 { string toString() { return ""; } }
+    static class CF2 { override string toString() { return ""; } }
+
+    static interface IK1 { void toString(scope void delegate(const(char)[]) sink,
+                           FormatSpec!char) const; }
+    static class CIK1 : IK1 { override void toString(scope void delegate(const(char)[]) sink,
+                              FormatSpec!char) const { sink("CIK1"); } }
+    static struct KS1 { void toString(scope void delegate(const(char)[]) sink,
+                        FormatSpec!char) const { sink("KS1"); } }
+
+    static union KU1 { void toString(scope void delegate(const(char)[]) sink,
+                       FormatSpec!char) const { sink("KU1"); } }
+
+    static class KC1 { void toString(scope void delegate(const(char)[]) sink,
+                       FormatSpec!char) const { sink("KC1"); } }
+
+    IF1 cif1 = new CIF1;
+    assertThrown!FormatException(format("%f", cif1));
+    assertThrown!FormatException(format("%f", SF1()));
+    assertThrown!FormatException(format("%f", UF1()));
+    assertThrown!FormatException(format("%f", new CF1()));
+
+    IF2 cif2 = new CIF2;
+    assertThrown!FormatException(format("%f", cif2));
+    assertThrown!FormatException(format("%f", SF2()));
+    assertThrown!FormatException(format("%f", UF2()));
+    assertThrown!FormatException(format("%f", new CF2()));
+
+    IK1 cik1 = new CIK1;
+    assert(format("%f", cik1) == "CIK1");
+    assert(format("%f", KS1()) == "KS1");
+    assert(format("%f", KU1()) == "KU1");
+    assert(format("%f", new KC1()) == "KC1");
+}
+
 /**
    Aggregates ($(D struct), $(D union), $(D class), and $(D interface)) are
    basically formatted by calling $(D toString).
@@ -2423,6 +2504,7 @@ const string toString();
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (is(T == class) && !is(T == enum))
 {
+    enforceValidFormatSpec!(T, Char)(f);
     // TODO: Change this once toString() works for shared objects.
     static assert(!is(T == shared), "unable to format shared objects");
 
@@ -2524,6 +2606,7 @@ unittest
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is(T == enum))
 {
+    enforceValidFormatSpec!(T, Char)(f);
     if (val is null)
         put(w, "null");
     else
@@ -2567,6 +2650,7 @@ unittest
 void formatValue(Writer, T, Char)(Writer w, auto ref T val, ref FormatSpec!Char f)
 if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is(T == enum))
 {
+    enforceValidFormatSpec!(T, Char)(f);
     static if (hasToString!(T, Char))
     {
         formatObject(w, val, f);
@@ -2758,7 +2842,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
         }
         else
         {
-            const void * p = val;
+            const p = val;
             if (f.spec == 's')
             {
                 FormatSpec!Char fs = f; // fs is copy for change its values.
@@ -2815,6 +2899,12 @@ unittest
     formatTest( B.init, "null" );
 }
 
+unittest
+{
+    // Test for issue 9336
+    shared int i;
+    format("%s", &i);
+}
 
 /**
    Delegates are formatted by 'Attributes ReturnType delegate(Parameters)'

@@ -17,9 +17,9 @@ module std.internal.digest.sha_SSSE3;
 
 import std.conv;
 
-version(OSX)
+version(D_PIC)
 {
-    // Do not use.
+    // Do not use (Bug9378).
 }
 else version(D_InlineAsm_X86)
 {
