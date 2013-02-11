@@ -155,7 +155,7 @@ final class Pid
     The ID number assigned to the process by the operating
     system.
     */
-    @property int processID() const
+    @property int processID() const @safe pure
     {
         enforce(_processID >= 0,
             "Pid doesn't correspond to a running process.");
@@ -163,7 +163,7 @@ final class Pid
     }
 
     // See module-level wait() for documentation.
-    version(Posix) int wait()
+    version(Posix) int wait() @trusted
     {
         if (_processID == terminated) return _exitCode;
         int exitCode;
@@ -192,7 +192,7 @@ final class Pid
     }
     else version(Windows)
     {
-        int wait()
+        int wait() @trusted
         {
             if (_processID == terminated) return _exitCode;
             if(_handle != INVALID_HANDLE_VALUE)
@@ -235,7 +235,7 @@ private:
     version(Windows)
     {
         HANDLE _handle;
-        this(int pid, HANDLE handle)
+        this(int pid, HANDLE handle) @safe pure nothrow
         {
             _processID = pid;
             _handle = handle;
@@ -243,7 +243,7 @@ private:
     }
     else
     {
-        this(int id)
+        this(int id) @safe pure nothrow
         {
             _processID = id;
         }
@@ -351,6 +351,7 @@ Pid spawnProcess(
     File stdout_ = std.stdio.stdout,
     File stderr_ = std.stdio.stderr,
     Config config = Config.none)
+    @trusted // TODO: Should be @safe
 {
     auto splitCmd = split(command);
     return spawnProcessImpl(splitCmd[0], splitCmd[1 .. $],
@@ -367,6 +368,7 @@ Pid spawnProcess(
     File stdout_ = std.stdio.stdout,
     File stderr_ = std.stdio.stderr,
     Config config = Config.none)
+    @trusted // TODO: Should be @safe
 {
     auto splitCmd = split(command);
     return spawnProcessImpl(splitCmd[0], splitCmd[1 .. $],
@@ -383,6 +385,7 @@ Pid spawnProcess(
     File stdout_ = std.stdio.stdout,
     File stderr_ = std.stdio.stderr,
     Config config = Config.none)
+    @trusted // TODO: Should be @safe
 {
     return spawnProcessImpl(name, args,
                             environ,
@@ -399,6 +402,7 @@ Pid spawnProcess(
     File stdout_ = std.stdio.stdout,
     File stderr_ = std.stdio.stderr,
     Config config = Config.none)
+    @trusted // TODO: Should be @safe
 {
     return spawnProcessImpl(name, args,
                             toEnvz(environmentVars),
@@ -415,6 +419,7 @@ version(Posix) private Pid spawnProcessImpl(
     File stdout_,
     File stderr_,
     Config config)
+    @trusted // TODO: Should be @safe
 {
     // Make sure the file exists and is executable.
     if (any!isDirSeparator(name))
@@ -487,6 +492,7 @@ else version(Windows) private Pid spawnProcessImpl(
     File stdout_,
     File stderr_,
     Config config)
+    @trusted
 {
     // Create a process info structure.  Note that we don't care about wide
     // characters yet.
@@ -616,6 +622,7 @@ else version(Windows) private Pid spawnProcessImpl(
 // Searches the PATH variable for the given executable file,
 // (checking that it is in fact executable).
 version(Posix) private string searchPathFor(string executable)
+    @trusted //TODO: @safe nothrow
 {
     auto pathz = environment["PATH"];
     if (pathz == null)  return null;
@@ -632,6 +639,7 @@ version(Posix) private string searchPathFor(string executable)
 // Converts a C array of C strings to a string[] array,
 // setting the program name as the zeroth element.
 version(Posix) private const(char)** toArgz(string prog, const string[] args)
+    @trusted nothrow //TODO: @safe
 {
     alias const(char)* stringz_t;
     auto argz = new stringz_t[](args.length+2);
@@ -648,6 +656,7 @@ version(Posix) private const(char)** toArgz(string prog, const string[] args)
 // Converts a string[string] array to a C array of C strings
 // on the form "key=value".
 version(Posix) private const(char)** toEnvz(const string[string] env)
+    @trusted //TODO: @safe pure nothrow
 {
     alias const(char)* stringz_t;
     auto envz = new stringz_t[](env.length+1);
@@ -661,6 +670,7 @@ version(Posix) private const(char)** toEnvz(const string[string] env)
     return envz.ptr;
 }
 else version(Windows) private LPVOID toEnvz(const string[string] env)
+    @safe pure nothrow
 {
     uint len = 1; // reserve 1 byte for termination of environment block
     foreach(k, v; env)
@@ -681,7 +691,7 @@ else version(Windows) private LPVOID toEnvz(const string[string] env)
 
 // Checks whether the file exists and can be executed by the
 // current user.
-version(Posix) private bool isExecutable(string path)
+version(Posix) private bool isExecutable(string path) @trusted //TODO: @safe nothrow
 {
     return (access(toStringz(path), X_OK) == 0);
 }
@@ -818,7 +828,7 @@ Signal codes are defined in the $(D core.sys.posix.signal) module
 Examples:
 See the $(LREF spawnProcess) documentation.
 */
-int wait(Pid pid)
+int wait(Pid pid) @safe
 {
     enforce(pid !is null, "Called wait on a null Pid.");
     return pid.wait();
@@ -844,7 +854,7 @@ way of doing this.
 Returns:
 A $(LREF Pipe) object that corresponds to the created _pipe.
 */
-version(Posix) Pipe pipe()
+version(Posix) Pipe pipe() @trusted //TODO: @safe
 {
     int[2] fds;
     errnoEnforce(core.sys.posix.unistd.pipe(fds) == 0,
@@ -858,7 +868,7 @@ version(Posix) Pipe pipe()
                     null, 1);
     return p;
 }
-else version(Windows) Pipe pipe()
+else version(Windows) Pipe pipe() @trusted //TODO: @safe
 {
     // use CreatePipe to create an anonymous pipe
     HANDLE readHandle;
@@ -929,11 +939,11 @@ else version(Windows) Pipe pipe()
 struct Pipe
 {
     /// The read end of the pipe.
-    @property File readEnd() { return _read; }
+    @property File readEnd() @trusted /*TODO: @safe nothrow*/ { return _read; }
 
 
     /// The write end of the pipe.
-    @property File writeEnd() { return _write; }
+    @property File writeEnd() @trusted /*TODO: @safe nothrow*/ { return _write; }
 
 
     /**
@@ -947,7 +957,7 @@ struct Pipe
     it will only be closed in the parent process.  (What happens in the
     child process is platform dependent.)
     */
-    void close()
+    void close() @trusted //TODO: @safe nothrow
     {
         _read.close();
         _write.close();
@@ -995,6 +1005,7 @@ foreach (line; pipes.stderr.byLine) errors ~= line.idup;
 */
 ProcessPipes pipeProcess(string command,
                          Redirect redirectFlags = Redirect.all)
+    @safe
 {
     auto splitCmd = split(command);
     return pipeProcess(splitCmd[0], splitCmd[1 .. $], redirectFlags);
@@ -1004,6 +1015,7 @@ ProcessPipes pipeProcess(string command,
 ProcessPipes pipeProcess(string name,
                          string[] args,
                          Redirect redirectFlags = Redirect.all)
+    @trusted //TODO: @safe
 {
     File stdinFile, stdoutFile, stderrFile;
 
@@ -1074,6 +1086,7 @@ ProcessPipes pipeProcess(string name,
 
 /// ditto
 ProcessPipes pipeShell(string command, Redirect redirectFlags = Redirect.all)
+    @safe
 {
     return pipeProcess(getShell(), [shellSwitch, command], redirectFlags);
 }
@@ -1171,7 +1184,7 @@ with a child process through its standard streams.
 struct ProcessPipes
 {
     /// The $(LREF Pid) of the child process.
-    @property Pid pid()
+    @property Pid pid() @safe
     {
         enforce(_pid !is null);
         return _pid;
@@ -1181,7 +1194,7 @@ struct ProcessPipes
     An $(XREF stdio,File) that allows writing to the child process'
     standard input stream.
     */
-    @property File stdin()
+    @property File stdin() @trusted //TODO: @safe
     {
         enforce((_redirectFlags & Redirect.stdin) > 0,
                 "Child process' standard input stream hasn't been redirected.");
@@ -1192,7 +1205,7 @@ struct ProcessPipes
     An $(XREF stdio,File) that allows reading from the child
     process' standard output/error stream.
     */
-    @property File stdout()
+    @property File stdout() @trusted //TODO: @safe
     {
         enforce((_redirectFlags & Redirect.stdout) > 0,
                 "Child process' standard output stream hasn't been redirected.");
@@ -1200,7 +1213,7 @@ struct ProcessPipes
     }
 
     /// ditto
-    @property File stderr()
+    @property File stderr() @trusted //TODO: @safe
     {
         enforce((_redirectFlags & Redirect.stderr) > 0,
                 "Child process' standard error stream hasn't been redirected.");
@@ -1231,6 +1244,7 @@ negative number whose absolute value is the signal number.
 (See $(LREF wait) for details.)
 */
 Tuple!(int, "status", string, "output") execute(string command)
+    @trusted //TODO: @safe
 {
     auto p = pipeProcess(command,
                          Redirect.stdout | Redirect.stderrToStdout);
@@ -1246,6 +1260,7 @@ Tuple!(int, "status", string, "output") execute(string command)
 
 /// ditto
 Tuple!(int, "status", string, "output") execute(string name, string[] args...)
+    @trusted //TODO: @safe
 {
     auto p = pipeProcess(name, args,
                          Redirect.stdout | Redirect.stderrToStdout);
@@ -1286,12 +1301,12 @@ version(Posix)   private immutable string shellSwitch = "-c";
 version(Windows) private immutable string shellSwitch = "/C";
 
 // Gets the user's default shell.
-version(Posix)  private string getShell()
+version(Posix)  private string getShell() @safe //TODO: nothrow
 {
     return environment.get("SHELL", "/bin/sh");
 }
 
-version(Windows) private string getShell()
+version(Windows) private string getShell() @safe nothrow
 {
     return "cmd.exe";
 }
@@ -1315,6 +1330,7 @@ negative number whose absolute value is the signal number.
 (See $(LREF wait) for details.)
 */
 Tuple!(int, "status", string, "output") shell(string command)
+    @trusted //TODO: @safe
 {
     version(Windows)
         return execute(getShell() ~ " " ~ shellSwitch ~ " " ~ command);
@@ -1338,12 +1354,12 @@ unittest
 
 
 /// Returns the process ID number of the current process.
-version(Posix) @property int thisProcessID()
+version(Posix) @property int thisProcessID() @trusted //TODO: @safe nothrow
 {
     return getpid();
 }
 
-version(Windows) @property int thisProcessID()
+version(Windows) @property int thisProcessID() @safe nothrow
 {
     return GetCurrentProcessId();
 }
@@ -1407,7 +1423,7 @@ static:
     auto path = environment["PATH"];
     ---
     */
-    string opIndex(string name)
+    string opIndex(string name) @safe
     {
         string value;
         enforce(getImpl(name, value), "Environment variable not found: "~name);
@@ -1435,7 +1451,7 @@ static:
     }
     ---
     */
-    string get(string name, string defaultValue = null)
+    string get(string name, string defaultValue = null) @safe //TODO: nothrow
     {
         string value;
         auto found = getImpl(name, value);
@@ -1452,7 +1468,7 @@ static:
     environment["foo"] = "bar";
     ---
     */
-    string opIndexAssign(string value, string name)
+    string opIndexAssign(string value, string name) @trusted
     {
         version(Posix)
         {
@@ -1485,7 +1501,7 @@ static:
     If the variable isn't in the environment, this function returns
     successfully without doing anything.
     */
-    void remove(string name)
+    void remove(string name) @trusted // TODO: @safe nothrow
     {
         version(Posix)
         {
@@ -1506,7 +1522,7 @@ static:
     built-in associative arrays are not.  This function will store all
     variable names in uppercase (e.g. $(D PATH)).
     */
-    string[string] toAA()
+    string[string] toAA() @trusted
     {
         string[string] aa;
         version(Posix)
@@ -1558,13 +1574,13 @@ private:
     // Returns the length of an environment variable (in number of
     // wchars, including the null terminator), or 0 if it doesn't exist.
     version(Windows)
-    int varLength(LPCWSTR namez)
+    int varLength(LPCWSTR namez) @safe nothrow
     {
         return GetEnvironmentVariableW(namez, null, 0);
     }
 
     // Retrieves the environment variable, returns false on failure.
-    bool getImpl(string name, out string value)
+    bool getImpl(string name, out string value) @trusted // TODO: nothrow
     {
         version(Posix)
         {
