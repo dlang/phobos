@@ -1389,36 +1389,24 @@ version(unittest) private struct TestScript
 
 
 /**
-Manipulates environment variables using an associative-array-like
+Manipulates _environment variables using an associative-array-like
 interface.
 
-Examples:
----
-// Return variable, or throw an exception if it doesn't exist.
-string path = environment["PATH"];
-
-// Add/replace variable.
-environment["foo"] = "bar";
-
-// Remove variable.
-environment.remove("foo");
-
-// Return variable, or null if it doesn't exist.
-string foo = environment.get("foo");
-
-// Return variable, or a default value if it doesn't exist.
-string foo = environment.get("foo", "default foo value");
-
-// Return an associative array containing all the environment variables.
-string[string] aa = environment.toAA();
----
+This class contains only static methods, and cannot be instantiated.
+See below for examples of use.
 */
-alias Environment environment;
-
-abstract final class Environment
+abstract final class environment
 {
 static:
-    // Retrieves an environment variable, throws on failure.
+    /**
+    Retrieves the value of the environment variable with the given $(D name).
+
+    If no such variable exists, this function throws an $(D Exception).
+    See also $(LREF get), which doesn't throw on failure.
+    ---
+    auto path = environment["PATH"];
+    ---
+    */
     string opIndex(string name)
     {
         string value;
@@ -1426,8 +1414,44 @@ static:
         return value;
     }
 
-    // Assigns a value to an environment variable.  If the variable
-    // exists, it is overwritten.
+    /**
+    Retrieves the value of the environment variable with the given $(D name),
+    or a default value if the variable doesn't exist.
+
+    Unlike $(LREF opIndex), this function never throws.
+    ---
+    auto userShell = environment.get("SHELL", "/bin/sh");
+    ---
+    This function is also useful in checking for the existence of an
+    environment variable.
+    ---
+    auto myVar = environment.get("MYVAR");
+    if (myVar is null)
+    {
+        // Environment variable doesn't exist.
+        // Note that we have to use 'is' for the comparison, since
+        // myVar == null is also true if the variable exists but is
+        // empty.
+    }
+    ---
+    */
+    string get(string name, string defaultValue = null)
+    {
+        string value;
+        auto found = getImpl(name, value);
+        return found ? value : defaultValue;
+    }
+
+    /**
+    Assigns the given $(D value) to the environment variable with the given
+    $(D name).
+
+    If the variable does not exist, it will be created. If it already exists,
+    it will be overwritten.
+    ---
+    environment["foo"] = "bar";
+    ---
+    */
     string opIndexAssign(string value, string name)
     {
         version(Posix)
@@ -1455,8 +1479,12 @@ static:
         else static assert(0);
     }
 
-    // Removes an environment variable.  The function succeeds even
-    // if the variable isn't in the environment.
+    /**
+    Removes the environment variable with the given $(D name).
+
+    If the variable isn't in the environment, this function returns
+    successfully without doing anything.
+    */
     void remove(string name)
     {
         version(Posix)
@@ -1470,16 +1498,14 @@ static:
         else static assert(0);
     }
 
-    // Same as opIndex, except it returns a default value if
-    // the variable doesn't exist.
-    string get(string name, string defaultValue = null)
-    {
-        string value;
-        auto found = getImpl(name, value);
-        return found ? value : defaultValue;
-    }
+    /**
+    Copies all environment variables into an associative array.
 
-    // Returns all environment variables in an associative array.
+    Windows_specific:
+    While Windows environment variable names are case insensitive, D's
+    built-in associative arrays are not.  This function will store all
+    variable names in uppercase (e.g. $(D PATH)).
+    */
     string[string] toAA()
     {
         string[string] aa;
@@ -1511,16 +1537,17 @@ static:
             for (int i=0; envBlock[i] != '\0'; ++i)
             {
                 auto start = i;
-                while (envBlock[i] != '=')
-                {
-                    assert (envBlock[i] != '\0');
-                    ++i;
-                }
-                immutable name = toUTF8(envBlock[start .. i]);
+                while (envBlock[i] != '=') ++i;
+                immutable name = toUTF8(toUpper(envBlock[start .. i]));
 
                 start = i+1;
                 while (envBlock[i] != '\0') ++i;
-                aa[name] = toUTF8(envBlock[start .. i]);
+                // Just like in POSIX systems, environment variables may be
+                // defined more than once in an environment block on Windows,
+                // and it is just as much of a security issue there.  Moreso,
+                // in fact, due to the case insensensitivity of variable names,
+                // which is not handled correctly by all programs.
+                if (name !in aa) aa[name] = toUTF8(envBlock[start .. i]);
             }
         }
         else static assert(0);
@@ -1556,7 +1583,11 @@ private:
             const namez = toUTF16z(name);
             immutable len = varLength(namez);
             if (len == 0) return false;
-            if (len == 1) return true;
+            if (len == 1)
+            {
+                value = "";
+                return true;
+            }
 
             auto buf = new WCHAR[len];
             GetEnvironmentVariableW(namez, buf.ptr, to!DWORD(buf.length));
@@ -1604,20 +1635,6 @@ unittest
         //    GetEnvironmentVariable should return 1.  Instead it returns
         //    0, indicating the variable doesn't exist.
         version(Windows)  if (n.length == 0 || v.length == 0) continue;
-
-        // Windows environment variables are supposed to be case insensitive,
-        // and the GetEnvironmentVariable() function used by environment[]
-        // works like that.  The GetEnvironmentStrings() function used by
-        // toAA(), however, returns the environment block verbatim, and it
-        // may contain multiple variables whose names differ only in case.
-        // This seems to happen with the temp/tmp/TEMP/TMP variables on
-        // systems that run Cygwin.  Pending a better solution, we just
-        // skip them.
-        version(Windows)
-        {
-            if (n == "temp" || n == "tmp" || n == "TEMP" || n == "TMP")
-                continue;
-        }
 
         assert (v == environment[n]);
     }
