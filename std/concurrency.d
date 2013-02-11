@@ -72,7 +72,7 @@ private
     import std.algorithm;
     import std.exception;
     import std.range;
-    import std.range;
+    import std.string;
     import std.traits;
     import std.typecons;
     import std.typetuple;
@@ -484,7 +484,7 @@ unittest
     static assert( __traits(compiles, spawn(fn2, 2)));
     static assert(!__traits(compiles, spawn(fn1, 1)));
     static assert(!__traits(compiles, spawn(fn2)));
-    
+
     void delegate(int) shared                      dg1;
     shared(void delegate(int))                     dg2;
     shared(void delegate(long) shared)             dg3;
@@ -497,7 +497,7 @@ unittest
     static assert( __traits(compiles, spawn(dg4, 4, 4, 4)));
     static assert( __traits(compiles, spawn(dg5, 5)));
     static assert(!__traits(compiles, spawn(dg6, 6)));
-    
+
     auto callable1  = new class{ void opCall(int) shared {} };
     auto callable2  = cast(shared)new class{ void opCall(int) shared {} };
     auto callable3  = new class{ void opCall(int) immutable {} };
@@ -707,7 +707,14 @@ receiveOnlyRet!(T) receiveOnly(T...)()
               },
               ( Variant val )
               {
-                  throw new MessageMismatch;
+                  static if (T.length > 1)
+                      string exp = T.stringof;
+                  else
+                      string exp = T[0].stringof;
+
+                  throw new MessageMismatch(
+                      format("Unexpected message type: expected '%s', got '%s'",
+                          exp, val.type.toString()));
               } );
     static if( T.length == 1 )
         return ret[0];
@@ -715,9 +722,30 @@ receiveOnlyRet!(T) receiveOnly(T...)()
         return ret;
 }
 
+unittest
+{
+    static void t1(Tid mainTid)
+    {
+        try
+        {
+            receiveOnly!string();
+            mainTid.send("");
+        }
+        catch (Throwable th)
+        {
+            mainTid.send(th.msg);
+        }
+    }
+
+    auto tid = spawn(&t1, thisTid);
+    tid.send(1);
+    string result = receiveOnly!string();
+    assert(result == "Unexpected message type: expected 'string', got 'int'");
+}
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated bool receiveTimeout(T...)( long ms, T ops )
+deprecated("Please use the overload of receiveTimeout which takes a Duration.")
+bool receiveTimeout(T...)( long ms, T ops )
 {
     return receiveTimeout( dur!"msecs"( ms ), ops );
 }

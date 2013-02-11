@@ -108,6 +108,28 @@ private int bsr64(ulong value) {
     return v.high==0 ? core.bitop.bsr(v.low) : core.bitop.bsr(v.high) + 32;
 }
 
+private template CustomFloatParams(uint bits)
+{
+    enum CustomFloatFlags flags = CustomFloatFlags.ieee
+                ^ ((bits == 80) ? CustomFloatFlags.storeNormalized : CustomFloatFlags.none);
+    static if (bits ==  8) alias CustomFloatParams!( 4,  3, flags) CustomFloatParams;
+    static if (bits == 16) alias CustomFloatParams!(10,  5, flags) CustomFloatParams;
+    static if (bits == 32) alias CustomFloatParams!(23,  8, flags) CustomFloatParams;
+    static if (bits == 64) alias CustomFloatParams!(52, 11, flags) CustomFloatParams;
+    static if (bits == 80) alias CustomFloatParams!(64, 15, flags) CustomFloatParams;
+}
+
+private template CustomFloatParams(uint precision, uint exponentWidth, CustomFloatFlags flags)
+{
+    alias TypeTuple!(
+        precision,
+        exponentWidth,
+        flags,
+        (1 << (exponentWidth - ((flags & flags.probability) == 0)))
+         - ((flags & (flags.nan | flags.infinity)) != 0) - ((flags & flags.probability) != 0)
+    ) CustomFloatParams; // ((flags & CustomFloatFlags.probability) == 0)
+}
+
 /**
  * Allows user code to define custom floating-point formats. These formats are
  * for storage only; all operations on them are performed by first implicitly
@@ -138,24 +160,17 @@ private int bsr64(ulong value) {
  * ----
  */
 template CustomFloat(uint bits)
-if( bits == 8 || bits == 16 || bits == 32 || bits == 64 || bits == 80) {
-    static if(bits ==  8) alias CustomFloat!( 4, 3) CustomFloat;
-    static if(bits == 16) alias CustomFloat!(10, 5) CustomFloat;
-    static if(bits == 32) alias CustomFloat!(23, 8) CustomFloat;
-    static if(bits == 64) alias CustomFloat!(52,11) CustomFloat;
-    static if(bits == 80) alias CustomFloat!(64, 15,
-        CustomFloatFlags.ieee^CustomFloatFlags.storeNormalized) CustomFloat;
-}
-///ditto
-template CustomFloat(uint precision, uint exponentWidth,CustomFloatFlags flags = CustomFloatFlags.ieee)
-if(  ( (flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision + exponentWidth > 0)
+if (bits == 8 || bits == 16 || bits == 32 || bits == 64 || bits == 80)
 {
-    alias CustomFloat!(precision,exponentWidth,flags,
-                       (1 << (exponentWidth  - ((flags&flags.probability)==0) ))
-                       - ((flags&(flags.nan|flags.infinity))!=0) - ((flags&flags.probability)!=0)
-                       ) CustomFloat; // ((flags&CustomFloatFlags.probability)==0)
+    alias CustomFloat!(CustomFloatParams!(bits)) CustomFloat;
 }
-///ditto
+/// ditto
+template CustomFloat(uint precision, uint exponentWidth, CustomFloatFlags flags = CustomFloatFlags.ieee)
+if (((flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision + exponentWidth > 0)
+{
+    alias CustomFloat!(CustomFloatParams!(precision, exponentWidth, flags)) CustomFloat;
+}
+/// ditto
 struct CustomFloat(
     uint                precision,  // fraction bits (23 for float)
     uint                exponentWidth,  // exponent bits (8 for float)  Exponent width
@@ -184,12 +199,14 @@ struct CustomFloat(
         alias CustomFloatFlags Flags;
 
         // Facilitate converting numeric types to custom float
-        union ToBinary(F) if(is(CustomFloat!(F.sizeof*8)) || is(F == real)) {
+        union ToBinary(F)
+        if (is(typeof(CustomFloatParams!(F.sizeof*8))) || is(F == real))
+        {
             F set;
 
             // If on Linux or Mac, where 80-bit reals are padded, ignore the
             // padding.
-            CustomFloat!(min(F.sizeof*8, 80)) get;
+            CustomFloat!(CustomFloatParams!(min(F.sizeof*8, 80))) get;
 
             // Convert F to the correct binary type.
             static typeof(get) opCall(F value) {
