@@ -69,7 +69,10 @@ import std.traits, std.c.string, std.typetuple, std.conv, std.exception;
 
 @trusted:
 
-private template maxSize(T...)
+/++
+    Gives the $(D sizeof) the largest type given.
+  +/
+template maxSize(T...)
 {
     static if (T.length == 1)
     {

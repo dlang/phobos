@@ -1645,6 +1645,38 @@ unittest
     assert(n == 255);
 }
 
+/**
+Convert a value that is implicitly convertible to the enum base type
+into an Enum value. If the value does not match any enum member values
+a ConvException is thrown.
+Enums with floating-point or string base types are not supported.
+*/
+T toImpl(T, S)(S value)
+    if (is(T == enum) && is(S : OriginalType!T)
+        && !isFloatingPoint!(OriginalType!T) && !isSomeString!(OriginalType!T))
+{
+    foreach (Member; EnumMembers!T)
+    {
+        if (Member == value)
+            return Member;
+    }
+
+    throw new ConvException(format("Value (%s) does not match any member value of enum '%s'", value, T.stringof));
+}
+
+unittest
+{
+    enum En8143 : int { A = 10, B = 20, C = 30, D = 20 }
+    enum En8143[][] m3 = to!(En8143[][])([[10, 30], [30, 10]]);
+    static assert(m3 == [[En8143.A, En8143.C], [En8143.C, En8143.A]]);
+
+    En8143 en1 = to!En8143(10);
+    assert(en1 == En8143.A);
+    assertThrown!ConvException(to!En8143(5));   // matches none
+    En8143[][] m1 = to!(En8143[][])([[10, 30], [30, 10]]);
+    assert(m1 == [[En8143.A, En8143.C], [En8143.C, En8143.A]]);
+}
+
 /***************************************************************
  Rounded conversion from floating point to integral.
 
@@ -3133,13 +3165,15 @@ dstring dtext(T...)(T args)
     return textImpl!dstring(args);
 }
 
-private S textImpl(S, U...)(U args)
+private S textImpl(S, U...)(U args) if (U.length == 0)
 {
-    S result;
-    foreach (i, arg; args)
-    {
-        result ~= to!S(args[i]);
-    }
+    return null;
+}
+
+private S textImpl(S, U...)(U args) if (U.length > 0)
+{
+    auto result = to!S(args[0]);
+    foreach (arg; args[1 .. $]) result ~= to!S(arg);
     return result;
 }
 
@@ -3149,6 +3183,9 @@ unittest
     assert(text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz");
     assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
     assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
+    assert(text() is null);
+    assert(wtext() is null);
+    assert(dtext() is null);
 }
 
 /***************************************************************
