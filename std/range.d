@@ -6715,6 +6715,9 @@ Given a range of ranges, returns a range of ranges where the $(I i)'th subrange
 contains the $(I i)'th elements of the original subranges.
  */
 struct Transposed(RangeOfRanges)
+    if (isForwardRange!RangeOfRanges &&
+        isInputRange!(ElementType!RangeOfRanges) &&
+        hasAssignableElements!RangeOfRanges)
 {
     //alias ElementType = typeof(map!"a.front"(RangeOfRanges.init));
 
@@ -6725,15 +6728,20 @@ struct Transposed(RangeOfRanges)
 
     @property auto front()
     {
-        return map!"a.front"(_input);
+        return map!"a.front"(_input.save);
     }
 
     void popFront()
     {
-        foreach (ref e; _input)
+        // Advance the position of each subrange.
+        auto r = _input.save;
+        while (!r.empty)
         {
-            if (e.empty) continue;
+            auto e = r.front;
             e.popFront();
+            r.front = e;
+
+            r.popFront();
         }
     }
 
@@ -6744,8 +6752,11 @@ struct Transposed(RangeOfRanges)
 
     @property bool empty()
     {
-        foreach (e; _input)
+        if (_input.empty) return true;
+        foreach (e; _input.save)
+        {
             if (!e.empty) return false;
+        }
         return true;
     }
 
@@ -6758,6 +6769,13 @@ struct Transposed(RangeOfRanges)
 
 private:
     RangeOfRanges _input;
+}
+
+unittest
+{
+    // Boundary case: transpose of empty range should be empty
+    int[][] ror = [];
+    assert(transposed(ror).empty);
 }
 
 /// Example
@@ -6777,6 +6795,9 @@ unittest
 
 /// ditto
 Transposed!RangeOfRanges transposed(RangeOfRanges)(RangeOfRanges rr)
+    if (isForwardRange!RangeOfRanges &&
+        isInputRange!(ElementType!RangeOfRanges) &&
+        hasAssignableElements!RangeOfRanges)
 {
     return Transposed!RangeOfRanges(rr);
 }
@@ -6795,6 +6816,19 @@ unittest
     {
         assert(array(e) == witness[i++]);
     }
+}
+
+// Issue 8764
+unittest
+{
+    ulong[1] t0 = [ 123 ];
+
+    assert(!hasAssignableElements!(typeof(t0[].chunks(1))));
+    assert(!is(typeof(transposed(t0[].chunks(1)))));
+    assert(is(typeof(transposed(t0[].chunks(1).array()))));
+
+    auto t1 = transposed(t0[].chunks(1).array());
+    assert(equal!"a.equal(b)"(t1, [[123]]));
 }
 
 /**
