@@ -1984,9 +1984,7 @@ public struct Regex(Char)
        static assert(isRandomAccessRange!(typeof(nc)));
        assert(!nc.empty);
        assert(nc.length == 2);
-       foreach(name; nc) {
-           writeln(name);
-       }
+       assert(nc.equal(["name", "var"]));
        ---
      +/
     @property auto namedCaptures()
@@ -2020,7 +2018,8 @@ public struct Regex(Char)
             void popBack() { assert(!empty); end--; }
             string opIndex()(size_t i)
             {
-                assert(start + i < end, "Request named group is out of range.");
+                assert(start + i < end,
+                       "Requested named group is out of range.");
                 return groups[start+i].name;
             }
         }
