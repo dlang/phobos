@@ -2023,8 +2023,8 @@ public struct Regex(Char)
                 return groups[start+i].name;
             }
             NamedGroupRange opSlice(size_t low, size_t high) {
-                assert(low < high);
-                assert(start + high < end);
+                assert(low <= high);
+                assert(start + high <= end);
                 return NamedGroupRange(groups, start + low, start + high);
             }
             NamedGroupRange opSlice() { return this.save; }
