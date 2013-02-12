@@ -172,6 +172,9 @@ $(BOOKTABLE ,
         $(TD Creates a _range that iterates over the $(I n)'th elements of the
         given random-access ranges.
     ))
+    $(TR $(TD $(D $(LREF transposed)))
+        $(TD Transposes a _range of ranges.
+    ))
     $(TR $(TD $(D $(LREF indexed)))
         $(TD Creates a _range that offers a view of a given _range as though
         its elements were reordered according to a given _range of indices.
@@ -6707,6 +6710,10 @@ unittest
     assert(mat1[1] == 10);
 }
 
+/**
+Given a range of ranges, returns a range of ranges where the $(I i)'th subrange
+contains the $(I i)'th elements of the original subranges.
+ */
 struct Transposed(RangeOfRanges)
 {
     //alias ElementType = typeof(map!"a.front"(RangeOfRanges.init));
@@ -6753,7 +6760,23 @@ private:
     RangeOfRanges _input;
 }
 
-auto transposed(RangeOfRanges)(RangeOfRanges rr)
+/// Example
+unittest
+{
+    int[][] ror = [
+        [1, 2, 3],
+        [4, 5, 6]
+    ];
+    auto xp = transposed(ror);
+    assert(equal!"a.equal(b)"(xp, [
+        [1, 4],
+        [2, 5],
+        [3, 6]
+    ]));
+}
+
+/// ditto
+Transposed!RangeOfRanges transposed(RangeOfRanges)(RangeOfRanges rr)
 {
     return Transposed!RangeOfRanges(rr);
 }
