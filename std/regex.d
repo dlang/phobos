@@ -2022,6 +2022,12 @@ public struct Regex(Char)
                        "Requested named group is out of range.");
                 return groups[start+i].name;
             }
+            NamedGroupRange opSlice(size_t low, size_t high) {
+                assert(low < high);
+                assert(start + high < end);
+                return NamedGroupRange(groups, start + low, start + high);
+            }
+            NamedGroupRange opSlice() { return this.save; }
         }
         return NamedGroupRange(dict, 0, dict.length);
     }
