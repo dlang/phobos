@@ -676,7 +676,7 @@ version(Posix) private const(char)** toEnvz(const string[string] env)
     return envz.ptr;
 }
 else version(Windows) private LPVOID toEnvz(const string[string] env)
-    @safe pure nothrow
+    @trusted pure //TODO: @safe nothrow
 {
     uint len = 1; // reserve 1 byte for termination of environment block
     foreach(k, v; env)
@@ -1365,7 +1365,7 @@ version(Posix) @property int thisProcessID() @trusted //TODO: @safe nothrow
     return getpid();
 }
 
-version(Windows) @property int thisProcessID() @safe nothrow
+version(Windows) @property int thisProcessID() @trusted nothrow //TODO: @safe
 {
     return GetCurrentProcessId();
 }
@@ -1580,13 +1580,13 @@ private:
     // Returns the length of an environment variable (in number of
     // wchars, including the null terminator), or 0 if it doesn't exist.
     version(Windows)
-    int varLength(LPCWSTR namez) @safe nothrow
+    int varLength(LPCWSTR namez) @trusted nothrow
     {
         return GetEnvironmentVariableW(namez, null, 0);
     }
 
     // Retrieves the environment variable, returns false on failure.
-    bool getImpl(string name, out string value) @trusted // TODO: nothrow
+    bool getImpl(string name, out string value) @trusted //TODO: nothrow
     {
         version(Posix)
         {
