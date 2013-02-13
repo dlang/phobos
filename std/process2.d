@@ -4,7 +4,7 @@
 Functions for starting and interacting with other processes, and for
 working with the current process' execution environment.
 
-Summary:
+Process_handling:
 $(UL $(LI
     $(LREF spawnProcess) spawns a new _process, optionally assigning it an
     arbitrary set of standard input, output, and error streams.
@@ -30,9 +30,6 @@ $(LI
     the _process' standard output and error streams and return
     the output of these as a string.
     These correspond roughly to C's $(D system) function.)
-$(LI
-    $(LREF environment) is an interface through which the current process'
-    environment variables can be read and manipulated.)
 )
 $(LREF shell) and $(LREF pipeShell) both run the given command
 through the user's default command interpreter.  On Windows, this is
@@ -50,6 +47,15 @@ contain spaces.
 Unless the directory of the executable file is explicitly specified, all
 functions will search for it in the directories specified in the PATH
 environment variable.
+
+Other_functionality:
+$(UL
+$(LI
+    $(LREF pipe) is used to create unidirectional pipes.)
+$(LI
+    $(LREF environment) is an interface through which the current process'
+    environment variables can be read and manipulated.)
+)
 
 Authors:
     $(LINK2 https://github.com/kyllingstad, Lars Tandle Kyllingstad),
