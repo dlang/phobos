@@ -2034,6 +2034,29 @@ public struct Regex(Char)
         assert(nc[1..$].equal(["var"]));
     }
 
+    unittest
+    {
+        auto re = regex(`(\w+) (?P<named>\w+) (\w+)`);
+        auto nc = re.namedCaptures;
+        assert(nc.length == 1);
+        assert(nc[0] == "named");
+        assert(nc.front == "named");
+        assert(nc.back == "named");
+
+        re = regex(`(\w+) (\w+)`);
+        nc = re.namedCaptures;
+        assert(nc.empty);
+
+        re = regex(`(?P<year>\d{4})/(?P<month>\d{2})/(?P<day>\d{2})/`);
+        nc = re.namedCaptures;
+        auto cp = nc.save;
+        assert(nc.equal(cp));
+        nc.popFront();
+        assert(nc.equal(cp[1..$]));
+        nc.popBack();
+        assert(nc.equal(cp[1..$-1]));
+    }
+
 private:
     NamedGroup[] dict;  //maps name -> user group number
     uint ngroup;        //number of internal groups
