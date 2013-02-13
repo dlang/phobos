@@ -9263,7 +9263,7 @@ unittest
     int[] b = [1, 3, 2];
     assert(!isSorted(b));
 
-    dchar[] ds = "コーヒーが好すきです"d.dup;
+    dchar[] ds = "コーヒーが好きです"d.dup;
     sort(ds);
     string s = to!string(ds);
     assert(isSorted(ds));  // random-access
