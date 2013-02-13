@@ -1995,7 +1995,7 @@ public struct Regex(Char)
             }
 
             @property string front() { return groups[start].name; };
-            @property string back() { return groups[end].name; }
+            @property string back() { return groups[end-1].name; }
             @property bool empty() { return start >= end; }
             @property size_t length() { return end - start; }
             alias length opDollar;
