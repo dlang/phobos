@@ -593,7 +593,7 @@ Parameter for the generator.
    Throws:
    $(D Exception) if the InputRange didn't provide enough elements to seed the generator.
    The number of elements required is the 'n' template parameter of the MersenneTwisterEngine struct.
-   
+
    Examples:
    ----------------
    Mt19937 gen;
@@ -1272,7 +1272,7 @@ if (isIntegral!T || isSomeChar!T)
 
 /// Ditto
 auto uniform(T)()
-if (isIntegral!T || isSomeChar!T)
+if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
 {
     return uniform!T(rndGen);
 }
@@ -1286,6 +1286,26 @@ unittest
         size_t i = 50;
         while (--i && uniform!T() == init) {}
         assert(i > 0);
+    }
+}
+
+/**
+Returns a uniformly selected member of enum $(D E).
+ */
+auto uniform(E)()
+if (is(E == enum))
+{
+    static immutable E[EnumMembers!E.length] members = [EnumMembers!E];
+    return members[std.random.uniform(0, members.length)];
+}
+
+unittest
+{
+    enum Fruit { Apple = 12, Mango = 29, Pear = 72 }
+    foreach (_; 0 .. 100)
+    {
+        auto f = uniform!Fruit();
+        assert(f == Fruit.Apple || f == Fruit.Mango || f == Fruit.Pear);
     }
 }
 
@@ -1342,15 +1362,15 @@ unittest
 }
 
 /**
-Partially shuffles the elements of $(D r) such that upon returning $(D r[0..n]) 
-is a random subset of $(D r) and is randomly ordered.  $(D r[n..r.length]) 
-will contain the elements not in $(D r[0..n]).  These will be in an undefined 
-order, but will not be random in the sense that their order after 
-$(D partialShuffle) returns will not be independent of their order before 
+Partially shuffles the elements of $(D r) such that upon returning $(D r[0..n])
+is a random subset of $(D r) and is randomly ordered.  $(D r[n..r.length])
+will contain the elements not in $(D r[0..n]).  These will be in an undefined
+order, but will not be random in the sense that their order after
+$(D partialShuffle) returns will not be independent of their order before
 $(D partialShuffle) was called.
 
 $(D r) must be a random-access range with length.  $(D n) must be less than
-or equal to $(D r.length).  
+or equal to $(D r.length).
 */
 void partialShuffle(Range, RandomGen = Random)(Range r, size_t n,
                                               ref RandomGen gen = rndGen)
