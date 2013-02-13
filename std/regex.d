@@ -1975,18 +1975,7 @@ public struct Regex(Char)
     +/
     @property bool empty() const nothrow {  return ir is null; }
 
-    /++
-       A range of the names of the named subgroups in the regex.
-
-       ---
-       auto re = regex(`(?P<name>\w+) = (?P<var>\d+)`);
-       auto nc = re.namedCaptures;
-       static assert(isRandomAccessRange!(typeof(nc)));
-       assert(!nc.empty);
-       assert(nc.length == 2);
-       assert(nc.equal(["name", "var"]));
-       ---
-     +/
+    /// A range of the names of the named subgroups in the regex.
     @property auto namedCaptures()
     {
         static struct NamedGroupRange
@@ -2030,6 +2019,19 @@ public struct Regex(Char)
             NamedGroupRange opSlice() { return this.save; }
         }
         return NamedGroupRange(dict, 0, dict.length);
+    }
+
+    ///
+    unittest
+    {
+        auto re = regex(`(?P<name>\w+) = (?P<var>\d+)`);
+        auto nc = re.namedCaptures;
+        static assert(isRandomAccessRange!(typeof(nc)));
+        assert(!nc.empty);
+        assert(nc.length == 2);
+        assert(nc.equal(["name", "var"]));
+        assert(nc[0] == "name");
+        assert(nc[1..$].equal(["var"]));
     }
 
 private:
