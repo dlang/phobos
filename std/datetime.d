@@ -7725,6 +7725,151 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
 
 
     /++
+        Converts this $(D SysTime) to a string with the format used by
+        email message headers. Fractional seconds are truncated.
+
+        Time zone offsets will be in the form +HHMM or -HHMM.
+
+        Examples:
+--------------------
+assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()).toEmailString() ==
+       "Sun, 4 Jul 2010 07:06:12 +0000");
+
+assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
+               FracSec.from!"msecs"(24), UTC()).toEmailString() ==
+       "Fri, 25 Dec 1998 02:15:00 +0000");
+
+assert(SysTime(DateTime(0, 1, 5, 23, 9, 59), new SimpleTimeZone(hours(-5))).toEmailString() ==
+       "Wed, 5 Jan 0000 23:09:59 -0500");
+
+assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
+               FracSec.from!"hnsecs"(520_920), UTC()).toEmailString() ==
+       "Fri, 5 Jan -0004 00:00:02 +0000");
+--------------------
+      +/
+
+    string toEmailString() const nothrow
+    {
+        try
+        {
+            string dayOfWeekStr;
+            final switch(dayOfWeek)
+            {
+                case DayOfWeek.sun: dayOfWeekStr = "Sun"; break;
+                case DayOfWeek.mon: dayOfWeekStr = "Mon"; break;
+                case DayOfWeek.tue: dayOfWeekStr = "Tue"; break;
+                case DayOfWeek.wed: dayOfWeekStr = "Wed"; break;
+                case DayOfWeek.thu: dayOfWeekStr = "Thu"; break;
+                case DayOfWeek.fri: dayOfWeekStr = "Fri"; break;
+                case DayOfWeek.sat: dayOfWeekStr = "Sat"; break;
+            }
+
+            string monthStr;
+            final switch(month)
+            {
+                case Month.jan: monthStr = "Jan"; break;
+                case Month.feb: monthStr = "Feb"; break;
+                case Month.mar: monthStr = "Mar"; break;
+                case Month.apr: monthStr = "Apr"; break;
+                case Month.may: monthStr = "May"; break;
+                case Month.jun: monthStr = "Jun"; break;
+                case Month.jul: monthStr = "Jul"; break;
+                case Month.aug: monthStr = "Aug"; break;
+                case Month.sep: monthStr = "Sep"; break;
+                case Month.oct: monthStr = "Oct"; break;
+                case Month.nov: monthStr = "Nov"; break;
+                case Month.dec: monthStr = "Dec"; break;
+            }
+
+            auto tzOffset = timezone.utcOffsetAt(stdTime);
+            auto tzAbsOffset = abs(tzOffset);
+
+            string timeZoneStr =
+                "%s%.2s%.2s".format(
+                    tzOffset < seconds(0)? "-" : "+",
+                    tzAbsOffset.hours,
+                    tzAbsOffset.minutes
+                );
+            
+            string result =
+                "%s, %s %s %.4s %.2s:%.2s:%.2s %s".format(
+                    dayOfWeekStr,
+                    day, monthStr, year,
+                    hour, minute, second,
+                    timeZoneStr
+                );
+            
+            return result;
+        }
+        catch(Exception e)
+            assert(0, "format() threw.");
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            _assertPred!"=="(SysTime(DateTime.init, UTC()).toEmailString(), "Mon, 1 Jan 0001 00:00:00 +0000");
+            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1), UTC()).toEmailString(), "Mon, 1 Jan 0001 00:00:00 +0000");
+
+            _assertPred!"=="(SysTime(DateTime(9, 12, 4, 0, 0, 0), UTC()).toEmailString(), "Fri, 4 Dec 0009 00:00:00 +0000");
+            _assertPred!"=="(SysTime(DateTime(99, 12, 4, 5, 6, 12), UTC()).toEmailString(), "Fri, 4 Dec 0099 05:06:12 +0000");
+            _assertPred!"=="(SysTime(DateTime(999, 12, 4, 13, 44, 59), UTC()).toEmailString(), "Wed, 4 Dec 0999 13:44:59 +0000");
+            _assertPred!"=="(SysTime(DateTime(9999, 7, 4, 23, 59, 59), UTC()).toEmailString(), "Sun, 4 Jul 9999 23:59:59 +0000");
+            _assertPred!"=="(SysTime(DateTime(10000, 10, 20, 1, 1, 1), UTC()).toEmailString(), "Fri, 20 Oct 10000 01:01:01 +0000");
+
+            _assertPred!"=="(SysTime(DateTime(9, 12, 4, 0, 0, 0), FracSec.from!"msecs"(42), UTC()).toEmailString(), "Fri, 4 Dec 0009 00:00:00 +0000");
+            _assertPred!"=="(SysTime(DateTime(99, 12, 4, 5, 6, 12), FracSec.from!"msecs"(100), UTC()).toEmailString(), "Fri, 4 Dec 0099 05:06:12 +0000");
+            _assertPred!"=="(SysTime(DateTime(999, 12, 4, 13, 44, 59), FracSec.from!"usecs"(45020), UTC()).toEmailString(), "Wed, 4 Dec 0999 13:44:59 +0000");
+            _assertPred!"=="(SysTime(DateTime(9999, 7, 4, 23, 59, 59), FracSec.from!"hnsecs"(12), UTC()).toEmailString(), "Sun, 4 Jul 9999 23:59:59 +0000");
+            _assertPred!"=="(SysTime(DateTime(10000, 10, 20, 1, 1, 1), FracSec.from!"hnsecs"(507890), UTC()).toEmailString(), "Fri, 20 Oct 10000 01:01:01 +0000");
+
+            _assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 12, 12),
+                                     new SimpleTimeZone(dur!"minutes"(-360))).toEmailString(),
+                            "Fri, 21 Dec 2012 12:12:12 -0600");
+
+            _assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 12, 12),
+                                     new SimpleTimeZone(dur!"minutes"(420))).toEmailString(),
+                            "Fri, 21 Dec 2012 12:12:12 +0700");
+
+            //Test B.C.
+            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC()).toEmailString(), "Sun, 31 Dec 0000 23:59:59 +0000");
+            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1), UTC()).toEmailString(), "Sun, 31 Dec 0000 23:59:59 +0000");
+            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), UTC()).toEmailString(), "Sun, 31 Dec 0000 23:59:59 +0000");
+
+            _assertPred!"=="(SysTime(DateTime(0, 12, 4, 0, 12, 4), UTC()).toEmailString(), "Mon, 4 Dec 0000 00:12:04 +0000");
+            _assertPred!"=="(SysTime(DateTime(-9, 12, 4, 0, 0, 0), UTC()).toEmailString(), "Wed, 4 Dec -0009 00:00:00 +0000");
+            _assertPred!"=="(SysTime(DateTime(-99, 12, 4, 5, 6, 12), UTC()).toEmailString(), "Wed, 4 Dec -0099 05:06:12 +0000");
+            _assertPred!"=="(SysTime(DateTime(-999, 12, 4, 13, 44, 59), UTC()).toEmailString(), "Fri, 4 Dec -0999 13:44:59 +0000");
+            _assertPred!"=="(SysTime(DateTime(-9999, 7, 4, 23, 59, 59), UTC()).toEmailString(), "Wed, 4 Jul -9999 23:59:59 +0000");
+            _assertPred!"=="(SysTime(DateTime(-10000, 10, 20, 1, 1, 1), UTC()).toEmailString(), "Fri, 20 Oct -10000 01:01:01 +0000");
+
+            _assertPred!"=="(SysTime(DateTime(0, 12, 4, 0, 0, 0), FracSec.from!"msecs"(7), UTC()).toEmailString(), "Mon, 4 Dec 0000 00:00:00 +0000");
+            _assertPred!"=="(SysTime(DateTime(-9, 12, 4, 0, 0, 0), FracSec.from!"msecs"(42), UTC()).toEmailString(), "Wed, 4 Dec -0009 00:00:00 +0000");
+            _assertPred!"=="(SysTime(DateTime(-99, 12, 4, 5, 6, 12), FracSec.from!"msecs"(100), UTC()).toEmailString(), "Wed, 4 Dec -0099 05:06:12 +0000");
+            _assertPred!"=="(SysTime(DateTime(-999, 12, 4, 13, 44, 59), FracSec.from!"usecs"(45020), UTC()).toEmailString(), "Fri, 4 Dec -0999 13:44:59 +0000");
+            _assertPred!"=="(SysTime(DateTime(-9999, 7, 4, 23, 59, 59), FracSec.from!"hnsecs"(12), UTC()).toEmailString(), "Wed, 4 Jul -9999 23:59:59 +0000");
+            _assertPred!"=="(SysTime(DateTime(-10000, 10, 20, 1, 1, 1), FracSec.from!"hnsecs"(507890), UTC()).toEmailString(), "Fri, 20 Oct -10000 01:01:01 +0000");
+
+            //Verify Examples.
+            assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()).toEmailString() ==
+                   "Sun, 4 Jul 2010 07:06:12 +0000");
+
+            assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
+                           FracSec.from!"msecs"(24), UTC()).toEmailString() ==
+                   "Fri, 25 Dec 1998 02:15:00 +0000");
+
+            assert(SysTime(DateTime(0, 1, 5, 23, 9, 59), new SimpleTimeZone(hours(-5))).toEmailString() ==
+                   "Wed, 5 Jan 0000 23:09:59 -0500");
+
+            assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
+                           FracSec.from!"hnsecs"(520_920), UTC()).toEmailString() ==
+                   "Fri, 5 Jan -0004 00:00:02 +0000");
+        }
+    }
+
+    /++
         Converts this $(D SysTime) to a string with the format
         YYYYMMDDTHHMMSS.FFFFFFFTZ (where F is fractional seconds and TZ is time
         zone).
