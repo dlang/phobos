@@ -36,31 +36,27 @@ assert(isEven(2) && !isEven(1));
 ----
 */
 
-template unaryFun(alias fun, bool byRef = false, string parmName = "a")
+template unaryFun(alias fun, string parmName = "a")
 {
     static if (is(typeof(fun) : string))
     {
-        static if (byRef)
+        auto unaryFun(ElementType)(auto ref ElementType __a)
         {
-            auto unaryFun(ElementType)(ref ElementType __a)
-            {
-                mixin("alias __a "~parmName~";");
-                mixin("return (" ~ fun ~ ");");
-            }
-        }
-        else
-        {
-            auto unaryFun(ElementType)(ElementType __a)
-            {
-                mixin("alias __a "~parmName~";");
-                mixin("return (" ~ fun ~ ");");
-            }
+            mixin("alias __a "~parmName~";");
+            mixin("return (" ~ fun ~ ");");
         }
     }
     else
     {
         alias fun unaryFun;
     }
+}
+
+/+ Undocumented, will be removed December 2014+/
+deprecated("Parameter byRef is obsolete. Please call unaryFun!(fun, parmName) directly.")
+template unaryFun(alias fun, bool byRef, string parmName = "a")
+{
+    alias unaryFun = unaryFun!(fun, parmName);
 }
 
 unittest
@@ -99,7 +95,7 @@ template binaryFun(alias fun, string parm1Name = "a",
     static if (is(typeof(fun) : string))
     {
         auto binaryFun(ElementType1, ElementType2)
-            (ElementType1 __a, ElementType2 __b)
+            (auto ref ElementType1 __a, auto ref ElementType2 __b)
         {
             mixin("alias __a "~parm1Name~";");
             mixin("alias __b "~parm2Name~";");
