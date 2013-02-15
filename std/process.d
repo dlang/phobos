@@ -394,6 +394,9 @@ unittest
     auto x = shell("echo wyda");
     // @@@ This fails on wine
     //assert(x == "wyda" ~ newline, text(x.length));
+
+    import std.exception;  // Issue 9444
+    assertThrown!ErrnoException(shell("qwertyuiop09813478"));
 }
 
 /**
