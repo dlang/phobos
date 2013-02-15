@@ -7784,19 +7784,14 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             auto tzOffset = timezone.utcOffsetAt(stdTime);
             auto tzAbsOffset = abs(tzOffset);
 
-            string timeZoneStr =
-                "%s%.2s%.2s".format(
-                    tzOffset < seconds(0)? "-" : "+",
-                    tzAbsOffset.hours,
-                    tzAbsOffset.minutes
-                );
-            
             string result =
-                "%s, %s %s %.4s %.2s:%.2s:%.2s %s".format(
+                "%s, %s %s %.4s %.2s:%.2s:%.2s %s%.2s%.2s".format(
                     dayOfWeekStr,
                     day, monthStr, year,
                     hour, minute, second,
-                    timeZoneStr
+                    tzOffset < seconds(0)? "-" : "+",
+                    tzAbsOffset.hours,
+                    tzAbsOffset.minutes
                 );
             
             return result;
