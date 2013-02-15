@@ -457,9 +457,10 @@ referring to the same handle will see a closed file henceforth.
         {
             if (_p.isPipe)
             {
-                // Ignore the result of the command
-                errnoEnforce(.pclose(_p.handle) != -1,
+                auto res = .pclose(_p.handle);
+                errnoEnforce(res != -1,
                         "Could not close pipe `"~_name~"'");
+                errnoEnforce(res == 0, format("Command returned %d", res));
                 return;
             }
         }
