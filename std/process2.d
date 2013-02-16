@@ -95,12 +95,13 @@ version(Windows)
     {
         // Some MSVCRT functions and constants.
         import core.stdc.stdint;
-        @trusted extern(C)
+        extern(C)
         {
             int _fileno(FILE* stream);
             HANDLE _get_osfhandle(int fd);
             int _open_osfhandle(HANDLE osfhandle, int flags);
             FILE* _fdopen(int fd, const (char)* mode);
+            int _close(int fd);
         }
         enum
         {
@@ -913,17 +914,28 @@ else version(Windows) Pipe pipe() @trusted //TODO: @safe
     // Create file descriptors from the handles
     version (DMC_RUNTIME)
     {
-        auto readfd = _handleToFD(readHandle, FHND_DEVICE);
-        auto writefd = _handleToFD(writeHandle, FHND_DEVICE);
+        auto readFD  = _handleToFD(readHandle, FHND_DEVICE);
+        auto writeFD = _handleToFD(writeHandle, FHND_DEVICE);
     }
     else // MSVCRT
     {
-        auto readfd = _open_osfhandle(readHandle, _O_RDONLY);
-        auto writefd = _open_osfhandle(writeHandle, _O_APPEND);
+        auto readFD  = _open_osfhandle(readHandle, _O_RDONLY);
+        auto writeFD = _open_osfhandle(writeHandle, _O_APPEND);
+    }
+    version (DMC_RUNTIME) alias .close _close;
+    if (readFD == -1 || writeFD == -1)
+    {
+        // Close file descriptors, then throw.
+        if (readFD >= 0) _close(readFD);
+        else CloseHandle(readHandle);
+        if (writeFD >= 0) _close(writeFD);
+        else CloseHandle(writeHandle);
+        throw new StdioException("Error creating pipe");
     }
 
+    // Create FILE pointers from the file descriptors
     Pipe p;
-    version(DMC_RUNTIME)
+    version (DMC_RUNTIME)
     {
         // This is a re-implementation of DMC's fdopen, but without the
         // mucking with the file descriptor.  POSIX standard requires the
@@ -942,22 +954,25 @@ else version(Windows) Pipe pipe() @trusted //TODO: @safe
             return fp;
         }
 
-        p._read = File(errnoEnforce(local_fdopen(readfd, "r"),
-                                    "Cannot open read end of pipe"),
-                        null, 1);
-        p._write = File(errnoEnforce(local_fdopen(writefd, "a"),
-                                     "Cannot open write end of pipe"),
-                        null, 1);
+        auto readFP  = local_fdopen(readFD, "r");
+        auto writeFP = local_fdopen(writeFD, "a");
     }
     else // MSVCRT
     {
-        p._read = File(errnoEnforce(_fdopen(readfd, "r"),
-                                    "Cannot open read end of pipe"),
-                       null, 1);
-        p._write = File(errnoEnforce(_fdopen(writefd, "a"),
-                                     "Cannot open write end of pipe"),
-                        null, 1);
+        auto readFP  = _fdopen(readFD, "r");
+        auto writeFP = _fdopen(writeFD, "a");
     }
+    if (readFP == null || writeFP == null)
+    {
+        // Close streams, then throw.
+        if (readFP != null) fclose(readFP);
+        else _close(readFD);
+        if (writeFP != null) fclose(writeFP);
+        else _close(writeFD);
+        throw new StdioException("Cannot open pipe");
+    }
+    p._read = File(readFP, null);
+    p._write = File(writeFP, null);
     return p;
 }
 
