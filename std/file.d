@@ -880,7 +880,7 @@ bool exists(in char[] name) @trusted
         */
 
         stat_t statbuf = void;
-        return stat(toStringz(name), &statbuf) == 0;
+        return lstat(toStringz(name), &statbuf) == 0;
     }
 }
 
@@ -2012,14 +2012,14 @@ else version(Posix)
 
         @property bool isDir()
         {
-            _ensureStatDone();
+            _ensureStatOrLStatDone();
 
             return (_statBuf.st_mode & S_IFMT) == S_IFDIR;
         }
 
         @property bool isFile()
         {
-            _ensureStatDone();
+            _ensureStatOrLStatDone();
 
             return (_statBuf.st_mode & S_IFMT) == S_IFREG;
         }
@@ -2093,6 +2093,31 @@ else version(Posix)
                     "Failed to stat file `" ~ _name ~ "'");
 
             _didStat = true;
+        }
+        
+        /++
+            This is to support lazy evaluation, because doing stat's is
+            expensive and not always needed.
+            
+            Try both stat and lstat for isFile and isDir
+            to detect broken symlinks.
+         +/
+        void _ensureStatOrLStatDone()
+        {
+            if(_didStat)
+                return;
+                
+            if( stat(toStringz(_name), &_statBuf) != 0 )
+            {
+                _ensureLStatDone();
+                
+                _statBuf = stat_t.init;
+                _statBuf.st_mode = S_IFLNK;
+            }
+            else
+            {
+                _didStat = true;
+            }
         }
 
         /++
@@ -2174,6 +2199,26 @@ unittest
                 assert(!de.isFile);
                 assert(de.isDir);
                 assert(de.isSymlink);
+            }
+
+            symfile.remove();
+            core.sys.posix.unistd.symlink((deleteme ~ "_broken_symlink\0").ptr, symfile.ptr);
+
+            {
+                //Issue 8298
+                DirEntry de = DirEntry(symfile);
+
+                assert(!de.isFile);
+                assert(!de.isDir);
+                assert(de.isSymlink);
+                assertThrown(de.size);
+                assertThrown(de.timeStatusChanged);
+                assertThrown(de.timeLastAccessed);
+                assertThrown(de.timeLastModified);
+                assertThrown(de.attributes);
+                assertThrown(de.statBuf);
+                assert(symfile.exists);
+                symfile.remove();
             }
         }
 
