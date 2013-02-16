@@ -66,6 +66,7 @@ Source:
     $(PHOBOSSRC std/_process.d)
 Macros:
     WIKI=Phobos/StdProcess
+    OBJECTREF=$(D $(LINK2 object.html#$0,$0))
 */
 module std.process2;
 
@@ -163,8 +164,7 @@ final class Pid
     */
     @property int processID() const @safe pure
     {
-        enforce(_processID >= 0,
-            "Pid doesn't correspond to a running process.");
+        assert(_processID >= 0);
         return _processID;
     }
 
@@ -177,8 +177,11 @@ final class Pid
         {
             int status;
             auto check = waitpid(processID, &status, 0);
-            enforce(check != -1  ||  errno != ECHILD,
+            if (check == -1  &&  errno == ECHILD)
+            {
+                throw new ProcessException(
                     "Process does not exist or is not a child process.");
+            }
             if (WIFEXITED(status))
             {
                 exitCode = WEXITSTATUS(status);
@@ -204,9 +207,11 @@ final class Pid
             if(_handle != INVALID_HANDLE_VALUE)
             {
                 auto result = WaitForSingleObject(_handle, INFINITE);
-                enforce(result == WAIT_OBJECT_0, "Wait failed");
+                if (result != WAIT_OBJECT_0)
+                    throw ProcessException.newFromLastError("Wait failed.");
                 // the process has exited, get the return code
-                enforce(GetExitCodeProcess(_handle, cast(LPDWORD)&_exitCode));
+                if (!GetExitCodeProcess(_handle, cast(LPDWORD)&_exitCode))
+                    throw ProcessException.newFromLastError();
                 CloseHandle(_handle);
                 _handle = INVALID_HANDLE_VALUE;
                 _processID = terminated;
@@ -312,6 +317,10 @@ args = The _command-line arguments to give to the program.
 
 Returns:
 A $(LREF Pid) object that corresponds to the spawned process.
+
+Throws:
+$(LREF ProcessException) on failure to start the process.$(BR)
+$(XREF stdio,StdioException) if either of the given streams is invalid.
 
 Examples:
 Open Firefox on the D homepage and wait for it to complete:
@@ -430,27 +439,30 @@ version(Posix) private Pid spawnProcessImpl(
     // Make sure the file exists and is executable.
     if (any!isDirSeparator(name))
     {
-        enforce(isExecutable(name), "Not an executable file: "~name);
+        if (!isExecutable(name))
+            throw new ProcessException("Not an executable file: "~name);
     }
     else
     {
         name = searchPathFor(name);
-        enforce(name != null, "Executable file not found: "~name);
+        if (name is null)
+            throw new ProcessException("Executable file not found: "~name);
     }
 
     // Get the file descriptors of the streams.
     auto stdinFD  = core.stdc.stdio.fileno(stdin_.getFP());
-    errnoEnforce(stdinFD != -1, "Invalid stdin stream");
+    if (stdinFD == -1) throw new StdioException("Invalid stdin stream");
     auto stdoutFD = core.stdc.stdio.fileno(stdout_.getFP());
-    errnoEnforce(stdoutFD != -1, "Invalid stdout stream");
+    if (stdoutFD == -1) throw new StdioException("Invalid stdout stream");
     auto stderrFD = core.stdc.stdio.fileno(stderr_.getFP());
-    errnoEnforce(stderrFD != -1, "Invalid stderr stream");
+    if (stderrFD == -1) throw new StdioException("Invalid stderr stream");
 
     auto namez = toStringz(name);
     auto argz = toArgz(name, args);
 
     auto id = fork();
-    errnoEnforce(id >= 0, "Cannot spawn new process");
+    if (id < 0)
+        throw ProcessException.newFromErrno("Failed to spawn new process");
     if (id == 0)
     {
         // Child process
@@ -582,11 +594,11 @@ else version(Windows) private Pid spawnProcessImpl(
     startinfo.dwFlags = STARTF_USESTDHANDLES;
     // Get the file descriptors of the streams.
     auto stdinFD  = _fileno(stdin_.getFP());
-    errnoEnforce(stdinFD != -1, "Invalid stdin stream");
+    if (stdinFD == -1) throw new StdioException("Invalid stdin stream");
     auto stdoutFD = _fileno(stdout_.getFP());
-    errnoEnforce(stdoutFD != -1, "Invalid stdout stream");
+    if (stdoutFD == -1) throw new StdioException("Invalid stdout stream");
     auto stderrFD = _fileno(stderr_.getFP());
-    errnoEnforce(stderrFD != -1, "Invalid stderr stream");
+    if (stderrFD == -1) throw new StdioException("Invalid stderr stream");
 
     // need to convert file descriptors to HANDLEs
     version (DMC_RUNTIME)
@@ -603,10 +615,10 @@ else version(Windows) private Pid spawnProcessImpl(
     }
 
     // TODO: need to fix this for unicode
-    if(!CreateProcessA(null, cmdline.ptr, null, null, true, (config & Config.gui) ? CREATE_NO_WINDOW : 0, envz, null, &startinfo, &pi))
-    {
-        throw new Exception("Error starting process: " ~ sysErrorString(GetLastError()), __FILE__, __LINE__);
-    }
+    if(!CreateProcessA(null, cmdline.ptr, null, null, true,
+                       (config & Config.gui) ? CREATE_NO_WINDOW : 0,
+                       envz, null, &startinfo, &pi))
+        throw ProcessException.newFromLastError("Failed to spawn new process");
 
     // figure out if we should close any of the streams
     with (Config)
@@ -831,12 +843,15 @@ negative return value will always indicate termination by signal.
 Signal codes are defined in the $(D core.sys.posix.signal) module
 (which corresponds to the $(D signal.h) POSIX header).
 
+Throws:
+$(LREF ProcessException) on failure.
+
 Examples:
 See the $(LREF spawnProcess) documentation.
 */
 int wait(Pid pid) @safe
 {
-    enforce(pid !is null, "Called wait on a null Pid.");
+    assert(pid !is null, "Called wait on a null Pid.");
     return pid.wait();
 }
 
@@ -859,6 +874,9 @@ way of doing this.
 
 Returns:
 A $(LREF Pipe) object that corresponds to the created _pipe.
+
+Throws:
+$(XREF stdio,StdioException) on failure.
 */
 version(Posix) Pipe pipe() @trusted //TODO: @safe
 {
@@ -866,12 +884,14 @@ version(Posix) Pipe pipe() @trusted //TODO: @safe
     errnoEnforce(core.sys.posix.unistd.pipe(fds) == 0,
                  "Unable to create pipe");
     Pipe p;
-    p._read = File(errnoEnforce(fdopen(fds[0], "r"),
-                                "Cannot open read end of pipe"),
-                   null, 1);
-    p._write = File(errnoEnforce(fdopen(fds[1], "w"),
-                                 "Cannot open write end of pipe"),
-                    null, 1);
+    auto readFP = fdopen(fds[0], "r");
+    if (readFP == null)
+        throw new StdioException("Cannot open read end of pipe");
+    p._read = File(readFP, null);
+    auto writeFP = fdopen(fds[1], "w");
+    if (writeFP == null)
+        throw new StdioException("Cannot open write end of pipe");
+    p._write = File(writeFP, null);
     return p;
 }
 else version(Windows) Pipe pipe() @trusted //TODO: @safe
@@ -885,8 +905,9 @@ else version(Windows) Pipe pipe() @trusted //TODO: @safe
     sa.bInheritHandle = true;
     if(!CreatePipe(&readHandle, &writeHandle, &sa, 0))
     {
-        throw new Exception("Error creating pipe: " ~ sysErrorString(GetLastError()),
-                            __FILE__, __LINE__);
+        throw new StdioException(
+            "Error creating pipe (" ~ sysErrorString(GetLastError()) ~ ')',
+            0);
     }
 
     // Create file descriptors from the handles
@@ -996,6 +1017,11 @@ A $(LREF ProcessPipes) object which contains $(XREF stdio,File)
 handles that communicate with the redirected streams of the child
 process, along with the $(LREF Pid) of the process.
 
+Throws:
+$(LREF ProcessException) on failure to start the process.$(BR)
+$(XREF stdio,StdioException) on failure to create pipes.$(BR)
+$(OBJECTREF Error) if $(D redirectFlags) is an invalid combination of flags.
+
 Example:
 ---
 auto pipes = pipeProcess("my_application");
@@ -1041,9 +1067,9 @@ ProcessPipes pipeProcess(string name,
 
     if (redirectFlags & Redirect.stdout)
     {
-        enforce((redirectFlags & Redirect.stdoutToStderr) == 0,
-                "Invalid combination of options: Redirect.stdout | "
-                ~"Redirect.stdoutToStderr");
+        if ((redirectFlags & Redirect.stdoutToStderr) != 0)
+            throw new Error("Invalid combination of options: Redirect.stdout | "
+                            ~"Redirect.stdoutToStderr");
         auto p = pipe();
         stdoutFile = p.writeEnd;
         pipes._stdout = p.readEnd;
@@ -1055,9 +1081,9 @@ ProcessPipes pipeProcess(string name,
 
     if (redirectFlags & Redirect.stderr)
     {
-        enforce((redirectFlags & Redirect.stderrToStdout) == 0,
-            "Invalid combination of options: Redirect.stderr | "
-           ~"Redirect.stderrToStdout");
+        if ((redirectFlags & Redirect.stderrToStdout) != 0)
+            throw new Error("Invalid combination of options: Redirect.stderr | "
+                            ~"Redirect.stderrToStdout");
         auto p = pipe();
         stderrFile = p.writeEnd;
         pipes._stderr = p.readEnd;
@@ -1119,11 +1145,16 @@ enum Redirect
     all = stdin | stdout | stderr,
 
     /**
-    Redirect the standard error stream into the standard output
-    stream, or vice versa.
+    Redirect the standard error stream into the standard output stream.
+    This can not be combined with $(D Redirect.sterr).
     */
     stderrToStdout = 8,
-    stdoutToStderr = 16,                    /// ditto
+
+    /**
+    Redirect the standard output stream into the standard error stream.
+    This can not be combined with $(D Redirect.stout).
+    */
+    stdoutToStderr = 16,
 }
 
 unittest
@@ -1190,39 +1221,57 @@ with a child process through its standard streams.
 struct ProcessPipes
 {
     /// The $(LREF Pid) of the child process.
-    @property Pid pid() @safe
+    @property Pid pid() @safe nothrow
     {
-        enforce(_pid !is null);
+        assert(_pid !is null);
         return _pid;
     }
 
     /**
     An $(XREF stdio,File) that allows writing to the child process'
     standard input stream.
+
+    Throws:
+    $(OBJECTREF Error) if the child process' standard input stream hasn't
+    been redirected.
     */
-    @property File stdin() @trusted //TODO: @safe
+    @property File stdin() @trusted //TODO: @safe nothrow
     {
-        enforce((_redirectFlags & Redirect.stdin) > 0,
-                "Child process' standard input stream hasn't been redirected.");
+        if ((_redirectFlags & Redirect.stdin) == 0)
+            throw new Error("Child process' standard input stream hasn't "
+                            ~"been redirected.");
         return _stdin;
     }
 
     /**
-    An $(XREF stdio,File) that allows reading from the child
-    process' standard output/error stream.
+    An $(XREF stdio,File) that allows reading from the child process'
+    standard output stream.
+
+    Throws:
+    $(OBJECTREF Error) if the child process' standard output stream hasn't
+    been redirected.
     */
-    @property File stdout() @trusted //TODO: @safe
+    @property File stdout() @trusted //TODO: @safe nothrow
     {
-        enforce((_redirectFlags & Redirect.stdout) > 0,
-                "Child process' standard output stream hasn't been redirected.");
+        if ((_redirectFlags & Redirect.stdout) == 0)
+            throw new Error("Child process' standard output stream hasn't "
+                            ~"been redirected.");
         return _stdout;
     }
 
-    /// ditto
-    @property File stderr() @trusted //TODO: @safe
+    /**
+    An $(XREF stdio,File) that allows reading from the child process'
+    standard error stream.
+
+    Throws:
+    $(OBJECTREF Error) if the child process' standard error stream hasn't
+    been redirected.
+    */
+    @property File stderr() @trusted //TODO: @safe nothrow
     {
-        enforce((_redirectFlags & Redirect.stderr) > 0,
-                "Child process' standard error stream hasn't been redirected.");
+        if ((_redirectFlags & Redirect.stderr) == 0)
+            throw new Error("Child process' standard error stream hasn't "
+                            ~"been redirected.");
         return _stderr;
     }
 
@@ -1245,9 +1294,13 @@ if (dmd.status != 0) writeln("Compilation failed:\n", dmd.output);
 ---
 
 POSIX_specific:
-If the process is terminated by a signal, this function returns a
-negative number whose absolute value is the signal number.
-(See $(LREF wait) for details.)
+If the process is terminated by a signal, the $(D status) field of
+the return value will contain a negative number whose absolute
+value is the signal number.  (See $(LREF wait) for details.)
+
+Throws:
+$(LREF ProcessException) on failure to start the process.$(BR)
+$(XREF stdio,StdioException) on failure to capture output.
 */
 Tuple!(int, "status", string, "output") execute(string command)
     @trusted //TODO: @safe
@@ -1331,9 +1384,13 @@ writefln("ls exited with code %s and said: %s", ls.status, ls.output);
 ---
 
 POSIX_specific:
-If the process is terminated by a signal, this function returns a
-negative number whose absolute value is the signal number.
-(See $(LREF wait) for details.)
+If the process is terminated by a signal, the $(D status) field of
+the return value will contain a negative number whose absolute
+value is the signal number.  (See $(LREF wait) for details.)
+
+Throws:
+$(LREF ProcessException) on failure to start the process.$(BR)
+$(XREF stdio,StdioException) on failure to capture output.
 */
 Tuple!(int, "status", string, "output") shell(string command)
     @trusted //TODO: @safe
@@ -1356,6 +1413,51 @@ unittest
     auto r3 = shell("exit 123");
     assert (r3.status == 123);
     assert (r3.output.empty);
+}
+
+
+/// An exception that signals a problem with starting or waiting for a process.
+class ProcessException : Exception
+{
+    // Standard constructor.
+    this(string msg, string file = __FILE__, size_t line = __LINE__)
+    {
+        super(msg, file, line);
+    }
+
+    // Creates a new ProcessException based on errno.
+    static ProcessException newFromErrno(string customMsg = null,
+                                         string file = __FILE__,
+                                         size_t line = __LINE__)
+    {
+        import core.stdc.errno;
+        import std.c.string;
+        version(linux)
+        {
+            char[1024] buf;
+            auto errnoMsg = to!string(
+                std.c.string.strerror_r(errno, buf.ptr, buf.length));
+        }
+        else
+        {
+            auto errnoMsg = to!string(std.c.string.strerror(errno));
+        }
+        auto msg = customMsg.empty() ? errnoMsg
+                                     : customMsg ~ " (" ~ errnoMsg ~ ')';
+        return new ProcessException(msg, file, line);
+    }
+
+    // Creates a new ProcessException based on GetLastError() (Windows only).
+    version (Windows)
+    static ProcessException newFromLastError(string customMsg = null,
+                                             string file = __FILE__,
+                                             size_t line = __LINE__)
+    {
+        auto lastMsg = sysErrorString(GetLastError());
+        auto msg = customMsg.empty() ? lastMsg
+                                     : customMsg ~ " (" ~ lastMsg ~ ')';
+        return new ProcessException(msg, file, line);
+    }
 }
 
 
