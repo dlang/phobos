@@ -7751,8 +7751,8 @@ assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
     {
         enforce(year >= 1900 && year <= 9999, new DateTimeException("year must be between 1900 and 9999 inclusive"));
         
-        static immutable monthStrings     = ["Jan", "Feb", "Mar", "Apr",  "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        static immutable dayOfWeekStrings = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        static immutable char[3][12] monthStrings     = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        static immutable char[3][ 7] dayOfWeekStrings = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
         auto tzOffset = timezone.utcOffsetAt(stdTime);
         auto tzAbsOffset = abs(tzOffset);
