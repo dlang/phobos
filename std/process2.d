@@ -84,6 +84,16 @@ version(Windows)
     import core.sys.windows.windows;
     import std.utf;
     import std.windows.syserror;
+
+    extern(Windows) BOOL SetHandleInformation(HANDLE hObject,
+                                              DWORD dwMask,
+                                              DWORD dwFlags);
+    enum
+    {
+        HANDLE_FLAG_INHERIT = 0x1,
+        HANDLE_FLAG_PROTECT_FROM_CLOSE = 0x2,
+    }
+
     version(Win32) version(DigitalMars)
     {
         // When the DMC runtime is used, we have to use some custom functions
@@ -615,6 +625,17 @@ else version(Windows) private Pid spawnProcessImpl(
         startinfo.hStdError = _get_osfhandle(stderrFD);
     }
 
+    // Make the handles inheritable
+    static void makeInheritable(HANDLE h, string which)
+    {
+        if (!SetHandleInformation(h, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
+            throw new StdioException(
+                "Failed to pass "~which~" stream to child process", 0);
+    }
+    makeInheritable(startinfo.hStdInput, "stdin");
+    makeInheritable(startinfo.hStdOutput, "stdout");
+    makeInheritable(startinfo.hStdError, "stderr");
+
     // TODO: need to fix this for unicode
     if(!CreateProcessA(null, cmdline.ptr, null, null, true,
                        (config & Config.gui) ? CREATE_NO_WINDOW : 0,
@@ -900,11 +921,7 @@ else version(Windows) Pipe pipe() @trusted //TODO: @safe
     // use CreatePipe to create an anonymous pipe
     HANDLE readHandle;
     HANDLE writeHandle;
-    SECURITY_ATTRIBUTES sa;
-    sa.nLength = sa.sizeof;
-    sa.lpSecurityDescriptor = null;
-    sa.bInheritHandle = true;
-    if(!CreatePipe(&readHandle, &writeHandle, &sa, 0))
+    if (!CreatePipe(&readHandle, &writeHandle, null, 0))
     {
         throw new StdioException(
             "Error creating pipe (" ~ sysErrorString(GetLastError()) ~ ')',
