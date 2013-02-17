@@ -7749,7 +7749,10 @@ assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
 
     string toEmailString(bool useDayOfWeek=true, bool useSeconds=true) const
     {
-        enforce(year >= 1900 && year <= 9999, new DateTimeException("year must be between 1900 and 9999 inclusive"));
+        auto dt = cast(DateTime) this;
+
+        if(dt.year < 1900 || dt.year > 9999)
+            throw new DateTimeException("year must be between 1900 and 9999 inclusive");
         
         static immutable char[3][12] monthStrings     = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         static immutable char[3][ 7] dayOfWeekStrings = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -7757,21 +7760,18 @@ assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
         auto tzOffset = timezone.utcOffsetAt(stdTime);
         auto tzAbsOffset = abs(tzOffset);
 
-        string result =
-            "%s%s%s %s %.4s %.2s:%.2s%s%.*s %s%.2s%.2s".format(
-                useDayOfWeek? dayOfWeekStrings[dayOfWeek] : "",
-                useDayOfWeek? ", " : "",
-                day, monthStrings[month - 1], year,
-                hour, minute,
-                useSeconds? ":" : "",
-                useSeconds? 2 : 0, // Precision for next arg
-                useSeconds? second : 0,
-                tzOffset < seconds(0)? "-" : "+",
-                tzAbsOffset.hours,
-                tzAbsOffset.minutes
-            );
-        
-        return result;
+        return "%s%s%s %s %.4s %.2s:%.2s%s%.*s %s%.2s%.2s".format(
+            useDayOfWeek? dayOfWeekStrings[dayOfWeek] : "",
+            useDayOfWeek? ", " : "",
+            dt.day, monthStrings[dt.month - 1], dt.year,
+            dt.hour, dt.minute,
+            useSeconds? ":" : "",
+            useSeconds? 2 : 0, // Precision for next arg
+            useSeconds? dt.second : 0,
+            tzOffset < seconds(0)? "-" : "+",
+            tzAbsOffset.hours,
+            tzAbsOffset.minutes
+        );
     }
 
     unittest
