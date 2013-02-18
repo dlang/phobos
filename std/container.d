@@ -6,7 +6,6 @@ Defines generic _containers.
 Source: $(PHOBOSSRC std/_container.d)
 Macros:
 WIKI = Phobos/StdContainer
-TEXTWITHCOMMAS = $0
 
 Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
 copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
@@ -17,7 +16,7 @@ boost.org/LICENSE_1_0.txt)).
 
 Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
 
-$(BOOKTABLE $(TEXTWITHCOMMAS Container primitives. Below, $(D C) means
+$(BOOKTABLE $(ARGS Container primitives. Below, $(D C) means
 a _container type, $(D c) is a value of _container type, $(D n$(SUB
 x)) represents the effective length of value $(D x), which could be a
 single element (in which case $(D n$(SUB x)) is $(D 1)), a _container,
@@ -1882,7 +1881,7 @@ Appends the contents of stuff into this.
         insertBack(rhs);
         return this;
     }
-    
+
 // Private implementations helpers for opOpBinaryRight
     DList opOpAssignRightPrivate(string op, Stuff)(Stuff lhs)
     if (op == "~" && isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
@@ -2112,7 +2111,7 @@ $(D r) and $(D m) is the length of $(D stuff).
             last = new Node(item, last, null);
             ++result;
         }
-        
+
         //We have created a first-last chain. Now we insert it.
         if(!_first)
         {
@@ -2446,7 +2445,7 @@ unittest
     auto d = DList!int([4, 5, 6]);
 
     assert((a ~ b[])[].empty);
-    
+
     assert((c ~ d[])[].equal([1, 2, 3, 4, 5, 6]));
     assert(c[].equal([1, 2, 3]));
     assert(d[].equal([4, 5, 6]));

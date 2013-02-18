@@ -407,7 +407,7 @@ public:
 
     /** Convert the BigInt to string, passing it to 'sink'.
      *
-     * $(TABLE  The output format is controlled via formatString:
+     * $(BOOKTABLE  The output format is controlled via formatString:,
      * $(TR $(TD "d") $(TD  Decimal))
      * $(TR $(TD "x") $(TD  Hexadecimal, lower case))
      * $(TR $(TD "X") $(TD  Hexadecimal, upper case))

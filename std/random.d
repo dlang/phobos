@@ -762,7 +762,7 @@ unittest
  *
  * Implemented according to $(WEB www.jstatsoft.org/v08/i14/paper, Xorshift RNGs).
  *
- * $(BOOKTABLE $(TEXTWITHCOMMAS Supporting bits are below, $(D bits) means second parameter of XorshiftEngine.),
+ * $(BOOKTABLE $(ARGS Supporting bits are below, $(D bits) means second parameter of XorshiftEngine.),
  *  $(TR $(TH bits) $(TH period))
  *  $(TR $(TD 32)   $(TD 2^32 - 1))
  *  $(TR $(TD 64)   $(TD 2^64 - 1))

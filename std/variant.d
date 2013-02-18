@@ -1575,7 +1575,7 @@ unittest
  * ensuring that all types are handled by the visiting functions.
  *
  * The delegate or function having the currently held value as parameter is called
- * with $(D_PARM variant)'s current value. Visiting handlers are passed
+ * with $(D variant)'s current value. Visiting handlers are passed
  * in the template parameter list.
  * It is statically ensured that all types of
  * $(D_PARAM variant) are handled accross all handlers.
