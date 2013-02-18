@@ -266,7 +266,7 @@ unittest
     {
         struct MoreIntegrals {
             bool checkExpectations(uint eu, ushort es, uint ei) { return u == eu && s == es && i == ei; }
-            
+
             mixin(bitfields!(
                   uint, "u", 24,
                   short, "s", 16,
@@ -585,7 +585,7 @@ struct BitArray
         }
         return result;
     }
-    
+
     /** ditto */
     int opApply(scope int delegate(size_t, bool) dg) const
     {
@@ -1960,7 +1960,7 @@ private template canSwapEndianness(T)
 unittest
 {
     foreach(T; TypeTuple!(bool, ubyte, byte, ushort, short, uint, int, ulong,
-                          long, char, wchar, dchar, float, double)) 
+                          long, char, wchar, dchar, float, double))
     {
         static assert(canSwapEndianness!(T));
         static assert(canSwapEndianness!(const T));
@@ -2169,7 +2169,7 @@ unittest
         ubyte[] buffer = [66, 0, 0, 0, 65, 200, 0, 0];
         assert(buffer.peek!float()== 32.0);
         assert(buffer.peek!float(4) == 25.0f);
-        
+
         size_t index = 0;
         assert(buffer.peek!float(&index) == 32.0f);
         assert(index == 4);
@@ -2183,7 +2183,7 @@ unittest
         ubyte[] buffer = [64, 64, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0];
         assert(buffer.peek!double() == 32.0);
         assert(buffer.peek!double(8) == 25.0);
-        
+
         size_t index = 0;
         assert(buffer.peek!double(&index) == 32.0);
         assert(index == 8);
@@ -2195,7 +2195,7 @@ unittest
     {
         //enum
         ubyte[] buffer = [0, 0, 0, 10, 0, 0, 0, 20, 0, 0, 0, 30];
-        
+
         enum Foo
         {
             one = 10,
@@ -2727,7 +2727,7 @@ unittest
     {
         //char (8bit)
         ubyte[] buffer = [0, 0, 0];
-        
+
         buffer.write!char('a', 0);
         assert(buffer == [97, 0, 0]);
 
@@ -2751,7 +2751,7 @@ unittest
     {
         //wchar (16bit - 2x ubyte)
         ubyte[] buffer = [0, 0, 0, 0];
-        
+
         buffer.write!wchar('ą', 0);
         assert(buffer == [1, 5, 0, 0]);
 
@@ -2771,7 +2771,7 @@ unittest
     {
         //dchar (32bit - 4x ubyte)
         ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
-        
+
         buffer.write!dchar('ą', 0);
         assert(buffer == [0, 0, 1, 5, 0, 0, 0, 0]);
 
@@ -2786,7 +2786,7 @@ unittest
         buffer.write!dchar('ą', &index);
         assert(buffer == [0, 0, 1, 7, 0, 0, 1, 5]);
         assert(index == 8);
-    }     
+    }
 
     {
         //float (32bit - 4x ubyte)
@@ -2817,7 +2817,7 @@ unittest
 
         buffer.write!double(25.0, 8);
         assert(buffer == [64, 64, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0]);
-        
+
         size_t index = 0;
         buffer.write!double(25.0, &index);
         assert(buffer == [64, 57, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0]);
@@ -2831,7 +2831,7 @@ unittest
     {
         //enum
         ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        
+
         enum Foo
         {
             one = 10,
@@ -3020,19 +3020,19 @@ unittest
     {
         //char wchar dchar
         auto buffer = appender!(const ubyte[])();
-        
+
         buffer.append!char('a');
         assert(buffer.data == [97]);
 
         buffer.append!char('b');
         assert(buffer.data == [97, 98]);
-        
+
         buffer.append!wchar('ą');
         assert(buffer.data == [97, 98, 1, 5]);
 
         buffer.append!dchar('ą');
         assert(buffer.data == [97, 98, 1, 5, 0, 0, 1, 5]);
-    }     
+    }
 
     {
         //float double
@@ -3048,7 +3048,7 @@ unittest
     {
         //enum
         auto buffer = appender!(const ubyte[])();
-        
+
         enum Foo
         {
             one = 10,
