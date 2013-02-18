@@ -2163,7 +2163,6 @@ unittest
             void test(string);
             real test(real);
             int  test();
-            int  test() @property; // ?
         }
         auto o = new BlackHole!I_5;
     }
