@@ -659,16 +659,17 @@ private enum NEL = '\u0085', LS = '\u2028', PS = '\u2029';
 //returns it's value and skips these maxDigit chars on success, throws on failure
 dchar parseUniHex(Char)(ref Char[] str, uint maxDigit)
 {
+    //std.conv.parse is both @system and bogus
     enforce(str.length >= maxDigit,"incomplete escape sequence");
     uint val;
-    for(int k=0;k<maxDigit;k++)
+    for(int k=0; k<maxDigit; k++)
     {
         auto current = str[k];//accepts ascii only, so it's OK to index directly
         if('0' <= current && current <= '9')
             val = val * 16 + current - '0';
         else if('a' <= current && current <= 'f')
             val = val * 16 + current -'a' + 10;
-        else if('A' <= current && current <= 'Z')
+        else if('A' <= current && current <= 'F')
             val = val * 16 + current - 'A' + 10;
         else
             throw new Exception("invalid escape sequence");
@@ -676,6 +677,21 @@ dchar parseUniHex(Char)(ref Char[] str, uint maxDigit)
     enforce(val <= 0x10FFFF, "invalid codepoint");
     str = str[maxDigit..$];
     return val;
+}
+
+@system unittest //BUG canFind is system
+{
+    string[] non_hex = [ "000j", "000z", "FffG", "0Z"]; 
+    string[] hex = [ "01", "ff", "00af", "10FFFF" ];
+    int value[] = [ 1, 0xFF, 0xAF, 0x10FFFF ];
+    foreach(v; non_hex)
+        assert(collectException(parseUniHex(v, v.length)).msg
+          .canFind("invalid escape sequence"));
+    foreach(i, v; hex)
+        assert(parseUniHex(v, v.length) == value[i]);
+    string over = "0011FFFF";
+    assert(collectException(parseUniHex(over, over.length)).msg
+      .canFind("invalid codepoint"));
 }
 
 //heuristic value determines maximum CodepointSet length suitable for linear search
