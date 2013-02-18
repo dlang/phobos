@@ -27,7 +27,9 @@ module std.bitmanip;
 //debug = bitarray;                // uncomment to turn on debugging printf's
 
 import core.bitop;
+import std.format;
 import std.range;
+import std.string;
 import std.system;
 import std.traits;
 
@@ -1429,6 +1431,112 @@ struct BitArray
         assert(c[1] == 1);
         assert(c[2] == 0);
     }
+
+    /***************************************
+     * Return a string representation of this BitArray.
+     *
+     * Two format specifiers are supported:
+     * $(LI $(B %s) which prints the bits as an array, and)
+     * $(LI $(B %b) which prints the bits as 8-bit byte packets)
+     * separated with an underscore.
+     */
+    void toString(scope void delegate(const(char)[]) sink,
+                  FormatSpec!char fmt) const
+    {
+        switch(fmt.spec)
+        {
+            case 'b':
+                return formatBitString(sink);
+            case 's':
+                return formatBitArray(sink);
+            default:
+                throw new Exception("Unknown format specifier: %" ~ fmt.spec);
+        }
+    }
+
+    ///
+    unittest
+    {
+        BitArray b;
+        b.init([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
+
+        auto s1 = format("%s", b);
+        assert(s1 == "[0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]");
+
+        auto s2 = format("%b", b);
+        assert(s2 == "00001111_00001111");
+    }
+
+    private void formatBitString(scope void delegate(const(char)[]) sink) const
+    {
+        if (!length)
+            return;
+
+        auto leftover = len % 8;
+        foreach (idx; 0 .. leftover)
+        {
+            char[1] res = cast(char)(bt(ptr, idx) + '0');
+            sink.put(res[]);
+        }
+
+        if (leftover && len > 8)
+            sink.put("_");
+
+        size_t count;
+        foreach (idx; leftover .. len)
+        {
+            char[1] res = cast(char)(bt(ptr, idx) + '0');
+            sink.put(res[]);
+            if (++count == 8 && idx != len - 1)
+            {
+                sink.put("_");
+                count = 0;
+            }
+        }
+    }
+
+    private void formatBitArray(scope void delegate(const(char)[]) sink) const
+    {
+        sink("[");
+        foreach (idx; 0 .. len)
+        {
+            char[1] res = cast(char)(bt(ptr, idx) + '0');
+            sink(res[]);
+            if (idx+1 < len)
+                sink(", ");
+        }
+        sink("]");
+    }
+}
+
+unittest
+{
+    BitArray b;
+
+    b.init([]);
+    assert(format("%s", b) == "[]");
+    assert(format("%b", b) is null);
+
+    b.init([1]);
+    assert(format("%s", b) == "[1]");
+    assert(format("%b", b) == "1");
+
+    b.init([0, 0, 0, 0]);
+    assert(format("%b", b) == "0000");
+
+    b.init([0, 0, 0, 0, 1, 1, 1, 1]);
+    assert(format("%s", b) == "[0, 0, 0, 0, 1, 1, 1, 1]");
+    assert(format("%b", b) == "00001111");
+
+    b.init([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
+    assert(format("%s", b) == "[0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]");
+    assert(format("%b", b) == "00001111_00001111");
+
+    b.init([1, 0, 0, 0, 0, 1, 1, 1, 1]);
+    assert(format("%b", b) == "1_00001111");
+
+    b.init([1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
+    assert(format("%b", b) == "1_00001111_00001111");
 }
 
 /++
