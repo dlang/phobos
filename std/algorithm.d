@@ -260,7 +260,7 @@ of sets implemented as a range of sorted ranges.)
 $(TR $(TDNW $(LREF setDifference)) $(TD Lazily computes the set
 difference of two or more sorted ranges.)
 )
-$(TR $(TDNW $(LREF setIntersection)) $(TD Lazily computes the 
+$(TR $(TDNW $(LREF setIntersection)) $(TD Lazily computes the
 intersection of two or more sorted ranges.)
 )
 $(TR $(TDNW $(LREF setSymmetricDifference)) $(TD Lazily
@@ -4399,11 +4399,11 @@ unittest
 /++
     Returns the number of elements which must be popped from the front of
     $(D haystack) before reaching an element for which
-    $(D startsWith!pred(haystack, needle)) is $(D true). If
-    $(D startsWith!pred(haystack, needle)) is not $(D true) for any element in
-    $(D haystack), then -1 is returned.
+    $(D startsWith!pred(haystack, needles)) is $(D true). If
+    $(D startsWith!pred(haystack, needles)) is not $(D true) for any element in
+    $(D haystack), then $(D -1) is returned.
 
-    $(D needle) may be either an element or a range.
+    $(D needles) may be either an element or a range.
 
     Examples:
 --------------------
@@ -4419,47 +4419,88 @@ assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
 assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
 --------------------
   +/
-ptrdiff_t countUntil(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
-    if (isForwardRange!R1 && isForwardRange!R2 &&
-        is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
+ptrdiff_t countUntil(alias pred = "a == b", R, Rs...)(R haystack, Rs needles)
+    if (isForwardRange!R
+        && Rs.length > 0
+        && isForwardRange!(Rs[0]) == isInputRange!(Rs[0])
+        && is(typeof(startsWith!pred(haystack, needles[0])))
+        && (Rs.length == 1
+            || is(typeof(countUntil!pred(haystack, needles[1 .. $])))))
 {
     typeof(return) result;
-    static if (hasLength!R1) //Note: Narrow strings don't have length.
+
+    static if (needles.length == 1)
     {
-        //We delegate to find because find is very efficient.
-        //We store the length of the haystack so we don't have to save it.
-        auto len = haystack.length;
-        auto r2 = find!pred(haystack, needle);
-        if (!r2.empty)
-            return cast(typeof(return)) (len - r2.length);
+        static if (hasLength!R) //Note: Narrow strings don't have length.
+        {
+            //We delegate to find because find is very efficient.
+            //We store the length of the haystack so we don't have to save it.
+            auto len = haystack.length;
+            auto r2 = find!pred(haystack, needles[0]);
+            if (!r2.empty)
+              return cast(typeof(return)) (len - r2.length);
+        }
+        else
+        {
+            if (needles[0].empty)
+              return 0;
+
+            //Default case, slower route doing startsWith iteration
+            for ( ; !haystack.empty ; ++result )
+            {
+                //We compare the first elements of the ranges here before
+                //forwarding to startsWith. This avoids making useless saves to
+                //haystack/needle if they aren't even going to be mutated anyways.
+                //It also cuts down on the amount of pops on haystack.
+                if (binaryFun!pred(haystack.front, needles[0].front))
+                {
+                    //Here, we need to save the needle before popping it.
+                    //haystack we pop in all paths, so we do that, and then save.
+                    haystack.popFront();
+                    if (startsWith!pred(haystack.save, needles[0].save.dropOne()))
+                      return result;
+                }
+                else
+                  haystack.popFront();
+            }
+        }
     }
     else
     {
-        if (needle.empty)
-            return 0;
-
-        //Default case, slower route doing startsWith iteration
-        for ( ; !haystack.empty ; ++result )
+        foreach (i, Ri; Rs)
         {
-            //We compare the first elements of the ranges here before
-            //forwarding to startsWith. This avoids making useless saves to
-            //haystack/needle if they aren't even going to be mutated anyways.
-            //It also cuts down on the amount of pops on haystack.
-            if (binaryFun!pred(haystack.front, needle.front))
+            static if (isForwardRange!Ri)
             {
-                //Here, we need to save the needle before popping it.
-                //haystack we pop in all paths, so we do that, and then save.
-                haystack.popFront();
-                if (startsWith!pred(haystack.save, needle.save.dropOne()))
-                    return result;
+                if (needles[i].empty)
+                  return 0;
             }
-            else
-                haystack.popFront();
+        }
+        Tuple!Rs t;
+        foreach (i, Ri; Rs)
+        {
+            static if (!isForwardRange!Ri)
+            {
+                t[i] = needles[i];
+            }
+        }
+        for (; !haystack.empty ; ++result, haystack.popFront())
+        {
+            foreach (i, Ri; Rs)
+            {
+                static if (isForwardRange!Ri)
+                {
+                    t[i] = needles[i].save;
+                }
+            }
+            if (startsWith!pred(haystack.save, t.expand))
+            {
+                return result;
+            }
         }
     }
 
     //Because of @@@8804@@@: Avoids both "unreachable code" or "no return statement"
-    static if (isInfinite!R1) assert(0);
+    static if (isInfinite!R) assert(0);
     else return -1;
 }
 /// ditto
@@ -4507,6 +4548,14 @@ unittest
     assert(r.save.countUntil(r2) == 3);
     assert(r.save.countUntil(7)  == -1);
     assert(r.save.countUntil(r3) == -1);
+}
+
+unittest
+{
+    assert(countUntil("hello world", "world", "asd") == 6);
+    assert(countUntil("hello world", "world", "ello") == 1);
+    assert(countUntil("hello world", "world", "") == 0);
+    assert(countUntil("hello world", "world", 'l') == 2);
 }
 
 /++
