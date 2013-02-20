@@ -260,7 +260,7 @@ of sets implemented as a range of sorted ranges.)
 $(TR $(TDNW $(LREF setDifference)) $(TD Lazily computes the set
 difference of two or more sorted ranges.)
 )
-$(TR $(TDNW $(LREF setIntersection)) $(TD Lazily computes the 
+$(TR $(TDNW $(LREF setIntersection)) $(TD Lazily computes the
 intersection of two or more sorted ranges.)
 )
 $(TR $(TDNW $(LREF setSymmetricDifference)) $(TD Lazily
@@ -7857,13 +7857,12 @@ sorted. In addition, it also partitions $(D r) such that all elements
 $(D e1) from $(D r[0]) to $(D r[nth]) satisfy $(D !less(r[nth], e1)),
 and all elements $(D e2) from $(D r[nth]) to $(D r[r.length]) satisfy
 $(D !less(e2, r[nth])). Effectively, it finds the nth smallest
-(according to $(D less)) elements in $(D r). Performs $(BIGOH
-r.length) (if unstable) or $(BIGOH r.length * log(r.length)) (if
-stable) evaluations of $(D less) and $(D swap). See also $(WEB
+(according to $(D less)) elements in $(D r). Performs an expected
+$(BIGOH r.length) (if unstable) or $(BIGOH r.length * log(r.length))
+(if stable) evaluations of $(D less) and $(D swap). See also $(WEB
 sgi.com/tech/stl/nth_element.html, STL's nth_element).
 
-Example:
-
+Examples:
 ----
 int[] v = [ 25, 7, 9, 2, 0, 5, 21 ];
 auto n = 4;
@@ -7887,14 +7886,10 @@ void topN(alias less = "a < b",
             "Stable topN not yet implemented");
     while (r.length > nth)
     {
-        auto pivot = r.length / 2;
+        auto pivot = uniform(0, r.length);
         swap(r[pivot], r.back);
         assert(!binaryFun!(less)(r.back, r.back));
-        bool pred(ElementType!(Range) a)
-        {
-            return binaryFun!(less)(a, r.back);
-        }
-        auto right = partition!(pred, ss)(r);
+        auto right = partition!((a) => binaryFun!less(a, r.back), ss)(r);
         assert(right.length >= 1);
         swap(right.front, r.back);
         pivot = r.length - right.length;
