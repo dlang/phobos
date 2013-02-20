@@ -5016,12 +5016,11 @@ unittest
 }
 
 /**
-Detect whether $(D T) is a delegate.
+Detects whether $(D T) is a delegate type.
 */
-template isDelegate(T...)
-    if(T.length == 1)
+template isDelegate(T)
 {
-    enum bool isDelegate = is(T[0] == delegate);
+    enum bool isDelegate = is(T == delegate);
 }
 
 unittest
