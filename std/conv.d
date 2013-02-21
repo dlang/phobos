@@ -348,6 +348,13 @@ T toImpl(T, S)(S value)
     return value;
 }
 
+unittest
+{
+    enum E { a }  // Issue 9523 - Allow identity enum conversion
+    auto e = to!E(E.a);
+    assert(e == E.a);
+}
+
 private template isSignedInt(T)
 {
     enum isSignedInt = isIntegral!T && isSigned!T;
@@ -1652,7 +1659,7 @@ a ConvException is thrown.
 Enums with floating-point or string base types are not supported.
 */
 T toImpl(T, S)(S value)
-    if (is(T == enum) && is(S : OriginalType!T)
+    if (is(T == enum) && !is(S == enum) && is(S : OriginalType!T)
         && !isFloatingPoint!(OriginalType!T) && !isSomeString!(OriginalType!T))
 {
     foreach (Member; EnumMembers!T)
