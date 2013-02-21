@@ -4278,6 +4278,14 @@ unittest
     }
 }
 
+//BUG 9559
+unittest
+{
+    alias Nullable!int I;
+    auto ints = [0, 1, 2].map!(i => i & 1 ? I.init : I(i))();
+    auto asArray = std.array.array(ints);
+}
+
 private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
 {
     enforceEx!ConvException(chunk.length >= typeSize,
