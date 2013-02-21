@@ -70,7 +70,7 @@ Macros:
 */
 module std.process2;
 
-version(Posix)
+version (Posix)
 {
     import core.stdc.errno;
     import core.stdc.string;
@@ -78,13 +78,34 @@ version(Posix)
     import core.sys.posix.unistd;
     import core.sys.posix.sys.wait;
 }
-version(Windows)
+version (Windows)
 {
     import core.stdc.stdio;
     import core.sys.windows.windows;
     import std.utf;
     import std.windows.syserror;
+}
+import std.algorithm;
+import std.array;
+import std.conv;
+import std.exception;
+import std.path;
+import std.stdio;
+import std.string;
+import std.typecons;
 
+
+// When the DMC runtime is used, we have to use some custom functions
+// to convert between Windows file handles and FILE*s.
+version (Win32) version (DigitalMars) version = DMC_RUNTIME;
+
+
+// Some of the following should be moved to druntime.
+private:
+
+// Windows API declarations.
+version (Windows)
+{
     extern(Windows) BOOL SetHandleInformation(HANDLE hObject,
                                               DWORD dwMask,
                                               DWORD dwFlags);
@@ -94,17 +115,13 @@ version(Windows)
         HANDLE_FLAG_PROTECT_FROM_CLOSE = 0x2,
     }
     enum CREATE_UNICODE_ENVIRONMENT = 0x400;
+}
 
-    version(Win32) version(DigitalMars)
-    {
-        // When the DMC runtime is used, we have to use some custom functions
-        // to convert between Windows file handles and FILE*s.
-        version = DMC_RUNTIME;
-    }
-
+// Microsoft Visual C Runtime (MSVCRT) declarations.
+version (Windows)
+{
     version (DMC_RUNTIME) { } else
     {
-        // Some MSVCRT functions and constants.
         import core.stdc.stdint;
         extern(C)
         {
@@ -129,42 +146,26 @@ version(Windows)
     }
 }
 
-import std.algorithm;
-import std.array;
-import std.conv;
-import std.exception;
-import std.path;
-import std.stdio;
-import std.string;
-import std.typecons;
-
-
-version(Posix)
+// POSIX API declarations.
+version (Posix)
 {
-    version(OSX)
+    version (OSX)
     {
         // https://www.gnu.org/software/gnulib/manual/html_node/environ.html
-        private extern(C) char*** _NSGetEnviron();
-        private __gshared char** environ;
-
-        shared static this()
-        {
-            environ = *_NSGetEnviron();
-        }
+        extern(C) char*** _NSGetEnviron();
+        __gshared const char** environ;
+        shared static this() { environ = *_NSGetEnviron(); }
     }
     else
     {
         // Made available by the C runtime:
-        private extern(C) extern __gshared char** environ;
+        extern(C) extern __gshared const char** environ;
     }
 }
-else version(Windows)
-{
-    // Use the same spawnProcess() implementations on both Windows
-    // and POSIX, only the spawnProcessImpl() function has to be
-    // different.
-    private __gshared LPVOID environ = null;
-}
+
+
+// Actual module classes/functions start here.
+public:
 
 
 /// A handle that corresponds to a spawned process.
@@ -181,7 +182,8 @@ final class Pid
     }
 
     // See module-level wait() for documentation.
-    version(Posix) int wait() @trusted
+    version (Posix)
+    int wait() @trusted
     {
         if (_processID == terminated) return _exitCode;
         int exitCode;
@@ -211,7 +213,7 @@ final class Pid
         _exitCode = exitCode;
         return exitCode;
     }
-    else version(Windows)
+    else version (Windows)
     {
         int wait() @trusted
         {
@@ -255,7 +257,7 @@ private:
 
     // Pids are only meant to be constructed inside this module, so
     // we make the constructor private.
-    version(Windows)
+    version (Windows)
     {
         HANDLE _handle;
         this(int pid, HANDLE handle) @safe pure nothrow
@@ -439,7 +441,7 @@ Pid spawnProcess(
 }
 
 // Implementation of spawnProcess for POSIX.
-version(Posix)
+version (Posix)
 private Pid spawnProcessPosix(string name,
                               const string[] args,
                               const char** envz,
@@ -514,7 +516,7 @@ private Pid spawnProcessPosix(string name,
     }
 }
 
-version(Windows)
+version (Windows)
 private Pid spawnProcessWindows(string name,
                                 const string[] args,
                                 LPVOID envz,
@@ -642,7 +644,8 @@ private Pid spawnProcessWindows(string name,
 
 // Searches the PATH variable for the given executable file,
 // (checking that it is in fact executable).
-version(Posix) private string searchPathFor(string executable)
+version (Posix)
+private string searchPathFor(string executable)
     @trusted //TODO: @safe nothrow
 {
     auto pathz = environment["PATH"];
@@ -657,9 +660,10 @@ version(Posix) private string searchPathFor(string executable)
     return null;
 }
 
-// Converts a C array of C strings to a string[] array,
+// Converts a string[] array to a C array of C strings,
 // setting the program name as the zeroth element.
-version(Posix) private const(char)** toArgz(string prog, const string[] args)
+version (Posix)
+private const(char)** toArgz(string prog, const string[] args)
     @trusted nothrow //TODO: @safe
 {
     alias const(char)* stringz_t;
@@ -676,7 +680,7 @@ version(Posix) private const(char)** toArgz(string prog, const string[] args)
 
 // Converts a string[string] array to a C array of C strings
 // on the form "key=value".
-version(Posix)
+version (Posix)
 private const(char)** toPosixEnv(const ref string[string] env)
     @trusted //TODO: @safe pure nothrow
 {
@@ -694,7 +698,7 @@ private const(char)** toPosixEnv(const ref string[string] env)
 
 // Converts a string[string] array to a block of 16-bit
 // characters on the form "key=value\0key=value\0...\0\0"
-version(Windows)
+version (Windows)
 private LPVOID toWindowsEnv(const ref string[string] env)
     @trusted //TODO: @safe pure nothrow
 {
@@ -712,7 +716,8 @@ private LPVOID toWindowsEnv(const ref string[string] env)
 
 // Checks whether the file exists and can be executed by the
 // current user.
-version(Posix) private bool isExecutable(string path) @trusted //TODO: @safe nothrow
+version (Posix)
+private bool isExecutable(string path) @trusted //TODO: @safe nothrow
 {
     return (access(toStringz(path), X_OK) == 0);
 }
@@ -897,7 +902,8 @@ A $(LREF Pipe) object that corresponds to the created _pipe.
 Throws:
 $(XREF stdio,StdioException) on failure.
 */
-version(Posix) Pipe pipe() @trusted //TODO: @safe
+version (Posix)
+Pipe pipe() @trusted //TODO: @safe
 {
     int[2] fds;
     errnoEnforce(core.sys.posix.unistd.pipe(fds) == 0,
@@ -913,7 +919,8 @@ version(Posix) Pipe pipe() @trusted //TODO: @safe
     p._write = File(writeFP, null);
     return p;
 }
-else version(Windows) Pipe pipe() @trusted //TODO: @safe
+else version (Windows)
+Pipe pipe() @trusted //TODO: @safe
 {
     // use CreatePipe to create an anonymous pipe
     HANDLE readHandle;
@@ -1366,7 +1373,7 @@ unittest
 {
     // To avoid printing the newline characters, we use the echo|set trick on
     // Windows, and printf on POSIX (neither echo -n nor echo \c are portable).
-    version(Windows) TestScript prog =
+    version (Windows) TestScript prog =
        "echo|set /p=%1
         echo|set /p=%2 1>&2
         exit 123";
@@ -1385,18 +1392,14 @@ unittest
 
 // A command-line switch that indicates to the shell that it should
 // interpret the following argument as a command to be executed.
-version(Posix)   private immutable string shellSwitch = "-c";
-version(Windows) private immutable string shellSwitch = "/C";
+version (Posix)   private immutable string shellSwitch = "-c";
+version (Windows) private immutable string shellSwitch = "/C";
 
 // Gets the user's default shell.
-version(Posix)  private string getShell() @safe //TODO: nothrow
+private string getShell() @safe //TODO: nothrow
 {
-    return environment.get("SHELL", "/bin/sh");
-}
-
-version(Windows) private string getShell() @safe nothrow
-{
-    return "cmd.exe";
+    version (Windows)    return "cmd.exe";
+    else version (Posix) return environment.get("SHELL", "/bin/sh");
 }
 
 
@@ -1424,9 +1427,9 @@ $(XREF stdio,StdioException) on failure to capture output.
 Tuple!(int, "status", string, "output") shell(string command)
     @trusted //TODO: @safe
 {
-    version(Windows)
+    version (Windows)
         return execute(getShell() ~ " " ~ shellSwitch ~ " " ~ command);
-    else version(Posix)
+    else version (Posix)
         return execute(getShell(), shellSwitch, command);
     else assert(0);
 }
@@ -1461,7 +1464,7 @@ class ProcessException : Exception
     {
         import core.stdc.errno;
         import std.c.string;
-        version(linux)
+        version (linux)
         {
             char[1024] buf;
             auto errnoMsg = to!string(
@@ -1491,14 +1494,10 @@ class ProcessException : Exception
 
 
 /// Returns the process ID number of the current process.
-version(Posix) @property int thisProcessID() @trusted //TODO: @safe nothrow
+@property int thisProcessID() @trusted //TODO: @safe nothrow
 {
-    return getpid();
-}
-
-version(Windows) @property int thisProcessID() @trusted nothrow //TODO: @safe
-{
-    return GetCurrentProcessId();
+    version (Windows)    return GetCurrentProcessId();
+    else version (Posix) return getpid();
 }
 
 
@@ -1507,7 +1506,8 @@ version(Windows) @property int thisProcessID() @trusted nothrow //TODO: @safe
 // file. On Windows the file name gets a .cmd extension, while on
 // POSIX its executable permission bit is set.  The file is
 // automatically deleted when the object goes out of scope.
-version(unittest) private struct TestScript
+version (unittest)
+private struct TestScript
 {
     this(string code)
     {
@@ -1607,7 +1607,7 @@ static:
     */
     string opIndexAssign(string value, string name) @trusted
     {
-        version(Posix)
+        version (Posix)
         {
             if (core.sys.posix.stdlib.setenv(toStringz(name), toStringz(value), 1) != -1)
             {
@@ -1621,7 +1621,7 @@ static:
                 "Failed to add environment variable");
             assert(0);
         }
-        else version(Windows)
+        else version (Windows)
         {
             enforce(
                 SetEnvironmentVariableW(toUTF16z(name), toUTF16z(value)),
@@ -1640,14 +1640,8 @@ static:
     */
     void remove(string name) @trusted // TODO: @safe nothrow
     {
-        version(Posix)
-        {
-            core.sys.posix.stdlib.unsetenv(toStringz(name));
-        }
-        else version(Windows)
-        {
-            SetEnvironmentVariableW(toUTF16z(name), null);
-        }
+        version (Windows)    SetEnvironmentVariableW(toUTF16z(name), null);
+        else version (Posix) core.sys.posix.stdlib.unsetenv(toStringz(name));
         else static assert(0);
     }
 
@@ -1662,7 +1656,7 @@ static:
     string[string] toAA() @trusted
     {
         string[string] aa;
-        version(Posix)
+        version (Posix)
         {
             for (int i=0; environ[i] != null; ++i)
             {
@@ -1681,7 +1675,7 @@ static:
                 if (name !in aa)  aa[name] = value;
             }
         }
-        else version(Windows)
+        else version (Windows)
         {
             auto envBlock = GetEnvironmentStringsW();
             enforce(envBlock, "Failed to retrieve environment variables.");
@@ -1710,7 +1704,7 @@ static:
 private:
     // Returns the length of an environment variable (in number of
     // wchars, including the null terminator), or 0 if it doesn't exist.
-    version(Windows)
+    version (Windows)
     int varLength(LPCWSTR namez) @trusted nothrow
     {
         return GetEnvironmentVariableW(namez, null, 0);
@@ -1719,19 +1713,7 @@ private:
     // Retrieves the environment variable, returns false on failure.
     bool getImpl(string name, out string value) @trusted //TODO: nothrow
     {
-        version(Posix)
-        {
-            const vz = core.sys.posix.stdlib.getenv(toStringz(name));
-            if (vz == null) return false;
-            auto v = vz[0 .. strlen(vz)];
-
-            // Cache the last call's result.
-            static string lastResult;
-            if (v != lastResult) lastResult = v.idup;
-            value = lastResult;
-            return true;
-        }
-        else version(Windows)
+        version (Windows)
         {
             const namez = toUTF16z(name);
             immutable len = varLength(namez);
@@ -1745,6 +1727,18 @@ private:
             auto buf = new WCHAR[len];
             GetEnvironmentVariableW(namez, buf.ptr, to!DWORD(buf.length));
             value = toUTF8(buf[0 .. $-1]);
+            return true;
+        }
+        else version (Posix)
+        {
+            const vz = core.sys.posix.stdlib.getenv(toStringz(name));
+            if (vz == null) return false;
+            auto v = vz[0 .. strlen(vz)];
+
+            // Cache the last call's result.
+            static string lastResult;
+            if (v != lastResult) lastResult = v.idup;
+            value = lastResult;
             return true;
         }
         else static assert(0);
@@ -1787,7 +1781,7 @@ unittest
         //  - If an env. variable has zero length, i.e. is "\0",
         //    GetEnvironmentVariable should return 1.  Instead it returns
         //    0, indicating the variable doesn't exist.
-        version(Windows)  if (n.length == 0 || v.length == 0) continue;
+        version (Windows) if (n.length == 0 || v.length == 0) continue;
 
         assert (v == environment[n]);
     }
