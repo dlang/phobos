@@ -93,6 +93,7 @@ version(Windows)
         HANDLE_FLAG_INHERIT = 0x1,
         HANDLE_FLAG_PROTECT_FROM_CLOSE = 0x2,
     }
+    enum CREATE_UNICODE_ENVIRONMENT = 0x400;
 
     version(Win32) version(DigitalMars)
     {
@@ -331,7 +332,8 @@ A $(LREF Pid) object that corresponds to the spawned process.
 
 Throws:
 $(LREF ProcessException) on failure to start the process.$(BR)
-$(XREF stdio,StdioException) if either of the given streams is invalid.
+$(XREF stdio,StdioException) on failure to pass one of the streams
+    to the child process (Windows only).
 
 Examples:
 Open Firefox on the D homepage and wait for it to complete:
@@ -380,16 +382,14 @@ Pid spawnProcess(
     @trusted // TODO: Should be @safe
 {
     auto splitCmd = split(command);
-    return spawnProcessImpl(splitCmd[0], splitCmd[1 .. $],
-                            environ,
-                            stdin_, stdout_, stderr_,
-                            config);
+    return spawnProcess(splitCmd[0], splitCmd[1 .. $],
+                        stdin_, stdout_, stderr_, config);
 }
 
 /// ditto
 Pid spawnProcess(
     string command,
-    string[string] environmentVars,
+    const ref string[string] environmentVars,
     File stdin_ = std.stdio.stdin,
     File stdout_ = std.stdio.stdout,
     File stderr_ = std.stdio.stderr,
@@ -397,10 +397,8 @@ Pid spawnProcess(
     @trusted // TODO: Should be @safe
 {
     auto splitCmd = split(command);
-    return spawnProcessImpl(splitCmd[0], splitCmd[1 .. $],
-                            toEnvz(environmentVars),
-                            stdin_, stdout_, stderr_,
-                            config);
+    return spawnProcess(splitCmd[0], splitCmd[1 .. $], environmentVars,
+                        stdin_, stdout_, stderr_, config);
 }
 
 /// ditto
@@ -413,41 +411,44 @@ Pid spawnProcess(
     Config config = Config.none)
     @trusted // TODO: Should be @safe
 {
-    return spawnProcessImpl(name, args,
-                            environ,
-                            stdin_, stdout_, stderr_,
-                            config);
+    version (Windows)
+        return spawnProcessWindows(name, args, null,
+                                   stdin_, stdout_, stderr_, config);
+    else version (Posix)
+        return spawnProcessPosix(name, args, environ,
+                                 stdin_, stdout_, stderr_, config);
 }
 
 /// ditto
 Pid spawnProcess(
     string name,
     const string[] args,
-    string[string] environmentVars,
+    const ref string[string] environmentVars,
     File stdin_ = std.stdio.stdin,
     File stdout_ = std.stdio.stdout,
     File stderr_ = std.stdio.stderr,
     Config config = Config.none)
     @trusted // TODO: Should be @safe
 {
-    return spawnProcessImpl(name, args,
-                            toEnvz(environmentVars),
-                            stdin_, stdout_, stderr_,
-                            config);
+    version (Windows)
+        return spawnProcessWindows(name, args, toWindowsEnv(environmentVars),
+                                   stdin_, stdout_, stderr_, config);
+    else version (Posix)
+        return spawnProcessPosix(name, args, toPosixEnv(environmentVars),
+                                 stdin_, stdout_, stderr_, config);
 }
 
-// The actual spawnProcess implementation.
-version(Posix) private Pid spawnProcessImpl(
-    string name,
-    const string[] args,
-    const char** envz,
-    File stdin_,
-    File stdout_,
-    File stderr_,
-    Config config)
+// Implementation of spawnProcess for POSIX.
+version(Posix)
+private Pid spawnProcessPosix(string name,
+                              const string[] args,
+                              const char** envz,
+                              File stdin_,
+                              File stdout_,
+                              File stderr_,
+                              Config config)
     @trusted // TODO: Should be @safe
 {
-    // Make sure the file exists and is executable.
     if (any!isDirSeparator(name))
     {
         if (!isExecutable(name))
@@ -460,16 +461,15 @@ version(Posix) private Pid spawnProcessImpl(
             throw new ProcessException("Executable file not found: "~name);
     }
 
-    // Get the file descriptors of the streams.
-    auto stdinFD  = core.stdc.stdio.fileno(stdin_.getFP());
-    if (stdinFD == -1) throw new StdioException("Invalid stdin stream");
-    auto stdoutFD = core.stdc.stdio.fileno(stdout_.getFP());
-    if (stdoutFD == -1) throw new StdioException("Invalid stdout stream");
-    auto stderrFD = core.stdc.stdio.fileno(stderr_.getFP());
-    if (stderrFD == -1) throw new StdioException("Invalid stderr stream");
-
     auto namez = toStringz(name);
     auto argz = toArgz(name, args);
+
+    // Get the file descriptors of the streams.
+    // These could potentially be invalid, but that is OK.  If so, later calls
+    // to dup2() and close() will just silently fail without causing any harm.
+    auto stdinFD  = core.stdc.stdio.fileno(stdin_.getFP());
+    auto stdoutFD = core.stdc.stdio.fileno(stdout_.getFP());
+    auto stderrFD = core.stdc.stdio.fileno(stderr_.getFP());
 
     auto id = fork();
     if (id < 0)
@@ -493,7 +493,7 @@ version(Posix) private Pid spawnProcessImpl(
         if (stdoutFD > STDERR_FILENO)  close(stdoutFD);
         if (stderrFD > STDERR_FILENO)  close(stderrFD);
 
-        // Execute program
+        // Execute program.
         execve(namez, argz, envz);
 
         // If execution fails, exit as quickly as possible.
@@ -513,25 +513,17 @@ version(Posix) private Pid spawnProcessImpl(
         return new Pid(id);
     }
 }
-else version(Windows) private Pid spawnProcessImpl(
-    string name,
-    const string[] args,
-    LPVOID envz,
-    File stdin_,
-    File stdout_,
-    File stderr_,
-    Config config)
-    @trusted
+
+version(Windows)
+private Pid spawnProcessWindows(string name,
+                                const string[] args,
+                                LPVOID envz,
+                                File stdin_,
+                                File stdout_,
+                                File stderr_,
+                                Config config)
+                                @trusted
 {
-    // Create a process info structure.  Note that we don't care about wide
-    // characters yet.
-    STARTUPINFO startinfo;
-    startinfo.cb = startinfo.sizeof;
-
-    // Create a process information structure.
-    PROCESS_INFORMATION pi;
-
-    //
     // Windows is a little strange when passing command line.  It requires the
     // command-line to be one single command line, and the quoting processing
     // is rather bizzare.  Through trial and error, here are the rules I've
@@ -560,14 +552,13 @@ else version(Windows) private Pid spawnProcessImpl(
     // In our 'reverse' routine, we will only utilize the first 2 rules
     // for escapes.
     //
-    char[] cmdline;
-    uint minsize = 0;
-    foreach(s; args)
-        minsize += args.length;
+    wchar[] cmdline;
 
     // reserve enough space to hold the program and all the arguments, plus 3
     // extra characters per arg for the quotes and the space, plus 5 extra
     // chars for good measure (in case we have to add escaped quotes).
+    uint minsize = 0;
+    foreach(s; args) minsize += s.length;
     cmdline.reserve(minsize + name.length + 3 * args.length + 5);
 
     // this could be written more optimized...
@@ -594,64 +585,54 @@ else version(Windows) private Pid spawnProcessImpl(
         if(needquote)
             cmdline ~= '"';
     }
-
     addArg(name);
     foreach(a; args)
         addArg(a);
-
     cmdline ~= '\0';
 
     // ok, the command line is ready.  Figure out the startup info
+    STARTUPINFO_W startinfo;
+    startinfo.cb = startinfo.sizeof;
     startinfo.dwFlags = STARTF_USESTDHANDLES;
-    // Get the file descriptors of the streams.
-    auto stdinFD  = _fileno(stdin_.getFP());
-    if (stdinFD == -1) throw new StdioException("Invalid stdin stream");
-    auto stdoutFD = _fileno(stdout_.getFP());
-    if (stdoutFD == -1) throw new StdioException("Invalid stdout stream");
-    auto stderrFD = _fileno(stderr_.getFP());
-    if (stderrFD == -1) throw new StdioException("Invalid stderr stream");
 
-    // need to convert file descriptors to HANDLEs
-    version (DMC_RUNTIME)
+    // Extract file descriptors and HANDLEs from the streams and make the
+    // handles inheritable.
+    static void prepareStream(ref File file, DWORD stdHandle, string which,
+                              out int fileDescriptor, out HANDLE handle)
     {
-        startinfo.hStdInput = _fdToHandle(stdinFD);
-        startinfo.hStdOutput = _fdToHandle(stdoutFD);
-        startinfo.hStdError = _fdToHandle(stderrFD);
-    }
-    else // MSVCRT
-    {
-        startinfo.hStdInput = _get_osfhandle(stdinFD);
-        startinfo.hStdOutput = _get_osfhandle(stdoutFD);
-        startinfo.hStdError = _get_osfhandle(stderrFD);
-    }
-
-    // Make the handles inheritable
-    static void makeInheritable(HANDLE h, string which)
-    {
-        if (!SetHandleInformation(h, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
+        fileDescriptor = _fileno(file.getFP());
+        if (fileDescriptor < 0)   handle = GetStdHandle(stdHandle);
+        else
+        {
+            version (DMC_RUNTIME) handle = _fdToHandle(fileDescriptor);
+            else    /* MSVCRT */  handle = _get_osfhandle(fileDescriptor);
+        }
+        if (!SetHandleInformation(handle, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
+        {
             throw new StdioException(
                 "Failed to pass "~which~" stream to child process", 0);
+        }
     }
-    makeInheritable(startinfo.hStdInput, "stdin");
-    makeInheritable(startinfo.hStdOutput, "stdout");
-    makeInheritable(startinfo.hStdError, "stderr");
+    int stdinFD = -1, stdoutFD = -1, stderrFD = -1;
+    prepareStream(stdin_,  STD_INPUT_HANDLE,  "stdin" , stdinFD,  startinfo.hStdInput );
+    prepareStream(stdout_, STD_OUTPUT_HANDLE, "stdout", stdoutFD, startinfo.hStdOutput);
+    prepareStream(stderr_, STD_ERROR_HANDLE,  "stderr", stderrFD, startinfo.hStdError );
 
-    // TODO: need to fix this for unicode
-    if(!CreateProcessA(null, cmdline.ptr, null, null, true,
-                       (config & Config.gui) ? CREATE_NO_WINDOW : 0,
-                       envz, null, &startinfo, &pi))
+    // Create process.
+    PROCESS_INFORMATION pi;
+    DWORD dwCreationFlags = CREATE_UNICODE_ENVIRONMENT |
+                            ((config & Config.gui) ? CREATE_NO_WINDOW : 0);
+    if (!CreateProcessW(null, cmdline.ptr, null, null, true, dwCreationFlags,
+                        envz, null, &startinfo, &pi))
         throw ProcessException.newFromLastError("Failed to spawn new process");
 
     // figure out if we should close any of the streams
-    with (Config)
-    {
-        if (stdinFD  > STDERR_FILENO && !(config & noCloseStdin))
-            stdin_.close();
-        if (stdoutFD > STDERR_FILENO && !(config & noCloseStdout))
-            stdout_.close();
-        if (stderrFD > STDERR_FILENO && !(config & noCloseStderr))
-            stderr_.close();
-    }
+    if (stdinFD  > STDERR_FILENO && !(config & Config.noCloseStdin))
+        stdin_.close();
+    if (stdoutFD > STDERR_FILENO && !(config & Config.noCloseStdout))
+        stdout_.close();
+    if (stderrFD > STDERR_FILENO && !(config & Config.noCloseStderr))
+        stderr_.close();
 
     // close the thread handle in the process info structure
     CloseHandle(pi.hThread);
@@ -695,7 +676,8 @@ version(Posix) private const(char)** toArgz(string prog, const string[] args)
 
 // Converts a string[string] array to a C array of C strings
 // on the form "key=value".
-version(Posix) private const(char)** toEnvz(const string[string] env)
+version(Posix)
+private const(char)** toPosixEnv(const ref string[string] env)
     @trusted //TODO: @safe pure nothrow
 {
     alias const(char)* stringz_t;
@@ -709,24 +691,23 @@ version(Posix) private const(char)** toEnvz(const string[string] env)
     envz[$-1] = null;
     return envz.ptr;
 }
-else version(Windows) private LPVOID toEnvz(const string[string] env)
-    @trusted pure //TODO: @safe nothrow
+
+// Converts a string[string] array to a block of 16-bit
+// characters on the form "key=value\0key=value\0...\0\0"
+version(Windows)
+private LPVOID toWindowsEnv(const ref string[string] env)
+    @trusted //TODO: @safe pure nothrow
 {
-    uint len = 1; // reserve 1 byte for termination of environment block
+    auto envz = appender!(wchar[])();
     foreach(k, v; env)
     {
-        len += k.length + v.length + 2; // one for '=', one for null char
+        envz.put(k);
+        envz.put('=');
+        envz.put(v);
+        envz.put('\0');
     }
-
-    char [] envz;
-    envz.reserve(len);
-    foreach(k, v; env)
-    {
-        envz ~= k ~ '=' ~ v ~ '\0';
-    }
-
-    envz ~= '\0';
-    return envz.ptr;
+    envz.put('\0');
+    return envz.data.ptr;
 }
 
 // Checks whether the file exists and can be executed by the
@@ -786,6 +767,22 @@ unittest
     assert (pipe5o.readEnd.readln().chomp() == "input output foo");
     assert (pipe5e.readEnd.readln().chomp().stripRight() == "input error bar");
     wait(pid5);
+
+    import std.ascii, std.file, std.uuid;
+    auto path6i = buildPath(tempDir(), randomUUID().toString());
+    auto path6o = buildPath(tempDir(), randomUUID().toString());
+    auto path6e = buildPath(tempDir(), randomUUID().toString());
+    std.file.write(path6i, "INPUT"~std.ascii.newline);
+    auto file6i = File(path6i, "r");
+    auto file6o = File(path6o, "w");
+    auto file6e = File(path6e, "w");
+    auto pid6 = spawnProcess(prog5.path, ["bar", "baz" ], file6i, file6o, file6e);
+    wait(pid6);
+    assert (readText(path6o).chomp() == "INPUT output bar");
+    assert (readText(path6e).chomp().stripRight() == "INPUT error baz");
+    remove(path6i);
+    remove(path6o);
+    remove(path6e);
 }
 
 version (Posix) unittest
