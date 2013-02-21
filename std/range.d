@@ -4260,28 +4260,31 @@ assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
 Tip: This is a great way to implement simple circular buffers.
 */
 struct Cycle(Range)
-    if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
+    if (isForwardRange!Range && !isInfinite!Range)
 {
-    alias Unqual!Range R;
+    alias R = Range;
 
     static if (isRandomAccessRange!R && hasLength!R)
     {
         R _original;
         size_t _index;
 
-        this(R input, size_t index = 0) { _original = input; _index = index; }
+        this(R input, size_t index = 0)
+        {
+            _original = input;
+            _index = (index % _original.length);
+        }
 
         @property auto ref front()
         {
-            return _original[_index % _original.length];
+            return _original[_index];
         }
 
-        static if (is(typeof((cast(const R)_original)[0])) &&
-                   is(typeof((cast(const R)_original).length)))
+        static if (is(typeof((cast(const R)_original)[_index])))
         {
             @property auto ref front() const
             {
-                return _original[_index % _original.length];
+                return _original[_index];
             }
         }
 
@@ -4289,13 +4292,19 @@ struct Cycle(Range)
         {
             @property auto front(ElementType!R val)
             {
-                _original[_index % _original.length] = val;
+                _original[_index] = val;
             }
         }
 
         enum bool empty = false;
 
-        void popFront() { ++_index; }
+        void popFront()
+        {
+            ++_index;
+            immutable len = _original.length;
+            if (_index >= len)
+                _index -= len;
+        }
 
         auto ref opIndex(size_t n)
         {
@@ -4321,29 +4330,28 @@ struct Cycle(Range)
 
         @property Cycle save()
         {
-            return Cycle(this._original.save, this._index);
+            //No need to call _original.save, because Cycle never actually
+            //modifies _original (nothing but RA access)
+            return Cycle(this._original, this._index);
         }
 
         private static struct DollarToken {}
         enum opDollar = DollarToken.init;
 
-        auto opSlice(size_t i, size_t j)
+        Take!(Cycle!R) opSlice(size_t i, size_t j)
+        in
         {
-            version (assert)
-            {
-                import core.exception : RangeError;
-                if (i > j) throw new RangeError();
-            }
-            auto retval = this.save;
-            retval._index += i;
-            return takeExactly(retval, j - i);
+            import core.exception : RangeError;
+            if (i > j) throw new RangeError();
+        }
+        body
+        {
+            return this[i .. $].takeExactly(j - i);
         }
 
-        auto opSlice(size_t i, DollarToken)
+        Cycle!R opSlice(size_t i, DollarToken)
         {
-            auto retval = this.save;
-            retval._index += i;
-            return retval;
+            return typeof(this)(_original, _index + i);
         }
     }
     else
@@ -4351,15 +4359,24 @@ struct Cycle(Range)
         R _original;
         R _current;
 
-        this(R input) { _original = input; _current = input.save; }
+        this(R input)
+        {
+            _original = input;
+            _current = input.save;
+        }
 
-        @property auto ref front() { return _current.front; }
+        @property auto ref front()
+        {
+            return _current.front;
+        }
 
         static if (is(typeof((cast(const R)_current).front)))
+        {
             @property auto ref front() const
             {
                 return _current.front;
             }
+        }
 
         static if (hasAssignableElements!R)
         {
@@ -4374,108 +4391,126 @@ struct Cycle(Range)
         void popFront()
         {
             _current.popFront();
-            if (_current.empty) _current = _original;
+            if (_current.empty) _current = _original.save;
         }
 
         @property Cycle save()
         {
+            //No need to call _original.save, because Cycle never actually
+            //modifies _original
             Cycle ret = this;
-            ret._original = this._original.save;
+            ret._original = this._original;
             ret._current =  this._current.save;
             return ret;
         }
     }
 }
 
+/// ditto
 template Cycle(R)
-    if (isInfinite!R)
+if (isInfinite!R)
 {
-    alias R Cycle;
+    alias Cycle = R;
 }
 
+/// ditto
 struct Cycle(R)
     if (isStaticArray!R)
 {
-    private alias typeof(R.init[0]) ElementType;
-    private ElementType* _ptr;
-    private size_t _index;
+    enum  N = R.length;
+    private alias ElementType = .ElementType!R;
+    private R* _ptr;
+    private size_t _index = 0;
 
-    this(ref R input, size_t index = 0)
+    this(ref R input, size_t index) nothrow @system
     {
-        _ptr = input.ptr;
-        _index = index;
-    }
-
-    @property auto ref inout(ElementType) front() inout
-    {
-        return _ptr[_index % R.length];
+        _ptr = &input;
+        _index = index % N;
     }
 
     enum bool empty = false;
 
-    void popFront() { ++_index; }
-
-    ref inout(ElementType) opIndex(size_t n) inout
-    {
-        return _ptr[(n + _index) % R.length];
-    }
-
-    @property Cycle save()
+    @property inout(Cycle) save() nothrow inout
     {
         return this;
     }
 
+    this(ref R input, size_t index) nothrow @system
+    {
+        _ptr = &input;
+        _index = index % N;
+    }
+
+    @property ref inout(EType) front() inout nothrow
+    {
+        return (*_ptr)[_index];
+    }
+
+    void popFront() nothrow
+    {
+        ++_index;
+        if ( _index == N)
+            _index = 0;
+    }
+
+    ref inout(EType) opIndex(size_t n) inout nothrow
+    {
+        return (*_ptr)[(n + _index) % N];
+    }
+
     private static struct DollarToken {}
+    enum opDollar = DollarToken.init;
 
-    DollarToken opDollar()
+    Take!(Cycle!R) opSlice(size_t i, size_t j) nothrow
+    in
     {
-        return DollarToken.init;
+        if (i > j) throw new RangeError();
+    }
+    body
+    {
+        return this[i .. $].takeExactly(j - i);
     }
 
-    auto opSlice(size_t i, size_t j)
+    inout(Cycle!R) opSlice(size_t i, DollarToken) inout nothrow
     {
-        version (assert)
-        {
-            import core.exception : RangeError;
-            if (i > j) throw new RangeError();
-        }
-        auto retval = this.save;
-        retval._index += i;
-        return takeExactly(retval, j - i);
-    }
-
-    auto opSlice(size_t i, DollarToken)
-    {
-        auto retval = this.save;
-        retval._index += i;
-        return retval;
+        return Cycle!R(*cast(R*)_ptr, _index + i);
     }
 }
 
-/// Ditto
-Cycle!R cycle(R)(R input)
-    if (isForwardRange!(Unqual!R) && !isInfinite!(Unqual!R))
+//Standard ranges
+/// ditto
+auto cycle(R)(R input)
+if (isForwardRange!R && !isInfinite!R)
 {
     return Cycle!R(input);
 }
-
-/// Ditto
-Cycle!R cycle(R)(R input, size_t index = 0)
-    if (isRandomAccessRange!(Unqual!R) && !isInfinite!(Unqual!R))
+/// ditto
+auto cycle(R)(R input, size_t index)
+if (isRandomAccessRange!R && !isInfinite!R)
 {
     return Cycle!R(input, index);
 }
 
-Cycle!R cycle(R)(R input)
-    if (isInfinite!R)
+//Infinite ranges
+/// ditto
+auto cycle(R)(R input)
+if (isInfinite!R)
 {
     return input;
 }
-
-Cycle!R cycle(R)(ref R input, size_t index = 0)
-    if (isStaticArray!R)
+/// ditto
+auto cycle(R)(R input, size_t index)
+if (isInfinite!R && hasSlicing!R)
 {
-    return Cycle!R(input, index);
+    return input[index .. $];
+}
+
+//Static arrays
+/// ditto
+auto cycle(R)(ref R input, size_t index = 0)
+if (isStaticArray!R)
+{
+    return Cycle!R(input);
 }
 
 unittest
@@ -4486,7 +4521,7 @@ unittest
     int[3] a = [ 1, 2, 3 ];
     static assert(isStaticArray!(typeof(a)));
     auto c = cycle(a);
-    assert(a.ptr == c._ptr);
+    assert(a.ptr == c._ptr.ptr);
     assert(equal(take(cycle(a), 5), [ 1, 2, 3, 1, 2 ][]));
     static assert(isForwardRange!(typeof(c)));
 
@@ -4496,7 +4531,8 @@ unittest
     c2[3]++;
     assert(nums[0] == 2);
 
-    static assert(is(Cycle!(immutable int[])));
+    immutable int[] imSlice = [1, 2, 3];
+    static assert(is(typeof(cycle(imSlice))));
 
     foreach(DummyType; AllDummyRanges)
     {
@@ -4521,9 +4557,6 @@ unittest
 
                 static if (isRandomAccessRange!DummyType)
                 {
-                    import core.exception : RangeError;
-                    import std.exception : assertThrown;
-
                     {
                         cy[10] = 66;
                         scope(exit) cy[10] = 1;
@@ -4531,7 +4564,6 @@ unittest
                     }
 
                     assert(cRange[10] == 1);
-                    assertThrown!RangeError(cy[2..1]);
                 }
             }
 
@@ -4561,6 +4593,43 @@ unittest // For infinite ranges
     InfRange i;
     auto c = cycle(i);
     assert (c == i);
+}
+
+unittest
+{
+    int[5] arr = [0, 1, 2, 3, 4];
+    auto cleS = cycle(arr);   //Static
+    auto cleD = cycle(arr[]); //Dynamic
+    assert(equal(cleS[5 .. 10], arr[]));
+    assert(equal(cleD[5 .. 10], arr[]));
+
+    //n is a multiple of 5 worth about 3/4 of size_t.max
+    auto n = size_t.max/4 + size_t.max/2;
+    n -= n % 5;
+
+    //Test index overflow
+    foreach (_ ; 0 .. 10)
+    {
+        cleS = cleS[n .. $];
+        cleD = cleD[n .. $];
+        assert(equal(cleS[5 .. 10], arr[]));
+        assert(equal(cleD[5 .. 10], arr[]));
+    }
+}
+
+unittest
+{
+    int[1] arr = [0];
+    auto cleS = cycle(arr);
+    cleS = cleS[10 .. $];
+    assert(equal(cleS[5 .. 10], 0.repeat(5)));
+    assert(cleS.front == 0);
+}
+
+unittest //10845
+{
+   auto a = inputRangeObject(iota(3).filter!"true");
+   assert(equal(cycle(a).take(10), [0, 1, 2, 0, 1, 2, 0, 1, 2, 0]));
 }
 
 private template lengthType(R) { alias typeof((inout int = 0){ R r = void; return r.length; }()) lengthType; }
@@ -9706,3 +9775,4 @@ unittest    // bug 9060
     static void foo(R)(R r) { until!(x => x > 7)(r); }
     foo(r);
 }
+
