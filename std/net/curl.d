@@ -2151,6 +2151,9 @@ struct HTTP
         p.curl.set(CurlOption.url, url);
     }
 
+    /**
+     * The name of a file holding one or more certificates to verify the peer with.
+     */
     @property void caInfo(const(char)[] caFile)
     {
         p.curl.set(CurlOption.cainfo, caFile);
@@ -3125,6 +3128,14 @@ struct SMTP
                                     "The url must be for the smtp protocol.");
         }
         p.curl.set(CurlOption.url, url);
+    }
+
+    /**
+     * The name of a file holding one or more certificates to verify the peer with.
+     */
+    @property void caInfo(const(char)[] caFile)
+    {
+        p.curl.set(CurlOption.cainfo, caFile);
     }
 
     private void initialize()

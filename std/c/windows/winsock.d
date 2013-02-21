@@ -11,8 +11,14 @@ private import std.c.windows.windows;
 
 
 extern(Windows):
-
-alias int  SOCKET;
+version(Win64)
+{
+    alias long SOCKET;
+}
+else
+{
+    alias int SOCKET;
+}
 alias uint socklen_t;
 
 const SOCKET INVALID_SOCKET = cast(SOCKET)~0;
