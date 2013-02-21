@@ -1182,13 +1182,13 @@ enum Redirect
 
     /**
     Redirect the standard error stream into the standard output stream.
-    This can not be combined with $(D Redirect.sterr).
+    This can not be combined with $(D Redirect.stderr).
     */
     stderrToStdout = 8,
 
     /**
     Redirect the standard output stream into the standard error stream.
-    This can not be combined with $(D Redirect.stout).
+    This can not be combined with $(D Redirect.stdout).
     */
     stdoutToStderr = 16,
 }
