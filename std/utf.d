@@ -990,15 +990,7 @@ out (result)
 }
 body
 {
-    //@@@BUG@@@ 8521 forces canIndex to be done outside of decodeImpl, which
-    //is undesirable, since not all overloads of decodeImpl need it. So, it
-    //should be moved back into decodeImpl once bug# 8521 has been fixed.
-    enum canIndex = isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S);
-    //static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S))
-    static if (canIndex)
-        immutable fst = str[0];
-    else
-        immutable fst = str.front;
+    immutable fst = str.front;
 
     if (fst < codeUnitLimit!S)
     {
@@ -1007,6 +999,10 @@ body
         return fst;
     }
 
+    //@@@BUG@@@ 8521 forces canIndex to be done outside of decodeImpl, which
+    //is undesirable, since not all overloads of decodeImpl need it. So, it
+    //should be moved back into decodeImpl once bug# 8521 has been fixed.
+    enum canIndex = isRandomAccessRange!S && hasSlicing!S && hasLength!S;
     immutable retval = decodeImpl!canIndex(str, numCodeUnits);
 
     // The other range types were already popped by decodeImpl.
