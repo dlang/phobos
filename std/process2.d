@@ -898,7 +898,6 @@ kill(pid, 10);
 assert (wait(pid) == 10);
 ---
 
-
 POSIX_specific:
 A $(LINK2 http://en.wikipedia.org/wiki/Unix_signal,signal) will be sent to
 the process, whose value is given by $(D codeOrSignal).  Depending on the
