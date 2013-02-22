@@ -402,9 +402,30 @@ public:
    Constructor taking one value for each field. Each argument must be
    implicitly assignable to the respective element of the target.
  */
-    this(U...)(U values) if (U.length == Types.length)
+    this(U...)(U values)
+    if (is(typeof({ void fun(Types); fun(values); })))
     {
-        foreach (i, Unused; Types)
+        foreach (i, _; Types)
+        {
+            field[i] = values[i];
+        }
+    }
+
+/**
+   Constructor taking a compatible array. The array element type must
+   be implicitly assignable to each element of the target.
+
+Examples:
+----
+int[2] ints;
+Tuple!(int, int) t = ints;
+----
+ */
+    this(U, size_t n)(U[n] values)
+    if (n == Types.length
+        && is(typeof({ foreach (i, _; Types) field[i] = values[i]; })))
+    {
+        foreach (i, _; Types)
         {
             field[i] = values[i];
         }
@@ -778,6 +799,13 @@ unittest
         static assert( is(typeof(tm4 < tc4)));
         static assert( is(typeof(tc4 < tm4)));
         static assert( is(typeof(tc4 < tc4)));
+    }
+    {
+        int[2] ints = [ 1, 2 ];
+        Tuple!(int, int) t = ints;
+        assert(t[0] == 1 && t[1] == 2);
+        Tuple!(long, uint) t2 = ints;
+        assert(t2[0] == 1 && t2[1] == 2);
     }
 }
 
