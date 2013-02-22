@@ -176,12 +176,38 @@ public:
 final class Pid
 {
     /**
-    The ID number assigned to the process by the operating
-    system.
+    The process ID number.
+
+    This is a number that uniquely identifies the process on the operating
+    system, for at least as long as it is running.  Once $(LREF wait)
+    has been called on the $(LREF Pid), this function will return an
+    invalid process ID.
     */
-    @property int processID() const @safe pure
+    @property int processID() const @safe pure nothrow
     {
-        assert(_processID >= 0);
+        return _processID;
+    }
+
+    /**
+    An operating system handle to the process.
+
+    This handle is used to specify the process in OS-specific APIs.
+    On POSIX, this function returns a $(D core.sys.posix.sys.types.pid_t)
+    with the same value as $(LREF processID), while on Windows it returns
+    a $(D core.sys.windows.windows.HANDLE).
+
+    Once $(LREF wait) has been called on the $(LREF Pid), this function
+    will return an invalid handle.
+    */
+    // Note: Since HANDLE is a reference, this function cannot be const.
+    version (Windows)
+    @property HANDLE osHandle() @safe pure nothrow
+    {
+        return _handle;
+    }
+    else version (Posix)
+    @property pid_t osHandle() @safe pure nothrow
+    {
         return _processID;
     }
 
@@ -194,7 +220,7 @@ final class Pid
         while(true)
         {
             int status;
-            auto check = waitpid(processID, &status, 0);
+            auto check = waitpid(_processID, &status, 0);
             if (check == -1  &&  errno == ECHILD)
             {
                 throw new ProcessException(
@@ -941,13 +967,13 @@ void kill(Pid pid, int codeOrSignal)
 
     version (Windows)
     {
-        if (!TerminateProcess(pid._handle, codeOrSignal))
+        if (!TerminateProcess(pid.osHandle, codeOrSignal))
             throw ProcessException.newFromLastError();
     }
     else version (Posix)
     {
         import core.sys.posix.signal;
-        if (kill(pid.processID, codeOrSignal) == -1)
+        if (kill(pid.osHandle, codeOrSignal) == -1)
             throw ProcessException.newFromErrno();
     }
 }
