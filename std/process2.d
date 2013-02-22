@@ -172,140 +172,6 @@ version (Posix)
 public:
 
 
-/// A handle that corresponds to a spawned process.
-final class Pid
-{
-    /**
-    The process ID number.
-
-    This is a number that uniquely identifies the process on the operating
-    system, for at least as long as it is running.  Once $(LREF wait)
-    has been called on the $(LREF Pid), this function will return an
-    invalid process ID.
-    */
-    @property int processID() const @safe pure nothrow
-    {
-        return _processID;
-    }
-
-    /**
-    An operating system handle to the process.
-
-    This handle is used to specify the process in OS-specific APIs.
-    On POSIX, this function returns a $(D core.sys.posix.sys.types.pid_t)
-    with the same value as $(LREF processID), while on Windows it returns
-    a $(D core.sys.windows.windows.HANDLE).
-
-    Once $(LREF wait) has been called on the $(LREF Pid), this function
-    will return an invalid handle.
-    */
-    // Note: Since HANDLE is a reference, this function cannot be const.
-    version (Windows)
-    @property HANDLE osHandle() @safe pure nothrow
-    {
-        return _handle;
-    }
-    else version (Posix)
-    @property pid_t osHandle() @safe pure nothrow
-    {
-        return _processID;
-    }
-
-    // See module-level wait() for documentation.
-    version (Posix)
-    int wait() @trusted
-    {
-        if (_processID == terminated) return _exitCode;
-        int exitCode;
-        while(true)
-        {
-            int status;
-            auto check = waitpid(_processID, &status, 0);
-            if (check == -1  &&  errno == ECHILD)
-            {
-                throw new ProcessException(
-                    "Process does not exist or is not a child process.");
-            }
-            if (WIFEXITED(status))
-            {
-                exitCode = WEXITSTATUS(status);
-                break;
-            }
-            else if (WIFSIGNALED(status))
-            {
-                exitCode = -WTERMSIG(status);
-                break;
-            }
-            // Process has stopped, but not terminated, so we continue waiting.
-        }
-        // Mark Pid as terminated, and cache and return exit code.
-        _processID = terminated;
-        _exitCode = exitCode;
-        return exitCode;
-    }
-    else version (Windows)
-    {
-        int wait() @trusted
-        {
-            if (_processID == terminated) return _exitCode;
-            if(_handle != INVALID_HANDLE_VALUE)
-            {
-                auto result = WaitForSingleObject(_handle, INFINITE);
-                if (result != WAIT_OBJECT_0)
-                    throw ProcessException.newFromLastError("Wait failed.");
-                // the process has exited, get the return code
-                if (!GetExitCodeProcess(_handle, cast(LPDWORD)&_exitCode))
-                    throw ProcessException.newFromLastError();
-                CloseHandle(_handle);
-                _handle = INVALID_HANDLE_VALUE;
-                _processID = terminated;
-            }
-            return _exitCode;
-        }
-
-        ~this()
-        {
-            if(_handle != INVALID_HANDLE_VALUE)
-            {
-                CloseHandle(_handle);
-                _handle = INVALID_HANDLE_VALUE;
-            }
-        }
-    }
-
-private:
-    // Special values for _processID.
-    enum invalid = -1, terminated = -2;
-
-    // OS process ID number.  Only nonnegative IDs correspond to
-    // running processes.
-    int _processID = invalid;
-
-    // Exit code cached by wait().  This is only expected to hold a
-    // sensible value if _processID == terminated.
-    int _exitCode;
-
-    // Pids are only meant to be constructed inside this module, so
-    // we make the constructor private.
-    version (Windows)
-    {
-        HANDLE _handle;
-        this(int pid, HANDLE handle) @safe pure nothrow
-        {
-            _processID = pid;
-            _handle = handle;
-        }
-    }
-    else
-    {
-        this(int id) @safe pure nothrow
-        {
-            _processID = id;
-        }
-    }
-}
-
-
 /**
 Spawns a new _process, optionally assigning it an
 arbitrary set of standard input, output, and error streams.
@@ -863,6 +729,140 @@ enum Config
     a console window.  On POSIX it has no effect.
     */
     gui = 8,
+}
+
+
+/// A handle that corresponds to a spawned process.
+final class Pid
+{
+    /**
+    The process ID number.
+
+    This is a number that uniquely identifies the process on the operating
+    system, for at least as long as the process is running.  Once $(LREF wait)
+    has been called on the $(LREF Pid), this method will return an
+    invalid process ID.
+    */
+    @property int processID() const @safe pure nothrow
+    {
+        return _processID;
+    }
+
+    /**
+    An operating system handle to the process.
+
+    This handle is used to specify the process in OS-specific APIs.
+    On POSIX, this function returns a $(D core.sys.posix.sys.types.pid_t)
+    with the same value as $(LREF processID), while on Windows it returns
+    a $(D core.sys.windows.windows.HANDLE).
+
+    Once $(LREF wait) has been called on the $(LREF Pid), this method
+    will return an invalid handle.
+    */
+    // Note: Since HANDLE is a reference, this function cannot be const.
+    version (Windows)
+    @property HANDLE osHandle() @safe pure nothrow
+    {
+        return _handle;
+    }
+    else version (Posix)
+    @property pid_t osHandle() @safe pure nothrow
+    {
+        return _processID;
+    }
+
+    // See module-level wait() for documentation.
+    version (Posix)
+    int wait() @trusted
+    {
+        if (_processID == terminated) return _exitCode;
+        int exitCode;
+        while(true)
+        {
+            int status;
+            auto check = waitpid(_processID, &status, 0);
+            if (check == -1  &&  errno == ECHILD)
+            {
+                throw new ProcessException(
+                    "Process does not exist or is not a child process.");
+            }
+            if (WIFEXITED(status))
+            {
+                exitCode = WEXITSTATUS(status);
+                break;
+            }
+            else if (WIFSIGNALED(status))
+            {
+                exitCode = -WTERMSIG(status);
+                break;
+            }
+            // Process has stopped, but not terminated, so we continue waiting.
+        }
+        // Mark Pid as terminated, and cache and return exit code.
+        _processID = terminated;
+        _exitCode = exitCode;
+        return exitCode;
+    }
+    else version (Windows)
+    {
+        int wait() @trusted
+        {
+            if (_processID == terminated) return _exitCode;
+            if(_handle != INVALID_HANDLE_VALUE)
+            {
+                auto result = WaitForSingleObject(_handle, INFINITE);
+                if (result != WAIT_OBJECT_0)
+                    throw ProcessException.newFromLastError("Wait failed.");
+                // the process has exited, get the return code
+                if (!GetExitCodeProcess(_handle, cast(LPDWORD)&_exitCode))
+                    throw ProcessException.newFromLastError();
+                CloseHandle(_handle);
+                _handle = INVALID_HANDLE_VALUE;
+                _processID = terminated;
+            }
+            return _exitCode;
+        }
+
+        ~this()
+        {
+            if(_handle != INVALID_HANDLE_VALUE)
+            {
+                CloseHandle(_handle);
+                _handle = INVALID_HANDLE_VALUE;
+            }
+        }
+    }
+
+private:
+    // Special values for _processID.
+    enum invalid = -1, terminated = -2;
+
+    // OS process ID number.  Only nonnegative IDs correspond to
+    // running processes.
+    int _processID = invalid;
+
+    // Exit code cached by wait().  This is only expected to hold a
+    // sensible value if _processID == terminated.
+    int _exitCode;
+
+    // Pids are only meant to be constructed inside this module, so
+    // we make the constructor private.
+    version (Windows)
+    {
+        HANDLE _handle;
+        this(int pid, HANDLE handle) @safe pure nothrow
+        {
+            _processID = pid;
+            _handle = handle;
+        }
+    }
+    else
+    {
+        this(int id) @safe pure nothrow
+        {
+            _processID = id;
+        }
+    }
 }
 
 
