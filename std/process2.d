@@ -30,6 +30,8 @@ $(LI
     the _process' standard output and error streams and return
     the output of these as a string.
     These correspond roughly to C's $(D system) function.)
+$(LI
+    $(LREF kill) attempts to terminate a running process.)
 )
 $(LREF shell) and $(LREF pipeShell) both run the given command
 through the user's default command interpreter.  On Windows, this is
@@ -38,11 +40,11 @@ variable (defaulting to $(I /bin/sh) if it cannot be determined).  The
 command is specified as a single string which is sent directly to the
 shell.
 
-The other commands all have two forms, one where the program name
-and its arguments are specified in a single string parameter, separated
-by spaces, and one where the arguments are specified as an array of
-strings.  Use the latter whenever the program name or any of the arguments
-contain spaces.
+$(LREF spawnProcess), $(LREF pipeProcess) and $(LREF execute)  all have
+two forms: one where the program name and its arguments are specified
+in a single string parameter, separated by spaces, and one where the
+arguments are specified as an array of strings.  Use the latter whenever
+the program name or any of the arguments contain spaces.
 
 Unless the directory of the executable file is explicitly specified, all
 functions will search for it in the directories specified in the PATH
@@ -109,6 +111,8 @@ version (Windows)
     extern(Windows) BOOL SetHandleInformation(HANDLE hObject,
                                               DWORD dwMask,
                                               DWORD dwFlags);
+    extern(Windows) BOOL TerminateProcess(HANDLE hProcess,
+                                          UINT uExitCode);
     enum
     {
         HANDLE_FLAG_INHERIT = 0x1,
@@ -790,16 +794,6 @@ unittest
     remove(path6e);
 }
 
-version (Posix) unittest
-{
-    // Termination by signal.
-    import core.sys.posix.signal;
-    TestScript prog = "while true; do; done"; // Infinite loop
-    auto pid = spawnProcess(prog.path);
-    kill(pid.processID, SIGTERM);
-    assert (wait(pid) == -SIGTERM);
-}
-
 
 /**
 Flags that control the behaviour of $(LREF spawnProcess).
@@ -877,6 +871,111 @@ int wait(Pid pid) @safe
 {
     assert(pid !is null, "Called wait on a null Pid.");
     return pid.wait();
+}
+
+
+/**
+Attempts to terminate the process associated with $(D pid).
+
+The the effect of this function, as well as the meaning of $(D codeOrSignal),
+is highly platform dependent.  Details are given below.  Common to all
+platforms is that this function only $(I initiates) termination of the process,
+and returns immediately.  It does not wait for the process to end,
+nor does it guarantee that the process does in fact get terminated.
+
+Always call $(LREF wait) to wait for a process to complete, even if $(D kill)
+has been called on it.
+
+Windows_specific:
+The process will be
+$(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/ms686714%28v=vs.100%29.aspx,
+forcefully and abruptly terminated).  If $(D codeOrSignal) is specified, it
+will be used as the exit code of the process.  If not, the process wil exit
+with code 1.
+---
+auto pid = spawnProcess("some_app");
+kill(pid, 10);
+assert (wait(pid) == 10);
+---
+
+
+POSIX_specific:
+A $(LINK2 http://en.wikipedia.org/wiki/Unix_signal,signal) will be sent to
+the process, whose value is given by $(D codeOrSignal).  Depending on the
+signal sent, this may or may not terminate the process.  Symbolic constants
+for various $(LINK2 http://en.wikipedia.org/wiki/Unix_signal#POSIX_signals,
+POSIX signals) are defined in $(D core.sys.posix.signal), which corresponds to the
+$(LINK2 http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html,
+$(D signal.h) POSIX header).  If $(D codeOrSignal) is omitted, the
+$(D SIGTERM) signal will be sent.  (This matches the behaviour of the
+$(LINK2 http://pubs.opengroup.org/onlinepubs/9699919799/utilities/kill.html,
+$(D _kill)) shell command.)
+---
+import core.sys.posix.signal: SIGKILL;
+auto pid = spawnProcess("some_app");
+kill(pid, SIGKILL);
+assert (wait(pid) == -SIGKILL); // Negative return value on POSIX!
+---
+
+Throws:
+$(LREF ProcessException) if the operating system reports an error.
+    (Note that this does not include failure to terminate the process,
+    which is considered a "normal" outcome.)$(BR)
+$(OBJECTREF Error) if $(D codeOrSignal) is negative.
+*/
+void kill(Pid pid)
+{
+    version (Windows) kill(pid, 1);
+    else version (Posix)
+    {
+        import core.sys.posix.signal: SIGTERM;
+        kill(pid, SIGTERM);
+    }
+}
+
+/// ditto
+void kill(Pid pid, int codeOrSignal)
+{
+    version (Windows)    enum errMsg = "Invalid exit code";
+    else version (Posix) enum errMsg = "Invalid signal";
+    if (codeOrSignal < 0) throw new Error(errMsg);
+
+    version (Windows)
+    {
+        if (!TerminateProcess(pid._handle, codeOrSignal))
+            throw ProcessException.newFromLastError();
+    }
+    else version (Posix)
+    {
+        import core.sys.posix.signal;
+        if (kill(pid.processID, codeOrSignal) == -1)
+            throw ProcessException.newFromErrno();
+    }
+}
+
+version (Posix) unittest
+{
+    import core.sys.posix.signal: SIGTERM, SIGKILL;
+    TestScript prog = "while true; do; done"; // Infinite loop
+    auto pid = spawnProcess(prog.path);
+    kill(pid);
+    assert (wait(pid) == -SIGTERM);
+    pid = spawnProcess(prog.path);
+    kill(pid, SIGKILL);
+    assert (wait(pid) == -SIGKILL);
+}
+
+version (Windows) unittest
+{
+    TestScript prog =
+       "loop:
+        goto loop";
+    auto pid = spawnProcess(prog.path);
+    kill(pid);
+    assert (wait(pid) == 1);
+    pid = spawnProcess(prog.path);
+    kill(pid, 123);
+    assert (wait(pid) == 123);
 }
 
 
