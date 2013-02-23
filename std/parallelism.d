@@ -234,11 +234,11 @@ private template noUnsharedAliasing(T)
 private template isSafeTask(F)
 {
     enum bool isSafeTask =
-    ((functionAttributes!(F) & FunctionAttribute.safe) ||
-     (functionAttributes!(F) & FunctionAttribute.trusted)) &&
-    !(functionAttributes!F & FunctionAttribute.ref_) &&
-    (isFunctionPointer!F || !hasUnsharedAliasing!F) &&
-    allSatisfy!(noUnsharedAliasing, ParameterTypeTuple!F);
+        ((functionAttributes!(F) & FunctionAttribute.safe) ||
+         (functionAttributes!(F) & FunctionAttribute.trusted)) &&
+        !(functionAttributes!F & FunctionAttribute.ref_) &&
+        (isFunctionPointer!F || !hasUnsharedAliasing!F) &&
+        allSatisfy!(noUnsharedAliasing, ParameterTypeTuple!F);
 }
 
 unittest
@@ -392,24 +392,24 @@ private struct AbstractTask
     ubyte taskStatus = TaskStatus.notStarted;
 
     bool done() @property
-{
-    if(atomicReadUbyte(taskStatus) == TaskStatus.done)
     {
-        if(exception)
+        if(atomicReadUbyte(taskStatus) == TaskStatus.done)
         {
-            throw exception;
+            if(exception)
+            {
+                throw exception;
+            }
+
+            return true;
         }
 
-        return true;
+        return false;
     }
 
-    return false;
-}
-
-void job()
-{
-    runTask(&this);
-}
+    void job()
+    {
+        runTask(&this);
+    }
 }
 
 /**
@@ -442,8 +442,7 @@ Bugs:  Changes to $(D ref) and $(D out) arguments are not propagated to the
 */
 struct Task(alias fun, Args...)
 {
-AbstractTask base = {runTask :
-                         &impl};
+    AbstractTask base = {runTask : &impl};
     alias base this;
 
     private @property AbstractTask* basePtr()
@@ -1853,11 +1852,11 @@ public:
                 size_t bufPos;
                 bool lastTaskWaited;
 
-                static if(isRandomAccessRange!S)
-        {
-            alias S FromType;
+            static if(isRandomAccessRange!S)
+            {
+                alias S FromType;
 
-            void popSource()
+                void popSource()
                 {
                     static if(__traits(compiles, source[0..source.length]))
                     {
@@ -1873,14 +1872,12 @@ public:
                                       ~ "  " ~ S.stringof ~ " doesn't.");
                     }
                 }
-
             }
             else static if(bufferTrick)
-        {
-
-            // Make sure we don't have the buffer recycling overload of
-            // asyncBuf.
-            static if(
+            {
+                // Make sure we don't have the buffer recycling overload of
+                // asyncBuf.
+                static if(
                     is(typeof(source.source)) &&
                     isRoundRobin!(typeof(source.source))
                 )
@@ -1914,7 +1911,6 @@ public:
 
                     return from;
                 }
-
             }
             else
             {
@@ -1940,154 +1936,154 @@ public:
             }
 
             static if(hasLength!S)
-        {
-            size_t _length;
+            {
+                size_t _length;
 
-            public @property size_t length() const pure nothrow @safe
+                public @property size_t length() const pure nothrow @safe
                 {
                     return _length;
                 }
             }
 
-            this(S source, size_t bufSize, size_t workUnitSize, TaskPool pool)
-            {
-                static if(bufferTrick)
+                this(S source, size_t bufSize, size_t workUnitSize, TaskPool pool)
                 {
-                    bufSize = source.buf1.length;
-                }
-
-                buf1.length = bufSize;
-                buf2.length = bufSize;
-
-                static if(!isRandomAccessRange!S)
-                {
-                    from.length = bufSize;
-                }
-
-                this.workUnitSize = (workUnitSize == size_t.max) ?
-                pool.defaultWorkUnitSize(bufSize) : workUnitSize;
-                this.source = source;
-                this.pool = pool;
-
-                static if(hasLength!S)
-                {
-                    _length = source.length;
-                }
-
-                buf1 = fillBuf(buf1);
-                submitBuf2();
-            }
-
-            // The from parameter is a dummy and ignored in the random access
-            // case.
-            E[] fillBuf(E[] buf)
-            {
-                static if(isRandomAccessRange!S)
-                {
-                    auto toMap = take(source, buf.length);
-                    scope(success) popSource();
-                }
-                else
-                {
-                    auto toMap = dumpToFrom();
-                }
-
-                buf = buf[0..min(buf.length, toMap.length)];
-
-                // Handle as a special case:
-                if(pool.size == 0)
-                {
-                    size_t index = 0;
-                    foreach(elem; toMap)
+                    static if(bufferTrick)
                     {
-                        buf[index++] = fun(elem);
+                        bufSize = source.buf1.length;
                     }
-                    return buf;
-                }
 
-                pool.amap!(functions)(toMap, workUnitSize, buf);
-
-                return buf;
-            }
-
-            void submitBuf2()
-            in
-            {
-                assert(nextBufTask.prev is null);
-                assert(nextBufTask.next is null);
-            } body
-            {
-                // Hack to reuse the task object.
-
-                nextBufTask = typeof(nextBufTask).init;
-                nextBufTask._args[0] = &fillBuf;
-                nextBufTask._args[1] = buf2;
-                pool.put(nextBufTask);
-            }
-
-            void doBufSwap()
-            {
-                if(lastTaskWaited)
-                {
-                    // Then the source is empty.  Signal it here.
-                    buf1 = null;
-                    buf2 = null;
+                    buf1.length = bufSize;
+                    buf2.length = bufSize;
 
                     static if(!isRandomAccessRange!S)
                     {
-                        from = null;
+                        from.length = bufSize;
                     }
 
-                    return;
+                    this.workUnitSize = (workUnitSize == size_t.max) ?
+                            pool.defaultWorkUnitSize(bufSize) : workUnitSize;
+                    this.source = source;
+                    this.pool = pool;
+
+                    static if(hasLength!S)
+                    {
+                        _length = source.length;
+                    }
+
+                    buf1 = fillBuf(buf1);
+                    submitBuf2();
                 }
 
-                buf2 = buf1;
-                buf1 = nextBufTask.yieldForce;
-                bufPos = 0;
-
-                if(source.empty)
+                // The from parameter is a dummy and ignored in the random access
+                // case.
+                E[] fillBuf(E[] buf)
                 {
-                    lastTaskWaited = true;
+                    static if(isRandomAccessRange!S)
+                    {
+                        auto toMap = take(source, buf.length);
+                        scope(success) popSource();
+                    }
+                    else
+                    {
+                        auto toMap = dumpToFrom();
+                    }
+
+                    buf = buf[0..min(buf.length, toMap.length)];
+
+                    // Handle as a special case:
+                    if(pool.size == 0)
+                    {
+                        size_t index = 0;
+                        foreach(elem; toMap)
+                        {
+                            buf[index++] = fun(elem);
+                        }
+                        return buf;
+                    }
+
+                    pool.amap!(functions)(toMap, workUnitSize, buf);
+
+                    return buf;
+                }
+
+                void submitBuf2()
+                in
+                {
+                    assert(nextBufTask.prev is null);
+                    assert(nextBufTask.next is null);
+                } body
+                {
+                    // Hack to reuse the task object.
+
+                    nextBufTask = typeof(nextBufTask).init;
+                    nextBufTask._args[0] = &fillBuf;
+                    nextBufTask._args[1] = buf2;
+                    pool.put(nextBufTask);
+                }
+
+                void doBufSwap()
+                {
+                    if(lastTaskWaited)
+                    {
+                        // Then the source is empty.  Signal it here.
+                        buf1 = null;
+                        buf2 = null;
+
+                        static if(!isRandomAccessRange!S)
+                        {
+                            from = null;
+                        }
+
+                        return;
+                    }
+
+                    buf2 = buf1;
+                    buf1 = nextBufTask.yieldForce;
+                    bufPos = 0;
+
+                    if(source.empty)
+                    {
+                        lastTaskWaited = true;
+                    }
+                    else
+                    {
+                        submitBuf2();
+                    }
+                }
+
+            public:
+                @property auto front()
+                {
+                    return buf1[bufPos];
+                }
+
+                void popFront()
+                {
+                    static if(hasLength!S)
+                    {
+                        _length--;
+                    }
+
+                    bufPos++;
+                    if(bufPos >= buf1.length)
+                    {
+                        doBufSwap();
+                    }
+                }
+
+                static if(std.range.isInfinite!S)
+                {
+                    enum bool empty = false;
                 }
                 else
                 {
-                    submitBuf2();
+
+                    bool empty() @property
+                    {
+                        // popFront() sets this when source is empty
+                        return buf1.length == 0;
+                    }
                 }
-            }
-
-public:
-            @property auto front()
-            {
-                return buf1[bufPos];
-            }
-
-            void popFront()
-            {
-                static if(hasLength!S)
-                {
-                    _length--;
-                }
-
-                bufPos++;
-                if(bufPos >= buf1.length)
-                {
-                    doBufSwap();
-                }
-            }
-
-            static if(std.range.isInfinite!S)
-        {
-            enum bool empty = false;
-        }
-        else
-        {
-
-            bool empty() @property
-                {
-                    // popFront() sets this when source is empty
-                    return buf1.length == 0;
-                }
-            }
             }
             return new Map(source, bufSize, workUnitSize, this);
         }
@@ -2156,10 +2152,10 @@ public:
 
             static if(hasLength!S)
             {
-            size_t _length;
+                size_t _length;
 
-            // Available if hasLength!(S).
-            public @property size_t length() const pure nothrow @safe
+                // Available if hasLength!(S).
+                public @property size_t length() const pure nothrow @safe
                 {
                     return _length;
                 }
