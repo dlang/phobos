@@ -1870,7 +1870,7 @@ public:
                     else
                     {
                         static assert(0, "S must have slicing for Map."
-                                      ~ "  " ~ R.stringof ~ " doesn't.");
+                                      ~ "  " ~ S.stringof ~ " doesn't.");
                     }
                 }
 
