@@ -337,7 +337,7 @@ alias core.thread.getpid getpid;
 /**
    Runs $(D_PARAM cmd) in a shell and returns its standard output. If
    the process could not be started or exits with an error code,
-   throws an exception.
+   throws ErrnoException.
 
    Example:
 
