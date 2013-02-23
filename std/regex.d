@@ -657,12 +657,12 @@ private enum NEL = '\u0085', LS = '\u2028', PS = '\u2029';
 
 //test if a given string starts with hex number of maxDigit that's a valid codepoint
 //returns it's value and skips these maxDigit chars on success, throws on failure
-dchar parseUniHex(Char)(ref Char[] str, uint maxDigit)
+dchar parseUniHex(Char)(ref Char[] str, size_t maxDigit)
 {
     //std.conv.parse is both @system and bogus
     enforce(str.length >= maxDigit,"incomplete escape sequence");
     uint val;
-    for(int k=0; k<maxDigit; k++)
+    for(int k = 0; k < maxDigit; k++)
     {
         auto current = str[k];//accepts ascii only, so it's OK to index directly
         if('0' <= current && current <= '9')
@@ -764,7 +764,7 @@ auto memoizeExpr(string expr)()
         s.add(unicodeLu).add(unicodeLl).add(unicodeLt)
             .add(unicodeLo).add(unicodeLm);
     }
-    else if(ucmp(name,"LC") == 0 || ucmp(name,"Cased Letter")==0)
+    else if(ucmp(name,"LC") == 0 || ucmp(name,"Cased Letter") == 0)
     {
         s.add(unicodeLl).add(unicodeLu).add(unicodeLt);//Title case
     }
@@ -799,7 +799,8 @@ auto memoizeExpr(string expr)()
         auto range = assumeSorted!((x,y) => ucmp(x.name, y.name) < 0)(unicodeProperties);
         //creating empty Codepointset is a workaround
         auto eq = range.lowerBound(UnicodeProperty(cast(string)name,CodepointSet.init)).length;
-        enforce(eq!=range.length && ucmp(name,range[eq].name)==0,"invalid property name");
+        enforce(eq != range.length && ucmp(name,range[eq].name) == 0,
+            "invalid property name");
         s = range[eq].set.dup;
     }
 
@@ -811,7 +812,7 @@ auto memoizeExpr(string expr)()
 }
 
 //basic stack, just in case it gets used anywhere else then Parser
-@trusted struct Stack(T, bool CTFE=false)
+@trusted struct Stack(T, bool CTFE = false)
 {
     static if(!CTFE)
         Appender!(T[]) stack;//compiles but bogus at CTFE
@@ -963,7 +964,7 @@ struct Parser(R, bool CTFE=false)
     //parsing number with basic overflow check
     uint parseDecimal()
     {
-        uint r=0;
+        uint r = 0;
         while(ascii.isDigit(current))
         {
             if(r >= (uint.max/10))
@@ -1065,7 +1066,7 @@ struct Parser(R, bool CTFE=false)
                         if(__ctfe)
                         {
                             size_t ind;
-                            for(ind=0; ind <dict.length; ind++)
+                            for(ind = 0; ind < dict.length; ind++)
                                 if(t.name >= dict[ind].name)
                                     break;
                             insertInPlaceAlt(dict, ind, t);
@@ -1403,7 +1404,7 @@ struct Parser(R, bool CTFE=false)
 
     //CodepointSet operations relatively in order of priority
     enum Operator:uint {
-        Open=0, Negate,  Difference, SymDifference, Intersection, Union, None
+        Open = 0, Negate,  Difference, SymDifference, Intersection, Union, None
     };
 
     //parse unit of CodepointSet spec, most notably escape sequences and char ranges
@@ -1926,7 +1927,7 @@ struct Parser(R, bool CTFE=false)
         alias comparePropertyName ucmp;
         enum MAX_PROPERTY = 128;
         char[MAX_PROPERTY] result;
-        uint k=0;
+        uint k = 0;
         enforce(next());
         if(current == '{')
         {
@@ -2016,7 +2017,7 @@ private:
         if(flags & RegexOption.multiline)
             return;
     L_CheckLoop:
-        for(uint i=0; i<ir.length; i+=ir[i].length)
+        for(uint i = 0; i < ir.length; i += ir[i].length)
         {
             switch(ir[i].code)
             {
@@ -2050,7 +2051,7 @@ private:
         auto counterRange = FixedStack!uint(new uint[maxCounterDepth+1], -1);
         counterRange.push(1);
         ulong cumRange = 0;
-        for(uint i=0; i<ir.length; i+=ir[i].length)
+        for(uint i = 0; i < ir.length; i += ir[i].length)
         {
             if(ir[i].hotspot)
             {
