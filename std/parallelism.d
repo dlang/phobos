@@ -234,9 +234,8 @@ private template noUnsharedAliasing(T)
 private template isSafeTask(F)
 {
     enum bool isSafeTask =
-        ((functionAttributes!(F) & FunctionAttribute.safe) ||
-         (functionAttributes!(F) & FunctionAttribute.trusted)) &&
-        !(functionAttributes!F & FunctionAttribute.ref_) &&
+        (functionAttributes!F & (FunctionAttribute.safe | FunctionAttribute.trusted)) != 0 &&
+        (functionAttributes!F & FunctionAttribute.ref_) == 0 &&
         (isFunctionPointer!F || !hasUnsharedAliasing!F) &&
         allSatisfy!(noUnsharedAliasing, ParameterTypeTuple!F);
 }
@@ -248,13 +247,13 @@ unittest
     alias void function(uint, string) @trusted F3;
     alias void function(uint, char[]) F4;
 
-    static assert(isSafeTask!(F1));
+    static assert( isSafeTask!(F1));
     static assert(!isSafeTask!(F2));
-    static assert(isSafeTask!(F3));
+    static assert( isSafeTask!(F3));
     static assert(!isSafeTask!(F4));
 
     alias uint[] function(uint, string) pure @trusted F5;
-    static assert(isSafeTask!(F5));
+    static assert( isSafeTask!(F5));
 }
 
 // This function decides whether Tasks that meet all of the other requirements
@@ -371,11 +370,8 @@ private template isRoundRobin(T)
 
 unittest
 {
-    static assert(isRoundRobin!(
-        RoundRobinBuffer!(void delegate(char[]), bool delegate())
-    ));
-
-    static assert(!isRoundRobin!uint);
+    static assert( isRoundRobin!(RoundRobinBuffer!(void delegate(char[]), bool delegate())));
+    static assert(!isRoundRobin!(uint));
 }
 
 // This is the base "class" for all of the other tasks.  Using C-style
@@ -1413,8 +1409,7 @@ public:
         }
 
         immutable size_t eightSize = 4 * (this.size + 1);
-        auto ret = (rangeLen / eightSize) +
-                   ((rangeLen % eightSize == 0) ? 0 : 1);
+        auto ret = (rangeLen / eightSize) + ((rangeLen % eightSize == 0) ? 0 : 1);
         return max(ret, 1);
     }
 
@@ -1672,8 +1667,7 @@ public:
             }
             else
             {
-                auto buf = uninitializedArray!(MapType!(Args[0], functions)[])
-                           (len);
+                auto buf = uninitializedArray!(MapType!(Args[0], functions)[])(len);
                 alias args args2;
                 alias Args Args2;
             }
@@ -2332,15 +2326,13 @@ public:
     processes them is in queue.  This is checked for at compile time
     and will result in a static assertion failure.
     */
-    auto asyncBuf(C1, C2)
-    (C1 next, C2 empty, size_t initialBufSize = 0, size_t nBuffers = 100)
+    auto asyncBuf(C1, C2)(C1 next, C2 empty, size_t initialBufSize = 0, size_t nBuffers = 100)
     if(is(typeof(C2.init()) : bool) &&
         ParameterTypeTuple!(C1).length == 1 &&
         ParameterTypeTuple!(C2).length == 0 &&
         isArray!(ParameterTypeTuple!(C1)[0])
     ) {
-        auto roundRobin = RoundRobinBuffer!(C1, C2)
-        (next, empty, initialBufSize, nBuffers);
+        auto roundRobin = RoundRobinBuffer!(C1, C2)(next, empty, initialBufSize, nBuffers);
         return asyncBuf(roundRobin, nBuffers / 2);
     }
 
@@ -2455,8 +2447,7 @@ public:
                 }
                 else
                 {
-                    typeof(adjoin!(staticMap!(binaryFun, functions))(e, e))
-                    seed = void;
+                    typeof(adjoin!(staticMap!(binaryFun, functions))(e, e)) seed = void;
                     foreach (i, T; seed.Types)
                     {
                         auto p = (cast(void*) &seed.expand[i])
@@ -2501,8 +2492,7 @@ public:
             alias typeof(seed) E;
             alias typeof(range) R;
 
-            E reduceOnRange
-            (R range, size_t lowerBound, size_t upperBound)
+            E reduceOnRange(R range, size_t lowerBound, size_t upperBound)
             {
                 // This is for exploiting instruction level parallelism by
                 // using multiple accumulator variables within each thread,
@@ -2599,8 +2589,7 @@ public:
                 workUnitSize = len;
             }
 
-            immutable size_t nWorkUnits = (len / workUnitSize) +
-                                          ((len % workUnitSize == 0) ? 0 : 1);
+            immutable size_t nWorkUnits = (len / workUnitSize) + ((len % workUnitSize == 0) ? 0 : 1);
             assert(nWorkUnits * workUnitSize >= len);
 
             alias Task!(run, typeof(&reduceOnRange), R, size_t, size_t) RTask;
@@ -2769,9 +2758,8 @@ public:
     size_t workerIndex() @property @safe const nothrow
     {
         immutable rawInd = threadIndex;
-        return (rawInd >= instanceStartIndex &&
-        rawInd < instanceStartIndex + size) ?
-        (rawInd - instanceStartIndex + 1) : 0;
+        return (rawInd >= instanceStartIndex && rawInd < instanceStartIndex + size) ?
+                (rawInd - instanceStartIndex + 1) : 0;
     }
 
     /**
@@ -4386,8 +4374,7 @@ version(parallelismStressTest)
             {
                 foreach(j, number; poolInstance.parallel(nestedInner, 1))
                 {
-                    synchronized writeln
-                    (i, ": ", letter, "  ", j, ": ", number);
+                    synchronized writeln(i, ": ", letter, "  ", j, ": ", number);
                 }
             }
 
