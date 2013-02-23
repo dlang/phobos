@@ -113,7 +113,9 @@ private
     alias TypeTuple!(cfloat, cdouble, creal) ComplexTypeList;
     alias TypeTuple!(IntegralTypeList, FloatingPointTypeList) NumericTypeList;
     alias TypeTuple!(char, wchar, dchar) CharTypeList;
-
+}
+package
+{
     /* Get an expression typed as T, like T.init */
     template defaultInit(T)
     {
