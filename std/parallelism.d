@@ -3605,7 +3605,8 @@ enum string parallelApplyMixinInputRange = q{
 
         enum bool bufferTrick = true;
     }
-    else {
+    else
+    {
         enum bool bufferTrick = false;
     }
 
@@ -3770,7 +3771,8 @@ private void addToChain(
         lastException.next = e;
         lastException = findLastException(e);
     }
-    else {
+    else
+    {
         firstException = e;
         lastException = findLastException(e);
     }
@@ -4284,7 +4286,8 @@ unittest
 
     assertThrown!Exception(mapThrow());
 
-    struct ThrowingRange {
+    struct ThrowingRange
+    {
         @property int front()
         {
             return 1;
