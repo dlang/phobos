@@ -209,18 +209,18 @@ private template MapType(R, functions...)
 {
     static if(functions.length == 0)
     {
-        alias typeof(unaryFun!(functions[0])(ElementType!(R).init)) MapType;
+        alias typeof(unaryFun!(functions[0])(ElementType!R.init)) MapType;
     }
     else
     {
         alias typeof(adjoin!(staticMap!(unaryFun, functions))
-                     (ElementType!(R).init)) MapType;
+                     (ElementType!R.init)) MapType;
     }
 }
 
 private template ReduceType(alias fun, R, E)
 {
-    alias typeof(binaryFun!(fun)(E.init, ElementType!(R).init)) ReduceType;
+    alias typeof(binaryFun!fun(E.init, ElementType!R.init)) ReduceType;
 }
 
 private template noUnsharedAliasing(T)
@@ -247,13 +247,13 @@ unittest
     alias void function(uint, string) @trusted F3;
     alias void function(uint, char[]) F4;
 
-    static assert( isSafeTask!(F1));
-    static assert(!isSafeTask!(F2));
-    static assert( isSafeTask!(F3));
-    static assert(!isSafeTask!(F4));
+    static assert( isSafeTask!F1);
+    static assert(!isSafeTask!F2);
+    static assert( isSafeTask!F3);
+    static assert(!isSafeTask!F4);
 
     alias uint[] function(uint, string) pure @trusted F5;
-    static assert( isSafeTask!(F5));
+    static assert( isSafeTask!F5);
 }
 
 // This function decides whether Tasks that meet all of the other requirements
@@ -768,7 +768,7 @@ struct Task(alias fun, Args...)
 // Calls $(D fpOrDelegate) with $(D args).  This is an
 // adapter that makes $(D Task) work with delegates, function pointers and
 // functors instead of just aliases.
-ReturnType!(F) run(F, Args...)(F fpOrDelegate, ref Args args)
+ReturnType!F run(F, Args...)(F fpOrDelegate, ref Args args)
 {
     return fpOrDelegate(args);
 }
@@ -832,7 +832,7 @@ void parallelSort(T)(T[] data)
     greaterEqual = data[$ - greaterEqual.length..$];
 
     // Execute both recursion branches in parallel.
-    auto recurseTask = task!(parallelSort)(greaterEqual);
+    auto recurseTask = task!parallelSort(greaterEqual);
     taskPool.put(recurseTask);
     parallelSort(less);
     recurseTask.yieldForce;
@@ -1908,7 +1908,7 @@ public:
             }
             else
             {
-                alias ElementType!(S)[] FromType;
+                alias ElementType!S[] FromType;
 
                 // The temporary array that data is copied to before being
                 // mapped.
@@ -1995,7 +1995,7 @@ public:
                         return buf;
                     }
 
-                    pool.amap!(functions)(toMap, workUnitSize, buf);
+                    pool.amap!functions(toMap, workUnitSize, buf);
 
                     return buf;
                 }
@@ -2089,7 +2089,7 @@ public:
     $(D source) into a buffer of $(D bufSize) elements in a worker thread,
     while making prevously buffered elements from a second buffer, also of size
     $(D bufSize), available via the range interface of the returned
-    object.  The returned range has a length iff $(D hasLength!(S)).
+    object.  The returned range has a length iff $(D hasLength!S).
     $(D asyncBuf) is useful, for example, when performing expensive operations
     on the elements of ranges that represent data on a disk or network.
 
@@ -2148,7 +2148,7 @@ public:
             {
                 size_t _length;
 
-                // Available if hasLength!(S).
+                // Available if hasLength!S.
                 public @property size_t length() const pure nothrow @safe
                 {
                     return _length;
@@ -2328,9 +2328,9 @@ public:
     */
     auto asyncBuf(C1, C2)(C1 next, C2 empty, size_t initialBufSize = 0, size_t nBuffers = 100)
     if(is(typeof(C2.init()) : bool) &&
-        ParameterTypeTuple!(C1).length == 1 &&
-        ParameterTypeTuple!(C2).length == 0 &&
-        isArray!(ParameterTypeTuple!(C1)[0])
+        ParameterTypeTuple!C1.length == 1 &&
+        ParameterTypeTuple!C2.length == 0 &&
+        isArray!(ParameterTypeTuple!C1[0])
     ) {
         auto roundRobin = RoundRobinBuffer!(C1, C2)(next, empty, initialBufSize, nBuffers);
         return asyncBuf(roundRobin, nBuffers / 2);
@@ -2424,8 +2424,8 @@ public:
         ///
         auto reduce(Args...)(Args args)
         {
-            alias reduceAdjoin!(functions) fun;
-            alias reduceFinish!(functions) finishFun;
+            alias reduceAdjoin!functions fun;
+            alias reduceFinish!functions finishFun;
 
             static if(isIntegral!(Args[$ - 1]))
             {
@@ -2949,7 +2949,7 @@ public:
                 atomicSetUbyte(barrierDummy, 1);
             }
 
-            return WorkerLocalStorageRange!(T)(this);
+            return WorkerLocalStorageRange!T(this);
         }
     }
 
@@ -2973,7 +2973,7 @@ public:
         size_t _length;
         size_t beginOffset;
 
-        this(WorkerLocalStorage!(T) wl)
+        this(WorkerLocalStorage!T wl)
         {
             this.workerLocalStorage = wl;
             _length = wl.size;
@@ -3050,9 +3050,9 @@ public:
     create one instance of a class for each worker.  For usage example,
     see the $(D WorkerLocalStorage) struct.
      */
-    WorkerLocalStorage!(T) workerLocalStorage(T)(lazy T initialVal = T.init)
+    WorkerLocalStorage!T workerLocalStorage(T)(lazy T initialVal = T.init)
     {
-        WorkerLocalStorage!(T) ret;
+        WorkerLocalStorage!T ret;
         ret.initialize(this);
         foreach(i; 0..size + 1)
         {
@@ -3476,11 +3476,11 @@ int doSizeZeroCase(R, Delegate)(ref ParallelForeach!R p, Delegate dg)
 
         // The explicit ElementType!R in the foreach loops is necessary for
         // correct behavior when iterating over strings.
-        static if(hasLvalueElements!(R))
+        static if(hasLvalueElements!R)
         {
             foreach(ref ElementType!R elem; range)
             {
-                static if(ParameterTypeTuple!(dg).length == 2)
+                static if(ParameterTypeTuple!dg.length == 2)
                 {
                     res = dg(index, elem);
                 }
@@ -3496,7 +3496,7 @@ int doSizeZeroCase(R, Delegate)(ref ParallelForeach!R p, Delegate dg)
         {
             foreach(ElementType!R elem; range)
             {
-                static if(ParameterTypeTuple!(dg).length == 2)
+                static if(ParameterTypeTuple!dg.length == 2)
                 {
                     res = dg(index, elem);
                 }
@@ -3619,7 +3619,7 @@ enum string parallelApplyMixinInputRange = q{
 
         static if(hasLvalueElements!R)
         {
-            alias ElementType!(R)*[] Temp;
+            alias ElementType!R*[] Temp;
             Temp temp;
 
             // Returns:  The previous value of nPopped.
@@ -3627,7 +3627,7 @@ enum string parallelApplyMixinInputRange = q{
             {
                 if(temp is null)
                 {
-                    temp = uninitializedArray!(Temp)(workUnitSize);
+                    temp = uninitializedArray!Temp(workUnitSize);
                 }
 
                 rangeMutex.lock();
@@ -3649,7 +3649,7 @@ enum string parallelApplyMixinInputRange = q{
         else
         {
 
-            alias ElementType!(R)[] Temp;
+            alias ElementType!R[] Temp;
             Temp temp;
 
             // Returns:  The previous value of nPopped.
@@ -3657,7 +3657,7 @@ enum string parallelApplyMixinInputRange = q{
             {
                 if(temp is null)
                 {
-                    temp = uninitializedArray!(Temp)(workUnitSize);
+                    temp = uninitializedArray!Temp(workUnitSize);
                 }
 
                 rangeMutex.lock();
@@ -4400,7 +4400,7 @@ version(parallelismStressTest)
             assert(poolInstance.workerIndex() == 0);
 
             // Test worker-local storage.
-            auto workerLocalStorage = poolInstance.workerLocalStorage!(uint)(1);
+            auto workerLocalStorage = poolInstance.workerLocalStorage!uint(1);
             foreach(i; poolInstance.parallel(iota(0U, 1_000_000)))
             {
                 workerLocalStorage.get++;
