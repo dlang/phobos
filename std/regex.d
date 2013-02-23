@@ -338,7 +338,7 @@ int lengthOfPairedIR(IR i)
 //if the operation has a merge point (this relies on the order of the ops)
 bool hasMerge(IR i)
 {
-    return (i&0b11)==0b10 && i<=IR.RepeatQEnd;
+    return (i&0b11)==0b10 && i <= IR.RepeatQEnd;
 }
 
 //is an IR that opens a "group"
@@ -545,16 +545,16 @@ static assert(Bytecode.sizeof == 4);
 }
 
 //another pretty printer, writes out the bytecode of a regex and where the pc is
-@trusted void prettyPrint(Sink,Char=const(char))
-    (Sink sink, const(Bytecode)[] irb, uint pc=uint.max, int indent=3, size_t index=0)
+@trusted void prettyPrint(Sink,Char = const(char))
+    (Sink sink, const(Bytecode)[] irb, uint pc = uint.max, int indent = 3, size_t index = 0)
     if (isOutputRange!(Sink,Char))
 {//formattedWrite is @system
-    while(irb.length>0)
+    while(irb.length > 0)
     {
         formattedWrite(sink,"%3d",index);
-        if(pc==0 && irb[0].code!=IR.Char)
+        if(pc == 0 && irb[0].code!=IR.Char)
         {
-            for (int i=0;i<indent-2;++i)
+            for (int i = 0;i < indent-2;++i)
                 put(sink,"=");
             put(sink,"> ");
         }
@@ -562,35 +562,35 @@ static assert(Bytecode.sizeof == 4);
         {
             if(isEndIR(irb[0].code))
             {
-                indent-=2;
+                indent -= 2;
             }
-            if(indent>0)
+            if(indent > 0)
             {
                 string spaces="             ";
                 put(sink,spaces[0..(indent%spaces.length)]);
-                for (size_t i=indent/spaces.length;i>0;--i)
+                for (size_t i = indent/spaces.length;i > 0;--i)
                     put(sink,spaces);
             }
         }
-        if(irb[0].code==IR.Char)
+        if(irb[0].code == IR.Char)
         {
             put(sink,`"`);
-            int i=0;
+            int i = 0;
             do
             {
                 put(sink,cast(char[])([cast(dchar)irb[i].data]));
                 ++i;
-            } while(i<irb.length && irb[i].code==IR.Char);
+            } while(i < irb.length && irb[i].code == IR.Char);
             put(sink,"\"");
-            if(pc<i)
+            if(pc < i)
             {
                 put(sink,"\n");
-                for (int ii=indent+pc+1;ii>0;++ii)
+                for (int ii = indent+pc+1;ii > 0;++ii)
                     put(sink,"=");
                 put(sink,"^");
             }
-            index+=i;
-            irb=irb[i..$];
+            index += i;
+            irb = irb[i..$];
         }
         else
         {
@@ -598,9 +598,9 @@ static assert(Bytecode.sizeof == 4);
             put(sink,"(");
             formattedWrite(sink,"%d",irb[0].data);
             int nArgs= irb[0].args;
-            for(int iarg=0;iarg<nArgs;++iarg)
+            for(int iarg = 0;iarg < nArgs;++iarg)
             {
-                if(iarg+1<irb.length)
+                if(iarg+1 < irb.length)
                     formattedWrite(sink,",%d",irb[iarg+1].data);
                 else
                     put(sink,"*error* incomplete irb stream");
@@ -608,10 +608,10 @@ static assert(Bytecode.sizeof == 4);
             put(sink,")");
             if(isStartIR(irb[0].code))
             {
-                indent+=2;
+                indent += 2;
             }
-            index+=lengthOfIR(irb[0].code);
-            irb=irb[lengthOfIR(irb[0].code)..$];
+            index += lengthOfIR(irb[0].code);
+            irb = irb[lengthOfIR(irb[0].code)..$];
         }
         put(sink,"\n");
     }
@@ -862,7 +862,7 @@ template BasicElementOf(Range)
     alias Unqual!(ElementEncodingType!Range) BasicElementOf;
 }
 
-struct Parser(R, bool CTFE=false)
+struct Parser(R, bool CTFE = false)
     if (isForwardRange!R && is(ElementType!R : dchar))
 {
     enum infinite = ~0u;
@@ -1931,7 +1931,7 @@ struct Parser(R, bool CTFE=false)
         enforce(next());
         if(current == '{')
         {
-            while(k<MAX_PROPERTY && next() && current !='}' && current !=':')
+            while(k < MAX_PROPERTY && next() && current !='}' && current !=':')
                 if(current != '-' && current != ' ' && current != '_')
                     result[k++] = cast(char)ascii.toLower(current);
             enforce(k != MAX_PROPERTY, "invalid property name");
@@ -2103,7 +2103,7 @@ private:
     //IR code validator - proper nesting, illegal instructions, etc.
     @trusted void validate()
     {//@@@BUG@@@ text is @system
-        for(uint pc=0; pc<ir.length; pc+=ir[pc].length)
+        for(uint pc = 0; pc < ir.length; pc += ir[pc].length)
         {
             if(ir[pc].isStart || ir[pc].isEnd)
             {
@@ -2128,7 +2128,7 @@ private:
         writefln("PC\tINST\n");
         prettyPrint(delegate void(const(char)[] s){ write(s); },ir);
         writefln("\n");
-        for(uint i=0; i<ir.length; i+=ir[i].length)
+        for(uint i = 0; i < ir.length; i += ir[i].length)
         {
             writefln("%d\t%s ", i, disassemble(ir, i, dict));
         }
@@ -2194,7 +2194,7 @@ int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
             uint end = pc + len;
             if(re.ir[pc].data != front && re.ir[pc+1].data != front)
             {
-                for(pc = pc+2; pc<end; pc++)
+                for(pc = pc+2; pc < end; pc++)
                     if(re.ir[pc].data == front)
                         break;
                 if(pc == end)
@@ -2469,7 +2469,7 @@ private:
             tab[idx] &= ~mask;
         }
 
-        void set(alias setBits=setInvMask)(dchar ch)
+        void set(alias setBits = setInvMask)(dchar ch)
         {
             static if(charSize == 3)
             {
@@ -2489,7 +2489,7 @@ private:
                 Char[dchar.sizeof/Char.sizeof] buf;
                 uint tmask = mask;
                 size_t total = encode(buf, ch);
-                for(size_t i=0; i<total; i++, tmask<<=1)
+                for(size_t i = 0; i < total; i++, tmask<<=1)
                 {
                     static if(charSize == 1)
                         setBits(buf[i], tmask);
@@ -2590,7 +2590,7 @@ public:
                     uint end = t.pc + len;
                     uint[Bytecode.maxSequence] s;
                     uint numS;
-                    for(uint i = 0; i<len; i++)
+                    for(uint i = 0; i < len; i++)
                     {
                         auto x = charLen(re.ir[t.pc+i].data);
                         if(countUntil(s[0..numS], x) < 0)
@@ -2600,7 +2600,7 @@ public:
                     {
                         t.add(re.ir[i].data);
                     }
-                    for(uint i=0; i<numS; i++)
+                    for(uint i = 0; i < numS; i++)
                     {
                         auto tx = fork(t, t.pc + len, t.counter);
                         if(tx.idx + s[i] <= n_length)
@@ -2630,8 +2630,8 @@ public:
                             static immutable codeBounds = [0x0, 0x7F, 0x80, 0x7FF, 0x800, 0xFFFF, 0x10000, 0x10FFFF];
                         else //== 2
                             static immutable codeBounds = [0x0, 0xFFFF, 0x10000, 0x10FFFF];
-                        auto srange = assumeSorted!"a<=b"(set.ivals);
-                        for(uint i = 0; i<codeBounds.length/2; i++)
+                        auto srange = assumeSorted!"a <= b"(set.ivals);
+                        for(uint i = 0; i < codeBounds.length/2; i++)
                         {
                             auto start = srange.lowerBound(codeBounds[2*i]).length;
                             auto end = srange.lowerBound(codeBounds[2*i+1]).length;
@@ -2651,7 +2651,7 @@ public:
                             continue;
                         t.add(ch);
                     }
-                    for(uint i=0; i<numS; i++)
+                    for(uint i = 0; i < numS; i++)
                     {
                         auto tx =  fork(t, t.pc + IRL!(IR.CodepointSet), t.counter);
                         tx.advance(s[i]);
@@ -2809,7 +2809,7 @@ public:
                         state = (state<<1) | table[p[0]];
                         state = (state<<1) | table[p[1]];
                         state = (state<<1) | table[p[2]];
-                        p+=4;
+                        p += 4;
                     }
                     else
                     {
@@ -2850,7 +2850,7 @@ public:
                     if(!(state & limit))
                         return idx+i/Char.sizeof-length;
                 }
-                while(i<len)
+                while(i < len)
                 {
                     state = (state<<1) | table[p[i++]];
                     if(!(state & limit))
@@ -2870,7 +2870,7 @@ public:
     @system debug static void dump(uint[] table)
     {//@@@BUG@@@ writef(ln) is @system
         import std.stdio;
-        for(size_t i=0; i<table.length; i+=4)
+        for(size_t i = 0; i < table.length; i += 4)
         {
             writefln("%32b %32b %32b %32b",table[i], table[i+1], table[i+2], table[i+3]);
         }
@@ -2953,7 +2953,7 @@ struct Input(Char)
     size_t _index;
 
     //constructs Input object out of plain string
-    this(String input, size_t idx=0)
+    this(String input, size_t idx = 0)
     {
         _origin = input;
         _index = idx;
@@ -2969,7 +2969,7 @@ struct Input(Char)
         return true;
     }
     @property bool atEnd(){
-        return _index==_origin.length;
+        return _index == _origin.length;
     }
     bool search(Kickstart)(ref Kickstart kick, ref dchar res, ref size_t pos)
     {
@@ -3007,7 +3007,7 @@ struct Input(Char)
             res = _origin[0.._index].back;
             return true;
         }
-        @property atEnd(){ return _index==0 || _index==std.utf.strideBack(_origin, _index); }
+        @property atEnd(){ return _index == 0 || _index == std.utf.strideBack(_origin, _index); }
         @property auto loopBack(){   return Input(_origin, _index); }
 
         //support for backtracker engine, might not be present
@@ -3035,10 +3035,10 @@ struct StreamTester(Char)
     //adds the next chunk to the stream
     bool addNextChunk()
     {
-        if(splits.length<pos)
+        if(splits.length < pos)
         {
             ++pos;
-            if(pos<splits.length)
+            if(pos < splits.length)
             {
                 assert(splits[pos-1]<=splits[pos],"splits is not ordered");
                 stream.addChunk(allStr[splits[pos-1]..splits[pos]]);
@@ -3046,7 +3046,7 @@ struct StreamTester(Char)
             else
             {
                 stream.addChunk(allStr[splits[pos-1]..$]);
-                stream.hasEnd=true;
+                stream.hasEnd = true;
             }
             return true;
         }
@@ -3057,14 +3057,14 @@ struct StreamTester(Char)
     //constructs Input object out of plain string
     this(String input, size_t[] splits)
     {
-        allStr=input;
-        refStream=Input!(Char)(input,splits);
-        stream=new StreamCBuf!(Char)();
-        pos=0;
+        allStr = input;
+        refStream = Input!(Char)(input,splits);
+        stream = new StreamCBuf!(Char)();
+        pos = 0;
         if (splits.length) 
         {
             stream.addChunk(allStr);
-            stream.hasEnd=true;
+            stream.hasEnd = true;
         }
         else
             stream.addChunk(allStr[0..splits[0]]);
@@ -3073,7 +3073,7 @@ struct StreamTester(Char)
     //codepoint at current stream position
     bool nextChar(ref dchar res, ref size_t pos)
     {
-        bool ret=stream.nextChar(res,pos);
+        bool ret = stream.nextChar(res,pos);
         dchar refRes;
         size_t refPos;
         if(!res)
@@ -3086,10 +3086,10 @@ struct StreamTester(Char)
         }
         else
         {
-            bool refRet=refStream.nextChar(refRes,refPos);
-            enforce(refRet==ret,"stream contiinued past end");
-            enforce(refRes==res,"incorrect char "~res~" vs "~refRes);
-            enforce(refPos==(pos &~(255UL<<48)),"incorrect pos, string wans't normalized???");
+            bool refRet = refStream.nextChar(refRes,refPos);
+            enforce(refRet == ret,"stream contiinued past end");
+            enforce(refRes == res,"incorrect char "~res~" vs "~refRes);
+            enforce(refPos == (pos &~(255UL<<48)),"incorrect pos, string wans't normalized???");
             return true;
         }
     }
@@ -3102,14 +3102,14 @@ struct StreamTester(Char)
 
     bool search(Kickstart)(ref Kickstart kick, ref dchar res, ref ulong pos)
     {
-        bool ret=stream.search(kick,res,pos);
+        bool ret = stream.search(kick,res,pos);
         dchar refRes;
         size_t refPos;
         if(ret)
         {
-            bool refRet=refStream.search(kick,refRes,refPos);
+            bool refRet = refStream.search(kick,refRes,refPos);
             enforce(refRet,"stream found spurious kickstart match");
-            enforce(refRes==res,"stream found different kickstart match "~res~" vs "~refRes);
+            enforce(refRes == res,"stream found different kickstart match "~res~" vs "~refRes);
             enforce(refPos==(pos &~(255UL<<48)),"stream found different pos for kickstart match, non normalized input?: "~to!string(pos)~" vs "~to!string(refPos));
         }
         else if(hasEnd)
@@ -3136,19 +3136,19 @@ struct StreamTester(Char)
 
         this(Input!(Char).BackLooper refBacklooper,StreamCBuf!(Char).BackLooper backlooper)
         {
-            this.refBacklooper=refBacklooper;
-            this.backlooper=backlooper;
+            this.refBacklooper = refBacklooper;
+            this.backlooper = backlooper;
         }
         bool nextChar(ref dchar res,ref ulong pos)
         {
-            bool ret=backlooper.nextChar(res,pos);
+            bool ret = backlooper.nextChar(res,pos);
             if(ret)
             {
                 dchar refRes;
                 size_t refPos;
-                bool refRet=refBacklooper.nextChar(refRes,refPos);
+                bool refRet = refBacklooper.nextChar(refRes,refPos);
                 enforce(refRet,"stream backlooper goes back beyond start");
-                enforce(refRes==res,"stream backlooper has different char "~res~" vs "~refRes);
+                enforce(refRes == res,"stream backlooper has different char "~res~" vs "~refRes);
                 enforce(refPos==(pos &~(255UL<<48)),"stream backlooper has different pos: "~to!string(pos)~" vs "~to!string(refPos));
             }
             else if (refBacklooper.nextChar(refPos,refPos))
@@ -3208,7 +3208,7 @@ struct StreamTester(Char)
 +/
 template BacktrackingMatcher(bool CTregex)
 {
-    @trusted struct BacktrackingMatcher(Char, Stream=Input!Char)
+    @trusted struct BacktrackingMatcher(Char, Stream = Input!Char)
         if(is(Char : dchar))
     {
         alias Stream.DataIndex DataIndex;
@@ -3433,7 +3433,7 @@ template BacktrackingMatcher(bool CTregex)
                         uint end = pc + len;
                         if(re.ir[pc].data != front && re.ir[pc+1].data != front)
                         {
-                            for(pc = pc+2; pc<end; pc++)
+                            for(pc = pc+2; pc < end; pc++)
                                 if(re.ir[pc].data == front)
                                     break;
                             if(pc == end)
@@ -3873,7 +3873,7 @@ template BacktrackingMatcher(bool CTregex)
                         uint end = pc - len;
                         if(re.ir[pc].data != front && re.ir[pc-1].data != front)
                         {
-                            for(pc = pc-2; pc>end; pc--)
+                            for(pc = pc-2; pc > end; pc--)
                                 if(re.ir[pc].data == front)
                                     break;
                             if(pc == end)
@@ -4235,7 +4235,7 @@ template BacktrackingMatcher(bool CTregex)
     string s = "alias TypeTuple!(";
     if(S < E)
         s ~= to!string(S);
-    for(int i=S+1; i<E;i++)
+    for(int i = S+1; i < E;i++)
     {
         s ~= ", ";
         s ~= to!string(i);
@@ -4399,7 +4399,7 @@ struct CtContext
 
         }
         r = pieces[0];
-        for(uint i=1; i<pieces.length; i++)
+        for(uint i = 1; i < pieces.length; i++)
         {
             r.code ~= ctSub(`
                 case $$:
@@ -4548,7 +4548,7 @@ struct CtContext
 
     string ctQuickTest(Bytecode[] ir, int id)
     {
-        uint pc=0;
+        uint pc = 0;
         while(pc < ir.length && ir[pc].isAtom)
         {
             if(ir[pc].code == IR.GroupStart || ir[pc].code == IR.GroupEnd)
@@ -4605,7 +4605,7 @@ struct CtContext
                     if(atEnd)
                         $$`, bailOut);
             uint len = ir[0].sequence;
-            for(uint i = 0; i<len; i++)
+            for(uint i = 0; i < len; i++)
             {
                 code ~= ctSub( `
                     if(front == $$)
@@ -4768,7 +4768,7 @@ struct CtContext
             counter = 0;
             lastState = 0;
             auto start = s._index;`;
-        for(int i=0; i<nInfLoops; i++)
+        for(int i = 0; i < nInfLoops; i++)
             r ~= ctSub(`
             size_t tracker_$$;`, i);
         r ~= `
@@ -4825,7 +4825,7 @@ struct Thread(DataIndex)
 //head-tail singly-linked list
 struct ThreadList(DataIndex)
 {
-    Thread!DataIndex* tip=null, toe=null;
+    Thread!DataIndex* tip = null, toe = null;
     //add new thread to the start of list
     void insertFront(Thread!DataIndex* t)
     {
@@ -4892,7 +4892,7 @@ enum OneShot { Fwd, Bwd };
    Thomspon matcher does all matching in lockstep,
    never looking at the same char twice
 +/
-@trusted struct ThompsonMatcher(Char, Stream=Input!Char)
+@trusted struct ThompsonMatcher(Char, Stream = Input!Char)
     if(is(Char : dchar))
 {
     alias Stream.DataIndex DataIndex;
@@ -5502,7 +5502,7 @@ enum OneShot { Fwd, Bwd };
                       uint len = re.ir[t.pc].sequence;
                       uint end = t.pc + len;
                       static assert(IRL!(IR.OrChar) == 1);
-                      for(; t.pc<end; t.pc++)
+                      for(; t.pc < end; t.pc++)
                           if(re.ir[t.pc].data == front)
                               break;
                       if(t.pc != end)
@@ -5582,9 +5582,9 @@ enum OneShot { Fwd, Bwd };
         }
 
     }
-    enum uint RestartPc=uint.max;
+    enum uint RestartPc = uint.max;
     //match the input, evaluating IR without searching
-    MatchResult matchOneShot(OneShot direction)(Group!DataIndex[] matches, uint startPc=0)
+    MatchResult matchOneShot(OneShot direction)(Group!DataIndex[] matches, uint startPc = 0)
     {
         debug(fred_matching)
         {
@@ -5595,8 +5595,8 @@ enum OneShot { Fwd, Bwd };
             alias eval evalFn;
         else
             alias evalBack evalFn;
-        assert(clist == (ThreadList!DataIndex).init || startPc==RestartPc); // incorrect after a partial match
-        assert(nlist == (ThreadList!DataIndex).init || startPc==RestartPc);
+        assert(clist == (ThreadList!DataIndex).init || startPc == RestartPc); // incorrect after a partial match
+        assert(nlist == (ThreadList!DataIndex).init || startPc == RestartPc);
         static if(direction == OneShot.Fwd)
             startPc = startPc;
         else
@@ -6016,7 +6016,7 @@ enum OneShot { Fwd, Bwd };
                 case IR.OrChar://assumes IRL!(OrChar) == 1
                     uint len = re.ir[t.pc].sequence;
                     uint end = t.pc - len;
-                    for(; t.pc>end; t.pc--)
+                    for(; t.pc > end; t.pc--)
                         if(re.ir[t.pc].data == front)
                             break;
                     if(t.pc != end)
@@ -6106,7 +6106,7 @@ enum OneShot { Fwd, Bwd };
         memory = memory[threadSize*size..$];
         freelist = cast(Thread!DataIndex*)&mem[0];
         size_t i;
-        for(i=threadSize; i<threadSize*size; i+=threadSize)
+        for(i = threadSize; i < threadSize*size; i += threadSize)
             (cast(Thread!DataIndex*)&mem[i-threadSize]).next = cast(Thread!DataIndex*)&mem[i];
         (cast(Thread!DataIndex*)&mem[i-threadSize]).next = null;
     }
@@ -6143,7 +6143,7 @@ enum OneShot { Fwd, Bwd };
     }
 
     //creates a start thread
-    Thread!DataIndex* createStart(DataIndex index, uint pc=0)
+    Thread!DataIndex* createStart(DataIndex index, uint pc = 0)
     {
         auto t = allocate();
         t.matches.ptr[0..re.ngroup] = (Group!DataIndex).init;
@@ -6185,7 +6185,7 @@ enum OneShot { Fwd, Bwd };
     }
     ----
 +/
-@trusted public struct Captures(R, DIndex=size_t)
+@trusted public struct Captures(R, DIndex = size_t)
     if(isSomeString!R)
 {//@trusted because of union inside
     alias DIndex DataIndex;
@@ -6341,7 +6341,7 @@ unittest//verify example
     alias Engine specifies an engine type to use during matching,
     and is automatically deduced in a call to $(D match)/$(D bmatch).
 +/
-@trusted public struct RegexMatch(R, alias Engine=ThompsonMatcher)
+@trusted public struct RegexMatch(R, alias Engine = ThompsonMatcher)
     if(isSomeString!R)
 {
 private:
@@ -6635,7 +6635,7 @@ public auto bmatch(R, RegEx)(R input, RegEx re)
     assert(replace("noon", regex("^n"), "[$&]") == "[n]oon");
     ---
 +/
-public @trusted R replace(alias scheme=match, R, RegEx)(R input, RegEx re, R format)
+public @trusted R replace(alias scheme = match, R, RegEx)(R input, RegEx re, R format)
   if(isSomeString!R && isRegexFor!(RegEx, R))
 {
     auto app = appender!(R)();
@@ -6677,7 +6677,7 @@ public @trusted R replace(alias scheme=match, R, RegEx)(R input, RegEx re, R for
     assert(s == "StRAp A Rocket engine on A chicken.");
     ---
 +/
-public @trusted R replace(alias fun, R, RegEx, alias scheme=match)(R input, RegEx re)
+public @trusted R replace(alias fun, R, RegEx, alias scheme = match)(R input, RegEx re)
     if(isSomeString!R && isRegexFor!(RegEx, R))
 {
     auto app = appender!(R)();
@@ -6695,7 +6695,7 @@ public @trusted R replace(alias fun, R, RegEx, alias scheme=match)(R input, RegE
 
 //produce replacement string from format using captures for substitue
 public @trusted void replaceFmt(R, Capt, OutR)
-    (R format, Capt captures, OutR sink, bool ignoreBadSubs=false)
+    (R format, Capt captures, OutR sink, bool ignoreBadSubs = false)
     if(isOutputRange!(OutR, ElementEncodingType!R[]) &&
         isOutputRange!(OutR, ElementEncodingType!(Capt.String)[]))
 {
@@ -6774,7 +6774,7 @@ assert(equal(splitter(s1, regex(", *")),
     ["", "abc", "de", "fg", "hi", ""]));
 ----
 +/
-public struct Splitter(Range, alias RegEx=Regex)
+public struct Splitter(Range, alias RegEx = Regex)
     if(isSomeString!Range && isRegexFor!(RegEx, Range))
 {
 private:
@@ -7253,10 +7253,10 @@ unittest
     static string generate(uint n,uint[] black_list...)
     {
         string s = "TypeTuple!(";
-        for(uint i=0; i<n; i++)
+        for(uint i = 0; i < n; i++)
         {
             uint j;
-            for(j =0; j<black_list.length; j++)
+            for(j =0; j < black_list.length; j++)
                 if(i == black_list[j])
                     break;
             if(j == black_list.length)
@@ -7520,7 +7520,7 @@ else
             foreach(i, v; TypeTuple!(string, wstring, dstring))
             {
                 auto baz(Cap)(Cap m)
-                if (is(Cap==Captures!(Cap.String)))
+                if (is(Cap == Captures!(Cap.String)))
                 {
                     return std.string.toUpper(m.hit);
                 }
@@ -7618,7 +7618,7 @@ else
             auto r = regex(
                r"^NAME   = (?P<comp>[a-zA-Z0-9_]+):*(?P<blk>[a-zA-Z0-9_]*)","gm");
             auto uniCapturesNew = match(uniFileOld, r);
-            for(int i=0; i<20; i++)
+            for(int i = 0; i < 20; i++)
                 foreach (matchNew; uniCapturesNew) {}
     }
     unittest
