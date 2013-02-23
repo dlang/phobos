@@ -7725,6 +7725,95 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
 
 
     /++
+        Converts this $(D SysTime) to a string with the format used by
+        email message headers. Fractional seconds are truncated.
+
+        Time zone offsets will be in the form +HHMM or -HHMM.
+        
+        As required by $(WEB http://www.rfc-editor.org/rfc/rfc5322.txt, RFC 5322),
+        the year must be between 1900 and 9999, inclusive. If it isn't,
+        a $(D DateTimeException) will be thrown.
+        
+        The day of the week and the seconds can optionally be omitted.
+
+        Examples:
+--------------------
+assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()).toEmailString() ==
+       "Sun, 4 Jul 2010 07:06:12 +0000");
+
+assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
+               new SimpleTimeZone(hours(-5))).toEmailString() ==
+       "Fri, 25 Dec 1998 02:15:00 -0500");
+--------------------
+      +/
+
+    string toEmailString(bool useDayOfWeek=true, bool useSeconds=true) const
+    {
+        auto dt = cast(DateTime) this;
+
+        if(dt.year < 1900 || dt.year > 9999)
+            throw new DateTimeException("year must be between 1900 and 9999 inclusive");
+        
+        static immutable char[3][12] monthStrings     = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        static immutable char[3][ 7] dayOfWeekStrings = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+        auto tzOffset = timezone.utcOffsetAt(stdTime);
+        auto tzAbsOffset = abs(tzOffset);
+
+        return "%s%s%s %s %.4s %.2s:%.2s%s%.*s %s%.2s%.2s".format(
+            useDayOfWeek? dayOfWeekStrings[dayOfWeek] : "",
+            useDayOfWeek? ", " : "",
+            dt.day, monthStrings[dt.month - 1], dt.year,
+            dt.hour, dt.minute,
+            useSeconds? ":" : "",
+            useSeconds? 2 : 0, // Precision for next arg
+            useSeconds? dt.second : 0,
+            tzOffset < seconds(0)? "-" : "+",
+            tzAbsOffset.hours,
+            tzAbsOffset.minutes
+        );
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            _assertPred!"=="(SysTime(DateTime(9999, 7, 4, 23, 59, 59), UTC()).toEmailString(), "Sun, 4 Jul 9999 23:59:59 +0000");
+            _assertPred!"=="(SysTime(DateTime(9999, 7, 4, 23, 59, 59), FracSec.from!"hnsecs"(12), UTC()).toEmailString(), "Sun, 4 Jul 9999 23:59:59 +0000");
+
+            _assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 12, 12),
+                                     new SimpleTimeZone(dur!"minutes"(-360))).toEmailString(),
+                            "Fri, 21 Dec 2012 12:12:12 -0600");
+
+            _assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 12, 12),
+                                     new SimpleTimeZone(dur!"minutes"(420))).toEmailString(),
+                            "Fri, 21 Dec 2012 12:12:12 +0700");
+
+            //Test year validation
+            assertThrown!DateTimeException(SysTime(DateTime(1, 12, 4, 13, 44, 59), UTC()).toEmailString());
+            assertThrown!DateTimeException(SysTime(DateTime(1899, 12, 4, 13, 44, 59), UTC()).toEmailString());
+            assertThrown!DateTimeException(SysTime(DateTime(10000, 12, 4, 13, 44, 59), UTC()).toEmailString());
+            assertThrown!DateTimeException(SysTime(DateTime(-1999, 12, 4, 13, 44, 59), UTC()).toEmailString());
+            assertNotThrown!DateTimeException(SysTime(DateTime(1900, 12, 4, 13, 44, 59), UTC()).toEmailString());
+            assertNotThrown!DateTimeException(SysTime(DateTime(9999, 12, 4, 13, 44, 59), UTC()).toEmailString());
+            
+            //Test omissions
+            _assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 13, 14), UTC()).toEmailString(false), "21 Dec 2012 12:13:14 +0000");
+            _assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 13, 14), UTC()).toEmailString(true, false), "Fri, 21 Dec 2012 12:13 +0000");
+            _assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 13, 14), UTC()).toEmailString(false, false), "21 Dec 2012 12:13 +0000");
+            
+            //Verify Examples.
+            assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()).toEmailString() ==
+                   "Sun, 4 Jul 2010 07:06:12 +0000");
+
+            assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
+                           new SimpleTimeZone(hours(-5))).toEmailString() ==
+                   "Fri, 25 Dec 1998 02:15:00 -0500");
+        }
+    }
+
+    /++
         Converts this $(D SysTime) to a string with the format
         YYYYMMDDTHHMMSS.FFFFFFFTZ (where F is fractional seconds and TZ is time
         zone).
