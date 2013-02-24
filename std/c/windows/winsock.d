@@ -12,8 +12,8 @@ private import std.c.windows.windows;
 
 extern(Windows):
 
-alias int  SOCKET;
-alias uint socklen_t;
+alias size_t SOCKET;
+alias int    socklen_t;
 
 const SOCKET INVALID_SOCKET = cast(SOCKET)~0;
 const int SOCKET_ERROR = -1;
