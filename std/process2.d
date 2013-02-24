@@ -781,10 +781,20 @@ final class Pid
         {
             int status;
             auto check = waitpid(_processID, &status, 0);
-            if (check == -1  &&  errno == ECHILD)
+            if (check == -1)
             {
-                throw new ProcessException(
-                    "Process does not exist or is not a child process.");
+                if (errno == ECHILD)
+                {
+                    throw new ProcessException(
+                        "Process does not exist or is not a child process.");
+                }
+                else
+                {
+                    // waitpid() was interrupted by a signal.  We simply
+                    // restart it.
+                    assert (errno == EINTR);
+                    continue;
+                }
             }
             if (WIFEXITED(status))
             {
