@@ -771,16 +771,28 @@ final class Pid
         return _processID;
     }
 
-    // See module-level wait() for documentation.
+private:
+    /*
+    Pid.performWait() does the dirty work for wait() and nonBlockingWait().
+
+    If block == true, this function blocks until the process terminates,
+    sets _processID to terminated, and returns the exit code or terminating
+    signal as described in the wait() documentation.
+
+    If block == false, this function returns immediately, regardless
+    of the status of the process.  If the process has terminated, the
+    function has the exact same effect as the blocking version.  If not,
+    it returns 0 and does not modify _processID.
+    */
     version (Posix)
-    int wait() @trusted
+    int performWait(bool block) @trusted
     {
         if (_processID == terminated) return _exitCode;
         int exitCode;
         while(true)
         {
             int status;
-            auto check = waitpid(_processID, &status, 0);
+            auto check = waitpid(_processID, &status, block ? 0 : WNOHANG);
             if (check == -1)
             {
                 if (errno == ECHILD)
@@ -796,6 +808,7 @@ final class Pid
                     continue;
                 }
             }
+            if (!block && check == 0) return 0;
             if (WIFEXITED(status))
             {
                 exitCode = WEXITSTATUS(status);
@@ -806,6 +819,11 @@ final class Pid
                 exitCode = -WTERMSIG(status);
                 break;
             }
+            // We check again whether the call should be blocking,
+            // since we don't care about other status changes besides
+            // "exited" and "terminated by signal".
+            if (!block) return 0;
+
             // Process has stopped, but not terminated, so we continue waiting.
         }
         // Mark Pid as terminated, and cache and return exit code.
@@ -815,21 +833,22 @@ final class Pid
     }
     else version (Windows)
     {
-        int wait() @trusted
+        int performWait(bool block) @trusted
         {
             if (_processID == terminated) return _exitCode;
-            if(_handle != INVALID_HANDLE_VALUE)
+            assert (_handle != INVALID_HANDLE_VALUE);
+            if (block)
             {
                 auto result = WaitForSingleObject(_handle, INFINITE);
                 if (result != WAIT_OBJECT_0)
                     throw ProcessException.newFromLastError("Wait failed.");
-                // the process has exited, get the return code
-                if (!GetExitCodeProcess(_handle, cast(LPDWORD)&_exitCode))
-                    throw ProcessException.newFromLastError();
-                CloseHandle(_handle);
-                _handle = INVALID_HANDLE_VALUE;
-                _processID = terminated;
             }
+            if (!GetExitCodeProcess(_handle, cast(LPDWORD)&_exitCode))
+                throw ProcessException.newFromLastError();
+            if (!block && _exitCode == STILL_ACTIVE) return 0;
+            CloseHandle(_handle);
+            _handle = INVALID_HANDLE_VALUE;
+            _processID = terminated;
             return _exitCode;
         }
 
@@ -843,7 +862,6 @@ final class Pid
         }
     }
 
-private:
     // Special values for _processID.
     enum invalid = -1, terminated = -2;
 
@@ -906,7 +924,32 @@ See the $(LREF spawnProcess) documentation.
 int wait(Pid pid) @safe
 {
     assert(pid !is null, "Called wait on a null Pid.");
-    return pid.wait();
+    return pid.performWait(true);
+}
+
+
+/**
+A non-blocking version of $(LREF wait).
+
+If the process associated with $(D pid) has already terminated,
+$(D _nonBlockingWait) has the exact same effect as $(LREF wait).
+In this case, it returns a tuple where the $(D terminated) field
+is set to $(D true) and the $(D status) field has the same
+interpretation as the return value of $(LREF wait).
+
+If the process has $(I not) yet terminated, this function differs
+from $(LREF wait) in that it returns immediately also in this case.
+The $(D terminated) field of the returned tuple will then be set
+to $(D false), while the $(D status) field will always be 0 (zero).
+
+Throws:
+$(LREF ProcessException) on failure.
+*/
+Tuple!(bool, "terminated", int, "status") nonBlockingWait(Pid pid) @safe
+{
+    assert(pid !is null, "Called nonBlockingWait on a null Pid.");
+    auto code = pid.performWait(false);
+    return typeof(return)(pid._processID == pid.terminated, code);
 }
 
 
@@ -988,29 +1031,32 @@ void kill(Pid pid, int codeOrSignal)
     }
 }
 
-version (Posix) unittest
+unittest
 {
-    import core.sys.posix.signal: SIGTERM, SIGKILL;
-    TestScript prog = "while true; do; done"; // Infinite loop
+    // The test script goes into an infinite loop.
+    version (Windows)
+    {
+        TestScript prog = "loop:
+                           goto loop";
+    }
+    else version (Posix)
+    {
+        import core.sys.posix.signal: SIGTERM, SIGKILL;
+        TestScript prog = "while true; do; done";
+    }
     auto pid = spawnProcess(prog.path);
     kill(pid);
-    assert (wait(pid) == -SIGTERM);
-    pid = spawnProcess(prog.path);
-    kill(pid, SIGKILL);
-    assert (wait(pid) == -SIGKILL);
-}
+    version (Windows)    assert (wait(pid) == 1);
+    else version (Posix) assert (wait(pid) == -SIGTERM);
 
-version (Windows) unittest
-{
-    TestScript prog =
-       "loop:
-        goto loop";
-    auto pid = spawnProcess(prog.path);
-    kill(pid);
-    assert (wait(pid) == 1);
     pid = spawnProcess(prog.path);
-    kill(pid, 123);
-    assert (wait(pid) == 123);
+    auto s = nonBlockingWait(pid);
+    assert (s.terminated == false && s.status == 0);
+    version (Windows)    kill(pid, 123);
+    else version (Posix) kill(pid, SIGKILL);
+    do { s = nonBlockingWait(pid); } while (!s.terminated);
+    version (Windows)    assert (s.status == 123);
+    else version (Posix) assert (s.status == -SIGKILL);
 }
 
 
