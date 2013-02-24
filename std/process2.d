@@ -956,7 +956,7 @@ Tuple!(bool, "terminated", int, "status") nonBlockingWait(Pid pid) @safe
 /**
 Attempts to terminate the process associated with $(D pid).
 
-The the effect of this function, as well as the meaning of $(D codeOrSignal),
+The effect of this function, as well as the meaning of $(D codeOrSignal),
 is highly platform dependent.  Details are given below.  Common to all
 platforms is that this function only $(I initiates) termination of the process,
 and returns immediately.  It does not wait for the process to end,
