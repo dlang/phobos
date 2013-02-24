@@ -997,7 +997,10 @@ The process will be
 $(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/ms686714%28v=vs.100%29.aspx,
 forcefully and abruptly terminated).  If $(D codeOrSignal) is specified, it
 will be used as the exit code of the process.  If not, the process wil exit
-with code 1.
+with code 1.  Do not use $(D codeOrSignal = 259), as this is a special value
+(aka. $(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/ms683189.aspx,
+STILL_ACTIVE)) used by Windows to signal that a process has in fact $(I not)
+terminated yet.
 ---
 auto pid = spawnProcess("some_app");
 kill(pid, 10);
