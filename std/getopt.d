@@ -785,3 +785,12 @@ unittest
     getopt(args, "t", &foo);
     assert(foo == ["a":1]);
 }
+
+unittest
+{
+    // From bugzilla 9583
+    int opt;
+    auto args = ["prog", "--opt=123", "--", "--a", "--b", "--c"];
+    getopt(args, "opt", &opt);
+    assert(args == ["prog", "--a", "--b", "--c"]);
+}
