@@ -39,7 +39,7 @@ public import std.path;
 public import std.perf;
 public import std.process;
 public import std.random;
-public import std.regexp;
+public import std.regex;
 public import std.signals;
 //public import std.slist;
 public import std.socket;
@@ -82,7 +82,7 @@ else
     std.conv.to!double("1.0");          // std.conv
     OutBuffer b = new OutBuffer();      // outbuffer
     std.ctype.tolower('A');             // ctype
-    RegExp r = new RegExp(null, null);  // regexp
+    auto r = regex("");                 // regex
     uint ranseed = std.random.unpredictableSeed;
     thisTid;
     int a[];
