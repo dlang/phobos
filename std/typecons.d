@@ -353,13 +353,7 @@ private:
         }
     }
 
-    template defaultInit(T)
-    {
-        static if (!is(typeof({ T v = void; })))    // inout(U) and others
-            @property T defaultInit(T v = T.init);
-        else
-            @property T defaultInit();
-    }
+    import std.traits : defaultInit;
     template isCompatibleTuples(Tup1, Tup2, string op)
     {
         enum isCompatibleTuples = is(typeof(
