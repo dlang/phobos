@@ -949,7 +949,7 @@ Tuple!(bool, "terminated", int, "status") nonBlockingWait(Pid pid) @safe
 {
     assert(pid !is null, "Called nonBlockingWait on a null Pid.");
     auto code = pid.performWait(false);
-    return typeof(return)(pid._processID == pid.terminated, code);
+    return typeof(return)(pid._processID == Pid.terminated, code);
 }
 
 
@@ -1051,7 +1051,7 @@ unittest
 
     pid = spawnProcess(prog.path);
     auto s = nonBlockingWait(pid);
-    assert (s.terminated == false && s.status == 0);
+    assert (!s.terminated && s.status == 0);
     version (Windows)    kill(pid, 123);
     else version (Posix) kill(pid, SIGKILL);
     do { s = nonBlockingWait(pid); } while (!s.terminated);
