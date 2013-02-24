@@ -398,14 +398,19 @@ private void getoptImpl(T...)(ref string[] args,
     else
     {
         // no more options to look for, potentially some arguments left
-        foreach (a ; args[1 .. $]) {
+        foreach (i, a ; args[1 .. $]) {
             if (!a.length || a[0] != optionChar)
             {
                 // not an option
                 if (cfg.stopOnFirstNonOption) break;
                 continue;
             }
-            if (endOfOptions.length && a == endOfOptions) break;
+            if (endOfOptions.length && a == endOfOptions)
+            {
+                // Consume the "--"
+                args = args[0 .. i + 1] ~ args[i + 2 .. $];
+                break;
+            }
             if (!cfg.passThrough)
             {
                 throw new Exception("Unrecognized option "~a);
