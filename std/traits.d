@@ -3598,14 +3598,10 @@ template ImplicitConversionTargets(T)
     else static if (is(T : typeof(null)))
         alias TypeTuple!(typeof(null)) ImplicitConversionTargets;
     else static if(is(T : Object))
-        alias TransitiveBaseTypeTuple!T ImplicitConversionTargets;
-    // @@@BUG@@@ this should work
-    // else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
-    //     alias TypeTuple!(const(typeof(T.init[0]))[]) ImplicitConversionTargets;
-    else static if (is(T == char[]))
-        alias TypeTuple!(const(char)[]) ImplicitConversionTargets;
+        alias TransitiveBaseTypeTuple!(T) ImplicitConversionTargets;
     else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
-        alias TypeTuple!(const(typeof(T.init[0]))[]) ImplicitConversionTargets;
+        alias ImplicitConversionTargets =
+            TypeTuple!(const(Unqual!(typeof(T.init[0])))[]);
     else static if (is(T : void*))
         alias TypeTuple!(void*) ImplicitConversionTargets;
     else
@@ -3614,7 +3610,8 @@ template ImplicitConversionTargets(T)
 
 unittest
 {
-    assert(is(ImplicitConversionTargets!double[0] == real));
+    static assert(is(ImplicitConversionTargets!(double)[0] == real));
+    static assert(is(ImplicitConversionTargets!(string)[0] == const(char)[]));
 }
 
 /**
