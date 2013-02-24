@@ -920,6 +920,9 @@ $(LREF ProcessException) on failure.
 
 Examples:
 See the $(LREF spawnProcess) documentation.
+
+See_also:
+$(LREF tryWait), for a non-blocking function.
 */
 int wait(Pid pid) @safe
 {
@@ -932,22 +935,46 @@ int wait(Pid pid) @safe
 A non-blocking version of $(LREF wait).
 
 If the process associated with $(D pid) has already terminated,
-$(D _nonBlockingWait) has the exact same effect as $(LREF wait).
+$(D tryWait) has the exact same effect as $(LREF wait).
 In this case, it returns a tuple where the $(D terminated) field
 is set to $(D true) and the $(D status) field has the same
 interpretation as the return value of $(LREF wait).
 
 If the process has $(I not) yet terminated, this function differs
-from $(LREF wait) in that it returns immediately also in this case.
-The $(D terminated) field of the returned tuple will then be set
-to $(D false), while the $(D status) field will always be 0 (zero).
+from $(D wait) in that does not wait for this to happen, but instead
+returns immediately.  The $(D terminated) field of the returned
+tuple will then be set to $(D false), while the $(D status) field
+will always be 0 (zero).  $(D wait) or $(D tryWait) should then be
+called again at some later time on the same $(D Pid); not only to
+get the exit code, but also to avoid the process becoming a "zombie"
+when it finally terminates.  (See $(LREF wait) for details).
 
 Throws:
 $(LREF ProcessException) on failure.
-*/
-Tuple!(bool, "terminated", int, "status") nonBlockingWait(Pid pid) @safe
+
+Example:
+---
+auto pid = spawnProcess("dmd myapp.d");
+scope(exit) wait(pid);
+...
+auto dmd = tryWait(pid);
+if (dmd.terminated)
 {
-    assert(pid !is null, "Called nonBlockingWait on a null Pid.");
+    if (dmd.status == 0) writeln("Compilation succeeded!");
+    else writeln("Compilation failed");
+}
+else writeln("Still compiling...");
+...
+---
+Note that in this example, the first $(D wait) call will have no
+effect if the process has already terminated by the time $(D tryWait)
+is called.  In the opposite case, however, the $(D scope) statement
+ensures that we always wait for the process if it hasn't terminated
+by the time we reach the end of the scope.
+*/
+Tuple!(bool, "terminated", int, "status") tryWait(Pid pid) @safe
+{
+    assert(pid !is null, "Called tryWait on a null Pid.");
     auto code = pid.performWait(false);
     return typeof(return)(pid._processID == Pid.terminated, code);
 }
@@ -1050,11 +1077,11 @@ unittest
     else version (Posix) assert (wait(pid) == -SIGTERM);
 
     pid = spawnProcess(prog.path);
-    auto s = nonBlockingWait(pid);
+    auto s = tryWait(pid);
     assert (!s.terminated && s.status == 0);
     version (Windows)    kill(pid, 123);
     else version (Posix) kill(pid, SIGKILL);
-    do { s = nonBlockingWait(pid); } while (!s.terminated);
+    do { s = tryWait(pid); } while (!s.terminated);
     version (Windows)    assert (s.status == 123);
     else version (Posix) assert (s.status == -SIGKILL);
 }
