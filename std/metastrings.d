@@ -1,26 +1,30 @@
 // Written in the D programming language.
 
 /**
+$(RED Deprecated. It will be removed in March 2014.
+      Please use $(XREF string, format), $(XREF conv, to), or
+      $(XREF conv, parse) instead of these templates (which one would depend on
+      which template is being replaced.) They now work in CTFE, and these
+      templates are very inefficient.)
+
 Templates with which to do compile-time manipulation of strings.
 
 Macros:
  WIKI = Phobos/StdMetastrings
 
-Copyright: Copyright Digital Mars 2007 - 2009.
+Copyright: Copyright Digital Mars 2007 - 2013.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors:   $(WEB digitalmars.com, Walter Bright),
            Don Clugston
 Source:    $(PHOBOSSRC std/_metastrings.d)
 */
-/*
-         Copyright Digital Mars 2007 - 2009.
-Distributed under the Boost Software License, Version 1.0.
-   (See accompanying file LICENSE_1_0.txt or copy at
-         http://www.boost.org/LICENSE_1_0.txt)
- */
 module std.metastrings;
 
 /**
+$(RED Deprecated.
+     Please use $(XREF string, format) instead. It now works in CTFE,
+     and this template is very inefficient.)
+
 Formats constants into a string at compile time.  Analogous to $(XREF
 string,format).
 
@@ -45,6 +49,7 @@ void main()
  * ---
  */
 
+deprecated("std.string.format now works in CTFE. Please use it instead.")
 template Format(A...)
 {
     static if (A.length == 0)
@@ -55,6 +60,7 @@ template Format(A...)
         enum Format = toStringNow!(A[0]) ~ Format!(A[1..$]);
 }
 
+deprecated("std.string.format now works in CTFE. Please use it instead.")
 template FormatString(const(char)[] F, A...)
 {
     static if (F.length == 0)
@@ -80,9 +86,14 @@ unittest
 }
 
 /**
+ * $(RED Deprecated.
+ *       Please use $(XREF conv, format) instead. It now works in CTFE,
+ *       and this template is very inefficient.)
+ *
  * Convert constant argument to a string.
  */
 
+deprecated("std.conv.to now works in CTFE. Please use it instead.")
 template toStringNow(ulong v)
 {
     static if (v < 10)
@@ -97,6 +108,7 @@ unittest
 }
 
 /// ditto
+deprecated("std.conv.to!string now works in CTFE. Please use it instead.")
 template toStringNow(long v)
 {
     static if (v < 0)
@@ -112,30 +124,35 @@ unittest
 }
 
 /// ditto
+deprecated("std.conv.to!string now works in CTFE. Please use it instead.")
 template toStringNow(uint U)
 {
     enum toStringNow = toStringNow!(cast(ulong)U);
 }
 
 /// ditto
+deprecated("std.conv.to!string now works in CTFE. Please use it instead.")
 template toStringNow(int I)
 {
     enum toStringNow = toStringNow!(cast(long)I);
 }
 
 /// ditto
+deprecated("std.conv.to!string now works in CTFE. Please use it instead.")
 template toStringNow(bool B)
 {
     enum toStringNow = B ? "true" : "false";
 }
 
 /// ditto
+deprecated("std.conv.to!string now works in CTFE. Please use it instead.")
 template toStringNow(string S)
 {
     enum toStringNow = S;
 }
 
 /// ditto
+deprecated("std.conv.to!string now works in CTFE. Please use it instead.")
 template toStringNow(char C)
 {
     enum toStringNow = "" ~ C;
@@ -143,6 +160,10 @@ template toStringNow(char C)
 
 
 /********
+ * $(RED Deprecated.
+ *       Please use $(XREF conv, parse) instead. It now works in CTFE,
+ *       and this template is very inefficient.)
+ *
  * Parse unsigned integer literal from the start of string s.
  * returns:
  *    .value = the integer literal as a string,
@@ -152,6 +173,7 @@ template toStringNow(char C)
  *    .rest = s
  */
 
+deprecated("to!string(std.conv.parse!uint(value)) now works in CTFE. Please use it instead.")
 template parseUinteger(const(char)[] s)
 {
     static if (s.length == 0)
@@ -172,6 +194,10 @@ template parseUinteger(const(char)[] s)
 }
 
 /********
+$(RED Deprecated.
+      Please use $(XREF conv, parse) instead. It now works in CTFE,
+      and this template is very inefficient.)
+
 Parse integer literal optionally preceded by $(D '-') from the start
 of string $(D s).
 
@@ -184,6 +210,7 @@ Otherwise:
    .rest = s
 */
 
+deprecated("to!string(std.conv.parse!int(value)) now works in CTFE. Please use it instead.")
 template parseInteger(const(char)[] s)
 {
     static if (s.length == 0)
