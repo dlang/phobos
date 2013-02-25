@@ -211,7 +211,7 @@ private:
             // no need to copy the data (it's garbage)
             break;
         case OpID.compare:
-            auto rhs = cast(VariantN *) parm;
+            auto rhs = cast(const VariantN *) parm;
             return rhs.peek!(A)
                 ? 0 // all uninitialized are equal
                 : ptrdiff_t.min; // uninitialized variant is not comparable otherwise
@@ -595,7 +595,7 @@ public:
      * assert(a == 6);
      * ----
      */
-    @property T * peek(T)()
+    @property inout T * peek(T)() inout
     {
         static if (!is(T == void))
             static assert(allowed!(T), "Cannot store a " ~ T.stringof
@@ -771,13 +771,14 @@ public:
      */
 
     // returns 1 if the two are equal
-    bool opEquals(T)(T rhs)
+    bool opEquals(T)(auto ref T rhs) const
     {
-        static if (is(T == VariantN))
+        static if (is(Unqual!T == VariantN))
             alias rhs temp;
         else
             auto temp = VariantN(rhs);
-        return fptr(OpID.compare, &store, &temp) == 0;
+        return !fptr(OpID.compare, cast(ubyte[size]*) &store,
+                     cast(void*) &temp);
     }
 
     /**
@@ -1871,3 +1872,12 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
     assert(false);
 }
 
+unittest
+{
+    // http://d.puremagic.com/issues/show_bug.cgi?id=5310
+    const Variant a;
+    assert(a == a);
+    Variant b;
+    assert(a == b);
+    assert(b == a);
+}
