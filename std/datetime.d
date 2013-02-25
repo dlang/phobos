@@ -115,7 +115,6 @@ import std.exception;
 import std.file;
 import std.functional;
 import std.math;
-import std.metastrings;
 import std.path;
 import std.range;
 import std.stdio;

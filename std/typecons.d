@@ -45,7 +45,7 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
 module std.typecons;
 import core.memory, core.stdc.stdlib;
 import std.algorithm, std.array, std.conv, std.exception, std.format,
-    std.metastrings, std.string, std.traits, std.typetuple, std.range;
+    std.string, std.traits, std.typetuple, std.range;
 
 debug(Unique) import std.stdio;
 
@@ -2368,7 +2368,7 @@ private static:
                 // The generated function declarations may hide existing ones
                 // in the base class (cf. HiddenFuncError), so we put an alias
                 // declaration here to reveal possible hidden functions.
-                code ~= Format!("alias %s.%s %s;\n",
+                code ~= format("alias %s.%s %s;\n",
                             Policy.BASE_CLASS_ID, // [BUG 2540] super.
                             oset.name, oset.name );
             }
@@ -2410,6 +2410,8 @@ private static:
             enum atts     = functionAttributes!(func);
             enum realName = isCtor ? "this" : name;
 
+            // FIXME?? Make it so that these aren't CTFE funcs any more, since
+            // Format is deprecated, and format works at compile time?
             /* Made them CTFE funcs just for the sake of Format!(...) */
 
             // return type with optional "ref"
@@ -2453,7 +2455,7 @@ private static:
             //
             if (isAbstractFunction!func)
                 code ~= "override ";
-            code ~= Format!("extern(%s) %s %s(%s) %s %s\n",
+            code ~= format("extern(%s) %s %s(%s) %s %s\n",
                     functionLinkage!(func),
                     returnType,
                     realName,
