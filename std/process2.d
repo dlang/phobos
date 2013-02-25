@@ -262,7 +262,7 @@ auto file = File("dfiles.txt", "w");
 auto lsPid = spawnProcess("ls -l", stdin, p.writeEnd);
 scope(exit) wait(lsPid);
 
-auto grPid = spawnProcess(`grep '\.d$'`, p.readEnd, file);
+auto grPid = spawnProcess(`grep \.d$`, p.readEnd, file);
 scope(exit) wait(grPid);
 ---
 Open a set of files in LibreOffice Writer, and make it print
