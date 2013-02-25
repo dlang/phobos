@@ -9056,7 +9056,8 @@ corresponding $(D sort), but $(D schwartzSort) evaluates $(D
 transform) only $(D r.length) times (less than half when compared to
 regular sorting). The usage can be best illustrated with an example.
 
-Examples:
+Example:
+
 ----
 uint hashFun(string) { ... expensive computation ... }
 string[] array = ...;
@@ -9076,51 +9077,24 @@ To check whether an array was sorted and benefit of the speedup of
 Schwartz sorting, a function $(D schwartzIsSorted) is not provided
 because the effect can be achieved by calling $(D
 isSorted!less(map!transform(r))).
-
-Returns: The initial range wrapped as a $(D SortedRange) with the
-predicate $(D (a, b) => binaryFun!less(transform(a),
-transform(b))).
  */
-SortedRange!(R, ((a, b) => binaryFun!less(transform(a), transform(b))))
-schwartzSort(alias transform, alias less = "a < b",
-        SwapStrategy ss = SwapStrategy.unstable, R)(R r)
-    if (isRandomAccessRange!R && hasLength!R)
+void schwartzSort(alias transform, alias less = "a < b",
+        SwapStrategy ss = SwapStrategy.unstable, Range)(Range r)
+    if (isRandomAccessRange!(Range) && hasLength!(Range))
 {
-    import core.stdc.stdlib;
-    alias T = typeof(transform(r.front));
-    auto xform1 = (cast(T*) malloc(r.length * T.sizeof))[0 .. r.length];
-    size_t length;
-    scope(exit)
+    alias typeof(transform(r.front)) XformType;
+    auto xform = new XformType[r.length];
+    foreach (i, e; r)
     {
-        static if (hasElaborateDestructor!T)
-        {
-            foreach (i; 0 .. length) collectException(destroy(xform1[i]));
-        }
-        free(xform1);
+        xform[i] = transform(e);
     }
-    for (; length != r.length; ++length)
+    auto z = zip(xform, r);
+    alias typeof(z.front) ProxyType;
+    bool myLess(ProxyType a, ProxyType b)
     {
-        emplace(xform1.ptr + length, transform(r[length]));
+        return binaryFun!less(a[0], b[0]);
     }
-    // Make sure we use ubyte[] and ushort[], not char[] and wchar[]
-    // for the intermediate array, lest zip gets confused.
-    static if (isNarrowString!(typeof(xform1)))
-    {
-        auto xform = xform1.representation();
-    }
-    else
-    {
-        alias xform = xform1;
-    }
-    zip(xform, r).sort!((a, b) => binaryFun!less(a[0], b[0]), ss)();
-    return typeof(return)(r);
-}
-
-unittest
-{
-    // issue 5924
-    Tuple!(char)[] chars;
-    schwartzSort!((Tuple!(char) c){ return c[0]; })(chars);
+    sort!(myLess, ss)(z);
 }
 
 unittest
