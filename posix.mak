@@ -164,7 +164,7 @@ STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
         cpuid cstream ctype csv datetime demangle encoding exception	\
         file format functional getopt json math mathspecial md5	\
         metastrings mmfile numeric outbuffer parallelism path perf		\
-        process random range regex regexp signals socket socketstream	\
+        process random range regex signals socket socketstream	\
         stdint stdio stdiobase stream string syserror system traits		\
         typecons typetuple uni uri utf uuid variant xml zip zlib)
 
