@@ -408,7 +408,7 @@ private void getoptImpl(T...)(ref string[] args,
             if (endOfOptions.length && a == endOfOptions)
             {
                 // Consume the "--"
-                args = args[0 .. i + 1] ~ args[i + 2 .. $];
+                args = args.remove(i + 1);
                 break;
             }
             if (!cfg.passThrough)
