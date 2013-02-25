@@ -974,6 +974,11 @@ unittest
     assert(wtext(int.max) == "2147483647"w);
     assert(wtext(int.min) == "-2147483648"w);
     assert(to!string(0L) == "0");
+
+    //Test CTFE-ability.
+    static assert(to!string(1uL << 62) == "4611686018427387904");
+    static assert(to!string(0x100000000) == "4294967296");
+    static assert(to!string(-138L) == "-138");
 }
 
 unittest
@@ -2008,6 +2013,14 @@ unittest
         foreach (j, s; errors[i..$])
             assertThrown!ConvOverflowException(to!Int(s));
     }
+}
+
+unittest
+{
+    //Some CTFE-ability checks.
+    static assert((){string s = "1234abc"; return parse!int(s) == 1234 && s == "abc";}());
+    static assert((){string s = "-1234abc"; return parse!int(s) == -1234 && s == "abc";}());
+    static assert((){string s = "1234abc"; return parse!uint(s) == 1234 && s == "abc";}());
 }
 
 /// ditto
