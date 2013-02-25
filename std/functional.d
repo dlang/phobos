@@ -20,7 +20,7 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.functional;
 
-import std.metastrings, std.traits, std.typecons, std.typetuple;
+import std.traits, std.typecons, std.typetuple;
 // for making various functions visible in *naryFun
 import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
 
