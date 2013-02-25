@@ -23,7 +23,6 @@ import std.algorithm, std.array, std.ascii, std.exception, std.math, std.range,
     std.string, std.traits, std.typecons, std.typetuple, std.uni,
     std.utf;
 import std.format;
-import std.metastrings;
 
 //debug=conv;           // uncomment to turn on debugging printf's
 
@@ -3264,7 +3263,7 @@ auto z = octal!"1_000_000u";
 template octal(alias s)
     if (isIntegral!(typeof(s)))
 {
-    enum auto octal = octal!(typeof(s), toStringNow!(s));
+    enum auto octal = octal!(typeof(s), to!string(s));
 }
 
 /*
