@@ -379,10 +379,27 @@ public:
 */
     alias staticMap!(extractType, fieldSpecs) Types;
 
-    Types field;
+/**
+Use $(D t.expand) for a tuple $(D t) to expand it into its
+components. The result of $(D expand) acts as if the tuple components
+were listed as a list of values. (Ordinarily, a $(D Tuple) acts as a
+single value.)
+
+Examples:
+----
+auto t = tuple(1, " hello ", 2.3);
+writeln(t);        // Tuple!(int, string, double)(1, " hello ", 2.3)
+writeln(t.expand); // 1 hello 2.3
+----
+ */
+    Types expand;
     mixin(injectNamedFields());
-    alias field expand;
-    alias field this;
+
+    // This is mostly to make t[n] work.
+    alias expand this;
+
+    // backwards compatibility
+    alias field = expand;
 
     // This mitigates breakage of old code now that std.range.Zip uses
     // Tuple instead of the old Proxy.  It's intentionally lacking ddoc
