@@ -108,6 +108,8 @@ private:
 // Windows API declarations.
 version (Windows)
 {
+    extern(Windows) BOOL GetHandleInformation(HANDLE hObject,
+                                              LPDWORD lpdwFlags);
     extern(Windows) BOOL SetHandleInformation(HANDLE hObject,
                                               DWORD dwMask,
                                               DWORD dwFlags);
@@ -505,10 +507,19 @@ private Pid spawnProcessWindows(string name,
             version (DMC_RUNTIME) handle = _fdToHandle(fileDescriptor);
             else    /* MSVCRT */  handle = _get_osfhandle(fileDescriptor);
         }
-        if (!SetHandleInformation(handle, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
+        DWORD dwFlags;
+        GetHandleInformation(handle, &dwFlags);
+        if (!(dwFlags & HANDLE_FLAG_INHERIT))
         {
-            throw new StdioException(
-                "Failed to pass "~which~" stream to child process", 0);
+            if (!SetHandleInformation(handle,
+                                      HANDLE_FLAG_INHERIT,
+                                      HANDLE_FLAG_INHERIT))
+            {
+                throw new StdioException(
+                    "Failed to make "~which~" stream inheritable by child process ("
+                    ~sysErrorString(GetLastError()) ~ ')',
+                    0);
+            }
         }
     }
     int stdinFD = -1, stdoutFD = -1, stderrFD = -1;
