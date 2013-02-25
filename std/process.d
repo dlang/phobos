@@ -1120,6 +1120,49 @@ string escapeShellCommand(in char[][] args...)
     return escapeShellCommandString(escapeShellArguments(args));
 }
 
+unittest
+{
+    // This is a simple unit test without any special requirements,
+    // in addition to the unittest_burnin one below which requires
+    // special preparation.
+
+    struct TestVector { string[] args; string windows, posix; }
+    TestVector[] tests =
+    [
+        {
+            args    : ["foo"],
+            windows : `^"foo^"`,
+            posix   : `'foo'`
+        },
+        {
+            args    : ["foo", "hello"],
+            windows : `^"foo^" ^"hello^"`,
+            posix   : `'foo' 'hello'`
+        },
+        {
+            args    : ["foo", "hello world"],
+            windows : `^"foo^" ^"hello world^"`,
+            posix   : `'foo' 'hello world'`
+        },
+        {
+            args    : ["foo", "hello", "world"],
+            windows : `^"foo^" ^"hello^" ^"world^"`,
+            posix   : `'foo' 'hello' 'world'`
+        },
+        {
+            args    : ["foo", `'"^\`],
+            windows : `^"foo^" ^"'\^"^^\\^"`,
+            posix   : `'foo' ''\''"^\'`
+        },
+    ];
+
+    foreach (test; tests)
+        version (Windows)
+            assert(escapeShellCommand(test.args) == test.windows);
+        else
+            assert(escapeShellCommand(test.args) == test.posix  );
+}
+
 /**
     Escape a filename to be used for shell redirection with
     the $(D system) or $(D shell) functions.
