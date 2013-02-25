@@ -9354,14 +9354,22 @@ extra indirection, and is always larger than a sorting-based solution
 because it needs space for the index in addition to the original
 collection. The complexity is the same as $(D sort)'s.
 
-$(D makeIndex) overwrites its second argument with the result, but
-never reallocates it. If the second argument's length is less than
-that of the range indexed, an exception is thrown.
-
 The first overload of $(D makeIndex) writes to a range containing
 pointers, and the second writes to a range containing offsets. The
 first overload requires $(D Range) to be a forward range, and the
 latter requires it to be a random-access range.
+
+$(D makeIndex) overwrites its second argument with the result, but
+never reallocates it.
+
+Returns: The pointer-based version returns a $(D SortedRange) wrapper
+over index, of type $(D SortedRange!(RangeIndex, (a, b) =>
+binaryFun!less(*a, *b))) thus reflecting the ordering of the
+index. The index-based version returns $(D void) because the ordering
+relation involves not only $(D index) but also $(D r).
+
+Throws: If the second argument's length is less than that of the range
+indexed, an exception is thrown.
 
 Example:
 ----
@@ -9378,7 +9386,8 @@ assert(isSorted!
     (index2));
 ----
 */
-void makeIndex(
+SortedRange!(RangeIndex, (a, b) => binaryFun!less(*a, *b))
+makeIndex(
     alias less = "a < b",
     SwapStrategy ss = SwapStrategy.unstable,
     Range,
@@ -9393,12 +9402,8 @@ void makeIndex(
         index[i] = &(r.front);
     enforce(index.length == i);
     // sort the index
-    static bool indirectLess(ElementType!(RangeIndex) a,
-            ElementType!(RangeIndex) b)
-    {
-        return binaryFun!(less)(*a, *b);
-    }
-    sort!(indirectLess, ss)(index);
+    sort!((a, b) => binaryFun!less(*a, *b), ss)(index);
+    return typeof(return)(index);
 }
 
 /// Ditto
@@ -9408,32 +9413,28 @@ void makeIndex(
     Range,
     RangeIndex)
 (Range r, RangeIndex index)
-    if (isRandomAccessRange!(Range) && !isInfinite!(Range) &&
-        isRandomAccessRange!(RangeIndex) && !isInfinite!(RangeIndex) &&
-        isIntegral!(ElementType!(RangeIndex)))
+if (isRandomAccessRange!Range && !isInfinite!Range &&
+    isRandomAccessRange!RangeIndex && !isInfinite!RangeIndex &&
+    isIntegral!(ElementType!RangeIndex))
 {
-    alias Unqual!(ElementType!RangeIndex) I;
+    alias Unqual!(ElementType!RangeIndex) IndexType;
     enforce(r.length == index.length,
         "r and index must be same length for makeIndex.");
-    static if (I.sizeof < size_t.sizeof)
+    static if (IndexType.sizeof < size_t.sizeof)
     {
-        enforce(r.length <= I.max, "Cannot create an index with " ~
-            "element type " ~ I.stringof ~ " with length " ~
-            to!string(r.length) ~ "."
-        );
+        enforce(r.length <= IndexType.max, "Cannot create an index with " ~
+            "element type " ~ IndexType.stringof ~ " with length " ~
+            to!string(r.length) ~ ".");
     }
 
-    for (I i = 0; i < r.length; ++i)
+    for (IndexType i = 0; i < r.length; ++i)
     {
         index[cast(size_t) i] = i;
     }
 
     // sort the index
-    bool indirectLess(ElementType!(RangeIndex) a, ElementType!(RangeIndex) b)
-    {
-        return binaryFun!(less)(r[cast(size_t) a], r[cast(size_t) b]);
-    }
-    sort!(indirectLess, ss)(index);
+    sort!((a, b) => binaryFun!less(r[cast(size_t) a], r[cast(size_t) b]), ss)
+      (index);
 }
 
 unittest
