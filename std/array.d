@@ -35,31 +35,34 @@ assert(a == [ 1, 2, 3, 4, 5 ]);
 ), $(ARGS), $(ARGS), $(ARGS import std.array;))
  */
 ForeachType!Range[] array(Range)(Range r)
-if (isIterable!Range && !isNarrowString!Range)
+    if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
 {
-    alias ForeachType!Range E;
+    alias E = ForeachType!Range;
+    alias UE = Unqual!E;
     static if (hasLength!Range)
     {
         if(r.length == 0) return null;
 
-        auto result = uninitializedArray!(Unqual!(E)[])(r.length);
+        auto result = uninitializedArray!(UE[])(r.length);
 
         size_t i = 0;
         foreach (e; r)
         {
-            // hacky
-            static if (is(typeof(e.opAssign(e))))
+            static if (!is(typeof(result[i] = e)) ||
+                        is(typeof(result[i].opAssign(e))))
             {
-                // this should be in-place construction
-                emplace!E(result.ptr + i, e);
+                // Disabled or elaborate opAssign.
+                // Construct by the book.
+                emplace!UE(result.ptr + i, e);
             }
             else
             {
+                // It is safe to straight up assign.
                 result[i] = e;
             }
-            i++;
+            ++i;
         }
-        return cast(E[])result;
+        return cast(E[]) result;
     }
     else
     {
@@ -155,6 +158,9 @@ unittest
     {
         ref S opAssign(S)(const ref S rhs)
         {
+            //FIXME @@@9824@@@ : Emplace calls opAssign, but it should actually
+            //straight up blit.
+            //Replace with "assert(0)" once fixed.
             i = rhs.i;
             return this;
         }
@@ -189,6 +195,26 @@ unittest
     });
 }
 
+//FIXME @@@9824@@@: 
+//"array" works correctly, but emplace chokes later. Uncomment once emplace is fixed.
+//unittest
+//{
+//    static struct S
+//    {
+//        @disable void opAssign(S);
+//        int i;
+//    }
+//    auto arr = [S(0), S(1), S(2)];
+//    arr.array();
+//}
+
+unittest
+{
+    //Turn down infinity:
+    static assert(!is(typeof(
+        repeat(1).array()
+    )));
+}
 
 /**
 Returns a newly allocated associative array out of elements of the input range,
