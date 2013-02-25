@@ -725,8 +725,9 @@ enum Config
     noCloseStderr = 4,                                  /// ditto
 
     /**
-    On Windows, this option causes the process to run in
-    a console window.  On POSIX it has no effect.
+    On Windows, the child process will by default be run in
+    a console window.  This option wil cause it to run in "GUI mode"
+    instead, i.e., without a console. On POSIX, it has no effect.
     */
     gui = 8,
 }
