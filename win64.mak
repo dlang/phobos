@@ -138,11 +138,12 @@ SRC_STD_6c=std\zlib.d
 SRC_STD_6d=std\stream.d
 SRC_STD_6e=std\socket.d
 SRC_STD_6f=std\socketstream.d
-SRC_STD_6g=std\container.d
-SRC_STD_6h=std\conv.d
-SRC_STD_6i=std\zip.d
-SRC_STD_6j=std\cstream.d
-SRC_STD_6k=std\regex.d
+SRC_STD_6g=std\perf.d
+SRC_STD_6h=std\container.d
+SRC_STD_6i=std\conv.d
+SRC_STD_6j=std\zip.d
+SRC_STD_6k=std\cstream.d
+SRC_STD_6l=std\regex.d
 
 SRC_STD_7= \
 	std\stdint.d \
@@ -166,6 +167,7 @@ SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_6i) \
 	$(SRC_STD_6j) \
 	$(SRC_STD_6k) \
+	$(SRC_STD_6l) \
 	$(SRC_STD_7)
 
 SRC=	unittest.d crc32.d index.d
@@ -178,7 +180,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\syserror.d \
 	std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\format.d \
-	std\stdio.d std\uni.d std\uuid.d \
+	std\stdio.d std\perf.d std\uni.d std\uuid.d \
 	std\cstream.d std\demangle.d \
 	std\signals.d std\cpuid.d std\typetuple.d std\traits.d \
 	std\metastrings.d std\getopt.d \
@@ -334,6 +336,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_outbuffer.html \
 	$(DOC)\std_parallelism.html \
 	$(DOC)\std_path.html \
+	$(DOC)\std_perf.html \
 	$(DOC)\std_process.html \
 	$(DOC)\std_random.html \
 	$(DOC)\std_range.html \
@@ -402,6 +405,7 @@ UNITTEST_OBJS= unittest1.obj unittest2.obj unittest2a.obj \
 		unittest6i.obj \
 		unittest6j.obj \
 		unittest6k.obj \
+		unittest6l.obj \
 		unittest7.obj 
 
 unittest : $(LIB)
@@ -426,6 +430,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6g.obj $(SRC_STD_6g)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6j.obj $(SRC_STD_6j)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6k.obj $(SRC_STD_6k)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6l.obj $(SRC_STD_6l)
 	$(DMD) $(UDFLAGS) -c           -ofunittest7.obj $(SRC_STD_7)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8.obj $(SRC_TO_COMPILE_NOT_STD)
 	$(DMD) $(UDFLAGS)    -unittest unittest.d $(UNITTEST_OBJS) \
@@ -611,6 +616,9 @@ $(DOC)\std_parallelism.html : $(STDDOC) std\parallelism.d
 
 $(DOC)\std_path.html : $(STDDOC) std\path.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_path.html $(STDDOC) std\path.d
+
+$(DOC)\std_perf.html : $(STDDOC) std\perf.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_perf.html $(STDDOC) std\perf.d
 
 $(DOC)\std_process.html : $(STDDOC) std\process.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_process.html $(STDDOC) std\process.d

@@ -134,7 +134,7 @@ SRC_STD_5_HEAVY= std\algorithm.d
 SRC_STD_6= std\variant.d \
 	std\syserror.d std\zlib.d \
 	std\stream.d std\socket.d std\socketstream.d \
-	std\container.d std\conv.d \
+	std\perf.d std\container.d std\conv.d \
 	std\zip.d std\cstream.d
 
 SRC_STD_REST= std\regex.d \
@@ -158,7 +158,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\syserror.d \
 	std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\format.d \
-	std\stdio.d std\uni.d std\uuid.d \
+	std\stdio.d std\perf.d std\uni.d std\uuid.d \
 	std\cstream.d std\demangle.d \
 	std\signals.d std\cpuid.d std\typetuple.d std\traits.d \
 	std\metastrings.d std\getopt.d \
@@ -314,6 +314,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_outbuffer.html \
 	$(DOC)\std_parallelism.html \
 	$(DOC)\std_path.html \
+	$(DOC)\std_perf.html \
 	$(DOC)\std_process.html \
 	$(DOC)\std_random.html \
 	$(DOC)\std_range.html \
@@ -562,6 +563,9 @@ $(DOC)\std_parallelism.html : $(STDDOC) std\parallelism.d
 
 $(DOC)\std_path.html : $(STDDOC) std\path.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_path.html $(STDDOC) std\path.d
+
+$(DOC)\std_perf.html : $(STDDOC) std\perf.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_perf.html $(STDDOC) std\perf.d
 
 $(DOC)\std_process.html : $(STDDOC) std\process.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_process.html $(STDDOC) std\process.d
