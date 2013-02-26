@@ -398,14 +398,19 @@ private void getoptImpl(T...)(ref string[] args,
     else
     {
         // no more options to look for, potentially some arguments left
-        foreach (a ; args[1 .. $]) {
+        foreach (i, a ; args[1 .. $]) {
             if (!a.length || a[0] != optionChar)
             {
                 // not an option
                 if (cfg.stopOnFirstNonOption) break;
                 continue;
             }
-            if (endOfOptions.length && a == endOfOptions) break;
+            if (endOfOptions.length && a == endOfOptions)
+            {
+                // Consume the "--"
+                args = args.remove(i + 1);
+                break;
+            }
             if (!cfg.passThrough)
             {
                 throw new Exception("Unrecognized option "~a);
@@ -779,4 +784,13 @@ unittest
     auto args = ["", "-t", "a=1"];
     getopt(args, "t", &foo);
     assert(foo == ["a":1]);
+}
+
+unittest
+{
+    // From bugzilla 9583
+    int opt;
+    auto args = ["prog", "--opt=123", "--", "--a", "--b", "--c"];
+    getopt(args, "opt", &opt);
+    assert(args == ["prog", "--a", "--b", "--c"]);
 }
