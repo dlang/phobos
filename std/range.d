@@ -1208,6 +1208,37 @@ unittest
 }
 
 /**
+Returns $(D true) if $(D R) has an $(D empty) member that returns a
+boolean type. $(D R) does not have to be a range.
+ */
+template hasEmpty(R)
+{
+    enum bool hasEmpty = is(typeof(
+    (inout int = 0)
+    {
+        R r = void;
+        static assert(is(typeof(r.empty) : bool)
+                   || is(typeof(r.empty()) : bool));
+    }));
+}
+
+unittest
+{
+    static assert(hasEmpty!(char[]));
+    static assert(hasEmpty!(int[]));
+    static assert(hasEmpty!(inout(int)[]));
+
+    struct A { bool empty; }
+    struct B { bool empty() { return 0; } }
+    struct C { @property bool empty() { return false; } }
+    struct D { @property int empty() { return 0; } }
+    static assert(hasEmpty!A);
+    static assert(hasEmpty!B);
+    static assert(hasEmpty!C);
+    static assert(!hasEmpty!D);
+}
+
+/**
 Returns $(D true) if $(D R) is an infinite input range. An
 infinite input range is an input range that has a statically-defined
 enumerated member called $(D empty) that is always $(D false),
