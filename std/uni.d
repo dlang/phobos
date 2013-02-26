@@ -44,12 +44,6 @@ bool isWhite(dchar c) @safe pure nothrow
 }
 
 
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated("Please use std.uni.isLower instead.") bool isUniLower(dchar c) @safe pure nothrow
-{
-    return isLower(c);
-}
-
 /++
     Return whether $(D c) is a Unicode lowercase character.
   +/
@@ -62,12 +56,6 @@ bool isLower(dchar c) @safe pure nothrow
 }
 
 
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated("Please use std.uni.isUpper instead.") bool isUniUpper(dchar c) @safe pure nothrow
-{
-    return isUpper(c);
-}
-
 /++
     Return whether $(D c) is a Unicode uppercase character.
   +/
@@ -79,12 +67,6 @@ bool isUpper(dchar c) @safe pure nothrow
     return isAlpha(c) && c == toUpper(c);
 }
 
-
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated("Please use std.uni.toLower instead.")  dchar toUniLower(dchar c) @safe pure nothrow
-{
-    return toLower(c);
-}
 
 /++
     If $(D c) is a Unicode uppercase character, then its lowercase equivalent
@@ -146,12 +128,6 @@ dchar toLower(dchar c) @safe pure nothrow
 }
 
 
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated("Please use std.uni.toUpper instead.")   dchar toUniUpper(dchar c) @safe pure nothrow
-{
-    return toUpper(c);
-}
-
 /++
     If $(D c) is a Unicode lowercase character, then its uppercase equivalent
     is returned. Otherwise $(D c) is returned.
@@ -211,12 +187,6 @@ dchar toUpper(dchar c) @safe pure nothrow
     return c;
 }
 
-
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated("Please use std.uni.isAlpha instead.")  bool isUniAlpha(dchar c) @safe pure nothrow
-{
-    return isAlpha(c);
-}
 
 /++
     Returns whether $(D c) is a Unicode alpha character
