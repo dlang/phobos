@@ -29,7 +29,7 @@
  * a = 3.14;
  * assert(a.type == typeid(double));
  * // Implicit conversions work just as with built-in types
- * assert(a > b);
+ * assert(a < b);
  * // Check for convertibility
  * assert(!a.convertsTo!(int)); // double not convertible to int
  * // Strings and all other arrays are supported
