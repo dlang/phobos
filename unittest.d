@@ -36,7 +36,6 @@ public import std.mmfile;
 public import std.outbuffer;
 public import std.parallelism;
 public import std.path;
-public import std.perf;
 public import std.process;
 public import std.random;
 public import std.regex;
