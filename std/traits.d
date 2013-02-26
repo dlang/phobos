@@ -4353,7 +4353,6 @@ template AssocArrayTypeOf(T)
     else static if (is(typeof(idz(defaultInit!T)) X))
     {
                inout(             V  [K]) idzp(K, V)(        inout(             V  [K]) );
-               inout(      shared(V) [K]) idzp(K, V)(        inout(      shared(V) [K]) );
                inout(       const(V) [K]) idzp(K, V)(        inout(       const(V) [K]) );
                inout(shared(const V) [K]) idzp(K, V)(        inout(shared(const V) [K]) );
                inout(   immutable(V) [K]) idzp(K, V)(        inout(   immutable(V) [K]) );
