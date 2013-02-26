@@ -45,7 +45,7 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
 module std.typecons;
 import core.memory, core.stdc.stdlib;
 import std.algorithm, std.array, std.conv, std.exception, std.format,
-    std.metastrings, std.traits, std.typetuple, std.range;
+    std.string, std.traits, std.typetuple, std.range;
 
 debug(Unique) import std.stdio;
 
@@ -323,11 +323,10 @@ private:
         string decl = "";
         foreach (i, name; staticMap!(extractName, fieldSpecs))
         {
-            enum numbered = toStringNow!(i);
-            decl ~= "alias Identity!(field[" ~ numbered ~ "]) _" ~ numbered ~ ";";
+            decl ~= format("alias Identity!(field[%s]) _%s;", i, i);
             if (name.length != 0)
             {
-                decl ~= "alias _" ~ numbered ~ " " ~ name ~ ";";
+                decl ~= format("alias _%s %s;", i, name);
             }
         }
         return decl;
@@ -2069,7 +2068,7 @@ private static:
     // overloaded function with the name.
     template INTERNAL_FUNCINFO_ID(string name, size_t i)
     {
-        enum string INTERNAL_FUNCINFO_ID = "F_" ~ name ~ "_" ~ toStringNow!(i);
+        enum string INTERNAL_FUNCINFO_ID = format("F_%s_%s", name, i);
     }
 
     /*
@@ -2329,7 +2328,7 @@ private static:
     {
         template PARAMETER_VARIABLE_ID(size_t i)
         {
-            enum string PARAMETER_VARIABLE_ID = "a" ~ toStringNow!(i);
+            enum string PARAMETER_VARIABLE_ID = format("a%s", i);
                 // default: a0, a1, ...
         }
     }
@@ -2369,7 +2368,7 @@ private static:
                 // The generated function declarations may hide existing ones
                 // in the base class (cf. HiddenFuncError), so we put an alias
                 // declaration here to reveal possible hidden functions.
-                code ~= Format!("alias %s.%s %s;\n",
+                code ~= format("alias %s.%s %s;\n",
                             Policy.BASE_CLASS_ID, // [BUG 2540] super.
                             oset.name, oset.name );
             }
@@ -2411,6 +2410,8 @@ private static:
             enum atts     = functionAttributes!(func);
             enum realName = isCtor ? "this" : name;
 
+            // FIXME?? Make it so that these aren't CTFE funcs any more, since
+            // Format is deprecated, and format works at compile time?
             /* Made them CTFE funcs just for the sake of Format!(...) */
 
             // return type with optional "ref"
@@ -2454,7 +2455,7 @@ private static:
             //
             if (isAbstractFunction!func)
                 code ~= "override ";
-            code ~= Format!("extern(%s) %s %s(%s) %s %s\n",
+            code ~= format("extern(%s) %s %s(%s) %s %s\n",
                     functionLinkage!(func),
                     returnType,
                     realName,
@@ -2516,7 +2517,7 @@ private static:
             if (stc & STC.lazy_ ) params ~= "lazy ";
 
             // Take parameter type from the FuncInfo.
-            params ~= myFuncInfo ~ ".PT[" ~ toStringNow!(i) ~ "]";
+            params ~= format("%s.PT[%s]", myFuncInfo, i);
 
             // Declare a parameter variable.
             params ~= " " ~ PARAMETER_VARIABLE_ID!(i);
