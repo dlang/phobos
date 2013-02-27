@@ -1776,55 +1776,45 @@ static:
     /**
     Retrieves the value of the environment variable with the given $(D name).
 
-    If no such variable exists, this function returns $(D null).  It is thus
-    equivalent to $(D environment.get(name, null)).
+    If no such variable exists, this function throws an $(D Exception).
+    See also $(LREF get), which doesn't throw on failure.
     ---
-    auto myVar = environment["MYVAR"];
-    if (myVar is null)
-    {
-        // Environment variable doesn't exist.
-        // Note that we use 'is' for the comparison, since myVar == null is
-        // also true if the variable exists but is empty.
-    }
+    auto path = environment["PATH"];
     ---
     */
-    string opIndex(string name) @safe //TODO: nothrow
+    string opIndex(string name) @safe
     {
-        return get(name, null);
+        string value;
+        enforce(getImpl(name, value), "Environment variable not found: "~name);
+        return value;
     }
 
     /**
     Retrieves the value of the environment variable with the given $(D name),
     or a default value if the variable doesn't exist.
+
+    Unlike $(LREF opIndex), this function never throws.
     ---
     auto userShell = environment.get("SHELL", "/bin/sh");
     ---
-    */
-    string get(string name, string defaultValue) @trusted //TODO: nothrow
+    This function is also useful in checking for the existence of an
+    environment variable.
+    ---
+    auto myVar = environment.get("MYVAR");
+    if (myVar is null)
     {
-        version (Windows)
-        {
-            const namez = toUTF16z(name);
-            immutable len = varLength(namez);
-            if (len == 0) return defaultValue;
-            if (len == 1) return "";
-
-            auto buf = new WCHAR[len];
-            GetEnvironmentVariableW(namez, buf.ptr, to!DWORD(buf.length));
-            return toUTF8(buf[0 .. $-1]);
-        }
-        else version (Posix)
-        {
-            const vz = core.sys.posix.stdlib.getenv(toStringz(name));
-            if (vz == null) return defaultValue;
-            auto v = vz[0 .. strlen(vz)];
-
-            // Cache the last call's result.
-            static string lastResult;
-            if (v != lastResult) lastResult = v.idup;
-            return lastResult;
-        }
-        else static assert(0);
+        // Environment variable doesn't exist.
+        // Note that we have to use 'is' for the comparison, since
+        // myVar == null is also true if the variable exists but is
+        // empty.
+    }
+    ---
+    */
+    string get(string name, string defaultValue = null) @safe //TODO: nothrow
+    {
+        string value;
+        auto found = getImpl(name, value);
+        return found ? value : defaultValue;
     }
 
     /**
@@ -1941,6 +1931,40 @@ private:
     {
         return GetEnvironmentVariableW(namez, null, 0);
     }
+
+    // Retrieves the environment variable, returns false on failure.
+    bool getImpl(string name, out string value) @trusted //TODO: nothrow
+    {
+        version (Windows)
+        {
+            const namez = toUTF16z(name);
+            immutable len = varLength(namez);
+            if (len == 0) return false;
+            if (len == 1)
+            {
+                value = "";
+                return true;
+            }
+
+            auto buf = new WCHAR[len];
+            GetEnvironmentVariableW(namez, buf.ptr, to!DWORD(buf.length));
+            value = toUTF8(buf[0 .. $-1]);
+            return true;
+        }
+        else version (Posix)
+        {
+            const vz = core.sys.posix.stdlib.getenv(toStringz(name));
+            if (vz == null) return false;
+            auto v = vz[0 .. strlen(vz)];
+
+            // Cache the last call's result.
+            static string lastResult;
+            if (v != lastResult) lastResult = v.idup;
+            value = lastResult;
+            return true;
+        }
+        else static assert(0);
+    }
 }
 
 unittest
@@ -1959,10 +1983,13 @@ unittest
     // Remove again, should succeed
     environment.remove("std_process");
 
-    // Get nonexistent variable
-    assert (environment["std_process"] is null);
+    // Throw on not found.
+    assertThrown(environment["std_process"]);
 
-    // get()
+    // get() without default value
+    assert (environment.get("std_process") == null);
+
+    // get() with default value
     assert (environment.get("std_process", "baz") == "baz");
 
     // Convert to associative array
