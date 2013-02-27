@@ -3048,6 +3048,11 @@ private dchar parseEscape(Source)(ref Source s)
 
     switch (s.front)
     {
+        case '"':   result = '\"';  break;
+        case '\'':  result = '\'';  break;
+        case '0':   result = '\0';  break;
+        case '?':   result = '\?';  break;
+        case '\\':  result = '\\';  break;
         case 'a':   result = '\a';  break;
         case 'b':   result = '\b';  break;
         case 'f':   result = '\f';  break;
