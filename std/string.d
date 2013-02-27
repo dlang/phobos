@@ -90,9 +90,9 @@ deprecated("Please use std.uni.isWhite instead.")       bool iswhite(dchar c)
 
 /++
     Compares two ranges of characters lexicographically. The comparison is
-    case insensitive. Use $(D XREF algorithm, cmp) for a case sensitive
-    comparison. $(D icmp) works like $(D XREF algorithm, cmp) except that it
-    converts characters to lowercase prior to applying ($D pred). Technically,
+    case insensitive. Use $(XREF algorithm, cmp) for a case sensitive
+    comparison. icmp works like $(XREF algorithm, cmp) except that it
+    converts characters to lowercase prior to applying $(D pred). Technically,
     $(D icmp(r1, r2)) is equivalent to
     $(D cmp!"std.uni.toLower(a) < std.uni.toLower(b)"(r1, r2)).
 
