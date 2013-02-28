@@ -620,8 +620,9 @@ are attempted in order, and the first to compile "wins" and gets
 evaluated.
 
 In this table "doPut" is a method that places $(D e) into $(D r), using the
-correct primitive: $(D r.put(e)) if $(D R) defines $(D put), $(D r.front = e) if $(D r) is an input
-range (followed by $(D r.popFront())), or $(D r(e)) otherwise.
+correct primitive: $(D r.put(e)) if $(D R) defines $(D put), $(D r.front = e)
+if $(D r) is an input range (followed by $(D r.popFront())), or $(D r(e))
+otherwise.
 
 $(BOOKTABLE ,
     $(TR
@@ -647,7 +648,7 @@ $(BOOKTABLE ,
     )
 )
 
-Tip: $(D put) should $(I not) be used "UFCS-style", eg $(D r.put(e)).
+Tip: $(D put) should $(I not) be used "UFCS-style", e.g. $(D r.put(e)).
 Doing this may call $(D R.put) directly, by-passing any transformation
 feature provided by $(D Range.put). $(D put(r, e)) is prefered.
  +/
@@ -8308,37 +8309,6 @@ sort) which sorts $(D r) in place and returns the corresponding $(D
 SortedRange). To construct a $(D SortedRange) from a range $(D r) that
 is known to be already sorted, use $(LREF assumeSorted) described
 below.
-
-Example:
-
-----
-auto a = [ 1, 2, 3, 42, 52, 64 ];
-auto r = assumeSorted(a);
-assert(r.contains(3));
-assert(!r.contains(32));
-auto r1 = sort!"a > b"(a);
-assert(r1.contains(3));
-assert(!r1.contains(32));
-assert(r1.release() == [ 64, 52, 42, 3, 2, 1 ]);
-----
-
-$(D SortedRange) could accept ranges weaker than random-access, but it
-is unable to provide interesting functionality for them. Therefore,
-$(D SortedRange) is currently restricted to random-access ranges.
-
-No copy of the original range is ever made. If the underlying range is
-changed concurrently with its corresponding $(D SortedRange) in ways
-that break its sortedness, $(D SortedRange) will work erratically.
-
-Example:
-
-----
-auto a = [ 1, 2, 3, 42, 52, 64 ];
-auto r = assumeSorted(a);
-assert(r.contains(42));
-swap(a[3], a[5]);         // illegal to break sortedness of original range
-assert(!r.contains(42));  // passes although it shouldn't
-----
 */
 struct SortedRange(Range, alias pred = "a < b")
 if (isInputRange!Range)
@@ -8457,7 +8427,7 @@ if (isInputRange!Range)
         {
             return _input.length;
         }
-        alias length opDollar;
+        alias opDollar = length;
     }
 
     alias opDollar = length;
@@ -8617,8 +8587,14 @@ auto p = a.upperBound(3);
 assert(equal(p, [4, 4, 5, 6]));
 ----
 */
-    auto upperBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
-    if (isTwoWayCompatible!(predFun, ElementType!Range, V))
+    auto upperBound(SearchPolicy sp = isRandomAccessRange!Range
+                    ? SearchPolicy.binarySearch
+                    : SearchPolicy.linear,
+                    V)(V value)
+    if (sp == SearchPolicy.linear
+        ||
+        isTwoWayCompatible!(predFun, ElementType!Range, V)
+        && isRandomAccessRange!Range && sp != SearchPolicy.linear)
     {
         static assert(isRandomAccessRange!Range || sp == SearchPolicy.linear,
             "Specify SearchPolicy.linear explicitly for "
@@ -8792,7 +8768,7 @@ sgi.com/tech/stl/binary_search.html, binary_search).
     }
 }
 
-// Doc examples
+///
 unittest
 {
     auto a = [ 1, 2, 3, 42, 52, 64 ];
@@ -8803,6 +8779,24 @@ unittest
     assert(r1.contains(3));
     assert(!r1.contains(32));
     assert(r1.release() == [ 64, 52, 42, 3, 2, 1 ]);
+}
+
+/**
+$(D SortedRange) could accept ranges weaker than random-access, but it
+is unable to provide interesting functionality for them. Therefore,
+$(D SortedRange) is currently restricted to random-access ranges.
+
+No copy of the original range is ever made. If the underlying range is
+changed concurrently with its corresponding $(D SortedRange) in ways
+that break its sortedness, $(D SortedRange) will work erratically.
+*/
+unittest
+{
+    auto a = [ 1, 2, 3, 42, 52, 64 ];
+    auto r = assumeSorted(a);
+    assert(r.contains(42));
+    swap(a[3], a[5]);         // illegal to break sortedness of original range
+    assert(!r.contains(42));  // passes although it shouldn't
 }
 
 unittest
