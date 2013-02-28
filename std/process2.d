@@ -10,7 +10,7 @@ $(UL $(LI
     arbitrary set of standard input, output, and error streams.
     The function returns immediately, leaving the child _process to execute
     in parallel with its parent.  All other functions in this module that
-    spawn processes are built around $(LREF spawnProcess).)
+    spawn processes are built around $(D spawnProcess).)
 $(LI
     $(LREF wait) makes the parent _process wait for a child _process to
     terminate.  In general one should always do this, to avoid
@@ -18,30 +18,26 @@ $(LI
     Scope guards are perfect for this – see the $(LREF spawnProcess)
     documentation for examples.)
 $(LI
-    $(LREF pipeProcess) and $(LREF pipeShell) also spawn a child _process
-    which runs in parallel with its parent.  However, instead of taking
-    arbitrary streams, they automatically create a set of
+    $(LREF pipeProcess) also spawns a child _process which runs
+    in parallel with its parent.  However, instead of taking
+    arbitrary streams, it automatically creates a set of
     pipes that allow the parent to communicate with the child
     through the child's standard input, output, and/or error streams.
-    These functions correspond roughly to C's $(D popen) function.)
+    This function corresponds roughly to C's $(D popen) function.)
 $(LI
-    $(LREF execute) and $(LREF shell) start a new _process and wait for it
-    to complete before returning.  Additionally, they capture
-    the _process' standard output and error streams and return
-    the output of these as a string.
-    These correspond roughly to C's $(D system) function.)
+    $(LREF execute) starts a new _process and waits for it
+    to complete before returning.  Additionally, it captures
+    the _process' standard output and error streams and returns
+    the output of these as a string.)
+$(LI
+    $(LREF spawnShell), $(LREF pipeShell) and $(LREF shell) work like
+    $(D spawnProcess), $(D pipeProcess) and $(D execute), respectively,
+    except that they take a single command string and run it through
+    the current user's default command interpreter.
+    $(D shell) corresponds roughly to C's $(D system) function.)
 $(LI
     $(LREF kill) attempts to terminate a running process.)
 )
-$(LREF shell) and $(LREF pipeShell) both run the given command through the
-user's default command interpreter.
-
-$(LREF spawnProcess), $(LREF pipeProcess) and $(LREF execute)  all have
-two forms: one where the program name and its arguments are specified
-in a single string parameter, separated by spaces, and one where the
-arguments are specified as an array of strings.  Use the latter whenever
-the program name or any of the arguments contain spaces.
-
 Unless the directory of the executable file is explicitly specified, all
 functions will search for it in the directories specified in the PATH
 environment variable.
@@ -57,7 +53,8 @@ $(LI
 
 Authors:
     $(LINK2 https://github.com/kyllingstad, Lars Tandle Kyllingstad),
-    $(LINK2 https://github.com/schveiguy, Steven Schveighoffer)
+    $(LINK2 https://github.com/schveiguy, Steven Schveighoffer),
+    $(LINK2 https://github.com/cybershadow, Vladimir Panteleev)
 Copyright:
     Copyright (c) 2013, the authors. All rights reserved.
 Source:
@@ -111,6 +108,8 @@ version (Windows)
                                               DWORD dwFlags);
     extern(Windows) BOOL TerminateProcess(HANDLE hProcess,
                                           UINT uExitCode);
+    extern(Windows) LPWSTR* CommandLineToArgvW(LPCWSTR lpCmdLine,
+                                               int* pNumArgs);
     enum
     {
         HANDLE_FLAG_INHERIT = 0x1,
@@ -170,40 +169,104 @@ version (Posix)
 public:
 
 
+// =============================================================================
+// Functions and classes for process management.
+//
+// Authors: Lars T. Kyllingstad and Steven Schveighoffer
+// =============================================================================
+
+
 /**
 Spawns a new _process, optionally assigning it an
 arbitrary set of standard input, output, and error streams.
 The function returns immediately, leaving the child _process to execute
 in parallel with its parent.
 
-Unless a directory is specified in the $(D _command) (or $(D name))
-parameter, this function will search the directories in the
-PATH environment variable for the program.  To run an executable in
-the current directory, use $(D "./$(I executable_name)").
+Command_line:
+There are four overloads of this function.  The first two take an array
+of strings, $(D args), which should contain the program name as the
+zeroth element and any command-line arguments in subsequent elements.
+The third and fourth versions are included for convenience, and may be
+used when there are no command-line arguments.  They take a single string,
+$(D program), which specifies the program name.
 
-Note that if you pass an $(XREF stdio,File) object that is $(I not)
+Unless a directory is specified in $(D args[0]) or $(D program),
+$(D spawnProcess) will search for the program in the directories listed
+in the PATH environment variable.  To run an executable in the current
+directory, use $(D "./$(I executable_name)").
+---
+// Run an executable called "prog" located in the current working
+// directory:
+auto pid = spawnProcess("./prog");
+scope(exit) wait(pid);
+// We can do something else while the program runs.  The scope guard
+// ensures that the process is waited for at the end of the scope.
+...
+
+// Run DMD on the file "myprog.d", specifying a few compiler switches:
+auto dmdPid = spawnProcess(["dmd", "-O", "-release", "-inline", "myprog.d" ]);
+if (wait(dmdPid) != 0)
+    writeln("Compilation failed!");
+---
+
+Environment_variables:
+With the first and third $(D spawnProcess) overloads, one can specify
+the environment variables of the child process using the $(D environmentVars)
+parameter.  With the second and fourth overload, the child process inherits
+its parent's environment variables.
+
+To make the child inherit the parent's environment $(I plus) one or more
+additional variables, first use $(D $(LREF environment).$(LREF toAA)) to
+obtain an associative array that contains the parent's environment
+variables, and add the new variables to it before passing it to
+$(D spawnProcess).
+---
+auto envVars = environment.toAA();
+envVars["FOO"] = "bar";
+wait(spawnProcess("prog", envVars));
+---
+
+Standard_streams:
+The optional arguments $(D stdin_), $(D stdout_) and $(D stderr_) may
+be used to assign arbitrary $(XREF stdio,File) objects as the standard
+input, output and error streams, respectively, of the child process.  The
+former must be opened for reading, while the latter two must be opened for
+writing.  The default is for the child process to inherit the standard
+streams of its parent.
+---
+// Run DMD on the file myprog.d, logging any error messages to a
+// file named errors.log.
+auto logFile = File("errors.log", "w");
+auto pid = spawnProcess(["dmd", "myprog.d"],
+                        std.stdio.stdin,
+                        std.stdio.stdout,
+                        logFile);
+if (wait(pid) != 0)
+    writeln("Compilation failed. See errors.log for details.");
+---
+
+Note that if you pass a $(D File) object that is $(I not)
 one of the standard input/output/error streams of the parent process,
-that stream will by default be closed in the parent process when this
-function returns.  See the $(LREF Config) documentation below for
+that stream will by default be $(I closed) in the parent process when
+this function returns.  See the $(LREF Config) documentation below for
 information about how to disable this behaviour.
 
-Beware of buffering issues when passing $(XREF stdio,File) objects to
+Beware of buffering issues when passing $(D File) objects to
 $(D spawnProcess).  The child process will inherit the low-level raw
 read/write offset associated with the underlying file descriptor, but
 it will not be aware of any buffered data.  In cases where this matters
 (e.g. when a file should be aligned before being passed on to the
-child process), it may be a good idea to use unbuffered streams (or at
-least ensure all relevant buffers are flushed).
+child process), it may be a good idea to use unbuffered streams, or at
+least ensure all relevant buffers are flushed.
 
 Params:
-command = A string that contains the program name and any _command-line
-    arguments, separated by spaces.  If the program name or any
-    of the arguments themselves contain spaces, use the third or
-    fourth form of this function, where they are specified as
-    separate elements in an array.
+args = An array which contains the program name as the first element
+    and any command-line arguments in the following elements.
+program = The program name, $(I without) command-line arguments.
 environmentVars = The environment variables for the child process may
-    be specified using this parameter.  If it is omitted, the child
-    process inherits the environment of the parent process.
+    be specified using this parameter.  By default it is $(D null),
+    which means that, the child process inherits the environment of
+    the parent process.
 stdin_ = The standard input stream of the child process.
     This can be any $(XREF stdio,File) that is opened for reading.
     By default the child process inherits the parent's input
@@ -218,10 +281,6 @@ stderr_ = The standard error stream of the child process.
     stream.
 config = Options that control the behaviour of $(D spawnProcess).
     See the $(LREF Config) documentation for details.
-name = The name or path of the executable file.
-args = The _command-line arguments to give to the program.
-    (There is no need to specify the program name as the
-    zeroth argument; this is done automatically.)
 
 Returns:
 A $(LREF Pid) object that corresponds to the spawned process.
@@ -229,136 +288,97 @@ A $(LREF Pid) object that corresponds to the spawned process.
 Throws:
 $(LREF ProcessException) on failure to start the process.$(BR)
 $(XREF stdio,StdioException) on failure to pass one of the streams
-    to the child process (Windows only).
-
-Examples:
-Open Firefox on the D homepage and wait for it to complete:
----
-auto pid = spawnProcess("firefox http://www.dlang.org");
-wait(pid);
----
-Use the $(I ls) _command to retrieve a list of files:
----
-string[] files;
-auto p = pipe();
-
-auto pid = spawnProcess("ls", stdin, p.writeEnd);
-scope(exit) wait(pid);
-
-foreach (f; p.readEnd.byLine())  files ~= f.idup;
----
-Use the $(I ls -l) _command to get a list of files, pipe the output
-to $(I grep) and let it filter out all files except D source files,
-and write the output to the file $(I dfiles.txt):
----
-// Let's emulate the command "ls -l | grep '\.d$' > dfiles.txt"
-auto p = pipe();
-auto file = File("dfiles.txt", "w");
-
-auto lsPid = spawnProcess("ls -l", stdin, p.writeEnd);
-scope(exit) wait(lsPid);
-
-auto grPid = spawnProcess(`grep \.d$`, p.readEnd, file);
-scope(exit) wait(grPid);
----
-Open a set of files in LibreOffice Writer, and make it print
-any error messages to the standard output stream.  Note that since
-the filenames contain spaces, we have to pass them in an array:
----
-spawnProcess("lowriter", ["my document.odt", "your document.odt"],
-             stdin, stdout, stdout);
----
+    to the child process (Windows only).$(BR)
+$(CXREF exception,RangeError) if $(D args) is empty.
 */
-Pid spawnProcess(
-    string command,
-    File stdin_ = std.stdio.stdin,
-    File stdout_ = std.stdio.stdout,
-    File stderr_ = std.stdio.stderr,
-    Config config = Config.none)
+Pid spawnProcess(in char[][] args,
+                 const string[string] environmentVars,
+                 File stdin_ = std.stdio.stdin,
+                 File stdout_ = std.stdio.stdout,
+                 File stderr_ = std.stdio.stderr,
+                 Config config = Config.none)
     @trusted // TODO: Should be @safe
 {
-    auto splitCmd = split(command);
-    return spawnProcess(splitCmd[0], splitCmd[1 .. $],
+    version (Windows)    auto  args2 = escapeShellArguments(args);
+    else version (Posix) alias args2 = args;
+    return spawnProcessImpl(args2, toEnvz(environmentVars),
+                            stdin_, stdout_, stderr_, config);
+}
+
+/// ditto
+Pid spawnProcess(in char[][] args,
+                 File stdin_ = std.stdio.stdin,
+                 File stdout_ = std.stdio.stdout,
+                 File stderr_ = std.stdio.stderr,
+                 Config config = Config.none)
+    @trusted // TODO: Should be @safe
+{
+    version (Windows)    auto  args2 = escapeShellArguments(args);
+    else version (Posix) alias args2 = args;
+    return spawnProcessImpl(args2, null, stdin_, stdout_, stderr_, config);
+}
+
+/// ditto
+Pid spawnProcess(in char[] program,
+                 const string[string] environmentVars,
+                 File stdin_ = std.stdio.stdin,
+                 File stdout_ = std.stdio.stdout,
+                 File stderr_ = std.stdio.stderr,
+                 Config config = Config.none)
+    @trusted
+{
+    return spawnProcess((&program)[0 .. 1], environmentVars,
                         stdin_, stdout_, stderr_, config);
 }
 
 /// ditto
-Pid spawnProcess(
-    string command,
-    const ref string[string] environmentVars,
-    File stdin_ = std.stdio.stdin,
-    File stdout_ = std.stdio.stdout,
-    File stderr_ = std.stdio.stderr,
-    Config config = Config.none)
-    @trusted // TODO: Should be @safe
+Pid spawnProcess(in char[] program,
+                 File stdin_ = std.stdio.stdin,
+                 File stdout_ = std.stdio.stdout,
+                 File stderr_ = std.stdio.stderr,
+                 Config config = Config.none)
+    @trusted
 {
-    auto splitCmd = split(command);
-    return spawnProcess(splitCmd[0], splitCmd[1 .. $], environmentVars,
+    return spawnProcess((&program)[0 .. 1],
                         stdin_, stdout_, stderr_, config);
 }
 
-/// ditto
-Pid spawnProcess(
-    string name,
-    const string[] args,
-    File stdin_ = std.stdio.stdin,
-    File stdout_ = std.stdio.stdout,
-    File stderr_ = std.stdio.stderr,
-    Config config = Config.none)
-    @trusted // TODO: Should be @safe
-{
-    version (Windows)
-        return spawnProcessWindows(name, args, null,
-                                   stdin_, stdout_, stderr_, config);
-    else version (Posix)
-        return spawnProcessPosix(name, args, environ,
-                                 stdin_, stdout_, stderr_, config);
-}
+/*
+Implementation of spawnProcess() for POSIX.
 
-/// ditto
-Pid spawnProcess(
-    string name,
-    const string[] args,
-    const ref string[string] environmentVars,
-    File stdin_ = std.stdio.stdin,
-    File stdout_ = std.stdio.stdout,
-    File stderr_ = std.stdio.stderr,
-    Config config = Config.none)
-    @trusted // TODO: Should be @safe
-{
-    version (Windows)
-        return spawnProcessWindows(name, args, toWindowsEnv(environmentVars),
-                                   stdin_, stdout_, stderr_, config);
-    else version (Posix)
-        return spawnProcessPosix(name, args, toPosixEnv(environmentVars),
-                                 stdin_, stdout_, stderr_, config);
-}
-
-// Implementation of spawnProcess for POSIX.
+envz should be a zero-terminated array of zero-terminated strings
+on the form "var=value".
+*/
 version (Posix)
-private Pid spawnProcessPosix(string name,
-                              const string[] args,
-                              const char** envz,
-                              File stdin_,
-                              File stdout_,
-                              File stderr_,
-                              Config config)
+private Pid spawnProcessImpl(in char[][] args,
+                             const(char*)* envz,
+                             File stdin_,
+                             File stdout_,
+                             File stderr_,
+                             Config config)
     @trusted // TODO: Should be @safe
 {
+    const(char)[] name = args[0];
     if (any!isDirSeparator(name))
     {
         if (!isExecutable(name))
-            throw new ProcessException("Not an executable file: "~name);
+            throw new ProcessException(text("Not an executable file: ", name));
     }
     else
     {
         name = searchPathFor(name);
         if (name is null)
-            throw new ProcessException("Executable file not found: "~name);
+            throw new ProcessException(text("Executable file not found: ", name));
     }
 
-    auto namez = toStringz(name);
-    auto argz = toArgz(name, args);
+    // Convert program name and arguments to C-style strings.
+    auto argz = new const(char)*[args.length+1];
+    argz[0] = toStringz(name);
+    foreach (i; 1 .. args.length) argz[i] = toStringz(args[i]);
+    argz[$-1] = null;
+
+    // Use parent's environment variables?
+    if (envz is null) envz = environ;
 
     // Get the file descriptors of the streams.
     // These could potentially be invalid, but that is OK.  If so, later calls
@@ -390,7 +410,7 @@ private Pid spawnProcessPosix(string name,
         if (stderrFD > STDERR_FILENO)  close(stderrFD);
 
         // Execute program.
-        execve(namez, argz, envz);
+        execve(argz[0], argz.ptr, envz);
 
         // If execution fails, exit as quickly as possible.
         perror("spawnProcess(): Failed to execute program");
@@ -410,83 +430,27 @@ private Pid spawnProcessPosix(string name,
     }
 }
 
+/*
+Implementation of spawnProcess() for Windows.
+
+commandLine must contain the entire command line, properly
+quoted/escaped as required by CreateProcessW().
+
+envz must be a pointer to a block of UTF-16 characters on the form
+"var1=value1\0var2=value2\0...varN=valueN\0\0".
+*/
 version (Windows)
-private Pid spawnProcessWindows(string name,
-                                const string[] args,
-                                LPVOID envz,
-                                File stdin_,
-                                File stdout_,
-                                File stderr_,
-                                Config config)
-                                @trusted
+private Pid spawnProcessImpl(in char[] commandLine,
+                             LPVOID envz,
+                             File stdin_,
+                             File stdout_,
+                             File stderr_,
+                             Config config)
+    @trusted
 {
-    // Windows is a little strange when passing command line.  It requires the
-    // command-line to be one single command line, and the quoting processing
-    // is rather bizzare.  Through trial and error, here are the rules I've
-    // discovered that Windows uses to parse the command line WRT quotes:
-    //
-    // inside or outside quote mode:
-    // 1. if 2 or more backslashes are followed by a quote, the first
-    //    2 backslashes are reduced to 1 backslash which does not
-    //    affect anything after it.
-    // 2. one backslash followed by a quote is interpreted as a
-    //    literal quote, which cannot be used to close quote mode, and
-    //    does not affect anything after it.
-    //
-    // outside quote mode:
-    // 3. a quote enters quote mode
-    // 4. whitespace delineates an argument
-    //
-    // inside quote mode:
-    // 5. 2 quotes sequentially are interpreted as a literal quote and
-    //    an exit from quote mode.
-    // 6. a quote at the end of the string, or one that is followed by
-    //    anything other than a quote exits quote mode, but does not
-    //    affect the character after the quote.
-    // 7. end of line exits quote mode
-    //
-    // In our 'reverse' routine, we will only utilize the first 2 rules
-    // for escapes.
-    //
-    wchar[] cmdline;
+    auto commandz = toUTFz!(wchar*)(commandLine);
 
-    // reserve enough space to hold the program and all the arguments, plus 3
-    // extra characters per arg for the quotes and the space, plus 5 extra
-    // chars for good measure (in case we have to add escaped quotes).
-    uint minsize = 0;
-    foreach(s; args) minsize += s.length;
-    cmdline.reserve(minsize + name.length + 3 * args.length + 5);
-
-    // this could be written more optimized...
-    void addArg(string a)
-    {
-        if(cmdline.length)
-            cmdline ~= " ";
-        // first, determine if we need a quote
-        bool needquote = false;
-        foreach(dchar d; a)
-            if(d == ' ')
-            {
-                needquote = true;
-                break;
-            }
-        if(needquote)
-            cmdline ~= '"';
-        foreach(dchar d; a)
-        {
-            if(d == '"')
-                cmdline ~= '\\';
-            cmdline ~= d;
-        }
-        if(needquote)
-            cmdline ~= '"';
-    }
-    addArg(name);
-    foreach(a; args)
-        addArg(a);
-    cmdline ~= '\0';
-
-    // ok, the command line is ready.  Figure out the startup info
+    // Startup info for CreateProcessW().
     STARTUPINFO_W startinfo;
     startinfo.cb = startinfo.sizeof;
     startinfo.dwFlags = STARTF_USESTDHANDLES;
@@ -527,7 +491,7 @@ private Pid spawnProcessWindows(string name,
     PROCESS_INFORMATION pi;
     DWORD dwCreationFlags = CREATE_UNICODE_ENVIRONMENT |
                             ((config & Config.gui) ? CREATE_NO_WINDOW : 0);
-    if (!CreateProcessW(null, cmdline.ptr, null, null, true, dwCreationFlags,
+    if (!CreateProcessW(null, commandz, null, null, true, dwCreationFlags,
                         envz, null, &startinfo, &pi))
         throw ProcessException.newFromLastError("Failed to spawn new process");
 
@@ -548,10 +512,10 @@ private Pid spawnProcessWindows(string name,
 // Searches the PATH variable for the given executable file,
 // (checking that it is in fact executable).
 version (Posix)
-private string searchPathFor(string executable)
+private string searchPathFor(in char[] executable)
     @trusted //TODO: @safe nothrow
 {
-    auto pathz = environment["PATH"];
+    auto pathz = core.stdc.stdlib.getenv("PATH");
     if (pathz == null)  return null;
 
     foreach (dir; splitter(to!string(pathz), ':'))
@@ -563,46 +527,24 @@ private string searchPathFor(string executable)
     return null;
 }
 
-// Converts a string[] array to a C array of C strings,
-// setting the program name as the zeroth element.
-version (Posix)
-private const(char)** toArgz(string prog, const string[] args)
-    @trusted nothrow //TODO: @safe
-{
-    alias const(char)* stringz_t;
-    auto argz = new stringz_t[](args.length+2);
-
-    argz[0] = toStringz(prog);
-    foreach (i; 0 .. args.length)
-    {
-        argz[i+1] = toStringz(args[i]);
-    }
-    argz[$-1] = null;
-    return argz.ptr;
-}
-
 // Converts a string[string] array to a C array of C strings
 // on the form "key=value".
 version (Posix)
-private const(char)** toPosixEnv(const ref string[string] env)
+private const(char)** toEnvz(const string[string] env)
     @trusted //TODO: @safe pure nothrow
 {
     alias const(char)* stringz_t;
     auto envz = new stringz_t[](env.length+1);
     int i = 0;
-    foreach (k, v; env)
-    {
-        envz[i] = (k~'='~v~'\0').ptr;
-        i++;
-    }
-    envz[$-1] = null;
+    foreach (k, v; env) envz[i++] = (k~'='~v~'\0').ptr;
+    envz[i] = null;
     return envz.ptr;
 }
 
 // Converts a string[string] array to a block of 16-bit
 // characters on the form "key=value\0key=value\0...\0\0"
 version (Windows)
-private LPVOID toWindowsEnv(const ref string[string] env)
+private LPVOID toEnvz(const string[string] env)
     @trusted //TODO: @safe pure nothrow
 {
     auto envz = appender!(wchar[])();
@@ -620,7 +562,7 @@ private LPVOID toWindowsEnv(const ref string[string] env)
 // Checks whether the file exists and can be executed by the
 // current user.
 version (Posix)
-private bool isExecutable(string path) @trusted //TODO: @safe nothrow
+private bool isExecutable(in char[] path) @trusted //TODO: @safe nothrow
 {
     return (access(toStringz(path), X_OK) == 0);
 }
@@ -631,9 +573,9 @@ unittest
     assert (wait(spawnProcess(prog1.path)) == 0);
 
     TestScript prog2 = "exit 123";
-    auto pid2 = spawnProcess(prog2.path);
+    auto pid2 = spawnProcess([prog2.path]);
     assert (wait(pid2) == 123);
-    assert (wait(pid2) == 123);
+    assert (wait(pid2) == 123); // Exit code is cached.
 
     version (Windows) TestScript prog3 =
        "if not -%1-==-foo- ( exit 1 )
@@ -643,8 +585,7 @@ unittest
        `if test "$1" != "foo"; then exit 1; fi
         if test "$2" != "bar"; then exit 1; fi
         exit 0`;
-    assert (wait(spawnProcess(prog3.path, ["foo", "bar"])) == 0);
-    assert (wait(spawnProcess(prog3.path~" foo bar")) == 0);
+    assert (wait(spawnProcess([ prog3.path, "foo", "bar"])) == 0);
     assert (wait(spawnProcess(prog3.path)) == 1);
 
     version (Windows) TestScript prog4 =
@@ -654,8 +595,8 @@ unittest
        "if test $hello = world; then exit 0; fi
         exit 1";
     auto env = [ "hello" : "world" ];
-    assert (wait(spawnProcess(prog4.path, null, env)) == 0);
     assert (wait(spawnProcess(prog4.path, env)) == 0);
+    assert (wait(spawnProcess([prog4.path], env)) == 0);
 
     version (Windows) TestScript prog5 =
        "set /p INPUT=
@@ -668,7 +609,7 @@ unittest
     auto pipe5i = pipe();
     auto pipe5o = pipe();
     auto pipe5e = pipe();
-    auto pid5 = spawnProcess(prog5.path, ["foo", "bar" ],
+    auto pid5 = spawnProcess([ prog5.path, "foo", "bar" ],
                              pipe5i.readEnd, pipe5o.writeEnd, pipe5e.writeEnd);
     pipe5i.writeEnd.writeln("input");
     pipe5i.writeEnd.flush();
@@ -684,7 +625,8 @@ unittest
     auto file6i = File(path6i, "r");
     auto file6o = File(path6o, "w");
     auto file6e = File(path6e, "w");
-    auto pid6 = spawnProcess(prog5.path, ["bar", "baz" ], file6i, file6o, file6e);
+    auto pid6 = spawnProcess([prog5.path, "bar", "baz" ],
+                             file6i, file6o, file6e);
     wait(pid6);
     assert (readText(path6o).chomp() == "INPUT output bar");
     assert (readText(path6e).chomp().stripRight() == "INPUT error baz");
@@ -695,7 +637,91 @@ unittest
 
 
 /**
-Flags that control the behaviour of $(LREF spawnProcess).
+A variation on $(LREF spawnProcess) that runs the given _command through
+the current user's preferred _command interpreter (aka. shell).
+
+The string $(D command) is passed verbatim to the shell, and is therefore
+subject to its rules about _command structure, argument/filename quoting
+and escaping of special characters.
+The path to the shell executable is determined by the $(LREF userShell)
+function.
+
+In all other respects this function works just like $(D spawnProcess).
+Please refer to the $(LREF spawnProcess) documentation for descriptions
+of the other function parameters, the return value and any exceptions
+that may be thrown.
+---
+// Run the command/program "foo" on the file named "my file.txt", and
+// redirect its output into foo.log.
+auto pid = spawnShell(`foo "my file.txt" > foo.log`);
+wait(pid);
+---
+
+See_also:
+$(LREF escapeShellCommand), which may be helpful in constructing a
+properly quoted and escaped shell command line for the current plattform,
+from an array of separate arguments.
+*/
+Pid spawnShell(in char[] command,
+               const string[string] environmentVars,
+               File stdin_ = std.stdio.stdin,
+               File stdout_ = std.stdio.stdout,
+               File stderr_ = std.stdio.stderr,
+               Config config = Config.none)
+    @trusted // TODO: Should be @safe
+{
+    return spawnShellImpl(command, toEnvz(environmentVars),
+                          stdin_, stdout_, stderr_, config);
+}
+
+/// ditto
+Pid spawnShell(in char[] command,
+               File stdin_ = std.stdio.stdin,
+               File stdout_ = std.stdio.stdout,
+               File stderr_ = std.stdio.stderr,
+               Config config = Config.none)
+    @trusted // TODO: Should be @safe
+{
+    return spawnShellImpl(command, null, stdin_, stdout_, stderr_, config);
+}
+
+// Implementation of spawnShell() for Windows.
+version(Windows)
+private Pid spawnShellImpl(in char[] command,
+                           LPVOID envz,
+                           File stdin_ = std.stdio.stdin,
+                           File stdout_ = std.stdio.stdout,
+                           File stderr_ = std.stdio.stderr,
+                           Config config = Config.none)
+    @trusted // TODO: Should be @safe
+{
+    auto scmd = escapeShellArguments(userShell, shellSwitch) ~ " " ~ command;
+    return spawnProcessImpl(scmd, envz, stdin_, stdout_, stderr_, config);
+}
+
+// Implementation of spawnShell() for POSIX.
+version(Posix)
+private Pid spawnShellImpl(in char[] command,
+                           const char** envz,
+                           File stdin_ = std.stdio.stdin,
+                           File stdout_ = std.stdio.stdout,
+                           File stderr_ = std.stdio.stderr,
+                           Config config = Config.none)
+    @trusted // TODO: Should be @safe
+{
+    const(char)[][3] args;
+    args[0] = userShell;
+    args[1] = shellSwitch;
+    args[2] = command;
+    return spawnProcessImpl(args, envz, stdin_, stdout_, stderr_, config);
+}
+
+
+
+/**
+Flags that control the behaviour of $(LREF spawnProcess) and
+$(LREF spawnShell).
+
 Use bitwise OR to combine flags.
 
 Example:
@@ -943,10 +969,10 @@ int wait(Pid pid) @safe
 A non-blocking version of $(LREF wait).
 
 If the process associated with $(D pid) has already terminated,
-$(D tryWait) has the exact same effect as $(LREF wait).
+$(D tryWait) has the exact same effect as $(D wait).
 In this case, it returns a tuple where the $(D terminated) field
 is set to $(D true) and the $(D status) field has the same
-interpretation as the return value of $(LREF wait).
+interpretation as the return value of $(D wait).
 
 If the process has $(I not) yet terminated, this function differs
 from $(D wait) in that does not wait for this to happen, but instead
@@ -1109,10 +1135,22 @@ assert (p.readEnd.readln().chomp() == "Hello World");
 ---
 Pipes can, for example, be used for interprocess communication
 by spawning a new process and passing one end of the _pipe to
-the child, while the parent uses the other end.  See the
-$(LREF spawnProcess) documentation for examples.
-See also $(LREF pipeProcess) and $(LREF pipeShell) for an easy
-way of doing this.
+the child, while the parent uses the other end.
+(See also $(LREF pipeProcess) and $(LREF pipeShell) for an easier
+way of doing this.)
+---
+// Use cURL to download the dlang.org front page, pipe its
+// output to grep to extract a list of links to ZIP files,
+// and write the list to the file "D downloads.txt":
+auto p = pipe();
+auto outFile = File("D downloads.txt", "w");
+auto cpid = spawnProcess(["curl", "http://dlang.org/download.html"],
+                         std.stdio.stdin, p.writeEnd);
+scope(exit) wait(cpid);
+auto gpid = spawnProcess(["grep", "-o", `http://\S*\.zip`],
+                         p.readEnd, outFile);
+scope(exit) wait(gpid);
+---
 
 Returns:
 A $(LREF Pipe) object that corresponds to the created _pipe.
@@ -1279,7 +1317,8 @@ $(OBJECTREF Error) if $(D redirectFlags) is an invalid combination of flags.
 
 Example:
 ---
-auto pipes = pipeProcess("my_application");
+auto pipes = pipeProcess("my_application", Redirect.stdout | Redirect.stderr);
+scope(exit) wait(pipes.pid);
 
 // Store lines of output.
 string[] output;
@@ -1290,34 +1329,46 @@ string[] errors;
 foreach (line; pipes.stderr.byLine) errors ~= line.idup;
 ---
 */
-ProcessPipes pipeProcess(string command,
+ProcessPipes pipeProcess(string program,
                          Redirect redirectFlags = Redirect.all)
-    @safe
+    @trusted
 {
-    auto splitCmd = split(command);
-    return pipeProcess(splitCmd[0], splitCmd[1 .. $], redirectFlags);
+    return pipeProcessImpl!spawnProcess(program, redirectFlags);
 }
 
 /// ditto
-ProcessPipes pipeProcess(string name,
-                         string[] args,
+ProcessPipes pipeProcess(string[] args,
                          Redirect redirectFlags = Redirect.all)
     @trusted //TODO: @safe
 {
-    File stdinFile, stdoutFile, stderrFile;
+    return pipeProcessImpl!spawnProcess(args, redirectFlags);
+}
 
+/// ditto
+ProcessPipes pipeShell(string command, Redirect redirectFlags = Redirect.all)
+    @safe
+{
+    return pipeProcessImpl!spawnShell(command, redirectFlags);
+}
+
+// Implementation of the pipeProcess() family of functions.
+private ProcessPipes pipeProcessImpl(alias spawnFunc, Cmd)
+                                    (Cmd command, Redirect redirectFlags)
+    @trusted //TODO: @safe
+{
+    File childStdin, childStdout, childStderr;
     ProcessPipes pipes;
     pipes._redirectFlags = redirectFlags;
 
     if (redirectFlags & Redirect.stdin)
     {
         auto p = pipe();
-        stdinFile = p.readEnd;
+        childStdin = p.readEnd;
         pipes._stdin = p.writeEnd;
     }
     else
     {
-        stdinFile = std.stdio.stdin;
+        childStdin = std.stdio.stdin;
     }
 
     if (redirectFlags & Redirect.stdout)
@@ -1326,12 +1377,12 @@ ProcessPipes pipeProcess(string name,
             throw new Error("Invalid combination of options: Redirect.stdout | "
                             ~"Redirect.stdoutToStderr");
         auto p = pipe();
-        stdoutFile = p.writeEnd;
+        childStdout = p.writeEnd;
         pipes._stdout = p.readEnd;
     }
     else
     {
-        stdoutFile = std.stdio.stdout;
+        childStdout = std.stdio.stdout;
     }
 
     if (redirectFlags & Redirect.stderr)
@@ -1340,12 +1391,12 @@ ProcessPipes pipeProcess(string name,
             throw new Error("Invalid combination of options: Redirect.stderr | "
                             ~"Redirect.stderrToStdout");
         auto p = pipe();
-        stderrFile = p.writeEnd;
+        childStderr = p.writeEnd;
         pipes._stderr = p.readEnd;
     }
     else
     {
-        stderrFile = std.stdio.stderr;
+        childStderr = std.stdio.stderr;
     }
 
     if (redirectFlags & Redirect.stdoutToStderr)
@@ -1354,28 +1405,21 @@ ProcessPipes pipeProcess(string name,
         {
             // We know that neither of the other options have been
             // set, so we assign the std.stdio.std* streams directly.
-            stdoutFile = std.stdio.stderr;
-            stderrFile = std.stdio.stdout;
+            childStdout = std.stdio.stderr;
+            childStderr = std.stdio.stdout;
         }
         else
         {
-            stdoutFile = stderrFile;
+            childStdout = childStderr;
         }
     }
     else if (redirectFlags & Redirect.stderrToStdout)
     {
-        stderrFile = stdoutFile;
+        childStderr = childStdout;
     }
 
-    pipes._pid = spawnProcess(name, args, stdinFile, stdoutFile, stderrFile);
+    pipes._pid = spawnFunc(command, null, childStdin, childStdout, childStderr);
     return pipes;
-}
-
-/// ditto
-ProcessPipes pipeShell(string command, Redirect redirectFlags = Redirect.all)
-    @safe
-{
-    return pipeProcess(userShell, [shellSwitch, command], redirectFlags);
 }
 
 
@@ -1386,8 +1430,6 @@ Use bitwise OR to combine flags.
 */
 enum Redirect
 {
-    none = 0,
-
     /// Redirect the standard input, output or error streams, respectively.
     stdin = 1,
     stdout = 2,                             /// ditto
@@ -1434,7 +1476,7 @@ unittest
             echo "$INPUT $2" >&2
         done
         exit $EXITCODE`;
-    auto pp = pipeProcess(prog.path, ["bar", "baz"]);
+    auto pp = pipeProcess([prog.path, "bar", "baz"]);
     pp.stdin.writeln("foo");
     pp.stdin.flush();
     assert (pp.stdout.readln().chomp() == "foo bar");
@@ -1447,7 +1489,7 @@ unittest
     pp.stdin.flush();
     assert (wait(pp.pid) == 2);
 
-    pp = pipeProcess(prog.path, ["12345", "67890"],
+    pp = pipeProcess([prog.path, "12345", "67890"],
                      Redirect.stdin | Redirect.stdout | Redirect.stderrToStdout);
     pp.stdin.writeln("xyz");
     pp.stdin.flush();
@@ -1557,35 +1599,19 @@ Throws:
 $(LREF ProcessException) on failure to start the process.$(BR)
 $(XREF stdio,StdioException) on failure to capture output.
 */
-Tuple!(int, "status", string, "output") execute(string command)
+Tuple!(int, "status", string, "output") execute(string program)
     @trusted //TODO: @safe
 {
-    auto p = pipeProcess(command,
-                         Redirect.stdout | Redirect.stderrToStdout);
-
-    Appender!(ubyte[]) a;
-    foreach (ubyte[] chunk; p.stdout.byChunk(4096))  a.put(chunk);
-
-    typeof(return) r;
-    r.output = cast(string) a.data;
-    r.status = wait(p.pid);
-    return r;
+    auto p = pipeProcess(program, Redirect.stdout | Redirect.stderrToStdout);
+    return processOutput(p, size_t.max);
 }
 
 /// ditto
-Tuple!(int, "status", string, "output") execute(string name, string[] args...)
+Tuple!(int, "status", string, "output") execute(string[] args...)
     @trusted //TODO: @safe
 {
-    auto p = pipeProcess(name, args,
-                         Redirect.stdout | Redirect.stderrToStdout);
-
-    Appender!(ubyte[]) a;
-    foreach (ubyte[] chunk; p.stdout.byChunk(4096))  a.put(chunk);
-
-    typeof(return) r;
-    r.output = cast(string) a.data;
-    r.status = wait(p.pid);
-    return r;
+    auto p = pipeProcess(args, Redirect.stdout | Redirect.stderrToStdout);
+    return processOutput(p, size_t.max);
 }
 
 unittest
@@ -1600,7 +1626,7 @@ unittest
        `printf '%s' $1
         printf '%s' $2 >&2
         exit 123`;
-    auto r = execute(prog.path~" foo bar");
+    auto r = execute([prog.path, "foo", "bar"]);
     assert (r.status == 123);
     assert (r.output.stripRight() == "foobar");
     auto s = execute(prog.path, "Hello", "World");
@@ -1634,11 +1660,8 @@ $(XREF stdio,StdioException) on failure to capture output.
 Tuple!(int, "status", string, "output") shell(string command)
     @trusted //TODO: @safe
 {
-    version (Windows)
-        return execute(userShell ~ " " ~ shellSwitch ~ " " ~ command);
-    else version (Posix)
-        return execute(userShell, shellSwitch, command);
-    else assert(0);
+    auto p = pipeShell(command, Redirect.stdout | Redirect.stderrToStdout);
+    return processOutput(p, size_t.max);
 }
 
 unittest
@@ -1653,6 +1676,26 @@ unittest
     assert (r3.status == 123);
     assert (r3.output.empty);
 }
+
+// Collects the output and exit code for execute() and shell().
+private Tuple!(int, "status", string, "output") processOutput(
+    ref ProcessPipes pp,
+    size_t maxData)
+{
+    Appender!(ubyte[]) a;
+    enum chunkSize = 4096;
+    foreach (ubyte[] chunk; pp.stdout.byChunk(chunkSize))
+    {
+        a.put(chunk);
+        if (a.data().length + chunkSize > maxData) break;
+    }
+
+    typeof(return) r;
+    r.output = cast(string) a.data;
+    r.status = wait(pp.pid);
+    return r;
+}
+
 
 
 /// An exception that signals a problem with starting or waiting for a process.
@@ -1769,6 +1812,413 @@ private struct TestScript
 
     string path;
 }
+
+
+// =============================================================================
+// Functions for shell command quoting/escaping.
+// =============================================================================
+
+
+/*
+    Command line arguments exist in three forms:
+    1) string or char* array, as received by main.
+       Also used internally on POSIX systems.
+    2) Command line string, as used in Windows'
+       CreateProcess and CommandLineToArgvW functions.
+       A specific quoting and escaping algorithm is used
+       to distinguish individual arguments.
+    3) Shell command string, as written at a shell prompt
+       or passed to cmd /C - this one may contain shell
+       control characters, e.g. > or | for redirection /
+       piping - thus, yet another layer of escaping is
+       used to distinguish them from program arguments.
+
+    Except for escapeWindowsArgument, the intermediary
+    format (2) is hidden away from the user in this module.
+*/
+
+/**
+Escapes an argv-style argument array to be used with $(LREF spawnShell),
+$(LREF pipeShell) or $(LREF shell).
+---
+string url = "http://dlang.org/";
+shell(escapeShellCommand("wget", url, "-O", "dlang-index.html"));
+---
+
+Concatenate multiple $(D escapeShellCommand) and
+$(LREF escapeShellFileName) results to use shell redirection or
+piping operators.
+---
+shell(
+    escapeShellCommand("curl", "http://dlang.org/download.html") ~
+    "|" ~
+    escapeShellCommand("grep", "-o", `http://\S*\.zip`) ~
+    ">" ~
+    escapeShellFileName("D download links.txt"));
+---
+*/
+string escapeShellCommand(in char[][] args...)
+    //TODO: @safe pure nothrow
+{
+    return escapeShellCommandString(escapeShellArguments(args));
+}
+
+
+private string escapeShellCommandString(string command)
+    //TODO: @safe pure nothrow
+{
+    version (Windows)
+        return escapeWindowsShellCommand(command);
+    else
+        return command;
+}
+
+string escapeWindowsShellCommand(in char[] command)
+    //TODO: @safe pure nothrow (prevented by Appender)
+{
+    auto result = appender!string();
+    result.reserve(command.length);
+
+    foreach (c; command)
+        switch (c)
+        {
+            case '\0':
+                assert(0, "Cannot put NUL in command line");
+            case '\r':
+            case '\n':
+                assert(0, "CR/LF are not escapable");
+            case '\x01': .. case '\x09':
+            case '\x0B': .. case '\x0C':
+            case '\x0E': .. case '\x1F':
+            case '"':
+            case '^':
+            case '&':
+            case '<':
+            case '>':
+            case '|':
+                result.put('^');
+                goto default;
+            default:
+                result.put(c);
+        }
+    return result.data;
+}
+
+private string escapeShellArguments(in char[][] args...)
+    @trusted pure nothrow
+{
+    char[] buf;
+
+    @safe nothrow
+    char[] allocator(size_t size)
+    {
+        if (buf.length == 0)
+            return buf = new char[size];
+        else
+        {
+            auto p = buf.length;
+            buf.length = buf.length + 1 + size;
+            buf[p++] = ' ';
+            return buf[p..p+size];
+        }
+    }
+
+    foreach (arg; args)
+        escapeShellArgument!allocator(arg);
+    return assumeUnique(buf);
+}
+
+private auto escapeShellArgument(alias allocator)(in char[] arg) @safe nothrow
+{
+    // The unittest for this function requires special
+    // preparation - see below.
+
+    version (Windows)
+        return escapeWindowsArgumentImpl!allocator(arg);
+    else
+        return escapePosixArgumentImpl!allocator(arg);
+}
+
+/**
+Quotes a command-line argument in a manner conforming to the behavior of
+$(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/bb776391(v=vs.85).aspx,
+CommandLineToArgvW).
+*/
+string escapeWindowsArgument(in char[] arg) @trusted pure nothrow
+{
+    // Rationale for leaving this function as public:
+    // this algorithm of escaping paths is also used in other software,
+    // e.g. DMD's response files.
+
+    auto buf = escapeWindowsArgumentImpl!charAllocator(arg);
+    return assumeUnique(buf);
+}
+
+
+private char[] charAllocator(size_t size) @safe pure nothrow
+{
+    return new char[size];
+}
+
+
+private char[] escapeWindowsArgumentImpl(alias allocator)(in char[] arg)
+    @safe nothrow
+    if (is(typeof(allocator(size_t.init)[0] = char.init)))
+{
+    // References:
+    // * http://msdn.microsoft.com/en-us/library/windows/desktop/bb776391(v=vs.85).aspx
+    // * http://blogs.msdn.com/b/oldnewthing/archive/2010/09/17/10063629.aspx
+
+    // Calculate the total string size.
+
+    // Trailing backslashes must be escaped
+    bool escaping = true;
+    // Result size = input size + 2 for surrounding quotes + 1 for the
+    // backslash for each escaped character.
+    size_t size = 1 + arg.length + 1;
+
+    foreach_reverse (c; arg)
+    {
+        if (c == '"')
+        {
+            escaping = true;
+            size++;
+        }
+        else
+        if (c == '\\')
+        {
+            if (escaping)
+                size++;
+        }
+        else
+            escaping = false;
+    }
+
+    // Construct result string.
+
+    auto buf = allocator(size);
+    size_t p = size;
+    buf[--p] = '"';
+    escaping = true;
+    foreach_reverse (c; arg)
+    {
+        if (c == '"')
+            escaping = true;
+        else
+        if (c != '\\')
+            escaping = false;
+
+        buf[--p] = c;
+        if (escaping)
+            buf[--p] = '\\';
+    }
+    buf[--p] = '"';
+    assert(p == 0);
+
+    return buf;
+}
+
+version(Windows) version(unittest)
+{
+    import core.sys.windows.windows;
+    import core.stdc.stddef;
+
+    extern (Windows) wchar_t**  CommandLineToArgvW(wchar_t*, int*);
+    extern (C) size_t wcslen(in wchar *);
+
+    unittest
+    {
+        string[] testStrings = [
+            `Hello`,
+            `Hello, world`,
+            `Hello, "world"`,
+            `C:\`,
+            `C:\dmd`,
+            `C:\Program Files\`,
+        ];
+
+        enum CHARS = `_x\" *&^`; // _ is placeholder for nothing
+        foreach (c1; CHARS)
+        foreach (c2; CHARS)
+        foreach (c3; CHARS)
+        foreach (c4; CHARS)
+            testStrings ~= [c1, c2, c3, c4].replace("_", "");
+
+        foreach (s; testStrings)
+        {
+            auto q = escapeWindowsArgument(s);
+            LPWSTR lpCommandLine = (to!(wchar[])("Dummy.exe " ~ q) ~ "\0"w).ptr;
+            int numArgs;
+            LPWSTR* args = CommandLineToArgvW(lpCommandLine, &numArgs);
+            scope(exit) LocalFree(args);
+            assert(numArgs==2, s ~ " => " ~ q ~ " #" ~ text(numArgs-1));
+            auto arg = to!string(args[1][0..wcslen(args[1])]);
+            assert(arg == s, s ~ " => " ~ q ~ " => " ~ arg);
+        }
+    }
+}
+
+private string escapePosixArgument(in char[] arg) @trusted pure nothrow
+{
+    auto buf = escapePosixArgumentImpl!charAllocator(arg);
+    return assumeUnique(buf);
+}
+
+private char[] escapePosixArgumentImpl(alias allocator)(in char[] arg)
+    @safe nothrow
+    if (is(typeof(allocator(size_t.init)[0] = char.init)))
+{
+    // '\'' means: close quoted part of argument, append an escaped
+    // single quote, and reopen quotes
+
+    // Below code is equivalent to:
+    // return `'` ~ std.array.replace(arg, `'`, `'\''`) ~ `'`;
+
+    size_t size = 1 + arg.length + 1;
+    foreach (c; arg)
+        if (c == '\'')
+            size += 3;
+
+    auto buf = allocator(size);
+    size_t p = 0;
+    buf[p++] = '\'';
+    foreach (c; arg)
+        if (c == '\'')
+        {
+            buf[p..p+4] = `'\''`;
+            p += 4;
+        }
+        else
+            buf[p++] = c;
+    buf[p++] = '\'';
+    assert(p == size);
+
+    return buf;
+}
+
+/**
+Escapes a filename to be used for shell redirection with $(LREF spawnShell),
+$(LREF pipeShell) or $(LREF shell).
+*/
+string escapeShellFileName(in char[] fileName) @trusted pure nothrow
+{
+    // The unittest for this function requires special
+    // preparation - see below.
+
+    version (Windows)
+        return cast(string)('"' ~ fileName ~ '"');
+    else
+        return escapePosixArgument(fileName);
+}
+
+// Loop generating strings with random characters
+//version = unittest_burnin;
+
+version(unittest_burnin)
+unittest
+{
+    // There are no readily-available commands on all platforms suitable
+    // for properly testing command escaping. The behavior of CMD's "echo"
+    // built-in differs from the POSIX program, and Windows ports of POSIX
+    // environments (Cygwin, msys, gnuwin32) may interfere with their own
+    // "echo" ports.
+
+    // To run this unit test, create std_process_unittest_helper.d with the
+    // following content and compile it:
+    // import std.stdio, std.array; void main(string[] args) { write(args.join("\0")); }
+    // Then, test this module with:
+    // rdmd --main -unittest -version=unittest_burnin process.d
+
+    auto helper = absolutePath("std_process_unittest_helper");
+    assert(shell(helper ~ " hello").split("\0")[1..$] == ["hello"], "Helper malfunction");
+
+    void test(string[] s, string fn)
+    {
+        string e;
+        string[] g;
+
+        e = escapeShellCommand(helper ~ s);
+        {
+            scope(failure) writefln("shell() failed.\nExpected:\t%s\nEncoded:\t%s", s, [e]);
+            g = shell(e).split("\0")[1..$];
+        }
+        assert(s == g, format("shell() test failed.\nExpected:\t%s\nGot:\t\t%s\nEncoded:\t%s", s, g, [e]));
+
+        e = escapeShellCommand(helper ~ s) ~ ">" ~ escapeShellFileName(fn);
+        {
+            scope(failure) writefln("system() failed.\nExpected:\t%s\nFilename:\t%s\nEncoded:\t%s", s, [fn], [e]);
+            system(e);
+            g = readText(fn).split("\0")[1..$];
+        }
+        remove(fn);
+        assert(s == g, format("system() test failed.\nExpected:\t%s\nGot:\t\t%s\nEncoded:\t%s", s, g, [e]));
+    }
+
+    while (true)
+    {
+        string[] args;
+        foreach (n; 0..uniform(1, 4))
+        {
+            string arg;
+            foreach (l; 0..uniform(0, 10))
+            {
+                dchar c;
+                while (true)
+                {
+                    version (Windows)
+                    {
+                        // As long as DMD's system() uses CreateProcessA,
+                        // we can't reliably pass Unicode
+                        c = uniform(0, 128);
+                    }
+                    else
+                        c = uniform!ubyte();
+
+                    if (c == 0)
+                        continue; // argv-strings are zero-terminated
+                    version (Windows)
+                        if (c == '\r' || c == '\n')
+                            continue; // newlines are unescapable on Windows
+                    break;
+                }
+                arg ~= c;
+            }
+            args ~= arg;
+        }
+
+        // generate filename
+        string fn = "test_";
+        foreach (l; 0..uniform(1, 10))
+        {
+            dchar c;
+            while (true)
+            {
+                version (Windows)
+                    c = uniform(0, 128); // as above
+                else
+                    c = uniform!ubyte();
+
+                if (c == 0 || c == '/')
+                    continue; // NUL and / are the only characters
+                              // forbidden in POSIX filenames
+                version (Windows)
+                    if (c < '\x20' || c == '<' || c == '>' || c == ':' ||
+                        c == '"' || c == '\\' || c == '|' || c == '?' || c == '*')
+                        continue; // http://msdn.microsoft.com/en-us/library/aa365247(VS.85).aspx
+                break;
+            }
+
+            fn ~= c;
+        }
+
+        test(args, fn);
+    }
+}
+
+
+// =============================================================================
+// Environment variable manipulation.
+// =============================================================================
 
 
 /**
