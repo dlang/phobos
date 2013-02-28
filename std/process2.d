@@ -33,12 +33,8 @@ $(LI
 $(LI
     $(LREF kill) attempts to terminate a running process.)
 )
-$(LREF shell) and $(LREF pipeShell) both run the given command
-through the user's default command interpreter.  On Windows, this is
-the $(I cmd.exe) program, on POSIX it is determined by the SHELL environment
-variable (defaulting to $(I /bin/sh) if it cannot be determined).  The
-command is specified as a single string which is sent directly to the
-shell.
+$(LREF shell) and $(LREF pipeShell) both run the given command through the
+user's default command interpreter.
 
 $(LREF spawnProcess), $(LREF pipeProcess) and $(LREF execute)  all have
 two forms: one where the program name and its arguments are specified
@@ -1267,8 +1263,9 @@ input, output and/or error streams.
 
 These functions return immediately, leaving the child process to
 execute in parallel with the parent.
-$(LREF pipeShell) invokes the user's _command interpreter
-to execute the given program or _command.
+$(LREF pipeShell) invokes the user's _command interpreter, as
+determined by $(LREF userShell), to execute the given program or
+_command.
 
 Returns:
 A $(LREF ProcessPipes) object which contains $(XREF stdio,File)
@@ -1378,7 +1375,7 @@ ProcessPipes pipeProcess(string name,
 ProcessPipes pipeShell(string command, Redirect redirectFlags = Redirect.all)
     @safe
 {
-    return pipeProcess(getShell(), [shellSwitch, command], redirectFlags);
+    return pipeProcess(userShell, [shellSwitch, command], redirectFlags);
 }
 
 
@@ -1612,19 +1609,6 @@ unittest
 }
 
 
-// A command-line switch that indicates to the shell that it should
-// interpret the following argument as a command to be executed.
-version (Posix)   private immutable string shellSwitch = "-c";
-version (Windows) private immutable string shellSwitch = "/C";
-
-// Gets the user's default shell.
-private string getShell() @safe //TODO: nothrow
-{
-    version (Windows)    return "cmd.exe";
-    else version (Posix) return environment.get("SHELL", "/bin/sh");
-}
-
-
 /**
 Executes $(D _command) in the user's default _shell and returns its
 exit code and output.
@@ -1632,6 +1616,7 @@ exit code and output.
 This function blocks until the command terminates.
 The $(D output) string includes what the command writes to its
 standard error stream as well as its standard output stream.
+The path to the _command interpreter is given by $(LREF userShell).
 ---
 auto ls = shell("ls -l");
 writefln("ls exited with code %s and said: %s", ls.status, ls.output);
@@ -1650,9 +1635,9 @@ Tuple!(int, "status", string, "output") shell(string command)
     @trusted //TODO: @safe
 {
     version (Windows)
-        return execute(getShell() ~ " " ~ shellSwitch ~ " " ~ command);
+        return execute(userShell ~ " " ~ shellSwitch ~ " " ~ command);
     else version (Posix)
-        return execute(getShell(), shellSwitch, command);
+        return execute(userShell, shellSwitch, command);
     else assert(0);
 }
 
@@ -1713,6 +1698,29 @@ class ProcessException : Exception
         return new ProcessException(msg, file, line);
     }
 }
+
+
+/**
+Determines the path to the current user's default command interpreter.
+
+On Windows, this function returns the contents of the COMSPEC environment
+variable, if it exists.  Otherwise, it returns the string $(D "cmd.exe").
+
+On POSIX, $(D userShell) returns the contents of the SHELL environment
+variable, if it exists and is non-empty.  Otherwise, it returns
+$(D "/bin/sh").
+*/
+@property string userShell() @safe //TODO: nothrow
+{
+    version (Windows)    return environment.get("COMSPEC", "cmd.exe");
+    else version (Posix) return environment.get("SHELL", "/bin/sh");
+}
+
+
+// A command-line switch that indicates to the shell that it should
+// interpret the following argument as a command to be executed.
+version (Posix)   private immutable string shellSwitch = "-c";
+version (Windows) private immutable string shellSwitch = "/C";
 
 
 /// Returns the process ID number of the current process.
@@ -1795,7 +1803,7 @@ static:
 
     Unlike $(LREF opIndex), this function never throws.
     ---
-    auto userShell = environment.get("SHELL", "/bin/sh");
+    auto sh = environment.get("SHELL", "/bin/sh");
     ---
     This function is also useful in checking for the existence of an
     environment variable.
