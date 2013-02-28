@@ -1809,7 +1809,7 @@ the contents may well have changed).
         {
             static import std.file;
 
-            /* the C function tmpfile doesn't seem to work, even when called from C */ 
+            /* the C function tmpfile doesn't seem to work, even when called from C */
             auto deleteme = testFilename();
             auto file = File(deleteme, "w+");
             scope(success) std.file.remove(deleteme);
