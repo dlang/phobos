@@ -2897,6 +2897,34 @@ unittest
     int[] arr = parse!(int[])(s);
 }
 
+unittest
+{
+    //Checks parsing of strings with escapped characters
+    string s1 = `[
+        "Contains a\0null!",
+        "tab\there",
+        "line\nbreak",
+        "backslash \\ slash / question \?",
+        "number \x35 five",
+        "unicode \u65E5 sun",
+        "very long \U000065E5 sun"
+    ]`;
+
+    //Note: escaped characters purposefully replaced and isolated to guarantee
+    //there are no typos in the escape syntax
+    string[] s2 = [
+        "Contains a" ~ '\0' ~ "null!",
+        "tab" ~ '\t' ~ "here",
+        "line" ~ '\n' ~ "break",
+        "backslash " ~ '\\' ~ " slash / question ?",
+        "number 5 five",
+        "unicode 日 sun",
+        "very long 日 sun"
+    ];
+    assert(s2 == parse!(string[])(s1));
+    assert(s1.empty);
+}
+
 /// ditto
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
     if (isExactSomeString!Source &&
@@ -3091,6 +3119,37 @@ private dchar parseEscape(Source)(ref Source s)
     s.popFront();
 
     return result;
+}
+
+unittest
+{
+    string[] s1 = [ `\"`, `\'`, `\?`, `\\`, `\a`, `\b`, `\f`, `\n`, `\r`, `\t`, `\v` ];
+    string   s2 = [ '\"', '\'', '\?', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v' ];
+
+    foreach (i ; 0 .. s1.length)
+    {
+        assert(s2[i] == parseEscape(s1[i]));
+        assert(s1[i].empty);
+    }
+}
+
+unittest
+{
+    string[] ss = [
+        `hello!`,  //Not an escape
+        `\`,       //Premature termination
+        `\/`,      //Not an escape
+        `\gggg`,   //Not an escape
+        `\xzz`,    //Not an hex
+        `\x0`,     //Premature hex end
+        `\XB9`,    //Not legal hex syntax
+        `\u!!`,    //Not a unicode hex
+        `\777`,    //Octal, not supported
+        `\u123`,   //Premature hex end
+        `\U123123` //Premature hex end
+    ];
+    foreach (s ; ss)
+        assertThrown!ConvException(parseEscape(s));
 }
 
 // Undocumented
