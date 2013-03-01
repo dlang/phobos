@@ -3123,8 +3123,21 @@ private dchar parseEscape(Source)(ref Source s)
 
 unittest
 {
-    string[] s1 = [ `\"`, `\'`, `\?`, `\\`, `\a`, `\b`, `\f`, `\n`, `\r`, `\t`, `\v` ];
-    string   s2 = [ '\"', '\'', '\?', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v' ];
+    string[] s1 = [
+        `\"`, `\'`, `\?`, `\\`, `\a`, `\b`, `\f`, `\n`, `\r`, `\t`, `\v`, //Normal escapes
+        //`\141`, //@@@9621@@@ Octal escapes.
+        `\x61`, 
+        `\u65E5`, `\U00012456`
+        //`\&amp;`, `\&quot;`, //@@@9621@@@ Named Character Entities.
+    ];
+
+    const(dchar)[] s2 = [
+        '\"', '\'', '\?', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v', //Normal escapes
+        //'\141', //@@@9621@@@ Octal escapes.
+        '\x61', 
+        '\u65E5', '\U00012456'
+        //'\&amp;', '\&quot;', //@@@9621@@@ Named Character Entities.
+    ];
 
     foreach (i ; 0 .. s1.length)
     {
@@ -3144,7 +3157,7 @@ unittest
         `\x0`,     //Premature hex end
         `\XB9`,    //Not legal hex syntax
         `\u!!`,    //Not a unicode hex
-        `\777`,    //Octal, not supported
+        `\777`,    //Octal is larger than a byte //Note: Throws, but simply because octals are unsupported
         `\u123`,   //Premature hex end
         `\U123123` //Premature hex end
     ];
