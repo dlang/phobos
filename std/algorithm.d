@@ -7911,6 +7911,8 @@ $(BIGOH r.length) (if unstable) or $(BIGOH r.length * log(r.length))
 (if stable) evaluations of $(D less) and $(D swap). See also $(WEB
 sgi.com/tech/stl/nth_element.html, STL's nth_element).
 
+If $(D n >= r.length), the algorithm has no effect.
+
 Examples:
 ----
 int[] v = [ 25, 7, 9, 2, 0, 5, 21 ];
