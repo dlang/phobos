@@ -3726,6 +3726,201 @@ unittest
     }
 }
 
+/**
+Given a forward range $(D r), returns a range of ranges that group adjacent
+elements in $(D r) according to $(D binaryFun!pred(a, b)). Each range
+returned contains sequential elements in $(D r) that are equal
+according to $(D binaryFun!pred(a, b)). The predicate is assumed to be
+transitive ($(D binaryFun!pred(a, b) && binaryFun!pred(b, c)) implies
+$(D binaryFun!pred(a, c))). By default $(D pred) creates subranges of
+equal elements.
+
+Returns: $(D groupBy!pred(r)) returns a range of type $(D
+GroupBy!(pred, typeof(r))), which in turn is a range of ranges. If $(D
+r) is an $(D InputRange), then $(D GroupBy!(pred, typeof(r))) and its
+component ranges are all $(D InputRange)s as well. Otherwise, $(D
+GroupBy!(pred, typeof(r))) and its component ranges are all $(D
+ForwardRange)s.
+
+Although grouping after sorting is a common pattern, the range doesn't
+have to be sorted or structured in a particular way.
+ */
+struct GroupBy(alias pred, R) if (isForwardRange!R)
+{
+    private import std.typecons;
+    // This data will be shared between the GroupBy range and its
+    // individual groups.
+    struct SharedInput
+    {
+        R data;
+        ulong groupId;
+    }
+    private RefCounted!SharedInput _input;
+    private ElementType!R _model;
+    private Group _front;
+
+    /**
+      A group of identical elements in a range.
+    */
+    struct Group
+    {
+        private RefCounted!SharedInput _allGroups;
+        private R _thisGroup;
+        private ulong _id;
+        private ElementType!R _model;
+
+        private this(RefCounted!SharedInput allGroups)
+        {
+            _allGroups = allGroups;
+            _thisGroup = allGroups.data.save;
+            _id = allGroups.groupId;
+            if (!_thisGroup.empty) _model = _thisGroup.front;
+        }
+
+        /**
+           Range primitives.
+        */
+        @property bool empty()
+        {
+            auto result = _thisGroup.empty
+                || !binaryFun!pred(_thisGroup.front, _model);
+            if (result && !isNull(_allGroups) && _allGroups.groupId == _id)
+            {
+                // Fast forward allGroups to this position
+                _allGroups.data = _thisGroup;
+                _allGroups = null;
+            }
+            return result;
+        }
+
+        /// ditto
+        @property auto ref front()
+        {
+            assert(!empty);
+            return _thisGroup.front;
+        }
+
+        /// ditto
+        void popFront()
+        {
+            assert(!empty);
+            _thisGroup.popFront();
+        }
+
+        /// ditto
+        static if (isForwardRange!R)
+            @property auto save()
+            {
+                auto result = this;
+                result._thisGroup = _thisGroup.save;
+                return result;
+            }
+    }
+
+    /**
+       Initializes a $(D GroupBy) from a range.
+    */
+    this(R data)
+    {
+        _input = RefCounted!SharedInput(data, 0);
+        _front._allGroups = _input;
+        _front._thisGroup = data.save;
+        if (!data.empty)
+        {
+            _front._model = _model = data.front;
+        }
+    }
+
+    /**
+       Range primitives.
+    */
+    @property bool empty()
+    {
+        return _input.data.empty;
+    }
+
+    /// ditto
+    @property ref Group front()
+    {
+        assert(!empty);
+        return _front;
+    }
+
+    /// ditto
+    void popFront()
+    {
+        for (; !_input.data.empty; _input.data.popFront())
+        {
+            if (binaryFun!pred(_input.data.front, _model))
+            {
+                continue;
+            }
+            // found a new group
+            _model = _input.data.front;
+            _front._model = _model;
+            _front._id = ++_input.groupId;
+            break;
+        }
+        _front._thisGroup = _input.data.save;
+    }
+
+    /// ditto
+    static if (isForwardRange!R)
+        @property auto save()
+        {
+            return GroupBy(_input.data.save);
+        }
+}
+
+/// Ditto
+unittest
+{
+    auto a = [ 1, 2, 2, 3, 3, 3, 4, 5, 5, 6, ];
+    auto g = groupBy(a);
+    auto witness = [ [1], [2, 2], [3, 3, 3], [4], [5, 5], [6], ];
+    uint i;
+    foreach (group; g)
+    {
+        assert(group.equal(witness[i++]));
+    }
+    assert(i == witness.length);
+}
+
+/// Ditto
+auto groupBy(alias pred = "a == b", R)(R r) if (isForwardRange!R)
+{
+    return GroupBy!(pred, R)(r);
+}
+
+unittest
+{
+    // Test groups saved out of order
+    auto a = [ 1, 1, 1, 2, 2, 3, 3, 3, 4, 5, 5, 6, ];
+    auto g1 = groupBy(a);
+    auto g2 = g1.save;
+    auto firstGroup1 = g1.front;
+    auto firstGroup2 = firstGroup1.save;
+    g1.popFront();
+
+    auto witness2 = [ [1, 1, 1], [2, 2], [3, 3, 3], [4], [5, 5], [6], ];
+    uint i = 0;
+    foreach (group; g2)
+    {
+        assert(group.equal(witness2[i++]));
+    }
+
+    auto witness1 = [ [2, 2], [3, 3, 3], [4], [5, 5], [6], ];
+    i = 0;
+    foreach (group; g1)
+    {
+        assert(group.equal(witness1[i++]));
+    }
+    assert(i == witness1.length);
+
+    assert(firstGroup1.equal([1, 1, 1]));
+    assert(firstGroup2.equal([1, 1, 1]));
+}
+
 // overwriteAdjacent
 /*
 Reduces $(D r) by shifting it to the left until no adjacent elements
