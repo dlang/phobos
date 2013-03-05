@@ -28,7 +28,7 @@ module std.string;
 import core.exception : RangeError, onRangeError;
 import core.vararg, core.stdc.stdlib, core.stdc.string,
     std.algorithm, std.ascii, std.conv, std.exception, std.format, std.functional,
-    std.metastrings, std.range, std.regex, std.traits,
+    std.range, std.regex, std.traits,
     std.typecons, std.typetuple, std.uni, std.utf;
 
 //Remove when repeat is finally removed. They're only here as part of the
@@ -90,9 +90,9 @@ deprecated("Please use std.uni.isWhite instead.")       bool iswhite(dchar c)
 
 /++
     Compares two ranges of characters lexicographically. The comparison is
-    case insensitive. Use $(D XREF algorithm, cmp) for a case sensitive
-    comparison. $(D icmp) works like $(D XREF algorithm, cmp) except that it
-    converts characters to lowercase prior to applying ($D pred). Technically,
+    case insensitive. Use $(XREF algorithm, cmp) for a case sensitive
+    comparison. icmp works like $(XREF algorithm, cmp) except that it
+    converts characters to lowercase prior to applying $(D pred). Technically,
     $(D icmp(r1, r2)) is equivalent to
     $(D cmp!"std.uni.toLower(a) < std.uni.toLower(b)"(r1, r2)).
 
@@ -2554,6 +2554,10 @@ unittest
 
     assertThrown!FormatException(format("foo %s"));
     assertThrown!FormatException(format("foo %s", 123, 456));
+
+    //Test CTFE-ability of format.
+    static assert(format("hel%slo%s%s%s", "world", -138, 'c', true) ==
+                  "helworldlo-138ctrue", "[" ~ s ~ "]");
 }
 
 

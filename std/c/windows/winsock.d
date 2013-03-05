@@ -12,8 +12,8 @@ private import std.c.windows.windows;
 
 extern(Windows):
 
-alias int  SOCKET;
-alias uint socklen_t;
+alias size_t SOCKET;
+alias int    socklen_t;
 
 const SOCKET INVALID_SOCKET = cast(SOCKET)~0;
 const int SOCKET_ERROR = -1;
@@ -312,8 +312,17 @@ struct servent
 {
     char* s_name;
     char** s_aliases;
-    SHORT s_port;
-    char* s_proto;
+
+    version (Win64)
+    {
+        char* s_proto;
+        SHORT s_port;
+    }
+    else
+    {
+        SHORT s_port;
+        char* s_proto;
+    }
 }
 
 

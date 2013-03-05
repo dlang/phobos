@@ -57,6 +57,9 @@ import core.exception, core.stdc.errno;
         T          = The $(D Throwable) to test for.
         expression = The expression to test.
         msg        = Optional message to output on test failure.
+                     If msg is empty, and the thrown exception has a
+                     non-empty msg field, the exception's msg field
+                     will be output on test failure.
 
     Throws:
         $(D AssertError) if the given $(D Throwable) is thrown.
@@ -70,7 +73,7 @@ assertNotThrown(enforceEx!StringException(true, "Error!"));
 
 assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
            enforceEx!StringException(false, "Error!"))) ==
-       `assertNotThrown failed: StringException was thrown.`);
+       `assertNotThrown failed: StringException was thrown: Error!`);
 --------------------
   +/
 void assertNotThrown(T : Throwable = Exception, E)
@@ -83,8 +86,8 @@ void assertNotThrown(T : Throwable = Exception, E)
         expression();
     catch(T t)
     {
-        immutable tail = msg.empty ? "." : ": " ~ msg;
-
+        immutable message = msg.empty ? t.msg : msg;
+        immutable tail = message.empty ? "." : ": " ~ message;
         throw new AssertError(format("assertNotThrown failed: %s was thrown%s",
                                      T.stringof,
                                      tail),
@@ -104,6 +107,18 @@ unittest
 
     assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
                enforceEx!StringException(false, "Error!"))) ==
+           `assertNotThrown failed: StringException was thrown: Error!`);
+
+    assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
+               enforceEx!StringException(false, ""), "Error!")) ==
+           `assertNotThrown failed: StringException was thrown: Error!`);
+
+    assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
+               enforceEx!StringException(false, ""))) ==
+           `assertNotThrown failed: StringException was thrown.`);
+
+    assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
+               enforceEx!StringException(false, ""), "")) ==
            `assertNotThrown failed: StringException was thrown.`);
 }
 

@@ -3162,8 +3162,6 @@ unittest
 
 unittest
 {
-    import std.metastrings;
-
     string genInput()
     {
         return "@property bool empty() { return _arr.empty; }" ~
@@ -3241,21 +3239,21 @@ unittest
                               //`InitStruct([1, 2, 3])`,
                               `TakeNoneStruct([1, 2, 3])`))
     {
-        mixin(Format!("enum a = takeNone(%s).empty;", range));
+        mixin(format("enum a = takeNone(%s).empty;", range));
         assert(a, typeof(range).stringof);
-        mixin(Format!("assert(takeNone(%s).empty);", range));
-        mixin(Format!("static assert(is(typeof(%s) == typeof(takeNone(%s))), typeof(%s).stringof);",
-                      range, range, range));
+        mixin(format("assert(takeNone(%s).empty);", range));
+        mixin(format("static assert(is(typeof(%s) == typeof(takeNone(%s))), typeof(%s).stringof);",
+                     range, range, range));
     }
 
     foreach(range; TypeTuple!(`NormalStruct([1, 2, 3])`,
                               `InitStruct([1, 2, 3])`))
     {
-        mixin(Format!("enum a = takeNone(%s).empty;", range));
+        mixin(format("enum a = takeNone(%s).empty;", range));
         assert(a, typeof(range).stringof);
-        mixin(Format!("assert(takeNone(%s).empty);", range));
-        mixin(Format!("static assert(is(typeof(takeExactly(%s, 0)) == typeof(takeNone(%s))), typeof(%s).stringof);",
-                      range, range, range));
+        mixin(format("assert(takeNone(%s).empty);", range));
+        mixin(format("static assert(is(typeof(takeExactly(%s, 0)) == typeof(takeNone(%s))), typeof(%s).stringof);",
+                     range, range, range));
     }
 
     //Don't work in CTFE.
@@ -3834,6 +3832,8 @@ struct Cycle(Range)
 
         auto opSlice(size_t i, size_t j)
         {
+            version (assert)
+                if (i > j) throw new RangeError(text(i, " > ", j));
             auto retval = this.save;
             retval._index += i;
             return takeExactly(retval, j - i);
@@ -3934,6 +3934,8 @@ struct Cycle(R)
 
     auto opSlice(size_t i, size_t j)
     {
+        version (assert)
+            if (i > j) throw new RangeError(text(i, " > ", j));
         auto retval = this.save;
         retval._index += i;
         return takeExactly(retval, j - i);
@@ -4023,6 +4025,8 @@ unittest
                     }
 
                     assert(cRange[10] == 1);
+
+                    assertThrown!RangeError(cy[2..1]);
                 }
             }
 

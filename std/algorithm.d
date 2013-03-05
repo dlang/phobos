@@ -260,7 +260,7 @@ of sets implemented as a range of sorted ranges.)
 $(TR $(TDNW $(LREF setDifference)) $(TD Lazily computes the set
 difference of two or more sorted ranges.)
 )
-$(TR $(TDNW $(LREF setIntersection)) $(TD Lazily computes the 
+$(TR $(TDNW $(LREF setIntersection)) $(TD Lazily computes the
 intersection of two or more sorted ranges.)
 )
 $(TR $(TDNW $(LREF setSymmetricDifference)) $(TD Lazily
@@ -326,12 +326,12 @@ module std.algorithm;
 
 import std.c.string, core.bitop;
 import std.array, std.ascii, std.container, std.conv, std.exception,
-    std.functional, std.math, std.metastrings, std.range, std.string,
+    std.functional, std.math, std.random, std.range, std.string,
     std.traits, std.typecons, std.typetuple, std.uni, std.utf;
 
 version(unittest)
 {
-    import std.random, std.stdio, std.string;
+    import std.stdio;
     mixin(dummyRanges);
 }
 
@@ -4399,11 +4399,11 @@ unittest
 /++
     Returns the number of elements which must be popped from the front of
     $(D haystack) before reaching an element for which
-    $(D startsWith!pred(haystack, needle)) is $(D true). If
-    $(D startsWith!pred(haystack, needle)) is not $(D true) for any element in
-    $(D haystack), then -1 is returned.
+    $(D startsWith!pred(haystack, needles)) is $(D true). If
+    $(D startsWith!pred(haystack, needles)) is not $(D true) for any element in
+    $(D haystack), then $(D -1) is returned.
 
-    $(D needle) may be either an element or a range.
+    $(D needles) may be either an element or a range.
 
     Examples:
 --------------------
@@ -4419,47 +4419,88 @@ assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
 assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
 --------------------
   +/
-ptrdiff_t countUntil(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
-    if (isForwardRange!R1 && isForwardRange!R2 &&
-        is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
+ptrdiff_t countUntil(alias pred = "a == b", R, Rs...)(R haystack, Rs needles)
+    if (isForwardRange!R
+        && Rs.length > 0
+        && isForwardRange!(Rs[0]) == isInputRange!(Rs[0])
+        && is(typeof(startsWith!pred(haystack, needles[0])))
+        && (Rs.length == 1
+            || is(typeof(countUntil!pred(haystack, needles[1 .. $])))))
 {
     typeof(return) result;
-    static if (hasLength!R1) //Note: Narrow strings don't have length.
+
+    static if (needles.length == 1)
     {
-        //We delegate to find because find is very efficient.
-        //We store the length of the haystack so we don't have to save it.
-        auto len = haystack.length;
-        auto r2 = find!pred(haystack, needle);
-        if (!r2.empty)
-            return cast(typeof(return)) (len - r2.length);
+        static if (hasLength!R) //Note: Narrow strings don't have length.
+        {
+            //We delegate to find because find is very efficient.
+            //We store the length of the haystack so we don't have to save it.
+            auto len = haystack.length;
+            auto r2 = find!pred(haystack, needles[0]);
+            if (!r2.empty)
+              return cast(typeof(return)) (len - r2.length);
+        }
+        else
+        {
+            if (needles[0].empty)
+              return 0;
+
+            //Default case, slower route doing startsWith iteration
+            for ( ; !haystack.empty ; ++result )
+            {
+                //We compare the first elements of the ranges here before
+                //forwarding to startsWith. This avoids making useless saves to
+                //haystack/needle if they aren't even going to be mutated anyways.
+                //It also cuts down on the amount of pops on haystack.
+                if (binaryFun!pred(haystack.front, needles[0].front))
+                {
+                    //Here, we need to save the needle before popping it.
+                    //haystack we pop in all paths, so we do that, and then save.
+                    haystack.popFront();
+                    if (startsWith!pred(haystack.save, needles[0].save.dropOne()))
+                      return result;
+                }
+                else
+                  haystack.popFront();
+            }
+        }
     }
     else
     {
-        if (needle.empty)
-            return 0;
-
-        //Default case, slower route doing startsWith iteration
-        for ( ; !haystack.empty ; ++result )
+        foreach (i, Ri; Rs)
         {
-            //We compare the first elements of the ranges here before
-            //forwarding to startsWith. This avoids making useless saves to
-            //haystack/needle if they aren't even going to be mutated anyways.
-            //It also cuts down on the amount of pops on haystack.
-            if (binaryFun!pred(haystack.front, needle.front))
+            static if (isForwardRange!Ri)
             {
-                //Here, we need to save the needle before popping it.
-                //haystack we pop in all paths, so we do that, and then save.
-                haystack.popFront();
-                if (startsWith!pred(haystack.save, needle.save.dropOne()))
-                    return result;
+                if (needles[i].empty)
+                  return 0;
             }
-            else
-                haystack.popFront();
+        }
+        Tuple!Rs t;
+        foreach (i, Ri; Rs)
+        {
+            static if (!isForwardRange!Ri)
+            {
+                t[i] = needles[i];
+            }
+        }
+        for (; !haystack.empty ; ++result, haystack.popFront())
+        {
+            foreach (i, Ri; Rs)
+            {
+                static if (isForwardRange!Ri)
+                {
+                    t[i] = needles[i].save;
+                }
+            }
+            if (startsWith!pred(haystack.save, t.expand))
+            {
+                return result;
+            }
         }
     }
 
     //Because of @@@8804@@@: Avoids both "unreachable code" or "no return statement"
-    static if (isInfinite!R1) assert(0);
+    static if (isInfinite!R) assert(0);
     else return -1;
 }
 /// ditto
@@ -4507,6 +4548,14 @@ unittest
     assert(r.save.countUntil(r2) == 3);
     assert(r.save.countUntil(7)  == -1);
     assert(r.save.countUntil(r3) == -1);
+}
+
+unittest
+{
+    assert(countUntil("hello world", "world", "asd") == 6);
+    assert(countUntil("hello world", "world", "ello") == 1);
+    assert(countUntil("hello world", "world", "") == 0);
+    assert(countUntil("hello world", "world", 'l') == 2);
 }
 
 /++
@@ -7857,13 +7906,14 @@ sorted. In addition, it also partitions $(D r) such that all elements
 $(D e1) from $(D r[0]) to $(D r[nth]) satisfy $(D !less(r[nth], e1)),
 and all elements $(D e2) from $(D r[nth]) to $(D r[r.length]) satisfy
 $(D !less(e2, r[nth])). Effectively, it finds the nth smallest
-(according to $(D less)) elements in $(D r). Performs $(BIGOH
-r.length) (if unstable) or $(BIGOH r.length * log(r.length)) (if
-stable) evaluations of $(D less) and $(D swap). See also $(WEB
+(according to $(D less)) elements in $(D r). Performs an expected
+$(BIGOH r.length) (if unstable) or $(BIGOH r.length * log(r.length))
+(if stable) evaluations of $(D less) and $(D swap). See also $(WEB
 sgi.com/tech/stl/nth_element.html, STL's nth_element).
 
-Example:
+If $(D n >= r.length), the algorithm has no effect.
 
+Examples:
 ----
 int[] v = [ 25, 7, 9, 2, 0, 5, 21 ];
 auto n = 4;
@@ -7887,14 +7937,10 @@ void topN(alias less = "a < b",
             "Stable topN not yet implemented");
     while (r.length > nth)
     {
-        auto pivot = r.length / 2;
+        auto pivot = uniform(0, r.length);
         swap(r[pivot], r.back);
         assert(!binaryFun!(less)(r.back, r.back));
-        bool pred(ElementType!(Range) a)
-        {
-            return binaryFun!(less)(a, r.back);
-        }
-        auto right = partition!(pred, ss)(r);
+        auto right = partition!((a) => binaryFun!less(a, r.back), ss)(r);
         assert(right.length >= 1);
         swap(right.front, r.back);
         pivot = r.length - right.length;
@@ -9012,8 +9058,7 @@ corresponding $(D sort), but $(D schwartzSort) evaluates $(D
 transform) only $(D r.length) times (less than half when compared to
 regular sorting). The usage can be best illustrated with an example.
 
-Example:
-
+Examples:
 ----
 uint hashFun(string) { ... expensive computation ... }
 string[] array = ...;
@@ -9033,24 +9078,51 @@ To check whether an array was sorted and benefit of the speedup of
 Schwartz sorting, a function $(D schwartzIsSorted) is not provided
 because the effect can be achieved by calling $(D
 isSorted!less(map!transform(r))).
+
+Returns: The initial range wrapped as a $(D SortedRange) with the
+predicate $(D (a, b) => binaryFun!less(transform(a),
+transform(b))).
  */
-void schwartzSort(alias transform, alias less = "a < b",
-        SwapStrategy ss = SwapStrategy.unstable, Range)(Range r)
-    if (isRandomAccessRange!(Range) && hasLength!(Range))
+SortedRange!(R, ((a, b) => binaryFun!less(transform(a), transform(b))))
+schwartzSort(alias transform, alias less = "a < b",
+        SwapStrategy ss = SwapStrategy.unstable, R)(R r)
+    if (isRandomAccessRange!R && hasLength!R)
 {
-    alias typeof(transform(r.front)) XformType;
-    auto xform = new XformType[r.length];
-    foreach (i, e; r)
+    import core.stdc.stdlib;
+    alias T = typeof(transform(r.front));
+    auto xform1 = (cast(T*) malloc(r.length * T.sizeof))[0 .. r.length];
+    size_t length;
+    scope(exit)
     {
-        xform[i] = transform(e);
+        static if (hasElaborateDestructor!T)
+        {
+            foreach (i; 0 .. length) collectException(destroy(xform1[i]));
+        }
+        free(xform1.ptr);
     }
-    auto z = zip(xform, r);
-    alias typeof(z.front) ProxyType;
-    bool myLess(ProxyType a, ProxyType b)
+    for (; length != r.length; ++length)
     {
-        return binaryFun!less(a[0], b[0]);
+        emplace(xform1.ptr + length, transform(r[length]));
     }
-    sort!(myLess, ss)(z);
+    // Make sure we use ubyte[] and ushort[], not char[] and wchar[]
+    // for the intermediate array, lest zip gets confused.
+    static if (isNarrowString!(typeof(xform1)))
+    {
+        auto xform = xform1.representation();
+    }
+    else
+    {
+        alias xform = xform1;
+    }
+    zip(xform, r).sort!((a, b) => binaryFun!less(a[0], b[0]), ss)();
+    return typeof(return)(r);
+}
+
+unittest
+{
+    // issue 5924
+    Tuple!(char)[] chars;
+    schwartzSort!((Tuple!(char) c){ return c[0]; })(chars);
 }
 
 unittest
@@ -9284,14 +9356,22 @@ extra indirection, and is always larger than a sorting-based solution
 because it needs space for the index in addition to the original
 collection. The complexity is the same as $(D sort)'s.
 
-$(D makeIndex) overwrites its second argument with the result, but
-never reallocates it. If the second argument's length is less than
-that of the range indexed, an exception is thrown.
-
 The first overload of $(D makeIndex) writes to a range containing
 pointers, and the second writes to a range containing offsets. The
 first overload requires $(D Range) to be a forward range, and the
 latter requires it to be a random-access range.
+
+$(D makeIndex) overwrites its second argument with the result, but
+never reallocates it.
+
+Returns: The pointer-based version returns a $(D SortedRange) wrapper
+over index, of type $(D SortedRange!(RangeIndex, (a, b) =>
+binaryFun!less(*a, *b))) thus reflecting the ordering of the
+index. The index-based version returns $(D void) because the ordering
+relation involves not only $(D index) but also $(D r).
+
+Throws: If the second argument's length is less than that of the range
+indexed, an exception is thrown.
 
 Example:
 ----
@@ -9308,7 +9388,8 @@ assert(isSorted!
     (index2));
 ----
 */
-void makeIndex(
+SortedRange!(RangeIndex, (a, b) => binaryFun!less(*a, *b))
+makeIndex(
     alias less = "a < b",
     SwapStrategy ss = SwapStrategy.unstable,
     Range,
@@ -9323,12 +9404,8 @@ void makeIndex(
         index[i] = &(r.front);
     enforce(index.length == i);
     // sort the index
-    static bool indirectLess(ElementType!(RangeIndex) a,
-            ElementType!(RangeIndex) b)
-    {
-        return binaryFun!(less)(*a, *b);
-    }
-    sort!(indirectLess, ss)(index);
+    sort!((a, b) => binaryFun!less(*a, *b), ss)(index);
+    return typeof(return)(index);
 }
 
 /// Ditto
@@ -9338,32 +9415,28 @@ void makeIndex(
     Range,
     RangeIndex)
 (Range r, RangeIndex index)
-    if (isRandomAccessRange!(Range) && !isInfinite!(Range) &&
-        isRandomAccessRange!(RangeIndex) && !isInfinite!(RangeIndex) &&
-        isIntegral!(ElementType!(RangeIndex)))
+if (isRandomAccessRange!Range && !isInfinite!Range &&
+    isRandomAccessRange!RangeIndex && !isInfinite!RangeIndex &&
+    isIntegral!(ElementType!RangeIndex))
 {
-    alias Unqual!(ElementType!RangeIndex) I;
+    alias Unqual!(ElementType!RangeIndex) IndexType;
     enforce(r.length == index.length,
         "r and index must be same length for makeIndex.");
-    static if (I.sizeof < size_t.sizeof)
+    static if (IndexType.sizeof < size_t.sizeof)
     {
-        enforce(r.length <= I.max, "Cannot create an index with " ~
-            "element type " ~ I.stringof ~ " with length " ~
-            to!string(r.length) ~ "."
-        );
+        enforce(r.length <= IndexType.max, "Cannot create an index with " ~
+            "element type " ~ IndexType.stringof ~ " with length " ~
+            to!string(r.length) ~ ".");
     }
 
-    for (I i = 0; i < r.length; ++i)
+    for (IndexType i = 0; i < r.length; ++i)
     {
         index[cast(size_t) i] = i;
     }
 
     // sort the index
-    bool indirectLess(ElementType!(RangeIndex) a, ElementType!(RangeIndex) b)
-    {
-        return binaryFun!(less)(r[cast(size_t) a], r[cast(size_t) b]);
-    }
-    sort!(indirectLess, ss)(index);
+    sort!((a, b) => binaryFun!less(r[cast(size_t) a], r[cast(size_t) b]), ss)
+      (index);
 }
 
 unittest

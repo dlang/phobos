@@ -117,7 +117,7 @@ SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
 
 SRC_STD_3a= std\signals.d std\typetuple.d std\traits.d \
     std\encoding.d std\xml.d \
-    std\random.d std\regexp.d \
+    std\random.d \
     std\exception.d \
     std\compiler.d std\cpuid.d \
     std\system.d std\concurrency.d
@@ -157,7 +157,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\outbuffer.d std\md5.d std\base64.d \
 	std\mmfile.d \
 	std\syserror.d \
-	std\regexp.d std\random.d std\stream.d std\process.d std\process2.d \
+	std\random.d std\stream.d std\process.d std\process2.d \
 	std\socket.d std\socketstream.d std\format.d \
 	std\stdio.d std\perf.d std\uni.d std\uuid.d \
 	std\cstream.d std\demangle.d \
@@ -321,7 +321,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_random.html \
 	$(DOC)\std_range.html \
 	$(DOC)\std_regex.html \
-	$(DOC)\std_regexp.html \
 	$(DOC)\std_signals.html \
 	$(DOC)\std_socket.html \
 	$(DOC)\std_socketstream.html \
@@ -584,9 +583,6 @@ $(DOC)\std_range.html : $(STDDOC) std\range.d
 
 $(DOC)\std_regex.html : $(STDDOC) std\regex.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_regex.html $(STDDOC) std\regex.d
-
-$(DOC)\std_regexp.html : $(STDDOC) std\regexp.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_regexp.html $(STDDOC) std\regexp.d
 
 $(DOC)\std_signals.html : $(STDDOC) std\signals.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_signals.html $(STDDOC) std\signals.d

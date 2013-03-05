@@ -2240,7 +2240,6 @@ unittest
 {
     import core.exception;
     import std.algorithm;
-    import std.metastrings;
     import std.typetuple;
 
     size_t zeroLen(C)(const(C)* ptr)
@@ -2285,7 +2284,7 @@ unittest
         auto p = toUTFz!P(s);
         immutable len = zeroLen(p);
         enforce(cmp(s, p[0 .. len]) == 0,
-                new AssertError(Format!("Unit test failed: %s %s", P.stringof, S.stringof),
+                new AssertError(format("Unit test failed: %s %s", P.stringof, S.stringof),
                                 __FILE__, line));
     }
 

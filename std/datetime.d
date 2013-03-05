@@ -115,7 +115,6 @@ import std.exception;
 import std.file;
 import std.functional;
 import std.math;
-import std.metastrings;
 import std.path;
 import std.range;
 import std.stdio;
@@ -15339,7 +15338,7 @@ public:
         {
             auto dt = DateTime.init;
             dt.timeOfDay = TimeOfDay(12, 30, 33);
-            _assertPred!"=="(dt._date, date.init);
+            _assertPred!"=="(dt._date, Date.init);
             _assertPred!"=="(dt._tod, TimeOfDay(12, 30, 33));
 
             const cdt = DateTime(1999, 7, 6, 12, 30, 33);
