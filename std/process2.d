@@ -171,8 +171,6 @@ public:
 
 // =============================================================================
 // Functions and classes for process management.
-//
-// Authors: Lars T. Kyllingstad and Steven Schveighoffer
 // =============================================================================
 
 
