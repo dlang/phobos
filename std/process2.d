@@ -977,7 +977,7 @@ from $(D wait) in that does not wait for this to happen, but instead
 returns immediately.  The $(D terminated) field of the returned
 tuple will then be set to $(D false), while the $(D status) field
 will always be 0 (zero).  $(D wait) or $(D tryWait) should then be
-called again at some later time on the same $(D Pid); not only to
+called again on the same $(D Pid) at some later time; not only to
 get the exit code, but also to avoid the process becoming a "zombie"
 when it finally terminates.  (See $(LREF wait) for details).
 
