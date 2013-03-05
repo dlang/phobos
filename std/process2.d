@@ -1584,7 +1584,7 @@ This function blocks until the program terminates.
 The $(D output) string includes what the program writes to its
 standard error stream as well as its standard output stream.
 ---
-auto dmd = execute("dmd myapp.d");
+auto dmd = execute("dmd", "myapp.d");
 if (dmd.status != 0) writeln("Compilation failed:\n", dmd.output);
 ---
 
@@ -1597,14 +1597,6 @@ Throws:
 $(LREF ProcessException) on failure to start the process.$(BR)
 $(XREF stdio,StdioException) on failure to capture output.
 */
-Tuple!(int, "status", string, "output") execute(string program)
-    @trusted //TODO: @safe
-{
-    auto p = pipeProcess(program, Redirect.stdout | Redirect.stderrToStdout);
-    return processOutput(p, size_t.max);
-}
-
-/// ditto
 Tuple!(int, "status", string, "output") execute(string[] args...)
     @trusted //TODO: @safe
 {
