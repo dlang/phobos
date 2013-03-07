@@ -468,7 +468,7 @@ string decode(string s, DecodeMode mode=DecodeMode.LOOSE)
                     buffer ~= temp[0 .. std.utf.encode(temp, d)];
                     i = s.length - t.length - 1;
                 }
-                catch(Err e)
+                catch(Err)
                 {
                     if (mode == DecodeMode.STRICT)
                         throw new DecodeException("Unescaped &");
@@ -497,7 +497,7 @@ unittest
     {
         bool b = false;
         try { decode(s,DecodeMode.STRICT); }
-        catch (DecodeException e) { b = true; }
+        catch (DecodeException) { b = true; }
         assert(b,s);
     }
 
@@ -1072,7 +1072,7 @@ class Tag
             reqc(s,'>');
             tagString.length = (s.ptr - tagString.ptr);
         }
-        catch(XMLException e)
+        catch(XMLException)
         {
             tagString.length = (s.ptr - tagString.ptr);
             throw new TagException(tagString);
@@ -2572,7 +2572,7 @@ private
 
     void opt(alias f)(ref string s)
     {
-        try { f(s); } catch(Err e) {}
+        try { f(s); } catch(Err) {}
     }
 
     void plus(alias f)(ref string s)
@@ -2586,7 +2586,7 @@ private
         while (s.length != 0)
         {
             try { f(s); }
-            catch(Err e) { return; }
+            catch(Err) { return; }
         }
     }
 

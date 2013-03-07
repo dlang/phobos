@@ -590,7 +590,7 @@ public:
     {
         try
             this(dateTime, FracSec.from!"hnsecs"(0), tz);
-        catch(Exception e)
+        catch(Exception)
             assert(0, "FracSec's constructor threw when it shouldn't have.");
     }
 
@@ -645,7 +645,7 @@ public:
 
             this(standardTime, _timezone);
         }
-        catch(Exception e)
+        catch(Exception)
         {
             assert(0, "Date, TimeOfDay, or DateTime's constructor threw when " ~
                       "it shouldn't have.");
@@ -698,7 +698,7 @@ public:
 
             this(standardTime, _timezone);
         }
-        catch(Exception e)
+        catch(Exception)
             assert(0, "Date's constructor through when it shouldn't have.");
     }
 
@@ -1916,7 +1916,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
             return FracSec.from!"hnsecs"(cast(int)hnsecs);
         }
-        catch(Exception e)
+        catch(Exception)
             assert(0, "FracSec.from!\"hnsecs\"() threw.");
     }
 
@@ -2340,7 +2340,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
             return timeInfo;
         }
-        catch(Exception e)
+        catch(Exception)
             assert(0, "Either DateTime's constructor threw.");
     }
 
@@ -4888,7 +4888,7 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
 
             adjTime = newDaysHNSecs + hnsecs;
         }
-        catch(Exception e)
+        catch(Exception)
             assert(0, "Either DateTime's constructor or TimeOfDay's constructor threw.");
     }
 
@@ -7620,7 +7620,7 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
 
             return DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
         }
-        catch(Exception e)
+        catch(Exception)
             assert(0, "Either DateTime's constructor or TimeOfDay's constructor threw.");
     }
 
@@ -7679,7 +7679,7 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
 
             return TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second);
         }
-        catch(Exception e)
+        catch(Exception)
             assert(0, "TimeOfDay's constructor threw.");
     }
 
@@ -7793,7 +7793,7 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
                           fracSecToISOString(cast(int)hnsecs),
                           SimpleTimeZone.toISOString(utcOffset));
         }
-        catch(Exception e)
+        catch(Exception)
             assert(0, "format() threw.");
     }
 
@@ -7938,7 +7938,7 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
                           fracSecToISOString(cast(int)hnsecs),
                           SimpleTimeZone.toISOString(utcOffset));
         }
-        catch(Exception e)
+        catch(Exception)
             assert(0, "format() threw.");
     }
 
@@ -8081,7 +8081,7 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
                           fracSecToISOString(cast(int)hnsecs),
                           SimpleTimeZone.toISOString(utcOffset));
         }
-        catch(Exception e)
+        catch(Exception)
             assert(0, "format() threw.");
     }
 
@@ -8294,7 +8294,7 @@ assert(SysTime.fromISOString("20100704T070612+8:00") ==
 
             return retval;
         }
-        catch(DateTimeException dte)
+        catch(DateTimeException)
             throw new DateTimeException(format("Invalid ISO String: %s", isoString));
     }
 
@@ -8523,7 +8523,7 @@ assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
 
             return retval;
         }
-        catch(DateTimeException dte)
+        catch(DateTimeException)
             throw new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString));
     }
 
@@ -8756,7 +8756,7 @@ assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+8:00") ==
 
             return retval;
         }
-        catch(DateTimeException dte)
+        catch(DateTimeException)
             throw new DateTimeException(format("Invalid Simple String: %s", simpleString));
     }
 
@@ -9125,7 +9125,7 @@ public:
 
                 try
                     dayOfYear = day;
-                catch(Exception e)
+                catch(Exception)
                     assert(0, "dayOfYear assignment threw.");
             }
         }
@@ -9135,7 +9135,7 @@ public:
 
             try
                 dayOfYear = (daysInLeapYear + day);
-            catch(Exception e)
+            catch(Exception)
                 assert(0, "dayOfYear assignment threw.");
         }
         else
@@ -9190,7 +9190,7 @@ public:
 
                 try
                     dayOfYear = newDoY;
-                catch(Exception e)
+                catch(Exception)
                     assert(0, "dayOfYear assignment threw.");
             }
         }
@@ -12352,7 +12352,7 @@ assert(date == Date(2010, 12, 31));
             else
                 return Date(_year - 1, 12, 31).isoWeek;
         }
-        catch(Exception e)
+        catch(Exception)
             assert(0, "Date's constructor threw.");
     }
 
@@ -12436,7 +12436,7 @@ assert(Date(2000, 6, 4).endOfMonth == Date(1999, 6, 30));
     {
         try
             return Date(_year, _month, maxDay(_year, _month));
-        catch(Exception e)
+        catch(Exception)
             assert(0, "Date's constructor threw.");
     }
 
@@ -12679,7 +12679,7 @@ assert(Date(-4, 1, 5).toISOString() == "-00040105");
             else
                 return format("%06d%02d%02d", _year, _month, _day);
         }
-        catch(Exception e)
+        catch(Exception)
             assert(0, "format() threw.");
     }
 
@@ -12742,7 +12742,7 @@ assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
             else
                 return format("%06d-%02d-%02d", _year, _month, _day);
         }
-        catch(Exception e)
+        catch(Exception)
             assert(0, "format() threw.");
     }
 
@@ -12805,7 +12805,7 @@ assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
             else
                 return format("%06d-%s-%02d", _year, monthToString(_month, false), _day);
         }
-        catch(Exception e)
+        catch(Exception)
             assert(0, "format() threw.");
     }
 
@@ -14411,7 +14411,7 @@ assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
     {
         try
             return format("%02d%02d%02d", _hour, _minute, _second);
-        catch(Exception e)
+        catch(Exception)
             assert(0, "format() threw.");
     }
 
@@ -14446,7 +14446,7 @@ assert(TimeOfDay(12, 30, 33).toISOExtString() == "123033");
     {
         try
             return format("%02d:%02d:%02d", _hour, _minute, _second);
-        catch(Exception e)
+        catch(Exception)
             assert(0, "format() threw.");
     }
 
@@ -17326,7 +17326,7 @@ assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonth ==
     {
         try
             return DateTime(_date.endOfMonth, TimeOfDay(23, 59, 59));
-        catch(Exception e)
+        catch(Exception)
             assert(0, "DateTime constructor threw.");
     }
 
@@ -17551,7 +17551,7 @@ assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOString() ==
     {
         try
             return format("%sT%s", _date.toISOString(), _tod.toISOString());
-        catch(Exception e)
+        catch(Exception)
             assert(0, "format() threw.");
     }
 
@@ -17611,7 +17611,7 @@ assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtString() ==
     {
         try
             return format("%sT%s", _date.toISOExtString(), _tod.toISOExtString());
-        catch(Exception e)
+        catch(Exception)
             assert(0, "format() threw.");
     }
 
@@ -17670,7 +17670,7 @@ assert(DateTime(Dte(-4, 1, 5), TimeOfDay(0, 0, 2)).toSimpleString() ==
     {
         try
             return format("%s %s", _date.toSimpleString(), _tod.toString());
-        catch(Exception e)
+        catch(Exception)
             assert(0, "format() threw.");
     }
 
@@ -19756,7 +19756,7 @@ private:
     {
         try
             return format("[%s - %s)", _begin, _end);
-        catch(Exception e)
+        catch(Exception)
             assert(0, "format() threw.");
     }
 
@@ -22295,7 +22295,7 @@ private:
     {
         try
             return format("[%s - ∞)", _begin);
-        catch(Exception e)
+        catch(Exception)
             assert(0, "format() threw.");
     }
 
@@ -24556,7 +24556,7 @@ private:
     {
         try
             return format("[-∞ - %s)", _end);
-        catch(Exception e)
+        catch(Exception)
             assert(0, "format() threw.");
     }
 
@@ -28058,7 +28058,7 @@ public:
         {
             try
                 return to!string(tzname[0]);
-            catch(Exception e)
+            catch(Exception)
                 assert(0, "to!string(tzname[0]) failed.");
         }
         else version(Windows)
@@ -28088,7 +28088,7 @@ public:
 
                 return retval;
             }
-            catch(Exception e)
+            catch(Exception)
                 assert(0, "GetTimeZoneInformation() threw.");
         }
     }
@@ -28131,7 +28131,7 @@ public:
         {
             try
                 return to!string(tzname[1]);
-            catch(Exception e)
+            catch(Exception)
                 assert(0, "to!string(tzname[1]) failed.");
         }
         else version(Windows)
@@ -28161,7 +28161,7 @@ public:
 
                 return retval;
             }
-            catch(Exception e)
+            catch(Exception)
                 assert(0, "GetTimeZoneInformation() threw.");
         }
     }
@@ -28210,7 +28210,7 @@ public:
 
                     return janOffset != julyOffset;
                 }
-                catch(Exception e)
+                catch(Exception)
                     assert(0, "Clock.currTime() threw.");
             }
         }
@@ -28223,7 +28223,7 @@ public:
 
                 return tzInfo.DaylightDate.wMonth != 0;
             }
-            catch(Exception e)
+            catch(Exception)
                 assert(0, "GetTimeZoneInformation() threw.");
         }
     }
@@ -28285,7 +28285,7 @@ public:
 
             try
                 GetTimeZoneInformation(&tzInfo);
-            catch(Exception e)
+            catch(Exception)
                 assert(0, "The impossible happened. GetTimeZoneInformation() threw.");
 
             return WindowsTimeZone._dstInEffect(&tzInfo, stdTime);
@@ -28329,7 +28329,7 @@ public:
 
             try
                 GetTimeZoneInformation(&tzInfo);
-            catch(Exception e)
+            catch(Exception)
                 assert(0, "GetTimeZoneInformation() threw.");
 
             return WindowsTimeZone._utcToTZ(&tzInfo, stdTime, hasDST);
@@ -28388,7 +28388,7 @@ public:
 
             try
                 GetTimeZoneInformation(&tzInfo);
-            catch(Exception e)
+            catch(Exception)
                 assert(0, "GetTimeZoneInformation() threw.");
 
             return WindowsTimeZone._tzToUTC(&tzInfo, adjTime, hasDST);
@@ -30239,7 +30239,7 @@ else version(Windows)
 
                 return false;
             }
-            catch(Exception e)
+            catch(Exception)
                 assert(0, "DateTime's constructor threw.");
         }
 
@@ -30356,7 +30356,7 @@ else version(Windows)
                     if(isDST)
                         return adjTime + convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.DaylightBias);
                 }
-                catch(Exception e)
+                catch(Exception)
                     assert(0, "SysTime's constructor threw.");
             }
 
@@ -30427,7 +30427,7 @@ else version(Posix)
             setenv("TZ", value.ptr, 1);
             tzset();
         }
-        catch(Exception e)
+        catch(Exception)
             assert(0, "The impossible happened. setenv or tzset threw.");
     }
 
@@ -30439,7 +30439,7 @@ else version(Posix)
             unsetenv("TZ");
             tzset();
         }
-        catch(Exception e)
+        catch(Exception)
             assert(0, "The impossible happened. unsetenv or tzset threw.");
     }
 }
@@ -30913,7 +30913,7 @@ public:
         bool doublestart = true;
         try
             sw.start();
-        catch(AssertError e)
+        catch(AssertError)
             doublestart = false;
         assert(!doublestart);
         sw.stop();
@@ -30940,7 +30940,7 @@ public:
         bool doublestop = true;
         try
             sw.stop();
-        catch(AssertError e)
+        catch(AssertError)
             doublestop = false;
         assert(!doublestop);
         assert((t1 - sw.peek()).to!("seconds", real)() == 0);
@@ -32933,7 +32933,7 @@ body
 
         return isoString;
     }
-    catch(Exception e)
+    catch(Exception)
         assert(0, "format() threw.");
 }
 
@@ -33273,7 +33273,7 @@ string numToString(long value) pure nothrow
         else
             return str[i .. $].idup;
     }
-    catch(Exception e)
+    catch(Exception)
         assert(0, "Something threw when nothing can throw.");
 }
 

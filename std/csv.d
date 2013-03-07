@@ -1524,7 +1524,7 @@ unittest
         csvNextToken(str,a,',','"');
         assert(0);
     }
-    catch (IncompleteCellException ice)
+    catch (IncompleteCellException)
     {
         assert(a.data == "one\nnew line");
         assert(str == "");
@@ -1538,7 +1538,7 @@ unittest
         csvNextToken(str,a,',','"');
         assert(0);
     }
-    catch (IncompleteCellException ice)
+    catch (IncompleteCellException)
     {
         assert(a.data == "Hello world");
         assert(str == "\"");

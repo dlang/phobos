@@ -711,7 +711,7 @@ unittest
     environment.remove("std_process");
 
     // Throw on not found.
-    try { environment["std_process"]; assert(0); } catch(Exception e) { }
+    try { environment["std_process"]; assert(0); } catch(Exception) { }
 
     // get() without default value
     assert (environment.get("std.process") == null);

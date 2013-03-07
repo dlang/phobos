@@ -241,7 +241,7 @@ void assertThrown(T : Throwable = Exception, E)
 
     try
         expression();
-    catch(T t)
+    catch(T)
         thrown = true;
 
     if(!thrown)
