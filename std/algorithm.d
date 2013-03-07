@@ -8048,15 +8048,13 @@ void topN(alias less = "a < b",
     }
 }
 
+/// Ditto
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 5, 7, 2, 6, 7 ];
     int[] b = [ 2, 1, 5, 6, 7, 3, 0 ];
     topN(a, b);
     sort(a);
-    sort(b);
     assert(a == [0, 1, 2, 2, 3]);
 }
 
