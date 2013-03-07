@@ -1169,7 +1169,7 @@ struct Nullable(T)
 /**
 Constructor initializing $(D this) with $(D value).
  */
-    this()(T value)
+    this()(T value) inout
     {
         _value = value;
         _isNull = false;
