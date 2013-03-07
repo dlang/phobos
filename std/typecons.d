@@ -3141,7 +3141,7 @@ unittest
     // bug5896 test
     assert(h.opCast!int() == 0);
     assert(cast(int)h == 0);
-    immutable(Hoge) ih = new immutable(Hoge)(new Foo());
+    const ih = new const Hoge(new Foo());
     static assert(!__traits(compiles, ih.opCast!int()));
     static assert(!__traits(compiles, cast(int)ih));
 
