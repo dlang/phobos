@@ -49,7 +49,8 @@ UDFLAGS=-g -m$(MODEL) -O -w -d -property
 
 CC=$(VCDIR)\bin\amd64\cl
 LD=$(VCDIR)\bin\amd64\link
-LIB=$(VCDIR)\bin\amd64\lib
+AR=$(VCDIR)\bin\amd64\lib
+MAKE=make
 
 ## D compiler
 
@@ -454,7 +455,7 @@ html : $(DOCS)
 
 $(ZLIB): $(SRC_ZLIB)
 	cd etc\c\zlib
-	make -f win$(MODEL).mak zlib$(MODEL).lib
+	$(MAKE) -f win$(MODEL).mak zlib$(MODEL).lib CC=$(CC) LIB=$(AR)
 	cd ..\..\..
 
 ################## DOCS ####################################
@@ -796,7 +797,7 @@ phobos.zip : zip
 
 clean:
 	cd etc\c\zlib
-	make -f win$(MODEL).mak clean
+	$(MAKE) -f win$(MODEL).mak clean
 	cd ..\..\..
 	del $(DOCS)
 	del $(UNITTEST_OBJS) unittest.obj unittest.exe
