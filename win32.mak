@@ -49,6 +49,8 @@ UDFLAGS=-O -w -d -property
 ## C compiler
 
 CC=dmc
+AR=lib
+MAKE=make
 
 ## D compiler
 
@@ -401,7 +403,7 @@ html : $(DOCS)
 
 $(ZLIB): $(SRC_ZLIB)
 	cd etc\c\zlib
-	make -f win$(MODEL).mak zlib.lib
+	$(MAKE) -f win$(MODEL).mak zlib.lib CC=$(CC) LIB=$(AR)
 	cd ..\..\..
 
 ################## DOCS ####################################
@@ -743,7 +745,7 @@ phobos.zip : zip
 
 clean:
 	cd etc\c\zlib
-	make -f win$(MODEL).mak clean
+	$(MAKE) -f win$(MODEL).mak clean
 	cd ..\..\..
 	del $(DOCS)
 	del $(UNITTEST_OBJS) unittest.obj unittest.exe
