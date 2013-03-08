@@ -745,7 +745,7 @@ phobos.zip : zip
 
 clean:
 	cd etc\c\zlib
-	make -f win$(MODEL).mak clean
+	$(MAKE) -f win$(MODEL).mak clean
 	cd ..\..\..
 	del $(DOCS)
 	del $(UNITTEST_OBJS) unittest.obj unittest.exe
