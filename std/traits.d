@@ -2442,7 +2442,7 @@ unittest
 
     // void static array hides actual type of bits, so "may have indirections".
     static assert( hasIndirections!(void[1]));
-    interface I;
+    interface I {}
     struct S1 {}
     struct S2 { int a; }
     struct S3 { int a; int b; }
