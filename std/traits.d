@@ -5016,24 +5016,41 @@ unittest
 }
 
 /**
-Detect whether $(D T) is a delegate.
+Detect whether symbol or type $(D T) is a delegate.
 */
 template isDelegate(T...)
-    if(T.length == 1)
+    if (T.length == 1)
 {
-    enum bool isDelegate = is(T[0] == delegate);
+    static if (is(typeof(& T[0]) U : U*) && is(typeof(& T[0]) U == delegate))
+    {
+        // T is a (nested) function symbol.
+        enum bool isDelegate = true;
+    }
+    else static if (is(T[0] W) || is(typeof(T[0]) W))
+    {
+        // T is an expression or a type.  Take the type of it and examine.
+        enum bool isDelegate = is(W == delegate);
+    }
+    else
+        enum bool isDelegate = false;
 }
 
 unittest
 {
-    static assert( isDelegate!(void delegate()));
-    static assert( isDelegate!(uint delegate(uint)));
-    static assert( isDelegate!(shared uint delegate(uint)));
+    static void sfunc() { }
+    int x;
+    void func() { x++; }
 
-    static assert(!isDelegate!uint);
-    static assert(!isDelegate!(void function()));
+    int delegate() dg;
+    assert(isDelegate!dg);
+    assert(isDelegate!(int delegate()));
+    assert(isDelegate!(typeof(&func)));
+
+    int function() fp;
+    assert(!isDelegate!fp);
+    assert(!isDelegate!(int function()));
+    assert(!isDelegate!(typeof(&sfunc)));
 }
-
 
 /**
 Detect whether symbol or type $(D T) is a function, a function pointer or a delegate.
