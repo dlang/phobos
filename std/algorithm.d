@@ -649,11 +649,11 @@ assert(r == 107);
 // Mixing convertible types is fair game, too
 double[] c = [ 2.5, 3.0 ];
 auto r1 = reduce!("a + b")(chain(a, b, c));
-assert(r1 == 112.5);
+assert(approxEqual(r1, 112.5));
 
 // To minimize nesting of parentheses, Uniform Function Call Syntax can be used
 auto r2 = chain(a, b, c).reduce!("a + b");
-assert(r2 == 112.5);
+assert(approxEqual(r2, 112.5));
 ----
 
 $(DDOC_SECTION_H Multiple functions:) Sometimes it is very useful to
@@ -669,14 +669,14 @@ Example:
 double[] a = [ 3.0, 4, 7, 11, 3, 2, 5 ];
 // Compute minimum and maximum in one pass
 auto r = reduce!(min, max)(a);
-// The type of r is Tuple!(double, double)
-assert(r[0] == 2);  // minimum
-assert(r[1] == 11); // maximum
+// The type of r is Tuple!(int, int)
+assert(approxEqual(r[0], 2));  // minimum
+assert(approxEqual(r[1], 11)); // maximum
 
 // Compute sum and sum of squares in one pass
 r = reduce!("a + b", "a + b * b")(tuple(0.0, 0.0), a);
-assert(r[0] == 35);  // sum
-assert(r[1] == 233); // sum of squares
+assert(approxEqual(r[0], 35));  // sum
+assert(approxEqual(r[1], 233)); // sum of squares
 // Compute average and standard deviation from the above
 auto avg = r[0] / a.length;
 auto stdev = sqrt(r[1] / a.length - avg * avg);
@@ -1285,7 +1285,7 @@ assert(equal(r, [ 3, 400, 100, 102 ]));
 // Mixing convertible types is fair game, too
 double[] c = [ 2.5, 3.0 ];
 auto r1 = chain(c, a, b).filter!(a => cast(int) a != a);
-assert(equal(r1, [ 2.5 ]));
+assert(approxEqual(r1, [ 2.5 ]));
 ----
  */
 template filter(alias pred) if (is(typeof(unaryFun!pred)))
