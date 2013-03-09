@@ -348,7 +348,7 @@ Example:
 ----
 int[] arr1 = [ 1, 2, 3, 4 ];
 int[] arr2 = [ 5, 6 ];
-auto squares = map!("a * a")(chain(arr1, arr2));
+auto squares = map!(a => a * a)(chain(arr1, arr2));
 assert(equal(squares, [ 1, 4, 9, 16, 25, 36 ]));
 ----
 
@@ -617,19 +617,27 @@ Example:
 ----
 int[] arr = [ 1, 2, 3, 4, 5 ];
 // Sum all elements
-auto sum = reduce!("a + b")(0, arr);
+auto sum = reduce!((a,b) => a + b)(0, arr);
+assert(sum == 15);
+
+// Sum again, using a string predicate with "a" and "b"
+sum = reduce!"a + b"(0, arr);
 assert(sum == 15);
 
 // Compute the maximum of all elements
 auto largest = reduce!(max)(arr);
 assert(largest == 5);
 
+// Max again, but with Uniform Function Call Syntax (UFCS)
+largest = arr.reduce!(max);
+assert(largest == 5);
+
 // Compute the number of odd elements
-auto odds = reduce!("a + (b & 1)")(0, arr);
+auto odds = reduce!((a,b) => a + (b & 1))(0, arr);
 assert(odds == 3);
 
 // Compute the sum of squares
-auto ssquares = reduce!("a + b * b")(0, arr);
+auto ssquares = reduce!((a,b) => a + b * b)(0, arr);
 assert(ssquares == 55);
 
 // Chain multiple ranges into seed
@@ -641,7 +649,11 @@ assert(r == 107);
 // Mixing convertible types is fair game, too
 double[] c = [ 2.5, 3.0 ];
 auto r1 = reduce!("a + b")(chain(a, b, c));
-assert(r1 == 112.5);
+assert(approxEqual(r1, 112.5));
+
+// To minimize nesting of parentheses, Uniform Function Call Syntax can be used
+auto r2 = chain(a, b, c).reduce!("a + b");
+assert(approxEqual(r2, 112.5));
 ----
 
 $(DDOC_SECTION_H Multiple functions:) Sometimes it is very useful to
@@ -657,14 +669,14 @@ Example:
 double[] a = [ 3.0, 4, 7, 11, 3, 2, 5 ];
 // Compute minimum and maximum in one pass
 auto r = reduce!(min, max)(a);
-// The type of r is Tuple!(double, double)
-assert(r[0] == 2);  // minimum
-assert(r[1] == 11); // maximum
+// The type of r is Tuple!(int, int)
+assert(approxEqual(r[0], 2));  // minimum
+assert(approxEqual(r[1], 11)); // maximum
 
 // Compute sum and sum of squares in one pass
 r = reduce!("a + b", "a + b * b")(tuple(0.0, 0.0), a);
-assert(r[0] == 35);  // sum
-assert(r[1] == 233); // sum of squares
+assert(approxEqual(r[0], 35));  // sum
+assert(approxEqual(r[1], 233)); // sum of squares
 // Compute average and standard deviation from the above
 auto avg = r[0] / a.length;
 auto stdev = sqrt(r[1] / a.length - avg * avg);
@@ -1255,18 +1267,25 @@ which $(D predicate(x)) is $(D true).
 Example:
 ----
 int[] arr = [ 1, 2, 3, 4, 5 ];
+
 // Sum all elements
-auto small = filter!("a < 3")(arr);
+auto small = filter!(a => a < 3)(arr);
 assert(equal(small, [ 1, 2 ]));
+
+// Sum again, but with Uniform Function Call Syntax (UFCS)
+auto sum = arr.filter!(a => a < 3);
+assert(equal(sum, [ 1, 2 ]));
+
 // In combination with chain() to span multiple ranges
 int[] a = [ 3, -2, 400 ];
 int[] b = [ 100, -101, 102 ];
-auto r = filter!("a > 0")(chain(a, b));
+auto r = chain(a, b).filter!(a => a > 0);
 assert(equal(r, [ 3, 400, 100, 102 ]));
+
 // Mixing convertible types is fair game, too
 double[] c = [ 2.5, 3.0 ];
-auto r1 = filter!("cast(int) a != a")(chain(c, a, b));
-assert(equal(r1, [ 2.5 ]));
+auto r1 = chain(c, a, b).filter!(a => cast(int) a != a);
+assert(approxEqual(r1, [ 2.5 ]));
 ----
  */
 template filter(alias pred) if (is(typeof(unaryFun!pred)))
