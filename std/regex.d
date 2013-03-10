@@ -1062,21 +1062,9 @@ struct Parser(R, bool CTFE = false)
                         nglob = groupStack.top++;
                         enforce(groupStack.top <= maxGroupNumber, "limit on submatches is exceeded");
                         auto t = NamedGroup(name, nglob);
-
-                        if(__ctfe)
-                        {
-                            size_t ind;
-                            for(ind = 0; ind < dict.length; ind++)
-                                if(t.name >= dict[ind].name)
-                                    break;
-                            insertInPlaceAlt(dict, ind, t);
-                        }
-                        else
-                        {
-                            auto d = assumeSorted!"a.name < b.name"(dict);
-                            auto ind = d.lowerBound(t).length;
-                            insertInPlaceAlt(dict, ind, t);
-                        }
+                        auto d = assumeSorted!"a.name < b.name"(dict);
+                        auto ind = d.lowerBound(t).length;
+                        insertInPlaceAlt(dict, ind, t);
                         put(Bytecode(IR.GroupStart, nglob));
                         break;
                     case '<':
@@ -7658,6 +7646,18 @@ else
         auto rx_2 = regex(r"^([0-9])*(\d)");
         auto m2 = match("1234", rx_2);      
         assert(equal(m2.front, ["1234", "3", "4"]));
+    }
+
+    // bugzilla 9280
+    unittest
+    {
+        string tomatch = "a!b@c";
+        static r = regex(r"^(?P<nick>.*?)!(?P<ident>.*?)@(?P<host>.*?)$");
+        auto nm = match(tomatch, r);
+        assert(nm);
+        auto c = nm.captures;
+        assert(c[1] == "a");
+        assert(c["nick"] == "a");
     }
 }
 
