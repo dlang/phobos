@@ -6205,6 +6205,16 @@ private:
     uint ngroup;
     NamedGroup[] names;
 
+    this()(R input, uint groups, NamedGroup[] named)
+    {
+        _input = input;
+        ngroup = groups;
+        names = named;
+        newMatches();
+        b = ngroup;
+        f = 0;
+    }
+
     this(alias Engine)(ref RegexMatch!(R,Engine) rmatch)
     {
         _input = rmatch._input;
@@ -6354,7 +6364,7 @@ private:
     Captures!(R,EngineType.DataIndex) _captures;
     void[] _memory;//is ref-counted
 
-    this(RegEx)(RegEx prog, R input)
+    this(RegEx)(R input, RegEx prog)
     {
         _input = input;
         immutable size = EngineType.initialMemory(prog)+size_t.sizeof;
@@ -6455,6 +6465,34 @@ public:
 
 }
 
+private @trusted auto matchOnce(alias Engine, RegEx, R)(R input, RegEx re)
+{
+    alias BasicElementOf!R Char;
+    alias Engine!Char EngineType;
+
+    size_t size = EngineType.initialMemory(re);
+    void[] memory = enforce(malloc(size))[0..size];
+    scope(exit) free(memory.ptr);
+    auto captures = Captures!(R, EngineType.DataIndex)(input, re.ngroup, re.dict);
+    auto engine = EngineType(re, Input!Char(input), memory);    
+    captures._empty = !engine.match(captures.matches);
+    return captures;
+}
+
+private auto matchMany(alias Engine, RegEx, R)(R input, RegEx re)
+{
+    RegEx reCopy = re;
+    reCopy.flags |= RegexOption.global;
+    return RegexMatch!(R, Engine)(input, reCopy);
+}
+
+unittest
+{
+    //sanity checks for new API
+    auto re = regex("abc");
+    assert(!"abc".matchOnce!(ThompsonMatcher)(re).empty);
+    assert("abc".matchOnce!(ThompsonMatcher)(re)[0] == "abc");
+}
 /++
     Compile regular expression pattern for the later execution.
     Returns: $(D Regex) object that works on inputs having
@@ -6525,41 +6563,41 @@ template isRegexFor(RegEx, R)
     Start matching $(D input) to regex pattern $(D re),
     using Thompson NFA matching scheme.
 
-    This is the $(U recommended) method for matching regular expression.
+    The use of this function is $(RED discouraged) - use either of 
+    $(LREF matchAll) or $(LREF matchFirst). 
 
-    $(D re) parameter can be one of three types:
-    $(UL
-      $(LI Plain string, in which case it's compiled to bytecode before matching. )
-      $(LI Regex!char (wchar/dchar) that contains pattern in form of
-        precompiled  bytecode. )
-      $(LI StaticRegex!char (wchar/dchar) that contains pattern in form of
-        specially crafted native code. )
-    )
+    Delegating  the kind of operation 
+    to "g" flag is soon to be phased out along with the
+    ability to choose the exact matching scheme. The choice of 
+    matching scheme to use depends highly on the pattern kind and 
+    can done automatically on case by case basis.
+    
     Returns: a $(D RegexMatch) object holding engine state after first match.
 +/
 
 public auto match(R, RegEx)(R input, RegEx re)
     if(isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
 {
-    return RegexMatch!(Unqual!(typeof(input)),ThompsonMatcher)(re, input);
+    return RegexMatch!(Unqual!(typeof(input)),ThompsonMatcher)(input, re);
 }
 
 ///ditto
 public auto match(R, String)(R input, String re)
     if(isSomeString!R && isSomeString!String)
 {
-    return RegexMatch!(Unqual!(typeof(input)),ThompsonMatcher)(regex(re), input);
+    return RegexMatch!(Unqual!(typeof(input)),ThompsonMatcher)(input, regex(re));
 }
 
 public auto match(R, RegEx)(R input, RegEx re)
     if(isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
 {
-    return RegexMatch!(Unqual!(typeof(input)),BacktrackingMatcher!true)(re, input);
+    return RegexMatch!(Unqual!(typeof(input)),BacktrackingMatcher!true)(input, re);
 }
 
 /++
-    Start matching $(D input) to regex pattern $(D re),
-    using traditional $(LUCKY backtracking) matching scheme.
+    Find the first (leftmost) slice of the $(D input) that 
+    matches the pattern $(D re). This function picks the most suitable
+    regular expression engine depending on the pattern properties.
 
     $(D re) parameter can be one of three types:
     $(UL
@@ -6570,6 +6608,116 @@ public auto match(R, RegEx)(R input, RegEx re)
         compiled native machine code. )
     )
 
+    Returns: 
+    $(LREF Captures) containing matching together with all submatches 
+    if there was a match, otherwise an empty $(LREF Captures) object.
++/
+public auto matchFirst(R, RegEx)(R input, RegEx re)
+    if(isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
+{
+    return matchOnce!ThompsonMatcher(input, re);
+}
+
+///ditto
+public auto matchFirst(R, String)(R input, String re)
+    if(isSomeString!R && isSomeString!String)
+{
+    return matchOnce!ThompsonMatcher(input, regex(re));
+}
+
+public auto matchFirst(R, RegEx)(R input, RegEx re)
+    if(isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
+{
+    return matchOnce!(BacktrackingMatcher!true)(input, re);
+}
+
+/++
+    Find the first (leftmost) slice of the $(D input) that 
+    matches the pattern $(D re). This function picks the most suitable
+    regular expression engine depending on the pattern properties.
+
+    $(D re) parameter can be one of three types:
+    $(UL
+      $(LI Plain string, in which case it's compiled to bytecode before matching. )
+      $(LI Regex!char (wchar/dchar) that contains a pattern in the form of
+        compiled  bytecode. )
+      $(LI StaticRegex!char (wchar/dchar) that contains a pattern in the form of
+        compiled native machine code. )
+    )
+
+    Returns: 
+    $(LREF Captures) containing matching together with all submatches 
+    if there was a match, otherwise an empty $(LREF Captures) object.
++/
+public auto matchAll(R, RegEx)(R input, RegEx re)
+    if(isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
+{
+    return matchMany!ThompsonMatcher(input, re);
+}
+
+///ditto
+public auto matchAll(R, String)(R input, String re)
+    if(isSomeString!R && isSomeString!String)
+{
+    return matchMany!ThompsonMatcher(input, regex(re));
+}
+
+public auto matchAll(R, RegEx)(R input, RegEx re)
+    if(isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
+{
+    return matchMany!(BacktrackingMatcher!true)(input, re);
+}
+
+// another set of tests just to cover the new API
+@system unittest
+{
+    foreach(String; TypeTuple!(string, wstring, const(dchar)[]))
+    {
+        auto str1 = "blah-bleh".to!String();
+        auto pat1 = "bl[ae]h".to!String();
+        auto mf = matchFirst(str1, pat1);
+        assert(mf.equal(["blah".to!String()]));
+        auto mAll = matchAll(str1, pat1);
+        assert(mAll.equal!((a,b) => a.equal(b))
+            ([["blah".to!String()], ["bleh".to!String()]]));
+
+        auto str2 = "1/03/12 - 3/03/12".to!String();
+        auto pat2 = regex(r"(\d+)/(\d+)/(\d+)".to!String());
+        auto mf2 = matchFirst(str2, pat2);
+        assert(mf2.equal(["1/03/12", "1", "03", "12"].map!(to!String)()));
+        auto mAll2 = matchAll(str2, pat2);
+        assert(mAll2.front.equal(mf2));
+        mAll2.popFront();
+        assert(mAll2.front.equal(["3/03/12", "3", "03", "12"].map!(to!String)()));
+        mf2.popFrontN(3);
+        assert(mf2.equal(["12".to!String()]));
+
+        auto ctPat = ctRegex!(`(?P<Quot>\d+)/(?P<Denom>\d+)`.to!String());
+        auto str = "2 + 34/56 - 6/1".to!String();
+        auto cmf = matchFirst(str, ctPat);
+        assert(cmf.equal(["34/56", "34", "56"].map!(to!String)()));
+        assert(cmf["Quot"] == "34".to!String());
+        assert(cmf["Denom"] == "56".to!String());
+        auto cmAll = matchAll(str, ctPat);
+        assert(cmAll.front.equal(cmf));
+        cmAll.popFront();
+        assert(cmAll.front.equal(["6/1", "6", "1"].map!(to!String)()));
+    }
+}
+
+/++
+    Start matching of $(D input) to regex pattern $(D re),
+    using traditional $(LUCKY backtracking) matching scheme.
+
+    The use of this function is $(RED discouraged) - use either of 
+    $(LREF matchAll) or $(LREF matchFirst). 
+
+    Delegating  the kind of operation 
+    to "g" flag is soon to be phased out along with the
+    ability to choose the exact matching scheme. The choice of 
+    matching scheme to use depends highly on the pattern kind and 
+    can done automatically on case by case basis.
+
     Returns: a $(D RegexMatch) object holding engine
     state after first match.
 
@@ -6577,80 +6725,243 @@ public auto match(R, RegEx)(R input, RegEx re)
 public auto bmatch(R, RegEx)(R input, RegEx re)
     if(isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
 {
-    return RegexMatch!(Unqual!(typeof(input)), BacktrackingMatcher!false)(re, input);
+    return RegexMatch!(Unqual!(typeof(input)), BacktrackingMatcher!false)(input, re);
 }
 
 ///ditto
 public auto bmatch(R, String)(R input, String re)
     if(isSomeString!R && isSomeString!String)
 {
-    return RegexMatch!(Unqual!(typeof(input)), BacktrackingMatcher!false)(regex(re), input);
+    return RegexMatch!(Unqual!(typeof(input)), BacktrackingMatcher!false)(input, regex(re));
 }
 
 public auto bmatch(R, RegEx)(R input, RegEx re)
     if(isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
 {
-    return RegexMatch!(Unqual!(typeof(input)),BacktrackingMatcher!true)(re, input);
+    return RegexMatch!(Unqual!(typeof(input)),BacktrackingMatcher!true)(input, re);
+}
+
+template isReplaceFunctor(alias fun, R)
+{
+    enum isReplaceFunctor = __traits(compiles, (Captures!R c){ fun(c); });
+}
+
+// the lowest level - just stuff replacements into the sink
+private @trusted void replaceCapturesInto(alias output, Sink, R, T)
+        (ref Sink sink, R input, T captures)
+    if(isOutputRange!(Sink, dchar) && isSomeString!R)
+{
+    sink.put(captures.pre);
+    // a hack to get around bogus errors, should be simply output(captures, sink)
+    // "is a nested function and cannot be accessed from"
+    static if(isReplaceFunctor!(output, R))
+        sink.put(output(captures)); //"mutator" type of function
+    else 
+        output(captures, sink); //"output" type of function
+    sink.put(captures.post);
+}
+
+// ditto for a range of captures
+private @trusted void replaceMatchesInto(alias output, Sink, R, T)
+        (ref Sink sink, R input, T matches)
+    if(isOutputRange!(Sink, dchar) && isSomeString!R && is(T == RegexMatch!R))
+{    
+    size_t offset = 0;
+    foreach(cap; matches)
+    {
+        sink.put(cap.pre[offset .. $]);
+        // same hack, see replaceCapturesInto
+        static if(isReplaceFunctor!(output, R))
+            sink.put(output(cap)); //"mutator" type of function
+        else 
+            output(cap, sink); //"output" type of function
+        offset = cap.pre.length + cap.hit.length;
+    }
+    sink.put(input[offset .. $]);
+}
+
+//  a general skeleton of replaceFirst
+private @trusted R replaceFirstWith(alias output, R, RegEx)(R input, RegEx re)
+    if(isSomeString!R && isRegexFor!(RegEx, R))
+{
+    auto data = matchFirst(input, re);
+    if(data.empty)
+        return input;
+    auto app = appender!(R)();
+    replaceCapturesInto!output(app, input, data);
+    return app.data;
+}
+
+// ditto for replaceAll 
+// the method parameter allows old API to ride on the back of the new one
+private @trusted R replaceAllWith(alias output, 
+        alias method=matchAll, R, RegEx)(R input, RegEx re)
+    if(isSomeString!R && isRegexFor!(RegEx, R))
+{
+    auto matches = method(input, re); //inout(C)[] fails 
+    if(matches.empty)
+        return input;
+    auto app = appender!(R)();
+    replaceMatchesInto!output(app, input, matches);
+    return app.data;
 }
 
 /++
-    Construct a new string from $(D input) by replacing each match with
-    a string generated from match according to $(D format) specifier.
+    Construct a new string from $(D input) by replacing the first match with
+    a string generated from it according to the $(D format) specifier.
 
-    To replace all occurrences use regex with "g" flag, otherwise
-    only the first occurrence gets replaced.
+    To replace all matches use $(LREF replaceAll). 
 
     Params:
     input = string to search
     re = compiled regular expression to use
-    format = format string to generate replacements from
+    format = format string to generate replacements from, 
+    see $(S_LINK Replace format string).
+
+    Returns:
+    A string of the same type with the first match (if any) replaced. 
+    If no match is found returns the input string itself.
+
+    Example:
+    ---
+    assert(replaceFirst("noon", regex("n"), "[$&]") == "[n]oon");
+    ---
++/
+public @trusted R replaceFirst(R, C, RegEx)(R input, RegEx re, const(C)[] format)
+    if(isSomeString!R && is(C : dchar) && isRegexFor!(RegEx, R))
+{
+    return replaceFirstWith!((m, sink) => replaceFmt(format, m, sink))(input, re);    
+}
+
+/++
+    This is a general replacement tool that construct a new string by replacing 
+    matches of pattern $(D re) in the $(D input). Unlike the other overload 
+    there is no format string instead captures are passed to
+    to a user-defined functor $(D fun) that returns a new string 
+    to use as replacement.
+
+    This version replaces the first match in $(D input), 
+    see $(LREF replaceAll) to replace the all of the matches.
+
+    Returns: 
+    A new string of the same type as $(D input) with all matches 
+    replaced by return values of $(D fun). If no matches found 
+    returns the $(D input) itself.
+
+    Example:
+    ---
+    string list = "#21 out of 46";
+    string newList = replaceFirst!(cap => to!string(to!int(cap.hit)+1))
+        (list, regex(`[0-9]+`));
+    assert(newList == "#22 out of 46");
+    ---
++/
+public @trusted R replaceFirst(alias fun, R, RegEx)(R input, RegEx re)
+  if(isSomeString!R && isRegexFor!(RegEx, R))
+{
+    return replaceFirstWith!((m, sink) => sink.put(fun(m)))(input, re);
+}
+
+/++
+    A variation on $(LREF replaceFirst) that instead of allocating a new string
+    on each call outputs the result piece-wise to the $(D sink). In particular 
+    this enables efficient construction of a final output incrementally.
+    
+    Like in $(LREF replaceFirst) family of functions there is an overload
+    for the substitution guided by the $(D format) string   
+    and the one with the user defined callback.
+
+    Example:
+    ---
+    import std.array;
+    string m1 = "first message\n";
+    string m2 = "second message\n";
+    auto result = appender!string();
+    replaceFirstInto(result, m1, regex(`([a-z]+) message`), "$1");
+    //equivalent of the above with user-defined callback
+    replaceFirstInto!(cap=>cap[1])(result, m2, regex(`([a-z]+) message`));
+    assert(result.data == "first\nsecond\n");
+    ---
++/
+public @trusted void replaceFirstInto(Sink, R, C, RegEx)
+        (ref Sink sink, R input, RegEx re, const(C)[] format)
+    if(isOutputRange!(Sink, dchar) && isSomeString!R 
+        && is(C : dchar) && isRegexFor!(RegEx, R))
+    {
+    replaceCapturesInto!((m, sink) => replaceFmt(format, m, sink))
+        (sink, input, matchFirst(input, re));
+    }
+
+///ditto
+public @trusted void replaceFirstInto(alias fun, Sink, R, RegEx)
+    (Sink sink, R input, RegEx re)
+    if(isOutputRange!(Sink, dchar) && isSomeString!R && isRegexFor!(RegEx, R))
+{
+    replaceCapturesInto!fun(sink, input, matchFirst(input, re));
+}
+
+//examples for replaceFirst
+@system unittest
+{
+    string list = "#21 out of 46";
+    string newList = replaceFirst!(cap => to!string(to!int(cap.hit)+1))
+        (list, regex(`[0-9]+`));
+    assert(newList == "#22 out of 46");
+    import std.array;
+    string m1 = "first message\n";
+    string m2 = "second message\n";
+    auto result = appender!string();
+    replaceFirstInto(result, m1, regex(`([a-z]+) message`), "$1");
+    //equivalent of the above with user-defined callback
+    replaceFirstInto!(cap=>cap[1])(result, m2, regex(`([a-z]+) message`));
+    assert(result.data == "first\nsecond\n");
+}
+
+/++
+    Construct a new string from $(D input) by replacing all of the 
+    fragments that match a pattern $(D re) with a string generated 
+    from the match according to the $(D format) specifier.
+
+    To replace only the first match use $(LREF replaceFirst).
+
+    Params:
+    input = string to search
+    re = compiled regular expression to use
+    format = format string to generate replacements from, 
+    see $(S_LINK Replace format string).
+
+    Returns:
+    A string of the same type as $(D input) with the all 
+    of the matches (if any) replaced. 
+    If no match is found returns the input string itself.
 
     Example:
     ---
     // Comify a number
     auto com = regex(r"(?<=\d)(?=(\d\d\d)+\b)","g");
-    assert(replace("12000 + 42100 = 54100", com, ",") == "12,000 + 42,100 = 54,100");
-    ---
-
-    The format string can reference parts of match using the following notation.
-    $(REG_TABLE
-        $(REG_TITLE Format specifier, Replaced by )
-        $(REG_ROW $&amp;, the whole match. )
-        $(REG_ROW $`, part of input $(I preceding) the match. )
-        $(REG_ROW $', part of input $(I following) the match. )
-        $(REG_ROW $$, '$' character. )
-        $(REG_ROW \c &#44 where c is any character, the character c itself. )
-        $(REG_ROW \\, '\' character. )
-        $(REG_ROW &#36;1 .. &#36;99, submatch number 1 to 99 respectively. )
-    )
-    ---
-    assert(replace("noon", regex("^n"), "[$&]") == "[n]oon");
+    assert(replaceAll("12000 + 42100 = 54100", com, ",") == "12,000 + 42,100 = 54,100");
     ---
 +/
-public @trusted R replace(alias scheme = match, R, RegEx)(R input, RegEx re, R format)
-  if(isSomeString!R && isRegexFor!(RegEx, R))
+public @trusted R replaceAll(R, C, RegEx)(R input, RegEx re, const(C)[] format)
+    if(isSomeString!R && is(C : dchar) && isRegexFor!(RegEx, R))
 {
-    auto app = appender!(R)();
-    auto matches = scheme(input, re);
-    size_t offset = 0;
-    foreach(ref m; matches)
-    {
-        app.put(m.pre[offset .. $]);
-        replaceFmt(format, m.captures, app);
-        offset = m.pre.length + m.hit.length;
-    }
-    app.put(input[offset .. $]);
-    return app.data;
+    return replaceAllWith!((m, sink) => replaceFmt(format, m, sink))(input, re);    
 }
 
 /++
-    Search string for matches using regular expression pattern $(D re)
-    and pass captures for each match to user-defined functor $(D fun).
+    This is a general replacement tool that construct a new string by replacing 
+    matches of pattern $(D re) in the $(D input). Unlike the other overload 
+    there is no format string instead captures are passed to
+    to a user-defined functor $(D fun) that returns a new string 
+    to use as replacement.
 
-    To replace all occurrances use regex with "g" flag, otherwise
-    only first occurrence gets replaced.
+    This version replaces all of the matches found in $(D input), 
+    see $(LREF replaceFirst) to replace the first match only.
 
-    Returns: new string with all matches replaced by return values of $(D fun).
+    Returns: 
+    A new string of the same type as $(D input) with all matches 
+    replaced by return values of $(D fun). If no matches found 
+    returns the $(D input) itself.
 
     Params:
     s = string to search
@@ -6664,28 +6975,130 @@ public @trusted R replace(alias scheme = match, R, RegEx)(R input, RegEx re, R f
     {
         return std.string.toUpper(m.hit);
     }
-    auto s = replace!(baz)("Strap a rocket engine on a chicken.",
-            regex("[ar]", "g"));
+    auto s = replaceAll!(baz)("Strap a rocket engine on a chicken.",
+            regex("[ar]"));
     assert(s == "StRAp A Rocket engine on A chicken.");
     ---
 +/
-public @trusted R replace(alias fun, R, RegEx, alias scheme = match)(R input, RegEx re)
+public @trusted R replaceAll(alias fun, R, RegEx)(R input, RegEx re)
     if(isSomeString!R && isRegexFor!(RegEx, R))
 {
-    auto app = appender!(R)();
-    auto matches = scheme(input, re);
-    size_t offset = 0;
-    foreach(m; matches)
-    {
-        app.put(m.pre[offset .. $]);
-        app.put(fun(m));
-        offset = m.pre.length + m.hit.length;
-    }
-    app.put(input[offset .. $]);
-    return app.data;
+    return replaceAllWith!((m, sink) => sink.put(fun(m)))(input, re);
 }
 
-//produce replacement string from format using captures for substitue
+/++
+    A variation on $(LREF replaceAll) that instead of allocating a new string
+    on each call outputs the result piece-wise to the $(D sink). In particular 
+    this enables efficient construction of a final output incrementally.
+
+    As with $(LREF replaceAll) there are 2 overloads - one with a format string, 
+    the other one with a user defined functor.
+
+    Example:
+    ---
+    //swap all 3 letter words and bring it back
+    string text = "How are you doing?";
+    auto sink = appender!(char[])();
+    replaceAllInto!(cap => retro(cap[0]))(sink, text, regex(`\b\w{3}\b`));
+    auto swapped = sink.data.dup; // make a copy explicitly
+    assert(swapped == "woH era uoy doing?");
+    sink.clear(); 
+    replaceAllInto!(cap => retro(cap[0]))(sink, swapped, regex(`\b\w{3}\b`));
+    assert(sink.data == text);
+    ---
++/
+public @trusted void replaceAllInto(Sink, R, C, RegEx)
+        (Sink sink, R input, RegEx re, const(C)[] format)
+    if(isOutputRange!(Sink, dchar) && isSomeString!R 
+        && is(C : dchar) && isRegexFor!(RegEx, R))
+    {
+    replaceMatchesInto!((m, sink) => replaceFmt(format, m, sink))
+        (sink, input, matchAll(input, re));
+    }
+
+///ditto
+public @trusted void replaceAllInto(alias fun, Sink, R, RegEx)
+        (Sink sink, R input, RegEx re)
+    if(isOutputRange!(Sink, dchar) && isSomeString!R && isRegexFor!(RegEx, R))
+{
+    replaceMatchesInto!fun(sink, input, matchAll(input, re));
+}
+
+// a bit of examples
+@system unittest
+{
+    //swap all 3 letter words and bring it back
+    string text = "How are you doing?";
+    auto sink = appender!(char[])();
+    replaceAllInto!(cap => retro(cap[0]))(sink, text, regex(`\b\w{3}\b`));
+    auto swapped = sink.data.dup; // make a copy explicitly
+    assert(swapped == "woH era uoy doing?");
+    sink.clear(); 
+    replaceAllInto!(cap => retro(cap[0]))(sink, swapped, regex(`\b\w{3}\b`));
+    assert(sink.data == text);
+}
+
+// exercise all of the replace APIs
+@system unittest
+{
+    // try and check first/all simple substitution
+    foreach(S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
+    {
+        S s1 = "curt trial".to!S();
+        S s2 = "round dome".to!S();
+        S t1F = "court trial".to!S();
+        S t2F = "hound dome".to!S();
+        S t1A = "court trial".to!S();
+        S t2A = "hound home".to!S();
+        auto re1 = regex("curt".to!S());
+        auto re2 = regex("[dr]o".to!S());
+
+        assert(replaceFirst(s1, re1, "court") == t1F);
+        assert(replaceFirst(s2, re2, "ho") == t2F);
+        assert(replaceAll(s1, re1, "court") == t1A);
+        assert(replaceAll(s2, re2, "ho") == t2A);
+
+        auto rep1 = replaceFirst!(cap => cap[0][0]~"o".to!S()~cap[0][1..$])(s1, re1);
+        assert(rep1 == t1F);
+        assert(replaceFirst!(cap => "ho".to!S())(s2, re2) == t2F);
+        auto rep1A = replaceAll!(cap => cap[0][0]~"o".to!S()~cap[0][1..$])(s1, re1);
+        assert(rep1A == t1A);
+        assert(replaceAll!(cap => "ho".to!S())(s2, re2) == t2A);
+        
+        auto sink = appender!S();
+        replaceFirstInto(sink, s1, re1, "court");
+        assert(sink.data == t1F);
+        replaceFirstInto(sink, s2, re2, "ho");
+        assert(sink.data == t1F~t2F);
+        replaceAllInto(sink, s1, re1, "court");
+        assert(sink.data == t1F~t2F~t1A);
+        replaceAllInto(sink, s2, re2, "ho");
+        assert(sink.data == t1F~t2F~t1A~t2A);
+    }
+}
+
+/++
+    Old API for replacement, operation depends on flags of pattern $(D re). 
+    With "g" flag it performs the equivalent of $(LREF replaceAll) otherwise it
+    works the same as $(LREF replaceFirst).
+
+    The use of this function is $(RED discouraged), please use $(LREF replaceAll) 
+    or $(LREF replaceFirst) explicitly.
++/
+public @trusted R replace(alias scheme = match, R, C, RegEx)(R input, RegEx re, const(C)[] format)
+    if(isSomeString!R && isRegexFor!(RegEx, R))
+{
+    return replaceAllWith!((m, sink) => replaceFmt(format, m, sink), match)(input, re);
+}
+
+///ditto
+public @trusted R replace(alias fun, R, RegEx)(R input, RegEx re)
+    if(isSomeString!R && isRegexFor!(RegEx, R))
+{
+    return replaceAllWith!(fun, match)(input, re);
+}
+
+//produce replacement string from format using captures for substitution
 public @trusted void replaceFmt(R, Capt, OutR)
     (R format, Capt captures, OutR sink, bool ignoreBadSubs = false)
     if(isOutputRange!(OutR, ElementEncodingType!R[]) &&
@@ -6786,7 +7199,7 @@ private:
         }
         else
         {
-            _match = Rx(separator, _input);
+            _match = Rx(_input, separator);
         }
     }
 
@@ -7656,11 +8069,24 @@ unittest
     assert(c["nick"] == "a");
 }
 
-// bugzilla 9634
+
+// bugzilla 9579
 unittest
+{
+    char[] input = ['a', 'b', 'c'];
+    string format = "($1)";
+    // used to give a compile error:
+    auto re = regex(`(a)`, "g");        
+    auto r = replace(input, re, format);
+    assert(r == "(a)bc");
+}
+
+// bugzilla 9634
+unittest 
 {
     auto re = ctRegex!"(?:a+)";
     assert(match("aaaa", re).hit == "aaaa");
 }
+
 
 }//version(unittest)
