@@ -6623,11 +6623,11 @@ public auto bmatch(R, RegEx)(R input, RegEx re)
     assert(replace("noon", regex("^n"), "[$&]") == "[n]oon");
     ---
 +/
-public @trusted R replace(alias scheme = match, R, RegEx)(R input, RegEx re, R format)
-  if(isSomeString!R && isRegexFor!(RegEx, R))
+public @trusted inout(C)[] replace(alias scheme = match, C, RegEx)(inout(C)[] input, RegEx re, const(C)[] format)
+  if(is(C : dchar) && isRegexFor!(RegEx, C[]))
 {
-    auto app = appender!(R)();
-    auto matches = scheme(input, re);
+    auto app = appender!(C[])(); //inout is too shallow?
+    auto matches = scheme(cast(const(C)[])input, re); //can cast inout to const
     size_t offset = 0;
     foreach(ref m; matches)
     {
@@ -6636,7 +6636,7 @@ public @trusted R replace(alias scheme = match, R, RegEx)(R input, RegEx re, R f
         offset = m.pre.length + m.hit.length;
     }
     app.put(input[offset .. $]);
-    return app.data;
+    return cast(inout(C)[])app.data;
 }
 
 /++
@@ -7658,6 +7658,17 @@ else
         auto c = nm.captures;
         assert(c[1] == "a");
         assert(c["nick"] == "a");
+    }
+
+    // bugzilla 9579
+    unittest
+    {
+        char[] input = ['a', 'b', 'c'];
+        string format = "($1)";
+        // used to give a compile error:
+        auto re = regex(`(a)`, "g");        
+        auto r = replace(input, re, format);
+        assert(r == "(a)bc");
     }
 }
 
