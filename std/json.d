@@ -396,7 +396,7 @@ string toJSON(in JSONValue* root)
                 case '\t':      json.put("\\t");        break;
                 default:
                     appendJSONChar(&json, c,
-                                   (string msg){throw new JSONException(msg);});
+                                   (msg) { throw new JSONException(msg); });
             }
         }
 
@@ -412,8 +412,9 @@ string toJSON(in JSONValue* root)
                 bool first = true;
                 foreach(name, member; value.object)
                 {
-                    if(first) first = false;
-                    else json.put(',');
+                    if(!first)
+                        json.put(',');
+                    first = false;
                     toString(name);
                     json.put(':');
                     toValue(&member);
@@ -423,11 +424,11 @@ string toJSON(in JSONValue* root)
 
             case JSON_TYPE.ARRAY:
                 json.put('[');
-                auto length = value.array.length;
-                foreach (i; 0 .. length)
+                foreach (i, ref el; value.array)
                 {
-                    if(i) json.put(',');
-                    toValue(&value.array[i]);
+                    if(i)
+                        json.put(',');
+                    toValue(&el);
                 }
                 json.put(']');
                 break;
@@ -469,7 +470,8 @@ string toJSON(in JSONValue* root)
 private void appendJSONChar(Appender!string* dst, dchar c,
                             scope void delegate(string) error)
 {
-    if(isControl(c)) error("Illegal control character.");
+    if(isControl(c))
+        error("Illegal control character.");
     dst.put(c);
 }
 
@@ -480,17 +482,14 @@ class JSONException : Exception
 {
     this(string msg, int line = 0, int pos = 0)
     {
-        if(line) super(text(msg, " (Line ", line, ":", pos, ")"));
-        else super(msg);
+        if(line)
+            super(text(msg, " (Line ", line, ":", pos, ")"));
+        else
+            super(msg);
     }
 }
 
-version(unittest)
-{
-        import std.exception;
-        import std.stdio;
-}
-
+version(unittest) import std.exception;
 
 unittest
 {
@@ -531,6 +530,7 @@ unittest
         }
         catch(JSONException e)
         {
+            import std.stdio;
             writefln(text(json, "\n", e.toString()));
         }
     }
