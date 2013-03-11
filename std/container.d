@@ -2507,7 +2507,9 @@ struct Array(T)
         // Destructor releases array memory
         ~this()
         {
-            foreach (ref e; _payload) .destroy(e);
+            static if(hasElaborateDestructor!T)
+                foreach (ref e; _payload)
+                    .destroy(e);
             static if (hasIndirections!T)
                 GC.removeRange(_payload.ptr);
             free(_payload.ptr);
@@ -2544,26 +2546,32 @@ struct Array(T)
         @property void length(size_t newLength)
         {
             if (length >= newLength)
+                shorten(newLength);
+            else
+                enlarge(newLength);
+        }
+
+        //shorten
+        void shorten(size_t newLength)
+        {
+            static if (hasIndirections!T || hasElaborateDestructor!T)
             {
-                // shorten
-                static if (is(T == struct) && hasElaborateDestructor!T)
+                foreach (ref e; _payload.ptr[newLength .. length])
                 {
-                    foreach (ref e; _payload.ptr[newLength .. _payload.length])
-                    {
+                    static if (is(T == struct))
                         .destroy(e);
-                    }
+                    else //Class or pointer
+                        _payload[$ - 1] = null;
                 }
-                // Zero out unused capacity to prevent gc from seeing false pointers
-                static if (hasIndirections!T)
-                    memset(_payload.ptr + newLength,
-                           0,
-                           (length - newLength) * T.sizeof);
-                _payload = _payload.ptr[0 .. newLength];
-                return;
             }
+            _payload = _payload.ptr[0 .. newLength];
+        }
+        
+        void enlarge(size_t newLength)
+        {
             // enlarge
             if (newLength > capacity)
-                reserve(max(capacity + capacity / 2, newLength));
+                reserve(max(capacity + capacity / 2, newLength), newLength);
             initializeAll(_payload.ptr[length .. newLength]);
             _payload = _payload.ptr[0 .. newLength];
         }
@@ -2575,11 +2583,18 @@ struct Array(T)
         }
 
         // reserve
-        void reserve(size_t elements)
+        void reserve(size_t newCap)
         {
-            if (elements <= capacity) return;
-            immutable sz = elements * T.sizeof;
-            static if (hasIndirections!T)       // should use hasPointers instead
+            reserve(newCap, length);
+        }
+
+        // newLength is implementation detail for items that will be immediatly used
+        // as such, they are not 0-initialized.
+        void reserve(size_t newCap, size_t newLength)
+        {
+            if (newCap <= capacity) return;
+            immutable sz = newCap * T.sizeof;
+            static if (hasIndirections!T)
             {
                 /* Because of the transactional nature of this
                  * relative to the garbage collector, ensure no
@@ -2590,12 +2605,17 @@ struct Array(T)
                 auto newPayload =
                     enforce((cast(T*) malloc(sz))[0 .. oldLength]);
                 // copy old data over to new array
-                newPayload[] = _payload[];
+                static if (hasElaborateCopyConstructor!T)
+                    //Avoid unnecessary postblit call via memcpy
+                    memcpy(newPayload.ptr, _payload.ptr, T.sizeof * oldLength);
+                else
+                    newPayload[] = _payload[];
                 // Zero out unused capacity to prevent gc from seeing
-                // false pointers
-                memset(newPayload.ptr + oldLength,
-                        0,
-                        (elements - oldLength) * T.sizeof);
+                // false pointers. We only initialize from newLength to newCap
+                // since oldLength to newLength will be initialized by other code
+                memset(newPayload.ptr + newLength,
+                       0,
+                       (newCap - newLength) * T.sizeof);
                 GC.addRange(newPayload.ptr, sz);
                 GC.removeRange(_payload.ptr);
                 free(_payload.ptr);
@@ -2610,16 +2630,16 @@ struct Array(T)
                     enforce(cast(T*) realloc(_payload.ptr, sz))[0 .. length];
                 _payload = newPayload;
             }
-            _capacity = elements;
+            _capacity = newCap;
         }
 
         // Insert one item
         size_t insertBack(Stuff)(Stuff stuff)
-        if (isImplicitlyConvertible!(Stuff, T))
+            if (isImplicitlyConvertible!(Stuff, T))
         {
             if (_capacity == length)
             {
-                reserve(1 + capacity + capacity / 2);
+                reserve(1 + capacity + capacity / 2, length + 1);
             }
             assert(capacity > length && _payload.ptr);
             emplace(_payload.ptr + _payload.length, stuff);
@@ -2629,24 +2649,31 @@ struct Array(T)
 
         /// Insert a range of items
         size_t insertBack(Stuff)(Stuff stuff)
-        if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
+            if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
         {
             static if (hasLength!Stuff)
             {
-                immutable oldLength = length;
-                reserve(oldLength + stuff.length);
+                immutable stuffLen  = stuff.length;
+                immutable newLength = length + stuffLen;
+                reserve(newLength, newLength);
+                foreach (ref e; _payload.ptr[length .. newLength])
+                {
+                    emplace(&e, stuff.front);
+                    stuff.popFront();
+                }
+                _payload = _payload.ptr[0 .. newLength];
+                return stuffLen;
             }
-            size_t result;
-            foreach (item; stuff)
+            else
             {
-                insertBack(item);
-                ++result;
+                size_t result;
+                foreach (item; stuff)
+                {
+                    insertBack(item);
+                    ++result;
+                }
+                return result;
             }
-            static if (hasLength!Stuff)
-            {
-                assert(length == oldLength + stuff.length);
-            }
-            return result;
         }
     }
     private alias RefCounted!(Payload, RefCountedAutoInitialize.no) Data;
@@ -2944,13 +2971,12 @@ Complexity: $(BIGOH 1).
     const @safe nothrow
     size_t opDollar()
     {
-        // @@@BUG@@@ This doesn't work yet
         return length;
     }
 
 /**
 Returns the maximum number of elements the container can store without
-   (a) allocating memory, (b) invalidating iterators upon insertion.
+   (a) allocating memory, (b) invalidating ranges upon insertion.
 
 Complexity: $(BIGOH 1)
      */
@@ -2968,23 +2994,16 @@ Complexity: $(BIGOH 1)
      */
     void reserve(size_t elements)
     {
-        if (!_data.refCountedStore.isInitialized)
-        {
-            if (!elements) return;
-            immutable sz = elements * T.sizeof;
-            auto p = enforce(malloc(sz));
-            static if (hasIndirections!T)
-            {
-                GC.addRange(p, sz);
-                memset(p, 0, sz);
-            }
-            _data = Data(cast(T[]) p[0 .. 0]);
-            _data._capacity = elements;
-        }
-        else
-        {
-            _data.reserve(elements);
-        }
+        _data.refCountedStore.ensureInitialized();
+        _data.reserve(elements);
+    }
+
+    // newLength is implementation detail for when reserved is immediatly
+    // followed by writes. This avoids double initialization.
+    private void reserve(size_t elements, size_t newLength)
+    {
+        _data.refCountedStore.ensureInitialized();
+        _data.reserve(elements, newLength);
     }
 
 /**
@@ -3143,40 +3162,64 @@ Complexity: $(BIGOH slice.length)
     }
 
 /**
-Returns a new container that's the concatenation of $(D this) and its
-argument. $(D opBinaryRight) is only defined if $(D Stuff) does not
-define $(D opBinary).
+Returns a new Array that's the concatenation of $(D this) and $(D stuff).
+$(D stuff) may be an element, a range or another Array.
 
 Complexity: $(BIGOH n + m), where m is the number of elements in $(D
 stuff)
      */
     Array opBinary(string op, Stuff)(Stuff stuff)
-        if (op == "~")
+        if (op == "~" && is(typeof(this ~= stuff)))
     {
-        // TODO: optimize
         Array result;
-        // @@@BUG@@ result ~= this[] doesn't work
-        auto r = this[];
-        result ~= r;
-        assert(result.length == length);
-        result ~= stuff[];
+        static if (hasLength!Stuff)
+        {
+            immutable newCap = this.length + stuff.length;
+            result.reserve(newCap, newCap);
+        }
+        result ~= this;
+        result ~= stuff;
         return result;
     }
 
 /**
-Forwards to $(D insertBack(stuff)).
+Returns a new Array that's the concatenation of $(D stuff) and $(D this).
+$(D stuff) may be an element or a range.
+
+Complexity: $(BIGOH m + n), where m is the number of elements in $(D
+stuff)
+     */
+    Array opBinaryRight(string op, Stuff)(Stuff stuff)
+        if (op == "~" && is(typeof(insertBack(stuff))))
+    {
+        Array result;
+        static if (hasLength!Stuff)
+        {
+            immutable newCap = this.length + stuff.length;
+            result.reserve(newCap, newCap);
+        }
+        result ~= stuff;
+        result ~= this;
+        return result;
+    }
+
+/**
+Appends $(D stuff) to $(D this). $(D stuff) may be an element, a range or
+another Array.
      */
     void opOpAssign(string op, Stuff)(Stuff stuff)
-        if (op == "~")
+        if (op == "~" && is(typeof(insertBack(stuff))))
     {
-        static if (is(typeof(stuff[])))
-        {
-            insertBack(stuff[]);
-        }
-        else
-        {
-            insertBack(stuff);
-        }
+        insertBack(stuff[]);
+    }
+
+/**
+ditto
+     */
+    void opOpAssign(string op, E)(Array!E stuff)
+        if (op == "~" && isImplicitlyConvertible!(T, E))
+    {
+        insertBack(stuff[]);
     }
 
 /**
@@ -3190,7 +3233,8 @@ Complexity: $(BIGOH n)
     void clear()
     {
         //Clear the actual elements, so that other referencing arrays/ranges are impacted.
-        length(0);
+        if (_data.refCountedStore.isInitialized())
+            _data.shorten(0);
     }
 
 /**
@@ -3244,7 +3288,7 @@ Complexity: $(BIGOH m * log(n)), where $(D m) is the number of
 elements in $(D stuff)
      */
     size_t insertBack(Stuff)(Stuff stuff)
-    if (isImplicitlyConvertible!(Stuff, T) ||
+        if (isImplicitlyConvertible!(Stuff, T) ||
             isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
         _data.refCountedStore.ensureInitialized();
@@ -3265,7 +3309,15 @@ Complexity: $(BIGOH log(n)).
     void removeBack()
     {
         version(assert) if (empty) throw new RangeError();
-        _data.length = _length - 1;
+        static if (hasIndirections!T || hasElaborateDestructor!T)
+        {
+            // Clear this guy
+            static if (is(T == struct))
+                .destroy(_payload[$ - 1]);
+            else //Class or pointer
+                _payload[$ - 1] = null;
+        }
+        _payload = _payload[0 .. $ - 1];
     }
     /// ditto
     alias removeBack stableRemoveBack;
@@ -3287,7 +3339,7 @@ Complexity: $(BIGOH howMany).
     {
         if(!_data.refCountedStore.isInitialized) return 0;
         if (howMany > _length) howMany = _length;
-        _data.length = _length - howMany;
+        _data.shorten(_length - howMany);
         return howMany;
     }
     /// ditto
@@ -3327,9 +3379,9 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
         static if (isForwardRange!Stuff)
         {
             // Can find the length in advance
-            auto extra = walkLength(stuff);
+            auto extra = walkLength(stuff.save);
             if (!extra) return 0;
-            reserve(length + extra);
+            reserve(length + extra, length + extra);
             assert(_data.refCountedStore.isInitialized);
             // Move elements over by extra slots
             memmove(_payload.ptr + r._a + extra,
@@ -3341,8 +3393,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
                 emplace(p, stuff.front);
                 stuff.popFront();
             }
-            _payload =
-                _payload.ptr[0 .. _length + extra];
+            _payload = _payload.ptr[0 .. _length + extra];
             return extra;
         }
         else
@@ -3429,6 +3480,8 @@ $(D r)
         immutable tailLength = _length - offset2;
         // Use copy here, not a[] = b[] because the ranges may overlap
         // Use _payload to access the underlying array directly, for copy
+        // TODO: Optimize. This code postblits items to move them. This can be
+        // avoided, but is more complicated. Keeping code simple for now.
         copy(_payload[offset2 .. _length],
              _payload[offset1 .. offset1 + tailLength]);
         length = offset1 + tailLength;
@@ -3531,10 +3584,9 @@ unittest
 {
     auto a = Array!int(1, 2, 3);
     auto b = Array!int(11, 12, 13);
-    auto c = a ~ b;
-    //foreach (e; c) writeln(e);
-    assert(c == Array!int(1, 2, 3, 11, 12, 13));
-    //assert(a ~ b[] == Array!int(1, 2, 3, 11, 12, 13));
+    assert(a   ~ b   == Array!int(1, 2, 3, 11, 12, 13));
+    assert(a   ~ b[] == Array!int(1, 2, 3, 11, 12, 13));
+    assert(a[] ~ b   == Array!int(1, 2, 3, 11, 12, 13));
 }
 
 unittest
