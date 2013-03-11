@@ -23,7 +23,8 @@ import std.range;
 import std.uni : isControl;
 import std.utf;
 
-private {
+private
+{
     // Prevent conflicts from these generic names
     alias std.utf.stride UTFStride;
     alias std.utf.decode toUnicode;
@@ -32,7 +33,8 @@ private {
 /**
 JSON type enumeration
 */
-enum JSON_TYPE : byte {
+enum JSON_TYPE : byte
+{
     /// Indicates the type of a $(D JSONValue).
     STRING,
     INTEGER, /// ditto
@@ -48,8 +50,10 @@ enum JSON_TYPE : byte {
 /**
 JSON value node
 */
-struct JSONValue {
-    union {
+struct JSONValue
+{
+    union
+    {
         /// Value when $(D type) is $(D JSON_TYPE.STRING)
         string                          str;
         /// Value when $(D type) is $(D JSON_TYPE.INTEGER)
@@ -86,7 +90,8 @@ struct JSONValue {
 /**
 Parses a serialized string and returns a tree of JSON values.
 */
-JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
+JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
+{
     JSONValue root = void;
     root.type = JSON_TYPE.NULL;
 
@@ -96,12 +101,15 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
     dchar next = 0;
     int line = 1, pos = 1;
 
-    void error(string msg) {
+    void error(string msg)
+    {
         throw new JSONException(msg, line, pos);
     }
 
-    dchar peekChar() {
-        if(!next) {
+    dchar peekChar()
+    {
+        if(!next)
+        {
             if(json.empty) return '\0';
             next = json.front;
             json.popFront();
@@ -109,36 +117,43 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
         return next;
     }
 
-    void skipWhitespace() {
+    void skipWhitespace()
+    {
         while(isWhite(peekChar())) next = 0;
     }
 
-    dchar getChar(bool SkipWhitespace = false)() {
+    dchar getChar(bool SkipWhitespace = false)()
+    {
         static if(SkipWhitespace) skipWhitespace();
 
         dchar c = void;
-        if(next) {
+        if(next)
+        {
             c = next;
             next = 0;
         }
-        else {
+        else
+        {
             if(json.empty) error("Unexpected end of data.");
             c = json.front;
             json.popFront();
         }
 
-        if(c == '\n' || (c == '\r' && peekChar() != '\n')) {
+        if(c == '\n' || (c == '\r' && peekChar() != '\n'))
+        {
             line++;
             pos = 1;
         }
-        else {
+        else
+        {
             pos++;
         }
 
         return c;
     }
 
-    void checkChar(bool SkipWhitespace = true, bool CaseSensitive = true)(char c) {
+    void checkChar(bool SkipWhitespace = true, bool CaseSensitive = true)(char c)
+    {
         static if(SkipWhitespace) skipWhitespace();
         auto c2 = getChar();
         static if(!CaseSensitive) c2 = toLower(c2);
@@ -158,11 +173,13 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
         return true;
     }
 
-    string parseString() {
+    string parseString()
+    {
         auto str = appender!string();
 
     Next:
-        switch(peekChar()) {
+        switch(peekChar())
+        {
             case '"':
                 getChar();
                 break;
@@ -170,7 +187,8 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
             case '\\':
                 getChar();
                 auto c = getChar();
-                switch(c) {
+                switch(c)
+                {
                     case '"':       str.put('"');   break;
                     case '\\':      str.put('\\');  break;
                     case '/':       str.put('/');   break;
@@ -181,7 +199,8 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
                     case 't':       str.put('\t');  break;
                     case 'u':
                         dchar val = 0;
-                        foreach_reverse(i; 0 .. 4) {
+                        foreach_reverse(i; 0 .. 4)
+                        {
                             auto hex = toUpper(getChar());
                             if(!isHexDigit(hex)) error("Expecting hex character");
                             val += (isDigit(hex) ? hex - '0' : hex - ('A' - 10)) << (4 * i);
@@ -204,28 +223,32 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
         return str.data;
     }
 
-    void parseValue(JSONValue* value) {
+    void parseValue(JSONValue* value)
+    {
         depth++;
 
         if(maxDepth != -1 && depth > maxDepth) error("Nesting too deep.");
 
         auto c = getChar!true();
 
-        switch(c) {
+        switch(c)
+        {
             case '{':
                 value.type = JSON_TYPE.OBJECT;
                 value.object = null;
 
                 if(testChar('}')) break;
 
-                do {
+                do
+                {
                     checkChar('"');
                     string name = parseString();
                     checkChar(':');
                     JSONValue member = void;
                     parseValue(&member);
                     value.object[name] = member;
-                } while(testChar(','));
+                }
+                while(testChar(','));
 
                 checkChar('}');
                 break;
@@ -236,11 +259,13 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
 
                 if(testChar(']')) break;
 
-                do {
+                do
+                {
                     JSONValue element = void;
                     parseValue(&element);
                     value.array ~= element;
-                } while(testChar(','));
+                }
+                while(testChar(','));
 
                 checkChar(']');
                 break;
@@ -255,18 +280,21 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
                 auto number = appender!string();
                 bool isFloat, isNegative;
 
-                void readInteger() {
+                void readInteger()
+                {
                     if(!isDigit(c)) error("Digit expected");
 
                 Next: number.put(c);
 
-                    if(isDigit(peekChar())) {
+                    if(isDigit(peekChar()))
+                    {
                         c = getChar();
                         goto Next;
                     }
                 }
 
-                if(c == '-') {
+                if(c == '-')
+                {
                     number.put('-');
                     c = getChar();
                     isNegative = true;
@@ -274,13 +302,15 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
 
                 readInteger();
 
-                if(testChar('.')) {
+                if(testChar('.'))
+                {
                     isFloat = true;
                     number.put('.');
                     c = getChar();
                     readInteger();
                 }
-                if(testChar!(false, false)('e')) {
+                if(testChar!(false, false)('e'))
+                {
                     isFloat = true;
                     number.put('e');
                     if(testChar('+')) number.put('+');
@@ -290,11 +320,13 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
                 }
 
                 string data = number.data;
-                if(isFloat) {
+                if(isFloat)
+                {
                     value.type = JSON_TYPE.FLOAT;
                     value.floating = parse!real(data);
                 }
-                else {
+                else
+                {
                     if (isNegative)
                         value.integer = parse!long(data);
                     else
@@ -342,14 +374,18 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
 /**
 Takes a tree of JSON values and returns the serialized string.
 */
-string toJSON(in JSONValue* root) {
+string toJSON(in JSONValue* root)
+{
     auto json = appender!string();
 
-    void toString(string str) {
+    void toString(string str)
+    {
         json.put('"');
 
-        foreach (dchar c; str) {
-            switch(c) {
+        foreach (dchar c; str)
+        {
+            switch(c)
+            {
                 case '"':       json.put("\\\"");       break;
                 case '\\':      json.put("\\\\");       break;
                 case '/':       json.put("\\/");        break;
@@ -367,12 +403,15 @@ string toJSON(in JSONValue* root) {
         json.put('"');
     }
 
-    void toValue(in JSONValue* value) {
-        final switch(value.type) {
+    void toValue(in JSONValue* value)
+    {
+        final switch(value.type)
+        {
             case JSON_TYPE.OBJECT:
                 json.put('{');
                 bool first = true;
-                foreach(name, member; value.object) {
+                foreach(name, member; value.object)
+                {
                     if(first) first = false;
                     else json.put(',');
                     toString(name);
@@ -385,7 +424,8 @@ string toJSON(in JSONValue* root) {
             case JSON_TYPE.ARRAY:
                 json.put('[');
                 auto length = value.array.length;
-                foreach (i; 0 .. length) {
+                foreach (i; 0 .. length)
+                {
                     if(i) json.put(',');
                     toValue(&value.array[i]);
                 }
@@ -436,8 +476,10 @@ private void appendJSONChar(Appender!string* dst, dchar c,
 /**
 Exception thrown on JSON errors
 */
-class JSONException : Exception {
-    this(string msg, int line = 0, int pos = 0) {
+class JSONException : Exception
+{
+    this(string msg, int line = 0, int pos = 0)
+    {
         if(line) super(text(msg, " (Line ", line, ":", pos, ")"));
         else super(msg);
     }
@@ -450,7 +492,8 @@ version(unittest)
 }
 
 
-unittest {
+unittest
+{
     // An overly simple test suite, if it can parse a serializated string and
     // then use the resulting values tree to generate an identical
     // serialization, both the decoder and encoder works.
@@ -478,13 +521,16 @@ unittest {
 
     JSONValue val;
     string result;
-    foreach(json; jsons) {
-        try {
+    foreach(json; jsons)
+    {
+        try
+        {
             val = parseJSON(json);
             result = toJSON(&val);
             assert(result == json, text(result, " should be ", json));
         }
-        catch(JSONException e) {
+        catch(JSONException e)
+        {
             writefln(text(json, "\n", e.toString()));
         }
     }
