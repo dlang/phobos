@@ -2084,6 +2084,7 @@ unittest
 
 /***************************************************
 Copy file $(D from) to file $(D to). File timestamps are preserved.
+If the target file exists, it is overwritten.
  */
 void copy(in char[] from, in char[] to)
 {
@@ -2140,6 +2141,18 @@ void copy(in char[] from, in char[] to)
 
         cenforce(utime(toz, &utim) != -1, from);
     }
+}
+
+unittest
+{
+    auto t1 = deleteme, t2 = deleteme~"2";
+    scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
+    write(t1, "1");
+    copy(t1, t2);
+    assert(readText(t2) == "1");
+    write(t1, "2");
+    copy(t1, t2);
+    assert(readText(t2) == "2");
 }
 
 
