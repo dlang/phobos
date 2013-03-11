@@ -431,20 +431,6 @@ private void appendJSONChar(Appender!string* dst, dchar c,
 {
     if(isControl(c)) error("Illegal control character.");
     dst.put(c);
-//      int stride = UTFStride((&c)[0 .. 1], 0);
-//      if(stride == 1) {
-//              if(isControl(c)) error("Illegal control character.");
-//              dst.put(c);
-//      }
-//      else {
-//              char[6] utf = void;
-//              utf[0] = c;
-//              foreach(i; 1 .. stride) utf[i] = next;
-//              size_t index = 0;
-//              if(isControl(toUnicode(utf[0 .. stride], index)))
-//                      error("Illegal control character");
-//              dst.put(utf[0 .. stride]);
-//      }
 }
 
 /**
