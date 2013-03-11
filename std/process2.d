@@ -401,6 +401,19 @@ private Pid spawnProcessImpl(in char[][] args,
         dup2(stdoutFD, STDOUT_FILENO);
         dup2(stderrFD, STDERR_FILENO);
 
+        // Ensure that the standard streams aren't closed on execute, and
+        // optionally close all other file descriptors.
+        setCLOEXEC(STDIN_FILENO, false);
+        setCLOEXEC(STDOUT_FILENO, false);
+        setCLOEXEC(STDERR_FILENO, false);
+        if (!(config & Config.inheritFDs))
+        {
+            import core.sys.posix.sys.resource;
+            rlimit r;
+            getrlimit(RLIMIT_NOFILE, &r);
+            foreach (i; 3 .. cast(int) r.rlim_cur) close(i);
+        }
+
         // Close the old file descriptors, unless they are
         // either of the standard streams.
         if (stdinFD  > STDERR_FILENO)  close(stdinFD);
@@ -563,6 +576,25 @@ version (Posix)
 private bool isExecutable(in char[] path) @trusted //TODO: @safe nothrow
 {
     return (access(toStringz(path), X_OK) == 0);
+}
+
+// Sets or unsets the FD_CLOEXEC flag on the given file descriptor.
+version (Posix)
+private void setCLOEXEC(int fd, bool on)
+{
+    import core.sys.posix.fcntl;
+    auto flags = fcntl(fd, F_GETFD);
+    if (flags >= 0)
+    {
+        if (on) flags |= FD_CLOEXEC;
+        else    flags &= ~(cast(typeof(flags)) FD_CLOEXEC);
+        flags = fcntl(fd, F_SETFD, flags);
+    }
+    if (flags == -1)
+    {
+        throw new StdioException("Failed to "~(on ? "" : "un")
+                                 ~"set close-on-exec flag on file descriptor");
+    }
 }
 
 unittest
@@ -761,6 +793,17 @@ enum Config
     instead, i.e., without a console. On POSIX, it has no effect.
     */
     gui = 8,
+
+    /**
+    On POSIX, open $(LINK2 http://en.wikipedia.org/wiki/File_descriptor,file descriptors)
+    are by default inherited by the child process.  As this may lead
+    to subtle bugs when pipes or multiple threads are involved,
+    $(LREF spawnProcess) ensures that all file descriptors except the
+    ones that correspond to standard input/output/error are closed
+    in the child process when it starts.  Use $(D inheritFDs) to prevent
+    this.  On Windows, this option has no effect.
+    */
+    inheritFDs = 16,
 }
 
 
