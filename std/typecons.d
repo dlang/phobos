@@ -3025,32 +3025,38 @@ unittest
     {
         private int value;
         mixin Proxy!value;
-        this(int n){ value = n; }
+        this(int n) const { value = n; }
     }
 
-    MyInt m = 10;
-    static assert(!__traits(compiles, { int x = m; }));
-    static assert(!__traits(compiles, { void func(int n){} func(m); }));
-    assert(m == 10);
-    assert(m != 20);
-    assert(m < 20);
-    assert(+m == 10);
-    assert(-m == -10);
-    assert(++m == 11);
-    assert(m++ == 11); assert(m == 12);
-    assert(--m == 11);
-    assert(m-- == 11); assert(m == 10);
-    assert(cast(double)m == 10.0);
-    assert(m + 10 == 20);
-    assert(m - 5 == 5);
-    assert(m * 20 == 200);
-    assert(m / 2 == 5);
-    assert(10 + m == 20);
-    assert(15 - m == 5);
-    assert(20 * m == 200);
-    assert(50 / m == 5);
-    m = m;
-    m = 20; assert(m == 20);
+    foreach (T; TypeTuple!(MyInt, const MyInt, immutable MyInt))
+    {
+        T m = 10;
+        static assert(!__traits(compiles, { int x = m; }));
+        static assert(!__traits(compiles, { void func(int n){} func(m); }));
+        assert(m == 10);
+        assert(m != 20);
+        assert(m < 20);
+        assert(+m == 10);
+        assert(-m == -10);
+        assert(cast(double)m == 10.0);
+        assert(m + 10 == 20);
+        assert(m - 5 == 5);
+        assert(m * 20 == 200);
+        assert(m / 2 == 5);
+        assert(10 + m == 20);
+        assert(15 - m == 5);
+        assert(20 * m == 200);
+        assert(50 / m == 5);
+        static if (is(T == MyInt))  // mutable
+        {
+            assert(++m == 11);
+            assert(m++ == 11); assert(m == 12);
+            assert(--m == 11);
+            assert(m-- == 11); assert(m == 10);
+            m = m;
+            m = 20; assert(m == 20);
+        }
+    }
 }
 unittest
 {
@@ -3058,29 +3064,39 @@ unittest
     {
         private int[] value;
         mixin Proxy!value;
-        this(int[] arr){ value = arr; }
+        this(int[] arr) { value = arr; }
+        this(immutable int[] arr) immutable { value = arr; }
     }
 
-    MyArray a = [1,2,3,4];
-    assert(a == [1,2,3,4]);
-    assert(a != [5,6,7,8]);
-    assert(+a[0]    == 1);
-    version (LittleEndian)
-        assert(cast(ulong[])a == [0x0000_0002_0000_0001, 0x0000_0004_0000_0003]);
-    else
-        assert(cast(ulong[])a == [0x0000_0001_0000_0002, 0x0000_0003_0000_0004]);
-    assert(a ~ [10,11] == [1,2,3,4,10,11]);
-    assert(a[0]    == 1);
-    assert(a[]     == [1,2,3,4]);
-    assert(a[2..4] == [3,4]);
-    a = a;
-    a = [5,6,7,8];  assert(a == [5,6,7,8]);
-    a[0]     = 0;   assert(a == [0,6,7,8]);
-    a[]      = 1;   assert(a == [1,1,1,1]);
-    a[0..3]  = 2;   assert(a == [2,2,2,1]);
-    a[0]    += 2;   assert(a == [4,2,2,1]);
-    a[]     *= 2;   assert(a == [8,4,4,2]);
-    a[0..2] /= 2;   assert(a == [4,2,4,2]);
+    foreach (T; TypeTuple!(MyArray, const MyArray, immutable MyArray))
+    {
+      static if (is(T == immutable))
+        T a = [1,2,3,4].idup;   // workaround until qualified ctor is properly supported
+      else
+        T a = [1,2,3,4];
+        assert(a == [1,2,3,4]);
+        assert(a != [5,6,7,8]);
+        assert(+a[0]    == 1);
+        version (LittleEndian)
+            assert(cast(ulong[])a == [0x0000_0002_0000_0001, 0x0000_0004_0000_0003]);
+        else
+            assert(cast(ulong[])a == [0x0000_0001_0000_0002, 0x0000_0003_0000_0004]);
+        assert(a ~ [10,11] == [1,2,3,4,10,11]);
+        assert(a[0]    == 1);
+        assert(a[]     == [1,2,3,4]);
+        assert(a[2..4] == [3,4]);
+        static if (is(T == MyArray))    // mutable
+        {
+            a = a;
+            a = [5,6,7,8];  assert(a == [5,6,7,8]);
+            a[0]     = 0;   assert(a == [0,6,7,8]);
+            a[]      = 1;   assert(a == [1,1,1,1]);
+            a[0..3]  = 2;   assert(a == [2,2,2,1]);
+            a[0]    += 2;   assert(a == [4,2,2,1]);
+            a[]     *= 2;   assert(a == [8,4,4,2]);
+            a[0..2] /= 2;   assert(a == [4,2,4,2]);
+        }
+    }
 }
 unittest
 {
