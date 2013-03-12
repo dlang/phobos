@@ -2966,7 +2966,11 @@ mixin template Proxy(alias a)
     auto ref opSliceUnary(string op, this X      )()                           { return mixin(op~"a[]"); }
     auto ref opSliceUnary(string op, this X, B, E)(auto ref B b, auto ref E e) { return mixin(op~"a[b..e]"); }
 
-    auto ref opBinary     (string op, this X, B)(auto ref B b) { return mixin("a "~op~" b"); }
+    auto ref opBinary(string op, this X, B)(auto ref B b)
+    if (op == "in" && is(typeof(a in b)) || op != "in")
+    {
+        return mixin("a "~op~" b");
+    }
     auto ref opBinaryRight(string op, this X, B)(auto ref B b) { return mixin("b "~op~" a"); }
 
     static if (!is(typeof(this) == class))
@@ -3213,6 +3217,20 @@ unittest
     }
     MyFoo2 f2;
     f2 = f2;
+}
+unittest
+{
+    // bug8613
+    static struct Name
+    {
+        mixin Proxy!val;
+        private string val;
+        this(string s) { val = s; }
+    }
+
+    bool[Name] names;
+    names[Name("a")] = true;
+    bool* b = Name("a") in names;
 }
 
 /**
