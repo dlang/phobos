@@ -3003,6 +3003,11 @@ mixin template Proxy(alias a)
             // non template function
             auto ref opDispatch(this X, Args...)(auto ref Args args) { return mixin("a."~name~"(args)"); }
         }
+        else static if (is(typeof({ enum x = mixin("a."~name); })))
+        {
+            // built-in type field, manifest constant, and static non-mutable field
+            enum opDispatch = mixin("a."~name);
+        }
         else static if (is(typeof(mixin("a."~name))) || __traits(getOverloads, a, name).length != 0)
         {
             // field or property function
@@ -3026,6 +3031,9 @@ unittest
         private int value;
         mixin Proxy!value;
         this(int n) const { value = n; }
+
+        enum str = "str";
+        static immutable arr = [1,2,3];
     }
 
     foreach (T; TypeTuple!(MyInt, const MyInt, immutable MyInt))
@@ -3056,6 +3064,11 @@ unittest
             m = m;
             m = 20; assert(m == 20);
         }
+        static assert(T.max == int.max);
+        static assert(T.min == int.min);
+        static assert(T.init == int.init);
+        static assert(T.str == "str");
+        static assert(T.arr == [1,2,3]);
     }
 }
 unittest
@@ -3232,12 +3245,38 @@ unittest
     Typedef!int y = 10;
     assert(x == y);
 
+    static assert(Typedef!int.init == int.init);
+
     Typedef!(float, 1.0) z; // specifies the init
     assert(z == 1.0);
+
+    static assert(typeof(z).init == 1.0);
 
     alias Typedef!(int, 0, "dollar") Dollar;
     alias Typedef!(int, 0, "yen") Yen;
     static assert(!is(Dollar == Yen));
+
+    Typedef!(int[3]) sa;
+    static assert(sa.length == 3);
+    static assert(typeof(sa).length == 3);
+}
+
+unittest
+{
+    // bug8655
+    import std.typecons;
+    import std.bitmanip;
+    static import core.stdc.config;
+
+    alias Typedef!(core.stdc.config.c_ulong) c_ulong;
+
+    static struct Foo
+    {
+        mixin(bitfields!(
+            c_ulong, "NameOffset", 31,
+            c_ulong, "NameIsString", 1
+        ));
+    }
 }
 
 
