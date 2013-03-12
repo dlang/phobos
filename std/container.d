@@ -3521,12 +3521,15 @@ $(D r)
 
 unittest
 {
+    writeln(__LINE__);
     Array!int a;
     assert(a.empty);
+    writeln(__LINE__);
 }
 
 unittest
 {
+    writeln(__LINE__);
     Array!int a = Array!int(1, 2, 3);
     //a._data._refCountedDebug = true;
     auto b = a.dup;
@@ -3534,16 +3537,20 @@ unittest
     b.front = 42;
     assert(b == Array!int(42, 2, 3));
     assert(a == Array!int(1, 2, 3));
+    writeln(__LINE__);
 }
 
 unittest
 {
+    writeln(__LINE__);
     auto a = Array!int(1, 2, 3);
     assert(a.length == 3);
+    writeln(__LINE__);
 }
 
 unittest
 {
+    writeln(__LINE__);
     Array!int a;
     a.reserve(1000);
     assert(a.length == 0);
@@ -3555,41 +3562,40 @@ unittest
         a.insertBack(i);
     }
     assert(p == a._data._payload.ptr);
+    writeln(__LINE__);
 }
 
 unittest
 {
+    writeln(__LINE__);
     auto a = Array!int(1, 2, 3);
     a[1] *= 42;
     assert(a[1] == 84);
+    writeln(__LINE__);
 }
 
 unittest
 {
-    auto a = Array!int(1, 2, 3);
-    auto b = Array!int(11, 12, 13);
-    assert(a   ~ b   == Array!int(1, 2, 3, 11, 12, 13));
-    assert(a   ~ b[] == Array!int(1, 2, 3, 11, 12, 13));
-    assert(a[] ~ b   == Array!int(1, 2, 3, 11, 12, 13));
-}
-
-unittest
-{
+    writeln(__LINE__);
     auto a = Array!int(1, 2, 3);
     auto b = Array!int(11, 12, 13);
     a ~= b;
     assert(a == Array!int(1, 2, 3, 11, 12, 13));
+    writeln(__LINE__);
 }
 
 unittest
 {
+    writeln(__LINE__);
     auto a = Array!int(1, 2, 3, 4);
     assert(a.removeAny() == 4);
     assert(a == Array!int(1, 2, 3));
+    writeln(__LINE__);
 }
 
 unittest
 {
+    writeln(__LINE__);
     auto a = Array!int(1, 2, 3, 4, 5);
     auto r = a[2 .. a.length];
     assert(a.insertBefore(r, 42) == 1);
@@ -3597,21 +3603,25 @@ unittest
     r = a[2 .. 2];
     assert(a.insertBefore(r, [8, 9]) == 2);
     assert(a == Array!int(1, 2, 8, 9, 42, 3, 4, 5));
+    writeln(__LINE__);
 }
 
 unittest
 {
+    writeln(__LINE__);
     auto a = Array!int(0, 1, 2, 3, 4, 5, 6, 7, 8);
     a.linearRemove(a[4 .. 6]);
     auto b = Array!int(0, 1, 2, 3, 6, 7, 8);
     //writeln(a.length);
     //foreach (e; a) writeln(e);
     assert(a == Array!int(0, 1, 2, 3, 6, 7, 8));
+    writeln(__LINE__);
 }
 
 // Give the Range object some testing.
 unittest
 {
+    writeln(__LINE__);
     auto a = Array!int(0, 1, 2, 3, 4, 5, 6)[];
     auto b = Array!int(6, 5, 4, 3, 2, 1, 0)[];
     alias typeof(a) A;
@@ -3624,6 +3634,7 @@ unittest
     assert(equal(retro(b), a));
     assert(a.length == 7);
     assert(equal(a[1..4], [1, 2, 3]));
+    writeln(__LINE__);
 }
 // Test issue 5920
 version(unittest)
@@ -3642,6 +3653,7 @@ version(unittest)
 }
 unittest
 {
+    writeln(__LINE__);
     alias structBug5920 S;
     uint dMask;
 
@@ -3666,10 +3678,12 @@ unittest
         assert(dMask == 0b1111_1111);
     }
     assert(dMask == 0b1111_1111);   // make sure the d'tor is called once only.
+    writeln(__LINE__);
 }
 // Test issue 5792 (mainly just to check if this piece of code is compilable)
 unittest
 {
+    writeln(__LINE__);
     auto a = Array!(int[])([[1,2],[3,4]]);
     a.reserve(4);
     assert(a.capacity >= 4);
@@ -3681,43 +3695,55 @@ unittest
     assert(a.length == 2);
     assert(a[0] == [1,2]);
     assert(a[1] == [3,4]);
+    writeln(__LINE__);
 }
 
 // test replace!Stuff with range Stuff
 unittest
 {
+    writeln(__LINE__);
     auto a = Array!int([1, 42, 5]);
     a.replace(a[1 .. 2], [2, 3, 4]);
     assert(equal(a[], [1, 2, 3, 4, 5]));
+    writeln(__LINE__);
 }
 
 // test insertBefore and replace with empty Arrays
 unittest
 {
+    writeln(__LINE__);
     auto a = Array!int();
     a.insertBefore(a[], 1);
     assert(equal(a[], [1]));
+    writeln(__LINE__);
 }
 unittest
 {
+    writeln(__LINE__);
     auto a = Array!int();
     a.insertBefore(a[], [1, 2]);
     assert(equal(a[], [1, 2]));
+    writeln(__LINE__);
 }
 unittest
 {
+    writeln(__LINE__);
     auto a = Array!int();
     a.replace(a[], [1, 2]);
     assert(equal(a[], [1, 2]));
+    writeln(__LINE__);
 }
 unittest
 {
+    writeln(__LINE__);
     auto a = Array!int();
     a.replace(a[], 1);
     assert(equal(a[], [1]));
+    writeln(__LINE__);
 }
 unittest
 {
+    writeln(__LINE__);
     //Check that an empty (and payload-less) range can correctly be used
     Array!int a;
     auto r = a[];
@@ -3739,9 +3765,11 @@ unittest
     a = Array!int();
     a.replace(r, [1]);
     assert(equal(a[], [1]));
+    writeln(__LINE__);
 }
 unittest
 {
+    writeln(__LINE__);
     auto a = Array!int([1, 1]);
     a[1]  = 0; //Check Array.opIndexAssign
     assert(a[1] == 0);
@@ -3769,9 +3797,11 @@ unittest
     assert(+r[0] == +3);
     assert(-r[0] == -3);
     assert(~r[0] == ~3);
+    writeln(__LINE__);
 }
 unittest
 {
+    writeln(__LINE__);
     //Test "array-wide" operations
     auto a = Array!int([0, 1, 2]); //Array
     a[] += 5;
@@ -3793,14 +3823,17 @@ unittest
     assert(r.equal([6, 35, 40]));
     r[0 .. 2] = 0;
     assert(r.equal([0, 0, 40]));
+    writeln(__LINE__);
 }
 unittest
 {
+    writeln(__LINE__);
     auto arr = Array!int([0, 1, 2, 3, 4, 5, 6, 7, 8]);
     auto r = arr[2 .. 6];
     // r gets invalidated during the remove.
     // we also verify overwriting an invalidated range.
     r = arr.linearRemove(r);
+    writeln(__LINE__);
 }
 unittest
 {
@@ -3871,6 +3904,17 @@ unittest
         r = r[];
         r = r[1 .. 2];
     }
+}
+
+unittest
+{
+    writeln(__LINE__);
+    auto a = Array!int(1, 2, 3);
+    auto b = Array!int(11, 12, 13);
+    assert(a   ~ b   == Array!int(1, 2, 3, 11, 12, 13));
+    assert(a   ~ b[] == Array!int(1, 2, 3, 11, 12, 13));
+    assert(a[] ~ b   == Array!int(1, 2, 3, 11, 12, 13));
+    writeln(__LINE__);
 }
 
 // BinaryHeap
