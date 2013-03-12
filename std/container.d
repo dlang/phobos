@@ -2571,7 +2571,7 @@ struct Array(T)
         {
             // enlarge
             if (newLength > capacity)
-                reserve(max(capacity + capacity / 2, newLength), newLength);
+                reserve(max(capacity + capacity / 2, newLength));
             initializeAll(_payload.ptr[length .. newLength]);
             _payload = _payload.ptr[0 .. newLength];
         }
@@ -2583,17 +2583,10 @@ struct Array(T)
         }
 
         // reserve
-        void reserve(size_t newCap)
+        void reserve(size_t elements)
         {
-            reserve(newCap, length);
-        }
-
-        // newLength is implementation detail for items that will be immediatly used
-        // as such, they are not 0-initialized.
-        void reserve(size_t newCap, size_t newLength)
-        {
-            if (newCap <= capacity) return;
-            immutable sz = newCap * T.sizeof;
+            if (elements <= capacity) return;
+            immutable sz = elements * T.sizeof;
             static if (hasIndirections!T)
             {
                 /* Because of the transactional nature of this
@@ -2611,11 +2604,10 @@ struct Array(T)
                 else
                     newPayload[] = _payload[];
                 // Zero out unused capacity to prevent gc from seeing
-                // false pointers. We only initialize from newLength to newCap
-                // since oldLength to newLength will be initialized by other code
-                memset(newPayload.ptr + newLength,
+                // false pointers.
+                memset(newPayload.ptr + oldLength,
                        0,
-                       (newCap - newLength) * T.sizeof);
+                       (elements - oldLength) * T.sizeof);
                 GC.addRange(newPayload.ptr, sz);
                 GC.removeRange(_payload.ptr);
                 free(_payload.ptr);
@@ -2630,7 +2622,7 @@ struct Array(T)
                     enforce(cast(T*) realloc(_payload.ptr, sz))[0 .. length];
                 _payload = newPayload;
             }
-            _capacity = newCap;
+            _capacity = elements;
         }
 
         // Insert one item
@@ -2639,7 +2631,7 @@ struct Array(T)
         {
             if (_capacity == length)
             {
-                reserve(1 + capacity + capacity / 2, length + 1);
+                reserve(1 + capacity + capacity / 2);
             }
             assert(capacity > length && _payload.ptr);
             emplace(_payload.ptr + _payload.length, stuff);
@@ -2655,7 +2647,7 @@ struct Array(T)
             {
                 immutable stuffLen  = stuff.length;
                 immutable newLength = length + stuffLen;
-                reserve(newLength, newLength);
+                reserve(newLength);
                 foreach (ref e; _payload.ptr[length .. newLength])
                 {
                     emplace(&e, stuff.front);
@@ -2998,14 +2990,6 @@ Complexity: $(BIGOH 1)
         _data.reserve(elements);
     }
 
-    // newLength is implementation detail for when reserved is immediatly
-    // followed by writes. This avoids double initialization.
-    private void reserve(size_t elements, size_t newLength)
-    {
-        _data.refCountedStore.ensureInitialized();
-        _data.reserve(elements, newLength);
-    }
-
 /**
 Returns a range that iterates over elements of the container, in
 forward order.
@@ -3175,7 +3159,7 @@ stuff)
         static if (hasLength!Stuff)
         {
             immutable newCap = this.length + stuff.length;
-            result.reserve(newCap, newCap);
+            result.reserve(newCap);
         }
         result ~= this;
         result ~= stuff;
@@ -3196,7 +3180,7 @@ stuff)
         static if (hasLength!Stuff)
         {
             immutable newCap = this.length + stuff.length;
-            result.reserve(newCap, newCap);
+            result.reserve(newCap);
         }
         result ~= stuff;
         result ~= this;
@@ -3381,7 +3365,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
             // Can find the length in advance
             auto extra = walkLength(stuff.save);
             if (!extra) return 0;
-            reserve(length + extra, length + extra);
+            reserve(length + extra);
             assert(_data.refCountedStore.isInitialized);
             // Move elements over by extra slots
             memmove(_payload.ptr + r._a + extra,
