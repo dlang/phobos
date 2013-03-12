@@ -3587,6 +3587,16 @@ unittest
     writeln(__LINE__);
 }
 
+unittest
+{
+    writeln(__LINE__);
+    auto a = Array!int(1, 2, 3);
+    auto b = Array!int(4, 5, 6);
+    a.insertBack(b[]);
+    assert(a == Array!int(1, 2, 3, 4, 5, 6));
+    writeln(__LINE__);
+}
+
 //unittest
 //{
 //    writeln(__LINE__);
