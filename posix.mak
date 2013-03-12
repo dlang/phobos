@@ -113,6 +113,9 @@ ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
 	else
 		CFLAGS += -O3
 	endif
+    ifeq ($(OS),osx)
+        CFLAGS += -mmacosx-version-min=10.6
+    endif
 endif
 
 # Set DFLAGS
