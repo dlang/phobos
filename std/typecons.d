@@ -3126,8 +3126,7 @@ unittest
     auto h = new Hoge(new Foo());
     int n;
 
-    // blocked by bug 7641
-    //static assert(!__traits(compiles, { Foo f = h; }));
+    static assert(!__traits(compiles, { Foo f = h; }));
 
     // field
     h.field = 1;            // lhs of assign
