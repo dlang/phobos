@@ -3145,66 +3145,66 @@ Complexity: $(BIGOH slice.length)
             mixin("_payload[i .. j] "~op~"= value;");
     }
 
-/**
-Returns a new Array that's the concatenation of $(D this) and $(D stuff).
-$(D stuff) may be an element, a range or another Array.
-
-Complexity: $(BIGOH n + m), where m is the number of elements in $(D
-stuff)
-     */
-    Array opBinary(string op, Stuff)(Stuff stuff)
-        if (op == "~" && is(typeof(this ~= stuff)))
-    {
-        Array result;
-        static if (hasLength!Stuff)
-        {
-            immutable newCap = this.length + stuff.length;
-            result.reserve(newCap);
-        }
-        result ~= this;
-        result ~= stuff;
-        return result;
-    }
-
-/**
-Returns a new Array that's the concatenation of $(D stuff) and $(D this).
-$(D stuff) may be an element or a range.
-
-Complexity: $(BIGOH m + n), where m is the number of elements in $(D
-stuff)
-     */
-    Array opBinaryRight(string op, Stuff)(Stuff stuff)
-        if (op == "~" && is(typeof(insertBack(stuff))))
-    {
-        Array result;
-        static if (hasLength!Stuff)
-        {
-            immutable newCap = this.length + stuff.length;
-            result.reserve(newCap);
-        }
-        result ~= stuff;
-        result ~= this;
-        return result;
-    }
-
-/**
-Appends $(D stuff) to $(D this). $(D stuff) may be an element, a range or
-another Array.
-     */
-    void opOpAssign(string op, Stuff)(Stuff stuff)
-        if (op == "~" && is(typeof(insertBack(stuff))))
-    {
-        insertBack(stuff[]);
-    }
-
-/**
-ditto
-     */
-    void opOpAssign(string op, E)(Array!E stuff)
-        if (op == "~" && isImplicitlyConvertible!(T, E))
-    {
-        insertBack(stuff[]);
-    }
+///**
+//Returns a new Array that's the concatenation of $(D this) and $(D stuff).
+//$(D stuff) may be an element, a range or another Array.
+//
+//Complexity: $(BIGOH n + m), where m is the number of elements in $(D
+//stuff)
+//     */
+//    Array opBinary(string op, Stuff)(Stuff stuff)
+//        if (op == "~" && is(typeof(this ~= stuff)))
+//    {
+//        Array result;
+//        static if (hasLength!Stuff)
+//        {
+//            immutable newCap = this.length + stuff.length;
+//            result.reserve(newCap);
+//        }
+//        result ~= this;
+//        result ~= stuff;
+//        return result;
+//    }
+//
+///**
+//Returns a new Array that's the concatenation of $(D stuff) and $(D this).
+//$(D stuff) may be an element or a range.
+//
+//Complexity: $(BIGOH m + n), where m is the number of elements in $(D
+//stuff)
+//     */
+//    Array opBinaryRight(string op, Stuff)(Stuff stuff)
+//        if (op == "~" && is(typeof(insertBack(stuff))))
+//    {
+//        Array result;
+//        static if (hasLength!Stuff)
+//        {
+//            immutable newCap = this.length + stuff.length;
+//            result.reserve(newCap);
+//        }
+//        result ~= stuff;
+//        result ~= this;
+//        return result;
+//    }
+//
+///**
+//Appends $(D stuff) to $(D this). $(D stuff) may be an element, a range or
+//another Array.
+//     */
+//    void opOpAssign(string op, Stuff)(Stuff stuff)
+//        if (op == "~" && is(typeof(insertBack(stuff))))
+//    {
+//        insertBack(stuff[]);
+//    }
+//
+///**
+//ditto
+//     */
+//    void opOpAssign(string op, E)(Array!E stuff)
+//        if (op == "~" && isImplicitlyConvertible!(T, E))
+//    {
+//        insertBack(stuff[]);
+//    }
 
 /**
 Removes all contents from the container. The container decides how $(D
@@ -3579,8 +3579,8 @@ unittest
     writeln(__LINE__);
     auto a = Array!int(1, 2, 3);
     auto b = Array!int(11, 12, 13);
-    a ~= b;
-    assert(a == Array!int(1, 2, 3, 11, 12, 13));
+    //a ~= b;
+    //assert(a == Array!int(1, 2, 3, 11, 12, 13));
     writeln(__LINE__);
 }
 
@@ -3906,16 +3906,16 @@ unittest
     }
 }
 
-unittest
-{
-    writeln(__LINE__);
-    auto a = Array!int(1, 2, 3);
-    auto b = Array!int(11, 12, 13);
-    assert(a   ~ b   == Array!int(1, 2, 3, 11, 12, 13));
-    assert(a   ~ b[] == Array!int(1, 2, 3, 11, 12, 13));
-    assert(a[] ~ b   == Array!int(1, 2, 3, 11, 12, 13));
-    writeln(__LINE__);
-}
+//unittest
+//{
+//    writeln(__LINE__);
+//    auto a = Array!int(1, 2, 3);
+//    auto b = Array!int(11, 12, 13);
+//    assert(a   ~ b   == Array!int(1, 2, 3, 11, 12, 13));
+//    assert(a   ~ b[] == Array!int(1, 2, 3, 11, 12, 13));
+//    assert(a[] ~ b   == Array!int(1, 2, 3, 11, 12, 13));
+//    writeln(__LINE__);
+//}
 
 // BinaryHeap
 /**
