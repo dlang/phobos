@@ -106,6 +106,9 @@ endif
 
 # Set CFLAGS
 CFLAGS :=
+ifeq ($(OS),osx)
+	CFLAGS += -mmacosx-version-min=10.6
+endif
 ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
 	CFLAGS += -m$(MODEL) $(PIC)
 	ifeq ($(BUILD),debug)
@@ -113,9 +116,6 @@ ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
 	else
 		CFLAGS += -O3
 	endif
-    ifeq ($(OS),osx)
-        CFLAGS += -mmacosx-version-min=10.6
-    endif
 endif
 
 # Set DFLAGS
