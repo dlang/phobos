@@ -3186,25 +3186,25 @@ Complexity: $(BIGOH slice.length)
 //        result ~= this;
 //        return result;
 //    }
-//
-///**
-//Appends $(D stuff) to $(D this). $(D stuff) may be an element, a range or
-//another Array.
-//     */
-//    void opOpAssign(string op, Stuff)(Stuff stuff)
-//        if (op == "~" && is(typeof(insertBack(stuff))))
-//    {
-//        insertBack(stuff[]);
-//    }
-//
-///**
-//ditto
-//     */
-//    void opOpAssign(string op, E)(Array!E stuff)
-//        if (op == "~" && isImplicitlyConvertible!(T, E))
-//    {
-//        insertBack(stuff[]);
-//    }
+
+/**
+Appends $(D stuff) to $(D this). $(D stuff) may be an element, a range or
+another Array.
+     */
+    void opOpAssign(string op, Stuff)(Stuff stuff)
+        if (op == "~" && is(typeof(insertBack(stuff))))
+    {
+        insertBack(stuff);
+    }
+
+/**
+ditto
+     */
+    void opOpAssign(string op, E)(Array!E stuff)
+        if (op == "~" && isImplicitlyConvertible!(T, E))
+    {
+        insertBack(stuff[]);
+    }
 
 /**
 Removes all contents from the container. The container decides how $(D
@@ -3578,9 +3578,14 @@ unittest
 {
     writeln(__LINE__);
     auto a = Array!int(1, 2, 3);
-    auto b = Array!int(11, 12, 13);
-    //a ~= b;
-    //assert(a == Array!int(1, 2, 3, 11, 12, 13));
+    auto b = Array!int(4, 5, 6);
+    auto c = Array!int(7, 8, 9);
+    a ~= b;   //Array ~= Array
+    assert(a == Array!int(1, 2, 3, 4, 5, 6));
+    b ~= c[]; //Array ~= Range
+    assert(b == Array!int(4, 5, 6, 7, 8, 9));
+    c ~= 0;   //Array ~= Element
+    assert(c == Array!int(7, 8, 9, 0));
     writeln(__LINE__);
 }
 
