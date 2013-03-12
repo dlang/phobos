@@ -1484,7 +1484,6 @@ unittest
     assert(s.sameHead(s.stripRight()));
 }
 
-
 /++
     If $(D str) ends with $(D delimiter), then $(D str) is returned without
     $(D delimiter) on its end. If it $(D str) does $(I not) end with
@@ -2654,7 +2653,7 @@ unittest
 /*****************************************************
  * Format arguments into a string.
  *
- * $(LREF format) has been changed to use this implementation in November 2012. 
+ * $(LREF format) has been changed to use this implementation in November 2012.
  * Then xformat has been scheduled for deprecation at the same time.
  * It will be deprecateed in May 2013.
  */
@@ -2695,7 +2694,7 @@ deprecated unittest
  * Format arguments into string $(D_PARAM buf) which must be large
  * enough to hold the result. Throws RangeError if it is not.
  *
- * $(LREF sformat) has been changed to use this implementation in November 2012. 
+ * $(LREF sformat) has been changed to use this implementation in November 2012.
  * Then xsformat has been scheduled for deprecation at the same time.
  * It will be deprecateed in May 2013.
  *
