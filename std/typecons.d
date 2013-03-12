@@ -2972,7 +2972,7 @@ mixin template Proxy(alias a)
     static if (!is(typeof(this) == class))
     {
         private import std.traits;
-        static if (isAssignable!(typeof(a), typeof(a)))
+        static if (isAssignable!(typeof(a)))
         {
             auto ref opAssign(this X)(auto ref typeof(this) v)
             {
