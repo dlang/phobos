@@ -1357,6 +1357,51 @@ unittest
            "hello world" ~ [paraSep]);
 }
 
+/++
+    Strips leading $(D delimiter).
+  +/
+C[] stripLeft(C)(C[] str, dchar delimiter) @safe pure
+    if(isSomeChar!C)
+{
+    foreach (i, dchar c; str)
+    {
+        if (c != delimiter)
+            return str[i .. $];
+    }
+
+    return str[$ .. $]; //Empty string with correct type.
+}
+
+///
+unittest
+{
+    assert("  foobar  ".stripLeft(' ') == "foobar  ");
+    assert("00223.444500".stripLeft('0') == "223.444500");
+    assert("ůůűniçodêéé".stripLeft('ů') == "űniçodêéé");
+}
+
+/++
+    Strips leading characters until $(D predicate) returns false.
+  +/
+C[] stripLeft(alias predicate, C)(C[] str) @safe pure
+    if (isSomeChar!C && is(typeof(predicate(str.front)) : bool))
+{
+    foreach (i, dchar c; str)
+    {
+        if (!predicate(c))
+            return str[i .. $];
+    }
+
+    return str[$ .. $]; //Empty string with correct type.
+}
+
+///
+unittest
+{
+    assert("  foobar  ".stripLeft!(a => a == ' ')() == "foobar  ");
+    assert("00223.444500".stripLeft!(a => a == '0')() == "223.444500");
+    assert("ůůűniçodêéé".stripLeft!(a => a == 'ů')() == "űniçodêéé");
+}
 
 //Explicitly undocumented. Do not use. To be removed in March 2013.
 deprecated("Please use std.string.stripRight instead.") String stripr(String)(String s)
@@ -1408,6 +1453,51 @@ unittest
            [paraSep] ~ "hello world");
 }
 
+/++
+    Strips trailing $(D delimiter).
+  +/
+C[] stripRight(C)(C[] str, dchar delimiter)
+    if(isSomeChar!C)
+{
+    foreach_reverse (i, dchar c; str)
+    {
+        if (c != delimiter)
+            return str[0 .. i + codeLength!C(c)];
+    }
+
+    return str[0 .. 0];
+}
+
+///
+unittest
+{
+    assert("  foobar  ".stripRight(' ') == "  foobar");
+    assert("00223.444500".stripRight('0') == "00223.4445");
+    assert("ùniçodêéé".stripRight('é') == "ùniçodê");
+}
+
+/++
+    Strips trailing characters until $(D predicate) returns false.
+  +/
+C[] stripRight(alias predicate, C)(C[] str)
+    if (isSomeChar!C && is(typeof(predicate(str.front)) : bool))
+{
+    foreach_reverse (i, dchar c; str)
+    {
+        if (!predicate(c))
+            return str[0 .. i + codeLength!C(c)];
+    }
+
+    return str[0 .. 0];
+}
+
+///
+unittest
+{
+    assert("  foobar  ".stripRight!(a => a == ' ')() == "  foobar");
+    assert("00223.444500".stripRight!(a => a == '0')() == "00223.4445");
+    assert("ùniçodêéé".stripRight!(a => a == 'é')() == "ùniçodê");
+}
 
 /++
     Strips both leading and trailing whitespace.
@@ -1484,6 +1574,39 @@ unittest
     assert(s.sameHead(s.stripRight()));
 }
 
+/++
+    Strips both leading and trailing $(D delimiter).
+  +/
+C[] strip(C)(C[] str, dchar delimiter)
+    if(isSomeChar!C)
+{
+    return stripRight(stripLeft(str, delimiter), delimiter);
+}
+
+///
+unittest
+{
+    assert("  foobar  ".strip(' ') == "foobar");
+    assert("00223.444500".strip('0') == "223.4445");
+    assert("ëëêéüŗōpéêëë".strip('ë') == "êéüŗōpéê");
+}
+
+/++
+    Strips both leading and trailing characters until $(D predicate) returns false.
+  +/
+C[] strip(alias predicate, C)(C[] str)
+    if (isSomeChar!C && is(typeof(predicate(str.front)) : bool))
+{
+    return stripRight!predicate(stripLeft!predicate(str));
+}
+
+///
+unittest
+{
+    assert("  foobar  ".strip!(a => a == ' ')() == "foobar");
+    assert("00223.444500".strip!(a => a == '0')() == "223.4445");
+    assert("ëëêéüŗōpéêëë".strip!(a => a == 'ë')() == "êéüŗōpéê");
+}
 
 /++
     If $(D str) ends with $(D delimiter), then $(D str) is returned without
@@ -2654,7 +2777,7 @@ unittest
 /*****************************************************
  * Format arguments into a string.
  *
- * $(LREF format) has been changed to use this implementation in November 2012. 
+ * $(LREF format) has been changed to use this implementation in November 2012.
  * Then xformat has been scheduled for deprecation at the same time.
  * It will be deprecateed in May 2013.
  */
@@ -2695,7 +2818,7 @@ deprecated unittest
  * Format arguments into string $(D_PARAM buf) which must be large
  * enough to hold the result. Throws RangeError if it is not.
  *
- * $(LREF sformat) has been changed to use this implementation in November 2012. 
+ * $(LREF sformat) has been changed to use this implementation in November 2012.
  * Then xsformat has been scheduled for deprecation at the same time.
  * It will be deprecateed in May 2013.
  *
