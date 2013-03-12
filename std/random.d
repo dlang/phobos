@@ -1093,7 +1093,7 @@ take $(D urng) uses the default generator $(D rndGen).
 Example:
 
 ----
-Random gen(unpredictableSeed);
+auto gen=Random(unpredictableSeed);
 // Generate an integer in [0, 1023]
 auto a = uniform(0, 1024, gen);
 // Generate a float in [0, 1$(RPAREN)
