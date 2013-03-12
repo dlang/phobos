@@ -2930,15 +2930,16 @@ void func(int n) { }
  */
 mixin template Proxy(alias a)
 {
-    auto ref opEquals(this X)(auto ref typeof(this) b)
+    auto ref opEquals(this X, B)(auto ref B b)
     {
-        import std.algorithm;
-        static assert(startsWith(a.stringof, "this."));
-        return a == mixin("b."~a.stringof[5..$]);   // remove "this."
-    }
-    auto ref opEquals(this X, B)(auto ref B b) if (!is(B == typeof(this)))
-    {
-        return a == b;
+        static if (is(immutable B == immutable typeof(this)))
+        {
+            import std.algorithm;
+            static assert(startsWith(a.stringof, "this."));
+            return a == mixin("b."~a.stringof[5..$]);   // remove "this."
+        }
+        else
+            return a == b;
     }
 
     auto ref opCmp(this X, B)(auto ref B b)
