@@ -223,6 +223,10 @@ version(RBDoChecks)
     import std.stdio;
 }
 
+unittest
+{
+  writeln("starting algorithm unittests");
+}
 
 
 /* The following documentation and type $(D TotalContainer) are
@@ -3580,14 +3584,29 @@ unittest
     auto a = Array!int(1, 2, 3);
     auto b = Array!int(4, 5, 6);
     auto c = Array!int(7, 8, 9);
-    a ~= b;   //Array ~= Array
+    a.insertBack(b[]);
     assert(a == Array!int(1, 2, 3, 4, 5, 6));
-    b ~= c[]; //Array ~= Range
+    b.insertBack(c[]); //Array ~= Range
     assert(b == Array!int(4, 5, 6, 7, 8, 9));
-    c ~= 0;   //Array ~= Element
+    c.insertBack(0);   //Array ~= Element
     assert(c == Array!int(7, 8, 9, 0));
     writeln(__LINE__);
 }
+
+//unittest
+//{
+//    writeln(__LINE__);
+//    auto a = Array!int(1, 2, 3);
+//    auto b = Array!int(4, 5, 6);
+//    auto c = Array!int(7, 8, 9);
+//    a ~= b;   //Array ~= Array
+//    assert(a == Array!int(1, 2, 3, 4, 5, 6));
+//    b ~= c[]; //Array ~= Range
+//    assert(b == Array!int(4, 5, 6, 7, 8, 9));
+//    c ~= 0;   //Array ~= Element
+//    assert(c == Array!int(7, 8, 9, 0));
+//    writeln(__LINE__);
+//}
 
 unittest
 {
