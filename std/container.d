@@ -3578,20 +3578,20 @@ unittest
     writeln(__LINE__);
 }
 
-unittest
-{
-    writeln(__LINE__);
-    auto a = Array!int(1, 2, 3);
-    auto b = Array!int(4, 5, 6);
-    auto c = Array!int(7, 8, 9);
-    a.insertBack(b[]);
-    assert(a == Array!int(1, 2, 3, 4, 5, 6));
-    b.insertBack(c[]); //Array ~= Range
-    assert(b == Array!int(4, 5, 6, 7, 8, 9));
-    c.insertBack(0);   //Array ~= Element
-    assert(c == Array!int(7, 8, 9, 0));
-    writeln(__LINE__);
-}
+//unittest
+//{
+//    writeln(__LINE__);
+//    auto a = Array!int(1, 2, 3);
+//    auto b = Array!int(4, 5, 6);
+//    auto c = Array!int(7, 8, 9);
+//    a.insertBack(b[]);
+//    assert(a == Array!int(1, 2, 3, 4, 5, 6));
+//    b.insertBack(c[]); //Array ~= Range
+//    assert(b == Array!int(4, 5, 6, 7, 8, 9));
+//    c.insertBack(0);   //Array ~= Element
+//    assert(c == Array!int(7, 8, 9, 0));
+//    writeln(__LINE__);
+//}
 
 //unittest
 //{
