@@ -566,7 +566,9 @@ private LPVOID toEnvz(const string[string] env)
         envz.put(v);
         envz.put('\0');
     }
-    envz.put('\0');
+    // Two final zeros are needed in case there aren't any environment vars,
+    // and the last one does no harm when there are.
+    envz.put("\0\0"w);
     return envz.data.ptr;
 }
 
