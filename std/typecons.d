@@ -3034,7 +3034,7 @@ unittest
     {
         private int value;
         mixin Proxy!value;
-        this(int n) const { value = n; }
+        this(int n) inout { value = n; }
 
         enum str = "str";
         static immutable arr = [1,2,3];
@@ -3087,7 +3087,7 @@ unittest
 
     foreach (T; TypeTuple!(MyArray, const MyArray, immutable MyArray))
     {
-      static if (is(T == immutable))
+      static if (is(T == immutable) && !is(typeof({ T a = [1,2,3,4]; })))
         T a = [1,2,3,4].idup;   // workaround until qualified ctor is properly supported
       else
         T a = [1,2,3,4];
