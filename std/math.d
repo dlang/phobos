@@ -2780,20 +2780,33 @@ void resetIeeeFlags() { IeeeFlags.resetIeeeFlags(); }
 Example:
 ----
 {
+    FloatingPointControl fpctrl;
+
     // Enable hardware exceptions for division by zero, overflow to infinity,
     // invalid operations, and uninitialized floating-point variables.
-
-    FloatingPointControl fpctrl;
     fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
-    double y = x * 3.0; // will generate a hardware exception, if x is uninitialized.
-    //
-    fpctrl.rounding = FloatingPointControl.roundUp;
+    // This will generate a hardware exception, if x is a
+    // default-initialized floating point variable:
+    real x; // Add `= 0` or even `= real.nan` to not throw the exception.
+    real y = x * 3.0;
 
-    // The hardware exceptions will be disabled when leaving this scope.
+    // The exception is only thrown for default-uninitialized NaN-s.
+    // NaN-s with other payload are valid:
+    real z = y * real.nan; // ok
+
+    // Changing the rounding mode:
+    fpctrl.rounding = FloatingPointControl.roundUp;
+    assert(rint(1.1) == 2);
+
+    // The set hardware exceptions will be disabled when leaving this scope.
     // The original rounding mode will also be restored.
 }
 
+// Ensure previous values are returned:
+assert(!FloatingPointControl.enabledExceptions);
+assert(FloatingPointControl.rounding == FloatingPointControl.roundToNearest);
+assert(rint(1.1) == 1);
 ----
 
  */
