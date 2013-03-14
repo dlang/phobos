@@ -2852,8 +2852,8 @@ public:
     //// Change the floating-point hardware rounding mode
     @property void rounding(RoundingMode newMode)
     {
-        ushort old = getControlState();
-        setControlState((old & ~ROUNDING_MASK) | (newMode & ROUNDING_MASK));
+        initialize();
+        setControlState((getControlState() & ~ROUNDING_MASK) | (newMode & ROUNDING_MASK));
     }
 
     /// Return the exceptions which are currently enabled (unmasked)
@@ -2872,7 +2872,8 @@ public:
     ~this()
     {
         clearExceptions();
-        setControlState(savedState);
+        if (initialized)
+            setControlState(savedState);
     }
 
 private:
@@ -2963,6 +2964,25 @@ private:
 
 unittest
 {
+    void ensureDefaults()
+    {
+        assert(FloatingPointControl.rounding
+               == FloatingPointControl.roundToNearest);
+        assert(FloatingPointControl.enabledExceptions == 0);
+    }
+
+    {
+        FloatingPointControl ctrl;
+    }
+    ensureDefaults();
+
+    {
+        FloatingPointControl ctrl;
+        ctrl.rounding = FloatingPointControl.roundDown;
+        assert(FloatingPointControl.rounding == FloatingPointControl.roundDown);
+    }
+    ensureDefaults();
+
     {
         FloatingPointControl ctrl;
         ctrl.enableExceptions(FloatingPointControl.divByZeroException
@@ -2974,9 +2994,7 @@ unittest
         ctrl.rounding = FloatingPointControl.roundUp;
         assert(FloatingPointControl.rounding == FloatingPointControl.roundUp);
     }
-    assert(FloatingPointControl.rounding
-           == FloatingPointControl.roundToNearest);
-    assert(FloatingPointControl.enabledExceptions == 0);
+    ensureDefaults();
 }
 
 
