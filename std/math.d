@@ -2778,23 +2778,23 @@ void resetIeeeFlags() { IeeeFlags.resetIeeeFlags(); }
 
 
 Example:
- ----
-  {
+----
+{
     // Enable hardware exceptions for division by zero, overflow to infinity,
     // invalid operations, and uninitialized floating-point variables.
 
     FloatingPointControl fpctrl;
     fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
-    double y = x*3.0; // will generate a hardware exception, if x is uninitialized.
+    double y = x * 3.0; // will generate a hardware exception, if x is uninitialized.
     //
     fpctrl.rounding = FloatingPointControl.roundUp;
 
     // The hardware exceptions will be disabled when leaving this scope.
     // The original rounding mode will also be restored.
-  }
+}
 
- ----
+----
 
  */
 struct FloatingPointControl
@@ -2963,20 +2963,20 @@ private:
 
 unittest
 {
-   {
+    {
         FloatingPointControl ctrl;
         ctrl.enableExceptions(FloatingPointControl.divByZeroException
-                           | FloatingPointControl.overflowException);
+                              | FloatingPointControl.overflowException);
         assert(ctrl.enabledExceptions ==
-            (FloatingPointControl.divByZeroException
-          | FloatingPointControl.overflowException));
+               (FloatingPointControl.divByZeroException
+                | FloatingPointControl.overflowException));
 
         ctrl.rounding = FloatingPointControl.roundUp;
         assert(FloatingPointControl.rounding == FloatingPointControl.roundUp);
     }
     assert(FloatingPointControl.rounding
-       == FloatingPointControl.roundToNearest);
-    assert(FloatingPointControl.enabledExceptions ==0);
+           == FloatingPointControl.roundToNearest);
+    assert(FloatingPointControl.enabledExceptions == 0);
 }
 
 
