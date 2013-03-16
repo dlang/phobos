@@ -431,11 +431,11 @@ private Pid spawnProcessImpl(in char[][] args,
     else
     {
         // Parent process:  Close streams and return.
-        if (stdinFD  > STDERR_FILENO && !(config & Config.noCloseStdin))
+        if (stdinFD  > STDERR_FILENO && !(config & Config.retainStdin))
             stdin_.close();
-        if (stdoutFD > STDERR_FILENO && !(config & Config.noCloseStdout))
+        if (stdoutFD > STDERR_FILENO && !(config & Config.retainStdout))
             stdout_.close();
-        if (stderrFD > STDERR_FILENO && !(config & Config.noCloseStderr))
+        if (stderrFD > STDERR_FILENO && !(config & Config.retainStderr))
             stderr_.close();
         return new Pid(id);
     }
@@ -507,11 +507,11 @@ private Pid spawnProcessImpl(in char[] commandLine,
         throw ProcessException.newFromLastError("Failed to spawn new process");
 
     // figure out if we should close any of the streams
-    if (stdinFD  > STDERR_FILENO && !(config & Config.noCloseStdin))
+    if (stdinFD  > STDERR_FILENO && !(config & Config.retainStdin))
         stdin_.close();
-    if (stdoutFD > STDERR_FILENO && !(config & Config.noCloseStdout))
+    if (stdoutFD > STDERR_FILENO && !(config & Config.retainStdout))
         stdout_.close();
-    if (stderrFD > STDERR_FILENO && !(config & Config.noCloseStderr))
+    if (stderrFD > STDERR_FILENO && !(config & Config.retainStderr))
         stderr_.close();
 
     // close the thread handle in the process info structure
@@ -766,7 +766,7 @@ auto logFile = File("myapp_error.log", "w");
 // its error stream to logFile, and leave logFile open in the
 // parent process as well.
 auto pid = spawnProcess("myapp", stdin, stdout, logFile,
-                        Config.noCloseStderr | Config.gui);
+                        Config.retainStderr | Config.gui);
 scope(exit)
 {
     auto exitCode = wait(pid);
@@ -780,16 +780,15 @@ enum Config
     none = 0,
 
     /**
-    Unless the child process inherits the standard
-    input/output/error streams of its parent, one almost
-    always wants the streams closed in the parent when
-    $(LREF spawnProcess) returns.  Therefore, by default, this
-    is done.  If this is not desirable, pass any of these
+    Unless the child process inherits the standard input/output/error
+    streams of its parent, one almost always wants the streams closed
+    in the parent when $(LREF spawnProcess) returns.  Therefore, by
+    default, this is done.  If this is not desirable, pass any of these
     options to spawnProcess.
     */
-    noCloseStdin  = 1,
-    noCloseStdout = 2,                                  /// ditto
-    noCloseStderr = 4,                                  /// ditto
+    retainStdin  = 1,
+    retainStdout = 2,                                  /// ditto
+    retainStderr = 4,                                  /// ditto
 
     /**
     On Windows, the child process will by default be run in
