@@ -2274,7 +2274,7 @@ Appends an entire range to the managed array.
         // another because we can't trust the length portion.
         static if (!(isSomeChar!T && isSomeChar!(ElementType!Range) &&
                      !is(Range == Unqual!T[]) &&
-                     !is(Range == const(T)[]) &&
+                     !is(Range == const(Unqual!T)[]) &&
                      !is(Range == immutable(T)[])) &&
                     is(typeof(items.length) == size_t))
         {
@@ -2512,33 +2512,36 @@ unittest
     auto app4 = appender([]);
     app4.shrinkTo(0);
 
-    // Issue 5663 tests
+    // Issue 5663 & 9725 tests
+    foreach (S; TypeTuple!(char[], const(char)[], string))
     {
-        Appender!(char[]) app5663i;
-        assertNotThrown(app5663i.put("\xE3"));
-        assert(app5663i.data == "\xE3");
+        {
+            Appender!S app5663i;
+            assertNotThrown(app5663i.put("\xE3"));
+            assert(app5663i.data == "\xE3");
 
-        Appender!(char[]) app5663c;
-        assertNotThrown(app5663c.put(cast(const(char)[])"\xE3"));
-        assert(app5663c.data == "\xE3");
+            Appender!S app5663c;
+            assertNotThrown(app5663c.put(cast(const(char)[])"\xE3"));
+            assert(app5663c.data == "\xE3");
 
-        Appender!(char[]) app5663m;
-        assertNotThrown(app5663m.put(cast(char[])"\xE3"));
-        assert(app5663m.data == "\xE3");
-    }
-    // ditto for ~=
-    {
-        Appender!(char[]) app5663i;
-        assertNotThrown(app5663i ~= "\xE3");
-        assert(app5663i.data == "\xE3");
+            Appender!S app5663m;
+            assertNotThrown(app5663m.put(cast(char[])"\xE3"));
+            assert(app5663m.data == "\xE3");
+        }
+        // ditto for ~=
+        {
+            Appender!S app5663i;
+            assertNotThrown(app5663i ~= "\xE3");
+            assert(app5663i.data == "\xE3");
 
-        Appender!(char[]) app5663c;
-        assertNotThrown(app5663c ~= cast(const(char)[])"\xE3");
-        assert(app5663c.data == "\xE3");
+            Appender!S app5663c;
+            assertNotThrown(app5663c ~= cast(const(char)[])"\xE3");
+            assert(app5663c.data == "\xE3");
 
-        Appender!(char[]) app5663m;
-        assertNotThrown(app5663m ~= cast(char[])"\xE3");
-        assert(app5663m.data == "\xE3");
+            Appender!S app5663m;
+            assertNotThrown(app5663m ~= cast(char[])"\xE3");
+            assert(app5663m.data == "\xE3");
+        }
     }
 }
 
