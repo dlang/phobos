@@ -208,20 +208,16 @@ if (wait(dmdPid) != 0)
 ---
 
 Environment_variables:
-With the first and third $(D spawnProcess) overloads, one can specify
-the environment variables of the child process using the $(D environmentVars)
-parameter.  With the second and fourth overload, the child process inherits
-its parent's environment variables.
+By default, the child process inherits the environment of the parent
+process, along with any additional variables specified in the $(D env)
+parameter.  If the same variable exists in both the parent's environment
+and in $(D env), the latter takes precedence.
 
-To make the child inherit the parent's environment $(I plus) one or more
-additional variables, first use $(D $(LREF environment).$(LREF toAA)) to
-obtain an associative array that contains the parent's environment
-variables, and add the new variables to it before passing it to
-$(D spawnProcess).
+If the $(LREF Config).$(LREF newEnv) flag is set in $(D config), the child
+process will $(I not) inherit the parent's environment.  Its entire
+environment will then be determined by $(D env).
 ---
-auto envVars = environment.toAA();
-envVars["FOO"] = "bar";
-wait(spawnProcess("prog", envVars));
+wait(spawnProcess("myapp", ["foo" : "bar"], Config.newEnv));
 ---
 
 Standard_streams:
@@ -261,10 +257,6 @@ Params:
 args = An array which contains the program name as the first element
     and any command-line arguments in the following elements.
 program = The program name, $(I without) command-line arguments.
-environmentVars = The environment variables for the child process may
-    be specified using this parameter.  By default it is $(D null),
-    which means that, the child process inherits the environment of
-    the parent process.
 stdin_ = The standard input stream of the child process.
     This can be any $(XREF stdio,File) that is opened for reading.
     By default the child process inherits the parent's input
@@ -277,6 +269,8 @@ stderr_ = The standard error stream of the child process.
     This can be any $(XREF stdio,File) that is opened for writing.
     By default the child process inherits the parent's error
     stream.
+env = The environment variables for the child process may
+    be specified using this parameter.
 config = Options that control the behaviour of $(D spawnProcess).
     See the $(LREF Config) documentation for details.
 
@@ -290,43 +284,30 @@ $(XREF stdio,StdioException) on failure to pass one of the streams
 $(CXREF exception,RangeError) if $(D args) is empty.
 */
 Pid spawnProcess(in char[][] args,
-                 const string[string] environmentVars,
                  File stdin_ = std.stdio.stdin,
                  File stdout_ = std.stdio.stdout,
                  File stderr_ = std.stdio.stderr,
+                 const string[string] env = null,
                  Config config = Config.none)
     @trusted // TODO: Should be @safe
 {
     version (Windows)    auto  args2 = escapeShellArguments(args);
     else version (Posix) alias args2 = args;
-    return spawnProcessImpl(args2, toEnvz(environmentVars),
-                            stdin_, stdout_, stderr_, config);
+    return spawnProcessImpl(args2, stdin_, stdout_, stderr_, env, config);
 }
 
 /// ditto
 Pid spawnProcess(in char[][] args,
-                 File stdin_ = std.stdio.stdin,
-                 File stdout_ = std.stdio.stdout,
-                 File stderr_ = std.stdio.stderr,
+                 const string[string] env,
                  Config config = Config.none)
     @trusted // TODO: Should be @safe
 {
-    version (Windows)    auto  args2 = escapeShellArguments(args);
-    else version (Posix) alias args2 = args;
-    return spawnProcessImpl(args2, null, stdin_, stdout_, stderr_, config);
-}
-
-/// ditto
-Pid spawnProcess(in char[] program,
-                 const string[string] environmentVars,
-                 File stdin_ = std.stdio.stdin,
-                 File stdout_ = std.stdio.stdout,
-                 File stderr_ = std.stdio.stderr,
-                 Config config = Config.none)
-    @trusted
-{
-    return spawnProcess((&program)[0 .. 1], environmentVars,
-                        stdin_, stdout_, stderr_, config);
+    return spawnProcess(args,
+                        std.stdio.stdin,
+                        std.stdio.stdout,
+                        std.stdio.stderr,
+                        env,
+                        config);
 }
 
 /// ditto
@@ -334,11 +315,21 @@ Pid spawnProcess(in char[] program,
                  File stdin_ = std.stdio.stdin,
                  File stdout_ = std.stdio.stdout,
                  File stderr_ = std.stdio.stderr,
+                 const string[string] env = null,
                  Config config = Config.none)
     @trusted
 {
     return spawnProcess((&program)[0 .. 1],
-                        stdin_, stdout_, stderr_, config);
+                        stdin_, stdout_, stderr_, env, config);
+}
+
+/// ditto
+Pid spawnProcess(in char[] program,
+                 const string[string] env,
+                 Config config = Config.none)
+    @trusted
+{
+    return spawnProcess((&program)[0 .. 1], env, config);
 }
 
 /*
@@ -349,10 +340,10 @@ on the form "var=value".
 */
 version (Posix)
 private Pid spawnProcessImpl(in char[][] args,
-                             const(char*)* envz,
                              File stdin_,
                              File stdout_,
                              File stderr_,
+                             const string[string] env,
                              Config config)
     @trusted // TODO: Should be @safe
 {
@@ -375,8 +366,8 @@ private Pid spawnProcessImpl(in char[][] args,
     foreach (i; 1 .. args.length) argz[i] = toStringz(args[i]);
     argz[$-1] = null;
 
-    // Use parent's environment variables?
-    if (envz is null) envz = environ;
+    // Prepare environment.
+    auto envz = createEnv(env, !(config & Config.newEnv));
 
     // Get the file descriptors of the streams.
     // These could potentially be invalid, but that is OK.  If so, later calls
@@ -452,14 +443,17 @@ envz must be a pointer to a block of UTF-16 characters on the form
 */
 version (Windows)
 private Pid spawnProcessImpl(in char[] commandLine,
-                             LPVOID envz,
                              File stdin_,
                              File stdout_,
                              File stderr_,
+                             const string[string] env,
                              Config config)
     @trusted
 {
     auto commandz = toUTFz!(wchar*)(commandLine);
+
+    // Prepare environment.
+    auto envz = createEnv(env, !(config & Config.newEnv));
 
     // Startup info for CreateProcessW().
     STARTUPINFO_W startinfo;
@@ -538,38 +532,89 @@ private string searchPathFor(in char[] executable)
     return null;
 }
 
-// Converts a string[string] array to a C array of C strings
-// on the form "key=value".
+// Converts childEnv to a zero-terminated array of zero-terminated strings
+// on the form "name=value", optionally adding those of the current process'
+// environment strings that are not present in childEnv.  If the parent's
+// environment should be inherited without modification, this function
+// returns environ directly.
 version (Posix)
-private const(char)** toEnvz(const string[string] env)
-    @trusted //TODO: @safe pure nothrow
+private const(char*)* createEnv(const string[string] childEnv,
+                                bool mergeWithParentEnv)
 {
-    alias const(char)* stringz_t;
-    auto envz = new stringz_t[](env.length+1);
-    int i = 0;
-    foreach (k, v; env) envz[i++] = (k~'='~v~'\0').ptr;
-    envz[i] = null;
+    // Determine the number of strings in the parent's environment.
+    int parentEnvLength = 0;
+    if (mergeWithParentEnv)
+    {
+        if (childEnv.length == 0) return environ;
+        while (environ[parentEnvLength] != null) ++parentEnvLength;
+    }
+
+    // Convert the "new" variables to C-style strings.
+    auto envz = new const(char)*[parentEnvLength + childEnv.length + 1];
+    int pos = 0;
+    foreach (var, val; childEnv)
+        envz[pos++] = (var~'='~val~'\0').ptr;
+
+    // Add the parent's environment.
+    foreach (environStr; environ[0 .. parentEnvLength])
+    {
+        int eqPos = 0;
+        while (environStr[eqPos] != '=' && environStr[eqPos] != '\0') ++eqPos;
+        if (environStr[eqPos] != '=') continue;
+        auto var = environStr[0 .. eqPos];
+        if (var in childEnv) continue;
+        envz[pos++] = environStr;
+    }
+    envz[pos] = null;
     return envz.ptr;
 }
 
-// Converts a string[string] array to a block of 16-bit
-// characters on the form "key=value\0key=value\0...\0\0"
+// Converts childEnv to a Windows environment block, which is on the form
+// "name1=value1\0name2=value2\0...nameN=valueN\0\0", optionally adding
+// those of the current process' environment strings that are not present
+// in childEnv.  Returns null if the parent's environment should be
+// inherited without modification, as this is what is expected by
+// CreateProcess().
 version (Windows)
-private LPVOID toEnvz(const string[string] env)
-    @trusted //TODO: @safe pure nothrow
+private LPVOID createEnv(const string[string] childEnv,
+                         bool mergeWithParentEnv)
 {
+    if (mergeWithParentEnv && childEnv.length == 0) return null;
+
     auto envz = appender!(wchar[])();
-    foreach(k, v; env)
+    void put(string var, string val)
     {
-        envz.put(k);
+        envz.put(var);
         envz.put('=');
-        envz.put(v);
-        envz.put('\0');
+        envz.put(val);
+        envz.put(cast(wchar) '\0');
     }
+
+    // Add the variables in childEnv, removing them from parentEnv
+    // if they exist there too.
+    auto parentEnv = mergeWithParentEnv ? environment.toAA() : null;
+    foreach (k, v; childEnv)
+    {
+        auto uk = toUpper(k);
+        put(uk, v);
+        if (uk in parentEnv) parentEnv.remove(uk);
+    }
+
+    // Add remaining parent environment variables.
+    foreach (k, v; parentEnv) put(k, v);
+
     // Two final zeros are needed in case there aren't any environment vars,
     // and the last one does no harm when there are.
     envz.put("\0\0"w);
     return envz.data.ptr;
+}
+
+version (Windows) unittest
+{
+    assert (createEnv(null, true) == null);
+    assert ((cast(wchar*) createEnv(null, false))[0 .. 2] == "\0\0"w);
+    auto e1 = (cast(wchar*) createEnv(["foo":"bar", "ab":"c"], false))[0 .. 14];
+    assert (e1 == "FOO=bar\0AB=c\0\0"w || e1 == "AB=c\0FOO=bar\0\0"w);
 }
 
 // Checks whether the file exists and can be executed by the
@@ -669,6 +714,51 @@ unittest
     remove(path6e);
 }
 
+unittest // Environment variables in spawnProcess().
+{
+    // We really should use set /a on Windows, but Wine doesn't support it.
+    version (Windows) TestScript envProg =
+       `if [%STD_PROCESS_UNITTEST1%] == [1] (
+            if [%STD_PROCESS_UNITTEST2%] == [2] (exit 3)
+            exit 1
+        )
+        if [%STD_PROCESS_UNITTEST1%] == [4] (
+            if [%STD_PROCESS_UNITTEST2%] == [2] (exit 6)
+            exit 4
+        )
+        if [%STD_PROCESS_UNITTEST2%] == [2] (exit 2)
+        exit 0`;
+    version (Posix) TestScript envProg =
+       `if test "$std_process_unittest1" = ""; then
+            std_process_unittest1=0
+        fi
+        if test "$std_process_unittest2" = ""; then
+            std_process_unittest2=0
+        fi
+        exit $(($std_process_unittest1+$std_process_unittest2))`;
+
+    environment.remove("std_process_unittest1"); // Just in case.
+    environment.remove("std_process_unittest2");
+    assert (wait(spawnProcess(envProg.path)) == 0);
+    assert (wait(spawnProcess(envProg.path, null, Config.newEnv)) == 0);
+
+    environment["std_process_unittest1"] = "1";
+    assert (wait(spawnProcess(envProg.path)) == 1);
+    assert (wait(spawnProcess(envProg.path, null, Config.newEnv)) == 0);
+
+    auto env = ["std_process_unittest2" : "2"];
+    assert (wait(spawnProcess(envProg.path, env)) == 3);
+    assert (wait(spawnProcess(envProg.path, env, Config.newEnv)) == 2);
+
+    env["std_process_unittest1"] = "4";
+    assert (wait(spawnProcess(envProg.path, env)) == 6);
+    assert (wait(spawnProcess(envProg.path, env, Config.newEnv)) == 6);
+
+    environment.remove("std_process_unittest1");
+    assert (wait(spawnProcess(envProg.path, env)) == 6);
+    assert (wait(spawnProcess(envProg.path, env, Config.newEnv)) == 6);
+}
+
 
 /**
 A variation on $(LREF spawnProcess) that runs the given _command through
@@ -697,59 +787,41 @@ properly quoted and escaped shell command line for the current plattform,
 from an array of separate arguments.
 */
 Pid spawnShell(in char[] command,
-               const string[string] environmentVars,
                File stdin_ = std.stdio.stdin,
                File stdout_ = std.stdio.stdout,
                File stderr_ = std.stdio.stderr,
+               const string[string] env = null,
                Config config = Config.none)
     @trusted // TODO: Should be @safe
 {
-    return spawnShellImpl(command, toEnvz(environmentVars),
-                          stdin_, stdout_, stderr_, config);
+    version (Windows)
+    {
+        auto args = escapeShellArguments(userShell, shellSwitch)
+                    ~ " " ~ command;
+    }
+    else version (Posix)
+    {
+        const(char)[][3] args;
+        args[0] = userShell;
+        args[1] = shellSwitch;
+        args[2] = command;
+    }
+    return spawnProcessImpl(args, stdin_, stdout_, stderr_, env, config);
 }
 
 /// ditto
 Pid spawnShell(in char[] command,
-               File stdin_ = std.stdio.stdin,
-               File stdout_ = std.stdio.stdout,
-               File stderr_ = std.stdio.stderr,
+               const string[string] env,
                Config config = Config.none)
     @trusted // TODO: Should be @safe
 {
-    return spawnShellImpl(command, null, stdin_, stdout_, stderr_, config);
+    return spawnShell(command,
+                      std.stdio.stdin,
+                      std.stdio.stdout,
+                      std.stdio.stderr,
+                      env,
+                      config);
 }
-
-// Implementation of spawnShell() for Windows.
-version(Windows)
-private Pid spawnShellImpl(in char[] command,
-                           LPVOID envz,
-                           File stdin_ = std.stdio.stdin,
-                           File stdout_ = std.stdio.stdout,
-                           File stderr_ = std.stdio.stderr,
-                           Config config = Config.none)
-    @trusted // TODO: Should be @safe
-{
-    auto scmd = escapeShellArguments(userShell, shellSwitch) ~ " " ~ command;
-    return spawnProcessImpl(scmd, envz, stdin_, stdout_, stderr_, config);
-}
-
-// Implementation of spawnShell() for POSIX.
-version(Posix)
-private Pid spawnShellImpl(in char[] command,
-                           const char** envz,
-                           File stdin_ = std.stdio.stdin,
-                           File stdout_ = std.stdio.stdout,
-                           File stderr_ = std.stdio.stderr,
-                           Config config = Config.none)
-    @trusted // TODO: Should be @safe
-{
-    const(char)[][3] args;
-    args[0] = userShell;
-    args[1] = shellSwitch;
-    args[2] = command;
-    return spawnProcessImpl(args, envz, stdin_, stdout_, stderr_, config);
-}
-
 
 
 /**
@@ -780,22 +852,30 @@ enum Config
     none = 0,
 
     /**
+    By default, the child process inherits the parent's environment,
+    and any environment variables passed to $(LREF spawnProcess) will
+    be added to it.  If this flag is set, the only variables in the
+    child process' environment will be those given to spawnProcess.
+    */
+    newEnv = 1,
+
+    /**
     Unless the child process inherits the standard input/output/error
     streams of its parent, one almost always wants the streams closed
     in the parent when $(LREF spawnProcess) returns.  Therefore, by
     default, this is done.  If this is not desirable, pass any of these
     options to spawnProcess.
     */
-    retainStdin  = 1,
-    retainStdout = 2,                                  /// ditto
-    retainStderr = 4,                                  /// ditto
+    retainStdin  = 2,
+    retainStdout = 4,                                  /// ditto
+    retainStderr = 8,                                  /// ditto
 
     /**
     On Windows, the child process will by default be run in
     a console window.  This option wil cause it to run in "GUI mode"
     instead, i.e., without a console. On POSIX, it has no effect.
     */
-    gui = 8,
+    gui = 16,
 
     /**
     On POSIX, open $(LINK2 http://en.wikipedia.org/wiki/File_descriptor,file descriptors)
@@ -806,7 +886,7 @@ enum Config
     in the child process when it starts.  Use $(D inheritFDs) to prevent
     this.  On Windows, this option has no effect.
     */
-    inheritFDs = 16,
+    inheritFDs = 32,
 }
 
 
@@ -1462,7 +1542,7 @@ private ProcessPipes pipeProcessImpl(alias spawnFunc, Cmd)
         childStderr = childStdout;
     }
 
-    pipes._pid = spawnFunc(command, null, childStdin, childStdout, childStderr);
+    pipes._pid = spawnFunc(command, childStdin, childStdout, childStderr);
     return pipes;
 }
 
