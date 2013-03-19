@@ -2381,12 +2381,6 @@ C[] translate(C = immutable char)(in char[] str, in char[] transTable, in char[]
 in
 {
     assert(transTable.length == 256);
-    foreach(char c; str)
-        assert(c <= 256);
-    foreach(char c; transTable)
-        assert(c <= 256);
-    foreach(char c; toRemove)
-        assert(c <= 256);
 }
 body
 {
@@ -2654,7 +2648,7 @@ unittest
 /*****************************************************
  * Format arguments into a string.
  *
- * $(LREF format) has been changed to use this implementation in November 2012. 
+ * $(LREF format) has been changed to use this implementation in November 2012.
  * Then xformat has been scheduled for deprecation at the same time.
  * It will be deprecateed in May 2013.
  */
@@ -2695,7 +2689,7 @@ deprecated unittest
  * Format arguments into string $(D_PARAM buf) which must be large
  * enough to hold the result. Throws RangeError if it is not.
  *
- * $(LREF sformat) has been changed to use this implementation in November 2012. 
+ * $(LREF sformat) has been changed to use this implementation in November 2012.
  * Then xsformat has been scheduled for deprecation at the same time.
  * It will be deprecateed in May 2013.
  *
