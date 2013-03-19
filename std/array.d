@@ -169,6 +169,18 @@ unittest
     }
 }
 
+unittest
+{
+    //CTFE
+    struct S
+    {
+        ubyte[5] a = repeat(cast(ubyte)1)[0 .. 5].array();
+        ubyte[5] b = iota(cast(ubyte)0, cast(ubyte)5).array();
+    }
+    static assert(S.init.a[] == [1, 1, 1, 1, 1]);
+    static assert(S.init.b[] == [0, 1, 2, 3, 4]);
+}
+
 /**
 Returns a newly allocated associative array out of elements of the input range,
 which must be a range of tuples (Key, Value).
@@ -266,10 +278,10 @@ assert(matrix[0].length == 31);
 ---
 ), $(ARGS), $(ARGS), $(ARGS import std.array;))
 */
-auto uninitializedArray(T, I...)(I sizes)
-if(allSatisfy!(isIntegral, I))
+auto uninitializedArray(T, Sizes...)(Sizes sizes)
+    if (allSatisfy!(isIntegral, Sizes))
 {
-    return arrayAllocImpl!(false, T, I)(sizes);
+    return arrayAllocImpl!(false, T, Sizes)(sizes);
 }
 
 unittest
@@ -287,10 +299,10 @@ Returns a new array of type $(D T) allocated on the garbage collected heap.
 Initialization is guaranteed only for pointers, references and slices,
 for preservation of memory safety.
 */
-auto minimallyInitializedArray(T, I...)(I sizes) @trusted
-if(allSatisfy!(isIntegral, I))
+auto minimallyInitializedArray(T, Sizes...)(Sizes sizes) @trusted
+    if (allSatisfy!(isIntegral, Sizes))
 {
-    return arrayAllocImpl!(true, T, I)(sizes);
+    return arrayAllocImpl!(true, T, Sizes)(sizes);
 }
 
 unittest
@@ -306,34 +318,56 @@ unittest
     }
 }
 
-private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes)
-if(allSatisfy!(isIntegral, I))
+unittest
 {
-    static assert(sizes.length >= 1,
+    alias T1 = int*[];
+    alias T2 = int*[][];
+    auto t1 = minimallyInitializedArray!T1(10);
+    auto t2 = minimallyInitializedArray!T2(10, 10);
+    foreach (p; t1)
+        assert(p is null);
+    foreach (arr; t2)
+        foreach (p; arr)
+            assert(p is null);
+}
+
+private auto arrayAllocImpl(bool minimallyInitialized, T, Sizes...)(Sizes sizes)
+    if (allSatisfy!(isIntegral, Sizes))
+{
+    static assert(Sizes.length >= 1,
         "Cannot allocate an array without the size of at least the first " ~
         " dimension.");
-    static assert(sizes.length <= nDimensions!T,
-        to!string(sizes.length) ~ " dimensions specified for a " ~
+    static assert(Sizes.length <= nDimensions!T,
+        to!string(Sizes.length) ~ " dimensions specified for a " ~
         to!string(nDimensions!T) ~ " dimensional array.");
 
     alias typeof(T.init[0]) E;
+    immutable size0 = sizes[0];
 
-    auto ptr = cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!(E));
-    auto ret = ptr[0..sizes[0]];
-
-    static if(sizes.length > 1)
+    static if (Sizes.length == 1)
     {
+        if (__ctfe)
+            return new E[](size0);
+        else
+            static if (minimallyInitialized && hasIndirections!E)
+                return new E[](size0);
+            else
+                return (cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!E))[0 .. size0];
+    }
+    else
+    {
+        E[] ret;
+        if (__ctfe)
+            ret = new E[](size0);
+        else
+            ret = (cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!E))[0 .. size0];
+
         foreach(ref elem; ret)
         {
-            elem = uninitializedArray!(E)(sizes[1..$]);
+            elem = arrayAllocImpl!(minimallyInitialized, E)(sizes[1 .. $]);
         }
+        return ret;
     }
-    else static if(minimallyInitialized && hasIndirections!E)
-    {
-        ret[] = E.init;
-    }
-
-    return ret;
 }
 
 /**
