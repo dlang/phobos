@@ -655,10 +655,8 @@ unittest
     assert (wait(pid2) == 123); // Exit code is cached.
 
     version (Windows) TestScript prog3 =
-       "echo -%1-
-        echo -%2-
-        if not -%1-==-foo- ( exit 1 )
-        if not -%2-==-bar- ( exit 1 )
+       "if not [%~1]==[foo] ( exit 1 )
+        if not [%~2]==[bar] ( exit 1 )
         exit 0";
     else version (Posix) TestScript prog3 =
        `if test "$1" != "foo"; then exit 1; fi
