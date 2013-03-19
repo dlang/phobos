@@ -2180,8 +2180,15 @@ if (is(typeof(ElementType!Range.init == Separator.init))
             assert(!empty);
             if (_frontLength == _unComputed)
             {
-                auto r = _input.find(_separator);
-                _frontLength = _input.length - r.length;
+                _frontLength = 0;
+                foreach(c; _input)
+                {
+                    if (c == _separator)
+                    {
+                        break;
+                    }
+                    ++_frontLength;
+                }
             }
             return _input[0 .. _frontLength];
         }
@@ -2191,7 +2198,15 @@ if (is(typeof(ElementType!Range.init == Separator.init))
             assert(!empty);
             if (_frontLength == _unComputed)
             {
-                front;
+                _frontLength = 0;
+                foreach(c; _input)
+                {
+                    if (c == _separator)
+                    {
+                        break;
+                    }
+                    ++_frontLength;
+                }
             }
             assert(_frontLength <= _input.length);
             if (_frontLength == _input.length)
@@ -2204,8 +2219,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
             }
             else
             {
-                _input = _input[_frontLength .. _input.length];
-                skipOver(_input, _separator) || assert(false);
+                _input = _input[_frontLength + 1.. _input.length];
                 _frontLength = _unComputed;
             }
         }
@@ -2373,7 +2387,25 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
             if (_frontLength != _frontLength.max) return;
             assert(!_input.empty);
             // compute front length
-            _frontLength = _input.length - find(_input, _separator).length;
+            size_t findSeparatorLength = 0;
+            _frontLength = 0;
+ 
+            foreach(c; _input)
+            {
+                ++_frontLength;
+                if (c != _separator[findSeparatorLength])
+                {
+                    findSeparatorLength = 0;
+                }
+                else
+                {
+                    if (_separator.length == ++findSeparatorLength)
+                    {
+                        _frontLength -= _separator.length;
+                        break;
+                    }
+                }
+            }
             static if (isBidirectionalRange!Range)
                 if (_frontLength == _input.length) _backLength = _frontLength;
         }
