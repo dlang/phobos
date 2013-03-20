@@ -677,8 +677,8 @@ unittest
 
     version (Windows) TestScript prog5 =
        "set /p INPUT=
-        echo %INPUT% output %1
-        echo %INPUT% error %2 1>&2";
+        echo %INPUT% output %~1
+        echo %INPUT% error %~2 1>&2";
     else version (Posix) TestScript prog5 =
        "read INPUT
         echo $INPUT output $1
@@ -1579,17 +1579,17 @@ enum Redirect
 unittest
 {
     version (Windows) TestScript prog =
-       "call :sub %1 %2 0
-        call :sub %1 %2 1
-        call :sub %1 %2 2
-        call :sub %1 %2 3
+       "call :sub %~1 %~2 0
+        call :sub %~1 %~2 1
+        call :sub %~1 %~2 2
+        call :sub %~1 %~2 3
         exit 3
 
         :sub
         set /p INPUT=
-        if -%INPUT%-==-stop- ( exit %3 )
-        echo %INPUT% %1
-        echo %INPUT% %2 1>&2";
+        if -%INPUT%-==-stop- ( exit %~3 )
+        echo %INPUT% %~1
+        echo %INPUT% %~2 1>&2";
     else version (Posix) TestScript prog =
        `for EXITCODE in 0 1 2 3; do
             read INPUT
@@ -1733,8 +1733,8 @@ unittest
     // To avoid printing the newline characters, we use the echo|set trick on
     // Windows, and printf on POSIX (neither echo -n nor echo \c are portable).
     version (Windows) TestScript prog =
-       "echo|set /p=%1
-        echo|set /p=%2 1>&2
+       "echo|set /p=%~1
+        echo|set /p=%~2 1>&2
         exit 123";
     else version (Posix) TestScript prog =
        `printf '%s' $1
