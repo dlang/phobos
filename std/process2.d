@@ -644,72 +644,21 @@ private void setCLOEXEC(int fd, bool on)
     }
 }
 
-unittest
+unittest // Command line arguments in spawnProcess().
 {
-    TestScript prog1 = "exit 0";
-    assert (wait(spawnProcess(prog1.path)) == 0);
-
-    TestScript prog2 = "exit 123";
-    auto pid2 = spawnProcess([prog2.path]);
-    assert (wait(pid2) == 123);
-    assert (wait(pid2) == 123); // Exit code is cached.
-
-    version (Windows) TestScript prog3 =
+    version (Windows) TestScript prog =
        "if not [%~1]==[foo] ( exit 1 )
-        if not [%~2]==[bar] ( exit 1 )
+        if not [%~2]==[bar] ( exit 2 )
         exit 0";
-    else version (Posix) TestScript prog3 =
+    else version (Posix) TestScript prog =
        `if test "$1" != "foo"; then exit 1; fi
-        if test "$2" != "bar"; then exit 1; fi
+        if test "$2" != "bar"; then exit 2; fi
         exit 0`;
-    assert (wait(spawnProcess([ prog3.path, "foo", "bar"])) == 0);
-    assert (wait(spawnProcess(prog3.path)) == 1);
-
-    version (Windows) TestScript prog4 =
-       "if %hello%==world ( exit 0 )
-        exit 1";
-    version (Posix) TestScript prog4 =
-       "if test $hello = world; then exit 0; fi
-        exit 1";
-    auto env = [ "hello" : "world" ];
-    assert (wait(spawnProcess(prog4.path, env)) == 0);
-    assert (wait(spawnProcess([prog4.path], env)) == 0);
-
-    version (Windows) TestScript prog5 =
-       "set /p INPUT=
-        echo %INPUT% output %~1
-        echo %INPUT% error %~2 1>&2";
-    else version (Posix) TestScript prog5 =
-       "read INPUT
-        echo $INPUT output $1
-        echo $INPUT error $2 >&2";
-    auto pipe5i = pipe();
-    auto pipe5o = pipe();
-    auto pipe5e = pipe();
-    auto pid5 = spawnProcess([ prog5.path, "foo", "bar" ],
-                             pipe5i.readEnd, pipe5o.writeEnd, pipe5e.writeEnd);
-    pipe5i.writeEnd.writeln("input");
-    pipe5i.writeEnd.flush();
-    assert (pipe5o.readEnd.readln().chomp() == "input output foo");
-    assert (pipe5e.readEnd.readln().chomp().stripRight() == "input error bar");
-    wait(pid5);
-
-    import std.ascii, std.file, std.uuid;
-    auto path6i = buildPath(tempDir(), randomUUID().toString());
-    auto path6o = buildPath(tempDir(), randomUUID().toString());
-    auto path6e = buildPath(tempDir(), randomUUID().toString());
-    std.file.write(path6i, "INPUT"~std.ascii.newline);
-    auto file6i = File(path6i, "r");
-    auto file6o = File(path6o, "w");
-    auto file6e = File(path6e, "w");
-    auto pid6 = spawnProcess([prog5.path, "bar", "baz" ],
-                             file6i, file6o, file6e);
-    wait(pid6);
-    assert (readText(path6o).chomp() == "INPUT output bar");
-    assert (readText(path6e).chomp().stripRight() == "INPUT error baz");
-    remove(path6i);
-    remove(path6o);
-    remove(path6e);
+    assert (wait(spawnProcess(prog.path)) == 1);
+    assert (wait(spawnProcess([prog.path])) == 1);
+    assert (wait(spawnProcess([prog.path, "foo"])) == 2);
+    assert (wait(spawnProcess([prog.path, "foo", "baz"])) == 2);
+    assert (wait(spawnProcess([prog.path, "foo", "bar"])) == 0);
 }
 
 unittest // Environment variables in spawnProcess().
@@ -755,6 +704,47 @@ unittest // Environment variables in spawnProcess().
     environment.remove("std_process_unittest1");
     assert (wait(spawnProcess(envProg.path, env)) == 6);
     assert (wait(spawnProcess(envProg.path, env, Config.newEnv)) == 6);
+}
+
+unittest // Stream redirection in spawnProcess().
+{
+    version (Windows) TestScript prog =
+       "set /p INPUT=
+        echo %INPUT% output %~1
+        echo %INPUT% error %~2 1>&2";
+    else version (Posix) TestScript prog =
+       "read INPUT
+        echo $INPUT output $1
+        echo $INPUT error $2 >&2";
+
+    // Pipes
+    auto pipei = pipe();
+    auto pipeo = pipe();
+    auto pipee = pipe();
+    auto pid = spawnProcess([prog.path, "foo", "bar"],
+                             pipei.readEnd, pipeo.writeEnd, pipee.writeEnd);
+    pipei.writeEnd.writeln("input");
+    pipei.writeEnd.flush();
+    assert (pipeo.readEnd.readln().chomp() == "input output foo");
+    assert (pipee.readEnd.readln().chomp().stripRight() == "input error bar");
+    wait(pid);
+
+    // Files
+    import std.ascii, std.file, std.uuid;
+    auto pathi = buildPath(tempDir(), randomUUID().toString());
+    auto patho = buildPath(tempDir(), randomUUID().toString());
+    auto pathe = buildPath(tempDir(), randomUUID().toString());
+    std.file.write(pathi, "INPUT"~std.ascii.newline);
+    auto filei = File(pathi, "r");
+    auto fileo = File(patho, "w");
+    auto filee = File(pathe, "w");
+    pid = spawnProcess([prog.path, "bar", "baz" ], filei, fileo, filee);
+    wait(pid);
+    assert (readText(patho).chomp() == "INPUT output bar");
+    assert (readText(pathe).chomp().stripRight() == "INPUT error baz");
+    remove(pathi);
+    remove(patho);
+    remove(pathe);
 }
 
 
@@ -1087,6 +1077,18 @@ int wait(Pid pid) @safe
 }
 
 
+unittest
+{
+    version (Windows) TestScript prog = "exit %~1";
+    else version (Posix) TestScript prog = "exit $1";
+    assert (wait(spawnProcess([prog.path, "0"])) == 0);
+    assert (wait(spawnProcess([prog.path, "123"])) == 123);
+    auto pid = spawnProcess([prog.path, "10"]);
+    assert (wait(pid) == 10);
+    assert (wait(pid) == 10); // cached exit code
+}
+
+
 /**
 A non-blocking version of $(LREF wait).
 
@@ -1134,6 +1136,7 @@ Tuple!(bool, "terminated", int, "status") tryWait(Pid pid) @safe
     auto code = pid.performWait(false);
     return typeof(return)(pid._processID == Pid.terminated, code);
 }
+// unittest: This function is tested together with kill() below.
 
 
 /**
@@ -1217,7 +1220,7 @@ void kill(Pid pid, int codeOrSignal)
     }
 }
 
-unittest
+unittest // tryWait() and kill()
 {
     // The test script goes into an infinite loop.
     version (Windows)
