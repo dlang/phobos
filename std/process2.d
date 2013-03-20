@@ -30,11 +30,11 @@ $(LI
     the _process' standard output and error streams and returns
     the output of these as a string.)
 $(LI
-    $(LREF spawnShell), $(LREF pipeShell) and $(LREF runShell) work like
+    $(LREF spawnShell), $(LREF pipeShell) and $(LREF executeShell) work like
     $(D spawnProcess), $(D pipeProcess) and $(D execute), respectively,
     except that they take a single command string and run it through
     the current user's default command interpreter.
-    $(D runShell) corresponds roughly to C's $(D system) function.)
+    $(D executeShell) corresponds roughly to C's $(D system) function.)
 $(LI
     $(LREF kill) attempts to terminate a running process.)
 )
@@ -1761,7 +1761,7 @@ The $(D output) string includes what the command writes to its
 standard error stream as well as its standard output stream.
 The path to the _command interpreter is given by $(LREF userShell).
 ---
-auto ls = runShell("ls -l");
+auto ls = executeShell("ls -l");
 writefln("ls exited with code %s and said: %s", ls.status, ls.output);
 ---
 
@@ -1774,7 +1774,7 @@ Throws:
 $(LREF ProcessException) on failure to start the process.$(BR)
 $(XREF stdio,StdioException) on failure to capture output.
 */
-Tuple!(int, "status", string, "output") runShell(string command)
+Tuple!(int, "status", string, "output") executeShell(string command)
     @trusted //TODO: @safe
 {
     auto p = pipeShell(command, Redirect.stdout | Redirect.stderrToStdout);
@@ -1783,18 +1783,18 @@ Tuple!(int, "status", string, "output") runShell(string command)
 
 unittest
 {
-    auto r1 = runShell("echo foo");
+    auto r1 = executeShell("echo foo");
     assert (r1.status == 0);
     assert (r1.output.chomp() == "foo");
-    auto r2 = runShell("echo bar 1>&2");
+    auto r2 = executeShell("echo bar 1>&2");
     assert (r2.status == 0);
     assert (r2.output.chomp().stripRight() == "bar");
-    auto r3 = runShell("exit 123");
+    auto r3 = executeShell("exit 123");
     assert (r3.status == 123);
     assert (r3.output.empty);
 }
 
-// Collects the output and exit code for execute() and runShell().
+// Collects the output and exit code for execute() and executeShell().
 private Tuple!(int, "status", string, "output") processOutput(
     ref ProcessPipes pp,
     size_t maxData)
@@ -1959,14 +1959,14 @@ Escapes an argv-style argument array to be used with $(LREF spawnShell),
 $(LREF pipeShell) or $(LREF shell).
 ---
 string url = "http://dlang.org/";
-runShell(escapeShellCommand("wget", url, "-O", "dlang-index.html"));
+executeShell(escapeShellCommand("wget", url, "-O", "dlang-index.html"));
 ---
 
 Concatenate multiple $(D escapeShellCommand) and
 $(LREF escapeShellFileName) results to use shell redirection or
 piping operators.
 ---
-runShell(
+executeShell(
     escapeShellCommand("curl", "http://dlang.org/download.html") ~
     "|" ~
     escapeShellCommand("grep", "-o", `http://\S*\.zip`) ~
