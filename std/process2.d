@@ -152,10 +152,10 @@ version (Posix)
 {
     version (OSX)
     {
-        // https://www.gnu.org/software/gnulib/manual/html_node/environ.html
-        extern(C) char*** _NSGetEnviron();
-        __gshared const char** environ;
-        shared static this() { environ = *_NSGetEnviron(); }
+        extern(C) char*** _NSGetEnviron() nothrow;
+        private const char*** environPtr;
+        static this() { environPtr = _NSGetEnviron(); }
+        const(char**) environ() @property @trusted nothrow { return *environPtr; }
     }
     else
     {
