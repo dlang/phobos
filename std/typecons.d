@@ -3305,32 +3305,17 @@ it is the responsibility of the user to not escape a reference to the
 object outside the scope.
 
 Note: it's illegal to move a class reference even if you are sure there
-are no pointers to it.
-
-Example:
-----
-unittest
-{
-    class A { int x; }
-    auto a1 = scoped!A();
-    auto a2 = scoped!A();
-    a1.x = 42;
-    a2.x = 53;
-    assert(a1.x == 42);
-
-    auto a3 = a2; // illegal, fails to compile
-    assert([a2][0].x == 42); // illegal, unexpected behaviour
-}
-----
+are no pointers to it. As such, it is illegal to move a scoped object.
  */
-@system auto scoped(T, Args...)(auto ref Args args) if (is(T == class))
+template scoped(T)
+    if (is(T == class))
 {
     // _d_newclass now use default GC alignment (looks like (void*).sizeof * 2 for
     // small objects). We will just use the maximum of filed alignments.
     alias classInstanceAlignment!T alignment;
     alias _alignUp!alignment aligned;
 
-    static struct Scoped(T)
+    static struct Scoped
     {
         // Addition of `alignment` is required as `Scoped_store` can be misaligned in memory.
         private void[aligned(__traits(classInstanceSize, T) + size_t.sizeof) + alignment] Scoped_store = void;
@@ -3351,10 +3336,8 @@ unittest
         }
         alias Scoped_payload this;
 
-        @disable this(this)
-        {
-            assert(false, "Illegal call to Scoped this(this)");
-        }
+        @disable this();
+        @disable this(this);
 
         ~this()
         {
@@ -3364,11 +3347,47 @@ unittest
         }
     }
 
-    Scoped!T result;
-    immutable size_t d = cast(void*) result.Scoped_payload - result.Scoped_store.ptr;
-    *cast(size_t*) &result.Scoped_store[$ - size_t.sizeof] = d;
-    emplace!(Unqual!T)(result.Scoped_store[d .. $ - size_t.sizeof], args);
-    return result;
+    /// Returns the scoped object
+    @system auto scoped(Args...)(auto ref Args args)
+    {
+        Scoped result = void;
+        *cast(size_t*) &result.Scoped_store[$ - size_t.sizeof] = 0;
+        immutable size_t d = cast(void*) result.Scoped_payload - result.Scoped_store.ptr;
+        *cast(size_t*) &result.Scoped_store[$ - size_t.sizeof] = d;
+        emplace!(Unqual!T)(result.Scoped_store[d .. $ - size_t.sizeof], args);
+        return result;
+    }
+}
+///
+unittest
+{
+    class A
+    {
+        int x;
+        this()     {x = 0;}
+        this(int i){x = i;}
+    }
+
+    // Standard usage
+    auto a1 = scoped!A();
+    auto a2 = scoped!A(1);
+    a1.x = 42;
+    assert(a1.x == 42);
+    assert(a2.x ==  1);
+
+    // Restrictions
+    static assert(!is(typeof({
+        auto e1 = a1; // illegal, scoped objects can't be copied
+        assert([a2][0].x == 42); // ditto
+        alias ScopedObject = typeof(a1);
+        auto e2 = ScopedObject();  //Illegal, must be built via scoped!A
+        auto e3 = ScopedObject(1); //Illegal, must be built via scoped!A
+    })));
+
+    // Use with alias
+    alias makeScopedA = scoped!A;
+    auto a6 = makeScopedA();
+    auto a7 = makeScopedA();
 }
 
 private size_t _alignUp(size_t alignment)(size_t n)
@@ -3603,6 +3622,24 @@ unittest
     int val = 3;
     auto s = scoped!C(val);
     assert(val == 4);
+}
+
+unittest
+{
+    class C
+    {
+        this(){}
+        this(int){}
+        this(int, int){}
+    }
+    alias makeScopedC = scoped!C;
+
+    auto a = makeScopedC();
+    auto b = makeScopedC(1);
+    auto c = makeScopedC(1, 1);
+
+    static assert(is(typeof(a) == typeof(b)));
+    static assert(is(typeof(b) == typeof(c)));
 }
 
 /**
