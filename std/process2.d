@@ -781,7 +781,7 @@ wait(pid);
 
 See_also:
 $(LREF escapeShellCommand), which may be helpful in constructing a
-properly quoted and escaped shell command line for the current plattform,
+properly quoted and escaped shell command line for the current platform,
 from an array of separate arguments.
 */
 Pid spawnShell(in char[] command,
