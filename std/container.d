@@ -2709,11 +2709,6 @@ Defines the container's primary range, which is a random-access range.
             return _b - _a;
         }
 
-        size_t opDollar() const
-        {
-            return length;
-        }
-
         @property T front()
         {
             enforce(!empty);
@@ -2903,13 +2898,6 @@ Complexity: $(BIGOH 1).
     @property size_t length() const
     {
         return _data.refCountedStore.isInitialized ? _data._payload.length : 0;
-    }
-
-    /// ditto
-    size_t opDollar() const
-    {
-        // @@@BUG@@@ This doesn't work yet
-        return length;
     }
 
 /**

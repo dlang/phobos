@@ -457,8 +457,6 @@ private struct MapResult(alias fun, Range)
         {
             return _input.length;
         }
-
-        alias length opDollar;
     }
 
     static if (!isInfinite!R && hasSlicing!R)
@@ -3596,9 +3594,7 @@ if (isRandomAccessRange!R1 && isBidirectionalRange!R2
     const needleLength = walkLength(needle.save);
     if (needleLength > haystack.length)
     {
-        // @@@BUG@@@
-        //return haystack[$ .. $];
-        return haystack[haystack.length .. haystack.length];
+        return haystack[$ .. $];
     }
     // @@@BUG@@@
     // auto needleBack = moveBack(needle);
@@ -4069,8 +4065,6 @@ public:
     {
         return needle.length;
     }
-
-    alias length opDollar;
 }
 
 /// Ditto
@@ -10142,8 +10136,6 @@ public:
             }
             return result;
         }
-
-        alias length opDollar;
     }
 }
 
