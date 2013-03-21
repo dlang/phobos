@@ -9100,13 +9100,14 @@ Returns: The initial range wrapped as a $(D SortedRange) with the
 predicate $(D (a, b) => binaryFun!less(transform(a),
 transform(b))).
  */
-SortedRange!(R, ((a, b) => binaryFun!less(transform(a), transform(b))))
+SortedRange!(R, ((a, b) => binaryFun!less(unaryFun!transform(a),
+                                          unaryFun!transform(b))))
 schwartzSort(alias transform, alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable, R)(R r)
     if (isRandomAccessRange!R && hasLength!R)
 {
     import core.stdc.stdlib;
-    alias T = typeof(transform(r.front));
+    alias T = typeof(unaryFun!transform(r.front));
     auto xform1 = (cast(T*) malloc(r.length * T.sizeof))[0 .. r.length];
     size_t length;
     scope(exit)
@@ -9119,7 +9120,7 @@ schwartzSort(alias transform, alias less = "a < b",
     }
     for (; length != r.length; ++length)
     {
-        emplace(xform1.ptr + length, transform(r[length]));
+        emplace(xform1.ptr + length, unaryFun!transform(r[length]));
     }
     // Make sure we use ubyte[] and ushort[], not char[] and wchar[]
     // for the intermediate array, lest zip gets confused.
@@ -9133,6 +9134,13 @@ schwartzSort(alias transform, alias less = "a < b",
     }
     zip(xform, r).sort!((a, b) => binaryFun!less(a[0], b[0]), ss)();
     return typeof(return)(r);
+}
+
+unittest
+{
+    // issue 4909
+    Tuple!(char)[] chars;
+    schwartzSort!"a[0]"(chars);
 }
 
 unittest
