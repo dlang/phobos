@@ -55,6 +55,7 @@ struct Symbol
         timer_t totaltime;      // aggregate time
         timer_t functime;       // time excluding subfunction calls
         ubyte Sflags;
+        uint recursion;         // call recursion level
         string Sident;          // name of symbol
 }
 
@@ -580,6 +581,7 @@ static void trace_pro(string id)
     trace_tos.starttime = starttime;
     trace_tos.ohd = trace_ohd + t - starttime;
     trace_tos.subtime = 0;
+    s.recursion++;
     //printf("trace_tos.ohd=%lld, trace_ohd=%lld + t=%lld - starttime=%lld\n",
     //  trace_tos.ohd,trace_ohd,t,starttime);
 }
@@ -616,7 +618,9 @@ extern (C) void _c_trace_epi()
 
         // totaltime is time spent in this function + all time spent in
         // subfunctions - bookkeeping overhead.
-        trace_tos.sym.totaltime += totaltime;
+        trace_tos.sym.recursion--;
+        if(trace_tos.sym.recursion == 0)
+            trace_tos.sym.totaltime += totaltime;
 
         //if (totaltime < trace_tos.subtime)
         //printf("totaltime=%lld < trace_tos.subtime=%lld\n",totaltime,trace_tos.subtime);
