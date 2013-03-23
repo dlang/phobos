@@ -3351,8 +3351,8 @@ template scoped(T)
     @system auto scoped(Args...)(auto ref Args args)
     {
         Scoped result = void;
-        *cast(size_t*) &result.Scoped_store[$ - size_t.sizeof] = 0;
-        immutable size_t d = cast(void*) result.Scoped_payload - result.Scoped_store.ptr;
+        void* alignedStore = cast(void*) aligned(cast(size_t) result.Scoped_store.ptr);
+        immutable size_t d = alignedStore - result.Scoped_store.ptr;
         *cast(size_t*) &result.Scoped_store[$ - size_t.sizeof] = d;
         emplace!(Unqual!T)(result.Scoped_store[d .. $ - size_t.sizeof], args);
         return result;
