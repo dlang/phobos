@@ -20,6 +20,7 @@ module std.json;
 import std.ascii;
 import std.conv;
 import std.range;
+import std.uni : isControl;
 import std.utf;
 
 private {
@@ -456,7 +457,12 @@ class JSONException : Exception {
         }
 }
 
-version(unittest) import std.stdio;
+version(unittest)
+{
+        import std.exception;
+        import std.stdio;
+}
+
 
 unittest {
         // An overly simple test suite, if it can parse a serializated string and
@@ -504,4 +510,6 @@ unittest {
         assert(toJSON(&val) == "\"\&Alpha;\&Beta;\&Gamma;\"");
         val = parseJSON(`"\u2660\u2666"`);
         assert(toJSON(&val) == "\"\&spades;\&diams;\"");
+
+        assertNotThrown(parseJSON(`{ "foo": "` ~ "\u007F" ~ `"}`));
 }
