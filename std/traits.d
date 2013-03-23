@@ -1676,21 +1676,124 @@ unittest
 // Aggregate Types
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
+/**
+Determines whether $(D T) has its own context pointer.
+$(D T) must be either $(D class), $(D struct), or $(D union).
+*/
+template isNested(T)
+    if(is(T == class) || is(T == struct) || is(T == union))
+{
+    enum isNested = __traits(isNested, T);
+}
+
+/**
+Determines whether $(D T) or any of its representation types
+have a context pointer.
+*/
+template hasNested(T)
+{
+    static if(isStaticArray!T && T.length)
+        enum hasNested = hasNested!(typeof(T.init[0]));
+    else static if(is(T == class) || is(T == struct) || is(T == union))
+        enum hasNested = isNested!T ||
+            anySatisfy!(.hasNested, FieldTypeTuple!T);
+    else
+        enum hasNested = false;
+}
+
+unittest
+{
+    static assert(!__traits(compiles, isNested!int));
+    static assert(!hasNested!int);
+
+    static struct StaticStruct { }
+    static assert(!isNested!StaticStruct);
+    static assert(!hasNested!StaticStruct);
+
+    int i;
+    struct NestedStruct { void f() { ++i; } }
+    static assert( isNested!NestedStruct);
+    static assert( hasNested!NestedStruct);
+    static assert( isNested!(immutable NestedStruct));
+    static assert( hasNested!(immutable NestedStruct));
+
+    static assert(!__traits(compiles, isNested!(NestedStruct[1])));
+    static assert( hasNested!(NestedStruct[1]));
+    static assert(!hasNested!(NestedStruct[0]));
+
+    struct S1 { NestedStruct nested; }
+    static assert(!isNested!S1);
+    static assert( hasNested!S1);
+
+    static struct S2 { NestedStruct nested; }
+    static assert(!isNested!S2);
+    static assert( hasNested!S2);
+
+    static struct S3 { NestedStruct[0] nested; }
+    static assert(!isNested!S3);
+    static assert(!hasNested!S3);
+
+    static union U { NestedStruct nested; }
+    static assert(!isNested!U);
+    static assert( hasNested!U);
+
+    static class StaticClass { }
+    static assert(!isNested!StaticClass);
+    static assert(!hasNested!StaticClass);
+
+    class NestedClass { void f() { ++i; } }
+    static assert( isNested!NestedClass);
+    static assert( hasNested!NestedClass);
+    static assert( isNested!(immutable NestedClass));
+    static assert( hasNested!(immutable NestedClass));
+
+    static assert(!__traits(compiles, isNested!(NestedClass[1])));
+    static assert( hasNested!(NestedClass[1]));
+    static assert(!hasNested!(NestedClass[0]));
+}
+
+
 /***
- * Get the types of the fields of a struct or class.
+ * Get as a typetuple the types of the fields of a struct, class, or union.
  * This consists of the fields that take up memory space,
  * excluding the hidden fields like the virtual function
- * table pointer.
+ * table pointer or a context pointer for nested types.
+ * If $(D T) isn't a struct, class, or union returns typetuple
+ * with one element $(D T).
  */
 
-template FieldTypeTuple(S)
+template FieldTypeTuple(T)
 {
-    static if (is(S == struct) || is(S == class) || is(S == union))
-        alias typeof(S.tupleof) FieldTypeTuple;
+    static if (is(T == struct) || is(T == union))
+        alias typeof(T.tupleof[0 .. $ - isNested!T]) FieldTypeTuple;
+    else static if (is(T == class))
+        alias typeof(T.tupleof) FieldTypeTuple;
     else
-        alias TypeTuple!S FieldTypeTuple;
-        //static assert(0, "argument is not struct or class");
+        alias TypeTuple!T FieldTypeTuple;
 }
+
+unittest
+{
+    static assert(is(FieldTypeTuple!int == TypeTuple!int));
+
+    static struct StaticStruct1 { }
+    static assert(is(FieldTypeTuple!StaticStruct1 == TypeTuple!()));
+
+    static struct StaticStruct2 { int a, b; }
+    static assert(is(FieldTypeTuple!StaticStruct2 == TypeTuple!(int, int)));
+
+    int i;
+
+    struct NestedStruct1 { void f() { ++i; } }
+    static assert(is(FieldTypeTuple!NestedStruct1 == TypeTuple!()));
+
+    struct NestedStruct2 { int a; void f() { ++i; } }
+    static assert(is(FieldTypeTuple!NestedStruct2 == TypeTuple!int));
+
+    class NestedClass { int a; void f() { ++i; } }
+    static assert(is(FieldTypeTuple!NestedClass == TypeTuple!int));
+}
+
 
 // // FieldOffsetsTuple
 // private template FieldOffsetsTupleImpl(size_t n, T...)
