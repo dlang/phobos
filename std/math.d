@@ -2778,23 +2778,36 @@ void resetIeeeFlags() { IeeeFlags.resetIeeeFlags(); }
 
 
 Example:
- ----
-  {
+----
+{
+    FloatingPointControl fpctrl;
+
     // Enable hardware exceptions for division by zero, overflow to infinity,
     // invalid operations, and uninitialized floating-point variables.
-
-    FloatingPointControl fpctrl;
     fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
-    double y = x*3.0; // will generate a hardware exception, if x is uninitialized.
-    //
+    // This will generate a hardware exception, if x is a
+    // default-initialized floating point variable:
+    real x; // Add `= 0` or even `= real.nan` to not throw the exception.
+    real y = x * 3.0;
+
+    // The exception is only thrown for default-uninitialized NaN-s.
+    // NaN-s with other payload are valid:
+    real z = y * real.nan; // ok
+
+    // Changing the rounding mode:
     fpctrl.rounding = FloatingPointControl.roundUp;
+    assert(rint(1.1) == 2);
 
-    // The hardware exceptions will be disabled when leaving this scope.
+    // The set hardware exceptions will be disabled when leaving this scope.
     // The original rounding mode will also be restored.
-  }
+}
 
- ----
+// Ensure previous values are returned:
+assert(!FloatingPointControl.enabledExceptions);
+assert(FloatingPointControl.rounding == FloatingPointControl.roundToNearest);
+assert(rint(1.1) == 1);
+----
 
  */
 struct FloatingPointControl
@@ -2852,8 +2865,8 @@ public:
     //// Change the floating-point hardware rounding mode
     @property void rounding(RoundingMode newMode)
     {
-        ushort old = getControlState();
-        setControlState((old & ~ROUNDING_MASK) | (newMode & ROUNDING_MASK));
+        initialize();
+        setControlState((getControlState() & ~ROUNDING_MASK) | (newMode & ROUNDING_MASK));
     }
 
     /// Return the exceptions which are currently enabled (unmasked)
@@ -2872,7 +2885,8 @@ public:
     ~this()
     {
         clearExceptions();
-        setControlState(savedState);
+        if (initialized)
+            setControlState(savedState);
     }
 
 private:
@@ -2963,20 +2977,37 @@ private:
 
 unittest
 {
-   {
+    void ensureDefaults()
+    {
+        assert(FloatingPointControl.rounding
+               == FloatingPointControl.roundToNearest);
+        assert(FloatingPointControl.enabledExceptions == 0);
+    }
+
+    {
+        FloatingPointControl ctrl;
+    }
+    ensureDefaults();
+
+    {
+        FloatingPointControl ctrl;
+        ctrl.rounding = FloatingPointControl.roundDown;
+        assert(FloatingPointControl.rounding == FloatingPointControl.roundDown);
+    }
+    ensureDefaults();
+
+    {
         FloatingPointControl ctrl;
         ctrl.enableExceptions(FloatingPointControl.divByZeroException
-                           | FloatingPointControl.overflowException);
+                              | FloatingPointControl.overflowException);
         assert(ctrl.enabledExceptions ==
-            (FloatingPointControl.divByZeroException
-          | FloatingPointControl.overflowException));
+               (FloatingPointControl.divByZeroException
+                | FloatingPointControl.overflowException));
 
         ctrl.rounding = FloatingPointControl.roundUp;
         assert(FloatingPointControl.rounding == FloatingPointControl.roundUp);
     }
-    assert(FloatingPointControl.rounding
-       == FloatingPointControl.roundToNearest);
-    assert(FloatingPointControl.enabledExceptions ==0);
+    ensureDefaults();
 }
 
 
