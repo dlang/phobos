@@ -3578,111 +3578,355 @@ unittest
     assert(i is k);
 }
 
-// Specialization for struct
-T* emplace(T, Args...)(T* chunk, auto ref Args args)
-    if (is(T == struct))
+
+// Used in `_initializeFrom` and `emplace` overload for static arrays.
+private template _implicitlyConvertibleDim(From, To)
 {
-    void initialize()
+    template impl(To, From, size_t dim)
     {
-        if(auto p = typeid(T).init().ptr)
-            memcpy(chunk, p, T.sizeof);
+        static if(is(To : From))
+            enum impl = dim;
+        else static if(isStaticArray!To)
+            enum impl = impl!(ArrayElementType!To, From, dim + 1);
         else
-            memset(chunk, 0, T.sizeof);
+            enum impl = -1;
     }
 
-    static if (is(typeof(chunk.__ctor(args))))
+    enum _implicitlyConvertibleDim = impl!(To, From, 0);
+}
+
+
+// Used in `emplace` overloads for structs and static arrays.
+private void _initializeFrom(D, S)(ref D dest, ref S src)
+    if(__traits(compiles, { D d = S.init; }))
+{
+    static assert(_implicitlyConvertibleDim!(S, Unqual!D) != -1);
+    foreach(ref element; asFlatStaticArray!(_implicitlyConvertibleDim!(S, Unqual!D))(dest))
     {
-        // T defines a genuine constructor accepting args
-        // Go the classic route: write .init first, then call ctor
-        initialize();
-        chunk.__ctor(args);
+        static if(hasElaborateCopyConstructor!D || hasElaborateAssign!D)
+        {
+            // Argsument is implicitly convertible to `D` or to it's element type.
+            // As we are, finally, dealing with structs here, this means both types
+            // are the same type with, possibly, different qualifiers.
+
+            static assert(is(Unqual!(typeof(element)) == Unqual!S)); // for `memcpy`, should never fail
+            memcpy(cast(void*) &element, cast(const void*) &src, D.sizeof);
+            callPostblits(element);
+        }
+        else static if(isAssignable!D)
+        {
+            element = src;
+        }
+        else
+        {
+            (*cast(Unqual!D*) &element) = src;
+        }
     }
-    else static if (is(typeof(T(args))))
+}
+
+/*
+Specialization for struct.
+
+If there is one argument it works like `T t = args[0];` if the latter compiles.
+Works like `T t = T(args);` otherwise.
+*/
+T* emplace(T, Args...)(T* chunk, auto ref Args args)
+    if(is(T == struct))
+{
+    // Also see `declaration.c` for how dmd works
+    // https://github.com/9rnsr/dmd/blob/a4c8e8e295974e11cefa0ac9e8a10d8829efc4b7/src/declaration.c#L1477
+
+    static if(Args.length == 1 && is(T : Args[0]))
+    {
+        // The only argument's type is implicitly convertible to T.
+        // Create with copy-construction.
+
+        _initializeFrom(*chunk, args[0]);
+    }
+    else static if(hasMember!(T, "__ctor"))
+    {
+        // `T` defines a constructor accepting `args`.
+
+        static assert(!isNested!T, "Can't emplace nested struct "  ~ T.stringof ~
+            " with context pointer using constructor.");
+
+        // Let's initialize `chunk` and call the constructor!
+        setInitialState(*chunk);
+        chunk.__ctor(forward!args);
+    }
+    else static if(hasMember!(T, "opCall"))
+    {
+        static assert(0, "Can't emplace struct " ~ T.stringof ~ " using `opCall`." ~
+            " Use `emplace(chunk, " ~ T.stringof ~ "(...))` instead.");
+    }
+    else static if(__traits(compiles, { T t = T(args); }))
     {
         // Struct without constructor that has one matching field for
-        // each argument
-        *chunk = T(args);
+        // each argument (i.e. each field is initializable from the
+        // corresponding argsument).
+
+        static assert(!anySatisfy!(hasNested, FieldTypeTuple!T[Args.length .. $]),
+            "To emplace struct "  ~ T.stringof ~ " using static initialization" ~
+            " you must explicitly pass arguments for all fields with context pointers.");
+
+        // If struct fields doesn't have copy constructors
+        // and every field has corresponding argument,
+        // we still need to initialize the struct
+        // because of possible padding holes.
+        setInitialState(*chunk);
+
+        foreach(i, ref field; chunk.tupleof[0 .. Args.length])
+            _initializeFrom(field, args[i]);
     }
-    else //static if (Args.length == 1 && is(Args[0] : T))
+    else
     {
-        static assert(Args.length == 1);
-        //static assert(0, T.stringof ~ " " ~ Args.stringof);
-        // initialize();
-        *chunk = args[0];
+        static assert(0, "Don't know how to initialize an object of type "
+            ~ T.stringof ~ " with arguments " ~ Args.stringof);
     }
+
     return chunk;
+}
+
+// Test copying from same struct branch
+
+unittest
+{
+    static bool _false = false; // To avoid "statement is not reachable" warning
+    static struct S
+    {
+        int i = 1;
+        this(int _i) { i = _i; }
+        this(const S) { assert(_false); }
+    }
+
+    // Do not call constructor if copying from same struct and it is allowed.
+    S s = void;
+    emplace(&s, immutable S(2));
+    assert(s.i == 2);
 }
 
 // Test constructor branch
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    struct S
+    static struct S
     {
-        double x = 5, y = 6;
-        this(int a, int b)
-        {
-            assert(x == 5 && y == 6);
-            x = a;
-            y = b;
-        }
+        int i = 1;
+        void* p = cast(void*) 7;
+        this(const S) { i = 2; }
     }
 
-    auto s1 = new void[S.sizeof];
-    auto s2 = S(42, 43);
-    assert(*emplace!S(cast(S*) s1.ptr, s2) == s2);
-    assert(*emplace!S(cast(S*) s1, 44, 45) == S(44, 45));
+    // Call constructor if copying from same struct and it isn't allowed.
+    S s = void;
+    emplace(&s, immutable S());
+    assert(s.i == 2);
 }
 
-unittest
+unittest // context pointer
 {
-    __conv_EmplaceTest k = void;
-    emplace(&k, 5);
-    assert(k.i == 5);
+    int i;
+    struct S { this(int) { ++i; } }
+    S s = void;
+    static assert(!__traits(compiles, emplace(&s, 0)));
+
+    static struct S2 { int i; S s; }
+    S2 s2 = void;
+    static assert(!__traits(compiles, emplace(&s2, 0)));
+    emplace(&s2, 0, S(0));
+    assert(i == 1);
+
+    static int si = 0;
+    static struct S3 { S s; this(int) { s = S.init; ++si; } }
+    S3 s3 = void;
+    emplace(&s3, 0);
+    assert(si == 1);
 }
 
-unittest
+unittest // constructors
 {
-    int var = 6;
-    __conv_EmplaceTest k = void;
-    emplace(&k, 5, var);
-    assert(k.i == 5);
-    assert(var == 7);
+
+    static void* p;
+    static int i = 2, j = 2;
+    static struct S
+    {
+        int[2] arr = 1;
+        this(int n1, int n2, ref int _i, out int _j)
+        {
+            assert(&this == p && arr == [1, 1]);
+            assert(n1 == 1 && n2 == 2);
+            assert(&_i == &i && &_j == &j);
+            assert(_i++ == 2 && _j++ == 0);
+        }
+
+        this(int n)
+        { assert(n == 2); }
+
+        this(ref int n)
+        { assert(n == 3); }
+    }
+    S s; p = &s;
+    short sh = 2;
+    emplace(&s, 1, sh, i, j);
+    assert(i == 3 && j == 1);
+
+    static assert(!__traits(compiles, emplace(&s, 1, 1, 0, j)));
+    static assert(!__traits(compiles, emplace(&s, 1, 1, i, 0)));
+    static assert(!__traits(compiles, emplace(&s, 1, 1, sh, j)));
+    static assert(!__traits(compiles, emplace(&s, 1, 1, i, sh)));
+
+    emplace(&s, 2);   // calls this(int n)
+    emplace(&s, sh);  // calls this(int n)
+    emplace(&s, i);   // calls this(ref int n)
+}
+
+unittest // templated constructors
+{
+    static void* p;
+    static int i = 0;
+    static struct S
+    {
+        int[2] arr = 1;
+        this(T)(auto ref T t)
+        {
+            assert(&this == p && arr == [1, 1]);
+            assert(i++ == __traits(isRef, t));
+        }
+    }
+    S s; p = &s;
+    emplace(&s, 1);  // calls this(int t)
+    assert(i == 1);
+    short sh = 1;
+    emplace(&s, sh); // calls this(ref int t)
+    assert(i == 2);
+}
+
+// opCall branch
+
+unittest // opCall
+{
+    int i;
+    struct S
+    {
+        int i;
+        static S opCall(int) { assert(0); }
+    }
+    S s = void;
+    static assert(!__traits(compiles, emplace(&s, 0)));
 }
 
 // Test matching fields branch
 
 unittest
 {
-    struct S { uint n; }
-    S s;
-    emplace!S(&s, 2U);
-    assert(s.n == 2);
-}
-
-unittest
-{
     struct S { int a, b; this(int){} }
     S s;
-    static assert(!__traits(compiles, emplace!S(&s, 2, 3)));
+    static assert(!__traits(compiles, emplace(&s, 0, 0)));
 }
 
 unittest
 {
-    struct S { int a, b = 7; }
-    S s1 = void, s2 = void;
+    struct S { uint a = 1; void* b = null; }
 
-    emplace!S(&s1, 2);
-    assert(s1.a == 2 && s1.b == 7);
+    {
+        S s;
 
-    emplace!S(&s2, 2, 3);
-    assert(s2.a == 2 && s2.b == 3);
+        emplace(&s, 2U);
+        assert(s.a == 2 && !s.b);
+
+        emplace(&s, 3);
+        assert(s.a == 3 && !s.b);
+
+        immutable int immutableI = 4;
+        // emplace(&s, immutableI); // disabled because of @@@BUG????@@@
+        // assert(s.a == 4 && !s.b);
+
+        emplace(&s, 0, cast(void*) 3);
+        assert(!s.a && cast(int) s.b == 3);
+
+        // Note: S(0L) compiles because compiler know constan value
+        static assert(!__traits(compiles, emplace(&s, 0L)));
+        static assert(!__traits(compiles, emplace(&s, 0, 0, 0)));
+        static assert(!__traits(compiles, emplace(&s, 0, (const void*).init)));
+        static assert(!__traits(compiles, emplace(&s, 0, (shared void*).init)));
+    }
+
+    // shared
+    {
+        shared S s;
+        emplace(&s, 0, cast(shared void*) 3);
+        assert(!s.a && cast(int) s.b == 3);
+
+        static assert(!__traits(compiles, emplace(&s, 0, (const void*).init)));
+        static assert(!__traits(compiles, emplace(&s, 0, (void*).init)));
+    }
+
+    // const
+    {
+        S s = void;
+        emplace(cast(const S*) &s, 0, cast(const void*) 1);
+        assert(!s.a && cast(int) s.b == 1);
+
+        static assert(!__traits(compiles, emplace(cast(const S*) &s, 0, (void*).init)));
+        static assert(!__traits(compiles, emplace(cast(const S*) &s, 0, (shared void*).init)));
+    }
 }
 
-// Test assignment branch
+unittest // static array
+{
+    static struct S
+    { int[1][1] sarr; }
 
-// FIXME: no tests
+    S s = void;
+    emplace(&s, 2);
+    assert(s.sarr[0][0] == 2);
+}
+
+unittest
+{
+    static struct S
+    { int[2][1] sarr; }
+
+    S s = void;
+    // Note: S([3, 4]) compiles because compiler know array literal value
+    emplace(&s, cast(int[2]) [3, 4]);
+    assert(s.sarr[0] == [3, 4]);
+}
+
+
+/*
+Specialization for static array.
+
+Works like `T t = arg;`.
+*/
+T* emplace(T, Arg)(T* chunk, auto ref Arg arg)
+    if(isStaticArray!T)
+{
+    static assert(_implicitlyConvertibleDim!(Arg, T) != -1,
+        "Don't know how to initialize a static array of type "
+        ~ T.stringof ~ " with argument " ~ Arg.stringof);
+
+    _initializeFrom(*chunk, arg);
+    return chunk;
+}
+
+unittest
+{
+    static struct S
+    { int i = 1; }
+
+    S[1][1] sArr = void;
+    emplace(&sArr, immutable S(2));
+    assert(sArr[0][0].i == 2);
+}
+
+unittest
+{
+    static struct S
+    { void* p; }
+
+    S[1][1] sArr = void;
+    static assert(!__traits(compiles, emplace(&sArr, 0, immutable S())));
+}
 
 private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
 {

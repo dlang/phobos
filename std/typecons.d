@@ -2883,7 +2883,7 @@ unittest
 // 6436
 unittest
 {
-    struct S { this(ref int val) { assert(val == 3); ++val; } }
+    static struct S { this(ref int val) { assert(val == 3); ++val; } }
 
     int val = 3;
     auto s = RefCounted!S(val);
@@ -3462,7 +3462,7 @@ unittest // Issue 6580 testcase
 
 unittest // Original Issue 6580 testcase
 {
-    class C { int i; byte b; }
+    static class C { int i; byte b; }
 
     auto sa = [scoped!C(), scoped!C()];
     assert(cast(size_t)&sa[0].i % int.alignof == 0);
@@ -3471,7 +3471,7 @@ unittest // Original Issue 6580 testcase
 
 unittest
 {
-    class A { int x = 1; }
+    static class A { int x = 1; }
     auto a1 = scoped!A();
     assert(a1.x == 1);
     auto a2 = scoped!A();
@@ -3482,7 +3482,7 @@ unittest
 
 unittest
 {
-    class A { int x = 1; this() { x = 2; } }
+    static class A { int x = 1; this() { x = 2; } }
     auto a1 = scoped!A();
     assert(a1.x == 2);
     auto a2 = scoped!A();
@@ -3493,7 +3493,7 @@ unittest
 
 unittest
 {
-    class A { int x = 1; this(int y) { x = y; } ~this() {} }
+    static class A { int x = 1; this(int y) { x = y; } ~this() {} }
     auto a1 = scoped!A(5);
     assert(a1.x == 5);
     auto a2 = scoped!A(42);
@@ -3504,8 +3504,8 @@ unittest
 
 unittest
 {
-    class A { static bool dead; ~this() { dead = true; } }
-    class B : A { static bool dead; ~this() { dead = true; } }
+    static class A { static bool dead; ~this() { dead = true; } }
+    static class B : A { static bool dead; ~this() { dead = true; } }
     {
         auto b = scoped!B();
     }
@@ -3539,7 +3539,7 @@ unittest // Issue 8039 testcase
 unittest
 {
     // bug4500
-    class A
+    static class A
     {
         this() { a = this; }
         this(int i) { a = this; }
@@ -3617,7 +3617,7 @@ unittest
 
 unittest
 {
-    class C { this(ref int val) { assert(val == 3); ++val; } }
+    static class C { this(ref int val) { assert(val == 3); ++val; } }
 
     int val = 3;
     auto s = scoped!C(val);
