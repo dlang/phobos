@@ -1490,7 +1490,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
                 {
                     foreach(year; chain(testYearsBC, testYearsAD))
                     {
-                        foreach(month; EnumMembers!Month)
+                        foreach(month; enumMembers!Month)
                         {
                             auto st = SysTime(DateTime(Date(year, month, 1), tod), fs, tz);
                             immutable max = maxDay(year, month);
@@ -1514,7 +1514,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
                                    testYearsBC[$-2], testYearsAD[0],
                                    testYearsAD[$-2], testYearsAD[$-1]])
                     {
-                        foreach(month; EnumMembers!Month)
+                        foreach(month; enumMembers!Month)
                         {
                             auto st = SysTime(DateTime(Date(year, month, 1), tod), fs, tz);
                             immutable max = maxDay(year, month);

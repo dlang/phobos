@@ -407,7 +407,7 @@ unittest
         assert(indexOf(sPlts, cast(char)'R', CaseSensitive.no) == 2);
     }
 
-    foreach(cs; EnumMembers!CaseSensitive)
+    foreach(cs; enumMembers!CaseSensitive)
     {
         assert(indexOf("hello\U00010143\u0100\U00010143", '\u0100', cs) == 9);
         assert(indexOf("hello\U00010143\u0100\U00010143"w, '\u0100', cs) == 7);
@@ -479,7 +479,7 @@ unittest
                            to!T("page-break-before"), CaseSensitive.no) == -1);
         }
 
-        foreach(cs; EnumMembers!CaseSensitive)
+        foreach(cs; enumMembers!CaseSensitive)
         {
             assert(indexOf("hello\U00010143\u0100\U00010143", to!S("\u0100"), cs) == 9);
             assert(indexOf("hello\U00010143\u0100\U00010143"w, to!S("\u0100"), cs) == 7);
@@ -576,7 +576,7 @@ unittest
         assert(lastIndexOf(sPlts, 'S', CaseSensitive.no) == 40);
     }
 
-    foreach(cs; EnumMembers!CaseSensitive)
+    foreach(cs; enumMembers!CaseSensitive)
     {
         assert(lastIndexOf("\U00010143\u0100\U00010143hello", '\u0100', cs) == 4);
         assert(lastIndexOf("\U00010143\u0100\U00010143hello"w, '\u0100', cs) == 2);
@@ -683,7 +683,7 @@ unittest
             assert(lastIndexOf(sMars, to!T(sMars), CaseSensitive.no) == 0, typeStr);
         }
 
-        foreach(cs; EnumMembers!CaseSensitive)
+        foreach(cs; enumMembers!CaseSensitive)
         {
             enum csString = to!string(cs);
 
