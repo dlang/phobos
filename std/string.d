@@ -1217,50 +1217,422 @@ deprecated("Please use std.string.splitLines instead.") S[] splitlines(S)(S s)
     return splitLines!S(s);
 }
 
+/+
+    Determines if there is a line ending in string $(D s) at $(D index).
+    index is advanced to one past the line end.
+    If there was no line end, then index is advanced to one past the underlying
+    utf-decoded character.
+    If index is equal to the string's length, then this will always return true
+    and leave index with the same value it had before.
+    If this is called with an index greater than the string's length, then an
+    assertion may be triggered.
+  +/
+private bool lineEndAt(S, uint l = __LINE__)(S s, ref size_t index)
+    if(isSomeString!S)
+{
+    assert( index <= s.length );
+    if ( index == s.length )
+        return true;
+
+    immutable c = decode(s, index);
+
+    if(c == '\r' || c == '\n' || c == lineSep || c == paraSep)
+    {
+        immutable isWinEOL = c == '\r' && index < s.length && s[index] == '\n';
+
+        if(isWinEOL)
+            ++index;
+
+        return true;
+    }
+
+    return false;
+}
+
+unittest
+{
+    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    {
+        auto s = to!S("\r \n\r \r\n \u2028 \u2029 \n\n \n");
+        size_t i = 0;
+
+        assert(  lineEndAt(s,i) ); // \r
+        assert( i == 1 );
+        assert( !lineEndAt(s,i) ); // space
+        assert(  lineEndAt(s,i) ); // \n
+        assert(  lineEndAt(s,i) ); // \r
+        assert( !lineEndAt(s,i) ); // space
+        assert(  lineEndAt(s,i) ); // \r\n
+        assert( !lineEndAt(s,i) ); // space
+        assert(  lineEndAt(s,i) ); // \u2028
+        assert( !lineEndAt(s,i) ); // space
+        assert(  lineEndAt(s,i) ); // \u2029
+        assert( !lineEndAt(s,i) ); // space
+        assert(  lineEndAt(s,i) ); // \n
+        assert(  lineEndAt(s,i) ); // \n
+        assert( !lineEndAt(s,i) ); // space
+        assert(  lineEndAt(s,i) ); // \n
+        assert( i == s.length );
+        assert(  lineEndAt(s,i) ); // End of Text
+        assert( i == s.length );
+    }
+}
+
+private bool lineEndBefore(S)(S s, ref size_t index)
+{
+    assert( index <= s.length );
+    if (index == 0)
+        return true;
+
+    auto nbytesInPrevCode = std.utf.strideBack(s,index);
+    index -= nbytesInPrevCode;
+
+    auto indexCopy = index; // Let decode increment a copy so that our index progresses backwards.
+    immutable c = decode(s, indexCopy);
+
+    if(c == '\r' || c == '\n' || c == lineSep || c == paraSep)
+    {
+        immutable isWinEOL = c == '\n' && index > 0 && s[index - 1] == '\r';
+
+        if(isWinEOL)
+            --index;
+
+        return true;
+    }
+
+    return false;
+}
+
+unittest
+{
+    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    {
+        auto s = to!S("\r \n\r \r\n \u2028 \u2029 \n\n \n");
+        size_t i = s.length;
+
+        assert(  lineEndBefore(s,i) ); // \n
+        assert( !lineEndBefore(s,i) ); // space
+        assert(  lineEndBefore(s,i) ); // \n
+        assert(  lineEndBefore(s,i) ); // \n
+        assert( !lineEndBefore(s,i) ); // space
+        assert(  lineEndBefore(s,i) ); // \u2029
+        assert( !lineEndBefore(s,i) ); // space
+        assert(  lineEndBefore(s,i) ); // \u2028
+        assert( !lineEndBefore(s,i) ); // space
+        assert(  lineEndBefore(s,i) ); // \r\n
+        assert( !lineEndBefore(s,i) ); // space
+        assert(  lineEndBefore(s,i) ); // \r
+        assert(  lineEndBefore(s,i) ); // \n
+        assert( !lineEndBefore(s,i) ); // space
+        assert(  lineEndBefore(s,i) ); // \r
+        assert( i == 0 );
+        assert(  lineEndBefore(s,i) ); // Begin of Text
+        assert( i == 0 );
+    }
+}
+
+/++
+    Used by $(LREF splitter) and $(LREF splitLines).
++/
+enum KeepTerminator : bool
+{
+    no, ///
+    yes /// ditto
+}
+
+/++
+    Lazily splits $(D s) into a range of lines using $(D '\r'), $(D '\n'),
+    $(D "\r\n"), $(XREF uni, lineSep), and $(XREF uni, paraSep) as delimiters.
+    If $(D keepTerm) is set to $(D KeepTerminator.yes), then the delimiter
+    is included in the strings returned.
+
+    The behavior of this splitter differs from that of $(XREF algorithm, _splitter)
+    when dealing with empty strings and strings that end in any kind
+    of new line character (a delimiter).  This splitter will be empty when
+    passed an empty string and will always treat a new line character adjacent
+    to the end of the string all as a one end-of-line.
+
+    Examples:
+--------------------
+auto text = "\n1\r\n2\r3\n";
+char[] newText = new char[0];
+int i = 0;
+foreach( line; splitter(text) )
+{
+    if ( i == 0 )
+        assert(line == "");
+    else
+        assert(line.length > 0);
+
+    newText ~= line;
+    i++;
+}
+assert(newText == "123");
+
+newText = new char[0];
+foreach( line; splitter(text, KeepTerminator.yes) )
+    newText ~= line;
+assert(newText == text);
+--------------------
++/
+auto splitter(S)(S s, KeepTerminator keepTerm = KeepTerminator.no)
+    if(isSomeString!S)
+{
+    static struct Result
+    {
+    private:
+        S input;
+        KeepTerminator keepTerm;
+        enum _uncomputed = size_t.max;
+        size_t frontEol;
+        size_t backEol;
+
+        void calculateFront()
+        {
+            frontEol = 0;
+
+            while ( true )
+            {
+                auto nextPos = frontEol;
+                if ( lineEndAt(input,nextPos) )
+                    break;
+
+                frontEol = nextPos;
+            }
+        }
+
+        void calculateBack()
+        {
+            backEol = input.length;
+
+            // In cases where (keepTerm == KeepTerminator.yes) we will always
+            //   want our resulting slice to have the line ending at the end
+            //   of it and not the beginning.  As such, we always ignore the
+            //   line ending at the right-side of our remaining text.
+            // If there is no such line ending, then it is because we have just
+            //   calculated the last line of a string that doesn't end in a
+            //   newline, which is fine.  In other words: there is no need to
+            //   assert(false) if this lineEndBefore call returns false.
+            lineEndBefore(input,backEol);
+
+            // Everything else is business-as-usual.
+            while ( true )
+            {
+                auto nextPos = backEol;
+                if ( lineEndBefore(input,nextPos) )
+                    break;
+
+                backEol = nextPos;
+            }
+        }
+
+    public:
+        this(S input, KeepTerminator keepTerm)
+        {
+            this.keepTerm = keepTerm;
+            this.input = input;
+            frontEol = _uncomputed;
+            backEol = _uncomputed;
+        }
+
+        @property bool empty()
+        {
+            return input.empty;
+        }
+
+        @property S front()
+        {
+            assert(!empty);
+            if (frontEol == _uncomputed)
+                calculateFront();
+
+            if ( keepTerm == KeepTerminator.no )
+            {
+                return input[0 .. frontEol];
+            }
+            else
+            {
+                size_t frontEolEnd = frontEol;
+                lineEndAt(input, frontEolEnd) || assert(false);
+                return input[0 .. frontEolEnd];
+            }
+        }
+
+        void popFront()
+        {
+            assert(!empty);
+
+            if (frontEol == _uncomputed)
+                calculateFront();
+
+            lineEndAt(input, frontEol) || assert(false);
+
+            // Make sure back() stays the same.
+            if ( backEol != _uncomputed )
+                backEol -= frontEol;
+
+            input = input[frontEol .. $];
+            frontEol = _uncomputed;
+        }
+
+        @property typeof(this) save()
+        {
+            auto ret = this;
+            ret.input = input.save;
+            return ret;
+        }
+
+        @property S back()
+        {
+            assert(!empty);
+            if (backEol == _uncomputed)
+                calculateBack();
+
+            if ( keepTerm == KeepTerminator.no )
+            {
+                size_t backEolEnd = input.length;
+                lineEndBefore(input, backEolEnd); // It's OK if this returns false. See calculateBack() for details.
+                return input[backEol .. backEolEnd];
+            }
+            else
+            {
+                return input[backEol .. $];
+            }
+        }
+
+        void popBack()
+        {
+            assert(!empty);
+
+            if (backEol == _uncomputed)
+                calculateBack();
+
+            input = input[0 .. backEol];
+            backEol = _uncomputed;
+        }
+    }
+
+    return Result(s, keepTerm);
+}
+
+unittest
+{
+    // These first couple tests are for the sake of testing the example.
+    auto text = "\n1\r\n2\r3\n";
+    char[] newText = new char[0];
+    int i = 0;
+    foreach( line; splitter(text) )
+    {
+        if ( i == 0 )
+            assert(line == "");
+        else
+            assert(line.length > 0);
+
+        newText ~= line;
+        i++;
+    }
+    assert(newText == "123");
+
+    newText = new char[0];
+    foreach( line; splitter(text, KeepTerminator.yes) )
+        newText ~= line;
+    assert(newText == text);
+
+    // More exhaustive testing follows.
+    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    {
+        auto s = to!S("\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\nsunday\n");
+
+        auto r = splitter(s);
+        assert( r.front == ""       );   r.popFront();
+        assert( r.front == "peter"  );   r.popFront();
+        assert( r.front == ""       );   r.popFront();
+        assert( r.front == "paul"   );   r.popFront();
+        assert( r.front == "jerry"  );   r.popFront();
+        assert( r.front == "ice"    );   r.popFront();
+        assert( r.front == "cream"  );   r.popFront();
+        assert( r.front == ""       );   r.popFront();
+        assert( r.front == "sunday" );   r.popFront();
+        assert( r.empty );
+
+        r = splitter(s);
+        assert( r.back == "sunday" );   r.popBack();
+        assert( r.back == ""       );   r.popBack();
+        assert( r.back == "cream"  );   r.popBack();
+        assert( r.back == "ice"    );   r.popBack();
+        assert( r.back == "jerry"  );   r.popBack();
+        assert( r.back == "paul"   );   r.popBack();
+        assert( r.back == ""       );   r.popBack();
+        assert( r.back == "peter"  );   r.popBack();
+        assert( r.back == ""       );   r.popBack();
+        assert( r.empty );
+
+        r = splitter(s,KeepTerminator.yes);
+        assert( r.front == "\r"         );   r.popFront();
+        assert( r.front == "peter\n"    );   r.popFront();
+        assert( r.front == "\r"         );   r.popFront();
+        assert( r.front == "paul\r\n"   );   r.popFront();
+        assert( r.front == "jerry\u2028");   r.popFront();
+        assert( r.front == "ice\u2029"  );   r.popFront();
+        assert( r.front == "cream\n"    );   r.popFront();
+        assert( r.front == "\n"         );   r.popFront();
+        assert( r.front == "sunday\n"   );   r.popFront();
+        assert( r.empty );
+
+        r = splitter(s,KeepTerminator.yes);
+        assert( r.back == "sunday\n"   );   r.popBack();
+        assert( r.back == "\n"         );   r.popBack();
+        assert( r.back == "cream\n"    );   r.popBack();
+        assert( r.back == "ice\u2029"  );   r.popBack();
+        assert( r.back == "jerry\u2028");   r.popBack();
+        assert( r.back == "paul\r\n"   );   r.popBack();
+        assert( r.back == "\r"         );   r.popBack();
+        assert( r.back == "peter\n"    );   r.popBack();
+        assert( r.back == "\r"         );   r.popBack();
+        assert( r.empty );
+
+        // auto s = to!S("\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\nsunday\n");
+        r = splitter(s,KeepTerminator.yes);
+        assert( r.front == "\r"         );   r.popFront();
+        assert( r.back  == "sunday\n"   );   r.popBack();
+        r.popFront(); // peter\n
+        r.popBack();  // \n
+        assert( r.front == "\r"         );   r.popFront();
+        assert( r.front == "paul\r\n"   );   r.popFront();
+        assert( r.back  == "cream\n"    );   r.popBack();
+        assert( r.back  == "ice\u2029"  );   r.popBack();
+        assert( r.front == "jerry\u2028");
+        assert( r.back  == "jerry\u2028");
+        r.popBack();
+        assert( r.empty );
+
+        // Make sure unicode works between the end-of-lines.
+        s = to!S("一\n二\n三");
+
+        r = splitter(s,KeepTerminator.yes);
+        assert( r.front == "一\n" );  r.popFront();
+        assert( r.front == "二\n" );  r.popFront();
+        assert( r.front == "三" );    r.popFront();
+        assert( r.empty );
+
+        r = splitter(s,KeepTerminator.yes);
+        assert( r.back == "三"   );   r.popBack();
+        assert( r.back == "二\n" );   r.popBack();
+        assert( r.back == "一\n" );   r.popBack();
+        assert( r.empty );
+    }
+}
+
 /++
     Split $(D s) into an array of lines using $(D '\r'), $(D '\n'),
     $(D "\r\n"), $(XREF uni, lineSep), and $(XREF uni, paraSep) as delimiters.
     If $(D keepTerm) is set to $(D KeepTerminator.yes), then the delimiter
     is included in the strings returned.
   +/
-enum KeepTerminator : bool { no, yes }
-/// ditto
 S[] splitLines(S)(S s, KeepTerminator keepTerm = KeepTerminator.no)
     if(isSomeString!S)
 {
-    size_t iStart = 0;
-    size_t nextI = 0;
-    auto retval = appender!(S[])();
-
-    for(size_t i; i < s.length; i = nextI)
-    {
-        immutable c = decode(s, nextI);
-
-        if(c == '\r' || c == '\n' || c == lineSep || c == paraSep)
-        {
-            immutable isWinEOL = c == '\r' && i + 1 < s.length && s[i + 1] == '\n';
-            auto iEnd = i;
-
-            if(keepTerm == KeepTerminator.yes)
-            {
-                iEnd = isWinEOL? nextI + 1 : nextI;
-            }
-
-            retval.put(s[iStart .. iEnd]);
-            iStart = nextI;
-
-            if(isWinEOL)
-            {
-                ++nextI;
-                ++iStart;
-            }
-        }
-    }
-
-    if(iStart != nextI)
-        retval.put(s[iStart .. $]);
-
-    return retval.data;
+    return array(splitter(s,keepTerm));
 }
 
 unittest
