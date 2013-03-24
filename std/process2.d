@@ -514,24 +514,6 @@ private Pid spawnProcessImpl(in char[] commandLine,
     return new Pid(pi.dwProcessId, pi.hProcess);
 }
 
-// Searches the PATH variable for the given executable file,
-// (checking that it is in fact executable).
-version (Posix)
-private string searchPathFor(in char[] executable)
-    @trusted //TODO: @safe nothrow
-{
-    auto pathz = core.stdc.stdlib.getenv("PATH");
-    if (pathz == null)  return null;
-
-    foreach (dir; splitter(to!string(pathz), ':'))
-    {
-        auto execPath = buildPath(dir, executable);
-        if (isExecutable(execPath))  return execPath;
-    }
-
-    return null;
-}
-
 // Converts childEnv to a zero-terminated array of zero-terminated strings
 // on the form "name=value", optionally adding those of the current process'
 // environment strings that are not present in childEnv.  If the parent's
@@ -640,12 +622,40 @@ version (Windows) unittest
     assert (e1 == "FOO=bar\0AB=c\0\0"w || e1 == "AB=c\0FOO=bar\0\0"w);
 }
 
+// Searches the PATH variable for the given executable file,
+// (checking that it is in fact executable).
+version (Posix)
+private string searchPathFor(in char[] executable)
+    @trusted //TODO: @safe nothrow
+{
+    auto pathz = core.stdc.stdlib.getenv("PATH");
+    if (pathz == null)  return null;
+
+    foreach (dir; splitter(to!string(pathz), ':'))
+    {
+        auto execPath = buildPath(dir, executable);
+        if (isExecutable(execPath))  return execPath;
+    }
+
+    return null;
+}
+
 // Checks whether the file exists and can be executed by the
 // current user.
 version (Posix)
 private bool isExecutable(in char[] path) @trusted //TODO: @safe nothrow
 {
     return (access(toStringz(path), X_OK) == 0);
+}
+
+version (Posix) unittest
+{
+    auto unamePath = searchPathFor("uname");
+    assert (!unamePath.empty);
+    assert (unamePath[0] == '/');
+    assert (unamePath.endsWith("uname"));
+    auto unlikely = searchPathFor("lkmqwpoialhggyaofijadsohufoiqezm");
+    assert (unlikely is null, "Are you kidding me?");
 }
 
 // Sets or unsets the FD_CLOEXEC flag on the given file descriptor.
