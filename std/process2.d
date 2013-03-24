@@ -569,6 +569,29 @@ private const(char*)* createEnv(const string[string] childEnv,
     return envz.ptr;
 }
 
+version (Posix) unittest
+{
+    auto e1 = createEnv(null, false);
+    assert (e1 != null && *e1 == null);
+
+    auto e2 = createEnv(null, true);
+    assert (e2 != null);
+    int i = 0;
+    for (; environ[i] != null; ++i)
+    {
+        assert (e2[i] != null);
+        import core.stdc.string;
+        assert (strcmp(e2[i], environ[i]) == 0);
+    }
+    assert (e2[i] == null);
+
+    auto e3 = createEnv(["foo" : "bar", "hello" : "world"], false);
+    assert (e3 != null && e3[0] != null && e3[1] != null && e3[2] == null);
+    assert ((e3[0][0 .. 8] == "foo=bar\0" && e3[1][0 .. 12] == "hello=world\0")
+         || (e3[0][0 .. 12] == "hello=world\0" && e3[1][0 .. 8] == "foo=bar\0"));
+}
+
+
 // Converts childEnv to a Windows environment block, which is on the form
 // "name1=value1\0name2=value2\0...nameN=valueN\0\0", optionally adding
 // those of the current process' environment strings that are not present
