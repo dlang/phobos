@@ -318,7 +318,7 @@ unittest
     }
 }
 
-unittest
+unittest //@@@9803@@@
 {
     alias T1 = int*[];
     alias T2 = int*[][];
