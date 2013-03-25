@@ -250,8 +250,15 @@ $(ROOT)/%$(DOTOBJ) : %.c
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
 	$(CC) -c $(CFLAGS) $< -o$@
 
+ifeq (linux,$(OS))
+$(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
+	cp $(DRUNTIME_PATH)/lib/libdruntime-$(OS)$(MODEL).so $(ROOT)/libdruntimeso.so
+	cp $(DRUNTIME) $(ROOT)/libdruntime.a
+	$(DMD) $(DFLAGS) -lib -of$@ $(D_FILES) $(OBJS)
+else
 $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
+endif
 
 ifeq (osx,$(OS))
 # Build fat library that combines the 32 bit and the 64 bit libraries
