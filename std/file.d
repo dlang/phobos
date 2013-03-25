@@ -1592,6 +1592,94 @@ unittest
     assert(s.length);
 }
 
+version (OSX)
+    private extern (C) int _NSGetExecutablePath(char* buf, uint* bufsize);
+else version (FreeBSD)
+    private extern (C) int sysctl (const int* name, uint namelen, void* oldp,
+        size_t* oldlenp, const void* newp, size_t newlen);
+
+/**
+ * Returns the full path of the current executable.
+ *
+ * Throws:
+ * $(XREF object, Exception)
+ */
+@trusted string thisExePath ()
+{
+    version (OSX)
+    {
+        import core.sys.posix.stdlib : realpath;
+
+        uint size;
+
+        _NSGetExecutablePath(null, &size); // get the length of the path
+        auto buffer = new char[size];
+        _NSGetExecutablePath(buffer.ptr, &size);
+
+        auto absolutePath = realpath(buffer.ptr, null); // let the function allocate
+
+        scope (exit)
+        {
+            if (absolutePath)
+                free(absolutePath);
+        }
+
+        errnoEnforce(absolutePath);
+        return to!(string)(absolutePath);
+    }
+    else version (linux)
+    {
+        return readLink("/proc/self/exe");
+    }
+    else version (Windows)
+    {
+        wchar[MAX_PATH] buf;
+        wchar[] buffer = buf[];
+
+        while (true)
+        {
+            auto len = GetModuleFileNameW(null, buffer.ptr, cast(DWORD) buffer.length);
+            enforce(len, sysErrorString(GetLastError()));
+            if (len != buffer.length)
+                return to!(string)(buffer[0 .. len]);
+            buffer.length *= 2;
+        }
+
+        assert(0, "should not happen");
+    }
+    else version (FreeBSD)
+    {
+        enum
+        {
+            CTL_KERN = 1,
+            KERN_PROC = 14,
+            KERN_PROC_PATHNAME = 12
+        }
+
+        int[4] mib = [CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1];
+        size_t len;
+
+        auto result = sysctl(mib.ptr, mib.length, null, &len, null, 0); // get the length of the path
+        errnoEnforce(result == 0);
+
+        auto buffer = new char[len - 1];
+        result = sysctl(mib.ptr, mib.length, buffer.ptr, &len, null, 0);
+        errnoEnforce(result == 0);
+
+        return buffer.assumeUnique;
+    }
+    else
+        static assert(0, "thisExePath is not supported on this platform");
+}
+
+unittest
+{
+    auto path = thisExePath();
+
+    assert(path.exists);
+    assert(path.isAbsolute);
+    assert(path.isFile);
+}
 
 version(StdDdoc)
 {
