@@ -5293,6 +5293,22 @@ unittest
 }
 
 /**
+Determines whether function $(D f) requires a context pointer.
+*/
+template isNestedFunction(alias f)
+{
+    enum isNestedFunction = __traits(isNested, f);
+}
+
+unittest
+{
+    static void f() { }
+    void g() { }
+    static assert(!isNestedFunction!f);
+    static assert( isNestedFunction!g);
+}
+
+/**
  * Detect whether $(D T) is a an abstract class.
  */
 template isAbstractClass(T...)
