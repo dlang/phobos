@@ -452,25 +452,6 @@ unittest
     assert(to!string(test) == test);
 }
 
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated T toImpl(T, S)(S value)
-    if (is(S : Object) && !is(T : Object) && !isSomeString!T &&
-        hasMember!(S, "to") && is(typeof(S.init.to!T()) : T))
-{
-    return value.to!T();
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    class B
-    {
-        T to(T)() { return 43; }
-    }
-    auto b = new B;
-    assert(to!int(b) == 43);
-}
-
 /**
 When source type supports member template function opCast, is is used.
 */

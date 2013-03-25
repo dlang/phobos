@@ -776,13 +776,6 @@ unittest
     assert(result == "Unexpected message type: expected 'string', got 'int'");
 }
 
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated("Please use the overload of receiveTimeout which takes a Duration.")
-bool receiveTimeout(T...)( long ms, T ops )
-{
-    return receiveTimeout( dur!"msecs"( ms ), ops );
-}
-
 /++
     Same as $(D receive) except that rather than wait forever for a message,
     it waits until either it receives a message or the given
