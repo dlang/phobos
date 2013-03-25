@@ -320,15 +320,20 @@ unittest
 
 unittest //@@@9803@@@
 {
-    alias T1 = int*[];
-    alias T2 = int*[][];
-    auto t1 = minimallyInitializedArray!T1(10);
-    auto t2 = minimallyInitializedArray!T2(10, 10);
-    foreach (p; t1)
-        assert(p is null);
-    foreach (arr; t2)
-        foreach (p; arr)
+    //Check safety while we're at it.
+    void foo() @safe nothrow
+    {
+        alias T1 = int*[];
+        alias T2 = int*[][];
+        auto t1 = minimallyInitializedArray!T1(10);
+        auto t2 = minimallyInitializedArray!T2(10, 10);
+        foreach (p; t1)
             assert(p is null);
+        foreach (arr; t2)
+            foreach (p; arr)
+                assert(p is null);
+    }
+    foo();
 }
 
 private auto arrayAllocImpl(bool minimallyInitialized, T, Sizes...)(Sizes sizes)
@@ -341,33 +346,42 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, Sizes...)(Sizes sizes)
         to!string(Sizes.length) ~ " dimensions specified for a " ~
         to!string(nDimensions!T) ~ " dimensional array.");
 
-    alias typeof(T.init[0]) E;
-    immutable size0 = sizes[0];
-
-    static if (Sizes.length == 1)
+    static if (minimallyInitialized &&
+               hasIndirections!(ArrayAllocImplFinalElementType!(T, Sizes.length)))
     {
-        if (__ctfe)
-            return new E[](size0);
-        else
-            static if (minimallyInitialized && hasIndirections!E)
-                return new E[](size0);
-            else
-                return (cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!E))[0 .. size0];
+        //If we end up needing to initialize the elements anyways, then we
+        //might as well just let the compiler allocate for us.
+        return new T(sizes);
     }
     else
     {
-        E[] ret;
+        //If ctfe, just call new.
         if (__ctfe)
-            ret = new E[](size0);
-        else
-            ret = (cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!E))[0 .. size0];
+            return new T(sizes);
 
-        foreach(ref elem; ret)
-        {
-            elem = arrayAllocImpl!(minimallyInitialized, E)(sizes[1 .. $]);
-        }
+        alias E = ElementEncodingType!T;
+
+        //Manually build the array without initializing:
+        //Builds the top dimension
+        E[] ret = (cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!E))[0 .. sizes[0]];
+        //Recursivelly builds the next dimensions
+        static if (Sizes.length > 1)
+            foreach(ref elem; ret)
+                elem = arrayAllocImpl!(false, E)(sizes[1 .. $]);
         return ret;
     }
+}
+
+//Private template: Gets the final element type of a multi-dimensional-array
+//of dimension N. Used by minimallyInitializedArray to check for indirections.
+private template ArrayAllocImplFinalElementType(T, size_t N)
+{
+    static if (N > 1)
+        alias ArrayAllocImplFinalElementType = ArrayAllocImplFinalElementType!(ElementEncodingType!T, N - 1);
+    else static if (N == 1)
+        alias ArrayAllocImplFinalElementType = ElementEncodingType!T;
+    else
+        static assert(false);
 }
 
 /**
