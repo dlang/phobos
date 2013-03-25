@@ -7389,12 +7389,6 @@ assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).daysInMonth == 30);
         return Date(dayOfGregorianCal).daysInMonth;
     }
 
-    //Explicitly undocumented. Do not use. To be removed in March 2013.
-    deprecated("Please use daysInMonth instead.") @property ubyte endOfMonthDay() const nothrow
-    {
-        return Date(dayOfGregorianCal).daysInMonth;
-    }
-
     unittest
     {
         version(testStdDateTime)
@@ -12504,12 +12498,6 @@ assert(Date(2000, 6, 4).daysInMonth == 30);
         return maxDay(_year, _month);
     }
 
-    //Explicitly undocumented. Do not use. To be removed in March 2013.
-    deprecated("Please use daysInMonth instead.") @property ubyte endOfMonthDay() const nothrow
-    {
-        return maxDay(_year, _month);
-    }
-
     unittest
     {
         version(testStdDateTime)
@@ -17390,12 +17378,6 @@ assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).daysInMonth == 30);
 --------------------
       +/
     @property ubyte daysInMonth() const pure nothrow
-    {
-        return _date.daysInMonth;
-    }
-
-    //Explicitly undocumented. Do not use. To be removed in March 2013.
-    deprecated("Please use daysInMonth instead.") @property ubyte endOfMonthDay() const nothrow
     {
         return _date.daysInMonth;
     }
