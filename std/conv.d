@@ -2899,7 +2899,7 @@ unittest
 
 unittest
 {
-    //Checks parsing of strings with escapped characters
+    //Checks parsing of strings with escaped characters
     string s1 = `[
         "Contains a\0null!",
         "tab\there",
