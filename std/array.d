@@ -253,16 +253,37 @@ private template nDimensions(T)
     }
 }
 
-unittest {
+unittest
+{
     static assert(nDimensions!(uint[]) == 1);
     static assert(nDimensions!(float[][]) == 2);
+}
+
+// Returns the element type of the nDimension array T.
+private template NElementEncodingType(T, size_t N)
+{
+    static if (N > 1)
+        alias NElementEncodingType = NElementEncodingType!(ElementEncodingType!T, N - 1);
+    else static if (N == 1)
+        alias NElementEncodingType = ElementEncodingType!T;
+    else
+        static assert(false);
+}
+
+unittest
+{
+    static assert(is(NElementEncodingType!(uint[],   1) == uint));
+    static assert(is(NElementEncodingType!(uint[][], 1) == uint[]));
+    static assert(is(NElementEncodingType!(uint[][], 2) == uint  ));
+    static assert(is(NElementEncodingType!(char[][], 1) == char[]));
+    static assert(is(NElementEncodingType!(char[][], 2) == char  ));
 }
 
 /**
 Returns a new array of type $(D T) allocated on the garbage collected heap
 without initializing its elements.  This can be a useful optimization if every
 element will be immediately initialized.  $(D T) may be a multidimensional
-array.  In this case sizes may be specified for any number of dimensions from 1
+array. In this case sizes may be specified for any number of dimensions from 1
 to the number in $(D T).
 
 Examples:
@@ -296,7 +317,7 @@ unittest
 
 /**
 Returns a new array of type $(D T) allocated on the garbage collected heap.
-Initialization is guaranteed only for pointers, references and slices,
+Initialization is guaranteed only for types which have indirections,
 for preservation of memory safety.
 */
 auto minimallyInitializedArray(T, Sizes...)(Sizes sizes) @trusted
@@ -347,7 +368,7 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, Sizes...)(Sizes sizes)
         to!string(nDimensions!T) ~ " dimensional array.");
 
     static if (minimallyInitialized &&
-               hasIndirections!(ArrayAllocImplFinalElementType!(T, Sizes.length)))
+               hasIndirections!(NElementEncodingType!(T, Sizes.length)))
     {
         //If we end up needing to initialize the elements anyways, then we
         //might as well just let the compiler allocate for us.
@@ -370,18 +391,6 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, Sizes...)(Sizes sizes)
                 elem = arrayAllocImpl!(false, E)(sizes[1 .. $]);
         return ret;
     }
-}
-
-//Private template: Gets the final element type of a multi-dimensional-array
-//of dimension N. Used by minimallyInitializedArray to check for indirections.
-private template ArrayAllocImplFinalElementType(T, size_t N)
-{
-    static if (N > 1)
-        alias ArrayAllocImplFinalElementType = ArrayAllocImplFinalElementType!(ElementEncodingType!T, N - 1);
-    else static if (N == 1)
-        alias ArrayAllocImplFinalElementType = ElementEncodingType!T;
-    else
-        static assert(false);
 }
 
 /**
