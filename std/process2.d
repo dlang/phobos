@@ -844,6 +844,25 @@ Pid spawnShell(in char[] command,
                       config);
 }
 
+unittest
+{
+    version (Windows)
+        auto cmd = "echo %FOO%";
+    else version (Posix)
+        auto cmd = "echo $foo";
+    import std.file;
+    auto tmpFile = uniqueTempPath();
+    scope(exit) if (exists(tmpFile)) remove(tmpFile);
+    auto redir = "> \""~tmpFile~'"';
+    auto env = ["foo" : "bar"];
+    assert (wait(spawnShell(cmd~redir, env)) == 0);
+    auto f = File(tmpFile, "a");
+    assert (wait(spawnShell(cmd, std.stdio.stdin, f, std.stdio.stderr, env)) == 0);
+    f.close();
+    auto output = std.file.readText(tmpFile);
+    assert (output == "bar\nbar\n" || output == "bar\r\nbar\r\n");
+}
+
 
 /**
 Flags that control the behaviour of $(LREF spawnProcess) and
@@ -1934,7 +1953,7 @@ private struct TestScript
 {
     this(string code)
     {
-        import std.ascii, std.file, std.uuid;
+        import std.ascii, std.file;
         version (Windows)
         {
             auto ext = ".cmd";
@@ -1945,7 +1964,7 @@ private struct TestScript
             auto ext = "";
             auto firstLine = "#!/bin/sh";
         }
-        path = buildPath(tempDir(), randomUUID().toString()~ext);
+        path = uniqueTempPath()~ext;
         std.file.write(path, firstLine~std.ascii.newline~code~std.ascii.newline);
         version (Posix)
         {
@@ -1961,6 +1980,13 @@ private struct TestScript
     }
 
     string path;
+}
+
+version (unittest)
+private string uniqueTempPath()
+{
+    import std.file, std.uuid;
+    return buildPath(tempDir(), randomUUID().toString);
 }
 
 
