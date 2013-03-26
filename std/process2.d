@@ -780,6 +780,12 @@ unittest // Stream redirection in spawnProcess().
     remove(pathe);
 }
 
+unittest // Error handling in spawnProcess()
+{
+    assertThrown!ProcessException(spawnProcess("ewrgiuhrifuheiohnmnvqweoijwf"));
+    assertThrown!ProcessException(spawnProcess("./rgiuhrifuheiohnmnvqweoijwf"));
+}
+
 
 /**
 A variation on $(LREF spawnProcess) that runs the given _command through
