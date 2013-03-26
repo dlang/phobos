@@ -832,8 +832,7 @@ wait(pid);
 
 See_also:
 $(LREF escapeShellCommand), which may be helpful in constructing a
-properly quoted and escaped shell command line for the current platform,
-from an array of separate arguments.
+properly quoted and escaped shell _command line for the current platform.
 */
 Pid spawnShell(in char[] command,
                File stdin_ = std.stdio.stdin,
