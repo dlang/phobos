@@ -2049,7 +2049,7 @@ private string uniqueTempPath()
 
 /**
 Escapes an argv-style argument array to be used with $(LREF spawnShell),
-$(LREF pipeShell) or $(LREF shell).
+$(LREF pipeShell) or $(LREF executeShell).
 ---
 string url = "http://dlang.org/";
 executeShell(escapeShellCommand("wget", url, "-O", "dlang-index.html"));
@@ -2066,6 +2066,10 @@ executeShell(
     ">" ~
     escapeShellFileName("D download links.txt"));
 ---
+
+Throws:
+$(OBJECTREF Error) if any part of the command line contains unescapable
+characters (NUL on all platforms, as well as CR and LF on Windows).
 */
 string escapeShellCommand(in char[][] args...)
     //TODO: @safe pure nothrow
@@ -2083,7 +2087,7 @@ private string escapeShellCommandString(string command)
         return command;
 }
 
-string escapeWindowsShellCommand(in char[] command)
+private string escapeWindowsShellCommand(in char[] command)
     //TODO: @safe pure nothrow (prevented by Appender)
 {
     auto result = appender!string();
@@ -2093,10 +2097,10 @@ string escapeWindowsShellCommand(in char[] command)
         switch (c)
         {
             case '\0':
-                assert(0, "Cannot put NUL in command line");
+                throw new Error("Cannot put NUL in command line");
             case '\r':
             case '\n':
-                assert(0, "CR/LF are not escapable");
+                throw new Error("CR/LF are not escapable");
             case '\x01': .. case '\x09':
             case '\x0B': .. case '\x0C':
             case '\x0E': .. case '\x1F':
@@ -2154,7 +2158,7 @@ Quotes a command-line argument in a manner conforming to the behavior of
 $(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/bb776391(v=vs.85).aspx,
 CommandLineToArgvW).
 */
-string escapeWindowsArgument(in char[] arg) @trusted pure nothrow
+private string escapeWindowsArgument(in char[] arg) @trusted pure nothrow
 {
     // Rationale for leaving this function as public:
     // this algorithm of escaping paths is also used in other software,
