@@ -1703,6 +1703,24 @@ unittest
     assert (wait(pp.pid) == 1);
 }
 
+unittest
+{
+    TestScript prog = "exit 0";
+    assertThrown!Error(pipeProcess(
+        prog.path,
+        Redirect.stdout | Redirect.stdoutToStderr));
+    assertThrown!Error(pipeProcess(
+        prog.path,
+        Redirect.stderr | Redirect.stderrToStdout));
+    auto p = pipeProcess(prog.path, Redirect.stdin);
+    assertThrown!Error(p.stdout);
+    assertThrown!Error(p.stderr);
+    wait(p.pid);
+    p = pipeProcess(prog.path, Redirect.stderr);
+    assertThrown!Error(p.stdin);
+    assertThrown!Error(p.stdout);
+    wait(p.pid);
+}
 
 /**
 Object which contains $(XREF stdio,File) handles that allow communication
