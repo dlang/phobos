@@ -1310,6 +1310,7 @@ unittest // tryWait() and kill()
     do { s = tryWait(pid); } while (!s.terminated);
     version (Windows)    assert (s.status == 123);
     else version (Posix) assert (s.status == -SIGKILL);
+    assertThrown!ProcessException(kill(pid));
 }
 
 
@@ -1351,8 +1352,8 @@ version (Posix)
 Pipe pipe() @trusted //TODO: @safe
 {
     int[2] fds;
-    errnoEnforce(core.sys.posix.unistd.pipe(fds) == 0,
-                 "Unable to create pipe");
+    if (core.sys.posix.unistd.pipe(fds) != 0)
+        throw new StdioException("Unable to create pipe");
     Pipe p;
     auto readFP = fdopen(fds[0], "r");
     if (readFP == null)
