@@ -2042,7 +2042,7 @@ version (unittest)
 private string uniqueTempPath()
 {
     import std.file, std.uuid;
-    return buildPath(tempDir(), randomUUID().toString);
+    return buildPath(tempDir(), randomUUID().toString());
 }
 
 
