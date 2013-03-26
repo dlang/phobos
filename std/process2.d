@@ -16,7 +16,8 @@ $(LI
     terminate.  In general one should always do this, to avoid
     child _processes becoming "zombies" when the parent _process exits.
     Scope guards are perfect for this – see the $(LREF spawnProcess)
-    documentation for examples.)
+    documentation for examples.  $(LREF tryWait) is similar to $(D wait),
+    but does not block if the process has not yet terminated.)
 $(LI
     $(LREF pipeProcess) also spawns a child _process which runs
     in parallel with its parent.  However, instead of taking
@@ -38,6 +39,24 @@ $(LI
 $(LI
     $(LREF kill) attempts to terminate a running process.)
 )
+
+The following table compactly summarises the different process $(I creation)
+functions and how they relate to each other:
+$(BOOKTABLE,
+    $(TR $(TH )
+         $(TH Runs program directly)
+         $(TH Runs shell command))
+    $(TR $(TD Low-level process creation)
+         $(TD $(LREF spawnProcess))
+         $(TD $(LREF spawnShell)))
+    $(TR $(TD Automatic input/output redirection using pipes)
+         $(TD $(LREF pipeProcess))
+         $(TD $(LREF pipeShell)))
+    $(TR $(TD Execute and wait for completion, collect output)
+         $(TD $(LREF execute))
+         $(TD $(LREF executeShell)))
+)
+
 Unless the directory of the executable file is explicitly specified, all
 functions will search for it in the directories specified in the PATH
 environment variable.
@@ -49,6 +68,9 @@ $(LI
 $(LI
     $(LREF environment) is an interface through which the current process'
     environment variables can be read and manipulated.)
+$(LI
+    $(LREF escapeShellCommand) and $(LREF escapeShellFileName) are useful
+    for constructing shell command lines in a portable way.)
 )
 
 Authors:
