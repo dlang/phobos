@@ -1135,15 +1135,21 @@ int wait(Pid pid) @safe
 }
 
 
-unittest
+unittest // Pid and wait()
 {
-    version (Windows) TestScript prog = "exit %~1";
+    version (Windows)    TestScript prog = "exit %~1";
     else version (Posix) TestScript prog = "exit $1";
     assert (wait(spawnProcess([prog.path, "0"])) == 0);
     assert (wait(spawnProcess([prog.path, "123"])) == 123);
     auto pid = spawnProcess([prog.path, "10"]);
+    assert (pid.processID > 0);
+    version (Windows)    assert (pid.osHandle != INVALID_HANDLE_VALUE);
+    else version (Posix) assert (pid.osHandle == pid.processID);
     assert (wait(pid) == 10);
     assert (wait(pid) == 10); // cached exit code
+    assert (pid.processID < 0);
+    version (Windows)    assert (pid.osHandle == INVALID_HANDLE_VALUE);
+    else version (Posix) assert (pid.osHandle < 0);
 }
 
 
