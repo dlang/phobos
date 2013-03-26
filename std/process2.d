@@ -1482,6 +1482,9 @@ unittest
     p.writeEnd.writeln("Hello World");
     p.writeEnd.flush();
     assert (p.readEnd.readln().chomp() == "Hello World");
+    p.close();
+    assert (!p.readEnd.isOpen);
+    assert (!p.writeEnd.isOpen);
 }
 
 
