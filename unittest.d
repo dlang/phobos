@@ -77,7 +77,7 @@ else
     // Bring in unit test for module by referencing function in it
 
     cmp("foo", "bar");                  // string
-    fncharmatch('a', 'b');              // path
+    filenameCharCmp('a', 'b');          // path
     isNaN(1.0);                         // math
     std.conv.to!double("1.0");          // std.conv
     OutBuffer b = new OutBuffer();      // outbuffer
