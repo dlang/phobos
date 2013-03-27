@@ -121,7 +121,7 @@ D language compiler. Also, check out the
 
 	<dl>
 
-	<dt><a href="std_ascii.html"><b>std.base64</b></a>
+	<dt><a href="std_ascii.html"><b>std.ascii</b></a>
 	<dd>Functions that operate on ASCII characters.
 
 	<dt><a href="std_base64.html"><b>std.base64</b></a>
