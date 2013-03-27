@@ -1465,9 +1465,9 @@ body
             // Multiply existing number by 10^19, then add y1.
             if (hi>0)
             {
-                data[hi] = multibyteMul(data[0..hi], data[0..hi], 1220703125*2, 0); // 5^13*2 = 0x9184_E72A
+                data[hi] = multibyteMul(data[0..hi], data[0..hi], 1220703125*2u, 0); // 5^13*2 = 0x9184_E72A
                 ++hi;
-                data[hi] = multibyteMul(data[0..hi], data[0..hi], 15625*262144, 0); // 5^6*2^18 = 0xF424_0000
+                data[hi] = multibyteMul(data[0..hi], data[0..hi], 15625*262144u, 0); // 5^6*2^18 = 0xF424_0000
                 ++hi;
             }
             else
