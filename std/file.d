@@ -2372,15 +2372,7 @@ private struct DirIteratorImpl
 
         bool mayStepIn()
         {
-            try
-            {
-                return _followSymlink ? _cur.isDir : _cur.isDir && !_cur.isSymlink;
-            }
-            catch (Exception)
-            {
-                // Entry may have disappeared
-            }
-            return false;
+            return _followSymlink ? _cur.isDir : _cur.isDir && !_cur.isSymlink;
         }
     }
     else version(Posix)
