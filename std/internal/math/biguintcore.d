@@ -233,7 +233,7 @@ public:
         return (data[0] == ylo);
     }
 
-    bool isZero() pure const
+    bool isZero() pure const nothrow @safe
     {
         return data.length == 1 && data[0] == 0;
     }
