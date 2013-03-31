@@ -5845,24 +5845,28 @@ unittest
 // XXX Select & select should go to another module. (functional or algorithm?)
 
 /**
-Aliases itself to $(D T) if the boolean $(D condition) is $(D true)
-and to $(D F) otherwise.
-
-Example:
-----
-alias Select!(size_t.sizeof == 4, int, long) Int;
-----
+Aliases itself to $(D T[0]) if the boolean $(D condition) is $(D true)
+and to $(D T[1]) otherwise.
  */
-template Select(bool condition, T, F)
+template Select(bool condition, T...) if (T.length == 2)
 {
-    static if (condition) alias T Select;
-    else alias F Select;
+    alias Select = T[!condition];
 }
 
+///
 unittest
 {
+    // can select types
     static assert(is(Select!(true, int, long) == int));
     static assert(is(Select!(false, int, long) == long));
+
+    // can select symbols
+    int a = 1;
+    int b = 2;
+    alias selA = Select!(true, a, b);
+    alias selB = Select!(false, a, b);
+    assert(selA == 1);
+    assert(selB == 2);
 }
 
 /**
