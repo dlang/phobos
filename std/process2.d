@@ -1102,7 +1102,7 @@ private:
     // we make the constructor private.
     version (Windows)
     {
-        HANDLE _handle;
+        HANDLE _handle = INVALID_HANDLE_VALUE;
         this(int pid, HANDLE handle) @safe pure nothrow
         {
             _processID = pid;
@@ -1250,6 +1250,10 @@ auto pid = spawnProcess("some_app");
 kill(pid, 10);
 assert (wait(pid) == 10);
 ---
+$(RED Win32-specific warning:) The mechanisms for process termination are
+$(LINK2 http://blogs.msdn.com/b/oldnewthing/archive/2007/05/03/2383346.aspx,
+incredibly badly specified) in Win32.  This function may therefore produce
+unexpected results, and should be used with the utmost care.
 
 POSIX_specific:
 A $(LINK2 http://en.wikipedia.org/wiki/Unix_signal,signal) will be sent to
@@ -1294,6 +1298,13 @@ void kill(Pid pid, int codeOrSignal)
 
     version (Windows)
     {
+        version (Win32)
+        {
+            // On Windows XP, TerminateProcess() appears to terminate the
+            // *current* process if it is passed an invalid handle...
+            if (pid.osHandle == INVALID_HANDLE_VALUE)
+                throw new ProcessException("Invalid process handle");
+        }
         if (!TerminateProcess(pid.osHandle, codeOrSignal))
             throw ProcessException.newFromLastError();
     }
