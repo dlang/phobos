@@ -2031,7 +2031,14 @@ private struct TestScript
     ~this()
     {
         import std.file;
-        if (!path.empty && exists(path)) remove(path);
+        if (!path.empty && exists(path))
+        {
+            try { remove(path); }
+            catch (Exception e)
+            {
+                debug std.stdio.stderr.writeln(e.msg);
+            }
+        }
     }
 
     string path;
