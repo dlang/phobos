@@ -1307,23 +1307,26 @@ void kill(Pid pid, int codeOrSignal)
 
 unittest // tryWait() and kill()
 {
+    import core.thread;
     // The test script goes into an infinite loop.
     version (Windows)
     {
-        TestScript prog = "loop:
+        TestScript prog = ":loop
                            goto loop";
     }
     else version (Posix)
     {
         import core.sys.posix.signal: SIGTERM, SIGKILL;
-        TestScript prog = "while true; do; done";
+        TestScript prog = "while true; do sleep 1; done";
     }
     auto pid = spawnProcess(prog.path);
+    Thread.sleep(dur!"seconds"(1));
     kill(pid);
     version (Windows)    assert (wait(pid) == 1);
     else version (Posix) assert (wait(pid) == -SIGTERM);
 
     pid = spawnProcess(prog.path);
+    Thread.sleep(dur!"seconds"(1));
     auto s = tryWait(pid);
     assert (!s.terminated && s.status == 0);
     version (Windows)    kill(pid, 123);
