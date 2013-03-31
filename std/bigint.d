@@ -359,6 +359,12 @@ public:
     }
 
     ///
+    T opCast(T:bool)()
+    {
+        return !isZero();
+    }
+
+    ///
     int opCmp(T)(T y) if (isIntegral!T)
     {
         if (sign != (y<0) )
@@ -728,4 +734,8 @@ unittest
     import std.math:abs;
     auto r = abs(BigInt(-1000)); // 6486
     assert(r == 1000);
+
+    // opCast!bool
+    BigInt one = 1, zero;
+    assert(one && !zero);
 }
