@@ -359,6 +359,12 @@ public:
     }
 
     ///
+    T opCast(T:bool)()
+    {
+        return !isZero();
+    }
+
+    ///
     int opCmp(T)(T y) if (isIntegral!T)
     {
         if (sign != (y<0) )
@@ -478,21 +484,21 @@ private:
     }
 +/
 private:
-    void negate()
+    void negate() pure nothrow @safe
     {
         if (!data.isZero())
             sign = !sign;
     }
-    bool isZero() pure const
+    bool isZero() pure const nothrow @safe
     {
         return data.isZero();
     }
-    bool isNegative() pure const
+    bool isNegative() pure const nothrow @safe
     {
         return sign;
     }
     // Generate a runtime error if division by zero occurs
-    void checkDivByZero() pure const
+    void checkDivByZero() pure const  @safe
     {
         if (isZero())
             throw new Error("BigInt division by zero");
@@ -721,4 +727,15 @@ unittest
     assert(y.toLong() == -1);
     --y;
     assert(y.toLong() == -2);
+}
+
+unittest
+{
+    import std.math:abs;
+    auto r = abs(BigInt(-1000)); // 6486
+    assert(r == 1000);
+
+    // opCast!bool
+    BigInt one = 1, zero;
+    assert(one && !zero);
 }
