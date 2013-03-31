@@ -1694,6 +1694,7 @@ real frexp(real value, out int exp) @trusted pure nothrow
             exp = ex - F.EXPBIAS - real.mant_dig + 1;
             vu[F.EXPPOS_SHORT] = (0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE;
         }
+        return value;
     }
     else static if (real.mant_dig == 113)   // quadruple
     {
@@ -1736,6 +1737,7 @@ real frexp(real value, out int exp) @trusted pure nothrow
             vu[F.EXPPOS_SHORT] =
                 cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
         }
+        return value;
     }
     else static if (real.mant_dig==53) // real is double
     {
@@ -1775,12 +1777,12 @@ real frexp(real value, out int exp) @trusted pure nothrow
             vu[F.EXPPOS_SHORT] =
                 cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FE0);
         }
+        return value;
     }
-    else
+    else // static if (real.mant_dig==106) // real is doubledouble
     {
         assert (0, "frexp not implemented");
     }
-    return value;
 }
 
 
@@ -2638,6 +2640,18 @@ private:
         //  SUBNORMAL_MASK = 0x02;
     }
     else version (PPC)
+    {
+        // PowerPC FPSCR is a 32-bit register.
+        enum : int
+        {
+            INEXACT_MASK   = 0x600,
+            UNDERFLOW_MASK = 0x010,
+            OVERFLOW_MASK  = 0x008,
+            DIVBYZERO_MASK = 0x020,
+            INVALID_MASK   = 0xF80 // PowerPC has five types of invalid exceptions.
+        }
+    }
+    else version (PPC64)
     {
         // PowerPC FPSCR is a 32-bit register.
         enum : int
@@ -3626,7 +3640,11 @@ real nextUp(real x) @trusted pure nothrow
             }
         }
         return x;
-    } // doubledouble is not supported
+    }
+    else // static if (real.mant_dig==106) // real is doubledouble
+    {
+        assert (0, "nextUp not implemented");
+    }
 }
 
 /** ditto */
