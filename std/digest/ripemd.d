@@ -292,7 +292,7 @@ struct RIPEMD160
             {
                 for(size_t i = 0; i < 16; i++)
                 {
-                    x[i] = littleEndianToNative!uint(cast(ubyte[4])block[i*4..i+4]);
+                    x[i] = littleEndianToNative!uint(cast(ubyte[4])block[i*4..(i+1)*4]);
                 }
             }
             else
