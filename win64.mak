@@ -27,13 +27,13 @@ CP=cp
 DIR=\dmd2
 
 ## Visual C directories
-VCDIR="\Program Files (x86)\Microsoft Visual Studio 10.0\VC"
-SDKDIR="\Program Files (x86)\Microsoft SDKs\Windows\v7.0A"
+VCDIR=\Program Files (x86)\Microsoft Visual Studio 10.0\VC
+SDKDIR=\Program Files (x86)\Microsoft SDKs\Windows\v7.0A
 
 ## Flags for VC compiler
 
-#CFLAGS=/Zi /nologo /I$(VCDIR)\INCLUDE /I$(SDKDIR)\Include
-CFLAGS=/O2 /nologo /I$(VCDIR)\INCLUDE /I$(SDKDIR)\Include
+#CFLAGS=/Zi /nologo /I"$(VCDIR)\INCLUDE" /I"$(SDKDIR)\Include"
+CFLAGS=/O2 /nologo /I"$(VCDIR)\INCLUDE" /I"$(SDKDIR)\Include"
 
 ## Flags for dmd D compiler
 
@@ -47,9 +47,10 @@ UDFLAGS=-g -m$(MODEL) -O -w -d -property
 
 ## C compiler, linker, librarian
 
-CC=$(VCDIR)\bin\amd64\cl
-LD=$(VCDIR)\bin\amd64\link
-LIB=$(VCDIR)\bin\amd64\lib
+CC="$(VCDIR)\bin\amd64\cl"
+LD="$(VCDIR)\bin\amd64\link"
+AR="$(VCDIR)\bin\amd64\lib"
+MAKE=make
 
 ## D compiler
 
@@ -150,8 +151,7 @@ SRC_STD_7= \
 	std\json.d \
 	std\parallelism.d \
 	std\mathspecial.d \
-	std\process.d \
-	std\process2.d
+	std\process.d
 
 SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_math) \
@@ -179,7 +179,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\outbuffer.d std\md5.d std\base64.d \
 	std\mmfile.d \
 	std\syserror.d \
-	std\random.d std\stream.d std\process.d std\process2.d \
+	std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\format.d \
 	std\stdio.d std\perf.d std\uni.d std\uuid.d \
 	std\cstream.d std\demangle.d \
@@ -339,7 +339,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_path.html \
 	$(DOC)\std_perf.html \
 	$(DOC)\std_process.html \
-	$(DOC)\std_process2.html \
 	$(DOC)\std_random.html \
 	$(DOC)\std_range.html \
 	$(DOC)\std_regex.html \
@@ -456,7 +455,7 @@ html : $(DOCS)
 
 $(ZLIB): $(SRC_ZLIB)
 	cd etc\c\zlib
-	make -f win$(MODEL).mak zlib$(MODEL).lib
+	$(MAKE) -f win$(MODEL).mak zlib$(MODEL).lib "CC=\$(CC)"\"" "LIB=\$(AR)"\"" "VCDIR=$(VCDIR)"
 	cd ..\..\..
 
 ################## DOCS ####################################
@@ -624,9 +623,6 @@ $(DOC)\std_perf.html : $(STDDOC) std\perf.d
 
 $(DOC)\std_process.html : $(STDDOC) std\process.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_process.html $(STDDOC) std\process.d
-
-$(DOC)\std_process2.html : $(STDDOC) std\process2.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_process2.html $(STDDOC) std\process2.d
 
 $(DOC)\std_random.html : $(STDDOC) std\random.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_random.html $(STDDOC) std\random.d
@@ -801,7 +797,7 @@ phobos.zip : zip
 
 clean:
 	cd etc\c\zlib
-	make -f win$(MODEL).mak clean
+	$(MAKE) -f win$(MODEL).mak clean
 	cd ..\..\..
 	del $(DOCS)
 	del $(UNITTEST_OBJS) unittest.obj unittest.exe
