@@ -2801,6 +2801,9 @@ version (unittest)
 /**
    Execute $(D command) in a _command shell.
 
+   $(RED This function is scheduled for deprecation.  Please use
+   $(LREF spawnShell) or $(LREF executeShell) instead.)
+
    Returns: If $(D command) is null, returns nonzero if the _command
    interpreter is found, and zero otherwise. If $(D command) is not
    null, returns -1 on error, or the exit status of command (which may
@@ -2950,7 +2953,13 @@ private
 
 /**
  * Replace the current process by executing a command, $(D pathname), with
- * the arguments in $(D argv). Typically, the first element of $(D argv) is
+ * the arguments in $(D argv).
+ *
+ * $(RED These functions are scheduled for deprecation.  Please use
+ * $(LREF spawnShell) instead (or, alternatively, the homonymous C
+ * functions declared in $(D std.c.process).))
+ *
+ * Typically, the first element of $(D argv) is
  * the command being executed, i.e. $(D argv[0] == pathname). The 'p'
  * versions of $(D exec) search the PATH environment variable for $(D
  * pathname). The 'e' versions additionally take the new process'
@@ -3048,6 +3057,9 @@ else
  * Returns the process ID of the calling process, which is guaranteed to be
  * unique on the system. This call is always successful.
  *
+ * $(RED This function is scheduled for deprecation.  Please use
+ * $(LREF thisProcessID) instead.)
+ *
  * Example:
  * ---
  * writefln("Current process id: %s", getpid());
@@ -3059,6 +3071,9 @@ alias core.thread.getpid getpid;
    Runs $(D_PARAM cmd) in a shell and returns its standard output. If
    the process could not be started or exits with an error code,
    throws ErrnoException.
+
+   $(RED This function is scheduled for deprecation.  Please use
+   $(LREF executeShell) instead.)
 
    Example:
 
@@ -3123,7 +3138,11 @@ unittest
 /**
 Gets the value of environment variable $(D name) as a string. Calls
 $(LINK2 std_c_stdlib.html#_getenv, std.c.stdlib._getenv)
-internally. */
+internally.
+
+   $(RED This function is scheduled for deprecation.  Please use
+   $(LREF environment) instead.)
+*/
 
 string getenv(in char[] name)
 {
@@ -3141,7 +3160,11 @@ Sets the value of environment variable $(D name) to $(D value). If the
 value was written, or the variable was already present and $(D
 overwrite) is false, returns normally. Otherwise, it throws an
 exception. Calls $(LINK2 std_c_stdlib.html#_setenv,
-std.c.stdlib._setenv) internally. */
+std.c.stdlib._setenv) internally.
+
+   $(RED This function is scheduled for deprecation.  Please use
+   $(LREF environment) instead.)
+*/
 version(StdDdoc) void setenv(in char[] name, in char[] value, bool overwrite);
 else version(Posix) void setenv(in char[] name, in char[] value, bool overwrite)
 {
@@ -3151,7 +3174,11 @@ else version(Posix) void setenv(in char[] name, in char[] value, bool overwrite)
 
 /**
 Removes variable $(D name) from the environment. Calls $(LINK2
-std_c_stdlib.html#_unsetenv, std.c.stdlib._unsetenv) internally. */
+std_c_stdlib.html#_unsetenv, std.c.stdlib._unsetenv) internally.
+
+   $(RED This function is scheduled for deprecation.  Please use
+   $(LREF environment) instead.)
+*/
 version(StdDdoc) void unsetenv(in char[] name);
 else version(Posix) void unsetenv(in char[] name)
 {
