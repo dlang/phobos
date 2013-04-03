@@ -76,7 +76,7 @@ $(LI
 Authors:
     $(LINK2 https://github.com/kyllingstad, Lars Tandle Kyllingstad),
     $(LINK2 https://github.com/schveiguy, Steven Schveighoffer),
-    $(LINK2 https://github.com/cybershadow, Vladimir Panteleev)
+    $(WEB thecybershadow.net, Vladimir Panteleev)
 Copyright:
     Copyright (c) 2013, the authors. All rights reserved.
 Source:
