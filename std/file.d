@@ -540,8 +540,8 @@ unittest
         auto diffm = modificationTime1 - currTime;
         scope(failure) writefln("[%s] [%s] [%s] [%s] [%s]", accessTime1, modificationTime1, currTime, diffa, diffm);
 
-        assert(abs(diffa) <= leeway);
-        assert(abs(diffm) <= leeway);
+        assert(core.time.abs(diffa) <= leeway);
+        assert(core.time.abs(diffm) <= leeway);
     }
 
     version(fullFileTests)

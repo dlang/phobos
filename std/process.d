@@ -1215,11 +1215,16 @@ is called.  In the opposite case, however, the $(D scope) statement
 ensures that we always wait for the process if it hasn't terminated
 by the time we reach the end of the scope.
 */
-Tuple!(bool, "terminated", int, "status") tryWait(Pid pid) @safe
+auto tryWait(Pid pid) @safe
 {
+    struct TryWaitResult
+    {
+        bool terminated;
+        int status;
+    }
     assert(pid !is null, "Called tryWait on a null Pid.");
     auto code = pid.performWait(false);
-    return typeof(return)(pid._processID == Pid.terminated, code);
+    return TryWaitResult(pid._processID == Pid.terminated, code);
 }
 // unittest: This function is tested together with kill() below.
 
@@ -1825,6 +1830,7 @@ private:
 }
 
 
+
 /**
 Executes the given program and returns its exit code and output.
 
@@ -1845,7 +1851,7 @@ Throws:
 $(LREF ProcessException) on failure to start the process.$(BR)
 $(XREF stdio,StdioException) on failure to capture output.
 */
-Tuple!(int, "status", string, "output") execute(string[] args...)
+auto execute(string[] args...)
     @trusted //TODO: @safe
 {
     auto p = pipeProcess(args, Redirect.stdout | Redirect.stderrToStdout);
@@ -1895,7 +1901,7 @@ Throws:
 $(LREF ProcessException) on failure to start the process.$(BR)
 $(XREF stdio,StdioException) on failure to capture output.
 */
-Tuple!(int, "status", string, "output") executeShell(string command)
+auto executeShell(string command)
     @trusted //TODO: @safe
 {
     auto p = pipeShell(command, Redirect.stdout | Redirect.stderrToStdout);
@@ -1916,7 +1922,7 @@ unittest
 }
 
 // Collects the output and exit code for execute() and executeShell().
-private Tuple!(int, "status", string, "output") processOutput(
+private auto processOutput(
     ref ProcessPipes pp,
     size_t maxData)
 {
@@ -1928,10 +1934,8 @@ private Tuple!(int, "status", string, "output") processOutput(
         if (a.data().length + chunkSize > maxData) break;
     }
 
-    typeof(return) r;
-    r.output = cast(string) a.data;
-    r.status = wait(pp.pid);
-    return r;
+    struct ProcessOutput { int status; string output; }
+    return ProcessOutput(wait(pp.pid), cast(string) a.data);
 }
 
 
@@ -2759,20 +2763,11 @@ import core.thread;
 import std.c.process;
 import std.c.string;
 
-import std.array;
-import std.conv;
-import std.exception;
 import std.internal.processinit;
-import std.stdio;
-import std.string;
-import std.typecons;
 
 version (Windows)
 {
     import std.format, std.random, std.file;
-    import core.sys.windows.windows;
-    import std.utf;
-    import std.windows.syserror;
 }
 version (Posix)
 {
@@ -2780,8 +2775,7 @@ version (Posix)
 }
 version (unittest)
 {
-    import std.file, std.conv, std.array, std.random;
-    import std.path : absolutePath;
+    import std.file, std.conv, std.random;
 }
 
 
