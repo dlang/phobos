@@ -1179,7 +1179,7 @@ A non-blocking version of $(LREF wait).
 
 If the process associated with $(D pid) has already terminated,
 $(D tryWait) has the exact same effect as $(D wait).
-In this case, it returns a tuple where the $(D terminated) field
+In this case, it returns a struct where the $(D terminated) field
 is set to $(D true) and the $(D status) field has the same
 interpretation as the return value of $(D wait).
 
@@ -1191,6 +1191,12 @@ will always be 0 (zero).  $(D wait) or $(D tryWait) should then be
 called again on the same $(D Pid) at some later time; not only to
 get the exit code, but also to avoid the process becoming a "zombie"
 when it finally terminates.  (See $(LREF wait) for details).
+
+Returns:
+A $(D struct) which contains the fields $(D bool terminated)
+and $(D int status).  (This will most likely change to become a
+$(D std.typecons.Tuple!(bool,"terminated",int,"status")) in the future,
+but a compiler bug currently prevents this.)
 
 Throws:
 $(LREF ProcessException) on failure.
@@ -1842,6 +1848,12 @@ auto dmd = execute("dmd", "myapp.d");
 if (dmd.status != 0) writeln("Compilation failed:\n", dmd.output);
 ---
 
+Returns:
+A $(D struct) which contains the fields $(D int status) and
+$(D string output).  (This will most likely change to become a
+$(D std.typecons.Tuple!(int,"status",bool,"output")) in the future,
+but a compiler bug currently prevents this.)
+
 POSIX_specific:
 If the process is terminated by a signal, the $(D status) field of
 the return value will contain a negative number whose absolute
@@ -1891,6 +1903,12 @@ The path to the _command interpreter is given by $(LREF userShell).
 auto ls = executeShell("ls -l");
 writefln("ls exited with code %s and said: %s", ls.status, ls.output);
 ---
+
+Returns:
+A $(D struct) which contains the fields $(D int status) and
+$(D string output).  (This will most likely change to become a
+$(D std.typecons.Tuple!(int,"status",bool,"output")) in the future,
+but a compiler bug currently prevents this.)
 
 POSIX_specific:
 If the process is terminated by a signal, the $(D status) field of
