@@ -77,7 +77,7 @@ else
     // Bring in unit test for module by referencing function in it
 
     cmp("foo", "bar");                  // string
-    fncharmatch('a', 'b');              // path
+    filenameCharCmp('a', 'b');          // path
     isNaN(1.0);                         // math
     std.conv.to!double("1.0");          // std.conv
     OutBuffer b = new OutBuffer();      // outbuffer
@@ -91,9 +91,9 @@ else
     Clock.currTime();                   // datetime
     Exception e = new ReadException(""); // stream
     din.eof();                           // cstream
-    isValidDchar(cast(dchar)0);                 // utf
-    std.uri.ascii2hex(0);                       // uri
-    std.zlib.adler32(0,null);                   // D.zlib
+    isValidDchar(cast(dchar)0);          // utf
+    std.uri.ascii2hex(0);                // uri
+    std.zlib.adler32(0,null);            // D.zlib
     auto t = task!cmp("foo", "bar");  // parallelism
 
     ubyte[16] buf;
@@ -122,7 +122,7 @@ else
 
     std.demangle.demangle("hello");
 
-    std.uni.isUniAlpha('A');
+    std.uni.isAlpha('A');
 
     std.file.exists("foo");
 

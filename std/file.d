@@ -68,6 +68,11 @@ version (Windows)
     // Required by tempPath():
     private extern(Windows) DWORD GetTempPathW(DWORD nBufferLength,
                                                LPWSTR lpBuffer);
+    // Required by rename():
+    enum MOVEFILE_REPLACE_EXISTING = 1;
+    private extern(Windows) DWORD MoveFileExW(LPCWSTR lpExistingFileName,
+                                              LPCWSTR lpNewFileName,
+                                              DWORD dwFlags);
 }
 else version (Posix)
 {
@@ -391,13 +396,14 @@ version(Posix) private void writeImpl(in char[] name,
 
 /***************************************************
  * Rename file $(D from) to $(D to).
+ * If the target file exists, it is overwritten.
  * Throws: $(D FileException) on error.
  */
 void rename(in char[] from, in char[] to)
 {
     version(Windows)
     {
-        enforce(MoveFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to)),
+        enforce(MoveFileExW(std.utf.toUTF16z(from), std.utf.toUTF16z(to), MOVEFILE_REPLACE_EXISTING),
                 new FileException(
                     text("Attempting to rename file ", from, " to ",
                             to)));
@@ -405,6 +411,19 @@ void rename(in char[] from, in char[] to)
     else version(Posix)
         cenforce(core.stdc.stdio.rename(toStringz(from), toStringz(to)) == 0, to);
 }
+
+unittest
+{
+    auto t1 = deleteme, t2 = deleteme~"2";
+    scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
+    write(t1, "1");
+    rename(t1, t2);
+    assert(readText(t2) == "1");
+    write(t1, "2");
+    rename(t1, t2);
+    assert(readText(t2) == "2");
+}
+
 
 /***************************************************
 Delete file $(D name).
@@ -2065,6 +2084,7 @@ unittest
 
 /***************************************************
 Copy file $(D from) to file $(D to). File timestamps are preserved.
+If the target file exists, it is overwritten.
  */
 void copy(in char[] from, in char[] to)
 {
@@ -2121,6 +2141,18 @@ void copy(in char[] from, in char[] to)
 
         cenforce(utime(toz, &utim) != -1, from);
     }
+}
+
+unittest
+{
+    auto t1 = deleteme, t2 = deleteme~"2";
+    scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
+    write(t1, "1");
+    copy(t1, t2);
+    assert(readText(t2) == "1");
+    write(t1, "2");
+    copy(t1, t2);
+    assert(readText(t2) == "2");
 }
 
 
@@ -2340,15 +2372,7 @@ private struct DirIteratorImpl
 
         bool mayStepIn()
         {
-            try
-            {
-                return _followSymlink ? _cur.isDir : _cur.isDir && !_cur.isSymlink;
-            }
-            catch (Exception)
-            {
-                // Entry may have disappeared
-            }
-            return false;
+            return _followSymlink ? _cur.isDir : _cur.isDir && !_cur.isSymlink;
         }
     }
     else version(Posix)

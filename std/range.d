@@ -3832,8 +3832,7 @@ struct Cycle(Range)
 
         auto opSlice(size_t i, size_t j)
         {
-            version (assert)
-                if (i > j) throw new RangeError(text(i, " > ", j));
+            version (assert) if (i > j) throw new RangeError();
             auto retval = this.save;
             retval._index += i;
             return takeExactly(retval, j - i);
@@ -3934,8 +3933,7 @@ struct Cycle(R)
 
     auto opSlice(size_t i, size_t j)
     {
-        version (assert)
-            if (i > j) throw new RangeError(text(i, " > ", j));
+        version (assert) if (i > j) throw new RangeError();
         auto retval = this.save;
         retval._index += i;
         return takeExactly(retval, j - i);

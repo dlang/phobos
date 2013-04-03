@@ -1097,7 +1097,7 @@ unittest
         int a;
         long b;
         string c;
-        real d;
+        real d = 0.0;
         bool e;
     }
 

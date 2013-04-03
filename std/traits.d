@@ -302,7 +302,7 @@ private template fullyQualifiedNameImplForSymbols(alias T)
         if(s.skipOver("package ") || s.skipOver("module "))
             return s;
         return s.findSplit("(")[0];
-    }(T.stringof);
+    }(__traits(identifier, T));
 }
 
 unittest
@@ -315,6 +315,7 @@ unittest
     alias fqn = fullyQualifiedName;
     static assert(fqn!fqn == "std.traits.fullyQualifiedName");
     static assert(fqn!(QualifiedNameTests.Inner) == "std.traits.QualifiedNameTests.Inner");
+    static assert(fqn!(QualifiedNameTests.func) == "std.traits.QualifiedNameTests.func");
     import core.sync.barrier;
     static assert(fullyQualifiedName!Barrier == "core.sync.barrier.Barrier");
 }
@@ -1675,21 +1676,124 @@ unittest
 // Aggregate Types
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
+/**
+Determines whether $(D T) has its own context pointer.
+$(D T) must be either $(D class), $(D struct), or $(D union).
+*/
+template isNested(T)
+    if(is(T == class) || is(T == struct) || is(T == union))
+{
+    enum isNested = __traits(isNested, T);
+}
+
+/**
+Determines whether $(D T) or any of its representation types
+have a context pointer.
+*/
+template hasNested(T)
+{
+    static if(isStaticArray!T && T.length)
+        enum hasNested = hasNested!(typeof(T.init[0]));
+    else static if(is(T == class) || is(T == struct) || is(T == union))
+        enum hasNested = isNested!T ||
+            anySatisfy!(.hasNested, FieldTypeTuple!T);
+    else
+        enum hasNested = false;
+}
+
+unittest
+{
+    static assert(!__traits(compiles, isNested!int));
+    static assert(!hasNested!int);
+
+    static struct StaticStruct { }
+    static assert(!isNested!StaticStruct);
+    static assert(!hasNested!StaticStruct);
+
+    int i;
+    struct NestedStruct { void f() { ++i; } }
+    static assert( isNested!NestedStruct);
+    static assert( hasNested!NestedStruct);
+    static assert( isNested!(immutable NestedStruct));
+    static assert( hasNested!(immutable NestedStruct));
+
+    static assert(!__traits(compiles, isNested!(NestedStruct[1])));
+    static assert( hasNested!(NestedStruct[1]));
+    static assert(!hasNested!(NestedStruct[0]));
+
+    struct S1 { NestedStruct nested; }
+    static assert(!isNested!S1);
+    static assert( hasNested!S1);
+
+    static struct S2 { NestedStruct nested; }
+    static assert(!isNested!S2);
+    static assert( hasNested!S2);
+
+    static struct S3 { NestedStruct[0] nested; }
+    static assert(!isNested!S3);
+    static assert(!hasNested!S3);
+
+    static union U { NestedStruct nested; }
+    static assert(!isNested!U);
+    static assert( hasNested!U);
+
+    static class StaticClass { }
+    static assert(!isNested!StaticClass);
+    static assert(!hasNested!StaticClass);
+
+    class NestedClass { void f() { ++i; } }
+    static assert( isNested!NestedClass);
+    static assert( hasNested!NestedClass);
+    static assert( isNested!(immutable NestedClass));
+    static assert( hasNested!(immutable NestedClass));
+
+    static assert(!__traits(compiles, isNested!(NestedClass[1])));
+    static assert( hasNested!(NestedClass[1]));
+    static assert(!hasNested!(NestedClass[0]));
+}
+
+
 /***
- * Get the types of the fields of a struct or class.
+ * Get as a typetuple the types of the fields of a struct, class, or union.
  * This consists of the fields that take up memory space,
  * excluding the hidden fields like the virtual function
- * table pointer.
+ * table pointer or a context pointer for nested types.
+ * If $(D T) isn't a struct, class, or union returns typetuple
+ * with one element $(D T).
  */
 
-template FieldTypeTuple(S)
+template FieldTypeTuple(T)
 {
-    static if (is(S == struct) || is(S == class) || is(S == union))
-        alias typeof(S.tupleof) FieldTypeTuple;
+    static if (is(T == struct) || is(T == union))
+        alias typeof(T.tupleof[0 .. $ - isNested!T]) FieldTypeTuple;
+    else static if (is(T == class))
+        alias typeof(T.tupleof) FieldTypeTuple;
     else
-        alias TypeTuple!S FieldTypeTuple;
-        //static assert(0, "argument is not struct or class");
+        alias TypeTuple!T FieldTypeTuple;
 }
+
+unittest
+{
+    static assert(is(FieldTypeTuple!int == TypeTuple!int));
+
+    static struct StaticStruct1 { }
+    static assert(is(FieldTypeTuple!StaticStruct1 == TypeTuple!()));
+
+    static struct StaticStruct2 { int a, b; }
+    static assert(is(FieldTypeTuple!StaticStruct2 == TypeTuple!(int, int)));
+
+    int i;
+
+    struct NestedStruct1 { void f() { ++i; } }
+    static assert(is(FieldTypeTuple!NestedStruct1 == TypeTuple!()));
+
+    struct NestedStruct2 { int a; void f() { ++i; } }
+    static assert(is(FieldTypeTuple!NestedStruct2 == TypeTuple!int));
+
+    class NestedClass { int a; void f() { ++i; } }
+    static assert(is(FieldTypeTuple!NestedClass == TypeTuple!int));
+}
+
 
 // // FieldOffsetsTuple
 // private template FieldOffsetsTupleImpl(size_t n, T...)
@@ -2441,7 +2545,7 @@ unittest
 
     // void static array hides actual type of bits, so "may have indirections".
     static assert( hasIndirections!(void[1]));
-    interface I;
+    interface I {}
     struct S1 {}
     struct S2 { int a; }
     struct S3 { int a; int b; }
@@ -5015,24 +5119,41 @@ unittest
 }
 
 /**
-Detect whether $(D T) is a delegate.
+Detect whether symbol or type $(D T) is a delegate.
 */
 template isDelegate(T...)
-    if(T.length == 1)
+    if (T.length == 1)
 {
-    enum bool isDelegate = is(T[0] == delegate);
+    static if (is(typeof(& T[0]) U : U*) && is(typeof(& T[0]) U == delegate))
+    {
+        // T is a (nested) function symbol.
+        enum bool isDelegate = true;
+    }
+    else static if (is(T[0] W) || is(typeof(T[0]) W))
+    {
+        // T is an expression or a type.  Take the type of it and examine.
+        enum bool isDelegate = is(W == delegate);
+    }
+    else
+        enum bool isDelegate = false;
 }
 
 unittest
 {
-    static assert( isDelegate!(void delegate()));
-    static assert( isDelegate!(uint delegate(uint)));
-    static assert( isDelegate!(shared uint delegate(uint)));
+    static void sfunc() { }
+    int x;
+    void func() { x++; }
 
-    static assert(!isDelegate!uint);
-    static assert(!isDelegate!(void function()));
+    int delegate() dg;
+    assert(isDelegate!dg);
+    assert(isDelegate!(int delegate()));
+    assert(isDelegate!(typeof(&func)));
+
+    int function() fp;
+    assert(!isDelegate!fp);
+    assert(!isDelegate!(int function()));
+    assert(!isDelegate!(typeof(&sfunc)));
 }
-
 
 /**
 Detect whether symbol or type $(D T) is a function, a function pointer or a delegate.
@@ -5169,6 +5290,22 @@ unittest
     static assert(isFinalFunction!(FC.foo));
     static assert(!isFinalFunction!(C.bar));
     static assert(isFinalFunction!(C.foo));
+}
+
+/**
+Determines whether function $(D f) requires a context pointer.
+*/
+template isNestedFunction(alias f)
+{
+    enum isNestedFunction = __traits(isNested, f);
+}
+
+unittest
+{
+    static void f() { }
+    void g() { }
+    static assert(!isNestedFunction!f);
+    static assert( isNestedFunction!g);
 }
 
 /**
@@ -5708,24 +5845,28 @@ unittest
 // XXX Select & select should go to another module. (functional or algorithm?)
 
 /**
-Aliases itself to $(D T) if the boolean $(D condition) is $(D true)
-and to $(D F) otherwise.
-
-Example:
-----
-alias Select!(size_t.sizeof == 4, int, long) Int;
-----
+Aliases itself to $(D T[0]) if the boolean $(D condition) is $(D true)
+and to $(D T[1]) otherwise.
  */
-template Select(bool condition, T, F)
+template Select(bool condition, T...) if (T.length == 2)
 {
-    static if (condition) alias T Select;
-    else alias F Select;
+    alias Select = T[!condition];
 }
 
+///
 unittest
 {
+    // can select types
     static assert(is(Select!(true, int, long) == int));
     static assert(is(Select!(false, int, long) == long));
+
+    // can select symbols
+    int a = 1;
+    int b = 2;
+    alias selA = Select!(true, a, b);
+    alias selB = Select!(false, a, b);
+    assert(selA == 1);
+    assert(selB == 2);
 }
 
 /**
