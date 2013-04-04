@@ -110,6 +110,7 @@ import std.path;
 import std.stdio;
 import std.string;
 import std.typecons;
+import std.internal.processinit;
 
 
 // When the DMC runtime is used, we have to use some custom functions
@@ -176,7 +177,7 @@ version (Posix)
     {
         extern(C) char*** _NSGetEnviron() nothrow;
         private const char*** environPtr;
-        static this() { environPtr = _NSGetEnviron(); }
+        extern(C) void std_process_static_this() { environPtr = _NSGetEnviron(); }
         const(char**) environ() @property @trusted nothrow { return *environPtr; }
     }
     else
@@ -2780,8 +2781,6 @@ import core.stdc.errno;
 import core.thread;
 import std.c.process;
 import std.c.string;
-
-import std.internal.processinit;
 
 version (Windows)
 {
