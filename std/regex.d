@@ -229,7 +229,8 @@ import std.array, std.algorithm, std.range,
        std.functional, std.exception;
 import core.bitop, core.stdc.string, core.stdc.stdlib;
 static import ascii = std.ascii;
-import std.string : representation;
+import core.exception;
+import std.string : representation, format;
 
 debug import std.stdio;
 
@@ -6701,6 +6702,183 @@ public class RegexException : Exception
         super(msg, file, line);
     }
 }
+
+
+@system:
+
+/++
+    Runs a delegate with the Captures of a regex. Each capture group will be
+    transferred as a parameter, after being converted to the type of the
+    parameter.
+
+    Params:
+        captures = The regex's captures.
+        dlg      = The delegate to call.
++/
+private auto callWithCaptures(CapturesType, DelegateType)(CapturesType captures, DelegateType dlg)
+{
+    alias dlgPatameters = ParameterTypeTuple!dlg;
+    immutable delegateInvocation = {
+        auto argsBuilder = appender!(string[])();
+        foreach(i; 0 .. arity!dlg)
+        {
+            argsBuilder.put("captures[%d].to!(dlgPatameters[%s])()".format(i + 1, i));
+        }
+        return "dlg(%s)".format(argsBuilder.data().join(", "));
+    }();
+
+    return mixin(delegateInvocation);
+}
+
+/++
+    Tries to match text with multiple regular expressions. On the first match,
+    calls the delegate associated with the regular expression that matched.
+
+    Params:
+        Patterns = Pairs of regular expressions and delegates.
+        input    = The text to match with.
+
+    Example:
+    ----
+    //Handling input strings without a standard format.
+    enum Weekday
+    {
+        Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday
+    }
+
+    struct Schedule
+    {
+        Weekday day;
+        int hour;
+    }
+
+    assert(equal(
+                [
+                    Schedule(Weekday.Sunday, 1),
+                    Schedule(Weekday.Monday, 14),
+                    Schedule(Weekday.Tuesday, 3),
+                    Schedule(Weekday.Wednesday, 4),
+                    Schedule(Weekday.Thursday, 17),
+                    Schedule(Weekday.Friday, 6),
+                ],
+                [
+                    "Sunday 1AM",
+                    "Monday 2PM",
+                    "Tuesday 3",
+                    "4AM Wednesday",
+                    "5PM Thursday",
+                    "6 Friday",
+                ].map!(regexSwitch!(
+                        `(\w+) (\d+)AM`, (Weekday day, int hour) => Schedule(day, hour % 12),
+                        `(\w+) (\d+)PM`, (Weekday day, int hour) => Schedule(day, hour % 12 + 12),
+                        `(\w+) (\d+)`, (Weekday day, int hour) => Schedule(day, hour),
+                        `(\d+)AM (\w+)`, (int hour, Weekday day) => Schedule(day, hour % 12),
+                        `(\d+)PM (\w+)`, (int hour, Weekday day) => Schedule(day, hour % 12 + 12),
+                        `(\d+) (\w+)`, (int hour, Weekday day) => Schedule(day, hour),
+                        ))()));
+    ----
++/
+public template regexSwitch(Patterns...)
+{
+    auto regexSwitch(T)(T input)
+    {
+        static assert(__traits(compiles, (match(input, ""))),
+                "Unable to match on " ~ T.stringof ~ ".");
+        static assert(Patterns.length % 2 == 0,
+                "Wrong number of arguments - each pattern must have a handler.");
+        foreach(index, pattern;Patterns)
+        {
+            static if(index % 2 == 0)
+            {
+                static assert(__traits(compiles, (match(input, pattern))),
+                        "Unable to match with " ~ typeof(pattern).stringof);
+
+                static assert(isCallable!(Patterns[index + 1]),
+                        PatternTypes[index + 1].stringof ~ " is not callable - can't be used as handler.");
+
+                auto matches = match(input, pattern);
+                if(!matches.empty())
+                {
+                    return callWithCaptures(matches.captures, Patterns[index + 1]);
+                }
+            }
+        }
+
+        throw new SwitchError("Input not matched by any pattern");
+    }
+}
+
+unittest//verify example
+{
+    //Handling input strings without a standard format.
+    enum Weekday
+    {
+        Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday
+    }
+
+    struct Schedule
+    {
+        Weekday day;
+        int hour;
+    }
+
+    assert(equal(
+                [
+                    Schedule(Weekday.Sunday, 1),
+                    Schedule(Weekday.Monday, 14),
+                    Schedule(Weekday.Tuesday, 3),
+                    Schedule(Weekday.Wednesday, 4),
+                    Schedule(Weekday.Thursday, 17),
+                    Schedule(Weekday.Friday, 6),
+                ],
+                [
+                    "Sunday 1AM",
+                    "Monday 2PM",
+                    "Tuesday 3",
+                    "4AM Wednesday",
+                    "5PM Thursday",
+                    "6 Friday",
+                ].map!(regexSwitch!(
+                        `(\w+) (\d+)AM`, (Weekday day, int hour) => Schedule(day, hour % 12),
+                        `(\w+) (\d+)PM`, (Weekday day, int hour) => Schedule(day, hour % 12 + 12),
+                        `(\w+) (\d+)`, (Weekday day, int hour) => Schedule(day, hour),
+                        `(\d+)AM (\w+)`, (int hour, Weekday day) => Schedule(day, hour % 12),
+                        `(\d+)PM (\w+)`, (int hour, Weekday day) => Schedule(day, hour % 12 + 12),
+                        `(\d+) (\w+)`, (int hour, Weekday day) => Schedule(day, hour),
+                        ))()));
+}
+
+unittest//other checks for regexSwitch
+{
+    //Using with single pattern:
+    assert("1 true hello".regexSwitch!(
+                `(\d+) (\w+) (.*)$`, (int a, bool b, string c) => tuple(a, b, c),
+                )() == tuple(1, true, "hello"));
+
+    //If no pattern matches, it should throw an exception:
+    assert("2 * 3".regexSwitch!(
+                `(\d+) \+ (\d+)`, (int a, int b) => a + b,
+                `(\d+) \- (\d+)`, (int a, int b) => a - b,
+                )().collectException!SwitchError() !is null);
+
+    //If no patterns are given, it should throw an exception:
+    assert("bla bla bla".regexSwitch!()().collectException!SwitchError() !is null);
+
+    //Each pattern must have an handler:
+    static assert(!__traits(compiles, "yada yada yada".regexSwitch!(
+                    `(\d+)`, (int x) => x,
+                    `.*`,
+                    )()));
+    static assert(!__traits(compiles, "yada yada yada".regexSwitch!(
+                    `(\d+)`,
+                    `.*`,
+                    )()));
+    static assert(!__traits(compiles, "yada yada yada".regexSwitch!(
+                    `.*`,
+                    )()));
+}
+
+
 
 //--------------------- TEST SUITE ---------------------------------
 version(unittest)
