@@ -109,7 +109,6 @@ import std.exception;
 import std.path;
 import std.stdio;
 import std.string;
-import std.typecons;
 import std.internal.processinit;
 
 
@@ -119,7 +118,8 @@ version (Win32) version (DigitalMars) version = DMC_RUNTIME;
 
 
 // Some of the following should be moved to druntime.
-private:
+private
+{
 
 // Windows API declarations.
 version (Windows)
@@ -188,8 +188,7 @@ version (Posix)
 }
 
 
-// Actual module classes/functions start here.
-public:
+} // private
 
 
 // =============================================================================
