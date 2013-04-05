@@ -37,10 +37,10 @@ $(LI
     the current user's default command interpreter.
     $(D executeShell) corresponds roughly to C's $(D system) function.)
 $(LI
-    $(LREF kill) attempts to terminate a running process.)
+    $(LREF kill) attempts to terminate a running _process.)
 )
 
-The following table compactly summarises the different process $(I creation)
+The following table compactly summarises the different _process creation
 functions and how they relate to each other:
 $(BOOKTABLE,
     $(TR $(TH )
@@ -56,10 +56,6 @@ $(BOOKTABLE,
          $(TD $(LREF execute))
          $(TD $(LREF executeShell)))
 )
-
-Unless the directory of the executable file is explicitly specified, all
-functions will search for it in the directories specified in the PATH
-environment variable.
 
 Other_functionality:
 $(UL
@@ -211,9 +207,19 @@ used when there are no command-line arguments.  They take a single string,
 $(D program), which specifies the program name.
 
 Unless a directory is specified in $(D args[0]) or $(D program),
-$(D spawnProcess) will search for the program in the directories listed
-in the PATH environment variable.  To run an executable in the current
-directory, use $(D "./$(I executable_name)").
+$(D spawnProcess) will search for the program in a platform-dependent
+manner.  On POSIX systems, it will look for the executable in the
+directories listed in the PATH environment variable, in the order
+they are listed.  On Windows, it will search for the executable in
+the following sequence:
+$(OL
+    $(LI The directory from which the application loaded.)
+    $(LI The current directory for the parent process.)
+    $(LI The 32-bit Windows system directory.)
+    $(LI The 16-bit Windows system directory.)
+    $(LI The Windows directory.)
+    $(LI The directories listed in the PATH environment variable.)
+)
 ---
 // Run an executable called "prog" located in the current working
 // directory:
@@ -1261,10 +1267,10 @@ auto pid = spawnProcess("some_app");
 kill(pid, 10);
 assert (wait(pid) == 10);
 ---
-$(RED Win32-specific warning:) The mechanisms for process termination are
+$(RED Warning:) The mechanisms for process termination are
 $(LINK2 http://blogs.msdn.com/b/oldnewthing/archive/2007/05/03/2383346.aspx,
-incredibly badly specified) in Win32.  This function may therefore produce
-unexpected results, and should be used with the utmost care.
+incredibly badly specified) in the Windows API.  This function may therefore
+produce unexpected results, and should be used with the utmost care.
 
 POSIX_specific:
 A $(LINK2 http://en.wikipedia.org/wiki/Unix_signal,signal) will be sent to
