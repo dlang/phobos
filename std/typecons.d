@@ -552,6 +552,21 @@ assert(s[0] == "abc" && s[1] == 4.5);
     }
 
 /**
+   Return a copy of this Tuple with its fields in reverse order.
+ */
+    @property
+    auto reversed()
+    {
+        static if (is(typeof(this) : Tuple!A, A...))
+            alias RevTypes = Reverse!A;
+
+        Tuple!RevTypes result;
+        auto tup = this.tupleof;
+        result.tupleof = Reverse!tup;
+        return result;
+    }
+
+/**
    The length of the tuple.
  */
     enum length = field.length;
@@ -738,6 +753,13 @@ unittest
         auto t1 = tuple(x);
         alias Tuple!(const(int)) T;
         auto t2 = T(1);
+    }
+    // 7666
+    {
+        auto tup = tuple(1, "2");
+        assert(tup.reversed == tuple("2", 1));
+        auto tup2 = tuple(1);
+        assert(tup2.reversed == tuple(1));
     }
 }
 unittest
