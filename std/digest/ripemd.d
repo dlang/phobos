@@ -33,13 +33,15 @@ $(TR $(TDNW Helpers) $(TD $(MYREF ripemd160Of))
  * The D implementation is a direct translation of the ANSI C implementation by Antoon Bosselaers.
  *
  * References:
- *      $(LINK2 http://homes.esat.kuleuven.be/~bosselae/ripemd160.html, The hash function RIPEMD-160)
- *      $(LINK2 http://en.wikipedia.org/wiki/RIPEMD-160, Wikipedia on RIPEMD-160)
+ * $(UL
+ * $(LI $(LINK2 http://homes.esat.kuleuven.be/~bosselae/ripemd160.html, The hash function RIPEMD-160))
+ * $(LI $(LINK2 http://en.wikipedia.org/wiki/RIPEMD-160, Wikipedia on RIPEMD-160))
+ * )
  *
- * Source: $(PHOBOSSRC std/digest/_md.d)
+ * Source: $(PHOBOSSRC std/digest/_ripemd.d)
  *
  * Macros:
- * WIKI = Phobos/StdMd5
+ * WIKI = Phobos/StdRipemd
  * MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
  *
  * Examples:
