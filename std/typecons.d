@@ -557,13 +557,7 @@ assert(s[0] == "abc" && s[1] == 4.5);
     @property
     auto reversed()
     {
-        static if (is(typeof(this) : Tuple!A, A...))
-            alias RevTypes = Reverse!A;
-
-        Tuple!RevTypes result;
-        auto tup = this.tupleof;
-        result.tupleof = Reverse!tup;
-        return result;
+        return tuple(Reverse!expand);
     }
 
 /**
