@@ -407,11 +407,10 @@ assert(a == [ 2, 3 ]);
 ), $(ARGS), $(ARGS), $(ARGS import std.array;))
 */
 
-void popFront(A)(ref A a)
-if (!isNarrowString!A && isDynamicArray!A && isMutable!A && !is(A == void[]))
+void popFront(T)(ref T[] a)
+if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
-    assert(a.length, "Attempting to popFront() past the end of an array of "
-            ~ typeof(a[0]).stringof);
+    assert(a.length, "Attempting to popFront() past the end of an array of " ~ T.stringof);
     a = a[1 .. $];
 }
 
@@ -420,16 +419,16 @@ unittest
     auto a = [ 1, 2, 3 ];
     a.popFront();
     assert(a == [ 2, 3 ]);
-    static assert(!__traits(compiles, popFront!(immutable int[])()));
-    static assert(!__traits(compiles, popFront!(void[])()));
+
+    static assert(!is(typeof({          int[4] a; popFront(a); })));
+    static assert(!is(typeof({ immutable int[] a; popFront(a); })));
+    static assert(!is(typeof({          void[] a; popFront(a); })));
 }
 
 // Specialization for narrow strings. The necessity of
-// !isStaticArray!A suggests a compiler @@@BUG@@@.
-void popFront(S)(ref S str) @trusted pure nothrow
-if (isNarrowString!S && isMutable!S && !isStaticArray!S)
+void popFront(C)(ref C[] str) @trusted pure nothrow
+if (isNarrowString!(C[]))
 {
-    alias ElementEncodingType!S C;
     assert(str.length, "Attempting to popFront() past the end of an array of " ~ C.stringof);
 
     static if(is(Unqual!C == char))
@@ -460,26 +459,14 @@ if (isNarrowString!S && isMutable!S && !isStaticArray!S)
     else static assert(0, "Bad template constraint.");
 }
 
-version(unittest) C[] _eatString(C)(C[] str)
-{
-    while(!str.empty)
-        str.popFront();
-
-    return str;
-}
-
 unittest
 {
-    string s1 = "\xC2\xA9hello";
-    s1.popFront();
-    assert(s1 == "hello");
-    wstring s2 = "\xC2\xA9hello";
-    s2.popFront();
-    assert(s2 == "hello");
-    string s3 = "\u20AC100";
-
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
+        S s = "\xC2\xA9hello";
+        s.popFront();
+        assert(s == "hello");
+
         S str = "hello\U00010143\u0100\U00010143";
         foreach(dchar c; ['h', 'e', 'l', 'l', 'o', '\U00010143', '\u0100', '\U00010143'])
         {
@@ -487,11 +474,18 @@ unittest
             str.popFront();
         }
         assert(str.empty);
+
+        static assert(!is(typeof({          immutable S a; popFront(a); })));
+        static assert(!is(typeof({ typeof(S.init[0])[4] a; popFront(a); })));
     }
 
-    static assert(!is(typeof(popFront!(immutable string))));
-    static assert(!is(typeof(popFront!(char[4]))));
+    C[] _eatString(C)(C[] str)
+    {
+        while(!str.empty)
+            str.popFront();
 
+        return str;
+    }
     enum checkCTFE = _eatString("ウェブサイト@La_Verité.com");
     static assert(checkCTFE.empty);
     enum checkCTFEW = _eatString("ウェブサイト@La_Verité.com"w);
@@ -517,8 +511,8 @@ assert(a == [ 1, 2 ]);
 ), $(ARGS), $(ARGS), $(ARGS import std.array;))
 */
 
-void popBack(A)(ref A a)
-if (isDynamicArray!A && !isNarrowString!A && isMutable!A && !is(A == void[]))
+void popBack(T)(ref T[] a)
+if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length);
     a = a[0 .. $ - 1];
@@ -529,17 +523,18 @@ unittest
     auto a = [ 1, 2, 3 ];
     a.popBack();
     assert(a == [ 1, 2 ]);
-    static assert(!__traits(compiles, popBack!(immutable int[])));
-    static assert(!__traits(compiles, popBack!(void[])));
+
+    static assert(!is(typeof({ immutable int[] a; popBack(a); })));
+    static assert(!is(typeof({          int[4] a; popBack(a); })));
+    static assert(!is(typeof({          void[] a; popBack(a); })));
 }
 
 // Specialization for arrays of char
-@trusted void popBack(A)(ref A a)
-    if(isNarrowString!A && isMutable!A)
+@trusted void popBack(T)(ref T[] a)
+if (isNarrowString!(T[]))
 {
-    assert(a.length, "Attempting to popBack() past the front of an array of " ~
-                     typeof(a[0]).stringof);
-    a = a[0 .. $ - std.utf.strideBack(a, a.length)];
+    assert(a.length, "Attempting to popBack() past the front of an array of " ~ T.stringof);
+    a = a[0 .. $ - std.utf.strideBack(a, $)];
 }
 
 unittest
@@ -563,7 +558,8 @@ unittest
         }
         assert(str.empty);
 
-        static assert(!__traits(compiles, popBack!(immutable S)));
+        static assert(!is(typeof({          immutable S a; popBack(a); })));
+        static assert(!is(typeof({ typeof(S.init[0])[4] a; popBack(a); })));
     }
 }
 
@@ -588,17 +584,8 @@ assert(a.front == 1);
 @property ref T front(T)(T[] a)
 if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
-    assert(a.length, "Attempting to fetch the front of an empty array of " ~
-                     typeof(a[0]).stringof);
+    assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
     return a[0];
-}
-
-@property dchar front(A)(A a) if (isNarrowString!A)
-{
-    assert(a.length, "Attempting to fetch the front of an empty array of " ~
-                     typeof(a[0]).stringof);
-    size_t i = 0;
-    return decode(a, i);
 }
 
 unittest
@@ -610,6 +597,16 @@ unittest
 
     immutable b = [ 1, 2 ];
     assert(b.front == 1);
+
+    int[2] c = [ 1, 2 ];
+    assert(c.front == 1);
+}
+
+@property dchar front(T)(T[] a) if (isNarrowString!(T[]))
+{
+    assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
+    size_t i = 0;
+    return decode(a, i);
 }
 
 /**
@@ -631,8 +628,7 @@ assert(a.back == 3);
 */
 @property ref T back(T)(T[] a) if (!isNarrowString!(T[]))
 {
-    assert(a.length, "Attempting to fetch the back of an empty array of " ~
-                     typeof(a[0]).stringof);
+    assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
     return a[$ - 1];
 }
 
@@ -645,14 +641,15 @@ unittest
 
     immutable b = [ 1, 2, 3 ];
     assert(b.back == 3);
+
+    int[3] c = [ 1, 2, 3 ];
+    assert(c.back == 3);
 }
 
 // Specialization for strings
-@property dchar back(A)(A a)
-    if(isDynamicArray!A && isNarrowString!A)
+@property dchar back(T)(T[] a) if (isNarrowString!(T[]))
 {
-    assert(a.length, "Attempting to fetch the back of an empty array of " ~
-                     typeof(a[0]).stringof);
+    assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
     size_t i = a.length - std.utf.strideBack(a, a.length);
     return decode(a, i);
 }
@@ -714,6 +711,25 @@ unittest
     assert(overlap(a, b.dup).empty);
     test(c, d);
     assert(overlap(c, d.idup).empty);
+}
+
+unittest // bugzilla 9836
+{
+	// range primitives for array should work with alias this types
+    struct Wrapper
+    {
+        int[] data;
+        alias data this;
+
+        @property Wrapper save() { return this; }
+    }
+    auto w = Wrapper([1,2,3,4]);
+    std.array.popFront(w); // should work
+
+    static assert(isInputRange!Wrapper);
+    static assert(isForwardRange!Wrapper);
+    static assert(isBidirectionalRange!Wrapper);
+    static assert(isRandomAccessRange!Wrapper);
 }
 
 /+
