@@ -412,8 +412,7 @@ writeln(t.expand); // 1 hello 2.3
    Constructor taking one value for each field. Each argument must be
    implicitly assignable to the respective element of the target.
  */
-    this(U...)(U values)
-    if (is(typeof({ void fun(Types); fun(values); })))
+    this()(Types values)
     {
         foreach (i, _; Types)
         {
@@ -738,6 +737,11 @@ unittest
         auto t1 = tuple(x);
         alias Tuple!(const(int)) T;
         auto t2 = T(1);
+    }
+    // 9431
+    {
+        alias T = Tuple!(int[1][]);
+        auto t = T([[10]]);
     }
 }
 unittest
