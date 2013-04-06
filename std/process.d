@@ -522,8 +522,9 @@ private Pid spawnProcessImpl(in char[] commandLine,
 
     // Create process.
     PROCESS_INFORMATION pi;
-    DWORD dwCreationFlags = CREATE_UNICODE_ENVIRONMENT |
-                            ((config & Config.gui) ? CREATE_NO_WINDOW : 0);
+    DWORD dwCreationFlags =
+        CREATE_UNICODE_ENVIRONMENT |
+        ((config & Config.suppressConsole) ? CREATE_NO_WINDOW : 0);
     if (!CreateProcessW(null, commandz, null, null, true, dwCreationFlags,
                         envz, null, &startinfo, &pi))
         throw ProcessException.newFromLastError("Failed to spawn new process");
@@ -907,11 +908,11 @@ Example:
 ---
 auto logFile = File("myapp_error.log", "w");
 
-// Start program in a console window (Windows only), redirect
-// its error stream to logFile, and leave logFile open in the
-// parent process as well.
+// Start program, suppressing the console window (Windows only),
+// redirect its error stream to logFile, and leave logFile open
+// in the parent process as well.
 auto pid = spawnProcess("myapp", stdin, stdout, logFile,
-                        Config.retainStderr | Config.gui);
+                        Config.retainStderr | Config.suppressConsole);
 scope(exit)
 {
     auto exitCode = wait(pid);
@@ -944,11 +945,11 @@ enum Config
     retainStderr = 8,                                  /// ditto
 
     /**
-    On Windows, the child process will by default be run in
-    a console window.  This option wil cause it to run in "GUI mode"
-    instead, i.e., without a console. On POSIX, it has no effect.
+    On Windows, if the child process is a console application, this
+    flag will prevent the creation of a console window.  Otherwise,
+    it will be ignored. On POSIX, $(D suppressConsole) has no effect.
     */
-    gui = 16,
+    suppressConsole = 16,
 
     /**
     On POSIX, open $(LINK2 http://en.wikipedia.org/wiki/File_descriptor,file descriptors)
