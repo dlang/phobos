@@ -126,14 +126,7 @@ public:
         static if (BigDigit.sizeof == int.sizeof)
         {
             if (data.length == n*2 + 1) return data[n*2];
-            version(LittleEndian)
-            {
-                return data[n*2] + ((cast(ulong)data[n*2 + 1]) << 32 );
-            }
-            else
-            {
-                return data[n*2 + 1] + ((cast(ulong)data[n*2]) << 32 );
-            }
+            return data[n*2] + ((cast(ulong)data[n*2 + 1]) << 32 );
         }
         else static if (BigDigit.sizeof == long.sizeof)
         {
@@ -853,6 +846,18 @@ unittest
 }
 
 
+unittest
+{
+    BigUint r;
+    r = 5UL;
+    assert(r.peekUlong(0) == 5UL);
+    assert(r.peekUint(0) == 5U);
+    r = 0x1234_5678_9ABC_DEF0UL;
+    assert(r.peekUlong(0) == 0x1234_5678_9ABC_DEF0UL);
+    assert(r.peekUint(0) == 0x9ABC_DEF0U);
+}
+
+
 // Pow tests
 unittest
 {
@@ -1501,14 +1506,14 @@ body
     {
         if (hi == 0)
         {
+            data[0] = cast(uint)y;
             if (data.length == 1)
             {
-                data[0] = cast(uint)(y & 0xFFFF_FFFF);
                 hi = 1;
             }
             else
             {
-                *cast(ulong *)(&data[hi]) = y;
+                data[1] = cast(uint)(y >>> 32);
                 hi=2;
             }
         }
