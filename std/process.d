@@ -283,7 +283,7 @@ child process), it may be a good idea to use unbuffered streams, or at
 least ensure all relevant buffers are flushed.
 
 Params:
-args = An array which contains the program name as the first element
+args = An array which contains the program name as the zeroth element
     and any command-line arguments in the following elements.
 program = The program name, $(I without) command-line arguments.
 stdin_ = The standard input stream of the child process.
@@ -298,8 +298,7 @@ stderr_ = The standard error stream of the child process.
     This can be any $(XREF stdio,File) that is opened for writing.
     By default the child process inherits the parent's error
     stream.
-env = The environment variables for the child process may
-    be specified using this parameter.
+env = Additional environment variables for the child process.
 config = Options that control the behaviour of $(D spawnProcess).
     See the $(LREF Config) documentation for details.
 
