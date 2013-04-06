@@ -2,7 +2,7 @@
 
 /**
 Functions for starting and interacting with other processes, and for
-working with the current process' execution environment.
+working with the current _process' execution environment.
 
 Process_handling:
 $(UL $(LI
@@ -14,10 +14,10 @@ $(UL $(LI
 $(LI
     $(LREF wait) makes the parent _process wait for a child _process to
     terminate.  In general one should always do this, to avoid
-    child _processes becoming "zombies" when the parent _process exits.
+    child processes becoming "zombies" when the parent _process exits.
     Scope guards are perfect for this – see the $(LREF spawnProcess)
     documentation for examples.  $(LREF tryWait) is similar to $(D wait),
-    but does not block if the process has not yet terminated.)
+    but does not block if the _process has not yet terminated.)
 $(LI
     $(LREF pipeProcess) also spawns a child _process which runs
     in parallel with its parent.  However, instead of taking
@@ -46,7 +46,7 @@ $(BOOKTABLE,
     $(TR $(TH )
          $(TH Runs program directly)
          $(TH Runs shell command))
-    $(TR $(TD Low-level process creation)
+    $(TR $(TD Low-level _process creation)
          $(TD $(LREF spawnProcess))
          $(TD $(LREF spawnShell)))
     $(TR $(TD Automatic input/output redirection using pipes)
@@ -62,7 +62,7 @@ $(UL
 $(LI
     $(LREF pipe) is used to create unidirectional pipes.)
 $(LI
-    $(LREF environment) is an interface through which the current process'
+    $(LREF environment) is an interface through which the current _process'
     environment variables can be read and manipulated.)
 $(LI
     $(LREF escapeShellCommand) and $(LREF escapeShellFileName) are useful
@@ -80,6 +80,7 @@ Source:
 Macros:
     WIKI=Phobos/StdProcess
     OBJECTREF=$(D $(LINK2 object.html#$0,$0))
+    LREF=$(D $(LINK2 #.$0,$0))
 */
 module std.process;
 
@@ -241,7 +242,7 @@ process, along with any additional variables specified in the $(D env)
 parameter.  If the same variable exists in both the parent's environment
 and in $(D env), the latter takes precedence.
 
-If the $(LREF Config).$(LREF newEnv) flag is set in $(D config), the child
+If the $(LREF Config.newEnv) flag is set in $(D config), the child
 process will $(I not) inherit the parent's environment.  Its entire
 environment will then be determined by $(D env).
 ---
@@ -984,7 +985,7 @@ final class Pid
 
     This handle is used to specify the process in OS-specific APIs.
     On POSIX, this function returns a $(D core.sys.posix.sys.types.pid_t)
-    with the same value as $(LREF processID), while on Windows it returns
+    with the same value as $(LREF Pid.processID), while on Windows it returns
     a $(D core.sys.windows.windows.HANDLE).
 
     Once $(LREF wait) has been called on the $(LREF Pid), this method
@@ -2519,7 +2520,7 @@ static:
     Retrieves the value of the environment variable with the given $(D name).
 
     If no such variable exists, this function throws an $(D Exception).
-    See also $(LREF get), which doesn't throw on failure.
+    See also $(LREF environment.get), which doesn't throw on failure.
     ---
     auto path = environment["PATH"];
     ---
@@ -2535,7 +2536,7 @@ static:
     Retrieves the value of the environment variable with the given $(D name),
     or a default value if the variable doesn't exist.
 
-    Unlike $(LREF opIndex), this function never throws.
+    Unlike $(LREF environment.opIndex), this function never throws.
     ---
     auto sh = environment.get("SHELL", "/bin/sh");
     ---
@@ -3145,7 +3146,7 @@ $(LINK2 std_c_stdlib.html#_getenv, std.c.stdlib._getenv)
 internally.
 
    $(RED This function is scheduled for deprecation.  Please use
-   $(LREF environment) instead.)
+   $(LREF environment.get) instead.)
 */
 
 string getenv(in char[] name)
@@ -3167,7 +3168,7 @@ exception. Calls $(LINK2 std_c_stdlib.html#_setenv,
 std.c.stdlib._setenv) internally.
 
    $(RED This function is scheduled for deprecation.  Please use
-   $(LREF environment) instead.)
+   $(LREF environment.opIndexAssign) instead.)
 */
 version(StdDdoc) void setenv(in char[] name, in char[] value, bool overwrite);
 else version(Posix) void setenv(in char[] name, in char[] value, bool overwrite)
@@ -3181,7 +3182,7 @@ Removes variable $(D name) from the environment. Calls $(LINK2
 std_c_stdlib.html#_unsetenv, std.c.stdlib._unsetenv) internally.
 
    $(RED This function is scheduled for deprecation.  Please use
-   $(LREF environment) instead.)
+   $(LREF environment.remove) instead.)
 */
 version(StdDdoc) void unsetenv(in char[] name);
 else version(Posix) void unsetenv(in char[] name)
