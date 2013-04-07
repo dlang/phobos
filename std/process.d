@@ -194,10 +194,12 @@ version (Posix)
 
 
 /**
-Spawns a new _process, optionally assigning it an
-arbitrary set of standard input, output, and error streams.
+Spawns a new _process, optionally assigning it an arbitrary set of standard
+input, output, and error streams.
+
 The function returns immediately, leaving the child _process to execute
-in parallel with its parent.
+in parallel with its parent.  It is recommended to always call $(LREF wait)
+on the returned $(LREF Pid), as detailed in the documentation for $(D wait).
 
 Command_line:
 There are four overloads of this function.  The first two take an array
@@ -283,24 +285,22 @@ child process), it may be a good idea to use unbuffered streams, or at
 least ensure all relevant buffers are flushed.
 
 Params:
-args = An array which contains the program name as the zeroth element
-    and any command-line arguments in the following elements.
+args    = An array which contains the program name as the zeroth element
+          and any command-line arguments in the following elements.
 program = The program name, $(I without) command-line arguments.
-stdin_ = The standard input stream of the child process.
-    This can be any $(XREF stdio,File) that is opened for reading.
-    By default the child process inherits the parent's input
-    stream.
+stdin_  = The standard input stream of the child process.
+          This can be any $(XREF stdio,File) that is opened for reading.
+          By default the child process inherits the parent's input
+          stream.
 stdout_ = The standard output stream of the child process.
-    This can be any $(XREF stdio,File) that is opened for writing.
-    By default the child process inherits the parent's output
-    stream.
+          This can be any $(XREF stdio,File) that is opened for writing.
+          By default the child process inherits the parent's output stream.
 stderr_ = The standard error stream of the child process.
-    This can be any $(XREF stdio,File) that is opened for writing.
-    By default the child process inherits the parent's error
-    stream.
-env = Additional environment variables for the child process.
-config = Options that control the behaviour of $(D spawnProcess).
-    See the $(LREF Config) documentation for details.
+          This can be any $(XREF stdio,File) that is opened for writing.
+          By default the child process inherits the parent's error stream.
+env     = Additional environment variables for the child process.
+config  = Flags that control process creation. See $(LREF Config)
+          for an overview of available flags.
 
 Returns:
 A $(LREF Pid) object that corresponds to the spawned process.
@@ -1545,20 +1545,45 @@ unittest
 Starts a new process, creating pipes to redirect its standard
 input, output and/or error streams.
 
-These functions return immediately, leaving the child process to
-execute in parallel with the parent.
-$(LREF pipeShell) invokes the user's _command interpreter, as
-determined by $(LREF userShell), to execute the given program or
-_command.
+$(D pipeProcess) and $(D pipeShell) are convenient wrappers around
+$(LREF spawnProcess) and $(LREF spawnShell), respectively, and
+automate the task of redirecting one or more of the child process'
+standard streams through pipes.  Like the functions they wrap,
+these functions return immediately, leaving the child process to
+execute in parallel with the invoking process.  It is recommended
+to always call $(LREF wait) on the returned $(LREF ProcessPipes.pid),
+as detailed in the documentation for $(D wait).
+
+The $(D args)/$(D program)/$(D command), $(D env) and $(D config)
+parameters are forwarded straight to the underlying spawn functions,
+and we refer to their documentation for details.
+
+Params:
+args     = An array which contains the program name as the zeroth element
+           and any command-line arguments in the following elements.
+           (See $(LREF spawnProcess) for details.)
+program  = The program name, $(I without) command-line arguments.
+           (See $(LREF spawnProcess) for details.)
+command  = A shell command which is passed verbatim to the command
+           interpreter.  (See $(LREF spawnShell) for details.)
+redirect = Flags that determine which streams are redirected, and
+           how.  See $(LREF Redirect) for an overview of available
+           flags.
+env      = Additional environment variables for the child process.
+           (See $(LREF spawnProcess) for details.)
+config   = Flags that control process creation. See $(LREF Config)
+           for an overview of available flags, and note that the
+           $(D retainStd...) flags have no effect in this function.
 
 Returns:
 A $(LREF ProcessPipes) object which contains $(XREF stdio,File)
 handles that communicate with the redirected streams of the child
-process, along with the $(LREF Pid) of the process.
+process, along with a $(LREF Pid) object that corresponds to the
+spawned process.
 
 Throws:
 $(LREF ProcessException) on failure to start the process.$(BR)
-$(XREF stdio,StdioException) on failure to create pipes.$(BR)
+$(XREF stdio,StdioException) on failure to redirect any of the streams.$(BR)
 $(OBJECTREF Error) if $(D redirectFlags) is an invalid combination of flags.
 
 Example:
@@ -1575,31 +1600,41 @@ string[] errors;
 foreach (line; pipes.stderr.byLine) errors ~= line.idup;
 ---
 */
-ProcessPipes pipeProcess(string program,
-                         Redirect redirectFlags = Redirect.all)
-    @trusted
-{
-    return pipeProcessImpl!spawnProcess(program, redirectFlags);
-}
-
-/// ditto
 ProcessPipes pipeProcess(string[] args,
-                         Redirect redirectFlags = Redirect.all)
+                         Redirect redirectFlags = Redirect.all,
+                         const string[string] env = null,
+                         Config config = Config.none)
     @trusted //TODO: @safe
 {
-    return pipeProcessImpl!spawnProcess(args, redirectFlags);
+    return pipeProcessImpl!spawnProcess(args, redirectFlags, env, config);
 }
 
 /// ditto
-ProcessPipes pipeShell(string command, Redirect redirectFlags = Redirect.all)
+ProcessPipes pipeProcess(string program,
+                         Redirect redirectFlags = Redirect.all,
+                         const string[string] env = null,
+                         Config config = Config.none)
+    @trusted
+{
+    return pipeProcessImpl!spawnProcess(program, redirectFlags, env, config);
+}
+
+/// ditto
+ProcessPipes pipeShell(string command,
+                       Redirect redirectFlags = Redirect.all,
+                       const string[string] env = null,
+                       Config config = Config.none)
     @safe
 {
-    return pipeProcessImpl!spawnShell(command, redirectFlags);
+    return pipeProcessImpl!spawnShell(command, redirectFlags, env, config);
 }
 
 // Implementation of the pipeProcess() family of functions.
 private ProcessPipes pipeProcessImpl(alias spawnFunc, Cmd)
-                                    (Cmd command, Redirect redirectFlags)
+                                    (Cmd command,
+                                     Redirect redirectFlags,
+                                     const string[string] env = null,
+                                     Config config = Config.none)
     @trusted //TODO: @safe
 {
     File childStdin, childStdout, childStderr;
@@ -1664,7 +1699,9 @@ private ProcessPipes pipeProcessImpl(alias spawnFunc, Cmd)
         childStderr = childStdout;
     }
 
-    pipes._pid = spawnFunc(command, childStdin, childStdout, childStderr);
+    config &= ~(Config.retainStdin | Config.retainStdout | Config.retainStderr);
+    pipes._pid = spawnFunc(command, childStdin, childStdout, childStderr,
+                           env, config);
     return pipes;
 }
 
@@ -1845,15 +1882,42 @@ private:
 
 
 /**
-Executes the given program and returns its exit code and output.
+Executes the given program or shell command and returns its exit
+code and output.
 
-This function blocks until the program terminates.
-The $(D output) string includes what the program writes to its
-standard error stream as well as its standard output stream.
+$(D execute) and $(D executeShell) start a new process using
+$(LREF spawnProcess) and $(LREF spawnShell), respectively, and wait
+for the process to complete before returning.  The functions capture
+what the child process prints to both its standard output and
+standard error streams, and return this together with its exit code.
 ---
 auto dmd = execute("dmd", "myapp.d");
 if (dmd.status != 0) writeln("Compilation failed:\n", dmd.output);
+
+auto ls = executeShell("ls -l");
+if (ls.status == 0) writeln("Failed to retrieve file listing");
+else writeln(ls.output);
 ---
+
+The $(D args)/$(D program)/$(D command), $(D env) and $(D config)
+parameters are forwarded straight to the underlying spawn functions,
+and we refer to their documentation for details.
+
+Params:
+args      = An array which contains the program name as the zeroth element
+            and any command-line arguments in the following elements.
+            (See $(LREF spawnProcess) for details.)
+program   = The program name, $(I without) command-line arguments.
+            (See $(LREF spawnProcess) for details.)
+command   = A shell command which is passed verbatim to the command
+            interpreter.  (See $(LREF spawnShell) for details.)
+env       = Additional environment variables for the child process.
+            (See $(LREF spawnProcess) for details.)
+config    = Flags that control process creation. See $(LREF Config)
+            for an overview of available flags, and note that the
+            $(D retainStd...) flags have no effect in this function.
+maxOutput = The maximum number of bytes of output that should be
+            captured.
 
 Returns:
 A $(D struct) which contains the fields $(D int status) and
@@ -1870,11 +1934,66 @@ Throws:
 $(LREF ProcessException) on failure to start the process.$(BR)
 $(XREF stdio,StdioException) on failure to capture output.
 */
-auto execute(string[] args...)
+auto execute(string[] args,
+             const string[string] env = null,
+             Config config = Config.none,
+             size_t maxOutput = size_t.max)
     @trusted //TODO: @safe
 {
-    auto p = pipeProcess(args, Redirect.stdout | Redirect.stderrToStdout);
-    return processOutput(p, size_t.max);
+    return executeImpl!pipeProcess(args, env, config, maxOutput);
+}
+
+/// ditto
+auto execute(string program,
+             const string[string] env = null,
+             Config config = Config.none,
+             size_t maxOutput = size_t.max)
+    @trusted //TODO: @safe
+{
+    return executeImpl!pipeProcess(program, env, config, maxOutput);
+}
+
+/// ditto
+auto executeShell(string command,
+                  const string[string] env = null,
+                  Config config = Config.none,
+                  size_t maxOutput = size_t.max)
+    @trusted //TODO: @safe
+{
+    return executeImpl!pipeShell(command, env, config, maxOutput);
+}
+
+// Does the actual work for execute() and executeShell().
+private auto executeImpl(alias pipeFunc, Cmd)(
+    Cmd commandLine,
+    const string[string] env = null,
+    Config config = Config.none,
+    size_t maxOutput = size_t.max)
+{
+    auto p = pipeFunc(commandLine, Redirect.stdout | Redirect.stderrToStdout,
+                      env, config);
+
+    auto a = appender!(ubyte[])();
+    enum size_t defaultChunkSize = 4096;
+    immutable chunkSize = min(maxOutput, defaultChunkSize);
+
+    // Store up to maxOutput bytes in a.
+    foreach (ubyte[] chunk; p.stdout.byChunk(chunkSize))
+    {
+        immutable size_t remain = maxOutput - a.data().length;
+
+        if (chunk.length < remain) a.put(chunk);
+        else
+        {
+            a.put(chunk[0 .. remain]);
+            break;
+        }
+    }
+    // Exhaust the stream, if necessary.
+    foreach (ubyte[] chunk; p.stdout.byChunk(defaultChunkSize)) { }
+
+    struct ProcessOutput { int status; string output; }
+    return ProcessOutput(wait(p.pid), cast(string) a.data);
 }
 
 unittest
@@ -1892,45 +2011,9 @@ unittest
     auto r = execute([prog.path, "foo", "bar"]);
     assert (r.status == 123);
     assert (r.output.stripRight() == "foobar");
-    auto s = execute(prog.path, "Hello", "World");
+    auto s = execute([prog.path, "Hello", "World"]);
     assert (s.status == 123);
     assert (s.output.stripRight() == "HelloWorld");
-}
-
-
-/**
-Executes $(D _command) in the user's default shell and returns its
-exit code and output.
-
-This function blocks until the command terminates.
-The $(D output) string includes what the command writes to its
-standard error stream as well as its standard output stream.
-The path to the _command interpreter is given by $(LREF userShell).
----
-auto ls = executeShell("ls -l");
-writefln("ls exited with code %s and said: %s", ls.status, ls.output);
----
-
-Returns:
-A $(D struct) which contains the fields $(D int status) and
-$(D string output).  (This will most likely change to become a
-$(D std.typecons.Tuple!(int,"status",bool,"output")) in the future,
-but a compiler bug currently prevents this.)
-
-POSIX_specific:
-If the process is terminated by a signal, the $(D status) field of
-the return value will contain a negative number whose absolute
-value is the signal number.  (See $(LREF wait) for details.)
-
-Throws:
-$(LREF ProcessException) on failure to start the process.$(BR)
-$(XREF stdio,StdioException) on failure to capture output.
-*/
-auto executeShell(string command)
-    @trusted //TODO: @safe
-{
-    auto p = pipeShell(command, Redirect.stdout | Redirect.stderrToStdout);
-    return processOutput(p, size_t.max);
 }
 
 unittest
@@ -1945,24 +2028,6 @@ unittest
     assert (r3.status == 123);
     assert (r3.output.empty);
 }
-
-// Collects the output and exit code for execute() and executeShell().
-private auto processOutput(
-    ref ProcessPipes pp,
-    size_t maxData)
-{
-    Appender!(ubyte[]) a;
-    enum chunkSize = 4096;
-    foreach (ubyte[] chunk; pp.stdout.byChunk(chunkSize))
-    {
-        a.put(chunk);
-        if (a.data().length + chunkSize > maxData) break;
-    }
-
-    struct ProcessOutput { int status; string output; }
-    return ProcessOutput(wait(pp.pid), cast(string) a.data);
-}
-
 
 
 /// An exception that signals a problem with starting or waiting for a process.
