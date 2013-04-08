@@ -252,7 +252,7 @@ wait(spawnProcess("myapp", ["foo" : "bar"], Config.newEnv));
 ---
 
 Standard_streams:
-The optional arguments $(D stdin_), $(D stdout_) and $(D stderr_) may
+The optional arguments $(D stdin), $(D stdout) and $(D stderr) may
 be used to assign arbitrary $(XREF stdio,File) objects as the standard
 input, output and error streams, respectively, of the child process.  The
 former must be opened for reading, while the latter two must be opened for
@@ -288,14 +288,14 @@ Params:
 args    = An array which contains the program name as the zeroth element
           and any command-line arguments in the following elements.
 program = The program name, $(I without) command-line arguments.
-stdin_  = The standard input stream of the child process.
+stdin   = The standard input stream of the child process.
           This can be any $(XREF stdio,File) that is opened for reading.
           By default the child process inherits the parent's input
           stream.
-stdout_ = The standard output stream of the child process.
+stdout  = The standard output stream of the child process.
           This can be any $(XREF stdio,File) that is opened for writing.
           By default the child process inherits the parent's output stream.
-stderr_ = The standard error stream of the child process.
+stderr  = The standard error stream of the child process.
           This can be any $(XREF stdio,File) that is opened for writing.
           By default the child process inherits the parent's error stream.
 env     = Additional environment variables for the child process.
@@ -312,16 +312,16 @@ $(XREF stdio,StdioException) on failure to pass one of the streams
 $(CXREF exception,RangeError) if $(D args) is empty.
 */
 Pid spawnProcess(in char[][] args,
-                 File stdin_ = std.stdio.stdin,
-                 File stdout_ = std.stdio.stdout,
-                 File stderr_ = std.stdio.stderr,
+                 File stdin = std.stdio.stdin,
+                 File stdout = std.stdio.stdout,
+                 File stderr = std.stdio.stderr,
                  const string[string] env = null,
                  Config config = Config.none)
     @trusted // TODO: Should be @safe
 {
     version (Windows)    auto  args2 = escapeShellArguments(args);
     else version (Posix) alias args2 = args;
-    return spawnProcessImpl(args2, stdin_, stdout_, stderr_, env, config);
+    return spawnProcessImpl(args2, stdin, stdout, stderr, env, config);
 }
 
 /// ditto
@@ -340,15 +340,15 @@ Pid spawnProcess(in char[][] args,
 
 /// ditto
 Pid spawnProcess(in char[] program,
-                 File stdin_ = std.stdio.stdin,
-                 File stdout_ = std.stdio.stdout,
-                 File stderr_ = std.stdio.stderr,
+                 File stdin = std.stdio.stdin,
+                 File stdout = std.stdio.stdout,
+                 File stderr = std.stdio.stderr,
                  const string[string] env = null,
                  Config config = Config.none)
     @trusted
 {
     return spawnProcess((&program)[0 .. 1],
-                        stdin_, stdout_, stderr_, env, config);
+                        stdin, stdout, stderr, env, config);
 }
 
 /// ditto
@@ -368,9 +368,9 @@ on the form "var=value".
 */
 version (Posix)
 private Pid spawnProcessImpl(in char[][] args,
-                             File stdin_,
-                             File stdout_,
-                             File stderr_,
+                             File stdin,
+                             File stdout,
+                             File stderr,
                              const string[string] env,
                              Config config)
     @trusted // TODO: Should be @safe
@@ -400,9 +400,9 @@ private Pid spawnProcessImpl(in char[][] args,
     // Get the file descriptors of the streams.
     // These could potentially be invalid, but that is OK.  If so, later calls
     // to dup2() and close() will just silently fail without causing any harm.
-    auto stdinFD  = core.stdc.stdio.fileno(stdin_.getFP());
-    auto stdoutFD = core.stdc.stdio.fileno(stdout_.getFP());
-    auto stderrFD = core.stdc.stdio.fileno(stderr_.getFP());
+    auto stdinFD  = core.stdc.stdio.fileno(stdin.getFP());
+    auto stdoutFD = core.stdc.stdio.fileno(stdout.getFP());
+    auto stderrFD = core.stdc.stdio.fileno(stderr.getFP());
 
     auto id = fork();
     if (id < 0)
@@ -451,11 +451,11 @@ private Pid spawnProcessImpl(in char[][] args,
     {
         // Parent process:  Close streams and return.
         if (stdinFD  > STDERR_FILENO && !(config & Config.retainStdin))
-            stdin_.close();
+            stdin.close();
         if (stdoutFD > STDERR_FILENO && !(config & Config.retainStdout))
-            stdout_.close();
+            stdout.close();
         if (stderrFD > STDERR_FILENO && !(config & Config.retainStderr))
-            stderr_.close();
+            stderr.close();
         return new Pid(id);
     }
 }
@@ -471,9 +471,9 @@ envz must be a pointer to a block of UTF-16 characters on the form
 */
 version (Windows)
 private Pid spawnProcessImpl(in char[] commandLine,
-                             File stdin_,
-                             File stdout_,
-                             File stderr_,
+                             File stdin,
+                             File stdout,
+                             File stderr,
                              const string[string] env,
                              Config config)
     @trusted
@@ -516,9 +516,9 @@ private Pid spawnProcessImpl(in char[] commandLine,
         }
     }
     int stdinFD = -1, stdoutFD = -1, stderrFD = -1;
-    prepareStream(stdin_,  STD_INPUT_HANDLE,  "stdin" , stdinFD,  startinfo.hStdInput );
-    prepareStream(stdout_, STD_OUTPUT_HANDLE, "stdout", stdoutFD, startinfo.hStdOutput);
-    prepareStream(stderr_, STD_ERROR_HANDLE,  "stderr", stderrFD, startinfo.hStdError );
+    prepareStream(stdin,  STD_INPUT_HANDLE,  "stdin" , stdinFD,  startinfo.hStdInput );
+    prepareStream(stdout, STD_OUTPUT_HANDLE, "stdout", stdoutFD, startinfo.hStdOutput);
+    prepareStream(stderr, STD_ERROR_HANDLE,  "stderr", stderrFD, startinfo.hStdError );
 
     // Create process.
     PROCESS_INFORMATION pi;
@@ -531,11 +531,11 @@ private Pid spawnProcessImpl(in char[] commandLine,
 
     // figure out if we should close any of the streams
     if (stdinFD  > STDERR_FILENO && !(config & Config.retainStdin))
-        stdin_.close();
+        stdin.close();
     if (stdoutFD > STDERR_FILENO && !(config & Config.retainStdout))
-        stdout_.close();
+        stdout.close();
     if (stderrFD > STDERR_FILENO && !(config & Config.retainStderr))
-        stderr_.close();
+        stderr.close();
 
     // close the thread handle in the process info structure
     CloseHandle(pi.hThread);
@@ -842,9 +842,9 @@ $(LREF escapeShellCommand), which may be helpful in constructing a
 properly quoted and escaped shell _command line for the current platform.
 */
 Pid spawnShell(in char[] command,
-               File stdin_ = std.stdio.stdin,
-               File stdout_ = std.stdio.stdout,
-               File stderr_ = std.stdio.stderr,
+               File stdin = std.stdio.stdin,
+               File stdout = std.stdio.stdout,
+               File stderr = std.stdio.stderr,
                const string[string] env = null,
                Config config = Config.none)
     @trusted // TODO: Should be @safe
@@ -861,7 +861,7 @@ Pid spawnShell(in char[] command,
         args[1] = shellSwitch;
         args[2] = command;
     }
-    return spawnProcessImpl(args, stdin_, stdout_, stderr_, env, config);
+    return spawnProcessImpl(args, stdin, stdout, stderr, env, config);
 }
 
 /// ditto
