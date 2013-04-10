@@ -899,7 +899,7 @@ public:
     // Commenteed all _r versions for now because of ambiguities
     // arising when two Variants are used
 
-    /////ditto
+    // ///ditto
     // VariantN opSub_r(T)(T lhs)
     // {
     //     return VariantN(lhs).opArithmetic!(VariantN, "-")(this);
