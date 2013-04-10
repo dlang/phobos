@@ -2448,7 +2448,7 @@ private char[] escapePosixArgumentImpl(alias allocator)(in char[] arg)
 
 /**
 Escapes a filename to be used for shell redirection with $(LREF spawnShell),
-$(LREF pipeShell) or $(LREF shell).
+$(LREF pipeShell) or $(LREF executeShell).
 */
 string escapeShellFileName(in char[] fileName) @trusted pure nothrow
 {
