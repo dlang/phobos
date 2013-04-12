@@ -309,7 +309,6 @@ Throws:
 $(LREF ProcessException) on failure to start the process.$(BR)
 $(XREF stdio,StdioException) on failure to pass one of the streams
     to the child process (Windows only).$(BR)
-$(CXREF exception,RangeError) if $(D args) is empty.
 */
 Pid spawnProcess(in char[][] args,
                  File stdin = std.stdio.stdin,
@@ -958,7 +957,11 @@ enum Config
     $(LREF spawnProcess) ensures that all file descriptors except the
     ones that correspond to standard input/output/error are closed
     in the child process when it starts.  Use $(D inheritFDs) to prevent
-    this.  On Windows, this option has no effect.
+    this.
+
+    On Windows, this option has no effect, and any handles which have been
+    explicitly marked as inheritable will always be inherited by the child
+    process.
     */
     inheritFDs = 32,
 }
@@ -1922,7 +1925,7 @@ maxOutput = The maximum number of bytes of output that should be
 Returns:
 A $(D struct) which contains the fields $(D int status) and
 $(D string output).  (This will most likely change to become a
-$(D std.typecons.Tuple!(int,"status",bool,"output")) in the future,
+$(D std.typecons.Tuple!(int,"status",string,"output")) in the future,
 but a compiler bug currently prevents this.)
 
 POSIX_specific:
@@ -2583,12 +2586,15 @@ abstract final class environment
 static:
     /**
     Retrieves the value of the environment variable with the given $(D name).
-
-    If no such variable exists, this function throws an $(D Exception).
-    See also $(LREF environment.get), which doesn't throw on failure.
     ---
     auto path = environment["PATH"];
     ---
+
+    Throws:
+    $(OBJECTREF Exception) if the environment variable does not exist.
+
+    See_also:
+    $(LREF environment.get), which doesn't throw on failure.
     */
     string opIndex(string name) @safe
     {
@@ -2634,6 +2640,10 @@ static:
     ---
     environment["foo"] = "bar";
     ---
+
+    Throws:
+    $(OBJECTREF Exception) if the environment variable could not be added
+        (e.g. if the name is invalid).
     */
     string opIndexAssign(string value, string name) @trusted
     {
@@ -2682,6 +2692,10 @@ static:
     While Windows environment variable names are case insensitive, D's
     built-in associative arrays are not.  This function will store all
     variable names in uppercase (e.g. $(D PATH)).
+
+    Throws:
+    $(OBJECTREF Exception) if the environment variables could not
+        be retrieved (Windows only).
     */
     string[string] toAA() @trusted
     {
