@@ -1253,7 +1253,7 @@ passed, uses the default $(D rndGen).
  */
 auto uniform(T, UniformRandomNumberGenerator)
 (ref UniformRandomNumberGenerator urng)
-if (isIntegral!T || isSomeChar!T)
+if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
 {
     auto r = urng.front;
     urng.popFront();
@@ -1290,13 +1290,22 @@ unittest
 }
 
 /**
-Returns a uniformly selected member of enum $(D E).
+Returns a uniformly selected member of enum $(D E). If no random number
+generator is passed, uses the default $(D rndGen).
  */
-auto uniform(E)()
+auto uniform(E, UniformRandomNumberGenerator)
+(ref UniformRandomNumberGenerator urng)
 if (is(E == enum))
 {
     static immutable E[EnumMembers!E.length] members = [EnumMembers!E];
-    return members[std.random.uniform(0, members.length)];
+    return members[std.random.uniform(0, members.length, urng)];
+}
+
+/// Ditto
+auto uniform(E)()
+if (is(E == enum))
+{
+    return uniform!E(rndGen);
 }
 
 unittest
@@ -1304,8 +1313,10 @@ unittest
     enum Fruit { Apple = 12, Mango = 29, Pear = 72 }
     foreach (_; 0 .. 100)
     {
-        auto f = uniform!Fruit();
-        assert(f == Fruit.Apple || f == Fruit.Mango || f == Fruit.Pear);
+        foreach(f; [uniform!Fruit(), rndGen.uniform!Fruit()])
+        {
+            assert(f == Fruit.Apple || f == Fruit.Mango || f == Fruit.Pear);
+        }
     }
 }
 
