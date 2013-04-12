@@ -82,74 +82,7 @@ class StringException : Exception
         $(TR $(TD $(D > 0))  $(TD $(D s1 > s2)))
      )
   +/
-int icmp(alias pred = "a < b", S1, S2)(S1 s1, S2 s2)
-    if(isSomeString!S1 && isSomeString!S2)
-{
-    static if(is(typeof(pred) : string))
-        enum isLessThan = pred == "a < b";
-    else
-        enum isLessThan = false;
-
-    size_t i, j;
-    while(i < s1.length && j < s2.length)
-    {
-        immutable c1 = std.uni.toLower(decode(s1, i));
-        immutable c2 = std.uni.toLower(decode(s2, j));
-
-        static if(isLessThan)
-        {
-            if(c1 != c2)
-            {
-                if(c1 < c2) return -1;
-                if(c1 > c2) return 1;
-            }
-        }
-        else
-        {
-            if(binaryFun!pred(c1, c2)) return -1;
-            if(binaryFun!pred(c2, c1)) return 1;
-        }
-    }
-
-    if(i < s1.length) return 1;
-    if(j < s2.length) return -1;
-
-    return 0;
-}
-
-int icmp(alias pred = "a < b", S1, S2)(S1 s1, S2 s2)
-    if(!(isSomeString!S1 && isSomeString!S2) &&
-       isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar) &&
-       isForwardRange!S2 && is(Unqual!(ElementType!S2) == dchar))
-{
-    static if(is(typeof(pred) : string))
-        enum isLessThan = pred == "a < b";
-    else
-        enum isLessThan = false;
-
-    for(;; s1.popFront(), s2.popFront())
-    {
-        if(s1.empty) return s2.empty ? 0 : -1;
-        if(s2.empty) return 1;
-
-        immutable c1 = std.uni.toLower(s1.front);
-        immutable c2 = std.uni.toLower(s2.front);
-
-        static if(isLessThan)
-        {
-            if(c1 != c2)
-            {
-                if(c1 < c2) return -1;
-                if(c1 > c2) return 1;
-            }
-        }
-        else
-        {
-            if(binaryFun!pred(c1, c2)) return -1;
-            if(binaryFun!pred(c2, c1)) return 1;
-        }
-    }
-}
+alias icmp = std.uni.icmp;
 
 unittest
 {
@@ -877,13 +810,17 @@ unittest
     toLowerInPlace(s3);
     assert(s3 == s2, s3);
 
-    s1 = "\u0130";
-    s2 = toLower(s1);
-    s3 = s1.dup;
-    assert(s2 == "i");
-    assert(s2 !is s1);
-    toLowerInPlace(s3);
-    assert(s3 == s2, s3);
+    // 0x0130 is I with dot above and has only TAILORED mapping to i
+    // thus not included in simple case folding
+    version(none){ 
+        s1 = "\u0130";
+        s2 = toLower(s1);
+        s3 = s1.dup;
+        assert(s2 == "i");
+        assert(s2 !is s1);
+        toLowerInPlace(s3);
+        assert(s3 == s2, s3);
+    }
 
     // Test on wchar and dchar strings.
     assert(toLower("Some String"w) == "some string"w);
@@ -1032,7 +969,7 @@ unittest
 
 
 /++
-    Capitalize the first character of $(D s) and conver the rest of $(D s)
+    Capitalize the first character of $(D s) and convert the rest of $(D s)
     to lowercase.
  +/
 S capitalize(S)(S s) @trusted pure
@@ -1093,10 +1030,11 @@ unittest
         assert(cmp(s2, "Fol") == 0);
         assert(s2 !is s1);
 
+        //0x0130, 0x0131 is NOT folded in simple case folding
         s1 = to!S("\u0131 \u0130");
         s2 = capitalize(s1);
-        assert(cmp(s2, "\u0049 \u0069") == 0);
-        assert(s2 !is s1);
+        assert(cmp(s2, "\u0131 \u0130") == 0);
+        assert(s2 is s1);
 
         s1 = to!S("\u017F \u0049");
         s2 = capitalize(s1);
@@ -1104,7 +1042,6 @@ unittest
         assert(s2 !is s1);
     }
 }
-
 
 /++
     Split $(D s) into an array of lines using $(D '\r'), $(D '\n'),
