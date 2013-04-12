@@ -294,7 +294,7 @@ struct RIPEMD160
             {
                 for(size_t i = 0; i < 16; i++)
                 {
-                    x[i] = littleEndianToNative!uint(cast(ubyte[4])block[i*4..(i+1)*4]);
+                    x[i] = littleEndianToNative!uint(*cast(ubyte[4]*)&(*block)[i*4]);
                 }
             }
             else
@@ -587,8 +587,7 @@ struct RIPEMD160
             uint index, padLen;
 
             //Save number of bits
-            bits[0 .. 4] = nativeToLittleEndian((cast(uint*)&_count)[0])[];
-            bits[4 .. 8] = nativeToLittleEndian((cast(uint*)&_count)[1])[];
+            bits[0 .. 8] = nativeToLittleEndian(_count)[];
 
             //Pad out to 56 mod 64
             index = (cast(uint)_count >> 3) & (64 - 1);
