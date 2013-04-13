@@ -494,7 +494,7 @@ struct SHA1
          */
         @trusted nothrow pure ubyte[20] finish()
         {
-            ubyte[20] data;
+            ubyte[20] data = void;
             uint index, padLen;
 
             /* Save number of bits */

@@ -212,28 +212,28 @@ struct MD5_CTX
      */
     static void FF(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
     {
-        a += F (b, c, d) + x + cast(uint)(ac);
+        a += F (b, c, d) + x + ac;
         a = ROTATE_LEFT (a, s);
         a += b;
     }
 
     static void GG(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
     {
-        a += G (b, c, d) + x + cast(uint)(ac);
+        a += G (b, c, d) + x + ac;
         a = ROTATE_LEFT (a, s);
         a += b;
     }
 
     static void HH(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
     {
-        a += H (b, c, d) + x + cast(uint)(ac);
+        a += H (b, c, d) + x + ac;
         a = ROTATE_LEFT (a, s);
         a += b;
     }
 
     static void II(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
     {
-        a += I (b, c, d) + x + cast(uint)(ac);
+        a += I (b, c, d) + x + ac;
         a = ROTATE_LEFT (a, s);
         a += b;
     }
