@@ -582,7 +582,7 @@ struct RIPEMD160
          */
         @trusted nothrow pure ubyte[20] finish()
         {
-            ubyte[20] data;
+            ubyte[20] data = void;
             ubyte[8] bits = void;
             uint index, padLen;
 
