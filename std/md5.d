@@ -164,7 +164,10 @@ unittest
     string a = "Mary has ", b = "a little lamb";
     int[] c = [ 1, 2, 3, 4, 5 ];
     string d = getDigestString(a, b, c);
-    assert(d == "F36625A66B2A8D9F47270C00C8BEFD2F", d);
+    version(LittleEndian)
+        assert(d == "F36625A66B2A8D9F47270C00C8BEFD2F", d);
+    else
+        assert(d == "2656D2008FF10DAE4B0783E6E0171655", d);
 }
 
 /**
