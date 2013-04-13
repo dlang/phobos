@@ -195,28 +195,28 @@ struct MD5
          */
         static nothrow pure void FF(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
         {
-            a += F (b, c, d) + x + cast(uint)(ac);
+            a += F (b, c, d) + x + ac;
             a = rotateLeft(a, s);
             a += b;
         }
 
         static nothrow pure void GG(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
         {
-            a += G (b, c, d) + x + cast(uint)(ac);
+            a += G (b, c, d) + x + ac;
             a = rotateLeft(a, s);
             a += b;
         }
 
         static nothrow pure void HH(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
         {
-            a += H (b, c, d) + x + cast(uint)(ac);
+            a += H (b, c, d) + x + ac;
             a = rotateLeft(a, s);
             a += b;
         }
 
         static nothrow pure void II(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
         {
-            a += I (b, c, d) + x + cast(uint)(ac);
+            a += I (b, c, d) + x + ac;
             a = rotateLeft(a, s);
             a += b;
         }
@@ -435,7 +435,7 @@ struct MD5
          */
         @trusted nothrow pure ubyte[16] finish()
         {
-            ubyte[16] data;
+            ubyte[16] data = void;
             ubyte[8] bits = void;
             uint index, padLen;
 
