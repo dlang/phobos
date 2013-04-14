@@ -589,6 +589,27 @@ void put(R, E)(ref R r, E e)
     {
         r.put((&e)[0..1]);
     }
+    else static if (usingPut && isSomeString!E && is(typeof(r.put(e[0]))))
+    {
+        foreach (i; 0..e.length) r.put(e[i]);
+    }
+    else static if (usingPut && is(Unqual!E == dchar))
+    {
+        static if (is(typeof(r.put((wchar[]).init))))
+            wchar[2] buf;
+        else static if (is(typeof(r.put((char[]).init))))
+            char[4] buf;
+        static if (is(typeof(buf)))
+        {
+            import std.utf : encode;
+            foreach (c; buf[0 .. encode(buf, e)])
+            {
+                r.put((&c)[0..1]);
+            }
+        }
+        else
+            static assert(false, "Cannot put a "~E.stringof~" into a "~R.stringof);
+    }
     else static if (usingFront && is(typeof(r.front = e, r.popFront())))
     {
         r.front = e;
@@ -605,6 +626,31 @@ void put(R, E)(ref R r, E e)
     else static if (usingCall && is(typeof(r((E[]).init))))
     {
         r((&e)[0..1]);
+    }
+    else static if (usingCall && isSomeString!E && is(typeof(r(e[0]))))
+    {
+        foreach (i; 0..e.length) r(e[i]);
+    }
+    else static if (usingCall && is(typeof(r(e.front))))
+    {
+        for (; !e.empty; e.popFront()) r(e.front);
+    }
+    else static if (usingCall && is(Unqual!E == dchar))
+    {
+        static if (is(typeof(r((wchar[]).init))))
+            wchar[2] buf;
+        else static if (is(typeof(r((char[]).init))))
+            char[4] buf;
+        static if (is(typeof(buf)))
+        {
+            import std.utf : encode;
+            foreach (c; buf[0 .. encode(buf, e)])
+            {
+                r((&c)[0..1]);
+            }
+        }
+        else
+            static assert(false, "Cannot put a "~E.stringof~" into a "~R.stringof);
     }
     else
     {
@@ -690,6 +736,74 @@ unittest
     LockingTextWriter w;
     RetroResult r;
     put(w, r);
+}
+
+unittest
+{
+    struct PutC(C)
+    {
+        string result;
+        void put(const(C) c) { result ~= to!string((&c)[0..1]); }
+    }
+    struct PutS(C)
+    {
+        string result;
+        void put(const(C)[] s) { result ~= to!string(s); }
+    }
+
+    // Current put-able combinations
+    foreach (E; TypeTuple!(char, wchar, dchar))
+    {
+        E ch = 'c';
+        dchar dh = 'd';
+        const(E)[] s = "test";
+
+        //  char put-to ( char)
+        // wchar put-to (wchar)
+        // dchar put-to (dchar)
+        PutC!E putc;
+        auto sinkc = &putc.put;
+        put(putc, ch);
+        assert(putc.result == "c");
+        put(sinkc, ch);
+        assert(putc.result == "cc");
+
+        //  char[] put-to ( char[])
+        // wchar[] put-to (wchar[])
+        // dchar[] put-to (dchar[])
+        PutS!E puts;
+        auto sinks = &puts.put;
+        put(puts, s);
+        assert(puts.result == "test");
+        put(sinks, s);
+        assert(puts.result == "testtest");
+
+        //  char[] put-to (dchar)
+        // wchar[] put-to (dchar)
+        // dchar[] put-to (dchar)
+        PutC!dchar putdc;
+        auto sinkdc = &putdc.put;
+        put(putdc, s);
+        assert(putdc.result == "test");
+        put(sinkdc, s);
+        assert(putdc.result == "testtest");
+
+        //  char[] put-to ( char)
+        // wchar[] put-to (wchar)
+        // dchar[] put-to (dchar)  <--- already supported
+        put(putc, s);
+        assert(putc.result == "cctest");
+        put(sinkc, s);
+        assert(putc.result == "cctesttest");
+
+        // dchar put-to ( char[])
+        // dchar put-to (wchar[])
+        // dchar put-to (dchar[])  <--- already supported
+        put(puts, dh);
+        assert(puts.result == "testtestd");
+        put(sinks, dh);
+        assert(puts.result == "testtestdd");
+    }
 }
 
 /**
