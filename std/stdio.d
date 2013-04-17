@@ -251,6 +251,14 @@ manner, such that as soon as the last $(D File) variable bound to a
 given $(D FILE*) goes out of scope, the underlying $(D FILE*) is
 automatically closed.
 
+Bugs:
+$(D File) expects file names to be encoded in $(B CP_ACP) on $(I Windows)
+instead of UTF-8 ($(BUGZILLA 7648)) thus must not be used in $(I Windows)
+or cross-platform applications other than with an immediate ASCII string as
+a file name to prevent accidental changes to result in incorrect behavior.
+One can use $(XREF file, read)/$(XREF file, write)/$(XREF stream, File)
+instead.
+
 Example:
 ----
 // test.d
