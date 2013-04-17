@@ -2829,17 +2829,21 @@ unittest
  */
 template hasElaborateAssign(S)
 {
-    static if(!is(S == struct))
+    static if(isStaticArray!S && S.length)
     {
-        enum bool hasElaborateAssign = false;
+        enum bool hasElaborateAssign = hasElaborateAssign!(typeof(S.init[0]));
     }
-    else
+    else static if(is(S == struct))
     {
         @property auto ref lvalueOf() { static S s = void; return s; }
 
         enum hasElaborateAssign = is(typeof(S.init.opAssign(S.init))) ||
                                   is(typeof(S.init.opAssign(lvalueOf))) ||
             anySatisfy!(.hasElaborateAssign, typeof(S.tupleof));
+    }
+    else
+    {
+        enum bool hasElaborateAssign = false;
     }
 }
 
@@ -2857,6 +2861,8 @@ unittest
     static assert( hasElaborateAssign!S1);
     static assert(!hasElaborateAssign!S2);
     static assert( hasElaborateAssign!S3);
+    static assert( hasElaborateAssign!(S3[1]));
+    static assert(!hasElaborateAssign!(S3[0]));
 
     static struct S4
     {
