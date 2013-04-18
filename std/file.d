@@ -4,7 +4,7 @@
 Utilities for manipulating files and scanning directories. Functions
 in this module handle files as a unit, e.g., read or write one _file
 at a time. For opening files and manipulating them via handles refer
-to module $(D $(LINK2 std_stdio.html,std.stdio)).
+to module $(LINK2 std_stdio.html,$(D std.stdio)).
 
 Macros:
 WIKI = Phobos/StdFile
@@ -2904,7 +2904,7 @@ unittest
 Returns the path to a directory for temporary files.
 
 On Windows, this function returns the result of calling the Windows API function
-$(D $(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/aa364992.aspx, GetTempPath)).
+$(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/aa364992.aspx, $(D GetTempPath)).
 
 On POSIX platforms, it searches through the following list of directories
 and returns the first one which is found to exist:
@@ -2927,7 +2927,7 @@ environment variables and directory structures have changed in the
 meantime.
 
 The POSIX $(D tempDir) algorithm is inspired by Python's
-$(D $(LINK2 http://docs.python.org/library/tempfile.html#tempfile.tempdir, tempfile.tempdir)).
+$(LINK2 http://docs.python.org/library/tempfile.html#tempfile.tempdir, $(D tempfile.tempdir)).
 */
 string tempDir()
 {

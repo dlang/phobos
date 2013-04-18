@@ -2982,7 +2982,7 @@ unittest
     $(D to).
 
     Both $(D from) and $(D to) may contain ranges using the $(D '-') character
-    (e.g. $(D "a-d") is synonymous with $(D "abcd).) Neither accept a leading
+    (e.g. $(D "a-d") is synonymous with $(D "abcd").) Neither accept a leading
     $(D '^') as meaning the complement of the string (use the $(D 'c') modifier
     for that).
   +/

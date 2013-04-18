@@ -146,7 +146,7 @@ until a specific value is found.)
 $(LEADINGROW Comparison
 )
 $(TR $(TDNW $(LREF cmp)) $(TD $(D cmp("abc", "abcd")) is $(D
--1), $(D cmp("abc", aba")) is $(D 1), and $(D cmp("abc", "abc")) is
+-1), $(D cmp("abc", "aba")) is $(D 1), and $(D cmp("abc", "abc")) is
 $(D 0).)
 )
 $(TR $(TDNW $(LREF equal)) $(TD Compares ranges for
