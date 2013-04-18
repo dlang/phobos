@@ -13,7 +13,7 @@
     To differentiate between these cases, use $(XREF file,isDir) and
     $(XREF file,exists).
 
-    Note that on Windows, both the backslash ($(D '\')) and the slash ($(D '/'))
+    Note that on Windows, both the backslash ($(D `\`)) and the slash ($(D `/`))
     are in principle valid directory separators.  This module treats them
     both on equal footing, but in cases where a $(I new) separator is
     added, a backslash will be used.  Furthermore, the $(LREF buildNormalizedPath)
@@ -91,8 +91,8 @@ else static assert (0, "unsupported platform");
 
 /** Determines whether the given character is a directory separator.
 
-    On Windows, this includes both $(D '\') and $(D '/').
-    On POSIX, it's just $(D '/').
+    On Windows, this includes both $(D `\`) and $(D `/`).
+    On POSIX, it's just $(D `/`).
 */
 bool isDirSeparator(dchar c)  @safe pure nothrow
 {
@@ -1703,7 +1703,7 @@ unittest
     ---
 
     On Windows, an absolute path starts at the root directory of
-    a specific drive.  Hence, it must start with $(D "d:\") or $(D "d:/"),
+    a specific drive.  Hence, it must start with $(D `d:\`) or $(D `d:/`),
     where $(D d) is the drive letter.  Alternatively, it may be a
     network path, i.e. a path starting with a double (back)slash.
     ---
@@ -1834,14 +1834,14 @@ unittest
     taken to be the current working directory.  If specified,
     $(D base) must be an absolute _path, and it is always assumed
     to refer to a directory.  If $(D path) and $(D base) refer to
-    the same directory, the function returns $(D ".").
+    the same directory, the function returns $(D `.`).
 
     The following algorithm is used:
     $(OL
         $(LI If $(D path) is a relative directory, return it unaltered.)
         $(LI Find a common root between $(D path) and $(D base).
             If there is no common root, return $(D path) unaltered.)
-        $(LI Prepare a string with as many $(D "../") or $(D "..\") as
+        $(LI Prepare a string with as many $(D `../`) or $(D `..\`) as
             necessary to reach the common root from base path.)
         $(LI Append the remaining segments of $(D path) to the string
             and return.)
@@ -1975,7 +1975,7 @@ unittest
     which, if not specified, is given by
     $(LREF CaseSensitive)$(D .osDefault).
 
-    On Windows, the backslash and slash characters ($(D '\') and $(D '/'))
+    On Windows, the backslash and slash characters ($(D `\`) and $(D `/`))
     are considered equal.
 
     Examples:

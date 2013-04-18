@@ -110,7 +110,7 @@ $(VERSION 060, ddd mm, 2012, =================================================,
         $(LI $(BUGZILLA 4629): BufferedFile.printf() wants char[] as first argument)
         $(LI $(BUGZILLA 4695): std.range.zip is broken)
         $(LI $(BUGZILLA 4744): std.conv: string-&gt;enum doesn't look for longer match)
-        $(LI $(BUGZILLA 4822): Problem with std.stdio.File.writef(&quot;%c&quot;)
+        $(LI $(BUGZILLA 4822): Problem with std.stdio.File.writef(&quot;%c&quot;))
         $(LI $(BUGZILLA 5011): std.container: SList linearRemove produces wrong results)
         $(LI $(BUGZILLA 5089): feqrel does not compile for floats)
         $(LI $(BUGZILLA 5260): std.math.feqrel() returns negative number)
