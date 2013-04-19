@@ -2280,7 +2280,7 @@ if (!is(StringTypeOf!T) && !is(CharTypeOf!T) || is(T == enum))
 }
 
 /**
-   Associative arrays are formatted by using $(D ':') and $(D ', ') as
+   Associative arrays are formatted by using $(D ':') and $(D ", ") as
    separators, and enclosed by $(D '[') and $(D ']').
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)

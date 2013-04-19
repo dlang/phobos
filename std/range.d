@@ -233,8 +233,8 @@ $(BOOKTABLE ,
 
 Ranges whose elements are sorted afford better efficiency with certain
 operations. For this, the $(D $(LREF assumeSorted)) function can be used to
-construct a $(D $(LREF SortedRange)) from a pre-sorted _range. The $(D $(LINK2
-std_algorithm.html#sort, std.algorithm.sort)) function also conveniently
+construct a $(D $(LREF SortedRange)) from a pre-sorted _range. The $(LINK2
+std_algorithm.html#sort, $(D std.algorithm.sort)) function also conveniently
 returns a $(D SortedRange). $(D SortedRange) objects provide some additional
 _range operations that take advantage of the fact that the _range is sorted.
 
