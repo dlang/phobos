@@ -910,6 +910,8 @@ unittest
 
  Params:
  name = The file to get the attributes of.
+
+ Throws: $(D FileException) on error.
   +/
 uint getAttributes(in char[] name)
 {
@@ -1349,6 +1351,8 @@ void mkdir(in char[] pathname)
 
 /****************************************************
  * Make directory and all parent directories as needed.
+ *
+ * Throws: $(D FileException) on error.
  */
 
 void mkdirRecurse(in char[] pathname)
@@ -2085,6 +2089,8 @@ unittest
 /***************************************************
 Copy file $(D from) to file $(D to). File timestamps are preserved.
 If the target file exists, it is overwritten.
+
+Throws: $(D FileException) on error.
  */
 void copy(in char[] from, in char[] to)
 {
