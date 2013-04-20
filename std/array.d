@@ -2373,8 +2373,9 @@ possibility that $(D Appender) might overwrite immutable data.
         }
 
 /**
-Shrinks the managed array to the given length.  Passing in a length that's
-greater than the current array length throws an enforce exception.
+Shrinks the managed array to the given length.
+
+Throws: $(D Exception) if newlength is greater than the current array length.
 */
         void shrinkTo(size_t newlength)
         {
