@@ -114,14 +114,14 @@ SRC_STD_2a_HEAVY= std\array.d std\functional.d std\path.d std\outbuffer.d std\ut
 
 SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
     std\metastrings.d std\bitmanip.d std\typecons.d \
-    std\uni.d std\base64.d std\md5.d std\ctype.d std\ascii.d \
+    std\uni.d std\base64.d std\md5.d std\ascii.d \
     std\demangle.d std\uri.d std\mmfile.d std\getopt.d
 
 SRC_STD_3a= std\signals.d std\typetuple.d std\traits.d \
     std\encoding.d std\xml.d \
     std\random.d \
     std\exception.d \
-    std\compiler.d std\cpuid.d \
+    std\compiler.d \
     std\system.d std\concurrency.d
 
 SRC_STD_3b= std\datetime.d
@@ -136,7 +136,7 @@ SRC_STD_5_HEAVY= std\algorithm.d
 SRC_STD_6= std\variant.d \
 	std\syserror.d std\zlib.d \
 	std\stream.d std\socket.d std\socketstream.d \
-	std\perf.d std\container.d std\conv.d \
+	std\container.d std\conv.d \
 	std\zip.d std\cstream.d
 
 SRC_STD_REST= std\regex.d \
@@ -154,15 +154,15 @@ SRC=	unittest.d crc32.d index.d
 
 SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d std\datetime.d \
-	std\ctype.d std\csv.d std\file.d std\compiler.d std\system.d \
+	std\csv.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\md5.d std\base64.d \
 	std\mmfile.d \
 	std\syserror.d \
 	std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\format.d \
-	std\stdio.d std\perf.d std\uni.d std\uuid.d \
+	std\stdio.d std\uni.d std\uuid.d \
 	std\cstream.d std\demangle.d \
-	std\signals.d std\cpuid.d std\typetuple.d std\traits.d \
+	std\signals.d std\typetuple.d std\traits.d \
 	std\metastrings.d std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
 	std\functional.d std\algorithm.d std\array.d std\typecons.d \
@@ -262,7 +262,6 @@ SRC_ZLIB= \
 DOCS=	$(DOC)\object.html \
 	$(DOC)\core_atomic.html \
 	$(DOC)\core_bitop.html \
-	$(DOC)\core_cpuid.html \
 	$(DOC)\core_exception.html \
 	$(DOC)\core_memory.html \
 	$(DOC)\core_runtime.html \
@@ -288,14 +287,12 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_complex.html \
 	$(DOC)\std_container.html \
 	$(DOC)\std_conv.html \
-	$(DOC)\std_cpuid.html \
 	$(DOC)\std_digest_crc.html \
 	$(DOC)\std_digest_sha.html \
 	$(DOC)\std_digest_md.html \
 	$(DOC)\std_digest_ripemd.html \
 	$(DOC)\std_digest_digest.html \
 	$(DOC)\std_cstream.html \
-	$(DOC)\std_ctype.html \
 	$(DOC)\std_csv.html \
 	$(DOC)\std_datetime.html \
 	$(DOC)\std_demangle.html \
@@ -316,7 +313,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_outbuffer.html \
 	$(DOC)\std_parallelism.html \
 	$(DOC)\std_path.html \
-	$(DOC)\std_perf.html \
 	$(DOC)\std_process.html \
 	$(DOC)\std_random.html \
 	$(DOC)\std_range.html \
@@ -419,7 +415,6 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -cov=44 -unittest -main -run std\uni.d
 	$(DMD) -cov=91 -unittest -main -run std\base64.d
 	$(DMD) -cov=99 -unittest -main -run std\md5.d
-	$(DMD) -cov=0  -unittest -main -run std\ctype.d
 	$(DMD) -cov=100 -unittest -main -run std\ascii.d
 	$(DMD) -cov=0  -unittest -main -run std\demangle.d
 	$(DMD) -cov=57 -unittest -main -run std\uri.d
@@ -496,9 +491,6 @@ $(DOC)\core_atomic.html : $(STDDOC) $(DRUNTIME)\src\core\atomic.d
 $(DOC)\core_bitop.html : $(STDDOC) $(DRUNTIME)\src\core\bitop.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\core_bitop.html $(STDDOC) $(DRUNTIME)\src\core\bitop.d -I$(DRUNTIME)\src\
 
-$(DOC)\core_cpuid.html : $(STDDOC) $(DRUNTIME)\src\core\cpuid.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\core_cpuid.html $(STDDOC) $(DRUNTIME)\src\core\cpuid.d -I$(DRUNTIME)\src\
-
 $(DOC)\core_exception.html : $(STDDOC) $(DRUNTIME)\src\core\exception.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\core_exception.html $(STDDOC) $(DRUNTIME)\src\core\exception.d -I$(DRUNTIME)\src\
 
@@ -574,14 +566,8 @@ $(DOC)\std_conv.html : $(STDDOC) std\conv.d
 $(DOC)\std_container.html : $(STDDOC) std\container.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container.html $(STDDOC) std\container.d
 
-$(DOC)\std_cpuid.html : $(STDDOC) std\cpuid.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_cpuid.html $(STDDOC) std\cpuid.d
-
 $(DOC)\std_cstream.html : $(STDDOC) std\cstream.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_cstream.html $(STDDOC) std\cstream.d
-
-$(DOC)\std_ctype.html : $(STDDOC) std\ctype.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_ctype.html $(STDDOC) std\ctype.d
 
 $(DOC)\std_csv.html : $(STDDOC) std\csv.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_csv.html $(STDDOC) std\csv.d
@@ -639,9 +625,6 @@ $(DOC)\std_parallelism.html : $(STDDOC) std\parallelism.d
 
 $(DOC)\std_path.html : $(STDDOC) std\path.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_path.html $(STDDOC) std\path.d
-
-$(DOC)\std_perf.html : $(STDDOC) std\perf.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_perf.html $(STDDOC) std\perf.d
 
 $(DOC)\std_process.html : $(STDDOC) std\process.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_process.html $(STDDOC) std\process.d

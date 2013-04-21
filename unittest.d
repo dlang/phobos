@@ -20,9 +20,7 @@ public import std.base64;
 public import std.compiler;
 public import std.concurrency;
 public import std.conv;
-public import std.cpuid;
 public import std.cstream;
-public import std.ctype;
 public import std.datetime;
 public import std.demangle;
 public import std.file;
@@ -36,7 +34,6 @@ public import std.mmfile;
 public import std.outbuffer;
 public import std.parallelism;
 public import std.path;
-public import std.perf;
 public import std.process;
 public import std.random;
 public import std.regex;
@@ -81,7 +78,6 @@ else
     isNaN(1.0);                         // math
     std.conv.to!double("1.0");          // std.conv
     OutBuffer b = new OutBuffer();      // outbuffer
-    std.ctype.tolower('A');             // ctype
     auto r = regex("");                 // regex
     uint ranseed = std.random.unpredictableSeed;
     thisTid;
@@ -130,8 +126,6 @@ else
     foreach_reverse (k, dchar d; "hello"c) { }
 
     std.signals.linkin();
-
-    writefln(std.cpuid.toString());
 
     bool isEmail = std.net.isemail.isEmail("abc");
     auto http = std.net.curl.HTTP("dlang.org");
