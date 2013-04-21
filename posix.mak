@@ -263,7 +263,7 @@ $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 
 dll : $(LIBSO)
 
-$(LIBSO): $(OBJS)
+$(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ $(DRUNTIMESO) $(D_FILES) $(OBJS)
 
 ifeq (osx,$(OS))
