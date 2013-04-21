@@ -113,6 +113,7 @@ SRC_STD_2_HEAVY= std\range.d
 SRC_STD_2a_HEAVY= std\array.d std\functional.d std\path.d std\outbuffer.d std\utf.d
 
 SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
+    std\halffloat.d \
     std\metastrings.d std\bitmanip.d std\typecons.d \
     std\uni.d std\base64.d std\md5.d std\ctype.d std\ascii.d \
     std\demangle.d std\uri.d std\mmfile.d std\getopt.d
@@ -168,7 +169,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\functional.d std\algorithm.d std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
 	std\range.d std\stdiobase.d std\parallelism.d \
-	std\regex.d \
+	std\regex.d std\halffloat.d \
 	std\exception.d std\ascii.d
 
 SRC_STD_NET= std\net\isemail.d std\net\curl.d
@@ -306,6 +307,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_functional.html \
 	$(DOC)\std_gc.html \
 	$(DOC)\std_getopt.html \
+	$(DOC)\std_halffloat.html \
 	$(DOC)\std_json.html \
 	$(DOC)\std_math.html \
 	$(DOC)\std_mathspecial.html \
@@ -609,6 +611,9 @@ $(DOC)\std_gc.html : $(STDDOC) $(DRUNTIME)\src\core\memory.d
 
 $(DOC)\std_getopt.html : $(STDDOC) std\getopt.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_getopt.html $(STDDOC) std\getopt.d
+
+$(DOC)\std_halffloat.html : $(STDDOC) std\halffloat.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_halffloat.html $(STDDOC) std\halffloat.d
 
 $(DOC)\std_json.html : $(STDDOC) std\json.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_json.html $(STDDOC) std\json.d
