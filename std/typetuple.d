@@ -535,12 +535,18 @@ template staticMap(alias F, T...)
 {
     static if (T.length == 0)
     {
-        alias TypeTuple!() staticMap;
+        alias staticMap = TypeTuple!();
+    }
+    else static if (T.length == 1)
+    {
+        alias staticMap = TypeTuple!(F!(T[0]));
     }
     else
     {
-        alias TypeTuple!(F!(T[0]),
-                         staticMap!(F, T[1 .. $])) staticMap;
+        alias staticMap =
+            TypeTuple!(
+                staticMap!(F, T[ 0  .. $/2]),
+                staticMap!(F, T[$/2 ..  $ ]));
     }
 }
 
@@ -575,15 +581,17 @@ template allSatisfy(alias F, T...)
 {
     static if (T.length == 0)
     {
-        enum bool allSatisfy = true;
+        enum allSatisfy = true;
     }
     else static if (T.length == 1)
     {
-        alias F!(T[0]) allSatisfy;
+        enum allSatisfy = F!(T[0]);
     }
     else
     {
-        enum bool allSatisfy = F!(T[0]) && allSatisfy!(F, T[1 .. $]);
+        enum allSatisfy =
+            allSatisfy!(F, T[ 0  .. $/2]) &&
+            allSatisfy!(F, T[$/2 ..  $ ]);
     }
 }
 
@@ -610,15 +618,17 @@ template anySatisfy(alias F, T...)
 {
     static if(T.length == 0)
     {
-        enum bool anySatisfy = false;
+        enum anySatisfy = false;
     }
     else static if (T.length == 1)
     {
-        alias F!(T[0]) anySatisfy;
+        enum anySatisfy = F!(T[0]);
     }
     else
     {
-        enum bool anySatisfy = F!(T[0]) || anySatisfy!(F, T[1 .. $]);
+        enum anySatisfy =
+            anySatisfy!(F, T[ 0  .. $/2]) ||
+            anySatisfy!(F, T[$/2 ..  $ ]);
     }
 }
 
@@ -645,12 +655,24 @@ static assert(is(Filter!(isUnsigned, int, byte, ubyte,
   +/
 template Filter(alias pred, TList...)
 {
-    static if(TList.length == 0)
-        alias TypeTuple!() Filter;
-    else static if(pred!(TList[0]))
-        alias TypeTuple!(TList[0], Filter!(pred, TList[1 .. $])) Filter;
+    static if (TList.length == 0)
+    {
+        alias Filter = TypeTuple!();
+    }
+    else static if (TList.length == 1)
+    {
+        static if (pred!(TList[0]))
+            alias Filter = TypeTuple!(TList[0]);
+        else
+            alias Filter = TypeTuple!();
+    }
     else
-        alias Filter!(pred, TList[1 .. $]) Filter;
+    {
+        alias Filter =
+            TypeTuple!(
+                Filter!(pred, TList[ 0  .. $/2]),
+                Filter!(pred, TList[$/2 ..  $ ]));
+    }
 }
 
 //Verify Examples
