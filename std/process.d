@@ -309,6 +309,7 @@ Throws:
 $(LREF ProcessException) on failure to start the process.$(BR)
 $(XREF stdio,StdioException) on failure to pass one of the streams
     to the child process (Windows only).$(BR)
+$(CXREF exception,RangeError) if $(D args) is empty.
 */
 Pid spawnProcess(in char[][] args,
                  File stdin = std.stdio.stdin,
@@ -374,6 +375,7 @@ private Pid spawnProcessImpl(in char[][] args,
                              Config config)
     @trusted // TODO: Should be @safe
 {
+    if (args.empty) throw new RangeError("Command line is empty");
     const(char)[] name = args[0];
     if (any!isDirSeparator(name))
     {
@@ -477,6 +479,7 @@ private Pid spawnProcessImpl(in char[] commandLine,
                              Config config)
     @trusted
 {
+    if (commandLine.empty) throw new RangeError("Command line is empty");
     auto commandz = toUTFz!(wchar*)(commandLine);
 
     // Prepare environment.
@@ -1261,11 +1264,10 @@ Windows_specific:
 The process will be
 $(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/ms686714%28v=vs.100%29.aspx,
 forcefully and abruptly terminated).  If $(D codeOrSignal) is specified, it
-will be used as the exit code of the process.  If not, the process wil exit
-with code 1.  Do not use $(D codeOrSignal = 259), as this is a special value
-(aka. $(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/ms683189.aspx,
-STILL_ACTIVE)) used by Windows to signal that a process has in fact $(I not)
-terminated yet.
+must be a nonnegative number which will be used as the exit code of the process.
+If not, the process wil exit with code 1.  Do not use $(D codeOrSignal = 259),
+as this is a special value (aka. $(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/ms683189.aspx,STILL_ACTIVE))
+used by Windows to signal that a process has in fact $(I not) terminated yet.
 ---
 auto pid = spawnProcess("some_app");
 kill(pid, 10);
@@ -1295,10 +1297,9 @@ assert (wait(pid) == -SIGKILL); // Negative return value on POSIX!
 ---
 
 Throws:
-$(LREF ProcessException) if the operating system reports an error.
-    (Note that this does not include failure to terminate the process,
-    which is considered a "normal" outcome.)$(BR)
-$(OBJECTREF Error) if $(D codeOrSignal) is negative.
+$(LREF ProcessException) on error (e.g. if codeOrSignal is invalid).
+    Note that failure to terminate the process is considered a "normal"
+    outcome, not an error.$(BR)
 */
 void kill(Pid pid)
 {
@@ -1313,12 +1314,9 @@ void kill(Pid pid)
 /// ditto
 void kill(Pid pid, int codeOrSignal)
 {
-    version (Windows)    enum errMsg = "Invalid exit code";
-    else version (Posix) enum errMsg = "Invalid signal";
-    if (codeOrSignal < 0) throw new Error(errMsg);
-
     version (Windows)
     {
+        if (codeOrSignal < 0) throw new ProcessException("Invalid exit code");
         version (Win32)
         {
             // On Windows XP, TerminateProcess() appears to terminate the
@@ -1361,6 +1359,7 @@ unittest // tryWait() and kill()
     Thread.sleep(dur!"seconds"(1));
     auto s = tryWait(pid);
     assert (!s.terminated && s.status == 0);
+    assertThrown!ProcessException(kill(pid, -123)); // Negative code not allowed.
     version (Windows)    kill(pid, 123);
     else version (Posix) kill(pid, SIGKILL);
     do { s = tryWait(pid); } while (!s.terminated);
@@ -1587,7 +1586,6 @@ spawned process.
 Throws:
 $(LREF ProcessException) on failure to start the process.$(BR)
 $(XREF stdio,StdioException) on failure to redirect any of the streams.$(BR)
-$(OBJECTREF Error) if $(D redirectFlags) is an invalid combination of flags.
 
 Example:
 ---
@@ -1658,8 +1656,8 @@ private ProcessPipes pipeProcessImpl(alias spawnFunc, Cmd)
     if (redirectFlags & Redirect.stdout)
     {
         if ((redirectFlags & Redirect.stdoutToStderr) != 0)
-            throw new Error("Invalid combination of options: Redirect.stdout | "
-                            ~"Redirect.stdoutToStderr");
+            throw new StdioException("Cannot create pipe for stdout AND "
+                                     ~"redirect it to stderr", 0);
         auto p = pipe();
         childStdout = p.writeEnd;
         pipes._stdout = p.readEnd;
@@ -1672,8 +1670,8 @@ private ProcessPipes pipeProcessImpl(alias spawnFunc, Cmd)
     if (redirectFlags & Redirect.stderr)
     {
         if ((redirectFlags & Redirect.stderrToStdout) != 0)
-            throw new Error("Invalid combination of options: Redirect.stderr | "
-                            ~"Redirect.stderrToStdout");
+            throw new StdioException("Cannot create pipe for stderr AND "
+                                     ~"redirect it to stdout", 0);
         auto p = pipe();
         childStderr = p.writeEnd;
         pipes._stderr = p.readEnd;
@@ -1799,10 +1797,10 @@ unittest
 unittest
 {
     TestScript prog = "exit 0";
-    assertThrown!Error(pipeProcess(
+    assertThrown!StdioException(pipeProcess(
         prog.path,
         Redirect.stdout | Redirect.stdoutToStderr));
-    assertThrown!Error(pipeProcess(
+    assertThrown!StdioException(pipeProcess(
         prog.path,
         Redirect.stderr | Redirect.stderrToStdout));
     auto p = pipeProcess(prog.path, Redirect.stdin);
@@ -2207,7 +2205,7 @@ executeShell(
 ---
 
 Throws:
-$(OBJECTREF Error) if any part of the command line contains unescapable
+$(OBJECTREF Exception) if any part of the command line contains unescapable
 characters (NUL on all platforms, as well as CR and LF on Windows).
 */
 string escapeShellCommand(in char[][] args...)
@@ -2236,10 +2234,10 @@ private string escapeWindowsShellCommand(in char[] command)
         switch (c)
         {
             case '\0':
-                throw new Error("Cannot put NUL in command line");
+                throw new Exception("Cannot put NUL in command line");
             case '\r':
             case '\n':
-                throw new Error("CR/LF are not escapable");
+                throw new Exception("CR/LF are not escapable");
             case '\x01': .. case '\x09':
             case '\x0B': .. case '\x0C':
             case '\x0E': .. case '\x1F':
