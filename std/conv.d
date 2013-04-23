@@ -3760,7 +3760,7 @@ T* emplace(T, Args...)(T* chunk, auto ref Args args)
 {
     static if (Args.length == 1 && is(Args[0] : T) &&
         is(typeof({T t = args[0];})) && //Check for legal postblit
-        is(Unqual!(Args[0]) == T)       //Check for alias this (and @@@8847@@@)
+        is(typeof(emplacePostblitter(*chunk, args[0])))
         )
     {
         emplacePostblitter(*chunk, args[0]);
@@ -3777,6 +3777,16 @@ T* emplace(T, Args...)(T* chunk, auto ref Args args)
         //Can be built calling opCall
         emplaceOpCaller(chunk, args); //emplaceOpCaller is deprecated
     }
+    else static if (Args.length == 1 && is(Args[0] : T) &&
+        is(typeof({T t = args[0];})) && //Check for legal postblit
+        is(typeof(emplacePostblitter(*chunk, cast(T)args[0])))
+        )
+    {
+        //Finally: alias this
+        //Coerce to type T. May or may not create a temporary.
+        //static assert(0, T.stringof ~ " " ~ Args[0].stringof);
+        emplace(chunk, cast(T)args[0]);
+    }
     else static if (is(typeof(T(args))))
     {
         // Struct without constructor that has one matching field for
@@ -3785,20 +3795,9 @@ T* emplace(T, Args...)(T* chunk, auto ref Args args)
         foreach (i, ref field; chunk.tupleof[0 .. Args.length])
             emplacePostblitter(field, args[i]);
     }
-    else static if (Args.length == 1 && is(Args[0] : T) &&
-        is(typeof({T t = args[0];})) )
-    {
-        //Finally: alias this (and bug @@@8847@@@)
-        //Coerce to type T. May or may not create a temporary.
-        emplace(chunk, cast(T)args[0]);
-    }
     else
     {
-        //We can't emplace. Try to diagnose a disabled postblit.
-        static assert(!(Args.length == 1 && is(Args[0] : T)),
-            "struct " ~ T.stringof ~ " is not emplaceable because its copy is annotated with @disable");
-
-        //Some other error
+        //We can't emplace.
         static assert(false,
             "Don't know how to emplace a " ~ T.stringof ~ " with " ~ Args[].stringof);
     }
@@ -3821,7 +3820,7 @@ private void emplaceInitializer(T)(T* chunk)
 }
 private void emplacePostblitter(T, Arg)(ref T chunk, auto ref Arg arg)
 {
-    static assert(is(Arg : T), "emplace internal error");
+    static assert(is(Arg : T), "emplace internal error: " ~ T.stringof ~ " " ~ Arg.stringof);
 
     static assert(is(typeof({T t = arg;})),
         "struct " ~ T.stringof ~ " is not emplaceable because its copy is annotated with @disable");
@@ -3928,22 +3927,22 @@ unittest
 //postblit precedence
 unittest
 {
-    ////Works, but breaks in "-w -O" because of @@@9332@@@.
-    ////Uncomment test when 9332 is fixed.
-    //static struct S
-    //{
-    //    int i;
-    //
-    //    this(S other){assert(false);}
-    //    this(int i){this.i = i;}
-    //    this(this){}
-    //}
-    //S a = void;
-    //assert(is(typeof({S b = a;})));    //Postblit
-    //assert(is(typeof({S b = S(a);}))); //Constructor
-    //auto b = S(5);
-    //emplace(&a, b);
-    //assert(a.i == 5);
+    //Works, but breaks in "-w -O" because of @@@9332@@@.
+    //Uncomment test when 9332 is fixed.
+    static struct S
+    {
+        int i;
+    
+        this(S other){assert(false);}
+        this(int i){this.i = i;}
+        this(this){}
+    }
+    S a = void;
+    assert(is(typeof({S b = a;})));    //Postblit
+    assert(is(typeof({S b = S(a);}))); //Constructor
+    auto b = S(5);
+    emplace(&a, b);
+    assert(a.i == 5);
 
     static struct S2
     {
@@ -4024,12 +4023,12 @@ unittest
     static assert( __traits(compiles, emplace(&ss2)));
     static assert(!__traits(compiles, emplace(&ss2, SS2.init)));
 
-    // @@@9346@@@:
-    // SS1 sss1 = s1;      //This doesn't compile...
-    // SS1 sss1 = SS1(s1); //This actually compiles, but it is a bug.
-    // emplace will correctly turn this down (with a correct assert).
-    static assert(!__traits(compiles, emplace(&ss1, s1)));
-    static assert(!__traits(compiles, emplace(&ss2, s2)));
+    
+    // SS1 sss1 = s1;      //This doesn't compile
+    // SS1 sss1 = SS1(s1); //This doesn't compile
+    // So emplace shouldn't compile either
+    static assert(!__traits(compiles, emplace(&sss1, s1)));
+    static assert(!__traits(compiles, emplace(&sss2, s2)));
 }
 
 //Imutability
@@ -4144,14 +4143,18 @@ version(unittest)
     struct __std_conv_S
     {
         int i;
-        this(__std_conv_SS ss){i = ss.j;}
-        static opCall(__std_conv_SS ss){assert(0);}
+        this(__std_conv_SS ss)         {assert(0);}
+        static opCall(__std_conv_SS ss)
+        {
+            __std_conv_S s; s.i = ss.j;
+            return s;
+        }
     }
     struct __std_conv_SS
     {
         int j;
         __std_conv_S s;
-        ref __std_conv_S foo() @property {assert(0);}
+        ref __std_conv_S foo() @property {s.i = j; return s;}
         alias foo this;
     }
     static assert(is(__std_conv_SS : __std_conv_S));
@@ -4160,8 +4163,8 @@ version(unittest)
         __std_conv_S s = void;
         __std_conv_SS ss = __std_conv_SS(1);
 
-        auto sTest1 = ss; //this calls "S.this(SS)" (and not "SS alias this")
-        emplace(&s, ss);  //Ergo we want the same behavior
+        __std_conv_S sTest1 = ss; //this calls "SS alias this" (and not "S.this(SS)")
+        emplace(&s, ss); //"alias this" should take precedence in emplace over "opCall"
         assert(s.i == 1);
     }
 }
@@ -4221,7 +4224,7 @@ unittest
         return t;
     }
     enum a = bar!int;
-    //enum b = bar!S1; //@@@9364@@@
+    //enum b = bar!S1; //@@@9364@@@ Error: CTFE internal error painting S1*
     enum c = bar!S2;
 }
 
