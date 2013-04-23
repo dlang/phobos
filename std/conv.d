@@ -3604,6 +3604,8 @@ as $(D chunk)).
  */
 T* emplace(T)(T* chunk)
 {
+    static assert(is(T* : void*), "Cannot emplace type " ~ T.stringof ~ " because it is qualified.");
+
     static if (is(T == class))
     {
         *chunk = null;
@@ -3616,7 +3618,7 @@ T* emplace(T)(T* chunk)
     else
     {
         static assert(!is(T == struct) || is(typeof({static T i;})),
-            text("Cannot emplace because ", T.stringof, ".this() is annotated with @disable.")); //OR @@@8902@@@
+            text("Cannot emplace because ", T.stringof, ".this() is annotated with @disable."));
         static T i;
 
         static if (isAssignable!T && !hasElaborateAssign!T)
@@ -3758,12 +3760,21 @@ unittest
 T* emplace(T, Args...)(T* chunk, auto ref Args args)
     if (is(T == struct))
 {
+    static assert(is(T* : void*), "Cannot emplace type " ~ T.stringof ~ " because it is qualified.");
+
     static if (Args.length == 1 && is(Args[0] : T) &&
-        is(typeof({T t = args[0];})) && //Check for legal postblit
-        is(typeof(emplacePostblitter(*chunk, args[0])))
+        is (typeof({T t = args[0];})) //Check for legal postblit
         )
     {
-        emplacePostblitter(*chunk, args[0]);
+        static if (is(T == Unqual!(Args[0])))
+            //Types match exactly: we postblit
+            emplacePostblitter(*chunk, args[0]);
+        else
+            //Types don't actually match, this means args[0] is convertible
+            //to T via an alias this.
+            //We Coerce to type T via an explicit cast.
+            //May or may not create a temporary.
+            emplacePostblitter(*chunk, cast(T)args[0]);
     }
     else static if (is(typeof(chunk.__ctor(args))))
     {
@@ -3777,16 +3788,6 @@ T* emplace(T, Args...)(T* chunk, auto ref Args args)
         //Can be built calling opCall
         emplaceOpCaller(chunk, args); //emplaceOpCaller is deprecated
     }
-    else static if (Args.length == 1 && is(Args[0] : T) &&
-        is(typeof({T t = args[0];})) && //Check for legal postblit
-        is(typeof(emplacePostblitter(*chunk, cast(T)args[0])))
-        )
-    {
-        //Finally: alias this
-        //Coerce to type T. May or may not create a temporary.
-        //static assert(0, T.stringof ~ " " ~ Args[0].stringof);
-        emplace(chunk, cast(T)args[0]);
-    }
     else static if (is(typeof(T(args))))
     {
         // Struct without constructor that has one matching field for
@@ -3797,6 +3798,10 @@ T* emplace(T, Args...)(T* chunk, auto ref Args args)
     }
     else
     {
+        //We can't emplace. Try to diagnose a disabled postblit. 
+        static assert(!(Args.length == 1 && is(Args[0] : T)), 
+            "struct " ~ T.stringof ~ " is not emplaceable because its copy is annotated with @disable");
+
         //We can't emplace.
         static assert(false,
             "Don't know how to emplace a " ~ T.stringof ~ " with " ~ Args[].stringof);
