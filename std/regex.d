@@ -2979,24 +2979,23 @@ struct Input(Char)
         alias size_t DataIndex;
         String _origin;
         size_t _index;
-        this(Input input)
+        this(Input input, size_t index)
         {
             _origin = input._origin;
-            _index = input._index;
+            _index = index;
         }
         @trusted bool nextChar(ref dchar res,ref size_t pos)
         {
             if(_index == 0)
                 return false;
             _index -= std.utf.strideBack(_origin, _index);
-            if(_index == 0)
-                return false;
+
             pos = _index;
-            res = _origin[0.._index].back;
+            res = _origin.back;
             return true;
         }
         @property atEnd(){ return _index == 0 || _index == std.utf.strideBack(_origin, _index); }
-        @property auto loopBack(){   return Input(_origin, _index); }
+        auto loopBack(size_t index = _index){   return Input(_origin, index); }
 
         //support for backtracker engine, might not be present
         void reset(size_t index){   _index = index+std.utf.stride(_origin, index);  }
@@ -3005,7 +3004,7 @@ struct Input(Char)
         //index of at End position
         @property size_t lastIndex(){   return 0; }
     }
-    @property auto loopBack(){   return BackLooper(this); }
+    auto loopBack(size_t index = _index){   return BackLooper(this, index); }
 }
 
 // Test stream against simple UTF-string stream abstraction (w/o normalization and such)
@@ -3162,7 +3161,7 @@ struct StreamTester(Char)
             }
             return backlooper.atEnd;
         }
-        @property auto loopBack(){   return Input(_origin, _index); }
+        auto loopBack(size_t index = _index){   return Input(_origin, index); }
 
         //support for backtracker engine, might not be present
         void reset(size_t index){   _index = index+std.utf.stride(_origin, index);  }
@@ -3171,7 +3170,7 @@ struct StreamTester(Char)
         //index of at End position
         @property size_t lastIndex(){   return 0; }
     }
-    @property auto loopBack(){   return BackLooper(this); }
+    auto loopBack(size_t index = _index){   return BackLooper(this, index); }
 }
 
 //both helperd below are internal, on its own are quite "explosive"
@@ -5136,13 +5135,13 @@ enum OneShot { Fwd, Bwd };
                     t.pc += IRL!(IR.Wordboundary);
                     break;
                 }
-                else if(atEnd && s.loopBack.nextChar(back, bi)
+                else if(atEnd && s.loopBack(index).nextChar(back, bi)
                         && wordTrie[back])
                 {
                     t.pc += IRL!(IR.Wordboundary);
                     break;
                 }
-                else if(s.loopBack.nextChar(back, index))
+                else if(s.loopBack(index).nextChar(back, index))
                 {
                     bool af = wordTrie[front];
                     bool ab = wordTrie[back];
@@ -5169,7 +5168,7 @@ enum OneShot { Fwd, Bwd };
                         return;
                     break;
                 }
-                else if(atEnd && s.loopBack.nextChar(back, bi)
+                else if(atEnd && s.loopBack(index).nextChar(back, bi)
                         && wordTrie[back])
                 {
                     recycle(t);
@@ -5178,7 +5177,7 @@ enum OneShot { Fwd, Bwd };
                         return;
                     break;
                 }
-                else if(s.loopBack.nextChar(back, index))
+                else if(s.loopBack(index).nextChar(back, index))
                 {
                     bool af = wordTrie[front];
                     bool ab = wordTrie[back]  != 0;
@@ -5198,7 +5197,7 @@ enum OneShot { Fwd, Bwd };
                 DataIndex bi;
                 if(atStart
                     ||( (re.flags & RegexOption.multiline)
-                    && s.loopBack.nextChar(back,bi)
+                    && s.loopBack(index).nextChar(back,bi)
                     && startOfLine(back, front == '\n')))
                 {
                     t.pc += IRL!(IR.Bol);
@@ -5217,7 +5216,7 @@ enum OneShot { Fwd, Bwd };
                 DataIndex bi;
                 //no matching inside \r\n
                 if(atEnd || ((re.flags & RegexOption.multiline)
-                    && endOfLine(front, s.loopBack.nextChar(back, bi)
+                    && endOfLine(front, s.loopBack(index).nextChar(back, bi)
                         && back == '\r')))
                 {
                     t.pc += IRL!(IR.Eol);
@@ -5419,8 +5418,8 @@ enum OneShot { Fwd, Bwd };
             case IR.LookbehindStart:
             case IR.NeglookbehindStart:
                 auto matcher =
-                    ThompsonMatcher!(Char, typeof(s.loopBack))
-                    (this, re.ir[t.pc..t.pc+re.ir[t.pc].data+IRL!(IR.LookbehindStart)], s.loopBack);
+                    ThompsonMatcher!(Char, typeof(s.loopBack(index)))
+                    (this, re.ir[t.pc..t.pc+re.ir[t.pc].data+IRL!(IR.LookbehindStart)], s.loopBack(index));
                 matcher.re.ngroup = re.ir[t.pc+2].raw - re.ir[t.pc+1].raw;
                 matcher.backrefed = backrefed.empty ? t.matches : backrefed;
                 //backMatch
@@ -5676,13 +5675,13 @@ enum OneShot { Fwd, Bwd };
                     t.pc--;
                     break;
                 }
-                else if(atEnd && s.loopBack.nextChar(back, bi)
+                else if(atEnd && s.loopBack(index).nextChar(back, bi)
                         && wordTrie[back])
                 {
                     t.pc--;
                     break;
                 }
-                else if(s.loopBack.nextChar(back, index))
+                else if(s.loopBack(index).nextChar(back, index))
                 {
                     bool af = wordTrie[front];
                     bool ab = wordTrie[back];
@@ -5705,14 +5704,14 @@ enum OneShot { Fwd, Bwd };
                     t = worklist.fetch();
                     break;
                 }
-                else if(atEnd && s.loopBack.nextChar(back, bi)
+                else if(atEnd && s.loopBack(index).nextChar(back, bi)
                         && wordTrie[back])
                 {
                     recycle(t);
                     t = worklist.fetch();
                     break;
                 }
-                else if(s.loopBack.nextChar(back, index))
+                else if(s.loopBack(index).nextChar(back, index))
                 {
                     bool af = wordTrie[front];
                     bool ab = wordTrie[back];
@@ -5730,7 +5729,7 @@ enum OneShot { Fwd, Bwd };
                 DataIndex bi;
                 if(atStart
                     ||((re.flags & RegexOption.multiline)
-                    && s.loopBack.nextChar(back,bi)
+                    && s.loopBack(index).nextChar(back,bi)
                     && startOfLine(back, front == '\n')))
                 {
                     t.pc--;
@@ -5747,7 +5746,7 @@ enum OneShot { Fwd, Bwd };
                 DataIndex bi;
                 //no matching inside \r\n
                 if((re.flags & RegexOption.multiline)
-                    && endOfLine(front, s.loopBack.nextChar(back, bi)
+                    && endOfLine(front, s.loopBack(index).nextChar(back, bi)
                         && back == '\r'))
                 {
                     t.pc--;
@@ -5952,10 +5951,10 @@ enum OneShot { Fwd, Bwd };
                 uint len = re.ir[t.pc].data;
                 t.pc -= len + IRL!(IR.LookaheadStart);
                 bool positive = re.ir[t.pc].code == IR.LookaheadStart;
-                auto matcher = ThompsonMatcher!(Char, typeof(s.loopBack))
+                auto matcher = ThompsonMatcher!(Char, typeof(s.loopBack(index)))
                     (this
                     , re.ir[t.pc .. t.pc+len+IRL!(IR.LookbehindStart)+IRL!(IR.LookbehindEnd)]
-                    , s.loopBack);
+                    , s.loopBack(index));
                 matcher.re.ngroup = re.ir[t.pc+2].raw - re.ir[t.pc+1].raw;
                 matcher.backrefed = backrefed.empty ? t.matches : backrefed;
                 matcher.next(); //fetch a char, since direction was reversed
