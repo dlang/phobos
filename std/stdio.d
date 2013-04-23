@@ -291,12 +291,12 @@ struct File
     {
         FILE * handle = null; // Is null iff this Impl is closed by another File
         uint refs = uint.max / 2;
-        bool isPipe;
+        bool isPipe; // true iff the stream has been created by popen()
     }
     private Impl* _p;
     private string _name;
 
-    private this(FILE* handle, string name, uint refs = 1, bool isPipe = false)
+    package this(FILE* handle, string name, uint refs = 1, bool isPipe = false)
     {
         assert(!_p);
         _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
@@ -2385,7 +2385,10 @@ Initialize with a message and an error code. */
             auto s = std.c.string.strerror(errno);
         }
         auto sysmsg = to!string(s);
-        super(message ? message ~ "(" ~ sysmsg ~ ")" : sysmsg);
+        // If e is 0, we don't use the system error message.  (The message
+        // is "Success", which is rather pointless for an exception.)
+        super(e == 0 ? message
+                     : (message ? message ~ " (" ~ sysmsg ~ ")" : sysmsg));
     }
 
 /** Convenience functions that throw an $(D StdioException). */
