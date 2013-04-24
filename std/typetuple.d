@@ -461,10 +461,17 @@ unittest
  */
 template Reverse(TList...)
 {
-    static if (TList.length == 0)
-    alias TList Reverse;
+    static if (TList.length <= 1)
+    {
+        alias Reverse = TList;
+    }
     else
-    alias TypeTuple!(Reverse!(TList[1 .. $]), TList[0]) Reverse;
+    {
+        alias Reverse =
+            TypeTuple!(
+                Reverse!(TList[$/2 ..  $ ]),
+                Reverse!(TList[ 0  .. $/2]));
+    }
 }
 
 ///
