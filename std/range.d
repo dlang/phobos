@@ -7386,7 +7386,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
         }
 
     /// Ditto
-    @property size_t length()          //const
+    @property auto length()          //const
     {
         return _input.length;
     }
