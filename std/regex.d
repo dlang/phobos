@@ -2996,7 +2996,7 @@ struct Input(Char)
             return true;
         }
         @property atEnd(){ return _index == 0 || _index == std.utf.strideBack(_origin, _index); }
-        auto loopBack(size_t index = _index){   return Input(_origin, index); }
+        auto loopBack(size_t index){   return Input(_origin, index); }
 
         //support for backtracker engine, might not be present
         //void reset(size_t index){   _index = index ? index-std.utf.strideBack(_origin, index) : 0;  }
@@ -3006,7 +3006,7 @@ struct Input(Char)
         //index of at End position
         @property size_t lastIndex(){   return 0; }
     }
-    auto loopBack(size_t index = _index){   return BackLooper(this, index); }
+    auto loopBack(size_t index){   return BackLooper(this, index); }
 }
 
 // Test stream against simple UTF-string stream abstraction (w/o normalization and such)
@@ -4097,13 +4097,13 @@ template BacktrackingMatcher(bool CTregex)
                     case IR.GroupStart:
                         uint n = re.ir[pc].data;
                         matches[n].begin = index;
-                        debug(fred_matching)  writefln("IR group #%u starts at %u", n, index + 1);
+                        debug(fred_matching)  writefln("IR group #%u starts at %u", n, index);
                         pc --;
                         break;
                     case IR.GroupEnd:
                         uint n = re.ir[pc].data;
                         matches[n].end = index;
-                        debug(fred_matching) writefln("IR group #%u ends at %u", n, index + 1);
+                        debug(fred_matching) writefln("IR group #%u ends at %u", n, index);
                         pc --;
                         break;
                     case IR.LookaheadStart:
