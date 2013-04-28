@@ -2823,8 +2823,12 @@ unittest
    defining $(D opAssign(typeof(this))) or $(D opAssign(ref typeof(this)))
    for a $(D struct). (Non-struct types never have elaborate assignments.)
 
+   Note: There is no correlation between $(D hasElaborateAssign) and
+   $(D isAssignable). Having elaborate assignment does not imply
+   actual assignability.
+
    Note: Structs with (possibly nested) postblit operator(s) will have a
-   hidden yet elaborate compiler generated assignement operator (unless
+   hidden yet elaborate compiler generated assignment operator (unless
    explicitly disabled).
  */
 template hasElaborateAssign(S)
@@ -2851,45 +2855,98 @@ unittest
 {
     static assert(!hasElaborateAssign!int);
 
-    static struct S  { void opAssign(S) {} }
-    static assert( hasElaborateAssign!S);
-    static assert(!hasElaborateAssign!(const(S)));
-
+    static struct S  { void opAssign(S)      {} }
     static struct S1 { void opAssign(ref S1) {} }
-    static struct S2 { void opAssign(int) {} }
+    static struct S2 { void opAssign(int)    {} }
     static struct S3 { S s; }
+
+    static assert( hasElaborateAssign!S );
     static assert( hasElaborateAssign!S1);
     static assert(!hasElaborateAssign!S2);
     static assert( hasElaborateAssign!S3);
     static assert( hasElaborateAssign!(S3[1]));
     static assert(!hasElaborateAssign!(S3[0]));
 
-    static struct S4
-    {
-        void opAssign(U)(U u) {}
-        @disable void opAssign(U)(ref U u);
-    }
-    static assert( hasElaborateAssign!S4);
+    static assert(!hasElaborateAssign!(const(S)));
+
+    static struct SS  { S  s; }
+    static struct SS1 { S1 s; }
+    static struct SS2 { S2 s; }
+    static struct SS3 { S3 s; }
+    static assert( hasElaborateAssign!SS1);
+    static assert(!hasElaborateAssign!SS2);
+    static assert( hasElaborateAssign!SS3);
 
     static struct S5 { @disable this(); this(int n){ s = S(); } S s; }
     static assert( hasElaborateAssign!S5);
 
-    static struct S6 { this(this) {} }
-    static struct S7 { this(this) {} @disable void opAssign(S7); }
-    static struct S8 { this(this) {} @disable void opAssign(S8); void opAssign(int) {} }
-    static struct S9 { this(this) {}                             void opAssign(int) {} }
-    static assert( hasElaborateAssign!S6);
-    static assert(!hasElaborateAssign!S7);
-    static assert(!hasElaborateAssign!S8);
-    static assert( hasElaborateAssign!S9);
-    static struct SS6 { S6 s; }
-    static struct SS7 { S7 s; }
-    static struct SS8 { S8 s; }
-    static struct SS9 { S9 s; }
-    static assert( hasElaborateAssign!SS6);
-    static assert( hasElaborateAssign!SS7);
-    static assert( hasElaborateAssign!SS8);
-    static assert( hasElaborateAssign!SS9);
+    //Testing postblit and disabled opAssign.
+    static struct S6  {               }
+    static struct S7  {               @disable void opAssign(S7);  }
+    static struct S8  {               @disable void opAssign(S8);  void opAssign(int) {} }
+    static struct S9  {                                            void opAssign(int) {} }
+    static struct S6P { this(this) {} }
+    static struct S7P { this(this) {} @disable void opAssign(S7P); }
+    static struct S8P { this(this) {} @disable void opAssign(S8P); void opAssign(int) {} }
+    static struct S9P { this(this) {}                              void opAssign(int) {} }
+    //Non postblit structs
+    static assert(!hasElaborateAssign!S6);  static assert( isAssignable!S6 );
+    static assert(!hasElaborateAssign!S7);  static assert(!isAssignable!S7 );
+    static assert(!hasElaborateAssign!S8);  static assert(!isAssignable!S8 );
+    static assert(!hasElaborateAssign!S9);  static assert( isAssignable!S9 );
+    //postbllit structs
+    static assert( hasElaborateAssign!S6P); static assert( isAssignable!S6P);
+    static assert(!hasElaborateAssign!S7P); static assert(!isAssignable!S7P);
+    static assert(!hasElaborateAssign!S8P); static assert(!isAssignable!S8P);
+    static assert( hasElaborateAssign!S9P); static assert( isAssignable!S9P);
+
+    //Testing same thing but with nested
+    static struct SS6  { S6  s; }
+    static struct SS7  { S7  s; }
+    static struct SS8  { S8  s; }
+    static struct SS9  { S9  s; }
+    static struct SS6P { S6P s; }
+    static struct SS7P { S7P s; }
+    static struct SS8P { S8P s; }
+    static struct SS9P { S9P s; }
+    //Notice that the SS structs have exactly the same sematics as the S structs.
+    static assert(!hasElaborateAssign!SS6);  static assert( isAssignable!SS6 );
+    static assert(!hasElaborateAssign!SS7);  static assert(!isAssignable!SS7 );
+    static assert(!hasElaborateAssign!SS8);  static assert(!isAssignable!SS8 );
+    static assert(!hasElaborateAssign!SS9);  static assert( isAssignable!SS9 );
+    //The SSP structs, however (7 and 8), have become assignable: This is because
+    //it has and ElaborateCopyConstructor, so it implements opAssign in terms of postblit
+    static assert( hasElaborateAssign!SS6P); static assert( isAssignable!SS6P);
+    static assert( hasElaborateAssign!SS7P); static assert( isAssignable!SS7P);
+    static assert( hasElaborateAssign!SS8P); static assert( isAssignable!SS8P);
+    static assert( hasElaborateAssign!SS9P); static assert( isAssignable!SS9P);
+}
+
+unittest //Test isAssignable/hasElaborateAssign oddity
+{
+    //S is an odd struct that allows only Rvalue assignement. This messes
+    //up a bit with the definitions of isAssignable and hasElaborateAssign.
+    static struct S
+    {
+        void opAssign(U)(U u) {}
+        @disable void opAssign(U)(ref U u);
+    }
+    S sa, sb;
+    static assert(!is(typeof( sa = sb  ))); //Lvalue assignement fails
+    static assert( is(typeof( sa = S() ))); //But Rvalue assignement succeeds
+    static assert( hasElaborateAssign!S);   //S has an elaborate assign.
+    static assert(!isAssignable!S);         //But it isn't actually assignable...
+
+    //SS just holds an S. What does that mean for SS assignability?
+    static struct SS { S s; }
+    SS ssa, ssb;
+    static assert(hasMember!(SS, "opAssign")); //SS has an opAssign
+    static assert(!is(typeof( ssa = ssb  )));  //Lvalue assignement fails
+    static assert(!is(typeof( ssa = SS() )));  //And so does Rvalue assignement
+    static assert( hasElaborateAssign!S);   //has an elaborate assign*
+    static assert(!isAssignable!S);         //But it isn't assignable...
+    //Note (*): This is the only case where the code "anySatisfy!(.hasElaborateAssign, typeof(S.tupleof))"
+    //actually does anything.
 }
 
 /**
@@ -3764,9 +3821,13 @@ type $(D Lhs).
 
 If you omit $(D Rhs), $(D isAssignable) will check identity assignable of $(D Lhs).
 
+Note: $(D isAssignable) will return true iff the type $(D Lhs) is assignable from
+an $(I Lvalue) of type $(D Rhs). $(D isAssignable) does not check nor imply
+Rvalue assignability.
+
 Examples:
 ---
-static assert(isAssignable!(long, int));
+static assert( isAssignable!(long, int));
 static assert(!isAssignable!(int, long));
 static assert( isAssignable!(const(char)[], string));
 static assert(!isAssignable!(string, char[]));
