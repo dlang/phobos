@@ -2774,8 +2774,9 @@ unittest
 /**
  True if $(D S) or any type embedded directly in the representation of $(D S)
  defines an elaborate copy constructor. Elaborate copy constructors are
- introduced by defining $(D this(this)) for a $(D struct). (Non-struct types
- never have elaborate copy constructors.)
+ introduced by defining $(D this(this)) for a $(D struct).
+
+ Classes and unions never have elaborate copy constructors.
  */
 template hasElaborateCopyConstructor(S)
 {
@@ -2821,7 +2822,10 @@ unittest
    True if $(D S) or any type directly embedded in the representation of $(D S)
    defines an elaborate assignment. Elaborate assignments are introduced by
    defining $(D opAssign(typeof(this))) or $(D opAssign(ref typeof(this)))
-   for a $(D struct). (Non-struct types never have elaborate assignments.)
+   for a $(D struct) or when there is a compiler-generated $(D opAssign)
+   (in case $(D S) has an elaborate copy constructor or destructor).
+
+   Classes and unions never have elaborate assignments.
 
    Note: Structs with (possibly nested) postblit operator(s) will have a
    hidden yet elaborate compiler generated assignement operator (unless
@@ -2878,10 +2882,12 @@ unittest
     static struct S7 { this(this) {} @disable void opAssign(S7); }
     static struct S8 { this(this) {} @disable void opAssign(S8); void opAssign(int) {} }
     static struct S9 { this(this) {}                             void opAssign(int) {} }
+    static struct S10 { ~this() { } }
     static assert( hasElaborateAssign!S6);
     static assert(!hasElaborateAssign!S7);
     static assert(!hasElaborateAssign!S8);
     static assert( hasElaborateAssign!S9);
+    static assert( hasElaborateAssign!S10);
     static struct SS6 { S6 s; }
     static struct SS7 { S7 s; }
     static struct SS8 { S8 s; }
@@ -2896,8 +2902,10 @@ unittest
    True if $(D S) or any type directly embedded in the representation
    of $(D S) defines an elaborate destructor. Elaborate destructors
    are introduced by defining $(D ~this()) for a $(D
-   struct). (Non-struct types never have elaborate destructors, even
-   though classes may define $(D ~this()).)
+   struct).
+
+   Classes and unions never have elaborate destructors, even
+   though classes may define $(D ~this()).
  */
 template hasElaborateDestructor(S)
 {
