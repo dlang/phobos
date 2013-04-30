@@ -22,6 +22,8 @@
 # OS can be linux, win32, win32remote, win32wine, osx, or freebsd. If left
 # blank, the system will be determined by using uname
 
+SONAME:=libphobos2.so.0.$(shell awk -F. '{ print $$NF + 0 }' ../dmd/VERSION)
+
 QUIET:=@
 
 OS:=
@@ -264,7 +266,7 @@ $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 dll : $(LIBSO)
 
 $(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
-	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ $(DRUNTIMESO) $(D_FILES) $(OBJS)
+	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=${SONAME} $(DRUNTIMESO) $(D_FILES) $(OBJS)
 
 ifeq (osx,$(OS))
 # Build fat library that combines the 32 bit and the 64 bit libraries
