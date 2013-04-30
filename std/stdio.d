@@ -291,18 +291,18 @@ struct File
     {
         FILE * handle = null; // Is null iff this Impl is closed by another File
         uint refs = uint.max / 2;
-        bool isPipe;
+        bool isPopened; // true iff the stream has been created by popen()
     }
     private Impl* _p;
     private string _name;
 
-    package this(FILE* handle, string name, uint refs = 1, bool isPipe = false)
+    package this(FILE* handle, string name, uint refs = 1, bool isPopened = false)
     {
         assert(!_p);
         _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
         _p.handle = handle;
         _p.refs = refs;
-        _p.isPipe = isPipe;
+        _p.isPopened = isPopened;
         _name = name;
     }
 
@@ -472,7 +472,7 @@ Throws: $(D ErrnoException) on error.
         scope(exit) _p.handle = null; // nullify the handle anyway
         version (Posix)
         {
-            if (_p.isPipe)
+            if (_p.isPopened)
             {
                 auto res = .pclose(_p.handle);
                 errnoEnforce(res != -1,
