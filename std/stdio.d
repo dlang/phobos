@@ -296,7 +296,7 @@ struct File
     private Impl* _p;
     private string _name;
 
-    private this(FILE* handle, string name, uint refs = 1, bool isPipe = false)
+    package this(FILE* handle, string name, uint refs = 1, bool isPipe = false)
     {
         assert(!_p);
         _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
