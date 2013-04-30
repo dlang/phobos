@@ -154,7 +154,7 @@ DDOC=$(DMD)
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))
 	LIB = $(ROOT)/libphobos2.a
-	LIBSO = $(ROOT)/libphobos2so.so
+	LIBSO = $(ROOT)/$(SONAME).0
 else
 	LIB = $(ROOT)/phobos.lib
 endif
@@ -266,7 +266,7 @@ $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 dll : $(LIBSO)
 
 $(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
-	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=${SONAME} $(DRUNTIMESO) $(D_FILES) $(OBJS)
+	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(D_FILES) $(OBJS)
 
 ifeq (osx,$(OS))
 # Build fat library that combines the 32 bit and the 64 bit libraries
