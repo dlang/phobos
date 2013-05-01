@@ -263,7 +263,13 @@ $(ROOT)/%$(DOTOBJ) : %.c
 $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
 
-dll : $(LIBSO)
+dll : $(ROOT)/libphobos2.so
+
+$(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
+	ln -s $(lastword $(subst /, ,$(LIBSO))) $@
+
+$(ROOT)/$(SONAME): $(LIBSO)
+	ln -s $(lastword $(subst /, ,$(LIBSO))) $@
 
 $(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(D_FILES) $(OBJS)
