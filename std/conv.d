@@ -24,6 +24,10 @@ import std.algorithm, std.array, std.ascii, std.exception, std.math, std.range,
     std.utf;
 import std.format;
 
+version(unittest) {
+    import std.container;
+}
+
 //debug=conv;           // uncomment to turn on debugging printf's
 
 /* ************* Exceptions *************** */
@@ -1742,7 +1746,7 @@ assert(test == "");
 --------------
  */
 
-Target parse(Target, Source)(ref Source s)
+Target parse(Target, Source)(auto ref Source s)
     if (isSomeChar!(ElementType!Source) &&
         isIntegral!Target && !is(Target == enum))
 {
@@ -2003,8 +2007,18 @@ unittest
     static assert((){string s = "1234abc"; return parse!uint(s) == 1234 && s == "abc";}());
 }
 
+// Test parse on std.container Array range rvalues.
+unittest
+{
+    auto arr = Array!dchar();
+
+    arr ~= "1234";
+
+    assert(parse!int(arr[]) == 1234);
+}
+
 /// ditto
-Target parse(Target, Source)(ref Source s, uint radix)
+Target parse(Target, Source)(auto ref Source s, uint radix)
     if (isSomeChar!(ElementType!Source) &&
         isIntegral!Target && !is(Target == enum))
 in
@@ -2101,6 +2115,16 @@ unittest // bugzilla 7302
     assert(r.front == '!');
 }
 
+// Test parse on std.container Array range rvalues.
+unittest
+{
+    auto arr = Array!dchar();
+
+    arr ~= "FF";
+
+    assert(parse!int(arr[], 16) == 255);
+}
+
 Target parse(Target, Source)(ref Source s)
     if (isExactSomeString!Source &&
         is(Target == enum))
@@ -2160,7 +2184,7 @@ unittest // bugzilla 4744
     assert(parse!A(s) == A.member111 && s == "1");
 }
 
-Target parse(Target, Source)(ref Source p)
+Target parse(Target, Source)(auto ref Source p)
     if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
         isFloatingPoint!Target && !is(Target == enum))
 {
@@ -2642,6 +2666,17 @@ unittest
         assertThrown!ConvException(parse!double(s));
 }
 
+// Test parse on std.container Array range rvalues.
+unittest
+{
+    auto arr = Array!dchar();
+
+    arr ~= "23.5";
+
+    assert(parse!float(arr[]) == 23.5);
+}
+
+
 /**
 Parsing one character off a string returns the character and bumps the
 string up one position.
@@ -3107,7 +3142,7 @@ unittest
     string[] s1 = [
         `\"`, `\'`, `\?`, `\\`, `\a`, `\b`, `\f`, `\n`, `\r`, `\t`, `\v`, //Normal escapes
         //`\141`, //@@@9621@@@ Octal escapes.
-        `\x61`, 
+        `\x61`,
         `\u65E5`, `\U00012456`
         //`\&amp;`, `\&quot;`, //@@@9621@@@ Named Character Entities.
     ];
@@ -3115,7 +3150,7 @@ unittest
     const(dchar)[] s2 = [
         '\"', '\'', '\?', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v', //Normal escapes
         //'\141', //@@@9621@@@ Octal escapes.
-        '\x61', 
+        '\x61',
         '\u65E5', '\U00012456'
         //'\&amp;', '\&quot;', //@@@9621@@@ Named Character Entities.
     ];
