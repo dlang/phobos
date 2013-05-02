@@ -299,8 +299,24 @@ private:
         case OpID.copyOut:
             auto target = cast(VariantN *) parm;
             assert(target);
-            tryPutting(zis, typeid(A), cast(void*) getPtr(&target.store))
-                || assert(false);
+            static if (A.sizeof <= target.size)
+            {
+                tryPutting(zis, typeid(A), &target.store) 
+                    || assert(false);
+            }
+            else
+            {
+                static if (__traits(compiles, {new A(*zis);}))
+                {
+                    auto p = new A(*zis);
+                }
+                else
+                {
+                    auto p = new A;
+                    *p = *zis;
+                }
+                memcpy(&target.store, &p, p.sizeof);
+            }
             target.fptr = &handler!(A);
             break;
         case OpID.get:
@@ -1880,4 +1896,18 @@ unittest
     Variant b;
     assert(a == b);
     assert(b == a);
+}
+
+// http://d.puremagic.com/issues/show_bug.cgi?id=10017
+unittest
+{
+    struct S
+    {
+        int[9] s;
+    }
+
+    Variant v1, v2;
+    v1 = S();
+    v2 = v1;
+    assert(v1 == v2);
 }
