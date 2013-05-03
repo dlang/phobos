@@ -28526,30 +28526,34 @@ private:
     this() immutable
     {
         super("", "", "");
-        tzset();
     }
 
 
-    static shared LocalTime _localTime;
-    static bool _initialized;
+    static immutable LocalTime _localTime = new immutable(LocalTime)();
+    // Use low-lock singleton pattern with _tzsetWasCalled (see http://dconf.org/talks/simcha.html)
+    static bool _lowLock;
+    static shared bool _tzsetWasCalled;
 
 
+    // This is done so that we can maintain purity in spite of doing an impure
+    // operation the first time that LocalTime() is called.
     static immutable(LocalTime) singleton()
     {
-        //TODO Make this use double-checked locking once shared has been fixed
-        //to use memory fences properly.
-        if(!_initialized)
+        if(!_lowLock)
         {
             synchronized
             {
-                if(!_localTime)
-                    _localTime = cast(shared LocalTime)new immutable(LocalTime)();
+                if(!_tzsetWasCalled)
+                {
+                    tzset();
+                    _tzsetWasCalled = true;
+                }
             }
 
-            _initialized = true;
+            _lowLock = true;
         }
 
-        return cast(immutable LocalTime)_localTime;
+        return _localTime;
     }
 }
 
@@ -28566,8 +28570,7 @@ public:
       +/
     static immutable(UTC) opCall() pure nothrow
     {
-        alias pure nothrow immutable(UTC) function() FuncType;
-        return (cast(FuncType)&singleton)();
+        return _utc;
     }
 
 
@@ -28680,27 +28683,7 @@ private:
     }
 
 
-    static shared UTC _utc;
-    static bool _initialized;
-
-
-    static immutable(UTC) singleton()
-    {
-        //TODO Make this use double-checked locking once shared has been fixed
-        //to use memory fences properly.
-        if(!_initialized)
-        {
-            synchronized
-            {
-                if(!_utc)
-                    _utc = cast(shared UTC)new immutable(UTC)();
-            }
-
-            _initialized = true;
-        }
-
-        return cast(immutable UTC)_utc;
-    }
+    static immutable UTC _utc = new immutable(UTC)();
 }
 
 
