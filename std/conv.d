@@ -2003,16 +2003,10 @@ unittest
     static assert((){string s = "1234abc"; return parse!uint(s) == 1234 && s == "abc";}());
 }
 
-// Test parse on std.container Array range rvalues.
+// Test parse on r-value input ranges.
 unittest
 {
-    import std.container;
-
-    auto arr = Array!dchar();
-
-    arr ~= "1234";
-
-    assert(parse!int(arr[]) == 1234);
+    assert(parse!int(inputRangeObject("1234")) == 1234);
 }
 
 /// ditto
@@ -2113,16 +2107,10 @@ unittest // bugzilla 7302
     assert(r.front == '!');
 }
 
-// Test parse on std.container Array range rvalues.
+// Test parse on r-value input ranges.
 unittest
 {
-    import std.container;
-
-    auto arr = Array!dchar();
-
-    arr ~= "FF";
-
-    assert(parse!int(arr[], 16) == 255);
+    assert(parse!int(inputRangeObject("FF"), 16) == 255);
 }
 
 Target parse(Target, Source)(ref Source s)
@@ -2666,18 +2654,11 @@ unittest
         assertThrown!ConvException(parse!double(s));
 }
 
-// Test parse on std.container Array range rvalues.
+// Test parse on r-value input ranges.
 unittest
 {
-    import std.container;
-
-    auto arr = Array!dchar();
-
-    arr ~= "23.5";
-
-    assert(parse!float(arr[]) == 23.5);
+    assert(parse!float(inputRangeObject("23.5")) == 23.5);
 }
-
 
 /**
 Parsing one character off a string returns the character and bumps the
@@ -2943,16 +2924,13 @@ unittest
     assert(s1.empty);
 }
 
-// Test parse on std.container Array range rvalues.
+// Test parse on r-value input ranges.
 unittest
 {
-    import std.container;
+    string input = "[1, 2, 3, 2034]";
+    int[] expected = [1, 2, 3, 2034];
 
-    auto arr = Array!dchar();
-
-    arr ~= "[1, 2, 3, 2034]";
-
-    assert(parse!(int[])(arr[]) == [1, 2, 3, 2034]);
+    assert(parse!(int[])(inputRangeObject(input)) == expected);
 }
 
 /// ditto
@@ -3019,23 +2997,20 @@ unittest
     assertThrown!ConvException(parse!(int[4])(s4));
 }
 
-// Test parse on std.container Array range rvalues.
+// Test parse on r-value input ranges.
 unittest
 {
-    import std.container;
-
-    auto arr = Array!dchar();
-
     // Let's test it with funny characters too. Why not?
-    arr ~= "a1$ 2$ 3$ 2034b";
+    string input = "a1$ 2$ 3$ 2034b";
+    int[4] expected = [1, 2, 3, 2034];
 
-    assert(parse!(int[4])(arr[], 'a', 'b', '$') == [1, 2, 3, 2034]);
+    assert(parse!(int[4])(inputRangeObject(input), 'a', 'b', '$') == expected);
 }
 
 /**
- * Parses an associative array from a string given the left bracket (default $(D
- * '[')), right bracket (default $(D ']')), key-value separator (default $(D
- * ':')), and element seprator (by default $(D ',')).
+ * Parses an associative array from an input range given the left bracket
+ * (default $(D * '[')), right bracket (default $(D ']')), key-value separator
+ * (default $(D * ':')), and element separator (by default $(D ',')).
  */
 Target parse(Target, Source)(auto ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
     if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
@@ -3098,19 +3073,13 @@ unittest
     int[int] aa = parse!(int[int])(s);
 }
 
-// Test parse on std.container Array range rvalues.
+// Test parse on r-value input ranges.
 unittest
 {
-    import std.container;
-
-    auto arr = Array!dchar();
-
-    // Let's test it with funny characters too. Why not?
-    arr ~= `["a" : 1, "b" : 2, "c" : 3]`;
-
+    string input = `["a" : 1, "b" : 2, "c" : 3]`;
     int[string] expected = ["a" : 1, "b" : 2, "c" : 3];
 
-    assert(parse!(int[string])(arr[]) == expected);
+    assert(parse!(int[string])(inputRangeObject(input)) == expected);
 }
 
 private dchar parseEscape(Source)(ref Source s)
