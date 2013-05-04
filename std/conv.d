@@ -1742,8 +1742,8 @@ assert(test == "");
 --------------
  */
 
-Target parse(Target, Source)(ref Source s)
-    if (isSomeChar!(ElementType!Source) &&
+Target parse(Target, Source)(auto ref Source s)
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
         isIntegral!Target && !is(Target == enum))
 {
     static if (Target.sizeof < int.sizeof)
@@ -2003,9 +2003,15 @@ unittest
     static assert((){string s = "1234abc"; return parse!uint(s) == 1234 && s == "abc";}());
 }
 
+// Test parse on r-value input ranges.
+unittest
+{
+    assert(parse!int(inputRangeObject("1234")) == 1234);
+}
+
 /// ditto
-Target parse(Target, Source)(ref Source s, uint radix)
-    if (isSomeChar!(ElementType!Source) &&
+Target parse(Target, Source)(auto ref Source s, uint radix)
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
         isIntegral!Target && !is(Target == enum))
 in
 {
@@ -2101,6 +2107,12 @@ unittest // bugzilla 7302
     assert(r.front == '!');
 }
 
+// Test parse on r-value input ranges.
+unittest
+{
+    assert(parse!int(inputRangeObject("FF"), 16) == 255);
+}
+
 Target parse(Target, Source)(ref Source s)
     if (isExactSomeString!Source &&
         is(Target == enum))
@@ -2160,7 +2172,7 @@ unittest // bugzilla 4744
     assert(parse!A(s) == A.member111 && s == "1");
 }
 
-Target parse(Target, Source)(ref Source p)
+Target parse(Target, Source)(auto ref Source p)
     if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
         isFloatingPoint!Target && !is(Target == enum))
 {
@@ -2642,6 +2654,12 @@ unittest
         assertThrown!ConvException(parse!double(s));
 }
 
+// Test parse on r-value input ranges.
+unittest
+{
+    assert(parse!float(inputRangeObject("23.5")) == 23.5);
+}
+
 /**
 Parsing one character off a string returns the character and bumps the
 string up one position.
@@ -2803,8 +2821,8 @@ package void skipWS(R)(ref R r)
  * '[')), right bracket (default $(D ']')), and element separator (by
  * default $(D ',')).
  */
-Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
-    if (isExactSomeString!Source &&
+Target parse(Target, Source)(auto ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
         isDynamicArray!Target && !is(Target == enum))
 {
     Target result;
@@ -2906,9 +2924,18 @@ unittest
     assert(s1.empty);
 }
 
+// Test parse on r-value input ranges.
+unittest
+{
+    string input = "[1, 2, 3, 2034]";
+    int[] expected = [1, 2, 3, 2034];
+
+    assert(parse!(int[])(inputRangeObject(input)) == expected);
+}
+
 /// ditto
-Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
-    if (isExactSomeString!Source &&
+Target parse(Target, Source)(auto ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
         isStaticArray!Target && !is(Target == enum))
 {
     Target result = void;
@@ -2970,13 +2997,23 @@ unittest
     assertThrown!ConvException(parse!(int[4])(s4));
 }
 
+// Test parse on r-value input ranges.
+unittest
+{
+    // Let's test it with funny characters too. Why not?
+    string input = "a1$ 2$ 3$ 2034b";
+    int[4] expected = [1, 2, 3, 2034];
+
+    assert(parse!(int[4])(inputRangeObject(input), 'a', 'b', '$') == expected);
+}
+
 /**
- * Parses an associative array from a string given the left bracket (default $(D
- * '[')), right bracket (default $(D ']')), key-value separator (default $(D
- * ':')), and element seprator (by default $(D ',')).
+ * Parses an associative array from an input range given the left bracket
+ * (default $(D * '[')), right bracket (default $(D ']')), key-value separator
+ * (default $(D * ':')), and element separator (by default $(D ',')).
  */
-Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
-    if (isExactSomeString!Source &&
+Target parse(Target, Source)(auto ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
         isAssociativeArray!Target && !is(Target == enum))
 {
     alias typeof(Target.keys[0]) KeyType;
@@ -3034,6 +3071,15 @@ unittest
         assertThrown!ConvException(parse!(int[int])(ss));
     }
     int[int] aa = parse!(int[int])(s);
+}
+
+// Test parse on r-value input ranges.
+unittest
+{
+    string input = `["a" : 1, "b" : 2, "c" : 3]`;
+    int[string] expected = ["a" : 1, "b" : 2, "c" : 3];
+
+    assert(parse!(int[string])(inputRangeObject(input)) == expected);
 }
 
 private dchar parseEscape(Source)(ref Source s)
@@ -3107,7 +3153,7 @@ unittest
     string[] s1 = [
         `\"`, `\'`, `\?`, `\\`, `\a`, `\b`, `\f`, `\n`, `\r`, `\t`, `\v`, //Normal escapes
         //`\141`, //@@@9621@@@ Octal escapes.
-        `\x61`, 
+        `\x61`,
         `\u65E5`, `\U00012456`
         //`\&amp;`, `\&quot;`, //@@@9621@@@ Named Character Entities.
     ];
@@ -3115,7 +3161,7 @@ unittest
     const(dchar)[] s2 = [
         '\"', '\'', '\?', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v', //Normal escapes
         //'\141', //@@@9621@@@ Octal escapes.
-        '\x61', 
+        '\x61',
         '\u65E5', '\U00012456'
         //'\&amp;', '\&quot;', //@@@9621@@@ Named Character Entities.
     ];
