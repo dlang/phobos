@@ -24,10 +24,6 @@ import std.algorithm, std.array, std.ascii, std.exception, std.math, std.range,
     std.utf;
 import std.format;
 
-version(unittest) {
-    import std.container;
-}
-
 //debug=conv;           // uncomment to turn on debugging printf's
 
 /* ************* Exceptions *************** */
@@ -1747,7 +1743,7 @@ assert(test == "");
  */
 
 Target parse(Target, Source)(auto ref Source s)
-    if (isSomeChar!(ElementType!Source) &&
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
         isIntegral!Target && !is(Target == enum))
 {
     static if (Target.sizeof < int.sizeof)
@@ -2010,6 +2006,8 @@ unittest
 // Test parse on std.container Array range rvalues.
 unittest
 {
+    import std.container;
+
     auto arr = Array!dchar();
 
     arr ~= "1234";
@@ -2019,7 +2017,7 @@ unittest
 
 /// ditto
 Target parse(Target, Source)(auto ref Source s, uint radix)
-    if (isSomeChar!(ElementType!Source) &&
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
         isIntegral!Target && !is(Target == enum))
 in
 {
@@ -2118,6 +2116,8 @@ unittest // bugzilla 7302
 // Test parse on std.container Array range rvalues.
 unittest
 {
+    import std.container;
+
     auto arr = Array!dchar();
 
     arr ~= "FF";
@@ -2669,6 +2669,8 @@ unittest
 // Test parse on std.container Array range rvalues.
 unittest
 {
+    import std.container;
+
     auto arr = Array!dchar();
 
     arr ~= "23.5";
@@ -2838,8 +2840,8 @@ package void skipWS(R)(ref R r)
  * '[')), right bracket (default $(D ']')), and element separator (by
  * default $(D ',')).
  */
-Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
-    if (isExactSomeString!Source &&
+Target parse(Target, Source)(auto ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
         isDynamicArray!Target && !is(Target == enum))
 {
     Target result;
@@ -2941,9 +2943,21 @@ unittest
     assert(s1.empty);
 }
 
+// Test parse on std.container Array range rvalues.
+unittest
+{
+    import std.container;
+
+    auto arr = Array!dchar();
+
+    arr ~= "[1, 2, 3, 2034]";
+
+    assert(parse!(int[])(arr[]) == [1, 2, 3, 2034]);
+}
+
 /// ditto
-Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
-    if (isExactSomeString!Source &&
+Target parse(Target, Source)(auto ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
         isStaticArray!Target && !is(Target == enum))
 {
     Target result = void;
@@ -3005,13 +3019,26 @@ unittest
     assertThrown!ConvException(parse!(int[4])(s4));
 }
 
+// Test parse on std.container Array range rvalues.
+unittest
+{
+    import std.container;
+
+    auto arr = Array!dchar();
+
+    // Let's test it with funny characters too. Why not?
+    arr ~= "a1$ 2$ 3$ 2034b";
+
+    assert(parse!(int[4])(arr[], 'a', 'b', '$') == [1, 2, 3, 2034]);
+}
+
 /**
  * Parses an associative array from a string given the left bracket (default $(D
  * '[')), right bracket (default $(D ']')), key-value separator (default $(D
  * ':')), and element seprator (by default $(D ',')).
  */
-Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
-    if (isExactSomeString!Source &&
+Target parse(Target, Source)(auto ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
         isAssociativeArray!Target && !is(Target == enum))
 {
     alias typeof(Target.keys[0]) KeyType;
@@ -3069,6 +3096,21 @@ unittest
         assertThrown!ConvException(parse!(int[int])(ss));
     }
     int[int] aa = parse!(int[int])(s);
+}
+
+// Test parse on std.container Array range rvalues.
+unittest
+{
+    import std.container;
+
+    auto arr = Array!dchar();
+
+    // Let's test it with funny characters too. Why not?
+    arr ~= `["a" : 1, "b" : 2, "c" : 3]`;
+
+    int[string] expected = ["a" : 1, "b" : 2, "c" : 3];
+
+    assert(parse!(int[string])(arr[]) == expected);
 }
 
 private dchar parseEscape(Source)(ref Source s)
