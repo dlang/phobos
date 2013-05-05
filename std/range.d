@@ -3728,10 +3728,7 @@ Take!(Repeat!T) repeat(T)(T value, size_t n)
     return take(repeat(value), n);
 }
 
-/++
-    $(RED Deprecated. It will be removed in January 2013.
-          Please use $(LREF repeat) instead.)
-  +/
+// Explicitly undocumented. It will be removed in November 2013.
 deprecated("Please use std.range.repeat instead.") Take!(Repeat!T) replicate(T)(T value, size_t n)
 {
     return repeat(value, n);
@@ -7684,10 +7681,7 @@ sgi.com/tech/stl/binary_search.html, binary_search).
         return false;
     }
 
-/++
-    $(RED Deprecated. It will be removed in January 2013.
-          Please use $(LREF contains) instead.)
-  +/
+    // Explicitly undocumented. It will be removed in November 2013.
     deprecated("Please use contains instead.") alias contains canFind;
 }
 

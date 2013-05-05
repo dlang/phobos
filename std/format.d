@@ -62,10 +62,7 @@ class FormatException : Exception
     }
 }
 
-/++
-    $(RED Deprecated. It will be removed In January 2013.
-          Please use $(D FormatException) instead.)
- +/
+// Explicitly undocumented. It will be removed in November 2013.
 deprecated("Please use FormatException instead.")
 alias FormatException FormatError;
 

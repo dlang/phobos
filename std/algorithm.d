@@ -4665,25 +4665,7 @@ unittest
     }
 }
 
-/**
- *  $(RED Deprecated. It will be removed in January 2013.
- *        Currently defaults to $(LREF countUntil) instead.)
- *
- * Not to be confused with its homonym function
- * in $(D std.string).
- *
- * Please use $(D std.string.indexOf) if you wish to find
- * the index of a character in a string.
- *
- * Otherwise, please use $(D std.string.countUntil) to find
- * an element's logical position in a range.
- *
- * Example:
- * --------
- * assert(std.string.indexOf("日本語", '本') == 3);
- * assert(std.algorithm.countUntil("日本語", '本') == 1);
- * --------
- */
+// Explicitly undocumented. It will be removed in November 2013.
 deprecated("Please use std.algorithm.countUntil instead.")
 ptrdiff_t indexOf(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (is(typeof(startsWith!pred(haystack, needle))))
