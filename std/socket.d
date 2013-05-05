@@ -144,12 +144,7 @@ version(unittest)
 /// Base exception thrown by $(D std.socket).
 class SocketException: Exception
 {
-    /**
-     * $(RED Deprecated. It will be removed in January 2013.
-     *       Please use $(LREF SocketOSException) instead.)
-     *
-     * Provided for compatibility with older code using $(D SocketException).
-     */
+    // Explicitly undocumented. It will be removed in November 2013.
     deprecated("Please use std.socket.SocketOSException instead.") @property int errorCode() const
     {
         auto osException = cast(SocketOSException)this;
@@ -1999,10 +1994,7 @@ struct TimeVal
     }
 }
 
-/++
-    $(RED Deprecated. It will be removed in January 2013.
-          Please use $(LREF TimeVal) instead.)
-  +/
+// Explicitly undocumented. It will be removed in November 2013.
 deprecated("Please use std.socket.TimeVal instead.") alias TimeVal timeval;
 
 
@@ -2230,10 +2222,7 @@ struct Linger
     }
 }
 
-/++
-    $(RED Deprecated. It will be removed in January 2013.
-          Please use $(LREF Linger) instead.)
-  +/
+// Explicitly undocumented. It will be removed in November 2013.
 deprecated("Please use std.socket.Linger instead.") alias Linger linger;
 
 /// Specifies a socket option:
