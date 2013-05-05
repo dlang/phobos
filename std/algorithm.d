@@ -9932,30 +9932,6 @@ unittest
     assert(all!(a => a > x)([2, 3]));
 }
 
-// Deprecated. It will be removed in January 2013.  Use std.range.SortedRange.canFind.
-deprecated("Please use std.range.SortedRange.canFind instead.")
-bool canFindSorted(alias pred = "a < b", Range, V)(Range range, V value) {
-    return assumeSorted!pred(range).canFind!V(value);
-}
-
-// Deprecated. It will be removed in January 2013.  Use std.range.SortedRange.lowerBound.
-deprecated("Please use std.range.SortedRange.lowerBound instead.")
-Range lowerBound(alias pred = "a < b", Range, V)(Range range, V value) {
-    return assumeSorted!pred(range).lowerBound!V(value).release;
-}
-
-// Deprecated. It will be removed in January 2013.  Use std.range.SortedRange.upperBound.
-deprecated("Please use std.range.SortedRange.upperBound instead.")
-Range upperBound(alias pred = "a < b", Range, V)(Range range, V value) {
-    return assumeSorted!pred(range).upperBound!V(value).release;
-}
-
-// Deprecated. It will be removed in January 2013.  Use std.range.SortedRange.equalRange.
-deprecated("Please use std.range.SortedRange.equalRange instead.")
-Range equalRange(alias pred = "a < b", Range, V)(Range range, V value) {
-    return assumeSorted!pred(range).equalRange!V(value).release;
-}
-
 /**
 Copies the top $(D n) elements of the input range $(D source) into the
 random-access range $(D target), where $(D n =
