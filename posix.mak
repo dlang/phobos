@@ -245,7 +245,7 @@ debug :
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=debug
 unittest :
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=debug unittest
-	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release unittest
+	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release LD_LIBRARY_PATH=$(ROOT_OF_THEM_ALL)/$(OS)/release/$(MODEL) unittest
 else
 # This branch is normally taken in recursive builds. All we need to do
 # is set the default build to $(BUILD) (which is either debug or
