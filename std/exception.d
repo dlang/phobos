@@ -569,14 +569,7 @@ template enforceEx(E)
     }
 }
 
-/++
-    $(RED Deprecated. It will be removed in October 2012. Please use the version
-          of $(D enforceEx) which takes an exception that constructs with
-          $(D new E(msg, file, line)).)
-
-    If $(D !!value) is $(D true), $(D value) is returned. Otherwise,
-    $(D new E(msg)) is thrown.
-  +/
+// Explicitly undocumented. It will be removed in November 2013.
 deprecated("Please use the version of enforceEx which takes an exception that constructs with new E(msg, file, line).")
 template enforceEx(E)
     if (is(typeof(new E(""))) && !is(typeof(new E("", __FILE__, __LINE__))) && !is(typeof(new E(__FILE__, __LINE__))))

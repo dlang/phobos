@@ -4665,25 +4665,7 @@ unittest
     }
 }
 
-/**
- *  $(RED Deprecated. It will be removed in January 2013.
- *        Currently defaults to $(LREF countUntil) instead.)
- *
- * Not to be confused with its homonym function
- * in $(D std.string).
- *
- * Please use $(D std.string.indexOf) if you wish to find
- * the index of a character in a string.
- *
- * Otherwise, please use $(D std.string.countUntil) to find
- * an element's logical position in a range.
- *
- * Example:
- * --------
- * assert(std.string.indexOf("日本語", '本') == 3);
- * assert(std.algorithm.countUntil("日本語", '本') == 1);
- * --------
- */
+// Explicitly undocumented. It will be removed in November 2013.
 deprecated("Please use std.algorithm.countUntil instead.")
 ptrdiff_t indexOf(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (is(typeof(startsWith!pred(haystack, needle))))
@@ -9948,30 +9930,6 @@ unittest
     assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
     int x = 1;
     assert(all!(a => a > x)([2, 3]));
-}
-
-// Deprecated. It will be removed in January 2013.  Use std.range.SortedRange.canFind.
-deprecated("Please use std.range.SortedRange.canFind instead.")
-bool canFindSorted(alias pred = "a < b", Range, V)(Range range, V value) {
-    return assumeSorted!pred(range).canFind!V(value);
-}
-
-// Deprecated. It will be removed in January 2013.  Use std.range.SortedRange.lowerBound.
-deprecated("Please use std.range.SortedRange.lowerBound instead.")
-Range lowerBound(alias pred = "a < b", Range, V)(Range range, V value) {
-    return assumeSorted!pred(range).lowerBound!V(value).release;
-}
-
-// Deprecated. It will be removed in January 2013.  Use std.range.SortedRange.upperBound.
-deprecated("Please use std.range.SortedRange.upperBound instead.")
-Range upperBound(alias pred = "a < b", Range, V)(Range range, V value) {
-    return assumeSorted!pred(range).upperBound!V(value).release;
-}
-
-// Deprecated. It will be removed in January 2013.  Use std.range.SortedRange.equalRange.
-deprecated("Please use std.range.SortedRange.equalRange instead.")
-Range equalRange(alias pred = "a < b", Range, V)(Range range, V value) {
-    return assumeSorted!pred(range).equalRange!V(value).release;
 }
 
 /**

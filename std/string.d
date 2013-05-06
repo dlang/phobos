@@ -2462,26 +2462,15 @@ unittest
 
 
 /*****************************************************
+ * $(RED Deprecated. It will be removed in November 2013.
+ *       Please us std.string.format instead)
+ *
  * Format arguments into a string.
  *
- * $(LREF format) has been changed to use this implementation in November 2012.
- * Then xformat has been scheduled for deprecation at the same time.
- * It will be deprecateed in May 2013.
+ * $(LREF format) was changed to use this implementation in November 2012,
  */
 
-string xformat(Char, Args...)(in Char[] fmt, Args args)
-{
-    auto w = appender!string();
-    auto n = formattedWrite(w, fmt, args);
-    version (all)
-    {
-        // In the future, this check will be removed to increase consistency
-        // with formattedWrite
-        enforce(n == args.length, new FormatException(
-            text("Orphan format arguments: args[", n, "..", args.length, "]")));
-    }
-    return w.data;
-}
+deprecated("Please use std.string.format instead.") alias format xformat;
 
 deprecated unittest
 {
@@ -2502,62 +2491,16 @@ deprecated unittest
 
 
 /*****************************************************
- * Format arguments into string $(D_PARAM buf) which must be large
+ * $(RED Deprecated. It will be removed in November 2013).
+ *       Please us std.string.sformat instead)
+ *
+ * Format arguments into string $(D buf) which must be large
  * enough to hold the result. Throws RangeError if it is not.
  *
- * $(LREF sformat) has been changed to use this implementation in November 2012.
- * Then xsformat has been scheduled for deprecation at the same time.
- * It will be deprecateed in May 2013.
- *
- * Returns: filled slice of $(D_PARAM buf)
+ * $(LREF sformat) was changed to use this implementation in November 2012,
  */
 
-char[] xsformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
-{
-    size_t i;
-
-    struct Sink
-    {
-        void put(dchar c)
-        {
-            char[4] enc;
-            auto n = encode(enc, c);
-
-            if (buf.length < i + n)
-                onRangeError("std.string.xsformat", 0);
-
-            buf[i .. i + n] = enc[0 .. n];
-            i += n;
-        }
-        void put(const(char)[] s)
-        {
-            if (buf.length < i + s.length)
-                onRangeError("std.string.xsformat", 0);
-
-            buf[i .. i + s.length] = s[];
-            i += s.length;
-        }
-        void put(const(wchar)[] s)
-        {
-            for (; !s.empty; s.popFront())
-                put(s.front);
-        }
-        void put(const(dchar)[] s)
-        {
-            for (; !s.empty; s.popFront())
-                put(s.front);
-        }
-    }
-    auto n = formattedWrite(Sink(), fmt, args);
-    version (all)
-    {
-        // In the future, this check will be removed to increase consistency
-        // with formattedWrite
-        enforce(n == args.length, new FormatException(
-            text("Orphan format arguments: args[", n, "..", args.length, "]")));
-    }
-    return buf[0 .. i];
-}
+deprecated("Please use std.string.sformat instead.") alias sformat xsformat;
 
 deprecated unittest
 {
