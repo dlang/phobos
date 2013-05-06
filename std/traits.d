@@ -212,8 +212,10 @@ template moduleName(alias T)
 
         enum moduleName = packagePrefix ~ T.stringof[7..$];
     }
-    else
+    else static if (!is(typeof(__traits(parent, T)) == bool))
         alias moduleName!(__traits(parent, T)) moduleName;
+    else
+        enum moduleName = ""; 
 }
 
 unittest
