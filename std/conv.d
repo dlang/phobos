@@ -3740,10 +3740,10 @@ unittest
 private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
 {
     enforceEx!ConvException(chunk.length >= typeSize,
-        xformat("emplace: Chunk size too small: %s < %s size = %s",
+        format("emplace: Chunk size too small: %s < %s size = %s",
         chunk.length, typeName, typeSize));
     enforceEx!ConvException((cast(size_t) chunk.ptr) % typeAlignment == 0,
-        xformat("emplace: Misaligned memory block (0x%X): it must be %s-byte aligned for type %s",
+        format("emplace: Misaligned memory block (0x%X): it must be %s-byte aligned for type %s",
         chunk.ptr, typeAlignment, typeName));
 }
 
