@@ -245,7 +245,8 @@ debug :
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=debug
 unittest :
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=debug unittest
-	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release LD_LIBRARY_PATH=$(ROOT_OF_THEM_ALL)/$(OS)/release/$(MODEL) unittest
+	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release \
+		LD_LIBRARY_PATH=$(ROOT_OF_THEM_ALL)/$(OS)/release/$(MODEL) unittest
 else
 # This branch is normally taken in recursive builds. All we need to do
 # is set the default build to $(BUILD) (which is either debug or
@@ -284,8 +285,8 @@ $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 	@echo Testing $@ - disabled
 
 $(ROOT)/unittest/%$(DOTEXE) : %.d $(LIB) $(ROOT)/emptymain.d
-	@echo Testing $@
-	$(QUIET)$(DMD) $(DFLAGS) -unittest $(LINKOPTS) $(subst /,$(PATHSEP),"-of$@") \
+	@echo Testing $@ \(static library\)
+	$(QUIET)$(DMD) $(DFLAGS) -unittest $(LINKOPTS) -defaultlib=libphobos2.a $(subst /,$(PATHSEP),"-of$@") \
 	 	$(ROOT)/emptymain.d $<
 # make the file very old so it builds and runs again if it fails
 	@touch -t 197001230123 $@
