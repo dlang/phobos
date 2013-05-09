@@ -750,19 +750,17 @@ struct BitArray
 
         if (this.length != a2.length)
             return 0;                // not equal
-        byte *p1 = cast(byte*)this.ptr;
-        byte *p2 = cast(byte*)a2.ptr;
-        auto n = this.length / 8;
+        auto p1 = this.ptr;
+        auto p2 = a2.ptr;
+        auto n = this.length / bitsPerSizeT;
         for (i = 0; i < n; i++)
         {
             if (p1[i] != p2[i])
                 return 0;                // not equal
         }
 
-        ubyte mask;
-
-        n = this.length & 7;
-        mask = cast(ubyte)((1 << n) - 1);
+        n = this.length & (bitsPerSizeT-1);
+        size_t mask = (1 << n) - 1;
         //printf("i = %d, n = %d, mask = %x, %x, %x\n", i, n, mask, p1[i], p2[i]);
         return (mask == 0) || (p1[i] & mask) == (p2[i] & mask);
     }
@@ -799,22 +797,20 @@ struct BitArray
         auto len = this.length;
         if (a2.length < len)
             len = a2.length;
-        ubyte* p1 = cast(ubyte*)this.ptr;
-        ubyte* p2 = cast(ubyte*)a2.ptr;
-        auto n = len / 8;
+        auto p1 = this.ptr;
+        auto p2 = a2.ptr;
+        auto n = len / bitsPerSizeT;
         for (i = 0; i < n; i++)
         {
             if (p1[i] != p2[i])
                 break;                // not equal
         }
-        for (uint j = i * 8; j < len; j++)
+        for (size_t j = 0; j < len-i * bitsPerSizeT; j++)
         {
-            ubyte mask = cast(ubyte)(1 << j);
-            int c;
-
-            c = cast(int)(p1[i] & mask) - cast(int)(p2[i] & mask);
+            size_t mask = cast(size_t)(1 << j);
+            auto c = (cast(long)(p1[i] & mask) - cast(long)(p2[i] & mask));
             if (c)
-                return c;
+                return c > 0 ? 1 : -1;
         }
         return cast(int)this.len - cast(int)a2.length;
     }
@@ -844,6 +840,18 @@ struct BitArray
         assert(a == e);
         assert(a <= e);
         assert(a >= e);
+
+        bool[] v;
+        for (int i = 1; i < 256; i++)
+        {
+            v.length = i;
+            v[] = false;
+            BitArray x; x.init(v);
+            v[i-1] = true;
+            BitArray y; y.init(v);
+            assert(x < y);
+            assert(x <= y);
+        }
     }
 
     /***************************************

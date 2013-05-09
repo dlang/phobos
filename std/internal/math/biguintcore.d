@@ -126,14 +126,7 @@ public:
         static if (BigDigit.sizeof == int.sizeof)
         {
             if (data.length == n*2 + 1) return data[n*2];
-            version(LittleEndian)
-            {
-                return data[n*2] + ((cast(ulong)data[n*2 + 1]) << 32 );
-            }
-            else
-            {
-                return data[n*2 + 1] + ((cast(ulong)data[n*2]) << 32 );
-            }
+            return data[n*2] + ((cast(ulong)data[n*2 + 1]) << 32 );
         }
         else static if (BigDigit.sizeof == long.sizeof)
         {
@@ -233,7 +226,7 @@ public:
         return (data[0] == ylo);
     }
 
-    bool isZero() pure const
+    bool isZero() pure const nothrow @safe
     {
         return data.length == 1 && data[0] == 0;
     }
@@ -855,6 +848,18 @@ unittest
 }
 
 
+unittest
+{
+    BigUint r;
+    r = 5UL;
+    assert(r.peekUlong(0) == 5UL);
+    assert(r.peekUint(0) == 5U);
+    r = 0x1234_5678_9ABC_DEF0UL;
+    assert(r.peekUlong(0) == 0x1234_5678_9ABC_DEF0UL);
+    assert(r.peekUint(0) == 0x9ABC_DEF0U);
+}
+
+
 // Pow tests
 unittest
 {
@@ -1470,9 +1475,9 @@ body
             // Multiply existing number by 10^19, then add y1.
             if (hi>0)
             {
-                data[hi] = multibyteMul(data[0..hi], data[0..hi], 1220703125*2, 0); // 5^13*2 = 0x9184_E72A
+                data[hi] = multibyteMul(data[0..hi], data[0..hi], 1220703125*2u, 0); // 5^13*2 = 0x9184_E72A
                 ++hi;
-                data[hi] = multibyteMul(data[0..hi], data[0..hi], 15625*262144, 0); // 5^6*2^18 = 0xF424_0000
+                data[hi] = multibyteMul(data[0..hi], data[0..hi], 15625*262144u, 0); // 5^6*2^18 = 0xF424_0000
                 ++hi;
             }
             else
@@ -1506,14 +1511,14 @@ body
     {
         if (hi == 0)
         {
+            data[0] = cast(uint)y;
             if (data.length == 1)
             {
-                data[0] = cast(uint)(y & 0xFFFF_FFFF);
                 hi = 1;
             }
             else
             {
-                *cast(ulong *)(&data[hi]) = y;
+                data[1] = cast(uint)(y >>> 32);
                 hi=2;
             }
         }

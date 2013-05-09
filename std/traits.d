@@ -113,7 +113,9 @@ private
     alias TypeTuple!(cfloat, cdouble, creal) ComplexTypeList;
     alias TypeTuple!(IntegralTypeList, FloatingPointTypeList) NumericTypeList;
     alias TypeTuple!(char, wchar, dchar) CharTypeList;
-
+}
+package
+{
     /* Get an expression typed as T, like T.init */
     template defaultInit(T)
     {
@@ -300,7 +302,7 @@ private template fullyQualifiedNameImplForSymbols(alias T)
         if(s.skipOver("package ") || s.skipOver("module "))
             return s;
         return s.findSplit("(")[0];
-    }(T.stringof);
+    }(__traits(identifier, T));
 }
 
 unittest
@@ -313,6 +315,7 @@ unittest
     alias fqn = fullyQualifiedName;
     static assert(fqn!fqn == "std.traits.fullyQualifiedName");
     static assert(fqn!(QualifiedNameTests.Inner) == "std.traits.QualifiedNameTests.Inner");
+    static assert(fqn!(QualifiedNameTests.func) == "std.traits.QualifiedNameTests.func");
     import core.sync.barrier;
     static assert(fullyQualifiedName!Barrier == "core.sync.barrier.Barrier");
 }
@@ -1673,21 +1676,124 @@ unittest
 // Aggregate Types
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
+/**
+Determines whether $(D T) has its own context pointer.
+$(D T) must be either $(D class), $(D struct), or $(D union).
+*/
+template isNested(T)
+    if(is(T == class) || is(T == struct) || is(T == union))
+{
+    enum isNested = __traits(isNested, T);
+}
+
+/**
+Determines whether $(D T) or any of its representation types
+have a context pointer.
+*/
+template hasNested(T)
+{
+    static if(isStaticArray!T && T.length)
+        enum hasNested = hasNested!(typeof(T.init[0]));
+    else static if(is(T == class) || is(T == struct) || is(T == union))
+        enum hasNested = isNested!T ||
+            anySatisfy!(.hasNested, FieldTypeTuple!T);
+    else
+        enum hasNested = false;
+}
+
+unittest
+{
+    static assert(!__traits(compiles, isNested!int));
+    static assert(!hasNested!int);
+
+    static struct StaticStruct { }
+    static assert(!isNested!StaticStruct);
+    static assert(!hasNested!StaticStruct);
+
+    int i;
+    struct NestedStruct { void f() { ++i; } }
+    static assert( isNested!NestedStruct);
+    static assert( hasNested!NestedStruct);
+    static assert( isNested!(immutable NestedStruct));
+    static assert( hasNested!(immutable NestedStruct));
+
+    static assert(!__traits(compiles, isNested!(NestedStruct[1])));
+    static assert( hasNested!(NestedStruct[1]));
+    static assert(!hasNested!(NestedStruct[0]));
+
+    struct S1 { NestedStruct nested; }
+    static assert(!isNested!S1);
+    static assert( hasNested!S1);
+
+    static struct S2 { NestedStruct nested; }
+    static assert(!isNested!S2);
+    static assert( hasNested!S2);
+
+    static struct S3 { NestedStruct[0] nested; }
+    static assert(!isNested!S3);
+    static assert(!hasNested!S3);
+
+    static union U { NestedStruct nested; }
+    static assert(!isNested!U);
+    static assert( hasNested!U);
+
+    static class StaticClass { }
+    static assert(!isNested!StaticClass);
+    static assert(!hasNested!StaticClass);
+
+    class NestedClass { void f() { ++i; } }
+    static assert( isNested!NestedClass);
+    static assert( hasNested!NestedClass);
+    static assert( isNested!(immutable NestedClass));
+    static assert( hasNested!(immutable NestedClass));
+
+    static assert(!__traits(compiles, isNested!(NestedClass[1])));
+    static assert( hasNested!(NestedClass[1]));
+    static assert(!hasNested!(NestedClass[0]));
+}
+
+
 /***
- * Get the types of the fields of a struct or class.
+ * Get as a typetuple the types of the fields of a struct, class, or union.
  * This consists of the fields that take up memory space,
  * excluding the hidden fields like the virtual function
- * table pointer.
+ * table pointer or a context pointer for nested types.
+ * If $(D T) isn't a struct, class, or union returns typetuple
+ * with one element $(D T).
  */
 
-template FieldTypeTuple(S)
+template FieldTypeTuple(T)
 {
-    static if (is(S == struct) || is(S == class) || is(S == union))
-        alias typeof(S.tupleof) FieldTypeTuple;
+    static if (is(T == struct) || is(T == union))
+        alias typeof(T.tupleof[0 .. $ - isNested!T]) FieldTypeTuple;
+    else static if (is(T == class))
+        alias typeof(T.tupleof) FieldTypeTuple;
     else
-        alias TypeTuple!S FieldTypeTuple;
-        //static assert(0, "argument is not struct or class");
+        alias TypeTuple!T FieldTypeTuple;
 }
+
+unittest
+{
+    static assert(is(FieldTypeTuple!int == TypeTuple!int));
+
+    static struct StaticStruct1 { }
+    static assert(is(FieldTypeTuple!StaticStruct1 == TypeTuple!()));
+
+    static struct StaticStruct2 { int a, b; }
+    static assert(is(FieldTypeTuple!StaticStruct2 == TypeTuple!(int, int)));
+
+    int i;
+
+    struct NestedStruct1 { void f() { ++i; } }
+    static assert(is(FieldTypeTuple!NestedStruct1 == TypeTuple!()));
+
+    struct NestedStruct2 { int a; void f() { ++i; } }
+    static assert(is(FieldTypeTuple!NestedStruct2 == TypeTuple!int));
+
+    class NestedClass { int a; void f() { ++i; } }
+    static assert(is(FieldTypeTuple!NestedClass == TypeTuple!int));
+}
+
 
 // // FieldOffsetsTuple
 // private template FieldOffsetsTupleImpl(size_t n, T...)
@@ -2439,7 +2545,7 @@ unittest
 
     // void static array hides actual type of bits, so "may have indirections".
     static assert( hasIndirections!(void[1]));
-    interface I;
+    interface I {}
     struct S1 {}
     struct S2 { int a; }
     struct S3 { int a; int b; }
@@ -2668,8 +2774,9 @@ unittest
 /**
  True if $(D S) or any type embedded directly in the representation of $(D S)
  defines an elaborate copy constructor. Elaborate copy constructors are
- introduced by defining $(D this(this)) for a $(D struct). (Non-struct types
- never have elaborate copy constructors.)
+ introduced by defining $(D this(this)) for a $(D struct).
+
+ Classes and unions never have elaborate copy constructors.
  */
 template hasElaborateCopyConstructor(S)
 {
@@ -2680,7 +2787,7 @@ template hasElaborateCopyConstructor(S)
     else static if(is(S == struct))
     {
         enum hasElaborateCopyConstructor = hasMember!(S, "__postblit")
-            || anySatisfy!(.hasElaborateCopyConstructor, typeof(S.tupleof));
+            || anySatisfy!(.hasElaborateCopyConstructor, FieldTypeTuple!S);
     }
     else
     {
@@ -2715,21 +2822,32 @@ unittest
    True if $(D S) or any type directly embedded in the representation of $(D S)
    defines an elaborate assignment. Elaborate assignments are introduced by
    defining $(D opAssign(typeof(this))) or $(D opAssign(ref typeof(this)))
-   for a $(D struct). (Non-struct types never have elaborate assignments.)
+   for a $(D struct) or when there is a compiler-generated $(D opAssign)
+   (in case $(D S) has an elaborate copy constructor or destructor).
+
+   Classes and unions never have elaborate assignments.
+
+   Note: Structs with (possibly nested) postblit operator(s) will have a
+   hidden yet elaborate compiler generated assignement operator (unless
+   explicitly disabled).
  */
 template hasElaborateAssign(S)
 {
-    static if(!is(S == struct))
+    static if(isStaticArray!S && S.length)
     {
-        enum bool hasElaborateAssign = false;
+        enum bool hasElaborateAssign = hasElaborateAssign!(typeof(S.init[0]));
     }
-    else
+    else static if(is(S == struct))
     {
         @property auto ref lvalueOf() { static S s = void; return s; }
 
         enum hasElaborateAssign = is(typeof(S.init.opAssign(S.init))) ||
                                   is(typeof(S.init.opAssign(lvalueOf))) ||
-            anySatisfy!(.hasElaborateAssign, typeof(S.tupleof));
+            anySatisfy!(.hasElaborateAssign, FieldTypeTuple!S);
+    }
+    else
+    {
+        enum bool hasElaborateAssign = false;
     }
 }
 
@@ -2737,34 +2855,57 @@ unittest
 {
     static assert(!hasElaborateAssign!int);
 
-    struct S  { void opAssign(S) {} }
+    static struct S  { void opAssign(S) {} }
     static assert( hasElaborateAssign!S);
     static assert(!hasElaborateAssign!(const(S)));
 
-    struct S1 { void opAssign(ref S1) {} }
-    struct S2 { void opAssign(S1) {} }
-    struct S3 { S s; }
+    static struct S1 { void opAssign(ref S1) {} }
+    static struct S2 { void opAssign(int) {} }
+    static struct S3 { S s; }
     static assert( hasElaborateAssign!S1);
     static assert(!hasElaborateAssign!S2);
     static assert( hasElaborateAssign!S3);
+    static assert( hasElaborateAssign!(S3[1]));
+    static assert(!hasElaborateAssign!(S3[0]));
 
-    struct S4
+    static struct S4
     {
         void opAssign(U)(U u) {}
         @disable void opAssign(U)(ref U u);
     }
     static assert( hasElaborateAssign!S4);
 
-    struct S5 { @disable this(); this(int n){ s = S(); } S s; }
+    static struct S5 { @disable this(); this(int n){ s = S(); } S s; }
     static assert( hasElaborateAssign!S5);
+
+    static struct S6 { this(this) {} }
+    static struct S7 { this(this) {} @disable void opAssign(S7); }
+    static struct S8 { this(this) {} @disable void opAssign(S8); void opAssign(int) {} }
+    static struct S9 { this(this) {}                             void opAssign(int) {} }
+    static struct S10 { ~this() { } }
+    static assert( hasElaborateAssign!S6);
+    static assert(!hasElaborateAssign!S7);
+    static assert(!hasElaborateAssign!S8);
+    static assert( hasElaborateAssign!S9);
+    static assert( hasElaborateAssign!S10);
+    static struct SS6 { S6 s; }
+    static struct SS7 { S7 s; }
+    static struct SS8 { S8 s; }
+    static struct SS9 { S9 s; }
+    static assert( hasElaborateAssign!SS6);
+    static assert( hasElaborateAssign!SS7);
+    static assert( hasElaborateAssign!SS8);
+    static assert( hasElaborateAssign!SS9);
 }
 
 /**
    True if $(D S) or any type directly embedded in the representation
    of $(D S) defines an elaborate destructor. Elaborate destructors
    are introduced by defining $(D ~this()) for a $(D
-   struct). (Non-struct types never have elaborate destructors, even
-   though classes may define $(D ~this()).)
+   struct).
+
+   Classes and unions never have elaborate destructors, even
+   though classes may define $(D ~this()).
  */
 template hasElaborateDestructor(S)
 {
@@ -2775,7 +2916,7 @@ template hasElaborateDestructor(S)
     else static if(is(S == struct))
     {
         enum hasElaborateDestructor = hasMember!(S, "__dtor")
-            || anySatisfy!(.hasElaborateDestructor, typeof(S.tupleof));
+            || anySatisfy!(.hasElaborateDestructor, FieldTypeTuple!S);
     }
     else
     {
@@ -2844,10 +2985,9 @@ unittest
     static assert(isOutputRange!(OutputRange!int, int));
 }
 
-// Temporarily disabled until bug4617 is fixed.
-version(none) unittest
+unittest
 {
-    // 8231
+    // 8321
     struct S {
         int x;
         void f(){}
@@ -3674,9 +3814,13 @@ unittest
     static assert(!isAssignable!(S2, int));
 
     struct S3 { @disable void opAssign(); }
-    static assert(!isAssignable!(S3, S3));
+    static assert( isAssignable!(S3, S3));
+
+    struct S3X { @disable void opAssign(S3X); }
+    static assert(!isAssignable!(S3X, S3X));
 
     struct S4 { void opAssign(int); }
+    static assert( isAssignable!(S4, S4));
     static assert( isAssignable!(S4, int));
     static assert( isAssignable!(S4, immutable(int)));
 
@@ -4326,7 +4470,6 @@ template AssocArrayTypeOf(T)
     else static if (is(typeof(idz(defaultInit!T)) X))
     {
                inout(             V  [K]) idzp(K, V)(        inout(             V  [K]) );
-               inout(      shared(V) [K]) idzp(K, V)(        inout(      shared(V) [K]) );
                inout(       const(V) [K]) idzp(K, V)(        inout(       const(V) [K]) );
                inout(shared(const V) [K]) idzp(K, V)(        inout(shared(const V) [K]) );
                inout(   immutable(V) [K]) idzp(K, V)(        inout(   immutable(V) [K]) );
@@ -4989,24 +5132,41 @@ unittest
 }
 
 /**
-Detect whether $(D T) is a delegate.
+Detect whether symbol or type $(D T) is a delegate.
 */
 template isDelegate(T...)
-    if(T.length == 1)
+    if (T.length == 1)
 {
-    enum bool isDelegate = is(T[0] == delegate);
+    static if (is(typeof(& T[0]) U : U*) && is(typeof(& T[0]) U == delegate))
+    {
+        // T is a (nested) function symbol.
+        enum bool isDelegate = true;
+    }
+    else static if (is(T[0] W) || is(typeof(T[0]) W))
+    {
+        // T is an expression or a type.  Take the type of it and examine.
+        enum bool isDelegate = is(W == delegate);
+    }
+    else
+        enum bool isDelegate = false;
 }
 
 unittest
 {
-    static assert( isDelegate!(void delegate()));
-    static assert( isDelegate!(uint delegate(uint)));
-    static assert( isDelegate!(shared uint delegate(uint)));
+    static void sfunc() { }
+    int x;
+    void func() { x++; }
 
-    static assert(!isDelegate!uint);
-    static assert(!isDelegate!(void function()));
+    int delegate() dg;
+    assert(isDelegate!dg);
+    assert(isDelegate!(int delegate()));
+    assert(isDelegate!(typeof(&func)));
+
+    int function() fp;
+    assert(!isDelegate!fp);
+    assert(!isDelegate!(int function()));
+    assert(!isDelegate!(typeof(&sfunc)));
 }
-
 
 /**
 Detect whether symbol or type $(D T) is a function, a function pointer or a delegate.
@@ -5143,6 +5303,22 @@ unittest
     static assert(isFinalFunction!(FC.foo));
     static assert(!isFinalFunction!(C.bar));
     static assert(isFinalFunction!(C.foo));
+}
+
+/**
+Determines whether function $(D f) requires a context pointer.
+*/
+template isNestedFunction(alias f)
+{
+    enum isNestedFunction = __traits(isNested, f);
+}
+
+unittest
+{
+    static void f() { }
+    void g() { }
+    static assert(!isNestedFunction!f);
+    static assert( isNestedFunction!g);
 }
 
 /**
@@ -5682,24 +5858,28 @@ unittest
 // XXX Select & select should go to another module. (functional or algorithm?)
 
 /**
-Aliases itself to $(D T) if the boolean $(D condition) is $(D true)
-and to $(D F) otherwise.
-
-Example:
-----
-alias Select!(size_t.sizeof == 4, int, long) Int;
-----
+Aliases itself to $(D T[0]) if the boolean $(D condition) is $(D true)
+and to $(D T[1]) otherwise.
  */
-template Select(bool condition, T, F)
+template Select(bool condition, T...) if (T.length == 2)
 {
-    static if (condition) alias T Select;
-    else alias F Select;
+    alias Select = T[!condition];
 }
 
+///
 unittest
 {
+    // can select types
     static assert(is(Select!(true, int, long) == int));
     static assert(is(Select!(false, int, long) == long));
+
+    // can select symbols
+    int a = 1;
+    int b = 2;
+    alias selA = Select!(true, a, b);
+    alias selB = Select!(false, a, b);
+    assert(selA == 1);
+    assert(selB == 2);
 }
 
 /**

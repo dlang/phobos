@@ -1718,6 +1718,22 @@ private mixin template Protocol()
         p.curl.set(CurlOption.tcp_nodelay, cast(long) (on ? 1 : 0) );
     }
 
+    /** Sets whether SSL peer certificates should be verified.
+        See: $(WEB http://curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTSSLVERIFYPEER, verifypeer)
+    */
+    @property void verifyPeer(bool on)
+    {
+      p.curl.set(CurlOption.ssl_verifypeer, on ? 1 : 0);
+    }
+
+    /** Sets whether the host within an SSL certificate should be verified.
+        See: $(WEB http://curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTSSLVERIFYHOST, verifypeer)
+    */
+    @property void verifyHost(bool on)
+    {
+      p.curl.set(CurlOption.ssl_verifyhost, on ? 2 : 0);
+    }
+
     // Authentication settings
 
     /**
@@ -2071,11 +2087,12 @@ struct HTTP
         p.curl.initialize();
         maxRedirects = HTTP.defaultMaxRedirects;
         p.charset = "ISO-8859-1"; // Default charset defined in HTTP RFC
-        p.curl.set(CurlOption.ssl_verifypeer, false);
         p.method = Method.undefined;
         dataTimeout = _defaultDataTimeout;
         onReceiveHeader = null;
         version (unittest) verbose = true;
+        verifyPeer = true;
+        verifyHost = true;
     }
 
     /**
@@ -2749,6 +2766,7 @@ struct FTP
     FTP dup()
     {
         FTP copy = FTP();
+        copy.initialize();
         copy.p.encoding = p.encoding;
         copy.p.curl = p.curl.dup();
         curl_slist* cur = p.commands;
@@ -3051,24 +3069,38 @@ struct SMTP
     */
     this(const(char)[] url)
     {
-        p.curl.initialize();
-        auto lowered = url.toLower();
+        initialize();
 
-        if (lowered.startsWith("smtps://"))
-        {
-            p.curl.set(CurlOption.use_ssl, CurlUseSSL.all);
-            p.curl.set(CurlOption.ssl_verifypeer, false);
-            p.curl.set(CurlOption.ssl_verifyhost, 2);
-        }
-        else
-        {
-            enforceEx!CurlException(lowered.startsWith("smtp://"),
-                                    "The url must be for the smtp protocol.");
-        }
-
-        p.curl.set(CurlOption.url, url);
-        dataTimeout = _defaultDataTimeout;
+        this.url = url;
     }
+
+    static SMTP opCall()
+    {
+        SMTP smtp;
+        smtp.initialize();
+        return smtp;
+    }
+
+    /+ TODO: The other structs have this function.
+    SMTP dup()
+    {
+        SMTP copy = SMTP();
+        copy.initialize();
+        copy.p.encoding = p.encoding;
+        copy.p.curl = p.curl.dup();
+        curl_slist* cur = p.commands;
+        curl_slist* newlist = null;
+        while (cur)
+        {
+            newlist = curl_slist_append(newlist, cur.data);
+            cur = cur.next;
+        }
+        copy.p.commands = newlist;
+        copy.p.curl.set(CurlOption.postquote, copy.p.commands);
+        copy.dataTimeout = _defaultDataTimeout;
+        return copy;
+    }
+    +/
 
     /**
         Performs the request as configured.
@@ -3081,9 +3113,26 @@ struct SMTP
     /// The URL to specify the location of the resource.
     @property void url(const(char)[] url)
     {
-        if (!startsWith(url.toLower(), "smtp://", "smtps://"))
-            url = "smtp://" ~ url;
+        auto lowered = url.toLower();
+
+        if (lowered.startsWith("smtps://"))
+        {
+            p.curl.set(CurlOption.use_ssl, CurlUseSSL.all);
+        }
+        else
+        {
+            enforceEx!CurlException(lowered.startsWith("smtp://"),
+                                    "The url must be for the smtp protocol.");
+        }
         p.curl.set(CurlOption.url, url);
+    }
+
+    private void initialize()
+    {
+        p.curl.initialize();
+        dataTimeout = _defaultDataTimeout;
+        verifyPeer = true;
+        verifyHost = true;
     }
 
     // This is a workaround for mixed in content not having its

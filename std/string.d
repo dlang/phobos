@@ -28,7 +28,7 @@ module std.string;
 import core.exception : RangeError, onRangeError;
 import core.vararg, core.stdc.stdlib, core.stdc.string,
     std.algorithm, std.ascii, std.conv, std.exception, std.format, std.functional,
-    std.metastrings, std.range, std.regex, std.traits,
+    std.range, std.regex, std.traits,
     std.typecons, std.typetuple, std.uni, std.utf;
 
 //Remove when repeat is finally removed. They're only here as part of the
@@ -67,32 +67,12 @@ class StringException : Exception
     }
 }
 
-/* ************* Constants *************** */
-
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated("Please use std.ascii.hexDigits instead.")   immutable char[16] hexdigits = "0123456789ABCDEF";
-deprecated("Please use std.ascii.digits instead.")      immutable digits = "0123456789";
-deprecated("Please use std.ascii.octalDigits instead.") immutable char[8]  octdigits = "01234567";
-deprecated("Please use std.ascii.lowercase instead.")   immutable char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";
-deprecated("Please use std.ascii.letters instead.")     immutable char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-deprecated("Please use std.ascii.uppercase instead.")   immutable char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-deprecated("Please use std.ascii.whitespace instead.")  alias std.ascii.whitespace whitespace;
-deprecated("Please use std.uni.lineSep instead.")       enum dchar LS = '\u2028';
-deprecated("Please use std.uni.paraSep instead.")       enum dchar PS = '\u2029';
-deprecated("Please use std.ascii.newline instead.")     alias std.ascii.newline newline;
-deprecated("Please use std.uni.isWhite instead.")       bool iswhite(dchar c)
-{
-    return c <= 0x7F
-        ? indexOf(whitespace, c) != -1
-        : (c == paraSep || c == lineSep);
-}
-
 
 /++
     Compares two ranges of characters lexicographically. The comparison is
-    case insensitive. Use $(D XREF algorithm, cmp) for a case sensitive
-    comparison. $(D icmp) works like $(D XREF algorithm, cmp) except that it
-    converts characters to lowercase prior to applying ($D pred). Technically,
+    case insensitive. Use $(XREF algorithm, cmp) for a case sensitive
+    comparison. icmp works like $(XREF algorithm, cmp) except that it
+    converts characters to lowercase prior to applying $(D pred). Technically,
     $(D icmp(r1, r2)) is equivalent to
     $(D cmp!"std.uni.toLower(a) < std.uni.toLower(b)"(r1, r2)).
 
@@ -759,12 +739,6 @@ unittest
 }
 
 
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated("Please use std.string.toLower instead.") S tolower(S)(S s) if (isSomeString!S)
-{
-    return toLower!S(s);
-}
-
 /++
     Returns a string which is identical to $(D s) except that all of its
     characters are lowercase (in unicode, not just ASCII). If $(D s) does not
@@ -810,12 +784,6 @@ unittest
         immutable S ti = "hello world\u0101";
         assert(toLower(ti) == s);
     }
-}
-
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated("Please use std.string.toLowerInPlace instead.") void tolowerInPlace(C)(ref C[] s) if (isSomeChar!C)
-{
-    toLowerInPlace!C(s);
 }
 
 /++
@@ -922,11 +890,6 @@ unittest
     assert(toLower("Some String"d) == "some string"d);
 }
 
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated("Please use std.string.toUpper instead.") S toupper(S)(S s) if (isSomeString!S)
-{
-    return toUpper!S(s);
-}
 
 /++
     Returns a string which is identical to $(D s) except that all of its
@@ -973,12 +936,6 @@ unittest
         immutable S ti = "HELLO WORLD\u0100";
         assert(toUpper(ti) == s);
     }
-}
-
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated("Please use std.string.toUpperInPlace instead.") void toupperInPlace(C)(ref C[] s) if (isSomeChar!C)
-{
-    toUpperInPlace!C(s);
 }
 
 /++
@@ -1149,74 +1106,6 @@ unittest
 }
 
 
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated S capwords(S)(S s) if (isSomeString!S)
-{
-    alias typeof(s[0]) C;
-    auto retval = appender!(C[])();
-    bool inWord = false;
-    size_t wordStart = 0;
-
-    foreach(i, dchar c; s)
-    {
-        if(std.uni.isWhite(s[i]))
-        {
-            if(inWord)
-            {
-                retval.put(capitalize(s[wordStart .. i]));
-                inWord = false;
-            }
-        }
-        else if(!inWord)
-        {
-            if(!retval.data.empty)
-                retval.put(' ');
-
-            wordStart = i;
-            inWord = true;
-        }
-    }
-
-    if(inWord)
-        retval.put(capitalize(s[wordStart .. $]));
-
-    return cast(S)retval.data;
-}
-
-deprecated unittest
-{
-    debug(string) printf("string.capwords.unittest\n");
-
-    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
-    {
-        auto s1 = to!S("\tfoo abc(aD)*  \t  (q PTT  ");
-        S s2;
-
-        s2 = capwords(s1);
-        assert(cmp(s2, "Foo Abc(ad)* (q Ptt") == 0);
-
-        s1 = to!S("\u0430\u0411\u0544 \uFF48elLO\u00A0\u0131\u0053\u0049\u017F " ~
-                  "\u017F\u0053\u0131\u0130");
-        s2 = capwords(s1);
-        assert(cmp(s2, "\u0410\u0431\u0574 \uFF28ello\u00A0\u0049\u0073\u0069\u017F " ~
-                       "\u0053\u0053\u0131\u0069"));
-    }
-}
-
-
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated("Please use std.array.replicate instead.") S repeat(S)(S s, size_t n)
-{
-    return std.array.replicate(s, n);
-}
-
-
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated("Please use std.string.splitLines instead.") S[] splitlines(S)(S s)
-{
-    return splitLines!S(s);
-}
-
 /++
     Split $(D s) into an array of lines using $(D '\r'), $(D '\n'),
     $(D "\r\n"), $(XREF uni, lineSep), and $(XREF uni, paraSep) as delimiters.
@@ -1307,12 +1196,6 @@ unittest
 }
 
 
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated("Please use std.string.stripLeft instead.") String stripl(String)(String s)
-{
-    return stripLeft!String(s);
-}
-
 /++
     Strips leading whitespace.
 
@@ -1357,12 +1240,6 @@ unittest
            "hello world" ~ [paraSep]);
 }
 
-
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated("Please use std.string.stripRight instead.") String stripr(String)(String s)
-{
-    return stripRight!String(s);
-}
 
 /++
     Strips trailing whitespace.
@@ -1755,12 +1632,6 @@ unittest
 }
 
 
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated("Please use std.string.leftJustify instead.") S ljustify(S)(S s, size_t width) if (isSomeString!S)
-{
-    return leftJustify!S(s, width);
-}
-
 /++
     Left justify $(D s) in a field $(D width) characters wide. $(D fillChar)
     is the character that will be used to fill up the space in the field that
@@ -1795,12 +1666,6 @@ S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
     }
 }
 
-
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated("Please use std.string.rightJustify instead.") S rjustify(S)(S s, size_t width) if (isSomeString!S)
-{
-    return rightJustify!S(s, width);
-}
 
 /++
     Right justify $(D s) in a field $(D width) characters wide. $(D fillChar)
@@ -1901,33 +1766,6 @@ unittest
     }
 }
 
-
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated("Please use std.string.rightJustify with a fill character of '0' instead.")
-S zfill(S)(S s, int width) if (isSomeString!S)
-{
-    return rightJustify!S(s, width, '0');
-}
-
-
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated("Please use std.array.insertInPlace instead.") S insert(S)(S s, size_t index, S sub)
-in
-{
-    assert(0 <= index && index <= s.length);
-}
-body
-{
-    std.array.insertInPlace(s, index, sub);
-    return s;
-}
-
-
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated("Please use std.string.detab instead.") S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
-{
-    return detab!S(str, tabsize);
-}
 
 /++
     Replace each tab character in $(D s) with the number of spaces necessary
@@ -2381,12 +2219,6 @@ C[] translate(C = immutable char)(in char[] str, in char[] transTable, in char[]
 in
 {
     assert(transTable.length == 256);
-    foreach(char c; str)
-        assert(c <= 256);
-    foreach(char c; transTable)
-        assert(c <= 256);
-    foreach(char c; toRemove)
-        assert(c <= 256);
 }
 body
 {
@@ -2483,28 +2315,6 @@ unittest
 }
 
 
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated("Please use std.string.makeTrans instead.") alias makeTrans maketrans;
-
-deprecated unittest
-{
-    debug(string) printf("string.translate.unittest\n");
-
-    string from = "abcdef";
-    string to   = "ABCDEF";
-    string s    = "The quick dog fox";
-    string t;
-    string r;
-    int i;
-
-    t = maketrans(from, to);
-    r = translate(s, t, "kg");
-    //printf("r = '%.*s'\n", r);
-    i = cmp(r, "ThE quiC Do Fox");
-    assert(i == 0);
-}
-
-
 /*****************************************************
  * Format arguments into a string.
  *
@@ -2554,6 +2364,10 @@ unittest
 
     assertThrown!FormatException(format("foo %s"));
     assertThrown!FormatException(format("foo %s", 123, 456));
+
+    //Test CTFE-ability of format.
+    static assert(format("hel%slo%s%s%s", "world", -138, 'c', true) ==
+                  "helworldlo-138ctrue", "[" ~ s ~ "]");
 }
 
 
@@ -2648,26 +2462,15 @@ unittest
 
 
 /*****************************************************
+ * $(RED Deprecated. It will be removed in November 2013.
+ *       Please us std.string.format instead)
+ *
  * Format arguments into a string.
  *
- * $(LREF format) has been changed to use this implementation in November 2012. 
- * Then xformat has been scheduled for deprecation at the same time.
- * It will be deprecateed in May 2013.
+ * $(LREF format) was changed to use this implementation in November 2012,
  */
 
-string xformat(Char, Args...)(in Char[] fmt, Args args)
-{
-    auto w = appender!string();
-    auto n = formattedWrite(w, fmt, args);
-    version (all)
-    {
-        // In the future, this check will be removed to increase consistency
-        // with formattedWrite
-        enforce(n == args.length, new FormatException(
-            text("Orphan format arguments: args[", n, "..", args.length, "]")));
-    }
-    return w.data;
-}
+deprecated("Please use std.string.format instead.") alias format xformat;
 
 deprecated unittest
 {
@@ -2688,62 +2491,16 @@ deprecated unittest
 
 
 /*****************************************************
- * Format arguments into string $(D_PARAM buf) which must be large
+ * $(RED Deprecated. It will be removed in November 2013).
+ *       Please us std.string.sformat instead)
+ *
+ * Format arguments into string $(D buf) which must be large
  * enough to hold the result. Throws RangeError if it is not.
  *
- * $(LREF sformat) has been changed to use this implementation in November 2012. 
- * Then xsformat has been scheduled for deprecation at the same time.
- * It will be deprecateed in May 2013.
- *
- * Returns: filled slice of $(D_PARAM buf)
+ * $(LREF sformat) was changed to use this implementation in November 2012,
  */
 
-char[] xsformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
-{
-    size_t i;
-
-    struct Sink
-    {
-        void put(dchar c)
-        {
-            char[4] enc;
-            auto n = encode(enc, c);
-
-            if (buf.length < i + n)
-                onRangeError("std.string.xsformat", 0);
-
-            buf[i .. i + n] = enc[0 .. n];
-            i += n;
-        }
-        void put(const(char)[] s)
-        {
-            if (buf.length < i + s.length)
-                onRangeError("std.string.xsformat", 0);
-
-            buf[i .. i + s.length] = s[];
-            i += s.length;
-        }
-        void put(const(wchar)[] s)
-        {
-            for (; !s.empty; s.popFront())
-                put(s.front);
-        }
-        void put(const(dchar)[] s)
-        {
-            for (; !s.empty; s.popFront())
-                put(s.front);
-        }
-    }
-    auto n = formattedWrite(Sink(), fmt, args);
-    version (all)
-    {
-        // In the future, this check will be removed to increase consistency
-        // with formattedWrite
-        enforce(n == args.length, new FormatException(
-            text("Orphan format arguments: args[", n, "..", args.length, "]")));
-    }
-    return buf[0 .. i];
-}
+deprecated("Please use std.string.sformat instead.") alias sformat xsformat;
 
 deprecated unittest
 {
@@ -3168,7 +2925,7 @@ unittest
     $(D to).
 
     Both $(D from) and $(D to) may contain ranges using the $(D '-') character
-    (e.g. $(D "a-d") is synonymous with $(D "abcd).) Neither accept a leading
+    (e.g. $(D "a-d") is synonymous with $(D "abcd").) Neither accept a leading
     $(D '^') as meaning the complement of the string (use the $(D 'c') modifier
     for that).
   +/
@@ -3512,97 +3269,6 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false)
     return true;
 }
 
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated bool isNumeric(...)
-{
-    return isNumeric(_arguments, _argptr);
-}
-
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated bool isNumeric(TypeInfo[] _arguments, va_list _argptr)
-{
-    auto  s = ""c;
-    auto ws = ""w;
-    auto ds = ""d;
-
-    //writefln("isNumeric(...) called!");
-    if (_arguments.length == 0)
-        return false;
-
-    if (_arguments[0] == typeid(char[]))
-        return isNumeric(va_arg!(char[])(_argptr));
-    else if (_arguments[0] == typeid(wchar[]))
-        return isNumeric(std.utf.toUTF8(va_arg!(wchar[])(_argptr)));
-    else if (_arguments[0] == typeid(dchar[]))
-        return isNumeric(std.utf.toUTF8(va_arg!(dstring)(_argptr)));
-    else if (_arguments[0] == typeid(real))
-        return true;
-    else if (_arguments[0] == typeid(double))
-        return true;
-    else if (_arguments[0] == typeid(float))
-        return true;
-    else if (_arguments[0] == typeid(ulong))
-        return true;
-    else if (_arguments[0] == typeid(long))
-        return true;
-    else if (_arguments[0] == typeid(uint))
-        return true;
-    else if (_arguments[0] == typeid(int))
-        return true;
-    else if (_arguments[0] == typeid(ushort))
-        return true;
-    else if (_arguments[0] == typeid(short))
-        return true;
-    else if (_arguments[0] == typeid(ubyte))
-    {
-    char[1] t;
-    t[0]= va_arg!(ubyte)(_argptr);
-    return isNumeric(cast(string)t);
-    }
-    else if (_arguments[0] == typeid(byte))
-    {
-    char[1] t;
-    t[0] = va_arg!(char)(_argptr);
-    return isNumeric(cast(string)t);
-    }
-    else if (_arguments[0] == typeid(ireal))
-        return true;
-    else if (_arguments[0] == typeid(idouble))
-        return true;
-    else if (_arguments[0] == typeid(ifloat))
-        return true;
-    else if (_arguments[0] == typeid(creal))
-        return true;
-    else if (_arguments[0] == typeid(cdouble))
-        return true;
-    else if (_arguments[0] == typeid(cfloat))
-        return true;
-    else if (_arguments[0] == typeid(char))
-    {
-    char[1] t;
-    t[0] = va_arg!(char)(_argptr);
-        return isNumeric(cast(string)t);
-    }
-    else if (_arguments[0] == typeid(wchar))
-    {
-    wchar[1] t;
-    t[0] = va_arg!(wchar)(_argptr);
-        return isNumeric(std.utf.toUTF8(t));
-    }
-    else if (_arguments[0] == typeid(dchar))
-    {
-    dchar[1] t;
-    t[0] = va_arg!(dchar)(_argptr);
-        dchar[] t1 = t;
-    return isNumeric(std.utf.toUTF8(cast(dstring) t1));
-    }
-    //else if (_arguments[0] == typeid(cent))
-    //    return true;
-    //else if (_arguments[0] == typeid(ucent))
-    //    return true;
-    else
-       return false;
-}
 
 unittest
 {
@@ -3642,22 +3308,6 @@ unittest
     assert(isNumeric(s[1..s.length - 2]) == true);
     assert(isNumeric(s) == false);
     assert(isNumeric(s[0..s.length - 1]) == false);
-}
-
-deprecated unittest
-{
-    // These test calling the isNumeric(...) function
-    assert(isNumeric(1,123UL) == true);
-    assert(isNumeric('2') == true);
-    assert(isNumeric('x') == false);
-    assert(isNumeric(cast(byte)0x57) == false); // 'W'
-    assert(isNumeric(cast(byte)0x37) == true);  // '7'
-    assert(isNumeric(cast(wchar[])"145.67") == true);
-    assert(isNumeric(cast(dchar[])"145.67U") == false);
-    assert(isNumeric(123_000.23fi) == true);
-    assert(isNumeric(123.00E-5+1234.45E-12Li) == true);
-    assert(isNumeric(real.nan) == true);
-    assert(isNumeric(-real.infinity) == true);
 }
 
 

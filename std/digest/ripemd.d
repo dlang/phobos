@@ -33,13 +33,15 @@ $(TR $(TDNW Helpers) $(TD $(MYREF ripemd160Of))
  * The D implementation is a direct translation of the ANSI C implementation by Antoon Bosselaers.
  *
  * References:
- *      $(LINK2 http://homes.esat.kuleuven.be/~bosselae/ripemd160.html, The hash function RIPEMD-160)
- *      $(LINK2 http://en.wikipedia.org/wiki/RIPEMD-160, Wikipedia on RIPEMD-160)
+ * $(UL
+ * $(LI $(LINK2 http://homes.esat.kuleuven.be/~bosselae/ripemd160.html, The hash function RIPEMD-160))
+ * $(LI $(LINK2 http://en.wikipedia.org/wiki/RIPEMD-160, Wikipedia on RIPEMD-160))
+ * )
  *
- * Source: $(PHOBOSSRC std/digest/_md.d)
+ * Source: $(PHOBOSSRC std/digest/_ripemd.d)
  *
  * Macros:
- * WIKI = Phobos/StdMd5
+ * WIKI = Phobos/StdRipemd
  * MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
  *
  * Examples:
@@ -292,7 +294,7 @@ struct RIPEMD160
             {
                 for(size_t i = 0; i < 16; i++)
                 {
-                    x[i] = littleEndianToNative!uint(cast(ubyte[4])block[i*4..i+4]);
+                    x[i] = littleEndianToNative!uint(*cast(ubyte[4]*)&(*block)[i*4]);
                 }
             }
             else
@@ -580,13 +582,12 @@ struct RIPEMD160
          */
         @trusted nothrow pure ubyte[20] finish()
         {
-            ubyte[20] data;
+            ubyte[20] data = void;
             ubyte[8] bits = void;
             uint index, padLen;
 
             //Save number of bits
-            bits[0 .. 4] = nativeToLittleEndian((cast(uint*)&_count)[0])[];
-            bits[4 .. 8] = nativeToLittleEndian((cast(uint*)&_count)[1])[];
+            bits[0 .. 8] = nativeToLittleEndian(_count)[];
 
             //Pad out to 56 mod 64
             index = (cast(uint)_count >> 3) & (64 - 1);

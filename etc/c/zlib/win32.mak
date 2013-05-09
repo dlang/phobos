@@ -2,6 +2,7 @@
 
 CC=dmc
 LD=link
+LIB=lib
 CFLAGS=-o
 LDFLAGS=
 O=.obj
@@ -74,7 +75,7 @@ minigzip.obj: minigzip.c zlib.h zconf.h
 	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
 
 zlib.lib: $(OBJS)
-	lib -c zlib.lib $(OBJS)
+	$(LIB) -c zlib.lib $(OBJS)
 
 example.exe: example.obj zlib.lib
 	$(LD) $(LDFLAGS) example.obj zlib.lib

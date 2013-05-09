@@ -407,11 +407,10 @@ assert(a == [ 2, 3 ]);
 ), $(ARGS), $(ARGS), $(ARGS import std.array;))
 */
 
-void popFront(A)(ref A a)
-if (!isNarrowString!A && isDynamicArray!A && isMutable!A && !is(A == void[]))
+void popFront(T)(ref T[] a)
+if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
-    assert(a.length, "Attempting to popFront() past the end of an array of "
-            ~ typeof(a[0]).stringof);
+    assert(a.length, "Attempting to popFront() past the end of an array of " ~ T.stringof);
     a = a[1 .. $];
 }
 
@@ -420,16 +419,16 @@ unittest
     auto a = [ 1, 2, 3 ];
     a.popFront();
     assert(a == [ 2, 3 ]);
-    static assert(!__traits(compiles, popFront!(immutable int[])()));
-    static assert(!__traits(compiles, popFront!(void[])()));
+
+    static assert(!is(typeof({          int[4] a; popFront(a); })));
+    static assert(!is(typeof({ immutable int[] a; popFront(a); })));
+    static assert(!is(typeof({          void[] a; popFront(a); })));
 }
 
 // Specialization for narrow strings. The necessity of
-// !isStaticArray!A suggests a compiler @@@BUG@@@.
-void popFront(S)(ref S str) @trusted pure nothrow
-if (isNarrowString!S && isMutable!S && !isStaticArray!S)
+void popFront(C)(ref C[] str) @trusted pure nothrow
+if (isNarrowString!(C[]))
 {
-    alias ElementEncodingType!S C;
     assert(str.length, "Attempting to popFront() past the end of an array of " ~ C.stringof);
 
     static if(is(Unqual!C == char))
@@ -460,26 +459,14 @@ if (isNarrowString!S && isMutable!S && !isStaticArray!S)
     else static assert(0, "Bad template constraint.");
 }
 
-version(unittest) C[] _eatString(C)(C[] str)
-{
-    while(!str.empty)
-        str.popFront();
-
-    return str;
-}
-
 unittest
 {
-    string s1 = "\xC2\xA9hello";
-    s1.popFront();
-    assert(s1 == "hello");
-    wstring s2 = "\xC2\xA9hello";
-    s2.popFront();
-    assert(s2 == "hello");
-    string s3 = "\u20AC100";
-
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
+        S s = "\xC2\xA9hello";
+        s.popFront();
+        assert(s == "hello");
+
         S str = "hello\U00010143\u0100\U00010143";
         foreach(dchar c; ['h', 'e', 'l', 'l', 'o', '\U00010143', '\u0100', '\U00010143'])
         {
@@ -487,11 +474,18 @@ unittest
             str.popFront();
         }
         assert(str.empty);
+
+        static assert(!is(typeof({          immutable S a; popFront(a); })));
+        static assert(!is(typeof({ typeof(S.init[0])[4] a; popFront(a); })));
     }
 
-    static assert(!is(typeof(popFront!(immutable string))));
-    static assert(!is(typeof(popFront!(char[4]))));
+    C[] _eatString(C)(C[] str)
+    {
+        while(!str.empty)
+            str.popFront();
 
+        return str;
+    }
     enum checkCTFE = _eatString("ウェブサイト@La_Verité.com");
     static assert(checkCTFE.empty);
     enum checkCTFEW = _eatString("ウェブサイト@La_Verité.com"w);
@@ -517,8 +511,8 @@ assert(a == [ 1, 2 ]);
 ), $(ARGS), $(ARGS), $(ARGS import std.array;))
 */
 
-void popBack(A)(ref A a)
-if (isDynamicArray!A && !isNarrowString!A && isMutable!A && !is(A == void[]))
+void popBack(T)(ref T[] a)
+if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length);
     a = a[0 .. $ - 1];
@@ -529,17 +523,18 @@ unittest
     auto a = [ 1, 2, 3 ];
     a.popBack();
     assert(a == [ 1, 2 ]);
-    static assert(!__traits(compiles, popBack!(immutable int[])));
-    static assert(!__traits(compiles, popBack!(void[])));
+
+    static assert(!is(typeof({ immutable int[] a; popBack(a); })));
+    static assert(!is(typeof({          int[4] a; popBack(a); })));
+    static assert(!is(typeof({          void[] a; popBack(a); })));
 }
 
 // Specialization for arrays of char
-@trusted void popBack(A)(ref A a)
-    if(isNarrowString!A && isMutable!A)
+@trusted void popBack(T)(ref T[] a)
+if (isNarrowString!(T[]))
 {
-    assert(a.length, "Attempting to popBack() past the front of an array of " ~
-                     typeof(a[0]).stringof);
-    a = a[0 .. $ - std.utf.strideBack(a, a.length)];
+    assert(a.length, "Attempting to popBack() past the front of an array of " ~ T.stringof);
+    a = a[0 .. $ - std.utf.strideBack(a, $)];
 }
 
 unittest
@@ -563,7 +558,8 @@ unittest
         }
         assert(str.empty);
 
-        static assert(!__traits(compiles, popBack!(immutable S)));
+        static assert(!is(typeof({          immutable S a; popBack(a); })));
+        static assert(!is(typeof({ typeof(S.init[0])[4] a; popBack(a); })));
     }
 }
 
@@ -588,17 +584,8 @@ assert(a.front == 1);
 @property ref T front(T)(T[] a)
 if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
-    assert(a.length, "Attempting to fetch the front of an empty array of " ~
-                     typeof(a[0]).stringof);
+    assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
     return a[0];
-}
-
-@property dchar front(A)(A a) if (isNarrowString!A)
-{
-    assert(a.length, "Attempting to fetch the front of an empty array of " ~
-                     typeof(a[0]).stringof);
-    size_t i = 0;
-    return decode(a, i);
 }
 
 unittest
@@ -610,6 +597,16 @@ unittest
 
     immutable b = [ 1, 2 ];
     assert(b.front == 1);
+
+    int[2] c = [ 1, 2 ];
+    assert(c.front == 1);
+}
+
+@property dchar front(T)(T[] a) if (isNarrowString!(T[]))
+{
+    assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
+    size_t i = 0;
+    return decode(a, i);
 }
 
 /**
@@ -631,8 +628,7 @@ assert(a.back == 3);
 */
 @property ref T back(T)(T[] a) if (!isNarrowString!(T[]))
 {
-    assert(a.length, "Attempting to fetch the back of an empty array of " ~
-                     typeof(a[0]).stringof);
+    assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
     return a[$ - 1];
 }
 
@@ -645,14 +641,15 @@ unittest
 
     immutable b = [ 1, 2, 3 ];
     assert(b.back == 3);
+
+    int[3] c = [ 1, 2, 3 ];
+    assert(c.back == 3);
 }
 
 // Specialization for strings
-@property dchar back(A)(A a)
-    if(isDynamicArray!A && isNarrowString!A)
+@property dchar back(T)(T[] a) if (isNarrowString!(T[]))
 {
-    assert(a.length, "Attempting to fetch the back of an empty array of " ~
-                     typeof(a[0]).stringof);
+    assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
     size_t i = a.length - std.utf.strideBack(a, a.length);
     return decode(a, i);
 }
@@ -714,6 +711,25 @@ unittest
     assert(overlap(a, b.dup).empty);
     test(c, d);
     assert(overlap(c, d.idup).empty);
+}
+
+unittest // bugzilla 9836
+{
+	// range primitives for array should work with alias this types
+    struct Wrapper
+    {
+        int[] data;
+        alias data this;
+
+        @property Wrapper save() { return this; }
+    }
+    auto w = Wrapper([1,2,3,4]);
+    std.array.popFront(w); // should work
+
+    static assert(isInputRange!Wrapper);
+    static assert(isForwardRange!Wrapper);
+    static assert(isBidirectionalRange!Wrapper);
+    static assert(isRandomAccessRange!Wrapper);
 }
 
 /+
@@ -830,7 +846,7 @@ unittest
 
 private void copyBackwards(T)(T[] src, T[] dest)
 {
-    import core.stdc.string;    
+    import core.stdc.string;
     assert(src.length == dest.length);
     if (!__ctfe)
         memmove(dest.ptr, src.ptr, src.length * T.sizeof);
@@ -861,7 +877,7 @@ assert(a == [ 1, 2, 1, 10, 11, 2, 3, 4]);
 ), $(ARGS), $(ARGS), $(ARGS import std.array;))
  +/
 void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
-    if(!isSomeString!(T[]) 
+    if(!isSomeString!(T[])
         && allSatisfy!(isInputRangeOrConvertible!T, U) && U.length > 0)
 {
     static if(allSatisfy!(isInputRangeWithLengthOrConvertible!T, U))
@@ -894,11 +910,11 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
     else
     {
         // stuff has some InputRanges in it that don't have length
-        // assume that stuff to be inserted is typically shorter 
-        // then the array that can be arbitrary big        
+        // assume that stuff to be inserted is typically shorter
+        // then the array that can be arbitrary big
         // TODO: needs a better implementation as there is no need to build an _array_
         // a singly-linked list of memory blocks (rope, etc.) will do
-        auto app = appender!(T[])(); 
+        auto app = appender!(T[])();
         foreach (i, E; U)
             app.put(stuff[i]);
         insertInPlace(array, pos, app.data);
@@ -995,7 +1011,7 @@ private template isInputRangeWithLengthOrConvertible(E)
 //ditto
 private template isCharOrStringOrDcharRange(T)
 {
-    enum isCharOrStringOrDcharRange = isSomeString!T || isSomeChar!T || 
+    enum isCharOrStringOrDcharRange = isSomeString!T || isSomeChar!T ||
         (isInputRange!T && is(ElementType!T : dchar));
 }
 
@@ -1077,7 +1093,7 @@ unittest
             testStr!(T[], U[])();
         }
 
-    }    
+    }
 
     // variadic version
     bool testVar(T, U...)(T orig, size_t pos, U args)
@@ -1115,8 +1131,8 @@ unittest
     {
         int* payload;
         this(int k)
-        { 
-            payload = new int; 
+        {
+            payload = new int;
             *payload = k;
         }
         this(this)
@@ -1129,7 +1145,7 @@ unittest
         {
             *payload = 0; //'destroy' it
         }
-        @property int getPayload(){ return *payload; }        
+        @property int getPayload(){ return *payload; }
         alias getPayload this;
     }
 
@@ -1137,7 +1153,7 @@ unittest
     arr ~= [Int(1), Int(4), Int(5)];
     assert(arr[0] == 1);
     insertInPlace(arr, 1, Int(2), Int(3));
-    assert(equal(arr, [1, 2, 3, 4, 5]));  //check it works with postblit  
+    assert(equal(arr, [1, 2, 3, 4, 5]));  //check it works with postblit
 }
 
 unittest
@@ -2219,11 +2235,28 @@ Returns the managed array.
         return newext > newlength ? newext : newlength;
     }
 
+    private template canPutItem(U)
+    {
+        enum bool canPutItem = isImplicitlyConvertible!(U, T) ||
+            isSomeChar!T && isSomeChar!U;
+    }
+
+    private template canPutConstRange(Range)
+    {
+        enum bool canPutConstRange = isInputRange!(Unqual!Range) &&
+            !isInputRange!Range;
+    }
+
+    private template canPutRange(Range)
+    {
+        enum bool canPutRange = isInputRange!Range &&
+            is(typeof(Appender.init.put(Range.init.front)));
+    }
+
 /**
 Appends one item to the managed array.
  */
-    void put(U)(U item) if (isImplicitlyConvertible!(U, T) ||
-            isSomeChar!T && isSomeChar!U)
+    void put(U)(U item) if (canPutItem!U)
     {
         static if (isSomeChar!T && isSomeChar!U && T.sizeof < U.sizeof)
         {
@@ -2242,8 +2275,8 @@ Appends one item to the managed array.
     }
 
     // Const fixing hack.
-    void put(Range)(Range items)
-    if(isInputRange!(Unqual!Range) && !isInputRange!Range) {
+    void put(Range)(Range items) if (canPutConstRange!Range)
+    {
         alias put!(Unqual!Range) p;
         p(items);
     }
@@ -2251,14 +2284,13 @@ Appends one item to the managed array.
 /**
 Appends an entire range to the managed array.
  */
-    void put(Range)(Range items) if (isInputRange!Range
-            && is(typeof(Appender.init.put(items.front))))
+    void put(Range)(Range items) if (canPutRange!Range)
     {
         // note, we disable this branch for appending one type of char to
         // another because we can't trust the length portion.
         static if (!(isSomeChar!T && isSomeChar!(ElementType!Range) &&
                      !is(Range == Unqual!T[]) &&
-                     !is(Range == const(T)[]) &&
+                     !is(Range == const(Unqual!T)[]) &&
                      !is(Range == immutable(T)[])) &&
                     is(typeof(items.length) == size_t))
         {
@@ -2300,6 +2332,28 @@ Appends an entire range to the managed array.
         }
     }
 
+/**
+Appends one item to the managed array.
+ */
+    void opOpAssign(string op : "~", U)(U item) if (canPutItem!U)
+    {
+        put(item);
+    }
+
+    // Const fixing hack.
+    void opOpAssign(string op : "~", Range)(Range items) if (canPutConstRange!Range)
+    {
+        put(items);
+    }
+
+/**
+Appends an entire range to the managed array.
+ */
+    void opOpAssign(string op : "~", Range)(Range items) if (canPutRange!Range)
+    {
+        put(items);
+    }
+
     // only allow overwriting data on non-immutable and non-const data
     static if(!is(T == immutable) && !is(T == const))
     {
@@ -2319,8 +2373,9 @@ possibility that $(D Appender) might overwrite immutable data.
         }
 
 /**
-Shrinks the managed array to the given length.  Passing in a length that's
-greater than the current array length throws an enforce exception.
+Shrinks the managed array to the given length.
+
+Throws: $(D Exception) if newlength is greater than the current array length.
 */
         void shrinkTo(size_t newlength)
         {
@@ -2371,6 +2426,33 @@ those appends.
         mixin("return impl." ~ fn ~ "(args);");
     }
 
+    private alias Appender!(A, T) AppenderType;
+
+/**
+Appends one item to the managed array.
+ */
+    void opOpAssign(string op : "~", U)(U item) if (AppenderType.canPutItem!U)
+    {
+        scope(exit) *this.arr = impl.data;
+        impl.put(item);
+    }
+
+    // Const fixing hack.
+    void opOpAssign(string op : "~", Range)(Range items) if (AppenderType.canPutConstRange!Range)
+    {
+        scope(exit) *this.arr = impl.data;
+        impl.put(items);
+    }
+
+/**
+Appends an entire range to the managed array.
+ */
+    void opOpAssign(string op : "~", Range)(Range items) if (AppenderType.canPutRange!Range)
+    {
+        scope(exit) *this.arr = impl.data;
+        impl.put(items);
+    }
+
 /**
 Returns the capacity of the array (the maximum number of elements the
 managed array can accommodate before triggering a reallocation).  If any
@@ -2401,18 +2483,36 @@ Appender!(E[]) appender(A : E[], E)(A array = null)
 
 unittest
 {
-    auto app = appender!(char[])();
-    string b = "abcdefg";
-    foreach (char c; b) app.put(c);
-    assert(app.data == "abcdefg");
+    {
+        auto app = appender!(char[])();
+        string b = "abcdefg";
+        foreach (char c; b) app.put(c);
+        assert(app.data == "abcdefg");
+    }
+    {
+        auto app = appender!(char[])();
+        string b = "abcdefg";
+        foreach (char c; b) app ~= c;
+        assert(app.data == "abcdefg");
+    }
+    {
+        int[] a = [ 1, 2 ];
+        auto app2 = appender(a);
+        assert(app2.data == [ 1, 2 ]);
+        app2.put(3);
+        app2.put([ 4, 5, 6 ][]);
+        assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
+        app2.put([ 7 ]);
+        assert(app2.data == [ 1, 2, 3, 4, 5, 6, 7 ]);
+    }
 
     int[] a = [ 1, 2 ];
     auto app2 = appender(a);
     assert(app2.data == [ 1, 2 ]);
-    app2.put(3);
-    app2.put([ 4, 5, 6 ][]);
+    app2 ~= 3;
+    app2 ~= [ 4, 5, 6 ][];
     assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
-    app2.put([ 7 ]);
+    app2 ~= [ 7 ];
     assert(app2.data == [ 1, 2, 3, 4, 5, 6, 7 ]);
 
     app2.reserve(5);
@@ -2429,19 +2529,36 @@ unittest
     auto app4 = appender([]);
     app4.shrinkTo(0);
 
-    // Issue 5663 tests
+    // Issue 5663 & 9725 tests
+    foreach (S; TypeTuple!(char[], const(char)[], string))
     {
-        Appender!(char[]) app5663i;
-        assertNotThrown(app5663i.put("\xE3"));
-        assert(app5663i.data == "\xE3");
+        {
+            Appender!S app5663i;
+            assertNotThrown(app5663i.put("\xE3"));
+            assert(app5663i.data == "\xE3");
 
-        Appender!(char[]) app5663c;
-        assertNotThrown(app5663c.put(cast(const(char)[])"\xE3"));
-        assert(app5663c.data == "\xE3");
+            Appender!S app5663c;
+            assertNotThrown(app5663c.put(cast(const(char)[])"\xE3"));
+            assert(app5663c.data == "\xE3");
 
-        Appender!(char[]) app5663m;
-        assertNotThrown(app5663m.put(cast(char[])"\xE3"));
-        assert(app5663m.data == "\xE3");
+            Appender!S app5663m;
+            assertNotThrown(app5663m.put(cast(char[])"\xE3"));
+            assert(app5663m.data == "\xE3");
+        }
+        // ditto for ~=
+        {
+            Appender!S app5663i;
+            assertNotThrown(app5663i ~= "\xE3");
+            assert(app5663i.data == "\xE3");
+
+            Appender!S app5663c;
+            assertNotThrown(app5663c ~= cast(const(char)[])"\xE3");
+            assert(app5663c.data == "\xE3");
+
+            Appender!S app5663m;
+            assertNotThrown(app5663m ~= cast(char[])"\xE3");
+            assert(app5663m.data == "\xE3");
+        }
     }
 }
 
@@ -2457,19 +2574,39 @@ RefAppender!(E[]) appender(A : E[]*, E)(A array)
 
 unittest
 {
-    auto arr = new char[0];
-    auto app = appender(&arr);
-    string b = "abcdefg";
-    foreach (char c; b) app.put(c);
-    assert(app.data == "abcdefg");
-    assert(arr == "abcdefg");
+    {
+        auto arr = new char[0];
+        auto app = appender(&arr);
+        string b = "abcdefg";
+        foreach (char c; b) app.put(c);
+        assert(app.data == "abcdefg");
+        assert(arr == "abcdefg");
+    }
+    {
+        auto arr = new char[0];
+        auto app = appender(&arr);
+        string b = "abcdefg";
+        foreach (char c; b) app ~= c;
+        assert(app.data == "abcdefg");
+        assert(arr == "abcdefg");
+    }
+    {
+        int[] a = [ 1, 2 ];
+        auto app2 = appender(&a);
+        assert(app2.data == [ 1, 2 ]);
+        assert(a == [ 1, 2 ]);
+        app2.put(3);
+        app2.put([ 4, 5, 6 ][]);
+        assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
+        assert(a == [ 1, 2, 3, 4, 5, 6 ]);
+    }
 
     int[] a = [ 1, 2 ];
     auto app2 = appender(&a);
     assert(app2.data == [ 1, 2 ]);
     assert(a == [ 1, 2 ]);
-    app2.put(3);
-    app2.put([ 4, 5, 6 ][]);
+    app2 ~= 3;
+    app2 ~= [ 4, 5, 6 ][];
     assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
     assert(a == [ 1, 2, 3, 4, 5, 6 ]);
 

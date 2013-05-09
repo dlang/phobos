@@ -20,7 +20,7 @@ public import core.stdc.stdio, std.string : KeepTerminator;
 static import std.c.stdio;
 import std.stdiobase;
 import core.stdc.errno, core.stdc.stddef, core.stdc.stdlib, core.memory,
-    core.stdc.string, core.stdc.wchar_;
+    core.stdc.string, core.stdc.wchar_, core.exception;
 import std.algorithm, std.array, std.conv, std.exception, std.format,
     std.range, std.string, std.traits, std.typecons,
     std.typetuple, std.utf;
@@ -251,6 +251,14 @@ manner, such that as soon as the last $(D File) variable bound to a
 given $(D FILE*) goes out of scope, the underlying $(D FILE*) is
 automatically closed.
 
+Bugs:
+$(D File) expects file names to be encoded in $(B CP_ACP) on $(I Windows)
+instead of UTF-8 ($(BUGZILLA 7648)) thus must not be used in $(I Windows)
+or cross-platform applications other than with an immediate ASCII string as
+a file name to prevent accidental changes to result in incorrect behavior.
+One can use $(XREF file, read)/$(XREF file, write)/$(XREF stream, File)
+instead.
+
 Example:
 ----
 // test.d
@@ -283,18 +291,18 @@ struct File
     {
         FILE * handle = null; // Is null iff this Impl is closed by another File
         uint refs = uint.max / 2;
-        bool isPipe;
+        bool isPopened; // true iff the stream has been created by popen()
     }
     private Impl* _p;
     private string _name;
 
-    private this(FILE* handle, string name, uint refs = 1, bool isPipe = false)
+    package this(FILE* handle, string name, uint refs = 1, bool isPopened = false)
     {
         assert(!_p);
         _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
         _p.handle = handle;
         _p.refs = refs;
-        _p.isPipe = isPipe;
+        _p.isPopened = isPopened;
         _name = name;
     }
 
@@ -302,13 +310,15 @@ struct File
 Constructor taking the name of the file to open and the open mode
 (with the same semantics as in the C standard library $(WEB
 cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen)
-function). Throws an exception if the file could not be opened.
+function).
 
 Copying one $(D File) object to another results in the two $(D File)
 objects referring to the same underlying file.
 
 The destructor automatically closes the file as soon as no $(D File)
 object refers to it anymore.
+
+Throws: $(D ErrnoException) if the file could not be opened.
  */
     this(string name, in char[] stdioOpenmode = "rb")
     {
@@ -345,7 +355,8 @@ First calls $(D detach) (throwing on failure), and then attempts to
 _open file $(D name) with mode $(D stdioOpenmode). The mode has the
 same semantics as in the C standard library $(WEB
 cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen) function.
-Throws exception in case of error.
+
+Throws: $(D ErrnoException) in case of error.
  */
     void open(string name, in char[] stdioOpenmode = "rb")
     {
@@ -357,6 +368,8 @@ Throws exception in case of error.
 First calls $(D detach) (throwing on failure), and then runs a command
 by calling the C standard library function $(WEB
 opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
+
+Throws: $(D ErrnoException) in case of error.
  */
     version(Posix) void popen(string command, in char[] stdioOpenmode = "r")
     {
@@ -374,8 +387,9 @@ opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
 
 /**
 Returns $(D true) if the file is at end (see $(WEB
-cplusplus.com/reference/clibrary/cstdio/feof.html, feof)). The file
-must be opened, otherwise an exception is thrown.
+cplusplus.com/reference/clibrary/cstdio/feof.html, feof)).
+
+Throws: $(D Exception) if the file is not opened.
  */
     @property bool eof() const pure
     {
@@ -402,8 +416,9 @@ the file handle.
     }
 
 /**
-Detaches from the underlying file. If the sole owner, calls $(D close)
-and throws if that fails.
+Detaches from the underlying file. If the sole owner, calls $(D close).
+
+Throws: $(D ErrnoException) on failure if closing the file.
   */
     void detach()
     {
@@ -439,6 +454,8 @@ throwing on error. Even if an exception is thrown, afterwards the $(D
 File) object is empty. This is different from $(D detach) in that it
 always closes the file; consequently, all other $(D File) objects
 referring to the same handle will see a closed file henceforth.
+
+Throws: $(D ErrnoException) on error.
  */
     void close()
     {
@@ -455,11 +472,12 @@ referring to the same handle will see a closed file henceforth.
         scope(exit) _p.handle = null; // nullify the handle anyway
         version (Posix)
         {
-            if (_p.isPipe)
+            if (_p.isPopened)
             {
-                // Ignore the result of the command
-                errnoEnforce(.pclose(_p.handle) != -1,
+                auto res = .pclose(_p.handle);
+                errnoEnforce(res != -1,
                         "Could not close pipe `"~_name~"'");
+                errnoEnforce(res == 0, format("Command returned %d", res));
                 return;
             }
         }
@@ -480,9 +498,10 @@ _clearerr) for the file handle.
     }
 
 /**
-If the file is not opened, throws an exception. Otherwise, calls $(WEB
-cplusplus.com/reference/clibrary/cstdio/_fflush.html, _fflush) for the
-file handle and throws on error.
+Calls $(WEB cplusplus.com/reference/clibrary/cstdio/_fflush.html, _fflush) 
+for the file handle.
+
+Throws: $(D Exception) if the file is not opened or if the call to $D(fflush) fails.
  */
     void flush()
     {
@@ -492,14 +511,16 @@ file handle and throws on error.
     }
 
 /**
-If the file is not opened, throws an exception. Otherwise, calls $(WEB
-cplusplus.com/reference/clibrary/cstdio/fread.html, fread) for the
-file handle and throws on error. The number of items to read and the size of
+Calls $(WEB cplusplus.com/reference/clibrary/cstdio/fread.html, fread) for the
+file handle. The number of items to read and the size of
 each item is inferred from the size and type of the input array, respectively.
 
 Returns: The slice of $(D buffer) containing the data that was actually read.
 This will be shorter than $(D buffer) if EOF was reached before the buffer
 could be filled.
+
+Throws: $(D Exception) if $(D buffer) is empty.
+        $(D ErrnoException) if the file is not opened or the call to $D(fread) fails.
 
 $(D rawRead) always reads in binary mode on Windows.
  */
@@ -541,13 +562,14 @@ $(D rawRead) always reads in binary mode on Windows.
     }
 
 /**
-If the file is not opened, throws an exception. Otherwise, calls $(WEB
-cplusplus.com/reference/clibrary/cstdio/fwrite.html, fwrite) for the file
-handle and throws on error. The number of items to write and the size of each
+Calls $(WEB cplusplus.com/reference/clibrary/cstdio/fwrite.html, fwrite) for the file
+handle. The number of items to write and the size of each
 item is inferred from the size and type of the input array, respectively. An
 error is thrown if the buffer could not be written in its entirety.
 
 $(D rawWrite) always writes in binary mode on Windows.
+
+Throws: $(D ErrnoException) if the file is not opened or if the call to $D(fread) fails.
  */
     void rawWrite(T)(in T[] buffer)
     {
@@ -587,9 +609,11 @@ $(D rawWrite) always writes in binary mode on Windows.
     }
 
 /**
-If the file is not opened, throws an exception. Otherwise, calls $(WEB
-cplusplus.com/reference/clibrary/cstdio/fseek.html, fseek) for the
-file handle. Throws on error.
+Calls $(WEB cplusplus.com/reference/clibrary/cstdio/fseek.html, fseek) 
+for the file handle.
+
+Throws: $(D Exception) if the file is not opened.
+        $(D ErrnoException) if the call to $D(fseek) fails.
  */
     void seek(long offset, int origin = SEEK_SET)
     {
@@ -634,9 +658,11 @@ file handle. Throws on error.
     }
 
 /**
-If the file is not opened, throws an exception. Otherwise, calls $(WEB
-cplusplus.com/reference/clibrary/cstdio/ftell.html, ftell) for the
-managed file handle. Throws on error.
+Calls $(WEB cplusplus.com/reference/clibrary/cstdio/ftell.html, ftell) for the
+managed file handle.
+
+Throws: $(D Exception) if the file is not opened.
+        $(D ErrnoException) if the call to $D(ftell) fails.
  */
     @property ulong tell() const
     {
@@ -666,9 +692,10 @@ managed file handle. Throws on error.
     }
 
 /**
-If the file is not opened, throws an exception. Otherwise, calls $(WEB
-cplusplus.com/reference/clibrary/cstdio/_rewind.html, _rewind) for the
-file handle. Throws on error.
+Calls $(WEB cplusplus.com/reference/clibrary/cstdio/_rewind.html, _rewind)
+for the file handle.
+
+Throws: $(D Exception) if the file is not opened.
  */
     void rewind()
     {
@@ -677,9 +704,11 @@ file handle. Throws on error.
     }
 
 /**
-If the file is not opened, throws an exception. Otherwise, calls $(WEB
-cplusplus.com/reference/clibrary/cstdio/_setvbuf.html, _setvbuf) for
+Calls $(WEB cplusplus.com/reference/clibrary/cstdio/_setvbuf.html, _setvbuf) for
 the file handle.
+
+Throws: $(D Exception) if the file is not opened.
+        $(D ErrnoException) if the call to $D(setvbuf) fails.
  */
     void setvbuf(size_t size, int mode = _IOFBF)
     {
@@ -689,9 +718,12 @@ the file handle.
     }
 
 /**
-If the file is not opened, throws an exception. Otherwise, calls
-$(WEB cplusplus.com/reference/clibrary/cstdio/_setvbuf.html,
-_setvbuf) for the file handle. */
+Calls $(WEB cplusplus.com/reference/clibrary/cstdio/_setvbuf.html,
+_setvbuf) for the file handle. 
+
+Throws: $(D Exception) if the file is not opened.
+        $(D ErrnoException) if the call to $D(setvbuf) fails.
+*/
     void setvbuf(void[] buf, int mode = _IOFBF)
     {
         enforce(isOpen, "Attempting to call setvbuf() on an unopened file");
@@ -701,8 +733,11 @@ _setvbuf) for the file handle. */
     }
 
 /**
-If the file is not opened, throws an exception. Otherwise, writes its
-arguments in text format to the file. */
+Writes its arguments in text format to the file. 
+
+Throws: $(D Exception) if the file is not opened.
+        $(D ErrnoException) on an error writing to the file.
+*/
     void write(S...)(S args)
     {
         auto w = lockingTextWriter;
@@ -738,24 +773,35 @@ arguments in text format to the file. */
     }
 
 /**
-If the file is not opened, throws an exception. Otherwise, writes its
-arguments in text format to the file, followed by a newline. */
+Writes its arguments in text format to the file, followed by a newline.
+
+Throws: $(D Exception) if the file is not opened.
+        $(D ErrnoException) on an error writing to the file.
+*/
     void writeln(S...)(S args)
     {
         write(args, '\n');
     }
 
 /**
-If the file is not opened, throws an exception. Otherwise, writes its
-arguments in text format to the file, according to the format in the
-first argument. */
+Writes its arguments in text format to the file, according to the 
+format in the first argument. 
+
+Throws: $(D Exception) if the file is not opened.
+        $(D ErrnoException) on an error writing to the file.
+*/
     void writef(Char, A...)(in Char[] fmt, A args)
     {
         std.format.formattedWrite(lockingTextWriter, fmt, args);
     }
 
 /**
-Same as writef, plus adds a newline. */
+Writes its arguments in text format to the file, according to the 
+format in the first argument, followed by a newline.
+
+Throws: $(D Exception) if the file is not opened.
+        $(D ErrnoException) on an error writing to the file.
+*/
     void writefln(Char, A...)(in Char[] fmt, A args)
     {
         auto w = lockingTextWriter;
@@ -1143,7 +1189,7 @@ to this file. */
 
 
         /// Range primitive operations.
-        @property
+        @property nothrow
         bool empty() const
         {
             return !file_.isOpen;
@@ -1151,9 +1197,10 @@ to this file. */
 
 
         /// Ditto
-        @property
-        nothrow ubyte[] front()
+        @property nothrow
+        ubyte[] front()
         {
+            version(assert) if (empty) throw new RangeError();
             return chunk_;
         }
 
@@ -1161,7 +1208,7 @@ to this file. */
         /// Ditto
         void popFront()
         {
-            enforce(!empty, "Cannot call popFront on empty range");
+            version(assert) if (empty) throw new RangeError();
 
             chunk_ = file_.rawRead(chunk_);
             if (chunk_.length == 0)
@@ -1429,13 +1476,13 @@ struct LockingTextReader
 
     @property dchar front()
     {
-        enforce(!empty);
+        version(assert) if (empty) throw new RangeError();
         return _crt;
     }
 
     void popFront()
     {
-        enforce(!empty);
+        version(assert) if (empty) throw new RangeError();
         if (FGETC(cast(_iobuf*) _f._p.handle) == -1)
         {
             enforce(_f.eof);
@@ -1859,8 +1906,8 @@ import std.stdio;
 
 int main()
 {
-    char[] buf;
-    while ((buf = readln()) != null)
+    string buf;
+    while ((buf = stdin.readln()) !is null)
         write(buf);
     return 0;
 }
@@ -2338,7 +2385,10 @@ Initialize with a message and an error code. */
             auto s = std.c.string.strerror(errno);
         }
         auto sysmsg = to!string(s);
-        super(message ? message ~ "(" ~ sysmsg ~ ")" : sysmsg);
+        // If e is 0, we don't use the system error message.  (The message
+        // is "Success", which is rather pointless for an exception.)
+        super(e == 0 ? message
+                     : (message ? message ~ " (" ~ sysmsg ~ ")" : sysmsg));
     }
 
 /** Convenience functions that throw an $(D StdioException). */

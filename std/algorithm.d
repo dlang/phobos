@@ -25,9 +25,10 @@ splitter) $(MYREF uniq) )
 $(TR $(TDNW Sorting) $(TD $(MYREF completeSort) $(MYREF isPartitioned)
 $(MYREF isSorted) $(MYREF makeIndex) $(MYREF partialSort) $(MYREF
 partition) $(MYREF partition3) $(MYREF schwartzSort) $(MYREF sort)
-$(MYREF topN) $(MYREF topNCopy) )
+$(MYREF topN) $(MYREF topNCopy) $(MYREF nextPermutation)
+$(MYREF nextEvenPermutation) )
 )
-$(TR $(TDNW Set&nbsp;operations) $(TD $(MYREF
+$(TR $(TDNW Set&nbsp;operations) $(TD $(MYREF cartesianProduct) $(MYREF
 largestPartialIntersection) $(MYREF largestPartialIntersectionWeighted)
 $(MYREF nWayUnion) $(MYREF setDifference) $(MYREF setIntersection) $(MYREF
 setSymmetricDifference) $(MYREF setUnion) )
@@ -145,7 +146,7 @@ until a specific value is found.)
 $(LEADINGROW Comparison
 )
 $(TR $(TDNW $(LREF cmp)) $(TD $(D cmp("abc", "abcd")) is $(D
--1), $(D cmp("abc", aba")) is $(D 1), and $(D cmp("abc", "abc")) is
+-1), $(D cmp("abc", "aba")) is $(D 1), and $(D cmp("abc", "abc")) is
 $(D 0).)
 )
 $(TR $(TDNW $(LREF equal)) $(TD Compares ranges for
@@ -235,7 +236,16 @@ range.)
 $(TR $(TDNW $(LREF topNCopy)) $(TD Copies out the top elements
 of a range.)
 )
+$(TR $(TDNW $(LREF nextPermutation)) $(TD Computes the next lexicographically
+greater permutation of a range in-place.)
+)
+$(TR $(TDNW $(LREF nextEvenPermutation)) $(TD Computes the next
+lexicographically greater even permutation of a range in-place.)
+)
 $(LEADINGROW Set operations
+)
+$(TR $(TDNW $(LREF cartesianProduct)) $(TD Computes Cartesian product of two
+ranges.)
 )
 $(TR $(TDNW $(LREF largestPartialIntersection)) $(TD Copies out
 the values that occur most frequently in a range of ranges.)
@@ -251,7 +261,7 @@ $(TR $(TDNW $(LREF setDifference)) $(TD Lazily computes the set
 difference of two or more sorted ranges.)
 )
 $(TR $(TDNW $(LREF setIntersection)) $(TD Lazily computes the
-set difference of two or more sorted ranges.)
+intersection of two or more sorted ranges.)
 )
 $(TR $(TDNW $(LREF setSymmetricDifference)) $(TD Lazily
 computes the symmetric set difference of two or more sorted ranges.)
@@ -316,12 +326,12 @@ module std.algorithm;
 
 import std.c.string, core.bitop;
 import std.array, std.ascii, std.container, std.conv, std.exception,
-    std.functional, std.math, std.metastrings, std.range, std.string,
+    std.functional, std.math, std.random, std.range, std.string,
     std.traits, std.typecons, std.typetuple, std.uni, std.utf;
 
 version(unittest)
 {
-    import std.random, std.stdio, std.string;
+    import std.stdio;
     mixin(dummyRanges);
 }
 
@@ -338,7 +348,7 @@ Example:
 ----
 int[] arr1 = [ 1, 2, 3, 4 ];
 int[] arr2 = [ 5, 6 ];
-auto squares = map!("a * a")(chain(arr1, arr2));
+auto squares = map!(a => a * a)(chain(arr1, arr2));
 assert(equal(squares, [ 1, 4, 9, 16, 25, 36 ]));
 ----
 
@@ -607,19 +617,27 @@ Example:
 ----
 int[] arr = [ 1, 2, 3, 4, 5 ];
 // Sum all elements
-auto sum = reduce!("a + b")(0, arr);
+auto sum = reduce!((a,b) => a + b)(0, arr);
+assert(sum == 15);
+
+// Sum again, using a string predicate with "a" and "b"
+sum = reduce!"a + b"(0, arr);
 assert(sum == 15);
 
 // Compute the maximum of all elements
 auto largest = reduce!(max)(arr);
 assert(largest == 5);
 
+// Max again, but with Uniform Function Call Syntax (UFCS)
+largest = arr.reduce!(max);
+assert(largest == 5);
+
 // Compute the number of odd elements
-auto odds = reduce!("a + (b & 1)")(0, arr);
+auto odds = reduce!((a,b) => a + (b & 1))(0, arr);
 assert(odds == 3);
 
 // Compute the sum of squares
-auto ssquares = reduce!("a + b * b")(0, arr);
+auto ssquares = reduce!((a,b) => a + b * b)(0, arr);
 assert(ssquares == 55);
 
 // Chain multiple ranges into seed
@@ -631,7 +649,11 @@ assert(r == 107);
 // Mixing convertible types is fair game, too
 double[] c = [ 2.5, 3.0 ];
 auto r1 = reduce!("a + b")(chain(a, b, c));
-assert(r1 == 112.5);
+assert(approxEqual(r1, 112.5));
+
+// To minimize nesting of parentheses, Uniform Function Call Syntax can be used
+auto r2 = chain(a, b, c).reduce!("a + b");
+assert(approxEqual(r2, 112.5));
 ----
 
 $(DDOC_SECTION_H Multiple functions:) Sometimes it is very useful to
@@ -647,14 +669,14 @@ Example:
 double[] a = [ 3.0, 4, 7, 11, 3, 2, 5 ];
 // Compute minimum and maximum in one pass
 auto r = reduce!(min, max)(a);
-// The type of r is Tuple!(double, double)
-assert(r[0] == 2);  // minimum
-assert(r[1] == 11); // maximum
+// The type of r is Tuple!(int, int)
+assert(approxEqual(r[0], 2));  // minimum
+assert(approxEqual(r[1], 11)); // maximum
 
 // Compute sum and sum of squares in one pass
 r = reduce!("a + b", "a + b * b")(tuple(0.0, 0.0), a);
-assert(r[0] == 35);  // sum
-assert(r[1] == 233); // sum of squares
+assert(approxEqual(r[0], 35));  // sum
+assert(approxEqual(r[1], 233)); // sum of squares
 // Compute average and standard deviation from the above
 auto avg = r[0] / a.length;
 auto stdev = sqrt(r[1] / a.length - avg * avg);
@@ -1245,18 +1267,25 @@ which $(D predicate(x)) is $(D true).
 Example:
 ----
 int[] arr = [ 1, 2, 3, 4, 5 ];
+
 // Sum all elements
-auto small = filter!("a < 3")(arr);
+auto small = filter!(a => a < 3)(arr);
 assert(equal(small, [ 1, 2 ]));
+
+// Sum again, but with Uniform Function Call Syntax (UFCS)
+auto sum = arr.filter!(a => a < 3);
+assert(equal(sum, [ 1, 2 ]));
+
 // In combination with chain() to span multiple ranges
 int[] a = [ 3, -2, 400 ];
 int[] b = [ 100, -101, 102 ];
-auto r = filter!("a > 0")(chain(a, b));
+auto r = chain(a, b).filter!(a => a > 0);
 assert(equal(r, [ 3, 400, 100, 102 ]));
+
 // Mixing convertible types is fair game, too
 double[] c = [ 2.5, 3.0 ];
-auto r1 = filter!("cast(int) a != a")(chain(c, a, b));
-assert(equal(r1, [ 2.5 ]));
+auto r1 = chain(c, a, b).filter!(a => cast(int) a != a);
+assert(approxEqual(r1, [ 2.5 ]));
 ----
  */
 template filter(alias pred) if (is(typeof(unaryFun!pred)))
@@ -4389,11 +4418,11 @@ unittest
 /++
     Returns the number of elements which must be popped from the front of
     $(D haystack) before reaching an element for which
-    $(D startsWith!pred(haystack, needle)) is $(D true). If
-    $(D startsWith!pred(haystack, needle)) is not $(D true) for any element in
-    $(D haystack), then -1 is returned.
+    $(D startsWith!pred(haystack, needles)) is $(D true). If
+    $(D startsWith!pred(haystack, needles)) is not $(D true) for any element in
+    $(D haystack), then $(D -1) is returned.
 
-    $(D needle) may be either an element or a range.
+    $(D needles) may be either an element or a range.
 
     Examples:
 --------------------
@@ -4409,47 +4438,88 @@ assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
 assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
 --------------------
   +/
-ptrdiff_t countUntil(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
-    if (isForwardRange!R1 && isForwardRange!R2 &&
-        is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
+ptrdiff_t countUntil(alias pred = "a == b", R, Rs...)(R haystack, Rs needles)
+    if (isForwardRange!R
+        && Rs.length > 0
+        && isForwardRange!(Rs[0]) == isInputRange!(Rs[0])
+        && is(typeof(startsWith!pred(haystack, needles[0])))
+        && (Rs.length == 1
+            || is(typeof(countUntil!pred(haystack, needles[1 .. $])))))
 {
     typeof(return) result;
-    static if (hasLength!R1) //Note: Narrow strings don't have length.
+
+    static if (needles.length == 1)
     {
-        //We delegate to find because find is very efficient.
-        //We store the length of the haystack so we don't have to save it.
-        auto len = haystack.length;
-        auto r2 = find!pred(haystack, needle);
-        if (!r2.empty)
-            return cast(typeof(return)) (len - r2.length);
+        static if (hasLength!R) //Note: Narrow strings don't have length.
+        {
+            //We delegate to find because find is very efficient.
+            //We store the length of the haystack so we don't have to save it.
+            auto len = haystack.length;
+            auto r2 = find!pred(haystack, needles[0]);
+            if (!r2.empty)
+              return cast(typeof(return)) (len - r2.length);
+        }
+        else
+        {
+            if (needles[0].empty)
+              return 0;
+
+            //Default case, slower route doing startsWith iteration
+            for ( ; !haystack.empty ; ++result )
+            {
+                //We compare the first elements of the ranges here before
+                //forwarding to startsWith. This avoids making useless saves to
+                //haystack/needle if they aren't even going to be mutated anyways.
+                //It also cuts down on the amount of pops on haystack.
+                if (binaryFun!pred(haystack.front, needles[0].front))
+                {
+                    //Here, we need to save the needle before popping it.
+                    //haystack we pop in all paths, so we do that, and then save.
+                    haystack.popFront();
+                    if (startsWith!pred(haystack.save, needles[0].save.dropOne()))
+                      return result;
+                }
+                else
+                  haystack.popFront();
+            }
+        }
     }
     else
     {
-        if (needle.empty)
-            return 0;
-
-        //Default case, slower route doing startsWith iteration
-        for ( ; !haystack.empty ; ++result )
+        foreach (i, Ri; Rs)
         {
-            //We compare the first elements of the ranges here before
-            //forwarding to startsWith. This avoids making useless saves to
-            //haystack/needle if they aren't even going to be mutated anyways.
-            //It also cuts down on the amount of pops on haystack.
-            if (binaryFun!pred(haystack.front, needle.front))
+            static if (isForwardRange!Ri)
             {
-                //Here, we need to save the needle before popping it.
-                //haystack we pop in all paths, so we do that, and then save.
-                haystack.popFront();
-                if (startsWith!pred(haystack.save, needle.save.dropOne()))
-                    return result;
+                if (needles[i].empty)
+                  return 0;
             }
-            else
-                haystack.popFront();
+        }
+        Tuple!Rs t;
+        foreach (i, Ri; Rs)
+        {
+            static if (!isForwardRange!Ri)
+            {
+                t[i] = needles[i];
+            }
+        }
+        for (; !haystack.empty ; ++result, haystack.popFront())
+        {
+            foreach (i, Ri; Rs)
+            {
+                static if (isForwardRange!Ri)
+                {
+                    t[i] = needles[i].save;
+                }
+            }
+            if (startsWith!pred(haystack.save, t.expand))
+            {
+                return result;
+            }
         }
     }
 
     //Because of @@@8804@@@: Avoids both "unreachable code" or "no return statement"
-    static if (isInfinite!R1) assert(0);
+    static if (isInfinite!R) assert(0);
     else return -1;
 }
 /// ditto
@@ -4497,6 +4567,14 @@ unittest
     assert(r.save.countUntil(r2) == 3);
     assert(r.save.countUntil(7)  == -1);
     assert(r.save.countUntil(r3) == -1);
+}
+
+unittest
+{
+    assert(countUntil("hello world", "world", "asd") == 6);
+    assert(countUntil("hello world", "world", "ello") == 1);
+    assert(countUntil("hello world", "world", "") == 0);
+    assert(countUntil("hello world", "world", 'l') == 2);
 }
 
 /++
@@ -4587,25 +4665,7 @@ unittest
     }
 }
 
-/**
- *  $(RED Deprecated. It will be removed in January 2013.
- *        Currently defaults to $(LREF countUntil) instead.)
- *
- * Not to be confused with its homonym function
- * in $(D std.string).
- *
- * Please use $(D std.string.indexOf) if you wish to find
- * the index of a character in a string.
- *
- * Otherwise, please use $(D std.string.countUntil) to find
- * an element's logical position in a range.
- *
- * Example:
- * --------
- * assert(std.string.indexOf("日本語", '本') == 3);
- * assert(std.algorithm.countUntil("日本語", '本') == 1);
- * --------
- */
+// Explicitly undocumented. It will be removed in November 2013.
 deprecated("Please use std.algorithm.countUntil instead.")
 ptrdiff_t indexOf(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (is(typeof(startsWith!pred(haystack, needle))))
@@ -4783,17 +4843,16 @@ assert(startsWith("abc", "x", "aaa", "sab") == 0);
 assert(startsWith("abc", "x", "aaa", "a", "sab") == 3);
 ----
  */
-uint startsWith(alias pred = "a == b", Range, Ranges...)
-               (Range doesThisStart, Ranges withOneOfThese)
-if (isInputRange!Range && Ranges.length > 1 &&
+uint startsWith(alias pred = "a == b", Range, Needles...)(Range doesThisStart, Needles withOneOfThese)
+if (isInputRange!Range && Needles.length > 1 &&
     is(typeof(.startsWith!pred(doesThisStart, withOneOfThese[0])) : bool ) &&
     is(typeof(.startsWith!pred(doesThisStart, withOneOfThese[1 .. $])) : uint))
 {
     alias doesThisStart haystack;
     alias withOneOfThese needles;
 
-    // Make one pass looking for empty ranges
-    foreach (i, Unused; Ranges)
+    // Make one pass looking for empty ranges in needles
+    foreach (i, Unused; Needles)
     {
         // Empty range matches everything
         static if (!is(typeof(binaryFun!pred(haystack.front, needles[i])) : bool))
@@ -4804,17 +4863,18 @@ if (isInputRange!Range && Ranges.length > 1 &&
 
     for (; !haystack.empty; haystack.popFront())
     {
-        foreach (i, Unused; Ranges)
+        foreach (i, Unused; Needles)
         {
             static if (is(typeof(binaryFun!pred(haystack.front, needles[i])) : bool))
             {
                 // Single-element
                 if (binaryFun!pred(haystack.front, needles[i]))
                 {
-                    // found, but continue to account for one-element
+                    // found, but instead of returning, we just stop searching.
+                    // This is to account for one-element
                     // range matches (consider startsWith("ab", "a",
                     // 'a') should return 1, not 2).
-                    continue;
+                    break;
                 }
             }
             else
@@ -4833,9 +4893,12 @@ if (isInputRange!Range && Ranges.length > 1 &&
         }
 
         // If execution reaches this point, then the front matches for all
-        // needles ranges. What we need to do now is to lop off the front of
-        // all ranges involved and recurse.
-        foreach (i, Unused; Ranges)
+        // needle ranges, or a needle element has been matched.
+        // What we need to do now is iterate, lopping off the front of
+        // the range and checking if the result is empty, or finding an
+        // element needle and returning.
+        // If neither happens, we drop to the end and loop.
+        foreach (i, Unused; Needles)
         {
             static if (is(typeof(binaryFun!pred(haystack.front, needles[i])) : bool))
             {
@@ -4853,8 +4916,7 @@ if (isInputRange!Range && Ranges.length > 1 &&
 }
 
 /// Ditto
-bool startsWith(alias pred = "a == b", R1, R2)
-               (R1 doesThisStart, R2 withThis)
+bool startsWith(alias pred = "a == b", R1, R2)(R1 doesThisStart, R2 withThis)
 if (isInputRange!R1 &&
     isInputRange!R2 &&
     is(typeof(binaryFun!pred(doesThisStart.front, withThis.front)) : bool))
@@ -4867,18 +4929,24 @@ if (isInputRange!R1 &&
     else
         enum isDefaultPred = false;
 
+    //Note: While narrow strings don't have a "true" length, for a narrow string to start with another
+    //narrow string *of the same type*, it must have *at least* as many code units.
+    static if ((hasLength!R1 && hasLength!R2) ||
+        (isNarrowString!R1 && isNarrowString!R2 && ElementEncodingType!R1.sizeof == ElementEncodingType!R2.sizeof))
+    {
+        if (haystack.length < needle.length)
+            return false;
+    }
+
     static if (isDefaultPred && isArray!R1 && isArray!R2 &&
                is(Unqual!(ElementEncodingType!R1) == Unqual!(ElementEncodingType!R2)))
     {
-        if (haystack.length < needle.length) return false;
-
+        //Array slice comparison mode
         return haystack[0 .. needle.length] == needle;
     }
-    else static if (isArray!R1 && isArray!R2 &&
-                    !isNarrowString!R1 && !isNarrowString!R2)
+    else static if (isRandomAccessRange!R1 && isRandomAccessRange!R2 && hasLength!R2)
     {
-        if (haystack.length < needle.length) return false;
-
+        //RA dual indexing mode
         foreach (j; 0 .. needle.length)
         {
             if (!binaryFun!pred(needle[j], haystack[j]))
@@ -4890,26 +4958,34 @@ if (isInputRange!R1 &&
     }
     else
     {
+        //Standard input range mode
+        if (needle.empty) return true;
         static if (hasLength!R1 && hasLength!R2)
         {
-            if (haystack.length < needle.length) return false;
+            //We have previously checked that haystack.length > needle.length,
+            //So no need to check haystack.empty during iteration
+            for ( ; ; haystack.popFront() )
+            {
+                if (!binaryFun!pred(haystack.front, needle.front)) break;
+                needle.popFront();
+                if (needle.empty) return true;
+            }
         }
-
-        if (needle.empty) return true;
-
-        for (; !haystack.empty; haystack.popFront())
+        else
         {
-            if (!binaryFun!pred(haystack.front, needle.front)) break;
-            needle.popFront();
-            if (needle.empty) return true;
+            for ( ; !haystack.empty ; haystack.popFront() )
+            {
+                if (!binaryFun!pred(haystack.front, needle.front)) break;
+                needle.popFront();
+                if (needle.empty) return true;
+            }
         }
         return false;
     }
 }
 
 /// Ditto
-bool startsWith(alias pred = "a == b", R, E)
-               (R doesThisStart, E withThis)
+bool startsWith(alias pred = "a == b", R, E)(R doesThisStart, E withThis)
 if (isInputRange!R &&
     is(typeof(binaryFun!pred(doesThisStart.front, withThis)) : bool))
 {
@@ -4933,6 +5009,7 @@ unittest
 
         foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
         {
+            //Lots of strings
             assert(startsWith(to!S("abc"), to!T("")));
             assert(startsWith(to!S("ab"), to!T("a")));
             assert(startsWith(to!S("abc"), to!T("a")));
@@ -4949,15 +5026,34 @@ unittest
             assert(startsWith(to!S("abc"), 'a'));
             assert(!startsWith(to!S("abc"), to!T("sab")));
             assert(startsWith(to!S("abc"), 'x', to!T("aaa"), 'a', "sab") == 3);
+
+            //Unicode
             assert(startsWith(to!S("\uFF28el\uFF4co"), to!T("\uFF28el")));
             assert(startsWith(to!S("\uFF28el\uFF4co"), to!T("Hel"), to!T("\uFF28el")) == 2);
+            assert(startsWith(to!S("日本語"), to!T("日本")));
+            assert(startsWith(to!S("日本語"), to!T("日本語")));
+            assert(!startsWith(to!S("日本"), to!T("日本語")));
+
+            //Empty
+            assert(startsWith(to!S(""),  T.init));
+            assert(!startsWith(to!S(""), 'a'));
+            assert(startsWith(to!S("a"), T.init));
+            assert(startsWith(to!S("a"), T.init, "") == 1);
+            assert(startsWith(to!S("a"), T.init, 'a') == 1);
+            assert(startsWith(to!S("a"), 'a', T.init) == 2);
         }
     }
+
+    //Length but no RA
+    assert(!startsWith("abc".takeExactly(3), "abcd".takeExactly(4)));
+    assert(startsWith("abc".takeExactly(3), "abcd".takeExactly(3)));
+    assert(startsWith("abc".takeExactly(3), "abcd".takeExactly(1)));
 
     foreach (T; TypeTuple!(int, short))
     {
         immutable arr = cast(T[])[0, 1, 2, 3, 4, 5];
 
+        //RA range
         assert(startsWith(arr, cast(int[])null));
         assert(!startsWith(arr, 5));
         assert(!startsWith(arr, 1));
@@ -4969,6 +5065,7 @@ unittest
         assert(!startsWith(arr, [0, 1, 7]));
         assert(startsWith(arr, [0, 1, 7], [0, 1, 2]) == 2);
 
+        //Normal input range
         assert(!startsWith(filter!"true"(arr), 1));
         assert(startsWith(filter!"true"(arr), 0));
         assert(startsWith(filter!"true"(arr), [0]));
@@ -4980,6 +5077,10 @@ unittest
         assert(startsWith(arr, filter!"true"([0, 1]), 7) == 1);
         assert(!startsWith(arr, filter!"true"([0, 1, 7])));
         assert(startsWith(arr, [0, 1, 7], filter!"true"([0, 1, 2])) == 2);
+
+        //Non-default pred
+        assert(startsWith!("a%10 == b%10")(arr, [10, 11]));
+        assert(!startsWith!("a%10 == b%10")(arr, [10, 12]));
     }
 }
 
@@ -5089,17 +5190,16 @@ assert(endsWith("abc", "x", "aaa", "sab") == 0);
 assert(endsWith("abc", "x", "aaa", 'c', "sab") == 3);
 ----
  */
-uint endsWith(alias pred = "a == b", Range, Ranges...)
-             (Range doesThisEnd, Ranges withOneOfThese)
-if (isBidirectionalRange!Range && Ranges.length > 1 &&
+uint endsWith(alias pred = "a == b", Range, Needles...)(Range doesThisEnd, Needles withOneOfThese)
+if (isBidirectionalRange!Range && Needles.length > 1 &&
     is(typeof(.endsWith!pred(doesThisEnd, withOneOfThese[0])) : bool) &&
     is(typeof(.endsWith!pred(doesThisEnd, withOneOfThese[1 .. $])) : uint))
 {
     alias doesThisEnd haystack;
     alias withOneOfThese needles;
 
-    // Make one pass looking for empty ranges
-    foreach (i, Unused; Ranges)
+    // Make one pass looking for empty ranges in needles
+    foreach (i, Unused; Needles)
     {
         // Empty range matches everything
         static if (!is(typeof(binaryFun!pred(haystack.back, needles[i])) : bool))
@@ -5110,7 +5210,7 @@ if (isBidirectionalRange!Range && Ranges.length > 1 &&
 
     for (; !haystack.empty; haystack.popBack())
     {
-        foreach (i, Unused; Ranges)
+        foreach (i, Unused; Needles)
         {
             static if (is(typeof(binaryFun!pred(haystack.back, needles[i])) : bool))
             {
@@ -5139,7 +5239,7 @@ if (isBidirectionalRange!Range && Ranges.length > 1 &&
         // If execution reaches this point, then the back matches for all
         // needles ranges. What we need to do now is to lop off the back of
         // all ranges involved and recurse.
-        foreach (i, Unused; Ranges)
+        foreach (i, Unused; Needles)
         {
             static if (is(typeof(binaryFun!pred(haystack.back, needles[i])) : bool))
             {
@@ -5157,8 +5257,7 @@ if (isBidirectionalRange!Range && Ranges.length > 1 &&
 }
 
 /// Ditto
-bool endsWith(alias pred = "a == b", R1, R2)
-             (R1 doesThisEnd, R2 withThis)
+bool endsWith(alias pred = "a == b", R1, R2)(R1 doesThisEnd, R2 withThis)
 if (isBidirectionalRange!R1 &&
     isBidirectionalRange!R2 &&
     is(typeof(binaryFun!pred(doesThisEnd.back, withThis.back)) : bool))
@@ -5185,8 +5284,7 @@ if (isBidirectionalRange!R1 &&
 }
 
 /// Ditto
-bool endsWith(alias pred = "a == b", R, E)
-             (R doesThisEnd, E withThis)
+bool endsWith(alias pred = "a == b", R, E)(R doesThisEnd, E withThis)
 if (isBidirectionalRange!R &&
     is(typeof(binaryFun!pred(doesThisEnd.back, withThis)) : bool))
 {
@@ -5200,27 +5298,6 @@ unittest
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
-    //This is because we need to run some tests on ranges which _aren't_ arrays,
-    //and as far as I can tell, all of the functions which would wrap an array
-    //in a range (such as filter) don't return bidirectional ranges, so I'm
-    //creating one here.
-    auto static wrap(R)(R r)
-    if (isBidirectionalRange!R)
-    {
-        static struct Result
-        {
-            @property auto ref front() {return _range.front;}
-            @property auto ref back() {return _range.back;}
-            @property bool empty() {return _range.empty;}
-            void popFront() {_range.popFront();}
-            void popBack() {_range.popBack();}
-            @property auto save() {return this;}
-            R _range;
-        }
-
-        return Result(r);
-    }
-
     foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         assert(!endsWith(to!S("abc"), 'a'));
@@ -5231,6 +5308,7 @@ unittest
 
         foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
         {
+            //Lots of strings
             assert(endsWith(to!S("abc"), to!T("")));
             assert(!endsWith(to!S("abc"), to!T("a")));
             assert(!endsWith(to!S("abc"), to!T("b")));
@@ -5244,6 +5322,21 @@ unittest
             assert(endsWith(to!S("abc"), to!T("x"), "aaa", "c", "sab") == 3);
             assert(endsWith(to!S("\uFF28el\uFF4co"), to!T("l\uFF4co")));
             assert(endsWith(to!S("\uFF28el\uFF4co"), to!T("lo"), to!T("l\uFF4co")) == 2);
+
+            //Unicode
+            assert(endsWith(to!S("\uFF28el\uFF4co"), to!T("l\uFF4co")));
+            assert(endsWith(to!S("\uFF28el\uFF4co"), to!T("lo"), to!T("l\uFF4co")) == 2);
+            assert(endsWith(to!S("日本語"), to!T("本語")));
+            assert(endsWith(to!S("日本語"), to!T("日本語")));
+            assert(!endsWith(to!S("本語"), to!T("日本語")));
+
+            //Empty
+            assert(endsWith(to!S(""),  T.init));
+            assert(!endsWith(to!S(""), 'a'));
+            assert(endsWith(to!S("a"), T.init));
+            assert(endsWith(to!S("a"), T.init, "") == 1);
+            assert(endsWith(to!S("a"), T.init, 'a') == 1);
+            assert(endsWith(to!S("a"), 'a', T.init) == 2);
         }
     }
 
@@ -5251,6 +5344,7 @@ unittest
     {
         immutable arr = cast(T[])[0, 1, 2, 3, 4, 5];
 
+        //RA range
         assert(endsWith(arr, cast(int[])null));
         assert(!endsWith(arr, 0));
         assert(!endsWith(arr, 4));
@@ -5262,18 +5356,20 @@ unittest
         assert(!endsWith(arr, [2, 4, 5]));
         assert(endsWith(arr, [2, 4, 5], [3, 4, 5]) == 2);
 
-        assert(!endsWith(wrap(arr), 4));
-        assert(endsWith(wrap(arr), 5));
-        assert(endsWith(wrap(arr), [5]));
-        assert(endsWith(wrap(arr), [4, 5]));
-        assert(endsWith(wrap(arr), [4, 5], 7) == 1);
-        assert(!endsWith(wrap(arr), [2, 4, 5]));
-        assert(endsWith(wrap(arr), [2, 4, 5], [3, 4, 5]) == 2);
-        assert(endsWith(arr, wrap([4, 5])));
-        assert(endsWith(arr, wrap([4, 5]), 7) == 1);
-        assert(!endsWith(arr, wrap([2, 4, 5])));
-        assert(endsWith(arr, [2, 4, 5], wrap([3, 4, 5])) == 2);
+        //Normal input range
+        assert(!endsWith(filterBidirectional!"true"(arr), 4));
+        assert(endsWith(filterBidirectional!"true"(arr), 5));
+        assert(endsWith(filterBidirectional!"true"(arr), [5]));
+        assert(endsWith(filterBidirectional!"true"(arr), [4, 5]));
+        assert(endsWith(filterBidirectional!"true"(arr), [4, 5], 7) == 1);
+        assert(!endsWith(filterBidirectional!"true"(arr), [2, 4, 5]));
+        assert(endsWith(filterBidirectional!"true"(arr), [2, 4, 5], [3, 4, 5]) == 2);
+        assert(endsWith(arr, filterBidirectional!"true"([4, 5])));
+        assert(endsWith(arr, filterBidirectional!"true"([4, 5]), 7) == 1);
+        assert(!endsWith(arr, filterBidirectional!"true"([2, 4, 5])));
+        assert(endsWith(arr, [2, 4, 5], filterBidirectional!"true"([3, 4, 5])) == 2);
 
+        //Non-default pred
         assert(endsWith!("a%10 == b%10")(arr, [14, 15]));
         assert(!endsWith!("a%10 == b%10")(arr, [15, 14]));
     }
@@ -7811,13 +7907,14 @@ sorted. In addition, it also partitions $(D r) such that all elements
 $(D e1) from $(D r[0]) to $(D r[nth]) satisfy $(D !less(r[nth], e1)),
 and all elements $(D e2) from $(D r[nth]) to $(D r[r.length]) satisfy
 $(D !less(e2, r[nth])). Effectively, it finds the nth smallest
-(according to $(D less)) elements in $(D r). Performs $(BIGOH
-r.length) (if unstable) or $(BIGOH r.length * log(r.length)) (if
-stable) evaluations of $(D less) and $(D swap). See also $(WEB
+(according to $(D less)) elements in $(D r). Performs an expected
+$(BIGOH r.length) (if unstable) or $(BIGOH r.length * log(r.length))
+(if stable) evaluations of $(D less) and $(D swap). See also $(WEB
 sgi.com/tech/stl/nth_element.html, STL's nth_element).
 
-Example:
+If $(D n >= r.length), the algorithm has no effect.
 
+Examples:
 ----
 int[] v = [ 25, 7, 9, 2, 0, 5, 21 ];
 auto n = 4;
@@ -7841,14 +7938,10 @@ void topN(alias less = "a < b",
             "Stable topN not yet implemented");
     while (r.length > nth)
     {
-        auto pivot = r.length / 2;
+        auto pivot = uniform(0, r.length);
         swap(r[pivot], r.back);
         assert(!binaryFun!(less)(r.back, r.back));
-        bool pred(ElementType!(Range) a)
-        {
-            return binaryFun!(less)(a, r.back);
-        }
-        auto right = partition!(pred, ss)(r);
+        auto right = partition!((a) => binaryFun!less(a, r.back), ss)(r);
         assert(right.length >= 1);
         swap(right.front, r.back);
         pivot = r.length - right.length;
@@ -7956,15 +8049,13 @@ void topN(alias less = "a < b",
     }
 }
 
+/// Ditto
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 5, 7, 2, 6, 7 ];
     int[] b = [ 2, 1, 5, 6, 7, 3, 0 ];
     topN(a, b);
     sort(a);
-    sort(b);
     assert(a == [0, 1, 2, 2, 3]);
 }
 
@@ -8966,8 +9057,7 @@ corresponding $(D sort), but $(D schwartzSort) evaluates $(D
 transform) only $(D r.length) times (less than half when compared to
 regular sorting). The usage can be best illustrated with an example.
 
-Example:
-
+Examples:
 ----
 uint hashFun(string) { ... expensive computation ... }
 string[] array = ...;
@@ -8987,24 +9077,59 @@ To check whether an array was sorted and benefit of the speedup of
 Schwartz sorting, a function $(D schwartzIsSorted) is not provided
 because the effect can be achieved by calling $(D
 isSorted!less(map!transform(r))).
+
+Returns: The initial range wrapped as a $(D SortedRange) with the
+predicate $(D (a, b) => binaryFun!less(transform(a),
+transform(b))).
  */
-void schwartzSort(alias transform, alias less = "a < b",
-        SwapStrategy ss = SwapStrategy.unstable, Range)(Range r)
-    if (isRandomAccessRange!(Range) && hasLength!(Range))
+SortedRange!(R, ((a, b) => binaryFun!less(unaryFun!transform(a),
+                                          unaryFun!transform(b))))
+schwartzSort(alias transform, alias less = "a < b",
+        SwapStrategy ss = SwapStrategy.unstable, R)(R r)
+    if (isRandomAccessRange!R && hasLength!R)
 {
-    alias typeof(transform(r.front)) XformType;
-    auto xform = new XformType[r.length];
-    foreach (i, e; r)
+    import core.stdc.stdlib;
+    alias T = typeof(unaryFun!transform(r.front));
+    auto xform1 = (cast(T*) malloc(r.length * T.sizeof))[0 .. r.length];
+    size_t length;
+    scope(exit)
     {
-        xform[i] = transform(e);
+        static if (hasElaborateDestructor!T)
+        {
+            foreach (i; 0 .. length) collectException(destroy(xform1[i]));
+        }
+        free(xform1.ptr);
     }
-    auto z = zip(xform, r);
-    alias typeof(z.front) ProxyType;
-    bool myLess(ProxyType a, ProxyType b)
+    for (; length != r.length; ++length)
     {
-        return binaryFun!less(a[0], b[0]);
+        emplace(xform1.ptr + length, unaryFun!transform(r[length]));
     }
-    sort!(myLess, ss)(z);
+    // Make sure we use ubyte[] and ushort[], not char[] and wchar[]
+    // for the intermediate array, lest zip gets confused.
+    static if (isNarrowString!(typeof(xform1)))
+    {
+        auto xform = xform1.representation();
+    }
+    else
+    {
+        alias xform = xform1;
+    }
+    zip(xform, r).sort!((a, b) => binaryFun!less(a[0], b[0]), ss)();
+    return typeof(return)(r);
+}
+
+unittest
+{
+    // issue 4909
+    Tuple!(char)[] chars;
+    schwartzSort!"a[0]"(chars);
+}
+
+unittest
+{
+    // issue 5924
+    Tuple!(char)[] chars;
+    schwartzSort!((Tuple!(char) c){ return c[0]; })(chars);
 }
 
 unittest
@@ -9188,7 +9313,7 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
         ahead.popFront();
         size_t i;
 
-        for (; !ahead.empty; ahead.popFront(), ++i)
+        for (; !ahead.empty; ahead.popFront(), r.popFront(), ++i)
         {
             if (!binaryFun!less(ahead.front, r.front)) continue;
             // Check for antisymmetric predicate
@@ -9202,6 +9327,26 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
         }
     }
     return true;
+}
+
+unittest
+{
+    // Issue 9457
+    auto x = "abcd";
+    assert(isSorted(x));
+    auto y = "acbd";
+    assert(!isSorted(y));
+
+    int[] a = [1, 2, 3];
+    assert(isSorted(a));
+    int[] b = [1, 3, 2];
+    assert(!isSorted(b));
+
+    dchar[] ds = "コーヒーが好きです"d.dup;
+    sort(ds);
+    string s = to!string(ds);
+    assert(isSorted(ds));  // random-access
+    assert(isSorted(s));   // bidirectional
 }
 
 // makeIndex
@@ -9218,14 +9363,22 @@ extra indirection, and is always larger than a sorting-based solution
 because it needs space for the index in addition to the original
 collection. The complexity is the same as $(D sort)'s.
 
-$(D makeIndex) overwrites its second argument with the result, but
-never reallocates it. If the second argument's length is less than
-that of the range indexed, an exception is thrown.
-
 The first overload of $(D makeIndex) writes to a range containing
 pointers, and the second writes to a range containing offsets. The
 first overload requires $(D Range) to be a forward range, and the
 latter requires it to be a random-access range.
+
+$(D makeIndex) overwrites its second argument with the result, but
+never reallocates it.
+
+Returns: The pointer-based version returns a $(D SortedRange) wrapper
+over index, of type $(D SortedRange!(RangeIndex, (a, b) =>
+binaryFun!less(*a, *b))) thus reflecting the ordering of the
+index. The index-based version returns $(D void) because the ordering
+relation involves not only $(D index) but also $(D r).
+
+Throws: If the second argument's length is less than that of the range
+indexed, an exception is thrown.
 
 Example:
 ----
@@ -9242,7 +9395,8 @@ assert(isSorted!
     (index2));
 ----
 */
-void makeIndex(
+SortedRange!(RangeIndex, (a, b) => binaryFun!less(*a, *b))
+makeIndex(
     alias less = "a < b",
     SwapStrategy ss = SwapStrategy.unstable,
     Range,
@@ -9257,12 +9411,8 @@ void makeIndex(
         index[i] = &(r.front);
     enforce(index.length == i);
     // sort the index
-    static bool indirectLess(ElementType!(RangeIndex) a,
-            ElementType!(RangeIndex) b)
-    {
-        return binaryFun!(less)(*a, *b);
-    }
-    sort!(indirectLess, ss)(index);
+    sort!((a, b) => binaryFun!less(*a, *b), ss)(index);
+    return typeof(return)(index);
 }
 
 /// Ditto
@@ -9272,32 +9422,28 @@ void makeIndex(
     Range,
     RangeIndex)
 (Range r, RangeIndex index)
-    if (isRandomAccessRange!(Range) && !isInfinite!(Range) &&
-        isRandomAccessRange!(RangeIndex) && !isInfinite!(RangeIndex) &&
-        isIntegral!(ElementType!(RangeIndex)))
+if (isRandomAccessRange!Range && !isInfinite!Range &&
+    isRandomAccessRange!RangeIndex && !isInfinite!RangeIndex &&
+    isIntegral!(ElementType!RangeIndex))
 {
-    alias Unqual!(ElementType!RangeIndex) I;
+    alias Unqual!(ElementType!RangeIndex) IndexType;
     enforce(r.length == index.length,
         "r and index must be same length for makeIndex.");
-    static if (I.sizeof < size_t.sizeof)
+    static if (IndexType.sizeof < size_t.sizeof)
     {
-        enforce(r.length <= I.max, "Cannot create an index with " ~
-            "element type " ~ I.stringof ~ " with length " ~
-            to!string(r.length) ~ "."
-        );
+        enforce(r.length <= IndexType.max, "Cannot create an index with " ~
+            "element type " ~ IndexType.stringof ~ " with length " ~
+            to!string(r.length) ~ ".");
     }
 
-    for (I i = 0; i < r.length; ++i)
+    for (IndexType i = 0; i < r.length; ++i)
     {
         index[cast(size_t) i] = i;
     }
 
     // sort the index
-    bool indirectLess(ElementType!(RangeIndex) a, ElementType!(RangeIndex) b)
-    {
-        return binaryFun!(less)(r[cast(size_t) a], r[cast(size_t) b]);
-    }
-    sort!(indirectLess, ss)(index);
+    sort!((a, b) => binaryFun!less(r[cast(size_t) a], r[cast(size_t) b]), ss)
+      (index);
 }
 
 unittest
@@ -9772,37 +9918,18 @@ assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
 bool all(alias pred, R)(R range)
 if (isInputRange!R && is(typeof(unaryFun!pred(range.front))))
 {
-    return find!(not!(unaryFun!pred))(range).empty;
+    // dmd @@@BUG9578@@@ workaround
+    // return find!(not!(unaryFun!pred))(range).empty;
+    bool notPred(ElementType!R a) { return !unaryFun!pred(a); }
+    return find!notPred(range).empty;
 }
 
 unittest
 {
     assert(all!"a & 1"([1, 3, 5, 7, 9]));
     assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
-}
-
-// Deprecated. It will be removed in January 2013.  Use std.range.SortedRange.canFind.
-deprecated("Please use std.range.SortedRange.canFind instead.")
-bool canFindSorted(alias pred = "a < b", Range, V)(Range range, V value) {
-    return assumeSorted!pred(range).canFind!V(value);
-}
-
-// Deprecated. It will be removed in January 2013.  Use std.range.SortedRange.lowerBound.
-deprecated("Please use std.range.SortedRange.lowerBound instead.")
-Range lowerBound(alias pred = "a < b", Range, V)(Range range, V value) {
-    return assumeSorted!pred(range).lowerBound!V(value).release;
-}
-
-// Deprecated. It will be removed in January 2013.  Use std.range.SortedRange.upperBound.
-deprecated("Please use std.range.SortedRange.upperBound instead.")
-Range upperBound(alias pred = "a < b", Range, V)(Range range, V value) {
-    return assumeSorted!pred(range).upperBound!V(value).release;
-}
-
-// Deprecated. It will be removed in January 2013.  Use std.range.SortedRange.equalRange.
-deprecated("Please use std.range.SortedRange.equalRange instead.")
-Range equalRange(alias pred = "a < b", Range, V)(Range range, V value) {
-    return assumeSorted!pred(range).equalRange!V(value).release;
+    int x = 1;
+    assert(all!(a => a > x)([2, 3]));
 }
 
 /**
@@ -10708,4 +10835,798 @@ unittest
     const Array!T arrayTwo = Array!T([ T(1,2), T(3,4) ] );
 
     assert(arrayOne == arrayTwo);
+}
+
+// nextPermutation
+/**
+ * Permutes $(D range) in-place to the next lexicographically greater
+ * permutation.
+ *
+ * The predicate $(D less) defines the lexicographical ordering to be used on
+ * the range.
+ *
+ * If the range is currently the lexicographically greatest permutation, it is
+ * permuted back to the least permutation and false is returned.  Otherwise,
+ * true is returned. One can thus generate all permutations of a range by
+ * sorting it according to $(D less), which produces the lexicographically
+ * least permutation, and then calling nextPermutation until it returns false.
+ * This is guaranteed to generate all distinct permutations of the range
+ * exactly once.  If there are $(I N) elements in the range and all of them are
+ * unique, then $(I N)! permutations will be generated. Otherwise, if there are
+ * some duplicated elements, fewer permutations will be produced.
+----
+// Enumerate all permutations
+int[] a = [1,2,3,4,5];
+while (nextPermutation(a))
+{
+    // a now contains the next permutation of the array.
+}
+----
+ * Returns: false if the range was lexicographically the greatest, in which
+ * case the range is reversed back to the lexicographically smallest
+ * permutation; otherwise returns true.
+ *
+ * Example:
+----
+// Step through all permutations of a sorted array in lexicographic order
+int[] a = [1,2,3];
+assert(nextPermutation(a) == true);
+assert(a == [1,3,2]);
+assert(nextPermutation(a) == true);
+assert(a == [2,1,3]);
+assert(nextPermutation(a) == true);
+assert(a == [2,3,1]);
+assert(nextPermutation(a) == true);
+assert(a == [3,1,2]);
+assert(nextPermutation(a) == true);
+assert(a == [3,2,1]);
+assert(nextPermutation(a) == false);
+assert(a == [1,2,3]);
+----
+----
+// Step through permutations of an array containing duplicate elements:
+int[] a = [1,1,2];
+assert(nextPermutation(a) == true);
+assert(a == [1,2,1]);
+assert(nextPermutation(a) == true);
+assert(a == [2,1,1]);
+assert(nextPermutation(a) == false);
+assert(a == [1,1,2]);
+----
+ */
+bool nextPermutation(alias less="a<b", BidirectionalRange)
+                    (ref BidirectionalRange range)
+    if (isBidirectionalRange!BidirectionalRange &&
+        hasSwappableElements!BidirectionalRange)
+{
+    // Ranges of 0 or 1 element have no distinct permutations.
+    if (range.empty) return false;
+
+    auto i = retro(range);
+    auto last = i.save;
+
+    // Find last occurring increasing pair of elements
+    size_t n = 1;
+    for (i.popFront(); !i.empty; i.popFront(), last.popFront(), n++)
+    {
+        if (binaryFun!less(i.front, last.front))
+            break;
+    }
+
+    if (i.empty) {
+        // Entire range is decreasing: it's lexicographically the greatest. So
+        // wrap it around.
+        range.reverse();
+        return false;
+    }
+
+    // Find last element greater than i.front.
+    auto j = find!((a) => binaryFun!less(i.front, a))(
+                   takeExactly(retro(range), n));
+
+    assert(!j.empty);   // shouldn't happen since i.front < last.front
+    swap(i.front, j.front);
+    reverse(takeExactly(retro(range), n));
+
+    return true;
+}
+
+unittest
+{
+    // Boundary cases: arrays of 0 or 1 element.
+    int[] a1 = [];
+    assert(!nextPermutation(a1));
+    assert(a1 == []);
+
+    int[] a2 = [1];
+    assert(!nextPermutation(a2));
+    assert(a2 == [1]);
+}
+
+unittest
+{
+    int[] a = [1,2,3];
+    assert(nextPermutation(a) == true);
+    assert(a == [1,3,2]);
+    assert(nextPermutation(a) == true);
+    assert(a == [2,1,3]);
+    assert(nextPermutation(a) == true);
+    assert(a == [2,3,1]);
+    assert(nextPermutation(a) == true);
+    assert(a == [3,1,2]);
+    assert(nextPermutation(a) == true);
+    assert(a == [3,2,1]);
+    assert(nextPermutation(a) == false);
+    assert(a == [1,2,3]);
+}
+
+unittest
+{
+    auto a1 = [1, 2, 3, 4];
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [1, 2, 4, 3]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [1, 3, 2, 4]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [1, 3, 4, 2]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [1, 4, 2, 3]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [1, 4, 3, 2]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [2, 1, 3, 4]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [2, 1, 4, 3]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [2, 3, 1, 4]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [2, 3, 4, 1]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [2, 4, 1, 3]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [2, 4, 3, 1]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [3, 1, 2, 4]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [3, 1, 4, 2]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [3, 2, 1, 4]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [3, 2, 4, 1]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [3, 4, 1, 2]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [3, 4, 2, 1]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [4, 1, 2, 3]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [4, 1, 3, 2]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [4, 2, 1, 3]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [4, 2, 3, 1]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [4, 3, 1, 2]));
+
+    assert(nextPermutation(a1));
+    assert(equal(a1, [4, 3, 2, 1]));
+
+    assert(!nextPermutation(a1));
+    assert(equal(a1, [1, 2, 3, 4]));
+}
+
+unittest
+{
+    // Test array with duplicate elements
+    int[] a = [1,1,2];
+    assert(nextPermutation(a) == true);
+    assert(a == [1,2,1]);
+    assert(nextPermutation(a) == true);
+    assert(a == [2,1,1]);
+    assert(nextPermutation(a) == false);
+    assert(a == [1,1,2]);
+}
+
+unittest
+{
+    // Test with non-default sorting order
+    int[] a = [3,2,1];
+    assert(nextPermutation!"a > b"(a) == true);
+    assert(a == [3,1,2]);
+    assert(nextPermutation!"a > b"(a) == true);
+    assert(a == [2,3,1]);
+    assert(nextPermutation!"a > b"(a) == true);
+    assert(a == [2,1,3]);
+    assert(nextPermutation!"a > b"(a) == true);
+    assert(a == [1,3,2]);
+    assert(nextPermutation!"a > b"(a) == true);
+    assert(a == [1,2,3]);
+    assert(nextPermutation!"a > b"(a) == false);
+    assert(a == [3,2,1]);
+}
+
+// nextEvenPermutation
+/**
+ * Permutes $(D range) in-place to the next lexicographically greater $(I even)
+ * permutation.
+ *
+ * The predicate $(D less) defines the lexicographical ordering to be used on
+ * the range.
+ *
+ * An even permutation is one which is produced by swapping an even number of
+ * pairs of elements in the original range. The set of $(I even) permutations
+ * is distinct from the set of $(I all) permutations only when there are no
+ * duplicate elements in the range. If the range has $(I N) unique elements,
+ * then there are exactly $(I N)!/2 even permutations.
+ *
+ * If the range is already the lexicographically greatest even permutation, it
+ * is permuted back to the least even permutation and false is returned.
+ * Otherwise, true is returned, and the range is modified in-place to be the
+ * lexicographically next even permutation.
+ *
+ * One can thus generate the even permutations of a range with unique elements
+ * by starting with the lexicographically smallest permutation, and repeatedly
+ * calling nextEvenPermutation until it returns false.
+----
+// Enumerate even permutations
+int[] a = [1,2,3,4,5];
+while (nextEvenPermutation(a))
+{
+    // a now contains the next even permutation of the array.
+}
+----
+ * One can also generate the $(I odd) permutations of a range by noting that
+ * permutations obey the rule that even + even = even, and odd + even = odd.
+ * Thus, by swapping the last two elements of a lexicographically least range,
+ * it is turned into the first odd permutation. Then calling
+ * nextEvenPermutation on this first odd permutation will generate the next
+ * even permutation relative to this odd permutation, which is actually the
+ * next odd permutation of the original range. Thus, by repeatedly calling
+ * nextEvenPermutation until it returns false, one enumerates the odd
+ * permutations of the original range.
+----
+// Enumerate odd permutations
+int[] a = [1,2,3,4,5];
+swap(a[$-2], a[$-1]);    // a is now the first odd permutation of [1,2,3,4,5]
+while (nextEvenPermutation(a))
+{
+    // a now contains the next odd permutation of the original array
+    // (which is an even permutation of the first odd permutation).
+}
+----
+ *
+ * Warning: Since even permutations are only distinct from all permutations
+ * when the range elements are unique, this function assumes that there are no
+ * duplicate elements under the specified ordering. If this is not _true, some
+ * permutations may fail to be generated. When the range has non-unique
+ * elements, you should use $(MYREF nextPermutation) instead.
+ *
+ * Returns: false if the range was lexicographically the greatest, in which
+ * case the range is reversed back to the lexicographically smallest
+ * permutation; otherwise returns true.
+ *
+ * Examples:
+----
+// Step through even permutations of a sorted array in lexicographic order
+int[] a = [1,2,3];
+assert(nextEvenPermutation(a) == true);
+assert(a == [2,3,1]);
+assert(nextEvenPermutation(a) == true);
+assert(a == [3,1,2]);
+assert(nextEvenPermutation(a) == false);
+assert(a == [1,2,3]);
+----
+ * Even permutations are useful for generating coordinates of certain geometric
+ * shapes. Here's a non-trivial example:
+----
+// Print the 60 vertices of a uniform truncated icosahedron (soccer ball)
+import std.math, std.stdio;
+enum real Phi = (1.0 + sqrt(5.0)) / 2.0;    // Golden ratio
+real[][] seeds = [
+    [0.0, 1.0, 3.0*Phi],
+    [1.0, 2.0+Phi, 2.0*Phi],
+    [Phi, 2.0, Phi^^3]
+];
+foreach (seed; seeds)
+{
+    // Loop over even permutations of each seed
+    do
+    {
+        // Loop over all sign changes of each permutation
+        size_t i;
+        do
+        {
+            // Generate all possible sign changes
+            for (i=0; i < seed.length; i++)
+            {
+                if (seed[i] != 0.0)
+                {
+                    seed[i] = -seed[i];
+                    if (seed[i] < 0.0)
+                        break;
+                }
+            }
+            writeln(seed);
+        } while (i < seed.length);
+    } while (nextEvenPermutation(seed));
+}
+----
+ */
+bool nextEvenPermutation(alias less="a<b", BidirectionalRange)
+                        (ref BidirectionalRange range)
+    if (isBidirectionalRange!BidirectionalRange &&
+        hasSwappableElements!BidirectionalRange)
+{
+    // Ranges of 0 or 1 element have no distinct permutations.
+    if (range.empty) return false;
+
+    bool oddParity = false;
+    bool ret = true;
+    do
+    {
+        auto i = retro(range);
+        auto last = i.save;
+
+        // Find last occurring increasing pair of elements
+        size_t n = 1;
+        for (i.popFront(); !i.empty;
+            i.popFront(), last.popFront(), n++)
+        {
+            if (binaryFun!less(i.front, last.front))
+                break;
+        }
+
+        if (!i.empty)
+        {
+            // Find last element greater than i.front.
+            auto j = find!((a) => binaryFun!less(i.front, a))(
+                           takeExactly(retro(range), n));
+
+            // shouldn't happen since i.front < last.front
+            assert(!j.empty);
+
+            swap(i.front, j.front);
+            oddParity = !oddParity;
+        }
+        else
+        {
+            // Entire range is decreasing: it's lexicographically
+            // the greatest.
+            ret = false;
+        }
+
+        reverse(takeExactly(retro(range), n));
+        if ((n / 2) % 2 == 1)
+            oddParity = !oddParity;
+    } while(oddParity);
+
+    return ret;
+}
+
+unittest
+{
+    auto a2 = [ 1, 2, 3 ];
+
+    assert(nextEvenPermutation(a2));
+    assert(equal(a2, [ 2, 3, 1 ]));
+
+    assert(nextEvenPermutation(a2));
+    assert(equal(a2, [ 3, 1, 2 ]));
+
+    assert(!nextEvenPermutation(a2));
+    assert(equal(a2, [ 1, 2, 3 ]));
+
+    auto a3 = [ 1, 2, 3, 4 ];
+    int count = 1;
+    while (nextEvenPermutation(a3)) count++;
+    assert(count == 12);
+}
+
+unittest
+{
+    // Test with non-default sorting order
+    auto a = [ 3, 2, 1 ];
+
+    assert(nextEvenPermutation!"a > b"(a) == true);
+    assert(a == [ 2, 1, 3 ]);
+    assert(nextEvenPermutation!"a > b"(a) == true);
+    assert(a == [ 1, 3, 2 ]);
+    assert(nextEvenPermutation!"a > b"(a) == false);
+    assert(a == [ 3, 2, 1 ]);
+}
+
+unittest
+{
+    // Test various cases of rollover
+    auto a = [ 3, 1, 2 ];
+    assert(nextEvenPermutation(a) == false);
+    assert(a == [ 1, 2, 3 ]);
+
+    auto b = [ 3, 2, 1 ];
+    assert(nextEvenPermutation(b) == false);
+    assert(b == [ 1, 3, 2 ]);
+}
+
+unittest
+{
+    // Verify correctness of ddoc example.
+    enum real Phi = (1.0 + sqrt(5.0)) / 2.0;    // Golden ratio
+    real[][] seeds = [
+        [0.0, 1.0, 3.0*Phi],
+        [1.0, 2.0+Phi, 2.0*Phi],
+        [Phi, 2.0, Phi^^3]
+    ];
+    size_t n;
+    foreach (seed; seeds)
+    {
+        // Loop over even permutations of each seed
+        do
+        {
+            // Loop over all sign changes of each permutation
+            size_t i;
+            do
+            {
+                // Generate all possible sign changes
+                for (i=0; i < seed.length; i++)
+                {
+                    if (seed[i] != 0.0)
+                    {
+                        seed[i] = -seed[i];
+                        if (seed[i] < 0.0)
+                            break;
+                    }
+                }
+                n++;
+            } while (i < seed.length);
+        } while (nextEvenPermutation(seed));
+    }
+    assert(n == 60);
+}
+
+// cartesianProduct
+/**
+Lazily computes the Cartesian product of two or more ranges. The product is a
+_range of tuples of elements from each respective range.
+
+The conditions for the two-range case are as follows:
+
+If both ranges are finite, then one must be (at least) a forward range and the
+other an input range.
+
+If one _range is infinite and the other finite, then the finite _range must
+be a forward _range, and the infinite range can be an input _range.
+
+If both ranges are infinite, then both must be forward ranges.
+
+When there are more than two ranges, the above conditions apply to each
+adjacent pair of ranges.
+
+Examples:
+---
+auto N = sequence!"n"(0);         // the range of natural numbers
+auto N2 = cartesianProduct(N, N); // the range of all pairs of natural numbers
+
+// Various arbitrary number pairs can be found in the range in finite time.
+assert(canFind(N2, tuple(0, 0)));
+assert(canFind(N2, tuple(123, 321)));
+assert(canFind(N2, tuple(11, 35)));
+assert(canFind(N2, tuple(279, 172)));
+---
+
+---
+auto B = [ 1, 2, 3 ];
+auto C = [ 4, 5, 6 ];
+auto BC = cartesianProduct(B, C);
+
+foreach (n; [[1, 4], [2, 4], [3, 4], [1, 5], [2, 5], [3, 5], [1, 6],
+             [2, 6], [3, 6]])
+{
+    assert(canFind(BC, tuple(n[0], n[1])));
+}
+---
+
+---
+auto A = [ 1, 2, 3 ];
+auto B = [ 'a', 'b', 'c' ];
+auto C = [ "x", "y", "z" ];
+auto ABC = cartesianProduct(A, B, C);
+
+assert(ABC.equal([
+    tuple(1, 'a', "x"), tuple(2, 'a', "x"), tuple(3, 'a', "x"),
+    tuple(1, 'b', "x"), tuple(2, 'b', "x"), tuple(3, 'b', "x"),
+    tuple(1, 'c', "x"), tuple(2, 'c', "x"), tuple(3, 'c', "x"),
+    tuple(1, 'a', "y"), tuple(2, 'a', "y"), tuple(3, 'a', "y"),
+    tuple(1, 'b', "y"), tuple(2, 'b', "y"), tuple(3, 'b', "y"),
+    tuple(1, 'c', "y"), tuple(2, 'c', "y"), tuple(3, 'c', "y"),
+    tuple(1, 'a', "z"), tuple(2, 'a', "z"), tuple(3, 'a', "z"),
+    tuple(1, 'b', "z"), tuple(2, 'b', "z"), tuple(3, 'b', "z"),
+    tuple(1, 'c', "z"), tuple(2, 'c', "z"), tuple(3, 'c', "z")
+]));
+---
+*/
+auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
+{
+    static if (isInfinite!R1 && isInfinite!R2)
+    {
+        static if (isForwardRange!R1 && isForwardRange!R2)
+        {
+            // This algorithm traverses the cartesian product by alternately
+            // covering the right and bottom edges of an increasing square area
+            // over the infinite table of combinations. This schedule allows us
+            // to require only forward ranges.
+            return zip(sequence!"n"(cast(size_t)0), range1.save, range2.save,
+                       repeat(range1), repeat(range2))
+                .map!(function(a) => chain(
+                    zip(repeat(a[1]), take(a[4].save, a[0])),
+                    zip(take(a[3].save, a[0]+1), repeat(a[2]))
+                ))()
+                .joiner();
+        }
+        else static assert(0, "cartesianProduct of infinite ranges requires "~
+                              "forward ranges");
+    }
+    else static if (isInputRange!R2 && isForwardRange!R1 && !isInfinite!R1)
+    {
+        return joiner(map!((ElementType!R2 a) => zip(range1.save, repeat(a)))
+                          (range2));
+    }
+    else static if (isInputRange!R1 && isForwardRange!R2 && !isInfinite!R2)
+    {
+        return joiner(map!((ElementType!R1 a) => zip(repeat(a), range2.save))
+                          (range1));
+    }
+    else static assert(0, "cartesianProduct involving finite ranges must "~
+                          "have at least one finite forward range");
+}
+
+unittest
+{
+    // Test cartesian product of two infinite ranges
+    auto Even = sequence!"2*n"(0);
+    auto Odd = sequence!"2*n+1"(0);
+    auto EvenOdd = cartesianProduct(Even, Odd);
+
+    foreach (pair; [[0, 1], [2, 1], [0, 3], [2, 3], [4, 1], [4, 3], [0, 5],
+                    [2, 5], [4, 5], [6, 1], [6, 3], [6, 5]])
+    {
+        assert(canFind(EvenOdd, tuple(pair[0], pair[1])));
+    }
+
+    // This should terminate in finite time
+    assert(canFind(EvenOdd, tuple(124, 73)));
+    assert(canFind(EvenOdd, tuple(0, 97)));
+    assert(canFind(EvenOdd, tuple(42, 1)));
+}
+
+unittest
+{
+    // Test cartesian product of an infinite input range and a finite forward
+    // range.
+    auto N = sequence!"n"(0);
+    auto M = [100, 200, 300];
+    auto NM = cartesianProduct(N,M);
+
+    foreach (pair; [[0, 100], [0, 200], [0, 300], [1, 100], [1, 200], [1, 300],
+                    [2, 100], [2, 200], [2, 300], [3, 100], [3, 200],
+                    [3, 300]])
+    {
+        assert(canFind(NM, tuple(pair[0], pair[1])));
+    }
+
+    // We can't solve the halting problem, so we can only check a finite
+    // initial segment here.
+    assert(!canFind(NM.take(100), tuple(100, 0)));
+    assert(!canFind(NM.take(100), tuple(1, 1)));
+    assert(!canFind(NM.take(100), tuple(100, 200)));
+
+    auto MN = cartesianProduct(M,N);
+    foreach (pair; [[100, 0], [200, 0], [300, 0], [100, 1], [200, 1], [300, 1],
+                    [100, 2], [200, 2], [300, 2], [100, 3], [200, 3],
+                    [300, 3]])
+    {
+        assert(canFind(MN, tuple(pair[0], pair[1])));
+    }
+
+    // We can't solve the halting problem, so we can only check a finite
+    // initial segment here.
+    assert(!canFind(MN.take(100), tuple(0, 100)));
+    assert(!canFind(MN.take(100), tuple(0, 1)));
+    assert(!canFind(MN.take(100), tuple(100, 200)));
+}
+
+unittest
+{
+    // Test cartesian product of two finite ranges.
+    auto X = [1, 2, 3];
+    auto Y = [4, 5, 6];
+    auto XY = cartesianProduct(X, Y);
+    auto Expected = [[1, 4], [1, 5], [1, 6], [2, 4], [2, 5], [2, 6], [3, 4],
+                     [3, 5], [3, 6]];
+
+    // Verify Expected ⊆ XY
+    foreach (pair; Expected)
+    {
+        assert(canFind(XY, tuple(pair[0], pair[1])));
+    }
+
+    // Verify XY ⊆ Expected
+    foreach (pair; XY)
+    {
+        assert(canFind(Expected, [pair[0], pair[1]]));
+    }
+
+    // And therefore, by set comprehension, XY == Expected
+}
+
+unittest
+{
+    auto N = sequence!"n"(0);
+
+    // To force the template to fall to the second case, we wrap N in a struct
+    // that doesn't allow bidirectional access.
+    struct FwdRangeWrapper(R)
+    {
+        R impl;
+
+        // Input range API
+        @property auto front() { return impl.front; }
+        void popFront() { impl.popFront(); }
+        static if (isInfinite!R)
+            enum empty = false;
+        else
+            @property bool empty() { return impl.empty; }
+
+        // Forward range API
+        @property auto save() { return typeof(this)(impl.save); }
+    }
+    auto fwdWrap(R)(R range) { return FwdRangeWrapper!R(range); }
+
+    // General test: two infinite bidirectional ranges
+    auto N2 = cartesianProduct(N, N);
+
+    assert(canFind(N2, tuple(0, 0)));
+    assert(canFind(N2, tuple(123, 321)));
+    assert(canFind(N2, tuple(11, 35)));
+    assert(canFind(N2, tuple(279, 172)));
+
+    // Test first case: forward range with bidirectional range
+    auto fwdN = fwdWrap(N);
+    auto N2_a = cartesianProduct(fwdN, N);
+
+    assert(canFind(N2_a, tuple(0, 0)));
+    assert(canFind(N2_a, tuple(123, 321)));
+    assert(canFind(N2_a, tuple(11, 35)));
+    assert(canFind(N2_a, tuple(279, 172)));
+
+    // Test second case: bidirectional range with forward range
+    auto N2_b = cartesianProduct(N, fwdN);
+
+    assert(canFind(N2_b, tuple(0, 0)));
+    assert(canFind(N2_b, tuple(123, 321)));
+    assert(canFind(N2_b, tuple(11, 35)));
+    assert(canFind(N2_b, tuple(279, 172)));
+
+    // Test third case: finite forward range with (infinite) input range
+    static struct InpRangeWrapper(R)
+    {
+        R impl;
+
+        // Input range API
+        @property auto front() { return impl.front; }
+        void popFront() { impl.popFront(); }
+        static if (isInfinite!R)
+            enum empty = false;
+        else
+            @property bool empty() { return impl.empty; }
+    }
+    auto inpWrap(R)(R r) { return InpRangeWrapper!R(r); }
+
+    auto inpN = inpWrap(N);
+    auto B = [ 1, 2, 3 ];
+    auto fwdB = fwdWrap(B);
+    auto BN = cartesianProduct(fwdB, inpN);
+
+    assert(equal(map!"[a[0],a[1]]"(BN.take(10)), [[1, 0], [2, 0], [3, 0],
+                 [1, 1], [2, 1], [3, 1], [1, 2], [2, 2], [3, 2], [1, 3]]));
+
+    // Test fourth case: (infinite) input range with finite forward range
+    auto NB = cartesianProduct(inpN, fwdB);
+
+    assert(equal(map!"[a[0],a[1]]"(NB.take(10)), [[0, 1], [0, 2], [0, 3],
+                 [1, 1], [1, 2], [1, 3], [2, 1], [2, 2], [2, 3], [3, 1]]));
+
+    // General finite range case
+    auto C = [ 4, 5, 6 ];
+    auto BC = cartesianProduct(B, C);
+
+    foreach (n; [[1, 4], [2, 4], [3, 4], [1, 5], [2, 5], [3, 5], [1, 6],
+                 [2, 6], [3, 6]])
+    {
+        assert(canFind(BC, tuple(n[0], n[1])));
+    }
+}
+
+/// ditto
+auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
+{
+    /* We implement the n-ary cartesian product by recursively invoking the
+     * binary cartesian product. To make the resulting range nicer, we denest
+     * one level of tuples so that a ternary cartesian product, for example,
+     * returns 3-element tuples instead of nested 2-element tuples.
+     */
+    enum string denest = format("tuple(a[0], %(a[1][%d]%|,%))",
+                                iota(0, otherRanges.length+1));
+    return map!denest(
+        cartesianProduct(range1, cartesianProduct(range2, otherRanges))
+    );
+}
+
+unittest
+{
+    auto N = sequence!"n"(0);
+    auto N3 = cartesianProduct(N, N, N);
+
+    // Check that tuples are properly denested
+    assert(is(ElementType!(typeof(N3)) == Tuple!(size_t,size_t,size_t)));
+
+    assert(canFind(N3, tuple(0, 27, 7)));
+    assert(canFind(N3, tuple(50, 23, 71)));
+    assert(canFind(N3, tuple(9, 3, 0)));
+}
+
+version(none)
+// This unittest causes `make -f posix.mak unittest` to run out of memory. Why?
+unittest
+{
+    auto N = sequence!"n"(0);
+    auto N4 = cartesianProduct(N, N, N, N);
+
+    // Check that tuples are properly denested
+    assert(is(ElementType!(typeof(N4)) == Tuple!(size_t,size_t,size_t,size_t)));
+
+    assert(canFind(N4, tuple(1, 2, 3, 4)));
+    assert(canFind(N4, tuple(4, 3, 2, 1)));
+    assert(canFind(N4, tuple(10, 31, 7, 12)));
+}
+
+unittest
+{
+    auto A = [ 1, 2, 3 ];
+    auto B = [ 'a', 'b', 'c' ];
+    auto C = [ "x", "y", "z" ];
+    auto ABC = cartesianProduct(A, B, C);
+
+    assert(ABC.equal([
+        tuple(1, 'a', "x"), tuple(2, 'a', "x"), tuple(3, 'a', "x"),
+        tuple(1, 'b', "x"), tuple(2, 'b', "x"), tuple(3, 'b', "x"),
+        tuple(1, 'c', "x"), tuple(2, 'c', "x"), tuple(3, 'c', "x"),
+        tuple(1, 'a', "y"), tuple(2, 'a', "y"), tuple(3, 'a', "y"),
+        tuple(1, 'b', "y"), tuple(2, 'b', "y"), tuple(3, 'b', "y"),
+        tuple(1, 'c', "y"), tuple(2, 'c', "y"), tuple(3, 'c', "y"),
+        tuple(1, 'a', "z"), tuple(2, 'a', "z"), tuple(3, 'a', "z"),
+        tuple(1, 'b', "z"), tuple(2, 'b', "z"), tuple(3, 'b', "z"),
+        tuple(1, 'c', "z"), tuple(2, 'c', "z"), tuple(3, 'c', "z"),
+    ]));
 }

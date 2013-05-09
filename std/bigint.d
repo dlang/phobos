@@ -27,6 +27,7 @@ module std.bigint;
 
 private import std.internal.math.biguintcore;
 private import std.format : FormatSpec, FormatException;
+private import std.traits;
 
 /** A struct representing an arbitrary precision integer
  *
@@ -105,14 +106,14 @@ public:
     }
 
     ///
-    this(T: long) (T x) pure
+    this(T)(T x) pure if (isIntegral!T)
     {
         data = data.init; // @@@: Workaround for compiler bug
         opAssign(x);
     }
 
     ///
-    BigInt opAssign(T: long)(T x) pure
+    BigInt opAssign(T)(T x) pure if (isIntegral!T)
     {
         data = cast(ulong)((x < 0) ? -x : x);
         sign = (x < 0);
@@ -130,7 +131,7 @@ public:
     // BigInt op= integer
     BigInt opOpAssign(string op, T)(T y) pure
         if ((op=="+" || op=="-" || op=="*" || op=="/" || op=="%"
-          || op==">>" || op=="<<" || op=="^^") && is (T: long))
+          || op==">>" || op=="<<" || op=="^^") && isIntegral!T)
     {
         ulong u = cast(ulong)(y < 0 ? -y : y);
 
@@ -253,7 +254,7 @@ public:
     // BigInt op integer
     BigInt opBinary(string op, T)(T y) pure
         if ((op=="+" || op == "*" || op=="-" || op=="/"
-            || op==">>" || op=="<<" || op=="^^") && is (T: long))
+            || op==">>" || op=="<<" || op=="^^") && isIntegral!T)
     {
         BigInt r = this;
         return r.opOpAssign!(op)(y);
@@ -261,7 +262,7 @@ public:
 
     //
     int opBinary(string op, T : int)(T y) pure
-        if (op == "%")
+        if (op == "%" && isIntegral!T)
     {
         assert(y!=0);
         uint u = y < 0 ? -y : y;
@@ -273,14 +274,14 @@ public:
 
     // Commutative operators
     BigInt opBinaryRight(string op, T)(T y) pure
-        if ((op=="+" || op=="*") && !is(T: BigInt))
+        if ((op=="+" || op=="*") && isIntegral!T)
     {
         return opBinary!(op)(y);
     }
 
     //  BigInt = integer op BigInt
     BigInt opBinaryRight(string op, T)(T y) pure
-        if (op == "-" && is(T: long))
+        if (op == "-" && isIntegral!T)
     {
         ulong u = cast(ulong)(y < 0 ? -y : y);
         BigInt r;
@@ -295,7 +296,7 @@ public:
 
     //  integer = integer op BigInt
     T opBinaryRight(string op, T)(T x) pure
-        if ((op=="%" || op=="/") && is(T: long))
+        if ((op=="%" || op=="/") && isIntegral!T)
     {
         static if (op == "%")
         {
@@ -351,7 +352,7 @@ public:
     }
 
     ///
-    bool opEquals(T: long)(T y) const pure
+    bool opEquals(T)(T y) const pure if (isIntegral!T)
     {
         if (sign != (y<0))
             return 0;
@@ -359,7 +360,13 @@ public:
     }
 
     ///
-    int opCmp(T:long)(T y) pure
+    T opCast(T:bool)() pure
+    {
+        return !isZero();
+    }
+
+    ///
+    int opCmp(T)(T y) pure if (isIntegral!T)
     {
         if (sign != (y<0) )
             return sign ? -1 : 1;
@@ -478,21 +485,21 @@ private:
     }
 +/
 private:
-    void negate() pure
+    void negate() pure nothrow @safe
     {
         if (!data.isZero())
             sign = !sign;
     }
-    bool isZero() pure const
+    bool isZero() pure const nothrow @safe
     {
         return data.isZero();
     }
-    bool isNegative() pure const
+    bool isNegative() pure const nothrow @safe
     {
         return sign;
     }
     // Generate a runtime error if division by zero occurs
-    void checkDivByZero() pure const
+    void checkDivByZero() pure const  @safe
     {
         if (isZero())
             throw new Error("BigInt division by zero");
@@ -721,4 +728,15 @@ unittest
     assert(y.toLong() == -1);
     --y;
     assert(y.toLong() == -2);
+}
+
+unittest
+{
+    import std.math:abs;
+    auto r = abs(BigInt(-1000)); // 6486
+    assert(r == 1000);
+
+    // opCast!bool
+    BigInt one = 1, zero;
+    assert(one && !zero);
 }

@@ -6,7 +6,7 @@
 
 /**
  * $(RED Scheduled for deprecation. Please use std.digest.md instead.)
- * 
+ *
  * Computes MD5 digests of arbitrary data. MD5 digests are 16 byte quantities that are like a checksum or crc, but are more robust.
  *
  * There are two ways to do this. The first does it all in one function call to
@@ -88,6 +88,7 @@ pragma(msg, "std.md5 is scheduled for deprecation. Please use "
 //debug=md5;            // uncomment to turn on debugging printf's
 
 import std.ascii;
+import std.bitmanip;
 import std.string;
 import std.exception;
 debug(md5) import std.c.stdio : printf;
@@ -163,7 +164,10 @@ unittest
     string a = "Mary has ", b = "a little lamb";
     int[] c = [ 1, 2, 3, 4, 5 ];
     string d = getDigestString(a, b, c);
-    assert(d == "F36625A66B2A8D9F47270C00C8BEFD2F", d);
+    version(LittleEndian)
+        assert(d == "F36625A66B2A8D9F47270C00C8BEFD2F", d);
+    else
+        assert(d == "2656D2008FF10DAE4B0783E6E0171655", d);
 }
 
 /**
@@ -211,28 +215,28 @@ struct MD5_CTX
      */
     static void FF(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
     {
-        a += F (b, c, d) + x + cast(uint)(ac);
+        a += F (b, c, d) + x + ac;
         a = ROTATE_LEFT (a, s);
         a += b;
     }
 
     static void GG(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
     {
-        a += G (b, c, d) + x + cast(uint)(ac);
+        a += G (b, c, d) + x + ac;
         a = ROTATE_LEFT (a, s);
         a += b;
     }
 
     static void HH(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
     {
-        a += H (b, c, d) + x + cast(uint)(ac);
+        a += H (b, c, d) + x + ac;
         a = ROTATE_LEFT (a, s);
         a += b;
     }
 
     static void II(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
     {
-        a += I (b, c, d) + x + cast(uint)(ac);
+        a += I (b, c, d) + x + ac;
         a = ROTATE_LEFT (a, s);
         a += b;
     }
@@ -290,7 +294,7 @@ struct MD5_CTX
       uint index, padLen;
 
       /* Save number of bits */
-      Encode (bits.ptr, cast(const uint*) &count, 8);
+      bits[0 .. 8] = nativeToLittleEndian(count)[];
 
       /* Pad out to 56 mod 64. */
       index = (cast(uint)count >> 3) & (64 - 1);
@@ -301,7 +305,10 @@ struct MD5_CTX
       update (bits);
 
       /* Store state in digest */
-      Encode (digest.ptr, state.ptr, 16);
+      digest[0 .. 4]   = nativeToLittleEndian(state[0])[];
+      digest[4 .. 8]   = nativeToLittleEndian(state[1])[];
+      digest[8 .. 12]  = nativeToLittleEndian(state[2])[];
+      digest[12 .. 16] = nativeToLittleEndian(state[3])[];
 
       /* Zeroize sensitive information. */
       std.c.string.memset (&this, 0, MD5_CTX.sizeof);
@@ -339,7 +346,17 @@ struct MD5_CTX
            d = state[3];
       uint[16] x = void;
 
-      Decode (x.ptr, block, 64);
+      version(BigEndian)
+      {
+          for(size_t i = 0; i < 16; i++)
+          {
+              x[i] = littleEndianToNative!uint(*cast(ubyte[4]*)&block[i*4]);
+          }
+      }
+      else
+      {
+          (cast(ubyte*)x.ptr)[0 .. 64] = block[0 .. 64];
+      }
 
       /* Round 1 */
       FF (a, b, c, d, x[ 0], S11, 0xd76aa478); /* 1 */
@@ -420,46 +437,6 @@ struct MD5_CTX
 
       /* Zeroize sensitive information. */
       x[] = 0;
-    }
-
-    /* Encodes input (uint) into output (ubyte). Assumes len is
-      a multiple of 4.
-     */
-    private static void Encode (ubyte *output, const uint *input, uint len)
-    {
-        version (BigEndian)
-        {
-            uint i, j;
-
-            for (i = 0, j = 0; j < len; i++, j += 4)
-            {
-                *cast(uint *) &output[j] = core.bitop.bswap(input[i]);
-            }
-        }
-        else
-        {
-            (cast(uint *)output)[0..len/4] = input[0..len/4];
-        }
-    }
-
-    /* Decodes input (ubyte) into output (uint). Assumes len is
-      a multiple of 4.
-     */
-    private static void Decode (uint *output, const ubyte *input, uint len)
-    {
-        version (BigEndian)
-        {
-            uint i, j;
-
-            for (i = 0, j = 0; j < len; i++, j += 4)
-            {
-                output[i] = core.bitop.bswap(*cast(uint*)&input[j]);
-            }
-        }
-        else
-        {
-            output[0..len/4] = (cast(const uint *)input)[0..len/4];
-        }
     }
 }
 

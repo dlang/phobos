@@ -84,13 +84,19 @@ void main(string[] args)
  Depending on the type of the pointer being bound, $(D getopt)
  recognizes the following kinds of options:
 
- $(OL $(LI $(I Boolean options). These are the simplest options; all
- they do is set a Boolean to $(D true):
+ $(OL $(LI $(I Boolean options). A lone argument sets the option to $(D true).
+ Additionally $(B true) or $(B false) can be set within the option separated with
+ an "=" sign:
 
 ---------
-  bool verbose, debugging;
+  bool verbose = false, debugging = true;
   getopt(args, "verbose", &verbose, "debug", &debugging);
 ---------
+
+ To set $(D verbose) to $(D true), invoke the program with either $(D
+ --verbose) or $(D --verbose=true).
+
+ To set $(D debugging) to $(D false), invoke the program with $(D --debugging=false).
 
  )$(LI $(I Numeric options.) If an option is bound to a numeric type, a
  number is expected as the next option, or right within the option
@@ -398,14 +404,19 @@ private void getoptImpl(T...)(ref string[] args,
     else
     {
         // no more options to look for, potentially some arguments left
-        foreach (a ; args[1 .. $]) {
+        foreach (i, a ; args[1 .. $]) {
             if (!a.length || a[0] != optionChar)
             {
                 // not an option
                 if (cfg.stopOnFirstNonOption) break;
                 continue;
             }
-            if (endOfOptions.length && a == endOfOptions) break;
+            if (endOfOptions.length && a == endOfOptions)
+            {
+                // Consume the "--"
+                args = args.remove(i + 1);
+                break;
+            }
             if (!cfg.passThrough)
             {
                 throw new Exception("Unrecognized option "~a);
@@ -451,6 +462,14 @@ void handleOption(R)(string option, R receiver, ref string[] args,
 
         static if (is(typeof(*receiver) == bool))
         {
+            // parse '--b=true/false'
+            if (val.length)
+            {
+                *receiver = parse!(typeof(*receiver))(val);
+                break;
+            }
+
+            // no argument means set it to true
             *receiver = true;
             break;
         }
@@ -743,6 +762,12 @@ unittest
         "foo", &foo,
         "bar", &bar);
     assert(foo && !bar && args[1] == "nonoption" && args[2] == "--zab");
+
+    args = (["program.name", "--fb1", "--fb2=true", "--tb1=false"]).dup;
+    bool fb1, fb2;
+    bool tb1 = true;
+    getopt(args, "fb1", &fb1, "fb2", &fb2, "tb1", &tb1);
+    assert(fb1 && fb2 && !tb1);
 }
 
 unittest
@@ -779,4 +804,13 @@ unittest
     auto args = ["", "-t", "a=1"];
     getopt(args, "t", &foo);
     assert(foo == ["a":1]);
+}
+
+unittest
+{
+    // From bugzilla 9583
+    int opt;
+    auto args = ["prog", "--opt=123", "--", "--a", "--b", "--c"];
+    getopt(args, "opt", &opt);
+    assert(args == ["prog", "--a", "--b", "--c"]);
 }

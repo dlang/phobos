@@ -4,7 +4,7 @@
 Utilities for manipulating files and scanning directories. Functions
 in this module handle files as a unit, e.g., read or write one _file
 at a time. For opening files and manipulating them via handles refer
-to module $(D $(LINK2 std_stdio.html,std.stdio)).
+to module $(LINK2 std_stdio.html,$(D std.stdio)).
 
 Macros:
 WIKI = Phobos/StdFile
@@ -25,8 +25,6 @@ import core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
        std.range, std.stdio, std.string, std.traits,
        std.typecons, std.typetuple, std.utf;
 
-import std.metastrings; //For generating deprecation messages only. Remove once
-                        //deprecation path complete.
 
 version (Windows)
 {
@@ -70,6 +68,11 @@ version (Windows)
     // Required by tempPath():
     private extern(Windows) DWORD GetTempPathW(DWORD nBufferLength,
                                                LPWSTR lpBuffer);
+    // Required by rename():
+    enum MOVEFILE_REPLACE_EXISTING = 1;
+    private extern(Windows) DWORD MoveFileExW(LPCWSTR lpExistingFileName,
+                                              LPCWSTR lpNewFileName,
+                                              DWORD dwFlags);
 }
 else version (Posix)
 {
@@ -393,13 +396,14 @@ version(Posix) private void writeImpl(in char[] name,
 
 /***************************************************
  * Rename file $(D from) to $(D to).
+ * If the target file exists, it is overwritten.
  * Throws: $(D FileException) on error.
  */
 void rename(in char[] from, in char[] to)
 {
     version(Windows)
     {
-        enforce(MoveFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to)),
+        enforce(MoveFileExW(std.utf.toUTF16z(from), std.utf.toUTF16z(to), MOVEFILE_REPLACE_EXISTING),
                 new FileException(
                     text("Attempting to rename file ", from, " to ",
                             to)));
@@ -407,6 +411,19 @@ void rename(in char[] from, in char[] to)
     else version(Posix)
         cenforce(core.stdc.stdio.rename(toStringz(from), toStringz(to)) == 0, to);
 }
+
+unittest
+{
+    auto t1 = deleteme, t2 = deleteme~"2";
+    scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
+    write(t1, "1");
+    rename(t1, t2);
+    assert(readText(t2) == "1");
+    write(t1, "2");
+    rename(t1, t2);
+    assert(readText(t2) == "2");
+}
+
 
 /***************************************************
 Delete file $(D name).
@@ -471,26 +488,26 @@ unittest
 
 
 /++
-    Get the access and modified times of file $(D name).
+    Get the access and modified times of file or folder $(D name).
 
     Params:
-        name                 = File name to get times for.
-        fileAccessTime       = Time the file was last accessed.
-        fileModificationTime = Time the file was last modified.
+        name             = File/Folder name to get times for.
+        accessTime       = Time the file/folder was last accessed.
+        modificationTime = Time the file/folder was last modified.
 
     Throws:
         $(D FileException) on error.
  +/
 void getTimes(in char[] name,
-              out SysTime fileAccessTime,
-              out SysTime fileModificationTime)
+              out SysTime accessTime,
+              out SysTime modificationTime)
 {
     version(Windows)
     {
         with (getFileAttributesWin(name))
         {
-            fileAccessTime = std.datetime.FILETIMEToSysTime(&ftLastAccessTime);
-            fileModificationTime = std.datetime.FILETIMEToSysTime(&ftLastWriteTime);
+            accessTime = std.datetime.FILETIMEToSysTime(&ftLastAccessTime);
+            modificationTime = std.datetime.FILETIMEToSysTime(&ftLastWriteTime);
         }
     }
     else version(Posix)
@@ -499,8 +516,8 @@ void getTimes(in char[] name,
 
         cenforce(stat(toStringz(name), &statbuf) == 0, name);
 
-        fileAccessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
-        fileModificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
+        accessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
+        modificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
     }
 }
 
@@ -653,6 +670,78 @@ version(Windows) unittest
     }
 }
 
+
+/++
+    Set access/modified times of file or folder $(D name).
+
+    Params:
+        name             = File/Folder name to get times for.
+        accessTime       = Time the file/folder was last accessed.
+        modificationTime = Time the file/folder was last modified.
+
+    Throws:
+        $(D FileException) on error.
+ +/
+void setTimes(in char[] name,
+              SysTime accessTime,
+              SysTime modificationTime)
+{
+    version(Windows)
+    {
+        const ta = SysTimeToFILETIME(accessTime);
+        const tm = SysTimeToFILETIME(modificationTime);
+        alias TypeTuple!(GENERIC_WRITE,
+                         0,
+                         null,
+                         OPEN_EXISTING,
+                         FILE_ATTRIBUTE_NORMAL |
+                         FILE_ATTRIBUTE_DIRECTORY |
+                         FILE_FLAG_BACKUP_SEMANTICS,
+                         HANDLE.init)
+              defaults;
+        auto h = CreateFileW(std.utf.toUTF16z(name), defaults);
+
+        cenforce(h != INVALID_HANDLE_VALUE, name);
+
+        scope(exit)
+            cenforce(CloseHandle(h), name);
+
+        cenforce(SetFileTime(h, null, &ta, &tm), name);
+    }
+    else version(Posix)
+    {
+        timeval[2] t = void;
+
+        t[0] = accessTime.toTimeVal();
+        t[1] = modificationTime.toTimeVal();
+
+        cenforce(utimes(toStringz(name), t) == 0, name);
+    }
+}
+
+unittest
+{
+    string dir = deleteme ~ r".dir/a/b/c";
+    string file = dir ~ "/file";
+
+    if (!exists(dir)) mkdirRecurse(dir);
+    { auto f = File(file, "w"); }
+
+    foreach (path; [file, dir])  // test file and dir
+    {
+        SysTime atime = SysTime(DateTime(2010, 10, 4, 0, 0, 30));
+        SysTime mtime = SysTime(DateTime(2011, 10, 4, 0, 0, 30));
+        setTimes(path, atime, mtime);
+
+        SysTime atime_res;
+        SysTime mtime_res;
+        getTimes(path, atime_res, mtime_res);
+        assert(atime == atime_res);
+        assert(mtime == mtime_res);
+    }
+
+    rmdirRecurse(dir);
+}
 
 /++
     Returns the time that the given file was last modified.
@@ -821,6 +910,8 @@ unittest
 
  Params:
  name = The file to get the attributes of.
+
+ Throws: $(D FileException) on error.
   +/
 uint getAttributes(in char[] name)
 {
@@ -1260,6 +1351,8 @@ void mkdir(in char[] pathname)
 
 /****************************************************
  * Make directory and all parent directories as needed.
+ *
+ * Throws: $(D FileException) on error.
  */
 
 void mkdirRecurse(in char[] pathname)
@@ -1993,47 +2086,11 @@ unittest
     }
 }
 
-
-/******************************************************
- * $(RED Deprecated. It will be removed in November 2012.
- *       Please use $(LREF dirEntries) instead.)
- *
- * For each file and directory $(D DirEntry) in $(D pathname[])
- * pass it to the callback delegate.
- *
- * Params:
- *        callback =        Delegate that processes each
- *                        DirEntry in turn. Returns true to
- *                        continue, false to stop.
- * Example:
- *        This program lists all the files in its
- *        path argument and all subdirectories thereof.
- * ----
- * import std.stdio;
- * import std.file;
- *
- * void main(string[] args)
- * {
- *    bool callback(DirEntry* de)
- *    {
- *      if(de.isDir)
- *        listdir(de.name, &callback);
- *      else
- *        writefln(de.name);
-
- *      return true;
- *    }
- *
- *    listdir(args[1], &callback);
- * }
- * ----
- */
-deprecated("Please use dirEntries instead.")
-alias listDir listdir;
-
-
 /***************************************************
 Copy file $(D from) to file $(D to). File timestamps are preserved.
+If the target file exists, it is overwritten.
+
+Throws: $(D FileException) on error.
  */
 void copy(in char[] from, in char[] to)
 {
@@ -2092,66 +2149,17 @@ void copy(in char[] from, in char[] to)
     }
 }
 
-
-/++
-    Set access/modified times of file $(D name).
-
-    Params:
-        fileAccessTime       = Time the file was last accessed.
-        fileModificationTime = Time the file was last modified.
-
-    Throws:
-        $(D FileException) on error.
- +/
-void setTimes(in char[] name,
-              SysTime fileAccessTime,
-              SysTime fileModificationTime)
-{
-    version(Windows)
-    {
-        const ta = SysTimeToFILETIME(fileAccessTime);
-        const tm = SysTimeToFILETIME(fileModificationTime);
-        alias TypeTuple!(GENERIC_WRITE,
-                         0,
-                         null,
-                         OPEN_EXISTING,
-                         FILE_ATTRIBUTE_NORMAL, HANDLE.init)
-              defaults;
-        auto h = CreateFileW(std.utf.toUTF16z(name), defaults);
-
-        cenforce(h != INVALID_HANDLE_VALUE, name);
-
-        scope(exit)
-            cenforce(CloseHandle(h), name);
-
-        cenforce(SetFileTime(h, null, &ta, &tm), name);
-    }
-    else version(Posix)
-    {
-        timeval[2] t = void;
-
-        t[0] = fileAccessTime.toTimeVal();
-        t[1] = fileModificationTime.toTimeVal();
-
-        enforce(utimes(toStringz(name), t) == 0);
-    }
-}
-
-/+
 unittest
 {
-    write(deleteme, "a\n");
-    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
-    SysTime ftc1, fta1, ftm1;
-    getTimes(deleteme, ftc1, fta1, ftm1);
-    enforce(collectException(setTimes("nonexistent", fta1, ftm1)));
-    setTimes(deleteme, fta1 + dur!"seconds"(50), ftm1 + dur!"seconds"(50));
-    SysTime ftc2, fta2, ftm2;
-    getTimes(deleteme, ftc2, fta2, ftm2);
-    assert(fta1 + dur!"seconds(50) == fta2, text(fta1 + dur!"seconds(50), "!=", fta2));
-    assert(ftm1 + dur!"seconds(50) == ftm2);
+    auto t1 = deleteme, t2 = deleteme~"2";
+    scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
+    write(t1, "1");
+    copy(t1, t2);
+    assert(readText(t2) == "1");
+    write(t1, "2");
+    copy(t1, t2);
+    assert(readText(t2) == "2");
 }
-+/
 
 
 /++
@@ -2246,35 +2254,6 @@ unittest
     remove("unittest_write2.tmp");
     assert(!exists("unittest_write2.tmp"));
 }
-
-//Remove this when _listDir is removed. It's not needed to test
-//DirEntry. Plenty of other tests to do that already.
-unittest
-{
-    _listDir(".", delegate bool (DirEntry * de)
-    {
-        version(Windows)
-        {
-            auto s = std.string.format("%s : c %s, w %s, a %s",
-                                       de.name,
-                                       de.timeCreated,
-                                       de.timeLastModified,
-                                       de.timeLastAccessed);
-        }
-        else version(Posix)
-        {
-            auto s = std.string.format("%s : c %s, w %s, a %s",
-                                       de.name,
-                                       de.timeStatusChanged,
-                                       de.timeLastModified,
-                                       de.timeLastAccessed);
-        }
-
-        return true;
-    }
-    );
-}
-
 
 /**
  * Dictates directory spanning policy for $(D_PARAM dirEntries) (see below).
@@ -2399,15 +2378,7 @@ private struct DirIteratorImpl
 
         bool mayStepIn()
         {
-            try
-            {
-                return _followSymlink ? _cur.isDir : _cur.isDir && !_cur.isSymlink;
-            }
-            catch (Exception)
-            {
-                // Entry may have disappeared
-            }
-            return false;
+            return _followSymlink ? _cur.isDir : _cur.isDir && !_cur.isSymlink;
         }
     }
     else version(Posix)
@@ -2939,7 +2910,7 @@ unittest
 Returns the path to a directory for temporary files.
 
 On Windows, this function returns the result of calling the Windows API function
-$(D $(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/aa364992.aspx, GetTempPath)).
+$(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/aa364992.aspx, $(D GetTempPath)).
 
 On POSIX platforms, it searches through the following list of directories
 and returns the first one which is found to exist:
@@ -2962,7 +2933,7 @@ environment variables and directory structures have changed in the
 meantime.
 
 The POSIX $(D tempDir) algorithm is inspired by Python's
-$(D $(LINK2 http://docs.python.org/library/tempfile.html#tempfile.tempdir, tempfile.tempdir)).
+$(LINK2 http://docs.python.org/library/tempfile.html#tempfile.tempdir, $(D tempfile.tempdir)).
 */
 string tempDir()
 {
@@ -2998,259 +2969,4 @@ string tempDir()
         if (cache is null) cache = ".";
     }
     return cache;
-}
-
-
-/++
-    $(RED Deprecated. It will be removed in November 2012.
-          Please use $(LREF dirEntries) instead.)
-
-    Returns the contents of the given directory.
-
-    The names in the contents do not include the pathname.
-
-    Throws:
-        $(D FileException) on error.
-
-Examples:
-    This program lists all the files and subdirectories in its
-    path argument.
---------------------
-import std.stdio;
-import std.file;
-
-void main(string[] args)
-{
-    auto dirs = std.file.listDir(args[1]);
-
-    foreach(d; dirs)
-        writefln(d);
-}
---------------------
- +/
-deprecated("Please use dirEntries instead.")
-string[] listDir(C)(in C[] pathname)
-{
-    auto result = appender!(string[])();
-
-    bool listing(string filename)
-    {
-        result.put(filename);
-        return true; // continue
-    }
-
-    _listDir(pathname, &listing);
-
-    return result.data;
-}
-
-unittest
-{
-    assert(listDir(".").length > 0);
-}
-
-
-/++
-    $(RED Deprecated. It will be removed in November 2012.
-          Please use $(LREF dirEntries) instead.)
-
-    Returns all the files in the directory and its sub-directories
-    which match pattern or regular expression r.
-
-    Params:
-        pathname = The path of the directory to search.
-        pattern  = String with wildcards, such as $(RED "*.d"). The supported
-                   wildcard strings are described under fnmatch() in
-                   $(LINK2 std_path.html, std.path).
-        r        = Regular expression, for more powerful pattern matching.
-        followSymlink = Whether symbolic links which point to directories
-                         should be treated as directories and their contents
-                         iterated over. Ignored on Windows.
-
-Examples:
-    This program lists all the files with a "d" extension in
-    the path passed as the first argument.
---------------------
-import std.stdio;
-import std.file;
-
-void main(string[] args)
-{
-  auto d_source_files = std.file.listDir(args[1], "*.d");
-
-  foreach(d; d_source_files)
-      writefln(d);
-}
---------------------
-
-    A regular expression version that searches for all files with "d" or
-    "obj" extensions:
---------------------
-import std.stdio;
-import std.file;
-import std.regexp;
-
-void main(string[] args)
-{
-  auto d_source_files = std.file.listDir(args[1], RegExp(r"\.(d|obj)$"));
-
-  foreach(d; d_source_files)
-      writefln(d);
-}
---------------------
- +/
-deprecated("Please use dirEntries instead.")
-string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
-    if(is(C : char) && !is(U: bool delegate(string filename)))
-{
-    import std.regexp;
-    auto result = appender!(string[])();
-    bool callback(DirEntry* de)
-    {
-        if(followSymlink ? de.isDir : attrIsDir(de.linkAttributes))
-        {
-            _listDir(de.name, &callback);
-        }
-        else
-        {
-            static if(is(U : const(C[])))
-            {//pattern version
-                if(std.path.fnmatch(de.name, filter))
-                    result.put(de.name);
-            }
-            else static if(is(U : RegExp))
-            {//RegExp version
-
-                if(filter.test(de.name))
-                    result.put(de.name);
-            }
-            else
-                static assert(0,"There is no version of listDir that takes " ~ U.stringof);
-        }
-        return true; // continue
-    }
-
-    _listDir(pathname, &callback);
-
-    return result.data;
-}
-
-/******************************************************
- * $(RED Deprecated. It will be removed in November 2012.
- *       Please use $(LREF dirEntries) instead.)
- *
- * For each file and directory name in pathname[],
- * pass it to the callback delegate.
- *
- * Params:
- *        callback =        Delegate that processes each
- *                        filename in turn. Returns true to
- *                        continue, false to stop.
- * Example:
- *        This program lists all the files in its
- *        path argument, including the path.
- * ----
- * import std.stdio;
- * import std.path;
- * import std.file;
- *
- * void main(string[] args)
- * {
- *    auto pathname = args[1];
- *    string[] result;
- *
- *    bool listing(string filename)
- *    {
- *      result ~= buildPath(pathname, filename);
- *      return true; // continue
- *    }
- *
- *    listdir(pathname, &listing);
- *
- *    foreach (name; result)
- *      writefln("%s", name);
- * }
- * ----
- */
-deprecated("Please use dirEntries instead.")
-void listDir(C, U)(in C[] pathname, U callback)
-    if(is(C : char) && is(U: bool delegate(string filename)))
-{
-    _listDir(pathname, callback);
-}
-
-
-//==============================================================================
-// Private Section.
-//==============================================================================
-private:
-
-
-deprecated void _listDir(in char[] pathname, bool delegate(string filename) callback)
-{
-    bool listing(DirEntry* de)
-    {
-        return callback(baseName(de.name));
-    }
-
-    _listDir(pathname, &listing);
-}
-
-
-version(Windows)
-{
-    deprecated void _listDir(in char[] pathname, bool delegate(DirEntry* de) callback)
-    {
-        DirEntry de;
-        auto c = buildPath(pathname, "*.*");
-
-        WIN32_FIND_DATAW fileinfo;
-
-        auto h = FindFirstFileW(std.utf.toUTF16z(c), &fileinfo);
-        if(h == INVALID_HANDLE_VALUE)
-            return;
-
-        scope(exit) FindClose(h);
-
-        do
-        {
-            // Skip "." and ".."
-            if(std.string.wcscmp(fileinfo.cFileName.ptr, ".") == 0 ||
-               std.string.wcscmp(fileinfo.cFileName.ptr, "..") == 0)
-            {
-                continue;
-            }
-
-            de._init(pathname, &fileinfo);
-
-            if(!callback(&de))
-                break;
-
-        } while(FindNextFileW(h, &fileinfo) != FALSE);
-    }
-}
-else version(Posix)
-{
-    deprecated void _listDir(in char[] pathname, bool delegate(DirEntry* de) callback)
-    {
-        auto h = cenforce(opendir(toStringz(pathname)), pathname);
-        scope(exit) closedir(h);
-
-        DirEntry de;
-
-        for(dirent* fdata; (fdata = readdir(h)) != null; )
-        {
-            // Skip "." and ".."
-            if(!core.stdc.string.strcmp(fdata.d_name.ptr, ".") ||
-               !core.stdc.string.strcmp(fdata.d_name.ptr, ".."))
-            {
-                continue;
-            }
-
-            de._init(pathname, fdata);
-
-            if(!callback(&de))
-                break;
-        }
-    }
 }
