@@ -306,16 +306,9 @@ private:
             }
             else
             {
-                static if (__traits(compiles, {new A(*zis);}))
-                {
-                    auto p = new A(*zis);
-                }
-                else
-                {
-                    auto p = new A;
-                    *p = *zis;
-                }
-                memcpy(&target.store, &p, p.sizeof);
+                // The size of the target variant is too small.
+                // Create a copy of the value and store the reference.
+                target.makeIndirect(*zis);
             }
             target.fptr = &handler!(A);
             break;
@@ -510,6 +503,24 @@ private:
         return 0;
     }
 
+    /* Initialize the content of this variant from the specified value
+       by creating a copy of it and storing just its reference.
+    */
+    void makeIndirect(T)(auto ref T value)
+    {
+        static if (__traits(compiles, {new T(value);}))
+        {
+            auto p = new T(value);
+        }
+        else
+        {
+            auto p = new T;
+            *p = value;
+        }
+        memcpy(&store, &p, p.sizeof);
+        fptr = &handler!(T);
+    }
+
 public:
     /** Constructs a $(D_PARAM VariantN) value given an argument of a
      * generic type. Statically rejects disallowed types.
@@ -558,16 +569,9 @@ public:
             }
             else
             {
-                static if (__traits(compiles, {new T(rhs);}))
-                {
-                    auto p = new T(rhs);
-                }
-                else
-                {
-                    auto p = new T;
-                    *p = rhs;
-                }
-                memcpy(&store, &p, p.sizeof);
+                // The size of the variant's store is too small.
+                // Create a copy of the value and store the reference.
+                makeIndirect(rhs);
             }
             fptr = &handler!(T);
         }
