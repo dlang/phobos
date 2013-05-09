@@ -308,7 +308,7 @@ private:
             {
                 // The size of the target variant is too small.
                 // Create a copy of the value and store the reference.
-                target.makeIndirect(*zis);
+                target.storeIndirect(*zis);
             }
             target.fptr = &handler!(A);
             break;
@@ -506,7 +506,7 @@ private:
     /* Initialize the content of this variant from the specified value
        by creating a copy of it and storing just its reference.
     */
-    void makeIndirect(T)(auto ref T value)
+    void storeIndirect(T)(auto ref T value)
     {
         static if (__traits(compiles, {new T(value);}))
         {
@@ -571,7 +571,7 @@ public:
             {
                 // The size of the variant's store is too small.
                 // Create a copy of the value and store the reference.
-                makeIndirect(rhs);
+                storeIndirect(rhs);
             }
             fptr = &handler!(T);
         }
