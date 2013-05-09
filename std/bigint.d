@@ -79,7 +79,7 @@ public:
     /// It may have a leading + or - sign; followed by "0x" if hexadecimal.
     /// Underscores are permitted.
     /// BUG: Should throw a IllegalArgumentException/ConvError if invalid character found
-    this(T : const(char)[] )(T s)
+    this(T : const(char)[] )(T s) pure
     {
         bool neg = false;
         if (s[0] == '-') {
@@ -105,14 +105,14 @@ public:
     }
 
     ///
-    this(T: long) (T x)
+    this(T: long) (T x) pure
     {
         data = data.init; // @@@: Workaround for compiler bug
         opAssign(x);
     }
 
     ///
-    BigInt opAssign(T: long)(T x)
+    BigInt opAssign(T: long)(T x) pure
     {
         data = cast(ulong)((x < 0) ? -x : x);
         sign = (x < 0);
@@ -120,7 +120,7 @@ public:
     }
 
     ///
-    BigInt opAssign(T:BigInt)(T x)
+    BigInt opAssign(T:BigInt)(T x) pure
     {
         data = x.data;
         sign = x.sign;
@@ -128,7 +128,7 @@ public:
     }
 
     // BigInt op= integer
-    BigInt opOpAssign(string op, T)(T y)
+    BigInt opOpAssign(string op, T)(T y) pure
         if ((op=="+" || op=="-" || op=="*" || op=="/" || op=="%"
           || op==">>" || op=="<<" || op=="^^") && is (T: long))
     {
@@ -200,7 +200,7 @@ public:
     }
 
     // BigInt op= BigInt
-    BigInt opOpAssign(string op, T)(T y)
+    BigInt opOpAssign(string op, T)(T y) pure
         if ((op=="+" || op== "-" || op=="*" || op=="/" || op=="%")
             && is (T: BigInt))
     {
@@ -242,15 +242,16 @@ public:
     }
 
     // BigInt op BigInt
-    BigInt opBinary(string op, T)(T y)
-        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="%") && is (T: BigInt))
+    BigInt opBinary(string op, T)(T y) pure
+        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="%") 
+			&& is (T: BigInt))
     {
         BigInt r = this;
         return r.opOpAssign!(op)(y);
     }
 
     // BigInt op integer
-    BigInt opBinary(string op, T)(T y)
+    BigInt opBinary(string op, T)(T y) pure
         if ((op=="+" || op == "*" || op=="-" || op=="/"
             || op==">>" || op=="<<" || op=="^^") && is (T: long))
     {
@@ -259,7 +260,7 @@ public:
     }
 
     //
-    int opBinary(string op, T : int)(T y)
+    int opBinary(string op, T : int)(T y) pure
         if (op == "%")
     {
         assert(y!=0);
@@ -271,14 +272,14 @@ public:
     }
 
     // Commutative operators
-    BigInt opBinaryRight(string op, T)(T y)
+    BigInt opBinaryRight(string op, T)(T y) pure
         if ((op=="+" || op=="*") && !is(T: BigInt))
     {
         return opBinary!(op)(y);
     }
 
     //  BigInt = integer op BigInt
-    BigInt opBinaryRight(string op, T)(T y)
+    BigInt opBinaryRight(string op, T)(T y) pure
         if (op == "-" && is(T: long))
     {
         ulong u = cast(ulong)(y < 0 ? -y : y);
@@ -293,7 +294,7 @@ public:
     }
 
     //  integer = integer op BigInt
-    T opBinaryRight(string op, T)(T x)
+    T opBinaryRight(string op, T)(T x) pure
         if ((op=="%" || op=="/") && is(T: long))
     {
         static if (op == "%")
@@ -316,7 +317,7 @@ public:
         }
     }
     // const unary operations
-    BigInt opUnary(string op)() /*const*/ if (op=="+" || op=="-")
+    BigInt opUnary(string op)() pure /*const*/ if (op=="+" || op=="-")
     {
        static if (op=="-")
        {
@@ -329,7 +330,7 @@ public:
     }
 
     // non-const unary operations
-    BigInt opUnary(string op)() if (op=="++" || op=="--")
+    BigInt opUnary(string op)() pure if (op=="++" || op=="--")
     {
         static if (op=="++")
         {
@@ -344,13 +345,13 @@ public:
     }
 
     ///
-    bool opEquals()(auto ref const BigInt y) const
+    bool opEquals()(auto ref const BigInt y) const pure
     {
        return sign == y.sign && y.data == data;
     }
 
     ///
-    bool opEquals(T: long)(T y) const
+    bool opEquals(T: long)(T y) const pure
     {
         if (sign != (y<0))
             return 0;
@@ -358,7 +359,7 @@ public:
     }
 
     ///
-    int opCmp(T:long)(T y)
+    int opCmp(T:long)(T y) pure
     {
         if (sign != (y<0) )
             return sign ? -1 : 1;
@@ -366,7 +367,7 @@ public:
         return sign? -cmp: cmp;
     }
     ///
-    int opCmp(T:BigInt)(T y)
+    int opCmp(T:BigInt)(T y) pure
     {
         if (sign!=y.sign)
             return sign ? -1 : 1;
@@ -477,7 +478,7 @@ private:
     }
 +/
 private:
-    void negate()
+    void negate() pure
     {
         if (!data.isZero())
             sign = !sign;
@@ -498,7 +499,7 @@ private:
     }
 }
 
-string toDecimalString(BigInt x)
+string toDecimalString(BigInt x) 
 {
     string outbuff="";
     void sink(const(char)[] s) { outbuff ~= s; }
@@ -506,7 +507,7 @@ string toDecimalString(BigInt x)
     return outbuff;
 }
 
-string toHex(BigInt x)
+string toHex(BigInt x) 
 {
     string outbuff="";
     void sink(const(char)[] s) { outbuff ~= s; }
