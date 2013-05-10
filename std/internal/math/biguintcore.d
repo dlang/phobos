@@ -2202,13 +2202,13 @@ version(unittest)
 unittest
 {
 
-    void printBiguint(uint [] data) pure
+    void printBiguint(uint [] data)
     {
         char [] buff = new char[data.length*9];
         printf("%.*s\n", biguintToHex(buff, data, '_'));
     }
 
-    void printDecimalBigUint(BigUint data) pure
+    void printDecimalBigUint(BigUint data)
     {
         printf("%.*s\n", data.toDecimalString(0));
     }

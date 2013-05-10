@@ -740,3 +740,15 @@ unittest
     BigInt one = 1, zero;
     assert(one && !zero);
 }
+
+unittest // 6850
+{
+    pure long pureTest() {
+        BigInt a = 1;
+        BigInt b = 1336;
+        a += b;
+        return a.toLong();
+    }
+
+    assert(pureTest() == 1337);
+}
