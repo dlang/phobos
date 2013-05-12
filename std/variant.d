@@ -299,8 +299,17 @@ private:
         case OpID.copyOut:
             auto target = cast(VariantN *) parm;
             assert(target);
-            tryPutting(zis, typeid(A), cast(void*) getPtr(&target.store))
-                || assert(false);
+            static if (A.sizeof <= target.size)
+            {
+                tryPutting(zis, typeid(A), &target.store) 
+                    || assert(false);
+            }
+            else
+            {
+                // The size of the target variant is too small.
+                // Create a copy of the value and store the reference.
+                target.storeIndirect(*zis);
+            }
             target.fptr = &handler!(A);
             break;
         case OpID.get:
@@ -494,6 +503,24 @@ private:
         return 0;
     }
 
+    /* Initialize the content of this variant from the specified value
+       by creating a copy of it and storing just its reference.
+    */
+    void storeIndirect(T)(auto ref T value)
+    {
+        static if (__traits(compiles, {new T(value);}))
+        {
+            auto p = new T(value);
+        }
+        else
+        {
+            auto p = new T;
+            *p = value;
+        }
+        memcpy(&store, &p, p.sizeof);
+        fptr = &handler!(T);
+    }
+
 public:
     /** Constructs a $(D_PARAM VariantN) value given an argument of a
      * generic type. Statically rejects disallowed types.
@@ -542,16 +569,9 @@ public:
             }
             else
             {
-                static if (__traits(compiles, {new T(rhs);}))
-                {
-                    auto p = new T(rhs);
-                }
-                else
-                {
-                    auto p = new T;
-                    *p = rhs;
-                }
-                memcpy(&store, &p, p.sizeof);
+                // The size of the variant's store is too small.
+                // Create a copy of the value and store the reference.
+                storeIndirect(rhs);
             }
             fptr = &handler!(T);
         }
@@ -1880,4 +1900,18 @@ unittest
     Variant b;
     assert(a == b);
     assert(b == a);
+}
+
+// http://d.puremagic.com/issues/show_bug.cgi?id=10017
+unittest
+{
+    struct S
+    {
+        int[9] s;
+    }
+
+    Variant v1, v2;
+    v1 = S();
+    v2 = v1;
+    assert(v1 == v2);
 }
