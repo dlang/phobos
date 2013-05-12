@@ -1299,7 +1299,14 @@ struct Parser(R, bool CTFE = false)
             }
             put(Bytecode(greedy ? IR.InfiniteStart : IR.InfiniteQStart, len));
             enforce(ir.length + len < maxCompiledLength,  "maximum compiled pattern length is exceeded");
-            ir ~= ir[offset .. offset+len];
+            //workaround @@@BUG@@@ 9634
+            if(__ctfe)
+            { 
+                foreach(v; ir[offset .. offset+len])
+                    ir ~= v;
+            }
+            else
+                ir ~= ir[offset .. offset+len];
             //IR.InfinteX is always a hotspot
             put(Bytecode(greedy ? IR.InfiniteEnd : IR.InfiniteQEnd, len));
             put(Bytecode.init); //merge index
@@ -7658,6 +7665,13 @@ else
         auto c = nm.captures;
         assert(c[1] == "a");
         assert(c["nick"] == "a");
+    }
+
+    // bugzilla 9634
+    unittest 
+    {
+        auto re = ctRegex!"(?:a+)";
+        assert(match("aaaa", re).hit == "aaaa");
     }
 }
 
