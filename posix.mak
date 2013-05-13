@@ -22,6 +22,8 @@
 # OS can be linux, win32, win32remote, win32wine, osx, or freebsd. If left
 # blank, the system will be determined by using uname
 
+SONAME:=libphobos2.so.0.$(shell awk -F. '{ print $$NF + 0 }' ../dmd/VERSION)
+
 QUIET:=@
 
 OS:=
@@ -152,7 +154,7 @@ DDOC=$(DMD)
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))
 	LIB = $(ROOT)/libphobos2.a
-	LIBSO = $(ROOT)/libphobos2so.so
+	LIBSO = $(ROOT)/$(SONAME).0
 else
 	LIB = $(ROOT)/phobos.lib
 endif
@@ -243,7 +245,8 @@ debug :
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=debug
 unittest :
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=debug unittest
-	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release unittest
+	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release \
+		LD_LIBRARY_PATH=$(ROOT_OF_THEM_ALL)/$(OS)/release/$(MODEL) unittest
 else
 # This branch is normally taken in recursive builds. All we need to do
 # is set the default build to $(BUILD) (which is either debug or
@@ -261,10 +264,16 @@ $(ROOT)/%$(DOTOBJ) : %.c
 $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
 
-dll : $(LIBSO)
+dll : $(ROOT)/libphobos2.so
+
+$(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
+	ln -s $(lastword $(subst /, ,$(LIBSO))) $@
+
+$(ROOT)/$(SONAME): $(LIBSO)
+	ln -s $(lastword $(subst /, ,$(LIBSO))) $@
 
 $(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
-	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ $(DRUNTIMESO) $(D_FILES) $(OBJS)
+	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(D_FILES) $(OBJS)
 
 ifeq (osx,$(OS))
 # Build fat library that combines the 32 bit and the 64 bit libraries
@@ -276,8 +285,8 @@ $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 	@echo Testing $@ - disabled
 
 $(ROOT)/unittest/%$(DOTEXE) : %.d $(LIB) $(ROOT)/emptymain.d
-	@echo Testing $@
-	$(QUIET)$(DMD) $(DFLAGS) -unittest $(LINKOPTS) $(subst /,$(PATHSEP),"-of$@") \
+	@echo Testing $@ \(static library\)
+	$(QUIET)$(DMD) $(DFLAGS) -unittest $(LINKOPTS) -defaultlib=libphobos2.a $(subst /,$(PATHSEP),"-of$@") \
 	 	$(ROOT)/emptymain.d $<
 # make the file very old so it builds and runs again if it fails
 	@touch -t 197001230123 $@
