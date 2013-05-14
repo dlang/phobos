@@ -14,6 +14,10 @@ Authors:   $(WEB digitalmars.com, Walter Bright),
            Kenji Hara
 
 Source:    $(PHOBOSSRC std/_conv.d)
+
+Macros:
+WIKI = Phobos/StdConv
+
 */
 module std.conv;
 
@@ -257,7 +261,6 @@ $(D_PARAM to!(double[])) applies to an $(D_PARAM int[]). The
 conversion might throw an exception because $(D_PARAM to!short)
 might fail the range check.
 
-Macros: WIKI=Phobos/StdConv
  */
 
 /**
