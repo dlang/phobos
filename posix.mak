@@ -149,10 +149,17 @@ endif
 # Set DDOC, the documentation generator
 DDOC=$(DMD)
 
+# Set VERSION, where the file is that contains the version string
+VERSION=../dmd/VERSION
+
+# Set SONAME, the name of the shared library.
+# The awk script will produce the last 2 digits of the version string, i.e. 2.063 produces 63
+SONAME = libphobos2.so.0.$(shell awk -F. '{ print $$NF + 0 }' $(VERSION))
+
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))
 	LIB = $(ROOT)/libphobos2.a
-	LIBSO = $(ROOT)/libphobos2so.so
+	LIBSO = $(ROOT)/$(SONAME).0
 else
 	LIB = $(ROOT)/phobos.lib
 endif
@@ -261,10 +268,16 @@ $(ROOT)/%$(DOTOBJ) : %.c
 $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
 
-dll : $(LIBSO)
+dll : $(ROOT)/libphobos2.so
+
+$(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
+	ln -s $(notdir $(LIBSO)) $@ 
+
+$(ROOT)/$(SONAME): $(LIBSO)
+	ln -s $(notdir $(LIBSO)) $@
 
 $(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
-	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ $(DRUNTIMESO) $(D_FILES) $(OBJS)
+	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(D_FILES) $(OBJS)
 
 ifeq (osx,$(OS))
 # Build fat library that combines the 32 bit and the 64 bit libraries
