@@ -322,11 +322,13 @@ ptrdiff_t indexOf(Char)(in Char[] s,
         {
             if (std.ascii.isASCII(c))
             {                                               // Plain old ASCII
-                auto p = cast(char*)memchr(s.ptr, c, s.length);
-                if (p)
-                    return p - cast(char *)s;
-                else
-                    return -1;
+                auto c1 = cast(char) c;
+
+                foreach (ptrdiff_t i, c2; s)
+                {
+                    if (c1 == c2)
+                        return i;
+                }
             }
         }
 
