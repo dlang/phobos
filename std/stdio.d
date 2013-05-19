@@ -926,8 +926,8 @@ with every line.
         {
             // TODO: optimize this
             string s = readln(terminator);
-            if (!s.length) return 0;
             buf.length = 0;
+            if (!s.length) return 0;
             foreach (wchar c; s)
             {
                 buf ~= c;
@@ -961,15 +961,19 @@ with every line.
     {
         auto deleteme = testFilename();
         std.file.write(deleteme, "hello\n\rworld\nhow\n\rare ya");
-        auto witness = [ "hello\n\r", "world\nhow\n\r", "are ya" ];
         scope(exit) std.file.remove(deleteme);
-        auto f = File(deleteme);
-        uint i = 0;
-        char[] buf;
-        while (f.readln(buf, "\n\r"))
+        foreach (C; Tuple!(char, wchar, dchar).Types)
         {
-            assert(i < witness.length);
-            assert(buf == witness[i++]);
+            immutable(C)[][] witness = [ "hello\n\r", "world\nhow\n\r", "are ya" ];
+            auto f = File(deleteme);
+            uint i = 0;
+            C[] buf;
+            while (f.readln(buf, "\n\r"))
+            {
+                assert(i < witness.length);
+                assert(buf == witness[i++]);
+            }
+            assert(buf.length==0);
         }
     }
 
