@@ -512,7 +512,6 @@ unittest
         `0.23`,
         `-0.23`,
         `""`,
-        `1.223e+24`,
         `"hello\nworld"`,
         `"\"\\\/\b\f\n\r\t"`,
         `[]`,
@@ -522,6 +521,11 @@ unittest
         // Currently broken
         // `{"hello":{"json":"is great","array":[12,null,{}]},"goodbye":[true,"or",false,["test",42,{"nested":{"a":23.54,"b":0.0012}}]]}`
     ];
+
+    version (MinGW)
+        jsons ~= `1.223e+024`;
+    else
+        jsons ~= `1.223e+24`;
 
     JSONValue val;
     string result;
