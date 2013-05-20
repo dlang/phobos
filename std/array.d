@@ -2119,7 +2119,7 @@ appending to the original array will reallocate.
         // safe WRT built-in append, and we can use the entire block.
         auto cap = arr.capacity;
         if (cap > arr.length)
-            arr.length = cap;
+            arr = arr.ptr[0 .. cap];
         // we assume no reallocation occurred
         assert(arr.ptr is _data.arr.ptr);
         _data.capacity = arr.length;
@@ -2140,8 +2140,20 @@ done.
             immutable len = _data.arr.length;
             if (__ctfe)
             {
-                _data.arr.length = newCapacity;
-                _data.arr = _data.arr[0..len];
+                static if (is(Unqual!T == void))
+                {
+                    // void[]
+                    _data.arr.length = newCapacity;
+                }
+                else
+                {
+                    // avoid restriction of @disable this()
+                    _data.arr = _data.arr[0.._data.capacity];
+                    foreach (i; _data.capacity .. newCapacity)
+                        _data.arr ~= Unqual!T.init;
+                    assert(_data.arr.length == newCapacity);
+                    _data.arr = _data.arr[0..len];
+                }
                 _data.capacity = newCapacity;
                 return;
             }
@@ -2195,8 +2207,19 @@ Returns the managed array.
         {
             if (__ctfe)
             {
-                _data.arr.length = reqlen;
-                _data.arr = _data.arr[0..len];
+                static if (is(Unqual!T == void))
+                {
+                    // void[]
+                    _data.arr.length = reqlen;
+                }
+                else
+                {
+                    // avoid restriction of @disable this()
+                    _data.arr = _data.arr[0.._data.capacity];
+                    foreach (i; _data.capacity .. reqlen)
+                        _data.arr ~= Unqual!T.init;
+                    _data.arr = _data.arr[0..len];
+                }
                 _data.capacity = reqlen;
                 return;
             }
@@ -2559,6 +2582,24 @@ unittest
             assertNotThrown(app5663m ~= cast(char[])"\xE3");
             assert(app5663m.data == "\xE3");
         }
+    }
+
+    {
+        static struct S10122
+        {
+            int val;
+
+            @disable this();
+            this(int v) { val = v; }
+        }
+        auto w = appender!(S10122[])();
+        w.put(S10122(1));
+
+        static assert({
+            auto w = appender!(S10122[])();
+            w.put(S10122(1));
+            return w.data.length == 1 && w.data[0].val == 1;
+        }());
     }
 }
 
