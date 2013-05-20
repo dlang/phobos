@@ -2118,8 +2118,8 @@ appending to the original array will reallocate.
         // if we consume all the block that we can, then array appending is
         // safe WRT built-in append, and we can use the entire block.
         auto cap = arr.capacity;
-        if(cap > arr.length)
-            arr.length = cap;
+        if (cap > arr.length)
+            arr = arr.ptr[0 .. cap];
         // we assume no reallocation occurred
         assert(arr.ptr is _data.arr.ptr);
         _data.capacity = arr.length;
@@ -2132,22 +2132,34 @@ done.
 */
     void reserve(size_t newCapacity)
     {
-        if(!_data)
+        if (!_data)
             _data = new Data;
-        if(_data.capacity < newCapacity)
+        if (_data.capacity < newCapacity)
         {
             // need to increase capacity
             immutable len = _data.arr.length;
             if (__ctfe)
             {
-                _data.arr.length = newCapacity;
-                _data.arr = _data.arr[0..len];
+                static if (is(Unqual!T == void))
+                {
+                    // void[]
+                    _data.arr.length = newCapacity;
+                }
+                else
+                {
+                    // avoid restriction of @disable this()
+                    _data.arr = _data.arr[0.._data.capacity];
+                    foreach (i; _data.capacity .. newCapacity)
+                        _data.arr ~= Unqual!T.init;
+                    assert(_data.arr.length == newCapacity);
+                    _data.arr = _data.arr[0..len];
+                }
                 _data.capacity = newCapacity;
                 return;
             }
             immutable growsize = (newCapacity - len) * T.sizeof;
             auto u = GC.extend(_data.arr.ptr, growsize, growsize);
-            if(u)
+            if (u)
             {
                 // extend worked, update the capacity
                 _data.capacity = u / T.sizeof;
@@ -2158,7 +2170,7 @@ done.
                 auto bi = GC.qalloc(newCapacity * T.sizeof,
                         (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
                 _data.capacity = bi.size / T.sizeof;
-                if(len)
+                if (len)
                     memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
                 _data.arr = (cast(Unqual!(T)*)bi.base)[0..len];
                 // leave the old data, for safety reasons
@@ -2187,7 +2199,7 @@ Returns the managed array.
     // ensure we can add nelems elements, resizing as necessary
     private void ensureAddable(size_t nelems)
     {
-        if(!_data)
+        if (!_data)
             _data = new Data;
         immutable len = _data.arr.length;
         immutable reqlen = len + nelems;
@@ -2195,8 +2207,19 @@ Returns the managed array.
         {
             if (__ctfe)
             {
-                _data.arr.length = reqlen;
-                _data.arr = _data.arr[0..len];
+                static if (is(Unqual!T == void))
+                {
+                    // void[]
+                    _data.arr.length = reqlen;
+                }
+                else
+                {
+                    // avoid restriction of @disable this()
+                    _data.arr = _data.arr[0.._data.capacity];
+                    foreach (i; _data.capacity .. reqlen)
+                        _data.arr ~= Unqual!T.init;
+                    _data.arr = _data.arr[0..len];
+                }
                 _data.capacity = reqlen;
                 return;
             }
@@ -2206,7 +2229,7 @@ Returns the managed array.
             auto newlen = newCapacity(reqlen);
             // first, try extending the current block
             auto u = GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
-            if(u)
+            if (u)
             {
                 // extend worked, update the capacity
                 _data.capacity = u / T.sizeof;
@@ -2217,7 +2240,7 @@ Returns the managed array.
                 auto bi = GC.qalloc(newlen * T.sizeof,
                         (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
                 _data.capacity = bi.size / T.sizeof;
-                if(len)
+                if (len)
                     memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
                 _data.arr = (cast(Unqual!(T)*)bi.base)[0..len];
                 // leave the old data, for safety reasons
@@ -2297,9 +2320,9 @@ Appends an entire range to the managed array.
             // optimization -- if this type is something other than a string,
             // and we are adding exactly one element, call the version for one
             // element.
-            static if(!isSomeChar!T)
+            static if (!isSomeChar!T)
             {
-                if(items.length == 1)
+                if (items.length == 1)
                 {
                     put(items.front);
                     return;
@@ -2311,13 +2334,13 @@ Appends an entire range to the managed array.
             immutable len = _data.arr.length;
             immutable newlen = len + items.length;
             _data.arr = _data.arr.ptr[0..newlen];
-            static if(is(typeof(_data.arr[] = items[])))
+            static if (is(typeof(_data.arr[] = items[])))
             {
                 _data.arr.ptr[len..newlen] = items[];
             }
             else
             {
-                for(size_t i = len; !items.empty; items.popFront(), ++i)
+                for (size_t i = len; !items.empty; items.popFront(), ++i)
                     _data.arr.ptr[i] = cast(Unqual!T)items.front;
             }
         }
@@ -2355,7 +2378,7 @@ Appends an entire range to the managed array.
     }
 
     // only allow overwriting data on non-immutable and non-const data
-    static if(!is(T == immutable) && !is(T == const))
+    static if (!is(T == immutable) && !is(T == const))
     {
 /**
 Clears the managed array.  This allows the elements of the array to be reused
@@ -2379,7 +2402,7 @@ Throws: $(D Exception) if newlength is greater than the current array length.
 */
         void shrinkTo(size_t newlength)
         {
-            if(_data)
+            if (_data)
             {
                 enforce(newlength <= _data.arr.length);
                 _data.arr = _data.arr.ptr[0..newlength];
@@ -2559,6 +2582,24 @@ unittest
             assertNotThrown(app5663m ~= cast(char[])"\xE3");
             assert(app5663m.data == "\xE3");
         }
+    }
+
+    {
+        static struct S10122
+        {
+            int val;
+
+            @disable this();
+            this(int v) { val = v; }
+        }
+        auto w = appender!(S10122[])();
+        w.put(S10122(1));
+
+        static assert({
+            auto w = appender!(S10122[])();
+            w.put(S10122(1));
+            return w.data.length == 1 && w.data[0].val == 1;
+        }());
     }
 }
 
