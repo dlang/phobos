@@ -864,6 +864,23 @@ int main()
         }
     }
 
+    unittest
+    {
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "cześć \U0002000D");
+        scope(exit) std.file.remove(deleteme);
+        uint[] lengths=[12,8,7];
+        foreach (uint i,C; Tuple!(char, wchar, dchar).Types)
+        {
+            immutable(C)[] witness = "cześć \U0002000D";
+            auto f = File(deleteme);
+            immutable(C)[] buf;
+            buf = f.readln!(typeof(buf))();
+            assert(buf.length==lengths[i]);
+            assert(buf==witness);
+        }
+    }
+
 /**
 Read line from stream $(D fp) and write it to $(D buf[]), including
 terminating character.
@@ -928,7 +945,7 @@ with every line.
             string s = readln(terminator);
             buf.length = 0;
             if (!s.length) return 0;
-            foreach (wchar c; s)
+            foreach (C c; s)
             {
                 buf ~= c;
             }
