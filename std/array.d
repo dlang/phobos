@@ -2118,7 +2118,7 @@ appending to the original array will reallocate.
         // if we consume all the block that we can, then array appending is
         // safe WRT built-in append, and we can use the entire block.
         auto cap = arr.capacity;
-        if(cap > arr.length)
+        if (cap > arr.length)
             arr.length = cap;
         // we assume no reallocation occurred
         assert(arr.ptr is _data.arr.ptr);
@@ -2132,9 +2132,9 @@ done.
 */
     void reserve(size_t newCapacity)
     {
-        if(!_data)
+        if (!_data)
             _data = new Data;
-        if(_data.capacity < newCapacity)
+        if (_data.capacity < newCapacity)
         {
             // need to increase capacity
             immutable len = _data.arr.length;
@@ -2147,7 +2147,7 @@ done.
             }
             immutable growsize = (newCapacity - len) * T.sizeof;
             auto u = GC.extend(_data.arr.ptr, growsize, growsize);
-            if(u)
+            if (u)
             {
                 // extend worked, update the capacity
                 _data.capacity = u / T.sizeof;
@@ -2158,7 +2158,7 @@ done.
                 auto bi = GC.qalloc(newCapacity * T.sizeof,
                         (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
                 _data.capacity = bi.size / T.sizeof;
-                if(len)
+                if (len)
                     memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
                 _data.arr = (cast(Unqual!(T)*)bi.base)[0..len];
                 // leave the old data, for safety reasons
@@ -2187,7 +2187,7 @@ Returns the managed array.
     // ensure we can add nelems elements, resizing as necessary
     private void ensureAddable(size_t nelems)
     {
-        if(!_data)
+        if (!_data)
             _data = new Data;
         immutable len = _data.arr.length;
         immutable reqlen = len + nelems;
@@ -2206,7 +2206,7 @@ Returns the managed array.
             auto newlen = newCapacity(reqlen);
             // first, try extending the current block
             auto u = GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
-            if(u)
+            if (u)
             {
                 // extend worked, update the capacity
                 _data.capacity = u / T.sizeof;
@@ -2217,7 +2217,7 @@ Returns the managed array.
                 auto bi = GC.qalloc(newlen * T.sizeof,
                         (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
                 _data.capacity = bi.size / T.sizeof;
-                if(len)
+                if (len)
                     memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
                 _data.arr = (cast(Unqual!(T)*)bi.base)[0..len];
                 // leave the old data, for safety reasons
@@ -2297,9 +2297,9 @@ Appends an entire range to the managed array.
             // optimization -- if this type is something other than a string,
             // and we are adding exactly one element, call the version for one
             // element.
-            static if(!isSomeChar!T)
+            static if (!isSomeChar!T)
             {
-                if(items.length == 1)
+                if (items.length == 1)
                 {
                     put(items.front);
                     return;
@@ -2311,13 +2311,13 @@ Appends an entire range to the managed array.
             immutable len = _data.arr.length;
             immutable newlen = len + items.length;
             _data.arr = _data.arr.ptr[0..newlen];
-            static if(is(typeof(_data.arr[] = items[])))
+            static if (is(typeof(_data.arr[] = items[])))
             {
                 _data.arr.ptr[len..newlen] = items[];
             }
             else
             {
-                for(size_t i = len; !items.empty; items.popFront(), ++i)
+                for (size_t i = len; !items.empty; items.popFront(), ++i)
                     _data.arr.ptr[i] = cast(Unqual!T)items.front;
             }
         }
@@ -2355,7 +2355,7 @@ Appends an entire range to the managed array.
     }
 
     // only allow overwriting data on non-immutable and non-const data
-    static if(!is(T == immutable) && !is(T == const))
+    static if (!is(T == immutable) && !is(T == const))
     {
 /**
 Clears the managed array.  This allows the elements of the array to be reused
@@ -2379,7 +2379,7 @@ Throws: $(D Exception) if newlength is greater than the current array length.
 */
         void shrinkTo(size_t newlength)
         {
-            if(_data)
+            if (_data)
             {
                 enforce(newlength <= _data.arr.length);
                 _data.arr = _data.arr.ptr[0..newlength];
