@@ -23,7 +23,8 @@ module std.idioms;
 version(unittest)
 {
     import std.array, std.conv, std.exception, std.parallelism;
-    import core.exception, core.thread;
+    import core.exception, core.thread, core.sync.barrier;
+
 }
 
 /**
@@ -49,7 +50,8 @@ public class PropertyException : Exception
 public class SingletonException : Exception
 {
     public this()(string message, string File = __FILE__,
-            size_t line = __LINE__, Throwable next = null){
+            size_t line = __LINE__, Throwable next = null)
+    {
         super(message, file, line, next);
     }
 }
@@ -322,9 +324,19 @@ mixin template LowLockSingleton()
      *      true if instance was already initialized, false otherwise.
      */
     static @property bool hasInstance(){
-        //Use the __gshared reference since the thread local reference might
-        //still be null.
-        return __singleton_instance !is null;
+        if(__singleton_local_reference !is null)
+        {
+            return true;
+        }
+        synchronized(typeid(typeof(this)))
+        {
+            if(__singleton_instance !is null)
+            {
+                __singleton_local_reference = __singleton_instance;
+                return true;
+            }
+            return false;
+        }
     }
 
     /**
@@ -429,8 +441,6 @@ unittest
 //Try to force a read/write race to see if the singleton can evade it:
 unittest
 {
-    import core.sync.barrier;
-
     enum NUMBER_OF_THREADS = 10;
     static shared int threadsThatPassedTheBarrier = 0;
 
@@ -644,8 +654,6 @@ unittest
 //Try to force a read/write race to see if the singleton can evade it:
 unittest
 {
-    import core.sync.barrier;
-
     enum NUMBER_OF_THREADS = 10;
     static shared int threadsThatPassedTheBarrier = 0;
 
