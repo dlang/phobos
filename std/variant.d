@@ -1881,3 +1881,69 @@ unittest
     assert(a == b);
     assert(b == a);
 }
+
+/**
+ * TypeEnum is similar to $(D_PARAM Algebraic) except that it only stores
+ * the tag itself, not the value. It is useful if the data needs to be stored
+ * elsewhere, or if only the type itself is required.
+ *
+ * Example:
+ * ----
+ * alias TypeEnum!(
+ *     void,
+ *     byte,
+ *     short,
+ *     string,
+ *     Object
+ * ) TestTypeEnum;
+ *
+ * TestTypeEnum test;
+ * 
+ * assert(test == TestTypeEnum.from!void);
+ * assert(test != TestTypeEnum.from!byte);
+ * 
+ * test = TestTypeEnum.from!string;
+ * 
+ * assert(test == TestTypeEnum.from!string);
+ * assert(test != TestTypeEnum.from!Object);
+ * 
+ * // test = TestTypeEnum.from!float; // Won't compile, float is not in the list of types
+ * ----
+ */
+struct TypeEnum(T...) {
+	private int index;
+
+	private this(int index) {
+		this.index = index;
+	}
+	
+	// Convert a type to an instance of TypeEnum
+	template from(U) {
+		static assert(staticIndexOf!(U, T) != -1, "Type is not in the list of possible types for this TypeEnum");
+
+		public enum from = TypeEnum!T(staticIndexOf!(U, T));
+	}
+}
+
+unittest
+{
+	alias TypeEnum!(
+		void,
+		byte,
+		short,
+		string,
+		Object
+	) TestTypeEnum;
+	
+	TestTypeEnum test;
+	
+	assert(test == TestTypeEnum.from!void);
+	assert(test != TestTypeEnum.from!byte);
+	
+	test = TestTypeEnum.from!string;
+	
+	assert(test == TestTypeEnum.from!string);
+	assert(test != TestTypeEnum.from!Object);
+	
+	static assert(!__traits(compiles, TestTypeEnum.from!float));
+}
