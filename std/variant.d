@@ -1914,10 +1914,10 @@ unittest
  * ----
  */
 struct TypeEnum(T...) {
-	private int index;
+	private int _index;
 
 	private this(int index) {
-		this.index = index;
+		_index = index;
 	}
 	
 	// Convert a type to an instance of TypeEnum
@@ -1931,9 +1931,13 @@ struct TypeEnum(T...) {
 		static if (staticIndexOf!(U, T) == -1) {
 			return false;
 		} else {
-			return index == staticIndexOf!(U, T);
+			return _index == staticIndexOf!(U, T);
 		}
 	}
+	
+	// Expose read-only index with "alias this" for use with switch statement
+	@property public int index() { return _index; }
+	alias index this;
 }
 
 unittest
