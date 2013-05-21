@@ -1927,7 +1927,7 @@ struct TypeEnum(T...) {
 		public enum from = TypeEnum!T(staticIndexOf!(U, T));
 	}
 	
-	public bool isA(U)() {
+	@property public bool isA(U)() {
 		static if (staticIndexOf!(U, T) == -1) {
 			return false;
 		} else {
