@@ -169,6 +169,18 @@ unittest
     }
 }
 
+unittest
+{
+    //CTFE
+    struct S
+    {
+        ubyte[5] a = repeat(cast(ubyte)1)[0 .. 5].array();
+        ubyte[5] b = iota(cast(ubyte)0, cast(ubyte)5).array();
+    }
+    static assert(S.init.a[] == [1, 1, 1, 1, 1]);
+    static assert(S.init.b[] == [0, 1, 2, 3, 4]);
+}
+
 /**
 Returns a newly allocated associative array out of elements of the input range,
 which must be a range of tuples (Key, Value).
@@ -241,16 +253,37 @@ private template nDimensions(T)
     }
 }
 
-unittest {
+unittest
+{
     static assert(nDimensions!(uint[]) == 1);
     static assert(nDimensions!(float[][]) == 2);
+}
+
+// Returns the element type of the nDimension array T.
+private template NElementEncodingType(T, size_t N)
+{
+    static if (N > 1)
+        alias NElementEncodingType = NElementEncodingType!(ElementEncodingType!T, N - 1);
+    else static if (N == 1)
+        alias NElementEncodingType = ElementEncodingType!T;
+    else
+        static assert(false);
+}
+
+unittest
+{
+    static assert(is(NElementEncodingType!(uint[],   1) == uint));
+    static assert(is(NElementEncodingType!(uint[][], 1) == uint[]));
+    static assert(is(NElementEncodingType!(uint[][], 2) == uint  ));
+    static assert(is(NElementEncodingType!(char[][], 1) == char[]));
+    static assert(is(NElementEncodingType!(char[][], 2) == char  ));
 }
 
 /**
 Returns a new array of type $(D T) allocated on the garbage collected heap
 without initializing its elements.  This can be a useful optimization if every
 element will be immediately initialized.  $(D T) may be a multidimensional
-array.  In this case sizes may be specified for any number of dimensions from 1
+array. In this case sizes may be specified for any number of dimensions from 1
 to the number in $(D T).
 
 Examples:
@@ -266,10 +299,10 @@ assert(matrix[0].length == 31);
 ---
 ), $(ARGS), $(ARGS), $(ARGS import std.array;))
 */
-auto uninitializedArray(T, I...)(I sizes)
-if(allSatisfy!(isIntegral, I))
+auto uninitializedArray(T, Sizes...)(Sizes sizes)
+    if (allSatisfy!(isIntegral, Sizes))
 {
-    return arrayAllocImpl!(false, T, I)(sizes);
+    return arrayAllocImpl!(false, T, Sizes)(sizes);
 }
 
 unittest
@@ -284,13 +317,13 @@ unittest
 
 /**
 Returns a new array of type $(D T) allocated on the garbage collected heap.
-Initialization is guaranteed only for pointers, references and slices,
+Initialization is guaranteed only for types which have indirections,
 for preservation of memory safety.
 */
-auto minimallyInitializedArray(T, I...)(I sizes) @trusted
-if(allSatisfy!(isIntegral, I))
+auto minimallyInitializedArray(T, Sizes...)(Sizes sizes) @trusted
+    if (allSatisfy!(isIntegral, Sizes))
 {
-    return arrayAllocImpl!(true, T, I)(sizes);
+    return arrayAllocImpl!(true, T, Sizes)(sizes);
 }
 
 unittest
@@ -306,34 +339,58 @@ unittest
     }
 }
 
-private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes)
-if(allSatisfy!(isIntegral, I))
+unittest //@@@9803@@@
 {
-    static assert(sizes.length >= 1,
+    //Check safety while we're at it.
+    void foo() @safe nothrow
+    {
+        alias T1 = int*[];
+        alias T2 = int*[][];
+        auto t1 = minimallyInitializedArray!T1(10);
+        auto t2 = minimallyInitializedArray!T2(10, 10);
+        foreach (p; t1)
+            assert(p is null);
+        foreach (arr; t2)
+            foreach (p; arr)
+                assert(p is null);
+    }
+    foo();
+}
+
+private auto arrayAllocImpl(bool minimallyInitialized, T, Sizes...)(Sizes sizes)
+    if (allSatisfy!(isIntegral, Sizes))
+{
+    static assert(Sizes.length >= 1,
         "Cannot allocate an array without the size of at least the first " ~
         " dimension.");
-    static assert(sizes.length <= nDimensions!T,
-        to!string(sizes.length) ~ " dimensions specified for a " ~
+    static assert(Sizes.length <= nDimensions!T,
+        to!string(Sizes.length) ~ " dimensions specified for a " ~
         to!string(nDimensions!T) ~ " dimensional array.");
 
-    alias typeof(T.init[0]) E;
-
-    auto ptr = cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!(E));
-    auto ret = ptr[0..sizes[0]];
-
-    static if(sizes.length > 1)
+    static if (minimallyInitialized &&
+               hasIndirections!(NElementEncodingType!(T, Sizes.length)))
     {
-        foreach(ref elem; ret)
-        {
-            elem = uninitializedArray!(E)(sizes[1..$]);
-        }
+        //If we end up needing to initialize the elements anyways, then we
+        //might as well just let the compiler allocate for us.
+        return new T(sizes);
     }
-    else static if(minimallyInitialized && hasIndirections!E)
+    else
     {
-        ret[] = E.init;
-    }
+        //If ctfe, just call new.
+        if (__ctfe)
+            return new T(sizes);
 
-    return ret;
+        alias E = ElementEncodingType!T;
+
+        //Manually build the array without initializing:
+        //Builds the top dimension
+        E[] ret = (cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!E))[0 .. sizes[0]];
+        //Recursivelly builds the next dimensions
+        static if (Sizes.length > 1)
+            foreach(ref elem; ret)
+                elem = arrayAllocImpl!(false, E)(sizes[1 .. $]);
+        return ret;
+    }
 }
 
 /**
