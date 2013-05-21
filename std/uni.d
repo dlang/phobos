@@ -342,7 +342,7 @@
     $(P The recommended solution (see Unicode Implementation Guidelines) 
     is using multi-stage tables that is an instance of 
     $(WEB http://en.wikipedia.org/wiki/Trie, Trie) with integer keys
-    and a fixed number of stages. For the reminder of the section 
+    and a fixed number of stages. For the remainder of the section 
     it will be called a fixed trie. The following describes a particular 
     implementation that is aimed for the speed of access at the expense 
     of ideal size savings.
@@ -352,8 +352,8 @@
         Split the number of bits in a key (code point, 21 bits) into 2 components 
         (e.g. 15 and 8).  The first is the number of bits in the index of the trie
          and the other is number of bits in each page of the trie.
-        The layout of the trie is then an array of size 2^^bits-of-index followed
-        an array of memory chunks of size 2^^bits-of-page/bits-per-element. 
+        The layout of the trie is then an index array of size 2^^bits-of-index followed
+        an array of elements of size 2^^bits-of-page. 
     )
 
     $(P The number of pages is variable (but no less then 1) 
@@ -367,10 +367,10 @@
         in one array at $(D pages), the pseudo-code is:
     )
     ---        
-    auto elemsPerPage = 2^^bits_per_page/Value.sizeOfInBits;
+    auto elemsPerPage = 2^^bits_per_page;
     pages[index[n>>bits_per_page]][n & (elemsPerPage-1)];
     ---
-    $(P Where if the $(D elemsPerPage) is a power of 2 the whole process is 
+    $(P Since the $(D elemsPerPage) is a power of 2 the whole process is 
     a handful of simple instructions and 2 array reads. Subsequent levels 
     of the trie are introduced by recursing on this notion - the index array
     is treated as values. The number of bits in index is then again 
@@ -624,6 +624,8 @@ import std.traits, std.typecons, std.range, std.algorithm,
 import std.array; //@@BUG UFCS doesn't work with 'local' imports
 import core.bitop;
 
+//version = debug_std_uni; // enable costly  O(n) asserts
+
 version(std_uni_bootstrap){}
 else
 {
@@ -779,16 +781,18 @@ size_t replicateBits(size_t times, size_t bits)(size_t val)
     else static if(times % 2)
         return (replicateBits!(times-1, bits)(val)<<bits) | val;
     else
-        return replicateBits!(times/2, bits*2)(val<<bits | val);
+        return replicateBits!(times/2, bits*2)((val<<bits) | val);
 }
 
 unittest
 {// for replicate
     size_t m = 0b111;
+    size_t m2 = 0b01;
     foreach(i; TypeTuple!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
     {
         assert(replicateBits!(i, 3)(m)+1 == (1<<(3*i)));
-        // writefln("%2d:%32b", i, replicateBits!(i, 3)(m));
+        assert(replicateBits!(i, 2)(m2) == iota(0, i).map!"2^^(2*a)".reduce!"a+b");
+        //writefln("%2d:%32b", i, replicateBits!(i, 2)(m2));
     }
 }
 
@@ -1187,14 +1191,12 @@ pure nothrow:
     }
     void opSliceAssign(TypeOfBitPacked!T val, size_t start, size_t end)
     {
-        // rounded to factor granuarity
-        // TODO: re-test and implement
-        /*size_t pad_start = (start+factor/2)/factor*factor;// rounded up
+        // rounded to factor granularity
+        size_t pad_start = (start+factor-1)/factor*factor;// rounded up
         size_t pad_end = end/factor*factor; // rounded down
         size_t i;
         for(i=start; i<pad_start; i++)
             this[i] = val;
-        writeln("!!~!~!!");
         // all in between is x*factor elements
         if(pad_start != pad_end)
         {
@@ -1203,9 +1205,12 @@ pure nothrow:
                 original[j] = repval;// so speed it up by factor
         }
         for(; i<end; i++)
-            this[i] = val;*/
-        for(size_t i=start; i<end; i++)
             this[i] = val;
+        version(debug_std_uni)
+        {
+            for(i=start; i<end; i++)
+                assert(this[i] == val);
+        }
     }
 
     auto opSlice(size_t from, size_t to)
@@ -6488,7 +6493,8 @@ bool isAlpha(dchar c)
             return true;
         return false;
     }
-
+    
+    static immutable alphaTrie = pAlpha; 
     return alphaTrie[c];
 }
 
@@ -6509,6 +6515,7 @@ bool isAlpha(dchar c)
 @safe pure nothrow
 bool isMark(dchar c)
 {
+    static immutable markTrie = pMark;
     return markTrie[c];
 }
 
@@ -6528,6 +6535,7 @@ bool isMark(dchar c)
 @safe pure nothrow
 bool isNumber(dchar c)
 {
+    static immutable numberTrie = pNumber;
     return numberTrie[c];
 }
 
@@ -6548,6 +6556,8 @@ bool isNumber(dchar c)
 @safe pure nothrow
 bool isPunctuation(dchar c)
 {
+    
+    static immutable punctuationTrie = pTrie;
     return punctuationTrie[c];
 }
 
@@ -6571,7 +6581,8 @@ unittest
 @safe pure nothrow
 bool isSymbol(dchar c)
 {
-   return symbolTrie[c];
+    static immutable symbolTrie = pSymbol;
+    return symbolTrie[c];
 }
 
 unittest
@@ -6615,7 +6626,8 @@ unittest
 +/
 @safe pure nothrow
 bool isGraphical(dchar c)
-{
+{        
+    static immutable graphicalTrie = pGraph;
     return graphicalTrie[c];
 }
 
@@ -6723,6 +6735,7 @@ bool isSurrogateLo(dchar c)
 @safe pure nothrow
 bool isNonCharacter(dchar c)
 {
+    static immutable nonCharacterTrie = pNonChar;
     return nonCharacterTrie[c]; 
 }
 
@@ -6747,13 +6760,6 @@ auto asTrie(T...)(in TrieEntry!T e)
     return const(CodepointTrie!T)(e.offsets, e.sizes, e.data);
 }
 
-immutable alphaTrie = asTrie(alphaTrieEntries);
-immutable markTrie = asTrie(markTrieEntries);
-immutable numberTrie = asTrie(numberTrieEntries);
-immutable punctuationTrie = asTrie(punctuationTrieEntries);
-immutable symbolTrie = asTrie(symbolTrieEntries);
-immutable graphicalTrie = asTrie(graphicalTrieEntries);
-immutable nonCharacterTrie  = asTrie(nonCharacterTrieEntries);
 
 immutable nfcQC = asTrie(nfcQCTrieEntries);
 immutable nfdQC = asTrie(nfdQCTrieEntries);
@@ -6773,6 +6779,15 @@ shared static this()
     hangLV = asSet(hangulLV);
     hangLVT = asSet(hangulLVT);
 }
+
+// paint data as tries, trick to decouple dependencies
+enum pAlpha = asTrie(alphaTrieEntries);
+enum pGraph = asTrie(graphicalTrieEntries);
+enum pTrie = asTrie(punctuationTrieEntries);
+enum pSymbol = asTrie(symbolTrieEntries);
+enum pNumber = asTrie(numberTrieEntries);
+enum pMark = asTrie(markTrieEntries);
+enum pNonChar = asTrie(nonCharacterTrieEntries);
 
 immutable combiningClassTrie = asTrie(combiningClassTrieEntries);
 immutable canonMapping = asTrie(canonMappingTrieEntries);
