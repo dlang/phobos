@@ -1900,14 +1900,17 @@ unittest
  * TestTypeEnum test;
  * 
  * assert(test == TestTypeEnum.from!void);
+ * assert(test.isA!void);
  * assert(test != TestTypeEnum.from!byte);
  * 
  * test = TestTypeEnum.from!string;
  * 
  * assert(test == TestTypeEnum.from!string);
+ * assert(test.isA!string);
  * assert(test != TestTypeEnum.from!Object);
  * 
  * // test = TestTypeEnum.from!float; // Won't compile, float is not in the list of types
+ * assert(!test.isA!float); // Will compile, but will always return false
  * ----
  */
 struct TypeEnum(T...) {
@@ -1922,6 +1925,14 @@ struct TypeEnum(T...) {
 		static assert(staticIndexOf!(U, T) != -1, "Type is not in the list of possible types for this TypeEnum");
 
 		public enum from = TypeEnum!T(staticIndexOf!(U, T));
+	}
+	
+	public bool isA(U)() {
+		static if (staticIndexOf!(U, T) == -1) {
+			return false;
+		} else {
+			return index == staticIndexOf!(U, T);
+		}
 	}
 }
 
@@ -1938,11 +1949,13 @@ unittest
 	TestTypeEnum test;
 	
 	assert(test == TestTypeEnum.from!void);
+	assert(test.isA!void);
 	assert(test != TestTypeEnum.from!byte);
 	
 	test = TestTypeEnum.from!string;
 	
 	assert(test == TestTypeEnum.from!string);
+	assert(test.isA!string);
 	assert(test != TestTypeEnum.from!Object);
 	
 	static assert(!__traits(compiles, TestTypeEnum.from!float));
