@@ -3,6 +3,43 @@
 /**
 Reusable implementations of common idioms and design patterns.
 
+This module implements boilerplate code and design patterns that assist in the
+implementation of the code's architecture.
+
+The $(I Properties) idiom assist in defining property member fields - variables
+access by a pair of $(D @property) accessor methods instead of being used
+directly.
+$(BOOKTABLE ,
+    $(TR $(TD $(D $(LREF Properties)))
+        $(TD Template mixin used to easily declare property member fields.
+    ))
+    $(TR $(TD $(D $(LREF Asserting)))
+        $(TD UDA that makes a property setter verify it's input using D's
+        $(I contracts) mechanism($(D assert)).
+    ))
+    $(TR $(TD $(D $(LREF Enforcing)))
+        $(TD UDA that makes a property setter verify it's input using D's
+        $(I exception handling) mechanism.
+    ))
+)
+
+The $(I Singleton) idiom turns classes to singletons. There is a version for
+each one of the three types of globality that D offers:
+$(BOOKTABLE ,
+    $(TR $(TD $(D $(LREF ThreadLocalSingleton)))
+        $(TD A singleton that is local to the thread. Corresponds to D's $(D
+        static).
+    ))
+    $(TR $(TD $(D $(LREF SharedSingleton)))
+        $(TD A thread-safe, process-global singleton. Corresponds to D's $(D
+        static shared).
+    ))
+    $(TR $(TD $(D $(LREF ___GSharedSingleton)))
+        $(TD A process-global singleton, providing thread-safe initialization
+        without forcing thread-safe methods. Corresponds to D's $(D __gshared).
+    ))
+)
+
 Macros:
 
 WIKI = Phobos/StdIdioms
@@ -262,11 +299,15 @@ unittest
  * Turns the class into a singleon, using David Simcha's and Alexander
  * Terekhov's low lock singleton implementation approach.
  *
+ * This version of the $(I Singleton) idiom only synchronizes the
+ * $(U initialization) of the singleton. Methods of the instance $(B $(RED are not
+ * synchronized automatically)) by $(D ___GSharedSingleton).
+ *
  * $(B $(RED This template mixin does not create a private constructor!)) A
  * private constructor must be declared separately, otherwise the class could
  * be created from outside.
  */
-mixin template LowLockSingleton()
+mixin template __GSharedSingleton()
 {
     private __gshared typeof(this) __singleton_instance;
     private static typeof(this) __singleton_local_reference;
@@ -383,7 +424,7 @@ unittest
     //Singleton with default constructor:
     static class Foo
     {
-        mixin LowLockSingleton;
+        mixin __GSharedSingleton;
 
         private this(){}
     }
@@ -403,7 +444,7 @@ unittest
     //Singleton with no default constructor needs to be initialized:
     static class Bar
     {
-        mixin LowLockSingleton;
+        mixin __GSharedSingleton;
 
         private int x;
 
@@ -446,7 +487,7 @@ unittest
 
     static class Foo
     {
-        mixin LowLockSingleton;
+        mixin __GSharedSingleton;
 
         private this()
         {
@@ -651,15 +692,200 @@ unittest
     assert(getBarFromAnotherThread.spinForce().x == 3);
 }
 
+
+/**
+ * Turns the class into a singleon, using David Simcha's and Alexander
+ * Terekhov's low lock singleton implementation approach.
+ *
+ * This version of the $(I Singleton) idiom creates a shared instance of the
+ * singleton object, which means that non-shared instance methods will not be
+ * accessible.
+ *
+ * $(B $(RED This template mixin does not create a private constructor!)) A
+ * private constructor must be declared separately, otherwise the class could
+ * be created from outside.
+ */
+mixin template SharedSingleton()
+{
+    private static shared typeof(this) __singleton_instance;
+    private static bool __singleton_is_instantiated;
+
+    /**
+     * Initialize the singleton instance if no instance exists.
+     *
+     * Params:
+     *      instance = the instance to set.
+     *
+     * Returns:
+     *      true if new instance was created, false if there already was an old
+     *      instance.
+     */
+    private static bool singleton_tryInitInstance(lazy shared typeof(this) instance){
+        if(!__singleton_is_instantiated)
+        {
+            synchronized(typeid(typeof(this)))
+            {
+                if(__singleton_instance is null)
+                {
+                    __singleton_instance = instance;
+                    __singleton_is_instantiated = true;
+                    return true;
+                }
+                else
+                {
+                    __singleton_is_instantiated = true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Initialize the singleton instance. Fails if instance already exists.
+     *
+     * Params:
+     *      instance = the instance to set.
+     *
+     * Throws:
+     *      SingletonException if instance already exists.
+     */
+    private static void singleton_initInstance(lazy shared typeof(this) instance){
+        if(!singleton_tryInitInstance(instance))
+        {
+            throw new SingletonException(typeof(this).stringof ~ " is already initialized.");
+        }
+    }
+
+    /**
+     * Checks if an instance has already been initialized.
+     *
+     * Returns:
+     *      true if instance was already initialized, false otherwise.
+     */
+    static @property bool hasInstance(){
+        if(__singleton_is_instantiated)
+        {
+            return true;
+        }
+        synchronized(typeid(typeof(this)))
+        {
+            if(__singleton_instance !is null)
+            {
+                __singleton_is_instantiated = true;
+                return true;
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Returns the singleton instance.
+     *
+     * If the instance does not yet exist, and a default constructor is
+     * available, creates the instance using the default constructor.
+     *
+     * Returns:
+     *      The singleton instance.
+     */
+    static @property shared(typeof(this)) instance()
+    {
+        if(!__singleton_is_instantiated)
+        {
+            //Allow implicit initialization if and only if there is a default constructor:
+            static if(__traits(compiles, new shared(typeof(this))()))
+            {
+                singleton_tryInitInstance(new shared(typeof(this))());
+            }
+            else
+            {
+                synchronized(typeid(typeof(this)))
+                {
+                    if(__singleton_instance is null)
+                    {
+                        throw new SingletonException(typeof(this).stringof ~
+                                " has no default constructor and must be initialized manually.");
+                    }
+                    else
+                    {
+                        __singleton_is_instantiated = true;
+                    }
+                }
+            }
+        }
+        return __singleton_instance;
+    }
+}
+
+///
+unittest
+{
+    //Singleton with default constructor:
+    static shared class Foo
+    {
+        mixin SharedSingleton;
+
+        private this(){}
+    }
+
+    shared(Foo) foo = Foo.instance;
+
+    //We initialized it here, so it's initialized in all threads:
+    auto checkIfFooIsInitializedInAnotherThread = task!(Foo.hasInstance)();
+    checkIfFooIsInitializedInAnotherThread.executeInNewThread();
+    assert(checkIfFooIsInitializedInAnotherThread.spinForce());
+
+    //Different threads - same instances:
+    auto getFooFromAnotherThread = task!(Foo.instance)();
+    getFooFromAnotherThread.executeInNewThread();
+    assert(foo == getFooFromAnotherThread.spinForce());
+
+    //Singleton with no default constructor needs to be initialized:
+    static shared class Bar
+    {
+        mixin SharedSingleton;
+
+        private int x;
+
+        private this(int x)
+        {
+            this.x = x;
+        }
+
+        private static void init(int x)
+        {
+            singleton_tryInitInstance(new shared(Bar)(x));
+        }
+
+    }
+
+    assertThrown!SingletonException(Bar.instance);
+
+    Bar.init(1);
+    assert(Bar.instance.x == 1);
+
+    //Only first initialization works:
+    Bar.init(2);
+    assert(Bar.instance.x == 1);
+
+    //Even if you try to initialize again from another thread:
+    auto getBarFromAnotherThread = task!({
+            Bar.init(3);
+            return Bar.instance;
+            })();
+    getBarFromAnotherThread.executeInNewThread();
+    assert(Bar.instance == getBarFromAnotherThread.spinForce());
+    assert(getBarFromAnotherThread.spinForce().x == 1);
+}
+
 //Try to force a read/write race to see if the singleton can evade it:
 unittest
 {
     enum NUMBER_OF_THREADS = 10;
     static shared int threadsThatPassedTheBarrier = 0;
 
-    static class Foo
+    static shared class Foo
     {
-        mixin LowLockSingleton;
+        mixin SharedSingleton;
 
         private this()
         {
@@ -673,7 +899,7 @@ unittest
         }
     }
 
-    Foo[NUMBER_OF_THREADS] foos;
+    shared(Foo)[NUMBER_OF_THREADS] foos;
     Thread[NUMBER_OF_THREADS] threads;
     Barrier barrier = new Barrier(NUMBER_OF_THREADS);
 
