@@ -244,7 +244,7 @@ public:
 
     // BigInt op BigInt
     BigInt opBinary(string op, T)(T y) pure
-        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="%") 
+        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="%")
 			&& is (T: BigInt))
     {
         BigInt r = this;
@@ -381,6 +381,19 @@ public:
         int cmp = data.opCmp(y.data);
         return sign? -cmp: cmp;
     }
+    /// Sets the value of this BigInt as unit[],
+    /// sign is set as the boolean, true for negative and false for positive
+    void setData(uint[] n_data, bool sign = false) pure
+    {
+        this.sign = sign;
+        data.value = n_data;
+    }
+    /// Returns the value of this BigInt as a uint[],
+    /// the sign of the BigInt is ignored
+    uint[] getData() pure
+    {
+        return data.value;
+    }
     /// Returns the value of this BigInt as a long,
     /// or +- long.max if outside the representable range.
     long toLong() pure const
@@ -506,7 +519,7 @@ private:
     }
 }
 
-string toDecimalString(BigInt x) 
+string toDecimalString(BigInt x)
 {
     string outbuff="";
     void sink(const(char)[] s) { outbuff ~= s; }
@@ -514,7 +527,7 @@ string toDecimalString(BigInt x)
     return outbuff;
 }
 
-string toHex(BigInt x) 
+string toHex(BigInt x)
 {
     string outbuff="";
     void sink(const(char)[] s) { outbuff ~= s; }
@@ -553,6 +566,9 @@ unittest {
     assert((-4) % BigInt(5) == -4); // bug 5928
     assert(BigInt(-4) % BigInt(5) == -4);
     assert(BigInt(2)/BigInt(-3) == BigInt(0)); // bug 8022
+    a.setData([0x22, 0x44, 0xcc]);
+    a *= 2;
+    assert(a.getData() == [0x44, 0x88, 0x198]);
 }
 
 unittest // Recursive division, bug 5568

@@ -85,7 +85,7 @@ public:
 struct BigUint
 {
 private:
-    pure invariant() 
+    pure invariant()
     {
         assert( data.length == 1 || data[$-1] != 0 );
     }
@@ -95,6 +95,20 @@ private:
        data = x;
     }
 public:
+    @property
+    {
+        BigDigit[] value() pure
+        {
+            return data;
+        }
+
+        void value(BigDigit[] n_data) pure
+        {
+            if(n_data.length == 0) data = ZERO;
+            else data = n_data;
+        }
+    }
+
     // Length in uints
     size_t uintLength() pure const
     {
@@ -252,7 +266,7 @@ public:
      *  between every 8 digits.
      *  Separator characters do not contribute to the minPadding.
      */
-    char [] toHexString(int frontExtraBytes, char separator = 0, 
+    char [] toHexString(int frontExtraBytes, char separator = 0,
 			int minPadding=0, char padChar = '0') const pure
     {
         // Calculate number of extra padding bytes
@@ -434,7 +448,7 @@ public:
 
     // If wantSub is false, return x + y, leaving sign unchanged
     // If wantSub is true, return abs(x - y), negating sign if x < y
-    static BigUint addOrSubInt(Tulong)(const BigUint x, Tulong y, 
+    static BigUint addOrSubInt(Tulong)(const BigUint x, Tulong y,
 			bool wantSub, ref bool sign) pure if (is(Tulong == ulong))
     {
         BigUint r;
@@ -1558,7 +1572,7 @@ private:
 // with COW.
 
 // Classic 'schoolbook' multiplication.
-void mulSimple(BigDigit[] result, const(BigDigit) [] left, 
+void mulSimple(BigDigit[] result, const(BigDigit) [] left,
 		const(BigDigit)[] right) pure
 in
 {
@@ -1608,7 +1622,7 @@ body
 
 //  result = left - right
 // returns carry (0 or 1)
-BigDigit subSimple(BigDigit [] result,const(BigDigit) [] left, 
+BigDigit subSimple(BigDigit [] result,const(BigDigit) [] left,
 		const(BigDigit) [] right) pure
 in
 {
@@ -1736,7 +1750,7 @@ size_t karatsubaRequiredBuffSize(size_t xlen) pure
 * Params:
 * scratchbuff      An array long enough to store all the temporaries. Will be destroyed.
 */
-void mulKaratsuba(BigDigit [] result, const(BigDigit) [] x, 
+void mulKaratsuba(BigDigit [] result, const(BigDigit) [] x,
 		const(BigDigit)[] y, BigDigit [] scratchbuff) pure
 {
     assert(x.length >= y.length);
@@ -1841,7 +1855,7 @@ void mulKaratsuba(BigDigit [] result, const(BigDigit) [] x,
     addOrSubAssignSimple(result[half..$], mid, !midNegative);
 }
 
-void squareKaratsuba(BigDigit [] result, BigDigit [] x, 
+void squareKaratsuba(BigDigit [] result, BigDigit [] x,
 		BigDigit [] scratchbuff) pure
 {
     // See mulKaratsuba for implementation comments.
