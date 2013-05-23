@@ -3,23 +3,24 @@
 /++
     $(SECTION Overview)
 
-    $(P The $(D std.uni) module provides an implementation 
+    $(P The $(D std.uni) module provides an implementation
     of fundamental Unicode algorithms and data structures.
-    This doesn't include UTF encoding and decoding primitives, 
-    see module std.utf for $(XREF _utf, decode) and $(XREF _utf, encode). )
+    This doesn't include UTF encoding and decoding primitives,
+    see $(XREF _utf, decode) and $(XREF _utf, encode) in std.utf
+    for this functionality. )
 
-    $(P All primitives listed operate on Unicode character and 
-    sets of characters. For functions which operate on ASCII characters 
-    and ignore Unicode $(CHARACTER), see $(LINK2 std_ascii.html, std.ascii).
-    For definitions of Unicode $(CHARACTER), $(CODEPOINT) and other terms 
-    used throughout this module see the section $(S_LINK Terminology, terminology)
+    $(P All primitives listed operate on Unicode characters and
+    sets of characters. For functions which operate on ASCII characters
+    and ignore Unicode $(CHARACTERS), see $(LINK2 std_ascii.html, std.ascii).
+    For definitions of Unicode $(CHARACTER), $(CODEPOINT) and other terms
+    used throughout this module see the $(S_LINK Terminology, terminology) section
     below.
     )
 
-    $(P The focus of this module is the core needs of developing Unicode-aware 
-    applications. To that effect it provides the following optimized primitives: 
+    $(P The focus of this module is the core needs of developing Unicode-aware
+    applications. To that effect it provides the following optimized primitives:
     )
-    $(UL 
+    $(UL
     $(LI Character classification by category and common properties:
         $(LREF isAlpha), $(LREF isWhite) and others.
     )
@@ -29,54 +30,56 @@
     $(LI
         Converting text to any of the four normalization forms via $(LREF normalize).
     )
-    $(LI 
+    $(LI
         Decoding ($(LREF decodeGrapheme))  and iteration ($(LREF graphemeStride))
         by user-perceived characters, that is by $(LREF Grapheme) clusters.
     )
-    $(LI 
-        Decomposing and composing of individual character(s) according to canonical 
-        or compatibility rules, see $(LREF compose) and $(LREF decompose), 
-        including the specific version for Hangul syllables $(LREF composeJamo)
-        and $(LREF hangulDecompose).
-    )
-    )
-    $(P It's recognized that an application may need further enhancements 
-    and extensions, such as less-commonly known algorithms, 
-    or tailoring existing ones for region-specific needs. To help users 
-    with building any extra functionality beyond the core primitives,
-    the module provides: 
-    )
-    $(UL 
     $(LI
-        A type for easy manipulation of sets of characters $(LREF CodepointSet).
-        Besides the typical set algebra it provides an unusual feature: 
+        Decomposing and composing of individual character(s) according to canonical
+        or compatibility rules, see $(LREF compose) and $(LREF decompose),
+        including the specific version for Hangul syllables $(LREF composeJamo)
+        and $(LREF decomposeHangul).
+    )
+    )
+    $(P It's recognized that an application may need further enhancements
+    and extensions, such as less commonly known algorithms,
+    or tailoring existing ones for region specific needs. To help users
+    with building any extra functionality beyond the core primitives,
+    the module provides:
+    )
+    $(UL
+    $(LI
+        $(LREF CodepointSet), a type for easy manipulation of sets of characters.
+        Besides the typical set algebra it provides an unusual feature:
         a D source code generator for detection of $(CODEPOINTS) in this set.
         This is a boon for meta-programming parser frameworks,
-        and is used internally to power classification in small 
+        and is used internally to power classification in small
         sets like $(LREF isWhite).
     )
     $(LI
-        A way to construct optimal packed multi-stage tables also known as a 
+        A way to construct optimal packed multi-stage tables also known as a
         special case of $(LUCKY Trie).
-        The functions $(LREF codepointTrie), $(LREF codepointSetTrie) 
+        The functions $(LREF codepointTrie), $(LREF codepointSetTrie)
         construct custom tries that map dchar to value.
-        The end result is a fast and predictable $(BIGOH 1) lookup that powers 
+        The end result is a fast and predictable $(BIGOH 1) lookup that powers
         functions like $(LREF isAlpha) and $(LREF combiningClass),
         but for user-defined data sets.
     )
-    $(LI 
+    $(LI
         Generally useful building blocks for customized normalization:
         $(LREF combiningClass) for querying combining class
-        and $(LREF allowedIn) for testing Quick_Check.YES 
+        and $(LREF allowedIn) for testing the Quick_Check
         property of a given normalization form.
     )
-    $(LI 
+    $(LI
         Access to a large selection of commonly used sets of $(CODEPOINTS).
-        $(S_LINK Unicode properties, Supported ones) include Script, 
-        Block and General Category. The exact contents of a set can be 
-        observed in the CLDR utility, on page
-        $(WEB www.unicode.org/cldr/utility/properties.jsp, property index).
-        See $(LREF unicode) for easy and (optionally) compile-time checked queries.
+        $(S_LINK Unicode properties, Supported sets) include Script,
+        Block and General Category. The exact contents of a set can be
+        observed in the CLDR utility, on the
+        $(WEB www.unicode.org/cldr/utility/properties.jsp, property index) page
+        of the Unicode website.
+        See $(LREF unicode) for easy and (optionally) compile-time checked set
+        queries.
     )
     )
     $(SECTION Synopsis)
@@ -101,9 +104,9 @@
         assert(b.length > 45); // 46 items in Unicode 6.1, even more in 6.2
         // testing presence of a code point in a set
         // is just fine, it is O(logN)
-        assert(!b['$']); 
+        assert(!b['$']);
         assert(!b['\u058F']); // Armenian dram sign
-        assert(b['¥']); 
+        assert(b['¥']);
 
         // building fast lookup tables, these guarantee O(1) complexity
         // 1-level Trie lookup table essentially a huge bit-set ~262Kb
@@ -115,8 +118,8 @@
         assert(oneTrie['£']);
         assert(twoTrie['£']);
         assert(threeTrie['£']);
-        
-        // build the trie with the most sensible trie level 
+
+        // build the trie with the most sensible trie level
         // and bind it as a functor
         auto cyrilicOrArmenian = toDelegate(set);
         auto balance = find!(cyrilicOrArmenian)("Hello ընկեր!");
@@ -133,7 +136,7 @@
         assert(nS == "Äffin");
         assert(nS != nonS);
         string composed = "Äffin";
-        
+
         assert(normalize!NFD(composed) == "A\u0308ffin");
         // to NFKD, compatibility decomposition useful for fuzzy matching/searching
         assert(normalize!NFKD("2¹⁰") == "210");
@@ -141,124 +144,52 @@
     ---
     $(SECTION Terminology)
     $(P The following is a list of important Unicode notions
-    and definitions. Any conventions used specifically in this 
-    module alone are marked as such. The descriptions are based on the formal 
-    definition as found in The Unicode Standard Core Specification, 
-    specifically the 3rd chapter.)
+    and definitions. Any conventions used specifically in this
+    module alone are marked as such. The descriptions are based on the formal
+    definition as found in ($WEB http://www.unicode.org/versions/Unicode6.2.0/ch03.pdf,
+    chapter three of The Unicode Standard Core Specification.)
+    )
 
-    $(P $(DEF Code point) Any value in the Unicode codespace; 
-    that is, the range of integers from 0 to 10FFFF (hex).
-    Not all code points are assigned to encoded characters.
-    )
-    $(P $(DEF Code unit) The minimal bit combination that can represent 
-    a unit of encoded text for processing or interchange.  
-    Depending on the encoding this could be:
-    8-bit code units in the UTF-8 ($(D char)), 
-    16-bit code units in the UTF-16 ($(D wchar)),
-    and 32-bit code units in the UTF-32 ($(D dchar)).
-    $(I Note that in UTF-32, a code unit is a code point 
-    and is represented by the D $(D dchar) type.)
-    )
-    $(P $(DEF Abstract character) A unit of information used for the organization, 
+    $(P $(DEF Abstract character) A unit of information used for the organization,
     control, or representation of textual data.
     Note that:
-        $(UL 
-        $(LI When representing data, the nature of that data 
-        is generally symbolic as opposed to some other 
+        $(UL
+        $(LI When representing data, the nature of that data
+        is generally symbolic as opposed to some other
         kind of data (for example, visual).)
 
-        $(LI An abstract character has no concrete form 
-        and should not be confused with a $(I glyph).)
+        $(LI An abstract character has no concrete form
+        and should not be confused with a $(S_LINK Glyph, glyph).)
 
-        $(LI An abstract character does not necessarily 
+        $(LI An abstract character does not necessarily
         correspond to what a user thinks of as a “character”
          and should not be confused with a $(LREF Grapheme).)
-        
-        $(LI The abstract characters encoded (see Encoded character) 
+
+        $(LI The abstract characters encoded (see Encoded character)
         are known as Unicode abstract characters.)
 
-        $(LI Abstract characters not directly 
+        $(LI Abstract characters not directly
         encoded by the Unicode Standard can often be
         represented by the use of combining character sequences.)
         )
-    
-    )
-    $(P $(DEF Glyph) The actual, concrete image of a glyph representation 
-    having been rasterized or otherwise imaged onto some display surface.
-    )
-    $(P $(DEF Encoded character) An association (or mapping) 
-    between an abstract character and a code point.
-    )    
-    $(P $(DEF Character) Typically differs by context. 
-    For the purpose of this documentation the term $(I character)
-    implies $(I encoded character), that is a code point having 
-    an assigned abstract character (a symbolic meaning).
-    )    
-    $(P $(DEF Grapheme cluster) Defined as the text between 
-        grapheme boundaries  as specified by Unicode Standard Annex #29, 
-        $(WEB www.unicode.org/reports/tr29/, Unicode text segmentation).
-        Important general properties of a grapheme:
-        $(UL 
-            $(LI The grapheme cluster represents a horizontally segmentable 
-            unit of text, consisting of some grapheme base (which may 
-            consist of a Korean syllable) together with any number of 
-            nonspacing marks applied to it.
-            )
-            $(LI  A grapheme cluster typically starts with a grapheme base 
-            and then extends across any subsequent sequence of nonspacing marks. 
-            A grapheme cluster is most directly relevant to text rendering and 
-            processes such as cursor placement and text selection in editing, 
-            but may also be relevant to comparison and searching. 
-            )
-            $(LI For many processes, a grapheme cluster behaves as if it was a 
-            single character with the same properties as its grapheme base. 
-            Effectively, nonspacing marks apply $(I graphically) to the base, 
-            but do not change its properties.
-            )
-        )
-        $(P This module defines a number of primitives that work with graphemes:
-        $(LREF Grapheme), $(LREF decodeGrapheme) and $(LREF graphemeStride).
-        All of them are using $(I extended grapheme) boundaries 
-        as defined in the aforementioned standard annex.
-        )
-    )
-    $(P $(DEF Grapheme base) A character with the property
-     Grapheme_Base, or any standard Korean syllable block.
-    )
-    $(P $(DEF Combining character) A character with the General Category
-     of Combining Mark(M).
-        $(UL 
-            $(LI All characters with non-zero canonical combining class 
-            are combining characters, but the reverse is not the case:
-            there are combining characters with a zero combining class.
-            )
-            $(LI These characters are not normally used in isolation 
-            unless they are being described. They include such characters
-            as accents, diacritics, Hebrew points, Arabic vowel signs, 
-            and Indic matras.
-            )
-        )
-    )
-    $(P $(DEF Nonspacing mark) A combining character with the 
-        General Category of Nonspacing Mark (Mn) or Enclosing Mark (Me).
-    )
-    $(P $(DEF Spacing mark) A combining character that is not a nonspacing mark.)
-    
-    $(P $(DEF Canonical decomposition) 
-    The decomposition of a character or character sequence
-    that results from recursively applying the canonical 
-    mappings found in the Unicode Character Database 
-    and these described in Conjoining Jamo Behavior
-    (section 12 of 
-    $(WEB www.unicode.org/uni2book/ch03.pdf, Unicode Conformance)).
     )
 
-    $(P $(DEF Compatibility decomposition)
-    The decomposition of a character or character sequence that results 
-    from recursively applying both the compatibility mappings and
-    the canonical mappings found in the Unicode Character Database, and those
-    described in Conjoining Jamo Behavior no characters 
-    can be further decomposed.
+    $(P $(DEF Canonical decomposition)
+    The decomposition of a character or character sequence
+    that results from recursively applying the canonical
+    mappings found in the Unicode Character Database
+    and these described in Conjoining Jamo Behavior
+    (section 12 of
+    $(WEB www.unicode.org/uni2book/ch03.pdf, Unicode Conformance)).
+    )
+    
+    $(P $(DEF Canonical composition)
+    The precise definition of the Canonical composition
+    is the algorithm as specified in $(WEB www.unicode.org/uni2book/ch03.pdf,
+    Unicode Conformance) section 11.
+    Informally it's the process that does the reverse of the canonical
+    decomposition with the addition of certain rules
+    that e.g. prevent legacy characters from appearing in the composed result.
     )
 
     $(P $(DEF Canonical equivalent)
@@ -266,174 +197,264 @@
     their full canonical decompositions are identical.
     )
 
+    $(P $(DEF Character) Typically differs by context.
+    For the purpose of this documentation the term $(I character)
+    implies $(I encoded character), that is, a code point having
+    an assigned abstract character (a symbolic meaning).
+    )
+
+    $(P $(DEF Code point) Any value in the Unicode codespace;
+    that is, the range of integers from 0 to 10FFFF (hex).
+    Not all code points are assigned to encoded characters.
+    )
+    
+    $(P $(DEF Code unit) The minimal bit combination that can represent
+    a unit of encoded text for processing or interchange.
+    Depending on the encoding this could be:
+    8-bit code units in the UTF-8 ($(D char)),
+    16-bit code units in the UTF-16 ($(D wchar)),
+    and 32-bit code units in the UTF-32 ($(D dchar)).
+    $(I Note that in UTF-32, a code unit is a code point
+    and is represented by the D $(D dchar) type.)
+    )
+
+    $(P $(DEF Combining character) A character with the General Category
+     of Combining Mark(M).
+        $(UL
+            $(LI All characters with non-zero canonical combining class
+            are combining characters, but the reverse is not the case:
+            there are combining characters with a zero combining class.
+            )
+            $(LI These characters are not normally used in isolation
+            unless they are being described. They include such characters
+            as accents, diacritics, Hebrew points, Arabic vowel signs,
+            and Indic matras.
+            )
+        )
+    )
+
+    $(P $(DEF Combining class)
+        A numerical value used by the Unicode Canonical Ordering Algorithm 
+        to determine which sequences of combining marks are to be 
+        considered canonically equivalent and  which are not. 
+    )
+
+    $(P $(DEF Compatibility decomposition)
+    The decomposition of a character or character sequence that results
+    from recursively applying both the compatibility mappings and
+    the canonical mappings found in the Unicode Character Database, and those
+    described in Conjoining Jamo Behavior no characters
+    can be further decomposed.
+    )
+
     $(P $(DEF Compatibility equivalent)
     Two character sequences are said to be compatibility
     equivalents if their full compatibility decompositions are identical.
     )
 
-    $(P $(DEF Canonical composition)
-    The precise definition of the Canonical composition 
-    is the algorithm as specified in $(WEB www.unicode.org/uni2book/ch03.pdf, 
-    Unicode Conformance) section 11. 
-    Informally it's the process that does the reverse of the canonical
-    decomposition with the addition of certain rules 
-    that e.g. prevent legacy characters from appearing in the composed result.    
+    $(P $(DEF Encoded character) An association (or mapping)
+    between an abstract character and a code point.
     )
 
-    $(SECTION Normalization)
+    $(P $(DEF Glyph) The actual, concrete image of a glyph representation
+    having been rasterized or otherwise imaged onto some display surface.
+    )
+
+    $(P $(DEF Grapheme base) A character with the property
+     Grapheme_Base, or any standard Korean syllable block.
+    )
     
+    $(P $(DEF Grapheme cluster) Defined as the text between
+        grapheme boundaries  as specified by Unicode Standard Annex #29,
+        $(WEB www.unicode.org/reports/tr29/, Unicode text segmentation).
+        Important general properties of a grapheme:
+        $(UL
+            $(LI The grapheme cluster represents a horizontally segmentable
+            unit of text, consisting of some grapheme base (which may
+            consist of a Korean syllable) together with any number of
+            nonspacing marks applied to it.
+            )
+            $(LI  A grapheme cluster typically starts with a grapheme base
+            and then extends across any subsequent sequence of nonspacing marks.
+            A grapheme cluster is most directly relevant to text rendering and
+            processes such as cursor placement and text selection in editing,
+            but may also be relevant to comparison and searching.
+            )
+            $(LI For many processes, a grapheme cluster behaves as if it was a
+            single character with the same properties as its grapheme base.
+            Effectively, nonspacing marks apply $(I graphically) to the base,
+            but do not change its properties.
+            )
+        )
+        $(P This module defines a number of primitives that work with graphemes:
+        $(LREF Grapheme), $(LREF decodeGrapheme) and $(LREF graphemeStride).
+        All of them are using $(I extended grapheme) boundaries
+        as defined in the aforementioned standard annex.
+        )
+    )
+
+
+    $(P $(DEF Nonspacing mark) A combining character with the
+        General Category of Nonspacing Mark (Mn) or Enclosing Mark (Me).
+    )
+
+    $(P $(DEF Spacing mark) A combining character that is not a nonspacing mark.)
+
+
+    $(SECTION Normalization)
+
     $(P The concepts of $(S_LINK Canonical equivalent, canonical equivalent)
      or $(S_LINK Compatibility equivalent, compatibility equivalent)
-    characters in the Unicode Standard make it necessary to have a full, formal 
+    characters in the Unicode Standard make it necessary to have a full, formal
     definition of equivalence for Unicode strings.
     String equivalence is determined by a process called normalization,
-    whereby strings are converted into forms which are compared 
+    whereby strings are converted into forms which are compared
     directly for identity. This is the primary goal of the normalization process,
-    see the function $(LREF normalize) to convert into any of 
+    see the function $(LREF normalize) to convert into any of
     the four defined forms.
     )
 
-    $(P A very important attribute of the Unicode Normalization Forms 
-    is that they must remain stable between versions of the Unicode Standard. 
-    A Unicode string normalized to a particular Unicode Normalization Form 
-    in one version of the standard is guaranteed to remain in that Normalization 
+    $(P A very important attribute of the Unicode Normalization Forms
+    is that they must remain stable between versions of the Unicode Standard.
+    A Unicode string normalized to a particular Unicode Normalization Form
+    in one version of the standard is guaranteed to remain in that Normalization
     Form for implementations of future versions of the standard.
     )
 
-    $(P The Unicode Standard specifies four normalization forms. 
-    Informally, two of these forms are defined by maximal decomposition 
-    of equivalent sequences, and two of these forms are defined 
+    $(P The Unicode Standard specifies four normalization forms.
+    Informally, two of these forms are defined by maximal decomposition
+    of equivalent sequences, and two of these forms are defined
     by maximal $(I composition) of equivalent sequences.
-        $(UL 
+        $(UL
         $(LI Normalization Form D (NFD): The $(S_LINK Canonical decomposition,
             canonical decomposition) of a character sequence.)
         $(LI Normalization Form KD (NFKD): The $(S_LINK Compatibility decomposition,
             compatibility decomposition) of a character sequence.)
-        $(LI Normalization Form C (NFC): The canonical composition of the 
-            $(S_LINK Canonical decomposition, canonical decomposition) 
+        $(LI Normalization Form C (NFC): The canonical composition of the
+            $(S_LINK Canonical decomposition, canonical decomposition)
             of a coded character sequence.)
-        $(LI Normalization Form KC (NFKC): The canonical composition 
+        $(LI Normalization Form KC (NFKC): The canonical composition
         of the $(S_LINK Compatibility decomposition,
             compatibility decomposition) of a character sequence)
         )
     )
 
-    $(P The choice of the normalization form depends on the particular use case. 
-    NFC is the best form for general text, since it's more compatible with 
-    strings converted from legacy encodings. NFKC is the preferred form for 
-    identifiers, especially where there are security concerns. NFD and NFKD 
+    $(P The choice of the normalization form depends on the particular use case.
+    NFC is the best form for general text, since it's more compatible with
+    strings converted from legacy encodings. NFKC is the preferred form for
+    identifiers, especially where there are security concerns. NFD and NFKD
     are the most useful for internal processing.
     )
 
     $(SECTION Construction of lookup tables)
 
-    $(P The Unicode standard describes a set of algorithms that 
-    depend on having the ability to quickly look up various properties 
+    $(P The Unicode standard describes a set of algorithms that
+    depend on having the ability to quickly look up various properties
     of a code point. Given the the codespace of about 1 million $(CODEPOINTS),
-    it is not a trivial task to provide a space-efficient solution for 
+    it is not a trivial task to provide a space-efficient solution for
     the multitude of properties.)
 
     $(P Common approaches such as hash-tables or binary search over
      sorted code point intervals (as in $(LREF InversionList)) are insufficient.
-     Hash-tables have enormous memory footprint and binary search 
-     over intervals is not fast enough for some heavy-duty algorithms.      
+     Hash-tables have enormous memory footprint and binary search
+     over intervals is not fast enough for some heavy-duty algorithms.
      )
 
-    $(P The recommended solution (see Unicode Implementation Guidelines) 
-    is using multi-stage tables that is an instance of 
-    $(WEB http://en.wikipedia.org/wiki/Trie, Trie) with integer keys
-    and a fixed number of stages. For the remainder of the section 
-    it will be called a fixed trie. The following describes a particular 
-    implementation that is aimed for the speed of access at the expense 
+    $(P The recommended solution (see Unicode Implementation Guidelines)
+    is using multi-stage tables that are an implementation of the
+    $(WEB http://en.wikipedia.org/wiki/Trie, Trie) data structure with integer
+    keys and a fixed number of stages. For the remainder of the section
+    this will be called a fixed trie. The following describes a particular
+    implementation that is aimed for the speed of access at the expense
     of ideal size savings.
     )
 
-    $(P Taking 2-level Trie as an example the principle of operation is as follows.
-        Split the number of bits in a key (code point, 21 bits) into 2 components 
+    $(P Taking a 2-level Trie as an example the principle of operation is as follows.
+        Split the number of bits in a key (code point, 21 bits) into 2 components
         (e.g. 15 and 8).  The first is the number of bits in the index of the trie
          and the other is number of bits in each page of the trie.
-        The layout of the trie is then an index array of size 2^^bits-of-index followed
-        an array of elements of size 2^^bits-of-page. 
+        The layout of the trie is then an array of size 2^^bits-of-index followed
+        an array of memory chunks of size 2^^bits-of-page/bits-per-element.
     )
 
-    $(P The number of pages is variable (but no less then 1) 
-        unlike the number of entries in the index. The slots of the index 
-        all have to contain a number of a page that is present. The lookup is then 
-        just a couple of operations - slice the upper bits, 
+    $(P The number of pages is variable (but not less then 1)
+        unlike the number of entries in the index. The slots of the index
+        all have to contain a number of a page that is present. The lookup is then
+        just a couple of operations - slice the upper bits,
         lookup an index for these, take a page at this index and use
         the lower bits as an offset within this page.
 
-        Assuming that pages are laid out consequently 
+        Assuming that pages are laid out consequently
         in one array at $(D pages), the pseudo-code is:
     )
-    ---        
-    auto elemsPerPage = 2^^bits_per_page;
-    pages[index[n>>bits_per_page]][n & (elemsPerPage-1)];
     ---
-    $(P Since the $(D elemsPerPage) is a power of 2 the whole process is 
-    a handful of simple instructions and 2 array reads. Subsequent levels 
+    auto elemsPerPage = (2 ^^ bits_per_page) / Value.sizeOfInBits;
+    pages[index[n >> bits_per_page]][n & (elemsPerPage - 1)];
+    ---
+    $(P Where if $(D elemsPerPage) is a power of 2 the whole process is
+    a handful of simple instructions and 2 array reads. Subsequent levels
     of the trie are introduced by recursing on this notion - the index array
-    is treated as values. The number of bits in index is then again 
-    split into 2 parts, with pages over 'current-index' and the new 'upper-index'. 
+    is treated as values. The number of bits in index is then again
+    split into 2 parts, with pages over 'current-index' and the new 'upper-index'.
     )
 
     $(P For completeness a level 1 trie is simply an array.
-    The current implementation takes advantage of bit-packing values 
-    when the range is known to be limited in advance (such as $(D bool)). 
-    See also $(LREF BitPacked) for enforcing it manually. 
-    The major size advantage however comes from the fact 
+    The current implementation takes advantage of bit-packing values
+    when the range is known to be limited in advance (such as $(D bool)).
+    See also $(LREF BitPacked) for enforcing it manually.
+    The major size advantage however comes from the fact
     that multiple $(B identical pages on every level are merged) by construction.
     )
 
-    $(P The process of construction of a trie is more involved and is hidden from 
-    the user in a form of convenience functions: $(LREF codepointTrie), 
-    $(LREF codepointSetTrie) and even more convenient $(LREF toTrie). 
-    In general a set or built-in AA with $(D dchar) type 
-    can be turned into a trie. The trie object in this module 
+    $(P The process of constructing a trie is more involved and is hidden from
+    the user in a form of the convenience functions $(LREF codepointTrie),
+    $(LREF codepointSetTrie) and the even more convenient $(LREF toTrie).
+    In general a set or built-in AA with $(D dchar) type
+    can be turned into a trie. The trie object in this module
     is read-only (immutable); it's effectively frozen after construction.
     )
-    
+
     $(SECTION Unicode properties)
-    
-    $(P Full list of Unicode properties accessible through $(LREF unicode) 
-    and specific helpers per category nested within. Consult the 
+
+    $(P This is a full list of Unicode properties accessible through $(LREF unicode)
+    with specific helpers per category nested within. Consult the
     $(WEB www.unicode.org/cldr/utility/properties.jsp, CLDR utility)
     when in doubt about the contents of a particular set.)
 
-    $(P General category sets listed below are only accessible with $(LREF unicode) 
-    shorthand accessor.)
+    $(P General category sets listed below are only accessible with the
+    $(LREF unicode) shorthand accessor.)
     $(BOOKTABLE $(B General category ),
-         $(TR $(TH Abb.) $(TH Long form) 
+         $(TR $(TH Abb.) $(TH Long form)
             $(TH Abb.) $(TH Long form)$(TH Abb.) $(TH Long form))
-        $(TR $(TD L) $(TD Letter)  
+        $(TR $(TD L) $(TD Letter)
             $(TD Cn) $(TD Unassigned)  $(TD Po) $(TD Other_Punctuation))
-        $(TR $(TD Ll) $(TD Lowercase_Letter)    
+        $(TR $(TD Ll) $(TD Lowercase_Letter)
             $(TD Co) $(TD Private_Use) $(TD Ps) $(TD Open_Punctuation))
-        $(TR $(TD Lm) $(TD Modifier_Letter) 
+        $(TR $(TD Lm) $(TD Modifier_Letter)
             $(TD Cs) $(TD Surrogate)   $(TD S) $(TD Symbol))
-        $(TR $(TD Lo) $(TD Other_Letter) 
+        $(TR $(TD Lo) $(TD Other_Letter)
             $(TD N) $(TD Number)  $(TD Sc) $(TD Currency_Symbol))
-        $(TR $(TD Lt) $(TD Titlecase_Letter)  
+        $(TR $(TD Lt) $(TD Titlecase_Letter)
           $(TD Nd) $(TD Decimal_Number)  $(TD Sk) $(TD Modifier_Symbol))
-        $(TR $(TD Lu) $(TD Uppercase_Letter)  
+        $(TR $(TD Lu) $(TD Uppercase_Letter)
           $(TD Nl) $(TD Letter_Number)   $(TD Sm) $(TD Math_Symbol))
-        $(TR $(TD M) $(TD Mark)  
+        $(TR $(TD M) $(TD Mark)
           $(TD No) $(TD Other_Number)    $(TD So) $(TD Other_Symbol))
-        $(TR $(TD Mc) $(TD Spacing_Mark)  
+        $(TR $(TD Mc) $(TD Spacing_Mark)
           $(TD P) $(TD Punctuation) $(TD Z) $(TD Separator))
-        $(TR $(TD Me) $(TD Enclosing_Mark) 
+        $(TR $(TD Me) $(TD Enclosing_Mark)
           $(TD Pc) $(TD Connector_Punctuation)   $(TD Zl) $(TD Line_Separator))
-        $(TR $(TD Mn) $(TD Nonspacing_Mark) 
+        $(TR $(TD Mn) $(TD Nonspacing_Mark)
           $(TD Pd) $(TD Dash_Punctuation)    $(TD Zp) $(TD Paragraph_Separator))
-        $(TR $(TD C) $(TD Other) 
+        $(TR $(TD C) $(TD Other)
           $(TD Pe) $(TD Close_Punctuation) $(TD Zs) $(TD Space_Separator))
-        $(TR $(TD Cc) $(TD Control) $(TD Pf) 
+        $(TR $(TD Cc) $(TD Control) $(TD Pf)
           $(TD Final_Punctuation)   $(TD -) $(TD Any))
-        $(TR $(TD Cf) $(TD Format) 
+        $(TR $(TD Cf) $(TD Format)
           $(TD Pi) $(TD Initial_Punctuation) $(TD -) $(TD ASCII))
     )
-    $(P Sets for other commonly useful properties that are 
-    accessible with $(LREF unicode).)
+    $(P Sets for other commonly useful properties that are
+    accessible with $(LREF unicode):)
     $(BOOKTABLE $(B Common binary properties),
         $(TR $(TH Name) $(TH Name) $(TH Name))
         $(TR $(TD Alphabetic)  $(TD Ideographic) $(TD Other_Uppercase))
@@ -454,7 +475,7 @@
         $(TR $(TD ID_Continue) $(TD Other_Math)  )
     )
     $(P Bellow is the table with block names accepted by $(LREF unicode.block).
-    Note that the shorthand version $(LREF unicode) requires "In"  
+    Note that the shorthand version $(LREF unicode) requires "In"
     to be prepended to the names of blocks so as to disambiguate
     scripts and blocks.)
 
@@ -535,8 +556,8 @@
         $(TR $(TD Ethiopic)  $(TD Modifier Tone Letters) )
     )
 
-    $(P Bellow is the table with script names accepted by $(LREF unicode.script) 
-    and by the shorthand version $(LREF unicode).)
+    $(P Bellow is the table with script names accepted by $(LREF unicode.script)
+    and by the shorthand version $(LREF unicode):)
     $(BOOKTABLE $(B Scripts),
         $(TR $(TD Arabic)  $(TD Hanunoo) $(TD Old_Italic))
         $(TR $(TD Armenian)    $(TD Hebrew)  $(TD Old_Persian))
@@ -587,11 +608,11 @@
         $(WEB www.digitalmars.com/d/ascii-table.html, ASCII Table),
         $(WEB en.wikipedia.org/wiki/Unicode, Wikipedia),
         $(WEB www.unicode.org, The Unicode Consortium),
-        $(WEB www.unicode.org/reports/tr15/, Unicode normalization forms), 
+        $(WEB www.unicode.org/reports/tr15/, Unicode normalization forms),
         $(WEB www.unicode.org/reports/tr29/, Unicode text segmentation)
-        $(WEB www.unicode.org/uni2book/ch05.pdf, 
+        $(WEB www.unicode.org/uni2book/ch05.pdf,
             Unicode Implementation Guidelines)
-        $(WEB www.unicode.org/uni2book/ch03.pdf, 
+        $(WEB www.unicode.org/uni2book/ch03.pdf,
             Unicode Conformance)
     Trademarks:
         Unicode(tm) is a trademark of Unicode, Inc.
@@ -619,7 +640,7 @@ CLUSTER = $(S_LINK Grapheme cluster, grapheme cluster)
 module std.uni;
 
 static import std.ascii;
-import std.traits, std.typecons, std.range, std.algorithm,
+import std.traits, std.range, std.algorithm, std.typecons,
     std.format, std.conv, std.typetuple, std.exception, core.stdc.stdlib;
 import std.array; //@@BUG UFCS doesn't work with 'local' imports
 import core.bitop;
@@ -654,7 +675,7 @@ else version(X86_64)
 else
     enum hasUnalignedReads = false; //better be safe then sorry
 
-enum dchar lineSep = '\u2028'; /// Constant $(CODEPOINT) (0x2028) - line separator. 
+enum dchar lineSep = '\u2028'; /// Constant $(CODEPOINT) (0x2028) - line separator.
 enum dchar paraSep = '\u2029'; /// Constant $(CODEPOINT) (0x2029) - paragraph separator.
 
 // test the intro example
@@ -677,9 +698,9 @@ unittest
     assert(b.length > 45); // 46 items in Unicode 6.1, even more in 6.2
     // testing presence of a code point in a set
     // is just fine, it is O(logN)
-    assert(!b['$']); 
+    assert(!b['$']);
     assert(!b['\u058F']); // Armenian dram sign
-    assert(b['¥']); 
+    assert(b['¥']);
 
     // building fast lookup tables, these guarantee O(1) complexity
     // 1-level Trie lookup table essentially a huge bit-set ~262Kb
@@ -691,8 +712,8 @@ unittest
     assert(oneTrie['£']);
     assert(twoTrie['£']);
     assert(threeTrie['£']);
-    
-    // build the trie with the most sensible trie level 
+
+    // build the trie with the most sensible trie level
     // and bind it as a functor
     auto cyrilicOrArmenian = toDelegate(set);
     auto balance = find!(cyrilicOrArmenian)("Hello ընկեր!");
@@ -709,7 +730,7 @@ unittest
     assert(nS == "Äffin");
     assert(nS != nonS);
     string composed = "Äffin";
-    
+
     assert(normalize!NFD(composed) == "A\u0308ffin");
     // to NFKD, compatibility decomposition useful for fuzzy matching/searching
     assert(normalize!NFKD("2¹⁰") == "210");
@@ -724,7 +745,7 @@ private:
 enum lastDchar = 0x10FFFF;
 
 auto force(T, F)(F from)
-    if(isIntegral!T && !is(T == F)) 
+    if(isIntegral!T && !is(T == F))
 {
     assert(from <= T.max && from >= T.min);
     return cast(T)from;
@@ -791,7 +812,7 @@ unittest
     foreach(i; TypeTuple!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
     {
         assert(replicateBits!(i, 3)(m)+1 == (1<<(3*i)));
-        assert(replicateBits!(i, 2)(m2) == iota(0, i).map!"2^^(2*a)".reduce!"a+b");
+        assert(replicateBits!(i, 2)(m2) == iota(0, i).map!"2^^(2*a)"().reduce!"a+b"());
         //writefln("%2d:%32b", i, replicateBits!(i, 2)(m2));
     }
 }
@@ -814,7 +835,7 @@ struct MultiArray(Types...)
         storage = new size_t[full_size];
     }
 
-    this(const(size_t)[] raw_offsets, 
+    this(const(size_t)[] raw_offsets,
         const(size_t)[] raw_sizes, const(size_t)[] data)const
     {
         offsets[] = raw_offsets[];
@@ -824,7 +845,7 @@ struct MultiArray(Types...)
 
     @property auto slice(size_t n)()inout pure nothrow
     {
-        auto ptr = raw_ptr!n;        
+        auto ptr = raw_ptr!n;
         size_t len = spaceFor!(bitSizeOf!(Types[n]))(sz[n]);
         assert(ptr + len <= storage.ptr+storage.length);
         return packedArrayView!(Types[n])(ptr[0..len]);
@@ -862,14 +883,14 @@ struct MultiArray(Types...)
             {// shrink
                 size_t delta = (sz[n] - new_size);
                 sz[n] -= delta;
-                delta = spaceFor!(bitSizeOf!(Types[n]))(delta);            
+                delta = spaceFor!(bitSizeOf!(Types[n]))(delta);
                 // move all data past this array, forward direction
                 static if(n != dim-1)
                 {
                     auto start = raw_ptr!(n+1);
                     size_t len = storage.length;
                     copyForward(start[0..len-delta], start[delta..len]);
-                    
+
                     // adjust offsets last, they affect raw_slice
                     foreach(i; n+1..dim)
                         offsets[i] -= delta;
@@ -1003,7 +1024,7 @@ unittest
             arr.slice!(lvl)[i] = i;
     }
     Bitty m1;
-    
+
     m1.length!4 = 10;
     m1.length!3 = 2^^6;
     m1.length!2 = 2^^3;
@@ -1061,13 +1082,13 @@ size_t spaceFor(size_t _bits)(size_t new_len) pure nothrow
 
 template isBitPackableType(T)
 {
-    enum isBitPackableType = isBitPacked!T 
+    enum isBitPackableType = isBitPacked!T
         || isIntegral!T || is(T == bool) || isSomeChar!T;
 }
 
 //============================================================================
 template PackedArrayView(T)
-    if((is(T dummy == BitPacked!(U, sz), U, size_t sz) 
+    if((is(T dummy == BitPacked!(U, sz), U, size_t sz)
         && isBitPackableType!U) || isBitPackableType!T)
 {
     private enum bits = bitSizeOf!T;
@@ -1081,7 +1102,7 @@ template PackedArrayView(T)
 {
 pure nothrow:
     static assert(isPowerOf2(bits));
-    import core.bitop;      
+    import core.bitop;
 
     this(inout(size_t)[] arr)inout
     {
@@ -1113,9 +1134,9 @@ pure nothrow:
 
     static if(factor == bytesPerWord// can safely pack by byte
          || factor == 1 //a whole word at a time
-         || ((factor == bytesPerWord/2 || factor == bytesPerWord/4) 
+         || ((factor == bytesPerWord/2 || factor == bytesPerWord/4)
                 && hasUnalignedReads)) //this needs unaligned reads
-    {   
+    {
         static if(factor == bytesPerWord)
             alias U = ubyte;
         else static if(factor == bytesPerWord/2)
@@ -1150,7 +1171,7 @@ pure nothrow:
             assert(n/factor < original.length);
         }
         body
-        {                     
+        {
             return simpleIndex(n);
         }
 
@@ -1177,14 +1198,14 @@ pure nothrow:
             auto r = n % factor;
             size_t tgt_shift = bits*r;
             size_t word = original[q];
-            original[q] = (word & ~(mask<<tgt_shift)) 
+            original[q] = (word & ~(mask<<tgt_shift))
                 | (cast(size_t)val << tgt_shift);
         }
     }
 
     static if(isBitPacked!T) // lack of user-defined implicit conversions
     {
-        void opSliceAssign(T val, size_t start, size_t end)    
+        void opSliceAssign(T val, size_t start, size_t end)
         {
             opSliceAssign(cast(TypeOfBitPacked!T)val, start, end);
         }
@@ -1246,7 +1267,7 @@ private struct SliceOverIndexed(T)
     enum assignableIndex = is(typeof((){ T.init[0] = Item.init; }));
     enum assignableSlice = is(typeof((){ T.init[0..0] = Item.init; }));
 
-    auto opIndex(size_t idx) const
+    auto opIndex(size_t idx)const
     in
     {
         assert(idx < to - from);
@@ -1329,7 +1350,7 @@ SliceOverIndexed!(const(T)) sliceOverIndexed(T)(size_t a, size_t b, const(T)* x)
     return SliceOverIndexed!(const(T))(a, b, x);
 }
 
-// BUG? inout is out of reach 
+// BUG? inout is out of reach
 //...SliceOverIndexed.arr only parameters or stack based variables can be inout
 SliceOverIndexed!T sliceOverIndexed(T)(size_t a, size_t b, T* x)
     if(is(Unqual!T == T))
@@ -1374,7 +1395,7 @@ unittest
 }
 
 private auto packedArrayView(T)(inout(size_t)[] arr) @trusted pure nothrow
-{    
+{
     return inout(PackedArrayView!T)(arr);
 }
 
@@ -1397,7 +1418,7 @@ string genUnrolledSwitchSearch(size_t size)
                 idx +=  m;
             goto case;
         `.replace("m", to!string(v))
-        .replace("pow", to!string(i));   
+        .replace("pow", to!string(i));
         i--;
     }
     code ~= `
@@ -1405,7 +1426,7 @@ string genUnrolledSwitchSearch(size_t size)
             if(pred(range[idx], needle))
                 idx += 1;
             goto default;
-        `;  
+        `;
     code ~= `
         default:
     }`;
@@ -1421,12 +1442,12 @@ size_t uniformLowerBound(alias pred, Range, T)(Range range, T needle)
     if(is(T : ElementType!Range))
 {
     assert(isPowerOf2(range.length));
-    size_t idx = 0, m = range.length/2;        
+    size_t idx = 0, m = range.length/2;
     while(m != 0)
     {
         if(pred(range[idx+m], needle))
             idx += m;
-        m /= 2;        
+        m /= 2;
     }
     if(pred(range[idx], needle))
         idx += 1;
@@ -1448,7 +1469,7 @@ size_t switchUniformLowerBound(alias pred, Range, T)(Range range, T needle)
     mixin(genUnrolledSwitchSearch(max));
     return idx;
 }
-   
+
 //
 size_t floorPowerOf2(size_t arg) @safe pure nothrow
 {
@@ -1589,23 +1610,23 @@ unittest
     static void destroy(T)(ref T arr)
         if(isDynamicArray!T && is(Unqual!T == T))
     {
-        debug 
+        debug
         {
-            arr[] = cast(typeof(T.init[0]))(0xdead_beef); 
+            arr[] = cast(typeof(T.init[0]))(0xdead_beef);
         }
         arr = null;
     }
 
     static void destroy(T)(ref T arr)
         if(isDynamicArray!T && !is(Unqual!T == T))
-    { 
-        arr = null; 
+    {
+        arr = null;
     }
 }
 
 // ditto
 @trusted struct ReallocPolicy
-{    
+{
     static T[] dup(T)(const T[] arr)
     {
         auto result = alloc!T(arr.length);
@@ -1687,7 +1708,7 @@ unittest
 }
 
 /**
-    Tests if T is some kind a set of code points. Intended for template constraints.    
+    Tests if T is some kind a set of code points. Intended for template constraints.
 */
 public template isCodepointSet(T)
 {
@@ -1701,11 +1722,11 @@ public template isCodepointSet(T)
     Tests if $(D T) is a pair of integers that implicitly convert to $(D V).
     The following code must compile for any pair $(D T):
     ---
-    (T x){ V a = x[0]; V b = x[1];}    
+    (T x){ V a = x[0]; V b = x[1];}
     ---
     The following must not compile:
      ---
-    (T x){ V c = x[2];}    
+    (T x){ V c = x[2];}
     ---
 */
 public template isIntegralPair(T, V=uint)
@@ -1762,32 +1783,32 @@ public struct CodepointInterval {
 }
 
 /**
-    $(P 
+    $(P
     $(D InversionList) is a set of $(CODEPOINTS)
-    represented as an array of open-right [a, b$(RPAREN) 
-    intervals (see $(LREF CodepointInterval) above). 
+    represented as an array of open-right [a, b$(RPAREN)
+    intervals (see $(LREF CodepointInterval) above).
     The name comes from the way the representation reads left to right.
-    For instance a set of all values [10, 50$(RPAREN), [80, 90$(RPAREN), 
+    For instance a set of all values [10, 50$(RPAREN), [80, 90$(RPAREN),
     plus a singular value 60 looks like this:
     )
     ---
     10, 50, 60, 61, 80, 90
     ---
     $(P
-    The way to read this is: start with negative meaning that all numbers 
-    smaller then the next one are not present in this set (and positive 
-    - the contrary). Then switch positive/negative after each 
+    The way to read this is: start with negative meaning that all numbers
+    smaller then the next one are not present in this set (and positive
+    - the contrary). Then switch positive/negative after each
     number passed from left to right.
     )
-    $(P This way negative spans until 10, then positive until 50, 
+    $(P This way negative spans until 10, then positive until 50,
     then negative until 60, then positive until 61, and so on.
-    As seen this provides a space-efficient storage of highly redundant data 
-    that comes in long runs. A description which Unicode $(CHARACTER) 
-    properties fit nicely. The technique itself could be seen as a variation 
+    As seen this provides a space-efficient storage of highly redundant data
+    that comes in long runs. A description which Unicode $(CHARACTER)
+    properties fit nicely. The technique itself could be seen as a variation
     on $(LUCKY RLE encoding).
     )
-    
-    $(P Sets are value types (just like $(D int) is) thus they 
+
+    $(P Sets are value types (just like $(D int) is) thus they
         are never aliased.
     )
         Example:
@@ -1800,20 +1821,21 @@ public struct CodepointInterval {
         assert(a != c);
         ---
     $(P See also $(LREF unicode) for simpler construction of sets
-        out of predefined ones.
+        from predefined ones.
     )
 
-    $(P Memory usage is 6 bytes per each contiguous interval in a set. 
-    The value semantics are achieved by using COW technique  
-    and thus it's $(RED not) safe to cast this type to shared.
+    $(P Memory usage is 6 bytes per each contiguous interval in a set.
+    The value semantics are achieved by using the
+    ($WEB http://en.wikipedia.org/wiki/Copy-on-write, COW) technique
+    and thus it's $(RED not) safe to cast this type to $(D_KEYWORD shared).
     )
 
-    Note: 
+    Note:
     $(P It's not recommended to rely on the template parameters
-    or the exact type of a current $(CODEPOINT) set in $(D std.uni). 
-    The type and parameters may change when standard 
+    or the exact type of a current $(CODEPOINT) set in $(D std.uni).
+    The type and parameters may change when the standard
     allocators design is finalized.
-    Use $(LREF isCodepointSet) with templates or just stick with the default 
+    Use $(LREF isCodepointSet) with templates or just stick with the default
     alias $(LREF CodepointSet) throughout the whole code base.
     )
 */
@@ -1868,7 +1890,7 @@ public:
     body
     {
         data = Uint24Array!(SP)(intervals);
-    }   
+    }
 
     /**
         Get range that spans all of the $(CODEPOINT) intervals in this $(LREF InversionList).
@@ -1880,8 +1902,8 @@ public:
         set.byInterval.equal([tuple('A', 'E'), tuple('a', 'e')]);
         ---
     */
-    @property auto byInterval() 
-    {        
+    @property auto byInterval()
+    {
         static struct Intervals
         {
             this(Uint24Array!SP sp)
@@ -1894,7 +1916,7 @@ public:
             @property auto front()const
             {
                 uint a = slice[start];
-                uint b = slice[start+1];                
+                uint b = slice[start+1];
                 return CodepointInterval(a, b);
             }
 
@@ -1992,7 +2014,7 @@ public:
         assert(noLetters.length == 128 - 26*2);
         ---
     */
-    This opBinary(string op, U)(U rhs) 
+    This opBinary(string op, U)(U rhs)
         if(isCodepointSet!U || is(U:dchar))
     {
         static if(op == "&" || op == "|" || op == "~")
@@ -2007,7 +2029,7 @@ public:
             {
                 static if(is(Unqual!U == U))
                 {
-                    // try hard to reuse r-value         
+                    // try hard to reuse r-value
                     mixin("rhs "~op~"= this;");
                     return rhs;
                 }
@@ -2071,7 +2093,7 @@ public:
     /// Obtains a set that is the inversion of this set. See also $(LREF inverted).
     auto opUnary(string op: "!")()
     {
-        return this.inverted; 
+        return this.inverted;
     }
 
     /**
@@ -2091,7 +2113,7 @@ public:
             this(This set)
             {
                 r = set.byInterval;
-                if(!r.empty)                    
+                if(!r.empty)
                     cur = r.front.a;
             }
 
@@ -2125,17 +2147,17 @@ public:
     }
 
     /**
-        $(P Obtain textual representation of this set in from of 
-        open-right intervals and feed it to $(D sink). 
-        )        
+        $(P Obtain textual representation of this set in from of
+        open-right intervals and feed it to $(D sink).
+        )
         $(P Used by various standard formatting facilities such as
          $(XREF _format, formattedWrite), $(XREF _stdio, write),
-         $(XREF _stdio, writef), $(XREF _conv, to) and others.         
+         $(XREF _stdio, writef), $(XREF _conv, to) and others.
         )
         Example:
         ---
         import std.conv;
-        assert(unicode.ASCII.to!string == "[0..128$(RPAREN)");        
+        assert(unicode.ASCII.to!string == "[0..128$(RPAREN)");
         ---
     */
     void toString(scope void delegate (const(char)[]) sink)
@@ -2160,7 +2182,7 @@ public:
         someSet.add('5', '9'+1);
         assert(someSet['0']);
         assert(someSet['5']);
-        assert(someSet['9']);        
+        assert(someSet['9']);
         assert(someSet['Z']);
         ---
     */
@@ -2195,7 +2217,7 @@ private:
     }
 
     ref sub()(dchar ch)
-    {        
+    {
         return subChar(ch);
     }
 
@@ -2236,7 +2258,7 @@ public:
         set = unicode.ASCII;
         //union with the inverse gets all of the code points in the Unicode
         assert((set | set.inverted).length == 0x110000);
-        //no intersection with the inverse 
+        //no intersection with the inverse
         assert((set & set.inverted).empty);
         ---
     */
@@ -2263,16 +2285,16 @@ public:
     }
 
     /**
-        Generates string with D source code of unary function with name of 
+        Generates string with D source code of unary function with name of
         $(D funcName) taking a single $(D dchar) argument. If $(D funcName) is empty
         the code is adjusted to be a lambda function.
 
         The function generated tests if the $(CODEPOINT) passed
         belongs to this set or not. The result is to be used with string mixin.
-        The intended usage area is aggressive optimization via meta programming 
+        The intended usage area is aggressive optimization via meta programming
         in parser generators and the like.
 
-        Note: To be used with care for relatively small or regular sets. It
+        Note: Use with care for relatively small or regular sets. It
         could end up being slower then just using multi-staged tables.
 
         Example:
@@ -2303,10 +2325,10 @@ public:
             }
         }
         ---
-    */    
+    */
     string toSourceCode(string funcName="")
     {
-        import std.string;        
+        import std.string;
         enum maxBinary = 3;
         static string linearScope(R)(R ivals, string indent)
         {
@@ -2322,7 +2344,7 @@ public:
                 }
                 else if(span == 2)
                 {
-                    result ~= format("%sif(ch == %s || ch == %s) return true;\n", 
+                    result ~= format("%sif(ch == %s || ch == %s) return true;\n",
                         deeper, ival[0], ival[0]+1);
                 }
                 else
@@ -2337,7 +2359,7 @@ public:
         }
 
         static string binaryScope(R)(R ivals, string indent)
-        { 
+        {
             // time to do unrolled comparisons?
             if(ivals.length < maxBinary)
                 return linearScope(ivals, indent);
@@ -2355,14 +2377,14 @@ public:
             {
                 if(ival[0]+1 == ival[1])
                 {
-                    result ~= format("%scase %s: return true;\n", 
+                    result ~= format("%scase %s: return true;\n",
                         deeper, ival[0]);
                 }
                 else
                 {
                     result ~= format("%scase %s: .. case %s: return true;\n",
                          deeper, ival[0], ival[1]-1);
-                } 
+                }
             }
             result ~= deeper~"default: return false;\n"~indent~"}\n";
             return result;
@@ -2374,13 +2396,13 @@ public:
             // bisect on one [a, b) interval at idx
             string result = indent~"{\n";
             // less branch, < a
-            result ~= format("%sif(ch < %s)\n%s", 
-                deeper, range[idx][0], binaryScope(range[0..idx], deeper));            
+            result ~= format("%sif(ch < %s)\n%s",
+                deeper, range[idx][0], binaryScope(range[0..idx], deeper));
             // middle point,  >= a && < b
-            result ~= format("%selse if (ch < %s) return true;\n", 
+            result ~= format("%selse if (ch < %s) return true;\n",
                 deeper, range[idx][1]);
             // greater or equal branch,  >= b
-            result ~= format("%selse\n%s", 
+            result ~= format("%selse\n%s",
                 deeper, binaryScope(range[idx+1..$], deeper));
             return result~indent~"}\n";
         }
@@ -2398,7 +2420,7 @@ public:
     }
 
     /**
-        True if this set doesn't contain any $(CODEPOINTS). 
+        True if this set doesn't contain any $(CODEPOINTS).
         Example:
         ---
         CodepointSet emptySet;
@@ -2509,7 +2531,7 @@ private:
                 //  [----------+++++----++++++-]
                 //  [  a       s      b        ]
                 if(top == b)
-                {                    
+                {
                     assert(b_idx+1 < data.length);
                     pos = genericReplace(data, a_idx, b_idx+2, [a, data[b_idx+1] ]);
                     return pos;
@@ -2597,7 +2619,7 @@ private:
     Uint24Array!SP data;
 };
 
-@system unittest 
+@system unittest
 {
     //test examples
     import std.algorithm, std.typecons;
@@ -2625,7 +2647,7 @@ private:
     set = unicode.ASCII;
     //union with the inverse gets all of code points in the Unicode
     assert((set | set.inverted).length == 0x110000);
-    //no intersection with inverse 
+    //no intersection with inverse
     assert((set & set.inverted).empty);
 
     CodepointSet someSet;
@@ -2649,7 +2671,7 @@ private:
     assert(onlyOneOf['$']); //ASCII and not lowercase
     assert(!onlyOneOf['a']); //ASCII and lowercase
     assert(onlyOneOf['я']); //not ASCII but lowercase
-    
+
     auto noLetters = ascii - (lower | upper);
     assert(noLetters.length == 128 - 26*2);
     import std.conv;
@@ -2719,7 +2741,7 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
     static if(hasUnalignedReads)
         return __ctfe ? safeWrite24(ptr, val, idx) : unalignedWrite24(ptr, val, idx);
     else
-        return safeWrite24(ptr, val, idx);    
+        return safeWrite24(ptr, val, idx);
 }
 
 // Packed array of 24-bit integers, COW semantics.
@@ -2741,7 +2763,7 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
     }
 
     this(this)
-    {           
+    {
         if(!empty)
         {
             refCount = refCount + 1;
@@ -2764,9 +2786,9 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
     @property bool empty() const { return data.length == 0; }
 
     //report one less then actual size
-    @property size_t length() const 
-    { 
-        return data.length ? (data.length-4)/3 : 0; 
+    @property size_t length() const
+    {
+        return data.length ? (data.length-4)/3 : 0;
     }
 
     //+ an extra slot for ref-count
@@ -2863,7 +2885,7 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
         length = length + 1;
         this[$-1] = val;
     }
-    
+
     bool opEquals()(auto const ref Uint24Array rhs)const
     {
         if(empty ^ rhs.empty)
@@ -2873,9 +2895,9 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
 
 private:
     // ref-count is right after the data
-    @property uint refCount() const 
-    { 
-        return read24(data.ptr, length); 
+    @property uint refCount() const
+    {
+        return read24(data.ptr, length);
     }
 
     @property void refCount(uint cnt)
@@ -2884,7 +2906,7 @@ private:
         assert(cnt <= 0xFF_FFFF);
     }
     body
-    { 
+    {
         write24(data.ptr, cnt, length);
     }
 
@@ -2925,9 +2947,9 @@ private:
 @trusted unittest// Uint24 tests //@@@BUG@@ iota is system ?!
 {
     void funcRef(T)(ref T u24)
-    {        
+    {
         u24.length = 2;
-        u24[1] = 1024; 
+        u24[1] = 1024;
         T u24_c = u24;
         assert(u24[1] == 1024);
         u24.length = 0;
@@ -2946,9 +2968,9 @@ private:
     void func2(T)(T u24)
     {
         T u24_2 = u24;
-        T u24_3;        
+        T u24_3;
         u24_3 = u24_2;
-        assert(u24_2 == u24_3);        
+        assert(u24_2 == u24_3);
         assert(equalS(u24[], u24_2[]));
         assert(equalS(u24_2[], u24_3[]));
         funcRef(u24_3);
@@ -2992,7 +3014,7 @@ private:
         assert(arr[0] == 72);
         assert(arr2[0] == 11);
         //set this to about 100M to stress-test COW memory management
-        foreach(v; 0..10_000) 
+        foreach(v; 0..10_000)
             func2(arr);
         assert(equalS(arr[], [72, 0xFE_FEFE, 100]));
 
@@ -3204,14 +3226,14 @@ unittest// iteration & opIndex
         assert(equalS(a.byInterval, 
                 [tuple(cast(uint)'A', cast(uint)'N'), tuple(cast(uint)'a', cast(uint)'n')]
             ), text(a.byInterval));
-        
+
         //same @@@BUG as in issue 8949 ?
         version(bug8949)
         {
             assert(equalS(retro(a.byInterval), 
                 [tuple(cast(uint)'a', cast(uint)'n'), tuple(cast(uint)'A', cast(uint)'N')]
-            ), text(retro(a.byInterval)));  
-        }  
+            ), text(retro(a.byInterval)));
+        }
         auto achr = a.byCodepoint;
         assert(equalS(achr, arr), text(a.byCodepoint));
         foreach(ch; a.byCodepoint)
@@ -3248,9 +3270,9 @@ auto arrayRepr(T)(T x)
 /**
     Maps $(D Key) to a suitable integer index within the range of $(D size_t).
     The mapping is constructed by applying predicates from $(D Prefix) left to right
-    and concatenating the resulting bits. 
+    and concatenating the resulting bits.
 
-    The first (leftmost) predicate defines the most significant bits of 
+    The first (leftmost) predicate defines the most significant bits of
     the resulting index.
  */
 template mapTrieIndex(Prefix...)
@@ -3272,7 +3294,7 @@ template mapTrieIndex(Prefix...)
 
 /*
     $(D TrieBuilder) is a type used for incremental construction
-    of $(LREF Trie)s. 
+    of $(LREF Trie)s.
 
     See $(LREF buildTrie) for generic helpers built on top of it.
 */
@@ -3298,10 +3320,10 @@ private:
         alias Prefix = Args[1..$];
         enum lastPageSize = 2^^Prefix[$-1].bitSize;
         enum translatedMaxIndex = mapTrieIndex!(Prefix)(Args[0]);
-        enum roughedMaxIndex = 
+        enum roughedMaxIndex =
             (translatedMaxIndex + lastPageSize-1)/lastPageSize*lastPageSize;
         //check warp around - if wrapped, use the default deduction rule
-        enum maxIndex = roughedMaxIndex < translatedMaxIndex ? 
+        enum maxIndex = roughedMaxIndex < translatedMaxIndex ?
             deduceMaxIndex!(Prefix)() : roughedMaxIndex;
     }
     else
@@ -3309,7 +3331,7 @@ private:
         alias Prefix = Args;
         enum maxIndex = deduceMaxIndex!(Prefix)();
     }
-    
+
     alias getIndex = mapTrieIndex!(Prefix);
 
     enum lastLevel = Prefix.length-1;
@@ -3321,17 +3343,17 @@ private:
     // iteration over levels of Trie, each indexes its own level and thus a shortened domain
     size_t[Prefix.length] indices;
     // default filler value to use
-    Value defValue; 
+    Value defValue;
     // this is a full-width index of next item
-    size_t curIndex; 
+    size_t curIndex;
     // all-zeros page index, all-ones page index (+ indicator if there is such a page)
     ConstructState[Prefix.length] state;
-    // the table being constructed 
-    MultiArray!(idxTypes!(Key, fullBitSize!(Prefix), Prefix[0..$]), V) table;   
+    // the table being constructed
+    MultiArray!(idxTypes!(Key, fullBitSize!(Prefix), Prefix[0..$]), V) table;
 
     @disable this();
 
-    // this function assumes no holes in the input so 
+    // this function assumes no holes in the input so
     // indices are going one by one
     void addValue(size_t level, T)(T val, size_t numVals)
     {
@@ -3358,7 +3380,7 @@ private:
                     ptr[indices[level]] = force!(typeof(ptr[indices[level]]))(val);
                 }
                 indices[level]++;
-                numVals = 0;                
+                numVals = 0;
             }
             else
             {
@@ -3374,17 +3396,17 @@ private:
                     numVals = 0;
                 }
                 static if(level < Prefix.length-1)
-                    assert(indices[level] <= 2^^Prefix[level+1].bitSize);                
+                    assert(indices[level] <= 2^^Prefix[level+1].bitSize);
                 ptr[j..j+n]  = val;
                 j += n;
                 indices[level] = j;
             }
-            // last level (i.e. topmost) has 1 "page" 
+            // last level (i.e. topmost) has 1 "page"
             // thus it need not to add a new page on upper level
             static if(level != 0)
             {
                 if(indices[level] % pageSize == 0)
-                    spillToNextPage!level(ptr); 
+                    spillToNextPage!level(ptr);
             }
         }
         while(numVals);
@@ -3418,7 +3440,7 @@ private:
         auto slice = ptr[indices[level] - pageSize..indices[level]];
         size_t j;
         for(j=0; j<last; j+=pageSize)
-        {                        
+        {
             if(equalS(ptr[j..j+pageSize], slice[0..pageSize]))
             {
                 // get index to it, reuse ptr space for the next block
@@ -3438,9 +3460,9 @@ private:
             }
         }
         if(j == last)
-        {                            
-    L_allocate_page:    
-            next_lvl_index = force!NextIdx(indices[level]/pageSize - 1);                        
+        {
+    L_allocate_page:
+            next_lvl_index = force!NextIdx(indices[level]/pageSize - 1);
             // allocate next page
             version(none)
             {
@@ -3494,10 +3516,10 @@ private:
 
 public:
     /**
-        Construct a builder, where $(D filler) is a value 
+        Construct a builder, where $(D filler) is a value
         to indicate empty slots (or "not found" condition).
     */
-    this(Value filler) 
+    this(Value filler)
     {
         curIndex = 0;
         defValue = filler;
@@ -3511,9 +3533,9 @@ public:
     }
 
     /**
-        Put a value $(D v) into interval as 
+        Put a value $(D v) into interval as
         mapped by keys from $(D a) to $(D b).
-        All slots prior to $(D a) are filled with 
+        All slots prior to $(D a) are filled with
         the default filler.
     */
     void putRange(Key a, Key b, Value v)
@@ -3547,7 +3569,7 @@ public:
         else
         {
             if(curIndex != 0 //couldn't wrap around
-                || (Prefix.length != 1 && indices[lastLevel] == 0)) //can be just empty 
+                || (Prefix.length != 1 && indices[lastLevel] == 0)) //can be just empty
             {
                 addValue!lastLevel(defValue, size_t.max - curIndex);
                 addValue!lastLevel(defValue, 1);
@@ -3563,14 +3585,14 @@ public:
     The design goal is optimal speed with smallest footprint size.
     )
     $(P It's intentionally read-only and doesn't provide constructors.
-     To construct one use a special builder, 
+     To construct one use a special builder,
      see $(LREF TrieBuilder) and $(LREF buildTrie).
     )
 
 */
 @trusted public struct Trie(Value, Key, Args...)
     if(isValidPrefixForTrie!(Key, Args)
-        || (isValidPrefixForTrie!(Key, Args[1..$]) 
+        || (isValidPrefixForTrie!(Key, Args[1..$])
             && is(typeof(Args[0]) : size_t)))
 {
     static if(is(typeof(Args[0]) : size_t))
@@ -3591,7 +3613,7 @@ public:
     }
 
     // only for constant Tries constructed from precompiled tables
-    private this()(const(size_t)[] offsets, const(size_t)[] sizes, 
+    private this()(const(size_t)[] offsets, const(size_t)[] sizes,
         const(size_t)[] data) const
     {
         _table = typeof(_table)(offsets, sizes, data);
@@ -3600,12 +3622,12 @@ public:
     /*
         $(P Lookup the $(D key) in this $(D Trie). )
 
-        $(P The lookup always succeeds if key fits the domain 
-        provided during construction. The whole domain defined 
-        is covered so instead of not found condition 
+        $(P The lookup always succeeds if key fits the domain
+        provided during construction. The whole domain defined
+        is covered so instead of not found condition
         the sentinel (filler) value could be used. )
 
-        $(P See $(LREF buildTrie), $(LREF TrieBuilder) for how to 
+        $(P See $(LREF buildTrie), $(LREF TrieBuilder) for how to
         define a domain of $(D Trie) keys and the sentinel value. )
 
         Note:
@@ -3673,9 +3695,9 @@ template callableWith(T)
 }
 
 /*
-    Check if $(D Prefix) is a valid set of predicates 
+    Check if $(D Prefix) is a valid set of predicates
     for $(D Trie) template having $(D Key) as the type of keys.
-    This requires all predicates to be callable, take 
+    This requires all predicates to be callable, take
     single argument of type $(D Key) and return unsigned value.
 */
 template isValidPrefixForTrie(Key, Prefix...)
@@ -3684,7 +3706,7 @@ template isValidPrefixForTrie(Key, Prefix...)
 }
 
 /*
-    Check if $(D Args) is a set of maximum key value followed by valid predicates 
+    Check if $(D Args) is a set of maximum key value followed by valid predicates
     for $(D Trie) template having $(D Key) as the type of keys.
 */
 template isValidArgsForTrie(Key, Args...)
@@ -3707,14 +3729,14 @@ template isValidArgsForTrie(Key, Args...)
 }
 
 /**
-    A shorthand for creating a custom multi-level fixed Trie 
-    from a $(D CodepointSet). $(D sizes) are numbers of bits per level, 
-    with the most significant bits used first.    
+    A shorthand for creating a custom multi-level fixed Trie
+    from a $(D CodepointSet). $(D sizes) are numbers of bits per level,
+    with the most significant bits used first.
 
     Note: The sum of $(D sizes) must be equal 21.
 
-    See also even simpler $(LREF toTrie).
-    
+    See_Also: $(LREF toTrie), which is even simpler.
+
     Example:
     ---
     {
@@ -3758,22 +3780,22 @@ public template CodepointSetTrie(sizes...)
     A slightly more general tool for building fixed $(D Trie)
     for the Unicode data.
 
-    Specifically unlike $(D codepointSetTrie) it's allows creating mappings 
+    Specifically unlike $(D codepointSetTrie) it's allows creating mappings
     of $(D dchar) to an arbitrary type $(D T).
 
-    Note: Overload taking $(D CodepointSet)s will naturally convert 
+    Note: Overload taking $(D CodepointSet)s will naturally convert
     only to bool mapping $(D Trie)s.
 
     Example:
-    ---    
+    ---
     // pick characters from the Greek script
-    auto set = unicode.Greek; 
-        
-    // a user-defined property (or an expensive function) 
+    auto set = unicode.Greek;
+
+    // a user-defined property (or an expensive function)
     // that we want to look up
     static uint luckFactor(dchar ch)
     {
-        // here we consider a character lucky  
+        // here we consider a character lucky
         // if its code point has a lot of identical hex-digits
         // e.g. arabic letter DDAL (\u0688) has a "luck factor" of 2
         ubyte[6] nibbles; //6 4-bit chunks of code point
@@ -3807,9 +3829,9 @@ public template CodepointSetTrie(sizes...)
     assert(trie['\u4444'] == 0);
     // and here is a couple of quite lucky Greek characters:
     // Greek small letter epsilon with dasia
-    assert(trie['\u1F11'] == 3); 
+    assert(trie['\u1F11'] == 3);
     // Ancient Greek metretes sign
-    assert(trie['\U00010181'] == 3);   
+    assert(trie['\U00010181'] == 3);
     ---
 */
 public template codepointTrie(T, sizes...)
@@ -3822,7 +3844,7 @@ public template codepointTrie(T, sizes...)
         auto codepointTrie(Set)(in Set set)
             if(isCodepointSet!Set)
         {
-            return codepointSetTrie(set);        
+            return codepointSetTrie(set);
         }
     }
 
@@ -3835,13 +3857,13 @@ public template codepointTrie(T, sizes...)
 unittest //codepointTrie example
 {
     // pick characters from the Greek script
-    auto set = unicode.Greek; 
-        
-    // a user-defined property (or an expensive function) 
+    auto set = unicode.Greek;
+
+    // a user-defined property (or an expensive function)
     // that we want to look up
     static uint luckFactor(dchar ch)
     {
-        // here we consider a character lucky  
+        // here we consider a character lucky
         // if its code point has a lot of identical hex-digits
         // e.g. arabic letter DDAL (\u0688) has a "luck factor" of 2
         ubyte[6] nibbles; //6 4-bit chunks of code point
@@ -3875,7 +3897,7 @@ unittest //codepointTrie example
     assert(trie['\u4444'] == 0);
     // and here is a couple of quite lucky Greek characters:
     // Greek small letter epsilon with dasia
-    assert(trie['\u1F11'] == 3); 
+    assert(trie['\u1F11'] == 3);
     // Ancient Greek metretes sign
     assert(trie['\U00010181'] == 3);
 
@@ -3900,15 +3922,15 @@ public template cmpK0(alias Pred)
 }
 
 /*
-    The most general utility for construction of $(D Trie)s 
+    The most general utility for construction of $(D Trie)s
     short of using $(D TrieBuilder) directly.
 
     Provides a number of convenience overloads.
-    $(D Args) is tuple of maximum key value followed by 
+    $(D Args) is tuple of maximum key value followed by
     predicates to construct index from key.
 
-    Alternatively if the first argument is not a value convertible to $(D Key) 
-    then the whole tuple of $(D Args) is treated as predicates 
+    Alternatively if the first argument is not a value convertible to $(D Key)
+    then the whole tuple of $(D Args) is treated as predicates
     and the maximum Key is deduced from predicates.
 */
 public template buildTrie(Value, Key, Args...)
@@ -3920,14 +3942,14 @@ public template buildTrie(Value, Key, Args...)
     }
     else
         alias Prefix = Args;
-    
+
     alias getIndex = mapTrieIndex!(Prefix);
 
     // for multi-sort
     template GetComparators(size_t n)
     {
         static if(n > 0)
-            alias GetComparators = 
+            alias GetComparators =
                 TypeTuple!(GetComparators!(n-1), cmpK0!(Prefix[n-1]));
         else
             alias GetComparators = TypeTuple!();
@@ -3941,15 +3963,15 @@ public template buildTrie(Value, Key, Args...)
         ------
         Exception is thrown if it's detected that the above order doesn't hold.
 
-        In other words $(LREF mapTrieIndex) should be a 
+        In other words $(LREF mapTrieIndex) should be a
         monotonically increasing function that maps $(D Key) to an integer.
 
-        See also: $(XREF _algorithm, sort), 
+        See also: $(XREF _algorithm, sort),
         $(XREF _range, SortedRange),
         $(XREF _algorithm, setUnion).
     */
     auto buildTrie(Range)(Range range, Value filler=Value.init)
-        if(isInputRange!Range && is(typeof(Range.init.front[0]) : Value) 
+        if(isInputRange!Range && is(typeof(Range.init.front[0]) : Value)
             && is(typeof(Range.init.front[1]) : Key))
     {
         auto builder = TrieBuilder!(Value, Key, maxIndex, Prefix)(filler);
@@ -3959,18 +3981,18 @@ public template buildTrie(Value, Key, Args...)
     }
 
     /*
-        If $(D Value) is bool (or BitPacked!(bool, x)) then it's possible 
-        to build $(D Trie) from a range of open-right intervals of ($D Key)s.
-        The requirement  on the ordering of keys (and the behavior on the 
+        If $(D Value) is bool (or BitPacked!(bool, x)) then it's possible
+        to build $(D Trie) from a range of open-right intervals of $(D Key)s.
+        The requirement  on the ordering of keys (and the behavior on the
         violation of it) is the same as for Key-Value range overload.
 
         Intervals denote ranges of !$(D filler) i.e. the opposite of filler.
-        If no filler provided keys inside of the intervals map to true, 
+        If no filler provided keys inside of the intervals map to true,
         and $(D filler) is false.
     */
     auto buildTrie(Range)(Range range, Value filler=Value.init)
-        if(is(TypeOfBitPacked!Value ==  bool) 
-            && isInputRange!Range && is(typeof(Range.init.front[0]) : Key) 
+        if(is(TypeOfBitPacked!Value ==  bool)
+            && isInputRange!Range && is(typeof(Range.init.front[0]) : Key)
             && is(typeof(Range.init.front[1]) : Key))
     {
         auto builder = TrieBuilder!(Value, Key, Prefix)(filler);
@@ -3980,16 +4002,16 @@ public template buildTrie(Value, Key, Args...)
     }
 
     /*
-        If $(D Value) is bool (or BitPacked!(bool, x)) then it's possible 
+        If $(D Value) is bool (or BitPacked!(bool, x)) then it's possible
         to build $(D Trie) simply from an input range of $(D Key)s.
-        The requirement  on the ordering of keys (and the behavior on the 
+        The requirement  on the ordering of keys (and the behavior on the
         violation of it) is the same as for Key-Value range overload.
 
         Keys found in range denote !$(D filler) i.e. the opposite of filler.
         If no filler provided keys map to true, and $(D filler) is false.
     */
     auto buildTrie(Range)(Range range, Value filler=Value.init)
-        if(is(TypeOfBitPacked!Value ==  bool) 
+        if(is(TypeOfBitPacked!Value ==  bool)
             && isInputRange!Range && is(typeof(Range.init.front) : Key))
     {
         auto builder = TrieBuilder!(Value, Key, Prefix)(filler);
@@ -4027,13 +4049,13 @@ public template buildTrie(Value, Key, Args...)
 }
 
 /++
-    Convenience function to construct optimal configurations for 
+    Convenience function to construct optimal configurations for
     packed Trie from any $(D set) of $(CODEPOINTS).
-    
-    The parameter $(D level) indicates the number of trie levels to use, 
-    allowed values are: 1, 2, 3 or 4. Levels represent different trade-offs 
+
+    The parameter $(D level) indicates the number of trie levels to use,
+    allowed values are: 1, 2, 3 or 4. Levels represent different trade-offs
     speed-size wise.
-    
+
     $(P Level 1 is fastest and the most memory hungry (a bit array). )
     $(P Level 4 is the slowest and has the smallest footprint. )
 
@@ -4057,16 +4079,16 @@ public auto toTrie(size_t level, Set)(Set set)
     else static if(level == 4)
          return codepointSetTrie!(6, 4, 4, 7)(set);
     else
-        static assert(false, 
+        static assert(false,
             "Sorry, toTrie doesn't support levels > 4, use codepointSetTrie directly");
 }
 
 /**
-    $(P Builds $(D Trie) with typically optimal speed-size trade-off
+    $(P Builds a $(D Trie) with typically optimal speed-size trade-off
     and wraps it into a delegate of the following type:
-    $(D delegate bool (dchar ch)). )
+    $(D bool delegate(dchar ch)). )
 
-    $(P Effectively this creates a 'tester' lambda suitable 
+    $(P Effectively this creates a 'tester' lambda suitable
     for algorithms like std.algorithm.find that take unary predicates. )
 
     See the $(S_LINK Synopsis, Synopsis) section for example.
@@ -4075,25 +4097,25 @@ public auto toDelegate(Set)(Set set)
     if(isCodepointSet!Set)
 {
     //3 is very small and is almost as fast as 2-level (due to CPU caches?)
-    auto t = toTrie!3(set); 
+    auto t = toTrie!3(set);
     return (dchar ch) => t[ch];
 }
 
 /**
-    $(P Opaque wrapper around unsigned built-in integers and 
+    $(P Opaque wrapper around unsigned built-in integers and
     code unit (char/wchar/dchar) types.
-    Parameter $(D sz) indicates that the value is confined 
-    to the range of [0, 2^^sz$(RPAREN). With this knowledge it can be 
-    packed more tightly when stored in certain 
+    Parameter $(D sz) indicates that the value is confined
+    to the range of [0, 2^^sz$(RPAREN). With this knowledge it can be
+    packed more tightly when stored in certain
     data-structures like trie. )
 
     Note:
     $(P The $(D BitPacked!(T, sz)) is implicitly convertible to $(D T)
-    but not vise-versa. Users have to ensure the value fits in 
-    the range required and use the $(D cast) 
+    but not vise-versa. Users have to ensure the value fits in
+    the range required and use the $(D cast)
     operator to perform the conversion.)
 */
-struct BitPacked(T, size_t sz) 
+struct BitPacked(T, size_t sz)
     if(isIntegral!T || is(T:dchar))
 {
     enum bitSize = sz;
@@ -4102,8 +4124,8 @@ struct BitPacked(T, size_t sz)
 }
 
 /*
-    Depending on the form of the passed argument $(D bitSizeOf) returns 
-    the amount of bits required to represent a given type 
+    Depending on the form of the passed argument $(D bitSizeOf) returns
+    the amount of bits required to represent a given type
     or a return type of a given functor.
 */
 template bitSizeOf(Args...)
@@ -4125,27 +4147,27 @@ template bitSizeOf(Args...)
 }
 
 /**
-    Tests if $(D T) is some instantiation of $(LREF BitPacked)!(U, x) 
+    Tests if $(D T) is some instantiation of $(LREF BitPacked)!(U, x)
     and thus suitable for packing.
 */
 template isBitPacked(T)
 {
-    static if(is(T dummy == BitPacked!(U, bits), U, size_t bits))    
+    static if(is(T dummy == BitPacked!(U, bits), U, size_t bits))
         enum isBitPacked = true;
     else
         enum isBitPacked = false;
 }
 
 /**
-    Gives the type $(D U) from $(LREF BitPacked)!(U, x) 
+    Gives the type $(D U) from $(LREF BitPacked)!(U, x)
     or $(D T) itself for every other type.
 */
 template TypeOfBitPacked(T)
 {
-    static if(is(T dummy == BitPacked!(U, bits), U, size_t bits))    
+    static if(is(T dummy == BitPacked!(U, bits), U, size_t bits))
         alias TypeOfBitPacked = U;
     else
-        alias TypeOfBitPacked = T;   
+        alias TypeOfBitPacked = T;
 }
 
 /*
@@ -4177,9 +4199,9 @@ template sliceBitsImpl(size_t from, size_t to)
 }
 
 /*
-    A helper for defining lambda function that yields a slice 
+    A helper for defining lambda function that yields a slice
     of certain bits from an unsigned integral value.
-    The resulting lambda is wrapped in assumeSize and can be used directly 
+    The resulting lambda is wrapped in assumeSize and can be used directly
     with $(D Trie) template.
 */
 public template sliceBits(size_t from, size_t to)
@@ -4264,7 +4286,7 @@ unittest
 
     enum max3 = 256;
     // sliceBits
-    auto trie3 = buildTrie!(bool, uint, max3, 
+    auto trie3 = buildTrie!(bool, uint, max3,
             sliceBits!(6,8), sliceBits!(4,6), sliceBits!(0,4)
         )(redundant3.byInterval);
     trieStats(trie3);
@@ -4279,13 +4301,12 @@ unittest
     auto trie4 = buildTrie!(bool, size_t, max4,
             sliceBits!(13, 16), sliceBits!(9, 13), sliceBits!(6, 9) , sliceBits!(0, 6)
         )(redundant4.byInterval);
-    foreach(i; 0..max4){        
+    foreach(i; 0..max4){
         if(i in redundant4)
             assert(trie4[i], text(cast(uint)i));
     }
     trieStats(trie4);
-    version(none) //@@@BUG@@@ 10067
-    {
+
         alias mapToS = mapTrieIndex!(useItemAt!(0, char));
         string[] redundantS = ["tea", "start", "orange"];
         redundantS.sort!((a,b) => mapToS(a) < mapToS(b))();
@@ -4295,7 +4316,6 @@ unittest
         assert(strie["test"], text(strie["test"]));
         assert(!strie["aea"]);
         assert(strie["s"]);
-    }
 
     // a bit size test
     auto a = array(map!(x => to!ubyte(x))(iota(0, 256)));
@@ -4308,8 +4328,8 @@ unittest
 template useItemAt(size_t idx, T)
     if(isIntegral!T || is(T: dchar))
 {
-    static size_t impl(in T[] arr){ return arr[idx]; }
-    alias assumeSize!(impl, 8*T.sizeof)  useItemAt;
+    size_t impl(in T[] arr){ return arr[idx]; }
+    alias useItemAt = assumeSize!(impl, 8*T.sizeof);
 }
 
 template useLastItem(T)
@@ -4335,7 +4355,7 @@ template idxTypes(Key, size_t fullBits, Prefix...)
     else
     {
         // Important note on bit packing
-        // Each level has to hold enough of bits to address the next one    
+        // Each level has to hold enough of bits to address the next one
         // The bottom level is known to hold full bit width
         // thus it's size in pages is full_bit_width - size_of_last_prefix
         // Recourse on this notion
@@ -4348,7 +4368,7 @@ template idxTypes(Key, size_t fullBits, Prefix...)
 
 //============================================================================
 
-private @trusted int comparePropertyName(Char1, Char2)(const(Char1)[] a, const(Char2)[] b)
+@trusted int comparePropertyName(Char1, Char2)(const(Char1)[] a, const(Char2)[] b)
 {
     alias low = std.ascii.toLower;
     return cmp(
@@ -4378,7 +4398,7 @@ bool propertyNameLess(Char1, Char2)(const(Char1)[] a, const(Char2)[] b)
         arr ~= (0b1_00<<5) | cast(ubyte)(val>>8);
         arr ~= val & 0xFF;
     }
-    else        
+    else
     {
         assert(val < (1<<21));
         arr ~= (0b1_01<<5) | cast(ubyte)(val>>16);
@@ -4409,7 +4429,7 @@ public ubyte[] compressIntervals(Range)(Range intervals)
     uint base = 0;
     // RLE encode
     foreach(val; intervals)
-    {        
+    {
         compressTo(val[0]-base, storage);
         base = val[0];
         if(val[1] != lastDchar+1) // till the end of the domain so don't store it
@@ -4443,7 +4463,7 @@ unittest
 
 // Creates a range of $(D CodepointInterval) that lazily decodes compressed data.
 // TODO: make it package when pushed to std.
-@safe public auto decompressIntervals(const(ubyte)[] data) 
+@safe public auto decompressIntervals(const(ubyte)[] data)
 {
     return DecompressedIntervals(data);
 }
@@ -4473,7 +4493,7 @@ unittest
             _idx = size_t.max;
             return;
         }
-        uint base = _front[1];                
+        uint base = _front[1];
         _front[0] = base + decompressFrom(_stream, _idx);
         if(_idx == _stream.length)// odd length ---> till the end
             _front[1] = lastDchar+1;
@@ -4489,7 +4509,7 @@ unittest
         return _idx == size_t.max;
     }
 
-    @property DecompressedIntervals save() { return this; } 
+    @property DecompressedIntervals save() { return this; }
 }
 
 static assert(isInputRange!DecompressedIntervals);
@@ -4525,7 +4545,7 @@ else
 
 @trusted bool loadProperty(Set=CodepointSet, C)
     (in C[] name, ref Set target)
-{        
+{
     alias comparePropertyName ucmp;
     // conjure cumulative properties by hand
     if(ucmp(name, "L") == 0 || ucmp(name, "Letter") == 0)
@@ -4623,9 +4643,9 @@ else
 // CTFE-only helper for checking property names at compile-time
 @safe bool isPrettyPropertyName(C)(in C[] name)
 {
-    auto names = [ 
-        "L", "Letters", 
-        "LC", "Cased Letter", 
+    auto names = [
+        "L", "Letters",
+        "LC", "Cased Letter",
         "M", "Mark",
         "N", "Number",
         "P", "Punctuation",
@@ -4641,8 +4661,8 @@ else
 
 // ditto, CTFE-only, not optimized
 @safe private static bool findSetName(alias table, C)(in C[] name)
-{        
-    return findUnicodeSet!table(name) >= 0;            
+{
+    return findUnicodeSet!table(name) >= 0;
 }
 
 template SetSearcher(alias table, string kind)
@@ -4673,32 +4693,32 @@ template SetSearcher(alias table, string kind)
 }
 
 /**
-    A single entry point to lookup Unicode $(CODEPOINT) sets by name or alias of 
-    block, script or general category.
+    A single entry point to lookup Unicode $(CODEPOINT) sets by name or alias of
+    a block, script or general category.
 
     It uses well defined standard rules of property name lookup.
     This includes fuzzy matching of names, so that
-    'White_Space', 'white-SpAce' and 'whitespace' are all considered equal 
+    'White_Space', 'white-SpAce' and 'whitespace' are all considered equal
     and yield the same set of white space $(CHARACTERS).
 */
 @safe public struct unicode
 {
     /**
         Performs the lookup of set of $(CODEPOINTS)
-        with compile-time correctness checking. 
+        with compile-time correctness checking.
         This short-cut version combines 3 searches:
-        across blocks, scripts and common binary properties.
+        across blocks, scripts, and common binary properties.
 
         Note that since scripts and blocks overlap the
-        usual trick to disambiguate is used - to get a block use 
-        $(D unicode.InBlockName), to search a script 
+        usual trick to disambiguate is used - to get a block use
+        $(D unicode.InBlockName), to search a script
         use $(D unicode.ScriptName).
 
-        See also $(LREF block), $(LREF script) 
+        See also $(LREF block), $(LREF script)
         and (not included in this search) $(LREF hangulSyllableType).
 
         Example:
-        ---            
+        ---
         auto ascii = unicode.ASCII;
         assert(ascii['A']);
         assert(ascii['~']);
@@ -4709,7 +4729,7 @@ template SetSearcher(alias table, string kind)
         //underscores, '-' and whitespace in names are ignored too
         auto latin = unicode.in_latin1_Supplement;
         assert(latin['à']);
-        assert(!latin['$']); 
+        assert(!latin['$']);
         //BTW Latin 1 Supplement is a block, hence "In" prefix
         assert(latin == unicode("In Latin 1 Supplement"));
         import std.exception;
@@ -4717,7 +4737,7 @@ template SetSearcher(alias table, string kind)
         assert(collectException(unicode("InCyrilliac")));
         ---
     */
-    
+
     static @property auto opDispatch(string name)()
     {
         static if(findAny(name))
@@ -4725,20 +4745,21 @@ template SetSearcher(alias table, string kind)
         else
             static assert(false, "No unicode set by name "~name~" was found.");
     }
-    
+
     /**
-        The same lookup across blocks, scripts or binary property
+        The same lookup across blocks, scripts, or binary properties,
         but performed at run-time.
-        This version is provided for cases where $(D name) 
-        is not known beforehand otherwise compile-time
+        This version is provided for cases where $(D name)
+        is not known beforehand; otherwise compile-time
         checked $(LREF opDispatch) is typically a better choice.
 
-        See $(S_LINK Unicode properties, table of properties) for available sets.
+        See the $(S_LINK Unicode properties, table of properties) for available
+        sets.
     */
     static auto opCall(C)(in C[] name)
         if(is(C : dchar))
     {
-        return loadAny(name);       
+        return loadAny(name);
     }
 
     /**
@@ -4746,16 +4767,16 @@ template SetSearcher(alias table, string kind)
 
         See also $(S_LINK Unicode properties, table of properties).
 
-        Note: 
-        Here block names are unambiguous as no scripts are searched 
-        and thus to search use simply $(D unicode.block.BlockName) notation. 
+        Note:
+        Here block names are unambiguous as no scripts are searched
+        and thus to search use simply $(D unicode.block.BlockName) notation.
 
         See $(S_LINK Unicode properties, table of properties) for available sets.
 
         Example:
         ---
         // use .block for explicitness
-        assert(unicode.block.Greek_and_Coptic == unicode.InGreek_and_Coptic);        
+        assert(unicode.block.Greek_and_Coptic == unicode.InGreek_and_Coptic);
         ---
     */
     struct block
@@ -4765,8 +4786,9 @@ template SetSearcher(alias table, string kind)
 
     /**
         Narrows down the search for sets of $(CODEPOINTS) to all Unicode scripts.
-        
-        See $(S_LINK Unicode properties, table of properties) for available sets.
+
+        See the $(S_LINK Unicode properties, table of properties) for available
+        sets.
 
         Example:
         ---
@@ -4789,12 +4811,13 @@ template SetSearcher(alias table, string kind)
     /**
         Fetch a set of $(CODEPOINTS) that have the given hangul syllable type.
 
-        Other non-binary properties (once supported) are following the same 
-        notation - $(D unicode.propertyName.propertyValue) for compile-time 
+        Other non-binary properties (once supported) follow the same
+        notation - $(D unicode.propertyName.propertyValue) for compile-time
         checked access and $(D unicode.propertyName(propertyValue))
         for run-time checked one.
 
-        See $(S_LINK Unicode properties, table of properties) for available sets.
+        See the $(S_LINK Unicode properties, table of properties) for available
+        sets.
 
         Example:
         ---
@@ -4816,8 +4839,8 @@ private:
 
     static bool findAny(string name)
     {
-        return isPrettyPropertyName(name) 
-            || findSetName!propsTab(name) || findSetName!scriptsTab(name) 
+        return isPrettyPropertyName(name)
+            || findSetName!propsTab(name) || findSetName!scriptsTab(name)
             || (ucmp(name[0..2],"In") == 0 && findSetName!blocksTab(name[2..$]));
     }
 
@@ -4825,13 +4848,13 @@ private:
     {
         Set set;
         bool loaded = loadProperty(name, set) || loadUnicodeSet!scriptsTab(name, set)
-            || (ucmp(name[0..2],"In") == 0 
+            || (ucmp(name[0..2],"In") == 0
                 && loadUnicodeSet!blocksTab(name[2..$], set));
         if(loaded)
             return set;
         throw new Exception("No unicode set by name "~name.to!string()~" was found.");
     }
-    
+
     //FIXME: re-disable once the compiler is fixed
     // Disabled to prevent the mistake of creating instances of this pseudo-struct.
     //@disable ~this();
@@ -4849,9 +4872,9 @@ unittest
     //underscores, '-' and whitespace in names are ignored too
     auto latin = unicode.Inlatin1_Supplement;
     assert(latin['à']);
-    assert(!latin['$']); 
+    assert(!latin['$']);
     //BTW Latin 1 Supplement is a block, hence "In" prefix
-    assert(latin == unicode("In Latin 1 Supplement"));  
+    assert(latin == unicode("In Latin 1 Supplement"));
     import std.exception;
     // R-T look up throws if no such set is found
     assert(collectException(unicode("InCyrilliac")));
@@ -4863,7 +4886,7 @@ unittest
     //check that some leading vowels are present
     foreach(vowel; '\u1110'..'\u115F'+1)
         assert(leadingVowel[vowel]);
-    assert(leadingVowel == unicode.hangulSyllableType.L);  
+    assert(leadingVowel == unicode.hangulSyllableType.L);
 
     auto arabicScript = unicode.script.arabic;
     auto arabicBlock = unicode.block.arabic;
@@ -4909,7 +4932,7 @@ template genericDecodeGrapheme(bool getValue)
         enum GraphemeState {
             Start,
             CR,
-            RI, 
+            RI,
             L,
             V,
             LVT
@@ -4935,7 +4958,7 @@ template genericDecodeGrapheme(bool getValue)
                 if(ch == '\r')
                     state = CR;
                 else if(isRegionalIndicator(ch))
-                    state = RI;             
+                    state = RI;
                 else if(isHangL(ch))
                     state = L;
                 else if(hangLV[ch] || isHangV(ch))
@@ -4962,8 +4985,8 @@ template genericDecodeGrapheme(bool getValue)
             case RI:
                 if(isRegionalIndicator(ch))
                     mixin(eat);
-                else 
-                    goto L_End_Extend;                
+                else
+                    goto L_End_Extend;
             break;
             case L:
                 if(isHangL(ch))
@@ -4989,7 +5012,7 @@ template genericDecodeGrapheme(bool getValue)
                     state = LVT;
                     mixin(eat);
                 }
-                else 
+                else
                     goto L_End_Extend;
             break;
             case LVT:
@@ -5003,7 +5026,7 @@ template genericDecodeGrapheme(bool getValue)
             }
         }
     L_End_Extend:
-        
+
         while(!range.empty)
         {
             ch = range.front;
@@ -5032,7 +5055,7 @@ public: // Public API continues
     //ASCII as usual is 1 code unit, 1 code point etc.
     assert(graphemeStride("  ", 1) == 1);
     //A + combing ring above
-    string city = "A\u030Arhus";    
+    string city = "A\u030Arhus";
     size_t first = graphemeStride(city, 0);
     assert(first == 3); //\u030A has 2 UTF-8 code units
     assert(city[0..first] == "A\u030A");
@@ -5053,7 +5076,7 @@ unittest
 {
     assert(graphemeStride("  ", 1) == 1);
     //A + combing ring above
-    string city = "A\u030Arhus";    
+    string city = "A\u030Arhus";
     size_t first = graphemeStride(city, 0);
     assert(first == 3); //\u030A has 2 UTF-8 code units
     assert(city[0..first] == "A\u030A");
@@ -5061,12 +5084,12 @@ unittest
 }
 
 /++
-    Reads one full grapheme cluster from an input range of dchar $(D inp). 
+    Reads one full grapheme cluster from an input range of dchar $(D inp).
 
     For examples see the $(LREF Grapheme) below.
 
-    Note: 
-    This function modifies $(D inp) and thus $(D inp) 
+    Note:
+    This function modifies $(D inp) and thus $(D inp)
     must be an L-value.
 +/
 Grapheme decodeGrapheme(Input)(ref Input inp)
@@ -5092,14 +5115,14 @@ unittest
 }
 
 /++
-    $(P A structure designed to effectively pack $(CHARACTERS) 
-    of a $(CLUSTER). 
+    $(P A structure designed to effectively pack $(CHARACTERS)
+    of a $(CLUSTER).
     )
 
-    $(P $(D Grapheme) has value semantics so 2 copies of a $(D Grapheme) 
-    always refer to distinct objects. In the most actual scenarios a $(D Grapheme) 
-    fits on stack and avoids memory allocation overhead for all but quite 
-    long clusters. 
+    $(P $(D Grapheme) has value semantics so 2 copies of a $(D Grapheme)
+    always refer to distinct objects. In most actual scenarios a $(D Grapheme)
+    fits on the stack and avoids memory allocation overhead for all but quite
+    long clusters.
     )
 
     Example:
@@ -5115,7 +5138,7 @@ unittest
     auto wideOne = decodeGrapheme(bold);
     assert(wideOne.length == 2);
     assert(wideOne[].equal("u\u0308"));
-        
+
     // the usual range manipulation is possible
     assert(wideOne[].filter!isMark.equal("\u0308"));
     ---
@@ -5131,7 +5154,7 @@ public:
     }
 
     this(Input)(Input seq)
-        if(!isDynamicArray!Input 
+        if(!isDynamicArray!Input
             && isInputRange!Input && is(ElementType!Input : dchar))
     {
         this ~= seq;
@@ -5148,7 +5171,7 @@ public:
         Writes a $(CODEPOINT) $(D ch) at given index in this cluster.
 
         Warning:
-        Use of this facility may invalidate grapheme cluster, 
+        Use of this facility may invalidate grapheme cluster,
         see also $(LREF Grapheme.valid).
 
         Example:
@@ -5170,7 +5193,7 @@ public:
     /++
         Random-access range over Grapheme's $(CHARACTERS).
 
-        Warning: Invalidates when this Grapheme leaves the scope, 
+        Warning: Invalidates when this Grapheme leaves the scope,
         attempts to use it then would lead to memory corruption.
     +/
     @system auto opSlice(size_t a, size_t b) pure nothrow
@@ -5186,14 +5209,14 @@ public:
 
     /// Grapheme cluster length in $(CODEPOINTS).
     @property size_t length() const  pure nothrow
-    { 
-        return isBig ? len_ : slen_ & 0x7F; 
+    {
+        return isBig ? len_ : slen_ & 0x7F;
     }
 
     /++
         Append $(CHARACTER) $(D ch) to this grapheme.
-        Warning: 
-        Use of this facility may invalidate grapheme cluster, 
+        Warning:
+        Use of this facility may invalidate grapheme cluster,
         see also $(D valid).
 
         Example:
@@ -5221,7 +5244,7 @@ public:
                     convertToBig();// & fallthrough to "big" branch
                 else
                 {
-                    write24(small_.ptr, ch, smallLength); 
+                    write24(small_.ptr, ch, smallLength);
                     slen_++;
                     return this;
                 }
@@ -5230,7 +5253,7 @@ public:
             assert(isBig);
             if(len_ + 1 > cap_)
             {
-                cap_ += grow;                
+                cap_ += grow;
                 ptr_ = cast(ubyte*)enforce(realloc(ptr_, 3*(cap_+1)));
             }
             write24(ptr_, ch, len_++);
@@ -5240,7 +5263,7 @@ public:
             static assert(false, "No operation "~op~" defined for Grapheme");
     }
 
-    /// Append all of $(CHARACTERS) from the input range $(D inp) to this Grapheme.
+    /// Append all $(CHARACTERS) from the input range $(D inp) to this Grapheme.
     ref opOpAssign(string op, Input)(Input inp)
         if(isInputRange!Input && is(ElementType!Input : dchar))
     {
@@ -5256,12 +5279,12 @@ public:
 
     /++
         True if this object contains valid extended grapheme cluster.
-        Decoding primitives of this module always return valid $(D Grapheme).
+        Decoding primitives of this module always return a valid $(D Grapheme).
 
-        Appending to and direct manipulation of grapheme's $(CHARACTERS) may 
-        render it no longer valid. Certain applications may chose to use 
+        Appending to and direct manipulation of grapheme's $(CHARACTERS) may
+        render it no longer valid. Certain applications may chose to use
         Grapheme as a "small string" of any $(CODEPOINTS) and ignore this property
-        entirely.        
+        entirely.
     +/
     @property bool valid()() /*const*/
     {
@@ -5290,7 +5313,7 @@ public:
 
 private:
     enum small_bytes = ((ubyte*).sizeof+3*size_t.sizeof-1);
-    // "out of the blue" grow rate, needs testing 
+    // "out of the blue" grow rate, needs testing
     // (though graphemes are typically small < 9)
     enum grow = 20;
     enum small_cap = small_bytes/3;
@@ -5300,8 +5323,8 @@ private:
     {
         struct
         {
-            ubyte* ptr_; 
-            size_t cap_;           
+            ubyte* ptr_;
+            size_t cap_;
             size_t len_;
             size_t padding_;
         }
@@ -5329,24 +5352,24 @@ private:
     void setBig(){ slen_ |= small_flag; }
 
     @property size_t smallLength() pure nothrow
-    { 
-        return slen_ & small_mask; 
+    {
+        return slen_ & small_mask;
     }
-    @property ubyte isBig() const  pure nothrow 
-    { 
-        return slen_ & small_flag; 
+    @property ubyte isBig() const  pure nothrow
+    {
+        return slen_ & small_flag;
     }
 }
 
 //verify the example
-unittest 
+unittest
 {
     import std.algorithm;
     string bold = "ku\u0308hn";
 
     // note that decodeGrapheme takes parameter by ref
     auto first = decodeGrapheme(bold);
-    
+
     assert(first.length == 1);
     assert(first[0] == 'k');
 
@@ -5356,7 +5379,7 @@ unittest
     assert(wideOne[].equalS("u\u0308"));
     assert(wideOne.length == 2);
     static assert(isRandomAccessRange!(typeof(wideOne[])));
-    
+
     // all of the usual range manipulation is possible
     assert(wideOne[].filter!isMark().equalS("\u0308"));
 
@@ -5428,26 +5451,26 @@ unittest
 
 /++
     $(P Does basic case-insensitive comparison of strings $(D str1) and $(D str2).
-    This function uses simpler comparison rule thus achieving better performance 
+    This function uses simpler comparison rule thus achieving better performance
     then $(LREF icmp). However keep in mind the warning below.)
 
-    Warning: 
+    Warning:
     This function only handles 1:1 $(CODEPOINT) mapping
-    and thus is not sufficient for certain alphabets 
+    and thus is not sufficient for certain alphabets
     like German, Greek and few others.
 
     Example:
     ---
     assert(sicmp("Август", "авгусТ") == 0);
     // Greek also works as long as there is no 1:M mapping in sight
-    assert(sicmp("ΌΎ", "όύ") == 0);     
+    assert(sicmp("ΌΎ", "όύ") == 0);
     // things like the following won't get matched as equal
     // Greek small letter iota with dialytika and tonos
-    assert(sicmp("ΐ", "\u03B9\u0308\u0301" != 0);    
+    assert(sicmp("ΐ", "\u03B9\u0308\u0301" != 0);
 
     // while icmp has no problem with that
-    assert(icmp("ΐ", "\u03B9\u0308\u0301" == 0); 
-    assert(icmp("ΌΎ", "όύ") == 0);    
+    assert(icmp("ΐ", "\u03B9\u0308\u0301" == 0);
+    assert(icmp("ΌΎ", "όύ") == 0);
     ---
 +/
 int sicmp(C1, C2)(const(C1)[] str1, const(C2)[] str2)
@@ -5463,7 +5486,7 @@ int sicmp(C1, C2)(const(C1)[] str1, const(C2)[] str2)
         if(!diff)
             continue;
         size_t idx = simpleCaseTrie[lhs];
-        size_t idx2 = simpleCaseTrie[rhs];        
+        size_t idx2 = simpleCaseTrie[rhs];
         // simpleCaseTrie is packed index table
         if(idx != EMPTY_CASE_TRIE)
         {
@@ -5509,10 +5532,10 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
                 return 0;
             }
         }
-        else 
+        else
         {// OK it's a long chunk, like 'ss' for German
             dstring seq = fTable[idx].seq;
-            if(rhs == seq[0] 
+            if(rhs == seq[0]
                 && rtail.skipOver(seq[1..$]))
             {
                 // note that this path modifies rtail 
@@ -5527,23 +5550,23 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
 /++
     $(P Does case insensitive comparison of $(D str1) and $(D str2).
     Follows the rules of full case-folding mapping.
-    This includes matching as equal german ß with "ss" and 
+    This includes matching as equal german ß with "ss" and
     other 1:M $(CODEPOINT) mappings unlike $(LREF sicmp).
-    The cost of $(D icmp) being pedantically correct is 
-    slightly worse performance. 
+    The cost of $(D icmp) being pedantically correct is
+    slightly worse performance.
     )
 
     Example:
     ---
     assert(icmp("Rußland", "Russland") == 0);
-    assert(icmp("ᾩ -> \u1F70\u03B9", "\u1F61\u03B9 -> ᾲ") == 0);    
+    assert(icmp("ᾩ -> \u1F70\u03B9", "\u1F61\u03B9 -> ᾲ") == 0);
     ---
 +/
 int icmp(S1, S2)(S1 str1, S2 str2)
     if(isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar)
     && isForwardRange!S2 && is(Unqual!(ElementType!S2) == dchar))
 {
-    
+
     for(;;)
     {
         if(str1.empty)
@@ -5565,7 +5588,7 @@ int icmp(S1, S2)(S1 str1, S2 str2)
         int cmpRL = fullCasedCmp(rhs, lhs, str1);
         if(!cmpRL)
             continue;
-        // cmpXX contain remapped codepoints 
+        // cmpXX contain remapped codepoints
         // to obtain stable ordering of icmp
         diff = cmpLR - cmpRL;
         return diff;
@@ -5574,7 +5597,7 @@ int icmp(S1, S2)(S1 str1, S2 str2)
 
 unittest
 {
-    foreach(cfunc; TypeTuple!(icmp, sicmp)) 
+    foreach(cfunc; TypeTuple!(icmp, sicmp))
     {
         foreach(S1; TypeTuple!(string, wstring, dstring))
         foreach(S2; TypeTuple!(string, wstring, dstring))
@@ -5593,38 +5616,30 @@ unittest
         }
         // check that the order is properly agnostic to the case
         auto strs = [ "Apple", "ORANGE",  "orAcle", "amp", "banana"];
-        sort!((a,b) => cfunc(a,b) < 0)(strs);    
-        assert(strs == ["amp", "Apple",  "banana", "orAcle", "ORANGE"]);        
+        sort!((a,b) => cfunc(a,b) < 0)(strs);
+        assert(strs == ["amp", "Apple",  "banana", "orAcle", "ORANGE"]);
     }
     assert(icmp("ßb", "ssa") > 0);
     //Check example:
     assert(icmp("Russland", "Rußland") == 0);
     assert(icmp("ᾩ -> \u1F70\u03B9", "\u1F61\u03B9 -> ᾲ") == 0);
     assert(icmp("ΐ"w, "\u03B9\u0308\u0301") == 0);
-    assert(sicmp("ΐ", "\u03B9\u0308\u0301") != 0);    
+    assert(sicmp("ΐ", "\u03B9\u0308\u0301") != 0);
 }
 
 /++
-    Returns the combining class of $(D ch).
-    
-    $(P The combining class is a numerical value used by the 
-    Unicode Canonical Ordering Algorithm to determine which sequences 
-    of combining marks are to be considered canonically equivalent and
-    which are not. )
-
-    $(P Canonical equivalence is the criterion used to determine whether two 
-    $(CODEPOINT) sequences are considered identical for interpretation. )
+    $(P Returns the $(S_LINK Combining class, combining class) of $(D ch).)
 
     Example:
     ---
     //shorten the code
-    alias CC = combiningClass; 
+    alias CC = combiningClass;
 
     // combining tilda
     assert(CC('\u0303') == 230);
     // combining ring below
     assert(CC('\u0325') == 220);
-    // the simple consequence is that  "tilda" should be 
+    // the simple consequence is that  "tilda" should be
     // placed after a "ring below" in a sequence
     ---
 +/
@@ -5646,10 +5661,10 @@ unittest
 /// Unicode character decomposition type.
 enum UnicodeDecomposition {
     /// Canonical decomposition. The result is canonically equivalent sequence.
-    Canonical, 
+    Canonical,
     /**
          Compatibility decomposition. The result is compatibility equivalent sequence.
-         Note: Compatibility decomposition is a $(B lossy) conversion, 
+         Note: Compatibility decomposition is a $(B lossy) conversion,
          typically suitable only for fuzzy matching and internal processing.
     */
     Compatibility
@@ -5659,7 +5674,7 @@ enum UnicodeDecomposition {
     Shorthand aliases for character decomposition type, passed as a
     template parameter to $(LREF decompose).
 */
-enum { 
+enum {
     Canonical = UnicodeDecomposition.Canonical,
     Compatibility = UnicodeDecomposition.Compatibility
 };
@@ -5668,10 +5683,10 @@ enum {
     Try to canonically compose 2 $(CHARACTERS).
     Returns the composed $(CHARACTER) if they do compose and dchar.init otherwise.
 
-    The assumption is that $(D first) comes before $(D second) in the original text, 
+    The assumption is that $(D first) comes before $(D second) in the original text,
     usually meaning that the first is a starter.
 
-    Note: Hangul syllables are not covered by this function. 
+    Note: Hangul syllables are not covered by this function.
     See $(D composeJamo) below.
 
     Example:
@@ -5705,15 +5720,15 @@ public dchar compose(dchar first, dchar second)
 /++
     Returns a full $(S_LINK Canonical decomposition, Canonical)
     (by default) or $(S_LINK Compatibility decomposition, Compatibility)
-    decomposition of $(CHARACTER) $(D ch). 
-    If no decomposition is available returns a $(LREF Grapheme) 
+    decomposition of $(CHARACTER) $(D ch).
+    If no decomposition is available returns a $(LREF Grapheme)
     with the $(D ch) itself.
 
     Note:
-    This function also decomposes hangul syllables 
-    as prescribed by the standard. 
+    This function also decomposes hangul syllables
+    as prescribed by the standard.
     See also $(LREF decomposeHangul) for a restricted version
-    that takes into account only hangul syllables  but  
+    that takes into account only hangul syllables  but
     no other decompositions.
 
     Example:
@@ -5739,7 +5754,7 @@ public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch)
     }
     ushort idx = mapping[ch];
     if(!idx) // not found, check hangul arithmetic decomposition
-        return decomposeHangul(ch); 
+        return decomposeHangul(ch);
     auto decomp = table[idx..$].until(0);
     return Grapheme(decomp);
 }
@@ -5822,7 +5837,7 @@ void hangulRecompose(dchar[] seq)
                 seq[idx+1] = dchar.init;
                 idx += 2;
             }
-        } 
+        }
         else
             idx++;
     }
@@ -5832,8 +5847,8 @@ void hangulRecompose(dchar[] seq)
 public:
 
 /**
-    Decomposes a Hangul syllable. If ($D ch) is not a composed syllable
-    then this function returns $(LREF Grapheme) containing only $(D ch) as is. 
+    Decomposes a Hangul syllable. If $(D ch) is not a composed syllable
+    then this function returns $(LREF Grapheme) containing only $(D ch) as is.
 
     Example:
     ---
@@ -5845,7 +5860,7 @@ Grapheme decomposeHangul(dchar ch)
 {
     int idxS = cast(int)ch - jamoSBase;
     if(idxS < 0 || idxS >= jamoSCount) return Grapheme(ch);
-    int idxL = idxS / jamoNCount;   
+    int idxL = idxS / jamoNCount;
     int idxV = (idxS % jamoNCount) / jamoTCount;
     int idxT = idxS % jamoTCount;
 
@@ -5858,21 +5873,21 @@ Grapheme decomposeHangul(dchar ch)
 }
 
 /++
-    Try to compose hangul syllable out of a leading consonant ($(D lead)), 
+    Try to compose hangul syllable out of a leading consonant ($(D lead)),
     a $(D vowel) and optional $(D trailing) consonant jamos.
 
     On success returns the composed LV or LVT hangul syllable.
 
-    If any of $(D lead) and $(D vowel) are not a valid hangul jamo 
+    If any of $(D lead) and $(D vowel) are not a valid hangul jamo
     of the respective $(CHARACTER) class returns dchar.init.
 
     Example:
     ---
     assert(composeJamo('\u1111', '\u1171', '\u11B6') == '\uD4DB');
-    // leaving out T-vowel, or passing any codepoint 
+    // leaving out T-vowel, or passing any codepoint
     // that is not trailing consonant composes an LV-syllable
-    assert(composeJamo('\u1111', '\u1171') == '\uD4CC'); 
-    assert(composeJamo('\u1111', '\u1171', ' ') == '\uD4CC'); 
+    assert(composeJamo('\u1111', '\u1171') == '\uD4CC');
+    assert(composeJamo('\u1111', '\u1171', ' ') == '\uD4CC');
     assert(composeJamo('\u1111', 'A') == dchar.init);
     assert(composeJamo('A', '\u1171') == dchar.init);
     ---
@@ -5881,10 +5896,10 @@ dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init)
 {
     if(!isJamoL(lead))
         return dchar.init;
-    int indexL = lead - jamoLBase;    
-    if(!isJamoV(vowel)) 
+    int indexL = lead - jamoLBase;
+    if(!isJamoV(vowel))
         return dchar.init;
-    int indexV = vowel - jamoVBase;    
+    int indexV = vowel - jamoVBase;
     int indexLV = indexL * jamoNCount + indexV * jamoTCount;
     dchar syllable = jamoSBase + indexLV;
     return isJamoT(trailing) ? syllable + (trailing - jamoTBase) : syllable;
@@ -5904,14 +5919,14 @@ unittest
     assert(decomposeHangul('\uD4DB')[].equalS("\u1111\u1171\u11B6"));
     assert(composeJamo('\u1111', '\u1171', '\u11B6') == '\uD4DB');
     assert(composeJamo('\u1111', '\u1171') == '\uD4CC'); //leave out T-vowel
-    assert(composeJamo('\u1111', '\u1171', ' ') == '\uD4CC'); 
+    assert(composeJamo('\u1111', '\u1171', ' ') == '\uD4CC');
     assert(composeJamo('\u1111', 'A') == dchar.init);
     assert(composeJamo('A', '\u1171') == dchar.init);
 }
 
 /**
     Enumeration type for normalization forms,
-    passed as template parameter for functions like $(LREF normalize). 
+    passed as template parameter for functions like $(LREF normalize).
 */
 enum NormalizationForm {
     NFC,
@@ -5921,13 +5936,13 @@ enum NormalizationForm {
 }
 
 
-enum { 
+enum {
     /**
         Shorthand aliases from values indicating normalization forms.
     */
-    NFC = NormalizationForm.NFC, 
+    NFC = NormalizationForm.NFC,
     ///ditto
-    NFD = NormalizationForm.NFD, 
+    NFD = NormalizationForm.NFD,
     ///ditto
     NFKC = NormalizationForm.NFKC,
     ///ditto
@@ -5935,20 +5950,20 @@ enum {
 };
 
 /++
-    Returns $(D input) string normalized to the chosen form. 
-    The Form C is used by default. 
+    Returns $(D input) string normalized to the chosen form.
+    Form C is used by default.
 
-    For more information on normalization forms see 
+    For more information on normalization forms see
     the $(S_LINK Normalization, normalization section).
 
     Note:
-    In cases where the string in question is already normalized, 
+    In cases where the string in question is already normalized,
     it is returned unmodified and no memory allocation happens.
 
     Example:
     ---
     //any encoding works
-    wstring greet = "Hello world"; 
+    wstring greet = "Hello world";
     assert(normalize(greet) is greet); //the same exact slice
 
     // An example of a character with all 4 forms being different:
@@ -5960,7 +5975,7 @@ enum {
     ---
 +/
 inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
-{ 
+{
     auto anchors = splitNormalized!norm(input);
     if(anchors[0] == input.length && anchors[1] == input.length)
         return input;
@@ -5986,25 +6001,25 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
         ccc.length = decomposed.length;
         size_t firstNonStable = 0;
         ubyte lastClazz = 0;
-        
+
         foreach(idx, dchar ch; decomposed)
         {
             auto clazz = combiningClassTrie[ch];
             ccc[idx] = clazz;
             if(clazz == 0 && lastClazz != 0)
             {
-                // found a stable code point after unstable ones 
+                // found a stable code point after unstable ones
                 sort!("a[0] < b[0]", SwapStrategy.stable)
                     (zip(ccc[firstNonStable..idx], decomposed[firstNonStable..idx]));
                 firstNonStable = decomposed.length;
             }
             else if(clazz != 0 && lastClazz == 0)
             {
-                // found first unstable code point after stable ones 
+                // found first unstable code point after stable ones
                 firstNonStable = idx;
             }
-            lastClazz = clazz;            
-        }           
+            lastClazz = clazz;
+        }
         sort!("a[0] < b[0]", SwapStrategy.stable)
             (zip(ccc[firstNonStable..$], decomposed[firstNonStable..$]));
         static if(norm == NFC || norm == NFKC)
@@ -6012,9 +6027,9 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
             size_t idx = 0;
             auto first = countUntil(ccc, 0);
             if(first >= 0) // no starters?? no recomposition
-            {                
+            {
                 for(;;)
-                {                    
+                {
                     auto second = recompose(first, decomposed, ccc);
                     if(second == decomposed.length)
                         break;
@@ -6038,7 +6053,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
         ccc.assumeSafeAppend();
         input = input[anchors[1]..$];
         // and move on
-        anchors = splitNormalized!norm(input);       
+        anchors = splitNormalized!norm(input);
     }while(anchors[0] != input.length);
     app.put(input[0..anchors[0]]);
     return cast(inout(C)[])app.data;
@@ -6053,7 +6068,7 @@ unittest
     //check example
 
     //any encoding works
-    wstring greet = "Hello world"; 
+    wstring greet = "Hello world";
     assert(normalize(greet) is greet); //the same exact slice
 
     // An example of a character with all 4 forms being different:
@@ -6079,8 +6094,8 @@ private size_t recompose(size_t start, dchar[] input, ubyte[] ccc)
             break;
         int curCC = ccc[i];
         // In any character sequence beginning with a starter S
-        // a character C is blocked from S if and only if there 
-        // is some character B between S and C, and either B 
+        // a character C is blocked from S if and only if there
+        // is some character B between S and C, and either B
         // is a starter or it has the same or higher combining class as C.
         //------------------------
         // Applying to our case:
@@ -6093,11 +6108,11 @@ private size_t recompose(size_t start, dchar[] input, ubyte[] ccc)
         {
             dchar comp = compose(input[start], input[i]);
             if(comp != dchar.init)
-            {                
+            {
                 input[start] = comp;
                 input[i] = dchar.init;// put a sentinel
-                // current was merged so its CCC shouldn't affect 
-                // composing with the next one 
+                // current was merged so its CCC shouldn't affect
+                // composing with the next one
             }
             else {
                 // if it was a starter then accumCC is now 0, end of loop
@@ -6112,13 +6127,13 @@ private size_t recompose(size_t start, dchar[] input, ubyte[] ccc)
             if(accumCC == 0)
                 break;
         }
-        i++;        
+        i++;
     }
     return i;
 }
 
 // returns tuple of 2 indexes that delimit:
-// normalized text, piece that needs normalization and 
+// normalized text, piece that needs normalization and
 // the rest of input starting with stable code point
 private auto splitNormalized(NormalizationForm norm, C)(const(C)[] input)
 {
@@ -6138,7 +6153,7 @@ private auto splitNormalized(NormalizationForm norm, C)(const(C)[] input)
         {
             return seekStable!norm(idx, input);
         }
-        
+
         if(notAllowedIn!norm(ch))
         {
            return seekStable!norm(idx, input);
@@ -6188,14 +6203,14 @@ private auto seekStable(NormalizationForm norm, C)(size_t idx, in C[] input)
     assert(allowedIn!NFKC('я'));
     assert(allowedIn!NFKD('я'));
     assert(allowedIn!NFC('Z'));
-    ---    
+    ---
 */
 public bool allowedIn(NormalizationForm norm)(dchar ch)
 {
     return !notAllowedIn!norm(ch);
 }
 
-// not user friendly name but more direct 
+// not user friendly name but more direct
 private bool notAllowedIn(NormalizationForm norm)(dchar ch)
 {
     static if(norm == NFC)
@@ -6223,9 +6238,9 @@ unittest
 
 version(std_uni_bootstrap)
 {
-    // old version used for bootstrapping of gen_uni.d that generates 
+    // old version used for bootstrapping of gen_uni.d that generates
     // up to date optimal versions of all of isXXX functions
-    @safe pure nothrow public bool isWhite(dchar c) 
+    @safe pure nothrow public bool isWhite(dchar c)
     {
         return std.ascii.isWhite(c) ||
                c == lineSep || c == paraSep ||
@@ -6243,7 +6258,7 @@ public:
     (general Unicode category: Part of C0(tab, vertical tab, form feed,
     carriage return, and linefeed characters), Zs, Zl, Zp, and NEL(U+0085))
 +/
-@safe pure nothrow 
+@safe pure nothrow
 public bool isWhite(dchar c)
 {
     return isWhiteGen(c); // call pregenerated binary search
@@ -6327,7 +6342,7 @@ bool isUpper(dchar c)
 
 deprecated ("Please use std.uni.toLower instead")
 @safe pure nothrow
-dchar toUniLower(dchar c) 
+dchar toUniLower(dchar c)
 {
     return toLower(c);
 }
@@ -6335,8 +6350,8 @@ dchar toUniLower(dchar c)
 /++
     If $(D c) is a Unicode uppercase $(CHARACTER), then its lowercase equivalent
     is returned. Otherwise $(D c) is returned.
-    
-    Warning: certain alphabets like German, Greek have no 1:1
+
+    Warning: certain alphabets like German and Greek have no 1:1
     upper-lower mapping. Use overload of toLower which takes full string instead.
 +/
 @safe pure nothrow
@@ -6405,9 +6420,9 @@ dchar toUniUpper(dchar c)
 /++
     If $(D c) is a Unicode lowercase $(CHARACTER), then its uppercase equivalent
     is returned. Otherwise $(D c) is returned.
-     
-    Warning: 
-    Certain alphabets like German, Greek have no 1:1
+
+    Warning:
+    Certain alphabets like German and Greek have no 1:1
     upper-lower mapping. Use overload of toUpper which takes full string instead.
 +/
 @safe pure nothrow
@@ -6479,7 +6494,7 @@ bool isUniAlpha(dchar c)
 +/
 @safe pure nothrow
 bool isAlpha(dchar c)
-{    
+{
     // optimization
     if(c < 0xAA)
     {
@@ -6493,7 +6508,7 @@ bool isAlpha(dchar c)
             return true;
         return false;
     }
-    
+
     static immutable alphaTrie = pAlpha; 
     return alphaTrie[c];
 }
@@ -6502,9 +6517,9 @@ bool isAlpha(dchar c)
 {
     auto alpha = unicode("Alphabetic");
     foreach(ch; alpha.byCodepoint)
-        assert(isAlpha(ch));   
+        assert(isAlpha(ch));
     foreach(ch; 0..0x4000)
-        assert((ch in alpha) == isAlpha(ch)); 
+        assert((ch in alpha) == isAlpha(ch));
 }
 
 
@@ -6523,9 +6538,9 @@ bool isMark(dchar c)
 {
     auto mark = unicode("Mark");
     foreach(ch; mark.byCodepoint)
-        assert(isMark(ch));   
+        assert(isMark(ch));
     foreach(ch; 0..0x4000)
-        assert((ch in mark) == isMark(ch)); 
+        assert((ch in mark) == isMark(ch));
 }
 
 /++
@@ -6576,13 +6591,13 @@ unittest
 
 /++
     Returns whether $(D c) is a Unicode symbol $(CHARACTER)
-    (general Unicode category: Sm, Sc, Sk, So).   
+    (general Unicode category: Sm, Sc, Sk, So).
 +/
 @safe pure nothrow
 bool isSymbol(dchar c)
 {
     static immutable symbolTrie = pSymbol;
-    return symbolTrie[c];
+   return symbolTrie[c];
 }
 
 unittest
@@ -6622,22 +6637,22 @@ unittest
 /++
     Returns whether $(D c) is a Unicode graphical $(CHARACTER)
     (general Unicode category: L, M, N, P, S, Zs).
- 
+
 +/
 @safe pure nothrow
 bool isGraphical(dchar c)
-{        
+{
     static immutable graphicalTrie = pGraph;
     return graphicalTrie[c];
 }
 
 
 unittest
-{   
+{
     auto set = unicode("Graphical");
     import std.string;
     foreach(ch; set.byCodepoint)
-        assert(isGraphical(ch), format("%4x", ch));    
+        assert(isGraphical(ch), format("%4x", ch));
     foreach(ch; 0..0x4000)
         assert((ch in set) == isGraphical(ch));
 }
@@ -6658,7 +6673,7 @@ unittest
     assert(isControl('\u0000'));
     assert(isControl('\u0081'));
     assert(!isControl('\u0100'));
-    auto cc = unicode.Cc;    
+    auto cc = unicode.Cc;
     foreach(ch; cc.byCodepoint)
         assert(isControl(ch));
     foreach(ch; 0..0x1000)
@@ -6728,7 +6743,7 @@ bool isSurrogateLo(dchar c)
 }
 
 /++
-    Returns whether $(D c) is a Unicode non-character i.e. 
+    Returns whether $(D c) is a Unicode non-character i.e.
     a $(CODEPOINT) with no assigned abstract character.
     (general Unicode category: Cn)
 +/
@@ -6736,7 +6751,7 @@ bool isSurrogateLo(dchar c)
 bool isNonCharacter(dchar c)
 {
     static immutable nonCharacterTrie = pNonChar;
-    return nonCharacterTrie[c]; 
+    return nonCharacterTrie[c];
 }
 
 unittest
@@ -6766,7 +6781,7 @@ immutable nfdQC = asTrie(nfdQCTrieEntries);
 immutable nfkcQC = asTrie(nfkcQCTrieEntries);
 immutable nfkdQC = asTrie(nfkdQCTrieEntries);
 
-immutable graphemeExtend = asTrie(graphemeExtendTrieEntries); 
+immutable graphemeExtend = asTrie(graphemeExtendTrieEntries);
 immutable spacingMark = asTrie(mcTrieEntries);
 
 // TODO: move sets below to Tries
