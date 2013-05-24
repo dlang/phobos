@@ -407,6 +407,71 @@ unittest
 }
 
 /++
+    Returns the index of the first occurence of $(D c) in $(D s) with respect
+    to the start index $(D startIdx). If $(D c) is not found, then $(D -1) is
+    returned. If $(D c) is found the value of the returned index is at least
+    $(D startIdx). $(D startIdx) represents a codeunit index in $(D s). If the
+    sequence starting at $(D startIdx) does not represent a well formed codepoint,
+    then a $(XREF utf,UTFException) may be thrown.
+
+    $(D cs) indicates whether the comparisons are case sensitive.
+  +/
+ptrdiff_t indexOf(Char)(const(Char)[] s, dchar c, const size_t startIdx,
+        CaseSensitive cs = CaseSensitive.yes) pure
+    if (isSomeChar!Char)
+{
+    if (startIdx < s.length)
+    {
+        ptrdiff_t foundIdx = indexOf(s[startIdx .. $], c, cs);
+        if (foundIdx != -1)
+        {
+            return foundIdx + cast(ptrdiff_t)startIdx;
+        }
+    }
+    return -1;
+}
+
+unittest
+{
+    debug(string) printf("string.indexOf(startIdx).unittest\n");
+
+    foreach (S; TypeTuple!(string, wstring, dstring))
+    {
+        assert(indexOf(cast(S)null, cast(dchar)'a', 1) == -1);
+        assert(indexOf(to!S("def"), cast(dchar)'a', 1) == -1);
+        assert(indexOf(to!S("abba"), cast(dchar)'a', 1) == 3);
+        assert(indexOf(to!S("def"), cast(dchar)'f', 1) == 2);
+
+        assert((to!S("def")).indexOf(cast(dchar)'a', 1,
+                CaseSensitive.no) == -1);
+        assert(indexOf(to!S("def"), cast(dchar)'a', 1,
+                CaseSensitive.no) == -1);
+        assert(indexOf(to!S("def"), cast(dchar)'a', 12,
+                CaseSensitive.no) == -1);
+        assert(indexOf(to!S("AbbA"), cast(dchar)'a', 2,
+                CaseSensitive.no) == 3);
+        assert(indexOf(to!S("def"), cast(dchar)'F', 2, CaseSensitive.no) == 2);
+
+        S sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
+        assert(indexOf("def", cast(char)'f', cast(uint)2,
+            CaseSensitive.no) == 2);
+        assert(indexOf(sPlts, cast(char)'P', 12, CaseSensitive.no) == 23);
+        assert(indexOf(sPlts, cast(char)'R', cast(ulong)1,
+            CaseSensitive.no) == 2);
+    }
+
+    foreach(cs; EnumMembers!CaseSensitive)
+    {
+        assert(indexOf("hello\U00010143\u0100\U00010143", '\u0100', 2, cs)
+            == 9);
+        assert(indexOf("hello\U00010143\u0100\U00010143"w, '\u0100', 3, cs)
+            == 7);
+        assert(indexOf("hello\U00010143\u0100\U00010143"d, '\u0100', 6, cs)
+            == 6);
+    }
+}
+
+/++
     Returns the index of the first occurence of $(D sub) in $(D s). If $(D sub)
     is not found, then $(D -1) is returned.
 
@@ -482,6 +547,88 @@ unittest
     });
 }
 
+/++
+    Returns the index of the first occurence of $(D sub) in $(D s) with
+    respect to the start index $(D startIdx). If $(D sub) is not found, then
+    $(D -1) is returned. If $(D sub) is found the value of the returned index
+    is at least $(D startIdx). $(D startIdx) represents a codeunit index in
+    $(D s). If the sequence starting at $(D startIdx) does not represent a well
+    formed codepoint, then a $(XREF utf,UTFException) may be thrown.
+
+    $(D cs) indicates whether the comparisons are case sensitive.
+  +/
+ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
+        const size_t startIdx, CaseSensitive cs = CaseSensitive.yes)
+    if (isSomeChar!Char1 && isSomeChar!Char2)
+{
+    if (startIdx < s.length)
+    {
+        ptrdiff_t foundIdx = indexOf(s[startIdx .. $], sub, cs);
+        if (foundIdx != -1)
+        {
+            return foundIdx + cast(ptrdiff_t)startIdx;
+        }
+    }
+    return -1;
+}
+
+unittest
+{
+    debug(string) printf("string.indexOf(startIdx).unittest\n");
+
+    foreach(S; TypeTuple!(string, wstring, dstring))
+    {
+        foreach(T; TypeTuple!(string, wstring, dstring))
+        {
+            assert(indexOf(cast(S)null, to!T("a"), 1337) == -1);
+            assert(indexOf(to!S("def"), to!T("a"), 0) == -1);
+            assert(indexOf(to!S("abba"), to!T("a"), 2) == 3);
+            assert(indexOf(to!S("def"), to!T("f"), 1) == 2);
+            assert(indexOf(to!S("dfefffg"), to!T("fff"), 1) == 3);
+            assert(indexOf(to!S("dfeffgfff"), to!T("fff"), 5) == 6);
+
+            assert(indexOf(to!S("dfeffgfff"), to!T("a"), 1, CaseSensitive.no) == -1);
+            assert(indexOf(to!S("def"), to!T("a"), 2, CaseSensitive.no) == -1);
+            assert(indexOf(to!S("abba"), to!T("a"), 3, CaseSensitive.no) == 3);
+            assert(indexOf(to!S("def"), to!T("f"), 1, CaseSensitive.no) == 2);
+            assert(indexOf(to!S("dfefffg"), to!T("fff"), 2, CaseSensitive.no) == 3);
+            assert(indexOf(to!S("dfeffgfff"), to!T("fff"), 4, CaseSensitive.no) == 6);
+            assert(indexOf(to!S("dfeffgffföä"), to!T("öä"), 9, CaseSensitive.no) == 9,
+                to!string(indexOf(to!S("dfeffgffföä"), to!T("öä"), 9, CaseSensitive.no))
+                ~ " " ~ S.stringof ~ " " ~ T.stringof);
+
+            S sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
+            S sMars = "Who\'s \'My Favorite Maritian?\'";
+
+            assert(indexOf(sMars, to!T("MY fAVe"), 10,
+                CaseSensitive.no) == -1);
+            assert(indexOf(sMars, to!T("mY fAVOriTe"), 4, CaseSensitive.no) == 7);
+            assert(indexOf(sPlts, to!T("mArS:"), 0, CaseSensitive.no) == 0);
+            assert(indexOf(sPlts, to!T("rOcK"), 12, CaseSensitive.no) == 17);
+            assert(indexOf(sPlts, to!T("Un."), 32, CaseSensitive.no) == 41);
+            assert(indexOf(sPlts, to!T(sPlts), 0, CaseSensitive.no) == 0);
+
+            assert(indexOf("\u0100", to!T("\u0100"), 0, CaseSensitive.no) == 0);
+
+            // Thanks to Carlos Santander B. and zwang
+            assert(indexOf("sus mejores cortesanos. Se embarcaron en el puerto de Dubai y",
+                           to!T("page-break-before"), 10, CaseSensitive.no) == -1);
+
+            // In order for indexOf with and without index to be consistent
+            assert(indexOf(to!S(""), to!T("")) == indexOf(to!S(""), to!T(""), 0));
+        }
+
+        foreach(cs; EnumMembers!CaseSensitive)
+        {
+            assert(indexOf("hello\U00010143\u0100\U00010143", to!S("\u0100"),
+                3, cs) == 9);
+            assert(indexOf("hello\U00010143\u0100\U00010143"w, to!S("\u0100"),
+                3, cs) == 7);
+            assert(indexOf("hello\U00010143\u0100\U00010143"d, to!S("\u0100"),
+                3, cs) == 6);
+        }
+    }
+}
 
 /++
     Returns the index of the last occurence of $(D c) in $(D s). If $(D c)
