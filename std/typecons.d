@@ -3753,3 +3753,41 @@ unittest
     assert(flag1 == Yes.abc);
 }
 
+
+/**
+A wrapper around the $(D shared) attribute.
+
+"$(D static)" defined a thread-local non-shared variable, and "$(D shared)"
+defines an instance-local shared variable, but "$(D static shared)" defines a
+process-global shared variable - not a thread-local shared variable. This is
+where $(D Shared) comes in - $(static Shared!(T)) will create a thread-local
+shared variable.
+*/
+public struct Shared(T)
+{
+    public shared(T) __shared_content;
+    public alias __shared_content this;
+}
+
+///
+unittest
+{
+    static class Foo
+    {
+        static shared(Foo) a;
+        static Shared!Foo b;
+    }
+
+    //Initialize both a and b in another thread:
+    auto thread = new core.thread.Thread({
+            Foo.a = new shared(Foo)();
+            Foo.b = new shared(Foo)();
+            });
+    thread.start();
+    thread.join();
+
+    //a is static shared, so there is one Foo.a for all threads.
+    assert(Foo.a !is null);
+    //b is just static, so this thread has a different Foo.a.
+    assert(Foo.b is null);
+}
