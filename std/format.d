@@ -178,7 +178,7 @@ $(I FormatChar):
     values $(D nan) and $(D infinity)).  Ignore if there's a $(I
     Precision).))
 
-    $(TR $(TD $(B ' ')) $(TD numeric)) $(TD Prefix positive
+    $(TR $(TD $(B ' ')) $(TD numeric) $(TD Prefix positive
     numbers in a signed conversion with a space.))
 
     <dt>$(I Width)
