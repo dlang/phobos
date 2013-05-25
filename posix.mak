@@ -48,9 +48,9 @@ ifeq (,$(OS))
 	$(error Unrecognized or unsupported OS for uname: $(uname_S))
 endif
 
-# For now, 32 bit is the default model
+# For now, 64 bit is the default model
 ifeq (,$(MODEL))
-	MODEL:=32
+	MODEL:=64
 endif
 
 override PIC:=$(if $(PIC),-fPIC,)
