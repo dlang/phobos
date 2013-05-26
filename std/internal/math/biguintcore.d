@@ -73,6 +73,13 @@ else static if (BigDigit.sizeof == long.sizeof)
 }
 else static assert(0, "Unsupported BigDigit size");
 
+private import std.traits:isIntegral;
+enum BigDigitBits = BigDigit.sizeof*8;
+template maxBigDigits(T) if (isIntegral!T)
+{
+    enum maxBigDigits = (T.sizeof+BigDigit.sizeof-1)/BigDigit.sizeof;
+}
+
 enum BigDigit [] ZERO = [0];
 enum BigDigit [] ONE = [1];
 enum BigDigit [] TWO = [2];
@@ -197,15 +204,24 @@ public:
     ///
     int opCmp(Tulong)(Tulong y) pure if(is (Tulong == ulong))
     {
-        if (data.length > 2)
+        if (data.length > maxBigDigits!Tulong)
             return 1;
-        uint ylo = cast(uint)(y & 0xFFFF_FFFF);
-        uint yhi = cast(uint)(y >> 32);
-        if (data.length == 2 && data[1] != yhi)
-            return data[1] > yhi ? 1: -1;
-        if (data[0] == ylo)
-            return 0;
-        return data[0] > ylo ? 1: -1;
+
+        foreach_reverse (i; 0 .. maxBigDigits!Tulong)
+        {
+            BigDigit tmp = cast(BigDigit)(y>>(i*BigDigitBits));
+            if (tmp == 0)
+                if (data.length >= i+1)
+                    return 1;
+                else
+                    continue;
+            else
+                if (i+1 > data.length)
+                    return -1;
+                else if (tmp != data[i])
+                    return data[i] > tmp ? 1 : -1;
+        }
+        return 0;
     }
 
     bool opEquals(Tdummy = void)(ref const BigUint y) pure const
@@ -830,6 +846,13 @@ public:
 
 } // end BigUint
 
+unittest
+{
+    // ulong comparison test
+    BigUint a = [1];
+    assert(a == 1);
+    assert(a < 0x8000_0000_0000_0000UL); // bug 9548
+}
 
 // Remove leading zeros from x, to restore the BigUint invariant
 BigDigit[] removeLeadingZeros(BigDigit [] x) pure
