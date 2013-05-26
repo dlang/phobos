@@ -57,6 +57,9 @@ import core.exception, core.stdc.errno;
         T          = The $(D Throwable) to test for.
         expression = The expression to test.
         msg        = Optional message to output on test failure.
+                     If msg is empty, and the thrown exception has a
+                     non-empty msg field, the exception's msg field
+                     will be output on test failure.
 
     Throws:
         $(D AssertError) if the given $(D Throwable) is thrown.
@@ -70,7 +73,7 @@ assertNotThrown(enforceEx!StringException(true, "Error!"));
 
 assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
            enforceEx!StringException(false, "Error!"))) ==
-       `assertNotThrown failed: StringException was thrown.`);
+       `assertNotThrown failed: StringException was thrown: Error!`);
 --------------------
   +/
 void assertNotThrown(T : Throwable = Exception, E)
@@ -83,8 +86,8 @@ void assertNotThrown(T : Throwable = Exception, E)
         expression();
     catch(T t)
     {
-        immutable tail = msg.empty ? "." : ": " ~ msg;
-
+        immutable message = msg.empty ? t.msg : msg;
+        immutable tail = message.empty ? "." : ": " ~ message;
         throw new AssertError(format("assertNotThrown failed: %s was thrown%s",
                                      T.stringof,
                                      tail),
@@ -104,6 +107,18 @@ unittest
 
     assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
                enforceEx!StringException(false, "Error!"))) ==
+           `assertNotThrown failed: StringException was thrown: Error!`);
+
+    assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
+               enforceEx!StringException(false, ""), "Error!")) ==
+           `assertNotThrown failed: StringException was thrown: Error!`);
+
+    assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
+               enforceEx!StringException(false, ""))) ==
+           `assertNotThrown failed: StringException was thrown.`);
+
+    assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
+               enforceEx!StringException(false, ""), "")) ==
            `assertNotThrown failed: StringException was thrown.`);
 }
 
@@ -554,14 +569,7 @@ template enforceEx(E)
     }
 }
 
-/++
-    $(RED Deprecated. It will be removed in October 2012. Please use the version
-          of $(D enforceEx) which takes an exception that constructs with
-          $(D new E(msg, file, line)).)
-
-    If $(D !!value) is $(D true), $(D value) is returned. Otherwise,
-    $(D new E(msg)) is thrown.
-  +/
+// Explicitly undocumented. It will be removed in November 2013.
 deprecated("Please use the version of enforceEx which takes an exception that constructs with new E(msg, file, line).")
 template enforceEx(E)
     if (is(typeof(new E(""))) && !is(typeof(new E("", __FILE__, __LINE__))) && !is(typeof(new E(__FILE__, __LINE__))))
@@ -1199,4 +1207,175 @@ unittest
     // A a = { c };
     //process(a.sd); // works
     //process(structuralCast!StorableDocument(d)); // works
+}
+
+/++
+    ML-style functional exception handling. Runs the supplied expression and
+    returns its result. If the expression throws a $(D Throwable), runs the
+    supplied error handler instead and return its result. The error handler's
+    type must be the same as the expression's type.
+
+    Params:
+        E            = The type of $(D Throwable)s to catch. Defaults to ${D Exception}
+        T            = The return type of the expression and the error handler.
+        expression   = The expression to run and return its result.
+        errorHandler = The handler to run if the expression throwed.
+
+    Examples:
+--------------------
+    //Revert to a default value upon an error:
+    assert("x".to!int().ifThrown(0) == 0);
+--------------------
+
+    You can also chain multiple calls to ifThrown, each capturing errors from the
+    entire preceding expression.
+
+    Example:
+--------------------
+    //Chaining multiple calls to ifThrown to attempt multiple things in a row:
+    string s="true";
+    assert(s.to!int().
+            ifThrown(cast(int)s.to!double()).
+            ifThrown(cast(int)s.to!bool())
+            == 1);
+
+    //Respond differently to different types of errors
+    assert(enforce("x".to!int() < 1).to!string()
+            .ifThrown!ConvException("not a number")
+            .ifThrown!Exception("number too small")
+            == "not a number");
+--------------------
+
+    The expression and the errorHandler must have a common type they can both
+    be implicitly casted to, and that type will be the type of the compound
+    expression.
+
+    Examples:
+--------------------
+    //null and new Object have a common type(Object).
+    static assert(is(typeof(null.ifThrown(new Object())) == Object));
+    static assert(is(typeof((new Object()).ifThrown(null)) == Object));
+
+    //1 and new Object do not have a common type.
+    static assert(!__traits(compiles, 1.ifThrown(new Object())));
+    static assert(!__traits(compiles, (new Object()).ifThrown(1)));
+--------------------
+
+    If you need to use the actual thrown expection, you can use a delegate.
+    Example:
+--------------------
+    //Use a lambda to get the thrown object.
+    assert("%s".format().ifThrown!Exception(e => e.classinfo.name) == "std.format.FormatException");
+--------------------
+    +/
+//lazy version
+CommonType!(T1, T2) ifThrown(E : Throwable = Exception, T1, T2)(lazy scope T1 expression, lazy scope T2 errorHandler)
+{
+    static assert(!is(typeof(return) == void),
+            "The error handler's return value("~T2.stringof~") does not have a common type with the expression("~T1.stringof~").");
+    try
+    {
+        return expression();
+    }
+    catch(E)
+    {
+        return errorHandler();
+    }
+}
+
+///ditto
+//delegate version
+CommonType!(T1, T2) ifThrown(E : Throwable, T1, T2)(lazy scope T1 expression, scope T2 delegate(E) errorHandler)
+{
+    static assert(!is(typeof(return) == void),
+            "The error handler's return value("~T2.stringof~") does not have a common type with the expression("~T1.stringof~").");
+    try
+    {
+        return expression();
+    }
+    catch(E e)
+    {
+        return errorHandler(e);
+    }
+}
+
+///ditto
+//delegate version, general overload to catch any Exception
+CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate(Exception) errorHandler)
+{
+    static assert(!is(typeof(return) == void),
+            "The error handler's return value("~T2.stringof~") does not have a common type with the expression("~T1.stringof~").");
+    try
+    {
+        return expression();
+    }
+    catch(Exception e)
+    {
+        return errorHandler(e);
+    }
+}
+
+//Verify Examples
+unittest
+{
+    //Revert to a default value upon an error:
+    assert("x".to!int().ifThrown(0) == 0);
+
+    //Chaining multiple calls to ifThrown to attempt multiple things in a row:
+    string s="true";
+    assert(s.to!int().
+            ifThrown(cast(int)s.to!double()).
+            ifThrown(cast(int)s.to!bool())
+            == 1);
+
+    //Respond differently to different types of errors
+    assert(enforce("x".to!int() < 1).to!string()
+            .ifThrown!ConvException("not a number")
+            .ifThrown!Exception("number too small")
+            == "not a number");
+
+    //null and new Object have a common type(Object).
+    static assert(is(typeof(null.ifThrown(new Object())) == Object));
+    static assert(is(typeof((new Object()).ifThrown(null)) == Object));
+
+    //1 and new Object do not have a common type.
+    static assert(!__traits(compiles, 1.ifThrown(new Object())));
+    static assert(!__traits(compiles, (new Object()).ifThrown(1)));
+
+    //Use a lambda to get the thrown object.
+    assert("%s".format().ifThrown(e => e.classinfo.name) == "std.format.FormatException");
+}
+
+unittest
+{
+    //Basic behaviour - all versions.
+    assert("1".to!int().ifThrown(0) == 1);
+    assert("x".to!int().ifThrown(0) == 0);
+    assert("1".to!int().ifThrown!ConvException(0) == 1);
+    assert("x".to!int().ifThrown!ConvException(0) == 0);
+    assert("1".to!int().ifThrown(e=>0) == 1);
+    assert("x".to!int().ifThrown(e=>0) == 0);
+    static if (__traits(compiles, 0.ifThrown!Exception(e => 0))) //This will only work with a fix that was not yet pulled
+    {
+        assert("1".to!int().ifThrown!ConvException(e=>0) == 1);
+        assert("x".to!int().ifThrown!ConvException(e=>0) == 0);
+    }
+
+    //Exceptions other than stated not caught.
+    assert("x".to!int().ifThrown!StringException(0).collectException!ConvException() !is null);
+    static if (__traits(compiles, 0.ifThrown!Exception(e => 0))) //This will only work with a fix that was not yet pulled
+    {
+        assert("x".to!int().ifThrown!StringException(e=>0).collectException!ConvException() !is null);
+    }
+
+    //Default does not include errors.
+    int[] a=[];
+    assert(a[0].ifThrown(0).collectException!RangeError() !is null);
+    assert(a[0].ifThrown(e=>0).collectException!RangeError() !is null);
+
+    //Incompatible types are not accepted.
+    static assert(!__traits(compiles, 1.ifThrown(new Object())));
+    static assert(!__traits(compiles, (new Object()).ifThrown(1)));
+    static assert(!__traits(compiles, 1.ifThrown(e=>new Object())));
+    static assert(!__traits(compiles, (new Object()).ifThrown(e=>1)));
 }

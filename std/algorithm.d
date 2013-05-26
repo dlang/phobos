@@ -146,7 +146,7 @@ until a specific value is found.)
 $(LEADINGROW Comparison
 )
 $(TR $(TDNW $(LREF cmp)) $(TD $(D cmp("abc", "abcd")) is $(D
--1), $(D cmp("abc", aba")) is $(D 1), and $(D cmp("abc", "abc")) is
+-1), $(D cmp("abc", "aba")) is $(D 1), and $(D cmp("abc", "abc")) is
 $(D 0).)
 )
 $(TR $(TDNW $(LREF equal)) $(TD Compares ranges for
@@ -326,12 +326,12 @@ module std.algorithm;
 
 import std.c.string, core.bitop;
 import std.array, std.ascii, std.container, std.conv, std.exception,
-    std.functional, std.math, std.metastrings, std.range, std.string,
+    std.functional, std.math, std.random, std.range, std.string,
     std.traits, std.typecons, std.typetuple, std.uni, std.utf;
 
 version(unittest)
 {
-    import std.random, std.stdio, std.string;
+    import std.stdio;
     mixin(dummyRanges);
 }
 
@@ -348,7 +348,7 @@ Example:
 ----
 int[] arr1 = [ 1, 2, 3, 4 ];
 int[] arr2 = [ 5, 6 ];
-auto squares = map!("a * a")(chain(arr1, arr2));
+auto squares = map!(a => a * a)(chain(arr1, arr2));
 assert(equal(squares, [ 1, 4, 9, 16, 25, 36 ]));
 ----
 
@@ -617,19 +617,27 @@ Example:
 ----
 int[] arr = [ 1, 2, 3, 4, 5 ];
 // Sum all elements
-auto sum = reduce!("a + b")(0, arr);
+auto sum = reduce!((a,b) => a + b)(0, arr);
+assert(sum == 15);
+
+// Sum again, using a string predicate with "a" and "b"
+sum = reduce!"a + b"(0, arr);
 assert(sum == 15);
 
 // Compute the maximum of all elements
 auto largest = reduce!(max)(arr);
 assert(largest == 5);
 
+// Max again, but with Uniform Function Call Syntax (UFCS)
+largest = arr.reduce!(max);
+assert(largest == 5);
+
 // Compute the number of odd elements
-auto odds = reduce!("a + (b & 1)")(0, arr);
+auto odds = reduce!((a,b) => a + (b & 1))(0, arr);
 assert(odds == 3);
 
 // Compute the sum of squares
-auto ssquares = reduce!("a + b * b")(0, arr);
+auto ssquares = reduce!((a,b) => a + b * b)(0, arr);
 assert(ssquares == 55);
 
 // Chain multiple ranges into seed
@@ -641,7 +649,11 @@ assert(r == 107);
 // Mixing convertible types is fair game, too
 double[] c = [ 2.5, 3.0 ];
 auto r1 = reduce!("a + b")(chain(a, b, c));
-assert(r1 == 112.5);
+assert(approxEqual(r1, 112.5));
+
+// To minimize nesting of parentheses, Uniform Function Call Syntax can be used
+auto r2 = chain(a, b, c).reduce!("a + b");
+assert(approxEqual(r2, 112.5));
 ----
 
 $(DDOC_SECTION_H Multiple functions:) Sometimes it is very useful to
@@ -657,14 +669,14 @@ Example:
 double[] a = [ 3.0, 4, 7, 11, 3, 2, 5 ];
 // Compute minimum and maximum in one pass
 auto r = reduce!(min, max)(a);
-// The type of r is Tuple!(double, double)
-assert(r[0] == 2);  // minimum
-assert(r[1] == 11); // maximum
+// The type of r is Tuple!(int, int)
+assert(approxEqual(r[0], 2));  // minimum
+assert(approxEqual(r[1], 11)); // maximum
 
 // Compute sum and sum of squares in one pass
 r = reduce!("a + b", "a + b * b")(tuple(0.0, 0.0), a);
-assert(r[0] == 35);  // sum
-assert(r[1] == 233); // sum of squares
+assert(approxEqual(r[0], 35));  // sum
+assert(approxEqual(r[1], 233)); // sum of squares
 // Compute average and standard deviation from the above
 auto avg = r[0] / a.length;
 auto stdev = sqrt(r[1] / a.length - avg * avg);
@@ -1255,18 +1267,25 @@ which $(D predicate(x)) is $(D true).
 Example:
 ----
 int[] arr = [ 1, 2, 3, 4, 5 ];
+
 // Sum all elements
-auto small = filter!("a < 3")(arr);
+auto small = filter!(a => a < 3)(arr);
 assert(equal(small, [ 1, 2 ]));
+
+// Sum again, but with Uniform Function Call Syntax (UFCS)
+auto sum = arr.filter!(a => a < 3);
+assert(equal(sum, [ 1, 2 ]));
+
 // In combination with chain() to span multiple ranges
 int[] a = [ 3, -2, 400 ];
 int[] b = [ 100, -101, 102 ];
-auto r = filter!("a > 0")(chain(a, b));
+auto r = chain(a, b).filter!(a => a > 0);
 assert(equal(r, [ 3, 400, 100, 102 ]));
+
 // Mixing convertible types is fair game, too
 double[] c = [ 2.5, 3.0 ];
-auto r1 = filter!("cast(int) a != a")(chain(c, a, b));
-assert(equal(r1, [ 2.5 ]));
+auto r1 = chain(c, a, b).filter!(a => cast(int) a != a);
+assert(approxEqual(r1, [ 2.5 ]));
 ----
  */
 template filter(alias pred) if (is(typeof(unaryFun!pred)))
@@ -4399,11 +4418,11 @@ unittest
 /++
     Returns the number of elements which must be popped from the front of
     $(D haystack) before reaching an element for which
-    $(D startsWith!pred(haystack, needle)) is $(D true). If
-    $(D startsWith!pred(haystack, needle)) is not $(D true) for any element in
-    $(D haystack), then -1 is returned.
+    $(D startsWith!pred(haystack, needles)) is $(D true). If
+    $(D startsWith!pred(haystack, needles)) is not $(D true) for any element in
+    $(D haystack), then $(D -1) is returned.
 
-    $(D needle) may be either an element or a range.
+    $(D needles) may be either an element or a range.
 
     Examples:
 --------------------
@@ -4419,47 +4438,88 @@ assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
 assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
 --------------------
   +/
-ptrdiff_t countUntil(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
-    if (isForwardRange!R1 && isForwardRange!R2 &&
-        is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
+ptrdiff_t countUntil(alias pred = "a == b", R, Rs...)(R haystack, Rs needles)
+    if (isForwardRange!R
+        && Rs.length > 0
+        && isForwardRange!(Rs[0]) == isInputRange!(Rs[0])
+        && is(typeof(startsWith!pred(haystack, needles[0])))
+        && (Rs.length == 1
+            || is(typeof(countUntil!pred(haystack, needles[1 .. $])))))
 {
     typeof(return) result;
-    static if (hasLength!R1) //Note: Narrow strings don't have length.
+
+    static if (needles.length == 1)
     {
-        //We delegate to find because find is very efficient.
-        //We store the length of the haystack so we don't have to save it.
-        auto len = haystack.length;
-        auto r2 = find!pred(haystack, needle);
-        if (!r2.empty)
-            return cast(typeof(return)) (len - r2.length);
+        static if (hasLength!R) //Note: Narrow strings don't have length.
+        {
+            //We delegate to find because find is very efficient.
+            //We store the length of the haystack so we don't have to save it.
+            auto len = haystack.length;
+            auto r2 = find!pred(haystack, needles[0]);
+            if (!r2.empty)
+              return cast(typeof(return)) (len - r2.length);
+        }
+        else
+        {
+            if (needles[0].empty)
+              return 0;
+
+            //Default case, slower route doing startsWith iteration
+            for ( ; !haystack.empty ; ++result )
+            {
+                //We compare the first elements of the ranges here before
+                //forwarding to startsWith. This avoids making useless saves to
+                //haystack/needle if they aren't even going to be mutated anyways.
+                //It also cuts down on the amount of pops on haystack.
+                if (binaryFun!pred(haystack.front, needles[0].front))
+                {
+                    //Here, we need to save the needle before popping it.
+                    //haystack we pop in all paths, so we do that, and then save.
+                    haystack.popFront();
+                    if (startsWith!pred(haystack.save, needles[0].save.dropOne()))
+                      return result;
+                }
+                else
+                  haystack.popFront();
+            }
+        }
     }
     else
     {
-        if (needle.empty)
-            return 0;
-
-        //Default case, slower route doing startsWith iteration
-        for ( ; !haystack.empty ; ++result )
+        foreach (i, Ri; Rs)
         {
-            //We compare the first elements of the ranges here before
-            //forwarding to startsWith. This avoids making useless saves to
-            //haystack/needle if they aren't even going to be mutated anyways.
-            //It also cuts down on the amount of pops on haystack.
-            if (binaryFun!pred(haystack.front, needle.front))
+            static if (isForwardRange!Ri)
             {
-                //Here, we need to save the needle before popping it.
-                //haystack we pop in all paths, so we do that, and then save.
-                haystack.popFront();
-                if (startsWith!pred(haystack.save, needle.save.dropOne()))
-                    return result;
+                if (needles[i].empty)
+                  return 0;
             }
-            else
-                haystack.popFront();
+        }
+        Tuple!Rs t;
+        foreach (i, Ri; Rs)
+        {
+            static if (!isForwardRange!Ri)
+            {
+                t[i] = needles[i];
+            }
+        }
+        for (; !haystack.empty ; ++result, haystack.popFront())
+        {
+            foreach (i, Ri; Rs)
+            {
+                static if (isForwardRange!Ri)
+                {
+                    t[i] = needles[i].save;
+                }
+            }
+            if (startsWith!pred(haystack.save, t.expand))
+            {
+                return result;
+            }
         }
     }
 
     //Because of @@@8804@@@: Avoids both "unreachable code" or "no return statement"
-    static if (isInfinite!R1) assert(0);
+    static if (isInfinite!R) assert(0);
     else return -1;
 }
 /// ditto
@@ -4507,6 +4567,14 @@ unittest
     assert(r.save.countUntil(r2) == 3);
     assert(r.save.countUntil(7)  == -1);
     assert(r.save.countUntil(r3) == -1);
+}
+
+unittest
+{
+    assert(countUntil("hello world", "world", "asd") == 6);
+    assert(countUntil("hello world", "world", "ello") == 1);
+    assert(countUntil("hello world", "world", "") == 0);
+    assert(countUntil("hello world", "world", 'l') == 2);
 }
 
 /++
@@ -4597,25 +4665,7 @@ unittest
     }
 }
 
-/**
- *  $(RED Deprecated. It will be removed in January 2013.
- *        Currently defaults to $(LREF countUntil) instead.)
- *
- * Not to be confused with its homonym function
- * in $(D std.string).
- *
- * Please use $(D std.string.indexOf) if you wish to find
- * the index of a character in a string.
- *
- * Otherwise, please use $(D std.string.countUntil) to find
- * an element's logical position in a range.
- *
- * Example:
- * --------
- * assert(std.string.indexOf("日本語", '本') == 3);
- * assert(std.algorithm.countUntil("日本語", '本') == 1);
- * --------
- */
+// Explicitly undocumented. It will be removed in November 2013.
 deprecated("Please use std.algorithm.countUntil instead.")
 ptrdiff_t indexOf(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (is(typeof(startsWith!pred(haystack, needle))))
@@ -7822,13 +7872,14 @@ sorted. In addition, it also partitions $(D r) such that all elements
 $(D e1) from $(D r[0]) to $(D r[nth]) satisfy $(D !less(r[nth], e1)),
 and all elements $(D e2) from $(D r[nth]) to $(D r[r.length]) satisfy
 $(D !less(e2, r[nth])). Effectively, it finds the nth smallest
-(according to $(D less)) elements in $(D r). Performs $(BIGOH
-r.length) (if unstable) or $(BIGOH r.length * log(r.length)) (if
-stable) evaluations of $(D less) and $(D swap). See also $(WEB
+(according to $(D less)) elements in $(D r). Performs an expected
+$(BIGOH r.length) (if unstable) or $(BIGOH r.length * log(r.length))
+(if stable) evaluations of $(D less) and $(D swap). See also $(WEB
 sgi.com/tech/stl/nth_element.html, STL's nth_element).
 
-Example:
+If $(D n >= r.length), the algorithm has no effect.
 
+Examples:
 ----
 int[] v = [ 25, 7, 9, 2, 0, 5, 21 ];
 auto n = 4;
@@ -7852,14 +7903,10 @@ void topN(alias less = "a < b",
             "Stable topN not yet implemented");
     while (r.length > nth)
     {
-        auto pivot = r.length / 2;
+        auto pivot = uniform(0, r.length);
         swap(r[pivot], r.back);
         assert(!binaryFun!(less)(r.back, r.back));
-        bool pred(ElementType!(Range) a)
-        {
-            return binaryFun!(less)(a, r.back);
-        }
-        auto right = partition!(pred, ss)(r);
+        auto right = partition!((a) => binaryFun!less(a, r.back), ss)(r);
         assert(right.length >= 1);
         swap(right.front, r.back);
         pivot = r.length - right.length;
@@ -7967,15 +8014,13 @@ void topN(alias less = "a < b",
     }
 }
 
+/// Ditto
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 5, 7, 2, 6, 7 ];
     int[] b = [ 2, 1, 5, 6, 7, 3, 0 ];
     topN(a, b);
     sort(a);
-    sort(b);
     assert(a == [0, 1, 2, 2, 3]);
 }
 
@@ -8977,8 +9022,7 @@ corresponding $(D sort), but $(D schwartzSort) evaluates $(D
 transform) only $(D r.length) times (less than half when compared to
 regular sorting). The usage can be best illustrated with an example.
 
-Example:
-
+Examples:
 ----
 uint hashFun(string) { ... expensive computation ... }
 string[] array = ...;
@@ -8998,24 +9042,59 @@ To check whether an array was sorted and benefit of the speedup of
 Schwartz sorting, a function $(D schwartzIsSorted) is not provided
 because the effect can be achieved by calling $(D
 isSorted!less(map!transform(r))).
+
+Returns: The initial range wrapped as a $(D SortedRange) with the
+predicate $(D (a, b) => binaryFun!less(transform(a),
+transform(b))).
  */
-void schwartzSort(alias transform, alias less = "a < b",
-        SwapStrategy ss = SwapStrategy.unstable, Range)(Range r)
-    if (isRandomAccessRange!(Range) && hasLength!(Range))
+SortedRange!(R, ((a, b) => binaryFun!less(unaryFun!transform(a),
+                                          unaryFun!transform(b))))
+schwartzSort(alias transform, alias less = "a < b",
+        SwapStrategy ss = SwapStrategy.unstable, R)(R r)
+    if (isRandomAccessRange!R && hasLength!R)
 {
-    alias typeof(transform(r.front)) XformType;
-    auto xform = new XformType[r.length];
-    foreach (i, e; r)
+    import core.stdc.stdlib;
+    alias T = typeof(unaryFun!transform(r.front));
+    auto xform1 = (cast(T*) malloc(r.length * T.sizeof))[0 .. r.length];
+    size_t length;
+    scope(exit)
     {
-        xform[i] = transform(e);
+        static if (hasElaborateDestructor!T)
+        {
+            foreach (i; 0 .. length) collectException(destroy(xform1[i]));
+        }
+        free(xform1.ptr);
     }
-    auto z = zip(xform, r);
-    alias typeof(z.front) ProxyType;
-    bool myLess(ProxyType a, ProxyType b)
+    for (; length != r.length; ++length)
     {
-        return binaryFun!less(a[0], b[0]);
+        emplace(xform1.ptr + length, unaryFun!transform(r[length]));
     }
-    sort!(myLess, ss)(z);
+    // Make sure we use ubyte[] and ushort[], not char[] and wchar[]
+    // for the intermediate array, lest zip gets confused.
+    static if (isNarrowString!(typeof(xform1)))
+    {
+        auto xform = xform1.representation();
+    }
+    else
+    {
+        alias xform = xform1;
+    }
+    zip(xform, r).sort!((a, b) => binaryFun!less(a[0], b[0]), ss)();
+    return typeof(return)(r);
+}
+
+unittest
+{
+    // issue 4909
+    Tuple!(char)[] chars;
+    schwartzSort!"a[0]"(chars);
+}
+
+unittest
+{
+    // issue 5924
+    Tuple!(char)[] chars;
+    schwartzSort!((Tuple!(char) c){ return c[0]; })(chars);
 }
 
 unittest
@@ -9249,14 +9328,22 @@ extra indirection, and is always larger than a sorting-based solution
 because it needs space for the index in addition to the original
 collection. The complexity is the same as $(D sort)'s.
 
-$(D makeIndex) overwrites its second argument with the result, but
-never reallocates it. If the second argument's length is less than
-that of the range indexed, an exception is thrown.
-
 The first overload of $(D makeIndex) writes to a range containing
 pointers, and the second writes to a range containing offsets. The
 first overload requires $(D Range) to be a forward range, and the
 latter requires it to be a random-access range.
+
+$(D makeIndex) overwrites its second argument with the result, but
+never reallocates it.
+
+Returns: The pointer-based version returns a $(D SortedRange) wrapper
+over index, of type $(D SortedRange!(RangeIndex, (a, b) =>
+binaryFun!less(*a, *b))) thus reflecting the ordering of the
+index. The index-based version returns $(D void) because the ordering
+relation involves not only $(D index) but also $(D r).
+
+Throws: If the second argument's length is less than that of the range
+indexed, an exception is thrown.
 
 Example:
 ----
@@ -9273,7 +9360,8 @@ assert(isSorted!
     (index2));
 ----
 */
-void makeIndex(
+SortedRange!(RangeIndex, (a, b) => binaryFun!less(*a, *b))
+makeIndex(
     alias less = "a < b",
     SwapStrategy ss = SwapStrategy.unstable,
     Range,
@@ -9288,12 +9376,8 @@ void makeIndex(
         index[i] = &(r.front);
     enforce(index.length == i);
     // sort the index
-    static bool indirectLess(ElementType!(RangeIndex) a,
-            ElementType!(RangeIndex) b)
-    {
-        return binaryFun!(less)(*a, *b);
-    }
-    sort!(indirectLess, ss)(index);
+    sort!((a, b) => binaryFun!less(*a, *b), ss)(index);
+    return typeof(return)(index);
 }
 
 /// Ditto
@@ -9303,32 +9387,28 @@ void makeIndex(
     Range,
     RangeIndex)
 (Range r, RangeIndex index)
-    if (isRandomAccessRange!(Range) && !isInfinite!(Range) &&
-        isRandomAccessRange!(RangeIndex) && !isInfinite!(RangeIndex) &&
-        isIntegral!(ElementType!(RangeIndex)))
+if (isRandomAccessRange!Range && !isInfinite!Range &&
+    isRandomAccessRange!RangeIndex && !isInfinite!RangeIndex &&
+    isIntegral!(ElementType!RangeIndex))
 {
-    alias Unqual!(ElementType!RangeIndex) I;
+    alias Unqual!(ElementType!RangeIndex) IndexType;
     enforce(r.length == index.length,
         "r and index must be same length for makeIndex.");
-    static if (I.sizeof < size_t.sizeof)
+    static if (IndexType.sizeof < size_t.sizeof)
     {
-        enforce(r.length <= I.max, "Cannot create an index with " ~
-            "element type " ~ I.stringof ~ " with length " ~
-            to!string(r.length) ~ "."
-        );
+        enforce(r.length <= IndexType.max, "Cannot create an index with " ~
+            "element type " ~ IndexType.stringof ~ " with length " ~
+            to!string(r.length) ~ ".");
     }
 
-    for (I i = 0; i < r.length; ++i)
+    for (IndexType i = 0; i < r.length; ++i)
     {
         index[cast(size_t) i] = i;
     }
 
     // sort the index
-    bool indirectLess(ElementType!(RangeIndex) a, ElementType!(RangeIndex) b)
-    {
-        return binaryFun!(less)(r[cast(size_t) a], r[cast(size_t) b]);
-    }
-    sort!(indirectLess, ss)(index);
+    sort!((a, b) => binaryFun!less(r[cast(size_t) a], r[cast(size_t) b]), ss)
+      (index);
 }
 
 unittest
@@ -9803,37 +9883,18 @@ assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
 bool all(alias pred, R)(R range)
 if (isInputRange!R && is(typeof(unaryFun!pred(range.front))))
 {
-    return find!(not!(unaryFun!pred))(range).empty;
+    // dmd @@@BUG9578@@@ workaround
+    // return find!(not!(unaryFun!pred))(range).empty;
+    bool notPred(ElementType!R a) { return !unaryFun!pred(a); }
+    return find!notPred(range).empty;
 }
 
 unittest
 {
     assert(all!"a & 1"([1, 3, 5, 7, 9]));
     assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
-}
-
-// Deprecated. It will be removed in January 2013.  Use std.range.SortedRange.canFind.
-deprecated("Please use std.range.SortedRange.canFind instead.")
-bool canFindSorted(alias pred = "a < b", Range, V)(Range range, V value) {
-    return assumeSorted!pred(range).canFind!V(value);
-}
-
-// Deprecated. It will be removed in January 2013.  Use std.range.SortedRange.lowerBound.
-deprecated("Please use std.range.SortedRange.lowerBound instead.")
-Range lowerBound(alias pred = "a < b", Range, V)(Range range, V value) {
-    return assumeSorted!pred(range).lowerBound!V(value).release;
-}
-
-// Deprecated. It will be removed in January 2013.  Use std.range.SortedRange.upperBound.
-deprecated("Please use std.range.SortedRange.upperBound instead.")
-Range upperBound(alias pred = "a < b", Range, V)(Range range, V value) {
-    return assumeSorted!pred(range).upperBound!V(value).release;
-}
-
-// Deprecated. It will be removed in January 2013.  Use std.range.SortedRange.equalRange.
-deprecated("Please use std.range.SortedRange.equalRange instead.")
-Range equalRange(alias pred = "a < b", Range, V)(Range range, V value) {
-    return assumeSorted!pred(range).equalRange!V(value).release;
+    int x = 1;
+    assert(all!(a => a > x)([2, 3]));
 }
 
 /**

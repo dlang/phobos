@@ -62,10 +62,7 @@ class FormatException : Exception
     }
 }
 
-/++
-    $(RED Deprecated. It will be removed In January 2013.
-          Please use $(D FormatException) instead.)
- +/
+// Explicitly undocumented. It will be removed in November 2013.
 deprecated("Please use FormatException instead.")
 alias FormatException FormatError;
 
@@ -181,7 +178,7 @@ $(I FormatChar):
     values $(D nan) and $(D infinity)).  Ignore if there's a $(I
     Precision).))
 
-    $(TR $(TD $(B ' ')) $(TD numeric)) $(TD Prefix positive
+    $(TR $(TD $(B ' ')) $(TD numeric) $(TD Prefix positive
     numbers in a signed conversion with a space.))
 
     <dt>$(I Width)
@@ -2280,7 +2277,7 @@ if (!is(StringTypeOf!T) && !is(CharTypeOf!T) || is(T == enum))
 }
 
 /**
-   Associative arrays are formatted by using $(D ':') and $(D ', ') as
+   Associative arrays are formatted by using $(D ':') and $(D ", ") as
    separators, and enclosed by $(D '[') and $(D ']').
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
@@ -5089,11 +5086,11 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
             case Mangle.Tsarray:
                 version (X86)
-                    putArray(argptr, (cast(TypeInfo_StaticArray)ti).len, cast()(cast(TypeInfo_StaticArray)ti).next);
+                    putArray(argptr, (cast(TypeInfo_StaticArray)ti).len, (cast(TypeInfo_StaticArray)ti).next);
                 else version (Win64)
-                    putArray(argptr, (cast(TypeInfo_StaticArray)ti).len, cast()(cast(TypeInfo_StaticArray)ti).next);
+                    putArray(argptr, (cast(TypeInfo_StaticArray)ti).len, (cast(TypeInfo_StaticArray)ti).next);
                 else
-                    putArray((cast(__va_list*)argptr).stack_args, (cast(TypeInfo_StaticArray)ti).len, cast()(cast(TypeInfo_StaticArray)ti).next);
+                    putArray((cast(__va_list*)argptr).stack_args, (cast(TypeInfo_StaticArray)ti).len, (cast(TypeInfo_StaticArray)ti).next);
                 return;
 
             case Mangle.Tarray:
@@ -5101,7 +5098,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 if (ti.classinfo.name.length == 14 &&
                     ti.classinfo.name[9..14] == "Array")
                 { // array of non-primitive types
-                  TypeInfo tn = cast()(cast(TypeInfo_Array)ti).next;
+                  TypeInfo tn = (cast(TypeInfo_Array)ti).next;
                   tn = skipCI(tn);
                   switch (cast(Mangle)tn.classinfo.name[9])
                   {
@@ -5120,7 +5117,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 { // associative array
                   ubyte[long] vaa = va_arg!(ubyte[long])(argptr);
                   putAArray(vaa,
-                        cast()(cast(TypeInfo_AssociativeArray)ti).next,
+                        (cast(TypeInfo_AssociativeArray)ti).next,
                         (cast(TypeInfo_AssociativeArray)ti).key);
                   return;
                 }
@@ -5381,7 +5378,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             if (ti.classinfo.name.length == 14 &&
                     ti.classinfo.name[9..14] == "Array")
             {
-                TypeInfo tn = cast()(cast(TypeInfo_Array)ti).next;
+                TypeInfo tn = (cast(TypeInfo_Array)ti).next;
                 tn = skipCI(tn);
                 switch (cast(Mangle)tn.classinfo.name[9])
                 {

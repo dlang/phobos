@@ -195,28 +195,28 @@ struct MD5
          */
         static nothrow pure void FF(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
         {
-            a += F (b, c, d) + x + cast(uint)(ac);
+            a += F (b, c, d) + x + ac;
             a = rotateLeft(a, s);
             a += b;
         }
 
         static nothrow pure void GG(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
         {
-            a += G (b, c, d) + x + cast(uint)(ac);
+            a += G (b, c, d) + x + ac;
             a = rotateLeft(a, s);
             a += b;
         }
 
         static nothrow pure void HH(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
         {
-            a += H (b, c, d) + x + cast(uint)(ac);
+            a += H (b, c, d) + x + ac;
             a = rotateLeft(a, s);
             a += b;
         }
 
         static nothrow pure void II(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
         {
-            a += I (b, c, d) + x + cast(uint)(ac);
+            a += I (b, c, d) + x + ac;
             a = rotateLeft(a, s);
             a += b;
         }
@@ -259,7 +259,7 @@ struct MD5
             {
                 for(size_t i = 0; i < 16; i++)
                 {
-                    x[i] = littleEndianToNative!uint(cast(ubyte[4])block[i*4..i+4]);
+                    x[i] = littleEndianToNative!uint(*cast(ubyte[4]*)&(*block)[i*4]);
                 }
             }
             else
@@ -435,13 +435,12 @@ struct MD5
          */
         @trusted nothrow pure ubyte[16] finish()
         {
-            ubyte[16] data;
+            ubyte[16] data = void;
             ubyte[8] bits = void;
             uint index, padLen;
 
             //Save number of bits
-            bits[0 .. 4] = nativeToLittleEndian((cast(uint*)&_count)[0])[];
-            bits[4 .. 8] = nativeToLittleEndian((cast(uint*)&_count)[1])[];
+            bits[0 .. 8] = nativeToLittleEndian(_count)[];
 
             //Pad out to 56 mod 64
             index = (cast(uint)_count >> 3) & (64 - 1);

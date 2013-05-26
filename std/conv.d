@@ -14,6 +14,10 @@ Authors:   $(WEB digitalmars.com, Walter Bright),
            Kenji Hara
 
 Source:    $(PHOBOSSRC std/_conv.d)
+
+Macros:
+WIKI = Phobos/StdConv
+
 */
 module std.conv;
 
@@ -23,7 +27,6 @@ import std.algorithm, std.array, std.ascii, std.exception, std.math, std.range,
     std.string, std.traits, std.typecons, std.typetuple, std.uni,
     std.utf;
 import std.format;
-import std.metastrings;
 
 //debug=conv;           // uncomment to turn on debugging printf's
 
@@ -258,7 +261,6 @@ $(D_PARAM to!(double[])) applies to an $(D_PARAM int[]). The
 conversion might throw an exception because $(D_PARAM to!short)
 might fail the range check.
 
-Macros: WIKI=Phobos/StdConv
  */
 
 /**
@@ -451,25 +453,6 @@ unittest
     char[4] test = ['a', 'b', 'c', 'd'];
     static assert(!isInputRange!(Unqual!(char[4])));
     assert(to!string(test) == test);
-}
-
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated T toImpl(T, S)(S value)
-    if (is(S : Object) && !is(T : Object) && !isSomeString!T &&
-        hasMember!(S, "to") && is(typeof(S.init.to!T()) : T))
-{
-    return value.to!T();
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    class B
-    {
-        T to(T)() { return 43; }
-    }
-    auto b = new B;
-    assert(to!int(b) == 43);
 }
 
 /**
@@ -974,6 +957,11 @@ unittest
     assert(wtext(int.max) == "2147483647"w);
     assert(wtext(int.min) == "-2147483648"w);
     assert(to!string(0L) == "0");
+
+    //Test CTFE-ability.
+    static assert(to!string(1uL << 62) == "4611686018427387904");
+    static assert(to!string(0x100000000) == "4294967296");
+    static assert(to!string(-138L) == "-138");
 }
 
 unittest
@@ -1132,12 +1120,7 @@ unittest
     }
 }
 
-/**
-    $(RED Deprecated. It will be removed in January 2013.
-          Please use $(XREF format, formattedWrite) instead.)
-
-    Conversions to string with optional configures.
-*/
+// Explicitly undocumented. It will be removed in November 2013.
 deprecated("Please use std.format.formattedWrite instead.")
 T toImpl(T, S)(S s, in T leftBracket, in T separator = ", ", in T rightBracket = "]")
     if (!isSomeChar!(ElementType!S) && (isInputRange!S || isInputRange!(Unqual!S)) &&
@@ -1172,7 +1155,7 @@ T toImpl(T, S)(S s, in T leftBracket, in T separator = ", ", in T rightBracket =
     }
 }
 
-/// ditto
+// Explicitly undocumented. It will be removed in November 2013.
 deprecated("Please use std.format.formattedWrite instead.")
 T toImpl(T, S)(ref S s, in T leftBracket, in T separator = " ", in T rightBracket = "]")
     if ((is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[])) &&
@@ -1181,7 +1164,7 @@ T toImpl(T, S)(ref S s, in T leftBracket, in T separator = " ", in T rightBracke
     return toImpl(s);
 }
 
-/// ditto
+// Explicitly undocumented. It will be removed in November 2013.
 deprecated("Please use std.format.formattedWrite instead.")
 T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separator = ", ", in T rightBracket = "]")
     if (isAssociativeArray!S && !is(S == enum) &&
@@ -1205,7 +1188,7 @@ T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separator = ", ", 
     return cast(T) result.data;
 }
 
-/// ditto
+// Explicitly undocumented. It will be removed in November 2013.
 deprecated("Please use std.format.formattedWrite instead.")
 T toImpl(T, S)(S s, in T nullstr)
     if (is(S : Object) &&
@@ -1216,7 +1199,7 @@ T toImpl(T, S)(S s, in T nullstr)
     return to!T(s.toString());
 }
 
-/// ditto
+// Explicitly undocumented. It will be removed in November 2013.
 deprecated("Please use std.format.formattedWrite instead.")
 T toImpl(T, S)(S s, in T left, in T separator = ", ", in T right = ")")
     if (is(S == struct) && !is(typeof(&S.init.toString)) && !isInputRange!S &&
@@ -2008,6 +1991,14 @@ unittest
         foreach (j, s; errors[i..$])
             assertThrown!ConvOverflowException(to!Int(s));
     }
+}
+
+unittest
+{
+    //Some CTFE-ability checks.
+    static assert((){string s = "1234abc"; return parse!int(s) == 1234 && s == "abc";}());
+    static assert((){string s = "-1234abc"; return parse!int(s) == -1234 && s == "abc";}());
+    static assert((){string s = "1234abc"; return parse!uint(s) == 1234 && s == "abc";}());
 }
 
 /// ditto
@@ -2885,6 +2876,34 @@ unittest
     int[] arr = parse!(int[])(s);
 }
 
+unittest
+{
+    //Checks parsing of strings with escaped characters
+    string s1 = `[
+        "Contains a\0null!",
+        "tab\there",
+        "line\nbreak",
+        "backslash \\ slash / question \?",
+        "number \x35 five",
+        "unicode \u65E5 sun",
+        "very long \U000065E5 sun"
+    ]`;
+
+    //Note: escaped characters purposefully replaced and isolated to guarantee
+    //there are no typos in the escape syntax
+    string[] s2 = [
+        "Contains a" ~ '\0' ~ "null!",
+        "tab" ~ '\t' ~ "here",
+        "line" ~ '\n' ~ "break",
+        "backslash " ~ '\\' ~ " slash / question ?",
+        "number 5 five",
+        "unicode 日 sun",
+        "very long 日 sun"
+    ];
+    assert(s2 == parse!(string[])(s1));
+    assert(s1.empty);
+}
+
 /// ditto
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
     if (isExactSomeString!Source &&
@@ -3036,6 +3055,11 @@ private dchar parseEscape(Source)(ref Source s)
 
     switch (s.front)
     {
+        case '"':   result = '\"';  break;
+        case '\'':  result = '\'';  break;
+        case '0':   result = '\0';  break;
+        case '?':   result = '\?';  break;
+        case '\\':  result = '\\';  break;
         case 'a':   result = '\a';  break;
         case 'b':   result = '\b';  break;
         case 'f':   result = '\f';  break;
@@ -3074,6 +3098,50 @@ private dchar parseEscape(Source)(ref Source s)
     s.popFront();
 
     return result;
+}
+
+unittest
+{
+    string[] s1 = [
+        `\"`, `\'`, `\?`, `\\`, `\a`, `\b`, `\f`, `\n`, `\r`, `\t`, `\v`, //Normal escapes
+        //`\141`, //@@@9621@@@ Octal escapes.
+        `\x61`, 
+        `\u65E5`, `\U00012456`
+        //`\&amp;`, `\&quot;`, //@@@9621@@@ Named Character Entities.
+    ];
+
+    const(dchar)[] s2 = [
+        '\"', '\'', '\?', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v', //Normal escapes
+        //'\141', //@@@9621@@@ Octal escapes.
+        '\x61', 
+        '\u65E5', '\U00012456'
+        //'\&amp;', '\&quot;', //@@@9621@@@ Named Character Entities.
+    ];
+
+    foreach (i ; 0 .. s1.length)
+    {
+        assert(s2[i] == parseEscape(s1[i]));
+        assert(s1[i].empty);
+    }
+}
+
+unittest
+{
+    string[] ss = [
+        `hello!`,  //Not an escape
+        `\`,       //Premature termination
+        `\/`,      //Not an escape
+        `\gggg`,   //Not an escape
+        `\xzz`,    //Not an hex
+        `\x0`,     //Premature hex end
+        `\XB9`,    //Not legal hex syntax
+        `\u!!`,    //Not a unicode hex
+        `\777`,    //Octal is larger than a byte //Note: Throws, but simply because octals are unsupported
+        `\u123`,   //Premature hex end
+        `\U123123` //Premature hex end
+    ];
+    foreach (s ; ss)
+        assertThrown!ConvException(parseEscape(s));
 }
 
 // Undocumented
@@ -3251,7 +3319,7 @@ auto z = octal!"1_000_000u";
 template octal(alias s)
     if (isIntegral!(typeof(s)))
 {
-    enum auto octal = octal!(typeof(s), toStringNow!(s));
+    enum auto octal = octal!(typeof(s), to!string(s));
 }
 
 /*
@@ -3675,10 +3743,10 @@ unittest
 private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
 {
     enforceEx!ConvException(chunk.length >= typeSize,
-        xformat("emplace: Chunk size too small: %s < %s size = %s",
+        format("emplace: Chunk size too small: %s < %s size = %s",
         chunk.length, typeName, typeSize));
     enforceEx!ConvException((cast(size_t) chunk.ptr) % typeAlignment == 0,
-        xformat("emplace: Misaligned memory block (0x%X): it must be %s-byte aligned for type %s",
+        format("emplace: Misaligned memory block (0x%X): it must be %s-byte aligned for type %s",
         chunk.ptr, typeAlignment, typeName));
 }
 

@@ -233,8 +233,8 @@ $(BOOKTABLE ,
 
 Ranges whose elements are sorted afford better efficiency with certain
 operations. For this, the $(D $(LREF assumeSorted)) function can be used to
-construct a $(D $(LREF SortedRange)) from a pre-sorted _range. The $(D $(LINK2
-std_algorithm.html#sort, std.algorithm.sort)) function also conveniently
+construct a $(D $(LREF SortedRange)) from a pre-sorted _range. The $(LINK2
+std_algorithm.html#sort, $(D std.algorithm.sort)) function also conveniently
 returns a $(D SortedRange). $(D SortedRange) objects provide some additional
 _range operations that take advantage of the fact that the _range is sorted.
 
@@ -3162,8 +3162,6 @@ unittest
 
 unittest
 {
-    import std.metastrings;
-
     string genInput()
     {
         return "@property bool empty() { return _arr.empty; }" ~
@@ -3241,21 +3239,21 @@ unittest
                               //`InitStruct([1, 2, 3])`,
                               `TakeNoneStruct([1, 2, 3])`))
     {
-        mixin(Format!("enum a = takeNone(%s).empty;", range));
+        mixin(format("enum a = takeNone(%s).empty;", range));
         assert(a, typeof(range).stringof);
-        mixin(Format!("assert(takeNone(%s).empty);", range));
-        mixin(Format!("static assert(is(typeof(%s) == typeof(takeNone(%s))), typeof(%s).stringof);",
-                      range, range, range));
+        mixin(format("assert(takeNone(%s).empty);", range));
+        mixin(format("static assert(is(typeof(%s) == typeof(takeNone(%s))), typeof(%s).stringof);",
+                     range, range, range));
     }
 
     foreach(range; TypeTuple!(`NormalStruct([1, 2, 3])`,
                               `InitStruct([1, 2, 3])`))
     {
-        mixin(Format!("enum a = takeNone(%s).empty;", range));
+        mixin(format("enum a = takeNone(%s).empty;", range));
         assert(a, typeof(range).stringof);
-        mixin(Format!("assert(takeNone(%s).empty);", range));
-        mixin(Format!("static assert(is(typeof(takeExactly(%s, 0)) == typeof(takeNone(%s))), typeof(%s).stringof);",
-                      range, range, range));
+        mixin(format("assert(takeNone(%s).empty);", range));
+        mixin(format("static assert(is(typeof(takeExactly(%s, 0)) == typeof(takeNone(%s))), typeof(%s).stringof);",
+                     range, range, range));
     }
 
     //Don't work in CTFE.
@@ -3730,10 +3728,7 @@ Take!(Repeat!T) repeat(T)(T value, size_t n)
     return take(repeat(value), n);
 }
 
-/++
-    $(RED Deprecated. It will be removed in January 2013.
-          Please use $(LREF repeat) instead.)
-  +/
+// Explicitly undocumented. It will be removed in November 2013.
 deprecated("Please use std.range.repeat instead.") Take!(Repeat!T) replicate(T)(T value, size_t n)
 {
     return repeat(value, n);
@@ -3834,6 +3829,7 @@ struct Cycle(Range)
 
         auto opSlice(size_t i, size_t j)
         {
+            version (assert) if (i > j) throw new RangeError();
             auto retval = this.save;
             retval._index += i;
             return takeExactly(retval, j - i);
@@ -3934,6 +3930,7 @@ struct Cycle(R)
 
     auto opSlice(size_t i, size_t j)
     {
+        version (assert) if (i > j) throw new RangeError();
         auto retval = this.save;
         retval._index += i;
         return takeExactly(retval, j - i);
@@ -4023,6 +4020,8 @@ unittest
                     }
 
                     assert(cRange[10] == 1);
+
+                    assertThrown!RangeError(cy[2..1]);
                 }
             }
 
@@ -7682,10 +7681,7 @@ sgi.com/tech/stl/binary_search.html, binary_search).
         return false;
     }
 
-/++
-    $(RED Deprecated. It will be removed in January 2013.
-          Please use $(LREF contains) instead.)
-  +/
+    // Explicitly undocumented. It will be removed in November 2013.
     deprecated("Please use contains instead.") alias contains canFind;
 }
 

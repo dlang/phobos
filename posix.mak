@@ -80,6 +80,7 @@ MAKEFILE:=$(lastword $(MAKEFILE_LIST))
 # Set DRUNTIME name and full path
 ifeq (,$(findstring win,$(OS)))
 	DRUNTIME = $(DRUNTIME_PATH)/lib/libdruntime-$(OS)$(MODEL).a
+	DRUNTIMESO = $(DRUNTIME_PATH)/lib/libdruntime-$(OS)$(MODEL)so.a
 else
 	DRUNTIME = $(DRUNTIME_PATH)/lib/druntime.lib
 endif
@@ -148,9 +149,17 @@ endif
 # Set DDOC, the documentation generator
 DDOC=$(DMD)
 
+# Set VERSION, where the file is that contains the version string
+VERSION=../dmd/VERSION
+
+# Set SONAME, the name of the shared library.
+# The awk script will produce the last 2 digits of the version string, i.e. 2.063 produces 63
+SONAME = libphobos2.so.0.$(shell awk -F. '{ print $$NF + 0 }' $(VERSION))
+
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))
 	LIB = $(ROOT)/libphobos2.a
+	LIBSO = $(ROOT)/$(SONAME).0
 else
 	LIB = $(ROOT)/phobos.lib
 endif
@@ -161,10 +170,10 @@ MAIN = $(ROOT)/emptymain.d
 # Stuff in std/
 STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
         bitmanip compiler complex concurrency container conv		\
-        cpuid cstream ctype csv datetime demangle encoding exception	\
+        cstream csv datetime demangle encoding exception	\
         file format functional getopt json math mathspecial md5	\
-        metastrings mmfile numeric outbuffer parallelism path perf		\
-        process random range regex regexp signals socket socketstream	\
+        metastrings mmfile numeric outbuffer parallelism path		\
+        process random range regex signals socket socketstream	\
         stdint stdio stdiobase stream string syserror system traits		\
         typecons typetuple uni uri utf uuid variant xml zip zlib)
 
@@ -229,8 +238,14 @@ ifeq ($(BUILD),)
 # targets. BUILD is not defined in user runs, only by recursive
 # self-invocations. So the targets in this branch are accessible to
 # end users.
+ifeq (linux,$(OS))
+release :
+	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release PIC=1 dll
+	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release
+else
 release :
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release
+endif
 debug :
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=debug
 unittest :
@@ -252,6 +267,17 @@ $(ROOT)/%$(DOTOBJ) : %.c
 
 $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
+
+dll : $(ROOT)/libphobos2.so
+
+$(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
+	ln -s $(notdir $(LIBSO)) $@ 
+
+$(ROOT)/$(SONAME): $(LIBSO)
+	ln -s $(notdir $(LIBSO)) $@
+
+$(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
+	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(D_FILES) $(OBJS)
 
 ifeq (osx,$(OS))
 # Build fat library that combines the 32 bit and the 64 bit libraries

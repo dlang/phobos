@@ -80,7 +80,7 @@ public:
     /// It may have a leading + or - sign; followed by "0x" if hexadecimal.
     /// Underscores are permitted.
     /// BUG: Should throw a IllegalArgumentException/ConvError if invalid character found
-    this(T : const(char)[] )(T s)
+    this(T : const(char)[] )(T s) pure
     {
         bool neg = false;
         if (s[0] == '-') {
@@ -106,22 +106,22 @@ public:
     }
 
     ///
-    this(T)(T x) if (isIntegral!T)
+    this(T)(T x) pure if (isIntegral!T)
     {
         data = data.init; // @@@: Workaround for compiler bug
         opAssign(x);
     }
 
     ///
-    BigInt opAssign(T)(T x) if (isIntegral!T)
+    BigInt opAssign(T)(T x) pure if (isIntegral!T)
     {
-        data = cast(ulong)((x < 0) ? -x : x);
+        data = cast(ulong)absUnsign(x);
         sign = (x < 0);
         return this;
     }
 
     ///
-    BigInt opAssign(T:BigInt)(T x)
+    BigInt opAssign(T:BigInt)(T x) pure
     {
         data = x.data;
         sign = x.sign;
@@ -129,11 +129,11 @@ public:
     }
 
     // BigInt op= integer
-    BigInt opOpAssign(string op, T)(T y)
+    BigInt opOpAssign(string op, T)(T y) pure
         if ((op=="+" || op=="-" || op=="*" || op=="/" || op=="%"
           || op==">>" || op=="<<" || op=="^^") && isIntegral!T)
     {
-        ulong u = cast(ulong)(y < 0 ? -y : y);
+        ulong u = absUnsign(y);
 
         static if (op=="+")
         {
@@ -201,7 +201,7 @@ public:
     }
 
     // BigInt op= BigInt
-    BigInt opOpAssign(string op, T)(T y)
+    BigInt opOpAssign(string op, T)(T y) pure
         if ((op=="+" || op== "-" || op=="*" || op=="/" || op=="%")
             && is (T: BigInt))
     {
@@ -243,15 +243,16 @@ public:
     }
 
     // BigInt op BigInt
-    BigInt opBinary(string op, T)(T y)
-        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="%") && is (T: BigInt))
+    BigInt opBinary(string op, T)(T y) pure
+        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="%") 
+			&& is (T: BigInt))
     {
         BigInt r = this;
         return r.opOpAssign!(op)(y);
     }
 
     // BigInt op integer
-    BigInt opBinary(string op, T)(T y)
+    BigInt opBinary(string op, T)(T y) pure
         if ((op=="+" || op == "*" || op=="-" || op=="/"
             || op==">>" || op=="<<" || op=="^^") && isIntegral!T)
     {
@@ -260,11 +261,11 @@ public:
     }
 
     //
-    int opBinary(string op, T : int)(T y)
+    int opBinary(string op, T : int)(T y) pure
         if (op == "%" && isIntegral!T)
     {
         assert(y!=0);
-        uint u = y < 0 ? -y : y;
+        uint u = absUnsign(y);
         int rem = BigUint.modInt(data, u);
         // x%y always has the same sign as x.
         // This is not the same as mathematical mod.
@@ -272,17 +273,17 @@ public:
     }
 
     // Commutative operators
-    BigInt opBinaryRight(string op, T)(T y)
+    BigInt opBinaryRight(string op, T)(T y) pure
         if ((op=="+" || op=="*") && isIntegral!T)
     {
         return opBinary!(op)(y);
     }
 
     //  BigInt = integer op BigInt
-    BigInt opBinaryRight(string op, T)(T y)
+    BigInt opBinaryRight(string op, T)(T y) pure
         if (op == "-" && isIntegral!T)
     {
-        ulong u = cast(ulong)(y < 0 ? -y : y);
+        ulong u = absUnsign(y);
         BigInt r;
         static if (op == "-")
         {
@@ -294,7 +295,7 @@ public:
     }
 
     //  integer = integer op BigInt
-    T opBinaryRight(string op, T)(T x)
+    T opBinaryRight(string op, T)(T x) pure
         if ((op=="%" || op=="/") && isIntegral!T)
     {
         static if (op == "%")
@@ -303,7 +304,7 @@ public:
             // x%y always has the same sign as x.
             if (data.ulongLength() > 1)
                 return x;
-            ulong u = x < 0 ? -x : x;
+            ulong u = absUnsign(x);
             ulong rem = u % data.peekUlong(0);
             // x%y always has the same sign as x.
             return cast(T)((x<0) ? -rem : rem);
@@ -317,7 +318,7 @@ public:
         }
     }
     // const unary operations
-    BigInt opUnary(string op)() /*const*/ if (op=="+" || op=="-")
+    BigInt opUnary(string op)() pure /*const*/ if (op=="+" || op=="-")
     {
        static if (op=="-")
        {
@@ -330,7 +331,7 @@ public:
     }
 
     // non-const unary operations
-    BigInt opUnary(string op)() if (op=="++" || op=="--")
+    BigInt opUnary(string op)() pure if (op=="++" || op=="--")
     {
         static if (op=="++")
         {
@@ -345,29 +346,35 @@ public:
     }
 
     ///
-    bool opEquals()(auto ref const BigInt y) const
+    bool opEquals()(auto ref const BigInt y) const pure
     {
        return sign == y.sign && y.data == data;
     }
 
     ///
-    bool opEquals(T)(T y) const if (isIntegral!T)
+    bool opEquals(T)(T y) const pure if (isIntegral!T)
     {
         if (sign != (y<0))
             return 0;
-        return data.opEquals(cast(ulong)( y>=0 ? y : -y));
+        return data.opEquals(cast(ulong)absUnsign(y));
     }
 
     ///
-    int opCmp(T)(T y) if (isIntegral!T)
+    T opCast(T:bool)() pure
+    {
+        return !isZero();
+    }
+
+    ///
+    int opCmp(T)(T y) pure if (isIntegral!T)
     {
         if (sign != (y<0) )
             return sign ? -1 : 1;
-        int cmp = data.opCmp(cast(ulong)(y >= 0 ? y : -y));
+        int cmp = data.opCmp(cast(ulong)absUnsign(y));
         return sign? -cmp: cmp;
     }
     ///
-    int opCmp(T:BigInt)(T y)
+    int opCmp(T:BigInt)(T y) pure
     {
         if (sign!=y.sign)
             return sign ? -1 : 1;
@@ -379,7 +386,7 @@ public:
     long toLong() pure const
     {
         return (sign ? -1 : 1) *
-          (data.ulongLength() == 1  && (data.peekUlong(0) <= cast(ulong)(long.max))
+          (data.ulongLength() == 1  && (data.peekUlong(0) <= sign+cast(ulong)(long.max)) // 1+long.max = |long.min|
           ? cast(long)(data.peekUlong(0))
           : long.max);
     }
@@ -388,7 +395,7 @@ public:
     int toInt() pure const
     {
         return (sign ? -1 : 1) *
-          (data.uintLength() == 1  && (data.peekUint(0) <= cast(uint)(int.max))
+          (data.uintLength() == 1  && (data.peekUint(0) <= sign+cast(uint)(int.max)) // 1+int.max = |int.min|
           ? cast(int)(data.peekUint(0))
           : int.max);
     }
@@ -478,28 +485,28 @@ private:
     }
 +/
 private:
-    void negate()
+    void negate() pure nothrow @safe
     {
         if (!data.isZero())
             sign = !sign;
     }
-    bool isZero() pure const
+    bool isZero() pure const nothrow @safe
     {
         return data.isZero();
     }
-    bool isNegative() pure const
+    bool isNegative() pure const nothrow @safe
     {
         return sign;
     }
     // Generate a runtime error if division by zero occurs
-    void checkDivByZero() pure const
+    void checkDivByZero() pure const  @safe
     {
         if (isZero())
             throw new Error("BigInt division by zero");
     }
 }
 
-string toDecimalString(BigInt x)
+string toDecimalString(BigInt x) 
 {
     string outbuff="";
     void sink(const(char)[] s) { outbuff ~= s; }
@@ -507,12 +514,29 @@ string toDecimalString(BigInt x)
     return outbuff;
 }
 
-string toHex(BigInt x)
+string toHex(BigInt x) 
 {
     string outbuff="";
     void sink(const(char)[] s) { outbuff ~= s; }
     x.toString(&sink, "%x");
     return outbuff;
+}
+
+// Returns the absolute value of x converted to the corresponding unsigned type
+Unsigned!T absUnsign(T)(T x) if (isIntegral!T)
+{
+    static if (isSigned!T)
+    {
+        /* This returns the correct result even when x = T.min
+         * on two's complement machines because unsigned(T.min) = |T.min|
+         * even though -T.min = T.min.
+         */
+        return unsigned((x < 0) ? -x : x);
+    }
+    else
+    {
+        return x;
+    }
 }
 
 unittest {
@@ -546,6 +570,28 @@ unittest {
     assert((-4) % BigInt(5) == -4); // bug 5928
     assert(BigInt(-4) % BigInt(5) == -4);
     assert(BigInt(2)/BigInt(-3) == BigInt(0)); // bug 8022
+    assert(BigInt("-1") > long.min); // bug 9548
+}
+
+unittest // Minimum signed value bug tests.
+{
+    assert(BigInt("-0x8000000000000000") == BigInt(long.min));
+    assert(BigInt("-0x8000000000000000")+1 > BigInt(long.min));
+    assert(BigInt("-0x80000000") == BigInt(int.min));
+    assert(BigInt("-0x80000000")+1 > BigInt(int.min));
+    assert(BigInt(long.min).toLong() == long.min); // lossy toLong bug for long.min
+    assert(BigInt(int.min).toInt() == int.min); // lossy toInt bug for int.min
+    assert(BigInt(long.min).ulongLength == 1);
+    assert(BigInt(int.min).uintLength == 1); // cast/sign extend bug in opAssign
+    BigInt a;
+    a += int.min;
+    assert(a == BigInt(int.min));
+    a = int.min - BigInt(int.min);
+    assert(a == 0);
+    a = int.min;
+    assert(a == BigInt(int.min));
+    assert(int.min % (BigInt(int.min)-1) == int.min);
+    assert((BigInt(int.min)-1)%int.min == -1);
 }
 
 unittest // Recursive division, bug 5568
@@ -721,4 +767,27 @@ unittest
     assert(y.toLong() == -1);
     --y;
     assert(y.toLong() == -2);
+}
+
+unittest
+{
+    import std.math:abs;
+    auto r = abs(BigInt(-1000)); // 6486
+    assert(r == 1000);
+
+    // opCast!bool
+    BigInt one = 1, zero;
+    assert(one && !zero);
+}
+
+unittest // 6850
+{
+    pure long pureTest() {
+        BigInt a = 1;
+        BigInt b = 1336;
+        a += b;
+        return a.toLong();
+    }
+
+    assert(pureTest() == 1337);
 }

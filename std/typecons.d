@@ -45,7 +45,7 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
 module std.typecons;
 import core.memory, core.stdc.stdlib;
 import std.algorithm, std.array, std.conv, std.exception, std.format,
-    std.metastrings, std.traits, std.typetuple, std.range;
+    std.string, std.traits, std.typetuple, std.range;
 
 debug(Unique) import std.stdio;
 
@@ -323,11 +323,10 @@ private:
         string decl = "";
         foreach (i, name; staticMap!(extractName, fieldSpecs))
         {
-            enum numbered = toStringNow!(i);
-            decl ~= "alias Identity!(field[" ~ numbered ~ "]) _" ~ numbered ~ ";";
+            decl ~= format("alias Identity!(field[%s]) _%s;", i, i);
             if (name.length != 0)
             {
-                decl ~= "alias _" ~ numbered ~ " " ~ name ~ ";";
+                decl ~= format("alias _%s %s;", i, name);
             }
         }
         return decl;
@@ -379,10 +378,27 @@ public:
 */
     alias staticMap!(extractType, fieldSpecs) Types;
 
-    Types field;
+/**
+Use $(D t.expand) for a tuple $(D t) to expand it into its
+components. The result of $(D expand) acts as if the tuple components
+were listed as a list of values. (Ordinarily, a $(D Tuple) acts as a
+single value.)
+
+Examples:
+----
+auto t = tuple(1, " hello ", 2.3);
+writeln(t);        // Tuple!(int, string, double)(1, " hello ", 2.3)
+writeln(t.expand); // 1 hello 2.3
+----
+ */
+    Types expand;
     mixin(injectNamedFields());
-    alias field expand;
-    alias field this;
+
+    // This is mostly to make t[n] work.
+    alias expand this;
+
+    // backwards compatibility
+    alias field = expand;
 
     // This mitigates breakage of old code now that std.range.Zip uses
     // Tuple instead of the old Proxy.  It's intentionally lacking ddoc
@@ -396,9 +412,29 @@ public:
    Constructor taking one value for each field. Each argument must be
    implicitly assignable to the respective element of the target.
  */
-    this(U...)(U values) if (U.length == Types.length)
+    this()(Types values)
     {
-        foreach (i, Unused; Types)
+        foreach (i, _; Types)
+        {
+            field[i] = values[i];
+        }
+    }
+
+/**
+   Constructor taking a compatible array. The array element type must
+   be implicitly assignable to each element of the target.
+
+Examples:
+----
+int[2] ints;
+Tuple!(int, int) t = ints;
+----
+ */
+    this(U, size_t n)(U[n] values)
+    if (n == Types.length
+        && is(typeof({ foreach (i, _; Types) field[i] = values[i]; })))
+    {
+        foreach (i, _; Types)
         {
             field[i] = values[i];
         }
@@ -702,6 +738,11 @@ unittest
         alias Tuple!(const(int)) T;
         auto t2 = T(1);
     }
+    // 9431
+    {
+        alias T = Tuple!(int[1][]);
+        auto t = T([[10]]);
+    }
 }
 unittest
 {
@@ -772,6 +813,13 @@ unittest
         static assert( is(typeof(tm4 < tc4)));
         static assert( is(typeof(tc4 < tm4)));
         static assert( is(typeof(tc4 < tc4)));
+    }
+    {
+        int[2] ints = [ 1, 2 ];
+        Tuple!(int, int) t = ints;
+        assert(t[0] == 1 && t[1] == 2);
+        Tuple!(long, uint) t2 = ints;
+        assert(t2[0] == 1 && t2[1] == 2);
     }
 }
 
@@ -1125,7 +1173,7 @@ struct Nullable(T)
 /**
 Constructor initializing $(D this) with $(D value).
  */
-    this()(T value)
+    this()(T value) inout
     {
         _value = value;
         _isNull = false;
@@ -2024,7 +2072,7 @@ private static:
     // overloaded function with the name.
     template INTERNAL_FUNCINFO_ID(string name, size_t i)
     {
-        enum string INTERNAL_FUNCINFO_ID = "F_" ~ name ~ "_" ~ toStringNow!(i);
+        enum string INTERNAL_FUNCINFO_ID = format("F_%s_%s", name, i);
     }
 
     /*
@@ -2284,7 +2332,7 @@ private static:
     {
         template PARAMETER_VARIABLE_ID(size_t i)
         {
-            enum string PARAMETER_VARIABLE_ID = "a" ~ toStringNow!(i);
+            enum string PARAMETER_VARIABLE_ID = format("a%s", i);
                 // default: a0, a1, ...
         }
     }
@@ -2324,7 +2372,7 @@ private static:
                 // The generated function declarations may hide existing ones
                 // in the base class (cf. HiddenFuncError), so we put an alias
                 // declaration here to reveal possible hidden functions.
-                code ~= Format!("alias %s.%s %s;\n",
+                code ~= format("alias %s.%s %s;\n",
                             Policy.BASE_CLASS_ID, // [BUG 2540] super.
                             oset.name, oset.name );
             }
@@ -2366,6 +2414,8 @@ private static:
             enum atts     = functionAttributes!(func);
             enum realName = isCtor ? "this" : name;
 
+            // FIXME?? Make it so that these aren't CTFE funcs any more, since
+            // Format is deprecated, and format works at compile time?
             /* Made them CTFE funcs just for the sake of Format!(...) */
 
             // return type with optional "ref"
@@ -2409,7 +2459,7 @@ private static:
             //
             if (isAbstractFunction!func)
                 code ~= "override ";
-            code ~= Format!("extern(%s) %s %s(%s) %s %s\n",
+            code ~= format("extern(%s) %s %s(%s) %s %s\n",
                     functionLinkage!(func),
                     returnType,
                     realName,
@@ -2471,7 +2521,7 @@ private static:
             if (stc & STC.lazy_ ) params ~= "lazy ";
 
             // Take parameter type from the FuncInfo.
-            params ~= myFuncInfo ~ ".PT[" ~ toStringNow!(i) ~ "]";
+            params ~= format("%s.PT[%s]", myFuncInfo, i);
 
             // Declare a parameter variable.
             params ~= " " ~ PARAMETER_VARIABLE_ID!(i);
@@ -2884,15 +2934,16 @@ void func(int n) { }
  */
 mixin template Proxy(alias a)
 {
-    auto ref opEquals(this X)(auto ref typeof(this) b)
+    auto ref opEquals(this X, B)(auto ref B b)
     {
-        import std.algorithm;
-        static assert(startsWith(a.stringof, "this."));
-        return a == mixin("b."~a.stringof[5..$]);   // remove "this."
-    }
-    auto ref opEquals(this X, B)(auto ref B b) if (!is(B == typeof(this)))
-    {
-        return a == b;
+        static if (is(immutable B == immutable typeof(this)))
+        {
+            import std.algorithm;
+            static assert(startsWith(a.stringof, "this."));
+            return a == mixin("b."~a.stringof[5..$]);   // remove "this."
+        }
+        else
+            return a == b;
     }
 
     auto ref opCmp(this X, B)(auto ref B b)
@@ -2919,13 +2970,17 @@ mixin template Proxy(alias a)
     auto ref opSliceUnary(string op, this X      )()                           { return mixin(op~"a[]"); }
     auto ref opSliceUnary(string op, this X, B, E)(auto ref B b, auto ref E e) { return mixin(op~"a[b..e]"); }
 
-    auto ref opBinary     (string op, this X, B)(auto ref B b) { return mixin("a "~op~" b"); }
+    auto ref opBinary(string op, this X, B)(auto ref B b)
+    if (op == "in" && is(typeof(a in b)) || op != "in")
+    {
+        return mixin("a "~op~" b");
+    }
     auto ref opBinaryRight(string op, this X, B)(auto ref B b) { return mixin("b "~op~" a"); }
 
     static if (!is(typeof(this) == class))
     {
         private import std.traits;
-        static if (isAssignable!(typeof(a), typeof(a)))
+        static if (isAssignable!(typeof(a)))
         {
             auto ref opAssign(this X)(auto ref typeof(this) v)
             {
@@ -2956,6 +3011,11 @@ mixin template Proxy(alias a)
             // non template function
             auto ref opDispatch(this X, Args...)(auto ref Args args) { return mixin("a."~name~"(args)"); }
         }
+        else static if (is(typeof({ enum x = mixin("a."~name); })))
+        {
+            // built-in type field, manifest constant, and static non-mutable field
+            enum opDispatch = mixin("a."~name);
+        }
         else static if (is(typeof(mixin("a."~name))) || __traits(getOverloads, a, name).length != 0)
         {
             // field or property function
@@ -2978,32 +3038,46 @@ unittest
     {
         private int value;
         mixin Proxy!value;
-        this(int n){ value = n; }
+        this(int n) inout { value = n; }
+
+        enum str = "str";
+        static immutable arr = [1,2,3];
     }
 
-    MyInt m = 10;
-    static assert(!__traits(compiles, { int x = m; }));
-    static assert(!__traits(compiles, { void func(int n){} func(m); }));
-    assert(m == 10);
-    assert(m != 20);
-    assert(m < 20);
-    assert(+m == 10);
-    assert(-m == -10);
-    assert(++m == 11);
-    assert(m++ == 11); assert(m == 12);
-    assert(--m == 11);
-    assert(m-- == 11); assert(m == 10);
-    assert(cast(double)m == 10.0);
-    assert(m + 10 == 20);
-    assert(m - 5 == 5);
-    assert(m * 20 == 200);
-    assert(m / 2 == 5);
-    assert(10 + m == 20);
-    assert(15 - m == 5);
-    assert(20 * m == 200);
-    assert(50 / m == 5);
-    m = m;
-    m = 20; assert(m == 20);
+    foreach (T; TypeTuple!(MyInt, const MyInt, immutable MyInt))
+    {
+        T m = 10;
+        static assert(!__traits(compiles, { int x = m; }));
+        static assert(!__traits(compiles, { void func(int n){} func(m); }));
+        assert(m == 10);
+        assert(m != 20);
+        assert(m < 20);
+        assert(+m == 10);
+        assert(-m == -10);
+        assert(cast(double)m == 10.0);
+        assert(m + 10 == 20);
+        assert(m - 5 == 5);
+        assert(m * 20 == 200);
+        assert(m / 2 == 5);
+        assert(10 + m == 20);
+        assert(15 - m == 5);
+        assert(20 * m == 200);
+        assert(50 / m == 5);
+        static if (is(T == MyInt))  // mutable
+        {
+            assert(++m == 11);
+            assert(m++ == 11); assert(m == 12);
+            assert(--m == 11);
+            assert(m-- == 11); assert(m == 10);
+            m = m;
+            m = 20; assert(m == 20);
+        }
+        static assert(T.max == int.max);
+        static assert(T.min == int.min);
+        static assert(T.init == int.init);
+        static assert(T.str == "str");
+        static assert(T.arr == [1,2,3]);
+    }
 }
 unittest
 {
@@ -3011,29 +3085,39 @@ unittest
     {
         private int[] value;
         mixin Proxy!value;
-        this(int[] arr){ value = arr; }
+        this(int[] arr) { value = arr; }
+        this(immutable int[] arr) immutable { value = arr; }
     }
 
-    MyArray a = [1,2,3,4];
-    assert(a == [1,2,3,4]);
-    assert(a != [5,6,7,8]);
-    assert(+a[0]    == 1);
-    version (LittleEndian)
-        assert(cast(ulong[])a == [0x0000_0002_0000_0001, 0x0000_0004_0000_0003]);
-    else
-        assert(cast(ulong[])a == [0x0000_0001_0000_0002, 0x0000_0003_0000_0004]);
-    assert(a ~ [10,11] == [1,2,3,4,10,11]);
-    assert(a[0]    == 1);
-    //assert(a[]     == [1,2,3,4]);     // blocked by bug 2486
-    //assert(a[2..4] == [3,4]);         // blocked by bug 2486
-    a = a;
-    a = [5,6,7,8];  assert(a == [5,6,7,8]);
-    a[0]     = 0;   assert(a == [0,6,7,8]);
-    a[]      = 1;   assert(a == [1,1,1,1]);
-    a[0..3]  = 2;   assert(a == [2,2,2,1]);
-    a[0]    += 2;   assert(a == [4,2,2,1]);
-    a[]     *= 2;   assert(a == [8,4,4,2]);
-    a[0..2] /= 2;   assert(a == [4,2,4,2]);
+    foreach (T; TypeTuple!(MyArray, const MyArray, immutable MyArray))
+    {
+      static if (is(T == immutable) && !is(typeof({ T a = [1,2,3,4]; })))
+        T a = [1,2,3,4].idup;   // workaround until qualified ctor is properly supported
+      else
+        T a = [1,2,3,4];
+        assert(a == [1,2,3,4]);
+        assert(a != [5,6,7,8]);
+        assert(+a[0]    == 1);
+        version (LittleEndian)
+            assert(cast(ulong[])a == [0x0000_0002_0000_0001, 0x0000_0004_0000_0003]);
+        else
+            assert(cast(ulong[])a == [0x0000_0001_0000_0002, 0x0000_0003_0000_0004]);
+        assert(a ~ [10,11] == [1,2,3,4,10,11]);
+        assert(a[0]    == 1);
+        assert(a[]     == [1,2,3,4]);
+        assert(a[2..4] == [3,4]);
+        static if (is(T == MyArray))    // mutable
+        {
+            a = a;
+            a = [5,6,7,8];  assert(a == [5,6,7,8]);
+            a[0]     = 0;   assert(a == [0,6,7,8]);
+            a[]      = 1;   assert(a == [1,1,1,1]);
+            a[0..3]  = 2;   assert(a == [2,2,2,1]);
+            a[0]    += 2;   assert(a == [4,2,2,1]);
+            a[]     *= 2;   assert(a == [8,4,4,2]);
+            a[0..2] /= 2;   assert(a == [4,2,4,2]);
+        }
+    }
 }
 unittest
 {
@@ -3063,8 +3147,7 @@ unittest
     auto h = new Hoge(new Foo());
     int n;
 
-    // blocked by bug 7641
-    //static assert(!__traits(compiles, { Foo f = h; }));
+    static assert(!__traits(compiles, { Foo f = h; }));
 
     // field
     h.field = 1;            // lhs of assign
@@ -3095,7 +3178,7 @@ unittest
     // bug5896 test
     assert(h.opCast!int() == 0);
     assert(cast(int)h == 0);
-    immutable(Hoge) ih = new immutable(Hoge)(new Foo());
+    const ih = new const Hoge(new Foo());
     static assert(!__traits(compiles, ih.opCast!int()));
     static assert(!__traits(compiles, cast(int)ih));
 
@@ -3139,6 +3222,20 @@ unittest
     MyFoo2 f2;
     f2 = f2;
 }
+unittest
+{
+    // bug8613
+    static struct Name
+    {
+        mixin Proxy!val;
+        private string val;
+        this(string s) { val = s; }
+    }
+
+    bool[Name] names;
+    names[Name("a")] = true;
+    bool* b = Name("a") in names;
+}
 
 /**
 Library typedef.
@@ -3170,12 +3267,38 @@ unittest
     Typedef!int y = 10;
     assert(x == y);
 
+    static assert(Typedef!int.init == int.init);
+
     Typedef!(float, 1.0) z; // specifies the init
     assert(z == 1.0);
+
+    static assert(typeof(z).init == 1.0);
 
     alias Typedef!(int, 0, "dollar") Dollar;
     alias Typedef!(int, 0, "yen") Yen;
     static assert(!is(Dollar == Yen));
+
+    Typedef!(int[3]) sa;
+    static assert(sa.length == 3);
+    static assert(typeof(sa).length == 3);
+}
+
+unittest
+{
+    // bug8655
+    import std.typecons;
+    import std.bitmanip;
+    static import core.stdc.config;
+
+    alias Typedef!(core.stdc.config.c_ulong) c_ulong;
+
+    static struct Foo
+    {
+        mixin(bitfields!(
+            c_ulong, "NameOffset", 31,
+            c_ulong, "NameIsString", 1
+        ));
+    }
 }
 
 
@@ -3186,32 +3309,17 @@ it is the responsibility of the user to not escape a reference to the
 object outside the scope.
 
 Note: it's illegal to move a class reference even if you are sure there
-are no pointers to it.
-
-Example:
-----
-unittest
-{
-    class A { int x; }
-    auto a1 = scoped!A();
-    auto a2 = scoped!A();
-    a1.x = 42;
-    a2.x = 53;
-    assert(a1.x == 42);
-
-    auto a3 = a2; // illegal, fails to compile
-    assert([a2][0].x == 42); // illegal, unexpected behaviour
-}
-----
+are no pointers to it. As such, it is illegal to move a scoped object.
  */
-@system auto scoped(T, Args...)(auto ref Args args) if (is(T == class))
+template scoped(T)
+    if (is(T == class))
 {
     // _d_newclass now use default GC alignment (looks like (void*).sizeof * 2 for
     // small objects). We will just use the maximum of filed alignments.
     alias classInstanceAlignment!T alignment;
     alias _alignUp!alignment aligned;
 
-    static struct Scoped(T)
+    static struct Scoped
     {
         // Addition of `alignment` is required as `Scoped_store` can be misaligned in memory.
         private void[aligned(__traits(classInstanceSize, T) + size_t.sizeof) + alignment] Scoped_store = void;
@@ -3232,10 +3340,8 @@ unittest
         }
         alias Scoped_payload this;
 
-        @disable this(this)
-        {
-            assert(false, "Illegal call to Scoped this(this)");
-        }
+        @disable this();
+        @disable this(this);
 
         ~this()
         {
@@ -3245,11 +3351,47 @@ unittest
         }
     }
 
-    Scoped!T result;
-    immutable size_t d = cast(void*) result.Scoped_payload - result.Scoped_store.ptr;
-    *cast(size_t*) &result.Scoped_store[$ - size_t.sizeof] = d;
-    emplace!(Unqual!T)(result.Scoped_store[d .. $ - size_t.sizeof], args);
-    return result;
+    /// Returns the scoped object
+    @system auto scoped(Args...)(auto ref Args args)
+    {
+        Scoped result = void;
+        void* alignedStore = cast(void*) aligned(cast(size_t) result.Scoped_store.ptr);
+        immutable size_t d = alignedStore - result.Scoped_store.ptr;
+        *cast(size_t*) &result.Scoped_store[$ - size_t.sizeof] = d;
+        emplace!(Unqual!T)(result.Scoped_store[d .. $ - size_t.sizeof], args);
+        return result;
+    }
+}
+///
+unittest
+{
+    class A
+    {
+        int x;
+        this()     {x = 0;}
+        this(int i){x = i;}
+    }
+
+    // Standard usage
+    auto a1 = scoped!A();
+    auto a2 = scoped!A(1);
+    a1.x = 42;
+    assert(a1.x == 42);
+    assert(a2.x ==  1);
+
+    // Restrictions
+    static assert(!is(typeof({
+        auto e1 = a1; // illegal, scoped objects can't be copied
+        assert([a2][0].x == 42); // ditto
+        alias ScopedObject = typeof(a1);
+        auto e2 = ScopedObject();  //Illegal, must be built via scoped!A
+        auto e3 = ScopedObject(1); //Illegal, must be built via scoped!A
+    })));
+
+    // Use with alias
+    alias makeScopedA = scoped!A;
+    auto a6 = makeScopedA();
+    auto a7 = makeScopedA();
 }
 
 private size_t _alignUp(size_t alignment)(size_t n)
@@ -3484,6 +3626,24 @@ unittest
     int val = 3;
     auto s = scoped!C(val);
     assert(val == 4);
+}
+
+unittest
+{
+    class C
+    {
+        this(){}
+        this(int){}
+        this(int, int){}
+    }
+    alias makeScopedC = scoped!C;
+
+    auto a = makeScopedC();
+    auto b = makeScopedC(1);
+    auto c = makeScopedC(1, 1);
+
+    static assert(is(typeof(a) == typeof(b)));
+    static assert(is(typeof(b) == typeof(c)));
 }
 
 /**

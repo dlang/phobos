@@ -70,6 +70,7 @@ private
     import core.sync.mutex;
     import core.sync.condition;
     import std.algorithm;
+    import std.datetime;
     import std.exception;
     import std.range;
     import std.string;
@@ -303,6 +304,19 @@ class MailboxFull : Exception
 }
 
 
+/**
+ * Thrown when a Tid is missing, e.g. when $(D ownerTid) doesn't
+ * find an owner thread.
+ */
+class TidMissingException : Exception
+{
+    this(string msg, string file = __FILE__, size_t line = __LINE__)
+    {
+        super(msg, file, line);
+    }
+}
+
+
 //////////////////////////////////////////////////////////////////////////////
 // Thread ID
 //////////////////////////////////////////////////////////////////////////////
@@ -313,14 +327,6 @@ class MailboxFull : Exception
  */
 struct Tid
 {
-    void send(T...)( T vals )
-    {
-        static assert( !hasLocalAliasing!(T),
-                       "Aliases to mutable thread-local data not allowed." );
-        _send( this, vals );
-    }
-
-
 private:
     this( MessageBox m )
     {
@@ -343,6 +349,34 @@ private:
     return Tid( mbox );
 }
 
+/**
+ * Return the Tid of the thread which
+ * spawned the caller's thread.
+ *
+ * Throws: A $(D TidMissingException) exception if
+ * there is no owner thread.
+ */
+@property Tid ownerTid()
+{
+    enforceEx!TidMissingException(owner.mbox !is null, "Error: Thread has no owner thread.");
+    return owner;
+}
+
+unittest
+{
+    static void fun()
+    {
+        string res = receiveOnly!string();
+        assert(res == "Main calling");
+        ownerTid.send("Child responding");
+    }
+
+    assertThrown!TidMissingException(ownerTid);
+    auto child = spawn(&fun);
+    child.send("Main calling");
+    string res = receiveOnly!string();
+    assert(res == "Child responding");
+}
 
 //////////////////////////////////////////////////////////////////////////////
 // Thread Creation
@@ -741,13 +775,6 @@ unittest
     tid.send(1);
     string result = receiveOnly!string();
     assert(result == "Unexpected message type: expected 'string', got 'int'");
-}
-
-//Explicitly undocumented. Do not use. To be removed in March 2013.
-deprecated("Please use the overload of receiveTimeout which takes a Duration.")
-bool receiveTimeout(T...)( long ms, T ops )
-{
-    return receiveTimeout( dur!"msecs"( ms ), ops );
 }
 
 /++
@@ -1246,6 +1273,11 @@ private
                 return false;
             }
 
+            static if( timedWait )
+            {
+                auto limit = Clock.currTime( UTC() ) + period;
+            }
+
             while( true )
             {
                 ListT arrived;
@@ -1270,7 +1302,7 @@ private
                             m_notFull.notifyAll();
                         static if( timedWait )
                         {
-                            if( !m_putMsg.wait( period ) )
+                            if( period.isNegative || !m_putMsg.wait( period ) )
                                 return false;
                         }
                         else
@@ -1286,7 +1318,14 @@ private
                     scope(exit) m_localBox.put( arrived );
                     if( scan( arrived ) )
                         return true;
-                    else continue;
+                    else
+                    {
+                        static if( timedWait )
+                        {
+                            period = limit - Clock.currTime( UTC() );
+                        }
+                        continue;
+                    }
                 }
                 m_localBox.put( arrived );
                 pty( m_localPty );

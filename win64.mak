@@ -27,13 +27,13 @@ CP=cp
 DIR=\dmd2
 
 ## Visual C directories
-VCDIR="\Program Files (x86)\Microsoft Visual Studio 10.0\VC"
-SDKDIR="\Program Files (x86)\Microsoft SDKs\Windows\v7.0A"
+VCDIR=\Program Files (x86)\Microsoft Visual Studio 10.0\VC
+SDKDIR=\Program Files (x86)\Microsoft SDKs\Windows\v7.0A
 
 ## Flags for VC compiler
 
-#CFLAGS=/Zi /nologo /I$(VCDIR)\INCLUDE /I$(SDKDIR)\Include
-CFLAGS=/O2 /nologo /I$(VCDIR)\INCLUDE /I$(SDKDIR)\Include
+#CFLAGS=/Zi /nologo /I"$(VCDIR)\INCLUDE" /I"$(SDKDIR)\Include"
+CFLAGS=/O2 /nologo /I"$(VCDIR)\INCLUDE" /I"$(SDKDIR)\Include"
 
 ## Flags for dmd D compiler
 
@@ -47,9 +47,10 @@ UDFLAGS=-g -m$(MODEL) -O -w -d -property
 
 ## C compiler, linker, librarian
 
-CC=$(VCDIR)\bin\amd64\cl
-LD=$(VCDIR)\bin\amd64\link
-LIB=$(VCDIR)\bin\amd64\lib
+CC="$(VCDIR)\bin\amd64\cl"
+LD="$(VCDIR)\bin\amd64\link"
+AR="$(VCDIR)\bin\amd64\lib"
+MAKE=make
 
 ## D compiler
 
@@ -115,14 +116,14 @@ SRC_STD_math=std\math.d
 SRC_STD_3= std\csv.d std\complex.d std\numeric.d std\bigint.d
 SRC_STD_3c= std\datetime.d std\metastrings.d std\bitmanip.d std\typecons.d
 
-SRC_STD_3a= std\uni.d std\base64.d std\md5.d std\ctype.d std\ascii.d \
+SRC_STD_3a= std\uni.d std\base64.d std\md5.d std\ascii.d \
     std\demangle.d std\uri.d std\mmfile.d std\getopt.d
 
 SRC_STD_3b= std\signals.d std\typetuple.d std\traits.d \
     std\encoding.d std\xml.d \
-    std\random.d std\regexp.d \
+    std\random.d \
     std\exception.d \
-    std\compiler.d std\cpuid.d \
+    std\compiler.d \
     std\system.d std\concurrency.d
 
 #can't place SRC_STD_DIGEST in SRC_STD_REST because of out-of-memory issues
@@ -138,12 +139,11 @@ SRC_STD_6c=std\zlib.d
 SRC_STD_6d=std\stream.d
 SRC_STD_6e=std\socket.d
 SRC_STD_6f=std\socketstream.d
-SRC_STD_6g=std\perf.d
-SRC_STD_6h=std\container.d
-SRC_STD_6i=std\conv.d
-SRC_STD_6j=std\zip.d
-SRC_STD_6k=std\cstream.d
-SRC_STD_6l=std\regex.d
+SRC_STD_6g=std\container.d
+SRC_STD_6h=std\conv.d
+SRC_STD_6i=std\zip.d
+SRC_STD_6j=std\cstream.d
+SRC_STD_6k=std\regex.d
 
 SRC_STD_7= \
 	std\stdint.d \
@@ -167,22 +167,21 @@ SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_6i) \
 	$(SRC_STD_6j) \
 	$(SRC_STD_6k) \
-	$(SRC_STD_6l) \
 	$(SRC_STD_7)
 
 SRC=	unittest.d crc32.d index.d
 
 SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d std\datetime.d \
-	std\ctype.d std\csv.d std\file.d std\compiler.d std\system.d \
+	std\csv.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\md5.d std\base64.d \
 	std\mmfile.d \
 	std\syserror.d \
-	std\regexp.d std\random.d std\stream.d std\process.d \
+	std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\format.d \
-	std\stdio.d std\perf.d std\uni.d std\uuid.d \
+	std\stdio.d std\uni.d std\uuid.d \
 	std\cstream.d std\demangle.d \
-	std\signals.d std\cpuid.d std\typetuple.d std\traits.d \
+	std\signals.d std\typetuple.d std\traits.d \
 	std\metastrings.d std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
 	std\functional.d std\algorithm.d std\array.d std\typecons.d \
@@ -282,7 +281,6 @@ SRC_ZLIB= \
 DOCS=	$(DOC)\object.html \
 	$(DOC)\core_atomic.html \
 	$(DOC)\core_bitop.html \
-	$(DOC)\core_cpuid.html \
 	$(DOC)\core_exception.html \
 	$(DOC)\core_memory.html \
 	$(DOC)\core_runtime.html \
@@ -308,14 +306,12 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_complex.html \
 	$(DOC)\std_container.html \
 	$(DOC)\std_conv.html \
-	$(DOC)\std_cpuid.html \
 	$(DOC)\std_digest_crc.html \
 	$(DOC)\std_digest_sha.html \
 	$(DOC)\std_digest_md.html \
 	$(DOC)\std_digest_ripemd.html \
 	$(DOC)\std_digest_digest.html \
 	$(DOC)\std_cstream.html \
-	$(DOC)\std_ctype.html \
 	$(DOC)\std_csv.html \
 	$(DOC)\std_datetime.html \
 	$(DOC)\std_demangle.html \
@@ -336,12 +332,10 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_outbuffer.html \
 	$(DOC)\std_parallelism.html \
 	$(DOC)\std_path.html \
-	$(DOC)\std_perf.html \
 	$(DOC)\std_process.html \
 	$(DOC)\std_random.html \
 	$(DOC)\std_range.html \
 	$(DOC)\std_regex.html \
-	$(DOC)\std_regexp.html \
 	$(DOC)\std_signals.html \
 	$(DOC)\std_socket.html \
 	$(DOC)\std_socketstream.html \
@@ -406,7 +400,6 @@ UNITTEST_OBJS= unittest1.obj unittest2.obj unittest2a.obj \
 		unittest6i.obj \
 		unittest6j.obj \
 		unittest6k.obj \
-		unittest6l.obj \
 		unittest7.obj 
 
 unittest : $(LIB)
@@ -431,7 +424,6 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6g.obj $(SRC_STD_6g)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6j.obj $(SRC_STD_6j)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6k.obj $(SRC_STD_6k)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6l.obj $(SRC_STD_6l)
 	$(DMD) $(UDFLAGS) -c           -ofunittest7.obj $(SRC_STD_7)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8.obj $(SRC_TO_COMPILE_NOT_STD)
 	$(DMD) $(UDFLAGS)    -unittest unittest.d $(UNITTEST_OBJS) \
@@ -455,7 +447,7 @@ html : $(DOCS)
 
 $(ZLIB): $(SRC_ZLIB)
 	cd etc\c\zlib
-	make -f win$(MODEL).mak zlib$(MODEL).lib
+	$(MAKE) -f win$(MODEL).mak zlib$(MODEL).lib "CC=\$(CC)"\"" "LIB=\$(AR)"\"" "VCDIR=$(VCDIR)"
 	cd ..\..\..
 
 ################## DOCS ####################################
@@ -473,9 +465,6 @@ $(DOC)\core_atomic.html : $(STDDOC) $(DRUNTIME)\src\core\atomic.d
 
 $(DOC)\core_bitop.html : $(STDDOC) $(DRUNTIME)\src\core\bitop.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\core_bitop.html $(STDDOC) $(DRUNTIME)\src\core\bitop.d -I$(DRUNTIME)\src\
-
-$(DOC)\core_cpuid.html : $(STDDOC) $(DRUNTIME)\src\core\cpuid.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\core_cpuid.html $(STDDOC) $(DRUNTIME)\src\core\cpuid.d -I$(DRUNTIME)\src\
 
 $(DOC)\core_exception.html : $(STDDOC) $(DRUNTIME)\src\core\exception.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\core_exception.html $(STDDOC) $(DRUNTIME)\src\core\exception.d -I$(DRUNTIME)\src\
@@ -552,14 +541,8 @@ $(DOC)\std_conv.html : $(STDDOC) std\conv.d
 $(DOC)\std_container.html : $(STDDOC) std\container.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container.html $(STDDOC) std\container.d
 
-$(DOC)\std_cpuid.html : $(STDDOC) std\cpuid.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_cpuid.html $(STDDOC) std\cpuid.d
-
 $(DOC)\std_cstream.html : $(STDDOC) std\cstream.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_cstream.html $(STDDOC) std\cstream.d
-
-$(DOC)\std_ctype.html : $(STDDOC) std\ctype.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_ctype.html $(STDDOC) std\ctype.d
 
 $(DOC)\std_csv.html : $(STDDOC) std\csv.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_csv.html $(STDDOC) std\csv.d
@@ -618,9 +601,6 @@ $(DOC)\std_parallelism.html : $(STDDOC) std\parallelism.d
 $(DOC)\std_path.html : $(STDDOC) std\path.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_path.html $(STDDOC) std\path.d
 
-$(DOC)\std_perf.html : $(STDDOC) std\perf.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_perf.html $(STDDOC) std\perf.d
-
 $(DOC)\std_process.html : $(STDDOC) std\process.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_process.html $(STDDOC) std\process.d
 
@@ -632,9 +612,6 @@ $(DOC)\std_range.html : $(STDDOC) std\range.d
 
 $(DOC)\std_regex.html : $(STDDOC) std\regex.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_regex.html $(STDDOC) std\regex.d
-
-$(DOC)\std_regexp.html : $(STDDOC) std\regexp.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_regexp.html $(STDDOC) std\regexp.d
 
 $(DOC)\std_signals.html : $(STDDOC) std\signals.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_signals.html $(STDDOC) std\signals.d
@@ -800,7 +777,7 @@ phobos.zip : zip
 
 clean:
 	cd etc\c\zlib
-	make -f win$(MODEL).mak clean
+	$(MAKE) -f win$(MODEL).mak clean
 	cd ..\..\..
 	del $(DOCS)
 	del $(UNITTEST_OBJS) unittest.obj unittest.exe

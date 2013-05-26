@@ -121,7 +121,7 @@ D language compiler. Also, check out the
 
 	<dl>
 
-	<dt><a href="std_ascii.html"><b>std.base64</b></a>
+	<dt><a href="std_ascii.html"><b>std.ascii</b></a>
 	<dd>Functions that operate on ASCII characters.
 
 	<dt><a href="std_base64.html"><b>std.base64</b></a>
@@ -190,7 +190,7 @@ $(V1
 	<dd>Recursively search file system and (currently Windows
 	only) FTP sites.
 )
-	<dt><a href="std_regexp.html"><b>std.regexp</b></a>
+	<dt><a href="std_regex.html"><b>std.regex</b></a>
 	<dd>The usual regular expression functions.
 
 	<dt><a href="std_socket.html"><b>std.socket</b></a>

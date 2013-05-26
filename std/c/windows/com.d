@@ -2,8 +2,9 @@ module std.c.windows.com;
 
 pragma(lib,"uuid");
 
-private import std.c.windows.windows;
-private import std.string;
+import core.atomic;
+import std.c.windows.windows;
+import std.string;
 
 alias WCHAR OLECHAR;
 alias OLECHAR *LPOLESTR;
@@ -232,12 +233,12 @@ extern (System):
 
     ULONG AddRef()
     {
-        return InterlockedIncrement(&count);
+        return atomicOp!"+="(*cast(shared)&count, 1);
     }
 
     ULONG Release()
     {
-        LONG lRef = InterlockedDecrement(&count);
+        LONG lRef = atomicOp!"-="(*cast(shared)&count, 1);
         if (lRef == 0)
         {
             // free object
