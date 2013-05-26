@@ -7285,6 +7285,12 @@ if (s != SwapStrategy.stable
             blackouts[i][0] = v;
             blackouts[i][1] = 1;
         }
+        static if (i > 0)
+        {            
+            enforce(blackouts[i - 1][0] + blackouts[i - 1][1] 
+                    <= blackouts[i][0], 
+                "remove(): incorrect ordering of elements to remove");
+        }
     }
 
     size_t left = 0, right = offset.length - 1;
@@ -7304,7 +7310,9 @@ if (s != SwapStrategy.stable
         assert(blackouts[left][0] >= steps);
         tgt.popFrontN(blackouts[left][0] - steps);
         steps = blackouts[left][0];
-        auto toMove = min(blackouts[left][1], blackouts[right][1]);
+        auto toMove = min(
+            blackouts[left][1], 
+            range.length - (blackouts[right][0] + blackouts[right][1]));
         foreach (i; 0 .. toMove)
         {
             move(range.back, tgt.front);
@@ -7343,7 +7351,8 @@ if (s == SwapStrategy.stable && isForwardRange!Range && Offset.length >= 1)
             auto from = i;
             enum delta = 1;
         }
-        assert(pos <= from);
+        enforce(pos <= from,
+                "remove(): incorrect ordering of elements to remove");
         if (pass > 0)
         {
             for (; pos < from; ++pos, src.popFront(), tgt.popFront())
@@ -7365,6 +7374,16 @@ if (s == SwapStrategy.stable && isForwardRange!Range && Offset.length >= 1)
     // leftover move
     moveAll(src, tgt);
     return result;
+}
+
+unittest
+{
+    // http://d.puremagic.com/issues/show_bug.cgi?id=10173
+    int[] test = iota(0, 10).array();
+    assertThrown(remove!(SwapStrategy.stable)(test, tuple(2, 4), tuple(1, 3)));
+    assertThrown(remove!(SwapStrategy.unstable)(test, tuple(2, 4), tuple(1, 3)));
+    assertThrown(remove!(SwapStrategy.stable)(test, 2, 4, 1, 3));
+    assertThrown(remove!(SwapStrategy.unstable)(test, 2, 4, 1, 3));
 }
 
 unittest
@@ -7405,6 +7424,10 @@ unittest
     a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
     assert(remove!(SwapStrategy.stable)(a, 1, tuple(3, 5))
             == [ 0, 2, 5, 6, 7, 8, 9, 10]);
+
+    a = iota(0, 10).array();
+    assert(remove!(SwapStrategy.unstable)(a, tuple(1, 4), tuple(6, 7)) 
+            == [0, 9, 8, 7, 4, 5]);
 }
 
 /**
