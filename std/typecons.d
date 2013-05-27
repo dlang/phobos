@@ -268,10 +268,8 @@ Tuple!(int, int) point2;
 assert(!is(typeof(point1) == typeof(point2))); // passes
 ----
 */
-struct Tuple(Specs...)
+template Tuple(Specs...)
 {
-private:
-
     // Parse (type,name) pairs (FieldSpecs) out of the specified
     // arguments. Some fields would have name, others not.
     template parseSpecs(Specs...)
@@ -318,7 +316,7 @@ private:
     //      :
     // NOTE: field[k] is an expression (which yields a symbol of a
     //       variable) and can't be aliased directly.
-    static string injectNamedFields()
+    string injectNamedFields()
     {
         string decl = "";
         foreach (i, name; staticMap!(extractName, fieldSpecs))
@@ -352,237 +350,221 @@ private:
         }
     }
 
-    import std.traits : defaultInit;
-    template isCompatibleTuples(Tup1, Tup2, string op)
+    template areCompatibleTuples(Tup1, Tup2, string op)
     {
-        enum isCompatibleTuples = is(typeof(
+        enum areCompatibleTuples = isTuple!Tup2 && is(typeof(
         {
             Tup1 tup1 = void;
             Tup2 tup2 = void;
             static assert(tup1.field.length == tup2.field.length);
             foreach (i, _; Tup1.Types)
             {
-                // this doesn't work if typeof(tup1.field[i]) == const(int)
-                //typeof(tup1.field[i]) lhs = void;
-                //typeof(tup2.field[i]) rhs = void;
-                auto lhs = defaultInit!(typeof(tup1.field[i])); // workaround
-                auto rhs = defaultInit!(typeof(tup2.field[i]));
+                auto lhs = typeof(tup1.field[i]).init;
+                auto rhs = typeof(tup2.field[i]).init;
                 auto result = mixin("lhs "~op~" rhs");
             }
         }));
     }
 
-public:
-/**
-   The type of the tuple's components.
-*/
-    alias staticMap!(extractType, fieldSpecs) Types;
-
-/**
-Use $(D t.expand) for a tuple $(D t) to expand it into its
-components. The result of $(D expand) acts as if the tuple components
-were listed as a list of values. (Ordinarily, a $(D Tuple) acts as a
-single value.)
-
-Examples:
-----
-auto t = tuple(1, " hello ", 2.3);
-writeln(t);        // Tuple!(int, string, double)(1, " hello ", 2.3)
-writeln(t.expand); // 1 hello 2.3
-----
- */
-    Types expand;
-    mixin(injectNamedFields());
-
-    // This is mostly to make t[n] work.
-    alias expand this;
-
-    // backwards compatibility
-    alias field = expand;
-
-    // This mitigates breakage of old code now that std.range.Zip uses
-    // Tuple instead of the old Proxy.  It's intentionally lacking ddoc
-    // because it was intended for deprecation.
-    // Now that it has been deprecated, it will be removed in January 2013.
-    deprecated auto at(size_t index)() {
-        return field[index];
-    }
-
-/**
-   Constructor taking one value for each field. Each argument must be
-   implicitly assignable to the respective element of the target.
- */
-    this()(Types values)
+    struct Tuple
     {
-        foreach (i, _; Types)
+        /**
+         * The type of the tuple's components.
+         */
+        alias staticMap!(extractType, fieldSpecs) Types;
+
+        /**
+         * Use $(D t.expand) for a tuple $(D t) to expand it into its
+         * components. The result of $(D expand) acts as if the tuple components
+         * were listed as a list of values. (Ordinarily, a $(D Tuple) acts as a
+         * single value.)
+         *
+         * Examples:
+         * ----
+         * auto t = tuple(1, " hello ", 2.3);
+         * writeln(t);        // Tuple!(int, string, double)(1, " hello ", 2.3)
+         * writeln(t.expand); // 1 hello 2.3
+         * ----
+         */
+        Types expand;
+        mixin(injectNamedFields());
+
+        static if (is(Specs))
         {
-            field[i] = values[i];
+            // This is mostly to make t[n] work.
+            alias expand this;
         }
-    }
-
-/**
-   Constructor taking a compatible array. The array element type must
-   be implicitly assignable to each element of the target.
-
-Examples:
-----
-int[2] ints;
-Tuple!(int, int) t = ints;
-----
- */
-    this(U, size_t n)(U[n] values)
-    if (n == Types.length
-        && is(typeof({ foreach (i, _; Types) field[i] = values[i]; })))
-    {
-        foreach (i, _; Types)
+        else
         {
-            field[i] = values[i];
-        }
-    }
-
-/**
-   Constructor taking a compatible tuple. Each element of the source
-   must be implicitly assignable to the respective element of the
-   target.
- */
-    this(U)(U another)
-        if (isTuple!U && isCompatibleTuples!(typeof(this), U, "="))
-    {
-        foreach (i, T; Types)
-        {
-            field[i] = another.field[i];
-        }
-    }
-
-/**
-   Comparison for equality.
- */
-    bool opEquals(R)(R rhs)
-        if (isTuple!R && isCompatibleTuples!(typeof(this), R, "=="))
-    {
-        foreach (i, Unused; Types)
-        {
-            if (field[i] != rhs.field[i]) return false;
-        }
-        return true;
-    }
-    /// ditto
-    bool opEquals(R)(R rhs) const
-        if (isTuple!R && isCompatibleTuples!(typeof(this), R, "=="))
-    {
-        foreach (i, Unused; Types)
-        {
-            if (field[i] != rhs.field[i]) return false;
-        }
-        return true;
-    }
-
-/**
-   Comparison for ordering.
- */
-    int opCmp(R)(R rhs)
-        if (isTuple!R && isCompatibleTuples!(typeof(this), R, "<"))
-    {
-        foreach (i, Unused; Types)
-        {
-            if (field[i] != rhs.field[i])
+            @property
+            ref Tuple!Types _Tuple_super() @trusted
             {
-                return field[i] < rhs.field[i] ? -1 : 1;
+                foreach (i, _; Types)   // Rely on the field layout
+                {
+                    static assert(typeof(return).init.tupleof[i].offsetof ==
+                                                       expand[i].offsetof);
+                }
+                return *cast(typeof(return)*) &(field[0]);
+            }
+            // This is mostly to make t[n] work.
+            alias _Tuple_super this;
+        }
+
+        // backwards compatibility
+        alias field = expand;
+
+        /**
+         * Constructor taking one value for each field. Each argument must be
+         * implicitly assignable to the respective element of the target.
+         */
+        this()(Types values)
+        {
+            field[] = values[];
+        }
+
+        /**
+         * Constructor taking a compatible array. The array element type must
+         * be implicitly assignable to each element of the target.
+         *
+         * Examples:
+         * ----
+         * int[2] ints;
+         * Tuple!(int, int) t = ints;
+         * ----
+         */
+        this(U, size_t n)(U[n] values)
+        if (n == Types.length &&
+            is(typeof({ foreach (i, _; Types) field[i] = values[i]; })))
+        {
+            foreach (i, _; Types)
+            {
+                field[i] = values[i];
             }
         }
-        return 0;
-    }
-    /// ditto
-    int opCmp(R)(R rhs) const
-        if (isTuple!R && isCompatibleTuples!(typeof(this), R, "<"))
-    {
-        foreach (i, Unused; Types)
+
+        /**
+         * Constructor taking a compatible tuple. Each element of the source
+         * must be implicitly assignable to the respective element of the
+         * target.
+         */
+        this(U)(U another)
+        if (areCompatibleTuples!(typeof(this), U, "="))
         {
-            if (field[i] != rhs.field[i])
-            {
-                return field[i] < rhs.field[i] ? -1 : 1;
-            }
+            field[] = another.field[];
         }
-        return 0;
-    }
 
-/**
-   Assignment from another tuple. Each element of the source must be
-   implicitly assignable to the respective element of the target.
- */
-    void opAssign(R)(R rhs)
-        if (isTuple!R && allSatisfy!(isAssignable, Types))
-    {
-        static assert(field.length == rhs.field.length,
-                      "Length mismatch in attempting to assign a "
-                     ~ R.stringof ~" to a "~ typeof(this).stringof);
-        // Do not swap; opAssign should be called on the fields.
-        foreach (i, Unused; Types)
+        /**
+         * Comparison for equality.
+         */
+        bool opEquals(R)(R rhs)
+        if (areCompatibleTuples!(typeof(this), R, "=="))
         {
-            field[i] = rhs.field[i];
+            return field[] == rhs.field[];
         }
-    }
-
-    // @@@BUG4424@@@ workaround
-    private mixin template _workaround4424()
-    {
-        @disable void opAssign(typeof(this) );
-    }
-    mixin _workaround4424;
-
-/**
-   Takes a slice of the tuple.
-
-   Example:
-
-----
-Tuple!(int, string, float, double) a;
-a[1] = "abc";
-a[2] = 4.5;
-auto s = a.slice!(1, 3);
-static assert(is(typeof(s) == Tuple!(string, float)));
-assert(s[0] == "abc" && s[1] == 4.5);
-----
- */
-    @property
-    ref Tuple!(sliceSpecs!(from, to)) slice(uint from, uint to)()
-    {
-        return *cast(typeof(return) *) &(field[from]);
-    }
-
-/**
-   The length of the tuple.
- */
-    enum length = field.length;
-
-/**
-   Converts to string.
- */
-    string toString()
-    {
-        enum header = typeof(this).stringof ~ "(",
-             footer = ")",
-             separator = ", ";
-
-        Appender!string app;
-        app.put(header);
-        foreach (i, Unused; Types)
+        /// ditto
+        bool opEquals(R)(R rhs) const
+        if (areCompatibleTuples!(typeof(this), R, "=="))
         {
-            static if (i > 0)
+            return field[] == rhs.field[];
+        }
+
+        /**
+         * Comparison for ordering.
+         */
+        int opCmp(R)(R rhs)
+        if (areCompatibleTuples!(typeof(this), R, "<"))
+        {
+            foreach (i, Unused; Types)
             {
-                app.put(separator);
+                if (field[i] != rhs.field[i])
+                {
+                    return field[i] < rhs.field[i] ? -1 : 1;
+                }
             }
-            // TODO: Change this once toString() works for shared objects.
-            static if (is(Unused == class) && is(Unused == shared))
-                formattedWrite(app, "%s", field[i].stringof);
+            return 0;
+        }
+        /// ditto
+        int opCmp(R)(R rhs) const
+        if (areCompatibleTuples!(typeof(this), R, "<"))
+        {
+            foreach (i, Unused; Types)
+            {
+                if (field[i] != rhs.field[i])
+                {
+                    return field[i] < rhs.field[i] ? -1 : 1;
+                }
+            }
+            return 0;
+        }
+
+        /**
+         * Assignment from another tuple. Each element of the source must be
+         * implicitly assignable to the respective element of the target.
+         */
+        void opAssign(R)(auto ref R rhs)
+        if (areCompatibleTuples!(typeof(this), R, "="))
+        {
+            static if (is(R : Tuple!Types) && !__traits(isRef, rhs))
+            {
+                // Use swap-and-destroy to optimize rvalue assignment
+                swap!(Tuple!Types)(this, rhs);
+            }
             else
             {
-                FormatSpec!char f;  // "%s"
-                formatElement(app, field[i], f);
+                // Do not swap; opAssign should be called on the fields.
+                field[] = rhs.field[];
             }
         }
-        app.put(footer);
-        return app.data;
+
+        /**
+         * Takes a slice of the tuple.
+         *
+         * Examples:
+         * ----
+         * Tuple!(int, string, float, double) a;
+         * a[1] = "abc";
+         * a[2] = 4.5;
+         * auto s = a.slice!(1, 3);
+         * static assert(is(typeof(s) == Tuple!(string, float)));
+         * assert(s[0] == "abc" && s[1] == 4.5);
+         * ----
+         */
+        @property
+        ref Tuple!(sliceSpecs!(from, to)) slice(size_t from, size_t to)() @trusted
+        if (from <= to && to <= Types.length)
+        {
+            return *cast(typeof(return)*) &(field[from]);
+        }
+
+        /**
+         * Converts to string.
+         */
+        string toString()
+        {
+            enum header = typeof(this).stringof ~ "(",
+                 footer = ")",
+                 separator = ", ";
+
+            Appender!string w;
+            w.put(header);
+            foreach (i, Unused; Types)
+            {
+                static if (i > 0)
+                {
+                    w.put(separator);
+                }
+                // TODO: Change this once toString() works for shared objects.
+                static if (is(Unused == class) && is(Unused == shared))
+                    formattedWrite(w, "%s", field[i].stringof);
+                else
+                {
+                    FormatSpec!char f;  // "%s"
+                    formatElement(w, field[i], f);
+                }
+            }
+            w.put(footer);
+            return w.data;
+        }
     }
 }
 
@@ -821,6 +803,21 @@ unittest
         Tuple!(long, uint) t2 = ints;
         assert(t2[0] == 1 && t2[1] == 2);
     }
+}
+@safe unittest
+{
+    auto t1 = Tuple!(int, "x", string, "y")(1, "a");
+    assert(t1.x == 1);
+    assert(t1.y == "a");
+    void foo(Tuple!(int, string) t2) {}
+    foo(t1);
+
+    Tuple!(int, int)[] arr;
+    arr ~= tuple(10, 20); // OK
+    arr ~= Tuple!(int, "x", int, "y")(10, 20); // NG -> OK
+
+    static assert(is(typeof(Tuple!(int, "x", string, "y").tupleof) ==
+                     typeof(Tuple!(int,      string     ).tupleof)));
 }
 
 /**
