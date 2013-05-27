@@ -6529,8 +6529,8 @@ struct Chunks(Source)
         }
         else
         {
-            //Dollar token caries a static type, with no extra information.
-            //It can lazilly transform into _source.length on algorithmic
+            //Dollar token carries a static type, with no extra information.
+            //It can lazily transform into _source.length on algorithmic
             //operations such as : chunks[$/2, $-1];
             private static struct DollarToken
             {
