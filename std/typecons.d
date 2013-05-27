@@ -389,8 +389,26 @@ template Tuple(Specs...)
         Types expand;
         mixin(injectNamedFields());
 
-        // This is mostly to make t[n] work.
-        alias expand this;
+        static if (is(Specs))
+        {
+            // This is mostly to make t[n] work.
+            alias expand this;
+        }
+        else
+        {
+            @property
+            ref Tuple!Types _Tuple_super() @trusted
+            {
+                foreach (i, _; Types)   // Rely on the field layout
+                {
+                    static assert(typeof(return).init.tupleof[i].offsetof ==
+                                                       expand[i].offsetof);
+                }
+                return *cast(typeof(return)*) &(field[0]);
+            }
+            // This is mostly to make t[n] work.
+            alias _Tuple_super this;
+        }
 
         // backwards compatibility
         alias field = expand;
@@ -514,7 +532,7 @@ template Tuple(Specs...)
         @property
         ref Tuple!(sliceSpecs!(from, to)) slice(uint from, uint to)()
         {
-            return *cast(typeof(return) *) &(field[from]);
+            return *cast(typeof(return)*) &(field[from]);
         }
 
         /**
@@ -784,6 +802,21 @@ unittest
         Tuple!(long, uint) t2 = ints;
         assert(t2[0] == 1 && t2[1] == 2);
     }
+}
+@safe unittest
+{
+    auto t1 = Tuple!(int, "x", string, "y")(1, "a");
+    assert(t1.x == 1);
+    assert(t1.y == "a");
+    void foo(Tuple!(int, string) t2) {}
+    foo(t1);
+
+    Tuple!(int, int)[] arr;
+    arr ~= tuple(10, 20); // OK
+    arr ~= Tuple!(int, "x", int, "y")(10, 20); // NG -> OK
+
+    static assert(is(typeof(Tuple!(int, "x", string, "y").tupleof) ==
+                     typeof(Tuple!(int,      string     ).tupleof)));
 }
 
 /**
