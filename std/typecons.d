@@ -350,9 +350,9 @@ template Tuple(Specs...)
         }
     }
 
-    template isCompatibleTuples(Tup1, Tup2, string op)
+    template areCompatibleTuples(Tup1, Tup2, string op)
     {
-        enum isCompatibleTuples = is(typeof(
+        enum areCompatibleTuples = isTuple!Tup2 && is(typeof(
         {
             Tup1 tup1 = void;
             Tup2 tup2 = void;
@@ -441,7 +441,7 @@ template Tuple(Specs...)
          * target.
          */
         this(U)(U another)
-        if (isTuple!U && isCompatibleTuples!(typeof(this), U, "="))
+        if (areCompatibleTuples!(typeof(this), U, "="))
         {
             foreach (i, T; Types)
             {
@@ -453,7 +453,7 @@ template Tuple(Specs...)
          * Comparison for equality.
          */
         bool opEquals(R)(R rhs)
-        if (isTuple!R && isCompatibleTuples!(typeof(this), R, "=="))
+        if (areCompatibleTuples!(typeof(this), R, "=="))
         {
             foreach (i, Unused; Types)
             {
@@ -463,7 +463,7 @@ template Tuple(Specs...)
         }
         /// ditto
         bool opEquals(R)(R rhs) const
-        if (isTuple!R && isCompatibleTuples!(typeof(this), R, "=="))
+        if (areCompatibleTuples!(typeof(this), R, "=="))
         {
             foreach (i, Unused; Types)
             {
@@ -476,7 +476,7 @@ template Tuple(Specs...)
          * Comparison for ordering.
          */
         int opCmp(R)(R rhs)
-        if (isTuple!R && isCompatibleTuples!(typeof(this), R, "<"))
+        if (areCompatibleTuples!(typeof(this), R, "<"))
         {
             foreach (i, Unused; Types)
             {
@@ -489,7 +489,7 @@ template Tuple(Specs...)
         }
         /// ditto
         int opCmp(R)(R rhs) const
-        if (isTuple!R && isCompatibleTuples!(typeof(this), R, "<"))
+        if (areCompatibleTuples!(typeof(this), R, "<"))
         {
             foreach (i, Unused; Types)
             {
@@ -506,11 +506,8 @@ template Tuple(Specs...)
          * implicitly assignable to the respective element of the target.
          */
         void opAssign(R)(R rhs)
-        if (isTuple!R && allSatisfy!(isAssignable, Types))
+        if (areCompatibleTuples!(typeof(this), R, "="))
         {
-            static assert(field.length == rhs.field.length,
-                          "Length mismatch in attempting to assign a "
-                         ~ R.stringof ~" to a "~ typeof(this).stringof);
             // Do not swap; opAssign should be called on the fields.
             foreach (i, Unused; Types)
             {
