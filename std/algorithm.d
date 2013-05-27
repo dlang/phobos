@@ -7271,24 +7271,24 @@ if (s != SwapStrategy.stable
     && isBidirectionalRange!Range && hasLength!Range
     && Offset.length >= 1)
 {
-    Tuple!(size_t, size_t)[offset.length] blackouts;
+    Tuple!(size_t, "pos", size_t, "len")[offset.length] blackouts;
     foreach (i, v; offset)
     {
         static if (is(typeof(v[0]) : size_t) && is(typeof(v[1]) : size_t))
         {
-            blackouts[i][0] = v[0];
-            blackouts[i][1] = v[1] - v[0];
+            blackouts[i].pos = v[0];
+            blackouts[i].len = v[1] - v[0];
         }
         else
         {
             static assert(is(typeof(v) : size_t), typeof(v).stringof);
-            blackouts[i][0] = v;
-            blackouts[i][1] = 1;
+            blackouts[i].pos = v;
+            blackouts[i].len = 1;
         }
         static if (i > 0)
         {            
-            enforce(blackouts[i - 1][0] + blackouts[i - 1][1] 
-                    <= blackouts[i][0], 
+            enforce(blackouts[i - 1].pos + blackouts[i - 1].len 
+                    <= blackouts[i].pos, 
                 "remove(): incorrect ordering of elements to remove");
         }
     }
@@ -7300,19 +7300,19 @@ if (s != SwapStrategy.stable
     while (left <= right)
     {
         // Look for a blackout on the right
-        if (blackouts[right][0] + blackouts[right][1] >= range.length)
+        if (blackouts[right].pos + blackouts[right].len >= range.length)
         {
-            range.popBackN(blackouts[right][1]);
+            range.popBackN(blackouts[right].len);
             --right;
             continue;
         }
         // Advance to next blackout on the left
-        assert(blackouts[left][0] >= steps);
-        tgt.popFrontN(blackouts[left][0] - steps);
-        steps = blackouts[left][0];
+        assert(blackouts[left].pos >= steps);
+        tgt.popFrontN(blackouts[left].pos - steps);
+        steps = blackouts[left].pos;
         auto toMove = min(
-            blackouts[left][1], 
-            range.length - (blackouts[right][0] + blackouts[right][1]));
+            blackouts[left].len, 
+            range.length - (blackouts[right].pos + blackouts[right].len));
         foreach (i; 0 .. toMove)
         {
             move(range.back, tgt.front);
@@ -7320,7 +7320,7 @@ if (s != SwapStrategy.stable
             tgt.popFront();
         }
         steps += toMove;
-        if (toMove == blackouts[left][1])
+        if (toMove == blackouts[left].len)
         {
             // Filled the entire left hole
             ++left;
