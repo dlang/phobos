@@ -522,13 +522,6 @@ template Tuple(Specs...)
             }
         }
 
-        // @@@BUG4424@@@ workaround
-        private mixin template _workaround4424()
-        {
-            @disable void opAssign(typeof(this) );
-        }
-        mixin _workaround4424;
-
         /**
          * Takes a slice of the tuple.
          *
