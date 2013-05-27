@@ -2605,24 +2605,24 @@ template generateAssertTrap(C, func.../+[BUG 4217]+/)
  * Supports structural based typesafe conversion.
  *
  * If $(D Source) has structural conformance with the $(D interface) $(D Targets),
- * structuralCast creates internal wrapper class which inherits $(D Targets) and
+ * wrap creates internal wrapper class which inherits $(D Targets) and
  * wrap $(D src) object, then return it.
  */
-template structuralCast(Targets...)
+template wrap(Targets...)
 if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
 {
     // strict upcast
-    @property structuralCast(Source)(inout Source src) @trusted pure nothrow
+    @property wrap(Source)(inout Source src) @trusted pure nothrow
     if (Targets.length == 1 && is(Source : Targets[0]))
     {
         alias T = Select!(is(Source == shared), shared Targets[0], Targets[0]);
         return cast(inout T)(src);
     }
     // structural upcast
-    template structuralCast(Source)
+    template wrap(Source)
     if (!allSatisfy!(Bind!(isImplicitlyConvertible, Source), Targets))
     {
-        @property structuralCast(inout Source src)
+        @property wrap(inout Source src)
         {
             static assert(hasRequireMethods!(),
                           "Source "~Source.stringof~
@@ -2712,15 +2712,15 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
         final class Impl : Structural, Targets
         {
         private:
-            Source _structuralCast_source;
+            Source _wrap_source;
 
-            this(       inout Source s)        inout @safe pure nothrow { _structuralCast_source = s; }
-            this(shared inout Source s) shared inout @safe pure nothrow { _structuralCast_source = s; }
+            this(       inout Source s)        inout @safe pure nothrow { _wrap_source = s; }
+            this(shared inout Source s) shared inout @safe pure nothrow { _wrap_source = s; }
 
             // BUG: making private should work with NVI.
-            protected final inout(Object) _structuralCast_getSource() inout @trusted
+            protected final inout(Object) _wrap_getSource() inout @trusted
             {
-                return cast(inout Object)(_structuralCast_source);
+                return cast(inout Object)(_wrap_source);
             }
 
             import std.conv : to;
@@ -2758,7 +2758,7 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
                 enum generateFun =
                     "override "~stc~"ReturnType!(TargetMembers["~n~"].type) "
                     ~ name~"(ParameterTypeTuple!(TargetMembers["~n~"].type) args) "~mod~
-                    "{ return _structuralCast_source."~name~"(forward!args); }";
+                    "{ return _wrap_source."~name~"(forward!args); }";
             }
 
         public:
@@ -2768,33 +2768,33 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
     }
 }
 /// ditto
-template structuralCast(Targets...)
+template wrap(Targets...)
 if (Targets.length >= 1 && !allSatisfy!(isMutable, Targets))
 {
-    alias structuralCast = .structuralCast!(staticMap!(Unqual, Targets));
+    alias wrap = .wrap!(staticMap!(Unqual, Targets));
 }
 
 // Internal class to support dynamic cross-casting
 private interface Structural
 {
-    inout(Object) _structuralCast_getSource() inout @safe pure nothrow;
+    inout(Object) _wrap_getSource() inout @safe pure nothrow;
 }
 
 /**
- * Extract object which wrapped by $(D structuralCast).
+ * Extract object which wrapped by $(D wrap).
  */
-template structuralDownCast(Target)
+template unwrap(Target)
 if (isMutable!Target)
 {
     // strict downcast
-    @property structuralDownCast(Source)(inout Source src) @trusted pure nothrow
+    @property unwrap(Source)(inout Source src) @trusted pure nothrow
     if (is(Target : Source))
     {
         alias T = Select!(is(Source == shared), shared Target, Target);
         return cast(inout T)(src);
     }
     // structural downcast
-    @property structuralDownCast(Source)(inout Source src) @trusted pure nothrow
+    @property unwrap(Source)(inout Source src) @trusted pure nothrow
     if (!is(Target : Source))
     {
         alias T = Select!(is(Source == shared), shared Target, Target);
@@ -2803,7 +2803,7 @@ if (isMutable!Target)
         {
             if (auto a = cast(Structural)o)
             {
-                if (auto d = cast(inout T)(o = a._structuralCast_getSource()))
+                if (auto d = cast(inout T)(o = a._wrap_getSource()))
                     return d;
             }
             else if (auto d = cast(inout T)o)
@@ -2815,10 +2815,10 @@ if (isMutable!Target)
     }
 }
 /// ditto
-template structuralDownCast(Target)
+template unwrap(Target)
 if (!isMutable!Target)
 {
-    alias structuralDownCast = .structuralDownCast!(Unqual!Target);
+    alias unwrap = .unwrap!(Unqual!Target);
 }
 
 ///
@@ -2852,34 +2852,34 @@ unittest
         int reflesh();
     }
     // does not have structural conformance
-    static assert(!__traits(compiles, d1.structuralCast!Refleshable));
-    static assert(!__traits(compiles, h1.structuralCast!Refleshable));
+    static assert(!__traits(compiles, d1.wrap!Refleshable));
+    static assert(!__traits(compiles, h1.wrap!Refleshable));
 
     // strict upcast
-    Quack qd = d1.structuralCast!Quack;
+    Quack qd = d1.wrap!Quack;
     assert(qd is d1);
     assert(qd.quack() == 1);    // calls Duck.quack
     // strict downcast
-    Duck d2 = qd.structuralDownCast!Duck;
+    Duck d2 = qd.unwrap!Duck;
     assert(d2 is d1);
 
     // structural upcast
-    Quack qh = h1.structuralCast!Quack;
+    Quack qh = h1.wrap!Quack;
     assert(qh.quack() == 2);    // calls Human.quack
     // structural downcast
-    Human h2 = qh.structuralDownCast!Human;
+    Human h2 = qh.unwrap!Human;
     assert(h2 is h1);
 
     // structural upcast (two steps)
-    Quack qx = h1.structuralCast!Quack;     // Human -> Quack
-    Flyer fx = qx.structuralCast!Flyer;     // Quack -> Flyer
+    Quack qx = h1.wrap!Quack;   // Human -> Quack
+    Flyer fx = qx.wrap!Flyer;   // Quack -> Flyer
     assert(fx.height() == 20);  // calls Human.height
     // strucural downcast (two steps)
-    Quack qy = fx.structuralDownCast!Quack; // Flyer -> Quack
-    Human hy = qy.structuralDownCast!Human; // Quack -> Human
+    Quack qy = fx.unwrap!Quack; // Flyer -> Quack
+    Human hy = qy.unwrap!Human; // Quack -> Human
     assert(hy is h1);
     // strucural downcast (one step)
-    Human hz = fx.structuralDownCast!Human; // Flyer -> Human
+    Human hz = fx.unwrap!Human; // Flyer -> Human
     assert(hz is h1);
 }
 ///
@@ -2895,7 +2895,7 @@ unittest
     }
 
     auto x = new X();
-    auto ab = x.structuralCast!(A, B);
+    auto ab = x.wrap!(A, B);
     A a = ab;
     B b = ab;
     assert(a.run() == 1);
@@ -2932,11 +2932,11 @@ unittest
     auto sa = new shared A();
     auto ia = new immutable A();
     {
-                     Drawable  md = ma.structuralCast!Drawable;
-               const Drawable  cd = ma.structuralCast!Drawable;
-              shared Drawable  sd = sa.structuralCast!Drawable;
-        shared const Drawable scd = sa.structuralCast!Drawable;
-           immutable Drawable  id = ia.structuralCast!Drawable;
+                     Drawable  md = ma.wrap!Drawable;
+               const Drawable  cd = ma.wrap!Drawable;
+              shared Drawable  sd = sa.wrap!Drawable;
+        shared const Drawable scd = sa.wrap!Drawable;
+           immutable Drawable  id = ia.wrap!Drawable;
         assert( md.draw() == 1);
         assert( cd.draw() == 2);
         assert( sd.draw() == 3);
@@ -2944,7 +2944,7 @@ unittest
         assert( id.draw() == 5);
     }
     {
-        Drawable2 d = ma.structuralCast!Drawable2;
+        Drawable2 d = ma.wrap!Drawable2;
         static assert(!__traits(compiles, d.draw()));
         assert(d.draw(10) == 10);
     }
