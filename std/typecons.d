@@ -542,11 +542,6 @@ template Tuple(Specs...)
         }
 
         /**
-         * The length of the tuple.
-         */
-        enum length = field.length;
-
-        /**
          * Converts to string.
          */
         string toString()
