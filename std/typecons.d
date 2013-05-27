@@ -350,7 +350,6 @@ template Tuple(Specs...)
         }
     }
 
-    import std.traits : defaultInit;
     template isCompatibleTuples(Tup1, Tup2, string op)
     {
         enum isCompatibleTuples = is(typeof(
@@ -360,11 +359,8 @@ template Tuple(Specs...)
             static assert(tup1.field.length == tup2.field.length);
             foreach (i, _; Tup1.Types)
             {
-                // this doesn't work if typeof(tup1.field[i]) == const(int)
-                //typeof(tup1.field[i]) lhs = void;
-                //typeof(tup2.field[i]) rhs = void;
-                auto lhs = defaultInit!(typeof(tup1.field[i])); // workaround
-                auto rhs = defaultInit!(typeof(tup2.field[i]));
+                auto lhs = typeof(tup1.field[i]).init;
+                auto rhs = typeof(tup2.field[i]).init;
                 auto result = mixin("lhs "~op~" rhs");
             }
         }));
