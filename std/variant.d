@@ -299,6 +299,12 @@ private:
         case OpID.copyOut:
             auto target = cast(VariantN *) parm;
             assert(target);
+
+            static if (target.size < A.sizeof)
+            {
+                if (target.type.tsize < A.sizeof)
+                    *cast(A**)&target.store = new A;
+            }
             tryPutting(zis, typeid(A), cast(void*) getPtr(&target.store))
                 || assert(false);
             target.fptr = &handler!(A);
@@ -1880,4 +1886,18 @@ unittest
     Variant b;
     assert(a == b);
     assert(b == a);
+}
+
+unittest
+{
+    // http://d.puremagic.com/issues/show_bug.cgi?id=10017
+    static struct S
+    {
+        ubyte[Variant.size + 1] s;
+    }
+
+    Variant v1, v2;
+    v1 = S(); // the payload is allocated on the heap
+    v2 = v1;  // AssertError: target must be non-null
+    assert(v1 == v2);
 }
