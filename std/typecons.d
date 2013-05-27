@@ -373,24 +373,24 @@ private:
     }
 
 public:
-/**
-   The type of the tuple's components.
-*/
+    /**
+     * The type of the tuple's components.
+     */
     alias staticMap!(extractType, fieldSpecs) Types;
 
-/**
-Use $(D t.expand) for a tuple $(D t) to expand it into its
-components. The result of $(D expand) acts as if the tuple components
-were listed as a list of values. (Ordinarily, a $(D Tuple) acts as a
-single value.)
-
-Examples:
-----
-auto t = tuple(1, " hello ", 2.3);
-writeln(t);        // Tuple!(int, string, double)(1, " hello ", 2.3)
-writeln(t.expand); // 1 hello 2.3
-----
- */
+    /**
+     * Use $(D t.expand) for a tuple $(D t) to expand it into its
+     * components. The result of $(D expand) acts as if the tuple components
+     * were listed as a list of values. (Ordinarily, a $(D Tuple) acts as a
+     * single value.)
+     *
+     * Examples:
+     * ----
+     * auto t = tuple(1, " hello ", 2.3);
+     * writeln(t);        // Tuple!(int, string, double)(1, " hello ", 2.3)
+     * writeln(t.expand); // 1 hello 2.3
+     * ----
+     */
     Types expand;
     mixin(injectNamedFields());
 
@@ -408,10 +408,10 @@ writeln(t.expand); // 1 hello 2.3
         return field[index];
     }
 
-/**
-   Constructor taking one value for each field. Each argument must be
-   implicitly assignable to the respective element of the target.
- */
+    /**
+     * Constructor taking one value for each field. Each argument must be
+     * implicitly assignable to the respective element of the target.
+     */
     this()(Types values)
     {
         foreach (i, _; Types)
@@ -420,16 +420,16 @@ writeln(t.expand); // 1 hello 2.3
         }
     }
 
-/**
-   Constructor taking a compatible array. The array element type must
-   be implicitly assignable to each element of the target.
-
-Examples:
-----
-int[2] ints;
-Tuple!(int, int) t = ints;
-----
- */
+    /**
+     * Constructor taking a compatible array. The array element type must
+     * be implicitly assignable to each element of the target.
+     *
+     * Examples:
+     * ----
+     * int[2] ints;
+     * Tuple!(int, int) t = ints;
+     * ----
+     */
     this(U, size_t n)(U[n] values)
     if (n == Types.length
         && is(typeof({ foreach (i, _; Types) field[i] = values[i]; })))
@@ -440,11 +440,11 @@ Tuple!(int, int) t = ints;
         }
     }
 
-/**
-   Constructor taking a compatible tuple. Each element of the source
-   must be implicitly assignable to the respective element of the
-   target.
- */
+    /**
+     * Constructor taking a compatible tuple. Each element of the source
+     * must be implicitly assignable to the respective element of the
+     * target.
+     */
     this(U)(U another)
         if (isTuple!U && isCompatibleTuples!(typeof(this), U, "="))
     {
@@ -454,9 +454,9 @@ Tuple!(int, int) t = ints;
         }
     }
 
-/**
-   Comparison for equality.
- */
+    /**
+     * Comparison for equality.
+     */
     bool opEquals(R)(R rhs)
         if (isTuple!R && isCompatibleTuples!(typeof(this), R, "=="))
     {
@@ -477,9 +477,9 @@ Tuple!(int, int) t = ints;
         return true;
     }
 
-/**
-   Comparison for ordering.
- */
+    /**
+     * Comparison for ordering.
+     */
     int opCmp(R)(R rhs)
         if (isTuple!R && isCompatibleTuples!(typeof(this), R, "<"))
     {
@@ -506,10 +506,10 @@ Tuple!(int, int) t = ints;
         return 0;
     }
 
-/**
-   Assignment from another tuple. Each element of the source must be
-   implicitly assignable to the respective element of the target.
- */
+    /**
+     * Assignment from another tuple. Each element of the source must be
+     * implicitly assignable to the respective element of the target.
+     */
     void opAssign(R)(R rhs)
         if (isTuple!R && allSatisfy!(isAssignable, Types))
     {
@@ -530,34 +530,33 @@ Tuple!(int, int) t = ints;
     }
     mixin _workaround4424;
 
-/**
-   Takes a slice of the tuple.
-
-   Example:
-
-----
-Tuple!(int, string, float, double) a;
-a[1] = "abc";
-a[2] = 4.5;
-auto s = a.slice!(1, 3);
-static assert(is(typeof(s) == Tuple!(string, float)));
-assert(s[0] == "abc" && s[1] == 4.5);
-----
- */
+    /**
+     * Takes a slice of the tuple.
+     *
+     * Examples:
+     * ----
+     * Tuple!(int, string, float, double) a;
+     * a[1] = "abc";
+     * a[2] = 4.5;
+     * auto s = a.slice!(1, 3);
+     * static assert(is(typeof(s) == Tuple!(string, float)));
+     * assert(s[0] == "abc" && s[1] == 4.5);
+     * ----
+     */
     @property
     ref Tuple!(sliceSpecs!(from, to)) slice(uint from, uint to)()
     {
         return *cast(typeof(return) *) &(field[from]);
     }
 
-/**
-   The length of the tuple.
- */
+    /**
+     * The length of the tuple.
+     */
     enum length = field.length;
 
-/**
-   Converts to string.
- */
+    /**
+     * Converts to string.
+     */
     string toString()
     {
         enum header = typeof(this).stringof ~ "(",
