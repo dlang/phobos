@@ -35,8 +35,8 @@ setSymmetricDifference) $(MYREF setUnion) )
 )
 $(TR $(TDNW Mutation) $(TD $(MYREF bringToFront) $(MYREF copy) $(MYREF
 fill) $(MYREF initializeAll) $(MYREF move) $(MYREF moveAll) $(MYREF
-moveSome) $(MYREF remove) $(MYREF reverse) $(MYREF swap) $(MYREF
-swapRanges) $(MYREF uninitializedFill) ))
+moveSome) $(MYREF remove) $(MYREF reverse) $(MYREF strip) $(MYREF stripLeft)
+$(MYREF stripRight) $(MYREF swap) $(MYREF swapRanges) $(MYREF uninitializedFill) ))
 )
 
 Implements algorithms oriented mainly towards processing of
@@ -302,6 +302,21 @@ possible from one range to another.)
 )
 $(TR $(TDNW $(LREF reverse)) $(TD If $(D a = [1, 2, 3]), $(D
 reverse(a)) changes it to $(D [3, 2, 1]).)
+)
+$(TR $(TDNW $(LREF strip)) $(TD Strips all leading and trailing
+elements equal to a value, or that satisfy a predicate.
+If $(D a = [1, 1, 0, 1, 1]), then $(D strip(a, 1)) and $(D strip!(e => e == 1)(a))
+returns $(D [0]).)
+)
+$(TR $(TDNW $(LREF stripLeft)) $(TD Strips all leading elements equal to a value,
+or that satisfy a predicate.
+If $(D a = [1, 1, 0, 1, 1]), then $(D stripLeft(a, 1)) and $(D stripLeft!(e => e == 1)(a))
+returns $(D [0, 1, 1]).)
+)
+$(TR $(TDNW $(LREF stripRight)) $(TD Strips all trailing elements equal to a value,
+or that satisfy a predicate.
+If $(D a = [1, 1, 0, 1, 1]), then $(D stripRight(a, 1)) and $(D stripRight!(e => e == 1)(a))
+returns $(D [1, 1, 0]).)
 )
 $(TR $(TDNW $(LREF swap)) $(TD Swaps two values.)
 )
@@ -2206,7 +2221,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
         IndexType _frontLength = _unComputed;
         IndexType _backLength = _unComputed;
 
-        static if (isNarrowString!Range) 
+        static if (isNarrowString!Range)
         {
             size_t _separatorLength;
         }
@@ -2796,7 +2811,7 @@ unittest
     lines[1] = "line \ttwo".dup;
     lines[2] = "yah            last   line\ryah".dup;
     foreach (line; lines) {
-       foreach (word; splitter(strip(line))) {
+       foreach (word; splitter(std.string.strip(line))) {
             if (word in dictionary) continue; // Nothing to do
             auto newID = dictionary.length;
             dictionary[to!string(word)] = cast(uint)newID;
@@ -7050,6 +7065,134 @@ unittest
     test("hello\U00010143\u0100\U00010143", "\U00010143\u0100\U00010143olleh");
 }
 
+/**
+    The strip group of functions allow stripping of either leading, trailing,
+    or both leading and trailing elements.
+
+    The $(D stripLeft) function will strip the $(D front) of the range,
+    the $(D stripRight) function will strip the $(D back) of the range,
+    while the $(D strip) function will strip both the $(D front) and $(D back)
+    of the range.
+
+    Note that the $(D strip) and $(D stripRight) functions require the range to
+    be a $(LREF BidirectionalRange) range.
+
+    All of these functions come in two varieties: one takes a target element,
+    where the range will be stripped as long as this element can be found.
+    The other takes a lambda predicate, where the range will be stripped as
+    long as the predicate returns true.
+*/
+Range strip(Range, E)(Range range, E element)
+    if (isBidirectionalRange!Range && is(typeof(range.front == element) : bool))
+{
+    return range.stripLeft(element).stripRight(element);
+}
+
+/// ditto
+Range strip(alias pred, Range)(Range range)
+    if (isBidirectionalRange!Range && is(typeof(pred(range.back)) : bool))
+{
+    return range.stripLeft!pred().stripRight!pred();
+}
+
+/// ditto
+Range stripLeft(Range, E)(Range range, E element)
+    if (isInputRange!Range && is(typeof(range.front == element) : bool))
+{
+    return find!((auto ref a) => a != element)(range);
+}
+
+/// ditto
+Range stripLeft(alias pred, Range)(Range range)
+    if (isInputRange!Range && is(typeof(pred(range.front)) : bool))
+{
+    return find!(not!pred)(range);
+}
+
+/// ditto
+Range stripRight(Range, E)(Range range, E element)
+    if (isBidirectionalRange!Range && is(typeof(range.back == element) : bool))
+{
+    for (; !range.empty; range.popBack())
+    {
+        if (range.back != element)
+            break;
+    }
+    return range;
+}
+
+/// ditto
+Range stripRight(alias pred, Range)(Range range)
+    if (isBidirectionalRange!Range && is(typeof(pred(range.back)) : bool))
+{
+    for (; !range.empty; range.popBack())
+    {
+        if (!pred(range.back))
+            break;
+    }
+    return range;
+}
+
+/// Strip leading and trailing elements equal to the target element.
+@safe pure unittest
+{
+    assert("  foobar  ".strip(' ') == "foobar");
+    assert("00223.444500".strip('0') == "223.4445");
+    assert("ëëêéüŗōpéêëë".strip('ë') == "êéüŗōpéê");
+    assert([1, 1, 0, 1, 1].strip(1) == [0]);
+    assert([0.0, 0.01, 0.01, 0.0].strip(0).length == 2);
+}
+
+/// Strip leading and trailing elements while the predicate returns true.
+@safe pure unittest
+{
+    assert("  foobar  ".strip!(a => a == ' ')() == "foobar");
+    assert("00223.444500".strip!(a => a == '0')() == "223.4445");
+    assert("ëëêéüŗōpéêëë".strip!(a => a == 'ë')() == "êéüŗōpéê");
+    assert([1, 1, 0, 1, 1].strip!(a => a == 1)() == [0]);
+    assert([0.0, 0.01, 0.5, 0.6, 0.01, 0.0].strip!(a => a < 0.4)().length == 2);
+}
+
+/// Strip leading elements equal to the target element.
+@safe pure unittest
+{
+    assert("  foobar  ".stripLeft(' ') == "foobar  ");
+    assert("00223.444500".stripLeft('0') == "223.444500");
+    assert("ůůűniçodêéé".stripLeft('ů') == "űniçodêéé");
+    assert([1, 1, 0, 1, 1].stripLeft(1) == [0, 1, 1]);
+    assert([0.0, 0.01, 0.01, 0.0].stripLeft(0).length == 3);
+}
+
+/// Strip leading elements while the predicate returns true.
+@safe pure unittest
+{
+    assert("  foobar  ".stripLeft!(a => a == ' ')() == "foobar  ");
+    assert("00223.444500".stripLeft!(a => a == '0')() == "223.444500");
+    assert("ůůűniçodêéé".stripLeft!(a => a == 'ů')() == "űniçodêéé");
+    assert([1, 1, 0, 1, 1].stripLeft!(a => a == 1)() == [0, 1, 1]);
+    assert([0.0, 0.01, 0.10, 0.5, 0.6].stripLeft!(a => a < 0.4)().length == 2);
+}
+
+/// Strip trailing elements equal to the target element.
+@safe pure unittest
+{
+    assert("  foobar  ".stripRight(' ') == "  foobar");
+    assert("00223.444500".stripRight('0') == "00223.4445");
+    assert("ùniçodêéé".stripRight('é') == "ùniçodê");
+    assert([1, 1, 0, 1, 1].stripRight(1) == [1, 1, 0]);
+    assert([0.0, 0.01, 0.01, 0.0].stripRight(0).length == 3);
+}
+
+/// Strip trailing elements while the predicate returns true.
+@safe pure unittest
+{
+    assert("  foobar  ".stripRight!(a => a == ' ')() == "  foobar");
+    assert("00223.444500".stripRight!(a => a == '0')() == "00223.4445");
+    assert("ùniçodêéé".stripRight!(a => a == 'é')() == "ùniçodê");
+    assert([1, 1, 0, 1, 1].stripRight!(a => a == 1)() == [1, 1, 0]);
+    assert([0.0, 0.01, 0.10, 0.5, 0.6].stripRight!(a => a > 0.4)().length == 3);
+}
+
 // bringToFront
 /**
 The $(D bringToFront) function has considerable flexibility and
@@ -7402,8 +7545,8 @@ if (s != SwapStrategy.stable
         }
         static if (i > 0)
         {
-            enforce(blackouts[i - 1].pos + blackouts[i - 1].len 
-                    <= blackouts[i].pos, 
+            enforce(blackouts[i - 1].pos + blackouts[i - 1].len
+                    <= blackouts[i].pos,
                 "remove(): incorrect ordering of elements to remove");
         }
     }
@@ -7426,7 +7569,7 @@ if (s != SwapStrategy.stable
         tgt.popFrontN(blackouts[left].pos - steps);
         steps = blackouts[left].pos;
         auto toMove = min(
-            blackouts[left].len, 
+            blackouts[left].len,
             range.length - (blackouts[right].pos + blackouts[right].len));
         foreach (i; 0 .. toMove)
         {
@@ -7541,7 +7684,7 @@ unittest
             == [ 0, 2, 5, 6, 7, 8, 9, 10]);
 
     a = iota(0, 10).array();
-    assert(remove!(SwapStrategy.unstable)(a, tuple(1, 4), tuple(6, 7)) 
+    assert(remove!(SwapStrategy.unstable)(a, tuple(1, 4), tuple(6, 7))
             == [0, 9, 8, 7, 4, 5]);
 }
 
