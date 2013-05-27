@@ -543,25 +543,25 @@ template Tuple(Specs...)
                  footer = ")",
                  separator = ", ";
 
-            Appender!string app;
-            app.put(header);
+            Appender!string w;
+            w.put(header);
             foreach (i, Unused; Types)
             {
                 static if (i > 0)
                 {
-                    app.put(separator);
+                    w.put(separator);
                 }
                 // TODO: Change this once toString() works for shared objects.
                 static if (is(Unused == class) && is(Unused == shared))
-                    formattedWrite(app, "%s", field[i].stringof);
+                    formattedWrite(w, "%s", field[i].stringof);
                 else
                 {
                     FormatSpec!char f;  // "%s"
-                    formatElement(app, field[i], f);
+                    formatElement(w, field[i], f);
                 }
             }
-            app.put(footer);
-            return app.data;
+            w.put(footer);
+            return w.data;
         }
     }
 }
