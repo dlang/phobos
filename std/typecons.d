@@ -522,7 +522,8 @@ template Tuple(Specs...)
          * ----
          */
         @property
-        ref Tuple!(sliceSpecs!(from, to)) slice(uint from, uint to)()
+        ref Tuple!(sliceSpecs!(from, to)) slice(size_t from, size_t to)() @trusted
+        if (from <= to && to <= Types.length)
         {
             return *cast(typeof(return)*) &(field[from]);
         }
