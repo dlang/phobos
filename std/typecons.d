@@ -413,14 +413,6 @@ template Tuple(Specs...)
         // backwards compatibility
         alias field = expand;
 
-        // This mitigates breakage of old code now that std.range.Zip uses
-        // Tuple instead of the old Proxy.  It's intentionally lacking ddoc
-        // because it was intended for deprecation.
-        // Now that it has been deprecated, it will be removed in January 2013.
-        deprecated auto at(size_t index)() {
-            return field[index];
-        }
-
         /**
          * Constructor taking one value for each field. Each argument must be
          * implicitly assignable to the respective element of the target.
