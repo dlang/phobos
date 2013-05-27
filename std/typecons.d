@@ -501,11 +501,19 @@ template Tuple(Specs...)
          * Assignment from another tuple. Each element of the source must be
          * implicitly assignable to the respective element of the target.
          */
-        void opAssign(R)(R rhs)
+        void opAssign(R)(auto ref R rhs)
         if (areCompatibleTuples!(typeof(this), R, "="))
         {
-            // Do not swap; opAssign should be called on the fields.
-            field[] = rhs.field[];
+            static if (is(R : Tuple!Types) && !__traits(isRef, rhs))
+            {
+                // Use swap-and-destroy to optimize rvalue assignment
+                swap!(Tuple!Types)(this, rhs);
+            }
+            else
+            {
+                // Do not swap; opAssign should be called on the fields.
+                field[] = rhs.field[];
+            }
         }
 
         /**
