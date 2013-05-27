@@ -3149,7 +3149,7 @@ unittest
         size_t length = 0;
         foreach(T; Types)
         {
-            toWrite.append!T(cast(T)values[index++]);
+            toWrite.append!(T, endianness)(cast(T)values[index++]);
             length += T.sizeof;
         }
 
@@ -3159,11 +3159,11 @@ unittest
         index = 0;
         foreach(T; Types)
         {
-            assert(toRead.peek!T() == values[index], format("Failed Index: %s", index));
-            assert(toRead.peek!T(0) == values[index], format("Failed Index: %s", index));
+            assert(toRead.peek!(T, endianness)() == values[index], format("Failed Index: %s", index));
+            assert(toRead.peek!(T, endianness)(0) == values[index], format("Failed Index: %s", index));
             assert(toRead.length == length,
                    format("Failed Index [%s], Actual Length: %s", index, toRead.length));
-            assert(toRead.read!T() == values[index], format("Failed Index: %s", index));
+            assert(toRead.read!(T, endianness)() == values[index], format("Failed Index: %s", index));
             length -= T.sizeof;
             assert(toRead.length == length,
                    format("Failed Index [%s], Actual Length: %s", index, toRead.length));
