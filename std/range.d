@@ -3230,7 +3230,7 @@ unittest
         int[] _arr;
     }
 
-    foreach(range; TypeTuple!(`[1, 2, 3, 4, 5]`,
+    foreach(range; StaticTuple!(`[1, 2, 3, 4, 5]`,
                               `"hello world"`,
                               `"hello world"w`,
                               `"hello world"d`,
@@ -3246,7 +3246,7 @@ unittest
                      range, range, range));
     }
 
-    foreach(range; TypeTuple!(`NormalStruct([1, 2, 3])`,
+    foreach(range; StaticTuple!(`NormalStruct([1, 2, 3])`,
                               `InitStruct([1, 2, 3])`))
     {
         mixin(format("enum a = takeNone(%s).empty;", range));
@@ -5442,7 +5442,7 @@ unittest
 
 unittest
 {
-    foreach(range; TypeTuple!(iota(2, 27, 4),
+    foreach(range; StaticTuple!(iota(2, 27, 4),
                               iota(3, 9),
                               iota(2.7, 12.3, .1),
                               iota(3.2, 9.7)))

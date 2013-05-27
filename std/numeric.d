@@ -121,7 +121,7 @@ private template CustomFloatParams(uint bits)
 
 private template CustomFloatParams(uint precision, uint exponentWidth, CustomFloatFlags flags)
 {
-    alias TypeTuple!(
+    alias StaticTuple!(
         precision,
         exponentWidth,
         flags,

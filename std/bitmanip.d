@@ -3138,7 +3138,7 @@ unittest
 {
     import std.string;
 
-    foreach(endianness; TypeTuple!(Endian.bigEndian, Endian.littleEndian))
+    foreach(endianness; StaticTuple!(Endian.bigEndian, Endian.littleEndian))
     {
         auto toWrite = appender!(ubyte[])();
         alias TypeTuple!(uint, int, long, ulong, short, ubyte, ushort, byte, uint) Types;

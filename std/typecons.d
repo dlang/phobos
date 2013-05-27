@@ -278,18 +278,18 @@ private:
     {
         static if (Specs.length == 0)
         {
-            alias TypeTuple!() parseSpecs;
+            alias StaticTuple!() parseSpecs;
         }
         else static if (is(Specs[0]))
         {
             static if (is(typeof(Specs[1]) : string))
             {
-                alias TypeTuple!(FieldSpec!(Specs[0 .. 2]),
+                alias StaticTuple!(FieldSpec!(Specs[0 .. 2]),
                                  parseSpecs!(Specs[2 .. $])) parseSpecs;
             }
             else
             {
-                alias TypeTuple!(FieldSpec!(Specs[0]),
+                alias StaticTuple!(FieldSpec!(Specs[0]),
                                  parseSpecs!(Specs[1 .. $])) parseSpecs;
             }
         }
@@ -344,11 +344,11 @@ private:
     {
         static if (spec.name.length == 0)
         {
-            alias TypeTuple!(spec.Type) expandSpec;
+            alias StaticTuple!(spec.Type) expandSpec;
         }
         else
         {
-            alias TypeTuple!(spec.Type, spec.name) expandSpec;
+            alias StaticTuple!(spec.Type, spec.name) expandSpec;
         }
     }
 
@@ -1996,12 +1996,12 @@ private static:
             alias staticFilter!(pred, lst[1 .. $]) tail;
             //
             static if (pred!(lst[0]))
-                alias TypeTuple!(lst[0], tail) staticFilter;
+                alias StaticTuple!(lst[0], tail) staticFilter;
             else
                 alias tail staticFilter;
         }
         else
-            alias TypeTuple!() staticFilter;
+            alias StaticTuple!() staticFilter;
     }
 
     // Returns function overload sets in the class C, filtered with pred.
@@ -2015,12 +2015,12 @@ private static:
                 alias Impl!(names[1 .. $]) next;
 
                 static if (methods.length > 0)
-                    alias TypeTuple!(OverloadSet!(names[0], methods), next) Impl;
+                    alias StaticTuple!(OverloadSet!(names[0], methods), next) Impl;
                 else
                     alias next Impl;
             }
             else
-                alias TypeTuple!() Impl;
+                alias StaticTuple!() Impl;
         }
 
         alias Impl!(__traits(allMembers, C)) enumerateOverloads;
@@ -2341,9 +2341,9 @@ private static:
     template CountUp(size_t n)
     {
         static if (n > 0)
-            alias TypeTuple!(CountUp!(n - 1), n - 1) CountUp;
+            alias StaticTuple!(CountUp!(n - 1), n - 1) CountUp;
         else
-            alias TypeTuple!() CountUp;
+            alias StaticTuple!() CountUp;
     }
 
 
@@ -2475,7 +2475,7 @@ private static:
             /* Declare keywords: args, self and parent. */
             string preamble;
 
-            preamble ~= "alias TypeTuple!(" ~ enumerateParameters!(nparams) ~ ") args;\n";
+            preamble ~= "alias StaticTuple!(" ~ enumerateParameters!(nparams) ~ ") args;\n";
             if (!isCtor)
             {
                 preamble ~= "alias " ~ name ~ " self;\n";
@@ -3459,7 +3459,7 @@ unittest // Issue 6580 testcase
             byte[size] arr;
             alignmentTest();
         }
-        foreach(i; TypeTuple!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
+        foreach(i; StaticTuple!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
             test!i();
     }
 }
