@@ -409,10 +409,7 @@ template Tuple(Specs...)
          */
         this()(Types values)
         {
-            foreach (i, _; Types)
-            {
-                field[i] = values[i];
-            }
+            field[] = values[];
         }
 
         /**
@@ -443,10 +440,7 @@ template Tuple(Specs...)
         this(U)(U another)
         if (areCompatibleTuples!(typeof(this), U, "="))
         {
-            foreach (i, T; Types)
-            {
-                field[i] = another.field[i];
-            }
+            field[] = another.field[];
         }
 
         /**
@@ -455,21 +449,13 @@ template Tuple(Specs...)
         bool opEquals(R)(R rhs)
         if (areCompatibleTuples!(typeof(this), R, "=="))
         {
-            foreach (i, Unused; Types)
-            {
-                if (field[i] != rhs.field[i]) return false;
-            }
-            return true;
+            return field[] == rhs.field[];
         }
         /// ditto
         bool opEquals(R)(R rhs) const
         if (areCompatibleTuples!(typeof(this), R, "=="))
         {
-            foreach (i, Unused; Types)
-            {
-                if (field[i] != rhs.field[i]) return false;
-            }
-            return true;
+            return field[] == rhs.field[];
         }
 
         /**
@@ -509,10 +495,7 @@ template Tuple(Specs...)
         if (areCompatibleTuples!(typeof(this), R, "="))
         {
             // Do not swap; opAssign should be called on the fields.
-            foreach (i, Unused; Types)
-            {
-                field[i] = rhs.field[i];
-            }
+            field[] = rhs.field[];
         }
 
         /**
