@@ -1607,7 +1607,7 @@ struct RandomSample(R, Random = void)
     if(isInputRange!R && (isUniformRNG!Random || is(Random == void)))
 {
     private size_t _available, _toSelect;
-    private immutable ushort _alphaInverse = 13; // Vitter's recommended value.
+    private enum ushort _alphaInverse = 13; // Vitter's recommended value.
     private bool _first, _algorithmA;
     private double _Vprime;
     private R _input;

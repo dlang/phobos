@@ -318,7 +318,9 @@ if(allSatisfy!(isIntegral, I))
 
     alias typeof(T.init[0]) E;
 
-    auto ptr = cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!(E));
+    auto ptr = (__ctfe) ?
+        (new E[](sizes[0])).ptr :
+        cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!(E));
     auto ret = ptr[0..sizes[0]];
 
     static if(sizes.length > 1)
