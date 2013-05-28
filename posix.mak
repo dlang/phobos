@@ -271,10 +271,10 @@ $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 dll : $(ROOT)/libphobos2.so
 
 $(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
-	ln -s $(notdir $(LIBSO)) $@ 
+	ln -sf $(notdir $(LIBSO)) $@ 
 
 $(ROOT)/$(SONAME): $(LIBSO)
-	ln -s $(notdir $(LIBSO)) $@
+	ln -sf $(notdir $(LIBSO)) $@
 
 $(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(D_FILES) $(OBJS)
