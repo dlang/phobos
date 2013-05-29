@@ -37,6 +37,33 @@ module std.typetuple;
 import std.traits;
 
 /**
+ * Creates a statictuple out of a sequence of zero or more aliases.
+ * Example:
+ * ---
+ * import std.typetuple;
+ * 
+ * int myvar;
+ * alias StaticTuple!("Hello", 3, int, myvar) ST;
+ *
+ * writeln(ST[0]);				// Prints "Hello"
+ * writeln(ST[1]);				// Prints "3"
+ * writeln(cast(ST[2]) 4.5);	// Prints "4" (4.5 casted to int)
+ * writeln(ST[3].stringof);		// Prints "myvar"
+ * ---
+ *
+ * Example:
+ * ---
+ * StaticTuple!(ST, char)
+ * // is equivalent to:
+ * StaticTuple!("Hello", 3, int, myvar, char)
+ * ---
+ */
+template StaticTuple(TList...)
+{
+	alias TList StaticTuple;
+}
+
+/**
  * Creates a typetuple out of a sequence of zero or more types.
  * Example:
  * ---
@@ -58,7 +85,15 @@ import std.traits;
  */
 template TypeTuple(TList...)
 {
-    alias TList TypeTuple;
+	static if (is(TList)) {
+		alias TList TypeTuple;
+	} else {
+		// Work-around bug in DMD which fails to notice deprecation if template is aliased directly
+		deprecated("TypeTuple should no longer be used with non-type template arguments") {
+			alias TList Temp;
+		}
+		alias Temp TypeTuple;
+	}
 }
 
 /**
@@ -187,11 +222,11 @@ private template GenericErase(args...)
         static if (isSame!(e, head))
             alias tail result;
         else
-            alias TypeTuple!(head, GenericErase!(e, tail).result) result;
+            alias StaticTuple!(head, GenericErase!(e, tail).result) result;
     }
      else
     {
-        alias TypeTuple!() result;
+        alias StaticTuple!() result;
     }
  }
 
@@ -246,11 +281,11 @@ private template GenericEraseAll(args...)
         static if (isSame!(e, head))
             alias next result;
         else
-            alias TypeTuple!(head, next) result;
+            alias StaticTuple!(head, next) result;
     }
      else
     {
-        alias TypeTuple!() result;
+        alias StaticTuple!() result;
     }
  }
 
@@ -267,7 +302,7 @@ unittest
 
 
 /**
- * Returns a typetuple created from TList with the all duplicate
+ * Returns a statictuple created from TList with the all duplicate
  * types removed.
  * Example:
  * ---
@@ -283,7 +318,7 @@ template NoDuplicates(TList...)
     static if (TList.length == 0)
     alias TList NoDuplicates;
     else
-    alias TypeTuple!(TList[0], NoDuplicates!(EraseAll!(TList[0], TList[1 .. $]))) NoDuplicates;
+    alias StaticTuple!(TList[0], NoDuplicates!(EraseAll!(TList[0], TList[1 .. $]))) NoDuplicates;
 }
 
 unittest
@@ -344,14 +379,14 @@ private template GenericReplace(args...)
         alias    tuple[1 .. $] tail;
 
         static if (isSame!(from, head))
-            alias TypeTuple!(to, tail) result;
+            alias StaticTuple!(to, tail) result;
         else
-            alias TypeTuple!(head,
+            alias StaticTuple!(head,
                 GenericReplace!(from, to, tail).result) result;
     }
      else
     {
-        alias TypeTuple!() result;
+        alias StaticTuple!() result;
     }
  }
 
@@ -375,8 +410,8 @@ unittest
 }
 
 /**
- * Returns a typetuple created from TList with all occurrences
- * of type T, if found, replaced with type U.
+ * Returns a statictuple created from TList with all occurrences
+ * of T, if found, replaced with U.
  * Example:
  * ---
  * alias TypeTuple!(int, long, long, int, float) TL;
@@ -424,13 +459,13 @@ private template GenericReplaceAll(args...)
         alias GenericReplaceAll!(from, to, tail).result next;
 
         static if (isSame!(from, head))
-            alias TypeTuple!(to, next) result;
+            alias StaticTuple!(to, next) result;
         else
-            alias TypeTuple!(head, next) result;
+            alias StaticTuple!(head, next) result;
     }
     else
     {
-        alias TypeTuple!() result;
+        alias StaticTuple!() result;
     }
 }
 
@@ -454,7 +489,7 @@ unittest
 }
 
 /**
- * Returns a typetuple created from TList with the order reversed.
+ * Returns a statictuple created from TList with the order reversed.
  * Example:
  * ---
  * alias TypeTuple!(int, long, long, int, float) TL;
@@ -469,7 +504,7 @@ template Reverse(TList...)
     static if (TList.length == 0)
     alias TList Reverse;
     else
-    alias TypeTuple!(Reverse!(TList[1 .. $]), TList[0]) Reverse;
+    alias StaticTuple!(Reverse!(TList[1 .. $]), TList[0]) Reverse;
 }
 
 /**
@@ -523,7 +558,7 @@ template DerivedToFront(TList...)
 
 
 /**
-Evaluates to $(D TypeTuple!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
+Evaluates to $(D StaticTuple!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
 
 Example:
 ----
@@ -535,16 +570,16 @@ template staticMap(alias F, T...)
 {
     static if (T.length == 0)
     {
-        alias staticMap = TypeTuple!();
+        alias staticMap = StaticTuple!();
     }
     else static if (T.length == 1)
     {
-        alias staticMap = TypeTuple!(F!(T[0]));
+        alias staticMap = StaticTuple!(F!(T[0]));
     }
     else
     {
         alias staticMap =
-            TypeTuple!(
+            StaticTuple!(
                 staticMap!(F, T[ 0  .. $/2]),
                 staticMap!(F, T[$/2 ..  $ ]));
     }
@@ -640,8 +675,8 @@ unittest
 
 
 /++
-    Filters a $(D TypeTuple) using a template predicate. Returns a
-    $(D TypeTuple) of the elements which satisfy the predicate.
+    Filters a $(D StaticTuple) using a template predicate. Returns a
+    $(D StaticTuple) of the elements which satisfy the predicate.
 
     Examples:
 --------------------
@@ -657,19 +692,19 @@ template Filter(alias pred, TList...)
 {
     static if (TList.length == 0)
     {
-        alias Filter = TypeTuple!();
+        alias Filter = StaticTuple!();
     }
     else static if (TList.length == 1)
     {
         static if (pred!(TList[0]))
-            alias Filter = TypeTuple!(TList[0]);
+            alias Filter = StaticTuple!(TList[0]);
         else
-            alias Filter = TypeTuple!();
+            alias Filter = StaticTuple!();
     }
     else
     {
         alias Filter =
-            TypeTuple!(
+            StaticTuple!(
                 Filter!(pred, TList[ 0  .. $/2]),
                 Filter!(pred, TList[$/2 ..  $ ]));
     }
@@ -743,7 +778,7 @@ unittest
 
 unittest
 {
-    foreach (T; TypeTuple!(int, staticMap, 42))
+    foreach (T; StaticTuple!(int, staticMap, 42))
     {
         static assert(!Instantiate!(templateNot!testAlways, T));
         static assert(Instantiate!(templateNot!testNever, T));
@@ -803,7 +838,7 @@ unittest
 
 unittest
 {
-    foreach (T; TypeTuple!(int, staticMap, 42))
+    foreach (T; StaticTuple!(int, staticMap, 42))
     {
         static assert(Instantiate!(templateAnd!(), T));
         static assert(Instantiate!(templateAnd!(testAlways), T));
@@ -870,7 +905,7 @@ unittest
 
 unittest
 {
-    foreach (T; TypeTuple!(int, staticMap, 42))
+    foreach (T; StaticTuple!(int, staticMap, 42))
     {
         static assert(Instantiate!(templateOr!(testAlways), T));
         static assert(Instantiate!(templateOr!(testAlways, testAlways), T));

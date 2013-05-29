@@ -649,7 +649,7 @@ enum RegexOption: uint {
     multiline = 0x10,
     singleline = 0x20
 };
-alias TypeTuple!('g', 'i', 'x', 'U', 'm', 's') RegexOptionNames;//do not reorder this list
+alias StaticTuple!('g', 'i', 'x', 'U', 'm', 's') RegexOptionNames;//do not reorder this list
 static assert( RegexOption.max < 0x80);
 enum RegexInfo : uint { oneShot = 0x80 };
 
@@ -4052,10 +4052,10 @@ template BacktrackingMatcher(bool CTregex)
     return format;
 }
 
-//generate code for TypeTuple(S, S+1, S+2, ... E)
+//generate code for StaticTuple(S, S+1, S+2, ... E)
 @system string ctGenSeq(int S, int E)
 {
-    string s = "alias TypeTuple!(";
+    string s = "alias StaticTuple!(";
     if(S < E)
         s ~= to!string(S);
     for(int i = S+1; i < E;i++)
@@ -4066,7 +4066,7 @@ template BacktrackingMatcher(bool CTregex)
     return s ~") Sequence;";
 }
 
-//alias to TypeTuple(S, S+1, S+2, ... E)
+//alias to StaticTuple(S, S+1, S+2, ... E)
 template Sequence(int S, int E)
 {
     mixin(ctGenSeq(S,E));
@@ -7076,7 +7076,7 @@ unittest
     }
     static string generate(uint n,uint[] black_list...)
     {
-        string s = "TypeTuple!(";
+        string s = "StaticTuple!(";
         for(uint i = 0; i < n; i++)
         {
             uint j;

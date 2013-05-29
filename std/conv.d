@@ -702,8 +702,8 @@ unittest
     class C : B, I, J {}
     class D : I {}
 
-    foreach (m1; TypeTuple!(0,1,2,3,4)) // enumerate modifiers
-    foreach (m2; TypeTuple!(0,1,2,3,4)) // ditto
+    foreach (m1; StaticTuple!(0,1,2,3,4)) // enumerate modifiers
+    foreach (m2; StaticTuple!(0,1,2,3,4)) // ditto
     {
         alias AddModifier!m1 srcmod;
         alias AddModifier!m2 tgtmod;

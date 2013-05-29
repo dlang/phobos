@@ -2031,10 +2031,10 @@ template forward(args...)
             alias fwd = arg;
         else
             @property fwd()(){ return move(arg); }
-        alias forward = TypeTuple!(fwd, forward!(args[1..$]));
+        alias forward = StaticTuple!(fwd, forward!(args[1..$]));
     }
     else
-        alias forward = TypeTuple!();
+        alias forward = StaticTuple!();
 }
 
 unittest

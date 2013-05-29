@@ -296,7 +296,7 @@ uint strideBack(S)(auto ref S str, size_t index)
 
     if (index >= 4) //single verification for most common case
     {
-        foreach(i; TypeTuple!(2, 3, 4))
+        foreach(i; StaticTuple!(2, 3, 4))
         {
             if ((str[index-i] & 0b1100_0000) != 0b1000_0000)
                 return i;
@@ -304,7 +304,7 @@ uint strideBack(S)(auto ref S str, size_t index)
     }
     else
     {
-        foreach(i; TypeTuple!(2, 3))
+        foreach(i; StaticTuple!(2, 3))
         {
             if (index >= i && (str[index-i] & 0b1100_0000) != 0b1000_0000)
                 return i;
@@ -326,7 +326,7 @@ uint strideBack(S)(auto ref S str)
 {
     assert(!str.empty, "Past the end of the UTF-8 sequence");
     auto temp = str.save;
-    foreach(i; TypeTuple!(1, 2, 3, 4))
+    foreach(i; StaticTuple!(1, 2, 3, 4))
     {
         if ((temp.back & 0b1100_0000) != 0b1000_0000) return i;
         temp.popBack();
@@ -1144,7 +1144,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
     dchar d = fst; // upper control bits are masked out later
     fst <<= 1;
 
-    foreach(i; TypeTuple!(1, 2, 3))
+    foreach(i; StaticTuple!(1, 2, 3))
     {
 
         static if (canIndex)
@@ -1372,7 +1372,7 @@ version(unittest) private void testBadDecode(R)(R range, size_t index, size_t li
 
 unittest
 {
-    foreach (S; TypeTuple!(to!string, InputCU!char, RandomCU!char,
+    foreach (S; StaticTuple!(to!string, InputCU!char, RandomCU!char,
                            (string s) => new RefBidirCU!char(s),
                            (string s) => new RefRandomCU!char(s)))
     {
@@ -1430,7 +1430,7 @@ unittest
 
 unittest
 {
-    foreach (S; TypeTuple!(to!wstring, InputCU!wchar, RandomCU!wchar,
+    foreach (S; StaticTuple!(to!wstring, InputCU!wchar, RandomCU!wchar,
                            (wstring s) => new RefBidirCU!wchar(s),
                            (wstring s) => new RefRandomCU!wchar(s)))
     {
@@ -1454,7 +1454,7 @@ unittest
         }
     }
 
-    foreach (S; TypeTuple!(to!wstring, RandomCU!wchar, (wstring s) => new RefRandomCU!wchar(s)))
+    foreach (S; StaticTuple!(to!wstring, RandomCU!wchar, (wstring s) => new RefRandomCU!wchar(s)))
     {
         auto str = S([cast(wchar)0xD800, cast(wchar)0xDC00,
                       cast(wchar)0x1400,
@@ -1467,7 +1467,7 @@ unittest
 
 unittest
 {
-    foreach(S; TypeTuple!(to!dstring, RandomCU!dchar, InputCU!dchar,
+    foreach(S; StaticTuple!(to!dstring, RandomCU!dchar, InputCU!dchar,
                           (dstring s) => new RefBidirCU!dchar(s),
                           (dstring s) => new RefRandomCU!dchar(s)))
     {
@@ -1492,7 +1492,7 @@ unittest
         }
     }
 
-    foreach (S; TypeTuple!(to!dstring, RandomCU!dchar, (dstring s) => new RefRandomCU!dchar(s)))
+    foreach (S; StaticTuple!(to!dstring, RandomCU!dchar, (dstring s) => new RefRandomCU!dchar(s)))
     {
         auto str = S([cast(dchar)0x10000, cast(dchar)0x1400, cast(dchar)0xB9DDE]);
         testDecode(str, 0, 0x10000, 1);

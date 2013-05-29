@@ -136,7 +136,7 @@ version(unittest)
     template WildOf(T)        { alias        inout(T)  WildOf;        }
     template SharedWildOf(T)  { alias shared(inout(T)) SharedWildOf;  }
 
-    alias TypeTuple!(MutableOf, ConstOf, SharedOf, SharedConstOf, ImmutableOf) TypeQualifierList;
+    alias StaticTuple!(MutableOf, ConstOf, SharedOf, SharedConstOf, ImmutableOf) TypeQualifierList;
 
     struct SubTypeOf(T)
     {
@@ -333,8 +333,8 @@ private template fullyQualifiedNameImplForTypes(T,
         _inout = 3
     }
 
-    alias TypeTuple!(is(T == const), is(T == immutable), is(T == shared), is(T == inout)) qualifiers;
-    alias TypeTuple!(false, false, false, false) noQualifiers;
+    alias StaticTuple!(is(T == const), is(T == immutable), is(T == shared), is(T == inout)) qualifiers;
+    alias StaticTuple!(false, false, false, false) noQualifiers;
 
     string storageClassesString(uint psc)() @property
     {
@@ -761,14 +761,14 @@ template ParameterStorageClassTuple(func...)
             enum skip = mangledName!(Params[i]).length; // for bypassing Type
             enum rest = demang.rest;
 
-            alias TypeTuple!(
+            alias StaticTuple!(
                     demang.value + 0, // workaround: "not evaluatable at ..."
                     demangleNextParameter!(rest[skip .. $], i + 1)
                 ) demangleNextParameter;
         }
         else // went thru all the parameters
         {
-            alias TypeTuple!() demangleNextParameter;
+            alias StaticTuple!() demangleNextParameter;
         }
     }
 
@@ -855,9 +855,9 @@ template ParameterIdentifierTuple(func...)
     template Impl(size_t i = 0)
     {
         static if (i == PT.length)
-            alias TypeTuple!() Impl;
+            alias StaticTuple!() Impl;
         else
-            alias TypeTuple!(Get!i, Impl!(i+1)) Impl;
+            alias StaticTuple!(Get!i, Impl!(i+1)) Impl;
     }
 
     alias Impl!() ParameterIdentifierTuple;
@@ -943,9 +943,9 @@ template ParameterDefaultValueTuple(func...)
     template Impl(size_t i = 0)
     {
         static if (i == PT.length)
-            alias TypeTuple!() Impl;
+            alias StaticTuple!() Impl;
         else
-            alias TypeTuple!(Get!i, Impl!(i+1)) Impl;
+            alias StaticTuple!(Get!i, Impl!(i+1)) Impl;
     }
 
     alias Impl!() ParameterDefaultValueTuple;
@@ -967,14 +967,14 @@ unittest
     static assert(PDVT!bar.length == 2);
     static assert(PDVT!bar[0] == 1);
     static assert(PDVT!bar[1] == "hello");
-    static assert(is(typeof(PDVT!bar) == typeof(TypeTuple!(1, "hello"))));
+    static assert(is(typeof(PDVT!bar) == typeof(StaticTuple!(1, "hello"))));
 
     void baz(int x, int n = 1, string s = "hello"){}
     static assert(PDVT!baz.length == 3);
     static assert(is(PDVT!baz[0] == void));
     static assert(   PDVT!baz[1] == 1);
     static assert(   PDVT!baz[2] == "hello");
-    static assert(is(typeof(PDVT!baz) == typeof(TypeTuple!(void, 1, "hello"))));
+    static assert(is(typeof(PDVT!baz) == typeof(StaticTuple!(void, 1, "hello"))));
 
     struct Colour
     {
@@ -1507,7 +1507,7 @@ unittest
         int  test();
         int  test() @property;
     }
-    alias TypeTuple!(__traits(getVirtualFunctions, Overloads, "test")) ov;
+    alias StaticTuple!(__traits(getVirtualFunctions, Overloads, "test")) ov;
     alias FunctionTypeOf!(ov[0]) F_ov0;
     alias FunctionTypeOf!(ov[1]) F_ov1;
     alias FunctionTypeOf!(ov[2]) F_ov2;
@@ -1646,7 +1646,7 @@ unittest
             // Check that all linkage types work (D-style variadics require D linkage).
             static if (variadicFunctionStyle!T != Variadic.d)
             {
-                foreach (newLinkage; TypeTuple!("D", "C", "Windows", "Pascal", "C++"))
+                foreach (newLinkage; StaticTuple!("D", "C", "Windows", "Pascal", "C++"))
                 {
                     alias SetFunctionAttributes!(T, newLinkage, attrs) New;
                     static assert(functionLinkage!New == newLinkage,
@@ -1816,7 +1816,7 @@ unittest
 //         else
 //         {
 //             private enum size_t mySize = T[0].sizeof;
-//             alias TypeTuple!myOffset Head;
+//             alias StaticTuple!myOffset Head;
 //             static if (is(T == union))
 //             {
 //                 alias FieldOffsetsTupleImpl!(myOffset, T[1 .. $]).Result
@@ -1828,7 +1828,7 @@ unittest
 //                                              T[1 .. $]).Result
 //                     Tail;
 //             }
-//             alias TypeTuple!(Head, Tail) Result;
+//             alias StaticTuple!(Head, Tail) Result;
 //         }
 //     }
 // }
@@ -3102,7 +3102,7 @@ template EnumMembers(E)
     {
         static if (names.length > 0)
         {
-            alias TypeTuple!(
+            alias StaticTuple!(
                     WithIdentifier!(names[0])
                         .Symbolize!(__traits(getMember, E, names[0])),
                     EnumSpecificMembers!(names[1 .. $])
@@ -3110,7 +3110,7 @@ template EnumMembers(E)
         }
         else
         {
-            alias TypeTuple!() EnumSpecificMembers;
+            alias StaticTuple!() EnumSpecificMembers;
         }
     }
 
@@ -3438,28 +3438,28 @@ template MemberFunctionsTuple(C, string name)
             static if (__traits(hasMember, Node, name) && __traits(compiles, __traits(getMember, Node, name)))
             {
                 // Get all overloads in sight (not hidden).
-                alias TypeTuple!(__traits(getVirtualFunctions, Node, name)) inSight;
+                alias StaticTuple!(__traits(getVirtualFunctions, Node, name)) inSight;
 
                 // And collect all overloads in ancestor classes to reveal hidden
                 // methods.  The result may contain duplicates.
                 template walkThru(Parents...)
                 {
                     static if (Parents.length > 0)
-                        alias TypeTuple!(
+                        alias StaticTuple!(
                                     CollectOverloads!(Parents[0]),
                                     walkThru!(Parents[1 .. $])
                                 ) walkThru;
                     else
-                        alias TypeTuple!() walkThru;
+                        alias StaticTuple!() walkThru;
                 }
 
                 static if (is(Node Parents == super))
-                    alias TypeTuple!(inSight, walkThru!Parents) CollectOverloads;
+                    alias StaticTuple!(inSight, walkThru!Parents) CollectOverloads;
                 else
-                    alias TypeTuple!inSight CollectOverloads;
+                    alias StaticTuple!inSight CollectOverloads;
             }
             else
-                alias TypeTuple!() CollectOverloads; // no overloads in this hierarchy
+                alias StaticTuple!() CollectOverloads; // no overloads in this hierarchy
         }
 
         // duplicates in this tuple will be removed by shrink()
@@ -3485,13 +3485,13 @@ template MemberFunctionsTuple(C, string name)
                     alias shrinkOne!(rest[0], rest[1 .. $]) shrinkOne;
                 else
                     // target and rest[0] are distinct.
-                    alias TypeTuple!(
+                    alias StaticTuple!(
                                 shrinkOne!(target, rest[1 .. $]),
                                 rest[0] // keep
                             ) shrinkOne;
             }
             else
-                alias TypeTuple!target shrinkOne; // done
+                alias StaticTuple!target shrinkOne; // done
         }
 
         /*
@@ -3502,17 +3502,17 @@ template MemberFunctionsTuple(C, string name)
             static if (overloads.length > 0)
             {
                 alias shrinkOne!overloads temp;
-                alias TypeTuple!(temp[0], shrink!(temp[1 .. $])) shrink;
+                alias StaticTuple!(temp[0], shrink!(temp[1 .. $])) shrink;
             }
             else
-                alias TypeTuple!() shrink; // done
+                alias StaticTuple!() shrink; // done
         }
 
         // done.
         alias shrink!overloads MemberFunctionsTuple;
     }
     else
-        alias TypeTuple!() MemberFunctionsTuple;
+        alias StaticTuple!() MemberFunctionsTuple;
 }
 
 unittest
@@ -4322,8 +4322,8 @@ template StaticArrayTypeOf(T)
 
 unittest
 {
-    foreach (T; TypeTuple!(bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
-    foreach (Q; TypeTuple!(TypeQualifierList, WildOf, SharedWildOf))
+    foreach (T; StaticTuple!(bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
+    foreach (Q; StaticTuple!(TypeQualifierList, WildOf, SharedWildOf))
     {
         static assert(is( Q!(   T[1] ) == StaticArrayTypeOf!( Q!(              T[1]  ) ) ));
 
@@ -4332,8 +4332,8 @@ unittest
         static assert(is( Q!(P!(T[1])) == StaticArrayTypeOf!( Q!(SubTypeOf!(P!(T[1]))) ) ));
       }
     }
-    foreach (T; TypeTuple!void)
-    foreach (Q; TypeTuple!TypeQualifierList)
+    foreach (T; StaticTuple!void)
+    foreach (Q; StaticTuple!TypeQualifierList)
     {
         static assert(is( StaticArrayTypeOf!( Q!(void[1]) ) == Q!(void[1]) ));
     }
@@ -4368,13 +4368,13 @@ template DynamicArrayTypeOf(T)
 
 unittest
 {
-    foreach (T; TypeTuple!(/*void, */bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
-    foreach (Q; TypeTuple!(TypeQualifierList, WildOf, SharedWildOf))
+    foreach (T; StaticTuple!(/*void, */bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
+    foreach (Q; StaticTuple!(TypeQualifierList, WildOf, SharedWildOf))
     {
         static assert(is( Q!T[]  == DynamicArrayTypeOf!( Q!T[] ) ));
         static assert(is( Q!(T[])  == DynamicArrayTypeOf!( Q!(T[]) ) ));
 
-      foreach (P; TypeTuple!(MutableOf, ConstOf, ImmutableOf))
+      foreach (P; StaticTuple!(MutableOf, ConstOf, ImmutableOf))
       {
         static assert(is( Q!(P!T[]) == DynamicArrayTypeOf!( Q!(SubTypeOf!(P!T[])) ) ));
         static assert(is( Q!(P!(T[])) == DynamicArrayTypeOf!( Q!(SubTypeOf!(P!(T[]))) ) ));
@@ -4424,7 +4424,7 @@ template StringTypeOf(T)
 unittest
 {
     foreach (T; CharTypeList)
-    foreach (Q; TypeTuple!(MutableOf, ConstOf, ImmutableOf, WildOf))
+    foreach (Q; StaticTuple!(MutableOf, ConstOf, ImmutableOf, WildOf))
     {
         static assert(is(Q!T[] == StringTypeOf!( Q!T[] )));
 
@@ -4438,7 +4438,7 @@ unittest
         }
     }
     foreach (T; CharTypeList)
-    foreach (Q; TypeTuple!(SharedOf, SharedConstOf, SharedWildOf))
+    foreach (Q; StaticTuple!(SharedOf, SharedConstOf, SharedWildOf))
     {
         static assert(!is(StringTypeOf!( Q!T[] )));
     }
@@ -4488,17 +4488,17 @@ template AssocArrayTypeOf(T)
 unittest
 {
     foreach (T; TypeTuple!(int/*bool, CharTypeList, NumericTypeList, ImaginaryTypeList, ComplexTypeList*/))
-    foreach (P; TypeTuple!(TypeQualifierList, WildOf, SharedWildOf))
-    foreach (Q; TypeTuple!(TypeQualifierList, WildOf, SharedWildOf))
-    foreach (R; TypeTuple!(TypeQualifierList, WildOf, SharedWildOf))
+    foreach (P; StaticTuple!(TypeQualifierList, WildOf, SharedWildOf))
+    foreach (Q; StaticTuple!(TypeQualifierList, WildOf, SharedWildOf))
+    foreach (R; StaticTuple!(TypeQualifierList, WildOf, SharedWildOf))
     {
         static assert(is( P!(Q!T[R!T]) == AssocArrayTypeOf!(            P!(Q!T[R!T])  ) ));
     }
     foreach (T; TypeTuple!(int/*bool, CharTypeList, NumericTypeList, ImaginaryTypeList, ComplexTypeList*/))
-    foreach (O; TypeTuple!(TypeQualifierList, WildOf, SharedWildOf))
-    foreach (P; TypeTuple!TypeQualifierList)
-    foreach (Q; TypeTuple!TypeQualifierList)
-    foreach (R; TypeTuple!TypeQualifierList)
+    foreach (O; StaticTuple!(TypeQualifierList, WildOf, SharedWildOf))
+    foreach (P; StaticTuple!TypeQualifierList)
+    foreach (Q; StaticTuple!TypeQualifierList)
+    foreach (R; StaticTuple!TypeQualifierList)
     {
         static assert(is( O!(P!(Q!T[R!T])) == AssocArrayTypeOf!( O!(SubTypeOf!(P!(Q!T[R!T]))) ) ));
     }
@@ -4755,7 +4755,7 @@ unittest
 {
     foreach (T; TypeTuple!(char[], string, wstring, char[4]))
     {
-        foreach (Q; TypeTuple!(MutableOf, ConstOf, ImmutableOf)/*TypeQualifierList*/)
+        foreach (Q; StaticTuple!(MutableOf, ConstOf, ImmutableOf)/*TypeQualifierList*/)
         {
             static assert( isNarrowString!(            Q!T  ));
             static assert(!isNarrowString!( SubTypeOf!(Q!T) ));

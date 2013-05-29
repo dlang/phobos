@@ -184,7 +184,7 @@ void[] read(in char[] name, size_t upTo = size_t.max)
 {
     version(Windows)
     {
-        alias TypeTuple!(GENERIC_READ,
+        alias StaticTuple!(GENERIC_READ,
                 FILE_SHARE_READ, (SECURITY_ATTRIBUTES*).init, OPEN_EXISTING,
                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
                 HANDLE.init)
@@ -319,7 +319,7 @@ void write(in char[] name, const void[] buffer)
 {
     version(Windows)
     {
-        alias TypeTuple!(GENERIC_WRITE, 0, null, CREATE_ALWAYS,
+        alias StaticTuple!(GENERIC_WRITE, 0, null, CREATE_ALWAYS,
                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
                 HANDLE.init)
             defaults;
@@ -358,7 +358,7 @@ void append(in char[] name, in void[] buffer)
 {
     version(Windows)
     {
-        alias TypeTuple!(GENERIC_WRITE,0,null,OPEN_ALWAYS,
+        alias StaticTuple!(GENERIC_WRITE,0,null,OPEN_ALWAYS,
                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,HANDLE.init)
             defaults;
 
@@ -690,7 +690,7 @@ void setTimes(in char[] name,
     {
         const ta = SysTimeToFILETIME(accessTime);
         const tm = SysTimeToFILETIME(modificationTime);
-        alias TypeTuple!(GENERIC_WRITE,
+        alias StaticTuple!(GENERIC_WRITE,
                          0,
                          null,
                          OPEN_EXISTING,
