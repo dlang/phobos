@@ -749,17 +749,13 @@ S toLower(S)(S s) @trusted pure
 {
     foreach (i, dchar cOuter; s)
     {
-        if (!std.uni.isUpper(cOuter)) continue;
-        auto result = s[0.. i].dup;
-        foreach (dchar c; s[i .. $])
-        {
-            if (std.uni.isUpper(c))
-            {
-                c = std.uni.toLower(c);
-            }
-            result ~= c;
-        }
-        return cast(S) result;
+        if (cOuter == std.uni.toLower(cOuter)) continue;
+        //An uppercase letter has been found
+        //Just dup and forward the rest of the work to toLowerInPlace
+        auto result = s.dup;
+        auto slice = result[i .. $];
+        toLowerInPlace(slice);
+        return cast(S) result[0 .. i + slice.length];
     }
     return s;
 }
@@ -789,47 +785,57 @@ unittest
 /++
     Converts $(D s) to lowercase (in unicode, not just ASCII) in place.
     If $(D s) does not have any uppercase characters, then $(D s) is unaltered.
+
+    This function does not allocate.
+
+    Note: It is possible that this function will reduce $(D s)'s length. In
+    that case, the unreferenced characters will contain garbage.
  +/
 void toLowerInPlace(C)(ref C[] s)
-    if(is(C == char) || is(C == wchar))
+    if (is(C == char) || is(C == wchar))
 {
-    for (size_t i = 0; i < s.length; )
+    /*
+    * toLowerInPlace exploits the interesting fact that
+    * a letter's uppercase or lowercase utf representation will NEVER be
+    * longer than its own representation. This means that:
+    * 1. We can overwrite as we read, without fear of cloberring our own data
+    * 2. There will never be an overflow when encoding.
+    */
+    immutable len = s.length;
+    size_t decodeIndex = 0;
+    size_t encodeIndex = 0;
+    
+    while(decodeIndex < len)
     {
-        immutable c = s[i];
-        if (std.ascii.isUpper(c))
+        size_t oldDecodeIndex = decodeIndex;
+        dchar c = decode(s, decodeIndex);
+
+        dchar l = std.uni.toLower(c);
+        if (l != c)
         {
-            s[i++] = cast(C) (c + (cast(C)'a' - 'A'));
-        }
-        else if (!std.ascii.isASCII(c))
-        {
-            // wide character
-            size_t j = i;
-            dchar dc = decode(s, j);
-            assert(j > i);
-            if (!std.uni.isUpper(dc))
-            {
-                i = j;
-                continue;
-            }
-            auto toAdd = to!(C[])(std.uni.toLower(dc));
-            s = s[0 .. i] ~ toAdd  ~ s[j .. $];
-            i += toAdd.length;
+            //Note: Even if the buffers go past the end of the underlying
+            //string, we have the guarantee we will not write there
+                 static if (is(C ==  char)) auto pBuf = cast( char[4]*) &s[encodeIndex];
+            else static if (is(C == wchar)) auto pBuf = cast(wchar[2]*) &s[encodeIndex];
+            else static assert(0);
+            size_t strd = encode(*pBuf, l);
+            encodeIndex += strd;
         }
         else
         {
-            ++i;
+            size_t strd = decodeIndex - oldDecodeIndex;
+            encodeIndex += strd;
         }
     }
+    version(assert) s[encodeIndex .. decodeIndex] []= C.init;
+    s = s[0 .. encodeIndex];
 }
 
 void toLowerInPlace(C)(ref C[] s) @safe pure nothrow
     if(is(C == dchar))
 {
     foreach(ref c; s)
-    {
-        if(std.uni.isUpper(c))
-            c = std.uni.toLower(c);
-    }
+        c = std.uni.toLower(c);
 }
 
 unittest
@@ -942,47 +948,42 @@ unittest
     Converts $(D s) to uppercase (in unicode, not just ASCII) in place.
     If $(D s) does not have any lowercase characters, then $(D s) is unaltered.
  +/
-void toUpperInPlace(C)(ref C[] s)
-    if(isSomeChar!C &&
-       (is(C == char) || is(C == wchar)))
+void toUpperInPlace(C)(ref C[] s) pure @trusted
+    if (is(C == char) || is(C == wchar))
 {
-    for (size_t i = 0; i < s.length; )
+    immutable len = s.length;
+    size_t decodeIndex = 0;
+    size_t encodeIndex = 0;
+    
+    while(decodeIndex < len)
     {
-        immutable c = s[i];
-        if ('a' <= c && c <= 'z')
+        size_t oldDecodeIndex = decodeIndex;
+        dchar c = decode(s, decodeIndex);
+
+        dchar u = std.uni.toUpper(c);
+        if (u != c)
         {
-            s[i++] = cast(C) (c - (cast(C)'a' - 'A'));
-        }
-        else if (!std.ascii.isASCII(c))
-        {
-            // wide character
-            size_t j = i;
-            dchar dc = decode(s, j);
-            assert(j > i);
-            if (!std.uni.isLower(dc))
-            {
-                i = j;
-                continue;
-            }
-            auto toAdd = to!(C[])(std.uni.toUpper(dc));
-            s = s[0 .. i] ~ toAdd  ~ s[j .. $];
-            i += toAdd.length;
+                 static if (is(C ==  char)) auto pBuf = cast( char[4]*) &s[encodeIndex];
+            else static if (is(C == wchar)) auto pBuf = cast(wchar[2]*) &s[encodeIndex];
+            else static assert(0);
+            size_t strd = encode(*pBuf, u);
+            encodeIndex += strd;
         }
         else
         {
-            ++i;
+            size_t strd = decodeIndex - oldDecodeIndex;
+            encodeIndex += strd;
         }
     }
+    version(assert) s[encodeIndex .. decodeIndex] []= C.init;
+    s = s[0 .. encodeIndex];
 }
 
 void toUpperInPlace(C)(ref C[] s) @safe pure nothrow
-    if(is(C == dchar))
+    if (is(C == dchar))
 {
     foreach(ref c; s)
-    {
-        if(std.uni.isLower(c))
-            c = std.uni.toUpper(c);
-    }
+        c = std.uni.toUpper(c);
 }
 
 unittest
@@ -1034,6 +1035,9 @@ unittest
 /++
     Capitalize the first character of $(D s) and conver the rest of $(D s)
     to lowercase.
+    
+    $(red Currently, this function will change the first charater
+    according to unicode "Upper case", and not "Title case".)
  +/
 S capitalize(S)(S s) @trusted pure
     if(isSomeString!S)
