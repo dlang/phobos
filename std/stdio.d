@@ -873,9 +873,7 @@ int main()
         foreach (uint i,C; Tuple!(char, wchar, dchar).Types)
         {
             immutable(C)[] witness = "cześć \U0002000D";
-            auto f = File(deleteme);
-            immutable(C)[] buf;
-            buf = f.readln!(typeof(buf))();
+            auto buf = File(deleteme).readln!(immutable(C)[])();
             assert(buf.length==lengths[i]);
             assert(buf==witness);
         }
