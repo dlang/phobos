@@ -24,8 +24,8 @@ $(BOOKTABLE ,
     ))
     $(TR $(TD $(D $(LREF isOutputRange)))
         $(TD Tests if something is an $(I output _range), defined to be
-        something to which one can sequentially write data using the $(D $(LREF
-        put)) primitive.
+        something to which one can sequentially write data using the
+        $(D $(LREF put)) primitive.
     ))
     $(TR $(TD $(D $(LREF isForwardRange)))
         $(TD Tests if something is a $(I forward _range), defined to be an
