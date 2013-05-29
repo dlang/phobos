@@ -1679,6 +1679,9 @@ unittest
     }
 }
 
+//build hack 
+alias Uint24Array!ReallocPolicy _RealArray;
+
 unittest
 {
     with(ReallocPolicy)
