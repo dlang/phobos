@@ -6,7 +6,7 @@
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
-$(TR $(TDNW Searching) $(TD $(MYREF balancedParens) $(MYREF
+$(TR $(TDNW Searching) $(TD $(MYREF all) $(MYREF any) $(MYREF balancedParens) $(MYREF
 boyerMooreFinder) $(MYREF canFind) $(MYREF count) $(MYREF countUntil)
 $(MYREF commonPrefix) $(MYREF endsWith) $(MYREF find) $(MYREF
 findAdjacent) $(MYREF findAmong) $(MYREF findSkip) $(MYREF findSplit)
@@ -74,6 +74,10 @@ $(BOOKTABLE Cheat Sheet,
 $(TR $(TH Function Name) $(TH Description)
 )
 $(LEADINGROW Searching
+)
+$(TR $(TDNW $(LREF all)) $(TD $(D all!"a > 0"([1, 2, 3, 4])) returns $(D true) because all elements are positive)
+)
+$(TR $(TDNW $(LREF any)) $(TD $(D any!"a > 0"([1, 2, -3, -4])) returns $(D true) because at least one element is positive)
 )
 $(TR $(TDNW $(LREF balancedParens)) $(TD $(D
 balancedParens("((1 + 1) / 2)")) returns $(D true) because the string
