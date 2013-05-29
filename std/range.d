@@ -571,7 +571,7 @@ $(TR $(TD $(D r([ e ]);)) $(TD $(D R) is e.g. a $(D delegate)
 ))
 )
  */
-void put(R, E)(ref R r, E e)
+void put(R, E)(auto ref R r, E e)
 {
     static if(is(PointerTarget!R == struct))
         enum usingPut = hasMember!(PointerTarget!R, "put");
