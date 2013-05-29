@@ -173,7 +173,7 @@ $(I FormatChar):
     $(TR $(TD $(B '#')) $(TD floating) $(TD Always insert the decimal
        point and print trailing zeros.))
 
-    $(TR $(TD $(B '#')) $(TD numeric ($(B '0'))) $(TD Use leading
+    $(TR $(TD $(B '0')) $(TD numeric) $(TD Use leading
     zeros to pad rather than spaces (except for the floating point
     values $(D nan) and $(D infinity)).  Ignore if there's a $(I
     Precision).))
