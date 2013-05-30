@@ -318,14 +318,14 @@ clean :
 zip :
 	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES) win32.mak win64.mak
 
-install2 : release html
+install2 : release
 	mkdir -p $(INSTALL_DIR)/lib
 	cp $(LIB) $(INSTALL_DIR)/lib/
 	mkdir -p $(INSTALL_DIR)/import/etc
 	mkdir -p $(INSTALL_DIR)/import/std
 	cp crc32.d $(INSTALL_DIR)/import/
-	cp -r std $(INSTALL_DIR)/import/std/
-	cp -r etc $(INSTALL_DIR)/import/etc/
+	cp -r std/* $(INSTALL_DIR)/import/std/
+	cp -r etc/* $(INSTALL_DIR)/import/etc/
 	cp LICENSE_1_0.txt $(INSTALL_DIR)/phobos-LICENSE.txt
 
 $(DRUNTIME) :
