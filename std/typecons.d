@@ -1736,7 +1736,11 @@ if (is(typeof(T.init is null))) // T has nullify check.
 {
     private T _store;
     private this(T t) { _store = t; }
-    invariant() { assert(_store !is null); }
+
+    // Having this invariant is redundant.
+    // We should always construct NotNull object through assumeNotNull function,
+    // so we can guarantee that NotNull is always storing non-null pointer.
+    //invariant() { assert(_store !is null); }
 
     @property inout(T) _payload() inout { return _store; }
     alias _payload this;
