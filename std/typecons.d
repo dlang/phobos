@@ -506,8 +506,16 @@ template Tuple(Specs...)
         {
             static if (is(R : Tuple!Types) && !__traits(isRef, rhs))
             {
-                // Use swap-and-destroy to optimize rvalue assignment
-                swap!(Tuple!Types)(this, rhs);
+                if(__ctfe)
+                {
+                    // Cannot use swap at compile time
+                    field[] = rhs.field[];
+                }
+                else
+                {
+                    // Use swap-and-destroy to optimize rvalue assignment
+                    swap!(Tuple!Types)(this, rhs);
+                }
             }
             else
             {
@@ -818,6 +826,15 @@ unittest
 
     static assert(is(typeof(Tuple!(int, "x", string, "y").tupleof) ==
                      typeof(Tuple!(int,      string     ).tupleof)));
+}
+unittest
+{
+    static assert({
+        auto t = tuple(1);
+        t = tuple(2);
+
+        return true;
+    }());
 }
 
 /**
