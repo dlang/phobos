@@ -1046,8 +1046,42 @@ Returns the file number corresponding to this object.
     }
 
 /**
-Range that reads one line at a time. */
-    /// ditto
+Range that reads one line at a time.  Returned by $(LREF byLine).
+
+Allows to directly use range operations on lines of a file.
+
+Example:
+
+----
+import std.algorithm, std.string, std.stdio;
+// Count words in a file using ranges.
+void main()
+{
+    auto file = File("file.txt", "r"); // Open for reading
+    const wordCount = file.byLine()                  // Read lines
+                          .map!split                 // Split into words
+                          .map!(a => a.length)       // Count words per line
+                          .reduce!((a, b) => a + b); // Total word count
+    writeln(wordCount);
+}
+----
+
+Example:
+----
+import std.stdio;
+// Count lines in file using a foreach
+void main()
+{
+    auto file = File("file.txt", "r"); // open for reading
+    uint lineCount = 0;
+    foreach(line; file.byLine())
+    {
+        ++lineCount;
+    }
+    writeln("Lines in file: ", lineCount);
+}
+----
+*/
     struct ByLine(Char, Terminator)
     {
         File file;
