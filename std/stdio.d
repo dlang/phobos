@@ -1057,7 +1057,7 @@ import std.algorithm, std.string, std.stdio;
 // Count words in a file using ranges.
 void main()
 {
-    auto file = File("file.txt", "r"); // Open for reading
+    auto file = File("file.txt"); // Open for reading
     const wordCount = file.byLine()                  // Read lines
                           .map!split                 // Split into words
                           .map!(a => a.length)       // Count words per line
@@ -1072,9 +1072,9 @@ import std.stdio;
 // Count lines in file using a foreach
 void main()
 {
-    auto file = File("file.txt", "r"); // open for reading
-    uint lineCount = 0;
-    foreach(line; file.byLine())
+    auto file = File("file.txt"); // open for reading
+    ulong lineCount = 0;
+    foreach (line; file.byLine())
     {
         ++lineCount;
     }
