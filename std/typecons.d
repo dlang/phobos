@@ -506,7 +506,7 @@ template Tuple(Specs...)
         {
             static if (is(R : Tuple!Types) && !__traits(isRef, rhs))
             {
-                if(__ctfe)
+                if (__ctfe)
                 {
                     // Cannot use swap at compile time
                     field[] = rhs.field[];
