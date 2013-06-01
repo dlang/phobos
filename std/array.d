@@ -169,6 +169,27 @@ unittest
     }
 }
 
+// Bugzilla 10220
+unittest
+{
+    import std.algorithm : equal;
+    import std.range : repeat;
+
+    static struct S
+    {
+        int val;
+
+        @disable this();
+        this(int v) { val = v; }
+    }
+    assertCTFEable!(
+    {
+        auto r = S(1).repeat(2).array();
+        assert(equal(r, [S(1), S(1)]));
+    });
+}
+
+
 /**
 Returns a newly allocated associative array out of elements of the input range,
 which must be a range of tuples (Key, Value).
@@ -321,7 +342,12 @@ if(allSatisfy!(isIntegral, I))
     alias typeof(T.init[0]) E;
 
     auto ptr = (__ctfe) ?
-        (new E[](sizes[0])).ptr :
+        {
+            E[] arr;
+            foreach (i; 0 .. sizes[0])
+                arr ~= E.init;
+            return arr.ptr;
+        }() :
         cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!(E));
     auto ret = ptr[0..sizes[0]];
 
