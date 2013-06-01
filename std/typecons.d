@@ -829,12 +829,12 @@ unittest
 }
 unittest
 {
-    static assert({
+    // Bugzilla 10218
+    assertCTFEable!(
+    {
         auto t = tuple(1);
-        t = tuple(2);
-
-        return true;
-    }());
+        t = tuple(2);   // assignment
+    });
 }
 
 /**

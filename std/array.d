@@ -187,8 +187,8 @@ assert(b == ["foo":"bar", "baz":"quux"]);
  */
 
 auto assocArray(Range)(Range r)
-    if (isInputRange!Range && isTuple!(ElementType!Range)
-     && ElementType!Range.length == 2)
+    if (isInputRange!Range && isTuple!(ElementType!Range) &&
+        ElementType!Range.length == 2)
 {
     alias ElementType!Range.Types[0] KeyType;
     alias ElementType!Range.Types[1] ValueType;
@@ -202,7 +202,7 @@ unittest
 {
     static assert(!__traits(compiles, [ tuple("foo", "bar", "baz") ].assocArray()));
     static assert(!__traits(compiles, [ tuple("foo") ].assocArray()));
-    static assert(__traits(compiles, [ tuple("foo", "bar") ].assocArray()));
+    static assert( __traits(compiles, [ tuple("foo", "bar") ].assocArray()));
 
     auto aa1 = [ tuple("foo", "bar"), tuple("baz", "quux") ].assocArray();
     assert(is(typeof(aa1) == string[string]));
@@ -224,7 +224,8 @@ private template blockAttribute(T)
         enum blockAttribute = GC.BlkAttr.NO_SCAN;
     }
 }
-unittest {
+unittest
+{
     static assert(!(blockAttribute!void & GC.BlkAttr.NO_SCAN));
 }
 
@@ -241,7 +242,8 @@ private template nDimensions(T)
     }
 }
 
-unittest {
+unittest
+{
     static assert(nDimensions!(uint[]) == 1);
     static assert(nDimensions!(float[][]) == 2);
 }
@@ -1160,14 +1162,13 @@ unittest
 
 unittest
 {
-    static int[] testCTFE()
+    assertCTFEable!(
     {
         int[] a = [1, 2];
         a.insertInPlace(2, 3);
         a.insertInPlace(0, -1, 0);
-        return a;
-    }
-    static assert(testCTFE() == [-1, 0, 1, 2, 3]);
+        return a == [-1, 0, 1, 2, 3];
+    });
 }
 
 unittest // bugzilla 6874
@@ -2586,23 +2587,19 @@ unittest
         }
     }
 
+    static struct S10122
     {
-        static struct S10122
-        {
-            int val;
+        int val;
 
-            @disable this();
-            this(int v) { val = v; }
-        }
+        @disable this();
+        this(int v) { val = v; }
+    }
+    assertCTFEable!(
+    {
         auto w = appender!(S10122[])();
         w.put(S10122(1));
-
-        static assert({
-            auto w = appender!(S10122[])();
-            w.put(S10122(1));
-            return w.data.length == 1 && w.data[0].val == 1;
-        }());
-    }
+        assert(w.data.length == 1 && w.data[0].val == 1);
+    });
 }
 
 /++
