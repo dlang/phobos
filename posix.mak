@@ -56,6 +56,7 @@ endif
 override PIC:=$(if $(PIC),-fPIC,)
 
 # Configurable stuff that's rarely edited
+INSTALL_DIR = ../install
 DRUNTIME_PATH = ../druntime
 ZIPFILE = phobos.zip
 ROOT_OF_THEM_ALL = generated
@@ -251,6 +252,8 @@ debug :
 unittest :
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=debug unittest
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release unittest
+install :
+	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release INSTALL_DIR=$(INSTALL_DIR) DMD=$(DMD) install2
 else
 # This branch is normally taken in recursive builds. All we need to do
 # is set the default build to $(BUILD) (which is either debug or
@@ -315,8 +318,15 @@ clean :
 zip :
 	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES) win32.mak win64.mak
 
-install : release
-	sudo cp $(LIB) /usr/lib/
+install2 : release
+	mkdir -p $(INSTALL_DIR)/lib
+	cp $(LIB) $(INSTALL_DIR)/lib/
+	mkdir -p $(INSTALL_DIR)/import/etc
+	mkdir -p $(INSTALL_DIR)/import/std
+	cp crc32.d $(INSTALL_DIR)/import/
+	cp -r std/* $(INSTALL_DIR)/import/std/
+	cp -r etc/* $(INSTALL_DIR)/import/etc/
+	cp LICENSE_1_0.txt $(INSTALL_DIR)/phobos-LICENSE.txt
 
 $(DRUNTIME) :
 	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak MODEL=$(MODEL)
