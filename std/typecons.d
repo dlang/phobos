@@ -2616,6 +2616,623 @@ template generateAssertTrap(C, func.../+[BUG 4217]+/)
 }
 
 /**
+ * Supports structural based typesafe conversion.
+ *
+ * If $(D Source) has structural conformance with the $(D interface) $(D Targets),
+ * wrap creates internal wrapper class which inherits $(D Targets) and
+ * wrap $(D src) object, then return it.
+ */
+template wrap(Targets...)
+if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
+{
+    // strict upcast
+    @property wrap(Source)(inout Source src) @trusted pure nothrow
+    if (Targets.length == 1 && is(Source : Targets[0]))
+    {
+        alias T = Select!(is(Source == shared), shared Targets[0], Targets[0]);
+        return cast(inout T)(src);
+    }
+    // structural upcast
+    template wrap(Source)
+    if (!allSatisfy!(Bind!(isImplicitlyConvertible, Source), Targets))
+    {
+        @property wrap(inout Source src)
+        {
+            static assert(hasRequireMethods!(),
+                          "Source "~Source.stringof~
+                          " does not have structural conformance to "~
+                          Targets.stringof);
+
+            alias T = Select!(is(Source == shared), shared Impl, Impl);
+            return new inout T(src);
+        }
+
+        template FuncInfo(string s, F)
+        {
+            enum name = s;
+            alias type = F;
+        }
+
+        // Concat all Targets function members into one tuple
+        template Concat(size_t i = 0)
+        {
+            static if (i >= Targets.length)
+                alias Concat = TypeTuple!();
+            else
+            {
+                alias Concat = TypeTuple!(GetOverloadedMethods!(Targets[i]), Concat!(i + 1));
+            }
+        }
+        // Remove duplicated functions based on the identifier name and function type covariance
+        template Uniq(members...)
+        {
+            static if (members.length == 0)
+                alias Uniq = TypeTuple!();
+            else
+            {
+                alias func = members[0];
+                enum  name = __traits(identifier, func);
+                alias type = FunctionTypeOf!func;
+                template check(size_t i, mem...)
+                {
+                    static if (i >= mem.length)
+                        enum ptrdiff_t check = -1;
+                    else
+                    {
+                        enum ptrdiff_t check =
+                            __traits(identifier, func) == __traits(identifier, mem[i]) &&
+                            !is(DerivedFunctionType!(type, FunctionTypeOf!(mem[i])) == void)
+                          ? i : check!(i + 1, mem);
+                    }
+                }
+                enum ptrdiff_t x = 1 + check!(0, members[1 .. $]);
+                static if (x >= 1)
+                {
+                    alias typex = DerivedFunctionType!(type, FunctionTypeOf!(members[x]));
+                    alias remain = Uniq!(members[1 .. x], members[x + 1 .. $]);
+
+                    static if (remain.length >= 1 && remain[0].name == name &&
+                               !is(DerivedFunctionType!(typex, remain[0].type) == void))
+                    {
+                        alias F = DerivedFunctionType!(typex, remain[0].type);
+                        alias Uniq = TypeTuple!(FuncInfo!(name, F), remain[1 .. $]);
+                    }
+                    else
+                        alias Uniq = TypeTuple!(FuncInfo!(name, typex), remain);
+                }
+                else
+                {
+                    alias Uniq = TypeTuple!(FuncInfo!(name, type), Uniq!(members[1 .. $]));
+                }
+            }
+        }
+        alias TargetMembers = Uniq!(Concat!());             // list of FuncInfo
+        alias SourceMembers = GetOverloadedMethods!Source;  // list of function symbols
+
+        // Check whether all of SourceMembers satisfy covariance target in TargetMembers
+        template hasRequireMethods(size_t i = 0)
+        {
+            static if (i >= TargetMembers.length)
+                enum hasRequireMethods = true;
+            else
+            {
+                enum hasRequireMethods =
+                    findCovariantFunction!(TargetMembers[i], SourceMembers) != -1 &&
+                    hasRequireMethods!(i + 1);
+            }
+        }
+
+        // Internal wrapper class
+        final class Impl : Structural, Targets
+        {
+        private:
+            Source _wrap_source;
+
+            this(       inout Source s)        inout @safe pure nothrow { _wrap_source = s; }
+            this(shared inout Source s) shared inout @safe pure nothrow { _wrap_source = s; }
+
+            // BUG: making private should work with NVI.
+            protected final inout(Object) _wrap_getSource() inout @trusted
+            {
+                return cast(inout Object)(_wrap_source);
+            }
+
+            import std.conv : to;
+            import std.algorithm : forward;
+            template generateFun(size_t i)
+            {
+                enum name = TargetMembers[i].name;
+                enum fa = functionAttributes!(TargetMembers[i].type);
+                static @property stc()
+                {
+                    string r;
+                    if (fa & FunctionAttribute.property)    r ~= "@property ";
+                    if (fa & FunctionAttribute.ref_)        r ~= "ref ";
+                    if (fa & FunctionAttribute.pure_)       r ~= "pure ";
+                    if (fa & FunctionAttribute.nothrow_)    r ~= "nothrow ";
+                    if (fa & FunctionAttribute.trusted)     r ~= "@trusted ";
+                    if (fa & FunctionAttribute.safe)        r ~= "@safe ";
+                    return r;
+                }
+                static @property mod()
+                {
+                    alias TypeTuple!(TargetMembers[i].type)[0] type;
+                    string r;
+                    static if (is(type == immutable))       r ~= " immutable";
+                    else
+                    {
+                        static if (is(type == shared))      r ~= " shared";
+                        static if (is(type == const))       r ~= " const";
+                        else static if (is(type == inout))  r ~= " inout";
+                        //else  --> mutable
+                    }
+                    return r;
+                }
+                enum n = to!string(i);
+                enum generateFun =
+                    "override "~stc~"ReturnType!(TargetMembers["~n~"].type) "
+                    ~ name~"(ParameterTypeTuple!(TargetMembers["~n~"].type) args) "~mod~
+                    "{ return _wrap_source."~name~"(forward!args); }";
+            }
+
+        public:
+            mixin mixinAll!(
+                staticMap!(generateFun, staticIota!(0, TargetMembers.length)));
+        }
+    }
+}
+/// ditto
+template wrap(Targets...)
+if (Targets.length >= 1 && !allSatisfy!(isMutable, Targets))
+{
+    alias wrap = .wrap!(staticMap!(Unqual, Targets));
+}
+
+// Internal class to support dynamic cross-casting
+private interface Structural
+{
+    inout(Object) _wrap_getSource() inout @safe pure nothrow;
+}
+
+/**
+ * Extract object which wrapped by $(D wrap).
+ */
+template unwrap(Target)
+if (isMutable!Target)
+{
+    // strict downcast
+    @property unwrap(Source)(inout Source src) @trusted pure nothrow
+    if (is(Target : Source))
+    {
+        alias T = Select!(is(Source == shared), shared Target, Target);
+        return cast(inout T)(src);
+    }
+    // structural downcast
+    @property unwrap(Source)(inout Source src) @trusted pure nothrow
+    if (!is(Target : Source))
+    {
+        alias T = Select!(is(Source == shared), shared Target, Target);
+        Object o = cast(Object)src;     // remove qualifier
+        do
+        {
+            if (auto a = cast(Structural)o)
+            {
+                if (auto d = cast(inout T)(o = a._wrap_getSource()))
+                    return d;
+            }
+            else if (auto d = cast(inout T)o)
+                return d;
+            else
+                break;
+        } while (o);
+        return null;
+    }
+}
+/// ditto
+template unwrap(Target)
+if (!isMutable!Target)
+{
+    alias unwrap = .unwrap!(Unqual!Target);
+}
+
+///
+unittest
+{
+    interface Quack
+    {
+        int quack();
+        @property int height();
+    }
+    interface Flyer
+    {
+        @property int height();
+    }
+    class Duck : Quack
+    {
+        int quack() { return 1; }
+        @property int height() { return 10; }
+    }
+    class Human
+    {
+        int quack() { return 2; }
+        @property int height() { return 20; }
+    }
+
+    Duck d1 = new Duck();
+    Human h1 = new Human();
+
+    interface Refleshable
+    {
+        int reflesh();
+    }
+    // does not have structural conformance
+    static assert(!__traits(compiles, d1.wrap!Refleshable));
+    static assert(!__traits(compiles, h1.wrap!Refleshable));
+
+    // strict upcast
+    Quack qd = d1.wrap!Quack;
+    assert(qd is d1);
+    assert(qd.quack() == 1);    // calls Duck.quack
+    // strict downcast
+    Duck d2 = qd.unwrap!Duck;
+    assert(d2 is d1);
+
+    // structural upcast
+    Quack qh = h1.wrap!Quack;
+    assert(qh.quack() == 2);    // calls Human.quack
+    // structural downcast
+    Human h2 = qh.unwrap!Human;
+    assert(h2 is h1);
+
+    // structural upcast (two steps)
+    Quack qx = h1.wrap!Quack;   // Human -> Quack
+    Flyer fx = qx.wrap!Flyer;   // Quack -> Flyer
+    assert(fx.height() == 20);  // calls Human.height
+    // strucural downcast (two steps)
+    Quack qy = fx.unwrap!Quack; // Flyer -> Quack
+    Human hy = qy.unwrap!Human; // Quack -> Human
+    assert(hy is h1);
+    // strucural downcast (one step)
+    Human hz = fx.unwrap!Human; // Flyer -> Human
+    assert(hz is h1);
+}
+///
+unittest
+{
+    interface A { int run(); }
+    interface B { int stop(); @property int status(); }
+    class X
+    {
+        int run() { return 1; }
+        int stop() { return 2; }
+        @property int status() { return 3; }
+    }
+
+    auto x = new X();
+    auto ab = x.wrap!(A, B);
+    A a = ab;
+    B b = ab;
+    assert(a.run() == 1);
+    assert(b.stop() == 2);
+    assert(b.status == 3);
+    static assert(functionAttributes!(typeof(ab).status) & FunctionAttribute.property);
+}
+unittest
+{
+    class A
+    {
+        int draw()              { return 1; }
+        int draw(int v)         { return v; }
+
+        int draw() const        { return 2; }
+        int draw() shared       { return 3; }
+        int draw() shared const { return 4; }
+        int draw() immutable    { return 5; }
+    }
+    interface Drawable
+    {
+        int draw();
+        int draw() const;
+        int draw() shared;
+        int draw() shared const;
+        int draw() immutable;
+    }
+    interface Drawable2
+    {
+        int draw(int v);
+    }
+
+    auto ma = new A();
+    auto sa = new shared A();
+    auto ia = new immutable A();
+    {
+                     Drawable  md = ma.wrap!Drawable;
+               const Drawable  cd = ma.wrap!Drawable;
+              shared Drawable  sd = sa.wrap!Drawable;
+        shared const Drawable scd = sa.wrap!Drawable;
+           immutable Drawable  id = ia.wrap!Drawable;
+        assert( md.draw() == 1);
+        assert( cd.draw() == 2);
+        assert( sd.draw() == 3);
+        assert(scd.draw() == 4);
+        assert( id.draw() == 5);
+    }
+    {
+        Drawable2 d = ma.wrap!Drawable2;
+        static assert(!__traits(compiles, d.draw()));
+        assert(d.draw(10) == 10);
+    }
+}
+
+// Make a tuple of non-static function symbols
+private template GetOverloadedMethods(T)
+{
+    alias allMembers = TypeTuple!(__traits(allMembers, T));
+    template follows(size_t i = 0)
+    {
+        static if (i >= allMembers.length)
+        {
+            alias follows = TypeTuple!();
+        }
+        else
+        {
+            enum name = allMembers[i];
+
+            template isFunction(T, string name)
+            {
+                static if (is(typeof(mixin("&T."~name)) F == F*) && is(F == function))
+                    enum isFunction = true;
+                else
+                    enum isFunction = false;
+            }
+            static if (isFunction!(T, name) && !__traits(isStaticFunction, mixin("T."~name)))
+                alias follows = TypeTuple!(__traits(getOverloads, T, name), follows!(i + 1));
+            else
+                alias follows = follows!(i + 1);
+        }
+    }
+    alias GetOverloadedMethods = follows!();
+}
+// find a function from Fs that has same identifier and covariant type with f
+private template findCovariantFunction(alias finfo, Fs...)
+{
+    template check(size_t i = 0)
+    {
+        static if (i >= Fs.length)
+            enum ptrdiff_t check = -1;
+        else
+        {
+            enum ptrdiff_t check =
+                (finfo.name == __traits(identifier, Fs[i])) &&
+                isCovariantWith!(FunctionTypeOf!(Fs[i]), finfo.type)
+              ? i : check!(i + 1);
+        }
+    }
+    enum ptrdiff_t findCovariantFunction = check!();
+}
+
+private enum TypeModifier
+{
+    mutable     = 0,    // type is mutable
+    const_      = 1,    // type is const
+    immutable_  = 2,    // type is immutable
+    shared_     = 4,    // type is shared
+    inout_      = 8,    // type is wild
+}
+private template TypeMod(T)
+{
+    static if (is(T == immutable))
+    {
+        enum mod1 = TypeModifier.immutable_;
+        enum mod2 = 0;
+    }
+    else
+    {
+        enum mod1 = is(T == shared) ? TypeModifier.shared_ : 0;
+        static if (is(T == const))
+            enum mod2 = TypeModifier.const_;
+        else static if (is(T == inout))
+            enum mod2 = TypeModifier.inout_;
+        else
+            enum mod2 = TypeModifier.mutable;
+    }
+    enum TypeMod = cast(TypeModifier)(mod1 | mod2);
+}
+
+version(unittest)
+{
+    private template UnittestFuncInfo(alias f)
+    {
+        enum name = __traits(identifier, f);
+        alias type = FunctionTypeOf!f;
+    }
+}
+unittest
+{
+    class A
+    {
+        int draw() { return 1; }
+        @property int value() { return 2; }
+        final int run() { return 3; }
+    }
+    alias methods = GetOverloadedMethods!A;
+
+    alias int F1();
+    alias @property int F2();
+    alias string F3();
+    alias nothrow @trusted uint F4();
+    alias int F5(Object);
+    alias bool F6(Object);
+    static assert(methods.length == 3 + 4);
+    static assert(__traits(identifier, methods[0]) == "draw"     && is(typeof(&methods[0]) == F1*));
+    static assert(__traits(identifier, methods[1]) == "value"    && is(typeof(&methods[1]) == F2*));
+    static assert(__traits(identifier, methods[2]) == "run"      && is(typeof(&methods[2]) == F1*));
+
+    int draw() { return 0; }
+    @property int value() { return 0; }
+    void opEquals() {}
+    int nomatch() { return 0; }
+    static assert(findCovariantFunction!(UnittestFuncInfo!draw, methods) == 0);
+    static assert(findCovariantFunction!(UnittestFuncInfo!value, methods) == 1);
+    static assert(findCovariantFunction!(UnittestFuncInfo!opEquals, methods) == -1);
+    static assert(findCovariantFunction!(UnittestFuncInfo!nomatch, methods) == -1);
+}
+
+private template DerivedFunctionType(T...)
+{
+    static if (!T.length)
+    {
+        alias DerivedFunctionType = void;
+    }
+    else static if (T.length == 1)
+    {
+        static if (is(T[0] == function))
+        {
+            alias DerivedFunctionType = T[0];
+        }
+        else
+        {
+            alias DerivedFunctionType = void;
+        }
+    }
+    else static if (is(T[0] P0 == function) && is(T[1] P1 == function))
+    {
+        alias FA = FunctionAttribute;
+
+        alias F0 = T[0], R0 = ReturnType!F0, PSTC0 = ParameterStorageClassTuple!F0;
+        alias F1 = T[1], R1 = ReturnType!F1, PSTC1 = ParameterStorageClassTuple!F1;
+        enum FA0 = functionAttributes!F0;
+        enum FA1 = functionAttributes!F1;
+
+        template CheckParams(size_t i = 0)
+        {
+            static if (i >= P0.length)
+                enum CheckParams = true;
+            else
+            {
+                enum CheckParams = (is(P0[i] == P1[i]) && PSTC0[i] == PSTC1[i]) &&
+                                   CheckParams!(i + 1);
+            }
+        }
+        static if (R0.sizeof == R1.sizeof && !is(CommonType!(R0, R1) == void) &&
+                   P0.length == P1.length && CheckParams!() && TypeMod!F0 == TypeMod!F1 &&
+                   variadicFunctionStyle!F0 == variadicFunctionStyle!F1 &&
+                   functionLinkage!F0 == functionLinkage!F1 &&
+                   ((FA0 ^ FA1) & (FA.ref_ | FA.property)) == 0)
+        {
+            alias R = Select!(is(R0 : R1), R0, R1);
+            alias FX = FunctionTypeOf!(R function(P0));
+            alias FY = SetFunctionAttributes!(FX, functionLinkage!F0, FA0 | FA1);
+            alias DerivedFunctionType = DerivedFunctionType!(FY, T[2 .. $]);
+        }
+        else
+            alias DerivedFunctionType = void;
+    }
+    else
+        alias DerivedFunctionType = void;
+}
+unittest
+{
+    // attribute covariance
+    alias int F1();
+    static assert(is(DerivedFunctionType!(F1, F1) == F1));
+    alias int F2() pure nothrow;
+    static assert(is(DerivedFunctionType!(F1, F2) == F2));
+    alias int F3() @safe;
+    alias int F23() pure nothrow @safe;
+    static assert(is(DerivedFunctionType!(F2, F3) == F23));
+
+    // return type covariance
+    alias long F4();
+    static assert(is(DerivedFunctionType!(F1, F4) == void));
+    class C {}
+    class D : C {}
+    alias C F5();
+    alias D F6();
+    static assert(is(DerivedFunctionType!(F5, F6) == F6));
+    alias typeof(null) F7();
+    alias int[] F8();
+    alias int* F9();
+    static assert(is(DerivedFunctionType!(F5, F7) == F7));
+    static assert(is(DerivedFunctionType!(F7, F8) == void));
+    static assert(is(DerivedFunctionType!(F7, F9) == F7));
+
+    // variadic type equality
+    alias int F10(int);
+    alias int F11(int...);
+    alias int F12(int, ...);
+    static assert(is(DerivedFunctionType!(F10, F11) == void));
+    static assert(is(DerivedFunctionType!(F10, F12) == void));
+    static assert(is(DerivedFunctionType!(F11, F12) == void));
+
+    // linkage equality
+    alias extern(C) int F13(int);
+    alias extern(D) int F14(int);
+    alias extern(Windows) int F15(int);
+    static assert(is(DerivedFunctionType!(F13, F14) == void));
+    static assert(is(DerivedFunctionType!(F13, F15) == void));
+    static assert(is(DerivedFunctionType!(F14, F15) == void));
+
+    // ref & @property equality
+    alias int F16(int);
+    alias ref int F17(int);
+    alias @property int F18(int);
+    static assert(is(DerivedFunctionType!(F16, F17) == void));
+    static assert(is(DerivedFunctionType!(F16, F18) == void));
+    static assert(is(DerivedFunctionType!(F17, F18) == void));
+}
+
+private template staticIota(int beg, int end, int step = 1) if (step != 0)
+{
+    static if (beg + 1 >= end)
+    {
+        static if (beg >= end)
+        {
+            alias TypeTuple!() staticIota;
+        }
+        else
+        {
+            alias TypeTuple!(+beg) staticIota;
+        }
+    }
+    else
+    {
+        enum mid = beg + (end - beg) / 2;
+        alias staticIota = TypeTuple!(staticIota!(beg, mid), staticIota!(mid, end));
+    }
+}
+
+private template mixinAll(mixins...)
+{
+    static if (mixins.length == 1)
+    {
+        static if (is(typeof(mixins[0]) == string))
+        {
+            mixin(mixins[0]);
+        }
+        else
+        {
+            alias mixins[0] it;
+            mixin it;
+        }
+    }
+    else static if (mixins.length >= 2)
+    {
+        mixin mixinAll!(mixins[ 0 .. $/2]);
+        mixin mixinAll!(mixins[$/2 .. $ ]);
+    }
+}
+
+private template Bind(alias Template, args1...)
+{
+    template Bind(args2...)
+    {
+        alias Bind = Template!(args1, args2);
+    }
+}
+
+
+/**
 Options regarding auto-initialization of a $(D RefCounted) object (see
 the definition of $(D RefCounted) below).
  */
