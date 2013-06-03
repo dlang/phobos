@@ -257,8 +257,8 @@ private:
 enum IR:uint {
     Char              = 0b1_00000_00, //a character
     Any               = 0b1_00001_00, //any character
-    CodepointSet      = 0b1_00010_00, //a most generic CodepointSet [...]
-    Trie              = 0b1_00011_00, //CodepointSet implemented as Trie
+    CodepointSetOld      = 0b1_00010_00, //a most generic CodepointSetOld [...]
+    Trie              = 0b1_00011_00, //CodepointSetOld implemented as Trie
     //match with any of a consecutive OrChar's in this sequence
     //(used for case insensitive match)
     //OrChar holds in upper two bits of data total number of OrChars in this _sequence_
@@ -531,7 +531,7 @@ static assert(Bytecode.sizeof == 4);
         uint start = irb[pc+1].raw, end = irb[pc+2].raw;
         formattedWrite(output, " pc=>%u [%u..%u]", pc + len + IRL!(IR.LookaheadStart), start, end);
         break;
-    case IR.Backref: case IR.CodepointSet: case IR.Trie:
+    case IR.Backref: case IR.CodepointSetOld: case IR.Trie:
         uint n = irb[pc].data;
         formattedWrite(output, " %u",  n);
         if(irb[pc].code == IR.Backref)
@@ -694,17 +694,17 @@ dchar parseUniHex(Char)(ref Char[] str, size_t maxDigit)
       .canFind("invalid codepoint"));
 }
 
-//heuristic value determines maximum CodepointSet length suitable for linear search
+//heuristic value determines maximum CodepointSetOld length suitable for linear search
 enum maxCharsetUsed = 6;
 
 enum maxCachedTries = 8;
 
-alias CodepointTrie!8 Trie;
+alias CodepointTrieOld!8 Trie;
 
-Trie[const(CodepointSet)] trieCache;
+Trie[const(CodepointSetOld)] trieCache;
 
 //accessor with caching
-@trusted Trie getTrie(in CodepointSet set)
+@trusted Trie getTrie(in CodepointSetOld set)
 {// @@@BUG@@@ 6357 almost all properties of AA are not @safe
     if(__ctfe || maxCachedTries == 0)
         return Trie(set);
@@ -723,9 +723,9 @@ Trie[const(CodepointSet)] trieCache;
 }
 
 //property for \w character class
-@property CodepointSet wordCharacter()
+@property CodepointSetOld wordCharacter()
 {
-    return memoizeExpr!("CodepointSet.init.add(unicodeAlphabetic).add(unicodeMn).add(unicodeMc)
+    return memoizeExpr!("CodepointSetOld.init.add(unicodeAlphabetic).add(unicodeMn).add(unicodeMc)
         .add(unicodeMe).add(unicodeNd).add(unicodePc)")();
 }
 
@@ -752,10 +752,10 @@ auto memoizeExpr(string expr)()
 /+
     fetch codepoint set corresponding to a name (InBlock or binary property)
 +/
-@trusted const(CodepointSet) getUnicodeSet(in char[] name, bool negated,  bool casefold)
+@trusted const(CodepointSetOld) getUnicodeSet(in char[] name, bool negated,  bool casefold)
 {
-    alias comparePropertyName ucmp;
-    CodepointSet s;
+    alias comparePropertyNameOld ucmp;
+    CodepointSetOld s;
 
     //unicode property
     //helper: direct access with a sanity check
@@ -797,8 +797,8 @@ auto memoizeExpr(string expr)()
     else
     {
         auto range = assumeSorted!((x,y) => ucmp(x.name, y.name) < 0)(unicodeProperties);
-        //creating empty Codepointset is a workaround
-        auto eq = range.lowerBound(UnicodeProperty(cast(string)name,CodepointSet.init)).length;
+        //creating empty CodepointSetOld is a workaround
+        auto eq = range.lowerBound(UnicodeProperty(cast(string)name,CodepointSetOld.init)).length;
         enforce(eq != range.length && ucmp(name,range[eq].name) == 0,
             "invalid property name");
         s = range[eq].set.dup;
@@ -808,7 +808,7 @@ auto memoizeExpr(string expr)()
         s = caseEnclose(s);
     if(negated)
         s.negate();
-    return cast(const CodepointSet)s;
+    return cast(const CodepointSetOld)s;
 }
 
 //basic stack, just in case it gets used anywhere else then Parser
@@ -878,7 +878,7 @@ struct Parser(R, bool CTFE = false)
     uint nesting = 0;
     uint lookaroundNest = 0;
     uint counterDepth = 0; //current depth of nested counted repetitions
-    const(CodepointSet)[] charsets;  //
+    const(CodepointSetOld)[] charsets;  //
     const(Trie)[] tries; //
     uint[] backrefed; //bitarray for groups
 
@@ -1390,23 +1390,23 @@ struct Parser(R, bool CTFE = false)
         groupStack.top += g;
     }
 
-    //CodepointSet operations relatively in order of priority
+    //CodepointSetOld operations relatively in order of priority
     enum Operator:uint {
         Open = 0, Negate,  Difference, SymDifference, Intersection, Union, None
     };
 
-    //parse unit of CodepointSet spec, most notably escape sequences and char ranges
+    //parse unit of CodepointSetOld spec, most notably escape sequences and char ranges
     //also fetches next set operation
-    Tuple!(CodepointSet,Operator) parseCharTerm()
+    Tuple!(CodepointSetOld,Operator) parseCharTerm()
     {
         enum State{ Start, Char, Escape, CharDash, CharDashEscape,
             PotentialTwinSymbolOperator }
         Operator op = Operator.None;
         dchar last;
-        CodepointSet set;
+        CodepointSetOld set;
         State state = State.Start;
 
-        static void addWithFlags(ref CodepointSet set, uint ch, uint re_flags)
+        static void addWithFlags(ref CodepointSetOld set, uint ch, uint re_flags)
         {
             if(re_flags & RegexOption.casefold)
             {
@@ -1663,15 +1663,15 @@ struct Parser(R, bool CTFE = false)
                 state = State.Start;
                 break;
             }
-            enforce(next(), "unexpected end of CodepointSet");
+            enforce(next(), "unexpected end of CodepointSetOld");
         }
         return tuple(set, op);
     }
 
-    alias Stack!(CodepointSet, CTFE) ValStack;
+    alias Stack!(CodepointSetOld, CTFE) ValStack;
     alias Stack!(Operator, CTFE) OpStack;
 
-    //parse and store IR for CodepointSet
+    //parse and store IR for CodepointSetOld
     void parseCharset()
     {
         ValStack vstack;
@@ -1730,18 +1730,18 @@ struct Parser(R, bool CTFE = false)
             {
             case '[':
                 opstack.push(Operator.Open);
-                enforce(next(), "unexpected end of CodepointSet");
+                enforce(next(), "unexpected end of CodepointSetOld");
                 if(current == '^')
                 {
                     opstack.push(Operator.Negate);
-                    enforce(next(), "unexpected end of CodepointSet");
+                    enforce(next(), "unexpected end of CodepointSetOld");
                 }
                 //[] is prohibited
-                enforce(current != ']', "wrong CodepointSet");
+                enforce(current != ']', "wrong CodepointSetOld");
                 goto default;
             case ']':
                 enforce(unrollWhile!(unaryFun!"a != a.Open")(vstack, opstack)
-                        , "CodepointSet syntax error");
+                        , "CodepointSetOld syntax error");
                 enforce(!opstack.empty, "unmatched ']'");
                 opstack.pop();
                 next();
@@ -1777,8 +1777,8 @@ struct Parser(R, bool CTFE = false)
         assert(vstack.length == 1);
         charsetToIr(vstack.top);
     }
-    //try to generate optimal IR code for this CodepointSet
-    @trusted void charsetToIr(in CodepointSet set)
+    //try to generate optimal IR code for this CodepointSetOld
+    @trusted void charsetToIr(in CodepointSetOld set)
     {//@@@BUG@@@ writeln is @system
         uint chars = set.chars;
         if(chars < Bytecode.maxSequence)
@@ -1789,7 +1789,7 @@ struct Parser(R, bool CTFE = false)
                     put(Bytecode(IR.Char, set.ivals[0]));
                     break;
                 case 0:
-                    error("empty CodepointSet not allowed");
+                    error("empty CodepointSetOld not allowed");
                     break;
                 default:
                     foreach(ch; set[])
@@ -1807,7 +1807,7 @@ struct Parser(R, bool CTFE = false)
             }
             else
             {
-                put(Bytecode(IR.CodepointSet, cast(uint)charsets.length));
+                put(Bytecode(IR.CodepointSetOld, cast(uint)charsets.length));
                 tries ~= Trie.init;
             }
             charsets ~= set;
@@ -1854,8 +1854,8 @@ struct Parser(R, bool CTFE = false)
             charsetToIr(wordCharacter.dup.negate());
             break;
         case 'p': case 'P':
-            auto CodepointSet = parseUnicodePropertySpec(current == 'P');
-            charsetToIr(CodepointSet);
+            auto CodepointSetOld = parseUnicodePropertySpec(current == 'P');
+            charsetToIr(CodepointSetOld);
             break;
         case 'x':
             uint code = parseUniHex(pat, 2);
@@ -1908,11 +1908,11 @@ struct Parser(R, bool CTFE = false)
         }
     }
 
-    //parse and return a CodepointSet for \p{...Property...} and \P{...Property..},
+    //parse and return a CodepointSetOld for \p{...Property...} and \P{...Property..},
     //\ - assumed to be processed, p - is current
-    const(CodepointSet) parseUnicodePropertySpec(bool negated)
+    const(CodepointSetOld) parseUnicodePropertySpec(bool negated)
     {
-        alias comparePropertyName ucmp;
+        alias comparePropertyNameOld ucmp;
         enum MAX_PROPERTY = 128;
         char[MAX_PROPERTY] result;
         uint k = 0;
@@ -1965,7 +1965,7 @@ struct Parser(R, bool CTFE = false)
 public struct Regex(Char)
 {
     //temporary workaround for identifier lookup
-    const(CodepointSet)[] charsets; //
+    const(CodepointSetOld)[] charsets; //
     Bytecode[] ir;      //compiled bytecode of pattern
 
     /++
@@ -2196,7 +2196,7 @@ int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
                 return -1;
         case IR.Any:
             return 0;
-        case IR.CodepointSet:
+        case IR.CodepointSetOld:
             if(re.charsets[re.ir[pc].data].scanFor(front))
                 return 0;
             else
@@ -2260,13 +2260,13 @@ int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
                     formattedWrite(app, "%s", cast(dchar)re.ir[pc + rand(len)].data);
                     pc += len;
                     break;
-                case IR.CodepointSet:
+                case IR.CodepointSetOld:
                 case IR.Trie:
                     auto set = re.charsets[re.ir[pc].data];
                     auto x = rand(set.ivals.length/2);
                     auto y = rand(set.ivals[x*2+1] - set.ivals[2*x]);
                     formattedWrite(app, "%s", cast(dchar)(set.ivals[2*x]+y));
-                    pc += IRL!(IR.CodepointSet);
+                    pc += IRL!(IR.CodepointSetOld);
                     break;
                 case IR.Any:
                     uint x;
@@ -2429,7 +2429,7 @@ private:
     uint fChar;
     uint n_length;
     enum charSize =  effectiveSize!Char();
-    //maximum number of chars in CodepointSet to process
+    //maximum number of chars in CodepointSetOld to process
     enum uint charsetThreshold = 32_000;
     static struct ShiftThread
     {
@@ -2602,7 +2602,7 @@ public:
                     else
                         goto L_StopThread;
                     break;
-                case IR.CodepointSet:
+                case IR.CodepointSetOld:
                 case IR.Trie:
                     auto set = re.charsets[re.ir[t.pc].data];
                     uint[4] s;
@@ -2641,7 +2641,7 @@ public:
                     }
                     for(uint i = 0; i < numS; i++)
                     {
-                        auto tx =  fork(t, t.pc + IRL!(IR.CodepointSet), t.counter);
+                        auto tx =  fork(t, t.pc + IRL!(IR.CodepointSetOld), t.counter);
                         tx.advance(s[i]);
                         trs ~= tx;
                     }
@@ -3278,11 +3278,11 @@ template BacktrackingMatcher(bool CTregex)
                         pc += IRL!(IR.Any);
                         next();
                         break;
-                    case IR.CodepointSet:
+                    case IR.CodepointSetOld:
                         if(atEnd || !re.charsets[re.ir[pc].data].scanFor(front))
                             goto L_backtrack;
                         next();
-                        pc += IRL!(IR.CodepointSet);
+                        pc += IRL!(IR.CodepointSetOld);
                         break;
                     case IR.Trie:
                         if(atEnd || !re.tries[re.ir[pc].data][front])
@@ -3718,7 +3718,7 @@ template BacktrackingMatcher(bool CTregex)
                         pc--;
                         next();
                         break;
-                    case IR.CodepointSet:
+                    case IR.CodepointSetOld:
                         if(atEnd || !re.charsets[re.ir[pc].data].scanFor(front))
                             goto L_backtrack;
                         next();
@@ -4455,7 +4455,7 @@ struct CtContext
                     $$
                     $$`, bailOut, addr >= 0 ? "next();" :"",nextInstr);
             break;
-        case IR.CodepointSet:
+        case IR.CodepointSetOld:
             code ~= ctSub( `
                     if(atEnd || !re.charsets[$$].scanFor(front))
                         $$
@@ -5362,10 +5362,10 @@ enum OneShot { Fwd, Bwd };
                       if(!t)
                           return;
                       break;
-            case IR.CodepointSet:
+            case IR.CodepointSetOld:
                       if(re.charsets[re.ir[t.pc].data].scanFor(front))
                       {
-                          t.pc += IRL!(IR.CodepointSet);
+                          t.pc += IRL!(IR.CodepointSetOld);
                           nlist.insertBack(t);
                       }
                       else
@@ -5870,7 +5870,7 @@ enum OneShot { Fwd, Bwd };
                         nlist.insertBack(t);
                     t = worklist.fetch();
                     break;
-                case IR.CodepointSet:
+                case IR.CodepointSetOld:
                     if(re.charsets[re.ir[t.pc].data].scanFor(front))
                     {
                         t.pc--;

@@ -319,56 +319,56 @@ CommonCaseEntry(0x10428, 0x10450, 1073741864),
 struct UnicodeProperty
 {
     string name;
-    immutable CodepointSet set;
+    immutable CodepointSetOld set;
 }
-immutable(CodepointSet) unicodeInCombining_Diacritical_Marks_Supplement = CodepointSet([
+immutable(CodepointSetOld) unicodeInCombining_Diacritical_Marks_Supplement = CodepointSetOld([
     0x01dc0, 0x01e00,
 ]);
 
-immutable(CodepointSet) unicodeInCJK_Radicals_Supplement = CodepointSet([
+immutable(CodepointSetOld) unicodeInCJK_Radicals_Supplement = CodepointSetOld([
     0x02e80, 0x02f00,
 ]);
 
-immutable(CodepointSet) unicodeInEthiopic_Supplement = CodepointSet([
+immutable(CodepointSetOld) unicodeInEthiopic_Supplement = CodepointSetOld([
     0x01380, 0x013a0,
 ]);
 
-immutable(CodepointSet) unicodeInPhags_pa = CodepointSet([
+immutable(CodepointSetOld) unicodeInPhags_pa = CodepointSetOld([
     0x0a840, 0x0a880,
 ]);
 
-immutable(CodepointSet) unicodeInSyriac = CodepointSet([
+immutable(CodepointSetOld) unicodeInSyriac = CodepointSetOld([
     0x00700, 0x00750,
 ]);
 
-immutable(CodepointSet) unicodeInGujarati = CodepointSet([
+immutable(CodepointSetOld) unicodeInGujarati = CodepointSetOld([
     0x00a80, 0x00b00,
 ]);
 
-immutable(CodepointSet) unicodeOther_ID_Start = CodepointSet([
+immutable(CodepointSetOld) unicodeOther_ID_Start = CodepointSetOld([
     0x02118, 0x02119,
     0x0212e, 0x0212f,
     0x0309b, 0x0309d,
 ]);
 
-immutable(CodepointSet) unicodeInKharoshthi = CodepointSet([
+immutable(CodepointSetOld) unicodeInKharoshthi = CodepointSetOld([
     0x10a00, 0x10a60,
 ]);
 
-immutable(CodepointSet) unicodeInHangul_Jamo = CodepointSet([
+immutable(CodepointSetOld) unicodeInHangul_Jamo = CodepointSetOld([
     0x01100, 0x01200,
 ]);
 
-immutable(CodepointSet) unicodeRunic = CodepointSet([
+immutable(CodepointSetOld) unicodeRunic = CodepointSetOld([
     0x016a0, 0x016eb,
     0x016ee, 0x016f1,
 ]);
 
-immutable(CodepointSet) unicodeInKayah_Li = CodepointSet([
+immutable(CodepointSetOld) unicodeInKayah_Li = CodepointSetOld([
     0x0a900, 0x0a930,
 ]);
 
-immutable(CodepointSet) unicodeOther_Default_Ignorable_Code_Point = CodepointSet([
+immutable(CodepointSetOld) unicodeOther_Default_Ignorable_Code_Point = CodepointSetOld([
     0x0034f, 0x00350,
     0x0115f, 0x01161,
     0x02065, 0x0206a,
@@ -381,20 +381,20 @@ immutable(CodepointSet) unicodeOther_Default_Ignorable_Code_Point = CodepointSet
     0xe01f0, 0xe1000,
 ]);
 
-immutable(CodepointSet) unicodeOld_Turkic = CodepointSet([
+immutable(CodepointSetOld) unicodeOld_Turkic = CodepointSetOld([
     0x10c00, 0x10c49,
 ]);
 
-immutable(CodepointSet) unicodeInLydian = CodepointSet([
+immutable(CodepointSetOld) unicodeInLydian = CodepointSetOld([
     0x10920, 0x10940,
 ]);
 
-immutable(CodepointSet) unicodeIDS_Binary_Operator = CodepointSet([
+immutable(CodepointSetOld) unicodeIDS_Binary_Operator = CodepointSetOld([
     0x02ff0, 0x02ff2,
     0x02ff4, 0x02ffc,
 ]);
 
-immutable(CodepointSet) unicodeTai_Tham = CodepointSet([
+immutable(CodepointSetOld) unicodeTai_Tham = CodepointSetOld([
     0x01a20, 0x01a5f,
     0x01a60, 0x01a7d,
     0x01a7f, 0x01a8a,
@@ -402,7 +402,7 @@ immutable(CodepointSet) unicodeTai_Tham = CodepointSet([
     0x01aa0, 0x01aae,
 ]);
 
-immutable(CodepointSet) unicodeLinear_B = CodepointSet([
+immutable(CodepointSetOld) unicodeLinear_B = CodepointSetOld([
     0x10000, 0x1000c,
     0x1000d, 0x10027,
     0x10028, 0x1003b,
@@ -412,15 +412,15 @@ immutable(CodepointSet) unicodeLinear_B = CodepointSet([
     0x10080, 0x100fb,
 ]);
 
-immutable(CodepointSet) unicodeInSupplemental_Arrows_A = CodepointSet([
+immutable(CodepointSetOld) unicodeInSupplemental_Arrows_A = CodepointSetOld([
     0x027f0, 0x02800,
 ]);
 
-immutable(CodepointSet) unicodeInMathematical_Alphanumeric_Symbols = CodepointSet([
+immutable(CodepointSetOld) unicodeInMathematical_Alphanumeric_Symbols = CodepointSetOld([
     0x1d400, 0x1d800,
 ]);
 
-immutable(CodepointSet) unicodeArmenian = CodepointSet([
+immutable(CodepointSetOld) unicodeArmenian = CodepointSetOld([
     0x00531, 0x00557,
     0x00559, 0x00560,
     0x00561, 0x00588,
@@ -428,19 +428,19 @@ immutable(CodepointSet) unicodeArmenian = CodepointSet([
     0x0fb13, 0x0fb18,
 ]);
 
-immutable(CodepointSet) unicodeInBlock_Elements = CodepointSet([
+immutable(CodepointSetOld) unicodeInBlock_Elements = CodepointSetOld([
     0x02580, 0x025a0,
 ]);
 
-immutable(CodepointSet) unicodeInSupplemental_Arrows_B = CodepointSet([
+immutable(CodepointSetOld) unicodeInSupplemental_Arrows_B = CodepointSetOld([
     0x02900, 0x02980,
 ]);
 
-immutable(CodepointSet) unicodeInBalinese = CodepointSet([
+immutable(CodepointSetOld) unicodeInBalinese = CodepointSetOld([
     0x01b00, 0x01b80,
 ]);
 
-immutable(CodepointSet) unicodeCyrillic = CodepointSet([
+immutable(CodepointSetOld) unicodeCyrillic = CodepointSetOld([
     0x00400, 0x00485,
     0x00487, 0x00528,
     0x01d2b, 0x01d2c,
@@ -450,11 +450,11 @@ immutable(CodepointSet) unicodeCyrillic = CodepointSet([
     0x0a67c, 0x0a698,
 ]);
 
-immutable(CodepointSet) unicodeInBamum_Supplement = CodepointSet([
+immutable(CodepointSetOld) unicodeInBamum_Supplement = CodepointSetOld([
     0x16800, 0x16a40,
 ]);
 
-immutable(CodepointSet) unicodeWhite_Space = CodepointSet([
+immutable(CodepointSetOld) unicodeWhite_Space = CodepointSetOld([
     0x00009, 0x0000e,
     0x00020, 0x00021,
     0x00085, 0x00086,
@@ -468,12 +468,12 @@ immutable(CodepointSet) unicodeWhite_Space = CodepointSet([
     0x03000, 0x03001,
 ]);
 
-immutable(CodepointSet) unicodeBatak = CodepointSet([
+immutable(CodepointSetOld) unicodeBatak = CodepointSetOld([
     0x01bc0, 0x01bf4,
     0x01bfc, 0x01c00,
 ]);
 
-immutable(CodepointSet) unicodeDeprecated = CodepointSet([
+immutable(CodepointSetOld) unicodeDeprecated = CodepointSetOld([
     0x00149, 0x0014a,
     0x00673, 0x00674,
     0x00f77, 0x00f78,
@@ -485,38 +485,38 @@ immutable(CodepointSet) unicodeDeprecated = CodepointSet([
     0xe0020, 0xe0080,
 ]);
 
-immutable(CodepointSet) unicodeInUnified_Canadian_Aboriginal_Syllabics_Extended = CodepointSet([
+immutable(CodepointSetOld) unicodeInUnified_Canadian_Aboriginal_Syllabics_Extended = CodepointSetOld([
     0x018b0, 0x01900,
 ]);
 
-immutable(CodepointSet) unicodeCherokee = CodepointSet([
+immutable(CodepointSetOld) unicodeCherokee = CodepointSetOld([
     0x013a0, 0x013f5,
 ]);
 
-immutable(CodepointSet) unicodeInInscriptional_Parthian = CodepointSet([
+immutable(CodepointSetOld) unicodeInInscriptional_Parthian = CodepointSetOld([
     0x10b40, 0x10b60,
 ]);
 
-immutable(CodepointSet) unicodeHiragana = CodepointSet([
+immutable(CodepointSetOld) unicodeHiragana = CodepointSetOld([
     0x03041, 0x03097,
     0x0309d, 0x030a0,
     0x1b001, 0x1b002,
     0x1f200, 0x1f201,
 ]);
 
-immutable(CodepointSet) unicodeInCJK_Compatibility_Ideographs = CodepointSet([
+immutable(CodepointSetOld) unicodeInCJK_Compatibility_Ideographs = CodepointSetOld([
     0x0f900, 0x0fb00,
 ]);
 
-immutable(CodepointSet) unicodeInAncient_Symbols = CodepointSet([
+immutable(CodepointSetOld) unicodeInAncient_Symbols = CodepointSetOld([
     0x10190, 0x101d0,
 ]);
 
-immutable(CodepointSet) unicodeInOld_South_Arabian = CodepointSet([
+immutable(CodepointSetOld) unicodeInOld_South_Arabian = CodepointSetOld([
     0x10a60, 0x10a80,
 ]);
 
-immutable(CodepointSet) unicodePattern_Syntax = CodepointSet([
+immutable(CodepointSetOld) unicodePattern_Syntax = CodepointSetOld([
     0x00021, 0x00030,
     0x0003a, 0x00041,
     0x0005b, 0x0005f,
@@ -547,20 +547,20 @@ immutable(CodepointSet) unicodePattern_Syntax = CodepointSet([
     0x0fe45, 0x0fe47,
 ]);
 
-immutable(CodepointSet) unicodeNew_Tai_Lue = CodepointSet([
+immutable(CodepointSetOld) unicodeNew_Tai_Lue = CodepointSetOld([
     0x01980, 0x019ac,
     0x019b0, 0x019ca,
     0x019d0, 0x019db,
     0x019de, 0x019e0,
 ]);
 
-immutable(CodepointSet) unicodeASCII_Hex_Digit = CodepointSet([
+immutable(CodepointSetOld) unicodeASCII_Hex_Digit = CodepointSetOld([
     0x00030, 0x0003a,
     0x00041, 0x00047,
     0x00061, 0x00067,
 ]);
 
-immutable(CodepointSet) unicodeArabic = CodepointSet([
+immutable(CodepointSetOld) unicodeArabic = CodepointSetOld([
     0x00600, 0x00604,
     0x00606, 0x0060c,
     0x0060d, 0x0061b,
@@ -582,55 +582,55 @@ immutable(CodepointSet) unicodeArabic = CodepointSet([
     0x10e60, 0x10e7f,
 ]);
 
-immutable(CodepointSet) unicodeInCuneiform_Numbers_and_Punctuation = CodepointSet([
+immutable(CodepointSetOld) unicodeInCuneiform_Numbers_and_Punctuation = CodepointSetOld([
     0x12400, 0x12480,
 ]);
 
-immutable(CodepointSet) unicodeBrahmi = CodepointSet([
+immutable(CodepointSetOld) unicodeBrahmi = CodepointSetOld([
     0x11000, 0x1104e,
     0x11052, 0x11070,
 ]);
 
-immutable(CodepointSet) unicodeInControl_Pictures = CodepointSet([
+immutable(CodepointSetOld) unicodeInControl_Pictures = CodepointSetOld([
     0x02400, 0x02440,
 ]);
 
-immutable(CodepointSet) unicodeOther_ID_Continue = CodepointSet([
+immutable(CodepointSetOld) unicodeOther_ID_Continue = CodepointSetOld([
     0x000b7, 0x000b8,
     0x00387, 0x00388,
     0x01369, 0x01372,
     0x019da, 0x019db,
 ]);
 
-immutable(CodepointSet) unicodeInOl_Chiki = CodepointSet([
+immutable(CodepointSetOld) unicodeInOl_Chiki = CodepointSetOld([
     0x01c50, 0x01c80,
 ]);
 
-immutable(CodepointSet) unicodeInArmenian = CodepointSet([
+immutable(CodepointSetOld) unicodeInArmenian = CodepointSetOld([
     0x00530, 0x00590,
 ]);
 
-immutable(CodepointSet) unicodeInCyrillic = CodepointSet([
+immutable(CodepointSetOld) unicodeInCyrillic = CodepointSetOld([
     0x00400, 0x00500,
 ]);
 
-immutable(CodepointSet) unicodeInNew_Tai_Lue = CodepointSet([
+immutable(CodepointSetOld) unicodeInNew_Tai_Lue = CodepointSetOld([
     0x01980, 0x019e0,
 ]);
 
-immutable(CodepointSet) unicodeInHigh_Surrogates = CodepointSet([
+immutable(CodepointSetOld) unicodeInHigh_Surrogates = CodepointSetOld([
     0x0d800, 0x0db80,
 ]);
 
-immutable(CodepointSet) unicodeInHigh_Private_Use_Surrogates = CodepointSet([
+immutable(CodepointSetOld) unicodeInHigh_Private_Use_Surrogates = CodepointSetOld([
     0x0db80, 0x0dc00,
 ]);
 
-immutable(CodepointSet) unicodeInAncient_Greek_Numbers = CodepointSet([
+immutable(CodepointSetOld) unicodeInAncient_Greek_Numbers = CodepointSetOld([
     0x10140, 0x10190,
 ]);
 
-immutable(CodepointSet) unicodeQuotation_Mark = CodepointSet([
+immutable(CodepointSetOld) unicodeQuotation_Mark = CodepointSetOld([
     0x00022, 0x00023,
     0x00027, 0x00028,
     0x000ab, 0x000ac,
@@ -645,31 +645,31 @@ immutable(CodepointSet) unicodeQuotation_Mark = CodepointSet([
     0x0ff62, 0x0ff64,
 ]);
 
-immutable(CodepointSet) unicodeTai_Le = CodepointSet([
+immutable(CodepointSetOld) unicodeTai_Le = CodepointSetOld([
     0x01950, 0x0196e,
     0x01970, 0x01975,
 ]);
 
-immutable(CodepointSet) unicodeCc = CodepointSet([
+immutable(CodepointSetOld) unicodeCc = CodepointSetOld([
     0x00000, 0x00020,
     0x0007f, 0x000a0,
 ]);
 
-immutable(CodepointSet) unicodeInCherokee = CodepointSet([
+immutable(CodepointSetOld) unicodeInCherokee = CodepointSetOld([
     0x013a0, 0x01400,
 ]);
 
-immutable(CodepointSet) unicodeCoptic = CodepointSet([
+immutable(CodepointSetOld) unicodeCoptic = CodepointSetOld([
     0x003e2, 0x003f0,
     0x02c80, 0x02cf2,
     0x02cf9, 0x02d00,
 ]);
 
-immutable(CodepointSet) unicodeInCyrillic_Supplement = CodepointSet([
+immutable(CodepointSetOld) unicodeInCyrillic_Supplement = CodepointSetOld([
     0x00500, 0x00530,
 ]);
 
-immutable(CodepointSet) unicodeCf = CodepointSet([
+immutable(CodepointSetOld) unicodeCf = CodepointSetOld([
     0x000ad, 0x000ae,
     0x00600, 0x00604,
     0x006dd, 0x006de,
@@ -687,31 +687,31 @@ immutable(CodepointSet) unicodeCf = CodepointSet([
     0xe0020, 0xe0080,
 ]);
 
-immutable(CodepointSet) unicodeGothic = CodepointSet([
+immutable(CodepointSetOld) unicodeGothic = CodepointSetOld([
     0x10330, 0x1034b,
 ]);
 
-immutable(CodepointSet) unicodeInHiragana = CodepointSet([
+immutable(CodepointSetOld) unicodeInHiragana = CodepointSetOld([
     0x03040, 0x030a0,
 ]);
 
-immutable(CodepointSet) unicodeInIPA_Extensions = CodepointSet([
+immutable(CodepointSetOld) unicodeInIPA_Extensions = CodepointSetOld([
     0x00250, 0x002b0,
 ]);
 
-immutable(CodepointSet) unicodeOgham = CodepointSet([
+immutable(CodepointSetOld) unicodeOgham = CodepointSetOld([
     0x01680, 0x0169d,
 ]);
 
-immutable(CodepointSet) unicodeInCJK_Compatibility_Forms = CodepointSet([
+immutable(CodepointSetOld) unicodeInCJK_Compatibility_Forms = CodepointSetOld([
     0x0fe30, 0x0fe50,
 ]);
 
-immutable(CodepointSet) unicodeInShavian = CodepointSet([
+immutable(CodepointSetOld) unicodeInShavian = CodepointSetOld([
     0x10450, 0x10480,
 ]);
 
-immutable(CodepointSet) unicodeCn = CodepointSet([
+immutable(CodepointSetOld) unicodeCn = CodepointSetOld([
     0x00378, 0x0037a,
     0x0037f, 0x00384,
     0x0038b, 0x0038c,
@@ -1215,21 +1215,21 @@ immutable(CodepointSet) unicodeCn = CodepointSet([
     0x10fffe, 0x110000,
 ]);
 
-immutable(CodepointSet) unicodeInPhaistos_Disc = CodepointSet([
+immutable(CodepointSetOld) unicodeInPhaistos_Disc = CodepointSetOld([
     0x101d0, 0x10200,
 ]);
 
-immutable(CodepointSet) unicodeCo = CodepointSet([
+immutable(CodepointSetOld) unicodeCo = CodepointSetOld([
     0x0e000, 0x0f900,
     0xf0000, 0xffffe,
     0x100000, 0x10fffe,
 ]);
 
-immutable(CodepointSet) unicodeInKana_Supplement = CodepointSet([
+immutable(CodepointSetOld) unicodeInKana_Supplement = CodepointSetOld([
     0x1b000, 0x1b100,
 ]);
 
-immutable(CodepointSet) unicodeMath = CodepointSet([
+immutable(CodepointSetOld) unicodeMath = CodepointSetOld([
     0x0002b, 0x0002c,
     0x0003c, 0x0003f,
     0x0005e, 0x0005f,
@@ -1338,75 +1338,75 @@ immutable(CodepointSet) unicodeMath = CodepointSet([
     0x1d7ce, 0x1d800,
 ]);
 
-immutable(CodepointSet) unicodeInLinear_B_Ideograms = CodepointSet([
+immutable(CodepointSetOld) unicodeInLinear_B_Ideograms = CodepointSetOld([
     0x10080, 0x10100,
 ]);
 
-immutable(CodepointSet) unicodeInYi_Syllables = CodepointSet([
+immutable(CodepointSetOld) unicodeInYi_Syllables = CodepointSetOld([
     0x0a000, 0x0a490,
 ]);
 
-immutable(CodepointSet) unicodeInInscriptional_Pahlavi = CodepointSet([
+immutable(CodepointSetOld) unicodeInInscriptional_Pahlavi = CodepointSetOld([
     0x10b60, 0x10b80,
 ]);
 
-immutable(CodepointSet) unicodeCs = CodepointSet([
+immutable(CodepointSetOld) unicodeCs = CodepointSetOld([
     0x0d800, 0x0e000,
 ]);
 
-immutable(CodepointSet) unicodeInHangul_Jamo_Extended_A = CodepointSet([
+immutable(CodepointSetOld) unicodeInHangul_Jamo_Extended_A = CodepointSetOld([
     0x0a960, 0x0a980,
 ]);
 
-immutable(CodepointSet) unicodeInGlagolitic = CodepointSet([
+immutable(CodepointSetOld) unicodeInGlagolitic = CodepointSetOld([
     0x02c00, 0x02c60,
 ]);
 
-immutable(CodepointSet) unicodeInHangul_Jamo_Extended_B = CodepointSet([
+immutable(CodepointSetOld) unicodeInHangul_Jamo_Extended_B = CodepointSetOld([
     0x0d7b0, 0x0d800,
 ]);
 
-immutable(CodepointSet) unicodeInSpecials = CodepointSet([
+immutable(CodepointSetOld) unicodeInSpecials = CodepointSetOld([
     0x0fff0, 0x10000,
 ]);
 
-immutable(CodepointSet) unicodeBopomofo = CodepointSet([
+immutable(CodepointSetOld) unicodeBopomofo = CodepointSetOld([
     0x002ea, 0x002ec,
     0x03105, 0x0312e,
     0x031a0, 0x031bb,
 ]);
 
-immutable(CodepointSet) unicodeInBamum = CodepointSet([
+immutable(CodepointSetOld) unicodeInBamum = CodepointSetOld([
     0x0a6a0, 0x0a700,
 ]);
 
-immutable(CodepointSet) unicodeInPlaying_Cards = CodepointSet([
+immutable(CodepointSetOld) unicodeInPlaying_Cards = CodepointSetOld([
     0x1f0a0, 0x1f100,
 ]);
 
-immutable(CodepointSet) unicodeInArabic = CodepointSet([
+immutable(CodepointSetOld) unicodeInArabic = CodepointSetOld([
     0x00600, 0x00700,
 ]);
 
-immutable(CodepointSet) unicodeVariation_Selector = CodepointSet([
+immutable(CodepointSetOld) unicodeVariation_Selector = CodepointSetOld([
     0x0180b, 0x0180e,
     0x0fe00, 0x0fe10,
     0xe0100, 0xe01f0,
 ]);
 
-immutable(CodepointSet) unicodeInMathematical_Operators = CodepointSet([
+immutable(CodepointSetOld) unicodeInMathematical_Operators = CodepointSetOld([
     0x02200, 0x02300,
 ]);
 
-immutable(CodepointSet) unicodeInPhonetic_Extensions_Supplement = CodepointSet([
+immutable(CodepointSetOld) unicodeInPhonetic_Extensions_Supplement = CodepointSetOld([
     0x01d80, 0x01dc0,
 ]);
 
-immutable(CodepointSet) unicodeInBrahmi = CodepointSet([
+immutable(CodepointSetOld) unicodeInBrahmi = CodepointSetOld([
     0x11000, 0x11080,
 ]);
 
-immutable(CodepointSet) unicodeMalayalam = CodepointSet([
+immutable(CodepointSetOld) unicodeMalayalam = CodepointSetOld([
     0x00d02, 0x00d04,
     0x00d05, 0x00d0d,
     0x00d0e, 0x00d11,
@@ -1420,39 +1420,39 @@ immutable(CodepointSet) unicodeMalayalam = CodepointSet([
     0x00d79, 0x00d80,
 ]);
 
-immutable(CodepointSet) unicodeInCJK_Unified_Ideographs_Extension_A = CodepointSet([
+immutable(CodepointSetOld) unicodeInCJK_Unified_Ideographs_Extension_A = CodepointSetOld([
     0x03400, 0x04dc0,
 ]);
 
-immutable(CodepointSet) unicodeInCJK_Unified_Ideographs_Extension_B = CodepointSet([
+immutable(CodepointSetOld) unicodeInCJK_Unified_Ideographs_Extension_B = CodepointSetOld([
     0x20000, 0x2a6e0,
 ]);
 
-immutable(CodepointSet) unicodeInYijing_Hexagram_Symbols = CodepointSet([
+immutable(CodepointSetOld) unicodeInYijing_Hexagram_Symbols = CodepointSetOld([
     0x04dc0, 0x04e00,
 ]);
 
-immutable(CodepointSet) unicodeInCJK_Unified_Ideographs_Extension_C = CodepointSet([
+immutable(CodepointSetOld) unicodeInCJK_Unified_Ideographs_Extension_C = CodepointSetOld([
     0x2a700, 0x2b740,
 ]);
 
-immutable(CodepointSet) unicodeInTibetan = CodepointSet([
+immutable(CodepointSetOld) unicodeInTibetan = CodepointSetOld([
     0x00f00, 0x01000,
 ]);
 
-immutable(CodepointSet) unicodeInImperial_Aramaic = CodepointSet([
+immutable(CodepointSetOld) unicodeInImperial_Aramaic = CodepointSetOld([
     0x10840, 0x10860,
 ]);
 
-immutable(CodepointSet) unicodeInCJK_Unified_Ideographs_Extension_D = CodepointSet([
+immutable(CodepointSetOld) unicodeInCJK_Unified_Ideographs_Extension_D = CodepointSetOld([
     0x2b740, 0x2b820,
 ]);
 
-immutable(CodepointSet) unicodeInAlchemical_Symbols = CodepointSet([
+immutable(CodepointSetOld) unicodeInAlchemical_Symbols = CodepointSetOld([
     0x1f700, 0x1f780,
 ]);
 
-immutable(CodepointSet) unicodePattern_White_Space = CodepointSet([
+immutable(CodepointSetOld) unicodePattern_White_Space = CodepointSetOld([
     0x00009, 0x0000e,
     0x00020, 0x00021,
     0x00085, 0x00086,
@@ -1460,36 +1460,36 @@ immutable(CodepointSet) unicodePattern_White_Space = CodepointSet([
     0x02028, 0x0202a,
 ]);
 
-immutable(CodepointSet) unicodeInEmoticons = CodepointSet([
+immutable(CodepointSetOld) unicodeInEmoticons = CodepointSetOld([
     0x1f600, 0x1f650,
 ]);
 
-immutable(CodepointSet) unicodeInYi_Radicals = CodepointSet([
+immutable(CodepointSetOld) unicodeInYi_Radicals = CodepointSetOld([
     0x0a490, 0x0a4d0,
 ]);
 
-immutable(CodepointSet) unicodeInBraille_Patterns = CodepointSet([
+immutable(CodepointSetOld) unicodeInBraille_Patterns = CodepointSetOld([
     0x02800, 0x02900,
 ]);
 
-immutable(CodepointSet) unicodeInscriptional_Pahlavi = CodepointSet([
+immutable(CodepointSetOld) unicodeInscriptional_Pahlavi = CodepointSetOld([
     0x10b60, 0x10b73,
     0x10b78, 0x10b80,
 ]);
 
-immutable(CodepointSet) unicodeInCoptic = CodepointSet([
+immutable(CodepointSetOld) unicodeInCoptic = CodepointSetOld([
     0x02c80, 0x02d00,
 ]);
 
-immutable(CodepointSet) unicodeInGothic = CodepointSet([
+immutable(CodepointSetOld) unicodeInGothic = CodepointSetOld([
     0x10330, 0x10350,
 ]);
 
-immutable(CodepointSet) unicodeInDevanagari = CodepointSet([
+immutable(CodepointSetOld) unicodeInDevanagari = CodepointSetOld([
     0x00900, 0x00980,
 ]);
 
-immutable(CodepointSet) unicodeSTerm = CodepointSet([
+immutable(CodepointSetOld) unicodeSTerm = CodepointSetOld([
     0x00021, 0x00022,
     0x0002e, 0x0002f,
     0x0003f, 0x00040,
@@ -1539,15 +1539,15 @@ immutable(CodepointSet) unicodeSTerm = CodepointSet([
     0x110be, 0x110c2,
 ]);
 
-immutable(CodepointSet) unicodeInTai_Viet = CodepointSet([
+immutable(CodepointSetOld) unicodeInTai_Viet = CodepointSetOld([
     0x0aa80, 0x0aae0,
 ]);
 
-immutable(CodepointSet) unicodeInDeseret = CodepointSet([
+immutable(CodepointSetOld) unicodeInDeseret = CodepointSetOld([
     0x10400, 0x10450,
 ]);
 
-immutable(CodepointSet) unicodeHebrew = CodepointSet([
+immutable(CodepointSetOld) unicodeHebrew = CodepointSetOld([
     0x00591, 0x005c8,
     0x005d0, 0x005eb,
     0x005f0, 0x005f5,
@@ -1559,87 +1559,87 @@ immutable(CodepointSet) unicodeHebrew = CodepointSet([
     0x0fb46, 0x0fb50,
 ]);
 
-immutable(CodepointSet) unicodeLisu = CodepointSet([
+immutable(CodepointSetOld) unicodeLisu = CodepointSetOld([
     0x0a4d0, 0x0a500,
 ]);
 
-immutable(CodepointSet) unicodeInSupplementary_Private_Use_Area_A = CodepointSet([
+immutable(CodepointSetOld) unicodeInSupplementary_Private_Use_Area_A = CodepointSetOld([
     0xf0000, 0x100000,
 ]);
 
-immutable(CodepointSet) unicodeInSupplementary_Private_Use_Area_B = CodepointSet([
+immutable(CodepointSetOld) unicodeInSupplementary_Private_Use_Area_B = CodepointSetOld([
     0x100000, 0x110000,
 ]);
 
-immutable(CodepointSet) unicodeUgaritic = CodepointSet([
+immutable(CodepointSetOld) unicodeUgaritic = CodepointSetOld([
     0x10380, 0x1039e,
     0x1039f, 0x103a0,
 ]);
 
-immutable(CodepointSet) unicodeInMongolian = CodepointSet([
+immutable(CodepointSetOld) unicodeInMongolian = CodepointSetOld([
     0x01800, 0x018b0,
 ]);
 
-immutable(CodepointSet) unicodeInBopomofo = CodepointSet([
+immutable(CodepointSetOld) unicodeInBopomofo = CodepointSetOld([
     0x03100, 0x03130,
 ]);
 
-immutable(CodepointSet) unicodeOld_Persian = CodepointSet([
+immutable(CodepointSetOld) unicodeOld_Persian = CodepointSetOld([
     0x103a0, 0x103c4,
     0x103c8, 0x103d6,
 ]);
 
-immutable(CodepointSet) unicodeInCJK_Compatibility_Ideographs_Supplement = CodepointSet([
+immutable(CodepointSetOld) unicodeInCJK_Compatibility_Ideographs_Supplement = CodepointSetOld([
     0x2f800, 0x2fa20,
 ]);
 
-immutable(CodepointSet) unicodeInMahjong_Tiles = CodepointSet([
+immutable(CodepointSetOld) unicodeInMahjong_Tiles = CodepointSetOld([
     0x1f000, 0x1f030,
 ]);
 
-immutable(CodepointSet) unicodePhoenician = CodepointSet([
+immutable(CodepointSetOld) unicodePhoenician = CodepointSetOld([
     0x10900, 0x1091c,
     0x1091f, 0x10920,
 ]);
 
-immutable(CodepointSet) unicodeEgyptian_Hieroglyphs = CodepointSet([
+immutable(CodepointSetOld) unicodeEgyptian_Hieroglyphs = CodepointSetOld([
     0x13000, 0x1342f,
 ]);
 
-immutable(CodepointSet) unicodeInVariation_Selectors_Supplement = CodepointSet([
+immutable(CodepointSetOld) unicodeInVariation_Selectors_Supplement = CodepointSetOld([
     0xe0100, 0xe01f0,
 ]);
 
-immutable(CodepointSet) unicodeInLisu = CodepointSet([
+immutable(CodepointSetOld) unicodeInLisu = CodepointSetOld([
     0x0a4d0, 0x0a500,
 ]);
 
-immutable(CodepointSet) unicodeInLow_Surrogates = CodepointSet([
+immutable(CodepointSetOld) unicodeInLow_Surrogates = CodepointSetOld([
     0x0dc00, 0x0e000,
 ]);
 
-immutable(CodepointSet) unicodeInUgaritic = CodepointSet([
+immutable(CodepointSetOld) unicodeInUgaritic = CodepointSetOld([
     0x10380, 0x103a0,
 ]);
 
-immutable(CodepointSet) unicodeInAncient_Greek_Musical_Notation = CodepointSet([
+immutable(CodepointSetOld) unicodeInAncient_Greek_Musical_Notation = CodepointSetOld([
     0x1d200, 0x1d250,
 ]);
 
-immutable(CodepointSet) unicodeInSupplemental_Punctuation = CodepointSet([
+immutable(CodepointSetOld) unicodeInSupplemental_Punctuation = CodepointSetOld([
     0x02e00, 0x02e80,
 ]);
 
-immutable(CodepointSet) unicodeInTamil = CodepointSet([
+immutable(CodepointSetOld) unicodeInTamil = CodepointSetOld([
     0x00b80, 0x00c00,
 ]);
 
-immutable(CodepointSet) unicodeBidi_Control = CodepointSet([
+immutable(CodepointSetOld) unicodeBidi_Control = CodepointSetOld([
     0x0200e, 0x02010,
     0x0202a, 0x0202f,
 ]);
 
-immutable(CodepointSet) unicodeKatakana = CodepointSet([
+immutable(CodepointSetOld) unicodeKatakana = CodepointSetOld([
     0x030a1, 0x030fb,
     0x030fd, 0x03100,
     0x031f0, 0x03200,
@@ -1650,28 +1650,28 @@ immutable(CodepointSet) unicodeKatakana = CodepointSet([
     0x1b000, 0x1b001,
 ]);
 
-immutable(CodepointSet) unicodeInKanbun = CodepointSet([
+immutable(CodepointSetOld) unicodeInKanbun = CodepointSetOld([
     0x03190, 0x031a0,
 ]);
 
-immutable(CodepointSet) unicodeInHebrew = CodepointSet([
+immutable(CodepointSetOld) unicodeInHebrew = CodepointSetOld([
     0x00590, 0x00600,
 ]);
 
-immutable(CodepointSet) unicodeTai_Viet = CodepointSet([
+immutable(CodepointSetOld) unicodeTai_Viet = CodepointSetOld([
     0x0aa80, 0x0aac3,
     0x0aadb, 0x0aae0,
 ]);
 
-immutable(CodepointSet) unicodeShavian = CodepointSet([
+immutable(CodepointSetOld) unicodeShavian = CodepointSetOld([
     0x10450, 0x10480,
 ]);
 
-immutable(CodepointSet) unicodeInHanunoo = CodepointSet([
+immutable(CodepointSetOld) unicodeInHanunoo = CodepointSetOld([
     0x01720, 0x01740,
 ]);
 
-immutable(CodepointSet) unicodeOther_Lowercase = CodepointSet([
+immutable(CodepointSetOld) unicodeOther_Lowercase = CodepointSetOld([
     0x002b0, 0x002b9,
     0x002c0, 0x002c2,
     0x002e0, 0x002e5,
@@ -1687,7 +1687,7 @@ immutable(CodepointSet) unicodeOther_Lowercase = CodepointSet([
     0x0a770, 0x0a771,
 ]);
 
-immutable(CodepointSet) unicodeDash = CodepointSet([
+immutable(CodepointSetOld) unicodeDash = CodepointSetOld([
     0x0002d, 0x0002e,
     0x0058a, 0x0058b,
     0x005be, 0x005bf,
@@ -1709,27 +1709,27 @@ immutable(CodepointSet) unicodeDash = CodepointSet([
     0x0ff0d, 0x0ff0e,
 ]);
 
-immutable(CodepointSet) unicodeInSinhala = CodepointSet([
+immutable(CodepointSetOld) unicodeInSinhala = CodepointSetOld([
     0x00d80, 0x00e00,
 ]);
 
-immutable(CodepointSet) unicodeKaithi = CodepointSet([
+immutable(CodepointSetOld) unicodeKaithi = CodepointSetOld([
     0x11080, 0x110c2,
 ]);
 
-immutable(CodepointSet) unicodeInSundanese = CodepointSet([
+immutable(CodepointSetOld) unicodeInSundanese = CodepointSetOld([
     0x01b80, 0x01bc0,
 ]);
 
-immutable(CodepointSet) unicodeInEthiopic_Extended_A = CodepointSet([
+immutable(CodepointSetOld) unicodeInEthiopic_Extended_A = CodepointSetOld([
     0x0ab00, 0x0ab30,
 ]);
 
-immutable(CodepointSet) unicodeInAegean_Numbers = CodepointSet([
+immutable(CodepointSetOld) unicodeInAegean_Numbers = CodepointSetOld([
     0x10100, 0x10140,
 ]);
 
-immutable(CodepointSet) unicodeTibetan = CodepointSet([
+immutable(CodepointSetOld) unicodeTibetan = CodepointSetOld([
     0x00f00, 0x00f48,
     0x00f49, 0x00f6d,
     0x00f71, 0x00f98,
@@ -1739,37 +1739,37 @@ immutable(CodepointSet) unicodeTibetan = CodepointSet([
     0x00fd9, 0x00fdb,
 ]);
 
-immutable(CodepointSet) unicodeSamaritan = CodepointSet([
+immutable(CodepointSetOld) unicodeSamaritan = CodepointSetOld([
     0x00800, 0x0082e,
     0x00830, 0x0083f,
 ]);
 
-immutable(CodepointSet) unicodeInOptical_Character_Recognition = CodepointSet([
+immutable(CodepointSetOld) unicodeInOptical_Character_Recognition = CodepointSetOld([
     0x02440, 0x02460,
 ]);
 
-immutable(CodepointSet) unicodeInKatakana = CodepointSet([
+immutable(CodepointSetOld) unicodeInKatakana = CodepointSetOld([
     0x030a0, 0x03100,
 ]);
 
-immutable(CodepointSet) unicodeInVariation_Selectors = CodepointSet([
+immutable(CodepointSetOld) unicodeInVariation_Selectors = CodepointSetOld([
     0x0fe00, 0x0fe10,
 ]);
 
-immutable(CodepointSet) unicodeOld_Italic = CodepointSet([
+immutable(CodepointSetOld) unicodeOld_Italic = CodepointSetOld([
     0x10300, 0x1031f,
     0x10320, 0x10324,
 ]);
 
-immutable(CodepointSet) unicodeInEnclosed_CJK_Letters_and_Months = CodepointSet([
+immutable(CodepointSetOld) unicodeInEnclosed_CJK_Letters_and_Months = CodepointSetOld([
     0x03200, 0x03300,
 ]);
 
-immutable(CodepointSet) unicodeInLatin_1_Supplement = CodepointSet([
+immutable(CodepointSetOld) unicodeInLatin_1_Supplement = CodepointSetOld([
     0x00080, 0x00100,
 ]);
 
-immutable(CodepointSet) unicodeHan = CodepointSet([
+immutable(CodepointSetOld) unicodeHan = CodepointSetOld([
     0x02e80, 0x02e9a,
     0x02e9b, 0x02ef4,
     0x02f00, 0x02fd6,
@@ -1788,15 +1788,15 @@ immutable(CodepointSet) unicodeHan = CodepointSet([
     0x2f800, 0x2fa1e,
 ]);
 
-immutable(CodepointSet) unicodeDeseret = CodepointSet([
+immutable(CodepointSetOld) unicodeDeseret = CodepointSetOld([
     0x10400, 0x10450,
 ]);
 
-immutable(CodepointSet) unicodeInMyanmar = CodepointSet([
+immutable(CodepointSetOld) unicodeInMyanmar = CodepointSetOld([
     0x01000, 0x010a0,
 ]);
 
-immutable(CodepointSet) unicodeLl = CodepointSet([
+immutable(CodepointSetOld) unicodeLl = CodepointSetOld([
     0x00061, 0x0007b,
     0x000aa, 0x000ab,
     0x000b5, 0x000b6,
@@ -2408,16 +2408,16 @@ immutable(CodepointSet) unicodeLl = CodepointSet([
     0x1d7cb, 0x1d7cc,
 ]);
 
-immutable(CodepointSet) unicodeSaurashtra = CodepointSet([
+immutable(CodepointSetOld) unicodeSaurashtra = CodepointSetOld([
     0x0a880, 0x0a8c5,
     0x0a8ce, 0x0a8da,
 ]);
 
-immutable(CodepointSet) unicodeInLinear_B_Syllabary = CodepointSet([
+immutable(CodepointSetOld) unicodeInLinear_B_Syllabary = CodepointSetOld([
     0x10000, 0x10080,
 ]);
 
-immutable(CodepointSet) unicodeLm = CodepointSet([
+immutable(CodepointSetOld) unicodeLm = CodepointSetOld([
     0x002b0, 0x002c2,
     0x002c6, 0x002d2,
     0x002e0, 0x002e5,
@@ -2469,19 +2469,19 @@ immutable(CodepointSet) unicodeLm = CodepointSet([
     0x0ff9e, 0x0ffa0,
 ]);
 
-immutable(CodepointSet) unicodeInKannada = CodepointSet([
+immutable(CodepointSetOld) unicodeInKannada = CodepointSetOld([
     0x00c80, 0x00d00,
 ]);
 
-immutable(CodepointSet) unicodeInLimbu = CodepointSet([
+immutable(CodepointSetOld) unicodeInLimbu = CodepointSetOld([
     0x01900, 0x01950,
 ]);
 
-immutable(CodepointSet) unicodeInByzantine_Musical_Symbols = CodepointSet([
+immutable(CodepointSetOld) unicodeInByzantine_Musical_Symbols = CodepointSetOld([
     0x1d000, 0x1d100,
 ]);
 
-immutable(CodepointSet) unicodeMc = CodepointSet([
+immutable(CodepointSetOld) unicodeMc = CodepointSetOld([
     0x00903, 0x00904,
     0x0093b, 0x0093c,
     0x0093e, 0x00941,
@@ -2597,7 +2597,7 @@ immutable(CodepointSet) unicodeMc = CodepointSet([
     0x1d16d, 0x1d173,
 ]);
 
-immutable(CodepointSet) unicodeLo = CodepointSet([
+immutable(CodepointSetOld) unicodeLo = CodepointSetOld([
     0x001bb, 0x001bc,
     0x001c0, 0x001c4,
     0x00294, 0x00295,
@@ -2923,18 +2923,18 @@ immutable(CodepointSet) unicodeLo = CodepointSet([
     0x2f800, 0x2fa1e,
 ]);
 
-immutable(CodepointSet) unicodeMe = CodepointSet([
+immutable(CodepointSetOld) unicodeMe = CodepointSetOld([
     0x00488, 0x0048a,
     0x020dd, 0x020e1,
     0x020e2, 0x020e5,
     0x0a670, 0x0a673,
 ]);
 
-immutable(CodepointSet) unicodeInMeetei_Mayek = CodepointSet([
+immutable(CodepointSetOld) unicodeInMeetei_Mayek = CodepointSetOld([
     0x0abc0, 0x0ac00,
 ]);
 
-immutable(CodepointSet) unicodeLt = CodepointSet([
+immutable(CodepointSetOld) unicodeLt = CodepointSetOld([
     0x001c5, 0x001c6,
     0x001c8, 0x001c9,
     0x001cb, 0x001cc,
@@ -2947,15 +2947,15 @@ immutable(CodepointSet) unicodeLt = CodepointSet([
     0x01ffc, 0x01ffd,
 ]);
 
-immutable(CodepointSet) unicodeInKhmer = CodepointSet([
+immutable(CodepointSetOld) unicodeInKhmer = CodepointSetOld([
     0x01780, 0x01800,
 ]);
 
-immutable(CodepointSet) unicodeInEthiopic_Extended = CodepointSet([
+immutable(CodepointSetOld) unicodeInEthiopic_Extended = CodepointSetOld([
     0x02d80, 0x02de0,
 ]);
 
-immutable(CodepointSet) unicodeLu = CodepointSet([
+immutable(CodepointSetOld) unicodeLu = CodepointSetOld([
     0x00041, 0x0005b,
     0x000c0, 0x000d7,
     0x000d8, 0x000df,
@@ -3561,19 +3561,19 @@ immutable(CodepointSet) unicodeLu = CodepointSet([
     0x1d7ca, 0x1d7cb,
 ]);
 
-immutable(CodepointSet) unicodeCarian = CodepointSet([
+immutable(CodepointSetOld) unicodeCarian = CodepointSetOld([
     0x102a0, 0x102d1,
 ]);
 
-immutable(CodepointSet) unicodeInKaithi = CodepointSet([
+immutable(CodepointSetOld) unicodeInKaithi = CodepointSetOld([
     0x11080, 0x110d0,
 ]);
 
-immutable(CodepointSet) unicodeInVedic_Extensions = CodepointSet([
+immutable(CodepointSetOld) unicodeInVedic_Extensions = CodepointSetOld([
     0x01cd0, 0x01d00,
 ]);
 
-immutable(CodepointSet) unicodeMn = CodepointSet([
+immutable(CodepointSetOld) unicodeMn = CodepointSetOld([
     0x00300, 0x00370,
     0x00483, 0x00488,
     0x00591, 0x005be,
@@ -3779,7 +3779,7 @@ immutable(CodepointSet) unicodeMn = CodepointSet([
     0xe0100, 0xe01f0,
 ]);
 
-immutable(CodepointSet) unicodeNd = CodepointSet([
+immutable(CodepointSetOld) unicodeNd = CodepointSetOld([
     0x00030, 0x0003a,
     0x00660, 0x0066a,
     0x006f0, 0x006fa,
@@ -3820,40 +3820,40 @@ immutable(CodepointSet) unicodeNd = CodepointSet([
     0x1d7ce, 0x1d800,
 ]);
 
-immutable(CodepointSet) unicodeBamum = CodepointSet([
+immutable(CodepointSetOld) unicodeBamum = CodepointSetOld([
     0x0a6a0, 0x0a6f8,
     0x16800, 0x16a39,
 ]);
 
-immutable(CodepointSet) unicodeJavanese = CodepointSet([
+immutable(CodepointSetOld) unicodeJavanese = CodepointSetOld([
     0x0a980, 0x0a9ce,
     0x0a9cf, 0x0a9da,
     0x0a9de, 0x0a9e0,
 ]);
 
-immutable(CodepointSet) unicodeTifinagh = CodepointSet([
+immutable(CodepointSetOld) unicodeTifinagh = CodepointSetOld([
     0x02d30, 0x02d66,
     0x02d6f, 0x02d71,
     0x02d7f, 0x02d80,
 ]);
 
-immutable(CodepointSet) unicodeInHalfwidth_and_Fullwidth_Forms = CodepointSet([
+immutable(CodepointSetOld) unicodeInHalfwidth_and_Fullwidth_Forms = CodepointSetOld([
     0x0ff00, 0x0fff0,
 ]);
 
-immutable(CodepointSet) unicodeInDevanagari_Extended = CodepointSet([
+immutable(CodepointSetOld) unicodeInDevanagari_Extended = CodepointSetOld([
     0x0a8e0, 0x0a900,
 ]);
 
-immutable(CodepointSet) unicodeInIdeographic_Description_Characters = CodepointSet([
+immutable(CodepointSetOld) unicodeInIdeographic_Description_Characters = CodepointSetOld([
     0x02ff0, 0x03000,
 ]);
 
-immutable(CodepointSet) unicodeInCuneiform = CodepointSet([
+immutable(CodepointSetOld) unicodeInCuneiform = CodepointSetOld([
     0x12000, 0x12400,
 ]);
 
-immutable(CodepointSet) unicodeNl = CodepointSet([
+immutable(CodepointSetOld) unicodeNl = CodepointSetOld([
     0x016ee, 0x016f1,
     0x02160, 0x02183,
     0x02185, 0x02189,
@@ -3868,11 +3868,11 @@ immutable(CodepointSet) unicodeNl = CodepointSet([
     0x12400, 0x12463,
 ]);
 
-immutable(CodepointSet) unicodeInHangul_Compatibility_Jamo = CodepointSet([
+immutable(CodepointSetOld) unicodeInHangul_Compatibility_Jamo = CodepointSetOld([
     0x03130, 0x03190,
 ]);
 
-immutable(CodepointSet) unicodeNo = CodepointSet([
+immutable(CodepointSetOld) unicodeNo = CodepointSetOld([
     0x000b2, 0x000b4,
     0x000b9, 0x000ba,
     0x000bc, 0x000bf,
@@ -3916,11 +3916,11 @@ immutable(CodepointSet) unicodeNo = CodepointSet([
     0x1f100, 0x1f10b,
 ]);
 
-immutable(CodepointSet) unicodeInOriya = CodepointSet([
+immutable(CodepointSetOld) unicodeInOriya = CodepointSetOld([
     0x00b00, 0x00b80,
 ]);
 
-immutable(CodepointSet) unicodeLogical_Order_Exception = CodepointSet([
+immutable(CodepointSetOld) unicodeLogical_Order_Exception = CodepointSetOld([
     0x00e40, 0x00e45,
     0x00ec0, 0x00ec5,
     0x0aab5, 0x0aab7,
@@ -3928,32 +3928,32 @@ immutable(CodepointSet) unicodeLogical_Order_Exception = CodepointSet([
     0x0aabb, 0x0aabd,
 ]);
 
-immutable(CodepointSet) unicodeInscriptional_Parthian = CodepointSet([
+immutable(CodepointSetOld) unicodeInscriptional_Parthian = CodepointSetOld([
     0x10b40, 0x10b56,
     0x10b58, 0x10b60,
 ]);
 
-immutable(CodepointSet) unicodeSyloti_Nagri = CodepointSet([
+immutable(CodepointSetOld) unicodeSyloti_Nagri = CodepointSetOld([
     0x0a800, 0x0a82c,
 ]);
 
-immutable(CodepointSet) unicodeInBengali = CodepointSet([
+immutable(CodepointSetOld) unicodeInBengali = CodepointSetOld([
     0x00980, 0x00a00,
 ]);
 
-immutable(CodepointSet) unicodeInTagalog = CodepointSet([
+immutable(CodepointSetOld) unicodeInTagalog = CodepointSetOld([
     0x01700, 0x01720,
 ]);
 
-immutable(CodepointSet) unicodeInMyanmar_Extended_A = CodepointSet([
+immutable(CodepointSetOld) unicodeInMyanmar_Extended_A = CodepointSetOld([
     0x0aa60, 0x0aa80,
 ]);
 
-immutable(CodepointSet) unicodeInAvestan = CodepointSet([
+immutable(CodepointSetOld) unicodeInAvestan = CodepointSetOld([
     0x10b00, 0x10b40,
 ]);
 
-immutable(CodepointSet) unicodePc = CodepointSet([
+immutable(CodepointSetOld) unicodePc = CodepointSetOld([
     0x0005f, 0x00060,
     0x0203f, 0x02041,
     0x02054, 0x02055,
@@ -3962,11 +3962,11 @@ immutable(CodepointSet) unicodePc = CodepointSet([
     0x0ff3f, 0x0ff40,
 ]);
 
-immutable(CodepointSet) unicodeInCyrillic_Extended_A = CodepointSet([
+immutable(CodepointSetOld) unicodeInCyrillic_Extended_A = CodepointSetOld([
     0x02de0, 0x02e00,
 ]);
 
-immutable(CodepointSet) unicodePd = CodepointSet([
+immutable(CodepointSetOld) unicodePd = CodepointSetOld([
     0x0002d, 0x0002e,
     0x0058a, 0x0058b,
     0x005be, 0x005bf,
@@ -3984,15 +3984,15 @@ immutable(CodepointSet) unicodePd = CodepointSet([
     0x0ff0d, 0x0ff0e,
 ]);
 
-immutable(CodepointSet) unicodeInCyrillic_Extended_B = CodepointSet([
+immutable(CodepointSetOld) unicodeInCyrillic_Extended_B = CodepointSetOld([
     0x0a640, 0x0a6a0,
 ]);
 
-immutable(CodepointSet) unicodeInBasic_Latin = CodepointSet([
+immutable(CodepointSetOld) unicodeInBasic_Latin = CodepointSetOld([
     0x00000, 0x00080,
 ]);
 
-immutable(CodepointSet) unicodePe = CodepointSet([
+immutable(CodepointSetOld) unicodePe = CodepointSetOld([
     0x00029, 0x0002a,
     0x0005d, 0x0005e,
     0x0007d, 0x0007e,
@@ -4065,11 +4065,11 @@ immutable(CodepointSet) unicodePe = CodepointSet([
     0x0ff63, 0x0ff64,
 ]);
 
-immutable(CodepointSet) unicodeHanunoo = CodepointSet([
+immutable(CodepointSetOld) unicodeHanunoo = CodepointSetOld([
     0x01720, 0x01735,
 ]);
 
-immutable(CodepointSet) unicodePf = CodepointSet([
+immutable(CodepointSetOld) unicodePf = CodepointSetOld([
     0x000bb, 0x000bc,
     0x02019, 0x0201a,
     0x0201d, 0x0201e,
@@ -4082,7 +4082,7 @@ immutable(CodepointSet) unicodePf = CodepointSet([
     0x02e21, 0x02e22,
 ]);
 
-immutable(CodepointSet) unicodePi = CodepointSet([
+immutable(CodepointSetOld) unicodePi = CodepointSetOld([
     0x000ab, 0x000ac,
     0x02018, 0x02019,
     0x0201b, 0x0201d,
@@ -4096,7 +4096,7 @@ immutable(CodepointSet) unicodePi = CodepointSet([
     0x02e20, 0x02e21,
 ]);
 
-immutable(CodepointSet) unicodeSinhala = CodepointSet([
+immutable(CodepointSetOld) unicodeSinhala = CodepointSetOld([
     0x00d82, 0x00d84,
     0x00d85, 0x00d97,
     0x00d9a, 0x00db2,
@@ -4110,39 +4110,39 @@ immutable(CodepointSet) unicodeSinhala = CodepointSet([
     0x00df2, 0x00df5,
 ]);
 
-immutable(CodepointSet) unicodeInJavanese = CodepointSet([
+immutable(CodepointSetOld) unicodeInJavanese = CodepointSetOld([
     0x0a980, 0x0a9e0,
 ]);
 
-immutable(CodepointSet) unicodeInCarian = CodepointSet([
+immutable(CodepointSetOld) unicodeInCarian = CodepointSetOld([
     0x102a0, 0x102e0,
 ]);
 
-immutable(CodepointSet) unicodeInDomino_Tiles = CodepointSet([
+immutable(CodepointSetOld) unicodeInDomino_Tiles = CodepointSetOld([
     0x1f030, 0x1f0a0,
 ]);
 
-immutable(CodepointSet) unicodeInTifinagh = CodepointSet([
+immutable(CodepointSetOld) unicodeInTifinagh = CodepointSetOld([
     0x02d30, 0x02d80,
 ]);
 
-immutable(CodepointSet) unicodeLycian = CodepointSet([
+immutable(CodepointSetOld) unicodeLycian = CodepointSetOld([
     0x10280, 0x1029d,
 ]);
 
-immutable(CodepointSet) unicodeInGeometric_Shapes = CodepointSet([
+immutable(CodepointSetOld) unicodeInGeometric_Shapes = CodepointSetOld([
     0x025a0, 0x02600,
 ]);
 
-immutable(CodepointSet) unicodeInArabic_Presentation_Forms_A = CodepointSet([
+immutable(CodepointSetOld) unicodeInArabic_Presentation_Forms_A = CodepointSetOld([
     0x0fb50, 0x0fe00,
 ]);
 
-immutable(CodepointSet) unicodeInArabic_Presentation_Forms_B = CodepointSet([
+immutable(CodepointSetOld) unicodeInArabic_Presentation_Forms_B = CodepointSetOld([
     0x0fe70, 0x0ff00,
 ]);
 
-immutable(CodepointSet) unicodePo = CodepointSet([
+immutable(CodepointSetOld) unicodePo = CodepointSetOld([
     0x00021, 0x00024,
     0x00025, 0x00028,
     0x0002a, 0x0002b,
@@ -4273,7 +4273,7 @@ immutable(CodepointSet) unicodePo = CodepointSet([
     0x12470, 0x12474,
 ]);
 
-immutable(CodepointSet) unicodeTerminal_Punctuation = CodepointSet([
+immutable(CodepointSetOld) unicodeTerminal_Punctuation = CodepointSetOld([
     0x00021, 0x00022,
     0x0002c, 0x0002d,
     0x0002e, 0x0002f,
@@ -4343,7 +4343,7 @@ immutable(CodepointSet) unicodeTerminal_Punctuation = CodepointSet([
     0x12470, 0x12474,
 ]);
 
-immutable(CodepointSet) unicodePs = CodepointSet([
+immutable(CodepointSetOld) unicodePs = CodepointSetOld([
     0x00028, 0x00029,
     0x0005b, 0x0005c,
     0x0007b, 0x0007c,
@@ -4418,11 +4418,11 @@ immutable(CodepointSet) unicodePs = CodepointSet([
     0x0ff62, 0x0ff63,
 ]);
 
-immutable(CodepointSet) unicodeInSpacing_Modifier_Letters = CodepointSet([
+immutable(CodepointSetOld) unicodeInSpacing_Modifier_Letters = CodepointSetOld([
     0x002b0, 0x00300,
 ]);
 
-immutable(CodepointSet) unicodeOther_Alphabetic = CodepointSet([
+immutable(CodepointSetOld) unicodeOther_Alphabetic = CodepointSetOld([
     0x00345, 0x00346,
     0x005b0, 0x005be,
     0x005bf, 0x005c0,
@@ -4570,49 +4570,49 @@ immutable(CodepointSet) unicodeOther_Alphabetic = CodepointSet([
     0x110b0, 0x110b9,
 ]);
 
-immutable(CodepointSet) unicodeLepcha = CodepointSet([
+immutable(CodepointSetOld) unicodeLepcha = CodepointSetOld([
     0x01c00, 0x01c38,
     0x01c3b, 0x01c4a,
     0x01c4d, 0x01c50,
 ]);
 
-immutable(CodepointSet) unicodeKayah_Li = CodepointSet([
+immutable(CodepointSetOld) unicodeKayah_Li = CodepointSetOld([
     0x0a900, 0x0a930,
 ]);
 
-immutable(CodepointSet) unicodeInCounting_Rod_Numerals = CodepointSet([
+immutable(CodepointSetOld) unicodeInCounting_Rod_Numerals = CodepointSetOld([
     0x1d360, 0x1d380,
 ]);
 
-immutable(CodepointSet) unicodeNko = CodepointSet([
+immutable(CodepointSetOld) unicodeNko = CodepointSetOld([
     0x007c0, 0x007fb,
 ]);
 
-immutable(CodepointSet) unicodeInOld_Turkic = CodepointSet([
+immutable(CodepointSetOld) unicodeInOld_Turkic = CodepointSetOld([
     0x10c00, 0x10c50,
 ]);
 
-immutable(CodepointSet) unicodeInMiscellaneous_Symbols_And_Pictographs = CodepointSet([
+immutable(CodepointSetOld) unicodeInMiscellaneous_Symbols_And_Pictographs = CodepointSetOld([
     0x1f300, 0x1f600,
 ]);
 
-immutable(CodepointSet) unicodeInLao = CodepointSet([
+immutable(CodepointSetOld) unicodeInLao = CodepointSetOld([
     0x00e80, 0x00f00,
 ]);
 
-immutable(CodepointSet) unicodeInNKo = CodepointSet([
+immutable(CodepointSetOld) unicodeInNKo = CodepointSetOld([
     0x007c0, 0x00800,
 ]);
 
-immutable(CodepointSet) unicodeInGreek_and_Coptic = CodepointSet([
+immutable(CodepointSetOld) unicodeInGreek_and_Coptic = CodepointSetOld([
     0x00370, 0x00400,
 ]);
 
-immutable(CodepointSet) unicodePhags_Pa = CodepointSet([
+immutable(CodepointSetOld) unicodePhags_Pa = CodepointSetOld([
     0x0a840, 0x0a878,
 ]);
 
-immutable(CodepointSet) unicodeCypriot = CodepointSet([
+immutable(CodepointSetOld) unicodeCypriot = CodepointSetOld([
     0x10800, 0x10806,
     0x10808, 0x10809,
     0x1080a, 0x10836,
@@ -4621,11 +4621,11 @@ immutable(CodepointSet) unicodeCypriot = CodepointSet([
     0x1083f, 0x10840,
 ]);
 
-immutable(CodepointSet) unicodeInModifier_Tone_Letters = CodepointSet([
+immutable(CodepointSetOld) unicodeInModifier_Tone_Letters = CodepointSetOld([
     0x0a700, 0x0a720,
 ]);
 
-immutable(CodepointSet) unicodeTamil = CodepointSet([
+immutable(CodepointSetOld) unicodeTamil = CodepointSetOld([
     0x00b82, 0x00b84,
     0x00b85, 0x00b8b,
     0x00b8e, 0x00b91,
@@ -4644,12 +4644,12 @@ immutable(CodepointSet) unicodeTamil = CodepointSet([
     0x00be6, 0x00bfb,
 ]);
 
-immutable(CodepointSet) unicodeMyanmar = CodepointSet([
+immutable(CodepointSetOld) unicodeMyanmar = CodepointSetOld([
     0x01000, 0x010a0,
     0x0aa60, 0x0aa7c,
 ]);
 
-immutable(CodepointSet) unicodeSc = CodepointSet([
+immutable(CodepointSetOld) unicodeSc = CodepointSetOld([
     0x00024, 0x00025,
     0x000a2, 0x000a6,
     0x0060b, 0x0060c,
@@ -4668,11 +4668,11 @@ immutable(CodepointSet) unicodeSc = CodepointSet([
     0x0ffe5, 0x0ffe7,
 ]);
 
-immutable(CodepointSet) unicodeInPrivate_Use_Area = CodepointSet([
+immutable(CodepointSetOld) unicodeInPrivate_Use_Area = CodepointSetOld([
     0x0e000, 0x0f900,
 ]);
 
-immutable(CodepointSet) unicodeKannada = CodepointSet([
+immutable(CodepointSetOld) unicodeKannada = CodepointSetOld([
     0x00c82, 0x00c84,
     0x00c85, 0x00c8d,
     0x00c8e, 0x00c91,
@@ -4689,15 +4689,15 @@ immutable(CodepointSet) unicodeKannada = CodepointSet([
     0x00cf1, 0x00cf3,
 ]);
 
-immutable(CodepointSet) unicodeInPhonetic_Extensions = CodepointSet([
+immutable(CodepointSetOld) unicodeInPhonetic_Extensions = CodepointSetOld([
     0x01d00, 0x01d80,
 ]);
 
-immutable(CodepointSet) unicodeInEgyptian_Hieroglyphs = CodepointSet([
+immutable(CodepointSetOld) unicodeInEgyptian_Hieroglyphs = CodepointSetOld([
     0x13000, 0x13430,
 ]);
 
-immutable(CodepointSet) unicodeTelugu = CodepointSet([
+immutable(CodepointSetOld) unicodeTelugu = CodepointSetOld([
     0x00c01, 0x00c04,
     0x00c05, 0x00c0d,
     0x00c0e, 0x00c11,
@@ -4714,22 +4714,22 @@ immutable(CodepointSet) unicodeTelugu = CodepointSet([
     0x00c78, 0x00c80,
 ]);
 
-immutable(CodepointSet) unicodeInCombining_Diacritical_Marks = CodepointSet([
+immutable(CodepointSetOld) unicodeInCombining_Diacritical_Marks = CodepointSetOld([
     0x00300, 0x00370,
 ]);
 
-immutable(CodepointSet) unicodeCham = CodepointSet([
+immutable(CodepointSetOld) unicodeCham = CodepointSetOld([
     0x0aa00, 0x0aa37,
     0x0aa40, 0x0aa4e,
     0x0aa50, 0x0aa5a,
     0x0aa5c, 0x0aa60,
 ]);
 
-immutable(CodepointSet) unicodeInArabic_Supplement = CodepointSet([
+immutable(CodepointSetOld) unicodeInArabic_Supplement = CodepointSetOld([
     0x00750, 0x00780,
 ]);
 
-immutable(CodepointSet) unicodeSk = CodepointSet([
+immutable(CodepointSetOld) unicodeSk = CodepointSetOld([
     0x0005e, 0x0005f,
     0x00060, 0x00061,
     0x000a8, 0x000a9,
@@ -4759,12 +4759,12 @@ immutable(CodepointSet) unicodeSk = CodepointSet([
     0x0ffe3, 0x0ffe4,
 ]);
 
-immutable(CodepointSet) unicodeImperial_Aramaic = CodepointSet([
+immutable(CodepointSetOld) unicodeImperial_Aramaic = CodepointSetOld([
     0x10840, 0x10856,
     0x10857, 0x10860,
 ]);
 
-immutable(CodepointSet) unicodeSm = CodepointSet([
+immutable(CodepointSetOld) unicodeSm = CodepointSetOld([
     0x0002b, 0x0002c,
     0x0003c, 0x0003f,
     0x0007c, 0x0007d,
@@ -4833,7 +4833,7 @@ immutable(CodepointSet) unicodeSm = CodepointSet([
     0x1d7c3, 0x1d7c4,
 ]);
 
-immutable(CodepointSet) unicodeKharoshthi = CodepointSet([
+immutable(CodepointSetOld) unicodeKharoshthi = CodepointSetOld([
     0x10a00, 0x10a04,
     0x10a05, 0x10a07,
     0x10a0c, 0x10a14,
@@ -4844,15 +4844,15 @@ immutable(CodepointSet) unicodeKharoshthi = CodepointSet([
     0x10a50, 0x10a59,
 ]);
 
-immutable(CodepointSet) unicodeInLycian = CodepointSet([
+immutable(CodepointSetOld) unicodeInLycian = CodepointSetOld([
     0x10280, 0x102a0,
 ]);
 
-immutable(CodepointSet) unicodeInCombining_Half_Marks = CodepointSet([
+immutable(CodepointSetOld) unicodeInCombining_Half_Marks = CodepointSetOld([
     0x0fe20, 0x0fe30,
 ]);
 
-immutable(CodepointSet) unicodeSo = CodepointSet([
+immutable(CodepointSetOld) unicodeSo = CodepointSetOld([
     0x000a6, 0x000a8,
     0x000a9, 0x000aa,
     0x000ae, 0x000af,
@@ -5019,44 +5019,44 @@ immutable(CodepointSet) unicodeSo = CodepointSet([
     0x1f700, 0x1f774,
 ]);
 
-immutable(CodepointSet) unicodeInEnclosed_Alphanumeric_Supplement = CodepointSet([
+immutable(CodepointSetOld) unicodeInEnclosed_Alphanumeric_Supplement = CodepointSetOld([
     0x1f100, 0x1f200,
 ]);
 
-immutable(CodepointSet) unicodeInTai_Le = CodepointSet([
+immutable(CodepointSetOld) unicodeInTai_Le = CodepointSetOld([
     0x01950, 0x01980,
 ]);
 
-immutable(CodepointSet) unicodeInMandaic = CodepointSet([
+immutable(CodepointSetOld) unicodeInMandaic = CodepointSetOld([
     0x00840, 0x00860,
 ]);
 
-immutable(CodepointSet) unicodeInLepcha = CodepointSet([
+immutable(CodepointSetOld) unicodeInLepcha = CodepointSetOld([
     0x01c00, 0x01c50,
 ]);
 
-immutable(CodepointSet) unicodeCanadian_Aboriginal = CodepointSet([
+immutable(CodepointSetOld) unicodeCanadian_Aboriginal = CodepointSetOld([
     0x01400, 0x01680,
     0x018b0, 0x018f6,
 ]);
 
-immutable(CodepointSet) unicodeInGreek_Extended = CodepointSet([
+immutable(CodepointSetOld) unicodeInGreek_Extended = CodepointSetOld([
     0x01f00, 0x02000,
 ]);
 
-immutable(CodepointSet) unicodeInCJK_Unified_Ideographs = CodepointSet([
+immutable(CodepointSetOld) unicodeInCJK_Unified_Ideographs = CodepointSetOld([
     0x04e00, 0x0a000,
 ]);
 
-immutable(CodepointSet) unicodeIDS_Trinary_Operator = CodepointSet([
+immutable(CodepointSetOld) unicodeIDS_Trinary_Operator = CodepointSetOld([
     0x02ff2, 0x02ff4,
 ]);
 
-immutable(CodepointSet) unicodeInMiscellaneous_Symbols = CodepointSet([
+immutable(CodepointSetOld) unicodeInMiscellaneous_Symbols = CodepointSetOld([
     0x02600, 0x02700,
 ]);
 
-immutable(CodepointSet) unicodeLao = CodepointSet([
+immutable(CodepointSetOld) unicodeLao = CodepointSetOld([
     0x00e81, 0x00e83,
     0x00e84, 0x00e85,
     0x00e87, 0x00e89,
@@ -5077,17 +5077,17 @@ immutable(CodepointSet) unicodeLao = CodepointSet([
     0x00edc, 0x00ede,
 ]);
 
-immutable(CodepointSet) unicodeInLatin_Extended_Additional = CodepointSet([
+immutable(CodepointSetOld) unicodeInLatin_Extended_Additional = CodepointSetOld([
     0x01e00, 0x01f00,
 ]);
 
-immutable(CodepointSet) unicodeRadical = CodepointSet([
+immutable(CodepointSetOld) unicodeRadical = CodepointSetOld([
     0x02e80, 0x02e9a,
     0x02e9b, 0x02ef4,
     0x02f00, 0x02fd6,
 ]);
 
-immutable(CodepointSet) unicodeMongolian = CodepointSet([
+immutable(CodepointSetOld) unicodeMongolian = CodepointSetOld([
     0x01800, 0x01802,
     0x01804, 0x01805,
     0x01806, 0x0180f,
@@ -5096,11 +5096,11 @@ immutable(CodepointSet) unicodeMongolian = CodepointSet([
     0x01880, 0x018ab,
 ]);
 
-immutable(CodepointSet) unicodeInVai = CodepointSet([
+immutable(CodepointSetOld) unicodeInVai = CodepointSetOld([
     0x0a500, 0x0a640,
 ]);
 
-immutable(CodepointSet) unicodeBengali = CodepointSet([
+immutable(CodepointSetOld) unicodeBengali = CodepointSetOld([
     0x00981, 0x00984,
     0x00985, 0x0098d,
     0x0098f, 0x00991,
@@ -5117,7 +5117,7 @@ immutable(CodepointSet) unicodeBengali = CodepointSet([
     0x009e6, 0x009fc,
 ]);
 
-immutable(CodepointSet) unicodeLatin = CodepointSet([
+immutable(CodepointSetOld) unicodeLatin = CodepointSetOld([
     0x00041, 0x0005b,
     0x00061, 0x0007b,
     0x000aa, 0x000ab,
@@ -5150,46 +5150,46 @@ immutable(CodepointSet) unicodeLatin = CodepointSet([
     0x0ff41, 0x0ff5b,
 ]);
 
-immutable(CodepointSet) unicodeTagalog = CodepointSet([
+immutable(CodepointSetOld) unicodeTagalog = CodepointSetOld([
     0x01700, 0x0170d,
     0x0170e, 0x01715,
 ]);
 
-immutable(CodepointSet) unicodeRejang = CodepointSet([
+immutable(CodepointSetOld) unicodeRejang = CodepointSetOld([
     0x0a930, 0x0a954,
     0x0a95f, 0x0a960,
 ]);
 
-immutable(CodepointSet) unicodeInCombining_Diacritical_Marks_for_Symbols = CodepointSet([
+immutable(CodepointSetOld) unicodeInCombining_Diacritical_Marks_for_Symbols = CodepointSetOld([
     0x020d0, 0x02100,
 ]);
 
-immutable(CodepointSet) unicodeInSupplemental_Mathematical_Operators = CodepointSet([
+immutable(CodepointSetOld) unicodeInSupplemental_Mathematical_Operators = CodepointSetOld([
     0x02a00, 0x02b00,
 ]);
 
-immutable(CodepointSet) unicodeInCham = CodepointSet([
+immutable(CodepointSetOld) unicodeInCham = CodepointSetOld([
     0x0aa00, 0x0aa60,
 ]);
 
-immutable(CodepointSet) unicodeAvestan = CodepointSet([
+immutable(CodepointSetOld) unicodeAvestan = CodepointSetOld([
     0x10b00, 0x10b36,
     0x10b39, 0x10b40,
 ]);
 
-immutable(CodepointSet) unicodeInMiscellaneous_Mathematical_Symbols_A = CodepointSet([
+immutable(CodepointSetOld) unicodeInMiscellaneous_Mathematical_Symbols_A = CodepointSetOld([
     0x027c0, 0x027f0,
 ]);
 
-immutable(CodepointSet) unicodeInMiscellaneous_Mathematical_Symbols_B = CodepointSet([
+immutable(CodepointSetOld) unicodeInMiscellaneous_Mathematical_Symbols_B = CodepointSetOld([
     0x02980, 0x02a00,
 ]);
 
-immutable(CodepointSet) unicodeInTelugu = CodepointSet([
+immutable(CodepointSetOld) unicodeInTelugu = CodepointSetOld([
     0x00c00, 0x00c80,
 ]);
 
-immutable(CodepointSet) unicodeLimbu = CodepointSet([
+immutable(CodepointSetOld) unicodeLimbu = CodepointSetOld([
     0x01900, 0x0191d,
     0x01920, 0x0192c,
     0x01930, 0x0193c,
@@ -5197,11 +5197,11 @@ immutable(CodepointSet) unicodeLimbu = CodepointSet([
     0x01944, 0x01950,
 ]);
 
-immutable(CodepointSet) unicodeInGeneral_Punctuation = CodepointSet([
+immutable(CodepointSetOld) unicodeInGeneral_Punctuation = CodepointSetOld([
     0x02000, 0x02070,
 ]);
 
-immutable(CodepointSet) unicodeUnified_Ideograph = CodepointSet([
+immutable(CodepointSetOld) unicodeUnified_Ideograph = CodepointSetOld([
     0x03400, 0x04db6,
     0x04e00, 0x09fcc,
     0x0fa0e, 0x0fa10,
@@ -5216,42 +5216,42 @@ immutable(CodepointSet) unicodeUnified_Ideograph = CodepointSet([
     0x2b740, 0x2b81e,
 ]);
 
-immutable(CodepointSet) unicodeInPhoenician = CodepointSet([
+immutable(CodepointSetOld) unicodeInPhoenician = CodepointSetOld([
     0x10900, 0x10920,
 ]);
 
-immutable(CodepointSet) unicodeOld_South_Arabian = CodepointSet([
+immutable(CodepointSetOld) unicodeOld_South_Arabian = CodepointSetOld([
     0x10a60, 0x10a80,
 ]);
 
-immutable(CodepointSet) unicodeInBuhid = CodepointSet([
+immutable(CodepointSetOld) unicodeInBuhid = CodepointSetOld([
     0x01740, 0x01760,
 ]);
 
-immutable(CodepointSet) unicodeKhmer = CodepointSet([
+immutable(CodepointSetOld) unicodeKhmer = CodepointSetOld([
     0x01780, 0x017de,
     0x017e0, 0x017ea,
     0x017f0, 0x017fa,
     0x019e0, 0x01a00,
 ]);
 
-immutable(CodepointSet) unicodeInLatin_Extended_A = CodepointSet([
+immutable(CodepointSetOld) unicodeInLatin_Extended_A = CodepointSetOld([
     0x00100, 0x00180,
 ]);
 
-immutable(CodepointSet) unicodeInLatin_Extended_B = CodepointSet([
+immutable(CodepointSetOld) unicodeInLatin_Extended_B = CodepointSetOld([
     0x00180, 0x00250,
 ]);
 
-immutable(CodepointSet) unicodeInLatin_Extended_C = CodepointSet([
+immutable(CodepointSetOld) unicodeInLatin_Extended_C = CodepointSetOld([
     0x02c60, 0x02c80,
 ]);
 
-immutable(CodepointSet) unicodeInLatin_Extended_D = CodepointSet([
+immutable(CodepointSetOld) unicodeInLatin_Extended_D = CodepointSetOld([
     0x0a720, 0x0a800,
 ]);
 
-immutable(CodepointSet) unicodeGurmukhi = CodepointSet([
+immutable(CodepointSetOld) unicodeGurmukhi = CodepointSetOld([
     0x00a01, 0x00a04,
     0x00a05, 0x00a0b,
     0x00a0f, 0x00a11,
@@ -5270,15 +5270,15 @@ immutable(CodepointSet) unicodeGurmukhi = CodepointSet([
     0x00a66, 0x00a76,
 ]);
 
-immutable(CodepointSet) unicodeInOsmanya = CodepointSet([
+immutable(CodepointSetOld) unicodeInOsmanya = CodepointSetOld([
     0x10480, 0x104b0,
 ]);
 
-immutable(CodepointSet) unicodeInCJK_Compatibility = CodepointSet([
+immutable(CodepointSetOld) unicodeInCJK_Compatibility = CodepointSetOld([
     0x03300, 0x03400,
 ]);
 
-immutable(CodepointSet) unicodeOriya = CodepointSet([
+immutable(CodepointSetOld) unicodeOriya = CodepointSetOld([
     0x00b01, 0x00b04,
     0x00b05, 0x00b0d,
     0x00b0f, 0x00b11,
@@ -5295,24 +5295,24 @@ immutable(CodepointSet) unicodeOriya = CodepointSet([
     0x00b66, 0x00b78,
 ]);
 
-immutable(CodepointSet) unicodeBuginese = CodepointSet([
+immutable(CodepointSetOld) unicodeBuginese = CodepointSetOld([
     0x01a00, 0x01a1c,
     0x01a1e, 0x01a20,
 ]);
 
-immutable(CodepointSet) unicodeInGeorgian_Supplement = CodepointSet([
+immutable(CodepointSetOld) unicodeInGeorgian_Supplement = CodepointSetOld([
     0x02d00, 0x02d30,
 ]);
 
-immutable(CodepointSet) unicodeInCJK_Strokes = CodepointSet([
+immutable(CodepointSetOld) unicodeInCJK_Strokes = CodepointSetOld([
     0x031c0, 0x031f0,
 ]);
 
-immutable(CodepointSet) unicodeVai = CodepointSet([
+immutable(CodepointSetOld) unicodeVai = CodepointSetOld([
     0x0a500, 0x0a62c,
 ]);
 
-immutable(CodepointSet) unicodeHangul = CodepointSet([
+immutable(CodepointSetOld) unicodeHangul = CodepointSetOld([
     0x01100, 0x01200,
     0x0302e, 0x03030,
     0x03131, 0x0318f,
@@ -5329,19 +5329,19 @@ immutable(CodepointSet) unicodeHangul = CodepointSet([
     0x0ffda, 0x0ffdd,
 ]);
 
-immutable(CodepointSet) unicodeInRejang = CodepointSet([
+immutable(CodepointSetOld) unicodeInRejang = CodepointSetOld([
     0x0a930, 0x0a960,
 ]);
 
-immutable(CodepointSet) unicodeInMiscellaneous_Technical = CodepointSet([
+immutable(CodepointSetOld) unicodeInMiscellaneous_Technical = CodepointSetOld([
     0x02300, 0x02400,
 ]);
 
-immutable(CodepointSet) unicodeInTransport_And_Map_Symbols = CodepointSet([
+immutable(CodepointSetOld) unicodeInTransport_And_Map_Symbols = CodepointSetOld([
     0x1f680, 0x1f700,
 ]);
 
-immutable(CodepointSet) unicodeHyphen = CodepointSet([
+immutable(CodepointSetOld) unicodeHyphen = CodepointSetOld([
     0x0002d, 0x0002e,
     0x000ad, 0x000ae,
     0x0058a, 0x0058b,
@@ -5354,21 +5354,21 @@ immutable(CodepointSet) unicodeHyphen = CodepointSet([
     0x0ff65, 0x0ff66,
 ]);
 
-immutable(CodepointSet) unicodeThai = CodepointSet([
+immutable(CodepointSetOld) unicodeThai = CodepointSetOld([
     0x00e01, 0x00e3b,
     0x00e40, 0x00e5c,
 ]);
 
-immutable(CodepointSet) unicodeSundanese = CodepointSet([
+immutable(CodepointSetOld) unicodeSundanese = CodepointSetOld([
     0x01b80, 0x01bab,
     0x01bae, 0x01bba,
 ]);
 
-immutable(CodepointSet) unicodeInRunic = CodepointSet([
+immutable(CodepointSetOld) unicodeInRunic = CodepointSetOld([
     0x016a0, 0x01700,
 ]);
 
-immutable(CodepointSet) unicodeDiacritic = CodepointSet([
+immutable(CodepointSetOld) unicodeDiacritic = CodepointSetOld([
     0x0005e, 0x0005f,
     0x00060, 0x00061,
     0x000a8, 0x000a9,
@@ -5488,16 +5488,16 @@ immutable(CodepointSet) unicodeDiacritic = CodepointSet([
     0x1d1aa, 0x1d1ae,
 ]);
 
-immutable(CodepointSet) unicodeYi = CodepointSet([
+immutable(CodepointSetOld) unicodeYi = CodepointSetOld([
     0x0a000, 0x0a48d,
     0x0a490, 0x0a4c7,
 ]);
 
-immutable(CodepointSet) unicodeInAlphabetic_Presentation_Forms = CodepointSet([
+immutable(CodepointSetOld) unicodeInAlphabetic_Presentation_Forms = CodepointSetOld([
     0x0fb00, 0x0fb50,
 ]);
 
-immutable(CodepointSet) unicodeExtender = CodepointSet([
+immutable(CodepointSetOld) unicodeExtender = CodepointSetOld([
     0x000b7, 0x000b8,
     0x002d0, 0x002d2,
     0x00640, 0x00641,
@@ -5520,32 +5520,32 @@ immutable(CodepointSet) unicodeExtender = CodepointSet([
     0x0ff70, 0x0ff71,
 ]);
 
-immutable(CodepointSet) unicodeGlagolitic = CodepointSet([
+immutable(CodepointSetOld) unicodeGlagolitic = CodepointSetOld([
     0x02c00, 0x02c2f,
     0x02c30, 0x02c5f,
 ]);
 
-immutable(CodepointSet) unicodeInSuperscripts_and_Subscripts = CodepointSet([
+immutable(CodepointSetOld) unicodeInSuperscripts_and_Subscripts = CodepointSetOld([
     0x02070, 0x020a0,
 ]);
 
-immutable(CodepointSet) unicodeInMalayalam = CodepointSet([
+immutable(CodepointSetOld) unicodeInMalayalam = CodepointSetOld([
     0x00d00, 0x00d80,
 ]);
 
-immutable(CodepointSet) unicodeJoin_Control = CodepointSet([
+immutable(CodepointSetOld) unicodeJoin_Control = CodepointSetOld([
     0x0200c, 0x0200e,
 ]);
 
-immutable(CodepointSet) unicodeInBatak = CodepointSet([
+immutable(CodepointSetOld) unicodeInBatak = CodepointSetOld([
     0x01bc0, 0x01c00,
 ]);
 
-immutable(CodepointSet) unicodeThaana = CodepointSet([
+immutable(CodepointSetOld) unicodeThaana = CodepointSetOld([
     0x00780, 0x007b2,
 ]);
 
-immutable(CodepointSet) unicodeSoft_Dotted = CodepointSet([
+immutable(CodepointSetOld) unicodeSoft_Dotted = CodepointSetOld([
     0x00069, 0x0006b,
     0x0012f, 0x00130,
     0x00249, 0x0024a,
@@ -5579,56 +5579,56 @@ immutable(CodepointSet) unicodeSoft_Dotted = CodepointSet([
     0x1d692, 0x1d694,
 ]);
 
-immutable(CodepointSet) unicodeBraille = CodepointSet([
+immutable(CodepointSetOld) unicodeBraille = CodepointSetOld([
     0x02800, 0x02900,
 ]);
 
-immutable(CodepointSet) unicodeInGurmukhi = CodepointSet([
+immutable(CodepointSetOld) unicodeInGurmukhi = CodepointSetOld([
     0x00a00, 0x00a80,
 ]);
 
-immutable(CodepointSet) unicodeMandaic = CodepointSet([
+immutable(CodepointSetOld) unicodeMandaic = CodepointSetOld([
     0x00840, 0x0085c,
     0x0085e, 0x0085f,
 ]);
 
-immutable(CodepointSet) unicodeInUnified_Canadian_Aboriginal_Syllabics = CodepointSet([
+immutable(CodepointSetOld) unicodeInUnified_Canadian_Aboriginal_Syllabics = CodepointSetOld([
     0x01400, 0x01680,
 ]);
 
-immutable(CodepointSet) unicodeInDingbats = CodepointSet([
+immutable(CodepointSetOld) unicodeInDingbats = CodepointSetOld([
     0x02700, 0x027c0,
 ]);
 
-immutable(CodepointSet) unicodeZl = CodepointSet([
+immutable(CodepointSetOld) unicodeZl = CodepointSetOld([
     0x02028, 0x02029,
 ]);
 
-immutable(CodepointSet) unicodeInMusical_Symbols = CodepointSet([
+immutable(CodepointSetOld) unicodeInMusical_Symbols = CodepointSetOld([
     0x1d100, 0x1d200,
 ]);
 
-immutable(CodepointSet) unicodeInBuginese = CodepointSet([
+immutable(CodepointSetOld) unicodeInBuginese = CodepointSetOld([
     0x01a00, 0x01a20,
 ]);
 
-immutable(CodepointSet) unicodeInSaurashtra = CodepointSet([
+immutable(CodepointSetOld) unicodeInSaurashtra = CodepointSetOld([
     0x0a880, 0x0a8e0,
 ]);
 
-immutable(CodepointSet) unicodeInCJK_Symbols_and_Punctuation = CodepointSet([
+immutable(CodepointSetOld) unicodeInCJK_Symbols_and_Punctuation = CodepointSetOld([
     0x03000, 0x03040,
 ]);
 
-immutable(CodepointSet) unicodeInKangxi_Radicals = CodepointSet([
+immutable(CodepointSetOld) unicodeInKangxi_Radicals = CodepointSetOld([
     0x02f00, 0x02fe0,
 ]);
 
-immutable(CodepointSet) unicodeZp = CodepointSet([
+immutable(CodepointSetOld) unicodeZp = CodepointSetOld([
     0x02029, 0x0202a,
 ]);
 
-immutable(CodepointSet) unicodeHex_Digit = CodepointSet([
+immutable(CodepointSetOld) unicodeHex_Digit = CodepointSetOld([
     0x00030, 0x0003a,
     0x00041, 0x00047,
     0x00061, 0x00067,
@@ -5637,7 +5637,7 @@ immutable(CodepointSet) unicodeHex_Digit = CodepointSet([
     0x0ff41, 0x0ff47,
 ]);
 
-immutable(CodepointSet) unicodeZs = CodepointSet([
+immutable(CodepointSetOld) unicodeZs = CodepointSetOld([
     0x00020, 0x00021,
     0x000a0, 0x000a1,
     0x01680, 0x01681,
@@ -5648,11 +5648,11 @@ immutable(CodepointSet) unicodeZs = CodepointSet([
     0x03000, 0x03001,
 ]);
 
-immutable(CodepointSet) unicodeInThai = CodepointSet([
+immutable(CodepointSetOld) unicodeInThai = CodepointSetOld([
     0x00e00, 0x00e80,
 ]);
 
-immutable(CodepointSet) unicodeDevanagari = CodepointSet([
+immutable(CodepointSetOld) unicodeDevanagari = CodepointSetOld([
     0x00900, 0x00951,
     0x00953, 0x00964,
     0x00966, 0x00970,
@@ -5661,11 +5661,11 @@ immutable(CodepointSet) unicodeDevanagari = CodepointSet([
     0x0a8e0, 0x0a8fc,
 ]);
 
-immutable(CodepointSet) unicodeInArrows = CodepointSet([
+immutable(CodepointSetOld) unicodeInArrows = CodepointSetOld([
     0x02190, 0x02200,
 ]);
 
-immutable(CodepointSet) unicodeEthiopic = CodepointSet([
+immutable(CodepointSetOld) unicodeEthiopic = CodepointSetOld([
     0x01200, 0x01249,
     0x0124a, 0x0124e,
     0x01250, 0x01257,
@@ -5700,23 +5700,23 @@ immutable(CodepointSet) unicodeEthiopic = CodepointSet([
     0x0ab28, 0x0ab2f,
 ]);
 
-immutable(CodepointSet) unicodeInCurrency_Symbols = CodepointSet([
+immutable(CodepointSetOld) unicodeInCurrency_Symbols = CodepointSetOld([
     0x020a0, 0x020d0,
 ]);
 
-immutable(CodepointSet) unicodeInOld_Persian = CodepointSet([
+immutable(CodepointSetOld) unicodeInOld_Persian = CodepointSetOld([
     0x103a0, 0x103e0,
 ]);
 
-immutable(CodepointSet) unicodeInRumi_Numeral_Symbols = CodepointSet([
+immutable(CodepointSetOld) unicodeInRumi_Numeral_Symbols = CodepointSetOld([
     0x10e60, 0x10e80,
 ]);
 
-immutable(CodepointSet) unicodeInTags = CodepointSet([
+immutable(CodepointSetOld) unicodeInTags = CodepointSetOld([
     0xe0000, 0xe0080,
 ]);
 
-immutable(CodepointSet) unicodeGreek = CodepointSet([
+immutable(CodepointSetOld) unicodeGreek = CodepointSetOld([
     0x00370, 0x00374,
     0x00375, 0x00378,
     0x0037a, 0x0037e,
@@ -5752,38 +5752,38 @@ immutable(CodepointSet) unicodeGreek = CodepointSet([
     0x1d200, 0x1d246,
 ]);
 
-immutable(CodepointSet) unicodeOl_Chiki = CodepointSet([
+immutable(CodepointSetOld) unicodeOl_Chiki = CodepointSetOld([
     0x01c50, 0x01c80,
 ]);
 
-immutable(CodepointSet) unicodeTagbanwa = CodepointSet([
+immutable(CodepointSetOld) unicodeTagbanwa = CodepointSetOld([
     0x01760, 0x0176d,
     0x0176e, 0x01771,
     0x01772, 0x01774,
 ]);
 
-immutable(CodepointSet) unicodeOther_Uppercase = CodepointSet([
+immutable(CodepointSetOld) unicodeOther_Uppercase = CodepointSetOld([
     0x02160, 0x02170,
     0x024b6, 0x024d0,
 ]);
 
-immutable(CodepointSet) unicodeInOgham = CodepointSet([
+immutable(CodepointSetOld) unicodeInOgham = CodepointSetOld([
     0x01680, 0x016a0,
 ]);
 
-immutable(CodepointSet) unicodeInThaana = CodepointSet([
+immutable(CodepointSetOld) unicodeInThaana = CodepointSetOld([
     0x00780, 0x007c0,
 ]);
 
-immutable(CodepointSet) unicodeInEnclosed_Ideographic_Supplement = CodepointSet([
+immutable(CodepointSetOld) unicodeInEnclosed_Ideographic_Supplement = CodepointSetOld([
     0x1f200, 0x1f300,
 ]);
 
-immutable(CodepointSet) unicodeInKhmer_Symbols = CodepointSet([
+immutable(CodepointSetOld) unicodeInKhmer_Symbols = CodepointSetOld([
     0x019e0, 0x01a00,
 ]);
 
-immutable(CodepointSet) unicodeCommon = CodepointSet([
+immutable(CodepointSetOld) unicodeCommon = CodepointSetOld([
     0x00000, 0x00041,
     0x0005b, 0x00061,
     0x0007b, 0x000aa,
@@ -5955,15 +5955,15 @@ immutable(CodepointSet) unicodeCommon = CodepointSet([
     0xe0020, 0xe0080,
 ]);
 
-immutable(CodepointSet) unicodeInCommon_Indic_Number_Forms = CodepointSet([
+immutable(CodepointSetOld) unicodeInCommon_Indic_Number_Forms = CodepointSetOld([
     0x0a830, 0x0a840,
 ]);
 
-immutable(CodepointSet) unicodeInSmall_Form_Variants = CodepointSet([
+immutable(CodepointSetOld) unicodeInSmall_Form_Variants = CodepointSetOld([
     0x0fe50, 0x0fe70,
 ]);
 
-immutable(CodepointSet) unicodeIdeographic = CodepointSet([
+immutable(CodepointSetOld) unicodeIdeographic = CodepointSetOld([
     0x03006, 0x03008,
     0x03021, 0x0302a,
     0x03038, 0x0303b,
@@ -5978,47 +5978,47 @@ immutable(CodepointSet) unicodeIdeographic = CodepointSet([
     0x2f800, 0x2fa1e,
 ]);
 
-immutable(CodepointSet) unicodeGeorgian = CodepointSet([
+immutable(CodepointSetOld) unicodeGeorgian = CodepointSetOld([
     0x010a0, 0x010c6,
     0x010d0, 0x010fb,
     0x010fc, 0x010fd,
     0x02d00, 0x02d26,
 ]);
 
-immutable(CodepointSet) unicodeOsmanya = CodepointSet([
+immutable(CodepointSetOld) unicodeOsmanya = CodepointSetOld([
     0x10480, 0x1049e,
     0x104a0, 0x104aa,
 ]);
 
-immutable(CodepointSet) unicodeInEthiopic = CodepointSet([
+immutable(CodepointSetOld) unicodeInEthiopic = CodepointSetOld([
     0x01200, 0x01380,
 ]);
 
-immutable(CodepointSet) unicodeInEnclosed_Alphanumerics = CodepointSet([
+immutable(CodepointSetOld) unicodeInEnclosed_Alphanumerics = CodepointSetOld([
     0x02460, 0x02500,
 ]);
 
-immutable(CodepointSet) unicodeCuneiform = CodepointSet([
+immutable(CodepointSetOld) unicodeCuneiform = CodepointSetOld([
     0x12000, 0x1236f,
     0x12400, 0x12463,
     0x12470, 0x12474,
 ]);
 
-immutable(CodepointSet) unicodeSyriac = CodepointSet([
+immutable(CodepointSetOld) unicodeSyriac = CodepointSetOld([
     0x00700, 0x0070e,
     0x0070f, 0x0074b,
     0x0074d, 0x00750,
 ]);
 
-immutable(CodepointSet) unicodeInVertical_Forms = CodepointSet([
+immutable(CodepointSetOld) unicodeInVertical_Forms = CodepointSetOld([
     0x0fe10, 0x0fe20,
 ]);
 
-immutable(CodepointSet) unicodeInTai_Xuan_Jing_Symbols = CodepointSet([
+immutable(CodepointSetOld) unicodeInTai_Xuan_Jing_Symbols = CodepointSetOld([
     0x1d300, 0x1d360,
 ]);
 
-immutable(CodepointSet) unicodeNoncharacter_Code_Point = CodepointSet([
+immutable(CodepointSetOld) unicodeNoncharacter_Code_Point = CodepointSetOld([
     0x0fdd0, 0x0fdf0,
     0x0fffe, 0x10000,
     0x1fffe, 0x20000,
@@ -6039,20 +6039,20 @@ immutable(CodepointSet) unicodeNoncharacter_Code_Point = CodepointSet([
     0x10fffe, 0x110000,
 ]);
 
-immutable(CodepointSet) unicodeInMiscellaneous_Symbols_and_Arrows = CodepointSet([
+immutable(CodepointSetOld) unicodeInMiscellaneous_Symbols_and_Arrows = CodepointSetOld([
     0x02b00, 0x02c00,
 ]);
 
-immutable(CodepointSet) unicodeInOld_Italic = CodepointSet([
+immutable(CodepointSetOld) unicodeInOld_Italic = CodepointSetOld([
     0x10300, 0x10330,
 ]);
 
-immutable(CodepointSet) unicodeMeetei_Mayek = CodepointSet([
+immutable(CodepointSetOld) unicodeMeetei_Mayek = CodepointSetOld([
     0x0abc0, 0x0abee,
     0x0abf0, 0x0abfa,
 ]);
 
-immutable(CodepointSet) unicodeOther_Grapheme_Extend = CodepointSet([
+immutable(CodepointSetOld) unicodeOther_Grapheme_Extend = CodepointSetOld([
     0x009be, 0x009bf,
     0x009d7, 0x009d8,
     0x00b3e, 0x00b3f,
@@ -6071,7 +6071,7 @@ immutable(CodepointSet) unicodeOther_Grapheme_Extend = CodepointSet([
     0x1d16e, 0x1d173,
 ]);
 
-immutable(CodepointSet) unicodeOther_Math = CodepointSet([
+immutable(CodepointSetOld) unicodeOther_Math = CodepointSetOld([
     0x0005e, 0x0005f,
     0x003d0, 0x003d3,
     0x003d5, 0x003d6,
@@ -6174,7 +6174,7 @@ immutable(CodepointSet) unicodeOther_Math = CodepointSet([
     0x1d7ce, 0x1d800,
 ]);
 
-immutable(CodepointSet) unicodeGujarati = CodepointSet([
+immutable(CodepointSetOld) unicodeGujarati = CodepointSetOld([
     0x00a81, 0x00a84,
     0x00a85, 0x00a8e,
     0x00a8f, 0x00a92,
@@ -6191,40 +6191,40 @@ immutable(CodepointSet) unicodeGujarati = CodepointSet([
     0x00af1, 0x00af2,
 ]);
 
-immutable(CodepointSet) unicodeInBox_Drawing = CodepointSet([
+immutable(CodepointSetOld) unicodeInBox_Drawing = CodepointSetOld([
     0x02500, 0x02580,
 ]);
 
-immutable(CodepointSet) unicodeInTagbanwa = CodepointSet([
+immutable(CodepointSetOld) unicodeInTagbanwa = CodepointSetOld([
     0x01760, 0x01780,
 ]);
 
-immutable(CodepointSet) unicodeInHangul_Syllables = CodepointSet([
+immutable(CodepointSetOld) unicodeInHangul_Syllables = CodepointSetOld([
     0x0ac00, 0x0d7b0,
 ]);
 
-immutable(CodepointSet) unicodeLydian = CodepointSet([
+immutable(CodepointSetOld) unicodeLydian = CodepointSetOld([
     0x10920, 0x1093a,
     0x1093f, 0x10940,
 ]);
 
-immutable(CodepointSet) unicodeInKatakana_Phonetic_Extensions = CodepointSet([
+immutable(CodepointSetOld) unicodeInKatakana_Phonetic_Extensions = CodepointSetOld([
     0x031f0, 0x03200,
 ]);
 
-immutable(CodepointSet) unicodeInTai_Tham = CodepointSet([
+immutable(CodepointSetOld) unicodeInTai_Tham = CodepointSetOld([
     0x01a20, 0x01ab0,
 ]);
 
-immutable(CodepointSet) unicodeInNumber_Forms = CodepointSet([
+immutable(CodepointSetOld) unicodeInNumber_Forms = CodepointSetOld([
     0x02150, 0x02190,
 ]);
 
-immutable(CodepointSet) unicodeInBopomofo_Extended = CodepointSet([
+immutable(CodepointSetOld) unicodeInBopomofo_Extended = CodepointSetOld([
     0x031a0, 0x031c0,
 ]);
 
-immutable(CodepointSet) unicodeInherited = CodepointSet([
+immutable(CodepointSetOld) unicodeInherited = CodepointSetOld([
     0x00300, 0x00370,
     0x00485, 0x00487,
     0x0064b, 0x00656,
@@ -6251,31 +6251,31 @@ immutable(CodepointSet) unicodeInherited = CodepointSet([
     0xe0100, 0xe01f0,
 ]);
 
-immutable(CodepointSet) unicodeInLetterlike_Symbols = CodepointSet([
+immutable(CodepointSetOld) unicodeInLetterlike_Symbols = CodepointSetOld([
     0x02100, 0x02150,
 ]);
 
-immutable(CodepointSet) unicodeBuhid = CodepointSet([
+immutable(CodepointSetOld) unicodeBuhid = CodepointSetOld([
     0x01740, 0x01754,
 ]);
 
-immutable(CodepointSet) unicodeInCypriot_Syllabary = CodepointSet([
+immutable(CodepointSetOld) unicodeInCypriot_Syllabary = CodepointSetOld([
     0x10800, 0x10840,
 ]);
 
-immutable(CodepointSet) unicodeInSyloti_Nagri = CodepointSet([
+immutable(CodepointSetOld) unicodeInSyloti_Nagri = CodepointSetOld([
     0x0a800, 0x0a830,
 ]);
 
-immutable(CodepointSet) unicodeInSamaritan = CodepointSet([
+immutable(CodepointSetOld) unicodeInSamaritan = CodepointSetOld([
     0x00800, 0x00840,
 ]);
 
-immutable(CodepointSet) unicodeInGeorgian = CodepointSet([
+immutable(CodepointSetOld) unicodeInGeorgian = CodepointSetOld([
     0x010a0, 0x01100,
 ]);
 
-immutable(CodepointSet) unicodeAlphabetic = CodepointSet([
+immutable(CodepointSetOld) unicodeAlphabetic = CodepointSetOld([
     0x00041, 0x0005b,
     0x00061, 0x0007b,
     0x000aa, 0x000ab,
@@ -6764,7 +6764,7 @@ immutable(CodepointSet) unicodeAlphabetic = CodepointSet([
     0x2f800, 0x2fa1e,
 ]);
 
-immutable(CodepointSet) unicodeBalinese = CodepointSet([
+immutable(CodepointSetOld) unicodeBalinese = CodepointSetOld([
     0x01b00, 0x01b4c,
     0x01b50, 0x01b7d,
 ]);
@@ -7169,7 +7169,7 @@ UnicodeProperty("Zl", unicodeZl),
 UnicodeProperty("Zp", unicodeZp),
 UnicodeProperty("Zs", unicodeZs),
 ];
-immutable NFC_QCN = CodepointSet([
+immutable NFC_QCN = CodepointSetOld([
     0x00340, 0x00342,
     0x00343, 0x00345,
     0x00374, 0x00375,
@@ -7246,7 +7246,7 @@ immutable NFC_QCN = CodepointSet([
     0x2f800, 0x2fa1e,
 ]);
 
-immutable NFC_QCM = CodepointSet([
+immutable NFC_QCM = CodepointSetOld([
     0x00300, 0x00305,
     0x00306, 0x0030d,
     0x0030f, 0x00310,
