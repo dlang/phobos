@@ -2974,21 +2974,24 @@ private template GetOverloadedMethods(T)
         {
             alias follows = TypeTuple!();
         }
+        else static if (allMembers[i] == "this")
+        {
+            alias follows = follows!(i + 1);
+        }
         else
         {
             enum name = allMembers[i];
 
-            template isFunction(T, string name)
+            template isMethod(alias f)
             {
-                static if (is(typeof(mixin("&T."~name)) F == F*) && is(F == function))
-                    enum isFunction = true;
+                static if (is(typeof(&f) F == F*) && is(F == function))
+                    enum isMethod = !__traits(isStaticFunction, f);
                 else
-                    enum isFunction = false;
+                    enum isMethod = false;
             }
-            static if (isFunction!(T, name) && !__traits(isStaticFunction, mixin("T."~name)))
-                alias follows = TypeTuple!(__traits(getOverloads, T, name), follows!(i + 1));
-            else
-                alias follows = follows!(i + 1);
+            alias follows = TypeTuple!(
+                std.typetuple.Filter!(isMethod, __traits(getOverloads, T, name)),
+                follows!(i + 1));
         }
     }
     alias GetOverloadedMethods = follows!();
