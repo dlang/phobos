@@ -1706,11 +1706,14 @@ struct RandomSample(R, Random = void)
     }
 
 /// Ditto
-    @property typeof(this) save()
+    static if(isForwardRange!R)
     {
-        auto ret = this;
-        ret._input = _input.save;
-        return ret;
+        @property typeof(this) save()
+        {
+            auto ret = this;
+            ret._input = _input.save;
+            return ret;
+        }
     }
 
 /// Ditto
