@@ -1626,14 +1626,16 @@ struct RandomSample(R, Random = void)
             this(R input, size_t howMany, Random gen)
             {
                 _gen = gen;
-                initialize(input, howMany, input.length);
+                _input = input;
+                initialize(howMany, input.length);
             }
         }
 
         this(R input, size_t howMany, size_t total, Random gen)
         {
             _gen = gen;
-            initialize(input, howMany, total);
+            _input = input;
+            initialize(howMany, total);
         }
     }
     else
@@ -1642,19 +1644,20 @@ struct RandomSample(R, Random = void)
         {
             this(R input, size_t howMany)
             {
-                initialize(input, howMany, input.length);
+                _input = input;
+                initialize(howMany, input.length);
             }
         }
 
         this(R input, size_t howMany, size_t total)
         {
-            initialize(input, howMany, total);
+            _input = input;
+            initialize(howMany, total);
         }
     }
 
-    private void initialize(R input, size_t howMany, size_t total)
+    private void initialize(size_t howMany, size_t total)
     {
-        _input = input;
         _available = total;
         _toSelect = howMany;
         enforce(_toSelect <= _available);
@@ -1951,6 +1954,32 @@ unittest
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
     static assert(isForwardRange!(typeof(randomSample(a, 5))));
     static assert(isForwardRange!(typeof(randomSample(a, 5, gen))));
+
+    struct TestInputRange
+    {
+        private int[] arr = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        @property bool empty() const { return arr.empty; }
+        @property int front() const { return arr.front; }
+        void popFront() { arr.popFront(); }
+    }
+    static assert(isInputRange!TestInputRange);
+    TestInputRange input;
+    static assert(isInputRange!(typeof(randomSample(input, 5, 10))));
+    static assert(isInputRange!(typeof(randomSample(input, 5, 10, gen))));
+
+    struct TestInputRangeWithLength
+    {
+        private int[] arr = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        @property bool empty() const { return arr.empty; }
+        @property int front() const { return arr.front; }
+        void popFront() { arr.popFront(); }
+        @property size_t length() const { return arr.length; }
+    }
+    static assert(isInputRange!TestInputRangeWithLength);
+    static assert(hasLength!TestInputRangeWithLength);
+    TestInputRangeWithLength inputWithLength;
+    static assert(isInputRange!(typeof(randomSample(inputWithLength, 5))));
+    static assert(isInputRange!(typeof(randomSample(inputWithLength, 5, gen))));
 
     //int[] a = [ 0, 1, 2 ];
     assert(randomSample(a, 5).length == 5);
