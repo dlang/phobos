@@ -1318,11 +1318,7 @@ unittest
         [1.0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
     static const y =
         [2.0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
-    assert(dotProduct(x, y) == 2280);
-
-    // Test in CTFE
-    enum ctfeDot = dotProduct(x, y);
-    static assert(ctfeDot == 2280);
+    assertCTFEable!({ assert(dotProduct(x, y) == 2280); });
 }
 
 /**
