@@ -34,9 +34,9 @@ $(BOOKTABLE ,
         $(TD A thread-safe, process-global singleton. Corresponds to D's $(D
         static shared).
     ))
-    $(TR $(TD $(D $(LREF ___GSharedSingleton)))
+    $(TR $(TD $(D $(LREF __GSharedSingleton)))
         $(TD A process-global singleton, providing thread-safe initialization
-        without forcing thread-safe methods. Corresponds to D's $(D __gshared).
+        without forcing thread-safe methods. Corresponds to D's $(D ___gshared).
     ))
 )
 
@@ -98,7 +98,7 @@ public class SingletonException : Exception
  * the value for the property is correct.
  *
  * Unlike $(D Enforcing), Asserting will be disabled when compiled with the
- * $(I --release) flag.
+ * $(I -release) flag.
  */
 struct Asserting
 {
@@ -120,8 +120,8 @@ struct Asserting
  * the value for the property is correct, and throw $(D PropertyException) if
  * it isn't.
  *
- * Unlike $(D Asserting), Asserting will be enabled when compiled with the
- * --release flag.
+ * Unlike $(D Asserting), Enforcing will be enabled when compiled with the
+ * -release flag.
  */
 struct Enforcing
 {
@@ -141,7 +141,7 @@ struct Enforcing
  * Used for mixing in the properties member field declarations, and give them a
  * namespace using a mixin identifier.
  */
-mixin template __impl_Properties_declarations(string declarationCode)
+mixin template _impl_Properties_declarations(string declarationCode)
 {
     mixin(declarationCode);
 }
@@ -156,17 +156,17 @@ mixin template __impl_Properties_declarations(string declarationCode)
  *      namesHead       = the name of the current property field to generate
  *                        accessors for.
  *      identifiersTail = the rest of the property fields, to send via template
- *                        recursion to the next __impl_Properties_accessors.
+ *                        recursion to the next _impl_Properties_accessors.
  */
-mixin template __impl_Properties_accessors(alias fieldsNamespace, string namesHead, identifiersTail...)
+mixin template _impl_Properties_accessors(alias fieldsNamespace, string namesHead, identifiersTail...)
 {
-    mixin(`@property typeof(__fields.` ~ namesHead ~ `) ` ~ namesHead ~ `()` ~ q{
+    mixin(`@property typeof(_fields.` ~ namesHead ~ `) ` ~ namesHead ~ `()` ~ q{
         {
             return __traits(getMember, fieldsNamespace, namesHead);
         }
     });
 
-    mixin(`@property auto ` ~ namesHead ~ `(typeof(__fields.` ~ namesHead ~ `) a)` ~ q{
+    mixin(`@property auto ` ~ namesHead ~ `(typeof(_fields.` ~ namesHead ~ `) a)` ~ q{
         {
             foreach(annotation; __traits(getAttributes, __traits(getMember, fieldsNamespace, namesHead)))
             {
@@ -202,11 +202,11 @@ mixin template __impl_Properties_accessors(alias fieldsNamespace, string namesHe
         }
     });
 
-    mixin __impl_Properties_accessors!(fieldsNamespace, identifiersTail);
+    mixin _impl_Properties_accessors!(fieldsNamespace, identifiersTail);
 }
 
-//End condition for __impl_Properties_accessors
-mixin template __impl_Properties_accessors(alias fieldsNamespace) {}
+//End condition for _impl_Properties_accessors
+mixin template _impl_Properties_accessors(alias fieldsNamespace) {}
 
 /*
  * Create a string that declares aliases for all the members in a given
@@ -218,7 +218,7 @@ mixin template __impl_Properties_accessors(alias fieldsNamespace) {}
  * Returns:
  *      a string for a mixin to generate the aliases.
  */
-string __impl_Properties_generateAliases(alias namespace)()
+string _impl_Properties_generateAliases(alias namespace)()
 {
     auto result = appender!string();
     foreach(member; __traits(allMembers, namespace))
@@ -243,11 +243,11 @@ string __impl_Properties_generateAliases(alias namespace)()
  */
 public mixin template Properties(string declarationCode)
 {
-    private mixin __impl_Properties_declarations!declarationCode __fields;
+    private mixin _impl_Properties_declarations!declarationCode _fields;
 
-    mixin __impl_Properties_accessors!(__fields, __traits(allMembers, __fields)) __accessors;
+    mixin _impl_Properties_accessors!(_fields, __traits(allMembers, _fields)) _accessors;
 
-    mixin(__impl_Properties_generateAliases!__accessors());
+    mixin(_impl_Properties_generateAliases!_accessors());
 }
 
 ///
@@ -301,16 +301,16 @@ unittest
  *
  * This version of the $(I Singleton) idiom only synchronizes the
  * $(U initialization) of the singleton. Methods of the instance $(B $(RED are not
- * synchronized automatically)) by $(D ___GSharedSingleton).
+ * synchronized automatically)) by $(D __GSharedSingleton).
  *
  * $(B $(RED This template mixin does not create a private constructor!)) A
  * private constructor must be declared separately, otherwise the class could
  * be created from outside.
  */
-mixin template __GSharedSingleton()
+mixin template _GSharedSingleton()
 {
-    private __gshared typeof(this) __singleton_instance;
-    private static typeof(this) __singleton_local_reference;
+    private __gshared typeof(this) _singleton_instance;
+    private static typeof(this) _singleton_local_reference;
 
     /**
      * Initialize the singleton instance if no instance exists.
@@ -323,19 +323,19 @@ mixin template __GSharedSingleton()
      *      instance.
      */
     private static bool singleton_tryInitInstance(lazy typeof(this) instance){
-        if(__singleton_local_reference is null)
+        if(_singleton_local_reference is null)
         {
             synchronized(typeid(typeof(this)))
             {
-                if(__singleton_instance is null)
+                if(_singleton_instance is null)
                 {
-                    __singleton_instance = instance;
-                    __singleton_local_reference = __singleton_instance;
+                    _singleton_instance = instance;
+                    _singleton_local_reference = _singleton_instance;
                     return true;
                 }
                 else
                 {
-                    __singleton_local_reference = __singleton_instance;
+                    _singleton_local_reference = _singleton_instance;
                 }
             }
         }
@@ -365,15 +365,15 @@ mixin template __GSharedSingleton()
      *      true if instance was already initialized, false otherwise.
      */
     static @property bool hasInstance(){
-        if(__singleton_local_reference !is null)
+        if(_singleton_local_reference !is null)
         {
             return true;
         }
         synchronized(typeid(typeof(this)))
         {
-            if(__singleton_instance !is null)
+            if(_singleton_instance !is null)
             {
-                __singleton_local_reference = __singleton_instance;
+                _singleton_local_reference = _singleton_instance;
                 return true;
             }
             return false;
@@ -391,7 +391,7 @@ mixin template __GSharedSingleton()
      */
     static @property typeof(this) instance()
     {
-        if(__singleton_local_reference is null)
+        if(_singleton_local_reference is null)
         {
             //Allow implicit initialization if and only if there is a default constructor:
             static if(__traits(compiles, new typeof(this)()))
@@ -402,19 +402,19 @@ mixin template __GSharedSingleton()
             {
                 synchronized(typeid(typeof(this)))
                 {
-                    if(__singleton_instance is null)
+                    if(_singleton_instance is null)
                     {
                         throw new SingletonException(typeof(this).stringof ~
                                 " has no default constructor and must be initialized manually.");
                     }
                     else
                     {
-                        __singleton_local_reference = __singleton_instance;
+                        _singleton_local_reference = _singleton_instance;
                     }
                 }
             }
         }
-        return __singleton_local_reference;
+        return _singleton_local_reference;
     }
 }
 
@@ -424,7 +424,7 @@ unittest
     //Singleton with default constructor:
     static class Foo
     {
-        mixin __GSharedSingleton;
+        mixin _GSharedSingleton;
 
         private this(){}
     }
@@ -444,7 +444,7 @@ unittest
     //Singleton with no default constructor needs to be initialized:
     static class Bar
     {
-        mixin __GSharedSingleton;
+        mixin _GSharedSingleton;
 
         private int x;
 
@@ -487,7 +487,7 @@ unittest
 
     static class Foo
     {
-        mixin __GSharedSingleton;
+        mixin _GSharedSingleton;
 
         private this()
         {
@@ -551,7 +551,7 @@ unittest
  */
 mixin template ThreadLocalSingleton()
 {
-    private static typeof(this) __singleton_instance;
+    private static typeof(this) _singleton_instance;
 
     /**
      * Initialize the singleton instance if no instance exists in the current
@@ -565,9 +565,9 @@ mixin template ThreadLocalSingleton()
      *      instance.
      */
     private static bool singleton_tryInitInstance(lazy typeof(this) instance){
-        if(__singleton_instance is null)
+        if(_singleton_instance is null)
         {
-            __singleton_instance = instance;
+            _singleton_instance = instance;
             return true;
         }
         return false;
@@ -599,7 +599,7 @@ mixin template ThreadLocalSingleton()
      *      false otherwise.
      */
     static @property bool hasInstance(){
-        return __singleton_instance !is null;
+        return _singleton_instance !is null;
     }
 
     /**
@@ -621,13 +621,13 @@ mixin template ThreadLocalSingleton()
         }
         else
         {
-            if(__singleton_instance is null)
+            if(_singleton_instance is null)
             {
                 throw new SingletonException(typeof(this).stringof ~
                         " has no default constructor and must be initialized manually.");
             }
         }
-        return __singleton_instance;
+        return _singleton_instance;
     }
 }
 
@@ -707,8 +707,8 @@ unittest
  */
 mixin template SharedSingleton()
 {
-    private static shared typeof(this) __singleton_instance;
-    private static bool __singleton_is_instantiated;
+    private static shared typeof(this) _singleton_instance;
+    private static bool _singleton_is_instantiated;
 
     /**
      * Initialize the singleton instance if no instance exists.
@@ -721,19 +721,19 @@ mixin template SharedSingleton()
      *      instance.
      */
     private static bool singleton_tryInitInstance(lazy shared typeof(this) instance){
-        if(!__singleton_is_instantiated)
+        if(!_singleton_is_instantiated)
         {
             synchronized(typeid(typeof(this)))
             {
-                if(__singleton_instance is null)
+                if(_singleton_instance is null)
                 {
-                    __singleton_instance = instance;
-                    __singleton_is_instantiated = true;
+                    _singleton_instance = instance;
+                    _singleton_is_instantiated = true;
                     return true;
                 }
                 else
                 {
-                    __singleton_is_instantiated = true;
+                    _singleton_is_instantiated = true;
                 }
             }
         }
@@ -763,15 +763,15 @@ mixin template SharedSingleton()
      *      true if instance was already initialized, false otherwise.
      */
     static @property bool hasInstance(){
-        if(__singleton_is_instantiated)
+        if(_singleton_is_instantiated)
         {
             return true;
         }
         synchronized(typeid(typeof(this)))
         {
-            if(__singleton_instance !is null)
+            if(_singleton_instance !is null)
             {
-                __singleton_is_instantiated = true;
+                _singleton_is_instantiated = true;
                 return true;
             }
             return false;
@@ -789,7 +789,7 @@ mixin template SharedSingleton()
      */
     static @property shared(typeof(this)) instance()
     {
-        if(!__singleton_is_instantiated)
+        if(!_singleton_is_instantiated)
         {
             //Allow implicit initialization if and only if there is a default constructor:
             static if(__traits(compiles, new shared(typeof(this))()))
@@ -800,19 +800,19 @@ mixin template SharedSingleton()
             {
                 synchronized(typeid(typeof(this)))
                 {
-                    if(__singleton_instance is null)
+                    if(_singleton_instance is null)
                     {
                         throw new SingletonException(typeof(this).stringof ~
                                 " has no default constructor and must be initialized manually.");
                     }
                     else
                     {
-                        __singleton_is_instantiated = true;
+                        _singleton_is_instantiated = true;
                     }
                 }
             }
         }
-        return __singleton_instance;
+        return _singleton_instance;
     }
 }
 
