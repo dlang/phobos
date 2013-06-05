@@ -2803,12 +2803,36 @@ unittest
     }
 }
 
+/**
+ * A (mostly) platform independent abstraction for path strings.
+ * ($D Path) provides a type safe way to pass, compare, and manipulate arbitrary
+ * path strings. It wraps over the functions defined in this module,
+ * so behavior of methods on Path are, in most cases, identical to their
+ * corresponding module function.
+ *
+ * Examples:
+ * ---
+ * Path p1 = `foo/bar`;
+ * assert(p1.isRelative() == true);
+ * p1 = p1.toAbsolute(`/baz`);
+ * assert(p1.isAbsolute());
+ * assert(p1 == `/baz/foo/bar`);
+ * assert(p1 == `/baz/bix/../foo/bar`);
+ *
+ * Path p2 = `/one/two`;
+ * Path p3 = `three`;
+ * assert(p2.join(p3) == `/one/two/three`);
+ * assert(Path.build(p2, p3, `four`) == `/one/two/three/four`);
+ * ---
+ */
 struct Path {
     private {
         string _path;
     }
 
     @disable this();
+
+    /// Constructs a Path with a given string $(D _s).
     this(immutable(char)[] _s)
     {
         // Corrects forward/backslashes passed into
@@ -2831,9 +2855,37 @@ struct Path {
     // unless toNormalString is a property,
     // however it'd work just fine without
     // the -property switch
+    /**
+     * Returns the string representation of the Path
+     * with platform specific directory seperators.
+     * Examples:
+     * ---
+     * Path p1 = `foo/../bar`;
+     * version(Windows) {
+     *     assert(p1.toString() == `foo\..\bar`);
+     * }
+     * version(Posix) {
+     *     assert(p1.toString() == `foo/../bar`);
+     * }
+     * ---
+     */
     @property string toString() {
         return _path;
     }
+
+    /**
+     * Returns the string representation of the Path
+     * after it has been normalized.
+     * Note:
+     * This property a Subtype of Path, so Path
+     * can be implicitly converted to a string
+     * sans any calls to toString and toNormalString
+     * Examples:
+     * ---
+     * assert(Path(`.`).toNormalString() == ``);
+     * assert(Path(`foo/../bar`).toNormalString() == `bar`);
+     * ---
+     */
     @property string toNormalString()
     {
         if(this.isNormal()) {
@@ -2846,38 +2898,112 @@ struct Path {
     alias toNormalString this;
 
 
-    // Comparison
+    /**
+     * When Path is compared to another Path or string, the RHS
+     * is converted to a Path, then the two path's toNormalString
+     * results are compared.
+     * Path directory seperators are normalized
+     * right out of the box.
+     *
+     * Examples:
+     * ---
+     * Path p1 = Path(`foo.ext`);
+     * assert(p1 == p1.toString());
+     * assert(p1 == p1);
+     *
+     * Path p2 = Path(`foo/../bar.txt`);
+     * Path p3 = Path(`bar.txt`);
+     * // Normalizes other Path
+     * assert(p2 == p3);
+     * // Normalizes path strings
+     *  assert(p2 == `./bar.txt`);
+     *
+     * version(Windows) {
+     *     assert(Path(`./foo`) == `.\foo`);
+     *     assert(Path(`.\foo`) == `.\foo`);
+     *     assert(Path(`foo/../bar`) == `foo\..\bar`);
+     *     assert(Path(`foo\..\bar`) == `foo\..\bar`);
+     * }
+     * version(Posix) {
+     *     assert(Path(`./foo`) == `./foo`);
+     *     assert(Path(`.\foo`) == `./foo`);
+     *     assert(Path(`foo/../bar`) == `foo/../bar`);
+     *     assert(Path(`foo\..\bar`) == `foo/../bar`);
+     * }
+     * ---
+     */
     bool opEquals(string _s)
     {
         return this.toNormalString() == Path(_s).toNormalString();
     }
 
     // Path querying
+    /// See $(LREF extension)
     string extension()   { return _path.extension(); }
+    /// See $(LREF rootName)
     string rootName()    { return _path.rootName();  }
     version(Windows) {
+        /// See $(LREF driveName)
         string driveName() { return _path.driveName(); }
+        /// See $(LREF stripDrive)
         Path stripDrive()  { return Path(_path.stripDrive()); }
     }
 
     // Directory manipulation
+    /// Returns a normalized Path.
     Path normalize() { return Path(buildNormalizedPath(_path)); }
+
+    /**
+     * Builds a new Path from a set of components.
+     * Examples:
+     * ---
+     * Path p1 = `foo/bar/baz`;
+     * assert(p1 == Path.build(`foo`, `bar`, `baz`));
+     * assert(p1 == Path.build(Path(`foo`), `bar`, `baz`));
+     * assert(p1 == Path.build(`foo/bar`, `./baz`));
+     * ---
+     */
     static Path build(string[] _ss...) { return Path(_ss.buildPath()); }
+
+    /**
+     * Returns an array with components ($D _ss) joined as a path
+     * Examples:
+     * ---
+     * Path p1 = `foo/bar/baz`;
+     * assert(p1 == Path(`foo`).join(`bar`).join(`baz`));
+     * assert(p1 == Path(`foo`).join(`bar`, `baz`));
+     * assert(p1 == Path(`foo`).join(Path(`bar`), `baz`));
+     * ---
+     * assert(p1 == Path(`foo`).join(`bar/baz`));
+    */
     Path join (string[] _ss...)
     {
         return Path.build([this.toString()] ~ _ss);
     }
+    /// See $(LREF absolutePath)
     Path toAbsolute(lazy string base = getcwd())
     {
         return Path(_path.absolutePath(base));
     }
+    /// See $(LREF relativePath)
     Path toRelative(lazy string base = getcwd())
     {
         return Path(_path.relativePath(base));
     }
+    /// See $(LREF dirName).
     Path dirName() { return Path(_path.dirName()); }
     alias dirName dir;
 
+    /**
+     * Split path into its directory/file components
+     * Examples:
+     * ---
+     * assert(Path(`.`).components() == [`.`]);
+     * assert(Path(`.`).components() == [Path(`.`)]);
+     * assert(Path(`foo/bar`).components() == [`foo`, `bar`]);
+     * assert(Path(`foo/../bar`).components() == [`foo`, `..`, `bar`]);
+     * ---
+     */
     Path[] components()
     {
         return _path.pathSplitter().map!(a => Path(cast(string)a))().array();
@@ -2885,9 +3011,13 @@ struct Path {
     alias components split;
 
     // File manipulation
+    /// See $(LREF setExtension)
     Path setExtension    (string ext) { return Path(_path.setExtension(ext)); }
+    /// See $(LREF defaultExtension)
     Path defaultExtension(string ext) { return Path(_path.defaultExtension(ext)); }
+    /// See $(LREF stripExtension)
     Path stripExtension()             { return Path(_path.stripExtension()); }
+    /// See $(LREF baseName)
     Path baseName()                   { return Path(_path.baseName()); }
     Path baseName(string _s)          { return Path(_path.baseName(_s)); }
     alias baseName base;
@@ -2902,14 +3032,18 @@ struct Path {
     // Predicate methods
     // These all have direct analogs in
     // std.file
+    /// Returns true if Path is relative
     bool isRelative()  { return !_path.isAbsolute(); }
+    /// Returns true if Path is absolute
     bool isAbsolute()  { return _path.isAbsolute(); }
+    /// Returns true if Path is a valid path. See ($LREF isValidPath)
     bool isValidPath() { return _path.isValidPath(); }
+    /// Returns true if Path is normalized. See ($LREF buildNormalizedPath)
     bool isNormal()    { return _path == _path.buildNormalizedPath(); }
 }
 
 unittest {
-    /**
+    /*
      * Equality: Both Path objects will be
      * normalized then checked against each other.
      */
@@ -2925,7 +3059,16 @@ unittest {
     assert(p2 == `./bar.txt`);
 }
 unittest {
-    /**
+    Path p1 = `foo/../bar`;
+    version(Windows) {
+        assert(p1.toString() == `foo\..\bar`);
+    }
+    version(Posix) {
+        assert(p1.toString() == `foo/../bar`);
+    }
+}
+unittest {
+    /*
      * isNormal(): Returns true if the path is normalized
      */
     assert(Path(`.`).isNormal() == false);
@@ -2938,7 +3081,7 @@ unittest {
     assert(Path(`foo/bar`).isNormal() == true);
 }
 unittest {
-    /**
+    /*
      * normalize: Returns a normalized Path, with OS specific
      * dir seperators, and resolved directory change symbols.
      */
@@ -2955,7 +3098,7 @@ unittest {
     }
 }
 unittest {
-    /**
+    /*
      * toNormalString: Shorthand for normalize().toString()
      * When Path is subtyped to string, toNormalString is used
      * as the return value.
@@ -2967,7 +3110,7 @@ unittest {
     assert(Path(`foo/../bar`).toNormalString() == `bar`);
 }
 unittest {
-    /**
+    /*
      * Path directory seperators are normalized
      * right out of the box.
      */
@@ -2985,7 +3128,7 @@ unittest {
     }
 }
 unittest {
-    /**
+    /*
      * Note that if the string is the LHS of
      * the comparison, the string must be the
      * normalized path, with OS specific dir
@@ -3000,20 +3143,22 @@ unittest {
     }
 }
 unittest {
-    /**
+    /*
      * Path#join and Path.build: Joins a set of of Path or strings together
      * and returns a new Path
      */
     Path p1 = `foo/bar/baz`;
     assert(p1 == Path.build(`foo`, `bar`, `baz`));
     assert(p1 == Path.build(Path(`foo`), `bar`, `baz`));
+    assert(p1 == Path.build(`foo/bar`, `./baz`));
 
     assert(p1 == Path(`foo`).join(`bar`).join(`baz`));
     assert(p1 == Path(`foo`).join(`bar`, `baz`));
     assert(p1 == Path(`foo`).join(Path(`bar`), `baz`));
+    assert(p1 == Path(`foo`).join(`bar/baz`));
 }
 unittest {
-    /**
+    /*
      * toAbsolute (or root): Turns Path into an absolute directory,
      * with optional base (or else, the cwd). See std.path.toAbsolute.
      */
@@ -3028,7 +3173,7 @@ unittest {
     }
 }
 unittest {
-    /**
+    /*
      * toRelative (or unroot): Turns a Path into a relative
      * path given optional root directory `base`. See std.path.toRelative.
      */
@@ -3046,7 +3191,7 @@ unittest {
     }
 }
 unittest {
-    /**
+    /*
      * dirName: Returns the directory part of a path.
      * see std.path.dirName for details.
      * Aliases: dirName dir
@@ -3057,7 +3202,7 @@ unittest {
 }
 
 unittest {
-    /**
+    /*
      * extension, rootName, and driveName:
      * all behave similar to
      * std.path.{extension, rootName, driveName}
@@ -3077,7 +3222,7 @@ unittest {
     }
 }
 unittest {
-    /**
+    /*
      * stripDrive: Behaves exactly like std.path.stripDrive
      */
     version(Windows) {
@@ -3086,7 +3231,7 @@ unittest {
     }
 }
 unittest {
-    /**
+    /*
      * components: Split path into its directory/file components
      */
     assert(Path(`.`).components() == [`.`]);
@@ -3095,7 +3240,7 @@ unittest {
     assert(Path(`foo/../bar`).components() == [`foo`, `..`, `bar`]);
 }
 unittest {
-    /**
+    /*
      * setExtension, defaultExtension, stripExtension, and baseName:
      * all behave as defined in std.path
      */
@@ -3112,7 +3257,7 @@ unittest {
     assert(Path(`foo`).stripExtension()     == Path(`foo`));
 }
 unittest {
-    /**
+    /*
      * isRelative isAbsolute isValidPath isNormal
      * predicate methods for querying information about
      * Path objects
