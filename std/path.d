@@ -2829,6 +2829,19 @@ struct Path
 {
     private string _path = ".";
 
+    /**
+     * Constructs a Path with a set of path components
+     * Examples:
+     * ---
+     * auto p = Path(`foo`, `bar`, `..`, `baz`);
+     * assert(p == `foo/baz`);
+     * assert(p == `foo/bar/../baz`);
+     * ---
+     */
+    this(immutable(char)[][] _ss...)
+    {
+        _path = Path.build(_ss).toString();
+    }
     /// Constructs a Path with a given string $(D _s).
     this(immutable(char)[] _s)
     {
@@ -3042,6 +3055,10 @@ struct Path
     bool isNormal()    { return _path == _path.buildNormalizedPath(); }
 }
 
+unittest {
+    auto p = Path(`foo`, `bar`, `baz`);
+    assert(p == `foo/bar/baz`);
+}
 unittest {
     /*
      * Equality: Both Path objects will be
@@ -3321,4 +3338,14 @@ unittest {
         assert(!Path(`foo:bar`).isValidPath());
         assert(Path(`foo\bar`).isValidPath());
     }
+}
+
+unittest {
+    void bar(Path path) { return; }
+    void foo(string str) { return; }
+
+    Path p = `baz\quixx`;
+
+    bar(p);
+    foo(p);
 }
