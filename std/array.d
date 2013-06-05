@@ -343,10 +343,17 @@ if(allSatisfy!(isIntegral, I))
 
     auto ptr = (__ctfe) ?
         {
-            E[] arr;
-            foreach (i; 0 .. sizes[0])
-                arr ~= E.init;
-            return arr.ptr;
+            static if(__traits(compiles, new E[1]))
+            {
+                return (new E[sizes[0]]).ptr;
+            }
+            else
+            {
+                E[] arr;
+                foreach (i; 0 .. sizes[0])
+                    arr ~= E.init;
+                return arr.ptr;
+            }
         }() :
         cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!(E));
     auto ret = ptr[0..sizes[0]];
