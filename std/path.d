@@ -2825,12 +2825,9 @@ unittest
  * assert(Path.build(p2, p3, `four`) == `/one/two/three/four`);
  * ---
  */
-struct Path {
-    private {
-        string _path;
-    }
-
-    @disable this();
+struct Path
+{
+    private string _path = ".";
 
     /// Constructs a Path with a given string $(D _s).
     this(immutable(char)[] _s)
@@ -2843,9 +2840,12 @@ struct Path {
 
         // Special case: if _s is "", don`t split it, as we know
         // that it`s already normalized.
-        if(_s == "") {
+        if(_s == "")
+        {
             _path = _s;
-        } else {
+        }
+        else
+        {
             _path = pathSplitter(_s).array().buildPath();
         }
     }
@@ -2869,7 +2869,8 @@ struct Path {
      * }
      * ---
      */
-    @property string toString() {
+    @property string toString()
+    {
         return _path;
     }
 
@@ -2888,11 +2889,10 @@ struct Path {
      */
     @property string toNormalString()
     {
-        if(this.isNormal()) {
+        if(this.isNormal())
             return toString();
-        } else {
+        else
             return this.normalize().toString();
-        }
     }
     // Subtype to a string for a smooth, full bodied taste
     alias toNormalString this;
@@ -3060,12 +3060,16 @@ unittest {
 }
 unittest {
     Path p1 = `foo/../bar`;
-    version(Windows) {
+    version(Windows)
+    {
         assert(p1.toString() == `foo\..\bar`);
     }
-    version(Posix) {
+    else version(Posix)
+    {
         assert(p1.toString() == `foo/../bar`);
     }
+    else
+        static assert(0, "Unsupported OS");
 }
 unittest {
     /*
@@ -3088,14 +3092,18 @@ unittest {
     assert(Path(`.`).normalize().toString() == ``);
     assert(Path(``).normalize().toString() == ``);
     assert(Path(`dir/../file`).normalize().toString() == `file`);
-    version(Windows) {
+    version(Windows)
+    {
         assert(Path(`dir/file`).normalize().toString() == `dir\file`);
         assert(Path(`dir\file`).normalize().toString() == `dir\file`);
     }
-    version(Posix) {
+    else version(Posix)
+    {
         assert(Path(`dir/file`).normalize().toString() == `dir/file`);
         assert(Path(`dir\file`).normalize().toString() == `dir/file`);
     }
+    else
+        static assert(0, "Unsupported OS");
 }
 unittest {
     /*
@@ -3114,18 +3122,22 @@ unittest {
      * Path directory seperators are normalized
      * right out of the box.
      */
-    version(Windows) {
+    version(Windows)
+    {
         assert(Path(`./foo`) == `.\foo`);
         assert(Path(`.\foo`) == `.\foo`);
         assert(Path(`foo/../bar`) == `foo\..\bar`);
         assert(Path(`foo\..\bar`) == `foo\..\bar`);
     }
-    version(Posix) {
+    else version(Posix)
+    {
         assert(Path(`./foo`) == `./foo`);
         assert(Path(`.\foo`) == `./foo`);
         assert(Path(`foo/../bar`) == `foo/../bar`);
         assert(Path(`foo\..\bar`) == `foo/../bar`);
     }
+    else
+        static assert(0, "Unsupported OS");
 }
 unittest {
     /*
@@ -3135,12 +3147,16 @@ unittest {
      * seperators
      */
     assert(`foo` == Path(`foo`));
-    version(Windows) {
+    version(Windows)
+    {
         assert(`foo\bar` == Path(`foo/bar`));
     }
-    version(Posix) {
+    else version(Posix)
+    {
         assert(`foo/bar` == Path(`foo/bar`));
     }
+    else
+        static assert(0, "Unsupported OS");
 }
 unittest {
     /*
@@ -3163,32 +3179,40 @@ unittest {
      * with optional base (or else, the cwd). See std.path.toAbsolute.
      */
     Path p1 = `foo/baz`;
-    version(Windows) {
+    version(Windows)
+    {
         assert(p1.toAbsolute(`c:\`) == Path(`c:\foo\baz`));
         assert(p1.toAbsolute(`c:/`) == Path(`c:\foo\baz`));
         assert(Path(`c:\foo\`).toAbsolute(`e:\`) == `c:\foo\`);
     }
-    version(Posix) {
+    else version(Posix)
+    {
         assert(p1.toAbsolute(`/`) == `/foo/baz`);
     }
+    else
+        static assert(0, "Unsupported OS");
 }
 unittest {
     /*
      * toRelative (or unroot): Turns a Path into a relative
      * path given optional root directory `base`. See std.path.toRelative.
      */
-    version(Windows) {
+    version(Windows)
+    {
         Path p1 = `c:\foo\bar`;
         assert(p1.toRelative(`c:\`) == `foo\bar`);
         assert(p1.toRelative(`c:\foo`) == `bar`);
         assert(p1.toRelative(`c:\foo\`) == `bar`);
     }
-    version(Posix) {
+    else version(Posix)
+    {
         Path p1 = `/foo/bar`;
         assert(p1.toRelative(`/`) == `foo/bar`);
         assert(p1.toRelative(`/foo`) == `bar`);
         assert(p1.toRelative(`/foo/`) == `bar`);
     }
+    else
+        static assert(0, "Unsupported OS");
 }
 unittest {
     /*
@@ -3211,21 +3235,25 @@ unittest {
     assert(Path(`foo`).extension() == null);
 
     assert(Path(`/foo`).rootName() == `/`);
-    version(Windows) {
+    version(Windows)
+    {
         assert(Path(`c:\foo\bar`).rootName() == `c:\`);
         assert(Path(`foo\bar`).rootName() == null);
     }
-
-    version(Windows) {
+    else version(Windows)
+    {
         assert(Path(`c:\foo\bar`).driveName() == `c:`);
         assert(Path(`foo\bar`).driveName() == null);
     }
+    else
+        static assert(0, "Unsupported OS");
 }
 unittest {
     /*
      * stripDrive: Behaves exactly like std.path.stripDrive
      */
-    version(Windows) {
+    version(Windows)
+    {
         assert(Path(`c:\foo`).stripDrive() == `\foo`);
         assert(Path(`foo`).stripDrive() == `foo`);
     }
@@ -3264,23 +3292,32 @@ unittest {
      */
     assert(!Path(`foo`).isAbsolute());
     assert(!Path(`../foo`).isAbsolute());
-    version(Windows) {
+    version(Windows)
+    {
         assert(Path(`c:\foo`).isAbsolute());
     }
-    version(Posix) {
+    else version(Posix)
+    {
         assert(Path(`/foo/bar`).isAbsolute());
     }
+    else
+        static assert(0, "Unsupported OS");
 
     assert(Path(`foo`).isRelative());
     assert(Path(`../foo`).isRelative());
-    version(Windows) {
+    version(Windows)
+    {
         assert(!Path(`c:\foo`).isRelative());
     }
-    version(Posix) {
+    else version(Posix)
+    {
         assert(!Path(`/foo/bar`).isRelative());
     }
+    else
+        static assert(0, "Unsupported OS");
 
-    version(Windows) {
+    version(Windows)
+    {
         assert(!Path(`foo:bar`).isValidPath());
         assert(Path(`foo\bar`).isValidPath());
     }
