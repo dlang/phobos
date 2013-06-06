@@ -2838,12 +2838,12 @@ struct Path
      * assert(p == `foo/bar/../baz`);
      * ---
      */
-    this(immutable(char)[][] _ss...)
+    this(string[] pstrs...)
     {
-        _path = Path.build(_ss).toString();
+        _path = Path.build(pstrs).toString();
     }
     /// Constructs a Path with a given string $(D _s).
-    this(immutable(char)[] _s)
+    this(string pstr)
     {
         // Corrects forward/backslashes passed into
         // platform specific directory seperator
@@ -2851,21 +2851,21 @@ struct Path
         // This should be fixed it to have .join operate
         // on pathSplitter directly.
 
-        // Special case: if _s is "", don`t split it, as we know
+        // Special case: if pstr is "", don`t split it, as we know
         // that it`s already normalized.
-        if(_s == "")
+        if(pstr.empty)
         {
-            _path = _s;
+            _path = pstr;
         }
         else
         {
-            _path = pathSplitter(_s).array().buildPath();
+            _path = pathSplitter(pstr).array().buildPath();
         }
     }
 
     // -property workaround:
-    // Can't use `alias toNormalString this;`
-    // unless toNormalString is a property,
+    // Can't use `alias toString this;`
+    // unless toString is a property,
     // however it'd work just fine without
     // the -property switch
     /**
@@ -2886,6 +2886,8 @@ struct Path
     {
         return _path;
     }
+    // Subtype to a string for a smooth, full bodied taste
+    alias toString this;
 
     /**
      * Returns the string representation of the Path
@@ -2902,13 +2904,8 @@ struct Path
      */
     @property string toNormalString()
     {
-        if(this.isNormal())
-            return toString();
-        else
-            return this.normalize().toString();
+        return this.normalize().toString();
     }
-    // Subtype to a string for a smooth, full bodied taste
-    alias toNormalString this;
 
 
     /**
@@ -2976,10 +2973,10 @@ struct Path
      * assert(p1 == Path.build(`foo/bar`, `./baz`));
      * ---
      */
-    static Path build(string[] _ss...) { return Path(_ss.buildPath()); }
+    static Path build(string[] pstrs...) { return Path(pstrs.buildPath()); }
 
     /**
-     * Returns an array with components ($D _ss) joined as a path
+     * Returns an array with components ($D pstrs) joined as a path
      * Examples:
      * ---
      * Path p1 = `foo/bar/baz`;
@@ -2989,17 +2986,27 @@ struct Path
      * ---
      * assert(p1 == Path(`foo`).join(`bar/baz`));
     */
-    Path join (string[] _ss...)
+    Path join (string[] pstrs...)
     {
-        return Path.build([this.toString()] ~ _ss);
+        pstrs.insertInPlace(0, this);
+        return Path.build(pstrs);
     }
     /// See $(LREF absolutePath)
-    Path toAbsolute(lazy string base = getcwd())
+    Path toAbsolute()
+    {
+        return Path(_path.absolutePath());
+    }
+    Path toAbsolute(string base)
     {
         return Path(_path.absolutePath(base));
     }
+
     /// See $(LREF relativePath)
-    Path toRelative(lazy string base = getcwd())
+    Path toRelative()
+    {
+        return Path(_path.relativePath());
+    }
+    Path toRelative(string base)
     {
         return Path(_path.relativePath(base));
     }
@@ -3019,7 +3026,10 @@ struct Path
      */
     Path[] components()
     {
-        return _path.pathSplitter().map!(a => Path(cast(string)a))().array();
+        return _path
+          .pathSplitter()
+          .map!(pstr => Path(cast(string) pstr))()
+          .array();
     }
     alias components split;
 
@@ -3046,13 +3056,11 @@ struct Path
     // These all have direct analogs in
     // std.file
     /// Returns true if Path is relative
-    bool isRelative()  { return !_path.isAbsolute(); }
+    @property bool isRelative()  { return !_path.isAbsolute(); }
     /// Returns true if Path is absolute
-    bool isAbsolute()  { return _path.isAbsolute(); }
+    @property bool isAbsolute()  { return _path.isAbsolute(); }
     /// Returns true if Path is a valid path. See ($LREF isValidPath)
-    bool isValidPath() { return _path.isValidPath(); }
-    /// Returns true if Path is normalized. See ($LREF buildNormalizedPath)
-    bool isNormal()    { return _path == _path.buildNormalizedPath(); }
+    @property bool isValidPath() { return _path.isValidPath(); }
 }
 
 unittest {
@@ -3087,19 +3095,6 @@ unittest {
     }
     else
         static assert(0, "Unsupported OS");
-}
-unittest {
-    /*
-     * isNormal(): Returns true if the path is normalized
-     */
-    assert(Path(`.`).isNormal() == false);
-    assert(Path(`./foo`).isNormal() == false);
-    assert(Path(`foo/bar/../`).isNormal() == false);
-
-    assert(Path(``).isNormal() == true);
-    assert(Path(`../foo`).isNormal() == true);
-    assert(Path(`foo`).isNormal() == true);
-    assert(Path(`foo/bar`).isNormal() == true);
 }
 unittest {
     /*
@@ -3307,36 +3302,36 @@ unittest {
      * predicate methods for querying information about
      * Path objects
      */
-    assert(!Path(`foo`).isAbsolute());
-    assert(!Path(`../foo`).isAbsolute());
+    assert(!Path(`foo`).isAbsolute);
+    assert(!Path(`../foo`).isAbsolute);
     version(Windows)
     {
-        assert(Path(`c:\foo`).isAbsolute());
+        assert(Path(`c:\foo`).isAbsolute);
     }
     else version(Posix)
     {
-        assert(Path(`/foo/bar`).isAbsolute());
+        assert(Path(`/foo/bar`).isAbsolute);
     }
     else
         static assert(0, "Unsupported OS");
 
-    assert(Path(`foo`).isRelative());
-    assert(Path(`../foo`).isRelative());
+    assert(Path(`foo`).isRelative);
+    assert(Path(`../foo`).isRelative);
     version(Windows)
     {
-        assert(!Path(`c:\foo`).isRelative());
+        assert(!Path(`c:\foo`).isRelative);
     }
     else version(Posix)
     {
-        assert(!Path(`/foo/bar`).isRelative());
+        assert(!Path(`/foo/bar`).isRelative);
     }
     else
         static assert(0, "Unsupported OS");
 
     version(Windows)
     {
-        assert(!Path(`foo:bar`).isValidPath());
-        assert(Path(`foo\bar`).isValidPath());
+        assert(!Path(`foo:bar`).isValidPath);
+        assert(Path(`foo\bar`).isValidPath);
     }
 }
 
