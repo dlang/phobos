@@ -1239,11 +1239,16 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         formatValue(w, cast(int) val, f);
 }
 
+@safe pure unittest
+{
+    assertCTFEable!(
+    {
+        formatTest( false, "false" );
+        formatTest( true,  "true"  );
+    });
+}
 unittest
 {
-    formatTest( false, "false" );
-    formatTest( true,  "true"  );
-
     class C1 { bool val; alias val this; this(bool v){ val = v; } }
     class C2 { bool val; alias val this; this(bool v){ val = v; }
                override string toString() const { return "C"; } }
@@ -1282,9 +1287,12 @@ if (is(T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
     put(w, "null");
 }
 
-unittest
+@safe pure unittest
 {
-    formatTest( null, "null" );
+    assertCTFEable!(
+    {
+        formatTest( null, "null" );
+    });
 }
 
 /**
@@ -1294,49 +1302,50 @@ void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     alias U = IntegralTypeOf!T;
-    U val = obj;
+    U val = obj;    // Extracting alias this may be impure/system/may-throw
 
     if (f.spec == 'r')
     {
         // raw write, skip all else and write the thing
-        auto begin = cast(const char*) &val;
+        auto raw = (ref val)@trusted{
+            return (cast(const char*) &val)[0 .. val.sizeof];
+        }(val);
         if (std.system.endian == Endian.littleEndian && f.flPlus
             || std.system.endian == Endian.bigEndian && f.flDash)
         {
             // must swap bytes
-            foreach_reverse (i; 0 .. val.sizeof)
-                put(w, begin[i]);
+            foreach_reverse (c; raw)
+                put(w, c);
         }
         else
         {
-            foreach (i; 0 .. val.sizeof)
-                put(w, begin[i]);
+            foreach (c; raw)
+                put(w, c);
         }
         return;
     }
 
-    // Forward on to formatIntegral to handle both U and const(U)
-    // Saves duplication of code for both versions.
-    static if (isSigned!U)
-        formatIntegral(w, cast(long) val, f, Unsigned!U.max);
-    else
-        formatIntegral(w, cast(ulong) val, f, U.max);
-}
-
-private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, ref FormatSpec!Char f, ulong mask)
-{
-    FormatSpec!Char fs = f; // fs is copy for change its values.
-
-    T arg = val;
-
     uint base =
-        fs.spec == 'x' || fs.spec == 'X' ? 16 :
-        fs.spec == 'o' ? 8 :
-        fs.spec == 'b' ? 2 :
-        fs.spec == 's' || fs.spec == 'd' || fs.spec == 'u' ? 10 :
+        f.spec == 'x' || f.spec == 'X' ? 16 :
+        f.spec == 'o' ? 8 :
+        f.spec == 'b' ? 2 :
+        f.spec == 's' || f.spec == 'd' || f.spec == 'u' ? 10 :
         0;
     enforceFmt(base > 0,
         "integral");
+
+    // Forward on to formatIntegral to handle both U and const(U)
+    // Saves duplication of code for both versions.
+    static if (isSigned!U)
+        formatIntegral(w, cast( long) val, f, base, Unsigned!U.max);
+    else
+        formatIntegral(w, cast(ulong) val, f, base, U.max);
+}
+
+private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, ref FormatSpec!Char f, uint base, ulong mask)
+{
+    FormatSpec!Char fs = f; // fs is copy for change its values.
+    T arg = val;
 
     bool negative = (base == 10 && arg < 0);
     if (negative)
@@ -1385,9 +1394,9 @@ private void formatUnsigned(Writer, Char)(Writer w, ulong arg, ref FormatSpec!Ch
         forcedPrefix = '-';
     }
     // fill the digits
-    char[] digits = void;
+    char buffer[64]; // 64 bits in base 2 at most
+    char[] digits;
     {
-        char buffer[64]; // 64 bits in base 2 at most
         uint i = buffer.length;
         auto n = arg;
         do
@@ -1449,10 +1458,15 @@ private void formatUnsigned(Writer, Char)(Writer w, ulong arg, ref FormatSpec!Ch
     if (!leftPad) foreach (i ; 0 .. spacesToPrint) put(w, ' ');
 }
 
+@safe pure unittest
+{
+    assertCTFEable!(
+    {
+        formatTest( 10, "10" );
+    });
+}
 unittest
 {
-    formatTest( 10, "10" );
-
     class C1 { long val; alias val this; this(long v){ val = v; } }
     class C2 { long val; alias val this; this(long v){ val = v; }
                override string toString() const { return "C"; } }
@@ -1521,18 +1535,20 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     if (fs.spec == 'r')
     {
         // raw write, skip all else and write the thing
-        auto begin = cast(const char*) &val;
+        auto raw = (ref val)@trusted{
+            return (cast(const char*) &val)[0 .. val.sizeof];
+        }(val);
         if (std.system.endian == Endian.littleEndian && f.flPlus
             || std.system.endian == Endian.bigEndian && f.flDash)
         {
             // must swap bytes
-            foreach_reverse (i; 0 .. val.sizeof)
-                put(w, begin[i]);
+            foreach_reverse (c; raw)
+                put(w, c);
         }
         else
         {
-            foreach (i; 0 .. val.sizeof)
-                put(w, begin[i]);
+            foreach (c; raw)
+                put(w, c);
         }
         return;
     }
@@ -1595,13 +1611,15 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     put(w, buf[0 .. strlen(buf.ptr)]);
 }
 
-unittest
+/*@safe pure */unittest
 {
     foreach (T; TypeTuple!(float, double, real))
     {
         formatTest( to!(          T)(5.5), "5.5" );
         formatTest( to!(    const T)(5.5), "5.5" );
         formatTest( to!(immutable T)(5.5), "5.5" );
+
+        formatTest( T.nan, "nan" );
     }
 }
 
@@ -1622,14 +1640,6 @@ unittest
     formatTest( S2(2.25), "S" );
 }
 
-unittest
-{
-    foreach (T; TypeTuple!(float, double, real))
-    {
-        formatTest( T.nan, "nan" );
-    }
-}
-
 /*
    Formatting a $(D creal) is deprecated but still kept around for a while.
  */
@@ -1644,7 +1654,7 @@ if (is(Unqual!T : creal) && !is(T == enum) && !hasToString!(T, Char))
     put(w, 'i');
 }
 
-unittest
+/*@safe pure */unittest
 {
     foreach (T; TypeTuple!(cfloat, cdouble, creal))
     {
@@ -1683,7 +1693,7 @@ if (is(Unqual!T : ireal) && !is(T == enum) && !hasToString!(T, Char))
     put(w, 'i');
 }
 
-unittest
+/*@safe pure */unittest
 {
     foreach (T; TypeTuple!(ifloat, idouble, ireal))
     {
@@ -1730,10 +1740,16 @@ if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     }
 }
 
+@safe pure unittest
+{
+    assertCTFEable!(
+    {
+        formatTest( 'c', "c" );
+    });
+}
+
 unittest
 {
-    formatTest( 'c', "c" );
-
     class C1 { char val; alias val this; this(char v){ val = v; } }
     class C2 { char val; alias val this; this(char v){ val = v; }
                override string toString() const { return "C"; } }
