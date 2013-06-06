@@ -2166,7 +2166,7 @@ struct Appender(A : T[], T)
      * may be reserved than requested.  If newCapacity <= capacity, then nothing is
      * done.
      */
-    void reserve(size_t newCapacity)
+    void reserve(size_t newCapacity) @safe pure nothrow
     {
         immutable cap = _data ? _data.capacity : 0;
         if (newCapacity > cap)
@@ -2178,7 +2178,7 @@ struct Appender(A : T[], T)
      * managed array can accommodate before triggering a reallocation).  If any
      * appending will reallocate, $(D capacity) returns $(D 0).
      */
-    @property size_t capacity() const
+    @property size_t capacity() const @safe pure nothrow
     {
         return _data ? _data.capacity : 0;
     }
@@ -2186,15 +2186,18 @@ struct Appender(A : T[], T)
     /**
      * Returns the managed array.
      */
-    @property inout(T)[] data() inout
+    @property inout(T)[] data() inout @trusted pure nothrow
     {
+        /* @trusted operation:
+         * casting Unqual!T[] to inout(T)[]
+         */
         return cast(typeof(return))(_data ? _data.arr : null);
     }
 
     // ensure we can add nelems elements, resizing as necessary
-    private void ensureAddable(size_t nelems)
+    private void ensureAddable(size_t nelems) @safe pure nothrow
     {
-        static size_t newCapacity(size_t newlength)
+        static size_t newCapacity(size_t newlength) @safe pure nothrow
         {
             long mult = 100 + (1000L) / (bsr(newlength * T.sizeof) + 1);
             // limit to doubling the length, we don't want to grow too much
@@ -2209,7 +2212,7 @@ struct Appender(A : T[], T)
         immutable len = _data.arr.length;
         immutable reqlen = len + nelems;
 
-        if (_data.capacity >= reqlen)
+        if (()@trusted{ return _data.capacity; }() >= reqlen)
             return;
 
         // need to increase capacity
@@ -2222,7 +2225,7 @@ struct Appender(A : T[], T)
             else
             {
                 // avoid restriction of @disable this()
-                _data.arr = _data.arr[0 .. _data.capacity];
+                ()@trusted{ _data.arr = _data.arr[0 .. _data.capacity]; }();
                 foreach (i; _data.capacity .. reqlen)
                     _data.arr ~= Unqual!T.init;
             }
@@ -2236,7 +2239,9 @@ struct Appender(A : T[], T)
             // have better access to the capacity field.
             auto newlen = newCapacity(reqlen);
             // first, try extending the current block
-            auto u = GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
+            auto u = ()@trusted{ return
+                GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
+            }();
             if (u)
             {
                 // extend worked, update the capacity
@@ -2245,12 +2250,13 @@ struct Appender(A : T[], T)
             else
             {
                 // didn't work, must reallocate
-                auto bi = GC.qalloc(newlen * T.sizeof,
-                        (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
+                auto bi = ()@trusted{ return
+                    GC.qalloc(newlen * T.sizeof, (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
+                }();
                 _data.capacity = bi.size / T.sizeof;
                 if (len)
-                    memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
-                _data.arr = (cast(Unqual!T*)bi.base)[0..len];
+                    ()@trusted{ memcpy(bi.base, _data.arr.ptr, len * T.sizeof); }();
+                _data.arr = ()@trusted{ return (cast(Unqual!T*)bi.base)[0 .. len]; }();
                 // leave the old data, for safety reasons
             }
         }
@@ -2282,6 +2288,9 @@ struct Appender(A : T[], T)
     {
         static if (isSomeChar!T && isSomeChar!U && T.sizeof < U.sizeof)
         {
+            /* may throwable operation:
+             * - std.utf.encode
+             */
             // must do some transcoding around here
             Unqual!T[T.sizeof == 1 ? 4 : 2] encoded;
             auto len = std.utf.encode(encoded, item);
@@ -2291,8 +2300,14 @@ struct Appender(A : T[], T)
         {
             ensureAddable(1);
             immutable len = _data.arr.length;
-            _data.arr.ptr[len] = cast(Unqual!T)item;
-            _data.arr = _data.arr.ptr[0 .. len + 1];
+            //_data.arr.ptr[len] = cast(Unqual!T)item;    // assign? emplace?
+            //_data.arr = _data.arr.ptr[0 .. len + 1];
+
+            // Cannot return ref because it doesn't work in CTFE
+            ()@trusted{ return _data.arr.ptr[len .. len + 1]; }()[0]
+            =   // assign? emplace?
+            ()@trusted{ return cast(Unqual!T)item; } ();
+            ()@trusted{ _data.arr = _data.arr.ptr[0 .. len + 1]; }();
         }
     }
 
@@ -2311,9 +2326,7 @@ struct Appender(A : T[], T)
         // note, we disable this branch for appending one type of char to
         // another because we can't trust the length portion.
         static if (!(isSomeChar!T && isSomeChar!(ElementType!Range) &&
-                     !is(Range == Unqual!T[]) &&
-                     !is(Range == const(Unqual!T)[]) &&
-                     !is(Range == immutable(T)[])) &&
+                     !is(immutable Range == immutable T[])) &&
                     is(typeof(items.length) == size_t))
         {
             // optimization -- if this type is something other than a string,
@@ -2336,11 +2349,19 @@ struct Appender(A : T[], T)
             static if (is(typeof(_data.arr[] = items[])))
             {
                 _data.arr.ptr[len .. newlen] = items[];
+                // -> compiler bug?, slicing pointer does not become @system
             }
             else
             {
                 for (size_t i = len; !items.empty; items.popFront(), ++i)
-                    _data.arr.ptr[i] = cast(Unqual!T)items.front;
+                {
+                    //_data.arr.ptr[i] = cast(Unqual!T)items.front;
+
+                    // Cannot return ref because it doesn't work in CTFE
+                    ()@trusted{ return _data.arr.ptr[i .. i + 1]; }()[0]
+                    =   // assign? emplace?
+                    ()@trusted{ return cast(Unqual!T)items.front; }();
+                }
             }
         }
         else
@@ -2377,7 +2398,7 @@ struct Appender(A : T[], T)
     }
 
     // only allow overwriting data on non-immutable and non-const data
-    static if (!is(T == immutable) && !is(T == const))
+    static if (isMutable!T)
     {
         /**
          * Clears the managed array.  This allows the elements of the array to be reused
@@ -2386,11 +2407,11 @@ struct Appender(A : T[], T)
          * Note that clear is disabled for immutable or const element types, due to the
          * possibility that $(D Appender) might overwrite immutable data.
          */
-        void clear()
+        void clear() @safe pure nothrow
         {
             if (_data)
             {
-                _data.arr = _data.arr.ptr[0 .. 0];
+                _data.arr = ()@trusted{ return _data.arr.ptr[0 .. 0]; }();
             }
         }
 
@@ -2399,12 +2420,12 @@ struct Appender(A : T[], T)
          *
          * Throws: $(D Exception) if newlength is greater than the current array length.
          */
-        void shrinkTo(size_t newlength)
+        void shrinkTo(size_t newlength) @safe pure
         {
             if (_data)
             {
                 enforce(newlength <= _data.arr.length);
-                _data.arr = _data.arr.ptr[0 .. newlength];
+                _data.arr = ()@trusted{ return _data.arr.ptr[0 .. newlength]; }();
             }
             else
                 enforce(newlength == 0);
@@ -2518,7 +2539,7 @@ Appender!(E[]) appender(A : E[], E)(A array)
     }
 }
 
-unittest
+@safe pure nothrow unittest
 {
     {
         auto app = appender!(char[])();
@@ -2555,7 +2576,11 @@ unittest
     app2.reserve(5);
     assert(app2.capacity >= 5);
 
-    app2.shrinkTo(3);
+    try // shrinkTo may throw
+    {
+        app2.shrinkTo(3);
+    }
+    catch (Exception) assert(0);
     assert(app2.data == [ 1, 2, 3 ]);
     assertThrown(app2.shrinkTo(5));
 
@@ -2564,7 +2589,11 @@ unittest
     assert(app3.data == [1, 2, 3]);
 
     auto app4 = appender([]);
-    app4.shrinkTo(0);
+    try // shrinkTo may throw
+    {
+        app4.shrinkTo(0);
+    }
+    catch (Exception) assert(0);
 
     // Issue 5663 & 9725 tests
     foreach (S; TypeTuple!(char[], const(char)[], string))
@@ -2579,7 +2608,7 @@ unittest
             assert(app5663c.data == "\xE3");
 
             Appender!S app5663m;
-            assertNotThrown(app5663m.put(cast(char[])"\xE3"));
+            assertNotThrown(app5663m.put("\xE3".dup));
             assert(app5663m.data == "\xE3");
         }
         // ditto for ~=
@@ -2593,7 +2622,7 @@ unittest
             assert(app5663c.data == "\xE3");
 
             Appender!S app5663m;
-            assertNotThrown(app5663m ~= cast(char[])"\xE3");
+            assertNotThrown(app5663m ~= "\xE3".dup);
             assert(app5663m.data == "\xE3");
         }
     }
@@ -2603,7 +2632,7 @@ unittest
         int val;
 
         @disable this();
-        this(int v) { val = v; }
+        this(int v) @safe pure nothrow { val = v; }
     }
     assertCTFEable!(
     {
@@ -2611,6 +2640,55 @@ unittest
         w.put(S10122(1));
         assert(w.data.length == 1 && w.data[0].val == 1);
     });
+}
+
+@safe pure nothrow unittest
+{
+    {
+        auto w = appender!string();
+        w.reserve(4);
+        w.capacity;
+        w.data;
+        try
+        {
+            wchar wc = 'a';
+            dchar dc = 'a';
+            w.put(wc);    // decoding may throw
+            w.put(dc);    // decoding may throw
+        }
+        catch (Exception) assert(0);
+    }
+    {
+        auto w = appender!(int[])();
+        w.reserve(4);
+        w.capacity;
+        w.data;
+        w.put(10);
+        w.put([10]);
+        w.clear();
+        try
+        {
+            w.shrinkTo(0);
+        }
+        catch (Exception) assert(0);
+
+        struct N
+        {
+            int payload;
+            alias payload this;
+        }
+        w.put(N(1));
+        w.put([N(2)]);
+
+        struct S(T)
+        {
+            @property bool empty() { return true; }
+            @property T front() { return T.init; }
+            void popFront() {}
+        }
+        S!int r;
+        w.put(r);
+    }
 }
 
 /++
@@ -2664,7 +2742,11 @@ unittest
     app2.reserve(5);
     assert(app2.capacity >= 5);
 
-    app2.shrinkTo(3);
+    try // shrinkTo may throw
+    {
+        app2.shrinkTo(3);
+    }
+    catch (Exception) assert(0);
     assert(app2.data == [ 1, 2, 3 ]);
     assertThrown(app2.shrinkTo(5));
 
