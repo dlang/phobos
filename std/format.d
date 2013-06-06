@@ -51,11 +51,13 @@ version (DigitalMarsC)
  */
 class FormatException : Exception
 {
+    @safe pure nothrow
     this()
     {
         super("format error");
     }
 
+    @safe pure nothrow
     this(string msg, string fn = __FILE__, size_t ln = __LINE__, Throwable next = null)
     {
         super(msg, fn, ln, next);

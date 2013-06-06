@@ -37,6 +37,7 @@ import std.format;
  */
 class ConvException : Exception
 {
+    @safe pure nothrow
     this(string s, string fn = __FILE__, size_t ln = __LINE__)
     {
         super(s, fn, ln);
@@ -65,6 +66,7 @@ private auto convError(S, T)(S source, int radix, string fn = __FILE__, size_t l
         fn, ln);
 }
 
+@safe pure/* nothrow*/  // lazy parameter bug
 private auto parseError(lazy string msg, string fn = __FILE__, size_t ln = __LINE__)
 {
     return new ConvException(text("Can't parse string: ", msg), fn, ln);
@@ -139,6 +141,7 @@ private
  */
 class ConvOverflowException : ConvException
 {
+    @safe pure nothrow
     this(string s, string fn = __FILE__, size_t ln = __LINE__)
     {
         super(s, fn, ln);
@@ -2169,7 +2172,7 @@ Target parse(Target, Source)(ref Source p)
     // static immutable string infinity = "infinity";
     // static immutable string nans = "nans";
 
-    ConvException bailOut(string msg = null, string fn = __FILE__, size_t ln = __LINE__)
+    ConvException bailOut()(string msg = null, string fn = __FILE__, size_t ln = __LINE__)
     {
         if (!msg)
             msg = "Floating point conversion error";
