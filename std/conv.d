@@ -290,7 +290,7 @@ template to(T)
 }
 
 // Tests for issue 6175
-unittest
+@safe pure unittest
 {
     char[9] sarr = "blablabla";
     auto darr = to!(char[])(sarr);
@@ -299,14 +299,14 @@ unittest
 }
 
 // Tests for issue 7348
-unittest
+@safe pure unittest
 {
     assert(to!string(null) == "null");
     assert(text(null) == "null");
 }
 
 // Tests for issue 8729: do NOT skip leading WS
-unittest
+@safe pure unittest
 {
     foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
@@ -359,14 +359,14 @@ T toImpl(T, S)(S value)
     return value;
 }
 
-unittest
+@safe pure unittest
 {
     enum E { a }  // Issue 9523 - Allow identity enum conversion
     auto e = to!E(E.a);
     assert(e == E.a);
 }
 
-unittest
+@safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     int a = 42;
@@ -375,7 +375,7 @@ unittest
 }
 
 // Tests for issue 6377
-unittest
+@safe pure unittest
 {
     // Conversion between same size
     foreach (S; TypeTuple!(byte, short, int, long))
@@ -452,7 +452,7 @@ T toImpl(T, S)(ref S s)
     return toImpl!(T, typeof(s[0])[])(s);
 }
 
-unittest
+@safe pure unittest
 {
     char[4] test = ['a', 'b', 'c', 'd'];
     static assert(!isInputRange!(Unqual!(char[4])));
@@ -469,7 +469,7 @@ T toImpl(T, S)(S value)
     return value.opCast!T();
 }
 
-unittest
+@safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     class B
@@ -501,7 +501,7 @@ T toImpl(T, S)(S value)
 }
 
 // Bugzilla 3961
-unittest
+@safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     struct Int
@@ -513,14 +513,14 @@ unittest
     static struct Int2
     {
         int x;
-        this(int x) { this.x = x; }
+        this(int x) @safe pure { this.x = x; }
     }
     Int2 i2 = to!Int2(1);
 
     static struct Int3
     {
         int x;
-        static Int3 opCall(int x)
+        static Int3 opCall(int x) @safe pure
         {
             Int3 i;
             i.x = x;
@@ -531,11 +531,11 @@ unittest
 }
 
 // Bugzilla 6808
-unittest
+@safe pure unittest
 {
     static struct FakeBigInt
     {
-        this(string s){}
+        this(string s) @safe pure {}
     }
 
     string s = "101";
@@ -550,7 +550,7 @@ T toImpl(T, S)(S value)
     return new T(value);
 }
 
-unittest
+@safe pure unittest
 {
     static struct S
     {
@@ -559,14 +559,14 @@ unittest
     static class C
     {
         int x;
-        this(int x) { this.x = x; }
+        this(int x) @safe pure { this.x = x; }
     }
 
     static class B
     {
         int value;
-        this(S src) { value = src.x; }
-        this(C src) { value = src.x; }
+        this(S src) @safe pure { value = src.x; }
+        this(C src) @safe pure { value = src.x; }
     }
 
     S s = S(1);
@@ -581,17 +581,17 @@ unittest
     assert(c2.x == 3);
 }
 
-unittest
+@safe pure unittest
 {
     struct S
     {
         class A
         {
-            this(B b) {}
+            this(B b) @safe pure {}
         }
         class B : A
         {
-            this() { super(this); }
+            this() @safe pure { super(this); }
         }
     }
 
@@ -602,14 +602,14 @@ unittest
 
     static class C : Object
     {
-        this() {}
-        this(Object o) {}
+        this() @safe pure {}
+        this(Object o) @safe pure {}
     }
 
     Object oc = new C();
     C a2 = to!C(oc);    // == new C(a)
                         // Construction conversion overrides down-casting conversion
-    assert(a2 != a);    //
+    assert(a2 !is a);   //
 }
 
 /**
@@ -657,7 +657,7 @@ T toImpl(T, S)(S value)
     }
     static assert(isModConvertible, "Bad modifier conversion: "~S.stringof~" to "~T.stringof);
 
-    auto result = cast(T) value;
+    auto result = ()@trusted{ return cast(T) value; }();
     if (!result && value)
     {
         throw new ConvException("Cannot convert object of static type "
@@ -667,7 +667,7 @@ T toImpl(T, S)(S value)
     return result;
 }
 
-unittest
+@safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     // Testing object conversions
@@ -681,7 +681,7 @@ unittest
 }
 
 // Unittest for 6288
-unittest
+@safe pure unittest
 {
     template Identity(T)        { alias              T   Identity; }
     template toConst(T)         { alias        const(T)  toConst; }
@@ -1103,7 +1103,7 @@ body
     }
 }
 
-unittest
+@safe pure unittest
 {
     foreach (Int; TypeTuple!(uint, ulong))
     {
@@ -1281,10 +1281,10 @@ T toImpl(T, S)(S value)
         if (value > T.max)
             throw new ConvOverflowException("Conversion positive overflow");
     }
-    return cast(T) value;
+    return (ref value)@trusted{ return cast(T) value; }(value);
 }
 
-unittest
+@safe pure unittest
 {
     dchar a = ' ';
     assert(to!char(a) == ' ');
@@ -1316,19 +1316,18 @@ T toImpl(T, S)(S value)
         !isSomeString!S && isDynamicArray!S &&
         !isExactSomeString!T && isArray!T)
 {
-    alias typeof(T.init[0]) E;
-    auto result = new E[value.length];
-    foreach (i, e; value)
+    alias E = typeof(T.init[0]);
+
+    auto w = appender!(E[])();
+    w.reserve(value.length);
+    foreach (i, ref e; value)
     {
-        /* Temporarily cast to mutable type, so we can get it initialized,
-         * this is ok because there are no other references to result[]
-         */
-        cast()(result[i]) = to!E(e);
+        w.put(to!E(e));
     }
-    return result;
+    return w.data;
 }
 
-unittest
+@safe pure unittest
 {
     // array to array conversions
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -1337,8 +1336,8 @@ unittest
     auto b = to!(float[])(a);
     assert(b == [ 1.0f, 2, 3 ]);
 
-    auto c = to!(string[])(b);
-    assert(c[0] == "1" && c[1] == "2" && c[2] == "3");
+    //auto c = to!(string[])(b);
+    //assert(c[0] == "1" && c[1] == "2" && c[2] == "3");
 
     immutable(int)[3] d = [ 1, 2, 3 ];
     b = to!(float[])(d);
@@ -1356,6 +1355,13 @@ unittest
     }
     Wrap[] warr = to!(Wrap[])(["foo", "bar"]);  // should work
 }
+/*@safe pure */unittest
+{
+    auto b = [ 1.0f, 2, 3 ];
+
+    auto c = to!(string[])(b);
+    assert(c[0] == "1" && c[1] == "2" && c[2] == "3");
+}
 
 /**
 Associative array to associative array conversion converts each key
@@ -1365,6 +1371,8 @@ T toImpl(T, S)(S value)
     if (isAssociativeArray!S &&
         isAssociativeArray!T && !is(T == enum))
 {
+    /* This code is potentially unsafe.
+     */
     alias KeyType!T   K2;
     alias ValueType!T V2;
 
@@ -1380,7 +1388,7 @@ T toImpl(T, S)(S value)
     return cast(T)result;
 }
 
-unittest
+@safe /*pure */unittest
 {
     // hash to hash conversions
     int[string] a;
@@ -1389,7 +1397,7 @@ unittest
     auto b = to!(double[dstring])(a);
     assert(b["0"d] == 1 && b["1"d] == 2);
 }
-unittest // Bugzilla 8705, from doc
+@safe /*pure */unittest // Bugzilla 8705, from doc
 {
     int[string][double[int[]]] a;
     auto b = to!(short[wstring][string[double[]]])(a);
@@ -1475,7 +1483,7 @@ private void testFloatingToIntegral(Floating, Integral)()
     }
 }
 
-unittest
+@safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
 
@@ -1552,6 +1560,12 @@ unittest
             assert(a == 42);
         }
     }
+}
+/*@safe pure */unittest
+{
+    alias AllInts = TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong);
+    alias AllFloats = TypeTuple!(float, double, real);
+    alias AllNumerics = TypeTuple!(AllInts, AllFloats);
     // test conversions to string
     {
         foreach (T; AllNumerics)
@@ -1658,7 +1672,7 @@ T toImpl(T, S)(S value)
     throw new ConvException(format("Value (%s) does not match any member value of enum '%s'", value, T.stringof));
 }
 
-unittest
+@safe pure unittest
 {
     enum En8143 : int { A = 10, B = 20, C = 30, D = 20 }
     enum En8143[][] m3 = to!(En8143[][])([[10, 30], [30, 10]]);
