@@ -2945,7 +2945,6 @@ struct Path
      *     assert(Path(`./foo`) == `./foo`);
      *     assert(Path(`.\foo`) == `./foo`);
      *     assert(Path(`foo/../bar`) == `foo/../bar`);
-     *     assert(Path(`foo\..\bar`) == `foo/../bar`);
      * }
      * ---
      */
@@ -3155,13 +3154,12 @@ unittest {
     assert(Path(`dir/../file`).normalize().toString() == `file`);
     version(Windows)
     {
-        assert(Path(`dir/file`).normalize().toString() == `dir\file`);
         assert(Path(`dir\file`).normalize().toString() == `dir\file`);
+        assert(Path(`dir/file`).normalize().toString() == `dir\file`);
     }
     else version(Posix)
     {
         assert(Path(`dir/file`).normalize().toString() == `dir/file`);
-        assert(Path(`dir\file`).normalize().toString() == `dir/file`);
     }
     else
         static assert(0, "Unsupported OS");
@@ -3193,9 +3191,7 @@ unittest {
     else version(Posix)
     {
         assert(Path(`./foo`) == `./foo`);
-        assert(Path(`.\foo`) == `./foo`);
         assert(Path(`foo/../bar`) == `foo/../bar`);
-        assert(Path(`foo\..\bar`) == `foo/../bar`);
     }
     else
         static assert(0, "Unsupported OS");
@@ -3387,7 +3383,7 @@ unittest {
     void bar(Path path) { return; }
     void foo(string str) { return; }
 
-    Path p = `baz\quixx`;
+    Path p = `baz/quixx`;
 
     bar(p);
     foo(p);
