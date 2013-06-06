@@ -1617,19 +1617,19 @@ T toImpl(T, S)(S value, uint radix)
     return parse!T(value, radix);
 }
 
-unittest
+@safe pure unittest
 {
     // Issue 6668 - ensure no collaterals thrown
     try { to!uint("-1"); }
     catch (ConvException e) { assert(e.next is null); }
 }
 
-unittest
+@safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    foreach (Char; TypeTuple!(char, wchar, dchar))
+    foreach (Str; TypeTuple!(string, wstring, dstring))
     {
-        auto a = to!(Char[])("123");
+        Str a = "123";
         assert(to!int(a) == 123);
         assert(to!double(a) == 123);
     }
@@ -1752,7 +1752,7 @@ Target parse(Target, Source)(ref Source s)
     {
         // smaller types are handled like integers
         auto v = .parse!(Select!(Target.min < 0, int, uint))(s);
-        auto result = cast(Target) v;
+        auto result = ()@trusted{ return cast(Target) v; }();
         if (result != v)
             goto Loverflow;
         return result;
@@ -1813,14 +1813,14 @@ Lerr:
     throw convError!(Source, Target)(s);
 }
 
-unittest
+@safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     string s = "123";
     auto a = parse!int(s);
 }
 
-unittest
+@safe pure unittest
 {
     foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
@@ -1917,7 +1917,7 @@ unittest
     }
 }
 
-unittest
+@safe pure unittest
 {
     // parsing error check
     foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
@@ -1996,7 +1996,7 @@ unittest
     }
 }
 
-unittest
+@safe pure unittest
 {
     assertCTFEable!({ string s =  "1234abc"; assert(parse! int(s) ==  1234 && s == "abc"); });
     assertCTFEable!({ string s = "-1234abc"; assert(parse! int(s) == -1234 && s == "abc"); });
@@ -2057,7 +2057,7 @@ Lerr:
     throw convError!(Source, Target)(s, radix);
 }
 
-unittest
+@safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     // @@@BUG@@@ the size of China
@@ -2092,7 +2092,7 @@ unittest
     assert(parse!int(s, 10) == -42);
 }
 
-unittest // bugzilla 7302
+@safe pure unittest // bugzilla 7302
 {
     auto r = cycle("2A!");
     auto u = parse!uint(r, 16);
@@ -2149,7 +2149,7 @@ unittest
     }
 }
 
-unittest // bugzilla 4744
+@safe pure unittest // bugzilla 4744
 {
     enum A { member1, member11, member111 }
     assert(to!A("member1"  ) == A.member1  );
@@ -2345,8 +2345,8 @@ Target parse(Target, Source)(ref Source p)
             }
 
             // Stuff mantissa directly into real
-            *cast(long *)&ldval = msdec;
-            (cast(ushort *)&ldval)[4] = cast(ushort) e2;
+            ()@trusted{ *cast(long*)&ldval = msdec; }();
+            ()@trusted{ (cast(ushort*)&ldval)[4] = cast(ushort) e2; }();
 
             // Exponent is power of 2, not power of 10
             ldval = ldexp(ldval,exp);
@@ -2594,7 +2594,7 @@ unittest
     // printf("\n");
 }
 
-unittest
+@safe pure unittest
 {
     // Bugzilla 4959
     {
@@ -2654,7 +2654,7 @@ Target parse(Target, Source)(ref Source s)
     }
 }
 
-unittest
+@safe pure unittest
 {
     foreach (Str; TypeTuple!(string, wstring, dstring))
     {
@@ -2703,7 +2703,7 @@ Target parse(Target, Source)(ref Source s)
 /*
     Tests for to!bool and parse!bool
 */
-unittest
+@safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(conv) printf("conv.to!bool.unittest\n");
@@ -2742,7 +2742,7 @@ Target parse(Target, Source)(ref Source s)
     throw parseError("null should be case-insensitive 'null'");
 }
 
-unittest
+@safe pure unittest
 {
     alias typeof(null) NullType;
     auto s1 = "null";
@@ -2844,7 +2844,7 @@ unittest
     assert( ia == ia2);
 }
 
-unittest
+@safe pure unittest
 {
     auto s1 = `[['h', 'e', 'l', 'l', 'o'], "world"]`;
     auto a1 = parse!(string[])(s1);
@@ -2855,7 +2855,7 @@ unittest
     assert(a2 == ["aaa", "bbb", "ccc"]);
 }
 
-unittest
+@safe pure unittest
 {
     //Check proper failure
     auto s = "[ 1 , 2 , 3 ]";
@@ -2867,7 +2867,7 @@ unittest
     int[] arr = parse!(int[])(s);
 }
 
-unittest
+@safe pure unittest
 {
     //Checks parsing of strings with escaped characters
     string s1 = `[
@@ -2900,7 +2900,10 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     if (isExactSomeString!Source &&
         isStaticArray!Target && !is(Target == enum))
 {
-    Target result = void;
+    static if (hasIndirections!Target)
+        Target result = Target.init[0].init;
+    else
+        Target result = void;
 
     parseCheck!s(lbracket);
     skipWS(s);
@@ -2942,7 +2945,7 @@ Lfewerr:
     throw parseError(text("Too few elements in input, ", result.length, " elements expected."));
 }
 
-unittest
+@safe pure unittest
 {
     auto s1 = "[1,2,3,4]";
     auto sa1 = parse!(int[4])(s1);
@@ -3001,7 +3004,7 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     return result;
 }
 
-unittest
+@safe pure unittest
 {
     auto s1 = "[1:10, 2:20, 3:30]";
     auto aa1 = parse!(int[int])(s1);
@@ -3016,7 +3019,7 @@ unittest
     assert(aa3 == ["aaa":[1], "bbb":[2,3], "ccc":[4,5,6]]);
 }
 
-unittest
+@safe pure unittest
 {
     //Check proper failure
     auto s = "[1:10, 2:20, 3:30]";
@@ -3035,14 +3038,14 @@ private dchar parseEscape(Source)(ref Source s)
     if (s.empty)
         throw parseError("Unterminated escape sequence");
 
-    dchar getHexDigit()
+    dchar getHexDigit()(ref Source s_ = s)  // workaround
     {
-        if (s.empty)
+        if (s_.empty)
             throw parseError("Unterminated escape sequence");
-        s.popFront();
-        if (s.empty)
+        s_.popFront();
+        if (s_.empty)
             throw parseError("Unterminated escape sequence");
-        dchar c = s.front;
+        dchar c = s_.front;
         if (!isHexDigit(c))
             throw parseError("Hex digit is missing");
         return std.ascii.isAlpha(c) ? ((c & ~0x20) - ('A' - 10)) : c - '0';
@@ -3095,7 +3098,7 @@ private dchar parseEscape(Source)(ref Source s)
     return result;
 }
 
-unittest
+@safe pure unittest
 {
     string[] s1 = [
         `\"`, `\'`, `\?`, `\\`, `\a`, `\b`, `\f`, `\n`, `\r`, `\t`, `\v`, //Normal escapes
@@ -3120,7 +3123,7 @@ unittest
     }
 }
 
-unittest
+@safe pure unittest
 {
     string[] ss = [
         `hello!`,  //Not an escape
