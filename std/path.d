@@ -2838,12 +2838,12 @@ struct Path
      * assert(p == `foo/bar/../baz`);
      * ---
      */
-    this(string[] pstrs...)
+    this(string[] pstrs...) pure @safe
     {
         _path = Path.build(pstrs).toString();
     }
     /// Constructs a Path with a given string $(D _s).
-    this(string pstr)
+    this(string pstr) pure @trusted
     {
         // Corrects forward/backslashes passed into
         // platform specific directory seperator
@@ -2859,7 +2859,14 @@ struct Path
         }
         else
         {
-            _path = pathSplitter(pstr).array().buildPath();
+            // Workaround for algorithm.array() not being @safe pure nothrow
+            string[] tmp;
+            // TODO: Make pathSplitter inout
+            foreach(pcomp; pathSplitter(pstr)) {
+                tmp ~= cast(string) pcomp;
+            }
+            // TODO: make buildPath() nothrow
+            _path = tmp.buildPath();
         }
     }
 
@@ -2882,7 +2889,7 @@ struct Path
      * }
      * ---
      */
-    @property string toString()
+    @property string toString() pure nothrow @safe
     {
         return _path;
     }
@@ -2902,7 +2909,7 @@ struct Path
      * assert(Path(`foo/../bar`).toNormalString() == `bar`);
      * ---
      */
-    @property string toNormalString()
+    @property string toNormalString() pure @safe
     {
         return this.normalize().toString();
     }
@@ -2949,19 +2956,28 @@ struct Path
 
     // Path querying
     /// See $(LREF extension)
-    string extension()   { return _path.extension(); }
+    string extension() pure nothrow @safe { return _path.extension(); }
     /// See $(LREF rootName)
-    string rootName()    { return _path.rootName();  }
+    string rootName() pure nothrow @safe  { return _path.rootName();  }
     version(Windows) {
         /// See $(LREF driveName)
-        string driveName() { return _path.driveName(); }
+        string driveName() pure nothrow @safe
+        {
+            return _path.driveName();
+        }
         /// See $(LREF stripDrive)
-        Path stripDrive()  { return Path(_path.stripDrive()); }
+        Path stripDrive() pure @safe
+        {
+            return Path(_path.stripDrive());
+        }
     }
 
     // Directory manipulation
     /// Returns a normalized Path.
-    Path normalize() { return Path(buildNormalizedPath(_path)); }
+    Path normalize() pure @safe
+    {
+        return Path(buildNormalizedPath([_path]));
+    }
 
     /**
      * Builds a new Path from a set of components.
@@ -2973,7 +2989,10 @@ struct Path
      * assert(p1 == Path.build(`foo/bar`, `./baz`));
      * ---
      */
-    static Path build(string[] pstrs...) { return Path(pstrs.buildPath()); }
+    static Path build(string[] pstrs...) pure @safe
+    {
+        return Path(pstrs.buildPath());
+    }
 
     /**
      * Returns an array with components ($D pstrs) joined as a path
@@ -2988,30 +3007,37 @@ struct Path
     */
     Path join (string[] pstrs...)
     {
+        // Can't make this pure nothrow @safe
+        // as insertInPlace isn't qualified
         pstrs.insertInPlace(0, this);
         return Path.build(pstrs);
     }
     /// See $(LREF absolutePath)
-    Path toAbsolute()
+    Path toAbsolute() pure @safe
     {
         return Path(_path.absolutePath());
     }
-    Path toAbsolute(string base)
+    Path toAbsolute(string base) pure @safe
     {
         return Path(_path.absolutePath(base));
     }
 
     /// See $(LREF relativePath)
-    Path toRelative()
+    Path toRelative() pure
     {
         return Path(_path.relativePath());
     }
-    Path toRelative(string base)
+    Path toRelative(string base) pure
     {
         return Path(_path.relativePath(base));
     }
     /// See $(LREF dirName).
-    Path dirName() { return Path(_path.dirName()); }
+    Path dirName()
+    {
+        // TODO: make pure @safe nothrow
+        // due to dirName
+        return Path(_path.dirName());
+    }
     alias dirName dir;
 
     /**
@@ -3026,6 +3052,8 @@ struct Path
      */
     Path[] components()
     {
+        // TODO: make pure @safe nothrow
+        // due to .array() and .map()
         return _path
           .pathSplitter()
           .map!(pstr => Path(cast(string) pstr))()
@@ -3035,14 +3063,26 @@ struct Path
 
     // File manipulation
     /// See $(LREF setExtension)
-    Path setExtension    (string ext) { return Path(_path.setExtension(ext)); }
+    Path setExtension(string ext) pure @safe
+    {
+        return Path(_path.setExtension(ext));
+    }
     /// See $(LREF defaultExtension)
-    Path defaultExtension(string ext) { return Path(_path.defaultExtension(ext)); }
+    Path defaultExtension(string ext) pure @safe
+    {
+        return Path(_path.defaultExtension(ext));
+    }
     /// See $(LREF stripExtension)
-    Path stripExtension()             { return Path(_path.stripExtension()); }
+    Path stripExtension() pure @safe
+    {
+        return Path(_path.stripExtension());
+    }
     /// See $(LREF baseName)
-    Path baseName()                   { return Path(_path.baseName()); }
-    Path baseName(string _s)          { return Path(_path.baseName(_s)); }
+    Path baseName() pure @safe { return Path(_path.baseName()); }
+    Path baseName(string _s) pure @safe
+    {
+        return Path(_path.baseName(_s));
+    }
     alias baseName base;
 
     // These names make a bit more sense IMO,
@@ -3056,11 +3096,20 @@ struct Path
     // These all have direct analogs in
     // std.file
     /// Returns true if Path is relative
-    @property bool isRelative()  { return !_path.isAbsolute(); }
+    @property bool isRelative() pure nothrow @safe
+    {
+        return !_path.isAbsolute();
+    }
     /// Returns true if Path is absolute
-    @property bool isAbsolute()  { return _path.isAbsolute(); }
+    @property bool isAbsolute() pure nothrow @safe
+    {
+        return _path.isAbsolute();
+    }
     /// Returns true if Path is a valid path. See ($LREF isValidPath)
-    @property bool isValidPath() { return _path.isValidPath(); }
+    @property bool isValidPath() pure nothrow @safe
+    {
+        return _path.isValidPath();
+    }
 }
 
 unittest {
@@ -3252,13 +3301,12 @@ unittest {
         assert(Path(`c:\foo\bar`).rootName() == `c:\`);
         assert(Path(`foo\bar`).rootName() == null);
     }
-    else version(Windows)
+
+    version(Windows)
     {
         assert(Path(`c:\foo\bar`).driveName() == `c:`);
         assert(Path(`foo\bar`).driveName() == null);
     }
-    else
-        static assert(0, "Unsupported OS");
 }
 unittest {
     /*
