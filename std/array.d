@@ -2168,50 +2168,9 @@ struct Appender(A : T[], T)
      */
     void reserve(size_t newCapacity)
     {
-        if (!_data)
-            _data = new Data;
-        if (_data.capacity < newCapacity)
-        {
-            // need to increase capacity
-            immutable len = _data.arr.length;
-            if (__ctfe)
-            {
-                static if (is(Unqual!T == void))
-                {
-                    // void[]
-                    _data.arr.length = newCapacity;
-                }
-                else
-                {
-                    // avoid restriction of @disable this()
-                    _data.arr = _data.arr[0 .. _data.capacity];
-                    foreach (i; _data.capacity .. newCapacity)
-                        _data.arr ~= Unqual!T.init;
-                    assert(_data.arr.length == newCapacity);
-                    _data.arr = _data.arr[0 .. len];
-                }
-                _data.capacity = newCapacity;
-                return;
-            }
-            immutable growsize = (newCapacity - len) * T.sizeof;
-            auto u = GC.extend(_data.arr.ptr, growsize, growsize);
-            if (u)
-            {
-                // extend worked, update the capacity
-                _data.capacity = u / T.sizeof;
-            }
-            else
-            {
-                // didn't work, must reallocate
-                auto bi = GC.qalloc(newCapacity * T.sizeof,
-                        (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
-                _data.capacity = bi.size / T.sizeof;
-                if (len)
-                    memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
-                _data.arr = (cast(Unqual!T*)bi.base)[0 .. len];
-                // leave the old data, for safety reasons
-            }
-        }
+        immutable cap = _data ? _data.capacity : 0;
+        if (newCapacity > cap)
+            ensureAddable(newCapacity - cap);
     }
 
     /**
@@ -2235,30 +2194,43 @@ struct Appender(A : T[], T)
     // ensure we can add nelems elements, resizing as necessary
     private void ensureAddable(size_t nelems)
     {
+        static size_t newCapacity(size_t newlength)
+        {
+            long mult = 100 + (1000L) / (bsr(newlength * T.sizeof) + 1);
+            // limit to doubling the length, we don't want to grow too much
+            if(mult > 200)
+                mult = 200;
+            auto newext = cast(size_t)((newlength * mult + 99) / 100);
+            return newext > newlength ? newext : newlength;
+        }
+
         if (!_data)
             _data = new Data;
         immutable len = _data.arr.length;
         immutable reqlen = len + nelems;
-        if (reqlen > _data.capacity)
+
+        if (_data.capacity >= reqlen)
+            return;
+
+        // need to increase capacity
+        if (__ctfe)
         {
-            if (__ctfe)
+            static if (__traits(compiles, new Unqual!T[1]))
             {
-                static if (is(Unqual!T == void))
-                {
-                    // void[]
-                    _data.arr.length = reqlen;
-                }
-                else
-                {
-                    // avoid restriction of @disable this()
-                    _data.arr = _data.arr[0 .. _data.capacity];
-                    foreach (i; _data.capacity .. reqlen)
-                        _data.arr ~= Unqual!T.init;
-                    _data.arr = _data.arr[0 .. len];
-                }
-                _data.capacity = reqlen;
-                return;
+                _data.arr.length = reqlen;
             }
+            else
+            {
+                // avoid restriction of @disable this()
+                _data.arr = _data.arr[0 .. _data.capacity];
+                foreach (i; _data.capacity .. reqlen)
+                    _data.arr ~= Unqual!T.init;
+            }
+            _data.arr = _data.arr[0 .. len];
+            _data.capacity = reqlen;
+        }
+        else
+        {
             // Time to reallocate.
             // We need to almost duplicate what's in druntime, except we
             // have better access to the capacity field.
@@ -2278,20 +2250,10 @@ struct Appender(A : T[], T)
                 _data.capacity = bi.size / T.sizeof;
                 if (len)
                     memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
-                _data.arr = (cast(Unqual!T*)bi.base)[0 .. len];
+                _data.arr = (cast(Unqual!T*)bi.base)[0..len];
                 // leave the old data, for safety reasons
             }
         }
-    }
-
-    private static size_t newCapacity(size_t newlength)
-    {
-        long mult = 100 + (1000L) / (bsr(newlength * T.sizeof) + 1);
-        // limit to doubling the length, we don't want to grow too much
-        if(mult > 200)
-            mult = 200;
-        auto newext = cast(size_t)((newlength * mult + 99) / 100);
-        return newext > newlength ? newext : newlength;
     }
 
     private template canPutItem(U)
