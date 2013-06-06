@@ -43,37 +43,39 @@ class ConvException : Exception
     }
 }
 
-private string convError_unexpected(S)(S source) {
+private string convError_unexpected(S)(S source)
+{
     return source.empty ? "end of input" : text("'", source.front, "'");
 }
 
-private void convError(S, T)(S source, string fn = __FILE__, size_t ln = __LINE__)
+private auto convError(S, T)(S source, string fn = __FILE__, size_t ln = __LINE__)
 {
-    throw new ConvException(
+    return new ConvException(
         text("Unexpected ", convError_unexpected(source),
              " when converting from type "~S.stringof~" to type "~T.stringof),
         fn, ln);
 }
 
-private void convError(S, T)(S source, int radix, string fn = __FILE__, size_t ln = __LINE__)
+private auto convError(S, T)(S source, int radix, string fn = __FILE__, size_t ln = __LINE__)
 {
-    throw new ConvException(
+    return new ConvException(
         text("Unexpected ", convError_unexpected(source),
              " when converting from type "~S.stringof~" base ", radix,
              " to type "~T.stringof),
         fn, ln);
 }
 
-private void parseError(lazy string msg, string fn = __FILE__, size_t ln = __LINE__)
+private auto parseError(lazy string msg, string fn = __FILE__, size_t ln = __LINE__)
 {
-    throw new ConvException(text("Can't parse string: ", msg), fn, ln);
+    return new ConvException(text("Can't parse string: ", msg), fn, ln);
 }
 
 private void parseCheck(alias source)(dchar c, string fn = __FILE__, size_t ln = __LINE__)
 {
-    if (source.empty) parseError(text("unexpected end of input when expecting", "\"", c, "\""));
+    if (source.empty)
+        throw parseError(text("unexpected end of input when expecting", "\"", c, "\""));
     if (source.front != c)
-        parseError(text("\"", c, "\" is missing"), fn, ln);
+        throw parseError(text("\"", c, "\" is missing"), fn, ln);
     source.popFront();
 }
 
@@ -1591,7 +1593,7 @@ T toImpl(T, S)(S value)
     {
         if (value.length)
         {
-            convError!(S, T)(value);
+            throw convError!(S, T)(value);
         }
     }
     return parse!T(value);
@@ -1606,7 +1608,7 @@ T toImpl(T, S)(S value, uint radix)
     {
         if (value.length)
         {
-            convError!(S, T)(value);
+            throw convError!(S, T)(value);
         }
     }
     return parse!T(value, radix);
@@ -1805,8 +1807,7 @@ Target parse(Target, Source)(ref Source s)
 Loverflow:
     throw new ConvOverflowException("Overflow in integral conversion");
 Lerr:
-    convError!(Source, Target)(s);
-    assert(0);
+    throw convError!(Source, Target)(s);
 }
 
 unittest
@@ -2050,8 +2051,7 @@ body
 Loverflow:
     throw new ConvOverflowException("Overflow in integral conversion");
 Lerr:
-    convError!(Source, Target)(s, radix);
-    assert(0);
+    throw convError!(Source, Target)(s, radix);
 }
 
 unittest
@@ -2634,7 +2634,8 @@ Target parse(Target, Source)(ref Source s)
     if (isExactSomeString!Source &&
         staticIndexOf!(Unqual!Target, dchar, Unqual!(ElementEncodingType!Source)) >= 0)
 {
-    if (s.empty) convError!(Source, Target)(s);
+    if (s.empty)
+        throw convError!(Source, Target)(s);
     static if (is(Unqual!Target == dchar))
     {
         Target result = s.front;
@@ -2671,7 +2672,8 @@ Target parse(Target, Source)(ref Source s)
     if (!isSomeString!Source && isInputRange!Source && isSomeChar!(ElementType!Source) &&
         isSomeChar!Target && Target.sizeof >= ElementType!Source.sizeof && !is(Target == enum))
 {
-    if (s.empty) convError!(Source, Target)(s);
+    if (s.empty)
+        throw convError!(Source, Target)(s);
     Target result = s.front;
     s.popFront();
     return result;
@@ -2692,8 +2694,7 @@ Target parse(Target, Source)(ref Source s)
         s = s[5 .. $];
         return false;
     }
-    parseError("bool should be case-insensitive 'true' or 'false'");
-    assert(0);
+    throw parseError("bool should be case-insensitive 'true' or 'false'");
 }
 
 /*
@@ -2735,8 +2736,7 @@ Target parse(Target, Source)(ref Source s)
         s = s[4 .. $];
         return null;
     }
-    parseError("null should be case-insensitive 'null'");
-    assert(0);
+    throw parseError("null should be case-insensitive 'null'");
 }
 
 unittest
@@ -2795,7 +2795,8 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
 
     parseCheck!s(lbracket);
     skipWS(s);
-    if (s.empty) convError!(Source, Target)(s);
+    if (s.empty)
+        throw convError!(Source, Target)(s);
     if (s.front == rbracket)
     {
         s.popFront();
@@ -2805,7 +2806,8 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     {
         result ~= parseElement!(ElementType!Target)(s);
         skipWS(s);
-        if (s.empty) convError!(Source, Target)(s);
+        if (s.empty)
+            throw convError!(Source, Target)(s);
         if (s.front != comma)
             break;
     }
@@ -2899,7 +2901,8 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
 
     parseCheck!s(lbracket);
     skipWS(s);
-    if (s.empty) convError!(Source, Target)(s);
+    if (s.empty)
+        throw convError!(Source, Target)(s);
     if (s.front == rbracket)
     {
         static if (result.length != 0)
@@ -2916,7 +2919,8 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
             goto Lmanyerr;
         result[i++] = parseElement!(ElementType!Target)(s);
         skipWS(s);
-        if (s.empty) convError!(Source, Target)(s);
+        if (s.empty)
+            throw convError!(Source, Target)(s);
         if (s.front != comma)
         {
             if (i != result.length)
@@ -2929,12 +2933,10 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     return result;
 
 Lmanyerr:
-    parseError(text("Too many elements in input, ", result.length, " elements expected."));
-    assert(0);
+    throw parseError(text("Too many elements in input, ", result.length, " elements expected."));
 
 Lfewerr:
-    parseError(text("Too few elements in input, ", result.length, " elements expected."));
-    assert(0);
+    throw parseError(text("Too few elements in input, ", result.length, " elements expected."));
 }
 
 unittest
@@ -2970,7 +2972,8 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
 
     parseCheck!s(lbracket);
     skipWS(s);
-    if (s.empty) convError!(Source, Target)(s);
+    if (s.empty)
+        throw convError!(Source, Target)(s);
     if (s.front == rbracket)
     {
         s.popFront();
@@ -2985,8 +2988,10 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
         auto val = parseElement!ValType(s);
         skipWS(s);
         result[key] = val;
-        if (s.empty) convError!(Source, Target)(s);
-        if (s.front != comma) break;
+        if (s.empty)
+            throw convError!(Source, Target)(s);
+        if (s.front != comma)
+            break;
     }
     parseCheck!s(rbracket);
 
@@ -3024,16 +3029,19 @@ private dchar parseEscape(Source)(ref Source s)
     if (isInputRange!Source && isSomeChar!(ElementType!Source))
 {
     parseCheck!s('\\');
-    if (s.empty) parseError("Unterminated escape sequence");
+    if (s.empty)
+        throw parseError("Unterminated escape sequence");
 
     dchar getHexDigit()
     {
-        if (s.empty) parseError("Unterminated escape sequence");
+        if (s.empty)
+            throw parseError("Unterminated escape sequence");
         s.popFront();
-        if (s.empty) parseError("Unterminated escape sequence");
+        if (s.empty)
+            throw parseError("Unterminated escape sequence");
         dchar c = s.front;
         if (!isHexDigit(c))
-            parseError("Hex digit is missing");
+            throw parseError("Hex digit is missing");
         return std.ascii.isAlpha(c) ? ((c & ~0x20) - ('A' - 10)) : c - '0';
     }
 
@@ -3056,14 +3064,12 @@ private dchar parseEscape(Source)(ref Source s)
         case 'x':
             result  = getHexDigit() << 4;
             result |= getHexDigit();
-            if (s.empty) parseError("Unterminated escape sequence");
             break;
         case 'u':
             result  = getHexDigit() << 12;
             result |= getHexDigit() << 8;
             result |= getHexDigit() << 4;
             result |= getHexDigit();
-            if (s.empty) parseError("Unterminated escape sequence");
             break;
         case 'U':
             result  = getHexDigit() << 28;
@@ -3074,12 +3080,12 @@ private dchar parseEscape(Source)(ref Source s)
             result |= getHexDigit() << 8;
             result |= getHexDigit() << 4;
             result |= getHexDigit();
-            if (s.empty) parseError("Unterminated escape sequence");
             break;
         default:
-            parseError("Unknown escape character " ~ to!string(s.front));
-            break;
+            throw parseError("Unknown escape character " ~ to!string(s.front));
     }
+    if (s.empty)
+        throw parseError("Unterminated escape sequence");
 
     s.popFront();
 
@@ -3138,12 +3144,14 @@ Target parseElement(Target, Source)(ref Source s)
     auto result = appender!Target();
 
     // parse array of chars
-    if (s.empty) convError!(Source, Target)(s);
+    if (s.empty)
+        throw convError!(Source, Target)(s);
     if (s.front == '[')
         return parse!Target(s);
 
     parseCheck!s('\"');
-    if (s.empty) convError!(Source, Target)(s);
+    if (s.empty)
+        throw convError!(Source, Target)(s);
     if (s.front == '\"')
     {
         s.popFront();
@@ -3152,7 +3160,7 @@ Target parseElement(Target, Source)(ref Source s)
     while (true)
     {
         if (s.empty)
-            parseError("Unterminated quoted string");
+            throw parseError("Unterminated quoted string");
         switch (s.front)
         {
             case '\"':
@@ -3178,7 +3186,8 @@ Target parseElement(Target, Source)(ref Source s)
     Target c;
 
     parseCheck!s('\'');
-    if (s.empty) convError!(Source, Target)(s);
+    if (s.empty)
+        throw convError!(Source, Target)(s);
     if (s.front != '\\')
     {
         c = s.front;
