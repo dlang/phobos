@@ -2141,11 +2141,11 @@ struct Appender(A : T[], T)
      * it will be used by the appender.  After initializing an appender on an array,
      * appending to the original array will reallocate.
      */
-    this(T[] arr)
+    this(Unqual!T[] arr) @safe pure nothrow
     {
         // initialize to a given array.
         _data = new Data;
-        _data.arr = cast(Unqual!T[])arr;
+        _data.arr = arr;
 
         if (__ctfe)
             return;
@@ -2153,7 +2153,7 @@ struct Appender(A : T[], T)
         // We want to use up as much of the block the array is in as possible.
         // if we consume all the block that we can, then array appending is
         // safe WRT built-in append, and we can use the entire block.
-        auto cap = arr.capacity;
+        auto cap = ()@trusted{ return arr.capacity; }();
         if (cap > arr.length)
             arr = arr.ptr[0 .. cap];
         // we assume no reallocation occurred
@@ -2498,9 +2498,24 @@ struct RefAppender(A : T[], T)
     Convenience function that returns an $(D Appender!A) object initialized
     with $(D array).
  +/
-Appender!(E[]) appender(A : E[], E)(A array = null)
+Appender!(E[]) appender(A : E[], E)()
 {
-    return Appender!(E[])(array);
+    return Appender!(E[])(null);
+}
+/// ditto
+Appender!(E[]) appender(A : E[], E)(A array)
+{
+    static if (isMutable!E)
+    {
+        return Appender!(E[])(array);
+    }
+    else
+    {
+        /* @system operation:
+         * - casting array to Unqual!E[] (remove qualifiers)
+         */
+        return Appender!(E[])(cast(Unqual!E[])array);
+    }
 }
 
 unittest
