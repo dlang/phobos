@@ -66,6 +66,9 @@ class FormatException : Exception
 deprecated("Please use FormatException instead.")
 alias FormatException FormatError;
 
+private alias enforceFmt = enforceEx!FormatException;
+
+
 /**********************************************************************
    Interprets variadic argument list $(D args), formats them according
    to $(D fmt), and sends the resulting characters to $(D w). The
@@ -423,9 +426,8 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
         if (currentArg == funs.length && !spec.indexStart)
         {
             // leftover spec?
-            enforceEx!FormatException(
-                    fmt.length == 0,
-                    text("Orphan format specifier: %", fmt));
+            enforceFmt(fmt.length == 0,
+                text("Orphan format specifier: %", fmt));
             break;
         }
         if (spec.width == spec.DYNAMIC)
@@ -909,9 +911,8 @@ struct FormatSpec(Char)
                     trailing = trailing[1 .. $];
                     width = -.parse!(typeof(width))(trailing);
                     i = 0;
-                    enforceEx!FormatException(
-                            trailing[i++] == '$',
-                            "$ expected");
+                    enforceFmt(trailing[i++] == '$',
+                        "$ expected");
                 }
                 else
                 {
@@ -922,9 +923,8 @@ struct FormatSpec(Char)
             case '1': .. case '9':
                 auto tmp = trailing[i .. $];
                 const widthOrArgIndex = .parse!uint(tmp);
-                enforceEx!FormatException(
-                        tmp.length,
-                        text("Incorrect format specifier %", trailing[i .. $]));
+                enforceFmt(tmp.length,
+                    text("Incorrect format specifier %", trailing[i .. $]));
                 i = tmp.ptr - trailing.ptr;
                 if (tmp.startsWith('$'))
                 {
@@ -946,9 +946,8 @@ struct FormatSpec(Char)
                         indexEnd = .parse!(typeof(indexEnd))(tmp);
                     }
                     i = tmp.ptr - trailing.ptr;
-                    enforceEx!FormatException(
-                            trailing[i++] == '$',
-                            "$ expected");
+                    enforceFmt(trailing[i++] == '$',
+                        "$ expected");
                 }
                 else
                 {
@@ -967,9 +966,8 @@ struct FormatSpec(Char)
                         trailing = trailing[i .. $];
                         i = 0;
                         precision = -.parse!int(trailing);
-                        enforceEx!FormatException(
-                                trailing[i++] == '$',
-                                "$ expected");
+                        enforceFmt(trailing[i++] == '$',
+                            "$ expected");
                     }
                     else
                     {
@@ -1276,7 +1274,8 @@ unittest
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
 {
-    enforceEx!FormatException(f.spec == 's', "null");
+    enforceFmt(f.spec == 's',
+        "null");
 
     put(w, "null");
 }
@@ -1334,9 +1333,8 @@ private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, ref FormatS
         fs.spec == 'b' ? 2 :
         fs.spec == 's' || fs.spec == 'd' || fs.spec == 'u' ? 10 :
         0;
-    enforceEx!FormatException(
-            base > 0,
-            "integral");
+    enforceFmt(base > 0,
+        "integral");
 
     bool negative = (base == 10 && arg < 0);
     if (negative)
@@ -1536,9 +1534,8 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         }
         return;
     }
-    enforceEx!FormatException(
-            std.algorithm.find("fgFGaAeEs", fs.spec).length,
-            "floating");
+    enforceFmt(std.algorithm.find("fgFGaAeEs", fs.spec).length,
+        "floating");
     version (Win64)
     {
         if (isnan(val)) // snprintf writes 1.#QNAN
@@ -1591,9 +1588,8 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
             // negative precision is same as no precision specified
             fs.precision == fs.UNSPECIFIED ? -1 : fs.precision,
             val);
-    enforceEx!FormatException(
-            n >= 0,
-            "floating point formatting failure");
+    enforceFmt(n >= 0,
+        "floating point formatting failure");
     put(w, buf[0 .. strlen(buf.ptr)]);
 }
 
@@ -2298,9 +2294,8 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     AssocArrayTypeOf!T val = obj;
 
-    enforceEx!FormatException(
-            f.spec == 's' || f.spec == '(',
-            "associative");
+    enforceFmt(f.spec == 's' || f.spec == '(',
+        "associative");
 
     enum const(Char)[] defSpec = "%s" ~ f.keySeparator ~ "%s" ~ f.seqSeparator;
     auto fmtSpec = f.spec == '(' ? f.nested : defSpec;
@@ -2437,7 +2432,7 @@ void enforceValidFormatSpec(T, Char)(ref FormatSpec!Char f)
 {
     static if (!isInputRange!T && hasToString!(T, Char) != 4)
     {
-        enforceEx!FormatException(f.spec == 's',
+        enforceFmt(f.spec == 's',
             format("Expected '%%s' format specifier for type '%s'", T.stringof));
     }
 }
@@ -2861,7 +2856,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
             }
             else
             {
-                enforceEx!FormatException(f.spec == 'X' || f.spec == 'x',
+                enforceFmt(f.spec == 'X' || f.spec == 'x',
                    "Expected one of %s, %x or %X for pointer type.");
                 formatValue(w, cast(ulong) p, f);
             }
