@@ -407,22 +407,28 @@ My friends are John, Nancy.
  */
 uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
 {
-    enum len = args.length;
-    void function(Writer, const(void)*, ref FormatSpec!Char) funs[len] = void;
-    const(void)* argsAddresses[len] = void;
+    alias FPfmt = void function(Writer, const(void)*, ref FormatSpec!Char) @safe pure nothrow;
+
+    auto spec = FormatSpec!Char(fmt);
+
+    FPfmt[A.length] funs;
+    const(void)*[A.length] argsAddresses;
     if (!__ctfe)
     {
-        foreach (i, arg; args)
+        foreach (i, Arg; A)
         {
-            funs[i] = &formatGeneric!(Writer, typeof(arg), Char);
+            funs[i] = ()@trusted{ return cast(FPfmt)&formatGeneric!(Writer, Arg, Char); }();
             // We can safely cast away shared because all data is either
             // immutable or completely owned by this function.
-            argsAddresses[i] = cast(const(void*)) &args[ i ];
+            argsAddresses[i] = (ref arg)@trusted{ return cast(const void*) &arg; }(args[i]);
+
+            // Reflect formatting @safe/pure ability of each arguments to this function
+            if (0) formatValue(w, args[i], spec);
         }
     }
+
     // Are we already done with formats? Then just dump each parameter in turn
     uint currentArg = 0;
-    auto spec = FormatSpec!Char(fmt);
     while (spec.writeUpToNextSpec(w))
     {
         if (currentArg == funs.length && !spec.indexStart)
@@ -502,6 +508,13 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
         }
     }
     return currentArg;
+}
+
+@safe pure unittest
+{
+    auto w = appender!string();
+    formattedWrite(w, "%s %d", "@safe/pure", 42);
+    assert(w.data == "@safe/pure 42");
 }
 
 /**
@@ -841,16 +854,11 @@ struct FormatSpec(Char)
             case '(':
                 // Embedded format specifier.
                 auto j = i + 1;
-                void check(bool condition)
-                {
-                    enforce(
-                        condition,
-                        text("Incorrect format specifier: %", trailing[i .. $]));
-                }
                 // Get the matching balanced paren
                 for (uint innerParens;;)
                 {
-                    check(j < trailing.length);
+                    enforce(j < trailing.length,
+                        text("Incorrect format specifier: %", trailing[i .. $]));
                     if (trailing[j++] != '%')
                     {
                         // skip, we're waiting for %( and %)
@@ -1146,7 +1154,7 @@ struct FormatSpec(Char)
                 "\ntrailing = ", trailing, "\n");
     }
 }
-unittest
+@safe pure unittest
 {
     //Test the example
     auto a = appender!(string)();
