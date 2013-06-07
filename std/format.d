@@ -2874,33 +2874,34 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
         else
         {
             const p = val;
+            const pnum = ()@trusted{ return cast(ulong) p; }();
             if (f.spec == 's')
             {
                 FormatSpec!Char fs = f; // fs is copy for change its values.
                 fs.spec = 'X';
-                formatValue(w, cast(ulong) p, fs);
+                formatValue(w, pnum, fs);
             }
             else
             {
                 enforceFmt(f.spec == 'X' || f.spec == 'x',
                    "Expected one of %s, %x or %X for pointer type.");
-                formatValue(w, cast(ulong) p, f);
+                formatValue(w, pnum, f);
             }
         }
     }
 }
 
-unittest
+@safe pure unittest
 {
     // pointer
     auto r = retro([1,2,3,4]);
-    auto p = &r;
+    auto p = ()@trusted{ auto p = &r; return p; }();
     formatTest( p, "[4, 3, 2, 1]" );
     assert(p.empty);
     p = null;
     formatTest( p, "null" );
 
-    auto q = cast(void*)0xFFEECCAA;
+    auto q = ()@trusted{ return cast(void*)0xFFEECCAA; }();
     formatTest( q, "FFEECCAA" );
 }
 
