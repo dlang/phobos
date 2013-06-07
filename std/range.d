@@ -505,7 +505,7 @@ auto h = r.front; // can get the front of the range of non-void type
 The semantics of an input range (not checkable during compilation) are
 assumed to be the following ($(D r) is an object of type $(D R)):
 
-$(UL $(LI $(D r.empty) returns $(D false) iff there is more data
+$(UL $(LI $(D r.empty) returns $(D false) if there is more data
 available in the range.)  $(LI $(D r.front) returns the current
 element in the range. It may return by value or by reference. Calling
 $(D r.front) is allowed only if calling $(D r.empty) has, or would
@@ -969,7 +969,7 @@ unittest
 }
 
 /**
-Returns $(D true) iff $(D R) supports the $(D moveFront) primitive,
+Returns $(D true) if $(D R) supports the $(D moveFront) primitive,
 as well as $(D moveBack) and $(D moveAt) if it's a bidirectional or
 random access range.  These may be explicitly implemented, or may work
 via the default behavior of the module level functions $(D moveFront)
@@ -4072,7 +4072,7 @@ private template lengthType(R) { alias typeof((inout int = 0){ R r = void; retur
    ----
 
    $(D Zip) offers the lowest range facilities of all components, e.g. it
-   offers random access iff all ranges offer random access, and also
+   offers random access if all ranges offer random access, and also
    offers mutation and swapping if all ranges offer it. Due to this, $(D
    Zip) is extremely powerful because it allows manipulating several
    ranges in lockstep. For example, the following code sorts two arrays
