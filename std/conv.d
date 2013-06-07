@@ -809,7 +809,7 @@ T toImpl(T, S)(S value)
                         ~ S.stringof ~ " to a "
                         ~ T.stringof));
         auto result = new Char[raw.length / Char.sizeof];
-        memcpy(result.ptr, value.ptr, value.length);
+        ()@trusted{ memcpy(result.ptr, value.ptr, value.length); }();
         return cast(T) result;
     }
     else static if (isPointer!S && is(S : const(char)*))
@@ -823,7 +823,7 @@ T toImpl(T, S)(S value)
     }
 }
 
-unittest
+/*@safe pure */unittest
 {
     // string to string conversion
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -864,7 +864,7 @@ unittest
     }
 }
 
-unittest
+@safe pure unittest
 {
     // Conversion reinterpreting void array to string
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -877,7 +877,7 @@ unittest
     assert(c == "abcx");
 }
 
-unittest
+/*@safe pure */unittest
 {
     // char* to string conversion
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -887,7 +887,7 @@ unittest
     assert(to!string("foo\0".ptr) == "foo");
 }
 
-unittest
+@safe pure unittest
 {
     // Conversion representing bool value with string
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -898,15 +898,15 @@ unittest
     assert(to!string(b) == "true");
 }
 
-unittest
+@safe pure unittest
 {
     // Conversion representing character value with string
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
 
     alias TypeTuple!(
-        char, wchar, dchar,
-        const(char), const(wchar), const(dchar),
-        immutable(char), immutable(wchar), immutable(dchar)) AllChars;
+         char, const( char), immutable( char),
+        wchar, const(wchar), immutable(wchar),
+        dchar, const(dchar), immutable(dchar)) AllChars;
     foreach (Char1; AllChars)
     {
         foreach (Char2; AllChars)
@@ -928,7 +928,7 @@ unittest
     assert(s2 == "foo");
 }
 
-unittest
+@safe pure unittest
 {
     // Conversion representing integer values with string
 
@@ -969,7 +969,7 @@ unittest
     });
 }
 
-unittest
+@safe pure unittest
 {
     // Conversion representing dynamic/static array with string
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -977,12 +977,14 @@ unittest
     long[] b = [ 1, 3, 5 ];
     auto s = to!string(b);
     assert(to!string(b) == "[1, 3, 5]", s);
-
+}
+/*@safe pure */unittest // sprintf issue
+{
     double[2] a = [ 1.5, 2.5 ];
     assert(to!string(a) == "[1.5, 2.5]");
 }
 
-unittest
+/*@safe pure */unittest
 {
     // Conversion representing associative array with string
     int[string] a = ["0":1, "1":2];
