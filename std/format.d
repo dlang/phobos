@@ -290,83 +290,82 @@ $(I FormatChar):
     $(I FormatChar) is lower case, or $(B INF) or $(B INFINITY) if upper.
     </dl>
 
-Examples:
+    Examples:
+    -------------------------
+    import std.c.stdio;
+    import std.format;
 
--------------------------
-import std.c.stdio;
-import std.format;
+    void main()
+    {
+        auto writer = appender!string();
+        formattedWrite(writer, "%s is the ultimate %s.", 42, "answer");
+        assert(writer.data == "42 is the ultimate answer.");
+        // Clear the writer
+        writer = appender!string();
+        formattedWrite(writer, "Date: %2$s %1$s", "October", 5);
+        assert(writer.data == "Date: 5 October");
+    }
+    ------------------------
 
-void main()
-{
-    auto writer = appender!string();
-    formattedWrite(writer, "%s is the ultimate %s.", 42, "answer");
-    assert(writer.data == "42 is the ultimate answer.");
-    // Clear the writer
-    writer = appender!string();
-    formattedWrite(writer, "Date: %2$s %1$s", "October", 5);
-    assert(writer.data == "Date: 5 October");
-}
-------------------------
+    The positional and non-positional styles can be mixed in the same
+    format string. (POSIX leaves this behavior undefined.) The internal
+    counter for non-positional parameters tracks the next parameter after
+    the largest positional parameter already used.
 
-The positional and non-positional styles can be mixed in the same
-format string. (POSIX leaves this behavior undefined.) The internal
-counter for non-positional parameters tracks the next parameter after
-the largest positional parameter already used.
+    Example using array and nested array formatting:
+    -------------------------
+    import std.stdio;
 
-Example using array and nested array formatting:
--------------------------
-import std.stdio;
-
-void main()
-{
-    writefln("My items are %(%s %).", [1,2,3]);
-    writefln("My items are %(%s, %).", [1,2,3]);
-}
--------------------------
-   The output is:
+    void main()
+    {
+        writefln("My items are %(%s %).", [1,2,3]);
+        writefln("My items are %(%s, %).", [1,2,3]);
+    }
+    -------------------------
+    The output is:
 <pre class=console>
 My items are 1 2 3.
 My items are 1, 2, 3.
 </pre>
 
-   The trailing end of the sub-format string following the specifier for each
-   item is interpreted as the array delimiter, and is therefore omitted
-   following the last array item. The $(B %|) delimiter specifier may be used
-   to indicate where the delimiter begins, so that the portion of the format
-   string prior to it will be retained in the last array element:
--------------------------
-import std.stdio;
+    The trailing end of the sub-format string following the specifier for each
+    item is interpreted as the array delimiter, and is therefore omitted
+    following the last array item. The $(B %|) delimiter specifier may be used
+    to indicate where the delimiter begins, so that the portion of the format
+    string prior to it will be retained in the last array element:
+    -------------------------
+    import std.stdio;
 
-void main()
-{
-    writefln("My items are %(-%s-%|, %).", [1,2,3]);
-}
--------------------------
-   which gives the output:
+    void main()
+    {
+        writefln("My items are %(-%s-%|, %).", [1,2,3]);
+    }
+    -------------------------
+    which gives the output:
 <pre class=console>
 My items are -1-, -2-, -3-.
 </pre>
 
-   These compound format specifiers may be nested in the case of a nested
-   array argument:
--------------------------
-import std.stdio;
-void main() {
-     auto mat = [[1, 2, 3],
-                 [4, 5, 6],
-                 [7, 8, 9]];
+    These compound format specifiers may be nested in the case of a nested
+    array argument:
+    -------------------------
+    import std.stdio;
+    void main() {
+         auto mat = [[1, 2, 3],
+                     [4, 5, 6],
+                     [7, 8, 9]];
 
-     writefln("%(%(%d %)\n%)", mat);
-     writeln();
+         writefln("%(%(%d %)\n%)", mat);
+         writeln();
 
-     writefln("[%(%(%d %)\n %)]", mat);
-     writeln();
+         writefln("[%(%(%d %)\n %)]", mat);
+         writeln();
 
-     writefln("[%([%(%d %)]%|\n %)]", mat);
-     writeln();
-}
--------------------------
-   The output is:
+         writefln("[%([%(%d %)]%|\n %)]", mat);
+         writeln();
+    }
+    -------------------------
+    The output is:
 <pre class=console>
 1 2 3
 4 5 6
@@ -381,19 +380,19 @@ void main() {
  [7 8 9]]
 </pre>
 
-   Inside a compound format specifier, strings and characters are escaped
-   automatically. To avoid this behavior, add $(B '-') flag to
-   $(D "%$(LPAREN)").
--------------------------
-import std.stdio;
+    Inside a compound format specifier, strings and characters are escaped
+    automatically. To avoid this behavior, add $(B '-') flag to
+    $(D "%$(LPAREN)").
+    -------------------------
+    import std.stdio;
 
-void main()
-{
-    writefln("My friends are %s.", ["John", "Nancy"]);
-    writefln("My friends are %(%s, %).", ["John", "Nancy"]);
-    writefln("My friends are %-(%s, %).", ["John", "Nancy"]);
-}
--------------------------
+    void main()
+    {
+        writefln("My friends are %s.", ["John", "Nancy"]);
+        writefln("My friends are %(%s, %).", ["John", "Nancy"]);
+        writefln("My friends are %-(%s, %).", ["John", "Nancy"]);
+    }
+    -------------------------
    which gives the output:
 <pre class=console>
 My friends are ["John", "Nancy"].
@@ -586,29 +585,29 @@ template FormatSpec(Char)
 }
 
 /**
-   A General handler for $(D printf) style format specifiers. Used for building more
-   specific formatting functions.
-
-   Example:
-----
-auto a = appender!(string)();
-auto fmt = "Number: %2.4e\nString: %s";
-auto f = FormatSpec!char(fmt);
-
-f.writeUpToNextSpec(a);
-
-assert(a.data == "Number: ");
-assert(f.trailing == "\nString: %s");
-assert(f.spec == 'e');
-assert(f.width == 2);
-assert(f.precision == 4);
-
-f.writeUpToNextSpec(a);
-
-assert(a.data == "Number: \nString: ");
-assert(f.trailing == "");
-assert(f.spec == 's');
-----
+ * A General handler for $(D printf) style format specifiers. Used for building more
+ * specific formatting functions.
+ *
+ * Example:
+ * ----
+ * auto a = appender!(string)();
+ * auto fmt = "Number: %2.4e\nString: %s";
+ * auto f = FormatSpec!char(fmt);
+ *
+ * f.writeUpToNextSpec(a);
+ *
+ * assert(a.data == "Number: ");
+ * assert(f.trailing == "\nString: %s");
+ * assert(f.spec == 'e');
+ * assert(f.width == 2);
+ * assert(f.precision == 4);
+ *
+ * f.writeUpToNextSpec(a);
+ *
+ * assert(a.data == "Number: \nString: ");
+ * assert(f.trailing == "");
+ * assert(f.spec == 's');
+ * ----
  */
 struct FormatSpec(Char)
     if (is(Unqual!Char == Char))
@@ -617,63 +616,76 @@ struct FormatSpec(Char)
        Minimum _width, default $(D 0).
      */
     int width = 0;
+
     /**
        Precision. Its semantics depends on the argument type. For
        floating point numbers, _precision dictates the number of
        decimals printed.
      */
     int precision = UNSPECIFIED;
+
     /**
        Special value for width and precision. $(D DYNAMIC) width or
        precision means that they were specified with $(D '*') in the
        format string and are passed at runtime through the varargs.
      */
     enum int DYNAMIC = int.max;
+
     /**
        Special value for precision, meaning the format specifier
        contained no explicit precision.
      */
     enum int UNSPECIFIED = DYNAMIC - 1;
+
     /**
        The actual format specifier, $(D 's') by default.
     */
     char spec = 's';
+
     /**
        Index of the argument for positional parameters, from $(D 1) to
        $(D ubyte.max). ($(D 0) means not used).
     */
     ubyte indexStart;
+
     /**
        Index of the last argument for positional parameter range, from
        $(D 1) to $(D ubyte.max). ($(D 0) means not used).
     */
     ubyte indexEnd;
-    version(StdDdoc) {
+
+    version(StdDdoc)
+    {
         /**
          The format specifier contained a $(D '-') ($(D printf)
          compatibility).
          */
         bool flDash;
+
         /**
          The format specifier contained a $(D '0') ($(D printf)
          compatibility).
          */
         bool flZero;
+
         /**
          The format specifier contained a $(D ' ') ($(D printf)
          compatibility).
          */
         bool flSpace;
+
         /**
          The format specifier contained a $(D '+') ($(D printf)
          compatibility).
          */
         bool flPlus;
+
         /**
          The format specifier contained a $(D '#') ($(D printf)
          compatibility).
          */
         bool flHash;
+
         // Fake field to allow compilation
         ubyte allFlags;
     }
@@ -745,7 +757,8 @@ struct FormatSpec(Char)
 
     bool writeUpToNextSpec(OutputRange)(OutputRange writer)
     {
-        if (trailing.empty) return false;
+        if (trailing.empty)
+            return false;
         for (size_t i = 0; i < trailing.length; ++i)
         {
             if (trailing[i] != '%') continue;
@@ -908,7 +921,7 @@ struct FormatSpec(Char)
                 break;
             case '1': .. case '9':
                 auto tmp = trailing[i .. $];
-                const widthOrArgIndex = .parse!(uint)(tmp);
+                const widthOrArgIndex = .parse!uint(tmp);
                 enforceEx!FormatException(
                         tmp.length,
                         text("Incorrect format specifier %", trailing[i .. $]));
@@ -969,7 +982,7 @@ struct FormatSpec(Char)
                     // negative precision, as good as 0
                     precision = 0;
                     auto tmp = trailing[i .. $];
-                    .parse!(int)(tmp); // skip digits
+                    .parse!int(tmp); // skip digits
                     i = tmp.ptr - trailing.ptr;
                 }
                 else if (isDigit(trailing[i]))
@@ -2909,16 +2922,16 @@ unittest
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (is(T == delegate) && !is(T == enum) && !hasToString!(T, Char))
 {
-    alias FunctionAttribute FA;
+    alias FA = FunctionAttribute;
     if (functionAttributes!T & FA.pure_)    formatValue(w, "pure ", f);
     if (functionAttributes!T & FA.nothrow_) formatValue(w, "nothrow ", f);
     if (functionAttributes!T & FA.ref_)     formatValue(w, "ref ", f);
     if (functionAttributes!T & FA.property) formatValue(w, "@property ", f);
     if (functionAttributes!T & FA.trusted)  formatValue(w, "@trusted ", f);
     if (functionAttributes!T & FA.safe)     formatValue(w, "@safe ", f);
-    formatValue(w, ReturnType!(T).stringof,f);
-    formatValue(w, " delegate",f);
-    formatValue(w, ParameterTypeTuple!(T).stringof,f);
+    formatValue(w, ReturnType!T.stringof, f);
+    formatValue(w, " delegate", f);
+    formatValue(w, ParameterTypeTuple!T.stringof, f);
 }
 
 unittest

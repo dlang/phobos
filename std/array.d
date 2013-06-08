@@ -2130,22 +2130,22 @@ struct Appender(A : T[], T)
     private struct Data
     {
         size_t capacity;
-        Unqual!(T)[] arr;
+        Unqual!T[] arr;
     }
 
     private Data* _data;
 
-/**
-Construct an appender with a given array.  Note that this does not copy the
-data.  If the array has a larger capacity as determined by arr.capacity,
-it will be used by the appender.  After initializing an appender on an array,
-appending to the original array will reallocate.
-*/
+    /**
+     * Construct an appender with a given array.  Note that this does not copy the
+     * data.  If the array has a larger capacity as determined by arr.capacity,
+     * it will be used by the appender.  After initializing an appender on an array,
+     * appending to the original array will reallocate.
+     */
     this(T[] arr)
     {
         // initialize to a given array.
         _data = new Data;
-        _data.arr = cast(Unqual!(T)[])arr;
+        _data.arr = cast(Unqual!T[])arr;
 
         if (__ctfe)
             return;
@@ -2161,11 +2161,11 @@ appending to the original array will reallocate.
         _data.capacity = arr.length;
     }
 
-/**
-Reserve at least newCapacity elements for appending.  Note that more elements
-may be reserved than requested.  If newCapacity < capacity, then nothing is
-done.
-*/
+    /**
+     * Reserve at least newCapacity elements for appending.  Note that more elements
+     * may be reserved than requested.  If newCapacity <= capacity, then nothing is
+     * done.
+     */
     void reserve(size_t newCapacity)
     {
         if (!_data)
@@ -2184,11 +2184,11 @@ done.
                 else
                 {
                     // avoid restriction of @disable this()
-                    _data.arr = _data.arr[0.._data.capacity];
+                    _data.arr = _data.arr[0 .. _data.capacity];
                     foreach (i; _data.capacity .. newCapacity)
                         _data.arr ~= Unqual!T.init;
                     assert(_data.arr.length == newCapacity);
-                    _data.arr = _data.arr[0..len];
+                    _data.arr = _data.arr[0 .. len];
                 }
                 _data.capacity = newCapacity;
                 return;
@@ -2208,25 +2208,25 @@ done.
                 _data.capacity = bi.size / T.sizeof;
                 if (len)
                     memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
-                _data.arr = (cast(Unqual!(T)*)bi.base)[0..len];
+                _data.arr = (cast(Unqual!T*)bi.base)[0 .. len];
                 // leave the old data, for safety reasons
             }
         }
     }
 
-/**
-Returns the capacity of the array (the maximum number of elements the
-managed array can accommodate before triggering a reallocation).  If any
-appending will reallocate, $(D capacity) returns $(D 0).
- */
+    /**
+     * Returns the capacity of the array (the maximum number of elements the
+     * managed array can accommodate before triggering a reallocation).  If any
+     * appending will reallocate, $(D capacity) returns $(D 0).
+     */
     @property size_t capacity() const
     {
         return _data ? _data.capacity : 0;
     }
 
-/**
-Returns the managed array.
- */
+    /**
+     * Returns the managed array.
+     */
     @property inout(T)[] data() inout
     {
         return cast(typeof(return))(_data ? _data.arr : null);
@@ -2251,10 +2251,10 @@ Returns the managed array.
                 else
                 {
                     // avoid restriction of @disable this()
-                    _data.arr = _data.arr[0.._data.capacity];
+                    _data.arr = _data.arr[0 .. _data.capacity];
                     foreach (i; _data.capacity .. reqlen)
                         _data.arr ~= Unqual!T.init;
-                    _data.arr = _data.arr[0..len];
+                    _data.arr = _data.arr[0 .. len];
                 }
                 _data.capacity = reqlen;
                 return;
@@ -2278,7 +2278,7 @@ Returns the managed array.
                 _data.capacity = bi.size / T.sizeof;
                 if (len)
                     memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
-                _data.arr = (cast(Unqual!(T)*)bi.base)[0..len];
+                _data.arr = (cast(Unqual!T*)bi.base)[0 .. len];
                 // leave the old data, for safety reasons
             }
         }
@@ -2296,25 +2296,26 @@ Returns the managed array.
 
     private template canPutItem(U)
     {
-        enum bool canPutItem = isImplicitlyConvertible!(U, T) ||
+        enum bool canPutItem =
+            isImplicitlyConvertible!(U, T) ||
             isSomeChar!T && isSomeChar!U;
     }
-
     private template canPutConstRange(Range)
     {
-        enum bool canPutConstRange = isInputRange!(Unqual!Range) &&
+        enum bool canPutConstRange =
+            isInputRange!(Unqual!Range) &&
             !isInputRange!Range;
     }
-
     private template canPutRange(Range)
     {
-        enum bool canPutRange = isInputRange!Range &&
+        enum bool canPutRange =
+            isInputRange!Range &&
             is(typeof(Appender.init.put(Range.init.front)));
     }
 
-/**
-Appends one item to the managed array.
- */
+    /**
+     * Appends one item to the managed array.
+     */
     void put(U)(U item) if (canPutItem!U)
     {
         static if (isSomeChar!T && isSomeChar!U && T.sizeof < U.sizeof)
@@ -2340,9 +2341,9 @@ Appends one item to the managed array.
         p(items);
     }
 
-/**
-Appends an entire range to the managed array.
- */
+    /**
+     * Appends an entire range to the managed array.
+     */
     void put(Range)(Range items) if (canPutRange!Range)
     {
         // note, we disable this branch for appending one type of char to
@@ -2369,10 +2370,10 @@ Appends an entire range to the managed array.
             ensureAddable(items.length);
             immutable len = _data.arr.length;
             immutable newlen = len + items.length;
-            _data.arr = _data.arr.ptr[0..newlen];
+            _data.arr = _data.arr.ptr[0 .. newlen];
             static if (is(typeof(_data.arr[] = items[])))
             {
-                _data.arr.ptr[len..newlen] = items[];
+                _data.arr.ptr[len .. newlen] = items[];
             }
             else
             {
@@ -2391,9 +2392,9 @@ Appends an entire range to the managed array.
         }
     }
 
-/**
-Appends one item to the managed array.
- */
+    /**
+     * Appends one item to the managed array.
+     */
     void opOpAssign(string op : "~", U)(U item) if (canPutItem!U)
     {
         put(item);
@@ -2405,9 +2406,9 @@ Appends one item to the managed array.
         put(items);
     }
 
-/**
-Appends an entire range to the managed array.
- */
+    /**
+     * Appends an entire range to the managed array.
+     */
     void opOpAssign(string op : "~", Range)(Range items) if (canPutRange!Range)
     {
         put(items);
@@ -2416,32 +2417,32 @@ Appends an entire range to the managed array.
     // only allow overwriting data on non-immutable and non-const data
     static if (!is(T == immutable) && !is(T == const))
     {
-/**
-Clears the managed array.  This allows the elements of the array to be reused
-for appending.
-
-Note that clear is disabled for immutable or const element types, due to the
-possibility that $(D Appender) might overwrite immutable data.
-*/
+        /**
+         * Clears the managed array.  This allows the elements of the array to be reused
+         * for appending.
+         *
+         * Note that clear is disabled for immutable or const element types, due to the
+         * possibility that $(D Appender) might overwrite immutable data.
+         */
         void clear()
         {
             if (_data)
             {
-                _data.arr = _data.arr.ptr[0..0];
+                _data.arr = _data.arr.ptr[0 .. 0];
             }
         }
 
-/**
-Shrinks the managed array to the given length.
-
-Throws: $(D Exception) if newlength is greater than the current array length.
-*/
+        /**
+         * Shrinks the managed array to the given length.
+         *
+         * Throws: $(D Exception) if newlength is greater than the current array length.
+         */
         void shrinkTo(size_t newlength)
         {
             if (_data)
             {
                 enforce(newlength <= _data.arr.length);
-                _data.arr = _data.arr.ptr[0..newlength];
+                _data.arr = _data.arr.ptr[0 .. newlength];
             }
             else
                 enforce(newlength == 0);
@@ -2450,10 +2451,10 @@ Throws: $(D Exception) if newlength is greater than the current array length.
 }
 
 /**
-An appender that can update an array in-place.  It forwards all calls to an
-underlying appender implementation.  Any calls made to the appender also update
-the pointer to the original array passed in.
-*/
+ * An appender that can update an array in-place.  It forwards all calls to an
+ * underlying appender implementation.  Any calls made to the appender also update
+ * the pointer to the original array passed in.
+ */
 struct RefAppender(A : T[], T)
 {
     private
@@ -2462,16 +2463,16 @@ struct RefAppender(A : T[], T)
         T[] *arr;
     }
 
-/**
-Construct a ref appender with a given array reference.  This does not copy the
-data.  If the array has a larger capacity as determined by arr.capacity, it
-will be used by the appender.  $(D RefAppender) assumes that arr is a non-null
-value.
-
-Note, do not use builtin appending (i.e. ~=) on the original array passed in
-until you are done with the appender, because calls to the appender override
-those appends.
-*/
+    /**
+     * Construct a ref appender with a given array reference.  This does not copy the
+     * data.  If the array has a larger capacity as determined by arr.capacity, it
+     * will be used by the appender.  $(D RefAppender) assumes that arr is a non-null
+     * value.
+     *
+     * Note, do not use builtin appending (i.e. ~=) on the original array passed in
+     * until you are done with the appender, because calls to the appender override
+     * those appends.
+     */
     this(T[] *arr)
     {
         impl = Appender!(A, T)(*arr);
@@ -2487,9 +2488,9 @@ those appends.
 
     private alias Appender!(A, T) AppenderType;
 
-/**
-Appends one item to the managed array.
- */
+    /**
+     * Appends one item to the managed array.
+     */
     void opOpAssign(string op : "~", U)(U item) if (AppenderType.canPutItem!U)
     {
         scope(exit) *this.arr = impl.data;
@@ -2503,28 +2504,28 @@ Appends one item to the managed array.
         impl.put(items);
     }
 
-/**
-Appends an entire range to the managed array.
- */
+    /**
+     * Appends an entire range to the managed array.
+     */
     void opOpAssign(string op : "~", Range)(Range items) if (AppenderType.canPutRange!Range)
     {
         scope(exit) *this.arr = impl.data;
         impl.put(items);
     }
 
-/**
-Returns the capacity of the array (the maximum number of elements the
-managed array can accommodate before triggering a reallocation).  If any
-appending will reallocate, $(D capacity) returns $(D 0).
- */
+    /**
+     * Returns the capacity of the array (the maximum number of elements the
+     * managed array can accommodate before triggering a reallocation).  If any
+     * appending will reallocate, $(D capacity) returns $(D 0).
+     */
     @property size_t capacity() const
     {
         return impl.capacity;
     }
 
-/**
-Returns the managed array.
- */
+    /**
+     * Returns the managed array.
+     */
     @property inout(T)[] data() inout
     {
         return impl.data;
@@ -2532,7 +2533,7 @@ Returns the managed array.
 }
 
 /++
-    Convenience function that returns an $(D Appender!(A)) object initialized
+    Convenience function that returns an $(D Appender!A) object initialized
     with $(D array).
  +/
 Appender!(E[]) appender(A : E[], E)(A array = null)
@@ -2636,7 +2637,7 @@ unittest
 }
 
 /++
-    Convenience function that returns a $(D RefAppender!(A)) object initialized
+    Convenience function that returns a $(D RefAppender!A) object initialized
     with $(D array).  Don't use null for the $(D array) pointer, use the other
     version of $(D appender) instead.
  +/

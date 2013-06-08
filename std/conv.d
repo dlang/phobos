@@ -81,17 +81,17 @@ private
 {
     template isImaginary(T)
     {
-        enum bool isImaginary = staticIndexOf!(Unqual!(T),
+        enum bool isImaginary = staticIndexOf!(Unqual!T,
                 ifloat, idouble, ireal) >= 0;
     }
     template isComplex(T)
     {
-        enum bool isComplex = staticIndexOf!(Unqual!(T),
+        enum bool isComplex = staticIndexOf!(Unqual!T,
                 cfloat, cdouble, creal) >= 0;
     }
     template isNarrowInteger(T)
     {
-        enum bool isNarrowInteger = staticIndexOf!(Unqual!(T),
+        enum bool isNarrowInteger = staticIndexOf!(Unqual!T,
                 byte, ubyte, short, ushort) >= 0;
     }
 
@@ -303,25 +303,25 @@ unittest
 // Tests for issue 8729: do NOT skip leading WS
 unittest
 {
-    foreach(T;TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assertThrown!ConvException(to!T(" 0"));
         assertThrown!ConvException(to!T(" 0", 8));
     }
-    foreach(T;TypeTuple!(float, double, real))
+    foreach (T; TypeTuple!(float, double, real))
     {
         assertThrown!ConvException(to!T(" 0"));
     }
 
-    assertThrown!ConvException(to!bool  (" true"));
+    assertThrown!ConvException(to!bool(" true"));
 
-    alias typeof(null) NullType;
+    alias NullType = typeof(null);
     assertThrown!ConvException(to!NullType(" null"));
 
-    alias int[] ARR;
+    alias ARR = int[];
     assertThrown!ConvException(to!ARR(" [1]"));
 
-    alias int[int] AA;
+    alias AA = int[int];
     assertThrown!ConvException(to!AA(" [1:1]"));
 }
 
@@ -333,7 +333,11 @@ T toImpl(T, S)(S value)
     if (isImplicitlyConvertible!(S, T) &&
         !isEnumStrToStr!(S, T) && !isNullToStr!(S, T))
 {
-    alias isUnsigned isUnsignedInt;
+    template isSignedInt(T)
+    {
+        enum isSignedInt = isIntegral!T && isSigned!T;
+    }
+    alias isUnsignedInt = isUnsigned;
 
     // Conversion from integer to integer, and changing its sign
     static if (isUnsignedInt!S && isSignedInt!T && S.sizeof == T.sizeof)
@@ -357,11 +361,6 @@ unittest
     assert(e == E.a);
 }
 
-private template isSignedInt(T)
-{
-    enum isSignedInt = isIntegral!T && isSigned!T;
-}
-
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -378,18 +377,18 @@ unittest
     {
         alias Unsigned!S U;
 
-        foreach (Sint; TypeTuple!(S, const(S), immutable(S)))
-        foreach (Uint; TypeTuple!(U, const(U), immutable(U)))
+        foreach (Sint; TypeTuple!(S, const S, immutable S))
+        foreach (Uint; TypeTuple!(U, const U, immutable U))
         {
             // positive overflow
             Uint un = Uint.max;
-            assertThrown!ConvOverflowException(to!Sint(un), text(
-                Sint.stringof, ' ', Uint.stringof, ' ', un));
+            assertThrown!ConvOverflowException(to!Sint(un),
+                text(Sint.stringof, ' ', Uint.stringof, ' ', un));
 
             // negative overflow
             Sint sn = -1;
-            assertThrown!ConvOverflowException(to!Uint(sn), text(
-                Sint.stringof, ' ', Uint.stringof, ' ', un));
+            assertThrown!ConvOverflowException(to!Uint(sn),
+                text(Sint.stringof, ' ', Uint.stringof, ' ', un));
         }
     }
 
@@ -403,8 +402,8 @@ unittest
         static assert(U1.sizeof < S2.sizeof);
 
         // small unsigned to big signed
-        foreach (Uint; TypeTuple!(U1, const(U1), immutable(U1)))
-        foreach (Sint; TypeTuple!(S2, const(S2), immutable(S2)))
+        foreach (Uint; TypeTuple!(U1, const U1, immutable U1))
+        foreach (Sint; TypeTuple!(S2, const S2, immutable S2))
         {
             Uint un = Uint.max;
             assertNotThrown(to!Sint(un));
@@ -412,8 +411,8 @@ unittest
         }
 
         // big unsigned to small signed
-        foreach (Uint; TypeTuple!(U2, const(U2), immutable(U2)))
-        foreach (Sint; TypeTuple!(S1, const(S1), immutable(S1)))
+        foreach (Uint; TypeTuple!(U2, const U2, immutable U2))
+        foreach (Sint; TypeTuple!(S1, const S1, immutable S1))
         {
             Uint un = Uint.max;
             assertThrown(to!Sint(un));
@@ -422,16 +421,16 @@ unittest
         static assert(S1.sizeof < U2.sizeof);
 
         // small signed to big unsigned
-        foreach (Sint; TypeTuple!(S1, const(S1), immutable(S1)))
-        foreach (Uint; TypeTuple!(U2, const(U2), immutable(U2)))
+        foreach (Sint; TypeTuple!(S1, const S1, immutable S1))
+        foreach (Uint; TypeTuple!(U2, const U2, immutable U2))
         {
             Sint sn = -1;
             assertThrown!ConvOverflowException(to!Uint(sn));
         }
 
         // big signed to small unsigned
-        foreach (Sint; TypeTuple!(S2, const(S2), immutable(S2)))
-        foreach (Uint; TypeTuple!(U1, const(U1), immutable(U1)))
+        foreach (Sint; TypeTuple!(S2, const S2, immutable S2))
+        foreach (Uint; TypeTuple!(U1, const U1, immutable U1))
         {
             Sint sn = -1;
             assertThrown!ConvOverflowException(to!Uint(sn));
@@ -677,14 +676,14 @@ unittest
 }
 
 // Unittest for 6288
-version (unittest)
+unittest
 {
-    private template Identity(T)        { alias              T   Identity; }
-    private template toConst(T)         { alias        const(T)  toConst; }
-    private template toShared(T)        { alias       shared(T)  toShared; }
-    private template toSharedConst(T)   { alias shared(const(T)) toSharedConst; }
-    private template toImmutable(T)     { alias    immutable(T)  toImmutable; }
-    private template AddModifier(int n) if (0 <= n && n < 5)
+    template Identity(T)        { alias              T   Identity; }
+    template toConst(T)         { alias        const(T)  toConst; }
+    template toShared(T)        { alias       shared(T)  toShared; }
+    template toSharedConst(T)   { alias shared(const(T)) toSharedConst; }
+    template toImmutable(T)     { alias    immutable(T)  toImmutable; }
+    template AddModifier(int n) if (0 <= n && n < 5)
     {
              static if (n == 0) alias Identity       AddModifier;
         else static if (n == 1) alias toConst        AddModifier;
@@ -692,9 +691,7 @@ version (unittest)
         else static if (n == 3) alias toSharedConst  AddModifier;
         else static if (n == 4) alias toImmutable    AddModifier;
     }
-}
-unittest
-{
+
     interface I {}
     interface J {}
 
@@ -1477,10 +1474,9 @@ unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
 
-    alias TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong)
-    AllInts;
-    alias TypeTuple!(float, double, real) AllFloats;
-    alias TypeTuple!(AllInts, AllFloats) AllNumerics;
+    alias AllInts = TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong);
+    alias AllFloats = TypeTuple!(float, double, real);
+    alias AllNumerics = TypeTuple!(AllInts, AllFloats);
     // test with same type
     {
         foreach (T; AllNumerics)
@@ -1730,17 +1726,17 @@ unittest
  * was meaningfully converted.
  *
  * Example:
---------------
-string test = "123 \t  76.14";
-auto a = parse!uint(test);
-assert(a == 123);
-assert(test == " \t  76.14"); // parse bumps string
-munch(test, " \t\n\r"); // skip ws
-assert(test == "76.14");
-auto b = parse!double(test);
-assert(b == 76.14);
-assert(test == "");
---------------
+ * --------------
+ * string test = "123 \t  76.14";
+ * auto a = parse!uint(test);
+ * assert(a == 123);
+ * assert(test == " \t  76.14"); // parse bumps string
+ * munch(test, " \t\n\r"); // skip ws
+ * assert(test == "76.14");
+ * auto b = parse!double(test);
+ * assert(b == 76.14);
+ * assert(test == "");
+ * --------------
  */
 
 Target parse(Target, Source)(ref Source s)
@@ -1773,7 +1769,7 @@ Target parse(Target, Source)(ref Source s)
             if (c >= '0' && c <= '9')
             {
                 if (v >= Target.max/10 &&
-                        (v != Target.max/10|| c + sign > maxLastDigit))
+                        (v != Target.max/10 || c + sign > maxLastDigit))
                     goto Loverflow;
                 v = cast(Target) (v * 10 + (c - '0'));
                 s.popFront();
@@ -2118,9 +2114,9 @@ Target parse(Target, Source)(ref Source s)
         }
     }
 
-    if( longest_match > 0 )
+    if (longest_match > 0)
     {
-        s = s[longest_match..$];
+        s = s[longest_match .. $];
         return result ;
     }
 
@@ -2595,50 +2591,38 @@ unittest
     // printf("\n");
 }
 
-// Unittest for bug 4959
 unittest
 {
-    auto s = "0 ";
-    auto x = parse!double(s);
-    assert(s == " ");
-    assert(x == 0.0);
-}
+    // Bugzilla 4959
+    {
+        auto s = "0 ";
+        auto x = parse!double(s);
+        assert(s == " ");
+        assert(x == 0.0);
+    }
 
-// Unittest for bug 3369
-unittest
-{
+    // Bugzilla 3369
     assert(to!float("inf") == float.infinity);
     assert(to!float("-inf") == -float.infinity);
-}
 
-// Unittest for bug 6160
-unittest
-{
+    // Bugzilla 6160
     assert(6_5.536e3L == to!real("6_5.536e3"));                     // 2^16
     assert(0x1000_000_000_p10 == to!real("0x1000_000_000_p10"));    // 7.03687e+13
-}
 
-// Unittest for bug 6258
-unittest
-{
+    // Bugzilla 6258
     assertThrown!ConvException(to!real("-"));
     assertThrown!ConvException(to!real("in"));
-}
 
-// Unittest for bug 7055
-unittest
-{
+    // Bugzilla 7055
     assertThrown!ConvException(to!float("INF2"));
-}
-unittest
-{
+
     //extra stress testing
     auto ssOK    = ["1.", "1.1.1", "1.e5", "2e1e", "2a", "2e1_1",
                     "inf", "-inf", "infa", "-infa", "inf2e2", "-inf2e2"];
     auto ssKO    = ["", " ", "2e", "2e+", "2e-", "2ee", "2e++1", "2e--1", "2e_1", "+inf"];
-    foreach(s; ssOK)
+    foreach (s; ssOK)
         parse!double(s);
-    foreach(s; ssKO)
+    foreach (s; ssKO)
         assertThrown!ConvException(parse!double(s));
 }
 
@@ -2698,12 +2682,12 @@ Target parse(Target, Source)(ref Source s)
     if (isExactSomeString!Source &&
         is(Unqual!Target == bool))
 {
-    if (s.length >= 4 && icmp(s[0 .. 4], "true")==0)
+    if (s.length >= 4 && icmp(s[0 .. 4], "true") == 0)
     {
         s = s[4 .. $];
         return true;
     }
-    if (s.length >= 5 && icmp(s[0 .. 5], "false")==0)
+    if (s.length >= 5 && icmp(s[0 .. 5], "false") == 0)
     {
         s = s[5 .. $];
         return false;
@@ -2746,7 +2730,7 @@ Target parse(Target, Source)(ref Source s)
     if (isExactSomeString!Source &&
         is(Unqual!Target == typeof(null)))
 {
-    if (s.length >= 4 && icmp(s[0 .. 4], "null")==0)
+    if (s.length >= 4 && icmp(s[0 .. 4], "null") == 0)
     {
         s = s[4 .. $];
         return null;
@@ -2771,7 +2755,7 @@ unittest
     assert(m == "maybe");  // m shouldn't change on failure
 
     auto s = "NULL";
-    assert(parse!(const(NullType))(s) is null);
+    assert(parse!(const NullType)(s) is null);
 }
 
 //Used internally by parse Array/AA, to remove ascii whites
@@ -2780,7 +2764,7 @@ package void skipWS(R)(ref R r)
     static if (isSomeString!R)
     {
         //Implementation inspired from stripLeft.
-        foreach(i, dchar c; r)
+        foreach (i, dchar c; r)
         {
             if (!std.ascii.isWhite(c))
             {
@@ -2793,8 +2777,8 @@ package void skipWS(R)(ref R r)
     }
     else
     {
-        for ( ; !r.empty && std.ascii.isWhite(r.front) ; r.popFront())
-            { }
+        for (; !r.empty && std.ascii.isWhite(r.front); r.popFront())
+        {}
     }
 }
 
@@ -2870,7 +2854,7 @@ unittest
 {
     //Check proper failure
     auto s = "[ 1 , 2 , 3 ]";
-    foreach(i ; 0..s.length-1)
+    foreach (i ; 0..s.length-1)
     {
         auto ss = s[0 .. i];
         assertThrown!ConvException(parse!(int[])(ss));
@@ -2979,8 +2963,8 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     if (isExactSomeString!Source &&
         isAssociativeArray!Target && !is(Target == enum))
 {
-    alias typeof(Target.keys[0]) KeyType;
-    alias typeof(Target.values[0]) ValueType;
+    alias KeyType = typeof(Target.keys[0]);
+    alias ValType = typeof(Target.values[0]);
 
     Target result;
 
@@ -2998,7 +2982,7 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
         skipWS(s);
         parseCheck!s(keyval);
         skipWS(s);
-        auto val = parseElement!ValueType(s);
+        auto val = parseElement!ValType(s);
         skipWS(s);
         result[key] = val;
         if (s.empty) convError!(Source, Target)(s);
@@ -3028,7 +3012,7 @@ unittest
 {
     //Check proper failure
     auto s = "[1:10, 2:20, 3:30]";
-    foreach(i ; 0..s.length-1)
+    foreach (i ; 0 .. s.length-1)
     {
         auto ss = s[0 .. i];
         assertThrown!ConvException(parse!(int[int])(ss));
@@ -3107,7 +3091,7 @@ unittest
     string[] s1 = [
         `\"`, `\'`, `\?`, `\\`, `\a`, `\b`, `\f`, `\n`, `\r`, `\t`, `\v`, //Normal escapes
         //`\141`, //@@@9621@@@ Octal escapes.
-        `\x61`, 
+        `\x61`,
         `\u65E5`, `\U00012456`
         //`\&amp;`, `\&quot;`, //@@@9621@@@ Named Character Entities.
     ];
@@ -3115,7 +3099,7 @@ unittest
     const(dchar)[] s2 = [
         '\"', '\'', '\?', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v', //Normal escapes
         //'\141', //@@@9621@@@ Octal escapes.
-        '\x61', 
+        '\x61',
         '\u65E5', '\U00012456'
         //'\&amp;', '\&quot;', //@@@9621@@@ Named Character Entities.
     ];
@@ -3217,53 +3201,43 @@ Target parseElement(Target, Source)(ref Source s)
 
 
 /***************************************************************
-   Convenience functions for converting any number and types of
-   arguments into _text (the three character widths).
-
-   Example:
-----
-assert(text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz");
-assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
-assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
-----
-*/
-string text(T...)(T args)
-{
-    return textImpl!string(args);
-}
+ * Convenience functions for converting any number and types of
+ * arguments into _text (the three character widths).
+ */
+string text(T...)(T args) { return textImpl!string(args); }
 ///ditto
-wstring wtext(T...)(T args)
-{
-    return textImpl!wstring(args);
-}
+wstring wtext(T...)(T args) { return textImpl!wstring(args); }
 ///ditto
-dstring dtext(T...)(T args)
-{
-    return textImpl!dstring(args);
-}
+dstring dtext(T...)(T args) { return textImpl!dstring(args); }
 
-private S textImpl(S, U...)(U args) if (U.length == 0)
+private S textImpl(S, U...)(U args)
 {
-    return null;
+    static if (U.length == 0)
+    {
+        return null;
+    }
+    else
+    {
+        auto result = to!S(args[0]);
+        foreach (arg; args[1 .. $])
+            result ~= to!S(arg);
+        return result;
+    }
 }
-
-private S textImpl(S, U...)(U args) if (U.length > 0)
-{
-    auto result = to!S(args[0]);
-    foreach (arg; args[1 .. $]) result ~= to!S(arg);
-    return result;
-}
-
+///
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    assert(text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz");
+    assert( text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"c);
     assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
     assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
+}
+unittest
+{
     assert(text() is null);
     assert(wtext() is null);
     assert(dtext() is null);
 }
+
 
 /***************************************************************
 The $(D octal) facility is intended as an experimental facility to
