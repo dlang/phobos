@@ -151,7 +151,7 @@ endif
 DDOC=$(DMD)
 
 # Set VERSION, where the file is that contains the version string
-VERSION=../dmd/VERSION
+VERSION=../VERSION
 
 # Set SONAME, the name of the shared library.
 # The awk script will produce the last 2 digits of the version string, i.e. 2.063 produces 63
