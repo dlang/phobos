@@ -328,16 +328,25 @@ Source: $(PHOBOSSRC std/_algorithm.d)
 module std.algorithm;
 //debug = std_algorithm;
 
-import std.c.string, core.bitop;
-import std.array, std.ascii, std.container, std.conv, std.exception,
-    std.functional, std.math, std.random, std.range, std.string,
-    std.traits, std.typecons, std.typetuple, std.uni, std.utf;
+import std.container : BinaryHeap;
+import std.exception : pointsTo, enforce, to, emplace, assertThrown;
+import std.functional : unaryFun, binaryFun, adjoin;
+import std.random : Random, uniform, unpredictableSeed;
+import std.range;
+import std.string : representation, format;
+import std.typecons : tuple, Tuple;
+import std.traits : isIntegral, mostNegative, isSomeString, isMutable, Select,
+    isArray, hasElaborateAssign, isStaticArray, isNarrowString, isIterable,
+    Unqual, hasElaborateDestructor, unsigned, ForeachType, isDynamicArray,
+    hasElaborateCopyConstructor, CommonType;
+import std.typetuple : TypeTuple, staticMap, allSatisfy;
+import std.utf : UTFException, decode;
 
 version(unittest)
 {
-    import std.stdio;
+    debug(std_algorithm) import std.stdio;
     mixin(dummyRanges);
-}
+ }
 
 /**
 $(D auto map(Range)(Range r) if (isInputRange!(Unqual!Range));)
@@ -925,6 +934,8 @@ void fill(Range, Value)(Range range, Value filler)
 
 unittest
 {
+    import std.typecons;
+    import std.conv : text;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 3 ];
@@ -950,6 +961,7 @@ unittest
 }
 unittest
 {
+    import std.typecons;
     //ER8638_1 IS_NOT self assignable
     static struct ER8638_1
     {
@@ -1064,6 +1076,7 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
 
 unittest
 {
+    import std.typecons;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 3, 4, 5 ];
@@ -1147,6 +1160,7 @@ assert(s == [ 0, 0, 0, 0, 0 ]);
 void initializeAll(Range)(Range range)
     if (isInputRange!Range && hasLvalueElements!Range && hasAssignableElements!Range)
 {
+    import std.c.string : memset;
     alias ElementType!Range T;
     static if (hasElaborateAssign!T)
     {
@@ -1179,6 +1193,7 @@ void initializeAll(Range)(Range range)
 
 unittest
 {
+    import std.typecons; 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
@@ -1419,6 +1434,7 @@ unittest
 
 unittest
 {
+    import std.functional : compose, pipe;
     assert(equal(compose!(map!"2 * a", filter!"a & 1")([1,2,3,4,5]),
                     [2,6,10]));
     assert(equal(pipe!(filter!"a & 1", map!"2 * a")([1,2,3,4,5]),
@@ -2024,6 +2040,7 @@ assert(s == "HelloHello");
 */
 template forward(args...)
 {
+    import std.typecons; 
     static if (args.length)
     {
         alias arg = args[0];
@@ -2031,10 +2048,10 @@ template forward(args...)
             alias fwd = arg;
         else
             @property fwd()(){ return move(arg); }
-        alias forward = TypeTuple!(fwd, forward!(args[1..$]));
+        alias forward = std.typecons.TypeTuple!(fwd, forward!(args[1..$]));
     }
     else
-        alias forward = TypeTuple!();
+        alias forward = std.typecons.TypeTuple!();
 }
 
 unittest
@@ -2502,6 +2519,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
 
 unittest
 {
+    import std.conv : text;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto s = ",abc, de, fg,hi,";
@@ -2700,6 +2718,7 @@ if (isSomeString!Range)
 
 unittest
 {
+    import std.string : strip;
     // TDPL example, page 8
     uint[string] dictionary;
     char[][3] lines;
@@ -2876,6 +2895,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 
 unittest
 {
+    import std.conv : text;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     static assert(isInputRange!(typeof(joiner([""], ""))));
@@ -3518,6 +3538,7 @@ if (isInputRange!R &&
 
 unittest
 {
+    import std.container;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto lst = SList!int(1, 2, 5, 7, 3);
@@ -3581,6 +3602,7 @@ if (isForwardRange!R1 && isForwardRange!R2
 
 unittest
 {
+    import std.container;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto lst = SList!int(1, 2, 5, 7, 3);
@@ -3726,6 +3748,7 @@ if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2 &&
 
 unittest
 {
+    import std.container;
     assert(find([ 1, 2, 3 ], SList!int(2, 3)[]) == [ 2, 3 ]);
     assert(find([ 1, 2, 1, 2, 3, 3 ], SList!int(2, 3)[]) == [ 2, 3, 3 ]);
 }
@@ -3924,6 +3947,7 @@ unittest
 
 unittest
 {
+    import std.typecons; 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 3 ];
@@ -3944,12 +3968,14 @@ unittest
     //writeln(find!("toUpper(a) == toUpper(b)")(s, "hello"));
     assert(find!("toUpper(a) == toUpper(b)")(s, "hello").length == 3);
 
+    import std.string : toUpper;
     static bool f(string a, string b) { return toUpper(a) == toUpper(b); }
     assert(find!(f)(s, "hello").length == 3);
 }
 
 unittest
 {
+    import std.typecons; 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 3, 2, 6 ];
@@ -5000,6 +5026,7 @@ if (isInputRange!R &&
 
 unittest
 {
+    import std.typecons; 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
@@ -5299,6 +5326,7 @@ if (isBidirectionalRange!R &&
 
 unittest
 {
+    import std.typecons; 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
@@ -5478,6 +5506,7 @@ if (isNarrowString!R1 && isNarrowString!R2)
 
 unittest
 {
+    import std.typecons; 
     assert(commonPrefix([1, 2, 3], [1, 2, 3, 4, 5]) == [1, 2, 3]);
     assert(commonPrefix([1, 2, 3, 4, 5], [1, 2, 3]) == [1, 2, 3]);
     assert(commonPrefix([1, 2, 3, 4], [1, 2, 3, 4]) == [1, 2, 3, 4]);
@@ -5670,6 +5699,7 @@ size_t count(alias pred = "a == b", Range, E)(Range haystack, E needle)
 
 unittest
 {
+    import std.conv : text;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 4, 3, 2, 5, 3, 2, 4 ];
@@ -5877,6 +5907,7 @@ bool equal(alias pred, Range1, Range2)(Range1 r1, Range2 r2)
 
 unittest
 {
+    import std.math;   
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 4, 3];
@@ -6287,6 +6318,7 @@ minCount(alias pred = "a < b", Range)(Range range)
 
 unittest
 {
+    import std.conv : text;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
@@ -6361,6 +6393,7 @@ unittest
 unittest
 {
     //Rvalue range
+    import std.container;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     assert(Array!int(2, 3, 4, 1, 2, 4, 1, 1, 2)
@@ -7062,6 +7095,8 @@ size_t bringToFront(Range1, Range2)(Range1 front, Range2 back)
 
 unittest
 {
+    import std.container;
+    import std.conv : text;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     // doc example
@@ -7721,6 +7756,7 @@ Range partition(alias predicate,
 
 unittest // partition
 {
+    import std.conv : text;
     auto Arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     auto arr = Arr.dup;
     static bool even(int a) { return (a & 1) == 0; }
@@ -8127,6 +8163,7 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
             quickSortImpl!(lessFun)(r);
         else //use Tim Sort for semistable & stable
             TimSortImpl!(lessFun, Range).sort(r, null);
+        import std.conv : text;
         static if (is(typeof(text(r))))
         {
             enum maxLen = 8;
@@ -8176,6 +8213,7 @@ unittest
     assert(isSorted!(less)(a));
 
     string[] words = [ "aBc", "a", "abc", "b", "ABC", "c" ];
+    import std.string : toUpper;
     bool lessi(string a, string b) { return toUpper(a) < toUpper(b); }
     sort!(lessi, SwapStrategy.stable)(words);
     assert(words == [ "a", "aBc", "abc", "ABC", "b", "c" ]);
@@ -8456,6 +8494,8 @@ private void quickSortImpl(alias less, Range)(Range r)
 // Tim Sort implementation
 private template TimSortImpl(alias pred, R)
 {
+    import core.bitop : bsr;
+
     static assert(isRandomAccessRange!R);
     static assert(hasLength!R);
     static assert(hasSlicing!R);
@@ -9140,6 +9180,7 @@ unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    import std.math;   
     static double entropy(double[] probs) {
         double result = 0;
         foreach (p; probs) {
@@ -9169,6 +9210,7 @@ unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    import std.math;
     static double entropy(double[] probs) {
         double result = 0;
         foreach (p; probs) {
@@ -9296,6 +9338,7 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
 {
     if (r.empty) return true;
 
+    import std.conv : text;
     static if (isRandomAccessRange!Range && hasLength!Range)
     {
         immutable limit = r.length - 1;
@@ -9542,6 +9585,7 @@ if (is(ElementType!(RangeIndex) == ElementType!(Range)*))
 
 unittest
 {
+    import std.conv : text;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     {
@@ -9979,6 +10023,7 @@ unittest
 
 unittest
 {
+    import std.random;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto r = Random(unpredictableSeed);
@@ -10789,6 +10834,7 @@ unittest
     largestPartialIntersection(a, b, SortOutput.yes);
     //sort(b);
     //writeln(b);
+    import std.conv : text;
     assert(b == [ tuple(7.0, 4u), tuple(1.0, 3u) ][], text(b));
     assert(a[0].empty);
 }
@@ -10808,6 +10854,7 @@ unittest
     auto b = new Tuple!(string, uint)[2];
     largestPartialIntersection(a, b, SortOutput.yes);
     //writeln(b);
+    import std.conv : text;
     assert(b == [ tuple("7", 4u), tuple("1", 3u) ][], text(b));
 }
 
@@ -10834,6 +10881,7 @@ unittest
 
 unittest
 {
+    import std.container;
     alias Tuple!(uint, uint) T;
     const Array!T arrayOne = Array!T( [ T(1,2), T(3,4) ] );
     const Array!T arrayTwo = Array!T([ T(1,2), T(3,4) ] );
@@ -11275,6 +11323,7 @@ unittest
 
 unittest
 {
+    import std.math;
     // Verify correctness of ddoc example.
     enum real Phi = (1.0 + sqrt(5.0)) / 2.0;    // Golden ratio
     real[][] seeds = [
