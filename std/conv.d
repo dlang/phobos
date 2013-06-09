@@ -3903,3 +3903,130 @@ unittest
     toTextRange(-1, result);
     assert(result.data == "-1");
 }
+
+
+/**
+    Returns the corresponding unsigned value for $(D x) (e.g. if $(D x) has type
+    $(D int), it returns $(D cast(uint) x)). The advantage compared to the cast
+    is that you do not need to rewrite the cast if $(D x) later changes type
+    (e.g from $(D int) to $(D long)).
+
+    Note that the result is always mutable even if the original type was const
+    or immutable. In order to retain the constness, use $(XREF traits, Unsigned).
+ */
+auto unsigned(T)(T x) if (isIntegral!T)
+{
+    return cast(Unqual!(Unsigned!T))x;
+}
+
+///
+unittest
+{
+    uint s = 42;
+    auto u1 = unsigned(s); //not qualified
+    Unsigned!(typeof(s)) u2 = unsigned(s); //same qualification
+    immutable u3 = unsigned(s); //totally qualified
+}
+
+unittest
+{
+    foreach(T; TypeTuple!(byte, ubyte))
+    {
+        static assert(is(typeof(unsigned(cast(T)1)) == ubyte));
+        static assert(is(typeof(unsigned(cast(const T)1)) == ubyte));
+        static assert(is(typeof(unsigned(cast(immutable T)1)) == ubyte));
+    }
+
+    foreach(T; TypeTuple!(short, ushort))
+    {
+        static assert(is(typeof(unsigned(cast(T)1)) == ushort));
+        static assert(is(typeof(unsigned(cast(const T)1)) == ushort));
+        static assert(is(typeof(unsigned(cast(immutable T)1)) == ushort));
+    }
+
+    foreach(T; TypeTuple!(int, uint))
+    {
+        static assert(is(typeof(unsigned(cast(T)1)) == uint));
+        static assert(is(typeof(unsigned(cast(const T)1)) == uint));
+        static assert(is(typeof(unsigned(cast(immutable T)1)) == uint));
+    }
+
+    foreach(T; TypeTuple!(long, ulong))
+    {
+        static assert(is(typeof(unsigned(cast(T)1)) == ulong));
+        static assert(is(typeof(unsigned(cast(const T)1)) == ulong));
+        static assert(is(typeof(unsigned(cast(immutable T)1)) == ulong));
+    }
+}
+
+auto unsigned(T)(T x) if (isSomeChar!T)
+{
+    // All characters are unsigned
+    static assert(T.min == 0);
+    return cast(Unqual!T) x;
+}
+
+unittest
+{
+    foreach(T; TypeTuple!(char, wchar, dchar))
+    {
+        static assert(is(typeof(unsigned(cast(T)'A')) == T));
+        static assert(is(typeof(unsigned(cast(const T)'A')) == T));
+        static assert(is(typeof(unsigned(cast(immutable T)'A')) == T));
+    }
+}
+
+
+/**
+    Returns the corresponding signed value for $(D x) (e.g. if $(D x) has type
+    $(D uint), it returns $(D cast(int) x)). The advantage compared to the cast
+    is that you do not need to rewrite the cast if $(D x) later changes type
+    (e.g from $(D uint) to $(D ulong)).
+
+    Note that the result is always mutable even if the original type was const
+    or immutable. In order to retain the constness, use $(XREF traits, Signed).
+ */
+auto signed(T)(T x) if (isIntegral!T)
+{
+    return cast(Unqual!(Signed!T))x;
+}
+
+///
+unittest
+{
+    uint u = 42;
+    auto s1 = unsigned(u); //not qualified
+    Unsigned!(typeof(u)) s2 = unsigned(u); //same qualification
+    immutable s3 = unsigned(u); //totally qualified
+}
+
+unittest
+{
+    foreach(T; TypeTuple!(byte, ubyte))
+    {
+        static assert(is(typeof(signed(cast(T)1)) == byte));
+        static assert(is(typeof(signed(cast(const T)1)) == byte));
+        static assert(is(typeof(signed(cast(immutable T)1)) == byte));
+    }
+
+    foreach(T; TypeTuple!(short, ushort))
+    {
+        static assert(is(typeof(signed(cast(T)1)) == short));
+        static assert(is(typeof(signed(cast(const T)1)) == short));
+        static assert(is(typeof(signed(cast(immutable T)1)) == short));
+    }
+
+    foreach(T; TypeTuple!(int, uint))
+    {
+        static assert(is(typeof(signed(cast(T)1)) == int));
+        static assert(is(typeof(signed(cast(const T)1)) == int));
+        static assert(is(typeof(signed(cast(immutable T)1)) == int));
+    }
+
+    foreach(T; TypeTuple!(long, ulong))
+    {
+        static assert(is(typeof(signed(cast(T)1)) == long));
+        static assert(is(typeof(signed(cast(const T)1)) == long));
+        static assert(is(typeof(signed(cast(immutable T)1)) == long));
+    }
+}
