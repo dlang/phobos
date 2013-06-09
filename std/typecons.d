@@ -1173,7 +1173,8 @@ struct Nullable(T)
 /**
 Constructor initializing $(D this) with $(D value).
  */
-    this()(T value) inout
+    //this()(inout T value) inout   // proper signature
+    this(U:T)(inout U value) inout  // workaround for BUG 10313
     {
         _value = value;
         _isNull = false;
@@ -1405,6 +1406,48 @@ unittest
         S b = a;
         S c;
         c = a;
+    }
+}
+unittest
+{
+    // Bugzilla 10268
+    import std.json;
+    JSONValue value = void;
+    value.type = JSON_TYPE.NULL;
+    auto na = Nullable!JSONValue(value);
+
+    struct S1 { int val; }
+    struct S2 { int* val; }
+    struct S3 { immutable int* val; }
+
+    {
+        auto sm = S1(1);
+        immutable si = immutable S1(1);
+        static assert( __traits(compiles, { auto x1 =           Nullable!S1(sm); }));
+        static assert( __traits(compiles, { auto x2 = immutable Nullable!S1(sm); }));
+        static assert( __traits(compiles, { auto x3 =           Nullable!S1(si); }));
+        static assert( __traits(compiles, { auto x4 = immutable Nullable!S1(si); }));
+    }
+
+    auto nm = 10;
+    immutable ni = 10;
+
+    {
+        auto sm = S2(&nm);
+        immutable si = immutable S2(&ni);
+        static assert( __traits(compiles, { auto x =           Nullable!S2(sm); }));
+        static assert(!__traits(compiles, { auto x = immutable Nullable!S2(sm); }));
+        static assert(!__traits(compiles, { auto x =           Nullable!S2(si); }));
+        static assert( __traits(compiles, { auto x = immutable Nullable!S2(si); }));
+    }
+
+    {
+        auto sm = S3(&ni);
+        immutable si = immutable S3(&ni);
+        static assert( __traits(compiles, { auto x =           Nullable!S3(sm); }));
+        static assert( __traits(compiles, { auto x = immutable Nullable!S3(sm); }));
+        static assert( __traits(compiles, { auto x =           Nullable!S3(si); }));
+        static assert( __traits(compiles, { auto x = immutable Nullable!S3(si); }));
     }
 }
 
