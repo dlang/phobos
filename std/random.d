@@ -1662,7 +1662,7 @@ struct RandomSample(R, Random = void)
         _toSelect = howMany;
         enforce(_toSelect <= _available, text("RandomSample: cannot sample ", _toSelect, " items when only ", _available, " are available"));
         static if(hasLength!R)
-	        enforce(_available <= _input.length, text("RandomSample: specified ", _available, " items as available when input contains only ", _input.length));
+            enforce(_available <= _input.length, text("RandomSample: specified ", _available, " items as available when input contains only ", _input.length));
         _first = true;
     }
 
@@ -1916,7 +1916,7 @@ Variable names are chosen to match those in Vitter's paper.
         immutable size_t s = skip();
         assert(s < (_available + 1 - _toSelect));
         static if(hasLength!R)
-	        assert(s < (_input.length + 1 - _toSelect));
+            assert(s < (_input.length + 1 - _toSelect));
         assert(!_input.empty);
         _input.popFrontExactly(s);
         _index += s;
@@ -1967,8 +1967,8 @@ unittest
         @property bool empty() const { return arr.empty; }
         @property int front() const
         {
-	        assert(!arr.empty);
-	        return arr.front;
+            assert(!arr.empty);
+            return arr.front;
         }
         void popFront() { arr.popFront(); }
     }
@@ -2010,13 +2010,13 @@ unittest
         }
         assert(i == 10);
 
-	  auto sample2 = randomSample(input, 10, 10);
-	  i = 0;
-	  foreach(s; sample2)
-	  {
-	      assert(s == i);
-	      ++i;
-	  }
+        auto sample2 = randomSample(input, 10, 10);
+        i = 0;
+        foreach(s; sample2)
+        {
+            assert(s == i);
+            ++i;
+        }
     }
 
     //int[] a = [ 0, 1, 2 ];
