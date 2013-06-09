@@ -1914,6 +1914,10 @@ Variable names are chosen to match those in Vitter's paper.
         if (empty) return;
         assert(_available && _available >= _toSelect);
         immutable size_t s = skip();
+        assert(s < (_available + 1 - _toSelect));
+        static if(hasLength!R)
+	        assert(s < (_input.length + 1 - _toSelect));
+        assert(!_input.empty);
         _input.popFrontExactly(s);
         _index += s;
         _available -= s;
@@ -1961,7 +1965,11 @@ unittest
     {
         private int[] arr = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         @property bool empty() const { return arr.empty; }
-        @property int front() const { return arr.front; }
+        @property int front() const
+        {
+	        assert(!arr.empty);
+	        return arr.front;
+        }
         void popFront() { arr.popFront(); }
     }
     static assert(isInputRange!TestInputRange);
@@ -1985,6 +1993,31 @@ unittest
 
     assert(collectExceptionMsg(randomSample(a, 5, 15)) == "RandomSample: specified 15 items as available when input contains only 10");
     assert(collectExceptionMsg(randomSample(a, 15)) == "RandomSample: cannot sample 15 items when only 10 are available");
+
+    /* Check that sampling algorithm never accidentally
+     * overruns the end of the input range.  If input is
+     * an InputRange without .length, this relies on the
+     * user specifying the total number of available items
+     * correctly.
+     */
+    {
+        auto sample = randomSample(a, a.length);
+        uint i = 0;
+        foreach(s; sample)
+        {
+            assert(s == i);
+            ++i;
+        }
+        assert(i == 10);
+
+	  auto sample2 = randomSample(input, 10, 10);
+	  i = 0;
+	  foreach(s; sample2)
+	  {
+	      assert(s == i);
+	      ++i;
+	  }
+    }
 
     //int[] a = [ 0, 1, 2 ];
     assert(randomSample(a, 5).length == 5);
