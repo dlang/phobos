@@ -18,13 +18,18 @@ module std.stdio;
 
 public import core.stdc.stdio, std.string : KeepTerminator;
 static import std.c.stdio;
+import std.algorithm : equal, swap, endsWith;
 import std.stdiobase;
 import core.stdc.errno, core.stdc.stddef, core.stdc.stdlib, core.memory,
     core.stdc.string, core.stdc.wchar_, core.exception;
-import std.algorithm, std.array, std.conv, std.exception, std.format,
-    std.range, std.string, std.traits, std.typecons,
-    std.typetuple, std.utf;
-version(unittest) import std.file;
+import std.conv : text, to, toTextRange;
+import std.exception : assumeUnique, collectException, enforce, errnoEnforce;
+import std.format : formattedRead;
+import std.array : empty;
+import std.range;
+import std.string : format, toStringz, chomp;
+import std.traits : Unqual, isSomeChar, isAggregateType, isSomeString, 
+    isIntegral, isBoolean, ParameterTypeTuple;
 
 version (DigitalMars)
 {
@@ -435,6 +440,7 @@ Throws: $(D ErrnoException) on failure if closing the file.
 
     unittest
     {
+        import std.file;
         auto deleteme = testFilename();
         scope(exit) std.file.remove(deleteme);
         auto f = File(deleteme, "w");
