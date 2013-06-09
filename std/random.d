@@ -1660,7 +1660,9 @@ struct RandomSample(R, Random = void)
     {
         _available = total;
         _toSelect = howMany;
-        enforce(_toSelect <= _available);
+        enforce(_toSelect <= _available, text("RandomSample: cannot sample ", _toSelect, " items when only ", _available, " are available"));
+        static if(hasLength!R)
+	        enforce(_available <= _input.length, text("RandomSample: specified ", _available, " items as available when input contains only ", _input.length));
         _first = true;
     }
 
@@ -1912,7 +1914,7 @@ Variable names are chosen to match those in Vitter's paper.
         if (empty) return;
         assert(_available && _available >= _toSelect);
         immutable size_t s = skip();
-        _input.popFrontN(s);
+        _input.popFrontExactly(s);
         _index += s;
         _available -= s;
         assert(_available > 0);
@@ -1980,6 +1982,9 @@ unittest
     TestInputRangeWithLength inputWithLength;
     static assert(isInputRange!(typeof(randomSample(inputWithLength, 5))));
     static assert(isInputRange!(typeof(randomSample(inputWithLength, 5, gen))));
+
+    assert(collectExceptionMsg(randomSample(a, 5, 15)) == "RandomSample: specified 15 items as available when input contains only 10");
+    assert(collectExceptionMsg(randomSample(a, 15)) == "RandomSample: cannot sample 15 items when only 10 are available");
 
     //int[] a = [ 0, 1, 2 ];
     assert(randomSample(a, 5).length == 5);
