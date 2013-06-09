@@ -284,9 +284,14 @@ to $(WEB fantascienza.net/leonardo/so/, Leonardo Maffi).
 module std.range;
 
 public import std.array;
-import core.bitop, core.exception;
-import std.algorithm, std.conv, std.exception,  std.functional,
-    std.traits, std.typecons, std.typetuple, std.string;
+import std.algorithm : copy, count, equal, filter, filterBidirectional,
+    findSplitBefore, group, isSorted, joiner, move, map, max, min, sort, swap,
+    until;
+import std.exception : assertNotThrown, assertThrown, enforce;
+import std.string : RangeError;
+import std.traits;
+import std.typecons : Tuple, tuple;
+import std.typetuple : allSatisfy, staticMap, TypeTuple;
 
 // For testing only.  This code is included in a string literal to be included
 // in whatever module it's needed in, so that each module that uses it can be
@@ -2076,6 +2081,8 @@ if (Ranges.length > 0 &&
                 }
             }
 
+            import std.traits : anySatisfy;
+
             static if (anySatisfy!(isInfinite, R))
             {
 // Propagate infiniteness.
@@ -2575,6 +2582,7 @@ if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R))
 
 unittest
 {
+    import std.conv : text;
     void test(int[] input, int[] witness)
     {
         enforce(equal(radial(input), witness),
@@ -3229,6 +3237,8 @@ unittest
         auto takeNone() { return new typeof(this)(null); }
         int[] _arr;
     }
+
+    import std.string : format;
 
     foreach(range; TypeTuple!(`[1, 2, 3, 4, 5]`,
                               `"hello world"`,
@@ -4623,6 +4633,8 @@ private string lockstepMixin(Ranges...)(bool withIndex)
         dgArgs ~= "index";
     }
 
+    import std.string : format, outdent;
+    
     foreach (idx, Range; Ranges)
     {
         params ~= format("ref ElementType!(Ranges[%s])", idx);
@@ -4851,6 +4863,7 @@ foreach (e; take(recurrence!("a[n-1] * n")(1), 10)) { writeln(e); }
  */
 struct Recurrence(alias fun, StateType, size_t stateSize)
 {
+    private import std.functional : binaryFun;
     StateType[stateSize] _state;
     size_t _n;
 
@@ -4931,6 +4944,7 @@ unittest
 struct Sequence(alias fun, State)
 {
 private:
+    import std.functional : binaryFun;
     alias binaryFun!(fun, "a", "n") compute;
     alias typeof(compute(State.init, cast(size_t) 1)) ElementType;
     State _state;
@@ -7441,6 +7455,7 @@ enum SearchPolicy
 struct SortedRange(Range, alias pred = "a < b")
 if (isRandomAccessRange!Range && hasLength!Range)
 {
+    private import std.functional : binaryFun;
     private alias binaryFun!pred predFun;
     private bool geq(L, R)(L lhs, R rhs)
     {
@@ -7460,8 +7475,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
         if(!__ctfe)
         debug
         {
-            import std.random;
-
+            import core.bitop, std.conv, std.random;
             // Check the sortedness of the input
             if (this._input.length < 2) return;
             immutable size_t msb = bsr(this._input.length) + 1;
@@ -7978,6 +7992,7 @@ unittest
 
 unittest
 {
+    import std.conv : text;
     int[] a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
     auto p = assumeSorted(a).equalRange(3);
     assert(equal(p, [ 3, 3, 3 ]), text(p));
