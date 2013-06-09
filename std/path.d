@@ -55,6 +55,7 @@ import std.array;
 import std.conv;
 import std.file: getcwd;
 import std.string;
+import std.range;
 import std.traits;
 
 version(Posix)
@@ -886,56 +887,112 @@ unittest
 }
 
 
+/** Combines one or more path segments.
 
+    This function takes a set of path segments, given as an input
+    range of string elements or as a set of string arguments,
+    and concatenates them with each other.  Directory separators
+    are inserted between segments if necessary.  If any of the
+    path segments are absolute (as defined by $(LREF isAbsolute)), the
+    preceding segments will be dropped.
 
-/** Combines one or more path components.
-
-    The given path components are concatenated with each other,
-    and if necessary, directory separators are inserted between
-    them. If any of the path components are rooted (as defined by
-    $(LREF isRooted)) the preceding path components will be dropped.
+    On Windows, if one of the path segments are rooted, but not absolute
+    (e.g. `\foo`), all preceding path segments down to the previous root
+    will be dropped.  (See below for an example.)
 
     This function always allocates memory to hold the resulting path.
+    The variadic overload is guaranteed to only perform a single
+    allocation, as is the range version if $(D paths) is a forward
+    range.
 
     Examples:
     ---
     version (Posix)
     {
         assert (buildPath("foo", "bar", "baz") == "foo/bar/baz");
-        assert (buildPath("/foo/", "bar")      == "/foo/bar");
+        assert (buildPath("/foo/", "bar/baz")  == "/foo/bar/baz");
         assert (buildPath("/foo", "/bar")      == "/bar");
     }
 
     version (Windows)
     {
         assert (buildPath("foo", "bar", "baz") == `foo\bar\baz`);
-        assert (buildPath(`c:\foo`, "bar")    == `c:\foo\bar`);
-        assert (buildPath("foo", `d:\bar`)    == `d:\bar`);
-        assert (buildPath("foo", `\bar`)      == `\bar`);
+        assert (buildPath(`c:\foo`, `bar\baz`) == `c:\foo\bar\baz`);
+        assert (buildPath("foo", `d:\bar`)     == `d:\bar`);
+        assert (buildPath("foo", `\bar`)       == `\bar`);
+        assert (buildPath(`c:\foo`, `\bar`)    == `c:\bar`);
     }
     ---
 */
-immutable(C)[] buildPath(C)(const(C[])[] paths...)
-    @safe pure //TODO: nothrow (because of reduce() and to())
-    if (isSomeChar!C)
+immutable(Unqual!(typeof(ElementType!(Range).init[0])))[]
+    buildPath(Range)(Range segments)
+        if (isInputRange!Range && isSomeString!(ElementType!Range))
 {
-    static typeof(return) joinPaths(const(C)[] lhs, const(C)[] rhs)
-        @trusted pure //TODO: nothrow (because of to())
-    {
-        if (rhs.empty) return to!(typeof(return))(lhs);
-        if (lhs.empty || isRooted(rhs)) return to!(typeof(return))(rhs);
-        if (isDirSeparator(lhs[$-1]) || isDirSeparator(rhs[0]))
-            return cast(typeof(return))(lhs ~ rhs);
-        else
-            return cast(typeof(return))(lhs ~ dirSeparator ~ rhs);
-    }
+    if (segments.empty) return null;
 
-    return to!(typeof(return))(reduce!joinPaths(paths));
+    // If this is a forward range, we can pre-calculate a maximum length.
+    static if (isForwardRange!Range)
+    {
+        auto segments2 = segments.save();
+        size_t precalc = 0;
+        foreach (segment; segments2) precalc += segment.length + 1;
+    }
+    // Otherwise, just venture a guess and resize later if necessary.
+    else size_t precalc = 256;
+
+    auto buf = new Unqual!(typeof(ElementType!(Range).init[0]))[precalc];
+    size_t pos = 0;
+    foreach (segment; segments)
+    {
+        if (segment.empty) continue;
+        static if (!isForwardRange!Range)
+        {
+            immutable neededLength = pos + segment.length + 1;
+            if (buf.length < neededLength)
+                buf.length += neededLength + buf.length;
+        }
+        if (pos > 0)
+        {
+            if (isRooted(segment))
+            {
+                version (Posix)
+                {
+                    pos = 0;
+                }
+                else version (Windows)
+                {
+                    if (isAbsolute(segment))
+                        pos = 0;
+                    else
+                    {
+                        pos = rootName(buf[0 .. pos]).length;
+                        if (pos > 0 && isDirSeparator(buf[pos-1])) --pos;
+                    }
+                }
+            }
+            else if (!isDirSeparator(buf[pos-1]))
+                buf[pos++] = dirSeparator[0];
+        }
+        buf[pos .. pos + segment.length] = segment[];
+        pos += segment.length;
+    }
+    static U trustedCast(U, V)(V v) @trusted pure nothrow { return cast(U) v; }
+    return trustedCast!(typeof(return))(buf[0 .. pos]);
 }
 
+/// ditto
+immutable(C)[] buildPath(C)(const(C[])[] paths...)
+    @safe pure nothrow
+    if (isSomeChar!C)
+{
+    return buildPath!(typeof(paths))(paths);
+}
 
 unittest
 {
+    // ir() wraps an array in a plain (i.e. non-forward) input range, so that
+    // we can test both code paths
+    InputRange!(C[]) ir(C)(C[][] p...) { return inputRangeObject(p); }
     version (Posix)
     {
         assert (buildPath("foo") == "foo");
@@ -955,6 +1012,23 @@ unittest
 
         static assert (buildPath("foo", "bar", "baz") == "foo/bar/baz");
         static assert (buildPath("foo", "/bar", "baz") == "/bar/baz");
+
+        // The following are mostly duplicates of the above, except that the
+        // range version does not accept mixed constness.
+        assert (buildPath(ir("foo")) == "foo");
+        assert (buildPath(ir("/foo/")) == "/foo/");
+        assert (buildPath(ir("foo", "bar")) == "foo/bar");
+        assert (buildPath(ir("foo", "bar", "baz")) == "foo/bar/baz");
+        assert (buildPath(ir("foo/".dup, "bar".dup)) == "foo/bar");
+        assert (buildPath(ir("foo///".dup, "bar".dup)) == "foo///bar");
+        assert (buildPath(ir("/foo"w, "bar"w)) == "/foo/bar");
+        assert (buildPath(ir("foo"w.dup, "/bar"w.dup)) == "/bar");
+        assert (buildPath(ir("foo"w.dup, "bar/"w.dup)) == "foo/bar/");
+        assert (buildPath(ir("/"d, "foo"d)) == "/foo");
+        assert (buildPath(ir(""d.dup, "foo"d.dup)) == "foo");
+        assert (buildPath(ir("foo"d, ""d)) == "foo");
+        assert (buildPath(ir("foo", "bar", "baz")) == "foo/bar/baz");
+        assert (buildPath(ir("foo"w.dup, "/bar"w.dup, "baz"w.dup)) == "/bar/baz");
     }
     version (Windows)
     {
@@ -964,10 +1038,32 @@ unittest
         assert (buildPath("foo", `\bar`) == `\bar`);
         assert (buildPath(`c:\foo`, "bar") == `c:\foo\bar`);
         assert (buildPath("foo"w, `d:\bar`w.dup) ==  `d:\bar`);
+        assert (buildPath(`c:\foo\bar`, `\baz`) == `c:\baz`);
+        assert (buildPath(`\\foo\bar\baz`d, `foo`d, `\bar`d) == `\\foo\bar\bar`d);
 
         static assert (buildPath("foo", "bar", "baz") == `foo\bar\baz`);
         static assert (buildPath("foo", `c:\bar`, "baz") == `c:\bar\baz`);
+
+        assert (buildPath(ir("foo")) == "foo");
+        assert (buildPath(ir(`\foo/`)) == `\foo/`);
+        assert (buildPath(ir("foo", "bar", "baz")) == `foo\bar\baz`);
+        assert (buildPath(ir("foo", `\bar`)) == `\bar`);
+        assert (buildPath(ir(`c:\foo`, "bar")) == `c:\foo\bar`);
+        assert (buildPath(ir("foo"w.dup, `d:\bar`w.dup)) ==  `d:\bar`);
+        assert (buildPath(ir(`c:\foo\bar`, `\baz`)) == `c:\baz`);
+        assert (buildPath(ir(`\\foo\bar\baz`d, `foo`d, `\bar`d)) == `\\foo\bar\bar`d);
     }
+
+    // Test that allocation works as it should.
+    auto manyShort = "aaa".repeat(1000).array();
+    auto manyShortCombined = join(manyShort, dirSeparator);
+    assert (buildPath(manyShort) == manyShortCombined);
+    assert (buildPath(ir(manyShort)) == manyShortCombined);
+
+    auto fewLong = 'b'.repeat(500).array().repeat(10).array();
+    auto fewLongCombined = join(fewLong, dirSeparator);
+    assert (buildPath(fewLong) == fewLongCombined);
+    assert (buildPath(ir(fewLong)) == fewLongCombined);
 }
 
 unittest
@@ -983,7 +1079,6 @@ unittest
         assert (buildPath(ary) == `a\b`);
     }
 }
-
 
 
 /** Performs the same task as $(LREF buildPath),
