@@ -1620,8 +1620,11 @@ unittest
         assert (equal2(pathSplitter(`\\foo\bar\baz`), [`\\foo\bar`, "baz"]));
     }
 
-    // CTFE
-    static assert (equal(pathSplitter("/foo/bar".dup), ["/", "foo", "bar"]));
+    import std.exception;
+    assertCTFEable!(
+    {
+        assert (equal(pathSplitter("/foo/bar".dup), ["/", "foo", "bar"]));
+    });
 }
 
 
@@ -1944,8 +1947,10 @@ unittest
         assert (relativePath("/foo/bar/baz", "/foo/bar") == "baz");
         assertThrown(relativePath("/foo", "bar"));
 
-        // CTFE
-        static assert (relativePath("/foo/bar", "/foo/baz") == "../bar");
+        assertCTFEable!(
+        {
+            assert (relativePath("/foo/bar", "/foo/baz") == "../bar");
+        });
     }
     else version (Windows)
     {
@@ -1959,8 +1964,10 @@ unittest
         assert (relativePath(`\\foo\bar`, `c:\foo`) == `\\foo\bar`);
         assertThrown(relativePath(`c:\foo`, "bar"));
 
-        // CTFE
-        static assert (relativePath(`c:\foo\bar`, `c:\foo\baz`) == `..\bar`);
+        assertCTFEable!(
+        {
+            assert (relativePath(`c:\foo\bar`, `c:\foo\baz`) == `..\bar`);
+        });
     }
     else static assert (0);
 }
