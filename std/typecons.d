@@ -900,7 +900,7 @@ $(D Rebindable!(T)) does not compile if $(D T) is a non-class type.
 Regular $(D const) object references cannot be reassigned:
 
 ----
-class Widget { int x; int y() const { return a; } }
+class Widget { int x; int y() const { return x; } }
 const a = new Widget;
 a.y();          // fine
 a.x = 5;        // error! can't modify const a
