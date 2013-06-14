@@ -291,7 +291,7 @@ version(unittest)
 
     private enum QualifiedEnum
     {
-        a
+        a = 42
     }
 }
 
@@ -318,7 +318,6 @@ unittest
 
     // Main tests
     alias fqn = fullyQualifiedName;
-    static assert(fqn!QualifiedEnum == "std.traits.QualifiedEnum");
     static assert(fqn!fqn == "std.traits.fullyQualifiedName");
     static assert(fqn!(QualifiedNameTests.Inner) == "std.traits.QualifiedNameTests.Inner");
     static assert(fqn!(QualifiedNameTests.func) == "std.traits.QualifiedNameTests.func");
@@ -546,6 +545,8 @@ unittest
 
         // Basic qualified name
         static assert(fqn!(Inner) == inner_name);
+        static assert(fqn!(QualifiedEnum) == "std.traits.QualifiedEnum"); // type
+        static assert(fqn!(QualifiedEnum.a) == "std.traits.QualifiedEnum.a"); // symbol
 
         // Array types
         static assert(fqn!(typeof(array)) == format("%s[]", inner_name));
