@@ -234,7 +234,7 @@ struct SHA1
 
         shared static this()
         {
-            transform = hasSSSE3Support() ? &transformSSSE3 : &transformX86;
+            transform = hasSSSE3Support ? &transformSSSE3 : &transformX86;
         }
     }
     else

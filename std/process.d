@@ -1965,7 +1965,7 @@ private auto executeImpl(alias pipeFunc, Cmd)(
     // Store up to maxOutput bytes in a.
     foreach (ubyte[] chunk; p.stdout.byChunk(chunkSize))
     {
-        immutable size_t remain = maxOutput - a.data().length;
+        immutable size_t remain = maxOutput - a.data.length;
 
         if (chunk.length < remain) a.put(chunk);
         else
@@ -2041,8 +2041,8 @@ class ProcessException : Exception
         {
             auto errnoMsg = to!string(std.c.string.strerror(errno));
         }
-        auto msg = customMsg.empty() ? errnoMsg
-                                     : customMsg ~ " (" ~ errnoMsg ~ ')';
+        auto msg = customMsg.empty ? errnoMsg
+                                   : customMsg ~ " (" ~ errnoMsg ~ ')';
         return new ProcessException(msg, file, line);
     }
 
@@ -2053,8 +2053,8 @@ class ProcessException : Exception
                                              size_t line = __LINE__)
     {
         auto lastMsg = sysErrorString(GetLastError());
-        auto msg = customMsg.empty() ? lastMsg
-                                     : customMsg ~ " (" ~ lastMsg ~ ')';
+        auto msg = customMsg.empty ? lastMsg
+                                   : customMsg ~ " (" ~ lastMsg ~ ')';
         return new ProcessException(msg, file, line);
     }
 }
