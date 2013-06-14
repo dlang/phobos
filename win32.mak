@@ -146,13 +146,14 @@ SRC_STD_REST= std\regex.d \
 	std\mathspecial.d \
 	std\process.d
 
-SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_2a_HEAVY) \
+SRC_STD_ALL= std\package.d $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_3) $(SRC_STD_3a) $(SRC_STD_3b) $(SRC_STD_4) \
 	$(SRC_STD_5_HEAVY) $(SRC_STD_6) $(SRC_STD_REST)
 
 SRC=	unittest.d crc32.d index.d
 
-SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d std\uri.d \
+SRC_STD= std\package.d std\zlib.d std\zip.d std\stdint.d std\container.d \
+	std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d std\datetime.d \
 	std\csv.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\md5.d std\base64.d \

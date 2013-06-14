@@ -169,7 +169,7 @@ endif
 MAIN = $(ROOT)/emptymain.d
 
 # Stuff in std/
-STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
+STD_MODULES = $(addprefix std/, package algorithm array ascii base64 bigint		\
         bitmanip compiler complex concurrency container conv		\
         cstream csv datetime demangle encoding exception	\
         file format functional getopt json math mathspecial md5	\

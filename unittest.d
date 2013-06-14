@@ -134,7 +134,14 @@ else
     auto md5 = md5Of("hello");
     auto sha1 = sha1Of("hello");
     auto crc = crc32Of("hello");
-    auto string = toHexString(crc);
+    auto str = toHexString(crc);
+
+    {
+        import std;
+        auto s = [1,2,3].map!(a=>a*2)().retro().array().to!string();
+        assert(s == "[6, 4, 2]");
+    }
+
     puts("Success!");
 }
     return 0;
