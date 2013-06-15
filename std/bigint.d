@@ -383,7 +383,7 @@ public:
     }
     /// Sets the value of this BigInt as unit[],
     /// sign is set as the boolean, true for negative and false for positive
-    void setDataUint(uint[] n_data, bool sign = false) pure
+    void setDataUint(const uint[] n_data, bool sign = false) pure
     {
         this.sign = sign;
         data.setUint(n_data);
@@ -399,7 +399,7 @@ public:
     }
     /// Sets the value of this BigInt as ulong[],
     /// sign is set as the boolean, true for negative and false for positive
-    void setDataUlong(ulong[] n_data, bool sign = false) pure
+    void setDataUlong(const ulong[] n_data, bool sign = false) pure
     {
         this.sign = sign;
         data.setUlong(n_data);
