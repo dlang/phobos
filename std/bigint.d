@@ -383,16 +383,35 @@ public:
     }
     /// Sets the value of this BigInt as unit[],
     /// sign is set as the boolean, true for negative and false for positive
-    void setData(uint[] n_data, bool sign = false) pure
+    void setDataUint(uint[] n_data, bool sign = false) pure
     {
         this.sign = sign;
-        data.value = n_data;
+        data.setUint(n_data);
     }
     /// Returns the value of this BigInt as a uint[],
     /// the sign of the BigInt is ignored
-    uint[] getData() pure
+    uint[] getDataUint() pure
     {
-        return data.value;
+        uint[] array = new uint[data.uintLength()];
+        foreach(i; 0..data.uintLength())
+            array[i] = data.peekUint(i);
+        return array;
+    }
+    /// Sets the value of this BigInt as ulong[],
+    /// sign is set as the boolean, true for negative and false for positive
+    void setDataUlong(ulong[] n_data, bool sign = false) pure
+    {
+        this.sign = sign;
+        data.setUlong(n_data);
+    }
+    /// Returns the value of this BigInt as a ulong[],
+    /// the sign of the BigInt is ignored
+    ulong[] getDataUlong() pure
+    {
+        ulong[] array = new ulong[data.ulongLength()];
+        foreach(i; 0..data.ulongLength())
+            array[i] = data.peekUlong(i);
+        return array;
     }
     /// Returns the value of this BigInt as a long,
     /// or +- long.max if outside the representable range.
@@ -584,9 +603,6 @@ unittest {
     assert(BigInt(-4) % BigInt(5) == -4);
     assert(BigInt(2)/BigInt(-3) == BigInt(0)); // bug 8022
     assert(BigInt("-1") > long.min); // bug 9548
-    a.setData([0x22, 0x44, 0xcc]);
-    a *= 2;
-    assert(a.getData() == [0x44, 0x88, 0x198]);
 }
 
 unittest // Minimum signed value bug tests.
@@ -806,4 +822,16 @@ unittest // 6850
     }
 
     assert(pureTest() == 1337);
+}
+
+unittest
+{
+    BigInt a;
+    a.setDataUint([0x22]);
+    assert(a.toUint() == 0x22);
+    assert(a.getDataUint() == [0x22]);
+
+    a.setDataUlong([0xACDC]);
+    assert(a.toLong() == 0xACDC);
+    assert(a.getDataUlong() == [0xACDC]);
 }

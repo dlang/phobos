@@ -102,20 +102,58 @@ private:
        data = x;
     }
 public:
-    @property
+    void setUint(const uint[] n_data) pure
     {
-        BigDigit[] value() pure
+        if(n_data.length == 0)
         {
-            return data;
+            data = ZERO;
         }
-
-        void value(BigDigit[] n_data) pure
+        else
         {
-            if(n_data.length == 0) data = ZERO;
-            else data = n_data;
+            static if(BigDigit.sizeof == uint.sizeof)
+            {
+                data = n_data.dup;
+            }
+            else static if(BigDigit.sizeof == ulong.sizeof)
+            {
+                bool pad = data.length % 2 != 0;
+                uint[] temp = new uint[data.length + (pad ? 1 : 0)];
+
+                version(BigEndian)
+                {
+                    if(pad)
+                        temp[pad..$] = data[];
+                    else temp[] = data[];
+                }
+                else
+                {
+                    if(pad)
+                        temp[0..$-pad] = data[];
+                    else temp[] = data[];
+                }
+
+                data = cast(ulong[])temp;
+            }
         }
     }
-
+    void setUlong(const ulong[] n_data) pure
+    {
+        if(n_data.length == 0)
+        {
+            data = ZERO;
+        }
+        else
+        {
+            static if(BigDigit.sizeof == uint.sizeof)
+            {
+                data = cast(uint[])(n_data.dup);
+            }
+            else static if(BigDigit.sizeof == ulong.sizeof)
+            {
+                data = n_data.dup;
+            }
+        }
+    }
     // Length in uints
     size_t uintLength() pure const
     {
