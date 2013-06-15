@@ -8844,3 +8844,167 @@ unittest    // bug 9060
     static void foo(R)(R r) { until!(x => x > 7)(r); }
     foo(r);
 }
+
+/*****************************************************************************/
+
+/**
+  Implements a "tee" style pipe, wrapping an input range so that elements
+  of the range can be passed to a provided function as they are iterated over.
+
+  If pipeOnPop = true, func is called on popFront, else called on front.
+
+  Examples:
+---
+  int[] values = [1, 4, 9, 16, 25];
+
+  int count = 0;
+  auto newValues = values.filter!(a => a < 10)
+                     .tee!(a => count++)
+                     .map!(a => a + 1)
+                     .filter!(a => a < 10);
+  assert(equal(newValues3, [2, 5]));
+  assert(count == 3);
+
+  auto printValues = values.filter!(a => a < 10)
+                       .tee!(a => writefln("pre-map: %d", a))
+                       .map!(a => a + 1)
+                       .tee!(a => writefln("post-map: %d", a))
+                       .filter!(a => a < 10);
+  assert(equal(printValues, [2, 5]));
+  // Outputs (order due to range evaluation):
+  //   post-map: 2
+  //   pre-map: 1
+  //   post-map: 5
+  //   pre-map: 4
+  //   post-map: 1
+  //   pre-map: 9
+---
+
+*/ 
+template tee(alias func, bool pipeOnPop = true) if (is(typeof(unaryFun!func)))
+{
+    auto tee(Range)(Range inputRange) if (isInputRange!(Range))
+    {
+        return TeeRange!(Range, unaryFun!func, pipeOnPop)(inputRange);
+    }
+}
+
+private struct TeeRange(Range, alias func, bool pipeOnPop)
+{
+    Range _input;
+
+    this(Range r)
+    {
+        _input = r;
+    }
+
+    auto opSlice() { return _input; }
+
+    static if (isInfinite!Range)
+    {
+        enum bool empty = false;
+    }
+    else
+    {
+        @property bool empty() { return _input.empty; }
+    }
+
+    void popFront()
+    {
+        if (pipeOnPop && !_input.empty)
+        {
+            func(_input.front);
+        }
+        _input.popFront();
+    }
+
+    @property auto ref front()
+    {
+        if (!pipeOnPop)
+        {
+            func(_input.front);
+        }
+        return _input.front;
+    }
+
+    static if (isForwardRange!Range)
+    {
+        @property auto save()
+        {
+            return typeof(this)(_input);
+        }
+    }
+}
+
+unittest
+{
+    // Pass-through
+    int[] values = [1, 4, 9, 16, 25];
+
+    auto newValues = tee!(a => a + 1)(values);
+    assert(equal(newValues, values));
+
+    auto newValues2 = tee!(a => a = 0)(values);
+    assert(equal(newValues2, values));
+
+    int count = 0;
+    auto newValues3 = filter!(a => a < 10)(values)
+                      .tee!(a => count++)()
+                      .map!(a => a + 1)()
+                      .filter!(a => a < 10)();
+    assert(equal(newValues3, [2, 5]));
+    assert(count == 3);
+}
+
+unittest
+{
+    char[] txt = "Line one, Line 2".dup;
+
+    bool isVowel(dchar c)
+    {
+        return (std.string.indexOf("AaEeIiOoUu", c) != -1);
+    }
+
+    int vowelCount = 0;
+    int shiftedCount = 0;
+    auto removeVowels = tee!(c => isVowel(c) ? vowelCount++ : 0)(txt)
+                          .filter!(c => !isVowel(c))()
+                          .map!(c => (c == ' ') ? c : c + 1)()
+                          .tee!(c => isVowel(c) ? shiftedCount++ : 0)();
+    assert(equal(removeVowels, "Mo o- Mo 3"));
+    assert(vowelCount == 6);
+    assert(shiftedCount == 3);
+}
+
+unittest
+{
+    // Manually stride to test different pipe behavior.
+    void testRange(Range)(Range r)
+    {
+        const int strideLen = 3;
+        int i = 0;
+        typeof(Range.front) elem;
+        while (!r.empty)
+        {
+            if (i % strideLen == 0)
+            {
+                elem = r.front();
+            }
+            r.popFront();
+            i++;
+        }
+    }
+
+    string txt = "abcdefghijklmnopqrstuvwxyz";
+
+    int popCount = 0;
+    auto pipeOnPop = tee!(a => popCount++)(txt);
+    testRange(pipeOnPop);
+    assert(popCount == 26);
+
+    int frontCount = 0;
+    auto pipeOnFront = tee!(a => frontCount++, false)(txt);
+    testRange(pipeOnFront);
+    assert(frontCount == 9);
+}
+
