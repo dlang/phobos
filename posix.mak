@@ -48,27 +48,28 @@ ifeq (,$(OS))
 	$(error Unrecognized or unsupported OS for uname: $(uname_S))
 endif
 
-# For now, 32 bit is the default model
-ifeq (,$(MODEL))
-	MODEL:=32
+MODEL:=default
+ifneq (default,$(MODEL))
+      MODEL_FLAG:=-m$(MODEL)
 endif
 
 override PIC:=$(if $(PIC),-fPIC,)
 
 # Configurable stuff that's rarely edited
+INSTALL_DIR = ../install
 DRUNTIME_PATH = ../druntime
 ZIPFILE = phobos.zip
 ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 # Documentation-related stuff
-DOCSRC = ../d-programming-language.org
+DOCSRC = ../dlang.org
 WEBSITE_DIR = ../web
 DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
 BIGDOC_OUTPUT_DIR = /tmp
 SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES) $(EXTRA_DOCUMENTABLES))
 STDDOC = $(DOCSRC)/std.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc
-DDOCFLAGS=-m$(MODEL) -d -c -o- -version=StdDdoc -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
+DDOCFLAGS=$(MODEL_FLAG) -d -c -o- -version=StdDdoc -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
 # BUILD can be debug or release, but is unset by default; recursive
 # invocation will set it. See the debug and release targets below.
@@ -108,7 +109,7 @@ endif
 # Set CFLAGS
 CFLAGS :=
 ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
-	CFLAGS += -m$(MODEL) $(PIC)
+	CFLAGS += $(MODEL_FLAG) $(PIC)
 	ifeq ($(BUILD),debug)
 		CFLAGS += -g
 	else
@@ -117,7 +118,7 @@ ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
 endif
 
 # Set DFLAGS
-DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -property -m$(MODEL) $(PIC)
+DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -property $(MODEL_FLAG) $(PIC)
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
@@ -251,6 +252,8 @@ debug :
 unittest :
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=debug unittest
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release unittest
+install :
+	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release INSTALL_DIR=$(INSTALL_DIR) DMD=$(DMD) install2
 else
 # This branch is normally taken in recursive builds. All we need to do
 # is set the default build to $(BUILD) (which is either debug or
@@ -271,10 +274,10 @@ $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 dll : $(ROOT)/libphobos2.so
 
 $(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
-	ln -s $(notdir $(LIBSO)) $@ 
+	ln -sf $(notdir $(LIBSO)) $@ 
 
 $(ROOT)/$(SONAME): $(LIBSO)
-	ln -s $(notdir $(LIBSO)) $@
+	ln -sf $(notdir $(LIBSO)) $@
 
 $(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(D_FILES) $(OBJS)
@@ -315,8 +318,15 @@ clean :
 zip :
 	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES) win32.mak win64.mak
 
-install : release
-	sudo cp $(LIB) /usr/lib/
+install2 : release
+	mkdir -p $(INSTALL_DIR)/lib
+	cp $(LIB) $(INSTALL_DIR)/lib/
+	mkdir -p $(INSTALL_DIR)/import/etc
+	mkdir -p $(INSTALL_DIR)/import/std
+	cp crc32.d $(INSTALL_DIR)/import/
+	cp -r std/* $(INSTALL_DIR)/import/std/
+	cp -r etc/* $(INSTALL_DIR)/import/etc/
+	cp LICENSE_1_0.txt $(INSTALL_DIR)/phobos-LICENSE.txt
 
 $(DRUNTIME) :
 	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak MODEL=$(MODEL)

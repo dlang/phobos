@@ -6,9 +6,9 @@
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
-$(TR $(TDNW Searching) $(TD $(MYREF balancedParens) $(MYREF
+$(TR $(TDNW Searching) $(TD $(MYREF all) $(MYREF any) $(MYREF balancedParens) $(MYREF
 boyerMooreFinder) $(MYREF canFind) $(MYREF count) $(MYREF countUntil)
-$(MYREF endsWith) $(MYREF commonPrefix) $(MYREF find) $(MYREF
+$(MYREF commonPrefix) $(MYREF endsWith) $(MYREF find) $(MYREF
 findAdjacent) $(MYREF findAmong) $(MYREF findSkip) $(MYREF findSplit)
 $(MYREF findSplitAfter) $(MYREF findSplitBefore) $(MYREF indexOf)
 $(MYREF minCount) $(MYREF minPos) $(MYREF mismatch) $(MYREF skipOver)
@@ -23,10 +23,10 @@ $(MYREF group) $(MYREF joiner) $(MYREF map) $(MYREF reduce) $(MYREF
 splitter) $(MYREF uniq) )
 )
 $(TR $(TDNW Sorting) $(TD $(MYREF completeSort) $(MYREF isPartitioned)
-$(MYREF isSorted) $(MYREF makeIndex) $(MYREF partialSort) $(MYREF
+$(MYREF isSorted) $(MYREF makeIndex) $(MYREF nextPermutation)
+$(MYREF nextEvenPermutation) $(MYREF partialSort) $(MYREF
 partition) $(MYREF partition3) $(MYREF schwartzSort) $(MYREF sort)
-$(MYREF topN) $(MYREF topNCopy) $(MYREF nextPermutation)
-$(MYREF nextEvenPermutation) )
+$(MYREF topN) $(MYREF topNCopy) )
 )
 $(TR $(TDNW Set&nbsp;operations) $(TD $(MYREF cartesianProduct) $(MYREF
 largestPartialIntersection) $(MYREF largestPartialIntersectionWeighted)
@@ -74,6 +74,10 @@ $(BOOKTABLE Cheat Sheet,
 $(TR $(TH Function Name) $(TH Description)
 )
 $(LEADINGROW Searching
+)
+$(TR $(TDNW $(LREF all)) $(TD $(D all!"a > 0"([1, 2, 3, 4])) returns $(D true) because all elements are positive)
+)
+$(TR $(TDNW $(LREF any)) $(TD $(D any!"a > 0"([1, 2, -3, -4])) returns $(D true) because at least one element is positive)
 )
 $(TR $(TDNW $(LREF balancedParens)) $(TD $(D
 balancedParens("((1 + 1) / 2)")) returns $(D true) because the string
@@ -218,6 +222,12 @@ returns $(D true).)
 $(TR $(TDNW $(LREF makeIndex)) $(TD Creates a separate index
 for a range.)
 )
+$(TR $(TDNW $(LREF nextPermutation)) $(TD Computes the next lexicographically
+greater permutation of a range in-place.)
+)
+$(TR $(TDNW $(LREF nextEvenPermutation)) $(TD Computes the next
+lexicographically greater even permutation of a range in-place.)
+)
 $(TR $(TDNW $(LREF partialSort)) $(TD If $(D a = [5, 4, 3, 2,
 1]), then $(D partialSort(a, 3)) leaves $(D a[0 .. 3] = [1, 2,
 3]). The other elements of $(D a) are left in an unspecified order.)
@@ -235,12 +245,6 @@ range.)
 )
 $(TR $(TDNW $(LREF topNCopy)) $(TD Copies out the top elements
 of a range.)
-)
-$(TR $(TDNW $(LREF nextPermutation)) $(TD Computes the next lexicographically
-greater permutation of a range in-place.)
-)
-$(TR $(TDNW $(LREF nextEvenPermutation)) $(TD Computes the next
-lexicographically greater even permutation of a range in-place.)
 )
 $(LEADINGROW Set operations
 )
@@ -8123,17 +8127,12 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
             quickSortImpl!(lessFun)(r);
         else //use Tim Sort for semistable & stable
             TimSortImpl!(lessFun, Range).sort(r, null);
-        static if (is(typeof(text(r))))
-        {
-            enum maxLen = 8;
-            assert(isSorted!lessFun(r), text("Failed to sort range of type ",
-                            Range.stringof, ". Actual result is: ",
-                            r[0 .. r.length > maxLen ? maxLen : r.length ],
-                            r.length > maxLen ? "..." : ""));
-        }
-        else
-            assert(isSorted!lessFun(r), text("Unable to sort range of type ",
-                            Range.stringof, ": <unable to print elements>"));
+
+        enum maxLen = 8;
+        assert(isSorted!lessFun(r), text("Failed to sort range of type ",
+                        Range.stringof, ". Actual result is: ",
+                        r[0 .. r.length > maxLen ? maxLen : r.length ],
+                        r.length > maxLen ? "..." : ""));
     }
     else
     {
@@ -8186,6 +8185,13 @@ unittest
     auto b = rndstuff!(string)();
     sort!("toLower(a) < toLower(b)")(b);
     assert(isSorted!("toUpper(a) < toUpper(b)")(b));
+
+    {
+        // Issue 10317
+        enum E_10317 { a, b }
+        auto a_10317 = new E_10317[10];
+        sort(a_10317);
+    }
 }
 
 private template validPredicates(E, less...) {

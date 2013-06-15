@@ -958,10 +958,12 @@ unittest
     assert(wtext(int.min) == "-2147483648"w);
     assert(to!string(0L) == "0");
 
-    //Test CTFE-ability.
-    static assert(to!string(1uL << 62) == "4611686018427387904");
-    static assert(to!string(0x100000000) == "4294967296");
-    static assert(to!string(-138L) == "-138");
+    assertCTFEable!(
+    {
+        assert(to!string(1uL << 62) == "4611686018427387904");
+        assert(to!string(0x100000000) == "4294967296");
+        assert(to!string(-138L) == "-138");
+    });
 }
 
 unittest
@@ -1995,10 +1997,9 @@ unittest
 
 unittest
 {
-    //Some CTFE-ability checks.
-    static assert((){string s = "1234abc"; return parse!int(s) == 1234 && s == "abc";}());
-    static assert((){string s = "-1234abc"; return parse!int(s) == -1234 && s == "abc";}());
-    static assert((){string s = "1234abc"; return parse!uint(s) == 1234 && s == "abc";}());
+    assertCTFEable!({ string s =  "1234abc"; assert(parse! int(s) ==  1234 && s == "abc"); });
+    assertCTFEable!({ string s = "-1234abc"; assert(parse! int(s) == -1234 && s == "abc"); });
+    assertCTFEable!({ string s =  "1234abc"; assert(parse!uint(s) ==  1234 && s == "abc"); });
 }
 
 /// ditto
@@ -2510,9 +2511,9 @@ unittest
         assert(to!Float("123e+2") == Literal!Float(123e+2));
         assert(to!Float("123e-2") == Literal!Float(123e-2));
         assert(to!Float("123.") == Literal!Float(123.0));
-        assert(to!Float(".456") == Literal!Float(.456));
+        assert(to!Float(".375") == Literal!Float(.375));
 
-        assert(to!Float("1.23456E+2") == Literal!Float(1.23456E+2));
+        assert(to!Float("1.23375E+2") == Literal!Float(1.23375E+2));
 
         assert(to!Float("0") is 0.0);
         assert(to!Float("-0") is -0.0);
@@ -2612,7 +2613,7 @@ unittest
 // Unittest for bug 6160
 unittest
 {
-    assert(1000_000_000e50L == to!real("1000_000_000_e50"));        // 1e59
+    assert(6_5.536e3L == to!real("6_5.536e3"));                     // 2^16
     assert(0x1000_000_000_p10 == to!real("0x1000_000_000_p10"));    // 7.03687e+13
 }
 
