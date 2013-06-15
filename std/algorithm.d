@@ -11766,3 +11766,34 @@ unittest
     assert(shiftedCount == 3);
 }
 
+unittest
+{
+    // Manually stride to test different pipe behavior.
+    void testRange(Range)(Range r)
+    {
+        const int strideLen = 3;
+        int i = 0;
+        typeof(Range.front) elem;
+        while (!r.empty)
+        {
+            if (i % strideLen == 0)
+            {
+                elem = r.front();
+            }
+            r.popFront();
+            i++;
+        }
+    }
+
+    string txt = "abcdefghijklmnopqrstuvwxyz";
+
+    int popCount = 0;
+    auto pipeOnPop = tee!(a => popCount++)(txt);
+    testRange(pipeOnPop);
+    assert(popCount == 26);
+
+    int frontCount = 0;
+    auto pipeOnFront = tee!(a => frontCount++, false)(txt);
+    testRange(pipeOnFront);
+    assert(frontCount == 9);
+}
