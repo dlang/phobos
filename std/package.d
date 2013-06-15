@@ -26,11 +26,13 @@ import std.cstream;
 import std.csv;
 import std.datetime;
 //import std.demangle;
+/+
 import std.digest.crc;
 import std.digest.digest;
 import std.digest.md;
 import std.digest.ripemd;
 import std.digest.sha;
++/
 import std.encoding;
 import std.exception;
 import std.file;
@@ -43,8 +45,10 @@ import std.mathspecial;
 //import std.md5;
 //import std.metastrings;
 import std.mmfile;
+/+
 import std.net.curl;
 import std.net.isemail;
++/
 import std.numeric;
 import std.outbuffer;
 import std.parallelism;
