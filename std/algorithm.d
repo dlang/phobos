@@ -329,6 +329,7 @@ module std.algorithm;
 //debug = std_algorithm;
 
 import std.container : BinaryHeap;
+import std.conv : text;
 import std.exception : pointsTo, enforce, to, emplace, assertThrown;
 import std.functional : unaryFun, binaryFun, adjoin;
 import std.random : Random, uniform, unpredictableSeed;
@@ -8163,18 +8164,12 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
             quickSortImpl!(lessFun)(r);
         else //use Tim Sort for semistable & stable
             TimSortImpl!(lessFun, Range).sort(r, null);
-        import std.conv : text;
-        static if (is(typeof(text(r))))
-        {
-            enum maxLen = 8;
-            assert(isSorted!lessFun(r), text("Failed to sort range of type ",
-                            Range.stringof, ". Actual result is: ",
-                            r[0 .. r.length > maxLen ? maxLen : r.length ],
-                            r.length > maxLen ? "..." : ""));
-        }
-        else
-            assert(isSorted!lessFun(r), text("Unable to sort range of type ",
-                            Range.stringof, ": <unable to print elements>"));
+
+        enum maxLen = 8;
+        assert(isSorted!lessFun(r), text("Failed to sort range of type ",
+                        Range.stringof, ". Actual result is: ",
+                        r[0 .. r.length > maxLen ? maxLen : r.length ],
+                        r.length > maxLen ? "..." : ""));
     }
     else
     {
@@ -8228,6 +8223,13 @@ unittest
     auto b = rndstuff!(string)();
     sort!("toLower(a) < toLower(b)")(b);
     assert(isSorted!("toUpper(a) < toUpper(b)")(b));
+
+    {
+        // Issue 10317
+        enum E_10317 { a, b }
+        auto a_10317 = new E_10317[10];
+        sort(a_10317);
+    }
 }
 
 private template validPredicates(E, less...) {
