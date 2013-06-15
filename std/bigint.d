@@ -828,7 +828,7 @@ unittest
 {
     BigInt a;
     a.setDataUint([0x22]);
-    assert(a.toUint() == 0x22);
+    assert(a.toInt() == 0x22);
     assert(a.getDataUint() == [0x22]);
 
     a.setDataUlong([0xACDC]);
