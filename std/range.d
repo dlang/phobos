@@ -8911,7 +8911,8 @@ private struct TeeRange(Range, alias func, bool pipeOnPop)
 
     void popFront()
     {
-        if (pipeOnPop && !_input.empty)
+        assert(!_input.empty);
+        if (pipeOnPop)
         {
             func(_input.front);
         }
