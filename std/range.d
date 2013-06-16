@@ -8876,7 +8876,7 @@ unittest    // bug 9060
   //   pre-map: 1
   //   post-map: 5
   //   pre-map: 4
-  //   post-map: 1
+  //   post-map: 10
   //   pre-map: 9
 ---
 
@@ -8897,8 +8897,6 @@ private struct TeeRange(Range, alias func, bool pipeOnPop)
     {
         _input = r;
     }
-
-    auto opSlice() { return _input; }
 
     static if (isInfinite!Range)
     {
