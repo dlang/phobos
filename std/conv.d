@@ -577,22 +577,23 @@ unittest
     assert(c2.x == 3);
 }
 
-version (unittest)
-{
-    class A
-    {
-        this(B b) {}
-    }
-    class B : A
-    {
-        this() { super(this); }
-    }
-}
 unittest
 {
-    B b = new B();
-    A a = to!A(b);      // == cast(A)b
-                        // (do not run construction conversion like new A(b))
+    struct S
+    {
+        class A
+        {
+            this(B b) {}
+        }
+        class B : A
+        {
+            this() { super(this); }
+        }
+    }
+
+    S.B b = new S.B();
+    S.A a = to!(S.A)(b);      // == cast(S.A)b
+                              // (do not run construction conversion like new S.A(b))
     assert(b is a);
 
     static class C : Object
