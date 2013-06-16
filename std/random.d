@@ -1827,7 +1827,7 @@ Variable names are chosen to match those in Vitter's paper.
             return skipA();
         }
         // Otherwise, we use the standard Algorithm D mechanism.
-        else if ( _toSelect > 1 )
+        else if (_toSelect > 1)
         {
             size_t s;
             size_t qu1 = 1 + _available - _toSelect;
@@ -1882,7 +1882,7 @@ Variable names are chosen to match those in Vitter's paper.
                     }
 
                     // Step D4: decide whether or not to accept the current value of S.
-                    if ( (_available/(_available-x)) < (y1 * (y2 ^^ (1.0/(_toSelect-1)))) )
+                    if (_available/(_available-x) < y1 * (y2 ^^ (1.0/(_toSelect-1))))
                     {
                         // If it's not acceptable, we generate a new value of _Vprime
                         // and go back to the start of the for(;;) loop.
