@@ -8895,7 +8895,7 @@ template tee(alias func, bool pipeOnPop = true) if (is(typeof(unaryFun!func)))
 
 private struct TeeRange(Range, alias func, bool pipeOnPop)
 {
-    Range _input;
+    private Range _input;
 
     this(Range r)
     {
