@@ -1916,10 +1916,10 @@ Variable names are chosen to match those in Vitter's paper.
         if (empty) return;
         assert(_available && _available >= _toSelect);
         immutable size_t s = skip();
-        assert(s < (_available + 1 - _toSelect));
+        assert(s + _toSelect <= _available);
         static if (hasLength!R)
         {
-            assert(s < (_input.length + 1 - _toSelect));
+            assert(s + _toSelect <= _input.length);
         }
         assert(!_input.empty);
         _input.popFrontExactly(s);
