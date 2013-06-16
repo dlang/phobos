@@ -1660,10 +1660,15 @@ struct RandomSample(R, Random = void)
     {
         _available = total;
         _toSelect = howMany;
-        enforce(_toSelect <= _available, text("RandomSample: cannot sample ", _toSelect, " items when only ", _available, " are available"));
+        enforce(_toSelect <= _available,
+                text("RandomSample: cannot sample ", _toSelect,
+                     " items when only ", _available, " are available"));
         static if (hasLength!R)
         {
-            enforce(_available <= _input.length, text("RandomSample: specified ", _available, " items as available when input contains only ", _input.length));
+            enforce(_available <= _input.length,
+                    text("RandomSample: specified ", _available,
+                         " items as available when input contains only ",
+                         _input.length));
         }
         _first = true;
     }
