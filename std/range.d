@@ -8932,7 +8932,7 @@ private struct TeeRange(Range, alias func, bool pipeOnPop)
     {
         @property auto save()
         {
-            return typeof(this)(_input);
+            return typeof(this)(_input.save);
         }
     }
 }
@@ -9009,3 +9009,32 @@ unittest
     assert(frontCount == 9);
 }
 
+unittest
+{
+    // Verify save behavior, using a reference type InputRange.
+    class C
+    {
+        int _data;
+        @property int front() { return _data; }
+        @property bool empty() { return false; }
+        void popFront() { _data++; }
+        @property auto save()
+        {
+            C result = new C();
+            result._data = _data;
+            return result;
+        }
+    }
+
+    C nums = new C();
+
+    auto range = tee!(a => a + 1)(nums);
+    range.popFront();
+    assert(range.front == 1);
+
+    auto saved = range.save;
+    range.popFront();
+    range.popFront();
+    assert(range.front == 3);
+    assert(saved.front == 1);
+}
