@@ -1604,7 +1604,7 @@ of size $(D n) in O(n) steps and requiring O(n) random variates,
 regardless of the size of the data being sampled.
 */
 struct RandomSample(R, Random = void)
-    if(isInputRange!R && (isUniformRNG!Random || is(Random == void)))
+    if (isInputRange!R && (isUniformRNG!Random || is(Random == void)))
 {
     private size_t _available, _toSelect;
     private enum ushort _alphaInverse = 13; // Vitter's recommended value.
@@ -1617,7 +1617,7 @@ struct RandomSample(R, Random = void)
     // we shouldn't store a copy of it here.  Random == void is a sentinel
     // for this.  If we're using a user-specified generator then we have no
     // choice but to store a copy.
-    static if(!is(Random == void))
+    static if (!is(Random == void))
     {
         Random _gen;
 
@@ -1661,8 +1661,10 @@ struct RandomSample(R, Random = void)
         _available = total;
         _toSelect = howMany;
         enforce(_toSelect <= _available, text("RandomSample: cannot sample ", _toSelect, " items when only ", _available, " are available"));
-        static if(hasLength!R)
+        static if (hasLength!R)
+        {
             enforce(_available <= _input.length, text("RandomSample: specified ", _available, " items as available when input contains only ", _input.length));
+        }
         _first = true;
     }
 
@@ -1681,11 +1683,11 @@ struct RandomSample(R, Random = void)
         // having it always correspond to the first element of the
         // input.  The rest of the sample points are determined each
         // time we call popFront().
-        if(_first)
+        if (_first)
         {
             // We can save ourselves a random variate by checking right
             // at the beginning if we should use Algorithm A.
-            if((_alphaInverse * _toSelect) > _available)
+            if ((_alphaInverse * _toSelect) > _available)
             {
                 _algorithmA = true;
             }
@@ -1711,7 +1713,7 @@ struct RandomSample(R, Random = void)
     }
 
 /// Ditto
-    static if(isForwardRange!R)
+    static if (isForwardRange!R)
     {
         @property typeof(this) save()
         {
@@ -1744,7 +1746,7 @@ to remaining data values is sufficiently large.
         size_t s;
         double v, quot, top;
 
-        if(_toSelect==1)
+        if (_toSelect==1)
         {
             static if(is(Random==void))
             {
@@ -1761,7 +1763,7 @@ to remaining data values is sufficiently large.
             top = _available - _toSelect;
             quot = top / _available;
 
-            static if(is(Random==void))
+            static if (is(Random==void))
             {
                 v = uniform!"()"(0.0, 1.0);
             }
@@ -1785,7 +1787,7 @@ Randomly reset the value of _Vprime.
 */
     private double newVprime(size_t remaining)
     {
-        static if(is(Random == void))
+        static if (is(Random == void))
         {
             double r = uniform!"()"(0.0, 1.0);
         }
@@ -1815,11 +1817,11 @@ Variable names are chosen to match those in Vitter's paper.
         // than a certain proportion of the remaining data points, i.e.
         // if n >= alpha * N where alpha = 1/13, we carry out the
         // sampling with Algorithm A.
-        if(_algorithmA)
+        if (_algorithmA)
         {
             return skipA();
         }
-        else if((_alphaInverse * _toSelect) > _available)
+        else if ((_alphaInverse * _toSelect) > _available)
         {
             _algorithmA = true;
             return skipA();
@@ -1841,7 +1843,7 @@ Variable names are chosen to match those in Vitter's paper.
                     _Vprime = newVprime(_toSelect);
                 }
 
-                static if(is(Random == void))
+                static if (is(Random == void))
                 {
                     double u = uniform!"()"(0.0, 1.0);
                 }
@@ -1856,12 +1858,12 @@ Variable names are chosen to match those in Vitter's paper.
 
                 // Step D3: if _Vprime <= 1.0 our work is done and we return S.
                 // Otherwise ...
-                if(_Vprime > 1.0)
+                if (_Vprime > 1.0)
                 {
                     size_t top = _available - 1, limit;
                     double y2 = 1.0, bottom;
 
-                    if(_toSelect > (s+1) )
+                    if (_toSelect > (s+1))
                     {
                         bottom = _available - _toSelect;
                         limit = _available - s;
@@ -1880,7 +1882,7 @@ Variable names are chosen to match those in Vitter's paper.
                     }
 
                     // Step D4: decide whether or not to accept the current value of S.
-                    if( (_available/(_available-x)) < (y1 * (y2 ^^ (1.0/(_toSelect-1)))) )
+                    if ( (_available/(_available-x)) < (y1 * (y2 ^^ (1.0/(_toSelect-1)))) )
                     {
                         // If it's not acceptable, we generate a new value of _Vprime
                         // and go back to the start of the for(;;) loop.
@@ -1915,8 +1917,10 @@ Variable names are chosen to match those in Vitter's paper.
         assert(_available && _available >= _toSelect);
         immutable size_t s = skip();
         assert(s < (_available + 1 - _toSelect));
-        static if(hasLength!R)
+        static if (hasLength!R)
+        {
             assert(s < (_input.length + 1 - _toSelect));
+        }
         assert(!_input.empty);
         _input.popFrontExactly(s);
         _index += s;
@@ -1928,28 +1932,28 @@ Variable names are chosen to match those in Vitter's paper.
 
 /// Ditto
 auto randomSample(R)(R r, size_t n, size_t total)
-if(isInputRange!R)
+    if (isInputRange!R)
 {
     return RandomSample!(R, void)(r, n, total);
 }
 
 /// Ditto
 auto randomSample(R)(R r, size_t n)
-    if(isInputRange!R && hasLength!R)
+    if (isInputRange!R && hasLength!R)
 {
     return RandomSample!(R, void)(r, n, r.length);
 }
 
 /// Ditto
 auto randomSample(R, Random)(R r, size_t n, size_t total, Random gen)
-if(isInputRange!R && isUniformRNG!Random)
+    if (isInputRange!R && isUniformRNG!Random)
 {
     return RandomSample!(R, Random)(r, n, total, gen);
 }
 
 /// Ditto
 auto randomSample(R, Random)(R r, size_t n, Random gen)
-if (isInputRange!R && hasLength!R && isUniformRNG!Random)
+    if (isInputRange!R && hasLength!R && isUniformRNG!Random)
 {
     return RandomSample!(R, Random)(r, n, r.length, gen);
 }
