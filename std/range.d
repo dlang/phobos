@@ -8855,7 +8855,8 @@ unittest    // bug 9060
   Implements a "tee" style pipe, wrapping an input range so that elements
   of the range can be passed to a provided function as they are iterated over.
 
-  If pipeOnPop = true, func is called on popFront, else called on front.
+  If the pipeOnFront Flag is set to yes, func is called on front.
+  Otherwise, func is called on popFront (the default behavior).
 
   Examples:
 ---
@@ -8885,7 +8886,8 @@ unittest    // bug 9060
 ---
 
 */ 
-template tee(alias func, bool pipeOnPop = true) if (is(typeof(unaryFun!func)))
+template tee(alias func, Flag!"pipeOnFront" pipeOnFront = No.pipeOnFront)
+  if (is(typeof(unaryFun!func)))
 {
     auto tee(Range)(Range inputRange) if (isInputRange!(Range))
     {
@@ -8910,7 +8912,7 @@ template tee(alias func, bool pipeOnPop = true) if (is(typeof(unaryFun!func)))
             void popFront()
             {
                 assert(!_input.empty);
-                static if (pipeOnPop)
+                static if (!pipeOnFront)
                 {
                     unaryFun!func(_input.front);
                 }
@@ -8919,7 +8921,7 @@ template tee(alias func, bool pipeOnPop = true) if (is(typeof(unaryFun!func)))
 
             @property auto ref front()
             {
-                static if (!pipeOnPop)
+                static if (pipeOnFront)
                 {
                     unaryFun!func(_input.front);
                 }
@@ -9006,7 +9008,7 @@ unittest
     assert(popCount == 26);
 
     int frontCount = 0;
-    auto pipeOnFront = tee!(a => frontCount++, false)(txt);
+    auto pipeOnFront = tee!(a => frontCount++, Yes.pipeOnFront)(txt);
     testRange(pipeOnFront);
     assert(frontCount == 9);
 }
