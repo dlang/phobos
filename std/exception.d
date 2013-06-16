@@ -865,22 +865,34 @@ Returns $(D true) if $(D source)'s representation embeds a pointer
 that points to $(D target)'s representation or somewhere inside
 it.
 
-Note that evaluating $(D pointsTo(x, x)) checks whether $(D x) has
+If $(D source) is or contains a dynamic array, then, then pointsTo will check
+if there is overlap between the dynamic array and $(D target)'s representation.
+
+If $(D source) is or contains a union, then every member of the union is
+checked for embedded pointers. This may lead to false positives, depending on
+which should be considered the "active" member of the union.
+
+If $(D source) is a class, then pointsTo will handle it as a pointer.
+
+If $(D target) is a pointer, a dynamic array or a class, then pointsTo will only
+check if $(D source) points to $(D target), $(I not) what $(D target) references.
+
+Note: Evaluating $(D pointsTo(x, x)) checks whether $(D x) has
 internal pointers. This should only be done as an assertive test,
 as the language is free to assume objects don't have internal pointers
 (TDPL 7.1.3.5).
 */
-bool pointsTo(S, T, Tdummy=void)(auto ref const S source, auto ref const T target) @trusted pure nothrow
-    if ((__traits(isRef, source) || isDynamicArray!S) &&    // lvalue or slice rvalue
-        (__traits(isRef, target) || isDynamicArray!T))      // lvalue or slice rvalue
+bool pointsTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @trusted pure nothrow
+    if (__traits(isRef, source) || isDynamicArray!S || 
+        isPointer!S || is(S == class))
 {
-    static if (is(S P : U*, U))
+    static if (isPointer!S || is(S == class))
     {
         const m = cast(void*) source,
               b = cast(void*) &target, e = b + target.sizeof;
         return b <= m && m < e;
     }
-    else static if (is(S == struct))
+    else static if (is(S == struct) || is(S == union))
     {
         foreach (i, Subobj; typeof(source.tupleof))
             if (pointsTo(source.tupleof[i], target)) return true;
@@ -902,10 +914,101 @@ bool pointsTo(S, T, Tdummy=void)(auto ref const S source, auto ref const T targe
     }
 }
 // for shared objects
-bool pointsTo(S, T)(ref const shared S source, ref const shared T target) @trusted pure nothrow
+bool pointsTo(S, T)(auto ref const shared S source, ref const shared T target) @trusted pure nothrow
 {
     return pointsTo!(shared S, shared T, void)(source, target);
 }
+
+/// Pointers
+unittest
+{
+    int  i = 0;
+    int* p = null;
+    assert(!p.pointsTo(i));
+    p = &i;
+    assert( p.pointsTo(i));
+}
+
+/// Structs and Unions
+unittest
+{
+    struct S
+    {
+        int v;
+        int* p;
+    }
+    int i;
+    auto s = S(0, &i);
+ 
+    //structs and unions "own" their members
+    //pointsTo will answer true if one of the members pointsTo.
+    assert(!s.pointsTo(s.v)); //s.v is just v member of s, so not pointed.
+    assert( s.p.pointsTo(i)); //i is pointed by s.p.
+    assert( s  .pointsTo(i)); //which means i is pointed by s itself.
+
+    //Unions will behave exactly the same. Points to will check each "member"
+    //individually, even if they share the same memory
+}
+
+/// Arrays (dynamic and static)
+unittest
+{
+    int i;
+    int[]  slice = [0, 1, 2, 3, 4];
+    int[5] arr   = [0, 1, 2, 3, 4];
+    int*[]  slicep = [&i];
+    int*[1] arrp   = [&i];
+
+    //A slice points to all of its members:
+    assert( slice.pointsTo(slice[3]));
+    assert(!slice[0 .. 2].pointsTo(slice[3])); //Object 3 is outside of the slice [0 .. 2]
+
+    //Note that a slice will not take into account what its members point to.
+    assert( slicep[0].pointsTo(i));
+    assert(!slicep   .pointsTo(i));
+
+    //static arrays are objects that own their members, just like structs:
+    assert(!arr.pointsTo(arr[0])); //arr[0] is just a member of arr, so not pointed.
+    assert( arrp[0].pointsTo(i));  //i is pointed by arrp[0].
+    assert( arrp   .pointsTo(i));  //which means i is pointed by arrp itslef.
+
+    //Notice the difference between static and dynamic arrays:
+    assert(!arr  .pointsTo(arr[0]));
+    assert( arr[].pointsTo(arr[0]));
+    assert( arrp  .pointsTo(i));
+    assert(!arrp[].pointsTo(i));
+}
+
+/// Classes
+unittest
+{
+    class C
+    {
+        this(int* p){this.p = p;}
+        int* p;
+    }
+    int i;
+    C a = new C(&i);
+    C b = a;
+    //Classes are a bit particular, as they are treated like simple pointers
+    //to a class payload.
+    assert( a.p.pointsTo(i)); //a.p points to i.
+    assert(!a  .pointsTo(i)); //Yet a itself does not point i.
+
+    //To check the class payload itself, iterate on its members:
+    ()
+    {
+        foreach (index, _; FieldTypeTuple!C)
+            if (pointsTo(a.tupleof[index], i))
+                return;
+        assert(0);
+    }();
+
+    //To check if a class points a specific payload, a direct memmory check can be done:
+    auto aLoc = cast(ubyte[__traits(classInstanceSize, C)]*) a;
+    assert(b.pointsTo(*aLoc)); //b points to where a is pointing
+}
+
 unittest
 {
     struct S1 { int a; S1 * b; }
@@ -947,7 +1050,6 @@ unittest
 
     //dynamic arrays don't point to each other, or slices of themselves
     assert(!pointsTo(darr, darr));
-    assert(!pointsTo(darr, darr[0 .. 1]));
     assert(!pointsTo(darr[0 .. 1], darr));
 
     //But they do point their elements
@@ -1003,6 +1105,70 @@ unittest
     assert( pointsTo(ss, a));  //The array contains a struct that points to a
     assert(!pointsTo(ss, b));  //The array doesn't contains a struct that points to b
     assert(!pointsTo(ss, ss)); //The array doesn't point itself.
+}
+
+
+unittest //Unions
+{
+    int i;
+    union U //Named union
+    {
+        size_t asInt = 0;
+        int*   asPointer;
+    }
+    struct S
+    {
+        union //Anonymous union
+        {
+            size_t asInt = 0;
+            int*   asPointer;
+        }
+    }
+
+    U u;
+    S s;
+    assert(!pointsTo(u, i));
+    assert(!pointsTo(s, i));
+
+    u.asPointer = &i;
+    s.asPointer = &i;
+    assert( pointsTo(u, i));
+    assert( pointsTo(s, i));
+
+    u.asInt = cast(size_t)&i;
+    s.asInt = cast(size_t)&i;
+    assert( pointsTo(u, i)); //logical false positive
+    assert( pointsTo(s, i)); //logical false positive
+}
+
+unittest //Classes
+{
+    int i;
+    static class A
+    {
+        int* p;
+    }
+    A a = new A, b = a;
+    assert(!pointsTo(a, b)); //a does not point to b
+    a.p = &i;
+    assert(!pointsTo(a, i)); //a does not point to i
+}
+unittest //alias this test
+{
+    static int i;
+    static int j;
+    struct S
+    {
+        int* p;
+        @property int* foo(){return &i;}
+        alias foo this;
+    }
+    assert(is(S : int*));
+    S s = S(&j);
+    assert(!pointsTo(s, i));
+    assert( pointsTo(s, j));
+    assert( pointsTo(cast(int*)s, i));
+    assert(!pointsTo(cast(int*)s, j));
 }
 
 /*********************
