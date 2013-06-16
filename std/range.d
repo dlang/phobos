@@ -8889,53 +8889,53 @@ template tee(alias func, bool pipeOnPop = true) if (is(typeof(unaryFun!func)))
 {
     auto tee(Range)(Range inputRange) if (isInputRange!(Range))
     {
-        return TeeRange!(Range, unaryFun!func, pipeOnPop)(inputRange);
-    }
-}
-
-private struct TeeRange(Range, alias func, bool pipeOnPop)
-{
-    private Range _input;
-
-    this(Range r)
-    {
-        _input = r;
-    }
-
-    static if (isInfinite!Range)
-    {
-        enum bool empty = false;
-    }
-    else
-    {
-        @property bool empty() { return _input.empty; }
-    }
-
-    void popFront()
-    {
-        assert(!_input.empty);
-        static if (pipeOnPop)
+        struct Result(Range)
         {
-            func(_input.front);
-        }
-        _input.popFront();
-    }
+            private Range _input;
 
-    @property auto ref front()
-    {
-        static if (!pipeOnPop)
-        {
-            func(_input.front);
-        }
-        return _input.front;
-    }
+            this(Range r)
+            {
+                _input = r;
+            }
 
-    static if (isForwardRange!Range)
-    {
-        @property auto save()
-        {
-            return typeof(this)(_input.save);
+            static if (isInfinite!Range)
+            {
+                enum bool empty = false;
+            }
+            else
+            {
+                @property bool empty() { return _input.empty; }
+            }
+
+            void popFront()
+            {
+                assert(!_input.empty);
+                static if (pipeOnPop)
+                {
+                    unaryFun!func(_input.front);
+                }
+                _input.popFront();
+            }
+
+            @property auto ref front()
+            {
+                static if (!pipeOnPop)
+                {
+                    unaryFun!func(_input.front);
+                }
+                return _input.front;
+            }
+
+            static if (isForwardRange!Range)
+            {
+                @property auto save()
+                {
+                    return typeof(this)(_input.save);
+                }
+            }
         }
+
+        return Result!(Range)(inputRange);
     }
 }
 
