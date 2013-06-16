@@ -183,6 +183,10 @@ $(BOOKTABLE ,
     $(TR $(TD $(D $(LREF only)))
         $(TD Creates a _range that iterates over a single value.
     ))
+    $(TR $(TD $(D $(LREF tee)))
+        $(TD Creates a _range that wraps a given _range, forwarding along
+        its elements while also calling a provided function with each element.
+    ))
 )
 
 These _range-construction tools are implemented using templates; but sometimes
