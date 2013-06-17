@@ -134,6 +134,7 @@ public:
 
                 data = cast(ulong[])temp;
             }
+            data = removeLeadingZeros(data);
         }
     }
     void setUlong(const ulong[] n_data) pure
@@ -152,6 +153,7 @@ public:
             {
                 data = n_data.dup;
             }
+            data = removeLeadingZeros(data);
         }
     }
     // Length in uints
