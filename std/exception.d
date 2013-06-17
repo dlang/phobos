@@ -1353,9 +1353,9 @@ unittest
     }
 
     //Default does not include errors.
-    int[] a=[];
-    assert(a[0].ifThrown(0).collectException!RangeError() !is null);
-    assert(a[0].ifThrown(e=>0).collectException!RangeError() !is null);
+    int throwRangeError() { throw new RangeError; }
+    assert(throwRangeError().ifThrown(0).collectException!RangeError() !is null);
+    assert(throwRangeError().ifThrown(e=>0).collectException!RangeError() !is null);
 
     //Incompatible types are not accepted.
     static assert(!__traits(compiles, 1.ifThrown(new Object())));
