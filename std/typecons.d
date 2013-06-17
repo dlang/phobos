@@ -3006,6 +3006,23 @@ unittest
         assert(d.draw(10) == 10);
     }
 }
+unittest
+{
+    // Bugzilla 10377
+    import std.range, std.algorithm;
+
+    interface MyInputRange(T)
+    {
+        @property T front();
+        void popFront();
+        @property bool empty();
+    }
+
+    //auto o = iota(0,10,1).inputRangeObject();
+    //pragma(msg, __traits(allMembers, typeof(o)));
+    auto r = iota(0,10,1).inputRangeObject().wrap!(MyInputRange!int)();
+    assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]));
+}
 
 // Make a tuple of non-static function symbols
 private template GetOverloadedMethods(T)
@@ -3017,7 +3034,7 @@ private template GetOverloadedMethods(T)
         {
             alias follows = TypeTuple!();
         }
-        else static if (allMembers[i] == "this")
+        else static if (!__traits(compiles, mixin("T."~allMembers[i])))
         {
             alias follows = follows!(i + 1);
         }
