@@ -1844,7 +1844,7 @@ unittest
       static if (flags & 4)
         string toString() const { return "S"; }
     }
-    formatTest(S!0b000([0, 1, 2]), "S!(0)([0, 1, 2])");
+    formatTest(S!0b000([0, 1, 2]), "S!0([0, 1, 2])");
     formatTest(S!0b001([0, 1, 2]), "[0, 1, 2]");        // Test for bug 7628
     formatTest(S!0b010([0, 1, 2]), "[0, 2, 4]");
     formatTest(S!0b011([0, 1, 2]), "[0, 2, 4]");
