@@ -288,6 +288,11 @@ version(unittest)
 
         shared(immutable(Inner) delegate(ref double, scope string) const shared @trusted nothrow) attrDeleg;
     }
+
+    private enum QualifiedEnum
+    {
+        a = 42
+    }
 }
 
 private template fullyQualifiedNameImplForSymbols(alias T)
@@ -452,11 +457,11 @@ private template fullyQualifiedNameImplForTypes(T,
     {
         enum fullyQualifiedNameImplForTypes = "dstring";
     }
-    else static if (isBasicType!T || is(T == enum))
+    else static if (isBasicType!T && !is(T == enum))
     {
         enum fullyQualifiedNameImplForTypes = chain!((Unqual!T).stringof);
     }
-    else static if (isAggregateType!T)
+    else static if (isAggregateType!T || is(T == enum))
     {
         enum fullyQualifiedNameImplForTypes = chain!(fullyQualifiedNameImplForSymbols!T);
     }
@@ -540,6 +545,8 @@ unittest
 
         // Basic qualified name
         static assert(fqn!(Inner) == inner_name);
+        static assert(fqn!(QualifiedEnum) == "std.traits.QualifiedEnum"); // type
+        static assert(fqn!(QualifiedEnum.a) == "std.traits.QualifiedEnum.a"); // symbol
 
         // Array types
         static assert(fqn!(typeof(array)) == format("%s[]", inner_name));
