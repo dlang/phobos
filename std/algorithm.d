@@ -3519,15 +3519,117 @@ string[] s = [ "Hello", "world", "!" ];
 assert(!find!("toLower(a) == b")(s, "hello").empty);
 ----
  */
-R find(alias pred = "a == b", R, E)(R haystack, E needle)
-if (isInputRange!R &&
-        is(typeof(binaryFun!pred(haystack.front, needle)) : bool))
+R find(R, E)(R haystack, E needle)
+    if (isInputRange!R &&
+        is (typeof(haystack.front == needle) : bool))
 {
-    for (; !haystack.empty; haystack.popFront())
+    if (__ctfe) //Don't be fancy in CTFE: Forward now to generic code
+        return find!((a,b)=>a==b)(haystack, needle);
+
+    alias EType  = ElementType!R;
+    alias EEType = ElementEncodingType!R;
+
+    static if (isNarrowString!R && isSomeChar!E)
     {
-        if (binaryFun!pred(haystack.front, needle)) break;
+        //Optimization to not decode UTF-8 string
+        static if (EEType.sizeof == 1)
+            if (needle <= 0x7F)
+                return () @trusted
+                {
+                    immutable len = haystack.length;
+                    auto ptr = memchr(haystack.ptr, needle, len);
+                    if (ptr)
+                        return haystack.ptr[ptr - haystack.ptr .. len];
+                    else
+                        return haystack[$ .. $];
+                } ();
+
+        //Optimization to not decode UTF-16 string
+        static if (EEType.sizeof == 2)
+        {
+            string code = q{{
+                foreach (i, ref ElementEncodingType!R e; haystack)
+                {
+                    if (e == needle)
+                        return haystack.ptr[i .. len];
+                }
+                return haystack[$ .. $];
+            }};
+
+            static if (E.sizeof == 1)
+                mixin(code);
+            else
+                if (needle < 0xD7FF || (0xE000 <= needle && needle <= 0xFFFF))
+                    mixin(code);
+        }
+
+        //Default optimization to not decode.
+        return () @trusted
+        {
+            Unqual!EEType[EEType.sizeof == 1 ? 4 : 2] buf;
+            immutable len = encode(buf, cast(dchar)needle);
+            return find(haystack, cast(R)buf.ptr[0 .. len]);
+        } ();
     }
-    return haystack;
+    else static if (isArray!R && !isNarrowString!R && //Optimmization for 1 byte objects with POD comparison.
+        EType.sizeof == 1 && E.sizeof == 1 &&
+        !is(typeof(haystack[0].opEquals(needle))))
+    {
+        immutable len = haystack.length;
+        ubyte* pe = cast(ubyte*)&needle;
+        auto ptr = memchr(haystack.ptr, *pe, len);
+        if (ptr)
+            return haystack.ptr[ptr - haystack.ptr .. len];
+        else
+            return haystack[$ .. $];
+    }
+    else
+        return find!((ref a, ref b)=>a==b)(haystack, needle);
+}
+/// ditto
+R find(alias pred, R, E)(R haystack, E needle)
+    if (isInputRange!R &&
+        is (typeof(binaryFun!pred(haystack.front, needle)) : bool))
+{
+    alias predFun = binaryFun!pred;
+
+    static if (is(typeof(pred == "a == b")) && pred == "a == b")
+    {
+        //Delegate to no-pred version. This also transforms "a == b" into a faster lambda.
+        return find(haystack, needle);
+    }
+    else static if (isNarrowString!R)
+    {
+        immutable len = haystack.length;
+        size_t i = 0, next = 0;
+        while (next < len)
+        {
+            if (predFun(decode(haystack, next), needle))
+                return haystack.ptr[i .. len];
+            i = next;
+        }
+        return haystack[$ .. $];
+    }
+    else static if (isArray!R)
+    {
+        immutable len = haystack.length;
+        foreach (i, ref e; haystack)
+        {
+            if (predFun(e, needle))
+                return haystack.ptr[i .. len];
+        }
+        return haystack[$ .. $];
+    }
+    else
+    {
+        //standard range
+        for ( ; !haystack.empty; haystack.popFront() )
+        {
+            if (predFun(haystack.front, needle))
+                break;
+        }
+        return haystack;
+    }
 }
 
 unittest
@@ -3539,6 +3641,56 @@ unittest
     auto r = find(lst[], 5);
     assert(equal(r, SList!int(5, 7, 3)[]));
     assert(find([1, 2, 3, 5], 4).empty);
+}
+@safe pure nothrow unittest
+{
+    int[] a1 = [1, 2, 3];
+    assert(find              ([1, 2, 3], 2));
+    assert(find!((a,b)=>a==b)([1, 2, 3], 2));
+    ubyte[] a2 = [1, 2, 3];
+    ubyte   b2 = 2;
+    assert(find              ([1, 2, 3], 2));
+    assert(find!((a,b)=>a==b)([1, 2, 3], 2));
+}
+@safe pure unittest
+{
+    foreach(R; TypeTuple!(string, wstring, dstring))
+    {
+        foreach(E; TypeTuple!(char, wchar, dchar))
+        {
+            R r1 = "hello world";
+            E e1 = 'w';
+            assert(find              ("hello world", 'w') == "world");
+            assert(find!((a,b)=>a==b)("hello world", 'w') == "world");
+            R r2 = "日c語";
+            E e2 = 'c';
+            assert(find              ("日c語", 'c') == "c語");
+            assert(find!((a,b)=>a==b)("日c語", 'c') == "c語");
+            static if (E.sizeof >= 2)
+            {
+                R r3 = "hello world";
+                E e3 = 'w';
+                assert(find              ("日本語", '本') == "本語");
+                assert(find!((a,b)=>a==b)("日本語", '本') == "本語");
+            }
+        }
+    }
+}
+unittest
+{
+    //CTFE
+    static assert (find("abc", 'b') == "bc");
+    static assert (find("日b語", 'b') == "b語");
+    static assert (find("日本語", '本') == "本語");
+    static assert (find([1, 2, 3], 2)  == [2, 3]);
+
+    int[] a1 = [1, 2, 3];
+    static assert(find              ([1, 2, 3], 2));
+    static assert(find!((a,b)=>a==b)([1, 2, 3], 2));
+    ubyte[] a2 = [1, 2, 3];
+    ubyte   b2 = 2;
+    static assert(find              ([1, 2, 3], 2));
+    static assert(find!((a,b)=>a==b)([1, 2, 3], 2));
 }
 
 /**
