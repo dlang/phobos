@@ -5078,14 +5078,15 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         && isIntegral!S)
 {
     alias CommonType!(Unqual!B, Unqual!E) Value;
+    alias Unqual!S StepType;
     alias typeof(unsigned((end - begin) / step)) IndexType;
 
     static struct Result
     {
         private Value current, pastLast;
-        private S step;
+        private StepType step;
 
-        this(Value current, Value pastLast, S step)
+        this(Value current, Value pastLast, StepType step)
         {
             if ((current < pastLast && step >= 0) ||
                     (current > pastLast && step <= 0))
@@ -5236,7 +5237,7 @@ auto iota(E)(E end)
 auto iota(B, E, S)(B begin, E end, S step)
 if (isFloatingPoint!(CommonType!(B, E, S)))
 {
-    alias CommonType!(B, E, S) Value;
+    alias CommonType!(Unqual!B, Unqual!E, Unqual!S) Value;
     static struct Result
     {
         private Value start, step;
