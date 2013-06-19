@@ -5237,7 +5237,7 @@ auto iota(E)(E end)
 auto iota(B, E, S)(B begin, E end, S step)
 if (isFloatingPoint!(CommonType!(B, E, S)))
 {
-    alias CommonType!(Unqual!B, Unqual!E, Unqual!S) Value;
+    alias Unqual!(CommonType!(B, E, S)) Value;
     static struct Result
     {
         private Value start, step;
