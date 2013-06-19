@@ -153,8 +153,8 @@ DDOC=$(DMD)
 VERSION=../dmd/VERSION
 
 # Set SONAME, the name of the shared library.
-# The awk script will produce the last 2 digits of the version string, i.e. 2.063 produces 63
-SONAME = libphobos2.so.0.$(shell awk -F. '{ print $$NF + 0 }' $(VERSION))
+# The awk script will return the second group without leading zeros of the version string, i.e. 2.063.2 produces 63
+SONAME = libphobos2.so.0.$(shell awk -F. '{ print $$2 + 0 }' $(VERSION))
 
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))
