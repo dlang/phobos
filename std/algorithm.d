@@ -3523,15 +3523,27 @@ R find(R, E)(R haystack, E needle)
     if (isInputRange!R &&
         is (typeof(haystack.front == needle) : bool))
 {
-    if (__ctfe) //Don't be fancy in CTFE: Forward now to generic code
+    if (__ctfe) //Don't be fancy in CTFE: Forward to generic code
         return find!((a,b)=>a==b)(haystack, needle);
 
     alias EType  = ElementType!R;
     alias EEType = ElementEncodingType!R;
 
-    static if (isNarrowString!R && isSomeChar!E)
+    static if (isNarrowString!R && isSomeChar!E &&
+        EEType.sizeof == 2 && E.sizeof == 1)
     {
-        //Optimization to not decode UTF-8 string
+        //Optimization: Searching for a char inside wchar means we can straight up
+        //uncoditionally search the codeunits
+        foreach (i, ref ElementEncodingType!R e; haystack)
+        {
+            if (e == needle)
+                return haystack[i .. $];
+        }
+        return haystack[$ .. $];
+    }
+    else static if (isNarrowString!R && isSomeChar!E)
+    {
+        //Optimization to not decode UTF-8 string, and search the codeunits.
         static if (EEType.sizeof == 1)
             if (needle <= 0x7F)
                 return () @trusted
@@ -3544,26 +3556,24 @@ R find(R, E)(R haystack, E needle)
                         return haystack[$ .. $];
                 } ();
 
-        //Optimization to not decode UTF-16 string
+        //Optimization to not decode UTF-16 string, and search the codeunits.
         static if (EEType.sizeof == 2)
         {
-            string code = q{{
+            static if (E.sizeof == 2) enum condition = q{needle < 0xD7FF || (0xE000 <= needle)};
+            else                      enum condition = q{needle < 0xD7FF || (0xE000 <= needle && needle <= 0xFFFF)};
+            
+            if (mixin(condition))
+            {
                 foreach (i, ref ElementEncodingType!R e; haystack)
                 {
                     if (e == needle)
-                        return haystack.ptr[i .. len];
+                        return haystack[i .. $];
                 }
                 return haystack[$ .. $];
-            }};
-
-            static if (E.sizeof == 1)
-                mixin(code);
-            else
-                if (needle < 0xD7FF || (0xE000 <= needle && needle <= 0xFFFF))
-                    mixin(code);
+            }
         }
 
-        //Default optimization to not decode.
+        //Default optimization to not decode the narrow string.
         return () @trusted
         {
             Unqual!EEType[EEType.sizeof == 1 ? 4 : 2] buf;
@@ -3571,20 +3581,40 @@ R find(R, E)(R haystack, E needle)
             return find(haystack, cast(R)buf.ptr[0 .. len]);
         } ();
     }
-    else static if (isArray!R && !isNarrowString!R && //Optimmization for 1 byte objects with POD comparison.
-        EType.sizeof == 1 && E.sizeof == 1 &&
-        !is(typeof(haystack[0].opEquals(needle))))
+    else static if (isNarrowString!R)
     {
         immutable len = haystack.length;
-        ubyte* pe = cast(ubyte*)&needle;
-        auto ptr = memchr(haystack.ptr, *pe, len);
-        if (ptr)
-            return haystack.ptr[ptr - haystack.ptr .. len];
-        else
-            return haystack[$ .. $];
+        size_t i = 0, next = 0;
+        while (next < len)
+        {
+            if (decode(haystack, next) == needle)
+                return haystack[i .. $];
+            i = next;
+        }
+        return haystack[$ .. $];
+    }
+    else static if (isArray!R)
+    {
+        //TODO @@@10403@@@ optimization goes here ?
+
+        immutable len = haystack.length;
+        foreach (i, ref e; haystack)
+        {
+            if (e == needle)
+                return haystack[i .. $];
+        }
+        return haystack[$ .. $];
     }
     else
-        return find!((ref a, ref b)=>a==b)(haystack, needle);
+    {
+        //standard range
+        for ( ; !haystack.empty; haystack.popFront() )
+        {
+            if (haystack.front == needle)
+                break;
+        }
+        return haystack;
+    }
 }
 /// ditto
 R find(alias pred, R, E)(R haystack, E needle)
@@ -3605,18 +3635,17 @@ R find(alias pred, R, E)(R haystack, E needle)
         while (next < len)
         {
             if (predFun(decode(haystack, next), needle))
-                return haystack.ptr[i .. len];
+                return haystack[i .. $];
             i = next;
         }
         return haystack[$ .. $];
     }
     else static if (isArray!R)
     {
-        immutable len = haystack.length;
         foreach (i, ref e; haystack)
         {
             if (predFun(e, needle))
-                return haystack.ptr[i .. len];
+                return haystack[i .. $];
         }
         return haystack[$ .. $];
     }
@@ -4305,22 +4334,53 @@ bool pred(int x) { return x + 1 > 1.5; }
 assert(find!(pred)(arr) == arr);
 ----
 */
-Range find(alias pred, Range)(Range haystack) if (isInputRange!(Range))
+R find(alias pred, R)(R haystack)
+    if (isInputRange!R)
 {
-    alias unaryFun!(pred) predFun;
-    for (; !haystack.empty && !predFun(haystack.front); haystack.popFront())
+    alias unaryFun!pred predFun;
+    static if (isNarrowString!R)
     {
+        immutable len = haystack.length;
+        size_t i = 0, next = 0;
+        while (next < len)
+        {
+            if (predFun(decode(haystack, next)))
+                return haystack[i .. $];
+            i = next;
+        }
+        return haystack[$ .. $];
     }
-    return haystack;
+    else static if (isArray!R)
+    {
+        foreach (i, ref e; haystack)
+        {
+            if (predFun(e))
+                return haystack[i .. $];
+        }
+        return haystack[$ .. $];
+    }
+    else
+    {
+        //standard range
+        for ( ; !haystack.empty; haystack.popFront() )
+        {
+            if (predFun(haystack.front))
+                break;
+        }
+        return haystack;
+    }
 }
 
-unittest
+@safe pure unittest
 {
     //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    int[] a = [ 1, 2, 3 ];
-    assert(find!("a > 2")(a) == [3]);
+    int[] r = [ 1, 2, 3 ];
+    assert(find!(a=>a > 2)(r) == [3]);
     bool pred(int x) { return x + 1 > 1.5; }
-    assert(find!(pred)(a) == a);
+    assert(find!(pred)(r) == r);
+
+    assert(find!(a=>a > 'v')("hello world") == "world");
+    assert(find!(a=>a%4 == 0)("日本語") == "本語");
 }
 
 // findSkip
