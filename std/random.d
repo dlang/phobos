@@ -767,6 +767,20 @@ unittest
     assert(a != b);
 }
 
+unittest
+{
+    // Check .save works
+    foreach(Type; TypeTuple!(Mt19937))
+    {
+        auto gen1 = Type(unpredictableSeed);
+        auto gen2 = gen1.save;
+        assert(gen1 == gen2);  // Danger, Will Robinson -- no opEquals for MT
+        // Enable next test when RNGs are reference types
+        version(none) { assert(gen1 !is gen2); }
+        assert(gen1.take(100).array() == gen2.take(100).array());
+    }
+}
+
 
 /**
  * Xorshift generator using 32bit algorithm.
