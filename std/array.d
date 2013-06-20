@@ -2155,7 +2155,7 @@ struct Appender(A : T[], T)
         // safe WRT built-in append, and we can use the entire block.
         auto cap = ()@trusted{ return arr.capacity; }();
         if (cap > arr.length)
-            arr = arr.ptr[0 .. cap];
+            arr = ()@trusted{ return arr.ptr[0 .. cap]; }();
         // we assume no reallocation occurred
         assert(arr.ptr is _data.arr.ptr);
         _data.capacity = arr.length;
@@ -2345,11 +2345,10 @@ struct Appender(A : T[], T)
             ensureAddable(items.length);
             immutable len = _data.arr.length;
             immutable newlen = len + items.length;
-            _data.arr = _data.arr.ptr[0 .. newlen];
+            _data.arr = ()@trusted{ return _data.arr.ptr[0 .. newlen]; }();
             static if (is(typeof(_data.arr[] = items[])))
             {
-                _data.arr.ptr[len .. newlen] = items[];
-                // -> compiler bug?, slicing pointer does not become @system
+                ()@trusted{ return _data.arr.ptr[len .. newlen]; }()[] = items[];
             }
             else
             {
