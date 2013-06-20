@@ -996,7 +996,9 @@ unittest
         [0UL, 246875399, 3690007200, 1264581005, 3906711041, 1866187943, 2481925219, 2464530826, 1604040631, 3653403911]
     ];
 
-    foreach (I, Type; TypeTuple!(Xorshift32, Xorshift64, Xorshift96, Xorshift128, Xorshift160, Xorshift192))
+    alias TypeTuple!(Xorshift32, Xorshift64, Xorshift96, Xorshift128, Xorshift160, Xorshift192) XorshiftTypes;
+
+    foreach (I, Type; XorshiftTypes)
     {
         Type rnd;
 
@@ -1005,6 +1007,17 @@ unittest
             assert(rnd.front == e);
             rnd.popFront();
         }
+    }
+
+    // Check .save works
+    foreach (Type; XorshiftTypes)
+    {
+        auto rnd1 = Type(unpredictableSeed);
+        auto rnd2 = rnd1.save;
+        assert(rnd1 == rnd2);
+        // Enable next test when RNGs are reference types
+        version(none) { assert(rnd1 !is rnd2); }
+        assert(rnd1.take(100).array() == rnd2.take(100).array());
     }
 }
 
