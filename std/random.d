@@ -505,6 +505,17 @@ unittest
     rnd.seed();
     popFrontN(rnd, 9999);
     assert(rnd.front == 399268537);
+
+    // Check .save works
+    foreach (Type; TypeTuple!(MinstdRand0, MinstdRand))
+    {
+        auto rnd1 = Type(unpredictableSeed);
+        auto rnd2 = rnd1.save;
+        assert(rnd1 == rnd2);
+        // Enable next test when RNGs are reference types
+        version(none) { assert(rnd1 !is rnd2); }
+        assert(rnd1.take(100).array() == rnd2.take(100).array());
+    }
 }
 
 /**
