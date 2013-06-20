@@ -1195,6 +1195,14 @@ Constructor initializing $(D this) with $(D value).
     }
 
 /**
+Constructor initializing $(D this) with the null state.
+ */
+    // This is to support default function parameter of null.
+    this()(typeof(null) value)
+    {
+    }
+
+/**
 Returns $(D true) if and only if $(D this) is in the null state.
  */
     @property bool isNull() const pure nothrow @safe
@@ -1219,6 +1227,14 @@ succeeds, $(D this) becomes non-null.
     {
         _value = value;
         _isNull = false;
+    }
+
+/**
+Forces $(D this) to the null state using assignment.
+ */
+    void opAssign()(typeof(null) value)
+    {
+        nullify();
     }
 
 /**
@@ -1463,6 +1479,25 @@ unittest
         static assert( __traits(compiles, { auto x =           Nullable!S3(si); }));
         static assert( __traits(compiles, { auto x = immutable Nullable!S3(si); }));
     }
+}
+
+unittest
+{
+    // Issue #9636 - null initialization for Nullable.
+    bool testFunc(Nullable!double item = null) { return item.isNull; }
+
+    Nullable!double num = 0.12;
+    assert(testFunc() == true);
+    assert(testFunc(num) == false);
+
+    // Also null assignment.
+    Nullable!int x;
+    assert(x.isNull);
+    x = 5;
+    assert(!x.isNull);
+    assert(x == 5);
+    x = null;
+    assert(x.isNull);
 }
 
 /**
