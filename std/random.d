@@ -1573,7 +1573,6 @@ struct RandomCover(Range, Random)
             --k;
             ++i;
         }
-        assert(false);
     }
 
     @property typeof(this) save()
@@ -1969,7 +1968,6 @@ Variable names are chosen to match those in Vitter's paper.
         _index += s;
         _available -= s;
         assert(_available > 0);
-        return;
     }
 }
 
