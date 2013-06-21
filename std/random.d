@@ -184,10 +184,10 @@ unittest
         @property bool empty() {return false;}
         void popFront() {}
     }
-    assert(!isUniformRNG!(NoRng, uint));
-    assert(!isUniformRNG!(NoRng));
-    assert(!isSeedable!(NoRng, uint));
-    assert(!isSeedable!(NoRng));
+    static assert(!isUniformRNG!(NoRng, uint));
+    static assert(!isUniformRNG!(NoRng));
+    static assert(!isSeedable!(NoRng, uint));
+    static assert(!isSeedable!(NoRng));
 
     struct NoRng2
     {
@@ -197,10 +197,10 @@ unittest
 
         enum isUniformRandom = false;
     }
-    assert(!isUniformRNG!(NoRng2, uint));
-    assert(!isUniformRNG!(NoRng2));
-    assert(!isSeedable!(NoRng2, uint));
-    assert(!isSeedable!(NoRng2));
+    static assert(!isUniformRNG!(NoRng2, uint));
+    static assert(!isUniformRNG!(NoRng2));
+    static assert(!isSeedable!(NoRng2, uint));
+    static assert(!isSeedable!(NoRng2));
 
     struct NoRng3
     {
@@ -209,10 +209,10 @@ unittest
 
         enum isUniformRandom = true;
     }
-    assert(!isUniformRNG!(NoRng3, uint));
-    assert(!isUniformRNG!(NoRng3));
-    assert(!isSeedable!(NoRng3, uint));
-    assert(!isSeedable!(NoRng3));
+    static assert(!isUniformRNG!(NoRng3, uint));
+    static assert(!isUniformRNG!(NoRng3));
+    static assert(!isSeedable!(NoRng3, uint));
+    static assert(!isSeedable!(NoRng3));
 
     struct validRng
     {
@@ -222,10 +222,10 @@ unittest
 
         enum isUniformRandom = true;
     }
-    assert(isUniformRNG!(validRng, uint));
-    assert(isUniformRNG!(validRng));
-    assert(!isSeedable!(validRng, uint));
-    assert(!isSeedable!(validRng));
+    static assert(isUniformRNG!(validRng, uint));
+    static assert(isUniformRNG!(validRng));
+    static assert(!isSeedable!(validRng, uint));
+    static assert(!isSeedable!(validRng));
 
     struct seedRng
     {
@@ -235,10 +235,10 @@ unittest
         void seed(uint val){}
         enum isUniformRandom = true;
     }
-    assert(isUniformRNG!(seedRng, uint));
-    assert(isUniformRNG!(seedRng));
-    assert(isSeedable!(seedRng, uint));
-    assert(isSeedable!(seedRng));
+    static assert(isUniformRNG!(seedRng, uint));
+    static assert(isUniformRNG!(seedRng));
+    static assert(isSeedable!(seedRng, uint));
+    static assert(isSeedable!(seedRng));
 }
 
 /**
@@ -456,15 +456,15 @@ alias LinearCongruentialEngine!(uint, 48271, 0, 2147483647) MinstdRand;
 
 unittest
 {
-    assert(isForwardRange!MinstdRand);
-    assert(isUniformRNG!MinstdRand);
-    assert(isUniformRNG!MinstdRand0);
-    assert(isUniformRNG!(MinstdRand, uint));
-    assert(isUniformRNG!(MinstdRand0, uint));
-    assert(isSeedable!MinstdRand);
-    assert(isSeedable!MinstdRand0);
-    assert(isSeedable!(MinstdRand, uint));
-    assert(isSeedable!(MinstdRand0, uint));
+    static assert(isForwardRange!MinstdRand);
+    static assert(isUniformRNG!MinstdRand);
+    static assert(isUniformRNG!MinstdRand0);
+    static assert(isUniformRNG!(MinstdRand, uint));
+    static assert(isUniformRNG!(MinstdRand0, uint));
+    static assert(isSeedable!MinstdRand);
+    static assert(isSeedable!MinstdRand0);
+    static assert(isSeedable!(MinstdRand, uint));
+    static assert(isSeedable!(MinstdRand0, uint));
 
     // The correct numbers are taken from The Database of Integer Sequences
     // http://www.research.att.com/~njas/sequences/eisBTfry00128.txt
@@ -730,11 +730,11 @@ alias MersenneTwisterEngine!(uint, 32, 624, 397, 31, 0x9908b0df, 11, 7,
 
 unittest
 {
-    assert(isUniformRNG!Mt19937);
-    assert(isUniformRNG!(Mt19937, uint));
-    assert(isSeedable!Mt19937);
-    assert(isSeedable!(Mt19937, uint));
-    assert(isSeedable!(Mt19937, typeof(map!((a) => unpredictableSeed)(repeat(0)))));
+    static assert(isUniformRNG!Mt19937);
+    static assert(isUniformRNG!(Mt19937, uint));
+    static assert(isSeedable!Mt19937);
+    static assert(isSeedable!(Mt19937, uint));
+    static assert(isSeedable!(Mt19937, typeof(map!((a) => unpredictableSeed)(repeat(0)))));
     Mt19937 gen;
     popFrontN(gen, 9999);
     assert(gen.front == 4123659995);
@@ -1005,11 +1005,11 @@ alias Xorshift128 Xorshift;                                /// ditto
 
 unittest
 {
-    assert(isForwardRange!Xorshift);
-    assert(isUniformRNG!Xorshift);
-    assert(isUniformRNG!(Xorshift, uint));
-    assert(isSeedable!Xorshift);
-    assert(isSeedable!(Xorshift, uint));
+    static assert(isForwardRange!Xorshift);
+    static assert(isUniformRNG!Xorshift);
+    static assert(isUniformRNG!(Xorshift, uint));
+    static assert(isSeedable!Xorshift);
+    static assert(isSeedable!(Xorshift, uint));
 
     // Result from reference implementation.
     auto checking = [
@@ -1094,10 +1094,10 @@ alias Mt19937 Random;
 
 unittest
 {
-    assert(isUniformRNG!Random);
-    assert(isUniformRNG!(Random, uint));
-    assert(isSeedable!Random);
-    assert(isSeedable!(Random, uint));
+    static assert(isUniformRNG!Random);
+    static assert(isUniformRNG!(Random, uint));
+    static assert(isSeedable!Random);
+    static assert(isSeedable!(Random, uint));
 }
 
 /**
