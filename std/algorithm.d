@@ -6258,6 +6258,44 @@ unittest
     assert(max(Date.max, Date.min) == Date.max);
 }
 
+// clamp
+/**
+Returns $(D val), if it is between $(D lower) and $(D upper).
+Otherwise returns the nearest of the two. Equivalent to $(D max(lower,
+min(upper,val))). The type of the result is computed by using $(XREF
+traits, MaxType).
+*/
+MaxType!(T1, T2, T3) clamp(T1, T2, T3)(T1 val, T2 lower, T3 upper)
+{
+    return max(lower, min(upper,val));
+}
+
+///
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    int a = 1;
+    short b = 6;
+    double c = 2;
+    static assert(is(typeof(clamp(c,a,b)) == double));
+    assert(clamp(c,   a, b) == c);
+    assert(clamp(a-c, a, b) == a);
+    assert(clamp(b+c, a, b) == b);
+    // mixed sign
+    a = -5;
+    uint f = 5;
+    static assert(is(typeof(clamp(f, a, b)) == uint));
+    assert(clamp(f, a, b) == f);
+
+    // user-defined types
+    import std.datetime;
+    assert(clamp(Date(1982, 1, 4), Date(1012, 12, 21), Date(2012, 12, 21)) == Date(1982, 1, 4));
+    assert(clamp(Date(1982, 1, 4), Date.min, Date.max) == Date(1982, 1, 4));
+    // UFCS style
+    assert(Date(1982, 1, 4).clamp(Date.min, Date.max) == Date(1982, 1, 4));
+}
+
 /**
 Returns the minimum element of a range together with the number of
 occurrences. The function can actually be used for counting the
