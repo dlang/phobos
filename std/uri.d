@@ -26,14 +26,14 @@
  */
 module std.uri;
 
-//debug=uri;        // uncomment to turn on debugging printf's
+//debug=uri;        // uncomment to turn on debugging writefln's
+debug(uri) private import std.stdio;
 
 /* ====================== URI Functions ================ */
 
 private import std.ascii;
 private import std.c.stdlib;
 private import std.utf;
-private import std.stdio;
 import std.exception;
 
 class URIerror : Error
@@ -226,8 +226,6 @@ private dstring URI_Decode(string string, uint reservedSet)
     uint V;
     dchar C;
 
-    //printf("URI_Decode('%.*s')\n", string);
-
     // Result array, allocated on stack
     dchar* R;
     uint Rlen;
@@ -393,7 +391,6 @@ size_t uriLength(string s)
     if (s.length <= 4)
     goto Lno;
 
-    //writefln("isURL(%s)", s);
     if (s.length > 7 && std.string.icmp(s[0 .. 7], "http://") == 0)
     i = 7;
     else if (s.length > 8 && std.string.icmp(s[0 .. 8], "https://") == 0)
@@ -468,7 +465,6 @@ size_t emailLength(string s)
     i++;
     break;
     }
-    //writefln("test1 '%s'", s[0 .. i]);
 
     /* Now do the part past the '@'
      */
@@ -507,23 +503,22 @@ unittest
 
 unittest
 {
-    debug(uri) printf("uri.encodeURI.unittest\n");
+    debug(uri) writeln("uri.encodeURI.unittest");
 
     string s = "http://www.digitalmars.com/~fred/fred's RX.html#foo";
     string t = "http://www.digitalmars.com/~fred/fred's%20RX.html#foo";
 
     auto r = encode(s);
-    debug(uri) printf("r = '%.*s'\n", r);
+    debug(uri) writefln("r = '%s'", r);
     assert(r == t);
     r = decode(t);
-    debug(uri) printf("r = '%.*s'\n", r);
+    debug(uri) writefln("r = '%s'", r);
     assert(r == s);
 
     r = encode( decode("%E3%81%82%E3%81%82") );
     assert(r == "%E3%81%82%E3%81%82");
 
     r = encodeComponent("c++");
-    //printf("r = '%.*s'\n", r);
     assert(r == "c%2B%2B");
 
     auto str = new char[10_000_000];
@@ -533,5 +528,5 @@ unittest
     assert(c == 'A');
 
     r = decode("%41%42%43");
-    debug(uri) writefln(r);
+    debug(uri) writeln(r);
 }
