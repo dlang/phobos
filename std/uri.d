@@ -431,6 +431,15 @@ Lno:
     return -1;
 }
 
+unittest
+{
+    string s1 = "http://www.digitalmars.com/~fred/fredsRX.html#foo end!";
+    assert (uriLength(s1) == 49);
+    string s2 = "no uri here";
+    assert (uriLength(s2) == -1);
+}
+
+
 /***************************
  * Does string s[] start with an email address?
  * Returns:
@@ -485,6 +494,14 @@ size_t emailLength(string s)
 
 Lno:
     return -1;
+}
+
+unittest
+{
+    string s1 = "my.e-mail@www.example-domain.com with garbage added";
+    assert (emailLength(s1) == 32);
+    string s2 = "no email address here";
+    assert (emailLength(s2) == -1);
 }
 
 
