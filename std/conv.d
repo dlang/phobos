@@ -3523,7 +3523,7 @@ as $(D chunk)).
 T* emplace(T)(T* chunk)
     if (!is(T == class))
 {
-    static T i; // Can't use `= T.init` here because of @@@BUG8902@@@.
+    static T i = T.init;
     memcpy(chunk, &i, T.sizeof);
     return chunk;
 }
