@@ -6235,6 +6235,15 @@ unittest
     static assert(is(typeof(min(a, f)) == int));
     assert(min(a, f) == -10);
 
+    int    s4 = -20_000;
+    ushort u2 =  33_000;
+    short  s2 = -20_000;
+    uint   u4 =  33_000;
+    assert(min(s2, u2) == s2);
+    assert(min(s4, u2) == s4);
+    assert(min(s2, u4) == s2);
+    assert(min(s4, u4) == s4);
+
     //Test user-defined types
     import std.datetime;
     assert(min(Date(2012, 12, 21), Date(1982, 1, 4)) == Date(1982, 1, 4));
@@ -6327,6 +6336,15 @@ unittest
     uint f = 5;
     static assert(is(typeof(max(a, f)) == uint));
     assert(max(a, f) == 5);
+
+    int    s4 = -20_000;
+    ushort u2 =  33_000;
+    short  s2 = -20_000;
+    uint   u4 =  33_000;
+    assert(max(s2, u2) == u2);
+    assert(max(s4, u2) == u2);
+    assert(max(s2, u4) == u4);
+    assert(max(s4, u4) == u4);
 
     //Test user-defined types
     import std.datetime;
