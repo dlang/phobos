@@ -112,13 +112,6 @@ version(unittest) import std.typetuple;
    email: m-mat @ math.sci.hiroshima-u.ac.jp (remove space)
 */
 
-version(unittest)
-{
-    alias TypeTuple!(MinstdRand0, MinstdRand, Mt19937, Xorshift32, Xorshift64, Xorshift96,
-                     Xorshift128, Xorshift160, Xorshift192) PseudoRngTypes;
-}
-
-
 /**
  * Test if Rng is a random-number generator. The overload
  * taking a ElementType also makes sure that the Rng generates
@@ -1011,6 +1004,37 @@ unittest
             assert(rnd.front == e);
             rnd.popFront();
         }
+    }
+}
+
+
+/* A complete list of all pseudo-random number generators implemented in
+ * std.random.  This can be used to confirm that a given function or
+ * object is compatible with all the pseudo-random number generators
+ * available.  It is enabled only in unittest mode.
+ *
+ * Example:
+ *
+ * ----
+ * foreach(Rng; PseudoRngTypes)
+ * {
+ *     static assert(isUniformRng!Rng);
+ *     auto rng = Rng(unpredictableSeed);
+ *     foo(rng);
+ * }
+ * ----
+ */
+version(unittest)
+{
+    package alias PseudoRngTypes = TypeTuple!(MinstdRand0, MinstdRand, Mt19937, Xorshift32, Xorshift64,
+                                              Xorshift96, Xorshift128, Xorshift160, Xorshift192);
+}
+
+unittest
+{
+    foreach(Rng; PseudoRngTypes)
+    {
+        static assert(isUniformRNG!Rng);
     }
 }
 
