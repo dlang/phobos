@@ -6199,14 +6199,16 @@ MinType!(T1, T2, T) min(T1, T2, T...)(T1 a, T2 b, T xs)
         static if (isIntegral!T1 && isIntegral!T2 &&
                    (mostNegative!T1 < 0) != (mostNegative!T2 < 0))
         {
-            static if (mostNegative!T1 < 0)
-                immutable chooseB = b < a && a > 0;
+            static if (mostNegative!T1 < 0 && T1.sizeof <= T2.sizeof)
+                enum chooseB = q{b < a && a > 0};
+            else static if (mostNegative!T2 < 0 && T2.sizeof <= T1.sizeof)
+                enum chooseB = q{b < a || b < 0};
             else
-                immutable chooseB = b < a || b < 0;
+                enum chooseB = q{b < a};
         }
         else
-            immutable chooseB = b < a;
-        return cast(typeof(return)) (chooseB ? b : a);
+            enum chooseB = q{b < a};
+        return cast(typeof(return)) (mixin(chooseB) ? b : a);
     }
     else
     {
@@ -6290,14 +6292,16 @@ MaxType!(T1, T2, T) max(T1, T2, T...)(T1 a, T2 b, T xs)
         static if (isIntegral!T1 && isIntegral!T2 &&
                    (mostNegative!T1 < 0) != (mostNegative!T2 < 0))
         {
-            static if (mostNegative!T1 < 0)
-                immutable chooseB = b > a || a < 0;
+            static if (mostNegative!T1 < 0 && T1.sizeof <= T2.sizeof)
+                enum chooseB = q{b > a || a < 0};
+            else static if (mostNegative!T2 < 0 && T2.sizeof <= T1.sizeof)
+                enum chooseB = q{b > a && b > 0};
             else
-                immutable chooseB = b > a && b > 0;
+                enum chooseB = q{b > a};
         }
         else
-            immutable chooseB = b > a;
-        return cast(typeof(return)) (chooseB ? b : a);
+            immutable chooseB = q{b > a};
+        return cast(typeof(return)) (mixin(chooseB) ? b : a);
     }
     else
     {
