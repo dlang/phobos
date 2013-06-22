@@ -19,7 +19,8 @@ $(MYREF equal) $(MYREF levenshteinDistance) $(MYREF levenshteinDistanceAndPath)
 $(MYREF max) $(MYREF min) $(MYREF mismatch) $(MYREF clamp) $(MYREF
 predSwitch))
 )
-$(TR $(TDNW Iteration) $(TD $(MYREF filter) $(MYREF filterBidirectional)
+$(TR $(TDNW Iteration) $(TD $(MYREF cache) $(MYREF cacheBidirectional)
+$(MYREF filter) $(MYREF filterBidirectional)
 $(MYREF group) $(MYREF joiner) $(MYREF map) $(MYREF reduce) $(MYREF
 splitter) $(MYREF sum) $(MYREF uniq) )
 )
@@ -740,6 +741,257 @@ unittest
 {
     struct S {int* p;}
     auto m = immutable(S).init.repeat().map!"a".save;
+}
+
+/++
+$(D cache) eagerly evaluates $(D front) of $(D range)
+on each construction or call to $(D popFront),
+to store the result in a cache.
+The result is then directly returned when $(D front) is called,
+rather than re-evaluated.
+
+This can be a useful function to place in a chain, after functions
+that have expensive evaluation, as a lazy alternative to $(XREF array,array).
+In particular, it can be placed after a call to $(D map), or before a call
+to $(D filter).
+
+$(D cache) may provide bidirectional iteration if needed, but since
+this comes at an increased cost, it must be explicitly requested via the
+call to $(D cacheBidirectional). Furthermore, a bidirectional cache will
+evaluate the "center" element twice, when there is only one element left in
+the range.
+
+$(D cache) does not provide random access primitives,
+as $(D cache) would be unable to cache the random accesses.
+If $(D Range) provides slicing primitives,
+then $(D cache) will provide the same slicing primitives,
+but $(D hasSlicing!Cache) will not yield true (as the $(XREF range,hasSlicing)
+trait also checks for random access).
++/
+auto cache(Range)(Range range)
+if (isInputRange!Range)
+{
+    return Cache!(Range, false)(range);
+}
+
+/// ditto
+auto cacheBidirectional(Range)(Range range)
+if (isBidirectionalRange!Range)
+{
+    return Cache!(Range, true)(range);
+}
+
+///
+unittest
+{
+    import std.stdio, std.range;
+    import std.typecons : tuple;
+
+    ulong counter = 0;
+    double fun(int x)
+    {
+        ++counter;
+        // http://en.wikipedia.org/wiki/Quartic_function
+        return ( (x + 4.0) * (x + 1.0) * (x - 1.0) * (x - 3.0) ) / 14.0 + 0.5;
+    }
+    // Without cache, with array (greedy)
+    auto result1 = iota(-4, 5).map!(a =>tuple(a, fun(a)))()
+                             .filter!"a[1]<0"()
+                             .map!"a[0]"()
+                             .array();
+
+    // the values of x that have a negative y are:
+    assert(equal(result1, [-3, -2, 2]));
+
+    // Check how many times fun was evaluated.
+    // As many times as the number of items in both source and result.
+    assert(counter == iota(-4, 5).length + result1.length);
+
+    counter = 0;
+    // Without array, with cache (lazy)
+    auto result2 = iota(-4, 5).map!(a =>tuple(a, fun(a)))()
+                             .cache()
+                             .filter!"a[1]<0"()
+                             .map!"a[0]"();
+
+    // the values of x that have a negative y are:
+    assert(equal(result2, [-3, -2, 2]));
+
+    // Check how many times fun was evaluated.
+    // Only as many times as the number of items in source.
+    assert(counter == iota(-4, 5).length);
+}
+
+unittest
+{
+    auto a = [1, 2, 3, 4];
+    assert(equal(a.map!"(a - 1)*a"().cache(),                      [ 0, 2, 6, 12]));
+    assert(equal(a.map!"(a - 1)*a"().cacheBidirectional().retro(), [12, 6, 2,  0]));
+    auto r1 = [1, 2, 3, 4].cache()             [1 .. $];
+    auto r2 = [1, 2, 3, 4].cacheBidirectional()[1 .. $];
+    assert(equal(r1, [2, 3, 4]));
+    assert(equal(r2, [2, 3, 4]));
+}
+
+unittest
+{
+    //immutable test
+    static struct S
+    {
+        int i;
+        this(int i)
+        {
+            //this.i = i;
+        }
+    }
+    immutable(S)[] s = [S(1), S(2), S(3)];
+    assert(equal(s.cache(),              s));
+    assert(equal(s.cacheBidirectional(), s));
+}
+
+@safe pure nothrow unittest
+{
+    //safety etc
+    auto a = [1, 2, 3, 4];
+    assert(equal(a.cache(),              a));
+    assert(equal(a.cacheBidirectional(), a));
+}
+
+unittest
+{
+    char[][] stringbufs = ["hello".dup, "world".dup];
+    auto strings = stringbufs.map!((a)=>a.idup)().cache();
+    assert(strings.front is strings.front);
+}
+
+unittest
+{
+    auto c = [1, 2, 3].cycle().cache();
+    c = c[1 .. $];
+    auto d = c[0 .. 1];
+}
+
+private struct Cache(R, bool bidir)
+{
+    import core.exception : RangeError;
+
+    private
+    {
+        alias E  = ElementType!R;
+        alias UE = Unqual!E;
+
+        R source;
+
+        static if (bidir) alias CacheTypes = TypeTuple!(UE, UE);
+        else              alias CacheTypes = TypeTuple!UE;
+        CacheTypes caches;
+
+        static assert(isAssignable!(UE, E) && is(UE : E),
+            algoFormat("Cannot instantiate range with %s because %s elements are not assignable to %s.", R.stringof, E.stringof, UE.stringof));
+    }
+
+    this(R range)
+    {
+        source = range;
+        if (!range.empty)
+        {
+             caches[0] = range.front;
+             static if (bidir)
+                 caches[1] = range.back;
+        }
+    }
+
+    static if (isInfinite!R)
+        enum empty = false;
+    else
+        bool empty() @property
+        {
+            return source.empty;
+        }
+
+    static if (hasLength!R) auto length() @property
+    {
+        return source.length;
+    }
+
+    E front() @property
+    {
+        version(assert) if (empty) throw new RangeError();
+        return caches[0];
+    }
+    static if (bidir) E back() @property
+    {
+        version(assert) if (empty) throw new RangeError();
+        return caches[1];
+    }
+
+    void popFront()
+    {
+        version(assert) if (empty) throw new RangeError();
+        source.popFront();
+        if (!source.empty)
+            caches[0] = source.front;
+        else
+            caches = CacheTypes.init;
+    }
+    static if (bidir) void popBack()
+    {
+        version(assert) if (empty) throw new RangeError();
+        source.popBack();
+        if (!source.empty)
+            caches[1] = source.back;
+        else
+            caches = CacheTypes.init;
+    }
+
+    static if (isForwardRange!R)
+    {
+        private this(R source, ref CacheTypes caches)
+        {
+            this.source = source;
+            this.caches = caches;
+        }
+        typeof(this) save() @property
+        {
+            return typeof(this)(source.save, caches);
+        }
+    }
+
+    static if (hasSlicing!R)
+    {
+        enum hasEndSlicing = is(typeof(source[size_t.max .. $]));
+
+        static if (hasEndSlicing)
+        {
+            private static struct DollarToken{}
+            enum opDollar = DollarToken.init;
+
+            auto opSlice(size_t low, DollarToken)
+            {
+                return typeof(this)(source[low .. $]);
+            }
+        }
+
+        static if (!isInfinite!R)
+        {
+            typeof(this) opSlice(size_t low, size_t high)
+            {
+                return typeof(this)(source[low .. high]);
+            }
+        }
+        else static if (hasEndSlicing)
+        {
+            auto opSlice(size_t low, size_t high)
+            in
+            {
+                assert(low <= high);
+            }
+            body
+            {
+                return this[low .. $].take(high - low);
+            }
+        }
+    }
 }
 
 /++
