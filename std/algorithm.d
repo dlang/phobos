@@ -743,11 +743,12 @@ template reduce(fun...) if (fun.length >= 1)
                 else
                 {
                     static assert(fun.length > 1);
-                    typeof(adjoin!(staticMap!(binaryFun, fun))(r.front, r.front))
+                    Unqual!(typeof(r.front)) seed = r.front;
+                    typeof(adjoin!(staticMap!(binaryFun, fun))(seed, seed))
                         result = void;
                     foreach (i, T; result.Types)
                     {
-                        emplace(&result[i], r.front);
+                        emplace(&result[i], seed);
                     }
                     r.popFront();
                     return reduce(result, r);
@@ -903,6 +904,16 @@ unittest
     float[] c = [ 1.2, 3, 3.3 ];
     auto r = reduce!"a + b"(a, b);
     r = reduce!"a + b"(a, c);
+}
+
+unittest
+{
+    // Issue #10408 - Two-function reduce of a const array.
+    const numbers = [10, 30, 20];
+    immutable m = reduce!(min)(numbers);
+    assert(m == 10);
+    immutable minmax = reduce!(min, max)(numbers);
+    assert(minmax == tuple(10, 30));
 }
 
 /**
