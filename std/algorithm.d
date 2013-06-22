@@ -1356,7 +1356,7 @@ private struct FilterResult(alias pred, Range)
     {
         @property auto save()
         {
-            return typeof(this)(_input);
+            return typeof(this)(_input.save);
         }
     }
 }
