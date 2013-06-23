@@ -6188,8 +6188,8 @@ private template MinType(T...)
 
 // min
 /**
-Returns the minimum of the passed-in values. The type of the result is
-computed by using $(XREF traits, CommonType).
+Returns the minimum of the passed-in values. The result is of a type
+with the correct size and sign to hold the result.
 */
 MinType!(T1, T2, T) min(T1, T2, T...)(T1 a, T2 b, T xs)
     if (is(typeof(a < b)))
@@ -6277,8 +6277,8 @@ private template MaxType(T...)
 
 // max
 /**
-Returns the maximum of the passed-in values. The type of the result is
-computed by using $(XREF traits, CommonType).
+Returns the maximum of the passed-in values. The result is of a type
+with the correct size and sign to hold the result.
 
 Example:
 ----
