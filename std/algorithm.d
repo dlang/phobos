@@ -6159,7 +6159,7 @@ unittest
 }
 
 // MinType
-template MinType(T...)
+private template MinType(T...)
 {
     static assert(T.length >= 2);
     static if (T.length == 2)
@@ -6257,7 +6257,7 @@ unittest
 }
 
 // MaxType
-template MaxType(T...)
+private template MaxType(T...)
 {
     static assert(T.length >= 2);
     static if (T.length == 2)
