@@ -6197,7 +6197,7 @@ private bool algoLess(T1, T2)(T1 a, T2 b)
                (mostNegative!T1 < 0) != (mostNegative!T2 < 0))
     {
         static if (mostNegative!T1 < 0 && T1.sizeof <= T2.sizeof)
-            return a < b || a < 0;
+            return a < b || a <= 0;
         else static if (mostNegative!T2 < 0 && T2.sizeof <= T1.sizeof)
             return a < b && b > 0;
         else
@@ -6293,7 +6293,7 @@ private bool algoGreater(T1, T2)(T1 a, T2 b)
         static if (mostNegative!T1 < 0 && T1.sizeof <= T2.sizeof)
             return a > b && a > 0;
         else static if (mostNegative!T2 < 0 && T2.sizeof <= T1.sizeof)
-            return a > b || b < 0;
+            return a > b || b <= 0;
         else
             return a > b;
     }
