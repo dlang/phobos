@@ -6196,12 +6196,30 @@ private bool algoLess(T1, T2)(T1 a, T2 b)
     static if (isIntegral!T1 && isIntegral!T2 &&
                (mostNegative!T1 < 0) != (mostNegative!T2 < 0))
     {
-        static if (mostNegative!T1 < 0 && T1.sizeof <= T2.sizeof)
-            return a < b || a <= 0;
-        else static if (mostNegative!T2 < 0 && T2.sizeof <= T1.sizeof)
-            return a < b && b > 0;
-        else
-            return a < b;
+        static if (mostNegative!T1 < 0)
+        {
+            static if (T1.sizeof > T2.sizeof)
+                return a < b;
+            else static if (T2.sizeof <= 4)
+            {
+                alias T = Select!(T2.sizeof < 4, int, long);
+                return cast(T)a < cast(T)b;
+            }
+            else
+                return a < b || a < 0;
+        }
+        else //if(mostNegative!T2 < 0)
+        {
+            static if (T2.sizeof > T1.sizeof)
+                return a < b;
+            else static if (T1.sizeof <= 4)
+            {
+                alias T = Select!(T1.sizeof < 4, int, long);
+                return cast(T)a < cast(T)b;
+            }
+            else
+                return a < b && b >= 0;
+        }
     }
     else
         return a < b;
@@ -6216,7 +6234,7 @@ MinType!(T1, T2, T) min(T1, T2, T...)(T1 a, T2 b, T xs)
     if (is(typeof(a < b)))
 {
     static if (T.length == 0)
-        return cast(typeof(return)) (a.algoLess(b) ? a : b);
+        return cast(typeof(return)) (b.algoLess(a) ? b : a);
     else
         return min(min(a, b), xs);
 }
@@ -6290,16 +6308,35 @@ private bool algoGreater(T1, T2)(T1 a, T2 b)
     static if (isIntegral!T1 && isIntegral!T2 &&
                (mostNegative!T1 < 0) != (mostNegative!T2 < 0))
     {
-        static if (mostNegative!T1 < 0 && T1.sizeof <= T2.sizeof)
-            return a > b && a > 0;
-        else static if (mostNegative!T2 < 0 && T2.sizeof <= T1.sizeof)
-            return a > b || b <= 0;
-        else
-            return a > b;
+        static if (mostNegative!T1 < 0)
+        {
+            static if (T1.sizeof > T2.sizeof)
+                return a > b;
+            else static if (T2.sizeof <= 4)
+            {
+                alias T = Select!(T2.sizeof < 4, int, long);
+                return cast(T)a > cast(T)b;
+            }
+            else
+                return a > b && a >= 0;
+        }
+        else //if(mostNegative!T2 < 0)
+        {
+            static if (T2.sizeof > T1.sizeof)
+                return a > b;
+            else static if (T1.sizeof <= 4)
+            {
+                alias T = Select!(T1.sizeof < 4, int, long);
+                return cast(T)a > cast(T)b;
+            }
+            else
+                return a > b || b < 0;
+        }
     }
     else
         return a > b;
 }
+
 // max
 /**
 Returns the maximum of the passed-in values. The result is of a type
@@ -6322,7 +6359,7 @@ MaxType!(T1, T2, T) max(T1, T2, T...)(T1 a, T2 b, T xs)
     if (is(typeof(a < b)))
 {
     static if (T.length == 0)
-        return cast(typeof(return)) (a.algoGreater(b) ? a : b);
+        return cast(typeof(return)) (b.algoGreater(a) ? b : a);
     else
         return max(max(a, b), xs);
 }
