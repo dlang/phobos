@@ -6186,6 +6186,27 @@ private template MinType(T...)
     }
 }
 
+//less
+/*
+Returns $(D true) if $(D a) is smaller than $(D b). Unlike $(D <), $(D less)
+will properly handle arguments with unmatched size or sign
+*/ //named algoLess while private because of @@@10375@@@
+private bool algoLess(T1, T2)(T1 a, T2 b)
+{
+    static if (isIntegral!T1 && isIntegral!T2 &&
+               (mostNegative!T1 < 0) != (mostNegative!T2 < 0))
+    {
+        static if (mostNegative!T1 < 0 && T1.sizeof <= T2.sizeof)
+            return a < b || a < 0;
+        else static if (mostNegative!T2 < 0 && T2.sizeof <= T1.sizeof)
+            return a < b && b > 0;
+        else
+            return a < b;
+    }
+    else
+        return a < b;
+}
+
 // min
 /**
 Returns the minimum of the passed-in values. The result is of a type
@@ -6195,25 +6216,9 @@ MinType!(T1, T2, T) min(T1, T2, T...)(T1 a, T2 b, T xs)
     if (is(typeof(a < b)))
 {
     static if (T.length == 0)
-    {
-        static if (isIntegral!T1 && isIntegral!T2 &&
-                   (mostNegative!T1 < 0) != (mostNegative!T2 < 0))
-        {
-            static if (mostNegative!T1 < 0 && T1.sizeof <= T2.sizeof)
-                enum chooseB = q{b < a && a > 0};
-            else static if (mostNegative!T2 < 0 && T2.sizeof <= T1.sizeof)
-                enum chooseB = q{b < a || b < 0};
-            else
-                enum chooseB = q{b < a};
-        }
-        else
-            enum chooseB = q{b < a};
-        return cast(typeof(return)) (mixin(chooseB) ? b : a);
-    }
+        return cast(typeof(return)) (a.algoLess(b) ? a : b);
     else
-    {
         return min(min(a, b), xs);
-    }
 }
 
 unittest
@@ -6275,6 +6280,26 @@ private template MaxType(T...)
     }
 }
 
+//greater
+/*
+Returns $(D true) if $(D a) is greater than $(D b). Unlike $(D <), $(D greater)
+will properly handle arguments with unmatched size or sign
+*/ //named algoGreater while private because of @@@10375@@@
+private bool algoGreater(T1, T2)(T1 a, T2 b)
+{
+    static if (isIntegral!T1 && isIntegral!T2 &&
+               (mostNegative!T1 < 0) != (mostNegative!T2 < 0))
+    {
+        static if (mostNegative!T1 < 0 && T1.sizeof <= T2.sizeof)
+            return a > b && a > 0;
+        else static if (mostNegative!T2 < 0 && T2.sizeof <= T1.sizeof)
+            return a > b || b < 0;
+        else
+            return a > b;
+    }
+    else
+        return a > b;
+}
 // max
 /**
 Returns the maximum of the passed-in values. The result is of a type
@@ -6297,25 +6322,9 @@ MaxType!(T1, T2, T) max(T1, T2, T...)(T1 a, T2 b, T xs)
     if (is(typeof(a < b)))
 {
     static if (T.length == 0)
-    {
-        static if (isIntegral!T1 && isIntegral!T2 &&
-                   (mostNegative!T1 < 0) != (mostNegative!T2 < 0))
-        {
-            static if (mostNegative!T1 < 0 && T1.sizeof <= T2.sizeof)
-                enum chooseB = q{b > a || a < 0};
-            else static if (mostNegative!T2 < 0 && T2.sizeof <= T1.sizeof)
-                enum chooseB = q{b > a && b > 0};
-            else
-                enum chooseB = q{b > a};
-        }
-        else
-            immutable chooseB = q{b > a};
-        return cast(typeof(return)) (mixin(chooseB) ? b : a);
-    }
+        return cast(typeof(return)) (a.algoGreater(b) ? a : b);
     else
-    {
         return max(max(a, b), xs);
-    }
 }
 
 unittest
