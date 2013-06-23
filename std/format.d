@@ -1628,7 +1628,10 @@ if (is(Unqual!T : creal) && !is(T == enum) && !hasToString!(T, Char))
     creal val = obj;
 
     formatValue(w, val.re, f);
-    put(w, '+');
+    if (val.im >= 0)
+    {
+        put(w, '+');
+    }
     formatValue(w, val.im, f);
     put(w, 'i');
 }
@@ -1640,6 +1643,12 @@ unittest
         formatTest( to!(          T)(1 + 1i), "1+1i" );
         formatTest( to!(    const T)(1 + 1i), "1+1i" );
         formatTest( to!(immutable T)(1 + 1i), "1+1i" );
+    }
+    foreach (T; TypeTuple!(cfloat, cdouble, creal))
+    {
+        formatTest( to!(          T)(0 - 3i), "0-3i" );
+        formatTest( to!(    const T)(0 - 3i), "0-3i" );
+        formatTest( to!(immutable T)(0 - 3i), "0-3i" );
     }
 }
 
@@ -5348,7 +5357,10 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
     Lcomplex:
         putreal(vcreal.re);
-        putc('+');
+        if (vcreal.im >= 0)
+        {
+            putc('+');
+        }
         putreal(vcreal.im);
         putc('i');
         return;
