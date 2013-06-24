@@ -292,7 +292,7 @@ unittest
 /++
 Tests whether T is a template instantiation.
 +/
-template isTemplateInstantiation(alias T)
+template isTemplateInstantiation(T...) if(T.length==1)
 {
 	enum isTemplateInstantiation=is(typeof(GetTemplateParent!T));
 }
@@ -304,6 +304,7 @@ unittest
 	static assert(!isTemplateInstantiation!(A3));
 	static assert(isTemplateInstantiation!(A3!double));
 	static assert(!isTemplateInstantiation!(A3!double.A));
+	static assert(!isTemplateInstantiation!(int));
 }
 
 /**
