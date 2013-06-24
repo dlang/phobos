@@ -5747,7 +5747,7 @@ unittest
     assert(count("abcadfabf", "ab") == 2);
     assert(count("ababab", "abab") == 1);
     assert(count("ababab", "abx") == 0);
-    assert(count!"std.uni.toLower(a) == std.uni.toLower(b)"("AbcAdFaBf", "ab") == 2);
+    assert(count!((a, b) => std.uni.toLower(a) == std.uni.toLower(b))("AbcAdFaBf", "ab") == 2);
 }
 
 /// Ditto
@@ -6640,7 +6640,7 @@ unittest
     assert(levenshteinDistance("cat", "rat") == 1);
     assert(levenshteinDistance("parks", "spark") == 2);
     assert(levenshteinDistance("kitten", "sitting") == 3);
-    assert(levenshteinDistance!("std.uni.toUpper(a) == std.uni.toUpper(b)")
+    assert(levenshteinDistance!((a, b) => std.uni.toUpper(a) == std.uni.toUpper(b))
         ("parks", "SPARK") == 2);
 }
 
@@ -9774,8 +9774,8 @@ unittest
     // random data
     auto b = rndstuff!(string)();
     auto index = new string*[b.length];
-    partialIndex!("std.uni.toUpper(a) < std.uni.toUpper(b)")(b, index);
-    assert(isSorted!("std.uni.toUpper(*a) < std.uni.toUpper(*b)")(index));
+    partialIndex!((a, b) => std.uni.toUpper(a) < std.uni.toUpper(b))(b, index);
+    assert(isSorted!((a, b) => std.uni.toUpper(*a) < std.uni.toUpper(*b))(index));
 
     // random data with indexes
     auto index1 = new size_t[b.length];

@@ -387,6 +387,7 @@ size_t uriLength(string s)
      *  https://
      *  www.
      */
+    import std.string : icmp;
 
     size_t i;
 

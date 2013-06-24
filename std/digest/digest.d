@@ -936,6 +936,8 @@ enum Order : bool
  */
 char[num*2] toHexString(Order order = Order.increasing, size_t num)(in ubyte[num] digest)
 {
+    import std.ascii : hexDigits;
+
     char[num*2] result;
     size_t i;
 
@@ -963,6 +965,8 @@ char[num*2] toHexString(Order order = Order.increasing, size_t num)(in ubyte[num
 ///ditto
 string toHexString(Order order = Order.increasing)(in ubyte[] digest)
 {
+    import std.ascii : hexDigits;
+
     auto result = new char[digest.length*2];
     size_t i;
 
