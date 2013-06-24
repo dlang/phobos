@@ -69,6 +69,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
 {
     alias const(Char)[] tstring;
 
+    enum defaultThreshold = 16;
     int threshold;
     bool diagnose;
 
@@ -84,7 +85,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
 
         switch (errorLevel)
         {
-            case EmailStatusCode.warning: threshold = threshold; break;
+            case EmailStatusCode.warning: threshold = defaultThreshold; break;
             case EmailStatusCode.error: threshold = EmailStatusCode.valid; break;
             default: threshold = errorLevel;
         }
@@ -1669,8 +1670,6 @@ enum EmailStatusCode
 }
 
 private:
-
-enum threshold = 16;
 
 // Email parts for the isEmail function
 enum EmailPart
