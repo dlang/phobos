@@ -4625,7 +4625,7 @@ private string lockstepMixin(Ranges...)(bool withIndex)
 
     foreach (idx, Range; Ranges)
     {
-        params ~= format("ref ElementType!(Ranges[%s])", idx);
+        params ~= format("%sElementType!(Ranges[%s])", hasLvalueElements!Range ? "ref " : "", idx);
         emptyChecks ~= format("!ranges[%s].empty", idx);
         dgArgs ~= format("ranges[%s].front", idx);
         popFronts ~= format("ranges[%s].popFront();", idx);
@@ -4814,6 +4814,9 @@ unittest
     auto c = chain(foo2, bar2);
 
     foreach(f, b; lockstep(c, c)) {}
+
+    // Regression 10468
+    foreach (x, y; lockstep(iota(0, 10), iota(0, 10))) { }
 }
 
 /**
