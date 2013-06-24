@@ -102,7 +102,7 @@ class CFile : Stream {
    * Ditto
    */
   override char ungetc(char c) {
-    return cast(char).std.c.stdio.ungetc(c,cfile);
+    return cast(char)std.c.stdio.ungetc(c,cfile);
   }
 
   /**

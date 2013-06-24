@@ -2163,6 +2163,8 @@ if (isInputRange!T)
 // character formatting with ecaping
 private void formatChar(Writer)(Writer w, in dchar c, in char quote)
 {
+    import std.uni : isGraphical;
+
     if (std.uni.isGraphical(c))
     {
         if (c == quote || c == '\\')

@@ -2461,7 +2461,7 @@ Initialize with a message and an error code. */
         }
         else
         {
-            auto s = std.c.string.strerror(errno);
+            auto s = core.stdc.string.strerror(errno);
         }
         auto sysmsg = to!string(s);
         // If e is 0, we don't use the system error message.  (The message

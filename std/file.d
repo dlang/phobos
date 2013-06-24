@@ -1821,7 +1821,7 @@ else version(Windows)
 
         void _init(in char[] path, in WIN32_FIND_DATA* fd)
         {
-            auto clength = to!int(std.c.string.strlen(fd.cFileName.ptr));
+            auto clength = to!int(core.stdc.string.strlen(fd.cFileName.ptr));
 
             // Convert cFileName[] to unicode
             const wlength = MultiByteToWideChar(0, 0, fd.cFileName.ptr, clength, null, 0);
@@ -1955,7 +1955,7 @@ else version(Posix)
 
         void _init(in char[] path, core.sys.posix.dirent.dirent* fd)
         {
-            immutable len = std.c.string.strlen(fd.d_name.ptr);
+            immutable len = core.stdc.string.strlen(fd.d_name.ptr);
             _name = buildPath(path, fd.d_name[0 .. len]);
 
             _didLStat = false;
@@ -2581,8 +2581,8 @@ unittest
         auto len = enforce(walkLength(dirEntries(absolutePath(relpath), mode)));
         assert(walkLength(dirEntries(relpath, mode)) == len);
         assert(equal(
-                   map!(q{std.path.absolutePath(a.name)})(dirEntries(relpath, mode)),
-                   map!(q{a.name})(dirEntries(absolutePath(relpath), mode))));
+                   map!(a => std.path.absolutePath(a.name))(dirEntries(relpath, mode)),
+                   map!(a => a.name)(dirEntries(absolutePath(relpath), mode))));
         return len;
     }
 
