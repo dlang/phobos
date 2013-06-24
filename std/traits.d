@@ -236,11 +236,6 @@ unittest
 	static assert(isSameTypeTuple!(2,TypeTuple!(int,"bar"),TypeTuple!(int,"bar")));
 	static assert(!isSameTypeTuple!(2,TypeTuple!(int,"bar"),TypeTuple!(int,"bar","foo")));
 	static assert(!isSameTypeTuple!(2,TypeTuple!(int,"bar","foo"),TypeTuple!(int,"bar")));
-
-	enum a=(TypeTuple!(int,"bar","foo") == TypeTuple!(int,"bar"));
-//	static assert(TypeTuple!(int,"bar") == TypeTuple!(int,"bar","foo"));
-//	static assert(TypeTuple!(int,"bar") == TypeTuple!(int,"bar") );
-//	static assert(is(TypeTuple!(int,"bar") == TypeTuple!(int,"bar")) );
 }
 
 /++
