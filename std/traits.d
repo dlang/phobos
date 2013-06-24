@@ -221,21 +221,26 @@ unittest
 /++
 Tests for equality between 2 TypleTuples; the 1st element indicates the length of the first TypleTuple.
 +/
-template isSameTypleTuple(size_t N,T...)
+template isSameTypeTuple(size_t N,T...)
 {
 	static if(N){
-		enum isSameTypleTuple=T.length==2*N && isSame!(T[0],T[N]) && isSameTypleTuple!(N-1,T[1..N],T[N+1..$]);
+		enum isSameTypeTuple=T.length==2*N && isSame!(T[0],T[N]) && isSameTypeTuple!(N-1,T[1..N],T[N+1..$]);
 	}
 	else
-		enum isSameTypleTuple=T.length==0;
+		enum isSameTypeTuple=T.length==0;
 }
 unittest
 {
 	import std.typetuple;
-	static assert(isSameTypleTuple!(1,double,double));
-	static assert(isSameTypleTuple!(2,TypeTuple!(int,"bar"),TypeTuple!(int,"bar")));
-	static assert(!isSameTypleTuple!(2,TypeTuple!(int,"bar"),TypeTuple!(int,"bar","foo")));
-	static assert(!isSameTypleTuple!(2,TypeTuple!(int,"bar","foo"),TypeTuple!(int,"bar")));
+	static assert(isSameTypeTuple!(1,double,double));
+	static assert(isSameTypeTuple!(2,TypeTuple!(int,"bar"),TypeTuple!(int,"bar")));
+	static assert(!isSameTypeTuple!(2,TypeTuple!(int,"bar"),TypeTuple!(int,"bar","foo")));
+	static assert(!isSameTypeTuple!(2,TypeTuple!(int,"bar","foo"),TypeTuple!(int,"bar")));
+
+	enum a=(TypeTuple!(int,"bar","foo") == TypeTuple!(int,"bar"));
+//	static assert(TypeTuple!(int,"bar") == TypeTuple!(int,"bar","foo"));
+//	static assert(TypeTuple!(int,"bar") == TypeTuple!(int,"bar") );
+//	static assert(is(TypeTuple!(int,"bar") == TypeTuple!(int,"bar")) );
 }
 
 /++
@@ -271,7 +276,7 @@ unittest
  import std.traits;
  import std.typetuple;
  struct A1(alias T...){}
- static assert(isSameTypleTuple!(2,TypeTuple!("foo",int),GetTemplateArguments!(A4!("foo",int))));
+ static assert(isSameTypeTuple!(2,TypeTuple!("foo",int),GetTemplateArguments!(A4!("foo",int))));
  ---
 +/
 template GetTemplateArguments(T : TI!TP, alias TI, TP...)
@@ -286,8 +291,8 @@ template GetTemplateArguments(alias T : TI!TP, alias TI, TP...)
 unittest
 {
 	import std.typetuple;
-	static assert(isSameTypleTuple!(1,TypeTuple!(double),GetTemplateArguments!(A1!double)));
-	static assert(isSameTypleTuple!(2,TypeTuple!("foo",int),GetTemplateArguments!(A4!("foo",int))));
+	static assert(isSameTypeTuple!(1,TypeTuple!(double),GetTemplateArguments!(A1!double)));
+	static assert(isSameTypeTuple!(2,TypeTuple!("foo",int),GetTemplateArguments!(A4!("foo",int))));
 }
 /++
 Tests whether T is a template instantiation.
