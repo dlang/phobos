@@ -30,6 +30,7 @@ import std.typetuple;
 import std.typecons;
 import core.vararg;
 
+
 ///////////////////////////////////////////////////////////////////////////////
 // Functions
 ///////////////////////////////////////////////////////////////////////////////
@@ -145,6 +146,165 @@ version(unittest)
     }
 }
 
+/+
+Dummy structs to test out various traits.
++/
+version(unittest){
+	struct A1(T){}
+	struct A2{}
+	template A3(T){
+		struct A{}
+	}
+	struct A4(alias fun,T...){}
+}
+
+private
+	template isComparableAtCompileTime(alias T1,alias T2)
+{
+	static assert(T1==T2);
+}
+
+/++
+Tests whether T is such that alias T2=T compiles.
++/
+	template isAliasable(alias T)
+{
+	enum isAliasable=true;
+}
+	template isAliasable(T)
+{
+	enum isAliasable=false;
+}
+unittest
+{
+	static assert(!isAliasable!(double));
+	static assert(isAliasable!("foo"));
+	static assert(isAliasable!(A1));
+	static assert(isAliasable!(A1!double));
+	static assert(isAliasable!(A2));
+	static assert(isAliasable!(a=>a));
+	enum b=1;
+	static assert(isAliasable!b);
+}
+/++
+Tests for equality between 2 symbols (types/templates/values etc).
++/
+template isSame(T...) if(T.length==2)
+{
+	static if(__traits(compiles, isComparableAtCompileTime!(T[0],T[1]))){
+		enum isSame=T[0]==T[1];
+	}
+	else static if(isAliasable!(T[0]) && isAliasable!(T[1]))
+		enum isSame=__traits(isSame, T[0],T[1]);
+
+	else static if(__traits(compiles,is(T[0]==T[1]))){
+		enum isSame=is(T[0]==T[1]);
+	}
+	else{
+		enum isSame=false; //eg: "foo" , int
+	}
+}
+unittest
+{
+	static assert(isSame!(double,double));
+	static assert(isSame!(A1,A1));
+	static assert(isSame!(A1!int,A1!int));
+	static assert(!isSame!(A1!int,A1!float));
+	static assert(isSame!("foo","foo"));
+	static assert(!isSame!("foo","bar"));
+	static assert(!isSame!(a=>a,a=>a));
+	auto fun=(int a)=>a;
+	static assert(isSame!(fun,fun));
+	static assert(!isSame!("foo",int));
+}
+
+/++
+Tests for equality between 2 TypleTuples; the 1st element indicates the length of the first TypleTuple.
++/
+template isSameTypleTuple(size_t N,T...)
+{
+	static if(N){
+		enum isSameTypleTuple=T.length==2*N && isSame!(T[0],T[N]) && isSameTypleTuple!(N-1,T[1..N],T[N+1..$]);
+	}
+	else
+		enum isSameTypleTuple=T.length==0;
+}
+unittest
+{
+	import std.typetuple;
+	static assert(isSameTypleTuple!(1,double,double));
+	static assert(isSameTypleTuple!(2,TypeTuple!(int,"bar"),TypeTuple!(int,"bar")));
+	static assert(!isSameTypleTuple!(2,TypeTuple!(int,"bar"),TypeTuple!(int,"bar","foo")));
+	static assert(!isSameTypleTuple!(2,TypeTuple!(int,"bar","foo"),TypeTuple!(int,"bar")));
+}
+
+/++
+ Retrieves template symbol from a template instantiation. Works with structs/classes but not yet with functions.
+ Example:
+ ---
+ module mymodule;
+ import std.traits;
+ struct A1(T){}
+ static assert(isSame!(getTemplateParent!(A1!double),A1));
+ ---
++/
+template GetTemplateParent(T : TI!TP, alias TI, TP...)
+{
+	alias GetTemplateParent = TI;
+}
+template GetTemplateParent(alias T : TI!TP, alias TI, TP...)
+{
+	//TODO: how come this doesn't work with functions?
+	alias GetTemplateParent = TI;
+}
+unittest
+{
+	static assert(isSame!(GetTemplateParent!(A1!double),A1));
+	static assert(isSame!(GetTemplateParent!(A4!(a=>a,int)),A4));
+	static assert(isSame!(GetTemplateParent!(A3!(int)),A3));
+}
+/++
+ Retrieves template arguments from a template instantiation. Works with structs/classes but not yet with functions.
+ Example:
+ ---
+ module mymodule;
+ import std.traits;
+ import std.typetuple;
+ struct A1(alias T...){}
+ static assert(isSameTypleTuple!(2,TypeTuple!("foo",int),GetTemplateArguments!(A4!("foo",int))));
+ ---
++/
+template GetTemplateArguments(T : TI!TP, alias TI, TP...)
+{
+	alias GetTemplateArguments = TP;
+}
+template GetTemplateArguments(alias T : TI!TP, alias TI, TP...)
+{
+	//TODO: how come this doesn't work with functions?
+	alias GetTemplateArguments = TP;
+}
+unittest
+{
+	import std.typetuple;
+	static assert(isSameTypleTuple!(1,TypeTuple!(double),GetTemplateArguments!(A1!double)));
+	static assert(isSameTypleTuple!(2,TypeTuple!("foo",int),GetTemplateArguments!(A4!("foo",int))));
+}
+/++
+Tests whether T is a template instantiation.
++/
+template isTemplateInstantiation(alias T)
+{
+	enum isTemplateInstantiation=is(typeof(GetTemplateParent!T));
+}
+unittest
+{
+	static assert(isTemplateInstantiation!(A1!double));
+	static assert(!isTemplateInstantiation!(A1));
+	static assert(!isTemplateInstantiation!(A2));
+	static assert(!isTemplateInstantiation!(A3));
+	static assert(isTemplateInstantiation!(A3!double));
+	static assert(!isTemplateInstantiation!(A3!double.A));
+}
 
 /**
  * Get the full package name for the given symbol.
