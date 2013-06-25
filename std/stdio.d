@@ -2448,6 +2448,8 @@ Initialize with a message and an error code. */
         errno = e;
         version (Posix)
         {
+            import std.c.string : strerror_r;
+
             char[256] buf = void;
             version (linux)
             {
@@ -2899,18 +2901,22 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
         Bugs:
                 Only works on Linux
 */
-version(linux) {
+version(linux)
+{
     static import linux = std.c.linux.linux;
     static import sock = std.c.linux.socket;
+    import core.stdc.string : memcpy;
 
-    File openNetwork(string host, ushort port) {
+    File openNetwork(string host, ushort port)
+    {
         auto h = enforce( sock.gethostbyname(std.string.toStringz(host)),
             new StdioException("gethostbyname"));
 
         int s = sock.socket(sock.AF_INET, sock.SOCK_STREAM, 0);
         enforce(s != -1, new StdioException("socket"));
 
-        scope(failure) {
+        scope(failure)
+        {
             linux.close(s); // want to make sure it doesn't dangle if
                             // something throws. Upon normal exit, the
                             // File struct's reference counting takes
@@ -2922,7 +2928,7 @@ version(linux) {
 
         addr.sin_family = sock.AF_INET;
         addr.sin_port = sock.htons(port);
-        std.c.string.memcpy(&addr.sin_addr.s_addr, h.h_addr, h.h_length);
+        core.stdc.string.memcpy(&addr.sin_addr.s_addr, h.h_addr, h.h_length);
 
         enforce(sock.connect(s, cast(sock.sockaddr*) &addr, addr.sizeof) != -1,
             new StdioException("Connect failed"));

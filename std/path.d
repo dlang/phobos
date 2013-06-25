@@ -2638,6 +2638,9 @@ string expandTilde(string inputPath)
 {
     version(Posix)
     {
+        import core.stdc.string : strlen;
+        import core.stdc.stdlib : getenv, malloc, free;
+
         /*  Joins a path from a C string to the remainder of path.
 
             The last path separator from c_path is discarded. The result
