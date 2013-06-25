@@ -146,16 +146,37 @@ version(unittest)
     }
 }
 
-/+
-Dummy structs to test out various traits.
+
+// Auxiliary struct template used by AliasTuple.
+private
+struct AliasTupleImpl(U...){}
+
+/++
+AliasTuple can be used to box any type/symbol, and is more general than TypeTuple. 
+It can be used to compare TypeTuples:
+Example:
+ ---
+ module mymodule;
+ import std.traits;
+ import std.typetuple;
+ int b;
+ alias b2=b;
+ static assert(is(AliasTuple!(double,"a",b) == AliasTuple!(double,"a",b2));
+ ---
 +/
-version(unittest){
-	struct A1(T){}
-	struct A2{}
-	template A3(T){
-		struct A{}
-	}
-	struct A4(alias fun,T...){}
+template AliasTuple(T...){
+    alias AliasTuple=AliasTupleImpl!T;
+}
+unittest
+{   
+    import std.typetuple:Alias;
+    alias fun=Alias!(a=>a);
+    alias fun2=fun;
+    int b;
+    alias b1=b;
+    auto b2=b;    
+    static assert(is(AliasTuple!(double,"a",b,fun) == AliasTuple!(double,"a",b1,fun2)));
+    static assert(!is(AliasTuple!(double,"a",b,fun) == AliasTuple!(double,"a",b2,fun2)));
 }
 
 private
@@ -219,26 +240,6 @@ unittest
 }
 
 /++
-Tests for equality between 2 TypleTuples; the 1st element indicates the length of the first TypleTuple.
-+/
-template isSameTypeTuple(size_t N,T...)
-{
-	static if(N){
-		enum isSameTypeTuple=T.length==2*N && isSame!(T[0],T[N]) && isSameTypeTuple!(N-1,T[1..N],T[N+1..$]);
-	}
-	else
-		enum isSameTypeTuple=T.length==0;
-}
-unittest
-{
-	import std.typetuple;
-	static assert(isSameTypeTuple!(1,double,double));
-	static assert(isSameTypeTuple!(2,TypeTuple!(int,"bar"),TypeTuple!(int,"bar")));
-	static assert(!isSameTypeTuple!(2,TypeTuple!(int,"bar"),TypeTuple!(int,"bar","foo")));
-	static assert(!isSameTypeTuple!(2,TypeTuple!(int,"bar","foo"),TypeTuple!(int,"bar")));
-}
-
-/++
  Retrieves template symbol from a template instantiation. Works with structs/classes but not yet with functions.
  Example:
  ---
@@ -270,8 +271,8 @@ unittest
  module mymodule;
  import std.traits;
  import std.typetuple;
- struct A1(alias T...){}
- static assert(isSameTypeTuple!(2,TypeTuple!("foo",int),GetTemplateArguments!(A4!("foo",int))));
+ struct A(alias T...){}
+ static assert(is(AliasTuple!("foo",int) == AliasTuple!(GetTemplateArguments!(A!("foo",int)))));
  ---
 +/
 template GetTemplateArguments(T : TI!TP, alias TI, TP...)
@@ -286,8 +287,8 @@ template GetTemplateArguments(alias T : TI!TP, alias TI, TP...)
 unittest
 {
 	import std.typetuple;
-	static assert(isSameTypeTuple!(1,TypeTuple!(double),GetTemplateArguments!(A1!double)));
-	static assert(isSameTypeTuple!(2,TypeTuple!("foo",int),GetTemplateArguments!(A4!("foo",int))));
+    static assert(is(AliasTuple!double == AliasTuple!(GetTemplateArguments!(A1!double))));
+    static assert(is(AliasTuple!("foo",int) == AliasTuple!(GetTemplateArguments!(A4!("foo",int)))));
 }
 /++
 Tests whether T is a template instantiation.
@@ -422,7 +423,7 @@ template fullyQualifiedName(T...)
 
 version(unittest)
 {
-    // Used for both fullyQualifiedNameImplForTypes and fullyQualifiedNameImplForSymbols unittests
+    // Used for unittests of fullyQualifiedNameImplForTypes, fullyQualifiedNameImplForSymbols etc.
     private struct QualifiedNameTests
     {
         struct Inner
@@ -453,6 +454,15 @@ version(unittest)
     private enum QualifiedEnum
     {
         a = 42
+    }
+
+    private{
+        struct A1(T){}
+        struct A2{}
+        template A3(T){
+            struct A{}
+        }
+        struct A4(alias fun,T...){}        
     }
 }
 
