@@ -375,6 +375,8 @@ private Pid spawnProcessImpl(in char[][] args,
                              Config config)
     @trusted // TODO: Should be @safe
 {
+    import core.exception: RangeError;
+
     if (args.empty) throw new RangeError("Command line is empty");
     const(char)[] name = args[0];
     if (any!isDirSeparator(name))
@@ -479,6 +481,8 @@ private Pid spawnProcessImpl(in char[] commandLine,
                              Config config)
     @trusted
 {
+    import core.exception: RangeError;
+
     if (commandLine.empty) throw new RangeError("Command line is empty");
     auto commandz = toUTFz!(wchar*)(commandLine);
 

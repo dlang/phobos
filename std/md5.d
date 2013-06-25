@@ -177,6 +177,8 @@ unittest
  */
 struct MD5_CTX
 {
+    private import core.stdc.string : memcpy, memset;
+
     uint state[4] =                                   /* state (ABCD) */
     /* magic initialization constants */
     [0x67452301,0xefcdab89,0x98badcfe,0x10325476];
@@ -269,7 +271,7 @@ struct MD5_CTX
       /* Transform as many times as possible. */
       if (inputLen >= partLen)
       {
-            std.c.string.memcpy(&buffer[index], input.ptr, partLen);
+            core.stdc.string.memcpy(&buffer[index], input.ptr, partLen);
             transform (buffer.ptr);
 
             for (i = partLen; i + 63 < inputLen; i += 64)
@@ -282,7 +284,7 @@ struct MD5_CTX
 
       /* Buffer remaining input */
       if (inputLen - i)
-            std.c.string.memcpy(&buffer[index], &input[i], inputLen-i);
+            core.stdc.string.memcpy(&buffer[index], &input[i], inputLen-i);
     }
 
     /** MD5 finalization. Ends an MD5 message-digest operation, writing the
@@ -311,7 +313,7 @@ struct MD5_CTX
       digest[12 .. 16] = nativeToLittleEndian(state[3])[];
 
       /* Zeroize sensitive information. */
-      std.c.string.memset (&this, 0, MD5_CTX.sizeof);
+      core.stdc.string.memset (&this, 0, MD5_CTX.sizeof);
     }
 
     /* MD5 basic transformation. Transforms state based on block.

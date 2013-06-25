@@ -441,6 +441,8 @@ enum DecodeMode
  */
 string decode(string s, DecodeMode mode=DecodeMode.LOOSE)
 {
+    import std.utf : encode;
+
     if (mode == DecodeMode.NONE) return s;
 
     char[] buffer;

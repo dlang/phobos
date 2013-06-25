@@ -3364,6 +3364,7 @@ private void submitAndExecute(
 
     alias typeof(scopedTask(doIt)) PTask;
     import core.stdc.stdlib;
+    import core.stdc.string : memcpy;
 
     // The logical thing to do would be to just use alloca() here, but that
     // causes problems on Windows for reasons that I don't understand
