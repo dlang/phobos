@@ -118,26 +118,6 @@ version (Win32) version (DigitalMars) version = DMC_RUNTIME;
 private
 {
 
-// Windows API declarations.
-version (Windows)
-{
-    extern(Windows) BOOL GetHandleInformation(HANDLE hObject,
-                                              LPDWORD lpdwFlags);
-    extern(Windows) BOOL SetHandleInformation(HANDLE hObject,
-                                              DWORD dwMask,
-                                              DWORD dwFlags);
-    extern(Windows) BOOL TerminateProcess(HANDLE hProcess,
-                                          UINT uExitCode);
-    extern(Windows) LPWSTR* CommandLineToArgvW(LPCWSTR lpCmdLine,
-                                               int* pNumArgs);
-    enum
-    {
-        HANDLE_FLAG_INHERIT = 0x1,
-        HANDLE_FLAG_PROTECT_FROM_CLOSE = 0x2,
-    }
-    enum CREATE_UNICODE_ENVIRONMENT = 0x400;
-}
-
 // Microsoft Visual C Runtime (MSVCRT) declarations.
 version (Windows)
 {
