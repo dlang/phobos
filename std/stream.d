@@ -84,10 +84,7 @@ private {
   import std.utf;
   import core.bitop; // for bswap
   import core.vararg;
-}
-
-version (Windows) {
-  private import std.file;
+  import std.file;
 }
 
 /// InputStream is the interface for readable streams.
