@@ -1430,6 +1430,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
  */
 class Base64Exception : Exception
 {
+    @safe pure nothrow
     this(string s, string fn = __FILE__, size_t ln = __LINE__)
     {
         super(s, fn, ln);
