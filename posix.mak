@@ -27,25 +27,25 @@ QUIET:=@
 OS:=
 uname_S:=$(shell uname -s)
 ifeq (Darwin,$(uname_S))
-	OS:=osx
+     OS:=osx
 endif
 ifeq (Linux,$(uname_S))
-	OS:=linux
+     OS:=linux
 endif
 ifeq (FreeBSD,$(uname_S))
-	OS:=freebsd
+     OS:=freebsd
 endif
 ifeq (OpenBSD,$(uname_S))
-	OS:=openbsd
+     OS:=openbsd
 endif
 ifeq (Solaris,$(uname_S))
-	OS:=solaris
+     OS:=solaris
 endif
 ifeq (SunOS,$(uname_S))
-	OS:=solaris
+     OS:=solaris
 endif
 ifeq (,$(OS))
-	$(error Unrecognized or unsupported OS for uname: $(uname_S))
+     $(error Unrecognized or unsupported OS for uname: $(uname_S))
 endif
 
 MODEL:=default
