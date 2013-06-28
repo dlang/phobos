@@ -810,18 +810,21 @@ Throws: $(D Exception) if the file is not opened.
     }
 
 /**
-Read line from stream $(D fp) and return it as a specified type.
+Read line from the file handle and return it as a specified type.
 
 This version manages its own read buffer, which means one memory allocation per call. If you are not 
 retaining a reference to the read data, consider the $(D File.readln(buf)) version, which may offer 
 better performance as it reuses its read buffer.
 
 Params:
-    S = Template parameter; the type of the allocated buffer, and the type returned. Defaults to $(D string)
+    S = Template parameter; the type of the allocated buffer, and the type returned. Defaults to $(D string).
     terminator = line terminator (by default, '\n')
 
 Returns:
     The line that was read, including the line terminator character. 
+
+Throws:
+    $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
 
 Example:
 ---
@@ -830,9 +833,9 @@ import std.stdio;
 
 int main()
 {
-    string buf;
-    while ((buf = readln()) !is null)
-        write(buf);
+    string line;
+    while ((line = stdin.readln()) !is null)
+        write(line);
     return 0;
 }
 ---
@@ -866,17 +869,17 @@ int main()
     }
 
 /**
-Read line from stream $(D fp) and write it to $(D buf[]), including
+Read line from the file handle and write it to $(D buf[]), including
 terminating character.
 
-This is often faster than $(D buf = File.readln()) because the buffer
+This is often faster than $(D line = File.readln()) because the buffer
 is reused each call. Note that reusing the buffer means that the
 previous contents of it has to be copied if needed.
 
 Params:
-fp = input stream
 buf = buffer used to store the resulting line data. buf is
 resized as necessary.
+terminator = line terminator (by default, '\n')
 
 Returns:
 0 for end of file, otherwise number of characters read
@@ -892,7 +895,7 @@ Example:
 int main()
 {
     string[] outBuf;
-    string buf;
+    char[] buf;
 
     while (stdin.readln(buf))
     {
@@ -913,7 +916,7 @@ int main()
 
 This method is more efficient than the one in the previous example
 because $(D stdin.readln(buf)) reuses (if possible) memory allocated
-by $(D buf), whereas $(D buf = stdin.readln()) makes a new memory allocation
+by $(D buf), whereas $(D line = stdin.readln()) makes a new memory allocation
 with every line. 
 */
     size_t readln(C)(ref C[] buf, dchar terminator = '\n')
@@ -1972,15 +1975,19 @@ unittest
 }
 
 /**********************************
- * Read line from stream $(D fp).
+ * Read line from $(D stdin).
+ * 
+ * This version manages its own read buffer, which means one memory allocation per call. If you are not 
+ * retaining a reference to the read data, consider the $(D readln(buf)) version, which may offer 
+ * better performance as it reuses its read buffer.
+ * 
  * Returns:
- *        $(D null) for end of file,
- *        $(D char[]) for line read from $(D fp), including terminating character
+ *        The line that was read, including the line terminator character. 
  * Params:
- *        $(D fp) = input stream
- *        $(D terminator) = line terminator, '\n' by default
+ *        S = Template parameter; the type of the allocated buffer, and the type returned. Defaults to $(D string).
+ *        terminator = line terminator (by default, '\n')
  * Throws:
- *        $(D StdioException) on error
+ *        $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
  * Example:
  *        Reads $(D stdin) and writes it to $(D stdout).
 ---
@@ -1988,9 +1995,9 @@ import std.stdio;
 
 int main()
 {
-    string buf;
-    while ((buf = stdin.readln()) !is null)
-        write(buf);
+    string line;
+    while ((line = readln()) !is null)
+        write(line);
     return 0;
 }
 ---
@@ -2000,7 +2007,35 @@ if (isSomeString!S)
 {
     return stdin.readln!S(terminator);
 }
-/** ditto */
+
+/**********************************
+ * Read line from $(D stdin) and write it to buf[], including terminating character.
+ * 
+ * This is often faster than $(D line = readln()) because the buffer
+ * is reused each call. Note that reusing the buffer means that the
+ * previous contents of it has to be copied if needed.
+ * 
+ * Returns:
+ *        $(D size_t) 0 for end of file, otherwise number of characters read
+ * Params:
+ *        buf = Buffer used to store the resulting line data. buf is resized as necessary.
+ *        terminator = line terminator (by default, '\n')
+ * Throws:
+ *        $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
+ * Example:
+ *        Reads $(D stdin) and writes it to $(D stdout).
+---
+import std.stdio;
+
+int main()
+{
+    char[] buf;
+    while (readln(buf))
+        write(buf);
+    return 0;
+}
+---
+*/
 size_t readln(C)(ref C[] buf, dchar terminator = '\n')
 if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum))
 {
