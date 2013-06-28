@@ -5,33 +5,33 @@
     handling. It also defines functions intended to aid in unit testing.
 
     Synopsis of some of std.exception's functions:
---------------------
-string synopsis()
-{
-   FILE* f = enforce(fopen("some/file"));
-   // f is not null from here on
-   FILE* g = enforceEx!WriteException(fopen("some/other/file", "w"));
-   // g is not null from here on
+    --------------------
+    string synopsis()
+    {
+        FILE* f = enforce(fopen("some/file"));
+        // f is not null from here on
+        FILE* g = enforceEx!WriteException(fopen("some/other/file", "w"));
+        // g is not null from here on
 
-   Exception e = collectException(write(g, readln(f)));
-   if (e)
-   {
-       ... an exception occurred...
-       ... We have the exception to play around with...
-   }
+        Exception e = collectException(write(g, readln(f)));
+        if (e)
+        {
+            ... an exception occurred...
+            ... We have the exception to play around with...
+        }
 
-   string msg = collectExceptionMsg(write(g, readln(f)));
-   if (msg)
-   {
-       ... an exception occurred...
-       ... We have the message from the exception but not the exception...
-   }
+        string msg = collectExceptionMsg(write(g, readln(f)));
+        if (msg)
+        {
+            ... an exception occurred...
+            ... We have the message from the exception but not the exception...
+        }
 
-   char[] line;
-   enforce(readln(f, line));
-   return assumeUnique(line);
-}
---------------------
+        char[] line;
+        enforce(readln(f, line));
+        return assumeUnique(line);
+    }
+    --------------------
 
     Macros:
         WIKI = Phobos/StdException
@@ -63,19 +63,7 @@ import core.exception, core.stdc.errno;
 
     Throws:
         $(D AssertError) if the given $(D Throwable) is thrown.
-
-    Examples:
---------------------
-assertNotThrown!StringException(enforceEx!StringException(true, "Error!"));
-
-//Exception is the default.
-assertNotThrown(enforceEx!StringException(true, "Error!"));
-
-assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
-           enforceEx!StringException(false, "Error!"))) ==
-       `assertNotThrown failed: StringException was thrown: Error!`);
---------------------
-  +/
+ +/
 void assertNotThrown(T : Throwable = Exception, E)
                     (lazy E expression,
                      string msg = null,
@@ -83,21 +71,19 @@ void assertNotThrown(T : Throwable = Exception, E)
                      size_t line = __LINE__)
 {
     try
+    {
         expression();
-    catch(T t)
+    }
+    catch (T t)
     {
         immutable message = msg.empty ? t.msg : msg;
         immutable tail = message.empty ? "." : ": " ~ message;
         throw new AssertError(format("assertNotThrown failed: %s was thrown%s",
-                                     T.stringof,
-                                     tail),
-                              file,
-                              line,
-                              t);
+                                     T.stringof, tail),
+                              file, line, t);
     }
 }
-
-//Verify Examples
+///
 unittest
 {
     assertNotThrown!StringException(enforceEx!StringException(true, "Error!"));
@@ -108,7 +94,9 @@ unittest
     assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
                enforceEx!StringException(false, "Error!"))) ==
            `assertNotThrown failed: StringException was thrown: Error!`);
-
+}
+unittest
+{
     assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
                enforceEx!StringException(false, ""), "Error!")) ==
            `assertNotThrown failed: StringException was thrown: Error!`);
@@ -128,24 +116,28 @@ unittest
     void nothrowEx() { }
 
     try
+    {
         assertNotThrown!Exception(nothrowEx());
-    catch(AssertError)
-        assert(0);
+    }
+    catch (AssertError) assert(0);
 
     try
+    {
         assertNotThrown!Exception(nothrowEx(), "It's a message");
-    catch(AssertError)
-        assert(0);
+    }
+    catch (AssertError) assert(0);
 
     try
+    {
         assertNotThrown!AssertError(nothrowEx());
-    catch(AssertError)
-        assert(0);
+    }
+    catch (AssertError) assert(0);
 
     try
+    {
         assertNotThrown!AssertError(nothrowEx(), "It's a message");
-    catch(AssertError)
-        assert(0);
+    }
+    catch (AssertError) assert(0);
 
     {
         bool thrown = false;
@@ -154,9 +146,7 @@ unittest
             assertNotThrown!Exception(
                 throwEx(new Exception("It's an Exception")));
         }
-        catch(AssertError)
-            thrown = true;
-
+        catch (AssertError) thrown = true;
         assert(thrown);
     }
 
@@ -167,9 +157,7 @@ unittest
             assertNotThrown!Exception(
                 throwEx(new Exception("It's an Exception")), "It's a message");
         }
-        catch(AssertError)
-            thrown = true;
-
+        catch (AssertError) thrown = true;
         assert(thrown);
     }
 
@@ -178,13 +166,9 @@ unittest
         try
         {
             assertNotThrown!AssertError(
-                throwEx(new AssertError("It's an AssertError",
-                                        __FILE__,
-                                        __LINE__)));
+                throwEx(new AssertError("It's an AssertError", __FILE__, __LINE__)));
         }
-        catch(AssertError)
-            thrown = true;
-
+        catch (AssertError) thrown = true;
         assert(thrown);
     }
 
@@ -193,14 +177,10 @@ unittest
         try
         {
             assertNotThrown!AssertError(
-                throwEx(new AssertError("It's an AssertError",
-                                        __FILE__,
-                                        __LINE__)),
+                throwEx(new AssertError("It's an AssertError", __FILE__, __LINE__)),
                         "It's a message");
         }
-        catch(AssertError)
-            thrown = true;
-
+        catch (AssertError) thrown = true;
         assert(thrown);
     }
 }
@@ -218,18 +198,6 @@ unittest
 
     Throws:
         $(D AssertError) if the given $(D Throwable) is not thrown.
-
-    Examples:
---------------------
-assertThrown!StringException(enforceEx!StringException(false, "Error!"));
-
-//Exception is the default.
-assertThrown(enforceEx!StringException(false, "Error!"));
-
-assert(collectExceptionMsg!AssertError(assertThrown!StringException(
-           enforceEx!StringException(true, "Error!"))) ==
-       `assertThrown failed: No StringException was thrown.`);
---------------------
   +/
 void assertThrown(T : Throwable = Exception, E)
                  (lazy E expression,
@@ -240,23 +208,24 @@ void assertThrown(T : Throwable = Exception, E)
     bool thrown = false;
 
     try
+    {
         expression();
-    catch(T t)
+    }
+    catch (T)
+    {
         thrown = true;
+    }
 
-    if(!thrown)
+    if (!thrown)
     {
         immutable tail = msg.empty ? "." : ": " ~ msg;
 
         throw new AssertError(format("assertThrown failed: No %s was thrown%s",
-                                     T.stringof,
-                                     tail),
-                              file,
-                              line);
+                                     T.stringof, tail),
+                              file, line);
     }
 }
-
-//Verify Examples
+///
 unittest
 {
     assertThrown!StringException(enforceEx!StringException(false, "Error!"));
@@ -275,36 +244,32 @@ unittest
     void nothrowEx() { }
 
     try
+    {
         assertThrown!Exception(throwEx(new Exception("It's an Exception")));
-    catch(AssertError)
-        assert(0);
+    }
+    catch (AssertError) assert(0);
 
     try
     {
         assertThrown!Exception(throwEx(new Exception("It's an Exception")),
                                "It's a message");
     }
-    catch(AssertError)
-        assert(0);
+    catch(AssertError) assert(0);
 
     try
     {
         assertThrown!AssertError(throwEx(new AssertError("It's an AssertError",
-                                                         __FILE__,
-                                                         __LINE__)));
+                                                         __FILE__, __LINE__)));
     }
-    catch(AssertError)
-        assert(0);
+    catch (AssertError) assert(0);
 
     try
     {
         assertThrown!AssertError(throwEx(new AssertError("It's an AssertError",
-                                                         __FILE__,
-                                                         __LINE__)),
+                                                         __FILE__, __LINE__)),
                                  "It's a message");
     }
-    catch(AssertError)
-        assert(0);
+    catch (AssertError) assert(0);
 
 
     {
@@ -361,12 +326,12 @@ unittest
         blocks and $(D invariant)s), because they will be compiled out when
         compiling with $(I -release). Use $(D assert) in contracts.
 
-   Example:
---------------------
-auto f = enforce(fopen("data.txt"));
-auto line = readln(f);
-enforce(line.length, "Expected a non-empty line.");
---------------------
+    Example:
+    --------------------
+    auto f = enforce(fopen("data.txt"));
+    auto line = readln(f);
+    enforce(line.length, "Expected a non-empty line.");
+    --------------------
  +/
 T enforce(T)(T value, lazy const(char)[] msg = null, string file = __FILE__, size_t line = __LINE__)
 {
@@ -497,12 +462,12 @@ unittest
 /++
     If $(D !!value) is true, $(D value) is returned. Otherwise, $(D ex) is thrown.
 
-   Example:
---------------------
-auto f = enforce(fopen("data.txt"));
-auto line = readln(f);
-enforce(line.length, new IOException); // expect a non-empty line
---------------------
+    Example:
+    --------------------
+    auto f = enforce(fopen("data.txt"));
+    auto line = readln(f);
+    enforce(line.length, new IOException); // expect a non-empty line
+    --------------------
  +/
 T enforce(T)(T value, lazy Throwable ex)
 {
@@ -521,12 +486,12 @@ unittest
     $(D new ErrnoException(msg)) is thrown. $(D ErrnoException) assumes that the
     last operation set $(D errno) to an error code.
 
-   Example:
---------------------
-auto f = errnoEnforce(fopen("data.txt"));
-auto line = readln(f);
-enforce(line.length); // expect a non-empty line
---------------------
+    Example:
+    --------------------
+    auto f = errnoEnforce(fopen("data.txt"));
+    auto line = readln(f);
+    enforce(line.length); // expect a non-empty line
+    --------------------
  +/
 T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
     (T value, lazy string msg = null)
@@ -542,12 +507,12 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
     and can be constructed with $(D new E(file, line)), then
     $(D new E(file, line)) will be thrown.
 
-   Example:
---------------------
- auto f = enforceEx!FileMissingException(fopen("data.txt"));
- auto line = readln(f);
- enforceEx!DataCorruptionException(line.length);
---------------------
+    Example:
+    --------------------
+    auto f = enforceEx!FileMissingException(fopen("data.txt"));
+    auto line = readln(f);
+    enforceEx!DataCorruptionException(line.length);
+    --------------------
  +/
 template enforceEx(E)
     if (is(typeof(new E("", __FILE__, __LINE__))))
@@ -628,13 +593,6 @@ unittest
         T          = The type of exception to catch.
         expression = The expression which may throw an exception.
         result     = The result of the expression if no exception is thrown.
-
-    Example:
---------------------
-int[] a = new int[3];
-int b;
-assert(collectException(a[4], b));
---------------------
 +/
 T collectException(T = Exception, E)(lazy E expression, ref E result)
 {
@@ -648,13 +606,16 @@ T collectException(T = Exception, E)(lazy E expression, ref E result)
     }
     return null;
 }
-
+///
 unittest
 {
-    int[] a = new int[3];
     int b;
     int foo() { throw new Exception("blah"); }
     assert(collectException(foo(), b));
+
+    int[] a = new int[3];
+    import core.exception : RangeError;
+    assert(collectException!RangeError(a[4], b));
 }
 
 /++
@@ -710,18 +671,6 @@ unittest
     Params:
         T          = The type of exception to catch.
         expression = The expression which may throw an exception.
-
-    Examples:
---------------------
-void throwFunc() {throw new Exception("My Message.");}
-assert(collectExceptionMsg(throwFunc()) == "My Message.");
-
-void nothrowFunc() {}
-assert(collectExceptionMsg(nothrowFunc()) is null);
-
-void throwEmptyFunc() {throw new Exception("");}
-assert(collectExceptionMsg(throwEmptyFunc()) == emptyExceptionMsg);
---------------------
 +/
 string collectExceptionMsg(T = Exception, E)(lazy E expression)
 {
@@ -734,17 +683,16 @@ string collectExceptionMsg(T = Exception, E)(lazy E expression)
     catch(T e)
         return e.msg.empty ? emptyExceptionMsg : e.msg;
 }
-
-//Verify Examples.
+///
 unittest
 {
-    void throwFunc() {throw new Exception("My Message.");}
+    void throwFunc() { throw new Exception("My Message."); }
     assert(collectExceptionMsg(throwFunc()) == "My Message.");
 
     void nothrowFunc() {}
     assert(collectExceptionMsg(nothrowFunc()) is null);
 
-    void throwEmptyFunc() {throw new Exception("");}
+    void throwEmptyFunc() { throw new Exception(""); }
     assert(collectExceptionMsg(throwEmptyFunc()) == emptyExceptionMsg);
 }
 
@@ -1206,16 +1154,16 @@ class ErrnoException : Exception
         errorHandler = The handler to run if the expression throwed.
 
     Examples:
---------------------
+    --------------------
     //Revert to a default value upon an error:
     assert("x".to!int().ifThrown(0) == 0);
---------------------
+    --------------------
 
     You can also chain multiple calls to ifThrown, each capturing errors from the
     entire preceding expression.
 
     Example:
---------------------
+    --------------------
     //Chaining multiple calls to ifThrown to attempt multiple things in a row:
     string s="true";
     assert(s.to!int().
@@ -1228,14 +1176,14 @@ class ErrnoException : Exception
             .ifThrown!ConvException("not a number")
             .ifThrown!Exception("number too small")
             == "not a number");
---------------------
+    --------------------
 
     The expression and the errorHandler must have a common type they can both
     be implicitly casted to, and that type will be the type of the compound
     expression.
 
     Examples:
---------------------
+    --------------------
     //null and new Object have a common type(Object).
     static assert(is(typeof(null.ifThrown(new Object())) == Object));
     static assert(is(typeof((new Object()).ifThrown(null)) == Object));
@@ -1243,14 +1191,14 @@ class ErrnoException : Exception
     //1 and new Object do not have a common type.
     static assert(!__traits(compiles, 1.ifThrown(new Object())));
     static assert(!__traits(compiles, (new Object()).ifThrown(1)));
---------------------
+    --------------------
 
     If you need to use the actual thrown expection, you can use a delegate.
     Example:
---------------------
+    --------------------
     //Use a lambda to get the thrown object.
     assert("%s".format().ifThrown!Exception(e => e.classinfo.name) == "std.format.FormatException");
---------------------
+    --------------------
     +/
 //lazy version
 CommonType!(T1, T2) ifThrown(E : Throwable = Exception, T1, T2)(lazy scope T1 expression, lazy scope T2 errorHandler)

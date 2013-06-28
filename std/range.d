@@ -1459,7 +1459,7 @@ if (isBidirectionalRange!(Unqual!Range))
     }
     else
     {
-        static struct Result
+        static struct Result()
         {
             private alias Unqual!Range R;
 
@@ -1556,7 +1556,7 @@ if (isBidirectionalRange!(Unqual!Range))
             }
         }
 
-        return Result(r);
+        return Result!()(r);
     }
 }
 

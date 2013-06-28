@@ -2326,13 +2326,13 @@ unittest
  *        your calls to format accordingly.
  *
  *        e.g.:
-----
-format("key = %s", key, ", value = %s", value)
-----
+ *        ----
+ *        format("key = %s", key, ", value = %s", value)
+ *        ----
  *        needs to be rewritten as:
-----
-format("key = %s, value = %s", key, value)
-----
+ *        ----
+ *        format("key = %s, value = %s", key, value)
+ *        ----
  *   )
  */
 string format(Char, Args...)(in Char[] fmt, Args args)
@@ -2386,13 +2386,13 @@ unittest
  *        your calls to sformat accordingly.
  *
  *        e.g.:
-----
-sformat(buf, "key = %s", key, ", value = %s", value)
-----
+ *        ----
+ *        sformat(buf, "key = %s", key, ", value = %s", value)
+ *        ----
  *        needs to be rewritten as:
-----
-sformat(buf, "key = %s, value = %s", key, value)
-----
+ *        ----
+ *        sformat(buf, "key = %s, value = %s", key, value)
+ *        ----
  *   )
  */
 char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)

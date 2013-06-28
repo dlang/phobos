@@ -45,8 +45,8 @@ class UTFException : Exception
     uint[4] sequence;
     size_t  len;
 
-
-    UTFException setSequence(uint[] data...) @safe pure nothrow
+    @safe pure nothrow
+    UTFException setSequence(uint[] data...)
     {
         import std.algorithm;
 
@@ -58,13 +58,13 @@ class UTFException : Exception
         return this;
     }
 
-
+    @safe pure nothrow
     this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
     {
         super(msg, file, line, next);
     }
 
-
+    @safe pure
     this(string msg, size_t index, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
     {
         import std.string;

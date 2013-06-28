@@ -37,43 +37,47 @@ import std.format;
  */
 class ConvException : Exception
 {
+    @safe pure nothrow
     this(string s, string fn = __FILE__, size_t ln = __LINE__)
     {
         super(s, fn, ln);
     }
 }
 
-private string convError_unexpected(S)(S source) {
+private string convError_unexpected(S)(S source)
+{
     return source.empty ? "end of input" : text("'", source.front, "'");
 }
 
-private void convError(S, T)(S source, string fn = __FILE__, size_t ln = __LINE__)
+private auto convError(S, T)(S source, string fn = __FILE__, size_t ln = __LINE__)
 {
-    throw new ConvException(
+    return new ConvException(
         text("Unexpected ", convError_unexpected(source),
              " when converting from type "~S.stringof~" to type "~T.stringof),
         fn, ln);
 }
 
-private void convError(S, T)(S source, int radix, string fn = __FILE__, size_t ln = __LINE__)
+private auto convError(S, T)(S source, int radix, string fn = __FILE__, size_t ln = __LINE__)
 {
-    throw new ConvException(
+    return new ConvException(
         text("Unexpected ", convError_unexpected(source),
              " when converting from type "~S.stringof~" base ", radix,
              " to type "~T.stringof),
         fn, ln);
 }
 
-private void parseError(lazy string msg, string fn = __FILE__, size_t ln = __LINE__)
+@safe pure/* nothrow*/  // lazy parameter bug
+private auto parseError(lazy string msg, string fn = __FILE__, size_t ln = __LINE__)
 {
-    throw new ConvException(text("Can't parse string: ", msg), fn, ln);
+    return new ConvException(text("Can't parse string: ", msg), fn, ln);
 }
 
 private void parseCheck(alias source)(dchar c, string fn = __FILE__, size_t ln = __LINE__)
 {
-    if (source.empty) parseError(text("unexpected end of input when expecting", "\"", c, "\""));
+    if (source.empty)
+        throw parseError(text("unexpected end of input when expecting", "\"", c, "\""));
     if (source.front != c)
-        parseError(text("\"", c, "\" is missing"), fn, ln);
+        throw parseError(text("\"", c, "\" is missing"), fn, ln);
     source.popFront();
 }
 
@@ -81,17 +85,17 @@ private
 {
     template isImaginary(T)
     {
-        enum bool isImaginary = staticIndexOf!(Unqual!(T),
+        enum bool isImaginary = staticIndexOf!(Unqual!T,
                 ifloat, idouble, ireal) >= 0;
     }
     template isComplex(T)
     {
-        enum bool isComplex = staticIndexOf!(Unqual!(T),
+        enum bool isComplex = staticIndexOf!(Unqual!T,
                 cfloat, cdouble, creal) >= 0;
     }
     template isNarrowInteger(T)
     {
-        enum bool isNarrowInteger = staticIndexOf!(Unqual!(T),
+        enum bool isNarrowInteger = staticIndexOf!(Unqual!T,
                 byte, ubyte, short, ushort) >= 0;
     }
 
@@ -137,6 +141,7 @@ private
  */
 class ConvOverflowException : ConvException
 {
+    @safe pure nothrow
     this(string s, string fn = __FILE__, size_t ln = __LINE__)
     {
         super(s, fn, ln);
@@ -285,7 +290,7 @@ template to(T)
 }
 
 // Tests for issue 6175
-unittest
+@safe pure unittest
 {
     char[9] sarr = "blablabla";
     auto darr = to!(char[])(sarr);
@@ -294,34 +299,34 @@ unittest
 }
 
 // Tests for issue 7348
-unittest
+@safe pure unittest
 {
     assert(to!string(null) == "null");
     assert(text(null) == "null");
 }
 
 // Tests for issue 8729: do NOT skip leading WS
-unittest
+@safe pure unittest
 {
-    foreach(T;TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assertThrown!ConvException(to!T(" 0"));
         assertThrown!ConvException(to!T(" 0", 8));
     }
-    foreach(T;TypeTuple!(float, double, real))
+    foreach (T; TypeTuple!(float, double, real))
     {
         assertThrown!ConvException(to!T(" 0"));
     }
 
-    assertThrown!ConvException(to!bool  (" true"));
+    assertThrown!ConvException(to!bool(" true"));
 
-    alias typeof(null) NullType;
+    alias NullType = typeof(null);
     assertThrown!ConvException(to!NullType(" null"));
 
-    alias int[] ARR;
+    alias ARR = int[];
     assertThrown!ConvException(to!ARR(" [1]"));
 
-    alias int[int] AA;
+    alias AA = int[int];
     assertThrown!ConvException(to!AA(" [1:1]"));
 }
 
@@ -333,7 +338,11 @@ T toImpl(T, S)(S value)
     if (isImplicitlyConvertible!(S, T) &&
         !isEnumStrToStr!(S, T) && !isNullToStr!(S, T))
 {
-    alias isUnsigned isUnsignedInt;
+    template isSignedInt(T)
+    {
+        enum isSignedInt = isIntegral!T && isSigned!T;
+    }
+    alias isUnsignedInt = isUnsigned;
 
     // Conversion from integer to integer, and changing its sign
     static if (isUnsignedInt!S && isSignedInt!T && S.sizeof == T.sizeof)
@@ -350,19 +359,14 @@ T toImpl(T, S)(S value)
     return value;
 }
 
-unittest
+@safe pure unittest
 {
     enum E { a }  // Issue 9523 - Allow identity enum conversion
     auto e = to!E(E.a);
     assert(e == E.a);
 }
 
-private template isSignedInt(T)
-{
-    enum isSignedInt = isIntegral!T && isSigned!T;
-}
-
-unittest
+@safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     int a = 42;
@@ -371,25 +375,25 @@ unittest
 }
 
 // Tests for issue 6377
-unittest
+@safe pure unittest
 {
     // Conversion between same size
     foreach (S; TypeTuple!(byte, short, int, long))
     {
         alias Unsigned!S U;
 
-        foreach (Sint; TypeTuple!(S, const(S), immutable(S)))
-        foreach (Uint; TypeTuple!(U, const(U), immutable(U)))
+        foreach (Sint; TypeTuple!(S, const S, immutable S))
+        foreach (Uint; TypeTuple!(U, const U, immutable U))
         {
             // positive overflow
             Uint un = Uint.max;
-            assertThrown!ConvOverflowException(to!Sint(un), text(
-                Sint.stringof, ' ', Uint.stringof, ' ', un));
+            assertThrown!ConvOverflowException(to!Sint(un),
+                text(Sint.stringof, ' ', Uint.stringof, ' ', un));
 
             // negative overflow
             Sint sn = -1;
-            assertThrown!ConvOverflowException(to!Uint(sn), text(
-                Sint.stringof, ' ', Uint.stringof, ' ', un));
+            assertThrown!ConvOverflowException(to!Uint(sn),
+                text(Sint.stringof, ' ', Uint.stringof, ' ', un));
         }
     }
 
@@ -403,8 +407,8 @@ unittest
         static assert(U1.sizeof < S2.sizeof);
 
         // small unsigned to big signed
-        foreach (Uint; TypeTuple!(U1, const(U1), immutable(U1)))
-        foreach (Sint; TypeTuple!(S2, const(S2), immutable(S2)))
+        foreach (Uint; TypeTuple!(U1, const U1, immutable U1))
+        foreach (Sint; TypeTuple!(S2, const S2, immutable S2))
         {
             Uint un = Uint.max;
             assertNotThrown(to!Sint(un));
@@ -412,8 +416,8 @@ unittest
         }
 
         // big unsigned to small signed
-        foreach (Uint; TypeTuple!(U2, const(U2), immutable(U2)))
-        foreach (Sint; TypeTuple!(S1, const(S1), immutable(S1)))
+        foreach (Uint; TypeTuple!(U2, const U2, immutable U2))
+        foreach (Sint; TypeTuple!(S1, const S1, immutable S1))
         {
             Uint un = Uint.max;
             assertThrown(to!Sint(un));
@@ -422,16 +426,16 @@ unittest
         static assert(S1.sizeof < U2.sizeof);
 
         // small signed to big unsigned
-        foreach (Sint; TypeTuple!(S1, const(S1), immutable(S1)))
-        foreach (Uint; TypeTuple!(U2, const(U2), immutable(U2)))
+        foreach (Sint; TypeTuple!(S1, const S1, immutable S1))
+        foreach (Uint; TypeTuple!(U2, const U2, immutable U2))
         {
             Sint sn = -1;
             assertThrown!ConvOverflowException(to!Uint(sn));
         }
 
         // big signed to small unsigned
-        foreach (Sint; TypeTuple!(S2, const(S2), immutable(S2)))
-        foreach (Uint; TypeTuple!(U1, const(U1), immutable(U1)))
+        foreach (Sint; TypeTuple!(S2, const S2, immutable S2))
+        foreach (Uint; TypeTuple!(U1, const U1, immutable U1))
         {
             Sint sn = -1;
             assertThrown!ConvOverflowException(to!Uint(sn));
@@ -448,7 +452,7 @@ T toImpl(T, S)(ref S s)
     return toImpl!(T, typeof(s[0])[])(s);
 }
 
-unittest
+@safe pure unittest
 {
     char[4] test = ['a', 'b', 'c', 'd'];
     static assert(!isInputRange!(Unqual!(char[4])));
@@ -465,7 +469,7 @@ T toImpl(T, S)(S value)
     return value.opCast!T();
 }
 
-unittest
+@safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     class B
@@ -497,7 +501,7 @@ T toImpl(T, S)(S value)
 }
 
 // Bugzilla 3961
-unittest
+@safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     struct Int
@@ -509,14 +513,14 @@ unittest
     static struct Int2
     {
         int x;
-        this(int x) { this.x = x; }
+        this(int x) @safe pure { this.x = x; }
     }
     Int2 i2 = to!Int2(1);
 
     static struct Int3
     {
         int x;
-        static Int3 opCall(int x)
+        static Int3 opCall(int x) @safe pure
         {
             Int3 i;
             i.x = x;
@@ -527,11 +531,11 @@ unittest
 }
 
 // Bugzilla 6808
-unittest
+@safe pure unittest
 {
     static struct FakeBigInt
     {
-        this(string s){}
+        this(string s) @safe pure {}
     }
 
     string s = "101";
@@ -546,7 +550,7 @@ T toImpl(T, S)(S value)
     return new T(value);
 }
 
-unittest
+@safe pure unittest
 {
     static struct S
     {
@@ -555,14 +559,14 @@ unittest
     static class C
     {
         int x;
-        this(int x) { this.x = x; }
+        this(int x) @safe pure { this.x = x; }
     }
 
     static class B
     {
         int value;
-        this(S src) { value = src.x; }
-        this(C src) { value = src.x; }
+        this(S src) @safe pure { value = src.x; }
+        this(C src) @safe pure { value = src.x; }
     }
 
     S s = S(1);
@@ -577,17 +581,17 @@ unittest
     assert(c2.x == 3);
 }
 
-unittest
+@safe pure unittest
 {
     struct S
     {
         class A
         {
-            this(B b) {}
+            this(B b) @safe pure {}
         }
         class B : A
         {
-            this() { super(this); }
+            this() @safe pure { super(this); }
         }
     }
 
@@ -598,14 +602,14 @@ unittest
 
     static class C : Object
     {
-        this() {}
-        this(Object o) {}
+        this() @safe pure {}
+        this(Object o) @safe pure {}
     }
 
     Object oc = new C();
     C a2 = to!C(oc);    // == new C(a)
                         // Construction conversion overrides down-casting conversion
-    assert(a2 != a);    //
+    assert(a2 !is a);   //
 }
 
 /**
@@ -653,7 +657,7 @@ T toImpl(T, S)(S value)
     }
     static assert(isModConvertible, "Bad modifier conversion: "~S.stringof~" to "~T.stringof);
 
-    auto result = cast(T) value;
+    auto result = ()@trusted{ return cast(T) value; }();
     if (!result && value)
     {
         throw new ConvException("Cannot convert object of static type "
@@ -663,7 +667,7 @@ T toImpl(T, S)(S value)
     return result;
 }
 
-unittest
+@safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     // Testing object conversions
@@ -677,14 +681,14 @@ unittest
 }
 
 // Unittest for 6288
-version (unittest)
+@safe pure unittest
 {
-    private template Identity(T)        { alias              T   Identity; }
-    private template toConst(T)         { alias        const(T)  toConst; }
-    private template toShared(T)        { alias       shared(T)  toShared; }
-    private template toSharedConst(T)   { alias shared(const(T)) toSharedConst; }
-    private template toImmutable(T)     { alias    immutable(T)  toImmutable; }
-    private template AddModifier(int n) if (0 <= n && n < 5)
+    template Identity(T)        { alias              T   Identity; }
+    template toConst(T)         { alias        const(T)  toConst; }
+    template toShared(T)        { alias       shared(T)  toShared; }
+    template toSharedConst(T)   { alias shared(const(T)) toSharedConst; }
+    template toImmutable(T)     { alias    immutable(T)  toImmutable; }
+    template AddModifier(int n) if (0 <= n && n < 5)
     {
              static if (n == 0) alias Identity       AddModifier;
         else static if (n == 1) alias toConst        AddModifier;
@@ -692,9 +696,7 @@ version (unittest)
         else static if (n == 3) alias toSharedConst  AddModifier;
         else static if (n == 4) alias toImmutable    AddModifier;
     }
-}
-unittest
-{
+
     interface I {}
     interface J {}
 
@@ -807,7 +809,7 @@ T toImpl(T, S)(S value)
                         ~ S.stringof ~ " to a "
                         ~ T.stringof));
         auto result = new Char[raw.length / Char.sizeof];
-        memcpy(result.ptr, value.ptr, value.length);
+        ()@trusted{ memcpy(result.ptr, value.ptr, value.length); }();
         return cast(T) result;
     }
     else static if (isPointer!S && is(S : const(char)*))
@@ -821,7 +823,7 @@ T toImpl(T, S)(S value)
     }
 }
 
-unittest
+/*@safe pure */unittest
 {
     // string to string conversion
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -862,7 +864,7 @@ unittest
     }
 }
 
-unittest
+@safe pure unittest
 {
     // Conversion reinterpreting void array to string
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -875,7 +877,7 @@ unittest
     assert(c == "abcx");
 }
 
-unittest
+/*@safe pure */unittest
 {
     // char* to string conversion
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -885,7 +887,7 @@ unittest
     assert(to!string("foo\0".ptr) == "foo");
 }
 
-unittest
+@safe pure unittest
 {
     // Conversion representing bool value with string
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -896,15 +898,15 @@ unittest
     assert(to!string(b) == "true");
 }
 
-unittest
+@safe pure unittest
 {
     // Conversion representing character value with string
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
 
     alias TypeTuple!(
-        char, wchar, dchar,
-        const(char), const(wchar), const(dchar),
-        immutable(char), immutable(wchar), immutable(dchar)) AllChars;
+         char, const( char), immutable( char),
+        wchar, const(wchar), immutable(wchar),
+        dchar, const(dchar), immutable(dchar)) AllChars;
     foreach (Char1; AllChars)
     {
         foreach (Char2; AllChars)
@@ -926,7 +928,7 @@ unittest
     assert(s2 == "foo");
 }
 
-unittest
+@safe pure unittest
 {
     // Conversion representing integer values with string
 
@@ -967,7 +969,7 @@ unittest
     });
 }
 
-unittest
+@safe pure unittest
 {
     // Conversion representing dynamic/static array with string
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -975,12 +977,14 @@ unittest
     long[] b = [ 1, 3, 5 ];
     auto s = to!string(b);
     assert(to!string(b) == "[1, 3, 5]", s);
-
+}
+/*@safe pure */unittest // sprintf issue
+{
     double[2] a = [ 1.5, 2.5 ];
     assert(to!string(a) == "[1.5, 2.5]");
 }
 
-unittest
+/*@safe pure */unittest
 {
     // Conversion representing associative array with string
     int[string] a = ["0":1, "1":2];
@@ -1101,7 +1105,7 @@ body
     }
 }
 
-unittest
+@safe pure unittest
 {
     foreach (Int; TypeTuple!(uint, ulong))
     {
@@ -1279,10 +1283,10 @@ T toImpl(T, S)(S value)
         if (value > T.max)
             throw new ConvOverflowException("Conversion positive overflow");
     }
-    return cast(T) value;
+    return (ref value)@trusted{ return cast(T) value; }(value);
 }
 
-unittest
+@safe pure unittest
 {
     dchar a = ' ';
     assert(to!char(a) == ' ');
@@ -1314,19 +1318,18 @@ T toImpl(T, S)(S value)
         !isSomeString!S && isDynamicArray!S &&
         !isExactSomeString!T && isArray!T)
 {
-    alias typeof(T.init[0]) E;
-    auto result = new E[value.length];
-    foreach (i, e; value)
+    alias E = typeof(T.init[0]);
+
+    auto w = appender!(E[])();
+    w.reserve(value.length);
+    foreach (i, ref e; value)
     {
-        /* Temporarily cast to mutable type, so we can get it initialized,
-         * this is ok because there are no other references to result[]
-         */
-        cast()(result[i]) = to!E(e);
+        w.put(to!E(e));
     }
-    return result;
+    return w.data;
 }
 
-unittest
+@safe pure unittest
 {
     // array to array conversions
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -1335,8 +1338,8 @@ unittest
     auto b = to!(float[])(a);
     assert(b == [ 1.0f, 2, 3 ]);
 
-    auto c = to!(string[])(b);
-    assert(c[0] == "1" && c[1] == "2" && c[2] == "3");
+    //auto c = to!(string[])(b);
+    //assert(c[0] == "1" && c[1] == "2" && c[2] == "3");
 
     immutable(int)[3] d = [ 1, 2, 3 ];
     b = to!(float[])(d);
@@ -1354,6 +1357,13 @@ unittest
     }
     Wrap[] warr = to!(Wrap[])(["foo", "bar"]);  // should work
 }
+/*@safe pure */unittest
+{
+    auto b = [ 1.0f, 2, 3 ];
+
+    auto c = to!(string[])(b);
+    assert(c[0] == "1" && c[1] == "2" && c[2] == "3");
+}
 
 /**
 Associative array to associative array conversion converts each key
@@ -1363,6 +1373,8 @@ T toImpl(T, S)(S value)
     if (isAssociativeArray!S &&
         isAssociativeArray!T && !is(T == enum))
 {
+    /* This code is potentially unsafe.
+     */
     alias KeyType!T   K2;
     alias ValueType!T V2;
 
@@ -1378,7 +1390,7 @@ T toImpl(T, S)(S value)
     return cast(T)result;
 }
 
-unittest
+@safe /*pure */unittest
 {
     // hash to hash conversions
     int[string] a;
@@ -1387,7 +1399,7 @@ unittest
     auto b = to!(double[dstring])(a);
     assert(b["0"d] == 1 && b["1"d] == 2);
 }
-unittest // Bugzilla 8705, from doc
+@safe /*pure */unittest // Bugzilla 8705, from doc
 {
     int[string][double[int[]]] a;
     auto b = to!(short[wstring][string[double[]]])(a);
@@ -1473,14 +1485,13 @@ private void testFloatingToIntegral(Floating, Integral)()
     }
 }
 
-unittest
+@safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
 
-    alias TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong)
-    AllInts;
-    alias TypeTuple!(float, double, real) AllFloats;
-    alias TypeTuple!(AllInts, AllFloats) AllNumerics;
+    alias AllInts = TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong);
+    alias AllFloats = TypeTuple!(float, double, real);
+    alias AllNumerics = TypeTuple!(AllInts, AllFloats);
     // test with same type
     {
         foreach (T; AllNumerics)
@@ -1551,6 +1562,12 @@ unittest
             assert(a == 42);
         }
     }
+}
+/*@safe pure */unittest
+{
+    alias AllInts = TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong);
+    alias AllFloats = TypeTuple!(float, double, real);
+    alias AllNumerics = TypeTuple!(AllInts, AllFloats);
     // test conversions to string
     {
         foreach (T; AllNumerics)
@@ -1595,7 +1612,7 @@ T toImpl(T, S)(S value)
     {
         if (value.length)
         {
-            convError!(S, T)(value);
+            throw convError!(S, T)(value);
         }
     }
     return parse!T(value);
@@ -1610,25 +1627,25 @@ T toImpl(T, S)(S value, uint radix)
     {
         if (value.length)
         {
-            convError!(S, T)(value);
+            throw convError!(S, T)(value);
         }
     }
     return parse!T(value, radix);
 }
 
-unittest
+@safe pure unittest
 {
     // Issue 6668 - ensure no collaterals thrown
     try { to!uint("-1"); }
     catch (ConvException e) { assert(e.next is null); }
 }
 
-unittest
+@safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    foreach (Char; TypeTuple!(char, wchar, dchar))
+    foreach (Str; TypeTuple!(string, wstring, dstring))
     {
-        auto a = to!(Char[])("123");
+        Str a = "123";
         assert(to!int(a) == 123);
         assert(to!double(a) == 123);
     }
@@ -1657,7 +1674,7 @@ T toImpl(T, S)(S value)
     throw new ConvException(format("Value (%s) does not match any member value of enum '%s'", value, T.stringof));
 }
 
-unittest
+@safe pure unittest
 {
     enum En8143 : int { A = 10, B = 20, C = 30, D = 20 }
     enum En8143[][] m3 = to!(En8143[][])([[10, 30], [30, 10]]);
@@ -1730,17 +1747,17 @@ unittest
  * was meaningfully converted.
  *
  * Example:
---------------
-string test = "123 \t  76.14";
-auto a = parse!uint(test);
-assert(a == 123);
-assert(test == " \t  76.14"); // parse bumps string
-munch(test, " \t\n\r"); // skip ws
-assert(test == "76.14");
-auto b = parse!double(test);
-assert(b == 76.14);
-assert(test == "");
---------------
+ * --------------
+ * string test = "123 \t  76.14";
+ * auto a = parse!uint(test);
+ * assert(a == 123);
+ * assert(test == " \t  76.14"); // parse bumps string
+ * munch(test, " \t\n\r"); // skip ws
+ * assert(test == "76.14");
+ * auto b = parse!double(test);
+ * assert(b == 76.14);
+ * assert(test == "");
+ * --------------
  */
 
 Target parse(Target, Source)(ref Source s)
@@ -1751,7 +1768,7 @@ Target parse(Target, Source)(ref Source s)
     {
         // smaller types are handled like integers
         auto v = .parse!(Select!(Target.min < 0, int, uint))(s);
-        auto result = cast(Target) v;
+        auto result = ()@trusted{ return cast(Target) v; }();
         if (result != v)
             goto Loverflow;
         return result;
@@ -1773,7 +1790,7 @@ Target parse(Target, Source)(ref Source s)
             if (c >= '0' && c <= '9')
             {
                 if (v >= Target.max/10 &&
-                        (v != Target.max/10|| c + sign > maxLastDigit))
+                        (v != Target.max/10 || c + sign > maxLastDigit))
                     goto Loverflow;
                 v = cast(Target) (v * 10 + (c - '0'));
                 s.popFront();
@@ -1809,18 +1826,17 @@ Target parse(Target, Source)(ref Source s)
 Loverflow:
     throw new ConvOverflowException("Overflow in integral conversion");
 Lerr:
-    convError!(Source, Target)(s);
-    assert(0);
+    throw convError!(Source, Target)(s);
 }
 
-unittest
+@safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     string s = "123";
     auto a = parse!int(s);
 }
 
-unittest
+@safe pure unittest
 {
     foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
@@ -1917,7 +1933,7 @@ unittest
     }
 }
 
-unittest
+@safe pure unittest
 {
     // parsing error check
     foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
@@ -1996,7 +2012,7 @@ unittest
     }
 }
 
-unittest
+@safe pure unittest
 {
     assertCTFEable!({ string s =  "1234abc"; assert(parse! int(s) ==  1234 && s == "abc"); });
     assertCTFEable!({ string s = "-1234abc"; assert(parse! int(s) == -1234 && s == "abc"); });
@@ -2054,11 +2070,10 @@ body
 Loverflow:
     throw new ConvOverflowException("Overflow in integral conversion");
 Lerr:
-    convError!(Source, Target)(s, radix);
-    assert(0);
+    throw convError!(Source, Target)(s, radix);
 }
 
-unittest
+@safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     // @@@BUG@@@ the size of China
@@ -2093,7 +2108,7 @@ unittest
     assert(parse!int(s, 10) == -42);
 }
 
-unittest // bugzilla 7302
+@safe pure unittest // bugzilla 7302
 {
     auto r = cycle("2A!");
     auto u = parse!uint(r, 16);
@@ -2118,9 +2133,9 @@ Target parse(Target, Source)(ref Source s)
         }
     }
 
-    if( longest_match > 0 )
+    if (longest_match > 0)
     {
-        s = s[longest_match..$];
+        s = s[longest_match .. $];
         return result ;
     }
 
@@ -2150,7 +2165,7 @@ unittest
     }
 }
 
-unittest // bugzilla 4744
+@safe pure unittest // bugzilla 4744
 {
     enum A { member1, member11, member111 }
     assert(to!A("member1"  ) == A.member1  );
@@ -2175,7 +2190,7 @@ Target parse(Target, Source)(ref Source p)
     // static immutable string infinity = "infinity";
     // static immutable string nans = "nans";
 
-    ConvException bailOut(string msg = null, string fn = __FILE__, size_t ln = __LINE__)
+    ConvException bailOut()(string msg = null, string fn = __FILE__, size_t ln = __LINE__)
     {
         if (!msg)
             msg = "Floating point conversion error";
@@ -2348,8 +2363,8 @@ Target parse(Target, Source)(ref Source p)
             }
 
             // Stuff mantissa directly into real
-            *cast(long *)&ldval = msdec;
-            (cast(ushort *)&ldval)[4] = cast(ushort) e2;
+            ()@trusted{ *cast(long*)&ldval = msdec; }();
+            ()@trusted{ (cast(ushort*)&ldval)[4] = cast(ushort) e2; }();
 
             // Exponent is power of 2, not power of 10
             ldval = ldexp(ldval,exp);
@@ -2597,50 +2612,38 @@ unittest
     // printf("\n");
 }
 
-// Unittest for bug 4959
-unittest
+@safe pure unittest
 {
-    auto s = "0 ";
-    auto x = parse!double(s);
-    assert(s == " ");
-    assert(x == 0.0);
-}
+    // Bugzilla 4959
+    {
+        auto s = "0 ";
+        auto x = parse!double(s);
+        assert(s == " ");
+        assert(x == 0.0);
+    }
 
-// Unittest for bug 3369
-unittest
-{
+    // Bugzilla 3369
     assert(to!float("inf") == float.infinity);
     assert(to!float("-inf") == -float.infinity);
-}
 
-// Unittest for bug 6160
-unittest
-{
+    // Bugzilla 6160
     assert(6_5.536e3L == to!real("6_5.536e3"));                     // 2^16
     assert(0x1000_000_000_p10 == to!real("0x1000_000_000_p10"));    // 7.03687e+13
-}
 
-// Unittest for bug 6258
-unittest
-{
+    // Bugzilla 6258
     assertThrown!ConvException(to!real("-"));
     assertThrown!ConvException(to!real("in"));
-}
 
-// Unittest for bug 7055
-unittest
-{
+    // Bugzilla 7055
     assertThrown!ConvException(to!float("INF2"));
-}
-unittest
-{
+
     //extra stress testing
     auto ssOK    = ["1.", "1.1.1", "1.e5", "2e1e", "2a", "2e1_1",
                     "inf", "-inf", "infa", "-infa", "inf2e2", "-inf2e2"];
     auto ssKO    = ["", " ", "2e", "2e+", "2e-", "2ee", "2e++1", "2e--1", "2e_1", "+inf"];
-    foreach(s; ssOK)
+    foreach (s; ssOK)
         parse!double(s);
-    foreach(s; ssKO)
+    foreach (s; ssKO)
         assertThrown!ConvException(parse!double(s));
 }
 
@@ -2652,7 +2655,8 @@ Target parse(Target, Source)(ref Source s)
     if (isExactSomeString!Source &&
         staticIndexOf!(Unqual!Target, dchar, Unqual!(ElementEncodingType!Source)) >= 0)
 {
-    if (s.empty) convError!(Source, Target)(s);
+    if (s.empty)
+        throw convError!(Source, Target)(s);
     static if (is(Unqual!Target == dchar))
     {
         Target result = s.front;
@@ -2668,7 +2672,7 @@ Target parse(Target, Source)(ref Source s)
     }
 }
 
-unittest
+@safe pure unittest
 {
     foreach (Str; TypeTuple!(string, wstring, dstring))
     {
@@ -2689,7 +2693,8 @@ Target parse(Target, Source)(ref Source s)
     if (!isSomeString!Source && isInputRange!Source && isSomeChar!(ElementType!Source) &&
         isSomeChar!Target && Target.sizeof >= ElementType!Source.sizeof && !is(Target == enum))
 {
-    if (s.empty) convError!(Source, Target)(s);
+    if (s.empty)
+        throw convError!(Source, Target)(s);
     Target result = s.front;
     s.popFront();
     return result;
@@ -2700,24 +2705,23 @@ Target parse(Target, Source)(ref Source s)
     if (isExactSomeString!Source &&
         is(Unqual!Target == bool))
 {
-    if (s.length >= 4 && icmp(s[0 .. 4], "true")==0)
+    if (s.length >= 4 && icmp(s[0 .. 4], "true") == 0)
     {
         s = s[4 .. $];
         return true;
     }
-    if (s.length >= 5 && icmp(s[0 .. 5], "false")==0)
+    if (s.length >= 5 && icmp(s[0 .. 5], "false") == 0)
     {
         s = s[5 .. $];
         return false;
     }
-    parseError("bool should be case-insensitive 'true' or 'false'");
-    assert(0);
+    throw parseError("bool should be case-insensitive 'true' or 'false'");
 }
 
 /*
     Tests for to!bool and parse!bool
 */
-unittest
+@safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(conv) printf("conv.to!bool.unittest\n");
@@ -2748,16 +2752,15 @@ Target parse(Target, Source)(ref Source s)
     if (isExactSomeString!Source &&
         is(Unqual!Target == typeof(null)))
 {
-    if (s.length >= 4 && icmp(s[0 .. 4], "null")==0)
+    if (s.length >= 4 && icmp(s[0 .. 4], "null") == 0)
     {
         s = s[4 .. $];
         return null;
     }
-    parseError("null should be case-insensitive 'null'");
-    assert(0);
+    throw parseError("null should be case-insensitive 'null'");
 }
 
-unittest
+@safe pure unittest
 {
     alias typeof(null) NullType;
     auto s1 = "null";
@@ -2773,7 +2776,7 @@ unittest
     assert(m == "maybe");  // m shouldn't change on failure
 
     auto s = "NULL";
-    assert(parse!(const(NullType))(s) is null);
+    assert(parse!(const NullType)(s) is null);
 }
 
 //Used internally by parse Array/AA, to remove ascii whites
@@ -2782,7 +2785,7 @@ package void skipWS(R)(ref R r)
     static if (isSomeString!R)
     {
         //Implementation inspired from stripLeft.
-        foreach(i, dchar c; r)
+        foreach (i, dchar c; r)
         {
             if (!std.ascii.isWhite(c))
             {
@@ -2795,8 +2798,8 @@ package void skipWS(R)(ref R r)
     }
     else
     {
-        for ( ; !r.empty && std.ascii.isWhite(r.front) ; r.popFront())
-            { }
+        for (; !r.empty && std.ascii.isWhite(r.front); r.popFront())
+        {}
     }
 }
 
@@ -2813,7 +2816,8 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
 
     parseCheck!s(lbracket);
     skipWS(s);
-    if (s.empty) convError!(Source, Target)(s);
+    if (s.empty)
+        throw convError!(Source, Target)(s);
     if (s.front == rbracket)
     {
         s.popFront();
@@ -2823,7 +2827,8 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     {
         result ~= parseElement!(ElementType!Target)(s);
         skipWS(s);
-        if (s.empty) convError!(Source, Target)(s);
+        if (s.empty)
+            throw convError!(Source, Target)(s);
         if (s.front != comma)
             break;
     }
@@ -2857,7 +2862,7 @@ unittest
     assert( ia == ia2);
 }
 
-unittest
+@safe pure unittest
 {
     auto s1 = `[['h', 'e', 'l', 'l', 'o'], "world"]`;
     auto a1 = parse!(string[])(s1);
@@ -2868,11 +2873,11 @@ unittest
     assert(a2 == ["aaa", "bbb", "ccc"]);
 }
 
-unittest
+@safe pure unittest
 {
     //Check proper failure
     auto s = "[ 1 , 2 , 3 ]";
-    foreach(i ; 0..s.length-1)
+    foreach (i ; 0..s.length-1)
     {
         auto ss = s[0 .. i];
         assertThrown!ConvException(parse!(int[])(ss));
@@ -2880,7 +2885,7 @@ unittest
     int[] arr = parse!(int[])(s);
 }
 
-unittest
+@safe pure unittest
 {
     //Checks parsing of strings with escaped characters
     string s1 = `[
@@ -2913,11 +2918,15 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     if (isExactSomeString!Source &&
         isStaticArray!Target && !is(Target == enum))
 {
-    Target result = void;
+    static if (hasIndirections!Target)
+        Target result = Target.init[0].init;
+    else
+        Target result = void;
 
     parseCheck!s(lbracket);
     skipWS(s);
-    if (s.empty) convError!(Source, Target)(s);
+    if (s.empty)
+        throw convError!(Source, Target)(s);
     if (s.front == rbracket)
     {
         static if (result.length != 0)
@@ -2934,7 +2943,8 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
             goto Lmanyerr;
         result[i++] = parseElement!(ElementType!Target)(s);
         skipWS(s);
-        if (s.empty) convError!(Source, Target)(s);
+        if (s.empty)
+            throw convError!(Source, Target)(s);
         if (s.front != comma)
         {
             if (i != result.length)
@@ -2947,15 +2957,13 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     return result;
 
 Lmanyerr:
-    parseError(text("Too many elements in input, ", result.length, " elements expected."));
-    assert(0);
+    throw parseError(text("Too many elements in input, ", result.length, " elements expected."));
 
 Lfewerr:
-    parseError(text("Too few elements in input, ", result.length, " elements expected."));
-    assert(0);
+    throw parseError(text("Too few elements in input, ", result.length, " elements expected."));
 }
 
-unittest
+@safe pure unittest
 {
     auto s1 = "[1,2,3,4]";
     auto sa1 = parse!(int[4])(s1);
@@ -2981,14 +2989,15 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     if (isExactSomeString!Source &&
         isAssociativeArray!Target && !is(Target == enum))
 {
-    alias typeof(Target.keys[0]) KeyType;
-    alias typeof(Target.values[0]) ValueType;
+    alias KeyType = typeof(Target.keys[0]);
+    alias ValType = typeof(Target.values[0]);
 
     Target result;
 
     parseCheck!s(lbracket);
     skipWS(s);
-    if (s.empty) convError!(Source, Target)(s);
+    if (s.empty)
+        throw convError!(Source, Target)(s);
     if (s.front == rbracket)
     {
         s.popFront();
@@ -3000,18 +3009,20 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
         skipWS(s);
         parseCheck!s(keyval);
         skipWS(s);
-        auto val = parseElement!ValueType(s);
+        auto val = parseElement!ValType(s);
         skipWS(s);
         result[key] = val;
-        if (s.empty) convError!(Source, Target)(s);
-        if (s.front != comma) break;
+        if (s.empty)
+            throw convError!(Source, Target)(s);
+        if (s.front != comma)
+            break;
     }
     parseCheck!s(rbracket);
 
     return result;
 }
 
-unittest
+@safe pure unittest
 {
     auto s1 = "[1:10, 2:20, 3:30]";
     auto aa1 = parse!(int[int])(s1);
@@ -3026,11 +3037,11 @@ unittest
     assert(aa3 == ["aaa":[1], "bbb":[2,3], "ccc":[4,5,6]]);
 }
 
-unittest
+@safe pure unittest
 {
     //Check proper failure
     auto s = "[1:10, 2:20, 3:30]";
-    foreach(i ; 0..s.length-1)
+    foreach (i ; 0 .. s.length-1)
     {
         auto ss = s[0 .. i];
         assertThrown!ConvException(parse!(int[int])(ss));
@@ -3042,16 +3053,19 @@ private dchar parseEscape(Source)(ref Source s)
     if (isInputRange!Source && isSomeChar!(ElementType!Source))
 {
     parseCheck!s('\\');
-    if (s.empty) parseError("Unterminated escape sequence");
+    if (s.empty)
+        throw parseError("Unterminated escape sequence");
 
-    dchar getHexDigit()
+    dchar getHexDigit()(ref Source s_ = s)  // workaround
     {
-        if (s.empty) parseError("Unterminated escape sequence");
-        s.popFront();
-        if (s.empty) parseError("Unterminated escape sequence");
-        dchar c = s.front;
+        if (s_.empty)
+            throw parseError("Unterminated escape sequence");
+        s_.popFront();
+        if (s_.empty)
+            throw parseError("Unterminated escape sequence");
+        dchar c = s_.front;
         if (!isHexDigit(c))
-            parseError("Hex digit is missing");
+            throw parseError("Hex digit is missing");
         return std.ascii.isAlpha(c) ? ((c & ~0x20) - ('A' - 10)) : c - '0';
     }
 
@@ -3074,14 +3088,12 @@ private dchar parseEscape(Source)(ref Source s)
         case 'x':
             result  = getHexDigit() << 4;
             result |= getHexDigit();
-            if (s.empty) parseError("Unterminated escape sequence");
             break;
         case 'u':
             result  = getHexDigit() << 12;
             result |= getHexDigit() << 8;
             result |= getHexDigit() << 4;
             result |= getHexDigit();
-            if (s.empty) parseError("Unterminated escape sequence");
             break;
         case 'U':
             result  = getHexDigit() << 28;
@@ -3092,24 +3104,24 @@ private dchar parseEscape(Source)(ref Source s)
             result |= getHexDigit() << 8;
             result |= getHexDigit() << 4;
             result |= getHexDigit();
-            if (s.empty) parseError("Unterminated escape sequence");
             break;
         default:
-            parseError("Unknown escape character " ~ to!string(s.front));
-            break;
+            throw parseError("Unknown escape character " ~ to!string(s.front));
     }
+    if (s.empty)
+        throw parseError("Unterminated escape sequence");
 
     s.popFront();
 
     return result;
 }
 
-unittest
+@safe pure unittest
 {
     string[] s1 = [
         `\"`, `\'`, `\?`, `\\`, `\a`, `\b`, `\f`, `\n`, `\r`, `\t`, `\v`, //Normal escapes
         //`\141`, //@@@9621@@@ Octal escapes.
-        `\x61`, 
+        `\x61`,
         `\u65E5`, `\U00012456`
         //`\&amp;`, `\&quot;`, //@@@9621@@@ Named Character Entities.
     ];
@@ -3117,7 +3129,7 @@ unittest
     const(dchar)[] s2 = [
         '\"', '\'', '\?', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v', //Normal escapes
         //'\141', //@@@9621@@@ Octal escapes.
-        '\x61', 
+        '\x61',
         '\u65E5', '\U00012456'
         //'\&amp;', '\&quot;', //@@@9621@@@ Named Character Entities.
     ];
@@ -3129,7 +3141,7 @@ unittest
     }
 }
 
-unittest
+@safe pure unittest
 {
     string[] ss = [
         `hello!`,  //Not an escape
@@ -3156,12 +3168,14 @@ Target parseElement(Target, Source)(ref Source s)
     auto result = appender!Target();
 
     // parse array of chars
-    if (s.empty) convError!(Source, Target)(s);
+    if (s.empty)
+        throw convError!(Source, Target)(s);
     if (s.front == '[')
         return parse!Target(s);
 
     parseCheck!s('\"');
-    if (s.empty) convError!(Source, Target)(s);
+    if (s.empty)
+        throw convError!(Source, Target)(s);
     if (s.front == '\"')
     {
         s.popFront();
@@ -3170,7 +3184,7 @@ Target parseElement(Target, Source)(ref Source s)
     while (true)
     {
         if (s.empty)
-            parseError("Unterminated quoted string");
+            throw parseError("Unterminated quoted string");
         switch (s.front)
         {
             case '\"':
@@ -3196,7 +3210,8 @@ Target parseElement(Target, Source)(ref Source s)
     Target c;
 
     parseCheck!s('\'');
-    if (s.empty) convError!(Source, Target)(s);
+    if (s.empty)
+        throw convError!(Source, Target)(s);
     if (s.front != '\\')
     {
         c = s.front;
@@ -3219,53 +3234,43 @@ Target parseElement(Target, Source)(ref Source s)
 
 
 /***************************************************************
-   Convenience functions for converting any number and types of
-   arguments into _text (the three character widths).
-
-   Example:
-----
-assert(text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz");
-assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
-assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
-----
-*/
-string text(T...)(T args)
-{
-    return textImpl!string(args);
-}
+ * Convenience functions for converting any number and types of
+ * arguments into _text (the three character widths).
+ */
+string text(T...)(T args) { return textImpl!string(args); }
 ///ditto
-wstring wtext(T...)(T args)
-{
-    return textImpl!wstring(args);
-}
+wstring wtext(T...)(T args) { return textImpl!wstring(args); }
 ///ditto
-dstring dtext(T...)(T args)
-{
-    return textImpl!dstring(args);
-}
+dstring dtext(T...)(T args) { return textImpl!dstring(args); }
 
-private S textImpl(S, U...)(U args) if (U.length == 0)
+private S textImpl(S, U...)(U args)
 {
-    return null;
+    static if (U.length == 0)
+    {
+        return null;
+    }
+    else
+    {
+        auto result = to!S(args[0]);
+        foreach (arg; args[1 .. $])
+            result ~= to!S(arg);
+        return result;
+    }
 }
-
-private S textImpl(S, U...)(U args) if (U.length > 0)
-{
-    auto result = to!S(args[0]);
-    foreach (arg; args[1 .. $]) result ~= to!S(arg);
-    return result;
-}
-
+///
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    assert(text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz");
+    assert( text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"c);
     assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
     assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
+}
+unittest
+{
     assert(text() is null);
     assert(wtext() is null);
     assert(dtext() is null);
 }
+
 
 /***************************************************************
 The $(D octal) facility is intended as an experimental facility to
