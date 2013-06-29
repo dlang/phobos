@@ -836,18 +836,18 @@ static assert([ParameterIdentifierTuple!foo] == ["num", "name"]);
 template ParameterIdentifierTuple(func...)
     if (func.length == 1 && isCallable!func)
 {
-    static if (is(typeof(func[0]) PT == __parameters))
+    static if (is(FunctionTypeOf!func PT == __parameters))
     {
         template Get(size_t i)
         {
-            enum Get = __traits(identifier, PT[i..i+1]);
-        }
-    }
-    else static if (is(FunctionTypeOf!func PT == __parameters))
-    {
-        template Get(size_t i)
-        {
-            enum Get = "";
+            static if (!isFunctionPointer!func && !isDelegate!func)
+            {
+                enum Get = __traits(identifier, PT[i..i+1]);
+            }
+            else
+            {
+                enum Get = "";
+            }
         }
     }
     else
@@ -891,6 +891,17 @@ unittest
     // might be changed in the future?
     void delegate(int num, string name, int[long] aa) dg;
     static assert([PIT!dg] == ["", "", ""]);
+
+    interface Test
+    {
+        @property string getter();
+        @property void setter(int a);
+        Test method(int a, long b, string c);
+    }
+    static assert([PIT!(Test.getter)] == []);
+    static assert([PIT!(Test.setter)] == ["a"]);
+    static assert([PIT!(Test.method)] == ["a", "b", "c"]);
+
 /+
     // depends on internal
     void baw(int, string, int[]){}
