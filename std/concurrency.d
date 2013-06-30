@@ -193,15 +193,19 @@ private
     Tid         owner;
 }
 
+private shared bool firstInitialization = true;
 
-shared static this()
+static this()
 {
     // NOTE: Normally, mbox is initialized by spawn() or thisTid().  This
     //       doesn't support the simple case of calling only receive() in main
     //       however.  To ensure that this works, initialize the main thread's
-    //       mbox field here (as shared static ctors are run once on startup
-    //       by the main thread).
-    mbox = new MessageBox;
+    //       mbox field here only the first time this is run.
+    if (firstInitialization)
+    {
+        mbox = new MessageBox;
+        firstInitialization = false;
+    }
 }
 
 
