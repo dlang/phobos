@@ -3321,7 +3321,7 @@ automatically initialized. Leaving $(D autoInit ==
 RefCountedAutoInitialize.yes) (the default option) is convenient but
 has the cost of a test whenever the payload is accessed. If $(D
 autoInit == RefCountedAutoInitialize.no), user code must call either
-$(D refCountedIsInitialized) or $(D refCountedEnsureInitialized)
+$(D refCountedStore.isInitialized) or $(D refCountedStore.ensureInitialized)
 before attempting to access the payload. Not doing so results in null
 pointer dereference.
 
@@ -3405,7 +3405,7 @@ if (!is(T == class))
 /**
 Constructor that initializes the payload.
 
-Postcondition: $(D refCountedIsInitialized)
+Postcondition: $(D refCountedStore.isInitialized)
  */
     this(A...)(auto ref A args) if (A.length > 0)
     {
@@ -3414,7 +3414,7 @@ Postcondition: $(D refCountedIsInitialized)
 
 /**
 Constructor that tracks the reference count appropriately. If $(D
-!refCountedIsInitialized), does nothing.
+!refCountedStore.isInitialized), does nothing.
  */
     this(this)
     {
@@ -3424,7 +3424,7 @@ Constructor that tracks the reference count appropriately. If $(D
 
 /**
 Destructor that tracks the reference count appropriately. If $(D
-!refCountedIsInitialized), does nothing. When the reference count goes
+!refCountedStore.isInitialized), does nothing. When the reference count goes
 down to zero, calls $(D destroy) agaist the payload and calls $(D free)
 to deallocate the corresponding resource.
  */
@@ -3470,8 +3470,8 @@ Assignment operators
         /**
         Returns a reference to the payload. If (autoInit ==
         RefCountedAutoInitialize.yes), calls $(D
-        refCountedEnsureInitialized). Otherwise, just issues $(D
-        assert(refCountedIsInitialized)). Used with $(D alias
+        refCountedStore.ensureInitialized). Otherwise, just issues $(D
+        assert(refCountedStore.isInitialized)). Used with $(D alias
         refCountedPayload this;), so callers can just use the $(D RefCounted)
         object as a $(D T).
 
@@ -3512,8 +3512,8 @@ Assignment operators
 /**
 Returns a reference to the payload. If (autoInit ==
 RefCountedAutoInitialize.yes), calls $(D
-refCountedEnsureInitialized). Otherwise, just issues $(D
-assert(refCountedIsInitialized)).
+refCountedStore.ensureInitialized). Otherwise, just issues $(D
+assert(refCountedStore.isInitialized)).
  */
     alias refCountedPayload this;
 }
