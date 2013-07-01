@@ -360,7 +360,7 @@ T enforce(T, string file, size_t line = __LINE__)
  +/
 T enforce(T, Dg, string file = __FILE__, size_t line = __LINE__)
     (T value, scope Dg dg)
-    if (is(Dg : void delegate()) || is(Dg : void function()))
+    if (isSomeFunction!Dg && is(typeof( dg() )))
 {
     if (!value) dg();
     return value;
@@ -386,6 +386,13 @@ unittest
         assert (e.file == __FILE__);
         assert (e.line == __LINE__-7);
     }
+}
+
+unittest
+{
+    // Issue 10510
+    extern(C) void cFoo() { }
+    enforce(false, &cFoo);
 }
 
 // purity and safety inference test
@@ -831,7 +838,7 @@ as the language is free to assume objects don't have internal pointers
 (TDPL 7.1.3.5).
 */
 bool pointsTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @trusted pure nothrow
-    if (__traits(isRef, source) || isDynamicArray!S || 
+    if (__traits(isRef, source) || isDynamicArray!S ||
         isPointer!S || is(S == class))
 {
     static if (isPointer!S || is(S == class))
@@ -887,7 +894,7 @@ unittest
     }
     int i;
     auto s = S(0, &i);
- 
+
     //structs and unions "own" their members
     //pointsTo will answer true if one of the members pointsTo.
     assert(!s.pointsTo(s.v)); //s.v is just v member of s, so not pointed.
