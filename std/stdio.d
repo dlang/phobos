@@ -838,6 +838,7 @@ int main()
 ---
 */
     S readln(S = string)(dchar terminator = '\n')
+    if (isSomeString!S)
     {
         Unqual!(ElementEncodingType!S)[] buf;
         readln(buf, terminator);
@@ -915,7 +916,8 @@ because $(D stdin.readln(buf)) reuses (if possible) memory allocated
 by $(D buf), whereas $(D buf = stdin.readln()) makes a new memory allocation
 with every line. 
 */
-    size_t readln(C)(ref C[] buf, dchar terminator = '\n') if (isSomeChar!C && !is(C == enum))
+    size_t readln(C)(ref C[] buf, dchar terminator = '\n')
+    if ((is(C == char) || is(C == wchar) || is(C == dchar)) && !is(C == enum))
     {
         static if (is(C == char))
         {
@@ -938,7 +940,8 @@ with every line.
 
 /** ditto */
     size_t readln(C, R)(ref C[] buf, R terminator)
-        if (isBidirectionalRange!R && is(typeof(terminator.front == buf[0])))
+    if ((is(C == char) || is(C == wchar) || is(C == dchar)) && !is(C == enum) &&
+        isBidirectionalRange!R && is(typeof(terminator.front == dchar.init)))
     {
         auto last = terminator.back;
         C[] buf2;
@@ -1992,13 +1995,22 @@ int main()
 }
 ---
 */
-string readln(dchar terminator = '\n')
+S readln(S = string)(dchar terminator = '\n')
+if (isSomeString!S)
 {
     return stdin.readln(terminator);
 }
+/** ditto */
+size_t readln(C)(ref C[] buf, dchar terminator = '\n')
+if ((is(C == char) || is(C == wchar) || is(C == dchar)) && !is(C == enum))
+{
+    return stdin.readln(buf, terminator);
+}
 
 /** ditto */
-size_t readln(ref char[] buf, dchar terminator = '\n')
+size_t readln(C, R)(ref C[] buf, R terminator)
+if ((is(C == char) || is(C == wchar) || is(C == dchar)) && !is(C == enum) &&
+    isBidirectionalRange!R && is(typeof(terminator.front == dchar.init)))
 {
     return stdin.readln(buf, terminator);
 }
