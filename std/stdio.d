@@ -930,7 +930,7 @@ with every line.
             string s = readln(terminator);
             buf.length = 0;
             if (!s.length) return 0;
-            foreach (dchar c; s)
+            foreach (C c; s)
             {
                 buf ~= c;
             }
