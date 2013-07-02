@@ -917,7 +917,7 @@ by $(D buf), whereas $(D buf = stdin.readln()) makes a new memory allocation
 with every line. 
 */
     size_t readln(C)(ref C[] buf, dchar terminator = '\n')
-    if ((is(C == char) || is(C == wchar) || is(C == dchar)) && !is(C == enum))
+    if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum))
     {
         static if (is(C == char))
         {
@@ -940,7 +940,7 @@ with every line.
 
 /** ditto */
     size_t readln(C, R)(ref C[] buf, R terminator)
-    if ((is(C == char) || is(C == wchar) || is(C == dchar)) && !is(C == enum) &&
+    if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum) &&
         isBidirectionalRange!R && is(typeof(terminator.front == dchar.init)))
     {
         auto last = terminator.back;
@@ -2002,14 +2002,14 @@ if (isSomeString!S)
 }
 /** ditto */
 size_t readln(C)(ref C[] buf, dchar terminator = '\n')
-if ((is(C == char) || is(C == wchar) || is(C == dchar)) && !is(C == enum))
+if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum))
 {
     return stdin.readln(buf, terminator);
 }
 
 /** ditto */
 size_t readln(C, R)(ref C[] buf, R terminator)
-if ((is(C == char) || is(C == wchar) || is(C == dchar)) && !is(C == enum) &&
+if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum) &&
     isBidirectionalRange!R && is(typeof(terminator.front == dchar.init)))
 {
     return stdin.readln(buf, terminator);
