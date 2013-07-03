@@ -243,7 +243,7 @@ struct SHA1
     }
 
     private:
-        uint state[5] =                                   /* state (ABCDE) */
+        uint[5] state =                                   /* state (ABCDE) */
         /* magic initialization constants */
         [0x67452301,0xefcdab89,0x98badcfe,0x10325476,0xc3d2e1f0];
 
