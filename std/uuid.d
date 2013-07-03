@@ -493,7 +493,7 @@ public struct UUID
 
             enum ctfeEmpty = UUID.init.empty;
             assert(ctfeEmpty);
-        
+
             bool ctfeTest()
             {
                 for(size_t i = 0; i < 16; i++)
@@ -1396,7 +1396,7 @@ unittest
         id = parseHelper!S("///8ab3060e2cba4f23b74cb52db3bdfb46||");
         enum ctfeId = parseHelper!S("8ab3060e-2cba-4f23-b74c-b52db3bdfb46");
         assert(parseHelper!S("8AB3060E-2cba-4f23-b74c-b52db3bdfb46") == ctfeId);
-        
+
         //Test valid, working cases
         assert(parseHelper!S("00000000-0000-0000-0000-000000000000").empty);
         assert(parseHelper!S("8AB3060E-2CBA-4F23-b74c-B52Db3BDFB46").data
@@ -1515,7 +1515,7 @@ enum x500Namespace = UUID("6ba7b814-9dad-11d1-80b4-00c04fd430c8");
  * -------------------
  */
 enum uuidRegex = r"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}"
-    "-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}";
+    ~ "-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}";
 
 unittest
 {
@@ -1523,11 +1523,11 @@ unittest
     import std.regex;
 
     string test = "Lorem ipsum dolor sit amet, consetetur "
-    "6ba7b814-9dad-11d1-80b4-00c04fd430c8 sadipscing \n"
-    "elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore \r\n"
-    "magna aliquyam erat, sed diam voluptua. "
-    "8ab3060e-2cba-4f23-b74c-b52db3bdfb46 At vero eos et accusam et "
-    "justo duo dolores et ea rebum.";
+        ~ "6ba7b814-9dad-11d1-80b4-00c04fd430c8 sadipscing \n"
+        ~ "elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore \r\n"
+        ~ "magna aliquyam erat, sed diam voluptua. "
+        ~ "8ab3060e-2cba-4f23-b74c-b52db3bdfb46 At vero eos et accusam et "
+        ~ "justo duo dolores et ea rebum.";
 
     auto r = regex(uuidRegex, "g");
     UUID[] found;
@@ -1571,8 +1571,8 @@ public class UUIDParsingException : Exception
             input = input;
             position = pos;
             reason = why;
-            string message = format("An error occured in the UUID parser: %s\n" ~
-              " * Input:\t'%s'\n * Position:\t%s", msg, replace(replace(input,
+            string message = format("An error occured in the UUID parser: %s\n"
+              ~ " * Input:\t'%s'\n * Position:\t%s", msg, replace(replace(input,
               "\r", "\\r"), "\n", "\\n"), pos);
             super(message, file, line, next);
         }
