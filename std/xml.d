@@ -969,7 +969,7 @@ class Element : Item
  * $(DDOC_ENUM_MEMBERS EMPTY) Used for empty tags
  *
  */
-enum TagType { START, END, EMPTY };
+enum TagType { START, END, EMPTY }
 
 /**
  * Class representing an XML tag.

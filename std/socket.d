@@ -61,7 +61,7 @@ version(Windows)
     private alias std.c.windows.winsock.timeval _ctimeval;
     private alias std.c.windows.winsock.linger _clinger;
 
-    enum socket_t : SOCKET { INVALID_SOCKET };
+    enum socket_t : SOCKET { INVALID_SOCKET }
     private const int _SOCKET_ERROR = SOCKET_ERROR;
 
 

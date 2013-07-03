@@ -1882,7 +1882,7 @@ Appends the contents of stuff into this.
         insertBack(rhs);
         return this;
     }
-    
+
 // Private implementations helpers for opOpBinaryRight
     DList opOpAssignRightPrivate(string op, Stuff)(Stuff lhs)
     if (op == "~" && isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
@@ -2112,7 +2112,7 @@ $(D r) and $(D m) is the length of $(D stuff).
             last = new Node(item, last, null);
             ++result;
         }
-        
+
         //We have created a first-last chain. Now we insert it.
         if(!_first)
         {
@@ -2233,7 +2233,7 @@ Complexity: $(BIGOH 1)
     /// ditto
     template linearRemove(R) if (is(R == Range))
     {
-        Range linearRemove(R r) { return remove(r); };
+        Range linearRemove(R r) { return remove(r); }
     }
 
     /// ditto
@@ -2446,7 +2446,7 @@ unittest
     auto d = DList!int([4, 5, 6]);
 
     assert((a ~ b[])[].empty);
-    
+
     assert((c ~ d[])[].equal([1, 2, 3, 4, 5, 6]));
     assert(c[].equal([1, 2, 3]));
     assert(d[].equal([4, 5, 6]));

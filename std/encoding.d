@@ -645,7 +645,7 @@ template EncoderInstance(E)
 //=============================================================================
 
 /** Defines various character sets. */
-enum AsciiChar : ubyte { init };
+enum AsciiChar : ubyte { init }
 /// Ditto
 alias immutable(AsciiChar)[] AsciiString;
 

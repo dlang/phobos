@@ -372,7 +372,7 @@ enum config {
     noPassThrough,
     /// Stop at first argument that does not look like an option
     stopOnFirstNonOption,
-};
+}
 
 private void getoptImpl(T...)(ref string[] args,
     ref configuration cfg, T opts)
