@@ -842,7 +842,7 @@ int main()
     {
         Unqual!(ElementEncodingType!S)[] buf;
         readln(buf, terminator);
-        return assumeUnique(buf);
+        return cast(S)buf;
     }
 
     unittest
@@ -850,13 +850,13 @@ int main()
         auto deleteme = testFilename();
         std.file.write(deleteme, "hello\nworld\n");
         scope(exit) std.file.remove(deleteme);
-        foreach (C; Tuple!(char, wchar, dchar).Types)
+        foreach (String; TypeTuple!(string, char[], wstring, wchar[], dstring, dchar[]))
         {
             auto witness = [ "hello\n", "world\n" ];
             auto f = File(deleteme);
             uint i = 0;
-            immutable(C)[] buf;
-            while ((buf = f.readln!(typeof(buf))()).length)
+            String buf;
+            while ((buf = f.readln!String()).length)
             {
                 assert(i < witness.length);
                 assert(equal(buf, witness[i++]));
@@ -1998,7 +1998,7 @@ int main()
 S readln(S = string)(dchar terminator = '\n')
 if (isSomeString!S)
 {
-    return stdin.readln(terminator);
+    return stdin.readln!S(terminator);
 }
 /** ditto */
 size_t readln(C)(ref C[] buf, dchar terminator = '\n')
@@ -2013,6 +2013,29 @@ if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum) &&
     isBidirectionalRange!R && is(typeof(terminator.front == dchar.init)))
 {
     return stdin.readln(buf, terminator);
+}
+
+unittest
+{
+    //we can't actually test readln, so at the very least,
+    //we test compilability
+    void foo()
+    {
+        readln();
+        readln('\t');
+        foreach (String; TypeTuple!(string, char[], wstring, wchar[], dstring, dchar[]))
+        {
+            readln!String();
+            readln!String('\t');
+        }
+        foreach (String; TypeTuple!(char[], wchar[], dchar[]))
+        {
+            String buf;
+            readln(buf);
+            readln(buf, '\t');
+            readln(buf, "<br />");
+        }
+    }
 }
 
 /*
