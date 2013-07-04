@@ -36,7 +36,7 @@ struct tipc_subscr
         tipc_name_seq seq;
         uint timeout;
         uint filter;
-        ubyte usr_handle[8];
+        ubyte[8] usr_handle;
 }
 
 struct tipc_event

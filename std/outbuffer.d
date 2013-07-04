@@ -37,7 +37,7 @@ private
 
 class OutBuffer
 {
-    ubyte data[];
+    ubyte[] data;
     size_t offset;
 
     invariant()

@@ -700,7 +700,7 @@ Always $(D false).
  */
     enum bool empty = false;
 
-    private UIntType mt[n];
+    private UIntType[n] mt;
     private size_t mti = size_t.max; /* means mt is not initialized */
     UIntType _y = UIntType.max;
 }
