@@ -4012,7 +4012,7 @@ unittest
 struct BoyerMooreFinder(alias pred, Range)
 {
 private:
-    size_t skip[];
+    size_t[] skip;
     ptrdiff_t[ElementType!(Range)] occ;
     Range needle;
 

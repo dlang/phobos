@@ -169,7 +169,7 @@ struct RIPEMD160
 {
     private:
         // magic initialization constants
-        uint _state[5] = [0x67452301,0xefcdab89,0x98badcfe,0x10325476,0xc3d2e1f0]; // state (ABCDE)
+        uint[5] _state = [0x67452301,0xefcdab89,0x98badcfe,0x10325476,0xc3d2e1f0]; // state (ABCDE)
         ulong _count; //number of bits, modulo 2^64
         ubyte[64] _buffer; // input buffer
 

@@ -179,12 +179,12 @@ struct MD5_CTX
 {
     private import core.stdc.string : memcpy, memset;
 
-    uint state[4] =                                   /* state (ABCD) */
+    uint[4] state =                                   /* state (ABCD) */
     /* magic initialization constants */
     [0x67452301,0xefcdab89,0x98badcfe,0x10325476];
 
     ulong count;        /* number of bits, modulo 2^64 */
-    ubyte buffer[64];   /* input buffer */
+    ubyte[64] buffer;   /* input buffer */
 
     static ubyte[64] PADDING =
     [

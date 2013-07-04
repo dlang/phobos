@@ -368,7 +368,7 @@ enum
     _ALP =      _UC|_LC,
 }
 
-immutable ubyte _ctype[128] =
+immutable ubyte[128] _ctype =
 [
         _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
         _CTL,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL,_CTL,
