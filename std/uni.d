@@ -104,6 +104,47 @@ dchar toLower(dchar c) @safe pure nothrow
             if((c & 1) == 0)
                 ++c;
         }
+	    else if( c >= 0x386 && c <= 0x3AB ) // Greek characters
+	    {
+		    if( c >= 'Α' && c <= 'Ω' )
+		    {
+			    c += 32;
+		    }
+		    else
+		    {
+			    switch(c)
+			    {
+			    case 'Ά':
+				    return 'ά';
+				
+			    case 'Έ':
+				    return 'έ';
+				   
+			    case 'Ή':
+				    return 'ή';
+				    
+			    case 'Ί':
+				    return 'ί';
+				    
+			    case 'Ό':
+				    return 'ό';
+				    
+			    case 'Ύ':
+				    return 'ύ';
+				    
+			    case 'Ώ':
+				    return 'ώ';
+				    
+			    case 'Ϊ':
+				    return 'ϊ';
+				    
+			    case 'Ϋ':
+				    return 'ϋ';
+						
+			    default:
+			    }
+		    }
+	    }
         else if((c >= 0x0401 && c <= 0x040C) ||
                 (c>= 0x040E && c <= 0x040F))
         {
@@ -166,6 +207,56 @@ dchar toUpper(dchar c) @safe pure nothrow
             if(c & 1)
                 --c;
         }
+		else if( c >= 0x3AC && c <= 0x3CE ) // Greek characters
+		{
+		    if( c >= 'α' && c <= 'ω' )
+		    {
+				switch(c)
+				{
+			    case 'ς':
+				    return 'Σ';
+				
+			    default:	
+				    c -= 32;
+			    }
+		    }
+			else
+			{
+			    switch(c)
+			    {
+			    case 'ά':
+				    return 'Ά';
+						
+			    case 'έ':
+				    return 'Έ';
+				
+			    case 'ή':
+				    return 'Ή';
+				
+			    case 'ί':
+				    return 'Ί';
+						
+			    case 'ό':
+				    return 'Ό';
+						
+			    case 'ύ':
+				    return 'Ύ';
+				
+			    case 'ώ':
+				    return 'Ώ';
+				
+			    case 'ϊ':
+			    case 'ΐ':
+				    return 'Ϊ';
+				
+			    case 'ϋ':
+			    case 'ΰ':
+     			    return 'Ϋ';
+						
+			    default:
+			    }
+		    }
+	    }
         else if(c >= 0x0430 && c<= 0x044F)
             c -= 32;
         else if((c >= 0x0451 && c <= 0x045C) ||
