@@ -831,12 +831,11 @@ Example:
 // Reads $(D stdin) and writes it to $(D stdout).
 import std.stdio;
 
-int main()
+void main()
 {
     string line;
     while ((line = stdin.readln()) !is null)
         write(line);
-    return 0;
 }
 ---
 */
@@ -892,7 +891,7 @@ Example:
 // Reads $(D stdin) into a buffer
 // Dumps the buffer to $(D stdout) when it gets a "q"
 
-int main()
+void main()
 {
     string[] outBuf;
     char[] buf;
@@ -909,8 +908,6 @@ int main()
     {
         write(line);
     }
-
-    return 0;
 }
 ---
 
@@ -1993,12 +1990,11 @@ unittest
 ---
 import std.stdio;
 
-int main()
+void main()
 {
     string line;
     while ((line = readln()) !is null)
         write(line);
-    return 0;
 }
 ---
 */
@@ -2027,12 +2023,11 @@ if (isSomeString!S)
 ---
 import std.stdio;
 
-int main()
+void main()
 {
     char[] buf;
     while (readln(buf))
         write(buf);
-    return 0;
 }
 ---
 */
