@@ -171,162 +171,79 @@ private
 
 private
 {
-    /**** <WORK AROUNDS> ****/
-    template isVector(T) // TODO: REMOVE BRUTAL WORKAROUND
+    template isVector(T)
     {
-        static if(is(T == double2) || is(T == float4) ||
-                  is(T == long2) || is(T == ulong2) ||
-                  is(T == int4) || is(T == uint4) ||
-                  is(T == short8) || is(T == ushort8) ||
-                  is(T == byte16) || is(T == ubyte16) || is(T == void16))
-            enum bool isVector = true;
-        else
-            enum bool isVector = false;
+        enum bool isVector = is(T : __vector(V[N]), V, size_t N);
     }
-    template VectorType(T)
+    template isOfType(T, V)
     {
-        static if(is(T == double2))
-            alias double VectorType;
-        else static if(is(T == float4))
-            alias float VectorType;
-        else static if(is(T == long2))
-            alias long VectorType;
-        else static if(is(T == ulong2))
-            alias ulong VectorType;
-        else static if(is(T == int4))
-            alias int VectorType;
-        else static if(is(T == uint4))
-            alias uint VectorType;
-        else static if(is(T == short8))
-            alias short VectorType;
-        else static if(is(T == ushort8))
-            alias ushort VectorType;
-        else static if(is(T == byte16))
-            alias byte VectorType;
-        else static if(is(T == ubyte16))
-            alias ubyte VectorType;
-        else
-            static assert(0, "Incorrect type");
+        enum bool isOfType = is(Unqual!T == V);
     }
-    template NumElements(T)
+    template VectorType(T : __vector(V[N]), V, size_t N)
     {
-        static if(is(T == double2) || is(T == long2) || is(T == ulong2))
-            enum size_t NumElements = 2;
-        else static if(is(T == float4) || is(T == int4) || is(T == uint4))
-            enum size_t NumElements = 4;
-        else static if(is(T == short8) || is(T == ushort8))
-            enum size_t NumElements = 8;
-        else static if(is(T == byte16) || is(T == ubyte16))
-            enum size_t NumElements = 16;
-        else
-            static assert(0, "Incorrect type");
+        template Impl(T)
+        {
+            alias Impl = V;
+        }
+
+        alias VectorType = std.traits.ModifyTypePreservingSTC!(Impl, OriginalType!T);
     }
-    template UnsignedOf(T)
+    template NumElements(T : __vector(V[N]), V, size_t N)
     {
-        static if(is(T == long2) || is(T == ulong2))
-            alias ulong2 UnsignedOf;
-        else static if(is(T == int4) || is(T == uint4))
-            alias uint4 UnsignedOf;
-        else static if(is(T == short8) || is(T == ushort8))
-            alias ushort8 UnsignedOf;
-        else static if(is(T == byte16) || is(T == ubyte16))
-            alias ubyte16 UnsignedOf;
-        else static if(is(T == long) || is(T == ulong))
-            alias ulong UnsignedOf;
-        else static if(is(T == int) || is(T == uint))
-            alias uint UnsignedOf;
-        else static if(is(T == short) || is(T == ushort))
-            alias ushort UnsignedOf;
-        else static if(is(T == byte) || is(T == ubyte))
-            alias ubyte UnsignedOf;
-        else
-            static assert(0, "Incorrect type");
-    }
-    template SignedOf(T)
-    {
-        static if(is(T == long2) || is(T == ulong2))
-            alias long2 SignedOf;
-        else static if(is(T == int4) || is(T == uint4))
-            alias int4 SignedOf;
-        else static if(is(T == short8) || is(T == ushort8))
-            alias short8 SignedOf;
-        else static if(is(T == byte16) || is(T == ubyte16))
-            alias byte16 SignedOf;
-        else static if(is(T == long) || is(T == ulong))
-            alias long SignedOf;
-        else static if(is(T == int) || is(T == uint))
-            alias int SignedOf;
-        else static if(is(T == short) || is(T == ushort))
-            alias short SignedOf;
-        else static if(is(T == byte) || is(T == ubyte))
-            alias byte SignedOf;
-        else
-            static assert(0, "Incorrect type");
+        enum NumElements = N;
     }
     template PromotionOf(T)
     {
-        static if(is(T == int4))
-            alias long2 PromotionOf;
-        else static if(is(T == uint4))
-            alias ulong2 PromotionOf;
-        else static if(is(T == short8))
-            alias int4 PromotionOf;
-        else static if(is(T == ushort8))
-            alias uint4 PromotionOf;
-        else static if(is(T == byte16))
-            alias short8 PromotionOf;
-        else static if(is(T == ubyte16))
-            alias ushort8 PromotionOf;
-        else static if(is(T == int))
-            alias long PromotionOf;
-        else static if(is(T == uint))
-            alias ulong PromotionOf;
-        else static if(is(T == short))
-            alias int PromotionOf;
-        else static if(is(T == ushort))
-            alias uint PromotionOf;
-        else static if(is(T == byte))
-            alias short PromotionOf;
-        else static if(is(T == ubyte))
-            alias ushort PromotionOf;
-        else
-            static assert(0, "Incorrect type");
+        template Impl(T)
+        {
+            static if(is(T : __vector(V[N]), V, size_t N))
+                alias Impl = __vector(Impl!V[N/2]);
+            else static if(is(T == float))
+                alias Impl = double;
+            else static if(is(T == int))
+                alias Impl = long;
+            else static if(is(T == uint))
+                alias Impl = ulong;
+            else static if(is(T == short))
+                alias Impl = int;
+            else static if(is(T == ushort))
+                alias Impl = uint;
+            else static if(is(T == byte))
+                alias Impl = short;
+            else static if(is(T == ubyte))
+                alias Impl = ushort;
+            else
+                static assert(0, "Incorrect type");
+        }
+
+        alias PromotionOf = std.traits.ModifyTypePreservingSTC!(Impl, OriginalType!T);
     }
     template DemotionOf(T)
     {
-        static if(is(T == long2))
-            alias int4 DemotionOf;
-        else static if(is(T == ulong2))
-            alias uint4 DemotionOf;
-        else static if(is(T == int4))
-            alias short8 DemotionOf;
-        else static if(is(T == uint4))
-            alias ushort8 DemotionOf;
-        else static if(is(T == short8))
-            alias byte16 DemotionOf;
-        else static if(is(T == ushort8))
-            alias ubyte16 DemotionOf;
-        else static if(is(T == long))
-            alias int DemotionOf;
-        else static if(is(T == ulong))
-            alias uint DemotionOf;
-        else static if(is(T == int))
-            alias short DemotionOf;
-        else static if(is(T == uint))
-            alias ushort DemotionOf;
-        else static if(is(T == short))
-            alias byte DemotionOf;
-        else static if(is(T == ushort))
-            alias ubyte DemotionOf;
-        else
-            static assert(0, "Incorrect type");
+        template Impl(T)
+        {
+            static if(is(T : __vector(V[N]), V, size_t N))
+                alias Impl = __vector(Impl!V[N*2]);
+            else static if(is(T == double))
+                alias Impl = float;
+            else static if(is(T == long))
+                alias Impl = int;
+            else static if(is(T == ulong))
+                alias Impl = uint;
+            else static if(is(T == int))
+                alias Impl = short;
+            else static if(is(T == uint))
+                alias Impl = ushort;
+            else static if(is(T == short))
+                alias Impl = byte;
+            else static if(is(T == ushort))
+                alias Impl = ubyte;
+            else
+                static assert(0, "Incorrect type");
+        }
+
+        alias DemotionOf = std.traits.ModifyTypePreservingSTC!(Impl, OriginalType!T);
     }
-    /**** </WORK AROUNDS> ****/
-
-
-    // a template to test if a type is a vector type
-    //    template isVector(T : __vector(U[N]), U, size_t N) { enum bool isVector = true; }
-    //    template isVector(T) { enum bool isVector = false; }
 
     // pull the base type from a vector, array, or primitive
     // type. The first version does not work for vectors.
@@ -355,17 +272,20 @@ private
 
     template isScalarFloat(T)
     {
-        enum bool isScalarFloat = is(T == float) || is(T == double);
+        alias U = Unqual!T;
+        enum bool isScalarFloat = is(U == float) || is(U == double);
     }
 
     template isScalarInt(T)
     {
-        enum bool isScalarInt = is(T == long) || is(T == ulong) || is(T == int) || is(T == uint) || is(T == short) || is(T == ushort) || is(T == byte) || is(T == ubyte);
+        alias U = Unqual!T;
+        enum bool isScalarInt = is(U == long) || is(U == ulong) || is(U == int) || is(U == uint) || is(U == short) || is(U == ushort) || is(U == byte) || is(U == ubyte);
     }
 
     template isScalarUnsigned(T)
     {
-        enum bool isScalarUnsigned = is(T == ulong) || is(T == uint) || is(T == ushort) || is(T == ubyte);
+        alias U = Unqual!T;
+        enum bool isScalarUnsigned = is(U == ulong) || is(U == uint) || is(U == ushort) || is(U == ubyte);
     }
 
     template isScalar(T)
@@ -410,7 +330,7 @@ private
 
     template is64bitInteger(T)
     {
-        enum bool is64bitInteger = is64bitElement!T && !is(T == double);
+        enum bool is64bitInteger = is64bitElement!T && !is(Unqual!(BaseType!(T)) == double);
     }
 
     template is32bitElement(T)
@@ -492,11 +412,11 @@ private
         template ARMOpType(T, bool Rounded = false)
         {
             // NOTE: 0-unsigned, 1-signed, 2-poly, 3-float, 4-unsigned rounded, 5-signed rounded
-            static if(is(T == double2) || is(T == float4))
+            static if(isOfType!(T, double2) || isOfType!(T, float4))
                 enum uint ARMOpType = 3;
-            else static if(is(T == long2) || is(T == int4) || is(T == short8) || is(T == byte16))
+            else static if(isOfType!(T, long2) || isOfType!(T, int4) || isOfType!(T, short8) || isOfType!(T, byte16))
                 enum uint ARMOpType = 1 + (Rounded ? 4 : 0);
-            else static if(is(T == ulong2) || is(T == uint4) || is(T == ushort8) || is(T == ubyte16))
+            else static if(isOfType!(T, ulong2) || isOfType!(T, uint4) || isOfType!(T, ushort8) || isOfType!(T, ubyte16))
                 enum uint ARMOpType = 0 + (Rounded ? 4 : 0);
             else
                 static assert(0, "Incorrect type");
@@ -530,9 +450,9 @@ T loadScalar(T, SIMDVer Ver = sseVer)(BaseType!T* pS) if(isVector!T)
         }
         else version(GNU)
         {
-            static if(is(T == float[4]))
+            static if(isOfType(T, float4))
                 return __builtin_ia32_loadss(pS);
-            else static if(is(T == double[2]))
+            else static if(isOfType(T, double2))
                 return __builtin_ia32_loadddup(pV);
             else
                 static assert(0, "TODO");
@@ -566,9 +486,9 @@ T loadUnaligned(T, SIMDVer Ver = sseVer)(BaseType!T* pV) @trusted
         }
         else version(GNU)
         {
-            static if(is(T == float4))
+            static if(isOfType!(T, float4))
                 return __builtin_ia32_loadups(pV);
-            else static if(is(T == double2))
+            else static if(isOfType!(T, double2))
                 return __builtin_ia32_loadupd(pV);
             else
                 return cast(Vector!T)__builtin_ia32_loaddqu(cast(char*)pV);
@@ -599,9 +519,9 @@ BaseType!T getScalar(SIMDVer Ver = sseVer, T)(T v) if(isVector!T)
         {
             static if(Ver >= SIMDVer.SSE41 && !is16bitElement!T)
             {
-                static if(is(T == float4))
+                static if(isOfType!(T, float4))
                     return __builtin_ia32_vec_ext_v4sf(v, 0);
-                static if(is(T == double2))
+                static if(isOfType!(T, double2))
                     return __builtin_ia32_vec_ext_v2df(v, 0);
                 else static if(is64bitElement!T)
                     return __builtin_ia32_vec_ext_v2di(v, 0);
@@ -652,9 +572,9 @@ void storeUnaligned(SIMDVer Ver = sseVer, T, S)(T v, S* pV) @trusted if(isVector
         }
         else version(GNU_OR_LDC)
         {
-            static if(is(T == float4))
+            static if(isOfType!(T, float4))
                 __builtin_ia32_storeups(pV, v);
-            else static if(is(T == double2))
+            else static if(isOfType!(T, double2))
                 __builtin_ia32_storeupd(pV, v);
             else
                 __builtin_ia32_storedqu(cast(char*)pV, cast(byte16)v);
@@ -762,9 +682,9 @@ T setX(SIMDVer Ver = sseVer, T)(T v, T x) if(isVector!T)
         {
             static if(Ver >= SIMDVer.SSE41 && !is8bitElement!T)
             {
-                static if(is(T == double2))
+                static if(isOfType!(T, double2))
                     return __simd(XMM.BLENDPD, v, x, 1);
-                else static if(is(T == float4))
+                else static if(isOfType!(T, float4))
                     return __simd(XMM.BLENDPS, v, x, 1);
                 else static if(is64bitElement!T)
                     return __simd(XMM.PBLENDW, v, x, 0x0F);
@@ -780,9 +700,9 @@ T setX(SIMDVer Ver = sseVer, T)(T v, T x) if(isVector!T)
         {
             static if(Ver >= SIMDVer.SSE41 && !is8bitElement!T)
             {
-                static if(is(T == double2))
+                static if(isOfType!(T, double2))
                     return __builtin_ia32_blendpd(v, x, 1);
-                else static if(is(T == float4))
+                else static if(isOfType!(T, float4))
                     return __builtin_ia32_blendps(v, x, 1);
                 else static if(is64bitElement!T)
                     return __builtin_ia32_pblendw128(v, x, 0x0F);
@@ -819,9 +739,9 @@ T setY(SIMDVer Ver = sseVer, T)(T v, T y) if(isVector!T)
         {
             static if(Ver >= SIMDVer.SSE41 && !is8bitElement!T)
             {
-                static if(is(T == double2))
+                static if(isOfType!(T, double2))
                     return __simd(XMM.BLENDPD, v, x, 2);
-                else static if(is(T == float4))
+                else static if(isOfType!(T, float4))
                     return __simd(XMM.BLENDPS, v, x, 2);
                 else static if(is64bitElement!T)
                     return __simd(XMM.PBLENDW, v, x, 0xF0);
@@ -837,9 +757,9 @@ T setY(SIMDVer Ver = sseVer, T)(T v, T y) if(isVector!T)
         {
             static if(Ver >= SIMDVer.SSE41 && !is8bitElement!T)
             {
-                static if(is(T == double2))
+                static if(isOfType!(T, double2))
                     return __builtin_ia32_blendpd(v, y, 2);
-                else static if(is(T == float4))
+                else static if(isOfType!(T, float4))
                     return __builtin_ia32_blendps(v, y, 2);
                 else static if(is64bitElement!T)
                     return __builtin_ia32_pblendw128(v, y, 0xF0);
@@ -877,7 +797,7 @@ T setZ(SIMDVer Ver = sseVer, T)(T v, T z) if(isVector!T)
         {
             static if(Ver >= SIMDVer.SSE41 && !is8bitElement!T)
             {
-                static if(is(T == float4))
+                static if(isOfType!(T, float4))
                     return __simd(XMM.BLENDPS, v, x, 4);
                 else static if(is32bitElement!T)
                     return __simd(XMM.PBLENDW, v, x, 0x30);
@@ -893,7 +813,7 @@ T setZ(SIMDVer Ver = sseVer, T)(T v, T z) if(isVector!T)
         {
             static if(Ver >= SIMDVer.SSE41 && !is8bitElement!T)
             {
-                static if(is(T == float4))
+                static if(isOfType!(T, float4))
                     return __builtin_ia32_blendps(v, z, 4);
                 else static if(is32bitElement!T)
                     return __builtin_ia32_pblendw128(v, z, 0x30);
@@ -931,7 +851,7 @@ T setW(SIMDVer Ver = sseVer, T)(T v, T w) if(isVector!T)
         {
             static if(Ver >= SIMDVer.SSE41 && !is8bitElement!T)
             {
-                static if(is(T == float4))
+                static if(isOfType!(T, float4))
                     return __simd(XMM.BLENDPS, v, x, 8);
                 else static if(is32bitElement!T)
                     return __simd(XMM.PBLENDW, v, x, 0xC0);
@@ -947,7 +867,7 @@ T setW(SIMDVer Ver = sseVer, T)(T v, T w) if(isVector!T)
         {
             static if(Ver >= SIMDVer.SSE41 && !is8bitElement!T)
             {
-                static if(is(T == float4))
+                static if(isOfType!(T, float4))
                     return __builtin_ia32_blendps(v, w, 8);
                 else static if(is32bitElement!T)
                     return __builtin_ia32_pblendw128(v, w, 0xC0);
@@ -1098,7 +1018,7 @@ T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
                 // broadcasts can usually be implemented more efficiently...
                 static if(isBroadcast!Elements(elements) && !is32bitElement!T)
                 {
-                    static if(is(T == double2))
+                    static if(isOfType!(T, double2))
                     {
                         // unpacks are more efficient than shuffd
                         static if(elements[0] == 0)
@@ -1155,12 +1075,12 @@ T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
                 }
                 else
                 {
-                    static if(is(T == double2))
+                    static if(isOfType!(T, double2))
                         return __simd(XMM.SHUFPD, v, v, shufMask!(elements)); // swizzle: YX
                     else static if(is64bitElement!(T)) // (u)long2
                         // use a 32bit integer shuffle for swizzle: YZ
                         return __simd(XMM.PSHUFD, v, v, shufMask!([elements[0]*2, elements[0]*2 + 1, elements[1]*2, elements[1]*2 + 1]));
-                    else static if(is(T == float4))
+                    else static if(isOfType!(T, float4))
                     {
                         static if(elements == [0,0,2,2] && Ver >= SIMDVer.SSE3)
                             return __simd(XMM.MOVSLDUP, v);
@@ -1197,7 +1117,7 @@ T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
                 // broadcasts can usually be implemented more efficiently...
                 static if(isBroadcast!Elements(elements) && !is32bitElement!T)
                 {
-                    static if(is(T == double2))
+                    static if(isOfType!(T, double2))
                     {
                         // unpacks are more efficient than shuffd
                         static if(elements[0] == 0)
@@ -1254,12 +1174,12 @@ T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
                 }
                 else
                 {
-                    static if(is(T == double2))
+                    static if(isOfType!(T, double2))
                         return __builtin_ia32_shufpd(v, v, shufMask!(elements)); // swizzle: YX
                     else static if(is64bitElement!(T)) // (u)long2
                         // use a 32bit integer shuffle for swizzle: YZ
                         return __builtin_ia32_pshufd(v, shufMask!([elements[0]*2, elements[0]*2 + 1, elements[1]*2, elements[1]*2 + 1]));
-                    else static if(is(T == float4))
+                    else static if(isOfType!(T, float4))
                     {
                         static if(elements == [0,0,2,2] && Ver >= SIMDVer.SSE3)
                             return __builtin_ia32_movsldup(v);
@@ -1343,9 +1263,9 @@ T interleaveLow(SIMDVer Ver = sseVer, T)(T v1, T v2)
     {
         version(DigitalMars)
         {
-            static if(is(T == float4))
+            static if(isOfType!(T, float4))
                 return __simd(XMM.UNPCKLPS, v1, v2);
-            else static if(is(T == double2))
+            else static if(isOfType!(T, double2))
                 return __simd(XMM.UNPCKLPD, v1, v2);
             else static if(is64bitElement!T)
                 return __simd(XMM.PUNPCKLQDQ, v1, v2);
@@ -1360,9 +1280,9 @@ T interleaveLow(SIMDVer Ver = sseVer, T)(T v1, T v2)
         }
         else version(GNU)
         {
-            static if(is(T == float4))
+            static if(isOfType!(T, float4))
                 return __builtin_ia32_unpcklps(v1, v2);
-            else static if(is(T == double2))
+            else static if(isOfType!(T, double2))
                 return __builtin_ia32_unpcklpd(v1, v2);
             else static if(is64bitElement!T)
                 return __builtin_ia32_punpcklqdq128(v1, v2);
@@ -1401,9 +1321,9 @@ T interleaveHigh(SIMDVer Ver = sseVer, T)(T v1, T v2)
     {
         version(DigitalMars)
         {
-            static if(is(T == float4))
+            static if(isOfType!(T, float4))
                 return __simd(XMM.UNPCKHPS, v1, v2);
-            else static if(is(T == double2))
+            else static if(isOfType!(T, double2))
                 return __simd(XMM.UNPCKHPD, v1, v2);
             else static if(is64bitElement!T)
                 return __simd(XMM.PUNPCKHQDQ, v1, v2);
@@ -1418,9 +1338,9 @@ T interleaveHigh(SIMDVer Ver = sseVer, T)(T v1, T v2)
         }
         else version(GNU)
         {
-            static if(is(T == float4))
+            static if(isOfType!(T, float4))
                 return __builtin_ia32_unpckhps(v1, v2);
-            else static if(is(T == double2))
+            else static if(isOfType!(T, double2))
                 return __builtin_ia32_unpckhpd(v1, v2);
             else static if(is64bitElement!T)
                 return __builtin_ia32_punpckhqdq128(v1, v2);
@@ -1483,17 +1403,17 @@ PromotionOf!T unpackLow(SIMDVer Ver = sseVer, T)(T v)
         }
         else version(GNU)
         {
-            static if(is(T == int4))
+            static if(isOfType!(T, int4))
                 return cast(PromotionOf!T)interleaveLow!Ver(v, shiftRightImmediate!(31, Ver)(v));
-            else static if(is(T == uint4))
+            else static if(isOfType!(T, uint4))
                 return cast(PromotionOf!T)interleaveLow!(Ver, T)(v, 0);
-            else static if(is(T == short8))
+            else static if(isOfType!(T, short8))
                 return shiftRightImmediate!(16, Ver)(cast(int4)interleaveLow!Ver(v, v));
-            else static if(is(T == ushort8))
+            else static if(isOfType!(T, ushort8))
                 return cast(PromotionOf!T)interleaveLow!(Ver, T)(v, 0);
-            else static if(is(T == byte16))
+            else static if(isOfType!(T, byte16))
                 return shiftRightImmediate!(8, Ver)(cast(short8)interleaveLow!Ver(v, v));
-            else static if(is(T == ubyte16))
+            else static if(isOfType!(T, ubyte16))
                 return cast(PromotionOf!T)interleaveLow!(Ver, T)(v, 0);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -1533,17 +1453,17 @@ PromotionOf!T unpackHigh(SIMDVer Ver = sseVer, T)(T v)
         }
         else version(GNU)
         {
-            static if(is(T == int4))
+            static if(isOfType!(T, int4))
                 return cast(PromotionOf!T)interleaveHigh!Ver(v, shiftRightImmediate!(31, Ver)(v));
-            else static if(is(T == uint4))
+            else static if(isOfType!(T, uint4))
                 return cast(PromotionOf!T)interleaveHigh!(Ver, T)(v, 0);
-            else static if(is(T == short8))
+            else static if(isOfType!(T, short8))
                 return shiftRightImmediate!(16, Ver)(cast(int4)interleaveHigh!Ver(v, v));
-            else static if(is(T == ushort8))
+            else static if(isOfType!(T, ushort8))
                 return cast(PromotionOf!T)interleaveHigh!(Ver, T)(v, 0);
-            else static if(is(T == byte16))
+            else static if(isOfType!(T, byte16))
                 return shiftRightImmediate!(8, Ver)(cast(short8)interleaveHigh!Ver(v, v));
-            else static if(is(T == ubyte16))
+            else static if(isOfType!(T, ubyte16))
                 return cast(PromotionOf!T)interleaveHigh!(Ver, T)(v, 0);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -1578,26 +1498,26 @@ DemotionOf!T pack(SIMDVer Ver = sseVer, T)(T v1, T v2)
         }
         else version(GNU)
         {
-            static if(is(T == long2))
+            static if(isOfType!(T, long2))
                 static assert(0, "TODO");
-            else static if(is(T == ulong2))
+            else static if(isOfType!(T, ulong2))
                 static assert(0, "TODO");
-            else static if(is(T == int4))
+            else static if(isOfType!(T, int4))
             {
                 static assert(0, "TODO");
                 // return _mm_packs_epi32( _mm_srai_epi32( _mm_slli_epi16( a, 16), 16), _mm_srai_epi32( _mm_slli_epi32( b, 16), 16) );
             }
-            else static if(is(T == uint4))
+            else static if(isOfType!(T, uint4))
             {
                 static assert(0, "TODO");
                 // return _mm_packs_epi32( _mm_srai_epi32( _mm_slli_epi32( a, 16), 16), _mm_srai_epi32( _mm_slli_epi32( b, 16), 16) );
             }
-            else static if(is(T == short8))
+            else static if(isOfType!(T, short8))
             {
                 static assert(0, "TODO");
                 // return _mm_packs_epi16( _mm_srai_epi16( _mm_slli_epi16( a, 8), 8), _mm_srai_epi16( _mm_slli_epi16( b, 8), 8) );
             }
-            else static if(is(T == ushort8))
+            else static if(isOfType!(T, ushort8))
             {
                 static assert(0, "TODO");
                 // return _mm_packs_epi16( _mm_and_si128( a, 0x00FF), _mm_and_si128( b, 0x00FF) );
@@ -1630,26 +1550,26 @@ DemotionOf!T packSaturate(SIMDVer Ver = sseVer, T)(T v1, T v2)
     {
         version(DigitalMars)
         {
-            static if(is(T == int4))
+            static if(isOfType!(T, int4))
                 return __simd(XMM.PACKSSDW, v1, v2);
-            else static if(is(T == uint4))
+            else static if(isOfType!(T, uint4))
                 static assert(0, "TODO: should we emulate this?");
-            else static if(is(T == short8))
+            else static if(isOfType!(T, short8))
                 return __simd(XMM.PACKSSWB, v1, v2);
-            else static if(is(T == ushort8))
+            else static if(isOfType!(T, ushort8))
                 return __simd(XMM.PACKUSWB, v1, v2);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
         }
         else version(GNU_OR_LDC)
         {
-            static if(is(T == int4))
+            static if(isOfType!(T, int4))
                 return __builtin_ia32_packssdw128(v1, v2);
-            else static if(is(T == uint4))
+            else static if(isOfType!(T, uint4))
                 static assert(0, "TODO: should we emulate this?");
-            else static if(is(T == short8))
+            else static if(isOfType!(T, short8))
                 return __builtin_ia32_packsswb128(v1, v2);
-            else static if(is(T == ushort8))
+            else static if(isOfType!(T, ushort8))
                 return __builtin_ia32_packuswb128(v1, v2);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -1670,7 +1590,7 @@ DemotionOf!T packSaturate(SIMDVer Ver = sseVer, T)(T v1, T v2)
 
 int4 toInt(SIMDVer Ver = sseVer, T)(T v)
 {
-    static if(is(T == int4))
+    static if(isOfType!(T, int4))
         return v;
     else
     {
@@ -1678,18 +1598,18 @@ int4 toInt(SIMDVer Ver = sseVer, T)(T v)
         {
             version(DigitalMars)
             {
-                static if(is(T == float4))
+                static if(isOfType!(T, float4))
                     return __simd(XMM.CVTPS2DQ, v);
-                else static if(is(T == double2))
+                else static if(isOfType!(T, double2))
                     return __simd(XMM.CVTPD2DQ, v); // TODO: z,w are undefined... should we repeat xy to zw?
                 else
                     static assert(0, "Unsupported vector type: " ~ T.stringof);
             }
             else version(GNU_OR_LDC)
             {
-                static if(is(T == float4))
+                static if(isOfType!(T, float4))
                     return __builtin_ia32_cvtps2dq(v);
-                else static if(is(T == double2))
+                else static if(isOfType!(T, double2))
                     return __builtin_ia32_cvtpd2dq(v); // TODO: z,w are undefined... should we repeat xy to zw?
                 else
                     static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -1708,7 +1628,7 @@ int4 toInt(SIMDVer Ver = sseVer, T)(T v)
 
 float4 toFloat(SIMDVer Ver = sseVer, T)(T v)
 {
-    static if(is(T == float4))
+    static if(isOfType!(T, float4))
         return v;
     else
     {
@@ -1716,18 +1636,18 @@ float4 toFloat(SIMDVer Ver = sseVer, T)(T v)
         {
             version(DigitalMars)
             {
-                static if(is(T == int4))
+                static if(isOfType!(T, int4))
                     return __simd(XMM.CVTDQ2PS, v);
-                else static if(is(T == double2))
+                else static if(isOfType!(T, double2))
                     return __simd(XMM.CVTPD2PS, v); // TODO: z,w are undefined... should we repeat xy to zw?
                 else
                     static assert(0, "Unsupported vector type: " ~ T.stringof);
             }
             else version(GNU_OR_LDC)
             {
-                static if(is(T == int4))
+                static if(isOfType!(T, int4))
                     return __builtin_ia32_cvtdq2ps(v);
-                else static if(is(T == double2))
+                else static if(isOfType!(T, double2))
                     return __builtin_ia32_cvtpd2ps(v); // TODO: z,w are undefined... should we repeat xy to zw?
                 else
                     static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -1746,7 +1666,7 @@ float4 toFloat(SIMDVer Ver = sseVer, T)(T v)
 
 double2 toDouble(SIMDVer Ver = sseVer, T)(T v)
 {
-    static if(is(T == double2))
+    static if(isOfType!(T, double2))
         return v;
     else
     {
@@ -1754,18 +1674,18 @@ double2 toDouble(SIMDVer Ver = sseVer, T)(T v)
         {
             version(DigitalMars)
             {
-                static if(is(T == int4))
+                static if(isOfType!(T, int4))
                     return __simd(XMM.CVTDQ2PD, v);
-                else static if(is(T == float4))
+                else static if(isOfType!(T, float4))
                     return __simd(XMM.CVTPS2PD, v);
                 else
                     static assert(0, "Unsupported vector type: " ~ T.stringof);
             }
             else version(GNU_OR_LDC)
             {
-                static if(is(T == int4))
+                static if(isOfType!(T, int4))
                     return __builtin_ia32_cvtdq2pd(v);
-                else static if(is(T == float4))
+                else static if(isOfType!(T, float4))
                     return __builtin_ia32_cvtps2pd(v);
                 else
                     static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -1803,11 +1723,11 @@ T abs(SIMDVer Ver = sseVer, T)(T v)
         {
             version(DigitalMars)
             {
-                static if(is(T == double2))
+                static if(isOfType!(T, double2))
                 {
                     return __simd(XMM.ANDNPD, cast(double2)signMask2, v);
                 }
-                else static if(is(T == float4))
+                else static if(isOfType!(T, float4))
                 {
                     return __simd(XMM.ANDNPS, cast(float4)signMask4, v);
                 }
@@ -1822,16 +1742,16 @@ T abs(SIMDVer Ver = sseVer, T)(T v)
                     else static if(is8bitElement!(T))
                         return __simd(XMM.PABSB, v);
                 }
-                else static if(is(T == int4))
+                else static if(isOfType!(T, int4))
                 {
                     int4 t = shiftRightImmediate!(31, Ver)(v);
                     return sub!Ver(xor!Ver(v, t), t);
                 }
-                else static if(is(T == short8))
+                else static if(isOfType!(T, short8))
                 {
                     return max!Ver(v, sub!Ver(0, v));
                 }
-                else static if(is(T == byte16))
+                else static if(isOfType!(T, byte16))
                 {
                     byte16 t = maskGreater!Ver(0, v);
                     return sub!Ver(xor!Ver(v, t), t);
@@ -1841,21 +1761,21 @@ T abs(SIMDVer Ver = sseVer, T)(T v)
             }
             else version(GNU_OR_LDC)
             {
-                static if(is(T == double2))
+                static if(isOfType!(T, double2))
                 {
                     version(GNU)
                         return __builtin_ia32_andnpd(cast(double2)signMask2, v);
                     else
                         return cast(double2)(~signMask2 & cast(ulong2)v);
                 }
-                else static if(is(T == float4))
+                else static if(isOfType!(T, float4))
                 {
                     version(GNU)
                         return __builtin_ia32_andnps(cast(float4)signMask4, v);
                     else
                         return cast(float4)(~signMask4 & cast(uint4)v);
                 }
-                else static if(Ver >= SIMDVer.SSSE3 && !is(T == long2))
+                else static if(Ver >= SIMDVer.SSSE3 && !isOfType!(T, long2))
                 {
                     static if(is32bitElement!(T))
                         return __builtin_ia32_pabsd128(v);
@@ -1864,16 +1784,16 @@ T abs(SIMDVer Ver = sseVer, T)(T v)
                     else static if(is8bitElement!(T))
                         return __builtin_ia32_pabsb128(v);
                 }
-                else static if(is(T == int4))
+                else static if(isOfType!(T, int4))
                 {
                     int4 t = shiftRightImmediate!(31, Ver)(v);
                     return sub!Ver(xor!Ver(v, t), t);
                 }
-                else static if(is(T == short8))
+                else static if(isOfType!(T, short8))
                 {
                     return max!Ver(v, sub!Ver(0, v));
                 }
-                else static if(is(T == byte16) || is(T == long2))
+                else static if(isOfType!(T, byte16) || isOfType!(T, long2))
                 {
                     T zero = 0;
                     T t = maskGreater!Ver(zero, v);
@@ -1885,13 +1805,13 @@ T abs(SIMDVer Ver = sseVer, T)(T v)
         }
         else version(ARM)
         {
-            static if(is(T == float4))
+            static if(isOfType!(T, float4))
                 return __builtin_neon_vabsv4sf(v, ARMOpType!T);
-            else static if(is(T == int4))
+            else static if(isOfType!(T, int4))
                 return __builtin_neon_vabsv4si(v, ARMOpType!T);
-            else static if(is(T == short8))
+            else static if(isOfType!(T, short8))
                 return __builtin_neon_vabsv8hi(v, ARMOpType!T);
-            else static if(is(T == byte16))
+            else static if(isOfType!(T, byte16))
                 return __builtin_neon_vabsv16qi(v, ARMOpType!T);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -1914,13 +1834,13 @@ T neg(SIMDVer Ver = sseVer, T)(T v)
     }
     else version(ARM)
     {
-        static if(is(T == float4))
+        static if(isOfType!(T, float4))
             return __builtin_neon_vnegv4sf(v, ARMOpType!T);
-        else static if(is(T == int4))
+        else static if(isOfType!(T, int4))
             return __builtin_neon_vnegv4si(v, ARMOpType!T);
-        else static if(is(T == short8))
+        else static if(isOfType!(T, short8))
             return __builtin_neon_vnegv8hi(v, ARMOpType!T);
-        else static if(is(T == byte16))
+        else static if(isOfType!(T, byte16))
             return __builtin_neon_vnegv16qi(v, ARMOpType!T);
         else
             static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -1940,7 +1860,7 @@ T add(SIMDVer Ver = sseVer, T)(T v1, T v2)
     }
     else version(ARM)
     {
-        static if(is(T == float4))
+        static if(isOfType!(T, float4))
             return __builtin_neon_vaddv4sf(v1, v2, ARMOpType!T);
         else static if(is64bitInteger!T)
             return __builtin_neon_vaddv2di(v1, v2, ARMOpType!T);
@@ -1966,26 +1886,26 @@ T addSaturate(SIMDVer Ver = sseVer, T)(T v1, T v2)
     {
         version(DigitalMars)
         {
-            static if(is(T == short8))
+            static if(isOfType!(T, short8))
                 return __simd(XMM.PADDSW, v1, v2);
-            else static if(is(T == ushort8))
+            else static if(isOfType!(T, ushort8))
                 return __simd(XMM.PADDUSW, v1, v2);
-            else static if(is(T == byte16))
+            else static if(isOfType!(T, byte16))
                 return __simd(XMM.PADDSB, v1, v2);
-            else static if(is(T == ubyte16))
+            else static if(isOfType!(T, ubyte16))
                 return __simd(XMM.PADDUSB, v1, v2);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
         }
         else version(GNU_OR_LDC)
         {
-            static if(is(T == short8))
+            static if(isOfType!(T, short8))
                 return __builtin_ia32_paddsw128(v1, v2);
-            else static if(is(T == ushort8))
+            else static if(isOfType!(T, ushort8))
                 return __builtin_ia32_paddusw128(v1, v2);
-            else static if(is(T == byte16))
+            else static if(isOfType!(T, byte16))
                 return __builtin_ia32_paddsb128(v1, v2);
-            else static if(is(T == ubyte16))
+            else static if(isOfType!(T, ubyte16))
                 return __builtin_ia32_paddusb128(v1, v2);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -2010,7 +1930,7 @@ T sub(SIMDVer Ver = sseVer, T)(T v1, T v2)
     }
     else version(ARM)
     {
-        static if(is(T == float4))
+        static if(isOfType!(T, float4))
             return __builtin_neon_vsubv4sf(v1, v2, ARMOpType!T);
         else static if(is64bitInteger!T)
             return __builtin_neon_vsubv2di(v1, v2, ARMOpType!T);
@@ -2036,26 +1956,26 @@ T subSaturate(SIMDVer Ver = sseVer, T)(T v1, T v2)
     {
         version(DigitalMars)
         {
-            static if(is(T == short8))
+            static if(isOfType!(T, short8))
                 return __simd(XMM.PSUBSW, v1, v2);
-            else static if(is(T == ushort8))
+            else static if(isOfType!(T, ushort8))
                 return __simd(XMM.PSUBUSW, v1, v2);
-            else static if(is(T == byte16))
+            else static if(isOfType!(T, byte16))
                 return __simd(XMM.PSUBSB, v1, v2);
-            else static if(is(T == ubyte16))
+            else static if(isOfType!(T, ubyte16))
                 return __simd(XMM.PSUBUSB, v1, v2);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
         }
         else version(GNU_OR_LDC)
         {
-            static if(is(T == short8))
+            static if(isOfType!(T, short8))
                 return __builtin_ia32_psubsw128(v1, v2);
-            else static if(is(T == ushort8))
+            else static if(isOfType!(T, ushort8))
                 return __builtin_ia32_psubusw128(v1, v2);
-            else static if(is(T == byte16))
+            else static if(isOfType!(T, byte16))
                 return __builtin_ia32_psubsb128(v1, v2);
-            else static if(is(T == ubyte16))
+            else static if(isOfType!(T, ubyte16))
                 return __builtin_ia32_psubusb128(v1, v2);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -2080,7 +2000,7 @@ T mul(SIMDVer Ver = sseVer, T)(T v1, T v2)
     }
     else version(ARM)
     {
-        static if(is(T == float4))
+        static if(isOfType!(T, float4))
             return __builtin_neon_vmulv4sf(v1, v2, ARMOpType!T);
         else static if(is64bitInteger!T)
             return __builtin_neon_vmulv2di(v1, v2, ARMOpType!T);
@@ -2106,18 +2026,18 @@ T madd(SIMDVer Ver = sseVer, T)(T v1, T v2, T v3)
     {
         version(DigitalMars)
         {
-            static if(is(T == double2) && Ver == SIMDVer.SSE5)
+            static if(isOfType!(T, double2) && Ver == SIMDVer.SSE5)
                 return __simd(XMM.FMADDPD, v1, v2, v3);
-            else static if(is(T == float4) && Ver == SIMDVer.SSE5)
+            else static if(isOfType!(T, float4) && Ver == SIMDVer.SSE5)
                 return __simd(XMM.FMADDPS, v1, v2, v3);
             else
                 return v1*v2 + v3;
         }
         else version(GNU_OR_LDC)    // TODO: declare the SSE5 builtins for LDC
         {
-            static if(is(T == double2) && Ver == SIMDVer.SSE5)
+            static if(isOfType!(T, double2) && Ver == SIMDVer.SSE5)
                 return __builtin_ia32_fmaddpd(v1, v2, v3);
-            else static if(is(T == float4) && Ver == SIMDVer.SSE5)
+            else static if(isOfType!(T, float4) && Ver == SIMDVer.SSE5)
                 return __builtin_ia32_fmaddps(v1, v2, v3);
             else
                 return v1*v2 + v3;
@@ -2132,7 +2052,7 @@ T madd(SIMDVer Ver = sseVer, T)(T v1, T v2, T v3)
         }
         else
         {
-            static if(is(T == float4))
+            static if(isOfType!(T, float4))
                 return __builtin_neon_vmlav4sf(v3, v1, v2, ARMOpType!T);
             else static if(is64bitInteger!T)
                 return __builtin_neon_vmlav2di(v3, v1, v2, ARMOpType!T);
@@ -2163,9 +2083,9 @@ T msub(SIMDVer Ver = sseVer, T)(T v1, T v2, T v3)
         }
         else version(GNU_OR_LDC)    // TODO: declare the SSE5 builtins for LDC
         {
-            static if(is(T == double2) && Ver == SIMDVer.SSE5)
+            static if(isOfType!(T, double2) && Ver == SIMDVer.SSE5)
                 return __builtin_ia32_fmsubpd(v1, v2, v3);
-            else static if(is(T == float4) && Ver == SIMDVer.SSE5)
+            else static if(isOfType!(T, float4) && Ver == SIMDVer.SSE5)
                 return __builtin_ia32_fmsubps(v1, v2, v3);
             else
                 return v1*v2 - v3;
@@ -2200,9 +2120,9 @@ T nmadd(SIMDVer Ver = sseVer, T)(T v1, T v2, T v3)
         }
         else version(GNU_OR_LDC)    // TODO: declare the SSE5 builtins for LDC
         {
-            static if(is(T == double2) && Ver == SIMDVer.SSE5)
+            static if(isOfType!(T, double2) && Ver == SIMDVer.SSE5)
                 return __builtin_ia32_fnmaddpd(v1, v2, v3);
-            else static if(is(T == float4) && Ver == SIMDVer.SSE5)
+            else static if(isOfType!(T, float4) && Ver == SIMDVer.SSE5)
                 return __builtin_ia32_fnmaddps(v1, v2, v3);
             else
                 return v3 - (v1*v2);
@@ -2220,7 +2140,7 @@ T nmadd(SIMDVer Ver = sseVer, T)(T v1, T v2, T v3)
             // Note: ARM's msub is backwards, it performs:  r = r - a*b
             // Which is identical to the conventinal nmadd: r = -(a*b) + c
 
-            static if(is(T == float4))
+            static if(isOfType!(T, float4))
                 return __builtin_neon_vmlsv4sf(v3, v1, v2, ARMOpType!T);
             else static if(is64bitInteger!T)
                 return __builtin_neon_vmlsv2di(v3, v1, v2, ARMOpType!T);
@@ -2256,9 +2176,9 @@ T nmsub(SIMDVer Ver = sseVer, T)(T v1, T v2, T v3)
         }
         else version(GNU_OR_LDC)    // TODO: declare the SSE5 builtins for LDC
         {
-            static if(is(T == double2) && Ver == SIMDVer.SSE5)
+            static if(isOfType!(T, double2) && Ver == SIMDVer.SSE5)
                 return __builtin_ia32_fnmsubpd(v1, v2, v3);
-            else static if(is(T == float4) && Ver == SIMDVer.SSE5)
+            else static if(isOfType!(T, float4) && Ver == SIMDVer.SSE5)
                 return __builtin_ia32_fnmsubps(v1, v2, v3);
             else
                 return -(v1*v2) - v3;
@@ -2289,86 +2209,86 @@ T min(SIMDVer Ver = sseVer, T)(T v1, T v2)
     {
         version(DigitalMars)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return __simd(XMM.MINPD, v1, v2);
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __simd(XMM.MINPS, v1, v2);
-            else static if(is(T == long2) || is(T == ulong2))
+            else static if(isOfType!(T, long2) || isOfType!(T, ulong2))
                 return selectGreater!Ver(v1, v2, v2, v1);
-            else static if(is(T == int4))
+            else static if(isOfType!(T, int4))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __simd(XMM.PMINSD, v1, v2);
                 else
                     return selectGreater!Ver(v1, v2, v2, v1);
             }
-            else static if(is(T == uint4))
+            else static if(isOfType!(T, uint4))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __simd(XMM.PMINUD, v1, v2);
                 else
                     return selectGreater!Ver(v1, v2, v2, v1);
             }
-            else static if(is(T == short8))
+            else static if(isOfType!(T, short8))
                 return __simd(XMM.PMINSW, v1, v2); // available in SSE2
-            else static if(is(T == ushort8))
+            else static if(isOfType!(T, ushort8))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __simd(XMM.PMINUW, v1, v2);
                 else
                     return selectGreater!Ver(v1, v2, v2, v1);
             }
-            else static if(is(T == byte16))
+            else static if(isOfType!(T, byte16))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __simd(XMM.PMINSB, v1, v2);
                 else
                     return selectGreater!Ver(v1, v2, v2, v1);
             }
-            else static if(is(T == ubyte16))
+            else static if(isOfType!(T, ubyte16))
                 return __simd(XMM.PMINUB, v1, v2); // available in SSE2
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
         }
         else version(GNU_OR_LDC)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return __builtin_ia32_minpd(v1, v2);
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __builtin_ia32_minps(v1, v2);
-            else static if(is(T == long2) || is(T == ulong2))
+            else static if(isOfType!(T, long2) || isOfType!(T, ulong2))
                 return selectGreater!Ver(v1, v2, v2, v1);
-            else static if(is(T == int4))
+            else static if(isOfType!(T, int4))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __builtin_ia32_pminsd128(v1, v2);
                 else
                     return selectGreater!Ver(v1, v2, v2, v1);
             }
-            else static if(is(T == uint4))
+            else static if(isOfType!(T, uint4))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __builtin_ia32_pminud128(v1, v2);
                 else
                     return selectGreater!Ver(v1, v2, v2, v1);
             }
-            else static if(is(T == short8))
+            else static if(isOfType!(T, short8))
                 return __builtin_ia32_pminsw128(v1, v2); // available in SSE2
-            else static if(is(T == ushort8))
+            else static if(isOfType!(T, ushort8))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __builtin_ia32_pminuw128(v1, v2);
                 else
                     return selectGreater!Ver(v1, v2, v2, v1);
             }
-            else static if(is(T == byte16))
+            else static if(isOfType!(T, byte16))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __builtin_ia32_pminsb128(v1, v2);
                 else
                     return selectGreater!Ver(v1, v2, v2, v1);
             }
-            else static if(is(T == ubyte16))
+            else static if(isOfType!(T, ubyte16))
                 return __builtin_ia32_pminub128(v1, v2); // available in SSE2
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -2376,7 +2296,7 @@ T min(SIMDVer Ver = sseVer, T)(T v1, T v2)
     }
     else version(ARM)
     {
-        static if(is(T == float4))
+        static if(isOfType!(T, float4))
             return __builtin_neon_vminv4sf(v1, v2, ARMOpType!T);
         else static if(is64bitInteger!T)
             return __builtin_neon_vminv2di(v1, v2, ARMOpType!T);
@@ -2402,86 +2322,86 @@ T max(SIMDVer Ver = sseVer, T)(T v1, T v2)
     {
         version(DigitalMars)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return __simd(XMM.MAXPD, v1, v2);
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __simd(XMM.MAXPS, v1, v2);
-            else static if(is(T == long2) || is(T == ulong2))
+            else static if(isOfType!(T, long2) || isOfType!(T, ulong2))
                 return selectGreater!Ver(v1, v2, v1, v2);
-            else static if(is(T == int4))
+            else static if(isOfType!(T, int4))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __simd(XMM.PMAXSD, v1, v2);
                 else
                     return selectGreater!Ver(v1, v2, v1, v2);
             }
-            else static if(is(T == uint4))
+            else static if(isOfType!(T, uint4))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __simd(XMM.PMAXUD, v1, v2);
                 else
                     return selectGreater!Ver(v1, v2, v1, v2);
             }
-            else static if(is(T == short8))
+            else static if(isOfType!(T, short8))
                 return __simd(XMM.PMAXSW, v1, v2); // available in SSE2
-            else static if(is(T == ushort8))
+            else static if(isOfType!(T, ushort8))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __simd(XMM.PAXUW, v1, v2);
                 else
                     return selectGreater!Ver(v1, v2, v1, v2);
             }
-            else static if(is(T == byte16))
+            else static if(isOfType!(T, byte16))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __simd(XMM.PMAXSB, v1, v2);
                 else
                     return selectGreater!Ver(v1, v2, v1, v2);
             }
-            else static if(is(T == ubyte16))
+            else static if(isOfType!(T, ubyte16))
                 return __simd(XMM.PMAXUB, v1, v2); // available in SSE2
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
         }
         else version(GNU_OR_LDC)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return __builtin_ia32_maxpd(v1, v2);
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __builtin_ia32_maxps(v1, v2);
-            else static if(is(T == long2) || is(T == ulong2))
+            else static if(isOfType!(T, long2) || isOfType!(T, ulong2))
                 return selectGreater!Ver(v1, v2, v1, v2);
-            else static if(is(T == int4))
+            else static if(isOfType!(T, int4))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __builtin_ia32_pmaxsd128(v1, v2);
                 else
                     return selectGreater!Ver(v1, v2, v1, v2);
             }
-            else static if(is(T == uint4))
+            else static if(isOfType!(T, uint4))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __builtin_ia32_pmaxud128(v1, v2);
                 else
                     return selectGreater!Ver(v1, v2, v1, v2);
             }
-            else static if(is(T == short8))
+            else static if(isOfType!(T, short8))
                 return __builtin_ia32_pmaxsw128(v1, v2); // available in SSE2
-            else static if(is(T == ushort8))
+            else static if(isOfType!(T, ushort8))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __builtin_ia32_pmaxuw128(v1, v2);
                 else
                     return selectGreater!Ver(v1, v2, v1, v2);
             }
-            else static if(is(T == byte16))
+            else static if(isOfType!(T, byte16))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __builtin_ia32_pmaxsb128(v1, v2);
                 else
                     return selectGreater!Ver(v1, v2, v1, v2);
             }
-            else static if(is(T == ubyte16))
+            else static if(isOfType!(T, ubyte16))
                 return __builtin_ia32_pmaxub128(v1, v2); // available in SSE2
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -2489,7 +2409,7 @@ T max(SIMDVer Ver = sseVer, T)(T v1, T v2)
     }
     else version(ARM)
     {
-        static if(is(T == float4))
+        static if(isOfType!(T, float4))
             return __builtin_neon_vmaxv4sf(v1, v2, ARMOpType!T);
         else static if(is64bitInteger!T)
             return __builtin_neon_vmaxv2di(v1, v2, ARMOpType!T);
@@ -2535,14 +2455,14 @@ T floor(SIMDVer Ver = sseVer, T)(T v)
         }
         else version(GNU_OR_LDC)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __builtin_ia32_roundpd(v, 1);
                 else
                     static assert(0, "Only supported in SSE4.1 and above");
             }
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __builtin_ia32_roundps(v, 1);
@@ -2591,14 +2511,14 @@ T ceil(SIMDVer Ver = sseVer, T)(T v)
         }
         else version(GNU_OR_LDC)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __builtin_ia32_roundpd(v, 2);
                 else
                     static assert(0, "Only supported in SSE4.1 and above");
             }
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __builtin_ia32_roundps(v, 2);
@@ -2630,14 +2550,14 @@ T round(SIMDVer Ver = sseVer, T)(T v)
         }
         else version(GNU_OR_LDC)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __builtin_ia32_roundpd(v, 0);
                 else
                     static assert(0, "Only supported in SSE4.1 and above");
             }
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __builtin_ia32_roundps(v, 0);
@@ -2669,14 +2589,14 @@ T trunc(SIMDVer Ver = sseVer, T)(T v)
         }
         else version(GNU_OR_LDC)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __builtin_ia32_roundpd(v, 3);
                 else
                     static assert(0, "Only supported in SSE4.1 and above");
             }
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __builtin_ia32_roundps(v, 3);
@@ -2745,21 +2665,21 @@ T rcp(SIMDVer Ver = sseVer, T)(T v)
     {
         version(DigitalMars)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return div!(Ver, T)(1.0, v);
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __simd(XMM.RCPPS, v);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
         }
         else version(GNU_OR_LDC)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
             {
                 T one = 1;
                 return div!Ver(one, v);
             }
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __builtin_ia32_rcpps(v);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -2768,7 +2688,7 @@ T rcp(SIMDVer Ver = sseVer, T)(T v)
     else version(ARM)
     {
         static assert(0, "TODO!");
-        static if(is(T == float4))
+        static if(isOfType!(T, float4))
             return null;
         else
             static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -2786,18 +2706,18 @@ T sqrt(SIMDVer Ver = sseVer, T)(T v)
     {
         version(DigitalMars)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return __simd(XMM.SQRTPD, v);
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __simd(XMM.SQRTPS, v);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
         }
         else version(GNU_OR_LDC)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return __builtin_ia32_sqrtpd(v);
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __builtin_ia32_sqrtps(v);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -2806,7 +2726,7 @@ T sqrt(SIMDVer Ver = sseVer, T)(T v)
     else version(ARM)
     {
         static assert(0, "TODO!");
-        static if(is(T == float4))
+        static if(isOfType!(T, float4))
             return null;
         else
             static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -2824,18 +2744,18 @@ T rsqrt(SIMDVer Ver = sseVer, T)(T v)
     {
         version(DigitalMars)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return rcp!Ver(sqrt!Ver(v));
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return  __simd(XMM.RSQRTPS, v);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
         }
         else version(GNU_OR_LDC)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return rcp!Ver(sqrt!Ver(v));
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __builtin_ia32_rsqrtps(v);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -2844,7 +2764,7 @@ T rsqrt(SIMDVer Ver = sseVer, T)(T v)
     else version(ARM)
     {
         static assert(0, "TODO!");
-        static if(is(T == float4))
+        static if(isOfType!(T, float4))
             return null;
         else
             static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -2866,7 +2786,7 @@ T dot2(SIMDVer Ver = sseVer, T)(T v1, T v2)
     {
         version(DigitalMars)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
             {
                 static if(Ver >= SIMDVer.SSE41) // 1 op
                     return __simd(XMM.DPPD, v1, v2, 0x33);
@@ -2881,7 +2801,7 @@ T dot2(SIMDVer Ver = sseVer, T)(T v1, T v2)
                     return getX!Ver(t) + getY!Ver(t);
                 }
             }
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
             {
                 static if(Ver >= SIMDVer.SSE41) // 1 op
                     return __simd(XMM.DPPS, v1, v2, 0x3F);
@@ -2902,7 +2822,7 @@ T dot2(SIMDVer Ver = sseVer, T)(T v1, T v2)
         }
         else version(GNU_OR_LDC)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
             {
                 static if(Ver >= SIMDVer.SSE41) // 1 op
                     return __builtin_ia32_dppd(v1, v2, 0x33);
@@ -2917,7 +2837,7 @@ T dot2(SIMDVer Ver = sseVer, T)(T v1, T v2)
                     return getX!Ver(t) + getY!Ver(t);
                 }
             }
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
             {
                 static if(Ver >= SIMDVer.SSE41) // 1 op
                     return __builtin_ia32_dpps(v1, v2, 0x3F);
@@ -2954,7 +2874,7 @@ T dot3(SIMDVer Ver = sseVer, T)(T v1, T v2)
     {
         version(DigitalMars)
         {
-            static if(is(T == float4))
+            static if(isOfType!(T, float4))
             {
                 static if(Ver >= SIMDVer.SSE41) // 1 op
                     return __simd(XMM.DPPS, v1, v2, 0x7F);
@@ -2976,7 +2896,7 @@ T dot3(SIMDVer Ver = sseVer, T)(T v1, T v2)
         }
         else version(GNU_OR_LDC)
         {
-            static if(is(T == float4))
+            static if(isOfType!(T, float4))
             {
                 static if(Ver >= SIMDVer.SSE41) // 1 op
                     return __builtin_ia32_dpps(v1, v2, 0x7F);
@@ -3014,7 +2934,7 @@ T dot4(SIMDVer Ver = sseVer, T)(T v1, T v2)
     {
         version(DigitalMars)
         {
-            static if(is(T == float4))
+            static if(isOfType!(T, float4))
             {
                 static if(Ver >= SIMDVer.SSE41) // 1 op
                     return __simd(XMM.DPPS, v1, v2, 0xFF);
@@ -3036,7 +2956,7 @@ T dot4(SIMDVer Ver = sseVer, T)(T v1, T v2)
         }
         else version(GNU_OR_LDC)
         {
-            static if(is(T == float4))
+            static if(isOfType!(T, float4))
             {
                 static if(Ver >= SIMDVer.SSE41) // 1 op
                     return __builtin_ia32_dpps(v1, v2, 0xFF);
@@ -3139,7 +3059,7 @@ T rcpEst(SIMDVer Ver = sseVer, T)(T v)
 {
     version(ARM)
     {
-        static if(is(T == float4))
+        static if(isOfType!(T, float4))
             return __builtin_neon_vrecpev4sf(v, ARMOpType!T);
         else
             static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -3168,7 +3088,7 @@ T rsqrtEst(SIMDVer Ver = sseVer, T)(T v)
 {
     version(ARM)
     {
-        static if(is(T == float4))
+        static if(isOfType!(T, float4))
             return __builtin_neon_vrsqrtev4sf(v, ARMOpType!T);
         else
             static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -3231,18 +3151,18 @@ T or(SIMDVer Ver = sseVer, T)(T v1, T v2)
     {
         version(DigitalMars)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return __simd(XMM.ORPD, v1, v2);
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __simd(XMM.ORPS, v1, v2);
             else
                 return __simd(XMM.POR, v1, v2);
         }
         else version(GNU)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return __builtin_ia32_orpd(v1, v2);
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __builtin_ia32_orps(v1, v2);
             else
                 return __builtin_ia32_por128(v1, v2);
@@ -3275,18 +3195,18 @@ T and(SIMDVer Ver = sseVer, T)(T v1, T v2)
     {
         version(DigitalMars)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return __simd(XMM.ANDPD, v1, v2);
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __simd(XMM.ANDPS, v1, v2);
             else
                 return __simd(XMM.PAND, v1, v2);
         }
         else version(GNU)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return __builtin_ia32_andpd(v1, v2);
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __builtin_ia32_andps(v1, v2);
             else
                 return __builtin_ia32_pand128(v1, v2);
@@ -3319,18 +3239,18 @@ T andNot(SIMDVer Ver = sseVer, T)(T v1, T v2)
     {
         version(DigitalMars)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return __simd(XMM.ANDNPD, v2, v1);
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __simd(XMM.ANDNPS, v2, v1);
             else
                 return __simd(XMM.PANDN, v2, v1);
         }
         else version(GNU)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return __builtin_ia32_andnpd(v2, v1);
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __builtin_ia32_andnps(v2, v1);
             else
                 return __builtin_ia32_pandn128(v2, v1);
@@ -3357,18 +3277,18 @@ T xor(SIMDVer Ver = sseVer, T)(T v1, T v2)
     {
         version(DigitalMars)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return __simd(XMM.XORPD, v1, v2);
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __simd(XMM.XORPS, v1, v2);
             else
                 return __simd(XMM.PXOR, v1, v2);
         }
         else version(GNU)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return __builtin_ia32_xorpd(v1, v2);
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __builtin_ia32_xorps(v1, v2);
             else
                 return __builtin_ia32_pxor128(v1, v2);
@@ -3399,22 +3319,22 @@ T shiftLeft(SIMDVer Ver = sseVer, T)(T v1, T v2)
     {
         version(DigitalMars)
         {
-            static if(is(T == long2) || is(T == ulong2))
+            static if(isOfType!(T, long2) || isOfType!(T, ulong2))
                 return  __simd(XMM.PSLLQ, v1, v2);
-            else static if(is(T == int4) || is(T == uint4))
+            else static if(isOfType!(T, int4) || isOfType!(T, uint4))
                 return  __simd(XMM.PSLLD, v1, v2);
-            else static if(is(T == short8) || is(T == ushort8))
+            else static if(isOfType!(T, short8) || isOfType!(T, ushort8))
                 return  __simd(XMM.PSLLW, v1, v2);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
         }
         else version(GNU_OR_LDC)
         {
-            static if(is(T == long2) || is(T == ulong2))
+            static if(isOfType!(T, long2) || isOfType!(T, ulong2))
                 return __builtin_ia32_psllq128(v1, v2);
-            else static if(is(T == int4) || is(T == uint4))
+            else static if(isOfType!(T, int4) || isOfType!(T, uint4))
                 return __builtin_ia32_pslld128(v1, v2);
-            else static if(is(T == short8) || is(T == ushort8))
+            else static if(isOfType!(T, short8) || isOfType!(T, ushort8))
                 return __builtin_ia32_psllw128(v1, v2);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -3441,22 +3361,22 @@ T shiftLeftImmediate(size_t bits, SIMDVer Ver = sseVer, T)(T v)
         {
             version(DigitalMars)
             {
-                static if(is(T == long2) || is(T == ulong2))
+                static if(isOfType!(T, long2) || isOfType!(T, ulong2))
                     return __simd_ib(XMM.PSLLQ, v, bits);
-                else static if(is(T == int4) || is(T == uint4))
+                else static if(isOfType!(T, int4) || isOfType!(T, uint4))
                     return __simd_ib(XMM.PSLLD, v, bits);
-                else static if(is(T == short8) || is(T == ushort8))
+                else static if(isOfType!(T, short8) || isOfType!(T, ushort8))
                     return __simd_ib(XMM.PSLLW, v, bits);
                 else
                     static assert(0, "Unsupported vector type: " ~ T.stringof);
             }
             else version(GNU_OR_LDC)
             {
-                static if(is(T == long2) || is(T == ulong2))
+                static if(isOfType!(T, long2) || isOfType!(T, ulong2))
                     return __builtin_ia32_psllqi128(v, bits);
-                else static if(is(T == int4) || is(T == uint4))
+                else static if(isOfType!(T, int4) || isOfType!(T, uint4))
                     return __builtin_ia32_pslldi128(v, bits);
-                else static if(is(T == short8) || is(T == ushort8))
+                else static if(isOfType!(T, short8) || isOfType!(T, ushort8))
                     return __builtin_ia32_psllwi128(v, bits);
                 else
                     static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -3480,30 +3400,30 @@ T shiftRight(SIMDVer Ver = sseVer, T)(T v1, T v2)
     {
         version(DigitalMars)
         {
-            static if(is(T == ulong2))
+            static if(isOfType!(T, ulong2))
                 return __simd(XMM.PSRLQ, v1, v2);
-            else static if(is(T == int4))
+            else static if(isOfType!(T, int4))
                 return __simd(XMM.PSRAD, v1, v2);
-            else static if(is(T == uint4))
+            else static if(isOfType!(T, uint4))
                 return __simd(XMM.PSRLD, v1, v2);
-            else static if(is(T == short8))
+            else static if(isOfType!(T, short8))
                 return __simd(XMM.PSRAW, v1, v2);
-            else static if(is(T == ushort8))
+            else static if(isOfType!(T, ushort8))
                 return __simd(XMM.PSRLW, v1, v2);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
         }
         else version(GNU_OR_LDC)
         {
-            static if(is(T == ulong2))
+            static if(isOfType!(T, ulong2))
                 return __builtin_ia32_psrlq128(v1, v2);
-            else static if(is(T == int4))
+            else static if(isOfType!(T, int4))
                 return __builtin_ia32_psrad128(v1, v2);
-            else static if(is(T == uint4))
+            else static if(isOfType!(T, uint4))
                 return __builtin_ia32_psrld128(v1, v2);
-            else static if(is(T == short8))
+            else static if(isOfType!(T, short8))
                 return __builtin_ia32_psraw128(v1, v2);
-            else static if(is(T == ushort8))
+            else static if(isOfType!(T, ushort8))
                 return __builtin_ia32_psrlw128(v1, v2);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -3530,30 +3450,30 @@ T shiftRightImmediate(size_t bits, SIMDVer Ver = sseVer, T)(T v)
         {
             version(DigitalMars)
             {
-                static if(is(T == ulong2))
+                static if(isOfType!(T, ulong2))
                     return __simd_ib(XMM.PSRLQ, v, bits);
-                else static if(is(T == int4))
+                else static if(isOfType!(T, int4))
                     return __simd_ib(XMM.PSRAD, v, bits);
-                else static if(is(T == uint4))
+                else static if(isOfType!(T, uint4))
                     return __simd_ib(XMM.PSRLD, v, bits);
-                else static if(is(T == short8))
+                else static if(isOfType!(T, short8))
                     return __simd_ib(XMM.PSRAW, v, bits);
-                else static if(is(T == ushort8))
+                else static if(isOfType!(T, ushort8))
                     return __simd_ib(XMM.PSRLW, v, bits);
                 else
                     static assert(0, "Unsupported vector type: " ~ T.stringof);
             }
             else version(GNU_OR_LDC)
             {
-                static if(is(T == ulong2))
+                static if(isOfType!(T, ulong2))
                     return __builtin_ia32_psrlqi128(v, bits);
-                else static if(is(T == int4))
+                else static if(isOfType!(T, int4))
                     return __builtin_ia32_psradi128(v, bits);
-                else static if(is(T == uint4))
+                else static if(isOfType!(T, uint4))
                     return __builtin_ia32_psrldi128(v, bits);
-                else static if(is(T == short8))
+                else static if(isOfType!(T, short8))
                     return __builtin_ia32_psrawi128(v, bits);
-                else static if(is(T == ushort8))
+                else static if(isOfType!(T, ushort8))
                     return __builtin_ia32_psrlwi128(v, bits);
                 else
                     static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -3768,7 +3688,7 @@ T rotateElementsLeft(size_t n, SIMDVer Ver = sseVer, T)(T v)
 // rotate elements right
 T rotateElementsRight(size_t n, SIMDVer Ver = sseVer, T)(T v)
 {
-    enum size_t e = n & (NumElements!T - 1); // large rotations should wrap
+    enum e = n & (NumElements!T - 1); // large rotations should wrap
 
     static if(e == 0) // shift by 0 is a no-op
         return v;
@@ -3860,50 +3780,50 @@ bool anyLessEqual(SIMDVer Ver = sseVer, T)(T a, T b)
 // Generate bit masks
 
 // generate a bitmask of for elements: Rn = An == Bn ? -1 : 0
-void16 maskEqual(SIMDVer Ver = sseVer, T)(const T a, const T b)
+void16 maskEqual(SIMDVer Ver = sseVer, T)(T a, T b)
 {
     version(X86_OR_X64)
     {
         version(DigitalMars)
         {
-            static if(is(T == double2))
-                return __simd(XMM.CMPEQPD, a, b);
-            else static if(is(T == float4))
-                return __simd(XMM.CMPEQPS, a, b);
-            else static if(is(T == long2) || is(T == ulong2))
+            static if(isOfType!(T, double2))
+                return __simd(XMM.CMPPD, a, b, 0);
+            else static if(isOfType!(T, float4))
+                return __simd(XMM.CMPPS, a, b, 0);
+            else static if(isOfType!(T, long2) || isOfType!(T, ulong2))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __simd(XMM.PCMPEQQ, a, b);
                 else
                     static assert(0, "Only supported in SSE4.1 and above");
             }
-            else static if(is(T == int4) || is(T == uint4))
+            else static if(isOfType!(T, int4) || isOfType!(T, uint4))
                 return __simd(XMM.PCMPEQD, a, b);
-            else static if(is(T == short8) || is(T == ushort8))
+            else static if(isOfType!(T, short8) || isOfType!(T, ushort8))
                 return __simd(XMM.PCMPEQW, a, b);
-            else static if(is(T == byte16) || is(T == ubyte16))
+            else static if(isOfType!(T, byte16) || isOfType!(T, ubyte16))
                 return __simd(XMM.PCMPEQB, a, b);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
         }
         else version(GNU)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return __builtin_ia32_cmpeqpd(a, b);
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __builtin_ia32_cmpeqps(a, b);
-            else static if(is(T == long2) || is(T == ulong2))
+            else static if(isOfType!(T, long2) || isOfType!(T, ulong2))
             {
                 static if(Ver >= SIMDVer.SSE41)
                     return __builtin_ia32_pcmpeqq(a, b);
                 else
                     static assert(0, "Only supported in SSE4.1 and above");
             }
-            else static if(is(T == int4) || is(T == uint4))
+            else static if(isOfType!(T, int4) || isOfType!(T, uint4))
                 return __builtin_ia32_pcmpeqd128(a, b);
-            else static if(is(T == short8) || is(T == ushort8))
+            else static if(isOfType!(T, short8) || isOfType!(T, ushort8))
                 return __builtin_ia32_pcmpeqw128(a, b);
-            else static if(is(T == byte16) || is(T == ubyte16))
+            else static if(isOfType!(T, byte16) || isOfType!(T, ubyte16))
                 return __builtin_ia32_pcmpeqb128(a, b);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -3928,18 +3848,18 @@ void16 maskNotEqual(SIMDVer Ver = sseVer, T)(T a, T b)
     {
         version(DigitalMars)
         {
-            static if(is(T == double2))
-                return __simd(XMM.CMPNEQPD, a, b);
-            else static if(is(T == float4))
-                return __simd(XMM.CMPNEQPS, a, b);
+            static if(isOfType!(T, double2))
+                return __simd(XMM.CMPPD, a, b, 4);
+            else static if(isOfType!(T, float4))
+                return __simd(XMM.CMPPS, a, b, 4);
             else
                 return comp!Ver(cast(void16)maskEqual!Ver(a, b));
         }
         else version(GNU)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return __builtin_ia32_cmpneqpd(a, b);
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __builtin_ia32_cmpneqps(a, b);
             else
                 return comp!Ver(cast(void16)maskEqual!Ver(a, b));
@@ -3964,50 +3884,50 @@ void16 maskGreater(SIMDVer Ver = sseVer, T)(T a, T b)
     {
         version(DigitalMars)
         {
-            static if(is(T == double2))
-                return __simd(XMM.CMPGTPD, a, b);
-            else static if(is(T == float4))
-                return __simd(XMM.CMPGTPS, a, b);
-            else static if(is(T == long2))
+            static if(isOfType!(T, double2))
+                return __simd(XMM.CMPPD, b, a, 1);
+            else static if(isOfType!(T, float4))
+                return __simd(XMM.CMPPS, b, a, 1);
+            else static if(isOfType!(T, long2))
                 return __simd(XMM.PCMPGTQ, a, b);
-            else static if(is(T == ulong2))
+            else static if(isOfType!(T, ulong2))
                 return __simd(XMM.PCMPGTQ, a + signMask2, b + signMask2);
-            else static if(is(T == int4))
+            else static if(isOfType!(T, int4))
                 return __simd(XMM.PCMPGTD, a, b);
-            else static if(is(T == uint4))
+            else static if(isOfType!(T, uint4))
                 return __simd(XMM.PCMPGTD, a + signMask4, b + signMask4);
-            else static if(is(T == short8))
+            else static if(isOfType!(T, short8))
                 return __simd(XMM.PCMPGTW, a, b);
-            else static if(is(T == ushort8))
+            else static if(isOfType!(T, ushort8))
                 return __simd(XMM.PCMPGTW, a + signMask8, b + signMask8);
-            else static if(is(T == byte16))
+            else static if(isOfType!(T, byte16))
                 return __simd(XMM.PCMPGTB, a, b);
-            else static if(is(T == ubyte16))
+            else static if(isOfType!(T, ubyte16))
                 return __simd(XMM.PCMPGTB, a + signMask16, b + signMask16);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
         }
         else version(GNU)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return __builtin_ia32_cmpgtpd(a, b);
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __builtin_ia32_cmpgtps(a, b);
-            else static if(is(T == long2))
+            else static if(isOfType!(T, long2))
                 return __builtin_ia32_pcmpgtq(a, b);
-            else static if(is(T == ulong2))
+            else static if(isOfType!(T, ulong2))
                 return __builtin_ia32_pcmpgtq(a + signMask2, b + signMask2);
-            else static if(is(T == int4))
+            else static if(isOfType!(T, int4))
                 return __builtin_ia32_pcmpgtd128(a, b);
-            else static if(is(T == uint4))
+            else static if(isOfType!(T, uint4))
                 return __builtin_ia32_pcmpgtd128(a + signMask4, b + signMask4);
-            else static if(is(T == short8))
+            else static if(isOfType!(T, short8))
                 return __builtin_ia32_pcmpgtw128(a, b);
-            else static if(is(T == ushort8))
+            else static if(isOfType!(T, ushort8))
                 return __builtin_ia32_pcmpgtw128(a + signMask8, b + signMask8);
-            else static if(is(T == byte16))
+            else static if(isOfType!(T, byte16))
                 return __builtin_ia32_pcmpgtb128(a, b);
-            else static if(is(T == ubyte16))
+            else static if(isOfType!(T, ubyte16))
                 return __builtin_ia32_pcmpgtb128(a + signMask16, b + signMask16);
             else
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -4032,18 +3952,18 @@ void16 maskGreaterEqual(SIMDVer Ver = sseVer, T)(T a, T b)
     {
         version(DigitalMars)
         {
-            static if(is(T == double2))
-                return __simd(XMM.cmpgepd, a, b);
-            else static if(is(T == float4))
-                return __simd(XMM.cmpgeps, a, b);
+            static if(isOfType!(T, double2))
+                return __simd(XMM.CMPPD, b, a, 2);
+            else static if(isOfType!(T, float4))
+                return __simd(XMM.CMPPS, b, a, 2);
             else
                 return or!Ver(cast(void16)maskGreater!Ver(a, b), cast(void16)maskEqual!Ver(a, b)); // compound greater OR equal
         }
         else version(GNU)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return __builtin_ia32_cmpgepd(a, b);
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __builtin_ia32_cmpgeps(a, b);
             else
                 return or!Ver(cast(void16)maskGreater!Ver(a, b), cast(void16)maskEqual!Ver(a, b)); // compound greater OR equal
@@ -4068,18 +3988,18 @@ void16 maskLess(SIMDVer Ver = sseVer, T)(T a, T b)
     {
         version(DigitalMars)
         {
-            static if(is(T == double2))
-                return __simd(XMM.cmpltpd, a, b);
-            else static if(is(T == float4))
-                return __simd(XMM.cmpltps, a, b);
+            static if(isOfType!(T, double2))
+                return __simd(XMM.CMPPD, a, b, 1);
+            else static if(isOfType!(T, float4))
+                return __simd(XMM.CMPPS, a, b, 1);
             else
                 return maskGreater!Ver(b, a); // reverse the args
         }
         else version(GNU)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return __builtin_ia32_cmpltpd(a, b);
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __builtin_ia32_cmpltps(a, b);
             else
                 return maskGreater!Ver(b, a); // reverse the args
@@ -4104,18 +4024,18 @@ void16 maskLessEqual(SIMDVer Ver = sseVer, T)(T a, T b)
     {
         version(DigitalMars)
         {
-            static if(is(T == double2))
-                return __simd(XMM.CMPLEPD, a, b);
-            else static if(is(T == float4))
-                return __simd(XMM.CMPLEPS, a, b);
+            static if(isOfType!(T, double2))
+                return __simd(XMM.CMPPD, a, b, 2);
+            else static if(isOfType!(T, float4))
+                return __simd(XMM.CMPPS, a, b, 2);
             else
                 return maskGreaterEqual!Ver(b, a); // reverse the args
         }
         else version(GNU)
         {
-            static if(is(T == double2))
+            static if(isOfType!(T, double2))
                 return __builtin_ia32_cmplepd(a, b);
-            else static if(is(T == float4))
+            else static if(isOfType!(T, float4))
                 return __builtin_ia32_cmpleps(a, b);
             else
                 return maskGreaterEqual!Ver(b, a); // reverse the args
@@ -4146,9 +4066,9 @@ T select(SIMDVer Ver = sseVer, T)(void16 mask, T x, T y)
         {
             static if(Ver >= SIMDVer.SSE41)
             {
-                static if(is(T == double2))
+                static if(isOfType!(T, double2))
                     return __simd(XMM.BLENDVPD, y, x, mask);
-                else static if(is(T == float4))
+                else static if(isOfType!(T, float4))
                     return __simd(XMM.BLENDVPS, y, x, mask);
                 else
                     return __simd(XMM.PBLENDVB, y, x, mask);
@@ -4160,9 +4080,9 @@ T select(SIMDVer Ver = sseVer, T)(void16 mask, T x, T y)
         {
             static if(Ver >= SIMDVer.SSE41)
             {
-                static if(is(T == double2))
+                static if(isOfType!(T, double2))
                     return __builtin_ia32_blendvpd(y, x, cast(double2)mask);
-                else static if(is(T == float4))
+                else static if(isOfType!(T, float4))
                     return __builtin_ia32_blendvps(y, x, cast(float4)mask);
                 else
                 {
@@ -4255,7 +4175,7 @@ T transpose(SIMDVer Ver = sseVer, T)(T m)
         }
         else version(GNU)
         {
-            static if(is(T == float4x4))
+            static if(isOfType!(T, float4x4))
             {
                 float4 b0 = __builtin_ia32_shufps(m.xRow, m.yRow, shufMask!([0,1,0,1]));
                 float4 b1 = __builtin_ia32_shufps(m.zRow, m.wRow, shufMask!([0,1,0,1]));
@@ -4268,7 +4188,7 @@ T transpose(SIMDVer Ver = sseVer, T)(T m)
 
                 return float4x4(a0, a2, a1, a3);
             }
-            else static if (is(T == double2x2))
+            else static if (isOfType!(T, double2x2))
             {
                 static if(Ver >= SIMDVer.SSE2)
                 {
