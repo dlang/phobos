@@ -516,7 +516,7 @@ private
 // load scalar into all components (!! or just X?). Note: SLOW on many architectures
 Vector!T loadScalar(T, SIMDVer Ver = sseVer)(BaseType!T s)
 {
-    return loadScalar!Ver(&s);
+    return loadScalar!(T, Ver)(&s);
 }
 
 // load scaler from memory
@@ -635,16 +635,14 @@ BaseType!T getScalar(SIMDVer Ver = sseVer, T)(T v) if(isVector!T)
 // That's why we need to use template parameter S and check that it is
 // the base type in the template constraint. We will use this in some other
 // functions too.
-void storeScalar(SIMDVer Ver = sseVer, T, S)(T v, S* pS)
-if(isVector!T && is(BaseType!T == S))
+void storeScalar(SIMDVer Ver = sseVer, T, S)(T v, S* pS) if(isVector!T && is(BaseType!T == S))
 {
     // TODO: check this optimises correctly!! (opcode writes directly to memory)
     *pS = getScalar(v);
 }
 
 // store the vector to an unaligned address
-void storeUnaligned(SIMDVer Ver = sseVer, T, S)(T v, S* pV) @trusted
-if(isVector!T && is(BaseType!T == S))
+void storeUnaligned(SIMDVer Ver = sseVer, T, S)(T v, S* pV) @trusted if(isVector!T && is(BaseType!T == S))
 {
     version(X86_OR_X64)
     {
@@ -756,8 +754,7 @@ T getW(SIMDVer Ver = sseVer, T)(T v) if(isVector!T)
 }
 
 // set the X element
-T setX(SIMDVer Ver = sseVer, T)(T v, T x)
-if(isVector!T)
+T setX(SIMDVer Ver = sseVer, T)(T v, T x) if(isVector!T)
 {
     version(X86_OR_X64)
     {
@@ -814,8 +811,7 @@ if(isVector!T)
 }
 
 // set the Y element
-T setY(SIMDVer Ver = sseVer, T)(T v, T y)
-if(isVector!T)
+T setY(SIMDVer Ver = sseVer, T)(T v, T y) if(isVector!T)
 {
     version(X86_OR_X64)
     {
@@ -873,8 +869,7 @@ if(isVector!T)
 }
 
 // set the Z element
-T setZ(SIMDVer Ver = sseVer, T)(T v, T z)
-if(isVector!T)
+T setZ(SIMDVer Ver = sseVer, T)(T v, T z) if(isVector!T)
 {
     version(X86_OR_X64)
     {
@@ -928,8 +923,7 @@ if(isVector!T)
 }
 
 // set the W element
-T setW(SIMDVer Ver = sseVer, T)(T v, T w)
-if(isVector!T)
+T setW(SIMDVer Ver = sseVer, T)(T v, T w) if(isVector!T)
 {
     version(X86_OR_X64)
     {
@@ -1384,9 +1378,7 @@ T interleaveLow(SIMDVer Ver = sseVer, T)(T v1, T v2)
         else version(LDC)
         {
             enum int n = NumElements!T;
-            alias interleaveTuples!(
-                staticIota!(0, n / 2), staticIota!(n, n + n / 2)) mask;
-            
+            alias interleaveTuples!(staticIota!(0, n / 2), staticIota!(n, n + n / 2)) mask;
             return ldcsimd.shufflevector!(T, mask)(v1, v2);
         }
     }
@@ -3868,7 +3860,7 @@ bool anyLessEqual(SIMDVer Ver = sseVer, T)(T a, T b)
 // Generate bit masks
 
 // generate a bitmask of for elements: Rn = An == Bn ? -1 : 0
-void16 maskEqual(SIMDVer Ver = sseVer, T)(T a, T b)
+void16 maskEqual(SIMDVer Ver = sseVer, T)(const T a, const T b)
 {
     version(X86_OR_X64)
     {
@@ -3917,7 +3909,7 @@ void16 maskEqual(SIMDVer Ver = sseVer, T)(T a, T b)
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
         }
         else version(LDC)
-            return ldcsimd.equalMask!T(a, b); 
+            return ldcsimd.equalMask!T(a, b);
     }
     else version(ARM)
     {
@@ -3953,7 +3945,7 @@ void16 maskNotEqual(SIMDVer Ver = sseVer, T)(T a, T b)
                 return comp!Ver(cast(void16)maskEqual!Ver(a, b));
         }
         else version(LDC)
-            return ldcsimd.notEqualMask!T(a, b); 
+            return ldcsimd.notEqualMask!T(a, b);
     }
     else version(ARM)
     {
@@ -4021,7 +4013,7 @@ void16 maskGreater(SIMDVer Ver = sseVer, T)(T a, T b)
                 static assert(0, "Unsupported vector type: " ~ T.stringof);
         }
         else version(LDC)
-            return ldcsimd.greaterMask!T(a, b); 
+            return ldcsimd.greaterMask!T(a, b);
     }
     else version(ARM)
     {
@@ -4057,7 +4049,7 @@ void16 maskGreaterEqual(SIMDVer Ver = sseVer, T)(T a, T b)
                 return or!Ver(cast(void16)maskGreater!Ver(a, b), cast(void16)maskEqual!Ver(a, b)); // compound greater OR equal
         }
         else version(LDC)
-            return ldcsimd.greaterOrEqualMask!T(a, b); 
+            return ldcsimd.greaterOrEqualMask!T(a, b);
     }
     else version(ARM)
     {
@@ -4090,10 +4082,10 @@ void16 maskLess(SIMDVer Ver = sseVer, T)(T a, T b)
             else static if(is(T == float4))
                 return __builtin_ia32_cmpltps(a, b);
             else
-                return maskGreaterEqual!Ver(b, a); // reverse the args
+                return maskGreater!Ver(b, a); // reverse the args
         }
         else version(LDC)
-            return ldcsimd.greaterMask!T(b, a); 
+            return ldcsimd.greaterMask!T(b, a);
     }
     else version(ARM)
     {
@@ -4129,7 +4121,7 @@ void16 maskLessEqual(SIMDVer Ver = sseVer, T)(T a, T b)
                 return maskGreaterEqual!Ver(b, a); // reverse the args
         }
         else version(LDC)
-            return ldcsimd.greaterOrEqualMask!T(b, a); 
+            return ldcsimd.greaterOrEqualMask!T(b, a);
     }
     else version(ARM)
     {
