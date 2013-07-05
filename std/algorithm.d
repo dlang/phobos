@@ -2184,7 +2184,7 @@ unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    int[] a = [ 1, 2, 3, 4, 5 ];
+   int[] a = [ 1, 2, 3, 4, 5 ];
     int[] b = new int[3];
     assert(moveSome(a, b)[0] is a[3 .. $]);
     assert(a[0 .. 3] == b);
@@ -2200,31 +2200,16 @@ need not be assignable at all to be swapped.
 If $(D lhs) and $(D rhs) reference the same instance, then nothing is done.
 
 $(D lhs) and $(D rhs) must be mutable. If $(D T) is a struct or union, then
-its fields must also all be (recursively) mutable.
-
-Preconditions:
-
-$(D !pointsTo(lhs, lhs) && !pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
-&& !pointsTo(rhs, rhs))
-
-See_Also:
-    $(XREF exception, pointsTo)
+its fields must also all be (recursivelly) mutable.
  */
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow
 if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
 {
     static if (hasElaborateAssign!T || !isAssignable!T)
     {
-        import std.exception : pointsTo;
-
         if (&lhs != &rhs)
         {
             // For structs with non-trivial assignment, move memory directly
-            // First check for undue aliasing
-            static if (hasIndirections!T)
-                assert(!pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
-                    && !pointsTo(lhs, lhs) && !pointsTo(rhs, rhs));
-            // Swap bits
             ubyte[T.sizeof] t = void;
             auto a = (cast(ubyte*) &lhs)[0 .. T.sizeof];
             auto b = (cast(ubyte*) &rhs)[0 .. T.sizeof];
@@ -2366,6 +2351,42 @@ unittest
     // 12024
     import std.datetime;
     SysTime a, b;
+
+    //Verify swap is callable even with
+    //internal pointers
+    static struct S
+    {
+        S[] someRange;
+        void opAssign(S other)
+        {
+            assert(0);
+        }
+    }
+
+    S[2] arr;
+    foreach(ref e; arr)
+        //The elements are themselves part of arr
+        //this means there is some aliasing
+        e.someRange = arr[];
+
+    //verify this calls still works
+    swap(arr[0], arr[1]);
+}
+
+unittest // 9975
+{
+    import std.exception : pointsTo;
+    static struct S2
+    {
+        union
+        {
+            size_t sz;
+            string s;
+        }
+    }
+    S2 a , b;
+    a.sz = -1;
+    assert(pointsTo(a, b));
     swap(a, b);
 }
 
