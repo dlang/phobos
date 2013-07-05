@@ -45,7 +45,7 @@ else version(GNU)
     import gcc.builtins;
 }
 
-import core.simd;
+public import core.simd;
 import std.traits, std.typetuple;
 import std.range;
 
