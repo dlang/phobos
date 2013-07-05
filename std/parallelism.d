@@ -115,8 +115,8 @@ version(Windows)
             {
                 WORD wProcessorArchitecture;
                 WORD wReserved;
-            };
-        };
+            }
+        }
         DWORD     dwPageSize;
         LPVOID    lpMinimumApplicationAddress;
         LPVOID    lpMaximumApplicationAddress;
