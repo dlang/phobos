@@ -2837,7 +2837,7 @@ struct FloatingPointControl
         roundDown      = 0x0400,
         roundUp        = 0x0800,
         roundToZero    = 0x0C00
-    };
+    }
 
     /** IEEE hardware exceptions.
      *  By default, all exceptions are masked (disabled).
@@ -2855,7 +2855,7 @@ struct FloatingPointControl
                              | invalidException,
         allExceptions      = severeExceptions | underflowException
                              | inexactException | subnormalException,
-    };
+    }
 
 private:
     enum ushort EXCEPTION_MASK = 0x3F;
