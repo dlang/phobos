@@ -814,7 +814,7 @@ Read line from the file handle and return it as a specified type.
 
 This version manages its own read buffer, which means one memory allocation per call. If you are not 
 retaining a reference to the read data, consider the $(D File.readln(buf)) version, which may offer 
-better performance as it reuses its read buffer.
+better performance as it can reuse its read buffer.
 
 Params:
     S = Template parameter; the type of the allocated buffer, and the type returned. Defaults to $(D string).
@@ -871,8 +871,8 @@ void main()
 Read line from the file handle and write it to $(D buf[]), including
 terminating character.
 
-This is often faster than $(D line = File.readln()) because the buffer
-is reused each call. Note that reusing the buffer means that the
+This can be faster than $(D line = File.readln()) because you can reuse
+the buffer for each call. Note that reusing the buffer means that the
 previous contents of it has to be copied if needed.
 
 Params:
@@ -1976,7 +1976,7 @@ unittest
  * 
  * This version manages its own read buffer, which means one memory allocation per call. If you are not 
  * retaining a reference to the read data, consider the $(D readln(buf)) version, which may offer 
- * better performance as it reuses its read buffer.
+ * better performance as it can reuse its read buffer.
  * 
  * Returns:
  *        The line that was read, including the line terminator character. 
@@ -2007,8 +2007,8 @@ if (isSomeString!S)
 /**********************************
  * Read line from $(D stdin) and write it to buf[], including terminating character.
  * 
- * This is often faster than $(D line = readln()) because the buffer
- * is reused each call. Note that reusing the buffer means that the
+ * This can be faster than $(D line = readln()) because you can reuse
+ * the buffer for each call. Note that reusing the buffer means that the
  * previous contents of it has to be copied if needed.
  * 
  * Returns:
