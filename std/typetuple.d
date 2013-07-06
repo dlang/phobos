@@ -1,4 +1,45 @@
-// Written in the D programming language.
+private template _staticIndexedMap(alias F, size_t N, T...)
+{
+    static if (T.length == 0)
+    {
+        alias _staticIndexedMap = TypeTuple!();
+    }
+    else static if (T.length == 1)
+    {
+        alias _staticIndexedMap = TypeTuple!(F!(N, T[0]));
+    }
+    else
+    {
+        alias _staticIndexedMap =
+            TypeTuple!(
+                _staticIndexedMap!(F, N, T[0]),
+                _staticIndexedMap!(F, N + 1, T[1 ..  $ ]));
+    }
+}
+
+template staticIndexedMap(alias F, T...)
+{
+    alias staticIndexedMap = _staticIndexedMap!(F, 0, T);
+}
+
+unittest
+{
+    template Indexate(size_t i, T)
+    {
+        alias Indexate = TypeTuple!(i, T);
+    }
+
+    // empty
+    alias staticIndexedMap!(Indexate) Empty;
+    static assert(Empty.length == 0);
+
+    // single
+    alias staticIndexedMap!(Indexate, int) Single;
+    static assert(Single[0] == 0 && is(Single[1] == int));
+
+    alias TL = staticIndexedMap!(Indexate, int, string);
+    static assert(TL[0] == 0 && is(TL[3] == string));
+}// Written in the D programming language.
 
 /**
  * Templates with which to manipulate type tuples (also known as type lists).
@@ -564,7 +605,48 @@ unittest
     alias TL = staticMap!(Unqual, int, const int, immutable int);
     static assert(is(TL == TypeTuple!(int, int, int)));
 }
+private template _staticIndexedMap(alias F, size_t N, T...)
+{
+    static if (T.length == 0)
+    {
+        alias _staticIndexedMap = TypeTuple!();
+    }
+    else static if (T.length == 1)
+    {
+        alias _staticIndexedMap = TypeTuple!(F!(N, T[0]));
+    }
+    else
+    {
+        alias _staticIndexedMap =
+            TypeTuple!(
+                _staticIndexedMap!(F, N, T[0]),
+                _staticIndexedMap!(F, N + 1, T[1 ..  $ ]));
+    }
+}
 
+template staticIndexedMap(alias F, T...)
+{
+    alias staticIndexedMap = _staticIndexedMap!(F, 0, T);
+}
+
+unittest
+{
+    template Indexate(size_t i, T)
+    {
+        alias Indexate = TypeTuple!(i, T);
+    }
+
+    // empty
+    alias staticIndexedMap!(Indexate) Empty;
+    static assert(Empty.length == 0);
+
+    // single
+    alias staticIndexedMap!(Indexate, int) Single;
+    static assert(Single[0] == 0 && is(Single[1] == int));
+
+    alias TL = staticIndexedMap!(Indexate, int, string);
+    static assert(TL[0] == 0 && is(TL[3] == string));
+}
 unittest
 {
     // empty
@@ -577,6 +659,52 @@ unittest
 
     alias staticMap!(Unqual, int, const int, immutable int) T;
     static assert(is(T == TypeTuple!(int, int, int)));
+}
+
+/**
+Evaluates to $(D TypeTuple!(F!(0, T[0]), F!(1, T[1]), ..., F!(t.length - 1, T[$ - 1]))).
+ */
+private template _staticIndexedMap(alias F, size_t N, T...)
+{
+    static if (T.length == 0)
+    {
+        alias _staticIndexedMap = TypeTuple!();
+    }
+    else static if (T.length == 1)
+    {
+        alias _staticIndexedMap = TypeTuple!(F!(N, T[0]));
+    }
+    else
+    {
+        alias _staticIndexedMap =
+            TypeTuple!(
+                _staticIndexedMap!(F, N, T[0]),
+                _staticIndexedMap!(F, N + 1, T[1 ..  $ ]));
+    }
+}
+
+template staticIndexedMap(alias F, T...)
+{
+    alias staticIndexedMap = _staticIndexedMap!(F, 0, T);
+}
+
+unittest
+{
+    template Indexate(size_t i, T)
+    {
+        alias Indexate = TypeTuple!(i, T);
+    }
+
+    // empty
+    alias staticIndexedMap!(Indexate) Empty;
+    static assert(Empty.length == 0);
+
+    // single
+    alias staticIndexedMap!(Indexate, int) Single;
+    static assert(Single[0] == 0 && is(Single[1] == int));
+
+    alias TL = staticIndexedMap!(Indexate, int, string);
+    static assert(TL[0] == 0 && is(TL[3] == string));
 }
 
 /**
