@@ -580,6 +580,52 @@ unittest
 }
 
 /**
+Evaluates to $(D TypeTuple!(F!(0, T[0]), F!(1, T[1]), ..., F!(t.length - 1, T[$ - 1]))).
+ */
+template _staticIndexedMap(alias F, int N, T...)
+{
+    static if (T.length == 0)
+    {
+        alias _staticIndexedMap = TypeTuple!();
+    }
+    else static if (T.length == 1)
+    {
+        alias _staticIndexedMap = TypeTuple!(F!(N, T[0]));
+    }
+    else
+    {
+        alias _staticIndexedMap =
+            TypeTuple!(
+                _staticIndexedMap!(F, N, T[0]),
+                _staticIndexedMap!(F, N + 1, T[1 ..  $ ]));
+    }
+}
+
+template staticIndexedMap(alias F, T...)
+{
+    alias staticIndexedMap = _staticIndexedMap!(F, 0, T);
+}
+
+unittest
+{
+	template Indexate(size_t i, T)
+	{
+		alias Fun = TypeTuple!(i, T);
+	}
+
+    // empty
+    alias staticIndexedMap!(Indexate) Empty;
+    static assert(Empty.length == 0);
+
+    // single
+    alias staticIndexedMap!(Indexate, int) Single;
+    static assert(Single[0] == 0 && is(Single[1] == int));
+
+    alias TL = staticIndexedMap!(Indexate, int, string);
+    static assert(TL[0] == 0 && is(TL[3] == string));
+}
+
+/**
 Tests whether all given items satisfy a template predicate, i.e. evaluates to
 $(D F!(T[0]) && F!(T[1]) && ... && F!(T[$ - 1])).
 
