@@ -169,80 +169,81 @@ private
 // Internal functions
 ///////////////////////////////////////////////////////////////////////////////
 
+template isVector(T)
+{
+    enum bool isVector = is(T : __vector(V[N]), V, size_t N);
+}
+template ElementType(T : __vector(V[N]), V, size_t N) if(isVector!T)
+{
+    template Impl(T)
+    {
+        alias Impl = V;
+    }
+
+    alias ElementType = std.traits.ModifyTypePreservingSTC!(Impl, OriginalType!T);
+}
+template NumElements(T : __vector(V[N]), V, size_t N)
+{
+    enum NumElements = N;
+}
+template PromotionOf(T)
+{
+    template Impl(T)
+    {
+        static if(is(T : __vector(V[N]), V, size_t N))
+            alias Impl = __vector(Impl!V[N/2]);
+        else static if(is(T == float))
+            alias Impl = double;
+        else static if(is(T == int))
+            alias Impl = long;
+        else static if(is(T == uint))
+            alias Impl = ulong;
+        else static if(is(T == short))
+            alias Impl = int;
+        else static if(is(T == ushort))
+            alias Impl = uint;
+        else static if(is(T == byte))
+            alias Impl = short;
+        else static if(is(T == ubyte))
+            alias Impl = ushort;
+        else
+            static assert(0, "Incorrect type");
+    }
+
+    alias PromotionOf = std.traits.ModifyTypePreservingSTC!(Impl, OriginalType!T);
+}
+template DemotionOf(T)
+{
+    template Impl(T)
+    {
+        static if(is(T : __vector(V[N]), V, size_t N))
+            alias Impl = __vector(Impl!V[N*2]);
+        else static if(is(T == double))
+            alias Impl = float;
+        else static if(is(T == long))
+            alias Impl = int;
+        else static if(is(T == ulong))
+            alias Impl = uint;
+        else static if(is(T == int))
+            alias Impl = short;
+        else static if(is(T == uint))
+            alias Impl = ushort;
+        else static if(is(T == short))
+            alias Impl = byte;
+        else static if(is(T == ushort))
+            alias Impl = ubyte;
+        else
+            static assert(0, "Incorrect type");
+    }
+
+    alias DemotionOf = std.traits.ModifyTypePreservingSTC!(Impl, OriginalType!T);
+}
+
 private
 {
-    template isVector(T)
+    template isOfType(U, V)
     {
-        enum bool isVector = is(T : __vector(V[N]), V, size_t N);
-    }
-    template isOfType(T, V)
-    {
-        enum bool isOfType = is(Unqual!T == V);
-    }
-    template VectorType(T : __vector(V[N]), V, size_t N)
-    {
-        template Impl(T)
-        {
-            alias Impl = V;
-        }
-
-        alias VectorType = std.traits.ModifyTypePreservingSTC!(Impl, OriginalType!T);
-    }
-    template NumElements(T : __vector(V[N]), V, size_t N)
-    {
-        enum NumElements = N;
-    }
-    template PromotionOf(T)
-    {
-        template Impl(T)
-        {
-            static if(is(T : __vector(V[N]), V, size_t N))
-                alias Impl = __vector(Impl!V[N/2]);
-            else static if(is(T == float))
-                alias Impl = double;
-            else static if(is(T == int))
-                alias Impl = long;
-            else static if(is(T == uint))
-                alias Impl = ulong;
-            else static if(is(T == short))
-                alias Impl = int;
-            else static if(is(T == ushort))
-                alias Impl = uint;
-            else static if(is(T == byte))
-                alias Impl = short;
-            else static if(is(T == ubyte))
-                alias Impl = ushort;
-            else
-                static assert(0, "Incorrect type");
-        }
-
-        alias PromotionOf = std.traits.ModifyTypePreservingSTC!(Impl, OriginalType!T);
-    }
-    template DemotionOf(T)
-    {
-        template Impl(T)
-        {
-            static if(is(T : __vector(V[N]), V, size_t N))
-                alias Impl = __vector(Impl!V[N*2]);
-            else static if(is(T == double))
-                alias Impl = float;
-            else static if(is(T == long))
-                alias Impl = int;
-            else static if(is(T == ulong))
-                alias Impl = uint;
-            else static if(is(T == int))
-                alias Impl = short;
-            else static if(is(T == uint))
-                alias Impl = ushort;
-            else static if(is(T == short))
-                alias Impl = byte;
-            else static if(is(T == ushort))
-                alias Impl = ubyte;
-            else
-                static assert(0, "Incorrect type");
-        }
-
-        alias DemotionOf = std.traits.ModifyTypePreservingSTC!(Impl, OriginalType!T);
+        enum bool isOfType = is(Unqual!U == Unqual!V);
     }
 
     // pull the base type from a vector, array, or primitive
@@ -257,11 +258,10 @@ private
             return a.array;
         }()) ArrayType;
     }
-    //    template VectorType(T : Vector!T) { alias T VectorType; }
     template BaseType(T)
     {
         static if(isVector!T)
-            alias VectorType!T BaseType;
+            alias ElementType!T BaseType;
         else static if(isArray!T)
             alias ArrayType!T BaseType;
         else static if(isScalar!T)
@@ -674,7 +674,7 @@ T getW(SIMDVer Ver = sseVer, T)(T v) if(isVector!T)
 }
 
 // set the X element
-T setX(SIMDVer Ver = sseVer, T)(T v, T x) if(isVector!T)
+R setX(SIMDVer Ver = sseVer, T, U, R = Unqual!T)(T v, U x) if(isVector!T && isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -731,7 +731,7 @@ T setX(SIMDVer Ver = sseVer, T)(T v, T x) if(isVector!T)
 }
 
 // set the Y element
-T setY(SIMDVer Ver = sseVer, T)(T v, T y) if(isVector!T)
+R setY(SIMDVer Ver = sseVer, T, U, R = Unqual!T)(T v, U y) if(isVector!T && isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -789,7 +789,7 @@ T setY(SIMDVer Ver = sseVer, T)(T v, T y) if(isVector!T)
 }
 
 // set the Z element
-T setZ(SIMDVer Ver = sseVer, T)(T v, T z) if(isVector!T)
+R setZ(SIMDVer Ver = sseVer, T, U, R = Unqual!T)(T v, U z) if(isVector!T && isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -843,7 +843,7 @@ T setZ(SIMDVer Ver = sseVer, T)(T v, T z) if(isVector!T)
 }
 
 // set the W element
-T setW(SIMDVer Ver = sseVer, T)(T v, T w) if(isVector!T)
+R setW(SIMDVer Ver = sseVer, T, U, R = Unqual!T)(T v, U w) if(isVector!T && isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -1255,7 +1255,7 @@ T permute(SIMDVer Ver = sseVer, T)(T v, ubyte16 control)
 }
 
 // interleave low elements from 2 vectors
-T interleaveLow(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T interleaveLow(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     // this really requires multiple return values >_<
 
@@ -1313,7 +1313,7 @@ T interleaveLow(SIMDVer Ver = sseVer, T)(T v1, T v2)
 }
 
 // interleave high elements from 2 vectors
-T interleaveHigh(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T interleaveHigh(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     // this really requires multiple return values >_<
 
@@ -1488,7 +1488,7 @@ PromotionOf!T unpackHigh(SIMDVer Ver = sseVer, T)(T v)
     }
 }
 
-DemotionOf!T pack(SIMDVer Ver = sseVer, T)(T v1, T v2)
+DemotionOf!T pack(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -1544,7 +1544,7 @@ DemotionOf!T pack(SIMDVer Ver = sseVer, T)(T v1, T v2)
     }
 }
 
-DemotionOf!T packSaturate(SIMDVer Ver = sseVer, T)(T v1, T v2)
+DemotionOf!T packSaturate(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -1852,7 +1852,7 @@ T neg(SIMDVer Ver = sseVer, T)(T v)
 }
 
 // binary add
-T add(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T add(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -1880,7 +1880,7 @@ T add(SIMDVer Ver = sseVer, T)(T v1, T v2)
 }
 
 // binary add and saturate
-T addSaturate(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T addSaturate(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -1922,7 +1922,7 @@ T addSaturate(SIMDVer Ver = sseVer, T)(T v1, T v2)
 }
 
 // binary subtract
-T sub(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T sub(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -1950,7 +1950,7 @@ T sub(SIMDVer Ver = sseVer, T)(T v1, T v2)
 }
 
 // binary subtract and saturate
-T subSaturate(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T subSaturate(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -1992,7 +1992,7 @@ T subSaturate(SIMDVer Ver = sseVer, T)(T v1, T v2)
 }
 
 // binary multiply
-T mul(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T mul(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -2020,7 +2020,7 @@ T mul(SIMDVer Ver = sseVer, T)(T v1, T v2)
 }
 
 // multiply and add: v1*v2 + v3
-T madd(SIMDVer Ver = sseVer, T)(T v1, T v2, T v3)
+T madd(SIMDVer Ver = sseVer, T, U, V)(T v1, U v2, V v3) if(isOfType!(T, U) && isOfType!(T, V))
 {
     version(X86_OR_X64)
     {
@@ -2073,7 +2073,7 @@ T madd(SIMDVer Ver = sseVer, T)(T v1, T v2, T v3)
 }
 
 // multiply and subtract: v1*v2 - v3
-T msub(SIMDVer Ver = sseVer, T)(T v1, T v2, T v3)
+T msub(SIMDVer Ver = sseVer, T, U, V)(T v1, U v2, V v3) if(isOfType!(T, U) && isOfType!(T, V))
 {
     version(X86_OR_X64)
     {
@@ -2110,7 +2110,7 @@ T msub(SIMDVer Ver = sseVer, T)(T v1, T v2, T v3)
 }
 
 // negate multiply and add: -(v1*v2) + v3
-T nmadd(SIMDVer Ver = sseVer, T)(T v1, T v2, T v3)
+T nmadd(SIMDVer Ver = sseVer, T, U, V)(T v1, U v2, V v3) if(isOfType!(T, U) && isOfType!(T, V))
 {
     version(X86_OR_X64)
     {
@@ -2166,7 +2166,7 @@ T nmadd(SIMDVer Ver = sseVer, T)(T v1, T v2, T v3)
 }
 
 // negate multiply and subtract: -(v1*v2) - v3
-T nmsub(SIMDVer Ver = sseVer, T)(T v1, T v2, T v3)
+T nmsub(SIMDVer Ver = sseVer, T, U, V)(T v1, U v2, V v3) if(isOfType!(T, U) && isOfType!(T, V))
 {
     version(X86_OR_X64)
     {
@@ -2203,7 +2203,7 @@ T nmsub(SIMDVer Ver = sseVer, T)(T v1, T v2, T v3)
 }
 
 // min
-T min(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T min(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -2316,7 +2316,7 @@ T min(SIMDVer Ver = sseVer, T)(T v1, T v2)
 }
 
 // max
-T max(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T max(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -2429,13 +2429,13 @@ T max(SIMDVer Ver = sseVer, T)(T v1, T v2)
 }
 
 // clamp values such that a <= v <= b
-T clamp(SIMDVer Ver = sseVer, T)(T a, T v, T b)
+T clamp(SIMDVer Ver = sseVer, T, U, V)(T a, U v, V b) if(isOfType!(T, U) && isOfType!(T, V))
 {
     return max!Ver(a, min!Ver(v, b));
 }
 
 // lerp
-T lerp(SIMDVer Ver = sseVer, T)(T a, T b, T t)
+T lerp(SIMDVer Ver = sseVer, T, U, V)(T a, U b, V t) if(isOfType!(T, U) && isOfType!(T, V))
 {
     return madd!Ver(sub!Ver(b, a), t, a);
 }
@@ -2642,7 +2642,7 @@ T trunc(SIMDVer Ver = sseVer, T)(T v)
 // Precise mathematical operations
 
 // divide
-T div(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T div(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -2780,7 +2780,7 @@ T rsqrt(SIMDVer Ver = sseVer, T)(T v)
 // Vector maths operations
 
 // 2d dot product
-T dot2(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T dot2(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -2868,7 +2868,7 @@ T dot2(SIMDVer Ver = sseVer, T)(T v1, T v2)
 }
 
 // 3d dot product
-T dot3(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T dot3(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -2928,7 +2928,7 @@ T dot3(SIMDVer Ver = sseVer, T)(T v1, T v2)
 }
 
 // 4d dot product
-T dot4(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T dot4(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -2988,13 +2988,13 @@ T dot4(SIMDVer Ver = sseVer, T)(T v1, T v2)
 }
 
 // homogeneous dot product: v1.xyz1 dot v2.xyzw
-T dotH(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T dotH(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     return null;
 }
 
 // 3d cross product
-T cross3(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T cross3(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     T left = mul!Ver(swizzle!("YZXW", Ver)(v1), swizzle!("ZXYW", Ver)(v2));
     T right = mul!Ver(swizzle!("ZXYW", Ver)(v1), swizzle!("YZXW", Ver)(v2));
@@ -3042,7 +3042,7 @@ T magSq4(SIMDVer Ver = sseVer, T)(T v)
 // Fast estimates
 
 // divide estimate
-T divEst(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T divEst(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     version(ARM)
     {
@@ -3145,7 +3145,7 @@ T comp(SIMDVer Ver = sseVer, T)(T v)
 }
 
 // bitwise or: v1 | v2
-T or(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T or(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -3183,13 +3183,13 @@ T or(SIMDVer Ver = sseVer, T)(T v1, T v2)
 }
 
 // bitwise nor: ~(v1 | v2)
-T nor(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T nor(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     return comp!Ver(or!Ver(v1, v2));
 }
 
 // bitwise and: v1 & v2
-T and(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T and(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -3227,13 +3227,13 @@ T and(SIMDVer Ver = sseVer, T)(T v1, T v2)
 }
 
 // bitwise nand: ~(v1 & v2)
-T nand(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T nand(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     return comp!Ver(and!Ver(v1, v2));
 }
 
 // bitwise and with not: v1 & ~v2
-T andNot(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T andNot(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -3271,7 +3271,7 @@ T andNot(SIMDVer Ver = sseVer, T)(T v1, T v2)
 }
 
 // bitwise xor: v1 ^ v2
-T xor(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T xor(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -3313,7 +3313,7 @@ T xor(SIMDVer Ver = sseVer, T)(T v1, T v2)
 // Bit shifts and rotates
 
 // binary shift left
-T shiftLeft(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T shiftLeft(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -3394,7 +3394,7 @@ T shiftLeftImmediate(size_t bits, SIMDVer Ver = sseVer, T)(T v)
 }
 
 // binary shift right (signed types perform arithmatic shift right)
-T shiftRight(SIMDVer Ver = sseVer, T)(T v1, T v2)
+T shiftRight(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -3611,7 +3611,7 @@ T shiftElementsRight(size_t n, SIMDVer Ver = sseVer, T)(T v)
 }
 
 // shift elements left
-T shiftElementsLeftPair(size_t n, SIMDVer Ver = sseVer, T)(T v1, T v2)
+T shiftElementsLeftPair(size_t n, SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     static if(n == 0) // shift by 0 is a no-op
         return v;
@@ -3625,7 +3625,7 @@ T shiftElementsLeftPair(size_t n, SIMDVer Ver = sseVer, T)(T v1, T v2)
 }
 
 // shift elements right
-T shiftElementsRightPair(size_t n, SIMDVer Ver = sseVer, T)(T v1, T v2)
+T shiftElementsRightPair(size_t n, SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 {
     static if(n == 0) // shift by 0 is a no-op
         return v;
@@ -3704,73 +3704,73 @@ T rotateElementsRight(size_t n, SIMDVer Ver = sseVer, T)(T v)
 // Comparisons
 
 // true if all elements: r = A[n] == B[n] && A[n+1] == B[n+1] && ...
-bool allEqual(SIMDVer Ver = sseVer, T)(T a, T b)
+bool allEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 {
     return null;
 }
 
 // true if all elements: r = A[n] != B[n] && A[n+1] != B[n+1] && ...
-bool allNotEqual(SIMDVer Ver = sseVer, T)(T a, T b)
+bool allNotEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 {
     return null;
 }
 
 // true if all elements: r = A[n] > B[n] && A[n+1] > B[n+1] && ...
-bool allGreater(SIMDVer Ver = sseVer, T)(T a, T b)
+bool allGreater(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 {
     return null;
 }
 
 // true if all elements: r = A[n] >= B[n] && A[n+1] >= B[n+1] && ...
-bool allGreaterEqual(SIMDVer Ver = sseVer, T)(T a, T b)
+bool allGreaterEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 {
     return null;
 }
 
 // true if all elements: r = A[n] < B[n] && A[n+1] < B[n+1] && ...
-bool allLess(SIMDVer Ver = sseVer, T)(T a, T b)
+bool allLess(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 {
     return null;
 }
 
 // true if all elements: r = A[n] <= B[n] && A[n+1] <= B[n+1] && ...
-bool allLessEqual(SIMDVer Ver = sseVer, T)(T a, T b)
+bool allLessEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 {
     return null;
 }
 
 // true if any elements: r = A[n] == B[n] || A[n+1] == B[n+1] || ...
-bool anyEqual(SIMDVer Ver = sseVer, T)(T a, T b)
+bool anyEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 {
     return null;
 }
 
 // true if any elements: r = A[n] != B[n] || A[n+1] != B[n+1] || ...
-bool anyNotEqual(SIMDVer Ver = sseVer, T)(T a, T b)
+bool anyNotEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 {
     return null;
 }
 
 // true if any elements: r = A[n] > B[n] || A[n+1] > B[n+1] || ...
-bool anyGreater(SIMDVer Ver = sseVer, T)(T a, T b)
+bool anyGreater(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 {
     return null;
 }
 
 // true if any elements: r = A[n] >= B[n] || A[n+1] >= B[n+1] || ...
-bool anyGreaterEqual(SIMDVer Ver = sseVer, T)(T a, T b)
+bool anyGreaterEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 {
     return null;
 }
 
 // true if any elements: r = A[n] < B[n] || A[n+1] < B[n+1] || ...
-bool anyLess(SIMDVer Ver = sseVer, T)(T a, T b)
+bool anyLess(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 {
     return null;
 }
 
 // true if any elements: r = A[n] <= B[n] || A[n+1] <= B[n+1] || ...
-bool anyLessEqual(SIMDVer Ver = sseVer, T)(T a, T b)
+bool anyLessEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 {
     return null;
 }
@@ -3780,7 +3780,7 @@ bool anyLessEqual(SIMDVer Ver = sseVer, T)(T a, T b)
 // Generate bit masks
 
 // generate a bitmask of for elements: Rn = An == Bn ? -1 : 0
-void16 maskEqual(SIMDVer Ver = sseVer, T)(T a, T b)
+void16 maskEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -3842,7 +3842,7 @@ void16 maskEqual(SIMDVer Ver = sseVer, T)(T a, T b)
 }
 
 // generate a bitmask of for elements: Rn = An != Bn ? -1 : 0 (SLOW)
-void16 maskNotEqual(SIMDVer Ver = sseVer, T)(T a, T b)
+void16 maskNotEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -3878,7 +3878,7 @@ void16 maskNotEqual(SIMDVer Ver = sseVer, T)(T a, T b)
 }
 
 // generate a bitmask of for elements: Rn = An > Bn ? -1 : 0
-void16 maskGreater(SIMDVer Ver = sseVer, T)(T a, T b)
+void16 maskGreater(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -3946,7 +3946,7 @@ void16 maskGreater(SIMDVer Ver = sseVer, T)(T a, T b)
 }
 
 // generate a bitmask of for elements: Rn = An >= Bn ? -1 : 0 (SLOW)
-void16 maskGreaterEqual(SIMDVer Ver = sseVer, T)(T a, T b)
+void16 maskGreaterEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -3982,7 +3982,7 @@ void16 maskGreaterEqual(SIMDVer Ver = sseVer, T)(T a, T b)
 }
 
 // generate a bitmask of for elements: Rn = An < Bn ? -1 : 0 (SLOW)
-void16 maskLess(SIMDVer Ver = sseVer, T)(T a, T b)
+void16 maskLess(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -4018,7 +4018,7 @@ void16 maskLess(SIMDVer Ver = sseVer, T)(T a, T b)
 }
 
 // generate a bitmask of for elements: Rn = An <= Bn ? -1 : 0
-void16 maskLessEqual(SIMDVer Ver = sseVer, T)(T a, T b)
+void16 maskLessEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -4058,7 +4058,7 @@ void16 maskLessEqual(SIMDVer Ver = sseVer, T)(T a, T b)
 // Branchless selection
 
 // select elements according to: mask == true ? x : y
-T select(SIMDVer Ver = sseVer, T)(void16 mask, T x, T y)
+R select(SIMDVer Ver = sseVer, T, U, R = Unqual!T)(void16 mask, T x, U y) if(isOfType!(T, U))
 {
     version(X86_OR_X64)
     {
@@ -4074,7 +4074,7 @@ T select(SIMDVer Ver = sseVer, T)(void16 mask, T x, T y)
                     return __simd(XMM.PBLENDVB, y, x, mask);
             }
             else
-                return xor!Ver(x, and!Ver(cast(T)mask, xor!Ver(y, x)));
+                return xor!Ver(cast(void16)x, and!Ver(mask, xor!Ver(cast(void16)y, cast(void16)x)));
         }
         else version(GNU_OR_LDC)
         {
@@ -4087,11 +4087,11 @@ T select(SIMDVer Ver = sseVer, T)(void16 mask, T x, T y)
                 else
                 {
                     alias PblendvbParam P;
-                    return cast(T)__builtin_ia32_pblendvb128(cast(P)y, cast(P)x, cast(P)mask);
+                    return cast(R)__builtin_ia32_pblendvb128(cast(P)y, cast(P)x, cast(P)mask);
                 }
             }
             else
-                return xor!Ver(x, and!Ver(cast(T)mask, xor!Ver(y, x)));
+                return xor!Ver(cast(void16)x, and!Ver(mask, xor!Ver(cast(void16)y, cast(void16)x)));
         }
     }
     else version(ARM)
@@ -4101,42 +4101,42 @@ T select(SIMDVer Ver = sseVer, T)(void16 mask, T x, T y)
     else
     {
         // simulate on any architecture without an opcode: ((b ^ a) & mask) ^ a
-        return xor!Ver(x, cast(T)and!Ver(mask, cast(void16)xor!Ver(y, x)));
+        return xor!Ver(cast(void16)x, and!Ver(mask, xor!Ver(cast(void16)y, cast(void16)x)));
     }
 }
 
 // select elements: Rn = An == Bn ? Xn : Yn
-T selectEqual(SIMDVer Ver = sseVer, T)(T a, T b, T x, T y)
+R selectEqual(SIMDVer Ver = sseVer, T, U, V, W, R = Unqual!V)(T a, U b, V x, W y) if(isOfType!(T, U) && isOfType!(V, W))
 {
     return select!Ver(maskEqual!Ver(a, b), x, y);
 }
 
 // select elements: Rn = An != Bn ? Xn : Yn
-T selectNotEqual(SIMDVer Ver = sseVer, T)(T a, T b, T x, T y)
+R selectNotEqual(SIMDVer Ver = sseVer, T, U, V, W, R = Unqual!V)(T a, U b, V x, W y) if(isOfType!(T, U) && isOfType!(V, W))
 {
     return select!Ver(maskNotEqual!Ver(a, b), x, y);
 }
 
 // select elements: Rn = An > Bn ? Xn : Yn
-T selectGreater(SIMDVer Ver = sseVer, T)(T a, T b, T x, T y)
+R selectGreater(SIMDVer Ver = sseVer, T, U, V, W, R = Unqual!V)(T a, U b, V x, W y) if(isOfType!(T, U) && isOfType!(V, W))
 {
     return select!Ver(maskGreater!Ver(a, b), x, y);
 }
 
 // select elements: Rn = An >= Bn ? Xn : Yn
-T selectGreaterEqual(SIMDVer Ver = sseVer, T)(T a, T b, T x, T y)
+R selectGreaterEqual(SIMDVer Ver = sseVer, T, U, V, W, R = Unqual!V)(T a, U b, V x, W y) if(isOfType!(T, U) && isOfType!(V, W))
 {
     return select!Ver(maskGreaterEqual!Ver(a, b), x, y);
 }
 
 // select elements: Rn = An < Bn ? Xn : Yn
-T selectLess(SIMDVer Ver = sseVer, T)(T a, T b, T x, T y)
+R selectLess(SIMDVer Ver = sseVer, T, U, V, W, R = Unqual!V)(T a, U b, V x, W y) if(isOfType!(T, U) && isOfType!(V, W))
 {
     return select!Ver(maskLess!Ver(a, b), x, y);
 }
 
 // select elements: Rn = An <= Bn ? Xn : Yn
-T selectLessEqual(SIMDVer Ver = sseVer, T)(T a, T b, T x, T y)
+R selectLessEqual(SIMDVer Ver = sseVer, T, U, V, W, R = Unqual!V)(T a, U b, V x, W y) if(isOfType!(T, U) && isOfType!(V, W))
 {
     return select!Ver(maskLessEqual!Ver(a, b), x, y);
 }
