@@ -455,7 +455,7 @@ private struct MapResult(alias fun, Range)
         }
     }
 
-    static if (hasLength!R || isSomeString!R)
+    static if (hasLength!R)
     {
         @property auto length()
         {
