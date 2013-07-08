@@ -468,9 +468,9 @@ private struct MapResult(alias fun, Range)
     static if (!isInfinite!R && hasSlicing!R)
     {
         static if (is(typeof(_input[ulong.max .. ulong.max])))
-            private alias ulong opSlice_t;
+            private alias opSlice_t = ulong;
         else
-            private alias uint opSlice_t;
+            private alias opSlice_t = uint;
 
         auto opSlice(opSlice_t lowerBound, opSlice_t upperBound)
         {

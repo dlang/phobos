@@ -3821,11 +3821,7 @@ struct Cycle(Range)
         }
 
         private static struct DollarToken {}
-
-        DollarToken opDollar()
-        {
-            return DollarToken.init;
-        }
+        enum opDollar = DollarToken.init;
 
         auto opSlice(size_t i, size_t j)
         {
