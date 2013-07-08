@@ -5396,10 +5396,11 @@ template Unqual(T)
     }
     else // workaround
     {
-             static if (is(T U == shared(const U))) alias U Unqual;
+             static if (is(T U == shared(inout U))) alias U Unqual;
+        else static if (is(T U == shared(const U))) alias U Unqual;
+        else static if (is(T U ==        inout U )) alias U Unqual;
         else static if (is(T U ==        const U )) alias U Unqual;
         else static if (is(T U ==    immutable U )) alias U Unqual;
-        else static if (is(T U ==        inout U )) alias U Unqual;
         else static if (is(T U ==       shared U )) alias U Unqual;
         else                                        alias T Unqual;
     }
@@ -5407,12 +5408,13 @@ template Unqual(T)
 
 unittest
 {
-    static assert(is(Unqual!int == int));
-    static assert(is(Unqual!(const int) == int));
-    static assert(is(Unqual!(immutable int) == int));
-    static assert(is(Unqual!(inout int) == int));
-    static assert(is(Unqual!(shared int) == int));
-    static assert(is(Unqual!(shared(const int)) == int));
+    static assert(is(Unqual!(             int) == int));
+    static assert(is(Unqual!(       const int) == int));
+    static assert(is(Unqual!(       inout int) == int));
+    static assert(is(Unqual!(   immutable int) == int));
+    static assert(is(Unqual!(      shared int) == int));
+    static assert(is(Unqual!(shared const int) == int));
+    static assert(is(Unqual!(shared inout int) == int));
     alias immutable(int[]) ImmIntArr;
     static assert(is(Unqual!ImmIntArr == immutable(int)[]));
 }
@@ -5420,7 +5422,9 @@ unittest
 // [For internal use]
 private template ModifyTypePreservingSTC(alias Modifier, T)
 {
-         static if (is(T U == shared(const U))) alias shared(const Modifier!U) ModifyTypePreservingSTC;
+         static if (is(T U == shared(inout U))) alias shared(inout Modifier!U) ModifyTypePreservingSTC;
+    else static if (is(T U == shared(const U))) alias shared(const Modifier!U) ModifyTypePreservingSTC;
+    else static if (is(T U ==        inout U )) alias        inout(Modifier!U) ModifyTypePreservingSTC;
     else static if (is(T U ==        const U )) alias        const(Modifier!U) ModifyTypePreservingSTC;
     else static if (is(T U ==    immutable U )) alias    immutable(Modifier!U) ModifyTypePreservingSTC;
     else static if (is(T U ==       shared U )) alias       shared(Modifier!U) ModifyTypePreservingSTC;
@@ -5429,10 +5433,13 @@ private template ModifyTypePreservingSTC(alias Modifier, T)
 
 unittest
 {
-    static assert(is(ModifyTypePreservingSTC!(Intify, const real) == const int));
-    static assert(is(ModifyTypePreservingSTC!(Intify, immutable real) == immutable int));
-    static assert(is(ModifyTypePreservingSTC!(Intify, shared real) == shared int));
-    static assert(is(ModifyTypePreservingSTC!(Intify, shared(const real)) == shared(const int)));
+    static assert(is(ModifyTypePreservingSTC!(Intify,              real) ==              int));
+    static assert(is(ModifyTypePreservingSTC!(Intify,       shared real) ==       shared int));
+    static assert(is(ModifyTypePreservingSTC!(Intify,    immutable real) ==    immutable int));
+    static assert(is(ModifyTypePreservingSTC!(Intify,        const real) ==        const int));
+    static assert(is(ModifyTypePreservingSTC!(Intify,        inout real) ==        inout int));
+    static assert(is(ModifyTypePreservingSTC!(Intify, shared const real) == shared const int));
+    static assert(is(ModifyTypePreservingSTC!(Intify, shared inout real) == shared inout int));
 }
 version (unittest) private template Intify(T) { alias int Intify; }
 
