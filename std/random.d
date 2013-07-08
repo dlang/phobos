@@ -828,10 +828,15 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
         UIntType[size] seeds_ = [123456789, 362436069, 521288629, 88675123];
     else static if (bits == 160)
         UIntType[size] seeds_ = [123456789, 362436069, 521288629, 88675123, 5783321];
-    else
-    { // 192bits
+    else static if (bits == 192)
+    {
         UIntType[size] seeds_ = [123456789, 362436069, 521288629, 88675123, 5783321, 6615241];
         UIntType       value_;
+    }
+    else
+    {
+        static assert(false, "Xorshift supports only 32, 64, 96, 128, 160 or 192 bit versions. "
+                             ~ to!string(bits) ~ " is not supported.");
     }
 
 
