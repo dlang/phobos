@@ -1964,6 +1964,7 @@ Params:
 // Prints log messages for each call to overridden functions.
 string generateLogger(C, alias fun)() @property
 {
+    import std.traits;
     enum qname = C.stringof ~ "." ~ __traits(identifier, fun);
     string stmt;
 
@@ -1971,7 +1972,7 @@ string generateLogger(C, alias fun)() @property
     stmt ~= `Importer.writeln$(LPAREN)"Log: ` ~ qname ~ `(", args, ")"$(RPAREN);`;
     static if (!__traits(isAbstractFunction, fun))
     {
-        static if (is(typeof(return) == void))
+        static if (is(ReturnType!fun == void))
             stmt ~= q{ parent(args); };
         else
             stmt ~= q{
