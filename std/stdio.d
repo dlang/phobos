@@ -888,8 +888,9 @@ conversion error.
 
 Example:
 ---
-// Reads $(D stdin) into a buffer
-// Dumps the buffer to $(D stdout) when it gets a "q"
+// Read lines from $(D stdin) into a buffer
+// Ignore lines starting with '#'
+// Write the buffer to $(D stdout)
 
 void main()
 {
@@ -898,8 +899,8 @@ void main()
 
     while (stdin.readln(buf))
     {
-        if (buf[0] == 'q')
-            break;
+        if (buf[0] == '#')
+            continue;
 
         outBuf ~= buf.idup;
     }
@@ -911,7 +912,7 @@ void main()
 }
 ---
 
-This method is more efficient than the one in the previous example
+This method can be more efficient than the one in the previous example
 because $(D stdin.readln(buf)) reuses (if possible) memory allocated
 by $(D buf), whereas $(D line = stdin.readln()) makes a new memory allocation
 with every line. 
