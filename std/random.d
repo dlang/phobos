@@ -892,7 +892,7 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
         static if (bits == 32)
         {
             temp      = seeds_[0] ^ (seeds_[0] << a);
-            temp      = temp >> b;
+            temp      = temp ^ (temp >> b);
             seeds_[0] = temp ^ (temp << c);
         }
         else static if (bits == 64)
@@ -999,7 +999,7 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
  * num = rnd.front; // different across runs
  * -----
  */
-alias XorshiftEngine!(uint, 32,  13, 17, 5)  Xorshift32;
+alias XorshiftEngine!(uint, 32,  13, 17, 15)  Xorshift32;
 alias XorshiftEngine!(uint, 64,  10, 13, 10) Xorshift64;   /// ditto
 alias XorshiftEngine!(uint, 96,  10, 5,  26) Xorshift96;   /// ditto
 alias XorshiftEngine!(uint, 128, 11, 8,  19) Xorshift128;  /// ditto
@@ -1018,7 +1018,7 @@ unittest
 
     // Result from reference implementation.
     auto checking = [
-        [2463534242UL, 267649, 551450, 53765, 108832, 215250, 435468, 860211, 660133, 263375],
+        [2463534242UL, 901999875, 3371835698, 2675058524, 1053936272, 3811264849, 472493137, 3856898176, 2131710969, 2312157505],
         [362436069UL, 2113136921, 19051112, 3010520417, 951284840, 1213972223, 3173832558, 2611145638, 2515869689, 2245824891],
         [521288629UL, 1950277231, 185954712, 1582725458, 3580567609, 2303633688, 2394948066, 4108622809, 1116800180, 3357585673],
         [88675123UL, 3701687786, 458299110, 2500872618, 3633119408, 516391518, 2377269574, 2599949379, 717229868, 137866584],
