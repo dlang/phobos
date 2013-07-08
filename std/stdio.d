@@ -872,8 +872,8 @@ Read line from the file handle and write it to $(D buf[]), including
 terminating character.
 
 This can be faster than $(D line = File.readln()) because you can reuse
-the buffer for each call. Note that reusing the buffer means that the
-previous contents of it has to be copied if needed.
+the buffer for each call. Note that reusing the buffer means that you
+must copy the previous contents if you wish to retain them.
 
 Params:
 buf = buffer used to store the resulting line data. buf is
@@ -2008,8 +2008,8 @@ if (isSomeString!S)
  * Read line from $(D stdin) and write it to buf[], including terminating character.
  * 
  * This can be faster than $(D line = readln()) because you can reuse
- * the buffer for each call. Note that reusing the buffer means that the
- * previous contents of it has to be copied if needed.
+ * the buffer for each call. Note that reusing the buffer means that you
+ * must copy the previous contents if you wish to retain them.
  * 
  * Returns:
  *        $(D size_t) 0 for end of file, otherwise number of characters read
