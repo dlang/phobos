@@ -3107,13 +3107,16 @@ template EnumMembers(E)
 
     template EnumSpecificMembers(names...)
     {
-        static if (names.length > 0)
+        static if (names.length > 1)
         {
             alias TypeTuple!(
-                    WithIdentifier!(names[0])
-                        .Symbolize!(__traits(getMember, E, names[0])),
-                    EnumSpecificMembers!(names[1 .. $])
+                    EnumSpecificMembers!(names[0 .. $/2]),
+                    EnumSpecificMembers!(names[$/2 .. $])
                 ) EnumSpecificMembers;
+        }
+        else static if (names.length == 1)
+        {
+            alias WithIdentifier!(names[0]).Symbolize!(__traits(getMember, E, names[0])) EnumSpecificMembers;
         }
         else
         {
@@ -5045,10 +5048,13 @@ unittest
  */
 template isExpressionTuple(T ...)
 {
-    static if (T.length > 0)
+    static if (T.length >= 2)
         enum bool isExpressionTuple =
-            !is(T[0]) && __traits(compiles, { auto ex = T[0]; }) &&
-            isExpressionTuple!(T[1 .. $]);
+            isExpressionTuple!(T[0 .. $/2]) &&
+            isExpressionTuple!(T[$/2 .. $]);
+    else static if (T.length == 1)
+        enum bool isExpressionTuple =
+            !is(T[0]) && __traits(compiles, { auto ex = T[0]; });
     else
         enum bool isExpressionTuple = true; // default
 }
@@ -5078,8 +5084,10 @@ Detect whether tuple $(D T) is a type tuple.
  */
 template isTypeTuple(T...)
 {
-    static if (T.length > 0)
-        enum bool isTypeTuple = is(T[0]) && isTypeTuple!(T[1 .. $]);
+    static if (T.length >= 2)
+        enum bool isTypeTuple = isTypeTuple!(T[0 .. $/2]) && isTypeTuple!(T[$/2 .. $]);
+    else static if (T.length == 1)
+        enum bool isTypeTuple = is(T[0]);
     else
         enum bool isTypeTuple = true; // default
 }
@@ -5612,7 +5620,7 @@ template Largest(T...) if(T.length >= 1)
     }
     else
     {
-        alias Largest!(Largest!(T[0], T[1]), T[2..$]) Largest;
+        alias Largest!(Largest!(T[0 .. $/2]), Largest!(T[$/2 .. $])) Largest;
     }
 }
 
