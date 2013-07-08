@@ -365,6 +365,15 @@ public:
         return !isZero();
     }
 
+    // Hack to make BigInt's typeinfo.compare work properly.
+    // Note that this must appear before the other opCmp overloads, otherwise
+    // DMD won't find it.
+    int opCmp(ref const BigInt y) const
+    {
+        // Simply redirect to the "real" opCmp implementation.
+        return this.opCmp!BigInt(y);
+    }
+
     ///
     int opCmp(T)(T y) pure if (isIntegral!T)
     {
