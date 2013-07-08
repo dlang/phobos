@@ -391,14 +391,19 @@ template map(fun...) if (fun.length >= 1)
             alias unaryFun!fun _fun;
         }
 
-        return MapResult!(_fun, Range)(r);
+        static if (isInputRange!Range)
+            return MapResult!(_fun, Range)(r);
+        else static if (is(typeof({Unqual!Range UR = r;})))
+            return MapResult!(_fun, Unqual!Range)(r);
+        else
+            static assert(0, format("Cannot extract an %s input range from a %s", (Unqual!Range).stringof, Range.stringof));
     }
 }
 
 private struct MapResult(alias fun, Range)
 {
-    alias Unqual!Range R;
-    //alias typeof(fun(.ElementType!R.init)) ElementType;
+    alias R = Range;
+    static assert(isInputRange!R, "Phobos Error");
     R _input;
 
     static if (isBidirectionalRange!R)
@@ -611,6 +616,30 @@ unittest
     const floatEnd = 1.0;
     const floatStep = 0.02;
     static assert(__traits(compiles, map!(i => i)(iota(floatBegin, floatEnd, floatStep))));
+}
+
+unittest
+{
+    auto arr  = iota(0, 4);
+    auto iarr = cast(immutable)iota(0, 4);
+    auto m1 = map!"a * a"(arr);
+    auto m2 = map!"a * a"(iarr);
+    static assert(is(typeof(m1) == typeof(m2)));
+
+    static struct InfRefIota
+    {
+        int* p;
+        enum empty = false;
+        const @property int front(){return *p;}
+        void popFront(){++*p;}
+    }
+    static assert(isInputRange!InfRefIota);
+    auto i  = 0;
+    auto ii = cast(immutable) 0;
+    auto ir  = InfRefIota(&i);
+    auto iir = immutable(InfRefIota)(&ii);
+    map!"a"(ir);
+    static assert(!__traits(compiles, map!"a"(iir))); //Error: static assert  "Cannot extract an InfRefIota input range from a immutable(InfRefIota)"
 }
 
 /**
