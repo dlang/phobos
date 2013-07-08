@@ -1859,21 +1859,12 @@ private struct FilterBidiResult(alias pred, Range)
 // move
 /**
 Moves $(D source) into $(D target) via a destructive
-copy. Specifically: $(UL $(LI If $(D hasAliasing!T) is true (see
-$(XREF traits, hasAliasing)), then the representation of $(D source)
-is bitwise copied into $(D target) and then $(D source = T.init) is
-evaluated.)  $(LI Otherwise, $(D target = source) is evaluated.)) See
-also $(XREF exception, pointsTo).
-
-Preconditions:
-$(D &source == &target || !pointsTo(source, source))
+copy.
 */
 void move(T)(ref T source, ref T target)
 {
     import core.stdc.string : memcpy;
-    import std.exception : pointsTo;
 
-    assert(!pointsTo(source, source));
     static if (is(T == struct))
     {
         if (&source == &target) return;
