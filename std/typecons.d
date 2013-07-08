@@ -2871,7 +2871,7 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
             else
             {
                 enum hasRequireMethods =
-                    findCovariantFunction!(TargetMembers[i], SourceMembers) != -1 &&
+                    findCovariantFunction!(TargetMembers[i], Source, SourceMembers) != -1 &&
                     hasRequireMethods!(i + 1);
             }
         }
@@ -3161,6 +3161,23 @@ unittest
     Interface i = new Pluggable().wrap!Interface;
     assert(i.foo() == 1);
 }
+unittest
+{
+    // Enhancement 10538
+    interface Interface
+    {
+        int foo();
+        int bar(int);
+    }
+    class Pluggable
+    {
+        int opDispatch(string name, A...)(A args) { return 100; }
+    }
+
+    Interface i = wrap!Interface(new Pluggable());
+    assert(i.foo() == 100);
+    assert(i.bar(10) == 100);
+}
 
 // Make a tuple of non-static function symbols
 private template GetOverloadedMethods(T)
@@ -3195,7 +3212,7 @@ private template GetOverloadedMethods(T)
     alias GetOverloadedMethods = follows!();
 }
 // find a function from Fs that has same identifier and covariant type with f
-private template findCovariantFunction(alias finfo, Fs...)
+private template findCovariantFunction(alias finfo, Source, Fs...)
 {
     template check(size_t i = 0)
     {
@@ -3209,7 +3226,20 @@ private template findCovariantFunction(alias finfo, Fs...)
               ? i : check!(i + 1);
         }
     }
-    enum ptrdiff_t findCovariantFunction = check!();
+    enum x = check!();
+    static if (x == -1 && is(typeof(Source.opDispatch)))
+    {
+        alias Params = ParameterTypeTuple!(finfo.type);
+        enum ptrdiff_t findCovariantFunction =
+            is(typeof((             Source).init.opDispatch!(finfo.name)(Params.init))) ||
+            is(typeof((       const Source).init.opDispatch!(finfo.name)(Params.init))) ||
+            is(typeof((   immutable Source).init.opDispatch!(finfo.name)(Params.init))) ||
+            is(typeof((      shared Source).init.opDispatch!(finfo.name)(Params.init))) ||
+            is(typeof((shared const Source).init.opDispatch!(finfo.name)(Params.init)))
+          ? ptrdiff_t.max : -1;
+    }
+    else
+        enum ptrdiff_t findCovariantFunction = x;
 }
 
 private enum TypeModifier
@@ -3273,10 +3303,21 @@ unittest
     @property int value() { return 0; }
     void opEquals() {}
     int nomatch() { return 0; }
-    static assert(findCovariantFunction!(UnittestFuncInfo!draw, methods) == 0);
-    static assert(findCovariantFunction!(UnittestFuncInfo!value, methods) == 1);
-    static assert(findCovariantFunction!(UnittestFuncInfo!opEquals, methods) == -1);
-    static assert(findCovariantFunction!(UnittestFuncInfo!nomatch, methods) == -1);
+    static assert(findCovariantFunction!(UnittestFuncInfo!draw,     A, methods) == 0);
+    static assert(findCovariantFunction!(UnittestFuncInfo!value,    A, methods) == 1);
+    static assert(findCovariantFunction!(UnittestFuncInfo!opEquals, A, methods) == -1);
+    static assert(findCovariantFunction!(UnittestFuncInfo!nomatch,  A, methods) == -1);
+
+    // considering opDispatch
+    class B
+    {
+        void opDispatch(string name, A...)(A) {}
+    }
+    alias methodsB = GetOverloadedMethods!B;
+    static assert(findCovariantFunction!(UnittestFuncInfo!draw,     B, methodsB) == ptrdiff_t.max);
+    static assert(findCovariantFunction!(UnittestFuncInfo!value,    B, methodsB) == ptrdiff_t.max);
+    static assert(findCovariantFunction!(UnittestFuncInfo!opEquals, B, methodsB) == ptrdiff_t.max);
+    static assert(findCovariantFunction!(UnittestFuncInfo!nomatch,  B, methodsB) == ptrdiff_t.max);
 }
 
 private template DerivedFunctionType(T...)
