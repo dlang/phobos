@@ -845,10 +845,9 @@ public:
     }
 
     // Implement toHash so that BigUint works properly as an AA key.
-    size_t toHash() const pure @trusted nothrow
+    size_t toHash() const @trusted nothrow
     {
-        import rt.util.hash;
-        return hashOf(data.ptr, data.length * data[0].sizeof);
+	return typeid(data).getHash(&data);
     }
 
 } // end BigUint

@@ -515,7 +515,7 @@ private:
     }
 
     // Implement toHash so that BigInt works properly as an AA key.
-    size_t toHash() const pure @trusted nothrow
+    size_t toHash() const @trusted nothrow
     {
         return data.toHash() + sign;
     }
