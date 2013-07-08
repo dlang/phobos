@@ -191,7 +191,7 @@ public:
     }
 
     ///
-    int opCmp(Tdummy = void)(BigUint y) pure
+    int opCmp(Tdummy = void)(const BigUint y) pure const
     {
         if (data.length != y.data.length)
             return (data.length > y.data.length) ?  1 : -1;
@@ -842,6 +842,13 @@ public:
         }
         result.data = resultBuffer[0 .. result_start + r1.length];
         return result;
+    }
+
+    // Implement toHash so that BigUint works properly as an AA key.
+    size_t toHash() const pure @trusted nothrow
+    {
+        import rt.util.hash;
+        return hashOf(data.ptr, data.length * data[0].sizeof);
     }
 
 } // end BigUint
@@ -2029,7 +2036,7 @@ private:
 
 // Returns the highest value of i for which left[i]!=right[i],
 // or 0 if left[] == right[]
-size_t highestDifferentDigit(BigDigit [] left, BigDigit [] right) pure
+size_t highestDifferentDigit(const BigDigit [] left, const BigDigit [] right) pure
 {
     assert(left.length == right.length);
     for (ptrdiff_t i = left.length - 1; i>0; --i)

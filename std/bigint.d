@@ -374,7 +374,7 @@ public:
         return sign? -cmp: cmp;
     }
     ///
-    int opCmp(T:BigInt)(T y) pure
+    int opCmp(T:BigInt)(const T y) pure const
     {
         if (sign!=y.sign)
             return sign ? -1 : 1;
@@ -503,6 +503,12 @@ private:
     {
         if (isZero())
             throw new Error("BigInt division by zero");
+    }
+
+    // Implement toHash so that BigInt works properly as an AA key.
+    size_t toHash() const pure @trusted nothrow
+    {
+        return data.toHash() + sign;
     }
 }
 
@@ -790,4 +796,28 @@ unittest // 6850
     }
 
     assert(pureTest() == 1337);
+}
+
+unittest // 8435 & 10118
+{
+    auto i = BigInt(100);
+    auto j = BigInt(100);
+
+    // Two separate BigInt instances representing same value should have same
+    // hash.
+    assert(typeid(i).getHash(&i) == typeid(j).getHash(&j));
+    assert(typeid(i).compare(&i, &j) == 0);
+
+    // BigInt AA keys should behave consistently.
+    int[BigInt] aa;
+    aa[BigInt(123)] = 123;
+    assert(BigInt(123) in aa);
+
+    aa[BigInt(123)] = 321;
+    assert(aa[BigInt(123)] == 321);
+
+    auto keys = aa.byKey();
+    assert(keys.front == BigInt(123));
+    keys.popFront();
+    assert(keys.empty);
 }
