@@ -888,13 +888,13 @@ conversion error.
 
 Example:
 ---
-// Read lines from $(D stdin) into a buffer
+// Read lines from $(D stdin) into a string
 // Ignore lines starting with '#'
-// Write the buffer to $(D stdout)
+// Write the string to $(D stdout)
 
 void main()
 {
-    string[] outBuf;
+    string output;
     char[] buf;
 
     while (stdin.readln(buf))
@@ -902,20 +902,17 @@ void main()
         if (buf[0] == '#')
             continue;
 
-        outBuf ~= buf.idup;
+        output ~= buf;
     }
 
-    foreach (line; outBuf)
-    {
-        write(line);
-    }
+    write(output);
 }
 ---
 
 This method can be more efficient than the one in the previous example
 because $(D stdin.readln(buf)) reuses (if possible) memory allocated
-by $(D buf), whereas $(D line = stdin.readln()) makes a new memory allocation
-with every line. 
+for $(D buf), whereas $(D line = stdin.readln()) makes a new memory allocation
+for every line. 
 */
     size_t readln(C)(ref C[] buf, dchar terminator = '\n')
     if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum))
