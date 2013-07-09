@@ -925,8 +925,8 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
             seeds_[3] = seeds_[4];
             seeds_[4] = seeds_[4] ^ (seeds_[4] >> c) ^ temp ^ (temp >> b);
         }
-        else
-        { // 192bits
+        else static if (bits == 192)
+        {
             temp      = seeds_[0] ^ (seeds_[0] >> a);
             seeds_[0] = seeds_[1];
             seeds_[1] = seeds_[2];
@@ -934,6 +934,11 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
             seeds_[3] = seeds_[4];
             seeds_[4] = seeds_[4] ^ (seeds_[4] << c) ^ temp ^ (temp << b);
             value_    = seeds_[4] + (seeds_[5] += 362437);
+        }
+        else
+        {
+            static assert(false, "Xorshift RNGs are available in 32, 64, 96, 128, 160 or 192 bit versions. "
+                                 ~ to!string(bits) ~ " is not supported.");
         }
     }
 
