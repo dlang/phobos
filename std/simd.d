@@ -595,7 +595,7 @@ void storeUnaligned(SIMDVer Ver = sseVer, T, S)(T v, S* pV) @trusted if(isVector
 // Shuffle, swizzle, permutation
 
 // broadcast X to all elements
-T getX(SIMDVer Ver = sseVer, T)(T v) if(isVector!T)
+T getX(SIMDVer Ver = sseVer, T)(inout T v) if(isVector!T)
 {
     version(X86_OR_X64)
     {
@@ -613,7 +613,7 @@ T getX(SIMDVer Ver = sseVer, T)(T v) if(isVector!T)
 }
 
 // broadcast Y to all elements
-T getY(SIMDVer Ver = sseVer, T)(T v) if(isVector!T)
+T getY(SIMDVer Ver = sseVer, T)(inout T v) if(isVector!T)
 {
     version(X86_OR_X64)
     {
@@ -634,7 +634,7 @@ T getY(SIMDVer Ver = sseVer, T)(T v) if(isVector!T)
 }
 
 // broadcast Z to all elements
-T getZ(SIMDVer Ver = sseVer, T)(T v) if(isVector!T)
+T getZ(SIMDVer Ver = sseVer, T)(inout T v) if(isVector!T)
 {
     version(X86_OR_X64)
     {
@@ -654,7 +654,7 @@ T getZ(SIMDVer Ver = sseVer, T)(T v) if(isVector!T)
 }
 
 // broadcast W to all elements
-T getW(SIMDVer Ver = sseVer, T)(T v) if(isVector!T)
+T getW(SIMDVer Ver = sseVer, T)(inout T v) if(isVector!T)
 {
     version(X86_OR_X64)
     {
@@ -674,7 +674,7 @@ T getW(SIMDVer Ver = sseVer, T)(T v) if(isVector!T)
 }
 
 // set the X element
-R setX(SIMDVer Ver = sseVer, T, U, R = Unqual!T)(T v, U x) if(isVector!T && isOfType!(T, U))
+T setX(SIMDVer Ver = sseVer, T)(inout T v, inout T x) if(isVector!T)
 {
     version(X86_OR_X64)
     {
@@ -731,7 +731,7 @@ R setX(SIMDVer Ver = sseVer, T, U, R = Unqual!T)(T v, U x) if(isVector!T && isOf
 }
 
 // set the Y element
-R setY(SIMDVer Ver = sseVer, T, U, R = Unqual!T)(T v, U y) if(isVector!T && isOfType!(T, U))
+T setY(SIMDVer Ver = sseVer, T)(inout T v, inout T y) if(isVector!T)
 {
     version(X86_OR_X64)
     {
@@ -789,7 +789,7 @@ R setY(SIMDVer Ver = sseVer, T, U, R = Unqual!T)(T v, U y) if(isVector!T && isOf
 }
 
 // set the Z element
-R setZ(SIMDVer Ver = sseVer, T, U, R = Unqual!T)(T v, U z) if(isVector!T && isOfType!(T, U))
+T setZ(SIMDVer Ver = sseVer, T)(inout T v, inout T z) if(isVector!T)
 {
     version(X86_OR_X64)
     {
@@ -843,7 +843,7 @@ R setZ(SIMDVer Ver = sseVer, T, U, R = Unqual!T)(T v, U z) if(isVector!T && isOf
 }
 
 // set the W element
-R setW(SIMDVer Ver = sseVer, T, U, R = Unqual!T)(T v, U w) if(isVector!T && isOfType!(T, U))
+T setW(SIMDVer Ver = sseVer, T)(inout T v, inout T w) if(isVector!T)
 {
     version(X86_OR_X64)
     {
@@ -911,7 +911,7 @@ private template elementNames(int Elements)
 }
 
 // swizzle a vector: r = swizzle!"ZZWX"(v); // r = v.zzwx
-T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
+T swizzle(string swiz, SIMDVer Ver = sseVer, T)(inout T v)
 {
 
     // parse the string into elements
@@ -1225,7 +1225,7 @@ T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
 }
 
 // assign bytes to the target according to a permute control register
-T permute(SIMDVer Ver = sseVer, T)(T v, ubyte16 control)
+T permute(SIMDVer Ver = sseVer, T)(inout T v, ubyte16 control)
 {
     version(X86_OR_X64)
     {
@@ -1255,7 +1255,7 @@ T permute(SIMDVer Ver = sseVer, T)(T v, ubyte16 control)
 }
 
 // interleave low elements from 2 vectors
-T interleaveLow(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T interleaveLow(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     // this really requires multiple return values >_<
 
@@ -1313,7 +1313,7 @@ T interleaveLow(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 }
 
 // interleave high elements from 2 vectors
-T interleaveHigh(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T interleaveHigh(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     // this really requires multiple return values >_<
 
@@ -1390,7 +1390,7 @@ short8,short8 unpackBytes(byte16)
 }
 */
 
-PromotionOf!T unpackLow(SIMDVer Ver = sseVer, T)(T v)
+PromotionOf!T unpackLow(SIMDVer Ver = sseVer, T)(inout T v)
 {
     version(X86_OR_X64)
     {
@@ -1438,7 +1438,7 @@ PromotionOf!T unpackLow(SIMDVer Ver = sseVer, T)(T v)
     }
 }
 
-PromotionOf!T unpackHigh(SIMDVer Ver = sseVer, T)(T v)
+PromotionOf!T unpackHigh(SIMDVer Ver = sseVer, T)(inout T v)
 {
     version(X86_OR_X64)
     {
@@ -1488,7 +1488,7 @@ PromotionOf!T unpackHigh(SIMDVer Ver = sseVer, T)(T v)
     }
 }
 
-DemotionOf!T pack(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+DemotionOf!T pack(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     version(X86_OR_X64)
     {
@@ -1544,7 +1544,7 @@ DemotionOf!T pack(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
     }
 }
 
-DemotionOf!T packSaturate(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+DemotionOf!T packSaturate(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     version(X86_OR_X64)
     {
@@ -1588,7 +1588,7 @@ DemotionOf!T packSaturate(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T
 ///////////////////////////////////////////////////////////////////////////////
 // Type conversion
 
-int4 toInt(SIMDVer Ver = sseVer, T)(T v)
+int4 toInt(SIMDVer Ver = sseVer, T)(inout T v)
 {
     static if(isOfType!(T, int4))
         return v;
@@ -1626,7 +1626,7 @@ int4 toInt(SIMDVer Ver = sseVer, T)(T v)
     }
 }
 
-float4 toFloat(SIMDVer Ver = sseVer, T)(T v)
+float4 toFloat(SIMDVer Ver = sseVer, T)(inout T v)
 {
     static if(isOfType!(T, float4))
         return v;
@@ -1664,7 +1664,7 @@ float4 toFloat(SIMDVer Ver = sseVer, T)(T v)
     }
 }
 
-double2 toDouble(SIMDVer Ver = sseVer, T)(T v)
+double2 toDouble(SIMDVer Ver = sseVer, T)(inout T v)
 {
     static if(isOfType!(T, double2))
         return v;
@@ -1707,7 +1707,7 @@ double2 toDouble(SIMDVer Ver = sseVer, T)(T v)
 
 // unary absolute
 
-T abs(SIMDVer Ver = sseVer, T)(T v)
+T abs(SIMDVer Ver = sseVer, T)(inout T v)
 {
     /******************************
     * integer abs with no branches
@@ -1824,7 +1824,7 @@ T abs(SIMDVer Ver = sseVer, T)(T v)
 }
 
 // unary negate
-T neg(SIMDVer Ver = sseVer, T)(T v)
+T neg(SIMDVer Ver = sseVer, T)(inout T v)
 {
     static assert(!isUnsigned!(T), "Can not negate unsigned value");
 
@@ -1852,7 +1852,7 @@ T neg(SIMDVer Ver = sseVer, T)(T v)
 }
 
 // binary add
-T add(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T add(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     version(X86_OR_X64)
     {
@@ -1880,7 +1880,7 @@ T add(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 }
 
 // binary add and saturate
-T addSaturate(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T addSaturate(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     version(X86_OR_X64)
     {
@@ -1922,7 +1922,7 @@ T addSaturate(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 }
 
 // binary subtract
-T sub(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T sub(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     version(X86_OR_X64)
     {
@@ -1950,7 +1950,7 @@ T sub(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 }
 
 // binary subtract and saturate
-T subSaturate(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T subSaturate(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     version(X86_OR_X64)
     {
@@ -1992,7 +1992,7 @@ T subSaturate(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 }
 
 // binary multiply
-T mul(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T mul(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     version(X86_OR_X64)
     {
@@ -2020,7 +2020,7 @@ T mul(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 }
 
 // multiply and add: v1*v2 + v3
-T madd(SIMDVer Ver = sseVer, T, U, V)(T v1, U v2, V v3) if(isOfType!(T, U) && isOfType!(T, V))
+T madd(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2, inout T v3)
 {
     version(X86_OR_X64)
     {
@@ -2073,7 +2073,7 @@ T madd(SIMDVer Ver = sseVer, T, U, V)(T v1, U v2, V v3) if(isOfType!(T, U) && is
 }
 
 // multiply and subtract: v1*v2 - v3
-T msub(SIMDVer Ver = sseVer, T, U, V)(T v1, U v2, V v3) if(isOfType!(T, U) && isOfType!(T, V))
+T msub(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2, inout T v3)
 {
     version(X86_OR_X64)
     {
@@ -2110,7 +2110,7 @@ T msub(SIMDVer Ver = sseVer, T, U, V)(T v1, U v2, V v3) if(isOfType!(T, U) && is
 }
 
 // negate multiply and add: -(v1*v2) + v3
-T nmadd(SIMDVer Ver = sseVer, T, U, V)(T v1, U v2, V v3) if(isOfType!(T, U) && isOfType!(T, V))
+T nmadd(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2, inout T v3)
 {
     version(X86_OR_X64)
     {
@@ -2166,7 +2166,7 @@ T nmadd(SIMDVer Ver = sseVer, T, U, V)(T v1, U v2, V v3) if(isOfType!(T, U) && i
 }
 
 // negate multiply and subtract: -(v1*v2) - v3
-T nmsub(SIMDVer Ver = sseVer, T, U, V)(T v1, U v2, V v3) if(isOfType!(T, U) && isOfType!(T, V))
+T nmsub(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2, inout T v3)
 {
     version(X86_OR_X64)
     {
@@ -2203,7 +2203,7 @@ T nmsub(SIMDVer Ver = sseVer, T, U, V)(T v1, U v2, V v3) if(isOfType!(T, U) && i
 }
 
 // min
-T min(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T min(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     version(X86_OR_X64)
     {
@@ -2316,7 +2316,7 @@ T min(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 }
 
 // max
-T max(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T max(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     version(X86_OR_X64)
     {
@@ -2429,13 +2429,13 @@ T max(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 }
 
 // clamp values such that a <= v <= b
-T clamp(SIMDVer Ver = sseVer, T, U, V)(T a, U v, V b) if(isOfType!(T, U) && isOfType!(T, V))
+T clamp(SIMDVer Ver = sseVer, T)(inout T a, inout T v, inout T b)
 {
     return max!Ver(a, min!Ver(v, b));
 }
 
 // lerp
-T lerp(SIMDVer Ver = sseVer, T, U, V)(T a, U b, V t) if(isOfType!(T, U) && isOfType!(T, V))
+T lerp(SIMDVer Ver = sseVer, T)(inout T a, inout T b, inout T t)
 {
     return madd!Ver(sub!Ver(b, a), t, a);
 }
@@ -2445,7 +2445,7 @@ T lerp(SIMDVer Ver = sseVer, T, U, V)(T a, U b, V t) if(isOfType!(T, U) && isOfT
 // Floating point operations
 
 // round to the next lower integer value
-T floor(SIMDVer Ver = sseVer, T)(T v)
+T floor(SIMDVer Ver = sseVer, T)(inout T v)
 {
     version(X86_OR_X64)
     {
@@ -2501,7 +2501,7 @@ T floor(SIMDVer Ver = sseVer, T)(T v)
 }
 
 // round to the next higher integer value
-T ceil(SIMDVer Ver = sseVer, T)(T v)
+T ceil(SIMDVer Ver = sseVer, T)(inout T v)
 {
     version(X86_OR_X64)
     {
@@ -2540,7 +2540,7 @@ T ceil(SIMDVer Ver = sseVer, T)(T v)
 }
 
 // round to the nearest integer value
-T round(SIMDVer Ver = sseVer, T)(T v)
+T round(SIMDVer Ver = sseVer, T)(inout T v)
 {
     version(X86_OR_X64)
     {
@@ -2579,7 +2579,7 @@ T round(SIMDVer Ver = sseVer, T)(T v)
 }
 
 // truncate fraction (round towards zero)
-T trunc(SIMDVer Ver = sseVer, T)(T v)
+T trunc(SIMDVer Ver = sseVer, T)(inout T v)
 {
     version(X86_OR_X64)
     {
@@ -2642,7 +2642,7 @@ T trunc(SIMDVer Ver = sseVer, T)(T v)
 // Precise mathematical operations
 
 // divide
-T div(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T div(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     version(X86_OR_X64)
     {
@@ -2659,7 +2659,7 @@ T div(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 }
 
 // reciprocal
-T rcp(SIMDVer Ver = sseVer, T)(T v)
+T rcp(SIMDVer Ver = sseVer, T)(inout T v)
 {
     version(X86_OR_X64)
     {
@@ -2700,7 +2700,7 @@ T rcp(SIMDVer Ver = sseVer, T)(T v)
 }
 
 // square root
-T sqrt(SIMDVer Ver = sseVer, T)(T v)
+T sqrt(SIMDVer Ver = sseVer, T)(inout T v)
 {
     version(X86_OR_X64)
     {
@@ -2738,7 +2738,7 @@ T sqrt(SIMDVer Ver = sseVer, T)(T v)
 }
 
 // reciprocal square root
-T rsqrt(SIMDVer Ver = sseVer, T)(T v)
+T rsqrt(SIMDVer Ver = sseVer, T)(inout T v)
 {
     version(X86_OR_X64)
     {
@@ -2780,7 +2780,7 @@ T rsqrt(SIMDVer Ver = sseVer, T)(T v)
 // Vector maths operations
 
 // 2d dot product
-T dot2(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T dot2(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     version(X86_OR_X64)
     {
@@ -2868,7 +2868,7 @@ T dot2(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 }
 
 // 3d dot product
-T dot3(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T dot3(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     version(X86_OR_X64)
     {
@@ -2928,7 +2928,7 @@ T dot3(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 }
 
 // 4d dot product
-T dot4(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T dot4(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     version(X86_OR_X64)
     {
@@ -2988,13 +2988,13 @@ T dot4(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 }
 
 // homogeneous dot product: v1.xyz1 dot v2.xyzw
-T dotH(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T dotH(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     return null;
 }
 
 // 3d cross product
-T cross3(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T cross3(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     T left = mul!Ver(swizzle!("YZXW", Ver)(v1), swizzle!("ZXYW", Ver)(v2));
     T right = mul!Ver(swizzle!("ZXYW", Ver)(v1), swizzle!("YZXW", Ver)(v2));
@@ -3002,37 +3002,37 @@ T cross3(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 }
 
 // 3d magnitude
-T magnitude3(SIMDVer Ver = sseVer, T)(T v)
+T magnitude3(SIMDVer Ver = sseVer, T)(inout T v)
 {
     return sqrt!Ver(magSq3!Ver(v));
 }
 
 // 4d magnitude
-T magnitude4(SIMDVer Ver = sseVer, T)(T v)
+T magnitude4(SIMDVer Ver = sseVer, T)(inout T v)
 {
     return sqrt!Ver(magSq4!Ver(v));
 }
 
 // 3d normalise
-T normalise3(SIMDVer Ver = sseVer, T)(T v)
+T normalise3(SIMDVer Ver = sseVer, T)(inout T v)
 {
     return v * rsqrt!Ver(magSq3!Ver(v));
 }
 
 // 4d normalise
-T normalise4(SIMDVer Ver = sseVer, T)(T v)
+T normalise4(SIMDVer Ver = sseVer, T)(inout T v)
 {
     return v * rsqrt!Ver(magSq4!Ver(v));
 }
 
 // 3d magnitude squared
-T magSq3(SIMDVer Ver = sseVer, T)(T v)
+T magSq3(SIMDVer Ver = sseVer, T)(inout T v)
 {
     return dot3!Ver(v, v);
 }
 
 // 4d magnitude squared
-T magSq4(SIMDVer Ver = sseVer, T)(T v)
+T magSq4(SIMDVer Ver = sseVer, T)(inout T v)
 {
     return dot4!Ver(v, v);
 }
@@ -3042,7 +3042,7 @@ T magSq4(SIMDVer Ver = sseVer, T)(T v)
 // Fast estimates
 
 // divide estimate
-T divEst(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T divEst(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     version(ARM)
     {
@@ -3055,7 +3055,7 @@ T divEst(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 }
 
 // reciprocal estimate
-T rcpEst(SIMDVer Ver = sseVer, T)(T v)
+T rcpEst(SIMDVer Ver = sseVer, T)(inout T v)
 {
     version(ARM)
     {
@@ -3071,7 +3071,7 @@ T rcpEst(SIMDVer Ver = sseVer, T)(T v)
 }
 
 // square root estimate
-T sqrtEst(SIMDVer Ver = sseVer, T)(T v)
+T sqrtEst(SIMDVer Ver = sseVer, T)(inout T v)
 {
     version(ARM)
     {
@@ -3084,7 +3084,7 @@ T sqrtEst(SIMDVer Ver = sseVer, T)(T v)
 }
 
 // reciprocal square root estimate
-T rsqrtEst(SIMDVer Ver = sseVer, T)(T v)
+T rsqrtEst(SIMDVer Ver = sseVer, T)(inout T v)
 {
     version(ARM)
     {
@@ -3100,25 +3100,25 @@ T rsqrtEst(SIMDVer Ver = sseVer, T)(T v)
 }
 
 // 3d magnitude estimate
-T magEst3(SIMDVer Ver = sseVer, T)(T v)
+T magEst3(SIMDVer Ver = sseVer, T)(inout T v)
 {
     return sqrtEst!Ver(magSq3!Ver(v));
 }
 
 // 4d magnitude estimate
-T magEst4(SIMDVer Ver = sseVer, T)(T v)
+T magEst4(SIMDVer Ver = sseVer, T)(inout T v)
 {
     return sqrtEst!Ver(magSq4!Ver(v));
 }
 
 // 3d normalise estimate
-T normEst3(SIMDVer Ver = sseVer, T)(T v)
+T normEst3(SIMDVer Ver = sseVer, T)(inout T v)
 {
     return v * rsqrtEst!Ver(magSq3!Ver(v));
 }
 
 // 4d normalise estimate
-T normEst4(SIMDVer Ver = sseVer, T)(T v)
+T normEst4(SIMDVer Ver = sseVer, T)(inout T v)
 {
     return v * rsqrtEst!Ver(magSq4!Ver(v));
 }
@@ -3128,7 +3128,7 @@ T normEst4(SIMDVer Ver = sseVer, T)(T v)
 // Bitwise operations
 
 // unary complement: ~v
-T comp(SIMDVer Ver = sseVer, T)(T v)
+T comp(SIMDVer Ver = sseVer, T)(inout T v)
 {
     version(X86_OR_X64)
     {
@@ -3145,7 +3145,7 @@ T comp(SIMDVer Ver = sseVer, T)(T v)
 }
 
 // bitwise or: v1 | v2
-T or(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T or(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     version(X86_OR_X64)
     {
@@ -3183,13 +3183,13 @@ T or(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 }
 
 // bitwise nor: ~(v1 | v2)
-T nor(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T nor(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     return comp!Ver(or!Ver(v1, v2));
 }
 
 // bitwise and: v1 & v2
-T and(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T and(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     version(X86_OR_X64)
     {
@@ -3227,13 +3227,13 @@ T and(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 }
 
 // bitwise nand: ~(v1 & v2)
-T nand(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T nand(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     return comp!Ver(and!Ver(v1, v2));
 }
 
 // bitwise and with not: v1 & ~v2
-T andNot(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T andNot(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     version(X86_OR_X64)
     {
@@ -3271,7 +3271,7 @@ T andNot(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 }
 
 // bitwise xor: v1 ^ v2
-T xor(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T xor(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     version(X86_OR_X64)
     {
@@ -3313,7 +3313,7 @@ T xor(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 // Bit shifts and rotates
 
 // binary shift left
-T shiftLeft(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T shiftLeft(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     version(X86_OR_X64)
     {
@@ -3351,7 +3351,7 @@ T shiftLeft(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 }
 
 // binary shift left by immediate
-T shiftLeftImmediate(size_t bits, SIMDVer Ver = sseVer, T)(T v)
+T shiftLeftImmediate(size_t bits, SIMDVer Ver = sseVer, T)(inout T v)
 {
     static if(bits == 0) // shift by 0 is a no-op
         return v;
@@ -3394,7 +3394,7 @@ T shiftLeftImmediate(size_t bits, SIMDVer Ver = sseVer, T)(T v)
 }
 
 // binary shift right (signed types perform arithmatic shift right)
-T shiftRight(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T shiftRight(SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     version(X86_OR_X64)
     {
@@ -3440,7 +3440,7 @@ T shiftRight(SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
 }
 
 // binary shift right by immediate (signed types perform arithmatic shift right)
-T shiftRightImmediate(size_t bits, SIMDVer Ver = sseVer, T)(T v)
+T shiftRightImmediate(size_t bits, SIMDVer Ver = sseVer, T)(inout T v)
 {
     static if(bits == 0) // shift by 0 is a no-op
         return v;
@@ -3491,7 +3491,7 @@ T shiftRightImmediate(size_t bits, SIMDVer Ver = sseVer, T)(T v)
 }
 
 // shift bytes left by immediate ('left' as they appear in memory)
-T shiftBytesLeftImmediate(size_t bytes, SIMDVer Ver = sseVer, T)(T v)
+T shiftBytesLeftImmediate(size_t bytes, SIMDVer Ver = sseVer, T)(inout T v)
 {
     static assert(bytes >= 0 && bytes < 16, "Invalid shift amount");
     static if(bytes == 0) // shift by 0 is a no-op
@@ -3523,7 +3523,7 @@ T shiftBytesLeftImmediate(size_t bytes, SIMDVer Ver = sseVer, T)(T v)
 }
 
 // shift bytes right by immediate ('right' as they appear in memory)
-T shiftBytesRightImmediate(size_t bytes, SIMDVer Ver = sseVer, T)(T v)
+T shiftBytesRightImmediate(size_t bytes, SIMDVer Ver = sseVer, T)(inout T v)
 {
     static assert(bytes >= 0 && bytes < 16, "Invalid shift amount");
     static if(bytes == 0) // shift by 0 is a no-op
@@ -3555,7 +3555,7 @@ T shiftBytesRightImmediate(size_t bytes, SIMDVer Ver = sseVer, T)(T v)
 }
 
 // shift bytes left by immediate
-T rotateBytesLeftImmediate(size_t bytes, SIMDVer Ver = sseVer, T)(T v)
+T rotateBytesLeftImmediate(size_t bytes, SIMDVer Ver = sseVer, T)(inout T v)
 {
     enum b = bytes & 15;
 
@@ -3577,7 +3577,7 @@ T rotateBytesLeftImmediate(size_t bytes, SIMDVer Ver = sseVer, T)(T v)
 }
 
 // shift bytes right by immediate
-T rotateBytesRightImmediate(size_t bytes, SIMDVer Ver = sseVer, T)(T v)
+T rotateBytesRightImmediate(size_t bytes, SIMDVer Ver = sseVer, T)(inout T v)
 {
     enum b = bytes & 15;
 
@@ -3599,19 +3599,19 @@ T rotateBytesRightImmediate(size_t bytes, SIMDVer Ver = sseVer, T)(T v)
 }
 
 // shift elements left
-T shiftElementsLeft(size_t n, SIMDVer Ver = sseVer, T)(T v)
+T shiftElementsLeft(size_t n, SIMDVer Ver = sseVer, T)(inout T v)
 {
     return shiftBytesLeftImmediate!(n * BaseType!(T).sizeof, Ver)(v);
 }
 
 // shift elements right
-T shiftElementsRight(size_t n, SIMDVer Ver = sseVer, T)(T v)
+T shiftElementsRight(size_t n, SIMDVer Ver = sseVer, T)(inout T v)
 {
     return shiftBytesRightImmediate!(n * BaseType!(T).sizeof, Ver)(v);
 }
 
 // shift elements left
-T shiftElementsLeftPair(size_t n, SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T shiftElementsLeftPair(size_t n, SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     static if(n == 0) // shift by 0 is a no-op
         return v;
@@ -3625,7 +3625,7 @@ T shiftElementsLeftPair(size_t n, SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isO
 }
 
 // shift elements right
-T shiftElementsRightPair(size_t n, SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(isOfType!(T, U))
+T shiftElementsRightPair(size_t n, SIMDVer Ver = sseVer, T)(inout T v1, inout T v2)
 {
     static if(n == 0) // shift by 0 is a no-op
         return v;
@@ -3639,7 +3639,7 @@ T shiftElementsRightPair(size_t n, SIMDVer Ver = sseVer, T, U)(T v1, U v2) if(is
 }
 
 // rotate elements left
-T rotateElementsLeft(size_t n, SIMDVer Ver = sseVer, T)(T v)
+T rotateElementsLeft(size_t n, SIMDVer Ver = sseVer, T)(inout T v)
 {
     enum e = n & (NumElements!T - 1); // large rotations should wrap
 
@@ -3686,7 +3686,7 @@ T rotateElementsLeft(size_t n, SIMDVer Ver = sseVer, T)(T v)
 }
 
 // rotate elements right
-T rotateElementsRight(size_t n, SIMDVer Ver = sseVer, T)(T v)
+T rotateElementsRight(size_t n, SIMDVer Ver = sseVer, T)(inout T v)
 {
     enum e = n & (NumElements!T - 1); // large rotations should wrap
 
@@ -3704,73 +3704,73 @@ T rotateElementsRight(size_t n, SIMDVer Ver = sseVer, T)(T v)
 // Comparisons
 
 // true if all elements: r = A[n] == B[n] && A[n+1] == B[n+1] && ...
-bool allEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
+bool allEqual(SIMDVer Ver = sseVer, T)(inout T a, inout T b)
 {
     return null;
 }
 
 // true if all elements: r = A[n] != B[n] && A[n+1] != B[n+1] && ...
-bool allNotEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
+bool allNotEqual(SIMDVer Ver = sseVer, T)(inout T a, inout T b)
 {
     return null;
 }
 
 // true if all elements: r = A[n] > B[n] && A[n+1] > B[n+1] && ...
-bool allGreater(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
+bool allGreater(SIMDVer Ver = sseVer, T)(inout T a, inout T b)
 {
     return null;
 }
 
 // true if all elements: r = A[n] >= B[n] && A[n+1] >= B[n+1] && ...
-bool allGreaterEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
+bool allGreaterEqual(SIMDVer Ver = sseVer, T)(inout T a, inout T b)
 {
     return null;
 }
 
 // true if all elements: r = A[n] < B[n] && A[n+1] < B[n+1] && ...
-bool allLess(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
+bool allLess(SIMDVer Ver = sseVer, T)(inout T a, inout T b)
 {
     return null;
 }
 
 // true if all elements: r = A[n] <= B[n] && A[n+1] <= B[n+1] && ...
-bool allLessEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
+bool allLessEqual(SIMDVer Ver = sseVer, T)(inout T a, inout T b)
 {
     return null;
 }
 
 // true if any elements: r = A[n] == B[n] || A[n+1] == B[n+1] || ...
-bool anyEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
+bool anyEqual(SIMDVer Ver = sseVer, T)(inout T a, inout T b)
 {
     return null;
 }
 
 // true if any elements: r = A[n] != B[n] || A[n+1] != B[n+1] || ...
-bool anyNotEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
+bool anyNotEqual(SIMDVer Ver = sseVer, T)(inout T a, inout T b)
 {
     return null;
 }
 
 // true if any elements: r = A[n] > B[n] || A[n+1] > B[n+1] || ...
-bool anyGreater(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
+bool anyGreater(SIMDVer Ver = sseVer, T)(inout T a, inout T b)
 {
     return null;
 }
 
 // true if any elements: r = A[n] >= B[n] || A[n+1] >= B[n+1] || ...
-bool anyGreaterEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
+bool anyGreaterEqual(SIMDVer Ver = sseVer, T)(inout T a, inout T b)
 {
     return null;
 }
 
 // true if any elements: r = A[n] < B[n] || A[n+1] < B[n+1] || ...
-bool anyLess(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
+bool anyLess(SIMDVer Ver = sseVer, T)(inout T a, inout T b)
 {
     return null;
 }
 
 // true if any elements: r = A[n] <= B[n] || A[n+1] <= B[n+1] || ...
-bool anyLessEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
+bool anyLessEqual(SIMDVer Ver = sseVer, T)(inout T a, inout T b)
 {
     return null;
 }
@@ -3780,7 +3780,7 @@ bool anyLessEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 // Generate bit masks
 
 // generate a bitmask of for elements: Rn = An == Bn ? -1 : 0
-void16 maskEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
+void16 maskEqual(SIMDVer Ver = sseVer, T)(inout T a, inout T b)
 {
     version(X86_OR_X64)
     {
@@ -3842,7 +3842,7 @@ void16 maskEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 }
 
 // generate a bitmask of for elements: Rn = An != Bn ? -1 : 0 (SLOW)
-void16 maskNotEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
+void16 maskNotEqual(SIMDVer Ver = sseVer, T)(inout T a, inout T b)
 {
     version(X86_OR_X64)
     {
@@ -3878,7 +3878,7 @@ void16 maskNotEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 }
 
 // generate a bitmask of for elements: Rn = An > Bn ? -1 : 0
-void16 maskGreater(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
+void16 maskGreater(SIMDVer Ver = sseVer, T)(inout T a, inout T b)
 {
     version(X86_OR_X64)
     {
@@ -3946,7 +3946,7 @@ void16 maskGreater(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 }
 
 // generate a bitmask of for elements: Rn = An >= Bn ? -1 : 0 (SLOW)
-void16 maskGreaterEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
+void16 maskGreaterEqual(SIMDVer Ver = sseVer, T)(inout T a, inout T b)
 {
     version(X86_OR_X64)
     {
@@ -3982,7 +3982,7 @@ void16 maskGreaterEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U)
 }
 
 // generate a bitmask of for elements: Rn = An < Bn ? -1 : 0 (SLOW)
-void16 maskLess(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
+void16 maskLess(SIMDVer Ver = sseVer, T)(inout T a, inout T b)
 {
     version(X86_OR_X64)
     {
@@ -4018,7 +4018,7 @@ void16 maskLess(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 }
 
 // generate a bitmask of for elements: Rn = An <= Bn ? -1 : 0
-void16 maskLessEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
+void16 maskLessEqual(SIMDVer Ver = sseVer, T)(inout T a, inout T b)
 {
     version(X86_OR_X64)
     {
@@ -4058,7 +4058,7 @@ void16 maskLessEqual(SIMDVer Ver = sseVer, T, U)(T a, U b) if(isOfType!(T, U))
 // Branchless selection
 
 // select elements according to: mask == true ? x : y
-R select(SIMDVer Ver = sseVer, T, U, R = Unqual!T)(void16 mask, T x, U y) if(isOfType!(T, U))
+T select(SIMDVer Ver = sseVer, T)(void16 mask, inout T x, inout T y)
 {
     version(X86_OR_X64)
     {
@@ -4106,37 +4106,37 @@ R select(SIMDVer Ver = sseVer, T, U, R = Unqual!T)(void16 mask, T x, U y) if(isO
 }
 
 // select elements: Rn = An == Bn ? Xn : Yn
-R selectEqual(SIMDVer Ver = sseVer, T, U, V, W, R = Unqual!V)(T a, U b, V x, W y) if(isOfType!(T, U) && isOfType!(V, W))
+U selectEqual(SIMDVer Ver = sseVer, T, U)(inout T a, inout T b, inout U x, inout U y)
 {
     return select!Ver(maskEqual!Ver(a, b), x, y);
 }
 
 // select elements: Rn = An != Bn ? Xn : Yn
-R selectNotEqual(SIMDVer Ver = sseVer, T, U, V, W, R = Unqual!V)(T a, U b, V x, W y) if(isOfType!(T, U) && isOfType!(V, W))
+U selectNotEqual(SIMDVer Ver = sseVer, T, U)(inout T a, inout T b, inout U x, inout U y)
 {
     return select!Ver(maskNotEqual!Ver(a, b), x, y);
 }
 
 // select elements: Rn = An > Bn ? Xn : Yn
-R selectGreater(SIMDVer Ver = sseVer, T, U, V, W, R = Unqual!V)(T a, U b, V x, W y) if(isOfType!(T, U) && isOfType!(V, W))
+U selectGreater(SIMDVer Ver = sseVer, T, U)(inout T a, inout T b, inout U x, inout U y)
 {
     return select!Ver(maskGreater!Ver(a, b), x, y);
 }
 
 // select elements: Rn = An >= Bn ? Xn : Yn
-R selectGreaterEqual(SIMDVer Ver = sseVer, T, U, V, W, R = Unqual!V)(T a, U b, V x, W y) if(isOfType!(T, U) && isOfType!(V, W))
+U selectGreaterEqual(SIMDVer Ver = sseVer, T, U)(inout T a, inout T b, inout U x, inout U y)
 {
     return select!Ver(maskGreaterEqual!Ver(a, b), x, y);
 }
 
 // select elements: Rn = An < Bn ? Xn : Yn
-R selectLess(SIMDVer Ver = sseVer, T, U, V, W, R = Unqual!V)(T a, U b, V x, W y) if(isOfType!(T, U) && isOfType!(V, W))
+U selectLess(SIMDVer Ver = sseVer, T, U)(inout T a, inout T b, inout U x, inout U y)
 {
     return select!Ver(maskLess!Ver(a, b), x, y);
 }
 
 // select elements: Rn = An <= Bn ? Xn : Yn
-R selectLessEqual(SIMDVer Ver = sseVer, T, U, V, W, R = Unqual!V)(T a, U b, V x, W y) if(isOfType!(T, U) && isOfType!(V, W))
+U selectLessEqual(SIMDVer Ver = sseVer, T, U)(inout T a, inout T b, inout U x, inout U y)
 {
     return select!Ver(maskLessEqual!Ver(a, b), x, y);
 }
@@ -4165,7 +4165,7 @@ struct double2x2
 ///////////////////////////////////////////////////////////////////////////////
 // Matrix functions
 
-T transpose(SIMDVer Ver = sseVer, T)(T m)
+T transpose(SIMDVer Ver = sseVer, T)(inout T m)
 {
     version(X86_OR_X64)
     {
