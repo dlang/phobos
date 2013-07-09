@@ -801,8 +801,8 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
     if(isUnsigned!UIntType)
 {
     static assert(bits == 32 || bits == 64 || bits == 96 || bits == 128 || bits == 160 || bits == 192,
-                  "Supporting bits are 32, 64, 96, 128, 160 and 192. " ~ to!string(bits) ~ " is not supported.");
-
+                  "Xorshift supports only 32, 64, 96, 128, 160 and 192 bit versions. "
+                  ~ to!string(bits) ~ " is not supported.");
 
   public:
     ///Mark this as a Rng
@@ -835,8 +835,8 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
     }
     else
     {
-        static assert(false, "Xorshift supports only 32, 64, 96, 128, 160 or 192 bit versions. "
-                             ~ to!string(bits) ~ " is not supported.");
+        static assert(false, "Phobos Error: Xorshift has no instantiation rule for "
+                             ~ to!string(bits) ~ " bits.");
     }
 
 
@@ -925,8 +925,8 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
             seeds_[3] = seeds_[4];
             seeds_[4] = seeds_[4] ^ (seeds_[4] >> c) ^ temp ^ (temp >> b);
         }
-        else
-        { // 192bits
+        else static if (bits == 192)
+        {
             temp      = seeds_[0] ^ (seeds_[0] >> a);
             seeds_[0] = seeds_[1];
             seeds_[1] = seeds_[2];
@@ -934,6 +934,11 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
             seeds_[3] = seeds_[4];
             seeds_[4] = seeds_[4] ^ (seeds_[4] << c) ^ temp ^ (temp << b);
             value_    = seeds_[4] + (seeds_[5] += 362437);
+        }
+        else
+        {
+            static assert(false, "Phobos Error: Xorshift has no popFront() update for "
+                                 ~ to!string(bits) ~ " bits.");
         }
     }
 
