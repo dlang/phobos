@@ -614,16 +614,13 @@ unittest
 }
 
 /**
-$(D auto reduce(Args...)(Args args)
-    if (Args.length > 0 && Args.length <= 2 && isIterable!(Args[$ - 1]));)
-
 Implements the homonym function (also known as $(D accumulate), $(D
 compress), $(D inject), or $(D foldl)) present in various programming
-languages of functional flavor. The call $(D reduce!(fun)(seed,
-range)) first assigns $(D seed) to an internal variable $(D result),
+languages of functional flavor. The call $(D reduce!fun(range,
+seed)) first assigns $(D seed) to an internal variable $(D result),
 also called the accumulator. Then, for each element $(D x) in $(D
 range), $(D result = fun(result, x)) gets evaluated. Finally, $(D
-result) is returned. The one-argument version $(D reduce!(fun)(range))
+result) is returned. The one-argument version $(D reduce!fun(range))
 works similarly, but it uses the first element of the range as the
 seed (the range must be non-empty).
 
@@ -635,15 +632,15 @@ Example:
 ----
 int[] arr = [ 1, 2, 3, 4, 5 ];
 // Sum all elements
-auto sum = reduce!((a,b) => a + b)(0, arr);
+auto sum = arr.reduce!((a,b) => a + b)(0);
 assert(sum == 15);
 
 // Sum again, using a string predicate with "a" and "b"
-sum = reduce!"a + b"(0, arr);
+sum = arr.reduce!"a + b"(0);
 assert(sum == 15);
 
 // Compute the maximum of all elements
-auto largest = reduce!(max)(arr);
+auto largest = arr.reduce!max();
 assert(largest == 5);
 
 // Max again, but with Uniform Function Call Syntax (UFCS)
@@ -651,17 +648,17 @@ largest = arr.reduce!(max);
 assert(largest == 5);
 
 // Compute the number of odd elements
-auto odds = reduce!((a,b) => a + (b & 1))(0, arr);
+auto odds = arr.reduce!((a,b) => a + (b & 1))(0);
 assert(odds == 3);
 
 // Compute the sum of squares
-auto ssquares = reduce!((a,b) => a + b * b)(0, arr);
+auto ssquares = arr.reduce!((a,b) => a + b * b)(0);
 assert(ssquares == 55);
 
 // Chain multiple ranges into seed
 int[] a = [ 3, 4 ];
 int[] b = [ 100 ];
-auto r = reduce!("a + b")(chain(a, b));
+auto r = chain(a, b).reduce!"a + b"();
 assert(r == 107);
 
 // Mixing convertible types is fair game, too
@@ -670,7 +667,7 @@ auto r1 = reduce!("a + b")(chain(a, b, c));
 assert(approxEqual(r1, 112.5));
 
 // To minimize nesting of parentheses, Uniform Function Call Syntax can be used
-auto r2 = chain(a, b, c).reduce!("a + b");
+auto r2 = chain(a, b, c).reduce!("a + b")();
 assert(approxEqual(r2, 112.5));
 ----
 
@@ -692,7 +689,7 @@ assert(approxEqual(r[0], 2));  // minimum
 assert(approxEqual(r[1], 11)); // maximum
 
 // Compute sum and sum of squares in one pass
-r = reduce!("a + b", "a + b * b")(tuple(0.0, 0.0), a);
+r = reduce!("a + b", "a + b * b")(a, tuple(0.0, 0.0));
 assert(approxEqual(r[0], 35));  // sum
 assert(approxEqual(r[1], 233)); // sum of squares
 // Compute average and standard deviation from the above
@@ -700,95 +697,49 @@ auto avg = r[0] / a.length;
 auto stdev = sqrt(r[1] / a.length - avg * avg);
 ----
  */
-
-template reduce(fun...) if (fun.length >= 1)
+template reduce(fun...)
+    if (fun.length >= 1)
 {
-    auto reduce(Args...)(Args args)
-    if (Args.length > 0 && Args.length <= 2 && isIterable!(Args[$ - 1]))
+    /**
+     * No-seed version: The first element of $(D r) is taken as the seed. $(D r)
+     * must not be empty.
+     */
+    auto reduce(R)(R r)
+        if (isIterable!R)
     {
-        static if (isInputRange!(Args[$ - 1]))
+        static if (isInputRange!R)
         {
-            static if (Args.length == 2)
+            enforce(!r.empty, "Cannot reduce an empty range w/o an explicit seed value.");
+            static if (fun.length == 1)
             {
-                alias args[0] seed;
-                alias args[1] r;
-                Unqual!(Args[0]) result = seed;
-                for (; !r.empty; r.popFront())
-                {
-                    static if (fun.length == 1)
-                    {
-                        result = binaryFun!(fun[0])(result, r.front);
-                    }
-                    else
-                    {
-                        foreach (i, Unused; Args[0].Types)
-                        {
-                            result[i] = binaryFun!(fun[i])(result[i], r.front);
-                        }
-                    }
-                }
-                return result;
+                auto seed = r.front;
             }
             else
             {
-                enforce(!args[$ - 1].empty,
-                    "Cannot reduce an empty range w/o an explicit seed value.");
-                alias args[0] r;
-                static if (fun.length == 1)
+                static assert(fun.length > 1);
+                alias ufront_t = Unqual!(typeof(r.front));
+                typeof(adjoin!(staticMap!(binaryFun, fun))(cast(ufront_t)r.front, r.front))
+                    seed = void;
+                foreach (i, T; seed.Types)
                 {
-                    auto seed = r.front;
-                    r.popFront();
-                    return reduce(seed, r);
-                }
-                else
-                {
-                    static assert(fun.length > 1);
-                    Unqual!(typeof(r.front)) seed = r.front;
-                    typeof(adjoin!(staticMap!(binaryFun, fun))(seed, seed))
-                        result = void;
-                    foreach (i, T; result.Types)
-                    {
-                        emplace(&result[i], seed);
-                    }
-                    r.popFront();
-                    return reduce(result, r);
+                    emplace(&seed[i], r.front);
                 }
             }
+            r.popFront();
+            return impl(r, seed);
         }
-        else
-        {   // opApply case.  Coded as a separate case because efficiently
-            // handling all of the small details like avoiding unnecessary
-            // copying, iterating by dchar over strings, and dealing with the
-            // no explicit start value case would become an unreadable mess
-            // if these were merged.
-            alias args[$ - 1] r;
-            alias Args[$ - 1] R;
+        else //if (isIterable!R)
+        {
             alias ForeachType!R E;
-
-            static if (args.length == 2)
-            {
-                static if (fun.length == 1)
-                {
-                    auto result = Tuple!(Unqual!(Args[0]))(args[0]);
-                }
-                else
-                {
-                    Unqual!(Args[0]) result = args[0];
-                }
-
-                enum bool initialized = true;
-            }
-            else static if (fun.length == 1)
+            static if (fun.length == 1)
             {
                 Tuple!(typeof(binaryFun!fun(E.init, E.init))) result = void;
-                bool initialized = false;
             }
             else
             {
-                typeof(adjoin!(staticMap!(binaryFun, fun))(E.init, E.init))
-                    result = void;
-                bool initialized = false;
+                typeof(adjoin!(staticMap!(binaryFun, fun))(E.init, E.init)) result = void;
             }
+            bool initialized = false;
 
             // For now, just iterate using ref to avoid unnecessary copying.
             // When Bug 2443 is fixed, this may need to change.
@@ -803,10 +754,7 @@ template reduce(fun...) if (fun.length >= 1)
                 }
                 else
                 {
-                    static if (is(typeof(&initialized)))
-                    {
-                        initialized = true;
-                    }
+                    initialized = true;
 
                     foreach (i, T; result.Types)
                     {
@@ -814,24 +762,113 @@ template reduce(fun...) if (fun.length >= 1)
                     }
                 }
             }
-
-            enforce(initialized,
-                "Cannot reduce an empty iterable w/o an explicit seed value.");
+            enforce(initialized, "Cannot reduce an empty iterable w/o an explicit seed value.");
 
             static if (fun.length == 1)
-            {
                 return result[0];
+            else
+                return result;
+        }
+    }
+
+    /**
+    Standard signature: The elements of $(D r) are reduced into $(D seed)
+
+    $(Blue In case of ambiguity between both signatures, this is the chosen
+    signature)
+
+    Example:
+    ----
+    assert(reduce!"a~=b"([3, 4], [1, 2]).equal([1, 2, 3, 4]));
+    assert([3, 4].reduce!"a~=b"([1, 2]).equal([1, 2, 3, 4]));
+    ----
+    */
+    auto reduce(R, S)(R r, S seed)
+        if (isIterable!R && is(typeof(impl(r, seed))))
+    {
+        return impl(r, seed);
+    }
+
+    /**
+     * $(RED Scheduled for deprecation. Please prefer
+     *        the other (UFCS compatible) signature)
+     *
+     * Old signature: Same as $(D reduce(r, seed))
+     */
+    auto reduce(S, R)(S seed, R r)
+        if (isIterable!R && is(typeof(impl(r, seed))) && !is(typeof(impl(seed, r))))
+    {
+        return impl(r, seed);
+    }
+
+private:
+    auto impl(R, S)(R r, S seed)
+        if (isIterable!R)
+    {
+        static if (fun.length == 1)
+            //Create a single item tuple
+            auto result = Tuple!(Unqual!S)(seed);
+        else
+            //Already a tuple
+            Unqual!S result = seed;
+
+        //String mixin to avoid needless function call in range inner loop
+        string loopBody(string arg = "elem") @property @safe nothrow pure
+        {
+            return `{
+                foreach (i, T; result.Types)
+                {
+                    result[i] = binaryFun!(fun[i])(result[i], ` ~ arg ~ `);
+                }
+            }`;
+        }
+
+        //Bit ugly, but currently allows the best/correct iteration scheme in each case
+        //TODO: Once @@@4707@@@ - auto ref for foreach loops
+        //has been fixed, replace with a single simple "foreach(auto ref elem , r)"
+        // (while being careful with narrow strings / iterables)
+        static if (isInputRange!R)
+        {
+            static if (isNarrowString!R)
+            {
+                foreach (dchar elem; r)
+                    mixin(loopBody);
+            }
+            else static if (isArray!R)
+            {
+                foreach (ref elem; r)
+                    mixin(loopBody);
             }
             else
             {
-                return result;
+                for ( ; !r.empty ; r.popFront() )
+                    mixin(loopBody("r.front"));
             }
         }
+        else //if (isIterable!R)
+        {
+            static if (is(typeof({foreach(ref elem; r){}})))
+            {
+                foreach ( ref elem; r)
+                    mixin(loopBody);
+            }
+            else
+            {
+                foreach ( elem; r)
+                    mixin(loopBody);
+            }
+        }
+
+        static if (fun.length == 1)
+            return result[0];
+        else
+            return result;
     }
 }
 
 unittest
 {
+    //OLD BEHAVIOR: reduce(seed, r);
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     double[] a = [ 3, 4 ];
@@ -855,6 +892,12 @@ unittest
     // Stringize with commas
     string rep = reduce!("a ~ `, ` ~ to!(string)(b)")("", a);
     assert(rep[2 .. $] == "1, 2, 3, 4, 5", "["~rep[2 .. $]~"]");
+
+    // Test for throwing on empty range plus no seed.
+    try {
+        reduce!"a + b"([1, 2][0..0]);
+        assert(0);
+    } catch(Exception) {}
 
     // Test the opApply case.
     static struct OpApply
@@ -882,12 +925,6 @@ unittest
     assert(reduce!("a + b", max)(oa) == tuple(hundredSum, 99));
     assert(reduce!("a + b", max)(tuple(5, 0), oa) == tuple(hundredSum + 5, 99));
 
-    // Test for throwing on empty range plus no seed.
-    try {
-        reduce!"a + b"([1, 2][0..0]);
-        assert(0);
-    } catch(Exception) {}
-
     oa.actEmpty = true;
     try {
         reduce!"a + b"(oa);
@@ -897,6 +934,74 @@ unittest
 
 unittest
 {
+    //NEW BEHAVIOR: reduce(r, seed);
+    //Also, this time, we use UFCS
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    double[] a = [ 3, 4 ];
+    auto r = a.reduce!"a + b"(0.0);
+    assert(r == 7);
+    r = a.reduce!"a + b"();
+    assert(r == 7);
+    r = a.reduce!min();
+    assert(r == 3);
+    double[] b = [ 100 ];
+    auto r1 = chain(a, b).reduce!"a + b"();
+    assert(r1 == 107);
+
+    // two funs
+    auto r2 = a.reduce!("a + b", "a - b")(tuple(0.0, 0.0));
+    assert(r2[0] == 7 && r2[1] == -7);
+    auto r3 = a.reduce!("a + b", "a - b")();
+    assert(r3[0] == 7 && r3[1] == -1);
+
+    a = [ 1, 2, 3, 4, 5 ];
+    // Stringize with commas
+    string rep = a.reduce!("a ~ `, ` ~ to!(string)(b)")("");
+    assert(rep[2 .. $] == "1, 2, 3, 4, 5", "["~rep[2 .. $]~"]");
+
+    // Test for throwing on empty range plus no seed.
+    try {
+        [1, 2][0..0].reduce!"a + b"();
+        assert(0);
+    } catch(Exception) {}
+
+    // Test the opApply case.
+    static struct OpApply
+    {
+        bool actEmpty;
+
+        int opApply(int delegate(ref int) dg)
+        {
+            int res;
+            if (actEmpty) return res;
+
+            foreach(i; 0..100)
+            {
+                res = dg(i);
+                if (res) break;
+            }
+            return res;
+        }
+    }
+
+    OpApply oa;
+    auto hundredSum = iota(100).reduce!"a + b"();
+    assert(oa.reduce!"a + b"(5) == hundredSum + 5);
+    assert(oa.reduce!"a + b"() == hundredSum);
+    assert(oa.reduce!("a + b", max)() == tuple(hundredSum, 99));
+    assert(oa.reduce!("a + b", max)(tuple(5, 0)) == tuple(hundredSum + 5, 99));
+
+    oa.actEmpty = true;
+    try {
+        oa.reduce!"a + b"();
+        assert(0);
+    } catch(Exception) {}
+}
+
+unittest
+{
+    //OLD BEHAVIOR: reduce(seed, r);
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     const float a = 0.0;
@@ -904,6 +1009,28 @@ unittest
     float[] c = [ 1.2, 3, 3.3 ];
     auto r = reduce!"a + b"(a, b);
     r = reduce!"a + b"(a, c);
+}
+
+unittest
+{
+    //NEW BEHAVIOR: reduce(r, seed);
+    //Also, this time, we use UFCS
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    const float a = 0.0;
+    const float[] b = [ 1.2, 3, 3.3 ];
+    float[] c = [ 1.2, 3, 3.3 ];
+    auto r = b.reduce!"a + b"(a);
+    r = c.reduce!"a + b"(a);
+}
+
+unittest
+{
+    //Migration:
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    assert(reduce!"a~=b"([3, 4], [1, 2]).equal([1, 2, 3, 4]));
+    assert([3, 4].reduce!"a~=b"([1, 2]).equal([1, 2, 3, 4]));
 }
 
 unittest
