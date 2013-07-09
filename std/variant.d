@@ -787,6 +787,12 @@ public:
                      cast(void*) &temp);
     }
 
+    // workaround for bug 10567 fix
+    int opCmp(ref const VariantN rhs) const
+    {
+        return (cast()this).opCmp!(VariantN)(cast()rhs);
+    }
+
     /**
      * Ordering comparison used by the "<", "<=", ">", and ">="
      * operators. In case comparison is not sensible between the held
