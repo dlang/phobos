@@ -3116,7 +3116,7 @@ template EnumMembers(E)
         }
         else static if (names.length == 1)
         {
-            alias WithIdentifier!(names[0]).Symbolize!(__traits(getMember, E, names[0])) EnumSpecificMembers;
+            alias TypeTuple!(WithIdentifier!(names[0]).Symbolize!(__traits(getMember, E, names[0]))) EnumSpecificMembers;
         }
         else
         {
