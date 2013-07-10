@@ -53,7 +53,6 @@ version (unittest)
             _first = false;
         }
 
-
         return _deleteme;
     }
 }
@@ -1528,7 +1527,7 @@ else version(Posix) string readLink(C)(const(C)[] link)
         dynamicBuffer.length = dynamicBuffer.length * 3 / 2;
     }
 
-    throw new FileException(format("Path for %s is too long to read.", link));
+    throw new FileException(text(link), "Path is too long to read.");
 }
 
 version(Posix) unittest
@@ -1605,8 +1604,16 @@ version(StdDdoc)
       +/
     struct DirEntry
     {
-        void _init(T...)(T);
-    public:
+        /++
+            Constructs a DirEntry for the given file (or directory).
+
+            Params:
+                path = The file (or directory) to get a DirEntry for.
+
+            Throws:
+                $(D FileException) if the file does not exist.
+        +/
+        this(string path);
 
         /++
             Returns the path to the file represented by this $(D DirEntry).
@@ -1750,6 +1757,52 @@ else version(Windows)
     public:
         alias name this;
 
+        this(string path)
+        {
+            if(!path.exists)
+                throw new FileException(path, text("File does not exist"));
+
+            _name = path;
+
+            with (getFileAttributesWin(path))
+            {
+                _size = makeUlong(nFileSizeLow, nFileSizeHigh);
+                _timeCreated = std.datetime.FILETIMEToSysTime(&ftCreationTime);
+                _timeLastAccessed = std.datetime.FILETIMEToSysTime(&ftLastAccessTime);
+                _timeLastModified = std.datetime.FILETIMEToSysTime(&ftLastWriteTime);
+                _attributes = dwFileAttributes;
+            }
+        }
+
+        private this(string path, in WIN32_FIND_DATA* fd)
+        {
+            auto clength = to!int(core.stdc.string.strlen(fd.cFileName.ptr));
+
+            // Convert cFileName[] to unicode
+            const wlength = MultiByteToWideChar(0, 0, fd.cFileName.ptr, clength, null, 0);
+            auto wbuf = new wchar[wlength];
+            const n = MultiByteToWideChar(0, 0, fd.cFileName.ptr, clength, wbuf.ptr, wlength);
+            assert(n == wlength);
+            // toUTF8() returns a new buffer
+            _name = buildPath(path, std.utf.toUTF8(wbuf[0 .. wlength]));
+            _size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
+            _timeCreated = std.datetime.FILETIMEToSysTime(&fd.ftCreationTime);
+            _timeLastAccessed = std.datetime.FILETIMEToSysTime(&fd.ftLastAccessTime);
+            _timeLastModified = std.datetime.FILETIMEToSysTime(&fd.ftLastWriteTime);
+            _attributes = fd.dwFileAttributes;
+        }
+        private this(string path, in WIN32_FIND_DATAW *fd)
+        {
+            size_t clength = std.string.wcslen(fd.cFileName.ptr);
+            _name = std.utf.toUTF8(fd.cFileName[0 .. clength]);
+            _name = buildPath(path, std.utf.toUTF8(fd.cFileName[0 .. clength]));
+            _size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
+            _timeCreated = std.datetime.FILETIMEToSysTime(&fd.ftCreationTime);
+            _timeLastAccessed = std.datetime.FILETIMEToSysTime(&fd.ftLastAccessTime);
+            _timeLastModified = std.datetime.FILETIMEToSysTime(&fd.ftLastWriteTime);
+            _attributes = fd.dwFileAttributes;
+        }
+
         @property string name() const pure nothrow
         {
             return _name;
@@ -1804,54 +1857,7 @@ else version(Windows)
         }
 
     private:
-
-        void _init(in char[] path)
-        {
-            _name = path.idup;
-
-            with (getFileAttributesWin(path))
-            {
-                _size = makeUlong(nFileSizeLow, nFileSizeHigh);
-                _timeCreated = std.datetime.FILETIMEToSysTime(&ftCreationTime);
-                _timeLastAccessed = std.datetime.FILETIMEToSysTime(&ftLastAccessTime);
-                _timeLastModified = std.datetime.FILETIMEToSysTime(&ftLastWriteTime);
-                _attributes = dwFileAttributes;
-            }
-        }
-
-        void _init(in char[] path, in WIN32_FIND_DATA* fd)
-        {
-            auto clength = to!int(core.stdc.string.strlen(fd.cFileName.ptr));
-
-            // Convert cFileName[] to unicode
-            const wlength = MultiByteToWideChar(0, 0, fd.cFileName.ptr, clength, null, 0);
-            auto wbuf = new wchar[wlength];
-            const n = MultiByteToWideChar(0, 0, fd.cFileName.ptr, clength, wbuf.ptr, wlength);
-            assert(n == wlength);
-            // toUTF8() returns a new buffer
-            _name = buildPath(path, std.utf.toUTF8(wbuf[0 .. wlength]));
-            _size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
-            _timeCreated = std.datetime.FILETIMEToSysTime(&fd.ftCreationTime);
-            _timeLastAccessed = std.datetime.FILETIMEToSysTime(&fd.ftLastAccessTime);
-            _timeLastModified = std.datetime.FILETIMEToSysTime(&fd.ftLastWriteTime);
-            _attributes = fd.dwFileAttributes;
-        }
-
-        void _init(in char[] path, in WIN32_FIND_DATAW *fd)
-        {
-            size_t clength = std.string.wcslen(fd.cFileName.ptr);
-            _name = std.utf.toUTF8(fd.cFileName[0 .. clength]);
-            _name = buildPath(path, std.utf.toUTF8(fd.cFileName[0 .. clength]));
-            _size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
-            _timeCreated = std.datetime.FILETIMEToSysTime(&fd.ftCreationTime);
-            _timeLastAccessed = std.datetime.FILETIMEToSysTime(&fd.ftLastAccessTime);
-            _timeLastModified = std.datetime.FILETIMEToSysTime(&fd.ftLastWriteTime);
-            _attributes = fd.dwFileAttributes;
-        }
-
-
         string _name; /// The file or directory represented by this DirEntry.
-
 
         SysTime _timeCreated;      /// The time when the file was created.
         SysTime _timeLastAccessed; /// The time when the file was last accessed.
@@ -1867,6 +1873,43 @@ else version(Posix)
     {
     public:
         alias name this;
+
+        this(string path)
+        {
+            if(!path.exists)
+                throw new FileException(path, text("File does not exist"));
+
+            _name = path;
+
+            _didLStat = false;
+            _didStat = false;
+            _dTypeSet = false;
+        }
+
+        private this(string path, core.sys.posix.dirent.dirent* fd)
+        {
+            immutable len = core.stdc.string.strlen(fd.d_name.ptr);
+            _name = buildPath(path, fd.d_name[0 .. len]);
+
+            _didLStat = false;
+            _didStat = false;
+
+            //fd_d_type doesn't work for all file systems,
+            //in which case the result is DT_UNKOWN. But we
+            //can determine the correct type from lstat, so
+            //we'll only set the dtype here if we could
+            //correctly determine it (not lstat in the case
+            //of DT_UNKNOWN in case we don't ever actually
+            //need the dtype, thus potentially avoiding the
+            //cost of calling lstat).
+            if(fd.d_type != DT_UNKNOWN)
+            {
+                _dType = fd.d_type;
+                _dTypeSet = true;
+            }
+            else
+                _dTypeSet = false;
+        }
 
         @property string name() const pure nothrow
         {
@@ -1943,41 +1986,6 @@ else version(Posix)
         }
 
     private:
-
-        void _init(in char[] path)
-        {
-            _name = path.idup;
-
-            _didLStat = false;
-            _didStat = false;
-            _dTypeSet = false;
-        }
-
-        void _init(in char[] path, core.sys.posix.dirent.dirent* fd)
-        {
-            immutable len = core.stdc.string.strlen(fd.d_name.ptr);
-            _name = buildPath(path, fd.d_name[0 .. len]);
-
-            _didLStat = false;
-            _didStat = false;
-
-            //fd_d_type doesn't work for all file systems,
-            //in which case the result is DT_UNKOWN. But we
-            //can determine the correct type from lstat, so
-            //we'll only set the dtype here if we could
-            //correctly determine it (not lstat in the case
-            //of DT_UNKNOWN in case we don't ever actually
-            //need the dtype, thus potentially avoiding the
-            //cost of calling lstat).
-            if(fd.d_type != DT_UNKNOWN)
-            {
-                _dType = fd.d_type;
-                _dTypeSet = true;
-            }
-            else
-                _dTypeSet = false;
-        }
-
         /++
             This is to support lazy evaluation, because doing stat's is
             expensive and not always needed.
@@ -2012,7 +2020,6 @@ else version(Posix)
             _dTypeSet = true;
             _didLStat = true;
         }
-
 
         string _name; /// The file or directory represented by this DirEntry.
 
@@ -2172,7 +2179,8 @@ unittest
  +/
 void rmdirRecurse(in char[] pathname)
 {
-    DirEntry de = dirEntry(pathname);
+    //DirEntry never exists this scope, so cast to string is safe
+    DirEntry de = dirEntry(cast(string)pathname);
 
     rmdirRecurse(de);
 }
@@ -2189,7 +2197,7 @@ void rmdirRecurse(in char[] pathname)
 void rmdirRecurse(ref DirEntry de)
 {
     if(!de.isDir)
-        throw new FileException(text("File ", de.name, " is not a directory"));
+        throw new FileException(de.name, "Not a directory");
 
     if(de.isSymlink)
         remove(de.name);
@@ -2338,7 +2346,7 @@ private struct DirIteratorImpl
                     popDirStack();
                     return false;
                 }
-            _cur._init(_stack.data[$-1].dirpath, findinfo);
+            _cur = DirEntry(_stack.data[$-1].dirpath, findinfo);
             return true;
         }
 
@@ -2359,7 +2367,7 @@ private struct DirIteratorImpl
                     popDirStack();
                     return false;
                 }
-            _cur._init(_stack.data[$-1].dirpath, findinfo);
+            _cur = DirEntry(_stack.data[$-1].dirpath, findinfo);
             return true;
         }
 
@@ -2406,7 +2414,7 @@ private struct DirIteratorImpl
                 if(core.stdc.string.strcmp(fdata.d_name.ptr, ".")  &&
                    core.stdc.string.strcmp(fdata.d_name.ptr, "..") )
                 {
-                    _cur._init(_stack.data[$-1].dirpath, fdata);
+                    _cur = DirEntry(_stack.data[$-1].dirpath, fdata);
                     return true;
                 }
             }
@@ -2661,16 +2669,14 @@ auto dirEntries(string path, string pattern, SpanMode mode,
     Throws:
         $(D FileException) if the file does not exist.
  +/
+DirEntry dirEntry(string name)
+{
+    return DirEntry(name);
+}
+deprecated("dirEntry taking a mutable string is deprecated. Please use `dirEntry(name.idup)` instead.")
 DirEntry dirEntry(in char[] name)
 {
-    if(!name.exists)
-        throw new FileException(text("File ", name, " does not exist"));
-
-    DirEntry dirEntry;
-
-    dirEntry._init(name);
-
-    return dirEntry;
+    return dirEntry(name.idup);
 }
 
 //Test dirEntry with a directory.
