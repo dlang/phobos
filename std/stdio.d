@@ -1050,38 +1050,6 @@ Returns the file number corresponding to this object.
 Range that reads one line at a time.  Returned by $(LREF byLine).
 
 Allows to directly use range operations on lines of a file.
-
-Example:
-
-----
-import std.algorithm, std.string, std.stdio;
-// Count words in a file using ranges.
-void main()
-{
-    auto file = File("file.txt"); // Open for reading
-    const wordCount = file.byLine()                  // Read lines
-                          .map!split                 // Split into words
-                          .map!(a => a.length)       // Count words per line
-                          .reduce!((a, b) => a + b); // Total word count
-    writeln(wordCount);
-}
-----
-
-Example:
-----
-import std.stdio;
-// Count lines in file using a foreach
-void main()
-{
-    auto file = File("file.txt"); // open for reading
-    ulong lineCount = 0;
-    foreach (line; file.byLine())
-    {
-        ++lineCount;
-    }
-    writeln("Lines in file: ", lineCount);
-}
-----
 */
     struct ByLine(Char, Terminator)
     {
@@ -1153,8 +1121,51 @@ void main()
     }
 
 /**
-Convenience function that returns the $(D LinesReader) corresponding
-to this file. */
+Convenience function that returns a $(LREF ByLine) range corresponding
+to this file.
+
+The element type for the range returned will be $(D Char[]).
+
+Params:
+Char = Character type for each line, defaulting to $(D char). If 
+Char is mutable then each $(D front) will not persist after $(D 
+popFront) is called, so you must copy its contents if you wish to 
+retain them.
+keepTerminator = Use $(D KeepTerminator.yes) to include the 
+terminator at the end of each line.
+terminator = Line separator ('\n' by default).
+
+Example:
+----
+import std.algorithm, std.string, std.stdio;
+// Count words in a file using ranges.
+void main()
+{
+    auto file = File("file.txt"); // Open for reading
+    const wordCount = file.byLine()                  // Read lines
+                          .map!split                 // Split into words
+                          .map!(a => a.length)       // Count words per line
+                          .reduce!((a, b) => a + b); // Total word count
+    writeln(wordCount);
+}
+----
+
+Example:
+----
+import std.stdio;
+// Count lines in file using a foreach
+void main()
+{
+    auto file = File("file.txt"); // open for reading
+    ulong lineCount = 0;
+    foreach (line; file.byLine())
+    {
+        ++lineCount;
+    }
+    writeln("Lines in file: ", lineCount);
+}
+----
+*/
     ByLine!(Char, Terminator) byLine(Terminator = char, Char = char)
     (KeepTerminator keepTerminator = KeepTerminator.no,
             Terminator terminator = '\n')
