@@ -1046,7 +1046,7 @@ Returns the file number corresponding to this object.
         return .fileno(cast(FILE*) _p.handle);
     }
 
-/**
+/*
 Range that reads one line at a time.  Returned by $(LREF byLine).
 
 Allows to directly use range operations on lines of a file.
@@ -1121,10 +1121,10 @@ Allows to directly use range operations on lines of a file.
     }
 
 /**
-Convenience function that returns a $(LREF ByLine) range corresponding
-to this file.
+Returns a forward range set up to read from the file handle one line 
+at a time.
 
-The element type for the range returned will be $(D Char[]).
+The element type for the range will be $(D Char[]).
 
 Params:
 Char = Character type for each line, defaulting to $(D char). If 
@@ -1166,11 +1166,11 @@ void main()
 }
 ----
 */
-    ByLine!(Char, Terminator) byLine(Terminator = char, Char = char)
+    auto byLine(Terminator = char, Char = char)
     (KeepTerminator keepTerminator = KeepTerminator.no,
             Terminator terminator = '\n')
     {
-        return typeof(return)(this, keepTerminator, terminator);
+        return ByLine!(Char, Terminator)(this, keepTerminator, terminator);
     }
 
     unittest
