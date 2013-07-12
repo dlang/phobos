@@ -1121,7 +1121,7 @@ Allows to directly use range operations on lines of a file.
     }
 
 /**
-Returns a forward range set up to read from the file handle one line 
+Returns an input range set up to read from the file handle one line 
 at a time.
 
 The element type for the range will be $(D Char[]).
@@ -1129,15 +1129,15 @@ The element type for the range will be $(D Char[]).
 Params:
 Char = Character type for each line, defaulting to $(D char). If 
 Char is mutable then each $(D front) will not persist after $(D 
-popFront) is called, so you must copy its contents if you wish to 
-retain them.
+popFront) is called, so the caller must copy its contents (e.g. by 
+calling $(D to!string)) if retention is needed.
 keepTerminator = Use $(D KeepTerminator.yes) to include the 
 terminator at the end of each line.
-terminator = Line separator ('\n' by default).
+terminator = Line separator ($(D '\n') by default).
 
 Example:
 ----
-import std.algorithm, std.string, std.stdio;
+import std.algorithm, std.stdio, std.string;
 // Count words in a file using ranges.
 void main()
 {
