@@ -1527,7 +1527,7 @@ else version(Posix) string readLink(C)(const(C)[] link)
         dynamicBuffer.length = dynamicBuffer.length * 3 / 2;
     }
 
-    throw new FileException(text(link), "Path is too long to read.");
+    throw new FileException(to!string(link), "Path is too long to read.");
 }
 
 version(Posix) unittest
@@ -1760,7 +1760,7 @@ else version(Windows)
         this(string path)
         {
             if(!path.exists)
-                throw new FileException(path, text("File does not exist"));
+                throw new FileException(path, "File does not exist");
 
             _name = path;
 
@@ -1877,7 +1877,7 @@ else version(Posix)
         this(string path)
         {
             if(!path.exists)
-                throw new FileException(path, text("File does not exist"));
+                throw new FileException(path, "File does not exist");
 
             _name = path;
 
@@ -2179,7 +2179,8 @@ unittest
  +/
 void rmdirRecurse(in char[] pathname)
 {
-    //DirEntry never exists this scope, so cast to string is safe
+    //No references to pathname will be kept after rmdirRecurse,
+    //so the cast is safe
     DirEntry de = dirEntry(cast(string)pathname);
 
     rmdirRecurse(de);
