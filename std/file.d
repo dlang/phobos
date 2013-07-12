@@ -1080,7 +1080,7 @@ unittest
     possible for both $(D isFile) and $(D isDir) to be $(D false) for a
     particular file (in which case, it's a special file). You can use
     $(D getAttributes) to get the attributes to figure out what type of special
-    it is, or you can use $(D dirEntry) to get at its $(D statBuf), which is the
+    it is, or you can use $(D DirEntry) to get at its $(D statBuf), which is the
     result from $(D stat). In either case, see the man page for $(D stat) for
     more information.
 
@@ -1597,10 +1597,6 @@ version(StdDdoc)
 {
     /++
         Info on a file, similar to what you'd get from stat on a Posix system.
-
-        A $(D DirEntry) is obtained by using the functions $(D dirEntry) (to get
-        the $(D DirEntry) for a specific file) or $(D dirEntries) (to get a
-        $(D DirEntry) for each file/directory in a particular directory).
       +/
     struct DirEntry
     {
@@ -1620,10 +1616,10 @@ version(StdDdoc)
 
 Examples:
 --------------------
-auto de1 = dirEntry("/etc/fonts/fonts.conf");
+auto de1 = DirEntry("/etc/fonts/fonts.conf");
 assert(de1.name == "/etc/fonts/fonts.conf");
 
-auto de2 = dirEntry("/usr/share/include");
+auto de2 = DirEntry("/usr/share/include");
 assert(de2.name == "/usr/share/include");
 --------------------
           +/
@@ -1636,10 +1632,10 @@ assert(de2.name == "/usr/share/include");
 
 Examples:
 --------------------
-auto de1 = dirEntry("/etc/fonts/fonts.conf");
+auto de1 = DirEntry("/etc/fonts/fonts.conf");
 assert(!de1.isDir);
 
-auto de2 = dirEntry("/usr/share/include");
+auto de2 = DirEntry("/usr/share/include");
 assert(de2.isDir);
 --------------------
           +/
@@ -1662,10 +1658,10 @@ assert(de2.isDir);
 
 Examples:
 --------------------
-auto de1 = dirEntry("/etc/fonts/fonts.conf");
+auto de1 = DirEntry("/etc/fonts/fonts.conf");
 assert(de1.isFile);
 
-auto de2 = dirEntry("/usr/share/include");
+auto de2 = DirEntry("/usr/share/include");
 assert(!de2.isFile);
 --------------------
           +/
@@ -2039,7 +2035,7 @@ unittest
     {
         if("C:\\Program Files\\".exists)
         {
-            auto de = dirEntry("C:\\Program Files\\");
+            auto de = DirEntry("C:\\Program Files\\");
             assert(!de.isFile);
             assert(de.isDir);
             assert(!de.isSymlink);
@@ -2047,13 +2043,13 @@ unittest
 
         if("C:\\Users\\".exists && "C:\\Documents and Settings\\".exists)
         {
-            auto de = dirEntry("C:\\Documents and Settings\\");
+            auto de = DirEntry("C:\\Documents and Settings\\");
             assert(de.isSymlink);
         }
 
         if("C:\\Windows\\system.ini".exists)
         {
-            auto de = dirEntry("C:\\Windows\\system.ini");
+            auto de = DirEntry("C:\\Windows\\system.ini");
             assert(de.isFile);
             assert(!de.isDir);
             assert(!de.isSymlink);
@@ -2064,7 +2060,7 @@ unittest
         if("/usr/include".exists)
         {
             {
-                auto de = dirEntry("/usr/include");
+                auto de = DirEntry("/usr/include");
                 assert(!de.isFile);
                 assert(de.isDir);
                 assert(!de.isSymlink);
@@ -2076,7 +2072,7 @@ unittest
             core.sys.posix.unistd.symlink("/usr/include", symfile.ptr);
 
             {
-                auto de = dirEntry(symfile);
+                auto de = DirEntry(symfile);
                 assert(!de.isFile);
                 assert(de.isDir);
                 assert(de.isSymlink);
@@ -2085,7 +2081,7 @@ unittest
 
         if("/usr/include/assert.h".exists)
         {
-            auto de = dirEntry("/usr/include/assert.h");
+            auto de = DirEntry("/usr/include/assert.h");
             assert(de.isFile);
             assert(!de.isDir);
             assert(!de.isSymlink);
@@ -2181,11 +2177,8 @@ void rmdirRecurse(in char[] pathname)
 {
     //No references to pathname will be kept after rmdirRecurse,
     //so the cast is safe
-    DirEntry de = dirEntry(cast(string)pathname);
-
-    rmdirRecurse(de);
+    rmdirRecurse(DirEntry(cast(string)pathname));
 }
-
 
 /++
     Remove directory and all of its content and subdirectories,
@@ -2213,6 +2206,16 @@ void rmdirRecurse(ref DirEntry de)
         // the dir itself
         rmdir(de.name);
     }
+}
+///ditto
+//Note, without this overload, passing an RValue DirEntry still works, but
+//actually fully reconstructs a DirEntry inside the
+//"rmdirRecurse(in char[] pathname)" implementation. That is needlessly
+//expensive.
+//A DirEntry is a bit big (72B), so keeping the "by ref" signature is desirable.
+void rmdirRecurse(DirEntry de)
+{
+    rmdirRecurse(de);
 }
 
 version(Windows) unittest
@@ -2662,6 +2665,9 @@ auto dirEntries(string path, string pattern, SpanMode mode,
 }
 
 /++
+    $(RED Deprecated. It will be removed in July 2014.
+         Please use $(LREF DirEntry) constructor directly instead.)
+
     Returns a DirEntry for the given file (or directory).
 
     Params:
@@ -2670,14 +2676,10 @@ auto dirEntries(string path, string pattern, SpanMode mode,
     Throws:
         $(D FileException) if the file does not exist.
  +/
-DirEntry dirEntry(string name)
-{
-    return DirEntry(name);
-}
-deprecated("dirEntry taking a mutable string is deprecated. Please use `dirEntry(name.idup)` instead.")
+deprecated("Please use DirEntry constructor directly instead.")
 DirEntry dirEntry(in char[] name)
 {
-    return dirEntry(name.idup);
+    return DirEntry(name.idup);
 }
 
 //Test dirEntry with a directory.
