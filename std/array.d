@@ -2205,9 +2205,15 @@ struct Appender(A : T[], T)
      */
     void reserve(size_t newCapacity) @safe pure nothrow
     {
-        immutable cap = _data ? _data.capacity : 0;
-        if (newCapacity > cap)
-            ensureAddable(newCapacity - cap);
+        if (_data)
+        {
+            if (newCapacity > _data.capacity)
+                ensureAddable(newCapacity - _data.arr.length);
+        }
+        else
+        {
+            ensureAddable(newCapacity);
+        }
     }
 
     /**
