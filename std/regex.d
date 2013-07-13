@@ -2022,7 +2022,7 @@ public struct Regex(Char)
                 end = e;
             }
 
-            @property string front() { return groups[start].name; };
+            @property string front() { return groups[start].name; }
             @property string back() { return groups[end-1].name; }
             @property bool empty() { return start >= end; }
             @property size_t length() { return end - start; }
@@ -2030,7 +2030,7 @@ public struct Regex(Char)
             @property NamedGroupRange save()
             {
                 return NamedGroupRange(groups, start, end);
-            };
+            }
             void popFront() { assert(!empty); start++; }
             void popBack() { assert(!empty); end--; }
             string opIndex()(size_t i)
