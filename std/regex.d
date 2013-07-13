@@ -1987,6 +1987,70 @@ public struct Regex(Char)
     +/
     @property bool empty() const nothrow {  return ir is null; }
 
+    /++
+        A range of all the named captures in the regex.
+        Example:
+        ----
+        import std.range;
+        import std.algorithm;
+
+        auto re = regex(`(?P<name>\w+) = (?P<var>\d+)`);
+        auto nc = re.namedCaptures;
+        static assert(isRandomAccessRange!(typeof(nc)));
+        assert(!nc.empty);
+        assert(nc.length == 2);
+        assert(nc.equal(["name", "var"]));
+        assert(nc[0] == "name");
+        assert(nc[1..$].equal(["var"]));
+        ----
+     +/
+    @property auto namedCaptures()
+    {
+        static struct NamedGroupRange
+        {
+        private:
+            NamedGroup[] groups;
+            size_t start;
+            size_t end;
+        public:
+            this(NamedGroup[] g, size_t s, size_t e)
+            {
+                assert(s <= e);
+                assert(e <= g.length);
+                groups = g;
+                start = s;
+                end = e;
+            }
+
+            @property string front() { return groups[start].name; };
+            @property string back() { return groups[end-1].name; }
+            @property bool empty() { return start >= end; }
+            @property size_t length() { return end - start; }
+            alias length opDollar;
+            @property NamedGroupRange save()
+            {
+                return NamedGroupRange(groups, start, end);
+            };
+            void popFront() { assert(!empty); start++; }
+            void popBack() { assert(!empty); end--; }
+            string opIndex()(size_t i)
+            {
+                assert(start + i < end,
+                       "Requested named group is out of range.");
+                return groups[start+i].name;
+            }
+            NamedGroupRange opSlice(size_t low, size_t high) {
+                assert(low <= high);
+                assert(start + high <= end);
+                return NamedGroupRange(groups, start + low, start + high);
+            }
+            NamedGroupRange opSlice() { return this.save; }
+        }
+        return NamedGroupRange(dict, 0, dict.length);
+    }
+
+    ///
+
 private:
     NamedGroup[] dict;  //maps name -> user group number
     uint ngroup;        //number of internal groups
@@ -2152,6 +2216,38 @@ private:
         }
         debug validate();
     }
+}
+
+unittest
+{
+    auto re = regex(`(?P<name>\w+) = (?P<var>\d+)`);
+    auto nc = re.namedCaptures;
+    static assert(isRandomAccessRange!(typeof(nc)));
+    assert(!nc.empty);
+    assert(nc.length == 2);
+    assert(nc.equal(["name", "var"]));
+    assert(nc[0] == "name");
+    assert(nc[1..$].equal(["var"]));
+
+    re = regex(`(\w+) (?P<named>\w+) (\w+)`);
+    nc = re.namedCaptures;
+    assert(nc.length == 1);
+    assert(nc[0] == "named");
+    assert(nc.front == "named");
+    assert(nc.back == "named");
+
+    re = regex(`(\w+) (\w+)`);
+    nc = re.namedCaptures;
+    assert(nc.empty);
+
+    re = regex(`(?P<year>\d{4})/(?P<month>\d{2})/(?P<day>\d{2})/`);
+    nc = re.namedCaptures;
+    auto cp = nc.save;
+    assert(nc.equal(cp));
+    nc.popFront();
+    assert(nc.equal(cp[1..$]));
+    nc.popBack();
+    assert(nc.equal(cp[1..$-1]));
 }
 
 //

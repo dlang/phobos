@@ -455,7 +455,7 @@ private struct MapResult(alias fun, Range)
         }
     }
 
-    static if (hasLength!R || isSomeString!R)
+    static if (hasLength!R)
     {
         @property auto length()
         {
@@ -9949,10 +9949,7 @@ assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
 bool all(alias pred, R)(R range)
 if (isInputRange!R && is(typeof(unaryFun!pred(range.front))))
 {
-    // dmd @@@BUG9578@@@ workaround
-    // return find!(not!(unaryFun!pred))(range).empty;
-    bool notPred(ElementType!R a) { return !unaryFun!pred(a); }
-    return find!notPred(range).empty;
+    return find!(not!(unaryFun!pred))(range).empty;
 }
 
 unittest

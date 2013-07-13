@@ -801,8 +801,8 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
     if(isUnsigned!UIntType)
 {
     static assert(bits == 32 || bits == 64 || bits == 96 || bits == 128 || bits == 160 || bits == 192,
-                  "Supporting bits are 32, 64, 96, 128, 160 and 192. " ~ to!string(bits) ~ " is not supported.");
-
+                  "Xorshift supports only 32, 64, 96, 128, 160 and 192 bit versions. "
+                  ~ to!string(bits) ~ " is not supported.");
 
   public:
     ///Mark this as a Rng
@@ -828,10 +828,15 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
         UIntType[size] seeds_ = [123456789, 362436069, 521288629, 88675123];
     else static if (bits == 160)
         UIntType[size] seeds_ = [123456789, 362436069, 521288629, 88675123, 5783321];
-    else
-    { // 192bits
+    else static if (bits == 192)
+    {
         UIntType[size] seeds_ = [123456789, 362436069, 521288629, 88675123, 5783321, 6615241];
         UIntType       value_;
+    }
+    else
+    {
+        static assert(false, "Phobos Error: Xorshift has no instantiation rule for "
+                             ~ to!string(bits) ~ " bits.");
     }
 
 
@@ -887,7 +892,7 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
         static if (bits == 32)
         {
             temp      = seeds_[0] ^ (seeds_[0] << a);
-            temp      = temp >> b;
+            temp      = temp ^ (temp >> b);
             seeds_[0] = temp ^ (temp << c);
         }
         else static if (bits == 64)
@@ -913,15 +918,15 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
         }
         else static if (bits == 160)
         {
-            temp      = seeds_[0] ^ (seeds_[0] >> a);
+            temp      = seeds_[0] ^ (seeds_[0] << a);
             seeds_[0] = seeds_[1];
             seeds_[1] = seeds_[2];
             seeds_[2] = seeds_[3];
             seeds_[3] = seeds_[4];
             seeds_[4] = seeds_[4] ^ (seeds_[4] >> c) ^ temp ^ (temp >> b);
         }
-        else
-        { // 192bits
+        else static if (bits == 192)
+        {
             temp      = seeds_[0] ^ (seeds_[0] >> a);
             seeds_[0] = seeds_[1];
             seeds_[1] = seeds_[2];
@@ -929,6 +934,11 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
             seeds_[3] = seeds_[4];
             seeds_[4] = seeds_[4] ^ (seeds_[4] << c) ^ temp ^ (temp << b);
             value_    = seeds_[4] + (seeds_[5] += 362437);
+        }
+        else
+        {
+            static assert(false, "Phobos Error: Xorshift has no popFront() update for "
+                                 ~ to!string(bits) ~ " bits.");
         }
     }
 
@@ -994,7 +1004,7 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
  * num = rnd.front; // different across runs
  * -----
  */
-alias XorshiftEngine!(uint, 32,  13, 17, 5)  Xorshift32;
+alias XorshiftEngine!(uint, 32,  13, 17, 15)  Xorshift32;
 alias XorshiftEngine!(uint, 64,  10, 13, 10) Xorshift64;   /// ditto
 alias XorshiftEngine!(uint, 96,  10, 5,  26) Xorshift96;   /// ditto
 alias XorshiftEngine!(uint, 128, 11, 8,  19) Xorshift128;  /// ditto
@@ -1013,11 +1023,11 @@ unittest
 
     // Result from reference implementation.
     auto checking = [
-        [2463534242UL, 267649, 551450, 53765, 108832, 215250, 435468, 860211, 660133, 263375],
+        [2463534242UL, 901999875, 3371835698, 2675058524, 1053936272, 3811264849, 472493137, 3856898176, 2131710969, 2312157505],
         [362436069UL, 2113136921, 19051112, 3010520417, 951284840, 1213972223, 3173832558, 2611145638, 2515869689, 2245824891],
         [521288629UL, 1950277231, 185954712, 1582725458, 3580567609, 2303633688, 2394948066, 4108622809, 1116800180, 3357585673],
         [88675123UL, 3701687786, 458299110, 2500872618, 3633119408, 516391518, 2377269574, 2599949379, 717229868, 137866584],
-        [5783321UL, 93724048, 491642011, 136638118, 246438988, 238186808, 140181925, 533680092, 285770921, 462053907],
+        [5783321UL, 393427209, 1947109840, 565829276, 1006220149, 971147905, 1436324242, 2800460115, 1484058076, 3823330032],
         [0UL, 246875399, 3690007200, 1264581005, 3906711041, 1866187943, 2481925219, 2464530826, 1604040631, 3653403911]
     ];
 
@@ -1131,7 +1141,7 @@ take $(D urng) uses the default generator $(D rndGen).
 Example:
 
 ----
-Random gen(unpredictableSeed);
+auto gen = Random(unpredictableSeed);
 // Generate an integer in [0, 1023]
 auto a = uniform(0, 1024, gen);
 // Generate a float in [0, 1$(RPAREN)

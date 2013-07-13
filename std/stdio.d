@@ -810,30 +810,32 @@ Throws: $(D Exception) if the file is not opened.
     }
 
 /**
-Read line from stream $(D fp) and return it as a specified type.
+Read line from the file handle and return it as a specified type.
 
 This version manages its own read buffer, which means one memory allocation per call. If you are not 
 retaining a reference to the read data, consider the $(D File.readln(buf)) version, which may offer 
-better performance as it reuses its read buffer.
+better performance as it can reuse its read buffer.
 
 Params:
-    S = Template parameter; the type of the allocated buffer, and the type returned. Defaults to $(D string)
+    S = Template parameter; the type of the allocated buffer, and the type returned. Defaults to $(D string).
     terminator = line terminator (by default, '\n')
 
 Returns:
     The line that was read, including the line terminator character. 
+
+Throws:
+    $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
 
 Example:
 ---
 // Reads $(D stdin) and writes it to $(D stdout).
 import std.stdio;
 
-int main()
+void main()
 {
-    string buf;
-    while ((buf = readln()) !is null)
-        write(buf);
-    return 0;
+    string line;
+    while ((line = stdin.readln()) !is null)
+        write(line);
 }
 ---
 */
@@ -842,7 +844,7 @@ int main()
     {
         Unqual!(ElementEncodingType!S)[] buf;
         readln(buf, terminator);
-        return assumeUnique(buf);
+        return cast(S)buf;
     }
 
     unittest
@@ -850,13 +852,13 @@ int main()
         auto deleteme = testFilename();
         std.file.write(deleteme, "hello\nworld\n");
         scope(exit) std.file.remove(deleteme);
-        foreach (C; Tuple!(char, wchar, dchar).Types)
+        foreach (String; TypeTuple!(string, char[], wstring, wchar[], dstring, dchar[]))
         {
             auto witness = [ "hello\n", "world\n" ];
             auto f = File(deleteme);
             uint i = 0;
-            immutable(C)[] buf;
-            while ((buf = f.readln!(typeof(buf))()).length)
+            String buf;
+            while ((buf = f.readln!String()).length)
             {
                 assert(i < witness.length);
                 assert(equal(buf, witness[i++]));
@@ -866,17 +868,17 @@ int main()
     }
 
 /**
-Read line from stream $(D fp) and write it to $(D buf[]), including
+Read line from the file handle and write it to $(D buf[]), including
 terminating character.
 
-This is often faster than $(D buf = File.readln()) because the buffer
-is reused each call. Note that reusing the buffer means that the
-previous contents of it has to be copied if needed.
+This can be faster than $(D line = File.readln()) because you can reuse
+the buffer for each call. Note that reusing the buffer means that you
+must copy the previous contents if you wish to retain them.
 
 Params:
-fp = input stream
 buf = buffer used to store the resulting line data. buf is
 resized as necessary.
+terminator = line terminator (by default, '\n')
 
 Returns:
 0 for end of file, otherwise number of characters read
@@ -886,35 +888,31 @@ conversion error.
 
 Example:
 ---
-// Reads $(D stdin) into a buffer
-// Dumps the buffer to $(D stdout) when it gets a "q"
+// Read lines from $(D stdin) into a string
+// Ignore lines starting with '#'
+// Write the string to $(D stdout)
 
-int main()
+void main()
 {
-    string[] outBuf;
-    string buf;
+    string output;
+    char[] buf;
 
     while (stdin.readln(buf))
     {
-        if (buf[0] == 'q')
-            break;
+        if (buf[0] == '#')
+            continue;
 
-        outBuf ~= buf.idup;
+        output ~= buf;
     }
 
-    foreach (line; outBuf)
-    {
-        write(line);
-    }
-
-    return 0;
+    write(output);
 }
 ---
 
-This method is more efficient than the one in the previous example
+This method can be more efficient than the one in the previous example
 because $(D stdin.readln(buf)) reuses (if possible) memory allocated
-by $(D buf), whereas $(D buf = stdin.readln()) makes a new memory allocation
-with every line. 
+for $(D buf), whereas $(D line = stdin.readln()) makes a new memory allocation
+for every line. 
 */
     size_t readln(C)(ref C[] buf, dchar terminator = '\n')
     if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum))
@@ -1048,42 +1046,10 @@ Returns the file number corresponding to this object.
         return .fileno(cast(FILE*) _p.handle);
     }
 
-/**
+/*
 Range that reads one line at a time.  Returned by $(LREF byLine).
 
 Allows to directly use range operations on lines of a file.
-
-Example:
-
-----
-import std.algorithm, std.string, std.stdio;
-// Count words in a file using ranges.
-void main()
-{
-    auto file = File("file.txt"); // Open for reading
-    const wordCount = file.byLine()                  // Read lines
-                          .map!split                 // Split into words
-                          .map!(a => a.length)       // Count words per line
-                          .reduce!((a, b) => a + b); // Total word count
-    writeln(wordCount);
-}
-----
-
-Example:
-----
-import std.stdio;
-// Count lines in file using a foreach
-void main()
-{
-    auto file = File("file.txt"); // open for reading
-    ulong lineCount = 0;
-    foreach (line; file.byLine())
-    {
-        ++lineCount;
-    }
-    writeln("Lines in file: ", lineCount);
-}
-----
 */
     struct ByLine(Char, Terminator)
     {
@@ -1155,13 +1121,56 @@ void main()
     }
 
 /**
-Convenience function that returns the $(D LinesReader) corresponding
-to this file. */
-    ByLine!(Char, Terminator) byLine(Terminator = char, Char = char)
+Returns an input range set up to read from the file handle one line 
+at a time.
+
+The element type for the range will be $(D Char[]).
+
+Params:
+Char = Character type for each line, defaulting to $(D char). If 
+Char is mutable then each $(D front) will not persist after $(D 
+popFront) is called, so the caller must copy its contents (e.g. by 
+calling $(D to!string)) if retention is needed.
+keepTerminator = Use $(D KeepTerminator.yes) to include the 
+terminator at the end of each line.
+terminator = Line separator ($(D '\n') by default).
+
+Example:
+----
+import std.algorithm, std.stdio, std.string;
+// Count words in a file using ranges.
+void main()
+{
+    auto file = File("file.txt"); // Open for reading
+    const wordCount = file.byLine()                  // Read lines
+                          .map!split                 // Split into words
+                          .map!(a => a.length)       // Count words per line
+                          .reduce!((a, b) => a + b); // Total word count
+    writeln(wordCount);
+}
+----
+
+Example:
+----
+import std.stdio;
+// Count lines in file using a foreach
+void main()
+{
+    auto file = File("file.txt"); // open for reading
+    ulong lineCount = 0;
+    foreach (line; file.byLine())
+    {
+        ++lineCount;
+    }
+    writeln("Lines in file: ", lineCount);
+}
+----
+*/
+    auto byLine(Terminator = char, Char = char)
     (KeepTerminator keepTerminator = KeepTerminator.no,
             Terminator terminator = '\n')
     {
-        return typeof(return)(this, keepTerminator, terminator);
+        return ByLine!(Char, Terminator)(this, keepTerminator, terminator);
     }
 
     unittest
@@ -1972,35 +1981,65 @@ unittest
 }
 
 /**********************************
- * Read line from stream $(D fp).
+ * Read line from $(D stdin).
+ * 
+ * This version manages its own read buffer, which means one memory allocation per call. If you are not 
+ * retaining a reference to the read data, consider the $(D readln(buf)) version, which may offer 
+ * better performance as it can reuse its read buffer.
+ * 
  * Returns:
- *        $(D null) for end of file,
- *        $(D char[]) for line read from $(D fp), including terminating character
+ *        The line that was read, including the line terminator character. 
  * Params:
- *        $(D fp) = input stream
- *        $(D terminator) = line terminator, '\n' by default
+ *        S = Template parameter; the type of the allocated buffer, and the type returned. Defaults to $(D string).
+ *        terminator = line terminator (by default, '\n')
  * Throws:
- *        $(D StdioException) on error
+ *        $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
  * Example:
  *        Reads $(D stdin) and writes it to $(D stdout).
 ---
 import std.stdio;
 
-int main()
+void main()
 {
-    string buf;
-    while ((buf = stdin.readln()) !is null)
-        write(buf);
-    return 0;
+    string line;
+    while ((line = readln()) !is null)
+        write(line);
 }
 ---
 */
 S readln(S = string)(dchar terminator = '\n')
 if (isSomeString!S)
 {
-    return stdin.readln(terminator);
+    return stdin.readln!S(terminator);
 }
-/** ditto */
+
+/**********************************
+ * Read line from $(D stdin) and write it to buf[], including terminating character.
+ * 
+ * This can be faster than $(D line = readln()) because you can reuse
+ * the buffer for each call. Note that reusing the buffer means that you
+ * must copy the previous contents if you wish to retain them.
+ * 
+ * Returns:
+ *        $(D size_t) 0 for end of file, otherwise number of characters read
+ * Params:
+ *        buf = Buffer used to store the resulting line data. buf is resized as necessary.
+ *        terminator = line terminator (by default, '\n')
+ * Throws:
+ *        $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
+ * Example:
+ *        Reads $(D stdin) and writes it to $(D stdout).
+---
+import std.stdio;
+
+void main()
+{
+    char[] buf;
+    while (readln(buf))
+        write(buf);
+}
+---
+*/
 size_t readln(C)(ref C[] buf, dchar terminator = '\n')
 if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum))
 {
@@ -2013,6 +2052,29 @@ if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum) &&
     isBidirectionalRange!R && is(typeof(terminator.front == dchar.init)))
 {
     return stdin.readln(buf, terminator);
+}
+
+unittest
+{
+    //we can't actually test readln, so at the very least,
+    //we test compilability
+    void foo()
+    {
+        readln();
+        readln('\t');
+        foreach (String; TypeTuple!(string, char[], wstring, wchar[], dstring, dchar[]))
+        {
+            readln!String();
+            readln!String('\t');
+        }
+        foreach (String; TypeTuple!(char[], wchar[], dchar[]))
+        {
+            String buf;
+            readln(buf);
+            readln(buf, '\t');
+            readln(buf, "<br />");
+        }
+    }
 }
 
 /*
