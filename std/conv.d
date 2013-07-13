@@ -2181,10 +2181,10 @@ Target parse(Target, Source)(ref Source p)
 {
     static import core.stdc.math/* : HUGE_VAL*/;
 
-    static immutable real negtab[14] =
+    static immutable real[14] negtab =
         [ 1e-4096L,1e-2048L,1e-1024L,1e-512L,1e-256L,1e-128L,1e-64L,1e-32L,
                 1e-16L,1e-8L,1e-4L,1e-2L,1e-1L,1.0L ];
-    static immutable real postab[13] =
+    static immutable real[13] postab =
         [ 1e+4096L,1e+2048L,1e+1024L,1e+512L,1e+256L,1e+128L,1e+64L,1e+32L,
                 1e+16L,1e+8L,1e+4L,1e+2L,1e+1L ];
     // static immutable string infinity = "infinity";
@@ -2574,7 +2574,7 @@ unittest
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     struct longdouble
     {
-        ushort value[5];
+        ushort[5] value;
     }
 
     real ld;

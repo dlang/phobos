@@ -639,7 +639,7 @@ Parameter for the generator.
             upperMask = ~((cast(UIntType) 1u <<
                            (UIntType.sizeof * 8 - (w - r))) - 1),
             lowerMask = (cast(UIntType) 1u << r) - 1;
-        static immutable UIntType mag01[2] = [0x0UL, a];
+        static immutable UIntType[2] mag01 = [0x0UL, a];
 
         ulong y = void;
 

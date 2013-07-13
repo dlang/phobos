@@ -2068,7 +2068,7 @@ unittest
             ["nyuk", "I", "have", "no", "chocolate", "giba"],
             ["wyda", "I", "have", "I", "have", "have", "I", "have", "hehe"],
             0.5);
-    double witness[] = [ 7.0, 4.03125, 0, 0 ];
+    double[] witness = [ 7.0, 4.03125, 0, 0 ];
     foreach (e; sim)
     {
         //writeln(e);
@@ -2217,10 +2217,10 @@ private:
             recurseRange.popHalf();
             slowFourier2(recurseRange, buf[$ / 2..$]);
         }
-        
+
         butterfly(buf);
     }
-    
+
     // This algorithm works by performing the even and odd parts of our FFT
     // using the "two for the price of one" method mentioned at
     // http://www.engineeringproductivitytools.com/stuff/T0001/PT10.HTM#Head521
@@ -2232,7 +2232,7 @@ private:
         assert(isPowerOfTwo(range.length));
     } body {
         alias ElementType!R E;
-        
+
         // Converts odd indices of range to the imaginary components of
         // a range half the size.  The even indices become the real components.
         static if(isArray!R && isFloatingPoint!E) {
@@ -2240,57 +2240,57 @@ private:
             // cheap way to convert.  This is a common case, so take advantage.
             auto oddsImag = cast(Complex!E[]) range;
         } else {
-            // General case:  Use a higher order range.  We can assume 
+            // General case:  Use a higher order range.  We can assume
             // source.length is even because it has to be a power of 2.
             static struct OddToImaginary {
                 R source;
                 alias Complex!(CommonType!(E, typeof(buf[0].re))) C;
-                
+
                 @property {
                     C front() {
                         return C(source[0], source[1]);
                     }
-                
+
                     C back() {
                         immutable n = source.length;
                         return C(source[n - 2], source[n - 1]);
                     }
-                    
+
                     typeof(this) save() {
                         return typeof(this)(source.save);
                     }
-                    
+
                     bool empty() {
                         return source.empty;
                     }
-                    
+
                     size_t length() {
                         return source.length / 2;
                     }
                 }
-                
+
                 void popFront() {
                     source.popFront();
                     source.popFront();
                 }
-                
+
                 void popBack() {
                     source.popBack();
                     source.popBack();
                 }
-                
+
                 C opIndex(size_t index) {
                     return C(source[index * 2], source[index * 2 + 1]);
                 }
-                
+
                 typeof(this) opSlice(size_t lower, size_t upper) {
                     return typeof(this)(source[lower * 2..upper * 2]);
                 }
             }
-            
+
             auto oddsImag = OddToImaginary(range);
         }
-        
+
         fft(oddsImag, buf[0..$ / 2]);
         auto evenFft = buf[0..$ / 2];
         auto oddFft = buf[$ / 2..$];
@@ -2299,7 +2299,7 @@ private:
         oddFft[0].im = 0;
         evenFft[0].im = 0;
         // evenFft[0].re is already right b/c it's aliased with buf[0].re.
-        
+
         foreach(k; 1..halfN / 2 + 1) {
             immutable bufk = buf[k];
             immutable bufnk = buf[buf.length / 2 - k];
@@ -2307,7 +2307,7 @@ private:
             evenFft[halfN - k].re = evenFft[k].re;
             evenFft[k].im = 0.5 * (bufk.im - bufnk.im);
             evenFft[halfN - k].im = -evenFft[k].im;
-            
+
             oddFft[k].re = 0.5 * (bufk.im + bufnk.im);
             oddFft[halfN - k].re = oddFft[k].re;
             oddFft[k].im = 0.5 * (bufnk.re - bufk.re);
@@ -2316,8 +2316,8 @@ private:
 
         butterfly(buf);
     }
-    
-    void butterfly(R)(R buf) const 
+
+    void butterfly(R)(R buf) const
     in {
         assert(isPowerOfTwo(buf.length));
     } body {
@@ -2440,8 +2440,8 @@ private:
     }
 
 public:
-    /**Create an $(D Fft) object for computing fast Fourier transforms of 
-     * power of two sizes of $(D size) or smaller.  $(D size) must be a 
+    /**Create an $(D Fft) object for computing fast Fourier transforms of
+     * power of two sizes of $(D size) or smaller.  $(D size) must be a
      * power of two.
      */
     this(size_t size) {
@@ -2464,7 +2464,7 @@ public:
      *
      * Note:  Pure real FFTs are automatically detected and the relevant
      *        optimizations are performed.
-     * 
+     *
      * Returns:  An array of complex numbers representing the transformed data in
      *           the frequency domain.
      */
@@ -2506,7 +2506,7 @@ public:
             alias ElementType!R E;
             static if(is(E : real)) {
                 return fftImplPureReal(range, buf);
-            } else {                
+            } else {
                 static if(is(R : Stride!R)) {
                     return fftImpl(range, buf);
                 } else {
@@ -2611,13 +2611,13 @@ unittest {
         [36.0, -4, -4, -4, -4, -4, -4, -4]));
     assert(approxEqual(map!"a.im"(fft1),
         [0, 9.6568, 4, 1.6568, 0, -1.6568, -4, -9.6568]));
-    
+
     auto fft1Retro = fft(retro(arr));
     assert(approxEqual(map!"a.re"(fft1Retro),
         [36.0, 4, 4, 4, 4, 4, 4, 4]));
     assert(approxEqual(map!"a.im"(fft1Retro),
-        [0, -9.6568, -4, -1.6568, 0, 1.6568, 4, 9.6568]));  
-        
+        [0, -9.6568, -4, -1.6568, 0, 1.6568, 4, 9.6568]));
+
     auto fft1Float = fft(to!(float[])(arr));
     assert(approxEqual(map!"a.re"(fft1), map!"a.re"(fft1Float)));
     assert(approxEqual(map!"a.im"(fft1), map!"a.im"(fft1Float)));

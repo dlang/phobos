@@ -123,8 +123,8 @@ version(unittest)
         if (isnan(x) || isnan(y))
             return 0;
 
-        char bufx[30];
-        char bufy[30];
+        char[30] bufx;
+        char[30] bufy;
         assert(ndigits < bufx.length);
 
         int ix;
@@ -156,14 +156,14 @@ version(LittleEndian)
     static assert(real.mant_dig == 53 || real.mant_dig==64
                || real.mant_dig == 113,
       "Only 64-bit, 80-bit, and 128-bit reals"
-      " are supported for LittleEndian CPUs");
+      ~ " are supported for LittleEndian CPUs");
 }
 else
 {
     static assert(real.mant_dig == 53 || real.mant_dig==106
                || real.mant_dig == 113,
     "Only 64-bit and 128-bit reals are supported for BigEndian CPUs."
-    " double-double reals have partial support");
+    ~ " double-double reals have partial support");
 }
 
 // Constants used for extracting the components of the representation.
@@ -486,8 +486,6 @@ trigerr:
     }
     return real.nan;
 
-Lret:
-    ;
     }
     else version(D_InlineAsm_X86_64)
     {
@@ -533,10 +531,8 @@ trigerr:
         jz      Lret                    ; // if theta is NAN, return theta
         fstp    ST(0)                   ; // dump theta
     }
-    return real.nan;
-
 Lret:
-    ;
+    return real.nan;
     }
     else
     {
@@ -546,7 +542,7 @@ Lret:
 
 unittest
 {
-    static real vals[][2] =     // angle,tan
+    static real[2][] vals =     // angle,tan
         [
          [   0,   0],
          [   .5,  .5463024898],
@@ -1788,7 +1784,7 @@ real frexp(real value, out int exp) @trusted pure nothrow
 
 unittest
 {
-    static real vals[][3] =     // x,frexp,exp
+    static real[3][] vals =     // x,frexp,exp
         [
          [0.0,   0.0,    0],
          [-0.0,  -0.0,   0],
@@ -1818,7 +1814,7 @@ unittest
 
     static if (real.mant_dig == 64)
     {
-        static real extendedvals[][3] = [ // x,frexp,exp
+        static real[3][] extendedvals = [ // x,frexp,exp
                                           [0x1.a5f1c2eb3fe4efp+73L, 0x1.A5F1C2EB3FE4EFp-1L,   74],    // normal
                                           [0x1.fa01712e8f0471ap-1064L,  0x1.fa01712e8f0471ap-1L,     -1063],
                                           [real.min_normal,  .5,     -16381],
@@ -1929,7 +1925,7 @@ unittest
 
 unittest
 {
-    static real vals[][3] =    // value,exp,ldexp
+    static real[3][] vals =    // value,exp,ldexp
     [
     [    0,    0,    0],
     [    1,    0,    1],
@@ -2305,7 +2301,7 @@ real hypot(real x, real y) @safe pure nothrow
 
 unittest
 {
-    static real vals[][3] =     // x,y,hypot
+    static real[3][] vals =     // x,y,hypot
         [
             [ 0.0,     0.0,   0.0],
             [ 0.0,    -0.0,   0.0],
@@ -4725,7 +4721,7 @@ unittest
 {
     debug (math) printf("math.poly.unittest\n");
     real x = 3.1;
-    static real pp[] = [56.1, 32.7, 6];
+    static real[] pp = [56.1, 32.7, 6];
 
     assert( poly(x, pp) == (56.1L + (32.7L + 6L * x) * x) );
 }
