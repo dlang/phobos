@@ -189,6 +189,10 @@ unittest
     });
 }
 
+@safe nothrow unittest
+{
+    auto a = array([0, 1, 2, 3]);
+}
 
 /**
 Returns a newly allocated associative array out of elements of the input range,
@@ -234,22 +238,6 @@ unittest
     assert(aa2 == [0:"a", 1:"b", 2:"c"]);
 }
 
-private template blockAttribute(T)
-{
-    static if (hasIndirections!(T) || is(T == void))
-    {
-        enum blockAttribute = 0;
-    }
-    else
-    {
-        enum blockAttribute = GC.BlkAttr.NO_SCAN;
-    }
-}
-unittest
-{
-    static assert(!(blockAttribute!void & GC.BlkAttr.NO_SCAN));
-}
-
 // Returns the number of dimensions in an array T.
 private template nDimensions(T)
 {
@@ -275,6 +263,12 @@ without initializing its elements.  This can be a useful optimization if every
 element will be immediately initialized.  $(D T) may be a multidimensional
 array.  In this case sizes may be specified for any number of dimensions from 1
 to the number in $(D T).
+
+The array returned by uninitializedArray will have the same properties as a
+newed garbage collected array (capacity, appendability, etc...)
+
+uninitializedArray is nothrow . If the "final element type" is a POD, and
+has no indirections, then uninitializedArray is @trusted too.
 
 Examples:
 $(D_RUN_CODE
@@ -305,12 +299,27 @@ unittest
     assert(matrix[0].length == 31);
 }
 
+nothrow @safe unittest
+{
+    uninitializedArray!(int[])(10);
+    //uninitializedArray!(int[][])(10);
+    uninitializedArray!(int[][])(10, 10);
+    //uninitializedArray!(int*[][])(10, 10);
+}
+
 /**
 Returns a new array of type $(D T) allocated on the garbage collected heap.
-Initialization is guaranteed only for pointers, references and slices,
-for preservation of memory safety.
+Partial initialization is done for types with indirections,
+for preservation of memory safety. Note that elements will only be
+initialized to 0, but not necessarily the element type's $(D .init).
+
+The array returned by minimallyInitializedArray will have the same properties
+as a newed garbage collected array (capacity, appendability, etc...)
+
+minimallyInitializedArray is nothrow. If the "final element type" is a POD,
+then uninitializedArray is @trusted too.
 */
-auto minimallyInitializedArray(T, I...)(I sizes) @trusted
+auto minimallyInitializedArray(T, I...)(I sizes)
 if(allSatisfy!(isIntegral, I))
 {
     return arrayAllocImpl!(true, T, I)(sizes);
@@ -329,48 +338,195 @@ unittest
     }
 }
 
+unittest //@@@9803@@@
+{
+    auto a = minimallyInitializedArray!(int*[])(1);
+    assert(a[0] == null);
+    auto b = minimallyInitializedArray!(int[][])(1);
+    assert(b[0].empty);
+    auto c = minimallyInitializedArray!(int*[][])(1, 1);
+    assert(c[0][0] == null);
+}
+
+unittest //@@@10637@@@
+{
+    static struct S
+    {
+        static struct I{int i; alias i this;}
+        int* p;
+        this() @disable;
+        this(int i)
+        {
+            p = &(new I(i)).i;
+        }
+        this(this)
+        {
+            p = &(new I(*p)).i;
+        }
+        ~this()
+        {
+            assert(p != null);
+        }
+    }
+    auto a = minimallyInitializedArray!(S[])(1);
+    assert(a[0].p == null);
+    enum b = minimallyInitializedArray!(S[])(1);
+}
+
+unittest //Check safety/nothrow and capacity (related: @@@10641@@@)
+{
+    auto s = () nothrow @safe {return minimallyInitializedArray!(int[][][])(10, 10);}();
+    foreach (e; s)
+    {
+        foreach (ee; e)
+        {
+            foreach (eee; ee)
+                assert(e.empty);
+            assert(e.capacity);
+        }
+        assert(e.capacity);
+    }
+    assert(s.capacity);
+
+    enum es = arrayAllocImpl!(false, int[][])(10, 10);
+    enum as = es;
+    foreach (e; as)
+        assert(e.capacity);
+    assert(as.capacity);
+
+    () nothrow @safe {
+        minimallyInitializedArray!(int[][])(10);
+        minimallyInitializedArray!(int[][])(10, 10);
+        minimallyInitializedArray!(int*[][])(10, 10);
+    }();
+}
+
+//allocates a 1D array of size n
+//preserves APPENDABLE info
+//marks the array data as "used"
+//does not intialize array elements
+//nothrow and pure. safe too if T is POD without indirections.
+private template arrayAllocAlloc(T)
+{
+    private enum sbody = q{
+        try
+        {
+            T[] ret;
+            ret.reserve(n);
+            ret = ret.ptr[0 .. n];
+            assumeSafeAppend(ret); 
+            return ret;
+        }
+        catch (Exception)
+            {}
+        assert(0);
+    };
+    static if (__traits(isPOD, T) && !hasIndirections!T)
+        T[] arrayAllocAlloc(size_t n) @trusted nothrow
+        {
+            mixin(sbody);
+        }
+    else
+        T[] arrayAllocAlloc(size_t n) nothrow
+        {
+            mixin(sbody);
+        }
+}
+
+nothrow @safe unittest
+{
+    foreach (T; TypeTuple!(ubyte, ushort, uint, ulong))
+    {
+        for ( size_t n = 4 ; n < 65_000 ; n *= 2 )
+        {
+            foreach ( size_t n2 ; n - 2 .. n + 1 )
+            {
+                auto arr = arrayAllocAlloc!T(n2);
+                assert(arr.length == n2);
+                () @trusted {assert(arr.capacity >= n2);}();
+            }
+        }
+    }
+}
+nothrow unittest
+{
+    static struct S
+    {
+        this() @disable;
+        this(this) @disable;
+    }
+    for ( size_t n = 4 ; n < 65_000 ; n *= 2 )
+    {
+        foreach ( size_t n2 ; n - 2 .. n + 1 )
+        {
+            auto arr = arrayAllocAlloc!S(n2);
+            assert(arr.length == n2);
+            assert(arr.capacity >= n2);
+        }
+    }
+}
+
 private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes)
 if(allSatisfy!(isIntegral, I))
 {
     static assert(sizes.length >= 1,
-        "Cannot allocate an array without the size of at least the first " ~
-        " dimension.");
+        "Cannot allocate an array without the size of at least the first dimension.");
     static assert(sizes.length <= nDimensions!T,
-        to!string(sizes.length) ~ " dimensions specified for a " ~
-        to!string(nDimensions!T) ~ " dimensional array.");
+        format("%s dimensions specified for a %s dimensional array.", sizes.length, nDimensions!T));
 
-    alias typeof(T.init[0]) E;
+    alias ElementEncodingType!T E;
 
-    auto ptr = (__ctfe) ?
+    immutable size = sizes[0];
+
+    static if (I.length == 1)
+    {
+        if (__ctfe)
         {
             static if(__traits(compiles, new E[1]))
             {
-                return (new E[sizes[0]]).ptr;
+                return new E[](size);
             }
             else
             {
-                E[] arr;
-                foreach (i; 0 .. sizes[0])
-                    arr ~= E.init;
-                return arr.ptr;
+                E[] ret;
+                foreach (i; 0 .. size)
+                    ret ~= E.init;
+                return ret;
             }
-        }() :
-        cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!(E));
-    auto ret = ptr[0..sizes[0]];
-
-    static if(sizes.length > 1)
-    {
-        foreach(ref elem; ret)
+        }
+        else
         {
-            elem = uninitializedArray!(E)(sizes[1..$]);
+            static if(minimallyInitialized && hasIndirections!E)
+            {
+                import core.stdc.string;
+                E[] ret;
+                static if (__traits(isPOD, E))
+                () @trusted {
+                    ret = arrayAllocAlloc!E(size);
+                    memset(ret.ptr, 0, size * E.sizeof);
+                } ();
+                else
+                {
+                    ret = arrayAllocAlloc!E(size);
+                    memset(ret.ptr, 0, size * E.sizeof);
+                }
+                return ret;
+            }
+            else
+                return arrayAllocAlloc!E(size);
         }
     }
-    else static if(minimallyInitialized && hasIndirections!E)
+    else
     {
-        ret[] = E.init;
-    }
+        E[] ret = __ctfe ?
+            new E[](size) :
+            () @trusted {return arrayAllocAlloc!E(size);} ();
 
-    return ret;
+        foreach(ref elem; ret)
+            elem = arrayAllocImpl!(minimallyInitialized, E)(sizes[1..$]);
+
+        return ret;
+    }
 }
 
 /**
