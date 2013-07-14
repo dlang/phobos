@@ -2465,7 +2465,7 @@ unittest
 
 /*****************************************************
  * $(RED Deprecated. It will be removed in November 2013.
- *       Please us std.string.format instead)
+ *       Please use std.string.format instead.)
  *
  * Format arguments into a string.
  *
@@ -2493,8 +2493,8 @@ deprecated unittest
 
 
 /*****************************************************
- * $(RED Deprecated. It will be removed in November 2013).
- *       Please us std.string.sformat instead)
+ * $(RED Deprecated. It will be removed in November 2013.
+ *       Please use std.string.sformat instead.)
  *
  * Format arguments into string $(D buf) which must be large
  * enough to hold the result. Throws RangeError if it is not.
