@@ -465,16 +465,33 @@ private struct MapResult(alias fun, Range)
         alias length opDollar;
     }
 
-    static if (!isInfinite!R && hasSlicing!R)
+    static if (hasSlicing!R)
     {
         static if (is(typeof(_input[ulong.max .. ulong.max])))
-            private alias ulong opSlice_t;
+            private alias opSlice_t = ulong;
         else
-            private alias uint opSlice_t;
+            private alias opSlice_t = uint;
 
-        auto opSlice(opSlice_t lowerBound, opSlice_t upperBound)
+        static if (hasLength!R)
         {
-            return typeof(this)(_input[lowerBound..upperBound]);
+            auto opSlice(opSlice_t low, opSlice_t high)
+            {
+                return typeof(this)(_input[low .. high]);
+            }
+        }
+        else static if (is(typeof(_input[opSlice_t.max .. $])))
+        {
+            struct DollarToken{}
+            enum opDollar = DollarToken.init;
+            auto opSlice(opSlice_t low, DollarToken)
+            {
+                return typeof(this)(_input[low .. $]);
+            }
+
+            auto opSlice(opSlice_t low, opSlice_t high)
+            {
+                return this[low .. $].take(high - low);
+            }
         }
     }
 
@@ -611,6 +628,15 @@ unittest
     const floatEnd = 1.0;
     const floatStep = 0.02;
     static assert(__traits(compiles, map!(i => i)(iota(floatBegin, floatEnd, floatStep))));
+}
+unittest
+{
+    //slicing infinites
+    auto rr = iota(0, 5).cycle().map!"a * a"();
+    alias RR = typeof(rr);
+    static assert(hasSlicing!RR);
+    rr = rr[6 .. $]; //Advances 1 cycle and 1 unit
+    assert(equal(rr[0 .. 5], [1, 4, 9, 16, 0]));
 }
 
 /**
