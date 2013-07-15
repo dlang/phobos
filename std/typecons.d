@@ -2515,7 +2515,7 @@ private static:
             enum storageClass = make_storageClass();
 
             //
-            if (isAbstractFunction!func)
+            if (__traits(isVirtualMethod, func))
                 code ~= "override ";
             code ~= format("extern(%s) %s %s(%s) %s %s\n",
                     functionLinkage!(func),
