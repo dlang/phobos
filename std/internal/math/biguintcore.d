@@ -847,7 +847,7 @@ public:
     // Implement toHash so that BigUint works properly as an AA key.
     size_t toHash() const @trusted nothrow
     {
-	return typeid(data).getHash(&data);
+        return typeid(data).getHash(&data);
     }
 
 } // end BigUint
