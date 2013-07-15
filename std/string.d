@@ -693,14 +693,6 @@ unittest
  * Returns the representation of a string, which has the same type
  * as the string except the character type is replaced by $(D ubyte),
  * $(D ushort), or $(D uint) depending on the character width.
- *
- * Example:
-----
-string s = "hello";
-static assert(is(typeof(representation(s)) == immutable(ubyte)[]));
-assert(representation(s) is cast(immutable(ubyte)[]) s);
-assert(representation(s) == [0x68, 0x65, 0x6c, 0x6c, 0x6f]);
-----
  */
 auto representation(Char)(Char[] s) pure nothrow
     if (isSomeChar!Char)
@@ -724,10 +716,9 @@ auto representation(Char)(Char[] s) pure nothrow
 
     return cast(ST[]) s;
 }
-
+///
 unittest
 {
-    //test example
     string s = "hello";
     static assert(is(typeof(representation(s)) == immutable(ubyte)[]));
     assert(representation(s) is cast(immutable(ubyte)[]) s);
@@ -1219,20 +1210,6 @@ unittest
 
 /++
     Strips leading whitespace.
-
-    Examples:
---------------------
-assert(stripLeft("     hello world     ") ==
-       "hello world     ");
-assert(stripLeft("\n\t\v\rhello world\n\t\v\r") ==
-       "hello world\n\t\v\r");
-assert(stripLeft("hello world") ==
-       "hello world");
-assert(stripLeft([lineSep] ~ "hello world" ~ lineSep) ==
-       "hello world" ~ [lineSep]);
-assert(stripLeft([paraSep] ~ "hello world" ~ paraSep) ==
-       "hello world" ~ [paraSep]);
---------------------
   +/
 C[] stripLeft(C)(C[] str) @safe pure
     if (isSomeChar!C)
@@ -1246,7 +1223,7 @@ C[] stripLeft(C)(C[] str) @safe pure
     return str[$ .. $]; //Empty string with correct type.
 }
 
-//Verify Example.
+///
 unittest
 {
     assert(stripLeft("     hello world     ") ==
@@ -1264,20 +1241,6 @@ unittest
 
 /++
     Strips trailing whitespace.
-
-    Examples:
---------------------
-assert(stripRight("     hello world     ") ==
-       "     hello world");
-assert(stripRight("\n\t\v\rhello world\n\t\v\r") ==
-       "\n\t\v\rhello world");
-assert(stripRight("hello world") ==
-       "hello world");
-assert(stripRight([lineSep] ~ "hello world" ~ lineSep) ==
-       [lineSep] ~ "hello world");
-assert(stripRight([paraSep] ~ "hello world" ~ paraSep) ==
-       [paraSep] ~ "hello world");
---------------------
   +/
 C[] stripRight(C)(C[] str)
     if (isSomeChar!C)
@@ -1291,7 +1254,7 @@ C[] stripRight(C)(C[] str)
     return str[0 .. 0];
 }
 
-//Verify Example.
+///
 unittest
 {
     assert(stripRight("     hello world     ") ==
@@ -1309,20 +1272,6 @@ unittest
 
 /++
     Strips both leading and trailing whitespace.
-
-    Examples:
---------------------
-assert(strip("     hello world     ") ==
-       "hello world");
-assert(strip("\n\t\v\rhello world\n\t\v\r") ==
-       "hello world");
-assert(strip("hello world") ==
-       "hello world");
-assert(strip([lineSep] ~ "hello world" ~ [lineSep]) ==
-       "hello world");
-assert(strip([paraSep] ~ "hello world" ~ [paraSep]) ==
-       "hello world");
---------------------
   +/
 C[] strip(C)(C[] str)
     if (isSomeChar!C)
@@ -1330,7 +1279,7 @@ C[] strip(C)(C[] str)
     return stripRight(stripLeft(str));
 }
 
-//Verify Example.
+///
 unittest
 {
     assert(strip("     hello world     ") ==
@@ -1392,22 +1341,6 @@ unittest
     $(D "\r\n"), $(XREF uni, lineSep), or $(XREF uni, paraSep) is removed from
     the end of $(D str). If $(D str) does not end with any of those characters,
     then it is returned unchanged.
-
-    Examples:
---------------------
-assert(chomp(" hello world  \n\r") == " hello world  \n");
-assert(chomp(" hello world  \r\n") == " hello world  ");
-assert(chomp(" hello world  \n\n") == " hello world  \n");
-assert(chomp(" hello world  \n\n ") == " hello world  \n\n ");
-assert(chomp(" hello world  \n\n" ~ [lineSep]) == " hello world  \n\n");
-assert(chomp(" hello world  \n\n" ~ [paraSep]) == " hello world  \n\n");
-assert(chomp(" hello world") == " hello world");
-assert(chomp("") == "");
-
-assert(chomp(" hello world", "orld") == " hello w");
-assert(chomp(" hello world", " he") == " hello world");
-assert(chomp("", "hello") == "");
---------------------
   +/
 C[] chomp(C)(C[] str)
     if (isSomeChar!C)
@@ -1476,7 +1409,7 @@ C1[] chomp(C1, C2)(C1[] str, const(C2)[] delimiter)
     return str;
 }
 
-//Verify Example.
+///
 unittest
 {
     assert(chomp(" hello world  \n\r") == " hello world  \n");
@@ -1536,14 +1469,6 @@ unittest
     If $(D str) starts with $(D delimiter), then the part of $(D str) following
     $(D delimiter) is returned. If it $(D str) does $(I not) start with
     $(D delimiter), then it is returned unchanged.
-
-    Examples:
---------------------
-assert(chompPrefix("hello world", "he") == "llo world");
-assert(chompPrefix("hello world", "hello w") == "orld");
-assert(chompPrefix("hello world", " world") == "hello world");
-assert(chompPrefix("", "hello") == "");
---------------------
  +/
 C1[] chompPrefix(C1, C2)(C1[] str, C2[] delimiter)
     if (isSomeChar!C1 && isSomeChar!C2)
@@ -1569,7 +1494,7 @@ C1[] chompPrefix(C1, C2)(C1[] str, C2[] delimiter)
     }
 }
 
-//Verify Example.
+///
 unittest
 {
     assert(chompPrefix("hello world", "he") == "llo world");
@@ -1598,17 +1523,6 @@ unittest
     Returns $(D str) without its last character, if there is one. If $(D str)
     ends with $(D "\r\n"), then both are removed. If $(D str) is empty, then
     then it is returned unchanged.
-
-    Examples:
---------------------
-assert(chop("hello world") == "hello worl");
-assert(chop("hello world\n") == "hello world");
-assert(chop("hello world\r") == "hello world");
-assert(chop("hello world\n\r") == "hello world\n");
-assert(chop("hello world\r\n") == "hello world");
-assert(chop("Walter Bright") == "Walter Brigh");
-assert(chop("") == "");
---------------------
  +/
 S chop(S)(S str)
     if (isSomeString!S)
@@ -1624,7 +1538,7 @@ S chop(S)(S str)
     return str;
 }
 
-//Verify Example.
+///
 unittest
 {
     assert(chop("hello world") == "hello worl");
@@ -2034,17 +1948,6 @@ unittest
         transTable = The AA indicating which characters to replace and what to
                      replace them with.
         toRemove   = The characters to remove from the string.
-
-        Examples:
---------------------
-dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
-assert(translate("hello world", transTable1) == "h5ll7 w7rld");
-
-assert(translate("hello world", transTable1, "low") == "h5 rd");
-
-string[dchar] transTable2 = ['e' : "5", 'o' : "orange"];
-assert(translate("hello world", transTable2) == "h5llorange worangerld");
---------------------
   +/
 C1[] translate(C1, C2 = immutable char)(C1[] str,
                                         dchar[dchar] transTable,
@@ -2054,7 +1957,7 @@ C1[] translate(C1, C2 = immutable char)(C1[] str,
     return translateImpl(str, transTable, toRemove);
 }
 
-//Verify Examples.
+///
 unittest
 {
     dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
@@ -2225,14 +2128,6 @@ private auto translateImpl(C1, T, C2)(C1[] str,
         transTable = The string indicating which characters to replace and what
                      to replace them with. It is generated by $(LREF makeTrans).
         toRemove   = The characters to remove from the string.
-
-        Examples:
---------------------
-auto transTable1 = makeTrans("eo5", "57q");
-assert(translate("hello world", transTable1) == "h5ll7 w7rld");
-
-assert(translate("hello world", transTable1, "low") == "h5 rd");
---------------------
   +/
 C[] translate(C = immutable char)(in char[] str, in char[] transTable, in char[] toRemove = null) @trusted nothrow
     if (is(Unqual!C == char))
@@ -2289,7 +2184,7 @@ body
     return assumeUnique(transTable);
 }
 
-// Verify Examples.
+///
 unittest
 {
     auto transTable1 = makeTrans("eo5", "57q");
@@ -2807,11 +2702,11 @@ unittest
 
  Example:
  ---
-string s = "123abc";
-string t = munch(s, "0123456789");
-assert(t == "123" && s == "abc");
-t = munch(s, "0123456789");
-assert(t == "" && s == "abc");
+ string s = "123abc";
+ string t = munch(s, "0123456789");
+ assert(t == "123" && s == "abc");
+ t = munch(s, "0123456789");
+ assert(t == "" && s == "abc");
  ---
 
 The $(D_PARAM munch) function is mostly convenient for skipping
