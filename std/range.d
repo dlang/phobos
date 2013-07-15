@@ -2944,6 +2944,28 @@ if (isInputRange!R)
                 {
                     return Result(_input.save, _n);
                 }
+
+            static if (hasMobileElements!R)
+            {
+                auto moveFront()
+                {
+                    assert(!empty,
+                        "Attempting to move the front of an empty "
+                        ~ typeof(this).stringof);
+                    return .moveFront(_input);
+                }
+            }
+
+            static if (hasAssignableElements!R)
+            {
+                @property auto ref front(ElementType!R v)
+                {
+                    assert(!empty,
+                        "Attempting to assign to the front of an empty "
+                        ~ typeof(this).stringof);
+                    return _input.front = v;
+                }
+            }
         }
 
         return Result(range, n);
@@ -3000,11 +3022,31 @@ unittest
 
     foreach(DummyType; AllDummyRanges)
     {
-        DummyType dummy;
-        auto t = takeExactly(dummy, 5);
+        {
+            DummyType dummy;
+            auto t = takeExactly(dummy, 5);
 
-        //Test that takeExactly doesn't wrap the result of takeExactly.
-        assert(takeExactly(t, 4) == takeExactly(dummy, 4));
+            //Test that takeExactly doesn't wrap the result of takeExactly.
+            assert(takeExactly(t, 4) == takeExactly(dummy, 4));
+        }
+
+        static if(hasMobileElements!DummyType)
+        {
+            {
+                auto t = takeExactly(DummyType.init, 4);
+                assert(t.moveFront() == 1);
+                assert(equal(t, [1, 2, 3, 4]));
+            }
+        }
+
+        static if(hasAssignableElements!DummyType)
+        {
+            {
+                auto t = takeExactly(DummyType.init, 4);
+                t.front = 9;
+                assert(equal(t, [9, 2, 3, 4]));
+            }
+        }
     }
 }
 
