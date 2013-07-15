@@ -485,7 +485,6 @@ trigerr:
         fstp    ST(0)                   ; // dump theta
     }
     return real.nan;
-Lret: {}
     }
     else version(D_InlineAsm_X86_64)
     {
@@ -532,10 +531,10 @@ trigerr:
         fstp    ST(0)                   ; // dump theta
     }
     return real.nan;
-Lret: {}
     }
     else
     {
+Lret:
         return core.stdc.math.tanl(x);
     }
 }
