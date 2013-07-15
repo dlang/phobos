@@ -1896,8 +1896,6 @@ unittest
 {
     debug(string) printf("string.entab.unittest\n");
 
-    string r;
-
     assert(entab(cast(string) null) is null);
     assert(entab("").empty);
     assert(entab("a") == "a");
@@ -2496,46 +2494,25 @@ unittest
 {
     debug(string) printf("std.string.inPattern.unittest\n");
 
-    int i;
-
-    i = inPattern('x', "x");
-    assert(i == 1);
-    i = inPattern('x', "y");
-    assert(i == 0);
-    i = inPattern('x', cast(string)null);
-    assert(i == 0);
-    i = inPattern('x', "^y");
-    assert(i == 1);
-    i = inPattern('x', "yxxy");
-    assert(i == 1);
-    i = inPattern('x', "^yxxy");
-    assert(i == 0);
-    i = inPattern('x', "^abcd");
-    assert(i == 1);
-    i = inPattern('^', "^^");
-    assert(i == 0);
-    i = inPattern('^', "^");
-    assert(i == 1);
-    i = inPattern('^', "a^");
-    assert(i == 1);
-    i = inPattern('x', "a-z");
-    assert(i == 1);
-    i = inPattern('x', "A-Z");
-    assert(i == 0);
-    i = inPattern('x', "^a-z");
-    assert(i == 0);
-    i = inPattern('x', "^A-Z");
-    assert(i == 1);
-    i = inPattern('-', "a-");
-    assert(i == 1);
-    i = inPattern('-', "^A-");
-    assert(i == 0);
-    i = inPattern('a', "z-a");
-    assert(i == 1);
-    i = inPattern('z', "z-a");
-    assert(i == 1);
-    i = inPattern('x', "z-a");
-    assert(i == 0);
+    assert(inPattern('x', "x") == 1);
+    assert(inPattern('x', "y") == 0);
+    assert(inPattern('x', string.init) == 0);
+    assert(inPattern('x', "^y") == 1);
+    assert(inPattern('x', "yxxy") == 1);
+    assert(inPattern('x', "^yxxy") == 0);
+    assert(inPattern('x', "^abcd") == 1);
+    assert(inPattern('^', "^^") == 0);
+    assert(inPattern('^', "^") == 1);
+    assert(inPattern('^', "a^") == 1);
+    assert(inPattern('x', "a-z") == 1);
+    assert(inPattern('x', "A-Z") == 0);
+    assert(inPattern('x', "^a-z") == 0);
+    assert(inPattern('x', "^A-Z") == 1);
+    assert(inPattern('-', "a-") == 1);
+    assert(inPattern('-', "^A-") == 0);
+    assert(inPattern('a', "z-a") == 1);
+    assert(inPattern('z', "z-a") == 1);
+    assert(inPattern('x', "z-a") == 0);
 }
 
 
@@ -2574,12 +2551,8 @@ unittest
 {
     debug(string) printf("std.string.count.unittest\n");
 
-    size_t c;
-
-    c = countchars("abc", "a-c");
-    assert(c == 3);
-    c = countchars("hello world", "or");
-    assert(c == 3);
+    assert(countchars("abc", "a-c") == 3);
+    assert(countchars("hello world", "or") == 3);
 }
 
 
@@ -2615,16 +2588,10 @@ unittest
 {
     debug(string) printf("std.string.removechars.unittest\n");
 
-    string r;
-
-    r = removechars("abc", "a-c");
-    assert(r.length == 0);
-    r = removechars("hello world", "or");
-    assert(r == "hell wld");
-    r = removechars("hello world", "d");
-    assert(r == "hello worl");
-    r = removechars("hah", "h");
-    assert(r == "a");
+    assert(removechars("abc", "a-c").length == 0);
+    assert(removechars("hello world", "or") == "hell wld");
+    assert(removechars("hello world", "d") == "hello worl");
+    assert(removechars("hah", "h") == "a");
 }
 
 
@@ -2678,19 +2645,17 @@ S squeeze(S)(S s, in S pattern = null)
 unittest
 {
     debug(string) printf("std.string.squeeze.unittest\n");
-    string s,r;
 
-    r = squeeze("hello");
-    //writefln("r = '%s'", r);
-    assert(r == "helo");
+    string s;
+
+    assert(squeeze("hello") == "helo");
+
     s = "abcd";
-    r = squeeze(s);
-    assert(r is s);
+    assert(squeeze(s) is s);
     s = "xyzz";
-    r = squeeze(s);
-    assert(r.ptr == s.ptr); // should just be a slice
-    r = squeeze("hello goodbyee", "oe");
-    assert(r == "hello godbye");
+    assert(squeeze(s).ptr == s.ptr); // should just be a slice
+
+    assert(squeeze("hello goodbyee", "oe") == "hello godbye");
 }
 
 /***************************************************************
@@ -2794,20 +2759,12 @@ unittest
 {
     debug(string) printf("std.string.succ.unittest\n");
 
-    string r;
-
-    r = succ(cast(string) null);
-    assert(r is null);
-    r = succ("!@#$%");
-    assert(r == "!@#$%");
-    r = succ("1");
-    assert(r == "2");
-    r = succ("9");
-    assert(r == "10");
-    r = succ("999");
-    assert(r == "1000");
-    r = succ("zz99");
-    assert(r == "aaa00");
+    assert(succ(string.init) is null);
+    assert(succ("!@#$%") == "!@#$%");
+    assert(succ("1") == "2");
+    assert(succ("9") == "10");
+    assert(succ("999") == "1000");
+    assert(succ("zz99") == "aaa00");
 }
 
 
@@ -3194,7 +3151,6 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false)
 unittest
 {
     debug (string) printf("isNumeric(in string, bool = false).unittest\n");
-    string s;
 
     // Test the isNumeric(in string) function
     assert(isNumeric("1") == true );
@@ -3225,7 +3181,7 @@ unittest
     assert(isNumeric(to!string(-real.infinity)) == true);
     assert(isNumeric(to!string(123e+2+1234.78Li)) == true);
 
-    s = "$250.99-";
+    string s = "$250.99-";
     assert(isNumeric(s[1..s.length - 2]) == true);
     assert(isNumeric(s) == false);
     assert(isNumeric(s[0..s.length - 1]) == false);
@@ -3516,7 +3472,7 @@ unittest
 {
     debug(string) printf("string.column.unittest\n");
 
-    assert(column(cast(string) null) == 0);
+    assert(column(string.init) == 0);
     assert(column("") == 0);
     assert(column("\t") == 8);
     assert(column("abc\t") == 8);
@@ -3610,12 +3566,10 @@ unittest
 {
     debug(string) printf("string.wrap.unittest\n");
 
-    assert(wrap(cast(string) null) == "\n");
+    assert(wrap(string.init) == "\n");
     assert(wrap(" a b   df ") == "a b df\n");
-    //writefln("'%s'", wrap(" a b   df ",3));
     assert(wrap(" a b   df ", 3) == "a b\ndf\n");
     assert(wrap(" a bc   df ", 3) == "a\nbc\ndf\n");
-    //writefln("'%s'", wrap(" abcd   df ",3));
     assert(wrap(" abcd   df ", 3) == "abcd\ndf\n");
     assert(wrap("x") == "x\n");
     assert(wrap("u u") == "u u\n");
@@ -3745,8 +3699,10 @@ private S ctfe_stripRight(S)(S str) if(isSomeString!(Unqual!S))
     return str[0..endIndex];
 }
 
-version(unittest)
+unittest
 {
+    debug(string) printf("string.outdent.unittest\n");
+
     template outdent_testStr(S)
     {
         enum S outdent_testStr =
@@ -3770,11 +3726,6 @@ version(unittest)
 \t\tX
 ";
     }
-}
-
-unittest
-{
-    debug(string) printf("string.outdent.unittest\n");
 
     static assert(ctfe_strip(" \tHi \r\n") == "Hi");
     static assert(ctfe_strip(" \tHi&copy;\u2028 \r\n") == "Hi&copy;");
