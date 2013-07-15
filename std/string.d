@@ -155,6 +155,8 @@ unittest
 {
     debug(string) printf("string.icmp.unittest\n");
 
+    assertCTFEable!(
+    {
     assert(icmp("Ü", "ü") == 0, "Über failure");
     assert(icmp("abc", "abc") == 0);
     assert(icmp("ABC", "abc") == 0);
@@ -200,6 +202,7 @@ unittest
     assert(icmp("\u0430\u0410\u0543"d, filter!"true"("\u0430\u0410\u0544")) < 0);
     assert(icmp(filter!"true"("\u0430\u0411\u0543"d), filter!"true"("\u0430\u0411\u0543\u0237")) < 0);
     assert(icmp(filter!"true"("\u0430\u0411\u0543\u0237"d), filter!"true"("\u0430\u0411\u0543")) > 0);
+    });
 }
 
 
@@ -280,6 +283,9 @@ unittest
 {
     debug(string) printf("string.toStringz.unittest\n");
 
+    // TODO: CTFEable toStringz is really necessary?
+    //assertCTFEable!(
+    //{
     auto p = toStringz("foo");
     assert(strlen(p) == 3);
     const(char) foo[] = "abbzxyzzy";
@@ -297,6 +303,7 @@ unittest
     test = "foo\0";
     p = toStringz(test);
     assert(p[0] == 'f' && p[1] == 'o' && p[2] == 'o' && p[3] == 0);
+    //});
 }
 
 
@@ -369,6 +376,8 @@ unittest
 {
     debug(string) printf("string.indexOf.unittest\n");
 
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
         assert(indexOf(cast(S)null, cast(dchar)'a') == -1);
@@ -394,8 +403,7 @@ unittest
         assert(indexOf("hello\U00010143\u0100\U00010143"w, '\u0100', cs) == 7);
         assert(indexOf("hello\U00010143\u0100\U00010143"d, '\u0100', cs) == 6);
     }
-
-    enum index = indexOf("xyz", cast(dchar) 'x');
+    });
 }
 
 /++
@@ -427,6 +435,8 @@ unittest
 {
     debug(string) printf("string.indexOf.unittest\n");
 
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
         foreach (T; TypeTuple!(string, wstring, dstring))
@@ -469,6 +479,7 @@ unittest
             assert(indexOf("hello\U00010143\u0100\U00010143"d, to!S("\u0100"), cs) == 6);
         }
     }
+    });
 }
 
 
@@ -543,6 +554,8 @@ unittest
 {
     debug(string) printf("string.lastIndexOf.unittest\n");
 
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
         assert(lastIndexOf(cast(S) null, 'a') == -1);
@@ -572,6 +585,7 @@ unittest
         assert(lastIndexOf("\U00010143\u0100\U00010143hello"w, '\u0100', cs) == 2);
         assert(lastIndexOf("\U00010143\u0100\U00010143hello"d, '\u0100', cs) == 1);
     }
+    });
 }
 
 /++
@@ -599,8 +613,23 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
 
             for (ptrdiff_t i = s.length - sub.length; i >= 0; --i)
             {
-                if (s[i] == c && memcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
-                    return i;
+                if (s[i] == c)
+                {
+                    if (__ctfe)
+                    {
+                        foreach (j; 1 .. sub.length)
+                        {
+                            if (s[i + j] != sub[j])
+                                continue;
+                        }
+                        return i;
+                    }
+                    else
+                    {
+                        if (memcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
+                            return i;
+                    }
+                }
             }
         }
         else
@@ -637,6 +666,8 @@ unittest
 {
     debug(string) printf("string.lastIndexOf.unittest\n");
 
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
         foreach (T; TypeTuple!(string, wstring, dstring))
@@ -686,6 +717,7 @@ unittest
             assert(lastIndexOf("\U00010143\u0100\U00010143hello"d, to!S("\u0100"), cs) == 1, csString);
         }
     }
+    });
 }
 
 
@@ -726,6 +758,8 @@ unittest
 }
 unittest
 {
+    assertCTFEable!(
+    {
     void test(Char, T)(Char[] str)
     {
         static assert(is(typeof(representation(str)) == T[]));
@@ -746,6 +780,7 @@ unittest
         test!(      shared Char,       shared Int)(cast(shared) hello.dup);
         test!(const shared Char, const shared Int)(hello);
     }
+    });
 }
 
 
@@ -779,6 +814,8 @@ unittest
 {
     debug(string) printf("string.toLower.unittest\n");
 
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         S s = cast(S)"hello world\u0101";
@@ -795,6 +832,7 @@ unittest
         immutable S ti = "hello world\u0101";
         assert(toLower(ti) == s);
     }
+    });
 }
 
 /++
@@ -847,6 +885,8 @@ unittest
 {
     debug(string) printf("string.toLowerInPlace.unittest\n");
 
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!(char[], wchar[], dchar[]))
     {
         S s = to!S("hello world\u0101");
@@ -857,12 +897,15 @@ unittest
         toLowerInPlace(t);
         assert(t == "hello world\u0101");
     }
+    });
 }
 
 unittest
 {
     debug(string) printf("string.toLower/toLowerInPlace.unittest\n");
 
+    assertCTFEable!(
+    {
     string s1 = "FoL";
     string s2 = toLower(s1);
     assert(cmp(s2, "fol") == 0, s2);
@@ -899,6 +942,7 @@ unittest
     // Test on wchar and dchar strings.
     assert(toLower("Some String"w) == "some string"w);
     assert(toLower("Some String"d) == "some string"d);
+    });
 }
 
 
@@ -932,6 +976,8 @@ unittest
 {
     debug(string) printf("string.toUpper.unittest\n");
 
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         S s = cast(S)"HELLO WORLD\u0100";
@@ -948,6 +994,7 @@ unittest
         immutable S ti = "HELLO WORLD\u0100";
         assert(toUpper(ti) == s);
     }
+    });
 }
 
 /++
@@ -1001,6 +1048,8 @@ unittest
 {
     debug(string) printf("string.toUpperInPlace.unittest\n");
 
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!(char[], wchar[], dchar[]))
     {
         S s = to!S("HELLO WORLD\u0100");
@@ -1011,12 +1060,15 @@ unittest
         toUpperInPlace(t);
         assert(t == "HELLO WORLD\u0100");
     }
+    });
 }
 
 unittest
 {
     debug(string) printf("string.toUpper/toUpperInPlace.unittest\n");
 
+    assertCTFEable!(
+    {
     string s1 = "FoL";
     string s2;
     char[] s3;
@@ -1040,6 +1092,7 @@ unittest
     assert(s3 == s2);
     assert(cmp(s2, "A\u0460B\u0460D") == 0);
     assert(s2 !is s1);
+    });
 }
 
 
@@ -1087,6 +1140,8 @@ unittest
 {
     debug(string) printf("string.capitalize.unittest\n");
 
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         S s1 = to!S("FoL");
@@ -1115,6 +1170,7 @@ unittest
         assert(cmp(s2, "\u0053 \u0069") == 0);
         assert(s2 !is s1);
     }
+    });
 }
 
 
@@ -1168,6 +1224,8 @@ unittest
 {
     debug(string) printf("string.splitLines.unittest\n");
 
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         auto s = to!S("\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\nsunday\n");
@@ -1205,6 +1263,7 @@ unittest
         assert(lines.length == 9);
         assert(lines[8] == "sunday");
     }
+    });
 }
 
 
@@ -1298,6 +1357,8 @@ unittest
 {
     debug(string) printf("string.strip.unittest\n");
 
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!( char[], const  char[],  string,
                            wchar[], const wchar[], wstring,
                            dchar[], const dchar[], dstring))
@@ -1322,13 +1383,17 @@ unittest
         assert(equal(strip(to!S("\U0010FFFE")), "\U0010FFFE"));
         assert(equal(strip(to!S("")), ""));
     }
+    });
 }
 
 unittest
 {
+    assertCTFEable!(
+    {
     wstring s = " ";
     assert(s.sameTail(s.stripLeft()));
     assert(s.sameHead(s.stripRight()));
+    });
 }
 
 
@@ -1431,6 +1496,8 @@ unittest
     debug(string) printf("string.chomp.unittest\n");
     string s;
 
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         // @@@ BUG IN COMPILER, MUST INSERT CAST
@@ -1462,6 +1529,7 @@ unittest
             assert(chomp(to!S("\uFF28el\uFF4co"), to!T("l\uFF4co")) == "\uFF28e");
         }
     }
+    });
 }
 
 
@@ -1505,6 +1573,8 @@ unittest
 
 unittest
 {
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
@@ -1516,6 +1586,7 @@ unittest
             assert(equal(chompPrefix(to!S("\uFF28el"), to!T("\uFF28el\uFF4co")), "\uFF28el"));
         }
     }
+    });
 }
 
 
@@ -1554,6 +1625,8 @@ unittest
 {
     debug(string) printf("string.chop.unittest\n");
 
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         assert(chop(cast(S) null) is null);
@@ -1564,6 +1637,7 @@ unittest
         assert(equal(chop(to!S(`さいごの果実`)), "さいごの果"));
         assert(equal(chop(to!S(`ミツバチと科学者`)), "ミツバチと科学"));
     }
+    });
 }
 
 
@@ -1679,6 +1753,8 @@ unittest
 {
     debug(string) printf("string.justify.unittest\n");
 
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         S s = to!S("hello");
@@ -1699,6 +1775,7 @@ unittest
         assert(rightJustify(s, 8, '\u0100') == "\u0100\u0100\u0100hello");
         assert(center(s, 8, '\u0100') == "\u0100hello\u0100\u0100");
     }
+    });
 }
 
 
@@ -1769,6 +1846,8 @@ unittest
 {
     debug(string) printf("string.detab.unittest\n");
 
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         S s = to!S("This \tis\t a fofof\tof list");
@@ -1783,6 +1862,7 @@ unittest
         assert(detab(  "  ab\t asdf ") == "  ab     asdf ");
         assert(detab(  "  \U00010000b\tasdf ") == "  \U00010000b    asdf ");
     }
+    });
 }
 
 /++
@@ -1896,6 +1976,8 @@ unittest
 {
     debug(string) printf("string.entab.unittest\n");
 
+    assertCTFEable!(
+    {
     assert(entab(cast(string) null) is null);
     assert(entab("").empty);
     assert(entab("a") == "a");
@@ -1926,6 +2008,7 @@ unittest
     assert(entab("a\t") == "a");
     assert(entab("\uFF28\uFF45\uFF4C\uFF4C567      \t\uFF4F \t") ==
                  "\uFF28\uFF45\uFF4C\uFF4C567\t\t\uFF4F");
+    });
 }
 
 
@@ -1969,6 +2052,8 @@ unittest
 
 unittest
 {
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!( char[], const( char)[], immutable( char)[],
                            wchar[], const(wchar)[], immutable(wchar)[],
                            dchar[], const(dchar)[], immutable(dchar)[]))
@@ -2009,6 +2094,7 @@ unittest
         dchar[dchar] transTable = ['h' : 'q', 'l' : '5'];
         static assert(is(typeof(s) == typeof(translate(s, transTable))));
     }
+    });
 }
 
 /++ Ditto +/
@@ -2022,6 +2108,8 @@ C1[] translate(C1, S, C2 = immutable char)(C1[] str,
 
 unittest
 {
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!( char[], const( char)[], immutable( char)[],
                            wchar[], const(wchar)[], immutable(wchar)[],
                            dchar[], const(dchar)[], immutable(dchar)[]))
@@ -2064,6 +2152,7 @@ unittest
         string[dchar] transTable = ['h' : "silly", 'l' : "putty"];
         static assert(is(typeof(s) == typeof(translate(s, transTable))));
     }
+    });
 }
 
 private auto translateImpl(C1, T, C2)(C1[] str,
@@ -2193,6 +2282,8 @@ unittest
 
 unittest
 {
+    assertCTFEable!(
+    {
     foreach (C; TypeTuple!(char, const char, immutable char))
     {
         assert(translate!C("hello world", makeTrans("hl", "q5")) == to!(C[])("qe55o wor5d"));
@@ -2225,6 +2316,7 @@ unittest
                    to!S("qe55o wor5d"));
         }
     }
+    });
 }
 
 
@@ -2266,6 +2358,8 @@ unittest
 {
     debug(string) printf("std.string.format.unittest\n");
 
+    assertCTFEable!(
+    {
 //  assert(format(null) == "");
     assert(format("foo") == "foo");
     assert(format("foo%%") == "foo%");
@@ -2278,10 +2372,8 @@ unittest
     assertThrown!FormatException(format("foo %s"));
     assertThrown!FormatException(format("foo %s", 123, 456));
 
-    assertCTFEable!(
-    {
-        assert(format("hel%slo%s%s%s", "world", -138, 'c', true) ==
-                      "helworldlo-138ctrue");
+    assert(format("hel%slo%s%s%s", "world", -138, 'c', true) ==
+                  "helworldlo-138ctrue");
     });
 }
 
@@ -2359,6 +2451,8 @@ unittest
 {
     debug(string) printf("std.string.sformat.unittest\n");
 
+    assertCTFEable!(
+    {
     char[10] buf;
 
     assert(sformat(buf[], "foo") == "foo");
@@ -2373,6 +2467,7 @@ unittest
     assertThrown!FormatException(sformat(buf[], "foo %s", 123, 456));
 
     assert(sformat(buf[], "%s %s %s", "c"c, "w"w, "d"d) == "c w d");
+    });
 }
 
 
@@ -2391,6 +2486,8 @@ deprecated unittest
 {
     debug(string) printf("std.string.xformat.unittest\n");
 
+    assertCTFEable!(
+    {
 //  assert(xformat(null) == "");
     assert(xformat("foo") == "foo");
     assert(xformat("foo%%") == "foo%");
@@ -2402,6 +2499,7 @@ deprecated unittest
 
     assertThrown!FormatException(xformat("foo %s"));
     assertThrown!FormatException(xformat("foo %s", 123, 456));
+    });
 }
 
 
@@ -2421,6 +2519,8 @@ deprecated unittest
 {
     debug(string) printf("std.string.xsformat.unittest\n");
 
+    assertCTFEable!(
+    {
     char[10] buf;
 
     assert(xsformat(buf[], "foo") == "foo");
@@ -2435,6 +2535,7 @@ deprecated unittest
     assertThrown!FormatException(xsformat(buf[], "foo %s", 123, 456));
 
     assert(xsformat(buf[], "%s %s %s", "c"c, "w"w, "d"d) == "c w d");
+    });
 }
 
 
@@ -2494,6 +2595,8 @@ unittest
 {
     debug(string) printf("std.string.inPattern.unittest\n");
 
+    assertCTFEable!(
+    {
     assert(inPattern('x', "x") == 1);
     assert(inPattern('x', "y") == 0);
     assert(inPattern('x', string.init) == 0);
@@ -2513,6 +2616,7 @@ unittest
     assert(inPattern('a', "z-a") == 1);
     assert(inPattern('z', "z-a") == 1);
     assert(inPattern('x', "z-a") == 0);
+    });
 }
 
 
@@ -2551,8 +2655,11 @@ unittest
 {
     debug(string) printf("std.string.count.unittest\n");
 
+    assertCTFEable!(
+    {
     assert(countchars("abc", "a-c") == 3);
     assert(countchars("hello world", "or") == 3);
+    });
 }
 
 
@@ -2588,10 +2695,13 @@ unittest
 {
     debug(string) printf("std.string.removechars.unittest\n");
 
+    assertCTFEable!(
+    {
     assert(removechars("abc", "a-c").length == 0);
     assert(removechars("hello world", "or") == "hell wld");
     assert(removechars("hello world", "d") == "hello worl");
     assert(removechars("hah", "h") == "a");
+    });
 }
 
 
@@ -2646,6 +2756,8 @@ unittest
 {
     debug(string) printf("std.string.squeeze.unittest\n");
 
+    assertCTFEable!(
+    {
     string s;
 
     assert(squeeze("hello") == "helo");
@@ -2656,6 +2768,7 @@ unittest
     assert(squeeze(s).ptr == s.ptr); // should just be a slice
 
     assert(squeeze("hello goodbyee", "oe") == "hello godbye");
+    });
 }
 
 /***************************************************************
@@ -2759,12 +2872,15 @@ unittest
 {
     debug(string) printf("std.string.succ.unittest\n");
 
+    assertCTFEable!(
+    {
     assert(succ(string.init) is null);
     assert(succ("!@#$%") == "!@#$%");
     assert(succ("1") == "2");
     assert(succ("9") == "10");
     assert(succ("999") == "1000");
     assert(succ("zz99") == "aaa00");
+    });
 }
 
 
@@ -2931,6 +3047,8 @@ unittest
     // Reduced list of test types
     alias TestTypes = TypeTuple!(char[], const(wchar)[], immutable(dchar)[]);
 
+    assertCTFEable!(
+    {
     foreach (S; TestTypes)
     {
         foreach (T; TestTypes)
@@ -2954,6 +3072,7 @@ unittest
         auto s = to!S("hello world");
         static assert(is(typeof(s) == typeof(tr(s, "he", "if"))));
     }
+    });
 }
 
 
@@ -3152,6 +3271,8 @@ unittest
 {
     debug (string) printf("isNumeric(in string, bool = false).unittest\n");
 
+    assertCTFEable!(
+    {
     // Test the isNumeric(in string) function
     assert(isNumeric("1") == true );
     assert(isNumeric("1.0") == true );
@@ -3177,14 +3298,20 @@ unittest
     assert(isNumeric("123f") == true);
     assert(isNumeric("123.u") == false);
 
+  // @@@BUG@@ to!string(float) is not CTFEable.
+  // Related: formatValue(T) if (is(FloatingPointTypeOf!T))
+  if (!__ctfe)
+  {
     assert(isNumeric(to!string(real.nan)) == true);
     assert(isNumeric(to!string(-real.infinity)) == true);
     assert(isNumeric(to!string(123e+2+1234.78Li)) == true);
+  }
 
     string s = "$250.99-";
     assert(isNumeric(s[1..s.length - 2]) == true);
     assert(isNumeric(s) == false);
     assert(isNumeric(s[0..s.length - 1]) == false);
+    });
 }
 
 
@@ -3287,6 +3414,8 @@ body
 
 unittest
 {
+    assertCTFEable!(
+    {
     char[4] buffer;
 
     assert(soundex(null) == null);
@@ -3327,6 +3456,7 @@ unittest
     assert(soundex("johnsons") == "J525");
     assert(soundex("Hardin") == "H635");
     assert(soundex("Martinez") == "M635");
+    });
 }
 
 
@@ -3369,7 +3499,7 @@ string[string] abbrev(string[] values)
     string[string] result;
 
     // Make a copy when sorting so we follow COW principles.
-    values = values.dup.sort;
+    values = values.dup.sort;   // @@@BUG@@@ not CTFEable
 
     size_t values_length = values.length;
     size_t lasti = values_length;
@@ -3412,6 +3542,9 @@ unittest
 {
     debug(string) printf("string.abbrev.unittest\n");
 
+    // @@@BUG@@@ Built-in arr.sort is not CTFEable
+    //assertCTFEable!(
+    //{
     string[] values;
     values ~= "hello";
     values ~= "hello";
@@ -3433,6 +3566,7 @@ unittest
     assert(r[keys[1]] == "hello");
     assert(r[keys[2]] == "hello");
     assert(r[keys[3]] == "hello");
+    //});
 }
 
 
@@ -3472,11 +3606,14 @@ unittest
 {
     debug(string) printf("string.column.unittest\n");
 
+    assertCTFEable!(
+    {
     assert(column(string.init) == 0);
     assert(column("") == 0);
     assert(column("\t") == 8);
     assert(column("abc\t") == 8);
     assert(column("12345678\t") == 16);
+    });
 }
 
 /******************************************
@@ -3566,6 +3703,8 @@ unittest
 {
     debug(string) printf("string.wrap.unittest\n");
 
+    assertCTFEable!(
+    {
     assert(wrap(string.init) == "\n");
     assert(wrap(" a b   df ") == "a b df\n");
     assert(wrap(" a b   df ", 3) == "a b\ndf\n");
@@ -3573,6 +3712,7 @@ unittest
     assert(wrap(" abcd   df ", 3) == "abcd\ndf\n");
     assert(wrap("x") == "x\n");
     assert(wrap("u u") == "u u\n");
+    });
 }
 
 /******************************************
@@ -3727,6 +3867,8 @@ unittest
 ";
     }
 
+    assertCTFEable!(
+    {
     static assert(ctfe_strip(" \tHi \r\n") == "Hi");
     static assert(ctfe_strip(" \tHi&copy;\u2028 \r\n") == "Hi&copy;");
     static assert(ctfe_strip("Hi")         == "Hi");
@@ -3786,4 +3928,5 @@ unittest
         assert(testStr6.outdent() == expected6);
         static assert(testStr6.outdent() == expected6);
     }
+    });
 }
