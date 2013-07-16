@@ -380,6 +380,7 @@ unittest
         assert(indexOf(to!S("def"), cast(dchar)'a', CaseSensitive.no) == -1);
         assert(indexOf(to!S("Abba"), cast(dchar)'a', CaseSensitive.no) == 0);
         assert(indexOf(to!S("def"), cast(dchar)'F', CaseSensitive.no) == 2);
+        assert(indexOf(to!S("ödef"), 'ö', CaseSensitive.no) == 0);
 
         S sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
         assert(indexOf("def", cast(char)'f', CaseSensitive.no) == 2);
@@ -480,52 +481,55 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s,
                           CaseSensitive cs = CaseSensitive.yes)
     if(isSomeChar!Char)
 {
-    if(cs == CaseSensitive.yes)
+    if (cs == CaseSensitive.yes)
     {
-        if(cast(dchar)(cast(Char)c) == c)
+        if (std.ascii.isASCII(c))
         {
-            for(auto i = s.length; i-- != 0;)
+            foreach_reverse (i, it; s)
             {
-                if(s[i] == c)
-                    return cast(ptrdiff_t)i;
+                if (it == c)
+                {
+                    return i;
+                }
             }
         }
         else
         {
-            for(size_t i = s.length; !s.empty;)
+            foreach_reverse (i, dchar it; s)
             {
-                if(s.back == c)
-                    return cast(ptrdiff_t)i - codeLength!Char(c);
-
-                i -= strideBack(s, i);
-                s = s[0 .. i];
+                if (it == c)
+                {
+                    return i;
+                }
             }
         }
     }
     else
     {
-        if(std.ascii.isASCII(c))
+        if (std.ascii.isASCII(c))
         {
             immutable c1 = std.ascii.toLower(c);
 
-            for(auto i = s.length; i-- != 0;)
+            foreach_reverse (i, it; s)
             {
-                immutable c2 = std.ascii.toLower(s[i]);
-                if(c1 == c2)
-                    return cast(ptrdiff_t)i;
+                immutable c2 = std.ascii.toLower(it);
+                if (c1 == c2)
+                {
+                    return i;
+                }
             }
         }
         else
         {
             immutable c1 = std.uni.toLower(c);
 
-            for(size_t i = s.length; !s.empty;)
+            foreach_reverse (i, dchar it; s)
             {
-                if(std.uni.toLower(s.back) == c1)
-                    return cast(ptrdiff_t)i - codeLength!Char(c);
-
-                i -= strideBack(s, i);
-                s = s[0 .. i];
+                immutable c2 = std.uni.toLower(it);
+                if (c1 == c2)
+                {
+                    return i;
+                }
             }
         }
     }
@@ -543,11 +547,15 @@ unittest
         assert(lastIndexOf(to!S("def"), 'a') == -1);
         assert(lastIndexOf(to!S("abba"), 'a') == 3);
         assert(lastIndexOf(to!S("def"), 'f') == 2);
+        assert(lastIndexOf(to!S("ödef"), 'ö') == 0);
 
         assert(lastIndexOf(cast(S) null, 'a', CaseSensitive.no) == -1);
         assert(lastIndexOf(to!S("def"), 'a', CaseSensitive.no) == -1);
         assert(lastIndexOf(to!S("AbbA"), 'a', CaseSensitive.no) == 3);
         assert(lastIndexOf(to!S("def"), 'F', CaseSensitive.no) == 2);
+        assert(lastIndexOf(to!S("ödef"), 'ö', CaseSensitive.no) == 0);
+        assert(lastIndexOf(to!S("i\u0100def"), to!dchar("\u0100"),
+            CaseSensitive.no) == 1);
 
         S sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
 
@@ -642,6 +650,7 @@ unittest
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("x")) == -1, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("xy")) == -1, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("")) == 10, typeStr);
+            assert(lastIndexOf(to!S("öabcdefcdef"), to!T("ö")) == 0, typeStr);
 
             assert(lastIndexOf(cast(S)null, to!T("a"), CaseSensitive.no) == -1, typeStr);
             assert(lastIndexOf(to!S("abcdefCdef"), to!T("c"), CaseSensitive.no) == 6, typeStr);
@@ -649,10 +658,13 @@ unittest
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("x"), CaseSensitive.no) == -1, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("xy"), CaseSensitive.no) == -1, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T(""), CaseSensitive.no) == 10, typeStr);
+            assert(lastIndexOf(to!S("öabcdefcdef"), to!T("ö"), CaseSensitive.no) == 0, typeStr);
 
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("c"), CaseSensitive.no) == 6, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("cd"), CaseSensitive.no) == 6, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("def"), CaseSensitive.no) == 7, typeStr);
+
+            assert(lastIndexOf(to!S("ödfeffgfff"), to!T("ö"), CaseSensitive.yes) == 0);
 
             S sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
             S sMars = "Who\'s \'My Favorite Maritian?\'";
