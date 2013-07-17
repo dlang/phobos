@@ -320,7 +320,7 @@ ptrdiff_t indexOf(Char)(in Char[] s,
     {
         static if (Char.sizeof == 1)
         {
-            if (std.ascii.isASCII(c))
+            if (std.ascii.isASCII(c) && !__ctfe)
             {                                               // Plain old ASCII
                 auto p = cast(char*)memchr(s.ptr, c, s.length);
                 if (p)
@@ -394,6 +394,8 @@ unittest
         assert(indexOf("hello\U00010143\u0100\U00010143"w, '\u0100', cs) == 7);
         assert(indexOf("hello\U00010143\u0100\U00010143"d, '\u0100', cs) == 6);
     }
+
+    enum index = indexOf("xyz", cast(dchar) 'x');
 }
 
 /++
