@@ -2316,6 +2316,44 @@ unittest
     }+/
 }
 
+version(unittest)
+{
+    // Issue 10647
+    private string generateDoNothing(C, alias fun)() @property
+    {
+        string stmt;
+
+        static if (is(ReturnType!fun == void))
+            stmt ~= "";
+        else
+        {
+            string returnType = ReturnType!fun.stringof;
+            stmt ~= "return "~returnType~".init;";
+        }
+        return stmt;
+    }
+
+    private template isAlwaysTrue(alias fun)
+    {
+        enum isAlwaysTrue = true;
+    }
+
+    // Do nothing template
+    private template DoNothing(Base)
+    {
+        alias DoNothing = AutoImplement!(Base, generateDoNothing, isAlwaysTrue);
+    }
+
+    // A class to be overridden
+    private class Foo{
+        void bar(int a) { }
+    }
+}
+unittest
+{
+    auto foo = new DoNothing!Foo();
+    foo.bar(13);
+}
 
 /*
 Used by MemberFunctionGenerator.
@@ -2515,7 +2553,7 @@ private static:
             enum storageClass = make_storageClass();
 
             //
-            if (isAbstractFunction!func)
+            if (__traits(isVirtualMethod, func))
                 code ~= "override ";
             code ~= format("extern(%s) %s %s(%s) %s %s\n",
                     functionLinkage!(func),
