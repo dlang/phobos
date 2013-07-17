@@ -6053,7 +6053,16 @@ int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSom
         static if (typeof(r1[0]).sizeof == 1)
         {
             immutable len = min(r1.length, r2.length);
-            immutable result = std.c.string.memcmp(r1.ptr, r2.ptr, len);
+            immutable result = __ctfe ?
+                {
+                    foreach (i; 0 .. len)
+                    {
+                        if (r1[i] != r2[i])
+                            return threeWayInt(r1[i], r2[i]);
+                    }
+                    return 0;
+                }()
+                : std.c.string.memcmp(r1.ptr, r2.ptr, len);
             if (result) return result;
         }
         else
