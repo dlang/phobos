@@ -28,6 +28,7 @@ version(unittest) import std.range;
 
 
 immutable hexDigits      = "0123456789ABCDEF";           /// 0..9A..F
+immutable lowerHexDigits = "0123456789abcdef";           /// 0..9a..f
 immutable fullHexDigits  = "0123456789ABCDEFabcdef";     /// 0..9A..Fa..f
 immutable digits         = "0123456789";                 /// 0..9
 immutable octalDigits    = "01234567";                   /// 0..7
