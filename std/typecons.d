@@ -2226,7 +2226,9 @@ private static:
 
     public enum string code =
         ConstructorGenerator.generateCode!(  ctorOverloadSet ) ~ "\n" ~
-             MethodGenerator.generateCode!(targetOverloadSets);
+        "override {" ~
+             MethodGenerator.generateCode!(targetOverloadSets) ~
+        "}";
 
     debug (SHOW_GENERATED_CODE)
     {
@@ -2314,6 +2316,44 @@ unittest
         static abstract class C_9 : K {}
         auto o = new BlackHole!C_9;
     }+/
+}
+unittest
+{
+    // Issue 10647
+    static string generateDoNothing(C, alias fun)() @property
+    {
+        import std.traits;
+        string stmt;
+
+        static if (is(ReturnType!fun == void))
+            stmt ~= "";
+        else
+        {
+            string returnType = ReturnType!fun.stringof;
+            stmt ~= "return "~returnType~".init;";
+        }
+        return stmt;
+    }
+
+    template isAlwaysTrue(alias fun)
+    {
+        enum isAlwaysTrue = true;
+    }
+
+    // Do nothing template
+    template DoNothing(Base)
+    {
+        alias DoNothing = AutoImplement!(Base, generateDoNothing, isAlwaysTrue);
+    }
+
+    // A class to be overridden
+    static class Foo
+    {
+        void bar(int a) { }
+    }
+
+    auto foo = new DoNothing!Foo();
+    foo.bar(13);
 }
 
 
@@ -2515,8 +2555,6 @@ private static:
             enum storageClass = make_storageClass();
 
             //
-            if (isAbstractFunction!func)
-                code ~= "override ";
             code ~= format("extern(%s) %s %s(%s) %s %s\n",
                     functionLinkage!(func),
                     returnType,
