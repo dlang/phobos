@@ -1004,9 +1004,9 @@ struct Parser(R, bool CTFE = false)
                 }
                 default:
                     if(__ctfe)
-                       assert(text("unknown regex flag '",ch,"'"));
+                        assert(text("unknown regex flag '",ch,"'"));
                     else
-                        new RegexException(text("unknown regex flag '",ch,"'"));
+                        throw new RegexException(text("unknown regex flag '",ch,"'"));
             }
         }
     }
