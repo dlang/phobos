@@ -112,7 +112,6 @@ version(unittest) import std.typetuple;
    email: m-mat @ math.sci.hiroshima-u.ac.jp (remove space)
 */
 
-
 /**
  * Test if Rng is a random-number generator. The overload
  * taking a ElementType also makes sure that the Rng generates
@@ -1057,6 +1056,37 @@ unittest
 }
 
 
+/* A complete list of all pseudo-random number generators implemented in
+ * std.random.  This can be used to confirm that a given function or
+ * object is compatible with all the pseudo-random number generators
+ * available.  It is enabled only in unittest mode.
+ *
+ * Example:
+ *
+ * ----
+ * foreach(Rng; PseudoRngTypes)
+ * {
+ *     static assert(isUniformRng!Rng);
+ *     auto rng = Rng(unpredictableSeed);
+ *     foo(rng);
+ * }
+ * ----
+ */
+version(unittest)
+{
+    package alias PseudoRngTypes = TypeTuple!(MinstdRand0, MinstdRand, Mt19937, Xorshift32, Xorshift64,
+                                              Xorshift96, Xorshift128, Xorshift160, Xorshift192);
+}
+
+unittest
+{
+    foreach(Rng; PseudoRngTypes)
+    {
+        static assert(isUniformRNG!Rng);
+    }
+}
+
+
 /**
 A "good" seed for initializing random number engines. Initializing
 with $(D_PARAM unpredictableSeed) makes engines generate different
@@ -1401,23 +1431,33 @@ Shuffles elements of $(D r) using $(D gen) as a shuffler. $(D r) must be
 a random-access range with length.
  */
 
-void randomShuffle(Range, RandomGen = Random)(Range r,
-                                              ref RandomGen gen = rndGen)
+void randomShuffle(Range, RandomGen)(Range r, ref RandomGen gen)
     if(isRandomAccessRange!Range && isUniformRNG!RandomGen)
 {
     return partialShuffle!(Range, RandomGen)(r, r.length, gen);
 }
 
+/// ditto
+void randomShuffle(Range)(Range r)
+    if(isRandomAccessRange!Range)
+{
+    return randomShuffle(r, rndGen);
+}
+
 unittest
 {
-    // Also tests partialShuffle indirectly.
-    auto a = ([ 1, 2, 3, 4, 5, 6, 7, 8, 9 ]).dup;
-    auto b = a.dup;
-    Mt19937 gen;
-    randomShuffle(a, gen);
-    assert(a.sort == b.sort);
-    randomShuffle(a);
-    assert(a.sort == b.sort);
+    foreach(Rng; PseudoRngTypes)
+    {
+        static assert(isUniformRNG!Rng);
+        // Also tests partialShuffle indirectly.
+        auto a = ([ 1, 2, 3, 4, 5, 6, 7, 8, 9 ]).dup;
+        auto b = a.dup;
+        Rng gen;
+        randomShuffle(a, gen);
+        assert(a.sort == b.sort);
+        randomShuffle(a);
+        assert(a.sort == b.sort);
+    }
 }
 
 /**
@@ -1431,8 +1471,7 @@ $(D partialShuffle) was called.
 $(D r) must be a random-access range with length.  $(D n) must be less than
 or equal to $(D r.length).
 */
-void partialShuffle(Range, RandomGen = Random)(Range r, size_t n,
-                                              ref RandomGen gen = rndGen)
+void partialShuffle(Range, RandomGen)(Range r, size_t n, ref RandomGen gen)
     if(isRandomAccessRange!Range && isUniformRNG!RandomGen)
 {
     enforce(n <= r.length, "n must be <= r.length for partialShuffle.");
@@ -1440,6 +1479,13 @@ void partialShuffle(Range, RandomGen = Random)(Range r, size_t n,
     {
         swapAt(r, i, i + uniform(0, r.length - i, gen));
     }
+}
+
+/// ditto
+void partialShuffle(Range)(Range r, size_t n)
+    if(isRandomAccessRange!Range)
+{
+    return partialShuffle(r, n, rndGen);
 }
 
 /**
