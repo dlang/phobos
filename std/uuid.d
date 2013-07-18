@@ -493,7 +493,7 @@ public struct UUID
 
             enum ctfeEmpty = UUID.init.empty;
             assert(ctfeEmpty);
-        
+
             bool ctfeTest()
             {
                 for(size_t i = 0; i < 16; i++)
@@ -1396,7 +1396,7 @@ unittest
         id = parseHelper!S("///8ab3060e2cba4f23b74cb52db3bdfb46||");
         enum ctfeId = parseHelper!S("8ab3060e-2cba-4f23-b74c-b52db3bdfb46");
         assert(parseHelper!S("8AB3060E-2cba-4f23-b74c-b52db3bdfb46") == ctfeId);
-        
+
         //Test valid, working cases
         assert(parseHelper!S("00000000-0000-0000-0000-000000000000").empty);
         assert(parseHelper!S("8AB3060E-2CBA-4F23-b74c-B52Db3BDFB46").data

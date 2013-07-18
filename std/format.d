@@ -1402,7 +1402,7 @@ private void formatUnsigned(Writer, Char)(Writer w, ulong arg, ref FormatSpec!Ch
         forcedPrefix = '-';
     }
     // fill the digits
-    char buffer[64]; // 64 bits in base 2 at most
+    char[64] buffer; // 64 bits in base 2 at most
     char[] digits;
     {
         uint i = buffer.length;
@@ -1592,8 +1592,8 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         }
     }
     if (fs.spec == 's') fs.spec = 'g';
-    char sprintfSpec[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
-                     + 1 /*\0*/] = void;
+    char[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
+                     + 1 /*\0*/] sprintfSpec = void;
     sprintfSpec[0] = '%';
     uint i = 1;
     if (fs.flDash) sprintfSpec[i++] = '-';

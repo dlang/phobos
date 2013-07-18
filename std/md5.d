@@ -292,7 +292,7 @@ struct MD5_CTX
      */
     void finish(ref ubyte[16] digest)         /* message digest */
     {
-      ubyte bits[8] = void;
+      ubyte[8] bits = void;
       uint index, padLen;
 
       /* Save number of bits */
