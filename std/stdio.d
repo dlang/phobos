@@ -1069,6 +1069,7 @@ Allows to directly use range operations on lines of a file.
 */
     struct ByLine(Char, Terminator)
     {
+    private:
         File file;
         Char[] line;
         Terminator terminator;
@@ -1080,6 +1081,7 @@ Allows to directly use range operations on lines of a file.
         else
             private enum defTerm = cast(Terminator)"\n";
         
+    public:
         this(File f, KeepTerminator kt = KeepTerminator.no,
                 Terminator terminator = defTerm)
         {
@@ -1247,6 +1249,7 @@ void main()
                 lines.popFront();
                 i = 1;
             }
+            assert(lines.empty || lines.front is lines.front);
             foreach (line; lines)
             {
                 assert(line == witness[i++]);
@@ -1268,6 +1271,7 @@ void main()
         test("asd\ndef\nasdf", [ "asd", "def", "asdf" ]);
         test("asd\ndef\nasdf", [ "asd", "def", "asdf" ], KeepTerminator.no, true);
         test("asd\ndef\nasdf\n", [ "asd", "def", "asdf" ]);
+        test("foo", [ "foo" ], KeepTerminator.no, true);
         testTerm("bob\r\nmarge\r\nsteve\r\n", ["bob", "marge", "steve"],
             KeepTerminator.no, "\r\n", false);
         testTerm("sue\r", ["sue"], KeepTerminator.no, '\r', false);
@@ -1277,9 +1281,25 @@ void main()
         test("asd\ndef\nasdf", [ "asd\n", "def\n", "asdf" ], KeepTerminator.yes);
         test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes);
         test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes, true);
+        test("foo", [ "foo" ], KeepTerminator.yes, false);
         testTerm("bob\r\nmarge\r\nsteve\r\n", ["bob\r\n", "marge\r\n", "steve\r\n"],
             KeepTerminator.yes, "\r\n", false);
         testTerm("sue\r", ["sue\r"], KeepTerminator.yes, '\r', false);
+
+        // bug 9599
+        auto file = File.tmpfile();
+        file.write("1\n2\n3\n");
+
+        file.rewind();
+        auto fbl = file.byLine();
+        assert(fbl.take(1).equal(["1"]));
+        assert(fbl.equal(["2", "3"]));
+        assert(fbl.empty);
+        
+        file.rewind();
+        assert(!fbl.drop(2).empty);
+        assert(fbl.equal(["3"]));
+        assert(fbl.empty);
     }
 
     template byRecord(Fields...)
