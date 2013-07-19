@@ -288,7 +288,7 @@ unittest
     //{
     auto p = toStringz("foo");
     assert(strlen(p) == 3);
-    const(char) foo[] = "abbzxyzzy";
+    const(char)[] foo = "abbzxyzzy";
     p = toStringz(foo[3..5]);
     assert(strlen(p) == 2);
 

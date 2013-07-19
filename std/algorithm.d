@@ -1263,12 +1263,12 @@ unittest
     static struct S3
     {
         int i;
-        this(this){};
+        this(this){}
     }
     static struct S4
     {
         int i = 1;
-        this(this){};
+        this(this){}
     }
     static assert (!hasElaborateAssign!S1);
     static assert (!hasElaborateAssign!S2);

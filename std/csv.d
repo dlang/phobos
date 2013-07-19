@@ -430,7 +430,7 @@ unittest
         int value;
     }
 
-    Layout ans[3];
+    Layout[3] ans;
     ans[0].name = "one";
     ans[0].value = 1;
     ans[1].name = "two";
@@ -481,7 +481,7 @@ unittest
         double other;
     }
 
-    Layout ans[2];
+    Layout[2] ans;
     ans[0].name = "\U00010143Hello";
     ans[0].value = 65;
     ans[0].other = 63.63;
@@ -528,7 +528,7 @@ unittest
 
     auto records = csvReader!Layout(str, ["b","c","a"]);
 
-    Layout ans[2];
+    Layout[2] ans;
     ans[0].name = "Hello";
     ans[0].value = 65;
     ans[0].other = 63.63;
