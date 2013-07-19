@@ -5,7 +5,7 @@ JavaScript Object Notation
 
 Copyright: Copyright Jeremie Pelletier 2008 - 2009.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
-Authors:   Jeremie Pelletier
+Authors:   Jeremie Pelletier, David Herberth
 References: $(LINK http://json.org/)
 Source:    $(PHOBOSSRC std/_json.d)
 */
@@ -21,6 +21,8 @@ import std.ascii;
 import std.conv;
 import std.range;
 import std.utf;
+import std.traits;
+import std.exception;
 
 private
 {
@@ -51,38 +53,258 @@ JSON value node
 */
 struct JSONValue
 {
-    union
+    ///
+    union Store
     {
-        /// Value when $(D type) is $(D JSON_TYPE.STRING)
+        /// Value when $(D type) is $(D JSON_TYPE.STRING).
         string                          str;
-        /// Value when $(D type) is $(D JSON_TYPE.INTEGER)
+        /// Value when $(D type) is $(D JSON_TYPE.INTEGER).
         long                            integer;
-        /// Value when $(D type) is $(D JSON_TYPE.UINTEGER)
+        /// Value when $(D type) is $(D JSON_TYPE.UINTEGER).
         ulong                           uinteger;
-        /// Value when $(D type) is $(D JSON_TYPE.FLOAT)
+        /// Value when $(D type) is $(D JSON_TYPE.FLOAT).
         real                            floating;
-        /// Value when $(D type) is $(D JSON_TYPE.OBJECT)
+        /// Value when $(D type) is $(D JSON_TYPE.OBJECT).
         JSONValue[string]               object;
-        /// Value when $(D type) is $(D JSON_TYPE.ARRAY)
+        /// Value when $(D type) is $(D JSON_TYPE.ARRAY).
         JSONValue[]                     array;
     }
-    /// Specifies the _type of the value stored in this structure.
-    JSON_TYPE                               type;
+    ///
+    Store store;
 
-    /// array syntax for json arrays
-    ref JSONValue opIndex(size_t i)
-    in { assert(type == JSON_TYPE.ARRAY, "json type is not array"); }
-    body
+    /// Specifies the _type of the value stored in this structure.
+    JSON_TYPE type;
+
+    /// Typesafe way of accessing $(D store.str).
+    /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.STRING).
+    @property ref inout(string) str() inout
     {
-        return array[i];
+        enforceEx!JSONException(type == JSON_TYPE.STRING,
+                                "JSONValue is not a string");
+        return store.str;
     }
 
-    /// hash syntax for json objects
-    ref JSONValue opIndex(string k)
-    in { assert(type == JSON_TYPE.OBJECT, "json type is not object"); }
-    body
+    /// Typesafe way of accessing $(D store.integer).
+    /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.INTEGER).
+    @property ref inout(long) integer() inout
     {
-        return object[k];
+        enforceEx!JSONException(type == JSON_TYPE.INTEGER,
+                                "JSONValue is not an integer");
+        return store.integer;
+    }
+
+    /// Typesafe way of accessing $(D store.uinteger).
+    /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.UINTEGER).
+    @property ref inout(ulong) uinteger() inout
+    {
+        enforceEx!JSONException(type == JSON_TYPE.UINTEGER,
+                                "JSONValue is not an unsigned integer");
+        return store.uinteger;
+    }
+
+    /// Typesafe way of accessing $(D store.floating).
+    /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.FLOAT).
+    @property ref inout(real) floating() inout
+    {
+        enforceEx!JSONException(type == JSON_TYPE.FLOAT,
+                                "JSONValue is not a floating type");
+        return store.floating;
+    }
+
+    /// Typesafe way of accessing $(D store.object).
+    /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT).
+    @property ref inout(JSONValue[string]) object() inout
+    {
+        enforceEx!JSONException(type == JSON_TYPE.OBJECT,
+                                "JSONValue is not an object");
+        return store.object;
+    }
+
+    /// Typesafe way of accessing $(D store.array).
+    /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.ARRAY).
+    @property ref inout(JSONValue[]) array() inout
+    {
+        enforceEx!JSONException(type == JSON_TYPE.ARRAY,
+                                "JSONValue is not an array");
+        return store.array;
+    }
+
+    private void assign(T)(T arg)
+    {
+        static if(is(T : typeof(null)))
+        {
+            type = JSON_TYPE.NULL;
+        }
+        else static if(is(T : string))
+        {
+            type = JSON_TYPE.STRING;
+            store.str = arg;
+        }
+        else static if(is(T : ulong) && isUnsigned!T)
+        {
+            type = JSON_TYPE.UINTEGER;
+            store.uinteger = arg;
+        }
+        else static if(is(T : long))
+        {
+            type = JSON_TYPE.INTEGER;
+            store.integer = arg;
+        }
+        else static if(isFloatingPoint!T)
+        {
+            type = JSON_TYPE.FLOAT;
+            store.floating = arg;
+        }
+        else static if(is(T : Value[Key], Key, Value))
+        {
+            static assert(is(Key : string), "AA key must be string");
+            type = JSON_TYPE.OBJECT;
+            static if(is(Value : JSONValue)) {
+                store.object = arg;
+            }
+            else
+            {
+                JSONValue[string] aa;
+                foreach(key, value; arg)
+                    aa[key] = JSONValue(value);
+                store.object = aa;
+            }
+        }
+        else static if(isArray!T)
+        {
+            type = JSON_TYPE.ARRAY;
+            static if(is(ElementEncodingType!T : JSONValue))
+            {
+                store.array = arg;
+            }
+            else
+            {
+                JSONValue[] new_arg = new JSONValue[arg.length];
+                foreach(i, e; arg)
+                    new_arg[i] = JSONValue(e);
+                store.array = new_arg;
+            }
+        }
+        else static if(is(T : bool))
+        {
+            type = arg ? JSON_TYPE.TRUE : JSON_TYPE.FALSE;
+        }
+        else static if(is(T : JSONValue))
+        {
+            type = arg.type;
+            store = arg.store;
+        }
+        else
+        {
+            static assert(false, text(`unable to convert type "`, T.stringof, `" to json`));
+        }
+    }
+
+    private void assignRef(T)(ref T arg) if(isStaticArray!T)
+    {
+        type = JSON_TYPE.ARRAY;
+        static if(is(ElementEncodingType!T : JSONValue))
+        {
+            store.array = arg;
+        }
+        else
+        {
+            JSONValue[] new_arg = new JSONValue[arg.length];
+            foreach(i, e; arg)
+                new_arg[i] = JSONValue(e);
+            store.array = new_arg;
+        }
+    }
+
+
+    this(T)(T arg) if(!isStaticArray!T)
+    {
+        assign(arg);
+    }
+
+    this(T)(ref T arg) if(isStaticArray!T)
+    {
+        assignRef(arg);
+    }
+
+    this(T : JSONValue)(inout T arg) inout
+    {
+        store = arg.store;
+        type = arg.type;
+    }
+
+    void opAssign(T)(T arg) if(!isStaticArray!T && !is(T : JSONValue))
+    {
+        assign(arg);
+    }
+
+    void opAssign(T)(ref T arg) if(isStaticArray!T)
+    {
+        assignRef(arg);
+    }
+
+    /// Array syntax for json arrays.
+    /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.ARRAY).
+    ref inout(JSONValue) opIndex(size_t i) inout
+    {
+        enforceEx!JSONException(type == JSON_TYPE.ARRAY,
+                                "JSONValue is not an array");
+        return store.array[i];
+    }
+
+    /// Hash syntax for json objects.
+    /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT).
+    ref inout(JSONValue) opIndex(string k) inout
+    {
+        enforceEx!JSONException(type == JSON_TYPE.OBJECT,
+                                "JSONValue is not an object");
+        return store.object[k];
+    }
+
+    int opApply(int delegate(size_t index, ref JSONValue) dg)
+    {
+        enforceEx!JSONException(type == JSON_TYPE.ARRAY,
+                                "JSONValue is not an array");
+        int result;
+
+        foreach(size_t index, ref value; store.array)
+        {
+            result = dg(index, value);
+            if(result)
+                break;
+        }
+
+        return result;
+    }
+
+    /// Implements foreach interface json objects.
+    int opApply(int delegate(string key, ref JSONValue) dg)
+    {
+        enforceEx!JSONException(type == JSON_TYPE.OBJECT,
+                                "JSONValue is not an object");
+        int result;
+
+        foreach(string key, ref value; store.object)
+        {
+            result = dg(key, value);
+            if(result)
+                break;
+        }
+
+        return result;
+    }
+
+    /// Implicitly calls $(D toJSON) on this JSONValue.
+    string toString()
+    {
+        return toJSON(&this);
+    }
+
+    /// Implicitly calls $(D toJSON) on this JSONValue, like $(D toString), but
+    /// also passes $(I true) as $(I pretty) argument.
+    string toPrettyString()
+    {
+        return toJSON(&this, true);
     }
 }
 
@@ -234,7 +456,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
         {
             case '{':
                 value.type = JSON_TYPE.OBJECT;
-                value.object = null;
+                value.store.object = null;
 
                 if(testChar('}')) break;
 
@@ -245,7 +467,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
                     checkChar(':');
                     JSONValue member = void;
                     parseValue(&member);
-                    value.object[name] = member;
+                    value.store.object[name] = member;
                 }
                 while(testChar(','));
 
@@ -257,17 +479,17 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
 
                 if(testChar(']'))
                 {
-                    value.array = cast(JSONValue[]) "";
+                    value.store.array = cast(JSONValue[]) "";
                     break;
                 }
 
-                value.array = null;
+                value.store.array = null;
 
                 do
                 {
                     JSONValue element = void;
                     parseValue(&element);
-                    value.array ~= element;
+                    value.store.array ~= element;
                 }
                 while(testChar(','));
 
@@ -276,7 +498,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
 
             case '"':
                 value.type = JSON_TYPE.STRING;
-                value.str = parseString();
+                value.store.str = parseString();
                 break;
 
             case '0': .. case '9':
@@ -327,15 +549,16 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
                 if(isFloat)
                 {
                     value.type = JSON_TYPE.FLOAT;
-                    value.floating = parse!real(data);
+                    value.store.floating = parse!real(data);
                 }
                 else
                 {
                     if (isNegative)
-                        value.integer = parse!long(data);
+                        value.store.integer = parse!long(data);
                     else
-                        value.uinteger = parse!ulong(data);
-                    value.type = !isNegative && value.uinteger & (1UL << 63) ? JSON_TYPE.UINTEGER : JSON_TYPE.INTEGER;
+                        value.store.uinteger = parse!ulong(data);
+
+                    value.type = !isNegative && value.store.uinteger & (1UL << 63) ? JSON_TYPE.UINTEGER : JSON_TYPE.INTEGER;
                 }
                 break;
 
@@ -433,7 +656,7 @@ string toJSON(in JSONValue* root, in bool pretty = false)
         final switch(value.type)
         {
             case JSON_TYPE.OBJECT:
-                if(!value.object.length)
+                if(!value.store.object.length)
                 {
                     json.put("{}");
                 }
@@ -441,7 +664,7 @@ string toJSON(in JSONValue* root, in bool pretty = false)
                 {
                     putCharAndEOL('{');
                     bool first = true;
-                    foreach(name, member; value.object)
+                    foreach(name, member; value.store.object)
                     {
                         if(!first)
                             putCharAndEOL(',');
@@ -460,14 +683,14 @@ string toJSON(in JSONValue* root, in bool pretty = false)
                 break;
 
             case JSON_TYPE.ARRAY:
-                if(value.array.empty)
+                if(value.store.array.empty)
                 {
                     json.put("[]");
                 }
                 else
                 {
                     putCharAndEOL('[');
-                    foreach (i, ref el; value.array)
+                    foreach (i, ref el; value.store.array)
                     {
                         if(i)
                             putCharAndEOL(',');
@@ -481,19 +704,19 @@ string toJSON(in JSONValue* root, in bool pretty = false)
                 break;
 
             case JSON_TYPE.STRING:
-                toString(value.str);
+                toString(value.store.str);
                 break;
 
             case JSON_TYPE.INTEGER:
-                json.put(to!string(value.integer));
+                json.put(to!string(value.store.integer));
                 break;
 
             case JSON_TYPE.UINTEGER:
-                json.put(to!string(value.uinteger));
+                json.put(to!string(value.store.uinteger));
                 break;
 
             case JSON_TYPE.FLOAT:
-                json.put(to!string(value.floating));
+                json.put(to!string(value.store.floating));
                 break;
 
             case JSON_TYPE.TRUE:
@@ -536,9 +759,72 @@ class JSONException : Exception
         else
             super(msg);
     }
+
+    this(string msg, string file, size_t line)
+    {
+        super(msg, file, line);
+    }
 }
 
-version(unittest) import std.exception;
+
+unittest
+{
+    JSONValue jv = "123";
+    assert(jv.type == JSON_TYPE.STRING);
+    assertNotThrown(jv.str);
+    assertThrown!JSONException(jv.integer);
+    assertThrown!JSONException(jv.uinteger);
+    assertThrown!JSONException(jv.floating);
+    assertThrown!JSONException(jv.object);
+    assertThrown!JSONException(jv.array);
+    assertThrown!JSONException(jv["aa"]);
+    assertThrown!JSONException(jv[2]);
+
+    jv = -3;
+    assert(jv.type == JSON_TYPE.INTEGER);
+    assertNotThrown(jv.integer);
+
+    jv = cast(uint)3;
+    assert(jv.type == JSON_TYPE.UINTEGER);
+    assertNotThrown(jv.uinteger);
+
+    jv = 3.0f;
+    assert(jv.type == JSON_TYPE.FLOAT);
+    assertNotThrown(jv.floating);
+
+    jv = ["key" : "value"];
+    assert(jv.type == JSON_TYPE.OBJECT);
+    assertNotThrown(jv.object);
+    assertNotThrown(jv["key"]);
+    foreach(string key, value; jv)
+    {
+        static assert(is(typeof(value) == JSONValue));
+        assert(key == "key");
+        assert(value.type == JSON_TYPE.STRING);
+        assertNotThrown(value.str);
+        assert(value.str == "value");
+    }
+
+    jv = [3, 4, 5];
+    assert(jv.type == JSON_TYPE.ARRAY);
+    assertNotThrown(jv.array);
+    assertNotThrown(jv[2]);
+    foreach(size_t index, value; jv)
+    {
+        static assert(is(typeof(value) == JSONValue));
+        assert(value.type == JSON_TYPE.INTEGER);
+        assertNotThrown(value.integer);
+        assert(index == (value.integer-3));
+    }
+
+    jv = JSONValue("value");
+    assert(jv.type == JSON_TYPE.STRING);
+    assert(jv.str == "value");
+
+    JSONValue jv2 = JSONValue("value");
+    assert(jv2.type == JSON_TYPE.STRING);
+    assert(jv2.str == "value");
+}
 
 unittest
 {
@@ -591,10 +877,13 @@ unittest
     // Should be able to correctly interpret unicode entities
     val = parseJSON(`"\u003C\u003E"`);
     assert(toJSON(&val) == "\"\&lt;\&gt;\"");
+    assert(val.to!string() == "\"\&lt;\&gt;\"");
     val = parseJSON(`"\u0391\u0392\u0393"`);
     assert(toJSON(&val) == "\"\&Alpha;\&Beta;\&Gamma;\"");
+    assert(val.to!string() == "\"\&Alpha;\&Beta;\&Gamma;\"");
     val = parseJSON(`"\u2660\u2666"`);
     assert(toJSON(&val) == "\"\&spades;\&diams;\"");
+    assert(val.to!string() == "\"\&spades;\&diams;\"");
 
     //0x7F is a control character (see Unicode spec)
     assertThrown(parseJSON(`{ "foo": "` ~ "\u007F" ~ `"}`));
