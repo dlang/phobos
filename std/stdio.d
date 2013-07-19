@@ -1241,9 +1241,9 @@ void main()
         }
         // test line persistence
         std.file.write(deleteme, "mary\njohn\narnold");
-        assert(File(deleteme).byLine.array.sort !=
+        assert(File(deleteme).byLine().array().sort !=
             ["arnold", "john", "mary"]);
-        assert(File(deleteme).byLine!(char, immutable char).array.sort ==
+        assert(File(deleteme).byLine!(char, immutable char)().array().sort ==
             ["arnold", "john", "mary"]);
     }
 
