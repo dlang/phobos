@@ -770,7 +770,8 @@ $(UL
             $(DD Convert integral value to string in $(D_PARAM radix) radix.
             radix must be a value from 2 to 36.
             value is treated as a signed value only if radix is 10.
-            The characters A through Z are used to represent values 10 through 36.)))
+            The characters A through Z are used to represent values 10 through 36
+            and their case is determined by the $(D_PARAM letterCase) parameter.)))
   $(LI All floating point types to all string types.)
   $(LI Pointer to string conversions prints the pointer as a $(D size_t) value.
        If pointer is $(D char*), treat it as C-style strings.))
@@ -1069,7 +1070,7 @@ unittest
 }
 
 /// ditto
-T toImpl(T, S)(S value, uint radix)
+T toImpl(T, S)(S value, uint radix, LetterCase letterCase = LetterCase.upper)
     if (isIntegral!S &&
         isExactSomeString!T)
 in
@@ -1083,23 +1084,31 @@ body
         enforce(radix >= 2 && radix <= 36, new ConvException("Radix error"));
         if (radix == 10)
             return to!string(value);     // handle signed cases only for radix 10
-        return to!string(cast(ulong) value, radix);
+        return to!string(cast(ulong) value, radix, letterCase);
     }
     else
     {
         char[value.sizeof * 8] buffer;
         uint i = buffer.length;
+        char baseChar = 'A';
+        string caseHexDigits = hexDigits;
+        
+        if (letterCase == LetterCase.lower)
+        {
+            baseChar = 'a';
+            caseHexDigits = lowerHexDigits;
+        }      
 
-        if (value < radix && value < hexDigits.length)
-            return hexDigits[cast(size_t)value .. cast(size_t)value + 1];
+        if (value < radix && value < caseHexDigits.length)
+            return caseHexDigits[cast(size_t)value .. cast(size_t)value + 1];
 
         do
         {
             ubyte c;
             c = cast(ubyte)(value % radix);
             value = value / radix;
-            i--;
-            buffer[i] = cast(char)((c < 10) ? c + '0' : c + 'A' - 10);
+            i--;          
+            buffer[i] = cast(char)((c < 10) ? c + '0' : c + baseChar - 10);
         } while (value);
         return to!T(buffer[i .. $].dup);
     }
@@ -1116,6 +1125,8 @@ body
         assert(to!string(to!Int(15), 2u) == "1111");
         assert(to!string(to!Int(1), 2u) == "1");
         assert(to!string(to!Int(0x1234AF), 16u) == "1234AF");
+        assert(to!string(to!Int(0x1234BCD), 16u, LetterCase.upper) == "1234BCD");
+        assert(to!string(to!Int(0x1234AF), 16u, LetterCase.lower) == "1234af");
     }
 
     foreach (Int; TypeTuple!(int, long))

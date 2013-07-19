@@ -178,6 +178,7 @@ module std.digest.digest;
 import std.exception, std.range, std.traits;
 import std.algorithm : copy;
 import std.typetuple : allSatisfy;
+import std.ascii : LetterCase;
 
 //verify example
 unittest
@@ -901,14 +902,6 @@ enum Order : bool
     decreasing ///
 }
 
-/**
- * See $(LREF toHexString)
- */
-enum LetterCase : bool
-{
-    upper, ///
-    lower ///
-}
 
 /**
  * Used to convert a hash value (a static or dynamic array of ubytes) to a string.
