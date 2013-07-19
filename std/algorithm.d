@@ -177,7 +177,7 @@ $(TR $(TDNW $(LREF mismatch)) $(TD $(D mismatch("oh hi",
 $(LEADINGROW Iteration
 )
 $(TR $(TDNW $(LREF filter)) $(TD $(D filter!"a > 0"([1, -1, 2,
-0, -3])) iterates over elements $(D 1), $(D 2), and $(D 0).)
+0, -3])) iterates over elements $(D 1) and $(D 2).)
 )
 $(TR $(TDNW $(LREF filterBidirectional)) $(TD Similar to $(D
 filter), but also provides $(D back) and $(D popBack) at a small
