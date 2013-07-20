@@ -42,7 +42,7 @@ if (isIterable!Range && !isNarrowString!Range)
     {
         if(r.length == 0) return null;
 
-        auto result = uninitializedArray!(Unqual!(E)[])(r.length);
+        auto result = ()@trusted{ return uninitializedArray!(Unqual!(E)[])(r.length); }();
 
         size_t i = 0;
         foreach (e; r)
@@ -51,7 +51,8 @@ if (isIterable!Range && !isNarrowString!Range)
             static if (is(typeof(e.opAssign(e))))
             {
                 // this should be in-place construction
-                emplace!E(result.ptr + i, e);
+                auto ithptr = ()@trusted{ return result.ptr + i; }();
+                emplace!E(ithptr, e);
             }
             else
             {
@@ -70,6 +71,30 @@ if (isIterable!Range && !isNarrowString!Range)
         }
         return a.data;
     }
+}
+
+@safe unittest
+{
+    auto a = array([1, 2, 3, 4, 5][]);
+    assert(a == [ 1, 2, 3, 4, 5 ]);
+}
+
+@safe unittest
+{
+    struct Foo
+    {
+        int a;
+        @safe auto opAssign(Foo foo)
+        {
+            a = foo.a;
+        }
+        @safe auto opEquals(Foo foo)
+        {
+            return a == foo.a;
+        }
+    }
+    auto a = array([Foo(1), Foo(2), Foo(3), Foo(4), Foo(5)][]);
+    assert(equal(a, [Foo(1), Foo(2), Foo(3), Foo(4), Foo(5)]));
 }
 
 /**
