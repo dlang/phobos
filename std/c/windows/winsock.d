@@ -5,6 +5,7 @@
 
 
 module std.c.windows.winsock;
+version (Windows):
 
 private import std.stdint;
 private import std.c.windows.windows;

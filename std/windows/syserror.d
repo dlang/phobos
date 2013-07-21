@@ -14,6 +14,7 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 module std.windows.syserror;
+version (Windows):
 
 private import std.windows.charset;
 private import std.c.windows.windows;
