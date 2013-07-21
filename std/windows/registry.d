@@ -36,6 +36,7 @@
  *
  * ////////////////////////////////////////////////////////////////////////// */
 module std.windows.registry;
+version (Windows):
 
 import std.array;
 import std.system : Endian, endian;

@@ -16,6 +16,7 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 module std.windows.charset;
+version (Windows):
 
 private import std.conv;
 private import std.c.windows.windows;
