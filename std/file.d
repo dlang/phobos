@@ -1611,6 +1611,16 @@ version(StdDdoc)
         +/
         this(string path);
 
+        version (Windows)
+        {
+            private this(string path, in WIN32_FIND_DATA* fd);
+            private this(string path, in WIN32_FIND_DATAW *fd);
+        }
+        else version (Posix)
+        {
+            private this(string path, core.sys.posix.dirent.dirent* fd);
+        }
+
         /++
             Returns the path to the file represented by this $(D DirEntry).
 
