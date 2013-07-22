@@ -244,7 +244,7 @@ public:
 
     // BigInt op BigInt
     BigInt opBinary(string op, T)(T y) pure
-        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="%") 
+        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="%")
 			&& is (T: BigInt))
     {
         BigInt r = this;
@@ -381,6 +381,38 @@ public:
         int cmp = data.opCmp(y.data);
         return sign? -cmp: cmp;
     }
+    /// Sets the value of this BigInt as unit[],
+    /// sign is set as the boolean, true for negative and false for positive
+    void setDataUint(const uint[] n_data, bool sign = false) pure
+    {
+        this.sign = sign;
+        data.setUint(n_data);
+    }
+    /// Returns the value of this BigInt as a uint[],
+    /// the sign of the BigInt is ignored
+    uint[] getDataUint() pure
+    {
+        uint[] array = new uint[data.uintLength()];
+        foreach(i; 0..data.uintLength())
+            array[i] = data.peekUint(i);
+        return array;
+    }
+    /// Sets the value of this BigInt as ulong[],
+    /// sign is set as the boolean, true for negative and false for positive
+    void setDataUlong(const ulong[] n_data, bool sign = false) pure
+    {
+        this.sign = sign;
+        data.setUlong(n_data);
+    }
+    /// Returns the value of this BigInt as a ulong[],
+    /// the sign of the BigInt is ignored
+    ulong[] getDataUlong() pure
+    {
+        ulong[] array = new ulong[data.ulongLength()];
+        foreach(i; 0..data.ulongLength())
+            array[i] = data.peekUlong(i);
+        return array;
+    }
     /// Returns the value of this BigInt as a long,
     /// or +- long.max if outside the representable range.
     long toLong() pure const
@@ -506,7 +538,7 @@ private:
     }
 }
 
-string toDecimalString(BigInt x) 
+string toDecimalString(BigInt x)
 {
     string outbuff="";
     void sink(const(char)[] s) { outbuff ~= s; }
@@ -514,7 +546,7 @@ string toDecimalString(BigInt x)
     return outbuff;
 }
 
-string toHex(BigInt x) 
+string toHex(BigInt x)
 {
     string outbuff="";
     void sink(const(char)[] s) { outbuff ~= s; }
@@ -791,4 +823,16 @@ unittest // 6850
     }
 
     assert(pureTest() == 1337);
+}
+
+unittest
+{
+    BigInt a;
+    a.setDataUint([0x22]);
+    assert(a.toInt() == 0x22);
+    assert(a.getDataUint() == [0x22]);
+
+    a.setDataUlong([0xACDC]);
+    assert(a.toLong() == 0xACDC);
+    assert(a.getDataUlong() == [0xACDC]);
 }
