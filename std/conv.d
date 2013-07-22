@@ -3596,13 +3596,10 @@ Given a pointer $(D chunk) to uninitialized memory (but already typed
 as $(D T)), constructs an object of non-$(D class) type $(D T) at that
 address.
 
-This function can be $(D @trusted) if the corresponding constructor of
-$(D T) is $(D @safe).
-
 Returns: A pointer to the newly constructed object (which is the same
 as $(D chunk)).
  */
-T* emplace(T)(T* chunk)
+T* emplace(T)(T* chunk) @safe nothrow pure
 {
     static assert(is(T* : void*), "Cannot emplace type " ~ T.stringof ~ " because it is qualified.");
 
@@ -3612,19 +3609,22 @@ T* emplace(T)(T* chunk)
     }
     else static if (isStaticArray!T)
     {
-        foreach(i; 0 .. T.length)
-            emplace(&((*chunk)[i]));
+        //TODO: This can probably be optimized.
+        foreach(ref e; (*chunk)[])
+            emplace(()@trusted{return &e;}());
     }
     else
     {
         static assert(!is(T == struct) || is(typeof({static T i;})),
             text("Cannot emplace because ", T.stringof, ".this() is annotated with @disable."));
-        static T i;
 
         static if (isAssignable!T && !hasElaborateAssign!T)
-            *chunk = i;
+            *chunk = T.init;
         else
-            memcpy(chunk, &i, T.sizeof);
+        {
+            static immutable T i;
+            ()@trusted{memcpy(chunk, &i, T.sizeof);}();
+        }
     }
 
     return chunk;
@@ -3697,6 +3697,25 @@ unittest
     assert(s2[0].i == 5 && s2[1].i == 5);
 }
 
+unittest
+{
+    struct S1
+    {}
+
+    struct S2
+    {
+        void opAssign(S2);
+    }
+
+    S1 s1 = void;
+    S2 s2 = void;
+    S1[2] as1 = void;
+    S2[2] as2 = void;
+    emplace(&s1);
+    emplace(&s2);
+    emplace(&as1);
+    emplace(&as2);
+}
 
 /**
 Given a pointer $(D chunk) to uninitialized memory (but already typed
@@ -3714,7 +3733,9 @@ T* emplace(T, Args...)(T* chunk, Args args)
 {
     static assert(is(typeof(*chunk = args[0])),
         text("Don't know how to emplace a ", T.stringof, " with a ", Args[0].stringof, "."));
-    //Note: This also works for static arrays.
+    //TODO FIXME: For static arrays, this uses the "postblit-then-destroy" sequence.
+    //This means it will destroy unitialized data.
+    //It needs to be fixed.
     *chunk = args[0];
     return chunk;
 }
