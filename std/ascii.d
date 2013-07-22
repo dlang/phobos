@@ -38,6 +38,14 @@ immutable letters        = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ~
 immutable uppercase      = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; /// A..Z
 immutable whitespace     = " \t\v\r\n\f";                /// ASCII whitespace
 
+/**
+Letter case specifier.
+ */
+enum LetterCase : bool
+{
+    upper, /// Upper case letters
+    lower  /// Lower case letters
+}
 
 version(Windows)
 {
