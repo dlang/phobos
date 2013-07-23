@@ -195,8 +195,8 @@ void[] read(in char[] name, size_t upTo = size_t.max)
         auto size = GetFileSize(h, null);
         cenforce(size != INVALID_FILE_SIZE, name);
         size = min(upTo, size);
-        auto buf = uninitializedArray!(ubyte[])(size);
-        scope(failure) delete buf;
+        ubyte[] buf = (cast(ubyte*)GC.malloc(size, GC.BlkAttr.NO_SCAN))[0 .. size];
+        scope(failure) GC.free(buf.ptr);
 
         DWORD numread = void;
         cenforce(ReadFile(h,buf.ptr, size, &numread, null) == 1
@@ -224,8 +224,8 @@ void[] read(in char[] name, size_t upTo = size_t.max)
         immutable initialAlloc = to!size_t(statbuf.st_size
             ? min(statbuf.st_size + 1, maxInitialAlloc)
             : minInitialAlloc);
-        void[] result = uninitializedArray!(ubyte[])(initialAlloc);
-        scope(failure) delete result;
+        void[] result = GC.malloc(initialAlloc, GC.BlkAttr.NO_SCAN)[0 .. initialAlloc];
+        scope(failure) GC.free(result.ptr);
         size_t size = 0;
 
         for (;;)
