@@ -1053,11 +1053,16 @@ Allows to directly use range operations on lines of a file.
 */
     struct ByLine(Char, Terminator)
     {
+    private:
+        // use a mutable buffer for efficiency even when Char is immutable
+        Unqual!Char[] line;
+        Char[] _front;
+        bool first_call = true;
+        
+    public:
         File file;
-        Char[] line;
         Terminator terminator;
         KeepTerminator keepTerminator;
-        bool first_call = true;
 
         this(File f, KeepTerminator kt = KeepTerminator.no,
                 Terminator terminator = '\n')
@@ -1098,7 +1103,7 @@ Allows to directly use range operations on lines of a file.
                 popFront();
                 first_call = false;
             }
-            return line;
+            return _front;
         }
 
         /// Ditto
@@ -1117,6 +1122,8 @@ Allows to directly use range operations on lines of a file.
             {
                 line = line.ptr[0 .. line.length - 1];
             }
+            // duplicate if necessary
+            _front = to!(Char[])(line);
         }
     }
 
@@ -1189,7 +1196,7 @@ void main()
         }
         f.close();
 
-        void test(string txt, string[] witness,
+        void doTest(Char)(string txt, string[] witness,
                 KeepTerminator kt = KeepTerminator.no,
                 bool popFirstLine = false)
         {
@@ -1201,12 +1208,13 @@ void main()
                 f.close();
                 assert(!f.isOpen);
             }
-            auto lines = f.byLine(kt);
+            auto lines = f.byLine!(char, Char)(kt);
             if (popFirstLine)
             {
                 lines.popFront();
                 i = 1;
             }
+            assert(lines.empty || lines.front is lines.front);
             foreach (line; lines)
             {
                 assert(line == witness[i++]);
@@ -1214,17 +1222,29 @@ void main()
             assert(i == witness.length, text(i, " != ", witness.length));
         }
 
-        test("", null);
-        test("\n", [ "" ]);
-        test("asd\ndef\nasdf", [ "asd", "def", "asdf" ]);
-        test("asd\ndef\nasdf", [ "asd", "def", "asdf" ], KeepTerminator.no, true);
-        test("asd\ndef\nasdf\n", [ "asd", "def", "asdf" ]);
+        foreach (Char; TypeTuple!(char, immutable char))
+        {
+            alias test = doTest!Char;
+            test("", null);
+            test("\n", [ "" ]);
+            test("asd\ndef\nasdf", [ "asd", "def", "asdf" ]);
+            test("asd\ndef\nasdf", [ "asd", "def", "asdf" ], KeepTerminator.no, true);
+            test("asd\ndef\nasdf\n", [ "asd", "def", "asdf" ]);
+            test("foo", [ "foo" ], KeepTerminator.no, true);
 
-        test("", null, KeepTerminator.yes);
-        test("\n", [ "\n" ], KeepTerminator.yes);
-        test("asd\ndef\nasdf", [ "asd\n", "def\n", "asdf" ], KeepTerminator.yes);
-        test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes);
-        test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes, true);
+            test("", null, KeepTerminator.yes);
+            test("\n", [ "\n" ], KeepTerminator.yes);
+            test("asd\ndef\nasdf", [ "asd\n", "def\n", "asdf" ], KeepTerminator.yes);
+            test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes);
+            test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes, true);
+            test("foo", [ "foo" ], KeepTerminator.yes, false);
+        }
+        // test line persistence
+        std.file.write(deleteme, "mary\njohn\narnold");
+        assert(File(deleteme).byLine().array().sort !=
+            ["arnold", "john", "mary"]);
+        assert(File(deleteme).byLine!(char, immutable char)().array().sort ==
+            ["arnold", "john", "mary"]);
     }
 
     template byRecord(Fields...)
