@@ -1228,7 +1228,7 @@ unittest // bugzilla 6874
     starts at index $(D 0).
   +/
 @safe
-pure bool sameHead(T)(in T[] lhs, in T[] rhs)
+pure nothrow bool sameHead(T)(in T[] lhs, in T[] rhs)
 {
     return lhs.ptr == rhs.ptr;
 }
@@ -1239,15 +1239,13 @@ pure bool sameHead(T)(in T[] lhs, in T[] rhs)
     same place in memory, making one of the arrays a slice of the other which
     end at index $(D $).
   +/
-@safe
-pure bool sameTail(T)(in T[] lhs, in T[] rhs)
+@trusted
+pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
 {
-    return (in T[] lhs, in T[] rhs)@trusted{
-        return lhs.ptr + lhs.length == rhs.ptr + rhs.length;
-    }(lhs, rhs);
+    return lhs.ptr + lhs.length == rhs.ptr + rhs.length;
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     foreach(T; TypeTuple!(int[], const(int)[], immutable(int)[], const int[], immutable int[]))
     {
