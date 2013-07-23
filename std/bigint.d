@@ -365,6 +365,15 @@ public:
         return !isZero();
     }
 
+    // Hack to make BigInt's typeinfo.compare work properly.
+    // Note that this must appear before the other opCmp overloads, otherwise
+    // DMD won't find it.
+    int opCmp(ref const BigInt y) const
+    {
+        // Simply redirect to the "real" opCmp implementation.
+        return this.opCmp!BigInt(y);
+    }
+
     ///
     int opCmp(T)(T y) pure if (isIntegral!T)
     {
@@ -374,7 +383,7 @@ public:
         return sign? -cmp: cmp;
     }
     ///
-    int opCmp(T:BigInt)(T y) pure
+    int opCmp(T:BigInt)(const T y) pure const
     {
         if (sign!=y.sign)
             return sign ? -1 : 1;
@@ -503,6 +512,12 @@ private:
     {
         if (isZero())
             throw new Error("BigInt division by zero");
+    }
+
+    // Implement toHash so that BigInt works properly as an AA key.
+    size_t toHash() const @trusted nothrow
+    {
+        return data.toHash() + sign;
     }
 }
 
@@ -791,4 +806,28 @@ unittest // 6850
     }
 
     assert(pureTest() == 1337);
+}
+
+unittest // 8435 & 10118
+{
+    auto i = BigInt(100);
+    auto j = BigInt(100);
+
+    // Two separate BigInt instances representing same value should have same
+    // hash.
+    assert(typeid(i).getHash(&i) == typeid(j).getHash(&j));
+    assert(typeid(i).compare(&i, &j) == 0);
+
+    // BigInt AA keys should behave consistently.
+    int[BigInt] aa;
+    aa[BigInt(123)] = 123;
+    assert(BigInt(123) in aa);
+
+    aa[BigInt(123)] = 321;
+    assert(aa[BigInt(123)] == 321);
+
+    auto keys = aa.byKey();
+    assert(keys.front == BigInt(123));
+    keys.popFront();
+    assert(keys.empty);
 }
