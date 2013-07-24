@@ -291,18 +291,22 @@ endif
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 	@echo Testing $@ - disabled
 
+UT_D_OBJS:=$(addprefix $(ROOT)/unittest/,$(addsuffix .o,$(D_MODULES)))
+$(UT_D_OBJS): $(ROOT)/unittest/%.o: $(D_FILES)
+	$(DMD) $(DFLAGS) -unittest -c -of$@ $*.d
+
 ifneq (linux,$(OS))
 
-$(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(ALL_D_FILES) $(OBJS) $(DRUNTIME)
-	$(DMD) $(DFLAGS) -unittest -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(D_FILES) $(OBJS) $(DRUNTIME) -defaultlib= -debuglib=
+$(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME)
+	$(DMD) $(DFLAGS) -unittest -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) -defaultlib= -debuglib= -L-lcurl
 
 else
 
 UT_LIBSO:=$(ROOT)/unittest/libphobos2-ut.so
 
 $(UT_LIBSO): override PIC:=-fPIC
-$(UT_LIBSO): $(ALL_D_FILES) $(OBJS) $(DRUNTIMESO)
-	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(D_FILES) $(OBJS) $(DRUNTIMESO) -defaultlib= -debuglib=
+$(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO)
+	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) -defaultlib= -debuglib= -L-lcurl
 
 $(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_LIBSO)
 	$(DMD) $(DFLAGS) -of$@ $< -L$(UT_LIBSO) -defaultlib= -debuglib=
