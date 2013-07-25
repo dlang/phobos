@@ -3859,7 +3859,7 @@ private void emplacePostblitter(T, Arg)(ref T chunk, auto ref Arg arg)
         typeid(T).postblit(&chunk);
     }
 }
-private deprecated("emplace should not call opCall as a construction scheme. Please use \"emplace(chunk, T(args));\" directly.")
+private deprecated("Using static opCall for emplace is deprecated. Plase use emplace(chunk, T(args)) instead.")
 void emplaceOpCaller(T, Args...)(T* chunk, auto ref Args args)
 {
     static assert (is(typeof({T t = T.opCall(args);})),
