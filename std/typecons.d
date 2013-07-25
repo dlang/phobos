@@ -397,7 +397,7 @@ template Tuple(Specs...)
         else
         {
             @property
-            ref Tuple!Types _Tuple_super() @trusted
+            ref inout(Tuple!Types) _Tuple_super() inout @trusted
             {
                 foreach (i, _; Types)   // Rely on the field layout
                 {
@@ -826,6 +826,14 @@ unittest
 
     static assert(is(typeof(Tuple!(int, "x", string, "y").tupleof) ==
                      typeof(Tuple!(int,      string     ).tupleof)));
+}
+unittest
+{
+    // Bugzilla 10686
+    immutable Tuple!(int) t1;
+    auto r1 = t1[0]; // OK
+    immutable Tuple!(int, "x") t2;
+    auto r2 = t2[0]; // error
 }
 unittest
 {
