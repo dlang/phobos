@@ -1091,7 +1091,7 @@ Allows to directly use range operations on lines of a file.
         }
 
         /// Range primitive implementations.
-        @property bool empty() const
+        @property bool empty()
         {
             if (line !is null) return false;
             if (!file.isOpen) return true;
@@ -1099,16 +1099,15 @@ Allows to directly use range operations on lines of a file.
             // First read ever, must make sure stream is not empty. We
             // do so by reading a character and putting it back. Doing
             // so is guaranteed to work on all files opened in all
-            // buffering modes. Although we internally mutate the
-            // state of the file, we restore everything, which
-            // justifies the cast.
-            auto mutableFP = (cast(File*) &file).getFP();
-            auto c = fgetc(mutableFP);
+            // buffering modes.
+            auto fp = file.getFP();
+            auto c = fgetc(fp);
             if (c == -1)
             {
+                file.detach();
                 return true;
             }
-            ungetc(c, mutableFP) == c
+            ungetc(c, fp) == c
                 || assert(false, "Bug in cstdlib implementation");
             return false;
         }
@@ -1230,7 +1229,8 @@ void main()
         {
             assert(false);
         }
-        f.close();
+        f.detach();
+        assert(!f.isOpen);
 
         void testTerm(Terminator)(string txt, string[] witness,
                 KeepTerminator kt, Terminator term, bool popFirstLine)
@@ -1286,20 +1286,26 @@ void main()
             KeepTerminator.yes, "\r\n", false);
         testTerm("sue\r", ["sue\r"], KeepTerminator.yes, '\r', false);
 
-        // bug 9599
         auto file = File.tmpfile();
         file.write("1\n2\n3\n");
 
+        // bug 9599
         file.rewind();
         auto fbl = file.byLine();
         assert(fbl.take(1).equal(["1"]));
         assert(fbl.equal(["2", "3"]));
         assert(fbl.empty);
+        assert(file.isOpen); // we still have a valid reference
         
         file.rewind();
+        fbl = file.byLine();
         assert(!fbl.drop(2).empty);
         assert(fbl.equal(["3"]));
         assert(fbl.empty);
+        assert(file.isOpen);
+        
+        file.detach();
+        assert(!file.isOpen);
     }
 
     template byRecord(Fields...)
