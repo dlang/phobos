@@ -12,9 +12,46 @@ License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors: $(WEB erdani.com, Andrei Alexandrescu)
 
 Source: $(PHOBOSSRC std/_allocator.d)
+
+Allocation models supported:
+
+$(UL
+$(LI $(D malloc)/$(D free), unsafe)
+$(LI region-based)
+$(LI garbage collected)
+)
  */
 module std.allocator;
 import std.conv, std.traits;
+
+/**
+Returns the size in bytes of the state that needs to be allocated to hold an
+object of type $(D T). $(D stateSize!T) is zero for $(D struct)s that are not
+nested and have no nonstatic member variables.
+ */
+private template stateSize(T)
+{
+    static if (is(T == class) || is(T == interface))
+        enum stateSize = __traits(classInstanceSize, T);
+    else
+        enum stateSize = FieldTypeTuple!T.length || isNested!T ? T.sizeof : 0;
+}
+
+unittest
+{
+    struct A {}
+    static assert(stateSize!A == 0);
+    struct B { int x; }
+    static assert(stateSize!B == 4);
+    interface I1 {}
+    static assert(stateSize!I1 == 2 * size_t.sizeof);
+    class C1 {}
+    static assert(stateSize!C1 == 3 * size_t.sizeof);
+    class C2 { char c; }
+    static assert(stateSize!C2 == 4 * size_t.sizeof);
+    static class C3 { char c; }
+    static assert(stateSize!C3 == 2 * size_t.sizeof + char.sizeof);
+}
 
 /**
    The safe, garbage-collected allocation model. All pointers and
@@ -37,27 +74,25 @@ struct SafeGC
     /**
        Reference to object of class type $(D T).
      */
-    template Ref(T) if (is(T == class)) { alias T Ref; }
+    template OwningRef(T) if (is(T == class)) { alias T Ref; }
 
     /**
-       Allocate memory for an object of type $(D T) and then creates
-       it there. Returns a $(D Ref!T) for class objects and a $(D
-       Pointer!T) otherwise.
-    */
-    @trusted static auto create(T, A...)(auto ref A args)
+       Reference to object of class type $(D T).
+     */
+    template Ref(T) if (is(T == class)) { alias T Ref; }
+
+    ubyte[] allocate(size_t bytes)
     {
         import core.memory;
-        static if (is(T == class))
-        {
-            enum size = __traits(classInstanceSize, T);
-            auto raw = (cast(void*) GC.malloc(size))[0 .. size];
-        }
-        else
-        {
-            auto raw = cast(T*) GC.malloc(T.sizeof);
-        }
-        return emplace!T(raw, args);
+        return (cast(ubyte*) GC.malloc(bytes))[0 .. bytes];
     }
+}
+
+unittest
+{
+    class A { int x = 5; double y = 6; string z = "7"; }
+    SafeGC.Ref!A a = SafeGC().create!A();
+    assert(a.x == 5 && a.y == 6 && a.z == "7");
 }
 
 /**
@@ -66,26 +101,38 @@ struct SafeGC
  */
 struct Mallocator
 {
+    import core.stdc.stdlib;
+
     /**
        Pointer to object of type $(D T).
      */
-    template Pointer(T) { alias T* Pointer; }
+    template Pointer(T) { alias Pointer = T*; }
+
+    /**
+       Reference to object of class type $(D T).
+     */
+    template OwningRef(T) if (is(T == class)) { alias Ref = T; }
 
     /**
        Reference to object of class type $(D T).
      */
     template Ref(T) if (is(T == class)) { alias T Ref; }
 
-    /**
-       Allocateemplace memory for an object of type $(D T) and then creates
-       it there. Returns a $(D Ref!T) for class objects and a $(D
-       Pointer!T) otherwise.
-    */
-    static auto create(T, A...)(auto ref A args)
+    static ubyte[] allocate(size_t bytes)
     {
-        enum size = is(T == class) ? __traits(classInstanceSize, T) : T.sizeof;
-        auto address = malloc(T.sizeof);
-        return emplace(address, args);
+        return (cast(ubyte*) malloc(bytes))[0 .. bytes];
+    }
+
+    static void deallocate(void* p)
+    {
+        import core.stdc.stdlib;
+        free(p);
+    }
+
+    static if (is(typeof(malloc_usable_size(null)) : size_t))
+    size_t allocatedSize(void* p)
+    {
+        return malloc_usable_size(p);
     }
 
     /**
@@ -94,15 +141,16 @@ struct Mallocator
      * underlying the object. This is by necessity a $(D @system)
      * function.
      */
-    @system void dispose(T)(Pointer!T handle)
+    @system static void dispose(T)(T* handle)
     {
         clear(handle);
-        free(handle);
+        deallocate(handle);
     }
-    @system void dispose(T)(Ref!T handle)
+    @system static void dispose(T)(T handle)
+    if (is(T == class) || is(T == interface))
     {
         clear(handle);
-        free(handle);
+        deallocate(cast(void*) handle);
     }
 }
 
@@ -149,6 +197,163 @@ unittest
     test!Mallocator();
 }
 
+unittest
+{
+    Mallocator a;
+    int* p = a.create!int(42);
+    a.dispose(p);
+    class A {}
+    A obj = a.create!A();
+    a.dispose(obj);
+}
+
+/**
+Size tracker on top of any allocator
+*/
+struct SizeTrackingAllocator(Allocator)
+{
+    private enum hasState = FieldTypeTuple!(Allocator).length == 0;
+    static if (hasState) Allocator _parent;
+    else alias _parent = Allocator;
+
+    static ubyte[] allocate(size_t bytes)
+    {
+        auto result = _parent.allocate(bytes + size_t.sizeof);
+        *(cast(size_t*) result.ptr) = bytes;
+        return result[size_t.sizeof .. $];
+    }
+
+    static void deallocate(void* p)
+    {
+        _parent.deallocate(cast(size_t*) p - 1);
+    }
+
+    static size_t allocatedSize(void* p)
+    {
+        assert(p);
+        return *(cast(size_t*)p - 1);
+    }
+}
+
+unittest
+{
+    SizeTrackingAllocator!(Mallocator) a;
+    auto p = a.create!int(42);
+    assert(a.allocatedSize(p) == 4);
+}
+
+struct A { int a; double b; }
+struct B { int x; A y; string z; }
+pragma(msg, FieldTypeTuple!B);
+
+/**
+Freelist allocator, stackable on top of another allocator
+*/
+struct FreelistAllocator(BaseAlloc, size_t allocUnit)
+{
+    private enum hasState = FieldTypeTuple!(BaseAlloc).length == 0;
+    private struct Node { Node* next; }
+    private Node* _freeList;
+
+    static if (hasState) BaseAlloc _parent;
+    else alias _parent = BaseAlloc;
+
+    static if (hasState)
+        this(BaseAlloc parent)
+        {
+            _parent = parent;
+        }
+
+    /**
+       Pointer to object of type $(D T).
+     */
+    template Pointer(T) { alias Pointer = T*; }
+
+    /**
+       Reference to object of class type $(D T).
+     */
+    template OwningRef(T) if (is(T == class)) { alias Ref = T; }
+
+    /**
+       Reference to object of class type $(D T).
+     */
+    template Ref(T) if (is(T == class)) { alias Ref = T; }
+
+    ubyte[] allocate(size_t bytes)
+    {
+        if (bytes == allocUnit && _freeList)
+        {
+            // Pop off the freelist
+            auto result = (cast(ubyte*) _freeList)[0 .. allocUnit];
+            _freeList = _freeList.next;
+            return result;
+        }
+        // Need to use the parent allocator
+        return _parent.allocate(bytes);
+    }
+
+    //static if (is(typeof(_parent.allocatedSize(nullptr)) : size_t))
+    void deallocate(void* p)
+    {
+        if (_parent.allocatedSize(p) == allocUnit)
+        {
+            auto t = _freeList;
+            _freeList = cast(Node*) p;
+            _freeList.next = t;
+        }
+        else
+        {
+            _parent.deallocate(p);
+        }
+    }
+
+    /**
+     * Destroy object referred to by $(D handle) (which may be either
+     * a pointer or a class reference), and then frees the memory
+     * underlying the object. This is by necessity a $(D @system)
+     * function.
+     */
+    @system void dispose(T)(T* handle)
+    {
+        auto p = handle;
+        clear(p);
+        deallocate(handle);
+    }
+    @system void dispose(T)(T handle)
+    if (is(T == class) || is(T == interface))
+    {
+        void* p = cast(void*) handle;
+        clear(handle);
+        deallocate(p);
+    }
+}
+
+unittest
+{
+    FreelistAllocator!(SizeTrackingAllocator!Mallocator, int.sizeof) a;
+    auto p = a.create!int(42);
+    assert(*p == 42);
+    a.dispose(p);
+}
+
+/**  Allocate memory for an object of type $(D T) using allocator $(D alloc)
+and then creates it there. Returns a $(D Ref!T) for class objects and a $(D
+Pointer!T) otherwise.
+ */
+auto create(T, Alloc, A...)(auto ref Alloc alloc, auto ref A args)
+{
+    static if (is(T == class) || is(T == interface))
+        enum size = __traits(classInstanceSize, T);
+    else
+        enum size = T.sizeof;
+    auto address = Alloc().allocate(size);
+    return emplace!T(cast(void[]) address, args);
+}
+
+unittest
+{
+    int* p = Mallocator().create!int(42);
+}
 
 /**
    A doubly-linked list intended as checker for the validity of the
@@ -170,11 +375,11 @@ struct DList(T, A = SafeGC)
     @property auto dup()
     {
         if (!_root) return NodePtr.init;
-        auto result = A.create!Node(_root.payload, NodePtr.init, NodePtr.init);
+        auto result = A().create!Node(_root.payload, NodePtr.init, NodePtr.init);
         auto last = result;
         for (auto i = _root.next; i; i = i.next)
         {
-            auto copy = A.create!Node(i.payload, last, NodePtr.init);
+            auto copy = A().create!Node(i.payload, last, NodePtr.init);
             last.next = copy;
             last = copy;
         }
