@@ -357,7 +357,7 @@ private Pid spawnProcessImpl(in char[][] args,
 {
     import core.exception: RangeError;
 
-    if (args.empty) throw new RangeError("Command line is empty");
+    if (args.empty) throw new RangeError();
     const(char)[] name = args[0];
     if (any!isDirSeparator(name))
     {
