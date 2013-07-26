@@ -459,7 +459,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
          *  true if there are no more elements to be iterated.
          */
         @property @trusted
-        bool empty() const
+        bool empty()
         {
             return range_.empty;
         }
@@ -1125,7 +1125,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
          *  true if there are no more elements to be iterated.
          */
         @property @trusted
-        bool empty() const
+        bool empty()
         {
             return range_.empty;
         }
