@@ -594,7 +594,7 @@ void put(R, E)(ref R r, E e)
         r.front = e;
         r.popFront();
     }
-    else static if ((usingPut || usingFront) && isInputRange!E && is(typeof(put(r, e.front))))
+    else static if (!(usingPut || usingFront) && isInputRange!E && is(typeof(put(r, e.front))))
     {
         for (; !e.empty; e.popFront()) put(r, e.front);
     }
@@ -690,6 +690,15 @@ unittest
     LockingTextWriter w;
     RetroResult r;
     put(w, r);
+}
+
+unittest
+{
+    // issue 9823
+    const(char)[] r;
+    void delegate(const(char)[]) dg = (s) { r = s; };
+    put(dg, ["ABC"]);
+    assert(r == "ABC");
 }
 
 /**
