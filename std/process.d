@@ -1257,10 +1257,6 @@ auto pid = spawnProcess("some_app");
 kill(pid, 10);
 assert (wait(pid) == 10);
 ---
-$(RED Warning:) The mechanisms for process termination are
-$(LINK2 http://blogs.msdn.com/b/oldnewthing/archive/2007/05/03/2383346.aspx,
-incredibly badly specified) in the Windows API.  This function may therefore
-produce unexpected results, and should be used with the utmost care.
 
 POSIX_specific:
 A $(LINK2 http://en.wikipedia.org/wiki/Unix_signal,signal) will be sent to
