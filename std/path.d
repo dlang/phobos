@@ -836,19 +836,10 @@ unittest
 
     static assert (setExtension("file"w.dup, "ext"w) == "file.ext");
     static assert (setExtension("file.old"d.dup, "new"d) == "file.new");
-}
 
-// Issue 10601
-unittest
-{
+    // Issue 10601
     assert (setExtension("file", "") == "file");
     assert (setExtension("file.ext", "") == "file");
-    assert (setExtension("file".dup, "") == "file");
-    assert (setExtension("file.ext".dup, "") == "file");
-    assert (setExtension("file"w, ""w) == "file");
-    assert (setExtension("file.ext"w, ""w) == "file");
-    assert (setExtension("file"d, ""d) == "file");
-    assert (setExtension("file.ext"d, ""d) == "file");
 }
 
 
