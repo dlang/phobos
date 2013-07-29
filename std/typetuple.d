@@ -855,6 +855,139 @@ unittest
     }
 }
 
+/++
+Also known as "static iota", this template will generate a type tuple of values over a range.
+This is can particularly useful when a static $(D foreach) is desired.
+
+The range starts at $(D begin), and is increment by $(D step) until the value $(D end) has
+been reached. $(D begin) defaults to $(D 0), and $(D step) defaults to $(D 1).
+
+The range returned by staticIota can be expanded upon with $(XREF typetuple,TypeTuple).
+
+See also $(XREF range,iota).
++/
+template Iota(alias end)
+{
+    alias Iota = IotaImpl!(0, end, 1);
+}
+///ditto
+template Iota(alias begin, alias end)
+{
+    alias Iota = IotaImpl!(begin, end, 1);
+}
+///ditto
+template Iota(alias begin, alias end, alias step)
+{
+    alias Iota = IotaImpl!(begin, end, step);
+}
+
+template IotaImpl(alias begin, alias end, alias step, T...)
+{
+    alias E = CommonType!(begin, end, step);
+
+    static if (step == 0)
+        static assert(0, "step must be non-0");
+    else static if (step > 0 && begin >= end)
+        alias IotaImpl = T;
+    else static if(step < 0 && begin <= end)
+        alias IotaImpl = T;
+    else
+        alias IotaImpl = IotaImpl!(cast(E)(begin + step), end, step, T, cast(E)begin);
+}
+
+unittest
+{
+    static assert(Iota!(0).length == 0);
+
+    int[] a;
+    foreach (n; Iota!5)
+        a ~= n;
+    assert(a == [0, 1, 2, 3, 4]);
+
+    a.length = 0;
+    foreach (n; Iota!(-5))
+        a ~= n;
+    assert(a.length == 0);
+
+    a.length = 0;
+    foreach (n; Iota!(4, 7))
+        a ~= n;
+    assert(a == [4, 5, 6]);
+
+    a.length = 0;
+    foreach (n; Iota!(-1, 4))
+        a ~= n;
+    assert(a == [-1, 0, 1, 2, 3]);
+
+    a.length = 0;
+    foreach (n; Iota!(4, 2))
+        a ~= n;
+    assert(a.length == 0);
+
+    a.length = 0;
+    foreach (n; Iota!(0, 10, 2))
+        a ~= n;
+    assert(a == [0, 2, 4, 6, 8]);
+
+    a.length = 0;
+    foreach (n; Iota!(3, 15, 3))
+        a ~= n;
+    assert(a == [3, 6, 9, 12]);
+
+    a.length = 0;
+    foreach (n; Iota!(15, 3, 1))
+        a ~= n;
+    assert(a.length == 0);
+
+    a.length = 0;
+    foreach (n; Iota!(10, 0, -1))
+        a ~= n;
+    assert(a == [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
+
+    a.length = 0;
+    foreach (n; Iota!(15, 3, -2))
+        a ~= n;
+    assert(a == [15, 13, 11, 9, 7, 5]);
+
+    a.length = 0;
+    foreach(n; Iota!(0, -5, -1))
+        a ~= n;
+    assert(a == [0, -1, -2, -3, -4]);
+
+    foreach_reverse(n; Iota!(-4, 1))
+    assert(a == [0, -1, -2, -3, -4]);
+
+    static assert(!is(typeof( Iota!(15, 3, 0) ))); // stride = 0 statically
+}
+
+unittest
+{
+    auto foo1()
+    {
+        double[] ret;
+        foreach(n; Iota!(0.5, 3))
+            ret ~= n;
+        return ret;
+    }
+    auto foo2()
+    {
+        double[] ret;
+        foreach(j, n; TypeTuple!(Iota!(0, 1, 0.25), 1))
+            ret ~= n;
+        return ret;
+    }
+    auto foo3()
+    {
+        string ret;
+        foreach(n; Iota!('a', 'g'))
+            ret ~= n;
+        return ret;
+    }
+
+    static assert(foo1() == [0.5, 1.5, 2.5]);
+    static assert(foo2() == [0, 0.25, 0.5, 0.75, 1]);
+    static assert(foo3() == "abcdef");
+}
 
 // : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : //
 package:
