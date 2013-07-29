@@ -1070,27 +1070,53 @@ Allows to directly use range operations on lines of a file.
     struct ByLine(Char, Terminator)
     {
     private:
+        /* Ref-counting stops the source range's ByLineImpl
+         * from getting out of sync after the range is copied, e.g.
+         * when accessing range.front, then using std.range.take,
+         * then accessing range.front again. */
+        alias Impl = RefCounted!(ByLineImpl!(Char, Terminator),
+            RefCountedAutoInitialize.no);
+        Impl impl;
+        
+        static if (isScalarType!Terminator)
+            enum defTerm = '\n';
+        else
+            enum defTerm = cast(Terminator)"\n";
+        
+    public:
+        this(File f, KeepTerminator kt = KeepTerminator.no,
+                Terminator terminator = defTerm)
+        {
+            impl = Impl(f, kt, terminator);
+        }
+        
+        @property
+        ref get()
+        {
+            return impl;
+        }
+        
+        alias get this;
+    }
+
+    private struct ByLineImpl(Char, Terminator)
+    {
+    private:
         File file;
         Char[] line;
         Terminator terminator;
         KeepTerminator keepTerminator;
         bool first_call = true;
 
-        static if (isScalarType!Terminator)
-            private enum defTerm = '\n';
-        else
-            private enum defTerm = cast(Terminator)"\n";
-        
     public:
-        this(File f, KeepTerminator kt = KeepTerminator.no,
-                Terminator terminator = defTerm)
+        this(File f, KeepTerminator kt, Terminator terminator)
         {
             file = f;
             this.terminator = terminator;
             keepTerminator = kt;
         }
 
-        /// Range primitive implementations.
+        // Range primitive implementations.
         @property bool empty()
         {
             if (line !is null) return false;
@@ -1112,7 +1138,6 @@ Allows to directly use range operations on lines of a file.
             return false;
         }
 
-        /// Ditto
         @property Char[] front()
         {
             if (first_call)
@@ -1123,7 +1148,6 @@ Allows to directly use range operations on lines of a file.
             return line;
         }
 
-        /// Ditto
         void popFront()
         {
             assert(file.isOpen);
@@ -1291,7 +1315,10 @@ void main()
 
         // bug 9599
         file.rewind();
-        auto fbl = file.byLine();
+        File.ByLine!(char, char) fbl = file.byLine();
+        auto fbl2 = fbl;
+        assert(fbl.front == "1");
+        assert(fbl.front is fbl2.front);
         assert(fbl.take(1).equal(["1"]));
         assert(fbl.equal(["2", "3"]));
         assert(fbl.empty);
