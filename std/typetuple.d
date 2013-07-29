@@ -868,31 +868,32 @@ See also $(XREF range,iota).
 +/
 template Iota(alias end)
 {
-    alias Iota = IotaImpl!(0, end, 1);
+    alias E = typeof(end);
+    alias Iota = IotaImpl!(E, 0, end, 1);
 }
 ///ditto
 template Iota(alias begin, alias end)
 {
-    alias Iota = IotaImpl!(begin, end, 1);
+    alias E = CommonType!(typeof(begin), typeof(end));
+    alias Iota = IotaImpl!(E, begin, end, 1);
 }
 ///ditto
 template Iota(alias begin, alias end, alias step)
 {
-    alias Iota = IotaImpl!(begin, end, step);
+    alias E = CommonType!(typeof(begin), typeof(end), typeof(step));
+    alias Iota = IotaImpl!(E, begin, end, step);
 }
 
-template IotaImpl(alias begin, alias end, alias step, T...)
+template IotaImpl(E, E begin, E end, E step)
 {
     alias E = CommonType!(begin, end, step);
 
     static if (step == 0)
         static assert(0, "step must be non-0");
-    else static if (step > 0 && begin >= end)
-        alias IotaImpl = T;
-    else static if(step < 0 && begin <= end)
-        alias IotaImpl = T;
+    else static if ((step > 0 && begin >= end) || (step < 0 && begin <= end))
+        alias IotaImpl = TypeTuple!();
     else
-        alias IotaImpl = IotaImpl!(cast(E)(begin + step), end, step, T, cast(E)begin);
+        alias IotaImpl = TypeTuple!(begin, IotaImpl!(E, begin + step, end, step));
 }
 
 unittest
