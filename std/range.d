@@ -837,6 +837,15 @@ unittest
     assert(r == "ABC");
 }
 
+unittest
+{
+    // issue 10571
+    import std.format;
+    string buf;
+    formattedWrite((in char[] s) { buf ~= s; }, "%s", "hello");
+    assert(buf == "hello");
+}
+
 /**
 Returns $(D true) if $(D R) is an output range for elements of type
 $(D E). An output range is defined functionally as a range that
