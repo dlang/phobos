@@ -760,6 +760,9 @@ unittest
     extension is simply appended to the filename.  Including a leading dot
     in $(D ext) is optional.
 
+    If the extension is empty, this function is equivalent to
+    $(LREF stripExtension).
+
     This function normally allocates a new string (the possible exception
     being the case when path is immutable and doesn't already have an
     extension).
@@ -768,6 +771,7 @@ unittest
     ---
     assert (setExtension("file", "ext")      == "file.ext");
     assert (setExtension("file", ".ext")     == "file.ext");
+    assert (setExtension("file.old", "")     == "file");
     assert (setExtension("file.old", "new")  == "file.new");
     assert (setExtension("file.old", ".new") == "file.new");
     ---
@@ -776,10 +780,10 @@ immutable(Unqual!C1)[] setExtension(C1, C2)(in C1[] path, in C2[] ext)
     @trusted pure nothrow
     if (isSomeChar!C1 && !is(C1 == immutable) && is(Unqual!C1 == Unqual!C2))
 {
-    if (ext.length > 0 && ext[0] == '.')
-        return cast(typeof(return))(stripExtension(path)~ext);
-    else
+    if (ext.length > 0 && ext[0] != '.')
         return cast(typeof(return))(stripExtension(path)~'.'~ext);
+    else
+        return cast(typeof(return))(stripExtension(path)~ext);
 }
 
 ///ditto
@@ -787,6 +791,9 @@ immutable(C1)[] setExtension(C1, C2)(immutable(C1)[] path, const(C2)[] ext)
     @trusted pure nothrow
     if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
+    if (ext.length == 0)
+        return stripExtension(path);
+
     // Optimised for the case where path is immutable and has no extension
     if (ext.length > 0 && ext[0] == '.') ext = ext[1 .. $];
     auto i = extSeparatorPos(path);
@@ -829,8 +836,11 @@ unittest
 
     static assert (setExtension("file"w.dup, "ext"w) == "file.ext");
     static assert (setExtension("file.old"d.dup, "new"d) == "file.new");
-}
 
+    // Issue 10601
+    assert (setExtension("file", "") == "file");
+    assert (setExtension("file.ext", "") == "file");
+}
 
 
 
