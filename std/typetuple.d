@@ -884,16 +884,14 @@ template Iota(alias begin, alias end, alias step)
     alias Iota = IotaImpl!(E, begin, end, step);
 }
 
-template IotaImpl(E, E begin, E end, E step)
+private template IotaImpl(E, E begin, E end, E step)
 {
-    alias E = CommonType!(begin, end, step);
-
-    static if (step == 0)
-        static assert(0, "step must be non-0");
-    else static if ((step > 0 && begin >= end) || (step < 0 && begin <= end))
+    static if((step < 0 && begin < end) || (step > 0 && begin > end) || begin == end)
         alias IotaImpl = TypeTuple!();
-    else
+    else static if (step)
         alias IotaImpl = TypeTuple!(begin, IotaImpl!(E, begin + step, end, step));
+    else
+        static assert(0, "step must be non-0 for begin != end");
 }
 
 unittest
