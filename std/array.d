@@ -289,7 +289,7 @@ assert(matrix[0].length == 31);
 ---
 ), $(ARGS), $(ARGS), $(ARGS import std.array;))
 */
-auto uninitializedArray(T, I...)(I sizes)
+auto uninitializedArray(T, I...)(I sizes) @system
 if(allSatisfy!(isIntegral, I))
 {
     return arrayAllocImpl!(false, T, I)(sizes);
