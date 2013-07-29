@@ -1724,8 +1724,8 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
         return subject;
 
     auto app = appender!(E[])();
-    app.put(subject[0 .. subject.length - balance.length]);
-    app.put(to.save);
+    put(app, subject[0 .. subject.length - balance.length]);
+    put(app, to.save);
     replaceInto(app, balance[from.length .. $], from, to);
 
     return app.data;
@@ -1742,7 +1742,7 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
 {
     if (from.empty)
     {
-        sink.put(subject);
+        put(sink, subject);
         return;
     }
     for (;;)
@@ -1750,11 +1750,11 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
         auto balance = std.algorithm.find(subject, from.save);
         if (balance.empty)
         {
-            sink.put(subject);
+            put(sink, subject);
             break;
         }
-        sink.put(subject[0 .. subject.length - balance.length]);
-        sink.put(to.save);
+        put(sink, subject[0 .. subject.length - balance.length]);
+        put(sink, to.save);
         subject = balance[from.length .. $];
     }
 }
@@ -1793,6 +1793,7 @@ unittest
         C[] desired;
         this(C[] arr){ desired = arr; }
         void put(C[] part){ assert(skipOver(desired, part)); }
+        void put(C   part){ assert(skipOver(desired, part)); }
     }
     foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {

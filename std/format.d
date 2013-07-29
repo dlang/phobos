@@ -1875,18 +1875,18 @@ unittest
     struct S(uint flags)
     {
         int[] arr;
-      static if (flags & 1)
-        alias arr this;
+        static if (flags & 1)
+            alias arr this;
 
-      static if (flags & 2)
-      {
-        @property bool empty() const { return arr.length == 0; }
-        @property int front() const { return arr[0] * 2; }
-        void popFront() { arr = arr[1..$]; }
-      }
+        static if (flags & 2)
+        {
+            @property bool empty() const { return arr.length == 0; }
+            @property int front() const { return arr[0] * 2; }
+            void popFront() { arr = arr[1..$]; }
+        }
 
-      static if (flags & 4)
-        string toString() const { return "S"; }
+        static if (flags & 4)
+            string toString() const { return "S"; }
     }
     formatTest(S!0b000([0, 1, 2]), "S!0([0, 1, 2])");
     formatTest(S!0b001([0, 1, 2]), "[0, 1, 2]");        // Test for bug 7628
@@ -1900,20 +1900,20 @@ unittest
     class C(uint flags)
     {
         int[] arr;
-      static if (flags & 1)
-        alias arr this;
+        static if (flags & 1)
+            alias arr this;
 
         this(int[] a) { arr = a; }
 
-      static if (flags & 2)
-      {
-        @property bool empty() const { return arr.length == 0; }
-        @property int front() const { return arr[0] * 2; }
-        void popFront() { arr = arr[1..$]; }
-      }
+        static if (flags & 2)
+        {
+            @property bool empty() const { return arr.length == 0; }
+            @property int front() const { return arr[0] * 2; }
+            void popFront() { arr = arr[1..$]; }
+        }
 
-      static if (flags & 4)
-        override string toString() const { return "C"; }
+        static if (flags & 4)
+            override string toString() const { return "C"; }
     }
     formatTest(new C!0b000([0, 1, 2]), (new C!0b000([])).toString());
     formatTest(new C!0b001([0, 1, 2]), "[0, 1, 2]");    // Test for bug 7628
@@ -3062,24 +3062,95 @@ private int getNthInt(A...)(uint index, A args)
 /* ======================== Unit Tests ====================================== */
 
 version(unittest)
-void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __FILE__)
 {
-    FormatSpec!char f;
-    auto w = appender!string();
-    formatValue(w, val, f);
-    enforceEx!AssertError(
-            w.data == expected,
-            text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
-}
+    //Note about FormatAppender vs Appender:
+    //Appender is able to transocde all by himself. Appender can take any kind
+    //of string, and transcode it to anything else. It is "too" convenient
+    //for testing.
+    //FormatAppender is a simpler Appender, that only accepts
+    //string or a single char.
+    
+    //Ideally, we'd use a simple sink, but if we did that, but we can't verify
+    //the output, due to purity issues with "saving" the content of the sink.
+    private static struct FormatAppender
+    {
+        static struct Payload
+        {
+            char[] data;
+        }
+        Payload* pay;
+        char[] data() @property @safe pure nothrow
+        {
+            return pay.data;
+        }
+        void put(const(char)[]s) @safe pure nothrow
+        {
+            pay.data ~= s;
+        }
+        void put(char s) @safe pure nothrow
+        {
+            pay.data ~= s;
+        }
+    }
+    private auto formatAppender() @safe nothrow pure
+    {
+        return FormatAppender(new FormatAppender.Payload);
+    }
 
-version(unittest)
-void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, string fn = __FILE__)
-{
-    auto w = appender!string();
-    formattedWrite(w, fmt, val);
-    enforceEx!AssertError(
-            w.data == expected,
-            text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
+    //version = StdFormatSimpleAppender;
+
+    private void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __FILE__)
+    {
+        FormatSpec!char f;
+        void csink(const( char)[]) @safe nothrow pure{}
+        void wsink(const(wchar)[]) @safe nothrow pure{}
+        void dsink(const(dchar)[]) @safe nothrow pure{}
+        auto w1 = formatAppender();
+        auto w2 = appender!string();
+
+        //Note: Due to reference ranges, test the formatting *once*.
+        version(StdFormatSimpleAppender)
+            alias w = w2;
+        else
+            alias w = w1;
+        formatValue(w, val, f);
+        enforceEx!AssertError(w.data == expected, text("expected = `", expected, "`, result = `", w.data, "` here"), fn, ln);
+
+        //Unchecked calls to verify compilability
+        if (0) {
+            formatValue(&csink, val, f);
+            formatValue(&wsink, val, f);
+            formatValue(&dsink, val, f);
+            formatValue(w2, val, f);
+            formatValue(w2, val, f);
+        }
+    }
+
+    private void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, string fn = __FILE__)
+    {
+        void csink(const( char)[]) @safe nothrow pure{}
+        void wsink(const(wchar)[]) @safe nothrow pure{}
+        void dsink(const(dchar)[]) @safe nothrow pure{}
+        auto w1 = formatAppender();
+        auto w2 = appender!string();
+
+        //Note: Due to reference ranges, test the formatting *once*.
+        version(StdFormatSimpleAppender)
+            alias w = w2;
+        else
+            alias w = w1;
+        formattedWrite(w, fmt, val);
+        enforceEx!AssertError(w.data == expected, text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
+
+        //Unchecked calls to verify compilability
+        if (0) {
+            formattedWrite(&csink, fmt, val);
+            formattedWrite(&wsink, fmt, val);
+            formattedWrite(&dsink, fmt, val);
+            formattedWrite(w1, fmt, val);
+            formattedWrite(w2, fmt, val);
+        }
+    }
 }
 
 unittest
