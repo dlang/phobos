@@ -7331,120 +7331,80 @@ cases.))
 Range remove
 (SwapStrategy s = SwapStrategy.stable, Range, Offset...)
 (Range range, Offset offset)
-if (isBidirectionalRange!Range && hasLength!Range && s != SwapStrategy.stable
+if (s != SwapStrategy.stable
+    && isBidirectionalRange!Range && hasLength!Range
     && Offset.length >= 1)
 {
-    enum bool tupleLeft = is(typeof(offset[0][0]))
-        && is(typeof(offset[0][1]));
-    enum bool tupleRight = is(typeof(offset[$ - 1][0]))
-        && is(typeof(offset[$ - 1][1]));
-    static if (!tupleLeft)
+    Tuple!(size_t, "pos", size_t, "len")[offset.length] blackouts;
+    foreach (i, v; offset)
     {
-        alias offset[0] lStart;
-        auto lEnd = lStart + 1;
-    }
-    else
-    {
-        auto lStart = offset[0][0];
-        auto lEnd = offset[0][1];
-    }
-    static if (!tupleRight)
-    {
-        alias offset[$ - 1] rStart;
-        auto rEnd = rStart + 1;
-    }
-    else
-    {
-        auto rStart = offset[$ - 1][0];
-        auto rEnd = offset[$ - 1][1];
-    }
-    // Begin. Test first to see if we need to remove the rightmost
-    // element(s) in the range. In that case, life is simple - chop
-    // and recurse.
-    if (rEnd == range.length)
-    {
-        // must remove the last elements of the range
-        range.popBackN(rEnd - rStart);
-        static if (Offset.length > 1)
+        static if (is(typeof(v[0]) : size_t) && is(typeof(v[1]) : size_t))
         {
-            return .remove!(s, Range, Offset[0 .. $ - 1])
-                (range, offset[0 .. $ - 1]);
+            blackouts[i].pos = v[0];
+            blackouts[i].len = v[1] - v[0];
         }
         else
         {
-            return range;
+            static assert(is(typeof(v) : size_t), typeof(v).stringof);
+            blackouts[i].pos = v;
+            blackouts[i].len = 1;
+        }
+        static if (i > 0)
+        {            
+            enforce(blackouts[i - 1].pos + blackouts[i - 1].len 
+                    <= blackouts[i].pos, 
+                "remove(): incorrect ordering of elements to remove");
         }
     }
 
-    // Ok, there are "live" elements at the end of the range
-    auto t = range;
-    auto lDelta = lEnd - lStart, rDelta = rEnd - rStart;
-    auto rid = min(lDelta, rDelta);
-    foreach (i; 0 .. rid)
+    size_t left = 0, right = offset.length - 1;
+    auto tgt = range.save;
+    size_t steps = 0;
+
+    while (left <= right)
     {
-        move(range.back, t.front);
-        range.popBack();
-        t.popFront();
-    }
-    if (rEnd - rStart == lEnd - lStart)
-    {
-        // We got rid of both left and right
-        static if (Offset.length > 2)
+        // Look for a blackout on the right
+        if (blackouts[right].pos + blackouts[right].len >= range.length)
         {
-            return .remove!(s, Range, Offset[1 .. $ - 1])
-                (range, offset[1 .. $ - 1]);
+            range.popBackN(blackouts[right].len);
+            --right;
+            continue;
         }
-        else
+        // Advance to next blackout on the left
+        assert(blackouts[left].pos >= steps);
+        tgt.popFrontN(blackouts[left].pos - steps);
+        steps = blackouts[left].pos;
+        auto toMove = min(
+            blackouts[left].len, 
+            range.length - (blackouts[right].pos + blackouts[right].len));
+        foreach (i; 0 .. toMove)
         {
-            return range;
+            move(range.back, tgt.front);
+            range.popBack();
+            tgt.popFront();
         }
-    }
-    else if (rEnd - rStart < lEnd - lStart)
-    {
-        // We got rid of the entire right subrange
-        static if (Offset.length > 2)
+        steps += toMove;
+        if (toMove == blackouts[left].len)
         {
-            return .remove!(s, Range)
-                (range, tuple(lStart + rid, lEnd),
-                        offset[1 .. $ - 1]);
-        }
-        else
-        {
-            auto tmp = tuple(lStart + rid, lEnd);
-            return .remove!(s, Range, typeof(tmp))
-                (range, tmp);
+            // Filled the entire left hole
+            ++left;
+            continue;
         }
     }
-    else
-    {
-        // We got rid of the entire left subrange
-        static if (Offset.length > 2)
-        {
-            return .remove!(s, Range)
-                (range, offset[1 .. $ - 1],
-                        tuple(rStart, lEnd - rid));
-        }
-        else
-        {
-            auto tmp = tuple(rStart, lEnd - rid);
-            return .remove!(s, Range, typeof(tmp))
-                (range, tmp);
-        }
-    }
+
+    return range;
 }
 
 // Ditto
 Range remove
 (SwapStrategy s = SwapStrategy.stable, Range, Offset...)
 (Range range, Offset offset)
-if ((isForwardRange!Range && !isBidirectionalRange!Range
-                || !hasLength!Range || s == SwapStrategy.stable)
-        && Offset.length >= 1)
+if (s == SwapStrategy.stable && isForwardRange!Range && Offset.length >= 1)
 {
     auto result = range;
     auto src = range, tgt = range;
     size_t pos;
-    foreach (i; offset)
+    foreach (pass, i; offset)
     {
         static if (is(typeof(i[0])) && is(typeof(i[1])))
         {
@@ -7455,10 +7415,20 @@ if ((isForwardRange!Range && !isBidirectionalRange!Range
             auto from = i;
             enum delta = 1;
         }
-        assert(pos <= from);
-        for (; pos < from; ++pos, src.popFront(), tgt.popFront())
+        enforce(pos <= from,
+                "remove(): incorrect ordering of elements to remove");
+        if (pass > 0)
         {
-            move(src.front, tgt.front);
+            for (; pos < from; ++pos, src.popFront(), tgt.popFront())
+            {
+                move(src.front, tgt.front);
+            }
+        }
+        else
+        {
+            src.popFrontN(from);
+            tgt.popFrontN(from);
+            pos = from;
         }
         // now skip source to the "to" position
         src.popFrontN(delta);
@@ -7468,6 +7438,16 @@ if ((isForwardRange!Range && !isBidirectionalRange!Range
     // leftover move
     moveAll(src, tgt);
     return result;
+}
+
+unittest
+{
+    // http://d.puremagic.com/issues/show_bug.cgi?id=10173
+    int[] test = iota(0, 10).array();
+    assertThrown(remove!(SwapStrategy.stable)(test, tuple(2, 4), tuple(1, 3)));
+    assertThrown(remove!(SwapStrategy.unstable)(test, tuple(2, 4), tuple(1, 3)));
+    assertThrown(remove!(SwapStrategy.stable)(test, 2, 4, 1, 3));
+    assertThrown(remove!(SwapStrategy.unstable)(test, 2, 4, 1, 3));
 }
 
 unittest
@@ -7482,11 +7462,15 @@ unittest
 
     a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
     assert(remove!(SwapStrategy.unstable)(a, 0, 10) ==
-            [ 9, 1, 2, 3, 4, 5, 6, 7, 8 ]);
+           [ 9, 1, 2, 3, 4, 5, 6, 7, 8 ]);
 
     a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
     assert(remove!(SwapStrategy.unstable)(a, 0, tuple(9, 11)) ==
             [ 8, 1, 2, 3, 4, 5, 6, 7 ]);
+    // http://d.puremagic.com/issues/show_bug.cgi?id=5224
+    a = [ 1, 2, 3, 4 ];
+    assert(remove!(SwapStrategy.unstable)(a, 2) ==
+           [ 1, 2, 4 ]);
 
     a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
     //writeln(remove!(SwapStrategy.stable)(a, 1, 5));
@@ -7504,6 +7488,10 @@ unittest
     a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
     assert(remove!(SwapStrategy.stable)(a, 1, tuple(3, 5))
             == [ 0, 2, 5, 6, 7, 8, 9, 10]);
+
+    a = iota(0, 10).array();
+    assert(remove!(SwapStrategy.unstable)(a, tuple(1, 4), tuple(6, 7)) 
+            == [0, 9, 8, 7, 4, 5]);
 }
 
 /**
@@ -7529,7 +7517,7 @@ if (isBidirectionalRange!Range)
     {
         for (;!range.empty;)
         {
-            if (!unaryFun!(pred)(range.front))
+            if (!unaryFun!pred(range.front))
             {
                 range.popFront();
                 continue;
