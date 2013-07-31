@@ -804,21 +804,6 @@ unittest
     up to $(D index). So, $(D index) is the index of a code unit at the
     beginning of a code point, and the return value is how many code points into
     the string that that code point is.
-
-    Examples:
-    --------------------
-    assert(toUCSindex(`hello world`, 7) == 7);
-    assert(toUCSindex(`hello world`w, 7) == 7);
-    assert(toUCSindex(`hello world`d, 7) == 7);
-
-    assert(toUCSindex(`Ma Chérie`, 7) == 6);
-    assert(toUCSindex(`Ma Chérie`w, 7) == 7);
-    assert(toUCSindex(`Ma Chérie`d, 7) == 7);
-
-    assert(toUCSindex(`さいごの果実 / ミツバチと科学者`, 9) == 3);
-    assert(toUCSindex(`さいごの果実 / ミツバチと科学者`w, 9) == 9);
-    assert(toUCSindex(`さいごの果実 / ミツバチと科学者`d, 9) == 9);
-    --------------------
   +/
 size_t toUCSindex(C)(const(C)[] str, size_t index) @safe pure
     if (isSomeChar!C)
@@ -845,6 +830,7 @@ size_t toUCSindex(C)(const(C)[] str, size_t index) @safe pure
     }
 }
 
+///
 unittest
 {
     assert(toUCSindex(`hello world`, 7) == 7);
@@ -865,21 +851,6 @@ unittest
     Given a UCS index $(D n) into $(D str), returns the UTF index.
     So, $(D n) is how many code points into the string the code point is, and
     the array index of the code unit is returned.
-
-    Examples:
-    --------------------
-    assert(toUTFindex(`hello world`, 7) == 7);
-    assert(toUTFindex(`hello world`w, 7) == 7);
-    assert(toUTFindex(`hello world`d, 7) == 7);
-
-    assert(toUTFindex(`Ma Chérie`, 6) == 7);
-    assert(toUTFindex(`Ma Chérie`w, 7) == 7);
-    assert(toUTFindex(`Ma Chérie`d, 7) == 7);
-
-    assert(toUTFindex(`さいごの果実 / ミツバチと科学者`, 3) == 9);
-    assert(toUTFindex(`さいごの果実 / ミツバチと科学者`w, 9) == 9);
-    assert(toUTFindex(`さいごの果実 / ミツバチと科学者`d, 9) == 9);
-    --------------------
   +/
 size_t toUTFindex(C)(const(C)[] str, size_t n) @safe pure
     if (isSomeChar!C)
@@ -899,7 +870,7 @@ size_t toUTFindex(C)(const(C)[] str, size_t n) @safe pure
     }
 }
 
-//Verify Examples.
+///
 unittest
 {
     assert(toUTFindex(`hello world`, 7) == 7);
@@ -1824,17 +1795,6 @@ unittest
 /++
     Returns the number of code units that are required to encode the code point
     $(D c) when $(D C) is the character type used to encode it.
-
-    Examples:
-    ------
-    assert(codeLength!char('a') == 1);
-    assert(codeLength!wchar('a') == 1);
-    assert(codeLength!dchar('a') == 1);
-
-    assert(codeLength!char('\U0010FFFF') == 4);
-    assert(codeLength!wchar('\U0010FFFF') == 2);
-    assert(codeLength!dchar('\U0010FFFF') == 1);
-    ------
   +/
 ubyte codeLength(C)(dchar c) @safe pure nothrow
     if (isSomeChar!C)
@@ -1859,7 +1819,7 @@ ubyte codeLength(C)(dchar c) @safe pure nothrow
     }
 }
 
-//Verify Examples.
+///
 unittest
 {
     assert(codeLength!char('a') == 1);
@@ -1877,28 +1837,6 @@ unittest
     in a string whose character type is $(D C). This is particularly useful
     when slicing one string with the length of another and the two string
     types use different character types.
-
-    Examples:
-    ------
-    assert(codeLength!char("hello world") ==
-           to!string("hello world").length);
-    assert(codeLength!wchar("hello world") ==
-           to!wstring("hello world").length);
-    assert(codeLength!dchar("hello world") ==
-           to!dstring("hello world").length);
-
-    assert(codeLength!char(`プログラミング`) ==
-           to!string(`プログラミング`).length);
-    assert(codeLength!wchar(`プログラミング`) ==
-           to!wstring(`プログラミング`).length);
-    assert(codeLength!dchar(`プログラミング`) ==
-           to!dstring(`プログラミング`).length);
-
-    string haystack = `Être sans la verité, ça, ce ne serait pas bien.`;
-    wstring needle = `Être sans la verité`;
-    assert(haystack[codeLength!char(needle) .. $] ==
-           `, ça, ce ne serait pas bien.`);
-    ------
   +/
 size_t codeLength(C, InputRange)(InputRange input)
     if (isInputRange!InputRange && is(ElementType!InputRange : dchar))
@@ -1917,7 +1855,7 @@ size_t codeLength(C, InputRange)(InputRange input)
     }
 }
 
-//Verify Examples.
+///
 unittest
 {
     assert(codeLength!char("hello world") ==
@@ -2253,16 +2191,6 @@ dstring toUTF32(in dchar[] s) @safe
     C function keeps it around for any reason, make sure that you keep a
     reference to it in your D code. Otherwise, it may go away during a garbage
     collection cycle and cause a nasty bug when the C code tries to use it.
-
-    Examples:
-    --------------------
-    auto p1 = toUTFz!(char*)("hello world");
-    auto p2 = toUTFz!(const(char)*)("hello world");
-    auto p3 = toUTFz!(immutable(char)*)("hello world");
-    auto p4 = toUTFz!(char*)("hello world"d);
-    auto p5 = toUTFz!(const(wchar)*)("hello world");
-    auto p6 = toUTFz!(immutable(dchar)*)("hello world"w);
-    --------------------
   +/
 template toUTFz(P)
 {
@@ -2279,6 +2207,17 @@ template toUTFz(P, S)
     {
         return toUTFzImpl!(P, S)(str);
     }
+}
+
+///
+unittest
+{
+    auto p1 = toUTFz!(char*)("hello world");
+    auto p2 = toUTFz!(const(char)*)("hello world");
+    auto p3 = toUTFz!(immutable(char)*)("hello world");
+    auto p4 = toUTFz!(char*)("hello world"d);
+    auto p5 = toUTFz!(const(wchar)*)("hello world");
+    auto p6 = toUTFz!(immutable(dchar)*)("hello world"w);
 }
 
 private P toUTFzImpl(P, S)(S str) @system
@@ -2365,17 +2304,6 @@ private P toUTFzImpl(P, S)(S str)
     retval.put('\0');
 
     return cast(P)retval.data.ptr;
-}
-
-//Verify Examples.
-unittest
-{
-    auto p1 = toUTFz!(char*)("hello world");
-    auto p2 = toUTFz!(const(char)*)("hello world");
-    auto p3 = toUTFz!(immutable(char)*)("hello world");
-    auto p4 = toUTFz!(char*)("hello world"d);
-    auto p5 = toUTFz!(const(wchar)*)("hello world");
-    auto p6 = toUTFz!(immutable(dchar)*)("hello world"w);
 }
 
 unittest
