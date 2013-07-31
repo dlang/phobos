@@ -924,7 +924,7 @@ unittest
     }
     ---
 */
-immutable(Unqual!(typeof(ElementType!(Range).init[0])))[]
+immutable(ElementEncodingType!(ElementType!Range))[]
     buildPath(Range)(Range segments)
         if (isInputRange!Range && isSomeString!(ElementType!Range))
 {
@@ -940,7 +940,7 @@ immutable(Unqual!(typeof(ElementType!(Range).init[0])))[]
     // Otherwise, just venture a guess and resize later if necessary.
     else size_t precalc = 256;
 
-    auto buf = new Unqual!(typeof(ElementType!(Range).init[0]))[precalc];
+    auto buf = new Unqual!(ElementEncodingType!(ElementType!(Range)))[](precalc);
     size_t pos = 0;
     foreach (segment; segments)
     {
