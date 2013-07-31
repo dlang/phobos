@@ -121,6 +121,7 @@ pure nothrow bool isValidDchar(dchar c)
 unittest
 {
     debug(utf) printf("utf.isValidDchar.unittest\n");
+
     assert( isValidDchar(cast(dchar)'a') == true);
     assert( isValidDchar(cast(dchar)0x1FFFFF) == false);
 
@@ -1350,11 +1351,12 @@ version(unittest) private void testBadDecode(R)(R range, size_t index, size_t li
 
 unittest
 {
+    debug(utf) printf("utf.decode.unittest\n");
+
     foreach (S; TypeTuple!(to!string, InputCU!char, RandomCU!char,
                            (string s) => new RefBidirCU!char(s),
                            (string s) => new RefRandomCU!char(s)))
     {
-        debug(utf) printf("utf.decode.unittest\n");
         enum sHasLength = hasLength!(typeof(S("abcd")));
 
         {
@@ -2308,11 +2310,9 @@ private P toUTFzImpl(P, S)(S str)
 
 unittest
 {
-    import core.exception;
     import std.algorithm;
-    import std.typetuple;
 
-    size_t zeroLen(C)(const(C)* ptr)
+    static size_t zeroLen(C)(const(C)* ptr)
     {
         size_t len = 0;
 
@@ -2349,7 +2349,7 @@ unittest
         }
     }
 
-    void test(P, S)(S s, size_t line = __LINE__)
+    static void test(P, S)(S s, size_t line = __LINE__)
     {
         auto p = toUTFz!P(s);
         immutable len = zeroLen(p);
@@ -2363,19 +2363,16 @@ unittest
     {
         test!P("hello\U00010143\u0100\U00010143");
     }
-
     foreach (P; TypeTuple!( char*, const( char)*, immutable( char)*,
                            dchar*, const(dchar)*, immutable(dchar)*))
     {
         test!P("hello\U00010143\u0100\U00010143"w);
     }
-
     foreach (P; TypeTuple!( char*, const( char)*, immutable( char)*,
                            wchar*, const(wchar)*, immutable(wchar)*))
     {
         test!P("hello\U00010143\u0100\U00010143"d);
     }
-
     foreach (S; TypeTuple!( char[], const( char)[],
                            wchar[], const(wchar)[],
                            dchar[], const(dchar)[]))
@@ -2407,8 +2404,6 @@ const(wchar)* toUTF16z(C)(const(C)[] str)
 
 unittest
 {
-    import std.typetuple;
-
     //toUTFz is already thoroughly tested, so this will just verify that
     //toUTF16z compiles properly for the various string types.
     foreach (S; TypeTuple!(string, wstring, dstring))
@@ -2422,60 +2417,26 @@ unittest
 {
     debug(utf) printf("utf.toUTF.unittest\n");
 
-    string c;
-    wstring w;
-    dstring d;
+    assert(toUTF16("hello"c) == "hello");
+    assert(toUTF32("hello"c) == "hello");
+    assert(toUTF8 ("hello"w) == "hello");
+    assert(toUTF32("hello"w) == "hello");
+    assert(toUTF8 ("hello"d) == "hello");
+    assert(toUTF16("hello"d) == "hello");
 
-    c = "hello";
-    w = toUTF16(c);
-    assert(w == "hello");
-    d = toUTF32(c);
-    assert(d == "hello");
-    c = toUTF8(w);
-    assert(c == "hello");
-    d = toUTF32(w);
-    assert(d == "hello");
+    assert(toUTF16("hel\u1234o"c) == "hel\u1234o");
+    assert(toUTF32("hel\u1234o"c) == "hel\u1234o");
+    assert(toUTF8 ("hel\u1234o"w) == "hel\u1234o");
+    assert(toUTF32("hel\u1234o"w) == "hel\u1234o");
+    assert(toUTF8 ("hel\u1234o"d) == "hel\u1234o");
+    assert(toUTF16("hel\u1234o"d) == "hel\u1234o");
 
-    c = toUTF8(d);
-    assert(c == "hello");
-    w = toUTF16(d);
-    assert(w == "hello");
-
-
-    c = "hel\u1234o";
-    w = toUTF16(c);
-    assert(w == "hel\u1234o");
-    d = toUTF32(c);
-    assert(d == "hel\u1234o");
-
-    c = toUTF8(w);
-    assert(c == "hel\u1234o");
-    d = toUTF32(w);
-    assert(d == "hel\u1234o");
-
-    c = toUTF8(d);
-    assert(c == "hel\u1234o");
-    w = toUTF16(d);
-    assert(w == "hel\u1234o");
-
-
-    c = "he\U0010AAAAllo";
-    w = toUTF16(c);
-    //foreach (wchar c; w) printf("c = x%x\n", c);
-    //foreach (wchar c; cast(wstring)"he\U0010AAAAllo") printf("c = x%x\n", c);
-    assert(w == "he\U0010AAAAllo");
-    d = toUTF32(c);
-    assert(d == "he\U0010AAAAllo");
-
-    c = toUTF8(w);
-    assert(c == "he\U0010AAAAllo");
-    d = toUTF32(w);
-    assert(d == "he\U0010AAAAllo");
-
-    c = toUTF8(d);
-    assert(c == "he\U0010AAAAllo");
-    w = toUTF16(d);
-    assert(w == "he\U0010AAAAllo");
+    assert(toUTF16("he\U0010AAAAllo"c) == "he\U0010AAAAllo");
+    assert(toUTF32("he\U0010AAAAllo"c) == "he\U0010AAAAllo");
+    assert(toUTF8 ("he\U0010AAAAllo"w) == "he\U0010AAAAllo");
+    assert(toUTF32("he\U0010AAAAllo"w) == "he\U0010AAAAllo");
+    assert(toUTF8 ("he\U0010AAAAllo"d) == "he\U0010AAAAllo");
+    assert(toUTF16("he\U0010AAAAllo"d) == "he\U0010AAAAllo");
 }
 
 
