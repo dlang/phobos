@@ -897,8 +897,8 @@ unittest
     preceding segments will be dropped.
 
     On Windows, if one of the path segments are rooted, but not absolute
-    (e.g. `\foo`), all preceding path segments down to the previous root
-    will be dropped.  (See below for an example.)
+    (e.g. $(D `\foo`)), all preceding path segments down to the previous
+    root will be dropped.  (See below for an example.)
 
     This function always allocates memory to hold the resulting path.
     The variadic overload is guaranteed to only perform a single
