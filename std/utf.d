@@ -122,6 +122,8 @@ unittest
 {
     debug(utf) printf("utf.isValidDchar.unittest\n");
 
+    assertCTFEable!(
+    {
     assert( isValidDchar(cast(dchar)'a') == true);
     assert( isValidDchar(cast(dchar)0x1FFFFF) == false);
 
@@ -134,6 +136,7 @@ unittest
     assert( isValidDchar(cast(dchar)0x01FFFF));
     assert( isValidDchar(cast(dchar)0x10FFFF));
     assert(!isValidDchar(cast(dchar)0x110000));
+    });
 }
 
 
@@ -235,6 +238,8 @@ unittest
         }
     }
 
+    assertCTFEable!(
+    {
     test("a", 'a');
     test(" ", ' ');
     test("\u2029", '\u2029'); //paraSep
@@ -259,6 +264,7 @@ unittest
         static assert((functionAttributes!({ stride(str, 0); }) & FunctionAttribute.pure_) != 0);
         static assert((functionAttributes!({ stride(str);    }) & FunctionAttribute.pure_) != 0);
     }
+    });
 }
 
 
@@ -372,6 +378,8 @@ unittest
         }
     }
 
+    assertCTFEable!(
+    {
     test("a", 'a');
     test(" ", ' ');
     test("\u2029", '\u2029'); //paraSep
@@ -396,6 +404,7 @@ unittest
         static assert((functionAttributes!({ strideBack(str, 0); }) & FunctionAttribute.pure_) != 0);
         static assert((functionAttributes!({ strideBack(str);    }) & FunctionAttribute.pure_) != 0);
     }
+    });
 }
 
 
@@ -481,6 +490,8 @@ uint stride(S)(auto ref S str)
         }
     }
 
+    assertCTFEable!(
+    {
     test("a", 'a');
     test(" ", ' ');
     test("\u2029", '\u2029'); //paraSep
@@ -505,6 +516,7 @@ uint stride(S)(auto ref S str)
         static assert((functionAttributes!({ stride(str, 0); }) & FunctionAttribute.pure_) != 0);
         static assert((functionAttributes!({ stride(str);    }) & FunctionAttribute.pure_) != 0);
     }
+    });
 }
 
 
@@ -594,6 +606,8 @@ unittest
         }
     }
 
+    assertCTFEable!(
+    {
     test("a", 'a');
     test(" ", ' ');
     test("\u2029", '\u2029'); //paraSep
@@ -618,6 +632,7 @@ unittest
         static assert((functionAttributes!({ strideBack(str, 0); }) & FunctionAttribute.pure_) != 0);
         static assert((functionAttributes!({ strideBack(str);    }) & FunctionAttribute.pure_) != 0);
     }
+    });
 }
 
 
@@ -678,6 +693,8 @@ unittest
         }
     }
 
+    assertCTFEable!(
+    {
     test("a", 'a');
     test(" ", ' ');
     test("\u2029", '\u2029'); //paraSep
@@ -702,6 +719,7 @@ unittest
         static assert((functionAttributes!({ stride(str, 0); }) & FunctionAttribute.pure_) != 0);
         static assert((functionAttributes!({ stride(str);    }) & FunctionAttribute.pure_) != 0);
     }
+    });
 }
 
 
@@ -772,6 +790,8 @@ unittest
         }
     }
 
+    assertCTFEable!(
+    {
     test("a", 'a');
     test(" ", ' ');
     test("\u2029", '\u2029'); //paraSep
@@ -796,6 +816,7 @@ unittest
         static assert((functionAttributes!({ strideBack(str, 0); }) & FunctionAttribute.pure_) != 0);
         static assert((functionAttributes!({ strideBack(str);    }) & FunctionAttribute.pure_) != 0);
     }
+    });
 }
 
 
@@ -1353,6 +1374,8 @@ unittest
 {
     debug(utf) printf("utf.decode.unittest\n");
 
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!(to!string, InputCU!char, RandomCU!char,
                            (string s) => new RefBidirCU!char(s),
                            (string s) => new RefRandomCU!char(s)))
@@ -1406,10 +1429,13 @@ unittest
         testBadDecode(S("\xED\xBE\x80"), 0);
         testBadDecode(S("\xED\xBF\xBF"), 0);
     }
+    });
 }
 
 unittest
 {
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!(to!wstring, InputCU!wchar, RandomCU!wchar,
                            (wstring s) => new RefBidirCU!wchar(s),
                            (wstring s) => new RefRandomCU!wchar(s)))
@@ -1443,10 +1469,13 @@ unittest
         testDecode(str, 2, cast(dchar)0x1400, 3);
         testDecode(str, 3, cast(dchar)0xB9DDE, 5);
     }
+    });
 }
 
 unittest
 {
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!(to!dstring, RandomCU!dchar, InputCU!dchar,
                            (dstring s) => new RefBidirCU!dchar(s),
                            (dstring s) => new RefRandomCU!dchar(s)))
@@ -1479,10 +1508,13 @@ unittest
         testDecode(str, 1, 0x1400, 2);
         testDecode(str, 2, 0xB9DDE, 3);
     }
+    });
 }
 
 unittest
 {
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!( char[], const( char)[],  string,
                            wchar[], const(wchar)[], wstring,
                            dchar[], const(dchar)[], dstring))
@@ -1494,6 +1526,7 @@ unittest
         static assert((functionAttributes!({ S str; size_t i = 0; decodeFront(str, i); }) & FunctionAttribute.pure_) != 0);
         static assert((functionAttributes!({ S str; decodeFront(str); }) & FunctionAttribute.pure_) != 0);
     }
+    });
 }
 
 
@@ -1550,6 +1583,8 @@ size_t encode(ref char[4] buf, dchar c) @safe pure
 
 unittest
 {
+    assertCTFEable!(
+    {
     char[4] buf;
 
     assert(encode(buf, '\u0000') == 1 && buf[0 .. 1] == "\u0000");
@@ -1569,6 +1604,7 @@ unittest
     assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
     assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
     assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+    });
 }
 
 
@@ -1598,6 +1634,8 @@ size_t encode(ref wchar[2] buf, dchar c) @safe pure
 
 unittest
 {
+    assertCTFEable!(
+    {
     wchar[2] buf;
 
     assert(encode(buf, '\u0000') == 1 && buf[0 .. 1] == "\u0000");
@@ -1613,6 +1651,7 @@ unittest
     assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
     assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
     assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+    });
 }
 
 
@@ -1677,6 +1716,8 @@ unittest
 {
     debug(utf) printf("utf.encode.unittest\n");
 
+    assertCTFEable!(
+    {
     char[] s = "abcd".dup;
     encode(s, cast(dchar)'a');
     assert(s.length == 5);
@@ -1690,10 +1731,13 @@ unittest
     encode(s, cast(dchar)'\u2260');
     assert(s.length == 10);
     assert(s == "abcda\xC2\xA9\xE2\x89\xA0");
+    });
 }
 
 unittest
 {
+    assertCTFEable!(
+    {
     char[] buf;
 
     encode(buf, '\u0000'); assert(buf[0 .. $] == "\u0000");
@@ -1713,6 +1757,7 @@ unittest
     assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
     assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
     assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+    });
 }
 
 /// ditto
@@ -1748,6 +1793,8 @@ void encode(ref wchar[] str, dchar c) @safe pure
 
 unittest
 {
+    assertCTFEable!(
+    {
     wchar[] buf;
 
     encode(buf, '\u0000'); assert(buf[0] == '\u0000');
@@ -1763,6 +1810,7 @@ unittest
     assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
     assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
     assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+    });
 }
 
 /// ditto
@@ -1777,6 +1825,8 @@ void encode(ref dchar[] str, dchar c) @safe pure
 
 unittest
 {
+    assertCTFEable!(
+    {
     dchar[] buf;
 
     encode(buf, '\u0000'); assert(buf[0] == '\u0000');
@@ -1791,6 +1841,7 @@ unittest
     assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
     assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
     assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+    });
 }
 
 
@@ -1882,6 +1933,8 @@ unittest
 
 unittest
 {
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!( char[], const  char[],  string,
                            wchar[], const wchar[], wstring,
                            dchar[], const dchar[], dstring))
@@ -1896,6 +1949,7 @@ unittest
                    to!(C[])(`ウェブサイト@La_Verité.com`).length);
         }
     }
+    });
 }
 
 
@@ -2239,22 +2293,27 @@ private P toUTFzImpl(P, S)(S str) @system
 
     //If the P is mutable, then we have to make a copy.
     static if (is(Unqual!(typeof(*P.init)) == typeof(*P.init)))
+    {
         return toUTFzImpl!(P, const(C)[])(cast(const(C)[])str);
+    }
     else
     {
-        immutable p = str.ptr + str.length;
+        if (!__ctfe)
+        {
+            immutable p = str.ptr + str.length;
 
-        // Peek past end of str, if it's 0, no conversion necessary.
-        // Note that the compiler will put a 0 past the end of static
-        // strings, and the storage allocator will put a 0 past the end
-        // of newly allocated char[]'s.
-        // Is p dereferenceable? A simple test: if the p points to an
-        // address multiple of 4, then conservatively assume the pointer
-        // might be pointing to a new block of memory, which might be
-        // unreadable. Otherwise, it's definitely pointing to valid
-        // memory.
-        if ((cast(size_t)p & 3) && *p == '\0')
-            return str.ptr;
+            // Peek past end of str, if it's 0, no conversion necessary.
+            // Note that the compiler will put a 0 past the end of static
+            // strings, and the storage allocator will put a 0 past the end
+            // of newly allocated char[]'s.
+            // Is p dereferenceable? A simple test: if the p points to an
+            // address multiple of 4, then conservatively assume the pointer
+            // might be pointing to a new block of memory, which might be
+            // unreadable. Otherwise, it's definitely pointing to valid
+            // memory.
+            if ((cast(size_t)p & 3) && *p == '\0')
+                return str.ptr;
+        }
 
         return toUTFzImpl!(P, const(C)[])(cast(const(C)[])str);
     }
@@ -2274,10 +2333,13 @@ private P toUTFzImpl(P, S)(S str) @system
     static if (( is(const(Unqual!InChar) == InChar) &&  is(const(Unqual!OutChar) == OutChar)) ||
                (!is(const(Unqual!InChar) == InChar) && !is(immutable(Unqual!OutChar) == OutChar)))
     {
-        auto p = str.ptr + str.length;
+        if (!__ctfe)
+        {
+            auto p = str.ptr + str.length;
 
-        if ((cast(size_t)p & 3) && *p == '\0')
-            return str.ptr;
+            if ((cast(size_t)p & 3) && *p == '\0')
+                return str.ptr;
+        }
 
         str ~= '\0';
         return str.ptr;
@@ -2325,6 +2387,8 @@ unittest
         return len;
     }
 
+    assertCTFEable!(
+    {
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
         alias C = Unqual!(ElementEncodingType!S);
@@ -2348,6 +2412,7 @@ unittest
             assert(p2[s2.length] == '\0');
         }
     }
+    });
 
     static void test(P, S)(S s, size_t line = __LINE__)
     {
@@ -2358,6 +2423,8 @@ unittest
                                 __FILE__, line));
     }
 
+    assertCTFEable!(
+    {
     foreach (P; TypeTuple!(wchar*, const(wchar)*, immutable(wchar)*,
                            dchar*, const(dchar)*, immutable(dchar)*))
     {
@@ -2386,6 +2453,7 @@ unittest
             test!P(s);
         }
     }
+    });
 }
 
 
@@ -2417,6 +2485,8 @@ unittest
 {
     debug(utf) printf("utf.toUTF.unittest\n");
 
+    assertCTFEable!(
+    {
     assert(toUTF16("hello"c) == "hello");
     assert(toUTF32("hello"c) == "hello");
     assert(toUTF8 ("hello"w) == "hello");
@@ -2437,6 +2507,7 @@ unittest
     assert(toUTF32("he\U0010AAAAllo"w) == "he\U0010AAAAllo");
     assert(toUTF8 ("he\U0010AAAAllo"d) == "he\U0010AAAAllo");
     assert(toUTF16("he\U0010AAAAllo"d) == "he\U0010AAAAllo");
+    });
 }
 
 
@@ -2458,10 +2529,13 @@ size_t count(C)(const(C)[] str) @trusted pure
 
 unittest
 {
+    assertCTFEable!(
+    {
     assert(count("") == 0);
     assert(count("a") == 1);
     assert(count("abc") == 3);
     assert(count("\u20AC100") == 4);
+    });
 }
 
 
