@@ -938,7 +938,7 @@ immutable(ElementEncodingType!(ElementType!Range))[]
         foreach (segment; segments2) precalc += segment.length + 1;
     }
     // Otherwise, just venture a guess and resize later if necessary.
-    else size_t precalc = 256;
+    else size_t precalc = 255;
 
     auto buf = new Unqual!(ElementEncodingType!(ElementType!(Range)))[](precalc);
     size_t pos = 0;
