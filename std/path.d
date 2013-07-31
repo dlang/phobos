@@ -1884,6 +1884,7 @@ unittest
         assert (absolutePath(`some\file`, `c:\foo\bar`)    == `c:\foo\bar\some\file`);
         assert (absolutePath(`..\file`, `c:\foo\bar`)      == `c:\foo\bar\..\file`);
         assert (absolutePath(`c:\some\file`, `c:\foo\bar`) == `c:\some\file`);
+        assert (absolutePath(`\file`, `c:\foo\bar`)        == `c:\file`);
     }
     ---
 
@@ -1916,6 +1917,8 @@ unittest
         assert (absolutePath(`some\file`, `c:\foo\bar`)    == `c:\foo\bar\some\file`);
         assert (absolutePath(`..\file`, `c:\foo\bar`)      == `c:\foo\bar\..\file`);
         assert (absolutePath(`c:\some\file`, `c:\foo\bar`) == `c:\some\file`);
+        assert (absolutePath(`\`, `c:\`)                   == `c:\`);
+        assert (absolutePath(`\some\file`, `c:\foo\bar`)   == `c:\some\file`);
         static assert (absolutePath(`some\file`, `c:\foo\bar`) == `c:\foo\bar\some\file`);
     }
 
