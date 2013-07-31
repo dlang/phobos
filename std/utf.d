@@ -879,33 +879,38 @@ assert(toUTFindex(`さいごの果実 / ミツバチと科学者`w, 9) == 9);
 assert(toUTFindex(`さいごの果実 / ミツバチと科学者`d, 9) == 9);
 --------------------
   +/
-size_t toUTFindex(in char[] str, size_t n) @safe pure
+size_t toUTFindex(C)(const(C)[] str, size_t n) @safe pure
+    if (isSomeChar!C)
 {
-    size_t i;
-    while (n--)
-        i += stride(str, i);
-    return i;
-}
-
-/// ditto
-size_t toUTFindex(in wchar[] str, size_t n) @safe pure nothrow
-{
-    size_t i;
-
-    while (n--)
+    static if (is(Unqual!C == dchar))
     {
-        wchar u = str[i];
-
-        i += 1 + (u >= 0xD800 && u <= 0xDBFF);
+        return n;
     }
-
-    return i;
+    else
+    {
+        size_t i;
+        while (n--)
+        {
+            i += stride(str, i);
+        }
+        return i;
+    }
 }
 
-/// ditto
-size_t toUTFindex(in dchar[] str, size_t n) @safe pure nothrow
+//Verify Examples.
+unittest
 {
-    return n;
+    assert(toUTFindex(`hello world`, 7) == 7);
+    assert(toUTFindex(`hello world`w, 7) == 7);
+    assert(toUTFindex(`hello world`d, 7) == 7);
+
+    assert(toUTFindex(`Ma Chérie`, 6) == 7);
+    assert(toUTFindex(`Ma Chérie`w, 7) == 7);
+    assert(toUTFindex(`Ma Chérie`d, 7) == 7);
+
+    assert(toUTFindex(`さいごの果実 / ミツバチと科学者`, 3) == 9);
+    assert(toUTFindex(`さいごの果実 / ミツバチと科学者`w, 9) == 9);
+    assert(toUTFindex(`さいごの果実 / ミツバチと科学者`d, 9) == 9);
 }
 
 
