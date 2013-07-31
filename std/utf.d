@@ -75,15 +75,15 @@ class UTFException : Exception
     override string toString()
     {
         import std.string;
-        if(len == 0)
+        if (len == 0)
             return super.toString();
 
         string result = "Invalid UTF sequence:";
 
-        foreach(i; sequence[0 .. len])
+        foreach (i; sequence[0 .. len])
             result ~= format(" %02x", i);
 
-        if(super.msg.length > 0)
+        if (super.msg.length > 0)
         {
             result ~= " - ";
             result ~= super.msg;
@@ -95,7 +95,7 @@ class UTFException : Exception
 
 
 // Explicitly undocumented. It will be removed in November 2013.
-deprecated("Please use std.utf.UTFException instead.") alias UTFException UtfException;
+deprecated("Please use std.utf.UTFException instead.") alias UtfException = UTFException;
 
 
 /++
@@ -121,17 +121,17 @@ pure nothrow bool isValidDchar(dchar c)
 unittest
 {
     debug(utf) printf("utf.isValidDchar.unittest\n");
-    assert(isValidDchar(cast(dchar)'a') == true);
-    assert(isValidDchar(cast(dchar)0x1FFFFF) == false);
+    assert( isValidDchar(cast(dchar)'a') == true);
+    assert( isValidDchar(cast(dchar)0x1FFFFF) == false);
 
     assert(!isValidDchar(cast(dchar)0x00D800));
     assert(!isValidDchar(cast(dchar)0x00DBFF));
     assert(!isValidDchar(cast(dchar)0x00DC00));
     assert(!isValidDchar(cast(dchar)0x00DFFF));
-    assert(isValidDchar(cast(dchar)0x00FFFE));
-    assert(isValidDchar(cast(dchar)0x00FFFF));
-    assert(isValidDchar(cast(dchar)0x01FFFF));
-    assert(isValidDchar(cast(dchar)0x10FFFF));
+    assert( isValidDchar(cast(dchar)0x00FFFE));
+    assert( isValidDchar(cast(dchar)0x00FFFF));
+    assert( isValidDchar(cast(dchar)0x01FFFF));
+    assert( isValidDchar(cast(dchar)0x10FFFF));
     assert(!isValidDchar(cast(dchar)0x110000));
 }
 
@@ -250,13 +250,13 @@ unittest
     test("hello\U00010143\u0100\U00010143", '\u0100', 9);
     test("hello\U00010143\u0100\U00010143", '\U00010143', 11);
 
-    foreach(S; TypeTuple!(char[], const char[], string))
+    foreach (S; TypeTuple!(char[], const char[], string))
     {
         enum str = to!S("hello world");
-        static assert(isSafe!((){stride(str, 0);}));
-        static assert(isSafe!((){stride(str);}));
-        static assert((functionAttributes!((){stride(str, 0);}) & FunctionAttribute.pure_) != 0);
-        static assert((functionAttributes!((){stride(str);}) & FunctionAttribute.pure_) != 0);
+        static assert(isSafe!({ stride(str, 0); }));
+        static assert(isSafe!({ stride(str);    }));
+        static assert((functionAttributes!({ stride(str, 0); }) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!({ stride(str);    }) & FunctionAttribute.pure_) != 0);
     }
 }
 
@@ -289,14 +289,14 @@ uint strideBack(S)(auto ref S str, size_t index)
 {
     static if (is(typeof(str.length) : ulong))
         assert(index <= str.length, "Past the end of the UTF-8 sequence");
-    assert (index > 0, "Not the end of the UTF-8 sequence");
+    assert(index > 0, "Not the end of the UTF-8 sequence");
 
     if ((str[index-1] & 0b1100_0000) != 0b1000_0000)
         return 1;
 
     if (index >= 4) //single verification for most common case
     {
-        foreach(i; TypeTuple!(2, 3, 4))
+        foreach (i; TypeTuple!(2, 3, 4))
         {
             if ((str[index-i] & 0b1100_0000) != 0b1000_0000)
                 return i;
@@ -304,7 +304,7 @@ uint strideBack(S)(auto ref S str, size_t index)
     }
     else
     {
-        foreach(i; TypeTuple!(2, 3))
+        foreach (i; TypeTuple!(2, 3))
         {
             if (index >= i && (str[index-i] & 0b1100_0000) != 0b1000_0000)
                 return i;
@@ -316,7 +316,7 @@ uint strideBack(S)(auto ref S str, size_t index)
 /// Ditto
 uint strideBack(S)(auto ref S str)
     if (is(S : const char[]) ||
-       (isRandomAccessRange!S && hasLength!S && is(Unqual!(ElementType!S) == char)))
+        (isRandomAccessRange!S && hasLength!S && is(Unqual!(ElementType!S) == char)))
 {
     return strideBack(str, str.length);
 }
@@ -326,11 +326,13 @@ uint strideBack(S)(auto ref S str)
 {
     assert(!str.empty, "Past the end of the UTF-8 sequence");
     auto temp = str.save;
-    foreach(i; TypeTuple!(1, 2, 3, 4))
+    foreach (i; TypeTuple!(1, 2, 3, 4))
     {
-        if ((temp.back & 0b1100_0000) != 0b1000_0000) return i;
+        if ((temp.back & 0b1100_0000) != 0b1000_0000)
+            return i;
         temp.popBack();
-        if (temp.empty) break;
+        if (temp.empty)
+            break;
     }
     throw new UTFException("The last code unit is not the end of the UTF-8 sequence");
 }
@@ -385,13 +387,13 @@ unittest
     test("\U00010143\u0100\U00010143hello", '\u0100', 6);
     test("\U00010143\u0100\U00010143hello", '\U00010143', 4);
 
-    foreach(S; TypeTuple!(char[], const char[], string))
+    foreach (S; TypeTuple!(char[], const char[], string))
     {
         enum str = to!S("hello world");
-        static assert(isSafe!((){strideBack(str, 0);}));
-        static assert(isSafe!((){strideBack(str);}));
-        static assert((functionAttributes!((){strideBack(str, 0);}) & FunctionAttribute.pure_) != 0);
-        static assert((functionAttributes!((){strideBack(str);}) & FunctionAttribute.pure_) != 0);
+        static assert(isSafe!({ strideBack(str, 0); }));
+        static assert(isSafe!({ strideBack(str);    }));
+        static assert((functionAttributes!({ strideBack(str, 0); }) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!({ strideBack(str);    }) & FunctionAttribute.pure_) != 0);
     }
 }
 
@@ -439,7 +441,7 @@ uint stride(S)(auto ref S str) @safe pure
 uint stride(S)(auto ref S str)
     if (isInputRange!S && is(Unqual!(ElementType!S) == wchar))
 {
-    assert (!str.empty, "UTF-16 sequence is empty");
+    assert(!str.empty, "UTF-16 sequence is empty");
     immutable uint u = str.front;
     return 1 + (u >= 0xD800 && u <= 0xDBFF);
 }
@@ -494,13 +496,13 @@ uint stride(S)(auto ref S str)
     test("hello\U00010143\u0100\U00010143", '\u0100', 7);
     test("hello\U00010143\u0100\U00010143", '\U00010143', 8);
 
-    foreach(S; TypeTuple!(wchar[], const wchar[], wstring))
+    foreach (S; TypeTuple!(wchar[], const wchar[], wstring))
     {
         enum str = to!S("hello world");
-        static assert(isSafe!((){stride(str, 0);}));
-        static assert(isSafe!((){stride(str);}));
-        static assert((functionAttributes!((){stride(str, 0);}) & FunctionAttribute.pure_) != 0);
-        static assert((functionAttributes!((){stride(str);}) & FunctionAttribute.pure_) != 0);
+        static assert(isSafe!({ stride(str, 0); }));
+        static assert(isSafe!({ stride(str);    }));
+        static assert((functionAttributes!({ stride(str, 0); }) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!({ stride(str);    }) & FunctionAttribute.pure_) != 0);
     }
 }
 
@@ -536,7 +538,7 @@ uint strideBack(S)(auto ref S str, size_t index)
 {
     static if (is(typeof(str.length) : ulong))
         assert(index <= str.length, "Past the end of the UTF-16 sequence");
-    assert (index > 0, "Not the end of a UTF-16 sequence");
+    assert(index > 0, "Not the end of a UTF-16 sequence");
 
     immutable c2 = str[index-1];
     return 1 + (0xDC00 <= c2 && c2 < 0xE000);
@@ -547,7 +549,7 @@ uint strideBack(S)(auto ref S str)
     if (is(S : const wchar[]) ||
         (isBidirectionalRange!S && is(Unqual!(ElementType!S) == wchar)))
 {
-    assert (!str.empty, "UTF-16 sequence is empty");
+    assert(!str.empty, "UTF-16 sequence is empty");
 
     static if (is(S : const(wchar)[]))
         immutable c2 = str[$ - 1];
@@ -607,13 +609,13 @@ unittest
     test("\U00010143\u0100\U00010143hello", '\u0100', 3);
     test("\U00010143\u0100\U00010143hello", '\U00010143', 2);
 
-    foreach(S; TypeTuple!(wchar[], const wchar[], wstring))
+    foreach (S; TypeTuple!(wchar[], const wchar[], wstring))
     {
         enum str = to!S("hello world");
-        static assert(isSafe!((){strideBack(str, 0);}));
-        static assert(isSafe!((){strideBack(str);}));
-        static assert((functionAttributes!((){strideBack(str, 0);}) & FunctionAttribute.pure_) != 0);
-        static assert((functionAttributes!((){strideBack(str);}) & FunctionAttribute.pure_) != 0);
+        static assert(isSafe!({ strideBack(str, 0); }));
+        static assert(isSafe!({ strideBack(str);    }));
+        static assert((functionAttributes!({ strideBack(str, 0); }) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!({ strideBack(str);    }) & FunctionAttribute.pure_) != 0);
     }
 }
 
@@ -691,13 +693,13 @@ unittest
     test("hello\U00010143\u0100\U00010143", '\u0100', 6);
     test("hello\U00010143\u0100\U00010143", '\U00010143', 7);
 
-    foreach(S; TypeTuple!(dchar[], const dchar[], dstring))
+    foreach (S; TypeTuple!(dchar[], const dchar[], dstring))
     {
         enum str = to!S("hello world");
-        static assert(isSafe!((){stride(str, 0);}));
-        static assert(isSafe!((){stride(str);}));
-        static assert((functionAttributes!((){stride(str, 0);}) & FunctionAttribute.pure_) != 0);
-        static assert((functionAttributes!((){stride(str);}) & FunctionAttribute.pure_) != 0);
+        static assert(isSafe!({ stride(str, 0); }));
+        static assert(isSafe!({ stride(str);    }));
+        static assert((functionAttributes!({ stride(str, 0); }) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!({ stride(str);    }) & FunctionAttribute.pure_) != 0);
     }
 }
 
@@ -723,7 +725,7 @@ uint strideBack(S)(auto ref S str, size_t index)
 {
     static if (is(typeof(str.length) : ulong))
         assert(index <= str.length, "Past the end of the UTF-32 sequence");
-    assert (index > 0, "Not the end of the UTF-32 sequence");
+    assert(index > 0, "Not the end of the UTF-32 sequence");
     return 1;
 }
 
@@ -785,13 +787,13 @@ unittest
     test("\U00010143\u0100\U00010143hello", '\u0100', 2);
     test("\U00010143\u0100\U00010143hello", '\U00010143', 1);
 
-    foreach(S; TypeTuple!(dchar[], const dchar[], dstring))
+    foreach (S; TypeTuple!(dchar[], const dchar[], dstring))
     {
         enum str = to!S("hello world");
-        static assert(isSafe!((){strideBack(str, 0);}));
-        static assert(isSafe!((){strideBack(str);}));
-        static assert((functionAttributes!((){strideBack(str, 0);}) & FunctionAttribute.pure_) != 0);
-        static assert((functionAttributes!((){strideBack(str);}) & FunctionAttribute.pure_) != 0);
+        static assert(isSafe!({ strideBack(str, 0); }));
+        static assert(isSafe!({ strideBack(str);    }));
+        static assert((functionAttributes!({ strideBack(str, 0); }) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!({ strideBack(str);    }) & FunctionAttribute.pure_) != 0);
     }
 }
 
@@ -803,37 +805,37 @@ unittest
     beginning of a code point, and the return value is how many code points into
     the string that that code point is.
 
-Examples:
---------------------
-assert(toUCSindex(`hello world`, 7) == 7);
-assert(toUCSindex(`hello world`w, 7) == 7);
-assert(toUCSindex(`hello world`d, 7) == 7);
+    Examples:
+    --------------------
+    assert(toUCSindex(`hello world`, 7) == 7);
+    assert(toUCSindex(`hello world`w, 7) == 7);
+    assert(toUCSindex(`hello world`d, 7) == 7);
 
-assert(toUCSindex(`Ma Chérie`, 7) == 6);
-assert(toUCSindex(`Ma Chérie`w, 7) == 7);
-assert(toUCSindex(`Ma Chérie`d, 7) == 7);
+    assert(toUCSindex(`Ma Chérie`, 7) == 6);
+    assert(toUCSindex(`Ma Chérie`w, 7) == 7);
+    assert(toUCSindex(`Ma Chérie`d, 7) == 7);
 
-assert(toUCSindex(`さいごの果実 / ミツバチと科学者`, 9) == 3);
-assert(toUCSindex(`さいごの果実 / ミツバチと科学者`w, 9) == 9);
-assert(toUCSindex(`さいごの果実 / ミツバチと科学者`d, 9) == 9);
---------------------
+    assert(toUCSindex(`さいごの果実 / ミツバチと科学者`, 9) == 3);
+    assert(toUCSindex(`さいごの果実 / ミツバチと科学者`w, 9) == 9);
+    assert(toUCSindex(`さいごの果実 / ミツバチと科学者`d, 9) == 9);
+    --------------------
   +/
 size_t toUCSindex(C)(const(C)[] str, size_t index) @safe pure
-    if(isSomeChar!C)
+    if (isSomeChar!C)
 {
-    static if(is(Unqual!C == dchar))
+    static if (is(Unqual!C == dchar))
         return index;
     else
     {
         size_t n = 0;
         size_t j = 0;
 
-        for(; j < index; ++n)
+        for (; j < index; ++n)
             j += stride(str, j);
 
-        if(j > index)
+        if (j > index)
         {
-            static if(is(Unqual!C == char))
+            static if (is(Unqual!C == char))
                 throw new UTFException("Invalid UTF-8 sequence", index);
             else
                 throw new UTFException("Invalid UTF-16 sequence", index);
@@ -864,20 +866,20 @@ unittest
     So, $(D n) is how many code points into the string the code point is, and
     the array index of the code unit is returned.
 
-Examples:
---------------------
-assert(toUTFindex(`hello world`, 7) == 7);
-assert(toUTFindex(`hello world`w, 7) == 7);
-assert(toUTFindex(`hello world`d, 7) == 7);
+    Examples:
+    --------------------
+    assert(toUTFindex(`hello world`, 7) == 7);
+    assert(toUTFindex(`hello world`w, 7) == 7);
+    assert(toUTFindex(`hello world`d, 7) == 7);
 
-assert(toUTFindex(`Ma Chérie`, 6) == 7);
-assert(toUTFindex(`Ma Chérie`w, 7) == 7);
-assert(toUTFindex(`Ma Chérie`d, 7) == 7);
+    assert(toUTFindex(`Ma Chérie`, 6) == 7);
+    assert(toUTFindex(`Ma Chérie`w, 7) == 7);
+    assert(toUTFindex(`Ma Chérie`d, 7) == 7);
 
-assert(toUTFindex(`さいごの果実 / ミツバチと科学者`, 3) == 9);
-assert(toUTFindex(`さいごの果実 / ミツバチと科学者`w, 9) == 9);
-assert(toUTFindex(`さいごの果実 / ミツバチと科学者`d, 9) == 9);
---------------------
+    assert(toUTFindex(`さいごの果実 / ミツバチと科学者`, 3) == 9);
+    assert(toUTFindex(`さいごの果実 / ミツバチと科学者`w, 9) == 9);
+    assert(toUTFindex(`さいごの果実 / ミツバチと科学者`d, 9) == 9);
+    --------------------
   +/
 size_t toUTFindex(C)(const(C)[] str, size_t n) @safe pure
     if (isSomeChar!C)
@@ -1049,7 +1051,7 @@ dchar decodeFront(S)(ref S str)
 
 // Gives the maximum value that a code unit for the given range type can hold.
 private template codeUnitLimit(S)
-   if (isSomeChar!(ElementEncodingType!S))
+    if (isSomeChar!(ElementEncodingType!S))
 {
     static if (is(Unqual!(ElementEncodingType!S) == char))
         enum char codeUnitLimit = 0x80;
@@ -1087,7 +1089,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
     else static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
         auto pstr = str[index .. str.length];
     else
-        alias str pstr;
+        alias pstr = str;
 
     //@@@BUG@@@ 8521 forces this to be done outside of decodeImpl
     //enum canIndex = is(S : const char[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S);
@@ -1115,7 +1117,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
                 sequence[i] = str[i];
             } while (++i < str.length && i < 4 && (str[i] & 0xC0) == 0x80);
 
-            return (new UTFException(msg, i)).setSequence(sequence[0 .. i]);
+            return new UTFException(msg, i).setSequence(sequence[0 .. i]);
         }
     }
 
@@ -1149,7 +1151,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
     dchar d = fst; // upper control bits are masked out later
     fst <<= 1;
 
-    foreach(i; TypeTuple!(1, 2, 3))
+    foreach (i; TypeTuple!(1, 2, 3))
     {
 
         static if (canIndex)
@@ -1208,7 +1210,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
     else static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
         auto pstr = str[index .. str.length];
     else
-        alias str pstr;
+        alias pstr = str;
 
     //@@@BUG@@@ 8521 forces this to be done outside of decodeImpl
     //enum canIndex = is(S : const wchar[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S);
@@ -1227,7 +1229,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
     UTFException exception(string msg)
     {
         static if (canIndex)
-            return (new UTFException(msg)).setSequence(pstr[0]);
+            return new UTFException(msg).setSequence(pstr[0]);
         else
             return new UTFException(msg);
     }
@@ -1276,18 +1278,18 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
     static if (is(S : const dchar[]))
         auto pstr = str.ptr;
     else
-        alias str pstr;
+        alias pstr = str;
 
     static if (is(S : const dchar[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S))
     {
         if (!isValidDchar(pstr[index]))
-            throw (new UTFException("Invalid UTF-32 value")).setSequence(pstr[index]);
+            throw new UTFException("Invalid UTF-32 value").setSequence(pstr[index]);
         return pstr[index++];
     }
     else
     {
         if (!isValidDchar(pstr.front))
-            throw (new UTFException("Invalid UTF-32 value")).setSequence(pstr.front);
+            throw new UTFException("Invalid UTF-32 value").setSequence(pstr.front);
         ++index;
         immutable retval = pstr.front;
         pstr.popFront();
@@ -1301,7 +1303,7 @@ version(unittest) private void testDecode(R)(R range,
                                              size_t expectedIndex,
                                              size_t line = __LINE__)
 {
-    static if(hasLength!R)
+    static if (hasLength!R)
         immutable lenBefore = range.length;
 
     static if (isRandomAccessRange!R)
@@ -1312,7 +1314,7 @@ version(unittest) private void testDecode(R)(R range,
                     new AssertError(format("decode: Wrong character: %s", result), __FILE__, line));
             enforce(index == expectedIndex,
                     new AssertError(format("decode: Wrong index: %s", index), __FILE__, line));
-            static if(hasLength!R)
+            static if (hasLength!R)
             {
                 enforce(range.length == lenBefore,
                         new AssertError(format("decode: length changed: %s", range.length), __FILE__, line));
@@ -1326,7 +1328,7 @@ version(unittest) private void testDecodeFront(R)(ref R range,
                                                   size_t expectedNumCodeUnits,
                                                   size_t line = __LINE__)
 {
-    static if(hasLength!R)
+    static if (hasLength!R)
         immutable lenBefore = range.length;
 
     size_t numCodeUnits;
@@ -1472,9 +1474,9 @@ unittest
 
 unittest
 {
-    foreach(S; TypeTuple!(to!dstring, RandomCU!dchar, InputCU!dchar,
-                          (dstring s) => new RefBidirCU!dchar(s),
-                          (dstring s) => new RefRandomCU!dchar(s)))
+    foreach (S; TypeTuple!(to!dstring, RandomCU!dchar, InputCU!dchar,
+                           (dstring s) => new RefBidirCU!dchar(s),
+                           (dstring s) => new RefRandomCU!dchar(s)))
     {
         testBothDecode(S([cast(dchar)0x1111]), cast(dchar)0x1111, 1);
         testBothDecode(S([cast(dchar)0x10000]), cast(dchar)0x10000, 1);
@@ -1508,17 +1510,16 @@ unittest
 
 unittest
 {
-    foreach(S; TypeTuple!(char[], const(char)[], string,
-                          wchar[], const(wchar)[], wstring,
-                          dchar[], const(dchar)[], dstring))
+    foreach (S; TypeTuple!( char[], const( char)[],  string,
+                           wchar[], const(wchar)[], wstring,
+                           dchar[], const(dchar)[], dstring))
     {
-        static assert(isSafe!((){S str; size_t i = 0; decode(str, i);}));
-        static assert(isSafe!((){S str; size_t i = 0; decodeFront(str, i);}));
-        static assert(isSafe!((){S str; decodeFront(str);}));
-        static assert((functionAttributes!((){S str; size_t i = 0; decode(str, i);}) & FunctionAttribute.pure_) != 0);
-        static assert((functionAttributes!((){S str; size_t i = 0; decodeFront(str, i);}) &
-                      FunctionAttribute.pure_) != 0);
-        static assert((functionAttributes!((){S str; decodeFront(str);}) & FunctionAttribute.pure_) != 0);
+        static assert(isSafe!({ S str; size_t i = 0; decode(str, i);      }));
+        static assert(isSafe!({ S str; size_t i = 0; decodeFront(str, i); }));
+        static assert(isSafe!({ S str; decodeFront(str); }));
+        static assert((functionAttributes!({ S str; size_t i = 0; decode(str, i);      }) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!({ S str; size_t i = 0; decodeFront(str, i); }) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!({ S str; decodeFront(str); }) & FunctionAttribute.pure_) != 0);
     }
 }
 
@@ -1552,7 +1553,7 @@ size_t encode(ref char[4] buf, dchar c) @safe pure
     if (c <= 0xFFFF)
     {
         if (0xD800 <= c && c <= 0xDFFF)
-            throw (new UTFException("Encoding a surrogate code point in UTF-8")).setSequence(c);
+            throw new UTFException("Encoding a surrogate code point in UTF-8").setSequence(c);
 
         assert(isValidDchar(c));
         buf[0] = cast(char)(0xE0 | (c >> 12));
@@ -1571,7 +1572,7 @@ size_t encode(ref char[4] buf, dchar c) @safe pure
     }
 
     assert(!isValidDchar(c));
-    throw (new UTFException("Encoding an invalid code point in UTF-8")).setSequence(c);
+    throw new UTFException("Encoding an invalid code point in UTF-8").setSequence(c);
 }
 
 unittest
@@ -1604,7 +1605,7 @@ size_t encode(ref wchar[2] buf, dchar c) @safe pure
     if (c <= 0xFFFF)
     {
         if (0xD800 <= c && c <= 0xDFFF)
-            throw (new UTFException("Encoding an isolated surrogate code point in UTF-16")).setSequence(c);
+            throw new UTFException("Encoding an isolated surrogate code point in UTF-16").setSequence(c);
 
         assert(isValidDchar(c));
         buf[0] = cast(wchar)c;
@@ -1619,7 +1620,7 @@ size_t encode(ref wchar[2] buf, dchar c) @safe pure
     }
 
     assert(!isValidDchar(c));
-    throw (new UTFException("Encoding an invalid code point in UTF-16")).setSequence(c);
+    throw new UTFException("Encoding an invalid code point in UTF-16").setSequence(c);
 }
 
 unittest
@@ -1672,7 +1673,7 @@ void encode(ref char[] str, dchar c) @safe pure
         else if (c <= 0xFFFF)
         {
             if (0xD800 <= c && c <= 0xDFFF)
-                throw (new UTFException("Encoding a surrogate code point in UTF-8")).setSequence(c);
+                throw new UTFException("Encoding a surrogate code point in UTF-8").setSequence(c);
 
             assert(isValidDchar(c));
             buf[0] = cast(char)(0xE0 | (c >> 12));
@@ -1692,7 +1693,7 @@ void encode(ref char[] str, dchar c) @safe pure
         else
         {
             assert(!isValidDchar(c));
-            throw (new UTFException("Encoding an invalid code point in UTF-8")).setSequence(c);
+            throw new UTFException("Encoding an invalid code point in UTF-8").setSequence(c);
         }
         r ~= buf[0 .. L];
     }
@@ -1749,7 +1750,7 @@ void encode(ref wchar[] str, dchar c) @safe pure
     if (c <= 0xFFFF)
     {
         if (0xD800 <= c && c <= 0xDFFF)
-            throw (new UTFException("Encoding an isolated surrogate code point in UTF-16")).setSequence(c);
+            throw new UTFException("Encoding an isolated surrogate code point in UTF-16").setSequence(c);
 
         assert(isValidDchar(c));
         r ~= cast(wchar)c;
@@ -1766,7 +1767,7 @@ void encode(ref wchar[] str, dchar c) @safe pure
     else
     {
         assert(!isValidDchar(c));
-        throw (new UTFException("Encoding an invalid code point in UTF-16")).setSequence(c);
+        throw new UTFException("Encoding an invalid code point in UTF-16").setSequence(c);
     }
 
     str = r;
@@ -1795,7 +1796,7 @@ unittest
 void encode(ref dchar[] str, dchar c) @safe pure
 {
     if ((0xD800 <= c && c <= 0xDFFF) || 0x10FFFF < c)
-        throw (new UTFException("Encoding an invalid code point in UTF-32")).setSequence(c);
+        throw new UTFException("Encoding an invalid code point in UTF-32").setSequence(c);
 
     assert(isValidDchar(c));
     str ~= c;
@@ -1824,19 +1825,19 @@ unittest
     Returns the number of code units that are required to encode the code point
     $(D c) when $(D C) is the character type used to encode it.
 
-Examples:
-------
-assert(codeLength!char('a') == 1);
-assert(codeLength!wchar('a') == 1);
-assert(codeLength!dchar('a') == 1);
+    Examples:
+    ------
+    assert(codeLength!char('a') == 1);
+    assert(codeLength!wchar('a') == 1);
+    assert(codeLength!dchar('a') == 1);
 
-assert(codeLength!char('\U0010FFFF') == 4);
-assert(codeLength!wchar('\U0010FFFF') == 2);
-assert(codeLength!dchar('\U0010FFFF') == 1);
-------
+    assert(codeLength!char('\U0010FFFF') == 4);
+    assert(codeLength!wchar('\U0010FFFF') == 2);
+    assert(codeLength!dchar('\U0010FFFF') == 1);
+    ------
   +/
 ubyte codeLength(C)(dchar c) @safe pure nothrow
-    if(isSomeChar!C)
+    if (isSomeChar!C)
 {
     static if (C.sizeof == 1)
     {
@@ -1877,45 +1878,44 @@ unittest
     when slicing one string with the length of another and the two string
     types use different character types.
 
-Examples:
-------
-assert(codeLength!char("hello world") ==
-       to!string("hello world").length);
-assert(codeLength!wchar("hello world") ==
-       to!wstring("hello world").length);
-assert(codeLength!dchar("hello world") ==
-       to!dstring("hello world").length);
+    Examples:
+    ------
+    assert(codeLength!char("hello world") ==
+           to!string("hello world").length);
+    assert(codeLength!wchar("hello world") ==
+           to!wstring("hello world").length);
+    assert(codeLength!dchar("hello world") ==
+           to!dstring("hello world").length);
 
-assert(codeLength!char(`プログラミング`) ==
-       to!string(`プログラミング`).length);
-assert(codeLength!wchar(`プログラミング`) ==
-       to!wstring(`プログラミング`).length);
-assert(codeLength!dchar(`プログラミング`) ==
-       to!dstring(`プログラミング`).length);
+    assert(codeLength!char(`プログラミング`) ==
+           to!string(`プログラミング`).length);
+    assert(codeLength!wchar(`プログラミング`) ==
+           to!wstring(`プログラミング`).length);
+    assert(codeLength!dchar(`プログラミング`) ==
+           to!dstring(`プログラミング`).length);
 
-string haystack = `Être sans la verité, ça, ce ne serait pas bien.`;
-wstring needle = `Être sans la verité`;
-assert(haystack[codeLength!char(needle) .. $] ==
-       `, ça, ce ne serait pas bien.`);
-------
+    string haystack = `Être sans la verité, ça, ce ne serait pas bien.`;
+    wstring needle = `Être sans la verité`;
+    assert(haystack[codeLength!char(needle) .. $] ==
+           `, ça, ce ne serait pas bien.`);
+    ------
   +/
 size_t codeLength(C, InputRange)(InputRange input)
-	if(isInputRange!InputRange && is(ElementType!InputRange : dchar))
+    if (isInputRange!InputRange && is(ElementType!InputRange : dchar))
 {
-	alias Unqual!(ElementEncodingType!InputRange) EncType;
-	static if(isSomeString!InputRange && is(EncType == C) && is(typeof(input.length)))
-		return input.length;
-	else
-	{
+    alias EncType = Unqual!(ElementEncodingType!InputRange);
+    static if (isSomeString!InputRange && is(EncType == C) && is(typeof(input.length)))
+        return input.length;
+    else
+    {
         size_t total = 0;
 
-        foreach(dchar c; input)
+        foreach (dchar c; input)
             total += codeLength!C(c);
 
         return total;
-	}
+    }
 }
-   
 
 //Verify Examples.
 unittest
@@ -1942,17 +1942,17 @@ unittest
 
 unittest
 {
-    foreach(S; TypeTuple!(char[], const char[], string,
-                          wchar[], const wchar[], wstring,
-                          dchar[], const dchar[], dstring))
+    foreach (S; TypeTuple!( char[], const  char[],  string,
+                           wchar[], const wchar[], wstring,
+                           dchar[], const dchar[], dstring))
     {
-        foreach(C; TypeTuple!(char, wchar, dchar))
+        foreach (C; TypeTuple!(char, wchar, dchar))
         {
             assert(codeLength!C(to!S("Walter Bright")) == to!(C[])("Walter Bright").length);
             assert(codeLength!C(to!S(`言語`)) == to!(C[])(`言語`).length);
             assert(codeLength!C(to!S(`ウェブサイト@La_Verité.com`)) ==
                    to!(C[])(`ウェブサイト@La_Verité.com`).length);
-			assert(codeLength!C(to!S(`ウェブサイト@La_Verité.com`).filter!(x => true)()) ==
+            assert(codeLength!C(to!S(`ウェブサイト@La_Verité.com`).filter!(x => true)()) ==
                    to!(C[])(`ウェブサイト@La_Verité.com`).length);
         }
     }
@@ -1968,7 +1968,7 @@ unittest
         $(D UTFException) if $(D str) is not well-formed.
   +/
 void validate(S)(in S str) @safe pure
-    if(isSomeString!S)
+    if (isSomeString!S)
 {
     immutable len = str.length;
     for (size_t i = 0; i < len; )
@@ -2255,14 +2255,14 @@ dstring toUTF32(in dchar[] s) @safe
     collection cycle and cause a nasty bug when the C code tries to use it.
 
     Examples:
---------------------
-auto p1 = toUTFz!(char*)("hello world");
-auto p2 = toUTFz!(const(char)*)("hello world");
-auto p3 = toUTFz!(immutable(char)*)("hello world");
-auto p4 = toUTFz!(char*)("hello world"d);
-auto p5 = toUTFz!(const(wchar)*)("hello world");
-auto p6 = toUTFz!(immutable(dchar)*)("hello world"w);
---------------------
+    --------------------
+    auto p1 = toUTFz!(char*)("hello world");
+    auto p2 = toUTFz!(const(char)*)("hello world");
+    auto p3 = toUTFz!(immutable(char)*)("hello world");
+    auto p4 = toUTFz!(char*)("hello world"d);
+    auto p5 = toUTFz!(const(wchar)*)("hello world");
+    auto p6 = toUTFz!(immutable(dchar)*)("hello world"w);
+    --------------------
   +/
 template toUTFz(P)
 {
@@ -2282,22 +2282,22 @@ template toUTFz(P, S)
 }
 
 private P toUTFzImpl(P, S)(S str) @system
-    if(isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
-       is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)) &&
-       is(immutable(Unqual!(ElementEncodingType!S)) == ElementEncodingType!S))
+    if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
+        is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)) &&
+        is(immutable(Unqual!(ElementEncodingType!S)) == ElementEncodingType!S))
 //immutable(C)[] -> C*, const(C)*, or immutable(C)*
 {
-    if(str.empty)
+    if (str.empty)
     {
         typeof(*P.init)[] retval = ['\0'];
 
         return retval.ptr;
     }
 
-    alias Unqual!(ElementEncodingType!S) C;
+    alias C = Unqual!(ElementEncodingType!S);
 
     //If the P is mutable, then we have to make a copy.
-    static if(is(Unqual!(typeof(*P.init)) == typeof(*P.init)))
+    static if (is(Unqual!(typeof(*P.init)) == typeof(*P.init)))
         return toUTFzImpl!(P, const(C)[])(cast(const(C)[])str);
     else
     {
@@ -2312,7 +2312,7 @@ private P toUTFzImpl(P, S)(S str) @system
         // might be pointing to a new block of memory, which might be
         // unreadable. Otherwise, it's definitely pointing to valid
         // memory.
-        if((cast(size_t)p & 3) && *p == '\0')
+        if ((cast(size_t)p & 3) && *p == '\0')
             return str.ptr;
 
         return toUTFzImpl!(P, const(C)[])(cast(const(C)[])str);
@@ -2320,22 +2320,22 @@ private P toUTFzImpl(P, S)(S str) @system
 }
 
 private P toUTFzImpl(P, S)(S str) @system
-    if(isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
-       is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)) &&
-       !is(immutable(Unqual!(ElementEncodingType!S)) == ElementEncodingType!S))
+    if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
+        is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)) &&
+        !is(immutable(Unqual!(ElementEncodingType!S)) == ElementEncodingType!S))
 //C[] or const(C)[] -> C*, const(C)*, or immutable(C)*
 {
-    alias ElementEncodingType!S InChar;
-    alias typeof(*P.init) OutChar;
+    alias InChar  = ElementEncodingType!S;
+    alias OutChar = typeof(*P.init);
 
     //const(C)[] -> const(C)* or
     //C[] -> C* or const(C)*
-    static if((is(const(Unqual!InChar) == InChar) && is(const(Unqual!OutChar) == OutChar)) ||
-              (!is(const(Unqual!InChar) == InChar) && !is(immutable(Unqual!OutChar) == OutChar)))
+    static if (( is(const(Unqual!InChar) == InChar) &&  is(const(Unqual!OutChar) == OutChar)) ||
+               (!is(const(Unqual!InChar) == InChar) && !is(immutable(Unqual!OutChar) == OutChar)))
     {
         auto p = str.ptr + str.length;
 
-        if((cast(size_t)p & 3) && *p == '\0')
+        if ((cast(size_t)p & 3) && *p == '\0')
             return str.ptr;
 
         str ~= '\0';
@@ -2354,13 +2354,13 @@ private P toUTFzImpl(P, S)(S str) @system
 }
 
 private P toUTFzImpl(P, S)(S str)
-    if(isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
-       !is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)))
+    if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
+        !is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)))
 //C1[], const(C1)[], or immutable(C1)[] -> C2*, const(C2)*, or immutable(C2)*
 {
     auto retval = appender!(typeof(*P.init)[])();
 
-    foreach(dchar c; str)
+    foreach (dchar c; str)
         retval.put(c);
     retval.put('\0');
 
@@ -2388,7 +2388,7 @@ unittest
     {
         size_t len = 0;
 
-        while(*ptr != '\0')
+        while (*ptr != '\0')
         {
             ++ptr;
             ++len;
@@ -2397,9 +2397,9 @@ unittest
         return len;
     }
 
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach (S; TypeTuple!(string, wstring, dstring))
     {
-        alias Unqual!(ElementEncodingType!S) C;
+        alias C = Unqual!(ElementEncodingType!S);
 
         auto s1 = to!S("hello\U00010143\u0100\U00010143");
         auto temp = new C[](s1.length + 1);
@@ -2409,7 +2409,7 @@ unittest
         auto s2 = assumeUnique(temp);
         assert(s1 == s2);
 
-        foreach(P; TypeTuple!(C*, const(C)*, immutable(C)*))
+        foreach (P; TypeTuple!(C*, const(C)*, immutable(C)*))
         {
             auto p1 = toUTFz!P(s1);
             assert(p1[0 .. s1.length] == s1);
@@ -2430,32 +2430,33 @@ unittest
                                 __FILE__, line));
     }
 
-    foreach(P; TypeTuple!(wchar*, const(wchar)*, immutable(wchar)*,
-                          dchar*, const(dchar)*, immutable(dchar)*))
+    foreach (P; TypeTuple!(wchar*, const(wchar)*, immutable(wchar)*,
+                           dchar*, const(dchar)*, immutable(dchar)*))
     {
         test!P("hello\U00010143\u0100\U00010143");
     }
 
-    foreach(P; TypeTuple!(char*, const(char)*, immutable(char)*,
-                          dchar*, const(dchar)*, immutable(dchar)*))
+    foreach (P; TypeTuple!( char*, const( char)*, immutable( char)*,
+                           dchar*, const(dchar)*, immutable(dchar)*))
     {
         test!P("hello\U00010143\u0100\U00010143"w);
     }
 
-    foreach(P; TypeTuple!(char*, const(char)*, immutable(char)*,
-                          wchar*, const(wchar)*, immutable(wchar)*))
+    foreach (P; TypeTuple!( char*, const( char)*, immutable( char)*,
+                           wchar*, const(wchar)*, immutable(wchar)*))
     {
         test!P("hello\U00010143\u0100\U00010143"d);
     }
 
-    foreach(S; TypeTuple!(char[], wchar[], dchar[],
-                          const(char)[], const(wchar)[], const(dchar)[]))
+    foreach (S; TypeTuple!( char[], const( char)[],
+                           wchar[], const(wchar)[],
+                           dchar[], const(dchar)[]))
     {
         auto s = to!S("hello\U00010143\u0100\U00010143");
 
-        foreach(P; TypeTuple!(char*, wchar*, dchar*,
-                              const(char)*, const(wchar)*, const(dchar)*,
-                              immutable(char)*, immutable(wchar)*, immutable(dchar)*))
+        foreach (P; TypeTuple!( char*, const( char)*, immutable( char)*,
+                               wchar*, const(wchar)*, immutable(wchar)*,
+                               dchar*, const(dchar)*, immutable(dchar)*))
         {
             test!P(s);
         }
@@ -2471,7 +2472,7 @@ unittest
     that take an $(D LPWSTR) or $(D LPCWSTR) argument.
   +/
 const(wchar)* toUTF16z(C)(const(C)[] str)
-    if(isSomeChar!C)
+    if (isSomeChar!C)
 {
     return toUTFz!(const(wchar)*)(str);
 }
@@ -2482,7 +2483,7 @@ unittest
 
     //toUTFz is already thoroughly tested, so this will just verify that
     //toUTF16z compiles properly for the various string types.
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach (S; TypeTuple!(string, wstring, dstring))
         static assert(__traits(compiles, toUTF16z(to!S("hello world"))));
 }
 
@@ -2561,7 +2562,7 @@ unittest
         $(D UTFException) if $(D str) is not well-formed.
   +/
 size_t count(C)(const(C)[] str) @trusted pure
-    if(isSomeChar!C)
+    if (isSomeChar!C)
 {
     return walkLength(str);
 }
