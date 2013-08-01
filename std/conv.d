@@ -815,7 +815,7 @@ T toImpl(T, S)(S value)
     }
     else static if (isPointer!S && is(S : const(char)*))
     {
-        return value ? cast(T) value[0 .. strlen(value)].dup : cast(string)null;
+        return value ? ()@trusted{ return value[0 .. strlen(value)].dup; }() : null;
     }
     else
     {
@@ -878,7 +878,7 @@ T toImpl(T, S)(S value)
     assert(c == "abcx");
 }
 
-/*@safe pure */unittest
+@safe pure unittest
 {
     // char* to string conversion
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
