@@ -856,7 +856,7 @@ unittest
 }
 
 /++
-Also known as "static iota", this template will generate a type tuple of values over a range.
+This template will generate a type tuple of values over a range.
 This is can particularly useful when a static $(D foreach) is desired.
 
 The range starts at $(D begin), and is increment by $(D step) until the value $(D end) has
@@ -866,97 +866,124 @@ The range returned by staticIota can be expanded upon with $(XREF typetuple,Type
 
 See also $(XREF range,iota).
 +/
-template Iota(alias end)
+template staticIota(alias end)
 {
     alias E = typeof(end);
-    alias Iota = IotaImpl!(E, 0, end, 1);
+    alias staticIota = IotaImpl!(E, 0, end, 1);
 }
 ///ditto
-template Iota(alias begin, alias end)
+template staticIota(alias begin, alias end)
 {
     alias E = CommonType!(typeof(begin), typeof(end));
-    alias Iota = IotaImpl!(E, begin, end, 1);
+    alias staticIota = IotaImpl!(E, begin, end, 1);
 }
 ///ditto
-template Iota(alias begin, alias end, alias step)
+template staticIota(alias begin, alias end, alias step)
 {
     alias E = CommonType!(typeof(begin), typeof(end), typeof(step));
-    alias Iota = IotaImpl!(E, begin, end, step);
+    alias staticIota = IotaImpl!(E, begin, end, step);
 }
 
 private template IotaImpl(E, E begin, E end, E step)
 {
-    static if((step < 0 && begin < end) || (step > 0 && begin > end) || begin == end)
+    static if (!isScalarType!E)
+    {
+        static assert(0, "staticIota: parameters must be scalaer types.");
+    }
+    else static if (step > 0 && begin + step >= end)
+    {
+        static if (begin < end)
+            alias IotaImpl = TypeTuple!begin;
+        else
+            alias IotaImpl = TypeTuple!();
+    }
+    else static if (step < 0 && begin + step <= end)
+    {
+        static if (begin > end)
+            alias IotaImpl = TypeTuple!begin;
+        else
+            alias IotaImpl = TypeTuple!();
+    }
+    else static if (begin == end)
+    {
         alias IotaImpl = TypeTuple!();
+    }
     else static if (step)
-        alias IotaImpl = TypeTuple!(begin, IotaImpl!(E, begin + step, end, step));
+    {
+        enum newbeg = begin + step;
+        enum mid1 = step + (end - newbeg) / 2;
+        enum mid = begin + mid1 - (mid1 % step);
+        alias IotaImpl = TypeTuple!(.IotaImpl!(E, begin, mid, step), .IotaImpl!(E, mid, end, step));
+    }
     else
+    {
         static assert(0, "step must be non-0 for begin != end");
+    }
 }
 
 unittest
 {
-    static assert(Iota!(0).length == 0);
+    static assert(staticIota!(0).length == 0);
 
     int[] a;
-    foreach (n; Iota!5)
+    foreach (n; staticIota!5)
         a ~= n;
     assert(a == [0, 1, 2, 3, 4]);
 
     a.length = 0;
-    foreach (n; Iota!(-5))
+    foreach (n; staticIota!(-5))
         a ~= n;
     assert(a.length == 0);
 
     a.length = 0;
-    foreach (n; Iota!(4, 7))
+    foreach (n; staticIota!(4, 7))
         a ~= n;
     assert(a == [4, 5, 6]);
 
     a.length = 0;
-    foreach (n; Iota!(-1, 4))
+    foreach (n; staticIota!(-1, 4))
         a ~= n;
     assert(a == [-1, 0, 1, 2, 3]);
 
     a.length = 0;
-    foreach (n; Iota!(4, 2))
+    foreach (n; staticIota!(4, 2))
         a ~= n;
     assert(a.length == 0);
 
     a.length = 0;
-    foreach (n; Iota!(0, 10, 2))
+    foreach (n; staticIota!(0, 10, 2))
         a ~= n;
     assert(a == [0, 2, 4, 6, 8]);
 
     a.length = 0;
-    foreach (n; Iota!(3, 15, 3))
+    foreach (n; staticIota!(3, 15, 3))
         a ~= n;
     assert(a == [3, 6, 9, 12]);
 
     a.length = 0;
-    foreach (n; Iota!(15, 3, 1))
+    foreach (n; staticIota!(15, 3, 1))
         a ~= n;
     assert(a.length == 0);
 
     a.length = 0;
-    foreach (n; Iota!(10, 0, -1))
+    foreach (n; staticIota!(10, 0, -1))
         a ~= n;
     assert(a == [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
 
     a.length = 0;
-    foreach (n; Iota!(15, 3, -2))
+    foreach (n; staticIota!(15, 3, -2))
         a ~= n;
     assert(a == [15, 13, 11, 9, 7, 5]);
 
     a.length = 0;
-    foreach(n; Iota!(0, -5, -1))
+    foreach(n; staticIota!(0, -5, -1))
         a ~= n;
     assert(a == [0, -1, -2, -3, -4]);
 
-    foreach_reverse(n; Iota!(-4, 1))
+    foreach_reverse(n; staticIota!(-4, 1))
     assert(a == [0, -1, -2, -3, -4]);
 
-    static assert(!is(typeof( Iota!(15, 3, 0) ))); // stride = 0 statically
+    static assert(!is(typeof( staticIota!(15, 3, 0) ))); // stride = 0 statically
 }
 
 unittest
@@ -964,25 +991,24 @@ unittest
     auto foo1()
     {
         double[] ret;
-        foreach(n; Iota!(0.5, 3))
+        foreach(n; staticIota!(0.5, 3))
             ret ~= n;
         return ret;
     }
     auto foo2()
     {
         double[] ret;
-        foreach(j, n; TypeTuple!(Iota!(0, 1, 0.25), 1))
+        foreach(j, n; TypeTuple!(staticIota!(0, 1, 0.25), 1))
             ret ~= n;
         return ret;
     }
     auto foo3()
     {
         string ret;
-        foreach(n; Iota!('a', 'g'))
+        foreach(n; staticIota!('a', 'g'))
             ret ~= n;
         return ret;
     }
-
     static assert(foo1() == [0.5, 1.5, 2.5]);
     static assert(foo2() == [0, 0.25, 0.5, 0.75, 1]);
     static assert(foo3() == "abcdef");
