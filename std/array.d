@@ -306,21 +306,32 @@ version(unittest)
     static assert(nDimensions!(float[][]) == 2);
 }
 
-/**
+/++
 Returns a new array of type $(D T) allocated on the garbage collected heap
 without initializing its elements.  This can be a useful optimization if every
 element will be immediately initialized.  $(D T) may be a multidimensional
-array.  In this case sizes may be specified for any number of dimensions from 1
+array.  In this case sizes may be specified for any number of dimensions from 0
 to the number in $(D T).
-*/
-auto uninitializedArray(T, I...)(I sizes)
-if(allSatisfy!(isIntegral, I))
-{
-    return arrayAllocImpl!(false, T, I)(sizes);
-}
 
+uninitializedArray is nothrow and weakly pure.
++/
+auto uninitializedArray(T, I...)(I sizes) nothrow @trusted
+if (isDynamicArray!T && allSatisfy!(isIntegral, I))
+{
+    enum isSize_t(E) = is (E : size_t);
+    alias toSize_t(E) = size_t;
+
+    static assert(allSatisfy!(isSize_t, I),
+        format("Argument types in %s are not all convertible to size_t: %s",
+        I.stringof, Filter!(templateNot!(isSize_t), I).stringof));
+
+    //Eagerlly transform non-size_t into size_t to avoid template bloat
+    alias ST = staticMap!(toSize_t, I);
+
+    return arrayAllocImpl!(false, T, ST)(sizes);
+}
 ///
-unittest
+nothrow pure unittest
 {
     double[] arr = uninitializedArray!(double[])(100);
     assert(arr.length == 100);
@@ -330,19 +341,34 @@ unittest
     assert(matrix[0].length == 31);
 }
 
-/**
+/++
 Returns a new array of type $(D T) allocated on the garbage collected heap.
-Initialization is guaranteed only for pointers, references and slices,
-for preservation of memory safety.
-*/
-auto minimallyInitializedArray(T, I...)(I sizes) @trusted
-if(allSatisfy!(isIntegral, I))
+
+Partial initialization is done for types with indirections, for preservation
+of memory safety. Note that elements will only be initialized to 0, but not
+necessarily the element type's $(D .init).
+
+minimallyInitializedArray is nothrow and weakly pure.
++/
+auto minimallyInitializedArray(T, I...)(I sizes) nothrow @trusted
+if (isDynamicArray!T && allSatisfy!(isIntegral, I))
 {
-    return arrayAllocImpl!(true, T, I)(sizes);
+    enum isSize_t(E) = is (E : size_t);
+    alias toSize_t(E) = size_t;
+
+    static assert(allSatisfy!(isSize_t, I),
+        format("Argument types in %s are not all convertible to size_t: %s",
+        I.stringof, Filter!(templateNot!(isSize_t), I).stringof));
+
+    //Eagerlly transform non-size_t into size_t to avoid template bloat
+    alias ST = staticMap!(toSize_t, I);
+
+    return arrayAllocImpl!(true, T, ST)(sizes);
 }
 
-@safe unittest
+@safe nothrow pure unittest
 {
+    minimallyInitializedArray!(int[][][][][])();
     double[] arr = minimallyInitializedArray!(double[])(100);
     assert(arr.length == 100);
 
@@ -354,48 +380,126 @@ if(allSatisfy!(isIntegral, I))
     }
 }
 
-private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes)
-if(allSatisfy!(isIntegral, I))
+private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
 {
-    static assert(sizes.length >= 1,
-        "Cannot allocate an array without the size of at least the first " ~
-        " dimension.");
-    static assert(sizes.length <= nDimensions!T,
-        to!string(sizes.length) ~ " dimensions specified for a " ~
-        to!string(nDimensions!T) ~ " dimensional array.");
+    static assert(I.length <= nDimensions!T,
+        format("%s dimensions specified for a %s dimensional array.", I.length, nDimensions!T));
 
-    alias E = typeof(T.init[0]);
+    alias E = ElementEncodingType!T;
 
-    auto ptr = (__ctfe) ?
+    E[] ret;
+
+    static if (I.length != 0)
+    {
+        static assert (is(I[0] == size_t));
+        alias size = sizes[0];
+    }
+
+    static if (I.length == 1)
+    {
+        if (__ctfe)
         {
-            static if(__traits(compiles, new E[1]))
+            static if (__traits(compiles, new E[](size)))
+                ret = new E[](size);
+            else static if (__traits(compiles, ret ~= E.init))
             {
-                return (new E[sizes[0]]).ptr;
+                try
+                {
+                    foreach (i; 0 .. size)
+                        ret ~= E.init;
+                }
+                catch (Exception e)
+                    throw new Error(e.msg);
             }
             else
-            {
-                E[] arr;
-                foreach (i; 0 .. sizes[0])
-                    arr ~= E.init;
-                return arr.ptr;
-            }
-        }() :
-        cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!(E));
-    auto ret = ptr[0..sizes[0]];
-
-    static if(sizes.length > 1)
-    {
-        foreach(ref elem; ret)
+                assert(0, "No postblit nor default init on " ~ E.stringof ~
+                    ": At least one is required for CTFE.");
+        }
+        else
         {
-            elem = uninitializedArray!(E)(sizes[1..$]);
+            import core.stdc.string : memset;
+            auto ptr = cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!E);
+            static if (minimallyInitialized && hasIndirections!E)
+                memset(ptr, 0, size * E.sizeof);
+            ret = ptr[0 .. size];
         }
     }
-    else static if(minimallyInitialized && hasIndirections!E)
+    else static if (I.length > 1)
     {
-        ret[] = E.init;
+        ret = arrayAllocImpl!(false, E[])(size);
+        foreach(ref elem; ret)
+            elem = arrayAllocImpl!(minimallyInitialized, E)(sizes[1..$]);
     }
 
     return ret;
+}
+
+nothrow pure unittest
+{
+    auto s1 = uninitializedArray!(int[])();
+    auto s2 = minimallyInitializedArray!(int[])();
+    assert(s1.length == 0);
+    assert(s2.length == 0);
+}
+
+nothrow pure unittest //@@@9803@@@
+{
+    auto a = minimallyInitializedArray!(int*[])(1);
+    assert(a[0] == null);
+    auto b = minimallyInitializedArray!(int[][])(1);
+    assert(b[0].empty);
+    auto c = minimallyInitializedArray!(int*[][])(1, 1);
+    assert(c[0][0] == null);
+}
+
+unittest //@@@10637@@@
+{
+    static struct S
+    {
+        static struct I{int i; alias i this;}
+        int* p;
+        this() @disable;
+        this(int i)
+        {
+            p = &(new I(i)).i;
+        }
+        this(this)
+        {
+            p = &(new I(*p)).i;
+        }
+        ~this()
+        {
+            assert(p != null);
+        }
+    }
+    auto a = minimallyInitializedArray!(S[])(1);
+    assert(a[0].p == null);
+    enum b = minimallyInitializedArray!(S[])(1);
+}
+
+nothrow unittest
+{
+    static struct S1
+    {
+        this() @disable;
+        this(this) @disable;
+    }
+    auto a1 = minimallyInitializedArray!(S1[][])(2, 2);
+    //enum b1 = minimallyInitializedArray!(S1[][])(2, 2);
+    static struct S2
+    {
+        this() @disable;
+        //this(this) @disable;
+    }
+    auto a2 = minimallyInitializedArray!(S2[][])(2, 2);
+    enum b2 = minimallyInitializedArray!(S2[][])(2, 2);
+    static struct S3
+    {
+        //this() @disable;
+        this(this) @disable;
+    }
+    auto a3 = minimallyInitializedArray!(S3[][])(2, 2);
+    enum b3 = minimallyInitializedArray!(S3[][])(2, 2);
 }
 
 /**
