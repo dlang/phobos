@@ -234,22 +234,6 @@ unittest
     assert(aa2 == [0:"a", 1:"b", 2:"c"]);
 }
 
-private template blockAttribute(T)
-{
-    static if (hasIndirections!(T) || is(T == void))
-    {
-        enum blockAttribute = 0;
-    }
-    else
-    {
-        enum blockAttribute = GC.BlkAttr.NO_SCAN;
-    }
-}
-unittest
-{
-    static assert(!(blockAttribute!void & GC.BlkAttr.NO_SCAN));
-}
-
 // Returns the number of dimensions in an array T.
 private template nDimensions(T)
 {
@@ -269,32 +253,71 @@ unittest
     static assert(nDimensions!(float[][]) == 2);
 }
 
-/**
-Returns a new array of type $(D T) allocated on the garbage collected heap
-without initializing its elements.  This can be a useful optimization if every
-element will be immediately initialized.  $(D T) may be a multidimensional
-array.  In this case sizes may be specified for any number of dimensions from 1
-to the number in $(D T).
-
-Examples:
-$(D_RUN_CODE
-$(ARGS
----
-double[] arr = uninitializedArray!(double[])(100);
-assert(arr.length == 100);
-
-double[][] matrix = uninitializedArray!(double[][])(42, 31);
-assert(matrix.length == 42);
-assert(matrix[0].length == 31);
----
-), $(ARGS), $(ARGS), $(ARGS import std.array;))
-*/
-auto uninitializedArray(T, I...)(I sizes)
-if(allSatisfy!(isIntegral, I))
+//The following two templates are used to validate that
+//[Un|minimally]InitializedArray's arguments can
+//actually be cast to size_t. It also does the
+//actual cast, to avoid excess template creation.
+private template isConvertibleToSizeType(Arg)
 {
-    return arrayAllocImpl!(false, T, I)(sizes);
+    enum isConvertibleToSizeType = is(Arg : size_t);
+}
+private template toSizeType(Arg)
+{
+    alias toSizeType = size_t;
+}
+unittest
+{
+    static assert( isConvertibleToSizeType!(size_t));
+    static assert( isConvertibleToSizeType!(int));
+    static assert(!isConvertibleToSizeType!(string));
+    version(X86)
+    {
+        static assert(!isConvertibleToSizeType!(ulong));
+    }
+    else
+    {
+        static assert( isConvertibleToSizeType!(ulong));
+    }
+}
+unittest
+{
+    static assert( is(toSizeType!(bool) == size_t));
+    static assert( is(toSizeType!(int)  == size_t));
+    static assert( is(toSizeType!(long) == size_t));
 }
 
+
+/++
+Returns a new array of type $(D T) allocated on the garbage collected heap.
+
+The array returned by uninitializedArray will have the same properties
+as an array allocated with $(D new). It will have $(D APPENDABLE) info, which
+allows requesting $(XREF object, capacity), or doing in-place append.
+
+uninitializedArray is nothrow. If the "final element type" is a POD with no
+indirections, then uninitializedArray is @trusted too.
++/
+auto uninitializedArray(T, I...)(I sizes)
+{
+    static assert(allSatisfy!(isConvertibleToSizeType, I),
+        format("Argument types in %s are not all convertible to size_t: %s",
+        I.stringof, Filter!(templateNot!(isConvertibleToSizeType), I).stringof));
+    
+    static assert(I.length <= nDimensions!T,
+        format("%s dimensions specified for a %s dimensional array.", I.length, nDimensions!T));
+
+    static if (I.length == 0)
+    {
+        static assert(isArray!T, T.stringof ~ " is not an array type.");
+        return T.init;
+    }
+    else
+    {
+        alias ST = staticMap!(toSizeType, I);
+        return arrayAllocImpl!(false, T, ST)(sizes);
+    }
+}
+///
 unittest
 {
     double[] arr = uninitializedArray!(double[])(100);
@@ -305,19 +328,44 @@ unittest
     assert(matrix[0].length == 31);
 }
 
-/**
+/++
 Returns a new array of type $(D T) allocated on the garbage collected heap.
-Initialization is guaranteed only for pointers, references and slices,
-for preservation of memory safety.
-*/
-auto minimallyInitializedArray(T, I...)(I sizes) @trusted
-if(allSatisfy!(isIntegral, I))
+
+Partial initialization is done for types with indirections, for preservation
+of memory safety. Note that elements will only be initialized to 0, but not
+necessarily the element type's $(D .init).
+
+The array returned by minimallyInitializedArray will have the same properties
+as an array allocated with $(D new). It will have $(D APPENDABLE) info, which
+allows requesting $(XREF object, capacity), or doing in-place append.
+
+minimallyInitializedArray is nothrow. If the "final element type" is a POD,
+then minimallyInitializedArray is @trusted too.
++/
+auto minimallyInitializedArray(T, I...)(I sizes)
 {
-    return arrayAllocImpl!(true, T, I)(sizes);
+    static assert(allSatisfy!(isConvertibleToSizeType, I),
+        format("Argument types in %s are not all convertible to size_t: %s",
+        I.stringof, Filter!(templateNot!(isConvertibleToSizeType), I).stringof));
+
+    static assert(I.length <= nDimensions!T,
+        format("%s dimensions specified for a %s dimensional array.", I.length, nDimensions!T));
+
+    static if (I.length == 0)
+    {
+        static assert(isArray!T, T.stringof ~ " is not an array type.");
+        return T.init;
+    }
+    else
+    {
+        alias ST = staticMap!(toSizeType, I);
+        return arrayAllocImpl!(true, T, ST)(sizes);
+    }
 }
 
 unittest
 {
+    minimallyInitializedArray!(int[][][][][])();
     double[] arr = minimallyInitializedArray!(double[])(100);
     assert(arr.length == 100);
 
@@ -329,48 +377,180 @@ unittest
     }
 }
 
-private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes)
-if(allSatisfy!(isIntegral, I))
+/*
+GC-allocates a 1D array of length size. Array is not initialized. APPENDBLE data is present.
+Always nothrow.
+*/
+private T[] arrayAlloc1DImpl(T)(size_t size) nothrow
 {
-    static assert(sizes.length >= 1,
-        "Cannot allocate an array without the size of at least the first " ~
-        " dimension.");
-    static assert(sizes.length <= nDimensions!T,
-        to!string(sizes.length) ~ " dimensions specified for a " ~
-        to!string(nDimensions!T) ~ " dimensional array.");
+    //This function is nothrow because:
+    //1. reseve can only throw when:
+    //  a) a throwing postblit is called. Array is empty, so not possible.
+    //  b) T is shared, and a lock is not acquired: ret has not been passed to other threads yet, so not possible
+    //2. assumeSafeAppend. It can't throw (but is not (yet) marked as such).
+    try
+    {
+        T[] ret;
+        ret.reserve(size);
+        return assumeSafeAppend(ret.ptr[0 .. size]);
+    }
+    catch(Exception)
+        assert(0);
+}
 
-    alias typeof(T.init[0]) E;
+private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes)
+{
+    alias E = ElementEncodingType!T;
+    immutable size_t size = sizes[0];
 
-    auto ptr = (__ctfe) ?
+    E[] ret;
+    static if (I.length == 1)
+    {
+        if (__ctfe)
         {
-            static if(__traits(compiles, new E[1]))
+            static if (__traits(compiles, new E[](1)))
+                ret = new E[](size);
+            else
             {
-                return (new E[sizes[0]]).ptr;
+                foreach (i; 0 .. size)
+                    ret ~= E.init;
+            }
+        }
+        else
+        {
+            import core.stdc.string : memset;
+            static if (__traits(isPOD, E) && hasIndirections!E && minimallyInitialized)
+                () @trusted {
+                    ret = arrayAlloc1DImpl!E(size);
+                    memset(ret.ptr, 0, size * E.sizeof);
+                }();
+            else static if (__traits(isPOD, E) && !hasIndirections!E )
+            {
+                () @trusted {ret = arrayAlloc1DImpl!E(size);}();
             }
             else
             {
-                E[] arr;
-                foreach (i; 0 .. sizes[0])
-                    arr ~= E.init;
-                return arr.ptr;
+                ret = arrayAlloc1DImpl!E(size);
+                static if (hasIndirections!E && minimallyInitialized)
+                    memset(ret.ptr, 0, size * E.sizeof);
             }
-        }() :
-        cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!(E));
-    auto ret = ptr[0..sizes[0]];
-
-    static if(sizes.length > 1)
-    {
-        foreach(ref elem; ret)
-        {
-            elem = uninitializedArray!(E)(sizes[1..$]);
         }
     }
-    else static if(minimallyInitialized && hasIndirections!E)
+    else
     {
-        ret[] = E.init;
-    }
+        if (__ctfe)
+            ret = new E[](size);
+        else
+            ()@trusted{ret = arrayAlloc1DImpl!E(size);}();
+
+        foreach(ref elem; ret)
+            elem = arrayAllocImpl!(minimallyInitialized, E)(sizes[1..$]);
+    } 
 
     return ret;
+}
+unittest
+{
+    //Check arrayAllocImpl safety.
+    static assert( (FunctionAttribute.safe & functionAttributes!(minimallyInitializedArray!(int[], size_t))));
+    static assert( (FunctionAttribute.safe & functionAttributes!(       uninitializedArray!(int[], size_t))));
+
+    static assert( (FunctionAttribute.safe & functionAttributes!(minimallyInitializedArray!(int*[], size_t))));
+    static assert(!(FunctionAttribute.safe & functionAttributes!(       uninitializedArray!(int*[], size_t))));
+
+    static assert( (FunctionAttribute.safe & functionAttributes!(minimallyInitializedArray!(int[][], size_t))));
+    static assert(!(FunctionAttribute.safe & functionAttributes!(       uninitializedArray!(int[][], size_t))));
+
+    static assert( (FunctionAttribute.safe & functionAttributes!(minimallyInitializedArray!(int*[][], size_t))));
+    static assert(!(FunctionAttribute.safe & functionAttributes!(       uninitializedArray!(int*[][], size_t))));
+
+    static assert( (FunctionAttribute.safe & functionAttributes!(minimallyInitializedArray!(int[][], size_t, size_t))));
+    static assert( (FunctionAttribute.safe & functionAttributes!(       uninitializedArray!(int[][], size_t, size_t))));
+
+    static assert( (FunctionAttribute.safe & functionAttributes!(minimallyInitializedArray!(int*[][], size_t, size_t))));
+    static assert(!(FunctionAttribute.safe & functionAttributes!(       uninitializedArray!(int*[][], size_t, size_t))));
+
+    static struct SS
+    {
+        int i;
+    }
+    static struct SP
+    {
+        int* p;
+    }
+    static struct SB
+    {
+        this(this){}
+    }
+    static assert( (FunctionAttribute.safe & functionAttributes!(minimallyInitializedArray!(SS[], size_t))));
+    static assert( (FunctionAttribute.safe & functionAttributes!(       uninitializedArray!(SS[], size_t))));
+    static assert( (FunctionAttribute.safe & functionAttributes!(minimallyInitializedArray!(SP[], size_t))));
+    static assert(!(FunctionAttribute.safe & functionAttributes!(       uninitializedArray!(SP[], size_t))));
+    static assert(!(FunctionAttribute.safe & functionAttributes!(minimallyInitializedArray!(SB[], size_t))));
+    static assert(!(FunctionAttribute.safe & functionAttributes!(       uninitializedArray!(SB[], size_t))));
+}
+
+unittest //@@@9803@@@
+{
+    auto a = minimallyInitializedArray!(int*[])(1);
+    assert(a[0] == null);
+    auto b = minimallyInitializedArray!(int[][])(1);
+    assert(b[0].empty);
+    auto c = minimallyInitializedArray!(int*[][])(1, 1);
+    assert(c[0][0] == null);
+}
+
+unittest //@@@10637@@@
+{
+    static struct S
+    {
+        static struct I{int i; alias i this;}
+        int* p;
+        this() @disable;
+        this(int i)
+        {
+            p = &(new I(i)).i;
+        }
+        this(this)
+        {
+            p = &(new I(*p)).i;
+        }
+        ~this()
+        {
+            assert(p != null);
+        }
+    }
+    auto a = minimallyInitializedArray!(S[])(1);
+    assert(a[0].p == null);
+    enum b = minimallyInitializedArray!(S[])(1);
+}
+
+unittest //Check safety/nothrow and capacity (related: @@@10641@@@)
+{
+    auto s = () nothrow @safe {return minimallyInitializedArray!(int[][][])(10, 10);}();
+    foreach (e; s)
+    {
+        foreach (ee; e)
+        {
+            foreach (eee; ee)
+                assert(e.empty);
+            assert(e.capacity);
+        }
+        assert(e.capacity);
+    }
+    assert(s.capacity);
+
+    enum es = arrayAllocImpl!(false, int[][])(10, 10);
+    auto as = es;
+    foreach (e; as)
+        assert(e.capacity);
+    assert(as.capacity);
+
+    () nothrow @safe {
+        minimallyInitializedArray!(int[][])(10);
+        minimallyInitializedArray!(int[][])(10, 10);
+        minimallyInitializedArray!(int*[][])(10, 10);
+    }();
 }
 
 /**
