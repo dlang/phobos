@@ -904,25 +904,6 @@ unittest
     The variadic overload is guaranteed to only perform a single
     allocation, as is the range version if $(D paths) is a forward
     range.
-
-    Examples:
-    ---
-    version (Posix)
-    {
-        assert (buildPath("foo", "bar", "baz") == "foo/bar/baz");
-        assert (buildPath("/foo/", "bar/baz")  == "/foo/bar/baz");
-        assert (buildPath("/foo", "/bar")      == "/bar");
-    }
-
-    version (Windows)
-    {
-        assert (buildPath("foo", "bar", "baz") == `foo\bar\baz`);
-        assert (buildPath(`c:\foo`, `bar\baz`) == `c:\foo\bar\baz`);
-        assert (buildPath("foo", `d:\bar`)     == `d:\bar`);
-        assert (buildPath("foo", `\bar`)       == `\bar`);
-        assert (buildPath(`c:\foo`, `\bar`)    == `c:\bar`);
-    }
-    ---
 */
 immutable(ElementEncodingType!(ElementType!Range))[]
     buildPath(Range)(Range segments)
@@ -940,7 +921,7 @@ immutable(ElementEncodingType!(ElementType!Range))[]
     // Otherwise, just venture a guess and resize later if necessary.
     else size_t precalc = 255;
 
-    auto buf = new Unqual!(ElementEncodingType!(ElementType!(Range)))[](precalc);
+    auto buf = new Unqual!(ElementEncodingType!(ElementType!Range))[](precalc);
     size_t pos = 0;
     foreach (segment; segments)
     {
@@ -949,7 +930,7 @@ immutable(ElementEncodingType!(ElementType!Range))[]
         {
             immutable neededLength = pos + segment.length + 1;
             if (buf.length < neededLength)
-                buf.length += neededLength + buf.length;
+                buf.length = reserve(buf, neededLength + buf.length/2);
         }
         if (pos > 0)
         {
@@ -988,7 +969,27 @@ immutable(C)[] buildPath(C)(const(C[])[] paths...)
     return buildPath!(typeof(paths))(paths);
 }
 
+///
 unittest
+{
+    version (Posix)
+    {
+        assert (buildPath("foo", "bar", "baz") == "foo/bar/baz");
+        assert (buildPath("/foo/", "bar/baz")  == "/foo/bar/baz");
+        assert (buildPath("/foo", "/bar")      == "/bar");
+    }
+
+    version (Windows)
+    {
+        assert (buildPath("foo", "bar", "baz") == `foo\bar\baz`);
+        assert (buildPath(`c:\foo`, `bar\baz`) == `c:\foo\bar\baz`);
+        assert (buildPath("foo", `d:\bar`)     == `d:\bar`);
+        assert (buildPath("foo", `\bar`)       == `\bar`);
+        assert (buildPath(`c:\foo`, `\bar`)    == `c:\bar`);
+    }
+}
+
+unittest // non-documented
 {
     // ir() wraps an array in a plain (i.e. non-forward) input range, so that
     // we can test both code paths
