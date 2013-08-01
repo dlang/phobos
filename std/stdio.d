@@ -1190,11 +1190,13 @@ at a time.
 The element type for the range will be $(D Char[]). Range primitives 
 may throw $(D StdioException) on I/O error.
 
-Params:
-Char = Character type for each line, defaulting to $(D char). If 
-Char is mutable then each $(D front) will not persist after $(D 
+Note:
+Each $(D front) will not persist after $(D 
 popFront) is called, so the caller must copy its contents (e.g. by 
 calling $(D to!string)) if retention is needed.
+
+Params:
+Char = Character type for each line, defaulting to $(D char).
 keepTerminator = Use $(D KeepTerminator.yes) to include the 
 terminator at the end of each line.
 terminator = Line separator ($(D '\n') by default).
@@ -1216,19 +1218,26 @@ void main()
 
 Example:
 ----
-import std.stdio;
-// Count lines in file using a foreach
+import std.range, std.stdio;
+// Read lines using foreach.
 void main()
 {
-    auto file = File("file.txt"); // open for reading
-    ulong lineCount = 0;
-    foreach (line; file.byLine())
+    auto file = File("file.txt"); // Open for reading
+    auto range = file.byLine();
+    // Print first three lines
+    foreach (line; range.take(3))
+        writeln(line);
+    // Print remaining lines beginning with '#'
+    foreach (line; range)
     {
-        ++lineCount;
+        if (!line.empty && line[0] == '#')
+            writeln(line);
     }
-    writeln("Lines in file: ", lineCount);
 }
 ----
+Notice that neither example accesses the line data returned by
+$(D front) after the corresponding $(D popFront) call is made (because
+the contents may well have changed).
 */
     auto byLine(Terminator = char, Char = char)
     (KeepTerminator keepTerminator = KeepTerminator.no,
