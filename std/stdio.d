@@ -1090,13 +1090,20 @@ Allows to directly use range operations on lines of a file.
             impl = Impl(f, kt, terminator);
         }
         
-        @property
-        ref get()
+        @property bool empty()
         {
-            return impl;
+            return impl.refCountedPayload.empty;
         }
-        
-        alias get this;
+
+        @property Char[] front()
+        {
+            return impl.refCountedPayload.front;
+        }
+
+        void popFront()
+        {
+            impl.refCountedPayload.popFront();
+        }
     }
 
     private struct ByLineImpl(Char, Terminator)
