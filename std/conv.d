@@ -774,7 +774,8 @@ $(UL
             and their case is determined by the $(D_PARAM letterCase) parameter.)))
   $(LI All floating point types to all string types.)
   $(LI Pointer to string conversions prints the pointer as a $(D size_t) value.
-       If pointer is $(D char*), treat it as C-style strings.))
+       If pointer is $(D char*), treat it as C-style strings.
+       In that case, this function is $(D @system).))
 */
 T toImpl(T, S)(S value)
     if (!(isImplicitlyConvertible!(S, T) &&
@@ -815,6 +816,7 @@ T toImpl(T, S)(S value)
     }
     else static if (isPointer!S && is(S : const(char)*))
     {
+        // It is unsafe because we cannot guarantee that the pointer is null terminated.
         return value ? cast(T) value[0 .. strlen(value)].dup : cast(string)null;
     }
     else
