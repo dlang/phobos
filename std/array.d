@@ -84,11 +84,25 @@ if (isIterable!Range && !isNarrowString!Range)
     struct Foo
     {
         int a;
-        @safe auto opAssign(Foo foo)
+        @safe auto opEquals(Foo foo)
+        {
+            return a == foo.a;
+        }
+    }
+    auto a = array([Foo(1), Foo(2), Foo(3), Foo(4), Foo(5)][]);
+    assert(equal(a, [Foo(1), Foo(2), Foo(3), Foo(4), Foo(5)]));
+}
+
+@system unittest
+{
+    struct Foo
+    {
+        int a;
+        auto opAssign(Foo foo)
         {
             a = foo.a;
         }
-        @safe auto opEquals(Foo foo)
+        auto opEquals(Foo foo)
         {
             return a == foo.a;
         }
