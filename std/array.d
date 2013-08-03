@@ -73,21 +73,17 @@ if (isIterable!Range && !isNarrowString!Range)
     }
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     auto a = array([1, 2, 3, 4, 5][]);
     assert(a == [ 1, 2, 3, 4, 5 ]);
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     struct Foo
     {
         int a;
-        @safe auto opEquals(Foo foo)
-        {
-            return a == foo.a;
-        }
     }
     auto a = array([Foo(1), Foo(2), Foo(3), Foo(4), Foo(5)][]);
     assert(equal(a, [Foo(1), Foo(2), Foo(3), Foo(4), Foo(5)]));
