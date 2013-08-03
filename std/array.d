@@ -42,7 +42,7 @@ if (isIterable!Range && !isNarrowString!Range)
     {
         if(r.length == 0) return null;
 
-        auto result = ()@trusted{ return uninitializedArray!(Unqual!(E)[])(r.length); }();
+        auto result = ()@trusted{ return uninitializedArray!(Unqual!E[])(r.length); }();
 
         size_t i = 0;
         foreach (e; r)
@@ -52,7 +52,7 @@ if (isIterable!Range && !isNarrowString!Range)
                        !is(typeof(result[i] == e)))
             {
                 // this should be in-place construction
-                emplace!E(result.ptr + i, e);
+                emplace(result.ptr + i, e);
             }
             else
             {
