@@ -48,11 +48,11 @@ if (isIterable!Range && !isNarrowString!Range)
         foreach (e; r)
         {
             // hacky
-            static if (is(typeof(e.opAssign(e))))
+            static if (is(typeof(result[i].opAssign(e))) ||
+                       !is(typeof(result[i] == e)))
             {
                 // this should be in-place construction
-                auto ithptr = ()@trusted{ return result.ptr + i; }();
-                emplace!E(ithptr, e);
+                emplace!E(result.ptr + i, e);
             }
             else
             {
