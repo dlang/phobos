@@ -1330,51 +1330,101 @@ unittest
 Split the string $(D s) into an array of words, using whitespace as
 delimiter. Runs of whitespace are merged together (no empty words are produced).
  */
-S[] split(S)(S s) if (isSomeString!S)
+@safe pure
+S[] split(S)(S s)
+    if (isNarrowString!S)
 {
-    size_t istart;
-    bool inword = false;
-    S[] result;
+    S[] result; //TODO: use appender once safe and pure
 
-    foreach (i; 0 .. s.length)
+    s = s.stripRight(); //Means there is no trailing ws: There is *always* text after a white
+    if (s.empty)
+        return result;
+
+    size_t startIndex; //start word
+    size_t nextIndex; //look-ahead index
+
+    for ( ; ; startIndex = nextIndex )
+        if(!std.uni.isWhite(decode(s, nextIndex)))
+            break;
+
+    immutable len = s.length;
+    find_token:
+    for ( size_t currIndex = nextIndex ; currIndex < len ; currIndex = nextIndex )
     {
-        switch (s[i])
+        if (std.uni.isWhite(decode(s, nextIndex)))
         {
-        case ' ': case '\t': case '\f': case '\r': case '\n': case '\v':
-            if (inword)
-            {
-                result ~= s[istart .. i];
-                inword = false;
-            }
-            break;
-        default:
-            if (!inword)
-            {
-                istart = i;
-                inword = true;
-            }
-            break;
+            result ~= s[startIndex .. currIndex];
+            for ( startIndex = nextIndex ; ; startIndex = nextIndex )
+                if(!std.uni.isWhite(decode(s, nextIndex)))
+                    goto find_token;
         }
     }
-    if (inword)
-        result ~= s[istart .. $];
+    result ~= s[startIndex .. len];
     return result;
 }
+/// ditto
+@safe pure nothrow
+S[] split(S)(S s)
+    if (is(S : const dchar[]) && !isAggregateType!S)
+{
+    S[] result; //TODO: use appender once safe and pure and nothrow
 
+    s = s.stripRight(); //Means there is no trailing ws: There is *always* text after a white
+    if (s.empty) 
+        return result;
+
+    size_t startIndex;
+    for ( ; ; ++startIndex )
+        if (!std.uni.isWhite(s[startIndex]))
+            break;
+
+    immutable len = s.length;
+    find_token:
+    for ( size_t currIndex = startIndex + 1 ; currIndex < len ; ++currIndex )
+    {
+        if (std.uni.isWhite(s[currIndex]))
+        {
+            result ~= s[startIndex .. currIndex];
+            for ( startIndex = currIndex + 1 ; ; ++startIndex )
+                if (!std.uni.isWhite(s[startIndex]))
+                    goto find_token;
+        }
+    }
+    result ~= s[startIndex .. len];
+    return result;
+}
 unittest
 {
-    foreach (S; TypeTuple!(string, wstring, dstring))
-    {
-        debug(std_array) printf("array.split1\n");
-        S s = " \t\npeter paul\tjerry \n";
-        assert(equal(split(s), [ to!S("peter"), to!S("paul"), to!S("jerry") ]));
+    static auto makeEntry(S)(string l, string[] r)
+    {return tuple(l.to!S(), r.to!(S[])());}
 
-        S s2 = " \t\npeter paul\tjerry";
-        assert(equal(split(s2), [ to!S("peter"), to!S("paul"), to!S("jerry") ]));
+    foreach (S; TypeTuple!(string, wstring, dstring,))
+    {
+        auto entries =
+        [
+            makeEntry!S("", []),
+            makeEntry!S(" ", []),
+            makeEntry!S("hello", ["hello"]),
+            makeEntry!S(" hello ", ["hello"]),
+            makeEntry!S("  h  e  l  l  o ", ["h", "e", "l", "l", "o"]),
+            makeEntry!S("peter\t\npaul\rjerry", ["peter", "paul", "jerry"]),
+            makeEntry!S(" \t\npeter paul\tjerry \n", ["peter", "paul", "jerry"]),
+            makeEntry!S("\u2000日\u202F本\u205F語\u3000", ["日", "本", "語"]),
+            makeEntry!S("　　哈・郎博尔德｝　　　　___一个", ["哈・郎博尔德｝", "___一个"])
+        ];
+        foreach (entry; entries)
+            assert(entry[0].split() == entry[1], format("got: %s, expected: %s.", entry[0].split(), entry[1]));
     }
 
+    //Just to test that an immutable is split-able
     immutable string s = " \t\npeter paul\tjerry \n";
     assert(equal(split(s), ["peter", "paul", "jerry"]));
+
+    //Test ctfe
+    enum ctfe1 = "\u2000日\u202F本\u205F語\u3000".split();
+    enum ctfe2 = "\u2000日\u202F本\u205F語\u3000"d.split();
+    static assert(ctfe1 == ["日", "本", "語"]);
+    static assert(ctfe2 == ["日"d, "本", "語"]);
 }
 
 /**

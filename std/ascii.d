@@ -200,7 +200,12 @@ unittest
   +/
 bool isWhite(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & _SPC) : false;
+    return c < 0x80 ? _fastIsWhite(c) : false;
+}
+//Internal function called by uni: Checks isWhite, pre-supposing c < 0x80
+package bool _fastIsWhite(dchar c) @safe pure nothrow
+{
+    return cast(bool)(_ctype[c] & _SPC);
 }
 
 unittest
