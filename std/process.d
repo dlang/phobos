@@ -1581,7 +1581,7 @@ string[] errors;
 foreach (line; pipes.stderr.byLine) errors ~= line.idup;
 ---
 */
-ProcessPipes pipeProcess(string[] args,
+ProcessPipes pipeProcess(in char[][] args,
                          Redirect redirectFlags = Redirect.all,
                          const string[string] env = null,
                          Config config = Config.none)
@@ -1591,7 +1591,7 @@ ProcessPipes pipeProcess(string[] args,
 }
 
 /// ditto
-ProcessPipes pipeProcess(string program,
+ProcessPipes pipeProcess(in char[] program,
                          Redirect redirectFlags = Redirect.all,
                          const string[string] env = null,
                          Config config = Config.none)
@@ -1601,7 +1601,7 @@ ProcessPipes pipeProcess(string program,
 }
 
 /// ditto
-ProcessPipes pipeShell(string command,
+ProcessPipes pipeShell(in char[] command,
                        Redirect redirectFlags = Redirect.all,
                        const string[string] env = null,
                        Config config = Config.none)
@@ -1915,7 +1915,7 @@ Throws:
 $(LREF ProcessException) on failure to start the process.$(BR)
 $(XREF stdio,StdioException) on failure to capture output.
 */
-auto execute(string[] args,
+auto execute(in char[][] args,
              const string[string] env = null,
              Config config = Config.none,
              size_t maxOutput = size_t.max)
@@ -1925,7 +1925,7 @@ auto execute(string[] args,
 }
 
 /// ditto
-auto execute(string program,
+auto execute(in char[] program,
              const string[string] env = null,
              Config config = Config.none,
              size_t maxOutput = size_t.max)
@@ -1935,7 +1935,7 @@ auto execute(string program,
 }
 
 /// ditto
-auto executeShell(string command,
+auto executeShell(in char[] command,
                   const string[string] env = null,
                   Config config = Config.none,
                   size_t maxOutput = size_t.max)
@@ -2574,7 +2574,7 @@ static:
     See_also:
     $(LREF environment.get), which doesn't throw on failure.
     */
-    string opIndex(string name) @safe
+    string opIndex(in char[] name) @safe
     {
         string value;
         enforce(getImpl(name, value), "Environment variable not found: "~name);
@@ -2602,7 +2602,7 @@ static:
     }
     ---
     */
-    string get(string name, string defaultValue = null) @safe //TODO: nothrow
+    string get(in char[] name, string defaultValue = null) @safe //TODO: nothrow
     {
         string value;
         auto found = getImpl(name, value);
@@ -2623,7 +2623,7 @@ static:
     $(OBJECTREF Exception) if the environment variable could not be added
         (e.g. if the name is invalid).
     */
-    string opIndexAssign(string value, string name) @trusted
+    inout(char)[] opIndexAssign(inout char[] value, in char[] name) @trusted
     {
         version (Posix)
         {
@@ -2656,7 +2656,7 @@ static:
     If the variable isn't in the environment, this function returns
     successfully without doing anything.
     */
-    void remove(string name) @trusted // TODO: @safe nothrow
+    void remove(in char[] name) @trusted // TODO: @safe nothrow
     {
         version (Windows)    SetEnvironmentVariableW(toUTF16z(name), null);
         else version (Posix) core.sys.posix.stdlib.unsetenv(toStringz(name));
@@ -2733,7 +2733,7 @@ private:
     }
 
     // Retrieves the environment variable, returns false on failure.
-    bool getImpl(string name, out string value) @trusted //TODO: nothrow
+    bool getImpl(in char[] name, out string value) @trusted //TODO: nothrow
     {
         version (Windows)
         {
