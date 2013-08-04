@@ -49,7 +49,7 @@ if (isIterable!Range && !isNarrowString!Range)
         {
             // hacky
             static if (is(typeof(result[i].opAssign(e))) ||
-                       !is(typeof(result[i] == e)))
+                       !is(typeof(result[i] = e)))
             {
                 // this should be in-place construction
                 emplace(result.ptr + i, e);
