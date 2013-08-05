@@ -4103,7 +4103,7 @@ unittest
         auto tSlow = task!slowFun();
         pool1.put(tSlow);
         pool1.finish();
-        tSlow.yieldForce();
+        tSlow.yieldForce;
         // Can't assert that pool1.status == PoolState.stopNow because status
         // doesn't change until after the "done" flag is set and the waiting
         // thread is woken up.

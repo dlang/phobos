@@ -339,6 +339,8 @@ version(unittest)
     mixin(dummyRanges);
 }
 
+private T* addressOf(T)(ref T val) { return &val; }
+
 /**
 $(D auto map(Range)(Range r) if (isInputRange!(Unqual!Range));)
 
@@ -1163,9 +1165,11 @@ void uninitializedFill(Range, Value)(Range range, Value filler)
 {
     alias ElementType!Range T;
     static if (hasElaborateAssign!T)
+    {
         // Must construct stuff by the book
         for (; !range.empty; range.popFront())
-            emplace(&range.front(), filler);
+            emplace(addressOf(range.front), filler);
+    }
     else
         // Doesn't matter whether fill is initialized or not
         return fill(range, filler);
@@ -1208,13 +1212,13 @@ void initializeAll(Range)(Range range)
         auto p = typeid(T).init().ptr;
         if (p)
             for ( ; !range.empty ; range.popFront() )
-                memcpy(&range.front(), p, T.sizeof);
+                memcpy(addressOf(range.front), p, T.sizeof);
         else
             static if (isDynamicArray!Range)
                 memset(range.ptr, 0, range.length * T.sizeof);
             else
                 for ( ; !range.empty ; range.popFront() )
-                    memset(&range.front(), 0, T.sizeof);
+                    memset(addressOf(range.front), 0, T.sizeof);
     }
     else
         fill(range, T.init);
@@ -9462,7 +9466,7 @@ makeIndex(
     // assume collection already ordered
     size_t i;
     for (; !r.empty; r.popFront(), ++i)
-        index[i] = &(r.front);
+        index[i] = addressOf(r.front);
     enforce(index.length == i);
     // sort the index
     sort!((a, b) => binaryFun!less(*a, *b), ss)(index);
