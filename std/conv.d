@@ -880,7 +880,7 @@ T toImpl(T, S)(S value)
     assert(c == "abcx");
 }
 
-/*@safe pure */unittest
+@system pure unittest
 {
     // char* to string conversion
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
