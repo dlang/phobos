@@ -867,6 +867,21 @@ void main()
         }
     }
 
+    unittest
+    {
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "cześć \U0002000D");
+        scope(exit) std.file.remove(deleteme);
+        uint[] lengths=[12,8,7];
+        foreach (uint i,C; Tuple!(char, wchar, dchar).Types)
+        {
+            immutable(C)[] witness = "cześć \U0002000D";
+            auto buf = File(deleteme).readln!(immutable(C)[])();
+            assert(buf.length==lengths[i]);
+            assert(buf==witness);
+        }
+    }
+
 /**
 Read line from the file handle and write it to $(D buf[]), including
 terminating character.
