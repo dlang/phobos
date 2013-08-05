@@ -2716,7 +2716,7 @@ template wrap(Targets...)
 if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
 {
     // strict upcast
-    @property wrap(Source)(inout Source src) @trusted pure nothrow
+    auto wrap(Source)(inout Source src) @trusted pure nothrow
     if (Targets.length == 1 && is(Source : Targets[0]))
     {
         alias T = Select!(is(Source == shared), shared Targets[0], Targets[0]);
@@ -2726,7 +2726,7 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
     template wrap(Source)
     if (!allSatisfy!(Bind!(isImplicitlyConvertible, Source), Targets))
     {
-        @property wrap(inout Source src)
+        auto wrap(inout Source src)
         {
             static assert(hasRequireMethods!(),
                           "Source "~Source.stringof~
@@ -2859,10 +2859,21 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
                     return r;
                 }
                 enum n = to!string(i);
+                static if (fa & FunctionAttribute.property)
+                {
+                    static if (ParameterTypeTuple!(TargetMembers[i].type).length == 0)
+                        enum fbody = "_wrap_source."~name;
+                    else
+                        enum fbody = "_wrap_source."~name~" = forward!args";
+                }
+                else
+                {
+                        enum fbody = "_wrap_source."~name~"(forward!args)";
+                }
                 enum generateFun =
                     "override "~stc~"ReturnType!(TargetMembers["~n~"].type) "
                     ~ name~"(ParameterTypeTuple!(TargetMembers["~n~"].type) args) "~mod~
-                    "{ return _wrap_source."~name~"(forward!args); }";
+                    "{ return "~fbody~"; }";
             }
 
         public:
@@ -2891,14 +2902,14 @@ template unwrap(Target)
 if (isMutable!Target)
 {
     // strict downcast
-    @property unwrap(Source)(inout Source src) @trusted pure nothrow
+    auto unwrap(Source)(inout Source src) @trusted pure nothrow
     if (is(Target : Source))
     {
         alias T = Select!(is(Source == shared), shared Target, Target);
         return cast(inout T)(src);
     }
     // structural downcast
-    @property unwrap(Source)(inout Source src) @trusted pure nothrow
+    auto unwrap(Source)(inout Source src) @trusted pure nothrow
     if (!is(Target : Source))
     {
         alias T = Select!(is(Source == shared), shared Target, Target);
@@ -2977,7 +2988,7 @@ unittest
     // structural upcast (two steps)
     Quack qx = h1.wrap!Quack;   // Human -> Quack
     Flyer fx = qx.wrap!Flyer;   // Quack -> Flyer
-    assert(fx.height() == 20);  // calls Human.height
+    assert(fx.height == 20);    // calls Human.height
     // strucural downcast (two steps)
     Quack qy = fx.unwrap!Quack; // Flyer -> Quack
     Human hy = qy.unwrap!Human; // Quack -> Human
