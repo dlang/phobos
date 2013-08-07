@@ -2432,7 +2432,8 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
             if (_frontLength != _frontLength.max) return;
             assert(!_input.empty);
             // compute front length
-            _frontLength = _input.length - find(_input, _separator).length;
+            _frontLength = (_separator.empty) ? 1 :
+                           _input.length - find(_input, _separator).length;
             static if (isBidirectionalRange!Range)
                 if (_frontLength == _input.length) _backLength = _frontLength;
         }
@@ -2605,6 +2606,17 @@ unittest
         //writeln("{", e, "}");
     }
     assert(equal(sp6, ["", ""][]));
+}
+
+unittest
+{
+    // Issue 10773
+    auto s = splitter("abc", "");
+    auto expected = ["a", "b", "c"];
+    foreach (e; s) {
+        assert(e.equal(expected.front));
+        expected.popFront();
+    }
 }
 
 auto splitter(alias isTerminator, Range)(Range input)
