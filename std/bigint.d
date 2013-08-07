@@ -826,7 +826,7 @@ unittest // 8435 & 10118
     aa[BigInt(123)] = 321;
     assert(aa[BigInt(123)] == 321);
 
-    auto keys = aa.byKey();
+    auto keys = aa.byKey;
     assert(keys.front == BigInt(123));
     keys.popFront();
     assert(keys.empty);
