@@ -924,7 +924,7 @@ immutable(ElementEncodingType!(ElementType!Range))[]
     // If this is a forward range, we can pre-calculate a maximum length.
     static if (isForwardRange!Range)
     {
-        auto segments2 = segments.save();
+        auto segments2 = segments.save;
         size_t precalc = 0;
         foreach (segment; segments2) precalc += segment.length + 1;
     }
