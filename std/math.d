@@ -47,7 +47,7 @@
  *      HALF = &frac12;
  *
  * Copyright: Copyright Digital Mars 2000 - 2011.
- *            D implementations of tan, atan, atan2, floor and ceil functions are
+ *            D implementations of tan, atan, atan2, exp, floor and ceil functions are
  *            Copyright (C) 2001 Stephen L. Moshier <steve@moshier.net>
  *            and are incorporated herein by permission of the author.  The author
  *            reserves the right to distribute this material elsewhere under different
@@ -1280,7 +1280,53 @@ real exp(real x) @trusted pure nothrow
     }
     else
     {
-        static assert (0, "Not implemented");
+        // Coefficients for exp(x)
+        static immutable real[3] P = [
+            9.9999999999999999991025E-1L,
+            3.0299440770744196129956E-2L,
+            1.2617719307481059087798E-4L,
+        ];
+        static immutable real[4] Q = [
+            2.0000000000000000000897E0L,
+            2.2726554820815502876593E-1L,
+            2.5244834034968410419224E-3L,
+            3.0019850513866445504159E-6L,
+        ];
+
+        // C1 + C2 = LN2.
+        enum real C1 = 6.9314575195312500000000E-1L;
+        enum real C2 = 1.428606820309417232121458176568075500134E-6L;
+
+        // Overflow and Underflow limits.
+        enum real OF =  1.1356523406294143949492E4L;
+        enum real UF = -1.1432769596155737933527E4L;
+
+        // Special cases.
+        if (isNaN(x))
+            return x;
+        if (x > OF)
+            return real.infinity;
+        if (x < UF)
+            return 0.0;
+
+        // Express: e^^x = e^^g * 2^^n
+        //   = e^^g * e^^(n * LOG2E)
+        //   = e^^(g + n * LOG2E)
+        int n = cast(int)floor(LOG2E * x + 0.5);
+        x -= n * C1;
+        x -= n * C2;
+
+        // Rational approximation for exponential of the fractional part:
+        //  e^^x = 1 + 2x P(x^^2) / (Q(x^^2) - P(x^^2))
+        real xx = x * x;
+        real px = x * poly(xx, P);
+        x = px / (poly(xx, Q) - px);
+        x = 1.0 + ldexp(x, 1);
+
+        // Scale by power of 2.
+        x = ldexp(x, n);
+
+        return x;
     }
 }
 
