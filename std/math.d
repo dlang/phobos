@@ -47,7 +47,7 @@
  *      HALF = &frac12;
  *
  * Copyright: Copyright Digital Mars 2000 - 2011.
- *            D implementations of tan, atan, atan2, exp, expm1, exp2,
+ *            D implementations of tan, atan, atan2, exp, expm1, exp2, log,
  *            floor and ceil functions are
  *            Copyright (C) 2001 Stephen L. Moshier <steve@moshier.net>
  *            and are incorporated herein by permission of the author.  The author
@@ -2297,7 +2297,110 @@ real log(real x) @safe pure nothrow
     version (INLINE_YL2X)
         return yl2x(x, LN2);
     else
-        static assert (0, "Not implemented");
+    {
+        // Coefficients for log(1 + x)
+        static immutable real[7] P = [
+            2.0039553499201281259648E1L,
+            5.7112963590585538103336E1L,
+            6.0949667980987787057556E1L,
+            2.9911919328553073277375E1L,
+            6.5787325942061044846969E0L,
+            4.9854102823193375972212E-1L,
+            4.5270000862445199635215E-5L,
+        ];
+        static immutable real[7] Q = [
+            6.0118660497603843919306E1L,
+            2.1642788614495947685003E2L,
+            3.0909872225312059774938E2L,
+            2.2176239823732856465394E2L,
+            8.3047565967967209469434E1L,
+            1.5062909083469192043167E1L,
+            1.0000000000000000000000E0L,
+        ];
+
+        // Coefficients for log(x)
+        static immutable real[4] R = [
+           -3.5717684488096787370998E1L,
+            1.0777257190312272158094E1L,
+           -7.1990767473014147232598E-1L,
+            1.9757429581415468984296E-3L,
+        ];
+        static immutable real[4] S = [
+           -4.2861221385716144629696E2L,
+            1.9361891836232102174846E2L,
+           -2.6201045551331104417768E1L,
+            1.0000000000000000000000E0L,
+        ];
+
+        // C1 + C2 = LN2.
+        enum real C1 = 6.9314575195312500000000E-1L;
+        enum real C2 = 1.4286068203094172321215E-6L;
+
+        // Special cases.
+        if (isNaN(x))
+            return x;
+        if (isInfinity(x) && !signbit(x))
+            return x;
+        if (x == 0.0)
+            return -real.infinity;
+        if (x < 0.0)
+            return real.nan;
+
+        // Separate mantissa from exponent.
+        // Note, frexp is used so that denormal numbers will be handled properly.
+        real y, z;
+        int exp;
+
+        x = frexp(x, exp);
+
+        // Logarithm using log(x) = z + z^^3 P(z) / Q(z),
+        // where z = 2(x - 1)/(x + 1)
+        if((exp > 2) || (exp < -2))
+        {
+            if(x < SQRT1_2)
+            {   // 2(2x - 1)/(2x + 1)
+                exp -= 1;
+                z = x - 0.5;
+                y = 0.5 * z + 0.5;
+            }       
+            else
+            {   // 2(x - 1)/(x + 1)
+                z = x - 0.5;
+                z -= 0.5;
+                y = 0.5 * x  + 0.5;
+            }
+            x = z / y;
+            z = x * x;
+            z = x * (z * poly(z, R) / poly(z, S));
+            z += exp * C2;
+            z += x;
+            z += exp * C1;
+
+            return z;
+        }
+
+        // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
+        if (x < SQRT1_2)
+        {   // 2x - 1
+            exp -= 1;
+            x = ldexp(x, 1) - 1.0;
+        }
+        else
+        {
+            x = x - 1.0;
+        }
+        z = x * x;
+        y = x * (z * poly(x, P) / poly(x, Q));
+        y += exp * C2;
+        z = y - ldexp(z, -1);
+
+        // Note, the sum of above terms does not exceed x/4,
+        // so it contributes at most about 1/4 lsb to the error.
+        z += x;
+        z += exp * C1;
+
+        return z;
+    }
 }
 
 unittest
