@@ -2614,11 +2614,7 @@ unittest
 {
     // Issue 10773
     auto s = splitter("abc", "");
-    auto expected = ["a", "b", "c"];
-    foreach (e; s) {
-        assert(e.equal(expected.front));
-        expected.popFront();
-    }
+    assert(s.equal(["a", "b", "c"]));
 }
 
 unittest
@@ -2636,12 +2632,7 @@ unittest
     auto sep = new RefSep("->");
     auto data = "i->am->pointing";
     auto words = splitter(data, sep);
-    auto expected = [ "i", "am", "pointing" ];
-    foreach (w; words) {
-        assert(w == expected.front);
-        expected.popFront();
-    }
-    assert(expected.empty);
+    assert(words.equal([ "i", "am", "pointing" ]));
 }
 
 auto splitter(alias isTerminator, Range)(Range input)
