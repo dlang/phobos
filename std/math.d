@@ -47,7 +47,7 @@
  *      HALF = &frac12;
  *
  * Copyright: Copyright Digital Mars 2000 - 2011.
- *            D implementations of tan, atan, atan2, exp, expm1,
+ *            D implementations of tan, atan, atan2, exp, expm1, exp2,
  *            floor and ceil functions are
  *            Copyright (C) 2001 Stephen L. Moshier <steve@moshier.net>
  *            and are incorporated herein by permission of the author.  The author
@@ -1779,7 +1779,46 @@ L_was_nan:
     }
     else
     {
-        static assert (0, "Not implemented");
+        // Coefficients for exp2(x)
+        static immutable real[3] P = [
+            2.0803843631901852422887E6L,
+            3.0286971917562792508623E4L,
+            6.0614853552242266094567E1L,
+        ];
+        static immutable real[4] Q = [
+            6.0027204078348487957118E6L,
+            3.2772515434906797273099E5L,
+            1.7492876999891839021063E3L,
+            1.0000000000000000000000E0L,
+        ];
+
+        // Overflow and Underflow limits.
+        enum real OF =  16384.0L;
+        enum real UF = -16382.0L;
+
+        // Special cases.
+        if (isNaN(x))
+            return x;
+        if (x > OF)
+            return real.infinity;
+        if (x < UF)
+            return 0.0;
+
+        // Separate into integer and fractional parts.
+        int n = cast(int)floor(x + 0.5);
+        x -= n;
+
+        // Rational approximation:
+        //  exp2(x) = 1.0 + 2x P(x^^2) / (Q(x^^2) - P(x^^2))
+        real xx = x * x;
+        real px = x * poly(xx, P);
+        x = px / (poly(xx, Q) - px);
+        x = 1.0 + ldexp(x, 1);
+
+        // Scale by power of 2.
+        x = ldexp(x, n);
+
+        return x;
     }
 }
 
