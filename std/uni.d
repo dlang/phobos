@@ -182,7 +182,7 @@
     (section 12 of
     $(WEB www.unicode.org/uni2book/ch03.pdf, Unicode Conformance)).
     )
-    
+
     $(P $(DEF Canonical composition)
     The precise definition of the Canonical composition
     is the algorithm as specified in $(WEB www.unicode.org/uni2book/ch03.pdf,
@@ -207,7 +207,7 @@
     that is, the range of integers from 0 to 10FFFF (hex).
     Not all code points are assigned to encoded characters.
     )
-    
+
     $(P $(DEF Code unit) The minimal bit combination that can represent
     a unit of encoded text for processing or interchange.
     Depending on the encoding this could be:
@@ -234,9 +234,9 @@
     )
 
     $(P $(DEF Combining class)
-        A numerical value used by the Unicode Canonical Ordering Algorithm 
-        to determine which sequences of combining marks are to be 
-        considered canonically equivalent and  which are not. 
+        A numerical value used by the Unicode Canonical Ordering Algorithm
+        to determine which sequences of combining marks are to be
+        considered canonically equivalent and  which are not.
     )
 
     $(P $(DEF Compatibility decomposition)
@@ -263,7 +263,7 @@
     $(P $(DEF Grapheme base) A character with the property
      Grapheme_Base, or any standard Korean syllable block.
     )
-    
+
     $(P $(DEF Grapheme cluster) Defined as the text between
         grapheme boundaries  as specified by Unicode Standard Annex #29,
         $(WEB www.unicode.org/reports/tr29/, Unicode text segmentation).
@@ -785,7 +785,7 @@ auto adaptIntRange(T, F)(F[] src)
         {
             return ConvertIntegers(data[s..e]);
         }
-        
+
         @property size_t opDollar(){   return data.length; }
     }
     return ConvertIntegers(src);
@@ -1147,7 +1147,7 @@ pure nothrow:
 
         T opIndex(size_t idx) inout
         {
-            return __ctfe ? simpleIndex(idx) : 
+            return __ctfe ? simpleIndex(idx) :
                 cast(inout(T))(cast(U*)origin)[idx];
         }
 
@@ -1200,7 +1200,7 @@ private:
     // factor - number of elements in one machine word
     enum factor = size_t.sizeof*8/bits, mask = 2^^bits-1;
     enum bytesPerWord =  size_t.sizeof;
-    size_t* origin;   
+    size_t* origin;
 }
 
 // data is packed only by power of two sized packs per word,
@@ -1209,7 +1209,7 @@ private:
 @trusted struct PackedArrayViewImpl(T, size_t bits)
 {
 pure nothrow:
-    
+
     this(inout(size_t)* origin, size_t items)inout
     {
         ptr = inout(PackedPtr!(T))(origin);
@@ -1268,7 +1268,7 @@ pure nothrow:
             foreach(i; start..end)
                 ptr[i] = val;
             return;
-        }    
+        }
         size_t pad_end = end/factor*factor; // rounded down
         size_t i;
         for(i=start; i<pad_start; i++)
@@ -1281,7 +1281,7 @@ pure nothrow:
                 ptr.origin[j] = repval;// so speed it up by factor
         }
         for(; i<end; i++)
-            ptr[i] = val;        
+            ptr[i] = val;
     }
 
     auto opSlice(size_t from, size_t to)
@@ -1729,7 +1729,7 @@ unittest
     }
 }
 
-//build hack 
+//build hack
 alias Uint24Array!ReallocPolicy _RealArray;
 
 unittest
@@ -3276,14 +3276,14 @@ unittest// iteration & opIndex
     {
         auto arr = "ABCDEFGHIJKLMabcdefghijklm"d;
         auto a = CodeList('A','N','a', 'n');
-        assert(equalS(a.byInterval, 
+        assert(equalS(a.byInterval,
                 [tuple(cast(uint)'A', cast(uint)'N'), tuple(cast(uint)'a', cast(uint)'n')]
             ), text(a.byInterval));
 
         // same @@@BUG as in issue 8949 ?
         version(bug8949)
         {
-            assert(equalS(retro(a.byInterval), 
+            assert(equalS(retro(a.byInterval),
                 [tuple(cast(uint)'a', cast(uint)'n'), tuple(cast(uint)'A', cast(uint)'N')]
             ), text(retro(a.byInterval)));
         }
@@ -3908,7 +3908,7 @@ public template codepointTrie(T, sizes...)
 
     // unsorted range of pairs
     auto codepointTrie(R)(R range, T defValue=T.init)
-        if(isInputRange!R 
+        if(isInputRange!R
             && is(typeof(ElementType!R.init[0]) : T)
             && is(typeof(ElementType!R.init[1]) : dchar))
     {
@@ -4073,7 +4073,7 @@ public template buildTrie(Value, Key, Args...)
         alias Comps = GetComparators!(Prefix.length);
         if(unsorted)
             multiSort!(Comps)(range);
-        return buildTrie(range, filler);        
+        return buildTrie(range, filler);
     }
 
     /*
@@ -4590,7 +4590,7 @@ else
 @trusted ptrdiff_t findUnicodeSet(alias table, C)(in C[] name)
 {
     auto range = assumeSorted!((a,b) => propertyNameLess(a,b))
-        (table.map!"a.name"());    
+        (table.map!"a.name"());
     size_t idx = range.lowerBound(name).length;
     if(idx < range.length && comparePropertyName(range[idx], name) == 0)
         return idx;
@@ -5321,7 +5321,7 @@ public:
             if(len_ + 1 > cap_)
             {
                 cap_ += grow;
-                ptr_ = cast(ubyte*)enforce(realloc(ptr_, 3*(cap_+1)));                
+                ptr_ = cast(ubyte*)enforce(realloc(ptr_, 3*(cap_+1)));
             }
             write24(ptr_, ch, len_++);
             return this;
@@ -5405,7 +5405,7 @@ private:
     }
 
     void convertToBig()
-    {        
+    {
         size_t k = smallLength;
         ubyte* p = cast(ubyte*)enforce(malloc(3*(grow+1)));
         for(int i=0; i<k; i++)
@@ -5611,7 +5611,7 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
             if(rhs == seq[0]
                 && rtail.skipOver(seq[1..$]))
             {
-                // note that this path modifies rtail 
+                // note that this path modifies rtail
                 // iff we managed to get there
                 return 0;
             }
@@ -5686,7 +5686,7 @@ unittest
             assert(cfunc("авГуст".to!S1(), "АВгУСТ".to!S2()) == 0);
             // Check example:
             assert(cfunc("Август".to!S1(), "авгусТ".to!S2()) == 0);
-            assert(cfunc("ΌΎ".to!S1(), "όύ".to!S2()) == 0); 
+            assert(cfunc("ΌΎ".to!S1(), "όύ".to!S2()) == 0);
         }
         // check that the order is properly agnostic to the case
         auto strs = [ "Apple", "ORANGE",  "orAcle", "amp", "banana"];
@@ -5987,7 +5987,7 @@ unittest
     static void testDecomp(UnicodeDecomposition T)(dchar ch, string r)
     {
         Grapheme g = decompose!T(ch);
-        assert(equalS(g[], r), text(g[], " vs ", r));        
+        assert(equalS(g[], r), text(g[], " vs ", r));
     }
     testDecomp!Canonical('\u1FF4', "\u03C9\u0301\u0345");
     testDecomp!Canonical('\uF907', "\u9F9C");
@@ -6504,7 +6504,7 @@ dchar toLower()(dchar c)
     return c;
 }
 
-//TODO: Hidden for now, needs better API. 
+//TODO: Hidden for now, needs better API.
 //Other transforms could use better API as well, but this one is a new primitive.
 @safe pure nothrow
 private dchar toTitlecase(dchar c)
@@ -6645,9 +6645,9 @@ private void toCaseInPlace(alias indexFn, uint maxIdx, alias tableFn, C)(ref C[]
     size_t curIdx = 0;
     size_t destIdx = 0;
     alias slowToCase = toCaseInPlaceAlloc!(indexFn, maxIdx, tableFn);
-    size_t lastUnchanged = 0;  
+    size_t lastUnchanged = 0;
     // in-buffer move of bytes to a new start index
-    // the trick is that it may not need to copy at all  
+    // the trick is that it may not need to copy at all
     static size_t moveTo(C[] str, size_t dest, size_t from, size_t to)
     {
         // Interestingly we may just bump pointer for a while
@@ -6656,7 +6656,7 @@ private void toCaseInPlace(alias indexFn, uint maxIdx, alias tableFn, C)(ref C[]
         // In the end it sometimes flip-flops between the 2 cases below
         if(dest == from)
             return to;
-        // got to copy 
+        // got to copy
         foreach(C c; str[from..to])
             str[dest++] = c;
         return dest;
@@ -6677,7 +6677,7 @@ private void toCaseInPlace(alias indexFn, uint maxIdx, alias tableFn, C)(ref C[]
             // thus can just adjust pointer
             destIdx = moveTo(s, destIdx, lastUnchanged, startIdx);
             lastUnchanged = curIdx;
-            dchar cased = tableFn(caseIndex); 
+            dchar cased = tableFn(caseIndex);
             auto casedLen = codeLength!C(cased);
             if(casedLen + destIdx > curIdx) // no place to fit cased char
             {
@@ -6686,7 +6686,7 @@ private void toCaseInPlace(alias indexFn, uint maxIdx, alias tableFn, C)(ref C[]
             }
             else
             {
-                destIdx = encodeTo(s, destIdx, cased);                
+                destIdx = encodeTo(s, destIdx, cased);
             }
         }
         else  // 1:m codepoint mapping, slow codepath
@@ -6718,12 +6718,12 @@ private template toCaseLength(alias indexFn, uint maxIdx, alias tableFn)
             size_t startIdx = curIdx;
             dchar ch = decode(str, curIdx);
             ushort caseIndex = indexFn(ch);
-            if(caseIndex == ushort.max)                
+            if(caseIndex == ushort.max)
                 continue;
             else if(caseIndex < MAX_SIMPLE_LOWER)
             {
                 codeLen += startIdx - lastNonTrivial;
-                lastNonTrivial = curIdx;                
+                lastNonTrivial = curIdx;
                 dchar cased = tableFn(caseIndex);
                 codeLen += codeLength!C(cased);
             }
@@ -6757,13 +6757,13 @@ unittest
 // case-converted stuf to the new string
 private template toCaseInPlaceAlloc(alias indexFn, uint maxIdx, alias tableFn)
 {
-    void toCaseInPlaceAlloc(C)(ref C[] s, size_t curIdx, 
+    void toCaseInPlaceAlloc(C)(ref C[] s, size_t curIdx,
         size_t destIdx) @trusted pure
         if (is(C == char) || is(C == wchar) || is(C == dchar))
     {
         import std.utf : decode;
         alias caseLength = toCaseLength!(indexFn, maxIdx, tableFn);
-        auto trueLength = destIdx + caseLength(s[curIdx..$]);    
+        auto trueLength = destIdx + caseLength(s[curIdx..$]);
         C[] ns = new C[trueLength];
         ns[0..destIdx] = s[0..destIdx];
         size_t lastUnchanged = curIdx;
@@ -6811,7 +6811,7 @@ private template toCaseInPlaceAlloc(alias indexFn, uint maxIdx, alias tableFn)
 }
 
 /++
-    Converts $(D s) to lowercase (by performing Unicode lowercase mapping) in place.    
+    Converts $(D s) to lowercase (by performing Unicode lowercase mapping) in place.
     For a few characters string length may increase after the transformation,
     in such a case the function reallocates exactly once.
     If $(D s) does not have any uppercase characters, then $(D s) is unaltered.
@@ -6841,7 +6841,7 @@ void toUpperInPlace(C)(ref C[] s) @trusted pure
 +/
 S toLower(S)(S s) @trusted pure
     if(isSomeString!S)
-{    
+{
     return toCase!(LowerTriple)(s);
 }
 
@@ -6864,7 +6864,7 @@ S toLower(S)(S s) @trusted pure
 
 
 unittest
-{   
+{
     string s1 = "FoL";
     string s2 = toLower(s1);
     assert(cmp(s2, "fol") == 0, s2);
@@ -6960,7 +6960,7 @@ dchar toUpper()(dchar c)
 +/
 S toUpper(S)(S s) @trusted pure
     if(isSomeString!S)
-{    
+{
     return toCase!(UpperTriple)(s);
 }
 
@@ -7003,9 +7003,9 @@ unittest
         upInp.toUpperInPlace();
         assert(low == trueLow, format(diff, low, trueLow));
         assert(up == trueUp,  format(diff, up, trueUp));
-        assert(lowInp == trueLow, 
+        assert(lowInp == trueLow,
             format(diff, cast(ubyte[])s, cast(ubyte[])lowInp, cast(ubyte[])trueLow));
-        assert(upInp == trueUp, 
+        assert(upInp == trueUp,
             format(diff, cast(ubyte[])s, cast(ubyte[])upInp, cast(ubyte[])trueUp));
     }
     foreach(S; TypeTuple!(dstring, wstring, string))
@@ -7018,7 +7018,7 @@ unittest
         auto options = [easy, good, awful, wicked];
         S[] lower = ["123", "abcфеж", "\u0131\u023f\u03c9", "i\u0307\u1Fe2"];
         S[] upper = ["123", "ABCФЕЖ", "I\u2c7e\u2126", "\u0130\u03A5\u0308\u0300"];
-        
+
         foreach(val; TypeTuple!(easy, good))
         {
             auto e = val.dup;
@@ -7032,8 +7032,7 @@ unittest
         {
             doTest(v, upper[i], lower[i]);
         }
-                
-        
+
         // a few combinatorial runs
         foreach(i; 0..options.length)
         foreach(j; i..options.length)
@@ -7041,7 +7040,7 @@ unittest
         {
             auto sample = options[i] ~ options[j] ~ options[k];
             auto sample2 = options[k] ~ options[j] ~ options[i];
-            doTest(sample, upper[i] ~ upper[j] ~ upper[k], 
+            doTest(sample, upper[i] ~ upper[j] ~ upper[k],
                 lower[i] ~ lower[j] ~ lower[k]);
             doTest(sample2, upper[k] ~ upper[j] ~ upper[i],
                 lower[k] ~ lower[j] ~ lower[i]);
