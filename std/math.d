@@ -47,7 +47,7 @@
  *      HALF = &frac12;
  *
  * Copyright: Copyright Digital Mars 2000 - 2011.
- *            D implementations of tan, atan, atan2, exp, expm1, exp2, log,
+ *            D implementations of tan, atan, atan2, exp, expm1, exp2, log, log10,
  *            floor and ceil functions are
  *            Copyright (C) 2001 Stephen L. Moshier <steve@moshier.net>
  *            and are incorporated herein by permission of the author.  The author
@@ -2424,7 +2424,114 @@ real log10(real x) @safe pure nothrow
     version (INLINE_YL2X)
         return yl2x(x, LOG2);
     else
-        static assert (0, "Not implemented");
+    {
+        // Coefficients for log(1 + x)
+        static immutable real[7] P = [
+            2.0039553499201281259648E1L,
+            5.7112963590585538103336E1L,
+            6.0949667980987787057556E1L,
+            2.9911919328553073277375E1L,
+            6.5787325942061044846969E0L,
+            4.9854102823193375972212E-1L,
+            4.5270000862445199635215E-5L,
+        ];
+        static immutable real[7] Q = [
+            6.0118660497603843919306E1L,
+            2.1642788614495947685003E2L,
+            3.0909872225312059774938E2L,
+            2.2176239823732856465394E2L,
+            8.3047565967967209469434E1L,
+            1.5062909083469192043167E1L,
+            1.0000000000000000000000E0L,
+        ];
+
+        // Coefficients for log(x)
+        static immutable real[4] R = [
+           -3.5717684488096787370998E1L,
+            1.0777257190312272158094E1L,
+           -7.1990767473014147232598E-1L,
+            1.9757429581415468984296E-3L,
+        ];
+        static immutable real[4] S = [
+           -4.2861221385716144629696E2L,
+            1.9361891836232102174846E2L,
+           -2.6201045551331104417768E1L,
+            1.0000000000000000000000E0L,
+        ];
+
+        // log10(2) split into two parts.
+        enum real L102A =  0.3125L;
+        enum real L102B = -1.14700043360188047862611052755069732318101185E-2L;
+
+        // log10(e) split into two parts.
+        enum real L10EA =  0.5L;
+        enum real L10EB = -6.570551809674817234887108108339491770560299E-2L;
+
+        // Special cases are the same as for log.
+        if (isNaN(x))
+            return x;
+        if (isInfinity(x) && !signbit(x))
+            return x;
+        if (x == 0.0)
+            return -real.infinity;
+        if (x < 0.0)
+            return real.nan;
+
+        // Separate mantissa from exponent.
+        // Note, frexp is used so that denormal numbers will be handled properly.
+        real y, z;
+        int exp;
+
+        x = frexp(x, exp);
+
+        // Logarithm using log(x) = z + z^^3 P(z) / Q(z),
+        // where z = 2(x - 1)/(x + 1)
+        if((exp > 2) || (exp < -2))
+        {
+            if(x < SQRT1_2)
+            {   // 2(2x - 1)/(2x + 1)
+                exp -= 1;
+                z = x - 0.5;
+                y = 0.5 * z + 0.5;
+            }       
+            else
+            {   // 2(x - 1)/(x + 1)
+                z = x - 0.5;
+                z -= 0.5;
+                y = 0.5 * x  + 0.5;
+            }
+            x = z / y;
+            z = x * x;
+            y = x * (z * poly(z, R) / poly(z, S));
+            goto Ldone;
+        }
+
+        // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
+        if (x < SQRT1_2)
+        {   // 2x - 1
+            exp -= 1;
+            x = ldexp(x, 1) - 1.0;
+        }
+        else
+            x = x - 1.0;
+
+        z = x * x;
+        y = x * (z * poly(x, P) / poly(x, Q));
+        y = y - ldexp(z, -1);
+
+        // Multiply log of fraction by log10(e) and base 2 exponent by log10(2).
+        // This sequence of operations is critical and it may be horribly
+        // defeated by some compiler optimizers.
+    Ldone:
+        z = y * L10EB;
+        z += x * L10EB;
+        z += exp * L102B;
+        z += y * L10EA;
+        z += x * L10EA;
+        z += exp * L102A;
+
+        return z;
+    }
 }
 
 unittest
