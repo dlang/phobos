@@ -210,7 +210,7 @@ SRC_STD_C_OSX= std\c\osx\socket.d
 
 SRC_STD_C_FREEBSD= std\c\freebsd\socket.d
 
-SRC_STD_INTERNAL= std\internal\processinit.d std\internal\uni.d std\internal\uni_tab.d
+SRC_STD_INTERNAL= std\internal\processinit.d std\internal\uni.d std\internal\uni_tab.d std\internal\unicode_tables.d
 
 SRC_STD_INTERNAL_DIGEST= std\internal\digest\sha_SSSE3.d
 
