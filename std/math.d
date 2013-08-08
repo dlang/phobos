@@ -48,7 +48,7 @@
  *
  * Copyright: Copyright Digital Mars 2000 - 2011.
  *            D implementations of tan, atan, atan2, exp, expm1, exp2, log, log10,
- *            floor and ceil functions are
+ *            log1p, floor and ceil functions are
  *            Copyright (C) 2001 Stephen L. Moshier <steve@moshier.net>
  *            and are incorporated herein by permission of the author.  The author
  *            reserves the right to distribute this material elsewhere under different
@@ -2565,7 +2565,17 @@ real log1p(real x) @safe pure nothrow
     }
     else
     {
-        static assert (0, "Not implemented");
+        // Special cases.
+        if (isNaN(x) || x == 0.0)
+            return x;
+        if (isInfinity(x) && !signbit(x))
+            return x;
+        if (x == -1.0)
+            return -real.infinity;
+        if (x < -1.0)
+            return real.nan;
+
+        return log(x + 1.0);
     }
 }
 
