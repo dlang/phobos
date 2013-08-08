@@ -538,7 +538,7 @@ Lret: {}
     }
     else
     {
-        return core.stdc.math.tanl(x);
+        static assert (0, "Not implemented");
     }
 }
 
@@ -724,7 +724,7 @@ real atan2(real y, real x) @trusted pure nothrow
     }
     else
     {
-        return core.stdc.math.atan2l(y,x);
+        static assert (0, "Not implemented");
     }
 }
 
@@ -1102,7 +1102,7 @@ real exp(real x) @trusted pure nothrow
     }
     else
     {
-        return core.stdc.math.expl(x);
+        static assert (0, "Not implemented");
     }
 }
 
@@ -1297,7 +1297,7 @@ L_largenegative:
     }
     else
     {
-        return core.stdc.math.expm1l(x);
+        static assert (0, "Not implemented");
     }
 }
 
@@ -1504,7 +1504,7 @@ L_was_nan:
     }
     else
     {
-        return core.stdc.math.exp2l(x);
+        static assert (0, "Not implemented");
     }
 }
 
@@ -1983,7 +1983,7 @@ real log(real x) @safe pure nothrow
     version (INLINE_YL2X)
         return yl2x(x, LN2);
     else
-        return core.stdc.math.logl(x);
+        static assert (0, "Not implemented");
 }
 
 unittest
@@ -2007,7 +2007,7 @@ real log10(real x) @safe pure nothrow
     version (INLINE_YL2X)
         return yl2x(x, LOG2);
     else
-        return core.stdc.math.log10l(x);
+        static assert (0, "Not implemented");
 }
 
 unittest
@@ -2041,7 +2041,7 @@ real log1p(real x) @safe pure nothrow
     }
     else
     {
-        return core.stdc.math.log1pl(x);
+        static assert (0, "Not implemented");
     }
 }
 
@@ -2061,7 +2061,7 @@ real log2(real x) @safe pure nothrow
     version (INLINE_YL2X)
         return yl2x(x, 1);
     else
-        return core.stdc.math.log2l(x);
+        static assert (0, "Not implemented");
 }
 
 unittest
@@ -2468,7 +2468,7 @@ long lrint(real x) @trusted pure nothrow
     }
     else
     {
-        return core.stdc.math.llrintl(x);
+        static assert (0, "Not implemented");
     }
 }
 
@@ -4199,7 +4199,7 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @trusted pure nothrow
         }
         else
         {
-            return sign * core.stdc.math.powl(x, y);
+            static assert (0, "Not implemented");
         }
     }
     return impl(x, y);
