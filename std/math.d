@@ -336,7 +336,7 @@ unittest
     assert(abs(71.6Li) == 71.6L);
     assert(abs(-56) == 56);
     assert(abs(2321312L)  == 2321312L);
-    assert(abs(-1+1i) == sqrt(2.0));
+    assert(abs(-1+1i) == sqrt(2.0L));
 }
 
 /***********************************
@@ -1339,7 +1339,7 @@ float exp(float x)  @safe pure nothrow   { return exp(cast(real)x); }
 
 unittest
 {
-    assert(equalsDigit(exp(3.0), E * E * E, useDigits));
+    assert(equalsDigit(exp(3.0L), E * E * E, useDigits));
 }
 
 /**
@@ -1827,7 +1827,6 @@ unittest
     assert(exp2(0.5L)== SQRT2);
     assert(exp2(8.0L) == 256.0);
     assert(exp2(-9.0L)== 1.0L/512.0);
-    assert(exp(3.0L) == E*E*E);
     assert( core.stdc.math.exp2f(0.0f) == 1 );
     assert( core.stdc.math.exp2 (0.0)  == 1 );
     assert( core.stdc.math.exp2l(0.0L) == 1 );
