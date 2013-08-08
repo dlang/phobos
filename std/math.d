@@ -47,7 +47,7 @@
  *      HALF = &frac12;
  *
  * Copyright: Copyright Digital Mars 2000 - 2011.
- *            D implementations of tan, atan, floor and ceil functions are
+ *            D implementations of tan, atan, atan2, floor and ceil functions are
  *            Copyright (C) 2001 Stephen L. Moshier <steve@moshier.net>
  *            and are incorporated herein by permission of the author.  The author
  *            reserves the right to distribute this material elsewhere under different
@@ -856,7 +856,53 @@ real atan2(real y, real x) @trusted pure nothrow
     }
     else
     {
-        static assert (0, "Not implemented");
+        // Special cases.
+        if (isNaN(x) || isNaN(y))
+            return real.nan;
+        if (y == 0.0)
+        {
+            if (x >= 0 && !signbit(x))
+                return copysign(0, y);
+            else
+                return copysign(PI, y);
+        }
+        if (x == 0.0)
+            return copysign(PI_2, y);
+        if (isInfinity(x))
+        {
+            if (signbit(x))
+            {
+                if (isInfinity(y))
+                    return copysign(3*PI_4, y);
+                else
+                    return copysign(PI, y);
+            }
+            else
+            {
+                if (isInfinity(y))
+                    return copysign(PI_4, y);
+                else
+                    return copysign(0.0, y);
+            }
+        }
+        if (isInfinity(y))
+            return copysign(PI_2, y);
+
+        // Call atan and determine the quadrant.
+        real z = atan(y / x);
+
+        if (signbit(x))
+        {
+            if (signbit(y))
+                z = z - PI;
+            else
+                z = z + PI;
+        }
+
+        if (z == 0.0)
+            return copysign(z, y);
+
+        return z;
     }
 }
 
