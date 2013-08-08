@@ -47,6 +47,12 @@
  *      HALF = &frac12;
  *
  * Copyright: Copyright Digital Mars 2000 - 2011.
+ *            D implementations of floor and ceil functions for real types are
+ *            Copyright (C) 2001 Stephen L. Moshier <steve@moshier.net>
+ *            and are incorporated herein by permission of the author.  The author
+ *            reserves the right to distribute this material elsewhere under different
+ *            copying permissions.  These modifications are distributed here under
+ *            the following terms:
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   $(WEB digitalmars.com, Walter Bright),
  *                        Don Clugston
@@ -2337,7 +2343,7 @@ unittest
  * Returns the value of x rounded upward to the next integer
  * (toward positive infinity).
  */
-real ceil(real x)  @trusted nothrow
+real ceil(real x)  @trusted pure nothrow
 {
     version (Win64)
     {
@@ -2359,20 +2365,38 @@ real ceil(real x)  @trusted nothrow
         }
     }
     else
-        return core.stdc.math.ceill(x);
+    {
+        // Special cases.
+        if (isNaN(x) || isInfinity(x))
+            return x;
+
+        real y = floor(x);
+        if (y < x)
+            y += 1.0;
+
+        return y;
+    }
 }
 
 unittest
 {
     assert(ceil(+123.456) == +124);
     assert(ceil(-123.456) == -123);
+    assert(ceil(-1.234) == -1);
+    assert(ceil(-0.123) == 0);
+    assert(ceil(0.0) == 0);
+    assert(ceil(+0.123) == 1);
+    assert(ceil(+1.234) == 2);
+    assert(ceil(real.infinity) == real.infinity);
+    assert(isNaN(ceil(real.nan)));
+    assert(isNaN(ceil(real.init)));
 }
 
 /**************************************
  * Returns the value of x rounded downward to the next integer
  * (toward negative infinity).
  */
-real floor(real x) @trusted nothrow
+real floor(real x) @trusted pure nothrow
 {
     version (Win64)
     {
@@ -2394,13 +2418,99 @@ real floor(real x) @trusted nothrow
         }
     }
     else
-        return core.stdc.math.floorl(x);
+    {
+        // Bit clearing masks.
+        static immutable ushort[17] BMASK = [
+            0xffff, 0xfffe, 0xfffc, 0xfff8,
+            0xfff0, 0xffe0, 0xffc0, 0xff80,
+            0xff00, 0xfe00, 0xfc00, 0xf800,
+            0xf000, 0xe000, 0xc000, 0x8000,
+            0x0000,
+        ];
+
+        // Special cases.
+        if (isNaN(x) || isInfinity(x) || x == 0.0)
+            return x;
+
+        alias floatTraits!(real) F;
+        auto vu = *cast(ushort[real.sizeof/2]*)(&x);
+
+        // Find the exponent (power of 2)
+        static if (real.mant_dig == 53)
+        {
+            int exp = (vu[F.EXPPOS_SHORT] & 0x7ff) - 0x3ff;
+
+            version (LittleEndian)
+                int pos = 0;
+            else
+                int pos = 3;
+        }
+        else static if (real.mant_dig == 64)
+        {
+            int exp = (vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+
+            version (LittleEndian)
+                int pos = 0;
+            else
+                int pos = 4;
+        }
+        else if (real.mant_dig == 113)
+        {
+            int exp = (vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+
+            version (LittleEndian)
+                int pos = 0;
+            else
+                int pos = 7;
+        }
+        else
+            static assert(false, "Only 64-bit, 80-bit, and 128-bit reals are supported by floor()");
+
+        if (exp < 0)
+        {
+            if (x < 0.0)
+                return -1.0;
+            else
+                return 0.0;
+        }
+
+        exp = (real.mant_dig - 1) - exp;
+
+        // Clean out 16 bits at a time.
+        while (exp >= 16)
+        {
+            version (LittleEndian)
+                vu[pos++] = 0;
+            else
+                vu[pos--] = 0;
+            exp -= 16;
+        }
+
+        // Clear the remaining bits.
+        if (exp > 0)
+            vu[pos] &= BMASK[exp];
+
+        real y = *cast(real*)(&vu);
+
+        if ((x < 0.0) && (x != y))
+            y -= 1.0;
+
+        return y;
+    }
 }
 
 unittest
 {
     assert(floor(+123.456) == +123);
     assert(floor(-123.456) == -124);
+    assert(floor(-1.234) == -2);
+    assert(floor(-0.123) == -1);
+    assert(floor(0.0) == 0);
+    assert(floor(+0.123) == 0);
+    assert(floor(+1.234) == 1);
+    assert(floor(real.infinity) == real.infinity);
+    assert(isNaN(floor(real.nan)));
+    assert(isNaN(floor(real.init)));
 }
 
 /******************************************
