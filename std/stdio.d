@@ -1046,6 +1046,7 @@ Returns the file number corresponding to this object.
         return .fileno(cast(FILE*) _p.handle);
     }
 
+// Note: This was documented until 2013/08
 /*
 Range that reads one line at a time.  Returned by $(LREF byLine).
 
@@ -1255,6 +1256,7 @@ void main()
     }
 
 
+    // Note: This was documented until 2013/08
     /*
      * Range that reads a chunk at a time.
      */
@@ -1372,6 +1374,7 @@ void main()
         assert(i == witness.length);
     }
 
+// Note: This was documented until 2013/08
 /*
 $(D Range) that locks the file and allows fast writing to it.
  */
