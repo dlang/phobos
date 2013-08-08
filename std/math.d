@@ -47,16 +47,16 @@
  *      HALF = &frac12;
  *
  * Copyright: Copyright Digital Mars 2000 - 2011.
- *            D implementations of tan, atan, atan2, exp, expm1, exp2, log, log10,
- *            log1p, log2, floor and ceil functions are
- *            Copyright (C) 2001 Stephen L. Moshier <steve@moshier.net>
+ *            D implementations of tan, atan, atan2, exp, expm1, exp2, log, log10, log1p,
+ *            log2, floor, ceil and lrint functions are based on the CEPHES math library,
+ *            which is Copyright (C) 2001 Stephen L. Moshier <steve@moshier.net>
  *            and are incorporated herein by permission of the author.  The author
  *            reserves the right to distribute this material elsewhere under different
  *            copying permissions.  These modifications are distributed here under
  *            the following terms:
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   $(WEB digitalmars.com, Walter Bright),
- *                        Don Clugston
+ *                        Don Clugston, Conversion of CEPHES math library to D by Iain Buclaw
  * Source: $(PHOBOSSRC std/_math.d)
  */
 module std.math;
@@ -3204,8 +3204,124 @@ long lrint(real x) @trusted pure nothrow
     }
     else
     {
-        static assert (0, "Not implemented");
+        static if (real.mant_dig == 53)
+        {
+            long result;
+
+            // Rounding limit when casting from real(double) to ulong.
+            enum real OF = 4.50359962737049600000E15L;
+
+            uint* vi = cast(uint*)(&x);
+
+            // Find the exponent and sign
+            uint msb = vi[MANTISSA_MSB];
+            uint lsb = vi[MANTISSA_LSB];
+            int exp = ((msb >> 20) & 0x7ff) - 0x3ff;
+            int sign = msb >> 31;
+            msb &= 0xfffff;
+            msb |= 0x100000;
+
+            if (exp < 63)
+            {
+                if (exp >= 52)
+                    result = (cast(long) msb << (exp - 20)) | (lsb << (exp - 52));
+                else
+                {
+                    // Adjust x and check result.
+                    real j = sign ? -OF : OF;
+                    x = (j + x) - j;
+                    msb = vi[MANTISSA_MSB];
+                    lsb = vi[MANTISSA_LSB];
+                    exp = ((msb >> 20) & 0x7ff) - 0x3ff;
+                    msb &= 0xfffff;
+                    msb |= 0x100000;
+
+                    if (exp < 0)
+                        result = 0;
+                    else if (exp < 20)
+                        result = cast(long) msb >> (20 - exp);
+                    else if (exp == 20)
+                        result = cast(long) msb;
+                    else
+                        result = (cast(long) msb << (exp - 20)) | (lsb >> (52 - exp));
+                }
+            }
+            else
+            {
+                // It is left implementation defined when the number is too large.
+                return cast(long) x;
+            }
+
+            return sign ? -result : result;
+        }
+        else static if (real.mant_dig == 64)
+        {
+            alias floatTraits!(real) F;
+            long result;
+
+            // Rounding limit when casting from real(80-bit) to ulong.
+            enum real OF = 9.22337203685477580800E18L;
+
+            ushort* vu = cast(ushort*)(&x);
+            uint* vi = cast(uint*)(&x);
+
+            // Find the exponent and sign
+            int exp = (vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+            int sign = (vu[F.EXPPOS_SHORT] >> 15) & 1;
+
+            if (exp < 63)
+            {
+                // Adjust x and check result.
+                real j = sign ? -OF : OF;
+                x = (j + x) - j;
+                exp = (vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+
+                version (LittleEndian)
+                {
+                    if (exp < 0)
+                        result = 0;
+                    else if (exp <= 31)
+                        result = vi[1] >> (31 - exp);
+                    else
+                        result = (cast(long) vi[1] << (exp - 31)) | (vi[0] >> (63 - exp));
+                }
+                else
+                {
+                    if (exp < 0)
+                        result = 0;
+                    else if (exp <= 31)
+                        result = vi[1] >> (31 - exp);
+                    else
+                        result = (cast(long) vi[1] << (exp - 31)) | (vi[2] >> (63 - exp));
+                }
+            }
+            else
+            {
+                // It is left implementation defined when the number is too large
+                // to fit in a 64bit long.
+                return cast(long) x;
+            }
+
+            return sign ? -result : result;
+        }
+        else
+        {
+            static assert(false, "Only 64-bit and 80-bit reals are supported by lrint()");
+        }
     }
+}
+
+unittest
+{
+    assert(lrint(4.5) == 4);
+    assert(lrint(5.5) == 6);
+    assert(lrint(-4.5) == -4);
+    assert(lrint(-5.5) == -6);
+
+    assert(lrint(int.max - 0.5) == 2147483646L);
+    assert(lrint(int.max + 0.5) == 2147483648L);
+    assert(lrint(int.min - 0.5) == -2147483648L);
+    assert(lrint(int.min + 0.5) == -2147483648L);
 }
 
 /*******************************************
