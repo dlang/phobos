@@ -4939,13 +4939,18 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @trusted pure nothrow
 
     static real impl(real x, real y) pure nothrow
     {
+        // Special cases.
         if (isNaN(y))
             return y;
-
-        if (y == 0)
-            return 1;           // even if x is $(NAN)
-        if (isNaN(x) && y != 0)
+        if (isNaN(x) && y != 0.0)
             return x;
+
+        // Even if x is NaN.
+        if (y == 0.0)
+            return 1.0;
+        if (y == 1.0)
+            return x;
+
         if (isInfinity(y))
         {
             if (fabs(x) > 1)
@@ -4970,17 +4975,16 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @trusted pure nothrow
         if (isInfinity(x))
         {
             if (signbit(x))
-            {   long i;
-
-                i = cast(long)y;
-                if (y > 0)
+            {
+                long i = cast(long)y;
+                if (y > 0.0)
                 {
                     if (i == y && i & 1)
                         return -F.infinity;
                     else
                         return F.infinity;
                 }
-                else if (y < 0)
+                else if (y < 0.0)
                 {
                     if (i == y && i & 1)
                         return -0.0;
@@ -4990,9 +4994,9 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @trusted pure nothrow
             }
             else
             {
-                if (y > 0)
+                if (y > 0.0)
                     return F.infinity;
-                else if (y < 0)
+                else if (y < 0.0)
                     return +0.0;
             }
         }
@@ -5000,17 +5004,16 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @trusted pure nothrow
         if (x == 0.0)
         {
             if (signbit(x))
-            {   long i;
-
-                i = cast(long)y;
-                if (y > 0)
+            {
+                long i = cast(long)y;
+                if (y > 0.0)
                 {
                     if (i == y && i & 1)
                         return -0.0;
                     else
                         return +0.0;
                 }
-                else if (y < 0)
+                else if (y < 0.0)
                 {
                     if (i == y && i & 1)
                         return -F.infinity;
@@ -5020,12 +5023,61 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @trusted pure nothrow
             }
             else
             {
-                if (y > 0)
+                if (y > 0.0)
                     return +0.0;
-                else if (y < 0)
+                else if (y < 0.0)
                     return F.infinity;
             }
         }
+        if (x == 1.0)
+            return 1.0;
+
+        if (y >= F.max)
+        {
+            if ((x > 0.0 && x < 1.0) || (x > -1.0 && x < 0.0))
+                return 0.0;
+            if (x > 1.0 || x < -1.0)
+                return F.infinity;
+        }
+        if (y <= -F.max)
+        {
+            if ((x > 0.0 && x < 1.0) || (x > -1.0 && x < 0.0))
+                return F.infinity;
+            if (x > 1.0 || x < -1.0)
+                return 0.0;
+        }
+
+        if (x >= F.max)
+        {
+            if (y > 0.0)
+                return F.infinity;
+            else
+                return 0.0;
+        }
+        if (x <= -F.max)
+        {
+            long i = cast(long)y;
+            if (y > 0.0)
+            {
+                if (i == y && i & 1)
+                    return -F.infinity;
+                else
+                    return F.infinity;
+            }
+            else if (y < 0.0)
+            {
+                if (i == y && i & 1)
+                    return -0.0;
+                else
+                    return +0.0;
+            }
+        }
+
+        // Integer power of x.
+        long iy = cast(long)y;
+        if (iy == y && fabs(y) < 32768.0)
+            return pow(x, iy);
+
         double sign = 1.0;
         if (x < 0)
         {
@@ -5051,7 +5103,13 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @trusted pure nothrow
         }
         else
         {
-            static assert (0, "Not implemented");
+            // If x > 0, x ^^ y == 2 ^^ ( y * log2(x) )
+            // TODO: This is not accurate in practice. A fast and accurate
+            // (though complicated) method is described in:
+            // "An efficient rounding boundary test for pow(x, y)
+            // in double precision", C.Q. Lauter and V. Lefèvre, INRIA (2007).
+            Float w = exp2(y * log2(x));
+            return sign * w;
         }
     }
     return impl(x, y);
