@@ -47,7 +47,8 @@
  *      HALF = &frac12;
  *
  * Copyright: Copyright Digital Mars 2000 - 2011.
- *            D implementations of tan, atan, atan2, exp, floor and ceil functions are
+ *            D implementations of tan, atan, atan2, exp, expm1,
+ *            floor and ceil functions are
  *            Copyright (C) 2001 Stephen L. Moshier <steve@moshier.net>
  *            and are incorporated herein by permission of the author.  The author
  *            reserves the right to distribute this material elsewhere under different
@@ -1521,7 +1522,57 @@ L_largenegative:
     }
     else
     {
-        static assert (0, "Not implemented");
+        // Coefficients for exp(x) - 1
+        static immutable real[5] P = [
+           -1.586135578666346600772998894928250240826E4L,
+            2.642771505685952966904660652518429479531E3L,
+           -3.423199068835684263987132888286791620673E2L,
+            1.800826371455042224581246202420972737840E1L,
+           -5.238523121205561042771939008061958820811E-1L,
+        ];
+        static immutable real[6] Q = [
+           -9.516813471998079611319047060563358064497E4L,
+            3.964866271411091674556850458227710004570E4L,
+           -7.207678383830091850230366618190187434796E3L,
+            7.206038318724600171970199625081491823079E2L,
+           -4.002027679107076077238836622982900945173E1L,
+            1.000000000000000000000000000000000000000E0L,
+        ];
+
+        // C1 + C2 = LN2.
+        enum real C1 = 6.9314575195312500000000E-1L;
+        enum real C2 = 1.4286068203094172321215E-6L;
+
+        // Overflow and Underflow limits.
+        enum real OF =  1.1356523406294143949492E4L;
+        enum real UF = -4.5054566736396445112120088E1L;
+
+        // Special cases.
+        if (x > OF)
+            return real.infinity;
+        if (x == 0.0)
+            return x;
+        if (x < UF)
+            return -1.0;
+
+        // Express x = LN2 (n + remainder), remainder not exceeding 1/2.
+        int n = cast(int)floor(0.5 + x / LN2);
+        x -= n * C1;
+        x -= n * C2;
+
+        // Rational approximation:
+        //  exp(x) - 1 = x + 0.5 x^^2 + x^^3 P(x) / Q(x)
+        real px = x * poly(x, P);
+        real qx = poly(x, Q);
+        real xx = x * x;
+        qx = x + (0.5 * xx + xx * px / qx);
+
+        // We have qx = exp(remainder LN2) - 1, so:
+        //  exp(x) - 1 = 2^^n (qx + 1) - 1 = 2^^n qx + 2^^n - 1.
+        px = ldexp(1.0, n);
+        x = px * qx + (px - 1.0);
+
+        return x;
     }
 }
 
