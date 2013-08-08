@@ -1825,7 +1825,7 @@ public struct CodepointInterval {
 {
     for(;;){
         if(lhs.empty)
-            return rhs.empty();
+            return rhs.empty;
         if(rhs.empty)
             return false;
         if(lhs.front != rhs.front)
