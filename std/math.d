@@ -47,7 +47,7 @@
  *      HALF = &frac12;
  *
  * Copyright: Copyright Digital Mars 2000 - 2011.
- *            D implementations of tan, floor and ceil functions are
+ *            D implementations of tan, atan, floor and ceil functions are
  *            Copyright (C) 2001 Stephen L. Moshier <steve@moshier.net>
  *            and are incorporated herein by permission of the author.  The author
  *            reserves the right to distribute this material elsewhere under different
@@ -732,7 +732,72 @@ unittest
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(NAN))       $(TD yes))
  *  )
  */
-real atan(real x) @safe pure nothrow { return atan2(x, 1.0L); }
+real atan(real x) @safe pure nothrow
+{
+    version(InlineAsm_X86_Any)
+    {
+        return atan2(x, 1.0L);
+    }
+    else
+    {
+        // Coefficients for atan(x)
+        static immutable real[5] P = [
+           -5.0894116899623603312185E1L,
+           -9.9988763777265819915721E1L,
+           -6.3976888655834347413154E1L,
+           -1.4683508633175792446076E1L,
+           -8.6863818178092187535440E-1L,
+        ];
+        static immutable real[6] Q = [
+            1.5268235069887081006606E2L,
+            3.9157570175111990631099E2L,
+            3.6144079386152023162701E2L,
+            1.4399096122250781605352E2L,
+            2.2981886733594175366172E1L,
+            1.0000000000000000000000E0L,
+        ];
+
+        // tan(PI/8)
+        enum real TAN_PI_8 = 4.1421356237309504880169e-1L;
+        // tan(3 * PI/8)
+        enum real TAN3_PI_8 = 2.41421356237309504880169L;
+
+        // Special cases.
+        if (x == 0.0)
+            return x;
+        if (isInfinity(x))
+            return copysign(PI_2, x);
+
+        // Make argument positive but save the sign.
+        bool sign = false;
+        if (signbit(x))
+        {
+            sign = true;
+            x = -x;
+        }
+
+        // Range reduction.
+        real y;
+        if (x > TAN3_PI_8)
+        {
+            y = PI_2;
+            x = -(1.0 / x);
+        }
+        else if (x > TAN_PI_8)
+        {
+            y = PI_4;
+            x = (x - 1.0)/(x + 1.0);
+        }
+        else
+            y = 0.0;
+
+        // Rational form in x^^2.
+        real z = x * x;
+        y = y + (poly(z, P) / poly(z, Q)) * z * x + x;
+
+        return (sign) ? -y : y;
+    }
+}
 
 /// ditto
 double atan(double x) @safe pure nothrow { return atan(cast(real)x); }
