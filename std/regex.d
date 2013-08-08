@@ -225,8 +225,9 @@ module std.regex;
 import std.internal.uni, std.internal.uni_tab;//unicode property tables
 import std.array, std.algorithm, std.range,
        std.conv, std.exception, std.traits, std.typetuple,
-       std.uni, std.utf, std.format, std.typecons, std.bitmanip,
+       std.utf, std.format, std.typecons, std.bitmanip,
        std.functional, std.exception;
+
 import core.bitop, core.stdc.string, core.stdc.stdlib;
 static import ascii = std.ascii;
 import std.string : representation;
@@ -234,6 +235,9 @@ import std.string : representation;
 debug import std.stdio;
 
 private:
+
+import std.uni : isAlpha, isWhite;
+
 @safe:
 
 //uncomment to get a barrage of debug info
