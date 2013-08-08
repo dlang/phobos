@@ -47,7 +47,7 @@
  *      HALF = &frac12;
  *
  * Copyright: Copyright Digital Mars 2000 - 2011.
- *            D implementations of floor and ceil functions for real types are
+ *            D implementations of tan, floor and ceil functions are
  *            Copyright (C) 2001 Stephen L. Moshier <steve@moshier.net>
  *            and are incorporated herein by permission of the author.  The author
  *            reserves the right to distribute this material elsewhere under different
@@ -544,7 +544,68 @@ Lret: {}
     }
     else
     {
-        static assert (0, "Not implemented");
+        // Coefficients for tan(x)
+        static immutable real[3] P = [
+           -1.7956525197648487798769E7L,
+            1.1535166483858741613983E6L,
+           -1.3093693918138377764608E4L,
+        ];
+        static immutable real[5] Q = [
+           -5.3869575592945462988123E7L,
+            2.5008380182335791583922E7L,
+           -1.3208923444021096744731E6L,
+            1.3681296347069295467845E4L,
+            1.0000000000000000000000E0L,
+        ];
+
+        // PI/4 split into three parts.
+        enum real P1 = 7.853981554508209228515625E-1L;
+        enum real P2 = 7.946627356147928367136046290398E-9L;
+        enum real P3 = 3.061616997868382943065164830688E-17L;
+
+        // Special cases.
+        if (x == 0.0 || isNaN(x))
+            return x;
+        if (isInfinity(x))
+            return real.nan;
+
+        // Make argument positive but save the sign.
+        bool sign = false;
+        if (signbit(x))
+        {
+            sign = true;
+            x = -x;
+        }
+
+        // Compute x mod PI/4.
+        real y = floor(x / PI_4);
+        // Strip high bits of integer part.
+        real z = ldexp(y, -4);
+        // Compute y - 16 * (y / 16).
+        z = y - ldexp(floor(z), 4);
+
+        // Integer and fraction part modulo one octant.
+        int j = cast(int)(z);
+
+        // Map zeros and singularities to origin.
+        if (j & 1)
+        {
+            j += 1;
+            y += 1.0;
+        }
+
+        z = ((x - y * P1) - y * P2) - y * P3;
+        real zz = z * z;
+
+        if (zz > 1.0e-20L)
+            y = z + z * (zz * poly(zz, P) / poly(zz, Q));
+        else
+            y = z;
+
+        if (j & 2)
+            y = -1.0 / y;
+
+        return (sign) ? -y : y;
     }
 }
 
