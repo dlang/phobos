@@ -740,7 +740,7 @@ Throws: $(D Exception) if the file is not opened.
 */
     void write(S...)(S args)
     {
-        auto w = lockingTextWriter;
+        auto w = lockingTextWriter();
         foreach (arg; args)
         {
             alias typeof(arg) A;
@@ -792,7 +792,7 @@ Throws: $(D Exception) if the file is not opened.
 */
     void writef(Char, A...)(in Char[] fmt, A args)
     {
-        std.format.formattedWrite(lockingTextWriter, fmt, args);
+        std.format.formattedWrite(lockingTextWriter(), fmt, args);
     }
 
 /**
@@ -804,7 +804,7 @@ Throws: $(D Exception) if the file is not opened.
 */
     void writefln(Char, A...)(in Char[] fmt, A args)
     {
-        auto w = lockingTextWriter;
+        auto w = lockingTextWriter();
         std.format.formattedWrite(w, fmt, args);
         w.put('\n');
     }
@@ -1513,7 +1513,7 @@ $(D Range) that locks the file and allows fast writing to it.
 
 See $(LREF byChunk) for an example.
 */
-    @property auto lockingTextWriter()
+    auto lockingTextWriter()
     {
         return LockingTextWriter(this);
     }
