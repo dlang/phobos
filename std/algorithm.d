@@ -2412,7 +2412,9 @@ with string types.
  */
 auto splitter(Range, Separator)(Range r, Separator s)
 if (is(typeof(Range.init.front == Separator.init.front) : bool)
-        && (hasSlicing!Range || isNarrowString!Range))
+        && (hasSlicing!Range || isNarrowString!Range)
+        && isForwardRange!Separator
+        && (hasLength!Separator || isNarrowString!Separator))
 {
     static struct Result
     {
@@ -2432,7 +2434,8 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
             if (_frontLength != _frontLength.max) return;
             assert(!_input.empty);
             // compute front length
-            _frontLength = _input.length - find(_input, _separator).length;
+            _frontLength = (_separator.empty) ? 1 :
+                           _input.length - find(_input, _separator).length;
             static if (isBidirectionalRange!Range)
                 if (_frontLength == _input.length) _backLength = _frontLength;
         }
@@ -2443,7 +2446,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
                 if (_backLength != _backLength.max) return;
             assert(!_input.empty);
             // compute back length
-            static if (isBidirectionalRange!Range)
+            static if (isBidirectionalRange!Range && isBidirectionalRange!Separator)
             {
                 _backLength = _input.length -
                     find(retro(_input), retro(_separator)).source.length;
@@ -2517,7 +2520,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
         }
 
 // Bidirectional functionality as suggested by Brad Roberts.
-        static if (isBidirectionalRange!Range)
+        static if (isBidirectionalRange!Range && isBidirectionalRange!Separator)
         {
             @property Range back()
             {
@@ -2605,6 +2608,31 @@ unittest
         //writeln("{", e, "}");
     }
     assert(equal(sp6, ["", ""][]));
+}
+
+unittest
+{
+    // Issue 10773
+    auto s = splitter("abc", "");
+    assert(s.equal(["a", "b", "c"]));
+}
+
+unittest
+{
+    // Test by-reference separator
+    class RefSep {
+        string _impl;
+        this(string s) { _impl = s; }
+        @property empty() { return _impl.empty; }
+        @property auto front() { return _impl.front; }
+        void popFront() { _impl = _impl[1..$]; }
+        @property RefSep save() { return new RefSep(_impl); }
+        @property auto length() { return _impl.length; }
+    }
+    auto sep = new RefSep("->");
+    auto data = "i->am->pointing";
+    auto words = splitter(data, sep);
+    assert(words.equal([ "i", "am", "pointing" ]));
 }
 
 auto splitter(alias isTerminator, Range)(Range input)
