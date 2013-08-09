@@ -1074,7 +1074,13 @@ Allows to directly use range operations on lines of a file.
         KeepTerminator keepTerminator;
         bool first_call = true;
 
-        this(File f, KeepTerminator kt, Terminator terminator)
+        static if (isScalarType!Terminator)
+            private enum defTerm = '\n';
+        else
+            private enum defTerm = "\n";
+        
+        this(File f, KeepTerminator kt = KeepTerminator.no,
+                Terminator terminator = defTerm)
         {
             file = f;
             this.terminator = terminator;
