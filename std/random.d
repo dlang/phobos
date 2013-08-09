@@ -1399,6 +1399,79 @@ unittest
 }
 
 /**
+Generates a uniformly distributed random floating point number between
+0.0 and 1.0 (a double on default). The interval is closed to the left
+and to the right (equivalent to !"[]" for the uniform function).
+This handy function is usually faster than uniform(). The version that
+does not take $(D urng) uses the default generator $(D rndGen).
+
+New in dmd v.2.064.
+ */
+FP uniform01(FP = double)()
+if (isFloatingPoint!FP)
+{
+    immutable FP result = rndGen.front / (cast(FP)rndGen.max - rndGen.min);
+    rndGen.popFront;
+    return result;
+}
+
+/// ditto
+FP uniform01(FP = double, UniformRandomNumberGenerator)
+(ref UniformRandomNumberGenerator urng)
+if (isFloatingPoint!FP)
+{
+    immutable FP result = urng.front / (cast(FP)urng.max - urng.min);
+    urng.popFront;
+    return result;
+}
+
+///
+unittest
+{
+    // Generate a double in [0.0, 1.0]
+    immutable x = uniform01;
+
+    // Generate a float in [0.0f, 1.0f] using Xorshift generator
+    auto rng = Xorshift(10);
+    immutable y = rng.uniform01!float;
+}
+
+unittest
+{
+    auto x1 = uniform01;
+    static assert(is(typeof(x1) == double));
+
+    auto x2 = uniform01!float;
+    static assert(is(typeof(x2) == float));
+
+    auto x3 = uniform01!double;
+    static assert(is(typeof(x3) == double));
+
+    auto x4 = uniform01!real;
+    static assert(is(typeof(x4) == real));
+
+    auto rng1 = Mt19937(unpredictableSeed);
+    auto rng2 = Xorshift(unpredictableSeed);
+
+    // Statistical test
+    foreach (immutable _; 0 .. 100)
+    {
+        immutable r0 = uniform01;
+        assert(r0 >= 0 && r0 <= 1);
+
+        foreach (T; TypeTuple!(float, double, real))
+        {
+            immutable r1 = rng1.uniform01!T;
+            assert(r1 >= 0 && r1 <= 1);
+            immutable r2 = uniform01!T(rng2);
+            assert(r2 >= 0 && r2 <= 1);
+            immutable r3 = uniform01!T;
+            assert(r3 >= 0 && r3 <= 1);
+        }
+    }
+}
+
+/**
 Generates a uniform probability distribution of size $(D n), i.e., an
 array of size $(D n) of positive numbers of type $(D F) that sum to
 $(D 1). If $(D useThis) is provided, it is used as storage.
