@@ -6803,13 +6803,13 @@ unittest
 }
 
 // MinType
-template MinType(T...)
+private template MinType(T...)
+    if (T.length >= 2)
 {
-    static assert(T.length >= 2);
     static if (T.length == 2)
     {
         static if (!is(typeof(T[0].min)))
-            alias MinType = CommonType!(T[0 .. 2]);
+            alias MinType = CommonType!T;
         else
         {
             enum hasMostNegative = is(typeof(mostNegative!(T[0]))) &&
@@ -6826,7 +6826,7 @@ template MinType(T...)
     }
     else
     {
-        alias MinType = MinType!(MinType!(T[0 .. 2]), T[2 .. $]);
+        alias MinType = MinType!(T[0 .. $/2], MinType!(T[$/2 .. $]));
     }
 }
 
@@ -6835,15 +6835,23 @@ template MinType(T...)
 Returns the minimum of the passed-in values. The type of the result is
 computed by using $(XREF traits, CommonType).
 */
-MinType!(T1, T2, T) min(T1, T2, T...)(T1 a, T2 b, T xs)
-    if (is(typeof(a < b)))
+MinType!T min(T...)(T args)
+    if (T.length >= 2)
 {
-    static if (T.length == 0)
+    static if (T.length == 2)
     {
-        static if (isIntegral!T1 && isIntegral!T2 &&
-                   (mostNegative!T1 < 0) != (mostNegative!T2 < 0))
+        alias T0 = T[0];
+        alias T1 = T[1];
+        alias a = args[0];
+        alias b = args[1];
+
+        static assert (is(typeof(a < b)),
+            format("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
+
+        static if (isIntegral!T0 && isIntegral!T1 &&
+                   (mostNegative!T0 < 0) != (mostNegative!T1 < 0))
         {
-            static if (mostNegative!T1 < 0)
+            static if (mostNegative!T0 < 0)
                 immutable chooseB = b < a && a > 0;
             else
                 immutable chooseB = b < a || b < 0;
@@ -6854,7 +6862,7 @@ MinType!(T1, T2, T) min(T1, T2, T...)(T1 a, T2 b, T xs)
     }
     else
     {
-        return min(min(a, b), xs);
+        return min(args[0 .. $/2], min(args[$/2 .. $]));
     }
 }
 
@@ -6890,13 +6898,13 @@ unittest
 }
 
 // MaxType
-template MaxType(T...)
+private template MaxType(T...)
+    if (T.length >= 2)
 {
-    static assert(T.length >= 2);
     static if (T.length == 2)
     {
         static if (!is(typeof(T[0].min)))
-            alias MaxType = CommonType!(T[0 .. 2]);
+            alias MaxType = CommonType!T;
         else static if (T[1].max > T[0].max)
             alias MaxType = T[1];
         else
@@ -6904,7 +6912,7 @@ template MaxType(T...)
     }
     else
     {
-        alias MaxType = MaxType!(MaxType!(T[0], T[1]), T[2 .. $]);
+        alias MaxType = MaxType!(T[0 .. $/2], MaxType!(T[$/2 .. $]));
     }
 }
 
@@ -6913,15 +6921,23 @@ template MaxType(T...)
 Returns the maximum of the passed-in values. The type of the result is
 computed by using $(XREF traits, CommonType).
 */
-MaxType!(T1, T2, T) max(T1, T2, T...)(T1 a, T2 b, T xs)
-    if (is(typeof(a < b)))
+MaxType!T max(T...)(T args)
+    if (T.length >= 2)
 {
-    static if (T.length == 0)
+    static if (T.length == 2)
     {
-        static if (isIntegral!T1 && isIntegral!T2 &&
-                   (mostNegative!T1 < 0) != (mostNegative!T2 < 0))
+        alias T0 = T[0];
+        alias T1 = T[1];
+        alias a = args[0];
+        alias b = args[1];
+
+        static assert (is(typeof(a < b)),
+            format("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
+
+        static if (isIntegral!T0 && isIntegral!T1 &&
+                   (mostNegative!T0 < 0) != (mostNegative!T1 < 0))
         {
-            static if (mostNegative!T1 < 0)
+            static if (mostNegative!T0 < 0)
                 immutable chooseB = b > a || a < 0;
             else
                 immutable chooseB = b > a && b > 0;
@@ -6932,7 +6948,7 @@ MaxType!(T1, T2, T) max(T1, T2, T...)(T1 a, T2 b, T xs)
     }
     else
     {
-        return max(max(a, b), xs);
+        return max(args[0 .. $/2], max(args[$/2 .. $]));
     }
 }
 
