@@ -1140,7 +1140,7 @@ Allows to directly use range operations on lines of a file.
                 else static if (isArray!Terminator)
                 {
                     static assert(
-                        is(Unqual!(typeof(terminator[0])) == Char));
+                        is(Unqual!(ElementEncodingType!Terminator) == Char));
                     const tlen = terminator.length;
                 }
                 else
@@ -1207,7 +1207,7 @@ void main()
 /// ditto
     auto byLine(Terminator, Char = char)
     (KeepTerminator keepTerminator, Terminator terminator)
-    if (is(Unqual!(typeof(terminator[0])) == Char))
+    if (is(Unqual!(ElementEncodingType!Terminator) == Char))
     {
         return ByLine!(Char, Terminator)(this, keepTerminator, terminator);
     }
