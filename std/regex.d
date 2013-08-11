@@ -7244,7 +7244,7 @@ unittest
     assert(bmatch("aaabaaaabbb", cr5).hit == "aaabaaaabbb");
     auto cr6 = ctRegex!("(?:a{2,4}b{1,3}){1,2}?"w);
     assert(bmatch("aaabaaaabbb"w,  cr6).hit == "aaab"w);
-    auto cr7 = ctRegex!(`\r.*?$`,"m");
+    auto cr7 = ctRegex!(`\r.*?$`,"sm");
     assert(bmatch("abc\r\nxy",  cr7).hit == "\r\nxy");
     auto greed =  ctRegex!("<packet.*?/packet>");
     assert(bmatch("<packet>text</packet><packet>text</packet>", greed).hit
