@@ -1004,6 +1004,13 @@ unittest
     }
     auto foo3()
     {
+        double[] ret;
+        foreach(j, n; TypeTuple!(staticIota!(1, 0, -0.25), 0))
+            ret ~= n;
+        return ret;
+    }
+    auto foo4()
+    {
         string ret;
         foreach(n; staticIota!('a', 'g'))
             ret ~= n;
@@ -1011,7 +1018,8 @@ unittest
     }
     static assert(foo1() == [0.5, 1.5, 2.5]);
     static assert(foo2() == [0, 0.25, 0.5, 0.75, 1]);
-    static assert(foo3() == "abcdef");
+    static assert(foo3() == [1, 0.75, 0.5, 0.25, 0]);
+    static assert(foo4() == "abcdef");
 }
 
 // : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : //
