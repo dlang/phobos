@@ -4187,6 +4187,7 @@ struct CtContext
     int curInfLoop, nInfLoops;
     //to mark the portion of matches to save
     int match, total_matches;
+    int reserved;
 
 
     //state of codegenerator
@@ -4199,7 +4200,16 @@ struct CtContext
     this(Char)(Regex!Char re)
     {
         match = 1;
+        reserved = 1; //first match is skipped
         total_matches = re.ngroup;
+    }
+
+    CtContext lookaround()
+    {
+        CtContext ct;
+        ct.total_matches = total_matches;
+        ct.match = 1;
+        return ct;
     }
 
     //restore state having current context
@@ -4215,13 +4225,13 @@ struct CtContext
         if(match < total_matches)
         {
             text ~= ctSub("
-                    stackPop(matches[1..$$]);", match);
+                    stackPop(matches[$$..$$]);", reserved, match);
             text ~= ctSub("
                     matches[$$..$] = typeof(matches[0]).init;", match);
         }
         else
-            text ~= "
-                    stackPop(matches[1..$]);";
+            text ~= ctSub("
+                    stackPop(matches[$$..$]);", reserved);
         return text;
     }
 
@@ -4233,13 +4243,13 @@ struct CtContext
                     {
                         newStack();
                         lastState = 0;
-                    }", match-1, cast(int)counter + 2);
+                    }", match - reserved, cast(int)counter + 2);
         if(match < total_matches)
             text ~= ctSub("
-                    stackPush(matches[1..$$]);", match);
+                    stackPush(matches[$$..$$]);", reserved, match);
         else
-            text ~= "
-                    stackPush(matches[1..$]);";
+            text ~= ctSub("
+                    stackPush(matches[$$..$]);", reserved);
         text ~= counter ? ctSub("
                     stackPush($$);", count_expr) : "";
         text ~= ctSub("
@@ -4264,6 +4274,8 @@ struct CtContext
     //
     CtState ctGenGroup(ref Bytecode[] ir, int addr)
     {
+        auto bailOut = "goto L_backtrack;";
+        auto nextInstr = ctSub("goto case $$;", addr+1);
         CtState r;
         assert(!ir.empty);
         switch(ir[0].code)
@@ -4299,6 +4311,51 @@ struct CtContext
             ir = ir[ir[0].length+len..$];
             assert(ir[0].code == IR.OrEnd);
             ir = ir[ir[0].length..$];
+            break;
+        case IR.LookaheadStart:
+        case IR.NeglookaheadStart:
+            uint len = ir[0].data;
+            uint start = IRL!(IR.LookbehindStart);
+            uint end = IRL!(IR.LookbehindStart)+len+IRL!(IR.LookaheadEnd);
+            CtContext context = lookaround(); //split off new context
+            auto slice = ir[start .. end];
+            r.code ~= ctSub(`
+            case $$: //fake lookahead "atom"
+                    static bool matcher_$$(ref typeof(matcher) matcher) @trusted
+                    {
+                        //(neg)lookahead piece start
+                        $$
+                        //(neg)lookahead piece ends
+                    }
+                    auto save = index;
+                    auto mem = malloc(initialMemory(re))[0..initialMemory(re)];
+                    scope(exit) free(mem.ptr);
+                    auto lookahead = typeof(matcher)(re, s, mem, front, index);
+                    lookahead.matches = matches[$$..$$];
+                    lookahead.backrefed = backrefed.empty ? matches : backrefed;
+                    lookahead.re.nativeFn = &matcher_$$; //hookup closure's binary code
+                    bool match = $$;
+                    s.reset(save);
+                    next();
+                    if(match)
+                        $$
+                    else
+                        $$`, addr, addr, 
+                        context.ctGenRegEx(slice),
+                        ir[1].raw, ir[2].raw, //start - end of matches slice
+                        addr, 
+                        ir[0].code == IR.LookaheadStart 
+                        ? "lookahead.matchImpl()" : "!lookahead.matchImpl()", 
+                        nextInstr, bailOut);
+            ir = ir[end .. $];
+            r.addr = addr + 1;
+            break;
+        case IR.LookbehindStart: case IR.NeglookbehindStart:
+            assert(false, "Lookbehind is not supported yet");
+        case IR.LookaheadEnd: case IR.NeglookaheadEnd:
+        case IR.LookbehindEnd: case IR.NeglookbehindEnd:
+            ir = ir[IRL!(IR.LookaheadEnd) .. $];
+            r.addr = addr;
             break;
         default:
             assert(ir[0].isAtom,  text(ir[0].mnemonic));
@@ -4462,19 +4519,19 @@ struct CtContext
                     goto case $$;`, step, addr+2, addr+1, restoreCode(),
                     ir[0].code == IR.RepeatEnd ? addr+2 : fixup );
             ir = ir[ir[0].length..$];
-            break;
+            break;        
         case IR.Option:
-                r ~= ctSub( `
-                    {
-                        $$
-                    }
-                    goto case $$;
-                case $$://restore thunk to go to the next group
+            r ~= ctSub( `
+                {
                     $$
-                    goto case $$;`, saveCode(addr+1), addr+2,
+                }
+                goto case $$;
+            case $$://restore thunk to go to the next group
+                $$
+                goto case $$;`, saveCode(addr+1), addr+2,
                     addr+1, restoreCode(), fixup);
                 ir = ir[ir[0].length..$];
-                break;
+            break;
         default:
             assert(0, text(ir[0].mnemonic));
         }
@@ -4691,15 +4748,15 @@ struct CtContext
         case IR.End:
             break;
         default:
-            assert(0, text(ir[0].mnemonic, "is not supported yet"));
+            assert(0, text(ir[0].mnemonic, " is not supported yet"));
         }
         return code;
     }
 
     //generate D code for the whole regex
-    public string ctGenRegEx(Char)(ref Regex!Char re)
+    public string ctGenRegEx(Bytecode[] ir)
     {
-        auto bdy = ctGenBlock(re.ir, 0);
+        auto bdy = ctGenBlock(ir, 0);
         auto r = `
             with(matcher)
             {
@@ -4748,7 +4805,7 @@ struct CtContext
 string ctGenRegExCode(Char)(Regex!Char re)
 {
     auto context = CtContext(re);
-    return context.ctGenRegEx(re);
+    return context.ctGenRegEx(re.ir);
 }
 
 //State of VM thread
@@ -7211,7 +7268,7 @@ unittest
             alias Tests = Sequence!(185, 220);
         }
         else
-            alias Tests = Sequence!(0, 70);
+            alias Tests = TypeTuple!(Sequence!(0, 70), Sequence!(225, 232));
         foreach(a, v; Tests)
         {
             enum tvd = tv[v];
