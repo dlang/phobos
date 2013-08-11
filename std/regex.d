@@ -4321,7 +4321,7 @@ struct CtContext
             auto slice = ir[start .. end];
             r.code ~= ctSub(`
             case $$: //fake lookahead "atom"
-                    static bool matcher_$$(ref typeof(matcher) matcher) @safe
+                    static bool matcher_$$(ref typeof(matcher) matcher) @trusted
                     {
                         //(neg)lookahead piece start
                         $$
@@ -7268,7 +7268,7 @@ unittest
             alias Tests = Sequence!(185, 220);
         }
         else
-            alias Tests = Sequence!(0, 70);
+            alias Tests = TypeTuple!(Sequence!(0, 70), Sequence!(225, 232));
         foreach(a, v; Tests)
         {
             enum tvd = tv[v];
