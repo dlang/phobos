@@ -2104,7 +2104,7 @@ the process was invoked.
     size_t length;
 
     version (Windows)
-        length = GetModuleFileNameA(null, file.ptr, file.length-1);
+        length = GetModuleFileNameA(null, file.ptr, to!uint(file.length-1));
     else version (OSX)
     {
         length = file.length-1;
@@ -2114,7 +2114,7 @@ the process was invoked.
     {
         version (linux)
             enum selfExeLink = "/proc/self/exe";
-        else version (BSD)
+        else version (FreeBSD)
             enum selfExeLink = "/proc/curproc/file";
         else
         {
