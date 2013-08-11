@@ -2240,21 +2240,6 @@ struct Appender(A : T[], T)
     // ensure we can add nelems elements, resizing as necessary
     private void ensureAddable(size_t nelems) @safe pure nothrow
     {
-        //Calculates an efficient growth scheme based on the old capacity
-        //of data, and the minimum requested capacity.
-        //arg curLen: The current length
-        //arg reqLen: The length as requested by the user
-        //ret sugLen: A suggested growth.
-        static size_t newCapacity(size_t curLen, size_t reqLen) @safe pure nothrow
-        {
-            long mult = 100 + (1000L) / (bsr(curLen * T.sizeof) + 1);
-            // limit to doubling the length, we don't want to grow too much
-            if(mult > 200)
-                mult = 200;
-            auto sugLen = cast(size_t)((curLen * mult + 99) / 100);
-            return max(reqLen, sugLen);
-        }
-
         if (!_data)
             _data = new Data;
         immutable len = _data.arr.length;
@@ -2285,7 +2270,7 @@ struct Appender(A : T[], T)
             // Time to reallocate.
             // We need to almost duplicate what's in druntime, except we
             // have better access to the capacity field.
-            auto newlen = newCapacity(_data.capacity, reqlen);
+            auto newlen = appenderNewCapacity!(T.sizeof)(_data.capacity, reqlen);
             // first, try extending the current block
             auto u = ()@trusted{ return
                 GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
@@ -2478,6 +2463,21 @@ struct Appender(A : T[], T)
                 enforce(newlength == 0);
         }
     }
+}
+
+//Calculates an efficient growth scheme based on the old capacity
+//of data, and the minimum requested capacity.
+//arg curLen: The current length
+//arg reqLen: The length as requested by the user
+//ret sugLen: A suggested growth.
+private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen) @safe pure nothrow
+{
+    ulong mult = 100 + (1000UL) / (bsr(curLen * TSizeOf) + 1);
+    // limit to doubling the length, we don't want to grow too much
+    if(mult > 200)
+        mult = 200;
+    auto sugLen = cast(size_t)((curLen * mult + 99) / 100);
+    return max(reqLen, sugLen);
 }
 
 /**
