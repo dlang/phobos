@@ -99,6 +99,10 @@ version (Windows)
     import std.utf;
     import std.windows.syserror;
 }
+version (OSX)
+{
+    private extern(C) int _NSGetExecutablePath(char* buf, uint* bufsize);
+}
 import std.algorithm;
 import std.array;
 import std.conv;
@@ -2084,6 +2088,46 @@ version (Windows) private immutable string shellSwitch = "/C";
 {
     version (Windows)    return GetCurrentProcessId();
     else version (Posix) return getpid();
+}
+
+
+/**
+Returns the full filepath to the current process's executable.
+
+Note that this is far more accurate and reliable than using args[0] because
+it's unaffected by working directory, PATH or any other conditions of how
+the process was invoked.
+*/
+@property string thisProcessFile()
+{
+    auto file = new char[4*1024];
+    uint length;
+
+    version (Windows)
+        length = GetModuleFileNameA(null, file.ptr, to!uint(file.length-1));
+    else version (OSX)
+    {
+        length = to!uint(file.length-1);
+        _NSGetExecutablePath(file.ptr, &length);
+    }
+    else version (Posix)
+    {
+        version (linux)
+            enum selfExeLink = "/proc/self/exe";
+        else version (FreeBSD)
+            enum selfExeLink = "/proc/curproc/file";
+        else
+        {
+            enum selfExeLink = "";
+            assert(0);
+        }
+
+        length = to!uint(readlink(toStringz(selfExeLink), file.ptr, file.length-1));
+    }
+    else
+        assert(0);
+
+    return to!string(file[0..length]);
 }
 
 
