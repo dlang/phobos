@@ -2101,13 +2101,13 @@ the process was invoked.
 @property string thisProcessFile()
 {
     auto file = new char[4*1024];
-    size_t length;
+    uint length;
 
     version (Windows)
         length = GetModuleFileNameA(null, file.ptr, to!uint(file.length-1));
     else version (OSX)
     {
-        length = file.length-1;
+        length = to!uint(file.length-1);
         _NSGetExecutablePath(file.ptr, &length);
     }
     else version (Posix)
@@ -2122,7 +2122,7 @@ the process was invoked.
             assert(0);
         }
 
-        length = readlink(toStringz(selfExeLink), file.ptr, file.length-1);
+        length = to!uint(readlink(toStringz(selfExeLink), file.ptr, file.length-1));
     }
     else
         assert(0);
