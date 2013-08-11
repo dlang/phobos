@@ -4635,6 +4635,7 @@ struct CtContext
                         && s.loopBack(index).nextChar(back,bi)
                         && endOfLine(back, front == '\n')))
                     {
+                        debug(fred_matching) writeln("BOL matched");
                         $$
                     }
                     else
@@ -4648,9 +4649,10 @@ struct CtContext
                     debug(fred_matching) writefln("EOL (front 0x%x) %s", front, s[index..s.lastIndex]);
                     //no matching inside \r\n
                     if(atEnd || ((re.flags & RegexOption.multiline)
-                             && s.loopBack(index).nextChar(back,bi)
-                            && endOfLine(front, back == '\r')))
+                            && endOfLine(front, s.loopBack(index).nextChar(back,bi)
+                             && back == '\r')))
                     {
+                        debug(fred_matching) writeln("EOL matched");
                         $$
                     }
                     else
@@ -7180,7 +7182,8 @@ unittest
                     if(c == 'y')
                     {
                         auto result = produceExpected(m, to!(String)(tvd.format));
-                        assert(result == to!String(tvd.replace), text(matchFn.stringof ~": mismatch pattern #", a, ": ", tvd.pattern," expected: ",
+                        assert(result == to!String(tvd.replace), 
+                            text(matchFn.stringof ~": mismatch pattern #", a, ": ", tvd.pattern," expected: ",
                                     tvd.replace, " vs ", result));
                     }
                 }
@@ -7192,7 +7195,24 @@ unittest
 
     void ct_tests()
     {
-        foreach(a, v; TypeTuple!(Sequence!(0, 145)))
+        version(std_regex_ct1)
+        {
+            pragma(msg, "Testing 1st part of ctRegex");
+            alias Tests = Sequence!(0, 90);
+        }
+        else version(std_regex_ct2)
+        {
+            pragma(msg, "Testing 2nd part of ctRegex");
+            alias Tests = Sequence!(90, 165);
+        }
+        else version(std_regex_ct3)
+        {
+            pragma(msg, "Testing 3rd part of ctRegex");
+            alias Tests = Sequence!(185, 220);
+        }
+        else
+            alias Tests = Sequence!(0, 70);
+        foreach(a, v; Tests)
         {
             enum tvd = tv[v];
             static if(tvd.result == "c")
@@ -7200,9 +7220,10 @@ unittest
                 static assert(!__traits(compiles, (){
                     enum r = regex(tvd.pattern, tvd.flags);
                 }), "errornously compiles regex pattern: " ~ tvd.pattern);    
-            }        
+            }
             else
             {
+                //BUG: tv[v] is fine but tvd is not known at compile time?!
                 enum r = ctRegex!(tv[v].pattern, tv[v].flags);
                 auto nr = regex(tvd.pattern, tvd.flags);
                 assert(equal(r.ir, nr.ir), 
