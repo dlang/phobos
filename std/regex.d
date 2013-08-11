@@ -4562,7 +4562,8 @@ struct CtContext
             break;
         case IR.Any:
             code ~= ctSub( `
-                    if(atEnd)
+                    if(atEnd || (!(re.flags & RegexOption.singleline)
+                                && (front == '\r' || front == '\n')))
                         $$
                     $$
                     $$`, bailOut, addr >= 0 ? "next();" :"",nextInstr);
@@ -6433,7 +6434,6 @@ template ctRegexImpl(alias pattern, string flags=[])
     enum r = regex(pattern, flags);
     alias BasicElementOf!(typeof(pattern)) Char;
     enum source = ctGenRegExCode(r);
-    pragma(msg, source);
     alias BacktrackingMatcher!(true) Matcher;
     @trusted bool func(ref Matcher!Char matcher)
     {
@@ -7192,7 +7192,7 @@ unittest
 
     void ct_tests()
     {
-        foreach(a, v; TypeTuple!(Sequence!(0, 150)))
+        foreach(a, v; TypeTuple!(Sequence!(0, 145)))
         {
             enum tvd = tv[v];
             static if(tvd.result == "c")
@@ -7293,9 +7293,9 @@ unittest
     assert(m8.captures[2] == "b");
     assert(m8.captures[3] == "cc");
     auto cr9 = ctRegex!(".*$", "gm");
-auto m9 = match("First\rSecond", cr9);
+    auto m9 = match("First\rSecond", cr9);
     assert(m9);
-assert(equal(map!"a.hit"(m9), ["First", "", "Second"]));
+    assert(equal(map!"a.hit"(m9), ["First", "", "Second"]));
 }
 
 unittest
@@ -7338,7 +7338,7 @@ unittest
     test_body!match();
 }
 
-//tests for accomulated std.regex issues and other regressions
+//tests for accumulated std.regex issues and other regressions
 unittest
 {
     void test_body(alias matchFn)()
