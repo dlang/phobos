@@ -4183,7 +4183,9 @@ struct CtContext
 {
     //dirty flags
     bool counter, infNesting;
-    int nInfLoops; // to make a unique advancement counter per loop
+    // to make a unique advancement counter per nesting level of loops
+    int curInfLoop, nInfLoops;
+    //to mark the portion of matches to save
     int match, total_matches;
 
 
@@ -4271,12 +4273,17 @@ struct CtContext
                 ir[0].code == IR.InfiniteStart || ir[0].code == IR.InfiniteQStart;
             infNesting = infNesting || infLoop;
             if(infLoop)
-                nInfLoops++;
+            {
+                curInfLoop++;
+                nInfLoops = max(nInfLoops, curInfLoop+1);
+            }
             counter = counter ||
                 ir[0].code == IR.RepeatStart || ir[0].code == IR.RepeatQStart;
             uint len = ir[0].data;
             auto nir = ir[ir[0].length .. ir[0].length+len];
             r = ctGenBlock(nir, addr+1);
+            if(infLoop)
+                curInfLoop--;
             //start/end codegen
             //r.addr is at last test+ jump of loop, addr+1 is body of loop
             nir = ir[ir[0].length+len..$];
@@ -4309,10 +4316,10 @@ struct CtContext
         for(;;)
         {
             assert(ir[0].code == IR.Option);
-            auto len = ir[0].data;
-            auto nir = ir[optL .. optL+len-IRL!(IR.GotoEndOr)];
+            auto len = ir[0].data;            
             if(optL+len < ir.length  && ir[optL+len].code == IR.Option)//not a last option
             {
+                auto nir = ir[optL .. optL+len-IRL!(IR.GotoEndOr)];
                 r = ctGenBlock(nir, addr+2);//space for Option + restore state
                 //r.addr+1 to account GotoEndOr  at end of branch
                 r.code = ctGenFixupCode(ir[0 .. ir[0].length], addr, r.addr+1) ~ r.code;
@@ -4326,7 +4333,6 @@ struct CtContext
                 addr = pieces[$-1].addr;
                 break;
             }
-
         }
         r = pieces[0];
         for(uint i = 1; i < pieces.length; i++)
@@ -4358,7 +4364,7 @@ struct CtContext
         case IR.InfiniteStart, IR.InfiniteQStart:
             r ~= ctSub( `
                     tracker_$$ = DataIndex.max;
-                    goto case $$;`, nInfLoops-1, fixup);
+                    goto case $$;`, curInfLoop, fixup);
             ir = ir[ir[0].length..$];
             break;
         case IR.InfiniteEnd:
@@ -4377,9 +4383,9 @@ struct CtContext
                     goto case $$;
                 case $$: //restore state and go out of loop
                     $$
-                    goto case;`, nInfLoops-1, addr+2
-                    , nInfLoops-1, testCode, saveCode(addr+1)
-                    , fixup, addr+1, restoreCode());
+                    goto case;`, curInfLoop, addr+2,
+                    curInfLoop, testCode, saveCode(addr+1),
+                    fixup, addr+1, restoreCode());
             ir = ir[ir[0].length..$];
             break;
         case IR.InfiniteQEnd:
@@ -4400,9 +4406,9 @@ struct CtContext
                         goto case $$;
                 case $$://restore state and go inside loop
                     $$
-                    goto case $$;`, nInfLoops-1, addr+2, nInfLoops-1
-                        , testCode, saveCode(addr+1)
-                        , addr+2, fixup, addr+1, restoreCode(), fixup);
+                    goto case $$;`, curInfLoop, addr+2, curInfLoop,
+                    testCode, saveCode(addr+1),
+                    addr+2, fixup, addr+1, restoreCode(), fixup);
             ir = ir[ir[0].length..$];
             break;
         case IR.RepeatStart, IR.RepeatQStart:
@@ -4453,8 +4459,8 @@ struct CtContext
                     }
                 case $$: //restore state
                     $$
-                    goto case $$;`, step, addr+2, addr+1, restoreCode()
-                        , ir[0].code == IR.RepeatEnd ? addr+2 : fixup );
+                    goto case $$;`, step, addr+2, addr+1, restoreCode(),
+                    ir[0].code == IR.RepeatEnd ? addr+2 : fixup );
             ir = ir[ir[0].length..$];
             break;
         case IR.Option:
@@ -4465,8 +4471,8 @@ struct CtContext
                     goto case $$;
                 case $$://restore thunk to go to the next group
                     $$
-                    goto case $$;`, saveCode(addr+1), addr+2
-                        , addr+1, restoreCode(), fixup);
+                    goto case $$;`, saveCode(addr+1), addr+2,
+                    addr+1, restoreCode(), fixup);
                 ir = ir[ir[0].length..$];
                 break;
         default:
@@ -4556,8 +4562,7 @@ struct CtContext
             break;
         case IR.Any:
             code ~= ctSub( `
-                    if(atEnd || (!(re.flags & RegexOption.singleline)
-                                && (front == '\r' || front == '\n')))
+                    if(atEnd)
                         $$
                     $$
                     $$`, bailOut, addr >= 0 ? "next();" :"",nextInstr);
@@ -4663,9 +4668,10 @@ struct CtContext
                     $$`, ir[0].data, nextInstr);
             break;
         case IR.Backref:
-            string mStr = ir[0].localRef
-                ? ctSub("matches[$$].begin .. matches[$$].end];", ir[0].data, ir[0].data)
-                : ctSub("s[backrefed[$$].begin .. backrefed[$$].end];",ir[0].data, ir[0].data);
+            string mStr = "auto referenced = ";
+            mStr ~= ir[0].localRef
+                ? ctSub("s[matches[$$].begin .. matches[$$].end];", ir[0].data, ir[0].data)
+                : ctSub("s[backrefed[$$].begin .. backrefed[$$].end];", ir[0].data, ir[0].data);
             code ~= ctSub( `
                     $$
                     while(!atEnd && !referenced.empty && front == referenced.front)
@@ -6427,6 +6433,7 @@ template ctRegexImpl(alias pattern, string flags=[])
     enum r = regex(pattern, flags);
     alias BasicElementOf!(typeof(pattern)) Char;
     enum source = ctGenRegExCode(r);
+    pragma(msg, source);
     alias BacktrackingMatcher!(true) Matcher;
     @trusted bool func(ref Matcher!Char matcher)
     {
@@ -7181,436 +7188,405 @@ unittest
         }
         debug(fred_test) writeln("!!! FReD bulk test done "~matchFn.stringof~" !!!");
     }
-    static string generate(uint n,uint[] black_list...)
-    {
-        string s = "TypeTuple!(";
-        for(uint i = 0; i < n; i++)
-        {
-            uint j;
-            for(j =0; j < black_list.length; j++)
-                if(i == black_list[j])
-                    break;
-            if(j == black_list.length)
-            {
-                s ~= to!string(i);
-                s ~= ",";
-            }
-        }
-        s ~= ")";
-        return s;
-    }
-    //CTFE parsing
-    version(fred_ct)
+
+
     void ct_tests()
     {
-        foreach(a, v; mixin(generate(140,38,39,40,52,55,57,62,63,67,80,190,191,192)))
+        foreach(a, v; TypeTuple!(Sequence!(0, 150)))
         {
             enum tvd = tv[v];
-            enum r = regex(tvd.pattern, tvd.flags);
-            auto nr = regex(tvd.pattern, tvd.flags);
-
-            debug(fred_test)
+            static if(tvd.result == "c")
             {
-                writeln(" Test #", a, " pattern: ", tvd.pattern);
-                if(!equal(r.ir, nr.ir))
+                static assert(!__traits(compiles, (){
+                    enum r = regex(tvd.pattern, tvd.flags);
+                }), "errornously compiles regex pattern: " ~ tvd.pattern);    
+            }        
+            else
+            {
+                enum r = ctRegex!(tv[v].pattern, tv[v].flags);
+                auto nr = regex(tvd.pattern, tvd.flags);
+                assert(equal(r.ir, nr.ir), 
+                    text("!C-T regex! failed to compile pattern #", a ,": ", tvd.pattern));
+                auto m = match(tvd.input, r);
+                auto c = tvd.result[0];
+                bool ok = (c == 'y') ^ m.empty;                
+                assert(ok, text("ctRegex: failed to match pattern #", 
+                    a ,": ", tvd.pattern));
+                if(c == 'y')
                 {
-                    writeln("C-T version :");
-                    r.print();
-                    writeln("R-T version :");
-                    nr.print();
-                    assert(0, text("!C-T regex! failed to compile pattern #", a ,": ", tvd.pattern));
+                    import std.stdio;
+                    auto result = produceExpected(m, tvd.format);
+                    if(result != tvd.replace)
+                        writeln("ctRegex mismatch pattern #", a, ": ", tvd.pattern," expected: ",
+                                tvd.replace, " vs ", result);
                 }
             }
-            else
-                assert(equal(r.ir, nr.ir), text("!C-T regex! failed to compile pattern #", a ,": ", tvd.pattern));
-
         }
         debug(fred_test) writeln("!!! FReD C-T test done !!!");
     }
 
-    version(fred_ct)
-        ct_tests();
-    else
-    {
-        run_tests!bmatch(); //backtracker
-        run_tests!match(); //thompson VM
-    }
+    ct_tests();
+    run_tests!bmatch(); //backtracker
+    run_tests!match(); //thompson VM
 }
 
-version(fred_ct)
+unittest
 {
-    unittest
+    auto cr = ctRegex!("abc");
+    assert(bmatch("abc",cr).hit == "abc");
+    auto cr2 = ctRegex!("ab*c");
+    assert(bmatch("abbbbc",cr2).hit == "abbbbc");
+    auto cr3 = ctRegex!("^abc$");
+    assert(bmatch("abc",cr3).hit == "abc");
+    auto cr4 = ctRegex!(`\b(a\B[a-z]b)\b`);
+    assert(array(match("azb",cr4).captures) == ["azb", "azb"]);
+    auto cr5 = ctRegex!("(?:a{2,4}b{1,3}){1,2}");
+    assert(bmatch("aaabaaaabbb", cr5).hit == "aaabaaaabbb");
+    auto cr6 = ctRegex!("(?:a{2,4}b{1,3}){1,2}?"w);
+    assert(bmatch("aaabaaaabbb"w,  cr6).hit == "aaab"w);
+    auto cr7 = ctRegex!(`\r.*?$`,"m");
+    assert(bmatch("abc\r\nxy",  cr7).hit == "\r\nxy");
+    auto greed =  ctRegex!("<packet.*?/packet>");
+    assert(bmatch("<packet>text</packet><packet>text</packet>", greed).hit
+            == "<packet>text</packet>");
+    auto cr8 = ctRegex!("^(a)(b)?(c*)");
+    auto m8 = bmatch("abcc",cr8);
+    assert(m8);
+    assert(m8.captures[1] == "a");
+    assert(m8.captures[2] == "b");
+    assert(m8.captures[3] == "cc");
+    auto cr9 = ctRegex!("q(a|b)*q");
+    auto m9 = match("xxqababqyy",cr9);
+    assert(m9);
+    assert(equal(bmatch("xxqababqyy",cr9).captures, ["qababq", "b"]));
+
+    auto rtr = regex("a|b|c");
+    enum ctr = regex("a|b|c");
+    assert(equal(rtr.ir,ctr.ir));
+    //CTFE parser BUG is triggered by group
+    //in the middle of alternation (at least not first and not last)
+    enum testCT = regex(`abc|(edf)|xyz`);
+    auto testRT = regex(`abc|(edf)|xyz`);
+    assert(equal(testCT.ir,testRT.ir));
+}
+
+unittest
+{
+    enum cx = ctRegex!"(A|B|C)";
+    auto mx = match("B",cx);
+    assert(mx);
+    assert(equal(mx.captures, [ "B", "B"]));
+    enum cx2 = ctRegex!"(A|B)*";
+    assert(match("BAAA",cx2));
+    enum cx3 = ctRegex!("a{3,4}","i");
+    auto mx3 = match("AaA",cx3);
+    assert(mx3);
+    assert(mx3.captures[0] == "AaA");
+    enum cx4 = ctRegex!(`^a{3,4}?[a-zA-Z0-9~]{1,2}`,"i");
+    auto mx4 = match("aaaabc", cx4);
+    assert(mx4);
+    assert(mx4.captures[0] == "aaaab");
+    auto cr8 = ctRegex!("(a)(b)?(c*)");
+    auto m8 = bmatch("abcc",cr8);
+    assert(m8);
+    assert(m8.captures[1] == "a");
+    assert(m8.captures[2] == "b");
+    assert(m8.captures[3] == "cc");
+    auto cr9 = ctRegex!(".*$", "gm");
+auto m9 = match("First\rSecond", cr9);
+    assert(m9);
+assert(equal(map!"a.hit"(m9), ["First", "", "Second"]));
+}
+
+unittest
+{
+//global matching
+    void test_body(alias matchFn)()
     {
-        auto cr = ctRegex!("abc");
-        assert(bmatch("abc",cr).hit == "abc");
-        auto cr2 = ctRegex!("ab*c");
-        assert(bmatch("abbbbc",cr2).hit == "abbbbc");
-        auto cr3 = ctRegex!("^abc$");
-        assert(bmatch("abc",cr3).hit == "abc");
-        auto cr4 = ctRegex!(`\b(a\B[a-z]b)\b`);
-        assert(array(match("azb",cr4).captures) == ["azb", "azb"]);
-        auto cr5 = ctRegex!("(?:a{2,4}b{1,3}){1,2}");
-        assert(bmatch("aaabaaaabbb", cr5).hit == "aaabaaaabbb");
-        auto cr6 = ctRegex!("(?:a{2,4}b{1,3}){1,2}?"w);
-        assert(bmatch("aaabaaaabbb"w,  cr6).hit == "aaab"w);
-        auto cr7 = ctRegex!(`\r.*?$`,"m");
-        assert(bmatch("abc\r\nxy",  cr7).hit == "\r\nxy");
-        auto greed =  ctRegex!("<packet.*?/packet>");
-        assert(bmatch("<packet>text</packet><packet>text</packet>", greed).hit
-                == "<packet>text</packet>");
-        auto cr8 = ctRegex!("^(a)(b)?(c*)");
-        auto m8 = bmatch("abcc",cr8);
-        assert(m8);
-        assert(m8.captures[1] == "a");
-        assert(m8.captures[2] == "b");
-        assert(m8.captures[3] == "cc");
-        auto cr9 = ctRegex!("q(a|b)*q");
-        auto m9 = match("xxqababqyy",cr9);
-        assert(m9);
-        assert(equal(bmatch("xxqababqyy",cr9).captures, ["qababq", "b"]));
+        string s = "a quick brown fox jumps over a lazy dog";
+        auto r1 = regex("\\b[a-z]+\\b","g");
+        string[] test;
+        foreach(m; matchFn(s, r1))
+            test ~= m.hit;
+        assert(equal(test, [ "a", "quick", "brown", "fox", "jumps", "over", "a", "lazy", "dog"]));
+        auto free_reg = regex(`
 
-        auto rtr = regex("a|b|c");
-        enum ctr = regex("a|b|c");
-        assert(equal(rtr.ir,ctr.ir));
-        //CTFE parser BUG is triggered by group
-        //in the middle of alternation (at least not first and not last)
-        version(fred_bug)
-        {
-        enum testCT = regex(`abc|(edf)|xyz`);
-        auto testRT = regex(`abc|(edf)|xyz`);
-        debug
-        {
-            writeln("C-T version :");
-            testCT.print();
-            writeln("R-T version :");
-            testRT.print();
-
-        }
-
-        }
-
+            abc
+            \s+
+            "
+            (
+                    [^"]+
+                |   \\ "
+            )+
+            "
+            z
+        `, "x");
+        auto m = match(`abc  "quoted string with \" inside"z`,free_reg);
+        assert(m);
+        string mails = " hey@you.com no@spam.net ";
+        auto rm = regex(`@(?<=\S+@)\S+`,"g");
+        assert(equal(map!"a[0]"(matchFn(mails, rm)), ["@you.com", "@spam.net"]));
+        auto m2 = matchFn("First line\nSecond line",regex(".*$","gm"));
+        assert(equal(map!"a[0]"(m2), ["First line", "", "Second line"]));
+        auto m2a = matchFn("First line\nSecond line",regex(".+$","gm"));
+        assert(equal(map!"a[0]"(m2a), ["First line", "Second line"]));
+        auto m2b = matchFn("First line\nSecond line",regex(".+?$","gm"));
+        assert(equal(map!"a[0]"(m2b), ["First line", "Second line"]));
+        debug(fred_test) writeln("!!! FReD FLAGS test done "~matchFn.stringof~" !!!");
     }
+    test_body!bmatch();
+    test_body!match();
+}
 
-    unittest
+//tests for accomulated std.regex issues and other regressions
+unittest
+{
+    void test_body(alias matchFn)()
     {
-        enum cx = ctRegex!"(A|B|C)";
-        auto mx = match("B",cx);
-        assert(mx);
-        assert(equal(mx.captures, [ "B", "B"]));
-        enum cx2 = ctRegex!"(A|B)*";
-        assert(match("BAAA",cx2));
-        enum cx3 = ctRegex!("a{3,4}","i");
-        auto mx3 = match("AaA",cx3);
-        assert(mx3);
-        assert(mx3.captures[0] == "AaA");
-        enum cx4 = ctRegex!(`^a{3,4}?[a-zA-Z0-9~]{1,2}`,"i");
-        auto mx4 = match("aaaabc", cx4);
-        assert(mx4);
-        assert(mx4.captures[0] == "aaaab");
-        auto cr8 = ctRegex!("(a)(b)?(c*)");
-        auto m8 = bmatch("abcc",cr8);
-        assert(m8);
-        assert(m8.captures[1] == "a");
-        assert(m8.captures[2] == "b");
-        assert(m8.captures[3] == "cc");
-        auto cr9 = ctRegex!(".*$", "gm");
-        auto m9 = match("First\rSecond");
-        assert(m9);
-        assert(equal(map!"a.hit"(m9.captures), ["First", "", "Second"]));
+        //issue 5857
+        //matching goes out of control if ... in (...){x} has .*/.+
+        auto c = matchFn("axxxzayyyyyzd",regex("(a.*z){2}d")).captures;
+        assert(c[0] == "axxxzayyyyyzd");
+        assert(c[1] == "ayyyyyz");
+        auto c2 = matchFn("axxxayyyyyd",regex("(a.*){2}d")).captures;
+        assert(c2[0] == "axxxayyyyyd");
+        assert(c2[1] == "ayyyyy");
+        //issue 2108
+        //greedy vs non-greedy
+        auto nogreed = regex("<packet.*?/packet>");
+        assert(matchFn("<packet>text</packet><packet>text</packet>", nogreed).hit
+               == "<packet>text</packet>");
+        auto greed =  regex("<packet.*/packet>");
+        assert(matchFn("<packet>text</packet><packet>text</packet>", greed).hit
+               == "<packet>text</packet><packet>text</packet>");
+        //issue 4574
+        //empty successful match still advances the input
+        string[] pres, posts, hits;
+        foreach(m; matchFn("abcabc", regex("","g"))) {
+            pres ~= m.pre;
+            posts ~= m.post;
+            assert(m.hit.empty);
+
+        }
+        auto heads = [
+            "abcabc",
+            "abcab",
+            "abca",
+            "abc",
+            "ab",
+            "a",
+            ""
+        ];
+        auto tails = [
+            "abcabc",
+             "bcabc",
+              "cabc",
+               "abc",
+                "bc",
+                 "c",
+                  ""
+        ];
+        assert(pres == array(retro(heads)));
+        assert(posts == tails);
+        //issue 6076
+        //regression on .*
+        auto re = regex("c.*|d");
+        auto m = matchFn("mm", re);
+        assert(!m);
+        debug(fred_test) writeln("!!! FReD REGRESSION test done "~matchFn.stringof~" !!!");
+        auto rprealloc = regex(`((.){5}.{1,10}){5}`);
+        auto arr = array(repeat('0',100));
+        auto m2 = matchFn(arr, rprealloc);
+        assert(m2);
+        assert(collectException(
+                regex(r"^(import|file|binary|config)\s+([^\(]+)\(?([^\)]*)\)?\s*$")
+                ) is null);
+        foreach(ch; ['^','$','.','|','?',',','-',';',':'
+            ,'#','&','%','/','<','>','`'
+            ,'*','+','(',')','{','}'])
+        {
+            assert(match(to!string(ch),regex(`[\`~ch~`]`)));
+            assert(!match(to!string(ch),regex(`[^\`~ch~`]`)));
+            if(ch != '-') //'--' is an operator
+                assert(match(to!string(ch),regex(`[\`~ch~`-\`~ch~`]`)));
+        }
+        //bugzilla 7718
+        string strcmd = "./myApp.rb -os OSX -path \"/GIT/Ruby Apps/sec\" -conf 'notimer'";
+        auto reStrCmd = regex (`(".*")|('.*')`, "g");
+        assert(equal(map!"a[0]"(matchFn(strcmd, reStrCmd)),
+                     [`"/GIT/Ruby Apps/sec"`, `'notimer'`]));
+    }
+    test_body!bmatch();
+    test_body!match();
+}
+
+// tests for replace
+unittest
+{
+    void test(alias matchFn)()
+    {
+        import std.string : toUpper;
+
+        foreach(i, v; TypeTuple!(string, wstring, dstring))
+        {
+            auto baz(Cap)(Cap m)
+            if (is(Cap == Captures!(Cap.String)))
+            {
+                return std.string.toUpper(m.hit);
+            }
+            alias v String;
+            assert(std.regex.replace!(matchFn)(to!String("ark rapacity"), regex(to!String("r")), to!String("c"))
+                   == to!String("ack rapacity"));
+            assert(std.regex.replace!(matchFn)(to!String("ark rapacity"), regex(to!String("r"), "g"), to!String("c"))
+                   == to!String("ack capacity"));
+            assert(std.regex.replace!(matchFn)(to!String("noon"), regex(to!String("^n")), to!String("[$&]"))
+                   == to!String("[n]oon"));
+            assert(std.regex.replace!(matchFn)(to!String("test1 test2"), regex(to!String(`\w+`),"g"), to!String("$`:$'"))
+                   == to!String(": test2 test1 :"));
+            auto s = std.regex.replace!(baz!(Captures!(String)))(to!String("Strap a rocket engine on a chicken."),
+                    regex(to!String("[ar]"), "g"));
+            assert(s == "StRAp A Rocket engine on A chicken.");
+        }
+        debug(fred_test) writeln("!!! Replace test done "~matchFn.stringof~"  !!!");
+    }
+    test!(bmatch)();
+    test!(match)();
+}
+
+// tests for splitter
+unittest
+{
+    auto s1 = ", abc, de,     fg, hi, ";
+    auto sp1 = splitter(s1, regex(", *"));
+    auto w1 = ["", "abc", "de", "fg", "hi", ""];
+    assert(equal(sp1, w1));
+
+    auto s2 = ", abc, de,  fg, hi";
+    auto sp2 = splitter(s2, regex(", *"));
+    auto w2 = ["", "abc", "de", "fg", "hi"];
+
+    uint cnt;
+    foreach(e; sp2) {
+        assert(w2[cnt++] == e);
+    }
+    assert(equal(sp2, w2));
+}
+
+unittest
+{
+    char[] s1 = ", abc, de,  fg, hi, ".dup;
+    auto sp2 = splitter(s1, regex(", *"));
+}
+
+unittest
+{
+    auto s1 = ", abc, de,  fg, hi, ";
+    auto w1 = ["", "abc", "de", "fg", "hi", ""];
+    assert(equal(split(s1, regex(", *")), w1[]));
+}
+
+unittest
+{ // bugzilla 7141
+    string pattern = `[a\--b]`;
+    assert(match("-", pattern));
+    assert(match("b", pattern));
+    string pattern2 = `[&-z]`;
+    assert(match("b", pattern2));
+}
+unittest
+{//bugzilla 7111
+    assert(match("", regex("^")));
+}
+unittest
+{//bugzilla 7300
+    assert(!match("a"d, "aa"d));
+}
+
+unittest
+{//bugzilla 7674
+    assert("1234".replace(regex("^"), "$$") == "$1234");
+    assert("hello?".replace(regex(r"\?", "g"), r"\?") == r"hello\?");
+    assert("hello?".replace(regex(r"\?", "g"), r"\\?") != r"hello\?");
+}
+unittest
+{// bugzilla 7679
+    foreach(S; TypeTuple!(string, wstring, dstring))
+    {
+        enum re = ctRegex!(to!S(r"\."));
+        auto str = to!S("a.b");
+        assert(equal(std.regex.splitter(str, re), [to!S("a"), to!S("b")]));
+        assert(split(str, re) == [to!S("a"), to!S("b")]);
     }
 }
-else
+unittest
+{//bugzilla 8203
+    string data = "
+    NAME   = XPAW01_STA:STATION
+    NAME   = XPAW01_STA
+    ";
+        auto uniFileOld = data;
+        auto r = regex(
+           r"^NAME   = (?P<comp>[a-zA-Z0-9_]+):*(?P<blk>[a-zA-Z0-9_]*)","gm");
+        auto uniCapturesNew = match(uniFileOld, r);
+        for(int i = 0; i < 20; i++)
+            foreach (matchNew; uniCapturesNew) {}
+}
+unittest
+{// bugzilla 8637 purity of enforce
+    auto m = match("hello world", regex("world"));
+    enforce(m);
+}
+
+// bugzilla 8725
+unittest
 {
-    unittest
-    {
-    //global matching
-        void test_body(alias matchFn)()
-        {
-            string s = "a quick brown fox jumps over a lazy dog";
-            auto r1 = regex("\\b[a-z]+\\b","g");
-            string[] test;
-            foreach(m; matchFn(s, r1))
-                test ~= m.hit;
-            assert(equal(test, [ "a", "quick", "brown", "fox", "jumps", "over", "a", "lazy", "dog"]));
-            auto free_reg = regex(`
+  static italic = regex( r"\*
+                (?!\s+)
+                (.*?)
+                (?!\s+)
+                \*", "gx" );
+  string input = "this * is* interesting, *very* interesting";
+  assert(replace(input, italic, "<i>$1</i>") ==
+      "this * is* interesting, <i>very</i> interesting");
+}
 
-                abc
-                \s+
-                "
-                (
-                        [^"]+
-                    |   \\ "
-                )+
-                "
-                z
-            `, "x");
-            auto m = match(`abc  "quoted string with \" inside"z`,free_reg);
-            assert(m);
-            string mails = " hey@you.com no@spam.net ";
-            auto rm = regex(`@(?<=\S+@)\S+`,"g");
-            assert(equal(map!"a[0]"(matchFn(mails, rm)), ["@you.com", "@spam.net"]));
-            auto m2 = matchFn("First line\nSecond line",regex(".*$","gm"));
-            assert(equal(map!"a[0]"(m2), ["First line", "", "Second line"]));
-            auto m2a = matchFn("First line\nSecond line",regex(".+$","gm"));
-            assert(equal(map!"a[0]"(m2a), ["First line", "Second line"]));
-            auto m2b = matchFn("First line\nSecond line",regex(".+?$","gm"));
-            assert(equal(map!"a[0]"(m2b), ["First line", "Second line"]));
-            debug(fred_test) writeln("!!! FReD FLAGS test done "~matchFn.stringof~" !!!");
-        }
-        test_body!bmatch();
-        test_body!match();
-    }
+// bugzilla 8349
+unittest
+{
+    enum peakRegexStr = r"\>(wgEncode.*Tfbs.*\.(?:narrow)|(?:broad)Peak.gz)</a>";
+    enum peakRegex = ctRegex!(peakRegexStr);
+    //note that the regex pattern itself is probably bogus
+    assert(match(r"\>wgEncode-blah-Tfbs.narrow</a>", peakRegex));
+}
 
-    //tests for accomulated std.regex issues and other regressions
-    unittest
-    {
-        void test_body(alias matchFn)()
-        {
-            //issue 5857
-            //matching goes out of control if ... in (...){x} has .*/.+
-            auto c = matchFn("axxxzayyyyyzd",regex("(a.*z){2}d")).captures;
-            assert(c[0] == "axxxzayyyyyzd");
-            assert(c[1] == "ayyyyyz");
-            auto c2 = matchFn("axxxayyyyyd",regex("(a.*){2}d")).captures;
-            assert(c2[0] == "axxxayyyyyd");
-            assert(c2[1] == "ayyyyy");
-            //issue 2108
-            //greedy vs non-greedy
-            auto nogreed = regex("<packet.*?/packet>");
-            assert(matchFn("<packet>text</packet><packet>text</packet>", nogreed).hit
-                   == "<packet>text</packet>");
-            auto greed =  regex("<packet.*/packet>");
-            assert(matchFn("<packet>text</packet><packet>text</packet>", greed).hit
-                   == "<packet>text</packet><packet>text</packet>");
-            //issue 4574
-            //empty successful match still advances the input
-            string[] pres, posts, hits;
-            foreach(m; matchFn("abcabc", regex("","g"))) {
-                pres ~= m.pre;
-                posts ~= m.post;
-                assert(m.hit.empty);
+// bugzilla 9211
+unittest
+{
+    auto rx_1 =  regex(r"^(\w)*(\d)");
+    auto m = match("1234", rx_1);
+    assert(equal(m.front, ["1234", "3", "4"]));
+    auto rx_2 = regex(r"^([0-9])*(\d)");
+    auto m2 = match("1234", rx_2);
+    assert(equal(m2.front, ["1234", "3", "4"]));
+}
 
-            }
-            auto heads = [
-                "abcabc",
-                "abcab",
-                "abca",
-                "abc",
-                "ab",
-                "a",
-                ""
-            ];
-            auto tails = [
-                "abcabc",
-                 "bcabc",
-                  "cabc",
-                   "abc",
-                    "bc",
-                     "c",
-                      ""
-            ];
-            assert(pres == array(retro(heads)));
-            assert(posts == tails);
-            //issue 6076
-            //regression on .*
-            auto re = regex("c.*|d");
-            auto m = matchFn("mm", re);
-            assert(!m);
-            debug(fred_test) writeln("!!! FReD REGRESSION test done "~matchFn.stringof~" !!!");
-            auto rprealloc = regex(`((.){5}.{1,10}){5}`);
-            auto arr = array(repeat('0',100));
-            auto m2 = matchFn(arr, rprealloc);
-            assert(m2);
-            assert(collectException(
-                    regex(r"^(import|file|binary|config)\s+([^\(]+)\(?([^\)]*)\)?\s*$")
-                    ) is null);
-            foreach(ch; ['^','$','.','|','?',',','-',';',':'
-                ,'#','&','%','/','<','>','`'
-                ,'*','+','(',')','{','}'])
-            {
-                assert(match(to!string(ch),regex(`[\`~ch~`]`)));
-                assert(!match(to!string(ch),regex(`[^\`~ch~`]`)));
-                if(ch != '-') //'--' is an operator
-                    assert(match(to!string(ch),regex(`[\`~ch~`-\`~ch~`]`)));
-            }
-            //bugzilla 7718
-            string strcmd = "./myApp.rb -os OSX -path \"/GIT/Ruby Apps/sec\" -conf 'notimer'";
-            auto reStrCmd = regex (`(".*")|('.*')`, "g");
-            assert(equal(map!"a[0]"(matchFn(strcmd, reStrCmd)),
-                         [`"/GIT/Ruby Apps/sec"`, `'notimer'`]));
-        }
-        test_body!bmatch();
-        test_body!match();
-    }
+// bugzilla 9280
+unittest
+{
+    string tomatch = "a!b@c";
+    static r = regex(r"^(?P<nick>.*?)!(?P<ident>.*?)@(?P<host>.*?)$");
+    auto nm = match(tomatch, r);
+    assert(nm);
+    auto c = nm.captures;
+    assert(c[1] == "a");
+    assert(c["nick"] == "a");
+}
 
-    // tests for replace
-    unittest
-    {
-        void test(alias matchFn)()
-        {
-            import std.string : toUpper;
-
-            foreach(i, v; TypeTuple!(string, wstring, dstring))
-            {
-                auto baz(Cap)(Cap m)
-                if (is(Cap == Captures!(Cap.String)))
-                {
-                    return std.string.toUpper(m.hit);
-                }
-                alias v String;
-                assert(std.regex.replace!(matchFn)(to!String("ark rapacity"), regex(to!String("r")), to!String("c"))
-                       == to!String("ack rapacity"));
-                assert(std.regex.replace!(matchFn)(to!String("ark rapacity"), regex(to!String("r"), "g"), to!String("c"))
-                       == to!String("ack capacity"));
-                assert(std.regex.replace!(matchFn)(to!String("noon"), regex(to!String("^n")), to!String("[$&]"))
-                       == to!String("[n]oon"));
-                assert(std.regex.replace!(matchFn)(to!String("test1 test2"), regex(to!String(`\w+`),"g"), to!String("$`:$'"))
-                       == to!String(": test2 test1 :"));
-                auto s = std.regex.replace!(baz!(Captures!(String)))(to!String("Strap a rocket engine on a chicken."),
-                        regex(to!String("[ar]"), "g"));
-                assert(s == "StRAp A Rocket engine on A chicken.");
-            }
-            debug(fred_test) writeln("!!! Replace test done "~matchFn.stringof~"  !!!");
-        }
-        test!(bmatch)();
-        test!(match)();
-    }
-
-    // tests for splitter
-    unittest
-    {
-        auto s1 = ", abc, de,     fg, hi, ";
-        auto sp1 = splitter(s1, regex(", *"));
-        auto w1 = ["", "abc", "de", "fg", "hi", ""];
-        assert(equal(sp1, w1));
-
-        auto s2 = ", abc, de,  fg, hi";
-        auto sp2 = splitter(s2, regex(", *"));
-        auto w2 = ["", "abc", "de", "fg", "hi"];
-
-        uint cnt;
-        foreach(e; sp2) {
-            assert(w2[cnt++] == e);
-        }
-        assert(equal(sp2, w2));
-    }
-
-    unittest
-    {
-        char[] s1 = ", abc, de,  fg, hi, ".dup;
-        auto sp2 = splitter(s1, regex(", *"));
-    }
-
-    unittest
-    {
-        auto s1 = ", abc, de,  fg, hi, ";
-        auto w1 = ["", "abc", "de", "fg", "hi", ""];
-        assert(equal(split(s1, regex(", *")), w1[]));
-    }
-
-    unittest
-    { // bugzilla 7141
-        string pattern = `[a\--b]`;
-        assert(match("-", pattern));
-        assert(match("b", pattern));
-        string pattern2 = `[&-z]`;
-        assert(match("b", pattern2));
-    }
-    unittest
-    {//bugzilla 7111
-        assert(match("", regex("^")));
-    }
-    unittest
-    {//bugzilla 7300
-        assert(!match("a"d, "aa"d));
-    }
-
-    unittest
-    {//bugzilla 7674
-        assert("1234".replace(regex("^"), "$$") == "$1234");
-        assert("hello?".replace(regex(r"\?", "g"), r"\?") == r"hello\?");
-        assert("hello?".replace(regex(r"\?", "g"), r"\\?") != r"hello\?");
-    }
-    unittest
-    {// bugzilla 7679
-        foreach(S; TypeTuple!(string, wstring, dstring))
-        {
-            enum re = ctRegex!(to!S(r"\."));
-            auto str = to!S("a.b");
-            assert(equal(std.regex.splitter(str, re), [to!S("a"), to!S("b")]));
-            assert(split(str, re) == [to!S("a"), to!S("b")]);
-        }
-    }
-    unittest
-    {//bugzilla 8203
-        string data = "
-        NAME   = XPAW01_STA:STATION
-        NAME   = XPAW01_STA
-        ";
-            auto uniFileOld = data;
-            auto r = regex(
-               r"^NAME   = (?P<comp>[a-zA-Z0-9_]+):*(?P<blk>[a-zA-Z0-9_]*)","gm");
-            auto uniCapturesNew = match(uniFileOld, r);
-            for(int i = 0; i < 20; i++)
-                foreach (matchNew; uniCapturesNew) {}
-    }
-    unittest
-    {// bugzilla 8637 purity of enforce
-        auto m = match("hello world", regex("world"));
-        enforce(m);
-    }
-
-    // bugzilla 8725
-    unittest
-    {
-      static italic = regex( r"\*
-                    (?!\s+)
-                    (.*?)
-                    (?!\s+)
-                    \*", "gx" );
-      string input = "this * is* interesting, *very* interesting";
-      assert(replace(input, italic, "<i>$1</i>") ==
-          "this * is* interesting, <i>very</i> interesting");
-    }
-
-    // bugzilla 8349
-    unittest
-    {
-        enum peakRegexStr = r"\>(wgEncode.*Tfbs.*\.(?:narrow)|(?:broad)Peak.gz)</a>";
-        enum peakRegex = ctRegex!(peakRegexStr);
-        //note that the regex pattern itself is probably bogus
-        assert(match(r"\>wgEncode-blah-Tfbs.narrow</a>", peakRegex));
-    }
-
-    // bugzilla 9211
-    unittest
-    {
-        auto rx_1 =  regex(r"^(\w)*(\d)");
-        auto m = match("1234", rx_1);
-        assert(equal(m.front, ["1234", "3", "4"]));
-        auto rx_2 = regex(r"^([0-9])*(\d)");
-        auto m2 = match("1234", rx_2);
-        assert(equal(m2.front, ["1234", "3", "4"]));
-    }
-
-    // bugzilla 9280
-    unittest
-    {
-        string tomatch = "a!b@c";
-        static r = regex(r"^(?P<nick>.*?)!(?P<ident>.*?)@(?P<host>.*?)$");
-        auto nm = match(tomatch, r);
-        assert(nm);
-        auto c = nm.captures;
-        assert(c[1] == "a");
-        assert(c["nick"] == "a");
-    }
-
-    // bugzilla 9634
-    unittest
-    {
-        auto re = ctRegex!"(?:a+)";
-        assert(match("aaaa", re).hit == "aaaa");
-    }
+// bugzilla 9634
+unittest
+{
+    auto re = ctRegex!"(?:a+)";
+    assert(match("aaaa", re).hit == "aaaa");
 }
 
 }//version(unittest)
