@@ -930,7 +930,7 @@ static assert(   ParameterDefaultValueTuple!foo[2] == [1,2,3]);
 template ParameterDefaultValueTuple(func...)
     if (func.length == 1 && isCallable!func)
 {
-    static if (is(typeof(func[0]) PT == __parameters))
+    static if (is(FunctionTypeOf!(func[0]) PT == __parameters))
     {
         template Get(size_t i)
         {
@@ -993,6 +993,12 @@ unittest
     static assert(   PDVT!baz[1] == 1);
     static assert(   PDVT!baz[2] == "hello");
     static assert(is(typeof(PDVT!baz) == typeof(TypeTuple!(void, 1, "hello"))));
+
+    // bug 10800 - property functions return empty string
+    @property void foo(int x = 3) { }
+    static assert(PDVT!foo.length == 1);
+    static assert(PDVT!foo[0] == 3);
+    static assert(is(typeof(PDVT!foo) == typeof(TypeTuple!(3))));
 
     struct Colour
     {
