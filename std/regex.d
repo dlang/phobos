@@ -816,23 +816,9 @@ auto memoizeExpr(string expr)()
 }
 
 //basic stack, just in case it gets used anywhere else then Parser
-@trusted struct Stack(T, bool CTFE = false)
+@trusted struct Stack(T)
 {
-    static if(!CTFE)
-        Appender!(T[]) stack;//compiles but bogus at CTFE
-    else
-    {
-        struct Proxy
-        {
-            T[] data;
-            void put(T val)
-            {
-                data ~= val;
-            }
-            void shrinkTo(size_t sz){   data = data[0..sz]; }
-        }
-        Proxy stack;
-    }
+    Appender!(T[]) stack;  
     @property bool empty(){ return stack.data.empty; }
     void push(T item)
     {
@@ -866,7 +852,7 @@ template BasicElementOf(Range)
     alias Unqual!(ElementEncodingType!Range) BasicElementOf;
 }
 
-struct Parser(R, bool CTFE = false)
+struct Parser(R)
     if (isForwardRange!R && is(ElementType!R : dchar))
 {
     enum infinite = ~0u;
@@ -875,10 +861,10 @@ struct Parser(R, bool CTFE = false)
     R pat, origin;       //keep full pattern for pretty printing error messages
     Bytecode[] ir;       //resulting bytecode
     uint re_flags = 0;   //global flags e.g. multiline + internal ones
-    Stack!(uint, CTFE) fixupStack;  //stack of opened start instructions
+    Stack!(uint) fixupStack;  //stack of opened start instructions
     NamedGroup[] dict;   //maps name -> user group number
     //current num of group, group nesting level and repetitions step
-    Stack!(uint, CTFE) groupStack;
+    Stack!(uint) groupStack;
     uint nesting = 0;
     uint lookaroundNest = 0;
     uint counterDepth = 0; //current depth of nested counted repetitions
@@ -950,12 +936,7 @@ struct Parser(R, bool CTFE = false)
     {
         enforce(ir.length < maxCompiledLength
                 , "maximum compiled pattern length is exceeded");
-        if(__ctfe)
-        {
-            ir = ir ~ code;
-        }
-        else
-            ir ~= code;
+        ir ~= code;
     }
 
     void putRaw(uint number)
@@ -1007,10 +988,7 @@ struct Parser(R, bool CTFE = false)
                             break L_FlagSwitch;
                 }
                 default:
-                    if(__ctfe)
-                        assert(text("unknown regex flag '",ch,"'"));
-                    else
-                        throw new RegexException(text("unknown regex flag '",ch,"'"));
+                    throw new RegexException(text("unknown regex flag '",ch,"'"));
             }
         }
     }
@@ -1679,8 +1657,8 @@ struct Parser(R, bool CTFE = false)
         return tuple(set, op);
     }
 
-    alias Stack!(CodepointSet, CTFE) ValStack;
-    alias Stack!(Operator, CTFE) OpStack;
+    alias Stack!(CodepointSet) ValStack;
+    alias Stack!(Operator) OpStack;
 
     //parse and store IR for CodepointSet
     void parseCharset()
@@ -2200,12 +2178,9 @@ private:
     }
 
     //
-    this(S,bool x)(Parser!(S,x) p)
+    this(S)(Parser!(S) p)
     {
-        if(__ctfe)//CTFE something funky going on with array
-            ir = p.ir.dup;
-        else
-            ir = p.ir;
+        ir = p.ir;
         dict = p.dict;
         ngroup = p.groupStack.top;
         maxCounterDepth = p.counterDepth;
@@ -6472,19 +6447,9 @@ public:
 public auto regexImpl(S)(S pattern, const(char)[] flags="")
     if(isSomeString!(S))
 {
-    alias Regex!(BasicElementOf!S) Reg;
-    if(!__ctfe)
-    {
-        auto parser = Parser!(Unqual!(typeof(pattern)))(pattern, flags);
-        Regex!(BasicElementOf!S) r = parser.program;
-        return r;
-    }
-    else
-    {
-        auto parser = Parser!(Unqual!(typeof(pattern)), true)(pattern, flags);
-        Regex!(BasicElementOf!S) r = parser.program;
-        return r;
-    }
+    auto parser = Parser!(Unqual!(typeof(pattern)))(pattern, flags);
+    auto r = parser.program;
+    return r;
 }
 
 
