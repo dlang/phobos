@@ -65,6 +65,75 @@ unittest
     static assert(is(Types == TypeTuple!(int, double, char)));
 }
 
+/++
+Transform $(D range) into a $(LREF TypeTuple) of its elements.
++/
+template toTypeTuple(alias range)
+{
+    import std.range : isInputRange;
+    alias Arr = typeof(range);
+    static if (isArray!Arr && !isNarrowString!Arr)
+    {
+        static if (range.length == 0)
+        {
+            alias toTypeTuple = TypeTuple!();
+        }
+        else static if (range.length == 1)
+        {
+            alias toTypeTuple = TypeTuple!(range[0]);
+        }
+        else
+        {
+            alias toTypeTuple = TypeTuple!(toTypeTuple!(range[0 .. $/2]), toTypeTuple!(range[$/2 .. $]));
+        }
+    }
+    else static if (isInputRange!Arr)
+    {
+        import std.array : array;
+        alias toTypeTuple = toTypeTuple!(array(range));
+    }
+    else
+    {
+        import std.string : format;
+        static assert (0, format("Cannot transform %s of type %s into a TypeTuple.", range, Arr.stringof));
+    }
+}
+
+///
+unittest
+{
+    import std.range : iota;
+    import std.conv : to, octal;
+    //Testing compile time octal
+    foreach (I2; toTypeTuple!(iota(0, 8)))
+        foreach (I1; toTypeTuple!(iota(0, 8)))
+        {
+            enum oct = I2 *  8 + I1;
+            enum dec = I2 * 10 + I1;
+            enum str = to!string(dec);
+            static assert(octal!dec == oct);
+            static assert(octal!str == oct);
+        }
+}
+
+unittest
+{
+    enum REF = [0, 1, 2, 3];
+    foreach(I, V; toTypeTuple!([0, 1, 2, 3]))
+    {
+        static assert(V == I);
+        static assert(V == REF[I]);
+    }
+}
+unittest
+{
+    enum REF = "日本語"d;
+    foreach(I, V; toTypeTuple!"日本語"c)
+    {
+        static assert(V == REF[I]);
+    }
+}
+
 /**
  * Returns the index of the first occurrence of type T in the
  * sequence of zero or more types TList.
