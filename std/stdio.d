@@ -1074,8 +1074,13 @@ Allows to directly use range operations on lines of a file.
         KeepTerminator keepTerminator;
         bool first_call = true;
 
+        static if (isScalarType!Terminator)
+            private enum defTerm = '\n';
+        else
+            private enum defTerm = cast(Terminator)"\n";
+        
         this(File f, KeepTerminator kt = KeepTerminator.no,
-                Terminator terminator = '\n')
+                Terminator terminator = defTerm)
         {
             file = f;
             this.terminator = terminator;
@@ -1130,7 +1135,17 @@ Allows to directly use range operations on lines of a file.
             else if (keepTerminator == KeepTerminator.no
                     && std.algorithm.endsWith(line, terminator))
             {
-                line = line.ptr[0 .. line.length - 1];
+                static if (isScalarType!Terminator)
+                    enum tlen = 1;
+                else static if (isArray!Terminator)
+                {
+                    static assert(
+                        is(Unqual!(ElementEncodingType!Terminator) == Char));
+                    const tlen = terminator.length;
+                }
+                else
+                    static assert(false);
+                line = line.ptr[0 .. line.length - tlen];
             }
         }
     }
@@ -1184,6 +1199,15 @@ void main()
     auto byLine(Terminator = char, Char = char)
     (KeepTerminator keepTerminator = KeepTerminator.no,
             Terminator terminator = '\n')
+    if (isScalarType!Terminator)
+    {
+        return ByLine!(Char, Terminator)(this, keepTerminator, terminator);
+    }
+
+/// ditto
+    auto byLine(Terminator, Char = char)
+    (KeepTerminator keepTerminator, Terminator terminator)
+    if (is(Unqual!(ElementEncodingType!Terminator) == Char))
     {
         return ByLine!(Char, Terminator)(this, keepTerminator, terminator);
     }
@@ -1204,9 +1228,8 @@ void main()
         }
         f.close();
 
-        void test(string txt, string[] witness,
-                KeepTerminator kt = KeepTerminator.no,
-                bool popFirstLine = false)
+        void testTerm(Terminator)(string txt, string[] witness,
+                KeepTerminator kt, Terminator term, bool popFirstLine)
         {
             uint i;
             std.file.write(deleteme, txt);
@@ -1216,7 +1239,7 @@ void main()
                 f.close();
                 assert(!f.isOpen);
             }
-            auto lines = f.byLine(kt);
+            auto lines = f.byLine(kt, term);
             if (popFirstLine)
             {
                 lines.popFront();
@@ -1228,18 +1251,33 @@ void main()
             }
             assert(i == witness.length, text(i, " != ", witness.length));
         }
+        /* Wrap with default args.
+         * Note: Having a default argument for terminator = '\n' would prevent
+         * instantiating Terminator=string (or "\n" would prevent Terminator=char) */
+        void test(string txt, string[] witness,
+                KeepTerminator kt = KeepTerminator.no,
+                bool popFirstLine = false)
+        {
+            testTerm(txt, witness, kt, '\n', popFirstLine);
+        }
 
         test("", null);
         test("\n", [ "" ]);
         test("asd\ndef\nasdf", [ "asd", "def", "asdf" ]);
         test("asd\ndef\nasdf", [ "asd", "def", "asdf" ], KeepTerminator.no, true);
         test("asd\ndef\nasdf\n", [ "asd", "def", "asdf" ]);
+        testTerm("bob\r\nmarge\r\nsteve\r\n", ["bob", "marge", "steve"],
+            KeepTerminator.no, "\r\n", false);
+        testTerm("sue\r", ["sue"], KeepTerminator.no, '\r', false);
 
         test("", null, KeepTerminator.yes);
         test("\n", [ "\n" ], KeepTerminator.yes);
         test("asd\ndef\nasdf", [ "asd\n", "def\n", "asdf" ], KeepTerminator.yes);
         test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes);
         test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes, true);
+        testTerm("bob\r\nmarge\r\nsteve\r\n", ["bob\r\n", "marge\r\n", "steve\r\n"],
+            KeepTerminator.yes, "\r\n", false);
+        testTerm("sue\r", ["sue\r"], KeepTerminator.yes, '\r', false);
     }
 
     template byRecord(Fields...)
