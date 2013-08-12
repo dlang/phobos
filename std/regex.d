@@ -1,12 +1,13 @@
 //Written in the D programming language
 /++
+  $(SECTION Intro)
   $(LUCKY Regular expressions) are a commonly used method of pattern matching
   on strings, with $(I regex) being a catchy word for a pattern in this domain
   specific language. Typical problems usually solved by regular expressions
   include validation of user input and the ubiquitous find & replace
   in text processing utilities.
 
-  Synposis:
+  $(SECTION Synopsis)
   ---
   import std.regex;
   import std.stdio;
@@ -41,19 +42,24 @@
 
 
   ---
-
+  $(SECTION Syntax and general information)
   The general usage guideline is to keep regex complexity on the side of simplicity,
-  as its capabilities reside in purely character-level manipulation,
-  and as such are ill-suited for tasks involving higher level invariants
+  as its capabilities reside in purely character-level manipulation.
+  As such it's ill-suited for tasks involving higher level invariants
   like matching an integer number $(U bounded) in an [a,b] interval.
   Checks of this sort of are better addressed by additional post-processing.
 
   The basic syntax shouldn't surprise experienced users of regular expressions.
-  Thankfully, nowadays the web is bustling with resources to help newcomers, and a good
-  $(WEB www.regular-expressions.info, reference with tutorial) on regular expressions
-  can be found.
+  For an introduction to $(D std.regex) see a 
+  $(WEB dlang.org/regular-expression.html, short tour) of the module API 
+  and its abilities.
 
-  This library uses an ECMAScript syntax flavor with the following extensions:
+  There are other web resources on regular expressions to help newcomers, 
+  and a good $(WEB www.regular-expressions.info, reference with tutorial) 
+  can easily be found.
+
+  This library uses a remarkably common ECMAScript syntax flavor 
+  with the following extensions:
   $(UL
     $(LI Named subexpressions, with Python syntax. )
     $(LI Unicode properties such as Scripts, Blocks and common binary properties e.g Alphabetic, White_Space, Hex_Digit etc.)
@@ -62,12 +68,12 @@
 
   $(REG_START Pattern syntax )
   $(I std.regex operates on codepoint level,
-    'character' in this table denotes a single unicode codepoint.)
+    'character' in this table denotes a single Unicode codepoint.)
   $(REG_TABLE
     $(REG_TITLE Pattern element, Semantics )
     $(REG_TITLE Atoms, Match single characters )
     $(REG_ROW any character except [{|*+?()^$, Matches the character itself. )
-    $(REG_ROW ., In single line mode matches any charcter.
+    $(REG_ROW ., In single line mode matches any character.
       Otherwise it matches any character except '\n' and '\r'. )
     $(REG_ROW [class], Matches a single character
       that belongs to this character class. )
@@ -82,8 +88,8 @@
     $(REG_ROW \r, Matches a carriage return character. )
     $(REG_ROW \t, Matches a tab character. )
     $(REG_ROW \v, Matches a vertical tab character. )
-    $(REG_ROW \d, Matches any unicode digit. )
-    $(REG_ROW \D, Matches any character except unicode digits. )
+    $(REG_ROW \d, Matches any Unicode digit. )
+    $(REG_ROW \D, Matches any character except Unicode digits. )
     $(REG_ROW \w, Matches any word character (note: this includes numbers).)
     $(REG_ROW \W, Matches any non-word character.)
     $(REG_ROW \s, Matches whitespace, same as \p{White_Space}.)
@@ -91,15 +97,15 @@
     $(REG_ROW \\, Matches \ character. )
     $(REG_ROW \c where c is one of [|*+?(), Matches the character c itself. )
     $(REG_ROW \p{PropertyName}, Matches a character that belongs
-      to the unicode PropertyName set.
+        to the Unicode PropertyName set.
       Single letter abbreviations can be used without surrounding {,}. )
     $(REG_ROW  \P{PropertyName}, Matches a character that does not belong
-      to the unicode PropertyName set.
+        to the Unicode PropertyName set.
       Single letter abbreviations can be used without surrounding {,}. )
     $(REG_ROW \p{InBasicLatin}, Matches any character that is part of
-        the BasicLatin unicode $(U block).)
+          the BasicLatin Unicode $(U block).)
     $(REG_ROW \P{InBasicLatin}, Matches any character except ones in
-        the BasicLatin unicode $(U block).)
+          the BasicLatin Unicode $(U block).)
     $(REG_ROW \p{Cyrilic}, Matches any character that is part of
         Cyrilic $(U script).)
     $(REG_ROW \P{Cyrilic}, Matches any character except ones in
@@ -178,7 +184,7 @@
       useful for formatting complex regular expressions. )
   )
 
-  $(B Unicode support)
+  $(SECTION Unicode support)
 
   This library provides full Level 1 support* according to
     $(WEB unicode.org/reports/tr18/, UTS 18). Specifically:
@@ -196,19 +202,42 @@
   *With exception of point 1.1.1, as of yet, normalization of input
     is expected to be enforced by user.
 
-  $(B Slicing)
+    $(SECTION Replace format string) 
+
+    A set of functions in this module that do the substitution rely 
+    on a simple format to guide the process. In particular the table below 
+    applies to the $(D format) argument of 
+    $(LREF replaceFirst) and $(LREF replaceAll).
+    
+    The format string can reference parts of match using the following notation.
+    $(REG_TABLE
+        $(REG_TITLE Format specifier, Replaced by )
+        $(REG_ROW $&amp;, the whole match. )
+        $(REG_ROW $`, part of input $(I preceding) the match. )
+        $(REG_ROW $', part of input $(I following) the match. )
+        $(REG_ROW $$, '$' character. )
+        $(REG_ROW \c &#44 where c is any character, the character c itself. )
+        $(REG_ROW \\, '\' character. )
+        $(REG_ROW &#36;1 .. &#36;99, submatch number 1 to 99 respectively. )
+    )
+
+  $(SECTION Slicing and zero memory allocations orientation)
 
   All matches returned by pattern matching functionality in this library
-  are slices of the original input, with the notable exception of the $(D replace)
-  family of functions which generate a new string from the input.
+    are slices of the original input. The notable exception is the $(D replace)
+    family of functions  that generate a new string from the input.
 
-  Copyright: Copyright Dmitry Olshansky, 2011
+    In cases where producing the replacement is the ultimate goal 
+    $(LREF replaceFirstInto) and $(LREF replaceAllInto) could come in handy 
+    as functions that  avoid allocations even for replacement.
+
+    Copyright: Copyright Dmitry Olshansky, 2011-
 
   License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
   Authors: Dmitry Olshansky,
 
-  API and utility constructs are based on original $(D std.regex)
+    API and utility constructs are modeled after the original $(D std.regex)
   by Walter Bright and Andrei Alexandrescu.
 
   Source: $(PHOBOSSRC std/_regex.d)
@@ -218,11 +247,13 @@ Macros:
     REG_TITLE = $(TR $(TD $(B $1)) $(TD $(B $2)) )
     REG_TABLE = <table border="1" cellspacing="0" cellpadding="5" > $0 </table>
     REG_START = <h3><div align="center"> $0 </div></h3>
+    SECTION = <h3><a id="$1">$0</a></h3>
+    S_LINK = <a href="#$1">$+</a>
  +/
 
 module std.regex;
 
-import std.internal.uni, std.internal.uni_tab;//unicode property tables
+import std.internal.uni, std.internal.uni_tab;//Unicode property tables
 import std.array, std.algorithm, std.range,
        std.conv, std.exception, std.traits, std.typetuple,
        std.utf, std.format, std.typecons, std.bitmanip,
@@ -6309,7 +6340,7 @@ unittest//verify example
     Effectively it's a forward range of Captures!R, produced
     by lazily searching for matches in a given input.
 
-    alias Engine specifies an engine type to use during matching,
+    $(D alias Engine) specifies an engine type to use during matching,
     and is automatically deduced in a call to $(D match)/$(D bmatch).
 +/
 @trusted public struct RegexMatch(R, alias Engine = ThompsonMatcher)
@@ -6533,10 +6564,10 @@ public auto match(R, RegEx)(R input, RegEx re)
     $(D re) parameter can be one of three types:
     $(UL
       $(LI Plain string, in which case it's compiled to bytecode before matching. )
-      $(LI Regex!char (wchar/dchar) that contains pattern in form of
-        precompiled  bytecode. )
-      $(LI StaticRegex!char (wchar/dchar) that contains pattern in form of
-        specially crafted native code. )
+      $(LI Regex!char (wchar/dchar) that contains a pattern in the form of
+        compiled  bytecode. )
+      $(LI StaticRegex!char (wchar/dchar) that contains a pattern in the form of
+        compiled native machine code. )
     )
 
     Returns: a $(D RegexMatch) object holding engine
