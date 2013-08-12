@@ -539,8 +539,8 @@ static assert(Bytecode.sizeof == 4);
         break;
     case IR.RepeatEnd, IR.RepeatQEnd: //backward-jump instructions
         uint len = irb[pc].data;
-        formattedWrite(output, " pc=>%u min=%u max=%u step=%u"
-                , pc-len, irb[pc+3].raw, irb[pc+4].raw, irb[pc+2].raw);
+        formattedWrite(output, " pc=>%u min=%u max=%u step=%u",
+            pc-len, irb[pc+3].raw, irb[pc+4].raw, irb[pc+2].raw);
         break;
     case IR.InfiniteEnd, IR.InfiniteQEnd, IR.OrEnd: //ditto
         uint len = irb[pc].data;
@@ -688,6 +688,8 @@ enum RegexOption: uint {
 alias TypeTuple!('g', 'i', 'x', 'U', 'm', 's') RegexOptionNames;//do not reorder this list
 static assert( RegexOption.max < 0x80);
 enum RegexInfo : uint { oneShot = 0x80 }
+alias Escapables = TypeTuple!('[',']','\\','^','$','.','|','?',',','-',';',':',
+    '#','&','%','/','<','>','`', '*','+','(',')','{','}', '~');
 
 private enum NEL = '\u0085', LS = '\u2028', PS = '\u2029';
 
@@ -966,15 +968,15 @@ struct Parser(R)
 
     void put(Bytecode code)
     {
-        enforce(ir.length < maxCompiledLength
-                , "maximum compiled pattern length is exceeded");
+        enforce(ir.length < maxCompiledLength,
+            "maximum compiled pattern length is exceeded");
         ir ~= code;
     }
 
     void putRaw(uint number)
     {
-        enforce(ir.length < maxCompiledLength
-                , "maximum compiled pattern length is exceeded");
+        enforce(ir.length < maxCompiledLength,
+            "maximum compiled pattern length is exceeded");
         ir ~= Bytecode.fromRaw(number);
     }
 
@@ -1394,15 +1396,15 @@ struct Parser(R)
         put(Bytecode.fromRaw(0));
         groupStack.push(0);
         lookaroundNest++;
-        enforce(lookaroundNest <= maxLookaroundDepth
-                , "maximum lookaround depth is exceeded");
+        enforce(lookaroundNest <= maxLookaroundDepth,
+            "maximum lookaround depth is exceeded");
     }
 
     //fixup lookaround with start at offset fix
     void fixLookaround(uint fix)
     {
-        ir[fix] = Bytecode(ir[fix].code
-                           , cast(uint)ir.length - fix - IRL!(IR.LookaheadStart));
+        ir[fix] = Bytecode(ir[fix].code,
+            cast(uint)ir.length - fix - IRL!(IR.LookaheadStart));
         auto g = groupStack.pop();
         assert(!groupStack.empty);
         ir[fix+1] = Bytecode.fromRaw(groupStack.top);
@@ -1553,9 +1555,10 @@ struct Parser(R)
                     last = parseControlCode();
                     state = State.Char;
                     break;
-                case '[',']','\\','^','$','.','|','?',',','-',';',':'
-                ,'#','&','%','/','<','>','`'
-                ,'*','+','(',')','{','}', '~':
+                foreach(val; Escapables)
+                {
+                case val:
+                }
                     last = current;
                     state = State.Char;
                     break;
@@ -1659,9 +1662,10 @@ struct Parser(R)
                 case 'v':
                     end = '\v';
                     break;
-                case '[',']','\\','^','$','.','|','?',',','-',';',':'
-                ,'#','&','%','/','<','>','`'
-                ,'*','+','(',')','{','}', '~':
+                foreach(val; Escapables)
+                {
+                case val:
+                }
                     end = current;
                     break;
                 case 'c':
@@ -1749,18 +1753,18 @@ struct Parser(R)
             {
             case '[':
                 opstack.push(Operator.Open);
-                enforce(next(), "unexpected end of CodepointSet");
+                enforce(next(), "unexpected end of character class");
                 if(current == '^')
                 {
                     opstack.push(Operator.Negate);
-                    enforce(next(), "unexpected end of CodepointSet");
+                    enforce(next(), "unexpected end of character class");
                 }
                 //[] is prohibited
-                enforce(current != ']', "wrong CodepointSet");
+                enforce(current != ']', "wrong character class");
                 goto default;
             case ']':
-                enforce(unrollWhile!(unaryFun!"a != a.Open")(vstack, opstack)
-                        , "CodepointSet syntax error");
+                enforce(unrollWhile!(unaryFun!"a != a.Open")(vstack, opstack),
+                    "character class syntax error");
                 enforce(!opstack.empty, "unmatched ']'");
                 opstack.pop();
                 next();
@@ -1949,8 +1953,8 @@ struct Parser(R)
             enforce(current < 0x80, "invalid property name");
             result[k++] = cast(char)current;
         }
-        auto s = getUnicodeSet(result[0..k], negated
-                         , cast(bool)(re_flags & RegexOption.casefold));
+        auto s = getUnicodeSet(result[0..k], negated,
+            cast(bool)(re_flags & RegexOption.casefold));
         enforce(!s.empty, "unrecognized unicode property spec");
         next();
         return s;
@@ -2126,8 +2130,8 @@ private:
         {
             if(ir[i].hotspot)
             {
-                assert(i + 1 < ir.length
-                       , "unexpected end of IR while looking for hotspot");
+                assert(i + 1 < ir.length,
+                    "unexpected end of IR while looking for hotspot");
                 ir[i+1] = Bytecode.fromRaw(hotspotTableSize);
                 hotspotTableSize += counterRange.top;
             }
@@ -2142,8 +2146,8 @@ private:
                 ir[repEnd+4].raw *= counterRange.top;
                 ulong cntRange = cast(ulong)(max)*counterRange.top;
                 cumRange += cntRange;
-                enforce(cumRange < maxCumulativeRepetitionLength
-                        , "repetition length limit is exceeded");
+                enforce(cumRange < maxCumulativeRepetitionLength,
+                    "repetition length limit is exceeded");
                 counterRange.push(cast(uint)cntRange + counterRange.top);
                 threadCount += counterRange.top;
                 break;
@@ -2179,10 +2183,10 @@ private:
             if(ir[pc].isStart || ir[pc].isEnd)
             {
                 uint dest = ir[pc].indexOfPair(pc);
-                assert(dest < ir.length, text("Wrong length in opcode at pc="
-                                              , pc, " ", dest, " vs ", ir.length));
-                assert(ir[dest].paired ==  ir[pc]
-                       ,text("Wrong pairing of opcodes at pc=", pc, "and pc=", dest));
+                assert(dest < ir.length, text("Wrong length in opcode at pc=",
+                    pc, " ", dest, " vs ", ir.length));
+                assert(ir[dest].paired ==  ir[pc],
+                    text("Wrong pairing of opcodes at pc=", pc, "and pc=", dest));
             }
             else if(ir[pc].isAtom)
             {
@@ -3356,9 +3360,9 @@ template BacktrackingMatcher(bool CTregex)
                 for(;;)
                 {
                     debug(std_regex_matcher)
-                        writefln("PC: %s\tCNT: %s\t%s \tfront: %s src: %s"
-                            , pc, counter, disassemble(re.ir, pc, re.dict)
-                            , front, s._index);
+                        writefln("PC: %s\tCNT: %s\t%s \tfront: %s src: %s",
+                            pc, counter, disassemble(re.ir, pc, re.dict),
+                            front, s._index);
                     switch(re.ir[pc].code)
                     {
                     case IR.OrChar://assumes IRL!(OrChar) == 1
@@ -3747,8 +3751,8 @@ template BacktrackingMatcher(bool CTregex)
                 memory[lastState..lastState+2*matches.length] = (cast(size_t[])matches)[];
                 lastState += 2*matches.length;
                 debug(std_regex_matcher)
-                    writefln("Saved(pc=%s) front: %s src: %s"
-                             , pc, front, s[index..s.lastIndex]);
+                    writefln("Saved(pc=%s) front: %s src: %s",
+                        pc, front, s[index..s.lastIndex]);
             }
 
             //helper function, restores engine state
@@ -3774,8 +3778,8 @@ template BacktrackingMatcher(bool CTregex)
                 s.reset(index);
                 next();
                 debug(std_regex_matcher)
-                    writefln("Backtracked (pc=%s) front: %s src: %s"
-                    , pc, front, s[index..s.lastIndex]);
+                    writefln("Backtracked (pc=%s) front: %s src: %s",
+                        pc, front, s[index..s.lastIndex]);
                 return true;
             }
 
@@ -3796,9 +3800,9 @@ template BacktrackingMatcher(bool CTregex)
                 for(;;)
                 {
                     debug(std_regex_matcher)
-                        writefln("PC: %s\tCNT: %s\t%s \tfront: %s src: %s"
-                        , pc, counter, disassemble(re.ir, pc, re.dict)
-                        , front, retro(s[index..s.lastIndex]));
+                        writefln("PC: %s\tCNT: %s\t%s \tfront: %s src: %s",
+                            pc, counter, disassemble(re.ir, pc, re.dict),
+                            front, retro(s[index..s.lastIndex]));
                     switch(re.ir[pc].code)
                     {
                     case IR.OrChar://assumes IRL!(OrChar) == 1
@@ -4561,8 +4565,8 @@ struct CtContext
                     {
                         $$ //$$
                     }
-                    if(test_$$() >= 0)`, id, code ? code : "return 0;"
-                        , ir[pc].mnemonic, id);
+                    if(test_$$() >= 0)`, id, code ? code : "return 0;",
+                        ir[pc].mnemonic, id);
             }
         }
         return "";
@@ -4666,8 +4670,7 @@ struct CtContext
                             $$
                         }
                     }
-                    $$`
-                , nextInstr, nextInstr, nextInstr, bailOut);
+                    $$`, nextInstr, nextInstr, nextInstr, bailOut);
             break;
         case IR.Notwordboundary:
             code ~= ctSub( `
@@ -4735,8 +4738,10 @@ struct CtContext
         case IR.Backref:
             string mStr = "auto referenced = ";
             mStr ~= ir[0].localRef
-                ? ctSub("s[matches[$$].begin .. matches[$$].end];", ir[0].data, ir[0].data)
-                : ctSub("s[backrefed[$$].begin .. backrefed[$$].end];", ir[0].data, ir[0].data);
+                ? ctSub("s[matches[$$].begin .. matches[$$].end];", 
+                    ir[0].data, ir[0].data)
+                : ctSub("s[backrefed[$$].begin .. backrefed[$$].end];", 
+                    ir[0].data, ir[0].data);
             code ~= ctSub( `
                     $$
                     while(!atEnd && !referenced.empty && front == referenced.front)
@@ -5966,9 +5971,8 @@ enum OneShot { Fwd, Bwd };
                 t.pc -= len + IRL!(IR.LookaheadStart);
                 bool positive = re.ir[t.pc].code == IR.LookaheadStart;
                 auto matcher = ThompsonMatcher!(Char, typeof(s.loopBack(index)))
-                    (this
-                    , re.ir[t.pc .. t.pc+len+IRL!(IR.LookbehindStart)+IRL!(IR.LookbehindEnd)]
-                    , s.loopBack(index));
+                    (this, re.ir[t.pc .. t.pc+len+IRL!(IR.LookbehindStart)+IRL!(IR.LookbehindEnd)],
+                        s.loopBack(index));
                 matcher.re.ngroup = re.ir[t.pc+2].raw - re.ir[t.pc+1].raw;
                 matcher.backrefed = backrefed.empty ? t.matches : backrefed;
                 matcher.next(); //fetch a char, since direction was reversed
@@ -6384,8 +6388,8 @@ public:
         if(_memory.ptr)
         {
             ++counter;
-            debug(std_regex_allocation) writefln("RefCount (postblit): %x %d"
-                                            , _memory.ptr, *cast(size_t*)_memory.ptr);
+            debug(std_regex_allocation) writefln("RefCount (postblit): %x %d",
+                _memory.ptr, *cast(size_t*)_memory.ptr);
         }
     }
 
@@ -6393,8 +6397,8 @@ public:
     {
         if(_memory.ptr && --*cast(size_t*)_memory.ptr == 0)
         {
-            debug(std_regex_allocation) writefln("RefCount (dtor): %x %d"
-                                            , _memory.ptr, *cast(size_t*)_memory.ptr);
+            debug(std_regex_allocation) writefln("RefCount (dtor): %x %d",
+                _memory.ptr, *cast(size_t*)_memory.ptr);
             free(cast(void*)_memory.ptr);
         }
     }
@@ -7886,14 +7890,11 @@ unittest
         assert(collectException(
                 regex(r"^(import|file|binary|config)\s+([^\(]+)\(?([^\)]*)\)?\s*$")
                 ) is null);
-        foreach(ch; ['^','$','.','|','?',',','-',';',':'
-            ,'#','&','%','/','<','>','`'
-            ,'*','+','(',')','{','}'])
+        foreach(ch; Escapables)
         {
             assert(match(to!string(ch),regex(`[\`~ch~`]`)));
             assert(!match(to!string(ch),regex(`[^\`~ch~`]`)));
-            if(ch != '-') //'--' is an operator
-                assert(match(to!string(ch),regex(`[\`~ch~`-\`~ch~`]`)));
+            assert(match(to!string(ch),regex(`[\`~ch~`-\`~ch~`]`)));
         }
         //bugzilla 7718
         string strcmd = "./myApp.rb -os OSX -path \"/GIT/Ruby Apps/sec\" -conf 'notimer'";
