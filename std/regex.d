@@ -540,7 +540,7 @@ static assert(Bytecode.sizeof == 4);
     case IR.RepeatEnd, IR.RepeatQEnd: //backward-jump instructions
         uint len = irb[pc].data;
         formattedWrite(output, " pc=>%u min=%u max=%u step=%u",
-            pc-len, irb[pc+3].raw, irb[pc+4].raw, irb[pc+2].raw);
+            pc - len, irb[pc + 3].raw, irb[pc + 4].raw, irb[pc + 2].raw);
         break;
     case IR.InfiniteEnd, IR.InfiniteQEnd, IR.OrEnd: //ditto
         uint len = irb[pc].data;
@@ -1188,7 +1188,7 @@ struct Parser(R)
         default:
             if(replace)
             {
-                copyForwardAlt(ir[offset+1..$],ir[offset..$-1]);
+                copyForwardAlt(ir[offset + 1 .. $],ir[offset .. $ - 1]);
                 ir.length -= 1;
             }
             return;
@@ -2187,7 +2187,7 @@ unittest
     nc.popFront();
     assert(nc.equal(cp[1..$]));
     nc.popBack();
-    assert(nc.equal(cp[1..$-1]));
+    assert(nc.equal(cp[1 .. $ - 1]));
 }
 
 //
@@ -3057,14 +3057,14 @@ struct Input(Char)
 //unsafe, no initialization of elements
 @system T[] mallocArray(T)(size_t len)
 {
-    return (cast(T*)malloc(len*T.sizeof))[0..len];
+    return (cast(T*)malloc(len * T.sizeof))[0 .. len];
 }
 
 //very unsafe, no initialization
 @system T[] arrayInChunk(T)(size_t len, ref void[] chunk)
 {
     auto ret = (cast(T*)chunk.ptr)[0..len];
-    chunk = chunk[len*T.sizeof..$];
+    chunk = chunk[len * T.sizeof .. $];
     return ret;
 }
 
@@ -3675,7 +3675,7 @@ template BacktrackingMatcher(bool CTregex)
                 *cast(State*)&memory[lastState] =
                     State(index, pc, counter, infiniteNesting);
                 lastState += stateSize;
-                memory[lastState..lastState+2*matches.length] = (cast(size_t[])matches)[];
+                memory[lastState .. lastState + 2 * matches.length] = (cast(size_t[])matches)[];
                 lastState += 2*matches.length;
                 debug(std_regex_matcher)
                     writefln("Saved(pc=%s) front: %s src: %s",
@@ -4079,8 +4079,8 @@ template BacktrackingMatcher(bool CTregex)
             {
                 static if(args.length > 0)
                 {
-                    return  format[0..i-1] ~ to!string(args[0])
-                        ~ ctSub(format[i+1..$], args[1..$]);
+                    return  format[0 .. i - 1] ~ to!string(args[0])
+                        ~ ctSub(format[i + 1 .. $], args[1 .. $]);
                 }
                 else
                     assert(0);
@@ -4234,7 +4234,7 @@ struct CtContext
                 curInfLoop--;
             //start/end codegen
             //r.addr is at last test+ jump of loop, addr+1 is body of loop
-            nir = ir[ir[0].length+len..$];
+            nir = ir[ir[0].length + len .. $];
             r.code = ctGenFixupCode(ir[0..ir[0].length], addr, r.addr) ~ r.code;
             r.code ~= ctGenFixupCode(nir, r.addr, addr+1);
             r.addr += 2;   //account end instruction + restore state
@@ -4244,7 +4244,7 @@ struct CtContext
             uint len = ir[0].data;
             auto nir = ir[ir[0].length .. ir[0].length+len];
             r = ctGenAlternation(nir, addr);
-            ir = ir[ir[0].length+len..$];
+            ir = ir[ir[0].length + len .. $];
             assert(ir[0].code == IR.OrEnd);
             ir = ir[ir[0].length..$];
             break;
@@ -4318,7 +4318,7 @@ struct CtContext
                 r.code = ctGenFixupCode(ir[0 .. ir[0].length], addr, r.addr+1) ~ r.code;
                 addr = r.addr+1;//leave space for GotoEndOr
                 pieces ~= r;
-                ir = ir[optL+len..$];
+                ir = ir[optL + len .. $];
             }
             else
             {
@@ -4361,7 +4361,7 @@ struct CtContext
             ir = ir[ir[0].length..$];
             break;
         case IR.InfiniteEnd:
-            testCode = ctQuickTest(ir[IRL!(IR.InfiniteEnd)..$],addr+1);
+            testCode = ctQuickTest(ir[IRL!(IR.InfiniteEnd) .. $],addr + 1);
             r ~= ctSub( `
                     if(tracker_$$ == index)
                     {//source not consumed
@@ -4382,7 +4382,7 @@ struct CtContext
             ir = ir[ir[0].length..$];
             break;
         case IR.InfiniteQEnd:
-            testCode = ctQuickTest(ir[IRL!(IR.InfiniteEnd)..$],addr+1);
+            testCode = ctQuickTest(ir[IRL!(IR.InfiniteEnd) .. $],addr + 1);
             r ~= ctSub( `
                     if(tracker_$$ == index)
                     {//source not consumed
@@ -5284,14 +5284,14 @@ enum OneShot { Fwd, Bwd };
                 if(merge[re.ir[t.pc + 1].raw+t.counter] < genCounter)
                 {
                     debug(std_regex_matcher) writefln("A thread(pc=%s) passed there : %s ; GenCounter=%s mergetab=%s",
-                                    t.pc, s[index..s.lastIndex], genCounter, merge[re.ir[t.pc + 1].raw+t.counter] );
+                                    t.pc, s[index .. s.lastIndex], genCounter, merge[re.ir[t.pc + 1].raw + t.counter] );
                     merge[re.ir[t.pc + 1].raw+t.counter] = genCounter;
                     t.pc += IRL!(IR.OrEnd);
                 }
                 else
                 {
                     debug(std_regex_matcher) writefln("A thread(pc=%s) got merged there : %s ; GenCounter=%s mergetab=%s",
-                                    t.pc, s[index..s.lastIndex], genCounter, merge[re.ir[t.pc + 1].raw+t.counter] );
+                                    t.pc, s[index .. s.lastIndex], genCounter, merge[re.ir[t.pc + 1].raw + t.counter] );
                     recycle(t);
                     t = worklist.fetch();
                     if(!t)
@@ -5365,7 +5365,7 @@ enum OneShot { Fwd, Bwd };
             case IR.NeglookbehindStart:
                 auto matcher =
                     ThompsonMatcher!(Char, typeof(s.loopBack(index)))
-                    (this, re.ir[t.pc..t.pc+re.ir[t.pc].data+IRL!(IR.LookbehindStart)], s.loopBack(index));
+                    (this, re.ir[t.pc .. t.pc + re.ir[t.pc].data + IRL!(IR.LookbehindStart)], s.loopBack(index));
                 matcher.re.ngroup = re.ir[t.pc+2].raw - re.ir[t.pc+1].raw;
                 matcher.backrefed = backrefed.empty ? t.matches : backrefed;
                 //backMatch
@@ -6035,7 +6035,7 @@ enum OneShot { Fwd, Bwd };
     void prepareFreeList(size_t size, ref void[] memory)
     {
         void[] mem = memory[0 .. threadSize*size];
-        memory = memory[threadSize*size..$];
+        memory = memory[threadSize * size .. $];
         freelist = cast(Thread!DataIndex*)&mem[0];
         size_t i;
         for(i = threadSize; i < threadSize*size; i += threadSize)
