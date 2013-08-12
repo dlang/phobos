@@ -666,6 +666,60 @@ unittest
 }
 
 /++
+    Returns the index of the last occurence of $(D c) in $(D s). If $(D c) is
+    not found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
+    the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
+    codeunit index in $(D s). If the sequence ending at $(D startIdx) does not
+    represent a well formed codepoint, then a $(XREF utf,UTFException) may be
+    thrown.
+
+    $(D cs) indicates whether the comparisons are case sensitive.
+  +/
+ptrdiff_t lastIndexOf(Char)(const(Char)[] s, dchar c, const size_t startIdx,
+        CaseSensitive cs = CaseSensitive.yes)
+    if (isSomeChar!Char)
+{
+    if (startIdx <= s.length)
+    {
+        return lastIndexOf(s[0u .. startIdx], c, cs);
+    }
+
+    return -1;
+}
+
+unittest
+{
+    debug(string) printf("string.lastIndexOf.unittest\n");
+
+    foreach(S; TypeTuple!(string, wstring, dstring))
+    {
+        assert(lastIndexOf(cast(S) null, 'a') == -1);
+        assert(lastIndexOf(to!S("def"), 'a') == -1);
+        assert(lastIndexOf(to!S("abba"), 'a', 3) == 0);
+        assert(lastIndexOf(to!S("deff"), 'f', 3) == 2);
+
+        assert(lastIndexOf(cast(S) null, 'a', CaseSensitive.no) == -1);
+        assert(lastIndexOf(to!S("def"), 'a', CaseSensitive.no) == -1);
+        assert(lastIndexOf(to!S("AbbAa"), 'a', to!ushort(4), CaseSensitive.no) == 3,
+                to!string(lastIndexOf(to!S("AbbAa"), 'a', 4, CaseSensitive.no)));
+        assert(lastIndexOf(to!S("def"), 'F', 3, CaseSensitive.no) == 2);
+
+        S sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
+
+        assert(lastIndexOf(to!S("def"), 'f', 4, CaseSensitive.no) == -1);
+        assert(lastIndexOf(sPlts, 'M', sPlts.length -2, CaseSensitive.no) == 34);
+        assert(lastIndexOf(sPlts, 'S', sPlts.length -2, CaseSensitive.no) == 40);
+    }
+
+    foreach(cs; EnumMembers!CaseSensitive)
+    {
+        assert(lastIndexOf("\U00010143\u0100\U00010143hello", '\u0100', cs) == 4);
+        assert(lastIndexOf("\U00010143\u0100\U00010143hello"w, '\u0100', cs) == 2);
+        assert(lastIndexOf("\U00010143\u0100\U00010143hello"d, '\u0100', cs) == 1);
+    }
+}
+
+/++
     Returns the index of the last occurence of $(D sub) in $(D s). If $(D sub)
     is not found, then $(D -1) is returned.
 
@@ -795,6 +849,76 @@ unittest
         }
     }
     });
+}
+
+/++
+    Returns the index of the last occurence of $(D sub) in $(D s). If $(D sub)
+    is not found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
+    the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
+    codeunit index in $(D s). If the sequence ending at $(D startIdx) does not
+    represent a well formed codepoint, then a $(XREF utf,UTFException) may be
+    thrown.
+
+    $(D cs) indicates whether the comparisons are case sensitive.
+  +/
+ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
+        const size_t startIdx, CaseSensitive cs = CaseSensitive.yes)
+    if (isSomeChar!Char1 && isSomeChar!Char2)
+{
+    if (startIdx <= s.length)
+    {
+        return lastIndexOf(s[0u .. startIdx], sub, cs);
+    }
+
+    return -1;
+}
+
+unittest
+{
+    debug(string) printf("string.lastIndexOf.unittest\n");
+
+    foreach(S; TypeTuple!(string, wstring, dstring))
+    {
+        foreach(T; TypeTuple!(string, wstring, dstring))
+        {
+            enum typeStr = S.stringof ~ " " ~ T.stringof;
+
+            assert(lastIndexOf(cast(S)null, to!T("a")) == -1, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("c"), 5) == 2, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("cd"), 3) == -1, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("ef"), 6) == 4, typeStr ~
+                format(" %u", lastIndexOf(to!S("abcdefcdef"), to!T("ef"), 6)));
+            assert(lastIndexOf(to!S("abcdefCdef"), to!T("c"), 5) == 2, typeStr);
+            assert(lastIndexOf(to!S("abcdefCdef"), to!T("cd"), 3) == -1, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdefx"), to!T("x"), 1) == -1, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdefxy"), to!T("xy"), 6) == -1, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T(""), 8) == 8, typeStr);
+            assert(lastIndexOf(to!S("öafö"), to!T("ö"), 3) == 0, typeStr ~
+                    to!string(lastIndexOf(to!S("öafö"), to!T("ö"), 3))); //BUG 10472
+
+            assert(lastIndexOf(cast(S)null, to!T("a"), 1, CaseSensitive.no) == -1, typeStr);
+            assert(lastIndexOf(to!S("abcdefCdef"), to!T("c"), 5, CaseSensitive.no) == 2, typeStr);
+            assert(lastIndexOf(to!S("abcdefCdef"), to!T("cD"), 4, CaseSensitive.no) == 2, typeStr ~
+                " " ~ to!string(lastIndexOf(to!S("abcdefCdef"), to!T("cD"), 3, CaseSensitive.no)));
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("x"),3 , CaseSensitive.no) == -1, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdefXY"), to!T("xy"), 4, CaseSensitive.no) == -1, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T(""), 7, CaseSensitive.no) == 7, typeStr);
+
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("c"), 4, CaseSensitive.no) == 2, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("cd"), 4, CaseSensitive.no) == 2, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("def"), 6, CaseSensitive.no) == 3, typeStr);
+            assert(lastIndexOf(to!S(""), to!T(""), 0) == lastIndexOf(to!S(""), to!T("")), typeStr);
+        }
+
+        foreach(cs; EnumMembers!CaseSensitive)
+        {
+            enum csString = to!string(cs);
+
+            assert(lastIndexOf("\U00010143\u0100\U00010143hello", to!S("\u0100"), 6, cs) == 4, csString);
+            assert(lastIndexOf("\U00010143\u0100\U00010143hello"w, to!S("\u0100"), 6, cs) == 2, csString);
+            assert(lastIndexOf("\U00010143\u0100\U00010143hello"d, to!S("\u0100"), 3, cs) == 1, csString);
+        }
+    }
 }
 
 
