@@ -2954,7 +2954,7 @@ meantime.
 The POSIX $(D tempDir) algorithm is inspired by Python's
 $(LINK2 http://docs.python.org/library/tempfile.html#tempfile.tempdir, $(D tempfile.tempdir)).
 */
-string tempDir()
+string tempDir() @trusted
 {
     static string cache;
     if (cache is null)
