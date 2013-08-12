@@ -859,7 +859,7 @@ struct Parser(R)
     {
         if(n/32 >= backrefed.length)
             backrefed.length = n/32 + 1;
-        backrefed[n/32] |= 1<<(n & 31);
+        backrefed[n / 32] |= 1 << (n & 31);
     }
 
     @property dchar current(){ return _current; }
@@ -2010,7 +2010,7 @@ private:
     {
         if(n/32 >= backrefed.length)
             return 0;
-        return backrefed[n/32] & (1<<(n&31));
+        return backrefed[n / 32] & (1 << (n & 31));
     }
 
     //check if searching is not needed
@@ -7817,7 +7817,7 @@ unittest
         assert(collectException(
                 regex(r"^(import|file|binary|config)\s+([^\(]+)\(?([^\)]*)\)?\s*$")
                 ) is null);
-        foreach(ch; Escapables)
+        foreach(ch; [Escapables])
         {
             assert(match(to!string(ch),regex(`[\`~ch~`]`)));
             assert(!match(to!string(ch),regex(`[^\`~ch~`]`)));
