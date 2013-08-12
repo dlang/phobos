@@ -122,7 +122,7 @@ class FileException : Exception
     version(Windows) this(in char[] name,
                           uint errno = .GetLastError(),
                           string file = __FILE__,
-                          size_t line = __LINE__)
+                          size_t line = __LINE__) @trusted
     {
         this(name, sysErrorString(errno), file, line);
         this.errno = errno;
