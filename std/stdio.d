@@ -740,7 +740,7 @@ Throws: $(D Exception) if the file is not opened.
 */
     void write(S...)(S args)
     {
-        auto w = lockingTextWriter;
+        auto w = lockingTextWriter();
         foreach (arg; args)
         {
             alias typeof(arg) A;
@@ -792,7 +792,7 @@ Throws: $(D Exception) if the file is not opened.
 */
     void writef(Char, A...)(in Char[] fmt, A args)
     {
-        std.format.formattedWrite(lockingTextWriter, fmt, args);
+        std.format.formattedWrite(lockingTextWriter(), fmt, args);
     }
 
 /**
@@ -804,7 +804,7 @@ Throws: $(D Exception) if the file is not opened.
 */
     void writefln(Char, A...)(in Char[] fmt, A args)
     {
-        auto w = lockingTextWriter;
+        auto w = lockingTextWriter();
         std.format.formattedWrite(w, fmt, args);
         w.put('\n');
     }
@@ -1061,6 +1061,7 @@ Returns the file number corresponding to this object.
         return .fileno(cast(FILE*) _p.handle);
     }
 
+// Note: This was documented until 2013/08
 /*
 Range that reads one line at a time.  Returned by $(LREF byLine).
 
@@ -1154,7 +1155,8 @@ Allows to directly use range operations on lines of a file.
 Returns an input range set up to read from the file handle one line 
 at a time.
 
-The element type for the range will be $(D Char[]).
+The element type for the range will be $(D Char[]). Range primitives 
+may throw $(D StdioException) on I/O error.
 
 Params:
 Char = Character type for each line, defaulting to $(D char). If 
@@ -1307,7 +1309,8 @@ void main()
     }
 
 
-    /**
+    // Note: This was documented until 2013/08
+    /*
      * Range that reads a chunk at a time.
      */
     struct ByChunk
@@ -1361,10 +1364,17 @@ void main()
     }
 
 /**
-Iterates through a file a chunk at a time by using $(D foreach).
+Returns an input range set up to read from the file handle a chunk at a 
+time.
+
+The element type for the range will be $(D ubyte[]). Range primitives 
+may throw $(D StdioException) on I/O error.
+
+Note: Each $(D front) will not persist after $(D 
+popFront) is called, so the caller must copy its contents (e.g. by 
+calling $(D buffer.dup)) if retention is needed.
 
 Example:
-
 ---------
 void main()
 {
@@ -1374,15 +1384,22 @@ void main()
   }
 }
 ---------
-
 The content of $(D buffer) is reused across calls. In the example
 above, $(D buffer.length) is 4096 for all iterations, except for the
 last one, in which case $(D buffer.length) may be less than 4096 (but
 always greater than zero).
 
-In case of an I/O error, an $(D StdioException) is thrown.
+Example:
+---
+import std.algorithm, std.stdio;
+
+void main()
+{
+    stdin.byChunk(1024).copy(stdout.lockingTextWriter());
+}
+---
  */
-    ByChunk byChunk(size_t chunkSize)
+    auto byChunk(size_t chunkSize)
     {
         return ByChunk(this, chunkSize);
     }
@@ -1410,7 +1427,8 @@ In case of an I/O error, an $(D StdioException) is thrown.
         assert(i == witness.length);
     }
 
-/**
+// Note: This was documented until 2013/08
+/*
 $(D Range) that locks the file and allows fast writing to it.
  */
     struct LockingTextWriter
@@ -1544,8 +1562,11 @@ $(D Range) that locks the file and allows fast writing to it.
         }
     }
 
-/// Convenience function.
-    @property LockingTextWriter lockingTextWriter()
+/** Returns an output range that locks the file and allows fast writing to it.
+
+See $(LREF byChunk) for an example.
+*/
+    auto lockingTextWriter()
     {
         return LockingTextWriter(this);
     }
