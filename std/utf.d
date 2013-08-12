@@ -2256,15 +2256,6 @@ template toUTFz(P)
     }
 }
 
-/++ Ditto +/
-template toUTFz(P, S)
-{
-    P toUTFz(S str) @system
-    {
-        return toUTFzImpl!(P, S)(str);
-    }
-}
-
 ///
 unittest
 {
