@@ -4191,7 +4191,7 @@ unittest // Issue 6580 testcase
             byte[size] arr;
             alignmentTest();
         }
-        foreach(i; TypeTuple!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
+        foreach(i; toTypeTuple!(iota(0, 11)))
             test!i();
     }
 }
