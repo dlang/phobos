@@ -847,7 +847,7 @@ unittest
 /++
     Returns whether the given file (or directory) exists.
  +/
-bool exists(in char[] name)
+bool exists(in char[] name) @trusted
 {
     version(Windows)
     {
