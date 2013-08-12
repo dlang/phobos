@@ -421,7 +421,7 @@ struct Bytecode
     {
         assert(data < (1<<22) && code < 256 );
         assert(seq >= 2 && seq < maxSequence);
-        raw = code<<24 | ((seq-2)<<22) | data;
+        raw = code << 24 | (seq - 2)<<22 | data;
     }
 
     //store raw data
@@ -436,7 +436,7 @@ struct Bytecode
     @property uint data() const { return raw & 0x003f_ffff; }
 
     //ditto
-    @property uint sequence() const { return 2+((raw >>22) & 0x3); }
+    @property uint sequence() const { return 2 + (raw >> 22 & 0x3); }
 
     //ditto
     @property IR code() const { return cast(IR)(raw>>24); }
@@ -460,28 +460,28 @@ struct Bytecode
     void setBackrefence()
     {
         assert(code == IR.GroupStart || code == IR.GroupEnd);
-        raw = raw | (1<<23);
+        raw = raw | 1 << 23;
     }
 
     //is referenced
     @property bool backreference() const
     {
         assert(code == IR.GroupStart || code == IR.GroupEnd);
-        return cast(bool)(raw & (1<<23));
+        return cast(bool)(raw & 1 << 23);
     }
 
     //mark as local reference (for backrefs in lookarounds)
     void setLocalRef()
     {
         assert(code == IR.Backref);
-        raw = raw | (1<<23);
+        raw = raw | 1 << 23;
     }
 
     //is a local ref
     @property bool localRef() const
     {
         assert(code == IR.Backref);
-        return cast(bool)(raw & (1<<23));
+        return cast(bool)(raw & 1 << 23);
     }
 
     //human readable name of instruction
@@ -506,7 +506,7 @@ struct Bytecode
     @property Bytecode paired() const
     {//depends on bit and struct layout order
         assert(isStart || isEnd);
-        return Bytecode.fromRaw(raw ^ (0b11<<24));
+        return Bytecode.fromRaw(raw ^ 0b11 << 24);
     }
 
     //gets an index into IR block of the respective pair
@@ -580,79 +580,6 @@ static assert(Bytecode.sizeof == 4);
     return output.data;
 }
 
-//another pretty printer, writes out the bytecode of a regex and where the pc is
-@trusted void prettyPrint(Sink,Char = const(char))
-    (Sink sink, const(Bytecode)[] irb, uint pc = uint.max, int indent = 3, size_t index = 0)
-    if (isOutputRange!(Sink,Char))
-{//formattedWrite is @system
-    while(irb.length > 0)
-    {
-        formattedWrite(sink,"%3d",index);
-        if(pc == 0 && irb[0].code!=IR.Char)
-        {
-            for (int i = 0;i < indent-2;++i)
-                put(sink,"=");
-            put(sink,"> ");
-        }
-        else
-        {
-            if(isEndIR(irb[0].code))
-            {
-                indent -= 2;
-            }
-            if(indent > 0)
-            {
-                string spaces="             ";
-                put(sink,spaces[0..(indent%spaces.length)]);
-                for (size_t i = indent/spaces.length;i > 0;--i)
-                    put(sink,spaces);
-            }
-        }
-        if(irb[0].code == IR.Char)
-        {
-            put(sink,`"`);
-            int i = 0;
-            do
-            {
-                put(sink,cast(char[])([cast(dchar)irb[i].data]));
-                ++i;
-            } while(i < irb.length && irb[i].code == IR.Char);
-            put(sink,"\"");
-            if(pc < i)
-            {
-                put(sink,"\n");
-                for (int ii = indent+pc+1;ii > 0;++ii)
-                    put(sink,"=");
-                put(sink,"^");
-            }
-            index += i;
-            irb = irb[i..$];
-        }
-        else
-        {
-            put(sink,irb[0].mnemonic);
-            put(sink,"(");
-            formattedWrite(sink,"%d",irb[0].data);
-            int nArgs= irb[0].args;
-            for(int iarg = 0;iarg < nArgs;++iarg)
-            {
-                if(iarg+1 < irb.length)
-                    formattedWrite(sink,",%d",irb[iarg+1].data);
-                else
-                    put(sink,"*error* incomplete irb stream");
-            }
-            put(sink,")");
-            if(isStartIR(irb[0].code))
-            {
-                indent += 2;
-            }
-            index += lengthOfIR(irb[0].code);
-            irb = irb[lengthOfIR(irb[0].code)..$];
-        }
-        put(sink,"\n");
-    }
-}
-
 //index entry structure for name --> number of submatch
 struct NamedGroup
 {
@@ -688,8 +615,8 @@ enum RegexOption: uint {
 alias TypeTuple!('g', 'i', 'x', 'U', 'm', 's') RegexOptionNames;//do not reorder this list
 static assert( RegexOption.max < 0x80);
 enum RegexInfo : uint { oneShot = 0x80 }
-alias Escapables = TypeTuple!('[',']','\\','^','$','.','|','?',',','-',';',':',
-    '#','&','%','/','<','>','`', '*','+','(',')','{','}', '~');
+alias Escapables = TypeTuple!('[', ']', '\\', '^', '$', '.', '|', '?', ',', '-',
+    ';', ':', '#', '&', '%', '/', '<', '>', '`',  '*', '+', '(', ')', '{', '}',  '~');
 
 private enum NEL = '\u0085', LS = '\u2028', PS = '\u2029';
 
