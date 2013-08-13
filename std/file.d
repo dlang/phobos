@@ -42,14 +42,14 @@ version (unittest)
 {
     import core.thread;
 
-    private @property string deleteme()
+    private @property string deleteme() @safe
     {
         static _deleteme = "deleteme.dmd.unittest.pid";
         static _first = true;
 
         if(_first)
         {
-            _deleteme = buildPath(tempDir(), _deleteme) ~ to!string(getpid());
+            _deleteme = buildPath(tempDir(), _deleteme) ~ to!string(thisProcessID);
             _first = false;
         }
 
