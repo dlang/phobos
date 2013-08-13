@@ -107,7 +107,7 @@ else
 endif
 
 # Set CFLAGS
-CFLAGS :=
+CFLAGS=
 ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
 	CFLAGS += $(MODEL_FLAG) $(PIC)
 	ifeq ($(BUILD),debug)
@@ -118,7 +118,7 @@ ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
 endif
 
 # Set DFLAGS
-DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d $(MODEL_FLAG) $(PIC)
+DFLAGS=-I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d $(MODEL_FLAG) $(PIC)
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
@@ -274,7 +274,7 @@ $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 dll : $(ROOT)/libphobos2.so
 
 $(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
-	ln -sf $(notdir $(LIBSO)) $@ 
+	ln -sf $(notdir $(LIBSO)) $@
 
 $(ROOT)/$(SONAME): $(LIBSO)
 	ln -sf $(notdir $(LIBSO)) $@
@@ -291,22 +291,38 @@ endif
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 	@echo Testing $@ - disabled
 
-$(ROOT)/unittest/%$(DOTEXE) : %.d $(LIB) $(ROOT)/emptymain.d
-	@echo Testing $@
-	$(QUIET)$(DMD) $(DFLAGS) -unittest $(LINKOPTS) $(subst /,$(PATHSEP),"-of$@") \
-	 	$(ROOT)/emptymain.d $<
+ifneq (linux,$(OS))
+
+$(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(ALL_D_FILES) $(OBJS) $(DRUNTIME)
+	$(DMD) $(DFLAGS) -unittest -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(D_FILES) $(OBJS) $(DRUNTIME) -defaultlib= -debuglib=
+
+else
+
+UT_LIBSO:=$(ROOT)/unittest/libphobos2-ut.so
+
+$(UT_LIBSO): override PIC:=-fPIC
+$(UT_LIBSO): $(ALL_D_FILES) $(OBJS) $(DRUNTIMESO)
+	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(D_FILES) $(OBJS) $(DRUNTIMESO) -defaultlib= -debuglib=
+
+$(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_LIBSO)
+	$(DMD) $(DFLAGS) -of$@ $< -L$(UT_LIBSO) -defaultlib= -debuglib=
+
+endif
+
+# macro that returns the module name given the src path
+moduleName=$(subst /,.,$(1))
+
+$(ROOT)/unittest/%$(DOTEXE) : $(ROOT)/unittest/test_runner
+	@mkdir -p $(dir $@)
 # make the file very old so it builds and runs again if it fails
 	@touch -t 197001230123 $@
 # run unittest in its own directory
-	$(QUIET)$(RUN) $@
+	$(QUIET)$(RUN) $< $(call moduleName,$*)
 # succeeded, render the file new again
 	@touch $@
 
 # Disable implicit rule
 %$(DOTEXE) : %$(DOTOBJ)
-
-$(ROOT)/emptymain.d : $(ROOT)/.directory
-	@echo 'void main(){}' >$@
 
 $(ROOT)/.directory :
 	mkdir -p $(ROOT) || exists $(ROOT)
@@ -328,7 +344,7 @@ install2 : release
 	cp -r etc/* $(INSTALL_DIR)/import/etc/
 	cp LICENSE_1_0.txt $(INSTALL_DIR)/phobos-LICENSE.txt
 
-$(DRUNTIME) :
+$(DRUNTIME) $(DRUNTIMESO) :
 	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak MODEL=$(MODEL)
 
 ###########################################################
