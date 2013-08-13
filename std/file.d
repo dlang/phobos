@@ -99,7 +99,7 @@ class FileException : Exception
             file = The file where the error occurred.
             line = The line where the error occurred.
      +/
-    this(in char[] name, in char[] msg, string file = __FILE__, size_t line = __LINE__)
+    this(in char[] name, in char[] msg, string file = __FILE__, size_t line = __LINE__) @safe pure
     {
         if(msg.empty)
             super(name.idup, file, line);
@@ -122,7 +122,7 @@ class FileException : Exception
     version(Windows) this(in char[] name,
                           uint errno = .GetLastError(),
                           string file = __FILE__,
-                          size_t line = __LINE__)
+                          size_t line = __LINE__) @safe
     {
         this(name, sysErrorString(errno), file, line);
         this.errno = errno;
@@ -130,7 +130,7 @@ class FileException : Exception
     else version(Posix) this(in char[] name,
                              uint errno = .errno,
                              string file = __FILE__,
-                             size_t line = __LINE__)
+                             size_t line = __LINE__) @trusted
     {
         auto s = strerror(errno);
         this(name, to!string(s), file, line);
