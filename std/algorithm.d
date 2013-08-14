@@ -2206,6 +2206,15 @@ if (is(typeof(ElementType!Range.init == Separator.init))
         IndexType _frontLength = _unComputed;
         IndexType _backLength = _unComputed;
 
+        static if (isNarrowString!Range) 
+        {
+            size_t _separatorLength;
+        }
+        else
+        {
+            enum _separatorLength = 1;
+        }
+
         static if (isBidirectionalRange!Range)
         {
             static IndexType lastIndexOf(Range haystack, Separator needle)
@@ -2220,6 +2229,11 @@ if (is(typeof(ElementType!Range.init == Separator.init))
         {
             _input = input;
             _separator = separator;
+
+            static if (isNarrowString!Range)
+            {
+                _separatorLength = codeLength!(ElementEncodingType!Range)(separator);
+            }
         }
 
         static if (isInfinite!Range)
@@ -2263,8 +2277,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
             }
             else
             {
-                _input = _input[_frontLength .. _input.length];
-                skipOver(_input, _separator) || assert(false);
+                _input = _input[_frontLength + _separatorLength .. _input.length];
                 _frontLength = _unComputed;
             }
         }
@@ -2339,6 +2352,7 @@ unittest
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     assert(equal(splitter("hello  world", ' '), [ "hello", "", "world" ]));
+    assert(equal(splitter("žlutoučkýřkůň", 'ř'), [ "žlutoučký", "kůň" ]));
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
     int[][] w = [ [1, 2], [], [3], [4, 5], [] ];
     static assert(isForwardRange!(typeof(splitter(a, 0))));
@@ -3588,15 +3602,27 @@ string[] s = [ "Hello", "world", "!" ];
 assert(!find!("toLower(a) == b")(s, "hello").empty);
 ----
  */
+
 R find(alias pred = "a == b", R, E)(R haystack, E needle)
 if (isInputRange!R &&
         is(typeof(binaryFun!pred(haystack.front, needle)) : bool))
 {
-    for (; !haystack.empty; haystack.popFront())
+    static if (isNarrowString!R && isSomeChar!E && is(typeof(pred == "a == b")) && pred == "a == b")
     {
-        if (binaryFun!pred(haystack.front, needle)) break;
+        alias Unqual!(ElementEncodingType!R) EEType;
+        EEType[EEType.sizeof == 1 ? 4 : 2] buf;
+
+        size_t len = encode(buf, needle);
+        return () @trusted {return std.algorithm.find!pred(haystack, cast(R)buf[0 .. len]);}();
     }
-    return haystack;
+    else
+    {
+        for (; !haystack.empty; haystack.popFront())
+        {
+            if (binaryFun!pred(haystack.front, needle)) break;
+        }
+        return haystack;
+    }
 }
 
 unittest
@@ -3608,6 +3634,7 @@ unittest
     auto r = find(lst[], 5);
     assert(equal(r, SList!int(5, 7, 3)[]));
     assert(find([1, 2, 3, 5], 4).empty);
+    assert(equal(find!"a>b"("hello", 'k'), "llo"));
 }
 
 /**
@@ -7382,7 +7409,7 @@ if (s != SwapStrategy.stable
             blackouts[i].len = 1;
         }
         static if (i > 0)
-        {            
+        {
             enforce(blackouts[i - 1].pos + blackouts[i - 1].len 
                     <= blackouts[i].pos, 
                 "remove(): incorrect ordering of elements to remove");
