@@ -2773,7 +2773,6 @@ unittest
 
             auto s2 = splitter(d, [4, 5]);
             assert(equal(s2.front, [1,2,3]));
-            assert(equal(s2.back, [6,7,8,9,10]));
         }
     }
 }
@@ -2914,12 +2913,16 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
         // Bidirectional functionality as suggested by Brad Roberts.
         static if (isBidirectionalRange!Range && isBidirectionalRange!Separator)
         {
+            //Deprecated. It will be removed in December 2015
+            deprecated("splitter!(Range, Range) cannot be iterated backwards (due to separator overlap).")
             @property Range back()
             {
                 ensureBackLength();
                 return _input[_input.length - _backLength .. _input.length];
             }
 
+            //Deprecated. It will be removed in December 2015
+            deprecated("splitter!(Range, Range) cannot be iterated backwards (due to separator overlap).")
             void popBack()
             {
                 ensureBackLength();
