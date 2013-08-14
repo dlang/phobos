@@ -2329,15 +2329,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
                 }
                 else
                 {
-                    _input = _input[0 .. _input.length - _backLength];
-                    if (!_input.empty && _input.back == _separator)
-                    {
-                        _input.popBack();
-                    }
-                    else
-                    {
-                        assert(false);
-                    }
+                    _input = _input[0 .. _input.length - _backLength - _separatorLength];
                     _backLength = _unComputed;
                 }
             }
