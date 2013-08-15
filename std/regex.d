@@ -584,7 +584,7 @@ static assert(Bytecode.sizeof == 4);
 @trusted void printBytecode()(in Bytecode[] slice, in NamedGroup[] dict=[])
 {
     import std.stdio;
-    for(size_t pc=0; pc<slice.length; pc += slice[pc].length)
+    for(uint pc=0; pc<slice.length; pc += slice[pc].length)
         writeln("\t", disassemble(slice, pc, dict));
 }
 
@@ -610,10 +610,10 @@ struct Group(DataIndex)
 @trusted void reverseBytecode()(Bytecode[] code)
 {
     Bytecode[] rev = new Bytecode[code.length];
-    uint revPc = rev.length;
+    uint revPc = cast(uint)rev.length;
     Stack!(Tuple!(uint, uint, uint)) stack;
     uint start = 0;
-    uint end = code.length;
+    uint end = cast(uint)code.length;
     for(;;)
     {
         for(uint pc = start; pc < end; )
@@ -1430,11 +1430,6 @@ struct Parser(R)
             reverseBytecode(ir[fix + IRL!(IR.LookbehindStart) .. $]);            
     }
         put(ir[fix].paired);
-        debug(fred_parser)
-        {
-            //writeln("After reverse:");
-            printBytecode(ir[fix..$]);
-        }       
     }
 
     //CodepointSet operations relatively in order of priority
@@ -5142,19 +5137,22 @@ enum OneShot { Fwd, Bwd };
                 break;
             case IR.LookbehindStart:
             case IR.NeglookbehindStart:
-                uint end = t.pc+IRL!(IR.LookbehindStart)+re.ir[t.pc].data+IRL!(IR.LookbehindEnd);
+                uint len = re.ir[t.pc].data;
+                uint ms = re.ir[t.pc + 1].raw, me = re.ir[t.pc + 2].raw;
+                uint end = t.pc + len + IRL!(IR.LookbehindEnd) + IRL!(IR.LookbehindStart);
+                bool positive = re.ir[t.pc].code == IR.LookbehindStart;
                 static if(Stream.isLoopback)
                     auto matcher = fwdMatcher(re.ir[t.pc .. end]);
                 else
                     auto matcher = backMatcher(re.ir[t.pc .. end]);
-                matcher.re.ngroup = re.ir[t.pc+2].raw - re.ir[t.pc+1].raw;
+                matcher.re.ngroup = re.ir[t.pc + 2].raw - re.ir[t.pc + 1].raw;
                 matcher.backrefed = backrefed.empty ? t.matches : backrefed;
                 //backMatch
-                bool match = matcher.matchOneShot(t.matches, IRL!(IR.LookbehindStart))==MatchResult.Match;
-                match ^= re.ir[t.pc].code == IR.LookbehindStart;
+                bool nomatch = (matcher.matchOneShot(t.matches, IRL!(IR.LookbehindStart))
+                    == MatchResult.Match) ^ positive;
                 freelist = matcher.freelist;
                 genCounter = matcher.genCounter;
-                if(match)
+                if(nomatch)
                 {
                     recycle(t);
                     t = worklist.fetch();
@@ -5163,14 +5161,14 @@ enum OneShot { Fwd, Bwd };
                     break;
                 }
                 else
-                    t.pc += re.ir[t.pc].data + IRL!(IR.LookbehindStart) + IRL!(IR.LookbehindEnd);
+                    t.pc = end;
                 break;
             case IR.LookaheadStart:
             case IR.NeglookaheadStart:
                 auto save = index;
                 uint len = re.ir[t.pc].data;
-                uint ms = re.ir[t.pc+1].raw, me = re.ir[t.pc+2].raw;
-                uint end = t.pc+len+IRL!(IR.LookaheadEnd)+IRL!(IR.LookaheadStart);
+                uint ms = re.ir[t.pc + 1].raw, me = re.ir[t.pc  +2].raw;
+                uint end = t.pc + len + IRL!(IR.LookaheadEnd) + IRL!(IR.LookaheadStart);
                 bool positive = re.ir[t.pc].code == IR.LookaheadStart;
                 static if(Stream.isLoopback)
                     auto matcher = backMatcher(re.ir[t.pc .. end]);
@@ -5178,7 +5176,8 @@ enum OneShot { Fwd, Bwd };
                     auto matcher = fwdMatcher(re.ir[t.pc .. end]);
                 matcher.re.ngroup = me - ms;
                 matcher.backrefed = backrefed.empty ? t.matches : backrefed;
-                bool nomatch = (matcher.matchOneShot(t.matches, IRL!(IR.LookaheadStart)) == MatchResult.Match) ^ positive;
+                bool nomatch = (matcher.matchOneShot(t.matches, IRL!(IR.LookaheadStart)) 
+                    == MatchResult.Match) ^ positive;
                 freelist = matcher.freelist;
                 genCounter = matcher.genCounter;
                 s.reset(index);
@@ -5192,7 +5191,7 @@ enum OneShot { Fwd, Bwd };
                     break;
                 }
                 else
-                    t.pc += len + IRL!(IR.LookaheadEnd) + IRL!(IR.LookaheadStart);
+                    t.pc = end;
                 break;
             case IR.LookaheadEnd:
             case IR.NeglookaheadEnd:            
