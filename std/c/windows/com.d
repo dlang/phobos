@@ -1,4 +1,5 @@
 module std.c.windows.com;
+version (Windows):
 
 pragma(lib,"uuid");
 

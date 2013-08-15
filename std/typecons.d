@@ -397,7 +397,7 @@ template Tuple(Specs...)
         else
         {
             @property
-            ref Tuple!Types _Tuple_super() @trusted
+            ref inout(Tuple!Types) _Tuple_super() inout @trusted
             {
                 foreach (i, _; Types)   // Rely on the field layout
                 {
@@ -826,6 +826,14 @@ unittest
 
     static assert(is(typeof(Tuple!(int, "x", string, "y").tupleof) ==
                      typeof(Tuple!(int,      string     ).tupleof)));
+}
+unittest
+{
+    // Bugzilla 10686
+    immutable Tuple!(int) t1;
+    auto r1 = t1[0]; // OK
+    immutable Tuple!(int, "x") t2;
+    auto r2 = t2[0]; // error
 }
 unittest
 {
@@ -1964,6 +1972,7 @@ Params:
 // Prints log messages for each call to overridden functions.
 string generateLogger(C, alias fun)() @property
 {
+    import std.traits;
     enum qname = C.stringof ~ "." ~ __traits(identifier, fun);
     string stmt;
 
@@ -1971,7 +1980,7 @@ string generateLogger(C, alias fun)() @property
     stmt ~= `Importer.writeln$(LPAREN)"Log: ` ~ qname ~ `(", args, ")"$(RPAREN);`;
     static if (!__traits(isAbstractFunction, fun))
     {
-        static if (is(typeof(return) == void))
+        static if (is(ReturnType!fun == void))
             stmt ~= q{ parent(args); };
         else
             stmt ~= q{
@@ -2315,6 +2324,44 @@ unittest
     }+/
 }
 
+version(unittest)
+{
+    // Issue 10647
+    private string generateDoNothing(C, alias fun)() @property
+    {
+        string stmt;
+
+        static if (is(ReturnType!fun == void))
+            stmt ~= "";
+        else
+        {
+            string returnType = ReturnType!fun.stringof;
+            stmt ~= "return "~returnType~".init;";
+        }
+        return stmt;
+    }
+
+    private template isAlwaysTrue(alias fun)
+    {
+        enum isAlwaysTrue = true;
+    }
+
+    // Do nothing template
+    private template DoNothing(Base)
+    {
+        alias DoNothing = AutoImplement!(Base, generateDoNothing, isAlwaysTrue);
+    }
+
+    // A class to be overridden
+    private class Foo{
+        void bar(int a) { }
+    }
+}
+unittest
+{
+    auto foo = new DoNothing!Foo();
+    foo.bar(13);
+}
 
 /*
 Used by MemberFunctionGenerator.
@@ -2514,7 +2561,7 @@ private static:
             enum storageClass = make_storageClass();
 
             //
-            if (isAbstractFunction!func)
+            if (__traits(isVirtualMethod, func))
                 code ~= "override ";
             code ~= format("extern(%s) %s %s(%s) %s %s\n",
                     functionLinkage!(func),
@@ -2669,7 +2716,7 @@ template wrap(Targets...)
 if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
 {
     // strict upcast
-    @property wrap(Source)(inout Source src) @trusted pure nothrow
+    auto wrap(Source)(inout Source src) @trusted pure nothrow
     if (Targets.length == 1 && is(Source : Targets[0]))
     {
         alias T = Select!(is(Source == shared), shared Targets[0], Targets[0]);
@@ -2679,7 +2726,7 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
     template wrap(Source)
     if (!allSatisfy!(Bind!(isImplicitlyConvertible, Source), Targets))
     {
-        @property wrap(inout Source src)
+        auto wrap(inout Source src)
         {
             static assert(hasRequireMethods!(),
                           "Source "~Source.stringof~
@@ -2812,10 +2859,21 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
                     return r;
                 }
                 enum n = to!string(i);
+                static if (fa & FunctionAttribute.property)
+                {
+                    static if (ParameterTypeTuple!(TargetMembers[i].type).length == 0)
+                        enum fbody = "_wrap_source."~name;
+                    else
+                        enum fbody = "_wrap_source."~name~" = forward!args";
+                }
+                else
+                {
+                        enum fbody = "_wrap_source."~name~"(forward!args)";
+                }
                 enum generateFun =
                     "override "~stc~"ReturnType!(TargetMembers["~n~"].type) "
                     ~ name~"(ParameterTypeTuple!(TargetMembers["~n~"].type) args) "~mod~
-                    "{ return _wrap_source."~name~"(forward!args); }";
+                    "{ return "~fbody~"; }";
             }
 
         public:
@@ -2844,14 +2902,14 @@ template unwrap(Target)
 if (isMutable!Target)
 {
     // strict downcast
-    @property unwrap(Source)(inout Source src) @trusted pure nothrow
+    auto unwrap(Source)(inout Source src) @trusted pure nothrow
     if (is(Target : Source))
     {
         alias T = Select!(is(Source == shared), shared Target, Target);
         return cast(inout T)(src);
     }
     // structural downcast
-    @property unwrap(Source)(inout Source src) @trusted pure nothrow
+    auto unwrap(Source)(inout Source src) @trusted pure nothrow
     if (!is(Target : Source))
     {
         alias T = Select!(is(Source == shared), shared Target, Target);
@@ -2930,7 +2988,7 @@ unittest
     // structural upcast (two steps)
     Quack qx = h1.wrap!Quack;   // Human -> Quack
     Flyer fx = qx.wrap!Flyer;   // Quack -> Flyer
-    assert(fx.height() == 20);  // calls Human.height
+    assert(fx.height == 20);    // calls Human.height
     // strucural downcast (two steps)
     Quack qy = fx.unwrap!Quack; // Flyer -> Quack
     Human hy = qy.unwrap!Human; // Quack -> Human

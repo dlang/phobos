@@ -596,7 +596,8 @@ unittest
     val = parseJSON(`"\u2660\u2666"`);
     assert(toJSON(&val) == "\"\&spades;\&diams;\"");
 
-    assertNotThrown(parseJSON(`{ "foo": "` ~ "\u007F" ~ `"}`));
+    //0x7F is a control character (see Unicode spec)
+    assertThrown(parseJSON(`{ "foo": "` ~ "\u007F" ~ `"}`));
 
     with(parseJSON(`""`))
         assert(str == "" && str !is null);

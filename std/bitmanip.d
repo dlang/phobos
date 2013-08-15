@@ -723,9 +723,8 @@ struct BitArray
                 lo++;
                 hi--;
             }
-        Ldone:
-            ;
         }
+	Ldone:
         return this;
     }
 

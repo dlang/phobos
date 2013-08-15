@@ -770,10 +770,12 @@ $(UL
             $(DD Convert integral value to string in $(D_PARAM radix) radix.
             radix must be a value from 2 to 36.
             value is treated as a signed value only if radix is 10.
-            The characters A through Z are used to represent values 10 through 36.)))
+            The characters A through Z are used to represent values 10 through 36
+            and their case is determined by the $(D_PARAM letterCase) parameter.)))
   $(LI All floating point types to all string types.)
   $(LI Pointer to string conversions prints the pointer as a $(D size_t) value.
-       If pointer is $(D char*), treat it as C-style strings.))
+       If pointer is $(D char*), treat it as C-style strings.
+       In that case, this function is $(D @system).))
 */
 T toImpl(T, S)(S value)
     if (!(isImplicitlyConvertible!(S, T) &&
@@ -799,6 +801,11 @@ T toImpl(T, S)(S value)
         // other string-to-string conversions always run decode/encode
         return toStr!T(value);
     }
+    else static if (isIntegral!S && !is(S == enum))
+    {
+        // other integral-to-string conversions with default radix 
+        return toImpl!(T, S)(value, 10);
+    }
     else static if (is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[]))
     {
         // Converting void array to string
@@ -814,6 +821,7 @@ T toImpl(T, S)(S value)
     }
     else static if (isPointer!S && is(S : const(char)*))
     {
+        // It is unsafe because we cannot guarantee that the pointer is null terminated.
         return value ? cast(T) value[0 .. strlen(value)].dup : cast(string)null;
     }
     else
@@ -877,7 +885,7 @@ T toImpl(T, S)(S value)
     assert(c == "abcx");
 }
 
-/*@safe pure */unittest
+@system pure unittest
 {
     // char* to string conversion
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -1069,7 +1077,7 @@ unittest
 }
 
 /// ditto
-T toImpl(T, S)(S value, uint radix)
+@trusted pure T toImpl(T, S)(S value, uint radix, LetterCase letterCase = LetterCase.upper)
     if (isIntegral!S &&
         isExactSomeString!T)
 in
@@ -1078,30 +1086,67 @@ in
 }
 body
 {
-    static if (!is(IntegralTypeOf!S == ulong))
-    {
-        enforce(radix >= 2 && radix <= 36, new ConvException("Radix error"));
-        if (radix == 10)
-            return to!string(value);     // handle signed cases only for radix 10
-        return to!string(cast(ulong) value, radix);
-    }
-    else
-    {
-        char[value.sizeof * 8] buffer;
-        uint i = buffer.length;
+    alias EEType = Unqual!(ElementEncodingType!T);
 
-        if (value < radix && value < hexDigits.length)
-            return hexDigits[cast(size_t)value .. cast(size_t)value + 1];
+    T toStringRadixConvert(size_t bufLen, uint radix = 0, bool neg = false)(uint runtimeRadix = 0)
+    {
+        static if (neg)
+            ulong div = void, mValue = unsigned(-value);
+        else
+            Unsigned!(Unqual!S) div = void, mValue = unsigned(value);
+
+        size_t index = bufLen;
+        EEType[bufLen] buffer = void;
+        char baseChar = letterCase == LetterCase.lower ? 'a' : 'A';
+        char mod = void;
 
         do
         {
-            ubyte c;
-            c = cast(ubyte)(value % radix);
-            value = value / radix;
-            i--;
-            buffer[i] = cast(char)((c < 10) ? c + '0' : c + 'A' - 10);
-        } while (value);
-        return to!T(buffer[i .. $].dup);
+            static if (radix == 0)
+            {
+                div = cast(S)(mValue / runtimeRadix );
+                mod = cast(ubyte)(mValue % runtimeRadix);
+                mod += mod < 10 ? '0' : baseChar - 10;
+            }
+            else static if (radix > 10)
+            {
+                div = cast(S)(mValue / radix );
+                mod = cast(ubyte)(mValue % radix);
+                mod += mod < 10 ? '0' : baseChar - 10;
+            }
+            else
+            {
+                div = cast(S)(mValue / radix);
+                mod = mValue % radix + '0';
+            }
+            buffer[--index] = cast(char)mod;
+            mValue = div;
+        } while (mValue);
+
+        static if (neg)
+        {
+            buffer[--index] = '-';
+        }
+        return cast(T)buffer[index .. $].dup;
+    }
+
+    enforce(radix >= 2 && radix <= 36, new ConvException("Radix error"));
+
+    switch(radix)
+    {
+        case 10:
+            if (value < 0)
+                return toStringRadixConvert!(S.sizeof * 3 + 1, 10, true);
+            else
+                return toStringRadixConvert!(S.sizeof * 3, 10);
+        case 16:
+            return toStringRadixConvert!(S.sizeof * 2, 16);
+        case 2:
+            return toStringRadixConvert!(S.sizeof * 8, 2);
+        case 8:
+            return toStringRadixConvert!(S.sizeof * 3, 8);
+        default:
+           return toStringRadixConvert!(S.sizeof * 6)(radix);
     }
 }
 
@@ -1116,6 +1161,8 @@ body
         assert(to!string(to!Int(15), 2u) == "1111");
         assert(to!string(to!Int(1), 2u) == "1");
         assert(to!string(to!Int(0x1234AF), 16u) == "1234AF");
+        assert(to!string(to!Int(0x1234BCD), 16u, LetterCase.upper) == "1234BCD");
+        assert(to!string(to!Int(0x1234AF), 16u, LetterCase.lower) == "1234af");
     }
 
     foreach (Int; TypeTuple!(int, long))
@@ -1125,6 +1172,10 @@ body
 
         assert(to!string(to!Int(-10), 10u) == "-10");
     }
+
+    assert(to!string(cast(byte)-10, 16) == "F6");
+    assert(to!string(long.min) == "-9223372036854775808");
+    assert(to!string(long.max) == "9223372036854775807");
 }
 
 // Explicitly undocumented. It will be removed in November 2013.
@@ -2181,10 +2232,10 @@ Target parse(Target, Source)(ref Source p)
 {
     static import core.stdc.math/* : HUGE_VAL*/;
 
-    static immutable real negtab[14] =
+    static immutable real[14] negtab =
         [ 1e-4096L,1e-2048L,1e-1024L,1e-512L,1e-256L,1e-128L,1e-64L,1e-32L,
                 1e-16L,1e-8L,1e-4L,1e-2L,1e-1L,1.0L ];
-    static immutable real postab[13] =
+    static immutable real[13] postab =
         [ 1e+4096L,1e+2048L,1e+1024L,1e+512L,1e+256L,1e+128L,1e+64L,1e+32L,
                 1e+16L,1e+8L,1e+4L,1e+2L,1e+1L ];
     // static immutable string infinity = "infinity";
@@ -2574,7 +2625,7 @@ unittest
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     struct longdouble
     {
-        ushort value[5];
+        ushort[5] value;
     }
 
     real ld;

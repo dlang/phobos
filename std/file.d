@@ -42,14 +42,14 @@ version (unittest)
 {
     import core.thread;
 
-    private @property string deleteme()
+    private @property string deleteme() @safe
     {
         static _deleteme = "deleteme.dmd.unittest.pid";
         static _first = true;
 
         if(_first)
         {
-            _deleteme = buildPath(tempDir(), _deleteme) ~ to!string(getpid());
+            _deleteme = buildPath(tempDir(), _deleteme) ~ to!string(thisProcessID);
             _first = false;
         }
 
@@ -99,7 +99,7 @@ class FileException : Exception
             file = The file where the error occurred.
             line = The line where the error occurred.
      +/
-    this(in char[] name, in char[] msg, string file = __FILE__, size_t line = __LINE__)
+    this(in char[] name, in char[] msg, string file = __FILE__, size_t line = __LINE__) @safe pure
     {
         if(msg.empty)
             super(name.idup, file, line);
@@ -122,7 +122,7 @@ class FileException : Exception
     version(Windows) this(in char[] name,
                           uint errno = .GetLastError(),
                           string file = __FILE__,
-                          size_t line = __LINE__)
+                          size_t line = __LINE__) @safe
     {
         this(name, sysErrorString(errno), file, line);
         this.errno = errno;
@@ -130,7 +130,7 @@ class FileException : Exception
     else version(Posix) this(in char[] name,
                              uint errno = .errno,
                              string file = __FILE__,
-                             size_t line = __LINE__)
+                             size_t line = __LINE__) @trusted
     {
         auto s = strerror(errno);
         this(name, to!string(s), file, line);
@@ -847,7 +847,7 @@ unittest
 /++
     Returns whether the given file (or directory) exists.
  +/
-@property bool exists(in char[] name)
+bool exists(in char[] name) @trusted
 {
     version(Windows)
     {
@@ -1610,6 +1610,16 @@ version(StdDdoc)
                 $(D FileException) if the file does not exist.
         +/
         this(string path);
+
+        version (Windows)
+        {
+            private this(string path, in WIN32_FIND_DATA* fd);
+            private this(string path, in WIN32_FIND_DATAW *fd);
+        }
+        else version (Posix)
+        {
+            private this(string path, core.sys.posix.dirent.dirent* fd);
+        }
 
         /++
             Returns the path to the file represented by this $(D DirEntry).
@@ -2944,7 +2954,7 @@ meantime.
 The POSIX $(D tempDir) algorithm is inspired by Python's
 $(LINK2 http://docs.python.org/library/tempfile.html#tempfile.tempdir, $(D tempfile.tempdir)).
 */
-string tempDir()
+string tempDir() @trusted
 {
     static string cache;
     if (cache is null)

@@ -3,11 +3,12 @@
 /++
     Functions which operate on ASCII characters.
 
-    All of the functions in std.ascii accept unicode characters but effectively
-    ignore them. All $(D isX) functions return $(D false) for unicode
-    characters, and all $(D toX) functions do nothing to unicode characters.
+    All of the functions in std.ascii accept Unicode characters but effectively
+    ignore them if they're not ASCII. All $(D isX) functions return $(D false)
+    for non-ASCII characters, and all $(D toX) functions do nothing to non-ASCII
+    characters.
 
-    For functions which operate on unicode characters, see
+    For functions which operate on Unicode characters, see
     $(LINK2 std_uni.html, std.uni).
 
     References:
@@ -17,17 +18,24 @@
     Macros:
         WIKI=Phobos/StdASCII
 
-    Copyright: Copyright 2000 -
+    Copyright: Copyright 2000 - 2013
     License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   $(WEB digitalmars.com, Walter Bright) and Jonathan M Davis
     Source:    $(PHOBOSSRC std/_ascii.d)
   +/
 module std.ascii;
 
-version(unittest) import std.range;
+import std.traits;
+
+version(unittest)
+{
+    import std.range;
+    import std.typetuple;
+}
 
 
 immutable hexDigits      = "0123456789ABCDEF";           /// 0..9A..F
+immutable lowerHexDigits = "0123456789abcdef";           /// 0..9a..f
 immutable fullHexDigits  = "0123456789ABCDEFabcdef";     /// 0..9A..Fa..f
 immutable digits         = "0123456789";                 /// 0..9
 immutable octalDigits    = "01234567";                   /// 0..7
@@ -37,6 +45,14 @@ immutable letters        = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ~
 immutable uppercase      = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; /// A..Z
 immutable whitespace     = " \t\v\r\n\f";                /// ASCII whitespace
 
+/**
+Letter case specifier.
+ */
+enum LetterCase : bool
+{
+    upper, /// Upper case letters
+    lower  /// Lower case letters
+}
 
 version(Windows)
 {
@@ -207,7 +223,7 @@ bool isControl(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(dchar c; iota(0, 32))
+    foreach(dchar c; 0 .. 32)
         assert(isControl(c));
     assert(isControl(127));
 
@@ -227,7 +243,7 @@ bool isPunctuation(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(dchar c; iota(0, 128))
+    foreach(dchar c; 0 .. 128)
     {
         if(isControl(c) || isAlphaNum(c) || c == ' ')
             assert(!isPunctuation(c));
@@ -248,7 +264,7 @@ bool isGraphical(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(dchar c; iota(0, 128))
+    foreach(dchar c; 0 .. 128)
     {
         if(isControl(c) || c == ' ')
             assert(!isGraphical(c));
@@ -268,7 +284,7 @@ bool isPrintable(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(dchar c; iota(0, 128))
+    foreach(dchar c; 0 .. 128)
     {
         if(isControl(c))
             assert(!isPrintable(c));
@@ -289,7 +305,7 @@ bool isASCII(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(dchar c; iota(0, 128))
+    foreach(dchar c; 0 .. 128)
         assert(isASCII(c));
 
     assert(!isASCII(128));
@@ -299,54 +315,94 @@ unittest
 /++
     If $(D c) is an uppercase ASCII character, then its corresponding lowercase
     letter is returned. Otherwise, $(D c) is returned.
+
+    $(D C) can be any type which implicitly converts to $(D dchar). In the case
+    where it's a built-in type, $(D Unqual!C) is returned, whereas if it's a
+    user-defined type, $(D dchar) is returned.
   +/
-dchar toLower(dchar c) @safe pure nothrow
-out(result)
+auto toLower(C)(C c)
+    if(is(C : dchar))
 {
-    assert(!isUpper(result));
-}
-body
-{
-    return isUpper(c) ? c + cast(dchar)('a' - 'A') : c;
+    static if(isScalarType!C)
+        return isUpper(c) ? cast(Unqual!C)(c + 'a' - 'A') : cast(Unqual!C)c;
+    else
+        return toLower!dchar(c);
 }
 
 unittest
 {
-    foreach(i, c; uppercase)
-        assert(toLower(c) == lowercase[i]);
-
-    foreach(dchar c; iota(0, 128))
+    foreach(C; TypeTuple!(char, wchar, dchar, immutable char, ubyte))
     {
-        if(c < 'A' || c > 'Z')
+        foreach(i, c; uppercase)
+            assert(toLower(cast(C)c) == lowercase[i]);
+
+        foreach(C c; 0 .. 128)
+        {
+            if(c < 'A' || c > 'Z')
+                assert(toLower(c) == c);
+            else
+                assert(toLower(c) != c);
+        }
+
+        foreach(C c; 128 .. C.max)
             assert(toLower(c) == c);
     }
+
+    static assert(isSafe!(toLower!char));
+    static assert((functionAttributes!((){'a'.toLower();}) & FunctionAttribute.pure_) != 0);
+    static assert((functionAttributes!((){'a'.toLower();}) & FunctionAttribute.nothrow_) != 0);
+
+    static struct Char { dchar c; alias c this; }
+    static assert(is(typeof(Char('A').toLower()) == dchar));
+    assert(Char('A').toLower() == 'a');
+    assert(Char('a').toLower() == 'a');
 }
 
 
 /++
     If $(D c) is a lowercase ASCII character, then its corresponding uppercase
     letter is returned. Otherwise, $(D c) is returned.
+
+    $(D C) can be any type which implicitly converts to $(D dchar). In the case
+    where it's a built-in type, $(D Unqual!C) is returned, whereas if it's a
+    user-defined type, $(D dchar) is returned.
   +/
-dchar toUpper(dchar c) @safe pure nothrow
-out(result)
+auto toUpper(C)(C c)
+    if(is(C : dchar))
 {
-    assert(!isLower(result));
-}
-body
-{
-    return isLower(c) ? c - cast(dchar)('a' - 'A') : c;
+    static if(isScalarType!C)
+        return isLower(c) ? cast(Unqual!C)(c - ('a' - 'A')) : cast(Unqual!C)c;
+    else
+        return toUpper!dchar(c);
 }
 
 unittest
 {
-    foreach(i, c; lowercase)
-        assert(toUpper(c) == uppercase[i]);
-
-    foreach(dchar c; iota(0, 128))
+    foreach(C; TypeTuple!(char, wchar, dchar, immutable char, ubyte))
     {
-        if(c < 'a' || c > 'z')
+        foreach(i, c; lowercase)
+            assert(toUpper(cast(C)c) == uppercase[i]);
+
+        foreach(C c; 0 .. 128)
+        {
+            if(c < 'a' || c > 'z')
+                assert(toUpper(c) == c);
+            else
+                assert(toUpper(c) != c);
+        }
+
+        foreach(C c; 128 .. C.max)
             assert(toUpper(c) == c);
     }
+
+    static assert(isSafe!(toUpper!char));
+    static assert((functionAttributes!((){'a'.toUpper();}) & FunctionAttribute.pure_) != 0);
+    static assert((functionAttributes!((){'a'.toUpper();}) & FunctionAttribute.nothrow_) != 0);
+
+    static struct Char { dchar c; alias c this; }
+    static assert(is(typeof(Char('a').toUpper()) == dchar));
+    assert(Char('a').toUpper() == 'A');
+    assert(Char('A').toUpper() == 'A');
 }
 
 

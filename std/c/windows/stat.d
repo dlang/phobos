@@ -3,13 +3,12 @@
 /// Author: Walter Bright
 
 module std.c.windows.stat;
+version (Windows):
 
 extern (C):
 
 // linux version is in std.c.linux.linux
 
-version (Windows)
-{
 const S_IFMT   = 0xF000;
 const S_IFDIR  = 0x4000;
 const S_IFCHR  = 0x2000;
@@ -46,4 +45,3 @@ struct struct_stat
 int  stat(char *, struct_stat *);
 int  fstat(int, struct_stat *);
 int  _wstat(wchar *, struct_stat *);
-}

@@ -1,1427 +1,7146 @@
 // Written in the D programming language.
 
 /++
-    Functions which operate on Unicode characters.
+    $(SECTION Overview)
 
-    For functions which operate on ASCII characters and ignore Unicode
-    characters, see $(LINK2 std_ascii.html, std.ascii).
+    $(P The $(D std.uni) module provides an implementation
+    of fundamental Unicode algorithms and data structures.
+    This doesn't include UTF encoding and decoding primitives,
+    see $(XREF _utf, decode) and $(XREF _utf, encode) in std.utf
+    for this functionality. )
 
+    $(P All primitives listed operate on Unicode characters and
+    sets of characters. For functions which operate on ASCII characters
+    and ignore Unicode $(CHARACTERS), see $(LINK2 std_ascii.html, std.ascii).
+    For definitions of Unicode $(CHARACTER), $(CODEPOINT) and other terms
+    used throughout this module see the $(S_LINK Terminology, terminology) section
+    below.
+    )
+
+    $(P The focus of this module is the core needs of developing Unicode-aware
+    applications. To that effect it provides the following optimized primitives:
+    )
+    $(UL
+    $(LI Character classification by category and common properties:
+        $(LREF isAlpha), $(LREF isWhite) and others.
+    )
+    $(LI
+        Case-insensitive string comparison ($(LREF sicmp), $(LREF icmp)).
+    )
+    $(LI
+        Converting text to any of the four normalization forms via $(LREF normalize).
+    )
+    $(LI
+        Decoding ($(LREF decodeGrapheme))  and iteration ($(LREF graphemeStride))
+        by user-perceived characters, that is by $(LREF Grapheme) clusters.
+    )
+    $(LI
+        Decomposing and composing of individual character(s) according to canonical
+        or compatibility rules, see $(LREF compose) and $(LREF decompose),
+        including the specific version for Hangul syllables $(LREF composeJamo)
+        and $(LREF decomposeHangul).
+    )
+    )
+    $(P It's recognized that an application may need further enhancements
+    and extensions, such as less commonly known algorithms,
+    or tailoring existing ones for region specific needs. To help users
+    with building any extra functionality beyond the core primitives,
+    the module provides:
+    )
+    $(UL
+    $(LI
+        $(LREF CodepointSet), a type for easy manipulation of sets of characters.
+        Besides the typical set algebra it provides an unusual feature:
+        a D source code generator for detection of $(CODEPOINTS) in this set.
+        This is a boon for meta-programming parser frameworks,
+        and is used internally to power classification in small
+        sets like $(LREF isWhite).
+    )
+    $(LI
+        A way to construct optimal packed multi-stage tables also known as a
+        special case of $(LUCKY Trie).
+        The functions $(LREF codepointTrie), $(LREF codepointSetTrie)
+        construct custom tries that map dchar to value.
+        The end result is a fast and predictable $(BIGOH 1) lookup that powers
+        functions like $(LREF isAlpha) and $(LREF combiningClass),
+        but for user-defined data sets.
+    )
+    $(LI
+        Generally useful building blocks for customized normalization:
+        $(LREF combiningClass) for querying combining class
+        and $(LREF allowedIn) for testing the Quick_Check
+        property of a given normalization form.
+    )
+    $(LI
+        Access to a large selection of commonly used sets of $(CODEPOINTS).
+        $(S_LINK Unicode properties, Supported sets) include Script,
+        Block and General Category. The exact contents of a set can be
+        observed in the CLDR utility, on the
+        $(WEB www.unicode.org/cldr/utility/properties.jsp, property index) page
+        of the Unicode website.
+        See $(LREF unicode) for easy and (optionally) compile-time checked set
+        queries.
+    )
+    )
+    $(SECTION Synopsis)
+    ---
+    import std.uni;
+    void main()
+    {
+        // initialize code point sets using script/block or property name
+        // now 'set' contains code points from both scripts.
+        auto set = unicode("Cyrillic") | unicode("Armenian");
+        // same thing but simpler and checked at compile-time
+        auto ascii = unicode.ASCII;
+        auto currency = unicode.Currency_Symbol;
+
+        // easy set ops
+        auto a = set & ascii;
+        assert(a.empty); // as it has no intersection with ascii
+        a = set | ascii;
+        auto b = currency - a; // subtract all ASCII, Cyrillic and Armenian
+
+        // some properties of code point sets
+        assert(b.length > 45); // 46 items in Unicode 6.1, even more in 6.2
+        // testing presence of a code point in a set
+        // is just fine, it is O(logN)
+        assert(!b['$']);
+        assert(!b['\u058F']); // Armenian dram sign
+        assert(b['¥']);
+
+        // building fast lookup tables, these guarantee O(1) complexity
+        // 1-level Trie lookup table essentially a huge bit-set ~262Kb
+        auto oneTrie = toTrie!1(b);
+        // 2-level far more compact but typically slightly slower
+        auto twoTrie = toTrie!2(b);
+        // 3-level even smaller, and a bit slower yet
+        auto threeTrie = toTrie!3(b);
+        assert(oneTrie['£']);
+        assert(twoTrie['£']);
+        assert(threeTrie['£']);
+
+        // build the trie with the most sensible trie level
+        // and bind it as a functor
+        auto cyrilicOrArmenian = toDelegate(set);
+        auto balance = find!(cyrilicOrArmenian)("Hello ընկեր!");
+        assert(balance == "ընկեր!");
+        // compatible with bool delegate(dchar)
+        bool delegate(dchar) bindIt = cyrilicOrArmenian;
+
+        // Normalization
+        string s = "Plain ascii (and not only), is always normalized!";
+        assert(s is normalize(s));// is the same string
+
+        string nonS = "A\u0308ffin"; // A ligature
+        auto nS = normalize(nonS); // to NFC, the W3C endorsed standard
+        assert(nS == "Äffin");
+        assert(nS != nonS);
+        string composed = "Äffin";
+
+        assert(normalize!NFD(composed) == "A\u0308ffin");
+        // to NFKD, compatibility decomposition useful for fuzzy matching/searching
+        assert(normalize!NFKD("2¹⁰") == "210");
+    }
+    ---
+    $(SECTION Terminology)
+    $(P The following is a list of important Unicode notions
+    and definitions. Any conventions used specifically in this
+    module alone are marked as such. The descriptions are based on the formal
+    definition as found in ($WEB http://www.unicode.org/versions/Unicode6.2.0/ch03.pdf,
+    chapter three of The Unicode Standard Core Specification.)
+    )
+
+    $(P $(DEF Abstract character) A unit of information used for the organization,
+    control, or representation of textual data.
+    Note that:
+        $(UL
+        $(LI When representing data, the nature of that data
+        is generally symbolic as opposed to some other
+        kind of data (for example, visual).)
+
+        $(LI An abstract character has no concrete form
+        and should not be confused with a $(S_LINK Glyph, glyph).)
+
+        $(LI An abstract character does not necessarily
+        correspond to what a user thinks of as a “character”
+         and should not be confused with a $(LREF Grapheme).)
+
+        $(LI The abstract characters encoded (see Encoded character)
+        are known as Unicode abstract characters.)
+
+        $(LI Abstract characters not directly
+        encoded by the Unicode Standard can often be
+        represented by the use of combining character sequences.)
+        )
+    )
+
+    $(P $(DEF Canonical decomposition)
+    The decomposition of a character or character sequence
+    that results from recursively applying the canonical
+    mappings found in the Unicode Character Database
+    and these described in Conjoining Jamo Behavior
+    (section 12 of
+    $(WEB www.unicode.org/uni2book/ch03.pdf, Unicode Conformance)).
+    )
+
+    $(P $(DEF Canonical composition)
+    The precise definition of the Canonical composition
+    is the algorithm as specified in $(WEB www.unicode.org/uni2book/ch03.pdf,
+    Unicode Conformance) section 11.
+    Informally it's the process that does the reverse of the canonical
+    decomposition with the addition of certain rules
+    that e.g. prevent legacy characters from appearing in the composed result.
+    )
+
+    $(P $(DEF Canonical equivalent)
+    Two character sequences are said to be canonical equivalents if
+    their full canonical decompositions are identical.
+    )
+
+    $(P $(DEF Character) Typically differs by context.
+    For the purpose of this documentation the term $(I character)
+    implies $(I encoded character), that is, a code point having
+    an assigned abstract character (a symbolic meaning).
+    )
+
+    $(P $(DEF Code point) Any value in the Unicode codespace;
+    that is, the range of integers from 0 to 10FFFF (hex).
+    Not all code points are assigned to encoded characters.
+    )
+
+    $(P $(DEF Code unit) The minimal bit combination that can represent
+    a unit of encoded text for processing or interchange.
+    Depending on the encoding this could be:
+    8-bit code units in the UTF-8 ($(D char)),
+    16-bit code units in the UTF-16 ($(D wchar)),
+    and 32-bit code units in the UTF-32 ($(D dchar)).
+    $(I Note that in UTF-32, a code unit is a code point
+    and is represented by the D $(D dchar) type.)
+    )
+
+    $(P $(DEF Combining character) A character with the General Category
+     of Combining Mark(M).
+        $(UL
+            $(LI All characters with non-zero canonical combining class
+            are combining characters, but the reverse is not the case:
+            there are combining characters with a zero combining class.
+            )
+            $(LI These characters are not normally used in isolation
+            unless they are being described. They include such characters
+            as accents, diacritics, Hebrew points, Arabic vowel signs,
+            and Indic matras.
+            )
+        )
+    )
+
+    $(P $(DEF Combining class)
+        A numerical value used by the Unicode Canonical Ordering Algorithm
+        to determine which sequences of combining marks are to be
+        considered canonically equivalent and  which are not.
+    )
+
+    $(P $(DEF Compatibility decomposition)
+    The decomposition of a character or character sequence that results
+    from recursively applying both the compatibility mappings and
+    the canonical mappings found in the Unicode Character Database, and those
+    described in Conjoining Jamo Behavior no characters
+    can be further decomposed.
+    )
+
+    $(P $(DEF Compatibility equivalent)
+    Two character sequences are said to be compatibility
+    equivalents if their full compatibility decompositions are identical.
+    )
+
+    $(P $(DEF Encoded character) An association (or mapping)
+    between an abstract character and a code point.
+    )
+
+    $(P $(DEF Glyph) The actual, concrete image of a glyph representation
+    having been rasterized or otherwise imaged onto some display surface.
+    )
+
+    $(P $(DEF Grapheme base) A character with the property
+     Grapheme_Base, or any standard Korean syllable block.
+    )
+
+    $(P $(DEF Grapheme cluster) Defined as the text between
+        grapheme boundaries  as specified by Unicode Standard Annex #29,
+        $(WEB www.unicode.org/reports/tr29/, Unicode text segmentation).
+        Important general properties of a grapheme:
+        $(UL
+            $(LI The grapheme cluster represents a horizontally segmentable
+            unit of text, consisting of some grapheme base (which may
+            consist of a Korean syllable) together with any number of
+            nonspacing marks applied to it.
+            )
+            $(LI  A grapheme cluster typically starts with a grapheme base
+            and then extends across any subsequent sequence of nonspacing marks.
+            A grapheme cluster is most directly relevant to text rendering and
+            processes such as cursor placement and text selection in editing,
+            but may also be relevant to comparison and searching.
+            )
+            $(LI For many processes, a grapheme cluster behaves as if it was a
+            single character with the same properties as its grapheme base.
+            Effectively, nonspacing marks apply $(I graphically) to the base,
+            but do not change its properties.
+            )
+        )
+        $(P This module defines a number of primitives that work with graphemes:
+        $(LREF Grapheme), $(LREF decodeGrapheme) and $(LREF graphemeStride).
+        All of them are using $(I extended grapheme) boundaries
+        as defined in the aforementioned standard annex.
+        )
+    )
+
+
+    $(P $(DEF Nonspacing mark) A combining character with the
+        General Category of Nonspacing Mark (Mn) or Enclosing Mark (Me).
+    )
+
+    $(P $(DEF Spacing mark) A combining character that is not a nonspacing mark.)
+
+
+    $(SECTION Normalization)
+
+    $(P The concepts of $(S_LINK Canonical equivalent, canonical equivalent)
+     or $(S_LINK Compatibility equivalent, compatibility equivalent)
+    characters in the Unicode Standard make it necessary to have a full, formal
+    definition of equivalence for Unicode strings.
+    String equivalence is determined by a process called normalization,
+    whereby strings are converted into forms which are compared
+    directly for identity. This is the primary goal of the normalization process,
+    see the function $(LREF normalize) to convert into any of
+    the four defined forms.
+    )
+
+    $(P A very important attribute of the Unicode Normalization Forms
+    is that they must remain stable between versions of the Unicode Standard.
+    A Unicode string normalized to a particular Unicode Normalization Form
+    in one version of the standard is guaranteed to remain in that Normalization
+    Form for implementations of future versions of the standard.
+    )
+
+    $(P The Unicode Standard specifies four normalization forms.
+    Informally, two of these forms are defined by maximal decomposition
+    of equivalent sequences, and two of these forms are defined
+    by maximal $(I composition) of equivalent sequences.
+        $(UL
+        $(LI Normalization Form D (NFD): The $(S_LINK Canonical decomposition,
+            canonical decomposition) of a character sequence.)
+        $(LI Normalization Form KD (NFKD): The $(S_LINK Compatibility decomposition,
+            compatibility decomposition) of a character sequence.)
+        $(LI Normalization Form C (NFC): The canonical composition of the
+            $(S_LINK Canonical decomposition, canonical decomposition)
+            of a coded character sequence.)
+        $(LI Normalization Form KC (NFKC): The canonical composition
+        of the $(S_LINK Compatibility decomposition,
+            compatibility decomposition) of a character sequence)
+        )
+    )
+
+    $(P The choice of the normalization form depends on the particular use case.
+    NFC is the best form for general text, since it's more compatible with
+    strings converted from legacy encodings. NFKC is the preferred form for
+    identifiers, especially where there are security concerns. NFD and NFKD
+    are the most useful for internal processing.
+    )
+
+    $(SECTION Construction of lookup tables)
+
+    $(P The Unicode standard describes a set of algorithms that
+    depend on having the ability to quickly look up various properties
+    of a code point. Given the the codespace of about 1 million $(CODEPOINTS),
+    it is not a trivial task to provide a space-efficient solution for
+    the multitude of properties.)
+
+    $(P Common approaches such as hash-tables or binary search over
+     sorted code point intervals (as in $(LREF InversionList)) are insufficient.
+     Hash-tables have enormous memory footprint and binary search
+     over intervals is not fast enough for some heavy-duty algorithms.
+     )
+
+    $(P The recommended solution (see Unicode Implementation Guidelines)
+    is using multi-stage tables that are an implementation of the
+    $(WEB http://en.wikipedia.org/wiki/Trie, Trie) data structure with integer
+    keys and a fixed number of stages. For the remainder of the section
+    this will be called a fixed trie. The following describes a particular
+    implementation that is aimed for the speed of access at the expense
+    of ideal size savings.
+    )
+
+    $(P Taking a 2-level Trie as an example the principle of operation is as follows.
+        Split the number of bits in a key (code point, 21 bits) into 2 components
+        (e.g. 15 and 8).  The first is the number of bits in the index of the trie
+         and the other is number of bits in each page of the trie.
+        The layout of the trie is then an array of size 2^^bits-of-index followed
+        an array of memory chunks of size 2^^bits-of-page/bits-per-element.
+    )
+
+    $(P The number of pages is variable (but not less then 1)
+        unlike the number of entries in the index. The slots of the index
+        all have to contain a number of a page that is present. The lookup is then
+        just a couple of operations - slice the upper bits,
+        lookup an index for these, take a page at this index and use
+        the lower bits as an offset within this page.
+
+        Assuming that pages are laid out consequently
+        in one array at $(D pages), the pseudo-code is:
+    )
+    ---
+    auto elemsPerPage = (2 ^^ bits_per_page) / Value.sizeOfInBits;
+    pages[index[n >> bits_per_page]][n & (elemsPerPage - 1)];
+    ---
+    $(P Where if $(D elemsPerPage) is a power of 2 the whole process is
+    a handful of simple instructions and 2 array reads. Subsequent levels
+    of the trie are introduced by recursing on this notion - the index array
+    is treated as values. The number of bits in index is then again
+    split into 2 parts, with pages over 'current-index' and the new 'upper-index'.
+    )
+
+    $(P For completeness a level 1 trie is simply an array.
+    The current implementation takes advantage of bit-packing values
+    when the range is known to be limited in advance (such as $(D bool)).
+    See also $(LREF BitPacked) for enforcing it manually.
+    The major size advantage however comes from the fact
+    that multiple $(B identical pages on every level are merged) by construction.
+    )
+
+    $(P The process of constructing a trie is more involved and is hidden from
+    the user in a form of the convenience functions $(LREF codepointTrie),
+    $(LREF codepointSetTrie) and the even more convenient $(LREF toTrie).
+    In general a set or built-in AA with $(D dchar) type
+    can be turned into a trie. The trie object in this module
+    is read-only (immutable); it's effectively frozen after construction.
+    )
+
+    $(SECTION Unicode properties)
+
+    $(P This is a full list of Unicode properties accessible through $(LREF unicode)
+    with specific helpers per category nested within. Consult the
+    $(WEB www.unicode.org/cldr/utility/properties.jsp, CLDR utility)
+    when in doubt about the contents of a particular set.)
+
+    $(P General category sets listed below are only accessible with the
+    $(LREF unicode) shorthand accessor.)
+    $(BOOKTABLE $(B General category ),
+         $(TR $(TH Abb.) $(TH Long form)
+            $(TH Abb.) $(TH Long form)$(TH Abb.) $(TH Long form))
+        $(TR $(TD L) $(TD Letter)
+            $(TD Cn) $(TD Unassigned)  $(TD Po) $(TD Other_Punctuation))
+        $(TR $(TD Ll) $(TD Lowercase_Letter)
+            $(TD Co) $(TD Private_Use) $(TD Ps) $(TD Open_Punctuation))
+        $(TR $(TD Lm) $(TD Modifier_Letter)
+            $(TD Cs) $(TD Surrogate)   $(TD S) $(TD Symbol))
+        $(TR $(TD Lo) $(TD Other_Letter)
+            $(TD N) $(TD Number)  $(TD Sc) $(TD Currency_Symbol))
+        $(TR $(TD Lt) $(TD Titlecase_Letter)
+          $(TD Nd) $(TD Decimal_Number)  $(TD Sk) $(TD Modifier_Symbol))
+        $(TR $(TD Lu) $(TD Uppercase_Letter)
+          $(TD Nl) $(TD Letter_Number)   $(TD Sm) $(TD Math_Symbol))
+        $(TR $(TD M) $(TD Mark)
+          $(TD No) $(TD Other_Number)    $(TD So) $(TD Other_Symbol))
+        $(TR $(TD Mc) $(TD Spacing_Mark)
+          $(TD P) $(TD Punctuation) $(TD Z) $(TD Separator))
+        $(TR $(TD Me) $(TD Enclosing_Mark)
+          $(TD Pc) $(TD Connector_Punctuation)   $(TD Zl) $(TD Line_Separator))
+        $(TR $(TD Mn) $(TD Nonspacing_Mark)
+          $(TD Pd) $(TD Dash_Punctuation)    $(TD Zp) $(TD Paragraph_Separator))
+        $(TR $(TD C) $(TD Other)
+          $(TD Pe) $(TD Close_Punctuation) $(TD Zs) $(TD Space_Separator))
+        $(TR $(TD Cc) $(TD Control) $(TD Pf)
+          $(TD Final_Punctuation)   $(TD -) $(TD Any))
+        $(TR $(TD Cf) $(TD Format)
+          $(TD Pi) $(TD Initial_Punctuation) $(TD -) $(TD ASCII))
+    )
+    $(P Sets for other commonly useful properties that are
+    accessible with $(LREF unicode):)
+    $(BOOKTABLE $(B Common binary properties),
+        $(TR $(TH Name) $(TH Name) $(TH Name))
+        $(TR $(TD Alphabetic)  $(TD Ideographic) $(TD Other_Uppercase))
+        $(TR $(TD ASCII_Hex_Digit) $(TD IDS_Binary_Operator) $(TD Pattern_Syntax))
+        $(TR $(TD Bidi_Control)    $(TD ID_Start)    $(TD Pattern_White_Space))
+        $(TR $(TD Cased)   $(TD IDS_Trinary_Operator)    $(TD Quotation_Mark))
+        $(TR $(TD Case_Ignorable)  $(TD Join_Control)    $(TD Radical))
+        $(TR $(TD Dash)    $(TD Logical_Order_Exception) $(TD Soft_Dotted))
+        $(TR $(TD Default_Ignorable_Code_Point)    $(TD Lowercase)   $(TD STerm))
+        $(TR $(TD Deprecated)  $(TD Math)    $(TD Terminal_Punctuation))
+        $(TR $(TD Diacritic)   $(TD Noncharacter_Code_Point) $(TD Unified_Ideograph))
+        $(TR $(TD Extender)    $(TD Other_Alphabetic)    $(TD Uppercase))
+        $(TR $(TD Grapheme_Base)   $(TD Other_Default_Ignorable_Code_Point)  $(TD Variation_Selector))
+        $(TR $(TD Grapheme_Extend) $(TD Other_Grapheme_Extend)   $(TD White_Space))
+        $(TR $(TD Grapheme_Link)   $(TD Other_ID_Continue)   $(TD XID_Continue))
+        $(TR $(TD Hex_Digit)   $(TD Other_ID_Start)  $(TD XID_Start))
+        $(TR $(TD Hyphen)  $(TD Other_Lowercase) )
+        $(TR $(TD ID_Continue) $(TD Other_Math)  )
+    )
+    $(P Bellow is the table with block names accepted by $(LREF unicode.block).
+    Note that the shorthand version $(LREF unicode) requires "In"
+    to be prepended to the names of blocks so as to disambiguate
+    scripts and blocks.)
+
+    $(BOOKTABLE $(B Blocks),
+        $(TR $(TD Aegean Numbers)    $(TD Ethiopic Extended) $(TD Mongolian))
+        $(TR $(TD Alchemical Symbols)    $(TD Ethiopic Extended-A)   $(TD Musical Symbols))
+        $(TR $(TD Alphabetic Presentation Forms) $(TD Ethiopic Supplement)   $(TD Myanmar))
+        $(TR $(TD Ancient Greek Musical Notation)    $(TD General Punctuation)   $(TD Myanmar Extended-A))
+        $(TR $(TD Ancient Greek Numbers) $(TD Geometric Shapes)  $(TD New Tai Lue))
+        $(TR $(TD Ancient Symbols)   $(TD Georgian)  $(TD NKo))
+        $(TR $(TD Arabic)    $(TD Georgian Supplement)   $(TD Number Forms))
+        $(TR $(TD Arabic Extended-A) $(TD Glagolitic)    $(TD Ogham))
+        $(TR $(TD Arabic Mathematical Alphabetic Symbols)    $(TD Gothic)    $(TD Ol Chiki))
+        $(TR $(TD Arabic Presentation Forms-A)   $(TD Greek and Coptic)  $(TD Old Italic))
+        $(TR $(TD Arabic Presentation Forms-B)   $(TD Greek Extended)    $(TD Old Persian))
+        $(TR $(TD Arabic Supplement) $(TD Gujarati)  $(TD Old South Arabian))
+        $(TR $(TD Armenian)  $(TD Gurmukhi)  $(TD Old Turkic))
+        $(TR $(TD Arrows)    $(TD Halfwidth and Fullwidth Forms) $(TD Optical Character Recognition))
+        $(TR $(TD Avestan)   $(TD Hangul Compatibility Jamo) $(TD Oriya))
+        $(TR $(TD Balinese)  $(TD Hangul Jamo)   $(TD Osmanya))
+        $(TR $(TD Bamum) $(TD Hangul Jamo Extended-A)    $(TD Phags-pa))
+        $(TR $(TD Bamum Supplement)  $(TD Hangul Jamo Extended-B)    $(TD Phaistos Disc))
+        $(TR $(TD Basic Latin)   $(TD Hangul Syllables)  $(TD Phoenician))
+        $(TR $(TD Batak) $(TD Hanunoo)   $(TD Phonetic Extensions))
+        $(TR $(TD Bengali)   $(TD Hebrew)    $(TD Phonetic Extensions Supplement))
+        $(TR $(TD Block Elements)    $(TD High Private Use Surrogates)   $(TD Playing Cards))
+        $(TR $(TD Bopomofo)  $(TD High Surrogates)   $(TD Private Use Area))
+        $(TR $(TD Bopomofo Extended) $(TD Hiragana)  $(TD Rejang))
+        $(TR $(TD Box Drawing)   $(TD Ideographic Description Characters)    $(TD Rumi Numeral Symbols))
+        $(TR $(TD Brahmi)    $(TD Imperial Aramaic)  $(TD Runic))
+        $(TR $(TD Braille Patterns)  $(TD Inscriptional Pahlavi) $(TD Samaritan))
+        $(TR $(TD Buginese)  $(TD Inscriptional Parthian)    $(TD Saurashtra))
+        $(TR $(TD Buhid) $(TD IPA Extensions)    $(TD Sharada))
+        $(TR $(TD Byzantine Musical Symbols) $(TD Javanese)  $(TD Shavian))
+        $(TR $(TD Carian)    $(TD Kaithi)    $(TD Sinhala))
+        $(TR $(TD Chakma)    $(TD Kana Supplement)   $(TD Small Form Variants))
+        $(TR $(TD Cham)  $(TD Kanbun)    $(TD Sora Sompeng))
+        $(TR $(TD Cherokee)  $(TD Kangxi Radicals)   $(TD Spacing Modifier Letters))
+        $(TR $(TD CJK Compatibility) $(TD Kannada)   $(TD Specials))
+        $(TR $(TD CJK Compatibility Forms)   $(TD Katakana)  $(TD Sundanese))
+        $(TR $(TD CJK Compatibility Ideographs)  $(TD Katakana Phonetic Extensions)  $(TD Sundanese Supplement))
+        $(TR $(TD CJK Compatibility Ideographs Supplement)   $(TD Kayah Li)  $(TD Superscripts and Subscripts))
+        $(TR $(TD CJK Radicals Supplement)   $(TD Kharoshthi)    $(TD Supplemental Arrows-A))
+        $(TR $(TD CJK Strokes)   $(TD Khmer) $(TD Supplemental Arrows-B))
+        $(TR $(TD CJK Symbols and Punctuation)   $(TD Khmer Symbols) $(TD Supplemental Mathematical Operators))
+        $(TR $(TD CJK Unified Ideographs)    $(TD Lao)   $(TD Supplemental Punctuation))
+        $(TR $(TD CJK Unified Ideographs Extension A)    $(TD Latin-1 Supplement)    $(TD Supplementary Private Use Area-A))
+        $(TR $(TD CJK Unified Ideographs Extension B)    $(TD Latin Extended-A)  $(TD Supplementary Private Use Area-B))
+        $(TR $(TD CJK Unified Ideographs Extension C)    $(TD Latin Extended Additional) $(TD Syloti Nagri))
+        $(TR $(TD CJK Unified Ideographs Extension D)    $(TD Latin Extended-B)  $(TD Syriac))
+        $(TR $(TD Combining Diacritical Marks)   $(TD Latin Extended-C)  $(TD Tagalog))
+        $(TR $(TD Combining Diacritical Marks for Symbols)   $(TD Latin Extended-D)  $(TD Tagbanwa))
+        $(TR $(TD Combining Diacritical Marks Supplement)    $(TD Lepcha)    $(TD Tags))
+        $(TR $(TD Combining Half Marks)  $(TD Letterlike Symbols)    $(TD Tai Le))
+        $(TR $(TD Common Indic Number Forms) $(TD Limbu) $(TD Tai Tham))
+        $(TR $(TD Control Pictures)  $(TD Linear B Ideograms)    $(TD Tai Viet))
+        $(TR $(TD Coptic)    $(TD Linear B Syllabary)    $(TD Tai Xuan Jing Symbols))
+        $(TR $(TD Counting Rod Numerals) $(TD Lisu)  $(TD Takri))
+        $(TR $(TD Cuneiform) $(TD Low Surrogates)    $(TD Tamil))
+        $(TR $(TD Cuneiform Numbers and Punctuation) $(TD Lycian)    $(TD Telugu))
+        $(TR $(TD Currency Symbols)  $(TD Lydian)    $(TD Thaana))
+        $(TR $(TD Cypriot Syllabary) $(TD Mahjong Tiles) $(TD Thai))
+        $(TR $(TD Cyrillic)  $(TD Malayalam) $(TD Tibetan))
+        $(TR $(TD Cyrillic Extended-A)   $(TD Mandaic)   $(TD Tifinagh))
+        $(TR $(TD Cyrillic Extended-B)   $(TD Mathematical Alphanumeric Symbols) $(TD Transport And Map Symbols))
+        $(TR $(TD Cyrillic Supplement)   $(TD Mathematical Operators)    $(TD Ugaritic))
+        $(TR $(TD Deseret)   $(TD Meetei Mayek)  $(TD Unified Canadian Aboriginal Syllabics))
+        $(TR $(TD Devanagari)    $(TD Meetei Mayek Extensions)   $(TD Unified Canadian Aboriginal Syllabics Extended))
+        $(TR $(TD Devanagari Extended)   $(TD Meroitic Cursive)  $(TD Vai))
+        $(TR $(TD Dingbats)  $(TD Meroitic Hieroglyphs)  $(TD Variation Selectors))
+        $(TR $(TD Domino Tiles)  $(TD Miao)  $(TD Variation Selectors Supplement))
+        $(TR $(TD Egyptian Hieroglyphs)  $(TD Miscellaneous Mathematical Symbols-A)  $(TD Vedic Extensions))
+        $(TR $(TD Emoticons) $(TD Miscellaneous Mathematical Symbols-B)  $(TD Vertical Forms))
+        $(TR $(TD Enclosed Alphanumerics)    $(TD Miscellaneous Symbols) $(TD Yijing Hexagram Symbols))
+        $(TR $(TD Enclosed Alphanumeric Supplement)  $(TD Miscellaneous Symbols and Arrows)  $(TD Yi Radicals))
+        $(TR $(TD Enclosed CJK Letters and Months)   $(TD Miscellaneous Symbols And Pictographs) $(TD Yi Syllables))
+        $(TR $(TD Enclosed Ideographic Supplement)   $(TD Miscellaneous Technical)   )
+        $(TR $(TD Ethiopic)  $(TD Modifier Tone Letters) )
+    )
+
+    $(P Bellow is the table with script names accepted by $(LREF unicode.script)
+    and by the shorthand version $(LREF unicode):)
+    $(BOOKTABLE $(B Scripts),
+        $(TR $(TD Arabic)  $(TD Hanunoo) $(TD Old_Italic))
+        $(TR $(TD Armenian)    $(TD Hebrew)  $(TD Old_Persian))
+        $(TR $(TD Avestan) $(TD Hiragana)    $(TD Old_South_Arabian))
+        $(TR $(TD Balinese)    $(TD Imperial_Aramaic)    $(TD Old_Turkic))
+        $(TR $(TD Bamum)   $(TD Inherited)   $(TD Oriya))
+        $(TR $(TD Batak)   $(TD Inscriptional_Pahlavi)   $(TD Osmanya))
+        $(TR $(TD Bengali) $(TD Inscriptional_Parthian)  $(TD Phags_Pa))
+        $(TR $(TD Bopomofo)    $(TD Javanese)    $(TD Phoenician))
+        $(TR $(TD Brahmi)  $(TD Kaithi)  $(TD Rejang))
+        $(TR $(TD Braille) $(TD Kannada) $(TD Runic))
+        $(TR $(TD Buginese)    $(TD Katakana)    $(TD Samaritan))
+        $(TR $(TD Buhid)   $(TD Kayah_Li)    $(TD Saurashtra))
+        $(TR $(TD Canadian_Aboriginal) $(TD Kharoshthi)  $(TD Sharada))
+        $(TR $(TD Carian)  $(TD Khmer)   $(TD Shavian))
+        $(TR $(TD Chakma)  $(TD Lao) $(TD Sinhala))
+        $(TR $(TD Cham)    $(TD Latin)   $(TD Sora_Sompeng))
+        $(TR $(TD Cherokee)    $(TD Lepcha)  $(TD Sundanese))
+        $(TR $(TD Common)  $(TD Limbu)   $(TD Syloti_Nagri))
+        $(TR $(TD Coptic)  $(TD Linear_B)    $(TD Syriac))
+        $(TR $(TD Cuneiform)   $(TD Lisu)    $(TD Tagalog))
+        $(TR $(TD Cypriot) $(TD Lycian)  $(TD Tagbanwa))
+        $(TR $(TD Cyrillic)    $(TD Lydian)  $(TD Tai_Le))
+        $(TR $(TD Deseret) $(TD Malayalam)   $(TD Tai_Tham))
+        $(TR $(TD Devanagari)  $(TD Mandaic) $(TD Tai_Viet))
+        $(TR $(TD Egyptian_Hieroglyphs)    $(TD Meetei_Mayek)    $(TD Takri))
+        $(TR $(TD Ethiopic)    $(TD Meroitic_Cursive)    $(TD Tamil))
+        $(TR $(TD Georgian)    $(TD Meroitic_Hieroglyphs)    $(TD Telugu))
+        $(TR $(TD Glagolitic)  $(TD Miao)    $(TD Thaana))
+        $(TR $(TD Gothic)  $(TD Mongolian)   $(TD Thai))
+        $(TR $(TD Greek)   $(TD Myanmar) $(TD Tibetan))
+        $(TR $(TD Gujarati)    $(TD New_Tai_Lue) $(TD Tifinagh))
+        $(TR $(TD Gurmukhi)    $(TD Nko) $(TD Ugaritic))
+        $(TR $(TD Han) $(TD Ogham)   $(TD Vai))
+        $(TR $(TD Hangul)  $(TD Ol_Chiki)    $(TD Yi))
+    )
+
+    $(P Bellow is the table of names accepted by $(LREF unicode.hangulSyllableType).)
+    $(BOOKTABLE $(B Hangul syllable type),
+        $(TR $(TH Abb.) $(TH Long form))
+        $(TR $(TD L)   $(TD Leading_Jamo))
+        $(TR $(TD LV)  $(TD LV_Syllable))
+        $(TR $(TD LVT) $(TD LVT_Syllable) )
+        $(TR $(TD T)   $(TD Trailing_Jamo))
+        $(TR $(TD V)   $(TD Vowel_Jamo))
+    )
     References:
         $(WEB www.digitalmars.com/d/ascii-table.html, ASCII Table),
         $(WEB en.wikipedia.org/wiki/Unicode, Wikipedia),
-        $(WEB www.unicode.org, The Unicode Consortium)
-
+        $(WEB www.unicode.org, The Unicode Consortium),
+        $(WEB www.unicode.org/reports/tr15/, Unicode normalization forms),
+        $(WEB www.unicode.org/reports/tr29/, Unicode text segmentation)
+        $(WEB www.unicode.org/uni2book/ch05.pdf,
+            Unicode Implementation Guidelines)
+        $(WEB www.unicode.org/uni2book/ch03.pdf,
+            Unicode Conformance)
     Trademarks:
         Unicode(tm) is a trademark of Unicode, Inc.
 
     Macros:
         WIKI=Phobos/StdUni
 
-    Copyright: Copyright 2000 -
+    Copyright: Copyright 2013 -
     License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-    Authors:   $(WEB digitalmars.com, Walter Bright), Jonathan M Davis, and Kenji Hara
+    Authors:   Dmitry Olshansky
     Source:    $(PHOBOSSRC std/_uni.d)
-  +/
+    Standards: $(WEB www.unicode.org/versions/Unicode6.2.0/, Unicode v6.2)
+
+Macros:
+
+SECTION = <h3><a id="$1">$0</a></h3>
+DEF = <div><a id="$1"><i>$0</i></a></div>
+S_LINK = <a href="#$1">$+</a>
+CODEPOINT = $(S_LINK Code point, code point)
+CODEPOINTS = $(S_LINK Code point, code points)
+CHARACTER = $(S_LINK Character, character)
+CHARACTERS = $(S_LINK Character, characters)
+CLUSTER = $(S_LINK Grapheme cluster, grapheme cluster)
++/
 module std.uni;
 
 static import std.ascii;
+import std.traits, std.range, std.algorithm, std.typecons,
+    std.format, std.conv, std.typetuple, std.exception, core.stdc.stdlib;
+import std.array; //@@BUG UFCS doesn't work with 'local' imports
+import core.bitop;
 
-enum dchar lineSep = '\u2028'; /// UTF line separator
-enum dchar paraSep = '\u2029'; /// UTF paragraph separator
+// debug = std_uni;
 
-/++
-    Whether or not $(D c) is a Unicode whitespace character.
-    (general Unicode category: Part of C0(tab, vertical tab, form feed,
-    carriage return, and linefeed characters), Zs, Zl, Zp, and NEL(U+0085))
-  +/
-bool isWhite(dchar c) @safe pure nothrow
+debug(std_uni) import std.stdio;
+
+private:
+
+version(std_uni_bootstrap){}
+else
 {
-    return std.ascii.isWhite(c) ||
-           c == lineSep || c == paraSep ||
-           c == '\u0085' || c == '\u00A0' || c == '\u1680' || c == '\u180E' ||
-           (c >= '\u2000' && c <= '\u200A') ||
-           c == '\u202F' || c == '\u205F' || c == '\u3000';
+    import std.internal.unicode_tables; // generated file
 }
 
-
-/++
-    Return whether $(D c) is a Unicode lowercase character.
-  +/
-bool isLower(dchar c) @safe pure nothrow
+void copyBackwards(T)(T[] src, T[] dest)
 {
-    if(std.ascii.isASCII(c))
-        return std.ascii.isLower(c);
-
-    return isAlpha(c) && c == toLower(c);
+    assert(src.length == dest.length);
+    for(size_t i=src.length; i-- > 0; )
+        dest[i] = src[i];
 }
 
-
-/++
-    Return whether $(D c) is a Unicode uppercase character.
-  +/
-bool isUpper(dchar c) @safe pure nothrow
+void copyForward(T)(T[] src, T[] dest)
 {
-    if(std.ascii.isASCII(c))
-        return std.ascii.isUpper(c);
-
-    return isAlpha(c) && c == toUpper(c);
+    assert(src.length == dest.length);
+    for(size_t i=0; i<src.length; i++)
+        dest[i] = src[i];
 }
 
+// TODO: update to reflect all major CPUs supporting unaligned reads
+version(X86)
+    enum hasUnalignedReads = true;
+else version(X86_64)
+    enum hasUnalignedReads = true;
+else
+    enum hasUnalignedReads = false; // better be safe then sorry
 
-/++
-    If $(D c) is a Unicode uppercase character, then its lowercase equivalent
-    is returned. Otherwise $(D c) is returned.
-  +/
-dchar toLower(dchar c) @safe pure nothrow
+public enum dchar lineSep = '\u2028'; /// Constant $(CODEPOINT) (0x2028) - line separator.
+public enum dchar paraSep = '\u2029'; /// Constant $(CODEPOINT) (0x2029) - paragraph separator.
+
+// test the intro example
+unittest
 {
-    if(std.ascii.isUpper(c))
-        c += 32;
-    else if(c >= 0x00C0)
+    // initialize code point sets using script/block or property name
+    // set contains code points from both scripts.
+    auto set = unicode("Cyrillic") | unicode("Armenian");
+    // or simpler and statically-checked look
+    auto ascii = unicode.ASCII;
+    auto currency = unicode.Currency_Symbol;
+
+    // easy set ops
+    auto a = set & ascii;
+    assert(a.empty); // as it has no intersection with ascii
+    a = set | ascii;
+    auto b = currency - a; // subtract all ASCII, Cyrillic and Armenian
+
+    // some properties of code point sets
+    assert(b.length > 45); // 46 items in Unicode 6.1, even more in 6.2
+    // testing presence of a code point in a set
+    // is just fine, it is O(logN)
+    assert(!b['$']);
+    assert(!b['\u058F']); // Armenian dram sign
+    assert(b['¥']);
+
+    // building fast lookup tables, these guarantee O(1) complexity
+    // 1-level Trie lookup table essentially a huge bit-set ~262Kb
+    auto oneTrie = toTrie!1(b);
+    // 2-level far more compact but typically slightly slower
+    auto twoTrie = toTrie!2(b);
+    // 3-level even smaller, and a bit slower yet
+    auto threeTrie = toTrie!3(b);
+    assert(oneTrie['£']);
+    assert(twoTrie['£']);
+    assert(threeTrie['£']);
+
+    // build the trie with the most sensible trie level
+    // and bind it as a functor
+    auto cyrilicOrArmenian = toDelegate(set);
+    auto balance = find!(cyrilicOrArmenian)("Hello ընկեր!");
+    assert(balance == "ընկեր!");
+    // compatible with bool delegate(dchar)
+    bool delegate(dchar) bindIt = cyrilicOrArmenian;
+
+    // Normalization
+    string s = "Plain ascii (and not only), is always normalized!";
+    assert(s is normalize(s));// is the same string
+
+    string nonS = "A\u0308ffin"; // A ligature
+    auto nS = normalize(nonS); // to NFC, the W3C endorsed standard
+    assert(nS == "Äffin");
+    assert(nS != nonS);
+    string composed = "Äffin";
+
+    assert(normalize!NFD(composed) == "A\u0308ffin");
+    // to NFKD, compatibility decomposition useful for fuzzy matching/searching
+    assert(normalize!NFKD("2¹⁰") == "210");
+}
+
+enum lastDchar = 0x10FFFF;
+
+auto force(T, F)(F from)
+    if(isIntegral!T && !is(T == F))
+{
+    assert(from <= T.max && from >= T.min);
+    return cast(T)from;
+}
+
+auto force(T, F)(F from)
+    if(isBitPacked!T && !is(T == F))
+{
+    assert(from <= 2^^bitSizeOf!T-1);
+    return T(cast(TypeOfBitPacked!T)from);
+}
+
+auto force(T, F)(F from)
+    if(is(T == F))
+{
+    return from;
+}
+
+// cheap algorithm grease ;)
+auto adaptIntRange(T, F)(F[] src)
+{
+    //@@@BUG when in the 9 hells will map be copyable again?!
+    static struct ConvertIntegers
     {
-        if((c >= 0x00C0 && c <= 0x00D6) ||
-           (c >= 0x00D8 && c<=0x00DE))
+        private F[] data;
+
+        @property T front()
         {
-            c += 32;
+            return force!T(data.front);
         }
-        else if((c >= 0x0100 && c < 0x0138) ||
-                (c > 0x0149 && c < 0x0178))
+
+        void popFront(){ data.popFront(); }
+
+        @property bool empty()const { return data.empty; }
+
+        @property size_t length()const { return data.length; }
+
+        auto opSlice(size_t s, size_t e)
         {
-            if(c == 0x0130)
-                c = 0x0069;
-            else if((c & 1) == 0)
-                ++c;
+            return ConvertIntegers(data[s..e]);
         }
-        else if(c == 0x0178)
-            c = 0x00FF;
-        else if((c >= 0x0139 && c < 0x0149) ||
-                (c > 0x0178 && c < 0x017F))
+
+        @property size_t opDollar(){   return data.length; }
+    }
+    return ConvertIntegers(src);
+}
+
+// repeat X times the bit-pattern in val assuming it's length is 'bits'
+size_t replicateBits(size_t times, size_t bits)(size_t val)
+{
+    static if(times == 1)
+        return val;
+    else static if(times % 2)
+        return (replicateBits!(times-1, bits)(val)<<bits) | val;
+    else
+        return replicateBits!(times/2, bits*2)((val<<bits) | val);
+}
+
+unittest // for replicate
+{
+    size_t m = 0b111;
+    size_t m2 = 0b01;
+    foreach(i; TypeTuple!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
+    {
+        assert(replicateBits!(i, 3)(m)+1 == (1<<(3*i)));
+        assert(replicateBits!(i, 2)(m2) == iota(0, i).map!"2^^(2*a)"().reduce!"a+b"());
+    }
+}
+
+// multiple arrays squashed into one memory block
+struct MultiArray(Types...)
+{
+    this(size_t[] sizes...)
+    {
+        size_t full_size;
+        foreach(i, v; Types)
         {
-            if(c & 1)
-                ++c;
+            full_size += spaceFor!(bitSizeOf!v)(sizes[i]);
+            sz[i] = sizes[i];
+            static if(i >= 1)
+                offsets[i] = offsets[i-1] +
+                    spaceFor!(bitSizeOf!(Types[i-1]))(sizes[i-1]);
         }
-        else if(c >= 0x0200 && c <= 0x0217)
-        {
-            if((c & 1) == 0)
-                ++c;
-        }
-        else if((c >= 0x0401 && c <= 0x040C) ||
-                (c>= 0x040E && c <= 0x040F))
-        {
-            c += 80;
-        }
-        else if(c >= 0x0410 && c <= 0x042F)
-            c += 32;
-        else if(c >= 0x0460 && c <= 0x047F)
-        {
-            if((c & 1) == 0)
-                ++c;
-        }
-        else if(c >= 0x0531 && c <= 0x0556)
-            c += 48;
-        else if(c >= 0x10A0 && c <= 0x10C5)
-            c += 48;
-        else if(c >= 0xFF21 && c <= 0xFF3A)
-            c += 32;
+
+        storage = new size_t[full_size];
     }
 
-    return c;
-}
-
-
-/++
-    If $(D c) is a Unicode lowercase character, then its uppercase equivalent
-    is returned. Otherwise $(D c) is returned.
-  +/
-dchar toUpper(dchar c) @safe pure nothrow
-{
-    if(std.ascii.isLower(c))
-        c -= 32;
-    else if(c >= 0x00E0)
+    this(const(size_t)[] raw_offsets,
+        const(size_t)[] raw_sizes, const(size_t)[] data)const
     {
-        if((c >= 0x00E0 && c <= 0x00F6) ||
-           (c >= 0x00F8 && c <= 0x00FE))
-        {
-            c -= 32;
-        }
-        else if(c == 0x00FF)
-            c = 0x0178;
-        else if((c >= 0x0100 && c < 0x0138) ||
-                (c > 0x0149 && c < 0x0178))
-        {
-            if(c == 0x0131)
-                c = 0x0049;
-            else if(c & 1)
-                --c;
-        }
-        else if((c >= 0x0139 && c < 0x0149) ||
-                (c > 0x0178 && c < 0x017F))
-        {
-            if((c & 1) == 0)
-                --c;
-        }
-        else if(c == 0x017F)
-            c = 0x0053;
-        else if(c >= 0x0200 && c <= 0x0217)
-        {
-            if(c & 1)
-                --c;
-        }
-        else if(c >= 0x0430 && c<= 0x044F)
-            c -= 32;
-        else if((c >= 0x0451 && c <= 0x045C) ||
-                (c >=0x045E && c<= 0x045F))
-        {
-            c -= 80;
-        }
-        else if(c >= 0x0460 && c <= 0x047F)
-        {
-            if(c & 1)
-                --c;
-        }
-        else if(c >= 0x0561 && c < 0x0587)
-            c -= 48;
-        else if(c >= 0xFF41 && c <= 0xFF5A)
-            c -= 32;
+        offsets[] = raw_offsets[];
+        sz[] = raw_sizes[];
+        storage = data;
     }
 
-    return c;
-}
-
-
-/++
-    Returns whether $(D c) is a Unicode alpha character
-    (general Unicode category: Lu, Ll, Lt, Lm, and Lo).
-
-    Standards: Unicode 5.0.0.
-  +/
-bool isAlpha(dchar c) @safe pure nothrow
-{
-    static immutable dchar[2][] table =
-    [
-    [ 'A', 'Z' ],
-    [ 'a', 'z' ],
-    [ 0x00AA, 0x00AA ],
-    [ 0x00B5, 0x00B5 ],
-    [ 0x00BA, 0x00BA ],
-    [ 0x00C0, 0x00D6 ],
-    [ 0x00D8, 0x00F6 ],
-    [ 0x00F8, 0x02C1 ],
-    [ 0x02C6, 0x02D1 ],
-    [ 0x02E0, 0x02E4 ],
-    [ 0x02EE, 0x02EE ],
-    [ 0x037A, 0x037D ],
-    [ 0x0386, 0x0386 ],
-    [ 0x0388, 0x038A ],
-    [ 0x038C, 0x038C ],
-    [ 0x038E, 0x03A1 ],
-    [ 0x03A3, 0x03CE ],
-    [ 0x03D0, 0x03F5 ],
-    [ 0x03F7, 0x0481 ],
-    [ 0x048A, 0x0513 ],
-    [ 0x0531, 0x0556 ],
-    [ 0x0559, 0x0559 ],
-    [ 0x0561, 0x0587 ],
-    [ 0x05D0, 0x05EA ],
-    [ 0x05F0, 0x05F2 ],
-    [ 0x0621, 0x063A ],
-    [ 0x0640, 0x064A ],
-    [ 0x066E, 0x066F ],
-    [ 0x0671, 0x06D3 ],
-    [ 0x06D5, 0x06D5 ],
-    [ 0x06E5, 0x06E6 ],
-    [ 0x06EE, 0x06EF ],
-    [ 0x06FA, 0x06FC ],
-    [ 0x06FF, 0x06FF ],
-    [ 0x0710, 0x0710 ],
-    [ 0x0712, 0x072F ],
-    [ 0x074D, 0x076D ],
-    [ 0x0780, 0x07A5 ],
-    [ 0x07B1, 0x07B1 ],
-    [ 0x07CA, 0x07EA ],
-    [ 0x07F4, 0x07F5 ],
-    [ 0x07FA, 0x07FA ],
-    [ 0x0904, 0x0939 ],
-    [ 0x093D, 0x093D ],
-    [ 0x0950, 0x0950 ],
-    [ 0x0958, 0x0961 ],
-    [ 0x097B, 0x097F ],
-    [ 0x0985, 0x098C ],
-    [ 0x098F, 0x0990 ],
-    [ 0x0993, 0x09A8 ],
-    [ 0x09AA, 0x09B0 ],
-    [ 0x09B2, 0x09B2 ],
-    [ 0x09B6, 0x09B9 ],
-    [ 0x09BD, 0x09BD ],
-    [ 0x09CE, 0x09CE ],
-    [ 0x09DC, 0x09DD ],
-    [ 0x09DF, 0x09E1 ],
-    [ 0x09F0, 0x09F1 ],
-    [ 0x0A05, 0x0A0A ],
-    [ 0x0A0F, 0x0A10 ],
-    [ 0x0A13, 0x0A28 ],
-    [ 0x0A2A, 0x0A30 ],
-    [ 0x0A32, 0x0A33 ],
-    [ 0x0A35, 0x0A36 ],
-    [ 0x0A38, 0x0A39 ],
-    [ 0x0A59, 0x0A5C ],
-    [ 0x0A5E, 0x0A5E ],
-    [ 0x0A72, 0x0A74 ],
-    [ 0x0A85, 0x0A8D ],
-    [ 0x0A8F, 0x0A91 ],
-    [ 0x0A93, 0x0AA8 ],
-    [ 0x0AAA, 0x0AB0 ],
-    [ 0x0AB2, 0x0AB3 ],
-    [ 0x0AB5, 0x0AB9 ],
-    [ 0x0ABD, 0x0ABD ],
-    [ 0x0AD0, 0x0AD0 ],
-    [ 0x0AE0, 0x0AE1 ],
-    [ 0x0B05, 0x0B0C ],
-    [ 0x0B0F, 0x0B10 ],
-    [ 0x0B13, 0x0B28 ],
-    [ 0x0B2A, 0x0B30 ],
-    [ 0x0B32, 0x0B33 ],
-    [ 0x0B35, 0x0B39 ],
-    [ 0x0B3D, 0x0B3D ],
-    [ 0x0B5C, 0x0B5D ],
-    [ 0x0B5F, 0x0B61 ],
-    [ 0x0B71, 0x0B71 ],
-    [ 0x0B83, 0x0B83 ],
-    [ 0x0B85, 0x0B8A ],
-    [ 0x0B8E, 0x0B90 ],
-    [ 0x0B92, 0x0B95 ],
-    [ 0x0B99, 0x0B9A ],
-    [ 0x0B9C, 0x0B9C ],
-    [ 0x0B9E, 0x0B9F ],
-    [ 0x0BA3, 0x0BA4 ],
-    [ 0x0BA8, 0x0BAA ],
-    [ 0x0BAE, 0x0BB9 ],
-    [ 0x0C05, 0x0C0C ],
-    [ 0x0C0E, 0x0C10 ],
-    [ 0x0C12, 0x0C28 ],
-    [ 0x0C2A, 0x0C33 ],
-    [ 0x0C35, 0x0C39 ],
-    [ 0x0C60, 0x0C61 ],
-    [ 0x0C85, 0x0C8C ],
-    [ 0x0C8E, 0x0C90 ],
-    [ 0x0C92, 0x0CA8 ],
-    [ 0x0CAA, 0x0CB3 ],
-    [ 0x0CB5, 0x0CB9 ],
-    [ 0x0CBD, 0x0CBD ],
-    [ 0x0CDE, 0x0CDE ],
-    [ 0x0CE0, 0x0CE1 ],
-    [ 0x0D05, 0x0D0C ],
-    [ 0x0D0E, 0x0D10 ],
-    [ 0x0D12, 0x0D28 ],
-    [ 0x0D2A, 0x0D39 ],
-    [ 0x0D60, 0x0D61 ],
-    [ 0x0D85, 0x0D96 ],
-    [ 0x0D9A, 0x0DB1 ],
-    [ 0x0DB3, 0x0DBB ],
-    [ 0x0DBD, 0x0DBD ],
-    [ 0x0DC0, 0x0DC6 ],
-    [ 0x0E01, 0x0E30 ],
-    [ 0x0E32, 0x0E33 ],
-    [ 0x0E40, 0x0E46 ],
-    [ 0x0E81, 0x0E82 ],
-    [ 0x0E84, 0x0E84 ],
-    [ 0x0E87, 0x0E88 ],
-    [ 0x0E8A, 0x0E8A ],
-    [ 0x0E8D, 0x0E8D ],
-    [ 0x0E94, 0x0E97 ],
-    [ 0x0E99, 0x0E9F ],
-    [ 0x0EA1, 0x0EA3 ],
-    [ 0x0EA5, 0x0EA5 ],
-    [ 0x0EA7, 0x0EA7 ],
-    [ 0x0EAA, 0x0EAB ],
-    [ 0x0EAD, 0x0EB0 ],
-    [ 0x0EB2, 0x0EB3 ],
-    [ 0x0EBD, 0x0EBD ],
-    [ 0x0EC0, 0x0EC4 ],
-    [ 0x0EC6, 0x0EC6 ],
-    [ 0x0EDC, 0x0EDD ],
-    [ 0x0F00, 0x0F00 ],
-    [ 0x0F40, 0x0F47 ],
-    [ 0x0F49, 0x0F6A ],
-    [ 0x0F88, 0x0F8B ],
-    [ 0x1000, 0x1021 ],
-    [ 0x1023, 0x1027 ],
-    [ 0x1029, 0x102A ],
-    [ 0x1050, 0x1055 ],
-    [ 0x10A0, 0x10C5 ],
-    [ 0x10D0, 0x10FA ],
-    [ 0x10FC, 0x10FC ],
-    [ 0x1100, 0x1159 ],
-    [ 0x115F, 0x11A2 ],
-    [ 0x11A8, 0x11F9 ],
-    [ 0x1200, 0x1248 ],
-    [ 0x124A, 0x124D ],
-    [ 0x1250, 0x1256 ],
-    [ 0x1258, 0x1258 ],
-    [ 0x125A, 0x125D ],
-    [ 0x1260, 0x1288 ],
-    [ 0x128A, 0x128D ],
-    [ 0x1290, 0x12B0 ],
-    [ 0x12B2, 0x12B5 ],
-    [ 0x12B8, 0x12BE ],
-    [ 0x12C0, 0x12C0 ],
-    [ 0x12C2, 0x12C5 ],
-    [ 0x12C8, 0x12D6 ],
-    [ 0x12D8, 0x1310 ],
-    [ 0x1312, 0x1315 ],
-    [ 0x1318, 0x135A ],
-    [ 0x1380, 0x138F ],
-    [ 0x13A0, 0x13F4 ],
-    [ 0x1401, 0x166C ],
-    [ 0x166F, 0x1676 ],
-    [ 0x1681, 0x169A ],
-    [ 0x16A0, 0x16EA ],
-    [ 0x1700, 0x170C ],
-    [ 0x170E, 0x1711 ],
-    [ 0x1720, 0x1731 ],
-    [ 0x1740, 0x1751 ],
-    [ 0x1760, 0x176C ],
-    [ 0x176E, 0x1770 ],
-    [ 0x1780, 0x17B3 ],
-    [ 0x17D7, 0x17D7 ],
-    [ 0x17DC, 0x17DC ],
-    [ 0x1820, 0x1877 ],
-    [ 0x1880, 0x18A8 ],
-    [ 0x1900, 0x191C ],
-    [ 0x1950, 0x196D ],
-    [ 0x1970, 0x1974 ],
-    [ 0x1980, 0x19A9 ],
-    [ 0x19C1, 0x19C7 ],
-    [ 0x1A00, 0x1A16 ],
-    [ 0x1B05, 0x1B33 ],
-    [ 0x1B45, 0x1B4B ],
-    [ 0x1D00, 0x1DBF ],
-    [ 0x1E00, 0x1E9B ],
-    [ 0x1EA0, 0x1EF9 ],
-    [ 0x1F00, 0x1F15 ],
-    [ 0x1F18, 0x1F1D ],
-    [ 0x1F20, 0x1F45 ],
-    [ 0x1F48, 0x1F4D ],
-    [ 0x1F50, 0x1F57 ],
-    [ 0x1F59, 0x1F59 ],
-    [ 0x1F5B, 0x1F5B ],
-    [ 0x1F5D, 0x1F5D ],
-    [ 0x1F5F, 0x1F7D ],
-    [ 0x1F80, 0x1FB4 ],
-    [ 0x1FB6, 0x1FBC ],
-    [ 0x1FBE, 0x1FBE ],
-    [ 0x1FC2, 0x1FC4 ],
-    [ 0x1FC6, 0x1FCC ],
-    [ 0x1FD0, 0x1FD3 ],
-    [ 0x1FD6, 0x1FDB ],
-    [ 0x1FE0, 0x1FEC ],
-    [ 0x1FF2, 0x1FF4 ],
-    [ 0x1FF6, 0x1FFC ],
-    [ 0x2071, 0x2071 ],
-    [ 0x207F, 0x207F ],
-    [ 0x2090, 0x2094 ],
-    [ 0x2102, 0x2102 ],
-    [ 0x2107, 0x2107 ],
-    [ 0x210A, 0x2113 ],
-    [ 0x2115, 0x2115 ],
-    [ 0x2119, 0x211D ],
-    [ 0x2124, 0x2124 ],
-    [ 0x2126, 0x2126 ],
-    [ 0x2128, 0x2128 ],
-    [ 0x212A, 0x212D ],
-    [ 0x212F, 0x2139 ],
-    [ 0x213C, 0x213F ],
-    [ 0x2145, 0x2149 ],
-    [ 0x214E, 0x214E ],
-    [ 0x2183, 0x2184 ],
-    [ 0x2C00, 0x2C2E ],
-    [ 0x2C30, 0x2C5E ],
-    [ 0x2C60, 0x2C6C ],
-    [ 0x2C74, 0x2C77 ],
-    [ 0x2C80, 0x2CE4 ],
-    [ 0x2D00, 0x2D25 ],
-    [ 0x2D30, 0x2D65 ],
-    [ 0x2D6F, 0x2D6F ],
-    [ 0x2D80, 0x2D96 ],
-    [ 0x2DA0, 0x2DA6 ],
-    [ 0x2DA8, 0x2DAE ],
-    [ 0x2DB0, 0x2DB6 ],
-    [ 0x2DB8, 0x2DBE ],
-    [ 0x2DC0, 0x2DC6 ],
-    [ 0x2DC8, 0x2DCE ],
-    [ 0x2DD0, 0x2DD6 ],
-    [ 0x2DD8, 0x2DDE ],
-    [ 0x3005, 0x3006 ],
-    [ 0x3031, 0x3035 ],
-    [ 0x303B, 0x303C ],
-    [ 0x3041, 0x3096 ],
-    [ 0x309D, 0x309F ],
-    [ 0x30A1, 0x30FA ],
-    [ 0x30FC, 0x30FF ],
-    [ 0x3105, 0x312C ],
-    [ 0x3131, 0x318E ],
-    [ 0x31A0, 0x31B7 ],
-    [ 0x31F0, 0x31FF ],
-    [ 0x3400, 0x4DB5 ],
-    [ 0x4E00, 0x9FBB ],
-    [ 0xA000, 0xA48C ],
-    [ 0xA717, 0xA71A ],
-    [ 0xA800, 0xA801 ],
-    [ 0xA803, 0xA805 ],
-    [ 0xA807, 0xA80A ],
-    [ 0xA80C, 0xA822 ],
-    [ 0xA840, 0xA873 ],
-    [ 0xAC00, 0xD7A3 ],
-    [ 0xF900, 0xFA2D ],
-    [ 0xFA30, 0xFA6A ],
-    [ 0xFA70, 0xFAD9 ],
-    [ 0xFB00, 0xFB06 ],
-    [ 0xFB13, 0xFB17 ],
-    [ 0xFB1D, 0xFB1D ],
-    [ 0xFB1F, 0xFB28 ],
-    [ 0xFB2A, 0xFB36 ],
-    [ 0xFB38, 0xFB3C ],
-    [ 0xFB3E, 0xFB3E ],
-    [ 0xFB40, 0xFB41 ],
-    [ 0xFB43, 0xFB44 ],
-    [ 0xFB46, 0xFBB1 ],
-    [ 0xFBD3, 0xFD3D ],
-    [ 0xFD50, 0xFD8F ],
-    [ 0xFD92, 0xFDC7 ],
-    [ 0xFDF0, 0xFDFB ],
-    [ 0xFE70, 0xFE74 ],
-    [ 0xFE76, 0xFEFC ],
-    [ 0xFF21, 0xFF3A ],
-    [ 0xFF41, 0xFF5A ],
-    [ 0xFF66, 0xFFBE ],
-    [ 0xFFC2, 0xFFC7 ],
-    [ 0xFFCA, 0xFFCF ],
-    [ 0xFFD2, 0xFFD7 ],
-    [ 0xFFDA, 0xFFDC ],
-    [ 0x10000, 0x1000B ],
-    [ 0x1000D, 0x10026 ],
-    [ 0x10028, 0x1003A ],
-    [ 0x1003C, 0x1003D ],
-    [ 0x1003F, 0x1004D ],
-    [ 0x10050, 0x1005D ],
-    [ 0x10080, 0x100FA ],
-    [ 0x10300, 0x1031E ],
-    [ 0x10330, 0x10340 ],
-    [ 0x10342, 0x10349 ],
-    [ 0x10380, 0x1039D ],
-    [ 0x103A0, 0x103C3 ],
-    [ 0x103C8, 0x103CF ],
-    [ 0x10400, 0x1049D ],
-    [ 0x10800, 0x10805 ],
-    [ 0x10808, 0x10808 ],
-    [ 0x1080A, 0x10835 ],
-    [ 0x10837, 0x10838 ],
-    [ 0x1083C, 0x1083C ],
-    [ 0x1083F, 0x1083F ],
-    [ 0x10900, 0x10915 ],
-    [ 0x10A00, 0x10A00 ],
-    [ 0x10A10, 0x10A13 ],
-    [ 0x10A15, 0x10A17 ],
-    [ 0x10A19, 0x10A33 ],
-    [ 0x12000, 0x1236E ],
-    [ 0x1D400, 0x1D454 ],
-    [ 0x1D456, 0x1D49C ],
-    [ 0x1D49E, 0x1D49F ],
-    [ 0x1D4A2, 0x1D4A2 ],
-    [ 0x1D4A5, 0x1D4A6 ],
-    [ 0x1D4A9, 0x1D4AC ],
-    [ 0x1D4AE, 0x1D4B9 ],
-    [ 0x1D4BB, 0x1D4BB ],
-    [ 0x1D4BD, 0x1D4C3 ],
-    [ 0x1D4C5, 0x1D505 ],
-    [ 0x1D507, 0x1D50A ],
-    [ 0x1D50D, 0x1D514 ],
-    [ 0x1D516, 0x1D51C ],
-    [ 0x1D51E, 0x1D539 ],
-    [ 0x1D53B, 0x1D53E ],
-    [ 0x1D540, 0x1D544 ],
-    [ 0x1D546, 0x1D546 ],
-    [ 0x1D54A, 0x1D550 ],
-    [ 0x1D552, 0x1D6A5 ],
-    [ 0x1D6A8, 0x1D6C0 ],
-    [ 0x1D6C2, 0x1D6DA ],
-    [ 0x1D6DC, 0x1D6FA ],
-    [ 0x1D6FC, 0x1D714 ],
-    [ 0x1D716, 0x1D734 ],
-    [ 0x1D736, 0x1D74E ],
-    [ 0x1D750, 0x1D76E ],
-    [ 0x1D770, 0x1D788 ],
-    [ 0x1D78A, 0x1D7A8 ],
-    [ 0x1D7AA, 0x1D7C2 ],
-    [ 0x1D7C4, 0x1D7CB ],
-    [ 0x20000, 0x2A6D6 ],
-    [ 0x2F800, 0x2FA1D ],
-    ];
-
-    // optimization
-    if(c < 0xAA)
+    @property auto slice(size_t n)()inout pure nothrow
     {
-        if(c < 'A')
-            return false;
-        if(c <= 'Z')
-            return true;
-        if(c < 'a')
-            return false;
-        if(c <= 'z')
-            return true;
-        return false;
+        auto ptr = raw_ptr!n;
+        return packedArrayView!(Types[n])(ptr, sz[n]);
     }
 
-    return binarySearch!table(c);
+    @property auto ptr(size_t n)()inout pure nothrow
+    {
+        auto ptr = raw_ptr!n;
+        return inout(PackedPtr!(Types[n]))(ptr);
+    }
+
+    template length(size_t n)
+    {
+        @property size_t length()const{ return sz[n]; }
+
+        @property void length(size_t new_size)
+        {
+            if(new_size > sz[n])
+            {// extend
+                size_t delta = (new_size - sz[n]);
+                sz[n] += delta;
+                delta = spaceFor!(bitSizeOf!(Types[n]))(delta);
+                storage.length +=  delta;// extend space at end
+                // raw_slice!x must follow resize as it could be moved!
+                // next stmts move all data past this array, last-one-goes-first
+                static if(n != dim-1)
+                {
+                    auto start = raw_ptr!(n+1);
+                    // len includes delta
+                    size_t len = (storage.ptr+storage.length-start);
+
+                    copyBackwards(start[0..len-delta], start[delta..len]);
+
+                    start[0..delta] = 0;
+                    // offsets are used for raw_slice, ptr etc.
+                    foreach(i; n+1..dim)
+                        offsets[i] += delta;
+                }
+            }
+            else if(new_size < sz[n])
+            {// shrink
+                size_t delta = (sz[n] - new_size);
+                sz[n] -= delta;
+                delta = spaceFor!(bitSizeOf!(Types[n]))(delta);
+                // move all data past this array, forward direction
+                static if(n != dim-1)
+                {
+                    auto start = raw_ptr!(n+1);
+                    size_t len = storage.length;
+                    copyForward(start[0..len-delta], start[delta..len]);
+
+                    // adjust offsets last, they affect raw_slice
+                    foreach(i; n+1..dim)
+                        offsets[i] -= delta;
+                }
+                storage.length -= delta;
+            }
+            // else - NOP
+        }
+    }
+
+    @property size_t bytes(size_t n=size_t.max)() const
+    {
+        static if(n == size_t.max)
+            return storage.length*size_t.sizeof;
+        else static if(n != Types.length-1)
+            return (raw_ptr!(n+1)-raw_ptr!n)*size_t.sizeof;
+        else
+            return (storage.ptr+storage.length - raw_ptr!n)*size_t.sizeof;
+    }
+
+    void store(OutRange)(scope OutRange sink) const
+        if(isOutputRange!(OutRange, char))
+    {
+        formattedWrite(sink, "[%( 0x%x, %)]", offsets[]);
+        formattedWrite(sink, ", [%( 0x%x, %)]", sz[]);
+        formattedWrite(sink, ", [%( 0x%x, %)]", storage);
+    }
+
+private:
+    @property auto raw_ptr(size_t n)()inout
+    {
+        static if(n == 0)
+            return storage.ptr;
+        else
+        {
+            return storage.ptr+offsets[n];
+        }
+    }
+    enum dim = Types.length;
+    size_t[dim] offsets;// offset for level x
+    size_t[dim] sz;// size of level x
+    alias staticMap!(bitSizeOf, Types) bitWidth;
+    size_t[] storage;
 }
 
 unittest
 {
-    for(dchar c = 0; c < 0x80; ++c)
+    // sizes are:
+    // lvl0: 3, lvl1 : 2, lvl2: 1
+    auto m = MultiArray!(int, ubyte, int)(3,2,1);
+
+    static void check(size_t k, T)(ref T m, int n)
     {
-        if(c >= 'A' && c <= 'Z')
-            assert(isAlpha(c));
-        else if(c >= 'a' && c <= 'z')
-            assert(isAlpha(c));
-        else
-            assert(!isAlpha(c));
+        foreach(i; 0..n)
+            assert(m.slice!(k)[i] == i+1, text("level:",i," : ",m.slice!(k)[0..n]));
     }
+
+    static void checkB(size_t k, T)(ref T m, int n)
+    {
+        foreach(i; 0..n)
+            assert(m.slice!(k)[i] == n-i, text("level:",i," : ",m.slice!(k)[0..n]));
+    }
+
+    static void fill(size_t k, T)(ref T m, int n)
+    {
+        foreach(i; 0..n)
+            m.slice!(k)[i] = force!ubyte(i+1);
+    }
+
+    static void fillB(size_t k, T)(ref T m, int n)
+    {
+        foreach(i; 0..n)
+            m.slice!(k)[i] = force!ubyte(n-i);
+    }
+
+    m.length!1 = 100;
+    fill!1(m, 100);
+    check!1(m, 100);
+
+    m.length!0 = 220;
+    fill!0(m, 220);
+    check!1(m, 100);
+    check!0(m, 220);
+
+    m.length!2 = 17;
+    fillB!2(m, 17);
+    checkB!2(m, 17);
+    check!0(m, 220);
+    check!1(m, 100);
+
+    m.length!2 = 33;
+    checkB!2(m, 17);
+    fillB!2(m, 33);
+    checkB!2(m, 33);
+    check!0(m, 220);
+    check!1(m, 100);
+
+    m.length!1 = 195;
+    fillB!1(m, 195);
+    checkB!1(m, 195);
+    checkB!2(m, 33);
+    check!0(m, 220);
+
+    auto marr = MultiArray!(BitPacked!(uint, 4), BitPacked!(uint, 6))(20, 10);
+    marr.length!0 = 15;
+    marr.length!1 = 30;
+    fill!1(marr, 30);
+    fill!0(marr, 15);
+    check!1(marr, 30);
+    check!0(marr, 15);
+}
+
+unittest
+{// more bitpacking tests
+    alias MultiArray!(BitPacked!(size_t, 3)
+                , BitPacked!(size_t, 4)
+                , BitPacked!(size_t, 3)
+                , BitPacked!(size_t, 6)
+                , bool) Bitty;
+    alias sliceBits!(13, 16) fn1;
+    alias sliceBits!( 9, 13) fn2;
+    alias sliceBits!( 6,  9) fn3;
+    alias sliceBits!( 0,  6) fn4;
+    static void check(size_t lvl, MA)(ref MA arr){
+        for(size_t i = 0; i< arr.length!lvl; i++)
+            assert(arr.slice!(lvl)[i] == i, text("Mismatch on lvl ", lvl, " idx ", i, " value: ", arr.slice!(lvl)[i]));
+    }
+
+    static void fillIdx(size_t lvl, MA)(ref MA arr){
+        for(size_t i = 0; i< arr.length!lvl; i++)
+            arr.slice!(lvl)[i] = i;
+    }
+    Bitty m1;
+
+    m1.length!4 = 10;
+    m1.length!3 = 2^^6;
+    m1.length!2 = 2^^3;
+    m1.length!1 = 2^^4;
+    m1.length!0 = 2^^3;
+
+    m1.length!4 = 2^^16;
+
+    for(size_t i = 0; i< m1.length!4; i++)
+        m1.slice!(4)[i] = i % 2;
+
+    fillIdx!1(m1);
+    check!1(m1);
+    fillIdx!2(m1);
+    check!2(m1);
+    fillIdx!3(m1);
+    check!3(m1);
+    fillIdx!0(m1);
+    check!0(m1);
+    check!3(m1);
+    check!2(m1);
+    check!1(m1);
+    for(size_t i=0; i < 2^^16; i++)
+    {
+        m1.slice!(4)[i] = i % 2;
+        m1.slice!(0)[fn1(i)] = fn1(i);
+        m1.slice!(1)[fn2(i)] = fn2(i);
+        m1.slice!(2)[fn3(i)] = fn3(i);
+        m1.slice!(3)[fn4(i)] = fn4(i);
+    }
+    for(size_t i=0; i < 2^^16; i++)
+    {
+        assert(m1.slice!(4)[i] == i % 2);
+        assert(m1.slice!(0)[fn1(i)] == fn1(i));
+        assert(m1.slice!(1)[fn2(i)] == fn2(i));
+        assert(m1.slice!(2)[fn3(i)] == fn3(i));
+        assert(m1.slice!(3)[fn4(i)] == fn4(i));
+    }
+}
+
+size_t spaceFor(size_t _bits)(size_t new_len) pure nothrow
+{
+    enum bits = _bits == 1 ? 1 : ceilPowerOf2(_bits);// see PackedArrayView
+    static if(bits > 8*size_t.sizeof)
+    {
+        static assert(bits % (size_t.sizeof*8) == 0);
+        return new_len * bits/(8*size_t.sizeof);
+    }
+    else
+    {
+        enum factor = size_t.sizeof*8/bits;
+        return (new_len+factor-1)/factor; // rounded up
+    }
+}
+
+template isBitPackableType(T)
+{
+    enum isBitPackableType = isBitPacked!T
+        || isIntegral!T || is(T == bool) || isSomeChar!T;
+}
+
+//============================================================================
+template PackedArrayView(T)
+    if((is(T dummy == BitPacked!(U, sz), U, size_t sz)
+        && isBitPackableType!U) || isBitPackableType!T)
+{
+    private enum bits = bitSizeOf!T;
+    alias PackedArrayView = PackedArrayViewImpl!(T, bits > 1 ? ceilPowerOf2(bits) : 1);
+}
+
+//unsafe and fast access to a chunk of RAM as if it contains packed values
+template PackedPtr(T)
+    if((is(T dummy == BitPacked!(U, sz), U, size_t sz)
+        && isBitPackableType!U) || isBitPackableType!T)
+{
+    private enum bits = bitSizeOf!T;
+    alias PackedPtr = PackedPtrImpl!(T, bits > 1 ? ceilPowerOf2(bits) : 1);
+}
+
+@trusted struct PackedPtrImpl(T, size_t bits)
+{
+pure nothrow:
+    static assert(isPowerOf2(bits));
+
+    this(inout(size_t)* ptr)inout
+    {
+        origin = ptr;
+    }
+
+    private T simpleIndex(size_t n) inout
+    {
+        static if(factor == bytesPerWord*8)
+        {
+            // a re-write with less data dependency
+            auto q = n / factor;
+            auto r = n % factor;
+            return cast(T)(origin[q] & (mask<<r) ? 1 : 0);
+        }
+        else
+        {
+            auto q = n / factor;
+            auto r = n % factor;
+            return cast(T)((origin[q] >> bits*r) & mask);
+        }
+    }
+
+    static if(factor == bytesPerWord// can safely pack by byte
+         || factor == 1 // a whole word at a time
+         || ((factor == bytesPerWord/2 || factor == bytesPerWord/4)
+                && hasUnalignedReads)) // this needs unaligned reads
+    {
+        static if(factor == bytesPerWord)
+            alias U = ubyte;
+        else static if(factor == bytesPerWord/2)
+            alias U = ushort;
+        else static if(factor == bytesPerWord/4)
+            alias U = uint;
+        else static if(size_t.sizeof == 8 && factor == bytesPerWord/8)
+            alias U = ulong;
+
+        T opIndex(size_t idx) inout
+        {
+            return __ctfe ? simpleIndex(idx) :
+                cast(inout(T))(cast(U*)origin)[idx];
+        }
+
+        static if(isBitPacked!T) // lack of user-defined implicit conversion
+        {
+            void opIndexAssign(T val, size_t idx)
+            {
+                return opIndexAssign(cast(TypeOfBitPacked!T)val, idx);
+            }
+        }
+
+        void opIndexAssign(TypeOfBitPacked!T val, size_t idx)
+        {
+            (cast(U*)origin)[idx] = cast(U)val;
+        }
+    }
+    else
+    {
+        T opIndex(size_t n) inout
+        {
+            return simpleIndex(n);
+        }
+
+        static if(isBitPacked!T) // lack of user-defined implicit conversion
+        {
+            void opIndexAssign(T val, size_t idx)
+            {
+                return opIndexAssign(cast(TypeOfBitPacked!T)val, idx);
+            }
+        }
+
+        void opIndexAssign(TypeOfBitPacked!T val, size_t n)
+        in
+        {
+            static if(isIntegral!T)
+                assert(val <= mask);
+        }
+        body
+        {
+            auto q = n / factor;
+            auto r = n % factor;
+            size_t tgt_shift = bits*r;
+            size_t word = origin[q];
+            origin[q] = (word & ~(mask<<tgt_shift))
+                | (cast(size_t)val << tgt_shift);
+        }
+    }
+
+private:
+    // factor - number of elements in one machine word
+    enum factor = size_t.sizeof*8/bits, mask = 2^^bits-1;
+    enum bytesPerWord =  size_t.sizeof;
+    size_t* origin;
+}
+
+// data is packed only by power of two sized packs per word,
+// thus avoiding mul/div overhead at the cost of ultimate packing
+// this construct doesn't own memory, only provides access, see MultiArray for usage
+@trusted struct PackedArrayViewImpl(T, size_t bits)
+{
+pure nothrow:
+
+    this(inout(size_t)* origin, size_t items)inout
+    {
+        ptr = inout(PackedPtr!(T))(origin);
+        limit = items;
+    }
+
+    T opIndex(size_t idx) inout
+    in
+    {
+        assert(idx < limit);
+    }
+    body
+    {
+        return ptr[idx];
+    }
+
+    static if(isBitPacked!T) // lack of user-defined implicit conversion
+    {
+        void opIndexAssign(T val, size_t idx)
+        {
+            return opIndexAssign(cast(TypeOfBitPacked!T)val, idx);
+        }
+    }
+
+    void opIndexAssign(TypeOfBitPacked!T val, size_t idx)
+    in
+    {
+        assert(idx < limit);
+    }
+    body
+    {
+        ptr[idx] = val;
+    }
+
+    static if(isBitPacked!T) // lack of user-defined implicit conversions
+    {
+        void opSliceAssign(T val, size_t start, size_t end)
+        {
+            opSliceAssign(cast(TypeOfBitPacked!T)val, start, end);
+        }
+    }
+
+    void opSliceAssign(TypeOfBitPacked!T val, size_t start, size_t end)
+    in
+    {
+        assert(start <= end);
+        assert(end <= limit);
+    }
+    body
+    {
+        // rounded to factor granularity
+        size_t pad_start = (start+factor-1)/factor*factor;// rounded up
+        if(pad_start >= end) //rounded up >= then end of slice
+        {
+            //nothing to gain, use per element assignment
+            foreach(i; start..end)
+                ptr[i] = val;
+            return;
+        }
+        size_t pad_end = end/factor*factor; // rounded down
+        size_t i;
+        for(i=start; i<pad_start; i++)
+            ptr[i] = val;
+        // all in between is x*factor elements
+        if(pad_start != pad_end)
+        {
+            size_t repval = replicateBits!(factor, bits)(val);
+            for(size_t j=i/factor; i<pad_end; i+=factor, j++)
+                ptr.origin[j] = repval;// so speed it up by factor
+        }
+        for(; i<end; i++)
+            ptr[i] = val;
+    }
+
+    auto opSlice(size_t from, size_t to)
+    {
+        return sliceOverIndexed(from, to, &this);
+    }
+
+    auto opSlice(){ return opSlice(0, length); }
+
+    bool opEquals(T)(auto ref T arr) const
+    {
+        if(length != arr.length)
+           return false;
+        for(size_t i=0;i<length; i++)
+            if(this[i] != arr[i])
+                return false;
+        return true;
+    }
+
+    @property size_t length()const{ return limit; }
+
+private:
+    // factor - number of elements in one machine word
+    enum factor = size_t.sizeof*8/bits;
+    PackedPtr!(T) ptr;
+    size_t limit;
+}
+
+
+private struct SliceOverIndexed(T)
+{
+    enum assignableIndex = is(typeof((){ T.init[0] = Item.init; }));
+    enum assignableSlice = is(typeof((){ T.init[0..0] = Item.init; }));
+
+    auto opIndex(size_t idx)const
+    in
+    {
+        assert(idx < to - from);
+    }
+    body
+    {
+        return (*arr)[from+idx];
+    }
+
+    static if(assignableIndex)
+    void opIndexAssign(Item val, size_t idx)
+    in
+    {
+        assert(idx < to - from);
+    }
+    body
+    {
+       (*arr)[from+idx] = val;
+    }
+
+    auto opSlice(size_t a, size_t b)
+    {
+        return typeof(this)(from+a, from+b, arr);
+    }
+
+    // static if(assignableSlice)
+    void opSliceAssign(T)(T val, size_t start, size_t end)
+    {
+        (*arr)[start+from .. end+from] = val;
+    }
+
+    auto opSlice()
+    {
+        return typeof(this)(from, to, arr);
+    }
+
+    @property size_t length()const { return to-from;}
+
+    auto opDollar()const { return length; }
+
+    @property bool empty()const { return from == to; }
+
+    @property auto front()const { return (*arr)[from]; }
+
+    static if(assignableIndex)
+    @property void front(Item val) { (*arr)[from] = val; }
+
+    @property auto back()const { return (*arr)[to-1]; }
+
+    static if(assignableIndex)
+    @property void back(Item val) { (*arr)[to-1] = val; }
+
+    @property auto save() inout { return this; }
+
+    void popFront() {   from++; }
+
+    void popBack() {    to--; }
+
+    bool opEquals(T)(auto ref T arr) const
+    {
+        if(arr.length != length)
+            return false;
+        for(size_t i=0; i <length; i++)
+            if(this[i] != arr[i])
+                return false;
+        return true;
+    }
+private:
+    alias typeof(T.init[0]) Item;
+    size_t from, to;
+    T* arr;
+}
+
+static assert(isRandomAccessRange!(SliceOverIndexed!(int[])));
+
+// BUG? forward reference to return type of sliceOverIndexed!Grapheme
+SliceOverIndexed!(const(T)) sliceOverIndexed(T)(size_t a, size_t b, const(T)* x)
+    if(is(Unqual!T == T))
+{
+    return SliceOverIndexed!(const(T))(a, b, x);
+}
+
+// BUG? inout is out of reach
+//...SliceOverIndexed.arr only parameters or stack based variables can be inout
+SliceOverIndexed!T sliceOverIndexed(T)(size_t a, size_t b, T* x)
+    if(is(Unqual!T == T))
+{
+    return SliceOverIndexed!T(a, b, x);
+}
+
+unittest
+{
+    int[] idxArray = [2, 3, 5, 8, 13];
+    auto sliced = sliceOverIndexed(0, idxArray.length, &idxArray);
+
+    assert(!sliced.empty);
+    assert(sliced.front == 2);
+    sliced.front = 1;
+    assert(sliced.front == 1);
+    assert(sliced.back == 13);
+    sliced.popFront();
+    assert(sliced.front == 3);
+    assert(sliced.back == 13);
+    sliced.back = 11;
+    assert(sliced.back == 11);
+    sliced.popBack();
+
+    assert(sliced.front == 3);
+    assert(sliced[$-1] == 8);
+    sliced = sliced[];
+    assert(sliced[0] == 3);
+    assert(sliced.back == 8);
+    sliced = sliced[1..$];
+    assert(sliced.front == 5);
+    sliced = sliced[0..$-1];
+    assert(sliced[$-1] == 5);
+
+    int[] other = [2, 5];
+    assert(sliced[] == sliceOverIndexed(1, 2, &other));
+    sliceOverIndexed(0, 2, &idxArray)[0..2] = -1;
+    assert(idxArray[0..2] == [-1, -1]);
+    uint[] nullArr = null;
+    auto nullSlice = sliceOverIndexed(0, 0, &idxArray);
+    assert(nullSlice.empty);
+}
+
+private auto packedArrayView(T)(inout(size_t)* ptr, size_t items) @trusted pure nothrow
+{
+    return inout(PackedArrayView!T)(ptr, items);
+}
+
+
+//============================================================================
+// Partially unrolled binary search using Shar's method
+//============================================================================
+
+string genUnrolledSwitchSearch(size_t size)
+{
+    assert(isPowerOf2(size));
+    string code = `auto power = bsr(m)+1;
+    switch(power){`;
+    size_t i = bsr(size);
+    foreach_reverse(val; 0..bsr(size))
+    {
+        auto v = 2^^val;
+        code ~= `
+        case pow:
+            if(pred(range[idx+m], needle))
+                idx +=  m;
+            goto case;
+        `.replace("m", to!string(v))
+        .replace("pow", to!string(i));
+        i--;
+    }
+    code ~= `
+        case 0:
+            if(pred(range[idx], needle))
+                idx += 1;
+            goto default;
+        `;
+    code ~= `
+        default:
+    }`;
+    return code;
+}
+
+bool isPowerOf2(size_t sz) @safe pure nothrow
+{
+    return (sz & (sz-1)) == 0;
+}
+
+size_t uniformLowerBound(alias pred, Range, T)(Range range, T needle)
+    if(is(T : ElementType!Range))
+{
+    assert(isPowerOf2(range.length));
+    size_t idx = 0, m = range.length/2;
+    while(m != 0)
+    {
+        if(pred(range[idx+m], needle))
+            idx += m;
+        m /= 2;
+    }
+    if(pred(range[idx], needle))
+        idx += 1;
+    return idx;
+}
+
+size_t switchUniformLowerBound(alias pred, Range, T)(Range range, T needle)
+    if(is(T : ElementType!Range))
+{
+    assert(isPowerOf2(range.length));
+    size_t idx = 0, m = range.length/2;
+    enum max = 1<<10;
+    while(m >= max)
+    {
+        if(pred(range[idx+m], needle))
+            idx += m;
+        m /= 2;
+    }
+    mixin(genUnrolledSwitchSearch(max));
+    return idx;
+}
+
+//
+size_t floorPowerOf2(size_t arg) @safe pure nothrow
+{
+    assert(arg > 1); // else bsr is undefined
+    return 1<<bsr(arg-1);
+}
+
+size_t ceilPowerOf2(size_t arg) @safe pure nothrow
+{
+    assert(arg > 1); // else bsr is undefined
+    return 1<<bsr(arg-1)+1;
+}
+
+template sharMethod(alias uniLowerBound)
+{
+    size_t sharMethod(alias _pred="a<b", Range, T)(Range range, T needle)
+        if(is(T : ElementType!Range))
+    {
+        import std.functional;
+        alias binaryFun!_pred pred;
+        if(range.length == 0)
+            return 0;
+        if(isPowerOf2(range.length))
+            return uniLowerBound!pred(range, needle);
+        size_t n = floorPowerOf2(range.length);
+        if(pred(range[n-1], needle))
+        {// search in another 2^^k area that fully covers the tail of range
+            size_t k = ceilPowerOf2(range.length - n + 1);
+            return range.length - k + uniLowerBound!pred(range[$-k..$], needle);
+        }
+        else
+            return uniLowerBound!pred(range[0..n], needle);
+    }
+}
+
+alias sharMethod!uniformLowerBound sharLowerBound;
+alias sharMethod!switchUniformLowerBound sharSwitchLowerBound;
+
+unittest
+{
+    auto stdLowerBound(T)(T[] range, T needle)
+    {
+        return assumeSorted(range).lowerBound(needle).length;
+    }
+    immutable MAX = 5*1173;
+    auto arr = array(iota(5, MAX, 5));
+    assert(arr.length == MAX/5-1);
+    foreach(i; 0..MAX+5)
+    {
+        auto std = stdLowerBound(arr, i);
+        assert(std == sharLowerBound(arr, i));
+        assert(std == sharSwitchLowerBound(arr, i));
+    }
+    arr = [];
+    auto std = stdLowerBound(arr, 33);
+    assert(std == sharLowerBound(arr, 33));
+    assert(std == sharSwitchLowerBound(arr, 33));
+}
+//============================================================================
+
+@safe:
+// hope to see simillar stuff in public interface... once Allocators are out
+//@@@BUG moveFront and friends? dunno, for now it's POD-only
+
+@trusted size_t genericReplace(Policy=void, T, Range)
+    (ref T dest, size_t from, size_t to, Range stuff)
+{
+    size_t delta = to - from;
+    size_t stuff_end = from+stuff.length;
+    if(stuff.length > delta)
+    {// replace increases length
+        delta = stuff.length - delta;// now, new is > old  by delta
+        static if(is(Policy == void))
+            dest.length = dest.length+delta;//@@@BUG lame @property
+        else
+            dest = Policy.realloc(dest, dest.length+delta);
+        auto rem = copy(retro(dest[to..dest.length-delta])
+             , retro(dest[to+delta..dest.length]));
+        assert(rem.empty);
+        copy(stuff, dest[from..stuff_end]);
+    }
+    else if(stuff.length == delta)
+    {
+        copy(stuff, dest[from..to]);
+    }
+    else
+    {// replace decreases length by delta
+        delta = delta - stuff.length;
+        copy(stuff, dest[from..stuff_end]);
+        auto rem =  copy(dest[to..dest.length]
+             , dest[stuff_end..dest.length-delta]);
+        static if(is(Policy == void))
+            dest.length = dest.length - delta;//@@@BUG lame @property
+        else
+            dest = Policy.realloc(dest, dest.length-delta);
+        assert(rem.empty);
+    }
+    return stuff_end;
+}
+
+
+// Simple storage manipulation policy
+@trusted public struct GcPolicy
+{
+    static T[] dup(T)(const T[] arr)
+    {
+        return arr.dup;
+    }
+
+    static T[] alloc(T)(size_t size)
+    {
+        return new T[size];
+    }
+
+    static T[] realloc(T)(T[] arr, size_t sz)
+    {
+        arr.length = sz;
+        return arr;
+    }
+
+    static void replaceImpl(T, Range)(ref T[] dest, size_t from, size_t to, Range stuff)
+    {
+        replaceInPlace(dest, from, to, stuff);
+    }
+
+    static void append(T, V)(ref T[] arr, V value)
+        if(!isInputRange!V)
+    {
+        arr ~= force!T(value);
+    }
+
+    static void append(T, V)(ref T[] arr, V value)
+        if(isInputRange!V)
+    {
+        insertInPlace(arr, arr.length, value);
+    }
+
+    static void destroy(T)(ref T arr)
+        if(isDynamicArray!T && is(Unqual!T == T))
+    {
+        debug
+        {
+            arr[] = cast(typeof(T.init[0]))(0xdead_beef);
+        }
+        arr = null;
+    }
+
+    static void destroy(T)(ref T arr)
+        if(isDynamicArray!T && !is(Unqual!T == T))
+    {
+        arr = null;
+    }
+}
+
+// ditto
+@trusted struct ReallocPolicy
+{
+    static T[] dup(T)(const T[] arr)
+    {
+        auto result = alloc!T(arr.length);
+        result[] = arr[];
+        return result;
+    }
+
+    static T[] alloc(T)(size_t size)
+    {
+        auto ptr = cast(T*)enforce(malloc(T.sizeof*size), "out of memory on C heap");
+        return ptr[0..size];
+    }
+
+    static T[] realloc(T)(T[] arr, size_t size)
+    {
+        if(!size)
+        {
+            destroy(arr);
+            return null;
+        }
+        auto ptr = cast(T*)enforce(core.stdc.stdlib.realloc(
+                             arr.ptr, T.sizeof*size), "out of memory on C heap");
+        return ptr[0..size];
+    }
+
+    static void replaceImpl(T, Range)(ref T[] dest, size_t from, size_t to, Range stuff)
+    {
+        genericReplace!(ReallocPolicy)(dest, from, to, stuff);
+    }
+
+    static void append(T, V)(ref T[] arr, V value)
+        if(!isInputRange!V)
+    {
+        arr = realloc(arr, arr.length+1);
+        arr[$-1] = force!T(value);
+    }
+
+    static void append(T, V)(ref T[] arr, V value)
+        if(isInputRange!V && hasLength!V)
+    {
+        arr = realloc(arr, arr.length+value.length);
+        copy(value, arr[$-value.length..$]);
+    }
+
+    static void destroy(T)(ref T[] arr)
+    {
+        if(arr.ptr)
+            free(arr.ptr);
+        arr = null;
+    }
+}
+
+//build hack
+alias Uint24Array!ReallocPolicy _RealArray;
+
+unittest
+{
+    with(ReallocPolicy)
+    {
+        bool test(T, U, V)(T orig, size_t from, size_t to, U toReplace, V result,
+                   string file = __FILE__, size_t line = __LINE__)
+        {
+            {
+                replaceImpl(orig, from, to, toReplace);
+                scope(exit) destroy(orig);
+                if(!equalS(orig, result))
+                    return false;
+            }
+            return true;
+        }
+        static T[] arr(T)(T[] args... )
+        {
+            return dup(args);
+        }
+
+        assert(test(arr([1, 2, 3, 4]), 0, 0, [5, 6, 7], [5, 6, 7, 1, 2, 3, 4]));
+        assert(test(arr([1, 2, 3, 4]), 0, 2, cast(int[])[], [3, 4]));
+        assert(test(arr([1, 2, 3, 4]), 0, 4, [5, 6, 7], [5, 6, 7]));
+        assert(test(arr([1, 2, 3, 4]), 0, 2, [5, 6, 7], [5, 6, 7, 3, 4]));
+        assert(test(arr([1, 2, 3, 4]), 2, 3, [5, 6, 7], [1, 2, 5, 6, 7, 4]));
+    }
+}
+
+/**
+    Tests if T is some kind a set of code points. Intended for template constraints.
+*/
+public template isCodepointSet(T)
+{
+    static if(is(T dummy == InversionList!(Args), Args...))
+        enum isCodepointSet = true;
+    else
+        enum isCodepointSet = false;
+}
+
+/**
+    Tests if $(D T) is a pair of integers that implicitly convert to $(D V).
+    The following code must compile for any pair $(D T):
+    ---
+    (T x){ V a = x[0]; V b = x[1];}
+    ---
+    The following must not compile:
+     ---
+    (T x){ V c = x[2];}
+    ---
+*/
+public template isIntegralPair(T, V=uint)
+{
+    enum isIntegralPair = is(typeof((T x){ V a = x[0]; V b = x[1];}))
+        && !is(typeof((T x){ V c = x[2]; }));
+}
+
+
+/**
+    The recommended default type for set of $(CODEPOINTS).
+    For details, see the current implementation: $(LREF InversionList).
+*/
+public alias InversionList!GcPolicy CodepointSet;
+
+
+//@@@BUG: std.typecons tuples depend on std.format to produce fields mixin
+// which relies on std.uni.isGraphical and this chain blows up with Forward reference error
+// hence below doesn't seem to work
+// public alias Tuple!(uint, "a", uint, "b") CodepointInterval;
+
+/**
+    The recommended type of $(XREF _typecons, Tuple)
+    to represent [a, b) intervals of $(CODEPOINTS). As used in $(LREF InversionList).
+    Any interval type should pass $(LREF isIntegralPair) trait.
+*/
+public struct CodepointInterval {
+    uint[2] _tuple;
+    alias _tuple this;
+    this(uint low, uint high){
+        _tuple[0] = low;
+        _tuple[1] = high;
+    }
+    bool opEquals(T)(T val){
+        return this[0] == val[0] && this[1] == val[1];
+    }
+    @property ref uint a(){ return _tuple[0]; }
+    @property ref uint b(){ return _tuple[1]; }
+}
+
+//@@@BUG another forward reference workaround
+@trusted bool equalS(R1, R2)(R1 lhs, R2 rhs)
+{
+    for(;;){
+        if(lhs.empty)
+            return rhs.empty;
+        if(rhs.empty)
+            return false;
+        if(lhs.front != rhs.front)
+            return false;
+        lhs.popFront();
+        rhs.popFront();
+    }
+}
+
+/**
+    $(P
+    $(D InversionList) is a set of $(CODEPOINTS)
+    represented as an array of open-right [a, b$(RPAREN)
+    intervals (see $(LREF CodepointInterval) above).
+    The name comes from the way the representation reads left to right.
+    For instance a set of all values [10, 50$(RPAREN), [80, 90$(RPAREN),
+    plus a singular value 60 looks like this:
+    )
+    ---
+    10, 50, 60, 61, 80, 90
+    ---
+    $(P
+    The way to read this is: start with negative meaning that all numbers
+    smaller then the next one are not present in this set (and positive
+    - the contrary). Then switch positive/negative after each
+    number passed from left to right.
+    )
+    $(P This way negative spans until 10, then positive until 50,
+    then negative until 60, then positive until 61, and so on.
+    As seen this provides a space-efficient storage of highly redundant data
+    that comes in long runs. A description which Unicode $(CHARACTER)
+    properties fit nicely. The technique itself could be seen as a variation
+    on $(LUCKY RLE encoding).
+    )
+
+    $(P Sets are value types (just like $(D int) is) thus they
+        are never aliased.
+    )
+        Example:
+        ---
+        auto a = CodepointSet('a', 'z'+1);
+        auto b = CodepointSet('A', 'Z'+1);
+        auto c = a;
+        a = a | b;
+        assert(a == CodepointSet('A', 'Z'+1, 'a', 'z'+1));
+        assert(a != c);
+        ---
+    $(P See also $(LREF unicode) for simpler construction of sets
+        from predefined ones.
+    )
+
+    $(P Memory usage is 6 bytes per each contiguous interval in a set.
+    The value semantics are achieved by using the
+    ($WEB http://en.wikipedia.org/wiki/Copy-on-write, COW) technique
+    and thus it's $(RED not) safe to cast this type to $(D_KEYWORD shared).
+    )
+
+    Note:
+    $(P It's not recommended to rely on the template parameters
+    or the exact type of a current $(CODEPOINT) set in $(D std.uni).
+    The type and parameters may change when the standard
+    allocators design is finalized.
+    Use $(LREF isCodepointSet) with templates or just stick with the default
+    alias $(LREF CodepointSet) throughout the whole code base.
+    )
+*/
+@trusted public struct InversionList(SP=GcPolicy)
+{
+public:
+    /**
+        Construct from another code point set of any type.
+    */
+    this(Set)(Set set)
+        if(isCodepointSet!Set)
+    {
+        uint[] arr;
+        foreach(v; set.byInterval)
+        {
+            arr ~= v.a;
+            arr ~= v.b;
+        }
+        data = Uint24Array!(SP)(arr);
+    }
+
+    /**
+        Construct a set from a range of sorted code point intervals.
+    */
+    this(Range)(Range intervals)
+        if(isForwardRange!Range && isIntegralPair!(ElementType!Range))
+    {
+        auto flattened = roundRobin(intervals.save.map!"a[0]"(),
+            intervals.save.map!"a[1]"());
+        data = Uint24Array!(SP)(flattened);
+    }
+
+    /**
+        Construct a set from plain values of sorted code point intervals.
+        Example:
+        ---
+        auto set = CodepointSet('a', 'z'+1, 'а', 'я'+1);
+        foreach(v; 'a'..'z'+1)
+            assert(set[v]);
+        // Cyrillic lowercase interval
+        foreach(v; 'а'..'я'+1)
+            assert(set[v]);
+        ---
+    */
+    this()(uint[] intervals...)
+    in
+    {
+        assert(intervals.length % 2 == 0, "Odd number of interval bounds [a, b)!");
+        for(uint i=1; i<intervals.length; i++)
+            assert(intervals[i-1] < intervals[i]);
+    }
+    body
+    {
+        data = Uint24Array!(SP)(intervals);
+    }
+
+    /**
+        Get range that spans all of the $(CODEPOINT) intervals in this $(LREF InversionList).
+
+        Example:
+        ---
+        import std.algorithm, std.typecons;
+        auto set = CodepointSet('A', 'D'+1, 'a', 'd'+1);
+        set.byInterval.equal([tuple('A', 'E'), tuple('a', 'e')]);
+        ---
+    */
+    @property auto byInterval()
+    {
+        static struct Intervals
+        {
+            this(Uint24Array!SP sp)
+            {
+                slice = sp;
+                start = 0;
+                end = sp.length;
+            }
+
+            @property auto front()const
+            {
+                uint a = slice[start];
+                uint b = slice[start+1];
+                return CodepointInterval(a, b);
+            }
+
+            @property auto back()const
+            {
+                uint a = slice[end-2];
+                uint b = slice[end-1];
+                return CodepointInterval(a, b);
+            }
+
+            void popFront()
+            {
+                start += 2;
+            }
+
+            void popBack()
+            {
+                end -= 2;
+            }
+
+            @property bool empty()const { return start == end; }
+
+            @property auto save(){ return this; }
+        private:
+            size_t start, end;
+            Uint24Array!SP slice;
+        }
+        return Intervals(data);
+    }
+
+    /**
+        Tests the presence of code point $(D val) in this set.
+
+        Example:
+        ---
+        auto gothic = unicode.Gothic;
+        // Gothic letter ahsa
+        assert(gothic['\U00010330']);
+        // no ascii in Gothic obviously
+        assert(!gothic['$']);
+        ---
+    */
+    bool opIndex(uint val) const
+    {
+        // the <= ensures that searching in  interval of [a, b) for 'a' you get .length == 1
+        // return assumeSorted!((a,b) => a<=b)(data[]).lowerBound(val).length & 1;
+        return sharSwitchLowerBound!"a<=b"(data[], val) & 1;
+    }
+
+    /// Number of $(CODEPOINTS) in this set
+    @property size_t length()
+    {
+        size_t sum = 0;
+        foreach(iv; byInterval)
+        {
+            sum += iv.b - iv.a;
+        }
+        return sum;
+    }
+
+// bootstrap full set operations from 4 primitives (suitable as a template mixin):
+// addInterval, skipUpTo, dropUpTo & byInterval iteration
+//============================================================================
+public:
+    /**
+        $(P Sets support natural syntax for set algebra, namely: )
+        $(BOOKTABLE ,
+            $(TR $(TH Operator) $(TH Math notation) $(TH Description) )
+            $(TR $(TD &) $(TD a ∩ b) $(TD intersection) )
+            $(TR $(TD |) $(TD a ∪ b) $(TD union) )
+            $(TR $(TD -) $(TD a ∖ b) $(TD subtraction) )
+            $(TR $(TD ~) $(TD a ~ b) $(TD symmetric set difference i.e. (a ∪ b) \ (a ∩ b)) )
+        )
+
+        Example:
+        ---
+        auto lower = unicode.LowerCase;
+        auto upper = unicode.UpperCase;
+        auto ascii = unicode.ASCII;
+
+        assert((lower & upper).empty); // no intersection
+        auto lowerASCII = lower & ascii;
+        assert(lowerASCII.byCodepoint.equal(iota('a', 'z'+1)));
+        // throw away all of the lowercase ASCII
+        assert((ascii - lower).length == 128 - 26);
+
+        auto onlyOneOf = lower ~ ascii;
+        assert(!onlyOneOf['Δ']); // not ASCII and not lowercase
+        assert(onlyOneOf['$']); // ASCII and not lowercase
+        assert(!onlyOneOf['a']); // ASCII and lowercase
+        assert(onlyOneOf['я']); // not ASCII but lowercase
+
+        // throw away all cased letters from ASCII
+        auto noLetters = ascii - (lower | upper);
+        assert(noLetters.length == 128 - 26*2);
+        ---
+    */
+    This opBinary(string op, U)(U rhs)
+        if(isCodepointSet!U || is(U:dchar))
+    {
+        static if(op == "&" || op == "|" || op == "~")
+        {// symmetric ops thus can swap arguments to reuse r-value
+            static if(is(U:dchar))
+            {
+                auto tmp = this;
+                mixin("tmp "~op~"= rhs; ");
+                return tmp;
+            }
+            else
+            {
+                static if(is(Unqual!U == U))
+                {
+                    // try hard to reuse r-value
+                    mixin("rhs "~op~"= this;");
+                    return rhs;
+                }
+                else
+                {
+                    auto tmp = this;
+                    mixin("tmp "~op~"= rhs;");
+                    return tmp;
+                }
+            }
+        }
+        else static if(op == "-") // anti-symmetric
+        {
+            auto tmp = this;
+            tmp -= rhs;
+            return tmp;
+        }
+        else
+            static assert(0, "no operator "~op~" defined for Set");
+    }
+
+    /// The 'op=' versions of the above overloaded operators.
+    ref This opOpAssign(string op, U)(U rhs)
+        if(isCodepointSet!U || is(U:dchar))
+    {
+        static if(op == "|")    // union
+        {
+            static if(is(U:dchar))
+            {
+                this.addInterval(rhs, rhs+1);
+                return this;
+            }
+            else
+                return this.add(rhs);
+        }
+        else static if(op == "&")   // intersection
+                return this.intersect(rhs);// overloaded
+        else static if(op == "-")   // set difference
+                return this.sub(rhs);// overloaded
+        else static if(op == "~")   // symmetric set difference
+        {
+            auto copy = this & rhs;
+            this |= rhs;
+            this -= copy;
+            return this;
+        }
+        else
+            static assert(0, "no operator "~op~" defined for Set");
+    }
+
+    /**
+        Tests the presence of codepoint $(D ch) in this set,
+        the same as $(LREF opIndex).
+    */
+    bool opBinaryRight(string op: "in", U)(U ch)
+        if(is(U : dchar))
+    {
+        return this[ch];
+    }
+
+    /// Obtains a set that is the inversion of this set. See also $(LREF inverted).
+    auto opUnary(string op: "!")()
+    {
+        return this.inverted;
+    }
+
+    /**
+        A range that spans each $(CODEPOINT) in this set.
+
+        Example:
+        ---
+        import std.algorithm;
+        auto set = unicode.ASCII;
+        set.byCodepoint.equal(iota(0, 0x80));
+        ---
+    */
+    @property auto byCodepoint()
+    {
+        @trusted static struct CodepointRange
+        {
+            this(This set)
+            {
+                r = set.byInterval;
+                if(!r.empty)
+                    cur = r.front.a;
+            }
+
+            @property dchar front() const
+            {
+                return cast(dchar)cur;
+            }
+
+            @property bool empty() const
+            {
+                return r.empty;
+            }
+
+            void popFront()
+            {
+                cur++;
+                while(cur >= r.front.b)
+                {
+                    r.popFront();
+                    if(r.empty)
+                        break;
+                    cur = r.front.a;
+                }
+            }
+        private:
+            uint cur;
+            typeof(This.init.byInterval) r;
+        }
+
+        return CodepointRange(this);
+    }
+
+    /**
+        $(P Obtain textual representation of this set in from of
+        open-right intervals and feed it to $(D sink).
+        )
+        $(P Used by various standard formatting facilities such as
+         $(XREF _format, formattedWrite), $(XREF _stdio, write),
+         $(XREF _stdio, writef), $(XREF _conv, to) and others.
+        )
+        Example:
+        ---
+        import std.conv;
+        assert(unicode.ASCII.to!string == "[0..128$(RPAREN)");
+        ---
+    */
+    void toString(scope void delegate (const(char)[]) sink)
+    {
+        import std.format;
+        auto range = byInterval;
+        if(range.empty)
+            return;
+        auto val = range.front;
+        formattedWrite(sink, "[%d..%d)", val.a, val.b);
+        range.popFront();
+        foreach(i; range)
+            formattedWrite(sink, " [%d..%d)", i.a, i.b);
+    }
+    /**
+        Add an interval [a, b) to this set.
+
+        Example:
+        ---
+        CodepointSet someSet;
+        someSet.add('0', '5').add('A','Z'+1);
+        someSet.add('5', '9'+1);
+        assert(someSet['0']);
+        assert(someSet['5']);
+        assert(someSet['9']);
+        assert(someSet['Z']);
+        ---
+    */
+    ref add()(uint a, uint b)
+    {
+        addInterval(a, b);
+        return this;
+    }
+
+private:
+
+    ref intersect(U)(U rhs)
+        if(isCodepointSet!U)
+    {
+        Marker mark;
+        foreach( i; rhs.byInterval)
+        {
+            mark = this.dropUpTo(i.a, mark);
+            mark = this.skipUpTo(i.b, mark);
+        }
+        this.dropUpTo(uint.max, mark);
+        return this;
+    }
+
+    ref intersect()(dchar ch)
+    {
+        foreach(i; byInterval)
+            if(i.a >= ch && ch < i.b)
+                return this = This.init.add(ch, ch+1);
+        this = This.init;
+        return this;
+    }
+
+    ref sub()(dchar ch)
+    {
+        return subChar(ch);
+    }
+
+    // same as the above except that skip & drop parts are swapped
+    ref sub(U)(U rhs)
+        if(isCodepointSet!U)
+    {
+        uint top;
+        Marker mark;
+        foreach(i; rhs.byInterval)
+        {
+            mark = this.skipUpTo(i.a, mark);
+            mark = this.dropUpTo(i.b, mark);
+        }
+        return this;
+    }
+
+    ref add(U)(U rhs)
+        if(isCodepointSet!U)
+    {
+        Marker start;
+        foreach(i; rhs.byInterval)
+        {
+            start = addInterval(i.a, i.b, start);
+        }
+        return this;
+    }
+// end of mixin-able part
+//============================================================================
+public:
+    /**
+        Obtains a set that is the inversion of this set.
+
+        See the '!' $(LREF opUnary) for the same but using operators.
+
+        Example:
+        ---
+        set = unicode.ASCII;
+        // union with the inverse gets all of the code points in the Unicode
+        assert((set | set.inverted).length == 0x110000);
+        // no intersection with the inverse
+        assert((set & set.inverted).empty);
+        ---
+    */
+    @property auto inverted()
+    {
+        InversionList inversion = this;
+        if(inversion.data.length == 0)
+        {
+            inversion.addInterval(0, lastDchar+1);
+            return inversion;
+        }
+        if(inversion.data[0] != 0)
+            genericReplace(inversion.data, 0, 0, [0]);
+        else
+            genericReplace(inversion.data, 0, 1, cast(uint[])null);
+        if(data[data.length-1] != lastDchar+1)
+            genericReplace(inversion.data,
+                inversion.data.length, inversion.data.length, [lastDchar+1]);
+        else
+            genericReplace(inversion.data,
+                inversion.data.length-1, inversion.data.length, cast(uint[])null);
+
+        return inversion;
+    }
+
+    /**
+        Generates string with D source code of unary function with name of
+        $(D funcName) taking a single $(D dchar) argument. If $(D funcName) is empty
+        the code is adjusted to be a lambda function.
+
+        The function generated tests if the $(CODEPOINT) passed
+        belongs to this set or not. The result is to be used with string mixin.
+        The intended usage area is aggressive optimization via meta programming
+        in parser generators and the like.
+
+        Note: Use with care for relatively small or regular sets. It
+        could end up being slower then just using multi-staged tables.
+
+        Example:
+        ---
+        import std.stdio;
+
+        // construct set directly from [a, b) intervals
+        auto set = CodepointSet(10, 12, 45, 65, 100, 200);
+        writeln(set);
+        writeln(set.toSourceCode("func"));
+        ---
+
+        The above outputs something along the lines of:
+        ---
+        bool func(dchar ch)
+        {
+            if(ch < 45)
+            {
+                if(ch == 10 || ch == 11) return true;
+                return false;
+            }
+            else if (ch < 65) return true;
+            else
+            {
+                if(ch < 100) return false;
+                if(ch < 200) return true;
+                return false;
+            }
+        }
+        ---
+    */
+    string toSourceCode(string funcName="")
+    {
+        import std.string;
+        enum maxBinary = 3;
+        static string linearScope(R)(R ivals, string indent)
+        {
+            string result = indent~"{\n";
+            string deeper = indent~"    ";
+            foreach(ival; ivals)
+            {
+                auto span = ival[1] - ival[0];
+                assert(span != 0);
+                if(span == 1)
+                {
+                    result ~= format("%sif(ch == %s) return true;\n", deeper, ival[0]);
+                }
+                else if(span == 2)
+                {
+                    result ~= format("%sif(ch == %s || ch == %s) return true;\n",
+                        deeper, ival[0], ival[0]+1);
+                }
+                else
+                {
+                    if(ival[0] != 0) // dchar is unsigned and  < 0 is useless
+                        result ~= format("%sif(ch < %s) return false;\n", deeper, ival[0]);
+                    result ~= format("%sif(ch < %s) return true;\n", deeper, ival[1]);
+                }
+            }
+            result ~= format("%sreturn false;\n%s}\n", deeper, indent); // including empty range of intervals
+            return result;
+        }
+
+        static string binaryScope(R)(R ivals, string indent)
+        {
+            // time to do unrolled comparisons?
+            if(ivals.length < maxBinary)
+                return linearScope(ivals, indent);
+            else
+                return bisect(ivals, ivals.length/2, indent);
+        }
+
+        // not used yet if/elsebinary search is far better with DMD  as of 2.061
+        // and GDC is doing fine job either way
+        static string switchScope(R)(R ivals, string indent)
+        {
+            string result = indent~"switch(ch){\n";
+            string deeper = indent~"    ";
+            foreach(ival; ivals)
+            {
+                if(ival[0]+1 == ival[1])
+                {
+                    result ~= format("%scase %s: return true;\n",
+                        deeper, ival[0]);
+                }
+                else
+                {
+                    result ~= format("%scase %s: .. case %s: return true;\n",
+                         deeper, ival[0], ival[1]-1);
+                }
+            }
+            result ~= deeper~"default: return false;\n"~indent~"}\n";
+            return result;
+        }
+
+        static string bisect(R)(R range, size_t idx, string indent)
+        {
+            string deeper = indent ~ "    ";
+            // bisect on one [a, b) interval at idx
+            string result = indent~"{\n";
+            // less branch, < a
+            result ~= format("%sif(ch < %s)\n%s",
+                deeper, range[idx][0], binaryScope(range[0..idx], deeper));
+            // middle point,  >= a && < b
+            result ~= format("%selse if (ch < %s) return true;\n",
+                deeper, range[idx][1]);
+            // greater or equal branch,  >= b
+            result ~= format("%selse\n%s",
+                deeper, binaryScope(range[idx+1..$], deeper));
+            return result~indent~"}\n";
+        }
+
+        string code = format("bool %s(dchar ch) @safe pure nothrow\n",
+            funcName.empty ? "function" : funcName);
+        auto range = byInterval.array();
+        // special case first bisection to be on ASCII vs beyond
+        auto tillAscii = countUntil!"a[0] > 0x80"(range);
+        if(tillAscii <= 0) // everything is ASCII or nothing is ascii (-1 & 0)
+            code ~= binaryScope(range, "");
+        else
+            code ~= bisect(range, tillAscii, "");
+        return code;
+    }
+
+    /**
+        True if this set doesn't contain any $(CODEPOINTS).
+        Example:
+        ---
+        CodepointSet emptySet;
+        assert(emptySet.length == 0);
+        assert(emptySet.empty);
+        ---
+    */
+    @property bool empty() const
+    {
+        return data.length == 0;
+    }
+
+private:
+    alias typeof(this) This;
+    alias size_t Marker;
+
+    // special case for normal InversionList
+    ref subChar(dchar ch)
+    {
+        auto mark = skipUpTo(ch);
+        if(mark != data.length
+            && data[mark] == ch && data[mark-1] == ch)
+        {
+            // it has split, meaning that ch happens to be in one of intervals
+            data[mark] = data[mark]+1;
+        }
+        return this;
+    }
+
+    //
+    Marker addInterval(int a, int b, Marker hint=Marker.init)
+    in
+    {
+        assert(a <= b, text(a, " > ", b));
+    }
+    body
+    {
+        auto range = assumeSorted(data[]);
+        size_t pos;
+        size_t a_idx = range.lowerBound(a).length;
+        if(a_idx == range.length)
+        {
+            //  [---+++----++++----++++++]
+            //  [                         a  b]
+            data.append([a, b]);
+            return data.length-1;
+        }
+        size_t b_idx = range[a_idx..range.length].lowerBound(b).length+a_idx;
+        uint[] to_insert;
+        debug(std_uni)
+        {
+            writefln("a_idx=%d; b_idx=%d;", a_idx, b_idx);
+        }
+        if(b_idx == range.length)
+        {
+            //  [-------++++++++----++++++-]
+            //  [      s     a                 b]
+            if(a_idx & 1)// a in positive
+            {
+                to_insert = [ b ];
+            }
+            else// a in negative
+            {
+                to_insert = [a, b];
+            }
+            genericReplace(data, a_idx, b_idx, to_insert);
+            return a_idx+to_insert.length-1;
+        }
+
+        uint top = data[b_idx];
+
+        debug(std_uni)
+        {
+            writefln("a_idx=%d; b_idx=%d;", a_idx, b_idx);
+            writefln("a=%s; b=%s; top=%s;", a, b, top);
+        }
+        if(a_idx & 1)
+        {// a in positive
+            if(b_idx & 1)// b in positive
+            {
+                //  [-------++++++++----++++++-]
+                //  [       s    a        b    ]
+                to_insert = [top];
+            }
+            else // b in negative
+            {
+                //  [-------++++++++----++++++-]
+                //  [       s    a   b         ]
+                if(top == b)
+                {
+                    assert(b_idx+1 < data.length);
+                    pos = genericReplace(data, a_idx, b_idx+2, [data[b_idx+1]]);
+                    return pos;
+                }
+                to_insert = [b, top ];
+            }
+        }
+        else
+        { // a in negative
+            if(b_idx & 1) // b in positive
+            {
+                //  [----------+++++----++++++-]
+                //  [     a     b              ]
+                to_insert = [a, top];
+            }
+            else// b in negative
+            {
+                //  [----------+++++----++++++-]
+                //  [  a       s      b        ]
+                if(top == b)
+                {
+                    assert(b_idx+1 < data.length);
+                    pos = genericReplace(data, a_idx, b_idx+2, [a, data[b_idx+1] ]);
+                    return pos;
+                }
+                to_insert = [a, b, top];
+            }
+        }
+        pos = genericReplace(data, a_idx, b_idx+1, to_insert);
+        debug(std_uni)
+        {
+            writefln("marker idx: %d; length=%d", pos, data[pos], data.length);
+            writeln("inserting ", to_insert);
+        }
+        return pos;
+    }
+
+    //
+    Marker dropUpTo(uint a, Marker pos=Marker.init)
+    in
+    {
+        assert(pos % 2 == 0); // at start of interval
+    }
+    body
+    {
+        auto range = assumeSorted!"a<=b"(data[pos..data.length]);
+        if(range.empty)
+            return pos;
+        size_t idx = pos;
+        idx += range.lowerBound(a).length;
+
+        debug(std_uni)
+        {
+            writeln("dropUpTo full length=", data.length);
+            writeln(pos,"~~~", idx);
+        }
+        if(idx == data.length)
+            return genericReplace(data, pos, idx, cast(uint[])[]);
+        if(idx & 1)
+        {   // a in positive
+            //[--+++----++++++----+++++++------...]
+            //      |<---si       s  a  t
+            genericReplace(data, pos, idx, [a]);
+        }
+        else
+        {   // a in negative
+            //[--+++----++++++----+++++++-------+++...]
+            //      |<---si              s  a  t
+            genericReplace(data, pos, idx, cast(uint[])[]);
+        }
+        return pos;
+    }
+
+    //
+    Marker skipUpTo(uint a, Marker pos=Marker.init)
+    out(result)
+    {
+        assert(result % 2 == 0);// always start of interval
+        //(may be  0-width after-split)
+    }
+    body
+    {
+        assert(data.length % 2 == 0);
+        auto range = assumeSorted!"a<=b"(data[pos..data.length]);
+        size_t idx = pos+range.lowerBound(a).length;
+
+        if(idx >= data.length) // could have Marker point to recently removed stuff
+            return data.length;
+
+        if(idx & 1)// inside of interval, check for split
+        {
+
+            uint top = data[idx];
+            if(top == a)// no need to split, it's end
+                return idx+1;
+            uint start = data[idx-1];
+            if(a == start)
+                return idx-1;
+            // split it up
+            genericReplace(data, idx, idx+1, [a, a, top]);
+            return idx+1;        // avoid odd index
+        }
+        return idx;
+    }
+
+    Uint24Array!SP data;
+};
+
+@system unittest
+{
+    // test examples
+    import std.algorithm, std.typecons;
+    auto set = CodepointSet('A', 'D'+1, 'a', 'd'+1);
+    set.byInterval.equalS([tuple('A', 'E'), tuple('a', 'e')]);
+    set = unicode.ASCII;
+    assert(set.byCodepoint.equalS(iota(0, 0x80)));
+    set = CodepointSet('a', 'z'+1, 'а', 'я'+1);
+    foreach(v; 'a'..'z'+1)
+        assert(set[v]);
+    // Cyrillic lowercase interval
+    foreach(v; 'а'..'я'+1)
+        assert(set[v]);
+
+    auto gothic = unicode.Gothic;
+    // Gothic letter ahsa
+    assert(gothic['\U00010330']);
+    // no ascii in Gothic obviously
+    assert(!gothic['$']);
+
+    CodepointSet emptySet;
+    assert(emptySet.length == 0);
+    assert(emptySet.empty);
+
+    set = unicode.ASCII;
+    // union with the inverse gets all of code points in the Unicode
+    assert((set | set.inverted).length == 0x110000);
+    // no intersection with inverse
+    assert((set & set.inverted).empty);
+
+    CodepointSet someSet;
+    someSet.add('0', '5').add('A','Z'+1);
+    someSet.add('5', '9'+1);
+    assert(someSet['0']);
+    assert(someSet['5']);
+    assert(someSet['9']);
+    assert(someSet['Z']);
+
+    auto lower = unicode.LowerCase;
+    auto upper = unicode.UpperCase;
+    auto ascii = unicode.ASCII;
+    assert((lower & upper).empty); // no intersection
+    auto lowerASCII = lower & ascii;
+    assert(lowerASCII.byCodepoint.equalS(iota('a', 'z'+1)));
+    // throw away all of the lowercase ASCII
+    assert((ascii - lower).length == 128 - 26);
+    auto onlyOneOf = lower ~ ascii;
+    assert(!onlyOneOf['Δ']); // not ASCII and not lowercase
+    assert(onlyOneOf['$']); // ASCII and not lowercase
+    assert(!onlyOneOf['a']); // ASCII and lowercase
+    assert(onlyOneOf['я']); // not ASCII but lowercase
+
+    auto noLetters = ascii - (lower | upper);
+    assert(noLetters.length == 128 - 26*2);
+    import std.conv;
+    assert(unicode.ASCII.to!string() == "[0..128)");
+}
+
+// pedantic version for ctfe, and aligned-access only architectures
+@trusted uint safeRead24(const ubyte* ptr, size_t idx) pure nothrow
+{
+    idx *= 3;
+    version(LittleEndian)
+        return ptr[idx] + (cast(uint)ptr[idx+1]<<8)
+             + (cast(uint)ptr[idx+2]<<16);
+    else
+        return (cast(uint)ptr[idx]<<16) + (cast(uint)ptr[idx+1]<<8)
+             + ptr[idx+2];
+}
+
+// ditto
+@trusted void safeWrite24(ubyte* ptr, uint val, size_t idx) pure nothrow
+{
+    idx *= 3;
+    version(LittleEndian)
+    {
+        ptr[idx] = val & 0xFF;
+        ptr[idx+1] = (val>>8) & 0xFF;
+        ptr[idx+2] = (val>>16) & 0xFF;
+    }
+    else
+    {
+        ptr[idx] = (val>>16) & 0xFF;
+        ptr[idx+1] = (val>>8) & 0xFF;
+        ptr[idx+2] = val & 0xFF;
+    }
+}
+
+// unaligned x86-like read/write functions
+@trusted uint unalignedRead24(const ubyte* ptr, size_t idx) pure nothrow
+{
+    uint* src = cast(uint*)(ptr+3*idx);
+    version(LittleEndian)
+        return *src & 0xFF_FFFF;
+    else
+        return *src >> 8;
+}
+
+// ditto
+@trusted void unalignedWrite24(ubyte* ptr, uint val, size_t idx) pure nothrow
+{
+    uint* dest = cast(uint*)(cast(ubyte*)ptr + 3*idx);
+    version(LittleEndian)
+        *dest = val | (*dest & 0xFF00_0000);
+    else
+        *dest = (val<<8) | (*dest & 0xFF);
+}
+
+uint read24(const ubyte* ptr, size_t idx) pure nothrow
+{
+    static if(hasUnalignedReads)
+        return __ctfe ? safeRead24(ptr, idx) : unalignedRead24(ptr, idx);
+    else
+        return safeRead24(ptr, idx);
+}
+
+void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
+{
+    static if(hasUnalignedReads)
+        return __ctfe ? safeWrite24(ptr, val, idx) : unalignedWrite24(ptr, val, idx);
+    else
+        return safeWrite24(ptr, val, idx);
+}
+
+// Packed array of 24-bit integers, COW semantics.
+@trusted struct Uint24Array(SP=GcPolicy)
+{
+    this(Range)(Range range)
+        if(isInputRange!Range && hasLength!Range)
+    {
+        length = range.length;
+        copy(range, this[]);
+    }
+
+    this(Range)(Range range)
+        if(isForwardRange!Range && !hasLength!Range)
+    {
+        auto len = walkLength(range.save);
+        length = len;
+        copy(range, this[]);
+    }
+
+    this(this)
+    {
+        if(!empty)
+        {
+            refCount = refCount + 1;
+        }
+    }
+
+    ~this()
+    {
+        if(!empty)
+        {
+            auto cnt = refCount;
+            if(cnt == 1)
+                SP.destroy(data);
+            else
+                refCount = cnt - 1;
+        }
+    }
+
+    // no ref-count for empty U24 array
+    @property bool empty() const { return data.length == 0; }
+
+    // report one less then actual size
+    @property size_t length() const
+    {
+        return data.length ? (data.length-4)/3 : 0;
+    }
+
+    //+ an extra slot for ref-count
+    @property void length(size_t len)
+    {
+        if(len == 0)
+        {
+            if(!empty)
+                freeThisReference();
+            return;
+        }
+        immutable bytes = len*3+4; // including ref-count
+        if(empty)
+        {
+            data = SP.alloc!ubyte(bytes);
+            refCount = 1;
+            return;
+        }
+        auto cur_cnt = refCount;
+        if(cur_cnt != 1) // have more references to this memory
+        {
+            refCount = cur_cnt - 1;
+            auto new_data = SP.alloc!ubyte(bytes);
+            // take shrinking into account
+            auto to_copy = min(bytes, data.length)-4;
+            copy(data[0..to_copy], new_data[0..to_copy]);
+            data = new_data; // before setting refCount!
+            refCount = 1;
+        }
+        else // 'this' is the only reference
+        {
+            // use the realloc (hopefully in-place operation)
+            data = SP.realloc(data, bytes);
+            refCount = 1; // setup a ref-count in the new end of the array
+        }
+    }
+
+    alias opDollar = length;
+
+    // Read 24-bit packed integer
+    uint opIndex(size_t idx)const
+    {
+        return read24(data.ptr, idx);
+    }
+
+    // Write 24-bit packed integer
+    void opIndexAssign(uint val, size_t idx)
+    in
+    {
+        assert(!empty && val <= 0xFF_FFFF);
+    }
+    body
+    {
+        auto cnt = refCount;
+        if(cnt != 1)
+            dupThisReference(cnt);
+        write24(data.ptr, val, idx);
+    }
+
+    //
+    auto opSlice(size_t from, size_t to)
+    {
+        return sliceOverIndexed(from, to, &this);
+    }
+
+    ///
+    auto opSlice(size_t from, size_t to) const
+    {
+        return sliceOverIndexed(from, to, &this);
+    }
+
+    // length slices before the ref count
+    auto opSlice()
+    {
+        return opSlice(0, length);
+    }
+
+    // length slices before the ref count
+    auto opSlice() const
+    {
+        return opSlice(0, length);
+    }
+
+    void append(Range)(Range range)
+        if(isInputRange!Range && hasLength!Range && is(ElementType!Range : uint))
+    {
+        size_t nl = length + range.length;
+        length = nl;
+        copy(range, this[nl-range.length..nl]);
+    }
+
+    void append()(uint val)
+    {
+        length = length + 1;
+        this[$-1] = val;
+    }
+
+    bool opEquals()(auto const ref Uint24Array rhs)const
+    {
+        if(empty ^ rhs.empty)
+            return false; // one is empty and the other isn't
+        return empty || data[0..$-4] == rhs.data[0..$-4];
+    }
+
+private:
+    // ref-count is right after the data
+    @property uint refCount() const
+    {
+        return read24(data.ptr, length);
+    }
+
+    @property void refCount(uint cnt)
+    in
+    {
+        assert(cnt <= 0xFF_FFFF);
+    }
+    body
+    {
+        write24(data.ptr, cnt, length);
+    }
+
+    void freeThisReference()
+    {
+        auto count = refCount;
+        if(count != 1) // have more references to this memory
+        {
+            // dec shared ref-count
+            refCount = count - 1;
+            data = [];
+        }
+        else
+            SP.destroy(data);
+        assert(!data.ptr);
+    }
+
+    void dupThisReference(uint count)
+    in
+    {
+        assert(!empty && count != 1 && count == refCount);
+    }
+    body
+    {
+        // dec shared ref-count
+        refCount = count - 1;
+        // copy to the new chunk of RAM
+        auto new_data = SP.alloc!ubyte(data.length);
+        // bit-blit old stuff except the counter
+        copy(data[0..$-4], new_data[0..$-4]);
+        data = new_data; // before setting refCount!
+        refCount = 1; // so that this updates the right one
+    }
+
+    ubyte[] data;
+}
+
+@trusted unittest// Uint24 tests //@@@BUG@@ iota is system ?!
+{
+    void funcRef(T)(ref T u24)
+    {
+        u24.length = 2;
+        u24[1] = 1024;
+        T u24_c = u24;
+        assert(u24[1] == 1024);
+        u24.length = 0;
+        assert(u24.empty);
+        u24.append([1, 2]);
+        assert(equalS(u24[], [1, 2]));
+        u24.append(111);
+        assert(equalS(u24[], [1, 2, 111]));
+        assert(!u24_c.empty && u24_c[1] == 1024);
+        u24.length = 3;
+        copy(iota(0, 3), u24[]);
+        assert(equalS(u24[], iota(0, 3)));
+        assert(u24_c[1] == 1024);
+    }
+
+    void func2(T)(T u24)
+    {
+        T u24_2 = u24;
+        T u24_3;
+        u24_3 = u24_2;
+        assert(u24_2 == u24_3);
+        assert(equalS(u24[], u24_2[]));
+        assert(equalS(u24_2[], u24_3[]));
+        funcRef(u24_3);
+
+        assert(equalS(u24_3[], iota(0, 3)));
+        assert(!equalS(u24_2[], u24_3[]));
+        assert(equalS(u24_2[], u24[]));
+        u24_2 = u24_3;
+        assert(equalS(u24_2[], iota(0, 3)));
+        // to test that passed arg is intact outside
+        // plus try out opEquals
+        u24 = u24_3;
+        u24 = T.init;
+        u24_3 = T.init;
+        assert(u24.empty);
+        assert(u24 == u24_3);
+        assert(u24 != u24_2);
+    }
+
+    foreach(Policy; TypeTuple!(GcPolicy, ReallocPolicy))
+    {
+        alias typeof(Uint24Array!Policy.init[]) Range;
+        alias Uint24Array!Policy U24A;
+        static assert(isForwardRange!Range);
+        static assert(isBidirectionalRange!Range);
+        static assert(isOutputRange!(Range, uint));
+        static assert(isRandomAccessRange!(Range));
+
+        auto arr = U24A([42u, 36, 100]);
+        assert(arr[0] == 42);
+        assert(arr[1] == 36);
+        arr[0] = 72;
+        arr[1] = 0xFE_FEFE;
+        assert(arr[0] == 72);
+        assert(arr[1] == 0xFE_FEFE);
+        assert(arr[2] == 100);
+        U24A arr2 = arr;
+        assert(arr2[0] == 72);
+        arr2[0] = 11;
+        // test COW-ness
+        assert(arr[0] == 72);
+        assert(arr2[0] == 11);
+        // set this to about 100M to stress-test COW memory management
+        foreach(v; 0..10_000)
+            func2(arr);
+        assert(equalS(arr[], [72, 0xFE_FEFE, 100]));
+
+        auto r2 = U24A(iota(0, 100));
+        assert(equalS(r2[], iota(0, 100)), text(r2[]));
+        copy(iota(10, 170, 2), r2[10..90]);
+        assert(equalS(r2[], chain(iota(0, 10), iota(10, 170, 2), iota(90, 100)))
+               , text(r2[]));
+    }
+}
+
+version(unittest)
+{
+    private alias TypeTuple!(InversionList!GcPolicy, InversionList!ReallocPolicy) AllSets;
+}
+
+@trusted unittest// core set primitives test
+{
+    foreach(CodeList; AllSets)
+    {
+        CodeList a;
+        //"plug a hole" test
+        a.add(10, 20).add(25, 30).add(15, 27);
+        assert(a == CodeList(10, 30), text(a));
+
+        auto x = CodeList.init;
+        x.add(10, 20).add(30, 40).add(50, 60);
+
+        a = x;
+        a.add(20, 49);//[10, 49) [50, 60)
+        assert(a == CodeList(10, 49, 50 ,60));
+
+        a = x;
+        a.add(20, 50);
+        assert(a == CodeList(10, 60), text(a));
+
+        // simple unions, mostly edge effects
+        x = CodeList.init;
+        x.add(10, 20).add(40, 60);
+
+        a = x;
+        a.add(10, 25); //[10, 25) [40, 60)
+        assert(a == CodeList(10, 25, 40, 60));
+
+        a = x;
+        a.add(5, 15); //[5, 20) [40, 60)
+        assert(a == CodeList(5, 20, 40, 60));
+
+        a = x;
+        a.add(0, 10); // [0, 20) [40, 60)
+        assert(a == CodeList(0, 20, 40, 60));
+
+        a = x;
+        a.add(0, 5); // prepand
+        assert(a == CodeList(0, 5, 10, 20, 40, 60), text(a));
+
+        a = x;
+        a.add(5, 20);
+        assert(a == CodeList(5, 20, 40, 60));
+
+        a = x;
+        a.add(3, 37);
+        assert(a == CodeList(3, 37, 40, 60));
+
+        a = x;
+        a.add(37, 65);
+        assert(a == CodeList(10, 20, 37, 65));
+
+        // some tests on helpers for set intersection
+        x = CodeList.init.add(10, 20).add(40, 60).add(100, 120);
+        a = x;
+
+        auto m = a.skipUpTo(60);
+        a.dropUpTo(110, m);
+        assert(a == CodeList(10, 20, 40, 60, 110, 120), text(a.data[]));
+
+        a = x;
+        a.dropUpTo(100);
+        assert(a == CodeList(100, 120), text(a.data[]));
+
+        a = x;
+        m = a.skipUpTo(50);
+        a.dropUpTo(140, m);
+        assert(a == CodeList(10, 20, 40, 50), text(a.data[]));
+        a = x;
+        a.dropUpTo(60);
+        assert(a == CodeList(100, 120), text(a.data[]));
+    }
+}
+
+@trusted unittest
+{   // full set operations
+    foreach(CodeList; AllSets)
+    {
+        CodeList a, b, c, d;
+
+        //"plug a hole"
+        a.add(20, 40).add(60, 80).add(100, 140).add(150, 200);
+        b.add(40, 60).add(80, 100).add(140, 150);
+        c = a | b;
+        d = b | a;
+        assert(c == CodeList(20, 200), text(CodeList.stringof," ", c));
+        assert(c == d, text(c," vs ", d));
+
+        b = CodeList.init.add(25, 45).add(65, 85).add(95,110).add(150, 210);
+        c = a | b; //[20,45) [60, 85) [95, 140) [150, 210)
+        d = b | a;
+        assert(c == CodeList(20, 45, 60, 85, 95, 140, 150, 210), text(c));
+        assert(c == d, text(c," vs ", d));
+
+        b = CodeList.init.add(10, 20).add(30,100).add(145,200);
+        c = a | b;//[10, 140) [145, 200)
+        d = b | a;
+        assert(c == CodeList(10, 140, 145, 200));
+        assert(c == d, text(c," vs ", d));
+
+        b = CodeList.init.add(0, 10).add(15, 100).add(10, 20).add(200, 220);
+        c = a | b;//[0, 140) [150, 220)
+        d = b | a;
+        assert(c == CodeList(0, 140, 150, 220));
+        assert(c == d, text(c," vs ", d));
+
+
+        a = CodeList.init.add(20, 40).add(60, 80);
+        b = CodeList.init.add(25, 35).add(65, 75);
+        c = a & b;
+        d = b & a;
+        assert(c == CodeList(25, 35, 65, 75), text(c));
+        assert(c == d, text(c," vs ", d));
+
+        a = CodeList.init.add(20, 40).add(60, 80).add(100, 140).add(150, 200);
+        b = CodeList.init.add(25, 35).add(65, 75).add(110, 130).add(160, 180);
+        c = a & b;
+        d = b & a;
+        assert(c == CodeList(25, 35, 65, 75, 110, 130, 160, 180), text(c));
+        assert(c == d, text(c," vs ", d));
+
+        a = CodeList.init.add(20, 40).add(60, 80).add(100, 140).add(150, 200);
+        b = CodeList.init.add(10, 30).add(60, 120).add(135, 160);
+        c = a & b;//[20, 30)[60, 80) [100, 120) [135, 140) [150, 160)
+        d = b & a;
+
+        assert(c == CodeList(20, 30, 60, 80, 100, 120, 135, 140, 150, 160),text(c));
+        assert(c == d, text(c, " vs ",d));
+        assert((c & a) == c);
+        assert((d & b) == d);
+        assert((c & d) == d);
+
+        b = CodeList.init.add(40, 60).add(80, 100).add(140, 200);
+        c = a & b;
+        d = b & a;
+        assert(c == CodeList(150, 200), text(c));
+        assert(c == d, text(c, " vs ",d));
+        assert((c & a) == c);
+        assert((d & b) == d);
+        assert((c & d) == d);
+
+        assert((a & a) == a);
+        assert((b & b) == b);
+
+        a = CodeList.init.add(20, 40).add(60, 80).add(100, 140).add(150, 200);
+        b = CodeList.init.add(30, 60).add(75, 120).add(190, 300);
+        c = a - b;// [30, 40) [60, 75) [120, 140) [150, 190)
+        d = b - a;// [40, 60) [80, 100) [200, 300)
+        assert(c == CodeList(20, 30, 60, 75, 120, 140, 150, 190), text(c));
+        assert(d == CodeList(40, 60, 80, 100, 200, 300), text(d));
+        assert(c - d == c, text(c-d, " vs ", c));
+        assert(d - c == d, text(d-c, " vs ", d));
+        assert(c - c == CodeList.init);
+        assert(d - d == CodeList.init);
+
+        a = CodeList.init.add(20, 40).add( 60, 80).add(100, 140).add(150,            200);
+        b = CodeList.init.add(10,  50).add(60,                           160).add(190, 300);
+        c = a - b;// [160, 190)
+        d = b - a;// [10, 20) [40, 50) [80, 100) [140, 150) [200, 300)
+        assert(c == CodeList(160, 190), text(c));
+        assert(d == CodeList(10, 20, 40, 50, 80, 100, 140, 150, 200, 300), text(d));
+        assert(c - d == c, text(c-d, " vs ", c));
+        assert(d - c == d, text(d-c, " vs ", d));
+        assert(c - c == CodeList.init);
+        assert(d - d == CodeList.init);
+
+        a = CodeList.init.add(20,    40).add(60, 80).add(100,      140).add(150,  200);
+        b = CodeList.init.add(10, 30).add(45,         100).add(130,             190);
+        c = a ~ b; // [10, 20) [30, 40) [45, 60) [80, 130) [140, 150) [190, 200)
+        d = b ~ a;
+        assert(c == CodeList(10, 20, 30, 40, 45, 60, 80, 130, 140, 150, 190, 200),
+               text(c));
+        assert(c == d, text(c, " vs ", d));
+    }
+}
+
+
+@system:
+unittest// vs single dchar
+{
+    CodepointSet a = CodepointSet(10, 100, 120, 200);
+    assert(a - 'A' == CodepointSet(10, 65, 66, 100, 120, 200), text(a - 'A'));
+    assert((a & 'B') == CodepointSet(66, 67));
+}
+
+unittest// iteration & opIndex
+{
+    import std.typecons;
+    foreach(CodeList; TypeTuple!(InversionList!(ReallocPolicy)))
+    {
+        auto arr = "ABCDEFGHIJKLMabcdefghijklm"d;
+        auto a = CodeList('A','N','a', 'n');
+        assert(equalS(a.byInterval,
+                [tuple(cast(uint)'A', cast(uint)'N'), tuple(cast(uint)'a', cast(uint)'n')]
+            ), text(a.byInterval));
+
+        // same @@@BUG as in issue 8949 ?
+        version(bug8949)
+        {
+            assert(equalS(retro(a.byInterval),
+                [tuple(cast(uint)'a', cast(uint)'n'), tuple(cast(uint)'A', cast(uint)'N')]
+            ), text(retro(a.byInterval)));
+        }
+        auto achr = a.byCodepoint;
+        assert(equalS(achr, arr), text(a.byCodepoint));
+        foreach(ch; a.byCodepoint)
+            assert(a[ch]);
+        auto x = CodeList(100, 500, 600, 900, 1200, 1500);
+        assert(equalS(x.byInterval, [ tuple(100, 500), tuple(600, 900), tuple(1200, 1500)]), text(x.byInterval));
+        foreach(ch; x.byCodepoint)
+            assert(x[ch]);
+        static if(is(CodeList == CodepointSet))
+        {
+            auto y = CodeList(x.byInterval);
+            assert(equalS(x.byInterval, y.byInterval));
+        }
+        assert(equalS(CodepointSet.init.byInterval, cast(Tuple!(uint, uint)[])[]));
+        assert(equalS(CodepointSet.init.byCodepoint, cast(dchar[])[]));
+    }
+}
+
+//============================================================================
+// Generic Trie template and various ways to build it
+//============================================================================
+
+// debug helper to get a shortened array dump
+auto arrayRepr(T)(T x)
+{
+    if(x.length > 32)
+    {
+        return text(x[0..16],"~...~", x[x.length-16..x.length]);
+    }
+    else
+        return text(x);
+}
+
+/**
+    Maps $(D Key) to a suitable integer index within the range of $(D size_t).
+    The mapping is constructed by applying predicates from $(D Prefix) left to right
+    and concatenating the resulting bits.
+
+    The first (leftmost) predicate defines the most significant bits of
+    the resulting index.
+ */
+template mapTrieIndex(Prefix...)
+{
+    size_t mapTrieIndex(Key)(Key key)
+        if(isValidPrefixForTrie!(Key, Prefix))
+    {
+        alias Prefix p;
+        size_t idx;
+        foreach(i, v; p[0..$-1])
+        {
+            idx |= p[i](key);
+            idx <<= p[i+1].bitSize;
+        }
+        idx |= p[$-1](key);
+        return idx;
+    }
+}
+
+/*
+    $(D TrieBuilder) is a type used for incremental construction
+    of $(LREF Trie)s.
+
+    See $(LREF buildTrie) for generic helpers built on top of it.
+*/
+@trusted struct TrieBuilder(Value, Key, Args...)
+    if(isBitPackableType!Value && isValidArgsForTrie!(Key, Args))
+{
+private:
+    // last index is not stored in table, it is used as an offset to values in a block.
+    static if(is(Value == bool))// always pack bool
+        alias V = BitPacked!(Value, 1);
+    else
+        alias V = Value;
+    static auto deduceMaxIndex(Preds...)()
+    {
+        size_t idx = 1;
+        foreach(v; Preds)
+            idx *= 2^^v.bitSize;
+        return idx;
+    }
+
+    static if(is(typeof(Args[0]) : Key)) // Args start with upper bound on Key
+    {
+        alias Prefix = Args[1..$];
+        enum lastPageSize = 2^^Prefix[$-1].bitSize;
+        enum translatedMaxIndex = mapTrieIndex!(Prefix)(Args[0]);
+        enum roughedMaxIndex =
+            (translatedMaxIndex + lastPageSize-1)/lastPageSize*lastPageSize;
+        // check warp around - if wrapped, use the default deduction rule
+        enum maxIndex = roughedMaxIndex < translatedMaxIndex ?
+            deduceMaxIndex!(Prefix)() : roughedMaxIndex;
+    }
+    else
+    {
+        alias Prefix = Args;
+        enum maxIndex = deduceMaxIndex!(Prefix)();
+    }
+
+    alias getIndex = mapTrieIndex!(Prefix);
+
+    enum lastLevel = Prefix.length-1;
+    struct ConstructState
+    {
+        bool zeros, ones; // current page is zeros? ones?
+        uint idx_zeros, idx_ones;
+    }
+    // iteration over levels of Trie, each indexes its own level and thus a shortened domain
+    size_t[Prefix.length] indices;
+    // default filler value to use
+    Value defValue;
+    // this is a full-width index of next item
+    size_t curIndex;
+    // all-zeros page index, all-ones page index (+ indicator if there is such a page)
+    ConstructState[Prefix.length] state;
+    // the table being constructed
+    MultiArray!(idxTypes!(Key, fullBitSize!(Prefix), Prefix[0..$]), V) table;
+
+    @disable this();
+
+    // this function assumes no holes in the input so
+    // indices are going one by one
+    void addValue(size_t level, T)(T val, size_t numVals)
+    {
+        enum pageSize = 1<<Prefix[level].bitSize;
+        if(numVals == 0)
+            return;
+        do
+        {
+            // need to take pointer again, memory block may move on resize
+            auto ptr = table.slice!(level);
+            static if(is(T : bool))
+            {
+                if(val)
+                    state[level].zeros = false;
+                else
+                    state[level].ones = false;
+            }
+            if(numVals == 1)
+            {
+                static if(level == Prefix.length-1)
+                    ptr[indices[level]] = val;
+                else{// can incur narrowing conversion
+                    assert(indices[level] < ptr.length);
+                    ptr[indices[level]] = force!(typeof(ptr[indices[level]]))(val);
+                }
+                indices[level]++;
+                numVals = 0;
+            }
+            else
+            {
+                // where is the next page boundary
+                size_t nextPB = (indices[level]+pageSize)/pageSize*pageSize;
+                size_t j = indices[level];
+                size_t n =  nextPB-j;// can fill right in this page
+                if(numVals > n)
+                    numVals -= n;
+                else
+                {
+                    n = numVals;
+                    numVals = 0;
+                }
+                static if(level < Prefix.length-1)
+                    assert(indices[level] <= 2^^Prefix[level+1].bitSize);
+                ptr[j..j+n]  = val;
+                j += n;
+                indices[level] = j;
+            }
+            // last level (i.e. topmost) has 1 "page"
+            // thus it need not to add a new page on upper level
+            static if(level != 0)
+            {
+                if(indices[level] % pageSize == 0)
+                    spillToNextPage!level(ptr);
+            }
+        }
+        while(numVals);
+    }
+
+    // this can re-use the current page if duplicate or allocate a new one
+    // it also makes sure that previous levels point to the correct page in this level
+    void spillToNextPage(size_t level, Slice)(ref Slice ptr)
+    {
+        alias typeof(table.slice!(level-1)[0]) NextIdx;
+        NextIdx next_lvl_index;
+        enum pageSize = 1<<Prefix[level].bitSize;
+        static if(is(T : bool))
+        {
+            if(state[level].zeros)
+            {
+                if(state[level].idx_empty == uint.max)
+                {
+                    state[level].idx_empty = cast(uint)(indices[level]/pageSize - 1);
+                    goto L_allocate_page;
+                }
+                else
+                {
+                    next_lvl_index = force!NextIdx(state[level].idx_empty);
+                    indices[level] -= pageSize;// it is a duplicate
+                    goto L_know_index;
+                }
+            }
+        }
+        auto last = indices[level]-pageSize;
+        auto slice = ptr[indices[level] - pageSize..indices[level]];
+        size_t j;
+        for(j=0; j<last; j+=pageSize)
+        {
+            if(equalS(ptr[j..j+pageSize], slice[0..pageSize]))
+            {
+                // get index to it, reuse ptr space for the next block
+                next_lvl_index = force!NextIdx(j/pageSize);
+                version(none)
+                {
+                writefln("LEVEL(%s) page maped idx: %s: 0..%s  ---> [%s..%s]"
+                        ,level
+                        ,indices[level-1], pageSize, j, j+pageSize);
+                writeln("LEVEL(", level
+                        , ") mapped page is: ", slice, ": ", arrayRepr(ptr[j..j+pageSize]));
+                writeln("LEVEL(", level
+                        , ") src page is :", ptr, ": ", arrayRepr(slice[0..pageSize]));
+                }
+                indices[level] -= pageSize; // reuse this page, it is duplicate
+                break;
+            }
+        }
+        if(j == last)
+        {
+    L_allocate_page:
+            next_lvl_index = force!NextIdx(indices[level]/pageSize - 1);
+            // allocate next page
+            version(none)
+            {
+            writefln("LEVEL(%s) page allocated: %s"
+                     , level, arrayRepr(slice[0..pageSize]));
+            writefln("LEVEL(%s) index: %s ; page at this index %s"
+                     , level
+                     , next_lvl_index
+                     , arrayRepr(
+                         table.slice!(level)
+                          [pageSize*next_lvl_index..(next_lvl_index+1)*pageSize]
+                        ));
+            }
+            table.length!level = table.length!level + pageSize;
+        }
+    L_know_index:
+        // reset all zero/ones tracking variables
+        static if(is(TypeOfBitPacked!T : bool))
+        {
+            state[level].zeros = true;
+            state[level].ones = true;
+        }
+        // for the previous level, values are indices to the pages in the current level
+        addValue!(level-1)(next_lvl_index, 1);
+    }
+
+    // idx - full-width index to fill with v (full-width index != key)
+    // fills everything in the range of [curIndex, idx) with filler
+    void putAt(size_t idx, Value v)
+    {
+        assert(idx >= curIndex);
+        size_t numFillers = idx - curIndex;
+        addValue!lastLevel(defValue, numFillers);
+        addValue!lastLevel(v, 1);
+        curIndex = idx + 1;
+    }
+
+    // ditto, but sets the range of [idxA, idxB) to v
+    void putRangeAt(size_t idxA, size_t idxB, Value v)
+    {
+        assert(idxA >= curIndex);
+        assert(idxB >= idxA);
+        size_t numFillers = idxA - curIndex;
+        addValue!lastLevel(defValue, numFillers);
+        addValue!lastLevel(v, idxB - idxA);
+        curIndex = idxB; // open-right
+    }
+
+    enum errMsg = "non-monotonic prefix function(s), an unsorted range or "
+        "duplicate key->value mapping";
+
+public:
+    /**
+        Construct a builder, where $(D filler) is a value
+        to indicate empty slots (or "not found" condition).
+    */
+    this(Value filler)
+    {
+        curIndex = 0;
+        defValue = filler;
+        // zeros-page index, ones-page index
+        foreach(ref v; state)
+            v = ConstructState(true, true, uint.max, uint.max);
+        table = typeof(table)(indices);
+        // one page per level is a bootstrap minimum
+        foreach(i; Sequence!(0, Prefix.length))
+            table.length!i = (1<<Prefix[i].bitSize);
+    }
+
+    /**
+        Put a value $(D v) into interval as
+        mapped by keys from $(D a) to $(D b).
+        All slots prior to $(D a) are filled with
+        the default filler.
+    */
+    void putRange(Key a, Key b, Value v)
+    {
+        auto idxA = getIndex(a), idxB = getIndex(b);
+        // indexes of key should always grow
+        enforce(idxB >= idxA && idxA >= curIndex, errMsg);
+        putRangeAt(idxA, idxB, v);
+    }
+
+    /**
+        Put a value $(D v) into slot mapped by $(D key).
+        All slots prior to $(D key) are filled with the
+        default filler.
+    */
+    void putValue(Key key, Value v)
+    {
+        auto idx = getIndex(key);
+        enforce(idx >= curIndex, text(errMsg, " ", idx));
+        putAt(idx, v);
+    }
+
+    /// Finishes construction of Trie, yielding an immutable Trie instance.
+    auto build()
+    {
+        static if(maxIndex != 0) // doesn't cover full range of size_t
+        {
+            assert(curIndex <= maxIndex);
+            addValue!lastLevel(defValue, maxIndex - curIndex);
+        }
+        else
+        {
+            if(curIndex != 0 // couldn't wrap around
+                || (Prefix.length != 1 && indices[lastLevel] == 0)) // can be just empty
+            {
+                addValue!lastLevel(defValue, size_t.max - curIndex);
+                addValue!lastLevel(defValue, 1);
+            }
+            // else curIndex already completed the full range of size_t by wrapping around
+        }
+        return Trie!(V, Key, maxIndex, Prefix)(table);
+    }
+}
+
+/*
+    $(P A generic Trie data-structure for a fixed number of stages.
+    The design goal is optimal speed with smallest footprint size.
+    )
+    $(P It's intentionally read-only and doesn't provide constructors.
+     To construct one use a special builder,
+     see $(LREF TrieBuilder) and $(LREF buildTrie).
+    )
+
+*/
+@trusted public struct Trie(Value, Key, Args...)
+    if(isValidPrefixForTrie!(Key, Args)
+        || (isValidPrefixForTrie!(Key, Args[1..$])
+            && is(typeof(Args[0]) : size_t)))
+{
+    static if(is(typeof(Args[0]) : size_t))
+    {
+        enum maxIndex = Args[0];
+        enum hasBoundsCheck = true;
+        alias Prefix = Args[1..$];
+    }
+    else
+    {
+        enum hasBoundsCheck = false;
+        alias Prefix = Args;
+    }
+
+    private this()(typeof(_table) table)
+    {
+        _table = table;
+    }
+
+    // only for constant Tries constructed from precompiled tables
+    private this()(const(size_t)[] offsets, const(size_t)[] sizes,
+        const(size_t)[] data) const
+    {
+        _table = typeof(_table)(offsets, sizes, data);
+    }
+
+    /*
+        $(P Lookup the $(D key) in this $(D Trie). )
+
+        $(P The lookup always succeeds if key fits the domain
+        provided during construction. The whole domain defined
+        is covered so instead of not found condition
+        the sentinel (filler) value could be used. )
+
+        $(P See $(LREF buildTrie), $(LREF TrieBuilder) for how to
+        define a domain of $(D Trie) keys and the sentinel value. )
+
+        Note:
+        Domain range-checking is only enabled in debug builds
+        and results in assertion failure.
+    */
+    // templated to auto-detect pure, @safe and nothrow
+    TypeOfBitPacked!Value opIndex()(Key key) const
+    {
+        static if(hasBoundsCheck)
+            assert(mapTrieIndex!Prefix(key) < maxIndex);
+        size_t idx;
+        alias p = Prefix;
+        idx = cast(size_t)p[0](key);
+        foreach(i, v; p[0..$-1])
+            idx = cast(size_t)((_table.ptr!i[idx]<<p[i+1].bitSize) + p[i+1](key));
+        auto val = _table.ptr!(p.length-1)[idx];
+        return val;
+    }
+
+    @property size_t bytes(size_t n=size_t.max)() const
+    {
+        return _table.bytes!n;
+    }
+
+    @property size_t pages(size_t n)() const
+    {
+        return (bytes!n+2^^(Prefix[n].bitSize-1))
+                /2^^Prefix[n].bitSize;
+    }
+
+    void store(OutRange)(scope OutRange sink) const
+        if(isOutputRange!(OutRange, char))
+    {
+        _table.store(sink);
+    }
+
+private:
+    MultiArray!(idxTypes!(Key, fullBitSize!(Prefix), Prefix[0..$]), Value) _table;
+}
+
+// create a tuple of 'sliceBits' that slice the 'top' of bits into pieces of sizes 'sizes'
+// left-to-right, the most significant bits first
+template GetBitSlicing(size_t top, sizes...)
+{
+    static if(sizes.length > 0)
+        alias TypeTuple!(sliceBits!(top - sizes[0], top)
+            , GetBitSlicing!(top - sizes[0], sizes[1..$])) GetBitSlicing;
+    else
+        alias TypeTuple!()  GetBitSlicing;
+}
+
+template callableWith(T)
+{
+    template callableWith(alias Pred)
+    {
+        static if(!is(typeof(Pred(T.init))))
+            enum callableWith = false;
+        else
+        {
+            alias Result = typeof(Pred(T.init));
+            enum callableWith = isBitPackableType!(TypeOfBitPacked!(Result));
+        }
+    }
+}
+
+/*
+    Check if $(D Prefix) is a valid set of predicates
+    for $(D Trie) template having $(D Key) as the type of keys.
+    This requires all predicates to be callable, take
+    single argument of type $(D Key) and return unsigned value.
+*/
+template isValidPrefixForTrie(Key, Prefix...)
+{
+    enum isValidPrefixForTrie = allSatisfy!(callableWith!Key, Prefix); // TODO: tighten the screws
+}
+
+/*
+    Check if $(D Args) is a set of maximum key value followed by valid predicates
+    for $(D Trie) template having $(D Key) as the type of keys.
+*/
+template isValidArgsForTrie(Key, Args...)
+{
+    static if(Args.length > 1)
+    {
+        enum isValidArgsForTrie = isValidPrefixForTrie!(Key, Args)
+            || (isValidPrefixForTrie!(Key, Args[1..$]) && is(typeof(Args[0]) : Key));
+    }
+    else
+        enum isValidArgsForTrie = isValidPrefixForTrie!Args;
+}
+
+@property size_t sumOfIntegerTuple(ints...)()
+{
+    size_t count=0;
+    foreach(v; ints)
+        count += v;
+    return count;
+}
+
+/**
+    A shorthand for creating a custom multi-level fixed Trie
+    from a $(D CodepointSet). $(D sizes) are numbers of bits per level,
+    with the most significant bits used first.
+
+    Note: The sum of $(D sizes) must be equal 21.
+
+    See_Also: $(LREF toTrie), which is even simpler.
+
+    Example:
+    ---
+    {
+        import std.stdio;
+        auto set = unicode("Number");
+        auto trie = codepointSetTrie!(8, 5, 8)(set);
+        writeln("Input code points to test:");
+        foreach(line; stdin.byLine)
+        {
+            int count=0;
+            foreach(dchar ch; line)
+                if(trie[ch])// is number
+                    count++;
+            writefln("Contains %d number code points.", count);
+        }
+    }
+    ---
+*/
+public template codepointSetTrie(sizes...)
+    if(sumOfIntegerTuple!sizes == 21)
+{
+    auto codepointSetTrie(Set)(Set set)
+        if(isCodepointSet!Set)
+    {
+        auto builder = TrieBuilder!(bool, dchar, lastDchar+1, GetBitSlicing!(21, sizes))(false);
+        foreach(ival; set.byInterval)
+            builder.putRange(ival[0], ival[1], true);
+        return builder.build();
+    }
+}
+
+/// Type of Trie generated by codepointSetTrie function.
+public template CodepointSetTrie(sizes...)
+    if(sumOfIntegerTuple!sizes == 21)
+{
+    alias Prefix = GetBitSlicing!(21, sizes);
+    alias CodepointSetTrie = typeof(TrieBuilder!(bool, dchar, lastDchar+1, Prefix)(false).build());
+}
+
+/**
+    A slightly more general tool for building fixed $(D Trie)
+    for the Unicode data.
+
+    Specifically unlike $(D codepointSetTrie) it's allows creating mappings
+    of $(D dchar) to an arbitrary type $(D T).
+
+    Note: Overload taking $(D CodepointSet)s will naturally convert
+    only to bool mapping $(D Trie)s.
+
+    Example:
+    ---
+    // pick characters from the Greek script
+    auto set = unicode.Greek;
+
+    // a user-defined property (or an expensive function)
+    // that we want to look up
+    static uint luckFactor(dchar ch)
+    {
+        // here we consider a character lucky
+        // if its code point has a lot of identical hex-digits
+        // e.g. arabic letter DDAL (\u0688) has a "luck factor" of 2
+        ubyte[6] nibbles; // 6 4-bit chunks of code point
+        uint value = ch;
+        foreach(i; 0..6)
+        {
+            nibbles[i] = value & 0xF;
+            value >>= 4;
+        }
+        uint luck;
+        foreach(n; nibbles)
+            luck = cast(uint)max(luck, count(nibbles[], n));
+        return luck;
+    }
+
+    // only unsigned built-ins are supported at the moment
+    alias LuckFactor = BitPacked!(uint, 3);
+
+    // create a temporary associative array (AA)
+    LuckFactor[dchar] map;
+    foreach(ch; set.byCodepoint)
+        map[ch] = luckFactor(ch);
+
+    // bits per stage are chosen randomly, fell free to optimize
+    auto trie = codepointTrie!(LuckFactor, 8, 5, 8)(map);
+
+    // from now on the AA is not needed
+    foreach(ch; set.byCodepoint)
+        assert(trie[ch] == luckFactor(ch)); // verify
+    // CJK is not Greek, thus it has the default value
+    assert(trie['\u4444'] == 0);
+    // and here is a couple of quite lucky Greek characters:
+    // Greek small letter epsilon with dasia
+    assert(trie['\u1F11'] == 3);
+    // Ancient Greek metretes sign
+    assert(trie['\U00010181'] == 3);
+    ---
+*/
+public template codepointTrie(T, sizes...)
+    if(sumOfIntegerTuple!sizes == 21)
+{
+    alias Prefix = GetBitSlicing!(21, sizes);
+
+    static if(is(TypeOfBitPacked!T == bool))
+    {
+        auto codepointTrie(Set)(in Set set)
+            if(isCodepointSet!Set)
+        {
+            return codepointSetTrie(set);
+        }
+    }
+
+    auto codepointTrie()(T[dchar] map, T defValue=T.init)
+    {
+        return buildTrie!(T, dchar, Prefix)(map, defValue);
+    }
+
+    // unsorted range of pairs
+    auto codepointTrie(R)(R range, T defValue=T.init)
+        if(isInputRange!R
+            && is(typeof(ElementType!R.init[0]) : T)
+            && is(typeof(ElementType!R.init[1]) : dchar))
+    {
+        // build from unsorted array of pairs
+        // TODO: expose index sorting functions for Trie
+        return buildTrie!(T, dchar, Prefix)(range, defValue, true);
+    }
+}
+
+unittest // codepointTrie example
+{
+    // pick characters from the Greek script
+    auto set = unicode.Greek;
+
+    // a user-defined property (or an expensive function)
+    // that we want to look up
+    static uint luckFactor(dchar ch)
+    {
+        // here we consider a character lucky
+        // if its code point has a lot of identical hex-digits
+        // e.g. arabic letter DDAL (\u0688) has a "luck factor" of 2
+        ubyte[6] nibbles; // 6 4-bit chunks of code point
+        uint value = ch;
+        foreach(i; 0..6)
+        {
+            nibbles[i] = value & 0xF;
+            value >>= 4;
+        }
+        uint luck;
+        foreach(n; nibbles)
+            luck = cast(uint)max(luck, count(nibbles[], n));
+        return luck;
+    }
+
+    // only unsigned built-ins are supported at the moment
+    alias LuckFactor = BitPacked!(uint, 3);
+
+    // create a temporary associative array (AA)
+    LuckFactor[dchar] map;
+    foreach(ch; set.byCodepoint)
+        map[ch] = luckFactor(ch);
+
+    // bits per stage are chosen randomly, fell free to optimize
+    auto trie = codepointTrie!(LuckFactor, 8, 5, 8)(map);
+
+    // from now on the AA is not needed
+    foreach(ch; set.byCodepoint)
+        assert(trie[ch] == luckFactor(ch)); // verify
+    // CJK is not Greek, thus it has the default value
+    assert(trie['\u4444'] == 0);
+    // and here is a couple of quite lucky Greek characters:
+    // Greek small letter epsilon with dasia
+    assert(trie['\u1F11'] == 3);
+    // Ancient Greek metretes sign
+    assert(trie['\U00010181'] == 3);
+
+}
+
+/// Type of Trie as generated by codepointTrie function.
+public template CodepointTrie(T, sizes...)
+    if(sumOfIntegerTuple!sizes == 21)
+{
+    alias Prefix = GetBitSlicing!(21, sizes);
+    alias CodepointTrie = typeof(TrieBuilder!(T, dchar, lastDchar+1, Prefix)(T.init).build());
+}
+
+// @@@BUG multiSort can's access private symbols from uni
+public template cmpK0(alias Pred)
+{
+    static bool cmpK0(Value, Key)
+        (Tuple!(Value, Key) a, Tuple!(Value, Key) b)
+    {
+        return Pred(a[1]) < Pred(b[1]);
+    }
+}
+
+/*
+    The most general utility for construction of $(D Trie)s
+    short of using $(D TrieBuilder) directly.
+
+    Provides a number of convenience overloads.
+    $(D Args) is tuple of maximum key value followed by
+    predicates to construct index from key.
+
+    Alternatively if the first argument is not a value convertible to $(D Key)
+    then the whole tuple of $(D Args) is treated as predicates
+    and the maximum Key is deduced from predicates.
+*/
+public template buildTrie(Value, Key, Args...)
+    if(isValidArgsForTrie!(Key, Args))
+{
+    static if(is(typeof(Args[0]) : Key)) // prefix starts with upper bound on Key
+    {
+        alias Prefix = Args[1..$];
+    }
+    else
+        alias Prefix = Args;
+
+    alias getIndex = mapTrieIndex!(Prefix);
+
+    // for multi-sort
+    template GetComparators(size_t n)
+    {
+        static if(n > 0)
+            alias GetComparators =
+                TypeTuple!(GetComparators!(n-1), cmpK0!(Prefix[n-1]));
+        else
+            alias GetComparators = TypeTuple!();
+    }
+
+    /*
+        Build $(D Trie) from a range of a Key-Value pairs,
+        assuming it is sorted by Key as defined by the following lambda:
+        ------
+        (a, b) => mapTrieIndex!(Prefix)(a) < mapTrieIndex!(Prefix)(b)
+        ------
+        Exception is thrown if it's detected that the above order doesn't hold.
+
+        In other words $(LREF mapTrieIndex) should be a
+        monotonically increasing function that maps $(D Key) to an integer.
+
+        See also: $(XREF _algorithm, sort),
+        $(XREF _range, SortedRange),
+        $(XREF _algorithm, setUnion).
+    */
+    auto buildTrie(Range)(Range range, Value filler=Value.init)
+        if(isInputRange!Range && is(typeof(Range.init.front[0]) : Value)
+            && is(typeof(Range.init.front[1]) : Key))
+    {
+        auto builder = TrieBuilder!(Value, Key, Prefix)(filler);
+        foreach(v; range)
+            builder.putValue(v[1], v[0]);
+        return builder.build();
+    }
+
+    /*
+        If $(D Value) is bool (or BitPacked!(bool, x)) then it's possible
+        to build $(D Trie) from a range of open-right intervals of $(D Key)s.
+        The requirement  on the ordering of keys (and the behavior on the
+        violation of it) is the same as for Key-Value range overload.
+
+        Intervals denote ranges of !$(D filler) i.e. the opposite of filler.
+        If no filler provided keys inside of the intervals map to true,
+        and $(D filler) is false.
+    */
+    auto buildTrie(Range)(Range range, Value filler=Value.init)
+        if(is(TypeOfBitPacked!Value ==  bool)
+            && isInputRange!Range && is(typeof(Range.init.front[0]) : Key)
+            && is(typeof(Range.init.front[1]) : Key))
+    {
+        auto builder = TrieBuilder!(Value, Key, Prefix)(filler);
+        foreach(ival; range)
+            builder.putRange(ival[0], ival[1], !filler);
+        return builder.build();
+    }
+
+    auto buildTrie(Range)(Range range, Value filler, bool unsorted)
+        if(isInputRange!Range
+            && is(typeof(Range.init.front[0]) : Value)
+            && is(typeof(Range.init.front[1]) : Key))
+    {
+        alias Comps = GetComparators!(Prefix.length);
+        if(unsorted)
+            multiSort!(Comps)(range);
+        return buildTrie(range, filler);
+    }
+
+    /*
+        If $(D Value) is bool (or BitPacked!(bool, x)) then it's possible
+        to build $(D Trie) simply from an input range of $(D Key)s.
+        The requirement  on the ordering of keys (and the behavior on the
+        violation of it) is the same as for Key-Value range overload.
+
+        Keys found in range denote !$(D filler) i.e. the opposite of filler.
+        If no filler provided keys map to true, and $(D filler) is false.
+    */
+    auto buildTrie(Range)(Range range, Value filler=Value.init)
+        if(is(TypeOfBitPacked!Value ==  bool)
+            && isInputRange!Range && is(typeof(Range.init.front) : Key))
+    {
+        auto builder = TrieBuilder!(Value, Key, Prefix)(filler);
+        foreach(v; range)
+            builder.putValue(v, !filler);
+        return builder.build();
+    }
+
+    /*
+        If $(D Key) is unsigned integer $(D Trie) could be constructed from array
+        of values where array index serves as key.
+    */
+    auto buildTrie()(Value[] array, Value filler=Value.init)
+        if(isUnsigned!Key)
+    {
+        auto builder = TrieBuilder!(Value, Key, Prefix)(filler);
+        foreach(idx, v; array)
+            builder.putValue(idx, v);
+        return builder.build();
+    }
+
+    /*
+        Builds $(D Trie) from associative array.
+    */
+    auto buildTrie(Key, Value)(Value[Key] map, Value filler=Value.init)
+    {
+        auto range = array(zip(map.values, map.keys));
+        return buildTrie(range, filler, true); // sort it
+    }
+}
+
+/++
+    Convenience function to construct optimal configurations for
+    packed Trie from any $(D set) of $(CODEPOINTS).
+
+    The parameter $(D level) indicates the number of trie levels to use,
+    allowed values are: 1, 2, 3 or 4. Levels represent different trade-offs
+    speed-size wise.
+
+    $(P Level 1 is fastest and the most memory hungry (a bit array). )
+    $(P Level 4 is the slowest and has the smallest footprint. )
+
+    See the $(S_LINK Synopsis, Synopsis) section for example.
+
+    Note:
+    Level 4 stays very practical (being faster and more predictable)
+    compared to using direct lookup on the $(D set) itself.
+
+
++/
+public auto toTrie(size_t level, Set)(Set set)
+    if(isCodepointSet!Set)
+{
+    static if(level == 1)
+        return codepointSetTrie!(21)(set);
+    else static if(level == 2)
+        return codepointSetTrie!(10, 11)(set);
+    else static if(level == 3)
+        return codepointSetTrie!(8, 5, 8)(set);
+    else static if(level == 4)
+         return codepointSetTrie!(6, 4, 4, 7)(set);
+    else
+        static assert(false,
+            "Sorry, toTrie doesn't support levels > 4, use codepointSetTrie directly");
+}
+
+/**
+    $(P Builds a $(D Trie) with typically optimal speed-size trade-off
+    and wraps it into a delegate of the following type:
+    $(D bool delegate(dchar ch)). )
+
+    $(P Effectively this creates a 'tester' lambda suitable
+    for algorithms like std.algorithm.find that take unary predicates. )
+
+    See the $(S_LINK Synopsis, Synopsis) section for example.
+*/
+public auto toDelegate(Set)(Set set)
+    if(isCodepointSet!Set)
+{
+    // 3 is very small and is almost as fast as 2-level (due to CPU caches?)
+    auto t = toTrie!3(set);
+    return (dchar ch) => t[ch];
+}
+
+/**
+    $(P Opaque wrapper around unsigned built-in integers and
+    code unit (char/wchar/dchar) types.
+    Parameter $(D sz) indicates that the value is confined
+    to the range of [0, 2^^sz$(RPAREN). With this knowledge it can be
+    packed more tightly when stored in certain
+    data-structures like trie. )
+
+    Note:
+    $(P The $(D BitPacked!(T, sz)) is implicitly convertible to $(D T)
+    but not vise-versa. Users have to ensure the value fits in
+    the range required and use the $(D cast)
+    operator to perform the conversion.)
+*/
+struct BitPacked(T, size_t sz)
+    if(isIntegral!T || is(T:dchar))
+{
+    enum bitSize = sz;
+    T _value;
+    alias _value this;
+}
+
+/*
+    Depending on the form of the passed argument $(D bitSizeOf) returns
+    the amount of bits required to represent a given type
+    or a return type of a given functor.
+*/
+template bitSizeOf(Args...)
+    if(Args.length == 1)
+{
+    alias T = Args[0];
+    static if(__traits(compiles, { size_t val = T.bitSize; })) //(is(typeof(T.bitSize) : size_t))
+    {
+        enum bitSizeOf = T.bitSize;
+    }
+    else static if(is(ReturnType!T dummy == BitPacked!(U, bits), U, size_t bits))
+    {
+        enum bitSizeOf = bitSizeOf!(ReturnType!T);
+    }
+    else
+    {
+        enum bitSizeOf = T.sizeof*8;
+    }
+}
+
+/**
+    Tests if $(D T) is some instantiation of $(LREF BitPacked)!(U, x)
+    and thus suitable for packing.
+*/
+template isBitPacked(T)
+{
+    static if(is(T dummy == BitPacked!(U, bits), U, size_t bits))
+        enum isBitPacked = true;
+    else
+        enum isBitPacked = false;
+}
+
+/**
+    Gives the type $(D U) from $(LREF BitPacked)!(U, x)
+    or $(D T) itself for every other type.
+*/
+template TypeOfBitPacked(T)
+{
+    static if(is(T dummy == BitPacked!(U, bits), U, size_t bits))
+        alias TypeOfBitPacked = U;
+    else
+        alias TypeOfBitPacked = T;
+}
+
+/*
+    Wrapper, used in definition of custom data structures from $(D Trie) template.
+    Applying it to a unary lambda function indicates that the returned value always
+    fits within $(D bits) of bits.
+*/
+struct assumeSize(alias Fn, size_t bits)
+{
+    enum bitSize = bits;
+    static auto ref opCall(T)(auto ref T arg)
+    {
+        return Fn(arg);
+    }
+}
+
+/*
+    A helper for defining lambda function that yields a slice
+    of certain bits from an unsigned integral value.
+    The resulting lambda is wrapped in assumeSize and can be used directly
+    with $(D Trie) template.
+*/
+struct sliceBits(size_t from, size_t to)
+{
+    //for now bypass assumeSize, DMD has trouble inlining it
+    enum bitSize = to-from;
+    static auto opCall(T)(T x)
+    out(result)
+    {
+        assert(result < (1<<to-from));
+    }
+    body
+    {
+        static assert(from < to);
+        return (x >> from) & ((1<<(to-from))-1);
+    }
+}
+
+uint low_8(uint x) { return x&0xFF; }
+@safe pure nothrow uint midlow_8(uint x){ return (x&0xFF00)>>8; }
+alias assumeSize!(low_8, 8) lo8;
+alias assumeSize!(midlow_8, 8) mlo8;
+
+static assert(bitSizeOf!lo8 == 8);
+static assert(bitSizeOf!(sliceBits!(4, 7)) == 3);
+static assert(bitSizeOf!(BitPacked!(uint, 2)) == 2);
+
+template Sequence(size_t start, size_t end)
+{
+    static if(start < end)
+        alias TypeTuple!(start, Sequence!(start+1, end)) Sequence;
+    else
+        alias TypeTuple!() Sequence;
+}
+
+//---- TRIE TESTS ----
+unittest
+{
+    static trieStats(TRIE)(TRIE t)
+    {
+        version(std_uni_stats)
+        {
+            import std.stdio;
+            writeln("---TRIE FOOTPRINT STATS---");
+            foreach(i; Sequence!(0, t.table.dim) )
+            {
+                writefln("lvl%s = %s bytes;  %s pages"
+                         , i, t.bytes!i, t.pages!i);
+            }
+            writefln("TOTAL: %s bytes", t.bytes);
+            version(none)
+            {
+                writeln("INDEX (excluding value level):");
+                foreach(i; Sequence!(0, t.table.dim-1) )
+                    writeln(t.table.slice!(i)[0..t.table.length!i]);
+            }
+            writeln("---------------------------");
+        }
+    }
+    //@@@BUG link failure, lambdas not found by linker somehow (in case of trie2)
+    // alias assumeSize!(8, function (uint x) { return x&0xFF; }) lo8;
+    // alias assumeSize!(7, function (uint x) { return (x&0x7F00)>>8; }) next8;
+    alias CodepointSet Set;
+    auto set = Set('A','Z','a','z');
+    auto trie = buildTrie!(bool, uint, 256, lo8)(set.byInterval);// simple bool array
+    for(int a='a'; a<'z';a++)
+        assert(trie[a]);
+    for(int a='A'; a<'Z';a++)
+        assert(trie[a]);
+    for(int a=0; a<'A'; a++)
+        assert(!trie[a]);
+    for(int a ='Z'; a<'a'; a++)
+        assert(!trie[a]);
+    trieStats(trie);
+
+    auto redundant2 = Set(
+        1, 18, 256+2, 256+111, 512+1, 512+18, 768+2, 768+111);
+    auto trie2 = buildTrie!(bool, uint, 1024, mlo8, lo8)(redundant2.byInterval);
+    trieStats(trie2);
+    foreach(e; redundant2.byCodepoint)
+        assert(trie2[e], text(cast(uint)e, " - ", trie2[e]));
+    foreach(i; 0..1024)
+    {
+        assert(trie2[i] == (i in redundant2));
+    }
+
+
+    auto redundant3 = Set(
+          2,    4,    6,    8,    16,
+       2+16, 4+16, 16+6, 16+8, 16+16,
+       2+32, 4+32, 32+6, 32+8,
+      );
+
+    enum max3 = 256;
+    // sliceBits
+    auto trie3 = buildTrie!(bool, uint, max3,
+            sliceBits!(6,8), sliceBits!(4,6), sliceBits!(0,4)
+        )(redundant3.byInterval);
+    trieStats(trie3);
+    foreach(i; 0..max3)
+        assert(trie3[i] == (i in redundant3), text(cast(uint)i));
+
+    auto redundant4 = Set(
+            10, 64, 64+10, 128, 128+10, 256, 256+10, 512,
+            1000, 2000, 3000, 4000, 5000, 6000
+        );
+    enum max4 = 2^^16;
+    auto trie4 = buildTrie!(bool, size_t, max4,
+            sliceBits!(13, 16), sliceBits!(9, 13), sliceBits!(6, 9) , sliceBits!(0, 6)
+        )(redundant4.byInterval);
+    foreach(i; 0..max4){
+        if(i in redundant4)
+            assert(trie4[i], text(cast(uint)i));
+    }
+    trieStats(trie4);
+
+        alias mapToS = mapTrieIndex!(useItemAt!(0, char));
+        string[] redundantS = ["tea", "start", "orange"];
+        redundantS.sort!((a,b) => mapToS(a) < mapToS(b))();
+        auto strie = buildTrie!(bool, string, useItemAt!(0, char))(redundantS);
+        // using first char only
+        assert(redundantS == ["orange", "start", "tea"]);
+        assert(strie["test"], text(strie["test"]));
+        assert(!strie["aea"]);
+        assert(strie["s"]);
+
+    // a bit size test
+    auto a = array(map!(x => to!ubyte(x))(iota(0, 256)));
+    auto bt = buildTrie!(bool, ubyte, sliceBits!(7, 8), sliceBits!(5, 7), sliceBits!(0, 5))(a);
+    trieStats(bt);
+    foreach(i; 0..256)
+        assert(bt[cast(ubyte)i]);
+}
+
+template useItemAt(size_t idx, T)
+    if(isIntegral!T || is(T: dchar))
+{
+    size_t impl(in T[] arr){ return arr[idx]; }
+    alias useItemAt = assumeSize!(impl, 8*T.sizeof);
+}
+
+template useLastItem(T)
+{
+    size_t impl(in T[] arr){ return arr[$-1]; }
+    alias useLastItem = assumeSize!(impl, 8*T.sizeof);
+}
+
+template fullBitSize(Prefix...)
+{
+    static if(Prefix.length > 0)
+        enum fullBitSize = bitSizeOf!(Prefix[0])+fullBitSize!(Prefix[1..$]);
+    else
+        enum fullBitSize = 0;
+}
+
+template idxTypes(Key, size_t fullBits, Prefix...)
+{
+    static if(Prefix.length == 1)
+    {// the last level is value level, so no index once reduced to 1-level
+        alias TypeTuple!() idxTypes;
+    }
+    else
+    {
+        // Important note on bit packing
+        // Each level has to hold enough of bits to address the next one
+        // The bottom level is known to hold full bit width
+        // thus it's size in pages is full_bit_width - size_of_last_prefix
+        // Recourse on this notion
+        alias TypeTuple!(
+            idxTypes!(Key, fullBits - bitSizeOf!(Prefix[$-1]), Prefix[0..$-1]),
+            BitPacked!(typeof(Prefix[$-2](Key.init)), fullBits - bitSizeOf!(Prefix[$-1]))
+        ) idxTypes;
+    }
+}
+
+//============================================================================
+
+@trusted int comparePropertyName(Char1, Char2)(const(Char1)[] a, const(Char2)[] b)
+{
+    alias low = std.ascii.toLower;
+    return cmp(
+        a.map!(x => low(x))()
+        .filter!(x => !isWhite(x) && x != '-' && x != '_')(),
+        b.map!(x => low(x))()
+        .filter!(x => !isWhite(x) && x != '-' && x != '_')()
+    );
+}
+
+bool propertyNameLess(Char1, Char2)(const(Char1)[] a, const(Char2)[] b)
+{
+    return comparePropertyName(a, b) < 0;
+}
+
+//============================================================================
+// Utilities for compression of Unicode code point sets
+//============================================================================
+
+@safe void compressTo(uint val, ref ubyte[] arr) pure nothrow
+{
+    // not optimized as usually done 1 time (and not public interface)
+    if(val < 128)
+        arr ~= cast(ubyte)val;
+    else if(val < (1<<13))
+    {
+        arr ~= (0b1_00<<5) | cast(ubyte)(val>>8);
+        arr ~= val & 0xFF;
+    }
+    else
+    {
+        assert(val < (1<<21));
+        arr ~= (0b1_01<<5) | cast(ubyte)(val>>16);
+        arr ~= (val >> 8) & 0xFF;
+        arr ~= val  & 0xFF;
+    }
+}
+
+@safe uint decompressFrom(const(ubyte)[] arr, ref size_t idx) pure
+{
+    uint first = arr[idx++];
+    if(!(first & 0x80)) // no top bit -> [0..127]
+        return first;
+    uint extra = ((first>>5) & 1) + 1; // [1, 2]
+    uint val = (first & 0x1F);
+    enforce(idx + extra <= arr.length, "bad code point interval encoding");
+    foreach(j; 0..extra)
+        val = (val<<8) | arr[idx+j];
+    idx += extra;
+    return val;
+}
+
+
+package ubyte[] compressIntervals(Range)(Range intervals)
+    if(isInputRange!Range && isIntegralPair!(ElementType!Range))
+{
+    ubyte[] storage;
+    uint base = 0;
+    // RLE encode
+    foreach(val; intervals)
+    {
+        compressTo(val[0]-base, storage);
+        base = val[0];
+        if(val[1] != lastDchar+1) // till the end of the domain so don't store it
+        {
+            compressTo(val[1]-base, storage);
+            base = val[1];
+        }
+    }
+    return storage;
+}
+
+unittest
+{
+    auto run = [tuple(80, 127), tuple(128, (1<<10)+128)];
+    ubyte[] enc = [cast(ubyte)80, 47, 1, (0b1_00<<5) | (1<<2), 0];
+    assert(compressIntervals(run) == enc);
+    auto run2 = [tuple(0, (1<<20)+512+1), tuple((1<<20)+512+4, lastDchar+1)];
+    ubyte[] enc2 = [cast(ubyte)0, (0b1_01<<5) | (1<<4), 2, 1, 3]; // odd length-ed
+    assert(compressIntervals(run2) == enc2);
+    size_t  idx = 0;
+    assert(decompressFrom(enc, idx) == 80);
+    assert(decompressFrom(enc, idx) == 47);
+    assert(decompressFrom(enc, idx) == 1);
+    assert(decompressFrom(enc, idx) == (1<<10));
+    idx = 0;
+    assert(decompressFrom(enc2, idx) == 0);
+    assert(decompressFrom(enc2, idx) == (1<<20)+512+1);
+    assert(equalS(decompressIntervals(compressIntervals(run)), run));
+    assert(equalS(decompressIntervals(compressIntervals(run2)), run2));
+}
+
+// Creates a range of $(D CodepointInterval) that lazily decodes compressed data.
+@safe package auto decompressIntervals(const(ubyte)[] data)
+{
+    return DecompressedIntervals(data);
+}
+
+@trusted struct DecompressedIntervals
+{
+    const(ubyte)[] _stream;
+    size_t _idx;
+    CodepointInterval _front;
+
+    this(const(ubyte)[] stream)
+    {
+        _stream = stream;
+        popFront();
+    }
+
+    @property CodepointInterval front()
+    {
+        assert(!empty);
+        return _front;
+    }
+
+    void popFront()
+    {
+        if(_idx == _stream.length)
+        {
+            _idx = size_t.max;
+            return;
+        }
+        uint base = _front[1];
+        _front[0] = base + decompressFrom(_stream, _idx);
+        if(_idx == _stream.length)// odd length ---> till the end
+            _front[1] = lastDchar+1;
+        else
+        {
+            base = _front[0];
+            _front[1] = base + decompressFrom(_stream, _idx);
+        }
+    }
+
+    @property bool empty() const
+    {
+        return _idx == size_t.max;
+    }
+
+    @property DecompressedIntervals save() { return this; }
+}
+
+static assert(isInputRange!DecompressedIntervals);
+static assert(isForwardRange!DecompressedIntervals);
+//============================================================================
+
+version(std_uni_bootstrap){}
+else
+{
+
+// helper for looking up code point sets
+@trusted ptrdiff_t findUnicodeSet(alias table, C)(in C[] name)
+{
+    auto range = assumeSorted!((a,b) => propertyNameLess(a,b))
+        (table.map!"a.name"());
+    size_t idx = range.lowerBound(name).length;
+    if(idx < range.length && comparePropertyName(range[idx], name) == 0)
+        return idx;
+    return -1;
+}
+
+// another one that loads it
+@trusted bool loadUnicodeSet(alias table, Set, C)(in C[] name, ref Set dest)
+{
+    auto idx = findUnicodeSet!table(name);
+    if(idx >= 0)
+    {
+        dest = Set(asSet(table[idx].compressed));
+        return true;
+    }
+    return false;
+}
+
+@trusted bool loadProperty(Set=CodepointSet, C)
+    (in C[] name, ref Set target)
+{
+    alias comparePropertyName ucmp;
+    // conjure cumulative properties by hand
+    if(ucmp(name, "L") == 0 || ucmp(name, "Letter") == 0)
+    {
+        target |= asSet(uniPropLu);
+        target |= asSet(uniPropLl);
+        target |= asSet(uniPropLt);
+        target |= asSet(uniPropLo);
+        target |= asSet(uniPropLm);
+    }
+    else if(ucmp(name,"LC") == 0 || ucmp(name,"Cased Letter")==0)
+    {
+        target |= asSet(uniPropLl);
+        target |= asSet(uniPropLu);
+        target |= asSet(uniPropLt);// Title case
+    }
+    else if(ucmp(name, "M") == 0 || ucmp(name, "Mark") == 0)
+    {
+        target |= asSet(uniPropMn);
+        target |= asSet(uniPropMc);
+        target |= asSet(uniPropMe);
+    }
+    else if(ucmp(name, "N") == 0 || ucmp(name, "Number") == 0)
+    {
+        target |= asSet(uniPropNd);
+        target |= asSet(uniPropNl);
+        target |= asSet(uniPropNo);
+    }
+    else if(ucmp(name, "P") == 0 || ucmp(name, "Punctuation") == 0)
+    {
+        target |= asSet(uniPropPc);
+        target |= asSet(uniPropPd);
+        target |= asSet(uniPropPs);
+        target |= asSet(uniPropPe);
+        target |= asSet(uniPropPi);
+        target |= asSet(uniPropPf);
+        target |= asSet(uniPropPo);
+    }
+    else if(ucmp(name, "S") == 0 || ucmp(name, "Symbol") == 0)
+    {
+        target |= asSet(uniPropSm);
+        target |= asSet(uniPropSc);
+        target |= asSet(uniPropSk);
+        target |= asSet(uniPropSo);
+    }
+    else if(ucmp(name, "Z") == 0 || ucmp(name, "Separator") == 0)
+    {
+        target |= asSet(uniPropZs);
+        target |= asSet(uniPropZl);
+        target |= asSet(uniPropZp);
+    }
+    else if(ucmp(name, "C") == 0 || ucmp(name, "Other") == 0)
+    {
+        target |= asSet(uniPropCo);
+        target |= asSet(uniPropLo);
+        target |= asSet(uniPropNo);
+        target |= asSet(uniPropSo);
+        target |= asSet(uniPropPo);
+    }
+    else if(ucmp(name, "graphical") == 0){
+        target |= asSet(uniPropAlphabetic);
+
+        target |= asSet(uniPropMn);
+        target |= asSet(uniPropMc);
+        target |= asSet(uniPropMe);
+
+        target |= asSet(uniPropNd);
+        target |= asSet(uniPropNl);
+        target |= asSet(uniPropNo);
+
+        target |= asSet(uniPropPc);
+        target |= asSet(uniPropPd);
+        target |= asSet(uniPropPs);
+        target |= asSet(uniPropPe);
+        target |= asSet(uniPropPi);
+        target |= asSet(uniPropPf);
+        target |= asSet(uniPropPo);
+
+        target |= asSet(uniPropZs);
+
+        target |= asSet(uniPropSm);
+        target |= asSet(uniPropSc);
+        target |= asSet(uniPropSk);
+        target |= asSet(uniPropSo);
+    }
+    else if(ucmp(name, "any") == 0)
+        target = Set(0,0x110000);
+    else if(ucmp(name, "ascii") == 0)
+        target = Set(0,0x80);
+    else
+        return loadUnicodeSet!propsTab(name, target);
+    return true;
+}
+
+// CTFE-only helper for checking property names at compile-time
+@safe bool isPrettyPropertyName(C)(in C[] name)
+{
+    auto names = [
+        "L", "Letters",
+        "LC", "Cased Letter",
+        "M", "Mark",
+        "N", "Number",
+        "P", "Punctuation",
+        "S", "Symbol",
+        "Z", "Separator"
+        "Graphical",
+        "any",
+        "ascii"
+    ];
+    auto x = find!(x => comparePropertyName(x, name) == 0)(names);
+    return !x.empty;
+}
+
+// ditto, CTFE-only, not optimized
+@safe private static bool findSetName(alias table, C)(in C[] name)
+{
+    return findUnicodeSet!table(name) >= 0;
+}
+
+template SetSearcher(alias table, string kind)
+{
+    /// Run-time checked search.
+    static auto opCall(C)(in C[] name)
+        if(is(C : dchar))
+    {
+        CodepointSet set;
+        if(loadUnicodeSet!table(name, set))
+            return set;
+        throw new Exception("No unicode set for "~kind~" by name "
+            ~name.to!string()~" was found.");
+    }
+    /// Compile-time checked search.
+    static @property auto opDispatch(string name)()
+    {
+        static if(findSetName!table(name))
+        {
+            CodepointSet set;
+            loadUnicodeSet!table(name, set);
+            return set;
+        }
+        else
+            static assert(false, "No unicode set for "~kind~" by name "
+                ~name~" was found.");
+    }
+}
+
+/**
+    A single entry point to lookup Unicode $(CODEPOINT) sets by name or alias of
+    a block, script or general category.
+
+    It uses well defined standard rules of property name lookup.
+    This includes fuzzy matching of names, so that
+    'White_Space', 'white-SpAce' and 'whitespace' are all considered equal
+    and yield the same set of white space $(CHARACTERS).
+*/
+@safe public struct unicode
+{
+    /**
+        Performs the lookup of set of $(CODEPOINTS)
+        with compile-time correctness checking.
+        This short-cut version combines 3 searches:
+        across blocks, scripts, and common binary properties.
+
+        Note that since scripts and blocks overlap the
+        usual trick to disambiguate is used - to get a block use
+        $(D unicode.InBlockName), to search a script
+        use $(D unicode.ScriptName).
+
+        See also $(LREF block), $(LREF script)
+        and (not included in this search) $(LREF hangulSyllableType).
+
+        Example:
+        ---
+        auto ascii = unicode.ASCII;
+        assert(ascii['A']);
+        assert(ascii['~']);
+        assert(!ascii['\u00e0']);
+        // matching is case-insensitive
+        assert(ascii == unicode.ascII);
+        assert(!ascii['à']);
+        // underscores, '-' and whitespace in names are ignored too
+        auto latin = unicode.in_latin1_Supplement;
+        assert(latin['à']);
+        assert(!latin['$']);
+        // BTW Latin 1 Supplement is a block, hence "In" prefix
+        assert(latin == unicode("In Latin 1 Supplement"));
+        import std.exception;
+        // run-time look up throws if no such set is found
+        assert(collectException(unicode("InCyrilliac")));
+        ---
+    */
+
+    static @property auto opDispatch(string name)()
+    {
+        static if(findAny(name))
+            return loadAny(name);
+        else
+            static assert(false, "No unicode set by name "~name~" was found.");
+    }
+
+    /**
+        The same lookup across blocks, scripts, or binary properties,
+        but performed at run-time.
+        This version is provided for cases where $(D name)
+        is not known beforehand; otherwise compile-time
+        checked $(LREF opDispatch) is typically a better choice.
+
+        See the $(S_LINK Unicode properties, table of properties) for available
+        sets.
+    */
+    static auto opCall(C)(in C[] name)
+        if(is(C : dchar))
+    {
+        return loadAny(name);
+    }
+
+    /**
+        Narrows down the search for sets of $(CODEPOINTS) to all Unicode blocks.
+
+        See also $(S_LINK Unicode properties, table of properties).
+
+        Note:
+        Here block names are unambiguous as no scripts are searched
+        and thus to search use simply $(D unicode.block.BlockName) notation.
+
+        See $(S_LINK Unicode properties, table of properties) for available sets.
+
+        Example:
+        ---
+        // use .block for explicitness
+        assert(unicode.block.Greek_and_Coptic == unicode.InGreek_and_Coptic);
+        ---
+    */
+    struct block
+    {
+        mixin SetSearcher!(blocksTab, "block");
+    }
+
+    /**
+        Narrows down the search for sets of $(CODEPOINTS) to all Unicode scripts.
+
+        See the $(S_LINK Unicode properties, table of properties) for available
+        sets.
+
+        Example:
+        ---
+        auto arabicScript = unicode.script.arabic;
+        auto arabicBlock = unicode.block.arabic;
+        // there is an intersection between script and block
+        assert(arabicBlock['؁']);
+        assert(arabicScript['؁']);
+        // but they are different
+        assert(arabicBlock != arabicScript);
+        assert(arabicBlock == unicode.inArabic);
+        assert(arabicScript == unicode.arabic);
+        ---
+    */
+    struct script
+    {
+        mixin SetSearcher!(scriptsTab, "script");
+    }
+
+    /**
+        Fetch a set of $(CODEPOINTS) that have the given hangul syllable type.
+
+        Other non-binary properties (once supported) follow the same
+        notation - $(D unicode.propertyName.propertyValue) for compile-time
+        checked access and $(D unicode.propertyName(propertyValue))
+        for run-time checked one.
+
+        See the $(S_LINK Unicode properties, table of properties) for available
+        sets.
+
+        Example:
+        ---
+        // L here is syllable type not Letter as in unicode.L short-cut
+        auto leadingVowel = unicode.hangulSyllableType("L");
+        // check that some leading vowels are present
+        foreach(vowel; '\u1110'..'\u115F')
+            assert(leadingVowel[vowel]);
+        assert(leadingVowel == unicode.hangulSyllableType.L);
+        ---
+    */
+    struct hangulSyllableType
+    {
+        mixin SetSearcher!(hangulTab, "hangul syllable type");
+    }
+
+private:
+    alias ucmp = comparePropertyName;
+
+    static bool findAny(string name)
+    {
+        return isPrettyPropertyName(name)
+            || findSetName!propsTab(name) || findSetName!scriptsTab(name)
+            || (ucmp(name[0..2],"In") == 0 && findSetName!blocksTab(name[2..$]));
+    }
+
+    static auto loadAny(Set=CodepointSet, C)(in C[] name)
+    {
+        Set set;
+        bool loaded = loadProperty(name, set) || loadUnicodeSet!scriptsTab(name, set)
+            || (ucmp(name[0..2],"In") == 0
+                && loadUnicodeSet!blocksTab(name[2..$], set));
+        if(loaded)
+            return set;
+        throw new Exception("No unicode set by name "~name.to!string()~" was found.");
+    }
+
+    // FIXME: re-disable once the compiler is fixed
+    // Disabled to prevent the mistake of creating instances of this pseudo-struct.
+    //@disable ~this();
+}
+
+unittest
+{
+    auto ascii = unicode.ASCII;
+    assert(ascii['A']);
+    assert(ascii['~']);
+    assert(!ascii['\u00e0']);
+    // matching is case-insensitive
+    assert(ascii == unicode.ascII);
+    assert(!ascii['à']);
+    // underscores, '-' and whitespace in names are ignored too
+    auto latin = unicode.Inlatin1_Supplement;
+    assert(latin['à']);
+    assert(!latin['$']);
+    // BTW Latin 1 Supplement is a block, hence "In" prefix
+    assert(latin == unicode("In Latin 1 Supplement"));
+    import std.exception;
+    // R-T look up throws if no such set is found
+    assert(collectException(unicode("InCyrilliac")));
+
+    assert(unicode.block.Greek_and_Coptic == unicode.InGreek_and_Coptic);
+
+    // L here is explicitly syllable type not "Letter" as in unicode.L
+    auto leadingVowel = unicode.hangulSyllableType("L");
+    // check that some leading vowels are present
+    foreach(vowel; '\u1110'..'\u115F'+1)
+        assert(leadingVowel[vowel]);
+    assert(leadingVowel == unicode.hangulSyllableType.L);
+
+    auto arabicScript = unicode.script.arabic;
+    auto arabicBlock = unicode.block.arabic;
+    // there is an intersection between script and block
+    assert(arabicBlock['؁']);
+    assert(arabicScript['؁']);
+    // but they are different
+    assert(arabicBlock != arabicScript);
+    assert(arabicBlock == unicode.inArabic);
+    assert(arabicScript == unicode.arabic);
+}
+
+unittest
+{
+    assert(unicode("InHebrew") == asSet(blockHebrew));
+    assert(unicode("separator") == (asSet(uniPropZs) | asSet(uniPropZl) | asSet(uniPropZp)));
+    assert(unicode("In-Kharoshthi") == asSet(blockKharoshthi));
+}
+
+enum EMPTY_CASE_TRIE = ushort.max;// from what gen_uni uses internally
+
+// control - '\r'
+enum controlSwitch = `
+    case '\u0000':..case '\u0008':case '\u000E':..case '\u001F':case '\u007F':..case '\u0084':case '\u0086':..case '\u009F': case '\u0009':..case '\u000C': case '\u0085':
+`;
+// TODO: redo the most of hangul stuff algorithmically in case of Graphemes too
+// kill unrolled switches
+
+private static bool isRegionalIndicator(dchar ch)
+{
+    return ch >= '\U0001F1E6' && ch <= '\U0001F1FF';
+}
+
+template genericDecodeGrapheme(bool getValue)
+{
+    static immutable graphemeExtend = asTrie(graphemeExtendTrieEntries);
+    static immutable spacingMark = asTrie(mcTrieEntries);
+    static if(getValue)
+        alias Grapheme Value;
+    else
+        alias void Value;
+
+    Value genericDecodeGrapheme(Input)(ref Input range)
+    {
+        enum GraphemeState {
+            Start,
+            CR,
+            RI,
+            L,
+            V,
+            LVT
+        }
+        static if(getValue)
+            Grapheme grapheme;
+        auto state = GraphemeState.Start;
+        enum eat = q{
+            static if(getValue)
+                grapheme ~= ch;
+            range.popFront();
+        };
+
+        dchar ch;
+        assert(!range.empty, "Attempting to decode grapheme from an empty " ~ Input.stringof);
+        while(!range.empty)
+        {
+            ch = range.front;
+            final switch(state) with(GraphemeState)
+            {
+            case Start:
+                mixin(eat);
+                if(ch == '\r')
+                    state = CR;
+                else if(isRegionalIndicator(ch))
+                    state = RI;
+                else if(isHangL(ch))
+                    state = L;
+                else if(hangLV[ch] || isHangV(ch))
+                    state = V;
+                else if(hangLVT[ch])
+                    state = LVT;
+                else if(isHangT(ch))
+                    state = LVT;
+                else
+                {
+                    switch(ch)
+                    {
+                    mixin(controlSwitch);
+                        goto L_End;
+                    default:
+                        goto L_End_Extend;
+                    }
+                }
+            break;
+            case CR:
+                if(ch == '\n')
+                    mixin(eat);
+                goto L_End_Extend;
+            case RI:
+                if(isRegionalIndicator(ch))
+                    mixin(eat);
+                else
+                    goto L_End_Extend;
+            break;
+            case L:
+                if(isHangL(ch))
+                    mixin(eat);
+                else if(isHangV(ch) || hangLV[ch])
+                {
+                    state = V;
+                    mixin(eat);
+                }
+                else if(hangLVT[ch])
+                {
+                    state = LVT;
+                    mixin(eat);
+                }
+                else
+                    goto L_End_Extend;
+            break;
+            case V:
+                if(isHangV(ch))
+                    mixin(eat);
+                else if(isHangT(ch))
+                {
+                    state = LVT;
+                    mixin(eat);
+                }
+                else
+                    goto L_End_Extend;
+            break;
+            case LVT:
+                if(isHangT(ch))
+                {
+                    mixin(eat);
+                }
+                else
+                    goto L_End_Extend;
+            break;
+            }
+        }
+    L_End_Extend:
+        while(!range.empty)
+        {
+            ch = range.front;
+            // extend & spacing marks
+            if(!graphemeExtend[ch] && !spacingMark[ch])
+                break;
+            mixin(eat);
+        }
+    L_End:
+        static if(getValue)
+            return grapheme;
+    }
+
+}
+
+@trusted:
+public: // Public API continues
+
+/++
+    Returns the length of grapheme cluster starting at $(D index).
+    Both the resulting length and the $(D index) are measured
+    in $(S_LINK Code unit, code units).
+
+    Example:
+    ---
+    // ASCII as usual is 1 code unit, 1 code point etc.
+    assert(graphemeStride("  ", 1) == 1);
+    // A + combing ring above
+    string city = "A\u030Arhus";
+    size_t first = graphemeStride(city, 0);
+    assert(first == 3); //\u030A has 2 UTF-8 code units
+    assert(city[0..first] == "A\u030A");
+    assert(city[first..$] == "rhus");
+    ---
++/
+size_t graphemeStride(C)(in C[] input, size_t index)
+    if(is(C : dchar))
+{
+    auto src = input[index..$];
+    auto n = src.length;
+    genericDecodeGrapheme!(false)(src);
+    return n - src.length;
+}
+
+// for now tested separately see test_grapheme.d
+unittest
+{
+    assert(graphemeStride("  ", 1) == 1);
+    // A + combing ring above
+    string city = "A\u030Arhus";
+    size_t first = graphemeStride(city, 0);
+    assert(first == 3); //\u030A has 2 UTF-8 code units
+    assert(city[0..first] == "A\u030A");
+    assert(city[first..$] == "rhus");
+}
+
+/++
+    Reads one full grapheme cluster from an input range of dchar $(D inp).
+
+    For examples see the $(LREF Grapheme) below.
+
+    Note:
+    This function modifies $(D inp) and thus $(D inp)
+    must be an L-value.
++/
+Grapheme decodeGrapheme(Input)(ref Input inp)
+    if(isInputRange!Input && is(Unqual!(ElementType!Input) == dchar))
+{
+    return genericDecodeGrapheme!true(inp);
+}
+
+unittest
+{
+    Grapheme gr;
+    string s = " \u0020\u0308 ";
+    gr = decodeGrapheme(s);
+    assert(gr.length == 1 && gr[0] == ' ');
+    gr = decodeGrapheme(s);
+    assert(gr.length == 2 && equalS(gr[0..2], " \u0308"));
+    s = "\u0300\u0308\u1100";
+    assert(equalS(decodeGrapheme(s)[], "\u0300\u0308"));
+    assert(equalS(decodeGrapheme(s)[], "\u1100"));
+    s = "\u11A8\u0308\uAC01";
+    assert(equalS(decodeGrapheme(s)[], "\u11A8\u0308"));
+    assert(equalS(decodeGrapheme(s)[], "\uAC01"));
+}
+
+/++
+    $(P A structure designed to effectively pack $(CHARACTERS)
+    of a $(CLUSTER).
+    )
+
+    $(P $(D Grapheme) has value semantics so 2 copies of a $(D Grapheme)
+    always refer to distinct objects. In most actual scenarios a $(D Grapheme)
+    fits on the stack and avoids memory allocation overhead for all but quite
+    long clusters.
+    )
+
+    Example:
+    ---
+    import std.algorithm;
+    string bold = "ku\u0308hn";
+
+    // note that decodeGrapheme takes parameter by ref
+    // slicing a grapheme yields a range of dchar
+    assert(decodeGrapheme(bold)[].equal("k"));
+
+    // the next grapheme is 2 characters long
+    auto wideOne = decodeGrapheme(bold);
+    assert(wideOne.length == 2);
+    assert(wideOne[].equal("u\u0308"));
+
+    // the usual range manipulation is possible
+    assert(wideOne[].filter!isMark.equal("\u0308"));
+    ---
+    $(P See also $(LREF decodeGrapheme), $(LREF graphemeStride). )
++/
+@trusted struct Grapheme
+{
+public:
+    this(C)(in C[] chars...)
+        if(is(C : dchar))
+    {
+        this ~= chars;
+    }
+
+    this(Input)(Input seq)
+        if(!isDynamicArray!Input
+            && isInputRange!Input && is(ElementType!Input : dchar))
+    {
+        this ~= seq;
+    }
+
+    /// Gets a $(CODEPOINT) at the given index in this cluster.
+    dchar opIndex(size_t index) const  pure nothrow
+    {
+        assert(index < length);
+        return read24(isBig ? ptr_ : small_.ptr, index);
+    }
+
+    /++
+        Writes a $(CODEPOINT) $(D ch) at given index in this cluster.
+
+        Warning:
+        Use of this facility may invalidate grapheme cluster,
+        see also $(LREF Grapheme.valid).
+
+        Example:
+        ---
+        auto g = Grapheme("A\u0302");
+        assert(g[0] == 'A');
+        assert(g.valid);
+        g[1] = '~'; // ASCII tilda is not a combining mark
+        assert(g[1] == '~');
+        assert(!g.valid);
+        ---
+    +/
+    void opIndexAssign(dchar ch, size_t index)  pure nothrow
+    {
+        assert(index < length);
+        write24(isBig ? ptr_ : small_.ptr, ch, index);
+    }
+
+    /++
+        Random-access range over Grapheme's $(CHARACTERS).
+
+        Warning: Invalidates when this Grapheme leaves the scope,
+        attempts to use it then would lead to memory corruption.
+    +/
+    @system auto opSlice(size_t a, size_t b) pure nothrow
+    {
+        return sliceOverIndexed(a, b, &this);
+    }
+
+    /// ditto
+    @system auto opSlice() pure nothrow
+    {
+        return sliceOverIndexed(0, length, &this);
+    }
+
+    /// Grapheme cluster length in $(CODEPOINTS).
+    @property size_t length() const  pure nothrow
+    {
+        return isBig ? len_ : slen_ & 0x7F;
+    }
+
+    /++
+        Append $(CHARACTER) $(D ch) to this grapheme.
+        Warning:
+        Use of this facility may invalidate grapheme cluster,
+        see also $(D valid).
+
+        Example:
+        ---
+        auto g = Grapheme("A");
+        assert(g.valid);
+        g ~= '\u0301';
+        assert(g[].equal("A\u0301"));
+        assert(g.valid);
+        g ~= "B";
+        // not a valid grapheme cluster anymore
+        assert(!g.valid);
+        // still could be useful though
+        assert(g[].equal("A\u0301B"));
+        ---
+        See also $(LREF Grapheme.valid) below.
+    +/
+    ref opOpAssign(string op)(dchar ch)
+    {
+        static if(op == "~")
+        {
+            if(!isBig)
+            {
+                if(slen_ + 1 > small_cap)
+                    convertToBig();// & fallthrough to "big" branch
+                else
+                {
+                    write24(small_.ptr, ch, smallLength);
+                    slen_++;
+                    return this;
+                }
+            }
+
+            assert(isBig);
+            if(len_ + 1 > cap_)
+            {
+                cap_ += grow;
+                ptr_ = cast(ubyte*)enforce(realloc(ptr_, 3*(cap_+1)));
+            }
+            write24(ptr_, ch, len_++);
+            return this;
+        }
+        else
+            static assert(false, "No operation "~op~" defined for Grapheme");
+    }
+
+    /// Append all $(CHARACTERS) from the input range $(D inp) to this Grapheme.
+    ref opOpAssign(string op, Input)(Input inp)
+        if(isInputRange!Input && is(ElementType!Input : dchar))
+    {
+        static if(op == "~")
+        {
+            foreach(dchar ch; inp)
+                this ~= ch;
+            return this;
+        }
+        else
+            static assert(false, "No operation "~op~" defined for Grapheme");
+    }
+
+    /++
+        True if this object contains valid extended grapheme cluster.
+        Decoding primitives of this module always return a valid $(D Grapheme).
+
+        Appending to and direct manipulation of grapheme's $(CHARACTERS) may
+        render it no longer valid. Certain applications may chose to use
+        Grapheme as a "small string" of any $(CODEPOINTS) and ignore this property
+        entirely.
+    +/
+    @property bool valid()() /*const*/
+    {
+        auto r = this[];
+        genericDecodeGrapheme!false(r);
+        return r.length == 0;
+    }
+
+    this(this)
+    {
+        if(isBig)
+        {// dup it
+            auto raw_cap = 3*(cap_+1);
+            auto p = cast(ubyte*)enforce(malloc(raw_cap));
+            p[0..raw_cap] = ptr_[0..raw_cap];
+            ptr_ = p;
+        }
+    }
+
+    ~this()
+    {
+        if(isBig)
+        {
+            free(ptr_);
+        }
+    }
+
+
+private:
+    enum small_bytes = ((ubyte*).sizeof+3*size_t.sizeof-1);
+    // "out of the blue" grow rate, needs testing
+    // (though graphemes are typically small < 9)
+    enum grow = 20;
+    enum small_cap = small_bytes/3;
+    enum small_flag = 0x80, small_mask = 0x7F;
+    // 16 bytes in 32bits, should be enough for the majority of cases
+    union
+    {
+        struct
+        {
+            ubyte* ptr_;
+            size_t cap_;
+            size_t len_;
+            size_t padding_;
+        }
+        struct
+        {
+            ubyte[small_bytes] small_;
+            ubyte slen_;
+        }
+    }
+
+    void convertToBig()
+    {
+        size_t k = smallLength;
+        ubyte* p = cast(ubyte*)enforce(malloc(3*(grow+1)));
+        for(int i=0; i<k; i++)
+            write24(p, read24(small_.ptr, i), i);
+        // now we can overwrite small array data
+        ptr_ = p;
+        len_ = slen_;
+        assert(grow > len_);
+        cap_ = grow;
+        setBig();
+    }
+
+    void setBig(){ slen_ |= small_flag; }
+
+    @property size_t smallLength() pure nothrow
+    {
+        return slen_ & small_mask;
+    }
+    @property ubyte isBig() const  pure nothrow
+    {
+        return slen_ & small_flag;
+    }
+}
+
+static assert(Grapheme.sizeof == size_t.sizeof*4);
+
+// verify the example
+unittest
+{
+    import std.algorithm;
+    string bold = "ku\u0308hn";
+
+    // note that decodeGrapheme takes parameter by ref
+    auto first = decodeGrapheme(bold);
+
+    assert(first.length == 1);
+    assert(first[0] == 'k');
+
+    // the next grapheme is 2 characters long
+    auto wideOne = decodeGrapheme(bold);
+    // slicing a grapheme yields a random-access range of dchar
+    assert(wideOne[].equalS("u\u0308"));
+    assert(wideOne.length == 2);
+    static assert(isRandomAccessRange!(typeof(wideOne[])));
+
+    // all of the usual range manipulation is possible
+    assert(wideOne[].filter!isMark().equalS("\u0308"));
+
+    auto g = Grapheme("A");
+    assert(g.valid);
+    g ~= '\u0301';
+    assert(g[].equalS("A\u0301"));
+    assert(g.valid);
+    g ~= "B";
+    // not a valid grapheme cluster anymore
+    assert(!g.valid);
+    // still could be useful though
+    assert(g[].equalS("A\u0301B"));
+}
+
+unittest
+{
+    auto g = Grapheme("A\u0302");
+    assert(g[0] == 'A');
+    assert(g.valid);
+    g[1] = '~'; // ASCII tilda is not a combining mark
+    assert(g[1] == '~');
+    assert(!g.valid);
+}
+
+unittest
+{
+    // not valid clusters (but it just a test)
+    auto g  = Grapheme('a', 'b', 'c', 'd', 'e');
+    assert(g[0] == 'a');
+    assert(g[1] == 'b');
+    assert(g[2] == 'c');
+    assert(g[3] == 'd');
+    assert(g[4] == 'e');
+    g[3] = 'Й';
+    assert(g[2] == 'c');
+    assert(g[3] == 'Й', text(g[3], " vs ", 'Й'));
+    assert(g[4] == 'e');
+    assert(!g.valid);
+
+    g ~= 'ц';
+    g ~= '~';
+    assert(g[0] == 'a');
+    assert(g[1] == 'b');
+    assert(g[2] == 'c');
+    assert(g[3] == 'Й');
+    assert(g[4] == 'e');
+    assert(g[5] == 'ц');
+    assert(g[6] == '~');
+    assert(!g.valid);
+
+    Grapheme copy = g;
+    copy[0] = 'X';
+    copy[1] = '-';
+    assert(g[0] == 'a' && copy[0] == 'X');
+    assert(g[1] == 'b' && copy[1] == '-');
+    assert(equalS(g[2..g.length], copy[2..copy.length]));
+    copy = Grapheme("АБВГДЕЁЖЗИКЛМ");
+    assert(equalS(copy[0..8], "АБВГДЕЁЖ"), text(copy[0..8]));
+    copy ~= "xyz";
+    assert(equalS(copy[13..15], "xy"), text(copy[13..15]));
+    assert(!copy.valid);
+
+    Grapheme h;
+    foreach(dchar v; iota(cast(int)'A', cast(int)'Z'+1).map!"cast(dchar)a"())
+        h ~= v;
+    assert(equalS(h[], iota(cast(int)'A', cast(int)'Z'+1)));
+}
+
+/++
+    $(P Does basic case-insensitive comparison of strings $(D str1) and $(D str2).
+    This function uses simpler comparison rule thus achieving better performance
+    then $(LREF icmp). However keep in mind the warning below.)
+
+    Warning:
+    This function only handles 1:1 $(CODEPOINT) mapping
+    and thus is not sufficient for certain alphabets
+    like German, Greek and few others.
+
+    Example:
+    ---
+    assert(sicmp("Август", "авгусТ") == 0);
+    // Greek also works as long as there is no 1:M mapping in sight
+    assert(sicmp("ΌΎ", "όύ") == 0);
+    // things like the following won't get matched as equal
+    // Greek small letter iota with dialytika and tonos
+    assert(sicmp("ΐ", "\u03B9\u0308\u0301" != 0);
+
+    // while icmp has no problem with that
+    assert(icmp("ΐ", "\u03B9\u0308\u0301" == 0);
+    assert(icmp("ΌΎ", "όύ") == 0);
+    ---
++/
+int sicmp(C1, C2)(const(C1)[] str1, const(C2)[] str2)
+{
+    static immutable simpleCaseTrie = asTrie(simpleCaseTrieEntries);
+    static immutable sTable = simpleCaseTable;
+    size_t ridx=0;
+    foreach(dchar lhs; str1)
+    {
+        if(ridx == str2.length)
+            return 1;
+        dchar rhs = std.utf.decode(str2, ridx);
+        int diff = lhs - rhs;
+        if(!diff)
+            continue;
+        size_t idx = simpleCaseTrie[lhs];
+        size_t idx2 = simpleCaseTrie[rhs];
+        // simpleCaseTrie is packed index table
+        if(idx != EMPTY_CASE_TRIE)
+        {
+            if(idx2 != EMPTY_CASE_TRIE)
+            {// both cased chars
+                // adjust idx --> start of bucket
+                idx = idx - sTable[idx].n;
+                idx2 = idx2 - sTable[idx2].n;
+                if(idx == idx2)// one bucket, equivalent chars
+                    continue;
+                else//  not the same bucket
+                    diff = sTable[idx].ch - sTable[idx2].ch;
+            }
+            else
+                diff = sTable[idx - sTable[idx].n].ch - rhs;
+        }
+        else if(idx2 != EMPTY_CASE_TRIE)
+        {
+            diff = lhs - sTable[idx2 - sTable[idx2].n].ch;
+        }
+        // one of chars is not cased at all
+        return diff;
+    }
+    return ridx == str2.length ? 0 : -1;
+}
+
+private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
+{
+    static immutable fullCaseTrie = asTrie(fullCaseTrieEntries);
+    static immutable fTable = fullCaseTable;
+    size_t idx = fullCaseTrie[lhs];
+    // fullCaseTrie is packed index table
+    if(idx == EMPTY_CASE_TRIE)
+        return lhs;
+    size_t start = idx - fTable[idx].n;
+    size_t end = fTable[idx].size + start;
+    assert(fTable[start].entry_len == 1);
+    for(idx=start; idx<end; idx++)
+    {
+        if(fTable[idx].entry_len == 1)
+        {
+            if(fTable[idx].ch == rhs)
+            {
+                return 0;
+            }
+        }
+        else
+        {// OK it's a long chunk, like 'ss' for German
+            dstring seq = fTable[idx].seq;
+            if(rhs == seq[0]
+                && rtail.skipOver(seq[1..$]))
+            {
+                // note that this path modifies rtail
+                // iff we managed to get there
+                return 0;
+            }
+        }
+    }
+    return fTable[start].ch; // new remapped character for accurate diffs
+}
+
+/++
+    $(P Does case insensitive comparison of $(D str1) and $(D str2).
+    Follows the rules of full case-folding mapping.
+    This includes matching as equal german ß with "ss" and
+    other 1:M $(CODEPOINT) mappings unlike $(LREF sicmp).
+    The cost of $(D icmp) being pedantically correct is
+    slightly worse performance.
+    )
+
+    Example:
+    ---
+    assert(icmp("Rußland", "Russland") == 0);
+    assert(icmp("ᾩ -> \u1F70\u03B9", "\u1F61\u03B9 -> ᾲ") == 0);
+    ---
++/
+int icmp(S1, S2)(S1 str1, S2 str2)
+    if(isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar)
+    && isForwardRange!S2 && is(Unqual!(ElementType!S2) == dchar))
+{
+    for(;;)
+    {
+        if(str1.empty)
+            return str2.empty ? 0 : -1;
+        dchar lhs = str1.front;
+        if(str2.empty)
+            return 1;
+        dchar rhs = str2.front;
+        str1.popFront();
+        str2.popFront();
+        int diff = lhs - rhs;
+        if(!diff)
+            continue;
+        // first try to match lhs to <rhs,right-tail> sequence
+        int cmpLR = fullCasedCmp(lhs, rhs, str2);
+        if(!cmpLR)
+            continue;
+        // then rhs to <lhs,left-tail> sequence
+        int cmpRL = fullCasedCmp(rhs, lhs, str1);
+        if(!cmpRL)
+            continue;
+        // cmpXX contain remapped codepoints
+        // to obtain stable ordering of icmp
+        diff = cmpLR - cmpRL;
+        return diff;
+    }
+}
+
+unittest
+{
+    assertCTFEable!(
+    {
+    foreach(cfunc; TypeTuple!(icmp, sicmp))
+    {
+        foreach(S1; TypeTuple!(string, wstring, dstring))
+        foreach(S2; TypeTuple!(string, wstring, dstring))
+        {
+            assert(cfunc("".to!S1(), "".to!S2()) == 0);
+            assert(cfunc("A".to!S1(), "".to!S2()) > 0);
+            assert(cfunc("".to!S1(), "0".to!S2()) < 0);
+            assert(cfunc("abc".to!S1(), "abc".to!S2()) == 0);
+            assert(cfunc("abcd".to!S1(), "abc".to!S2()) > 0);
+            assert(cfunc("abc".to!S1(), "abcd".to!S2()) < 0);
+            assert(cfunc("Abc".to!S1(), "aBc".to!S2()) == 0);
+            assert(cfunc("авГуст".to!S1(), "АВгУСТ".to!S2()) == 0);
+            // Check example:
+            assert(cfunc("Август".to!S1(), "авгусТ".to!S2()) == 0);
+            assert(cfunc("ΌΎ".to!S1(), "όύ".to!S2()) == 0);
+        }
+        // check that the order is properly agnostic to the case
+        auto strs = [ "Apple", "ORANGE",  "orAcle", "amp", "banana"];
+        sort!((a,b) => cfunc(a,b) < 0)(strs);
+        assert(strs == ["amp", "Apple",  "banana", "orAcle", "ORANGE"]);
+    }
+    assert(icmp("ßb", "ssa") > 0);
+    // Check example:
+    assert(icmp("Russland", "Rußland") == 0);
+    assert(icmp("ᾩ -> \u1F70\u03B9", "\u1F61\u03B9 -> ᾲ") == 0);
+    assert(icmp("ΐ"w, "\u03B9\u0308\u0301") == 0);
+    assert(sicmp("ΐ", "\u03B9\u0308\u0301") != 0);
+    });
+}
+
+/++
+    $(P Returns the $(S_LINK Combining class, combining class) of $(D ch).)
+
+    Example:
+    ---
+    // shorten the code
+    alias CC = combiningClass;
+
+    // combining tilda
+    assert(CC('\u0303') == 230);
+    // combining ring below
+    assert(CC('\u0325') == 220);
+    // the simple consequence is that  "tilda" should be
+    // placed after a "ring below" in a sequence
+    ---
++/
+ubyte combiningClass(dchar ch)
+{
+    static immutable combiningClassTrie = asTrie(combiningClassTrieEntries);
+    return combiningClassTrie[ch];
+}
+
+unittest
+{
+    foreach(ch; 0..0x80)
+        assert(combiningClass(ch) == 0);
+    assert(combiningClass('\u05BD') == 22);
+    assert(combiningClass('\u0300') == 230);
+    assert(combiningClass('\u0317') == 220);
+    assert(combiningClass('\u1939') == 222);
+}
+
+/// Unicode character decomposition type.
+enum UnicodeDecomposition {
+    /// Canonical decomposition. The result is canonically equivalent sequence.
+    Canonical,
+    /**
+         Compatibility decomposition. The result is compatibility equivalent sequence.
+         Note: Compatibility decomposition is a $(B lossy) conversion,
+         typically suitable only for fuzzy matching and internal processing.
+    */
+    Compatibility
+};
+
+/**
+    Shorthand aliases for character decomposition type, passed as a
+    template parameter to $(LREF decompose).
+*/
+enum {
+    Canonical = UnicodeDecomposition.Canonical,
+    Compatibility = UnicodeDecomposition.Compatibility
+};
+
+/++
+    Try to canonically compose 2 $(CHARACTERS).
+    Returns the composed $(CHARACTER) if they do compose and dchar.init otherwise.
+
+    The assumption is that $(D first) comes before $(D second) in the original text,
+    usually meaning that the first is a starter.
+
+    Note: Hangul syllables are not covered by this function.
+    See $(D composeJamo) below.
+
+    Example:
+    ---
+    assert(compose('A','\u0308') == '\u00C4');
+    assert(compose('A', 'B') == dchar.init);
+    assert(compose('C', '\u0301') == '\u0106');
+    // note that the starter is the first one
+    // thus the following doesn't compose
+    assert(compose('\u0308', 'A') == dchar.init);
+    ---
++/
+public dchar compose(dchar first, dchar second)
+{
+    static immutable compositionJumpTrie = asTrie(compositionJumpTrieEntries);
+    size_t packed = compositionJumpTrie[first];
+    if(packed == ushort.max)
+        return dchar.init;
+    // unpack offset and length
+    size_t idx = packed & composeIdxMask, cnt = packed >> composeCntShift;
+    // TODO: optimize this micro binary search (no more then 4-5 steps)
+    auto r = compositionTable[idx..idx+cnt].map!"a.rhs"().assumeSorted();
+    auto target = r.lowerBound(second).length;
+    if(target == cnt)
+        return dchar.init;
+    auto entry = compositionTable[idx+target];
+    if(entry.rhs != second)
+        return dchar.init;
+    return entry.composed;
+}
+
+/++
+    Returns a full $(S_LINK Canonical decomposition, Canonical)
+    (by default) or $(S_LINK Compatibility decomposition, Compatibility)
+    decomposition of $(CHARACTER) $(D ch).
+    If no decomposition is available returns a $(LREF Grapheme)
+    with the $(D ch) itself.
+
+    Note:
+    This function also decomposes hangul syllables
+    as prescribed by the standard.
+    See also $(LREF decomposeHangul) for a restricted version
+    that takes into account only hangul syllables  but
+    no other decompositions.
+
+    Example:
+    ---
+    import std.algorithm;
+    assert(decompose('Ĉ')[].equal("C\u0302"));
+    assert(decompose('D')[].equal("D"));
+    assert(decompose('\uD4DC')[].equal("\u1111\u1171\u11B7"));
+    assert(decompose!Compatibility('¹').equal("1"));
+    ---
++/
+public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch)
+{
+    static if(decompType == Canonical)
+    {
+        static immutable table = decompCanonTable;
+        static immutable mapping = asTrie(canonMappingTrieEntries);
+    }
+    else static if(decompType == Compatibility)
+    {
+        static immutable table = decompCompatTable;
+        static immutable mapping = asTrie(compatMappingTrieEntries);
+    }
+    ushort idx = mapping[ch];
+    if(!idx) // not found, check hangul arithmetic decomposition
+        return decomposeHangul(ch);
+    auto decomp = table[idx..$].until(0);
+    return Grapheme(decomp);
+}
+
+unittest
+{
+    // verify examples
+    assert(compose('A','\u0308') == '\u00C4');
+    assert(compose('A', 'B') == dchar.init);
+    assert(compose('C', '\u0301') == '\u0106');
+    // note that the starter is the first one
+    // thus the following doesn't compose
+    assert(compose('\u0308', 'A') == dchar.init);
+
+    import std.algorithm;
+    assert(decompose('Ĉ')[].equalS("C\u0302"));
+    assert(decompose('D')[].equalS("D"));
+    assert(decompose('\uD4DC')[].equalS("\u1111\u1171\u11B7"));
+    assert(decompose!Compatibility('¹')[].equalS("1"));
+}
+
+//----------------------------------------------------------------------------
+// Hangul specific composition/decomposition
+enum jamoSBase = 0xAC00;
+enum jamoLBase = 0x1100;
+enum jamoVBase = 0x1161;
+enum jamoTBase = 0x11A7;
+enum jamoLCount = 19, jamoVCount = 21, jamoTCount = 28;
+enum jamoNCount = jamoVCount * jamoTCount;
+enum jamoSCount = jamoLCount * jamoNCount;
+
+// Tests if $(D ch) is a Hangul leading consonant jamo.
+bool isJamoL(dchar ch)
+{
+    // first cmp rejects ~ 1M code points above leading jamo range
+    return ch < jamoLBase+jamoLCount && ch >= jamoLBase;
+}
+
+// Tests if $(D ch) is a Hangul vowel jamo.
+bool isJamoT(dchar ch)
+{
+    // first cmp rejects ~ 1M code points above trailing jamo range
+    // Note: ch == jamoTBase doesn't indicate trailing jamo (TIndex must be > 0)
+    return ch < jamoTBase+jamoTCount && ch > jamoTBase;
+}
+
+// Tests if $(D ch) is a Hangul trailnig consonant jamo.
+bool isJamoV(dchar ch)
+{
+    // first cmp rejects ~ 1M code points above vowel range
+    return  ch < jamoVBase+jamoVCount && ch >= jamoVBase;
+}
+
+int hangulSyllableIndex(dchar ch)
+{
+    int idxS = cast(int)ch - jamoSBase;
+    return idxS >= 0 && idxS < jamoSCount ? idxS : -1;
+}
+
+// internal helper: compose hangul syllables leaving dchar.init in holes
+void hangulRecompose(dchar[] seq)
+{
+    for(size_t idx = 0; idx + 1 < seq.length; )
+    {
+        if(isJamoL(seq[idx]) && isJamoV(seq[idx+1]))
+        {
+            int indexL = seq[idx] - jamoLBase;
+            int indexV = seq[idx+1] - jamoVBase;
+            int indexLV = indexL * jamoNCount + indexV * jamoTCount;
+            if(idx + 2 < seq.length && isJamoT(seq[idx+2]))
+            {
+                seq[idx] = jamoSBase + indexLV + seq[idx+2] - jamoTBase;
+                seq[idx+1] = dchar.init;
+                seq[idx+2] = dchar.init;
+                idx += 3;
+            }
+            else
+            {
+                seq[idx] = jamoSBase + indexLV;
+                seq[idx+1] = dchar.init;
+                idx += 2;
+            }
+        }
+        else
+            idx++;
+    }
+}
+
+//----------------------------------------------------------------------------
+public:
+
+/**
+    Decomposes a Hangul syllable. If $(D ch) is not a composed syllable
+    then this function returns $(LREF Grapheme) containing only $(D ch) as is.
+
+    Example:
+    ---
+    import std.algorithm;
+    assert(decomposeHangul('\uD4DB')[].equal("\u1111\u1171\u11B6"));
+    ---
+*/
+Grapheme decomposeHangul(dchar ch)
+{
+    int idxS = cast(int)ch - jamoSBase;
+    if(idxS < 0 || idxS >= jamoSCount) return Grapheme(ch);
+    int idxL = idxS / jamoNCount;
+    int idxV = (idxS % jamoNCount) / jamoTCount;
+    int idxT = idxS % jamoTCount;
+
+    int partL = jamoLBase + idxL;
+    int partV = jamoVBase + idxV;
+    if(idxT > 0) // there is a trailling consonant (T); <L,V,T> decomposition
+        return Grapheme(partL, partV, jamoTBase + idxT);
+    else // <L, V> decomposition
+        return Grapheme(partL, partV);
+}
+
+/++
+    Try to compose hangul syllable out of a leading consonant ($(D lead)),
+    a $(D vowel) and optional $(D trailing) consonant jamos.
+
+    On success returns the composed LV or LVT hangul syllable.
+
+    If any of $(D lead) and $(D vowel) are not a valid hangul jamo
+    of the respective $(CHARACTER) class returns dchar.init.
+
+    Example:
+    ---
+    assert(composeJamo('\u1111', '\u1171', '\u11B6') == '\uD4DB');
+    // leaving out T-vowel, or passing any codepoint
+    // that is not trailing consonant composes an LV-syllable
+    assert(composeJamo('\u1111', '\u1171') == '\uD4CC');
+    assert(composeJamo('\u1111', '\u1171', ' ') == '\uD4CC');
+    assert(composeJamo('\u1111', 'A') == dchar.init);
+    assert(composeJamo('A', '\u1171') == dchar.init);
+    ---
++/
+dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init)
+{
+    if(!isJamoL(lead))
+        return dchar.init;
+    int indexL = lead - jamoLBase;
+    if(!isJamoV(vowel))
+        return dchar.init;
+    int indexV = vowel - jamoVBase;
+    int indexLV = indexL * jamoNCount + indexV * jamoTCount;
+    dchar syllable = jamoSBase + indexLV;
+    return isJamoT(trailing) ? syllable + (trailing - jamoTBase) : syllable;
+}
+
+unittest
+{
+    static void testDecomp(UnicodeDecomposition T)(dchar ch, string r)
+    {
+        Grapheme g = decompose!T(ch);
+        assert(equalS(g[], r), text(g[], " vs ", r));
+    }
+    testDecomp!Canonical('\u1FF4', "\u03C9\u0301\u0345");
+    testDecomp!Canonical('\uF907', "\u9F9C");
+    testDecomp!Compatibility('\u33FF', "\u0067\u0061\u006C");
+    testDecomp!Compatibility('\uA7F9', "\u0153");
+
+    // check examples
+    assert(decomposeHangul('\uD4DB')[].equalS("\u1111\u1171\u11B6"));
+    assert(composeJamo('\u1111', '\u1171', '\u11B6') == '\uD4DB');
+    assert(composeJamo('\u1111', '\u1171') == '\uD4CC'); // leave out T-vowel
+    assert(composeJamo('\u1111', '\u1171', ' ') == '\uD4CC');
+    assert(composeJamo('\u1111', 'A') == dchar.init);
+    assert(composeJamo('A', '\u1171') == dchar.init);
+}
+
+/**
+    Enumeration type for normalization forms,
+    passed as template parameter for functions like $(LREF normalize).
+*/
+enum NormalizationForm {
+    NFC,
+    NFD,
+    NFKC,
+    NFKD
+}
+
+
+enum {
+    /**
+        Shorthand aliases from values indicating normalization forms.
+    */
+    NFC = NormalizationForm.NFC,
+    ///ditto
+    NFD = NormalizationForm.NFD,
+    ///ditto
+    NFKC = NormalizationForm.NFKC,
+    ///ditto
+    NFKD = NormalizationForm.NFKD
+};
+
+/++
+    Returns $(D input) string normalized to the chosen form.
+    Form C is used by default.
+
+    For more information on normalization forms see
+    the $(S_LINK Normalization, normalization section).
+
+    Note:
+    In cases where the string in question is already normalized,
+    it is returned unmodified and no memory allocation happens.
+
+    Example:
+    ---
+    // any encoding works
+    wstring greet = "Hello world";
+    assert(normalize(greet) is greet); // the same exact slice
+
+    // An example of a character with all 4 forms being different:
+    // Greek upsilon with acute and hook symbol (code point 0x03D3)
+    assert(normalize!NFC("ϓ") == "\u03D3");
+    assert(normalize!NFD("ϓ") == "\u03D2\u0301");
+    assert(normalize!NFKC("ϓ") == "\u038E");
+    assert(normalize!NFKD("ϓ") == "\u03A5\u0301");
+    ---
++/
+inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
+{
+    auto anchors = splitNormalized!norm(input);
+    if(anchors[0] == input.length && anchors[1] == input.length)
+        return input;
+    dchar[] decomposed;
+    decomposed.reserve(31);
+    ubyte[] ccc;
+    ccc.reserve(31);
+    auto app = appender!(C[])();
+    do
+    {
+        app.put(input[0..anchors[0]]);
+        foreach(dchar ch; input[anchors[0]..anchors[1]])
+            static if(norm == NFD || norm == NFC)
+            {
+                foreach(dchar c; decompose!Canonical(ch)[])
+                    decomposed ~= c;
+            }
+            else // NFKD & NFKC
+            {
+                foreach(dchar c; decompose!Compatibility(ch)[])
+                    decomposed ~= c;
+            }
+        ccc.length = decomposed.length;
+        size_t firstNonStable = 0;
+        ubyte lastClazz = 0;
+
+        foreach(idx, dchar ch; decomposed)
+        {
+            auto clazz = combiningClass(ch);
+            ccc[idx] = clazz;
+            if(clazz == 0 && lastClazz != 0)
+            {
+                // found a stable code point after unstable ones
+                sort!("a[0] < b[0]", SwapStrategy.stable)
+                    (zip(ccc[firstNonStable..idx], decomposed[firstNonStable..idx]));
+                firstNonStable = decomposed.length;
+            }
+            else if(clazz != 0 && lastClazz == 0)
+            {
+                // found first unstable code point after stable ones
+                firstNonStable = idx;
+            }
+            lastClazz = clazz;
+        }
+        sort!("a[0] < b[0]", SwapStrategy.stable)
+            (zip(ccc[firstNonStable..$], decomposed[firstNonStable..$]));
+        static if(norm == NFC || norm == NFKC)
+        {
+            size_t idx = 0;
+            auto first = countUntil(ccc, 0);
+            if(first >= 0) // no starters?? no recomposition
+            {
+                for(;;)
+                {
+                    auto second = recompose(first, decomposed, ccc);
+                    if(second == decomposed.length)
+                        break;
+                    first = second;
+                }
+                // 2nd pass for hangul syllables
+                hangulRecompose(decomposed);
+            }
+        }
+        static if(norm == NFD || norm == NFKD)
+            app.put(decomposed);
+        else
+        {
+            auto clean = remove!("a == dchar.init", SwapStrategy.stable)(decomposed);
+            app.put(decomposed[0 .. clean.length]);
+        }
+        // reset variables
+        decomposed.length = 0;
+        decomposed.assumeSafeAppend();
+        ccc.length = 0;
+        ccc.assumeSafeAppend();
+        input = input[anchors[1]..$];
+        // and move on
+        anchors = splitNormalized!norm(input);
+    }while(anchors[0] != input.length);
+    app.put(input[0..anchors[0]]);
+    return cast(inout(C)[])app.data;
+}
+
+unittest
+{
+    assert(normalize!NFD("abc\uF904def") == "abc\u6ED1def", text(normalize!NFD("abc\uF904def")));
+    assert(normalize!NFKD("2¹⁰") == "210", normalize!NFKD("2¹⁰"));
+    assert(normalize!NFD("Äffin") == "A\u0308ffin");
+
+    // check example
+
+    // any encoding works
+    wstring greet = "Hello world";
+    assert(normalize(greet) is greet); // the same exact slice
+
+    // An example of a character with all 4 forms being different:
+    // Greek upsilon with acute and hook symbol (code point 0x03D3)
+    assert(normalize!NFC("ϓ") == "\u03D3");
+    assert(normalize!NFD("ϓ") == "\u03D2\u0301");
+    assert(normalize!NFKC("ϓ") == "\u038E");
+    assert(normalize!NFKD("ϓ") == "\u03A5\u0301");
+}
+
+// canonically recompose given slice of code points, works in-place and mutates data
+private size_t recompose(size_t start, dchar[] input, ubyte[] ccc)
+{
+    assert(input.length == ccc.length);
+    int accumCC = -1;// so that it's out of 0..255 range
+    bool foundSolidStarter = false;
+    // writefln("recomposing %( %04x %)", input);
+    // first one is always a starter thus we start at i == 1
+    size_t i = start+1;
+    for(; ; )
+    {
+        if(i == input.length)
+            break;
+        int curCC = ccc[i];
+        // In any character sequence beginning with a starter S
+        // a character C is blocked from S if and only if there
+        // is some character B between S and C, and either B
+        // is a starter or it has the same or higher combining class as C.
+        //------------------------
+        // Applying to our case:
+        // S is input[0]
+        // accumCC is the maximum CCC of characters between C and S,
+        //     as ccc are sorted
+        // C is input[i]
+
+        if(curCC > accumCC)
+        {
+            dchar comp = compose(input[start], input[i]);
+            if(comp != dchar.init)
+            {
+                input[start] = comp;
+                input[i] = dchar.init;// put a sentinel
+                // current was merged so its CCC shouldn't affect
+                // composing with the next one
+            }
+            else {
+                // if it was a starter then accumCC is now 0, end of loop
+                accumCC = curCC;
+                if(accumCC == 0)
+                    break;
+            }
+        }
+        else{
+            // ditto here
+            accumCC = curCC;
+            if(accumCC == 0)
+                break;
+        }
+        i++;
+    }
+    return i;
+}
+
+// returns tuple of 2 indexes that delimit:
+// normalized text, piece that needs normalization and
+// the rest of input starting with stable code point
+private auto splitNormalized(NormalizationForm norm, C)(const(C)[] input)
+{
+    auto result = input;
+    ubyte lastCC = 0;
+
+    foreach(idx, dchar ch; input)
+    {
+        static if(norm == NFC)
+            if(ch < 0x0300)
+            {
+                lastCC = 0;
+                continue;
+            }
+        ubyte CC = combiningClass(ch);
+        if(lastCC > CC && CC != 0)
+        {
+            return seekStable!norm(idx, input);
+        }
+
+        if(notAllowedIn!norm(ch))
+        {
+           return seekStable!norm(idx, input);
+        }
+        lastCC = CC;
+    }
+    return tuple(input.length, input.length);
+}
+
+private auto seekStable(NormalizationForm norm, C)(size_t idx, in C[] input)
+{
+    auto br = input[0..idx];
+    size_t region_start = 0;// default
+    for(;;)
+    {
+        if(br.empty)// start is 0
+            break;
+        dchar ch = br.back;
+        if(combiningClass(ch) == 0 && allowedIn!norm(ch))
+        {
+            region_start = br.length - std.utf.codeLength!C(ch);
+            break;
+        }
+        br.popFront();
+    }
+    ///@@@BUG@@@ can't use find: " find is a nested function and can't be used..."
+    size_t region_end=input.length;// end is $ by default
+    foreach(i, dchar ch; input[idx..$])
+    {
+        if(combiningClass(ch) == 0 && allowedIn!norm(ch))
+        {
+            region_end = i+idx;
+            break;
+        }
+    }
+    // writeln("Region to normalize: ", input[region_start..region_end]);
+    return tuple(region_start, region_end);
+}
+
+/**
+    Tests if dchar $(D ch) is always allowed (Quick_Check=YES) in normalization
+    form $(D norm).
+    ---
+    // e.g. Cyrillic is always allowed, so is ASCII
+    assert(allowedIn!NFC('я'));
+    assert(allowedIn!NFD('я'));
+    assert(allowedIn!NFKC('я'));
+    assert(allowedIn!NFKD('я'));
+    assert(allowedIn!NFC('Z'));
+    ---
+*/
+public bool allowedIn(NormalizationForm norm)(dchar ch)
+{
+    return !notAllowedIn!norm(ch);
+}
+
+// not user friendly name but more direct
+private bool notAllowedIn(NormalizationForm norm)(dchar ch)
+{
+    static if(norm == NFC)
+        static immutable qcTrie = asTrie(nfcQCTrieEntries);
+    else static if(norm == NFD)
+        static immutable qcTrie = asTrie(nfdQCTrieEntries);
+    else static if(norm == NFKC)
+        static immutable qcTrie = asTrie(nfkcQCTrieEntries);
+    else static if(norm == NFKD)
+        static immutable qcTrie = asTrie(nfkdQCTrieEntries);
+    else
+        static assert("Unknown normalization form "~norm);
+    return qcTrie[ch];
+}
+
+unittest
+{
+    assert(allowedIn!NFC('я'));
+    assert(allowedIn!NFD('я'));
+    assert(allowedIn!NFKC('я'));
+    assert(allowedIn!NFKD('я'));
+    assert(allowedIn!NFC('Z'));
+}
+
+}
+
+version(std_uni_bootstrap)
+{
+    // old version used for bootstrapping of gen_uni.d that generates
+    // up to date optimal versions of all of isXXX functions
+    @safe pure nothrow public bool isWhite(dchar c)
+    {
+        return std.ascii.isWhite(c) ||
+               c == lineSep || c == paraSep ||
+               c == '\u0085' || c == '\u00A0' || c == '\u1680' || c == '\u180E' ||
+               (c >= '\u2000' && c <= '\u200A') ||
+               c == '\u202F' || c == '\u205F' || c == '\u3000';
+    }
+}
+else
+{
+
+// trusted -> avoid bounds check
+@trusted pure nothrow
+ushort toLowerIndex(dchar c)
+{
+    static immutable trie = asTrie(toLowerIndexTrieEntries);
+    return trie[c];
+}
+
+// trusted -> avoid bounds check
+@trusted pure nothrow
+dchar toLowerTab(size_t idx)
+{
+    static immutable tab = toLowerTable;
+    return tab[idx];
+}
+
+// trusted -> avoid bounds check
+@trusted pure nothrow
+ushort toTitleIndex(dchar c)
+{
+    static immutable trie = asTrie(toTitleIndexTrieEntries);
+    return trie[c];
+}
+
+// trusted -> avoid bounds check
+@trusted pure nothrow
+dchar toTitleTab(size_t idx)
+{
+    static immutable tab = toTitleTable;
+    return tab[idx];
+}
+
+// trusted -> avoid bounds check
+@trusted pure nothrow
+ushort toUpperIndex(dchar c)
+{
+    static immutable trie = asTrie(toUpperIndexTrieEntries);
+    return trie[c];
+}
+
+// trusted -> avoid bounds check
+@trusted pure nothrow
+dchar toUpperTab(size_t idx)
+{
+    static immutable tab = toUpperTable;
+    return tab[idx];
+}
+
+public:
+
+/++
+    Whether or not $(D c) is a Unicode whitespace $(CHARACTER).
+    (general Unicode category: Part of C0(tab, vertical tab, form feed,
+    carriage return, and linefeed characters), Zs, Zl, Zp, and NEL(U+0085))
++/
+@safe pure nothrow
+public bool isWhite(dchar c)
+{
+    return isWhiteGen(c); // call pregenerated binary search
+}
+
+deprecated ("Please use std.uni.isLower instead")
+bool isUniLower(dchar c) @safe pure nothrow
+{
+    return isLower(c);
+}
+
+/++
+    Return whether $(D c) is a Unicode lowercase $(CHARACTER).
++/
+@safe pure nothrow
+bool isLower(dchar c)
+{
+    if(std.ascii.isASCII(c))
+        return std.ascii.isLower(c);
+    static immutable lowerCaseTrie = asTrie(lowerCaseTrieEntries);
+    return lowerCaseTrie[c];
+}
+
+@safe unittest
+{
+    foreach(v; 0..0x80)
+        assert(std.ascii.isLower(v) == isLower(v));
+    assert(isLower('я'));
+    assert(isLower('й'));
+    assert(!isLower('Ж'));
+    // Greek HETA
+    assert(!isLower('\u0370'));
+    assert(isLower('\u0371'));
+    assert(!isLower('\u039C')); // capital MU
+    assert(isLower('\u03B2')); // beta
+    // from extended Greek
+    assert(!isLower('\u1F18'));
+    assert(isLower('\u1F00'));
+    foreach(v; unicode.lowerCase.byCodepoint)
+        assert(isLower(v) && !isUpper(v));
+}
+
+
+deprecated ("Please use std.uni.isUpper instead")
+@safe pure nothrow
+bool isUniUpper(dchar c)
+{
+    return isUpper(c);
+}
+
+/++
+    Return whether $(D c) is a Unicode uppercase $(CHARACTER).
++/
+@safe pure nothrow
+bool isUpper(dchar c)
+{
+    if(std.ascii.isASCII(c))
+        return std.ascii.isUpper(c);
+    static immutable upperCaseTrie = asTrie(upperCaseTrieEntries);
+    return upperCaseTrie[c];
+}
+
+@safe unittest
+{
+    foreach(v; 0..0x80)
+        assert(std.ascii.isLower(v) == isLower(v));
+    assert(!isUpper('й'));
+    assert(isUpper('Ж'));
+    // Greek HETA
+    assert(isUpper('\u0370'));
+    assert(!isUpper('\u0371'));
+    assert(isUpper('\u039C')); // capital MU
+    assert(!isUpper('\u03B2')); // beta
+    // from extended Greek
+    assert(!isUpper('\u1F00'));
+    assert(isUpper('\u1F18'));
+    foreach(v; unicode.upperCase.byCodepoint)
+        assert(isUpper(v) && !isLower(v));
+}
+
+
+deprecated ("Please use std.uni.toLower instead")
+@safe pure nothrow
+dchar toUniLower(dchar c)
+{
+    return toLower(c);
+}
+
+
+/++
+    If $(D c) is a Unicode uppercase $(CHARACTER), then its lowercase equivalent
+    is returned. Otherwise $(D c) is returned.
+
+    Warning: certain alphabets like German and Greek have no 1:1
+    upper-lower mapping. Use overload of toLower which takes full string instead.
++/
+@safe pure nothrow
+dchar toLower()(dchar c)
+{
+     // optimize ASCII case
+    if(c < 0xAA)
+    {
+        if(c < 'A')
+            return c;
+        if(c <= 'Z')
+            return c + 32;
+        return c;
+    }
+    size_t idx = toLowerIndex(c);
+    if(idx < MAX_SIMPLE_LOWER)
+    {
+        return toLowerTab(idx);
+    }
+    return c;
+}
+
+//TODO: Hidden for now, needs better API.
+//Other transforms could use better API as well, but this one is a new primitive.
+@safe pure nothrow
+private dchar toTitlecase(dchar c)
+{
+    // optimize ASCII case
+    if(c < 0xAA)
+    {
+        if(c < 'a')
+            return c;
+        if(c <= 'z')
+            return c - 32;
+        return c;
+    }
+    size_t idx = toTitleIndex(c);
+    if(idx < MAX_SIMPLE_TITLE)
+    {
+        return toTitleTab(idx);
+    }
+    return c;
+}
+
+private alias UpperTriple = TypeTuple!(toUpperIndex, MAX_SIMPLE_UPPER, toUpperTab);
+private alias LowerTriple = TypeTuple!(toLowerIndex, MAX_SIMPLE_LOWER, toLowerTab);
+
+// generic toUpper/toLower on whole string, creates new or returns as is
+private S toCase(alias indexFn, uint maxIdx, alias tableFn, S)(S s) @trusted pure
+    if(isSomeString!S)
+{
+    foreach(i, dchar cOuter; s)
+    {
+        ushort idx = indexFn(cOuter);
+        if(idx == ushort.max)
+            continue;
+        auto result = s[0 .. i].dup;
+        foreach(dchar c; s[i .. $])
+        {
+            idx = indexFn(c);
+            if(idx == ushort.max)
+                result ~= c;
+            else if(idx < maxIdx)
+            {
+                c = tableFn(idx);
+                result ~= c;
+            }
+            else
+            {
+                auto val = tableFn(idx);
+                // unpack length + codepoint
+                uint len = val>>24;
+                result ~= cast(dchar)(val & 0xFF_FFFF);
+                foreach(j; idx+1..idx+len)
+                    result ~= tableFn(j);
+            }
+        }
+        return cast(S) result;
+    }
+    return s;
+}
+
+// TODO: helper, I wish std.utf was more flexible (and stright)
+private size_t encodeTo(char[] buf, size_t idx, dchar c) @trusted pure
+{
+    if (c <= 0x7F)
+    {
+        buf[idx] = cast(char)c;
+        idx++;
+    }
+    else if (c <= 0x7FF)
+    {
+        buf[idx] = cast(char)(0xC0 | (c >> 6));
+        buf[idx+1] = cast(char)(0x80 | (c & 0x3F));
+        idx += 2;
+    }
+    else if (c <= 0xFFFF)
+    {
+        buf[idx] = cast(char)(0xE0 | (c >> 12));
+        buf[idx+1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
+        buf[idx+2] = cast(char)(0x80 | (c & 0x3F));
+        idx += 3;
+    }
+    else if (c <= 0x10FFFF)
+    {
+        buf[idx] = cast(char)(0xF0 | (c >> 18));
+        buf[idx+1] = cast(char)(0x80 | ((c >> 12) & 0x3F));
+        buf[idx+2] = cast(char)(0x80 | ((c >> 6) & 0x3F));
+        buf[idx+3] = cast(char)(0x80 | (c & 0x3F));
+        idx += 4;
+    }
+    else
+        assert(0);
+    return idx;
+}
+
+unittest
+{
+    char[] s = "abcd".dup;
+    size_t i = 0;
+    i = encodeTo(s, i, 'X');
+    assert(s == "Xbcd");
+
+    i = encodeTo(s, i, cast(dchar)'\u00A9');
+    assert(s == "X\xC2\xA9d");
+}
+
+// TODO: helper, I wish std.utf was more flexible (and stright)
+private size_t encodeTo(wchar[] buf, size_t idx, dchar c) @trusted pure
+{
+    import std.utf;
+    if (c <= 0xFFFF)
+    {
+        if (0xD800 <= c && c <= 0xDFFF)
+            throw (new UTFException("Encoding an isolated surrogate code point in UTF-16")).setSequence(c);
+        buf[idx] = cast(wchar)c;
+        idx++;
+    }
+    else if (c <= 0x10FFFF)
+    {
+        buf[idx] = cast(wchar)((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
+        buf[idx+1] = cast(wchar)(((c - 0x10000) & 0x3FF) + 0xDC00);
+        idx += 2;
+    }
+    else
+        assert(0);
+    return idx;
+}
+
+private size_t encodeTo(dchar[] buf, size_t idx, dchar c) @trusted pure
+{
+    buf[idx] = c;
+    idx++;
+    return idx;
+}
+
+private void toCaseInPlace(alias indexFn, uint maxIdx, alias tableFn, C)(ref C[] s) @trusted pure
+    if (is(C == char) || is(C == wchar)  || is(C == dchar))
+{
+    import std.utf;
+    size_t curIdx = 0;
+    size_t destIdx = 0;
+    alias slowToCase = toCaseInPlaceAlloc!(indexFn, maxIdx, tableFn);
+    size_t lastUnchanged = 0;
+    // in-buffer move of bytes to a new start index
+    // the trick is that it may not need to copy at all
+    static size_t moveTo(C[] str, size_t dest, size_t from, size_t to)
+    {
+        // Interestingly we may just bump pointer for a while
+        // then have to copy if a re-cased char was smaller the original
+        // later we may regain pace with char that got bigger
+        // In the end it sometimes flip-flops between the 2 cases below
+        if(dest == from)
+            return to;
+        // got to copy
+        foreach(C c; str[from..to])
+            str[dest++] = c;
+        return dest;
+    }
+    while(curIdx != s.length)
+    {
+        size_t startIdx = curIdx;
+        dchar ch = decode(s, curIdx);
+        // TODO: special case for ASCII
+        auto caseIndex = indexFn(ch);
+        if(caseIndex == ushort.max) // unchanged, skip over
+        {
+            continue;
+        }
+        else if(caseIndex < maxIdx)  // 1:1 codepoint mapping
+        {
+            // previous cased chars had the same length as uncased ones
+            // thus can just adjust pointer
+            destIdx = moveTo(s, destIdx, lastUnchanged, startIdx);
+            lastUnchanged = curIdx;
+            dchar cased = tableFn(caseIndex);
+            auto casedLen = codeLength!C(cased);
+            if(casedLen + destIdx > curIdx) // no place to fit cased char
+            {
+                // switch to slow codepath, where we allocate
+                return slowToCase(s, startIdx, destIdx);
+            }
+            else
+            {
+                destIdx = encodeTo(s, destIdx, cased);
+            }
+        }
+        else  // 1:m codepoint mapping, slow codepath
+        {
+            destIdx = moveTo(s, destIdx, lastUnchanged, startIdx);
+            lastUnchanged = curIdx;
+            return slowToCase(s, startIdx, destIdx);
+        }
+        assert(destIdx <= curIdx);
+    }
+    if(lastUnchanged != s.length)
+    {
+        destIdx = moveTo(s, destIdx, lastUnchanged, s.length);
+    }
+    s = s[0..destIdx];
+}
+
+// helper to precalculate size of case-converted string
+private template toCaseLength(alias indexFn, uint maxIdx, alias tableFn)
+{
+    size_t toCaseLength(C)(in C[] str)
+    {
+        import std.utf;
+        size_t codeLen = 0;
+        size_t lastNonTrivial = 0;
+        size_t curIdx = 0;
+        while(curIdx != str.length)
+        {
+            size_t startIdx = curIdx;
+            dchar ch = decode(str, curIdx);
+            ushort caseIndex = indexFn(ch);
+            if(caseIndex == ushort.max)
+                continue;
+            else if(caseIndex < MAX_SIMPLE_LOWER)
+            {
+                codeLen += startIdx - lastNonTrivial;
+                lastNonTrivial = curIdx;
+                dchar cased = tableFn(caseIndex);
+                codeLen += codeLength!C(cased);
+            }
+            else
+            {
+                codeLen += startIdx - lastNonTrivial;
+                lastNonTrivial = curIdx;
+                auto val = tableFn(caseIndex);
+                auto len = val>>24;
+                dchar cased = val & 0xFF_FFFF;
+                codeLen += codeLength!C(cased);
+                foreach(j; caseIndex+1..caseIndex+len)
+                    codeLen += codeLength!C(tableFn(j));
+            }
+        }
+        if(lastNonTrivial != str.length)
+            codeLen += str.length - lastNonTrivial;
+        return codeLen;
+    }
+}
+
+unittest
+{
+    import std.conv;
+    alias toLowerLength = toCaseLength!(LowerTriple);
+    assert(toLowerLength("abcd") == 4);
+    assert(toLowerLength("аБВгд456") == 10+3);
+}
+
+// slower code path that preallocates and then copies
+// case-converted stuf to the new string
+private template toCaseInPlaceAlloc(alias indexFn, uint maxIdx, alias tableFn)
+{
+    void toCaseInPlaceAlloc(C)(ref C[] s, size_t curIdx,
+        size_t destIdx) @trusted pure
+        if (is(C == char) || is(C == wchar) || is(C == dchar))
+    {
+        import std.utf : decode;
+        alias caseLength = toCaseLength!(indexFn, maxIdx, tableFn);
+        auto trueLength = destIdx + caseLength(s[curIdx..$]);
+        C[] ns = new C[trueLength];
+        ns[0..destIdx] = s[0..destIdx];
+        size_t lastUnchanged = curIdx;
+        while(curIdx != s.length)
+        {
+            size_t startIdx = curIdx; // start of current codepoint
+            dchar ch = decode(s, curIdx);
+            auto caseIndex = indexFn(ch);
+            if(caseIndex == ushort.max) // skip over
+            {
+                continue;
+            }
+            else if(caseIndex < maxIdx)  // 1:1 codepoint mapping
+            {
+                dchar cased = tableFn(caseIndex);
+                auto toCopy = startIdx - lastUnchanged;
+                ns[destIdx .. destIdx+toCopy] = s[lastUnchanged .. startIdx];
+                lastUnchanged = curIdx;
+                destIdx += toCopy;
+                destIdx = encodeTo(ns, destIdx, cased);
+            }
+            else  // 1:m codepoint mapping, slow codepath
+            {
+                auto toCopy = startIdx - lastUnchanged;
+                ns[destIdx .. destIdx+toCopy] = s[lastUnchanged .. startIdx];
+                lastUnchanged = curIdx;
+                destIdx += toCopy;
+                auto val = tableFn(caseIndex);
+                // unpack length + codepoint
+                uint len = val>>24;
+                destIdx = encodeTo(ns, destIdx, cast(dchar)(val & 0xFF_FFFF));
+                foreach(j; caseIndex+1..caseIndex+len)
+                    destIdx = encodeTo(ns, destIdx, tableFn(j));
+            }
+        }
+        if(lastUnchanged != s.length)
+        {
+            auto toCopy = s.length - lastUnchanged;
+            ns[destIdx..destIdx+toCopy] = s[lastUnchanged..$];
+            destIdx += toCopy;
+        }
+        assert(ns.length == destIdx);
+        s = ns;
+    }
+}
+
+/++
+    Converts $(D s) to lowercase (by performing Unicode lowercase mapping) in place.
+    For a few characters string length may increase after the transformation,
+    in such a case the function reallocates exactly once.
+    If $(D s) does not have any uppercase characters, then $(D s) is unaltered.
++/
+void toLowerInPlace(C)(ref C[] s) @trusted pure
+    if (is(C == char) || is(C == wchar) || is(C == dchar))
+{
+    toCaseInPlace!(LowerTriple)(s);
+}
+
+/++
+    Converts $(D s) to uppercase  (by performing Unicode uppercase mapping) in place.
+    For a few characters string length may increase after the transformation,
+    in such a case the function reallocates exactly once.
+    If $(D s) does not have any lowercase characters, then $(D s) is unaltered.
++/
+void toUpperInPlace(C)(ref C[] s) @trusted pure
+    if (is(C == char) || is(C == wchar) || is(C == dchar))
+{
+    toCaseInPlace!(UpperTriple)(s);
+}
+
+/++
+    Returns a string which is identical to $(D s) except that all of its
+    characters are converted to lowercase (by preforming Unicode lowercase mapping).
+    If none of $(D s) characters were affected, then $(D s) itself is returned.
++/
+S toLower(S)(S s) @trusted pure
+    if(isSomeString!S)
+{
+    return toCase!(LowerTriple)(s);
+}
+
+
+@trusted unittest //@@@BUG std.format is not @safe
+{
+    import std.string : format;
+    foreach(ch; 0..0x80)
+        assert(std.ascii.toLower(ch) == toLower(ch));
+    assert(toLower('Я') == 'я');
+    assert(toLower('Δ') == 'δ');
+    foreach(ch; unicode.upperCase.byCodepoint)
+    {
+        dchar low = ch.toLower();
+        assert(low == ch || isLower(low), format("%s -> %s", ch, low));
+    }
+
+    assert(toLower("АЯ") == "ая");
+}
+
+
+unittest
+{
+    string s1 = "FoL";
+    string s2 = toLower(s1);
+    assert(cmp(s2, "fol") == 0, s2);
+    assert(s2 != s1);
+
+    char[] s3 = s1.dup;
+    toLowerInPlace(s3);
+    assert(s3 == s2);
+
+    s1 = "A\u0100B\u0101d";
+    s2 = toLower(s1);
+    s3 = s1.dup;
+    assert(cmp(s2, "a\u0101b\u0101d") == 0);
+    assert(s2 !is s1);
+    toLowerInPlace(s3);
+    assert(s3 == s2);
+
+    s1 = "A\u0460B\u0461d";
+    s2 = toLower(s1);
+    s3 = s1.dup;
+    assert(cmp(s2, "a\u0461b\u0461d") == 0);
+    assert(s2 !is s1);
+    toLowerInPlace(s3);
+    assert(s3 == s2);
+
+    s1 = "\u0130";
+    s2 = toLower(s1);
+    s3 = s1.dup;
+    assert(s2 == "i\u0307");
+    assert(s2 !is s1);
+    toLowerInPlace(s3);
+    assert(s3 == s2);
+
+    // Test on wchar and dchar strings.
+    assert(toLower("Some String"w) == "some string"w);
+    assert(toLower("Some String"d) == "some string"d);
+}
+
+
+deprecated("Please use std.uni.toUpper instead")
+@safe pure nothrow
+dchar toUniUpper(dchar c)
+{
+    return toUpper(c);
+}
+
+/++
+    If $(D c) is a Unicode lowercase $(CHARACTER), then its uppercase equivalent
+    is returned. Otherwise $(D c) is returned.
+
+    Warning:
+    Certain alphabets like German and Greek have no 1:1
+    upper-lower mapping. Use overload of toUpper which takes full string instead.
++/
+@safe pure nothrow
+dchar toUpper()(dchar c)
+{
+    // optimize ASCII case
+    if(c < 0xAA)
+    {
+        if(c < 'a')
+            return c;
+        if(c <= 'z')
+            return c - 32;
+        return c;
+    }
+    size_t idx = toUpperIndex(c);
+    if(idx < MAX_SIMPLE_UPPER)
+    {
+        return toUpperTab(idx);
+    }
+    return c;
+}
+
+@trusted unittest
+{
+    import std.string : format;
+    foreach(ch; 0..0x80)
+        assert(std.ascii.toUpper(ch) == toUpper(ch));
+    assert(toUpper('я') == 'Я');
+    assert(toUpper('δ') == 'Δ');
+    foreach(ch; unicode.lowerCase.byCodepoint)
+    {
+        dchar up = ch.toUpper();
+        assert(up == ch || isUpper(up), format("%s -> %s", ch, up));
+    }
+}
+
+/++
+    Returns a string which is identical to $(D s) except that all of its
+    characters are converted to uppercase (by preforming Unicode uppercase mapping).
+    If none of $(D s) characters were affected, then $(D s) itself is returned.
++/
+S toUpper(S)(S s) @trusted pure
+    if(isSomeString!S)
+{
+    return toCase!(UpperTriple)(s);
+}
+
+unittest
+{
+    string s1 = "FoL";
+    string s2;
+    char[] s3;
+
+    s2 = toUpper(s1);
+    s3 = s1.dup; toUpperInPlace(s3);
+    assert(s3 == s2, s3);
+    assert(cmp(s2, "FOL") == 0);
+    assert(s2 !is s1);
+
+    s1 = "a\u0100B\u0101d";
+    s2 = toUpper(s1);
+    s3 = s1.dup; toUpperInPlace(s3);
+    assert(s3 == s2);
+    assert(cmp(s2, "A\u0100B\u0100D") == 0);
+    assert(s2 !is s1);
+
+    s1 = "a\u0460B\u0461d";
+    s2 = toUpper(s1);
+    s3 = s1.dup; toUpperInPlace(s3);
+    assert(s3 == s2);
+    assert(cmp(s2, "A\u0460B\u0460D") == 0);
+    assert(s2 !is s1);
+}
+
+unittest
+{
+    static void doTest(C)(const(C)[] s, const(C)[] trueUp, const(C)[] trueLow)
+    {
+        import std.string : format;
+        string diff = "src: %( %x %)\nres: %( %x %)\ntru: %( %x %)";
+        auto low = s.toLower() , up = s.toUpper();
+        auto lowInp = s.dup, upInp = s.dup;
+        lowInp.toLowerInPlace();
+        upInp.toUpperInPlace();
+        assert(low == trueLow, format(diff, low, trueLow));
+        assert(up == trueUp,  format(diff, up, trueUp));
+        assert(lowInp == trueLow,
+            format(diff, cast(ubyte[])s, cast(ubyte[])lowInp, cast(ubyte[])trueLow));
+        assert(upInp == trueUp,
+            format(diff, cast(ubyte[])s, cast(ubyte[])upInp, cast(ubyte[])trueUp));
+    }
+    foreach(S; TypeTuple!(dstring, wstring, string))
+    {
+
+        S easy = "123";
+        S good = "abCФеж";
+        S awful = "\u0131\u023f\u2126";
+        S wicked = "\u0130\u1FE2";
+        auto options = [easy, good, awful, wicked];
+        S[] lower = ["123", "abcфеж", "\u0131\u023f\u03c9", "i\u0307\u1Fe2"];
+        S[] upper = ["123", "ABCФЕЖ", "I\u2c7e\u2126", "\u0130\u03A5\u0308\u0300"];
+
+        foreach(val; TypeTuple!(easy, good))
+        {
+            auto e = val.dup;
+            auto g = e;
+            e.toUpperInPlace();
+            assert(e is g);
+            e.toLowerInPlace();
+            assert(e is g);
+        }
+        foreach(i, v; options)
+        {
+            doTest(v, upper[i], lower[i]);
+        }
+
+        // a few combinatorial runs
+        foreach(i; 0..options.length)
+        foreach(j; i..options.length)
+        foreach(k; j..options.length)
+        {
+            auto sample = options[i] ~ options[j] ~ options[k];
+            auto sample2 = options[k] ~ options[j] ~ options[i];
+            doTest(sample, upper[i] ~ upper[j] ~ upper[k],
+                lower[i] ~ lower[j] ~ lower[k]);
+            doTest(sample2, upper[k] ~ upper[j] ~ upper[i],
+                lower[k] ~ lower[j] ~ lower[i]);
+        }
+    }
+}
+
+deprecated("Please use std.uni.isAlpha instead.")
+@safe pure nothrow
+bool isUniAlpha(dchar c)
+{
+    return isAlpha(c);
+}
+
+/++
+    Returns whether $(D c) is a Unicode alphabetic $(CHARACTER)
+    (general Unicode category: Alphabetic).
++/
+@safe pure nothrow
+bool isAlpha(dchar c)
+{
+    // optimization
+    if(c < 0xAA)
+    {
+        size_t x = c - 'A';
+        if(x <= 'Z' - 'A')
+            return true;
+        else
+        {
+            x = c - 'a';
+            if(x <= 'z'-'a')
+                return true;
+        }
+        return false;
+    }
+
+    static immutable alphaTrie = asTrie(alphaTrieEntries);
+    return alphaTrie[c];
+}
+
+@safe unittest
+{
+    auto alpha = unicode("Alphabetic");
+    foreach(ch; alpha.byCodepoint)
+        assert(isAlpha(ch));
+    foreach(ch; 0..0x4000)
+        assert((ch in alpha) == isAlpha(ch));
 }
 
 
 /++
     Returns whether $(D c) is a Unicode mark
     (general Unicode category: Mn, Me, Mc).
-
-    Standards: Unicode 6.0.0.
-  +/
-
-bool isMark(dchar c) @safe pure nothrow
++/
+@safe pure nothrow
+bool isMark(dchar c)
 {
-    static immutable dchar[2][] tableMn =
-    [
-    [ 0x0300, 0x036F ],
-    [ 0x0483, 0x0487 ],
-    [ 0x0591, 0x05BD ],
-    [ 0x05BF, 0x05BF ],
-    [ 0x05C1, 0x05C2 ],
-    [ 0x05C4, 0x05C5 ],
-    [ 0x05C7, 0x05C7 ],
-    [ 0x0610, 0x061A ],
-    [ 0x064B, 0x065F ],
-    [ 0x0670, 0x0670 ],
-    [ 0x06D6, 0x06DC ],
-    [ 0x06DF, 0x06E4 ],
-    [ 0x06E7, 0x06E8 ],
-    [ 0x06EA, 0x06ED ],
-    [ 0x0711, 0x0711 ],
-    [ 0x0730, 0x074A ],
-    [ 0x07A6, 0x07B0 ],
-    [ 0x07EB, 0x07F3 ],
-    [ 0x0816, 0x0819 ],
-    [ 0x081B, 0x0823 ],
-    [ 0x0825, 0x0827 ],
-    [ 0x0829, 0x082D ],
-    [ 0x0859, 0x085B ],
-    [ 0x0900, 0x0902 ],
-    [ 0x093A, 0x093A ],
-    [ 0x093C, 0x093C ],
-    [ 0x0941, 0x0948 ],
-    [ 0x094D, 0x094D ],
-    [ 0x0951, 0x0957 ],
-    [ 0x0962, 0x0963 ],
-    [ 0x0981, 0x0981 ],
-    [ 0x09BC, 0x09BC ],
-    [ 0x09C1, 0x09C4 ],
-    [ 0x09CD, 0x09CD ],
-    [ 0x09E2, 0x09E3 ],
-    [ 0x0A01, 0x0A02 ],
-    [ 0x0A3C, 0x0A3C ],
-    [ 0x0A41, 0x0A42 ],
-    [ 0x0A47, 0x0A48 ],
-    [ 0x0A4B, 0x0A4D ],
-    [ 0x0A51, 0x0A51 ],
-    [ 0x0A70, 0x0A71 ],
-    [ 0x0A75, 0x0A75 ],
-    [ 0x0A81, 0x0A82 ],
-    [ 0x0ABC, 0x0ABC ],
-    [ 0x0AC1, 0x0AC5 ],
-    [ 0x0AC7, 0x0AC8 ],
-    [ 0x0ACD, 0x0ACD ],
-    [ 0x0AE2, 0x0AE3 ],
-    [ 0x0B01, 0x0B01 ],
-    [ 0x0B3C, 0x0B3C ],
-    [ 0x0B3F, 0x0B3F ],
-    [ 0x0B41, 0x0B44 ],
-    [ 0x0B4D, 0x0B4D ],
-    [ 0x0B56, 0x0B56 ],
-    [ 0x0B62, 0x0B63 ],
-    [ 0x0B82, 0x0B82 ],
-    [ 0x0BC0, 0x0BC0 ],
-    [ 0x0BCD, 0x0BCD ],
-    [ 0x0C3E, 0x0C40 ],
-    [ 0x0C46, 0x0C48 ],
-    [ 0x0C4A, 0x0C4D ],
-    [ 0x0C55, 0x0C56 ],
-    [ 0x0C62, 0x0C63 ],
-    [ 0x0CBC, 0x0CBC ],
-    [ 0x0CBF, 0x0CBF ],
-    [ 0x0CC6, 0x0CC6 ],
-    [ 0x0CCC, 0x0CCD ],
-    [ 0x0CE2, 0x0CE3 ],
-    [ 0x0D41, 0x0D44 ],
-    [ 0x0D4D, 0x0D4D ],
-    [ 0x0D62, 0x0D63 ],
-    [ 0x0DCA, 0x0DCA ],
-    [ 0x0DD2, 0x0DD4 ],
-    [ 0x0DD6, 0x0DD6 ],
-    [ 0x0E31, 0x0E31 ],
-    [ 0x0E34, 0x0E3A ],
-    [ 0x0E47, 0x0E4E ],
-    [ 0x0EB1, 0x0EB1 ],
-    [ 0x0EB4, 0x0EB9 ],
-    [ 0x0EBB, 0x0EBC ],
-    [ 0x0EC8, 0x0ECD ],
-    [ 0x0F18, 0x0F19 ],
-    [ 0x0F35, 0x0F35 ],
-    [ 0x0F37, 0x0F37 ],
-    [ 0x0F39, 0x0F39 ],
-    [ 0x0F71, 0x0F7E ],
-    [ 0x0F80, 0x0F84 ],
-    [ 0x0F86, 0x0F87 ],
-    [ 0x0F8D, 0x0F97 ],
-    [ 0x0F99, 0x0FBC ],
-    [ 0x0FC6, 0x0FC6 ],
-    [ 0x102D, 0x1030 ],
-    [ 0x1032, 0x1037 ],
-    [ 0x1039, 0x103A ],
-    [ 0x103D, 0x103E ],
-    [ 0x1058, 0x1059 ],
-    [ 0x105E, 0x1060 ],
-    [ 0x1071, 0x1074 ],
-    [ 0x1082, 0x1082 ],
-    [ 0x1085, 0x1086 ],
-    [ 0x108D, 0x108D ],
-    [ 0x109D, 0x109D ],
-    [ 0x135D, 0x135F ],
-    [ 0x1712, 0x1714 ],
-    [ 0x1732, 0x1734 ],
-    [ 0x1752, 0x1753 ],
-    [ 0x1772, 0x1773 ],
-    [ 0x17B7, 0x17BD ],
-    [ 0x17C6, 0x17C6 ],
-    [ 0x17C9, 0x17D3 ],
-    [ 0x17DD, 0x17DD ],
-    [ 0x180B, 0x180D ],
-    [ 0x18A9, 0x18A9 ],
-    [ 0x1920, 0x1922 ],
-    [ 0x1927, 0x1928 ],
-    [ 0x1932, 0x1932 ],
-    [ 0x1939, 0x193B ],
-    [ 0x1A17, 0x1A18 ],
-    [ 0x1A56, 0x1A56 ],
-    [ 0x1A58, 0x1A5E ],
-    [ 0x1A60, 0x1A60 ],
-    [ 0x1A62, 0x1A62 ],
-    [ 0x1A65, 0x1A6C ],
-    [ 0x1A73, 0x1A7C ],
-    [ 0x1A7F, 0x1A7F ],
-    [ 0x1B00, 0x1B03 ],
-    [ 0x1B34, 0x1B34 ],
-    [ 0x1B36, 0x1B3A ],
-    [ 0x1B3C, 0x1B3C ],
-    [ 0x1B42, 0x1B42 ],
-    [ 0x1B6B, 0x1B73 ],
-    [ 0x1B80, 0x1B81 ],
-    [ 0x1BA2, 0x1BA5 ],
-    [ 0x1BA8, 0x1BA9 ],
-    [ 0x1BE6, 0x1BE6 ],
-    [ 0x1BE8, 0x1BE9 ],
-    [ 0x1BED, 0x1BED ],
-    [ 0x1BEF, 0x1BF1 ],
-    [ 0x1C2C, 0x1C33 ],
-    [ 0x1C36, 0x1C37 ],
-    [ 0x1CD0, 0x1CD2 ],
-    [ 0x1CD4, 0x1CE0 ],
-    [ 0x1CE2, 0x1CE8 ],
-    [ 0x1CED, 0x1CED ],
-    [ 0x1DC0, 0x1DE6 ],
-    [ 0x1DFC, 0x1DFF ],
-    [ 0x20D0, 0x20DC ],
-    [ 0x20E1, 0x20E1 ],
-    [ 0x20E5, 0x20F0 ],
-    [ 0x2CEF, 0x2CF1 ],
-    [ 0x2D7F, 0x2D7F ],
-    [ 0x2DE0, 0x2DFF ],
-    [ 0x302A, 0x302F ],
-    [ 0x3099, 0x309A ],
-    [ 0xA66F, 0xA66F ],
-    [ 0xA67C, 0xA67D ],
-    [ 0xA6F0, 0xA6F1 ],
-    [ 0xA802, 0xA802 ],
-    [ 0xA806, 0xA806 ],
-    [ 0xA80B, 0xA80B ],
-    [ 0xA825, 0xA826 ],
-    [ 0xA8C4, 0xA8C4 ],
-    [ 0xA8E0, 0xA8F1 ],
-    [ 0xA926, 0xA92D ],
-    [ 0xA947, 0xA951 ],
-    [ 0xA980, 0xA982 ],
-    [ 0xA9B3, 0xA9B3 ],
-    [ 0xA9B6, 0xA9B9 ],
-    [ 0xA9BC, 0xA9BC ],
-    [ 0xAA29, 0xAA2E ],
-    [ 0xAA31, 0xAA32 ],
-    [ 0xAA35, 0xAA36 ],
-    [ 0xAA43, 0xAA43 ],
-    [ 0xAA4C, 0xAA4C ],
-    [ 0xAAB0, 0xAAB0 ],
-    [ 0xAAB2, 0xAAB4 ],
-    [ 0xAAB7, 0xAAB8 ],
-    [ 0xAABE, 0xAABF ],
-    [ 0xAAC1, 0xAAC1 ],
-    [ 0xABE5, 0xABE5 ],
-    [ 0xABE8, 0xABE8 ],
-    [ 0xABED, 0xABED ],
-    [ 0xFB1E, 0xFB1E ],
-    [ 0xFE00, 0xFE0F ],
-    [ 0xFE20, 0xFE26 ],
-    [ 0x101FD, 0x101FD ],
-    [ 0x10A01, 0x10A03 ],
-    [ 0x10A05, 0x10A06 ],
-    [ 0x10A0C, 0x10A0F ],
-    [ 0x10A38, 0x10A3A ],
-    [ 0x10A3F, 0x10A3F ],
-    [ 0x11001, 0x11001 ],
-    [ 0x11038, 0x11046 ],
-    [ 0x11080, 0x11081 ],
-    [ 0x110B3, 0x110B6 ],
-    [ 0x110B9, 0x110BA ],
-    [ 0x1D167, 0x1D169 ],
-    [ 0x1D17B, 0x1D182 ],
-    [ 0x1D185, 0x1D18B ],
-    [ 0x1D1AA, 0x1D1AD ],
-    [ 0x1D242, 0x1D244 ],
-    [ 0xE0100, 0xE01EF ],
-    ];
-
-    static immutable dchar[2][] tableMe =
-    [
-    [ 0x0488, 0x0489 ],
-    [ 0x20DD, 0x20E0 ],
-    [ 0x20E2, 0x20E4 ],
-    [ 0xA670, 0xA672 ],
-    ];
-
-    static immutable dchar[2][] tableMc =
-    [
-    [ 0x0903, 0x0903 ],
-    [ 0x093B, 0x093B ],
-    [ 0x093E, 0x0940 ],
-    [ 0x0949, 0x094C ],
-    [ 0x094E, 0x094F ],
-    [ 0x0982, 0x0983 ],
-    [ 0x09BE, 0x09C0 ],
-    [ 0x09C7, 0x09C8 ],
-    [ 0x09CB, 0x09CC ],
-    [ 0x09D7, 0x09D7 ],
-    [ 0x0A03, 0x0A03 ],
-    [ 0x0A3E, 0x0A40 ],
-    [ 0x0A83, 0x0A83 ],
-    [ 0x0ABE, 0x0AC0 ],
-    [ 0x0AC9, 0x0AC9 ],
-    [ 0x0ACB, 0x0ACC ],
-    [ 0x0B02, 0x0B03 ],
-    [ 0x0B3E, 0x0B3E ],
-    [ 0x0B40, 0x0B40 ],
-    [ 0x0B47, 0x0B48 ],
-    [ 0x0B4B, 0x0B4C ],
-    [ 0x0B57, 0x0B57 ],
-    [ 0x0BBE, 0x0BBF ],
-    [ 0x0BC1, 0x0BC2 ],
-    [ 0x0BC6, 0x0BC8 ],
-    [ 0x0BCA, 0x0BCC ],
-    [ 0x0BD7, 0x0BD7 ],
-    [ 0x0C01, 0x0C03 ],
-    [ 0x0C41, 0x0C44 ],
-    [ 0x0C82, 0x0C83 ],
-    [ 0x0CBE, 0x0CBE ],
-    [ 0x0CC0, 0x0CC4 ],
-    [ 0x0CC7, 0x0CC8 ],
-    [ 0x0CCA, 0x0CCB ],
-    [ 0x0CD5, 0x0CD6 ],
-    [ 0x0D02, 0x0D03 ],
-    [ 0x0D3E, 0x0D40 ],
-    [ 0x0D46, 0x0D48 ],
-    [ 0x0D4A, 0x0D4C ],
-    [ 0x0D57, 0x0D57 ],
-    [ 0x0D82, 0x0D83 ],
-    [ 0x0DCF, 0x0DD1 ],
-    [ 0x0DD8, 0x0DDF ],
-    [ 0x0DF2, 0x0DF3 ],
-    [ 0x0F3E, 0x0F3F ],
-    [ 0x0F7F, 0x0F7F ],
-    [ 0x102B, 0x102C ],
-    [ 0x1031, 0x1031 ],
-    [ 0x1038, 0x1038 ],
-    [ 0x103B, 0x103C ],
-    [ 0x1056, 0x1057 ],
-    [ 0x1062, 0x1064 ],
-    [ 0x1067, 0x106D ],
-    [ 0x1083, 0x1084 ],
-    [ 0x1087, 0x108C ],
-    [ 0x108F, 0x108F ],
-    [ 0x109A, 0x109C ],
-    [ 0x17B6, 0x17B6 ],
-    [ 0x17BE, 0x17C5 ],
-    [ 0x17C7, 0x17C8 ],
-    [ 0x1923, 0x1926 ],
-    [ 0x1929, 0x192B ],
-    [ 0x1930, 0x1931 ],
-    [ 0x1933, 0x1938 ],
-    [ 0x19B0, 0x19C0 ],
-    [ 0x19C8, 0x19C9 ],
-    [ 0x1A19, 0x1A1B ],
-    [ 0x1A55, 0x1A55 ],
-    [ 0x1A57, 0x1A57 ],
-    [ 0x1A61, 0x1A61 ],
-    [ 0x1A63, 0x1A64 ],
-    [ 0x1A6D, 0x1A72 ],
-    [ 0x1B04, 0x1B04 ],
-    [ 0x1B35, 0x1B35 ],
-    [ 0x1B3B, 0x1B3B ],
-    [ 0x1B3D, 0x1B41 ],
-    [ 0x1B43, 0x1B44 ],
-    [ 0x1B82, 0x1B82 ],
-    [ 0x1BA1, 0x1BA1 ],
-    [ 0x1BA6, 0x1BA7 ],
-    [ 0x1BAA, 0x1BAA ],
-    [ 0x1BE7, 0x1BE7 ],
-    [ 0x1BEA, 0x1BEC ],
-    [ 0x1BEE, 0x1BEE ],
-    [ 0x1BF2, 0x1BF3 ],
-    [ 0x1C24, 0x1C2B ],
-    [ 0x1C34, 0x1C35 ],
-    [ 0x1CE1, 0x1CE1 ],
-    [ 0x1CF2, 0x1CF2 ],
-    [ 0xA823, 0xA824 ],
-    [ 0xA827, 0xA827 ],
-    [ 0xA880, 0xA881 ],
-    [ 0xA8B4, 0xA8C3 ],
-    [ 0xA952, 0xA953 ],
-    [ 0xA983, 0xA983 ],
-    [ 0xA9B4, 0xA9B5 ],
-    [ 0xA9BA, 0xA9BB ],
-    [ 0xA9BD, 0xA9C0 ],
-    [ 0xAA2F, 0xAA30 ],
-    [ 0xAA33, 0xAA34 ],
-    [ 0xAA4D, 0xAA4D ],
-    [ 0xAA7B, 0xAA7B ],
-    [ 0xABE3, 0xABE4 ],
-    [ 0xABE6, 0xABE7 ],
-    [ 0xABE9, 0xABEA ],
-    [ 0xABEC, 0xABEC ],
-    [ 0x11000, 0x11000 ],
-    [ 0x11002, 0x11002 ],
-    [ 0x11082, 0x11082 ],
-    [ 0x110B0, 0x110B2 ],
-    [ 0x110B7, 0x110B8 ],
-    [ 0x1D165, 0x1D166 ],
-    [ 0x1D16D, 0x1D172 ],
-    ];
-
-    return binarySearch!tableMn(c) || binarySearch!tableMe(c) || binarySearch!tableMc(c);
+    static immutable markTrie = asTrie(markTrieEntries);
+    return markTrie[c];
 }
 
-unittest
+@safe unittest
 {
-    assert(isMark('\u0300'));
-    assert(isMark('\u0488'));
-    assert(isMark('\u0903'));
+    auto mark = unicode("Mark");
+    foreach(ch; mark.byCodepoint)
+        assert(isMark(ch));
+    foreach(ch; 0..0x4000)
+        assert((ch in mark) == isMark(ch));
 }
-
 
 /++
-    Returns whether $(D c) is a Unicode numerical character
+    Returns whether $(D c) is a Unicode numerical $(CHARACTER)
     (general Unicode category: Nd, Nl, No).
-
-    Standards: Unicode 6.0.0.
-  +/
-
-bool isNumber(dchar c) @safe pure nothrow
++/
+@safe pure nothrow
+bool isNumber(dchar c)
 {
-    static immutable dchar[2][] tableNd =
-    [
-    [ 0x0030, 0x0039 ],
-    [ 0x0660, 0x0669 ],
-    [ 0x06F0, 0x06F9 ],
-    [ 0x07C0, 0x07C9 ],
-    [ 0x0966, 0x096F ],
-    [ 0x09E6, 0x09EF ],
-    [ 0x0A66, 0x0A6F ],
-    [ 0x0AE6, 0x0AEF ],
-    [ 0x0B66, 0x0B6F ],
-    [ 0x0BE6, 0x0BEF ],
-    [ 0x0C66, 0x0C6F ],
-    [ 0x0CE6, 0x0CEF ],
-    [ 0x0D66, 0x0D6F ],
-    [ 0x0E50, 0x0E59 ],
-    [ 0x0ED0, 0x0ED9 ],
-    [ 0x0F20, 0x0F29 ],
-    [ 0x1040, 0x1049 ],
-    [ 0x1090, 0x1099 ],
-    [ 0x17E0, 0x17E9 ],
-    [ 0x1810, 0x1819 ],
-    [ 0x1946, 0x194F ],
-    [ 0x19D0, 0x19D9 ],
-    [ 0x1A80, 0x1A89 ],
-    [ 0x1A90, 0x1A99 ],
-    [ 0x1B50, 0x1B59 ],
-    [ 0x1BB0, 0x1BB9 ],
-    [ 0x1C40, 0x1C49 ],
-    [ 0x1C50, 0x1C59 ],
-    [ 0xA620, 0xA629 ],
-    [ 0xA8D0, 0xA8D9 ],
-    [ 0xA900, 0xA909 ],
-    [ 0xA9D0, 0xA9D9 ],
-    [ 0xAA50, 0xAA59 ],
-    [ 0xABF0, 0xABF9 ],
-    [ 0xFF10, 0xFF19 ],
-    [ 0x104A0, 0x104A9 ],
-    [ 0x11066, 0x1106F ],
-    [ 0x1D7CE, 0x1D7FF ],
-    ];
-
-    static immutable dchar[2][] tableNl =
-    [
-    [ 0x16EE, 0x16F0 ],
-    [ 0x2160, 0x2182 ],
-    [ 0x2185, 0x2188 ],
-    [ 0x3007, 0x3007 ],
-    [ 0x3021, 0x3029 ],
-    [ 0x3038, 0x303A ],
-    [ 0xA6E6, 0xA6EF ],
-    [ 0x10140, 0x10174 ],
-    [ 0x10341, 0x10341 ],
-    [ 0x1034A, 0x1034A ],
-    [ 0x103D1, 0x103D5 ],
-    [ 0x12400, 0x12462 ],
-    ];
-
-    static immutable dchar[2][] tableNo =
-    [
-    [ 0x00B2, 0x00B3 ],
-    [ 0x00B9, 0x00B9 ],
-    [ 0x00BC, 0x00BE ],
-    [ 0x09F4, 0x09F9 ],
-    [ 0x0B72, 0x0B77 ],
-    [ 0x0BF0, 0x0BF2 ],
-    [ 0x0C78, 0x0C7E ],
-    [ 0x0D70, 0x0D75 ],
-    [ 0x0F2A, 0x0F33 ],
-    [ 0x1369, 0x137C ],
-    [ 0x17F0, 0x17F9 ],
-    [ 0x19DA, 0x19DA ],
-    [ 0x2070, 0x2070 ],
-    [ 0x2074, 0x2079 ],
-    [ 0x2080, 0x2089 ],
-    [ 0x2150, 0x215F ],
-    [ 0x2189, 0x2189 ],
-    [ 0x2460, 0x249B ],
-    [ 0x24EA, 0x24FF ],
-    [ 0x2776, 0x2793 ],
-    [ 0x2CFD, 0x2CFD ],
-    [ 0x3192, 0x3195 ],
-    [ 0x3220, 0x3229 ],
-    [ 0x3251, 0x325F ],
-    [ 0x3280, 0x3289 ],
-    [ 0x32B1, 0x32BF ],
-    [ 0xA830, 0xA835 ],
-    [ 0x10107, 0x10133 ],
-    [ 0x10175, 0x10178 ],
-    [ 0x1018A, 0x1018A ],
-    [ 0x10320, 0x10323 ],
-    [ 0x10858, 0x1085F ],
-    [ 0x10916, 0x1091B ],
-    [ 0x10A40, 0x10A47 ],
-    [ 0x10A7D, 0x10A7E ],
-    [ 0x10B58, 0x10B5F ],
-    [ 0x10B78, 0x10B7F ],
-    [ 0x10E60, 0x10E7E ],
-    [ 0x11052, 0x11065 ],
-    [ 0x1D360, 0x1D371 ],
-    [ 0x1F100, 0x1F10A ],
-    ];
-
-    return binarySearch!tableNd(c)
-        || binarySearch!tableNl(c)
-        || binarySearch!tableNo(c);
+    static immutable numberTrie = asTrie(numberTrieEntries);
+    return numberTrie[c];
 }
 
-unittest
+@safe unittest
 {
-    for (dchar c = '0'; c < '9'; ++c)
-    {
-        assert(isNumber(c));
-    }
+    auto n = unicode("N");
+    foreach(ch; n.byCodepoint)
+        assert(isNumber(ch));
+    foreach(ch; 0..0x4000)
+        assert((ch in n) == isNumber(ch));
 }
 
 
 /++
-    Returns whether $(D c) is a Unicode punctuation character
+    Returns whether $(D c) is a Unicode punctuation $(CHARACTER)
     (general Unicode category: Pd, Ps, Pe, Pc, Po, Pi, Pf).
-
-    Standards: Unicode 6.0.0.
-  +/
-
-bool isPunctuation(dchar c) @safe pure nothrow
++/
+@safe pure nothrow
+bool isPunctuation(dchar c)
 {
-    static immutable dchar[2][] tablePd =
-    [
-    [ 0x002D, 0x002D ],
-    [ 0x058A, 0x058A ],
-    [ 0x05BE, 0x05BE ],
-    [ 0x1400, 0x1400 ],
-    [ 0x1806, 0x1806 ],
-    [ 0x2010, 0x2015 ],
-    [ 0x2E17, 0x2E17 ],
-    [ 0x2E1A, 0x2E1A ],
-    [ 0x301C, 0x301C ],
-    [ 0x3030, 0x3030 ],
-    [ 0x30A0, 0x30A0 ],
-    [ 0xFE31, 0xFE32 ],
-    [ 0xFE58, 0xFE58 ],
-    [ 0xFE63, 0xFE63 ],
-    [ 0xFF0D, 0xFF0D ],
-    ];
-
-    static immutable dchar[2][] tablePs =
-    [
-    [ 0x0028, 0x0028 ],
-    [ 0x005B, 0x005B ],
-    [ 0x007B, 0x007B ],
-    [ 0x0F3A, 0x0F3A ],
-    [ 0x0F3C, 0x0F3C ],
-    [ 0x169B, 0x169B ],
-    [ 0x201A, 0x201A ],
-    [ 0x201E, 0x201E ],
-    [ 0x2045, 0x2045 ],
-    [ 0x207D, 0x207D ],
-    [ 0x208D, 0x208D ],
-    [ 0x2329, 0x2329 ],
-    [ 0x2768, 0x2768 ],
-    [ 0x276A, 0x276A ],
-    [ 0x276C, 0x276C ],
-    [ 0x276E, 0x276E ],
-    [ 0x2770, 0x2770 ],
-    [ 0x2772, 0x2772 ],
-    [ 0x2774, 0x2774 ],
-    [ 0x27C5, 0x27C5 ],
-    [ 0x27E6, 0x27E6 ],
-    [ 0x27E8, 0x27E8 ],
-    [ 0x27EA, 0x27EA ],
-    [ 0x27EC, 0x27EC ],
-    [ 0x27EE, 0x27EE ],
-    [ 0x2983, 0x2983 ],
-    [ 0x2985, 0x2985 ],
-    [ 0x2987, 0x2987 ],
-    [ 0x2989, 0x2989 ],
-    [ 0x298B, 0x298B ],
-    [ 0x298D, 0x298D ],
-    [ 0x298F, 0x298F ],
-    [ 0x2991, 0x2991 ],
-    [ 0x2993, 0x2993 ],
-    [ 0x2995, 0x2995 ],
-    [ 0x2997, 0x2997 ],
-    [ 0x29D8, 0x29D8 ],
-    [ 0x29DA, 0x29DA ],
-    [ 0x29FC, 0x29FC ],
-    [ 0x2E22, 0x2E22 ],
-    [ 0x2E24, 0x2E24 ],
-    [ 0x2E26, 0x2E26 ],
-    [ 0x2E28, 0x2E28 ],
-    [ 0x3008, 0x3008 ],
-    [ 0x300A, 0x300A ],
-    [ 0x300C, 0x300C ],
-    [ 0x300E, 0x300E ],
-    [ 0x3010, 0x3010 ],
-    [ 0x3014, 0x3014 ],
-    [ 0x3016, 0x3016 ],
-    [ 0x3018, 0x3018 ],
-    [ 0x301A, 0x301A ],
-    [ 0x301D, 0x301D ],
-    [ 0xFD3E, 0xFD3E ],
-    [ 0xFE17, 0xFE17 ],
-    [ 0xFE35, 0xFE35 ],
-    [ 0xFE37, 0xFE37 ],
-    [ 0xFE39, 0xFE39 ],
-    [ 0xFE3B, 0xFE3B ],
-    [ 0xFE3D, 0xFE3D ],
-    [ 0xFE3F, 0xFE3F ],
-    [ 0xFE41, 0xFE41 ],
-    [ 0xFE43, 0xFE43 ],
-    [ 0xFE47, 0xFE47 ],
-    [ 0xFE59, 0xFE59 ],
-    [ 0xFE5B, 0xFE5B ],
-    [ 0xFE5D, 0xFE5D ],
-    [ 0xFF08, 0xFF08 ],
-    [ 0xFF3B, 0xFF3B ],
-    [ 0xFF5B, 0xFF5B ],
-    [ 0xFF5F, 0xFF5F ],
-    [ 0xFF62, 0xFF62 ],
-    ];
-
-    static immutable dchar[2][] tablePe =
-    [
-    [ 0x0029, 0x0029 ],
-    [ 0x005D, 0x005D ],
-    [ 0x007D, 0x007D ],
-    [ 0x0F3B, 0x0F3B ],
-    [ 0x0F3D, 0x0F3D ],
-    [ 0x169C, 0x169C ],
-    [ 0x2046, 0x2046 ],
-    [ 0x207E, 0x207E ],
-    [ 0x208E, 0x208E ],
-    [ 0x232A, 0x232A ],
-    [ 0x2769, 0x2769 ],
-    [ 0x276B, 0x276B ],
-    [ 0x276D, 0x276D ],
-    [ 0x276F, 0x276F ],
-    [ 0x2771, 0x2771 ],
-    [ 0x2773, 0x2773 ],
-    [ 0x2775, 0x2775 ],
-    [ 0x27C6, 0x27C6 ],
-    [ 0x27E7, 0x27E7 ],
-    [ 0x27E9, 0x27E9 ],
-    [ 0x27EB, 0x27EB ],
-    [ 0x27ED, 0x27ED ],
-    [ 0x27EF, 0x27EF ],
-    [ 0x2984, 0x2984 ],
-    [ 0x2986, 0x2986 ],
-    [ 0x2988, 0x2988 ],
-    [ 0x298A, 0x298A ],
-    [ 0x298C, 0x298C ],
-    [ 0x298E, 0x298E ],
-    [ 0x2990, 0x2990 ],
-    [ 0x2992, 0x2992 ],
-    [ 0x2994, 0x2994 ],
-    [ 0x2996, 0x2996 ],
-    [ 0x2998, 0x2998 ],
-    [ 0x29D9, 0x29D9 ],
-    [ 0x29DB, 0x29DB ],
-    [ 0x29FD, 0x29FD ],
-    [ 0x2E23, 0x2E23 ],
-    [ 0x2E25, 0x2E25 ],
-    [ 0x2E27, 0x2E27 ],
-    [ 0x2E29, 0x2E29 ],
-    [ 0x3009, 0x3009 ],
-    [ 0x300B, 0x300B ],
-    [ 0x300D, 0x300D ],
-    [ 0x300F, 0x300F ],
-    [ 0x3011, 0x3011 ],
-    [ 0x3015, 0x3015 ],
-    [ 0x3017, 0x3017 ],
-    [ 0x3019, 0x3019 ],
-    [ 0x301B, 0x301B ],
-    [ 0x301E, 0x301F ],
-    [ 0xFD3F, 0xFD3F ],
-    [ 0xFE18, 0xFE18 ],
-    [ 0xFE36, 0xFE36 ],
-    [ 0xFE38, 0xFE38 ],
-    [ 0xFE3A, 0xFE3A ],
-    [ 0xFE3C, 0xFE3C ],
-    [ 0xFE3E, 0xFE3E ],
-    [ 0xFE40, 0xFE40 ],
-    [ 0xFE42, 0xFE42 ],
-    [ 0xFE44, 0xFE44 ],
-    [ 0xFE48, 0xFE48 ],
-    [ 0xFE5A, 0xFE5A ],
-    [ 0xFE5C, 0xFE5C ],
-    [ 0xFE5E, 0xFE5E ],
-    [ 0xFF09, 0xFF09 ],
-    [ 0xFF3D, 0xFF3D ],
-    [ 0xFF5D, 0xFF5D ],
-    [ 0xFF60, 0xFF60 ],
-    [ 0xFF63, 0xFF63 ],
-    ];
-
-    static immutable dchar[2][] tablePc =
-    [
-    [ 0x005F, 0x005F ],
-    [ 0x203F, 0x2040 ],
-    [ 0x2054, 0x2054 ],
-    [ 0xFE33, 0xFE34 ],
-    [ 0xFE4D, 0xFE4F ],
-    [ 0xFF3F, 0xFF3F ],
-    ];
-
-    static immutable dchar[2][] tablePo =
-    [
-    [ 0x0021, 0x0023 ],
-    [ 0x0025, 0x0027 ],
-    [ 0x002A, 0x002A ],
-    [ 0x002C, 0x002C ],
-    [ 0x002E, 0x002F ],
-    [ 0x003A, 0x003B ],
-    [ 0x003F, 0x0040 ],
-    [ 0x005C, 0x005C ],
-    [ 0x00A1, 0x00A1 ],
-    [ 0x00B7, 0x00B7 ],
-    [ 0x00BF, 0x00BF ],
-    [ 0x037E, 0x037E ],
-    [ 0x0387, 0x0387 ],
-    [ 0x055A, 0x055F ],
-    [ 0x0589, 0x0589 ],
-    [ 0x05C0, 0x05C0 ],
-    [ 0x05C3, 0x05C3 ],
-    [ 0x05C6, 0x05C6 ],
-    [ 0x05F3, 0x05F4 ],
-    [ 0x0609, 0x060A ],
-    [ 0x060C, 0x060D ],
-    [ 0x061B, 0x061B ],
-    [ 0x061E, 0x061F ],
-    [ 0x066A, 0x066D ],
-    [ 0x06D4, 0x06D4 ],
-    [ 0x0700, 0x070D ],
-    [ 0x07F7, 0x07F9 ],
-    [ 0x0830, 0x083E ],
-    [ 0x085E, 0x085E ],
-    [ 0x0964, 0x0965 ],
-    [ 0x0970, 0x0970 ],
-    [ 0x0DF4, 0x0DF4 ],
-    [ 0x0E4F, 0x0E4F ],
-    [ 0x0E5A, 0x0E5B ],
-    [ 0x0F04, 0x0F12 ],
-    [ 0x0F85, 0x0F85 ],
-    [ 0x0FD0, 0x0FD4 ],
-    [ 0x0FD9, 0x0FDA ],
-    [ 0x104A, 0x104F ],
-    [ 0x10FB, 0x10FB ],
-    [ 0x1361, 0x1368 ],
-    [ 0x166D, 0x166E ],
-    [ 0x16EB, 0x16ED ],
-    [ 0x1735, 0x1736 ],
-    [ 0x17D4, 0x17D6 ],
-    [ 0x17D8, 0x17DA ],
-    [ 0x1800, 0x1805 ],
-    [ 0x1807, 0x180A ],
-    [ 0x1944, 0x1945 ],
-    [ 0x1A1E, 0x1A1F ],
-    [ 0x1AA0, 0x1AA6 ],
-    [ 0x1AA8, 0x1AAD ],
-    [ 0x1B5A, 0x1B60 ],
-    [ 0x1BFC, 0x1BFF ],
-    [ 0x1C3B, 0x1C3F ],
-    [ 0x1C7E, 0x1C7F ],
-    [ 0x1CD3, 0x1CD3 ],
-    [ 0x2016, 0x2017 ],
-    [ 0x2020, 0x2027 ],
-    [ 0x2030, 0x2038 ],
-    [ 0x203B, 0x203E ],
-    [ 0x2041, 0x2043 ],
-    [ 0x2047, 0x2051 ],
-    [ 0x2053, 0x2053 ],
-    [ 0x2055, 0x205E ],
-    [ 0x2CF9, 0x2CFC ],
-    [ 0x2CFE, 0x2CFF ],
-    [ 0x2D70, 0x2D70 ],
-    [ 0x2E00, 0x2E01 ],
-    [ 0x2E06, 0x2E08 ],
-    [ 0x2E0B, 0x2E0B ],
-    [ 0x2E0E, 0x2E16 ],
-    [ 0x2E18, 0x2E19 ],
-    [ 0x2E1B, 0x2E1B ],
-    [ 0x2E1E, 0x2E1F ],
-    [ 0x2E2A, 0x2E2E ],
-    [ 0x2E30, 0x2E31 ],
-    [ 0x3001, 0x3003 ],
-    [ 0x303D, 0x303D ],
-    [ 0x30FB, 0x30FB ],
-    [ 0xA4FE, 0xA4FF ],
-    [ 0xA60D, 0xA60F ],
-    [ 0xA673, 0xA673 ],
-    [ 0xA67E, 0xA67E ],
-    [ 0xA6F2, 0xA6F7 ],
-    [ 0xA874, 0xA877 ],
-    [ 0xA8CE, 0xA8CF ],
-    [ 0xA8F8, 0xA8FA ],
-    [ 0xA92E, 0xA92F ],
-    [ 0xA95F, 0xA95F ],
-    [ 0xA9C1, 0xA9CD ],
-    [ 0xA9DE, 0xA9DF ],
-    [ 0xAA5C, 0xAA5F ],
-    [ 0xAADE, 0xAADF ],
-    [ 0xABEB, 0xABEB ],
-    [ 0xFE10, 0xFE16 ],
-    [ 0xFE19, 0xFE19 ],
-    [ 0xFE30, 0xFE30 ],
-    [ 0xFE45, 0xFE46 ],
-    [ 0xFE49, 0xFE4C ],
-    [ 0xFE50, 0xFE52 ],
-    [ 0xFE54, 0xFE57 ],
-    [ 0xFE5F, 0xFE61 ],
-    [ 0xFE68, 0xFE68 ],
-    [ 0xFE6A, 0xFE6B ],
-    [ 0xFF01, 0xFF03 ],
-    [ 0xFF05, 0xFF07 ],
-    [ 0xFF0A, 0xFF0A ],
-    [ 0xFF0C, 0xFF0C ],
-    [ 0xFF0E, 0xFF0F ],
-    [ 0xFF1A, 0xFF1B ],
-    [ 0xFF1F, 0xFF20 ],
-    [ 0xFF3C, 0xFF3C ],
-    [ 0xFF61, 0xFF61 ],
-    [ 0xFF64, 0xFF65 ],
-    [ 0x10100, 0x10101 ],
-    [ 0x1039F, 0x1039F ],
-    [ 0x103D0, 0x103D0 ],
-    [ 0x10857, 0x10857 ],
-    [ 0x1091F, 0x1091F ],
-    [ 0x1093F, 0x1093F ],
-    [ 0x10A50, 0x10A58 ],
-    [ 0x10A7F, 0x10A7F ],
-    [ 0x10B39, 0x10B3F ],
-    [ 0x11047, 0x1104D ],
-    [ 0x110BB, 0x110BC ],
-    [ 0x110BE, 0x110C1 ],
-    [ 0x12470, 0x12473 ],
-    ];
-
-    static immutable dchar[2][] tablePi =
-    [
-    [ 0x00AB, 0x00AB ],
-    [ 0x2018, 0x2018 ],
-    [ 0x201B, 0x201C ],
-    [ 0x201F, 0x201F ],
-    [ 0x2039, 0x2039 ],
-    [ 0x2E02, 0x2E02 ],
-    [ 0x2E04, 0x2E04 ],
-    [ 0x2E09, 0x2E09 ],
-    [ 0x2E0C, 0x2E0C ],
-    [ 0x2E1C, 0x2E1C ],
-    [ 0x2E20, 0x2E20 ],
-    ];
-
-    static immutable dchar[2][] tablePf =
-    [
-    [ 0x00BB, 0x00BB ],
-    [ 0x2019, 0x2019 ],
-    [ 0x201D, 0x201D ],
-    [ 0x203A, 0x203A ],
-    [ 0x2E03, 0x2E03 ],
-    [ 0x2E05, 0x2E05 ],
-    [ 0x2E0A, 0x2E0A ],
-    [ 0x2E0D, 0x2E0D ],
-    [ 0x2E1D, 0x2E1D ],
-    [ 0x2E21, 0x2E21 ],
-    ];
-
-    return binarySearch!tablePd(c)
-        || binarySearch!tablePs(c)
-        || binarySearch!tablePe(c)
-        || binarySearch!tablePc(c)
-        || binarySearch!tablePo(c)
-        || binarySearch!tablePi(c)
-        || binarySearch!tablePf(c);
+    static immutable punctuationTrie = asTrie(punctuationTrieEntries);
+    return punctuationTrie[c];
 }
 
 unittest
@@ -1433,1052 +7152,205 @@ unittest
     assert(isPunctuation('\u005F'));
     assert(isPunctuation('\u00AB'));
     assert(isPunctuation('\u00BB'));
+    foreach(ch; unicode("P").byCodepoint)
+        assert(isPunctuation(ch));
 }
 
-
 /++
-    Returns whether $(D c) is a Unicode symbol character
-    (general Unicode category: Sm, Sc, Sk, So)
-
-    Standards: Unicode 6.0.0.
-  +/
-bool isSymbol(dchar c) @safe pure nothrow
+    Returns whether $(D c) is a Unicode symbol $(CHARACTER)
+    (general Unicode category: Sm, Sc, Sk, So).
++/
+@safe pure nothrow
+bool isSymbol(dchar c)
 {
-    static immutable dchar[2][] tableSm =
-    [
-    [ 0x002B, 0x002B ],
-    [ 0x003C, 0x003E ],
-    [ 0x007C, 0x007C ],
-    [ 0x007E, 0x007E ],
-    [ 0x00AC, 0x00AC ],
-    [ 0x00B1, 0x00B1 ],
-    [ 0x00D7, 0x00D7 ],
-    [ 0x00F7, 0x00F7 ],
-    [ 0x03F6, 0x03F6 ],
-    [ 0x0606, 0x0608 ],
-    [ 0x2044, 0x2044 ],
-    [ 0x2052, 0x2052 ],
-    [ 0x207A, 0x207C ],
-    [ 0x208A, 0x208C ],
-    [ 0x2118, 0x2118 ],
-    [ 0x2140, 0x2144 ],
-    [ 0x214B, 0x214B ],
-    [ 0x2190, 0x2194 ],
-    [ 0x219A, 0x219B ],
-    [ 0x21A0, 0x21A0 ],
-    [ 0x21A3, 0x21A3 ],
-    [ 0x21A6, 0x21A6 ],
-    [ 0x21AE, 0x21AE ],
-    [ 0x21CE, 0x21CF ],
-    [ 0x21D2, 0x21D2 ],
-    [ 0x21D4, 0x21D4 ],
-    [ 0x21F4, 0x22FF ],
-    [ 0x2308, 0x230B ],
-    [ 0x2320, 0x2321 ],
-    [ 0x237C, 0x237C ],
-    [ 0x239B, 0x23B3 ],
-    [ 0x23DC, 0x23E1 ],
-    [ 0x25B7, 0x25B7 ],
-    [ 0x25C1, 0x25C1 ],
-    [ 0x25F8, 0x25FF ],
-    [ 0x266F, 0x266F ],
-    [ 0x27C0, 0x27C4 ],
-    [ 0x27C7, 0x27CA ],
-    [ 0x27CC, 0x27CC ],
-    [ 0x27CE, 0x27E5 ],
-    [ 0x27F0, 0x27FF ],
-    [ 0x2900, 0x2982 ],
-    [ 0x2999, 0x29D7 ],
-    [ 0x29DC, 0x29FB ],
-    [ 0x29FE, 0x2AFF ],
-    [ 0x2B30, 0x2B44 ],
-    [ 0x2B47, 0x2B4C ],
-    [ 0xFB29, 0xFB29 ],
-    [ 0xFE62, 0xFE62 ],
-    [ 0xFE64, 0xFE66 ],
-    [ 0xFF0B, 0xFF0B ],
-    [ 0xFF1C, 0xFF1E ],
-    [ 0xFF5C, 0xFF5C ],
-    [ 0xFF5E, 0xFF5E ],
-    [ 0xFFE2, 0xFFE2 ],
-    [ 0xFFE9, 0xFFEC ],
-    [ 0x1D6C1, 0x1D6C1 ],
-    [ 0x1D6DB, 0x1D6DB ],
-    [ 0x1D6FB, 0x1D6FB ],
-    [ 0x1D715, 0x1D715 ],
-    [ 0x1D735, 0x1D735 ],
-    [ 0x1D74F, 0x1D74F ],
-    [ 0x1D76F, 0x1D76F ],
-    [ 0x1D789, 0x1D789 ],
-    [ 0x1D7A9, 0x1D7A9 ],
-    [ 0x1D7C3, 0x1D7C3 ],
-    ];
-
-    static immutable dchar[2][] tableSc =
-    [
-    [ 0x0024, 0x0024 ],
-    [ 0x00A2, 0x00A5 ],
-    [ 0x060B, 0x060B ],
-    [ 0x09F2, 0x09F3 ],
-    [ 0x09FB, 0x09FB ],
-    [ 0x0AF1, 0x0AF1 ],
-    [ 0x0BF9, 0x0BF9 ],
-    [ 0x0E3F, 0x0E3F ],
-    [ 0x17DB, 0x17DB ],
-    [ 0x20A0, 0x20B9 ],
-    [ 0xA838, 0xA838 ],
-    [ 0xFDFC, 0xFDFC ],
-    [ 0xFE69, 0xFE69 ],
-    [ 0xFF04, 0xFF04 ],
-    [ 0xFFE0, 0xFFE1 ],
-    [ 0xFFE5, 0xFFE6 ],
-    ];
-
-    static immutable dchar[2][] tableSk =
-    [
-    [ 0x005E, 0x005E ],
-    [ 0x0060, 0x0060 ],
-    [ 0x00A8, 0x00A8 ],
-    [ 0x00AF, 0x00AF ],
-    [ 0x00B4, 0x00B4 ],
-    [ 0x00B8, 0x00B8 ],
-    [ 0x02C2, 0x02C5 ],
-    [ 0x02D2, 0x02DF ],
-    [ 0x02E5, 0x02EB ],
-    [ 0x02ED, 0x02ED ],
-    [ 0x02EF, 0x02FF ],
-    [ 0x0375, 0x0375 ],
-    [ 0x0384, 0x0385 ],
-    [ 0x1FBD, 0x1FBD ],
-    [ 0x1FBF, 0x1FC1 ],
-    [ 0x1FCD, 0x1FCF ],
-    [ 0x1FDD, 0x1FDF ],
-    [ 0x1FED, 0x1FEF ],
-    [ 0x1FFD, 0x1FFE ],
-    [ 0x309B, 0x309C ],
-    [ 0xA700, 0xA716 ],
-    [ 0xA720, 0xA721 ],
-    [ 0xA789, 0xA78A ],
-    [ 0xFBB2, 0xFBC1 ],
-    [ 0xFF3E, 0xFF3E ],
-    [ 0xFF40, 0xFF40 ],
-    [ 0xFFE3, 0xFFE3 ],
-    ];
-
-    static immutable dchar[2][] tableSo =
-    [
-    [ 0x00A6, 0x00A7 ],
-    [ 0x00A9, 0x00A9 ],
-    [ 0x00AE, 0x00AE ],
-    [ 0x00B0, 0x00B0 ],
-    [ 0x00B6, 0x00B6 ],
-    [ 0x0482, 0x0482 ],
-    [ 0x060E, 0x060F ],
-    [ 0x06DE, 0x06DE ],
-    [ 0x06E9, 0x06E9 ],
-    [ 0x06FD, 0x06FE ],
-    [ 0x07F6, 0x07F6 ],
-    [ 0x09FA, 0x09FA ],
-    [ 0x0B70, 0x0B70 ],
-    [ 0x0BF3, 0x0BF8 ],
-    [ 0x0BFA, 0x0BFA ],
-    [ 0x0C7F, 0x0C7F ],
-    [ 0x0D79, 0x0D79 ],
-    [ 0x0F01, 0x0F03 ],
-    [ 0x0F13, 0x0F17 ],
-    [ 0x0F1A, 0x0F1F ],
-    [ 0x0F34, 0x0F34 ],
-    [ 0x0F36, 0x0F36 ],
-    [ 0x0F38, 0x0F38 ],
-    [ 0x0FBE, 0x0FC5 ],
-    [ 0x0FC7, 0x0FCC ],
-    [ 0x0FCE, 0x0FCF ],
-    [ 0x0FD5, 0x0FD8 ],
-    [ 0x109E, 0x109F ],
-    [ 0x1360, 0x1360 ],
-    [ 0x1390, 0x1399 ],
-    [ 0x1940, 0x1940 ],
-    [ 0x19DE, 0x19FF ],
-    [ 0x1B61, 0x1B6A ],
-    [ 0x1B74, 0x1B7C ],
-    [ 0x2100, 0x2101 ],
-    [ 0x2103, 0x2106 ],
-    [ 0x2108, 0x2109 ],
-    [ 0x2114, 0x2114 ],
-    [ 0x2116, 0x2117 ],
-    [ 0x211E, 0x2123 ],
-    [ 0x2125, 0x2125 ],
-    [ 0x2127, 0x2127 ],
-    [ 0x2129, 0x2129 ],
-    [ 0x212E, 0x212E ],
-    [ 0x213A, 0x213B ],
-    [ 0x214A, 0x214A ],
-    [ 0x214C, 0x214D ],
-    [ 0x214F, 0x214F ],
-    [ 0x2195, 0x2199 ],
-    [ 0x219C, 0x219F ],
-    [ 0x21A1, 0x21A2 ],
-    [ 0x21A4, 0x21A5 ],
-    [ 0x21A7, 0x21AD ],
-    [ 0x21AF, 0x21CD ],
-    [ 0x21D0, 0x21D1 ],
-    [ 0x21D3, 0x21D3 ],
-    [ 0x21D5, 0x21F3 ],
-    [ 0x2300, 0x2307 ],
-    [ 0x230C, 0x231F ],
-    [ 0x2322, 0x2328 ],
-    [ 0x232B, 0x237B ],
-    [ 0x237D, 0x239A ],
-    [ 0x23B4, 0x23DB ],
-    [ 0x23E2, 0x23F3 ],
-    [ 0x2400, 0x2426 ],
-    [ 0x2440, 0x244A ],
-    [ 0x249C, 0x24E9 ],
-    [ 0x2500, 0x25B6 ],
-    [ 0x25B8, 0x25C0 ],
-    [ 0x25C2, 0x25F7 ],
-    [ 0x2600, 0x266E ],
-    [ 0x2670, 0x26FF ],
-    [ 0x2701, 0x2767 ],
-    [ 0x2794, 0x27BF ],
-    [ 0x2800, 0x28FF ],
-    [ 0x2B00, 0x2B2F ],
-    [ 0x2B45, 0x2B46 ],
-    [ 0x2B50, 0x2B59 ],
-    [ 0x2CE5, 0x2CEA ],
-    [ 0x2E80, 0x2E99 ],
-    [ 0x2E9B, 0x2EF3 ],
-    [ 0x2F00, 0x2FD5 ],
-    [ 0x2FF0, 0x2FFB ],
-    [ 0x3004, 0x3004 ],
-    [ 0x3012, 0x3013 ],
-    [ 0x3020, 0x3020 ],
-    [ 0x3036, 0x3037 ],
-    [ 0x303E, 0x303F ],
-    [ 0x3190, 0x3191 ],
-    [ 0x3196, 0x319F ],
-    [ 0x31C0, 0x31E3 ],
-    [ 0x3200, 0x321E ],
-    [ 0x322A, 0x3250 ],
-    [ 0x3260, 0x327F ],
-    [ 0x328A, 0x32B0 ],
-    [ 0x32C0, 0x32FE ],
-    [ 0x3300, 0x33FF ],
-    [ 0x4DC0, 0x4DFF ],
-    [ 0xA490, 0xA4C6 ],
-    [ 0xA828, 0xA82B ],
-    [ 0xA836, 0xA837 ],
-    [ 0xA839, 0xA839 ],
-    [ 0xAA77, 0xAA79 ],
-    [ 0xFDFD, 0xFDFD ],
-    [ 0xFFE4, 0xFFE4 ],
-    [ 0xFFE8, 0xFFE8 ],
-    [ 0xFFED, 0xFFEE ],
-    [ 0xFFFC, 0xFFFD ],
-    [ 0x10102, 0x10102 ],
-    [ 0x10137, 0x1013F ],
-    [ 0x10179, 0x10189 ],
-    [ 0x10190, 0x1019B ],
-    [ 0x101D0, 0x101FC ],
-    [ 0x1D000, 0x1D0F5 ],
-    [ 0x1D100, 0x1D126 ],
-    [ 0x1D129, 0x1D164 ],
-    [ 0x1D16A, 0x1D16C ],
-    [ 0x1D183, 0x1D184 ],
-    [ 0x1D18C, 0x1D1A9 ],
-    [ 0x1D1AE, 0x1D1DD ],
-    [ 0x1D200, 0x1D241 ],
-    [ 0x1D245, 0x1D245 ],
-    [ 0x1D300, 0x1D356 ],
-    [ 0x1F000, 0x1F02B ],
-    [ 0x1F030, 0x1F093 ],
-    [ 0x1F0A0, 0x1F0AE ],
-    [ 0x1F0B1, 0x1F0BE ],
-    [ 0x1F0C1, 0x1F0CF ],
-    [ 0x1F0D1, 0x1F0DF ],
-    [ 0x1F110, 0x1F12E ],
-    [ 0x1F130, 0x1F169 ],
-    [ 0x1F170, 0x1F19A ],
-    [ 0x1F1E6, 0x1F202 ],
-    [ 0x1F210, 0x1F23A ],
-    [ 0x1F240, 0x1F248 ],
-    [ 0x1F250, 0x1F251 ],
-    [ 0x1F300, 0x1F320 ],
-    [ 0x1F330, 0x1F335 ],
-    [ 0x1F337, 0x1F37C ],
-    [ 0x1F380, 0x1F393 ],
-    [ 0x1F3A0, 0x1F3C4 ],
-    [ 0x1F3C6, 0x1F3CA ],
-    [ 0x1F3E0, 0x1F3F0 ],
-    [ 0x1F400, 0x1F43E ],
-    [ 0x1F440, 0x1F440 ],
-    [ 0x1F442, 0x1F4F7 ],
-    [ 0x1F4F9, 0x1F4FC ],
-    [ 0x1F500, 0x1F53D ],
-    [ 0x1F550, 0x1F567 ],
-    [ 0x1F5FB, 0x1F5FF ],
-    [ 0x1F601, 0x1F610 ],
-    [ 0x1F612, 0x1F614 ],
-    [ 0x1F616, 0x1F616 ],
-    [ 0x1F618, 0x1F618 ],
-    [ 0x1F61A, 0x1F61A ],
-    [ 0x1F61C, 0x1F61E ],
-    [ 0x1F620, 0x1F625 ],
-    [ 0x1F628, 0x1F62B ],
-    [ 0x1F62D, 0x1F62D ],
-    [ 0x1F630, 0x1F633 ],
-    [ 0x1F635, 0x1F640 ],
-    [ 0x1F645, 0x1F64F ],
-    [ 0x1F680, 0x1F6C5 ],
-    [ 0x1F700, 0x1F773 ],
-    ];
-
-    return binarySearch!tableSm(c)
-        || binarySearch!tableSc(c)
-        || binarySearch!tableSk(c)
-        || binarySearch!tableSo(c);
+   static immutable symbolTrie = asTrie(symbolTrieEntries);
+   return symbolTrie[c];
 }
 
 unittest
 {
+    import std.string;
     assert(isSymbol('\u0024'));
     assert(isSymbol('\u002B'));
     assert(isSymbol('\u005E'));
     assert(isSymbol('\u00A6'));
+    foreach(ch; unicode("S").byCodepoint)
+        assert(isSymbol(ch), format("%04x", ch));
 }
 
-
 /++
-    Returns whether $(D c) is a Unicode whitespace character
+    Returns whether $(D c) is a Unicode space $(CHARACTER)
     (general Unicode category: Zs)
-
-    Standards: Unicode 6.0.0.
-  +/
-bool isSpace(dchar c) @safe pure nothrow
+    Note: This doesn't include '\n', '\r', \t' and other non-space $(CHARACTER).
+    For commonly used less strict semantics see $(LREF isWhite).
++/
+@safe pure nothrow
+bool isSpace(dchar c)
 {
-    return (c == 0x0020 ||
-        c == 0x00A0 || c == 0x1680 || c == 0x180E ||
-        (0x2000 <= c && c <= 0x200A) ||
-        c == 0x202F || c == 0x205F || c == 0x3000);
+    return isSpaceGen(c);
 }
 
 unittest
 {
     assert(isSpace('\u0020'));
+    auto space = unicode.Zs;
+    foreach(ch; space.byCodepoint)
+        assert(isSpace(ch));
+    foreach(ch; 0..0x1000)
+        assert(isSpace(ch) == space[ch]);
 }
 
 
 /++
-    Returns whether $(D c) is a Unicode graphical character
+    Returns whether $(D c) is a Unicode graphical $(CHARACTER)
     (general Unicode category: L, M, N, P, S, Zs).
 
-    Standards: Unicode 6.0.0.
-  +/
-
-bool isGraphical(dchar c) @safe pure nothrow
++/
+@safe pure nothrow
+bool isGraphical(dchar c)
 {
-    return isAlpha(c) || isNumber(c) || isSpace(c)
-        || isMark(c) || isPunctuation(c) || isSymbol(c);
+    static immutable graphicalTrie = asTrie(graphicalTrieEntries);
+    return graphicalTrie[c];
 }
+
 
 unittest
 {
+    auto set = unicode("Graphical");
+    import std.string;
+    foreach(ch; set.byCodepoint)
+        assert(isGraphical(ch), format("%4x", ch));
+    foreach(ch; 0..0x4000)
+        assert((ch in set) == isGraphical(ch));
 }
 
 
 /++
-    Returns whether $(D c) is a Unicode control character
-    (general Unicode category: Cc)
-
-    Standards: Unicode 6.0.0.
-  +/
-
-bool isControl(dchar c) @safe pure nothrow
+    Returns whether $(D c) is a Unicode control $(CHARACTER)
+    (general Unicode category: Cc).
++/
+@safe pure nothrow
+bool isControl(dchar c)
 {
-    return (c <= 0x1F || (0x80 <= c && c <= 0x9F));
+    return isControlGen(c);
 }
 
 unittest
 {
     assert(isControl('\u0000'));
+    assert(isControl('\u0081'));
+    assert(!isControl('\u0100'));
+    auto cc = unicode.Cc;
+    foreach(ch; cc.byCodepoint)
+        assert(isControl(ch));
+    foreach(ch; 0..0x1000)
+        assert(isControl(ch) == cc[ch]);
 }
 
 
 /++
-    Returns whether $(D c) is a Unicode formatting character
-    (general Unicode category: Cf)
-
-    Standards: Unicode 6.0.0.
-  +/
-bool isFormat(dchar c) @safe pure nothrow
+    Returns whether $(D c) is a Unicode formatting $(CHARACTER)
+    (general Unicode category: Cf).
++/
+@safe pure nothrow
+bool isFormat(dchar c)
 {
-    static immutable dchar[2][] tableCf =
-    [
-    [ 0x00AD, 0x00AD ],
-    [ 0x0600, 0x0603 ],
-    [ 0x06DD, 0x06DD ],
-    [ 0x070F, 0x070F ],
-    [ 0x17B4, 0x17B5 ],
-    [ 0x200B, 0x200F ],
-    [ 0x202A, 0x202E ],
-    [ 0x2060, 0x2064 ],
-    [ 0x206A, 0x206F ],
-    [ 0xFEFF, 0xFEFF ],
-    [ 0xFFF9, 0xFFFB ],
-    [ 0x110BD, 0x110BD ],
-    [ 0x1D173, 0x1D17A ],
-    [ 0xE0001, 0xE0001 ],
-    [ 0xE0020, 0xE007F ],
-    ];
-
-    return binarySearch!tableCf(c);
+    return isFormatGen(c);
 }
+
 
 unittest
 {
     assert(isFormat('\u00AD'));
+    foreach(ch; unicode("Format").byCodepoint)
+        assert(isFormat(ch));
 }
 
+// code points for private use, surrogates are not likely to change in near feature
+// if need be they can be generated from unicode data as well
 
 /++
-    Returns whether $(D c) is a Unicode Private Use character
-    (general Unicode category: Co)
-
-    Standards: Unicode 6.0.0.
-  +/
-bool isPrivateUse(dchar c) @safe pure nothrow
+    Returns whether $(D c) is a Unicode Private Use $(CODEPOINT)
+    (general Unicode category: Co).
++/
+@safe pure nothrow
+bool isPrivateUse(dchar c)
 {
     return (0x00_E000 <= c && c <= 0x00_F8FF)
         || (0x0F_0000 <= c && c <= 0x0F_FFFD)
         || (0x10_0000 <= c && c <= 0x10_FFFD);
 }
 
-
-unittest
-{
-}
-
-
 /++
-    Returns whether $(D c) is a Unicode surrogate character
-    (general Unicode category: Cs)
-
-    Standards: Unicode 6.0.0.
-  +/
-bool isSurrogate(dchar c) @safe pure nothrow
+    Returns whether $(D c) is a Unicode surrogate $(CODEPOINT)
+    (general Unicode category: Cs).
++/
+@safe pure nothrow
+bool isSurrogate(dchar c)
 {
     return (0xD800 <= c && c <= 0xDFFF);
 }
 
 /++
     Returns whether $(D c) is a Unicode high surrogate (lead surrogate).
-
-    Standards: Unicode 2.0.
-  +/
-bool isSurrogateHi(dchar c) @safe pure nothrow
++/
+@safe pure nothrow
+bool isSurrogateHi(dchar c)
 {
     return (0xD800 <= c && c <= 0xDBFF);
 }
 
 /++
     Returns whether $(D c) is a Unicode low surrogate (trail surrogate).
-
-    Standards: Unicode 2.0.
-  +/
-bool isSurrogateLo(dchar c) @safe pure nothrow
++/
+@safe pure nothrow
+bool isSurrogateLo(dchar c)
 {
     return (0xDC00 <= c && c <= 0xDFFF);
 }
 
-unittest
-{
-}
-
-
 /++
-    Returns whether $(D c) is a Unicode non-character
+    Returns whether $(D c) is a Unicode non-character i.e.
+    a $(CODEPOINT) with no assigned abstract character.
     (general Unicode category: Cn)
-
-    Standards: Unicode 6.0.0.
-  +/
-bool isNonCharacter(dchar c) @safe pure nothrow
++/
+@safe pure nothrow
+bool isNonCharacter(dchar c)
 {
-    static immutable dchar[2][] table =
-    [
-    [ 0x0378, 0x0379 ],
-    [ 0x037F, 0x0383 ],
-    [ 0x038B, 0x038B ],
-    [ 0x038D, 0x038D ],
-    [ 0x03A2, 0x03A2 ],
-    [ 0x0528, 0x0530 ],
-    [ 0x0557, 0x0558 ],
-    [ 0x0560, 0x0560 ],
-    [ 0x0588, 0x0588 ],
-    [ 0x058B, 0x0590 ],
-    [ 0x05C8, 0x05CF ],
-    [ 0x05EB, 0x05EF ],
-    [ 0x05F5, 0x05FF ],
-    [ 0x0604, 0x0605 ],
-    [ 0x061C, 0x061D ],
-    [ 0x070E, 0x070E ],
-    [ 0x074B, 0x074C ],
-    [ 0x07B2, 0x07BF ],
-    [ 0x07FB, 0x07FF ],
-    [ 0x082E, 0x082F ],
-    [ 0x083F, 0x083F ],
-    [ 0x085C, 0x085D ],
-    [ 0x085F, 0x08FF ],
-    [ 0x0978, 0x0978 ],
-    [ 0x0980, 0x0980 ],
-    [ 0x0984, 0x0984 ],
-    [ 0x098D, 0x098E ],
-    [ 0x0991, 0x0992 ],
-    [ 0x09A9, 0x09A9 ],
-    [ 0x09B1, 0x09B1 ],
-    [ 0x09B3, 0x09B5 ],
-    [ 0x09BA, 0x09BB ],
-    [ 0x09C5, 0x09C6 ],
-    [ 0x09C9, 0x09CA ],
-    [ 0x09CF, 0x09D6 ],
-    [ 0x09D8, 0x09DB ],
-    [ 0x09DE, 0x09DE ],
-    [ 0x09E4, 0x09E5 ],
-    [ 0x09FC, 0x0A00 ],
-    [ 0x0A04, 0x0A04 ],
-    [ 0x0A0B, 0x0A0E ],
-    [ 0x0A11, 0x0A12 ],
-    [ 0x0A29, 0x0A29 ],
-    [ 0x0A31, 0x0A31 ],
-    [ 0x0A34, 0x0A34 ],
-    [ 0x0A37, 0x0A37 ],
-    [ 0x0A3A, 0x0A3B ],
-    [ 0x0A3D, 0x0A3D ],
-    [ 0x0A43, 0x0A46 ],
-    [ 0x0A49, 0x0A4A ],
-    [ 0x0A4E, 0x0A50 ],
-    [ 0x0A52, 0x0A58 ],
-    [ 0x0A5D, 0x0A5D ],
-    [ 0x0A5F, 0x0A65 ],
-    [ 0x0A76, 0x0A80 ],
-    [ 0x0A84, 0x0A84 ],
-    [ 0x0A8E, 0x0A8E ],
-    [ 0x0A92, 0x0A92 ],
-    [ 0x0AA9, 0x0AA9 ],
-    [ 0x0AB1, 0x0AB1 ],
-    [ 0x0AB4, 0x0AB4 ],
-    [ 0x0ABA, 0x0ABB ],
-    [ 0x0AC6, 0x0AC6 ],
-    [ 0x0ACA, 0x0ACA ],
-    [ 0x0ACE, 0x0ACF ],
-    [ 0x0AD1, 0x0ADF ],
-    [ 0x0AE4, 0x0AE5 ],
-    [ 0x0AF0, 0x0AF0 ],
-    [ 0x0AF2, 0x0B00 ],
-    [ 0x0B04, 0x0B04 ],
-    [ 0x0B0D, 0x0B0E ],
-    [ 0x0B11, 0x0B12 ],
-    [ 0x0B29, 0x0B29 ],
-    [ 0x0B31, 0x0B31 ],
-    [ 0x0B34, 0x0B34 ],
-    [ 0x0B3A, 0x0B3B ],
-    [ 0x0B45, 0x0B46 ],
-    [ 0x0B49, 0x0B4A ],
-    [ 0x0B4E, 0x0B55 ],
-    [ 0x0B58, 0x0B5B ],
-    [ 0x0B5E, 0x0B5E ],
-    [ 0x0B64, 0x0B65 ],
-    [ 0x0B78, 0x0B81 ],
-    [ 0x0B84, 0x0B84 ],
-    [ 0x0B8B, 0x0B8D ],
-    [ 0x0B91, 0x0B91 ],
-    [ 0x0B96, 0x0B98 ],
-    [ 0x0B9B, 0x0B9B ],
-    [ 0x0B9D, 0x0B9D ],
-    [ 0x0BA0, 0x0BA2 ],
-    [ 0x0BA5, 0x0BA7 ],
-    [ 0x0BAB, 0x0BAD ],
-    [ 0x0BBA, 0x0BBD ],
-    [ 0x0BC3, 0x0BC5 ],
-    [ 0x0BC9, 0x0BC9 ],
-    [ 0x0BCE, 0x0BCF ],
-    [ 0x0BD1, 0x0BD6 ],
-    [ 0x0BD8, 0x0BE5 ],
-    [ 0x0BFB, 0x0C00 ],
-    [ 0x0C04, 0x0C04 ],
-    [ 0x0C0D, 0x0C0D ],
-    [ 0x0C11, 0x0C11 ],
-    [ 0x0C29, 0x0C29 ],
-    [ 0x0C34, 0x0C34 ],
-    [ 0x0C3A, 0x0C3C ],
-    [ 0x0C45, 0x0C45 ],
-    [ 0x0C49, 0x0C49 ],
-    [ 0x0C4E, 0x0C54 ],
-    [ 0x0C57, 0x0C57 ],
-    [ 0x0C5A, 0x0C5F ],
-    [ 0x0C64, 0x0C65 ],
-    [ 0x0C70, 0x0C77 ],
-    [ 0x0C80, 0x0C81 ],
-    [ 0x0C84, 0x0C84 ],
-    [ 0x0C8D, 0x0C8D ],
-    [ 0x0C91, 0x0C91 ],
-    [ 0x0CA9, 0x0CA9 ],
-    [ 0x0CB4, 0x0CB4 ],
-    [ 0x0CBA, 0x0CBB ],
-    [ 0x0CC5, 0x0CC5 ],
-    [ 0x0CC9, 0x0CC9 ],
-    [ 0x0CCE, 0x0CD4 ],
-    [ 0x0CD7, 0x0CDD ],
-    [ 0x0CDF, 0x0CDF ],
-    [ 0x0CE4, 0x0CE5 ],
-    [ 0x0CF0, 0x0CF0 ],
-    [ 0x0CF3, 0x0D01 ],
-    [ 0x0D04, 0x0D04 ],
-    [ 0x0D0D, 0x0D0D ],
-    [ 0x0D11, 0x0D11 ],
-    [ 0x0D3B, 0x0D3C ],
-    [ 0x0D45, 0x0D45 ],
-    [ 0x0D49, 0x0D49 ],
-    [ 0x0D4F, 0x0D56 ],
-    [ 0x0D58, 0x0D5F ],
-    [ 0x0D64, 0x0D65 ],
-    [ 0x0D76, 0x0D78 ],
-    [ 0x0D80, 0x0D81 ],
-    [ 0x0D84, 0x0D84 ],
-    [ 0x0D97, 0x0D99 ],
-    [ 0x0DB2, 0x0DB2 ],
-    [ 0x0DBC, 0x0DBC ],
-    [ 0x0DBE, 0x0DBF ],
-    [ 0x0DC7, 0x0DC9 ],
-    [ 0x0DCB, 0x0DCE ],
-    [ 0x0DD5, 0x0DD5 ],
-    [ 0x0DD7, 0x0DD7 ],
-    [ 0x0DE0, 0x0DF1 ],
-    [ 0x0DF5, 0x0E00 ],
-    [ 0x0E3B, 0x0E3E ],
-    [ 0x0E5C, 0x0E80 ],
-    [ 0x0E83, 0x0E83 ],
-    [ 0x0E85, 0x0E86 ],
-    [ 0x0E89, 0x0E89 ],
-    [ 0x0E8B, 0x0E8C ],
-    [ 0x0E8E, 0x0E93 ],
-    [ 0x0E98, 0x0E98 ],
-    [ 0x0EA0, 0x0EA0 ],
-    [ 0x0EA4, 0x0EA4 ],
-    [ 0x0EA6, 0x0EA6 ],
-    [ 0x0EA8, 0x0EA9 ],
-    [ 0x0EAC, 0x0EAC ],
-    [ 0x0EBA, 0x0EBA ],
-    [ 0x0EBE, 0x0EBF ],
-    [ 0x0EC5, 0x0EC5 ],
-    [ 0x0EC7, 0x0EC7 ],
-    [ 0x0ECE, 0x0ECF ],
-    [ 0x0EDA, 0x0EDB ],
-    [ 0x0EDE, 0x0EFF ],
-    [ 0x0F48, 0x0F48 ],
-    [ 0x0F6D, 0x0F70 ],
-    [ 0x0F98, 0x0F98 ],
-    [ 0x0FBD, 0x0FBD ],
-    [ 0x0FCD, 0x0FCD ],
-    [ 0x0FDB, 0x0FFF ],
-    [ 0x10C6, 0x10CF ],
-    [ 0x10FD, 0x10FF ],
-    [ 0x1249, 0x1249 ],
-    [ 0x124E, 0x124F ],
-    [ 0x1257, 0x1257 ],
-    [ 0x1259, 0x1259 ],
-    [ 0x125E, 0x125F ],
-    [ 0x1289, 0x1289 ],
-    [ 0x128E, 0x128F ],
-    [ 0x12B1, 0x12B1 ],
-    [ 0x12B6, 0x12B7 ],
-    [ 0x12BF, 0x12BF ],
-    [ 0x12C1, 0x12C1 ],
-    [ 0x12C6, 0x12C7 ],
-    [ 0x12D7, 0x12D7 ],
-    [ 0x1311, 0x1311 ],
-    [ 0x1316, 0x1317 ],
-    [ 0x135B, 0x135C ],
-    [ 0x137D, 0x137F ],
-    [ 0x139A, 0x139F ],
-    [ 0x13F5, 0x13FF ],
-    [ 0x169D, 0x169F ],
-    [ 0x16F1, 0x16FF ],
-    [ 0x170D, 0x170D ],
-    [ 0x1715, 0x171F ],
-    [ 0x1737, 0x173F ],
-    [ 0x1754, 0x175F ],
-    [ 0x176D, 0x176D ],
-    [ 0x1771, 0x1771 ],
-    [ 0x1774, 0x177F ],
-    [ 0x17DE, 0x17DF ],
-    [ 0x17EA, 0x17EF ],
-    [ 0x17FA, 0x17FF ],
-    [ 0x180F, 0x180F ],
-    [ 0x181A, 0x181F ],
-    [ 0x1878, 0x187F ],
-    [ 0x18AB, 0x18AF ],
-    [ 0x18F6, 0x18FF ],
-    [ 0x191D, 0x191F ],
-    [ 0x192C, 0x192F ],
-    [ 0x193C, 0x193F ],
-    [ 0x1941, 0x1943 ],
-    [ 0x196E, 0x196F ],
-    [ 0x1975, 0x197F ],
-    [ 0x19AC, 0x19AF ],
-    [ 0x19CA, 0x19CF ],
-    [ 0x19DB, 0x19DD ],
-    [ 0x1A1C, 0x1A1D ],
-    [ 0x1A5F, 0x1A5F ],
-    [ 0x1A7D, 0x1A7E ],
-    [ 0x1A8A, 0x1A8F ],
-    [ 0x1A9A, 0x1A9F ],
-    [ 0x1AAE, 0x1AFF ],
-    [ 0x1B4C, 0x1B4F ],
-    [ 0x1B7D, 0x1B7F ],
-    [ 0x1BAB, 0x1BAD ],
-    [ 0x1BBA, 0x1BBF ],
-    [ 0x1BF4, 0x1BFB ],
-    [ 0x1C38, 0x1C3A ],
-    [ 0x1C4A, 0x1C4C ],
-    [ 0x1C80, 0x1CCF ],
-    [ 0x1CF3, 0x1CFF ],
-    [ 0x1DE7, 0x1DFB ],
-    [ 0x1F16, 0x1F17 ],
-    [ 0x1F1E, 0x1F1F ],
-    [ 0x1F46, 0x1F47 ],
-    [ 0x1F4E, 0x1F4F ],
-    [ 0x1F58, 0x1F58 ],
-    [ 0x1F5A, 0x1F5A ],
-    [ 0x1F5C, 0x1F5C ],
-    [ 0x1F5E, 0x1F5E ],
-    [ 0x1F7E, 0x1F7F ],
-    [ 0x1FB5, 0x1FB5 ],
-    [ 0x1FC5, 0x1FC5 ],
-    [ 0x1FD4, 0x1FD5 ],
-    [ 0x1FDC, 0x1FDC ],
-    [ 0x1FF0, 0x1FF1 ],
-    [ 0x1FF5, 0x1FF5 ],
-    [ 0x1FFF, 0x1FFF ],
-    [ 0x2065, 0x2069 ],
-    [ 0x2072, 0x2073 ],
-    [ 0x208F, 0x208F ],
-    [ 0x209D, 0x209F ],
-    [ 0x20BA, 0x20CF ],
-    [ 0x20F1, 0x20FF ],
-    [ 0x218A, 0x218F ],
-    [ 0x23F4, 0x23FF ],
-    [ 0x2427, 0x243F ],
-    [ 0x244B, 0x245F ],
-    [ 0x2700, 0x2700 ],
-    [ 0x27CB, 0x27CB ],
-    [ 0x27CD, 0x27CD ],
-    [ 0x2B4D, 0x2B4F ],
-    [ 0x2B5A, 0x2BFF ],
-    [ 0x2C2F, 0x2C2F ],
-    [ 0x2C5F, 0x2C5F ],
-    [ 0x2CF2, 0x2CF8 ],
-    [ 0x2D26, 0x2D2F ],
-    [ 0x2D66, 0x2D6E ],
-    [ 0x2D71, 0x2D7E ],
-    [ 0x2D97, 0x2D9F ],
-    [ 0x2DA7, 0x2DA7 ],
-    [ 0x2DAF, 0x2DAF ],
-    [ 0x2DB7, 0x2DB7 ],
-    [ 0x2DBF, 0x2DBF ],
-    [ 0x2DC7, 0x2DC7 ],
-    [ 0x2DCF, 0x2DCF ],
-    [ 0x2DD7, 0x2DD7 ],
-    [ 0x2DDF, 0x2DDF ],
-    [ 0x2E32, 0x2E7F ],
-    [ 0x2E9A, 0x2E9A ],
-    [ 0x2EF4, 0x2EFF ],
-    [ 0x2FD6, 0x2FEF ],
-    [ 0x2FFC, 0x2FFF ],
-    [ 0x3040, 0x3040 ],
-    [ 0x3097, 0x3098 ],
-    [ 0x3100, 0x3104 ],
-    [ 0x312E, 0x3130 ],
-    [ 0x318F, 0x318F ],
-    [ 0x31BB, 0x31BF ],
-    [ 0x31E4, 0x31EF ],
-    [ 0x321F, 0x321F ],
-    [ 0x32FF, 0x32FF ],
-    [ 0x4DB6, 0x4DBF ],
-    [ 0x9FCC, 0x9FFF ],
-    [ 0xA48D, 0xA48F ],
-    [ 0xA4C7, 0xA4CF ],
-    [ 0xA62C, 0xA63F ],
-    [ 0xA674, 0xA67B ],
-    [ 0xA698, 0xA69F ],
-    [ 0xA6F8, 0xA6FF ],
-    [ 0xA78F, 0xA78F ],
-    [ 0xA792, 0xA79F ],
-    [ 0xA7AA, 0xA7F9 ],
-    [ 0xA82C, 0xA82F ],
-    [ 0xA83A, 0xA83F ],
-    [ 0xA878, 0xA87F ],
-    [ 0xA8C5, 0xA8CD ],
-    [ 0xA8DA, 0xA8DF ],
-    [ 0xA8FC, 0xA8FF ],
-    [ 0xA954, 0xA95E ],
-    [ 0xA97D, 0xA97F ],
-    [ 0xA9CE, 0xA9CE ],
-    [ 0xA9DA, 0xA9DD ],
-    [ 0xA9E0, 0xA9FF ],
-    [ 0xAA37, 0xAA3F ],
-    [ 0xAA4E, 0xAA4F ],
-    [ 0xAA5A, 0xAA5B ],
-    [ 0xAA7C, 0xAA7F ],
-    [ 0xAAC3, 0xAADA ],
-    [ 0xAAE0, 0xAB00 ],
-    [ 0xAB07, 0xAB08 ],
-    [ 0xAB0F, 0xAB10 ],
-    [ 0xAB17, 0xAB1F ],
-    [ 0xAB27, 0xAB27 ],
-    [ 0xAB2F, 0xABBF ],
-    [ 0xABEE, 0xABEF ],
-    [ 0xABFA, 0xABFF ],
-    [ 0xD7A4, 0xD7AF ],
-    [ 0xD7C7, 0xD7CA ],
-    [ 0xD7FC, 0xD7FF ],
-    [ 0xFA2E, 0xFA2F ],
-    [ 0xFA6E, 0xFA6F ],
-    [ 0xFADA, 0xFAFF ],
-    [ 0xFB07, 0xFB12 ],
-    [ 0xFB18, 0xFB1C ],
-    [ 0xFB37, 0xFB37 ],
-    [ 0xFB3D, 0xFB3D ],
-    [ 0xFB3F, 0xFB3F ],
-    [ 0xFB42, 0xFB42 ],
-    [ 0xFB45, 0xFB45 ],
-    [ 0xFBC2, 0xFBD2 ],
-    [ 0xFD40, 0xFD4F ],
-    [ 0xFD90, 0xFD91 ],
-    [ 0xFDC8, 0xFDEF ],
-    [ 0xFDFE, 0xFDFF ],
-    [ 0xFE1A, 0xFE1F ],
-    [ 0xFE27, 0xFE2F ],
-    [ 0xFE53, 0xFE53 ],
-    [ 0xFE67, 0xFE67 ],
-    [ 0xFE6C, 0xFE6F ],
-    [ 0xFE75, 0xFE75 ],
-    [ 0xFEFD, 0xFEFE ],
-    [ 0xFF00, 0xFF00 ],
-    [ 0xFFBF, 0xFFC1 ],
-    [ 0xFFC8, 0xFFC9 ],
-    [ 0xFFD0, 0xFFD1 ],
-    [ 0xFFD8, 0xFFD9 ],
-    [ 0xFFDD, 0xFFDF ],
-    [ 0xFFE7, 0xFFE7 ],
-    [ 0xFFEF, 0xFFF8 ],
-    [ 0xFFFE, 0xFFFF ],
-    [ 0x1000C, 0x1000C ],
-    [ 0x10027, 0x10027 ],
-    [ 0x1003B, 0x1003B ],
-    [ 0x1003E, 0x1003E ],
-    [ 0x1004E, 0x1004F ],
-    [ 0x1005E, 0x1007F ],
-    [ 0x100FB, 0x100FF ],
-    [ 0x10103, 0x10106 ],
-    [ 0x10134, 0x10136 ],
-    [ 0x1018B, 0x1018F ],
-    [ 0x1019C, 0x101CF ],
-    [ 0x101FE, 0x1027F ],
-    [ 0x1029D, 0x1029F ],
-    [ 0x102D1, 0x102FF ],
-    [ 0x1031F, 0x1031F ],
-    [ 0x10324, 0x1032F ],
-    [ 0x1034B, 0x1037F ],
-    [ 0x1039E, 0x1039E ],
-    [ 0x103C4, 0x103C7 ],
-    [ 0x103D6, 0x103FF ],
-    [ 0x1049E, 0x1049F ],
-    [ 0x104AA, 0x107FF ],
-    [ 0x10806, 0x10807 ],
-    [ 0x10809, 0x10809 ],
-    [ 0x10836, 0x10836 ],
-    [ 0x10839, 0x1083B ],
-    [ 0x1083D, 0x1083E ],
-    [ 0x10856, 0x10856 ],
-    [ 0x10860, 0x108FF ],
-    [ 0x1091C, 0x1091E ],
-    [ 0x1093A, 0x1093E ],
-    [ 0x10940, 0x109FF ],
-    [ 0x10A04, 0x10A04 ],
-    [ 0x10A07, 0x10A0B ],
-    [ 0x10A14, 0x10A14 ],
-    [ 0x10A18, 0x10A18 ],
-    [ 0x10A34, 0x10A37 ],
-    [ 0x10A3B, 0x10A3E ],
-    [ 0x10A48, 0x10A4F ],
-    [ 0x10A59, 0x10A5F ],
-    [ 0x10A80, 0x10AFF ],
-    [ 0x10B36, 0x10B38 ],
-    [ 0x10B56, 0x10B57 ],
-    [ 0x10B73, 0x10B77 ],
-    [ 0x10B80, 0x10BFF ],
-    [ 0x10C49, 0x10E5F ],
-    [ 0x10E7F, 0x10FFF ],
-    [ 0x1104E, 0x11051 ],
-    [ 0x11070, 0x1107F ],
-    [ 0x110C2, 0x11FFF ],
-    [ 0x1236F, 0x123FF ],
-    [ 0x12463, 0x1246F ],
-    [ 0x12474, 0x12FFF ],
-    [ 0x1342F, 0x167FF ],
-    [ 0x16A39, 0x1AFFF ],
-    [ 0x1B002, 0x1CFFF ],
-    [ 0x1D0F6, 0x1D0FF ],
-    [ 0x1D127, 0x1D128 ],
-    [ 0x1D1DE, 0x1D1FF ],
-    [ 0x1D246, 0x1D2FF ],
-    [ 0x1D357, 0x1D35F ],
-    [ 0x1D372, 0x1D3FF ],
-    [ 0x1D455, 0x1D455 ],
-    [ 0x1D49D, 0x1D49D ],
-    [ 0x1D4A0, 0x1D4A1 ],
-    [ 0x1D4A3, 0x1D4A4 ],
-    [ 0x1D4A7, 0x1D4A8 ],
-    [ 0x1D4AD, 0x1D4AD ],
-    [ 0x1D4BA, 0x1D4BA ],
-    [ 0x1D4BC, 0x1D4BC ],
-    [ 0x1D4C4, 0x1D4C4 ],
-    [ 0x1D506, 0x1D506 ],
-    [ 0x1D50B, 0x1D50C ],
-    [ 0x1D515, 0x1D515 ],
-    [ 0x1D51D, 0x1D51D ],
-    [ 0x1D53A, 0x1D53A ],
-    [ 0x1D53F, 0x1D53F ],
-    [ 0x1D545, 0x1D545 ],
-    [ 0x1D547, 0x1D549 ],
-    [ 0x1D551, 0x1D551 ],
-    [ 0x1D6A6, 0x1D6A7 ],
-    [ 0x1D7CC, 0x1D7CD ],
-    [ 0x1D800, 0x1EFFF ],
-    [ 0x1F02C, 0x1F02F ],
-    [ 0x1F094, 0x1F09F ],
-    [ 0x1F0AF, 0x1F0B0 ],
-    [ 0x1F0BF, 0x1F0C0 ],
-    [ 0x1F0D0, 0x1F0D0 ],
-    [ 0x1F0E0, 0x1F0FF ],
-    [ 0x1F10B, 0x1F10F ],
-    [ 0x1F12F, 0x1F12F ],
-    [ 0x1F16A, 0x1F16F ],
-    [ 0x1F19B, 0x1F1E5 ],
-    [ 0x1F203, 0x1F20F ],
-    [ 0x1F23B, 0x1F23F ],
-    [ 0x1F249, 0x1F24F ],
-    [ 0x1F252, 0x1F2FF ],
-    [ 0x1F321, 0x1F32F ],
-    [ 0x1F336, 0x1F336 ],
-    [ 0x1F37D, 0x1F37F ],
-    [ 0x1F394, 0x1F39F ],
-    [ 0x1F3C5, 0x1F3C5 ],
-    [ 0x1F3CB, 0x1F3DF ],
-    [ 0x1F3F1, 0x1F3FF ],
-    [ 0x1F43F, 0x1F43F ],
-    [ 0x1F441, 0x1F441 ],
-    [ 0x1F4F8, 0x1F4F8 ],
-    [ 0x1F4FD, 0x1F4FF ],
-    [ 0x1F53E, 0x1F54F ],
-    [ 0x1F568, 0x1F5FA ],
-    [ 0x1F600, 0x1F600 ],
-    [ 0x1F611, 0x1F611 ],
-    [ 0x1F615, 0x1F615 ],
-    [ 0x1F617, 0x1F617 ],
-    [ 0x1F619, 0x1F619 ],
-    [ 0x1F61B, 0x1F61B ],
-    [ 0x1F61F, 0x1F61F ],
-    [ 0x1F626, 0x1F627 ],
-    [ 0x1F62C, 0x1F62C ],
-    [ 0x1F62E, 0x1F62F ],
-    [ 0x1F634, 0x1F634 ],
-    [ 0x1F641, 0x1F644 ],
-    [ 0x1F650, 0x1F67F ],
-    [ 0x1F6C6, 0x1F6FF ],
-    [ 0x1F774, 0x1FFFF ],
-    [ 0x2A6D7, 0x2A6FF ],
-    [ 0x2B735, 0x2B73F ],
-    [ 0x2B81E, 0x2F7FF ],
-    [ 0x2FA1E, 0xE0000 ],
-    [ 0xE0002, 0xE001F ],
-    [ 0xE0080, 0xE00FF ],
-    [ 0xE01F0, 0xEFFFF ],
-    [ 0xFFFFE, 0xFFFFF ],
-    [ 0x10FFFE, 0x10FFFF ],
-    ];
-
-    return binarySearch!table(c);
+    static immutable nonCharacterTrie = asTrie(nonCharacterTrieEntries);
+    return nonCharacterTrie[c];
 }
 
 unittest
 {
+    auto set = unicode("Cn");
+    foreach(ch; set.byCodepoint)
+        assert(isNonCharacter(ch));
 }
 
-
-//==============================================================================
-// Private Section.
-//==============================================================================
 private:
+// load static data from pre-generated tables into usable datastructures
 
-bool binarySearch(alias table)(dchar c) @safe pure nothrow
+
+@safe auto asSet(const (ubyte)[] compressed)
 {
-    static @property bool checkTableEntry(alias table)()
-    {
-        foreach(i, entry; table)
-        {
-            assert(table[i][0] <= table[i][1]);
-            if(i < table.length - 1)
-                assert(table[i][1] < table[i + 1][0]);
-        }
-        return true;
-    }
-    static assert(checkTableEntry!table);
-
-    return binarySearch2(c, table);
+    return CodepointSet(decompressIntervals(compressed));
 }
 
-bool binarySearch2(dchar c, immutable dchar[2][] table) @safe pure nothrow
+auto asTrie(T...)(in TrieEntry!T e)
 {
-    // Binary search
-    size_t mid;
-    size_t low;
-    size_t high;
+    return const(CodepointTrie!T)(e.offsets, e.sizes, e.data);
+}
 
-    low = 0;
-    high = table.length - 1;
-    while(cast(int)low <= cast(int)high)
-    {
-        mid = (low + high) >> 1;
+// TODO: move sets below to Tries
+__gshared CodepointSet hangLV;
+__gshared CodepointSet hangLVT;
 
-        if(c < table[mid][0])
-            high = mid - 1;
-        else if(c > table[mid][1])
-            low = mid + 1;
-        else
-            goto Lis;
-    }
+shared static this()
+{
+    hangLV = asSet(hangulLV);
+    hangLVT = asSet(hangulLVT);
+}
 
-Lisnot:
-    debug
-    {
-        for(size_t i = 0; i < table.length; ++i)
-            assert(c < table[i][0] || c > table[i][1]);
-    }
+}// version(!std_uni_bootstrap)
 
-    return false;
-
-Lis:
-    debug
-    {
-        for(size_t i = 0; i < table.length; ++i)
-        {
-            if(c >= table[i][0] && c <= table[i][1])
-                return true;
-        }
-
-        assert(0);      // should have been in table
-    }
-    else
-        return true;
-};

@@ -37,13 +37,13 @@ CFLAGS=/O2 /nologo /I"$(VCDIR)\INCLUDE" /I"$(SDKDIR)\Include"
 
 ## Flags for dmd D compiler
 
-DFLAGS=-m$(MODEL) -O -release -w -d -property
+DFLAGS=-m$(MODEL) -O -release -w -d
 #DFLAGS=-m$(MODEL) -unittest -g -d
 #DFLAGS=-m$(MODEL) -unittest -cov -g -d
 
 ## Flags for compiling unittests
 
-UDFLAGS=-g -m$(MODEL) -O -w -d -property
+UDFLAGS=-g -m$(MODEL) -O -w -d
 
 ## C compiler, linker, librarian
 
@@ -210,7 +210,7 @@ SRC_STD_C_OSX= std\c\osx\socket.d
 
 SRC_STD_C_FREEBSD= std\c\freebsd\socket.d
 
-SRC_STD_INTERNAL= std\internal\processinit.d std\internal\uni.d std\internal\uni_tab.d
+SRC_STD_INTERNAL= std\internal\processinit.d std\internal\uni.d std\internal\uni_tab.d std\internal\unicode_tables.d
 
 SRC_STD_INTERNAL_DIGEST= std\internal\digest\sha_SSSE3.d
 

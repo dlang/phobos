@@ -178,6 +178,7 @@ module std.digest.digest;
 import std.exception, std.range, std.traits;
 import std.algorithm : copy;
 import std.typetuple : allSatisfy;
+import std.ascii : LetterCase;
 
 //verify example
 unittest
@@ -901,6 +902,7 @@ enum Order : bool
     decreasing ///
 }
 
+
 /**
  * Used to convert a hash value (a static or dynamic array of ubytes) to a string.
  * Can be used with the OOP and with the template API.
@@ -908,6 +910,10 @@ enum Order : bool
  * The additional order parameter can be used to specify the order of the input data.
  * By default the data is processed in increasing order, starting at index 0. To process it in the
  * opposite order, pass Order.decreasing as a parameter.
+ * 
+ * The additional letterCase parameter can be used to specify the case of the output data.
+ * By default the output is in upper case. To change it to the lower case
+ * pass LetterCase.lower as a parameter.
  *
  * Examples:
  * --------
@@ -915,7 +921,13 @@ enum Order : bool
  * auto crc32 = digest!CRC32("The quick ", "brown ", "fox jumps over the lazy dog");
  * assert(toHexString(crc32) == "39A34F41");
  * --------
- *
+ * 
+ * --------
+ * //Lower case variant:
+ * auto crc32 = digest!CRC32("The quick ", "brown ", "fox jumps over the lazy dog");
+ * assert(toHexString!(LetterCase.lower)(crc32) == "39a34f41");
+ * --------
+ * 
  * --------
  * //Usually CRCs are printed in this order, though:
  * auto crc32 = digest!CRC32("The quick ", "brown ", "fox jumps over the lazy dog");
@@ -934,9 +946,18 @@ enum Order : bool
  * assert(toHexString!(Order.decreasing)(crc32) == "414FA339");
  * --------
  */
-char[num*2] toHexString(Order order = Order.increasing, size_t num)(in ubyte[num] digest)
+char[num*2] toHexString(Order order = Order.increasing, size_t num, LetterCase letterCase = LetterCase.upper)
+(in ubyte[num] digest)
 {
-    import std.ascii : hexDigits;
+    static if (letterCase == LetterCase.upper)
+    {
+        import std.ascii : hexDigits = hexDigits;
+    }    
+    else
+    {
+        import std.ascii : hexDigits = lowerHexDigits;
+    }
+
 
     char[num*2] result;
     size_t i;
@@ -945,8 +966,8 @@ char[num*2] toHexString(Order order = Order.increasing, size_t num)(in ubyte[num
     {
         foreach(u; digest)
         {
-            result[i++] = std.ascii.hexDigits[u >> 4];
-            result[i++] = std.ascii.hexDigits[u & 15];
+            result[i++] = hexDigits[u >> 4];
+            result[i++] = hexDigits[u & 15];
         }
     }
     else
@@ -954,8 +975,8 @@ char[num*2] toHexString(Order order = Order.increasing, size_t num)(in ubyte[num
         size_t j = num - 1;
         while(i < num*2)
         {
-            result[i++] = std.ascii.hexDigits[digest[j] >> 4];
-            result[i++] = std.ascii.hexDigits[digest[j] & 15];
+            result[i++] = hexDigits[digest[j] >> 4];
+            result[i++] = hexDigits[digest[j] & 15];
             j--;
         }
     }
@@ -963,9 +984,23 @@ char[num*2] toHexString(Order order = Order.increasing, size_t num)(in ubyte[num
 }
 
 ///ditto
-string toHexString(Order order = Order.increasing)(in ubyte[] digest)
+auto toHexString(LetterCase letterCase, Order order = Order.increasing, size_t num)(in ubyte[num] digest)
 {
-    import std.ascii : hexDigits;
+    return toHexString!(order, num, letterCase)(digest);
+}
+
+///ditto
+string toHexString(Order order = Order.increasing, LetterCase letterCase = LetterCase.upper)
+(in ubyte[] digest)
+{
+    static if (letterCase == LetterCase.upper)
+    {
+        import std.ascii : hexDigits = hexDigits;
+    }    
+    else
+    {
+        import std.ascii : hexDigits = lowerHexDigits;
+    }
 
     auto result = new char[digest.length*2];
     size_t i;
@@ -974,19 +1009,25 @@ string toHexString(Order order = Order.increasing)(in ubyte[] digest)
     {
         foreach(u; digest)
         {
-            result[i++] = std.ascii.hexDigits[u >> 4];
-            result[i++] = std.ascii.hexDigits[u & 15];
+            result[i++] = hexDigits[u >> 4];
+            result[i++] = hexDigits[u & 15];
         }
     }
     else
     {
         foreach(u; retro(digest))
         {
-            result[i++] = std.ascii.hexDigits[u >> 4];
-            result[i++] = std.ascii.hexDigits[u & 15];
+            result[i++] = hexDigits[u >> 4];
+            result[i++] = hexDigits[u & 15];
         }
     }
     return assumeUnique(result);
+}
+
+///ditto
+auto toHexString(LetterCase letterCase, Order order = Order.increasing)(in ubyte[] digest)
+{
+    return toHexString!(order, letterCase)(digest);
 }
 
 //For more example unittests, see Digest.digest, digest
@@ -998,6 +1039,8 @@ unittest
     //Usually CRCs are printed in this order, though:
     auto crc32 = digest!CRC32("The quick ", "brown ", "fox jumps over the lazy dog");
     assert(toHexString!(Order.decreasing)(crc32) == "414FA339");
+    assert(toHexString!(LetterCase.lower, Order.decreasing)(crc32) == "414fa339");
+    assert(toHexString!(LetterCase.lower)(crc32) == "39a34f41");
 }
 
 //verify example
@@ -1017,6 +1060,7 @@ unittest
     assert(toHexString(cast(ubyte[4])[42, 43, 44, 45]) == "2A2B2C2D");
     assert(toHexString(cast(ubyte[])[42, 43, 44, 45]) == "2A2B2C2D");
     assert(toHexString!(Order.decreasing)(cast(ubyte[4])[42, 43, 44, 45]) == "2D2C2B2A");
+    assert(toHexString!(Order.decreasing, LetterCase.lower)(cast(ubyte[4])[42, 43, 44, 45]) == "2d2c2b2a");
     assert(toHexString!(Order.decreasing)(cast(ubyte[])[42, 43, 44, 45]) == "2D2C2B2A");
 }
 
