@@ -4685,10 +4685,16 @@ enum OneShot { Fwd, Bwd };
         index = matcher.index;
     }
 
-    auto backMatcher()(Bytecode[] piece, typeof(s.loopBack(index)) stream)
+    auto fwdMatcher()(Bytecode[] piece)
     {
-        auto m = ThompsonMatcher!(Char, typeof(stream))
-            (this, piece, stream);
+        auto m = ThompsonMatcher!(Char, Stream)(this, piece, s);
+        return m;
+    }
+
+    auto backMatcher()(Bytecode[] piece)
+    {
+        alias BackLooper = typeof(s.loopBack(index));
+        auto m = ThompsonMatcher!(Char, BackLooper)(this, piece, s.loopBack(index));
         m.next();
         return m;
     }
@@ -5136,8 +5142,11 @@ enum OneShot { Fwd, Bwd };
                 break;
             case IR.LookbehindStart:
             case IR.NeglookbehindStart:
-                auto matcher = backMatcher(re.ir[t.pc..t.pc+re.ir[t.pc].data+IRL!(IR.LookbehindEnd)],
-                    s.loopBack(index));
+                uint end = t.pc+IRL!(IR.LookbehindStart)+re.ir[t.pc].data+IRL!(IR.LookbehindEnd);
+                static if(Stream.isLoopback)
+                    auto matcher = fwdMatcher(re.ir[t.pc .. end]);
+                else
+                    auto matcher = backMatcher(re.ir[t.pc .. end]);
                 matcher.re.ngroup = re.ir[t.pc+2].raw - re.ir[t.pc+1].raw;
                 matcher.backrefed = backrefed.empty ? t.matches : backrefed;
                 //backMatch
@@ -5161,8 +5170,12 @@ enum OneShot { Fwd, Bwd };
                 auto save = index;
                 uint len = re.ir[t.pc].data;
                 uint ms = re.ir[t.pc+1].raw, me = re.ir[t.pc+2].raw;
+                uint end = t.pc+len+IRL!(IR.LookaheadEnd)+IRL!(IR.LookaheadStart);
                 bool positive = re.ir[t.pc].code == IR.LookaheadStart;
-                auto matcher = ThompsonMatcher(this, re.ir[t.pc .. t.pc+len+IRL!(IR.LookaheadEnd)+IRL!(IR.LookaheadStart)], s);
+                static if(Stream.isLoopback)
+                    auto matcher = backMatcher(re.ir[t.pc .. end]);
+                else
+                    auto matcher = fwdMatcher(re.ir[t.pc .. end]);
                 matcher.re.ngroup = me - ms;
                 matcher.backrefed = backrefed.empty ? t.matches : backrefed;
                 bool nomatch = (matcher.matchOneShot(t.matches, IRL!(IR.LookaheadStart)) == MatchResult.Match) ^ positive;
