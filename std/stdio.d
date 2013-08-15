@@ -320,7 +320,7 @@ object refers to it anymore.
 
 Throws: $(D ErrnoException) if the file could not be opened.
  */
-    this(string name, in char[] stdioOpenmode = "rb")
+    this(string name, in char[] stdioOpenmode = ['r','b'])
     {
         this(errnoEnforce(.fopen(name, stdioOpenmode),
                         text("Cannot open file `", name, "' in mode `",
