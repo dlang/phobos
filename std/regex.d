@@ -6201,39 +6201,39 @@ private:
         Group!DataIndex[] big_matches;
         Group!DataIndex[smallString] small_matches;
     }
-    uint f, b;
-    uint ngroup;
-    NamedGroup[] names;
+    uint _f, _b;
+    uint _ngroup;
+    NamedGroup[] _names;
 
-    this()(R input, uint groups, NamedGroup[] named)
+    this()(R input, uint ngroups, NamedGroup[] named)
     {
         _input = input;
-        ngroup = groups;
-        names = named;
+        _ngroup = ngroups;
+        _names = named;
         newMatches();
-        b = ngroup;
-        f = 0;
+        _b = _ngroup;
+        _f = 0;
     }
 
     this(alias Engine)(ref RegexMatch!(R,Engine) rmatch)
     {
         _input = rmatch._input;
-        ngroup = rmatch._engine.re.ngroup;
-        names = rmatch._engine.re.dict;
+        _ngroup = rmatch._engine.re.ngroup;
+        _names = rmatch._engine.re.dict;
         newMatches();
-        b = ngroup;
-        f = 0;
+        _b = _ngroup;
+        _f = 0;
     }
 
     @property Group!DataIndex[] matches()
     {
-       return ngroup > smallString ? big_matches : small_matches[0..ngroup];
+       return _ngroup > smallString ? big_matches : small_matches[0 .. _ngroup];
     }
 
     void newMatches()
     {
-        if(ngroup > smallString)
-            big_matches = new Group!DataIndex[ngroup];
+        if(_ngroup > smallString)
+            big_matches = new Group!DataIndex[_ngroup];
     }
 
 public:
@@ -6260,39 +6260,40 @@ public:
     @property R front()
     {
         assert(!empty);
-        return _input[matches[f].begin .. matches[f].end];
+        return _input[matches[_f].begin .. matches[_f].end];
     }
 
     ///ditto
     @property R back()
     {
         assert(!empty);
-        return _input[matches[b-1].begin .. matches[b-1].end];
+        return _input[matches[_b - 1].begin .. matches[_b - 1].end];
     }
 
     ///ditto
     void popFront()
     {
         assert(!empty);
-        ++f;
+        ++_f;
     }
 
     ///ditto
     void popBack()
     {
         assert(!empty);
-        --b;
+        --_b;
     }
 
     ///ditto
-    @property bool empty() const { return _empty || f >= b; }
+    @property bool empty() const { return _empty || _f >= _b; }
 
     ///ditto
     R opIndex()(size_t i) /*const*/ //@@@BUG@@@
     {
-        assert(f+i < b,text("requested submatch number ", i," is out of range"));
-        assert(matches[f+i].begin <= matches[f+i].end, text("wrong match: ", matches[f+i].begin, "..", matches[f+i].end));
-        return _input[matches[f+i].begin..matches[f+i].end];
+        assert(_f + i < _b,text("requested submatch number ", i," is out of range"));
+        assert(matches[_f + i].begin <= matches[_f + i].end, 
+            text("wrong match: ", matches[_f + i].begin, "..", matches[_f + i].end));
+        return _input[matches[_f + i].begin .. matches[_f + i].end];
     }
 
     /++
@@ -6315,12 +6316,12 @@ public:
     R opIndex(String)(String i) /*const*/ //@@@BUG@@@
         if(isSomeString!String)
     {
-        size_t index = lookupNamedGroup(names, i);
-        return _input[matches[index].begin..matches[index].end];
+        size_t index = lookupNamedGroup(_names, i);
+        return _input[matches[index].begin .. matches[index].end];
     }
 
     ///Number of matches in this object.
-    @property size_t length() const { return _empty ? 0 : b-f;  }
+    @property size_t length() const { return _empty ? 0 : _b - _f;  }
 
     ///A hook for compatibility with original std.regex.
     @property ref captures(){ return this; }
@@ -6481,9 +6482,8 @@ private @trusted auto matchOnce(alias Engine, RegEx, R)(R input, RegEx re)
 
 private auto matchMany(alias Engine, RegEx, R)(R input, RegEx re)
 {
-    RegEx reCopy = re;
-    reCopy.flags |= RegexOption.global;
-    return RegexMatch!(R, Engine)(input, reCopy);
+    re.flags |= RegexOption.global;
+    return RegexMatch!(R, Engine)(input, re);
 }
 
 unittest
@@ -6741,10 +6741,9 @@ public auto bmatch(R, RegEx)(R input, RegEx re)
     return RegexMatch!(Unqual!(typeof(input)),BacktrackingMatcher!true)(input, re);
 }
 
-template isReplaceFunctor(alias fun, R)
-{
-    enum isReplaceFunctor = __traits(compiles, (Captures!R c){ fun(c); });
-}
+
+enum isReplaceFunctor(alias fun, R) =
+    __traits(compiles, (Captures!R c){ fun(c); });
 
 // the lowest level - just stuff replacements into the sink
 private @trusted void replaceCapturesInto(alias output, Sink, R, T)
