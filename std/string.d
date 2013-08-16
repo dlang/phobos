@@ -24,6 +24,7 @@ Source:    $(PHOBOSSRC std/_string.d)
 module std.string;
 
 //debug=string;                 // uncomment to turn on debugging printf's
+debug(string) import std.stdio;
 
 import core.exception : RangeError, onRangeError;
 import core.vararg, core.stdc.stdlib, core.stdc.string,
@@ -83,7 +84,7 @@ alias icmp = std.uni.icmp;
 
 unittest
 {
-    debug(string) printf("string.icmp.unittest\n");
+    debug(string) writeln("string.icmp.unittest");
 
     assertCTFEable!(
     {
@@ -211,7 +212,7 @@ immutable(char)* toStringz(string s) pure nothrow
 
 unittest
 {
-    debug(string) printf("string.toStringz.unittest\n");
+    debug(string) writeln("string.toStringz.unittest");
 
     // TODO: CTFEable toStringz is really necessary?
     //assertCTFEable!(
@@ -304,7 +305,7 @@ ptrdiff_t indexOf(Char)(in Char[] s,
 
 unittest
 {
-    debug(string) printf("string.indexOf.unittest\n");
+    debug(string) writeln("string.indexOf.unittest");
 
     assertCTFEable!(
     {
@@ -363,7 +364,7 @@ ptrdiff_t indexOf(Char)(const(Char)[] s, dchar c, const size_t startIdx,
 
 unittest
 {
-    debug(string) printf("string.indexOf(startIdx).unittest\n");
+    debug(string) writeln("string.indexOf(startIdx).unittest");
 
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
@@ -428,7 +429,7 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s,
 
 unittest
 {
-    debug(string) printf("string.indexOf.unittest\n");
+    debug(string) writeln("string.indexOf.unittest");
 
     assertCTFEable!(
     {
@@ -504,7 +505,7 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 
 unittest
 {
-    debug(string) printf("string.indexOf(startIdx).unittest\n");
+    debug(string) writeln("string.indexOf(startIdx).unittest");
 
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
@@ -629,7 +630,7 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s,
 
 unittest
 {
-    debug(string) printf("string.lastIndexOf.unittest\n");
+    debug(string) writeln("string.lastIndexOf.unittest");
 
     assertCTFEable!(
     {
@@ -689,7 +690,7 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, dchar c, const size_t startIdx,
 
 unittest
 {
-    debug(string) printf("string.lastIndexOf.unittest\n");
+    debug(string) writeln("string.lastIndexOf.unittest");
 
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
@@ -795,7 +796,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
 
 unittest
 {
-    debug(string) printf("string.lastIndexOf.unittest\n");
+    debug(string) writeln("string.lastIndexOf.unittest");
 
     assertCTFEable!(
     {
@@ -875,7 +876,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 
 unittest
 {
-    debug(string) printf("string.lastIndexOf.unittest\n");
+    debug(string) writeln("string.lastIndexOf.unittest");
 
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
@@ -1136,7 +1137,7 @@ S[] splitLines(S)(S s, KeepTerminator keepTerm = KeepTerminator.no)
 
 unittest
 {
-    debug(string) printf("string.splitLines.unittest\n");
+    debug(string) writeln("string.splitLines.unittest");
 
     assertCTFEable!(
     {
@@ -1269,7 +1270,7 @@ unittest
 
 unittest
 {
-    debug(string) printf("string.strip.unittest\n");
+    debug(string) writeln("string.strip.unittest");
 
     assertCTFEable!(
     {
@@ -1407,7 +1408,7 @@ unittest
 
 unittest
 {
-    debug(string) printf("string.chomp.unittest\n");
+    debug(string) writeln("string.chomp.unittest");
     string s;
 
     assertCTFEable!(
@@ -1537,7 +1538,7 @@ unittest
 
 unittest
 {
-    debug(string) printf("string.chop.unittest\n");
+    debug(string) writeln("string.chop.unittest");
 
     assertCTFEable!(
     {
@@ -1665,7 +1666,7 @@ S center(S)(S s, size_t width, dchar fillChar = ' ') @trusted
 
 unittest
 {
-    debug(string) printf("string.justify.unittest\n");
+    debug(string) writeln("string.justify.unittest");
 
     assertCTFEable!(
     {
@@ -1758,7 +1759,7 @@ S detab(S)(S s, size_t tabSize = 8) @trusted pure
 
 unittest
 {
-    debug(string) printf("string.detab.unittest\n");
+    debug(string) writeln("string.detab.unittest");
 
     assertCTFEable!(
     {
@@ -1888,7 +1889,7 @@ S entab(S)(S s, size_t tabSize = 8) @trusted pure
 
 unittest
 {
-    debug(string) printf("string.entab.unittest\n");
+    debug(string) writeln("string.entab.unittest");
 
     assertCTFEable!(
     {
@@ -2270,7 +2271,7 @@ string format(Char, Args...)(in Char[] fmt, Args args)
 
 unittest
 {
-    debug(string) printf("std.string.format.unittest\n");
+    debug(string) writeln("std.string.format.unittest");
 
     assertCTFEable!(
     {
@@ -2363,7 +2364,7 @@ char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
 
 unittest
 {
-    debug(string) printf("std.string.sformat.unittest\n");
+    debug(string) writeln("std.string.sformat.unittest");
 
     assertCTFEable!(
     {
@@ -2398,7 +2399,7 @@ deprecated("Please use std.string.format instead.") alias format xformat;
 
 deprecated unittest
 {
-    debug(string) printf("std.string.xformat.unittest\n");
+    debug(string) writeln("std.string.xformat.unittest");
 
     assertCTFEable!(
     {
@@ -2431,7 +2432,7 @@ deprecated("Please use std.string.sformat instead.") alias sformat xsformat;
 
 deprecated unittest
 {
-    debug(string) printf("std.string.xsformat.unittest\n");
+    debug(string) writeln("std.string.xsformat.unittest");
 
     assertCTFEable!(
     {
@@ -2507,7 +2508,7 @@ bool inPattern(S)(dchar c, in S pattern) if (isSomeString!S)
 
 unittest
 {
-    debug(string) printf("std.string.inPattern.unittest\n");
+    debug(string) writeln("std.string.inPattern.unittest");
 
     assertCTFEable!(
     {
@@ -2567,7 +2568,7 @@ size_t countchars(S, S1)(S s, in S1 pattern) if (isSomeString!S && isSomeString!
 
 unittest
 {
-    debug(string) printf("std.string.count.unittest\n");
+    debug(string) writeln("std.string.count.unittest");
 
     assertCTFEable!(
     {
@@ -2607,7 +2608,7 @@ S removechars(S)(S s, in S pattern) if (isSomeString!S)
 
 unittest
 {
-    debug(string) printf("std.string.removechars.unittest\n");
+    debug(string) writeln("std.string.removechars.unittest");
 
     assertCTFEable!(
     {
@@ -2668,7 +2669,7 @@ S squeeze(S)(S s, in S pattern = null)
 
 unittest
 {
-    debug(string) printf("std.string.squeeze.unittest\n");
+    debug(string) writeln("std.string.squeeze.unittest");
 
     assertCTFEable!(
     {
@@ -2784,7 +2785,7 @@ S succ(S)(S s) if (isSomeString!S)
 
 unittest
 {
-    debug(string) printf("std.string.succ.unittest\n");
+    debug(string) writeln("std.string.succ.unittest");
 
     assertCTFEable!(
     {
@@ -2949,7 +2950,7 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
 
 unittest
 {
-    debug(string) printf("std.string.tr.unittest\n");
+    debug(string) writeln("std.string.tr.unittest");
     import std.algorithm;
 
     // Complete list of test types; too slow to test'em all
@@ -3183,7 +3184,7 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false)
 
 unittest
 {
-    debug (string) printf("isNumeric(in string, bool = false).unittest\n");
+    debug(string) writeln("isNumeric(in string, bool = false).unittest");
 
     assertCTFEable!(
     {
@@ -3454,7 +3455,7 @@ string[string] abbrev(string[] values)
 
 unittest
 {
-    debug(string) printf("string.abbrev.unittest\n");
+    debug(string) writeln("string.abbrev.unittest");
 
     // @@@BUG@@@ Built-in arr.sort is not CTFEable
     //assertCTFEable!(
@@ -3518,7 +3519,7 @@ size_t column(S)(S str, size_t tabsize = 8) if (isSomeString!S)
 
 unittest
 {
-    debug(string) printf("string.column.unittest\n");
+    debug(string) writeln("string.column.unittest");
 
     assertCTFEable!(
     {
@@ -3615,7 +3616,7 @@ S wrap(S)(S s, size_t columns = 80, S firstindent = null,
 
 unittest
 {
-    debug(string) printf("string.wrap.unittest\n");
+    debug(string) writeln("string.wrap.unittest");
 
     assertCTFEable!(
     {
@@ -3755,7 +3756,7 @@ private S ctfe_stripRight(S)(S str) if(isSomeString!(Unqual!S))
 
 unittest
 {
-    debug(string) printf("string.outdent.unittest\n");
+    debug(string) writeln("string.outdent.unittest");
 
     template outdent_testStr(S)
     {
