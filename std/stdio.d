@@ -2495,7 +2495,7 @@ auto chunks(File f, size_t size)
 {
     return ChunksImpl(f, size);
 }
-struct ChunksImpl
+private struct ChunksImpl
 {
     private File f;
     private size_t size;
