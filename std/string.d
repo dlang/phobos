@@ -24,6 +24,7 @@ Source:    $(PHOBOSSRC std/_string.d)
 module std.string;
 
 //debug=string;                 // uncomment to turn on debugging printf's
+debug(string) import core.stdc.stdio;
 
 import core.exception : RangeError, onRangeError;
 import core.vararg, core.stdc.stdlib, core.stdc.string,
@@ -3183,7 +3184,7 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false)
 
 unittest
 {
-    debug (string) printf("isNumeric(in string, bool = false).unittest\n");
+    debug(string) printf("isNumeric(in string, bool = false).unittest\n");
 
     assertCTFEable!(
     {
