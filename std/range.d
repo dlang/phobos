@@ -6649,7 +6649,8 @@ private:
 }
 
 /// Ditto
-Chunks!(Source) chunks(Source)(Source source, size_t chunkSize)
+Chunks!Source chunks(Source)(Source source, size_t chunkSize)
+if (isForwardRange!Source)
 {
     return typeof(return)(source, chunkSize);
 }
