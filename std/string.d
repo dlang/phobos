@@ -348,7 +348,7 @@ unittest
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
 ptrdiff_t indexOf(Char)(const(Char)[] s, dchar c, const size_t startIdx,
-        CaseSensitive cs = CaseSensitive.yes) pure
+        CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char)
 {
     if (startIdx < s.length)
