@@ -251,7 +251,7 @@ enum CaseSensitive { no, yes }
   +/
 ptrdiff_t indexOf(Char)(in Char[] s,
                       dchar c,
-                      CaseSensitive cs = CaseSensitive.yes) pure
+                      CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char)
 {
     if (cs == CaseSensitive.yes)
@@ -260,9 +260,9 @@ ptrdiff_t indexOf(Char)(in Char[] s,
         {
             if (std.ascii.isASCII(c) && !__ctfe)
             {                                               // Plain old ASCII
-                auto p = cast(char*)memchr(s.ptr, c, s.length);
+                auto p = ()@trusted{ return memchr(s.ptr, c, s.length); }();
                 if (p)
-                    return p - cast(char *)s;
+                    return p - s.ptr;
                 else
                     return -1;
             }
