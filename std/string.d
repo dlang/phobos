@@ -1322,7 +1322,7 @@ unittest
     the end of $(D str). If $(D str) does not end with any of those characters,
     then it is returned unchanged.
   +/
-C[] chomp(C)(C[] str)
+C[] chomp(C)(C[] str) @safe pure
     if (isSomeChar!C)
 {
     if (str.empty)
@@ -1364,7 +1364,7 @@ C[] chomp(C)(C[] str)
 }
 
 /// Ditto
-C1[] chomp(C1, C2)(C1[] str, const(C2)[] delimiter)
+C1[] chomp(C1, C2)(C1[] str, const(C2)[] delimiter) @safe pure
     if (isSomeChar!C1 && isSomeChar!C2)
 {
     if (delimiter.empty)
@@ -1390,7 +1390,7 @@ C1[] chomp(C1, C2)(C1[] str, const(C2)[] delimiter)
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assert(chomp(" hello world  \n\r") == " hello world  \n");
     assert(chomp(" hello world  \r\n") == " hello world  ");
