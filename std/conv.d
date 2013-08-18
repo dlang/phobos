@@ -798,8 +798,11 @@ T toImpl(T, S)(S value)
     }
     else static if (isExactSomeString!S)
     {
-        // other string-to-string conversions always run decode/encode
-        return toStr!T(value);
+        // other string-to-string
+        //Use Appender directly instead of toStr, which also uses a formatedWrite
+        auto w = appender!T();
+        w.put(value);
+        return w.data;
     }
     else static if (isIntegral!S && !is(S == enum))
     {
@@ -892,7 +895,7 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     static T enumRep = to!T(__traits(allMembers, S)[I]);
 }
 
-/*@safe pure */unittest
+@safe pure unittest
 {
     // string to string conversion
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
