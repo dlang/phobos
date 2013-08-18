@@ -73,10 +73,14 @@ version(Windows)
 else version(Posix)
 {
     version(linux)
+    {
         import std.c.linux.socket : AF_IPX, AF_APPLETALK, SOCK_RDM,
                IPPROTO_IGMP, IPPROTO_GGP, IPPROTO_PUP, IPPROTO_IDP,
                SD_RECEIVE, SD_SEND, SD_BOTH, MSG_NOSIGNAL, INADDR_NONE,
                TCP_KEEPIDLE, TCP_KEEPINTVL;
+
+        import core.sys.posix.sys.un : sockaddr_un;
+    }
     else version(OSX)
         import std.c.osx.socket : AF_IPX, AF_APPLETALK, SOCK_RDM,
                IPPROTO_IGMP, IPPROTO_GGP, IPPROTO_PUP, IPPROTO_IDP,
@@ -1893,10 +1897,10 @@ static if (is(sockaddr_un))
 
         this(in char[] path)
         {
-            len = sockaddr_un.sun_path.offsetof + path.length + 1;
+            len = cast(socklen_t)(sockaddr_un.init.sun_path.offsetof + path.length + 1);
             sun = cast(sockaddr_un*) (new ubyte[len]).ptr;
             sun.sun_family = AF_UNIX;
-            sun.sun_path.ptr[0..path.length] = path;
+            sun.sun_path.ptr[0..path.length] = (cast(byte[]) path)[];
             sun.sun_path.ptr[path.length] = 0;
         }
 
