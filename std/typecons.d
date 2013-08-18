@@ -372,6 +372,7 @@ template Tuple(Specs...)
          * The type of the tuple's components.
          */
         alias staticMap!(extractType, fieldSpecs) Types;
+        alias staticMap!(extractName, fieldSpecs) Indentifiers;
 
         /**
          * Use $(D t.expand) for a tuple $(D t) to expand it into its
