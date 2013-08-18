@@ -380,7 +380,7 @@ template Tuple(Specs...)
          * Examples:
          * ----
          * auto t = Tuple!(int, "num", string, "name", bool);
-         * static assert(t.Identifiers == TypeTuple!("num", "name", "");
+         * static assert(t.Identifiers == TypeTuple!("num", "name", ""));
          * ----
          */
         alias staticMap!(extractName, fieldSpecs) Identifiers;
