@@ -35,8 +35,15 @@ struct WSADATA
 alias WSADATA* LPWSADATA;
 
 
+enum : DWORD {
+    IOCPARAM_MASK = 0x7f,
+    IOC_VOID      = 0x20000000,
+    IOC_OUT       = 0x40000000,
+    IOC_IN        = 0x80000000,
+    IOC_INOUT     = IOC_IN|IOC_OUT
+}
+
 const int IOCPARM_MASK =  0x7F;
-const int IOC_IN =        cast(int)0x80000000;
 const int FIONBIO =       cast(int)(IOC_IN | ((UINT.sizeof & IOCPARM_MASK) << 16) | (102 << 8) | 126);
 
 enum NI_MAXHOST = 1025;
@@ -606,3 +613,33 @@ struct tcp_keepalive
     uint32_t keepalivetime;
     uint32_t keepaliveinterval;
 }
+
+/*
+  Definitions for winsock 2
+
+  Contributed by the WINE project.
+
+  Portions Copyright (c) 1980, 1983, 1988, 1993
+  The Regents of the University of California.  All rights reserved.
+
+  Portions Copyright (c) 1993 by Digital Equipment Corporation.
+ */
+
+enum SO_UPDATE_ACCEPT_CONTEXT = 0x700B;
+align(1) struct GUID {  // size is 16
+    DWORD   Data1;
+    WORD    Data2;
+    WORD    Data3;
+    BYTE[8] Data4;
+}
+
+const int IOC_WS2 = 0x08000000;
+
+template _WSAIORW(int x, int y) { const int _WSAIORW = IOC_INOUT | x | y; }
+
+const int SIO_GET_EXTENSION_FUNCTION_POINTER = _WSAIORW!(IOC_WS2,6);
+
+alias BOOL function(SOCKET, SOCKET, PVOID, DWORD, DWORD, DWORD, LPDWORD, OVERLAPPED*) FN_ACCEPTEX;
+alias BOOL function(SOCKET, sockaddr*, int, PVOID, DWORD, LPDWORD, OVERLAPPED*) FN_CONNECTEX;
+GUID WSAID_ACCEPTEX = {0xb5367df1,0xcbac,0x11cf,[0x95,0xca,0x00,0x80,0x5f,0x48,0xa1,0x92]};
+GUID WSAID_CONNECTEX = {0x25a207b9,0xddf3,0x4660,[0x8e,0xe9,0x76,0xe5,0x8c,0x74,0x06,0x3e]};
