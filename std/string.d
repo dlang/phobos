@@ -260,7 +260,8 @@ ptrdiff_t indexOf(Char)(in Char[] s,
         {
             if (std.ascii.isASCII(c) && !__ctfe)
             {                                               // Plain old ASCII
-                auto p = ()@trusted{ return memchr(s.ptr, c, s.length); }();
+                auto trustedmemchr() @trusted { return memchr(s.ptr, c, s.length); }
+                auto p = trustedmemchr();
                 if (p)
                     return p - s.ptr;
                 else
