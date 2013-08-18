@@ -372,7 +372,7 @@ template Tuple(Specs...)
          * The type of the tuple's components.
          */
         alias staticMap!(extractType, fieldSpecs) Types;
-        alias staticMap!(extractName, fieldSpecs) Indentifiers;
+        alias staticMap!(extractName, fieldSpecs) Identifiers;
 
         /**
          * Use $(D t.expand) for a tuple $(D t) to expand it into its
@@ -587,6 +587,7 @@ unittest
     {
         Tuple!(int, "a", int, "b") nosh;
         static assert(nosh.length == 2);
+        static assert(nosh.Identifiers == TypeTuple!("a", "b"));
         nosh.a = 5;
         nosh.b = 6;
         assert(nosh.a == 5);
@@ -595,6 +596,7 @@ unittest
     {
         Tuple!(short, double) b;
         static assert(b.length == 2);
+        static assert(b.Identifiers == TypeTuple!("",""));
         b[1] = 5;
         auto a = Tuple!(int, real)(b);
         assert(a[0] == 0 && a[1] == 5);
@@ -643,6 +645,7 @@ unittest
     // slicing
     {
         Tuple!(int, "x", real, "y", double, "z", string) t;
+        static assert(t.Identifiers == TypeTuple!("x","y","z",""));
         t[0] = 10;
         t[1] = 11;
         t[2] = 12;
@@ -4505,4 +4508,3 @@ unittest
     if (flag1) {} else assert(false);
     assert(flag1 == Yes.abc);
 }
-
