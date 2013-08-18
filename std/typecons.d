@@ -372,6 +372,17 @@ template Tuple(Specs...)
          * The type of the tuple's components.
          */
         alias staticMap!(extractType, fieldSpecs) Types;
+        
+        /**
+         * The indentifiers of the tuple's components, as a TypeTuple of strings.
+         * The identifier of a component without a name is $(D "").
+         * 
+         * Examples:
+         * ----
+         * auto t = Tuple!(int, "num", string, "name", bool);
+         * static assert(t.Identifiers == TypeTuple!("num", "name", "");
+         * ----
+         */
         alias staticMap!(extractName, fieldSpecs) Identifiers;
 
         /**
