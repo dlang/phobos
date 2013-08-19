@@ -91,7 +91,7 @@ DOCSRC = ../dlang.org
 WEBSITE_DIR = ../web
 DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
 BIGDOC_OUTPUT_DIR = /tmp
-SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES) $(STD_CONTAINER_MODULES) $(STD_RANGE_MODULES) $(STD_ALGO_MODULES) std/regex/package $(EXTRA_DOCUMENTABLES))
+SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES) $(STD_CONTAINER_MODULES) $(STD_RANGE_MODULES) $(STD_ALGO_MODULES) std/regex/package $(EXTRA_DOCUMENTABLES) $(STD_LOGGER_MODULES))
 STDDOC = $(DOCSRC)/html.ddoc $(DOCSRC)/dlang.org.ddoc $(DOCSRC)/std_navbar-prerelease.ddoc $(DOCSRC)/std.ddoc $(DOCSRC)/macros.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc $(DOCSRC)/macros.ddoc
 # Set DDOC, the documentation generator
@@ -193,6 +193,9 @@ STD_MODULES = $(addprefix std/, array ascii base64 bigint \
 
 STD_NET_MODULES = $(addprefix std/net/, isemail curl)
 
+STD_LOGGER_MODULES = $(addprefix std/experimental/logger/, package core \
+        filelogger nulllogger multilogger)
+
 STD_REGEX_MODULES = $(addprefix std/regex/, package $(addprefix internal/, \
 	generator ir parser backtracking kickstart tests thompson))
 
@@ -233,7 +236,8 @@ EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 # Aggregate all D modules relevant to this build
 D_MODULES = $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES) \
 	$(STD_DIGEST_MODULES) $(STD_CONTAINER_MODULES) $(STD_REGEX_MODULES) \
-	$(STD_RANGE_MODULES) $(STD_ALGO_MODULES)
+	$(STD_RANGE_MODULES) $(STD_ALGO_MODULES) $(STD_LOGGER_MODULES)
+
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
@@ -444,6 +448,9 @@ $(DOC_OUTPUT_DIR)/std_regex_%.html : std/regex/%.d $(STDDOC)
 $(DOC_OUTPUT_DIR)/std_net_%.html : std/net/%.d $(STDDOC)
 	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
 
+$(DOC_OUTPUT_DIR)/std_experimental_logger_%.html : std/experimental/logger/%.d $(STDDOC)
+	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
+
 $(DOC_OUTPUT_DIR)/std_digest_%.html : std/digest/%.d $(STDDOC)
 	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
 
@@ -454,6 +461,9 @@ $(DOC_OUTPUT_DIR)/%.html : %.d $(STDDOC)
 	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
 
 html : $(DOC_OUTPUT_DIR)/. $(HTMLS) $(STYLECSS_TGT)
+
+allmod :
+	echo $(SRC_DOCUMENTABLES)
 
 rsync-prerelease : html
 	rsync -avz $(DOC_OUTPUT_DIR)/ d-programming@digitalmars.com:data/phobos-prerelease/
