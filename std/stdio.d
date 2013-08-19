@@ -1069,27 +1069,62 @@ Allows to directly use range operations on lines of a file.
 */
     struct ByLine(Char, Terminator)
     {
+    private:
+        /* Ref-counting stops the source range's ByLineImpl
+         * from getting out of sync after the range is copied, e.g.
+         * when accessing range.front, then using std.range.take,
+         * then accessing range.front again. */
+        alias Impl = RefCounted!(ByLineImpl!(Char, Terminator),
+            RefCountedAutoInitialize.no);
+        Impl impl;
+        
+        static if (isScalarType!Terminator)
+            enum defTerm = '\n';
+        else
+            enum defTerm = cast(Terminator)"\n";
+        
+    public:
+        this(File f, KeepTerminator kt = KeepTerminator.no,
+                Terminator terminator = defTerm)
+        {
+            impl = Impl(f, kt, terminator);
+        }
+        
+        @property bool empty()
+        {
+            return impl.refCountedPayload.empty;
+        }
+
+        @property Char[] front()
+        {
+            return impl.refCountedPayload.front;
+        }
+
+        void popFront()
+        {
+            impl.refCountedPayload.popFront();
+        }
+    }
+
+    private struct ByLineImpl(Char, Terminator)
+    {
+    private:
         File file;
         Char[] line;
         Terminator terminator;
         KeepTerminator keepTerminator;
         bool first_call = true;
 
-        static if (isScalarType!Terminator)
-            private enum defTerm = '\n';
-        else
-            private enum defTerm = cast(Terminator)"\n";
-        
-        this(File f, KeepTerminator kt = KeepTerminator.no,
-                Terminator terminator = defTerm)
+    public:
+        this(File f, KeepTerminator kt, Terminator terminator)
         {
             file = f;
             this.terminator = terminator;
             keepTerminator = kt;
         }
 
-        /// Range primitive implementations.
-        @property bool empty() const
+        // Range primitive implementations.
+        @property bool empty()
         {
             if (line !is null) return false;
             if (!file.isOpen) return true;
@@ -1097,21 +1132,19 @@ Allows to directly use range operations on lines of a file.
             // First read ever, must make sure stream is not empty. We
             // do so by reading a character and putting it back. Doing
             // so is guaranteed to work on all files opened in all
-            // buffering modes. Although we internally mutate the
-            // state of the file, we restore everything, which
-            // justifies the cast.
-            auto mutableFP = (cast(File*) &file).getFP();
-            auto c = fgetc(mutableFP);
+            // buffering modes.
+            auto fp = file.getFP();
+            auto c = fgetc(fp);
             if (c == -1)
             {
+                file.detach();
                 return true;
             }
-            ungetc(c, mutableFP) == c
+            ungetc(c, fp) == c
                 || assert(false, "Bug in cstdlib implementation");
             return false;
         }
 
-        /// Ditto
         @property Char[] front()
         {
             if (first_call)
@@ -1122,7 +1155,6 @@ Allows to directly use range operations on lines of a file.
             return line;
         }
 
-        /// Ditto
         void popFront()
         {
             assert(file.isOpen);
@@ -1158,11 +1190,13 @@ at a time.
 The element type for the range will be $(D Char[]). Range primitives 
 may throw $(D StdioException) on I/O error.
 
-Params:
-Char = Character type for each line, defaulting to $(D char). If 
-Char is mutable then each $(D front) will not persist after $(D 
+Note:
+Each $(D front) will not persist after $(D 
 popFront) is called, so the caller must copy its contents (e.g. by 
 calling $(D to!string)) if retention is needed.
+
+Params:
+Char = Character type for each line, defaulting to $(D char).
 keepTerminator = Use $(D KeepTerminator.yes) to include the 
 terminator at the end of each line.
 terminator = Line separator ($(D '\n') by default).
@@ -1184,19 +1218,26 @@ void main()
 
 Example:
 ----
-import std.stdio;
-// Count lines in file using a foreach
+import std.range, std.stdio;
+// Read lines using foreach.
 void main()
 {
-    auto file = File("file.txt"); // open for reading
-    ulong lineCount = 0;
-    foreach (line; file.byLine())
+    auto file = File("file.txt"); // Open for reading
+    auto range = file.byLine();
+    // Print first three lines
+    foreach (line; range.take(3))
+        writeln(line);
+    // Print remaining lines beginning with '#'
+    foreach (line; range)
     {
-        ++lineCount;
+        if (!line.empty && line[0] == '#')
+            writeln(line);
     }
-    writeln("Lines in file: ", lineCount);
 }
 ----
+Notice that neither example accesses the line data returned by
+$(D front) after the corresponding $(D popFront) call is made (because
+the contents may well have changed).
 */
     auto byLine(Terminator = char, Char = char)
     (KeepTerminator keepTerminator = KeepTerminator.no,
@@ -1228,7 +1269,8 @@ void main()
         {
             assert(false);
         }
-        f.close();
+        f.detach();
+        assert(!f.isOpen);
 
         void testTerm(Terminator)(string txt, string[] witness,
                 KeepTerminator kt, Terminator term, bool popFirstLine)
@@ -1247,6 +1289,7 @@ void main()
                 lines.popFront();
                 i = 1;
             }
+            assert(lines.empty || lines.front is lines.front);
             foreach (line; lines)
             {
                 assert(line == witness[i++]);
@@ -1268,6 +1311,7 @@ void main()
         test("asd\ndef\nasdf", [ "asd", "def", "asdf" ]);
         test("asd\ndef\nasdf", [ "asd", "def", "asdf" ], KeepTerminator.no, true);
         test("asd\ndef\nasdf\n", [ "asd", "def", "asdf" ]);
+        test("foo", [ "foo" ], KeepTerminator.no, true);
         testTerm("bob\r\nmarge\r\nsteve\r\n", ["bob", "marge", "steve"],
             KeepTerminator.no, "\r\n", false);
         testTerm("sue\r", ["sue"], KeepTerminator.no, '\r', false);
@@ -1277,9 +1321,34 @@ void main()
         test("asd\ndef\nasdf", [ "asd\n", "def\n", "asdf" ], KeepTerminator.yes);
         test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes);
         test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes, true);
+        test("foo", [ "foo" ], KeepTerminator.yes, false);
         testTerm("bob\r\nmarge\r\nsteve\r\n", ["bob\r\n", "marge\r\n", "steve\r\n"],
             KeepTerminator.yes, "\r\n", false);
         testTerm("sue\r", ["sue\r"], KeepTerminator.yes, '\r', false);
+
+        auto file = File.tmpfile();
+        file.write("1\n2\n3\n");
+
+        // bug 9599
+        file.rewind();
+        File.ByLine!(char, char) fbl = file.byLine();
+        auto fbl2 = fbl;
+        assert(fbl.front == "1");
+        assert(fbl.front is fbl2.front);
+        assert(fbl.take(1).equal(["1"]));
+        assert(fbl.equal(["2", "3"]));
+        assert(fbl.empty);
+        assert(file.isOpen); // we still have a valid reference
+        
+        file.rewind();
+        fbl = file.byLine();
+        assert(!fbl.drop(2).empty);
+        assert(fbl.equal(["3"]));
+        assert(fbl.empty);
+        assert(file.isOpen);
+        
+        file.detach();
+        assert(!file.isOpen);
     }
 
     template byRecord(Fields...)
