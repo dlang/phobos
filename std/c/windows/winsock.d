@@ -214,7 +214,7 @@ enum: int
 
 
 /// Default FD_SETSIZE value.
-/// In C/C++, it is redefinable by #define-ing the macro before #include-ing
+/// In C/C++, it is redefinable by -ing the macro before #include-ing
 /// winsock.h. In D, use the $(D FD_CREATE) function to allocate a $(D fd_set)
 /// of an arbitrary size.
 const uint FD_SETSIZE = 64;
@@ -606,3 +606,75 @@ struct tcp_keepalive
     uint32_t keepalivetime;
     uint32_t keepaliveinterval;
 }
+
+/*
+* Copyright (C) the Wine project
+*
+* This library is free software; you can redistribute it and/or
+* modify it under the terms of the GNU Lesser General Public
+* License as published by the Free Software Foundation; either
+* version 2.1 of the License, or (at your option) any later version.
+*
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+* Lesser General Public License for more details.
+*
+* You should have received a copy of the GNU Lesser General Public
+* License along with this library; if not, write to the Free Software
+* Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+*/
+
+enum : int {
+    SO_MAXDG = 0x7009,
+    SO_MAXPATHDG = 0x700A,
+    SO_UPDATE_ACCEPT_CONTEXT = 0x700B,
+    SO_CONNECT_TIME = 0x700C,
+    SO_UPDATE_CONNECT_CONTEXT = 0x7010
+}
+
+/* Constants for WSAIoctl() */
+enum : int {
+    IOC_UNIX = 0x00000000,
+    IOC_WS2 = 0x08000000,
+    IOC_PROTOCOL = 0x10000000,
+    IOC_VENDOR = 0x18000000,
+    IOC_VOID = 0x20000000,
+    IOC_OUT = 0x40000000,
+    IOC_IN = 0x80000000,
+    IOC_INOUT (WS_IOC_IN|WS_IOC_OUT)
+}
+
+template _WSAIO(int x, int y) { const int _WSAIO = IOC_VOID | x | y; }
+template _WSAIOR(int x, int y) { const int _WSAIOR = IOC_OUT | x | y; }
+template _WSAIOW(int x, int y) { const int _WSAIOW = IOC_IN | x | y; }
+template _WSAIORW(int x, int y) { const int _WSAIORW = WS_IOC_INOUT | x | y; }
+template _WSAIORW(int x, int y) { const int _WSAIORW = IOC_INOUT | x | y; }
+
+const int SIO_ASSOCIATE_HANDLE = _WSAIOW(IOC_WS2,1);
+const int SIO_ENABLE_CIRCULAR_QUEUEING = _WSAIO(IOC_WS2,2);
+const int SIO_FIND_ROUTE = _WSAIOR(IOC_WS2,3);
+const int SIO_FLUSH = _WSAIO(IOC_WS2,4);
+const int SIO_GET_BROADCAST_ADDRESS = _WSAIOR(IOC_WS2,5);
+const int SIO_GET_EXTENSION_FUNCTION_POINTER = _WSAIORW(IOC_WS2,6);
+const int SIO_GET_QOS = _WSAIORW(IOC_WS2,7);
+const int SIO_GET_GROUP_QOS = _WSAIORW(IOC_WS2,8);
+const int SIO_MULTIPOINT_LOOPBACK = _WSAIOW(IOC_WS2,9);
+const int SIO_MULTICAST_SCOPE = _WSAIOW(IOC_WS2,10);
+const int SIO_SET_QOS = _WSAIOW(IOC_WS2,11);
+const int SIO_SET_GROUP_QOS = _WSAIOW(IOC_WS2,12);
+const int SIO_TRANSLATE_HANDLE = _WSAIORW(IOC_WS2,13);
+const int SIO_ROUTING_INTERFACE_QUERY = _WSAIORW(IOC_WS2,20);
+const int SIO_ROUTING_INTERFACE_CHANGE = _WSAIOW(IOC_WS2,21);
+const int SIO_ADDRESS_LIST_QUERY = _WSAIOR(IOC_WS2,22);
+const int SIO_ADDRESS_LIST_CHANGE = _WSAIO(IOC_WS2,23);
+const int SIO_QUERY_TARGET_PNP_HANDLE = _WSAIOR(IOC_WS2,24);
+const int SIO_GET_INTERFACE_LIST = _IOR ('t', 127, ULONG);
+
+alias BOOL function(SOCKET, SOCKET, PVOID, DWORD, DWORD, DWORD, LPDWORD, OVERLAPPED*) FN_ACCEPTEX;
+alias BOOL function(SOCKET, sockaddr*, int, PVOID, DWORD, LPDWORD, OVERLAPPED*) FN_CONNECTEX;
+alias BOOL function(SOCKET, OVERLAPPED*, DWORD, DWORD) FN_DISCONNECTEX;
+
+private import std.c.windows.guiddef;
+GUID WSAID_ACCEPTEX = {0xb5367df1,0xcbac,0x11cf,[0x95,0xca,0x00,0x80,0x5f,0x48,0xa1,0x92]};
+GUID WSAID_CONNECTEX = {0x25a207b9,0xddf3,0x4660,[0x8e,0xe9,0x76,0xe5,0x8c,0x74,0x06,0x3e]};
