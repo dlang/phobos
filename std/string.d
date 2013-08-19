@@ -1198,7 +1198,7 @@ C[] stripLeft(C)(C[] str) @safe pure
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assert(stripLeft("     hello world     ") ==
            "hello world     ");
