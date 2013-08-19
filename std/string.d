@@ -1097,7 +1097,7 @@ unittest
   +/
 enum KeepTerminator : bool { no, yes }
 /// ditto
-S[] splitLines(S)(S s, KeepTerminator keepTerm = KeepTerminator.no)
+S[] splitLines(S)(S s, KeepTerminator keepTerm = KeepTerminator.no) @safe pure
     if (isSomeString!S)
 {
     size_t iStart = 0;
