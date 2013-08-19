@@ -251,7 +251,7 @@ enum CaseSensitive { no, yes }
   +/
 ptrdiff_t indexOf(Char)(in Char[] s,
                       dchar c,
-                      CaseSensitive cs = CaseSensitive.yes) pure
+                      CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char)
 {
     if (cs == CaseSensitive.yes)
@@ -260,9 +260,10 @@ ptrdiff_t indexOf(Char)(in Char[] s,
         {
             if (std.ascii.isASCII(c) && !__ctfe)
             {                                               // Plain old ASCII
-                auto p = cast(char*)memchr(s.ptr, c, s.length);
+                auto trustedmemchr() @trusted { return cast(Char*)memchr(s.ptr, c, s.length); }
+                auto p = trustedmemchr();
                 if (p)
-                    return p - cast(char *)s;
+                    return p - s.ptr;
                 else
                     return -1;
             }
@@ -348,7 +349,7 @@ unittest
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
 ptrdiff_t indexOf(Char)(const(Char)[] s, dchar c, const size_t startIdx,
-        CaseSensitive cs = CaseSensitive.yes) pure
+        CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char)
 {
     if (startIdx < s.length)
