@@ -3063,7 +3063,7 @@ real floor(real x) @trusted pure nothrow
         // Find the exponent (power of 2)
         static if (real.mant_dig == 53)
         {
-            int exp = (vu[F.EXPPOS_SHORT] & 0x7ff) - 0x3ff;
+            int exp = ((vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
 
             version (LittleEndian)
                 int pos = 0;
