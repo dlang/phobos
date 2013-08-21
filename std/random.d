@@ -1575,31 +1575,57 @@ foreach (e; randomCover(a, rnd))
 }
 ----
  */
-struct RandomCover(Range, Random)
-    if(isRandomAccessRange!Range && isUniformRNG!Random)
+struct RandomCover(Range, UniformRNG = void)
+    if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
 {
     private Range _input;
-    private Random _rnd;
     private bool[] _chosen;
-    private uint _current;
-    private uint _alreadyChosen;
+    private size_t _current;
+    private size_t _alreadyChosen = 0;
 
-    this(Range input, Random rnd)
+    static if (is(UniformRNG == void))
     {
-        _input = input;
-        _rnd = rnd;
-        _chosen.length = _input.length;
-        popFront();
+        this(Range input)
+        {
+            _input = input;
+            _chosen.length = _input.length;
+            _alreadyChosen = 0;
+        }
+    }
+    else
+    {
+        private UniformRNG _rng;
+
+        this(Range input, UniformRNG rng)
+        {
+            _input = input;
+            _rng = rng;
+            _chosen.length = _input.length;
+            _alreadyChosen = 0;
+        }
     }
 
     static if (hasLength!Range)
+    {
         @property size_t length()
         {
-            return (1 + _input.length) - _alreadyChosen;
+            if (_alreadyChosen == 0)
+            {
+                return _input.length;
+            }
+            else
+            {
+                return (1 + _input.length) - _alreadyChosen;
+            }
         }
+    }
 
     @property auto ref front()
     {
+        if (_alreadyChosen == 0)
+        {
+            popFront();
+        }
         return _input[_current];
     }
 
@@ -1612,12 +1638,19 @@ struct RandomCover(Range, Random)
             return;
         }
         size_t k = _input.length - _alreadyChosen;
-        uint i;
+        size_t i;
         foreach (e; _input)
         {
             if (_chosen[i]) { ++i; continue; }
             // Roll a dice with k faces
-            auto chooseMe = uniform(0, k, _rnd) == 0;
+            static if (is(UniformRNG == void))
+            {
+                auto chooseMe = uniform(0, k) == 0;
+            }
+            else
+            {
+                auto chooseMe = uniform(0, k, _rng) == 0;
+            }
             assert(k > 1 || chooseMe);
             if (chooseMe)
             {
@@ -1635,7 +1668,10 @@ struct RandomCover(Range, Random)
     {
         auto ret = this;
         ret._input = _input.save;
-        ret._rnd = _rnd.save;
+        static if (!is(UniformRNG == void))
+        {
+            ret._rng = _rng.save;
+        }
         return ret;
     }
 
@@ -1643,17 +1679,24 @@ struct RandomCover(Range, Random)
 }
 
 /// Ditto
-RandomCover!(Range, Random) randomCover(Range, Random)(Range r, Random rnd)
-    if(isRandomAccessRange!Range && isUniformRNG!Random)
+auto randomCover(Range, UniformRNG)(Range r, UniformRNG rng)
+    if (isRandomAccessRange!Range && isUniformRNG!UniformRNG)
 {
-    return typeof(return)(r, rnd);
+    return RandomCover!(Range, UniformRNG)(r, rng);
+}
+
+/// Ditto
+auto randomCover(Range)(Range r)
+    if (isRandomAccessRange!Range)
+{
+    return RandomCover!(Range, void)(r);
 }
 
 unittest
 {
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
-    auto rnd = Random(unpredictableSeed);
-    RandomCover!(int[], Random) rc = randomCover(a, rnd);
+    auto rng = Random(unpredictableSeed);
+    RandomCover!(int[], Random) rc = randomCover(a, rng);
     static assert(isForwardRange!(typeof(rc)));
 
     int[] b = new int[9];
