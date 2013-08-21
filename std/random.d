@@ -1664,15 +1664,15 @@ struct RandomCover(Range, UniformRNG = void)
         }
     }
 
-    @property typeof(this) save()
+    static if (isForwardRange!UniformRNG)
     {
-        auto ret = this;
-        ret._input = _input.save;
-        static if (!is(UniformRNG == void))
+        @property typeof(this) save()
         {
+            auto ret = this;
+            ret._input = _input.save;
             ret._rng = _rng.save;
+            return ret;
         }
-        return ret;
     }
 
     @property bool empty() { return _alreadyChosen > _input.length; }
@@ -1854,16 +1854,13 @@ struct RandomSample(Range, UniformRNG = void)
     }
 
 /// Ditto
-    static if (isForwardRange!Range)
+    static if (isForwardRange!Range && isForwardRange!UniformRNG)
     {
         @property typeof(this) save()
         {
             auto ret = this;
             ret._input = _input.save;
-            static if (!is(UniformRNG == void))
-            {
-                ret._rng = _rng.save;
-            }
+            ret._rng = _rng.save;
             return ret;
         }
     }
