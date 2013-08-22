@@ -1385,13 +1385,69 @@ unittest //safety, purity, ctfe ...
     assertCTFEable!dg;
 }
 
-/**
-Splits a string by whitespace.
- */
-auto splitter(C)(C[] s) @safe pure
-    if(isSomeString!(C[]))
+/++
+Lazily splits the string $(D s) into words, using whitespace as
+delimiter.
+
+This function is string specific and, contrary to $(D
+splitter!(std.uni.isWhite)), runs of white spaces will be merged together.
+ +/
+auto splitter(C)(C[] s)
+    if(isSomeChar!C)
 {
-    return std.algorithm.splitter!(std.uni.isWhite)(s);
+    static struct Result
+    {
+    private:
+        alias S = C[];
+
+        S _s;
+        size_t _frontLength;
+        size_t _backLength;
+
+        void getFirst()
+        {
+            auto r = find!(std.uni.isWhite)(_s);
+            _frontLength = _s.length - r.length;
+        }
+
+    public:
+        this(C[] s)
+        {
+            _s = s.strip();
+            getFirst();
+        }
+
+        @property C[] front()
+        {
+            version(assert) if (empty) throw new RangeError();
+            return _s[0 .. _frontLength];
+        }
+
+        void popFront()
+        {
+            version(assert) if (empty) throw new RangeError();
+            _s = _s[_frontLength .. $].stripLeft();
+            getFirst();
+        }
+
+        @property empty()
+        {
+            return _s.empty();
+        }
+
+        @property Result save()
+        {
+            return this;
+        }
+    }
+    return Result(s);
+}
+
+///
+unittest
+{
+    auto a = " a     bcd   ef gh ";
+    assert(equal(splitter(a), ["a", "bcd", "ef", "gh"][]));
 }
 
 ///
@@ -1406,21 +1462,38 @@ auto splitter(C)(C[] s) @safe pure
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
         S a = " a     bcd   ef gh ";
-        assert(equal(splitter(a), [to!S(""), to!S("a"), to!S("bcd"), to!S("ef"), to!S("gh")][]));
+        assert(equal(splitter(a), [to!S("a"), to!S("bcd"), to!S("ef"), to!S("gh")]));
         a = "";
         assert(splitter(a).empty);
     }
+
+    immutable string s = " a     bcd   ef gh ";
+    assert(equal(splitter(s), ["a", "bcd", "ef", "gh"][]));
 }
 
-/**************************************
- * Splits $(D s) into an array, using $(D delim) as the delimiter.
- */
-Unqual!(S1)[] split(S1, S2)(S1 s, S2 delim)
+/++
+Eagerly Splits $(D s) into an array, using $(D delim) as the delimiter.
+
+See also: $(XREF algorithm, splitter) for the lazy version of this operator.
+ +/
+Unqual!S1[] split(S1, S2)(S1 s, S2 delim)
 if (isForwardRange!(Unqual!S1) && isForwardRange!S2)
 {
     Unqual!S1 us = s;
     auto app = appender!(Unqual!(S1)[])();
     foreach (word; std.algorithm.splitter(us, delim))
+    {
+        app.put(word);
+    }
+    return app.data;
+}
+///ditto
+Unqual!S1[] split(alias isTerminator, S1)(S1 s)
+if (isForwardRange!(Unqual!S1))
+{
+    Unqual!S1 us = s;
+    auto app = appender!(Unqual!(S1)[])();
+    foreach (word; std.algorithm.splitter!isTerminator(us))
     {
         app.put(word);
     }

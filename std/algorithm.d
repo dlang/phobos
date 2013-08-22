@@ -2717,32 +2717,45 @@ unittest
     assert(words.equal([ "i", "am", "pointing" ]));
 }
 
+///ditto
 auto splitter(alias isTerminator, Range)(Range input)
-if (is(typeof(unaryFun!(isTerminator)(ElementType!(Range).init))))
+if (isForwardRange!Range && is (typeof(unaryFun!isTerminator(input.front))))
 {
     return SplitterResult!(unaryFun!isTerminator, Range)(input);
 }
 
 private struct SplitterResult(alias isTerminator, Range)
 {
+    enum fullSlicing = (hasLength!Range && hasSlicing!Range) || isSomeString!Range;
+
     private Range _input;
-    private size_t _end;
+    private size_t _end = 0;
+    static if(!fullSlicing)
+        private Range _next;
+
+    private void findTerminator()
+    {
+        static if (fullSlicing)
+        {
+            auto r = find!isTerminator(_input.save);
+            _end = _input.length - r.length;
+        }
+        else
+            for ( _end = 0; !_next.empty ; _next.popFront)
+            {
+                if (isTerminator(_next.front)) break;
+                ++_end;
+            }
+    }
 
     this(Range input)
     {
         _input = input;
-        if (_input.empty)
-        {
-            _end = _end.max;
-        }
-        else
-        {
-            // Chase first terminator
-            while (_end < _input.length && !isTerminator(_input[_end]))
-            {
-                ++_end;
-            }
-        }
+        static if(!fullSlicing)
+            _next = _input.save;
+
+        if (!_input.empty)
+            findTerminator();
     }
 
     static if (isInfinite!Range)
@@ -2757,55 +2770,52 @@ private struct SplitterResult(alias isTerminator, Range)
         }
     }
 
-    @property Range front()
+    @property auto front()
     {
-        assert(!empty);
-        return _input[0 .. _end];
+        version(assert) if (empty) throw new RangeError();
+        static if (fullSlicing)
+            return _input[0 .. _end];
+        else
+            //Note: We don't need to save input, as we never actually modify it.
+            //Input is already saved as "checkpoints" of _next.
+            return _input.takeExactly(_end);
     }
 
     void popFront()
     {
-        assert(!empty);
-        if (_input.empty)
+        version(assert) if (empty) throw new RangeError();
+
+        static if (fullSlicing)
         {
-            _end = _end.max;
-            return;
-        }
-        // Skip over existing word
-        _input = _input[_end .. _input.length];
-        // Skip terminator
-        for (;;)
-        {
+            _input = _input[_end .. _input.length];
             if (_input.empty)
             {
-                // Nothing following the terminator - done
                 _end = _end.max;
                 return;
             }
-            if (!isTerminator(_input.front))
-            {
-                // Found a legit next field
-                break;
-            }
             _input.popFront();
         }
-        assert(!_input.empty && !isTerminator(_input.front));
-        // Prepare _end
-        _end = 1;
-        while (_end < _input.length && !isTerminator(_input[_end]))
+        else
         {
-            ++_end;
+            if (_next.empty)
+            {
+                _input = _next;
+                _end = _end.max;
+                return;
+            }
+            _next.popFront();
+            _input = _next.save;
         }
+        findTerminator();
     }
 
-    static if (isForwardRange!Range)
+    @property typeof(this) save()
     {
-        @property typeof(this) save()
-        {
-            auto ret = this;
-            ret._input = _input.save;
-            return ret;
-        }
+        auto ret = this;
+        ret._input = _input.save;
+        static if (!fullSlicing)
+            ret._next = _next.save;
+        return ret;
     }
 }
 
@@ -2826,22 +2836,18 @@ unittest
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     void compare(string sentence, string[] witness)
     {
-        foreach (word; splitter!"a == ' '"(sentence))
-        {
-            assert(word == witness.front, word);
-            witness.popFront();
-        }
-        assert(witness.empty, witness[0]);
+        auto r = splitter!"a == ' '"(sentence);
+        assert(equal(r.save, witness), format("got: %(%s, %) expected: %(%s, %)", r, witness));
     }
 
-    compare(" Mary    has a little lamb.   ",
-            ["", "Mary", "has", "a", "little", "lamb."]);
-    compare("Mary    has a little lamb.   ",
-            ["Mary", "has", "a", "little", "lamb."]);
-    compare("Mary    has a little lamb.",
-            ["Mary", "has", "a", "little", "lamb."]);
-    compare("", []);
-    compare(" ", [""]);
+    compare(" Mary  has a little lamb.   ",
+            ["", "Mary", "", "has", "a", "little", "lamb.", "", "", ""]);
+    compare("Mary  has a little lamb.   ",
+            ["Mary", "", "has", "a", "little", "lamb.", "", "", ""]);
+    compare("Mary  has a little lamb.",
+            ["Mary", "", "has", "a", "little", "lamb."]);
+    compare("", [""]);
+    compare(" ", ["", ""]);
 
     static assert(isForwardRange!(typeof(splitter!"a == ' '"("ABC"))));
 
@@ -2857,10 +2863,45 @@ unittest
     }
 }
 
+unittest
+{
+    struct Entry
+    {
+        int low;
+        int high;
+        int[][] result;
+    }
+    Entry[] entries = [
+        Entry(0, 0, [[]]),
+        Entry(0, 1, [[0]]),
+        Entry(1, 2, [[], []]),
+        Entry(2, 7, [[2], [4], [6]]),
+        Entry(1, 8, [[], [2], [4], [6], []]),
+    ];
+    foreach ( entry ; entries )
+    {
+        auto a = iota(entry.low, entry.high).filter!"true"();
+        auto b = splitter!"a%2"(a);
+        assert(equal!equal(b.save, entry.result), format("got: %(%s, %) expected: %(%s, %)", b, entry.result));
+    }
+}
+
+unittest
+{
+    //@@@6791@@@
+    assert(equal(std.array.splitter("là dove terminava quella valle"), ["là", "dove", "terminava", "quella", "valle"]));
+    assert(equal(splitter!(std.uni.isWhite)("là dove terminava quella valle"), ["là", "dove", "terminava", "quella", "valle"]));
+    assert(equal(splitter!"a=='本'"("日本語"), ["日", "語"]));
+}
+
+//@@@6730@@@ This exists already in std.array, so this declaration, at best, will only create ambiguity.
+//unfortunatly, an alias will conflict with the existing splitter in std.algorithm.
+//It needs to be removed.
+deprecated("std.algorithm.splitter(string) is deprecated in favor of std.algortihm.splitter(string)")
 auto splitter(Range)(Range input)
 if (isSomeString!Range)
 {
-    return splitter!(std.uni.isWhite)(input);
+    return std.array.splitter(input);
 }
 
 unittest
@@ -2872,7 +2913,7 @@ unittest
     lines[1] = "line \ttwo".dup;
     lines[2] = "yah            last   line\ryah".dup;
     foreach (line; lines) {
-       foreach (word; splitter(std.string.strip(line))) {
+       foreach (word; std.array.splitter(std.string.strip(line))) {
             if (word in dictionary) continue; // Nothing to do
             auto newID = dictionary.length;
             dictionary[to!string(word)] = cast(uint)newID;
