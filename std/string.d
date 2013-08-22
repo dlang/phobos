@@ -994,7 +994,7 @@ unittest
   +/
 alias toLower = std.uni.toLower;
 /++
-    Converts $(D s) to lowercase (by performing Unicode lowercase mapping) in place.    
+    Converts $(D s) to lowercase (by performing Unicode lowercase mapping) in place.
     For a few characters string length may increase after the transformation,
     in such a case the function reallocates exactly once.
     If $(D s) does not have any uppercase characters, then $(D s) is unaltered.
@@ -2295,9 +2295,9 @@ unittest
 
 
 /*****************************************************
- * Format arguments into string <i>s</i> which must be large
+ * Format arguments into buffer <i>buf</i> which must be large
  * enough to hold the result. Throws RangeError if it is not.
- * Returns: s
+ * Returns: The slice of $(D buf) containing the formatted string.
  *
  *  $(RED sformat's current implementation has been replaced with $(LREF xsformat)'s
  *        implementation. in November 2012.
