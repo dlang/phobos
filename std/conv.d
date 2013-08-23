@@ -1308,7 +1308,7 @@ fit in the narrower type.
  */
 T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
-        (isNumeric!S || isSomeChar!S) && !is(S == enum) &&
+        (isNumeric!S || isSomeChar!S) &&
         (isNumeric!T || isSomeChar!T) && !is(T == enum))
 {
     enum sSmallest = mostNegative!S;
