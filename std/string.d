@@ -1323,7 +1323,7 @@ unittest
     the end of $(D str). If $(D str) does not end with any of those characters,
     then it is returned unchanged.
   +/
-C[] chomp(C)(C[] str) @safe pure
+C[] chomp(C)(C[] str) @safe pure nothrow
     if (isSomeChar!C)
 {
     if (str.empty)
