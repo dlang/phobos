@@ -1724,7 +1724,7 @@ auto randomCover(Range)(Range r)
 unittest
 {
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
-    foreach(UniformRNG; TypeTuple!(void, PseudoRngTypes))
+    foreach (UniformRNG; TypeTuple!(void, PseudoRngTypes))
     {
         static if (is(UniformRNG == void))
         {
@@ -2049,12 +2049,12 @@ Variable names are chosen to match those in Vitter's paper.
             size_t qu1 = 1 + _available - _toSelect;
             double x, y1;
 
-            while(true)
+            while (true)
             {
                 // Step D2: set values of x and u.
-                for(x = _available * (1-_Vprime), s = cast(size_t) trunc(x);
-                    s >= qu1;
-                    x = _available * (1-_Vprime), s = cast(size_t) trunc(x))
+                for (x = _available * (1-_Vprime), s = cast(size_t) trunc(x);
+                     s >= qu1;
+                     x = _available * (1-_Vprime), s = cast(size_t) trunc(x))
                 {
                     _Vprime = newVprime(_toSelect);
                 }
@@ -2090,7 +2090,7 @@ Variable names are chosen to match those in Vitter's paper.
                         limit = qu1;
                     }
 
-                    foreach(size_t t; limit.._available)
+                    foreach (size_t t; limit.._available)
                     {
                         y2 *= top/bottom;
                         top--;
@@ -2101,7 +2101,7 @@ Variable names are chosen to match those in Vitter's paper.
                     if (_available/(_available-x) < y1 * (y2 ^^ (1.0/(_toSelect-1))))
                     {
                         // If it's not acceptable, we generate a new value of _Vprime
-                        // and go back to the start of the for(;;) loop.
+                        // and go back to the start of the for (;;) loop.
                         _Vprime = newVprime(_toSelect);
                     }
                     else
@@ -2188,7 +2188,7 @@ unittest
 
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
 
-    foreach(UniformRNG; PseudoRngTypes)
+    foreach (UniformRNG; PseudoRngTypes)
     {
         auto rng = UniformRNG(unpredictableSeed);
         /* First test the most general case: randomSample of input range, with and
@@ -2233,7 +2233,7 @@ unittest
          */
         {
             uint i = 0;
-            foreach(e; randomSample(a, a.length))
+            foreach (e; randomSample(a, a.length))
             {
                 assert(e == i);
                 ++i;
@@ -2241,7 +2241,7 @@ unittest
             assert(i == a.length);
 
             i = 0;
-            foreach(e; randomSample(TestInputRange(), 17, 17))
+            foreach (e; randomSample(TestInputRange(), 17, 17))
             {
                 assert(e == i);
                 ++i;
@@ -2285,7 +2285,7 @@ unittest
 
             // Small sample/source ratio, specified RNG.
             i = 0;
-            foreach(e; randomSample(randomCover(a), 5, rng))
+            foreach (e; randomSample(randomCover(a), 5, rng))
             {
                 ++i;
             }
@@ -2293,7 +2293,7 @@ unittest
 
             // Large sample/source ratio, no specified RNG.
             i = 0;
-            foreach(e; randomSample(TestInputRange(), 123, 123_456))
+            foreach (e; randomSample(TestInputRange(), 123, 123_456))
             {
                 ++i;
             }
@@ -2301,7 +2301,7 @@ unittest
 
             // Large sample/source ratio, specified RNG.
             i = 0;
-            foreach(e; randomSample(TestInputRange(), 123, 123_456, rng))
+            foreach (e; randomSample(TestInputRange(), 123, 123_456, rng))
             {
                 ++i;
             }
@@ -2311,7 +2311,7 @@ unittest
              * small enough to switch to Algorithm A.
              */
             i = 0;
-            foreach(e; randomSample(TestInputRange(), 10, 131))
+            foreach (e; randomSample(TestInputRange(), 10, 131))
             {
                 ++i;
             }
@@ -2321,13 +2321,13 @@ unittest
         // Test that the .index property works correctly
         {
             auto sample1 = randomSample(TestInputRange(), 654, 654_321);
-            for(; !sample1.empty; sample1.popFront())
+            for (; !sample1.empty; sample1.popFront())
             {
                 assert(sample1.front == sample1.index());
             }
 
             auto sample2 = randomSample(TestInputRange(), 654, 654_321, rng);
-            for(; !sample2.empty; sample2.popFront())
+            for (; !sample2.empty; sample2.popFront())
             {
                 assert(sample2.front == sample2.index());
             }
@@ -2339,13 +2339,13 @@ unittest
             version(none)
             {
                 auto sample3 = randomSample(TestInputRange(), 654, 654_321);
-                for(; !sample3.empty; sample3.popFront())
+                for (; !sample3.empty; sample3.popFront())
                 {
                     assert(sample3.index() == sample3.front);
                 }
 
                 auto sample4 = randomSample(TestInputRange(), 654, 654_321, rng);
-                for(; !sample4.empty; sample4.popFront())
+                for (; !sample4.empty; sample4.popFront())
                 {
                     assert(sample4.index() == sample4.front);
                 }
@@ -2366,7 +2366,7 @@ unittest
             assert(sample1.length == 789);
             assert(sample1._available == 456_789);
             uint i = 0;
-            for(; !sample1.empty; sample1.popFront())
+            for (; !sample1.empty; sample1.popFront())
             {
                 assert(sample1.front == sample1.index());
                 ++i;
@@ -2381,7 +2381,7 @@ unittest
             assert(sample2.length == 789);
             assert(sample2._available == 456_789);
             i = 0;
-            for(; !sample2.empty; sample2.popFront())
+            for (; !sample2.empty; sample2.popFront())
             {
                 assert(sample2.front == sample2.index());
                 ++i;
