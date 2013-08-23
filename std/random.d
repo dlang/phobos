@@ -1565,15 +1565,44 @@ Covers a given range $(D r) in a random manner, i.e. goes through each
 element of $(D r) once and only once, just in a random order. $(D r)
 must be a random-access range with length.
 
+If no random number generator is passed to $(D randomCover), the
+thread-global RNG rndGen will be used internally.
+
 Example:
 ----
 int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
-auto rnd = Random(unpredictableSeed);
-foreach (e; randomCover(a, rnd))
+foreach (e; randomCover(a))
 {
     writeln(e);
 }
 ----
+
+$(B WARNING:) If an alternative RNG is desired, it is essential for this
+to be a $(I new) RNG seeded in an unpredictable manner. Passing it a RNG
+used elsewhere in the program will result in unintended correlations,
+due to the current implementation of RNGs as value types.
+
+Example:
+----
+int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
+foreach (e; randomCover(a, Random(unpredictableSeed)))  // correct!
+{
+    writeln(e);
+}
+
+foreach (e; randomCover(a, rndGen))  // WRONG!! rndGen gets copied by value
+{
+    writeln(e);
+}
+
+foreach (e; randomCover(a, rndGen))  // ... so this second random cover
+{                                    // will output the same sequence as
+    writeln(e);                      // the previous one.
+}
+----
+
+These issues will be resolved in a second-generation std.random that
+re-implements random number generators as reference types.
  */
 struct RandomCover(Range, UniformRNG = void)
     if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
@@ -1730,10 +1759,22 @@ range. The total length of $(D r) must be known. If $(D total) is
 passed in, the total number of sample is considered to be $(D
 total). Otherwise, $(D RandomSample) uses $(D r.length).
 
-If the number of elements is not exactly $(D total), $(D
-RandomSample) throws an exception. This is because $(D total) is
-essential to computing the probability of selecting elements in the
-range.
+$(D RandomSample) implements Jeffrey Scott Vitter's Algorithm D
+(see Vitter $(WEB dx.doi.org/10.1145/358105.893, 1984), $(WEB
+dx.doi.org/10.1145/23002.23003, 1987)), which selects a sample
+of size $(D n) in O(n) steps and requiring O(n) random variates,
+regardless of the size of the data being sampled.  The exception
+to this is if traversing k elements on the input range is itself
+an O(k) operation (e.g. when sampling lines from an input file),
+in which case the sampling calculation will inevitably be of
+O(total).
+
+RandomSample will throw an exception if $(D total) is verifiably
+less than the total number of elements available in the input,
+or if $(D n > total).
+
+If no random number generator is passed to $(D randomSample), the
+thread-global RNG rndGen will be used internally.
 
 Example:
 ----
@@ -1745,11 +1786,32 @@ foreach (e; randomSample(a, 5))
 }
 ----
 
-$(D RandomSample) implements Jeffrey Scott Vitter's Algorithm D
-(see Vitter $(WEB dx.doi.org/10.1145/358105.893, 1984), $(WEB
-dx.doi.org/10.1145/23002.23003, 1987)), which selects a sample
-of size $(D n) in O(n) steps and requiring O(n) random variates,
-regardless of the size of the data being sampled.
+$(B WARNING:) If an alternative RNG is desired, it is essential for this
+to be a $(I new) RNG seeded in an unpredictable manner. Passing it a RNG
+used elsewhere in the program will result in unintended correlations,
+due to the current implementation of RNGs as value types.
+
+Example:
+----
+int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
+foreach (e; randomSample(a, 5, Random(unpredictableSeed)))  // correct!
+{
+    writeln(e);
+}
+
+foreach (e; randomSample(a, 5, rndGen))  // WRONG!! rndGen gets copied
+{                                        // by value
+    writeln(e);
+}
+
+foreach (e; randomSample(a, 5, rndGen))  // ... so this second random
+{                                        // sample will select the same
+    writeln(e);                          // values as the previous one.
+}
+----
+
+These issues will be resolved in a second-generation std.random that
+re-implements random number generators as reference types.
 */
 struct RandomSample(Range, UniformRNG = void)
     if (isInputRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
