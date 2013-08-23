@@ -1964,7 +1964,7 @@ real frexp(real value, out int exp) @trusted pure nothrow
 {
     ushort* vu = cast(ushort*)&value;
     long* vl = cast(long*)&value;
-    uint ex;
+    int ex;
     alias floatTraits!(real) F;
 
     ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
