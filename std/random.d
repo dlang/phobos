@@ -1653,6 +1653,7 @@ struct RandomCover(Range, UniformRNG = void)
     {
         if (_alreadyChosen == 0)
         {
+            _chosen[] = false;
             popFront();
         }
         return _input[_current];
