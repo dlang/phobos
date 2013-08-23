@@ -157,34 +157,35 @@ private alias enforceFmt = enforceEx!FormatException;
             $(B 's')|$(B 'c')|$(B 'b')|$(B 'd')|$(B 'o')|$(B 'x')|$(B 'X')|$(B 'e')|$(B 'E')|$(B 'f')|$(B 'F')|$(B 'g')|$(B 'G')|$(B 'a')|$(B 'A')
     )
 
-    $(BOOKTABLE Flags affect formatting depending on the specifier as
-    follows., $(TR $(TH Flag) $(TH Types&nbsp;affected) $(TH Semantics))
+    $(BOOKTABLE
+        Flags affect formatting depending on the specifier as
+        follows., $(TR $(TH Flag) $(TH Types&nbsp;affected) $(TH Semantics))
 
-    $(TR $(TD $(B '-')) $(TD numeric) $(TD Left justify the result in
-        the field.  It overrides any $(B 0) flag.))
+        $(TR $(TD $(B '-')) $(TD numeric) $(TD Left justify the result in
+            the field.  It overrides any $(B 0) flag.))
 
-    $(TR $(TD $(B '+')) $(TD numeric) $(TD Prefix positive numbers in
-    a signed conversion with a $(B +).  It overrides any $(I space)
-    flag.))
+        $(TR $(TD $(B '+')) $(TD numeric) $(TD Prefix positive numbers in
+        a signed conversion with a $(B +).  It overrides any $(I space)
+        flag.))
 
-    $(TR $(TD $(B '#')) $(TD integral ($(B 'o'))) $(TD Add to
-    precision as necessary so that the first digit of the octal
-    formatting is a '0', even if both the argument and the $(I
-    Precision) are zero.))
+        $(TR $(TD $(B '#')) $(TD integral ($(B 'o'))) $(TD Add to
+        precision as necessary so that the first digit of the octal
+        formatting is a '0', even if both the argument and the $(I
+        Precision) are zero.))
 
-    $(TR $(TD $(B '#')) $(TD integral ($(B 'x'), $(B 'X'))) $(TD If
-       non-zero, prefix result with $(B 0x) ($(B 0X)).))
+        $(TR $(TD $(B '#')) $(TD integral ($(B 'x'), $(B 'X'))) $(TD If
+           non-zero, prefix result with $(B 0x) ($(B 0X)).))
 
-    $(TR $(TD $(B '#')) $(TD floating) $(TD Always insert the decimal
-       point and print trailing zeros.))
+        $(TR $(TD $(B '#')) $(TD floating) $(TD Always insert the decimal
+           point and print trailing zeros.))
 
-    $(TR $(TD $(B '0')) $(TD numeric) $(TD Use leading
-    zeros to pad rather than spaces (except for the floating point
-    values $(D nan) and $(D infinity)).  Ignore if there's a $(I
-    Precision).))
+        $(TR $(TD $(B '0')) $(TD numeric) $(TD Use leading
+        zeros to pad rather than spaces (except for the floating point
+        values $(D nan) and $(D infinity)).  Ignore if there's a $(I
+        Precision).))
 
-    $(TR $(TD $(B ' ')) $(TD numeric) $(TD Prefix positive
-    numbers in a signed conversion with a space.))
+        $(TR $(TD $(B ' ')) $(TD numeric) $(TD Prefix positive
+        numbers in a signed conversion with a space.))
 
     <dt>$(I Width)
     <dd>
