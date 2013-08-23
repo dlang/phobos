@@ -1360,6 +1360,29 @@ T toImpl(T, S)(S value)
     dchar to4 = to!dchar(from4);
 }
 
+unittest
+{
+    // Narrowing conversions from enum -> integral should be allowed, but they
+    // should throw at runtime if the enum value doesn't fit in the target
+    // type.
+    enum E1 : ulong { A = 1, B = 1UL<<48 }
+    assert(to!int(E1.A) == 1);
+    assertThrown!ConvOverflowException(to!int(E1.B)); // E1.B overflows int
+
+    enum E2 : long { A = -1L<<48, B = -1<<31, C = 1<<31 }
+    assertThrown!ConvOverflowException(to!int(E2.A)); // E2.A overflows int
+    assertThrown!ConvOverflowException(to!uint(E2.B)); // E2.B overflows uint
+    assert(to!int(E2.B) == -1<<31); // but does not overflow int
+    assert(to!int(E2.C) == 1<<31);  // E2.C does not overflow int
+
+    enum E3 : int { A = -1, B = 1, C = 255 }
+    assertThrown!ConvOverflowException(to!ubyte(E3.A));
+    assert(to!byte(E3.A) == -1);
+    assert(to!byte(E3.B) == 1);
+    assert(to!ubyte(E3.C) == 255);
+    assertThrown!ConvOverflowException(to!byte(E3.C));
+}
+
 /**
 Array-to-array conversion (except when target is a string type)
 converts each element in turn by using $(D to).
