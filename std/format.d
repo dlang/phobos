@@ -186,6 +186,7 @@ private alias enforceFmt = enforceEx!FormatException;
 
         $(TR $(TD $(B ' ')) $(TD numeric) $(TD Prefix positive
         numbers in a signed conversion with a space.))
+    )
 
     <dt>$(I Width)
     <dd>
