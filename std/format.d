@@ -5929,3 +5929,12 @@ unittest
     formattedWrite(stream, "%2$.*1$d", 12, 10);
     assert(stream.data == "000000000010", stream.data);
 }
+
+unittest
+{
+    // bug 6893
+    enum E : ulong { A, B, C }
+    auto stream = appender!(char[])();
+    formattedWrite(stream, "%s", E.C);
+    assert(stream.data == "C");
+}
