@@ -1248,14 +1248,14 @@ unittest
 /++
     Strips both leading and trailing whitespace.
   +/
-C[] strip(C)(C[] str)
+C[] strip(C)(C[] str) @safe pure
     if (isSomeChar!C)
 {
     return stripRight(stripLeft(str));
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assert(strip("     hello world     ") ==
            "hello world");
@@ -1302,7 +1302,7 @@ unittest
     });
 }
 
-unittest
+@safe pure unittest
 {
     assertCTFEable!(
     {
