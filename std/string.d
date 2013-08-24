@@ -1454,7 +1454,7 @@ unittest
     $(D delimiter) is returned. If it $(D str) does $(I not) start with
     $(D delimiter), then it is returned unchanged.
  +/
-C1[] chompPrefix(C1, C2)(C1[] str, C2[] delimiter)
+C1[] chompPrefix(C1, C2)(C1[] str, C2[] delimiter) @safe pure
     if (isSomeChar!C1 && isSomeChar!C2)
 {
     static if (is(Unqual!C1 == Unqual!C2))
@@ -1479,7 +1479,7 @@ C1[] chompPrefix(C1, C2)(C1[] str, C2[] delimiter)
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assert(chompPrefix("hello world", "he") == "llo world");
     assert(chompPrefix("hello world", "hello w") == "orld");
@@ -1487,7 +1487,7 @@ unittest
     assert(chompPrefix("", "hello") == "");
 }
 
-unittest
+/* @safe */ pure unittest
 {
     assertCTFEable!(
     {
