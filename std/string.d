@@ -1217,7 +1217,7 @@ C[] stripLeft(C)(C[] str) @safe pure
 /++
     Strips trailing whitespace.
   +/
-C[] stripRight(C)(C[] str)
+C[] stripRight(C)(C[] str) @safe pure
     if (isSomeChar!C)
 {
     foreach_reverse (i, dchar c; str)
@@ -1230,7 +1230,7 @@ C[] stripRight(C)(C[] str)
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assert(stripRight("     hello world     ") ==
            "     hello world");
