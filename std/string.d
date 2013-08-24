@@ -1511,7 +1511,7 @@ C1[] chompPrefix(C1, C2)(C1[] str, C2[] delimiter) @safe pure
     ends with $(D "\r\n"), then both are removed. If $(D str) is empty, then
     then it is returned unchanged.
  +/
-S chop(S)(S str)
+S chop(S)(S str) @safe pure
     if (isSomeString!S)
 {
     if (str.empty)
@@ -1526,7 +1526,7 @@ S chop(S)(S str)
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assert(chop("hello world") == "hello worl");
     assert(chop("hello world\n") == "hello world");
