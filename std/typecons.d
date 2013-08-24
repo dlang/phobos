@@ -372,6 +372,18 @@ template Tuple(Specs...)
          * The type of the tuple's components.
          */
         alias staticMap!(extractType, fieldSpecs) Types;
+        
+        /**
+         * The identifiers of the tuple's components, as a TypeTuple of strings.
+         * The identifier of a component without a name is $(D "").
+         * 
+         * Examples:
+         * ----
+         * auto t = Tuple!(int, "num", string, "name", bool)();
+         * static assert(t.identifiers == TypeTuple!("num", "name", ""));
+         * ----
+         */
+        alias staticMap!(extractName, fieldSpecs) identifiers;
 
         /**
          * Use $(D t.expand) for a tuple $(D t) to expand it into its
@@ -586,6 +598,7 @@ unittest
     {
         Tuple!(int, "a", int, "b") nosh;
         static assert(nosh.length == 2);
+        static assert(nosh.identifiers == TypeTuple!("a", "b"));
         nosh.a = 5;
         nosh.b = 6;
         assert(nosh.a == 5);
@@ -594,6 +607,7 @@ unittest
     {
         Tuple!(short, double) b;
         static assert(b.length == 2);
+        static assert(b.identifiers == TypeTuple!("",""));
         b[1] = 5;
         auto a = Tuple!(int, real)(b);
         assert(a[0] == 0 && a[1] == 5);
@@ -642,6 +656,7 @@ unittest
     // slicing
     {
         Tuple!(int, "x", real, "y", double, "z", string) t;
+        static assert(t.identifiers == TypeTuple!("x","y","z",""));
         t[0] = 10;
         t[1] = 11;
         t[2] = 12;
@@ -4504,4 +4519,3 @@ unittest
     if (flag1) {} else assert(false);
     assert(flag1 == Yes.abc);
 }
-
