@@ -1736,7 +1736,8 @@ a ConvException is thrown.
 Enums with floating-point or string base types are not supported.
 */
 T toImpl(T, S)(S value)
-    if (is(T == enum) && !is(S == enum) && is(S : OriginalType!T)
+    if (is(T == enum) && !is(S == enum)
+        && is(typeof(value == OriginalType!T.init))
         && !isFloatingPoint!(OriginalType!T) && !isSomeString!(OriginalType!T))
 {
     foreach (Member; EnumMembers!T)
@@ -4111,4 +4112,12 @@ unittest
         static assert(is(typeof(signed(cast(const T)1)) == long));
         static assert(is(typeof(signed(cast(immutable T)1)) == long));
     }
+}
+
+unittest
+{
+    // issue 10874
+    enum Test { a = 0 }
+    ulong l = 0;
+    auto t = l.to!Test;
 }
