@@ -1632,6 +1632,11 @@ struct RandomCover(Range, UniformRNG = void)
             _chosen.length = _input.length;
             _alreadyChosen = 0;
         }
+
+        this(Range input, UniformRNG rng)
+        {
+            this(input, rng);
+        }
     }
 
     static if (hasLength!Range)
@@ -1738,6 +1743,9 @@ unittest
             auto rng = UniformRNG(unpredictableSeed);
             auto rc = randomCover(a, rng);
             static assert(isForwardRange!(typeof(rc)));
+            // check for constructor passed a value-type RNG
+            auto rc2 = RandomCover!(int[], UniformRNG)(a, UniformRNG(unpredictableSeed));
+            static assert(isForwardRange!(typeof(rc2)));
         }
 
         int[] b = new int[9];
@@ -1857,6 +1865,11 @@ struct RandomSample(Range, UniformRNG = void)
                 _input = input;
                 initialize(howMany, input.length);
             }
+
+            this(Range input, size_t howMany, UniformRNG rng)
+            {
+                this(input, howMany, rng);
+            }
         }
 
         this(Range input, size_t howMany, size_t total, ref UniformRNG rng)
@@ -1864,6 +1877,11 @@ struct RandomSample(Range, UniformRNG = void)
             _rng = rng;
             _input = input;
             initialize(howMany, total);
+        }
+
+        this(Range input, size_t howMany, size_t total, UniformRNG rng)
+        {
+            this(input, howMany, total, rng);
         }
     }
 
@@ -2199,6 +2217,14 @@ unittest
         static assert(isInputRange!(typeof(randomSample(TestInputRange(), 5, 10, rng))));
         static assert(!isForwardRange!(typeof(randomSample(TestInputRange(), 5, 10))));
         static assert(!isForwardRange!(typeof(randomSample(TestInputRange(), 5, 10, rng))));
+        // test case with range initialized by direct call to struct
+        {
+            auto sample =
+                RandomSample!(TestInputRange, UniformRNG)
+                             (TestInputRange(), 5, 10, UniformRNG(unpredictableSeed));
+            static assert(isInputRange!(typeof(sample)));
+            static assert(!isForwardRange!(typeof(sample)));
+        }
 
         /* Now test the case of an input range with length.  We ignore the cases
          * already covered by the previous tests.
@@ -2207,16 +2233,40 @@ unittest
         static assert(isInputRange!(typeof(randomSample(TestInputRange().takeExactly(10), 5, rng))));
         static assert(!isForwardRange!(typeof(randomSample(TestInputRange().takeExactly(10), 5))));
         static assert(!isForwardRange!(typeof(randomSample(TestInputRange().takeExactly(10), 5, rng))));
+        // test case with range initialized by direct call to struct
+        {
+            auto sample =
+                RandomSample!(typeof(TestInputRange().takeExactly(10)), UniformRNG)
+                             (TestInputRange().takeExactly(10), 5, 10, UniformRNG(unpredictableSeed));
+            static assert(isInputRange!(typeof(sample)));
+            static assert(!isForwardRange!(typeof(sample)));
+        }
 
         // Now test the case of providing a forward range as input.
         static assert(!isForwardRange!(typeof(randomSample(a, 5))));
         static if (isForwardRange!UniformRNG)
         {
             static assert(isForwardRange!(typeof(randomSample(a, 5, rng))));
+            // ... and test with range initialized directly
+            {
+                auto sample =
+                    RandomSample!(int[], UniformRNG)
+                                 (a, 5, UniformRNG(unpredictableSeed));
+                static assert(isForwardRange!(typeof(sample)));
+            }
         }
         else
         {
+            static assert(isInputRange!(typeof(randomSample(a, 5, rng))));
             static assert(!isForwardRange!(typeof(randomSample(a, 5, rng))));
+            // ... and test with range initialized directly
+            {
+                auto sample =
+                    RandomSample!(int[], UniformRNG)
+                                 (a, 5, UniformRNG(unpredictableSeed));
+                static assert(isInputRange!(typeof(sample)));
+                static assert(!isForwardRange!(typeof(sample)));
+            }
         }
 
         /* Check that randomSample will throw an error if we claim more
