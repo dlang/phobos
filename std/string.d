@@ -1562,7 +1562,7 @@ unittest
     is the character that will be used to fill up the space in the field that
     $(D s) doesn't fill.
   +/
-S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
+S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
     if (isSomeString!S)
 {
     alias typeof(s[0]) C;
@@ -1597,7 +1597,7 @@ S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
     is the character that will be used to fill up the space in the field that
     $(D s) doesn't fill.
   +/
-S rightJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
+S rightJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
     if (isSomeString!S)
 {
     alias typeof(s[0]) C;
@@ -1632,7 +1632,7 @@ S rightJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
     is the character that will be used to fill up the space in the field that
     $(D s) doesn't fill.
   +/
-S center(S)(S s, size_t width, dchar fillChar = ' ') @trusted
+S center(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
     if (isSomeString!S)
 {
     alias typeof(s[0]) C;
