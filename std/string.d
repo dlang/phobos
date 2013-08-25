@@ -2474,7 +2474,7 @@ deprecated unittest
  *  to be more like regular expression character classes.
  */
 
-bool inPattern(S)(dchar c, in S pattern) if (isSomeString!S)
+bool inPattern(S)(dchar c, in S pattern) @safe pure if (isSomeString!S)
 {
     bool result = false;
     int range = 0;
@@ -2540,7 +2540,7 @@ unittest
  * See if character c is in the intersection of the patterns.
  */
 
-bool inPattern(S)(dchar c, S[] patterns) if (isSomeString!S)
+bool inPattern(S)(dchar c, S[] patterns) @safe pure if (isSomeString!S)
 {
     foreach (string pattern; patterns)
     {
