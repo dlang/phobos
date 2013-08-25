@@ -94,6 +94,7 @@ else version(Posix)
         static assert(false);
 
     import core.sys.posix.netdb;
+    import core.sys.posix.sys.un : sockaddr_un;
     private import core.sys.posix.fcntl;
     private import core.sys.posix.unistd;
     private import core.sys.posix.arpa.inet;
@@ -1893,10 +1894,10 @@ static if (is(sockaddr_un))
 
         this(in char[] path)
         {
-            len = sockaddr_un.sun_path.offsetof + path.length + 1;
+            len = cast(socklen_t)(sockaddr_un.init.sun_path.offsetof + path.length + 1);
             sun = cast(sockaddr_un*) (new ubyte[len]).ptr;
             sun.sun_family = AF_UNIX;
-            sun.sun_path.ptr[0..path.length] = path;
+            sun.sun_path.ptr[0..path.length] = (cast(byte[]) path)[];
             sun.sun_path.ptr[path.length] = 0;
         }
 
@@ -1909,6 +1910,40 @@ static if (is(sockaddr_un))
         {
             return path;
         }
+    }
+
+    unittest
+    {
+        import core.stdc.stdio : remove;
+    
+        immutable ubyte[] data = [1, 2, 3, 4];
+        Socket[2] pair;
+        
+        auto name = "unix-address-family-unittest-socket-name";
+        auto address = new UnixAddress(name);
+        
+        auto listener = new Socket(AddressFamily.UNIX, SocketType.STREAM);
+        scope(exit) listener.close();
+        
+        listener.bind(address);
+        scope(exit) remove(toStringz(name));
+        
+        listener.listen(1);
+
+        pair[0] = new Socket(AddressFamily.UNIX, SocketType.STREAM);
+        scope(exit) listener.close();
+
+        pair[0].connect(address);
+        scope(exit) pair[0].close();
+
+        pair[1] = listener.accept();
+        scope(exit) pair[1].close();
+
+        pair[0].send(data);
+
+        auto buf = new ubyte[data.length];
+        pair[1].receive(buf);
+        assert(buf == data);
     }
 }
 
