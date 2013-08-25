@@ -188,7 +188,7 @@ $(BOOKTABLE ,
 These _range-construction tools are implemented using templates; but sometimes
 an object-based interface for ranges is needed. For this purpose, this module
 provides a number of object and $(D interface) definitions that can be used to
-wrap around _range objects created by the above templates:
+wrap around _range objects created by the above templates.
 
 $(BOOKTABLE ,
     $(TR $(TD $(D $(LREF InputRange)))
@@ -228,6 +228,9 @@ $(BOOKTABLE ,
     $(TR $(TD $(D $(LREF InputRangeObject)))
         $(TD Class that implements the $(D InputRange) interface and wraps the
         input _range methods in virtual functions.
+    ))
+    $(TR $(TD $(D $(LREF RefRange)))
+        $(TD Wrapper around a forward _range that gives it reference semantics.
     ))
 )
 
