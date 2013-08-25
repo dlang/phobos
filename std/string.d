@@ -2583,7 +2583,7 @@ unittest
  * Return string that is s with all characters removed that match pattern.
  */
 
-S removechars(S)(S s, in S pattern) if (isSomeString!S)
+S removechars(S)(S s, in S pattern) @safe pure if (isSomeString!S)
 {
     Unqual!(typeof(s[0]))[] r;
     bool changed = false;
@@ -2604,7 +2604,8 @@ S removechars(S)(S s, in S pattern) if (isSomeString!S)
             std.utf.encode(r, c);
         }
     }
-    return (changed ? cast(S) r : s);
+    auto trustedAssumeUnique(typeof(r) a)@trusted{ return assumeUnique(a); }
+    return (changed ? trustedAssumeUnique(r) : s);
 }
 
 unittest
