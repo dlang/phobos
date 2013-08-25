@@ -3738,7 +3738,7 @@ if (isInputRange!InputRange &&
             //Note: "needle <= 0x7F" properly handles sign via unsigned promotion
             static if (is(UEEType == char))
             {
-                if (!__ctfe && needle <= 0x7F)
+                if (!__ctfe && canSearchInCodeUnits!char(needle))
                 {
                     static R trustedMemchr(ref R haystack, ref E needle) @trusted nothrow pure
                     {
@@ -3754,7 +3754,7 @@ if (isInputRange!InputRange &&
             //Ditto, but for UTF16
             static if (is(UEEType == wchar))
             {
-                if (needle <= 0xD7FF || (0xE000 <= needle && needle <= 0xFFFF))
+                if (canSearchInCodeUnits!wchar(needle))
                 {
                     foreach (i, ref EEType e; haystack)
                     {
