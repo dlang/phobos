@@ -2604,8 +2604,10 @@ S removechars(S)(S s, in S pattern) @safe pure if (isSomeString!S)
             std.utf.encode(r, c);
         }
     }
-    auto trustedAssumeUnique(typeof(r) a)@trusted{ return assumeUnique(a); }
-    return (changed ? trustedAssumeUnique(r) : s);
+    if (changed)
+        return r;
+    else
+        return s;
 }
 
 unittest
