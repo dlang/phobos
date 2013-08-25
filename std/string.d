@@ -2557,7 +2557,7 @@ bool inPattern(S)(dchar c, S[] patterns) @safe pure if (isSomeString!S)
  * Count characters in s that match pattern.
  */
 
-size_t countchars(S, S1)(S s, in S1 pattern) if (isSomeString!S && isSomeString!S1)
+size_t countchars(S, S1)(S s, in S1 pattern) @safe pure if (isSomeString!S && isSomeString!S1)
 {
     size_t count;
     foreach (dchar c; s)
