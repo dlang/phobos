@@ -4009,8 +4009,6 @@ unittest
     assert(ssa.s.p != ssb.s.p);
 }
 
-import std.stdio;
-
 //disabled postblit
 unittest
 {
@@ -4307,12 +4305,49 @@ unittest
     }
 }
 
-//BUG 9559
-unittest
+unittest //@@@9559@@@
 {
     alias Nullable!int I;
     auto ints = [0, 1, 2].map!(i => i & 1 ? I.init : I(i))();
     auto asArray = std.array.array(ints);
+}
+
+unittest //http://forum.dlang.org/thread/nxbdgtdlmwscocbiypjs@forum.dlang.org
+{
+    import std.datetime;
+    static struct A
+    {
+        double i;
+    }
+
+    static struct B
+    {
+        invariant()
+        {
+            if(j == 0)
+                assert(a.i.isNaN, "why is 'j' zero?? and i is not NaN?");
+            else
+                assert(!a.i.isNaN);
+        }
+        SysTime when; // comment this line avoid the breakage
+        int j;
+        A a;
+    }
+
+    B b1 = B.init;
+    assert(&b1); // verify that default eyes invariants are ok;
+
+    auto b2 = B(SysTime(0, UTC()), 1, A(1));
+    assert(&b2);
+    auto b3 = B(SysTime(0, UTC()), 1, A(1));
+    assert(&b3);
+    
+    import std.array;
+    auto arr = [b2, b3];
+    
+    assert(arr[0].j == 1);
+    assert(arr[1].j == 1);
+    auto a2 = arr.array(); // << bang, invariant is raised, also if b2 and b3 are good
 }
 
 private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
