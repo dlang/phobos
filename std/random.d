@@ -1625,7 +1625,7 @@ struct RandomCover(Range, UniformRNG = void)
     {
         private UniformRNG _rng;
 
-        this(Range input, UniformRNG rng)
+        this(Range input, ref UniformRNG rng)
         {
             _input = input;
             _rng = rng;
@@ -1709,7 +1709,7 @@ struct RandomCover(Range, UniformRNG = void)
 }
 
 /// Ditto
-auto randomCover(Range, UniformRNG)(Range r, UniformRNG rng)
+auto randomCover(Range, UniformRNG)(Range r, auto ref UniformRNG rng)
     if (isRandomAccessRange!Range && isUniformRNG!UniformRNG)
 {
     return RandomCover!(Range, UniformRNG)(r, rng);
@@ -1851,7 +1851,7 @@ struct RandomSample(Range, UniformRNG = void)
 
         static if (hasLength!Range)
         {
-            this(Range input, size_t howMany, UniformRNG rng)
+            this(Range input, size_t howMany, ref UniformRNG rng)
             {
                 _rng = rng;
                 _input = input;
@@ -1859,7 +1859,7 @@ struct RandomSample(Range, UniformRNG = void)
             }
         }
 
-        this(Range input, size_t howMany, size_t total, UniformRNG rng)
+        this(Range input, size_t howMany, size_t total, ref UniformRNG rng)
         {
             _rng = rng;
             _input = input;
@@ -2161,14 +2161,14 @@ auto randomSample(Range)(Range r, size_t n)
 }
 
 /// Ditto
-auto randomSample(Range, UniformRNG)(Range r, size_t n, size_t total, UniformRNG rng)
+auto randomSample(Range, UniformRNG)(Range r, size_t n, size_t total, auto ref UniformRNG rng)
     if (isInputRange!Range && isUniformRNG!UniformRNG)
 {
     return RandomSample!(Range, UniformRNG)(r, n, total, rng);
 }
 
 /// Ditto
-auto randomSample(Range, UniformRNG)(Range r, size_t n, UniformRNG rng)
+auto randomSample(Range, UniformRNG)(Range r, size_t n, auto ref UniformRNG rng)
     if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
 {
     return RandomSample!(Range, UniformRNG)(r, n, r.length, rng);
