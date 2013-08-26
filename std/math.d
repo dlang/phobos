@@ -5816,3 +5816,11 @@ unittest
     real r = tan(-2.0L);
     assert(fabs(r - 2.18504f) < .00001);
 }
+
+/// Returns true if i is a power of two and false otherwise.
+bool isPow2(I)(I i)
+if(isIntegral!I)
+{ 
+    return i && !(i & (i - 1)); 
+}
+
