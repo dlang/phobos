@@ -10,9 +10,9 @@ $(TR $(TDNW Searching) $(TD $(MYREF all) $(MYREF any) $(MYREF balancedParens) $(
 boyerMooreFinder) $(MYREF canFind) $(MYREF count) $(MYREF countUntil)
 $(MYREF commonPrefix) $(MYREF endsWith) $(MYREF find) $(MYREF
 findAdjacent) $(MYREF findAmong) $(MYREF findSkip) $(MYREF findSplit)
-$(MYREF findSplitAfter) $(MYREF findSplitBefore) $(MYREF indexOf)
-$(MYREF minCount) $(MYREF minPos) $(MYREF mismatch) $(MYREF skipOver)
-$(MYREF startsWith) $(MYREF until) )
+$(MYREF findSplitAfter) $(MYREF findSplitBefore) $(MYREF minCount)
+$(MYREF minPos) $(MYREF mismatch) $(MYREF skipOver) $(MYREF startsWith)
+$(MYREF until) )
 )
 $(TR $(TDNW Comparison) $(TD $(MYREF cmp) $(MYREF equal) $(MYREF
 levenshteinDistance) $(MYREF levenshteinDistanceAndPath) $(MYREF max)
