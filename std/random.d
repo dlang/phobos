@@ -1590,7 +1590,7 @@ foreach (e; randomCover(a, Random(unpredictableSeed)))  // correct!
     writeln(e);
 }
 
-foreach (e; randomCover(a, rndGen))  // WRONG!! rndGen gets copied by value
+foreach (e; randomCover(a, rndGen))  // DANGEROUS!! rndGen gets copied by value
 {
     writeln(e);
 }
@@ -1808,8 +1808,8 @@ foreach (e; randomSample(a, 5, Random(unpredictableSeed)))  // correct!
     writeln(e);
 }
 
-foreach (e; randomSample(a, 5, rndGen))  // WRONG!! rndGen gets copied
-{                                        // by value
+foreach (e; randomSample(a, 5, rndGen))  // DANGEROUS!! rndGen gets
+{                                        // copied by value
     writeln(e);
 }
 
