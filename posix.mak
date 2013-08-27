@@ -136,16 +136,7 @@ else
 	PATHSEP:=$(shell echo "\\")
 endif
 
-# Set LINKOPTS
-ifeq (,$(findstring win,$(OS)))
-    ifeq (freebsd,$(OS))
-        LINKOPTS=-L-L$(ROOT)
-    else
-        LINKOPTS=-L-ldl -L-L$(ROOT)
-    endif
-else
-    LINKOPTS=-L/co $(LIB)
-endif
+LINKDL:=$(if $(findstring $(OS),linux),-L-ldl,)
 
 # Set DDOC, the documentation generator
 DDOC=$(DMD)
@@ -280,7 +271,7 @@ $(ROOT)/$(SONAME): $(LIBSO)
 	ln -sf $(notdir $(LIBSO)) $@
 
 $(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
-	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(D_FILES) $(OBJS)
+	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(LINKDL) $(D_FILES) $(OBJS)
 
 ifeq (osx,$(OS))
 # Build fat library that combines the 32 bit and the 64 bit libraries
@@ -306,7 +297,7 @@ UT_LIBSO:=$(ROOT)/unittest/libphobos2-ut.so
 
 $(UT_LIBSO): override PIC:=-fPIC
 $(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO)
-	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) -defaultlib= -debuglib= -L-lcurl
+	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LINKDL) -defaultlib= -debuglib= -L-lcurl
 
 $(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_LIBSO)
 	$(DMD) $(DFLAGS) -of$@ $< -L$(UT_LIBSO) -defaultlib= -debuglib=
