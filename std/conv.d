@@ -1308,8 +1308,8 @@ fit in the narrower type.
  */
 T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
-        (isNumeric!S || isSomeChar!S) &&
-        (isNumeric!T || isSomeChar!T) && !is(T == enum))
+        (isNumeric!S || isSomeChar!S || isBoolean!S) &&
+        (isNumeric!T || isSomeChar!T || isBoolean!T) && !is(T == enum))
 {
     enum sSmallest = mostNegative!S;
     enum tSmallest = mostNegative!T;
@@ -1365,9 +1365,12 @@ unittest
     // Narrowing conversions from enum -> integral should be allowed, but they
     // should throw at runtime if the enum value doesn't fit in the target
     // type.
-    enum E1 : ulong { A = 1, B = 1UL<<48 }
+    enum E1 : ulong { A = 1, B = 1UL<<48, C = 0 }
     assert(to!int(E1.A) == 1);
+    assert(to!bool(E1.A) == true);    
     assertThrown!ConvOverflowException(to!int(E1.B)); // E1.B overflows int
+    assertThrown!ConvOverflowException(to!bool(E1.B)); // E1.B overflows bool
+    assert(to!bool(E1.C) == false);
 
     enum E2 : long { A = -1L<<48, B = -1<<31, C = 1<<31 }
     assertThrown!ConvOverflowException(to!int(E2.A)); // E2.A overflows int
@@ -1375,12 +1378,17 @@ unittest
     assert(to!int(E2.B) == -1<<31); // but does not overflow int
     assert(to!int(E2.C) == 1<<31);  // E2.C does not overflow int
 
-    enum E3 : int { A = -1, B = 1, C = 255 }
+    enum E3 : int { A = -1, B = 1, C = 255, D = 0 }
     assertThrown!ConvOverflowException(to!ubyte(E3.A));
+    assertThrown!ConvOverflowException(to!bool(E3.A));
     assert(to!byte(E3.A) == -1);
     assert(to!byte(E3.B) == 1);
     assert(to!ubyte(E3.C) == 255);
-    assertThrown!ConvOverflowException(to!byte(E3.C));
+    assert(to!bool(E3.B) == true);
+    assertThrown!ConvOverflowException(to!byte(E3.C));    
+    assertThrown!ConvOverflowException(to!bool(E3.C));
+    assert(to!bool(E3.D) == false);
+
 }
 
 /**
