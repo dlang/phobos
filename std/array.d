@@ -258,7 +258,6 @@ unittest
 {
     static assert(!__traits(compiles, [ tuple("foo", "bar", "baz") ].assocArray()));
     static assert(!__traits(compiles, [ tuple("foo") ].assocArray()));
-    [ tuple("foo", "bar") ].assocArray();
     static assert( __traits(compiles, [ tuple("foo", "bar") ].assocArray()));
 
     auto aa1 = [ tuple("foo", "bar"), tuple("baz", "quux") ].assocArray();
@@ -2342,19 +2341,19 @@ struct Appender(A : T[], T)
             auto bigDataFun() @trusted nothrow { return _data.arr.ptr[0 .. len + 1];}
             auto bigData = bigDataFun();
 
-            auto getTarget() @trusted nothrow { return cast(Unqual!T)item;} 
+            auto getSource() @trusted nothrow { return cast(Unqual!T)item;} 
 
             //The idea is to only call emplace if we must.
-            static if ( is(typeof(bigData[0].opAssign(getTarget()))) ||
-                       !is(typeof(bigData[0] = getTarget())))
+            static if ( is(typeof(bigData[0].opAssign(getSource()))) ||
+                       !is(typeof(bigData[0] = getSource())))
             {
                 //pragma(msg, T.stringof); pragma(msg, U.stringof);
-                emplace(&bigData[len], getTarget());
+                emplace(&bigData[len], getSource());
             }
             else
             {
                 //pragma(msg, T.stringof); pragma(msg, U.stringof);
-                bigData[len] = getTarget();
+                bigData[len] = getSource();
             }
 
             //We do this at the end, in case of exceptions
@@ -2410,18 +2409,18 @@ struct Appender(A : T[], T)
             }
             else
             {
-                auto getTarget() @trusted nothrow {return cast(Unqual!T)items.front;}
+                auto getSource()() @trusted {return cast(Unqual!T)items.front;}
                 foreach (ref it ; bigData[len .. newlen])
                 {
                     static if (mustEmplace)
                     {
                         //pragma(msg, T.stringof); pragma(msg, Range.stringof);
-                        emplace(&it, getTarget());
+                        emplace(&it, getSource());
                     }
                     else
                     {
                         //pragma(msg, T.stringof); pragma(msg, Range.stringof);
-                        it = getTarget();
+                        it = getSource();
                     }
                 }
             }
@@ -2772,6 +2771,67 @@ unittest
     }
     auto a = Appender!(S[])();
     a.put([S()]);
+}
+
+unittest
+{
+    struct S
+    {
+        int* p;
+    }
+
+    auto a0 = Appender!(S[])();
+    auto a1 = Appender!(const(S)[])();
+    auto a2 = Appender!(immutable(S)[])();
+    auto s0 = S(null);
+    auto s1 = const(S)(null);
+    auto s2 = immutable(S)(null);
+    a1.put(s0);
+    a1.put(s1);
+    a1.put(s2);
+    a1.put([s0]);
+    a1.put([s1]);
+    a1.put([s2]);
+    a0.put(s0);
+    static assert(!is(typeof(a0.put(a1))));
+    static assert(!is(typeof(a0.put(a2))));
+    a0.put([s0]);
+    static assert(!is(typeof(a0.put([a1]))));
+    static assert(!is(typeof(a0.put([a2]))));
+    static assert(!is(typeof(a2.put(a0))));
+    static assert(!is(typeof(a2.put(a1))));
+    a2.put(s2);
+    static assert(!is(typeof(a2.put([a0]))));
+    static assert(!is(typeof(a2.put([a1]))));
+    a2.put([s2]);
+}
+
+unittest
+{ //9528
+    const(E)[] fastCopy(E)(E[] src) {
+            auto app = appender!(const(E)[])();
+            foreach (i, e; src)
+                    app.put(e);
+            return app.data;
+    }
+
+    class C {}
+    struct S { const(C) c; }
+    S[] s = [ S(new C) ];
+
+    auto t = fastCopy(s); // Does not compile
+}
+
+unittest
+{ //10753
+    struct Foo {
+       immutable dchar d;
+    }
+    struct Bar {
+       immutable int x;
+    }
+   "12".map!Foo.array;
+   [1, 2].map!Bar.array;
 }
 
 /++
