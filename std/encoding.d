@@ -1794,7 +1794,7 @@ size_t encode(E, R)(dchar c, R range)
     }
     else
     {
-        assert(0);
+        static assert(0);
     }
 }
 
