@@ -258,6 +258,7 @@ unittest
 {
     static assert(!__traits(compiles, [ tuple("foo", "bar", "baz") ].assocArray()));
     static assert(!__traits(compiles, [ tuple("foo") ].assocArray()));
+    [ tuple("foo", "bar") ].assocArray();
     static assert( __traits(compiles, [ tuple("foo", "bar") ].assocArray()));
 
     auto aa1 = [ tuple("foo", "bar"), tuple("baz", "quux") ].assocArray();
@@ -2337,14 +2338,27 @@ struct Appender(A : T[], T)
         {
             ensureAddable(1);
             immutable len = _data.arr.length;
-            //_data.arr.ptr[len] = cast(Unqual!T)item;    // assign? emplace?
-            //_data.arr = _data.arr.ptr[0 .. len + 1];
 
-            // Cannot return ref because it doesn't work in CTFE
-            ()@trusted{ return _data.arr.ptr[len .. len + 1]; }()[0]
-            =   // assign? emplace?
-            ()@trusted{ return cast(Unqual!T)item; } ();
-            ()@trusted{ _data.arr = _data.arr.ptr[0 .. len + 1]; }();
+            auto bigDataFun() @trusted nothrow { return _data.arr.ptr[0 .. len + 1];}
+            auto bigData = bigDataFun();
+
+            auto getTarget() @trusted nothrow { return cast(Unqual!T)item;} 
+
+            //The idea is to only call emplace if we must.
+            static if ( is(typeof(bigData[0].opAssign(getTarget()))) ||
+                       !is(typeof(bigData[0] = getTarget())))
+            {
+                //pragma(msg, T.stringof); pragma(msg, U.stringof);
+                emplace(&bigData[len], getTarget());
+            }
+            else
+            {
+                //pragma(msg, T.stringof); pragma(msg, U.stringof);
+                bigData[len] = getTarget();
+            }
+
+            //We do this at the end, in case of exceptions
+            _data.arr = bigData;
         }
     }
 
@@ -2382,23 +2396,38 @@ struct Appender(A : T[], T)
             ensureAddable(items.length);
             immutable len = _data.arr.length;
             immutable newlen = len + items.length;
-            _data.arr = ()@trusted{ return _data.arr.ptr[0 .. newlen]; }();
-            static if (is(typeof(_data.arr[] = items[])))
+
+            auto bigDataFun() @trusted nothrow { return _data.arr.ptr[0 .. newlen];}
+            auto bigData = bigDataFun();
+
+            enum mustEmplace =  is(typeof(bigData[0].opAssign(cast(Unqual!T)items.front))) ||
+                               !is(typeof(bigData[0] = cast(Unqual!T)items.front));
+
+            static if (is(typeof(_data.arr[] = items[])) && !mustEmplace)
             {
-                ()@trusted{ return _data.arr.ptr[len .. newlen]; }()[] = items[];
+                //pragma(msg, T.stringof); pragma(msg, Range.stringof);
+                bigData[len .. newlen] = items[];
             }
             else
             {
-                for (size_t i = len; !items.empty; items.popFront(), ++i)
+                auto getTarget() @trusted nothrow {return cast(Unqual!T)items.front;}
+                foreach (ref it ; bigData[len .. newlen])
                 {
-                    //_data.arr.ptr[i] = cast(Unqual!T)items.front;
-
-                    // Cannot return ref because it doesn't work in CTFE
-                    ()@trusted{ return _data.arr.ptr[i .. i + 1]; }()[0]
-                    =   // assign? emplace?
-                    ()@trusted{ return cast(Unqual!T)items.front; }();
+                    static if (mustEmplace)
+                    {
+                        //pragma(msg, T.stringof); pragma(msg, Range.stringof);
+                        emplace(&it, getTarget());
+                    }
+                    else
+                    {
+                        //pragma(msg, T.stringof); pragma(msg, Range.stringof);
+                        it = getTarget();
+                    }
                 }
             }
+
+            //We do this at the end, in case of exceptions
+            _data.arr = bigData;
         }
         else
         {
@@ -2725,6 +2754,24 @@ Appender!(E[]) appender(A : E[], E)(A array)
         S!int r;
         w.put(r);
     }
+}
+
+unittest
+{
+    //10690
+    [tuple(1)].filter!(t => true).array; // No error
+    [tuple("A")].filter!(t => true).array; // error
+}
+
+unittest
+{
+    //Coverage for put(Range) emplace
+    struct S
+    {
+        void opAssign(S){}
+    }
+    auto a = Appender!(S[])();
+    a.put([S()]);
 }
 
 /++
