@@ -1797,6 +1797,13 @@ size_t encode(E, R)(dchar c, R range)
         static assert(0);
     }
 }
+unittest
+{
+    Appender!(char[]) r;
+    assert(encode!(char)('T', r) == 1);
+    assert(encode!(wchar)('T', r) == 1);
+    assert(encode!(dchar)('T', r) == 1);
+}
 
 /**
  Encodes a single code point to a delegate.
