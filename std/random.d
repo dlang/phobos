@@ -1137,7 +1137,7 @@ struct LaggedFibonacciEngine(Type, size_t bits, size_t longLag, size_t shortLag)
     @property @safe pure nothrow const
     bool isSeeded()
     {
-        return payload != null;
+        return payload !is null;
     }
 
     /++
@@ -1154,9 +1154,10 @@ struct LaggedFibonacciEngine(Type, size_t bits, size_t longLag, size_t shortLag)
     ($(D longLag) to seed the generator.
      +/
     void seed(InputRange)(auto ref InputRange range)
-    if ( isInputRange!InputRange && isIntegral!(ElementType!InputRange) && ElementType!InputRange.sizeof >= std.algorithm.min(4, Type.sizeof))
+    if (isInputRange!InputRange && isIntegral!(ElementType!InputRange) && ElementType!InputRange.sizeof >= std.algorithm.min(4, Type.sizeof))
     {
-        if(!payload) payload = new Payload;
+        if (payload is null)
+            payload = new Payload;
         payload.seed(range);
     }
     /// ditto
@@ -1170,7 +1171,7 @@ struct LaggedFibonacciEngine(Type, size_t bits, size_t longLag, size_t shortLag)
     Constructs a generator in an already seeded state.
      +/
     this(InputRange)(auto ref InputRange range)
-    if ( isInputRange!InputRange && isIntegral!(ElementType!InputRange) && ElementType!InputRange.sizeof >= std.algorithm.min(4, Type.sizeof))
+    if (isInputRange!InputRange && isIntegral!(ElementType!InputRange) && ElementType!InputRange.sizeof >= std.algorithm.min(4, Type.sizeof))
     {
         seed(range);
     }
@@ -1188,7 +1189,7 @@ struct LaggedFibonacciEngine(Type, size_t bits, size_t longLag, size_t shortLag)
     auto dup()
     {
         This ret; //non qualified typeof(this)
-        if(payload)
+        if (payload !is null)
         {
             ret.payload = new Payload;
             *ret.payload = *payload;
@@ -1259,11 +1260,13 @@ struct LaggedFibonacciEngine(Type, size_t bits, size_t longLag, size_t shortLag)
     still require $(D longLag) time.
      +/
     @safe nothrow pure
-    void popFrontN(size_t z)
+    void popFrontExactly(size_t z)
     {
         assert(payload, payloadErrorText);
-        payload.popFrontN(z);
+        payload.popFrontExactly(z);
     }
+    /// ditto
+    alias popFrontN = popFrontExactly;
 
 private:
     alias This = typeof(this); //A *non-qualified* alias for typof(this).
@@ -1276,8 +1279,16 @@ private:
 
         alias UIntType = Type;
         enum size_t kMax = (bits+31)/32; //Total amount of "u32" types needed to fill a type of size bits
-        enum UIntType mask = cast(UIntType)~(~cast(UIntType)0 << bits); //A mask that is the size of "bits"
-        enum UIntType maxPrivate = mask; //maxPrivate is needed to have a single documented max
+        static if (bits != UIntType.sizeof * 8)
+        {
+            enum UIntType mask = cast(UIntType)~(~cast(UIntType)0 << bits); //A mask that is the size of "bits"
+            enum UIntType maxPrivate = mask; //maxPrivate is needed to have a single documented max
+        }
+        else
+        {
+            enum UIntType mask = 0; //A mask that is the size of "bits"
+            enum UIntType maxPrivate = UIntType.max; //maxPrivate is needed to have a single documented max
+        }
     }
     else //static if (isFloatingPoint!Type)
     {
@@ -1304,36 +1315,42 @@ private:
         void seed(Range)(ref Range range)
         {
             i = 0;
+            x[] = 0;
             static if (isIntegral!Type)
             {
                 foreach(ref val; x)
                 {
-                    val = 0;
-                    foreach(k; 0..kMax)
+                    static if (kMax)
                     {
-                        if (range.empty) throwSeedException();
-                        val += cast(UIntType)range.front << 32*k;
-                        range.popFront();
+                        foreach(k; 0..kMax)
+                        {
+                            if (range.empty) throwSeedException();
+                            val += cast(UIntType)range.front << 32*k;
+                            range.popFront();
+                        }
                     }
-                    val &= mask;
+                    static if (mask != 0)
+                        val &= mask;
                 }
             }
             else //static if (isFloatingPoint!Type)
             {
                 foreach(ref val; x)
                 {
-                    val = 0;
                     RealType mult = divisor;
-                    foreach(k; 0..kMax)
+                    static if (kMax)
                     {
-                        if(range.empty) throwSeedException();
-                        val += cast(uint)range.front * mult;
-                        range.popFront();
-                        mult *= two32;
+                        foreach(k; 0..kMax)
+                        {
+                            if (range.empty) throwSeedException();
+                            val += cast(uint)range.front * mult;
+                            range.popFront();
+                            mult *= two32;
+                        }
                     }
-                    static if(mask != 0)
+                    static if (mask != 0)
                     {
-                        if(range.empty) throwSeedException();
+                        if (range.empty) throwSeedException();
                         val += (cast(uint)range.front & mask) * mult;
                         range.popFront();
                     }
@@ -1366,11 +1383,16 @@ private:
                 assert(r1.ptr + r1.length <= r2.ptr || r2.ptr + r2.length <= r1.ptr, "Internal slice overlap error"); //@@@8650@@@
                 r1[] += r2[];
                 static if (isUnsigned!Type)
-                    r1[] &= mask;
+                {
+                    static if (mask != 0)
+                        r1[] &= mask;
+                }
                 else
-                    foreach(ref t; r1[])
-                        if(t >= 1.0)
+                {
+                    foreach (ref t; r1[])
+                        if (t >= 1.0)
                             t -= 1.0;
+                }
             }
     
             enum size_t pivot = longLag - shortLag;
@@ -1404,7 +1426,7 @@ private:
         void popFront()
         {
             ++i;
-            if(i == longLag)
+            if (i == longLag)
             {
                 fill();
                 i = 0;
@@ -1412,7 +1434,7 @@ private:
         }
 
         @safe pure nothrow
-        void popFrontN(size_t n)
+        void popFrontExactly(size_t n)
         {
             //Do two loops in case of integral overflow
             while(n >= longLag)
@@ -1421,12 +1443,13 @@ private:
                 n -= longLag;
             }
             i += n;
-            if(i >= longLag)
+            if (i >= longLag)
             {
                 fill();
                 i -= longLag;
             }
         }
+        alias popFrontN = popFrontExactly;
     }
 }
 
@@ -1457,21 +1480,52 @@ unittest
 /**
 Define $(D_PARAM LaggedFibonacciEngine) generators with well-chosen
 parameters. User must still specify the type of number generated (we suggest
-either $(D ulong) or $(D double)). By default, these define numbers
-with $(D 48) bits of precision, but it is possible to specify other depths.
+either $(D uint), $(D ulong) or $(D double)).
+
+For integrals, the default bit depth is the bit size of the integral. For
+floating point types, the bit depth is $(D 24), $(D 48) and $(D 64) for
+$(D float)s, $(D double)s and $(D real)s respectivelly.
 
 $(D LaggedFibonacci) is an implementation chosen LaggedFibonacci engine.
 */
-alias   LaggedFibonacci607(T, size_t N = 48) = LaggedFibonacciEngine!(T, N,   607,   273);
-alias  LaggedFibonacci1279(T, size_t N = 48) = LaggedFibonacciEngine!(T, N,  1279,   418); /// ditto
-alias  LaggedFibonacci2281(T, size_t N = 48) = LaggedFibonacciEngine!(T, N,  2281,  1252); /// ditto
-alias  LaggedFibonacci3217(T, size_t N = 48) = LaggedFibonacciEngine!(T, N,  3217,   576); /// ditto
-alias  LaggedFibonacci4423(T, size_t N = 48) = LaggedFibonacciEngine!(T, N,  4423,  2098); /// ditto
-alias  LaggedFibonacci9689(T, size_t N = 48) = LaggedFibonacciEngine!(T, N,  9689,  5502); /// ditto
-alias LaggedFibonacci19937(T, size_t N = 48) = LaggedFibonacciEngine!(T, N, 19937,  9842); /// ditto
-alias LaggedFibonacci23209(T, size_t N = 48) = LaggedFibonacciEngine!(T, N, 23209, 13470); /// ditto
-alias LaggedFibonacci44497(T, size_t N = 48) = LaggedFibonacciEngine!(T, N, 44497, 21034); /// ditto
-alias LaggedFibonacci     (T, size_t N = 48) = LaggedFibonacci607!(T, N); /// ditto
+alias LaggedFibonacci     (T) = LaggedFibonacci607!T; /// ditto
+alias   LaggedFibonacci607(T) =   LaggedFibonacci607!(T, LFBitDepth!T); /// ditto
+alias  LaggedFibonacci1279(T) =  LaggedFibonacci1279!(T, LFBitDepth!T); /// ditto
+alias  LaggedFibonacci2281(T) =  LaggedFibonacci2281!(T, LFBitDepth!T); /// ditto
+alias  LaggedFibonacci3217(T) =  LaggedFibonacci3217!(T, LFBitDepth!T); /// ditto
+alias  LaggedFibonacci4423(T) =  LaggedFibonacci4423!(T, LFBitDepth!T); /// ditto
+alias  LaggedFibonacci9689(T) =  LaggedFibonacci9689!(T, LFBitDepth!T); /// ditto
+alias LaggedFibonacci19937(T) = LaggedFibonacci19937!(T, LFBitDepth!T); /// ditto
+alias LaggedFibonacci23209(T) = LaggedFibonacci23209!(T, LFBitDepth!T); /// ditto
+alias LaggedFibonacci44497(T) = LaggedFibonacci44497!(T, LFBitDepth!T); /// ditto
+alias LaggedFibonacci     (T, size_t N) = LaggedFibonacci607!(T, N); /// ditto
+alias   LaggedFibonacci607(T, size_t N) = LaggedFibonacciEngine!(T, N,   607,   273);
+alias  LaggedFibonacci1279(T, size_t N) = LaggedFibonacciEngine!(T, N,  1279,   418); /// ditto
+alias  LaggedFibonacci2281(T, size_t N) = LaggedFibonacciEngine!(T, N,  2281,  1252); /// ditto
+alias  LaggedFibonacci3217(T, size_t N) = LaggedFibonacciEngine!(T, N,  3217,   576); /// ditto
+alias  LaggedFibonacci4423(T, size_t N) = LaggedFibonacciEngine!(T, N,  4423,  2098); /// ditto
+alias  LaggedFibonacci9689(T, size_t N) = LaggedFibonacciEngine!(T, N,  9689,  5502); /// ditto
+alias LaggedFibonacci19937(T, size_t N) = LaggedFibonacciEngine!(T, N, 19937,  9842); /// ditto
+alias LaggedFibonacci23209(T, size_t N) = LaggedFibonacciEngine!(T, N, 23209, 13470); /// ditto
+alias LaggedFibonacci44497(T, size_t N) = LaggedFibonacciEngine!(T, N, 44497, 21034); /// ditto
+
+private template LFBitDepth(T)
+{
+    static if (isIntegral!T)
+         enum LFBitDepth = T.sizeof * 8;
+    else static if (isFloatingPoint!T)
+    {
+        static if (is(Unqual!T == real))
+            enum LFBitDepth = 64;
+        static if (is(Unqual!T == double))
+            enum LFBitDepth = 48;
+        static if (is(Unqual!T == float))
+            enum LFBitDepth = 24;
+    }
+    else
+        //Nor integral nor float. Just return a number, and let an (verbose) error trigger later.
+        enum LFBitDepth = 48;
+}
 
 ///
 unittest
@@ -1505,7 +1559,7 @@ unittest
         LaggedFibonacciEngine!(ulong, 48, 1000, 998),
         LaggedFibonacciEngine!(ulong, 48, 1000, 999),
     );
-    foreach(T; Types)
+    foreach (T; Types)
         auto a = T(331u);
 }
 unittest
@@ -1565,15 +1619,15 @@ unittest
     void doTests(T, V)(V values, V values5000)
     {
         foreach (I, Type; TypeTuple!(
-                    LaggedFibonacci607!T,
-                   LaggedFibonacci1279!T,
-                   LaggedFibonacci2281!T,
-                   LaggedFibonacci3217!T,
-                   LaggedFibonacci4423!T,
-                   LaggedFibonacci9689!T,
-                  LaggedFibonacci19937!T,
-                  LaggedFibonacci23209!T,
-                  LaggedFibonacci44497!T,
+                    LaggedFibonacci607!(T, 48),
+                   LaggedFibonacci1279!(T, 48),
+                   LaggedFibonacci2281!(T, 48),
+                   LaggedFibonacci3217!(T, 48),
+                   LaggedFibonacci4423!(T, 48),
+                   LaggedFibonacci9689!(T, 48),
+                  LaggedFibonacci19937!(T, 48),
+                  LaggedFibonacci23209!(T, 48),
+                  LaggedFibonacci44497!(T, 48),
               )
         )
         {
@@ -1611,12 +1665,12 @@ unittest
                         4,  5,  6,  7,
                         8,  9, 10, 11,
                        12, 13, 14, 15];
-        static if(is(T == double))
+        static if (is(T == double))
         {
             sixteen[] /= 16.0;
         }
 
-        foreach(v; fourGenerator.take(10))
+        foreach (v; fourGenerator.take(10))
         {
             sixteen.canFind!approxEqual(v);
         }
