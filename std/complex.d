@@ -115,10 +115,12 @@ struct Complex(T)  if (isFloatingPoint!T)
 
     /** Converts the complex number to a string representation.
 
-        Supported format characters are 'e', 'f', 'g', 'a', and 's'.
+	The second form of this function is usually not called directly;
+	instead, it is used via $(XREF format,format), as shown in the examples
+	below.  Supported format characters are 'e', 'f', 'g', 'a', and 's'.
 
-        See the $(LINK2 std_format.html, std.format documentation) for
-        more information.
+	See the $(LINK2 std_format.html, std.format documentation) for more
+	information.
     */
     string toString() const
     {
@@ -157,8 +159,8 @@ struct Complex(T)  if (isFloatingPoint!T)
     }
 
     /**
-        $(RED Deprecated.
-          Please use $(XREF format,format) instead.)
+	$(RED Deprecated.  This function will be removed in March 2014.
+	  Please use $(XREF format,format) instead.)
 
         Converts the complex number to a string representation.
 
