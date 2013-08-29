@@ -5816,3 +5816,10 @@ unittest
     real r = tan(-2.0L);
     assert(fabs(r - 2.18504f) < .00001);
 }
+
+pure @safe nothrow unittest
+{
+    // issue 6381: floor/ceil should be usable in pure function.
+    auto x = floor(1.2);
+    auto y = ceil(1.2);
+}
