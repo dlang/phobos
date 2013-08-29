@@ -677,7 +677,7 @@ struct Group(DataIndex)
                     pc += len;
             }
         }
-        if(stack.empty())
+        if(stack.empty)
             break;
         start = stack.top[0];
         end = stack.top[1];
