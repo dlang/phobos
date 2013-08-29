@@ -274,8 +274,6 @@ private:
 
 import std.uni : isAlpha, isWhite;
 
-@safe:
-
 
 // IR bit pattern: 0b1_xxxxx_yy
 // where yy indicates class of instruction, xxxxx for actual operation code
@@ -2023,7 +2021,7 @@ public struct Regex(Char)
         assert(!r.empty);
         ---
     +/
-    @property bool empty() const nothrow {  return ir is null; }
+    @safe @property bool empty() const nothrow {  return ir is null; }
 
     /++
         A range of all the named captures in the regex.
@@ -2042,7 +2040,7 @@ public struct Regex(Char)
         assert(nc[1..$].equal(["var"]));
         ----
      +/
-    @property auto namedCaptures()
+    @safe @property auto namedCaptures()
     {
         static struct NamedGroupRange
         {
@@ -2526,7 +2524,7 @@ public struct StaticRegex(Char)
 {
 private:
     alias BacktrackingMatcher!(true) Matcher;
-    alias bool function(ref Matcher!Char) MatchFn;
+    alias bool function(ref Matcher!Char) @trusted MatchFn;
     MatchFn nativeFn;
 public:
     Regex!Char _regex;
@@ -6045,7 +6043,7 @@ public auto bmatch(R, RegEx)(R input, RegEx re)
 
 
 enum isReplaceFunctor(alias fun, R) =
-    __traits(compiles, (Captures!R c){ fun(c); });
+    __traits(compiles, (Captures!R c) { fun(c); });
 
 // the lowest level - just stuff replacements into the sink
 private @trusted void replaceCapturesInto(alias output, Sink, R, T)
@@ -6063,7 +6061,7 @@ private @trusted void replaceCapturesInto(alias output, Sink, R, T)
 }
 
 // ditto for a range of captures
-private @trusted void replaceMatchesInto(alias output, Sink, R, T)
+private void replaceMatchesInto(alias output, Sink, R, T)
         (ref Sink sink, R input, T matches)
     if(isOutputRange!(Sink, dchar) && isSomeString!R && is(T == RegexMatch!R))
 {    
@@ -6082,7 +6080,7 @@ private @trusted void replaceMatchesInto(alias output, Sink, R, T)
 }
 
 //  a general skeleton of replaceFirst
-private @trusted R replaceFirstWith(alias output, R, RegEx)(R input, RegEx re)
+private R replaceFirstWith(alias output, R, RegEx)(R input, RegEx re)
     if(isSomeString!R && isRegexFor!(RegEx, R))
 {
     auto data = matchFirst(input, re);
@@ -6095,7 +6093,7 @@ private @trusted R replaceFirstWith(alias output, R, RegEx)(R input, RegEx re)
 
 // ditto for replaceAll 
 // the method parameter allows old API to ride on the back of the new one
-private @trusted R replaceAllWith(alias output, 
+private R replaceAllWith(alias output, 
         alias method=matchAll, R, RegEx)(R input, RegEx re)
     if(isSomeString!R && isRegexFor!(RegEx, R))
 {
@@ -6128,7 +6126,7 @@ private @trusted R replaceAllWith(alias output,
     assert(replaceFirst("noon", regex("n"), "[$&]") == "[n]oon");
     ---
 +/
-public @trusted R replaceFirst(R, C, RegEx)(R input, RegEx re, const(C)[] format)
+public R replaceFirst(R, C, RegEx)(R input, RegEx re, const(C)[] format)
     if(isSomeString!R && is(C : dchar) && isRegexFor!(RegEx, R))
 {
     return replaceFirstWith!((m, sink) => replaceFmt(format, m, sink))(input, re);    
@@ -6157,7 +6155,7 @@ public @trusted R replaceFirst(R, C, RegEx)(R input, RegEx re, const(C)[] format
     assert(newList == "#22 out of 46");
     ---
 +/
-public @trusted R replaceFirst(alias fun, R, RegEx)(R input, RegEx re)
+public R replaceFirst(alias fun, R, RegEx)(R input, RegEx re)
   if(isSomeString!R && isRegexFor!(RegEx, R))
 {
     return replaceFirstWith!((m, sink) => sink.put(fun(m)))(input, re);
@@ -6386,21 +6384,21 @@ public @trusted void replaceAllInto(alias fun, Sink, R, RegEx)
     The use of this function is $(RED discouraged), please use $(LREF replaceAll) 
     or $(LREF replaceFirst) explicitly.
 +/
-public @trusted R replace(alias scheme = match, R, C, RegEx)(R input, RegEx re, const(C)[] format)
+public R replace(alias scheme = match, R, C, RegEx)(R input, RegEx re, const(C)[] format)
     if(isSomeString!R && isRegexFor!(RegEx, R))
 {
     return replaceAllWith!((m, sink) => replaceFmt(format, m, sink), match)(input, re);
 }
 
 ///ditto
-public @trusted R replace(alias fun, R, RegEx)(R input, RegEx re)
+public R replace(alias fun, R, RegEx)(R input, RegEx re)
     if(isSomeString!R && isRegexFor!(RegEx, R))
 {
     return replaceAllWith!(fun, match)(input, re);
 }
 
 //produce replacement string from format using captures for substitution
-public @trusted void replaceFmt(R, Capt, OutR)
+private void replaceFmt(R, Capt, OutR)
     (R format, Capt captures, OutR sink, bool ignoreBadSubs = false)
     if(isOutputRange!(OutR, ElementEncodingType!R[]) &&
         isOutputRange!(OutR, ElementEncodingType!(Capt.String)[]))
@@ -7391,5 +7389,23 @@ unittest
     assert(match("aaaa", re).hit == "aaaa");
 }
 
+// bugzilla 10913
+unittest
+{
+    @system static string foo(const(char)[] s)
+    {
+        return s.dup;
+    }
+    @safe static string bar(const(char)[] s)
+    {
+        return s.dup;
+    }
+    () @system {
+        replace!((a) => foo(a.hit))("blah", regex(`a`));
+    }();
+    () @safe {
+        replace!((a) => bar(a.hit))("blah", regex(`a`));
+    }();
+}
 
 }//version(unittest)
