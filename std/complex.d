@@ -115,6 +115,55 @@ struct Complex(T)  if (isFloatingPoint!T)
 
     /** Converts the complex number to a string representation.
 
+	The second form of this function is usually not called directly;
+	instead, it is used via $(XREF format,format), as shown in the examples
+	below.  Supported format characters are 'e', 'f', 'g', 'a', and 's'.
+
+	See the $(LINK2 std_format.html, std.format documentation) for more
+	information.
+    */
+    string toString() const /* TODO: pure @safe nothrow */
+    {
+        import std.exception : assumeUnique;
+        char[] buf;
+        buf.reserve(100);
+        auto fmt = FormatSpec!char("%s");
+        toString((const(char)[] s) { buf ~= s; }, fmt);
+        return assumeUnique(buf);
+    }
+
+    static if (is(T == double))
+    ///
+    unittest
+    {
+        auto c = complex(1.2, 3.4);
+
+        // Vanilla toString formatting:
+        assert(c.toString() == "1.2+3.4i");
+
+        // Formatting with std.format specs: the precision and width specifiers
+        // apply to both the real and imaginary parts of the complex number.
+        import std.string;
+        assert(format("%.2f", c)  == "1.20+3.40i");
+        assert(format("%4.1f", c) == " 1.2+ 3.4i");
+    }
+
+    /// ditto
+    void toString(Char)(scope void delegate(const(Char)[]) sink,
+                        FormatSpec!Char formatSpec) const
+    {
+        formatValue(sink, re, formatSpec);
+        if (signbit(im) == 0) sink("+");
+        formatValue(sink, im, formatSpec);
+        sink("i");
+    }
+
+    /**
+	$(RED Deprecated.  This function will be removed in March 2014.
+	  Please use $(XREF format,format) instead.)
+
+        Converts the complex number to a string representation.
+
         If a $(D sink) delegate is specified, the string is passed to it
         and this function returns $(D null).  Otherwise, this function
         returns the string representation directly.
@@ -128,23 +177,22 @@ struct Complex(T)  if (isFloatingPoint!T)
 
         See the $(LINK2 std_format.html, std.format documentation) for
         more information.
-    */
-    string toString(scope void delegate(const(char)[]) sink = null,
+     */
+    deprecated("Please use std.format.format() instead.")
+    string toString(scope void delegate(const(char)[]) sink,
                     string formatSpec = "%s")
         const
     {
         if (sink == null)
         {
+            import std.exception : assumeUnique;
             char[] buf;
             buf.reserve(100);
-            toString((const(char)[] s) { buf ~= s; }, formatSpec);
-            return cast(string) buf;
+            formattedWrite((const(char)[] s) { buf ~= s; }, formatSpec, this);
+            return assumeUnique(buf);
         }
 
-        formattedWrite(sink, formatSpec, re);
-        if (signbit(im) == 0)  sink("+");
-        formattedWrite(sink, formatSpec, im);
-        sink("i");
+        formattedWrite(sink, formatSpec, this);
         return null;
     }
 
@@ -739,4 +787,37 @@ unittest
     assert (sqrt(complex(0.0)) == 0.0);
     assert (sqrt(complex(1.0L, 0)) == std.math.sqrt(1.0L));
     assert (sqrt(complex(-1.0L, 0)) == complex(0, 1.0L));
+}
+
+// Issue 10881: support %f formatting of complex numbers
+unittest
+{
+    import std.string : format;
+
+    auto x = complex(1.2, 3.4);
+    assert(format("%.2f", x) == "1.20+3.40i");
+
+    auto y = complex(1.2, -3.4);
+    assert(format("%.2f", y) == "1.20-3.40i");
+}
+
+unittest
+{
+    // Test wide string formatting
+    wstring wformat(T)(string format, Complex!T c)
+    {
+        import std.array : appender;
+        auto w = appender!wstring();
+        auto n = formattedWrite(w, format, c);
+        return w.data;
+    }
+
+    auto x = complex(1.2, 3.4);
+    assert(wformat("%.2f", x) == "1.20+3.40i"w);
+}
+
+unittest
+{
+    // Test ease of use (vanilla toString() should be supported)
+    assert(complex(1.2, 3.4).toString() == "1.2+3.4i");
 }
