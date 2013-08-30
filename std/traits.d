@@ -3124,16 +3124,13 @@ template EnumMembers(E)
 
     template EnumSpecificMembers(names...)
     {
-        static if (names.length > 1)
+        static if (names.length > 0)
         {
             alias TypeTuple!(
-                    EnumSpecificMembers!(names[0 .. $/2]),
-                    EnumSpecificMembers!(names[$/2 .. $])
+                    WithIdentifier!(names[0])
+                        .Symbolize!(__traits(getMember, E, names[0])),
+                    EnumSpecificMembers!(names[1 .. $])
                 ) EnumSpecificMembers;
-        }
-        else static if (names.length == 1)
-        {
-            alias TypeTuple!(WithIdentifier!(names[0]).Symbolize!(__traits(getMember, E, names[0]))) EnumSpecificMembers;
         }
         else
         {
