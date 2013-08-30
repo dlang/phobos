@@ -761,8 +761,8 @@ enum maxCharsetUsed = 6;
 
 enum maxCachedTries = 8;
 
-alias CodepointSetTrie!(8, 5, 8) Trie;
-alias codepointSetTrie!(8, 5, 8) makeTrie;
+alias CodepointSetTrie!(13, 8) Trie;
+alias codepointSetTrie!(13, 8) makeTrie;
 
 Trie[CodepointSet] trieCache;
 
