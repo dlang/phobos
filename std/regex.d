@@ -2728,7 +2728,7 @@ public:
                             alias codeBounds = TypeTuple!(0xFFFF, 0x7FF, 0x7F, 0);
                         else //== 2
                             static codeBounds = TypeTuple!(0xFFFF, 0);
-                    L_OuterLoop:
+                    
                         foreach(ival; set.byInterval)
                         {
                             foreach(i, bound; codeBounds)
@@ -2736,9 +2736,11 @@ public:
                                 if(ival[1] > bound) //compare starting with greater
                                 {
                                     s[codeBounds.length - 1 - i] = codeBounds.length - i;
-                                    continue L_OuterLoop;
+                                    goto L_OutOfLoop;
                     }
                             }
+                    L_OutOfLoop:
+                            ;
                         }
                         //leave only non-zero items in s
                         for(size_t j = 0; j<codeBounds.length; j++)
