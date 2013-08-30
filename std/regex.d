@@ -271,6 +271,16 @@ debug(std_regex_test) import std.stdio; //trace test suite progress
 private:
 
 
+//TODO: remove this hack due to CTFE not able to run insertInPlace
+@trusted void insertInPlaceAlt(T)(ref T[] arr, size_t idx, T[] items...)
+{
+    if(__ctfe)
+        arr = arr[0..idx] ~ items ~ arr[idx..$];
+    else
+        insertInPlace(arr, idx, items);
+}
+
+
 // IR bit pattern: 0b1_xxxxx_yy
 // where yy indicates class of instruction, xxxxx for actual operation code
 //     00: atom, a normal instruction
@@ -808,8 +818,9 @@ Trie[CodepointSet] trieCache;
 @trusted CodepointSet getUnicodeSet(in char[] name, bool negated,  bool casefold)
 {
     CodepointSet s = unicode(name);
-    if(casefold)
-        s = caseEnclose(s);
+    //FIXME: caseEnclose for new uni as Set | CaseEnclose(SET && LC)
+    //if(casefold)
+    //   s = caseEnclose(s);
     if(negated)
         s = s.inverted();
     return s;
@@ -1050,7 +1061,7 @@ struct Parser(R)
                         auto t = NamedGroup(name, nglob);
                         auto d = assumeSorted!"a.name < b.name"(dict);
                         auto ind = d.lowerBound(t).length;
-                        insertInPlace(dict, ind, t);
+                        insertInPlaceAlt(dict, ind, t);
                         put(Bytecode(IR.GroupStart, nglob));
                         break;
                     case '<':
@@ -1139,7 +1150,7 @@ struct Parser(R)
                     len = cast(uint)ir.length - fix - (ir[fix].length - 1);
                     orStart = fix + ir[fix].length;
                 }
-                insertInPlace(ir, orStart, Bytecode(IR.OrStart, 0), Bytecode(IR.Option, len));
+                insertInPlaceAlt(ir, orStart, Bytecode(IR.OrStart, 0), Bytecode(IR.Option, len));
                 assert(ir[orStart].code == IR.OrStart);
                 put(Bytecode(IR.GotoEndOr, 0));
                 fixupStack.push(orStart); //fixup for StartOR
@@ -1231,7 +1242,7 @@ struct Parser(R)
         default:
             if(replace)
             {
-                copyForwardAlt(ir[offset + 1 .. $],ir[offset .. $ - 1]);
+                copy(ir[offset + 1 .. $], ir[offset .. $ - 1]);
                 ir.length -= 1;
             }
             return;
@@ -1252,7 +1263,7 @@ struct Parser(R)
                 if(replace)
                     ir[offset] = op;
                 else
-                    insertInPlace(ir, offset, op);
+                    insertInPlaceAlt(ir, offset, op);
                 put(Bytecode(greedy ? IR.RepeatEnd : IR.RepeatQEnd, len));
                 put(Bytecode.init); //hotspot
                 putRaw(1);
@@ -1269,7 +1280,7 @@ struct Parser(R)
                 if(replace)
                     ir[offset] = op;
                 else
-                    insertInPlace(ir, offset, op);
+                    insertInPlaceAlt(ir, offset, op);
                 offset += 1;//so it still points to the repeated block
                 put(Bytecode(greedy ? IR.RepeatEnd : IR.RepeatQEnd, len));
                 put(Bytecode.init); //hotspot
@@ -1280,7 +1291,7 @@ struct Parser(R)
             }
             else if(replace)
             {
-                copyForwardAlt(ir[offset+1 .. $],ir[offset .. $-1]);
+                copy(ir[offset+1 .. $], ir[offset .. $-1]);
                 ir.length -= 1;
             }
             put(Bytecode(greedy ? IR.InfiniteStart : IR.InfiniteQStart, len));
@@ -1296,7 +1307,7 @@ struct Parser(R)
             if(replace)
                 ir[offset] = op;
             else
-                insertInPlace(ir, offset, op);
+                insertInPlaceAlt(ir, offset, op);
             //IR.InfinteX is always a hotspot
             put(Bytecode(greedy ? IR.InfiniteEnd : IR.InfiniteQEnd, len));
             put(Bytecode.init); //merge index
@@ -1334,7 +1345,8 @@ struct Parser(R)
             next();
             break;
         default:
-            if(re_flags & RegexOption.casefold)
+            //FIXME: getCommonCasing in new std uni
+            /*if(re_flags & RegexOption.casefold)
             {
                 dchar[5] data;
                 auto range = getCommonCasing(current, data);
@@ -1345,7 +1357,7 @@ struct Parser(R)
                     foreach(v; range)
                         put(Bytecode(IR.OrChar, v, cast(uint)range.length));
             }
-            else
+            else*/
                 put(Bytecode(IR.Char, current));
             next();
         }
@@ -1399,15 +1411,16 @@ struct Parser(R)
 
         static void addWithFlags(ref CodepointSet set, uint ch, uint re_flags)
         {
-            if(re_flags & RegexOption.casefold)
+            //FIXME: getCommonCasing in new std uni
+            /*if(re_flags & RegexOption.casefold)
             {
                 dchar[5] chars;
                 auto range = getCommonCasing(ch, chars);
                 foreach(v; range)
                     set.add(v);
             }
-            else
-                set.add(ch);
+            else*/
+                set |= ch;
         }
 
         static Operator twinSymbolOperator(dchar symbol)
@@ -1471,14 +1484,14 @@ struct Parser(R)
                     state = State.CharDash;
                     break;
                 case '\\':
-                    set.add(last);
+                    set |= last;
                     state = State.Escape;
                     break;
                 case '[':
                     op = Operator.Union;
                     goto case;
                 case ']':
-                    set.add(last);
+                    set |= last;
                     break L_CharTermLoop;
                 default:
                     addWithFlags(set, last, re_flags);
@@ -1551,19 +1564,19 @@ struct Parser(R)
                     state = State.Char;
                     break;
                 case 'd':
-                    set.add(unicodeNd);
+                    set.add(unicode.Nd);
                     state = State.Start;
                     break;
                 case 'D':
-                    set.add(unicodeNd.dup.negate());
+                    set.add(unicode.Nd.inverted);
                     state = State.Start;
                     break;
                 case 's':
-                    set.add(unicodeWhite_Space);
+                    set.add(unicode.White_Space);
                     state = State.Start;
                     break;
                 case 'S':
-                    set.add(unicodeWhite_Space.dup.negate());
+                    set.add(unicode.White_Space.inverted);
                     state = State.Start;
                     break;
                 case 'w':
@@ -1571,7 +1584,7 @@ struct Parser(R)
                     state = State.Start;
                     break;
                 case 'W':
-                    set.add(wordCharacter.dup.negate());
+                    set.add(wordCharacter.inverted);
                     state = State.Start;
                     break;
                 default:
@@ -1606,7 +1619,7 @@ struct Parser(R)
                             addWithFlags(set, ch, re_flags);
                     }
                     else
-                        set.add(Interval(last, current));
+                        set.add(last, current + 1);
                     state = State.Start;
                 }
                 break;
@@ -1652,7 +1665,7 @@ struct Parser(R)
                     error("invalid escape sequence");
                 }
                 enforce(last <= end,"inverted range");
-                set.add(Interval(last,end));
+                set.add(last, end + 1);
                 state = State.Start;
                 break;
             }
@@ -1675,7 +1688,7 @@ struct Parser(R)
             switch(op)
             {
             case Operator.Negate:
-                stack.top.negate();
+                stack.top.inverted();
                 break;
             case Operator.Union:
                 auto s = stack.pop();//2nd operand
@@ -1690,7 +1703,7 @@ struct Parser(R)
             case Operator.SymDifference:
                 auto s = stack.pop();//2nd operand
                 enforce(!stack.empty, "no operand for '~~'");
-                stack.top.symmetricSub(s);
+                stack.top ~= s;
                 break;
             case Operator.Intersection:
                 auto s = stack.pop();//2nd operand
@@ -1769,27 +1782,28 @@ struct Parser(R)
         charsetToIr(vstack.top);
     }
     //try to generate optimal IR code for this CodepointSet
-    @trusted void charsetToIr(in CodepointSet set)
+    @trusted void charsetToIr(CodepointSet set)
     {//@@@BUG@@@ writeln is @system
-        uint chars = set.chars;
+        uint chars = set.length;
         if(chars < Bytecode.maxSequence)
         {
             switch(chars)
             {
                 case 1:
-                    put(Bytecode(IR.Char, set.ivals[0]));
+                    put(Bytecode(IR.Char, set.byCodepoint.front));
                     break;
                 case 0:
                     error("empty CodepointSet not allowed");
                     break;
                 default:
-                    foreach(ch; set[])
+                    foreach(ch; set.byCodepoint)
                         put(Bytecode(IR.OrChar, ch, chars));
             }
         }
         else
         {
-            if(set.ivals.length > maxCharsetUsed)
+            auto ivals = set.byInterval;
+            if(ivals.length > maxCharsetUsed)
             {
                 auto t  = getTrie(set);
                 put(Bytecode(IR.Trie, cast(uint)tries.length));
@@ -1820,21 +1834,21 @@ struct Parser(R)
 
         case 'd':
             next();
-            charsetToIr(unicodeNd);
+            charsetToIr(unicode.Nd);
             break;
         case 'D':
             next();
-            charsetToIr(unicodeNd.dup.negate());
+            charsetToIr(unicode.Nd.inverted);
             break;
         case 'b':   next(); put(Bytecode(IR.Wordboundary, 0)); break;
         case 'B':   next(); put(Bytecode(IR.Notwordboundary, 0)); break;
         case 's':
             next();
-            charsetToIr(unicodeWhite_Space);
+            charsetToIr(unicode.White_Space);
             break;
         case 'S':
             next();
-            charsetToIr(unicodeWhite_Space.dup.negate());
+            charsetToIr(unicode.White_Space.inverted);
             break;
         case 'w':
             next();
@@ -1842,7 +1856,7 @@ struct Parser(R)
             break;
         case 'W':
             next();
-            charsetToIr(wordCharacter.dup.negate());
+            charsetToIr(wordCharacter.inverted);
             break;
         case 'p': case 'P':
             auto CodepointSet = parseUnicodePropertySpec(current == 'P');
@@ -2279,7 +2293,7 @@ int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
         case IR.Any:
             return 0;
         case IR.CodepointSet:
-            if(re.charsets[re.ir[pc].data].scanFor(front))
+            if(re.charsets[re.ir[pc].data][front])
                 return 0;
             else
                 return -1;
@@ -2696,6 +2710,7 @@ public:
                     }
                     else
                     {
+                        /*
                         static if(charSize == 1)
                             static immutable codeBounds = [0x0, 0x7F, 0x80, 0x7FF, 0x800, 0xFFFF, 0x10000, 0x10FFFF];
                         else //== 2
@@ -2708,13 +2723,34 @@ public:
                             if(end > start || (end == start && (end & 1)))
                                s[numS++] = (i+1)*charSize;
                         }
+                        */
+                        static if(charSize == 1)
+                            alias codeBounds = TypeTuple!(0xFFFF, 0x7FF, 0x7F, 0);
+                        else //== 2
+                            static codeBounds = TypeTuple!(0xFFFF, 0);
+                    L_OuterLoop:
+                        foreach(ival; set.byInterval)
+                        {
+                            foreach(i, bound; codeBounds)
+                            {
+                                if(ival[1] > bound) //compare starting with greater
+                                {
+                                    s[codeBounds.length - 1 - i] = codeBounds.length - i;
+                                    continue L_OuterLoop;
+                    }
+                            }
+                        }
+                        //leave only non-zero items in s
+                        for(size_t j = 0; j<codeBounds.length; j++)
+                            if(s[j])
+                                s[numS++] = j;
                     }
                     if(numS == 0 || t.idx + s[numS-1] > n_length)
                         goto L_StopThread;
-                    auto  chars = set.chars;
+                    auto  chars = set.length;
                     if(chars > charsetThreshold)
                         goto L_StopThread;
-                    foreach(ch; set[])
+                    foreach(ch; set.byCodepoint)
                     {
                         //avoid surrogate pairs
                         if(0xD800 <= ch && ch <= 0xDFFF)
@@ -3395,7 +3431,7 @@ template BacktrackingMatcher(bool CTregex)
                         next();
                         break;
                     case IR.CodepointSet:
-                        if(atEnd || !re.charsets[re.ir[pc].data].scanFor(front))
+                        if(atEnd || !re.charsets[re.ir[pc].data][front])
                             goto L_backtrack;
                         next();
                         pc += IRL!(IR.CodepointSet);
@@ -4315,7 +4351,7 @@ struct CtContext
             break;
         case IR.CodepointSet:
             code ~= ctSub( `
-                    if(atEnd || !re.charsets[$$].scanFor(front))
+                    if(atEnd || !re.charsets[$$][front])
                         $$
                     $$
                 $$`, ir[0].data, bailOut, addr >= 0 ? "next();" :"", nextInstr);
@@ -5260,7 +5296,7 @@ enum OneShot { Fwd, Bwd };
                           return;
                       break;
             case IR.CodepointSet:
-                      if(re.charsets[re.ir[t.pc].data].scanFor(front))
+                      if(re.charsets[re.ir[t.pc].data][front])
                       {
                           t.pc += IRL!(IR.CodepointSet);
                           nlist.insertBack(t);
