@@ -1803,18 +1803,18 @@ struct Parser(R)
         else
         {
             auto ivals = set.byInterval;
-            if(ivals.length > maxCharsetUsed)
+            //if(ivals.length > maxCharsetUsed)
             {
                 auto t  = getTrie(set);
                 put(Bytecode(IR.Trie, cast(uint)tries.length));
                 tries ~= t;
                 debug(std_regex_allocation) writeln("Trie generated");
             }
-            else
+            /*else
             {
                 put(Bytecode(IR.CodepointSet, cast(uint)charsets.length));
                 tries ~= Trie.init;
-            }
+            }*/
             charsets ~= set;
             assert(charsets.length == tries.length);
         }
