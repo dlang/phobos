@@ -551,69 +551,163 @@ types. Several cases are accepted, as described below. The code snippets
 are attempted in order, and the first to compile "wins" and gets
 evaluated.
 
+We define this as: Let $(D doPut(R, E)) be a function that calls whichever
+compiles of $(D r.put(e);), $(D r.front = e;) or $(D r(e);).
+
 $(BOOKTABLE ,
-$(TR $(TH Code Snippet) $(TH Scenario
-))
-$(TR $(TD $(D r.put(e);)) $(TD $(D R) specifically defines a method
-    $(D put) accepting an $(D E).
-))
-$(TR $(TD $(D r.put([ e ]);)) $(TD $(D R) specifically defines a
-    method $(D put) accepting an $(D E[]).
-))
-$(TR $(TD $(D r.front = e; r.popFront();)) $(TD $(D R) is an input
-    range and $(D e) is assignable to $(D r.front).
-))
-$(TR $(TD $(D for (; !e.empty; e.popFront()) put(r, e.front);)) $(TD
-    Copying range $(D E) to range $(D R).
-))
-$(TR $(TD $(D r(e);)) $(TD $(D R) is e.g. a delegate accepting an $(D
-    E).
-))
-$(TR $(TD $(D r([ e ]);)) $(TD $(D R) is e.g. a $(D delegate)
-    accepting an $(D E[]).
-))
+    $(TR
+        $(TH Code Snippet)
+        $(TH Scenario)
+    )
+    $(TR
+        $(TD $(D doPut(r, e);))
+        $(TD $(D R) specifically defines a method accepting an $(D E).)
+    )
+    $(TR
+        $(TD is a sink $(D R) and is a char $(D E))
+        $(TD
+            if $(D R) is a sink that specifically accepts a string type,
+            and $(D E) is a character type, than put will do what is needed
+            to convert the character into a string of the right width.
+        )
+    )
+    $(TR
+        $(TD $(D doPut(r, wchar.init))/$(D doPut(r, char.init)))
+        $(TD
+            $(D E) is a wide character type, and $(D R) accepts thinner
+            chars: $(D E) is $(XREF utf,encode)ed, and the encoded elements
+            are fed to $(D r).
+        )
+    )
+    $(TR
+        $(TD $(D for (; !e.empty; e.popFront()) put(r, e.front);))
+        $(TD Copying range $(D E) into $(D R)).
+    )
 )
+
+Note: For practical reasons when passed a delegate or function "sink"
+that takes a const character string, put will $(I trust) that the sink will
+immediatly "use" the elements in the passed in array. Thanks to this
+assumption, it is possible to feed the sink with characters and strings of any
+sizes, and these will be encoded on the fly, $(B without allocating).
+Doing this requires escaping a local, which is very unsafe, and as such, is
+only done in this specific scenario, to facilitate formating functionalities.
  */
 void put(R, E)(ref R r, E e)
+{
+    //Sinks immediatly "use" the elements they are given, if we pass
+    //to them a slice. This allows escaping certain things which would be
+    //illegal otherwise.
+         static if (is (R == T function(const( char)[]), T) || is (R == T delegate(const( char)[]), T))
+        enum isSink = 1;
+    else static if (is (R == T function(const(wchar)[]), T) || is (R == T delegate(const(wchar)[]), T))
+        enum isSink = 2;
+    else static if (is (R == T function(const(dchar)[]), T) || is (R == T delegate(const(dchar)[]), T))
+        enum isSink = 4;
+    else
+        enum isSink = 0;
+
+    //First level: simply stright up put. Do this first
+    static if (is(typeof(doPut(r, e))))
+    {
+        doPut(r, e);
+    }
+    //if it is a sink, is our input a char?
+    else static if (isSink != 0 && isSomeChar!E)
+    {
+        putCharInSink!isSink(r, e);
+    }
+    //Is it a char we can encode?
+    else static if (isSomeChar!E && is(typeof(putChar(r, e))))
+    {
+        putChar(r, e);
+    }
+    //Is it a range?
+    else static if (isInputRange!E && is(typeof(put(r, e.front))))
+    {
+        for (; !e.empty; e.popFront())
+            put(r, e.front);
+    }
+    else
+        static assert(false, format("Cannot put a %s into a %s.", E.stringof, R.stringof));
+}
+
+//Helper functions. Calls the actual "final" put.
+//Meant as helper and "recursion stopper" or "tail call"
+private void doPut(R, T)(ref R r, ref T t)
 {
     static if(is(PointerTarget!R == struct))
         enum usingPut = hasMember!(PointerTarget!R, "put");
     else
         enum usingPut = hasMember!(R, "put");
+    enum usingFront  = !usingPut && isInputRange!R;
 
-    enum usingFront = !usingPut && isInputRange!R;
-    enum usingCall = !usingPut && !usingFront;
-
-    static if (usingPut && is(typeof(r.put(e))))
+    static if (usingFront)
     {
-        r.put(e);
-    }
-    else static if (usingPut && is(typeof(r.put((E[]).init))))
-    {
-        r.put((&e)[0..1]);
-    }
-    else static if (usingFront && is(typeof(r.front = e, r.popFront())))
-    {
-        r.front = e;
+        r.front = t;
         r.popFront();
     }
-    else static if ((usingPut || usingFront) && isInputRange!E && is(typeof(put(r, e.front))))
+    else static if (usingPut)
+        r.put(t);
+    else
+        r(t);
+}
+
+//This function is designed specifically for sinks, as it escapes references
+//to locals in the form of "slice to element". This isn't @safe code,
+//but is marked as trusted, as a convenience for formating.
+private void putCharInSink(size_t sinkSize, R, E)(ref R r, ref E e) @trusted
+{
+    //Can we straight up slice?
+    static if (E.sizeof == sinkSize)
     {
-        for (; !e.empty; e.popFront()) put(r, e.front);
+        if (__ctfe)
+            r([e]);
+        else
+            r((&e)[0 .. 1]);
     }
-    else static if (usingCall && is(typeof(r(e))))
+    //Can we slice a larger copy?
+    else static if (E.sizeof < sinkSize)
     {
-        r(e);
+        Select!(sinkSize == 4, dchar, wchar) c = e;
+        if (__ctfe)
+            r([c]);
+        else
+            r((&c)[0 .. 1]); //Note: this escapes a local.
     }
-    else static if (usingCall && is(typeof(r((E[]).init))))
+    //Transcode to thinner string.
+    else static if (E.sizeof > sinkSize)
     {
-        r((&e)[0..1]);
+        import std.utf : encode;
+        //Buffer is non-static due to purity issues. Not a big deal.
+        Select!(sinkSize == 1, char[4], wchar[2]) buf; //Note: this escapes a local.
+        r(buf[0 .. encode(buf, e)]);
     }
     else
+        static assert(0);
+}
+
+private void putChar(R, E)(ref R r, ref E e)
+if (isSomeChar!E)
+{
+    import std.utf : encode;
+    static char  c = 0;
+    static wchar w = 0;
+
+    static if (is(typeof(doPut(r, w))))
     {
-        static assert(false,
-                "Cannot put a "~E.stringof~" into a "~R.stringof);
+        wchar[2] buf;
+        foreach (it; buf[0 .. encode(buf, e)])
+            doPut(r, it);
     }
+    else static if (is(typeof(doPut(r, c))))
+    {
+        char[4] buf;
+        foreach (it; buf[0 .. encode(buf, e)])
+            doPut(r, it);
+    }
+    else
+        static assert(false, format("Cannot put a %s into a %s.", E.stringof, R.stringof));
 }
 
 unittest
@@ -695,6 +789,131 @@ unittest
     put(w, r);
 }
 
+unittest
+{
+    //Put C only accepts chars
+    static struct PutC(C)
+    {
+        string result;
+        void put(C c) { result ~= to!string(c); }
+    }
+    //Put SC accepts chars and strings
+    static struct PutSC(C)
+    {
+        string result;
+        void put(      C    c) { result ~= to!string(c); }
+        void put(const(C)[] s) { result ~= to!string(s); }
+    }
+
+    //Sinks, accepts strings *or* chars
+     char[] cbuf;
+    wchar[] wbuf;
+    dchar[] dbuf;
+    void sinkcc(       char    c) {cbuf ~= to! string(c);}
+    void sinksc(const( char)[] s) {cbuf ~= to! string(s);}
+    void sinkcw(      wchar    c) {wbuf ~= to!wstring(c);}
+    void sinksw(const(wchar)[] s) {wbuf ~= to!wstring(s);}
+    void sinkcd(      dchar    c) {dbuf ~= to!dstring(c);}
+    void sinksd(const(dchar)[] s) {dbuf ~= to!dstring(s);}
+
+    //Source Char
+    foreach (SC; TypeTuple!(char, wchar, dchar))
+    {
+        SC ch = 'I';
+        dchar dh = '♥';
+        immutable(SC)[] s = "日本語！";
+        immutable(SC)[][] ss = ["日本語", "が", "好き", "ですか", "？"];
+
+        //Target Char
+        foreach (TC; TypeTuple!(char, wchar, dchar))
+        {
+            //Testing PutC and PutCS
+            foreach (Type; TypeTuple!(PutC!TC, PutSC!TC))
+            {
+                Type value;
+                auto pointer = new Type();
+
+                //Testing both value and pointer
+                foreach (dest; tuple(value, pointer))
+                {
+                    put(dest, ch);
+                    assert(dest.result == "I");
+                    put(dest, dh);
+                    assert(dest.result == "I♥");
+                    put(dest, s);
+                    assert(dest.result == "I♥日本語！");
+                    put(dest, ss);
+                    assert(dest.result == "I♥日本語！日本語が好きですか？");
+                }
+            }
+        }
+        //Testing the sinks
+        foreach (tupe; tuple(tuple(&cbuf, &sinkcc, &sinksc),
+                             tuple(&wbuf, &sinkcw, &sinksw),
+                             tuple(&dbuf, &sinkcd, &sinksd),
+        ))
+        {
+            auto myBuf = tupe[0];
+            foreach (I; TypeTuple!(1, 2))
+            {
+                myBuf.length = 0;
+                auto sink = tupe[I];
+                put(sink, ch);
+                assert(*myBuf == "I");
+                put(sink, dh);
+                assert(*myBuf == "I♥");
+                put(sink, s);
+                assert(*myBuf == "I♥日本語！");
+                put(sink, ss);
+                assert(*myBuf == "I♥日本語！日本語が好きですか？");
+            }
+        }
+    }
+}
+
+unittest
+{
+    static struct CharRange
+    {
+        char c;
+        enum empty = false;
+        void popFront(){};
+        ref char front() @property
+        {
+            return c;
+        }
+    }
+    CharRange c;
+    put(c, cast(dchar)'本');
+    put(c, "hello"d);
+}
+
+unittest
+{
+    // issue 9823
+    const(char)[] r;
+    void delegate(const(char)[]) dg = (s) { r = s; };
+    put(dg, ["ABC"]);
+    assert(r == "ABC");
+}
+
+unittest
+{
+    // issue 10571
+    import std.format;
+    string buf;
+    formattedWrite((in char[] s) { buf ~= s; }, "%s", "hello");
+    assert(buf == "hello");
+}
+
+unittest
+{
+    import std.format;
+    wstring buf;
+    formattedWrite((const(wchar)[] s){buf ~= s;},
+        "This %s %s %s", 1, '\u3000', "\U00010000");
+    assert(buf == "This 1 \u3000 \U00010000");
+}
 /**
 Returns $(D true) if $(D R) is an output range for elements of type
 $(D E). An output range is defined functionally as a range that
