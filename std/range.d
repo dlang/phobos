@@ -575,45 +575,105 @@ $(TR $(TD $(D r([ e ]);)) $(TD $(D R) is e.g. a $(D delegate)
 )
  */
 void put(R, E)(ref R r, E e)
+{    
+    @property ref E[] EArrayInit(); //@@@9186@@@: Can't use (E[]).init
+
+    //First level: simply stright up put.
+    static if (is(typeof(doPut(r, e))))
+    {
+        doPut(r, e);
+    }
+    //special case for char to string. !important: do this before trying the next S[]
+    else static if (isSomeChar!E && is(typeof(putChar(r, e))))
+    {
+        putChar(r, e);
+    }
+    //Accepts E[] ?
+    //Important, use doPut here, to avoid endless tests to E[][]n E[][][]...
+    else static if (is(typeof(doPut(r, EArrayInit))))
+    {
+        doPut(r, (&e)[0..1]);
+    }
+    //Decode the string, and cram the chars. !important: do this before trying the next isInputRange!E
+    else static if (isSomeString!E && is(typeof(putChar(r, dchar.max))))
+    {
+        foreach(dchar c; e)
+            putChar(r, c);
+    }
+    //Extract each element from the range
+    //We can use "put" here, so we can recursivelly test a RoR of E.
+    else static if (isInputRange!E && is(typeof(put(r, e.front))))
+    {
+        for (; !e.empty; e.popFront())
+            put(r, e.front);
+    }
+    else
+        static assert(false, "Cannot put a "~E.stringof~" into a "~R.stringof);
+}
+
+//Helper functions. Calls the actual "final" put.
+//Meant as helper and "recursion stopper" or "tail call"
+private void doPut(R, T)(ref R r, auto ref T t)
 {
     static if(is(PointerTarget!R == struct))
         enum usingPut = hasMember!(PointerTarget!R, "put");
     else
         enum usingPut = hasMember!(R, "put");
+    enum usingFront  = !usingPut && isInputRange!R;
 
-    enum usingFront = !usingPut && isInputRange!R;
-    enum usingCall = !usingPut && !usingFront;
-
-    static if (usingPut && is(typeof(r.put(e))))
+    static if (usingFront)
     {
-        r.put(e);
-    }
-    else static if (usingPut && is(typeof(r.put((E[]).init))))
-    {
-        r.put((&e)[0..1]);
-    }
-    else static if (usingFront && is(typeof(r.front = e, r.popFront())))
-    {
-        r.front = e;
+        r.front = t;
         r.popFront();
     }
-    else static if ((usingPut || usingFront) && isInputRange!E && is(typeof(put(r, e.front))))
+    else static if (usingPut)
+        r.put(t);
+    else
+        r(t);
+}
+
+//Helper function to handle chars as quickly and as elegantly as possible
+//Assumes r.put(e)/r(e) has already been tested
+private void putChar(R, E)(ref R r, E e)
+if (isSomeChar!E)
+{
+    static if(is(PointerTarget!R == struct))
+        enum usingPut = hasMember!(PointerTarget!R, "put");
+    else
+        enum usingPut = hasMember!(R, "put");
+    enum usingFront  = !usingPut && isInputRange!R;
+
+    ////@@@9186@@@: Can't use (E[]).init
+    @property ref const(char)[]  stringInit();
+    @property ref const(wchar)[] wstringInit();
+    @property ref const(dchar)[] dstringInit();
+    
+    enum wcCond = is(typeof(doPut(r, wstringInit))) && (E.sizeof <= wchar.sizeof);
+    enum dcCond = is(typeof(doPut(r, dstringInit))) && (E.sizeof <= dchar.sizeof);
+    enum wsCond = is(typeof(doPut(r, wstringInit))) || is(typeof(doPut(r, wchar.max)));
+    enum ssCond = is(typeof(doPut(r, stringInit))) || is(typeof(doPut(r, char.max)));
+
+    //Quick encode a narrow char into wider string
+    static if (wcCond || dcCond)
     {
-        for (; !e.empty; e.popFront()) put(r, e.front);
+        alias Char = Select!(wcCond, wchar, dchar);
+        Char c = cast(Char)e;
+        doPut(r, (&c)[0..1]);
     }
-    else static if (usingCall && is(typeof(r(e))))
+    //Slowly encode a wide char into a narrower string
+    else static if (wsCond || ssCond)
     {
-        r(e);
-    }
-    else static if (usingCall && is(typeof(r((E[]).init))))
-    {
-        r((&e)[0..1]);
+        import std.utf : encode;
+        alias ARR = Select!(wsCond, wchar[2], char[4]);
+        static ARR buf;
+        static if (is(typeof(doPut(r, buf))))
+            doPut(r, buf[0 .. encode(buf, e)]);
+        else
+            foreach (c; buf[0 .. encode(buf, e)])
+                doPut(r, c);
     }
     else
-    {
-        static assert(false,
-                "Cannot put a "~E.stringof~" into a "~R.stringof);
-    }
+        static assert(false, "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof);
 }
 
 unittest
@@ -693,6 +753,97 @@ unittest
     LockingTextWriter w;
     RetroResult r;
     put(w, r);
+}
+
+unittest
+{
+    static struct PutC(C)
+    {
+        string result;
+        void put(const(C) c) { result ~= to!string((&c)[0..1]); }
+    }
+    static struct PutS(C)
+    {
+        string result;
+        void put(const(C)[] s) { result ~= to!string(s); }
+    }
+    static struct PutSS(C)
+    {
+        string result;
+        void put(const(C)[][] ss)
+        {
+            foreach(s; ss)
+                result ~= to!string(s);
+        }
+    }
+
+    //Source Char
+    foreach (SC; TypeTuple!(char, wchar, dchar))
+    {
+        SC ch = 'I';
+        dchar dh = '♥';
+        immutable(SC)[] s = "日本語！";
+        immutable(SC)[][] ss = ["日本語", "が", "好き", "ですか", "？"];
+
+        //Target Char
+        foreach (TC; TypeTuple!(char, wchar, dchar))
+        {
+            //Testing PutC and PutS
+            foreach (Type; TypeTuple!(PutC!TC, PutS!TC))
+            {
+                Type type;
+                auto sink = new Type();
+
+                //Testing put and sink
+                foreach (value ; tuple(type, sink))
+                {
+                    put(value, ch);
+                    assert(value.result == "I");
+                    put(value, dh);
+                    assert(value.result == "I♥");
+                    put(value, s);
+                    assert(value.result == "I♥日本語！");
+                    put(value, ss);
+                    assert(value.result == "I♥日本語！日本語が好きですか？");
+                }
+            }
+        }
+    }
+}
+
+unittest
+{
+    static struct CharRange
+    {
+        char c;
+        enum empty = false;
+        void popFront(){};
+        ref char front() @property
+        {
+            return c;
+        }
+    }
+    CharRange c;
+    put(c, cast(dchar)'H');
+    put(c, "hello"d);
+}
+
+unittest
+{
+    // issue 9823
+    const(char)[] r;
+    void delegate(const(char)[]) dg = (s) { r = s; };
+    put(dg, ["ABC"]);
+    assert(r == "ABC");
+}
+
+unittest
+{
+    // issue 10571
+    import std.format;
+    string buf;
+    formattedWrite((in char[] s) { buf ~= s; }, "%s", "hello");
+    assert(buf == "hello");
 }
 
 /**
