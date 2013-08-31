@@ -693,7 +693,7 @@ class Element : Item
      * Constructs an Element from a Tag.
      *
      * Params:
-     *      tag = the start or empty tag of the element.
+     *      tag_ = the start or empty tag of the element.
      */
     this(const(Tag) tag_)
     {
@@ -1655,7 +1655,7 @@ class DocumentParser : ElementParser
      * This is enforced by the function's in contract.
      *
      * Params:
-     *      xmltext = the entire XML document as text
+     *      xmlText_ = the entire XML document as text
      *
      */
     this(string xmlText_)

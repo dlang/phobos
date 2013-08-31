@@ -6893,7 +6893,7 @@ public @trusted R replaceAll(R, C, RegEx)(R input, RegEx re, const(C)[] format)
     returns the $(D input) itself.
 
     Params:
-    s = string to search
+    input = string to search
     re = compiled regular expression
     fun = delegate to use
 

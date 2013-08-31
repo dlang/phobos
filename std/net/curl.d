@@ -396,9 +396,9 @@ unittest
  *
  * Params:
  * url = resource to post to
- * putData = data to send as the body of the request. An array
- *           of an arbitrary type is accepted and will be cast to ubyte[]
- *           before sending it.
+ * postData = data to send as the body of the request. An array
+ *            of an arbitrary type is accepted and will be cast to ubyte[]
+ *            before sending it.
  * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
  *        guess connection type and create a new instance for this call only.
  *
@@ -894,7 +894,6 @@ struct ByLineBuffer(Char)
  *
  * Params:
  * url = The url to receive content from
- * postData = Data to HTTP Post
  * keepTerminator = KeepTerminator.yes signals that the line terminator should be
  *                  returned as part of the lines in the range.
  * terminator = The character that terminates a line
@@ -1433,7 +1432,6 @@ static struct AsyncChunkInputRange
  * Params:
  * url = The url to receive content from
  * postData = Data to HTTP Post
- * terminator = The character that terminates a line
  * chunkSize = The size of the chunks
  * transmitBuffers = The number of chunks buffered asynchronously
  * conn = The connection to use e.g. HTTP or FTP.

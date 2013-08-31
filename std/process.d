@@ -267,7 +267,6 @@ least ensure all relevant buffers are flushed.
 Params:
 args    = An array which contains the program name as the zeroth element
           and any command-line arguments in the following elements.
-program = The program name, $(I without) command-line arguments.
 stdin   = The standard input stream of the child process.
           This can be any $(XREF stdio,File) that is opened for reading.
           By default the child process inherits the parent's input
@@ -1582,32 +1581,32 @@ foreach (line; pipes.stderr.byLine) errors ~= line.idup;
 ---
 */
 ProcessPipes pipeProcess(in char[][] args,
-                         Redirect redirectFlags = Redirect.all,
+                         Redirect redirect = Redirect.all,
                          const string[string] env = null,
                          Config config = Config.none)
     @trusted //TODO: @safe
 {
-    return pipeProcessImpl!spawnProcess(args, redirectFlags, env, config);
+    return pipeProcessImpl!spawnProcess(args, redirect, env, config);
 }
 
 /// ditto
 ProcessPipes pipeProcess(in char[] program,
-                         Redirect redirectFlags = Redirect.all,
+                         Redirect redirect = Redirect.all,
                          const string[string] env = null,
                          Config config = Config.none)
     @trusted
 {
-    return pipeProcessImpl!spawnProcess(program, redirectFlags, env, config);
+    return pipeProcessImpl!spawnProcess(program, redirect, env, config);
 }
 
 /// ditto
 ProcessPipes pipeShell(in char[] command,
-                       Redirect redirectFlags = Redirect.all,
+                       Redirect redirect = Redirect.all,
                        const string[string] env = null,
                        Config config = Config.none)
     @safe
 {
-    return pipeProcessImpl!spawnShell(command, redirectFlags, env, config);
+    return pipeProcessImpl!spawnShell(command, redirect, env, config);
 }
 
 // Implementation of the pipeProcess() family of functions.

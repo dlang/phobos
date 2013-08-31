@@ -60,6 +60,10 @@ import core.exception, core.stdc.errno;
                      If msg is empty, and the thrown exception has a
                      non-empty msg field, the exception's msg field
                      will be output on test failure.
+        file       = The file where the error occurred.
+                     Defaults to $(D __FILE__).
+        line       = The line where the error occurred.
+                     Defaults to $(D __LINE__).
 
     Throws:
         $(D AssertError) if the given $(D Throwable) is thrown.
@@ -195,6 +199,10 @@ unittest
         T          = The $(D Throwable) to test for.
         expression = The expression to test.
         msg        = Optional message to output on test failure.
+        file       = The file where the error occurred.
+                     Defaults to $(D __FILE__).
+        line       = The line where the error occurred.
+                     Defaults to $(D __LINE__).
 
     Throws:
         $(D AssertError) if the given $(D Throwable) is not thrown.
@@ -1156,7 +1164,8 @@ class ErrnoException : Exception
 
     Params:
         E            = The type of $(D Throwable)s to catch. Defaults to ${D Exception}
-        T            = The return type of the expression and the error handler.
+        T1           = The type of the expression.
+        T2           = The return type of the error handler.
         expression   = The expression to run and return its result.
         errorHandler = The handler to run if the expression throwed.
 
