@@ -13,8 +13,6 @@
  * additional features specific to in-process messaging.
  *
  * Synposis:
- *$(D_RUN_CODE
- *$(ARGS
  * ---
  * import std.stdio;
  * import std.concurrency;
@@ -45,7 +43,6 @@
  *     writeln("Successfully printed number.");
  * }
  * ---
- *), $(ARGS), $(ARGS), $(ARGS))
  *
  * Copyright: Copyright Sean Kelly 2009 - 2010.
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
@@ -429,8 +426,6 @@ private template isSpawnable(F, T...)
  *  threads.
  *
  * Example:
- *$(D_RUN_CODE
- *$(ARGS
  * ---
  * import std.stdio, std.concurrency;
  *
@@ -455,7 +450,6 @@ private template isSpawnable(F, T...)
  *     auto tid2 = spawn(&f2, str.dup);
  * }
  * ---
- *), $(ARGS), $(ARGS), $(ARGS))
  */
 Tid spawn(F, T...)( F fn, T args )
     if ( isSpawnable!(F, T) )
@@ -623,8 +617,6 @@ private void _send(T...)( MsgType type, Tid tid, T vals )
  * sent.
  *
  * Example:
- *$(D_RUN_CODE
- *$(ARGS
  * ---
  * import std.stdio;
  * import std.variant;
@@ -645,7 +637,6 @@ private void _send(T...)( MsgType type, Tid tid, T vals )
  *      send(tid, 42);
  * }
  * ---
- *), $(ARGS), $(ARGS), $(ARGS))
  */
 void receive(T...)( T ops )
 {
@@ -706,11 +697,9 @@ private template receiveOnlyRet(T...)
  *          the message will be packed into a $(XREF typecons, Tuple).
  *
  * Example:
- *$(D_RUN_CODE
- *$(ARGS
  * ---
  * import std.concurrency;
-
+ *
  * void spawnedFunc()
  * {
  *     auto msg = receiveOnly!(int, string)();
@@ -724,7 +713,6 @@ private template receiveOnlyRet(T...)
  *     send(tid, 42, "42");
  * }
  * ---
- *), $(ARGS), $(ARGS), $(ARGS))
  */
 receiveOnlyRet!(T) receiveOnly(T...)()
 {
