@@ -2341,19 +2341,22 @@ struct Appender(A : T[], T)
             auto bigDataFun() @trusted nothrow { return _data.arr.ptr[0 .. len + 1];}
             auto bigData = bigDataFun();
 
-            auto getSource() @trusted nothrow { return cast(Unqual!T)item;} 
+            static if (is(Unqual!T == T))
+                alias uitem = item;
+            else
+                auto ref uitem() @trusted nothrow @property { return cast(Unqual!T)item;} 
 
             //The idea is to only call emplace if we must.
-            static if ( is(typeof(bigData[0].opAssign(getSource()))) ||
-                       !is(typeof(bigData[0] = getSource())))
+            static if ( is(typeof(bigData[0].opAssign(uitem))) ||
+                       !is(typeof(bigData[0] = uitem)))
             {
                 //pragma(msg, T.stringof); pragma(msg, U.stringof);
-                emplace(&bigData[len], getSource());
+                emplace(&bigData[len], uitem);
             }
             else
             {
                 //pragma(msg, T.stringof); pragma(msg, U.stringof);
-                bigData[len] = getSource();
+                bigData[len] = uitem;
             }
 
             //We do this at the end, in case of exceptions
@@ -2407,21 +2410,25 @@ struct Appender(A : T[], T)
                 //pragma(msg, T.stringof); pragma(msg, Range.stringof);
                 bigData[len .. newlen] = items[];
             }
-            else
+            else static if (is(Unqual!T == ElementType!Range))
             {
-                auto getSource()() @trusted {return cast(Unqual!T)items.front;}
                 foreach (ref it ; bigData[len .. newlen])
                 {
                     static if (mustEmplace)
-                    {
-                        //pragma(msg, T.stringof); pragma(msg, Range.stringof);
-                        emplace(&it, getSource());
-                    }
+                        emplace(&it, items.front);
                     else
-                    {
-                        //pragma(msg, T.stringof); pragma(msg, Range.stringof);
-                        it = getSource();
-                    }
+                        it = items.front;
+                }
+            }
+            else
+            {
+                static auto ref getUItem(U)(U item) @trusted {return cast(Unqual!T)item;}
+                foreach (ref it ; bigData[len .. newlen])
+                {
+                    static if (mustEmplace)
+                        emplace(&it, getUItem(items.front));
+                    else
+                        it = getUItem(items.front);
                 }
             }
 
@@ -2764,13 +2771,24 @@ unittest
 
 unittest
 {
-    //Coverage for put(Range) emplace
-    struct S
+    //Coverage for put(Range)
+    struct S1
     {
-        void opAssign(S){}
     }
-    auto a = Appender!(S[])();
-    a.put([S()]);
+    struct S2
+    {
+        void opAssign(S2){}
+    }
+    auto a1 = Appender!(S1[])();
+    auto a2 = Appender!(S2[])();
+    auto au1 = Appender!(const(S1)[])();
+    auto au2 = Appender!(const(S2)[])();
+    a1.put(S1().repeat().take(10));
+    a2.put(S2().repeat().take(10));
+    auto sc1 = const(S1)();
+    auto sc2 = const(S2)();
+    au1.put(sc1.repeat().take(10));
+    au2.put(sc2.repeat().take(10));
 }
 
 unittest
