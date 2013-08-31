@@ -2095,7 +2095,7 @@ void translate(C1, C2 = immutable char, Buffer)(C1[] str,
 }
 
 ///
-unittest
+@safe pure unittest
 {
     dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
     auto buffer = appender!(dchar[])();
@@ -2303,7 +2303,7 @@ body
 }
 
 ///
-unittest
+@safe pure unittest
 {
     auto buffer = appender!(char[])();
     auto transTable1 = makeTrans("eo5", "57q");
