@@ -2088,7 +2088,7 @@ unittest
 void translate(C1, C2 = immutable char, Buffer)(C1[] str,
                                         dchar[dchar] transTable,
                                         const(C2)[] toRemove,
-                                        Buffer buffer) @safe
+                                        Buffer buffer)
     if (isSomeChar!C1 && isSomeChar!C2 && isOutputRange!(Buffer, C1))
 {
     translateImpl(str, transTable, toRemove, buffer);
@@ -2116,7 +2116,7 @@ unittest
 void translate(C1, S, C2 = immutable char, Buffer)(C1[] str,
                                                    S[dchar] transTable,
                                                    const(C2)[] toRemove,
-                                                   Buffer buffer) @safe
+                                                   Buffer buffer)
     if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2 && isOutputRange!(Buffer, S))
 {
     translateImpl(str, transTable, toRemove, buffer);
@@ -2125,7 +2125,7 @@ void translate(C1, S, C2 = immutable char, Buffer)(C1[] str,
 private void translateImpl(C1, T, C2, Buffer)(C1[] str,
                                       T transTable,
                                       const(C2)[] toRemove,
-                                      Buffer buffer) @trusted
+                                      Buffer buffer)
 {
     bool[dchar] removeTable;
 
@@ -2140,9 +2140,9 @@ private void translateImpl(C1, T, C2, Buffer)(C1[] str,
         auto newC = c in transTable;
 
         if (newC)
-            buffer.put(*newC);
+            put(buffer, *newC);
         else
-            buffer.put(c);
+            put(buffer, c);
     }
 }
 
@@ -2286,7 +2286,7 @@ unittest
         toRemove   = The characters to remove from the string.
         buffer     = An output range to write the contents to.
   +/
-void translate(C = immutable char, Buffer)(in char[] str, in char[] transTable, in char[] toRemove, Buffer buffer) @trusted nothrow
+void translate(C = immutable char, Buffer)(in char[] str, in char[] transTable, in char[] toRemove, Buffer buffer)
     if (is(Unqual!C == char) && isOutputRange!(Buffer, char))
 in
 {
@@ -2315,14 +2315,14 @@ unittest
     assert(buffer.data == "h5 rd");
 }
 
-private void translateImplAscii(C = immutable char, Buffer)(in char[] str, in char[] transTable, ref bool[256] remTable, Buffer buffer, in char[] toRemove = null) @trusted nothrow
+private void translateImplAscii(C = immutable char, Buffer)(in char[] str, in char[] transTable, ref bool[256] remTable, Buffer buffer, in char[] toRemove = null)
 {
     static if (isOutputRange!(Buffer, char))
     {
         foreach (char c; str)
         {
             if (!remTable[c])
-                buffer.put(transTable[c]);
+                put(buffer, transTable[c]);
         }
     }
     else
