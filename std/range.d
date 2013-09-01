@@ -7873,6 +7873,23 @@ sgi.com/tech/stl/binary_search.html, binary_search).
         return false;
     }
 
+    auto insert(V)(V v)
+    if ((isDynamicArray!Range) && (isTwoWayCompatible!(predFun, ElementType!Range, V)))
+    {
+        _input ~= v;
+
+        for (auto i = _input.length - 1; i > 0; --i) {
+            auto a = _input[i - 1];
+            auto b = _input[i];
+
+            if (gt(b, a)) break;
+
+            swap(_input[i - 1], _input[i]);
+        }
+
+        return _input;
+    }
+
     // Explicitly undocumented. It will be removed in November 2013.
     deprecated("Please use contains instead.") alias contains canFind;
 }
@@ -7888,6 +7905,20 @@ unittest
     assert(r1.contains(3));
     assert(!r1.contains(32));
     assert(r1.release() == [ 64, 52, 42, 3, 2, 1 ]);
+}
+
+unittest
+{
+    auto a = [ 1, 2, 4, 16, 64 ];
+    auto b = a;
+
+    auto r = assumeSorted(a);
+    a = r.insert(8);
+    a = r.insert(32);
+
+    // reference changed, as expected, we appended to a slice
+    assert(a !is b);
+    assert(equal(a, [1, 2, 4, 8, 16, 32, 64]));
 }
 
 unittest
