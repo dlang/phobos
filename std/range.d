@@ -7848,6 +7848,7 @@ sgi.com/tech/stl/binary_search.html, binary_search).
  */
 
     bool contains(V)(V value)
+    if (isTwoWayCompatible!(predFun, ElementType!Range, V))
     {
         size_t first = 0, count = _input.length;
         while (count > 0)
