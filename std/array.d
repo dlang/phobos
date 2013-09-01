@@ -37,9 +37,12 @@ if (isIterable!Range && !isNarrowString!Range)
     static if (hasLength!Range)
     {
         if(r.length == 0) return null;
-
-        auto result = ()@trusted{ return uninitializedArray!(Unqual!E[])(r.length); }();
-
+        //@@@BUG@@@ 10928 should be lambda
+        static @trusted nothrow auto trustedAllocateArray(size_t n)
+        {
+            return uninitializedArray!(Unqual!E[])(n);
+        }
+        auto result = trustedAllocateArray(r.length);
         size_t i = 0;
         foreach (e; r)
         {
