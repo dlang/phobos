@@ -545,91 +545,159 @@ unittest
     static assert( isInputRange!(inout(int)[])); // bug 7824
 }
 
-/**
-Outputs $(D e) to $(D r). The exact effect is dependent upon the two
-types. Several cases are accepted, as described below. The code snippets
-are attempted in order, and the first to compile "wins" and gets
-evaluated.
+/+
+puts the whole raw element $(D t) into $(D r). doPut will not attempt to
+iterate, slice or transcode $(D t) in any way shape or form. It will $(B only)
+call the correct primitive ($(D r.put(t)),  $(D r.front = t) or
+$(D r(0)) once.
 
-$(BOOKTABLE ,
-$(TR $(TH Code Snippet) $(TH Scenario
-))
-$(TR $(TD $(D r.put(e);)) $(TD $(D R) specifically defines a method
-    $(D put) accepting an $(D E).
-))
-$(TR $(TD $(D r.put([ e ]);)) $(TD $(D R) specifically defines a
-    method $(D put) accepting an $(D E[]).
-))
-$(TR $(TD $(D r.front = e; r.popFront();)) $(TD $(D R) is an input
-    range and $(D e) is assignable to $(D r.front).
-))
-$(TR $(TD $(D for (; !e.empty; e.popFront()) put(r, e.front);)) $(TD
-    Copying range $(D E) to range $(D R).
-))
-$(TR $(TD $(D r(e);)) $(TD $(D R) is e.g. a delegate accepting an $(D
-    E).
-))
-$(TR $(TD $(D r([ e ]);)) $(TD $(D R) is e.g. a $(D delegate)
-    accepting an $(D E[]).
-))
-)
- */
-void put(R, E)(ref R r, E e)
-{    
-    @property ref E[] EArrayInit(); //@@@9186@@@: Can't use (E[]).init
-
-    //First level: simply stright up put.
-    static if (is(typeof(doPut(r, e))))
-    {
-        doPut(r, e);
-    }
-    //special case for char to string. !important: do this before trying the next S[]
-    else static if (isSomeChar!E && is(typeof(putChar(r, e))))
-    {
-        putChar(r, e);
-    }
-    //Accepts E[] ?
-    //Important, use doPut here, to avoid endless tests to E[][]n E[][][]...
-    else static if (is(typeof(doPut(r, EArrayInit))))
-    {
-        doPut(r, (&e)[0..1]);
-    }
-    //Decode the string, and cram the chars. !important: do this before trying the next isInputRange!E
-    else static if (isSomeString!E && is(typeof(putChar(r, dchar.max))))
-    {
-        foreach(dchar c; e)
-            putChar(r, c);
-    }
-    //Extract each element from the range
-    //We can use "put" here, so we can recursivelly test a RoR of E.
-    else static if (isInputRange!E && is(typeof(put(r, e.front))))
-    {
-        for (; !e.empty; e.popFront())
-            put(r, e.front);
-    }
-    else
-        static assert(false, "Cannot put a "~E.stringof~" into a "~R.stringof);
-}
-
-//Helper functions. Calls the actual "final" put.
-//Meant as helper and "recursion stopper" or "tail call"
-private void doPut(R, T)(ref R r, auto ref T t)
+This can be important when $(D t) needs to be placed in $(D r) unchanged.
+Furthermore, it can be useful when working with $(D InputRange)s, as doPut
+guarantees that no more than a single element will be placed.
++/
+package void doPut(R, E)(ref R r, auto ref E e)
 {
     static if(is(PointerTarget!R == struct))
         enum usingPut = hasMember!(PointerTarget!R, "put");
     else
         enum usingPut = hasMember!(R, "put");
-    enum usingFront  = !usingPut && isInputRange!R;
 
-    static if (usingFront)
+    static if (usingPut)
     {
-        r.front = t;
+        static assert(is(typeof(r.put(e))),
+            format("Cannot nativaly put a %s into a %s.", E.stringof, R.stringof));
+        r.put(e);
+    }
+    else static if (isInputRange!R)
+    {
+        static assert(is(typeof(r.front = e)),
+            format("Cannot nativaly put a %s into a %s.", E.stringof, R.stringof));
+        r.front = e;
         r.popFront();
     }
-    else static if (usingPut)
-        r.put(t);
     else
-        r(t);
+    {
+        static assert(is(typeof(r(e))),
+            format("Cannot nativaly put a %s into a %s.", E.stringof, R.stringof));
+        r(e);
+    }
+}
+
+unittest
+{
+    static assert (!isNativeOutputRange!(int,     int));
+    static assert ( isNativeOutputRange!(int[],   int));
+    static assert (!isNativeOutputRange!(int[][], int));
+
+    static assert (!isNativeOutputRange!(int,     int[]));
+    static assert (!isNativeOutputRange!(int[],   int[]));
+    static assert ( isNativeOutputRange!(int[][], int[]));
+
+    static assert (!isNativeOutputRange!(int,     int[][]));
+    static assert (!isNativeOutputRange!(int[],   int[][]));
+    static assert (!isNativeOutputRange!(int[][], int[][]));
+
+    static assert (!isNativeOutputRange!(int[4],   int));
+    static assert ( isNativeOutputRange!(int[4][], int)); //Scary!
+    static assert ( isNativeOutputRange!(int[4][], int[4]));
+
+    static assert (!isNativeOutputRange!( char[],   char));
+    static assert (!isNativeOutputRange!( char[],  dchar));
+    static assert ( isNativeOutputRange!(dchar[],   char));
+    static assert ( isNativeOutputRange!(dchar[],  dchar));
+
+}
+
+/++
+Outputs $(D e) to $(D r). The exact effect is dependent upon the two
+types. Several cases are accepted, as described below. The code snippets
+are attempted in order, and the first to compile "wins" and gets
+evaluated.
+
+In this table "doPut" is a method that places $(D e) into $(D r), using the
+correct primitive: $(D r.put(e)) if $(D R) defines $(D put), $(D r.front = e) if $(D r) is an input
+range (followed by $(D r.popFront()), or $(D r(e)) otherwise.
+
+$(BOOKTABLE ,
+    $(TR
+        $(TH Code Snippet)
+        $(TH Scenario)
+    )
+    $(TR
+        $(TD $(D r.doPut(e);))
+        $(TD $(D R) specifically accepts an $(D E).)
+    )
+    $(TR
+        $(TD $(D r.doPut([ e ]);))
+        $(TD $(D R) specifically accepts an $(D E[]).)
+    )
+    $(TR
+        $(TD $(D r.putChar(e);))
+        $(TD $(D R) accepts some form of string or character. put will
+            transocde the character $(D e) accordingly.)
+    )
+    $(TR
+        $(TD $(D for (; !e.empty; e.popFront()) put(r, e.front);))
+        $(TD Copying range $(D E) into $(D R).)
+    )
+
+    Tip: $(D put) should $(D not) be used "UFCS-style", eg $(D r.put(e)).
+    Doing this may call $(D R.put) dirrectly, by-passing any transformation
+    feature provided by $(D Range.put).
+)
+
+Tip:
+ +/
+void put(R, E)(ref R r, E e)
+{
+    @property ref E[] EArrayInit(); //@@@9186@@@: Can't use (E[]).init
+
+    //First level: simply straight up put.
+    static if (is(typeof(doPut(r, e))))
+    {
+        doPut(r, e);
+    }
+    //Optional optimization block for straight up array to array copy.
+    else static if (isDynamicArray!R && !isNarrowString!R && isDynamicArray!E && is(typeof(r[] = e[])))
+    {
+        immutable len = e.length;
+        r[0 .. len] = e[];
+        r = r[len .. $];
+    }
+    //Accepts E[] ?
+    else static if (is(typeof(doPut(r, [e]))) && !isDynamicArray!R)
+    {
+        if (__ctfe)
+            doPut(r, [e]);
+        else
+            doPut(r, (&e)[0..1]);
+    }
+    //special case for char to string.
+    else static if (isSomeChar!E && is(typeof(putChar(r, e))))
+    {
+        putChar(r, e);
+    }
+    //Extract each element from the range
+    //We can use "put" here, so we can recursivelly test a RoR of E.
+    else static if (isInputRange!E && is(typeof(put(r, e.front))))
+    {
+        //Special optimization: If E is a narrow string, and r accepts characters no-wider than the string's
+        //Then simply feed the characters 1 by 1.
+        static if (isNarrowString!E && (
+            (is(E : const  char[]) && is(typeof(doPut(r,  char.max))) && !is(typeof(doPut(r, dchar.max))) && !is(typeof(doPut(r, wchar.max)))) ||
+            (is(E : const wchar[]) && is(typeof(doPut(r, wchar.max))) && !is(typeof(doPut(r, dchar.max)))) ) )
+        {
+            foreach(c; e)
+                doPut(r, c);
+        }
+        else
+        {
+            for (; !e.empty; e.popFront())
+                put(r, e.front);
+        }
+    }
+    else
+        static assert (false, format("Cannot put a %s into a %s.", E.stringof, R.stringof));
 }
 
 //Helper function to handle chars as quickly and as elegantly as possible
@@ -637,43 +705,52 @@ private void doPut(R, T)(ref R r, auto ref T t)
 private void putChar(R, E)(ref R r, E e)
 if (isSomeChar!E)
 {
-    static if(is(PointerTarget!R == struct))
-        enum usingPut = hasMember!(PointerTarget!R, "put");
-    else
-        enum usingPut = hasMember!(R, "put");
-    enum usingFront  = !usingPut && isInputRange!R;
-
     ////@@@9186@@@: Can't use (E[]).init
-    @property ref const(char)[]  stringInit();
-    @property ref const(wchar)[] wstringInit();
-    @property ref const(dchar)[] dstringInit();
-    
-    enum wcCond = is(typeof(doPut(r, wstringInit))) && (E.sizeof <= wchar.sizeof);
-    enum dcCond = is(typeof(doPut(r, dstringInit))) && (E.sizeof <= dchar.sizeof);
-    enum wsCond = is(typeof(doPut(r, wstringInit))) || is(typeof(doPut(r, wchar.max)));
-    enum ssCond = is(typeof(doPut(r, stringInit))) || is(typeof(doPut(r, char.max)));
+    ref const( char)[] cstringInit();
+    ref const(wchar)[] wstringInit();
+    ref const(dchar)[] dstringInit();
 
-    //Quick encode a narrow char into wider string
-    static if (wcCond || dcCond)
+    enum csCond = !isDynamicArray!R && is(typeof(doPut(r, cstringInit())));
+    enum wsCond = !isDynamicArray!R && is(typeof(doPut(r, wstringInit())));
+    enum dsCond = !isDynamicArray!R && is(typeof(doPut(r, dstringInit())));
+
+    //Use "max" to avoid static type demotion
+    enum ccCond = is(typeof(doPut(r,  char.max)));
+    enum wcCond = is(typeof(doPut(r, wchar.max)));
+    //enum dcCond = is(typeof(doPut(r, dchar.max)));
+
+    //Fast transform a narrow char into a wider string
+    static if ((wsCond && E.sizeof < wchar.sizeof) || (dsCond && E.sizeof < dchar.sizeof))
     {
-        alias Char = Select!(wcCond, wchar, dchar);
-        Char c = cast(Char)e;
-        doPut(r, (&c)[0..1]);
-    }
-    //Slowly encode a wide char into a narrower string
-    else static if (wsCond || ssCond)
-    {
-        import std.utf : encode;
-        alias ARR = Select!(wsCond, wchar[2], char[4]);
-        static ARR buf;
-        static if (is(typeof(doPut(r, buf))))
-            doPut(r, buf[0 .. encode(buf, e)]);
+        enum w = wsCond && E.sizeof < wchar.sizeof;
+        Select!(w, wchar, dchar) c = e;
+        if (__ctfe)
+            doPut(r, [c]);
         else
-            foreach (c; buf[0 .. encode(buf, e)])
-                doPut(r, c);
+            doPut(r, (&c)[0..1]);
+    }
+    //Encode a wide char into a narrower string
+    else static if (wsCond || csCond)
+    {
+        import std.utf;
+        /+static+/ Select!(wsCond, wchar[2], char[4]) buf; //static prevents purity.
+        doPut(r, buf.ptr[0 .. encode(buf, e)]); //the word ".ptr" added to enforce un-safety.
+    }
+    //Slowly encode a wide char into a series of narrower chars
+    else static if (wcCond || ccCond)
+    {
+        import std.encoding;
+        alias C = Select!(wcCond, wchar, char);
+        encode!(C, R)(e, r);
     }
     else
-        static assert(false, "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof);
+        static assert (false, format("Cannot put a %s into a %s.", E.stringof, R.stringof));
+}
+
+pure unittest
+{
+    auto f = delegate (const(char)[]) {};
+    putChar(f, cast(dchar)'a');
 }
 
 unittest
@@ -738,6 +815,31 @@ unittest
 
 unittest
 {
+    int[][] a;
+    int[]   b;
+    int     c;
+    static assert( __traits(compiles, put(b, c)));
+    static assert( __traits(compiles, put(a, b)));
+    static assert(!__traits(compiles, put(a, c)));
+}
+
+unittest
+{
+    int[][] a = new int[][](3);
+    int[]   b = [1];
+    auto aa = a;
+    put(aa, b);
+    assert(aa == [[], []]);
+    assert(a  == [[1], [], []]);
+    int[][3] c = [2];
+    aa = a;
+    put(aa, c[]);
+    assert(aa.empty);
+    assert(a == [[2], [2], [2]]);
+}
+
+unittest
+{
     // Test fix for bug 7476.
     struct LockingTextWriter
     {
@@ -776,6 +878,9 @@ unittest
                 result ~= to!string(s);
         }
     }
+
+    PutS!char p;
+    putChar(p, cast(dchar)'a');
 
     //Source Char
     foreach (SC; TypeTuple!(char, wchar, dchar))
@@ -846,18 +951,106 @@ unittest
     assert(buf == "hello");
 }
 
-/**
+unittest
+{
+    import std.format;
+    struct PutC(C)
+    {
+        void put(C){}
+    }
+    struct PutS(C)
+    {
+        void put(const(C)[]){}
+    }
+    struct CallC(C)
+    {
+        void opCall(C){}
+    }
+    struct CallS(C)
+    {
+        void opCall(const(C)[]){}
+    }
+    struct FrontC(C)
+    {
+        enum empty = false;
+        auto front()@property{return C.init;}
+        void front(C)@property{}
+        void popFront(){}
+    }
+    struct FrontS(C)
+    {
+        enum empty = false;
+        auto front()@property{return C[].init;}
+        void front(const(C)[])@property{}
+        void popFront(){}
+    }
+    void foo()
+    {
+        foreach(C; TypeTuple!(char, wchar, dchar))
+        {
+            formattedWrite((C c){},        "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
+            formattedWrite((const(C)[]){}, "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
+            formattedWrite(PutC!C(),       "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
+            formattedWrite(PutS!C(),       "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
+            CallC!C callC;
+            CallS!C callS;
+            formattedWrite(callC,          "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
+            formattedWrite(callS,          "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
+            formattedWrite(FrontC!C(),     "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
+            formattedWrite(FrontS!C(),     "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
+        }
+        formattedWrite((dchar[]).init,     "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
+    }
+}
+
+/+
+Returns $(D true) if $(D R) is a native output range for elements of type
+$(D E). An output range is defined functionally as a range that
+supports the operation $(D doPut(r, e)) as defined above. if $(D doPut(r, e))
+is valid, then $(D put(r,e)) will have the same behavior.
+
+The two guarantees isNativeOutputRange gives over the larger $(D isOutputRange)
+are:
+1: $(D e) is $(B exactly) what will be placed (not $(D [e]), for example).
+2: if $(D E) is a non $(empty) $(D InputRange), then placing $(D e) is
+guaranteed to not overflow the range.
+ +/
+package template isNativeOutputRange(R, E)
+{
+    enum bool isNativeOutputRange = is(typeof(
+    (inout int = 0)
+    {
+        R r = void;
+        E e;
+        doPut(r, e);
+    }));
+}
+//
+unittest
+{
+    int[] r = new int[](4);
+    static assert(isInputRange!(int[]));
+    static assert( isNativeOutputRange!(int[], int));
+    static assert(!isNativeOutputRange!(int[], int[]));
+    static assert( isOutputRange!(int[], int[]));
+
+    if (!r.empty)
+        put(r, 1); //guaranteed to succeed
+    if (!r.empty)
+        put(r, [1, 2]); //May actually error out.
+}
+/++
 Returns $(D true) if $(D R) is an output range for elements of type
 $(D E). An output range is defined functionally as a range that
 supports the operation $(D put(r, e)) as defined above.
- */
+ +/
 template isOutputRange(R, E)
 {
     enum bool isOutputRange = is(typeof(
     (inout int = 0)
     {
         R r = void;
-        E e;
+        E e = void;
         put(r, e);
     }));
 }
@@ -877,6 +1070,9 @@ unittest
     static assert( isOutputRange!(dchar[], char));
     static assert( isOutputRange!(dchar[], wchar));
     static assert( isOutputRange!(dchar[], dchar));
+    static assert( isOutputRange!(dchar[], string));
+    static assert( isOutputRange!(dchar[], wstring));
+    static assert( isOutputRange!(dchar[], dstring));
 
     static assert(!isOutputRange!(const(int)[], int));
     static assert(!isOutputRange!(inout(int)[], int));

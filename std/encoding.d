@@ -1743,34 +1743,35 @@ Encodes $(D c) in units of type $(D E) and writes the result to the
 output range $(D R). Returns the number of $(D E)s written.
  */
 
-size_t encode(E, R)(dchar c, R range)
+size_t encode(E, R)(dchar c, auto ref R range)
+if (isNativeOutputRange!(R, E))
 {
     static if (is(Unqual!E == char))
     {
         if (c <= 0x7F)
         {
-            range.put(cast(char) c);
+            doPut(range, cast(char) c);
             return 1;
         }
         if (c <= 0x7FF)
         {
-            range.put(cast(char)(0xC0 | (c >> 6)));
-            range.put(cast(char)(0x80 | (c & 0x3F)));
+            doPut(range, cast(char)(0xC0 | (c >> 6)));
+            doPut(range, cast(char)(0x80 | (c & 0x3F)));
             return 2;
         }
         if (c <= 0xFFFF)
         {
-            range.put(cast(char)(0xE0 | (c >> 12)));
-            range.put(cast(char)(0x80 | ((c >> 6) & 0x3F)));
-            range.put(cast(char)(0x80 | (c & 0x3F)));
+            doPut(range, cast(char)(0xE0 | (c >> 12)));
+            doPut(range, cast(char)(0x80 | ((c >> 6) & 0x3F)));
+            doPut(range, cast(char)(0x80 | (c & 0x3F)));
             return 3;
         }
         if (c <= 0x10FFFF)
         {
-            range.put(cast(char)(0xF0 | (c >> 18)));
-            range.put(cast(char)(0x80 | ((c >> 12) & 0x3F)));
-            range.put(cast(char)(0x80 | ((c >> 6) & 0x3F)));
-            range.put(cast(char)(0x80 | (c & 0x3F)));
+            doPut(range, cast(char)(0xF0 | (c >> 18)));
+            doPut(range, cast(char)(0x80 | ((c >> 12) & 0x3F)));
+            doPut(range, cast(char)(0x80 | ((c >> 6) & 0x3F)));
+            doPut(range, cast(char)(0x80 | (c & 0x3F)));
             return 4;
         }
         else
@@ -1782,16 +1783,16 @@ size_t encode(E, R)(dchar c, R range)
     {
         if (c <= 0xFFFF)
         {
-            range.put(cast(wchar) c);
+            range.doPut(cast(wchar) c);
             return 1;
         }
-        range.put(cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800));
-        range.put(cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00));
+        range.doPut(cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800));
+        range.doPut(cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00));
         return 2;
     }
     else static if (is(Unqual!E == dchar))
     {
-        range.put(c);
+        range.doPut(c);
         return 1;
     }
     else
