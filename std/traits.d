@@ -3052,6 +3052,12 @@ Returns:
  The members are arranged in the same order as declared in $(D E).
 
 Note:
+ An enum can have multiple members which have the same value. If you want
+ to use EnumMembers to e.g. generate switch cases at compile-time,
+ you should use the $(XREF typetuple, NoDuplicates) template to avoid
+ generating duplicate switch cases.
+
+Note:
  Returned values are strictly typed with $(D E). Thus, the following code
  does not work without the explicit cast:
 --------------------
