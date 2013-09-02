@@ -76,9 +76,9 @@ bool isAlphaNum(dchar c) @safe pure nothrow
     return c <= 0x7F ? cast(bool)(_ctype[c] & (_ALP|_DIG)) : false;
 }
 
-unittest
+@safe pure unittest
 {
-    foreach(c; chain(digits, octalDigits, fullHexDigits, letters, lowercase, uppercase))
+    foreach(c; digits ~ octalDigits ~ fullHexDigits ~ letters ~ lowercase ~ uppercase)
         assert(isAlphaNum(c));
 
     foreach(c; whitespace)
