@@ -344,7 +344,7 @@ parses foo but leaves "--bar" in $(D args). The double-dash itself is
 removed from the argument array.
 */
 
-void getopt(T...)(ref string[] args, T opts) {
+void getopt(T...)(ref string[] args, T opts) if (T.length > 1) {
     enforce(args.length,
             "Invalid arguments string passed: program name missing");
     configuration cfg;
@@ -813,4 +813,14 @@ unittest
     auto args = ["prog", "--opt=123", "--", "--a", "--b", "--c"];
     getopt(args, "opt", &opt);
     assert(args == ["prog", "--a", "--b", "--c"]);
+}
+
+unittest
+{
+    // Issue 10955
+    auto args = [""];
+    int i;
+    static assert(!__traits(compiles, getopt(args, "i")));
+    static assert(!__traits(compiles, getopt(args, &i)));
+    static assert(__traits(compiles, getopt(args, "i", &i)));
 }
