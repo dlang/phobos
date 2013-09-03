@@ -1780,22 +1780,29 @@ size_t encode(E, R)(dchar c, R range)
     {
         if (c <= 0xFFFF)
         {
-            r.put(cast(wchar) c);
+            range.put(cast(wchar) c);
             return 1;
         }
-        r.put(cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800));
-        r.put(cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00));
+        range.put(cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800));
+        range.put(cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00));
         return 2;
     }
     else static if (is(Unqual!E == dchar))
     {
-        r.put(c);
+        range.put(c);
         return 1;
     }
     else
     {
-        assert(0);
+        static assert(0);
     }
+}
+unittest
+{
+    Appender!(char[]) r;
+    assert(encode!(char)('T', r) == 1);
+    assert(encode!(wchar)('T', r) == 1);
+    assert(encode!(dchar)('T', r) == 1);
 }
 
 /**
