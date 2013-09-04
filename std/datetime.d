@@ -1723,9 +1723,9 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
             $(D DateTimeException) if the given minute are not a valid minute
             of an hour.
      +/
-    @property void minute(int minutes)
+    @property void minute(int minute)
     {
-        enforceValid!"minutes"(minutes);
+        enforceValid!"minutes"(minute);
 
         auto hnsecs = adjTime;
         auto days = splitUnitsFromHNSecs!"days"(hnsecs);
@@ -1739,7 +1739,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         hnsecs = removeUnitsFromHNSecs!"minutes"(hnsecs);
 
         hnsecs += convert!("hours", "hnsecs")(hour);
-        hnsecs += convert!("minutes", "hnsecs")(minutes);
+        hnsecs += convert!("minutes", "hnsecs")(minute);
 
         if(negative)
             hnsecs -= convert!("hours", "hnsecs")(24);
@@ -2108,12 +2108,12 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         Params:
             tz = The $(D TimeZone) to set this $(D SysTime)'s time zone to.
       +/
-    @property void timezone(immutable TimeZone tz) pure nothrow
+    @property void timezone(immutable TimeZone timezone) pure nothrow
     {
-        if(tz is null)
+        if(timezone is null)
             _timezone = LocalTime();
         else
-            _timezone = tz;
+            _timezone = timezone;
     }
 
 
@@ -8433,10 +8433,10 @@ assert(SysTime.fromISOString("20100704T070612+8:00") ==
         are +H, -H, +HH, -HH, +H:MM, -H:MM, +HH:MM, and -HH:MM.
 
         Params:
-            isoExtString = A string formatted in the ISO Extended format for dates
-                           and times.
-            tz           = The time zone to convert the given time to (no
-                           conversion occurs if null).
+            isoString = A string formatted in the ISO Extended format for dates
+                        and times.
+            tz        = The time zone to convert the given time to (no
+                        conversion occurs if null).
 
         Throws:
             $(D DateTimeException) if the given string is not in the ISO format
@@ -10532,8 +10532,6 @@ assert(d4 == Date(2001, 2, 28));
             units         = The type of units to add ("years" or "months").
             value         = The number of months or years to add to this
                             $(D Date).
-            allowOverflow = Whether the days should be allowed to overflow,
-                            causing the month to increment.
 
         Examples:
 --------------------
@@ -11213,7 +11211,7 @@ assert(d6 == Date(2001, 2, 28));
 
         Params:
             units = The units to add. Must be $(D "days").
-            days  = The number of days to add to this $(D Date).
+            value = The number of days to add to this $(D Date).
 
         Examples:
 --------------------
@@ -14611,7 +14609,7 @@ assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
         Whitespace is stripped from the given string.
 
         Params:
-            isoExtString = A string formatted in the ISO Extended format for times.
+            isoString = A string formatted in the ISO Extended format for times.
 
         Throws:
             $(D DateTimeException) if the given string is not in the ISO
@@ -16092,7 +16090,7 @@ assert(dt6 == DateTime(2001, 2, 28, 12, 30, 33));
 
         Params:
             units = The units to add.
-            days  = The number of $(D_PARAM units) to add to this $(D DateTime).
+            value = The number of $(D_PARAM units) to add to this $(D DateTime).
 
         Examples:
 --------------------
@@ -17823,8 +17821,8 @@ assert(DateTime.fromISOString(" 20100704T070612 ") ==
         YYYY-MM-DDTHH:MM:SS. Whitespace is stripped from the given string.
 
         Params:
-            isoExtString = A string formatted in the ISO Extended format for dates
-                           and times.
+            isoString = A string formatted in the ISO Extended format for dates
+                        and times.
 
         Throws:
             $(D DateTimeException) if the given string is not in the ISO
@@ -19449,7 +19447,6 @@ assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
                 allowOverflow = Whether the days should be allowed to overflow
                                 on $(D begin) and $(D end), causing their month
                                 to increment.
-                dir           = The direction in time to expand the interval.
 
             Throws:
                 $(D DateTimeException) if this interval is empty or if the
@@ -22093,6 +22090,7 @@ assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
 
         Params:
             duration = The duration to expand the interval by.
+            dir      = The direction in time to expand the interval.
 
         Examples:
 --------------------
@@ -23527,7 +23525,7 @@ public:
 
     /++
         Params:
-            end = The time point which ends the interval.
+            begin = The time point which begins the interval.
 
         Examples:
 --------------------
@@ -24354,6 +24352,7 @@ assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
 
         Params:
             duration = The duration to expand the interval by.
+            dir      = The direction in time to expand the interval.
 
         Examples:
 --------------------
@@ -29578,12 +29577,7 @@ assert(tz.dstName == "PDT");
         begin with "America".
 
         Params:
-            subName       = The first part of the desired time zones.
-            tzDatabaseDir = The directory where the TZ Database files are
-                            located. Because these files are not located on
-                            Windows systems, provide them
-                            and give their location here to
-                            use $(D PosixTimeZone)s.
+            subName = The first part of the desired time zones.
 
         Throws:
             $(D FileException) if it fails to read from disk.
@@ -31431,7 +31425,7 @@ version(StdDdoc)
         $(D FILETIME) struct.
 
         Params:
-            stdTime = The std time to convert.
+            sysTime = The $(D SysTime) to convert.
 
         Throws:
             $(D DateTimeException) if the given value will not fit in a
