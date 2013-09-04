@@ -416,7 +416,8 @@ private:
             {
                 enforce(0, "Not implemented");
             }
-            static if (isDynamicArray!(A) && allowed!(typeof(A.init[0])))
+            // Can't handle void arrays as there isn't any result to return.
+            static if (isDynamicArray!(A) && !is(Unqual!(typeof(A.init[0])) == void) && allowed!(typeof(A.init[0])))
             {
                 // array type; input and output are the same VariantN
                 auto result = cast(VariantN*) parm;
@@ -460,7 +461,7 @@ private:
             }
 
         case OpID.catAssign:
-            static if (is(typeof((*zis)[0])) && is(typeof((*zis) ~= *zis)))
+            static if (!is(Unqual!(typeof((*zis)[0])) == void) && is(typeof((*zis)[0])) && is(typeof((*zis) ~= *zis)))
             {
                 // array type; parm is the element to append
                 auto arg = cast(VariantN*) parm;
@@ -1119,6 +1120,16 @@ unittest
 
     auto v = MyVariant(S.init);
     assert(v == S.init);
+}
+
+// Issue #10961
+unittest
+{
+    // Primarily test that we can assign a void[] to a Variant.
+    void[] elements = cast(void[])[1, 2, 3];
+    Variant v = elements;
+    void[] returned = v.get!(void[]);
+    assert(returned == elements);
 }
 
 /**
