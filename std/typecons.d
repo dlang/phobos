@@ -1102,7 +1102,8 @@ string alignForSize(E...)(string[] names...)
 
     string[7] declaration = ["", "", "", "", "", "", ""];
 
-    foreach (i, T; E) {
+    foreach (i, T; E)
+    {
         auto a = T.alignof;
         auto k = a>=64? 0 : a>=32? 1 : a>=16? 2 : a>=8? 3 : a>=4? 4 : a>=2? 5 : 6;
         declaration[k] ~= T.stringof ~ " " ~ names[i] ~ ";\n";
@@ -1114,11 +1115,26 @@ string alignForSize(E...)(string[] names...)
     return s;
 }
 
-unittest {
+unittest
+{
     enum x = alignForSize!(int[], char[3], short, double[5])("x", "y","z", "w");
-    struct Foo{ int x; }
-    enum y = alignForSize!(ubyte, Foo, cdouble)("x", "y","z");
+    struct Foo { int x; }
+    enum y = alignForSize!(ubyte, Foo, cdouble)("x", "y", "z");
 
+  static if ((int[1]).stringof == "int[1]") // if issue 9565 is implemented
+  {
+    enum passNormalX = x == "double[5] w;\nint[] x;\nshort z;\nchar[3] y;\n";
+    enum passNormalY = y == "cdouble z;\nFoo y;\nubyte x;\n";
+
+    enum passAbnormalX = x == "int[] x;\ndouble[5] w;\nshort z;\nchar[3] y;\n";
+    enum passAbnormalY = y == "Foo y;\ncdouble z;\nubyte x;\n";
+    // ^ blame http://d.puremagic.com/issues/show_bug.cgi?id=231
+
+    static assert(passNormalX || passAbnormalX && double.alignof <= (int[]).alignof);
+    static assert(passNormalY || passAbnormalY && double.alignof <= int.alignof);
+  }
+  else
+  {
     static if(size_t.sizeof == uint.sizeof)
     {
         enum passNormalX = x == "double[5u] w;\nint[] x;\nshort z;\nchar[3u] y;\n";
@@ -1136,6 +1152,7 @@ unittest {
         static assert(x == "int[] x;\ndouble[5LU] w;\nshort z;\nchar[3LU] y;\n");
         static assert(y == "cdouble z;\nFoo y;\nubyte x;\n");
     }
+  }
 }
 
 /*--*
