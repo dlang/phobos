@@ -5700,7 +5700,7 @@ alias std.conv.unsigned unsigned;
 Returns the most negative value of the numeric type T.
 */
 template mostNegative(T)
-    if(isNumeric!T || isSomeChar!T)
+    if(isNumeric!T || isSomeChar!T || isBoolean!T)
 {
     static if (is(typeof(T.min_normal)))
         enum mostNegative = -T.max;
@@ -5715,8 +5715,9 @@ unittest
     static assert(mostNegative!float == -float.max);
     static assert(mostNegative!double == -double.max);
     static assert(mostNegative!real == -real.max);
+    static assert(mostNegative!bool == false);
 
-    foreach(T; TypeTuple!(byte, short, int, long))
+    foreach(T; TypeTuple!(bool, byte, short, int, long))
         static assert(mostNegative!T == T.min);
 
     foreach(T; TypeTuple!(ubyte, ushort, uint, ulong, char, wchar, dchar))
