@@ -3142,7 +3142,7 @@ unittest
  * function, or any of the conversion functions.
  */
 
-bool isNumeric(const(char)[] s, in bool bAllowSep = false)
+bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
 {
     ptrdiff_t iLen = s.length;
     bool   bDecimalPoint = false;
