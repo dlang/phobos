@@ -3513,7 +3513,7 @@ unittest
  * </pre>
  */
 
-string[string] abbrev(string[] values)
+string[string] abbrev(string[] values) @safe pure
 {
     string[string] result;
 
@@ -3594,7 +3594,7 @@ unittest
  * leftmost column, which is numbered starting from 0.
  */
 
-size_t column(S)(S str, size_t tabsize = 8) if (isSomeString!S)
+size_t column(S)(S str, size_t tabsize = 8) @safe pure if (isSomeString!S)
 {
     size_t column;
 
@@ -3654,7 +3654,7 @@ unittest
  */
 
 S wrap(S)(S s, size_t columns = 80, S firstindent = null,
-        S indent = null, size_t tabsize = 8) if (isSomeString!S)
+        S indent = null, size_t tabsize = 8) @safe pure if (isSomeString!S)
 {
     typeof(s.dup) result;
     int spaces;
@@ -3715,7 +3715,7 @@ S wrap(S)(S s, size_t columns = 80, S firstindent = null,
     }
     result ~= '\n';
 
-    return assumeUnique(result);
+    return result;
 }
 
 unittest
@@ -3767,13 +3767,13 @@ unittest
  *
  */
 
-S outdent(S)(S str) if(isSomeString!S)
+S outdent(S)(S str) @safe pure if(isSomeString!S)
 {
     return str.splitLines(KeepTerminator.yes).outdent().join();
 }
 
 /// ditto
-S[] outdent(S)(S[] lines) if(isSomeString!S)
+S[] outdent(S)(S[] lines) @safe pure if(isSomeString!S)
 {
     if (lines.empty)
     {
