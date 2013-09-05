@@ -2843,7 +2843,7 @@ unittest
  * repeated with the one to its immediate left.
  */
 
-S succ(S)(S s) if (isSomeString!S)
+S succ(S)(S s) @safe pure if (isSomeString!S)
 {
     if (s.length && std.ascii.isAlphaNum(s[$ - 1]))
     {
@@ -2872,7 +2872,7 @@ S succ(S)(S s) if (isSomeString!S)
                     auto t = new typeof(r[0])[r.length + 1];
                     t[0] = cast(char) carry;
                     t[1 .. $] = r[];
-                    return assumeUnique(t);
+                    return t;
                 }
                 i--;
                 break;
@@ -2880,7 +2880,7 @@ S succ(S)(S s) if (isSomeString!S)
             default:
                 if (std.ascii.isAlphaNum(c))
                     r[i]++;
-                return cast(S) r;
+                return r;
             }
         }
     }
