@@ -3362,7 +3362,7 @@ unittest
  *  but this one is the standard one.
  */
 
-char[] soundex(const(char)[] string, char[] buffer = null)
+char[] soundex(const(char)[] string, char[] buffer = null) @safe pure nothrow
 in
 {
     assert(!buffer || buffer.length >= 4);
@@ -3431,7 +3431,7 @@ body
     return buffer;
 }
 
-unittest
+@safe pure nothrow unittest
 {
     assertCTFEable!(
     {
