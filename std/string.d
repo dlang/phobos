@@ -2826,7 +2826,7 @@ S1 munch(S1, S2)(ref S1 s, S2 pattern)
     return s[0 .. j];
 }
 
-unittest
+@safe pure unittest
 {
     string s = "123abc";
     string t = munch(s, "0123456789");
