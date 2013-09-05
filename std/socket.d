@@ -1766,13 +1766,13 @@ public:
     /**
      * Construct a new $(D Internet6Address).
      * Params:
-     *   node = an IPv6 host address string in the form described in RFC 2373,
-     *          or a host name which will be resolved using $(D getAddressInfo).
-     *   port = (optional) service name or port number.
+     *   addr    = an IPv6 host address string in the form described in RFC 2373,
+     *             or a host name which will be resolved using $(D getAddressInfo).
+     *   service = (optional) service name.
      */
-    this(in char[] node, in char[] service = null)
+    this(in char[] addr, in char[] service = null)
     {
-        auto results = getAddressInfo(node, service, AddressFamily.INET6);
+        auto results = getAddressInfo(addr, service, AddressFamily.INET6);
         assert(results.length && results[0].family == AddressFamily.INET6);
         sin6 = *cast(sockaddr_in6*)results[0].address.name;
     }
@@ -1784,19 +1784,19 @@ public:
      *          or a host name which will be resolved using $(D getAddressInfo).
      *   port = port number, may be $(D PORT_ANY).
      */
-    this(in char[] node, ushort port)
+    this(in char[] addr, ushort port)
     {
         if (port == PORT_ANY)
-            this(node);
+            this(addr);
         else
-            this(node, to!string(port));
+            this(addr, to!string(port));
     }
 
     /**
      * Construct a new $(D Internet6Address).
      * Params:
      *   addr = (optional) an IPv6 host address in host byte order, or
-                $(D ADDR_ANY).
+     *          $(D ADDR_ANY).
      *   port = port number, may be $(D PORT_ANY).
      */
     this(ubyte[16] addr, ushort port)
@@ -2920,7 +2920,9 @@ public:
      * randomly varies on the order of 10ms.
      *
      * Params:
-     *   value = The timeout duration to set. Must not be negative.
+     *   level  = The level at which a socket option is defined.
+     *   option = Either $(D SocketOption.SNDTIMEO) or $(D SocketOption.RCVTIMEO).
+     *   value  = The timeout duration to set. Must not be negative.
      *
      * Throws: $(D SocketException) if setting the options fails.
      *

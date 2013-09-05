@@ -114,10 +114,12 @@ class FileException : Exception
         in Windows, $(D_PARAM errno) in Posix).
 
         Params:
-            name = Name of file for which the error occurred.
-            msg  = Message describing the error.
-            file = The file where the error occurred.
-            line = The line where the error occurred.
+            name  = Name of file for which the error occurred.
+            errno = The error number.
+            file  = The file where the error occurred.
+                    Defaults to $(D __FILE__).
+            line  = The line where the error occurred.
+                    Defaults to $(D __LINE__).
      +/
     version(Windows) this(in char[] name,
                           uint errno = .GetLastError(),

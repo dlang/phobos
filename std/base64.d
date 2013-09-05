@@ -129,7 +129,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *
      * Params:
      *  source = an $(D InputRange) to encode.
-     *  range  = a buffer to store encoded result.
+     *  buffer = a buffer to store encoded result.
      *
      * Returns:
      *  the encoded string that slices buffer.

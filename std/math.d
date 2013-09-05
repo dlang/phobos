@@ -5486,6 +5486,7 @@ public:
  * Uses Horner's rule A(x) = $(SUB a, 0) + x($(SUB a, 1) + x($(SUB a, 2)
  *                         + x($(SUB a, 3) + ...)))
  * Params:
+ *      x =     the value to evaluate.
  *      A =     array of coefficients $(SUB a, 0), $(SUB a, 1), etc.
  */
 real poly(real x, const real[] A) @trusted pure nothrow

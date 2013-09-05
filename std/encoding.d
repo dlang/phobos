@@ -1514,6 +1514,7 @@ unittest
 
  Params:
     s = the string to be counted
+    n = the current code point index
  */
 ptrdiff_t index(E)(const(E)[] s,int n)
 in
@@ -1688,7 +1689,8 @@ body
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 
  Params:
-    c = the code point to be encoded
+    c     = the code point to be encoded
+    array = the destination array
 
  Returns:
           the number of code units written to the array
@@ -1824,7 +1826,8 @@ unittest
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 
  Params:
-    c = the code point to be encoded
+    c  = the code point to be encoded
+    dg = the delegate to invoke for each code unit
  */
 void encode(E)(dchar c, void delegate(E) dg)
 in
@@ -1905,7 +1908,7 @@ unittest
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 
  Params:
-    d = the code point to be encoded
+    c = the code point to be encoded
 
  Examples:
  --------------------------------------------------------
@@ -2152,7 +2155,8 @@ abstract class EncodingScheme
          * The input to this function MUST be a valid code point.
          *
          * Params:
-         *    c = the code point to be encoded
+         *    c      = the code point to be encoded
+         *    buffer = the destination array
          *
          * Returns:
          *    the number of ubytes written.
@@ -2340,6 +2344,7 @@ abstract class EncodingScheme
      *
      * Params:
      *    s = the string to be counted
+     *    n = the current code point index
      */
     ptrdiff_t index(const(ubyte)[] s, size_t n)
     in
