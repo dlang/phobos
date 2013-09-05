@@ -14433,7 +14433,7 @@ assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
     }
 
     ///
-    version(testStdDateTime) unittest
+    unittest
     {
         assert(TimeOfDay(0, 0, 0).toISOExtString() == "00:00:00");
         assert(TimeOfDay(12, 30, 33).toISOExtString() == "12:30:33");
