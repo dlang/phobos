@@ -14426,8 +14426,8 @@ assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
 
         Examples:
 --------------------
-assert(TimeOfDay(0, 0, 0).toISOExtString() == "000000");
-assert(TimeOfDay(12, 30, 33).toISOExtString() == "123033");
+assert(TimeOfDay(0, 0, 0).toISOExtString() == "00:00:00");
+assert(TimeOfDay(12, 30, 33).toISOExtString() == "12:30:33");
 --------------------
       +/
     string toISOExtString() const nothrow
