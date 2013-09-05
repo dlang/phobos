@@ -14423,12 +14423,6 @@ assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
 
     /++
         Converts this $(D TimeOfDay) to a string with the format HH:MM:SS.
-
-        Examples:
---------------------
-assert(TimeOfDay(0, 0, 0).toISOExtString() == "00:00:00");
-assert(TimeOfDay(12, 30, 33).toISOExtString() == "12:30:33");
---------------------
       +/
     string toISOExtString() const nothrow
     {
@@ -14436,6 +14430,13 @@ assert(TimeOfDay(12, 30, 33).toISOExtString() == "12:30:33");
             return format("%02d:%02d:%02d", _hour, _minute, _second);
         catch(Exception e)
             assert(0, "format() threw.");
+    }
+
+    ///
+    version(testStdDateTime) unittest
+    {
+        assert(TimeOfDay(0, 0, 0).toISOExtString() == "00:00:00");
+        assert(TimeOfDay(12, 30, 33).toISOExtString() == "12:30:33");
     }
 
     unittest
@@ -14448,10 +14449,6 @@ assert(TimeOfDay(12, 30, 33).toISOExtString() == "12:30:33");
             static assert(__traits(compiles, tod.toISOExtString()));
             static assert(__traits(compiles, ctod.toISOExtString()));
             static assert(__traits(compiles, itod.toISOExtString()));
-
-            //Verify Examples.
-            assert(TimeOfDay(0, 0, 0).toISOExtString() == "00:00:00");
-            assert(TimeOfDay(12, 30, 33).toISOExtString() == "12:30:33");
         }
     }
 
