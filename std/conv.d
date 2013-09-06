@@ -3706,7 +3706,11 @@ T* emplace(T)(T* chunk) @safe nothrow pure
     else
     {
         static immutable T i;
-        ()@trusted{memcpy(chunk, &i, T.sizeof);}();
+        static void trustedMemcpy(T* chunk) @trusted nothrow pure
+        {
+            memcpy(chunk, &i, T.sizeof);
+        }
+        trustedMemcpy(chunk);
     }
 
     return chunk;
