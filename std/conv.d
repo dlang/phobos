@@ -3696,10 +3696,11 @@ as $(D chunk)).
  */
 T* emplace(T)(T* chunk) @safe nothrow pure
 {
-    static assert(is(T* : void*), "Cannot emplace type " ~ T.stringof ~ " because it is qualified.");
+    static assert (is(T* : void*),
+        format("Cannot emplace a %s because it is qualified.", T.stringof));
 
-    static assert(!is(T == struct) || is(typeof({static T i;})),
-        text("Cannot emplace because ", T.stringof, ".this() is annotated with @disable."));
+    static assert (is(typeof({static T i;})),
+        format("Cannot emplace a %1$s because %1$s.this() is annotated with @disable.", T.stringof));
 
     static if (isAssignable!T && !hasElaborateAssign!T)
         *chunk = T.init;
@@ -3817,8 +3818,12 @@ as $(D chunk)).
 T* emplace(T, Args...)(T* chunk, Args args)
     if (!is(T == struct) && Args.length == 1)
 {
+    static assert (is(T* : void*),
+        format("Cannot emplace a %s because it is qualified.", T.stringof));
+
     static assert(is(typeof(*chunk = args[0])),
-        text("Don't know how to emplace a ", T.stringof, " with a ", Args[0].stringof, "."));
+        format("Don't know how to emplace a %s with a %s.", T.stringof, Args[0].stringof));
+
     //TODO FIXME: For static arrays, this uses the "postblit-then-destroy" sequence.
     //This means it will destroy unitialized data.
     //It needs to be fixed.
@@ -3867,7 +3872,8 @@ unittest
 T* emplace(T, Args...)(T* chunk, auto ref Args args)
     if (is(T == struct))
 {
-    static assert(is(T* : void*), "Cannot emplace type " ~ T.stringof ~ " because it is qualified.");
+    static assert (is(T* : void*),
+        format("Cannot emplace a %s because it is qualified.", T.stringof));
 
     static if (Args.length == 1 && is(Args[0] : T) &&
         is (typeof({T t = args[0];})) //Check for legal postblit
@@ -3907,11 +3913,11 @@ T* emplace(T, Args...)(T* chunk, auto ref Args args)
     {
         //We can't emplace. Try to diagnose a disabled postblit.
         static assert(!(Args.length == 1 && is(Args[0] : T)),
-            "struct " ~ T.stringof ~ " is not emplaceable because its copy is annotated with @disable");
+            format("Cannot emplace a %1$s because %1$s.this(this) is annotated with @disable.", T.stringof));
 
         //We can't emplace.
         static assert(false,
-            "Don't know how to emplace a " ~ T.stringof ~ " with " ~ Args[].stringof);
+            format("Don't know how to emplace a %s with %s.", T.stringof, Args[].stringof));
     }
 
     return chunk;
@@ -3932,10 +3938,11 @@ private void emplaceInitializer(T)(T* chunk)
 }
 private void emplacePostblitter(T, Arg)(ref T chunk, auto ref Arg arg)
 {
-    static assert(is(Arg : T), "emplace internal error: " ~ T.stringof ~ " " ~ Arg.stringof);
+    static assert(is(Arg : T),
+        format("emplace internal error: %s %s", T.stringof, Arg.stringof));
 
     static assert(is(typeof({T t = arg;})),
-        "struct " ~ T.stringof ~ " is not emplaceable because its copy is annotated with @disable");
+        format("Cannot emplace a %1$s because %1$s.this(this) is annotated with @disable.", T.stringof));
 
     static if (isAssignable!T && !hasElaborateAssign!T)
         chunk = arg;
@@ -3949,7 +3956,7 @@ private deprecated("Using static opCall for emplace is deprecated. Plase use emp
 void emplaceOpCaller(T, Args...)(T* chunk, auto ref Args args)
 {
     static assert (is(typeof({T t = T.opCall(args);})),
-        T.stringof ~ ".opCall does not return adequate data for construction.");
+        format("%s.opCall does not return adequate data for construction.", T.stringof));
     emplace(chunk, chunk.opCall(args));
 }
 
