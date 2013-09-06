@@ -3698,28 +3698,15 @@ T* emplace(T)(T* chunk) @safe nothrow pure
 {
     static assert(is(T* : void*), "Cannot emplace type " ~ T.stringof ~ " because it is qualified.");
 
-    static if (is(T == class))
-    {
-        *chunk = null;
-    }
-    else static if (isStaticArray!T)
-    {
-        //TODO: This can probably be optimized.
-        foreach(ref e; (*chunk)[])
-            emplace(()@trusted{return &e;}());
-    }
+    static assert(!is(T == struct) || is(typeof({static T i;})),
+        text("Cannot emplace because ", T.stringof, ".this() is annotated with @disable."));
+
+    static if (isAssignable!T && !hasElaborateAssign!T)
+        *chunk = T.init;
     else
     {
-        static assert(!is(T == struct) || is(typeof({static T i;})),
-            text("Cannot emplace because ", T.stringof, ".this() is annotated with @disable."));
-
-        static if (isAssignable!T && !hasElaborateAssign!T)
-            *chunk = T.init;
-        else
-        {
-            static immutable T i;
-            ()@trusted{memcpy(chunk, &i, T.sizeof);}();
-        }
+        static immutable T i;
+        ()@trusted{memcpy(chunk, &i, T.sizeof);}();
     }
 
     return chunk;
