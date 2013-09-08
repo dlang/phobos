@@ -803,7 +803,7 @@ T toImpl(T, S)(S value)
     }
     else static if (isIntegral!S && !is(S == enum))
     {
-        // other integral-to-string conversions with default radix 
+        // other integral-to-string conversions with default radix
         return toImpl!(T, S)(value, 10);
     }
     else static if (is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[]))
@@ -824,11 +824,70 @@ T toImpl(T, S)(S value)
         // It is unsafe because we cannot guarantee that the pointer is null terminated.
         return value ? cast(T) value[0 .. strlen(value)].dup : cast(string)null;
     }
+    else static if (isSomeString!T && is(S == enum) && isSwitchable!(OriginalType!S))
+    {
+        // generate a switch statement with string literals instead of allocating memory
+        // @@@BUG@@@ 10950 workaround: [CTFE] enum "char[]" not correctly duplicated when used.
+        enum rep(S val) = mixin(format(`"%s"%s`,
+            toStr!string(val), charLiteralSuffix!(ElementEncodingType!T)));
+
+        switch (value)
+        {
+            foreach (member; NoDuplicates!(EnumMembers!S))
+            {
+                case member:
+                    return to!T(rep!member);
+            }
+
+            default:
+                return toStr!T(value);
+        }
+    }
     else
     {
         // other non-string values runs formatting
         return toStr!T(value);
     }
+}
+
+/*
+    Check whether type $(D T) can be used in a switch statement.
+    This is useful for compile-time generation of switch case statements.
+*/
+private template isSwitchable(E)
+{
+    enum bool isSwitchable = is(typeof({
+        switch (E.init) { default: }
+    }));
+}
+
+//
+unittest
+{
+    static assert(isSwitchable!int);
+    static assert(!isSwitchable!double);
+    static assert(!isSwitchable!real);
+}
+
+/*
+    Get the char literal suffix for some char type $(D T),
+    to be used as a suffix to create a string literal
+    with the element encoding type $(D T).
+*/
+private template charLiteralSuffix(T) if (isSomeChar!T)
+{
+    alias literalSuffix = TypeTuple!('c', 'w', 'd');
+    alias charTypes = TypeTuple!(char, wchar, dchar);
+    enum charLiteralSuffix = literalSuffix[staticIndexOf!(Unqual!T, charTypes)];
+}
+
+//
+unittest
+{
+    static assert(charLiteralSuffix!char == 'c');
+    static assert(charLiteralSuffix!wchar == 'w');
+    static assert(charLiteralSuffix!dchar == 'd');
+    static assert(charLiteralSuffix!(immutable(char)) == 'c');
 }
 
 /*@safe pure */unittest
@@ -1074,6 +1133,34 @@ unittest
     assert(to! string(o) == "cast(EU)5"c);
     assert(to!wstring(o) == "cast(EU)5"w);
     assert(to!dstring(o) == "cast(EU)5"d);
+}
+
+unittest
+{
+    enum E
+    {
+        foo,
+        bar,
+        doo = foo,  // check duplicate switch statements
+    }
+
+    foreach (S; TypeTuple!(string, wstring, dstring, const(char[]), const(wchar[]), const(dchar[])))
+    {
+        auto s1 = to!S(E.foo);
+        auto s2 = to!S(E.foo);
+        assert(s1 == s2);
+        // ensure we don't allocate when it's unnecessary
+        assert(s1 is s2);
+    }
+
+    foreach (S; TypeTuple!(char[], wchar[], dchar[]))
+    {
+        auto s1 = to!S(E.foo);
+        auto s2 = to!S(E.foo);
+        assert(s1 == s2);
+        // ensure each mutable array is unique
+        assert(s1 !is s2);
+    }
 }
 
 /// ditto
@@ -3827,8 +3914,8 @@ T* emplace(T, Args...)(T* chunk, auto ref Args args)
     }
     else
     {
-        //We can't emplace. Try to diagnose a disabled postblit. 
-        static assert(!(Args.length == 1 && is(Args[0] : T)), 
+        //We can't emplace. Try to diagnose a disabled postblit.
+        static assert(!(Args.length == 1 && is(Args[0] : T)),
             "struct " ~ T.stringof ~ " is not emplaceable because its copy is annotated with @disable");
 
         //We can't emplace.
@@ -3966,7 +4053,7 @@ unittest
     static struct S
     {
         int i;
-    
+
         this(S other){assert(false);}
         this(int i){this.i = i;}
         this(this){}
@@ -4055,7 +4142,7 @@ unittest
     static assert( __traits(compiles, emplace(&ss2)));
     static assert(!__traits(compiles, emplace(&ss2, SS2.init)));
 
-    
+
     // SS1 sss1 = s1;      //This doesn't compile
     // SS1 sss1 = SS1(s1); //This doesn't compile
     // So emplace shouldn't compile either
@@ -4349,10 +4436,10 @@ unittest //http://forum.dlang.org/thread/nxbdgtdlmwscocbiypjs@forum.dlang.org
     assert(&b2);
     auto b3 = B(SysTime(0, UTC()), 1, A(1));
     assert(&b3);
-    
+
     import std.array;
     auto arr = [b2, b3];
-    
+
     assert(arr[0].j == 1);
     assert(arr[1].j == 1);
     auto a2 = arr.array(); // << bang, invariant is raised, also if b2 and b3 are good
