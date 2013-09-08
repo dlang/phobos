@@ -143,9 +143,12 @@ const(void)[] compress(const(void)[] buf)
 
 /*********************************************
  * Decompresses the data in srcbuf[].
- * Params: destlen = size of the uncompressed data.
- * It need not be accurate, but the decompression will be faster if the exact
- * size is supplied.
+ * Params:
+ *  srcbuf  = buffer containing the compressed data.
+ *  destlen = size of the uncompressed data.
+ *            It need not be accurate, but the decompression will be faster
+ *            if the exact size is supplied.
+ *  winbits = the base two logarithm of the maximum window size.
  * Returns: the decompressed data.
  */
 

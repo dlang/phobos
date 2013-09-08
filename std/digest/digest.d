@@ -650,7 +650,7 @@ unittest
  * function.
  *
  * Params:
- *  Order= the order in which the bytes are processed (see $(LREF toHexString))
+ *  order= the order in which the bytes are processed (see $(LREF toHexString))
  *  range= an $(D InputRange) with $(D ElementType) $(D ubyte), $(D ubyte[]) or $(D ubyte[num])
  *
  *
@@ -679,7 +679,7 @@ unittest
  * This overload of the hexDigest function handles arrays.
  *
  * Params:
- *  Order= the order in which the bytes are processed (see $(LREF toHexString))
+ *  order= the order in which the bytes are processed (see $(LREF toHexString))
  *  data= one or more arrays of any type
  *
  * Examples:
