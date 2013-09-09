@@ -1803,7 +1803,7 @@ public alias InversionList!GcPolicy CodepointSet;
 
 /**
     The recommended type of $(XREF _typecons, Tuple)
-    to represent [a, b) intervals of $(CODEPOINTS). As used in $(LREF InversionList).
+    to represent [a, b$(RPAREN) intervals of $(CODEPOINTS). As used in $(LREF InversionList).
     Any interval type should pass $(LREF isIntegralPair) trait.
 */
 public struct CodepointInterval {
@@ -2226,7 +2226,7 @@ public:
             formattedWrite(sink, " [%d..%d)", i.a, i.b);
     }
     /**
-        Add an interval [a, b) to this set.
+        Add an interval [a, b$(RPAREN) to this set.
 
         Example:
         ---
@@ -5537,10 +5537,10 @@ unittest
     assert(sicmp("ΌΎ", "όύ") == 0);
     // things like the following won't get matched as equal
     // Greek small letter iota with dialytika and tonos
-    assert(sicmp("ΐ", "\u03B9\u0308\u0301" != 0);
+    assert(sicmp("ΐ", "\u03B9\u0308\u0301") != 0);
 
     // while icmp has no problem with that
-    assert(icmp("ΐ", "\u03B9\u0308\u0301" == 0);
+    assert(icmp("ΐ", "\u03B9\u0308\u0301") == 0);
     assert(icmp("ΌΎ", "όύ") == 0);
     ---
 +/
