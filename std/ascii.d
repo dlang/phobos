@@ -32,8 +32,8 @@ immutable fullHexDigits  = "0123456789ABCDEFabcdef";     /// 0..9A..Fa..f
 immutable digits         = "0123456789";                 /// 0..9
 immutable octalDigits    = "01234567";                   /// 0..7
 immutable lowercase      = "abcdefghijklmnopqrstuvwxyz"; /// a..z
-immutable letters        = uppercase ~ lowercase;        /// A..Za..z
 immutable uppercase      = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; /// A..Z
+immutable letters        = uppercase ~ lowercase;        /// A..Za..z
 immutable whitespace     = " \t\v\r\n\f";                /// ASCII whitespace
 
 /**
