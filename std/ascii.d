@@ -318,7 +318,7 @@ unittest
     where it's a built-in type, $(D Unqual!C) is returned, whereas if it's a
     user-defined type, $(D dchar) is returned.
   +/
-auto toLower(C)(C c)
+auto toLower(C)(C c) @safe pure nothrow
     if(is(C : dchar))
 {
     import std.traits : isScalarType, Unqual;
@@ -367,7 +367,7 @@ unittest
     where it's a built-in type, $(D Unqual!C) is returned, whereas if it's a
     user-defined type, $(D dchar) is returned.
   +/
-auto toUpper(C)(C c)
+auto toUpper(C)(C c) @safe pure nothrow
     if(is(C : dchar))
 {
     import std.traits : isScalarType, Unqual;
