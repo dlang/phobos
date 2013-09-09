@@ -25,11 +25,10 @@
   +/
 module std.ascii;
 
-import std.traits;
-
 version(unittest)
 {
     import std.range;
+    import std.traits;
     import std.typetuple;
 }
 
@@ -323,6 +322,8 @@ unittest
 auto toLower(C)(C c)
     if(is(C : dchar))
 {
+    import std.traits : isScalarType, Unqual;
+    
     static if(isScalarType!C)
         return isUpper(c) ? cast(Unqual!C)(c + 'a' - 'A') : cast(Unqual!C)c;
     else
@@ -370,6 +371,8 @@ unittest
 auto toUpper(C)(C c)
     if(is(C : dchar))
 {
+    import std.traits : isScalarType, Unqual;
+    
     static if(isScalarType!C)
         return isLower(c) ? cast(Unqual!C)(c - ('a' - 'A')) : cast(Unqual!C)c;
     else
