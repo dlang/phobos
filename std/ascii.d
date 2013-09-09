@@ -26,15 +26,15 @@
 module std.ascii;
 
 
-enum hexDigits      = "0123456789ABCDEF";           /// 0..9A..F
-enum lowerHexDigits = "0123456789abcdef";           /// 0..9a..f
-enum fullHexDigits  = "0123456789ABCDEFabcdef";     /// 0..9A..Fa..f
-enum digits         = "0123456789";                 /// 0..9
-enum octalDigits    = "01234567";                   /// 0..7
-enum lowercase      = "abcdefghijklmnopqrstuvwxyz"; /// a..z
-enum letters        = uppercase ~ lowercase;        /// A..Za..z
-enum uppercase      = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; /// A..Z
-enum whitespace     = " \t\v\r\n\f";                /// ASCII whitespace
+immutable hexDigits      = "0123456789ABCDEF";           /// 0..9A..F
+immutable lowerHexDigits = "0123456789abcdef";           /// 0..9a..f
+immutable fullHexDigits  = "0123456789ABCDEFabcdef";     /// 0..9A..Fa..f
+immutable digits         = "0123456789";                 /// 0..9
+immutable octalDigits    = "01234567";                   /// 0..7
+immutable lowercase      = "abcdefghijklmnopqrstuvwxyz"; /// a..z
+immutable letters        = uppercase ~ lowercase;        /// A..Za..z
+immutable uppercase      = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; /// A..Z
+immutable whitespace     = " \t\v\r\n\f";                /// ASCII whitespace
 
 /**
 Letter case specifier.
@@ -48,12 +48,12 @@ enum LetterCase : bool
 version(Windows)
 {
     /// Newline sequence for this system.
-    enum newline = "\r\n";
+    immutable newline = "\r\n";
 }
 else version(Posix)
 {
     /// Newline sequence for this system.
-    enum newline = "\n";
+    immutable newline = "\n";
 }
 else
     static assert(0, "Unsupported OS");
@@ -445,7 +445,7 @@ enum
     _ALP = _UC | _LC,
 }
 
-enum ubyte[128] _ctype =
+immutable ubyte[128] _ctype =
 [
     _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
     _CTL,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL,_CTL,
