@@ -788,9 +788,9 @@ struct BitArray
         assert(a != d);
         assert(a == e);
 
-        for (int i = 1; i < 256; ++i)
+        foreach (i; 1 .. 256)
         {
-            for (int j = 0; j < i; ++j)
+            foreach (j; 0 .. i)
             {
                 BitArray a1, a2;
                 a1.length = i;
