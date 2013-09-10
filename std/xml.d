@@ -1156,7 +1156,7 @@ class Tag
             {
                 string s = "<" ~ name;
                 foreach(key,val;attr)
-                    s ~= format(" %s=\"%s\"",key,decode(val,DecodeMode.LOOSE));
+                    s ~= format(" %s=\"%s\"",key,encode(val));
                 return s;
             }
 
@@ -2729,6 +2729,13 @@ EOS";
         assert(e.text() == "What & Up Second");
     };
     xml.parse();
+}
+
+unittest
+{
+    string s = `<tag attr="&quot;value&gt;" />`;
+    auto doc = new Document(s);
+    assert(doc.toString() == s);
 }
 
 /** The base class for exceptions thrown by this module */
