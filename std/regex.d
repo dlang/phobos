@@ -5908,7 +5908,7 @@ public auto match(R, RegEx)(R input, RegEx re)
     )
 
     Returns: 
-    $(LREF Captures) containing matching together with all submatches 
+    $(LREF Captures) containing the extent of a match together with all submatches 
     if there was a match, otherwise an empty $(LREF Captures) object.
 +/
 public auto matchFirst(R, RegEx)(R input, RegEx re)
@@ -5931,9 +5931,12 @@ public auto matchFirst(R, RegEx)(R input, RegEx re)
 }
 
 /++
-    Find the first (leftmost) slice of the $(D input) that 
-    matches the pattern $(D re). This function picks the most suitable
-    regular expression engine depending on the pattern properties.
+    Initiate a search for all non-overlapping matches to the pattern $(D re)
+    in the given $(D input). The result is a lazy range of matches generated 
+    as they are encountered in the input going left to right.
+
+    This function picks the most suitable regular expression engine 
+    depending on the pattern properties.
 
     $(D re) parameter can be one of three types:
     $(UL
@@ -5945,8 +5948,8 @@ public auto matchFirst(R, RegEx)(R input, RegEx re)
     )
 
     Returns: 
-    $(LREF Captures) containing matching together with all submatches 
-    if there was a match, otherwise an empty $(LREF Captures) object.
+    $(LREF RegexMatch) object that represents matcher state 
+    after the first match was found or an empty one if not present. 
 +/
 public auto matchAll(R, RegEx)(R input, RegEx re)
     if(isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
