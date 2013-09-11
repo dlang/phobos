@@ -305,16 +305,6 @@ without initializing its elements.  This can be a useful optimization if every
 element will be immediately initialized.  $(D T) may be a multidimensional
 array.  In this case sizes may be specified for any number of dimensions from 1
 to the number in $(D T).
-
-Examples:
----
-double[] arr = uninitializedArray!(double[])(100);
-assert(arr.length == 100);
-
-double[][] matrix = uninitializedArray!(double[][])(42, 31);
-assert(matrix.length == 42);
-assert(matrix[0].length == 31);
----
 */
 auto uninitializedArray(T, I...)(I sizes)
 if(allSatisfy!(isIntegral, I))
@@ -322,6 +312,7 @@ if(allSatisfy!(isIntegral, I))
     return arrayAllocImpl!(false, T, I)(sizes);
 }
 
+///
 unittest
 {
     double[] arr = uninitializedArray!(double[])(100);
