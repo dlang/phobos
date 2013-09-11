@@ -824,24 +824,38 @@ T toImpl(T, S)(S value)
         // It is unsafe because we cannot guarantee that the pointer is null terminated.
         return value ? cast(T) value[0 .. strlen(value)].dup : cast(string)null;
     }
-    else static if (isSomeString!T && is(S == enum) && isSwitchable!(OriginalType!S))
+    else static if (isSomeString!T && is(S == enum))
     {
-        // generate a switch statement with string literals instead of allocating memory
-        // @@@BUG@@@ 10950 workaround: [CTFE] enum "char[]" not correctly duplicated when used.
-        enum rep(S val) = mixin(format(`"%s"%s`,
-            toStr!string(val), charLiteralSuffix!(ElementEncodingType!T)));
-
-        switch (value)
+        static if (isSwitchable!(OriginalType!S) && EnumMembers!S.length <= 50)
         {
-            foreach (member; NoDuplicates!(EnumMembers!S))
+            switch(value)
             {
-                case member:
-                    return to!T(rep!member);
+                foreach (I, member; NoDuplicates!(EnumMembers!S))
+                {
+                    case member:
+                        return to!T(enumRep!(immutable(T), S, I));
+                }
+                default:
             }
-
-            default:
-                return toStr!T(value);
         }
+        else
+        {
+            foreach (I, member; EnumMembers!S)
+            {
+                if (value == member)
+                    return to!T(enumRep!(immutable(T), S, I));
+            }
+        }
+
+        //Default case, delegate to format
+        //Note: we don't call toStr directly, to avoid duplicate work.
+        auto app = appender!T();
+        app.put("cast(");
+        app.put(S.stringof);
+        app.put(')');
+        FormatSpec!char f;
+        formatValue(app, cast(OriginalType!S)value, f);
+        return app.data;
     }
     else
     {
@@ -869,25 +883,13 @@ unittest
     static assert(!isSwitchable!real);
 }
 
-/*
-    Get the char literal suffix for some char type $(D T),
-    to be used as a suffix to create a string literal
-    with the element encoding type $(D T).
-*/
-private template charLiteralSuffix(T) if (isSomeChar!T)
+//Static representation of the index I of the enum S,
+//In representation T.
+//T must be an immutable string (avoids un-necessary initializations).
+private template enumRep(T, S, size_t I)
+if (is (T == immutable) && isExactSomeString!T && is(S == enum))
 {
-    alias literalSuffix = TypeTuple!('c', 'w', 'd');
-    alias charTypes = TypeTuple!(char, wchar, dchar);
-    enum charLiteralSuffix = literalSuffix[staticIndexOf!(Unqual!T, charTypes)];
-}
-
-//
-unittest
-{
-    static assert(charLiteralSuffix!char == 'c');
-    static assert(charLiteralSuffix!wchar == 'w');
-    static assert(charLiteralSuffix!dchar == 'd');
-    static assert(charLiteralSuffix!(immutable(char)) == 'c');
+    static T enumRep = to!T(__traits(allMembers, S)[I]);
 }
 
 /*@safe pure */unittest
@@ -1141,7 +1143,7 @@ unittest
     {
         foo,
         bar,
-        doo = foo,  // check duplicate switch statements
+        doo = foo, // check duplicate switch statements
     }
 
     foreach (S; TypeTuple!(string, wstring, dstring, const(char[]), const(wchar[]), const(dchar[])))
