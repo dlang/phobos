@@ -23,12 +23,6 @@ Returns a newly-allocated dynamic array consisting of a copy of the
 input range, static array, dynamic array, or class or struct with an
 $(D opApply) function $(D r).  Note that narrow strings are handled as
 a special case in an overload.
-
-Example:
-----
-auto a = array([1, 2, 3, 4, 5][]);
-assert(a == [ 1, 2, 3, 4, 5 ]);
-----
  */
 ForeachType!Range[] array(Range)(Range r)
 if (isIterable!Range && !isNarrowString!Range)
@@ -72,6 +66,7 @@ if (isIterable!Range && !isNarrowString!Range)
     }
 }
 
+///
 @safe pure nothrow unittest
 {
     auto a = array([1, 2, 3, 4, 5][]);
