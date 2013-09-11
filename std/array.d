@@ -227,14 +227,6 @@ unittest
 /**
 Returns a newly allocated associative array out of elements of the input range,
 which must be a range of tuples (Key, Value).
-
-Example:
-----
-auto a = assocArray(zip([0, 1, 2], ["a", "b", "c"]));
-assert(a == [0:"a", 1:"b", 2:"c"]);
-auto b = assocArray([ tuple("foo", "bar"), tuple("baz", "quux") ]);
-assert(b == ["foo":"bar", "baz":"quux"]);
-----
  */
 
 auto assocArray(Range)(Range r)
@@ -249,19 +241,23 @@ auto assocArray(Range)(Range r)
     return aa;
 }
 
-unittest
+///
+/*@safe*/ pure /*nothrow*/ unittest
+{
+    auto a = assocArray(zip([0, 1, 2], ["a", "b", "c"]));
+    assert(is(typeof(a) == string[int]));
+    assert(a == [0:"a", 1:"b", 2:"c"]);
+
+    auto b = assocArray([ tuple("foo", "bar"), tuple("baz", "quux") ]);
+    assert(is(typeof(b) == string[string]));
+    assert(b == ["foo":"bar", "baz":"quux"]);
+}
+
+version(unittest)
 {
     static assert(!__traits(compiles, [ tuple("foo", "bar", "baz") ].assocArray()));
     static assert(!__traits(compiles, [ tuple("foo") ].assocArray()));
     static assert( __traits(compiles, [ tuple("foo", "bar") ].assocArray()));
-
-    auto aa1 = [ tuple("foo", "bar"), tuple("baz", "quux") ].assocArray();
-    assert(is(typeof(aa1) == string[string]));
-    assert(aa1 == ["foo":"bar", "baz":"quux"]);
-
-    auto aa2 = zip([0, 1, 2], ["a", "b", "c"]).assocArray();
-    assert(is(typeof(aa2) == string[int]));
-    assert(aa2 == [0:"a", 1:"b", 2:"c"]);
 }
 
 private template blockAttribute(T)
