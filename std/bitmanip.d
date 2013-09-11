@@ -39,7 +39,7 @@ version(unittest)
     import std.typetuple;
 }
 
-import core.stdc.stdio;
+//import core.stdc.stdio;
 
 
 private string myToStringx(ulong n)
@@ -749,7 +749,7 @@ struct BitArray
      */
     const bool opEquals(const ref BitArray a2)
     {
-        puts("in opEquals");
+        //puts("in opEquals");
         int i;
 
         if (this.length != a2.length)
@@ -764,8 +764,8 @@ struct BitArray
         }
 
         n = this.length & (bitsPerSizeT-1);
-        size_t mask = (1 << n) - 1;
-        printf("i = %d, n = %d, mask = %x, %x, %x\n", i, n, mask, mask ? p1[i] : -1, mask ? p2[i] : -1);
+        size_t mask = (cast(size_t)1 << n) - 1;
+        //printf("i = %d, n = %d, mask = %x, %x, %x\n", i, n, mask, mask ? p1[i] : -1, mask ? p2[i] : -1);
         return (mask == 0) || (p1[i] & mask) == (p2[i] & mask);
     }
 
