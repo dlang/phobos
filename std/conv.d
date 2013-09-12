@@ -785,16 +785,21 @@ T toImpl(T, S)(S value)
     static if (isExactSomeString!S && value[0].sizeof == ElementEncodingType!T.sizeof)
     {
         // string-to-string with incompatible qualifier conversion
-        static if (is(ElementEncodingType!T == immutable))
+        try ///@@@5700@@@ - Allow dup in nothrow functions
         {
-            // conversion (mutable|const) -> immutable
-            return value.idup;
+            static if (is(ElementEncodingType!T == immutable))
+            {
+                // conversion (mutable|const) -> immutable
+                return value.idup;
+            }
+            else
+            {
+                // conversion (immutable|const) -> mutable
+                return value.dup;
+            }
         }
-        else
-        {
-            // conversion (immutable|const) -> mutable
-            return value.dup;
-        }
+        catch (Exception e)
+            assert(0, e.msg);
     }
     else static if (isExactSomeString!S)
     {
@@ -929,6 +934,25 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
             assert(s1 == to!(T[])(s3));
             auto s4 = to!(immutable(U)[])(s1);
             assert(s1 == to!(T[])(s4));
+        }
+    }
+}
+
+@safe pure nothrow unittest
+{
+    // string to same string conversion.
+    foreach (C; TypeTuple!(char, wchar, dchar))
+    {
+        alias Qualified = TypeTuple!(C[], const(C)[], immutable(C)[]);
+        foreach (S1; Qualified)
+        {
+            enum root = to!(immutable(C)[])("hello!");
+            foreach (S2; Qualified)
+            {
+                S1 s1 = to!S1(root);
+                S2 s2 = to!S2(s1);
+                assert(s1 == s2);
+            }
         }
     }
 }
