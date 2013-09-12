@@ -830,8 +830,13 @@ version(none) unittest
  * This wrapper function documents commitment on the part of the caller that
  * the appropriate steps have been taken to avoid whatever conditions may
  * trigger an exception during the evaluation of $(D expr).  If it turns out
- * that the expression $(I does) throw at runtime, the wrapper will terminate
- * the program with an $(D AssertError).
+ * that the expression $(I does) throw at runtime, the wrapper will throw an
+ * $(D AssertError).
+ *
+ * (Note that $(D Throwable) objects such as $(D AssertError) that do not
+ * subclass $(D Exception) may be thrown even from $(D nothrow) functions,
+ * since they are considered to be serious runtime problems that cannot be
+ * recovered from.)
  */
 T assumeWontThrow(T)(lazy T expr,
                      string msg = null,
