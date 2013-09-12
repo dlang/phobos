@@ -824,6 +824,72 @@ version(none) unittest
 }
 
 /**
+ * Wraps a possibly-throwing expression in a $(D nothrow) wrapper so that it
+ * can be called by a $(D nothrow) function.
+ *
+ * This wrapper function documents commitment on the part of the caller that
+ * the appropriate steps have been taken to avoid whatever conditions may
+ * trigger an exception during the evaluation of $(D expr).  If it turns out
+ * that the expression $(I does) throw at runtime, the wrapper will terminate
+ * the program with an $(D AssertError).
+ */
+T assumeWontThrow(T)(lazy T expr,
+                     string msg = null,
+                     string file = __FILE__,
+                     size_t line = __LINE__) nothrow
+{
+    try
+    {
+        return expr;
+    }
+    catch(Exception e)
+    {
+        immutable tail = msg.empty ? "." : ": " ~ msg;
+        throw new AssertError("assumeWontThrow failed: Expression did throw" ~
+                              tail, file, line);
+    }
+}
+
+///
+unittest
+{
+    import std.math : sqrt;
+
+    // This function may throw.
+    int squareRoot(int x)
+    {
+        if (x < 0)
+            throw new Exception("Tried to take root of negative number");
+        return cast(int)sqrt(cast(double)x);
+    }
+
+    // This function never throws.
+    int computeLength(int x, int y) nothrow
+    {
+        // Since x*x + y*y is always positive, we can safely assume squareRoot
+        // won't throw, and use it to implement this nothrow function. If it
+        // does throw (e.g., if x*x + y*y overflows a 32-bit value), then the
+        // program will terminate.
+        return assumeWontThrow(squareRoot(x*x + y*y));
+    }
+
+    assert(computeLength(3, 4) == 5);
+}
+
+unittest
+{
+    void alwaysThrows()
+    {
+        throw new Exception("I threw up");
+    }
+    void bad() nothrow
+    {
+        assumeWontThrow(alwaysThrows());
+    }
+    assertThrown!AssertError(bad());
+}
+
+/**
 Returns $(D true) if $(D source)'s representation embeds a pointer
 that points to $(D target)'s representation or somewhere inside
 it.
