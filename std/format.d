@@ -121,70 +121,72 @@ private alias enforceFmt = enforceEx!FormatException;
 
    The format string has the following grammar:
 
-$(PRE
-$(I FormatString):
-    $(I FormatStringItem)*
-$(I FormatStringItem):
-    $(B '%%')
-    $(B '%') $(I Position) $(I Flags) $(I Width) $(I Precision) $(I FormatChar)
-    $(B '%$(LPAREN)') $(I FormatString) $(B '%$(RPAREN)')
-    $(I OtherCharacterExceptPercent)
-$(I Position):
-    $(I empty)
-    $(I Integer) $(B '$')
-$(I Flags):
-    $(I empty)
-    $(B '-') $(I Flags)
-    $(B '+') $(I Flags)
-    $(B '#') $(I Flags)
-    $(B '0') $(I Flags)
-    $(B ' ') $(I Flags)
-$(I Width):
-    $(I empty)
-    $(I Integer)
-    $(B '*')
-$(I Precision):
-    $(I empty)
-    $(B '.')
-    $(B '.') $(I Integer)
-    $(B '.*')
-$(I Integer):
-    $(I Digit)
-    $(I Digit) $(I Integer)
-$(I Digit):
-    $(B '0')|$(B '1')|$(B '2')|$(B '3')|$(B '4')|$(B '5')|$(B '6')|$(B '7')|$(B '8')|$(B '9')
-$(I FormatChar):
-    $(B 's')|$(B 'c')|$(B 'b')|$(B 'd')|$(B 'o')|$(B 'x')|$(B 'X')|$(B 'e')|$(B 'E')|$(B 'f')|$(B 'F')|$(B 'g')|$(B 'G')|$(B 'a')|$(B 'A')
-)
+    $(PRE
+        $(I FormatString):
+            $(I FormatStringItem)*
+        $(I FormatStringItem):
+            $(B '%%')
+            $(B '%') $(I Position) $(I Flags) $(I Width) $(I Precision) $(I FormatChar)
+            $(B '%$(LPAREN)') $(I FormatString) $(B '%$(RPAREN)')
+            $(I OtherCharacterExceptPercent)
+        $(I Position):
+            $(I empty)
+            $(I Integer) $(B '$')
+        $(I Flags):
+            $(I empty)
+            $(B '-') $(I Flags)
+            $(B '+') $(I Flags)
+            $(B '#') $(I Flags)
+            $(B '0') $(I Flags)
+            $(B ' ') $(I Flags)
+        $(I Width):
+            $(I empty)
+            $(I Integer)
+            $(B '*')
+        $(I Precision):
+            $(I empty)
+            $(B '.')
+            $(B '.') $(I Integer)
+            $(B '.*')
+        $(I Integer):
+            $(I Digit)
+            $(I Digit) $(I Integer)
+        $(I Digit):
+            $(B '0')|$(B '1')|$(B '2')|$(B '3')|$(B '4')|$(B '5')|$(B '6')|$(B '7')|$(B '8')|$(B '9')
+        $(I FormatChar):
+            $(B 's')|$(B 'c')|$(B 'b')|$(B 'd')|$(B 'o')|$(B 'x')|$(B 'X')|$(B 'e')|$(B 'E')|$(B 'f')|$(B 'F')|$(B 'g')|$(B 'G')|$(B 'a')|$(B 'A')
+    )
 
-    $(BOOKTABLE Flags affect formatting depending on the specifier as
-    follows., $(TR $(TH Flag) $(TH Types&nbsp;affected) $(TH Semantics))
+    $(BOOKTABLE
+        Flags affect formatting depending on the specifier as
+        follows., $(TR $(TH Flag) $(TH Types&nbsp;affected) $(TH Semantics))
 
-    $(TR $(TD $(B '-')) $(TD numeric) $(TD Left justify the result in
-        the field.  It overrides any $(B 0) flag.))
+        $(TR $(TD $(B '-')) $(TD numeric) $(TD Left justify the result in
+            the field.  It overrides any $(B 0) flag.))
 
-    $(TR $(TD $(B '+')) $(TD numeric) $(TD Prefix positive numbers in
-    a signed conversion with a $(B +).  It overrides any $(I space)
-    flag.))
+        $(TR $(TD $(B '+')) $(TD numeric) $(TD Prefix positive numbers in
+        a signed conversion with a $(B +).  It overrides any $(I space)
+        flag.))
 
-    $(TR $(TD $(B '#')) $(TD integral ($(B 'o'))) $(TD Add to
-    precision as necessary so that the first digit of the octal
-    formatting is a '0', even if both the argument and the $(I
-    Precision) are zero.))
+        $(TR $(TD $(B '#')) $(TD integral ($(B 'o'))) $(TD Add to
+        precision as necessary so that the first digit of the octal
+        formatting is a '0', even if both the argument and the $(I
+        Precision) are zero.))
 
-    $(TR $(TD $(B '#')) $(TD integral ($(B 'x'), $(B 'X'))) $(TD If
-       non-zero, prefix result with $(B 0x) ($(B 0X)).))
+        $(TR $(TD $(B '#')) $(TD integral ($(B 'x'), $(B 'X'))) $(TD If
+           non-zero, prefix result with $(B 0x) ($(B 0X)).))
 
-    $(TR $(TD $(B '#')) $(TD floating) $(TD Always insert the decimal
-       point and print trailing zeros.))
+        $(TR $(TD $(B '#')) $(TD floating) $(TD Always insert the decimal
+           point and print trailing zeros.))
 
-    $(TR $(TD $(B '0')) $(TD numeric) $(TD Use leading
-    zeros to pad rather than spaces (except for the floating point
-    values $(D nan) and $(D infinity)).  Ignore if there's a $(I
-    Precision).))
+        $(TR $(TD $(B '0')) $(TD numeric) $(TD Use leading
+        zeros to pad rather than spaces (except for the floating point
+        values $(D nan) and $(D infinity)).  Ignore if there's a $(I
+        Precision).))
 
-    $(TR $(TD $(B ' ')) $(TD numeric) $(TD Prefix positive
-    numbers in a signed conversion with a space.))
+        $(TR $(TD $(B ' ')) $(TD numeric) $(TD Prefix positive
+        numbers in a signed conversion with a space.))
+    )
 
     <dt>$(I Width)
     <dd>
