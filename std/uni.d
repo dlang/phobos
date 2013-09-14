@@ -3949,7 +3949,7 @@ unittest // codepointTrie example
     // create a temporary associative array (AA)
     LuckFactor[dchar] map;
     foreach(ch; set.byCodepoint)
-        map[ch] = luckFactor(ch);
+        map[ch] = LuckFactor(luckFactor(ch));
 
     // bits per stage are chosen randomly, fell free to optimize
     auto trie = codepointTrie!(LuckFactor, 8, 5, 8)(map);
