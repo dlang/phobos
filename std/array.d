@@ -693,16 +693,6 @@ Returns the overlapping portion, if any, of two arrays. Unlike $(D
 equal), $(D overlap) only compares the pointers in the ranges, not the
 values referred by them. If $(D r1) and $(D r2) have an overlapping
 slice, returns that slice. Otherwise, returns the null slice.
-
-Example:
-----
-int[] a = [ 10, 11, 12, 13, 14 ];
-int[] b = a[1 .. 3];
-assert(overlap(a, b) == [ 11, 12 ]);
-b = b.dup;
-// overlap disappears even though the content is the same
-assert(overlap(a, b).empty);
-----
 */
 inout(T)[] overlap(T)(inout(T)[] r1, inout(T)[] r2) @trusted pure nothrow
 {
@@ -715,7 +705,18 @@ inout(T)[] overlap(T)(inout(T)[] r1, inout(T)[] r2) @trusted pure nothrow
     return b < e ? b[0 .. e - b] : null;
 }
 
-unittest
+///
+@safe pure /*nothrow*/ unittest
+{
+    int[] a = [ 10, 11, 12, 13, 14 ];
+    int[] b = a[1 .. 3];
+    assert(overlap(a, b) == [ 11, 12 ]);
+    b = b.dup;
+    // overlap disappears even though the content is the same
+    assert(overlap(a, b).empty);
+}
+
+/*@safe nothrow*/ unittest
 {
     static void test(L, R)(L l, R r)
     {
@@ -742,7 +743,7 @@ unittest
     assert(overlap(c, d.idup).empty);
 }
 
-unittest // bugzilla 9836
+@safe pure nothrow unittest // bugzilla 9836
 {
 	// range primitives for array should work with alias this types
     struct Wrapper
