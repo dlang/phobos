@@ -213,25 +213,14 @@ void assertThrown(T : Throwable = Exception, E)
                   string file = __FILE__,
                   size_t line = __LINE__)
 {
-    bool thrown = false;
-
     try
-    {
         expression();
-    }
     catch (T)
-    {
-        thrown = true;
-    }
+        return;
 
-    if (!thrown)
-    {
-        immutable tail = msg.empty ? "." : ": " ~ msg;
-
-        throw new AssertError(format("assertThrown failed: No %s was thrown%s",
-                                     T.stringof, tail),
-                              file, line);
-    }
+    throw new AssertError(format("assertThrown failed: No %s was thrown%s%s",
+                                 T.stringof, msg.empty ? "." : ": ", msg),
+                          file, line);
 }
 ///
 unittest
