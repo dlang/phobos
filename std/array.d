@@ -391,13 +391,6 @@ Implements the range interface primitive $(D empty) for built-in
 arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.empty) is
 equivalent to $(D empty(array)).
-
-Example:
-----
-auto a = [ 1, 2, 3 ];
-assert(!a.empty);
-assert(a[3 .. $].empty);
-----
  */
 
 @property bool empty(T)(in T[] a) @safe pure nothrow
@@ -405,7 +398,8 @@ assert(a[3 .. $].empty);
     return !a.length;
 }
 
-unittest
+///
+@safe pure nothrow unittest
 {
     auto a = [ 1, 2, 3 ];
     assert(!a.empty);
@@ -418,13 +412,6 @@ arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.save) is
 equivalent to $(D save(array)). The function does not duplicate the
 content of the array, it simply returns its argument.
-
-Example:
-----
-auto a = [ 1, 2, 3 ];
-auto b = a.save;
-assert(b is a);
-----
  */
 
 @property T[] save(T)(T[] a) @safe pure nothrow
@@ -432,6 +419,13 @@ assert(b is a);
     return a;
 }
 
+///
+@safe pure nothrow unittest
+{
+    auto a = [ 1, 2, 3 ];
+    auto b = a.save;
+    assert(b is a);
+}
 /**
 Implements the range interface primitive $(D popFront) for built-in
 arrays. Due to the fact that nonmember functions can be called with
@@ -439,28 +433,25 @@ the first argument using the dot notation, $(D array.popFront) is
 equivalent to $(D popFront(array)). For $(GLOSSARY narrow strings),
 $(D popFront) automaticaly advances to the next $(GLOSSARY code
 point).
-
-Example:
-----
-int[] a = [ 1, 2, 3 ];
-a.popFront();
-assert(a == [ 2, 3 ]);
-----
 */
 
-void popFront(T)(ref T[] a)
+void popFront(T)(ref T[] a) @safe pure nothrow
 if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length, "Attempting to popFront() past the end of an array of " ~ T.stringof);
     a = a[1 .. $];
 }
 
-unittest
+///
+@safe pure nothrow unittest
 {
     auto a = [ 1, 2, 3 ];
     a.popFront();
     assert(a == [ 2, 3 ]);
+}
 
+version(unittest)
+{
     static assert(!is(typeof({          int[4] a; popFront(a); })));
     static assert(!is(typeof({ immutable int[] a; popFront(a); })));
     static assert(!is(typeof({          void[] a; popFront(a); })));
@@ -500,7 +491,7 @@ if (isNarrowString!(C[]))
     else static assert(0, "Bad template constraint.");
 }
 
-unittest
+@safe pure unittest
 {
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
@@ -539,43 +530,39 @@ arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.popBack) is
 equivalent to $(D popBack(array)). For $(GLOSSARY narrow strings), $(D
 popFront) automaticaly eliminates the last $(GLOSSARY code point).
-
-
-Example:
-----
-int[] a = [ 1, 2, 3 ];
-a.popBack();
-assert(a == [ 1, 2 ]);
-----
 */
 
-void popBack(T)(ref T[] a)
+void popBack(T)(ref T[] a) @safe pure nothrow
 if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length);
     a = a[0 .. $ - 1];
 }
 
-unittest
+///
+@safe pure nothrow unittest
 {
     auto a = [ 1, 2, 3 ];
     a.popBack();
     assert(a == [ 1, 2 ]);
+}
 
+version(unittest)
+{
     static assert(!is(typeof({ immutable int[] a; popBack(a); })));
     static assert(!is(typeof({          int[4] a; popBack(a); })));
     static assert(!is(typeof({          void[] a; popBack(a); })));
 }
 
 // Specialization for arrays of char
-@trusted void popBack(T)(ref T[] a)
+void popBack(T)(ref T[] a) @safe pure
 if (isNarrowString!(T[]))
 {
     assert(a.length, "Attempting to popBack() past the front of an array of " ~ T.stringof);
     a = a[0 .. $ - std.utf.strideBack(a, $)];
 }
 
-unittest
+@safe pure unittest
 {
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
@@ -608,22 +595,22 @@ the first argument using the dot notation, $(D array.front) is
 equivalent to $(D front(array)). For $(GLOSSARY narrow strings), $(D
 front) automaticaly returns the first $(GLOSSARY code point) as a $(D
 dchar).
-
-
-Example:
-----
-int[] a = [ 1, 2, 3 ];
-assert(a.front == 1);
-----
 */
-@property ref T front(T)(T[] a)
+@property ref T front(T)(T[] a) @safe pure nothrow
 if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
     return a[0];
 }
 
-unittest
+///
+@safe pure nothrow unittest
+{
+    int[] a = [ 1, 2, 3 ];
+    assert(a.front == 1);
+}
+
+@safe pure nothrow unittest
 {
     auto a = [ 1, 2 ];
     a.front = 4;
@@ -637,7 +624,7 @@ unittest
     assert(c.front == 1);
 }
 
-@property dchar front(T)(T[] a) if (isNarrowString!(T[]))
+@property dchar front(T)(T[] a) @safe pure if (isNarrowString!(T[]))
 {
     assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
     size_t i = 0;
@@ -651,26 +638,24 @@ the first argument using the dot notation, $(D array.back) is
 equivalent to $(D back(array)). For $(GLOSSARY narrow strings), $(D
 back) automaticaly returns the last $(GLOSSARY code point) as a $(D
 dchar).
-
-Example:
-----
-int[] a = [ 1, 2, 3 ];
-assert(a.back == 3);
-----
 */
-@property ref T back(T)(T[] a) if (!isNarrowString!(T[]))
+@property ref T back(T)(T[] a) @safe pure nothrow if (!isNarrowString!(T[]))
 {
     assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
     return a[$ - 1];
 }
 
-unittest
+///
+@safe pure nothrow unittest
 {
     int[] a = [ 1, 2, 3 ];
     assert(a.back == 3);
     a.back += 4;
     assert(a.back == 7);
+}
 
+@safe pure nothrow unittest
+{
     immutable b = [ 1, 2, 3 ];
     assert(b.back == 3);
 
@@ -679,7 +664,7 @@ unittest
 }
 
 // Specialization for strings
-@property dchar back(T)(T[] a) if (isNarrowString!(T[]))
+@property dchar back(T)(T[] a) @safe pure if (isNarrowString!(T[]))
 {
     assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
     size_t i = a.length - std.utf.strideBack(a, a.length);
