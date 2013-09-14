@@ -270,7 +270,7 @@ private template blockAttribute(T)
         enum blockAttribute = GC.BlkAttr.NO_SCAN;
     }
 }
-unittest
+version(unittest)
 {
     static assert(!(blockAttribute!void & GC.BlkAttr.NO_SCAN));
 }
@@ -288,7 +288,7 @@ private template nDimensions(T)
     }
 }
 
-unittest
+version(unittest)
 {
     static assert(nDimensions!(uint[]) == 1);
     static assert(nDimensions!(float[][]) == 2);
