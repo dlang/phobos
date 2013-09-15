@@ -75,6 +75,10 @@ bool isAlphaNum(dchar c) @safe pure nothrow
 {
     return c <= 0x7F ? cast(bool)(_ctype[c] & (_ALP|_DIG)) : false;
 }
+bool isAlphaNum(char c) @safe pure nothrow
+{
+    return cast(bool)(_ctype[c] & (_ALP|_DIG));
+}
 
 unittest
 {
@@ -92,6 +96,10 @@ unittest
 bool isAlpha(dchar c) @safe pure nothrow
 {
     return c <= 0x7F ? cast(bool)(_ctype[c] & _ALP) : false;
+}
+bool isAlpha(char c) @safe pure nothrow
+{
+    return cast(bool)(_ctype[c] & _ALP);
 }
 
 unittest
@@ -111,6 +119,10 @@ bool isLower(dchar c) @safe pure nothrow
 {
     return c <= 0x7F ? cast(bool)(_ctype[c] & _LC) : false;
 }
+bool isLower(char c) @safe pure nothrow
+{
+    return cast(bool)(_ctype[c] & _LC);
+}
 
 unittest
 {
@@ -129,6 +141,10 @@ bool isUpper(dchar c) @safe pure nothrow
 {
     return c <= 0x7F ? cast(bool)(_ctype[c] & _UC) : false;
 }
+bool isUpper(char c) @safe pure nothrow
+{
+    return cast(bool)(_ctype[c] & _UC);
+}
 
 unittest
 {
@@ -146,6 +162,10 @@ unittest
 bool isDigit(dchar c) @safe pure nothrow
 {
     return c <= 0x7F ? cast(bool)(_ctype[c] & _DIG) : false;
+}
+bool isDigit(char c) @safe pure nothrow
+{
+    return cast(bool)(_ctype[c] & _DIG);
 }
 
 unittest
@@ -183,6 +203,10 @@ bool isHexDigit(dchar c) @safe pure nothrow
 {
     return c <= 0x7F ? cast(bool)(_ctype[c] & _HEX) : false;
 }
+bool isHexDigit(char c) @safe pure nothrow
+{
+    return cast(bool)(_ctype[c] & _HEX);
+}
 
 unittest
 {
@@ -202,6 +226,10 @@ bool isWhite(dchar c) @safe pure nothrow
 {
     return c <= 0x7F ? cast(bool)(_ctype[c] & _SPC) : false;
 }
+bool isWhite(char c) @safe pure nothrow
+{
+    return cast(bool)(_ctype[c] & _SPC);
+}
 
 unittest
 {
@@ -219,6 +247,10 @@ unittest
 bool isControl(dchar c) @safe pure nothrow
 {
     return c <= 0x7F ? cast(bool)(_ctype[c] & _CTL) : false;
+}
+bool isControl(char c) @safe pure nothrow
+{
+    return cast(bool)(_ctype[c] & _CTL);
 }
 
 unittest
@@ -239,6 +271,10 @@ unittest
 bool isPunctuation(dchar c) @safe pure nothrow
 {
     return c <= 0x7F ? cast(bool)(_ctype[c] & _PNC) : false;
+}
+bool isPunctuation(char c) @safe pure nothrow
+{
+    return cast(bool)(_ctype[c] & _PNC);
 }
 
 unittest
@@ -261,6 +297,10 @@ bool isGraphical(dchar c) @safe pure nothrow
 {
     return c <= 0x7F ? cast(bool)(_ctype[c] & (_ALP|_DIG|_PNC)) : false;
 }
+bool isGraphical(char c) @safe pure nothrow
+{
+    return cast(bool)(_ctype[c] & (_ALP|_DIG|_PNC));
+}
 
 unittest
 {
@@ -280,6 +320,10 @@ unittest
 bool isPrintable(dchar c) @safe pure nothrow
 {
     return c <= 0x7F ? cast(bool)(_ctype[c] & (_ALP|_DIG|_PNC|_BLK)) : false;
+}
+bool isPrintable(char c) @safe pure nothrow
+{
+    return cast(bool)(_ctype[c] & (_ALP|_DIG|_PNC|_BLK));
 }
 
 unittest
@@ -424,7 +468,7 @@ enum
     _ALP =      _UC|_LC,
 }
 
-immutable ubyte[128] _ctype =
+immutable ubyte[256] _ctype =
 [
         _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
         _CTL,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL,_CTL,
