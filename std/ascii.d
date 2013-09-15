@@ -31,6 +31,7 @@ version(unittest)
 {
     import std.range;
     import std.typetuple;
+    alias STD_ASCII_TEST_TYPES = TypeTuple!(char, ubyte, wchar, dchar, uint);
 }
 
 
@@ -82,11 +83,14 @@ bool isAlphaNum(char c) @safe pure nothrow
 
 unittest
 {
-    foreach(c; chain(digits, octalDigits, fullHexDigits, letters, lowercase, uppercase))
-        assert(isAlphaNum(c));
+    foreach(C; STD_ASCII_TEST_TYPES)
+    {
+        foreach(c; chain(digits, octalDigits, fullHexDigits, letters, lowercase, uppercase))
+            assert(isAlphaNum(cast(C)c));
 
-    foreach(c; whitespace)
-        assert(!isAlphaNum(c));
+        foreach(c; whitespace)
+            assert(!isAlphaNum(cast(C)c));
+    }
 }
 
 
@@ -104,11 +108,14 @@ bool isAlpha(char c) @safe pure nothrow
 
 unittest
 {
-    foreach(c; chain(letters, lowercase, uppercase))
-        assert(isAlpha(c));
+    foreach(C; STD_ASCII_TEST_TYPES)
+    {
+        foreach(c; chain(letters, lowercase, uppercase))
+            assert(isAlpha(cast(C)c));
 
-    foreach(c; chain(digits, octalDigits, whitespace))
-        assert(!isAlpha(c));
+        foreach(c; chain(digits, octalDigits, whitespace))
+            assert(!isAlpha(cast(C)c));
+    }
 }
 
 
@@ -126,11 +133,14 @@ bool isLower(char c) @safe pure nothrow
 
 unittest
 {
-    foreach(c; lowercase)
-        assert(isLower(c));
+    foreach(C; STD_ASCII_TEST_TYPES)
+    {
+        foreach(c; lowercase)
+            assert(isLower(cast(C)c));
 
-    foreach(c; chain(digits, uppercase, whitespace))
-        assert(!isLower(c));
+        foreach(c; chain(digits, uppercase, whitespace))
+            assert(!isLower(cast(C)c));
+    }
 }
 
 
@@ -148,11 +158,14 @@ bool isUpper(char c) @safe pure nothrow
 
 unittest
 {
-    foreach(c; uppercase)
-        assert(isUpper(c));
+    foreach(C; STD_ASCII_TEST_TYPES)
+    {
+        foreach(c; uppercase)
+            assert(isUpper(cast(C)c));
 
-    foreach(c; chain(digits, lowercase, whitespace))
-        assert(!isUpper(c));
+        foreach(c; chain(digits, lowercase, whitespace))
+            assert(!isUpper(cast(C)c));
+    }
 }
 
 
@@ -170,11 +183,14 @@ bool isDigit(char c) @safe pure nothrow
 
 unittest
 {
-    foreach(c; digits)
-        assert(isDigit(c));
+    foreach(C; STD_ASCII_TEST_TYPES)
+    {
+        foreach(c; digits)
+            assert(isDigit(cast(C)c));
 
-    foreach(c; chain(letters, whitespace))
-        assert(!isDigit(c));
+        foreach(c; chain(letters, whitespace))
+            assert(!isDigit(cast(C)c));
+    }
 }
 
 
@@ -188,11 +204,14 @@ bool isOctalDigit(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(c; octalDigits)
-        assert(isOctalDigit(c));
+    foreach(C; STD_ASCII_TEST_TYPES)
+    {
+        foreach(c; octalDigits)
+            assert(isOctalDigit(cast(C)c));
 
-    foreach(c; chain(letters, ['8', '9'], whitespace))
-        assert(!isOctalDigit(c));
+        foreach(c; chain(letters, ['8', '9'], whitespace))
+            assert(!isOctalDigit(cast(C)c));
+    }
 }
 
 
@@ -210,11 +229,14 @@ bool isHexDigit(char c) @safe pure nothrow
 
 unittest
 {
-    foreach(c; fullHexDigits)
-        assert(isHexDigit(c));
+    foreach(C; STD_ASCII_TEST_TYPES)
+    {
+        foreach(c; fullHexDigits)
+            assert(isHexDigit(cast(C)c));
 
-    foreach(c; chain(lowercase[6 .. $], uppercase[6 .. $], whitespace))
-        assert(!isHexDigit(c));
+        foreach(c; chain(lowercase[6 .. $], uppercase[6 .. $], whitespace))
+            assert(!isHexDigit(cast(C)c));
+    }
 }
 
 
@@ -233,11 +255,14 @@ bool isWhite(char c) @safe pure nothrow
 
 unittest
 {
-    foreach(c; whitespace)
-        assert(isWhite(c));
+    foreach(C; STD_ASCII_TEST_TYPES)
+    {
+        foreach(c; whitespace)
+            assert(isWhite(cast(C)c));
 
-    foreach(c; chain(digits, letters))
-        assert(!isWhite(c));
+        foreach(c; chain(digits, letters))
+            assert(!isWhite(cast(C)c));
+    }
 }
 
 
@@ -255,12 +280,15 @@ bool isControl(char c) @safe pure nothrow
 
 unittest
 {
-    foreach(dchar c; 0 .. 32)
-        assert(isControl(c));
-    assert(isControl(127));
+    foreach(C; STD_ASCII_TEST_TYPES)
+    {
+        foreach(C c; 0 .. 32)
+            assert(isControl(c));
+        assert(isControl(cast(C)127));
 
-    foreach(c; chain(digits, letters, [' ']))
-        assert(!isControl(c));
+        foreach(c; chain(digits, letters, [' ']))
+            assert(!isControl(cast(C)c));
+    }
 }
 
 
@@ -279,12 +307,15 @@ bool isPunctuation(char c) @safe pure nothrow
 
 unittest
 {
-    foreach(dchar c; 0 .. 128)
+    foreach(C; STD_ASCII_TEST_TYPES)
     {
-        if(isControl(c) || isAlphaNum(c) || c == ' ')
-            assert(!isPunctuation(c));
-        else
-            assert(isPunctuation(c));
+        foreach(C c; 0 .. 128)
+        {
+            if(isControl(c) || isAlphaNum(c) || c == ' ')
+                assert(!isPunctuation(c));
+            else
+                assert(isPunctuation(c));
+        }
     }
 }
 
@@ -304,12 +335,15 @@ bool isGraphical(char c) @safe pure nothrow
 
 unittest
 {
-    foreach(dchar c; 0 .. 128)
+    foreach(C; STD_ASCII_TEST_TYPES)
     {
-        if(isControl(c) || c == ' ')
-            assert(!isGraphical(c));
-        else
-            assert(isGraphical(c));
+        foreach(C c; 0 .. 128)
+        {
+            if(isControl(c) || c == ' ')
+                assert(!isGraphical(c));
+            else
+                assert(isGraphical(c));
+        }
     }
 }
 
@@ -328,12 +362,15 @@ bool isPrintable(char c) @safe pure nothrow
 
 unittest
 {
-    foreach(dchar c; 0 .. 128)
+    foreach(C; STD_ASCII_TEST_TYPES)
     {
-        if(isControl(c))
-            assert(!isPrintable(c));
-        else
-            assert(isPrintable(c));
+        foreach(C c; 0 .. 128)
+        {
+            if(isControl(c))
+                assert(!isPrintable(c));
+            else
+                assert(isPrintable(c));
+        }
     }
 }
 
@@ -349,10 +386,13 @@ bool isASCII(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(dchar c; 0 .. 128)
-        assert(isASCII(c));
+    foreach(C; STD_ASCII_TEST_TYPES)
+    {
+        foreach(C c; 0 .. 128)
+            assert(isASCII(c));
 
-    assert(!isASCII(128));
+        assert(!isASCII(cast(C)128));
+    }
 }
 
 
