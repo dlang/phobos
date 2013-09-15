@@ -1444,15 +1444,6 @@ unittest
 /++
    Concatenates all of the ranges in $(D ror) together into one array using
    $(D sep) as the separator if present.
-
-    Examples:
-    --------------------
-    assert(join(["hello", "silly", "world"], " ") == "hello silly world");
-    assert(join(["hello", "silly", "world"]) == "hellosillyworld");
-
-    assert(join([[1, 2, 3], [4, 5]], [72, 73]) == [1, 2, 3, 72, 73, 4, 5]);
-    assert(join([[1, 2, 3], [4, 5]]) == [1, 2, 3, 4, 5]);
-    --------------------
   +/
 ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     if(isInputRange!RoR &&
@@ -1524,8 +1515,8 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
     return result.data;
 }
 
-//Verify Examples.
-unittest
+///
+@safe pure nothrow unittest
 {
     assert(join(["hello", "silly", "world"], " ") == "hello silly world");
     assert(join(["hello", "silly", "world"]) == "hellosillyworld");
