@@ -248,7 +248,8 @@ auto assocArray(Range)(Range r)
     assert(b == ["foo":"bar", "baz":"quux"]);
 }
 
-version(unittest)
+/// @@@11053@@@ - Cannot be version(unittest) - recursive instantiation error
+unittest
 {
     static assert(!__traits(compiles, [ tuple("foo", "bar", "baz") ].assocArray()));
     static assert(!__traits(compiles, [ tuple("foo") ].assocArray()));
