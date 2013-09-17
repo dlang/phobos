@@ -317,16 +317,18 @@ unittest
     letter is returned. Otherwise, $(D c) is returned.
 
     $(D C) can be any type which implicitly converts to $(D dchar). In the case
-    where it's a built-in type, $(D Unqual!C) is returned, whereas if it's a
-    user-defined type, $(D dchar) is returned.
+    where it's a built-in type, or enum of a built-in type,
+    $(D Unqual!(OriginalType!C)) is returned, whereas if it's a user-defined
+    type, $(D dchar) is returned.
   +/
 auto toLower(C)(C c)
     if(is(C : dchar))
 {
-    static if(isScalarType!C)
-        return isUpper(c) ? cast(Unqual!C)(c + 'a' - 'A') : cast(Unqual!C)c;
+    static if (isAggregateType!C)
+        alias R = dchar;
     else
-        return toLower!dchar(c);
+        alias R = Unqual!(OriginalType!C);
+    return isUpper(c) ? cast(R)(cast(R)c + 'a' - 'A') : cast(R)c;
 }
 
 unittest
@@ -356,6 +358,13 @@ unittest
     static assert(is(typeof(Char('A').toLower()) == dchar));
     assert(Char('A').toLower() == 'a');
     assert(Char('a').toLower() == 'a');
+
+    static assert(toLower(StdASCIITestEC.a) == 'a');
+    static assert(toLower(StdASCIITestEC.A) == 'a');
+    static assert(is(typeof(toLower(StdASCIITestEC.A)) == char));
+    static assert(toLower(StdASCIITestED.a) == 'a');
+    static assert(toLower(StdASCIITestED.A) == 'a');
+    static assert(is(typeof(toLower(StdASCIITestED.A)) == dchar));
 }
 
 
@@ -364,16 +373,18 @@ unittest
     letter is returned. Otherwise, $(D c) is returned.
 
     $(D C) can be any type which implicitly converts to $(D dchar). In the case
-    where it's a built-in type, $(D Unqual!C) is returned, whereas if it's a
-    user-defined type, $(D dchar) is returned.
+    where it's a built-in type, or enum of a built-in type,
+    $(D Unqual!(OriginalType!C)) is returned, whereas if it's a user-defined
+    type, $(D dchar) is returned.
   +/
 auto toUpper(C)(C c)
     if(is(C : dchar))
 {
-    static if(isScalarType!C)
-        return isLower(c) ? cast(Unqual!C)(c - ('a' - 'A')) : cast(Unqual!C)c;
+    static if (isAggregateType!C)
+        alias R = dchar;
     else
-        return toUpper!dchar(c);
+        alias R = Unqual!(OriginalType!C);
+    return isLower(c) ? cast(R)(cast(R)c - ('a' - 'A')) : cast(R)c;
 }
 
 unittest
@@ -403,6 +414,13 @@ unittest
     static assert(is(typeof(Char('a').toUpper()) == dchar));
     assert(Char('a').toUpper() == 'A');
     assert(Char('A').toUpper() == 'A');
+
+    static assert(toUpper(StdASCIITestEC.a) == 'A');
+    static assert(toUpper(StdASCIITestEC.A) == 'A');
+    static assert(is(typeof(toUpper(StdASCIITestEC.A)) == char));
+    static assert(toUpper(StdASCIITestED.a) == 'A');
+    static assert(toUpper(StdASCIITestED.A) == 'A');
+    static assert(is(typeof(toUpper(StdASCIITestED.A)) == dchar));
 }
 
 
@@ -445,3 +463,16 @@ immutable ubyte[128] _ctype =
         _LC,_LC,_LC,_PNC,_PNC,_PNC,_PNC,_CTL
 ];
 
+version (unittest)
+{
+    enum StdASCIITestEC : char
+    {
+        a = 'a',
+        A = 'A',
+    }
+    enum StdASCIITestED : dchar
+    {
+        a = 'a',
+        A = 'A',
+    }
+}
