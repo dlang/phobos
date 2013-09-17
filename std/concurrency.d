@@ -328,16 +328,43 @@ class TidMissingException : Exception
  */
 struct Tid
 {
+    /** Get the string representation of this Tid. */
+    void toString(scope void delegate(const(char)[]) sink) const
+    {
+        sink("Tid(");
+        sink(format("%s", threadID));  // avoid std.conv import
+        sink(")");
+    }
+
 private:
     this( MessageBox m )
     {
         mbox = m;
+        threadID = cast(size_t)cast(void*)Thread.getThis;
     }
 
 
     MessageBox  mbox;
+    size_t threadID;
 }
 
+// test toString
+unittest
+{
+    static void test(Tid tid)
+    {
+        string tid1 = format("%s", thisTid);
+        string tid2 = format("%s", tid);
+        assert(tid1 != tid2);  // must be unique
+        ownerTid.send(1);
+    }
+
+    string res = format("%s", thisTid);  // avoid std.conv import
+    string rhs = format("Tid(%s)", cast(size_t)cast(void*)Thread.getThis);
+    assert(res == rhs, format("%s != %s", res, rhs));
+    spawn(&test, thisTid);
+    receiveOnly!int();  // wait for the thread before exiting
+}
 
 /**
  * Returns the caller's Tid.
