@@ -1163,7 +1163,7 @@ Allows to directly use range operations on lines of a file.
             if (line.empty)
             {
                 file.detach();
-                line = null;
+                line = [];
             }
             else if (keepTerminator == KeepTerminator.no
                     && std.algorithm.endsWith(line, terminator))
@@ -1357,6 +1357,29 @@ the contents may well have changed).
         {
             return typeof(return)(this, format);
         }
+    }
+
+    // test 10098 - byLine should return empty string instead of null when line is empty
+    unittest
+    {
+        auto fn1 = testFilename();
+        auto fn2 = testFilename();
+        scope(exit) std.file.remove(fn1);
+        scope(exit) std.file.remove(fn2);
+        std.file.write(fn1, "1\n2\n3\n4");
+        std.file.write(fn2, "1\n2\n3");
+        auto file1 = File(fn1, "r");
+        auto file2 = File(fn2, "r");
+        size_t lines1, lines2;
+
+        foreach (char[] line1, char[] line2; zip(StoppingPolicy.longest, file1.byLine, file2.byLine))
+        {
+            if (line1 !is null) ++lines1;
+            if (line2 !is null) ++lines2;
+        }
+
+        assert(lines1 == 4);
+        assert(lines2 == 3);
     }
 
     unittest
