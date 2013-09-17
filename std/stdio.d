@@ -498,7 +498,7 @@ _clearerr) for the file handle.
     }
 
 /**
-Calls $(WEB cplusplus.com/reference/clibrary/cstdio/_fflush.html, _fflush) 
+Calls $(WEB cplusplus.com/reference/clibrary/cstdio/_fflush.html, _fflush)
 for the file handle.
 
 Throws: $(D Exception) if the file is not opened or if the call to $D(fflush) fails.
@@ -609,7 +609,7 @@ Throws: $(D ErrnoException) if the file is not opened or if the call to $D(fread
     }
 
 /**
-Calls $(WEB cplusplus.com/reference/clibrary/cstdio/fseek.html, fseek) 
+Calls $(WEB cplusplus.com/reference/clibrary/cstdio/fseek.html, fseek)
 for the file handle.
 
 Throws: $(D Exception) if the file is not opened.
@@ -719,7 +719,7 @@ Throws: $(D Exception) if the file is not opened.
 
 /**
 Calls $(WEB cplusplus.com/reference/clibrary/cstdio/_setvbuf.html,
-_setvbuf) for the file handle. 
+_setvbuf) for the file handle.
 
 Throws: $(D Exception) if the file is not opened.
         $(D ErrnoException) if the call to $D(setvbuf) fails.
@@ -733,7 +733,7 @@ Throws: $(D Exception) if the file is not opened.
     }
 
 /**
-Writes its arguments in text format to the file. 
+Writes its arguments in text format to the file.
 
 Throws: $(D Exception) if the file is not opened.
         $(D ErrnoException) on an error writing to the file.
@@ -784,8 +784,8 @@ Throws: $(D Exception) if the file is not opened.
     }
 
 /**
-Writes its arguments in text format to the file, according to the 
-format in the first argument. 
+Writes its arguments in text format to the file, according to the
+format in the first argument.
 
 Throws: $(D Exception) if the file is not opened.
         $(D ErrnoException) on an error writing to the file.
@@ -796,7 +796,7 @@ Throws: $(D Exception) if the file is not opened.
     }
 
 /**
-Writes its arguments in text format to the file, according to the 
+Writes its arguments in text format to the file, according to the
 format in the first argument, followed by a newline.
 
 Throws: $(D Exception) if the file is not opened.
@@ -812,8 +812,8 @@ Throws: $(D Exception) if the file is not opened.
 /**
 Read line from the file handle and return it as a specified type.
 
-This version manages its own read buffer, which means one memory allocation per call. If you are not 
-retaining a reference to the read data, consider the $(D File.readln(buf)) version, which may offer 
+This version manages its own read buffer, which means one memory allocation per call. If you are not
+retaining a reference to the read data, consider the $(D File.readln(buf)) version, which may offer
 better performance as it can reuse its read buffer.
 
 Params:
@@ -821,7 +821,7 @@ Params:
     terminator = line terminator (by default, '\n')
 
 Returns:
-    The line that was read, including the line terminator character. 
+    The line that was read, including the line terminator character.
 
 Throws:
     $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
@@ -927,7 +927,7 @@ void main()
 This method can be more efficient than the one in the previous example
 because $(D stdin.readln(buf)) reuses (if possible) memory allocated
 for $(D buf), whereas $(D line = stdin.readln()) makes a new memory allocation
-for every line. 
+for every line.
 */
     size_t readln(C)(ref C[] buf, dchar terminator = '\n')
     if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum))
@@ -1077,19 +1077,19 @@ Allows to directly use range operations on lines of a file.
         alias Impl = RefCounted!(ByLineImpl!(Char, Terminator),
             RefCountedAutoInitialize.no);
         Impl impl;
-        
+
         static if (isScalarType!Terminator)
             enum defTerm = '\n';
         else
             enum defTerm = cast(Terminator)"\n";
-        
+
     public:
         this(File f, KeepTerminator kt = KeepTerminator.no,
                 Terminator terminator = defTerm)
         {
             impl = Impl(f, kt, terminator);
         }
-        
+
         @property bool empty()
         {
             return impl.refCountedPayload.empty;
@@ -1184,20 +1184,20 @@ Allows to directly use range operations on lines of a file.
     }
 
 /**
-Returns an input range set up to read from the file handle one line 
+Returns an input range set up to read from the file handle one line
 at a time.
 
-The element type for the range will be $(D Char[]). Range primitives 
+The element type for the range will be $(D Char[]). Range primitives
 may throw $(D StdioException) on I/O error.
 
 Note:
-Each $(D front) will not persist after $(D 
-popFront) is called, so the caller must copy its contents (e.g. by 
+Each $(D front) will not persist after $(D
+popFront) is called, so the caller must copy its contents (e.g. by
 calling $(D to!string)) if retention is needed.
 
 Params:
 Char = Character type for each line, defaulting to $(D char).
-keepTerminator = Use $(D KeepTerminator.yes) to include the 
+keepTerminator = Use $(D KeepTerminator.yes) to include the
 terminator at the end of each line.
 terminator = Line separator ($(D '\n') by default).
 
@@ -1339,14 +1339,14 @@ the contents may well have changed).
         assert(fbl.equal(["2", "3"]));
         assert(fbl.empty);
         assert(file.isOpen); // we still have a valid reference
-        
+
         file.rewind();
         fbl = file.byLine();
         assert(!fbl.drop(2).empty);
         assert(fbl.equal(["3"]));
         assert(fbl.empty);
         assert(file.isOpen);
-        
+
         file.detach();
         assert(!file.isOpen);
     }
@@ -1433,14 +1433,14 @@ the contents may well have changed).
     }
 
 /**
-Returns an input range set up to read from the file handle a chunk at a 
+Returns an input range set up to read from the file handle a chunk at a
 time.
 
-The element type for the range will be $(D ubyte[]). Range primitives 
+The element type for the range will be $(D ubyte[]). Range primitives
 may throw $(D StdioException) on I/O error.
 
-Note: Each $(D front) will not persist after $(D 
-popFront) is called, so the caller must copy its contents (e.g. by 
+Note: Each $(D front) will not persist after $(D
+popFront) is called, so the caller must copy its contents (e.g. by
 calling $(D buffer.dup)) if retention is needed.
 
 Example:
@@ -2143,13 +2143,13 @@ unittest
 
 /**********************************
  * Read line from $(D stdin).
- * 
- * This version manages its own read buffer, which means one memory allocation per call. If you are not 
- * retaining a reference to the read data, consider the $(D readln(buf)) version, which may offer 
+ *
+ * This version manages its own read buffer, which means one memory allocation per call. If you are not
+ * retaining a reference to the read data, consider the $(D readln(buf)) version, which may offer
  * better performance as it can reuse its read buffer.
- * 
+ *
  * Returns:
- *        The line that was read, including the line terminator character. 
+ *        The line that was read, including the line terminator character.
  * Params:
  *        S = Template parameter; the type of the allocated buffer, and the type returned. Defaults to $(D string).
  *        terminator = line terminator (by default, '\n')
@@ -2176,11 +2176,11 @@ if (isSomeString!S)
 
 /**********************************
  * Read line from $(D stdin) and write it to buf[], including terminating character.
- * 
+ *
  * This can be faster than $(D line = readln()) because you can reuse
  * the buffer for each call. Note that reusing the buffer means that you
  * must copy the previous contents if you wish to retain them.
- * 
+ *
  * Returns:
  *        $(D size_t) 0 for end of file, otherwise number of characters read
  * Params:
