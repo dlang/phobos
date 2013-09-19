@@ -1753,7 +1753,8 @@ if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     }
     else
     {
-        formatValue(w, cast(uint) val, f);
+        alias U = TypeTuple!(ubyte, ushort, uint)[CharTypeOf!T.sizeof/2];
+        formatValue(w, cast(U) val, f);
     }
 }
 
