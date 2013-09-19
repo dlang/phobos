@@ -2156,10 +2156,20 @@ if (isInputRange!T)
     }
     else if (f.spec == 'r')
     {
-        // raw writes
-        for (size_t i; !val.empty; val.popFront(), ++i)
+        static if (is(DynamicArrayTypeOf!T))
         {
-            formatValue(w, val.front, f);
+            alias ARR = DynamicArrayTypeOf!T;
+            foreach (e ; cast(ARR)val)
+            {
+                formatValue(w, e, f);
+            }
+        }
+        else
+        {
+            for (size_t i; !val.empty; val.popFront(), ++i)
+            {
+                formatValue(w, val.front, f);
+            }
         }
     }
     else if (f.spec == '(')
