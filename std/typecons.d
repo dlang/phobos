@@ -863,6 +863,17 @@ Tuple!T tuple(T...)(T args)
     return typeof(return)(args);
 }
 
+private template NameTypePairs(alias front, syms...)
+{
+    enum name = __traits(identifier, front);
+    alias pair = TypeTuple!(typeof(front), name);
+
+    static if (syms.length == 0)
+        alias NameTypePairs = pair;
+    else
+        alias NameTypePairs = TypeTuple!(pair, NameTypePairs!syms);
+}
+
 /**
 Returns $(D true) if and only if $(D T) is an instance of the
 $(D Tuple) struct template.
