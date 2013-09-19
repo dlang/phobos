@@ -863,6 +863,37 @@ Tuple!T tuple(T...)(T args)
     return typeof(return)(args);
 }
 
+/**
+Constructs a tuple from the given variables, where each variable in the
+tuple is accessible through its original variable name as named members
+of the tuple. Members can still be accessed by indexing.
+*/
+auto tuple(syms...)()
+{
+    return Tuple!(NameTypePairs!syms)(syms);
+}
+
+///
+unittest
+{
+    auto func()
+    {
+        int x = 1;
+        string y = "2";
+        auto square = (int a) => a * a;
+
+        // simple and concise syntax
+        return tuple!(x, y, square);
+    }
+
+    auto tup = func();
+
+    // symbol names accessible from the call site
+    assert(tup.x == 1);
+    assert(tup.y == "2");
+    assert(tup.square(2) == 4);
+}
+
 private template NameTypePairs(alias front, syms...)
 {
     enum name = __traits(identifier, front);
