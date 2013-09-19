@@ -634,19 +634,17 @@ $(BOOKTABLE ,
     $(TR
         $(TD $(D r.putChar(e);))
         $(TD $(D R) accepts some form of string or character. put will
-            transocde the character $(D e) accordingly.)
+            transcode the character $(D e) accordingly.)
     )
     $(TR
         $(TD $(D for (; !e.empty; e.popFront()) put(r, e.front);))
         $(TD Copying range $(D E) into $(D R).)
     )
-
-    Tip: $(D put) should $(D not) be used "UFCS-style", eg $(D r.put(e)).
-    Doing this may call $(D R.put) dirrectly, by-passing any transformation
-    feature provided by $(D Range.put).
 )
 
-Tip:
+Tip: $(D put) should $(I not) be used "UFCS-style", eg $(D r.put(e)).
+Doing this may call $(D R.put) directly, by-passing any transformation
+feature provided by $(D Range.put). $(D put(r, e)) is prefered.
  +/
 void put(R, E)(ref R r, E e)
 {
@@ -678,7 +676,7 @@ void put(R, E)(ref R r, E e)
         putChar(r, e);
     }
     //Extract each element from the range
-    //We can use "put" here, so we can recursivelly test a RoR of E.
+    //We can use "put" here, so we can recursively test a RoR of E.
     else static if (isInputRange!E && is(typeof(put(r, e.front))))
     {
         //Special optimization: If E is a narrow string, and r accepts characters no-wider than the string's
