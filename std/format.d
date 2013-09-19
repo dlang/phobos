@@ -1753,7 +1753,8 @@ if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     }
     else
     {
-        formatValue(w, cast(uint) val, f);
+        alias U = TypeTuple!(ubyte, ushort, uint)[CharTypeOf!T.sizeof/2];
+        formatValue(w, cast(U) val, f);
     }
 }
 
@@ -1778,6 +1779,21 @@ unittest
                 string toString() const { return "S"; } }
     formatTest( S1('c'), "c" );
     formatTest( S2('c'), "S" );
+}
+
+@safe pure unittest
+{
+    //Little Endian
+    formatTest( "%-r", cast( char)'c', ['c'         ] );
+    formatTest( "%-r", cast(wchar)'c', ['c', 0      ] );
+    formatTest( "%-r", cast(dchar)'c', ['c', 0, 0, 0] );
+    formatTest( "%-r", '本', ['\x2c', '\x67'] );
+
+    //Big Endian
+    formatTest( "%+r", cast( char)'c', [         'c'] );
+    formatTest( "%+r", cast(wchar)'c', [0,       'c'] );
+    formatTest( "%+r", cast(dchar)'c', [0, 0, 0, 'c'] );
+    formatTest( "%+r", '本', ['\x67', '\x2c'] );
 }
 
 /**
@@ -1819,6 +1835,25 @@ unittest
     struct S3 { string val; alias val this;
                 string toString() const { return "S"; } }
     formatTest( S3("s3"), "S" );
+}
+
+@safe pure unittest
+{
+    //Little Endian
+    formatTest( "%-r", "ab"c, ['a'         , 'b'         ] );
+    formatTest( "%-r", "ab"w, ['a', 0      , 'b', 0      ] );
+    formatTest( "%-r", "ab"d, ['a', 0, 0, 0, 'b', 0, 0, 0] );
+    formatTest( "%-r", "日本語"c, ['\xe6', '\x97', '\xa5', '\xe6', '\x9c', '\xac', '\xe8', '\xaa', '\x9e'] );
+    formatTest( "%-r", "日本語"w, ['\xe5', '\x65',                 '\x2c', '\x67',                 '\x9e', '\x8a'                ] );
+    formatTest( "%-r", "日本語"d, ['\xe5', '\x65', '\x00', '\x00', '\x2c', '\x67', '\x00', '\x00', '\x9e', '\x8a', '\x00', '\x00'] );
+
+    //Big Endian
+    formatTest( "%+r", "ab"c, [         'a',          'b'] );
+    formatTest( "%+r", "ab"w, [      0, 'a',       0, 'b'] );
+    formatTest( "%+r", "ab"d, [0, 0, 0, 'a', 0, 0, 0, 'b'] );
+    formatTest( "%+r", "日本語"c, ['\xe6', '\x97', '\xa5', '\xe6', '\x9c', '\xac', '\xe8', '\xaa', '\x9e'] );
+    formatTest( "%+r", "日本語"w, [                '\x65', '\xe5',                 '\x67', '\x2c',                 '\x8a', '\x9e'] );
+    formatTest( "%+r", "日本語"d, ['\x00', '\x00', '\x65', '\xe5', '\x00', '\x00', '\x67', '\x2c', '\x00', '\x00', '\x8a', '\x9e'] );
 }
 
 /**
@@ -2050,116 +2085,126 @@ private void formatRange(Writer, T, Char)(ref Writer w, ref T val, ref FormatSpe
 if (isInputRange!T)
 {
     // Formatting character ranges like string
-    static if (is(CharTypeOf!(ElementType!T)))
     if (f.spec == 's')
     {
-        static if (is(StringTypeOf!T))
+        static if (is(CharTypeOf!(ElementType!T)))
         {
-            auto s = val[0 .. f.precision < $ ? f.precision : $];
-            if (!f.flDash)
+            static if (is(StringTypeOf!T))
             {
-                // right align
-                if (f.width > s.length)
-                    foreach (i ; 0 .. f.width - s.length) put(w, ' ');
-                put(w, s);
-            }
-            else
-            {
-                // left align
-                put(w, s);
-                if (f.width > s.length)
-                    foreach (i ; 0 .. f.width - s.length) put(w, ' ');
-            }
-        }
-        else
-        {
-            if (!f.flDash)
-            {
-                static if (hasLength!T)
+                auto s = val[0 .. f.precision < $ ? f.precision : $];
+                if (!f.flDash)
                 {
                     // right align
-                    auto len = val.length;
-                }
-                else static if (isForwardRange!T && !isInfinite!T)
-                {
-                    auto len = walkLength(val.save);
+                    if (f.width > s.length)
+                        foreach (i ; 0 .. f.width - s.length) put(w, ' ');
+                    put(w, s);
                 }
                 else
                 {
-                    enforce(f.width == 0, "Cannot right-align a range without length");
-                    size_t len = 0;
-                }
-                if (f.precision != f.UNSPECIFIED && len > f.precision)
-                    len = f.precision;
-
-                if (f.width > len)
-                    foreach (i ; 0 .. f.width - len)
-                        put(w, ' ');
-                if (f.precision == f.UNSPECIFIED)
-                    put(w, val);
-                else
-                {
-                    size_t printed = 0;
-                    for (; !val.empty && printed < f.precision; val.popFront(), ++printed)
-                        put(w, val.front);
+                    // left align
+                    put(w, s);
+                    if (f.width > s.length)
+                        foreach (i ; 0 .. f.width - s.length) put(w, ' ');
                 }
             }
             else
             {
-                size_t printed = void;
-
-                // left align
-                if (f.precision == f.UNSPECIFIED)
+                if (!f.flDash)
                 {
                     static if (hasLength!T)
                     {
-                        printed = val.length;
-                        put(w, val);
+                        // right align
+                        auto len = val.length;
+                    }
+                    else static if (isForwardRange!T && !isInfinite!T)
+                    {
+                        auto len = walkLength(val.save);
                     }
                     else
                     {
-                        printed = 0;
-                        for (; !val.empty; val.popFront(), ++printed)
+                        enforce(f.width == 0, "Cannot right-align a range without length");
+                        size_t len = 0;
+                    }
+                    if (f.precision != f.UNSPECIFIED && len > f.precision)
+                        len = f.precision;
+
+                    if (f.width > len)
+                        foreach (i ; 0 .. f.width - len)
+                            put(w, ' ');
+                    if (f.precision == f.UNSPECIFIED)
+                        put(w, val);
+                    else
+                    {
+                        size_t printed = 0;
+                        for (; !val.empty && printed < f.precision; val.popFront(), ++printed)
                             put(w, val.front);
                     }
                 }
                 else
                 {
-                    printed = 0;
-                    for (; !val.empty && printed < f.precision; val.popFront(), ++printed)
-                        put(w, val.front);
-                }
+                    size_t printed = void;
 
-                if (f.width > printed)
-                    foreach (i ; 0 .. f.width - printed)
-                        put(w, ' ');
+                    // left align
+                    if (f.precision == f.UNSPECIFIED)
+                    {
+                        static if (hasLength!T)
+                        {
+                            printed = val.length;
+                            put(w, val);
+                        }
+                        else
+                        {
+                            printed = 0;
+                            for (; !val.empty; val.popFront(), ++printed)
+                                put(w, val.front);
+                        }
+                    }
+                    else
+                    {
+                        printed = 0;
+                        for (; !val.empty && printed < f.precision; val.popFront(), ++printed)
+                            put(w, val.front);
+                    }
+
+                    if (f.width > printed)
+                        foreach (i ; 0 .. f.width - printed)
+                            put(w, ' ');
+                }
             }
         }
-        return;
-    }
-
-    if (f.spec == 'r')
-    {
-        // raw writes
-        for (size_t i; !val.empty; val.popFront(), ++i)
+        else
         {
-            formatValue(w, val.front, f);
+            put(w, f.seqBefore);
+            if (!val.empty)
+            {
+                formatElement(w, val.front, f);
+                val.popFront();
+                for (size_t i; !val.empty; val.popFront(), ++i)
+                {
+                    put(w, f.seqSeparator);
+                    formatElement(w, val.front, f);
+                }
+            }
+            static if (!isInfinite!T) put(w, f.seqAfter);
         }
     }
-    else if (f.spec == 's')
+    else if (f.spec == 'r')
     {
-        put(w, f.seqBefore);
-        if (!val.empty)
+        static if (is(DynamicArrayTypeOf!T))
         {
-            formatElement(w, val.front, f);
-            val.popFront();
+            alias ARR = DynamicArrayTypeOf!T;
+            foreach (e ; cast(ARR)val)
+            {
+                formatValue(w, e, f);
+            }
+        }
+        else
+        {
             for (size_t i; !val.empty; val.popFront(), ++i)
             {
-                put(w, f.seqSeparator);
-                formatElement(w, val.front, f);
+                formatValue(w, val.front, f);
             }
         }
-        static if (!isInfinite!T) put(w, f.seqAfter);
     }
     else if (f.spec == '(')
     {
