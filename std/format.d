@@ -1781,6 +1781,19 @@ unittest
     formatTest( S2('c'), "S" );
 }
 
+@safe pure unittest
+{
+    //Little Endian
+    formatTest( "%-r", cast( char)'c', ['c'         ] );
+    formatTest( "%-r", cast(wchar)'c', ['c', 0      ] );
+    formatTest( "%-r", cast(dchar)'c', ['c', 0, 0, 0] );
+
+    //Big Endian
+    formatTest( "%+r", cast( char)'c', [         'c'] );
+    formatTest( "%+r", cast(wchar)'c', [0,       'c'] );
+    formatTest( "%+r", cast(dchar)'c', [0, 0, 0, 'c'] );
+}
+
 /**
    Strings are formatted like $(D printf) does.
  */
@@ -1820,6 +1833,19 @@ unittest
     struct S3 { string val; alias val this;
                 string toString() const { return "S"; } }
     formatTest( S3("s3"), "S" );
+}
+
+@safe pure unittest
+{
+    //Little Endian
+    formatTest( "%-r", "ab"c, ['a'         , 'b'         ] );
+    formatTest( "%-r", "ab"w, ['a', 0      , 'b', 0      ] );
+    formatTest( "%-r", "ab"d, ['a', 0, 0, 0, 'b', 0, 0, 0] );
+
+    //Big Endian
+    formatTest( "%+r", "ab"c, [         'a',          'b'] );
+    formatTest( "%+r", "ab"w, [      0, 'a',       0, 'b'] );
+    formatTest( "%+r", "ab"d, [0, 0, 0, 'a', 0, 0, 0, 'b'] );
 }
 
 /**
