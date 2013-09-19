@@ -1787,11 +1787,13 @@ unittest
     formatTest( "%-r", cast( char)'c', ['c'         ] );
     formatTest( "%-r", cast(wchar)'c', ['c', 0      ] );
     formatTest( "%-r", cast(dchar)'c', ['c', 0, 0, 0] );
+    formatTest( "%-r", '本', ['\x2c', '\x67'] );
 
     //Big Endian
     formatTest( "%+r", cast( char)'c', [         'c'] );
     formatTest( "%+r", cast(wchar)'c', [0,       'c'] );
     formatTest( "%+r", cast(dchar)'c', [0, 0, 0, 'c'] );
+    formatTest( "%+r", '本', ['\x67', '\x2c'] );
 }
 
 /**
@@ -1841,11 +1843,17 @@ unittest
     formatTest( "%-r", "ab"c, ['a'         , 'b'         ] );
     formatTest( "%-r", "ab"w, ['a', 0      , 'b', 0      ] );
     formatTest( "%-r", "ab"d, ['a', 0, 0, 0, 'b', 0, 0, 0] );
+    formatTest( "%-r", "日本語"c, ['\xe6', '\x97', '\xa5', '\xe6', '\x9c', '\xac', '\xe8', '\xaa', '\x9e'] );
+    formatTest( "%-r", "日本語"w, ['\xe5', '\x65',                 '\x2c', '\x67',                 '\x9e', '\x8a'                ] );
+    formatTest( "%-r", "日本語"d, ['\xe5', '\x65', '\x00', '\x00', '\x2c', '\x67', '\x00', '\x00', '\x9e', '\x8a', '\x00', '\x00'] );
 
     //Big Endian
     formatTest( "%+r", "ab"c, [         'a',          'b'] );
     formatTest( "%+r", "ab"w, [      0, 'a',       0, 'b'] );
     formatTest( "%+r", "ab"d, [0, 0, 0, 'a', 0, 0, 0, 'b'] );
+    formatTest( "%+r", "日本語"c, ['\xe6', '\x97', '\xa5', '\xe6', '\x9c', '\xac', '\xe8', '\xaa', '\x9e'] );
+    formatTest( "%+r", "日本語"w, [                '\x65', '\xe5',                 '\x67', '\x2c',                 '\x8a', '\x9e'] );
+    formatTest( "%+r", "日本語"d, ['\x00', '\x00', '\x65', '\xe5', '\x00', '\x00', '\x67', '\x2c', '\x00', '\x00', '\x8a', '\x9e'] );
 }
 
 /**
