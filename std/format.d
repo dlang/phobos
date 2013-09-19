@@ -2051,116 +2051,116 @@ private void formatRange(Writer, T, Char)(ref Writer w, ref T val, ref FormatSpe
 if (isInputRange!T)
 {
     // Formatting character ranges like string
-    static if (is(CharTypeOf!(ElementType!T)))
     if (f.spec == 's')
     {
-        static if (is(StringTypeOf!T))
+        static if (is(CharTypeOf!(ElementType!T)))
         {
-            auto s = val[0 .. f.precision < $ ? f.precision : $];
-            if (!f.flDash)
+            static if (is(StringTypeOf!T))
             {
-                // right align
-                if (f.width > s.length)
-                    foreach (i ; 0 .. f.width - s.length) put(w, ' ');
-                put(w, s);
-            }
-            else
-            {
-                // left align
-                put(w, s);
-                if (f.width > s.length)
-                    foreach (i ; 0 .. f.width - s.length) put(w, ' ');
-            }
-        }
-        else
-        {
-            if (!f.flDash)
-            {
-                static if (hasLength!T)
+                auto s = val[0 .. f.precision < $ ? f.precision : $];
+                if (!f.flDash)
                 {
                     // right align
-                    auto len = val.length;
-                }
-                else static if (isForwardRange!T && !isInfinite!T)
-                {
-                    auto len = walkLength(val.save);
+                    if (f.width > s.length)
+                        foreach (i ; 0 .. f.width - s.length) put(w, ' ');
+                    put(w, s);
                 }
                 else
                 {
-                    enforce(f.width == 0, "Cannot right-align a range without length");
-                    size_t len = 0;
-                }
-                if (f.precision != f.UNSPECIFIED && len > f.precision)
-                    len = f.precision;
-
-                if (f.width > len)
-                    foreach (i ; 0 .. f.width - len)
-                        put(w, ' ');
-                if (f.precision == f.UNSPECIFIED)
-                    put(w, val);
-                else
-                {
-                    size_t printed = 0;
-                    for (; !val.empty && printed < f.precision; val.popFront(), ++printed)
-                        put(w, val.front);
+                    // left align
+                    put(w, s);
+                    if (f.width > s.length)
+                        foreach (i ; 0 .. f.width - s.length) put(w, ' ');
                 }
             }
             else
             {
-                size_t printed = void;
-
-                // left align
-                if (f.precision == f.UNSPECIFIED)
+                if (!f.flDash)
                 {
                     static if (hasLength!T)
                     {
-                        printed = val.length;
-                        put(w, val);
+                        // right align
+                        auto len = val.length;
+                    }
+                    else static if (isForwardRange!T && !isInfinite!T)
+                    {
+                        auto len = walkLength(val.save);
                     }
                     else
                     {
-                        printed = 0;
-                        for (; !val.empty; val.popFront(), ++printed)
+                        enforce(f.width == 0, "Cannot right-align a range without length");
+                        size_t len = 0;
+                    }
+                    if (f.precision != f.UNSPECIFIED && len > f.precision)
+                        len = f.precision;
+
+                    if (f.width > len)
+                        foreach (i ; 0 .. f.width - len)
+                            put(w, ' ');
+                    if (f.precision == f.UNSPECIFIED)
+                        put(w, val);
+                    else
+                    {
+                        size_t printed = 0;
+                        for (; !val.empty && printed < f.precision; val.popFront(), ++printed)
                             put(w, val.front);
                     }
                 }
                 else
                 {
-                    printed = 0;
-                    for (; !val.empty && printed < f.precision; val.popFront(), ++printed)
-                        put(w, val.front);
-                }
+                    size_t printed = void;
 
-                if (f.width > printed)
-                    foreach (i ; 0 .. f.width - printed)
-                        put(w, ' ');
+                    // left align
+                    if (f.precision == f.UNSPECIFIED)
+                    {
+                        static if (hasLength!T)
+                        {
+                            printed = val.length;
+                            put(w, val);
+                        }
+                        else
+                        {
+                            printed = 0;
+                            for (; !val.empty; val.popFront(), ++printed)
+                                put(w, val.front);
+                        }
+                    }
+                    else
+                    {
+                        printed = 0;
+                        for (; !val.empty && printed < f.precision; val.popFront(), ++printed)
+                            put(w, val.front);
+                    }
+
+                    if (f.width > printed)
+                        foreach (i ; 0 .. f.width - printed)
+                            put(w, ' ');
+                }
             }
         }
-        return;
+        else
+        {
+            put(w, f.seqBefore);
+            if (!val.empty)
+            {
+                formatElement(w, val.front, f);
+                val.popFront();
+                for (size_t i; !val.empty; val.popFront(), ++i)
+                {
+                    put(w, f.seqSeparator);
+                    formatElement(w, val.front, f);
+                }
+            }
+            static if (!isInfinite!T) put(w, f.seqAfter);
+        }
     }
-
-    if (f.spec == 'r')
+    else if (f.spec == 'r')
     {
         // raw writes
         for (size_t i; !val.empty; val.popFront(), ++i)
         {
             formatValue(w, val.front, f);
         }
-    }
-    else if (f.spec == 's')
-    {
-        put(w, f.seqBefore);
-        if (!val.empty)
-        {
-            formatElement(w, val.front, f);
-            val.popFront();
-            for (size_t i; !val.empty; val.popFront(), ++i)
-            {
-                put(w, f.seqSeparator);
-                formatElement(w, val.front, f);
-            }
-        }
-        static if (!isInfinite!T) put(w, f.seqAfter);
     }
     else if (f.spec == '(')
     {
