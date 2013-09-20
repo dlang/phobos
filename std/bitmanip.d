@@ -819,9 +819,10 @@ struct BitArray
             }
         }
 
-        if (this.length < a2.length) return -1;
-        if (this.length > a2.length) return 1;
-        return 0;
+        // Standard: 
+        // A bool value can be implicitly converted to any integral type,
+        // with false becoming 0 and true becoming 1
+        return (this.length > a2.length) - (this.length < a2.length);
     }
 
     unittest
