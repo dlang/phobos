@@ -801,19 +801,27 @@ struct BitArray
         auto p1 = this.ptr;
         auto p2 = a2.ptr;
         auto n = len / bitsPerSizeT;
-        for (i = 0; i < n; i++)
+
+        for (i = 0; i < n; ++i)
         {
             if (p1[i] != p2[i])
                 break;                // not equal
         }
-        for (size_t j = 0; j < len-i * bitsPerSizeT; j++)
+
+        foreach (j; 0 .. len-i * bitsPerSizeT)
         {
-            size_t mask = cast(size_t)(1 << j);
-            auto c = (cast(long)(p1[i] & mask) - cast(long)(p2[i] & mask));
-            if (c)
-                return c > 0 ? 1 : -1;
+            size_t mask = cast(size_t)1 << j;
+                    
+            if ((p1[i] ^ p2[i]) & mask)
+            {
+                if (p1[i] & mask) return 1;
+                else return -1;
+            }
         }
-        return cast(int)this.len - cast(int)a2.length;
+
+        if (this.length < a2.length) return -1;
+        if (this.length > a2.length) return 1;
+        return 0;
     }
 
     unittest
@@ -843,7 +851,7 @@ struct BitArray
         assert(a >= e);
 
         bool[] v;
-        for (int i = 1; i < 256; i++)
+        foreach  (i; 1 .. 256)
         {
             v.length = i;
             v[] = false;
@@ -852,6 +860,20 @@ struct BitArray
             BitArray y; y.init(v);
             assert(x < y);
             assert(x <= y);
+        }
+
+        foreach (i; 2 .. 256)
+        {
+            foreach (j; 1 .. i)
+            {
+                BitArray a1, a2;
+                a1.length = i;
+                a2.length = i;
+                a1[j-1] = true;
+                a2[j] = true;
+                assert(a1 > a2);
+                assert(a1 >= a2);
+            }
         }
     }
 
