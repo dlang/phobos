@@ -4149,7 +4149,7 @@ template IntegralTypeOf(T)
        immutable(  char) idy(    immutable(  char) );
        immutable( wchar) idy(    immutable( wchar) );
        immutable( dchar) idy(    immutable( dchar) );
-    // Integrals and characers are impilcit convertible each other with value copy.
+    // Integrals and characers are implicitly convertible with each other for value copy.
     // Then adding exact overloads to detect it.
        immutable(  byte) idy(    immutable(  byte) );
        immutable( ubyte) idy(    immutable( ubyte) );
@@ -4293,7 +4293,7 @@ template CharTypeOf(T)
       immutable(  char) idy(   immutable(  char) );
       immutable( wchar) idy(   immutable( wchar) );
       immutable( dchar) idy(   immutable( dchar) );
-    // Integrals and characers are impilcit convertible each other with value copy.
+    // Integrals and characers are implicitly convertible with each other for value copy.
     // Then adding exact overloads to detect it.
       immutable(  byte) idy(   immutable(  byte) );
       immutable( ubyte) idy(   immutable( ubyte) );
