@@ -4301,8 +4301,6 @@ template CharTypeOf(T)
       immutable(ushort) idy(   immutable(ushort) );
       immutable(   int) idy(   immutable(   int) );
       immutable(  uint) idy(   immutable(  uint) );
-      immutable(  long) idy(   immutable(  long) );
-      immutable( ulong) idy(   immutable( ulong) );
 
     static if (is(T == enum))
         alias .CharTypeOf!(OriginalType!T) CharTypeOf;
