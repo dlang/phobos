@@ -936,7 +936,7 @@ struct BitArray
                 break;                // not equal
         }
 
-        foreach (j; 0 .. len-i * bitsPerSizeT)
+        foreach (j; 0 .. len - i*bitsPerSizeT)
         {
             size_t mask = size_t(1) << j;
                     
