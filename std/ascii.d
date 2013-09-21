@@ -273,6 +273,7 @@ unittest
     }
 }
 
+
 /++
     Whether or not $(D c) is a printable character - including the space
     character.
@@ -324,15 +325,17 @@ unittest
 auto toLower(C)(C c)
     if(is(C : dchar))
 {
-    static if (isAggregateType!C)
+    alias OC = OriginalType!C;
+    static if (isAggregateType!OC)
         alias R = dchar;
     else
-        alias R = Unqual!(OriginalType!C);
+        alias R = Unqual!OC;
     return isUpper(c) ? cast(R)(cast(R)c + 'a' - 'A') : cast(R)c;
 }
 
-unittest
+@safe pure nothrow unittest
 {
+
     foreach(C; TypeTuple!(char, wchar, dchar, immutable char, ubyte))
     {
         foreach(i, c; uppercase)
@@ -348,23 +351,11 @@ unittest
 
         foreach(C c; 128 .. C.max)
             assert(toLower(c) == c);
+
+        //CTFE
+        static assert(toLower(cast(C)'a') == 'a');
+        static assert(toLower(cast(C)'A') == 'a');
     }
-
-    static assert(isSafe!(toLower!char));
-    static assert((functionAttributes!((){'a'.toLower();}) & FunctionAttribute.pure_) != 0);
-    static assert((functionAttributes!((){'a'.toLower();}) & FunctionAttribute.nothrow_) != 0);
-
-    static struct Char { dchar c; alias c this; }
-    static assert(is(typeof(Char('A').toLower()) == dchar));
-    assert(Char('A').toLower() == 'a');
-    assert(Char('a').toLower() == 'a');
-
-    static assert(toLower(StdASCIITestEC.a) == 'a');
-    static assert(toLower(StdASCIITestEC.A) == 'a');
-    static assert(is(typeof(toLower(StdASCIITestEC.A)) == char));
-    static assert(toLower(StdASCIITestED.a) == 'a');
-    static assert(toLower(StdASCIITestED.A) == 'a');
-    static assert(is(typeof(toLower(StdASCIITestED.A)) == dchar));
 }
 
 
@@ -380,14 +371,15 @@ unittest
 auto toUpper(C)(C c)
     if(is(C : dchar))
 {
-    static if (isAggregateType!C)
+    alias OC = OriginalType!C;
+    static if (isAggregateType!OC)
         alias R = dchar;
     else
-        alias R = Unqual!(OriginalType!C);
+        alias R = Unqual!OC;
     return isLower(c) ? cast(R)(cast(R)c - ('a' - 'A')) : cast(R)c;
 }
 
-unittest
+@safe pure nothrow unittest
 {
     foreach(C; TypeTuple!(char, wchar, dchar, immutable char, ubyte))
     {
@@ -404,25 +396,68 @@ unittest
 
         foreach(C c; 128 .. C.max)
             assert(toUpper(c) == c);
+
+        //CTFE
+        static assert(toUpper(cast(C)'a') == 'A');
+        static assert(toUpper(cast(C)'A') == 'A');
     }
-
-    static assert(isSafe!(toUpper!char));
-    static assert((functionAttributes!((){'a'.toUpper();}) & FunctionAttribute.pure_) != 0);
-    static assert((functionAttributes!((){'a'.toUpper();}) & FunctionAttribute.nothrow_) != 0);
-
-    static struct Char { dchar c; alias c this; }
-    static assert(is(typeof(Char('a').toUpper()) == dchar));
-    assert(Char('a').toUpper() == 'A');
-    assert(Char('A').toUpper() == 'A');
-
-    static assert(toUpper(StdASCIITestEC.a) == 'A');
-    static assert(toUpper(StdASCIITestEC.A) == 'A');
-    static assert(is(typeof(toUpper(StdASCIITestEC.A)) == char));
-    static assert(toUpper(StdASCIITestED.a) == 'A');
-    static assert(toUpper(StdASCIITestED.A) == 'A');
-    static assert(is(typeof(toUpper(StdASCIITestED.A)) == dchar));
 }
 
+
+unittest //Test both toUpper and toLower with non-builtin
+{
+    //User Defined [Char|Wchar|Dchar]
+    static struct UDC {  char c; alias c this; }
+    static struct UDW { wchar c; alias c this; }
+    static struct UDD { dchar c; alias c this; }
+    //[Char|Wchar|Dchar] Enum
+    enum CE :  char {a = 'a', A = 'A'}
+    enum WE : wchar {a = 'a', A = 'A'}
+    enum DE : dchar {a = 'a', A = 'A'}
+    //User Defined [Char|Wchar|Dchar] Enum
+    enum UDCE : UDC {a = UDC('a'), A = UDC('A')}
+    enum UDWE : UDW {a = UDW('a'), A = UDW('A')}
+    enum UDDE : UDD {a = UDD('a'), A = UDD('A')}
+
+    //User defined types with implicit cast to dchar test.
+    foreach (Char; TypeTuple!(UDC, UDW, UDD))
+    {
+        assert(toLower(Char('a')) == 'a');
+        assert(toLower(Char('A')) == 'a');
+        static assert(toLower(Char('a')) == 'a');
+        static assert(toLower(Char('A')) == 'a');
+        static assert(toUpper(Char('a')) == 'A');
+        static assert(toUpper(Char('A')) == 'A');
+    }
+
+    //Various enum tests.
+    foreach (Enum; TypeTuple!(CE, WE, DE, UDCE, UDWE, UDDE))
+    {
+        assert(toLower(Enum.a) == 'a');
+        assert(toLower(Enum.A) == 'a');
+        assert(toUpper(Enum.a) == 'A');
+        assert(toUpper(Enum.A) == 'A');
+        static assert(toLower(Enum.a) == 'a');
+        static assert(toLower(Enum.A) == 'a');
+        static assert(toUpper(Enum.a) == 'A');
+        static assert(toUpper(Enum.A) == 'A');
+    }
+
+    //Return value type tests for enum of non-UDT. These should be the original type.
+    foreach (T; TypeTuple!(CE, WE, DE))
+    {
+        alias C = OriginalType!T;
+        static assert(is(typeof(toLower(T.init)) == C));
+        static assert(is(typeof(toUpper(T.init)) == C));
+    }
+
+    //Return value tests for UDT and enum of UDT. These should be dchar
+    foreach (T; TypeTuple!(UDC, UDW, UDD, UDCE, UDWE, UDDE))
+    {
+        static assert(is(typeof(toLower(T.init)) == dchar));
+        static assert(is(typeof(toUpper(T.init)) == dchar));
+    }
+}
 
 //==============================================================================
 // Private Section.
@@ -462,17 +497,3 @@ immutable ubyte[128] _ctype =
         _LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
         _LC,_LC,_LC,_PNC,_PNC,_PNC,_PNC,_CTL
 ];
-
-version (unittest)
-{
-    enum StdASCIITestEC : char
-    {
-        a = 'a',
-        A = 'A',
-    }
-    enum StdASCIITestED : dchar
-    {
-        a = 'a',
-        A = 'A',
-    }
-}
