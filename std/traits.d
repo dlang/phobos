@@ -5834,15 +5834,18 @@ unittest
     static assert(mangledName!((int a) { return a+x; }) == "DFNbNfiZi");    // nothrow safe
 }
 
+version(none) // disabled until druntime pull #611 is merged
 unittest
 {
     // Test for bug 5718
     import std.demangle;
     int foo;
-    assert(demangle(mangledName!foo)[$-7 .. $] == "int foo");
+    auto foo_demangled = demangle(mangledName!foo);
+    assert(foo_demangled[0 .. 4] == "int " && foo_demangled[$-3 .. $] == "foo");
 
     void bar(){}
-    assert(demangle(mangledName!bar)[$-10 .. $] == "void bar()");
+    auto bar_demangled = demangle(mangledName!bar);
+    assert(bar_demangled[0 .. 5] == "void " && bar_demangled[$-5 .. $] == "bar()");
 }
 
 
