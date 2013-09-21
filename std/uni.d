@@ -5699,6 +5699,8 @@ unittest
     assert(icmp("ᾩ -> \u1F70\u03B9", "\u1F61\u03B9 -> ᾲ") == 0);
     assert(icmp("ΐ"w, "\u03B9\u0308\u0301") == 0);
     assert(sicmp("ΐ", "\u03B9\u0308\u0301") != 0);
+    //bugzilla 11057
+    assert( icmp("K", "L") < 0 );
     });
 }
 
