@@ -5827,6 +5827,7 @@ unittest
     static assert(mangledName!((int a) { return a+x; }) == "DFNbNfiZi");    // nothrow safe
 }
 
+version(none) // disabled until druntime pull #611 is merged
 unittest
 {
     // Test for bug 5718
