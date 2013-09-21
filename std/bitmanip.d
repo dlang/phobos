@@ -808,15 +808,12 @@ struct BitArray
                 break;                // not equal
         }
 
-        foreach (j; 0 .. len - i*bitsPerSizeT)
+        immutable diff = p1[i] ^ p2[i];
+        if (diff)
         {
-            size_t mask = cast(size_t)1 << j;
-                    
-            if ((p1[i] ^ p2[i]) & mask)
-            {
-                if (p1[i] & mask) return 1;
-                else return -1;
-            }
+            immutable index = bsf(diff);
+            bool isLhs = cast(bool)(p1[i] & (cast(size_t)1 << index));
+            return (isLhs << 1) - 1;
         }
 
         // Standard: 
