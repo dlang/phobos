@@ -25,14 +25,13 @@
   +/
 module std.ascii;
 
-import std.traits;
-
-version(unittest)
+version (unittest)
 {
-    import std.range;
-    import std.typetuple;
+    // FIXME: When dmd bug #314 is fixed, make these selective.
+    import std.range; // : chain;
+    import std.traits; // : functionAttributes, FunctionAttribute, isSafe;
+    import std.typetuple; // : TypeTuple;
 }
-
 
 immutable hexDigits      = "0123456789ABCDEF";           /// 0..9A..F
 immutable lowerHexDigits = "0123456789abcdef";           /// 0..9a..f
@@ -40,9 +39,8 @@ immutable fullHexDigits  = "0123456789ABCDEFabcdef";     /// 0..9A..Fa..f
 immutable digits         = "0123456789";                 /// 0..9
 immutable octalDigits    = "01234567";                   /// 0..7
 immutable lowercase      = "abcdefghijklmnopqrstuvwxyz"; /// a..z
-immutable letters        = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ~
-                           "abcdefghijklmnopqrstuvwxyz"; /// A..Za..z
 immutable uppercase      = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; /// A..Z
+immutable letters        = uppercase ~ lowercase;        /// A..Za..z
 immutable whitespace     = " \t\v\r\n\f";                /// ASCII whitespace
 
 /**
@@ -320,9 +318,11 @@ unittest
     where it's a built-in type, $(D Unqual!C) is returned, whereas if it's a
     user-defined type, $(D dchar) is returned.
   +/
-auto toLower(C)(C c)
+auto toLower(C)(C c) @safe pure nothrow
     if(is(C : dchar))
 {
+    import std.traits : isScalarType, Unqual;
+    
     static if(isScalarType!C)
         return isUpper(c) ? cast(Unqual!C)(c + 'a' - 'A') : cast(Unqual!C)c;
     else
@@ -367,9 +367,11 @@ unittest
     where it's a built-in type, $(D Unqual!C) is returned, whereas if it's a
     user-defined type, $(D dchar) is returned.
   +/
-auto toUpper(C)(C c)
+auto toUpper(C)(C c) @safe pure nothrow
     if(is(C : dchar))
 {
+    import std.traits : isScalarType, Unqual;
+    
     static if(isScalarType!C)
         return isLower(c) ? cast(Unqual!C)(c - ('a' - 'A')) : cast(Unqual!C)c;
     else
@@ -413,35 +415,35 @@ private:
 
 enum
 {
-    _SPC =      8,
-    _CTL =      0x20,
-    _BLK =      0x40,
-    _HEX =      0x80,
-    _UC  =      1,
-    _LC  =      2,
-    _PNC =      0x10,
-    _DIG =      4,
-    _ALP =      _UC|_LC,
+    _UC  = 0x01,
+    _LC  = 0x02,
+    _DIG = 0x04,
+    _SPC = 0x08,
+    _PNC = 0x10,
+    _CTL = 0x20,
+    _BLK = 0x40,
+    _HEX = 0x80,
+    _ALP = _UC | _LC,
 }
 
 immutable ubyte[128] _ctype =
 [
-        _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
-        _CTL,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL,_CTL,
-        _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
-        _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
-        _SPC|_BLK,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
-        _PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
-        _DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,
-        _DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,
-        _PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
-        _PNC,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC,
-        _UC,_UC,_UC,_UC,_UC,_UC,_UC,_UC,
-        _UC,_UC,_UC,_UC,_UC,_UC,_UC,_UC,
-        _UC,_UC,_UC,_PNC,_PNC,_PNC,_PNC,_PNC,
-        _PNC,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC,
-        _LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
-        _LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
-        _LC,_LC,_LC,_PNC,_PNC,_PNC,_PNC,_CTL
+    _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
+    _CTL,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL,_CTL,
+    _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
+    _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
+    _SPC|_BLK,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
+    _PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
+    _DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,
+    _DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,
+    _PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
+    _PNC,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC,
+    _UC,_UC,_UC,_UC,_UC,_UC,_UC,_UC,
+    _UC,_UC,_UC,_UC,_UC,_UC,_UC,_UC,
+    _UC,_UC,_UC,_PNC,_PNC,_PNC,_PNC,_PNC,
+    _PNC,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC,
+    _LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
+    _LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
+    _LC,_LC,_LC,_PNC,_PNC,_PNC,_PNC,_CTL
 ];
 
