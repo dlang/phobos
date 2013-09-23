@@ -805,15 +805,23 @@ struct BitArray
         for (i = 0; i < n; ++i)
         {
             if (p1[i] != p2[i])
-                break;                // not equal
+            {
+                return p1[i] & cast(size_t)1 << bsf(p1[i] ^ p2[i]) ? 1 : -1;
+            }
         }
 
-        immutable diff = p1[i] ^ p2[i];
-        if (diff)
+        immutable lenLastChunk = len % bitsPerSizeT;
+        if (lenLastChunk > 0)
         {
-            immutable index = bsf(diff);
-            bool isLhs = cast(bool)(p1[i] & (cast(size_t)1 << index));
-            return (isLhs << 1) - 1;
+            immutable diff = p1[i] ^ p2[i];
+            if (diff)
+            {
+                immutable index = bsf(diff);
+                if (index < lenLastChunk)
+                {
+                    return p1[i] & cast(size_t)1 << index ? 1 : -1;
+                }
+            }
         }
 
         // Standard: 
