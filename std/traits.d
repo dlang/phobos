@@ -3841,20 +3841,6 @@ Returns $(D true) iff a value of type $(D Rhs) can be assigned to a variable of
 type $(D Lhs).
 
 If you omit $(D Rhs), $(D isAssignable) will check identity assignable of $(D Lhs).
-
-Examples:
----
-static assert(isAssignable!(long, int));
-static assert(!isAssignable!(int, long));
-static assert( isAssignable!(const(char)[], string));
-static assert(!isAssignable!(string, char[]));
-
-// int is assignable to int
-static assert( isAssignable!int);
-
-// immutable int is not assinable to immutable int
-static assert(!isAssignable!(immutable int));
----
 */
 template isAssignable(Lhs, Rhs = Lhs)
 {
@@ -3865,14 +3851,23 @@ template isAssignable(Lhs, Rhs = Lhs)
     }));
 }
 
+///
 unittest
 {
-    static assert( isAssignable!(long, int));
-    static assert( isAssignable!(const(char)[], string));
-
+    static assert(isAssignable!(long, int));
     static assert(!isAssignable!(int, long));
+    static assert( isAssignable!(const(char)[], string));
     static assert(!isAssignable!(string, char[]));
 
+    // int is assignable to int
+    static assert( isAssignable!int);
+
+    // immutable int is not assinable to immutable int
+    static assert(!isAssignable!(immutable int));
+}
+
+unittest
+{
     static assert(!isAssignable!(immutable(int), int));
     static assert( isAssignable!(int, immutable(int)));
 
@@ -3898,11 +3893,6 @@ unittest
     struct S6 { void opAssign(in ref S5); }
     static assert( isAssignable!(S6, S5));
     static assert( isAssignable!(S6, immutable(S5)));
-}
-unittest
-{
-    static assert( isAssignable!int);
-    static assert(!isAssignable!(immutable int));
 }
 
 
