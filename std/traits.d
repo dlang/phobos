@@ -3840,21 +3840,16 @@ unittest
 Returns $(D true) iff a value of type $(D Rhs) can be assigned to a variable of
 type $(D Lhs).
 
+$(D isAssignable) returns whether both an lvalue and rvalue can be assigned.
+
 If you omit $(D Rhs), $(D isAssignable) will check identity assignable of $(D Lhs).
 */
-template isAssignable(Lhs, Rhs = Lhs)
-{
-    enum bool isAssignable = is(typeof({
-        Lhs l = void;
-        void f(Rhs r) { l = r; }
-        return l;
-    }));
-}
+enum isAssignable(Lhs, Rhs = Lhs) = isRvalueAssignable!(Lhs, Rhs) && isLvalueAssignable!(Lhs, Rhs);
 
 ///
 unittest
 {
-    static assert(isAssignable!(long, int));
+    static assert( isAssignable!(long, int));
     static assert(!isAssignable!(int, long));
     static assert( isAssignable!(const(char)[], string));
     static assert(!isAssignable!(string, char[]));
@@ -3866,10 +3861,24 @@ unittest
     static assert(!isAssignable!(immutable int));
 }
 
+// ditto
+private enum isRvalueAssignable(Lhs, Rhs = Lhs) = __traits(compiles, lvalueOf!Lhs = rvalueOf!Rhs);
+
+// ditto
+private enum isLvalueAssignable(Lhs, Rhs = Lhs) = __traits(compiles, lvalueOf!Lhs = lvalueOf!Rhs);
+
 unittest
 {
     static assert(!isAssignable!(immutable int, int));
     static assert( isAssignable!(int, immutable int));
+
+    static assert(!isAssignable!(inout int, int));
+    static assert( isAssignable!(int, inout int));
+    static assert(!isAssignable!(inout int));
+
+    static assert( isAssignable!(shared int, int));
+    static assert( isAssignable!(int, shared int));
+    static assert( isAssignable!(shared int));
 
     struct S { @disable this(); this(int n){} }
     static assert( isAssignable!(S, S));
@@ -3891,8 +3900,10 @@ unittest
 
     struct S5 { @disable this(); @disable this(this); }
     struct S6 { void opAssign(in ref S5); }
-    static assert( isAssignable!(S6, S5));
-    static assert( isAssignable!(S6, immutable S5));
+    static assert(!isAssignable!(S6, S5));
+    static assert(!isRvalueAssignable!(S6, S5));
+    static assert( isLvalueAssignable!(S6, S5));
+    static assert( isLvalueAssignable!(S6, immutable S5));
 }
 
 
