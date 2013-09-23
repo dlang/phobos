@@ -3868,8 +3868,8 @@ unittest
 
 unittest
 {
-    static assert(!isAssignable!(immutable(int), int));
-    static assert( isAssignable!(int, immutable(int)));
+    static assert(!isAssignable!(immutable int, int));
+    static assert( isAssignable!(int, immutable int));
 
     struct S { @disable this(); this(int n){} }
     static assert( isAssignable!(S, S));
@@ -3887,12 +3887,12 @@ unittest
     struct S4 { void opAssign(int); }
     static assert( isAssignable!(S4, S4));
     static assert( isAssignable!(S4, int));
-    static assert( isAssignable!(S4, immutable(int)));
+    static assert( isAssignable!(S4, immutable int));
 
     struct S5 { @disable this(); @disable this(this); }
     struct S6 { void opAssign(in ref S5); }
     static assert( isAssignable!(S6, S5));
-    static assert( isAssignable!(S6, immutable(S5)));
+    static assert( isAssignable!(S6, immutable S5));
 }
 
 
