@@ -737,7 +737,7 @@ enum ParameterStorageClass : uint
      * These flags can be bitwise OR-ed together to represent complex storage
      * class.
      */
-    none   = 0,        /// ditto
+    none   = 0,
     scope_ = 0b000_1,  /// ditto
     out_   = 0b001_0,  /// ditto
     ref_   = 0b010_0,  /// ditto
@@ -1033,7 +1033,7 @@ enum FunctionAttribute : uint
     /**
      * These flags can be bitwise OR-ed together to represent complex attribute.
      */
-    none     = 0,          /// ditto
+    none     = 0,
     pure_    = 0b00000001, /// ditto
     nothrow_ = 0b00000010, /// ditto
     ref_     = 0b00000100, /// ditto
