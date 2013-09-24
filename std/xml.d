@@ -1117,9 +1117,10 @@ class Tag
         override int opCmp(Object o)
         {
             const tag = toType!(const Tag)(o);
+            // Note that attr is an AA, so the comparison is nonsensical (bug 10381)
             return
                 ((name != tag.name) ? ( name < tag.name ? -1 : 1 ) :
-                ((attr != tag.attr) ? ( attr < tag.attr ? -1 : 1 ) :
+                ((attr != tag.attr) ? ( cast(void *)attr < cast(void*)tag.attr ? -1 : 1 ) :
                 ((type != tag.type) ? ( type < tag.type ? -1 : 1 ) :
             0 )));
         }
