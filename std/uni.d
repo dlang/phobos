@@ -6720,7 +6720,7 @@ private template toCaseLength(alias indexFn, uint maxIdx, alias tableFn)
             ushort caseIndex = indexFn(ch);
             if(caseIndex == ushort.max)
                 continue;
-            else if(caseIndex < MAX_SIMPLE_LOWER)
+            else if(caseIndex < maxIdx)
             {
                 codeLen += startIdx - lastNonTrivial;
                 lastNonTrivial = curIdx;
@@ -6858,8 +6858,19 @@ S toLower(S)(S s) @trusted pure
         dchar low = ch.toLower();
         assert(low == ch || isLower(low), format("%s -> %s", ch, low));
     }
-
     assert(toLower("АЯ") == "ая");
+    
+    assert("\u1E9E".toLower == "\u00df");
+    assert("\u00df".toUpper == "SS");
+}
+
+//bugzilla 9629
+unittest
+{
+    wchar[] test = "hello þ world"w.dup;
+    auto piece = test[6..7];
+    toUpperInPlace(piece);
+    assert(test == "hello Þ world");
 }
 
 
