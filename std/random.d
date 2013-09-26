@@ -1827,10 +1827,11 @@ struct RandomSample(Range, UniformRNG = void)
 {
     private size_t _available, _toSelect;
     private enum ushort _alphaInverse = 13; // Vitter's recommended value.
-    private bool _first, _algorithmA;
     private double _Vprime;
     private Range _input;
     private size_t _index;
+    private enum Skip { None, A, D };
+    private Skip _skip = Skip.None;
 
     // If we're using the default thread-local random number generator then
     // we shouldn't store a copy of it here.  UniformRNG == void is a sentinel
@@ -1899,7 +1900,23 @@ struct RandomSample(Range, UniformRNG = void)
                          " items as available when input contains only ",
                          _input.length));
         }
-        _first = true;
+    }
+
+    private void initializeFront()
+    {
+        assert(_skip == Skip.None);
+        // We can save ourselves a random variate by checking right
+        // at the beginning if we should use Algorithm A.
+        if ((_alphaInverse * _toSelect) > _available)
+        {
+            _skip = Skip.A;
+        }
+        else
+        {
+            _skip = Skip.D;
+            _Vprime = newVprime(_toSelect);
+        }
+        prime();
     }
 
 /**
@@ -1917,21 +1934,9 @@ struct RandomSample(Range, UniformRNG = void)
         // having it always correspond to the first element of the
         // input.  The rest of the sample points are determined each
         // time we call popFront().
-        if (_first)
+        if (_skip == Skip.None)
         {
-            // We can save ourselves a random variate by checking right
-            // at the beginning if we should use Algorithm A.
-            if ((_alphaInverse * _toSelect) > _available)
-            {
-                _algorithmA = true;
-            }
-            else
-            {
-                _Vprime = newVprime(_toSelect);
-                _algorithmA = false;
-            }
-            prime();
-            _first = false;
+            initializeFront();
         }
         return _input.front;
     }
@@ -1939,6 +1944,13 @@ struct RandomSample(Range, UniformRNG = void)
 /// Ditto
     void popFront()
     {
+        // First we need to check if the sample has
+        // been initialized in the first place.
+        if (_skip == Skip.None)
+        {
+            initializeFront();
+        }
+
         _input.popFront();
         --_available;
         --_toSelect;
@@ -1967,9 +1979,40 @@ struct RandomSample(Range, UniformRNG = void)
 /**
 Returns the index of the visited record.
  */
-    size_t index()
+    @property size_t index()
     {
+        if (_skip == Skip.None)
+        {
+            initializeFront();
+        }
         return _index;
+    }
+
+    private size_t skip()
+    {
+        assert(_skip != Skip.None);
+
+        // Step D1: if the number of points still to select is greater
+        // than a certain proportion of the remaining data points, i.e.
+        // if n >= alpha * N where alpha = 1/13, we carry out the
+        // sampling with Algorithm A.
+        if (_skip == Skip.A)
+        {
+            return skipA();
+        }
+        else if ((_alphaInverse * _toSelect) > _available)
+        {
+            // We shouldn't get here unless the current selected
+            // algorithm is D.
+            assert(_skip == Skip.D);
+            _skip = Skip.A;
+            return skipA();
+        }
+        else
+        {
+            assert(_skip == Skip.D);
+            return skipD();
+        }
     }
 
 /*
@@ -2046,27 +2089,20 @@ and its rationale, see:
 
 Variable names are chosen to match those in Vitter's paper.
 */
-    private size_t skip()
+    private size_t skipD()
     {
-        // Step D1: if the number of points still to select is greater
-        // than a certain proportion of the remaining data points, i.e.
-        // if n >= alpha * N where alpha = 1/13, we carry out the
-        // sampling with Algorithm A.
-        if (_algorithmA)
-        {
-            return skipA();
-        }
-        else if ((_alphaInverse * _toSelect) > _available)
-        {
-            _algorithmA = true;
-            return skipA();
-        }
-        // Otherwise, we use the standard Algorithm D mechanism.
-        else if (_toSelect > 1)
+        // Confirm that the check in Step D1 is valid and we
+        // haven't been sent here by mistake
+        assert((_alphaInverse * _toSelect) <= _available);
+
+        // Now it's safe to use the standard Algorithm D mechanism.
+        if (_toSelect > 1)
         {
             size_t s;
             size_t qu1 = 1 + _available - _toSelect;
             double x, y1;
+
+            assert(!_Vprime.isNaN);
 
             while (true)
             {
@@ -2109,7 +2145,7 @@ Variable names are chosen to match those in Vitter's paper.
                         limit = qu1;
                     }
 
-                    foreach (size_t t; limit.._available)
+                    foreach (size_t t; limit .. _available)
                     {
                         y2 *= top/bottom;
                         top--;
@@ -2148,7 +2184,10 @@ Variable names are chosen to match those in Vitter's paper.
 
     private void prime()
     {
-        if (empty) return;
+        if (empty)
+        {
+            return;
+        }
         assert(_available && _available >= _toSelect);
         immutable size_t s = skip();
         assert(s + _toSelect <= _available);
@@ -2374,33 +2413,78 @@ unittest
             auto sample1 = randomSample(TestInputRange(), 654, 654_321);
             for (; !sample1.empty; sample1.popFront())
             {
-                assert(sample1.front == sample1.index());
+                assert(sample1.front == sample1.index);
             }
 
             auto sample2 = randomSample(TestInputRange(), 654, 654_321, rng);
             for (; !sample2.empty; sample2.popFront())
             {
-                assert(sample2.front == sample2.index());
+                assert(sample2.front == sample2.index);
             }
 
-            /* These next 2 tests will fail because of Issue 10322.  They
-             * should be restored to test that this bug has been fixed.
-             * http://d.puremagic.com/issues/show_bug.cgi?id=10322
+            /* Check that it also works if .index is called before .front.
+             * See: http://d.puremagic.com/issues/show_bug.cgi?id=10322
              */
-            version(none)
+            auto sample3 = randomSample(TestInputRange(), 654, 654_321);
+            for (; !sample3.empty; sample3.popFront())
             {
-                auto sample3 = randomSample(TestInputRange(), 654, 654_321);
-                for (; !sample3.empty; sample3.popFront())
-                {
-                    assert(sample3.index() == sample3.front);
-                }
+                assert(sample3.index == sample3.front);
+            }
 
-                auto sample4 = randomSample(TestInputRange(), 654, 654_321, rng);
-                for (; !sample4.empty; sample4.popFront())
+            auto sample4 = randomSample(TestInputRange(), 654, 654_321, rng);
+            for (; !sample4.empty; sample4.popFront())
+            {
+                assert(sample4.index == sample4.front);
+            }
+        }
+
+        /* Test behaviour if .popFront() is called before sample is read.
+         * This is a rough-and-ready check that the statistical properties
+         * are in the ballpark -- not a proper validation of statistical
+         * quality!  This incidentally also checks for reference-type
+         * initialization bugs, as the foreach() loop will operate on a
+         * copy of the popFronted (and hence initialized) sample.
+         */
+        {
+            size_t count0, count1, count99;
+            foreach(_; 0 .. 100_000)
+            {
+                auto sample = randomSample(iota(100), 5);
+                sample.popFront();
+                foreach(s; sample)
                 {
-                    assert(sample4.index() == sample4.front);
+                    if (s == 0)
+                    {
+                        ++count0;
+                    }
+                    else if (s == 1)
+                    {
+                        ++count1;
+                    }
+                    else if (s == 99)
+                    {
+                        ++count99;
+                    }
                 }
             }
+            /* Statistical assumptions here: this is a sequential sampling process
+             * so (i) 0 can only be the first sample point, so _can't_ be in the
+             * remainder of the sample after .popFront() is called. (ii) By similar
+             * token, 1 can only be in the remainder if it's the 2nd point of the
+             * whole sample, and hence if 0 was the first; probability of 0 being
+             * first and 1 second is 5/100 * 4/99 (thank you, Algorithm S:-) and
+             * so the mean count of 1 should be about 202.  Finally, 99 can only
+             * be the _last_ sample point to be picked, so its probability of
+             * inclusion should be independent of the .popFront() and it should
+             * occur with frequency 5/100, hence its count should be about 5000.
+             * Unfortunately we have to set quite a high tolerance because with
+             * sample size small enough for unittests to run in reasonable time,
+             * the variance can be quite high.
+             */
+            assert(count0 == 0);
+            assert(count1 < 300, text("1: ", count1, " > 300."));
+            assert(4_700 < count99, text("99: ", count99, " < 4700."));
+            assert(count99 < 5_300, text("99: ", count99, " > 5300."));
         }
 
         /* Odd corner-cases: RandomSample has 2 constructors that are not called
