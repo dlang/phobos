@@ -1646,8 +1646,6 @@ else version (FreeBSD)
                 return to!(string)(buffer[0 .. len]);
             buffer.length *= 2;
         }
-
-        assert(0, "should not happen");
     }
     else version (FreeBSD)
     {
