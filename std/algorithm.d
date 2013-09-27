@@ -1942,19 +1942,20 @@ if (isMutable!T && !is(typeof(T.init.proxySwap(T.init))))
 {
     static if (!isAssignable!T || hasElaborateAssign!T)
     {
-      if (&lhs != &rhs) {
-        // For structs with non-trivial assignment, move memory directly
-        // First check for undue aliasing
-        assert(!pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
-            && !pointsTo(lhs, lhs) && !pointsTo(rhs, rhs));
-        // Swap bits
-        ubyte[T.sizeof] t = void;
-        auto a = (cast(ubyte*) &lhs)[0 .. T.sizeof];
-        auto b = (cast(ubyte*) &rhs)[0 .. T.sizeof];
-        t[] = a[];
-        a[] = b[];
-        b[] = t[];
-      }
+        if (&lhs != &rhs)
+        {
+            // For structs with non-trivial assignment, move memory directly
+            // First check for undue aliasing
+            assert(!pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
+                && !pointsTo(lhs, lhs) && !pointsTo(rhs, rhs));
+            // Swap bits
+            ubyte[T.sizeof] t = void;
+            auto a = (cast(ubyte*) &lhs)[0 .. T.sizeof];
+            auto b = (cast(ubyte*) &rhs)[0 .. T.sizeof];
+            t[] = a[];
+            a[] = b[];
+            b[] = t[];
+        }
     }
     else
     {
