@@ -1940,7 +1940,7 @@ See_Also:
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow
 if (isMutable!T && !is(typeof(T.init.proxySwap(T.init))))
 {
-    static if (hasElaborateAssign!T)
+    static if (!isAssignable!T || hasElaborateAssign!T)
     {
       if (&lhs != &rhs) {
         // For structs with non-trivial assignment, move memory directly
@@ -2051,6 +2051,20 @@ unittest
     //Bug# 4789
     int[1] s = [1];
     swap(s, s);
+}
+
+unittest
+{
+    static struct NoAssign
+    {
+        int i;
+        void opAssign(NoAssign) @disable;
+    }
+    auto s1 = NoAssign(1);
+    auto s2 = NoAssign(2);
+    swap(s1, s2);
+    assert(s1.i == 2);
+    assert(s2.i == 1);
 }
 
 void swapFront(R1, R2)(R1 r1, R2 r2)
