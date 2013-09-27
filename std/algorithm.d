@@ -1946,8 +1946,9 @@ if (isMutable!T && !is(typeof(T.init.proxySwap(T.init))))
         {
             // For structs with non-trivial assignment, move memory directly
             // First check for undue aliasing
-            assert(!pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
-                && !pointsTo(lhs, lhs) && !pointsTo(rhs, rhs));
+            static if (hasIndirections!T)
+                assert(!pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
+                    && !pointsTo(lhs, lhs) && !pointsTo(rhs, rhs));
             // Swap bits
             ubyte[T.sizeof] t = void;
             auto a = (cast(ubyte*) &lhs)[0 .. T.sizeof];
