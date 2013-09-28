@@ -1225,15 +1225,15 @@ body
     {
         case 10:
             if (value < 0)
-                return toStringRadixConvert!(S.sizeof * 3 + 1, 10, true);
+                return toStringRadixConvert!(S.sizeof * 3 + 1, 10, true)();
             else
-                return toStringRadixConvert!(S.sizeof * 3, 10);
+                return toStringRadixConvert!(S.sizeof * 3, 10)();
         case 16:
-            return toStringRadixConvert!(S.sizeof * 2, 16);
+            return toStringRadixConvert!(S.sizeof * 2, 16)();
         case 2:
-            return toStringRadixConvert!(S.sizeof * 8, 2);
+            return toStringRadixConvert!(S.sizeof * 8, 2)();
         case 8:
-            return toStringRadixConvert!(S.sizeof * 3, 8);
+            return toStringRadixConvert!(S.sizeof * 3, 8)();
         default:
            return toStringRadixConvert!(S.sizeof * 6)(radix);
     }
