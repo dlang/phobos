@@ -136,6 +136,22 @@ unittest
     });
 }
 
+/++
+    Returns a $(D string) slice of a C-style null-terminated string.
+
+    $(RED Important Note:) The returned $(D string) is a slice of the original buffer.
++/
+
+inout(char)[] fromStringz(inout(char)* cString) @system pure {
+    return cString ? cString[0 .. strlen(cString)] : null;
+}
+
+///
+@system pure unittest
+{
+    assert(fromStringz(null) == null);
+    assert(fromStringz("foo") == "foo");
+}
 
 /++
     Returns a C-style zero-terminated string equivalent to $(D s). $(D s)
