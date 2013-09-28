@@ -2503,7 +2503,7 @@ unittest
             uint i = 0;
             for (; !sample1.empty; sample1.popFront())
             {
-                assert(sample1.front == sample1.index());
+                assert(sample1.front == sample1.index);
                 ++i;
             }
             assert(i == 789);
@@ -2518,7 +2518,7 @@ unittest
             i = 0;
             for (; !sample2.empty; sample2.popFront())
             {
-                assert(sample2.front == sample2.index());
+                assert(sample2.front == sample2.index);
                 ++i;
             }
             assert(i == 789);
