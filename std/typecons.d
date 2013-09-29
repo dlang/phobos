@@ -1121,8 +1121,6 @@ unittest
     struct Foo { int x; }
     enum y = alignForSize!(ubyte, Foo, cdouble)("x", "y", "z");
 
-  static if ((int[1]).stringof == "int[1]") // if issue 9565 is implemented
-  {
     enum passNormalX = x == "double[5] w;\nint[] x;\nshort z;\nchar[3] y;\n";
     enum passNormalY = y == "cdouble z;\nFoo y;\nubyte x;\n";
 
@@ -1132,27 +1130,6 @@ unittest
 
     static assert(passNormalX || passAbnormalX && double.alignof <= (int[]).alignof);
     static assert(passNormalY || passAbnormalY && double.alignof <= int.alignof);
-  }
-  else
-  {
-    static if(size_t.sizeof == uint.sizeof)
-    {
-        enum passNormalX = x == "double[5u] w;\nint[] x;\nshort z;\nchar[3u] y;\n";
-        enum passNormalY = y == "cdouble z;\nFoo y;\nubyte x;\n";
-
-        enum passAbnormalX = x == "int[] x;\ndouble[5u] w;\nshort z;\nchar[3u] y;\n";
-        enum passAbnormalY = y == "Foo y;\ncdouble z;\nubyte x;\n";
-        // ^ blame http://d.puremagic.com/issues/show_bug.cgi?id=231
-
-        static assert(passNormalX || double.alignof <= (int[]).alignof && passAbnormalX);
-        static assert(passNormalY || double.alignof <= int.alignof && passAbnormalY);
-    }
-    else
-    {
-        static assert(x == "int[] x;\ndouble[5LU] w;\nshort z;\nchar[3LU] y;\n");
-        static assert(y == "cdouble z;\nFoo y;\nubyte x;\n");
-    }
-  }
 }
 
 /*--*
