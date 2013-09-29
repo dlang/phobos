@@ -2557,18 +2557,17 @@ unittest
 }
 
 /**
-Iterates through a file a chunk at a time by using $(D
-foreach).
+Iterates through a file a chunk at a time by using $(D foreach).
 
 Example:
 
 ---------
 void main()
 {
-  foreach (ubyte[] buffer; chunks(stdin, 4096))
-  {
-    ... use buffer ...
-  }
+    foreach (ubyte[] buffer; chunks(stdin, 4096))
+    {
+        ... use buffer ...
+    }
 }
 ---------
 
@@ -2579,8 +2578,11 @@ The content of $(D buffer) is reused across calls. In the
 
  In case of an I/O error, an $(D StdioException) is thrown.
 */
-
-struct chunks
+auto chunks(File f, size_t size)
+{
+    return ChunksImpl(f, size);
+}
+private struct ChunksImpl
 {
     private File f;
     private size_t size;
@@ -2608,7 +2610,7 @@ struct chunks
 
     int opApply(D)(scope D dg)
     {
-        const maxStackSize = 1024 * 16;
+        enum maxStackSize = 1024 * 16;
         ubyte[] buffer = void;
         if (size < maxStackSize)
             buffer = (cast(ubyte*) alloca(size))[0 .. size];
@@ -2640,7 +2642,7 @@ struct chunks
 
 unittest
 {
-        //printf("Entering test at line %d\n", __LINE__);
+    //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
     auto deleteme = testFilename();
     scope(exit) { std.file.remove(deleteme); }
