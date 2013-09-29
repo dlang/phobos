@@ -2088,7 +2088,7 @@ struct Appender(A : T[], T)
      * it will be used by the appender.  After initializing an appender on an array,
      * appending to the original array will reallocate.
      */
-    this(Unqual!T[] arr) @safe pure nothrow
+    this(Unqual!T[] arr) @trusted pure nothrow
     {
         // initialize to a given array.
         _data = new Data;
@@ -2100,9 +2100,9 @@ struct Appender(A : T[], T)
         // We want to use up as much of the block the array is in as possible.
         // if we consume all the block that we can, then array appending is
         // safe WRT built-in append, and we can use the entire block.
-        auto cap = ()@trusted{ return arr.capacity; }();
+        auto cap = arr.capacity;
         if (cap > arr.length)
-            arr = ()@trusted{ return arr.ptr[0 .. cap]; }();
+            arr = arr.ptr[0 .. cap];
         // we assume no reallocation occurred
         assert(arr.ptr is _data.arr.ptr);
         _data.capacity = arr.length;
@@ -2142,7 +2142,7 @@ struct Appender(A : T[], T)
     }
 
     // ensure we can add nelems elements, resizing as necessary
-    private void ensureAddable(size_t nelems) @safe pure nothrow
+    private void ensureAddable(size_t nelems) @trusted pure nothrow
     {
         static size_t newCapacity(size_t newlength) @safe pure nothrow
         {
@@ -2159,7 +2159,7 @@ struct Appender(A : T[], T)
         immutable len = _data.arr.length;
         immutable reqlen = len + nelems;
 
-        if (()@trusted{ return _data.capacity; }() >= reqlen)
+        if (_data.capacity >= reqlen)
             return;
 
         // need to increase capacity
@@ -2172,7 +2172,7 @@ struct Appender(A : T[], T)
             else
             {
                 // avoid restriction of @disable this()
-                ()@trusted{ _data.arr = _data.arr[0 .. _data.capacity]; }();
+                _data.arr = _data.arr[0 .. _data.capacity];
                 foreach (i; _data.capacity .. reqlen)
                     _data.arr ~= Unqual!T.init;
             }
@@ -2186,9 +2186,7 @@ struct Appender(A : T[], T)
             // have better access to the capacity field.
             auto newlen = newCapacity(reqlen);
             // first, try extending the current block
-            auto u = ()@trusted{ return
-                GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
-            }();
+            auto u = GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
             if (u)
             {
                 // extend worked, update the capacity
@@ -2197,13 +2195,11 @@ struct Appender(A : T[], T)
             else
             {
                 // didn't work, must reallocate
-                auto bi = ()@trusted{ return
-                    GC.qalloc(newlen * T.sizeof, (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
-                }();
+                auto bi = GC.qalloc(newlen * T.sizeof, (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
                 _data.capacity = bi.size / T.sizeof;
                 if (len)
-                    ()@trusted{ memcpy(bi.base, _data.arr.ptr, len * T.sizeof); }();
-                _data.arr = ()@trusted{ return (cast(Unqual!T*)bi.base)[0 .. len]; }();
+                    memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
+                _data.arr = (cast(Unqual!T*)bi.base)[0 .. len];
                 // leave the old data, for safety reasons
             }
         }
@@ -2231,7 +2227,7 @@ struct Appender(A : T[], T)
     /**
      * Appends one item to the managed array.
      */
-    void put(U)(U item) if (canPutItem!U)
+    void put(U)(U item) @trusted if (canPutItem!U)
     {
         static if (isSomeChar!T && isSomeChar!U && T.sizeof < U.sizeof)
         {
@@ -2247,14 +2243,8 @@ struct Appender(A : T[], T)
         {
             ensureAddable(1);
             immutable len = _data.arr.length;
-            //_data.arr.ptr[len] = cast(Unqual!T)item;    // assign? emplace?
-            //_data.arr = _data.arr.ptr[0 .. len + 1];
-
-            // Cannot return ref because it doesn't work in CTFE
-            ()@trusted{ return _data.arr.ptr[len .. len + 1]; }()[0]
-            =   // assign? emplace?
-            ()@trusted{ return cast(Unqual!T)item; } ();
-            ()@trusted{ _data.arr = _data.arr.ptr[0 .. len + 1]; }();
+            _data.arr.ptr[len] = cast(Unqual!T)item;    // assign? emplace?
+            _data.arr = _data.arr.ptr[0 .. len + 1];
         }
     }
 
@@ -2268,7 +2258,7 @@ struct Appender(A : T[], T)
     /**
      * Appends an entire range to the managed array.
      */
-    void put(Range)(Range items) if (canPutRange!Range)
+    void put(Range)(Range items) @trusted if (canPutRange!Range)
     {
         // note, we disable this branch for appending one type of char to
         // another because we can't trust the length portion.
@@ -2292,21 +2282,16 @@ struct Appender(A : T[], T)
             ensureAddable(items.length);
             immutable len = _data.arr.length;
             immutable newlen = len + items.length;
-            _data.arr = ()@trusted{ return _data.arr.ptr[0 .. newlen]; }();
+            _data.arr = _data.arr.ptr[0 .. newlen];
             static if (is(typeof(_data.arr[] = items[])))
             {
-                ()@trusted{ return _data.arr.ptr[len .. newlen]; }()[] = items[];
+                _data.arr.ptr[len .. newlen][] = items[];
             }
             else
             {
                 for (size_t i = len; !items.empty; items.popFront(), ++i)
                 {
-                    //_data.arr.ptr[i] = cast(Unqual!T)items.front;
-
-                    // Cannot return ref because it doesn't work in CTFE
-                    ()@trusted{ return _data.arr.ptr[i .. i + 1]; }()[0]
-                    =   // assign? emplace?
-                    ()@trusted{ return cast(Unqual!T)items.front; }();
+                    _data.arr.ptr[i] = cast(Unqual!T)items.front;
                 }
             }
         }
@@ -2353,11 +2338,11 @@ struct Appender(A : T[], T)
          * Note that clear is disabled for immutable or const element types, due to the
          * possibility that $(D Appender) might overwrite immutable data.
          */
-        void clear() @safe pure nothrow
+        void clear() @trusted pure nothrow
         {
             if (_data)
             {
-                _data.arr = ()@trusted{ return _data.arr.ptr[0 .. 0]; }();
+                _data.arr = _data.arr.ptr[0 .. 0];
             }
         }
 
@@ -2366,12 +2351,12 @@ struct Appender(A : T[], T)
          *
          * Throws: $(D Exception) if newlength is greater than the current array length.
          */
-        void shrinkTo(size_t newlength) @safe pure
+        void shrinkTo(size_t newlength) @trusted pure
         {
             if (_data)
             {
                 enforce(newlength <= _data.arr.length);
-                _data.arr = ()@trusted{ return _data.arr.ptr[0 .. newlength]; }();
+                _data.arr = _data.arr.ptr[0 .. newlength];
             }
             else
                 enforce(newlength == 0);
