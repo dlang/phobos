@@ -1299,7 +1299,7 @@ unittest
 Split the string $(D s) into an array of words, using whitespace as
 delimiter. Runs of whitespace are merged together (no empty words are produced).
  */
-S[] split(S)(S s) if (isSomeString!S)
+S[] split(S)(S s) @safe pure if (isSomeString!S)
 {
     size_t istart;
     bool inword = false;
@@ -1348,20 +1348,21 @@ unittest
 
 /**
 Splits a string by whitespace.
-
-Example:
-----
-auto a = " a     bcd   ef gh ";
-assert(equal(splitter(a), ["", "a", "bcd", "ef", "gh"][]));
-----
  */
-auto splitter(C)(C[] s)
+auto splitter(C)(C[] s) @safe pure
     if(isSomeString!(C[]))
 {
     return std.algorithm.splitter!(std.uni.isWhite)(s);
 }
 
-unittest
+///
+@safe pure unittest
+{
+    auto a = " a     bcd   ef gh ";
+    assert(equal(splitter(a), ["", "a", "bcd", "ef", "gh"][]));
+}
+
+/*@safe*/ pure unittest
 {
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
@@ -1370,9 +1371,6 @@ unittest
         a = "";
         assert(splitter(a).empty);
     }
-
-    immutable string s = " a     bcd   ef gh ";
-    assert(equal(splitter(s), ["", "a", "bcd", "ef", "gh"][]));
 }
 
 /**************************************
