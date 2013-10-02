@@ -2898,10 +2898,8 @@ template hasElaborateAssign(S)
     }
     else static if(is(S == struct))
     {
-        @property auto ref lvalueOf() { static S s = void; return s; }
-
-        enum hasElaborateAssign = is(typeof(S.init.opAssign(S.init))) ||
-                                  is(typeof(S.init.opAssign(lvalueOf))) ||
+        enum hasElaborateAssign = is(typeof(S.init.opAssign(rvalueOf!S))) ||
+                                  is(typeof(S.init.opAssign(lvalueOf!S))) ||
             anySatisfy!(.hasElaborateAssign, FieldTypeTuple!S);
     }
     else
@@ -2933,6 +2931,13 @@ unittest
         @disable void opAssign(U)(ref U u);
     }
     static assert( hasElaborateAssign!S4);
+
+    static struct S41
+    {
+        void opAssign(U)(ref U u) {}
+        @disable void opAssign(U)(U u);
+    }
+    static assert( hasElaborateAssign!S41);
 
     static struct S5 { @disable this(); this(int n){ s = S(); } S s; }
     static assert( hasElaborateAssign!S5);
@@ -4117,6 +4122,57 @@ unittest
     }
     static assert( isCovariantWith!(DerivF.test1, BaseF.test1));
     static assert( isCovariantWith!(DerivF.test2, BaseF.test2));
+}
+
+
+// Needed for rvalueOf/lvalueOf because "inout on return means
+// inout must be on a parameter as well"
+private struct __InoutWorkaroundStruct{}
+
+/**
+Creates an lvalue or rvalue of type $(D T) for $(D typeof(...)) and
+$(D __traits(compiles, ...)) purposes. No actual value is returned.
+
+Note: Trying to use returned value will result in a
+"Symbol Undefined" error at link time.
+
+Examples:
+---
+// Note that `f` doesn't have to be implemented
+// as is isn't called.
+int f(int);
+bool f(ref int);
+static assert(is(typeof(f(rvalueOf!int)) == int));
+static assert(is(typeof(f(lvalueOf!int)) == bool));
+
+int i = rvalueOf!int; // error, no actual value is returned
+---
+*/
+@property T rvalueOf(T)(inout __InoutWorkaroundStruct = __InoutWorkaroundStruct.init);
+
+/// ditto
+@property ref T lvalueOf(T)(inout __InoutWorkaroundStruct = __InoutWorkaroundStruct.init);
+
+// Note: unittest can't be used as an example here as function overloads
+// aren't allowed inside functions.
+
+unittest
+{
+    void needLvalue(T)(ref T);
+    static struct S { }
+    int i;
+    struct Nested { void f() { ++i; } }
+    foreach(T; TypeTuple!(int, immutable int, inout int, string, S, Nested, Object))
+    {
+        static assert(!__traits(compiles, needLvalue(rvalueOf!T)));
+        static assert( __traits(compiles, needLvalue(lvalueOf!T)));
+        static assert(is(typeof(rvalueOf!T) == T));
+        static assert(is(typeof(lvalueOf!T) == T));
+    }
+
+    static assert(!__traits(compiles, rvalueOf!int = 1));
+    static assert( __traits(compiles, lvalueOf!byte = 127));
+    static assert(!__traits(compiles, lvalueOf!byte = 128));
 }
 
 
