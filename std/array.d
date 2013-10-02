@@ -326,7 +326,7 @@ if(allSatisfy!(isIntegral, I))
     return arrayAllocImpl!(true, T, I)(sizes);
 }
 
-unittest
+@safe unittest
 {
     double[] arr = minimallyInitializedArray!(double[])(100);
     assert(arr.length == 100);
