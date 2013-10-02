@@ -2024,12 +2024,16 @@ unittest
                     `["hello"]` );
 
         // 1 character escape sequences (' is not escaped in strings)
-        formatTest( [cast(StrType)"\"'\\\a\b\f\n\r\t\v"],
-                    `["\"'\\\a\b\f\n\r\t\v"]` );
+        formatTest( [cast(StrType)"\"'\0\\\a\b\f\n\r\t\v"],
+                    `["\"'\0\\\a\b\f\n\r\t\v"]` );
+
+        // 1 character optional escape sequences
+        formatTest( [cast(StrType)"\'\?"],
+                    `["'?"]` );
 
         // Valid and non-printable code point (<= U+FF)
-        formatTest( [cast(StrType)"\x00\x10\x1F\x20test"],
-                    `["\x00\x10\x1F test"]` );
+        formatTest( [cast(StrType)"\x10\x1F\x20test"],
+                    `["\x10\x1F test"]` );
 
         // Valid and non-printable code point (<= U+FFFF)
         formatTest( [cast(StrType)"\u200B..\u200F"],
@@ -2257,6 +2261,7 @@ private void formatChar(Writer)(Writer w, in dchar c, in char quote)
         put(w, '\\');
         switch (c)
         {
+        case '\0':  put(w, '0');  break;
         case '\a':  put(w, 'a');  break;
         case '\b':  put(w, 'b');  break;
         case '\f':  put(w, 'f');  break;
