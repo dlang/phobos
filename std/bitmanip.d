@@ -283,6 +283,40 @@ unittest
 
 unittest
 {
+    // Bug #6686
+    union  S {
+        ulong bits = ulong.max;
+        mixin (bitfields!(
+            ulong, "back",  31,
+            ulong, "front", 33)
+        );
+    }
+    S num;
+
+    num.bits = ulong.max;
+    num.back = 1;
+    assert(num.bits == 0xFFFF_FFFF_8000_0001uL);
+}
+
+unittest
+{
+    // Bug #5942
+    struct S
+    {
+        mixin(bitfields!(
+            int, "a" , 32,
+            int, "b" , 32
+        ));
+    }
+
+    S data;
+    data.b = 42;
+    data.a = 1;
+    assert(data.b == 42);
+}
+
+unittest
+{
     struct Test
     {
         mixin(bitfields!(bool, "a", 1,
