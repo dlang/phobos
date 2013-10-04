@@ -190,21 +190,6 @@ private
     Tid         owner;
 }
 
-private shared bool firstInitialization = true;
-
-static this()
-{
-    // NOTE: Normally, mbox is initialized by spawn() or thisTid().  This
-    //       doesn't support the simple case of calling only receive() in main
-    //       however.  To ensure that this works, initialize the main thread's
-    //       mbox field here only the first time this is run.
-    if (firstInitialization)
-    {
-        mbox = new MessageBox;
-        firstInitialization = false;
-    }
-}
-
 
 static ~this()
 {
@@ -639,6 +624,12 @@ private void _send(T...)( MsgType type, Tid tid, T vals )
  * ---
  */
 void receive(T...)( T ops )
+in
+{
+    assert(mbox !is null, "Cannot receive a message until a thread was spawned "
+           "or thisTid was passed to a running thread.");
+}
+body
 {
     checkops( ops );
     mbox.get( ops );
@@ -715,6 +706,12 @@ private template receiveOnlyRet(T...)
  * ---
  */
 receiveOnlyRet!(T) receiveOnly(T...)()
+in
+{
+    assert(mbox !is null, "Cannot receive a message until a thread was spawned "
+           "or thisTid was passed to a running thread.");
+}
+body
 {
     Tuple!(T) ret;
 
@@ -776,6 +773,12 @@ unittest
     message and $(D false) if it timed out waiting for one.
   +/
 bool receiveTimeout(T...)( Duration duration, T ops )
+in
+{
+    assert(mbox !is null, "Cannot receive a message until a thread was spawned "
+           "or thisTid was passed to a running thread.");
+}
+body
 {
     checkops( ops );
     return mbox.get( duration, ops );
