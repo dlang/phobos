@@ -4697,6 +4697,79 @@ unittest
 }
 
 /**
+ * Checks whether $(D T) is structurally an integer, i.e. whether it supports
+ * all of the operations an integer type should support.  Does not check the
+ * nominal type of $(D T).  In particular, the following must compile:
+ *
+ * ---
+ * T n;
+ * n = 2;
+ * n <<= 1;
+ * n >>= 1;
+ * n += n;
+ * n *= n;
+ * n /= n;
+ * n -= n;
+ * n %= 2;
+ * n %= n;
+ * bool foo = n < 2;
+ * bool bar = n == 2;
+ * ---
+ *
+ * All built-in D integers and character types and $(D std.bigint.BigInt) are
+ * integer-like by this definition.
+ */
+template isIntegerLike(T)
+{
+    static if (is(T == const) || is(T == immutable))
+    {
+        alias isIntegerLike = isIntegerLike!(Unqual!T);
+    }
+    else
+    {
+        enum bool isIntegerLike = is(typeof({
+            T n;
+            n = 2;
+            n <<= 1;
+            n >>= 1;
+            n += n;
+            n *= n;
+            n /= n;
+            n -= n;
+            n %= 2;
+            n %= n;
+            bool foo = n < 2;
+            bool bar = n == 2;
+
+            return n;
+        }));
+    }
+}
+
+unittest
+{
+    import std.bigint;
+    static assert(isIntegerLike!BigInt);
+    static assert(isIntegerLike!long);
+    static assert(isIntegerLike!ulong);
+    static assert(isIntegerLike!int);
+    static assert(isIntegerLike!uint);
+    static assert(isIntegerLike!short);
+    static assert(isIntegerLike!ushort);
+    static assert(isIntegerLike!byte);
+    static assert(isIntegerLike!ubyte);
+
+    static assert(isIntegerLike!char);
+    static assert(isIntegerLike!wchar);
+    static assert(isIntegerLike!dchar);
+
+    static assert(!isIntegerLike!real);
+    static assert(!isIntegerLike!double);
+    static assert(!isIntegerLike!float);
+    static assert(!isIntegerLike!bool);
+}
+
+/**
  * Detect whether $(D T) is a built-in floating point type.
  */
 template isFloatingPoint(T)
