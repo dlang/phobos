@@ -69,23 +69,22 @@ private template createAccessors(
     }
     else
     {
-        static if (len + offset <= uint.sizeof * 8)
-            alias uint MasksType;
-        else
-            alias ulong MasksType;
-        enum MasksType
-            maskAllElse = ((1uL << len) - 1u) << offset,
-            signBitCheck = 1uL << (len - 1),
-            extendSign = ~((cast(MasksType)1u << len) - 1);
+        enum ulong
+            maskAllElse = ((~0uL) >> (64 - len)) << offset,
+            signBitCheck = 1uL << (len - 1);
+
         static if (T.min < 0)
         {
             enum long minVal = -(1uL << (len - 1));
             enum ulong maxVal = (1uL << (len - 1)) - 1;
+            alias Unsigned!(T) UT;
+            enum UT extendSign = cast(UT)~((~0uL) >> (64 - len));
         }
         else
         {
             enum ulong minVal = 0;
-            enum ulong maxVal = (1uL << len) - 1;
+            enum ulong maxVal = (~0uL) >> (64 - len);
+            enum extendSign = 0;
         }
 
         static if (is(T == bool))
@@ -214,6 +213,106 @@ bool), followed by unsigned types, followed by signed types.
 template bitfields(T...)
 {
     enum { bitfields = createFields!(createStoreName!(T), 0, T).result }
+}
+
+unittest
+{
+    // Degenerate bitfields (#8474 / #11160) tests mixed with range tests
+    struct Test1
+    {
+        mixin(bitfields!(uint, "a", 32,
+                        uint, "b", 4,
+                        uint, "c", 4,
+                        uint, "d", 8,
+                        uint, "e", 16,));
+
+        static assert(Test1.b_min == 0);
+        static assert(Test1.b_max == 15);
+    }
+
+    struct Test2
+    {
+        mixin(bitfields!(bool, "a", 0,
+                        ulong, "b", 64));
+
+        static assert(Test2.b_min == ulong.min);
+        static assert(Test2.b_max == ulong.max);
+    }
+
+    struct Test1b
+    {
+        mixin(bitfields!(bool, "a", 0,
+                        int, "b", 8));
+    }
+
+    struct Test2b
+    {
+        mixin(bitfields!(int, "a", 32,
+                        int, "b", 4,
+                        int, "c", 4,
+                        int, "d", 8,
+                        int, "e", 16,));
+
+        static assert(Test2b.b_min == -8);
+        static assert(Test2b.b_max == 7);
+    }
+
+    struct Test3b
+    {
+        mixin(bitfields!(bool, "a", 0,
+                        long, "b", 64));
+
+        static assert(Test3b.b_min == long.min);
+        static assert(Test3b.b_max == long.max);
+    }
+
+    struct Test4b
+    {
+        mixin(bitfields!(long, "a", 32,
+                        int, "b", 32));
+    }
+
+    // Sign extension tests
+    Test2b t2b;
+    Test4b t4b;
+    t2b.b = -5; assert(t2b.b == -5);
+    t2b.d = -5; assert(t2b.d == -5);
+    t2b.e = -5; assert(t2b.e == -5);
+    t4b.a = -5; assert(t4b.a == -5L);
+}
+
+unittest
+{
+    // Bug #6686
+    union  S {
+        ulong bits = ulong.max;
+        mixin (bitfields!(
+            ulong, "back",  31,
+            ulong, "front", 33)
+        );
+    }
+    S num;
+
+    num.bits = ulong.max;
+    num.back = 1;
+    assert(num.bits == 0xFFFF_FFFF_8000_0001uL);
+}
+
+unittest
+{
+    // Bug #5942
+    struct S
+    {
+        mixin(bitfields!(
+            int, "a" , 32,
+            int, "b" , 32
+        ));
+    }
+
+    S data;
+    data.b = 42;
+    data.a = 1;
+    assert(data.b == 42);
 }
 
 unittest
