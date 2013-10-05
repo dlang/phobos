@@ -172,7 +172,7 @@ struct MD5
         ulong _count; //number of bits, modulo 2^64
         ubyte[64] _buffer; // input buffer
 
-        enum ubyte[64] _padding =
+        static immutable ubyte[64] _padding =
         [
           0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
