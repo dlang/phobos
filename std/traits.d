@@ -4707,13 +4707,19 @@ unittest
  * n <<= 1;
  * n >>= 1;
  * n += n;
+ * n += 2;
  * n *= n;
+ * n *= 2;
  * n /= n;
+ * n /= 2;
  * n -= n;
+ * n -= 2;
  * n %= 2;
  * n %= n;
  * bool foo = n < 2;
  * bool bar = n == 2;
+ * bool goo = n < n + 1;
+ * bool tar = n == n;
  * ---
  *
  * All built-in D integers and character types and $(D std.bigint.BigInt) are
@@ -4733,13 +4739,19 @@ template isIntegerLike(T)
             n <<= 1;
             n >>= 1;
             n += n;
+            n += 2;
             n *= n;
+            n *= 2;
             n /= n;
+            n /= 2;
             n -= n;
+            n -= 2;
             n %= 2;
             n %= n;
             bool foo = n < 2;
             bool bar = n == 2;
+            bool goo = n < n + 1;
+            bool tar = n == n;
 
             return n;
         }));
