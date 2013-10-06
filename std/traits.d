@@ -4726,7 +4726,7 @@ unittest
  * while for a non-mutable type, the above must compile for its unqualified,
  * mutable variant.
  *
- * All built-in D integers and character types and $(D std.bigint.BigInt) are
+ * All built-in D integers and character types and $(XREF bigint, BigInt) are
  * integer-like by this definition.
  */
 template isIntegerLike(T)
