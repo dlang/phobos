@@ -2701,7 +2701,8 @@ template generateAssertTrap(C, func.../+[BUG 4217]+/)
 
 private
 {
-    extern(C) pure nothrow Object _d_toObject(void* p);
+    pragma(mangle, "_d_toObject")
+    extern(C) pure nothrow Object typecons_d_toObject(void* p);
 }
 
 /*
@@ -2724,7 +2725,7 @@ if (is(T == class) || is(T == interface))
         }
         else
         {
-            return cast(T)_d_toObject(*cast(void**)(&source));
+            return cast(T)typecons_d_toObject(*cast(void**)(&source));
         }
     }
 }
