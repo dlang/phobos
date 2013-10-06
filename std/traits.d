@@ -4736,6 +4736,7 @@ template isIntegerLike(T)
         enum bool isIntegerLike = is(typeof({
             T n;
             n = 2;
+            n = n;
             n <<= 1;
             n >>= 1;
             n += n;
