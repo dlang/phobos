@@ -25,7 +25,7 @@ $(D opApply) function $(D r).  Note that narrow strings are handled as
 a special case in an overload.
  */
 ForeachType!Range[] array(Range)(Range r)
-if (isIterable!Range && !isNarrowString!Range)
+if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
 {
     alias ForeachType!Range E;
     static if (hasLength!Range)
@@ -90,7 +90,7 @@ if (isIterable!Range && !isNarrowString!Range)
         int a;
         auto opAssign(Foo foo)
         {
-            a = foo.a;
+            assert(0);
         }
         auto opEquals(Foo foo)
         {
@@ -180,12 +180,12 @@ unittest
     assert(array(b) == a);
 
     //To verify that the opAssign branch doesn't get screwed up by using Unqual.
+    //EDIT: array no longer calls opAssign.
     struct S
     {
         ref S opAssign(S)(const ref S rhs)
         {
-            i = rhs.i;
-            return this;
+            assert(0);
         }
 
         int i;
@@ -196,6 +196,18 @@ unittest
         auto arr = [T(1), T(2), T(3), T(4)];
         assert(array(arr) == arr);
     }
+}
+
+unittest
+{
+    //9824
+    static struct S
+    {
+        @disable void opAssign(S);
+        int i;
+    }
+    auto arr = [S(0), S(1), S(2)];
+    arr.array();
 }
 
 // Bugzilla 10220
@@ -218,6 +230,13 @@ unittest
     });
 }
 
+unittest
+{
+    //Turn down infinity:
+    static assert(!is(typeof(
+        repeat(1).array()
+    )));
+}
 
 /**
 Returns a newly allocated associative array out of elements of the input range,
