@@ -4201,6 +4201,14 @@ struct Zip(Ranges...)
             return result;
         }
 
+    private void emplaceIfCan(T)(T* addr)
+    {
+        static if(__traits(compiles, emplace(addr)))
+            emplace(addr);
+        else
+            throw new Exception("Range with non-default constructable elements exhausted.");
+    }
+
 /**
    Returns the current iterated element.
 */
@@ -4212,7 +4220,7 @@ struct Zip(Ranges...)
             auto addr = cast(Unqual!(typeof(result[i]))*) &result[i];
             if (ranges[i].empty)
             {
-                emplace(addr);
+                emplaceIfCan(addr);
             }
             else
             {
@@ -4256,7 +4264,7 @@ struct Zip(Ranges...)
                 }
                 else
                 {
-                    emplace(addr);
+                    emplaceIfCan(addr);
                 }
             }
             return result;
@@ -4280,7 +4288,7 @@ struct Zip(Ranges...)
                 }
                 else
                 {
-                    emplace(addr);
+                    emplaceIfCan(addr);
                 }
             }
             return result;
@@ -4303,7 +4311,7 @@ struct Zip(Ranges...)
                     }
                     else
                     {
-                        emplace(addr);
+                        emplaceIfCan(addr);
                     }
                 }
                 return result;
@@ -4645,6 +4653,15 @@ unittest
     auto LL2 = iota(0L, 500L);
     auto z2 = zip([7], LL2);
     assert(equal(z2, [tuple(7, 0L)]));
+}
+
+// Text for Issue 11196
+unittest
+{
+    static struct S { @disable this(); }
+    static assert(__traits(compiles, zip((S[5]).init[])));
+    auto z = zip(StoppingPolicy.longest, cast(S[]) null, new int[1]);
+    assertThrown(zip(StoppingPolicy.longest, cast(S[]) null, new int[1]).front);
 }
 
 /*
