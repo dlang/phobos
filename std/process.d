@@ -485,18 +485,21 @@ private Pid spawnProcessImpl(in char[] commandLine,
             version (DMC_RUNTIME) handle = _fdToHandle(fileDescriptor);
             else    /* MSVCRT */  handle = _get_osfhandle(fileDescriptor);
         }
+
         DWORD dwFlags;
-        GetHandleInformation(handle, &dwFlags);
-        if (!(dwFlags & HANDLE_FLAG_INHERIT))
+        if (GetHandleInformation(handle, &dwFlags))
         {
-            if (!SetHandleInformation(handle,
-                                      HANDLE_FLAG_INHERIT,
-                                      HANDLE_FLAG_INHERIT))
+            if (!(dwFlags & HANDLE_FLAG_INHERIT))
             {
-                throw new StdioException(
-                    "Failed to make "~which~" stream inheritable by child process ("
-                    ~sysErrorString(GetLastError()) ~ ')',
-                    0);
+                if (!SetHandleInformation(handle,
+                                          HANDLE_FLAG_INHERIT,
+                                          HANDLE_FLAG_INHERIT))
+                {
+                    throw new StdioException(
+                        "Failed to make "~which~" stream inheritable by child process ("
+                        ~sysErrorString(GetLastError()) ~ ')',
+                        0);
+                }
             }
         }
     }
