@@ -2429,21 +2429,21 @@ unittest
     formatTest( aa0, `[]` );
 
     // elements escaping
-    formatTest(  ["aaa":1, "bbb":2, "ccc":3],
-                `["aaa":1, "bbb":2, "ccc":3]` );
+    formatTest(  ["aaa":1, "bbb":2],
+                [`["aaa":1, "bbb":2]`, `["bbb":2, "aaa":1]`] );
     formatTest(  ['c':"str"],
                 `['c':"str"]` );
     formatTest(  ['"':"\"", '\'':"'"],
-                `['"':"\"", '\'':"'"]` );
+                [`['"':"\"", '\'':"'"]`, `['\'':"'", '"':"\""]`] );
 
     // range formatting for AA
     auto aa3 = [1:"hello", 2:"world"];
     // escape
     formatTest( "{%(%s:%s $ %)}", aa3,
-                `{1:"hello" $ 2:"world"}`);
+                [`{1:"hello" $ 2:"world"}`, `{2:"world" $ 1:"hello"}`]);
     // use range formatting for key and value, and use %|
     formatTest( "{%([%04d->%(%c.%)]%| $ %)}", aa3,
-                `{[0001->h.e.l.l.o] $ [0002->w.o.r.l.d]}` );
+                [`{[0001->h.e.l.l.o] $ [0002->w.o.r.l.d]}`, `{[0002->w.o.r.l.d]} $ [0001->h.e.l.l.o]`] );
 }
 
 unittest
@@ -2451,13 +2451,13 @@ unittest
     class C1 { int[char] val; alias val this; this(int[char] v){ val = v; } }
     class C2 { int[char] val; alias val this; this(int[char] v){ val = v; }
                override string toString() const { return "C"; } }
-    formatTest( new C1(['c':1, 'd':2]), `['c':1, 'd':2]` );
+    formatTest( new C1(['c':1, 'd':2]), [`['c':1, 'd':2]`, `['d':2, 'c':1]`] );
     formatTest( new C2(['c':1, 'd':2]), "C" );
 
     struct S1 { int[char] val; alias val this; }
     struct S2 { int[char] val; alias val this;
                 string toString() const { return "S"; } }
-    formatTest( S1(['c':1, 'd':2]), `['c':1, 'd':2]` );
+    formatTest( S1(['c':1, 'd':2]), [`['c':1, 'd':2]`, `['d':2, 'c':1]`] );
     formatTest( S2(['c':1, 'd':2]), "S" );
 }
 
@@ -3130,6 +3130,35 @@ void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, str
     enforceEx!AssertError(
             w.data == expected,
             text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
+}
+
+version(unittest)
+void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__)
+{
+    FormatSpec!char f;
+    auto w = appender!string();
+    formatValue(w, val, f);
+	foreach(cur; expected)
+	{
+		if(w.data == cur) return;
+	}
+    enforceEx!AssertError(
+            false,
+            text("expected one of `", expected, "`, result = `", w.data, "`"), fn, ln);
+}
+
+version(unittest)
+void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__)
+{
+    auto w = appender!string();
+    formattedWrite(w, fmt, val);
+    foreach(cur; expected)
+	{
+		if(w.data == cur) return;
+	}
+    enforceEx!AssertError(
+            false,
+            text("expected one of `", expected, "`, result = `", w.data, "`"), fn, ln);
 }
 
 unittest
@@ -5951,9 +5980,9 @@ unittest
 
     immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
     r = std.string.format("%s", aa.values);
-    assert(r == `["hello", "betty"]`);
+    assert(r == `["hello", "betty"]` || r == `["betty", "hello"]`);
     r = std.string.format("%s", aa);
-    assert(r == `[3:"hello", 4:"betty"]`);
+    assert(r == `[3:"hello", 4:"betty"]` || r == `[4:"betty", 3:"hello"]`);
 
     static const dchar[] ds = ['a','b'];
     for (int j = 0; j < ds.length; ++j)
