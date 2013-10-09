@@ -2901,9 +2901,11 @@ template hasElaborateAssign(S)
     }
     else static if(is(S == struct))
     {
-        enum hasElaborateAssign = is(typeof(S.init.opAssign(rvalueOf!S))) ||
-                                  is(typeof(S.init.opAssign(lvalueOf!S))) ||
-            anySatisfy!(.hasElaborateAssign, FieldTypeTuple!S);
+        static if(is(typeof(S.init.opAssign(rvalueOf!S))) ||
+                  is(typeof(S.init.opAssign(lvalueOf!S))))
+            enum hasElaborateAssign = true;
+      else
+            enum hasElaborateAssign = anySatisfy!(.hasElaborateAssign, FieldTypeTuple!S);
     }
     else
     {
