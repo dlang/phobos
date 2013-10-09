@@ -2963,8 +2963,10 @@ unittest
     static struct SS8 { S8 s; }
     static struct SS9 { S9 s; }
     static assert( hasElaborateAssign!SS6);
+    /+ Disabled because of @@@BUG11202@@@
     static assert(!__traits(compiles, hasElaborateAssign!SS7));
     static assert(!__traits(compiles, hasElaborateAssign!SS8));
+    +/
     static assert( hasElaborateAssign!SS9);
 }
 
