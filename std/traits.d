@@ -2892,9 +2892,6 @@ unittest
  */
 template hasElaborateAssign(S)
 {
-    static assert(isRvalueAssignable!S || isLvalueAssignable!S,
-        S.stringof ~ " is neither r- nor lvalue assignable.");
-
     static if(isStaticArray!S && S.length)
     {
         enum bool hasElaborateAssign = hasElaborateAssign!(typeof(S.init[0]));
@@ -2917,8 +2914,7 @@ unittest
 
     static struct S  { void opAssign(S) {} }
     static assert( hasElaborateAssign!S);
-    static assert(!__traits(compiles, hasElaborateAssign!(const S)));
-    static assert(!__traits(compiles, hasElaborateAssign!(shared S)));
+    static assert(!hasElaborateAssign!(const(S)));
 
     static struct S1 { void opAssign(ref S1) {} }
     static struct S2 { void opAssign(int) {} }
@@ -2952,8 +2948,8 @@ unittest
     static struct S9 { this(this) {}                             void opAssign(int) {} }
     static struct S10 { ~this() { } }
     static assert( hasElaborateAssign!S6);
-    static assert(!__traits(compiles, hasElaborateAssign!S7));
-    static assert(!__traits(compiles, hasElaborateAssign!S8));
+    static assert(!hasElaborateAssign!S7);
+    static assert(!hasElaborateAssign!S8);
     static assert( hasElaborateAssign!S9);
     static assert( hasElaborateAssign!S10);
     static struct SS6 { S6 s; }
@@ -2961,8 +2957,8 @@ unittest
     static struct SS8 { S8 s; }
     static struct SS9 { S9 s; }
     static assert( hasElaborateAssign!SS6);
-    static assert(!__traits(compiles, hasElaborateAssign!SS7));
-    static assert(!__traits(compiles, hasElaborateAssign!SS8));
+    static assert( hasElaborateAssign!SS7);
+    static assert( hasElaborateAssign!SS8);
     static assert( hasElaborateAssign!SS9);
 }
 
