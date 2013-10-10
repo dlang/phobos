@@ -1195,6 +1195,11 @@ Constructor initializing $(D this) with $(D value).
         _value = value;
         _isNull = false;
     }
+    this(U:T)(U value)  // workaround for BUG 10357
+    {
+        _value = value;
+        _isNull = false;
+    }
 
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
@@ -1465,6 +1470,12 @@ unittest
         static assert( __traits(compiles, { auto x =           Nullable!S3(si); }));
         static assert( __traits(compiles, { auto x = immutable Nullable!S3(si); }));
     }
+}
+unittest
+{
+    // Bugzila 10357
+    import std.datetime;
+    Nullable!SysTime time = SysTime(0);
 }
 
 /**
