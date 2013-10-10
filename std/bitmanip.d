@@ -608,6 +608,8 @@ struct BitArray
 
     unittest
     {
+        debug(bitarray) printf("BitArray.opIndex.unittest\n");
+
         void Fun(const BitArray arr)
         {
             auto x = arr[0];
