@@ -552,15 +552,38 @@ struct BitArray
                 auto b = ptr[0 .. olddim];
                 b.length = newdim;                // realloc
                 ptr = b.ptr;
-                if (newdim & (bitsPerSizeT-1))
+                if (newdim * bitsPerSizeT - newlen)
                 {   // Set any pad bits to 0
-                    ptr[newdim - 1] &= ~(~0 << (newdim & (bitsPerSizeT-1)));
+                    ptr[newdim - 1] &= ~(~0uL << (newlen & (bitsPerSizeT-1)));
                 }
             }
 
             len = newlen;
         }
         return len;
+    }
+
+    unittest
+    {
+        debug(bitarray) printf("BitArray.length.unittest\n");
+
+        BitArray a;
+        a.length = bitsPerSizeT;
+        foreach (ref e; a)
+            e = true;
+        BitArray b = a;
+        a.length = bitsPerSizeT/2; //padding bits should be left unchanged
+        foreach (i,e; b)
+            assert(e == true);
+        a.length = (3*bitsPerSizeT)/4; //new bits should be set to 0
+        foreach (i,e; a)
+            assert(e == (i < bitsPerSizeT/2));
+        foreach (i,e; b)
+            assert(e == (i < bitsPerSizeT/2 || i >= a.length));
+        // Now actually reallocate
+        a.length = bitsPerSizeT*2;
+        foreach (i,e; a)
+            assert(e == (i < bitsPerSizeT/2)); // new bits should be zero
     }
 
     /**********************************************
