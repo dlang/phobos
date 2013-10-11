@@ -3167,7 +3167,12 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
 
     // A sign is allowed only in the 1st character
     if (sx[0] == '-' || sx[0] == '+')
+    {
+        if (iLen == 1)  // but must be followed by other characters
+            return false;
+
         j++;
+    }
 
     for (int i = j; i < iLen; i++)
     {
@@ -3331,6 +3336,9 @@ unittest
     assert(isNumeric(s) == false);
     assert(isNumeric(s[0..s.length - 1]) == false);
     });
+
+    assert(!isNumeric("-"));
+    assert(!isNumeric("+"));
 }
 
 
