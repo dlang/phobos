@@ -552,10 +552,16 @@ struct BitArray
                 auto b = ptr[0 .. olddim];
                 b.length = newdim;                // realloc
                 ptr = b.ptr;
-                if (newdim * bitsPerSizeT - newlen)
-                {   // Set any pad bits to 0
-                    ptr[newdim - 1] &= ~(~0uL << (newlen & (bitsPerSizeT-1)));
-                }
+            }
+
+            if (newlen > len && olddim)
+            {   // Mask old MSBs
+                auto mask = ~(~cast(size_t)0 << (len % bitsPerSizeT));
+                auto mnewlen = newlen % bitsPerSizeT;
+                if (newdim == olddim && mnewlen)
+                    // Mask new pad bits
+                    mask |= ~cast(size_t)0 << mnewlen;
+                ptr[olddim - 1] &= mask;
             }
 
             len = newlen;
