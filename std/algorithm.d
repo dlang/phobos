@@ -1190,14 +1190,6 @@ void uninitializedFill(Range, Value)(Range range, Value filler)
         return fill(range, filler);
 }
 
-deprecated("Cannot reliably call uninitializedFill on range that does not expose references. Use fill instead.")
-void uninitializedFill(Range, Value)(Range range, Value filler)
-    if (isInputRange!Range && !hasLvalueElements!Range && is(typeof(range.front = filler)))
-{
-    static assert(hasElaborateAssign!T, "Cannot execute uninitializedFill a range that does not expose references, and whose objects have an elaborate assign.");
-    return fill(range, filler);
-}
-
 /**
 Initializes all elements of a range with their $(D .init)
 value. Assumes that the range does not currently contain meaningful
