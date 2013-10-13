@@ -4993,8 +4993,8 @@ private static bool isRegionalIndicator(dchar ch)
 
 template genericDecodeGrapheme(bool getValue)
 {
-    static immutable graphemeExtend = asTrie(graphemeExtendTrieEntries);
-    static immutable spacingMark = asTrie(mcTrieEntries);
+    alias graphemeExtend = graphemeExtendTrie;
+    alias spacingMark = mcTrie;
     static if(getValue)
         alias Grapheme Value;
     else
@@ -5551,7 +5551,6 @@ unittest
 +/
 int sicmp(C1, C2)(const(C1)[] str1, const(C2)[] str2)
 {
-    static immutable simpleCaseTrie = asTrie(simpleCaseTrieEntries);
     alias sTable = simpleCaseTable;
     size_t ridx=0;
     foreach(dchar lhs; str1)
@@ -5592,7 +5591,6 @@ int sicmp(C1, C2)(const(C1)[] str1, const(C2)[] str2)
 
 private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
 {
-    static immutable fullCaseTrie = asTrie(fullCaseTrieEntries);
     alias fTable = fullCaseTable;
     size_t idx = fullCaseTrie[lhs];
     // fullCaseTrie is packed index table
@@ -5728,7 +5726,6 @@ unittest
 +/
 ubyte combiningClass(dchar ch)
 {
-    static immutable combiningClassTrie = asTrie(combiningClassTrieEntries);
     return combiningClassTrie[ch];
 }
 
@@ -5785,7 +5782,6 @@ enum {
 +/
 public dchar compose(dchar first, dchar second)
 {
-    static immutable compositionJumpTrie = asTrie(compositionJumpTrieEntries);
     size_t packed = compositionJumpTrie[first];
     if(packed == ushort.max)
         return dchar.init;
@@ -5830,12 +5826,12 @@ public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch)
     static if(decompType == Canonical)
     {
         alias table = decompCanonTable;
-        static immutable mapping = asTrie(canonMappingTrieEntries);
+        alias mapping = canonMappingTrie;
     }
     else static if(decompType == Compatibility)
     {
         alias table = decompCompatTable;
-        static immutable mapping = asTrie(compatMappingTrieEntries);
+        alias mapping = compatMappingTrie;
     }
     ushort idx = mapping[ch];
     if(!idx) // not found, check hangul arithmetic decomposition
@@ -6301,13 +6297,13 @@ public bool allowedIn(NormalizationForm norm)(dchar ch)
 private bool notAllowedIn(NormalizationForm norm)(dchar ch)
 {
     static if(norm == NFC)
-        static immutable qcTrie = asTrie(nfcQCTrieEntries);
+        alias qcTrie = nfcQCTrie;
     else static if(norm == NFD)
-        static immutable qcTrie = asTrie(nfdQCTrieEntries);
+        alias qcTrie = nfdQCTrie;
     else static if(norm == NFKC)
-        static immutable qcTrie = asTrie(nfkcQCTrieEntries);
+        alias qcTrie = nfkcQCTrie;
     else static if(norm == NFKD)
-        static immutable qcTrie = asTrie(nfkdQCTrieEntries);
+        alias qcTrie = nfkdQCTrie;
     else
         static assert("Unknown normalization form "~norm);
     return qcTrie[ch];
@@ -6344,7 +6340,7 @@ else
 @trusted pure nothrow
 ushort toLowerIndex(dchar c)
 {
-    static immutable trie = asTrie(toLowerIndexTrieEntries);
+    alias trie = toLowerIndexTrie;
     return trie[c];
 }
 
@@ -6359,7 +6355,7 @@ dchar toLowerTab(size_t idx)
 @trusted pure nothrow
 ushort toTitleIndex(dchar c)
 {
-    static immutable trie = asTrie(toTitleIndexTrieEntries);
+    alias trie = toTitleIndexTrie;
     return trie[c];
 }
 
@@ -6374,7 +6370,7 @@ dchar toTitleTab(size_t idx)
 @trusted pure nothrow
 ushort toUpperIndex(dchar c)
 {
-    static immutable trie = asTrie(toUpperIndexTrieEntries);
+    alias trie = toUpperIndexTrie;
     return trie[c];
 }
 
@@ -6412,7 +6408,6 @@ bool isLower(dchar c)
 {
     if(std.ascii.isASCII(c))
         return std.ascii.isLower(c);
-    static immutable lowerCaseTrie = asTrie(lowerCaseTrieEntries);
     return lowerCaseTrie[c];
 }
 
@@ -6451,7 +6446,6 @@ bool isUpper(dchar c)
 {
     if(std.ascii.isASCII(c))
         return std.ascii.isUpper(c);
-    static immutable upperCaseTrie = asTrie(upperCaseTrieEntries);
     return upperCaseTrie[c];
 }
 
@@ -7093,7 +7087,6 @@ bool isAlpha(dchar c)
         return false;
     }
 
-    static immutable alphaTrie = asTrie(alphaTrieEntries);
     return alphaTrie[c];
 }
 
@@ -7114,7 +7107,6 @@ bool isAlpha(dchar c)
 @safe pure nothrow
 bool isMark(dchar c)
 {
-    static immutable markTrie = asTrie(markTrieEntries);
     return markTrie[c];
 }
 
@@ -7134,7 +7126,6 @@ bool isMark(dchar c)
 @safe pure nothrow
 bool isNumber(dchar c)
 {
-    static immutable numberTrie = asTrie(numberTrieEntries);
     return numberTrie[c];
 }
 
@@ -7155,7 +7146,6 @@ bool isNumber(dchar c)
 @safe pure nothrow
 bool isPunctuation(dchar c)
 {
-    static immutable punctuationTrie = asTrie(punctuationTrieEntries);
     return punctuationTrie[c];
 }
 
@@ -7179,7 +7169,6 @@ unittest
 @safe pure nothrow
 bool isSymbol(dchar c)
 {
-   static immutable symbolTrie = asTrie(symbolTrieEntries);
    return symbolTrie[c];
 }
 
@@ -7225,7 +7214,6 @@ unittest
 @safe pure nothrow
 bool isGraphical(dchar c)
 {
-    static immutable graphicalTrie = asTrie(graphicalTrieEntries);
     return graphicalTrie[c];
 }
 
@@ -7333,7 +7321,6 @@ bool isSurrogateLo(dchar c)
 @safe pure nothrow
 bool isNonCharacter(dchar c)
 {
-    static immutable nonCharacterTrie = asTrie(nonCharacterTrieEntries);
     return nonCharacterTrie[c];
 }
 
@@ -7353,9 +7340,41 @@ private:
     return CodepointSet(decompressIntervals(compressed));
 }
 
-auto asTrie(T...)(in TrieEntry!T e)
+@safe pure nothrow auto asTrie(T...)(in TrieEntry!T e)
 {
     return const(CodepointTrie!T)(e.offsets, e.sizes, e.data);
+}
+
+@safe pure nothrow @property
+{
+    // It's important to use auto return here, so that the compiler
+    // only runs semantic on the return type if the function gets
+    // used. Also these are functions rather than templates to not
+    // increase the object size of the caller.
+    auto lowerCaseTrie() { static immutable res = asTrie(lowerCaseTrieEntries); return res; }
+    auto upperCaseTrie() { static immutable res = asTrie(upperCaseTrieEntries); return res; }
+    auto simpleCaseTrie() { static immutable res = asTrie(simpleCaseTrieEntries); return res; }
+    auto fullCaseTrie() { static immutable res = asTrie(fullCaseTrieEntries); return res; }
+    auto alphaTrie() { static immutable res = asTrie(alphaTrieEntries); return res; }
+    auto markTrie() { static immutable res = asTrie(markTrieEntries); return res; }
+    auto numberTrie() { static immutable res = asTrie(numberTrieEntries); return res; }
+    auto punctuationTrie() { static immutable res = asTrie(punctuationTrieEntries); return res; }
+    auto symbolTrie() { static immutable res = asTrie(symbolTrieEntries); return res; }
+    auto graphicalTrie() { static immutable res = asTrie(graphicalTrieEntries); return res; }
+    auto nonCharacterTrie() { static immutable res = asTrie(nonCharacterTrieEntries); return res; }
+    auto nfcQCTrie() { static immutable res = asTrie(nfcQCTrieEntries); return res; }
+    auto nfdQCTrie() { static immutable res = asTrie(nfdQCTrieEntries); return res; }
+    auto nfkcQCTrie() { static immutable res = asTrie(nfkcQCTrieEntries); return res; }
+    auto nfkdQCTrie() { static immutable res = asTrie(nfkdQCTrieEntries); return res; }
+    auto mcTrie() { static immutable res = asTrie(mcTrieEntries); return res; }
+    auto graphemeExtendTrie() { static immutable res = asTrie(graphemeExtendTrieEntries); return res; }
+    auto combiningClassTrie() { static immutable res = asTrie(combiningClassTrieEntries); return res; }
+    auto compatMappingTrie() { static immutable res = asTrie(compatMappingTrieEntries); return res; }
+    auto canonMappingTrie() { static immutable res = asTrie(canonMappingTrieEntries); return res; }
+    auto compositionJumpTrie() { static immutable res = asTrie(compositionJumpTrieEntries); return res; }
+    auto toUpperIndexTrie() { static immutable res = asTrie(toUpperIndexTrieEntries); return res; }
+    auto toLowerIndexTrie() { static immutable res = asTrie(toLowerIndexTrieEntries); return res; }
+    auto toTitleIndexTrie() { static immutable res = asTrie(toTitleIndexTrieEntries); return res; }
 }
 
 // TODO: move sets below to Tries
