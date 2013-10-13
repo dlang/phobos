@@ -58,7 +58,7 @@ struct TrieEntry(T...)
     size_t[] data;
 }
 
-enum simpleCaseTable = [
+immutable simpleCaseTable = [
     SimpleCaseEntry(0x2c00, 0, 0x82),
     SimpleCaseEntry(0x2c30, 1, 0x42),
     SimpleCaseEntry(0x24c3, 0, 0x82),
@@ -2216,7 +2216,7 @@ enum simpleCaseTable = [
     SimpleCaseEntry(0x24c0, 0, 0x82),
     SimpleCaseEntry(0x24da, 1, 0x42)
 ];
-enum fullCaseTable = [
+immutable fullCaseTable = [
     FullCaseEntry("Ⰰ", 0, 2, 1),
     FullCaseEntry("ⰰ", 1, 2, 1),
     FullCaseEntry("Ⓝ", 0, 2, 1),

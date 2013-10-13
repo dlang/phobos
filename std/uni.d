@@ -5552,7 +5552,7 @@ unittest
 int sicmp(C1, C2)(const(C1)[] str1, const(C2)[] str2)
 {
     static immutable simpleCaseTrie = asTrie(simpleCaseTrieEntries);
-    static immutable sTable = simpleCaseTable;
+    alias sTable = simpleCaseTable;
     size_t ridx=0;
     foreach(dchar lhs; str1)
     {
@@ -5593,7 +5593,7 @@ int sicmp(C1, C2)(const(C1)[] str1, const(C2)[] str2)
 private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
 {
     static immutable fullCaseTrie = asTrie(fullCaseTrieEntries);
-    static immutable fTable = fullCaseTable;
+    alias fTable = fullCaseTable;
     size_t idx = fullCaseTrie[lhs];
     // fullCaseTrie is packed index table
     if(idx == EMPTY_CASE_TRIE)
