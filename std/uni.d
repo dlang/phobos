@@ -640,10 +640,12 @@ CLUSTER = $(S_LINK Grapheme cluster, grapheme cluster)
 module std.uni;
 
 static import std.ascii;
-import std.traits, std.range, std.algorithm, std.typecons,
-    std.format, std.conv, std.typetuple, std.exception, core.stdc.stdlib;
+import std.traits, std.range, std.algorithm, std.conv,
+    std.typetuple, std.exception, core.stdc.stdlib;
 import std.array; //@@BUG UFCS doesn't work with 'local' imports
 import core.bitop;
+
+version(unittest) import std.typecons;
 
 // debug = std_uni;
 
