@@ -640,10 +640,12 @@ CLUSTER = $(S_LINK Grapheme cluster, grapheme cluster)
 module std.uni;
 
 static import std.ascii;
-import std.traits, std.range, std.algorithm, std.typecons,
-    std.format, std.conv, std.typetuple, std.exception, core.stdc.stdlib;
+import std.traits, std.range, std.algorithm, std.conv,
+    std.typetuple, std.exception, core.stdc.stdlib;
 import std.array; //@@BUG UFCS doesn't work with 'local' imports
 import core.bitop;
+
+version(unittest) import std.typecons;
 
 // debug = std_uni;
 
@@ -1806,14 +1808,17 @@ public alias InversionList!GcPolicy CodepointSet;
     to represent [a, b$(RPAREN) intervals of $(CODEPOINTS). As used in $(LREF InversionList).
     Any interval type should pass $(LREF isIntegralPair) trait.
 */
-public struct CodepointInterval {
+public struct CodepointInterval 
+{
     uint[2] _tuple;
     alias _tuple this;
-    this(uint low, uint high){
+    this(uint low, uint high)
+    {
         _tuple[0] = low;
         _tuple[1] = high;
     }
-    bool opEquals(T)(T val){
+    bool opEquals(T)(T val) const
+    {
         return this[0] == val[0] && this[1] == val[1];
     }
     @property ref uint a(){ return _tuple[0]; }
@@ -5598,16 +5603,17 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
     assert(fTable[start].entry_len == 1);
     for(idx=start; idx<end; idx++)
     {
-        if(fTable[idx].entry_len == 1)
+        auto entryLen = fTable[idx].entry_len;
+        if(entryLen == 1)
         {
-            if(fTable[idx].ch == rhs)
+            if(fTable[idx].seq[0] == rhs)
             {
                 return 0;
             }
         }
         else
         {// OK it's a long chunk, like 'ss' for German
-            dstring seq = fTable[idx].seq;
+            dstring seq = fTable[idx].seq[0..entryLen];
             if(rhs == seq[0]
                 && rtail.skipOver(seq[1..$]))
             {
@@ -5617,7 +5623,7 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
             }
         }
     }
-    return fTable[start].ch; // new remapped character for accurate diffs
+    return fTable[start].seq[0]; // new remapped character for accurate diffs
 }
 
 /++
