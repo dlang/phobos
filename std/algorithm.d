@@ -43,7 +43,10 @@ Implements algorithms oriented mainly towards processing of
 sequences. Some functions are semantic equivalents or supersets of
 those found in the $(D $(LESS)_algorithm$(GREATER)) header in $(WEB
 sgi.com/tech/stl/, Alexander Stepanov's Standard Template Library) for
-C++.
+C++. Sequences processed by these functions define range-based interfaces.
+
+$(LINK2 std_range.html, Reference on ranges)$(BR)
+$(LINK2 http://ddili.org/ders/d.en/ranges.html, Tutorial on ranges)
 
 Many functions in this module are parameterized with a function or a
 $(GLOSSARY predicate). The predicate may be passed either as a
@@ -1924,12 +1927,15 @@ unittest
 
 // swap
 /**
-Swaps $(D lhs) and $(D rhs). See also $(XREF exception, pointsTo).
+Swaps $(D lhs) and $(D rhs). 
 
 Preconditions:
 
 $(D !pointsTo(lhs, lhs) && !pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
 && !pointsTo(rhs, rhs))
+
+See_Also: 
+    $(XREF exception, pointsTo)
  */
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow
 if (isMutable!T && !is(typeof(T.init.proxySwap(T.init))))
@@ -3570,10 +3576,10 @@ assert(r == [ 1, 2, 3, 4, 5 ]);
 Finds an individual element in an input range. Elements of $(D
 haystack) are compared with $(D needle) by using predicate $(D
 pred). Performs $(BIGOH walkLength(haystack)) evaluations of $(D
-pred). See also $(WEB sgi.com/tech/stl/_find.html, STL's _find).
+pred).
 
 To _find the last occurence of $(D needle) in $(D haystack), call $(D
-find(retro(haystack), needle)). See also $(XREF range, retro).
+find(retro(haystack), needle)). See $(XREF range, retro).
 
 Params:
 
@@ -3608,6 +3614,9 @@ assert(!find(a, 2).empty);      // found
 string[] s = [ "Hello", "world", "!" ];
 assert(!find!("toLower(a) == b")(s, "hello").empty);
 ----
+
+See_Also:
+     $(WEB sgi.com/tech/stl/_find.html, STL's _find)
  */
 
 R find(alias pred = "a == b", R, E)(R haystack, E needle)
@@ -4240,10 +4249,10 @@ unittest
 Advances the input range $(D haystack) by calling $(D haystack.popFront)
 until either $(D pred(haystack.front)), or $(D
 haystack.empty). Performs $(BIGOH haystack.length) evaluations of $(D
-pred). See also $(WEB sgi.com/tech/stl/find_if.html, STL's find_if).
+pred).
 
 To find the last element of a bidirectional $(D haystack) satisfying
-$(D pred), call $(D find!(pred)(retro(haystack))). See also $(XREF
+$(D pred), call $(D find!(pred)(retro(haystack))). See $(XREF
 range, retro).
 
 Example:
@@ -4255,6 +4264,9 @@ assert(find!("a > 2")(arr) == [ 3, 4, 1 ]);
 bool pred(int x) { return x + 1 > 1.5; }
 assert(find!(pred)(arr) == arr);
 ----
+
+See_Also:
+     $(WEB sgi.com/tech/stl/find_if.html, STL's find_if)
 */
 Range find(alias pred, Range)(Range haystack) if (isInputRange!(Range))
 {
@@ -5655,8 +5667,7 @@ unittest
 /**
 Advances $(D r) until it finds the first two adjacent elements $(D a),
 $(D b) that satisfy $(D pred(a, b)). Performs $(BIGOH r.length)
-evaluations of $(D pred). See also $(WEB
-sgi.com/tech/stl/adjacent_find.html, STL's adjacent_find).
+evaluations of $(D pred).
 
 Example:
 ----
@@ -5665,6 +5676,9 @@ auto r = findAdjacent(a);
 assert(r == [ 10, 10, 9, 8, 8, 7, 8, 9 ]);
 p = findAdjacent!("a < b")(a);
 assert(p == [ 7, 8, 9 ]);
+
+See_Also:
+     $(WEB sgi.com/tech/stl/adjacent_find.html, STL's adjacent_find)
 ----
 */
 Range findAdjacent(alias pred = "a == b", Range)(Range r)
@@ -5712,8 +5726,7 @@ unittest
 Advances $(D seq) by calling $(D seq.popFront) until either $(D
 find!(pred)(choices, seq.front)) is $(D true), or $(D seq) becomes
 empty. Performs $(BIGOH seq.length * choices.length) evaluations of
-$(D pred). See also $(WEB sgi.com/tech/stl/find_first_of.html, STL's
-find_first_of).
+$(D pred). 
 
 Example:
 ----
@@ -5721,6 +5734,9 @@ int[] a = [ -1, 0, 1, 2, 3, 4, 5 ];
 int[] b = [ 3, 1, 2 ];
 assert(findAmong(a, b) == a[2 .. $]);
 ----
+
+See_Also:
+    $(WEB sgi.com/tech/stl/find_first_of.html, STL's find_first_of)
 */
 Range1 findAmong(alias pred = "a == b", Range1, Range2)(
     Range1 seq, Range2 choices)
@@ -5923,8 +5939,7 @@ Returns $(D true) if and only if the two ranges compare equal element
 for element, according to binary predicate $(D pred). The ranges may
 have different element types, as long as $(D pred(a, b)) evaluates to
 $(D bool) for $(D a) in $(D r1) and $(D b) in $(D r2). Performs
-$(BIGOH min(r1.length, r2.length)) evaluations of $(D pred). See also
-$(WEB sgi.com/tech/stl/_equal.html, STL's _equal).
+$(BIGOH min(r1.length, r2.length)) evaluations of $(D pred). 
 
 Example:
 ----
@@ -5941,6 +5956,9 @@ assert(equal(a, b));
 double[] c = [ 1.005, 2, 4, 3];
 assert(equal!(approxEqual)(b, c));
 ----
+
+See_Also:
+    $(WEB sgi.com/tech/stl/_equal.html, STL's _equal)
 */
 bool equal(Range1, Range2)(Range1 r1, Range2 r2)
     if (isInputRange!Range1 && isInputRange!Range2
@@ -6515,8 +6533,7 @@ Sequentially compares elements in $(D r1) and $(D r2) in lockstep, and
 stops at the first mismatch (according to $(D pred), by default
 equality). Returns a tuple with the reduced ranges that start with the
 two mismatched values. Performs $(BIGOH min(r1.length, r2.length))
-evaluations of $(D pred). See also $(WEB
-sgi.com/tech/stl/_mismatch.html, STL's _mismatch).
+evaluations of $(D pred). 
 
 Example:
 ----
@@ -6526,6 +6543,9 @@ auto m = mismatch(x, y);
 assert(m[0] == x[3 .. $]);
 assert(m[1] == y[3 .. $]);
 ----
+
+See_Also:
+    $(WEB sgi.com/tech/stl/_mismatch.html, STL's _mismatch)
 */
 
 Tuple!(Range1, Range2)
@@ -6787,11 +6807,7 @@ unittest
 // copy
 /**
 Copies the content of $(D source) into $(D target) and returns the
-remaining (unfilled) part of $(D target). See also $(WEB
-sgi.com/tech/stl/_copy.html, STL's _copy). If a behavior similar to
-$(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward) is
-needed, use $(D copy(retro(source), retro(target))). See also $(XREF
-range, retro).
+remaining (unfilled) part of $(D target).
 
 Example:
 ----
@@ -6816,16 +6832,30 @@ auto d = copy(a, b);
 To copy at most $(D n) elements from range $(D a) to range $(D b), you
 may want to use $(D copy(take(a, n), b)). To copy those elements from
 range $(D a) that satisfy predicate $(D pred) to range $(D b), you may
-want to use $(D copy(filter!(pred)(a), b)).
+want to use $(D copy(a.filter!(pred), b)).
 
 Example:
 ----
 int[] a = [ 1, 5, 8, 9, 10, 1, 2, 0 ];
 auto b = new int[a.length];
-auto c = copy(filter!("(a & 1) == 1")(a), b);
+auto c = copy(a.filter!(a => (a & 1) == 1), b);
 assert(b[0 .. $ - c.length] == [ 1, 5, 9, 1 ]);
 ----
 
+$(XREF range, retro) can be used to achieve behavior similar to
+$(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward').
+
+Example: 
+----
+import std.algorithm, std.range;
+int[] src = [1, 2, 4];
+int[] dst = [0, 0, 0, 0, 0];
+copy(src.retro, dst.retro);
+assert(dst == [0, 0, 1, 2, 4]);
+----
+
+See_Also:
+    $(WEB sgi.com/tech/stl/_copy.html, STL's _copy)
  */
 Range2 copy(Range1, Range2)(Range1 source, Range2 target)
 if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
@@ -6962,13 +6992,16 @@ unittest
 // reverse
 /**
 Reverses $(D r) in-place.  Performs $(D r.length / 2) evaluations of $(D
-swap). See also $(WEB sgi.com/tech/stl/_reverse.html, STL's _reverse).
+swap).
 
 Example:
 ----
 int[] arr = [ 1, 2, 3 ];
 reverse(arr);
 assert(arr == [ 3, 2, 1 ]);
+
+See_Also:
+    $(WEB sgi.com/tech/stl/_reverse.html, STL's _reverse)
 ----
 */
 void reverse(Range)(Range r)
@@ -7241,7 +7274,7 @@ assert(equal(vec, [ 5, 6, 7 ]));
 ----
 
 Performs $(BIGOH max(front.length, back.length)) evaluations of $(D
-swap). See also $(WEB sgi.com/tech/stl/_rotate.html, STL's rotate).
+swap).
 
 Preconditions:
 
@@ -7253,6 +7286,9 @@ Returns:
 
 The number of elements brought to the front, i.e., the length of $(D
 back).
+
+See_Also:
+    $(WEB sgi.com/tech/stl/_rotate.html, STL's rotate)
 */
 size_t bringToFront(Range1, Range2)(Range1 front, Range2 back)
     if (isInputRange!Range1 && isForwardRange!Range2)
@@ -7833,9 +7869,6 @@ swap). The unstable version computes the minimum possible evaluations
 of $(D swap) (roughly half of those performed by the semistable
 version).
 
-See also STL's $(WEB sgi.com/tech/stl/_partition.html, _partition) and
-$(WEB sgi.com/tech/stl/stable_partition.html, stable_partition).
-
 Returns:
 
 The right part of $(D r) after partitioning.
@@ -7881,6 +7914,10 @@ r = partition!(fun, SwapStrategy.semistable)(arr);
 // Now arr is [4 5 6 7 8 9 10 2 3 1] and r points to 2
 assert(arr == [4, 5, 6, 7, 8, 9, 10, 2, 3, 1] && r == arr[7 .. $]);
 ----
+
+See_Also:
+    STL's $(WEB sgi.com/tech/stl/_partition.html, _partition)$(BR)
+    STL's $(WEB sgi.com/tech/stl/stable_partition.html, stable_partition)
 */
 Range partition(alias predicate,
         SwapStrategy ss = SwapStrategy.unstable, Range)(Range r)
@@ -8155,8 +8192,7 @@ and all elements $(D e2) from $(D r[nth]) to $(D r[r.length]) satisfy
 $(D !less(e2, r[nth])). Effectively, it finds the nth smallest
 (according to $(D less)) elements in $(D r). Performs an expected
 $(BIGOH r.length) (if unstable) or $(BIGOH r.length * log(r.length))
-(if stable) evaluations of $(D less) and $(D swap). See also $(WEB
-sgi.com/tech/stl/nth_element.html, STL's nth_element).
+(if stable) evaluations of $(D less) and $(D swap). 
 
 If $(D n >= r.length), the algorithm has no effect.
 
@@ -8170,6 +8206,9 @@ assert(v[n] == 9);
 topN!("a < b")(v, n);
 assert(v[n] == 9);
 ----
+
+See_Also:
+    $(WEB sgi.com/tech/stl/nth_element.html, STL's nth_element)
 
 BUGS:
 
@@ -8310,8 +8349,8 @@ unittest
 Sorts a random-access range according to the predicate $(D less). Performs
 $(BIGOH r.length * log(r.length)) (if unstable) or $(BIGOH r.length *
 log(r.length) * log(r.length)) (if stable) evaluations of $(D less)
-and $(D swap). See also STL's $(WEB sgi.com/tech/stl/_sort.html, _sort)
-and $(WEB sgi.com/tech/stl/stable_sort.html, stable_sort).
+and $(D swap).
+
 
 $(D sort) returns a $(XREF range, SortedRange) over the original range, which
 functions that can take advantage of sorted data can then use to know that the
@@ -8321,7 +8360,9 @@ but other functions won't know that the original range has been sorted, whereas
 they $(I can) know that $(XREF range, SortedRange) has been sorted.
 
 See_Also:
-    $(XREF range, assumeSorted)
+    $(XREF range, assumeSorted)$(BR)
+    STL's $(WEB sgi.com/tech/stl/_sort.html, _sort)$(BR)
+    $(WEB sgi.com/tech/stl/stable_sort.html, stable_sort)
 
 Remark: Stable sort is implementated as Timsort, the original code at
 $(WEB github.com/Xinok/XSort, XSort) by Xinok, public domain.
