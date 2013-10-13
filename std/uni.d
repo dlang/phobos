@@ -5829,12 +5829,12 @@ public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch)
 {
     static if(decompType == Canonical)
     {
-        static immutable table = decompCanonTable;
+        alias table = decompCanonTable;
         static immutable mapping = asTrie(canonMappingTrieEntries);
     }
     else static if(decompType == Compatibility)
     {
-        static immutable table = decompCompatTable;
+        alias table = decompCompatTable;
         static immutable mapping = asTrie(compatMappingTrieEntries);
     }
     ushort idx = mapping[ch];
@@ -6352,8 +6352,7 @@ ushort toLowerIndex(dchar c)
 @trusted pure nothrow
 dchar toLowerTab(size_t idx)
 {
-    static immutable tab = toLowerTable;
-    return tab[idx];
+    return toLowerTable[idx];
 }
 
 // trusted -> avoid bounds check
@@ -6368,8 +6367,7 @@ ushort toTitleIndex(dchar c)
 @trusted pure nothrow
 dchar toTitleTab(size_t idx)
 {
-    static immutable tab = toTitleTable;
-    return tab[idx];
+    return toTitleTable[idx];
 }
 
 // trusted -> avoid bounds check
@@ -6384,8 +6382,7 @@ ushort toUpperIndex(dchar c)
 @trusted pure nothrow
 dchar toUpperTab(size_t idx)
 {
-    static immutable tab = toUpperTable;
-    return tab[idx];
+    return toUpperTable[idx];
 }
 
 public:
