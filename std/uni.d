@@ -5549,7 +5549,9 @@ unittest
     assert(icmp("ΌΎ", "όύ") == 0);
     ---
 +/
-int sicmp(C1, C2)(const(C1)[] str1, const(C2)[] str2)
+int sicmp(S1, S2)(S1 str1, S2 str2)
+    if(isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar)
+    && isForwardRange!S2 && is(Unqual!(ElementType!S2) == dchar))
 {
     alias sTable = simpleCaseTable;
     size_t ridx=0;
@@ -5588,8 +5590,19 @@ int sicmp(C1, C2)(const(C1)[] str1, const(C2)[] str2)
     }
     return ridx == str2.length ? 0 : -1;
 }
+// overloads for the most common cases to reduce compile time
+@safe pure /*TODO nothrow*/
+{
+    int sicmp(const(char)[] str1, const(char)[] str2)
+    { return sicmp!(const(char)[], const(char)[])(str1, str2); }
+    int sicmp(const(wchar)[] str1, const(wchar)[] str2)
+    { return sicmp!(const(wchar)[], const(wchar)[])(str1, str2); }
+    int sicmp(const(dchar)[] str1, const(dchar)[] str2)
+    { return sicmp!(const(dchar)[], const(dchar)[])(str1, str2); }
+}
 
 private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
+    @trusted pure /*TODO nothrow*/
 {
     alias fTable = fullCaseTable;
     size_t idx = fullCaseTrie[lhs];
@@ -5669,6 +5682,16 @@ int icmp(S1, S2)(S1 str1, S2 str2)
         diff = cmpLR - cmpRL;
         return diff;
     }
+}
+// overloads for the most common cases to reduce compile time
+@safe pure /*TODO nothrow*/
+{
+    int icmp(const(char)[] str1, const(char)[] str2)
+    { return icmp!(const(char)[], const(char)[])(str1, str2); }
+    int icmp(const(wchar)[] str1, const(wchar)[] str2)
+    { return icmp!(const(wchar)[], const(wchar)[])(str1, str2); }
+    int icmp(const(dchar)[] str1, const(dchar)[] str2)
+    { return icmp!(const(dchar)[], const(dchar)[])(str1, str2); }
 }
 
 unittest
@@ -6484,7 +6507,7 @@ dchar toUniLower(dchar c)
     upper-lower mapping. Use overload of toLower which takes full string instead.
 +/
 @safe pure nothrow
-dchar toLower()(dchar c)
+dchar toLower(dchar c)
 {
      // optimize ASCII case
     if(c < 0xAA)
@@ -6820,6 +6843,16 @@ void toLowerInPlace(C)(ref C[] s) @trusted pure
 {
     toCaseInPlace!(LowerTriple)(s);
 }
+// overloads for the most common cases to reduce compile time
+@safe pure /*TODO nothrow*/
+{
+    void toLowerInPlace(ref char[] s)
+    { toLowerInPlace!char(s); }
+    void toLowerInPlace(ref wchar[] s)
+    { toLowerInPlace!wchar(s); }
+    void toLowerInPlace(ref dchar[] s)
+    { toLowerInPlace!dchar(s); }
+}
 
 /++
     Converts $(D s) to uppercase  (by performing Unicode uppercase mapping) in place.
@@ -6832,6 +6865,16 @@ void toUpperInPlace(C)(ref C[] s) @trusted pure
 {
     toCaseInPlace!(UpperTriple)(s);
 }
+// overloads for the most common cases to reduce compile time/code size
+@safe pure /*TODO nothrow*/
+{
+    void toUpperInPlace(ref char[] s)
+    { toUpperInPlace!char(s); }
+    void toUpperInPlace(ref wchar[] s)
+    { toUpperInPlace!wchar(s); }
+    void toUpperInPlace(ref dchar[] s)
+    { toUpperInPlace!dchar(s); }
+}
 
 /++
     Returns a string which is identical to $(D s) except that all of its
@@ -6842,6 +6885,16 @@ S toLower(S)(S s) @trusted pure
     if(isSomeString!S)
 {
     return toCase!(LowerTriple)(s);
+}
+// overloads for the most common cases to reduce compile time
+@safe pure /*TODO nothrow*/
+{
+    string toLower(string s)
+    { return toLower!string(s); }
+    wstring toLower(wstring s)
+    { return toLower!wstring(s); }
+    dstring toLower(dstring s)
+    { return toLower!dstring(s); }
 }
 
 
@@ -6930,7 +6983,7 @@ dchar toUniUpper(dchar c)
     upper-lower mapping. Use overload of toUpper which takes full string instead.
 +/
 @safe pure nothrow
-dchar toUpper()(dchar c)
+dchar toUpper(dchar c)
 {
     // optimize ASCII case
     if(c < 0xAA)
@@ -6972,6 +7025,16 @@ S toUpper(S)(S s) @trusted pure
     if(isSomeString!S)
 {
     return toCase!(UpperTriple)(s);
+}
+// overloads for the most common cases to reduce compile time
+@safe pure /*TODO nothrow*/
+{
+    string toUpper(string s)
+    { return toUpper!string(s); }
+    wstring toUpper(wstring s)
+    { return toUpper!wstring(s); }
+    dstring toUpper(dstring s)
+    { return toUpper!dstring(s); }
 }
 
 unittest
