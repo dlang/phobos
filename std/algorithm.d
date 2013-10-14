@@ -2928,7 +2928,27 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
         {
             _items = items;
             _sep = sep;
-            mixin(useItem); // _current should be initialized in place
+
+            //mixin(useItem); // _current should be initialized in place
+            if (_items.empty)
+                _current = _current.init;   // set invalid state
+            else
+            {
+                // If we're exporting .save, we must not consume any of the
+                // subranges, since RoR.save does not guarantee that the states
+                // of the subranges are also saved.
+                static if (isForwardRange!RoR &&
+                           isForwardRange!(ElementType!RoR))
+                    _current = _items.front.save;
+                else
+                    _current = _items.front;
+
+                if (_current.empty)
+                {
+                    // No data in the current item - toggle to use the separator
+                    useSeparator();
+                }
+            }
         }
 
         @property auto empty()
@@ -3115,7 +3135,24 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
         this(RoR r)
         {
             _items = r;
-            mixin(prepare); // _current should be initialized in place
+            //mixin(prepare); // _current should be initialized in place
+
+            // Skip over empty subranges.
+            while (!_items.empty && _items.front.empty)
+                _items.popFront();
+
+            if (_items.empty)
+                _current = _current.init;   // set invalid state
+            else
+            {
+                // We cannot export .save method unless we ensure subranges are not
+                // consumed when a .save'd copy of ourselves is iterated over. So
+                // we need to .save each subrange we traverse.
+                static if (isForwardRange!RoR && isForwardRange!(ElementType!RoR))
+                    _current = _items.front.save;
+                else
+                    _current = _items.front;
+            }
         }
         static if (isInfinite!RoR)
         {
