@@ -101,6 +101,10 @@ private:
     {
        data = x;
     }
+    this(T)(T x) pure if (isIntegral!T)
+    {
+        opAssign(x);
+    }
 public:
     // Length in uints
     size_t uintLength() pure const
