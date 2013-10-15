@@ -23,11 +23,12 @@ module std.format;
 import core.stdc.stdio, core.stdc.stdlib, core.stdc.string, core.vararg;
 import std.algorithm, std.array, std.ascii, std.bitmanip, std.conv,
     std.exception, std.functional, std.math, std.range,
-    std.string, std.system, std.traits, std.typecons, std.typetuple,
+    std.system, std.traits, std.typecons, std.typetuple,
     std.utf;
 version(unittest) {
     import std.stdio;
     import core.exception;
+    import std.string;
 }
 
 version (Win32) version (DigitalMars)
@@ -2520,7 +2521,7 @@ void enforceValidFormatSpec(T, Char)(ref FormatSpec!Char f)
     static if (!isInputRange!T && hasToString!(T, Char) != 4)
     {
         enforceFmt(f.spec == 's',
-            format("Expected '%%s' format specifier for type '%s'", T.stringof));
+            "Expected '%%s' format specifier for type '" ~ T.stringof ~ "'");
     }
 }
 
