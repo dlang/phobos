@@ -7,11 +7,11 @@
 
    Macros: WIKI = Phobos/StdFormat
 
-   Copyright: Copyright Digital Mars 2000-.
+   Copyright: Copyright Digital Mars 2000-2013.
 
    License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-   Authors: $(WEB digitalmars.com, Walter Bright), $(WEB erdani.com,
+   Authors: $(WEB walterbright.com, Walter Bright), $(WEB erdani.com,
    Andrei Alexandrescu), and Kenji Hara
 
    Source: $(PHOBOSSRC std/_format.d)
@@ -21,12 +21,18 @@ module std.format;
 //debug=format;                // uncomment to turn on debugging printf's
 
 import core.stdc.stdio, core.stdc.stdlib, core.stdc.string, core.vararg;
-import std.algorithm, std.array, std.ascii, std.bitmanip, std.conv,
-    std.exception, std.functional, std.math, std.range,
-    std.string, std.system, std.traits, std.typecons, std.typetuple,
+import std.algorithm, std.ascii, std.bitmanip, std.conv,
+    std.exception, std.range,
+    std.system, std.traits, std.typetuple,
     std.utf;
+version (Win64) {
+    import std.math : isnan;
+}
 version(unittest) {
+    import std.math;
     import std.stdio;
+    import std.string;
+    import std.typecons;
     import core.exception;
 }
 
