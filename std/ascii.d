@@ -34,14 +34,14 @@ version (unittest)
 }
 
 
-immutable hexDigits      = "0123456789ABCDEF";           /// 0..9A..F
-immutable lowerHexDigits = "0123456789abcdef";           /// 0..9a..f
 immutable fullHexDigits  = "0123456789ABCDEFabcdef";     /// 0..9A..Fa..f
-immutable digits         = "0123456789";                 /// 0..9
-immutable octalDigits    = "01234567";                   /// 0..7
-immutable lowercase      = "abcdefghijklmnopqrstuvwxyz"; /// a..z
-immutable uppercase      = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; /// A..Z
-immutable letters        = uppercase ~ lowercase;        /// A..Za..z
+immutable hexDigits      = fullHexDigits[0..16];         /// 0..9A..F
+immutable lowerHexDigits = "0123456789abcdef";           /// 0..9a..f
+immutable digits         = hexDigits[0..10];             /// 0..9
+immutable octalDigits    = digits[0..8];                 /// 0..7
+immutable letters        = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"; /// A..Za..z
+immutable uppercase      = letters[0..26];               /// A..Z
+immutable lowercase      = letters[26..52];              /// a..z
 immutable whitespace     = " \t\v\r\n\f";                /// ASCII whitespace
 
 /**
@@ -72,7 +72,7 @@ else
   +/
 bool isAlphaNum(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & (_ALP|_DIG)) : false;
+    return c <= 'z' && c >= '0' && (c <= '9' || c >= 'a' || (c >= 'A' && c <= 'Z'));
 }
 
 unittest
@@ -90,7 +90,8 @@ unittest
   +/
 bool isAlpha(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & _ALP) : false;
+    // Optimizer can turn this into a bitmask operation on 64 bit code
+    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 }
 
 unittest
@@ -108,7 +109,7 @@ unittest
   +/
 bool isLower(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & _LC) : false;
+    return c >= 'a' && c <= 'z';
 }
 
 unittest
@@ -126,7 +127,7 @@ unittest
   +/
 bool isUpper(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & _UC) : false;
+    return c <= 'Z' && 'A' <= c;
 }
 
 unittest
@@ -144,7 +145,7 @@ unittest
   +/
 bool isDigit(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & _DIG) : false;
+    return '0' <= c && c <= '9';
 }
 
 unittest
@@ -180,7 +181,7 @@ unittest
   +/
 bool isHexDigit(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & _HEX) : false;
+    return c <= 'f' && c >= '0' && (c <= '9' || c >= 'a' || (c >= 'A' && c <= 'F'));
 }
 
 unittest
@@ -199,7 +200,7 @@ unittest
   +/
 bool isWhite(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & _SPC) : false;
+    return c == ' ' || (c >= 0x09 && c <= 0x0D);
 }
 
 unittest
@@ -217,7 +218,7 @@ unittest
   +/
 bool isControl(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & _CTL) : false;
+    return c < 0x20 || c == 0x7F;
 }
 
 unittest
@@ -237,7 +238,7 @@ unittest
   +/
 bool isPunctuation(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & _PNC) : false;
+    return c <= '~' && c >= '!' && !isAlphaNum(c);
 }
 
 unittest
@@ -258,7 +259,7 @@ unittest
   +/
 bool isGraphical(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & (_ALP|_DIG|_PNC)) : false;
+    return '!' <= c && c <= '~';
 }
 
 unittest
@@ -279,7 +280,7 @@ unittest
   +/
 bool isPrintable(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & (_ALP|_DIG|_PNC|_BLK)) : false;
+    return c >= ' ' && c <= '~';
 }
 
 unittest
@@ -331,7 +332,7 @@ auto toLower(C)(C c)
         alias R = dchar;
     else
         alias R = Unqual!OC;
-    
+
     return isUpper(c) ? cast(R)(cast(R)c + 'a' - 'A') : cast(R)c;
 }
 
@@ -380,7 +381,7 @@ auto toUpper(C)(C c)
         alias R = dchar;
     else
         alias R = Unqual!OC;
-    
+
     return isLower(c) ? cast(R)(cast(R)c - ('a' - 'A')) : cast(R)c;
 }
 
@@ -463,42 +464,3 @@ unittest //Test both toUpper and toLower with non-builtin
         static assert(is(typeof(toUpper(T.init)) == dchar));
     }
 }
-
-//==============================================================================
-// Private Section.
-//==============================================================================
-private:
-
-enum
-{
-    _UC  = 0x01,
-    _LC  = 0x02,
-    _DIG = 0x04,
-    _SPC = 0x08,
-    _PNC = 0x10,
-    _CTL = 0x20,
-    _BLK = 0x40,
-    _HEX = 0x80,
-    _ALP = _UC | _LC,
-}
-
-immutable ubyte[128] _ctype =
-[
-    _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
-    _CTL,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL,_CTL,
-    _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
-    _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
-    _SPC|_BLK,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
-    _PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
-    _DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,
-    _DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,
-    _PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
-    _PNC,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC,
-    _UC,_UC,_UC,_UC,_UC,_UC,_UC,_UC,
-    _UC,_UC,_UC,_UC,_UC,_UC,_UC,_UC,
-    _UC,_UC,_UC,_PNC,_PNC,_PNC,_PNC,_PNC,
-    _PNC,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC,
-    _LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
-    _LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
-    _LC,_LC,_LC,_PNC,_PNC,_PNC,_PNC,_CTL
-];
