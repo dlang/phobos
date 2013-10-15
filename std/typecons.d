@@ -4244,6 +4244,12 @@ unittest
         auto e2 = ScopedObject();  //Illegal, must be built via scoped!A
         auto e3 = ScopedObject(1); //Illegal, must be built via scoped!A
     })));
+    
+    // Use as member variable
+    struct B
+    {
+        typeof(scoped!A()) a; // note the trailing parentheses
+    }
 
     // Use with alias
     alias makeScopedA = scoped!A;
