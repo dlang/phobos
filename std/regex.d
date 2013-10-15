@@ -6066,7 +6066,7 @@ private @trusted void replaceCapturesInto(alias output, Sink, R, T)
 // ditto for a range of captures
 private void replaceMatchesInto(alias output, Sink, R, T)
         (ref Sink sink, R input, T matches)
-    if(isOutputRange!(Sink, dchar) && isSomeString!R && is(T == RegexMatch!R))
+    if(isOutputRange!(Sink, dchar) && isSomeString!R)
 {    
     size_t offset = 0;
     foreach(cap; matches)
@@ -7409,6 +7409,15 @@ unittest
     () @safe {
         replace!((a) => bar(a.hit))("blah", regex(`a`));
     }();
+}
+
+// bugzilla 11262
+unittest
+{
+    enum reg = ctRegex!(r",", "g");
+    auto str = "This,List";
+    str = str.replace(reg, "-");
+    assert(str == "This-List");
 }
 
 }//version(unittest)
