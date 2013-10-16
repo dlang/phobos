@@ -916,6 +916,7 @@ struct MultiArray(Types...)
     void store(OutRange)(scope OutRange sink) const
         if(isOutputRange!(OutRange, char))
     {
+        import std.format;
         formattedWrite(sink, "[%( 0x%x, %)]", offsets[]);
         formattedWrite(sink, ", [%( 0x%x, %)]", sz[]);
         formattedWrite(sink, ", [%( 0x%x, %)]", storage);
@@ -3983,6 +3984,7 @@ public template CodepointTrie(T, sizes...)
 // @@@BUG multiSort can's access private symbols from uni
 public template cmpK0(alias Pred)
 {
+    import std.typecons;
     static bool cmpK0(Value, Key)
         (Tuple!(Value, Key) a, Tuple!(Value, Key) b)
     {
