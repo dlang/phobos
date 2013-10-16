@@ -4623,93 +4623,93 @@ else
     // conjure cumulative properties by hand
     if(ucmp(name, "L") == 0 || ucmp(name, "Letter") == 0)
     {
-        target |= asSet(uniPropLu);
-        target |= asSet(uniPropLl);
-        target |= asSet(uniPropLt);
-        target |= asSet(uniPropLo);
-        target |= asSet(uniPropLm);
+        target |= asSet(uniProps.Lu);
+        target |= asSet(uniProps.Ll);
+        target |= asSet(uniProps.Lt);
+        target |= asSet(uniProps.Lo);
+        target |= asSet(uniProps.Lm);
     }
     else if(ucmp(name,"LC") == 0 || ucmp(name,"Cased Letter")==0)
     {
-        target |= asSet(uniPropLl);
-        target |= asSet(uniPropLu);
-        target |= asSet(uniPropLt);// Title case
+        target |= asSet(uniProps.Ll);
+        target |= asSet(uniProps.Lu);
+        target |= asSet(uniProps.Lt);// Title case
     }
     else if(ucmp(name, "M") == 0 || ucmp(name, "Mark") == 0)
     {
-        target |= asSet(uniPropMn);
-        target |= asSet(uniPropMc);
-        target |= asSet(uniPropMe);
+        target |= asSet(uniProps.Mn);
+        target |= asSet(uniProps.Mc);
+        target |= asSet(uniProps.Me);
     }
     else if(ucmp(name, "N") == 0 || ucmp(name, "Number") == 0)
     {
-        target |= asSet(uniPropNd);
-        target |= asSet(uniPropNl);
-        target |= asSet(uniPropNo);
+        target |= asSet(uniProps.Nd);
+        target |= asSet(uniProps.Nl);
+        target |= asSet(uniProps.No);
     }
     else if(ucmp(name, "P") == 0 || ucmp(name, "Punctuation") == 0)
     {
-        target |= asSet(uniPropPc);
-        target |= asSet(uniPropPd);
-        target |= asSet(uniPropPs);
-        target |= asSet(uniPropPe);
-        target |= asSet(uniPropPi);
-        target |= asSet(uniPropPf);
-        target |= asSet(uniPropPo);
+        target |= asSet(uniProps.Pc);
+        target |= asSet(uniProps.Pd);
+        target |= asSet(uniProps.Ps);
+        target |= asSet(uniProps.Pe);
+        target |= asSet(uniProps.Pi);
+        target |= asSet(uniProps.Pf);
+        target |= asSet(uniProps.Po);
     }
     else if(ucmp(name, "S") == 0 || ucmp(name, "Symbol") == 0)
     {
-        target |= asSet(uniPropSm);
-        target |= asSet(uniPropSc);
-        target |= asSet(uniPropSk);
-        target |= asSet(uniPropSo);
+        target |= asSet(uniProps.Sm);
+        target |= asSet(uniProps.Sc);
+        target |= asSet(uniProps.Sk);
+        target |= asSet(uniProps.So);
     }
     else if(ucmp(name, "Z") == 0 || ucmp(name, "Separator") == 0)
     {
-        target |= asSet(uniPropZs);
-        target |= asSet(uniPropZl);
-        target |= asSet(uniPropZp);
+        target |= asSet(uniProps.Zs);
+        target |= asSet(uniProps.Zl);
+        target |= asSet(uniProps.Zp);
     }
     else if(ucmp(name, "C") == 0 || ucmp(name, "Other") == 0)
     {
-        target |= asSet(uniPropCo);
-        target |= asSet(uniPropLo);
-        target |= asSet(uniPropNo);
-        target |= asSet(uniPropSo);
-        target |= asSet(uniPropPo);
+        target |= asSet(uniProps.Co);
+        target |= asSet(uniProps.Lo);
+        target |= asSet(uniProps.No);
+        target |= asSet(uniProps.So);
+        target |= asSet(uniProps.Po);
     }
     else if(ucmp(name, "graphical") == 0){
-        target |= asSet(uniPropAlphabetic);
+        target |= asSet(uniProps.Alphabetic);
 
-        target |= asSet(uniPropMn);
-        target |= asSet(uniPropMc);
-        target |= asSet(uniPropMe);
+        target |= asSet(uniProps.Mn);
+        target |= asSet(uniProps.Mc);
+        target |= asSet(uniProps.Me);
 
-        target |= asSet(uniPropNd);
-        target |= asSet(uniPropNl);
-        target |= asSet(uniPropNo);
+        target |= asSet(uniProps.Nd);
+        target |= asSet(uniProps.Nl);
+        target |= asSet(uniProps.No);
 
-        target |= asSet(uniPropPc);
-        target |= asSet(uniPropPd);
-        target |= asSet(uniPropPs);
-        target |= asSet(uniPropPe);
-        target |= asSet(uniPropPi);
-        target |= asSet(uniPropPf);
-        target |= asSet(uniPropPo);
+        target |= asSet(uniProps.Pc);
+        target |= asSet(uniProps.Pd);
+        target |= asSet(uniProps.Ps);
+        target |= asSet(uniProps.Pe);
+        target |= asSet(uniProps.Pi);
+        target |= asSet(uniProps.Pf);
+        target |= asSet(uniProps.Po);
 
-        target |= asSet(uniPropZs);
+        target |= asSet(uniProps.Zs);
 
-        target |= asSet(uniPropSm);
-        target |= asSet(uniPropSc);
-        target |= asSet(uniPropSk);
-        target |= asSet(uniPropSo);
+        target |= asSet(uniProps.Sm);
+        target |= asSet(uniProps.Sc);
+        target |= asSet(uniProps.Sk);
+        target |= asSet(uniProps.So);
     }
     else if(ucmp(name, "any") == 0)
         target = Set(0,0x110000);
     else if(ucmp(name, "ascii") == 0)
         target = Set(0,0x80);
     else
-        return loadUnicodeSet!propsTab(name, target);
+        return loadUnicodeSet!(uniProps.tab)(name, target);
     return true;
 }
 
@@ -4854,7 +4854,7 @@ template SetSearcher(alias table, string kind)
     */
     struct block
     {
-        mixin SetSearcher!(blocksTab, "block");
+        mixin SetSearcher!(blocks.tab, "block");
     }
 
     /**
@@ -4878,7 +4878,7 @@ template SetSearcher(alias table, string kind)
     */
     struct script
     {
-        mixin SetSearcher!(scriptsTab, "script");
+        mixin SetSearcher!(scripts.tab, "script");
     }
 
     /**
@@ -4904,7 +4904,7 @@ template SetSearcher(alias table, string kind)
     */
     struct hangulSyllableType
     {
-        mixin SetSearcher!(hangulTab, "hangul syllable type");
+        mixin SetSearcher!(hangul.tab, "hangul syllable type");
     }
 
 private:
@@ -4913,16 +4913,16 @@ private:
     static bool findAny(string name)
     {
         return isPrettyPropertyName(name)
-            || findSetName!propsTab(name) || findSetName!scriptsTab(name)
-            || (ucmp(name[0..2],"In") == 0 && findSetName!blocksTab(name[2..$]));
+            || findSetName!(uniProps.tab)(name) || findSetName!(scripts.tab)(name)
+            || (ucmp(name[0..2],"In") == 0 && findSetName!(blocks.tab)(name[2..$]));
     }
 
     static auto loadAny(Set=CodepointSet, C)(in C[] name)
     {
         Set set;
-        bool loaded = loadProperty(name, set) || loadUnicodeSet!scriptsTab(name, set)
+        bool loaded = loadProperty(name, set) || loadUnicodeSet!(scripts.tab)(name, set)
             || (ucmp(name[0..2],"In") == 0
-                && loadUnicodeSet!blocksTab(name[2..$], set));
+                && loadUnicodeSet!(blocks.tab)(name[2..$], set));
         if(loaded)
             return set;
         throw new Exception("No unicode set by name "~name.to!string()~" was found.");
@@ -4974,9 +4974,9 @@ unittest
 
 unittest
 {
-    assert(unicode("InHebrew") == asSet(blockHebrew));
-    assert(unicode("separator") == (asSet(uniPropZs) | asSet(uniPropZl) | asSet(uniPropZp)));
-    assert(unicode("In-Kharoshthi") == asSet(blockKharoshthi));
+    assert(unicode("InHebrew") == asSet(blocks.Hebrew));
+    assert(unicode("separator") == (asSet(uniProps.Zs) | asSet(uniProps.Zl) | asSet(uniProps.Zp)));
+    assert(unicode("In-Kharoshthi") == asSet(blocks.Kharoshthi));
 }
 
 enum EMPTY_CASE_TRIE = ushort.max;// from what gen_uni uses internally
@@ -7448,8 +7448,8 @@ __gshared CodepointSet hangLVT;
 
 shared static this()
 {
-    hangLV = asSet(hangulLV);
-    hangLVT = asSet(hangulLVT);
+    hangLV = asSet(hangul.LV);
+    hangLVT = asSet(hangul.LVT);
 }
 
 }// version(!std_uni_bootstrap)
