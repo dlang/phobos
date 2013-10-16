@@ -1874,7 +1874,7 @@ for the process to complete before returning.  The functions capture
 what the child process prints to both its standard output and
 standard error streams, and return this together with its exit code.
 ---
-auto dmd = execute("dmd", "myapp.d");
+auto dmd = execute(["dmd", "myapp.d"]);
 if (dmd.status != 0) writeln("Compilation failed:\n", dmd.output);
 
 auto ls = executeShell("ls -l");
