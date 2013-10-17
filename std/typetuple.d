@@ -66,6 +66,101 @@ unittest
 }
 
 /**
+ * TypeTuple which does not auto-expand. 
+ *	
+ * Useful when you need to pass multiple several type tuples
+ * as different template argument list parameters, without
+ * merging those.	
+ */
+template Group(T...)
+{
+	alias expand = T;
+}
+
+///
+unittest
+{
+    alias group = Group!(int, double, string);
+    static assert (!is(typeof(group.length)));
+    static assert (group.expand.length == 3);
+    static assert (is(group.expand[1] == double));
+}
+
+/**
+ * Trait to check if given template argument behaves as a Group
+ */
+template isGroup(T...)
+{
+	enum isGroup = 
+		   (T.length == 1)                         // not an expanded type tuple
+		&& is(typeof(T[0]) == void) && !is(T[0])   // does not evaluate to something
+		&& is(typeof(T[0].expand.length) : size_t) // expands to something with length
+		&& !is(typeof(T[0].expand));               // but still not valid type on its own
+}
+
+///
+unittest
+{
+	alias group = Group!(int);
+	
+	template Fake(T...)
+	{
+		int[] expand;
+	}
+	alias fake = Fake!(int);
+
+	alias fake2 = TypeTuple!(int);
+
+	static assert (isGroup!group);
+	static assert (!isGroup!fake);
+	static assert (!isGroup!fake2);
+}
+
+/**
+    Compares two groups for element identity
+
+    Params:
+        Group1, Group2 = any instances of `Group`
+
+    Returns:
+        `true` if each element of Group1 is identical to
+        the one of Group2 at the same index
+ */
+template Compare(alias Group1, alias Group2)
+    if (isGroup!Group1 && isGroup!Group2)
+{
+    private bool implementation()
+    {
+        static if (Group1.expand.length == Group2.expand.length) {
+            foreach (index, element; Group1.expand)
+            {
+                static if (!isSame!(Group1.expand[index], Group2.expand[index])) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    enum Compare = implementation();
+}
+
+///
+unittest
+{
+	alias one = Group!(int, double);
+	alias two = Group!(int, double);
+	alias three = Group!(double, int);
+
+	static assert (Compare!(one, two));
+	static assert (!Compare!(one, three));
+    static assert (!is(typeof(Compare!(int, int))));
+}
+
+/**
  * Returns the index of the first occurrence of type T in the
  * sequence of zero or more types TList.
  * If not found, -1 is returned.
