@@ -79,16 +79,3 @@ string sysErrorString(
 
     return cast(immutable)message[0 .. writtenLength];
 }
-
-/*
- * If the test fails, the text representation for the tested
- * error codes may have changed in a future Windows version,
- * but at the time of writing it was deemed unlikely to happen.
- */
-@safe unittest
-{
-    assert(sysErrorString(ERROR_SUCCESS, LANG_ENGLISH, SUBLANG_ENGLISH_US)
-        == "The operation completed successfully.");
-    assert(sysErrorString(ERROR_FILE_NOT_FOUND, LANG_ENGLISH, SUBLANG_ENGLISH_US)
-        == "The system cannot find the file specified.");
-}
