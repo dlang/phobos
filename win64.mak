@@ -210,13 +210,15 @@ SRC_STD_C_OSX= std\c\osx\socket.d
 
 SRC_STD_C_FREEBSD= std\c\freebsd\socket.d
 
-SRC_STD_INTERNAL= std\internal\processinit.d std\internal\uni.d std\internal\uni_tab.d std\internal\unicode_tables.d
+SRC_STD_INTERNAL= std\internal\processinit.d std\internal\uni.d std\internal\uni_tab.d \
+	std\internal\unicode_tables.d std\internal\unicode_comp.d std\internal\unicode_decomp.d \
+	std\internal\unicode_grapheme.d std\internal\unicode_norm.d
 
 SRC_STD_INTERNAL_DIGEST= std\internal\digest\sha_SSSE3.d
 
 SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
-    std\internal\math\gammafunction.d std\internal\math\errorfunction.d
+	std\internal\math\gammafunction.d std\internal\math\errorfunction.d
 
 SRC_STD_INTERNAL_WINDOWS= std\internal\windows\advapi32.d
 
