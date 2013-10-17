@@ -5807,6 +5807,7 @@ enum {
 +/
 public dchar compose(dchar first, dchar second)
 {
+    import std.internal.unicode_comp;
     size_t packed = compositionJumpTrie[first];
     if(packed == ushort.max)
         return dchar.init;
@@ -5848,6 +5849,7 @@ public dchar compose(dchar first, dchar second)
 +/
 public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch)
 {
+    import std.internal.unicode_decomp;
     static if(decompType == Canonical)
     {
         alias table = decompCanonTable;
@@ -7427,29 +7429,100 @@ private:
     auto symbolTrie() { static immutable res = asTrie(symbolTrieEntries); return res; }
     auto graphicalTrie() { static immutable res = asTrie(graphicalTrieEntries); return res; }
     auto nonCharacterTrie() { static immutable res = asTrie(nonCharacterTrieEntries); return res; }
-    auto nfcQCTrie() { static immutable res = asTrie(nfcQCTrieEntries); return res; }
-    auto nfdQCTrie() { static immutable res = asTrie(nfdQCTrieEntries); return res; }
-    auto nfkcQCTrie() { static immutable res = asTrie(nfkcQCTrieEntries); return res; }
-    auto nfkdQCTrie() { static immutable res = asTrie(nfkdQCTrieEntries); return res; }
-    auto mcTrie() { static immutable res = asTrie(mcTrieEntries); return res; }
-    auto graphemeExtendTrie() { static immutable res = asTrie(graphemeExtendTrieEntries); return res; }
-    auto combiningClassTrie() { static immutable res = asTrie(combiningClassTrieEntries); return res; }
-    auto compatMappingTrie() { static immutable res = asTrie(compatMappingTrieEntries); return res; }
-    auto canonMappingTrie() { static immutable res = asTrie(canonMappingTrieEntries); return res; }
-    auto compositionJumpTrie() { static immutable res = asTrie(compositionJumpTrieEntries); return res; }
+
+    //normalization quick-check tables
+    auto nfcQCTrie()
+    {
+        import std.internal.unicode_norm;
+        static immutable res = asTrie(nfcQCTrieEntries);
+        return res;
+    }
+
+    auto nfdQCTrie()
+    {
+        import std.internal.unicode_norm;
+        static immutable res = asTrie(nfdQCTrieEntries);
+        return res;
+    }
+
+    auto nfkcQCTrie()
+    {
+        import std.internal.unicode_norm;
+        static immutable res = asTrie(nfkcQCTrieEntries);
+        return res;
+    }
+
+    auto nfkdQCTrie()
+    {
+        import std.internal.unicode_norm;
+        static immutable res = asTrie(nfkdQCTrieEntries);
+        return res;
+    }
+
+    //grapheme breaking algorithm tables
+    auto mcTrie()
+    {
+        import std.internal.unicode_grapheme;
+        static immutable res = asTrie(mcTrieEntries);
+        return res;
+    }
+
+    auto graphemeExtendTrie()
+    {
+        import std.internal.unicode_grapheme;
+        static immutable res = asTrie(graphemeExtendTrieEntries);
+        return res;
+    }
+
+    auto hangLV()
+    {
+        import std.internal.unicode_grapheme;
+        static immutable res = asTrie(hangulLVTrieEntries);
+        return res; 
+    }
+    
+    auto hangLVT()
+    {
+        import std.internal.unicode_grapheme;
+        static immutable res = asTrie(hangulLVTTrieEntries);
+        return res;
+    }
+
+    // tables below are used for composition/decomposition
+    auto combiningClassTrie() 
+    { 
+        import std.internal.unicode_comp;
+        static immutable res = asTrie(combiningClassTrieEntries); 
+        return res; 
+    }
+
+    auto compatMappingTrie()
+    { 
+        import std.internal.unicode_decomp;
+        static immutable res = asTrie(compatMappingTrieEntries); 
+        return res; 
+    }
+
+    auto canonMappingTrie()
+    { 
+        import std.internal.unicode_decomp;
+        static immutable res = asTrie(canonMappingTrieEntries);
+        return res; 
+    }
+
+    auto compositionJumpTrie()
+    {
+        import std.internal.unicode_comp;
+        static immutable res = asTrie(compositionJumpTrieEntries);
+        return res;
+    }
+
+    //case conversion tables
     auto toUpperIndexTrie() { static immutable res = asTrie(toUpperIndexTrieEntries); return res; }
     auto toLowerIndexTrie() { static immutable res = asTrie(toLowerIndexTrieEntries); return res; }
     auto toTitleIndexTrie() { static immutable res = asTrie(toTitleIndexTrieEntries); return res; }
-}
 
-// TODO: move sets below to Tries
-__gshared CodepointSet hangLV;
-__gshared CodepointSet hangLVT;
 
-shared static this()
-{
-    hangLV = asSet(hangul.LV);
-    hangLVT = asSet(hangul.LVT);
 }
 
 }// version(!std_uni_bootstrap)
