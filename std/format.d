@@ -546,6 +546,8 @@ assert(a == "hello" && b == 124 && c == 34.5);
  */
 uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, S args)
 {
+    import std.typecons : isTuple;
+
     auto spec = FormatSpec!Char(fmt);
     static if (!S.length)
     {
