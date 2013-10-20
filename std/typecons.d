@@ -4179,19 +4179,19 @@ template scoped(T)
     static struct Scoped
     {
         // Addition of `alignment` is required as `Scoped_store` can be misaligned in memory.
-        private void[aligned(__traits(classInstanceSize, T) + size_t.sizeof) + alignment] Scoped_store = void;
+        private void[__traits(classInstanceSize, T) + (alignment - 1) + ubyte.sizeof] Scoped_store = void;
 
         @property inout(T) Scoped_payload() inout
         {
             void* alignedStore = cast(void*) aligned(cast(size_t) Scoped_store.ptr);
             // As `Scoped` can be unaligned moved in memory class instance should be moved accordingly.
             immutable size_t d = alignedStore - Scoped_store.ptr;
-            size_t* currD = cast(size_t*) &Scoped_store[$ - size_t.sizeof];
+            ubyte* currD = cast(ubyte*) &Scoped_store[$ - ubyte.sizeof];
             if(d != *currD)
             {
                 import core.stdc.string;
                 memmove(alignedStore, Scoped_store.ptr + *currD, __traits(classInstanceSize, T));
-                *currD = d;
+                *currD = cast(ubyte)d;
             }
             return cast(inout(T)) alignedStore;
         }
@@ -4267,11 +4267,12 @@ unittest // Issue 6580 testcase
     static class C2 { byte[2] b; }
     static class C3 { byte[3] b; }
     static class C7 { byte[7] b; }
-    static assert(scoped!C0().sizeof % alignment == 0);
-    static assert(scoped!C1().sizeof % alignment == 0);
-    static assert(scoped!C2().sizeof % alignment == 0);
-    static assert(scoped!C3().sizeof % alignment == 0);
-    static assert(scoped!C7().sizeof % alignment == 0);
+
+    assert(cast(size_t)cast(void*)scoped!C0().Scoped_payload % alignment == 0);
+    assert(cast(size_t)cast(void*)scoped!C1().Scoped_payload % alignment == 0);
+    assert(cast(size_t)cast(void*)scoped!C2().Scoped_payload % alignment == 0);
+    assert(cast(size_t)cast(void*)scoped!C3().Scoped_payload % alignment == 0);
+    assert(cast(size_t)cast(void*)scoped!C7().Scoped_payload % alignment == 0);
 
     enum longAlignment = long.alignof;
     static class C1long
@@ -4281,8 +4282,8 @@ unittest // Issue 6580 testcase
         this(long _long, ref int i) { long_ = _long; ++i; }
     }
     static class C2long { byte[2] byte_ = [5, 6]; long long_ = 7; }
-    static assert(scoped!C1long().sizeof % longAlignment == 0);
-    static assert(scoped!C2long().sizeof % longAlignment == 0);
+    assert(cast(size_t)cast(void*)scoped!C1long().Scoped_payload % longAlignment == 0);
+    assert(cast(size_t)cast(void*)scoped!C2long().Scoped_payload % longAlignment == 0);
 
     void alignmentTest()
     {
