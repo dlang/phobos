@@ -1927,7 +1927,14 @@ unittest
 
 // swap
 /**
-Swaps $(D lhs) and $(D rhs). 
+Swaps $(D lhs) and $(D rhs). The instances $(D lhs) and $(D rhs) are moved in
+memory, without ever calling $(D opAssign), nor any other function. $(D T)
+need not be assignable at all to be swapped.
+
+If $(D lhs) and $(D rhs) reference the same instance, then nothing is done.
+
+$(D lhs) and $(D rhs) must be mutable. If $(D T) is a struct or union, then
+its fields must also all be (recursivelly) mutable.
 
 Preconditions:
 
