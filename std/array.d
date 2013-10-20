@@ -31,27 +31,22 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
     static if (hasLength!Range)
     {
         if(r.length == 0) return null;
-        //@@@BUG@@@ 10928 should be lambda
-        static @trusted nothrow auto trustedAllocateArray(size_t n)
+
+        static auto trustedAllocateArray(size_t n) @trusted nothrow pure
         {
             return uninitializedArray!(Unqual!E[])(n);
         }
         auto result = trustedAllocateArray(r.length);
-        size_t i = 0;
+
+        size_t i;
+        static auto trustedGetAddr(T)(ref T t) @trusted nothrow pure
+        {
+            return &t;
+        }
         foreach (e; r)
         {
-            // hacky
-            static if (is(typeof(result[i].opAssign(e))) ||
-                       !is(typeof(result[i] = e)))
-            {
-                // this should be in-place construction
-                emplace(result.ptr + i, e);
-            }
-            else
-            {
-                result[i] = e;
-            }
-            i++;
+            emplace(trustedGetAddr(result[i]), e);
+            ++i;
         }
         return cast(E[])result;
     }
