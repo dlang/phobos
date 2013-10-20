@@ -2980,6 +2980,13 @@ Example:
 // double.
 auto a = slurp!(int, double)("filename", "%s, %s");
 ----
+
+Bugs:
+$(D slurp) expects file names to be encoded in $(B CP_ACP) on $(I Windows)
+instead of UTF-8 (as it internally uses $(XREF stdio, File),
+see $(BUGZILLA 7648)) thus must not be used in $(I Windows)
+or cross-platform applications other than with an immediate ASCII string as
+a file name to prevent accidental changes to result in incorrect behavior.
  */
 Select!(Types.length == 1, Types[0][], Tuple!(Types)[])
 slurp(Types...)(string filename, in char[] format)
