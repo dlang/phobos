@@ -4214,8 +4214,8 @@ template scoped(T)
         Scoped result = void;
         void* alignedStore = cast(void*) aligned(cast(size_t) result.Scoped_store.ptr);
         immutable size_t d = alignedStore - result.Scoped_store.ptr;
-        *cast(size_t*) &result.Scoped_store[$ - size_t.sizeof] = d;
-        emplace!(Unqual!T)(result.Scoped_store[d .. $ - size_t.sizeof], args);
+        *cast(ubyte*) &result.Scoped_store[$ - ubyte.sizeof] = cast(ubyte)d;
+        emplace!(Unqual!T)(result.Scoped_store[d .. $ - ubyte.sizeof], args);
         return result;
     }
 }
