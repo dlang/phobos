@@ -1927,7 +1927,14 @@ unittest
 
 // swap
 /**
-Swaps $(D lhs) and $(D rhs). 
+Swaps $(D lhs) and $(D rhs). The instances $(D lhs) and $(D rhs) are moved in
+memory, without ever calling $(D opAssign), nor any other function. $(D T)
+need not be assignable at all to be swapped.
+
+If $(D lhs) and $(D rhs) reference the same instance, then nothing is done.
+
+$(D lhs) and $(D rhs) must be mutable. If $(D T) is a struct or union, then
+its fields must also all be (recursivelly) mutable.
 
 Preconditions:
 
@@ -1940,21 +1947,23 @@ See_Also:
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow
 if (isMutable!T && !is(typeof(T.init.proxySwap(T.init))))
 {
-    static if (hasElaborateAssign!T)
+    static if (!isAssignable!T || hasElaborateAssign!T)
     {
-      if (&lhs != &rhs) {
-        // For structs with non-trivial assignment, move memory directly
-        // First check for undue aliasing
-        assert(!pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
-            && !pointsTo(lhs, lhs) && !pointsTo(rhs, rhs));
-        // Swap bits
-        ubyte[T.sizeof] t = void;
-        auto a = (cast(ubyte*) &lhs)[0 .. T.sizeof];
-        auto b = (cast(ubyte*) &rhs)[0 .. T.sizeof];
-        t[] = a[];
-        a[] = b[];
-        b[] = t[];
-      }
+        if (&lhs != &rhs)
+        {
+            // For structs with non-trivial assignment, move memory directly
+            // First check for undue aliasing
+            static if (hasIndirections!T)
+                assert(!pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
+                    && !pointsTo(lhs, lhs) && !pointsTo(rhs, rhs));
+            // Swap bits
+            ubyte[T.sizeof] t = void;
+            auto a = (cast(ubyte*) &lhs)[0 .. T.sizeof];
+            auto b = (cast(ubyte*) &rhs)[0 .. T.sizeof];
+            t[] = a[];
+            a[] = b[];
+            b[] = t[];
+        }
     }
     else
     {
@@ -2051,6 +2060,20 @@ unittest
     //Bug# 4789
     int[1] s = [1];
     swap(s, s);
+}
+
+unittest
+{
+    static struct NoAssign
+    {
+        int i;
+        void opAssign(NoAssign) @disable;
+    }
+    auto s1 = NoAssign(1);
+    auto s2 = NoAssign(2);
+    swap(s1, s2);
+    assert(s1.i == 2);
+    assert(s2.i == 1);
 }
 
 void swapFront(R1, R2)(R1 r1, R2 r2)
