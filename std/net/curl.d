@@ -342,7 +342,10 @@ unittest
  *        guess connection type and create a new instance for this call only.
  *
  * The template parameter $(D T) specifies the type to return. Possible values
- * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
+ * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
+ * for $(D char), content will be converted from the connection character set
+ * (specified in HTTP response headers or FTP connection properties, both ISO-8859-1
+ * by default) to UTF-8.
  *
  * Example:
  * ----
@@ -403,7 +406,10 @@ unittest
  *        guess connection type and create a new instance for this call only.
  *
  * The template parameter $(D T) specifies the type to return. Possible values
- * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
+ * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
+ * for $(D char), content will be converted from the connection character set
+ * (specified in HTTP response headers or FTP connection properties, both ISO-8859-1
+ * by default) to UTF-8.
  *
  * Example:
  * ----
@@ -463,7 +469,10 @@ unittest
  *        guess connection type and create a new instance for this call only.
  *
  * The template parameter $(D T) specifies the type to return. Possible values
- * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
+ * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
+ * for $(D char), content will be converted from the connection character set
+ * (specified in HTTP response headers or FTP connection properties, both ISO-8859-1
+ * by default) to UTF-8.
  *
  * Example:
  * ----
@@ -3009,11 +3018,13 @@ struct FTP
         p.curl.set(CurlOption.postquote, p.commands);
     }
 
+    /// Connection encoding. Defaults to ISO-8859-1.
     @property void encoding(string name)
     {
         p.encoding = name;
     }
 
+    /// ditto
     @property string encoding()
     {
         return p.encoding;
