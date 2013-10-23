@@ -267,7 +267,7 @@ the type of the $(D k)th key of the container.
 A container may define both $(D KeyType) and $(D KeyTypes), e.g. in
 the case it has the notion of primary/preferred key.
  */
-    alias TypeTuple!(T) KeyTypes;
+    alias TypeTuple!T KeyTypes;
 
 /**
 If the container has a notion of key-value mapping, $(D ValueType)
@@ -2517,7 +2517,7 @@ struct Array(T) if (!is(T : const(bool)))
             assert(0);
         }
 
-        void opAssign(Array!(T).Payload rhs)
+        void opAssign(Payload rhs)
         {
             assert(false);
         }
@@ -3741,8 +3741,12 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
 //private:
 
     // The payload includes the support store and the effective length
-    private RefCounted!(Tuple!(Store, "_store", size_t, "_length"),
-                       RefCountedAutoInitialize.no) _payload;
+    private static struct Data
+    {
+        Store _store;
+        size_t _length;
+    }
+    private RefCounted!(Data, RefCountedAutoInitialize.no) _payload;
     // Comparison predicate
     private alias binaryFun!(less) comp;
     // Convenience accessors
@@ -4114,8 +4118,11 @@ allocating one bit per element.
 struct Array(T) if (is(T == bool))
 {
     static immutable uint bitsPerWord = size_t.sizeof * 8;
-    private alias Tuple!(Array!(size_t).Payload, "_backend", ulong, "_length")
-    Data;
+    private static struct Data
+    {
+        Array!size_t.Payload _backend;
+        size_t _length;
+    }
     private RefCounted!(Data, RefCountedAutoInitialize.no) _store;
 
     private @property ref size_t[] data()
@@ -4130,7 +4137,7 @@ struct Array(T) if (is(T == bool))
     struct Range
     {
         private Array!bool _outer;
-        private ulong _a, _b;
+        private size_t _a, _b;
         /// Range primitives
         @property Range save()
         {
@@ -4180,6 +4187,12 @@ struct Array(T) if (is(T == bool))
             return _outer[_b - 1];
         }
         /// Ditto
+        @property void back(bool value)
+        {
+            enforce(!empty);
+            _outer[_b - 1] = value;
+        }
+        /// Ditto
         T moveBack()
         {
             enforce(!empty);
@@ -4207,10 +4220,17 @@ struct Array(T) if (is(T == bool))
             return _outer.moveAt(_a + i);
         }
         /// Ditto
-        @property ulong length() const
+        @property size_t length() const
         {
             assert(_a <= _b);
             return _b - _a;
+        }
+        alias opDollar = length;
+        /// ditto
+        Range opSlice(size_t low, size_t high)
+        {
+            assert(_a <= low && low <= high && high <= _b);
+            return Range(_outer, _a + low, _a + high);
         }
     }
 
@@ -4262,9 +4282,13 @@ struct Array(T) if (is(T == bool))
 
        Complexity: $(BIGOH log(n)).
     */
-    @property ulong length()
+    @property size_t length() const
     {
         return _store.refCountedStore.isInitialized ? _store._length : 0;
+    }
+    size_t opDollar() const
+    {
+        return length;
     }
 
     unittest
@@ -4282,10 +4306,10 @@ struct Array(T) if (is(T == bool))
 
        Complexity: $(BIGOH log(n)).
      */
-    @property ulong capacity()
+    @property size_t capacity()
     {
         return _store.refCountedStore.isInitialized
-            ? cast(ulong) bitsPerWord * _store._backend.capacity
+            ? cast(size_t) bitsPerWord * _store._backend.capacity
             : 0;
     }
 
@@ -4308,7 +4332,7 @@ struct Array(T) if (is(T == bool))
        Complexity: $(BIGOH log(e - capacity)) if $(D e > capacity),
        otherwise $(BIGOH 1).
      */
-    void reserve(ulong e)
+    void reserve(size_t e)
     {
         _store.refCountedStore.ensureInitialized();
         _store._backend.reserve(to!size_t((e + bitsPerWord - 1) / bitsPerWord));
@@ -4348,7 +4372,7 @@ struct Array(T) if (is(T == bool))
 
        Complexity: $(BIGOH log(n))
      */
-    Range opSlice(ulong a, ulong b)
+    Range opSlice(size_t a, size_t b)
     {
         enforce(a <= b && b <= length);
         return Range(this, a, b);
@@ -4424,7 +4448,7 @@ struct Array(T) if (is(T == bool))
     /**
        Indexing operators yield or modify the value at a specified index.
      */
-    bool opIndex(ulong i)
+    bool opIndex(size_t i)
     {
         auto div = cast(size_t) (i / bitsPerWord);
         auto rem = i % bitsPerWord;
@@ -4432,7 +4456,7 @@ struct Array(T) if (is(T == bool))
         return cast(bool)(data.ptr[div] & (cast(size_t)1 << rem));
     }
     /// ditto
-    void opIndexAssign(bool value, ulong i)
+    void opIndexAssign(bool value, size_t i)
     {
         auto div = cast(size_t) (i / bitsPerWord);
         auto rem = i % bitsPerWord;
@@ -4441,7 +4465,7 @@ struct Array(T) if (is(T == bool))
         else data.ptr[div] &= ~(cast(size_t)1 << rem);
     }
     /// ditto
-    void opIndexOpAssign(string op)(bool value, ulong i)
+    void opIndexOpAssign(string op)(bool value, size_t i)
     {
         auto div = cast(size_t) (i / bitsPerWord);
         auto rem = i % bitsPerWord;
@@ -4457,7 +4481,7 @@ struct Array(T) if (is(T == bool))
         }
     }
     /// Ditto
-    T moveAt(ulong i)
+    T moveAt(size_t i)
     {
         return this[i];
     }
@@ -4555,7 +4579,7 @@ struct Array(T) if (is(T == bool))
 
        Postcondition: $(D _length == newLength)
      */
-    @property void length(ulong newLength)
+    @property void length(size_t newLength)
     {
         _store.refCountedStore.ensureInitialized();
         auto newDataLength =
@@ -4645,7 +4669,7 @@ struct Array(T) if (is(T == bool))
 
        Complexity: $(BIGOH log(n))
      */
-    ulong insertBack(Stuff)(Stuff stuff) if (is(Stuff : bool))
+    size_t insertBack(Stuff)(Stuff stuff) if (is(Stuff : bool))
     {
         _store.refCountedStore.ensureInitialized();
         auto rem = _store._length % bitsPerWord;
@@ -4670,10 +4694,10 @@ struct Array(T) if (is(T == bool))
         return 1;
     }
     /// Ditto
-    ulong insertBack(Stuff)(Stuff stuff)
+    size_t insertBack(Stuff)(Stuff stuff)
     if (isInputRange!Stuff && is(ElementType!Stuff : bool))
     {
-        static if (!hasLength!Stuff) ulong result;
+        static if (!hasLength!Stuff) size_t result;
         for (; !stuff.empty; stuff.popFront())
         {
             insertBack(stuff.front);
@@ -4729,7 +4753,7 @@ struct Array(T) if (is(T == bool))
        Complexity: $(BIGOH howMany * log(n)).
      */
     /// ditto
-    ulong removeBack(ulong howMany)
+    size_t removeBack(size_t howMany)
     {
         if (howMany >= length)
         {
@@ -4768,7 +4792,7 @@ struct Array(T) if (is(T == bool))
 
        Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
      */
-    ulong insertBefore(Stuff)(Range r, Stuff stuff)
+    size_t insertBefore(Stuff)(Range r, Stuff stuff)
     {
         // TODO: make this faster, it moves one bit at a time
         immutable inserted = stableInsertBack(stuff);
@@ -4795,7 +4819,7 @@ struct Array(T) if (is(T == bool))
     }
 
     /// ditto
-    ulong insertAfter(Stuff)(Range r, Stuff stuff)
+    size_t insertAfter(Stuff)(Range r, Stuff stuff)
     {
         // TODO: make this faster, it moves one bit at a time
         immutable inserted = stableInsertBack(stuff);
@@ -4870,6 +4894,27 @@ unittest
 {
     Array!bool a;
     assert(a.empty);
+}
+
+unittest
+{
+    Array!bool arr;
+    arr.insert([false, false, false, false]);
+    assert(arr.front == false);
+    assert(arr.back == false);
+    assert(arr[1] == false);
+    auto slice = arr[];
+    slice = arr[0 .. $];
+    slice = slice[1 .. $];
+    slice.front = true;
+    slice.back = true;
+    slice[1] = true;
+    assert(slice.front == true);
+    assert(slice.back == true);
+    assert(slice[1] == true);
+    assert(slice.moveFront == true);
+    assert(slice.moveBack == true);
+    assert(slice.moveAt(1) == true);
 }
 
 /*
