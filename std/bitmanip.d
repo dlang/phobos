@@ -552,15 +552,44 @@ struct BitArray
                 auto b = ptr[0 .. olddim];
                 b.length = newdim;                // realloc
                 ptr = b.ptr;
-                if (newdim & (bitsPerSizeT-1))
-                {   // Set any pad bits to 0
-                    ptr[newdim - 1] &= ~(~0 << (newdim & (bitsPerSizeT-1)));
-                }
+            }
+
+            if (newlen > len && olddim)
+            {   // Mask old MSBs
+                auto mask = ~(~cast(size_t)0 << (len % bitsPerSizeT));
+                auto mnewlen = newlen % bitsPerSizeT;
+                if (newdim == olddim && mnewlen)
+                    // Mask new pad bits
+                    mask |= ~cast(size_t)0 << mnewlen;
+                ptr[olddim - 1] &= mask;
             }
 
             len = newlen;
         }
         return len;
+    }
+
+    unittest
+    {
+        debug(bitarray) printf("BitArray.length.unittest\n");
+
+        BitArray a;
+        a.length = bitsPerSizeT;
+        foreach (ref e; a)
+            e = true;
+        BitArray b = a;
+        a.length = bitsPerSizeT/2; //padding bits should be left unchanged
+        foreach (i,e; b)
+            assert(e == true);
+        a.length = (3*bitsPerSizeT)/4; //new bits should be set to 0
+        foreach (i,e; a)
+            assert(e == (i < bitsPerSizeT/2));
+        foreach (i,e; b)
+            assert(e == (i < bitsPerSizeT/2 || i >= a.length));
+        // Now actually reallocate
+        a.length = bitsPerSizeT*2;
+        foreach (i,e; a)
+            assert(e == (i < bitsPerSizeT/2)); // new bits should be zero
     }
 
     /**********************************************
@@ -579,6 +608,8 @@ struct BitArray
 
     unittest
     {
+        debug(bitarray) printf("BitArray.opIndex.unittest\n");
+
         void Fun(const BitArray arr)
         {
             auto x = arr[0];
