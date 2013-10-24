@@ -1024,7 +1024,7 @@ $(D void).
  */
 template ElementType(R)
 {
-    static if (is(typeof((inout int = 0){ R r = void; return r.front; }()) T))
+    static if (is(typeof(lvalueOf!R.front) T))
         alias T ElementType;
     else
         alias void ElementType;
@@ -1044,6 +1044,15 @@ unittest
     static assert(is(ElementType!(inout(int)[]) : inout(int)));
 }
 
+unittest //11336
+{
+    static struct S
+    {
+        this(this) @disable;
+    }
+    static assert(is(ElementType!(S[]) == S));
+}
+
 /**
 The encoding element type of $(D R). For narrow strings ($(D char[]),
 $(D wchar[]) and their qualified variants including $(D string) and
@@ -1054,7 +1063,7 @@ $(D ElementType).
 template ElementEncodingType(R)
 {
     static if (isNarrowString!R)
-        alias typeof((inout int = 0){ R r = void; return r[0]; }()) ElementEncodingType;
+        alias typeof(lvalueOf!R[0]) ElementEncodingType;
     else
         alias ElementType!R ElementEncodingType;
 }
