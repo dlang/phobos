@@ -6500,25 +6500,76 @@ minCount(alias pred = "a < b", Range)(Range range)
     if (isInputRange!Range && !isInfinite!Range &&
         is(typeof(binaryFun!pred(range.front, range.front))))
 {
+    alias T  = ElementType!Range;
+    alias UT = Unqual!T;
+    alias RetType = Tuple!(T, size_t);
+
+    static assert (is(typeof(RetType(range.front, 1))),
+        format("Error: Cannot call minCount on a %s, because it is not possible "
+               "to copy the result value (a %s) into a Tuple.", Range.stringof, T.stringof));
+
     enforce(!range.empty, "Can't count elements from an empty range");
     size_t occurrences = 1;
-    auto v = range.front;
-    for (range.popFront(); !range.empty; range.popFront())
+
+    static if (isForwardRange!Range)
     {
-        auto v2 = range.front;
-        if (binaryFun!pred(v, v2)) continue;
-        if (binaryFun!pred(v2, v))
+        Range least = range.save;
+        for (range.popFront(); !range.empty; range.popFront())
         {
-            // change the min
-            move(v2, v);
-            occurrences = 1;
+            if (binaryFun!pred(least.front, range.front)) continue;
+            if (binaryFun!pred(range.front, least.front))
+            {
+                // change the min
+                least = range.save;
+                occurrences = 1;
+            }
+            else
+                ++occurrences;
         }
-        else
-        {
-            ++occurrences;
-        }
+        return RetType(least.front, occurrences);
     }
-    return typeof(return)(v, occurrences);
+    else static if (isAssignable!(UT, T) || (isAssignable!UT && !hasElaborateAssign!UT))
+    {
+        UT v = UT.init;
+        static if (isAssignable!(UT, T)) v = range.front;
+        else                             v = cast(UT)range.front;
+
+        for (range.popFront(); !range.empty; range.popFront())
+        {
+            if (binaryFun!pred(*cast(T*)&v, range.front)) continue;
+            if (binaryFun!pred(range.front, *cast(T*)&v))
+            {
+                // change the min
+                static if (isAssignable!(UT, T)) v = range.front;
+                else                             v = cast(UT)range.front; //Safe because !hasElaborateAssign!UT
+                occurrences = 1;
+            }
+            else
+                ++occurrences;
+        }
+        return RetType(*cast(T*)&v, occurrences);
+    }
+    else static if (hasLvalueElements!Range)
+    {
+        T* p = &(range.front());
+        for (range.popFront(); !range.empty; range.popFront())
+        {
+            if (binaryFun!pred(*p, range.front)) continue;
+            if (binaryFun!pred(range.front, *p))
+            {
+                // change the min
+                p = &(range.front());
+                occurrences = 1;
+            }
+            else
+                ++occurrences;
+        }
+        return RetType(*p, occurrences);
+    }
+    else
+        static assert(false,
+            format("Sorry, can't find the minCount of a %s: Don't know how "
+                   "to keep track of the smallest %s element.", Range.stringof, T.stringof));
 }
 
 unittest
@@ -6538,7 +6589,63 @@ unittest
     //test with reference ranges. Test both input and forward.
     assert(minCount(new ReferenceInputRange!int([1, 2, 1, 0, 2, 0])) == tuple(0, 2));
     assert(minCount(new ReferenceForwardRange!int([1, 2, 1, 0, 2, 0])) == tuple(0, 2));
+}
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
+    static struct R(T) //input range
+    {
+        T[] a;
+        bool empty() @property{return a.empty;}
+        ref T front() @property{return a.front;}
+        void popFront() {a.popFront();}
+    }
+
+    immutable         a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
+    R!(immutable int) b = R!(immutable int)(a);
+
+    assert(minCount(a) == tuple(1, 3));
+    assert(minCount(b) == tuple(1, 3));
+    assert(minCount!((ref immutable int a, ref immutable int b) => (a > b))(a) == tuple(4, 2));
+    assert(minCount!((ref immutable int a, ref immutable int b) => (a > b))(b) == tuple(4, 2));
+
+    immutable(int[])[] c = [ [4], [2, 4], [4], [4] ];
+    assert(minCount!("a[0] < b[0]")(c) == tuple([2, 4], 1), text(c[0]));
+
+    static struct S1
+    {
+        int i;
+    }
+    alias IS1 = immutable(S1);
+    static assert( isAssignable!S1);
+    static assert( isAssignable!(S1, IS1));
+
+    static struct S2
+    {
+        int* p;
+        this(ref immutable int i) immutable {p = &i;}
+        this(ref int i) {p = &i;}
+        @property ref inout(int) i() inout {return *p;}
+        bool opEquals(const S2 other) const {return i == other.i;}
+    }
+    alias IS2 = immutable(S2);
+    static assert( isAssignable!S2);
+    static assert(!isAssignable!(S2, IS2));
+    static assert(!hasElaborateAssign!S2);
+
+    foreach (Type; TypeTuple!(S1, immutable(S1), S2, immutable(S2)))
+    {
+        static if (is(Type == immutable)) alias V = immutable int;
+        else                              alias V = int;
+        V one = 1, two = 2;
+        auto r1 = [Type(two), Type(one), Type(one)];
+        auto r2 = R!Type(r1);
+        assert(minCount!"a.i < b.i"(r1) == tuple(Type(one), 2));
+        assert(minCount!"a.i < b.i"(r2) == tuple(Type(one), 2));
+        assert(one == 1 && two == 2);
+    }
 }
 
 // minPos
