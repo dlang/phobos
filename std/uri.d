@@ -36,7 +36,7 @@ private import std.c.stdlib;
 private import std.utf;
 import std.exception;
 
-class URIerror : Error
+class URIexception : Exception
 {
     this()
     {
@@ -116,7 +116,7 @@ private string URI_Encode(dstring string, uint unescapedSet)
                 {
                     R2 = cast(char *)alloca(Rsize * char.sizeof);
                     if (!R2)
-                        goto LthrowURIerror;
+                        goto LthrowURIexception;
                 }
                 R2[0..Rlen] = R[0..Rlen];
                 R = R2;
@@ -181,7 +181,7 @@ private string URI_Encode(dstring string, uint unescapedSet)
             +/
             else
             {
-                goto LthrowURIerror;        // undefined UTF-32 code
+                goto LthrowURIexception;        // undefined UTF-32 code
             }
 
             if (Rlen + L * 3 > Rsize)
@@ -196,7 +196,7 @@ private string URI_Encode(dstring string, uint unescapedSet)
                 {
                     R2 = cast(char *)alloca(Rsize * char.sizeof);
                     if (!R2)
-                        goto LthrowURIerror;
+                        goto LthrowURIexception;
                 }
                 R2[0..Rlen] = R[0..Rlen];
                 R = R2;
@@ -215,8 +215,8 @@ private string URI_Encode(dstring string, uint unescapedSet)
 
     return R[0..Rlen].idup;
 
-LthrowURIerror:
-    throw new URIerror();
+LthrowURIexception:
+    throw new URIexception();
 }
 
 uint ascii2hex(dchar c)
@@ -249,7 +249,7 @@ private dstring URI_Decode(string string, uint reservedSet)
     {
         R = cast(dchar *)alloca(Rsize * dchar.sizeof);
         if (!R)
-            goto LthrowURIerror;
+            goto LthrowURIexception;
     }
     Rlen = 0;
 
@@ -267,9 +267,9 @@ private dstring URI_Decode(string string, uint reservedSet)
         }
         start = k;
         if (k + 2 >= len)
-            goto LthrowURIerror;
+            goto LthrowURIexception;
         if (!isHexDigit(s[k + 1]) || !isHexDigit(s[k + 2]))
-            goto LthrowURIerror;
+            goto LthrowURIexception;
         B = cast(char)((ascii2hex(s[k + 1]) << 4) + ascii2hex(s[k + 2]));
         k += 2;
         if ((B & 0x80) == 0)
@@ -283,11 +283,11 @@ private dstring URI_Decode(string string, uint reservedSet)
             for (n = 1; ; n++)
             {
                 if (n > 4)
-                    goto LthrowURIerror;
+                    goto LthrowURIexception;
                 if (((B << n) & 0x80) == 0)
                 {
                     if (n == 1)
-                        goto LthrowURIerror;
+                        goto LthrowURIexception;
                     break;
                 }
             }
@@ -296,22 +296,22 @@ private dstring URI_Decode(string string, uint reservedSet)
             V = B & ((1 << (7 - n)) - 1);   // (!!!)
 
             if (k + (3 * (n - 1)) >= len)
-                goto LthrowURIerror;
+                goto LthrowURIexception;
             for (j = 1; j != n; j++)
             {
                 k++;
                 if (s[k] != '%')
-                    goto LthrowURIerror;
+                    goto LthrowURIexception;
                 if (!isHexDigit(s[k + 1]) || !isHexDigit(s[k + 2]))
-                    goto LthrowURIerror;
+                    goto LthrowURIexception;
                 B = cast(char)((ascii2hex(s[k + 1]) << 4) + ascii2hex(s[k + 2]));
                 if ((B & 0xC0) != 0x80)
-                    goto LthrowURIerror;
+                    goto LthrowURIexception;
                 k += 2;
                 V = (V << 6) | (B & 0x3F);
             }
             if (V > 0x10FFFF)
-                goto LthrowURIerror;
+                goto LthrowURIexception;
             C = V;
         }
         if (C < uri_flags.length && uri_flags[C] & reservedSet)
@@ -334,8 +334,8 @@ private dstring URI_Decode(string string, uint reservedSet)
     return R[0..Rlen].idup;
 
 
-LthrowURIerror:
-    throw new URIerror();
+LthrowURIexception:
+    throw new URIexception();
 }
 
 /*************************************
