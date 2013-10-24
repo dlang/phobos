@@ -1030,6 +1030,28 @@ template ElementType(R)
         alias void ElementType;
 }
 
+///
+unittest
+{
+    // Standard arrays: returns the type of the elements of the array
+    static assert(is(ElementType!(byte[]) == byte));
+    static assert(is(ElementType!(int[]) == int));
+
+    // Accessing .front retrieves the decoded dchar
+    static assert(is(ElementType!(char[])  == dchar)); // rvalue
+    static assert(is(ElementType!(wchar[]) == dchar)); // rvalue
+    static assert(is(ElementType!(dchar[]) == dchar)); // lvalue
+
+    // Ditto
+    static assert(is(ElementType!(string) == dchar));
+    static assert(is(ElementType!(wstring) == dchar));
+    static assert(is(ElementType!(dstring) == immutable(dchar)));
+
+    // For ranges it gets the type of .front.
+    auto range = iota(0, 10);
+    static assert(is(ElementType!(typeof(range)) == int));
+}
+
 unittest
 {
     enum XYZ : string { a = "foo" }
@@ -1074,6 +1096,26 @@ template ElementEncodingType(R)
         alias typeof(*lvalueOf!R.ptr) ElementEncodingType;
     else
         alias ElementType!R ElementEncodingType;
+}
+
+///
+unittest
+{
+    // internally the range stores the encoded type
+    static assert(is(ElementEncodingType!(char[])  == char));
+    static assert(is(ElementEncodingType!(wchar[]) == wchar));
+    static assert(is(ElementEncodingType!(dchar[]) == dchar));
+
+    // ditto
+    static assert(is(ElementEncodingType!(string)  == immutable(char)));
+    static assert(is(ElementEncodingType!(wstring) == immutable(wchar)));
+    static assert(is(ElementEncodingType!(dstring) == immutable(dchar)));
+
+    static assert(is(ElementEncodingType!(byte[]) == byte));
+    static assert(is(ElementEncodingType!(int[])  == int));
+
+    auto range = iota(0, 10);
+    static assert(is(ElementEncodingType!(typeof(range)) == int));
 }
 
 unittest
