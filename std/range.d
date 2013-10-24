@@ -1024,7 +1024,7 @@ $(D void).
  */
 template ElementType(R)
 {
-    static if (is(typeof((inout int = 0){ R r = void; return r.front; }()) T))
+    static if (is(typeof(lvalueOf!R.front) T))
         alias T ElementType;
     else
         alias void ElementType;
@@ -1044,6 +1044,23 @@ unittest
     static assert(is(ElementType!(inout(int)[]) : inout(int)));
 }
 
+unittest
+{
+    static assert(is(ElementType!(int[5]) == int));
+    static assert(is(ElementType!(int[0]) == int));
+    static assert(is(ElementType!(char[5]) == dchar));
+    static assert(is(ElementType!(char[0]) == dchar));
+}
+
+unittest //11336
+{
+    static struct S
+    {
+        this(this) @disable;
+    }
+    static assert(is(ElementType!(S[]) == S));
+}
+
 /**
 The encoding element type of $(D R). For narrow strings ($(D char[]),
 $(D wchar[]) and their qualified variants including $(D string) and
@@ -1054,7 +1071,7 @@ $(D ElementType).
 template ElementEncodingType(R)
 {
     static if (isNarrowString!R)
-        alias typeof((inout int = 0){ R r = void; return r[0]; }()) ElementEncodingType;
+        alias typeof(*lvalueOf!R.ptr) ElementEncodingType;
     else
         alias ElementType!R ElementEncodingType;
 }
@@ -1075,6 +1092,14 @@ unittest
     static assert(is(ElementType!(typeof(buf)) : void));
 
     static assert(is(ElementEncodingType!(inout char[]) : inout(char)));
+}
+
+unittest
+{
+    static assert(is(ElementEncodingType!(int[5]) == int));
+    static assert(is(ElementEncodingType!(int[0]) == int));
+    static assert(is(ElementEncodingType!(char[5]) == char));
+    static assert(is(ElementEncodingType!(char[0]) == char));
 }
 
 /**
