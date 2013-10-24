@@ -156,6 +156,9 @@ else
 	LIB = $(ROOT)/phobos.lib
 endif
 
+LIBCURL_STUB:=$(if $(findstring $(OS),linux),$(ROOT)/libcurl_stub.so,)
+LINKCURL:=$(if $(LIBCURL_STUB),-L$(LIBCURL_STUB),-L-lcurl)
+
 ################################################################################
 MAIN = $(ROOT)/emptymain.d
 
@@ -271,8 +274,13 @@ $(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
 $(ROOT)/$(SONAME): $(LIBSO)
 	ln -sf $(notdir $(LIBSO)) $@
 
-$(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
-	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(LINKDL) $(D_FILES) $(OBJS)
+$(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIME) $(LIBCURL_STUB)
+	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(LINKDL) $(LINKCURL) $(D_FILES) $(OBJS)
+
+# stub library with soname of the real libcurl.so (Bugzilla 10710)
+$(LIBCURL_STUB):
+	@echo "void curl_global_init() {}" > $(ROOT)/libcurl_stub.c
+	$(CC) -shared $(CFLAGS) $(ROOT)/libcurl_stub.c -o $@ -Wl,-soname=libcurl.so.4
 
 ifeq (osx,$(OS))
 # Build fat library that combines the 32 bit and the 64 bit libraries
@@ -290,15 +298,15 @@ $(UT_D_OBJS): $(ROOT)/unittest/%.o: $(D_FILES)
 ifneq (linux,$(OS))
 
 $(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME)
-	$(DMD) $(DFLAGS) -unittest -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) -defaultlib= -debuglib= -L-lcurl
+	$(DMD) $(DFLAGS) -unittest -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) $(LINKCURL) -defaultlib= -debuglib=
 
 else
 
 UT_LIBSO:=$(ROOT)/unittest/libphobos2-ut.so
 
 $(UT_LIBSO): override PIC:=-fPIC
-$(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO)
-	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LINKDL) -defaultlib= -debuglib= -L-lcurl
+$(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LIBCURL_STUB)
+	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LINKDL) $(LINKCURL) -defaultlib= -debuglib=
 
 $(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_LIBSO)
 	$(DMD) $(DFLAGS) -of$@ $< -L$(UT_LIBSO) -defaultlib= -debuglib=
