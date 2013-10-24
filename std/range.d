@@ -1044,6 +1044,14 @@ unittest
     static assert(is(ElementType!(inout(int)[]) : inout(int)));
 }
 
+unittest
+{
+    static assert(is(ElementType!(int[5]) == int));
+    static assert(is(ElementType!(int[0]) == int));
+    static assert(is(ElementType!(char[5]) == dchar));
+    static assert(is(ElementType!(char[0]) == dchar));
+}
+
 unittest //11336
 {
     static struct S
@@ -1063,7 +1071,7 @@ $(D ElementType).
 template ElementEncodingType(R)
 {
     static if (isNarrowString!R)
-        alias typeof(lvalueOf!R[0]) ElementEncodingType;
+        alias typeof(*lvalueOf!R.ptr) ElementEncodingType;
     else
         alias ElementType!R ElementEncodingType;
 }
@@ -1084,6 +1092,14 @@ unittest
     static assert(is(ElementType!(typeof(buf)) : void));
 
     static assert(is(ElementEncodingType!(inout char[]) : inout(char)));
+}
+
+unittest
+{
+    static assert(is(ElementEncodingType!(int[5]) == int));
+    static assert(is(ElementEncodingType!(int[0]) == int));
+    static assert(is(ElementEncodingType!(char[5]) == char));
+    static assert(is(ElementEncodingType!(char[0]) == char));
 }
 
 /**
