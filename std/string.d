@@ -3505,14 +3505,14 @@ body
  *
  * void main()
  * {
- *    static string[] list = [ "food", "foxy" ];
+ *     static string[] list = [ "food", "foxy" ];
  *
- *    auto abbrevs = std.string.abbrev(list);
+ *     auto abbrevs = std.string.abbrev(list);
  *
- *    foreach (key, value; abbrevs)
- *    {
- *       writefln("%s => %s", key, value);
- *    }
+ *     foreach (key, value; abbrevs)
+ *     {
+ *         writefln("%s => %s", key, value);
+ *     }
  * }
  * ---
  * produces the output:

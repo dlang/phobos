@@ -166,14 +166,13 @@ array. If the file size is larger than $(D upTo), only $(D upTo)
 bytes are read.
 
 Example:
-
 ----
 import std.file, std.stdio;
 void main()
 {
-   auto bytes = cast(ubyte[]) read("filename", 5);
-   if (bytes.length == 5)
-       writefln("The fifth byte of the file is 0x%x", bytes[4]);
+    auto bytes = cast(ubyte[]) read("filename", 5);
+    if (bytes.length == 5)
+        writefln("The fifth byte of the file is 0x%x", bytes[4]);
 }
 ----
 
@@ -278,7 +277,6 @@ Throws: $(D FileException) on file error, $(D UTFException) on UTF
 decoding error.
 
 Example:
-
 ----
 enforce(system("echo abc>deleteme") == 0);
 scope(exit) remove("deleteme");
@@ -305,14 +303,13 @@ Write $(D buffer) to file $(D name).
 Throws: $(D FileException) on error.
 
 Example:
-
 ----
 import std.file;
 void main()
 {
-   int[] a = [ 0, 1, 1, 2, 3, 5, 8 ];
-   write("filename", a);
-   assert(cast(int[]) read("filename") == a);
+    int[] a = [ 0, 1, 1, 2, 3, 5, 8 ];
+    write("filename", a);
+    assert(cast(int[]) read("filename") == a);
 }
 ----
  */
@@ -342,16 +339,15 @@ Appends $(D buffer) to file $(D name).
 Throws: $(D FileException) on error.
 
 Example:
-
 ----
 import std.file;
 void main()
 {
-   int[] a = [ 0, 1, 1, 2, 3, 5, 8 ];
-   write("filename", a);
-   int[] b = [ 13, 21 ];
-   append("filename", b);
-   assert(cast(int[]) read("filename") == a ~ b);
+    int[] a = [ 0, 1, 1, 2, 3, 5, 8 ];
+    write("filename", a);
+    int[] b = [ 13, 21 ];
+    append("filename", b);
+    assert(cast(int[]) read("filename") == a ~ b);
 }
 ----
  */
@@ -790,17 +786,17 @@ SysTime timeLastModified(in char[] name)
         name            = The name of the file to get the modification time for.
         returnIfMissing = The time to return if the given file does not exist.
 
-Examples:
---------------------
-if(timeLastModified(source) >= timeLastModified(target, SysTime.min))
-{
-    // must (re)build
-}
-else
-{
-    // target is up-to-date
-}
---------------------
+    Examples:
+    --------------------
+    if(timeLastModified(source) >= timeLastModified(target, SysTime.min))
+    {
+        // must (re)build
+    }
+    else
+    {
+        // target is up-to-date
+    }
+    --------------------
 +/
 SysTime timeLastModified(in char[] name, SysTime returnIfMissing)
 {
@@ -975,11 +971,11 @@ uint getLinkAttributes(in char[] name)
     Throws:
         $(D FileException) if the given file does not exist.
 
-Examples:
---------------------
-assert(!"/etc/fonts/fonts.conf".isDir);
-assert("/usr/share/include".isDir);
---------------------
+    Examples:
+    --------------------
+    assert(!"/etc/fonts/fonts.conf".isDir);
+    assert("/usr/share/include".isDir);
+    --------------------
   +/
 @property bool isDir(in char[] name)
 {
@@ -1020,11 +1016,11 @@ unittest
     Params:
         attributes = The file attributes.
 
-Examples:
---------------------
-assert(!attrIsDir(getAttributes("/etc/fonts/fonts.conf")));
-assert(!attrIsDir(getLinkAttributes("/etc/fonts/fonts.conf")));
---------------------
+    Examples:
+    --------------------
+    assert(!attrIsDir(getAttributes("/etc/fonts/fonts.conf")));
+    assert(!attrIsDir(getLinkAttributes("/etc/fonts/fonts.conf")));
+    --------------------
   +/
 bool attrIsDir(uint attributes) nothrow
 {
@@ -1092,11 +1088,11 @@ unittest
     Throws:
         $(D FileException) if the given file does not exist.
 
-Examples:
---------------------
-assert("/etc/fonts/fonts.conf".isFile);
-assert(!"/usr/share/include".isFile);
---------------------
+    Examples:
+    --------------------
+    assert("/etc/fonts/fonts.conf".isFile);
+    assert(!"/usr/share/include".isFile);
+    --------------------
   +/
 @property bool isFile(in char[] name)
 {
@@ -1144,11 +1140,11 @@ unittest
     Params:
         attributes = The file attributes.
 
-Examples:
---------------------
-assert(attrIsFile(getAttributes("/etc/fonts/fonts.conf")));
-assert(attrIsFile(getLinkAttributes("/etc/fonts/fonts.conf")));
---------------------
+    Examples:
+    --------------------
+    assert(attrIsFile(getAttributes("/etc/fonts/fonts.conf")));
+    assert(attrIsFile(getLinkAttributes("/etc/fonts/fonts.conf")));
+    --------------------
   +/
 bool attrIsFile(uint attributes) nothrow
 {
@@ -1296,13 +1292,13 @@ unittest
     Params:
         attributes = The file attributes.
 
-Examples:
---------------------
-core.sys.posix.unistd.symlink("/etc/fonts/fonts.conf", "/tmp/alink");
+    Examples:
+    --------------------
+    core.sys.posix.unistd.symlink("/etc/fonts/fonts.conf", "/tmp/alink");
 
-assert(!getAttributes("/tmp/alink").isSymlink);
-assert(getLinkAttributes("/tmp/alink").isSymlink);
---------------------
+    assert(!getAttributes("/tmp/alink").isSymlink);
+    assert(getLinkAttributes("/tmp/alink").isSymlink);
+    --------------------
   +/
 bool attrIsSymlink(uint attributes) nothrow
 {
@@ -1712,14 +1708,14 @@ version(StdDdoc)
         /++
             Returns the path to the file represented by this $(D DirEntry).
 
-Examples:
---------------------
-auto de1 = DirEntry("/etc/fonts/fonts.conf");
-assert(de1.name == "/etc/fonts/fonts.conf");
+            Examples:
+            --------------------
+            auto de1 = DirEntry("/etc/fonts/fonts.conf");
+            assert(de1.name == "/etc/fonts/fonts.conf");
 
-auto de2 = DirEntry("/usr/share/include");
-assert(de2.name == "/usr/share/include");
---------------------
+            auto de2 = DirEntry("/usr/share/include");
+            assert(de2.name == "/usr/share/include");
+            --------------------
           +/
         @property string name() const;
 
@@ -1728,14 +1724,14 @@ assert(de2.name == "/usr/share/include");
             Returns whether the file represented by this $(D DirEntry) is a
             directory.
 
-Examples:
---------------------
-auto de1 = DirEntry("/etc/fonts/fonts.conf");
-assert(!de1.isDir);
+            Examples:
+            --------------------
+            auto de1 = DirEntry("/etc/fonts/fonts.conf");
+            assert(!de1.isDir);
 
-auto de2 = DirEntry("/usr/share/include");
-assert(de2.isDir);
---------------------
+            auto de2 = DirEntry("/usr/share/include");
+            assert(de2.isDir);
+            --------------------
           +/
         @property bool isDir();
 
@@ -1754,14 +1750,14 @@ assert(de2.isDir);
             information about a special file (see the stat man page for more
             details).
 
-Examples:
---------------------
-auto de1 = DirEntry("/etc/fonts/fonts.conf");
-assert(de1.isFile);
+            Examples:
+            --------------------
+            auto de1 = DirEntry("/etc/fonts/fonts.conf");
+            assert(de1.isFile);
 
-auto de2 = DirEntry("/usr/share/include");
-assert(!de2.isFile);
---------------------
+            auto de2 = DirEntry("/usr/share/include");
+            assert(!de2.isFile);
+            --------------------
           +/
         @property bool isFile();
 
@@ -2642,35 +2638,35 @@ public:
     Throws:
         $(D FileException) if the directory does not exist.
 
-Examples:
---------------------
-// Iterate a directory in depth
-foreach (string name; dirEntries("destroy/me", SpanMode.depth))
-{
- remove(name);
-}
-// Iterate a directory in breadth
-foreach (string name; dirEntries(".", SpanMode.breadth))
-{
- writeln(name);
-}
-// Iterate a directory and get detailed info about it
-foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
-{
- writeln(e.name, "\t", e.size);
-}
-// Iterate over all *.d files in current directory and all its subdirectories
-auto dFiles = filter!`endsWith(a.name,".d")`(dirEntries(".",SpanMode.depth));
-foreach(d; dFiles)
-    writeln(d.name);
-// Hook it up with std.parallelism to compile them all in parallel:
-foreach(d; parallel(dFiles, 1)) //passes by 1 file to each thread
-{
-    string cmd = "dmd -c "  ~ d.name;
-    writeln(cmd);
-    std.process.system(cmd);
-}
---------------------
+    Examples:
+    --------------------
+    // Iterate a directory in depth
+    foreach (string name; dirEntries("destroy/me", SpanMode.depth))
+    {
+        remove(name);
+    }
+    // Iterate a directory in breadth
+    foreach (string name; dirEntries(".", SpanMode.breadth))
+    {
+        writeln(name);
+    }
+    // Iterate a directory and get detailed info about it
+    foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
+    {
+        writeln(e.name, "\t", e.size);
+    }
+    // Iterate over all *.d files in current directory and all its subdirectories
+    auto dFiles = filter!`endsWith(a.name,".d")`(dirEntries(".",SpanMode.depth));
+    foreach(d; dFiles)
+        writeln(d.name);
+    // Hook it up with std.parallelism to compile them all in parallel:
+    foreach(d; parallel(dFiles, 1)) //passes by 1 file to each thread
+    {
+        string cmd = "dmd -c "  ~ d.name;
+        writeln(cmd);
+        std.process.system(cmd);
+    }
+    --------------------
  +/
 auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 {
@@ -2743,14 +2739,14 @@ unittest
     Throws:
         $(D FileException) if the directory does not exist.
 
-Examples:
---------------------
-// Iterate over all D source files in current directory and all its
-// subdirectories
-auto dFiles = dirEntries(".","*.{d,di}",SpanMode.depth);
-foreach(d; dFiles)
-    writeln(d.name);
---------------------
+    Examples:
+    --------------------
+    // Iterate over all D source files in current directory and all its
+    // subdirectories
+    auto dFiles = dirEntries(".","*.{d,di}",SpanMode.depth);
+    foreach(d; dFiles)
+        writeln(d.name);
+    --------------------
  +/
 auto dirEntries(string path, string pattern, SpanMode mode,
     bool followSymlink = true)

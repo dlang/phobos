@@ -84,13 +84,12 @@ predicate. The string must use symbol names $(D a) and $(D b) as the
 compared elements.
 
    Example:
-
-----
-alias binaryFun!("a < b") less;
-assert(less(1, 2) && !less(2, 1));
-alias binaryFun!("a > b") greater;
-assert(!greater("1", "2") && greater("2", "1"));
-----
+   ----
+   alias binaryFun!("a < b") less;
+   assert(less(1, 2) && !less(2, 1));
+   alias binaryFun!("a > b") greater;
+   assert(!greater("1", "2") && greater("2", "1"));
+   ----
 */
 
 template binaryFun(alias fun, string parm1Name = "a",
@@ -446,12 +445,11 @@ unittest
    functions, a delegate, or a string.
 
    Example:
-
-----
-// First split a string in whitespace-separated tokens and then
-// convert each token into an integer
-assert(compose!(map!(to!(int)), split)("1 2 3") == [1, 2, 3]);
-----
+   ----
+   // First split a string in whitespace-separated tokens and then
+   // convert each token into an integer
+   assert(compose!(map!(to!(int)), split)("1 2 3") == [1, 2, 3]);
+   ----
 */
 
 template compose(fun...)
@@ -486,13 +484,12 @@ template compose(fun...)
    execution is the same as lexical order.
 
    Example:
-
-----
-// Read an entire text file, split the resulting string in
-// whitespace-separated tokens, and then convert each token into an
-// integer
-int[] a = pipe!(readText, split, map!(to!(int)))("file.txt");
-----
+   ----
+   // Read an entire text file, split the resulting string in
+   // whitespace-separated tokens, and then convert each token into an
+   // integer
+   int[] a = pipe!(readText, split, map!(to!(int)))("file.txt");
+   ----
  */
 template pipe(fun...)
 {
@@ -652,7 +649,7 @@ private struct DelegateFaker(F) {
 
     /*
      * What all the stuff below does is this:
-     *--------------------
+     * --------------------
      * struct DelegateFaker(F) {
      *     extern(linkage)
      *     [ref] ReturnType!F doIt(ParameterTypeTuple!F args) [@attributes]
@@ -661,7 +658,7 @@ private struct DelegateFaker(F) {
      *         return fp(args);
      *     }
      * }
-     *--------------------
+     * --------------------
      */
 
     // We will use MemberFunctionGenerator in std.typecons.  This is a policy

@@ -60,11 +60,11 @@
     $(D fromISOExtString), or $(D fromISOExtString) to create a
     $(D SysTime) from the string.
 
---------------------
-auto currentTime = Clock.currTime();
-auto timeString = currentTime.toISOExtString();
-auto restoredTime = SysTime.fromISOExtString(timeString);
---------------------
+    --------------------
+    auto currentTime = Clock.currTime();
+    auto timeString = currentTime.toISOExtString();
+    auto restoredTime = SysTime.fromISOExtString(timeString);
+    --------------------
 
     Various functions take a string (or strings) to represent a unit of time
     (e.g. $(D convert!("days", "hours")(numDays))). The valid strings to use
@@ -979,11 +979,11 @@ public:
             resulting date would be on February 29th.
 
         Examples:
---------------------
-assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).year == 1999);
-assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).year == 2010);
-assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).year == -7);
---------------------
+        --------------------
+        assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).year == 1999);
+        assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).year == 2010);
+        assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).year == -7);
+        --------------------
      +/
     @property void year(int year)
     {
@@ -1065,11 +1065,11 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).year == -7);
             $(D DateTimeException) if $(D isAD) is true.
 
         Examples:
---------------------
-assert(SysTime(DateTime(0, 1, 1, 12, 30, 33)).yearBC == 1);
-assert(SysTime(DateTime(-1, 1, 1, 10, 7, 2)).yearBC == 2);
-assert(SysTime(DateTime(-100, 1, 1, 4, 59, 0)).yearBC == 101);
---------------------
+        --------------------
+        assert(SysTime(DateTime(0, 1, 1, 12, 30, 33)).yearBC == 1);
+        assert(SysTime(DateTime(-1, 1, 1, 10, 7, 2)).yearBC == 2);
+        assert(SysTime(DateTime(-100, 1, 1, 4, 59, 0)).yearBC == 101);
+        --------------------
      +/
     @property ushort yearBC() const
     {
@@ -1115,14 +1115,14 @@ assert(SysTime(DateTime(-100, 1, 1, 4, 59, 0)).yearBC == 101);
             $(D DateTimeException) if a non-positive value is given.
 
         Examples:
---------------------
-auto st = SysTime(DateTime(2010, 1, 1, 7, 30, 0));
-st.yearBC = 1;
-assert(st == SysTime(DateTime(0, 1, 1, 7, 30, 0)));
+        --------------------
+        auto st = SysTime(DateTime(2010, 1, 1, 7, 30, 0));
+        st.yearBC = 1;
+        assert(st == SysTime(DateTime(0, 1, 1, 7, 30, 0)));
 
-st.yearBC = 10;
-assert(st == SysTime(DateTime(-9, 1, 1, 7, 30, 0)));
---------------------
+        st.yearBC = 10;
+        assert(st == SysTime(DateTime(-9, 1, 1, 7, 30, 0)));
+        --------------------
      +/
     @property void yearBC(int year)
     {
@@ -1214,11 +1214,11 @@ assert(st == SysTime(DateTime(-9, 1, 1, 7, 30, 0)));
         Month of a Gregorian Year.
 
         Examples:
---------------------
-assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).month == 7);
-assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).month == 10);
-assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).month == 4);
---------------------
+        --------------------
+        assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).month == 7);
+        assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).month == 10);
+        assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).month == 4);
+        --------------------
      +/
     @property Month month() const nothrow
     {
@@ -1379,11 +1379,11 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).month == 4);
         Day of a Gregorian Month.
 
         Examples:
---------------------
-assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).day == 6);
-assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).day == 4);
-assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
---------------------
+        --------------------
+        assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).day == 6);
+        assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).day == 4);
+        assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
+        --------------------
      +/
     @property ubyte day() const nothrow
     {
@@ -2425,23 +2425,23 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
                             causing the month to increment.
 
         Examples:
---------------------
-auto st1 = SysTime(DateTime(2010, 1, 1, 12, 30, 33));
-st1.add!"months"(11);
-assert(st1 == SysTime(DateTime(2010, 12, 1, 12, 30, 33)));
+        --------------------
+        auto st1 = SysTime(DateTime(2010, 1, 1, 12, 30, 33));
+        st1.add!"months"(11);
+        assert(st1 == SysTime(DateTime(2010, 12, 1, 12, 30, 33)));
 
-auto st2 = SysTime(DateTime(2010, 1, 1, 12, 30, 33));
-st2.add!"months"(-11);
-assert(st2 == SysTime(DateTime(2009, 2, 1, 12, 30, 33)));
+        auto st2 = SysTime(DateTime(2010, 1, 1, 12, 30, 33));
+        st2.add!"months"(-11);
+        assert(st2 == SysTime(DateTime(2009, 2, 1, 12, 30, 33)));
 
-auto st3 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
-st3.add!"years"(1);
-assert(st3 == SysTime(DateTime(2001, 3, 1, 12, 30, 33)));
+        auto st3 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
+        st3.add!"years"(1);
+        assert(st3 == SysTime(DateTime(2001, 3, 1, 12, 30, 33)));
 
-auto st4 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
-st4.add!"years"(1, AllowDayOverflow.no);
-assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
---------------------
+        auto st4 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
+        st4.add!"years"(1, AllowDayOverflow.no);
+        assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
+        --------------------
       +/
     ref SysTime add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
         if(units == "years" ||
@@ -3599,31 +3599,31 @@ assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
                             causing the month to increment.
 
         Examples:
---------------------
-auto st1 = SysTime(DateTime(2010, 1, 1, 12, 33, 33));
-st1.roll!"months"(1);
-assert(st1 == SysTime(DateTime(2010, 2, 1, 12, 33, 33)));
+        --------------------
+        auto st1 = SysTime(DateTime(2010, 1, 1, 12, 33, 33));
+        st1.roll!"months"(1);
+        assert(st1 == SysTime(DateTime(2010, 2, 1, 12, 33, 33)));
 
-auto st2 = SysTime(DateTime(2010, 1, 1, 12, 33, 33));
-st2.roll!"months"(-1);
-assert(st2 == SysTime(DateTime(2010, 12, 1, 12, 33, 33)));
+        auto st2 = SysTime(DateTime(2010, 1, 1, 12, 33, 33));
+        st2.roll!"months"(-1);
+        assert(st2 == SysTime(DateTime(2010, 12, 1, 12, 33, 33)));
 
-auto st3 = SysTime(DateTime(1999, 1, 29, 12, 33, 33));
-st3.roll!"months"(1);
-assert(st3 == SysTime(DateTime(1999, 3, 1, 12, 33, 33)));
+        auto st3 = SysTime(DateTime(1999, 1, 29, 12, 33, 33));
+        st3.roll!"months"(1);
+        assert(st3 == SysTime(DateTime(1999, 3, 1, 12, 33, 33)));
 
-auto st4 = SysTime(DateTime(1999, 1, 29, 12, 33, 33));
-st4.roll!"months"(1, AllowDayOverflow.no);
-assert(st4 == SysTime(DateTime(1999, 2, 28, 12, 33, 33)));
+        auto st4 = SysTime(DateTime(1999, 1, 29, 12, 33, 33));
+        st4.roll!"months"(1, AllowDayOverflow.no);
+        assert(st4 == SysTime(DateTime(1999, 2, 28, 12, 33, 33)));
 
-auto st5 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
-st5.roll!"years"(1);
-assert(st5 == SysTime(DateTime(2001, 3, 1, 12, 30, 33)));
+        auto st5 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
+        st5.roll!"years"(1);
+        assert(st5 == SysTime(DateTime(2001, 3, 1, 12, 30, 33)));
 
-auto st6 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
-st6.roll!"years"(1, AllowDayOverflow.no);
-assert(st6 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
---------------------
+        auto st6 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
+        st6.roll!"years"(1, AllowDayOverflow.no);
+        assert(st6 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
+        --------------------
       +/
     /+ref SysTime+/ void roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
         if(units == "years")
@@ -4488,29 +4488,29 @@ assert(st6 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
             value = The number of $(D_PARAM units) to add to this $(D SysTime).
 
         Examples:
---------------------
-auto st1 = SysTime(DateTime(2010, 1, 1, 11, 23, 12));
-st1.roll!"days"(1);
-assert(st1 == SysTime(DateTime(2010, 1, 2, 11, 23, 12)));
-st1.roll!"days"(365);
-assert(st1 == SysTime(DateTime(2010, 1, 26, 11, 23, 12)));
-st1.roll!"days"(-32);
-assert(st1 == SysTime(DateTime(2010, 1, 25, 11, 23, 12)));
+        --------------------
+        auto st1 = SysTime(DateTime(2010, 1, 1, 11, 23, 12));
+        st1.roll!"days"(1);
+        assert(st1 == SysTime(DateTime(2010, 1, 2, 11, 23, 12)));
+        st1.roll!"days"(365);
+        assert(st1 == SysTime(DateTime(2010, 1, 26, 11, 23, 12)));
+        st1.roll!"days"(-32);
+        assert(st1 == SysTime(DateTime(2010, 1, 25, 11, 23, 12)));
 
-auto st2 = SysTime(DateTime(2010, 7, 4, 12, 0, 0));
-st2.roll!"hours"(1);
-assert(st2 == SysTime(DateTime(2010, 7, 4, 13, 0, 0)));
+        auto st2 = SysTime(DateTime(2010, 7, 4, 12, 0, 0));
+        st2.roll!"hours"(1);
+        assert(st2 == SysTime(DateTime(2010, 7, 4, 13, 0, 0)));
 
-auto st3 = SysTime(DateTime(2010, 1, 1, 0, 0, 0));
-st3.roll!"seconds"(-1);
-assert(st3 == SysTime(DateTime(2010, 1, 1, 0, 0, 59)));
+        auto st3 = SysTime(DateTime(2010, 1, 1, 0, 0, 0));
+        st3.roll!"seconds"(-1);
+        assert(st3 == SysTime(DateTime(2010, 1, 1, 0, 0, 59)));
 
-auto st4 = SysTime(DateTime(2010, 1, 1, 0, 0, 0),
-                   FracSec.from!"usecs"(2_400));
-st4.roll!"usecs"(-1_200_000);
-assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
-                      FracSec.from!"usecs"(802_400)));
---------------------
+        auto st4 = SysTime(DateTime(2010, 1, 1, 0, 0, 0),
+                           FracSec.from!"usecs"(2_400));
+        st4.roll!"usecs"(-1_200_000);
+        assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
+                              FracSec.from!"usecs"(802_400)));
+        --------------------
       +/
     /+ref SysTime+/ void roll(string units)(long value) nothrow
         if(units == "days")
@@ -6449,12 +6449,12 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
             rhs = The $(D SysTime) to subtract from this one.
 
         Examples:
---------------------
-assert(SysTime(Date(1999, 2, 1)).diffMonths(SysTime(Date(1999, 1, 31))) == 1);
-assert(SysTime(Date(1999, 1, 31)).diffMonths(SysTime(Date(1999, 2, 1))) == -1);
-assert(SysTime(Date(1999, 3, 1)).diffMonths(SysTime(Date(1999, 1, 1))) == 2);
-assert(SysTime(Date(1999, 1, 1)).diffMonths(SysTime(Date(1999, 3, 31))) == -2);
---------------------
+        --------------------
+        assert(SysTime(Date(1999, 2, 1)).diffMonths(SysTime(Date(1999, 1, 31))) == 1);
+        assert(SysTime(Date(1999, 1, 31)).diffMonths(SysTime(Date(1999, 2, 1))) == -1);
+        assert(SysTime(Date(1999, 3, 1)).diffMonths(SysTime(Date(1999, 1, 1))) == 2);
+        assert(SysTime(Date(1999, 1, 1)).diffMonths(SysTime(Date(1999, 3, 31))) == -2);
+        --------------------
       +/
     int diffMonths(in SysTime rhs) const nothrow
     {
@@ -6537,11 +6537,11 @@ assert(SysTime(Date(1999, 1, 1)).diffMonths(SysTime(Date(1999, 3, 31))) == -2);
         Day of the year this $(D SysTime) is on.
 
         Examples:
---------------------
-assert(SysTime(DateTime(1999, 1, 1, 12, 22, 7)).dayOfYear == 1);
-assert(SysTime(DateTime(1999, 12, 31, 7, 2, 59)).dayOfYear == 365);
-assert(SysTime(DateTime(2000, 12, 31, 21, 20, 0)).dayOfYear == 366);
---------------------
+        --------------------
+        assert(SysTime(DateTime(1999, 1, 1, 12, 22, 7)).dayOfYear == 1);
+        assert(SysTime(DateTime(1999, 12, 31, 7, 2, 59)).dayOfYear == 365);
+        assert(SysTime(DateTime(2000, 12, 31, 21, 20, 0)).dayOfYear == 366);
+        --------------------
       +/
     @property ushort dayOfYear() const nothrow
     {
@@ -6606,18 +6606,18 @@ assert(SysTime(DateTime(2000, 12, 31, 21, 20, 0)).dayOfYear == 366);
         The Xth day of the Gregorian Calendar that this $(D SysTime) is on.
 
         Examples:
---------------------
-assert(SysTime(DateTime(1, 1, 1, 0, 0, 0)).dayOfGregorianCal == 1);
-assert(SysTime(DateTime(1, 12, 31, 23, 59, 59)).dayOfGregorianCal == 365);
-assert(SysTime(DateTime(2, 1, 1, 2, 2, 2)).dayOfGregorianCal == 366);
+        --------------------
+        assert(SysTime(DateTime(1, 1, 1, 0, 0, 0)).dayOfGregorianCal == 1);
+        assert(SysTime(DateTime(1, 12, 31, 23, 59, 59)).dayOfGregorianCal == 365);
+        assert(SysTime(DateTime(2, 1, 1, 2, 2, 2)).dayOfGregorianCal == 366);
 
-assert(SysTime(DateTime(0, 12, 31, 7, 7, 7)).dayOfGregorianCal == 0);
-assert(SysTime(DateTime(0, 1, 1, 19, 30, 0)).dayOfGregorianCal == -365);
-assert(SysTime(DateTime(-1, 12, 31, 4, 7, 0)).dayOfGregorianCal == -366);
+        assert(SysTime(DateTime(0, 12, 31, 7, 7, 7)).dayOfGregorianCal == 0);
+        assert(SysTime(DateTime(0, 1, 1, 19, 30, 0)).dayOfGregorianCal == -365);
+        assert(SysTime(DateTime(-1, 12, 31, 4, 7, 0)).dayOfGregorianCal == -366);
 
-assert(SysTime(DateTime(2000, 1, 1, 9, 30, 20)).dayOfGregorianCal == 730_120);
-assert(SysTime(DateTime(2010, 12, 31, 15, 45, 50)).dayOfGregorianCal == 734_137);
---------------------
+        assert(SysTime(DateTime(2000, 1, 1, 9, 30, 20)).dayOfGregorianCal == 730_120);
+        assert(SysTime(DateTime(2010, 12, 31, 15, 45, 50)).dayOfGregorianCal == 734_137);
+        --------------------
      +/
     @property int dayOfGregorianCal() const nothrow
     {
@@ -6982,32 +6982,32 @@ assert(SysTime(DateTime(2010, 12, 31, 15, 45, 50)).dayOfGregorianCal == 734_137)
                    to.
 
         Examples:
---------------------
-auto st = SysTime(DateTime(0, 0, 0, 12, 0, 0));
-st.dayOfGregorianCal = 1;
-assert(st == SysTime(DateTime(1, 1, 1, 12, 0, 0)));
+        --------------------
+        auto st = SysTime(DateTime(0, 0, 0, 12, 0, 0));
+        st.dayOfGregorianCal = 1;
+        assert(st == SysTime(DateTime(1, 1, 1, 12, 0, 0)));
 
-st.dayOfGregorianCal = 365;
-assert(st == SysTime(DateTime(1, 12, 31, 12, 0, 0)));
+        st.dayOfGregorianCal = 365;
+        assert(st == SysTime(DateTime(1, 12, 31, 12, 0, 0)));
 
-st.dayOfGregorianCal = 366;
-assert(st == SysTime(DateTime(2, 1, 1, 12, 0, 0)));
+        st.dayOfGregorianCal = 366;
+        assert(st == SysTime(DateTime(2, 1, 1, 12, 0, 0)));
 
-st.dayOfGregorianCal = 0;
-assert(st == SysTime(DateTime(0, 12, 31, 12, 0, 0)));
+        st.dayOfGregorianCal = 0;
+        assert(st == SysTime(DateTime(0, 12, 31, 12, 0, 0)));
 
-st.dayOfGregorianCal = -365;
-assert(st == SysTime(DateTime(-0, 1, 1, 12, 0, 0)));
+        st.dayOfGregorianCal = -365;
+        assert(st == SysTime(DateTime(-0, 1, 1, 12, 0, 0)));
 
-st.dayOfGregorianCal = -366;
-assert(st == SysTime(DateTime(-1, 12, 31, 12, 0, 0)));
+        st.dayOfGregorianCal = -366;
+        assert(st == SysTime(DateTime(-1, 12, 31, 12, 0, 0)));
 
-st.dayOfGregorianCal = 730_120;
-assert(st == SysTime(DateTime(2000, 1, 1, 12, 0, 0)));
+        st.dayOfGregorianCal = 730_120;
+        assert(st == SysTime(DateTime(2000, 1, 1, 12, 0, 0)));
 
-st.dayOfGregorianCal = 734_137;
-assert(st == SysTime(DateTime(2010, 12, 31, 12, 0, 0)));
---------------------
+        st.dayOfGregorianCal = 734_137;
+        assert(st == SysTime(DateTime(2010, 12, 31, 12, 0, 0)));
+        --------------------
      +/
     @property void dayOfGregorianCal(int days) nothrow
     {
@@ -7279,26 +7279,26 @@ assert(st == SysTime(DateTime(2010, 12, 31, 12, 0, 0)));
         The time portion of endOfMonth is always 23:59:59.9999999.
 
         Examples:
---------------------
-assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).endOfMonth ==
-       SysTime(DateTime(1999, 1, 31, 23, 59, 59),
-               FracSec.from!"hnsecs"(9_999_999)));
+        --------------------
+        assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).endOfMonth ==
+               SysTime(DateTime(1999, 1, 31, 23, 59, 59),
+                       FracSec.from!"hnsecs"(9_999_999)));
 
-assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0),
-               FracSec.from!"msecs"(24)).endOfMonth ==
-       SysTime(DateTime(1999, 2, 28, 23, 59, 59),
-               FracSec.from!"hnsecs"(9_999_999)));
+        assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0),
+                       FracSec.from!"msecs"(24)).endOfMonth ==
+               SysTime(DateTime(1999, 2, 28, 23, 59, 59),
+                       FracSec.from!"hnsecs"(9_999_999)));
 
-assert(SysTime(DateTime(2000, 2, 7, 5, 12, 27),
-               FracSec.from!"usecs"(5203)).endOfMonth ==
-       SysTime(DateTime(2000, 2, 29, 23, 59, 59),
-               FracSec.from!"hnsecs"(9_999_999)));
+        assert(SysTime(DateTime(2000, 2, 7, 5, 12, 27),
+                       FracSec.from!"usecs"(5203)).endOfMonth ==
+               SysTime(DateTime(2000, 2, 29, 23, 59, 59),
+                       FracSec.from!"hnsecs"(9_999_999)));
 
-assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9),
-               FracSec.from!"hnsecs"(12345)).endOfMonth ==
-       SysTime(DateTime(2000, 6, 30, 23, 59, 59),
-               FracSec.from!"hnsecs"(9_999_999)));
---------------------
+        assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9),
+                       FracSec.from!"hnsecs"(12345)).endOfMonth ==
+               SysTime(DateTime(2000, 6, 30, 23, 59, 59),
+                       FracSec.from!"hnsecs"(9_999_999)));
+        --------------------
       +/
     @property SysTime endOfMonth() const nothrow
     {
@@ -7377,12 +7377,12 @@ assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9),
         The last day in the month that this $(D SysTime) is in.
 
         Examples:
---------------------
-assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).daysInMonth == 31);
-assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0)).daysInMonth == 28);
-assert(SysTime(DateTime(2000, 2, 7, 5, 12, 27)).daysInMonth == 29);
-assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).daysInMonth == 30);
---------------------
+        --------------------
+        assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).daysInMonth == 31);
+        assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0)).daysInMonth == 28);
+        assert(SysTime(DateTime(2000, 2, 7, 5, 12, 27)).daysInMonth == 29);
+        assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).daysInMonth == 30);
+        --------------------
       +/
     @property ubyte daysInMonth() const nothrow
     {
@@ -7441,12 +7441,12 @@ assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).daysInMonth == 30);
         Whether the current year is a date in A.D.
 
         Examples:
---------------------
-assert(SysTime(DateTime(1, 1, 1, 12, 7, 0)).isAD);
-assert(SysTime(DateTime(2010, 12, 31, 0, 0, 0)).isAD);
-assert(!SysTime(DateTime(0, 12, 31, 23, 59, 59)).isAD);
-assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
---------------------
+        --------------------
+        assert(SysTime(DateTime(1, 1, 1, 12, 7, 0)).isAD);
+        assert(SysTime(DateTime(2010, 12, 31, 0, 0, 0)).isAD);
+        assert(!SysTime(DateTime(0, 12, 31, 23, 59, 59)).isAD);
+        assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
+        --------------------
       +/
     @property bool isAD() const nothrow
     {
@@ -7736,21 +7736,21 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
         Time zone offsets will be in the form +HH:MM or -HH:MM.
 
         Examples:
---------------------
-assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOString() ==
-       "20100704T070612");
+        --------------------
+        assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOString() ==
+               "20100704T070612");
 
-assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
-               FracSec.from!"msecs"(24)).toISOString() ==
-       "19981225T021500.024");
+        assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
+                       FracSec.from!"msecs"(24)).toISOString() ==
+               "19981225T021500.024");
 
-assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOString() ==
-       "00000105T230959");
+        assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOString() ==
+               "00000105T230959");
 
-assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
-               FracSec.from!"hnsecs"(520_920)).toISOString() ==
-       "-00040105T000002.052092");
---------------------
+        assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
+                       FracSec.from!"hnsecs"(520_920)).toISOString() ==
+               "-00040105T000002.052092");
+        --------------------
       +/
     string toISOString() const nothrow
     {
@@ -7881,21 +7881,21 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
         Time zone offsets will be in the form +HH:MM or -HH:MM.
 
         Examples:
---------------------
-assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtString() ==
-       "2010-07-04T07:06:12");
+        --------------------
+        assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtString() ==
+               "2010-07-04T07:06:12");
 
-assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
-               FracSec.from!"msecs"(24)).toISOExtString() ==
-       "1998-12-25T02:15:00.024");
+        assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
+                       FracSec.from!"msecs"(24)).toISOExtString() ==
+               "1998-12-25T02:15:00.024");
 
-assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOExtString() ==
-       "0000-01-05T23:09:59");
+        assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOExtString() ==
+               "0000-01-05T23:09:59");
 
-assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
-               FracSec.from!"hnsecs"(520_920)).toISOExtString() ==
-       "-0004-01-05T00:00:02.052092");
---------------------
+        assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
+                       FracSec.from!"hnsecs"(520_920)).toISOExtString() ==
+               "-0004-01-05T00:00:02.052092");
+        --------------------
       +/
     string toISOExtString() const nothrow
     {
@@ -8024,21 +8024,21 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
         Time zone offsets will be in the form +HH:MM or -HH:MM.
 
         Examples:
---------------------
-assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toSimpleString() ==
-       "2010-Jul-04 07:06:12");
+        --------------------
+        assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toSimpleString() ==
+               "2010-Jul-04 07:06:12");
 
-assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
-               FracSec.from!"msecs"(24)).toSimpleString() ==
-       "1998-Dec-25 02:15:00.024");
+        assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
+                       FracSec.from!"msecs"(24)).toSimpleString() ==
+               "1998-Dec-25 02:15:00.024");
 
-assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toSimpleString() ==
-       "0000-Jan-05 23:09:59");
+        assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toSimpleString() ==
+               "0000-Jan-05 23:09:59");
 
-assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
-               FracSec.from!"hnsecs"(520_920)).toSimpleString() ==
-        "-0004-Jan-05 00:00:02.052092");
---------------------
+        assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
+                       FracSec.from!"hnsecs"(520_920)).toSimpleString() ==
+                "-0004-Jan-05 00:00:02.052092");
+        --------------------
       +/
     string toSimpleString() const nothrow
     {
@@ -8216,27 +8216,27 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             or if the resulting $(D SysTime) would not be valid.
 
         Examples:
---------------------
-assert(SysTime.fromISOString("20100704T070612") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
-assert(SysTime.fromISOString("19981225T021500.007") ==
-       SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
-assert(SysTime.fromISOString("00000105T230959.00002") ==
-       SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
-assert(SysTime.fromISOString("-00040105T000002") ==
-       SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
-assert(SysTime.fromISOString(" 20100704T070612 ") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+        --------------------
+        assert(SysTime.fromISOString("20100704T070612") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+        assert(SysTime.fromISOString("19981225T021500.007") ==
+               SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
+        assert(SysTime.fromISOString("00000105T230959.00002") ==
+               SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
+        assert(SysTime.fromISOString("-00040105T000002") ==
+               SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
+        assert(SysTime.fromISOString(" 20100704T070612 ") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
 
-assert(SysTime.fromISOString("20100704T070612Z") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
-assert(SysTime.fromISOString("20100704T070612-8:00") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12),
-               new SimpleTimeZone(dur!"hours"(-8))));
-assert(SysTime.fromISOString("20100704T070612+8:00") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12),
-               new SimpleTimeZone(dur!"hours"(8))));
---------------------
+        assert(SysTime.fromISOString("20100704T070612Z") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
+        assert(SysTime.fromISOString("20100704T070612-8:00") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12),
+                       new SimpleTimeZone(dur!"hours"(-8))));
+        assert(SysTime.fromISOString("20100704T070612+8:00") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12),
+                       new SimpleTimeZone(dur!"hours"(8))));
+        --------------------
       +/
     static SysTime fromISOString(S)(in S isoString, immutable TimeZone tz = null)
         if(isSomeString!S)
@@ -8443,27 +8443,27 @@ assert(SysTime.fromISOString("20100704T070612+8:00") ==
             or if the resulting $(D SysTime) would not be valid.
 
         Examples:
---------------------
-assert(SysTime.fromISOExtString("2010-07-04T07:06:12") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
-assert(SysTime.fromISOExtString("1998-12-25T02:15:00.007") ==
-       SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
-assert(SysTime.fromISOExtString("0000-01-05T23:09:59.00002") ==
-       SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
-assert(SysTime.fromISOExtString("-0004-01-05T00:00:02") ==
-       SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
-assert(SysTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+        --------------------
+        assert(SysTime.fromISOExtString("2010-07-04T07:06:12") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+        assert(SysTime.fromISOExtString("1998-12-25T02:15:00.007") ==
+               SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
+        assert(SysTime.fromISOExtString("0000-01-05T23:09:59.00002") ==
+               SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
+        assert(SysTime.fromISOExtString("-0004-01-05T00:00:02") ==
+               SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
+        assert(SysTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
 
-assert(SysTime.fromISOExtString("2010-07-04T07:06:12Z") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
-assert(SysTime.fromISOExtString("2010-07-04T07:06:12-8:00") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12),
-               new SimpleTimeZone(dur!"hours"(-8))));
-assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12),
-               new SimpleTimeZone(dur!"hours"(8))));
---------------------
+        assert(SysTime.fromISOExtString("2010-07-04T07:06:12Z") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
+        assert(SysTime.fromISOExtString("2010-07-04T07:06:12-8:00") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12),
+                       new SimpleTimeZone(dur!"hours"(-8))));
+        assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12),
+                       new SimpleTimeZone(dur!"hours"(8))));
+        --------------------
       +/
     static SysTime fromISOExtString(S)(in S isoExtString, immutable TimeZone tz = null)
         if(isSomeString!(S))
@@ -8676,27 +8676,27 @@ assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
             or if the resulting $(D SysTime) would not be valid.
 
         Examples:
---------------------
-assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
-assert(SysTime.fromSimpleString("1998-Dec-25 02:15:00.007") ==
-       SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
-assert(SysTime.fromSimpleString("0000-Jan-05 23:09:59.00002") ==
-       SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
-assert(SysTime.fromSimpleString("-0004-Jan-05 00:00:02") ==
-       SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
-assert(SysTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+        --------------------
+        assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+        assert(SysTime.fromSimpleString("1998-Dec-25 02:15:00.007") ==
+               SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
+        assert(SysTime.fromSimpleString("0000-Jan-05 23:09:59.00002") ==
+               SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
+        assert(SysTime.fromSimpleString("-0004-Jan-05 00:00:02") ==
+               SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
+        assert(SysTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
 
-assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12Z") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
-assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12-8:00") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12),
-               new SimpleTimeZone(dur!"hours"(-8))));
-assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+8:00") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12),
-               new SimpleTimeZone(dur!"hours"(8))));
---------------------
+        assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12Z") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
+        assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12-8:00") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12),
+                       new SimpleTimeZone(dur!"hours"(-8))));
+        assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+8:00") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12),
+                       new SimpleTimeZone(dur!"hours"(8))));
+        --------------------
       +/
     static SysTime fromSimpleString(S)(in S simpleString, immutable TimeZone tz = null)
         if(isSomeString!(S))
@@ -9320,11 +9320,11 @@ public:
         are B.C.
 
         Examples:
---------------------
-assert(Date(1999, 7, 6).year == 1999);
-assert(Date(2010, 10, 4).year == 2010);
-assert(Date(-7, 4, 5).year == -7);
---------------------
+        --------------------
+        assert(Date(1999, 7, 6).year == 1999);
+        assert(Date(2010, 10, 4).year == 2010);
+        assert(Date(-7, 4, 5).year == -7);
+        --------------------
      +/
     @property short year() const pure nothrow
     {
@@ -9409,11 +9409,11 @@ assert(Date(-7, 4, 5).year == -7);
             $(D DateTimeException) if $(D isAD) is true.
 
         Examples:
---------------------
-assert(Date(0, 1, 1).yearBC == 1);
-assert(Date(-1, 1, 1).yearBC == 2);
-assert(Date(-100, 1, 1).yearBC == 101);
---------------------
+        --------------------
+        assert(Date(0, 1, 1).yearBC == 1);
+        assert(Date(-1, 1, 1).yearBC == 2);
+        assert(Date(-100, 1, 1).yearBC == 101);
+        --------------------
      +/
     @property ushort yearBC() const pure
     {
@@ -9456,14 +9456,14 @@ assert(Date(-100, 1, 1).yearBC == 101);
             $(D DateTimeException) if a non-positive value is given.
 
         Examples:
---------------------
-auto date = Date(2010, 1, 1);
-date.yearBC = 1;
-assert(date == Date(0, 1, 1));
+        --------------------
+        auto date = Date(2010, 1, 1);
+        date.yearBC = 1;
+        assert(date == Date(0, 1, 1));
 
-date.yearBC = 10;
-assert(date == Date(-9, 1, 1));
---------------------
+        date.yearBC = 10;
+        assert(date == Date(-9, 1, 1));
+        --------------------
      +/
     @property void yearBC(int year) pure
     {
@@ -9505,11 +9505,11 @@ assert(date == Date(-9, 1, 1));
         Month of a Gregorian Year.
 
         Examples:
---------------------
-assert(Date(1999, 7, 6).month == 7);
-assert(Date(2010, 10, 4).month == 10);
-assert(Date(-7, 4, 5).month == 4);
---------------------
+        --------------------
+        assert(Date(1999, 7, 6).month == 7);
+        assert(Date(2010, 10, 4).month == 10);
+        assert(Date(-7, 4, 5).month == 4);
+        --------------------
      +/
     @property Month month() const pure nothrow
     {
@@ -9584,11 +9584,11 @@ assert(Date(-7, 4, 5).month == 4);
         Day of a Gregorian Month.
 
         Examples:
---------------------
-assert(Date(1999, 7, 6).day == 6);
-assert(Date(2010, 10, 4).day == 4);
-assert(Date(-7, 4, 5).day == 5);
---------------------
+        --------------------
+        assert(Date(1999, 7, 6).day == 6);
+        assert(Date(2010, 10, 4).day == 4);
+        assert(Date(-7, 4, 5).day == 5);
+        --------------------
      +/
     @property ubyte day() const pure nothrow
     {
@@ -9748,23 +9748,23 @@ assert(Date(-7, 4, 5).day == 5);
                             causing the month to increment.
 
         Examples:
---------------------
-auto d1 = Date(2010, 1, 1);
-d1.add!"months"(11);
-assert(d1 == Date(2010, 12, 1));
+        --------------------
+        auto d1 = Date(2010, 1, 1);
+        d1.add!"months"(11);
+        assert(d1 == Date(2010, 12, 1));
 
-auto d2 = Date(2010, 1, 1);
-d2.add!"months"(-11);
-assert(d2 == Date(2009, 2, 1));
+        auto d2 = Date(2010, 1, 1);
+        d2.add!"months"(-11);
+        assert(d2 == Date(2009, 2, 1));
 
-auto d3 = Date(2000, 2, 29);
-d3.add!"years"(1);
-assert(d3 == Date(2001, 3, 1));
+        auto d3 = Date(2000, 2, 29);
+        d3.add!"years"(1);
+        assert(d3 == Date(2001, 3, 1));
 
-auto d4 = Date(2000, 2, 29);
-d4.add!"years"(1, AllowDayOverflow.no);
-assert(d4 == Date(2001, 2, 28));
---------------------
+        auto d4 = Date(2000, 2, 29);
+        d4.add!"years"(1, AllowDayOverflow.no);
+        assert(d4 == Date(2001, 2, 28));
+        --------------------
       +/
     /+ref Date+/ void add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
         if(units == "years")
@@ -10534,31 +10534,31 @@ assert(d4 == Date(2001, 2, 28));
                             $(D Date).
 
         Examples:
---------------------
-auto d1 = Date(2010, 1, 1);
-d1.roll!"months"(1);
-assert(d1 == Date(2010, 2, 1));
+        --------------------
+        auto d1 = Date(2010, 1, 1);
+        d1.roll!"months"(1);
+        assert(d1 == Date(2010, 2, 1));
 
-auto d2 = Date(2010, 1, 1);
-d2.roll!"months"(-1);
-assert(d2 == Date(2010, 12, 1));
+        auto d2 = Date(2010, 1, 1);
+        d2.roll!"months"(-1);
+        assert(d2 == Date(2010, 12, 1));
 
-auto d3 = Date(1999, 1, 29);
-d3.roll!"months"(1);
-assert(d3 == Date(1999, 3, 1));
+        auto d3 = Date(1999, 1, 29);
+        d3.roll!"months"(1);
+        assert(d3 == Date(1999, 3, 1));
 
-auto d4 = Date(1999, 1, 29);
-d4.roll!"months"(1, AllowDayOverflow.no);
-assert(d4 == Date(1999, 2, 28));
+        auto d4 = Date(1999, 1, 29);
+        d4.roll!"months"(1, AllowDayOverflow.no);
+        assert(d4 == Date(1999, 2, 28));
 
-auto d5 = Date(2000, 2, 29);
-d5.roll!"years"(1);
-assert(d5 == Date(2001, 3, 1));
+        auto d5 = Date(2000, 2, 29);
+        d5.roll!"years"(1);
+        assert(d5 == Date(2001, 3, 1));
 
-auto d6 = Date(2000, 2, 29);
-d6.roll!"years"(1, AllowDayOverflow.no);
-assert(d6 == Date(2001, 2, 28));
---------------------
+        auto d6 = Date(2000, 2, 29);
+        d6.roll!"years"(1, AllowDayOverflow.no);
+        assert(d6 == Date(2001, 2, 28));
+        --------------------
       +/
     /+ref Date+/ void roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
         if(units == "years")
@@ -11214,15 +11214,15 @@ assert(d6 == Date(2001, 2, 28));
             value = The number of days to add to this $(D Date).
 
         Examples:
---------------------
-auto d = Date(2010, 1, 1);
-d.roll!"days"(1);
-assert(d == Date(2010, 1, 2));
-d.roll!"days"(365);
-assert(d == Date(2010, 1, 26));
-d.roll!"days"(-32);
-assert(d == Date(2010, 1, 25));
---------------------
+        --------------------
+        auto d = Date(2010, 1, 1);
+        d.roll!"days"(1);
+        assert(d == Date(2010, 1, 2));
+        d.roll!"days"(365);
+        assert(d == Date(2010, 1, 26));
+        d.roll!"days"(-32);
+        assert(d == Date(2010, 1, 25));
+        --------------------
       +/
     /+ref Date+/ void roll(string units)(long days) pure nothrow
         if(units == "days")
@@ -11727,12 +11727,12 @@ assert(d == Date(2010, 1, 25));
             rhs = The $(D Date) to subtract from this one.
 
         Examples:
---------------------
-assert(Date(1999, 2, 1).diffMonths(Date(1999, 1, 31)) == 1);
-assert(Date(1999, 1, 31).diffMonths(Date(1999, 2, 1)) == -1);
-assert(Date(1999, 3, 1).diffMonths(Date(1999, 1, 1)) == 2);
-assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
---------------------
+        --------------------
+        assert(Date(1999, 2, 1).diffMonths(Date(1999, 1, 31)) == 1);
+        assert(Date(1999, 1, 31).diffMonths(Date(1999, 2, 1)) == -1);
+        assert(Date(1999, 3, 1).diffMonths(Date(1999, 1, 1)) == 2);
+        assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
+        --------------------
       +/
     int diffMonths(in Date rhs) const pure nothrow
     {
@@ -12017,11 +12017,11 @@ assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
         Day of the year this $(D Date) is on.
 
         Examples:
---------------------
-assert(Date(1999, 1, 1).dayOfYear == 1);
-assert(Date(1999, 12, 31).dayOfYear == 365);
-assert(Date(2000, 12, 31).dayOfYear == 366);
---------------------
+        --------------------
+        assert(Date(1999, 1, 1).dayOfYear == 1);
+        assert(Date(1999, 12, 31).dayOfYear == 365);
+        assert(Date(2000, 12, 31).dayOfYear == 366);
+        --------------------
       +/
     @property ushort dayOfYear() const pure nothrow
     {
@@ -12133,18 +12133,18 @@ assert(Date(2000, 12, 31).dayOfYear == 366);
         The Xth day of the Gregorian Calendar that this $(D Date) is on.
 
         Examples:
---------------------
-assert(Date(1, 1, 1).dayOfGregorianCal == 1);
-assert(Date(1, 12, 31).dayOfGregorianCal == 365);
-assert(Date(2, 1, 1).dayOfGregorianCal == 366);
+        --------------------
+        assert(Date(1, 1, 1).dayOfGregorianCal == 1);
+        assert(Date(1, 12, 31).dayOfGregorianCal == 365);
+        assert(Date(2, 1, 1).dayOfGregorianCal == 366);
 
-assert(Date(0, 12, 31).dayOfGregorianCal == 0);
-assert(Date(0, 1, 1).dayOfGregorianCal == -365);
-assert(Date(-1, 12, 31).dayOfGregorianCal == -366);
+        assert(Date(0, 12, 31).dayOfGregorianCal == 0);
+        assert(Date(0, 1, 1).dayOfGregorianCal == -365);
+        assert(Date(-1, 12, 31).dayOfGregorianCal == -366);
 
-assert(Date(2000, 1, 1).dayOfGregorianCal == 730_120);
-assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
---------------------
+        assert(Date(2000, 1, 1).dayOfGregorianCal == 730_120);
+        assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
+        --------------------
      +/
     @property int dayOfGregorianCal() const pure nothrow
     {
@@ -12234,32 +12234,32 @@ assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
             day = The day of the Gregorian Calendar to set this $(D Date) to.
 
         Examples:
---------------------
-auto date = Date.init;
-date.dayOfGregorianCal = 1;
-assert(date == Date(1, 1, 1));
+        --------------------
+        auto date = Date.init;
+        date.dayOfGregorianCal = 1;
+        assert(date == Date(1, 1, 1));
 
-date.dayOfGregorianCal = 365;
-assert(date == Date(1, 12, 31));
+        date.dayOfGregorianCal = 365;
+        assert(date == Date(1, 12, 31));
 
-date.dayOfGregorianCal = 366;
-assert(date == Date(2, 1, 1));
+        date.dayOfGregorianCal = 366;
+        assert(date == Date(2, 1, 1));
 
-date.dayOfGregorianCal = 0;
-assert(date == Date(0, 12, 31));
+        date.dayOfGregorianCal = 0;
+        assert(date == Date(0, 12, 31));
 
-date.dayOfGregorianCal = -365;
-assert(date == Date(-0, 1, 1));
+        date.dayOfGregorianCal = -365;
+        assert(date == Date(-0, 1, 1));
 
-date.dayOfGregorianCal = -366;
-assert(date == Date(-1, 12, 31));
+        date.dayOfGregorianCal = -366;
+        assert(date == Date(-1, 12, 31));
 
-date.dayOfGregorianCal = 730_120;
-assert(date == Date(2000, 1, 1));
+        date.dayOfGregorianCal = 730_120;
+        assert(date == Date(2000, 1, 1));
 
-date.dayOfGregorianCal = 734_137;
-assert(date == Date(2010, 12, 31));
---------------------
+        date.dayOfGregorianCal = 734_137;
+        assert(date == Date(2010, 12, 31));
+        --------------------
      +/
     @property void dayOfGregorianCal(int day) pure nothrow
     {
@@ -12419,12 +12419,12 @@ assert(date == Date(2010, 12, 31));
         $(D Date) for the last day in the month that this $(D Date) is in.
 
         Examples:
---------------------
-assert(Date(1999, 1, 6).endOfMonth == Date(1999, 1, 31));
-assert(Date(1999, 2, 7).endOfMonth == Date(1999, 2, 28));
-assert(Date(2000, 2, 7).endOfMonth == Date(1999, 2, 29));
-assert(Date(2000, 6, 4).endOfMonth == Date(1999, 6, 30));
---------------------
+        --------------------
+        assert(Date(1999, 1, 6).endOfMonth == Date(1999, 1, 31));
+        assert(Date(1999, 2, 7).endOfMonth == Date(1999, 2, 28));
+        assert(Date(2000, 2, 7).endOfMonth == Date(1999, 2, 29));
+        assert(Date(2000, 6, 4).endOfMonth == Date(1999, 6, 30));
+        --------------------
       +/
     @property Date endOfMonth() const pure nothrow
     {
@@ -12486,12 +12486,12 @@ assert(Date(2000, 6, 4).endOfMonth == Date(1999, 6, 30));
         The last day in the month that this $(D Date) is in.
 
         Examples:
---------------------
-assert(Date(1999, 1, 6).daysInMonth == 31);
-assert(Date(1999, 2, 7).daysInMonth == 28);
-assert(Date(2000, 2, 7).daysInMonth == 29);
-assert(Date(2000, 6, 4).daysInMonth == 30);
---------------------
+        --------------------
+        assert(Date(1999, 1, 6).daysInMonth == 31);
+        assert(Date(1999, 2, 7).daysInMonth == 28);
+        assert(Date(2000, 2, 7).daysInMonth == 29);
+        assert(Date(2000, 6, 4).daysInMonth == 30);
+        --------------------
       +/
     @property ubyte daysInMonth() const pure nothrow
     {
@@ -12550,12 +12550,12 @@ assert(Date(2000, 6, 4).daysInMonth == 30);
         Whether the current year is a date in A.D.
 
         Examples:
---------------------
-assert(Date(1, 1, 1).isAD);
-assert(Date(2010, 12, 31).isAD);
-assert(!Date(0, 12, 31).isAD);
-assert(!Date(-2010, 1, 1).isAD);
---------------------
+        --------------------
+        assert(Date(1, 1, 1).isAD);
+        assert(Date(2010, 12, 31).isAD);
+        assert(!Date(0, 12, 31).isAD);
+        assert(!Date(-2010, 1, 1).isAD);
+        --------------------
       +/
     @property bool isAD() const pure nothrow
     {
@@ -12644,12 +12644,12 @@ assert(!Date(-2010, 1, 1).isAD);
         Converts this $(D Date) to a string with the format YYYYMMDD.
 
         Examples:
---------------------
-assert(Date(2010, 7, 4).toISOString() == "20100704");
-assert(Date(1998, 12, 25).toISOString() == "19981225");
-assert(Date(0, 1, 5).toISOString() == "00000105");
-assert(Date(-4, 1, 5).toISOString() == "-00040105");
---------------------
+        --------------------
+        assert(Date(2010, 7, 4).toISOString() == "20100704");
+        assert(Date(1998, 12, 25).toISOString() == "19981225");
+        assert(Date(0, 1, 5).toISOString() == "00000105");
+        assert(Date(-4, 1, 5).toISOString() == "-00040105");
+        --------------------
       +/
     string toISOString() const nothrow
     {
@@ -12707,12 +12707,12 @@ assert(Date(-4, 1, 5).toISOString() == "-00040105");
         Converts this $(D Date) to a string with the format YYYY-MM-DD.
 
         Examples:
---------------------
-assert(Date(2010, 7, 4).toISOExtString() == "2010-07-04");
-assert(Date(1998, 12, 25).toISOExtString() == "1998-12-25");
-assert(Date(0, 1, 5).toISOExtString() == "0000-01-05");
-assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
---------------------
+        --------------------
+        assert(Date(2010, 7, 4).toISOExtString() == "2010-07-04");
+        assert(Date(1998, 12, 25).toISOExtString() == "1998-12-25");
+        assert(Date(0, 1, 5).toISOExtString() == "0000-01-05");
+        assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
+        --------------------
       +/
     string toISOExtString() const nothrow
     {
@@ -12770,12 +12770,12 @@ assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
         Converts this $(D Date) to a string with the format YYYY-Mon-DD.
 
         Examples:
---------------------
-assert(Date(2010, 7, 4).toSimpleString() == "2010-Jul-04");
-assert(Date(1998, 12, 25).toSimpleString() == "1998-Dec-25");
-assert(Date(0, 1, 5).toSimpleString() == "0000-Jan-05");
-assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
---------------------
+        --------------------
+        assert(Date(2010, 7, 4).toSimpleString() == "2010-Jul-04");
+        assert(Date(1998, 12, 25).toSimpleString() == "1998-Dec-25");
+        assert(Date(0, 1, 5).toSimpleString() == "0000-Jan-05");
+        assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
+        --------------------
       +/
     string toSimpleString() const nothrow
     {
@@ -12880,13 +12880,13 @@ assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
             or if the resulting $(D Date) would not be valid.
 
         Examples:
---------------------
-assert(Date.fromISOString("20100704") == Date(2010, 7, 4));
-assert(Date.fromISOString("19981225") == Date(1998, 12, 25));
-assert(Date.fromISOString("00000105") == Date(0, 1, 5));
-assert(Date.fromISOString("-00040105") == Date(-4, 1, 5));
-assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
---------------------
+        --------------------
+        assert(Date.fromISOString("20100704") == Date(2010, 7, 4));
+        assert(Date.fromISOString("19981225") == Date(1998, 12, 25));
+        assert(Date.fromISOString("00000105") == Date(0, 1, 5));
+        assert(Date.fromISOString("-00040105") == Date(-4, 1, 5));
+        assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
+        --------------------
       +/
     static Date fromISOString(S)(in S isoString)
         if(isSomeString!S)
@@ -13005,13 +13005,13 @@ assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
             Extended format or if the resulting $(D Date) would not be valid.
 
         Examples:
---------------------
-assert(Date.fromISOExtString("2010-07-04") == Date(2010, 7, 4));
-assert(Date.fromISOExtString("1998-12-25") == Date(1998, 12, 25));
-assert(Date.fromISOExtString("0000-01-05") == Date(0, 1, 5));
-assert(Date.fromISOExtString("-0004-01-05") == Date(-4, 1, 5));
-assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
---------------------
+        --------------------
+        assert(Date.fromISOExtString("2010-07-04") == Date(2010, 7, 4));
+        assert(Date.fromISOExtString("1998-12-25") == Date(1998, 12, 25));
+        assert(Date.fromISOExtString("0000-01-05") == Date(0, 1, 5));
+        assert(Date.fromISOExtString("-0004-01-05") == Date(-4, 1, 5));
+        assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
+        --------------------
       +/
     static Date fromISOExtString(S)(in S isoExtString)
         if(isSomeString!(S))
@@ -13135,13 +13135,13 @@ assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
             format or if the resulting $(D Date) would not be valid.
 
         Examples:
---------------------
-assert(Date.fromSimpleString("2010-Jul-04") == Date(2010, 7, 4));
-assert(Date.fromSimpleString("1998-Dec-25") == Date(1998, 12, 25));
-assert(Date.fromSimpleString("0000-Jan-05") == Date(0, 1, 5));
-assert(Date.fromSimpleString("-0004-Jan-05") == Date(-4, 1, 5));
-assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
---------------------
+        --------------------
+        assert(Date.fromSimpleString("2010-Jul-04") == Date(2010, 7, 4));
+        assert(Date.fromSimpleString("1998-Dec-25") == Date(1998, 12, 25));
+        assert(Date.fromSimpleString("0000-Jan-05") == Date(0, 1, 5));
+        assert(Date.fromSimpleString("-0004-Jan-05") == Date(-4, 1, 5));
+        assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
+        --------------------
       +/
     static Date fromSimpleString(S)(in S simpleString)
         if(isSomeString!(S))
@@ -13854,31 +13854,31 @@ public:
                     $(D TimeOfDay).
 
         Examples:
---------------------
-auto tod1 = TimeOfDay(7, 12, 0);
-tod1.roll!"hours"(1);
-assert(tod1 == TimeOfDay(8, 12, 0));
+        --------------------
+        auto tod1 = TimeOfDay(7, 12, 0);
+        tod1.roll!"hours"(1);
+        assert(tod1 == TimeOfDay(8, 12, 0));
 
-auto tod2 = TimeOfDay(7, 12, 0);
-tod2.roll!"hours"(-1);
-assert(tod2 == TimeOfDay(6, 12, 0));
+        auto tod2 = TimeOfDay(7, 12, 0);
+        tod2.roll!"hours"(-1);
+        assert(tod2 == TimeOfDay(6, 12, 0));
 
-auto tod3 = TimeOfDay(23, 59, 0);
-tod3.roll!"minutes"(1);
-assert(tod3 == TimeOfDay(23, 0, 0));
+        auto tod3 = TimeOfDay(23, 59, 0);
+        tod3.roll!"minutes"(1);
+        assert(tod3 == TimeOfDay(23, 0, 0));
 
-auto tod4 = TimeOfDay(0, 0, 0);
-tod4.roll!"minutes"(-1);
-assert(tod4 == TimeOfDay(0, 59, 0));
+        auto tod4 = TimeOfDay(0, 0, 0);
+        tod4.roll!"minutes"(-1);
+        assert(tod4 == TimeOfDay(0, 59, 0));
 
-auto tod5 = TimeOfDay(23, 59, 59);
-tod5.roll!"seconds"(1);
-assert(tod5 == TimeOfDay(23, 59, 0));
+        auto tod5 = TimeOfDay(23, 59, 59);
+        tod5.roll!"seconds"(1);
+        assert(tod5 == TimeOfDay(23, 59, 0));
 
-auto tod6 = TimeOfDay(0, 0, 0);
-tod6.roll!"seconds"(-1);
-assert(tod6 == TimeOfDay(0, 0, 59));
---------------------
+        auto tod6 = TimeOfDay(0, 0, 0);
+        tod6.roll!"seconds"(-1);
+        assert(tod6 == TimeOfDay(0, 0, 59));
+        --------------------
       +/
     /+ref TimeOfDay+/ void roll(string units)(long value) pure nothrow
         if(units == "hours")
@@ -14390,10 +14390,10 @@ assert(tod6 == TimeOfDay(0, 0, 59));
         Converts this $(D TimeOfDay) to a string with the format HHMMSS.
 
         Examples:
---------------------
-assert(TimeOfDay(0, 0, 0).toISOString() == "000000");
-assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
---------------------
+        --------------------
+        assert(TimeOfDay(0, 0, 0).toISOString() == "000000");
+        assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
+        --------------------
       +/
     string toISOString() const nothrow
     {
@@ -14425,10 +14425,10 @@ assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
         Converts this $(D TimeOfDay) to a string with the format HH:MM:SS.
 
         Examples:
---------------------
-assert(TimeOfDay(0, 0, 0).toISOExtString() == "000000");
-assert(TimeOfDay(12, 30, 33).toISOExtString() == "123033");
---------------------
+        --------------------
+        assert(TimeOfDay(0, 0, 0).toISOExtString() == "000000");
+        assert(TimeOfDay(12, 30, 33).toISOExtString() == "123033");
+        --------------------
       +/
     string toISOExtString() const nothrow
     {
@@ -14508,11 +14508,11 @@ assert(TimeOfDay(12, 30, 33).toISOExtString() == "123033");
             or if the resulting $(D TimeOfDay) would not be valid.
 
         Examples:
---------------------
-assert(TimeOfDay.fromISOString("000000") == TimeOfDay(0, 0, 0));
-assert(TimeOfDay.fromISOString("123033") == TimeOfDay(12, 30, 33));
-assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
---------------------
+        --------------------
+        assert(TimeOfDay.fromISOString("000000") == TimeOfDay(0, 0, 0));
+        assert(TimeOfDay.fromISOString("123033") == TimeOfDay(12, 30, 33));
+        assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
+        --------------------
       +/
     static TimeOfDay fromISOString(S)(in S isoString)
         if(isSomeString!S)
@@ -14617,11 +14617,11 @@ assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
             valid.
 
         Examples:
---------------------
-assert(TimeOfDay.fromISOExtString("00:00:00") == TimeOfDay(0, 0, 0));
-assert(TimeOfDay.fromISOExtString("12:30:33") == TimeOfDay(12, 30, 33));
-assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
---------------------
+        --------------------
+        assert(TimeOfDay.fromISOExtString("00:00:00") == TimeOfDay(0, 0, 0));
+        assert(TimeOfDay.fromISOExtString("12:30:33") == TimeOfDay(12, 30, 33));
+        assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
+        --------------------
       +/
     static TimeOfDay fromISOExtString(S)(in S isoExtString)
         if(isSomeString!S)
@@ -15374,11 +15374,11 @@ public:
             resulting date would be on February 29th.
 
         Examples:
---------------------
-assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).year == 1999);
-assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).year == 2010);
-assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).year == -7);
---------------------
+        --------------------
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).year == 1999);
+        assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).year == 2010);
+        assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).year == -7);
+        --------------------
      +/
     @property void year(int year) pure
     {
@@ -15419,11 +15419,11 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).year == -7);
             $(D DateTimeException) if $(D isAD) is true.
 
         Examples:
---------------------
-assert(DateTime(Date(0, 1, 1), TimeOfDay(12, 30, 33)).yearBC == 1);
-assert(DateTime(Date(-1, 1, 1), TimeOfDay(10, 7, 2)).yearBC == 2);
-assert(DateTime(Date(-100, 1, 1), TimeOfDay(4, 59, 0)).yearBC == 101);
---------------------
+        --------------------
+        assert(DateTime(Date(0, 1, 1), TimeOfDay(12, 30, 33)).yearBC == 1);
+        assert(DateTime(Date(-1, 1, 1), TimeOfDay(10, 7, 2)).yearBC == 2);
+        assert(DateTime(Date(-100, 1, 1), TimeOfDay(4, 59, 0)).yearBC == 101);
+        --------------------
      +/
     @property short yearBC() const pure
     {
@@ -15461,14 +15461,14 @@ assert(DateTime(Date(-100, 1, 1), TimeOfDay(4, 59, 0)).yearBC == 101);
             $(D DateTimeException) if a non-positive value is given.
 
         Examples:
---------------------
-auto dt = DateTime(Date(2010, 1, 1), TimeOfDay(7, 30, 0));
-dt.yearBC = 1;
-assert(dt == DateTime(Date(0, 1, 1), TimeOfDay(7, 30, 0)));
+        --------------------
+        auto dt = DateTime(Date(2010, 1, 1), TimeOfDay(7, 30, 0));
+        dt.yearBC = 1;
+        assert(dt == DateTime(Date(0, 1, 1), TimeOfDay(7, 30, 0)));
 
-dt.yearBC = 10;
-assert(dt == DateTime(Date(-9, 1, 1), TimeOfDay(7, 30, 0)));
---------------------
+        dt.yearBC = 10;
+        assert(dt == DateTime(Date(-9, 1, 1), TimeOfDay(7, 30, 0)));
+        --------------------
      +/
     @property void yearBC(int year) pure
     {
@@ -15507,11 +15507,11 @@ assert(dt == DateTime(Date(-9, 1, 1), TimeOfDay(7, 30, 0)));
         Month of a Gregorian Year.
 
         Examples:
---------------------
-assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).month == 7);
-assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).month == 10);
-assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).month == 4);
---------------------
+        --------------------
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).month == 7);
+        assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).month == 10);
+        assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).month == 4);
+        --------------------
      +/
     @property Month month() const pure nothrow
     {
@@ -15582,11 +15582,11 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).month == 4);
         Day of a Gregorian Month.
 
         Examples:
---------------------
-assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).day == 6);
-assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).day == 4);
-assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
---------------------
+        --------------------
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).day == 6);
+        assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).day == 4);
+        assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
+        --------------------
      +/
     @property ubyte day() const pure nothrow
     {
@@ -15915,23 +15915,23 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
                             causing the month to increment.
 
         Examples:
---------------------
-auto dt1 = DateTime(2010, 1, 1, 12, 30, 33);
-dt1.add!"months"(11);
-assert(dt1 == DateTime(2010, 12, 1, 12, 30, 33));
+        --------------------
+        auto dt1 = DateTime(2010, 1, 1, 12, 30, 33);
+        dt1.add!"months"(11);
+        assert(dt1 == DateTime(2010, 12, 1, 12, 30, 33));
 
-auto dt2 = DateTime(2010, 1, 1, 12, 30, 33);
-dt2.add!"months"(-11);
-assert(dt2 == DateTime(2009, 2, 1, 12, 30, 33));
+        auto dt2 = DateTime(2010, 1, 1, 12, 30, 33);
+        dt2.add!"months"(-11);
+        assert(dt2 == DateTime(2009, 2, 1, 12, 30, 33));
 
-auto dt3 = DateTime(2000, 2, 29, 12, 30, 33);
-dt3.add!"years"(1);
-assert(dt3 == DateTime(2001, 3, 1, 12, 30, 33));
+        auto dt3 = DateTime(2000, 2, 29, 12, 30, 33);
+        dt3.add!"years"(1);
+        assert(dt3 == DateTime(2001, 3, 1, 12, 30, 33));
 
-auto dt4 = DateTime(2000, 2, 29, 12, 30, 33);
-dt4.add!"years"(1, AllowDayOverflow.no);
-assert(dt4 == DateTime(2001, 2, 28, 12, 30, 33));
---------------------
+        auto dt4 = DateTime(2000, 2, 29, 12, 30, 33);
+        dt4.add!"years"(1, AllowDayOverflow.no);
+        assert(dt4 == DateTime(2001, 2, 28, 12, 30, 33));
+        --------------------
       +/
     /+ref DateTime+/ void add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
         if(units == "years" ||
@@ -15997,31 +15997,31 @@ assert(dt4 == DateTime(2001, 2, 28, 12, 30, 33));
                             causing the month to increment.
 
         Examples:
---------------------
-auto dt1 = DateTime(2010, 1, 1, 12, 33, 33);
-dt1.roll!"months"(1);
-assert(dt1 == DateTime(2010, 2, 1, 12, 33, 33));
+        --------------------
+        auto dt1 = DateTime(2010, 1, 1, 12, 33, 33);
+        dt1.roll!"months"(1);
+        assert(dt1 == DateTime(2010, 2, 1, 12, 33, 33));
 
-auto dt2 = DateTime(2010, 1, 1, 12, 33, 33);
-dt2.roll!"months"(-1);
-assert(dt2 == DateTime(2010, 12, 1, 12, 33, 33));
+        auto dt2 = DateTime(2010, 1, 1, 12, 33, 33);
+        dt2.roll!"months"(-1);
+        assert(dt2 == DateTime(2010, 12, 1, 12, 33, 33));
 
-auto dt3 = DateTime(1999, 1, 29, 12, 33, 33);
-dt3.roll!"months"(1);
-assert(dt3 == DateTime(1999, 3, 1, 12, 33, 33));
+        auto dt3 = DateTime(1999, 1, 29, 12, 33, 33);
+        dt3.roll!"months"(1);
+        assert(dt3 == DateTime(1999, 3, 1, 12, 33, 33));
 
-auto dt4 = DateTime(1999, 1, 29, 12, 33, 33);
-dt4.roll!"months"(1, AllowDayOverflow.no);
-assert(dt4 == DateTime(1999, 2, 28, 12, 33, 33));
+        auto dt4 = DateTime(1999, 1, 29, 12, 33, 33);
+        dt4.roll!"months"(1, AllowDayOverflow.no);
+        assert(dt4 == DateTime(1999, 2, 28, 12, 33, 33));
 
-auto dt5 = DateTime(2000, 2, 29, 12, 30, 33);
-dt5.roll!"years"(1);
-assert(dt5 == DateTime(2001, 3, 1, 12, 30, 33));
+        auto dt5 = DateTime(2000, 2, 29, 12, 30, 33);
+        dt5.roll!"years"(1);
+        assert(dt5 == DateTime(2001, 3, 1, 12, 30, 33));
 
-auto dt6 = DateTime(2000, 2, 29, 12, 30, 33);
-dt6.roll!"years"(1, AllowDayOverflow.no);
-assert(dt6 == DateTime(2001, 2, 28, 12, 30, 33));
---------------------
+        auto dt6 = DateTime(2000, 2, 29, 12, 30, 33);
+        dt6.roll!"years"(1, AllowDayOverflow.no);
+        assert(dt6 == DateTime(2001, 2, 28, 12, 30, 33));
+        --------------------
       +/
     /+ref DateTime+/ void roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
         if(units == "years" ||
@@ -16093,23 +16093,23 @@ assert(dt6 == DateTime(2001, 2, 28, 12, 30, 33));
             value = The number of $(D_PARAM units) to add to this $(D DateTime).
 
         Examples:
---------------------
-auto dt1 = DateTime(2010, 1, 1, 11, 23, 12);
-dt1.roll!"days"(1);
-assert(dt1 == DateTime(2010, 1, 2, 11, 23, 12));
-dt1.roll!"days"(365);
-assert(dt1 == DateTime(2010, 1, 26, 11, 23, 12));
-dt1.roll!"days"(-32);
-assert(dt1 == DateTime(2010, 1, 25, 11, 23, 12));
+        --------------------
+        auto dt1 = DateTime(2010, 1, 1, 11, 23, 12);
+        dt1.roll!"days"(1);
+        assert(dt1 == DateTime(2010, 1, 2, 11, 23, 12));
+        dt1.roll!"days"(365);
+        assert(dt1 == DateTime(2010, 1, 26, 11, 23, 12));
+        dt1.roll!"days"(-32);
+        assert(dt1 == DateTime(2010, 1, 25, 11, 23, 12));
 
-auto dt2 = DateTime(2010, 7, 4, 12, 0, 0);
-dt2.roll!"hours"(1);
-assert(dt2 == DateTime(2010, 7, 4, 13, 0, 0));
+        auto dt2 = DateTime(2010, 7, 4, 12, 0, 0);
+        dt2.roll!"hours"(1);
+        assert(dt2 == DateTime(2010, 7, 4, 13, 0, 0));
 
-auto dt3 = DateTime(2010, 1, 1, 0, 0, 0);
-dt3.roll!"seconds"(-1);
-assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
---------------------
+        auto dt3 = DateTime(2010, 1, 1, 0, 0, 0);
+        dt3.roll!"seconds"(-1);
+        assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
+        --------------------
       +/
     /+ref DateTime+/ void roll(string units)(long days) pure nothrow
         if(units == "days")
@@ -16981,19 +16981,19 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
             rhs = The $(D DateTime) to subtract from this one.
 
         Examples:
---------------------
-assert(DateTime(1999, 2, 1, 12, 2, 3).diffMonths(
-            DateTime(1999, 1, 31, 23, 59, 59)) == 1);
+        --------------------
+        assert(DateTime(1999, 2, 1, 12, 2, 3).diffMonths(
+                    DateTime(1999, 1, 31, 23, 59, 59)) == 1);
 
-assert(DateTime(1999, 1, 31, 0, 0, 0).diffMonths(
-            DateTime(1999, 2, 1, 12, 3, 42)) == -1);
+        assert(DateTime(1999, 1, 31, 0, 0, 0).diffMonths(
+                    DateTime(1999, 2, 1, 12, 3, 42)) == -1);
 
-assert(DateTime(1999, 3, 1, 5, 30, 0).diffMonths(
-            DateTime(1999, 1, 1, 2, 4, 7)) == 2);
+        assert(DateTime(1999, 3, 1, 5, 30, 0).diffMonths(
+                    DateTime(1999, 1, 1, 2, 4, 7)) == 2);
 
-assert(DateTime(1999, 1, 1, 7, 2, 4).diffMonths(
-            DateTime(1999, 3, 31, 0, 30, 58)) == -2);
---------------------
+        assert(DateTime(1999, 1, 1, 7, 2, 4).diffMonths(
+                    DateTime(1999, 3, 31, 0, 30, 58)) == -2);
+        --------------------
       +/
     int diffMonths(in DateTime rhs) const pure nothrow
     {
@@ -17076,11 +17076,11 @@ assert(DateTime(1999, 1, 1, 7, 2, 4).diffMonths(
         Day of the year this $(D DateTime) is on.
 
         Examples:
---------------------
-assert(DateTime(Date(1999, 1, 1), TimeOfDay(12, 22, 7)).dayOfYear == 1);
-assert(DateTime(Date(1999, 12, 31), TimeOfDay(7, 2, 59)).dayOfYear == 365);
-assert(DateTime(Date(2000, 12, 31), TimeOfDay(21, 20, 0)).dayOfYear == 366);
---------------------
+        --------------------
+        assert(DateTime(Date(1999, 1, 1), TimeOfDay(12, 22, 7)).dayOfYear == 1);
+        assert(DateTime(Date(1999, 12, 31), TimeOfDay(7, 2, 59)).dayOfYear == 365);
+        assert(DateTime(Date(2000, 12, 31), TimeOfDay(21, 20, 0)).dayOfYear == 366);
+        --------------------
       +/
     @property ushort dayOfYear() const pure nothrow
     {
@@ -17136,26 +17136,26 @@ assert(DateTime(Date(2000, 12, 31), TimeOfDay(21, 20, 0)).dayOfYear == 366);
         The Xth day of the Gregorian Calendar that this $(D DateTime) is on.
 
         Examples:
---------------------
-assert(DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 0)).dayOfGregorianCal ==
-       1);
-assert(DateTime(Date(1, 12, 31), TimeOfDay(23, 59, 59)).dayOfGregorianCal ==
-       365);
-assert(DateTime(Date(2, 1, 1), TimeOfDay(2, 2, 2)).dayOfGregorianCal ==
-       366);
+        --------------------
+        assert(DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 0)).dayOfGregorianCal ==
+               1);
+        assert(DateTime(Date(1, 12, 31), TimeOfDay(23, 59, 59)).dayOfGregorianCal ==
+               365);
+        assert(DateTime(Date(2, 1, 1), TimeOfDay(2, 2, 2)).dayOfGregorianCal ==
+               366);
 
-assert(DateTime(Date(0, 12, 31), TimeOfDay(7, 7, 7)).dayOfGregorianCal ==
-       0);
-assert(DateTime(Date(0, 1, 1), TimeOfDay(19, 30, 0)).dayOfGregorianCal ==
-       -365);
-assert(DateTime(Date(-1, 12, 31), TimeOfDay(4, 7, 0)).dayOfGregorianCal ==
-       -366);
+        assert(DateTime(Date(0, 12, 31), TimeOfDay(7, 7, 7)).dayOfGregorianCal ==
+               0);
+        assert(DateTime(Date(0, 1, 1), TimeOfDay(19, 30, 0)).dayOfGregorianCal ==
+               -365);
+        assert(DateTime(Date(-1, 12, 31), TimeOfDay(4, 7, 0)).dayOfGregorianCal ==
+               -366);
 
-assert(DateTime(Date(2000, 1, 1), TimeOfDay(9, 30, 20)).dayOfGregorianCal ==
-       730_120);
-assert(DateTime(Date(2010, 12, 31), TimeOfDay(15, 45, 50)).dayOfGregorianCal ==
-       734_137);
---------------------
+        assert(DateTime(Date(2000, 1, 1), TimeOfDay(9, 30, 20)).dayOfGregorianCal ==
+               730_120);
+        assert(DateTime(Date(2010, 12, 31), TimeOfDay(15, 45, 50)).dayOfGregorianCal ==
+               734_137);
+        --------------------
      +/
     @property int dayOfGregorianCal() const pure nothrow
     {
@@ -17196,32 +17196,32 @@ assert(DateTime(Date(2010, 12, 31), TimeOfDay(15, 45, 50)).dayOfGregorianCal ==
                    to.
 
         Examples:
---------------------
-auto dt = DateTime(Date.init, TimeOfDay(12, 0, 0));
-dt.dayOfGregorianCal = 1;
-assert(dt == DateTime(Date(1, 1, 1), TimeOfDay(12, 0, 0)));
+        --------------------
+        auto dt = DateTime(Date.init, TimeOfDay(12, 0, 0));
+        dt.dayOfGregorianCal = 1;
+        assert(dt == DateTime(Date(1, 1, 1), TimeOfDay(12, 0, 0)));
 
-dt.dayOfGregorianCal = 365;
-assert(dt == DateTime(Date(1, 12, 31), TimeOfDay(12, 0, 0)));
+        dt.dayOfGregorianCal = 365;
+        assert(dt == DateTime(Date(1, 12, 31), TimeOfDay(12, 0, 0)));
 
-dt.dayOfGregorianCal = 366;
-assert(dt == DateTime(Date(2, 1, 1), TimeOfDay(12, 0, 0)));
+        dt.dayOfGregorianCal = 366;
+        assert(dt == DateTime(Date(2, 1, 1), TimeOfDay(12, 0, 0)));
 
-dt.dayOfGregorianCal = 0;
-assert(dt == DateTime(Date(0, 12, 31), TimeOfDay(12, 0, 0)));
+        dt.dayOfGregorianCal = 0;
+        assert(dt == DateTime(Date(0, 12, 31), TimeOfDay(12, 0, 0)));
 
-dt.dayOfGregorianCal = -365;
-assert(dt == DateTime(Date(-0, 1, 1), TimeOfDay(12, 0, 0)));
+        dt.dayOfGregorianCal = -365;
+        assert(dt == DateTime(Date(-0, 1, 1), TimeOfDay(12, 0, 0)));
 
-dt.dayOfGregorianCal = -366;
-assert(dt == DateTime(Date(-1, 12, 31), TimeOfDay(12, 0, 0)));
+        dt.dayOfGregorianCal = -366;
+        assert(dt == DateTime(Date(-1, 12, 31), TimeOfDay(12, 0, 0)));
 
-dt.dayOfGregorianCal = 730_120;
-assert(dt == DateTime(Date(2000, 1, 1), TimeOfDay(12, 0, 0)));
+        dt.dayOfGregorianCal = 730_120;
+        assert(dt == DateTime(Date(2000, 1, 1), TimeOfDay(12, 0, 0)));
 
-dt.dayOfGregorianCal = 734_137;
-assert(dt == DateTime(Date(2010, 12, 31), TimeOfDay(12, 0, 0)));
---------------------
+        dt.dayOfGregorianCal = 734_137;
+        assert(dt == DateTime(Date(2010, 12, 31), TimeOfDay(12, 0, 0)));
+        --------------------
      +/
     @property void dayOfGregorianCal(int days) pure nothrow
     {
@@ -17296,19 +17296,19 @@ assert(dt == DateTime(Date(2010, 12, 31), TimeOfDay(12, 0, 0)));
         in. The time portion of endOfMonth is always 23:59:59.
 
         Examples:
---------------------
-assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).endOfMonth ==
-       DateTime(Date(1999, 1, 31), TimeOfDay(23, 59, 59)));
+        --------------------
+        assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).endOfMonth ==
+               DateTime(Date(1999, 1, 31), TimeOfDay(23, 59, 59)));
 
-assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).endOfMonth ==
-       DateTime(Date(1999, 2, 28), TimeOfDay(23, 59, 59)));
+        assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).endOfMonth ==
+               DateTime(Date(1999, 2, 28), TimeOfDay(23, 59, 59)));
 
-assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).endOfMonth ==
-       DateTime(Date(2000, 2, 29), TimeOfDay(23, 59, 59)));
+        assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).endOfMonth ==
+               DateTime(Date(2000, 2, 29), TimeOfDay(23, 59, 59)));
 
-assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonth ==
-       DateTime(Date(2000, 6, 30), TimeOfDay(23, 59, 59)));
---------------------
+        assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonth ==
+               DateTime(Date(2000, 6, 30), TimeOfDay(23, 59, 59)));
+        --------------------
       +/
     @property DateTime endOfMonth() const pure nothrow
     {
@@ -17370,12 +17370,12 @@ assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonth ==
         The last day in the month that this $(D DateTime) is in.
 
         Examples:
---------------------
-assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).daysInMonth == 31);
-assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).daysInMonth == 28);
-assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).daysInMonth == 29);
-assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).daysInMonth == 30);
---------------------
+        --------------------
+        assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).daysInMonth == 31);
+        assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).daysInMonth == 28);
+        assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).daysInMonth == 29);
+        assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).daysInMonth == 30);
+        --------------------
       +/
     @property ubyte daysInMonth() const pure nothrow
     {
@@ -17404,12 +17404,12 @@ assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).daysInMonth == 30);
         Whether the current year is a date in A.D.
 
         Examples:
---------------------
-assert(DateTime(Date(1, 1, 1), TimeOfDay(12, 7, 0)).isAD);
-assert(DateTime(Date(2010, 12, 31), TimeOfDay(0, 0, 0)).isAD);
-assert(!DateTime(Date(0, 12, 31), TimeOfDay(23, 59, 59)).isAD);
-assert(!DateTime(Date(-2010, 1, 1), TimeOfDay(2, 2, 2)).isAD);
---------------------
+        --------------------
+        assert(DateTime(Date(1, 1, 1), TimeOfDay(12, 7, 0)).isAD);
+        assert(DateTime(Date(2010, 12, 31), TimeOfDay(0, 0, 0)).isAD);
+        assert(!DateTime(Date(0, 12, 31), TimeOfDay(23, 59, 59)).isAD);
+        assert(!DateTime(Date(-2010, 1, 1), TimeOfDay(2, 2, 2)).isAD);
+        --------------------
       +/
     @property bool isAD() const pure nothrow
     {
@@ -17515,19 +17515,19 @@ assert(!DateTime(Date(-2010, 1, 1), TimeOfDay(2, 2, 2)).isAD);
         Converts this $(D DateTime) to a string with the format YYYYMMDDTHHMMSS.
 
         Examples:
---------------------
-assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOString() ==
-       "20100704T070612");
+        --------------------
+        assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOString() ==
+               "20100704T070612");
 
-assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOString() ==
-       "19981225T021500");
+        assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOString() ==
+               "19981225T021500");
 
-assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOString() ==
-       "00000105T230959");
+        assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOString() ==
+               "00000105T230959");
 
-assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOString() ==
-       "-00040105T000002");
---------------------
+        assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOString() ==
+               "-00040105T000002");
+        --------------------
       +/
     string toISOString() const nothrow
     {
@@ -17575,19 +17575,19 @@ assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOString() ==
         YYYY-MM-DDTHH:MM:SS.
 
         Examples:
---------------------
-assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOExtString() ==
-       "2010-07-04T07:06:12");
+        --------------------
+        assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOExtString() ==
+               "2010-07-04T07:06:12");
 
-assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOExtString() ==
-       "1998-12-25T02:15:00");
+        assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOExtString() ==
+               "1998-12-25T02:15:00");
 
-assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOExtString() ==
-       "0000-01-05T23:09:59");
+        assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOExtString() ==
+               "0000-01-05T23:09:59");
 
-assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtString() ==
-       "-0004-01-05T00:00:02");
---------------------
+        assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtString() ==
+               "-0004-01-05T00:00:02");
+        --------------------
       +/
     string toISOExtString() const nothrow
     {
@@ -17634,19 +17634,19 @@ assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtString() ==
         YYYY-Mon-DD HH:MM:SS.
 
         Examples:
---------------------
-assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toSimpleString() ==
-       "2010-Jul-04 07:06:12");
+        --------------------
+        assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toSimpleString() ==
+               "2010-Jul-04 07:06:12");
 
-assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toSimpleString() ==
-       "1998-Dec-25 02:15:00");
+        assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toSimpleString() ==
+               "1998-Dec-25 02:15:00");
 
-assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toSimpleString() ==
-       "0000-Jan-05 23:09:59");
+        assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toSimpleString() ==
+               "0000-Jan-05 23:09:59");
 
-assert(DateTime(Dte(-4, 1, 5), TimeOfDay(0, 0, 2)).toSimpleString() ==
-       "-0004-Jan-05 00:00:02");
---------------------
+        assert(DateTime(Dte(-4, 1, 5), TimeOfDay(0, 0, 2)).toSimpleString() ==
+               "-0004-Jan-05 00:00:02");
+        --------------------
       +/
     string toSimpleString() const nothrow
     {
@@ -17738,22 +17738,22 @@ assert(DateTime(Dte(-4, 1, 5), TimeOfDay(0, 0, 2)).toSimpleString() ==
             or if the resulting $(D DateTime) would not be valid.
 
         Examples:
---------------------
-assert(DateTime.fromISOString("20100704T070612") ==
-       DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+        --------------------
+        assert(DateTime.fromISOString("20100704T070612") ==
+               DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
 
-assert(DateTime.fromISOString("19981225T021500") ==
-       DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
+        assert(DateTime.fromISOString("19981225T021500") ==
+               DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
 
-assert(DateTime.fromISOString("00000105T230959") ==
-       DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
+        assert(DateTime.fromISOString("00000105T230959") ==
+               DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
 
-assert(DateTime.fromISOString("-00040105T000002") ==
-       DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
+        assert(DateTime.fromISOString("-00040105T000002") ==
+               DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
 
-assert(DateTime.fromISOString(" 20100704T070612 ") ==
-       DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
---------------------
+        assert(DateTime.fromISOString(" 20100704T070612 ") ==
+               DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+        --------------------
       +/
     static DateTime fromISOString(S)(in S isoString)
         if(isSomeString!S)
@@ -17830,22 +17830,22 @@ assert(DateTime.fromISOString(" 20100704T070612 ") ==
             valid.
 
         Examples:
---------------------
-assert(DateTime.fromISOExtString("2010-07-04T07:06:12") ==
-       DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+        --------------------
+        assert(DateTime.fromISOExtString("2010-07-04T07:06:12") ==
+               DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
 
-assert(DateTime.fromISOExtString("1998-12-25T02:15:00") ==
-       DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
+        assert(DateTime.fromISOExtString("1998-12-25T02:15:00") ==
+               DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
 
-assert(DateTime.fromISOExtString("0000-01-05T23:09:59") ==
-       DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
+        assert(DateTime.fromISOExtString("0000-01-05T23:09:59") ==
+               DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
 
-assert(DateTime.fromISOExtString("-0004-01-05T00:00:02") ==
-       DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
+        assert(DateTime.fromISOExtString("-0004-01-05T00:00:02") ==
+               DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
 
-assert(DateTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
-       DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
---------------------
+        assert(DateTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
+               DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+        --------------------
       +/
     static DateTime fromISOExtString(S)(in S isoExtString)
         if(isSomeString!(S))
@@ -17920,18 +17920,18 @@ assert(DateTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
             format or if the resulting $(D DateTime) would not be valid.
 
         Examples:
---------------------
-assert(DateTime.fromSimpleString("2010-Jul-04 07:06:12") ==
-       DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
-assert(DateTime.fromSimpleString("1998-Dec-25 02:15:00") ==
-       DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
-assert(DateTime.fromSimpleString("0000-Jan-05 23:09:59") ==
-       DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
-assert(DateTime.fromSimpleString("-0004-Jan-05 00:00:02") ==
-       DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
-assert(DateTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") ==
-       DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
---------------------
+        --------------------
+        assert(DateTime.fromSimpleString("2010-Jul-04 07:06:12") ==
+               DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+        assert(DateTime.fromSimpleString("1998-Dec-25 02:15:00") ==
+               DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
+        assert(DateTime.fromSimpleString("0000-Jan-05 23:09:59") ==
+               DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
+        assert(DateTime.fromSimpleString("-0004-Jan-05 00:00:02") ==
+               DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
+        assert(DateTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") ==
+               DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+        --------------------
       +/
     static DateTime fromSimpleString(S)(in S simpleString)
         if(isSomeString!(S))
@@ -18317,9 +18317,9 @@ public:
             $(D DateTimeException) if $(D_PARAM end) is before $(D_PARAM begin).
 
         Examples:
---------------------
-Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
---------------------
+        --------------------
+        Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
+        --------------------
       +/
     this(U)(in TP begin, in U end) pure
         if(is(Unqual!TP == Unqual!U))
@@ -18342,10 +18342,10 @@ Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
             $(D begin).
 
         Examples:
---------------------
-assert(Interval!Date(Date(1996, 1, 2), dur!"years"(3)) ==
-       Interval!Date(Date(1996, 1, 2), Date(1999, 1, 2)));
---------------------
+        --------------------
+        assert(Interval!Date(Date(1996, 1, 2), dur!"years"(3)) ==
+               Interval!Date(Date(1996, 1, 2), Date(1999, 1, 2)));
+        --------------------
       +/
     this(D)(in TP begin, in D duration) pure
         if(__traits(compiles, begin + duration))
@@ -18388,10 +18388,10 @@ assert(Interval!Date(Date(1996, 1, 2), dur!"years"(3)) ==
         The starting point of the interval. It is included in the interval.
 
         Examples:
---------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).begin ==
-       Date(1996, 1, 2));
---------------------
+        --------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).begin ==
+               Date(1996, 1, 2));
+        --------------------
       +/
     @property TP begin() const pure nothrow
     {
@@ -18421,10 +18421,10 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).begin ==
         The end point of the interval. It is excluded from the interval.
 
         Examples:
---------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).end ==
-       Date(2012, 3, 1));
---------------------
+        --------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).end ==
+               Date(2012, 3, 1));
+        --------------------
       +/
     @property TP end() const pure nothrow
     {
@@ -18454,10 +18454,10 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).end ==
         Returns the duration between $(D begin) and $(D end).
 
         Examples:
---------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).length ==
-       dur!"days"(5903));
---------------------
+        --------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).length ==
+               dur!"days"(5903));
+        --------------------
       +/
     @property typeof(end - begin) length() const pure nothrow
     {
@@ -18469,10 +18469,10 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).length ==
         Whether the interval's length is 0, that is, whether $(D begin == end).
 
         Examples:
---------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(1996, 1, 2)).empty);
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).empty);
---------------------
+        --------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(1996, 1, 2)).empty);
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).empty);
+        --------------------
       +/
     @property bool empty() const pure nothrow
     {
@@ -18490,15 +18490,15 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).empty);
             $(D DateTimeException) if this interval is empty.
 
         Examples:
---------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
-            Date(1994, 12, 24)));
+        --------------------
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
+                    Date(1994, 12, 24)));
 
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
-            Date(2000, 1, 5)));
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
-            Date(2012, 3, 1)));
---------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
+                    Date(2000, 1, 5)));
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
+                    Date(2012, 3, 1)));
+        --------------------
       +/
     bool contains(in TP timePoint) const pure
     {
@@ -18518,16 +18518,16 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
             $(D DateTimeException) if either interval is empty.
 
         Examples:
---------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+        --------------------
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
+                    Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
 
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
-            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
+                    Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
 
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
-            Interval!Date(Date(1998, 2, 28), Date(2013, 5, 1))));
---------------------
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
+                    Interval!Date(Date(1998, 2, 28), Date(2013, 5, 1))));
+        --------------------
       +/
     bool contains(in Interval interval) const pure
     {
@@ -18554,10 +18554,10 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
             $(D DateTimeException) if this interval is empty.
 
         Examples:
---------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
-            PosInfInterval!Date(Date(1999, 5, 4))));
---------------------
+        --------------------
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
+                    PosInfInterval!Date(Date(1999, 5, 4))));
+        --------------------
       +/
     bool contains(in PosInfInterval!TP interval) const pure
     {
@@ -18581,10 +18581,10 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
             $(D DateTimeException) if this interval is empty.
 
         Examples:
---------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
-            NegInfInterval!Date(Date(1996, 5, 4))));
---------------------
+        --------------------
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
+                    NegInfInterval!Date(Date(1996, 5, 4))));
+        --------------------
       +/
     bool contains(in NegInfInterval!TP interval) const pure
     {
@@ -18605,16 +18605,16 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
             $(D DateTimeException) if this interval is empty.
 
         Examples:
---------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
-            Date(1994, 12, 24)));
+        --------------------
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
+                    Date(1994, 12, 24)));
 
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
-            Date(2000, 1, 5)));
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
+                    Date(2000, 1, 5)));
 
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
-            Date(2012, 3, 1)));
---------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
+                    Date(2012, 3, 1)));
+        --------------------
       +/
     bool isBefore(in TP timePoint) const pure
     {
@@ -18635,16 +18635,16 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
             $(D DateTimeException) if either interval is empty.
 
         Examples:
---------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+        --------------------
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
+                    Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
 
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
-            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
+                    Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
 
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
-            Interval!Date(Date(2012, 3, 1), Date(2013, 5, 1))));
---------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
+                    Interval!Date(Date(2012, 3, 1), Date(2013, 5, 1))));
+        --------------------
       +/
     bool isBefore(in Interval interval) const pure
     {
@@ -18666,13 +18666,13 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
             $(D DateTimeException) if this interval is empty.
 
         Examples:
---------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
-            PosInfInterval!Date(Date(1999, 5, 4))));
+        --------------------
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
+                    PosInfInterval!Date(Date(1999, 5, 4))));
 
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
-            PosInfInterval!Date(Date(2013, 3, 7))));
---------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
+                    PosInfInterval!Date(Date(2013, 3, 7))));
+        --------------------
       +/
     bool isBefore(in PosInfInterval!TP interval) const pure
     {
@@ -18696,10 +18696,10 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
             $(D DateTimeException) if this interval is empty.
 
         Examples:
---------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
-            NegInfInterval!Date(Date(1996, 5, 4))));
---------------------
+        --------------------
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
+                    NegInfInterval!Date(Date(1996, 5, 4))));
+        --------------------
       +/
     bool isBefore(in NegInfInterval!TP interval) const pure
     {
@@ -18720,16 +18720,16 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
             $(D DateTimeException) if this interval is empty.
 
         Examples:
---------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
-            Date(1994, 12, 24)));
+        --------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
+                    Date(1994, 12, 24)));
 
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
-            Date(2000, 1, 5)));
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
+                    Date(2000, 1, 5)));
 
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
-            Date(2012, 3, 1)));
---------------------
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
+                    Date(2012, 3, 1)));
+        --------------------
       +/
     bool isAfter(in TP timePoint) const pure
     {
@@ -18750,16 +18750,16 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
             $(D DateTimeException) if either interval is empty.
 
         Examples:
---------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+        --------------------
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
+                    Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
 
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
-            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
+                    Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
 
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
-            Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
---------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
+                    Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
+        --------------------
       +/
     bool isAfter(in Interval interval) const pure
     {
@@ -18784,10 +18784,10 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
             $(D DateTimeException) if this interval is empty.
 
         Examples:
---------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
-            PosInfInterval!Date(Date(1999, 5, 4))));
---------------------
+        --------------------
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
+                    PosInfInterval!Date(Date(1999, 5, 4))));
+        --------------------
       +/
     bool isAfter(in PosInfInterval!TP interval) const pure
     {
@@ -18808,10 +18808,10 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
             $(D DateTimeException) if this interval is empty.
 
         Examples:
---------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
-            NegInfInterval!Date(Date(1996, 1, 2))));
---------------------
+        --------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
+                    NegInfInterval!Date(Date(1996, 1, 2))));
+        --------------------
       +/
     bool isAfter(in NegInfInterval!TP interval) const pure
     {
@@ -18831,16 +18831,16 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
             $(D DateTimeException) if either interval is empty.
 
         Examples:
---------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+        --------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
+                    Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
 
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
-            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
+                    Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
 
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
-            Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
---------------------
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
+                    Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
+        --------------------
       +/
     bool intersects(in Interval interval) const pure
     {
@@ -18861,13 +18861,13 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
             $(D DateTimeException) if this interval is empty.
 
         Examples:
---------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
-            PosInfInterval!Date(Date(1999, 5, 4))));
+        --------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
+                    PosInfInterval!Date(Date(1999, 5, 4))));
 
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
-            PosInfInterval!Date(Date(2012, 3, 1))));
---------------------
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
+                    PosInfInterval!Date(Date(2012, 3, 1))));
+        --------------------
       +/
     bool intersects(in PosInfInterval!TP interval) const pure
     {
@@ -18887,13 +18887,13 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
             $(D DateTimeException) if this interval is empty.
 
         Examples:
---------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
-            NegInfInterval!Date(Date(1996, 1, 2))));
+        --------------------
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
+                    NegInfInterval!Date(Date(1996, 1, 2))));
 
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
-            NegInfInterval!Date(Date(2000, 1, 2))));
---------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
+                    NegInfInterval!Date(Date(2000, 1, 2))));
+        --------------------
       +/
     bool intersects(in NegInfInterval!TP interval) const pure
     {
@@ -18914,15 +18914,15 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
             either interval is empty.
 
         Examples:
---------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
-       Interval!Date(Date(1996, 1 , 2), Date(2000, 8, 2)));
+        --------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
+                    Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+               Interval!Date(Date(1996, 1 , 2), Date(2000, 8, 2)));
 
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
-            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))) ==
-       Interval!Date(Date(1999, 1 , 12), Date(2011, 9, 17)));
---------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
+                    Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))) ==
+               Interval!Date(Date(1999, 1 , 12), Date(2011, 9, 17)));
+        --------------------
       +/
     Interval intersection(in Interval interval) const
     {
@@ -18946,15 +18946,15 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
             this interval is empty.
 
         Examples:
---------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
-            PosInfInterval!Date(Date(1990, 7, 6))) ==
-       Interval!Date(Date(1996, 1 , 2), Date(2012, 3, 1)));
+        --------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
+                    PosInfInterval!Date(Date(1990, 7, 6))) ==
+               Interval!Date(Date(1996, 1 , 2), Date(2012, 3, 1)));
 
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
-            PosInfInterval!Date(Date(1999, 1, 12))) ==
-       Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
---------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
+                    PosInfInterval!Date(Date(1999, 1, 12))) ==
+               Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
+        --------------------
       +/
     Interval intersection(in PosInfInterval!TP interval) const
     {
@@ -18975,15 +18975,15 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
             this interval is empty.
 
         Examples:
---------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
-            NegInfInterval!Date(Date(1999, 7, 6))) ==
-       Interval!Date(Date(1996, 1 , 2), Date(1999, 7, 6)));
+        --------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
+                    NegInfInterval!Date(Date(1999, 7, 6))) ==
+               Interval!Date(Date(1996, 1 , 2), Date(1999, 7, 6)));
 
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
-            NegInfInterval!Date(Date(2013, 1, 12))) ==
-       Interval!Date(Date(1996, 1 , 2), Date(2012, 3, 1)));
---------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
+                    NegInfInterval!Date(Date(2013, 1, 12))) ==
+               Interval!Date(Date(1996, 1 , 2), Date(2012, 3, 1)));
+        --------------------
       +/
     Interval intersection(in NegInfInterval!TP interval) const
     {
@@ -19004,16 +19004,16 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
             $(D DateTimeException) if either interval is empty.
 
         Examples:
---------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
-            Interval!Date(Date(1990, 7, 6), Date(1996, 1, 2))));
+        --------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
+                    Interval!Date(Date(1990, 7, 6), Date(1996, 1, 2))));
 
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
-            Interval!Date(Date(2012, 3, 1), Date(2013, 9, 17))));
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
+                    Interval!Date(Date(2012, 3, 1), Date(2013, 9, 17))));
 
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
-            Interval!Date(Date(1989, 3, 1), Date(2012, 3, 1))));
---------------------
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
+                    Interval!Date(Date(1989, 3, 1), Date(2012, 3, 1))));
+        --------------------
       +/
     bool isAdjacent(in Interval interval) const pure
     {
@@ -19035,13 +19035,13 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
             $(D DateTimeException) if this interval is empty.
 
         Examples:
---------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
-            PosInfInterval!Date(Date(1999, 5, 4))));
+        --------------------
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
+                    PosInfInterval!Date(Date(1999, 5, 4))));
 
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
-            PosInfInterval!Date(Date(2012, 3, 1))));
---------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
+                    PosInfInterval!Date(Date(2012, 3, 1))));
+        --------------------
       +/
     bool isAdjacent(in PosInfInterval!TP interval) const pure
     {
@@ -19062,13 +19062,13 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
             $(D DateTimeException) if this interval is empty.
 
         Examples:
---------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
-            NegInfInterval!Date(Date(1996, 1, 2))));
+        --------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
+                    NegInfInterval!Date(Date(1996, 1, 2))));
 
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
-            NegInfInterval!Date(Date(2000, 1, 2))));
---------------------
+        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
+                    NegInfInterval!Date(Date(2000, 1, 2))));
+        --------------------
       +/
     bool isAdjacent(in NegInfInterval!TP interval) const pure
     {
@@ -19089,15 +19089,15 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
             not adjacent or if either interval is empty.
 
         Examples:
---------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
-       Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
+        --------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
+                    Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+               Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
 
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
-            Interval!Date(Date(2012, 3, 1), Date(2013, 5, 7))) ==
-       Interval!Date(Date(1996, 1 , 2), Date(2013, 5, 7)));
---------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
+                    Interval!Date(Date(2012, 3, 1), Date(2013, 5, 7))) ==
+               Interval!Date(Date(1996, 1 , 2), Date(2013, 5, 7)));
+        --------------------
       +/
     Interval merge(in Interval interval) const
     {
@@ -19122,15 +19122,15 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
             not adjacent or if this interval is empty.
 
         Examples:
---------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
-            PosInfInterval!Date(Date(1990, 7, 6))) ==
-       PosInfInterval!Date(Date(1990, 7 , 6)));
+        --------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
+                    PosInfInterval!Date(Date(1990, 7, 6))) ==
+               PosInfInterval!Date(Date(1990, 7 , 6)));
 
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
-            PosInfInterval!Date(Date(2012, 3, 1))) ==
-       PosInfInterval!Date(Date(1996, 1 , 2)));
---------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
+                    PosInfInterval!Date(Date(2012, 3, 1))) ==
+               PosInfInterval!Date(Date(1996, 1 , 2)));
+        --------------------
       +/
     PosInfInterval!TP merge(in PosInfInterval!TP interval) const
     {
@@ -19152,15 +19152,15 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
             adjacent or if this interval is empty.
 
         Examples:
---------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
-            NegInfInterval!Date(Date(1996, 1, 2))) ==
-       NegInfInterval!Date(Date(2012, 3 , 1)));
+        --------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
+                    NegInfInterval!Date(Date(1996, 1, 2))) ==
+               NegInfInterval!Date(Date(2012, 3 , 1)));
 
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
-            NegInfInterval!Date(Date(2013, 1, 12))) ==
-       NegInfInterval!Date(Date(2013, 1 , 12)));
---------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
+                    NegInfInterval!Date(Date(2013, 1, 12))) ==
+               NegInfInterval!Date(Date(2013, 1 , 12)));
+        --------------------
       +/
     NegInfInterval!TP merge(in NegInfInterval!TP interval) const
     {
@@ -19183,15 +19183,15 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
             $(D DateTimeException) if either interval is empty.
 
         Examples:
---------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
-            Interval!Date(Date(1990, 7, 6), Date(1991, 1, 8))) ==
-       Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
+        --------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
+                    Interval!Date(Date(1990, 7, 6), Date(1991, 1, 8))) ==
+               Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
 
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
-            Interval!Date(Date(2012, 3, 1), Date(2013, 5, 7))) ==
-       Interval!Date(Date(1996, 1 , 2), Date(2013, 5, 7)));
---------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
+                    Interval!Date(Date(2012, 3, 1), Date(2013, 5, 7))) ==
+               Interval!Date(Date(1996, 1 , 2), Date(2013, 5, 7)));
+        --------------------
       +/
     Interval span(in Interval interval) const pure
     {
@@ -19217,15 +19217,15 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
             $(D DateTimeException) if this interval is empty.
 
         Examples:
---------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
-            PosInfInterval!Date(Date(1990, 7, 6))) ==
-       PosInfInterval!Date(Date(1990, 7 , 6)));
+        --------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
+                    PosInfInterval!Date(Date(1990, 7, 6))) ==
+               PosInfInterval!Date(Date(1990, 7 , 6)));
 
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
-            PosInfInterval!Date(Date(2050, 1, 1))) ==
-       PosInfInterval!Date(Date(1996, 1 , 2)));
---------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
+                    PosInfInterval!Date(Date(2050, 1, 1))) ==
+               PosInfInterval!Date(Date(1996, 1 , 2)));
+        --------------------
       +/
     PosInfInterval!TP span(in PosInfInterval!TP interval) const pure
     {
@@ -19247,15 +19247,15 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
             $(D DateTimeException) if this interval is empty.
 
         Examples:
---------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
-            NegInfInterval!Date(Date(1602, 5, 21))) ==
-       NegInfInterval!Date(Date(2012, 3 , 1)));
+        --------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
+                    NegInfInterval!Date(Date(1602, 5, 21))) ==
+               NegInfInterval!Date(Date(2012, 3 , 1)));
 
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
-            NegInfInterval!Date(Date(2013, 1, 12))) ==
-       NegInfInterval!Date(Date(2013, 1 , 12)));
---------------------
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
+                    NegInfInterval!Date(Date(2013, 1, 12))) ==
+               NegInfInterval!Date(Date(2013, 1 , 12)));
+        --------------------
       +/
     NegInfInterval!TP span(in NegInfInterval!TP interval) const pure
     {
@@ -19279,16 +19279,16 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
             interval would be invalid.
 
         Examples:
---------------------
-auto interval1 = Interval!Date(Date(1996, 1, 2), Date(2012, 4, 5));
-auto interval2 = Interval!Date(Date(1996, 1, 2), Date(2012, 4, 5));
+        --------------------
+        auto interval1 = Interval!Date(Date(1996, 1, 2), Date(2012, 4, 5));
+        auto interval2 = Interval!Date(Date(1996, 1, 2), Date(2012, 4, 5));
 
-interval1.shift(dur!"days"(50));
-assert(interval1 == Interval!Date(Date(1996, 2, 21), Date(2012, 5, 25)));
+        interval1.shift(dur!"days"(50));
+        assert(interval1 == Interval!Date(Date(1996, 2, 21), Date(2012, 5, 25)));
 
-interval2.shift(dur!"days"(-50));
-assert(interval2 == Interval!Date(Date(1995, 11, 13), Date(2012, 2, 15)));
---------------------
+        interval2.shift(dur!"days"(-50));
+        assert(interval2 == Interval!Date(Date(1995, 11, 13), Date(2012, 2, 15)));
+        --------------------
       +/
     void shift(D)(D duration) pure
         if(__traits(compiles, begin + duration))
@@ -19329,16 +19329,16 @@ assert(interval2 == Interval!Date(Date(1995, 11, 13), Date(2012, 2, 15)));
                 resulting interval would be invalid.
 
             Examples:
---------------------
-auto interval1 = Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
-auto interval2 = Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
+        --------------------
+        auto interval1 = Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
+        auto interval2 = Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
 
-interval1.shift(2);
-assert(interval1 == Interval!Date(Date(1998, 1, 2), Date(2014, 3, 1)));
+        interval1.shift(2);
+        assert(interval1 == Interval!Date(Date(1998, 1, 2), Date(2014, 3, 1)));
 
-interval2.shift(-2);
-assert(interval2 == Interval!Date(Date(1994, 1, 2), Date(2010, 3, 1)));
---------------------
+        interval2.shift(-2);
+        assert(interval2 == Interval!Date(Date(1994, 1, 2), Date(2010, 3, 1)));
+        --------------------
           +/
         void shift(T)(T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes)
             if(isIntegral!T)
@@ -19376,16 +19376,16 @@ assert(interval2 == Interval!Date(Date(1994, 1, 2), Date(2010, 3, 1)));
             interval would be invalid.
 
         Examples:
---------------------
-auto interval1 = Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
-auto interval2 = Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
+        --------------------
+        auto interval1 = Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
+        auto interval2 = Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
 
-interval1.expand(2);
-assert(interval1 == Interval!Date(Date(1994, 1, 2), Date(2014, 3, 1)));
+        interval1.expand(2);
+        assert(interval1 == Interval!Date(Date(1994, 1, 2), Date(2014, 3, 1)));
 
-interval2.expand(-2);
-assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
---------------------
+        interval2.expand(-2);
+        assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
+        --------------------
       +/
     void expand(D)(D duration, Direction dir = Direction.both) pure
         if(__traits(compiles, begin + duration))
@@ -19453,16 +19453,16 @@ assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
                 resulting interval would be invalid.
 
             Examples:
---------------------
-auto interval1 = Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
-auto interval2 = Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
+            --------------------
+            auto interval1 = Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
+            auto interval2 = Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
 
-interval1.expand(2);
-assert(interval1 == Interval!Date(Date(1994, 1, 2), Date(2014, 3, 1)));
+            interval1.expand(2);
+            assert(interval1 == Interval!Date(Date(1994, 1, 2), Date(2014, 3, 1)));
 
-interval2.expand(-2);
-assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
---------------------
+            interval2.expand(-2);
+            assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
+            --------------------
           +/
         void expand(T)(T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes, Direction dir = Direction.both)
             if(isIntegral!T)
@@ -19568,35 +19568,35 @@ assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
             so it's only relevant if when creating a custom delegate.
 
         Examples:
---------------------
-auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
-auto func = (in Date date) //For iterating over even-numbered days.
-            {
-                if((date.day & 1) == 0)
-                    return date + dur!"days"(2);
+            --------------------
+            auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
+            auto func = (in Date date) //For iterating over even-numbered days.
+                        {
+                            if((date.day & 1) == 0)
+                                return date + dur!"days"(2);
 
-                return date + dur!"days"(1);
-            };
-auto range = interval.fwdRange(func);
+                            return date + dur!"days"(1);
+                        };
+            auto range = interval.fwdRange(func);
 
- //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 2).
-assert(range.front == Date(2010, 9, 1));
+             //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 2).
+            assert(range.front == Date(2010, 9, 1));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 2));
+            range.popFront();
+            assert(range.front == Date(2010, 9, 2));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 4));
+            range.popFront();
+            assert(range.front == Date(2010, 9, 4));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 6));
+            range.popFront();
+            assert(range.front == Date(2010, 9, 6));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 8));
+            range.popFront();
+            assert(range.front == Date(2010, 9, 8));
 
-range.popFront();
-assert(range.empty);
---------------------
+            range.popFront();
+            assert(range.empty);
+            --------------------
       +/
     IntervalRange!(TP, Direction.fwd) fwdRange(TP delegate(in TP) func, PopFirst popFirst = PopFirst.no) const
     {
@@ -19661,35 +19661,35 @@ assert(range.empty);
             so it's only relevant for custom delegates.
 
         Examples:
---------------------
-auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
-auto func = (in Date date) //For iterating over even-numbered days.
-            {
-                if((date.day & 1) == 0)
-                    return date - dur!"days"(2);
+        --------------------
+        auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
+        auto func = (in Date date) //For iterating over even-numbered days.
+                    {
+                        if((date.day & 1) == 0)
+                            return date - dur!"days"(2);
 
-                return date - dur!"days"(1);
-            };
-auto range = interval.bwdRange(func);
+                        return date - dur!"days"(1);
+                    };
+        auto range = interval.bwdRange(func);
 
-//An odd day. Using PopFirst.yes would have made this Date(2010, 9, 8).
-assert(range.front == Date(2010, 9, 9));
+        //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 8).
+        assert(range.front == Date(2010, 9, 9));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 8));
+        range.popFront();
+        assert(range.front == Date(2010, 9, 8));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 6));
+        range.popFront();
+        assert(range.front == Date(2010, 9, 6));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 4));
+        range.popFront();
+        assert(range.front == Date(2010, 9, 4));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 2));
+        range.popFront();
+        assert(range.front == Date(2010, 9, 2));
 
-range.popFront();
-assert(range.empty);
---------------------
+        range.popFront();
+        assert(range.empty);
+        --------------------
       +/
     IntervalRange!(TP, Direction.bwd) bwdRange(TP delegate(in TP) func, PopFirst popFirst = PopFirst.no) const
     {
@@ -21280,9 +21280,9 @@ public:
             begin = The time point which begins the interval.
 
         Examples:
---------------------
-auto interval = PosInfInterval!Date(Date(1996, 1, 2));
---------------------
+        --------------------
+        auto interval = PosInfInterval!Date(Date(1996, 1, 2));
+        --------------------
       +/
     this(in TP begin) pure nothrow
     {
@@ -21318,9 +21318,9 @@ auto interval = PosInfInterval!Date(Date(1996, 1, 2));
         The starting point of the interval. It is included in the interval.
 
         Examples:
---------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).begin == Date(1996, 1, 2));
---------------------
+        --------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).begin == Date(1996, 1, 2));
+        --------------------
       +/
     @property TP begin() const pure nothrow
     {
@@ -21344,9 +21344,9 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).begin == Date(1996, 1, 2));
         Whether the interval's length is 0. Always returns false.
 
         Examples:
---------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).empty);
---------------------
+        --------------------
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).empty);
+        --------------------
       +/
     @property bool empty() const pure nothrow
     {
@@ -21361,10 +21361,10 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).empty);
             timePoint = The time point to check for inclusion in this interval.
 
         Examples:
---------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(Date(1994, 12, 24)));
-assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(Date(2000, 1, 5)));
---------------------
+        --------------------
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(Date(1994, 12, 24)));
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(Date(2000, 1, 5)));
+        --------------------
       +/
     bool contains(TP timePoint) const pure nothrow
     {
@@ -21382,16 +21382,16 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(Date(2000, 1, 5)));
             $(D DateTimeException) if the given interval is empty.
 
         Examples:
---------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+        --------------------
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(
+                    Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
 
-assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(
-            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(
+                    Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
 
-assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(
-            Interval!Date(Date(1998, 2, 28), Date(2013, 5, 1))));
---------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(
+                    Interval!Date(Date(1998, 2, 28), Date(2013, 5, 1))));
+        --------------------
       +/
     bool contains(in Interval!TP interval) const pure
     {
@@ -21408,13 +21408,13 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(
             interval = The interval to check for inclusion in this interval.
 
         Examples:
---------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(
-            PosInfInterval!Date(Date(1999, 5, 4))));
+        --------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(
+                    PosInfInterval!Date(Date(1999, 5, 4))));
 
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(
-            PosInfInterval!Date(Date(1995, 7, 2))));
---------------------
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(
+                    PosInfInterval!Date(Date(1995, 7, 2))));
+        --------------------
       +/
     bool contains(in PosInfInterval interval) const pure nothrow
     {
@@ -21432,10 +21432,10 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(
             interval = The interval to check for inclusion in this interval.
 
         Examples:
---------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(
-            NegInfInterval!Date(Date(1996, 5, 4))));
---------------------
+        --------------------
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(
+                    NegInfInterval!Date(Date(1996, 5, 4))));
+        --------------------
       +/
     bool contains(in NegInfInterval!TP interval) const pure nothrow
     {
@@ -21454,10 +21454,10 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(
                         it.
 
         Examples:
---------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(Date(1994, 12, 24)));
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(Date(2000, 1, 5)));
---------------------
+        --------------------
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(Date(1994, 12, 24)));
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(Date(2000, 1, 5)));
+        --------------------
       +/
     bool isBefore(in TP timePoint) const pure nothrow
     {
@@ -21480,13 +21480,13 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(Date(2000, 1, 5)));
             $(D DateTimeException) if the given interval is empty.
 
         Examples:
---------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+        --------------------
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
+                    Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
 
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
-            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
---------------------
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
+                    Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+        --------------------
       +/
     bool isBefore(in Interval!TP interval) const pure
     {
@@ -21507,13 +21507,13 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
             interval = The interval to check for against this interval.
 
         Examples:
---------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
-            PosInfInterval!Date(Date(1992, 5, 4))));
+        --------------------
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
+                    PosInfInterval!Date(Date(1992, 5, 4))));
 
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
-            PosInfInterval!Date(Date(2013, 3, 7))));
---------------------
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
+                    PosInfInterval!Date(Date(2013, 3, 7))));
+        --------------------
       +/
     bool isBefore(in PosInfInterval interval) const pure nothrow
     {
@@ -21532,10 +21532,10 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
             interval = The interval to check for against this interval.
 
         Examples:
---------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
-            NegInfInterval!Date(Date(1996, 5, 4))));
---------------------
+        --------------------
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
+                    NegInfInterval!Date(Date(1996, 5, 4))));
+        --------------------
       +/
     bool isBefore(in NegInfInterval!TP interval) const pure nothrow
     {
@@ -21551,10 +21551,10 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
                         it.
 
         Examples:
---------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).isAfter(Date(1994, 12, 24)));
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(Date(2000, 1, 5)));
---------------------
+        --------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).isAfter(Date(1994, 12, 24)));
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(Date(2000, 1, 5)));
+        --------------------
       +/
     bool isAfter(in TP timePoint) const pure nothrow
     {
@@ -21573,16 +21573,16 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(Date(2000, 1, 5)));
             $(D DateTimeException) if the given interval is empty.
 
         Examples:
---------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+        --------------------
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
+                    Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
 
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
-            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
+                    Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
 
-assert(PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
-            Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
---------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
+                    Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
+        --------------------
       +/
     bool isAfter(in Interval!TP interval) const pure
     {
@@ -21603,13 +21603,13 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
             interval = The interval to check against this interval.
 
         Examples:
---------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
-            PosInfInterval!Date(Date(1990, 1, 7))));
+        --------------------
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
+                    PosInfInterval!Date(Date(1990, 1, 7))));
 
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
-            PosInfInterval!Date(Date(1999, 5, 4))));
---------------------
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
+                    PosInfInterval!Date(Date(1999, 5, 4))));
+        --------------------
       +/
     bool isAfter(in PosInfInterval interval) const pure nothrow
     {
@@ -21625,13 +21625,13 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
             interval = The interval to check against this interval.
 
         Examples:
---------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
-            NegInfInterval!Date(Date(1996, 1, 2))));
+        --------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
+                    NegInfInterval!Date(Date(1996, 1, 2))));
 
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
-            NegInfInterval!Date(Date(2000, 7, 1))));
---------------------
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
+                    NegInfInterval!Date(Date(2000, 7, 1))));
+        --------------------
       +/
     bool isAfter(in NegInfInterval!TP interval) const pure nothrow
     {
@@ -21649,16 +21649,16 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
             $(D DateTimeException) if the given interval is empty.
 
         Examples:
---------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+        --------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
+                    Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
 
-assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
-            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
+                    Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
 
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).intersects(
-            Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
---------------------
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).intersects(
+                    Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
+        --------------------
       +/
     bool intersects(in Interval!TP interval) const pure
     {
@@ -21679,13 +21679,13 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).intersects(
                        interval.
 
         Examples:
---------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
-            PosInfInterval!Date(Date(1990, 1, 7))));
+        --------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
+                    PosInfInterval!Date(Date(1990, 1, 7))));
 
-assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
-            PosInfInterval!Date(Date(1999, 5, 4))));
---------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
+                    PosInfInterval!Date(Date(1999, 5, 4))));
+        --------------------
       +/
     bool intersects(in PosInfInterval interval) const pure nothrow
     {
@@ -21701,13 +21701,13 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
                        interval.
 
         Examples:
---------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).intersects(
-            NegInfInterval!Date(Date(1996, 1, 2))));
+        --------------------
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).intersects(
+                    NegInfInterval!Date(Date(1996, 1, 2))));
 
-assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
-            NegInfInterval!Date(Date(2000, 7, 1))));
---------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
+                    NegInfInterval!Date(Date(2000, 7, 1))));
+        --------------------
       +/
     bool intersects(in NegInfInterval!TP interval) const pure nothrow
     {
@@ -21726,15 +21726,15 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
             the given interval is empty.
 
         Examples:
---------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
-       Interval!Date(Date(1996, 1 , 2), Date(2000, 8, 2)));
+        --------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
+                    Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+               Interval!Date(Date(1996, 1 , 2), Date(2000, 8, 2)));
 
-assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
-            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))) ==
-       Interval!Date(Date(1999, 1 , 12), Date(2011, 9, 17)));
---------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
+                    Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))) ==
+               Interval!Date(Date(1999, 1 , 12), Date(2011, 9, 17)));
+        --------------------
       +/
     Interval!TP intersection(in Interval!TP interval) const
     {
@@ -21753,15 +21753,15 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
             interval = The interval to intersect with this interval.
 
         Examples:
---------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
-            PosInfInterval!Date(Date(1990, 7, 6))) ==
-       PosInfInterval!Date(Date(1996, 1 , 2)));
+        --------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
+                    PosInfInterval!Date(Date(1990, 7, 6))) ==
+               PosInfInterval!Date(Date(1996, 1 , 2)));
 
-assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
-            PosInfInterval!Date(Date(1999, 1, 12))) ==
-       PosInfInterval!Date(Date(1999, 1 , 12)));
---------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
+                    PosInfInterval!Date(Date(1999, 1, 12))) ==
+               PosInfInterval!Date(Date(1999, 1 , 12)));
+        --------------------
       +/
     PosInfInterval intersection(in PosInfInterval interval) const pure nothrow
     {
@@ -21779,15 +21779,15 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
             $(D DateTimeException) if the two intervals do not intersect.
 
         Examples:
---------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
-            NegInfInterval!Date(Date(1999, 7, 6))) ==
-       Interval!Date(Date(1996, 1 , 2), Date(1999, 7, 6)));
+        --------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
+                    NegInfInterval!Date(Date(1999, 7, 6))) ==
+               Interval!Date(Date(1996, 1 , 2), Date(1999, 7, 6)));
 
-assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
-            NegInfInterval!Date(Date(2013, 1, 12))) ==
-       Interval!Date(Date(1996, 1 , 2), Date(2013, 1, 12)));
---------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
+                    NegInfInterval!Date(Date(2013, 1, 12))) ==
+               Interval!Date(Date(1996, 1 , 2), Date(2013, 1, 12)));
+        --------------------
       +/
     Interval!TP intersection(in NegInfInterval!TP interval) const
     {
@@ -21808,13 +21808,13 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
             $(D DateTimeException) if the given interval is empty.
 
         Examples:
---------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
-            Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
+        --------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
+                    Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
 
-assert(!PosInfInterval!Date(Date(1999, 1, 12)).isAdjacent(
-            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
---------------------
+        assert(!PosInfInterval!Date(Date(1999, 1, 12)).isAdjacent(
+                    Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+        --------------------
       +/
     bool isAdjacent(in Interval!TP interval) const pure
     {
@@ -21835,13 +21835,13 @@ assert(!PosInfInterval!Date(Date(1999, 1, 12)).isAdjacent(
                        interval.
 
         Examples:
---------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
-            PosInfInterval!Date(Date(1990, 1, 7))));
+        --------------------
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
+                    PosInfInterval!Date(Date(1990, 1, 7))));
 
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
-            PosInfInterval!Date(Date(1996, 1, 2))));
---------------------
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
+                    PosInfInterval!Date(Date(1996, 1, 2))));
+        --------------------
       +/
     bool isAdjacent(in PosInfInterval interval) const pure nothrow
     {
@@ -21857,13 +21857,13 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
                        interval.
 
         Examples:
---------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
-            NegInfInterval!Date(Date(1996, 1, 2))));
+        --------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
+                    NegInfInterval!Date(Date(1996, 1, 2))));
 
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
-            NegInfInterval!Date(Date(2000, 7, 1))));
---------------------
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
+                    NegInfInterval!Date(Date(2000, 7, 1))));
+        --------------------
       +/
     bool isAdjacent(in NegInfInterval!TP interval) const pure nothrow
     {
@@ -21888,15 +21888,15 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
             is not possible.
 
         Examples:
---------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
-       PosInfInterval!Date(Date(1990, 7 , 6)));
+        --------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(
+                    Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+               PosInfInterval!Date(Date(1990, 7 , 6)));
 
-assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(
-            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))) ==
-       PosInfInterval!Date(Date(1996, 1 , 2)));
---------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(
+                    Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))) ==
+               PosInfInterval!Date(Date(1996, 1 , 2)));
+        --------------------
       +/
     PosInfInterval merge(in Interval!TP interval) const
     {
@@ -21920,15 +21920,15 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(
             is not possible.
 
         Examples:
---------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(
-            PosInfInterval!Date(Date(1990, 7, 6))) ==
-       PosInfInterval!Date(Date(1990, 7 , 6)));
+        --------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(
+                    PosInfInterval!Date(Date(1990, 7, 6))) ==
+               PosInfInterval!Date(Date(1990, 7 , 6)));
 
-assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(
-            PosInfInterval!Date(Date(1999, 1, 12))) ==
-       PosInfInterval!Date(Date(1996, 1 , 2)));
---------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(
+                    PosInfInterval!Date(Date(1999, 1, 12))) ==
+               PosInfInterval!Date(Date(1996, 1 , 2)));
+        --------------------
       +/
     PosInfInterval merge(in PosInfInterval interval) const pure nothrow
     {
@@ -21955,19 +21955,19 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(
             is not possible.
 
         Examples:
---------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
-            Interval!Date(Date(500, 8, 9), Date(1602, 1, 31))) ==
-       PosInfInterval!Date(Date(500, 8, 9)));
+        --------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
+                    Interval!Date(Date(500, 8, 9), Date(1602, 1, 31))) ==
+               PosInfInterval!Date(Date(500, 8, 9)));
 
-assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
-       PosInfInterval!Date(Date(1990, 7 , 6)));
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
+                    Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+               PosInfInterval!Date(Date(1990, 7 , 6)));
 
-assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
-            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))) ==
-       PosInfInterval!Date(Date(1996, 1 , 2)));
---------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
+                    Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))) ==
+               PosInfInterval!Date(Date(1996, 1 , 2)));
+        --------------------
       +/
     PosInfInterval span(in Interval!TP interval) const pure
     {
@@ -21993,15 +21993,15 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
             is not possible.
 
         Examples:
---------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
-            PosInfInterval!Date(Date(1990, 7, 6))) ==
-       PosInfInterval!Date(Date(1990, 7 , 6)));
+        --------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
+                    PosInfInterval!Date(Date(1990, 7, 6))) ==
+               PosInfInterval!Date(Date(1990, 7 , 6)));
 
-assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
-            PosInfInterval!Date(Date(1999, 1, 12))) ==
-       PosInfInterval!Date(Date(1996, 1 , 2)));
---------------------
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
+                    PosInfInterval!Date(Date(1999, 1, 12))) ==
+               PosInfInterval!Date(Date(1996, 1 , 2)));
+        --------------------
       +/
     PosInfInterval span(in PosInfInterval interval) const pure nothrow
     {
@@ -22019,16 +22019,16 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
             duration = The duration to shift the interval by.
 
         Examples:
---------------------
-auto interval1 = PosInfInterval!Date(Date(1996, 1, 2));
-auto interval2 = PosInfInterval!Date(Date(1996, 1, 2));
+        --------------------
+        auto interval1 = PosInfInterval!Date(Date(1996, 1, 2));
+        auto interval2 = PosInfInterval!Date(Date(1996, 1, 2));
 
-interval1.shift(dur!"days"(50));
-assert(interval1 == PosInfInterval!Date(Date(1996, 2, 21)));
+        interval1.shift(dur!"days"(50));
+        assert(interval1 == PosInfInterval!Date(Date(1996, 2, 21)));
 
-interval2.shift(dur!"days"(-50));
-assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
---------------------
+        interval2.shift(dur!"days"(-50));
+        assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
+        --------------------
       +/
     void shift(D)(D duration) pure nothrow
         if(__traits(compiles, begin + duration))
@@ -22060,16 +22060,16 @@ assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
                 resulting interval would be invalid.
 
             Examples:
---------------------
-auto interval1 = PosInfInterval!Date(Date(1996, 1, 2));
-auto interval2 = PosInfInterval!Date(Date(1996, 1, 2));
+            --------------------
+            auto interval1 = PosInfInterval!Date(Date(1996, 1, 2));
+            auto interval2 = PosInfInterval!Date(Date(1996, 1, 2));
 
-interval1.shift(dur!"days"(50));
-assert(interval1 == PosInfInterval!Date(Date(1996, 2, 21)));
+            interval1.shift(dur!"days"(50));
+            assert(interval1 == PosInfInterval!Date(Date(1996, 2, 21)));
 
-interval2.shift(dur!"days"(-50));
-assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
---------------------
+            interval2.shift(dur!"days"(-50));
+            assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
+            --------------------
           +/
         void shift(T)(T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes)
             if(isIntegral!T)
@@ -22093,16 +22093,16 @@ assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
             dir      = The direction in time to expand the interval.
 
         Examples:
---------------------
-auto interval1 = PosInfInterval!Date(Date(1996, 1, 2));
-auto interval2 = PosInfInterval!Date(Date(1996, 1, 2));
+        --------------------
+        auto interval1 = PosInfInterval!Date(Date(1996, 1, 2));
+        auto interval2 = PosInfInterval!Date(Date(1996, 1, 2));
 
-interval1.expand(dur!"days"(2));
-assert(interval1 == PosInfInterval!Date(Date(1995, 12, 31)));
+        interval1.expand(dur!"days"(2));
+        assert(interval1 == PosInfInterval!Date(Date(1995, 12, 31)));
 
-interval2.expand(dur!"days"(-2));
-assert(interval2 == PosInfInterval!Date(Date(1996, 1, 4)));
---------------------
+        interval2.expand(dur!"days"(-2));
+        assert(interval2 == PosInfInterval!Date(Date(1996, 1, 4)));
+        --------------------
       +/
     void expand(D)(D duration) pure nothrow
         if(__traits(compiles, begin + duration))
@@ -22129,16 +22129,16 @@ assert(interval2 == PosInfInterval!Date(Date(1996, 1, 4)));
                 resulting interval would be invalid.
 
             Examples:
---------------------
-auto interval1 = PosInfInterval!Date(Date(1996, 1, 2));
-auto interval2 = PosInfInterval!Date(Date(1996, 1, 2));
+            --------------------
+            auto interval1 = PosInfInterval!Date(Date(1996, 1, 2));
+            auto interval2 = PosInfInterval!Date(Date(1996, 1, 2));
 
-interval1.expand(2);
-assert(interval1 == PosInfInterval!Date(Date(1994, 1, 2)));
+            interval1.expand(2);
+            assert(interval1 == PosInfInterval!Date(Date(1994, 1, 2)));
 
-interval2.expand(-2);
-assert(interval2 == PosInfInterval!Date(Date(1998, 1, 2)));
---------------------
+            interval2.expand(-2);
+            assert(interval2 == PosInfInterval!Date(Date(1998, 1, 2)));
+            --------------------
           +/
         void expand(T)(T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes)
             if(isIntegral!T)
@@ -22203,35 +22203,35 @@ assert(interval2 == PosInfInterval!Date(Date(1998, 1, 2)));
             so it's only relevant for custom delegates.
 
         Examples:
---------------------
-auto interval = PosInfInterval!Date(Date(2010, 9, 1));
-auto func = (in Date date) //For iterating over even-numbered days.
-            {
-                if((date.day & 1) == 0)
-                    return date + dur!"days"(2);
+        --------------------
+        auto interval = PosInfInterval!Date(Date(2010, 9, 1));
+        auto func = (in Date date) //For iterating over even-numbered days.
+                    {
+                        if((date.day & 1) == 0)
+                            return date + dur!"days"(2);
 
-                return date + dur!"days"(1);
-            };
-auto range = interval.fwdRange(func);
+                        return date + dur!"days"(1);
+                    };
+        auto range = interval.fwdRange(func);
 
-//An odd day. Using PopFirst.yes would have made this Date(2010, 9, 2).
-assert(range.front == Date(2010, 9, 1));
+        //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 2).
+        assert(range.front == Date(2010, 9, 1));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 2));
+        range.popFront();
+        assert(range.front == Date(2010, 9, 2));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 4));
+        range.popFront();
+        assert(range.front == Date(2010, 9, 4));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 6));
+        range.popFront();
+        assert(range.front == Date(2010, 9, 6));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 8));
+        range.popFront();
+        assert(range.front == Date(2010, 9, 8));
 
-range.popFront();
-assert(!range.empty);
---------------------
+        range.popFront();
+        assert(!range.empty);
+        --------------------
       +/
     PosInfIntervalRange!(TP) fwdRange(TP delegate(in TP) func, PopFirst popFirst = PopFirst.no) const
     {
@@ -23528,9 +23528,9 @@ public:
             begin = The time point which begins the interval.
 
         Examples:
---------------------
-auto interval = PosInfInterval!Date(Date(1996, 1, 2));
---------------------
+        --------------------
+        auto interval = PosInfInterval!Date(Date(1996, 1, 2));
+        --------------------
       +/
     this(in TP end) pure nothrow
     {
@@ -23566,9 +23566,9 @@ auto interval = PosInfInterval!Date(Date(1996, 1, 2));
         The end point of the interval. It is excluded from the interval.
 
         Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).end == Date(2012, 3, 1));
---------------------
+        --------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).end == Date(2012, 3, 1));
+        --------------------
       +/
     @property TP end() const pure nothrow
     {
@@ -23592,9 +23592,9 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).end == Date(2012, 3, 1));
         Whether the interval's length is 0. Always returns false.
 
         Examples:
---------------------
-assert(!NegInfInterval!Date(Date(1996, 1, 2)).empty);
---------------------
+        --------------------
+        assert(!NegInfInterval!Date(Date(1996, 1, 2)).empty);
+        --------------------
       +/
     @property bool empty() const pure nothrow
     {
@@ -23609,11 +23609,11 @@ assert(!NegInfInterval!Date(Date(1996, 1, 2)).empty);
             timePoint = The time point to check for inclusion in this interval.
 
         Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(Date(1994, 12, 24)));
-assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(Date(2000, 1, 5)));
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(Date(2012, 3, 1)));
---------------------
+        --------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(Date(1994, 12, 24)));
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(Date(2000, 1, 5)));
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(Date(2012, 3, 1)));
+        --------------------
       +/
     bool contains(TP timePoint) const pure nothrow
     {
@@ -23631,16 +23631,16 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(Date(2012, 3, 1)));
             $(D DateTimeException) if the given interval is empty.
 
         Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+        --------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(
+                    Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
 
-assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(
-            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(
+                    Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
 
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(
-            Interval!Date(Date(1998, 2, 28), Date(2013, 5, 1))));
---------------------
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(
+                    Interval!Date(Date(1998, 2, 28), Date(2013, 5, 1))));
+        --------------------
       +/
     bool contains(in Interval!TP interval) const pure
     {
@@ -23660,10 +23660,10 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(
             interval = The interval to check for inclusion in this interval.
 
         Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(
-            PosInfInterval!Date(Date(1999, 5, 4))));
---------------------
+        --------------------
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(
+                    PosInfInterval!Date(Date(1999, 5, 4))));
+        --------------------
       +/
     bool contains(in PosInfInterval!TP interval) const pure nothrow
     {
@@ -23678,13 +23678,13 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(
             interval = The interval to check for inclusion in this interval.
 
         Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(
-            NegInfInterval!Date(Date(1996, 5, 4))));
+        --------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(
+                    NegInfInterval!Date(Date(1996, 5, 4))));
 
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(
-            NegInfInterval!Date(Date(2013, 7, 9))));
---------------------
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(
+                    NegInfInterval!Date(Date(2013, 7, 9))));
+        --------------------
       +/
     bool contains(in NegInfInterval interval) const pure nothrow
     {
@@ -23700,11 +23700,11 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(
                         before it.
 
         Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(1994, 12, 24)));
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2000, 1, 5)));
-assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2012, 3, 1)));
---------------------
+        --------------------
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(1994, 12, 24)));
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2000, 1, 5)));
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2012, 3, 1)));
+        --------------------
       +/
     bool isBefore(in TP timePoint) const pure nothrow
     {
@@ -23723,16 +23723,16 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2012, 3, 1)));
             $(D DateTimeException) if the given interval is empty
 
         Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+        --------------------
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+                    Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
 
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
-            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+                    Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
 
-assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
-            Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
---------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+                    Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
+        --------------------
       +/
     bool isBefore(in Interval!TP interval) const pure
     {
@@ -23750,13 +23750,13 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
             interval = The interval to check for against this interval.
 
         Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
-            PosInfInterval!Date(Date(1999, 5, 4))));
+        --------------------
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+                    PosInfInterval!Date(Date(1999, 5, 4))));
 
-assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
-            PosInfInterval!Date(Date(2012, 3, 1))));
---------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+                    PosInfInterval!Date(Date(2012, 3, 1))));
+        --------------------
       +/
     bool isBefore(in PosInfInterval!TP interval) const pure nothrow
     {
@@ -23776,13 +23776,13 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
             interval = The interval to check for against this interval.
 
         Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
-            NegInfInterval!Date(Date(1996, 5, 4))));
+        --------------------
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+                    NegInfInterval!Date(Date(1996, 5, 4))));
 
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
-            NegInfInterval!Date(Date(2013, 7, 9))));
---------------------
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+                    NegInfInterval!Date(Date(2013, 7, 9))));
+        --------------------
       +/
     bool isBefore(in NegInfInterval interval) const pure nothrow
     {
@@ -23801,11 +23801,11 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
                         it.
 
         Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(1994, 12, 24)));
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(2000, 1, 5)));
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(2012, 3, 1)));
---------------------
+        --------------------
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(1994, 12, 24)));
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(2000, 1, 5)));
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(2012, 3, 1)));
+        --------------------
       +/
     bool isAfter(in TP timePoint) const pure nothrow
     {
@@ -23828,16 +23828,16 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(2012, 3, 1)));
             $(D DateTimeException) if the given interval is empty.
 
         Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+        --------------------
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+                    Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
 
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
-            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+                    Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
 
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
-            Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
---------------------
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+                    Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
+        --------------------
       +/
     bool isAfter(in Interval!TP interval) const pure
     {
@@ -23858,13 +23858,13 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
             interval = The interval to check against this interval.
 
         Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
-            PosInfInterval!Date(Date(1999, 5, 4))));
+        --------------------
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+                    PosInfInterval!Date(Date(1999, 5, 4))));
 
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
-            PosInfInterval!Date(Date(2012, 3, 1))));
---------------------
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+                    PosInfInterval!Date(Date(2012, 3, 1))));
+        --------------------
       +/
     bool isAfter(in PosInfInterval!TP interval) const pure nothrow
     {
@@ -23883,13 +23883,13 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
             interval = The interval to check against this interval.
 
         Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
-            NegInfInterval!Date(Date(1996, 5, 4))));
+        --------------------
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+                    NegInfInterval!Date(Date(1996, 5, 4))));
 
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
-            NegInfInterval!Date(Date(2013, 7, 9))));
---------------------
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+                    NegInfInterval!Date(Date(2013, 7, 9))));
+        --------------------
       +/
     bool isAfter(in NegInfInterval interval) const pure nothrow
     {
@@ -23907,16 +23907,16 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
             $(D DateTimeException) if the given interval is empty.
 
         Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+        --------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+                    Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
 
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
-            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+                    Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
 
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(
-            Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
---------------------
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+                    Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
+        --------------------
       +/
     bool intersects(in Interval!TP interval) const pure
     {
@@ -23934,13 +23934,13 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(
                        interval.
 
         Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
-            PosInfInterval!Date(Date(1999, 5, 4))));
+        --------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+                    PosInfInterval!Date(Date(1999, 5, 4))));
 
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(
-            PosInfInterval!Date(Date(2012, 3, 1))));
---------------------
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+                    PosInfInterval!Date(Date(2012, 3, 1))));
+        --------------------
       +/
     bool intersects(in PosInfInterval!TP interval) const pure nothrow
     {
@@ -23958,13 +23958,13 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(
             interval = The interval to check for intersection with this interval.
 
         Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
-            NegInfInterval!Date(Date(1996, 5, 4))));
+        --------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+                    NegInfInterval!Date(Date(1996, 5, 4))));
 
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
-            NegInfInterval!Date(Date(2013, 7, 9))));
---------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+                    NegInfInterval!Date(Date(2013, 7, 9))));
+        --------------------
       +/
     bool intersects(in NegInfInterval!TP interval) const pure nothrow
     {
@@ -23983,15 +23983,15 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
             the given interval is empty.
 
         Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
-       Interval!Date(Date(1990, 7 , 6), Date(2000, 8, 2)));
+        --------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+                    Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+               Interval!Date(Date(1990, 7 , 6), Date(2000, 8, 2)));
 
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
-            Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) ==
-       Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
---------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+                    Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) ==
+               Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
+        --------------------
       +/
     Interval!TP intersection(in Interval!TP interval) const
     {
@@ -24013,15 +24013,15 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
             $(D DateTimeException) if the two intervals do not intersect.
 
         Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
-            PosInfInterval!Date(Date(1990, 7, 6))) ==
-       Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
+        --------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+                    PosInfInterval!Date(Date(1990, 7, 6))) ==
+               Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
 
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
-            PosInfInterval!Date(Date(1999, 1, 12))) ==
-       Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
---------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+                    PosInfInterval!Date(Date(1999, 1, 12))) ==
+               Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
+        --------------------
       +/
     Interval!TP intersection(in PosInfInterval!TP interval) const
     {
@@ -24038,15 +24038,15 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
             interval = The interval to intersect with this interval.
 
         Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
-            NegInfInterval!Date(Date(1999, 7, 6))) ==
-       NegInfInterval!Date(Date(1999, 7 , 6)));
+        --------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+                    NegInfInterval!Date(Date(1999, 7, 6))) ==
+               NegInfInterval!Date(Date(1999, 7 , 6)));
 
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
-            NegInfInterval!Date(Date(2013, 1, 12))) ==
-       NegInfInterval!Date(Date(2012, 3 , 1)));
---------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+                    NegInfInterval!Date(Date(2013, 1, 12))) ==
+               NegInfInterval!Date(Date(2012, 3 , 1)));
+        --------------------
       +/
     NegInfInterval intersection(in NegInfInterval interval) const nothrow
     {
@@ -24065,19 +24065,19 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
             $(D DateTimeException) if the given interval is empty.
 
         Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+        --------------------
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+                    Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
 
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
-            Interval!Date(Date(1999, 1, 12), Date(2012, 3, 1))));
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+                    Interval!Date(Date(1999, 1, 12), Date(2012, 3, 1))));
 
-assert(NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
-            Interval!Date(Date(2012, 3, 1), Date(2019, 2, 2))));
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+                    Interval!Date(Date(2012, 3, 1), Date(2019, 2, 2))));
 
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
-            Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
---------------------
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+                    Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
+        --------------------
       +/
     bool isAdjacent(in Interval!TP interval) const pure
     {
@@ -24095,13 +24095,13 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
                        interval.
 
         Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
-            PosInfInterval!Date(Date(1999, 5, 4))));
+        --------------------
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+                    PosInfInterval!Date(Date(1999, 5, 4))));
 
-assert(NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
-            PosInfInterval!Date(Date(2012, 3, 1))));
---------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+                    PosInfInterval!Date(Date(2012, 3, 1))));
+        --------------------
       +/
     bool isAdjacent(in PosInfInterval!TP interval) const pure nothrow
     {
@@ -24120,13 +24120,13 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
                        interval.
 
         Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
-            NegInfInterval!Date(Date(1996, 5, 4))));
+        --------------------
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+                    NegInfInterval!Date(Date(1996, 5, 4))));
 
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
-            NegInfInterval!Date(Date(2012, 3, 1))));
---------------------
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+                    NegInfInterval!Date(Date(2012, 3, 1))));
+        --------------------
       +/
     bool isAdjacent(in NegInfInterval interval) const pure nothrow
     {
@@ -24151,15 +24151,15 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
             is not possible.
 
         Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
-       NegInfInterval!Date(Date(2012, 3 , 1)));
+        --------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
+                    Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+               NegInfInterval!Date(Date(2012, 3 , 1)));
 
-assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
-            Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) ==
-       NegInfInterval!Date(Date(2015, 9 , 2)));
---------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
+                    Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) ==
+               NegInfInterval!Date(Date(2015, 9 , 2)));
+        --------------------
       +/
     NegInfInterval merge(in Interval!TP interval) const
     {
@@ -24183,15 +24183,15 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
             is not possible.
 
         Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
-            NegInfInterval!Date(Date(1999, 7, 6))) ==
-       NegInfInterval!Date(Date(2012, 3 , 1)));
+        --------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
+                    NegInfInterval!Date(Date(1999, 7, 6))) ==
+               NegInfInterval!Date(Date(2012, 3 , 1)));
 
-assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
-            NegInfInterval!Date(Date(2013, 1, 12))) ==
-       NegInfInterval!Date(Date(2013, 1 , 12)));
---------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
+                    NegInfInterval!Date(Date(2013, 1, 12))) ==
+               NegInfInterval!Date(Date(2013, 1 , 12)));
+        --------------------
       +/
     NegInfInterval merge(in NegInfInterval interval) const pure nothrow
     {
@@ -24218,19 +24218,19 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
             is not possible.
 
         Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
-       NegInfInterval!Date(Date(2012, 3 , 1)));
+        --------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
+                    Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+               NegInfInterval!Date(Date(2012, 3 , 1)));
 
-assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
-            Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) ==
-       NegInfInterval!Date(Date(2015, 9 , 2)));
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
+                    Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) ==
+               NegInfInterval!Date(Date(2015, 9 , 2)));
 
-assert(NegInfInterval!Date(Date(1600, 1, 7)).span(
-            Interval!Date(Date(2012, 3, 11), Date(2017, 7, 1))) ==
-       NegInfInterval!Date(Date(2017, 7 , 1)));
---------------------
+        assert(NegInfInterval!Date(Date(1600, 1, 7)).span(
+                    Interval!Date(Date(2012, 3, 11), Date(2017, 7, 1))) ==
+               NegInfInterval!Date(Date(2017, 7 , 1)));
+        --------------------
       +/
     NegInfInterval span(in Interval!TP interval) const pure
     {
@@ -24256,15 +24256,15 @@ assert(NegInfInterval!Date(Date(1600, 1, 7)).span(
             is not possible.
 
         Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
-            NegInfInterval!Date(Date(1999, 7, 6))) ==
-       NegInfInterval!Date(Date(2012, 3 , 1)));
+        --------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
+                    NegInfInterval!Date(Date(1999, 7, 6))) ==
+               NegInfInterval!Date(Date(2012, 3 , 1)));
 
-assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
-            NegInfInterval!Date(Date(2013, 1, 12))) ==
-       NegInfInterval!Date(Date(2013, 1 , 12)));
---------------------
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
+                    NegInfInterval!Date(Date(2013, 1, 12))) ==
+               NegInfInterval!Date(Date(2013, 1 , 12)));
+        --------------------
       +/
     NegInfInterval span(in NegInfInterval interval) const pure nothrow
     {
@@ -24282,16 +24282,16 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
             duration = The duration to shift the interval by.
 
         Examples:
---------------------
-auto interval1 = NegInfInterval!Date(Date(2012, 4, 5));
-auto interval2 = NegInfInterval!Date(Date(2012, 4, 5));
+        --------------------
+        auto interval1 = NegInfInterval!Date(Date(2012, 4, 5));
+        auto interval2 = NegInfInterval!Date(Date(2012, 4, 5));
 
-interval1.shift(dur!"days"(50));
-assert(interval1 == NegInfInterval!Date(Date(2012, 5, 25)));
+        interval1.shift(dur!"days"(50));
+        assert(interval1 == NegInfInterval!Date(Date(2012, 5, 25)));
 
-interval2.shift(dur!"days"(-50));
-assert(interval2 == NegInfInterval!Date( Date(2012, 2, 15)));
---------------------
+        interval2.shift(dur!"days"(-50));
+        assert(interval2 == NegInfInterval!Date( Date(2012, 2, 15)));
+        --------------------
       +/
     void shift(D)(D duration) pure nothrow
         if(__traits(compiles, end + duration))
@@ -24322,16 +24322,16 @@ assert(interval2 == NegInfInterval!Date( Date(2012, 2, 15)));
                 interval would be invalid.
 
             Examples:
---------------------
-auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
-auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
+            --------------------
+            auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
+            auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
 
-interval1.shift(2);
-assert(interval1 == NegInfInterval!Date(Date(2014, 3, 1)));
+            interval1.shift(2);
+            assert(interval1 == NegInfInterval!Date(Date(2014, 3, 1)));
 
-interval2.shift(-2);
-assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
---------------------
+            interval2.shift(-2);
+            assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
+            --------------------
           +/
         void shift(T)(T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes)
             if(isIntegral!T)
@@ -24355,16 +24355,16 @@ assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
             dir      = The direction in time to expand the interval.
 
         Examples:
---------------------
-auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
-auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
+        --------------------
+        auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
+        auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
 
-interval1.expand(dur!"days"(2));
-assert(interval1 == NegInfInterval!Date(Date(2012, 3, 3)));
+        interval1.expand(dur!"days"(2));
+        assert(interval1 == NegInfInterval!Date(Date(2012, 3, 3)));
 
-interval2.expand(dur!"days"(-2));
-assert(interval2 == NegInfInterval!Date(Date(2012, 2, 28)));
---------------------
+        interval2.expand(dur!"days"(-2));
+        assert(interval2 == NegInfInterval!Date(Date(2012, 2, 28)));
+        --------------------
       +/
     void expand(D)(D duration) pure nothrow
         if(__traits(compiles, end + duration))
@@ -24391,16 +24391,16 @@ assert(interval2 == NegInfInterval!Date(Date(2012, 2, 28)));
                 interval would be invalid.
 
             Examples:
---------------------
-auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
-auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
+            --------------------
+            auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
+            auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
 
-interval1.expand(2);
-assert(interval1 == NegInfInterval!Date(Date(2014, 3, 1)));
+            interval1.expand(2);
+            assert(interval1 == NegInfInterval!Date(Date(2014, 3, 1)));
 
-interval2.expand(-2);
-assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
---------------------
+            interval2.expand(-2);
+            assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
+            --------------------
           +/
         void expand(T)(T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes)
             if(isIntegral!T)
@@ -24465,34 +24465,34 @@ assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
             so it's only relevant for custom delegates.
 
         Examples:
---------------------
-auto interval = NegInfInterval!Date(Date(2010, 9, 9));
-auto func = (in Date date) //For iterating over even-numbered days.
-            {
-                if((date.day & 1) == 0)
-                    return date - dur!"days"(2);
+        --------------------
+        auto interval = NegInfInterval!Date(Date(2010, 9, 9));
+        auto func = (in Date date) //For iterating over even-numbered days.
+                    {
+                        if((date.day & 1) == 0)
+                            return date - dur!"days"(2);
 
-                return date - dur!"days"(1);
-            };
-auto range = interval.bwdRange(func);
+                        return date - dur!"days"(1);
+                    };
+        auto range = interval.bwdRange(func);
 
-assert(range.front == Date(2010, 9, 9)); //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 8).
+        assert(range.front == Date(2010, 9, 9)); //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 8).
 
-range.popFront();
-assert(range.front == Date(2010, 9, 8));
+        range.popFront();
+        assert(range.front == Date(2010, 9, 8));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 6));
+        range.popFront();
+        assert(range.front == Date(2010, 9, 6));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 4));
+        range.popFront();
+        assert(range.front == Date(2010, 9, 4));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 2));
+        range.popFront();
+        assert(range.front == Date(2010, 9, 2));
 
-range.popFront();
-assert(!range.empty);
---------------------
+        range.popFront();
+        assert(!range.empty);
+        --------------------
       +/
     NegInfIntervalRange!(TP) bwdRange(TP delegate(in TP) func, PopFirst popFirst = PopFirst.no) const
     {
@@ -25798,26 +25798,26 @@ unittest
         dayOfWeek = The week that each time point in the range will be.
 
     Examples:
---------------------
-auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
-auto func = everyDayOfWeek!Date(DayOfWeek.mon);
-auto range = interval.fwdRange(func);
+    --------------------
+    auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
+    auto func = everyDayOfWeek!Date(DayOfWeek.mon);
+    auto range = interval.fwdRange(func);
 
-//A Thursday. Using PopFirst.yes would have made this Date(2010, 9, 6).
-assert(range.front == Date(2010, 9, 2));
+    //A Thursday. Using PopFirst.yes would have made this Date(2010, 9, 6).
+    assert(range.front == Date(2010, 9, 2));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 6));
+    range.popFront();
+    assert(range.front == Date(2010, 9, 6));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 13));
+    range.popFront();
+    assert(range.front == Date(2010, 9, 13));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 20));
+    range.popFront();
+    assert(range.front == Date(2010, 9, 20));
 
-range.popFront();
-assert(range.empty);
---------------------
+    range.popFront();
+    assert(range.empty);
+    --------------------
   +/
 static TP delegate(in TP) everyDayOfWeek(TP, Direction dir = Direction.fwd)(DayOfWeek dayOfWeek) nothrow
     if(isTimePoint!TP &&
@@ -25924,32 +25924,32 @@ unittest
         month = The month that each time point in the range will be in.
 
     Examples:
---------------------
-auto interval = Interval!Date(Date(2000, 1, 30), Date(2004, 8, 5));
-auto func = everyMonth!(Date)(Month.feb);
-auto range = interval.fwdRange(func);
+    --------------------
+    auto interval = Interval!Date(Date(2000, 1, 30), Date(2004, 8, 5));
+    auto func = everyMonth!(Date)(Month.feb);
+    auto range = interval.fwdRange(func);
 
-//Using PopFirst.yes would have made this Date(2010, 2, 29).
-assert(range.front == Date(2000, 1, 30));
+    //Using PopFirst.yes would have made this Date(2010, 2, 29).
+    assert(range.front == Date(2000, 1, 30));
 
-range.popFront();
-assert(range.front == Date(2000, 2, 29));
+    range.popFront();
+    assert(range.front == Date(2000, 2, 29));
 
-range.popFront();
-assert(range.front == Date(2001, 2, 28));
+    range.popFront();
+    assert(range.front == Date(2001, 2, 28));
 
-range.popFront();
-assert(range.front == Date(2002, 2, 28));
+    range.popFront();
+    assert(range.front == Date(2002, 2, 28));
 
-range.popFront();
-assert(range.front == Date(2003, 2, 28));
+    range.popFront();
+    assert(range.front == Date(2003, 2, 28));
 
-range.popFront();
-assert(range.front == Date(2004, 2, 28));
+    range.popFront();
+    assert(range.front == Date(2004, 2, 28));
 
-range.popFront();
-assert(range.empty);
---------------------
+    range.popFront();
+    assert(range.empty);
+    --------------------
   +/
 static TP delegate(in TP) everyMonth(TP, Direction dir = Direction.fwd)(int month)
     if(isTimePoint!TP &&
@@ -26075,26 +26075,26 @@ unittest
                    the range.
 
     Examples:
---------------------
-auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
-auto func = everyDuration!Date(dur!"days"(8));
-auto range = interval.fwdRange(func);
+    --------------------
+    auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
+    auto func = everyDuration!Date(dur!"days"(8));
+    auto range = interval.fwdRange(func);
 
-//Using PopFirst.yes would have made this Date(2010, 9, 10).
-assert(range.front == Date(2010, 9, 2));
+    //Using PopFirst.yes would have made this Date(2010, 9, 10).
+    assert(range.front == Date(2010, 9, 2));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 10));
+    range.popFront();
+    assert(range.front == Date(2010, 9, 10));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 18));
+    range.popFront();
+    assert(range.front == Date(2010, 9, 18));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 26));
+    range.popFront();
+    assert(range.front == Date(2010, 9, 26));
 
-range.popFront();
-assert(range.empty);
---------------------
+    range.popFront();
+    assert(range.empty);
+    --------------------
   +/
 static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
                                        (D duration) nothrow
@@ -26197,26 +26197,26 @@ unittest
                         delegate.
 
     Examples:
---------------------
-auto interval = Interval!Date(Date(2010, 9, 2), Date(2025, 9, 27));
-auto func = everyDuration!Date(4, 1, AllowDayOverflow.yes, dur!"days"(2));
-auto range = interval.fwdRange(func);
+    --------------------
+    auto interval = Interval!Date(Date(2010, 9, 2), Date(2025, 9, 27));
+    auto func = everyDuration!Date(4, 1, AllowDayOverflow.yes, dur!"days"(2));
+    auto range = interval.fwdRange(func);
 
-//Using PopFirst.yes would have made this Date(2014, 10, 12).
-assert(range.front == Date(2010, 9, 2));
+    //Using PopFirst.yes would have made this Date(2014, 10, 12).
+    assert(range.front == Date(2010, 9, 2));
 
-range.popFront();
-assert(range.front == Date(2014, 10, 4));
+    range.popFront();
+    assert(range.front == Date(2014, 10, 4));
 
-range.popFront();
-assert(range.front == Date(2018, 11, 6));
+    range.popFront();
+    assert(range.front == Date(2018, 11, 6));
 
-range.popFront();
-assert(range.front == Date(2022, 12, 8));
+    range.popFront();
+    assert(range.front == Date(2022, 12, 8));
 
-range.popFront();
-assert(range.empty);
---------------------
+    range.popFront();
+    assert(range.empty);
+    --------------------
   +/
 static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
                                        (int years,
@@ -27597,9 +27597,9 @@ public:
             $(D DateTimeException) if the given time zone could not be found.
 
         Examples:
---------------------
-auto tz = TimeZone.getTimeZone("America/Los_Angeles");
---------------------
+        --------------------
+        auto tz = TimeZone.getTimeZone("America/Los_Angeles");
+        --------------------
       +/
     static immutable(TimeZone) getTimeZone(string name)
     {
@@ -29258,13 +29258,13 @@ public:
             $(D FileException) if the TZ Database file could not be opened.
 
         Examples:
---------------------
-auto tz = PosixTimeZone.getTimeZone("America/Los_Angeles");
+        --------------------
+        auto tz = PosixTimeZone.getTimeZone("America/Los_Angeles");
 
-assert(tz.name == "America/Los_Angeles");
-assert(tz.stdName == "PST");
-assert(tz.dstName == "PDT");
---------------------
+        assert(tz.name == "America/Los_Angeles");
+        assert(tz.stdName == "PST");
+        assert(tz.dstName == "PDT");
+        --------------------
       +/
     //TODO make it possible for tzDatabaseDir to be gzipped tar file rather than an uncompressed
     //     directory.
@@ -29991,9 +29991,9 @@ version(StdDdoc)
                 found.
 
             Examples:
-    --------------------
-    auto tz = TimeZone.getTimeZone("America/Los_Angeles");
-    --------------------
+            --------------------
+            auto tz = TimeZone.getTimeZone("America/Los_Angeles");
+            --------------------
           +/
         static immutable(WindowsTimeZone) getTimeZone(string name);
 
@@ -30736,34 +30736,34 @@ unittest
    between threads) can also affect $(D StopWatch)'s accuracy.
 
    Examples:
---------------------
-void foo()
-{
-    StopWatch sw;
-    enum n = 100;
-    TickDuration[n] times;
-    TickDuration last = TickDuration.from!"seconds"(0);
-    foreach(i; 0..n)
+    --------------------
+    void foo()
     {
-       sw.start(); //start/resume mesuring.
-       foreach(unused; 0..1_000_000)
-           bar();
-       sw.stop();  //stop/pause measuring.
-       //Return value of peek() after having stopped are the always same.
-       writeln((i + 1) * 1_000_000, " times done, lap time: ",
-               sw.peek().msecs, "[ms]");
-       times[i] = sw.peek() - last;
-       last = sw.peek();
+        StopWatch sw;
+        enum n = 100;
+        TickDuration[n] times;
+        TickDuration last = TickDuration.from!"seconds"(0);
+        foreach(i; 0..n)
+        {
+           sw.start(); //start/resume mesuring.
+           foreach(unused; 0..1_000_000)
+               bar();
+           sw.stop();  //stop/pause measuring.
+           //Return value of peek() after having stopped are the always same.
+           writeln((i + 1) * 1_000_000, " times done, lap time: ",
+                   sw.peek().msecs, "[ms]");
+           times[i] = sw.peek() - last;
+           last = sw.peek();
+        }
+        real sum = 0;
+        // To know the number of seconds,
+        // use properties of TickDuration.
+        // (seconds, msecs, usecs, hnsecs)
+        foreach(t; times)
+           sum += t.hnsecs;
+        writeln("Average time: ", sum/n, " hnsecs");
     }
-    real sum = 0;
-    // To know the number of seconds,
-    // use properties of TickDuration.
-    // (seconds, msecs, usecs, hnsecs)
-    foreach(t; times)
-       sum += t.hnsecs;
-    writeln("Average time: ", sum/n, " hnsecs");
-}
---------------------
+    --------------------
   +/
 @safe struct StopWatch
 {
@@ -31017,15 +31017,15 @@ private:
         that it took to call $(D fun[0]) $(D n) times. The second value is the
         length of time it took to call $(D fun[1]) $(D n) times. Etc.
 
-   Examples:
---------------------
-int a;
-void f0() {}
-void f1() {auto b = a;}
-void f2() {auto b = to!(string)(a);}
-auto r = benchmark!(f0, f1, f2)(10_000);
-writefln("Milliseconds to call fun[0] n times: %s", r[0].msecs);
---------------------
+    Examples:
+    --------------------
+    int a;
+    void f0() {}
+    void f1() {auto b = a;}
+    void f2() {auto b = to!(string)(a);}
+    auto r = benchmark!(f0, f1, f2)(10_000);
+    writefln("Milliseconds to call fun[0] n times: %s", r[0].msecs);
+    --------------------
   +/
 TickDuration[lengthof!(fun)()] benchmark(fun...)(uint n)
 {
@@ -31116,27 +31116,27 @@ private:
 
 
 /++
-   Benchmark with two functions comparing.
+    Benchmark with two functions comparing.
 
-   Params:
+    Params:
        baseFunc   = The function to become the base of the speed.
        targetFunc = The function that wants to measure speed.
        times      = The number of times each function is to be executed.
 
-   Examples:
---------------------
-void f1() {
-   // ...
-}
-void f2() {
-   // ...
-}
+    Examples:
+    --------------------
+    void f1() {
+       // ...
+    }
+    void f2() {
+       // ...
+    }
 
-void main() {
-   auto b = comparingBenchmark!(f1, f2, 0x80);
-   writeln(b.point);
-}
---------------------
+    void main() {
+       auto b = comparingBenchmark!(f1, f2, 0x80);
+       writeln(b.point);
+    }
+    --------------------
   +/
 ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
                                             alias targetFunc,
@@ -31897,12 +31897,12 @@ unittest
         value = The number to validate.
 
     Examples:
---------------------
-assert(valid!"hours"(12));
-assert(!valid!"hours"(32));
-assert(valid!"months"(12));
-assert(!valid!"months"(13));
---------------------
+    --------------------
+    assert(valid!"hours"(12));
+    assert(!valid!"hours"(32));
+    assert(valid!"months"(12));
+    assert(!valid!"months"(13));
+    --------------------
   +/
 bool valid(string units)(int value) pure nothrow
     if(units == "months" ||
@@ -32190,14 +32190,14 @@ version(StdDdoc)
         $(CXREF time, TickDuration).
 
         Examples:
---------------------
-writeln("benchmark start!");
-{
-auto mt = measureTime!((a){assert(a.seconds);});
-doSomething();
-}
-writeln("benchmark end!");
---------------------
+        --------------------
+        writeln("benchmark start!");
+        {
+        auto mt = measureTime!((a){assert(a.seconds);});
+        doSomething();
+        }
+        writeln("benchmark end!");
+        --------------------
       +/
     auto measureTime(alias func)();
 }
@@ -32346,16 +32346,16 @@ template hnsecsPer(string units)
         The number of the given units from converting hnsecs to those units.
 
     Examples:
---------------------
-auto hnsecs = 2595000000007L;
-immutable days = splitUnitsFromHNSecs!"days"(hnsecs);
-assert(days == 3);
-assert(hnsecs == 3000000007);
+    --------------------
+    auto hnsecs = 2595000000007L;
+    immutable days = splitUnitsFromHNSecs!"days"(hnsecs);
+    assert(days == 3);
+    assert(hnsecs == 3000000007);
 
-immutable minutes = splitUnitsFromHNSecs!"minutes"(hnsecs);
-assert(minutes == 5);
-assert(hnsecs == 7);
---------------------
+    immutable minutes = splitUnitsFromHNSecs!"minutes"(hnsecs);
+    assert(minutes == 5);
+    assert(hnsecs == 7);
+    --------------------
   +/
 long splitUnitsFromHNSecs(string units)(ref long hnsecs) pure nothrow
     if(validTimeUnits(units) &&
@@ -32399,12 +32399,12 @@ unittest
         The split out value.
 
     Examples:
---------------------
-auto hnsecs = 2595000000007L;
-immutable days = getUnitsFromHNSecs!"days"(hnsecs);
-assert(days == 3);
-assert(hnsecs == 2595000000007L);
---------------------
+    --------------------
+    auto hnsecs = 2595000000007L;
+    immutable days = getUnitsFromHNSecs!"days"(hnsecs);
+    assert(days == 3);
+    assert(hnsecs == 2595000000007L);
+    --------------------
   +/
 long getUnitsFromHNSecs(string units)(long hnsecs) pure nothrow
     if(validTimeUnits(units) &&
@@ -32441,12 +32441,12 @@ unittest
         The remaining hnsecs.
 
     Examples:
---------------------
-auto hnsecs = 2595000000007L;
-auto returned = removeUnitsFromHNSecs!"days"(hnsecs);
-assert(returned == 3000000007);
-assert(hnsecs == 2595000000007L);
---------------------
+    --------------------
+    auto hnsecs = 2595000000007L;
+    auto returned = removeUnitsFromHNSecs!"days"(hnsecs);
+    assert(returned == 3000000007);
+    assert(hnsecs == 2595000000007L);
+    --------------------
   +/
 long removeUnitsFromHNSecs(string units)(long hnsecs) pure nothrow
     if(validTimeUnits(units) &&
@@ -32804,10 +32804,10 @@ unittest
     The time units which are one step smaller than the given units.
 
     Examples:
---------------------
-assert(nextSmallerTimeUnits!"years" == "months");
-assert(nextSmallerTimeUnits!"usecs" == "hnsecs");
---------------------
+    --------------------
+    assert(nextSmallerTimeUnits!"years" == "months");
+    assert(nextSmallerTimeUnits!"usecs" == "hnsecs");
+    --------------------
   +/
 template nextSmallerTimeUnits(string units)
     if(validTimeUnits(units) &&
@@ -32841,10 +32841,10 @@ unittest
     The time units which are one step larger than the given units.
 
     Examples:
---------------------
-assert(nextLargerTimeUnits!"months" == "years");
-assert(nextLargerTimeUnits!"hnsecs" == "usecs");
---------------------
+    --------------------
+    assert(nextLargerTimeUnits!"months" == "years");
+    assert(nextLargerTimeUnits!"hnsecs" == "usecs");
+    --------------------
   +/
 template nextLargerTimeUnits(string units)
     if(validTimeUnits(units) &&

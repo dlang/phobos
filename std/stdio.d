@@ -2157,17 +2157,17 @@ unittest
  *        $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
  * Example:
  *        Reads $(D stdin) and writes it to $(D stdout).
----
-import std.stdio;
-
-void main()
-{
-    string line;
-    while ((line = readln()) !is null)
-        write(line);
-}
----
-*/
+ * ---
+ * import std.stdio;
+ *
+ * void main()
+ * {
+ *     string line;
+ *     while ((line = readln()) !is null)
+ *         write(line);
+ * }
+ * ---
+ */
 S readln(S = string)(dchar terminator = '\n')
 if (isSomeString!S)
 {

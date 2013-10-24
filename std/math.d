@@ -3447,25 +3447,24 @@ real remquo(real x, real y, out int n) @trusted nothrow  /// ditto
 
  Example:
  ----
-    real a=3.5;
-    // Set all the flags to zero
-    resetIeeeFlags();
-    assert(!ieeeFlags.divByZero);
-    // Perform a division by zero.
-    a/=0.0L;
-    assert(a==real.infinity);
-    assert(ieeeFlags.divByZero);
-    // Create a NaN
-    a*=0.0L;
-    assert(ieeeFlags.invalid);
-    assert(isNaN(a));
+ real a=3.5;
+ // Set all the flags to zero
+ resetIeeeFlags();
+ assert(!ieeeFlags.divByZero);
+ // Perform a division by zero.
+ a/=0.0L;
+ assert(a==real.infinity);
+ assert(ieeeFlags.divByZero);
+ // Create a NaN
+ a*=0.0L;
+ assert(ieeeFlags.invalid);
+ assert(isNaN(a));
 
-    // Check that calling func() has no effect on the
-    // status flags.
-    IeeeFlags f = ieeeFlags;
-    func();
-    assert(ieeeFlags == f);
-
+ // Check that calling func() has no effect on the
+ // status flags.
+ IeeeFlags f = ieeeFlags;
+ func();
+ assert(ieeeFlags == f);
  ----
  */
 struct IeeeFlags
@@ -3640,37 +3639,37 @@ void resetIeeeFlags() { IeeeFlags.resetIeeeFlags(); }
   end of the scope.
 
 
-Example:
-----
-{
-    FloatingPointControl fpctrl;
+  Example:
+  ----
+  {
+      FloatingPointControl fpctrl;
 
-    // Enable hardware exceptions for division by zero, overflow to infinity,
-    // invalid operations, and uninitialized floating-point variables.
-    fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+      // Enable hardware exceptions for division by zero, overflow to infinity,
+      // invalid operations, and uninitialized floating-point variables.
+      fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
-    // This will generate a hardware exception, if x is a
-    // default-initialized floating point variable:
-    real x; // Add `= 0` or even `= real.nan` to not throw the exception.
-    real y = x * 3.0;
+      // This will generate a hardware exception, if x is a
+      // default-initialized floating point variable:
+      real x; // Add `= 0` or even `= real.nan` to not throw the exception.
+      real y = x * 3.0;
 
-    // The exception is only thrown for default-uninitialized NaN-s.
-    // NaN-s with other payload are valid:
-    real z = y * real.nan; // ok
+      // The exception is only thrown for default-uninitialized NaN-s.
+      // NaN-s with other payload are valid:
+      real z = y * real.nan; // ok
 
-    // Changing the rounding mode:
-    fpctrl.rounding = FloatingPointControl.roundUp;
-    assert(rint(1.1) == 2);
+      // Changing the rounding mode:
+      fpctrl.rounding = FloatingPointControl.roundUp;
+      assert(rint(1.1) == 2);
 
-    // The set hardware exceptions will be disabled when leaving this scope.
-    // The original rounding mode will also be restored.
-}
+      // The set hardware exceptions will be disabled when leaving this scope.
+      // The original rounding mode will also be restored.
+  }
 
-// Ensure previous values are returned:
-assert(!FloatingPointControl.enabledExceptions);
-assert(FloatingPointControl.rounding == FloatingPointControl.roundToNearest);
-assert(rint(1.1) == 1);
-----
+  // Ensure previous values are returned:
+  assert(!FloatingPointControl.enabledExceptions);
+  assert(FloatingPointControl.rounding == FloatingPointControl.roundToNearest);
+  assert(rint(1.1) == 1);
+  ----
 
  */
 struct FloatingPointControl

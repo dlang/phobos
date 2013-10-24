@@ -38,49 +38,49 @@ private class MangleException : Exception
  * Example:
  *        This program reads standard in and writes it to standard out,
  *        pretty-printing any found D mangled names.
--------------------
-import core.stdc.stdio : stdin;
-import std.stdio;
-import std.ascii;
-import std.demangle;
-
-void test(int x, float y) { }
-
-int main()
-{   
-    string buffer;
-    bool inword;
-    int c;
-    
-    writefln("Try typing in: %s", test.mangleof);
-    while ((c = fgetc(stdin)) != EOF)
-    {
-        if (inword)
-        {
-            if (c == '_' || isAlphaNum(c))
-                buffer ~= cast(char) c;
-            else
-            {
-                inword = false;
-                write(demangle(buffer), cast(char) c);
-            }
-        }
-        else
-        {   if (c == '_' || isAlpha(c))
-            {   
-                inword = true;
-                buffer.length = 0;
-                buffer ~= cast(char) c;
-            }
-            else
-                write(cast(char) c);
-        }
-    }
-    if (inword)
-        write(demangle(buffer));
-    return 0;
-}
--------------------
+ * -------------------
+ * import core.stdc.stdio : stdin;
+ * import std.stdio;
+ * import std.ascii;
+ * import std.demangle;
+ *
+ * void test(int x, float y) { }
+ *
+ * int main()
+ * {
+ *     string buffer;
+ *     bool inword;
+ *     int c;
+ *
+ *     writefln("Try typing in: %s", test.mangleof);
+ *     while ((c = fgetc(stdin)) != EOF)
+ *     {
+ *         if (inword)
+ *         {
+ *             if (c == '_' || isAlphaNum(c))
+ *                 buffer ~= cast(char) c;
+ *             else
+ *             {
+ *                 inword = false;
+ *                 write(demangle(buffer), cast(char) c);
+ *             }
+ *         }
+ *         else
+ *         {   if (c == '_' || isAlpha(c))
+ *             {
+ *                 inword = true;
+ *                 buffer.length = 0;
+ *                 buffer ~= cast(char) c;
+ *             }
+ *             else
+ *                 write(cast(char) c);
+ *         }
+ *     }
+ *     if (inword)
+ *         write(demangle(buffer));
+ *     return 0;
+ * }
+ * -------------------
  */
 
 string demangle(string name)

@@ -138,13 +138,12 @@ string digestToString(in ubyte[16] digest)
 /**
    Gets the digest of all $(D data) items passed in.
 
-Example:
-
-----
-string a = "Mary has ", b = "a little lamb";
-int[] c = [ 1, 2, 3, 4, 5 ];
-string d = getDigestString(a, b, c);
-----
+   Example:
+   ----
+   string a = "Mary has ", b = "a little lamb";
+   int[] c = [ 1, 2, 3, 4, 5 ];
+   string d = getDigestString(a, b, c);
+   ----
 */
 string getDigestString(in void[][] data...)
 {

@@ -723,7 +723,6 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  * functions that have allocated and built them.
  *
  * Example:
- *
  * ----
  * string letters()
  * {

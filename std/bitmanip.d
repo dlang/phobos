@@ -168,7 +168,6 @@ Allows creating bit fields inside $(D_PARAM struct)s and $(D_PARAM
 class)es.
 
 Example:
-
 ----
 struct A
 {
@@ -194,7 +193,6 @@ must be exactly 8, 16, 32, or 64. If padding is needed, just allocate
 one bitfield with an empty name.
 
 Example:
-
 ----
 struct A
 {
@@ -420,20 +418,20 @@ unittest
    Allows manipulating the fraction, exponent, and sign parts of a
    $(D_PARAM float) separately. The definition is:
 
-----
-struct FloatRep
-{
-    union
-    {
-        float value;
-        mixin(bitfields!(
-                  uint,  "fraction", 23,
-                  ubyte, "exponent",  8,
-                  bool,  "sign",      1));
-    }
-    enum uint bias = 127, fractionBits = 23, exponentBits = 8, signBits = 1;
-}
-----
+   ----
+   struct FloatRep
+   {
+       union
+       {
+           float value;
+           mixin(bitfields!(
+                     uint,  "fraction", 23,
+                     ubyte, "exponent",  8,
+                     bool,  "sign",      1));
+       }
+       enum uint bias = 127, fractionBits = 23, exponentBits = 8, signBits = 1;
+   }
+   ----
 */
 
 struct FloatRep
@@ -453,20 +451,20 @@ struct FloatRep
    Allows manipulating the fraction, exponent, and sign parts of a
    $(D_PARAM double) separately. The definition is:
 
-----
-struct DoubleRep
-{
-    union
-    {
-        double value;
-        mixin(bitfields!(
-                  ulong,   "fraction", 52,
-                  ushort,  "exponent", 11,
-                  bool,    "sign",      1));
-    }
-    enum uint bias = 1023, signBits = 1, fractionBits = 52, exponentBits = 11;
-}
-----
+   ----
+   struct DoubleRep
+   {
+       union
+       {
+           double value;
+           mixin(bitfields!(
+                     ulong,   "fraction", 52,
+                     ushort,  "exponent", 11,
+                     bool,    "sign",      1));
+       }
+       enum uint bias = 1023, signBits = 1, fractionBits = 52, exponentBits = 11;
+   }
+   ----
 */
 
 struct DoubleRep
@@ -1749,16 +1747,16 @@ private union EndianSwapper(T)
     and therefore could vary from machine to machine (which could make it
     unusable if you tried to transfer it to another machine).
 
-        Examples:
---------------------
-int i = 12345;
-ubyte[4] swappedI = nativeToBigEndian(i);
-assert(i == bigEndianToNative!int(swappedI));
+    Examples:
+    --------------------
+    int i = 12345;
+    ubyte[4] swappedI = nativeToBigEndian(i);
+    assert(i == bigEndianToNative!int(swappedI));
 
-double d = 123.45;
-ubyte[8] swappedD = nativeToBigEndian(d);
-assert(d == bigEndianToNative!double(swappedD));
---------------------
+    double d = 123.45;
+    ubyte[8] swappedD = nativeToBigEndian(d);
+    assert(d == bigEndianToNative!double(swappedD));
+    --------------------
   +/
 auto nativeToBigEndian(T)(T val) @safe pure nothrow
     if(canSwapEndianness!T)
@@ -1881,16 +1879,16 @@ unittest
     because the FPU will mess up any swapped floating point values. So, you
     can't actually have swapped floating point values as floating point values).
 
-        Examples:
---------------------
-ushort i = 12345;
-ubyte[2] swappedI = nativeToBigEndian(i);
-assert(i == bigEndianToNative!ushort(swappedI));
+    Examples:
+    --------------------
+    ushort i = 12345;
+    ubyte[2] swappedI = nativeToBigEndian(i);
+    assert(i == bigEndianToNative!ushort(swappedI));
 
-dchar c = 'D';
-ubyte[4] swappedC = nativeToBigEndian(c);
-assert(c == bigEndianToNative!dchar(swappedC));
---------------------
+    dchar c = 'D';
+    ubyte[4] swappedC = nativeToBigEndian(c);
+    assert(c == bigEndianToNative!dchar(swappedC));
+    --------------------
   +/
 T bigEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow
     if(canSwapEndianness!T && n == T.sizeof)
@@ -1944,16 +1942,16 @@ private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
     because the FPU will mess up any swapped floating point values. So, you
     can't actually have swapped floating point values as floating point values).
 
-        Examples:
---------------------
-int i = 12345;
-ubyte[4] swappedI = nativeToLittleEndian(i);
-assert(i == littleEndianToNative!int(swappedI));
+    Examples:
+    --------------------
+    int i = 12345;
+    ubyte[4] swappedI = nativeToLittleEndian(i);
+    assert(i == littleEndianToNative!int(swappedI));
 
-double d = 123.45;
-ubyte[8] swappedD = nativeToLittleEndian(d);
-assert(d == littleEndianToNative!double(swappedD));
---------------------
+    double d = 123.45;
+    ubyte[8] swappedD = nativeToLittleEndian(d);
+    assert(d == littleEndianToNative!double(swappedD));
+    --------------------
   +/
 auto nativeToLittleEndian(T)(T val) @safe pure nothrow
     if(canSwapEndianness!T)
@@ -2049,16 +2047,16 @@ unittest
     and therefore could vary from machine to machine (which could make it
     unusable if you tried to transfer it to another machine).
 
-        Examples:
---------------------
-ushort i = 12345;
-ubyte[2] swappedI = nativeToLittleEndian(i);
-assert(i == littleEndianToNative!ushort(swappedI));
+    Examples:
+    --------------------
+    ushort i = 12345;
+    ubyte[2] swappedI = nativeToLittleEndian(i);
+    assert(i == littleEndianToNative!ushort(swappedI));
 
-dchar c = 'D';
-ubyte[4] swappedC = nativeToLittleEndian(c);
-assert(c == littleEndianToNative!dchar(swappedC));
---------------------
+    dchar c = 'D';
+    ubyte[4] swappedC = nativeToLittleEndian(c);
+    assert(c == littleEndianToNative!dchar(swappedC));
+    --------------------
   +/
 T littleEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow
     if(canSwapEndianness!T && n == T.sizeof)
@@ -2202,27 +2200,27 @@ unittest
                 after the bytes read. The overloads with index are only
                 available if $(D hasSlicing!R) is $(D true).
 
-        Examples:
---------------------
-ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
-assert(buffer.peek!uint() == 17110537);
-assert(buffer.peek!ushort() == 261);
-assert(buffer.peek!ubyte() == 1);
+    Examples:
+    --------------------
+    ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
+    assert(buffer.peek!uint() == 17110537);
+    assert(buffer.peek!ushort() == 261);
+    assert(buffer.peek!ubyte() == 1);
 
-assert(buffer.peek!uint(2) == 369700095);
-assert(buffer.peek!ushort(2) == 5641);
-assert(buffer.peek!ubyte(2) == 22);
+    assert(buffer.peek!uint(2) == 369700095);
+    assert(buffer.peek!ushort(2) == 5641);
+    assert(buffer.peek!ubyte(2) == 22);
 
-size_t index = 0;
-assert(buffer.peek!ushort(&index) == 261);
-assert(index == 2);
+    size_t index = 0;
+    assert(buffer.peek!ushort(&index) == 261);
+    assert(index == 2);
 
-assert(buffer.peek!uint(&index) == 369700095);
-assert(index == 6);
+    assert(buffer.peek!uint(&index) == 369700095);
+    assert(index == 6);
 
-assert(buffer.peek!ubyte(&index) == 8);
-assert(index == 7);
---------------------
+    assert(buffer.peek!ubyte(&index) == 8);
+    assert(index == 7);
+    --------------------
   +/
 
 T peek(T, Endian endianness = Endian.bigEndian, R)(R range)
@@ -2527,20 +2525,20 @@ unittest
         endianness = The endianness that the bytes are assumed to be in.
         range = The range to read from.
 
-        Examples:
---------------------
-ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
-assert(buffer.length == 7);
+    Examples:
+    --------------------
+    ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
+    assert(buffer.length == 7);
 
-assert(buffer.read!ushort() == 261);
-assert(buffer.length == 5);
+    assert(buffer.read!ushort() == 261);
+    assert(buffer.length == 5);
 
-assert(buffer.read!uint() == 369700095);
-assert(buffer.length == 1);
+    assert(buffer.read!uint() == 369700095);
+    assert(buffer.length == 1);
 
-assert(buffer.read!ubyte() == 8);
-assert(buffer.empty);
---------------------
+    assert(buffer.read!ubyte() == 8);
+    assert(buffer.empty);
+    --------------------
   +/
 T read(T, Endian endianness = Endian.bigEndian, R)(ref R range)
     if(canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
@@ -2786,48 +2784,48 @@ unittest
         index = The index to start writing to. If index is a pointer, then it
                 is updated to the index after the bytes read.
 
-        Examples:
---------------------
-{
-    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
-    buffer.write!uint(29110231u, 0);
-    assert(buffer == [1, 188, 47, 215, 0, 0, 0, 0]);
+    Examples:
+    --------------------
+    {
+        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
+        buffer.write!uint(29110231u, 0);
+        assert(buffer == [1, 188, 47, 215, 0, 0, 0, 0]);
 
-    buffer.write!ushort(927, 0);
-    assert(buffer == [3, 159, 47, 215, 0, 0, 0, 0]);
+        buffer.write!ushort(927, 0);
+        assert(buffer == [3, 159, 47, 215, 0, 0, 0, 0]);
 
-    buffer.write!ubyte(42, 0);
-    assert(buffer == [42, 159, 47, 215, 0, 0, 0, 0]);
-}
+        buffer.write!ubyte(42, 0);
+        assert(buffer == [42, 159, 47, 215, 0, 0, 0, 0]);
+    }
 
-{
-    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0, 0];
-    buffer.write!uint(142700095u, 2);
-    assert(buffer == [0, 0, 8, 129, 110, 63, 0, 0, 0]);
+    {
+        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+        buffer.write!uint(142700095u, 2);
+        assert(buffer == [0, 0, 8, 129, 110, 63, 0, 0, 0]);
 
-    buffer.write!ushort(19839, 2);
-    assert(buffer == [0, 0, 77, 127, 110, 63, 0, 0, 0]);
+        buffer.write!ushort(19839, 2);
+        assert(buffer == [0, 0, 77, 127, 110, 63, 0, 0, 0]);
 
-    buffer.write!ubyte(132, 2);
-    assert(buffer == [0, 0, 132, 127, 110, 63, 0, 0, 0]);
-}
+        buffer.write!ubyte(132, 2);
+        assert(buffer == [0, 0, 132, 127, 110, 63, 0, 0, 0]);
+    }
 
-{
-    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
-    size_t index = 0;
-    buffer.write!ushort(261, &index);
-    assert(buffer == [1, 5, 0, 0, 0, 0, 0, 0]);
-    assert(index == 2);
+    {
+        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
+        size_t index = 0;
+        buffer.write!ushort(261, &index);
+        assert(buffer == [1, 5, 0, 0, 0, 0, 0, 0]);
+        assert(index == 2);
 
-    buffer.write!uint(369700095u, &index);
-    assert(buffer == [1, 5, 22, 9, 44, 255, 0, 0]);
-    assert(index == 6);
+        buffer.write!uint(369700095u, &index);
+        assert(buffer == [1, 5, 22, 9, 44, 255, 0, 0]);
+        assert(index == 6);
 
-    buffer.write!ubyte(8, &index);
-    assert(buffer == [1, 5, 22, 9, 44, 255, 8, 0]);
-    assert(index == 7);
-}
---------------------
+        buffer.write!ubyte(8, &index);
+        assert(buffer == [1, 5, 22, 9, 44, 255, 8, 0]);
+        assert(index == 7);
+    }
+    --------------------
   +/
 void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t index)
     if(canSwapEndianness!T &&
@@ -3172,18 +3170,18 @@ unittest
         endianness = The endianness to write the bytes in.
         range = The range to append to.
 
-        Examples:
---------------------
-auto buffer = appender!(const ubyte[])();
-buffer.append!ushort(261);
-assert(buffer.data == [1, 5]);
+    Examples:
+    --------------------
+    auto buffer = appender!(const ubyte[])();
+    buffer.append!ushort(261);
+    assert(buffer.data == [1, 5]);
 
-buffer.append!uint(369700095u);
-assert(buffer.data == [1, 5, 22, 9, 44, 255]);
+    buffer.append!uint(369700095u);
+    assert(buffer.data == [1, 5, 22, 9, 44, 255]);
 
-buffer.append!ubyte(8);
-assert(buffer.data == [1, 5, 22, 9, 44, 255, 8]);
---------------------
+    buffer.append!ubyte(8);
+    assert(buffer.data == [1, 5, 22, 9, 44, 255, 8]);
+    --------------------
   +/
 void append(T, Endian endianness = Endian.bigEndian, R)(R range, T value)
     if(canSwapEndianness!T && isOutputRange!(R, ubyte))
