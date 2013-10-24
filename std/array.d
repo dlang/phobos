@@ -1314,34 +1314,36 @@ unittest
     }
 }
 
-/**************************************
-Split the string $(D s) into an array of words, using whitespace as
+/++
+Eagerly split the string $(D s) into an array of words, using whitespace as
 delimiter. Runs of whitespace are merged together (no empty words are produced).
- */
-S[] split(S)(S s) @safe pure if (isSomeString!S)
+
+$(D @safe), $(D pure) and $(D CTFE)-able.
++/
+S[] split(S)(S s) @safe pure
+if (isSomeString!S)
 {
     size_t istart;
     bool inword = false;
     S[] result;
 
-    foreach (i; 0 .. s.length)
+    foreach (i, dchar c ; s)
     {
-        switch (s[i])
+        if (std.uni.isWhite(c))
         {
-        case ' ': case '\t': case '\f': case '\r': case '\n': case '\v':
             if (inword)
             {
                 result ~= s[istart .. i];
                 inword = false;
             }
-            break;
-        default:
+        }
+        else
+        {
             if (!inword)
             {
                 istart = i;
                 inword = true;
             }
-            break;
         }
     }
     if (inword)
@@ -1351,18 +1353,41 @@ S[] split(S)(S s) @safe pure if (isSomeString!S)
 
 unittest
 {
-    foreach (S; TypeTuple!(string, wstring, dstring))
-    {
-        debug(std_array) printf("array.split1\n");
-        S s = " \t\npeter paul\tjerry \n";
-        assert(equal(split(s), [ to!S("peter"), to!S("paul"), to!S("jerry") ]));
+    static auto makeEntry(S)(string l, string[] r)
+    {return tuple(l.to!S(), r.to!(S[])());}
 
-        S s2 = " \t\npeter paul\tjerry";
-        assert(equal(split(s2), [ to!S("peter"), to!S("paul"), to!S("jerry") ]));
+    foreach (S; TypeTuple!(string, wstring, dstring,))
+    {
+        auto entries =
+        [
+            makeEntry!S("", []),
+            makeEntry!S(" ", []),
+            makeEntry!S("hello", ["hello"]),
+            makeEntry!S(" hello ", ["hello"]),
+            makeEntry!S("  h  e  l  l  o ", ["h", "e", "l", "l", "o"]),
+            makeEntry!S("peter\t\npaul\rjerry", ["peter", "paul", "jerry"]),
+            makeEntry!S(" \t\npeter paul\tjerry \n", ["peter", "paul", "jerry"]),
+            makeEntry!S("\u2000日\u202F本\u205F語\u3000", ["日", "本", "語"]),
+            makeEntry!S("　　哈・郎博尔德｝　　　　___一个", ["哈・郎博尔德｝", "___一个"])
+        ];
+        foreach (entry; entries)
+            assert(entry[0].split() == entry[1], format("got: %s, expected: %s.", entry[0].split(), entry[1]));
     }
 
+    //Just to test that an immutable is split-able
     immutable string s = " \t\npeter paul\tjerry \n";
-    assert(equal(split(s), ["peter", "paul", "jerry"]));
+    assert(split(s) == ["peter", "paul", "jerry"]);
+}
+
+unittest //safety, purity, ctfe ...
+{
+    void dg() @safe pure {
+        assert(split("hello world"c) == ["hello"c, "world"c]);
+        assert(split("hello world"w) == ["hello"w, "world"w]);
+        assert(split("hello world"d) == ["hello"d, "world"d]);
+    }
+    dg();
+    assertCTFEable!dg;
 }
 
 /**
