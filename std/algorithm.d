@@ -2743,7 +2743,8 @@ private struct SplitterResult(alias isTerminator, Range)
         else
             for ( _end = 0; !_next.empty ; _next.popFront)
             {
-                if (isTerminator(_next.front)) break;
+                if (isTerminator(_next.front))
+                    break;
                 ++_end;
             }
     }
@@ -2766,7 +2767,7 @@ private struct SplitterResult(alias isTerminator, Range)
     {
         @property bool empty()
         {
-            return _end == _end.max;
+            return _end == size_t.max;
         }
     }
 
@@ -2776,9 +2777,7 @@ private struct SplitterResult(alias isTerminator, Range)
         static if (fullSlicing)
             return _input[0 .. _end];
         else
-            //Note: We don't need to save input, as we never actually modify it.
-            //Input is already saved as "checkpoints" of _next.
-            return _input.takeExactly(_end);
+            return _input.save.takeExactly(_end);
     }
 
     void popFront()
@@ -2790,7 +2789,7 @@ private struct SplitterResult(alias isTerminator, Range)
             _input = _input[_end .. _input.length];
             if (_input.empty)
             {
-                _end = _end.max;
+                _end = size_t.max;
                 return;
             }
             _input.popFront();
@@ -2800,7 +2799,7 @@ private struct SplitterResult(alias isTerminator, Range)
             if (_next.empty)
             {
                 _input = _next;
-                _end = _end.max;
+                _end = size_t.max;
                 return;
             }
             _next.popFront();

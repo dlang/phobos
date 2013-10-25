@@ -1393,49 +1393,46 @@ This function is string specific and, contrary to $(D
 splitter!(std.uni.isWhite)), runs of white spaces will be merged together.
  +/
 auto splitter(C)(C[] s)
-    if(isSomeChar!C)
+if(isSomeChar!C)
 {
     static struct Result
     {
     private:
-        alias S = C[];
-
-        S _s;
+        C[] _s;
         size_t _frontLength;
-        size_t _backLength;
 
-        void getFirst()
+        void getFirst() pure @safe
         {
             auto r = find!(std.uni.isWhite)(_s);
             _frontLength = _s.length - r.length;
         }
 
     public:
-        this(C[] s)
+        this(C[] s) pure @safe
         {
             _s = s.strip();
             getFirst();
         }
 
-        @property C[] front()
+        @property C[] front() pure @safe
         {
             version(assert) if (empty) throw new RangeError();
             return _s[0 .. _frontLength];
         }
 
-        void popFront()
+        void popFront() pure @safe
         {
             version(assert) if (empty) throw new RangeError();
             _s = _s[_frontLength .. $].stripLeft();
             getFirst();
         }
 
-        @property empty()
+        @property bool empty() const pure nothrow @safe
         {
-            return _s.empty();
+            return _s.empty;
         }
 
-        @property Result save()
+        @property inout(Result) save() inout pure nothrow @safe
         {
             return this;
         }
@@ -1444,20 +1441,13 @@ auto splitter(C)(C[] s)
 }
 
 ///
-unittest
+@safe pure unittest
 {
     auto a = " a     bcd   ef gh ";
     assert(equal(splitter(a), ["a", "bcd", "ef", "gh"][]));
 }
 
-///
 @safe pure unittest
-{
-    auto a = " a     bcd   ef gh ";
-    assert(equal(splitter(a), ["", "a", "bcd", "ef", "gh"][]));
-}
-
-/*@safe*/ pure unittest
 {
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
@@ -1476,11 +1466,11 @@ Eagerly Splits $(D s) into an array, using $(D delim) as the delimiter.
 
 See also: $(XREF algorithm, splitter) for the lazy version of this operator.
  +/
-Unqual!S1[] split(S1, S2)(S1 s, S2 delim)
-if (isForwardRange!(Unqual!S1) && isForwardRange!S2)
+S1[] split(S1, S2)(S1 s, S2 delim)
+if (isForwardRange!S1 && isForwardRange!S2)
 {
-    Unqual!S1 us = s;
-    auto app = appender!(Unqual!(S1)[])();
+    S1 us = s;
+    auto app = appender!(S1[])();
     foreach (word; std.algorithm.splitter(us, delim))
     {
         app.put(word);
@@ -1488,11 +1478,11 @@ if (isForwardRange!(Unqual!S1) && isForwardRange!S2)
     return app.data;
 }
 ///ditto
-Unqual!S1[] split(alias isTerminator, S1)(S1 s)
-if (isForwardRange!(Unqual!S1))
+S1[] split(alias isTerminator, S1)(S1 s)
+if (isForwardRange!S1)
 {
-    Unqual!S1 us = s;
-    auto app = appender!(Unqual!(S1)[])();
+    S1 us = s;
+    auto app = appender!(S1[])();
     foreach (word; std.algorithm.splitter!isTerminator(us))
     {
         app.put(word);
