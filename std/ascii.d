@@ -68,6 +68,107 @@ else
 
 
 /++
+    Whether or not $(D c) is in the ASCII character set - i.e. in the range
+    0..0x7F.
+  +/
+bool isASCII(dchar c) @safe pure nothrow
+{
+    return c <= 0x7F;
+}
+
+unittest
+{
+    foreach(dchar c; 0 .. 128)
+        assert(isASCII(c));
+
+    assert(!isASCII(128));
+}
+
+
+/++
+    Same as the above $(D isASCII), but will test whether $(I all) the
+    characters in $(D str) are in the ASCII character set.
+  +/
+
+import std.stdio;
+
+bool isASCII(in char[] str) //@trusted nothrow pure
+{
+    enum alignment = size_t.alignof;
+    enum alignMask = ~(alignment - 1);
+    enum asciiMask = cast(size_t)(size_t.sizeof == 8 ? 0x80808080_80808080_UL : 0x80808080_UL);
+
+    auto beg = str.ptr;
+    auto end = str.ptr + str.length;
+    auto pivotBeg = cast(const(char)*)(cast(size_t)(beg + alignment - 1) & alignMask);
+    auto pivotEnd = cast(const(char)*)(cast(size_t)end & alignMask);
+
+    if (pivotEnd <= pivotBeg)
+    {
+        foreach (e; str)
+            if (e >= 0x80)
+                return false;
+    }
+    else
+    {
+        for (auto p = beg; p < pivotBeg; ++p)
+            if (*p >= 0x80)
+                return false;
+
+        for (auto p = pivotBeg; p < pivotEnd; p += size_t.sizeof)
+            if (*cast(const(size_t)*)p & asciiMask)
+                return false;
+
+        for (auto p = pivotEnd; p < end; ++p)
+            if (*p >= 0x80)
+                return false;
+    }
+
+    return true;
+}
+
+unittest
+{
+    string s1 = "aaaaaaaaaaaaaaaaaaaa";
+    foreach (i ; 0 .. 10)
+    {
+        foreach (j ; 10 .. 20)
+        {
+            assert( isASCII(s1[i .. j]));
+        }
+    }
+
+    string s2 = "ä";
+    assert(!isASCII(s2));
+
+    char[] s3 = s1.dup;
+    foreach (i ; 0 .. 10)
+    {
+        foreach (j ; 10 .. 20)
+        {
+            foreach(k ; i .. j)
+            {
+                s3[k] = 0x80;
+                assert (!isASCII(s3[i .. j]));
+                s3[k] = 'a';
+            }
+        }
+    }
+    foreach (i ; 1 .. 10)
+    {
+        foreach (j ; 10 .. 19)
+        {
+            s3[i - 1] = 0x80;
+            s3[j + 1] = 0x80;
+            assert ( isASCII(s3[i .. j]));
+            s3[j + 1] = 'a';
+            s3[i - 1] = 'a';
+        }
+    }
+}
+
+
+/++
     Returns whether $(D c) is a letter or a number (0..9, a..z, A..Z).
   +/
 bool isAlphaNum(dchar c) @safe pure nothrow
@@ -292,24 +393,6 @@ unittest
         else
             assert(isPrintable(c));
     }
-}
-
-
-/++
-    Whether or not $(D c) is in the ASCII character set - i.e. in the range
-    0..0x7F.
-  +/
-bool isASCII(dchar c) @safe pure nothrow
-{
-    return c <= 0x7F;
-}
-
-unittest
-{
-    foreach(dchar c; 0 .. 128)
-        assert(isASCII(c));
-
-    assert(!isASCII(128));
 }
 
 
