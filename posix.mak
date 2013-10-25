@@ -148,10 +148,14 @@ VERSION=../dmd/VERSION
 # The awk script will return the second group without leading zeros of the version string, i.e. 2.063.2 produces 63
 SONAME = libphobos2.so.0.$(shell awk -F. '{ print $$2 + 0 }' $(VERSION))
 
+# Set RELEASE version number of the real shared library name.
+# The awk script will return the third group of the version string, zero if missing, i.e. 2.063.2 produces 2
+RELEASE = $(shell awk -F. '{ print $$3 + 0 }' $(VERSION))
+
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))
 	LIB = $(ROOT)/libphobos2.a
-	LIBSO = $(ROOT)/$(SONAME).0
+	LIBSO = $(ROOT)/$(SONAME).$(RELEASE)
 else
 	LIB = $(ROOT)/phobos.lib
 endif
