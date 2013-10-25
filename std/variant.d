@@ -65,7 +65,8 @@
  */
 module std.variant;
 
-import std.traits, std.c.string, std.typetuple, std.conv, std.exception;
+import std.c.string, std.conv, std.exception, std.traits, std.typecons,
+    std.typetuple;
 
 @trusted:
 
@@ -494,7 +495,28 @@ private:
             }
 
         case OpID.apply:
-            assert(0);
+            static if (!isFunctionPointer!A && !isDelegate!A)
+            {
+                enforce(0, text("Cannot apply `()' to a value of type `",
+                                A.stringof, "'."));
+            }
+            else
+            {
+                auto p = cast(VariantN*) parm;
+                auto argCount = p.get!size_t();
+                Tuple!(ParameterTypeTuple!A) t;
+                enforce(t.length == argCount,
+                        text("Argument count mismatch: ",
+                             A.stringof, " expects ", t.length,
+                             " argument(s), not ", argCount, "."));
+                auto variantArgs = p[1 .. argCount + 1];
+                foreach (i, T; ParameterTypeTuple!A)
+                {
+                    t[i] = variantArgs[i].get!T();
+                }
+                *p = (*zis)(t.expand);
+            }
+            break;
 
         default: assert(false);
         }
@@ -563,6 +585,18 @@ public:
             fptr = &handler!(T);
         }
         return this;
+    }
+
+    VariantN opCall(P...)(auto ref P params)
+    {
+        VariantN pack[P.length + 1];
+        pack[0] = P.length;
+        foreach (i, _; params)
+        {
+            pack[i + 1] = params[i];
+        }
+        fptr(OpID.apply, &store, &pack);
+        return pack[0];
     }
 
     /** Returns true if and only if the $(D_PARAM VariantN) object
@@ -1100,6 +1134,18 @@ public:
         }
         return 0;
     }
+}
+
+unittest
+{
+    Variant v;
+    int foo() { return 42; }
+    v = &foo;
+    assert(v() == 42);
+
+    static int bar(string s) { return to!int(s); }
+    v = &bar;
+    assert(v("43") == 43);
 }
 
 //Issue# 8195
