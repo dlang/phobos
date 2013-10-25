@@ -78,9 +78,12 @@ else version(Posix)
                SD_RECEIVE, SD_SEND, SD_BOTH, MSG_NOSIGNAL, INADDR_NONE,
                TCP_KEEPIDLE, TCP_KEEPINTVL;
     else version(OSX)
+    {
         import std.c.osx.socket : AF_IPX, AF_APPLETALK, SOCK_RDM,
                IPPROTO_IGMP, IPPROTO_GGP, IPPROTO_PUP, IPPROTO_IDP,
                SD_RECEIVE, SD_SEND, SD_BOTH, INADDR_NONE;
+        import core.sys.posix.sys.un : sockaddr_un;
+    }
     else version(FreeBSD)
     {
         import core.sys.posix.sys.socket;
@@ -1893,10 +1896,10 @@ static if (is(sockaddr_un))
 
         this(in char[] path)
         {
-            len = sockaddr_un.sun_path.offsetof + path.length + 1;
+            len = cast(uint)(sun.sun_path.offsetof + path.length + 1);
             sun = cast(sockaddr_un*) (new ubyte[len]).ptr;
             sun.sun_family = AF_UNIX;
-            sun.sun_path.ptr[0..path.length] = path;
+            sun.sun_path.ptr[0..path.length] = (cast(const byte[])path)[];
             sun.sun_path.ptr[path.length] = 0;
         }
 
