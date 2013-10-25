@@ -55,11 +55,11 @@ $(D n) bytes may result in a larger allocation. The extra memory allocated goes
 unused and adds to the so-called $(WEB goo.gl/YoKffF,internal fragmentation).
 The function $(D goodAllocSize(n)) returns the actual number of bytes that would
 be allocated upon a request for $(D n) bytes. This module defines a default
-mplementation that returns $(D n) rounded up to a multiple of the allocator's
+implementation that returns $(D n) rounded up to a multiple of the allocator's
 alignment.))
 
 $(TR $(TDC void[] allocate(size_t s);, $(RES) is null || $(RES).length == s)
-$(TD If $(D s == 0), an the call may return any empty slice (including $(D
+$(TD If $(D s == 0), the call may return any empty slice (including $(D
 null)). Otherwise, the call allocates $(D s) bytes of memory and returns the
 allocated block, or $(D null) if the request could not be satisfied.))
 
@@ -232,6 +232,78 @@ unittest
 import std.algorithm, std.conv, std.exception, std.range, std.traits,
     std.typecons, std.typetuple;
 version(unittest) import std.stdio;
+
+/**
+*/
+private struct Tristate
+{
+    private ubyte value;
+    private static Tristate make(ubyte b)
+    {
+        Tristate r = void;
+        r.value = b;
+        return r;
+    }
+
+    enum no = make(0), yes = make(1), unknown = make(2);
+
+    this(bool b) { value = b; }
+
+    void opAssign(bool b) { value = b; }
+
+    Tristate opUnary(string s)() if (s == "~")
+    {
+        return this == unknown ? this : make(!value);
+    }
+
+    Tristate opBinary(string s)(Tristate rhs) if (s == "|")
+    {
+        return this == yes || rhs == yes
+            ? yes
+            : this == no && rhs == no
+                ? no
+                : unknown;
+    }
+
+    Tristate opBinary(string s)(Tristate rhs) if (s == "&")
+    {
+        return this == no || rhs == no
+            ? no
+            : this == yes && rhs == yes
+                ? yes
+                : unknown;
+    }
+
+    Tristate opBinary(string s)(Tristate rhs) if (s == "^" || s == "^^")
+    {
+        return (this == no && rhs == yes) || (this == yes && rhs == no)
+            ? yes
+            : this == unknown || rhs == unknown
+                ? unknown
+                : no;
+    }
+}
+
+unittest
+{
+    Tristate a;
+    assert(a == Tristate.no);
+    static assert(!is(typeof({ if (a) {} })));
+    assert(!is(typeof({ auto b = Tristate(3); })));
+    a = true;
+    assert(a == Tristate.yes);
+    a = false;
+    assert(a == Tristate.no);
+    a = Tristate.unknown;
+    Tristate b;
+    b = a;
+    assert(b == a);
+    auto c = a | b;
+    assert(c == Tristate.unknown);
+    assert((a & b) == Tristate.unknown);
+    a = true;
+    assert(~a == Tristate.no);
+}
 
 /**
 Returns the size in bytes of the state that needs to be allocated to hold an
@@ -1614,7 +1686,7 @@ bool reallocate(Allocator)(ref Allocator a, ref void[] b, size_t s)
 }
 
 /**
-$(D FallbackAllocator) is an the allocator equivalent of an "or" operator in
+$(D FallbackAllocator) is the allocator equivalent of an "or" operator in
 algebra. An allocation request is first attempted with the $(D Primary)
 allocator. If that returns $(D null), the request is forwarded to the $(D
 Fallback) allocator. All other requests are dispatched appropriately to one of
@@ -2471,7 +2543,7 @@ unittest
 }
 
 /**
-_Options for $(D AllocatorWithOptions) defined below. Each enables during
+_Options for $(D AllocatorWithStats) defined below. Each enables during
 compilation one specific counter, statistic, or other piece of information.
 */
 enum Options : uint
@@ -3125,6 +3197,11 @@ struct CascadingAllocator(alias make)
             auto newNodeStack = Node(make());
             // Weird: store the new node inside its own allocated storage!
             _root = cast(Node*) newNodeStack.a.allocate(Node.sizeof).ptr;
+            if (!_root)
+            {
+                // Are you serious? Not even the first allocation?
+                return null;
+            }
             newNodeStack.move(*_root);
             // Make sure we reserve room for the next next node
             _root.next = cast(Node*) _root.a.allocate(Node.sizeof).ptr;
@@ -3135,10 +3212,17 @@ struct CascadingAllocator(alias make)
         // No room left, must append a new allocator
         auto n = _root;
         while (n.nextIsInitialized) n = n.next;
+        if (!n.next)
+        {
+            // Resources truly exhausted, not much to do
+            return null;
+        }
         emplace(n.next, Node(make()));
         n.nextIsInitialized = true;
         // Reserve room for the next next allocator
         n.next.next = cast(Node*) allocateNoGrow(Node.sizeof).ptr;
+        // Rare failure cases leave nextIsInitialized to false
+        if (!n.next.next) n.nextIsInitialized = false;
         // TODO: would be nice to bring the new allocator to the front.
         // All done!
         return allocateNoGrow(s);
@@ -3146,8 +3230,8 @@ struct CascadingAllocator(alias make)
 
     private void[] allocateNoGrow(size_t bytes)
     {
-        if (!_root) return null;
         void[] result;
+        if (!_root) return result;
         for (auto n = _root; ; n = n.next)
         {
             result = n.a.allocate(bytes);
