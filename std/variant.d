@@ -514,7 +514,16 @@ private:
                 {
                     t[i] = variantArgs[i].get!T();
                 }
-                *p = (*zis)(t.expand);
+
+                static if(is(ReturnType!A == void))
+                {
+                    (*zis)(t.expand);
+                    *p = VariantN.init; // void returns uninitialized Variant.
+                }
+                else
+                {
+                    *p = (*zis)(t.expand);
+                }
             }
             break;
 
@@ -1638,6 +1647,18 @@ unittest
     assertThrown!VariantException(Variant(A(3)) < A(4));
     assertThrown!VariantException(A(3) < Variant(A(4)));
     assertThrown!VariantException(Variant(A(3)) < Variant(A(4)));
+}
+
+// Handling of void function pointers / delegates, e.g. issue 11360
+unittest
+{
+    static void t1() { }
+    Variant v = &t1;
+    assert(v() == Variant.init);
+    
+    static int t2() { return 3; }
+    Variant v2 = &t2;
+    assert(v2() == 3);
 }
 
 /**
