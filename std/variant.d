@@ -514,7 +514,10 @@ private:
                 {
                     t[i] = variantArgs[i].get!T();
                 }
-                *p = (*zis)(t.expand);
+                static if(is(ReturnType!A == void))
+                    *p = VariantN.init; // Uninitialized Variant.Uninitialized
+                else
+                    *p = (*zis)(t.expand);
             }
             break;
 
