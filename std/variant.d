@@ -518,7 +518,7 @@ private:
                 static if(is(ReturnType!A == void))
                 {
                     (*zis)(t.expand);
-                    *p = VariantN.init; // Uninitialized Variant.Uninitialized
+                    *p = VariantN.init; // void returns uninitialized Variant.
                 }
                 else
                 {
