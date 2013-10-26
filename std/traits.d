@@ -626,13 +626,13 @@ private template fullyQualifiedNameImplForTypes(T,
         import std.conv;
 
         enum fullyQualifiedNameImplForTypes = chain!(
-            format("%s[%s]", fullyQualifiedNameImplForTypes!(typeof(T.init[0]), qualifiers), T.length)
+            format("%s[%s]", fullyQualifiedNameImplForTypes!(_ArrayElementType!T, qualifiers), T.length)
         );
     }
     else static if (isArray!T)
     {
         enum fullyQualifiedNameImplForTypes = chain!(
-            format("%s[]", fullyQualifiedNameImplForTypes!(typeof(T.init[0]), qualifiers))
+            format("%s[]", fullyQualifiedNameImplForTypes!(_ArrayElementType!T, qualifiers))
         );
     }
     else static if (isAssociativeArray!T)
@@ -1873,7 +1873,7 @@ have a context pointer.
 template hasNested(T)
 {
     static if(isStaticArray!T && T.length)
-        enum hasNested = hasNested!(typeof(T.init[0]));
+        enum hasNested = hasNested!(_ArrayElementType!T);
     else static if(is(T == class) || is(T == struct) || is(T == union))
         enum hasNested = isNested!T ||
             anySatisfy!(.hasNested, FieldTypeTuple!T);
@@ -2697,7 +2697,7 @@ template hasIndirections(T)
                 enum Impl = true;
             else
                 enum Impl = Impl!(T[1 .. $]) ||
-                    Impl!(RepresentationTypeTuple!(typeof(T[0].init[0])));
+                    Impl!(RepresentationTypeTuple!(_ArrayElementType!(T[0])));
         }
         else
         {
@@ -2962,7 +2962,7 @@ template hasElaborateCopyConstructor(S)
 {
     static if(isStaticArray!S && S.length)
     {
-        enum bool hasElaborateCopyConstructor = hasElaborateCopyConstructor!(typeof(S.init[0]));
+        enum bool hasElaborateCopyConstructor = hasElaborateCopyConstructor!(_ArrayElementType!S);
     }
     else static if(is(S == struct))
     {
@@ -3015,7 +3015,7 @@ template hasElaborateAssign(S)
 {
     static if(isStaticArray!S && S.length)
     {
-        enum bool hasElaborateAssign = hasElaborateAssign!(typeof(S.init[0]));
+        enum bool hasElaborateAssign = hasElaborateAssign!(_ArrayElementType!S);
     }
     else static if(is(S == struct))
     {
@@ -3096,7 +3096,7 @@ template hasElaborateDestructor(S)
 {
     static if(isStaticArray!S && S.length)
     {
-        enum bool hasElaborateDestructor = hasElaborateDestructor!(typeof(S.init[0]));
+        enum bool hasElaborateDestructor = hasElaborateDestructor!(_ArrayElementType!S);
     }
     else static if(is(S == struct))
     {
@@ -3907,9 +3907,9 @@ template ImplicitConversionTargets(T)
         alias TypeTuple!(typeof(null)) ImplicitConversionTargets;
     else static if(is(T : Object))
         alias TransitiveBaseTypeTuple!(T) ImplicitConversionTargets;
-    else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
+    else static if (isDynamicArray!T && !is(_ArrayElementType!T == const))
         alias ImplicitConversionTargets =
-            TypeTuple!(const(Unqual!(typeof(T.init[0])))[]);
+            TypeTuple!(const(Unqual!(_ArrayElementType!T))[]);
     else static if (is(T : void*))
         alias TypeTuple!(void*) ImplicitConversionTargets;
     else
@@ -5102,6 +5102,31 @@ unittest
     static assert(!isArray!(uint[uint]));
     static assert(!isArray!(typeof(null)));
 }
+
+// Returns the element type of an array.
+package template _ArrayElementType(T)
+{
+    static if(is(T : E[], E) || is(T : E[n], E, size_t n))
+        alias _ArrayElementType = E;
+    else
+        static assert(0, T.stringof ~ " is not an array.");
+}
+
+unittest
+{
+    static assert(is(_ArrayElementType!(int[]) == int));
+    static assert(is(_ArrayElementType!(long[0]) == long));
+    static assert(is(_ArrayElementType!string == immutable(char)));
+    static assert(is(_ArrayElementType!(int[7][8]) == int[7]));
+
+    enum ESA : int[0] { a = [] }
+    enum EDA : long[] { a = null }
+    static assert(is(_ArrayElementType!ESA == int));
+    static assert(is(_ArrayElementType!EDA == long));
+
+    static assert(!__traits(compiles, _ArrayElementType!int));
+}
+
 
 /**
  * Detect whether $(D T) is an associative array type

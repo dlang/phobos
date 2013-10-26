@@ -4386,7 +4386,7 @@ body
             debug (unformatRange) printf("\t) spec = %c, front = %c ", fmt.spec, input.front);
             static if (isStaticArray!T)
             {
-                result[i++] = unformatElement!(typeof(T.init[0]))(input, fmt);
+                result[i++] = unformatElement!(_ArrayElementType!T)(input, fmt);
             }
             else static if (isDynamicArray!T)
             {
