@@ -493,43 +493,7 @@ private:
             }
 
         case OpID.apply:
-            static if (!isFunctionPointer!A && !isDelegate!A)
-            {
-                enforce(0, text("Cannot apply `()' to a value of type `",
-                                A.stringof, "'."));
-            }
-            else
-            {
-                alias ParamTypes = ParameterTypeTuple!A;
-                auto p = cast(VariantN*) parm;
-                auto argCount = p.get!size_t();
-                // To assign the tuple we need to use the unqualified version,
-                // otherwise we run into issues such as with const values.
-                // We still get the actual type from the Variant though
-                // to ensure that we retain const correctness.
-                Tuple!(staticMap!(Unqual, ParamTypes)) t;
-                enforce(t.length == argCount,
-                        text("Argument count mismatch: ",
-                             A.stringof, " expects ", t.length,
-                             " argument(s), not ", argCount, "."));
-                auto variantArgs = p[1 .. argCount + 1];
-                foreach (i, T; ParamTypes)
-                {
-                    t[i] = cast()variantArgs[i].get!T();
-                }
-
-                auto args = cast(Tuple!(ParamTypes))t;
-                static if(is(ReturnType!A == void))
-                {
-                    (*zis)(args.expand);
-                    *p = VariantN.init; // void returns uninitialized Variant.
-                }
-                else
-                {
-                    *p = (*zis)(args.expand);
-                }
-            }
-            break;
+            assert(0);
 
         default: assert(false);
         }
@@ -794,7 +758,7 @@ public:
     unittest
     {
         Variant a = "10";
-	assert(a.coerce!int == 10);
+        assert(a.coerce!int == 10);
     }
 
     /**
@@ -1594,36 +1558,6 @@ unittest
     // bug 7070
     Variant v;
     v = null;
-}
-
-// Const parameters with opCall, issue 11361.
-unittest
-{
-    static string t1(string c) {
-        return c ~ "a";
-    }
-
-    static const(char)[] t2(const(char)[] p) {
-        return p ~ "b";
-    }
-
-    static char[] t3(int p) {
-        return p.text.dup;
-    }
-
-    Variant v1 = &t1;
-    Variant v2 = &t2;
-    Variant v3 = &t3;
-
-    assert(v1("abc") == "abca");
-    assert(v1("abc").type == typeid(string));
-    assert(v2("abc") == "abcb");
-
-    assert(v2(cast(char[])("abc".dup)) == "abcb");
-    assert(v2("abc").type == typeid(const(char)[]));
-
-    assert(v3(4) == ['4']);
-    assert(v3(4).type == typeid(char[]));
 }
 
 // Ordering comparisons of incompatible types, e.g. issue 7990.
