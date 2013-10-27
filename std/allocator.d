@@ -233,49 +233,41 @@ import std.algorithm, std.conv, std.exception, std.range, std.traits,
     std.typecons, std.typetuple;
 version(unittest) import std.stdio;
 
-/**
+/*
+Tristate by Timon Gehr and Andrei Alexandrescu.
 */
-private struct Tristate
-{
+private struct Tristate{
     private ubyte value;
-    private static Tristate make(ubyte b)
-    {
+    private static Tristate make(ubyte b){
         Tristate r = void;
         r.value = b;
         return r;
     }
 
-    enum no = make(0), yes = make(1), unknown = make(4);
+    enum no = make(0), yes = make(2), unknown = make(6);
 
-    this(bool b) { value = b; }
+    this(bool b) { value = b << 1; }
 
-    void opAssign(bool b) { value = b; }
+    void opAssign(bool b) { value = b << 1; }
 
-    Tristate opUnary(string s)() if (s == "~")
-    {
-        return this == unknown ? this : make(!value);
+    Tristate opUnary(string s)() if (s == "~"){
+        return make((193>>value&3)<<1);
     }
 
-    Tristate opBinary(string s)(Tristate rhs) if (s == "|")
-    {
-        // | yields 0, 1, 4, 5
-        auto v = value | rhs.value;
-        return v == 4 ? unknown : make(v & 1);
+    Tristate opBinary(string s)(Tristate rhs) if (s == "|"){
+        return make((12756>>(value+rhs.value)&3)<<1);
     }
 
-    Tristate opBinary(string s)(Tristate rhs) if (s == "&")
-    {
-        return make((value & rhs.value) | ((value | rhs.value) & 4));
+    Tristate opBinary(string s)(Tristate rhs) if (s == "&"){
+        return make((13072>>(value+rhs.value)&3)<<1);
     }
 
-    Tristate opBinary(string s)(Tristate rhs) if (s == "^")
-    {
-        if (value == 4 || rhs.value == 4) return unknown;
-        return make(value ^ rhs.value);
+    Tristate opBinary(string s)(Tristate rhs) if (s == "^"){
+        return make((13252>>(value+rhs.value)&3)<<1);
     }
 }
 
-version(none) unittest
+unittest
 {
     alias f = Tristate.no, t = Tristate.yes, u = Tristate.unknown;
     auto truthTableAnd =
@@ -319,7 +311,6 @@ version(none) unittest
 
     for (auto i = 0; i != truthTableAnd.length; i += 3)
     {
-        writefln("%s: %s", i, truthTableXor[i + 2]);
         assert((truthTableAnd[i] & truthTableAnd[i + 1])
             == truthTableAnd[i + 2]);
         assert((truthTableOr[i] | truthTableOr[i + 1])
