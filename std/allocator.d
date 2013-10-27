@@ -1252,6 +1252,8 @@ blockSize) parameter as in $(D HeapBlock!(Allocator, 4096)). To choose a block
 size parameter, use $(D HeapBlock!(Allocator, chooseAtRuntime)) and pass the
 block size to the constructor.
 
+TODO: implement $(D alignedAllocate) and $(D alignedReallocate).
+
 */
 struct HeapBlock(Allocator, size_t theBlockSize,
     size_t theAlignment = platformAlignment)
@@ -3818,18 +3820,16 @@ unittest
 
 /**
 
-A $(D Bucketizer) uses distinct allocators for handling allocations of
-sizes in the intervals $(D [min, min + step - 1]), $(D [min + step, min + 2 *
-step - 1]), $(D [min + 2 * step, min + 3 * step - 1]), $(D ...), $(D [max - step
-+ 1, max]).
+A $(D Bucketizer) uses distinct allocators for handling allocations of sizes in
+the intervals $(D [min, min + step - 1]), $(D [min + step, min + 2 * step - 1]),
+$(D [min + 2 * step, min + 3 * step - 1]), $(D ...), $(D [max - step + 1, max]).
 
-$(D Bucketizer) holds a fixed-size array of allocators and dispatches
-calls to them appropriately. The size of the array is $(D (max + 1 - min) /
-step), which must be an exact division.
+$(D Bucketizer) holds a fixed-size array of allocators and dispatches calls to
+them appropriately. The size of the array is $(D (max + 1 - min) / step), which
+must be an exact division.
 
 Allocations for sizes smaller than $(D min) or larger than $(D max) are illegal
-for $(D Bucketizer). To handle them separately, $(D Segregator) may be
-of use.
+for $(D Bucketizer). To handle them separately, $(D Segregator) may be of use.
 
 */
 struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
