@@ -1917,7 +1917,8 @@ $(D Freelist) attempts to reduce internal fragmentation and improve cache
 locality by allocating multiple nodes at once, under the control of the $(D
 batchCount) parameter. This makes $(D Freelist) an efficient front for small
 object allocation on top of a large-block allocator. The default value of $(D
-batchCount) is 8, which should reduce
+batchCount) is 8, which should amortize freelist management costs to negligible
+in most cases.
 
 One instantiation is of particular interest: $(D Freelist!(0,unbounded)) puts
 every deallocation in the freelist, and subsequently serves any allocation from
