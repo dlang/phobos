@@ -63,6 +63,11 @@ $(TD If $(D s == 0), the call may return any empty slice (including $(D
 null)). Otherwise, the call allocates $(D s) bytes of memory and returns the
 allocated block, or $(D null) if the request could not be satisfied.))
 
+$(TR $(TDC void[] alignedAllocate(size_t s, uint a);, $(RES) is null ||
+$(RES).length == s) $(TD Similar to $(D allocate), with the additional guarantee
+that the memory returned is aligned to at least $(D a) bytes. $(D a) must be a
+power of 2.))
+
 $(TR $(TDC void[] allocateAll();, n/a) $(TD This is a special function
 indicating to wrapping allocators that $(D this) is a simple,
 limited-capabilities allocator that invites customization. Fixed-size regions
@@ -86,6 +91,11 @@ leaves $(D b) unchanged, and returns $(D false). An allocator should implement
 $(D reallocate) if it can derive some advantage from doing so; otherwise, this
 module defines a $(D reallocate) free function implemented in terms of $(D
 expand), $(D allocate), and $(D deallocate).))
+
+$(TR $(TDC bool alignedReallocate(ref void[] b, size_t s, uint a);, !$(RES) ||
+b.length == s) $(TD Similar to $(D reallocate), but guarantees the reallocated
+memory is aligned at $(D a) bytes. The buffer must have been originated with a
+call to $(D alignedAllocate). $(D a) must be a power of 2.))
 
 $(TR $(TDC bool owns(void[] b);, n/a) $(TD Returns $(D true) if $(D b) has been
 allocated with this allocator. An allocator should define this
