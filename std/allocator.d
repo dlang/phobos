@@ -173,6 +173,12 @@ $(TR $(TDC2 Mallocator) $(TD The C heap _allocator, a.k.a. $(D
 malloc)/$(D realloc)/$(D free). Use sparingly and only for code that is unlikely
 to leak.))
 
+$(TR $(TDC2 AlignedMallocator) $(TD Interface to OS-specific _allocators that
+support specifying alignment:
+$(WEB man7.org/linux/man-pages/man3/posix_memalign.3.html, $(D posix_memalign))
+on Posix and $(WEB msdn.microsoft.com/en-us/library/fs9stz4e(v=vs.80).aspx,
+$(D __aligned_xxx)) on Windows.))
+
 $(TR $(TDC2 AffixAllocator) $(TD Allocator that allows and manages allocating
 extra prefix and/or a suffix bytes for each block allocated.))
 
@@ -406,6 +412,49 @@ is passed for $(D maxNodes), then there is no limit and no checking for the
 number of nodes.
 */
 enum unbounded = size_t.max;
+
+/**
+The alignment that is guaranteed to accommodate any D object allocation on the
+current platform.
+*/
+enum uint platformAlignment = std.algorithm.max(double.alignof, real.alignof);
+
+/**
+The default good size allocation is deduced as $(D n) rounded up to the
+allocator's alignment.
+*/
+size_t goodAllocSize(A)(auto ref A a, size_t n)
+{
+    return n.roundUpToMultipleOf(a.alignment);
+}
+
+/**
+The default $(D reallocate) function first attempts to use $(D expand). If $(D
+Allocator.expand) is not defined or returns $(D false), $(D reallocate)
+allocates a new block of memory of appropriate size and copies data from the old
+block to the new block. Finally, if $(D Allocator) defines $(D deallocate), $(D
+reallocate) uses it to free the old memory block.
+
+$(D reallocate) does not attempt to use $(D Allocator.reallocate) even if
+defined. This is deliberate so allocators may use it internally within their own
+implementation of $(D reallocate).
+
+*/
+bool reallocate(Allocator)(ref Allocator a, ref void[] b, size_t s)
+{
+    if (b.length == s) return true;
+    static if (hasMember!(Allocator, "expand"))
+    {
+        if (b.length <= s && a.expand(b, s - b.length)) return true;
+    }
+    auto newB = a.allocate(s);
+    if (newB.length <= b.length) newB[] = b[0 .. newB.length];
+    else newB[0 .. b.length] = b[];
+    static if (hasMember!(Allocator, "deallocate"))
+        a.deallocate(b);
+    b = newB;
+    return true;
+}
 
 /*
   _   _       _ _          _ _                 _
@@ -1802,49 +1851,6 @@ unittest
 }
 
 /**
-The alignment that is guaranteed to accommodate any D object allocation on the
-current platform.
-*/
-enum uint platformAlignment = std.algorithm.max(double.alignof, real.alignof);
-
-/**
-The default good size allocation is deduced as $(D n) rounded up to the
-allocator's alignment.
-*/
-size_t goodAllocSize(A)(auto ref A a, size_t n)
-{
-    return n.roundUpToMultipleOf(a.alignment);
-}
-
-/**
-
-The default $(D reallocate) function first attempts to use $(D expand). If $(D
-Allocator.expand) is not defined or returns $(D false), $(D reallocate)
-allocates a new block of memory of appropriate size and copies data from the old
-block to the new block. Finally, if $(D Allocator) defines $(D deallocate), $(D
-reallocate) uses it to free the old memory block.
-
-$(D reallocate) does not attempt to use $(D Allocator.reallocate) even if
-defined. This is deliberate so allocators may use it internally within their own
-implementation of $(D reallocate).
-
-*/
-bool reallocate(Allocator)(ref Allocator a, ref void[] b, size_t s)
-{
-    static if (hasMember!(Allocator, "expand"))
-    {
-        if (b.length <= s && a.expand(b, s - b.length)) return true;
-    }
-    auto newB = a.allocate(s);
-    if (newB.length <= b.length) newB[] = b[0 .. newB.length];
-    else newB[0 .. b.length] = b[];
-    static if (hasMember!(Allocator, "deallocate"))
-        a.deallocate(b);
-    b = newB;
-    return true;
-}
-
-/**
 $(D FallbackAllocator) is the allocator equivalent of an "or" operator in
 algebra. An allocation request is first attempted with the $(D Primary)
 allocator. If that returns $(D null), the request is forwarded to the $(D
@@ -2392,6 +2398,19 @@ private struct BasicRegion(uint minAlign = platformAlignment)
         return result;
     }
 
+    /// Ditto
+    void[] alignedAllocate(size_t bytes, uint a)
+    {
+        // Just bump the pointer to the next good allocation
+        auto save = _current;
+        _current = cast(void*) roundUpToMultipleOf(
+            cast(ulong) _current, a);
+        if (auto b = allocate(bytes)) return b;
+        // Failed, rollback
+        _current = save;
+        return null;
+    }
+
     /// Allocates and returns all memory available to this region.
     void[] allocateAll()
     {
@@ -2458,6 +2477,12 @@ struct Region(uint minAlign = platformAlignment)
     void[] allocate(size_t bytes)
     {
         return base.allocate(bytes);
+    }
+
+    /// Ditto
+    void[] alignedAllocate(size_t bytes, uint a)
+    {
+        return base.alignedAllocate(bytes, a);
     }
 
     /// Ditto
@@ -2569,6 +2594,21 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
         lazyInit();
         newCrt = _crt + rounded;
         goto again;
+    }
+
+    /**
+    As above, but the memory allocated is aligned at $(D a) bytes.
+    */
+    void[] alignedAllocate(size_t bytes, uint a)
+    {
+        // Just bump the pointer to the next good allocation
+        auto save = _crt;
+        _crt = cast(void*) roundUpToMultipleOf(
+            cast(ulong) _crt, a);
+        if (auto b = allocate(bytes)) return b;
+        // Failed, rollback
+        _crt = save;
+        return null;
     }
 
     /**
