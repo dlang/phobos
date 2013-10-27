@@ -418,7 +418,7 @@ private:
                 enforce(0, "Not implemented");
             }
             // Can't handle void arrays as there isn't any result to return.
-            static if (isDynamicArray!(A) && !is(Unqual!(typeof(A.init[0])) == void) && allowed!(typeof(A.init[0])))
+            static if (isDynamicArray!(A) && !is(Unqual!(_ArrayElementType!A) == void) && allowed!(_ArrayElementType!A))
             {
                 // array type; input and output are the same VariantN
                 auto result = cast(VariantN*) parm;

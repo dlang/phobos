@@ -1665,7 +1665,7 @@ unittest
     {
         debug
         {
-            arr[] = cast(typeof(T.init[0]))(0xdead_beef);
+            arr[] = cast(_ArrayElementType!T)(0xdead_beef);
         }
         arr = null;
     }

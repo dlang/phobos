@@ -1497,7 +1497,7 @@ T toImpl(T, S)(S value)
         !isSomeString!S && isDynamicArray!S &&
         !isExactSomeString!T && isArray!T)
 {
-    alias E = typeof(T.init[0]);
+    alias E = _ArrayElementType!T;
 
     auto w = appender!(E[])();
     w.reserve(value.length);
@@ -3099,7 +3099,7 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
         isStaticArray!Target && !is(Target == enum))
 {
     static if (hasIndirections!Target)
-        Target result = Target.init[0].init;
+        Target result = _ArrayElementType!Target.init.init;
     else
         Target result = void;
 

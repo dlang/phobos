@@ -1093,7 +1093,7 @@ $(D ElementType).
 template ElementEncodingType(R)
 {
     static if (isNarrowString!R)
-        alias typeof(*lvalueOf!R.ptr) ElementEncodingType;
+        alias _ArrayElementType!R ElementEncodingType;
     else
         alias ElementType!R ElementEncodingType;
 }
@@ -4000,7 +4000,7 @@ template Cycle(R)
 struct Cycle(R)
     if (isStaticArray!R)
 {
-    private alias typeof(R.init[0]) ElementType;
+    private alias _ArrayElementType!R ElementType;
     private ElementType* _ptr;
     private size_t _index;
 

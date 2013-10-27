@@ -296,7 +296,7 @@ private template nDimensions(T)
 {
     static if(isArray!T)
     {
-        enum nDimensions = 1 + nDimensions!(typeof(T.init[0]));
+        enum nDimensions = 1 + nDimensions!(_ArrayElementType!T);
     }
     else
     {
@@ -368,7 +368,7 @@ if(allSatisfy!(isIntegral, I))
         to!string(sizes.length) ~ " dimensions specified for a " ~
         to!string(nDimensions!T) ~ " dimensional array.");
 
-    alias typeof(T.init[0]) E;
+    alias _ArrayElementType!T E;
 
     auto ptr = (__ctfe) ?
         {
@@ -524,7 +524,7 @@ if (isNarrowString!(C[]))
         assert(str.empty);
 
         static assert(!is(typeof({          immutable S a; popFront(a); })));
-        static assert(!is(typeof({ typeof(S.init[0])[4] a; popFront(a); })));
+        static assert(!is(typeof({ _ArrayElementType!S[4] a; popFront(a); })));
     }
 
     C[] _eatString(C)(C[] str)
@@ -600,7 +600,7 @@ if (isNarrowString!(T[]))
         assert(str.empty);
 
         static assert(!is(typeof({          immutable S a; popBack(a); })));
-        static assert(!is(typeof({ typeof(S.init[0])[4] a; popBack(a); })));
+        static assert(!is(typeof({ _ArrayElementType!S[4] a; popBack(a); })));
     }
 }
 
