@@ -696,7 +696,7 @@ struct AlignedMallocator
 
     /**
     On Posix, forwards to $(D realloc). On Windows, calls
-    $(WEB http://msdn.microsoft.com/en-US/library/y69db7sx(v=vs.80).aspx,
+    $(WEB msdn.microsoft.com/en-US/library/y69db7sx(v=vs.80).aspx,
     $(D __aligned_realloc(b.ptr, newSize, platformAlignment))).
     */
     version (Posix) @system bool reallocate(ref void[] b, size_t newSize) shared
@@ -722,10 +722,10 @@ struct AlignedMallocator
     On Posix, uses $(D alignedAllocate) and copies data around because there is
     no realloc for aligned memory. On Windows, calls
     $(WEB msdn.microsoft.com/en-US/library/y69db7sx(v=vs.80).aspx,
-    $(D __aligned_realloc(b.ptr, newSize, platformAlignment))).
+    $(D __aligned_realloc(b.ptr, newSize, a))).
     */
     version (Posix) @system
-    bool alignedReallocate(ref void[] b, size_t s, uint alignment) shared
+    bool alignedReallocate(ref void[] b, size_t s, uint a) shared
     {
         if (!s)
         {
@@ -733,7 +733,7 @@ struct AlignedMallocator
             b = null;
             return true;
         }
-        auto result = alignedAllocate(s, alignment);
+        auto result = alignedAllocate(s, a);
         if (!result) return false;
         if (s < b.length) result[] = b[0 .. s];
         else result[0 .. b.length] = b[];
@@ -742,7 +742,7 @@ struct AlignedMallocator
         return true;
     }
     else version (Windows) @system
-    bool alignedReallocate(ref void[] b, size_t s) shared
+    bool alignedReallocate(ref void[] b, size_t s, uint a) shared
     {
         if (!s)
         {
@@ -750,7 +750,7 @@ struct AlignedMallocator
             b = null;
             return true;
         }
-        auto p = cast(ubyte*) _aligned_realloc(b.ptr, s);
+        auto p = cast(ubyte*) _aligned_realloc(b.ptr, s, a);
         if (!p) return false;
         b = p[0 .. s];
         return true;
