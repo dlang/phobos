@@ -378,7 +378,7 @@ unittest
 /**
 $(D chooseAtRuntime) is a compile-time constant of type $(D size_t) that several
 parameterized structures in this module recognize to mean deferral to runtime of
-the exact value. For example, $(D HeapBlock!(Allocator, 4096) (described in
+the exact value. For example, $(D HeapBlock!(Allocator, 4096)) (described in
 detail below) defines a block allocator with block size of 4096 bytes, whereas
 $(D HeapBlock!(Allocator, chooseAtRuntime)) defines a block allocator that has a
 field storing the block size, initialized by the user.
@@ -622,6 +622,152 @@ unittest
 
     test!GCAllocator();
     test!Mallocator();
+}
+
+version (Posix) extern(C) int posix_memalign(void**, size_t, size_t);
+version (Windows)
+{
+    extern(C) void* _aligned_malloc(size_t, size_t);
+    extern(C) void _aligned_free(void *memblock);
+    extern(C) void* _aligned_realloc(void *, size_t, size_t);
+}
+
+/**
+   Aligned allocator using OS-specific primitives, under a uniform API.
+ */
+struct AlignedMallocator
+{
+    private import core.stdc.stdlib;
+
+    /**
+    The default alignment is $(D platformAlignment).
+    */
+    enum uint alignment = platformAlignment;
+
+    /**
+    Forwards to $(D alignedAllocate(bytes, platformAlignment)).
+    */
+    @trusted void[] allocate(size_t bytes) shared
+    {
+        return alignedAllocate(bytes, alignment);
+    }
+
+    version (Posix) import core.stdc.errno, core.sys.posix.stdlib;
+
+    /**
+    Uses $(WEB man7.org/linux/man-pages/man3/posix_memalign.3.html,
+    $(D posix_memalign)) on Posix and
+    $(WEB msdn.microsoft.com/en-us/library/8z34s9c6(v=vs.80).aspx,
+    $(D __aligned_malloc)) on Windows.
+    */
+    version(Posix) @trusted
+    void[] alignedAllocate(size_t bytes, uint alignment) shared
+    {
+        void* result;
+        auto code = posix_memalign(&result, alignment, bytes);
+        if (code == ENOMEM) return null;
+        enforce(code == 0);
+        return result[0 .. bytes];
+    }
+    else version(Windows) @trusted
+    void[] alignedAllocate(size_t bytes, uint alignment) shared
+    {
+        auto result = _aligned_malloc(bytes, alignment);
+        return result ? result[0 .. bytes] : null;
+    }
+    else static assert(0);
+
+    /**
+    Calls $(D free(b.ptr)) on Posix and
+    $(WEB msdn.microsoft.com/en-US/library/17b5h8td(v=vs.80).aspx,
+    $(D __aligned_free(b.ptr))) on Windows.
+    */
+    version (Posix) @system
+    void deallocate(void[] b) shared
+    {
+        free(b.ptr);
+    }
+    else version (Windows) @system
+    void deallocate(void[] b) shared
+    {
+        _aligned_free(b.ptr);
+    }
+    else static assert(0);
+
+    /**
+    On Posix, forwards to $(D realloc). On Windows, calls
+    $(WEB http://msdn.microsoft.com/en-US/library/y69db7sx(v=vs.80).aspx,
+    $(D __aligned_realloc(b.ptr, newSize, platformAlignment))).
+    */
+    version (Posix) @system bool reallocate(ref void[] b, size_t newSize) shared
+    {
+        return Mallocator.it.reallocate(b, newSize);
+    }
+    version (Windows) @system
+    bool reallocate(ref void[] b, size_t newSize) shared
+    {
+        if (!s)
+        {
+            deallocate(b);
+            b = null;
+            return true;
+        }
+        auto p = cast(ubyte*) _aligned_realloc(b.ptr, alignment);
+        if (!p) return false;
+        b = p[0 .. s];
+        return true;
+    }
+
+    /**
+    On Posix, uses $(D alignedAllocate) and copies data around because there is
+    no realloc for aligned memory. On Windows, calls
+    $(WEB msdn.microsoft.com/en-US/library/y69db7sx(v=vs.80).aspx,
+    $(D __aligned_realloc(b.ptr, newSize, platformAlignment))).
+    */
+    version (Posix) @system
+    bool alignedReallocate(ref void[] b, size_t s, uint alignment) shared
+    {
+        if (!s)
+        {
+            deallocate(b);
+            b = null;
+            return true;
+        }
+        auto result = alignedAllocate(s, alignment);
+        if (!result) return false;
+        if (s < b.length) result[] = b[0 .. s];
+        else result[0 .. b.length] = b[];
+        deallocate(b);
+        b = result;
+        return true;
+    }
+    else version (Windows) @system
+    bool alignedReallocate(ref void[] b, size_t s) shared
+    {
+        if (!s)
+        {
+            deallocate(b);
+            b = null;
+            return true;
+        }
+        auto p = cast(ubyte*) _aligned_realloc(b.ptr, s);
+        if (!p) return false;
+        b = p[0 .. s];
+        return true;
+    }
+
+    /**
+    Returns the global instance of this allocator type. The C heap allocator is thread-safe, therefore all of its methods and $(D it) itself are $(D shared).
+    */
+    static shared AlignedMallocator it;
+}
+
+///
+unittest
+{
+    auto buffer = AlignedMallocator.it.alignedAllocate(1024 * 1024 * 4, 128);
+    scope(exit) AlignedMallocator.it.deallocate(buffer);
+    //...
 }
 
 /**
