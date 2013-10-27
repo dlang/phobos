@@ -2285,14 +2285,30 @@ struct Appender(A : T[], T)
         {
             ensureAddable(1);
             immutable len = _data.arr.length;
-            //_data.arr.ptr[len] = cast(Unqual!T)item;    // assign? emplace?
-            //_data.arr = _data.arr.ptr[0 .. len + 1];
 
-            // Cannot return ref because it doesn't work in CTFE
-            ()@trusted{ return _data.arr.ptr[len .. len + 1]; }()[0]
-            =   // assign? emplace?
-            ()@trusted{ return cast(Unqual!T)item; } ();
-            ()@trusted{ _data.arr = _data.arr.ptr[0 .. len + 1]; }();
+            auto bigDataFun() @trusted nothrow { return _data.arr.ptr[0 .. len + 1];}
+            auto bigData = bigDataFun();
+
+            static if (is(Unqual!T == T))
+                alias uitem = item;
+            else
+                auto ref uitem() @trusted nothrow @property { return cast(Unqual!T)item;} 
+
+            //The idea is to only call emplace if we must.
+            static if ( is(typeof(bigData[0].opAssign(uitem))) ||
+                       !is(typeof(bigData[0] = uitem)))
+            {
+                //pragma(msg, T.stringof); pragma(msg, U.stringof);
+                emplace(&bigData[len], uitem);
+            }
+            else
+            {
+                //pragma(msg, T.stringof); pragma(msg, U.stringof);
+                bigData[len] = uitem;
+            }
+
+            //We do this at the end, in case of exceptions
+            _data.arr = bigData;
         }
     }
 
@@ -2330,23 +2346,42 @@ struct Appender(A : T[], T)
             ensureAddable(items.length);
             immutable len = _data.arr.length;
             immutable newlen = len + items.length;
-            _data.arr = ()@trusted{ return _data.arr.ptr[0 .. newlen]; }();
-            static if (is(typeof(_data.arr[] = items[])))
+
+            auto bigDataFun() @trusted nothrow { return _data.arr.ptr[0 .. newlen];}
+            auto bigData = bigDataFun();
+
+            enum mustEmplace =  is(typeof(bigData[0].opAssign(cast(Unqual!T)items.front))) ||
+                               !is(typeof(bigData[0] = cast(Unqual!T)items.front));
+
+            static if (is(typeof(_data.arr[] = items[])) && !mustEmplace)
             {
-                ()@trusted{ return _data.arr.ptr[len .. newlen]; }()[] = items[];
+                //pragma(msg, T.stringof); pragma(msg, Range.stringof);
+                bigData[len .. newlen] = items[];
+            }
+            else static if (is(Unqual!T == ElementType!Range))
+            {
+                foreach (ref it ; bigData[len .. newlen])
+                {
+                    static if (mustEmplace)
+                        emplace(&it, items.front);
+                    else
+                        it = items.front;
+                }
             }
             else
             {
-                for (size_t i = len; !items.empty; items.popFront(), ++i)
+                static auto ref getUItem(U)(U item) @trusted {return cast(Unqual!T)item;}
+                foreach (ref it ; bigData[len .. newlen])
                 {
-                    //_data.arr.ptr[i] = cast(Unqual!T)items.front;
-
-                    // Cannot return ref because it doesn't work in CTFE
-                    ()@trusted{ return _data.arr.ptr[i .. i + 1]; }()[0]
-                    =   // assign? emplace?
-                    ()@trusted{ return cast(Unqual!T)items.front; }();
+                    static if (mustEmplace)
+                        emplace(&it, getUItem(items.front));
+                    else
+                        it = getUItem(items.front);
                 }
             }
+
+            //We do this at the end, in case of exceptions
+            _data.arr = bigData;
         }
         else
         {
@@ -2688,6 +2723,96 @@ Appender!(E[]) appender(A : E[], E)(A array)
         S!int r;
         w.put(r);
     }
+}
+
+unittest
+{
+    //10690
+    [tuple(1)].filter!(t => true).array; // No error
+    [tuple("A")].filter!(t => true).array; // error
+}
+
+unittest
+{
+    //Coverage for put(Range)
+    struct S1
+    {
+    }
+    struct S2
+    {
+        void opAssign(S2){}
+    }
+    auto a1 = Appender!(S1[])();
+    auto a2 = Appender!(S2[])();
+    auto au1 = Appender!(const(S1)[])();
+    auto au2 = Appender!(const(S2)[])();
+    a1.put(S1().repeat().take(10));
+    a2.put(S2().repeat().take(10));
+    auto sc1 = const(S1)();
+    auto sc2 = const(S2)();
+    au1.put(sc1.repeat().take(10));
+    au2.put(sc2.repeat().take(10));
+}
+
+unittest
+{
+    struct S
+    {
+        int* p;
+    }
+
+    auto a0 = Appender!(S[])();
+    auto a1 = Appender!(const(S)[])();
+    auto a2 = Appender!(immutable(S)[])();
+    auto s0 = S(null);
+    auto s1 = const(S)(null);
+    auto s2 = immutable(S)(null);
+    a1.put(s0);
+    a1.put(s1);
+    a1.put(s2);
+    a1.put([s0]);
+    a1.put([s1]);
+    a1.put([s2]);
+    a0.put(s0);
+    static assert(!is(typeof(a0.put(a1))));
+    static assert(!is(typeof(a0.put(a2))));
+    a0.put([s0]);
+    static assert(!is(typeof(a0.put([a1]))));
+    static assert(!is(typeof(a0.put([a2]))));
+    static assert(!is(typeof(a2.put(a0))));
+    static assert(!is(typeof(a2.put(a1))));
+    a2.put(s2);
+    static assert(!is(typeof(a2.put([a0]))));
+    static assert(!is(typeof(a2.put([a1]))));
+    a2.put([s2]);
+}
+
+unittest
+{ //9528
+    const(E)[] fastCopy(E)(E[] src) {
+            auto app = appender!(const(E)[])();
+            foreach (i, e; src)
+                    app.put(e);
+            return app.data;
+    }
+
+    class C {}
+    struct S { const(C) c; }
+    S[] s = [ S(new C) ];
+
+    auto t = fastCopy(s); // Does not compile
+}
+
+unittest
+{ //10753
+    struct Foo {
+       immutable dchar d;
+    }
+    struct Bar {
+       immutable int x;
+    }
+   "12".map!Foo.array;
+   [1, 2].map!Bar.array;
 }
 
 /++
