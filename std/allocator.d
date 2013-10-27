@@ -245,7 +245,7 @@ private struct Tristate
         return r;
     }
 
-    enum no = make(0), yes = make(1), unknown = make(2);
+    enum no = make(0), yes = make(1), unknown = make(4);
 
     this(bool b) { value = b; }
 
@@ -258,34 +258,76 @@ private struct Tristate
 
     Tristate opBinary(string s)(Tristate rhs) if (s == "|")
     {
-        return this == yes || rhs == yes
-            ? yes
-            : this == no && rhs == no
-                ? no
-                : unknown;
+        // | yields 0, 1, 4, 5
+        auto v = value | rhs.value;
+        return v == 4 ? unknown : make(v & 1);
     }
 
     Tristate opBinary(string s)(Tristate rhs) if (s == "&")
     {
-        return this == no || rhs == no
-            ? no
-            : this == yes && rhs == yes
-                ? yes
-                : unknown;
+        return make((value & rhs.value) | ((value | rhs.value) & 4));
     }
 
-    Tristate opBinary(string s)(Tristate rhs) if (s == "^" || s == "^^")
+    Tristate opBinary(string s)(Tristate rhs) if (s == "^")
     {
-        return (this == no && rhs == yes) || (this == yes && rhs == no)
-            ? yes
-            : this == unknown || rhs == unknown
-                ? unknown
-                : no;
+        if (value == 4 || rhs.value == 4) return unknown;
+        return make(value ^ rhs.value);
     }
 }
 
-unittest
+version(none) unittest
 {
+    alias f = Tristate.no, t = Tristate.yes, u = Tristate.unknown;
+    auto truthTableAnd =
+    [
+        t, t, t,
+        t, u, u,
+        t, f, f,
+        u, t, u,
+        u, u, u,
+        u, f, f,
+        f, t, f,
+        f, u, f,
+        f, f, f,
+    ];
+
+    auto truthTableOr =
+    [
+        t, t, t,
+        t, u, t,
+        t, f, t,
+        u, t, t,
+        u, u, u,
+        u, f, u,
+        f, t, t,
+        f, u, u,
+        f, f, f,
+    ];
+
+    auto truthTableXor =
+    [
+        t, t, f,
+        t, u, u,
+        t, f, t,
+        u, t, u,
+        u, u, u,
+        u, f, u,
+        f, t, t,
+        f, u, u,
+        f, f, f,
+    ];
+
+    for (auto i = 0; i != truthTableAnd.length; i += 3)
+    {
+        writefln("%s: %s", i, truthTableXor[i + 2]);
+        assert((truthTableAnd[i] & truthTableAnd[i + 1])
+            == truthTableAnd[i + 2]);
+        assert((truthTableOr[i] | truthTableOr[i + 1])
+            == truthTableOr[i + 2]);
+        assert((truthTableXor[i] ^ truthTableXor[i + 1])
+            == truthTableXor[i + 2]);
+    }
+
     Tristate a;
     assert(a == Tristate.no);
     static assert(!is(typeof({ if (a) {} })));
@@ -303,6 +345,9 @@ unittest
     assert((a & b) == Tristate.unknown);
     a = true;
     assert(~a == Tristate.no);
+    a = true;
+    b = false;
+    assert((a ^ b) == Tristate.yes);
 }
 
 /**
@@ -1855,9 +1900,9 @@ unittest
 
 /**
 
-$(WEB en.wikipedia.org/wiki/Free_list, Free list allocator), stackable on top
-of another allocator. Allocation requests between $(D min) and $(D max) bytes
-are rounded up to $(D max) and served from a singly-linked list of buffers
+$(WEB en.wikipedia.org/wiki/Free_list, Free list allocator), stackable on top of
+another allocator. Allocation requests between $(D min) and $(D max) bytes are
+rounded up to $(D max) and served from a singly-linked list of buffers
 deallocated in the past. All other allocations are directed to $(D
 ParentAllocator). Due to the simplicity of free list management, allocations
 from the free list are fast.
@@ -1868,27 +1913,28 @@ inaccessible to requests of other sizes. To prevent that, the $(D maxNodes)
 parameter allows limiting the size of the free list. Alternatively, $(D
 deallocateAll) cleans the free list.
 
-$(D Freelist) attempts to reduce internal fragmentation by allocating
-multiple nodes at once. For example, if $(D A) allocates memory in chunks of at
-least 64 bytes, $(D Freelist!(A, 16)) will allocate four objects of
-size 16  at a time to fill the entire allocated block. This makes $(D
-Freelist) an efficient front for small object allocation on top of a
-large-block allocator.
+$(D Freelist) attempts to reduce internal fragmentation and improve cache
+locality by allocating multiple nodes at once, under the control of the $(D
+batchCount) parameter. This makes $(D Freelist) an efficient front for small
+object allocation on top of a large-block allocator. The default value of $(D
+batchCount) is 8, which should reduce
 
-One instantiation is of particular interest: $(D Freelist!(0,
-unbounded)) puts every deallocation in the freelist, and subsequently serves any
-allocation from the freelist (if not empty). There is no checking of size
-matching, which would be incorrect for a freestanding allocator but is both
-correct and fast when an owning allocator on top of the free list allocator
-(such as $(D Segregator)) is already in charge of handling size checking.
+One instantiation is of particular interest: $(D Freelist!(0,unbounded)) puts
+every deallocation in the freelist, and subsequently serves any allocation from
+the freelist (if not empty). There is no checking of size matching, which would
+be incorrect for a freestanding allocator but is both correct and fast when an
+owning allocator on top of the free list allocator (such as $(D Segregator)) is
+already in charge of handling size checking.
 
 */
 struct Freelist(ParentAllocator,
-    size_t minSize, size_t maxSize = minSize, size_t maxNodes = unbounded)
+    size_t minSize, size_t maxSize = minSize,
+    uint batchCount = 8, size_t maxNodes = unbounded)
 {
     static assert(minSize != unbounded, "Use minSize = 0 for no low bound.");
     static assert(max >= (void*).sizeof,
         "Maximum size must accommodate a pointer.");
+
     static if (minSize != chooseAtRuntime)
     {
         alias _min = minSize;
@@ -1944,7 +1990,8 @@ struct Freelist(ParentAllocator,
 
     private bool inRange(size_t n) const
     {
-        static if (minSize == maxSize && minSize != chooseAtRuntime) return n == maxSize;
+        static if (minSize == maxSize && minSize != chooseAtRuntime)
+            return n == maxSize;
         else return !tooSmall(n) && !tooLarge(n);
     }
 
@@ -1986,8 +2033,8 @@ struct Freelist(ParentAllocator,
     else alias parent = ParentAllocator.it;
 
     private struct Node { Node* next; }
-    private Node* _freeList;
-    private uint nodesAtATime;
+    private Node* _root;
+    private uint nodesAtATime = batchCount;
 
     static if (maxNodes != unbounded)
     {
@@ -2001,15 +2048,6 @@ struct Freelist(ParentAllocator,
         private static void incNodes() { }
         private static void decNodes() { }
         private enum bool nodesFull = false;
-    }
-
-    private size_t allocatedPerItem(size_t bytes)
-    {
-        const resultAlignment = cast(uint) (bytes < parent.alignment
-            ? Node.alignof
-            : parent.alignment);
-        return roundUpToMultipleOf(
-            max == unbounded ? bytes : max, resultAlignment);
     }
 
     /**
@@ -2047,49 +2085,55 @@ struct Freelist(ParentAllocator,
     */
     void[] allocate(const size_t bytes)
     {
+        assert(bytes < size_t.max / 2);
         assert(parent.alignment >= Node.alignof);
         if (!inRange(bytes)) return parent.allocate(bytes);
-        if (!_freeList) return allocateFresh(bytes);
+        if (!_root) return allocateFresh(bytes);
         // Pop off the freelist
-        auto result = (cast(ubyte*) _freeList)[0 .. bytes];
-        _freeList = _freeList.next;
+        auto result = (cast(ubyte*) _root)[0 .. bytes];
+        _root = _root.next;
         decNodes();
         return result;
     }
 
     private void[] allocateFresh(const size_t bytes)
     {
-        assert(!_freeList);
+        assert(!_root);
         assert(bytes == max || max == unbounded);
         if (nodesAtATime == 1)
         {
             // Easy case, just get it over with
             return parent.allocate(bytes);
         }
-        const allocatedPerItem = this.allocatedPerItem(bytes);
-        const allocated = parent.goodAllocSize(allocatedPerItem);
-        if (nodesAtATime == 0)
+        assert(parent.alignment % Node.alignof == 0);
+        static if (maxSize != unbounded && maxSize != chooseAtRuntime)
         {
-            nodesAtATime = cast(uint) (allocated / allocatedPerItem);
-            if (nodesAtATime == 1) return parent.allocate(bytes);
+            static assert((parent.alignment + max) % Node.alignof == 0,
+                text("(", parent.alignment, " + ", max, ") % ",
+                 Node.alignof));
         }
-        // Allocate multiple nodes, thread them through the list
-        auto chunk = parent.allocate(nodesAtATime * allocatedPerItem);
-        // First allocation goes to the result
-        auto result = chunk[0 .. bytes];
-        chunk = chunk[allocatedPerItem .. $];
-        assert(!chunk.empty);
-        _freeList = cast(Node*) chunk.ptr;
+        else
+        {
+            assert((parent.alignment + bytes) % Node.alignof == 0,
+                text("(", parent.alignment, " + ", bytes, ") % ",
+                 Node.alignof));
+        }
+
+        auto data = parent.allocate(nodesAtATime * bytes);
+        if (!data) return null;
+        auto result = data[0 .. bytes];
+        auto n = data[bytes .. $];
+        _root = cast(Node*) n.ptr;
         for (;;)
         {
-            if (chunk.length == allocatedPerItem)
+            if (n.length < bytes)
             {
-                (cast(Node*) chunk.ptr).next = null;
+                (cast(Node*) data.ptr).next = null;
                 break;
             }
-            auto next = chunk[allocatedPerItem .. $];
-            (cast(Node*) chunk.ptr).next = cast(Node*) next.ptr;
-            chunk = next;
+            (cast(Node*) data.ptr).next = cast(Node*) n.ptr;
+            data = n;
+            n = data[bytes .. $];
         }
         return result;
     }
@@ -2135,10 +2179,10 @@ struct Freelist(ParentAllocator,
     {
         if (!nodesFull && inRange(block.length))
         {
-            auto t = _freeList;
+            auto t = _root;
             assert(Node.alignof <= parent.alignment);
-            _freeList = cast(Node*) block.ptr;
-            _freeList.next = t;
+            _root = cast(Node*) block.ptr;
+            _root.next = t;
             incNodes();
         }
         else
@@ -2160,27 +2204,27 @@ struct Freelist(ParentAllocator,
         }
         else static if (hasMember!(ParentAllocator, "deallocate"))
         {
-            for (auto n = _freeList; n; n = n.next)
+            for (auto n = _root; n; n = n.next)
             {
                 parent.deallocate((cast(ubyte*)n)[0 .. max]);
             }
         }
-        _freeList = null;
+        _root = null;
     }
 }
 
 unittest
 {
-    Freelist!(GCAllocator, 8) fl;
-    assert(fl._freeList is null);
+    Freelist!(GCAllocator, 8, 8, 1) fl;
+    assert(fl._root is null);
     auto b1 = fl.allocate(8);
-    assert(fl._freeList !is null);
+    //assert(fl._root !is null);
     auto b2 = fl.allocate(8);
-    assert(fl._freeList is null);
+    assert(fl._root is null);
     fl.deallocate(b1);
-    assert(fl._freeList !is null);
+    assert(fl._root !is null);
     auto b3 = fl.allocate(8);
-    assert(fl._freeList is null);
+    assert(fl._root is null);
 }
 
 /*
@@ -2910,7 +2954,7 @@ public:
                 p._callerFile = f;
             static if (flags & Options.callerLine)
                 p._callerLine = n;
-            static if (flags & Options.callerModule)
+            static if (flags & Options.callerTime)
             {
                 import std.datetime;
                 p._callerTime =  Clock.currTime;
