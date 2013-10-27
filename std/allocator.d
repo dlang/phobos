@@ -46,8 +46,9 @@ $(TR $(TH Method name) $(TH Semantics))
 
 $(TR $(TDC uint alignment;, $(RES) > 0) $(TD Returns the minimum alignment of
 all data returned by the allocator. An allocator may implement $(D alignment) as
-a statically-known $(D enum) value, a $(D static) constant initialized upon
-program startup, or even a dynamic property.))
+a statically-known $(D enum) value only. Applications that need
+dynamically-chosen alignment values should use the $(D alignedMalloc) and $(D
+alignedRealloc) APIs.))
 
 $(TR $(TDC uint goodAllocSize(size_t n);, $(RES) >= n) $(TD Allocators
 customarily allocate memory in discretely-sized chunks. Therefore, a request for
@@ -66,7 +67,7 @@ allocated block, or $(D null) if the request could not be satisfied.))
 $(TR $(TDC void[] alignedAllocate(size_t s, uint a);, $(RES) is null ||
 $(RES).length == s) $(TD Similar to $(D allocate), with the additional guarantee
 that the memory returned is aligned to at least $(D a) bytes. $(D a) must be a
-power of 2.))
+power of 2 greater than $(D (void*).sizeof).))
 
 $(TR $(TDC void[] allocateAll();, n/a) $(TD This is a special function
 indicating to wrapping allocators that $(D this) is a simple,
@@ -95,7 +96,8 @@ expand), $(D allocate), and $(D deallocate).))
 $(TR $(TDC bool alignedReallocate(ref void[] b, size_t s, uint a);, !$(RES) ||
 b.length == s) $(TD Similar to $(D reallocate), but guarantees the reallocated
 memory is aligned at $(D a) bytes. The buffer must have been originated with a
-call to $(D alignedAllocate). $(D a) must be a power of 2.))
+call to $(D alignedAllocate). $(D a) must be a power of 2 greater than $(D
+(void*).sizeof).))
 
 $(TR $(TDC bool owns(void[] b);, n/a) $(TD Returns $(D true) if $(D b) has been
 allocated with this allocator. An allocator should define this
@@ -424,7 +426,7 @@ struct NullAllocator
     alignment and because composite allocators using $(D NullAllocator)
     shouldn't be unnecessarily constrained.
     */
-    enum uint alignment = platformAlignment;
+    enum uint alignment = 64 * 1024;
     /// Always returns $(D null).
     void[] allocate(size_t) shared { return null; }
     /// Returns $(D b is null).
@@ -471,8 +473,8 @@ struct GCAllocator
     private import core.memory;
 
     /**
-    The alignment is a static constant equal to $(D platformAlignment), which ensures
-    proper alignment for any D data type.
+    The alignment is a static constant equal to $(D platformAlignment), which
+    ensures proper alignment for any D data type.
     */
     enum uint alignment = platformAlignment;
 
@@ -671,18 +673,19 @@ struct AlignedMallocator
     $(D __aligned_malloc)) on Windows.
     */
     version(Posix) @trusted
-    void[] alignedAllocate(size_t bytes, uint alignment) shared
+    void[] alignedAllocate(size_t bytes, uint a) shared
     {
+        assert(a.isGoodDynamicAlignment);
         void* result;
-        auto code = posix_memalign(&result, alignment, bytes);
+        auto code = posix_memalign(&result, a, bytes);
         if (code == ENOMEM) return null;
-        enforce(code == 0);
+        enforce(code == 0, text("Invalid alignment requested: ", a));
         return result[0 .. bytes];
     }
     else version(Windows) @trusted
-    void[] alignedAllocate(size_t bytes, uint alignment) shared
+    void[] alignedAllocate(size_t bytes, uint a) shared
     {
-        auto result = _aligned_malloc(bytes, alignment);
+        auto result = _aligned_malloc(bytes, a);
         return result ? result[0 .. bytes] : null;
     }
     else static assert(0);
@@ -714,15 +717,15 @@ struct AlignedMallocator
         return Mallocator.it.reallocate(b, newSize);
     }
     version (Windows) @system
-    bool reallocate(ref void[] b, size_t newSize) shared
+    bool reallocate(ref void[] b, size_t newSize, uint a) shared
     {
-        if (!s)
+        if (!newSize)
         {
             deallocate(b);
             b = null;
             return true;
         }
-        auto p = cast(ubyte*) _aligned_realloc(b.ptr, alignment);
+        auto p = cast(ubyte*) _aligned_realloc(b.ptr, a);
         if (!p) return false;
         b = p[0 .. s];
         return true;
@@ -863,41 +866,24 @@ If $(D Prefix) is not $(D void), $(D Allocator) must guarantee an alignment at
 least as large as $(D Prefix.alignof).
 
 Suffixes are slower to get at because of alignment rounding, so prefixes should
-be preferred.
+be preferred. However, small prefixes blunt the alignment so if a large
+alignment with a small affix is needed, suffixes should be chosen.
 
  */
 struct AffixAllocator(Allocator, Prefix, Suffix = void)
 {
-    static if (staticallyKnownAlignment!Allocator)
-    {
-        static assert(
-            !stateSize!Prefix || Allocator.alignment >= Prefix.alignof,
-            "AffixAllocator does not work with allocators offering a smaller"
-            " alignment than the prefix alignment.");
-    }
     static assert(
-        !hasElaborateDestructor!Prefix && !hasElaborateDestructor!Suffix,
-        "AffixAllocator: ellaborate destructors for affixes not implemented.");
+        !stateSize!Prefix || Allocator.alignment >= Prefix.alignof,
+        "AffixAllocator does not work with allocators offering a smaller"
+        " alignment than the prefix alignment.");
+    static assert(alignment % Suffix.alignof == 0,
+        "This restriction could be relaxed in the future.");
 
     /**
     If $(D Prefix) is $(D void), the alignment is that of the parent. Otherwise, the alignment is the same as the $(D Prefix)'s alignment.
     */
-    static if (!stateSize!Prefix)
-    {
-        enum uint alignment = Prefix.alignof;
-    }
-    else static if (staticallyKnownAlignment!Allocator)
-    {
-        enum uint alignment = Allocator.alignment;
-    }
-    else
-    {
-        uint alignment()
-        {
-            assert(!stateSize!Prefix || parent.alignment >= Prefix.alignof);
-            return parent.alignment;
-        }
-    }
+    enum uint alignment =
+        stateSize!Prefix ? Allocator.alignment : Prefix.alignof;
 
     /**
     If the parent allocator $(D Allocator) is stateful, an instance of it is
@@ -923,8 +909,6 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             }
             else
             {
-                assert(alignment % Suffix.alignof == 0,
-                    "This restriction could be relaxed in the future.");
                 return roundUpToMultipleOf(
                     s + stateSize!Prefix,
                     Suffix.alignof) + stateSize!Suffix;
@@ -1222,8 +1206,9 @@ block size to the constructor.
 */
 struct HeapBlock(Allocator, size_t theBlockSize,
     size_t theAlignment = platformAlignment)
-if (theBlockSize > 0)
 {
+    static assert(theBlockSize > 0 && theAlignment.isGoodStaticAlignment);
+
     /**
     Parent allocator. If it has no state, $(D parent) is an alias for $(D
     Allocator.it).
@@ -1253,28 +1238,10 @@ if (theBlockSize > 0)
     }
 
     /**
-    The alignment offered is user-configurable. If $(D minAlign ==
-    chooseAtRuntime), $(D HeapBlock) offers a read/write property $(D
-    alignment). It is defaulted to $(D platformAlignment). If the user needs to
-    set it, setting must occur before any use of the allocator.
+    The alignment offered is user-configurable statically through parameter
+    $(D theAlignment), defaulted to $(D platformAlignment).
     */
-    static if (theAlignment != chooseAtRuntime)
-    {
-        alias alignment = theAlignment;
-    }
-    else
-    {
-        @property uint alignment()
-        {
-            return _alignment;
-        }
-        @property void alignment(uint a)
-        {
-            assert(a);
-            _alignment = a;
-        }
-        private uint _alignment = platformAlignment;
-    }
+    alias alignment = theAlignment;
 
     private uint _blocks;
     private ulong[] _control;
@@ -1914,14 +1881,7 @@ struct FallbackAllocator(Primary, Fallback)
     /**
     The alignment offered is the minimum of the two allocators' alignment.
     */
-    static if (staticallyKnownAlignment!Primary
-            && staticallyKnownAlignment!Fallback)
-        enum uint alignment = min(Primary.alignment, Fallback.alignment);
-    else
-        uint alignment()
-        {
-            return min(primary.alignment, fallback.alignment);
-        }
+    enum uint alignment = min(Primary.alignment, Fallback.alignment);
 
     /**
     Allocates memory trying the primary allocator first. If it returns $(D
@@ -2181,6 +2141,7 @@ struct Freelist(ParentAllocator,
     else alias parent = ParentAllocator.it;
 
     private struct Node { Node* next; }
+    static assert(ParentAllocator.alignment >= Node.alignof);
     private Node* _root;
     private uint nodesAtATime = batchCount;
 
@@ -2201,22 +2162,12 @@ struct Freelist(ParentAllocator,
     /**
     Alignment is defined as $(D parent.alignment). However, if $(D
     parent.alignment > maxSize), objects returned from the freelist will have a
-    smaller alignment, namely $(D maxSize) rounded up to the nearest multiple of
-    2. This allows $(D Freelist) to minimize internal fragmentation by
+    smaller _alignment, namely $(D maxSize) rounded up to the nearest multiple
+    of 2. This allows $(D Freelist) to minimize internal fragmentation by
     allocating several small objects within an allocated block. Also, there is
-    no disruption because no object has smaller size than its alignment.
+    no disruption because no object has smaller size than its _alignment.
     */
-    static if (staticallyKnownAlignment!ParentAllocator)
-    {
-        enum uint alignment = ParentAllocator.alignment;
-    }
-    else
-    {
-        uint alignment()
-        {
-            return parent.alignment;
-        }
-    }
+    enum uint alignment = ParentAllocator.alignment;
 
     /**
     Returns $(D max) for sizes in the interval $(D [min, max]), and $(D
@@ -2234,7 +2185,6 @@ struct Freelist(ParentAllocator,
     void[] allocate(const size_t bytes)
     {
         assert(bytes < size_t.max / 2);
-        assert(parent.alignment >= Node.alignof);
         if (!inRange(bytes)) return parent.allocate(bytes);
         if (!_root) return allocateFresh(bytes);
         // Pop off the freelist
@@ -2253,7 +2203,6 @@ struct Freelist(ParentAllocator,
             // Easy case, just get it over with
             return parent.allocate(bytes);
         }
-        assert(parent.alignment % Node.alignof == 0);
         static if (maxSize != unbounded && maxSize != chooseAtRuntime)
         {
             static assert((parent.alignment + max) % Node.alignof == 0,
@@ -2328,7 +2277,6 @@ struct Freelist(ParentAllocator,
         if (!nodesFull && inRange(block.length))
         {
             auto t = _root;
-            assert(Node.alignof <= parent.alignment);
             _root = cast(Node*) block.ptr;
             _root.next = t;
             incNodes();
@@ -2395,6 +2343,7 @@ control alignment externally.
 */
 private struct BasicRegion(uint minAlign = platformAlignment)
 {
+    static assert(minAlign.isGoodStaticAlignment);
     private void* _current, _end;
 
     /**
@@ -2426,7 +2375,7 @@ private struct BasicRegion(uint minAlign = platformAlignment)
     /**
     Standard allocator primitives.
     */
-    enum uint alignment = minAlign; // TODO: make this a member
+    enum uint alignment = minAlign;
 
     /// Ditto
     void[] allocate(size_t bytes)
@@ -2484,6 +2433,8 @@ control alignment externally.
 */
 struct Region(uint minAlign = platformAlignment)
 {
+    static assert(minAlign.isGoodStaticAlignment);
+
     private BasicRegion!(minAlign) base;
     private void* _begin;
 
@@ -2558,9 +2509,10 @@ $(D InSituRegion!(n + a - 1, a)).
 */
 struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
 {
-    static assert(size >= minAlign || minAlign == chooseAtRuntime);
+    static assert(minAlign.isGoodStaticAlignment);
+    static assert(size >= minAlign);
 
-    // The store will be aligned to realof.align, regardless of the requested
+    // The store will be aligned to double.alignof, regardless of the requested
     // alignment.
     union
     {
@@ -2569,41 +2521,19 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     }
     private void* _crt, _end;
 
-    static if (minAlign != chooseAtRuntime)
-        /**
+    /**
+    An alias for $(D minAlign), which must be a valid alignment (nonzero power
+    of 2). The start of the region and all allocation requests will be rounded
+    up to a multiple of the alignment.
 
-        If $(D minAlign == chooseAtRuntime), then $(D alignment) is a read-write
-        property. It must be set before any data is allocated with the
-        allocator. Otherwise, $(D minAlign) must be a positive constant and $(D
-        alignment) will be equal to it. In either case, the start of the region
-        and all allocation requests will be rounded up to a multiple of the
-        alignment.
-
-        ----
-        InSituRegion!(4096) a1;
-        assert(a1.alignment == platformAlignment);
-        InSituRegion!(4096, 64) a2;
-        assert(a2.alignment == 64);
-        InSituRegion!(4096, chooseAtRuntime) a3;
-        a3.alignment = 8;
-        assert(a3.alignment == 8);
-        ----
-        */
-        enum uint alignment = minAlign;
-    else
-    {
-        private uint _alignment;
-        @property uint alignment() const
-        {
-            assert(_alignment);
-            return _alignment;
-        }
-        @property void alignment(uint a)
-        {
-            assert(a && !_crt);
-            _alignment = a;
-        }
-    }
+    ----
+    InSituRegion!(4096) a1;
+    assert(a1.alignment == platformAlignment);
+    InSituRegion!(4096, 64) a2;
+    assert(a2.alignment == 64);
+    ----
+    */
+    enum uint alignment = minAlign;
 
     private void lazyInit()
     {
@@ -2726,11 +2656,6 @@ unittest
     InSituRegion!(65536, 1024*4) r2;
     assert(r2.available <= 65536);
     a = r2.allocate(2001);
-    assert(a.length == 2001);
-
-    InSituRegion!(65536, chooseAtRuntime) r3;
-    r3.alignment = 64;
-    a = r3.allocate(2001);
     assert(a.length == 2001);
 }
 
@@ -3072,13 +2997,7 @@ public:
     static if (stateSize!MyAllocator) MyAllocator parent;
     else alias parent = MyAllocator.it;
 
-    static if (staticallyKnownAlignment!Allocator)
-        enum uint alignment = Allocator.alignment;
-    else
-        uint alignment()
-        {
-            return parent.alignment;
-        }
+    enum uint alignment = Allocator.alignment;
 
     static if (hasMember!(Allocator, "owns"))
     bool owns(void[] b)
@@ -3385,10 +3304,7 @@ struct CascadingAllocator(alias make)
     /**
     Standard primitives.
     */
-    static if (staticallyKnownAlignment!Allocator)
-        enum uint alignment = Allocator.alignment;
-    else
-        uint alignment() { return Allocator.alignment; }
+    enum uint alignment = Allocator.alignment;
 
     /// Ditto
     void[] allocate(size_t s)
@@ -3668,18 +3584,11 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
             else return _large;
     }
 
+    enum uint alignment = min(SmallAllocator.alignment,
+        LargeAllocator.alignment);
+
     template Impl()
     {
-        static if (staticallyKnownAlignment!SmallAllocator
-                && staticallyKnownAlignment!LargeAllocator)
-            enum uint alignment = min(SmallAllocator.alignment,
-                LargeAllocator.alignment);
-        else
-            uint alignment()
-            {
-                return min(_small.alignment, _large.alignment);
-            }
-
         void[] allocate(size_t s)
         {
             return s <= threshold ? _small.allocate(s) : _large.allocate(s);
@@ -3902,13 +3811,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     /**
     The alignment offered is the same as $(D Allocator.alignment).
     */
-    static if (staticallyKnownAlignment!Allocator)
-        enum uint alignment = Allocator.alignment;
-    else
-        uint alignment()
-        {
-            return Allocator.alignment;
-        }
+    enum uint alignment = Allocator.alignment;
 
     /**
     Rounds up to the maximum size of the bucket in which $(D bytes) falls.
@@ -3991,34 +3894,6 @@ unittest
     auto b = a.allocate(400);
     assert(b.length == 400, text(b.length));
     a.deallocate(b);
-}
-
-/**
-Returns $(D true) iff $(D Allocator)'s alignment is statically known (i.e. is
-defined as an $(D enum), a $(D static immutable) value, or a $(D static const)
-value.)
-*/
-private template staticallyKnownAlignment(Allocator)
-{
-    static if (is(typeof({enum x = Allocator.alignment;})))
-        enum staticallyKnownAlignment = Allocator.alignment > 0;
-    else
-        enum staticallyKnownAlignment = false;
-}
-
-///
-unittest
-{
-    struct S1 { static uint alignment = 42; }
-    struct S2 { uint alignment = 42; }
-    struct S3 { static const uint alignment = 42; }
-    struct S4 { static immutable uint alignment = 42; }
-    struct S5 { enum uint alignment = 42; }
-    static assert(!staticallyKnownAlignment!S1);
-    static assert(!staticallyKnownAlignment!S2);
-    static assert(staticallyKnownAlignment!S3);
-    static assert(staticallyKnownAlignment!S4);
-    static assert(staticallyKnownAlignment!S5);
 }
 
 /**
@@ -4271,6 +4146,21 @@ unittest
     alloc = new CAllocatorImpl!A;
     b = alloc.allocate(101);
     assert(alloc.deallocate(b));
+}
+
+private bool isPowerOf2(uint x)
+{
+    return (x & (x - 1)) == 0;
+}
+
+private bool isGoodStaticAlignment(uint x)
+{
+    return x.isPowerOf2 && x > 0;
+}
+
+private bool isGoodDynamicAlignment(uint x)
+{
+    return x.isPowerOf2 && x >= (void*).sizeof;
 }
 
 __EOF__
