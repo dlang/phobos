@@ -32,7 +32,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
     {
         if(r.length == 0) return null;
 
-        static auto trustedAllocateArray(size_t n) @trusted nothrow pure
+        static auto trustedAllocateArray(size_t n) @trusted nothrow
         {
             return uninitializedArray!(Unqual!E[])(n);
         }
