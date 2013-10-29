@@ -897,6 +897,40 @@ unittest
     static assert(!isTuple!(S));
 }
 
+template isHeterogeneous(T)
+if (isTuple!T)
+{
+	alias types = FieldTypeTuple!T;
+    enum isSameTypeAshead(U) = is(U == types[0]);
+    enum isHomogeneous = !allSatisfy!(isSameTypeAsHead, types);
+}
+
+@safe @pure @nothrow unittest
+{
+    alias HOTUP = Tuple!(int, int, int);
+    static assert(isHomogeneous!HOTUP);
+    static assert(!isHeterogeneous!HOTUP);
+
+    HOTUP hotup = HTUP(1, 2, 3);
+    static assert(isHomogeneous!(typeof(hotup)));
+    static assert(!isHeterogeneous!(typeof(hotup)));
+
+    alias HETUP = Tuple!(string, bool, float);
+    static assert(!isHomogeneous!(HETUP));
+    static assert(isHeterogeneous!(HETUP));
+
+    HETUP hetup = HETUP("test", false, 2.345);
+    static assert(!isHomogeneous!(typeof(hetup)));
+    static assert(isHeterogeneous!(typeof(hetup)));
+
+    alias ZTUP = Tuple!();
+    static assert(isHomogeneous!ZTUP);
+    static assert(!isHeterogeneous!ZTUP);
+
+    ZTUP ztup = ZTUP();
+    static assert(isHomogeneous!(typeof(ztup)));
+    static assert(!isHeterogeneous!(typeof(ztup)));
+}
 
 /**
 $(D Rebindable!(T)) is a simple, efficient wrapper that behaves just
