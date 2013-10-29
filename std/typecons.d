@@ -932,7 +932,7 @@ if (isTuple!T)
     static assert(isHomogeneous!HOTUP);
     static assert(!isHeterogeneous!HOTUP);
 
-    HOTUP hotup = HTUP(1, 2, 3);
+    HOTUP hotup = HOTUP(1, 2, 3);
     static assert(isHomogeneous!(typeof(hotup)));
     static assert(!isHeterogeneous!(typeof(hotup)));
 
