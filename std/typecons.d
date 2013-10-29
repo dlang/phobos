@@ -897,6 +897,21 @@ unittest
     static assert(!isTuple!(S));
 }
 
+/**
+Returns $(D true) if all types in the $(D Tuple T) are the same. 
+*/
+template isHomogeneous(T)
+if (isTuple!T)
+{
+	alias types = FieldTypeTuple!T;
+    enum isSameTypeAshead(U) = is(U == types[0]);
+    enum isHomogeneous = allSatisfy!(isSameTypeAsHead, types);
+}
+
+/**
+Returns $(D true) if at least one type in the $(D Tuple T)
+is not the same as the others.
+*/
 template isHeterogeneous(T)
 if (isTuple!T)
 {
