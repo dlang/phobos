@@ -904,8 +904,11 @@ template isHomogeneous(T)
 if (isTuple!T)
 {
 	alias types = FieldTypeTuple!T;
-    enum isSameTypeAshead(U) = is(U == types[0]);
-    enum isHomogeneous = allSatisfy!(isSameTypeAsHead, types);
+    template isSameTypeAshead(U)
+    {
+        enum isSameTypeAsHead = is(U == types[0]);
+    }
+    enum isHomogeneous = allSatisfy!(isSameTypeAshead, types[1..$]);
 }
 
 /**
@@ -916,8 +919,11 @@ template isHeterogeneous(T)
 if (isTuple!T)
 {
 	alias types = FieldTypeTuple!T;
-    enum isSameTypeAshead(U) = is(U == types[0]);
-    enum isHomogeneous = !allSatisfy!(isSameTypeAsHead, types);
+    template isSameTypeAshead(U)
+    {
+        enum isSameTypeAsHead = is(U == types[0]);
+    }
+    enum isHomogeneous = !allSatisfy!(isSameTypeAsHead, types[1..$]);
 }
 
 @safe pure nothrow unittest
