@@ -405,6 +405,8 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
             {
                 try
                 {
+                    //Issue: if E has an impure postblit, then all of arrayAllocImpl
+                    //Will be impure, even during non CTFE.
                     foreach (i; 0 .. size)
                         ret ~= E.init;
                 }
