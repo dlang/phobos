@@ -920,7 +920,7 @@ if (isTuple!T)
     enum isHomogeneous = !allSatisfy!(isSameTypeAsHead, types);
 }
 
-@safe @pure @nothrow unittest
+@safe pure nothrow unittest
 {
     alias HOTUP = Tuple!(int, int, int);
     static assert(isHomogeneous!HOTUP);
