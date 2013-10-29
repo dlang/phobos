@@ -2339,9 +2339,9 @@ private:
 
         immutable halfLen = n / 2;
 
-        // This loop is unrolled and the two iterations are nterleaved relative
-        // to the textbook FFT to increase ILP.  This gives roughly 5% speedups
-        // on DMD.
+        // This loop is unrolled and the two iterations are interleaved
+        // relative to the textbook FFT to increase ILP.  This gives roughly 5%
+        // speedups on DMD.
         for(size_t k = 0; k < halfLen; k += 2) {
             immutable cosTwiddle1 = cosFromLookup(k);
             immutable sinTwiddle1 = negSinFromLookup(k);
@@ -2467,6 +2467,9 @@ public:
      *
      * Returns:  An array of complex numbers representing the transformed data in
      *           the frequency domain.
+     *
+     * Conventions: The exponent is negative and the factor is one,
+     *              i.e., output[j] := sum[ exp(-2 PI i j k / N) input[k] ].
      */
     Complex!F[] fft(F = double, R)(R range) const
     if(isFloatingPoint!F && isRandomAccessRange!R) {
@@ -2523,6 +2526,9 @@ public:
      * the same compile-time interface.
      *
      * Returns:  The time-domain signal.
+     *
+     * Conventions: The exponent is positive and the factor is 1/N, i.e.,
+     *              output[j] := (1 / N) sum[ exp(+2 PI i j k / N) input[k] ].
      */
     Complex!F[] inverseFft(F = double, R)(R range) const
     if(isRandomAccessRange!R && isComplexLike!(ElementType!R) && isFloatingPoint!F) {
