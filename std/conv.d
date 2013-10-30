@@ -121,7 +121,7 @@ private
     template isNullToStr(S, T)
     {
         enum isNullToStr = isImplicitlyConvertible!(S, T) &&
-                           is(S == typeof(null)) && isExactSomeString!T;
+                           (is(S == typeof(null)) || is(S == const(typeof(null))) || is(S == immutable(typeof(null)))) && isExactSomeString!T;
     }
 
     template isRawStaticArray(T, A...)
@@ -303,6 +303,15 @@ template to(T)
 {
     assert(to!string(null) == "null");
     assert(text(null) == "null");
+}
+
+// Tests for issue 11390
+@safe pure unittest
+{
+    const(typeof(null)) ctn;
+    immutable(typeof(null)) itn;
+    assert(to!string(ctn) == "null");
+    assert(to!string(itn) == "null");
 }
 
 // Tests for issue 8729: do NOT skip leading WS
