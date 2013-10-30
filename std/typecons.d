@@ -906,11 +906,11 @@ if (isTuple!T)
 	alias types = FieldTypeTuple!T;
     static if (types.length > 0)
     {
-        template isSameTypeAshead(U)
+        template isSameTypeAsHead(U)
         {
             enum isSameTypeAsHead = is(U == types[0]);
         }
-        enum isHomogeneous = allSatisfy!(isSameTypeAshead, types);
+        enum isHomogeneous = allSatisfy!(isSameTypeAsHead, types);
     }
     else
     {
@@ -928,15 +928,15 @@ if (isTuple!T)
 	alias types = FieldTypeTuple!T;
     static if (types.length > 0)
     {
-        template isSameTypeAshead(U)
+        template isSameTypeAsHead(U)
         {
             enum isSameTypeAsHead = is(U == types[0]);
         }
-        enum isHomogeneous = !allSatisfy!(isSameTypeAsHead, types);
+        enum isHeterogeneous = !allSatisfy!(isSameTypeAsHead, types);
     }
     else
     {
-        enum isHomogeneous = false;
+        enum isHeterogeneous = false;
     }
 }
 
