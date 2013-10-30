@@ -903,7 +903,11 @@ Returns $(D true) if all types in the $(D Tuple T) are the same.
 template isHomogeneous(T)
 if (isTuple!T)
 {
+<<<<<<< HEAD
     alias types = T.Types;
+=======
+    alias types = FieldTypeTuple!T;
+>>>>>>> d21b508a588878fbe5292166365d7b5034285c0a
     static if (types.length > 0)
     {
         template isSameTypeAsHead(U)
@@ -925,9 +929,20 @@ is not the same as the others.
 template isHeterogeneous(T)
 if (isTuple!T)
 {
+<<<<<<< HEAD
     static if (T.Types.length > 0)
     {
         enum isHeterogeneous = !isHomogeneous!T;
+=======
+    alias types = FieldTypeTuple!T;
+    static if (types.length > 0)
+    {
+        template isSameTypeAsHead(U)
+        {
+            enum isSameTypeAsHead = is(U == types[0]);
+        }
+        enum isHeterogeneous = !allSatisfy!(isSameTypeAsHead, types);
+>>>>>>> d21b508a588878fbe5292166365d7b5034285c0a
     }
     else
     {
