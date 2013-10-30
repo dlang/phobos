@@ -897,6 +897,85 @@ unittest
     static assert(!isTuple!(S));
 }
 
+/**
+Returns $(D true) if all types in the $(D Tuple T) are the same. 
+*/
+template isHomogeneous(T)
+if (isTuple!T)
+{
+<<<<<<< HEAD
+    alias types = T.Types;
+=======
+    alias types = FieldTypeTuple!T;
+>>>>>>> d21b508a588878fbe5292166365d7b5034285c0a
+    static if (types.length > 0)
+    {
+        template isSameTypeAsHead(U)
+        {
+            enum isSameTypeAsHead = is(U == types[0]);
+        }
+        enum isHomogeneous = allSatisfy!(isSameTypeAsHead, types);
+    }
+    else
+    {
+        enum isHomogeneous = true;
+    }
+}
+
+/**
+Returns $(D true) if at least one type in the $(D Tuple T)
+is not the same as the others.
+*/
+template isHeterogeneous(T)
+if (isTuple!T)
+{
+<<<<<<< HEAD
+    static if (T.Types.length > 0)
+    {
+        enum isHeterogeneous = !isHomogeneous!T;
+=======
+    alias types = FieldTypeTuple!T;
+    static if (types.length > 0)
+    {
+        template isSameTypeAsHead(U)
+        {
+            enum isSameTypeAsHead = is(U == types[0]);
+        }
+        enum isHeterogeneous = !allSatisfy!(isSameTypeAsHead, types);
+>>>>>>> d21b508a588878fbe5292166365d7b5034285c0a
+    }
+    else
+    {
+        enum isHeterogeneous = false;
+    }
+}
+
+@safe pure nothrow unittest
+{
+    alias HOTUP = Tuple!(int, int, int);
+    static assert(isHomogeneous!HOTUP);
+    static assert(!isHeterogeneous!HOTUP);
+
+    HOTUP hotup = HOTUP(1, 2, 3);
+    static assert(isHomogeneous!(typeof(hotup)));
+    static assert(!isHeterogeneous!(typeof(hotup)));
+
+    alias HETUP = Tuple!(string, bool, float);
+    static assert(!isHomogeneous!(HETUP));
+    static assert(isHeterogeneous!(HETUP));
+
+    HETUP hetup = HETUP("test", false, 2.345);
+    static assert(!isHomogeneous!(typeof(hetup)));
+    static assert(isHeterogeneous!(typeof(hetup)));
+
+    alias ZTUP = Tuple!();
+    static assert(isHomogeneous!ZTUP);
+    static assert(!isHeterogeneous!ZTUP);
+
+    ZTUP ztup = ZTUP();
+    static assert(isHomogeneous!(typeof(ztup)));
+    static assert(!isHeterogeneous!(typeof(ztup)));
+}
 
 /**
 $(D Rebindable!(T)) is a simple, efficient wrapper that behaves just
