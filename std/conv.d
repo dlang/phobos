@@ -121,7 +121,7 @@ private
     template isNullToStr(S, T)
     {
         enum isNullToStr = isImplicitlyConvertible!(S, T) &&
-                           (is(S == typeof(null)) || is(S == const(typeof(null))) || is(S == immutable(typeof(null)))) && isExactSomeString!T;
+                           (is(Unqual!S == typeof(null))) && isExactSomeString!T;
     }
 
     template isRawStaticArray(T, A...)

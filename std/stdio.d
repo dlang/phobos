@@ -1899,9 +1899,7 @@ void writeln(T...)(T args)
     else static if (T.length == 1 &&
                     is(typeof(args[0]) : const(char)[]) &&
                     !is(typeof(args[0]) == enum) &&
-                    !is(typeof(args[0]) == typeof(null)) &&
-                    !is(typeof(args[0]) == const(typeof(null))) &&
-                    !is(typeof(args[0]) == immutable(typeof(null))) &&
+                    !is(Unqual!(typeof(args[0])) == typeof(null)) &&
                     !isAggregateType!(typeof(args[0])))
     {
         // Specialization for strings - a very frequent case
