@@ -900,7 +900,7 @@ unittest
 /**
 Returns $(D true) if all types in the $(D Tuple T) are the same. 
 */
-template isHomogeneous(T)
+template allTypesSame(T)
 if (isTuple!T)
 {
     alias types = T.Types;
@@ -910,56 +910,33 @@ if (isTuple!T)
         {
             enum isSameTypeAsHead = is(U == types[0]);
         }
-        enum isHomogeneous = allSatisfy!(isSameTypeAsHead, types);
+        enum allTypesSame = allSatisfy!(isSameTypeAsHead, types);
     }
     else
     {
-        enum isHomogeneous = true;
-    }
-}
-
-/**
-Returns $(D true) if at least one type in the $(D Tuple T)
-is not the same as the others.
-*/
-template isHeterogeneous(T)
-if (isTuple!T)
-{
-    static if (T.Types.length > 0)
-    {
-        enum isHeterogeneous = !isHomogeneous!T;
-    }
-    else
-    {
-        enum isHeterogeneous = false;
+        enum allTypesSame = true;
     }
 }
 
 @safe pure nothrow unittest
 {
     alias HOTUP = Tuple!(int, int, int);
-    static assert(isHomogeneous!HOTUP);
-    static assert(!isHeterogeneous!HOTUP);
+    static assert(allTypesSame!HOTUP);
 
     HOTUP hotup = HOTUP(1, 2, 3);
-    static assert(isHomogeneous!(typeof(hotup)));
-    static assert(!isHeterogeneous!(typeof(hotup)));
+    static assert(allTypesSame!(typeof(hotup)));
 
     alias HETUP = Tuple!(string, bool, float);
-    static assert(!isHomogeneous!(HETUP));
-    static assert(isHeterogeneous!(HETUP));
+    static assert(!allTypesSame!(HETUP));
 
     HETUP hetup = HETUP("test", false, 2.345);
-    static assert(!isHomogeneous!(typeof(hetup)));
-    static assert(isHeterogeneous!(typeof(hetup)));
-
+    static assert(!allTypesSame!(typeof(hetup)));
+	
     alias ZTUP = Tuple!();
-    static assert(isHomogeneous!ZTUP);
-    static assert(!isHeterogeneous!ZTUP);
+    static assert(allTypesSame!ZTUP);
 
     ZTUP ztup = ZTUP();
-    static assert(isHomogeneous!(typeof(ztup)));
-    static assert(!isHeterogeneous!(typeof(ztup)));
+    static assert(allTypesSame!(typeof(ztup)));
 }
 
 /**
