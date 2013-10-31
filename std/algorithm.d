@@ -3740,14 +3740,14 @@ if (isInputRange!InputRange &&
             {
                 if (!__ctfe && needle <= 0x7F)
                 {
-                    R trustedmemchr() @trusted nothrow
+                    static R trustedMemchr(ref R haystack, ref E needle) @trusted nothrow pure
                     {
                         auto ptr = memchr(haystack.ptr, needle, haystack.length);
                         return ptr ?
                              haystack[ptr - haystack.ptr .. $] :
                              haystack[$ .. $];
                     }
-                    return trustedmemchr();
+                    return trustedMemchr(haystack, needle);
                 }
             }
 
@@ -3775,12 +3775,17 @@ if (isInputRange!InputRange &&
 
             size_t len = encode(buf, needle);
             //TODO: Make find!(R, R) @safe
-            R trustedFindRR() @trusted {return std.algorithm.find(haystack, cast(R)buf[0 .. len]);}
-            return trustedFindRR();
+            R trustedFindRR(ref R haystack, UEEType[] needle) @trusted pure
+            {
+                return cast(R) std.algorithm.find(haystack, needle);
+            }
+            return trustedFindRR(haystack, buf[0 .. len]);
         }
         else
         {
-            //Explicit pred. Manually decode: That is the fastest implementation.
+            //Explicit pred: we must test each character by the book.
+            //We choose a manual decoding approach, because it is faster than
+            //the built-in foreach, or doing a front/popFront for-loop.
             immutable len = haystack.length;
             size_t i = 0, next = 0;
             while (next < len)
@@ -3797,10 +3802,10 @@ if (isInputRange!InputRange &&
         //10403 optimization
         static if (isDefaultPred && isIntegral!EType && EType.sizeof == 1 && isIntegralNeedle)
         {
-            R findHelper() @trusted nothrow
+            R findHelper(ref R haystack, ref E needle) @trusted nothrow pure
             {
                 EType* ptr = null;
-                //Note: we use "min/max" to handle sign miss-match.
+                //Note: we use "min/max" to handle sign mismatch.
                 if (min(EType.min, needle) == EType.min, needle && max(EType.max, needle) == EType.max)
                     ptr = cast(EType*) memchr(haystack.ptr, needle, haystack.length);
 
@@ -3810,7 +3815,7 @@ if (isInputRange!InputRange &&
             }
 
             if (!__ctfe)
-                return findHelper();
+                return findHelper(haystack, needle);
         }
 
         //Default implementation.
