@@ -10658,10 +10658,14 @@ Returns $(D true) if and only if a value $(D v) satisfying the
 predicate $(D pred) can be found in the forward range $(D
 range). Performs $(BIGOH r.length) evaluations of $(D pred).
  */
-bool any(alias pred, Range)(Range range)
-if (is(typeof(find!pred(range))))
+template any(alias pred)
 {
-    return !find!pred(range).empty;
+    /// ditto
+    bool any(Range)(Range range)
+    if (is(typeof(find!pred(range))))
+    {
+        return !find!pred(range).empty;
+    }
 }
 
 unittest
@@ -10676,10 +10680,14 @@ unittest
 Returns $(D true) if and only if all values in $(D range) satisfy the
 predicate $(D pred).  Performs $(BIGOH r.length) evaluations of $(D pred).
 */
-bool all(alias pred, R)(R range)
-if (isInputRange!R && is(typeof(unaryFun!pred(range.front))))
+template all(alias pred)
 {
-    return find!(not!(unaryFun!pred))(range).empty;
+    /// ditto
+    bool all(R)(R range)
+    if (isInputRange!R && is(typeof(unaryFun!pred(range.front))))
+    {
+        return find!(not!(unaryFun!pred))(range).empty;
+    }
 }
 
 ///
