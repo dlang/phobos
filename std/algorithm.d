@@ -664,7 +664,7 @@ $(D auto reduce(Args...)(Args args)
     if (Args.length > 0 && Args.length <= 2 && isIterable!(Args[$ - 1]));)
 
 Implements the homonym function (also known as $(D accumulate), $(D
-compress), $(D inject), or $(D foldl)) present in various programming
+compress), $(D inject), or $(D fold)) present in various programming
 languages of functional flavor. The call $(D reduce!(fun)(seed,
 range)) first assigns $(D seed) to an internal variable $(D result),
 also called the accumulator. Then, for each element $(D x) in $(D
