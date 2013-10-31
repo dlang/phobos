@@ -10587,17 +10587,31 @@ unittest
 +/
 
 // canFind
-/**
-Returns $(D true) if and only if $(D value) can be found in $(D
-range). Performs $(BIGOH needle.length) evaluations of $(D pred).
- */
-bool canFind(alias pred = "a == b", R, E)(R haystack, E needle)
-if (is(typeof(find!pred(haystack, needle))))
-{
-    return !find!pred(haystack, needle).empty;
-}
-
 /++
+Convenience function. Like find, but only returns whether or not the search
+was succesful.
+ +/
+template canFind(alias pred="a == b")
+{
+    //Explictly Undocumented. Do not use. It may be deprecated in the future.
+    //Use any instead.
+    bool canFind(Range)(Range haystack)
+    if (is(typeof(find!pred(haystack))))
+    {
+        return any!pred(haystack);
+    }
+
+    /++
+    Returns $(D true) if and only if $(D value) can be found in $(D
+    range). Performs $(BIGOH needle.length) evaluations of $(D pred).
+     +/
+    bool canFind(Range, Element)(Range haystack, Element needle)
+    if (is(typeof(find!pred(haystack, needle))))
+    {
+        return !find!pred(haystack, needle).empty;
+    }
+
+    /++
     Returns the 1-based index of the first needle found in $(D haystack). If no
     needle is found, then $(D 0) is returned.
 
@@ -10607,13 +10621,14 @@ if (is(typeof(find!pred(haystack, needle))))
     $(D bool) for the same effect or used to get which needle was found first
     without having to deal with the tuple that $(D LREF find) returns for the
     same operation.
- +/
-size_t canFind(alias pred = "a == b", Range, Ranges...)(Range haystack, Ranges needles)
-if (Ranges.length > 1 &&
-    allSatisfy!(isForwardRange, Ranges) &&
-    is(typeof(find!pred(haystack, needles))))
-{
-    return find!pred(haystack, needles)[1];
+     +/
+    size_t canFind(Range, Ranges...)(Range haystack, Ranges needles)
+    if (Ranges.length > 1 &&
+        allSatisfy!(isForwardRange, Ranges) &&
+        is(typeof(find!pred(haystack, needles))))
+    {
+        return find!pred(haystack, needles)[1];
+    }
 }
 
 unittest
@@ -10636,13 +10651,6 @@ unittest
     assert(canFind([0, 1, 2, 3], 4) == false);
     assert(!canFind([0, 1, 2, 3], [1, 3], [2, 4]));
     assert(canFind([0, 1, 2, 3], [1, 3], [2, 4]) == 0);
-}
-
-//Explictly Undocumented. Do not use. It may be deprecated in the future.
-//Use any instead.
-bool canFind(alias pred, Range)(Range range)
-{
-    return any!pred(range);
 }
 
 /**
