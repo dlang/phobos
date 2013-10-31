@@ -10653,6 +10653,11 @@ unittest
     assert(canFind([0, 1, 2, 3], [1, 3], [2, 4]) == 0);
 }
 
+unittest
+{
+    equal!(canFind!"a < b")([[1, 2, 3], [7, 8, 9]], [2, 3]);
+}
+
 /**
 Returns $(D true) if and only if a value $(D v) satisfying the
 predicate $(D pred) can be found in the forward range $(D
@@ -10666,6 +10671,14 @@ template any(alias pred)
     {
         return !find!pred(range).empty;
     }
+}
+
+///
+unittest
+{
+    import std.ascii : isWhite;
+    assert( all!(any!isWhite)(["a a", "b b"]));
+    assert(!any!(all!isWhite)(["a a", "b b"]));
 }
 
 unittest
@@ -10693,8 +10706,11 @@ template all(alias pred)
 ///
 unittest
 {
-    assert(all!"a & 1"([1, 3, 5, 7, 9]));
+    assert( all!"a & 1"([1, 3, 5, 7, 9]));
     assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
+}
+unittest
+{
     int x = 1;
     assert(all!(a => a > x)([2, 3]));
 }
