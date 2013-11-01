@@ -34,13 +34,19 @@ debug(uri) private import std.stdio;
 private import std.ascii;
 private import std.c.stdlib;
 private import std.utf;
-import std.exception;
+import core.exception : OutOfMemoryError;
+import std.exception : assumeUnique;
 
-class URIerror : Error
+class URIException : Exception
 {
-    this()
+    @safe pure nothrow this()
     {
-        super("URI error");
+        super("URI Exception");
+    }
+
+    @safe pure nothrow this(string msg)
+    {
+        super("URI Exception: " ~ msg);
     }
 }
 
@@ -116,7 +122,7 @@ private string URI_Encode(dstring string, uint unescapedSet)
                 {
                     R2 = cast(char *)alloca(Rsize * char.sizeof);
                     if (!R2)
-                        goto LthrowURIerror;
+                        throw new OutOfMemoryError("Alloca failure");
                 }
                 R2[0..Rlen] = R[0..Rlen];
                 R = R2;
@@ -181,7 +187,7 @@ private string URI_Encode(dstring string, uint unescapedSet)
             +/
             else
             {
-                goto LthrowURIerror;        // undefined UTF-32 code
+                throw new URIException("Undefined UTF-32 code point");
             }
 
             if (Rlen + L * 3 > Rsize)
@@ -196,7 +202,7 @@ private string URI_Encode(dstring string, uint unescapedSet)
                 {
                     R2 = cast(char *)alloca(Rsize * char.sizeof);
                     if (!R2)
-                        goto LthrowURIerror;
+                        throw new OutOfMemoryError("Alloca failure");
                 }
                 R2[0..Rlen] = R[0..Rlen];
                 R = R2;
@@ -214,9 +220,6 @@ private string URI_Encode(dstring string, uint unescapedSet)
     }
 
     return R[0..Rlen].idup;
-
-LthrowURIerror:
-    throw new URIerror();
 }
 
 uint ascii2hex(dchar c)
@@ -249,7 +252,7 @@ private dstring URI_Decode(string string, uint reservedSet)
     {
         R = cast(dchar *)alloca(Rsize * dchar.sizeof);
         if (!R)
-            goto LthrowURIerror;
+            throw new OutOfMemoryError("Alloca failure");
     }
     Rlen = 0;
 
@@ -267,9 +270,9 @@ private dstring URI_Decode(string string, uint reservedSet)
         }
         start = k;
         if (k + 2 >= len)
-            goto LthrowURIerror;
+            throw new URIException("Unexpected end of URI");
         if (!isHexDigit(s[k + 1]) || !isHexDigit(s[k + 2]))
-            goto LthrowURIerror;
+            throw new URIException("Expected two hexadecimal digits after '%'");
         B = cast(char)((ascii2hex(s[k + 1]) << 4) + ascii2hex(s[k + 2]));
         k += 2;
         if ((B & 0x80) == 0)
@@ -283,11 +286,11 @@ private dstring URI_Decode(string string, uint reservedSet)
             for (n = 1; ; n++)
             {
                 if (n > 4)
-                    goto LthrowURIerror;
+                    throw new URIException("UTF-32 code point size too large");
                 if (((B << n) & 0x80) == 0)
                 {
                     if (n == 1)
-                        goto LthrowURIerror;
+                        throw new URIException("UTF-32 code point size too small");
                     break;
                 }
             }
@@ -296,22 +299,22 @@ private dstring URI_Decode(string string, uint reservedSet)
             V = B & ((1 << (7 - n)) - 1);   // (!!!)
 
             if (k + (3 * (n - 1)) >= len)
-                goto LthrowURIerror;
+                throw new URIException("UTF-32 unaligned String");
             for (j = 1; j != n; j++)
             {
                 k++;
                 if (s[k] != '%')
-                    goto LthrowURIerror;
+                    throw new URIException("Expected: '%'");
                 if (!isHexDigit(s[k + 1]) || !isHexDigit(s[k + 2]))
-                    goto LthrowURIerror;
+                    throw new URIException("Expected two hexadecimal digits after '%'");
                 B = cast(char)((ascii2hex(s[k + 1]) << 4) + ascii2hex(s[k + 2]));
                 if ((B & 0xC0) != 0x80)
-                    goto LthrowURIerror;
+                    throw new URIException("Incorrect UTF-32 multi-byte sequence");
                 k += 2;
                 V = (V << 6) | (B & 0x3F);
             }
             if (V > 0x10FFFF)
-                goto LthrowURIerror;
+                throw new URIException("Unknown UTF-32 code point");
             C = V;
         }
         if (C < uri_flags.length && uri_flags[C] & reservedSet)
@@ -332,10 +335,6 @@ private dstring URI_Decode(string string, uint reservedSet)
 
     // Copy array on stack to array in memory
     return R[0..Rlen].idup;
-
-
-LthrowURIerror:
-    throw new URIerror();
 }
 
 /*************************************
