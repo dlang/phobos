@@ -5379,16 +5379,34 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
             immutable fcount = (end - start) / step;
             enforce(fcount >= 0, "iota: incorrect startup parameters");
             count = to!size_t(fcount);
-            auto pastEnd = start + count * step;
+            immutable pastEnd = start + count * step;
             if (step > 0)
             {
-                if (pastEnd < end) ++count;
-                assert(start + count * step >= end);
+                if (__ctfe)
+                {
+                    if (pastEnd < end) ++count;
+                    assert(start + count * step >= end);
+                }
+                else
+                {
+                    import std.math : nextDown;
+                    if (pastEnd <= nextDown(end)) ++count;
+                    assert(start + count * step > nextDown(end));
+                }
             }
             else
             {
-                if (pastEnd > end) ++count;
-                assert(start + count * step <= end);
+                if (__ctfe)
+                {
+                    if (pastEnd > end) ++count;
+                    assert(start + count * step <= end);
+                }
+                else
+                {
+                    import std.math : nextUp;
+                    if (pastEnd >= nextUp(end)) ++count;
+                    assert(start + count * step < nextUp(end));
+                }
             }
         }
 
@@ -5561,6 +5579,13 @@ unittest
         foreach (i; iota(cast(Type)0, cast(Type)10)) { val++; }
         assert(val == 10);
     }
+
+    // Issue 6531
+    assert(iota(0.0, 3.0, 0.03).length == 100);
+    assert(iota(0.0, 3.0, 0.03).back < 3.0);
+    assert(iota(-936596.062f, 373124.094f, 327430.031f).length == 5);
+    assert(iota(0.0, 3.6, 0.03).length == 120, text(iota(0.0, 3.6, 0.03).length));
+    assert(iota(0.0, 100.0, 10.0).length == 10);
 }
 
 unittest
