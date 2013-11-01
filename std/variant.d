@@ -504,7 +504,7 @@ private:
             {
                 alias ParamTypes = ParameterTypeTuple!A;
                 auto p = cast(VariantN*) parm;
-                auto argCount = p.get!size_t();
+                auto argCount = p.get!size_t;
                 // To assign the tuple we need to use the unqualified version,
                 // otherwise we run into issues such as with const values.
                 // We still get the actual type from the Variant though
@@ -517,7 +517,7 @@ private:
                 auto variantArgs = p[1 .. argCount + 1];
                 foreach (i, T; ParamTypes)
                 {
-                    t[i] = cast()variantArgs[i].get!T();
+                    t[i] = cast()variantArgs[i].get!T;
                 }
 
                 auto args = cast(Tuple!(ParamTypes))t;
