@@ -272,22 +272,22 @@ private struct Ternary
 
     Ternary opUnary(string s)() if (s == "~")
     {
-        return make((193 >> value & 3) << 1);
+        return make(386 >> value & 6);
     }
 
     Ternary opBinary(string s)(Ternary rhs) if (s == "|")
     {
-        return make((12756 >> (value + rhs.value) & 3) << 1);
+        return make(25512 >> value + rhs.value & 6);
     }
 
     Ternary opBinary(string s)(Ternary rhs) if (s == "&")
     {
-        return make((13072 >> (value + rhs.value) & 3) << 1);
+        return make(26144 >> value + rhs.value & 6);
     }
 
     Ternary opBinary(string s)(Ternary rhs) if (s == "^")
     {
-        return make((13252 >> (value + rhs.value) & 3) << 1);
+        return make(26504 >> value + rhs.value & 6);
     }
 }
 
