@@ -47,10 +47,10 @@ $(TR $(TH Method name) $(TH Semantics))
 $(TR $(TDC uint alignment;, $(RES) > 0) $(TD Returns the minimum alignment of
 all data returned by the allocator. An allocator may implement $(D alignment) as
 a statically-known $(D enum) value only. Applications that need
-dynamically-chosen alignment values should use the $(D alignedMalloc) and $(D
-alignedRealloc) APIs.))
+dynamically-chosen alignment values should use the $(D alignedAllocate) and $(D
+alignedReallocate) APIs.))
 
-$(TR $(TDC uint goodAllocSize(size_t n);, $(RES) >= n) $(TD Allocators
+$(TR $(TDC size_t goodAllocSize(size_t n);, $(RES) >= n) $(TD Allocators
 customarily allocate memory in discretely-sized chunks. Therefore, a request for
 $(D n) bytes may result in a larger allocation. The extra memory allocated goes
 unused and adds to the so-called $(WEB goo.gl/YoKffF,internal fragmentation).
@@ -252,12 +252,14 @@ import std.algorithm, std.conv, std.exception, std.range, std.traits,
 version(unittest) import std.stdio;
 
 /*
-Tristate by Timon Gehr and Andrei Alexandrescu.
+Ternary by Timon Gehr and Andrei Alexandrescu.
 */
-private struct Tristate{
-    private ubyte value;
-    private static Tristate make(ubyte b){
-        Tristate r = void;
+private struct Ternary
+{
+    private ubyte value = 6;
+    private static Ternary make(ubyte b)
+    {
+        Ternary r = void;
         r.value = b;
         return r;
     }
@@ -268,26 +270,30 @@ private struct Tristate{
 
     void opAssign(bool b) { value = b << 1; }
 
-    Tristate opUnary(string s)() if (s == "~"){
-        return make((193>>value&3)<<1);
+    Ternary opUnary(string s)() if (s == "~")
+    {
+        return make((193 >> value & 3) << 1);
     }
 
-    Tristate opBinary(string s)(Tristate rhs) if (s == "|"){
-        return make((12756>>(value+rhs.value)&3)<<1);
+    Ternary opBinary(string s)(Ternary rhs) if (s == "|")
+    {
+        return make((12756 >> (value + rhs.value) & 3) << 1);
     }
 
-    Tristate opBinary(string s)(Tristate rhs) if (s == "&"){
-        return make((13072>>(value+rhs.value)&3)<<1);
+    Ternary opBinary(string s)(Ternary rhs) if (s == "&")
+    {
+        return make((13072 >> (value + rhs.value) & 3) << 1);
     }
 
-    Tristate opBinary(string s)(Tristate rhs) if (s == "^"){
-        return make((13252>>(value+rhs.value)&3)<<1);
+    Ternary opBinary(string s)(Ternary rhs) if (s == "^")
+    {
+        return make((13252 >> (value + rhs.value) & 3) << 1);
     }
 }
 
 unittest
 {
-    alias f = Tristate.no, t = Tristate.yes, u = Tristate.unknown;
+    alias f = Ternary.no, t = Ternary.yes, u = Ternary.unknown;
     auto truthTableAnd =
     [
         t, t, t,
@@ -337,26 +343,22 @@ unittest
             == truthTableXor[i + 2]);
     }
 
-    Tristate a;
-    assert(a == Tristate.no);
+    Ternary a;
+    assert(a == Ternary.unknown);
     static assert(!is(typeof({ if (a) {} })));
-    assert(!is(typeof({ auto b = Tristate(3); })));
+    assert(!is(typeof({ auto b = Ternary(3); })));
     a = true;
-    assert(a == Tristate.yes);
+    assert(a == Ternary.yes);
     a = false;
-    assert(a == Tristate.no);
-    a = Tristate.unknown;
-    Tristate b;
+    assert(a == Ternary.no);
+    a = Ternary.unknown;
+    assert(a == Ternary.unknown);
+    Ternary b;
     b = a;
     assert(b == a);
-    auto c = a | b;
-    assert(c == Tristate.unknown);
-    assert((a & b) == Tristate.unknown);
-    a = true;
-    assert(~a == Tristate.no);
-    a = true;
-    b = false;
-    assert((a ^ b) == Tristate.yes);
+    assert(~Ternary.yes == Ternary.no);
+    assert(~Ternary.no == Ternary.yes);
+    assert(~Ternary.unknown == Ternary.unknown);
 }
 
 /**
@@ -757,27 +759,17 @@ struct AlignedMallocator
     else static assert(0);
 
     /**
-    On Posix, forwards to $(D realloc). On Windows, calls
-    $(WEB msdn.microsoft.com/en-US/library/y69db7sx(v=vs.80).aspx,
-    $(D __aligned_realloc(b.ptr, newSize, platformAlignment))).
+    On Posix, forwards to $(D realloc). On Windows, forwards to
+    $(D alignedReallocate(b, newSize, platformAlignment)).
     */
     version (Posix) @system bool reallocate(ref void[] b, size_t newSize) shared
     {
         return Mallocator.it.reallocate(b, newSize);
     }
     version (Windows) @system
-    bool reallocate(ref void[] b, size_t newSize, uint a) shared
+    bool reallocate(ref void[] b, size_t newSize) shared
     {
-        if (!newSize)
-        {
-            deallocate(b);
-            b = null;
-            return true;
-        }
-        auto p = cast(ubyte*) _aligned_realloc(b.ptr, a);
-        if (!p) return false;
-        b = p[0 .. s];
-        return true;
+        returned alignedReallocate(b, newSize, alignment);
     }
 
     /**
@@ -1282,7 +1274,7 @@ struct HeapBlock(Allocator, size_t theBlockSize,
         @property uint blockSize() { return _blockSize; }
         @property void blockSize(uint s)
         {
-            assert(!_control && (s & (s - 1)) == 0);
+            assert(!_control && s % alignment == 0);
             _blockSize = s;
         }
         private uint _blockSize;
@@ -1313,16 +1305,18 @@ struct HeapBlock(Allocator, size_t theBlockSize,
     private void initialize()
     {
         assert(_blocks);
-        const controlWords = (_blocks + 63) / 64;
+        const controlBytes = ((_blocks + 63) / 64) * 8;
+        const controlBytesRounded = controlBytes.roundUpToMultipleOf(
+            alignment);
+        const payloadBytes = _blocks * blockSize;
         auto allocatedByUs = parent.allocate(
-            ulong.sizeof *
-            (controlWords // control bits
-            + (_blocks * blockSize + 7) / 8) // payload
+            controlBytesRounded // control bits
+            + payloadBytes // payload
         );
         auto m = cast(ulong[]) allocatedByUs;
-        _control = m[0 .. controlWords];
+        _control = m[0 .. controlBytes / 8];
         _control[] = 0;
-        _payload = m[controlWords .. $];
+        _payload = m[controlBytesRounded / 8 .. $];
         assert(_payload.length == _blocks * blockSize,
             text(_payload.length, " != ", _blocks * blockSize));
     }
@@ -2048,17 +2042,21 @@ struct Freelist(ParentAllocator,
     uint batchCount = 8, size_t maxNodes = unbounded)
 {
     static assert(minSize != unbounded, "Use minSize = 0 for no low bound.");
-    static assert(max >= (void*).sizeof,
+    static assert(maxSize >= (void*).sizeof,
         "Maximum size must accommodate a pointer.");
 
     static if (minSize != chooseAtRuntime)
     {
-        alias _min = minSize;
+        alias min = minSize;
     }
     else
     {
-        size_t _min;
-        @property size_t min() const { return _min; }
+        size_t _min = chooseAtRuntime;
+        @property size_t min() const
+        {
+            assert(_min != chooseAtRuntime);
+            return _min;
+        }
         @property void min(size_t x)
         {
             enforce(x <= _max);
@@ -2080,7 +2078,7 @@ struct Freelist(ParentAllocator,
     private bool tooSmall(size_t n) const
     {
         static if (minSize == 0) return false;
-        else return n < _min;
+        else return n < min;
     }
 
     static if (maxSize != chooseAtRuntime)
@@ -2091,7 +2089,7 @@ struct Freelist(ParentAllocator,
     {
         size_t _max;
         @property size_t max() const { return _max; }
-        @property void maxSize(size_t x)
+        @property void max(size_t x)
         {
             enforce(x >= _min && x >= (void*).sizeof);
             _max = x;
@@ -2190,10 +2188,12 @@ struct Freelist(ParentAllocator,
     /**
     Allocates memory either off of the free list or from the parent allocator.
     */
-    void[] allocate(const size_t bytes)
+    void[] allocate(size_t bytes)
     {
         assert(bytes < size_t.max / 2);
         if (!inRange(bytes)) return parent.allocate(bytes);
+        // Round up allocation to max
+        if (maxSize != unbounded) bytes = max;
         if (!_root) return allocateFresh(bytes);
         // Pop off the freelist
         auto result = (cast(ubyte*) _root)[0 .. bytes];
@@ -2319,9 +2319,9 @@ struct Freelist(ParentAllocator,
 
 unittest
 {
-    Freelist!(GCAllocator, 8, 8, 1) fl;
+    Freelist!(GCAllocator, 0, 8, 1) fl;
     assert(fl._root is null);
-    auto b1 = fl.allocate(8);
+    auto b1 = fl.allocate(7);
     //assert(fl._root !is null);
     auto b2 = fl.allocate(8);
     assert(fl._root is null);
@@ -2329,6 +2329,340 @@ unittest
     assert(fl._root !is null);
     auto b3 = fl.allocate(8);
     assert(fl._root is null);
+}
+
+/**
+Freelist shared across threads. Allocation and deallocation are lock-free. The
+parameters have the same semantics as for $(D Freelist).
+*/
+struct SharedFreelist(ParentAllocator,
+    size_t minSize, size_t maxSize = minSize,
+    uint batchCount = 8, size_t maxNodes = unbounded)
+{
+    static assert(minSize != unbounded, "Use minSize = 0 for no low bound.");
+    static assert(maxSize >= (void*).sizeof,
+        "Maximum size must accommodate a pointer.");
+
+    private import core.atomic;
+
+    static if (minSize != chooseAtRuntime)
+    {
+        alias min = minSize;
+    }
+    else
+    {
+        shared size_t _min = chooseAtRuntime;
+        @property size_t min() const shared
+        {
+            assert(_min != chooseAtRuntime);
+            return _min;
+        }
+        @property void min(size_t x) shared
+        {
+            enforce(x <= max);
+            enforce(cas(&_min, chooseAtRuntime, x),
+                "SharedFreelist.min must be initialized exactly once.");
+        }
+        static if (maxSize == chooseAtRuntime)
+        {
+            // Both bounds can be set, provide one function for setting both in
+            // one shot.
+            void setBounds(size_t low, size_t high) shared
+            {
+                enforce(low <= high && high >= (void*).sizeof);
+                enforce(cas(&_min, chooseAtRuntime, low),
+                    "SharedFreelist.min must be initialized exactly once.");
+                enforce(cas(&_max, chooseAtRuntime, high),
+                    "SharedFreelist.max must be initialized exactly once.");
+            }
+        }
+    }
+
+    private bool tooSmall(size_t n) const shared
+    {
+        static if (minSize == 0) return false;
+        else static if (minSize == chooseAtRuntime) return n < _min;
+        else return n < minSize;
+    }
+
+    static if (maxSize != chooseAtRuntime)
+    {
+        alias max = maxSize;
+    }
+    else
+    {
+        shared size_t _max = chooseAtRuntime;
+        @property size_t max() const shared { return _max; }
+        @property void max(size_t x) shared
+        {
+            enforce(x >= _min && x >= (void*).sizeof);
+            enforce(cas(&_max, chooseAtRuntime, x),
+                "SharedFreelist.max must be initialized exactly once.");
+        }
+    }
+
+    private bool tooLarge(size_t n) const shared
+    {
+        static if (maxSize == unbounded) return false;
+        else static if (maxSize == chooseAtRuntime) return n > _max;
+        else return n > maxSize;
+    }
+
+    private bool inRange(size_t n) const shared
+    {
+        static if (minSize == maxSize && minSize != chooseAtRuntime)
+            return n == maxSize;
+        else return !tooSmall(n) && !tooLarge(n);
+    }
+
+    static if (maxNodes != unbounded)
+    {
+        private shared size_t nodes;
+        private void incNodes() shared
+        {
+            atomicOp!("+=")(nodes, 1);
+        }
+        private void decNodes() shared
+        {
+            assert(nodes);
+            atomicOp!("-=")(nodes, 1);
+        }
+        private bool nodesFull() shared
+        {
+            return nodes >= maxNodes;
+        }
+    }
+    else
+    {
+        private static void incNodes() { }
+        private static void decNodes() { }
+        private enum bool nodesFull = false;
+    }
+
+    version (StdDdoc)
+    {
+        /**
+        Properties for getting (and possibly setting) the bounds. Setting bounds
+        is allowed only once , and before any allocation takes place. Otherwise,
+        the primitives have the same semantics as those of $(D Freelist).
+        */
+        @property size_t min();
+        /// Ditto
+        @property void min(size_t newMinSize);
+        /// Ditto
+        @property size_t max();
+        /// Ditto
+        @property void max(size_t newMaxSize);
+        /// Ditto
+        void setBounds(size_t newMin, size_t newMax);
+        ///
+        unittest
+        {
+            Freelist!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
+            // Set the maxSize first so setting the minSize doesn't throw
+            a.max = 128;
+            a.min = 64;
+            a.setBounds(64, 128); // equivalent
+            assert(a.max == 128);
+            assert(a.min == 64);
+        }
+    }
+
+    /**
+    The parent allocator. Depending on whether $(D ParentAllocator) holds state
+    or not, this is a member variable or an alias for $(D ParentAllocator.it).
+    */
+    static if (stateSize!ParentAllocator) shared ParentAllocator parent;
+    else alias parent = ParentAllocator.it;
+
+    private struct Node { Node* next; }
+    static assert(ParentAllocator.alignment >= Node.alignof);
+    private Node* _root;
+    private uint nodesAtATime = batchCount;
+
+    /// Standard primitives.
+    enum uint alignment = ParentAllocator.alignment;
+
+    /// Ditto
+    size_t goodAllocSize(size_t bytes) shared
+    {
+        if (inRange(bytes)) return maxSize == unbounded ? bytes : max;
+        return parent.goodAllocSize(bytes);
+    }
+
+    /// Ditto
+    bool owns(void[] b) shared const
+    {
+        if (inRange(b.length)) return true;
+        static if (hasMember!(ParentAllocator, "owns"))
+            return parent.owns(b);
+        else
+            return false;
+    }
+
+    /**
+    Forwards to $(D parent), which must also support $(D shared) primitives.
+    */
+    static if (hasMember!(ParentAllocator, "expand"))
+    bool expand(void[] b, size_t s)
+    {
+        return parent.expand(b, s);
+    }
+
+    /// Ditto
+    static if (hasMember!(ParentAllocator, "reallocate"))
+    bool reallocate(void[] b, size_t s)
+    {
+        return parent.reallocate(b, s);
+    }
+
+    /// Ditto
+    void[] allocate(size_t bytes) shared
+    {
+        assert(bytes < size_t.max / 2);
+        if (!inRange(bytes)) return parent.allocate(bytes);
+        if (maxSize != unbounded) bytes = max;
+        if (!_root) return allocateFresh(bytes);
+        // Pop off the freelist
+        shared Node* oldRoot = void, next = void;
+        do
+        {
+            oldRoot = _root; // atomic load
+            next = oldRoot.next; // atomic load
+        }
+        while (!cas(&_root, oldRoot, next));
+        // great, snatched the root
+        decNodes();
+        return (cast(ubyte*) oldRoot)[0 .. bytes];
+    }
+
+    private void[] allocateFresh(const size_t bytes) shared
+    {
+        assert(bytes == max || max == unbounded);
+        if (nodesAtATime == 1)
+        {
+            // Easy case, just get it over with
+            return parent.allocate(bytes);
+        }
+        static if (maxSize != unbounded && maxSize != chooseAtRuntime)
+        {
+            static assert(
+                (parent.alignment + max) % Node.alignof == 0,
+                text("(", parent.alignment, " + ", max, ") % ",
+                 Node.alignof));
+        }
+        else
+        {
+            assert((parent.alignment + bytes) % Node.alignof == 0,
+                text("(", parent.alignment, " + ", bytes, ") % ",
+                 Node.alignof));
+        }
+
+        auto data = parent.allocate(nodesAtATime * bytes);
+        if (!data) return null;
+        auto result = data[0 .. bytes];
+        auto n = data[bytes .. $];
+        auto newRoot = cast(shared Node*) n.ptr;
+        shared Node* lastNode;
+        for (;;)
+        {
+            if (n.length < bytes)
+            {
+                lastNode = cast(shared Node*) data.ptr;
+                break;
+            }
+            (cast(Node*) data.ptr).next = cast(Node*) n.ptr;
+            data = n;
+            n = data[bytes .. $];
+        }
+        // Created the list, now wire the new nodes in considering another
+        // thread might have also created some nodes.
+        do
+        {
+            lastNode.next = _root;
+        }
+        while (!cas(&_root, lastNode.next, newRoot));
+        return result;
+    }
+
+    /// Ditto
+    void deallocate(void[] b) shared
+    {
+        if (!nodesFull && inRange(b.length))
+        {
+            auto newRoot = cast(shared Node*) b.ptr;
+            shared Node* oldRoot;
+            do
+            {
+                oldRoot = _root;
+                newRoot.next = oldRoot;
+            }
+            while (!cas(&_root, oldRoot, newRoot));
+            incNodes();
+        }
+        else
+        {
+            static if (is(typeof(parent.deallocate(block))))
+                parent.deallocate(block);
+        }
+    }
+
+    /// Ditto
+    void deallocateAll() shared
+    {
+        static if (hasMember!(ParentAllocator, "deallocateAll"))
+        {
+            parent.deallocateAll();
+        }
+        else static if (hasMember!(ParentAllocator, "deallocate"))
+        {
+            for (auto n = _root; n; n = n.next)
+            {
+                parent.deallocate((cast(ubyte*)n)[0 .. max]);
+            }
+        }
+        _root = null;
+    }
+}
+
+unittest
+{
+    import core.thread, std.concurrency;
+
+    static shared SharedFreelist!(Mallocator, 64, 128, 8, 100) a;
+
+    assert(a.goodAllocSize(1) == platformAlignment);
+
+    auto b = a.allocate(100);
+    a.deallocate(b);
+
+    static void fun(Tid tid, int i)
+    {
+        scope(exit) tid.send(true);
+        auto b = cast(ubyte[]) a.allocate(100);
+        b[] = cast(ubyte) i;
+
+        assert(b.equal(repeat(cast(ubyte) i, b.length)));
+        a.deallocate(b);
+    }
+
+    Tid[] tids;
+    foreach (i; 0 .. 1000)
+    {
+        tids ~= spawn(&fun, thisTid, i);
+    }
+
+    foreach (i; 0 .. 1000)
+    {
+        assert(receiveOnly!bool);
+    }
+}
+
+unittest
+{
+    shared SharedFreelist!(Mallocator, chooseAtRuntime, chooseAtRuntime,
+        8, 100) a;
+    auto b = a.allocate(64);
 }
 
 /*
