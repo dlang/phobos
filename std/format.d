@@ -1296,7 +1296,8 @@ unittest
    $(D null) literal is formatted as $(D "null").
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (is(T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
+if (is(Unqual!T == typeof(null)) &&
+!is(T == enum) && !hasToString!(T, Char))
 {
     enforceFmt(f.spec == 's',
         "null");
