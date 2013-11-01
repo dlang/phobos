@@ -2711,18 +2711,21 @@ unittest
         //writeln(name);
         assert(e.isFile || e.isDir, e.name);
     }
+}
 
+unittest
+{
     //issue 7264
-    foreach (string name; dirEntries(testdir, "*.d", SpanMode.breadth))
+    foreach (string name; dirEntries(".", "*.d", SpanMode.breadth))
     {
 
     }
-    foreach (entry; dirEntries(testdir, SpanMode.breadth))
+    foreach (entry; dirEntries(".", SpanMode.breadth))
     {
         static assert(is(typeof(entry) == DirEntry));
     }
     //issue 7138
-    auto a = array(dirEntries(testdir, SpanMode.shallow));
+    auto a = array(dirEntries(".", SpanMode.shallow));
 }
 
 /++
