@@ -472,7 +472,8 @@ T toImpl(T, S)(ref S s)
 When source type supports member template function opCast, is is used.
 */
 T toImpl(T, S)(S value)
-    if (is(typeof(S.init.opCast!T()) : T) &&
+    if (!isImplicitlyConvertible!(S, T) &&
+        is(typeof(S.init.opCast!T()) : T) &&
         !isExactSomeString!T)
 {
     return value.opCast!T();
