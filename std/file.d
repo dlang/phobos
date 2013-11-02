@@ -2723,6 +2723,10 @@ unittest
     }
     //issue 7138
     auto a = array(dirEntries(testdir, SpanMode.shallow));
+
+    // issue 11392
+    auto dFiles = dirEntries(testdir, SpanMode.shallow);
+    foreach(d; dFiles){}
 }
 
 /++
