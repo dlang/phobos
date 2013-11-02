@@ -220,6 +220,9 @@ wikipedia.org/wiki/Free_list, free list) on top of any other allocator. The
 preferred size, tolerance, and maximum elements are configurable at compile- and
 run time.))
 
+$(TR $(TDC2 SharedFreelist) $(TD Same features as $(D Freelist), but packaged as
+a $(D shared) structure that is accessible to several threads.))
+
 $(TR $(TDC2 Region) $(TD Region allocator organizes a chunk of memory as a
 simple bump-the-pointer allocator.))
 
