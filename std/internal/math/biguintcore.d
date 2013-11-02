@@ -483,9 +483,12 @@ public:
                     sign = false;
                     return r;
                 }
-                if (d > uint.max) {
+                if (d > uint.max)
+                {
                     r.data = [cast(uint)(d & 0xFFFF_FFFF), cast(uint)(d>>32)];
-                } else {
+                }
+                else
+                {
                     r.data = [cast(uint)(d & 0xFFFF_FFFF)];
                 }
             }
@@ -535,7 +538,7 @@ public:
             result[x.data.length+1] = multibyteMulAdd!('+')(result[1..x.data.length+1],
                 x.data, hi, 0);
         }
-        return BigUint(removeLeadingZeros(result));
+        return BigUint(removeLeadingZeros(assumeUnique(result)));
     }
 
     /*  return x * y.
@@ -2262,4 +2265,7 @@ unittest
     r = b[0..a.length];
     assert(r[] == r1[]);
     assert(q[] == q1[]);
+    
+    BigInt n = 2;
+    n *= 2;
 }
