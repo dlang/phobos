@@ -166,9 +166,9 @@ across threads, and to deallocate blocks in a different thread than the one that
 allocated it.
 
 All allocators in this module accept and return $(D void[]) (as opposed to
-$(shared void[])). This is because at the time of allocation, deallocation, or
-reallocation, the memory is effectively not $(D shared) (it it were, it would be
-a bug at the application level).
+$(D shared void[])). This is because at the time of allocation, deallocation, or
+reallocation, the memory is effectively not $(D shared) (if it were, it would
+reveal a bug at the application level).
 
 The issue remains of calling $(D a.deallocate(b)) from a different thread than
 the one that allocated $(D b). It follows that both threads must have access to
@@ -176,7 +176,7 @@ the same instance $(D a) of the respective allocator type. By definition of D,
 this is possible only if $(D a) has the $(D shared) qualifier. It follows that
 the allocator type must implement $(D allocate) and $(D deallocate) as $(D
 shared) methods. That way, the allocator commits to allowing usable $(D shared)
-instances, which means different threads access to the same allocator object.
+instances.
 
 Conversely, allocating memory with one non-$(D shared) allocator, passing it
 across threads (by casting the obtained buffer to $(D shared)), and later
