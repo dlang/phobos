@@ -484,7 +484,7 @@ public:
                     return r;
                 }
                 if (d > uint.max) {
-                    r.data = [cast(uint)(d>>32), cast(uint)(d & 0xFFFF_FFFF)];
+                    r.data = [cast(uint)(d & 0xFFFF_FFFF), cast(uint)(d>>32)];
                 } else {
                     r.data = [cast(uint)(d & 0xFFFF_FFFF)];
                 }
