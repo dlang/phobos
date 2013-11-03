@@ -897,6 +897,47 @@ unittest
     static assert(!isTuple!(S));
 }
 
+/**
+Returns $(D true) if all types in the $(D Tuple T) are the same. 
+*/
+template allTypesSame(T)
+if (isTuple!T)
+{
+    alias types = T.Types;
+    static if (types.length > 0)
+    {
+        template isSameTypeAsHead(U)
+        {
+            enum isSameTypeAsHead = is(U == types[0]);
+        }
+        enum allTypesSame = allSatisfy!(isSameTypeAsHead, types);
+    }
+    else
+    {
+        enum allTypesSame = true;
+    }
+}
+
+@safe pure nothrow unittest
+{
+    alias HOTUP = Tuple!(int, int, int);
+    static assert(allTypesSame!HOTUP);
+
+    HOTUP hotup = HOTUP(1, 2, 3);
+    static assert(allTypesSame!(typeof(hotup)));
+
+    alias HETUP = Tuple!(string, bool, float);
+    static assert(!allTypesSame!(HETUP));
+
+    HETUP hetup = HETUP("test", false, 2.345);
+    static assert(!allTypesSame!(typeof(hetup)));
+	
+    alias ZTUP = Tuple!();
+    static assert(allTypesSame!ZTUP);
+
+    ZTUP ztup = ZTUP();
+    static assert(allTypesSame!(typeof(ztup)));
+}
 
 /**
 $(D Rebindable!(T)) is a simple, efficient wrapper that behaves just
