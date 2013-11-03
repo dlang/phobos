@@ -796,7 +796,7 @@ struct AlignedMallocator
     version (Windows) @system
     bool reallocate(ref void[] b, size_t newSize) shared
     {
-        returned alignedReallocate(b, newSize, alignment);
+        return alignedReallocate(b, newSize, alignment);
     }
 
     /**
