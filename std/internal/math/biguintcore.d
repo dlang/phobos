@@ -2265,7 +2265,4 @@ unittest
     r = b[0..a.length];
     assert(r[] == r1[]);
     assert(q[] == q1[]);
-    
-    BigInt n = 2;
-    n *= 2;
 }

@@ -874,4 +874,7 @@ unittest // 11148
             assert(t2_2 == 2);
         }
     }
+    
+    BigInt n = 2;
+    n *= 2;
 }
