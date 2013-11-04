@@ -1024,7 +1024,7 @@ $(D void).
  */
 template ElementType(R)
 {
-    static if (is(typeof(lvalueOf!R.front) T))
+    static if (is(typeof(R.init.front.init) T))
         alias T ElementType;
     else
         alias void ElementType;
@@ -1059,11 +1059,12 @@ unittest
     immutable char[3] a = "abc";
     int[] i;
     void[] buf;
-    static assert(is(ElementType!(XYZ) : dchar));
-    static assert(is(ElementType!(typeof(a)) : dchar));
-    static assert(is(ElementType!(typeof(i)) : int));
-    static assert(is(ElementType!(typeof(buf)) : void));
-    static assert(is(ElementType!(inout(int)[]) : inout(int)));
+    static assert(is(ElementType!(XYZ) == dchar));
+    static assert(is(ElementType!(typeof(a)) == dchar));
+    static assert(is(ElementType!(typeof(i)) == int));
+    static assert(is(ElementType!(typeof(buf)) == void));
+    static assert(is(ElementType!(inout(int)[]) == inout(int)));
+    static assert(is(ElementType!(inout(int[])) == inout(int)));
 }
 
 unittest
@@ -1081,6 +1082,17 @@ unittest //11336
         this(this) @disable;
     }
     static assert(is(ElementType!(S[]) == S));
+}
+
+unittest // 11401
+{
+    // ElementType should also work for non-@propety 'front'
+    struct E { ushort id; }
+    struct R
+    {
+        E front() { return E.init; }
+    }
+    static assert(is(ElementType!R == E));
 }
 
 /**
