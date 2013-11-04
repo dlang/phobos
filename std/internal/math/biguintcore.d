@@ -564,7 +564,7 @@ public:
     }
 
     // return x / y
-    static BigUint divInt(T)(BigUint x, T y_) pure if ( is(T : uint) )
+    static BigUint divInt(T)(BigUint x, T y_) pure if ( is(Unqual!T == uint) )
     {
         uint y = y_;
         if (y == 1)
@@ -590,7 +590,7 @@ public:
     }
 
     // return x % y
-    static uint modInt(T)(BigUint x, T y_) pure if ( is(T : uint) )
+    static uint modInt(T)(BigUint x, T y_) pure if ( is(UnqualT == uint) )
     {
         uint y = y_;
         assert(y!=0);
