@@ -47,6 +47,7 @@ alias multibyteAddSub!('-') multibyteSub;
 
 
 private import core.cpuid;
+private import std.traits : Unqual;
 
 shared static this()
 {
@@ -590,7 +591,7 @@ public:
     }
 
     // return x % y
-    static uint modInt(T)(BigUint x, T y_) pure if ( is(UnqualT == uint) )
+    static uint modInt(T)(BigUint x, T y_) pure if ( is(Unqual!T == uint) )
     {
         uint y = y_;
         assert(y!=0);
