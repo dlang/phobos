@@ -2492,7 +2492,8 @@ for the array is reclaimed as soon as possible; there is no reliance
 on the garbage collector. $(D Array) uses $(D malloc) and $(D free)
 for managing its own memory.
  */
-struct Array(T) if (!is(T : const(bool)))
+struct Array(T)
+if (!is(Unqual!T == bool))
 {
     // This structure is not copyable.
     private struct Payload
@@ -4115,7 +4116,8 @@ unittest
 _Array specialized for $(D bool). Packs together values efficiently by
 allocating one bit per element.
  */
-struct Array(T) if (is(T == bool))
+struct Array(T)
+if (is(Unqual!T == bool))
 {
     static immutable uint bitsPerWord = size_t.sizeof * 8;
     private static struct Data
