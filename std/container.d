@@ -3694,6 +3694,17 @@ unittest {
     arr ~= s;
 }
 
+unittest //11459
+{
+    static struct S
+    {
+        bool b;
+        alias b this;
+    }
+    alias A = Array!S;
+    alias B = Array!(shared bool);
+}
+
 // BinaryHeap
 /**
 Implements a $(WEB en.wikipedia.org/wiki/Binary_heap, binary heap)
@@ -4138,7 +4149,7 @@ if (is(Unqual!T == bool))
      */
     struct Range
     {
-        private Array!bool _outer;
+        private Array _outer;
         private size_t _a, _b;
         /// Range primitives
         @property Range save()
@@ -4262,9 +4273,9 @@ if (is(Unqual!T == bool))
 
        Complexity: $(BIGOH n).
      */
-    @property Array!bool dup()
+    @property Array dup()
     {
-        Array!bool result;
+        Array result;
         result.insertBack(this[]);
         return result;
     }
@@ -4560,7 +4571,7 @@ if (is(Unqual!T == bool))
      */
     void clear()
     {
-        this = Array!bool();
+        this = Array();
     }
 
     unittest
