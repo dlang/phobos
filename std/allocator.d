@@ -2991,7 +2991,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     */
     void deallocateAll()
     {
-        _crt = null;
+        _crt = _store.ptr;
     }
 
     /**
