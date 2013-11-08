@@ -2281,29 +2281,15 @@ struct Appender(A : T[], T)
             ensureAddable(1);
             immutable len = _data.arr.length;
 
-            auto bigDataFun() @trusted nothrow { return _data.arr.ptr[0 .. len + 1];}
-            auto bigData = bigDataFun();
-
-            static if (is(Unqual!T == T))
-                alias uitem = item;
+            auto ptr() @trusted @property nothrow { return _data.arr.ptr + len; }
+            static if (is(U : Unqual!T))
+                emplace(ptr, item);
             else
-                auto ref uitem() @trusted nothrow @property { return cast(Unqual!T)item;} 
-
-            //The idea is to only call emplace if we must.
-            static if ( is(typeof(bigData[0].opAssign(uitem))) ||
-                       !is(typeof(bigData[0] = uitem)))
-            {
-                //pragma(msg, T.stringof); pragma(msg, U.stringof);
-                emplace(&bigData[len], uitem);
-            }
-            else
-            {
-                //pragma(msg, T.stringof); pragma(msg, U.stringof);
-                bigData[len] = uitem;
-            }
+                emplace(ptr, cast(Unqual!T)item);
 
             //We do this at the end, in case of exceptions
-            _data.arr = bigData;
+            auto trustedGrow() @trusted nothrow { _data.arr = _data.arr.ptr[0 .. len + 1];}
+            trustedGrow();
         }
     }
 
@@ -2338,47 +2324,32 @@ struct Appender(A : T[], T)
             }
 
             // make sure we have enough space, then add the items
-            ensureAddable(items.length);
+            immutable itemslen = items.length;
+            ensureAddable(itemslen);
+
             immutable len = _data.arr.length;
-            immutable newlen = len + items.length;
+            immutable newlen = len + itemslen;
 
-            auto bigDataFun() @trusted nothrow { return _data.arr.ptr[0 .. newlen];}
-            auto bigData = bigDataFun();
-
-            enum mustEmplace =  is(typeof(bigData[0].opAssign(cast(Unqual!T)items.front))) ||
-                               !is(typeof(bigData[0] = cast(Unqual!T)items.front));
-
-            static if (is(typeof(_data.arr[] = items[])) && !mustEmplace)
+            static if (is(typeof(_data.arr[] = items[])) && !hasElaborateAssign!(Unqual!T) )
             {
-                //pragma(msg, T.stringof); pragma(msg, Range.stringof);
-                bigData[len .. newlen] = items[];
-            }
-            else static if (is(Unqual!T == ElementType!Range))
-            {
-                foreach (ref it ; bigData[len .. newlen])
-                {
-                    static if (mustEmplace)
-                        emplace(&it, items.front);
-                    else
-                        it = items.front;
-                    items.popFront();
-                }
+                auto slice() @trusted @property nothrow { return _data.arr.ptr[len .. newlen];}
+                slice[] = items[];
             }
             else
             {
-                static auto ref getUItem(U)(U item) @trusted {return cast(Unqual!T)item;}
-                foreach (ref it ; bigData[len .. newlen])
+                auto ptr(size_t i) @trusted nothrow { return _data.arr.ptr + i; }
+                for (size_t i = len ; i < newlen ; items.popFront(), ++i)
                 {
-                    static if (mustEmplace)
-                        emplace(&it, getUItem(items.front));
+                    static if (is(ElementType!Range : Unqual!T))
+                        emplace(ptr(i), items.front);
                     else
-                        it = getUItem(items.front);
-                    items.popFront();
+                        emplace(ptr(i), cast(Unqual!T)items.front);
                 }
             }
 
             //We do this at the end, in case of exceptions
-            _data.arr = bigData;
+            auto trustedGrow() @trusted nothrow { _data.arr = _data.arr.ptr[0 .. newlen];}
+            trustedGrow();
         }
         else
         {
