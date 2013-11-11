@@ -4833,6 +4833,55 @@ unittest
     assert(equal(map!(to!int)(["42", "34", "345"]), [42, 34, 345]));
 }
 
+/+
+package helper: This function is functionally equivalent to the normal
+emplace. However, it only calls the actual emplace if really necessary.
+It's dedicated to improving both code readability and performance.
+This function is mostly a workaround for DMD's bad inliner.
+
+Doing it as a dedicated function helps reduce error-prone boilerplate
+code in caller function. Indeed: While the normal emplace will still
+correctly call '=' when needed, it takes an argument by pointer. DMD
+seems to have a lot of trouble making the inline assignment when there
+is an un-necessary indirection.
+
+eg:
+----
+int i;
+emplace(&i, 5);
+vs
+autoEmplace(i, 5);
+----
+
+Using $(D emplace) over raw assignement or $(D autoEmplace) for trivial
+types in a tight loop $(I can) result in a $(I catastrophic) performance
+penalty.
++/
+package void autoEmplace(T, Args...)(ref T chunk, auto ref Args args)
+{
+    static if (Args.length == 0 && isAssignable!(T) && !hasElaborateAssign!T)
+        chunk = T.init;
+    else static if (Args.length == 1 && isAssignable!(T, Args[0]) && !hasElaborateAssign!T)
+        chunk = args[0];
+    else
+        emplace(&chunk, args);
+}
+
+unittest
+{
+    int i;
+    autoEmplace(i);
+    autoEmplace(i, 5);
+
+    static struct S
+    {
+        void opAssign(S);
+    }
+    S s;
+    autoEmplace(s);
+    autoEmplace(s, S.init);
+}
+
 // Undocumented for the time being
 void toTextRange(T, W)(T value, W writer)
     if (isIntegral!T && isOutputRange!(W, char))

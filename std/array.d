@@ -30,22 +30,19 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
     alias ForeachType!Range E;
     static if (hasLength!Range)
     {
-        if(r.length == 0) return null;
+        immutable len = r.length;
+        if(len == 0) return null;
 
         static auto trustedAllocateArray(size_t n) @trusted nothrow
         {
             return uninitializedArray!(Unqual!E[])(n);
         }
-        auto result = trustedAllocateArray(r.length);
+        auto result = trustedAllocateArray(len);
 
         size_t i;
-        static auto trustedGetAddr(T)(ref T t) @trusted nothrow pure
-        {
-            return &t;
-        }
         foreach (e; r)
         {
-            emplace(trustedGetAddr(result[i]), e);
+            autoEmplace(result[i], e);
             ++i;
         }
         return cast(E[])result;
@@ -913,17 +910,16 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
         }
         array.length += to_insert;
         copyBackwards(array[pos..oldLen], array[pos+to_insert..$]);
-        auto ptr = array.ptr + pos;
         foreach (i, E; U)
         {
             static if (is(E : T)) //ditto
             {
-                emplace(ptr++, stuff[i]);
+                autoEmplace(array[pos++], stuff[i]);
             }
             else
             {
                 foreach (v; stuff[i])
-                    emplace(ptr++, v);
+                    autoEmplace(array[pos++], v);
             }
         }
     }
