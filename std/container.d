@@ -2492,7 +2492,8 @@ for the array is reclaimed as soon as possible; there is no reliance
 on the garbage collector. $(D Array) uses $(D malloc) and $(D free)
 for managing its own memory.
  */
-struct Array(T) if (!is(T : const(bool)))
+struct Array(T)
+if (!is(Unqual!T == bool))
 {
     // This structure is not copyable.
     private struct Payload
@@ -3693,6 +3694,17 @@ unittest {
     arr ~= s;
 }
 
+unittest //11459
+{
+    static struct S
+    {
+        bool b;
+        alias b this;
+    }
+    alias A = Array!S;
+    alias B = Array!(shared bool);
+}
+
 // BinaryHeap
 /**
 Implements a $(WEB en.wikipedia.org/wiki/Binary_heap, binary heap)
@@ -4115,7 +4127,8 @@ unittest
 _Array specialized for $(D bool). Packs together values efficiently by
 allocating one bit per element.
  */
-struct Array(T) if (is(T == bool))
+struct Array(T)
+if (is(Unqual!T == bool))
 {
     static immutable uint bitsPerWord = size_t.sizeof * 8;
     private static struct Data
@@ -4136,7 +4149,7 @@ struct Array(T) if (is(T == bool))
      */
     struct Range
     {
-        private Array!bool _outer;
+        private Array _outer;
         private size_t _a, _b;
         /// Range primitives
         @property Range save()
@@ -4260,9 +4273,9 @@ struct Array(T) if (is(T == bool))
 
        Complexity: $(BIGOH n).
      */
-    @property Array!bool dup()
+    @property Array dup()
     {
-        Array!bool result;
+        Array result;
         result.insertBack(this[]);
         return result;
     }
@@ -4558,7 +4571,7 @@ struct Array(T) if (is(T == bool))
      */
     void clear()
     {
-        this = Array!bool();
+        this = Array();
     }
 
     unittest
