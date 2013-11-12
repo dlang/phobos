@@ -2158,6 +2158,7 @@ struct HTTP
         p.curl.set(CurlOption.url, url);
     }
 
+    /// Set the CA certificate bundle file to use for SSL peer verification
     @property void caInfo(const(char)[] caFile)
     {
         p.curl.set(CurlOption.cainfo, caFile);
