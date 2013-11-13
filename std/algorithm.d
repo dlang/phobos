@@ -2310,6 +2310,8 @@ if (is(typeof(ElementType!Range.init == Separator.init))
             {
                 _separatorLength = codeLength!(ElementEncodingType!Range)(separator);
             }
+            if (_input.empty)
+                _frontLength = _atEnd;
         }
 
         static if (isInfinite!Range)
@@ -2430,7 +2432,7 @@ unittest
     // }
     assert(equal(splitter(a, 0), w));
     a = null;
-    assert(equal(splitter(a, 0), [ (int[]).init ][]));
+    assert(equal(splitter(a, 0),  (int[][]).init));
     a = [ 0 ];
     assert(equal(splitter(a, 0), [ (int[]).init, (int[]).init ][]));
     a = [ 0, 1 ];
@@ -2601,7 +2603,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
             }
         }
 
-// Bidirectional functionality as suggested by Brad Roberts.
+        // Bidirectional functionality as suggested by Brad Roberts.
         static if (isBidirectionalRange!Range && isBidirectionalRange!Separator)
         {
             @property Range back()
@@ -2719,7 +2721,7 @@ unittest
 
 ///ditto
 auto splitter(alias isTerminator, Range)(Range input)
-if (isForwardRange!Range && is (typeof(unaryFun!isTerminator(input.front))))
+if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(input.front))))
 {
     return SplitterResult!(unaryFun!isTerminator, Range)(input);
 }
@@ -2757,6 +2759,8 @@ private struct SplitterResult(alias isTerminator, Range)
 
         if (!_input.empty)
             findTerminator();
+        else
+            _end = size_t.max;
     }
 
     static if (isInfinite!Range)
@@ -2845,7 +2849,7 @@ unittest
             ["Mary", "", "has", "a", "little", "lamb.", "", "", ""]);
     compare("Mary  has a little lamb.",
             ["Mary", "", "has", "a", "little", "lamb."]);
-    compare("", [""]);
+    compare("", (string[]).init);
     compare(" ", ["", ""]);
 
     static assert(isForwardRange!(typeof(splitter!"a == ' '"("ABC"))));
@@ -2871,7 +2875,7 @@ unittest
         int[][] result;
     }
     Entry[] entries = [
-        Entry(0, 0, [[]]),
+        Entry(0, 0, []),
         Entry(0, 1, [[0]]),
         Entry(1, 2, [[], []]),
         Entry(2, 7, [[2], [4], [6]]),
@@ -2926,6 +2930,72 @@ unittest
     assert(dictionary["last"]== 4);
 }
 
+unittest
+{
+    // Check consistency:
+    // All flavors of split should produce the same results
+    foreach (input; [(int[]).init,
+                     [0],
+                     [0, 1, 0],
+                     [1, 1, 0, 0, 1, 1],
+                    ])
+    {
+        foreach (s; [0, 1])
+        {
+            auto result = split(input, s);
+
+            assert(equal(result, split(input, [s])), format(`"[%(%s,%)]"`, split(input, [s])));
+            //assert(equal(result, split(input, [s].filter!"true"())));                          //Not yet implemented
+            assert(equal(result, split!((a) => a == s)(input)), text(split!((a) => a == s)(input)));
+
+            //assert(equal!equal(result, split(input.filter!"true"(), s)));                      //Not yet implemented
+            //assert(equal!equal(result, split(input.filter!"true"(), [s])));                    //Not yet implemented
+            //assert(equal!equal(result, split(input.filter!"true"(), [s].filter!"true"())));    //Not yet implemented
+            assert(equal!equal(result, split!((a) => a == s)(input.filter!"true"())));
+
+            assert(equal(result, splitter(input, s)));
+            assert(equal(result, splitter(input, [s])));
+            //assert(equal(result, splitter(input, [s].filter!"true"())));                       //Not yet implemented
+            assert(equal(result, splitter!((a) => a == s)(input)));
+
+            //assert(equal!equal(result, splitter(input.filter!"true"(), s)));                   //Not yet implemented
+            //assert(equal!equal(result, splitter(input.filter!"true"(), [s])));                 //Not yet implemented
+            //assert(equal!equal(result, splitter(input.filter!"true"(), [s].filter!"true"()))); //Not yet implemented
+            assert(equal!equal(result, splitter!((a) => a == s)(input.filter!"true"())));
+        }
+    }
+    foreach (input; [string.init,
+                     " ",
+                     "  hello ",
+                     "hello   hello",
+                     " hello   what heck   this ?  "
+                    ])
+    {
+        foreach (s; [' ', 'h'])
+        {
+            auto result = split(input, s);
+
+            assert(equal(result, split(input, [s])));
+            //assert(equal(result, split(input, [s].filter!"true"())));                          //Not yet implemented
+            assert(equal(result, split!((a) => a == s)(input)));
+
+            //assert(equal!equal(result, split(input.filter!"true"(), s)));                      //Not yet implemented
+            //assert(equal!equal(result, split(input.filter!"true"(), [s])));                    //Not yet implemented
+            //assert(equal!equal(result, split(input.filter!"true"(), [s].filter!"true"())));    //Not yet implemented
+            assert(equal!equal(result, split!((a) => a == s)(input.filter!"true"())));
+
+            assert(equal(result, splitter(input, s)));
+            assert(equal(result, splitter(input, [s])));
+            //assert(equal(result, splitter(input, [s].filter!"true"())));                       //Not yet implemented
+            assert(equal(result, splitter!((a) => a == s)(input)));
+
+            //assert(equal!equal(result, splitter(input.filter!"true"(), s)));                   //Not yet implemented
+            //assert(equal!equal(result, splitter(input.filter!"true"(), [s])));                 //Not yet implemented
+            //assert(equal!equal(result, splitter(input.filter!"true"(), [s].filter!"true"()))); //Not yet implemented
+            assert(equal!equal(result, splitter!((a) => a == s)(input.filter!"true"())));
+        }
+    }
+}
 // joiner
 /**
 Lazily joins a range of ranges with a separator. The separator itself

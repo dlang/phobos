@@ -13,8 +13,9 @@ Source: $(PHOBOSSRC std/_array.d)
 module std.array;
 
 import core.memory, core.bitop;
-import std.algorithm, std.ascii, std.conv, std.exception, std.range, std.string,
-       std.traits, std.typecons, std.typetuple, std.uni, std.utf;
+import std.algorithm, std.ascii, std.conv, std.exception, std.functional,
+       std.range, std.string, std.traits, std.typecons, std.typetuple,
+       std.uni, std.utf;
 import std.c.string : memcpy;
 version(unittest) import core.exception, std.stdio;
 
@@ -1466,27 +1467,35 @@ Eagerly Splits $(D s) into an array, using $(D delim) as the delimiter.
 
 See also: $(XREF algorithm, splitter) for the lazy version of this operator.
  +/
-S1[] split(S1, S2)(S1 s, S2 delim)
-if (isForwardRange!S1 && isForwardRange!S2)
+auto split(R, E)(R r, E delim)
+if (isForwardRange!R && is(typeof(ElementType!R.init == E.init)))
 {
-    S1 us = s;
-    auto app = appender!(S1[])();
-    foreach (word; std.algorithm.splitter(us, delim))
-    {
-        app.put(word);
-    }
+    auto spl = std.algorithm.splitter(r, delim);
+    alias S = typeof(spl.front.init); // "Slice_t"
+    auto app = appender!(S[])();
+    foreach (e; spl)
+        app.put(e);
+    return app.data;
+}
+auto split(R1, R2)(R1 r, R2 delim)
+if (isForwardRange!R1 && isForwardRange!R2 && is(typeof(ElementType!R1.init == ElementType!R2.init)))
+{
+    auto spl = std.algorithm.splitter(r, delim);
+    alias S = typeof(spl.front.init); // "Slice_t"
+    auto app = appender!(S[])();
+    foreach (e; spl)
+        app.put(e);
     return app.data;
 }
 ///ditto
-S1[] split(alias isTerminator, S1)(S1 s)
-if (isForwardRange!S1)
+auto split(alias isTerminator, R)(R r)
+if (isForwardRange!R && is(typeof(unaryFun!isTerminator(r.front))))
 {
-    S1 us = s;
-    auto app = appender!(S1[])();
-    foreach (word; std.algorithm.splitter!isTerminator(us))
-    {
-        app.put(word);
-    }
+    auto spl = std.algorithm.splitter!isTerminator(r);
+    alias S = typeof(spl.front.init); // "Slice_t"
+    auto app = appender!(S[])();
+    foreach (e; spl)
+        app.put(e);
     return app.data;
 }
 
