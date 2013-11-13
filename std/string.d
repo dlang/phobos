@@ -575,7 +575,7 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s,
 {
     if (cs == CaseSensitive.yes)
     {
-        if (std.ascii.isASCII(c))
+        if (canSearchInCodeUnits!Char(c))
         {
             foreach_reverse (i, it; s)
             {
@@ -1565,9 +1565,9 @@ unittest
 S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
     if (isSomeString!S)
 {
-    alias typeof(s[0]) C;
+    alias C = ElementEncodingType!S;
 
-    if (cast(dchar)(cast(C)fillChar) == fillChar)
+    if (canSearchInCodeUnits!C(fillChar))
     {
         immutable len = s.walkLength();
         if (len >= width)
@@ -1600,9 +1600,9 @@ S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
 S rightJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
     if (isSomeString!S)
 {
-    alias typeof(s[0]) C;
+    alias C = ElementEncodingType!S;
 
-    if (cast(dchar)(cast(C)fillChar) == fillChar)
+    if (canSearchInCodeUnits!C(fillChar))
     {
         immutable len = s.walkLength();
         if (len >= width)
@@ -1635,9 +1635,9 @@ S rightJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
 S center(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
     if (isSomeString!S)
 {
-    alias typeof(s[0]) C;
+    alias C = ElementEncodingType!S;
 
-    if (cast(dchar)(cast(C)fillChar) == fillChar)
+    if (canSearchInCodeUnits!C(fillChar))
     {
         immutable len = s.walkLength();
         if (len >= width)
@@ -1690,6 +1690,10 @@ unittest
         assert(leftJustify(s, 8, '\u0100') == "hello\u0100\u0100\u0100");
         assert(rightJustify(s, 8, '\u0100') == "\u0100\u0100\u0100hello");
         assert(center(s, 8, '\u0100') == "\u0100hello\u0100\u0100");
+
+        assert(leftJustify(s, 8, 'ö') == "helloööö");
+        assert(rightJustify(s, 8, 'ö') == "öööhello");
+        assert(center(s, 8, 'ö') == "öhelloöö");
     }
     });
 }
@@ -1746,10 +1750,7 @@ S detab(S)(S s, size_t tabSize = 8) @trusted pure
         L1:
             if (changes)
             {
-                if (cast(dchar)(cast(C)c) == c)
-                    result ~= cast(C)c;
-                else
-                    std.utf.encode(result, c);
+                std.utf.encode(result, c);
             }
             break;
         }
@@ -1870,10 +1871,7 @@ S entab(S)(S s, size_t tabSize = 8) @trusted pure
         }
         if (changes)
         {
-            if (cast(dchar)(cast(C)c) == c)
-                result ~= cast(C)c;
-            else
-                std.utf.encode(result, c);
+            std.utf.encode(result, c);
         }
     }
 

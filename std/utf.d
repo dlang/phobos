@@ -1952,6 +1952,45 @@ unittest
     });
 }
 
+/+
+Internal helper function:
+
+Returns true if it is safe to search for the Codepoint $(D c) inside
+code units, without decoding.
+
+This is a runtime check that is used an optimization in various functions,
+particularly, in $(D std.string).
+  +/
+package bool canSearchInCodeUnits(C)(dchar c)
+if (isSomeChar!C)
+{
+    static if (C.sizeof == 1)
+         return c <= 0x7F;
+    else static if (C.sizeof == 2)
+        return c <= 0xD7FF || (0xE000 <= c && c <= 0xFFFF);
+    else static if (C.sizeof == 4)
+        return true;
+    else
+        static assert(0);
+}
+unittest
+{
+    assert( canSearchInCodeUnits! char('a'));
+    assert( canSearchInCodeUnits!wchar('a'));
+    assert( canSearchInCodeUnits!dchar('a'));
+    assert(!canSearchInCodeUnits! char('ö')); //Important test: ö <= 0xFF
+    assert(!canSearchInCodeUnits! char(cast(char)'ö')); //Important test: ö <= 0xFF
+    assert( canSearchInCodeUnits!wchar('ö'));
+    assert( canSearchInCodeUnits!dchar('ö'));
+    assert(!canSearchInCodeUnits! char('日'));
+    assert( canSearchInCodeUnits!wchar('日'));
+    assert( canSearchInCodeUnits!dchar('日'));
+    assert(!canSearchInCodeUnits!wchar(cast(wchar)0xDA00));
+    assert( canSearchInCodeUnits!dchar(cast(dchar)0xDA00));
+    assert(!canSearchInCodeUnits! char('\U00010001'));
+    assert(!canSearchInCodeUnits!wchar('\U00010001'));
+    assert( canSearchInCodeUnits!dchar('\U00010001'));
+}
 
 /* =================== Validation ======================= */
 
