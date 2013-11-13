@@ -28181,9 +28181,9 @@ public:
                 try
                 {
                     auto currYear = (cast(Date)Clock.currTime()).year;
-                    auto janOffset = SysTime(Date(currYear, 1, 4), this).stdTime -
+                    auto janOffset = SysTime(Date(currYear, 1, 4), cast(immutable)this).stdTime -
                                      SysTime(Date(currYear, 1, 4), UTC()).stdTime;
-                    auto julyOffset = SysTime(Date(currYear, 7, 4), this).stdTime -
+                    auto julyOffset = SysTime(Date(currYear, 7, 4), cast(immutable)this).stdTime -
                                       SysTime(Date(currYear, 7, 4), UTC()).stdTime;
 
                     return janOffset != julyOffset;
