@@ -1388,10 +1388,11 @@ unittest //safety, purity, ctfe ...
 
 /++
 Lazily splits the string $(D s) into words, using whitespace as
-delimiter.
+the delimiter.
 
 This function is string specific and, contrary to $(D
-splitter!(std.uni.isWhite)), runs of white spaces will be merged together.
+splitter!(std.uni.isWhite)), runs of whitespace will be merged together
+(no empty tokens will be produced).
  +/
 auto splitter(C)(C[] s)
 if(isSomeChar!C)
@@ -1463,7 +1464,7 @@ if(isSomeChar!C)
 }
 
 /++
-Eagerly Splits $(D s) into an array, using $(D delim) as the delimiter.
+Eagerly splits $(D s) into an array, using $(D delim) as the delimiter.
 
 See also: $(XREF algorithm, splitter) for the lazy version of this operator.
  +/

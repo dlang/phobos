@@ -2900,7 +2900,7 @@ unittest
 //@@@6730@@@ This exists already in std.array, so this declaration, at best, will only create ambiguity.
 //unfortunatly, an alias will conflict with the existing splitter in std.algorithm.
 //It needs to be removed.
-deprecated("std.algorithm.splitter(string) is deprecated in favor of std.algortihm.splitter(string)")
+deprecated("Please use std.array.splitter for string specific splitting")
 auto splitter(Range)(Range input)
 if (isSomeString!Range)
 {
