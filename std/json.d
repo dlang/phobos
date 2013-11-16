@@ -77,55 +77,91 @@ struct JSONValue
 
     /// Typesafe way of accessing $(D store.str).
     /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.STRING).
-    @property ref inout(string) str() inout
+    @property inout(string) str() inout
     {
         enforceEx!JSONException(type == JSON_TYPE.STRING,
                                 "JSONValue is not a string");
         return store.str;
     }
+    /// ditto
+    @property string str(string v)
+    {
+        assign(v);
+        return store.str;
+    }
 
     /// Typesafe way of accessing $(D store.integer).
     /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.INTEGER).
-    @property ref inout(long) integer() inout
+    @property inout(long) integer() inout
     {
         enforceEx!JSONException(type == JSON_TYPE.INTEGER,
                                 "JSONValue is not an integer");
         return store.integer;
     }
+    /// ditto
+    @property long integer(long v)
+    {
+        assign(v);
+        return store.integer;
+    }
 
     /// Typesafe way of accessing $(D store.uinteger).
     /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.UINTEGER).
-    @property ref inout(ulong) uinteger() inout
+    @property inout(ulong) uinteger() inout
     {
         enforceEx!JSONException(type == JSON_TYPE.UINTEGER,
                                 "JSONValue is not an unsigned integer");
         return store.uinteger;
     }
+    /// ditto
+    @property ulong uinteger(ulong v)
+    {
+        assign(v);
+        return store.uinteger;
+    }
 
     /// Typesafe way of accessing $(D store.floating).
     /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.FLOAT).
-    @property ref inout(real) floating() inout
+    @property inout(real) floating() inout
     {
         enforceEx!JSONException(type == JSON_TYPE.FLOAT,
                                 "JSONValue is not a floating type");
         return store.floating;
     }
+    /// ditto
+    @property real floating(real v)
+    {
+        assign(v);
+        return store.floating;
+    }
 
     /// Typesafe way of accessing $(D store.object).
     /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT).
-    @property ref inout(JSONValue[string]) object() inout
+    @property inout(JSONValue[string]) object() inout
     {
         enforceEx!JSONException(type == JSON_TYPE.OBJECT,
                                 "JSONValue is not an object");
         return store.object;
     }
+    /// ditto
+    @property JSONValue[string] object(JSONValue[string] v)
+    {
+        assign(v);
+        return store.object;
+    }
 
     /// Typesafe way of accessing $(D store.array).
     /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.ARRAY).
-    @property ref inout(JSONValue[]) array() inout
+    @property inout(JSONValue[]) array() inout
     {
         enforceEx!JSONException(type == JSON_TYPE.ARRAY,
                                 "JSONValue is not an array");
+        return store.array;
+    }
+    /// ditto
+    @property JSONValue[] array(JSONValue[] v)
+    {
+        assign(v);
         return store.array;
     }
 
@@ -824,6 +860,38 @@ unittest
     JSONValue jv2 = JSONValue("value");
     assert(jv2.type == JSON_TYPE.STRING);
     assert(jv2.str == "value");
+}
+
+unittest
+{
+    // Bugzilla 11504
+
+    JSONValue jv = 1;
+    assert(jv.type == JSON_TYPE.INTEGER);
+
+    jv.str = "123";
+    assert(jv.type == JSON_TYPE.STRING);
+    assert(jv.str == "123");
+
+    jv.integer = 1;
+    assert(jv.type == JSON_TYPE.INTEGER);
+    assert(jv.integer == 1);
+
+    jv.uinteger = 2u;
+    assert(jv.type == JSON_TYPE.UINTEGER);
+    assert(jv.uinteger == 2u);
+
+    jv.floating = 1.5f;
+    assert(jv.type == JSON_TYPE.FLOAT);
+    assert(jv.floating == 1.5f);
+
+    jv.object = ["key" : JSONValue("value")];
+    assert(jv.type == JSON_TYPE.OBJECT);
+    assert(jv.object == ["key" : JSONValue("value")]);
+
+    jv.array = [JSONValue(1), JSONValue(2), JSONValue(3)];
+    assert(jv.type == JSON_TYPE.ARRAY);
+    assert(jv.array == [JSONValue(1), JSONValue(2), JSONValue(3)]);
 }
 
 unittest
