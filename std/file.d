@@ -2030,6 +2030,11 @@ else version(Posix)
 
             return (_lstatMode & S_IFMT) == S_IFLNK;
         }
+        @property bool isStatValid()
+        {
+            _ensureStatDone(false);
+            return _isStatSucceeded;
+        }
 
         @property ulong size()
         {
@@ -2084,14 +2089,18 @@ else version(Posix)
             This is to support lazy evaluation, because doing stat's is
             expensive and not always needed.
          +/
-        void _ensureStatDone()
+        void _ensureStatDone(bool isEnforce=true)
         {
             if(_didStat)
                 return;
 
-            enforce(stat(toStringz(_name), &_statBuf) == 0,
-                    "Failed to stat file `" ~ _name ~ "'");
-
+            auto ret=stat(toStringz(_name), &_statBuf) == 0;
+            if(isEnforce){
+                _bailOut(ret);
+                _isStatSucceeded = true;
+            }
+            else
+                _isStatSucceeded = ret;
             _didStat = true;
         }
 
@@ -2106,13 +2115,16 @@ else version(Posix)
 
             stat_t statbuf = void;
 
-            enforce(lstat(toStringz(_name), &statbuf) == 0,
-                "Failed to stat file `" ~ _name ~ "'");
-
+            _bailOut(lstat(toStringz(_name), &statbuf) == 0);
             _lstatMode = statbuf.st_mode;
 
             _dTypeSet = true;
             _didLStat = true;
+        }
+
+        private void _bailOut(bool isOK)
+        {
+            enforce(isOK, "Failed to stat file `" ~ _name ~ "'");
         }
 
         string _name; /// The file or directory represented by this DirEntry.
@@ -2124,6 +2136,7 @@ else version(Posix)
         bool _didLStat = false;   /// Whether lstat() has been called for this DirEntry.
         bool _didStat = false;    /// Whether stat() has been called for this DirEntry.
         bool _dTypeSet = false;   /// Whether the dType of the file has been set.
+        bool _isStatSucceeded = false;   /// Whether stat succeeded (eg: broken symlink).
     }
 }
 
@@ -2539,7 +2552,7 @@ private struct DirIteratorImpl
 
         bool mayStepIn()
         {
-            return _followSymlink ? _cur.isDir : attrIsDir(_cur.linkAttributes);
+            return _followSymlink ? _cur.isStatValid && _cur.isDir : attrIsDir(_cur.linkAttributes);
         }
     }
 
