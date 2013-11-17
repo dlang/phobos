@@ -2456,6 +2456,8 @@ struct Appender(A : T[], T)
 //ret sugLen: A suggested growth.
 private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen) @safe pure nothrow
 {
+    if(curLen == 0)
+        return max(reqLen,8);
     ulong mult = 100 + (1000UL) / (bsr(curLen * TSizeOf) + 1);
     // limit to doubling the length, we don't want to grow too much
     if(mult > 200)
