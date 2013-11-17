@@ -2237,13 +2237,14 @@ unittest
 
     void printBiguint(uint [] data)
     {
-        char [] buff = new char[data.length*9];
-        printf("%.*s\n", biguintToHex(buff, data, '_'));
+        char [] buff = biguintToHex(new char[data.length*9], data, '_');
+        printf("%.*s\n", buff.length, buff.ptr);
     }
 
     void printDecimalBigUint(BigUint data)
     {
-        printf("%.*s\n", data.toDecimalString(0));
+        auto str = data.toDecimalString(0);
+        printf("%.*s\n", str.length, str.ptr);
     }
 
     uint [] a, b;
