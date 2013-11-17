@@ -798,6 +798,13 @@ size_t replicateBits(size_t times, size_t bits)(size_t val)
 {
     static if(times == 1)
         return val;
+    else static if(bits == 1)
+    {
+        static if(times == size_t.sizeof*8)
+            return val ? size_t.max : 0;
+        else
+            return val ? (1<<times)-1 : 0;
+    }
     else static if(times % 2)
         return (replicateBits!(times-1, bits)(val)<<bits) | val;
     else
@@ -1235,44 +1242,15 @@ pure nothrow:
     bool zeros(size_t s, size_t e)
     in
     {
-        assert(s % factor == 0);        
-        assert(e % factor == 0);
-        assert(s < e);
+        assert(s <= e);
     }
     body
     {
-        size_t* p = ptr.origin;
-        auto count = (e - s)/factor;
-        size_t val;
-        foreach(i; 0..count)
-        {
-            val |= p[i];
-            if(val)
+        foreach(v; this[s..e])
+            if(v)
                 return false;
-        }
         return true;
-    }
-
-    bool ones(size_t s, size_t e)
-    in
-    {
-        assert(s % factor == 0);        
-        assert(e % factor == 0);
-        assert(s < e);
-    }
-    body
-    {
-        size_t* p = ptr.origin;
-        auto count = (e - s)/factor;
-        size_t val;
-        foreach(i; 0..count)
-        {
-            val |= p[i];
-            if(val != size_t.max)
-                return false;
-        }
-        return true;
-    }
+    }   
 
     T opIndex(size_t idx) inout
     in
@@ -3454,8 +3432,7 @@ private:
     enum lastLevel = Prefix.length-1;
     struct ConstructState
     {
-        bool zeros, ones; // current page is zeros? ones?
-        uint idx_zeros, idx_ones;
+        size_t idx_zeros, idx_ones;
     }
     // iteration over levels of Trie, each indexes its own level and thus a shortened domain
     size_t[Prefix.length] indices;    
@@ -3506,25 +3483,39 @@ private:
             j += numVals;
             return;
         }
-        numVals -= n;
-        //write till the end of current page
-        ptr[j..j+n]  = val;
-        j += n;
-        //spill to the next page
-        spillToNextPage!level(ptr);
-        // page at once loop
-        while(numVals >= pageSize)
+        static if(level != 0)//on the first level it always fits
         {
-            numVals -= pageSize;
-            ptr[j..j+pageSize]  = val;
-            j += pageSize;
+            numVals -= n;
+            //write till the end of current page
+            ptr[j..j+n]  = val;
+            j += n;
+            //spill to the next page
             spillToNextPage!level(ptr);
-        }
-        if(numVals)
-        {
-            // the leftovers, an incomplete page
-            ptr[j..j+numVals]  = val;
-            j += numVals;
+            // page at once loop
+            if(state[level].idx_zeros != size_t.max && val == T.init)
+            {
+                alias typeof(table.slice!(level-1)[0]) NextIdx;
+                addValue!(level-1)(force!NextIdx(state[level].idx_zeros),
+                    numVals/pageSize);
+                ptr = table.slice!level; //table structure might have changed
+                numVals %= pageSize;
+            }
+            else
+            {
+                while(numVals >= pageSize)
+                {
+                    numVals -= pageSize;
+                    ptr[j..j+pageSize]  = val;
+                    j += pageSize;
+                    spillToNextPage!level(ptr);
+                }
+            }
+            if(numVals)
+            {
+                // the leftovers, an incomplete page
+                ptr[j..j+numVals]  = val;
+                j += numVals;
+            }
         }
     }
 
@@ -3571,6 +3562,10 @@ private:
         {
     L_allocate_page:
             next_lvl_index = force!NextIdx(idx!level/pageSize - 1);
+            if(state[level].idx_zeros == size_t.max && ptr.zeros(j, j+pageSize))
+            {                
+                state[level].idx_zeros = next_lvl_index;
+            }
             // allocate next page
             version(none)
             {
@@ -3628,7 +3623,7 @@ public:
         defValue = filler;
         // zeros-page index, ones-page index
         foreach(ref v; state)
-            v = ConstructState(true, true, uint.max, uint.max);
+            v = ConstructState(size_t.max, size_t.max);
         table = typeof(table)(indices);
         // one page per level is a bootstrap minimum
         foreach(i; Sequence!(0, Prefix.length))
