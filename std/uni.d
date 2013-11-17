@@ -1131,19 +1131,9 @@ pure nothrow:
 
     private T simpleIndex(size_t n) inout
     {
-        static if(factor == bytesPerWord*8)
-        {
-            // a re-write with less data dependency
-            auto q = n / factor;
-            auto r = n % factor;
-            return cast(T)(origin[q] & (mask<<r) ? 1 : 0);
-        }
-        else
-        {
-            auto q = n / factor;
-            auto r = n % factor;
-            return cast(T)((origin[q] >> bits*r) & mask);
-        }
+        auto q = n / factor;
+        auto r = n % factor;
+        return cast(T)((origin[q] >> bits*r) & mask);
     }
 
     private void simpleWrite(TypeOfBitPacked!T val, size_t n)
@@ -1696,11 +1686,14 @@ unittest
     static void destroy(T)(ref T arr)
         if(isDynamicArray!T && is(Unqual!T == T))
     {
-        debug
+        version(bug10929) //@@@BUG@@@
         {
-            arr[] = cast(typeof(T.init[0]))(0xdead_beef);
+            debug
+            {
+                arr[] = cast(typeof(T.init[0]))(0xdead_beef);
+            }
+            arr = null;
         }
-        arr = null;
     }
 
     static void destroy(T)(ref T arr)
@@ -2005,6 +1998,13 @@ public:
                 end = sp.length;
             }
 
+            this(Uint24Array!SP sp, size_t s, size_t e)
+            {
+                slice = sp;
+                start = s;
+                end = e;
+            }
+
             @property auto front()const
             {
                 uint a = slice[start];
@@ -2028,6 +2028,20 @@ public:
             {
                 end -= 2;
             }
+
+            auto opIndex(size_t idx) const
+            {
+                uint a = slice[start+idx*2];
+                uint b = slice[start+idx*2+1];
+                return CodepointInterval(a, b);
+            }
+
+            auto opSlice(size_t s, size_t e)
+            {
+                return Intervals(slice, s*2+start, e*2+start);
+            }
+
+            @property size_t length()const {  return slice.length/2; }
 
             @property bool empty()const { return start == end; }
 
@@ -3742,8 +3756,7 @@ public:
         idx = cast(size_t)p[0](key);
         foreach(i, v; p[0..$-1])
             idx = cast(size_t)((_table.ptr!i[idx]<<p[i+1].bitSize) + p[i+1](key));
-        auto val = _table.ptr!(p.length-1)[idx];
-        return val;
+        return _table.ptr!(p.length-1)[idx];
     }
 
     @property size_t bytes(size_t n=size_t.max)() const
