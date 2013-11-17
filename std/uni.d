@@ -1232,6 +1232,48 @@ pure nothrow:
         limit = items;
     }
 
+    bool zeros(size_t s, size_t e)
+    in
+    {
+        assert(s % factor == 0);        
+        assert(e % factor == 0);
+        assert(s < e);
+    }
+    body
+    {
+        size_t* p = ptr.origin;
+        auto count = (e - s)/factor;
+        size_t val;
+        foreach(i; 0..count)
+        {
+            val |= p[i];
+            if(val)
+                return false;
+        }
+        return true;
+    }
+
+    bool ones(size_t s, size_t e)
+    in
+    {
+        assert(s % factor == 0);        
+        assert(e % factor == 0);
+        assert(s < e);
+    }
+    body
+    {
+        size_t* p = ptr.origin;
+        auto count = (e - s)/factor;
+        size_t val;
+        foreach(i; 0..count)
+        {
+            val |= p[i];
+            if(val != size_t.max)
+                return false;
+        }
+        return true;
+    }
+
     T opIndex(size_t idx) inout
     in
     {
@@ -3416,7 +3458,7 @@ private:
         uint idx_zeros, idx_ones;
     }
     // iteration over levels of Trie, each indexes its own level and thus a shortened domain
-    size_t[Prefix.length] indices;
+    size_t[Prefix.length] indices;    
     // default filler value to use
     Value defValue;
     // this is a full-width index of next item
@@ -3428,91 +3470,82 @@ private:
 
     @disable this();
 
+    //shortcut for index variable at level 'level'
+    @property ref idx(size_t level)(){ return indices[level]; }
+
     // this function assumes no holes in the input so
     // indices are going one by one
     void addValue(size_t level, T)(T val, size_t numVals)
     {
+        alias j = idx!level;
         enum pageSize = 1<<Prefix[level].bitSize;
         if(numVals == 0)
             return;
-        do
+        auto ptr = table.slice!(level);
+        if(numVals == 1)
         {
-            // need to take pointer again, memory block may move on resize
-            auto ptr = table.slice!(level);
-            static if(is(T : bool))
-            {
-                if(val)
-                    state[level].zeros = false;
-                else
-                    state[level].ones = false;
-            }
-            if(numVals == 1)
-            {
-                static if(level == Prefix.length-1)
-                    ptr[indices[level]] = val;
-                else{// can incur narrowing conversion
-                    assert(indices[level] < ptr.length);
-                    ptr[indices[level]] = force!(typeof(ptr[indices[level]]))(val);
-                }
-                indices[level]++;
-                numVals = 0;
-            }
+            static if(level == Prefix.length-1)
+                ptr[j] = val;
             else
-            {
-                // where is the next page boundary
-                size_t nextPB = (indices[level]+pageSize)/pageSize*pageSize;
-                size_t j = indices[level];
-                size_t n =  nextPB-j;// can fill right in this page
-                if(numVals > n)
-                    numVals -= n;
-                else
-                {
-                    n = numVals;
-                    numVals = 0;
-                }
-                static if(level < Prefix.length-1)
-                    assert(indices[level] <= 2^^Prefix[level+1].bitSize);
-                ptr[j..j+n]  = val;
-                j += n;
-                indices[level] = j;
+            {// can incur narrowing conversion
+                assert(j < ptr.length);
+                ptr[j] = force!(typeof(ptr[j]))(val);
             }
-            // last level (i.e. topmost) has 1 "page"
-            // thus it need not to add a new page on upper level
-            static if(level != 0)
-            {
-                if(indices[level] % pageSize == 0)
-                    spillToNextPage!level(ptr);
-            }
+            j++;
+            if(j % pageSize == 0)
+                spillToNextPage!level(ptr);
+            return;
         }
-        while(numVals);
+        // longer row of values
+        // get to the next page boundary
+        size_t nextPB = (j + pageSize) & ~(pageSize-1);
+        size_t n =  nextPB - j;// can fill right in this page
+        if(numVals < n) //fits in current page  
+        {
+            ptr[j..j+numVals]  = val;
+            j += numVals;
+            return;
+        }
+        numVals -= n;
+        //write till the end of current page
+        ptr[j..j+n]  = val;
+        j += n;
+        //spill to the next page
+        spillToNextPage!level(ptr);
+        // page at once loop
+        while(numVals >= pageSize)
+        {
+            numVals -= pageSize;
+            ptr[j..j+pageSize]  = val;
+            j += pageSize;
+            spillToNextPage!level(ptr);
+        }
+        if(numVals)
+        {
+            // the leftovers, an incomplete page
+            ptr[j..j+numVals]  = val;
+            j += numVals;
+        }
+    }
+
+    void spillToNextPage(size_t level, Slice)(ref Slice ptr)
+    {
+        // last level (i.e. topmost) has 1 "page"
+        // thus it need not to add a new page on upper level
+        static if(level != 0)
+            spillToNextPageImpl!(level)(ptr);
     }
 
     // this can re-use the current page if duplicate or allocate a new one
     // it also makes sure that previous levels point to the correct page in this level
-    void spillToNextPage(size_t level, Slice)(ref Slice ptr)
+    void spillToNextPageImpl(size_t level, Slice)(ref Slice ptr)
     {
         alias typeof(table.slice!(level-1)[0]) NextIdx;
         NextIdx next_lvl_index;
         enum pageSize = 1<<Prefix[level].bitSize;
-        static if(is(T : bool))
-        {
-            if(state[level].zeros)
-            {
-                if(state[level].idx_empty == uint.max)
-                {
-                    state[level].idx_empty = cast(uint)(indices[level]/pageSize - 1);
-                    goto L_allocate_page;
-                }
-                else
-                {
-                    next_lvl_index = force!NextIdx(state[level].idx_empty);
-                    indices[level] -= pageSize;// it is a duplicate
-                    goto L_know_index;
-                }
-            }
-        }
-        auto last = indices[level]-pageSize;
-        auto slice = ptr[indices[level] - pageSize..indices[level]];
+        assert(idx!level % pageSize == 0);
+        auto last = idx!level-pageSize;
+        auto slice = ptr[idx!level - pageSize..idx!level];
         size_t j;
         for(j=0; j<last; j+=pageSize)
         {
@@ -3530,14 +3563,14 @@ private:
                 writeln("LEVEL(", level
                         , ") src page is :", ptr, ": ", arrayRepr(slice[0..pageSize]));
                 }
-                indices[level] -= pageSize; // reuse this page, it is duplicate
+                idx!level -= pageSize; // reuse this page, it is duplicate
                 break;
             }
         }
         if(j == last)
         {
     L_allocate_page:
-            next_lvl_index = force!NextIdx(indices[level]/pageSize - 1);
+            next_lvl_index = force!NextIdx(idx!level/pageSize - 1);
             // allocate next page
             version(none)
             {
@@ -3551,17 +3584,12 @@ private:
                           [pageSize*next_lvl_index..(next_lvl_index+1)*pageSize]
                         ));
             }
-            table.length!level = table.length!level + pageSize;
+            table.length!level = table.length!level + pageSize;            
         }
     L_know_index:
-        // reset all zero/ones tracking variables
-        static if(is(TypeOfBitPacked!T : bool))
-        {
-            state[level].zeros = true;
-            state[level].ones = true;
-        }
         // for the previous level, values are indices to the pages in the current level
         addValue!(level-1)(next_lvl_index, 1);
+        ptr = table.slice!level; //re-load the slice after moves
     }
 
     // idx - full-width index to fill with v (full-width index != key)
