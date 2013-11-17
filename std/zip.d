@@ -186,23 +186,35 @@ class ZipArchive
         uint directorySize = 0;
         foreach (ArchiveMember de; directory)
         {
-            de.expandedSize = to!uint(de.expandedData.length);
-            switch (de.compressionMethod)
+            // We have just compressed this member
+            if (de.compressedSize > 0)
             {
-                case 0:
-                    de.compressedData = de.expandedData;
-                    break;
-
-                case 8:
-                    de.compressedData = cast(ubyte[])std.zlib.compress(cast(void[])de.expandedData);
-                    de.compressedData = de.compressedData[2 .. de.compressedData.length - 4];
-                    break;
-
-                default:
-                    throw new ZipException("unsupported compression method");
+                auto off = de.offset + 30 + de.name.length + de.extra.length;
+                de.compressedData = data[off .. off + de.compressedSize];
             }
-            de.compressedSize = to!uint(de.compressedData.length);
-            de.crc32 = std.zlib.crc32(0, cast(void[])de.expandedData);
+            else
+            {
+                de.expandedSize = to!uint(de.expandedData.length);
+                de.crc32 = std.zlib.crc32(0, cast(void[])de.expandedData);
+
+                switch (de.compressionMethod)
+                {
+                    case 0:
+                        de.compressedData = de.expandedData;
+                        break;
+
+                    case 8:
+                        de.compressedData = cast(ubyte[])std.zlib.compress(cast(void[])de.expandedData);
+                        de.compressedData = de.compressedData[2 .. de.compressedData.length - 4];
+                        break;
+
+                    default:
+                        throw new ZipException("unsupported compression method");
+                }
+
+                de.compressedSize = to!uint(de.compressedData.length);
+            }
+
 
             archiveSize += 30 + de.name.length +
                                 de.extra.length +
@@ -228,7 +240,7 @@ class ZipArchive
             putUint  (i + 10, cast(uint)de.time);
             putUint  (i + 14, de.crc32);
             putUint  (i + 18, de.compressedSize);
-            putUint  (i + 22, to!uint(de.expandedData.length));
+            putUint  (i + 22, to!uint(de.expandedSize));
             putUshort(i + 26, cast(ushort)de.name.length);
             putUshort(i + 28, cast(ushort)de.extra.length);
             i += 30;
@@ -402,6 +414,7 @@ class ZipArchive
             i += commentlen;
 
             directory[de.name] = de;
+
         }
         if (i != directoryOffset + directorySize)
             throw new ZipException("invalid directory entry 3");
