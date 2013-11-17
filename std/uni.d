@@ -890,7 +890,7 @@ struct MultiArray(Types...)
                 static if(n != dim-1)
                 {
                     auto start = raw_ptr!(n+1);
-                    size_t len = storage.length;
+                    size_t len = (storage.ptr+storage.length-start);
                     copyForward(start[0..len-delta], start[delta..len]);
 
                     // adjust offsets last, they affect raw_slice
@@ -941,69 +941,74 @@ private:
 
 unittest
 {
-    // sizes are:
-    // lvl0: 3, lvl1 : 2, lvl2: 1
-    auto m = MultiArray!(int, ubyte, int)(3,2,1);
+    enum dg = (){
+        // sizes are:
+        // lvl0: 3, lvl1 : 2, lvl2: 1
+        auto m = MultiArray!(int, ubyte, int)(3,2,1);
 
-    static void check(size_t k, T)(ref T m, int n)
-    {
-        foreach(i; 0..n)
-            assert(m.slice!(k)[i] == i+1, text("level:",i," : ",m.slice!(k)[0..n]));
-    }
+        static void check(size_t k, T)(ref T m, int n)
+        {
+            foreach(i; 0..n)
+                assert(m.slice!(k)[i] == i+1, text("level:",i," : ",m.slice!(k)[0..n]));
+        }
 
-    static void checkB(size_t k, T)(ref T m, int n)
-    {
-        foreach(i; 0..n)
-            assert(m.slice!(k)[i] == n-i, text("level:",i," : ",m.slice!(k)[0..n]));
-    }
+        static void checkB(size_t k, T)(ref T m, int n)
+        {
+            foreach(i; 0..n)
+                assert(m.slice!(k)[i] == n-i, text("level:",i," : ",m.slice!(k)[0..n]));
+        }
 
-    static void fill(size_t k, T)(ref T m, int n)
-    {
-        foreach(i; 0..n)
-            m.slice!(k)[i] = force!ubyte(i+1);
-    }
+        static void fill(size_t k, T)(ref T m, int n)
+        {
+            foreach(i; 0..n)
+                m.slice!(k)[i] = force!ubyte(i+1);
+        }
 
-    static void fillB(size_t k, T)(ref T m, int n)
-    {
-        foreach(i; 0..n)
-            m.slice!(k)[i] = force!ubyte(n-i);
-    }
+        static void fillB(size_t k, T)(ref T m, int n)
+        {
+            foreach(i; 0..n)
+                m.slice!(k)[i] = force!ubyte(n-i);
+        }
 
-    m.length!1 = 100;
-    fill!1(m, 100);
-    check!1(m, 100);
+        m.length!1 = 100;
+        fill!1(m, 100);
+        check!1(m, 100);
 
-    m.length!0 = 220;
-    fill!0(m, 220);
-    check!1(m, 100);
-    check!0(m, 220);
+        m.length!0 = 220;
+        fill!0(m, 220);
+        check!1(m, 100);
+        check!0(m, 220);
 
-    m.length!2 = 17;
-    fillB!2(m, 17);
-    checkB!2(m, 17);
-    check!0(m, 220);
-    check!1(m, 100);
+        m.length!2 = 17;
+        fillB!2(m, 17);
+        checkB!2(m, 17);
+        check!0(m, 220);
+        check!1(m, 100);
 
-    m.length!2 = 33;
-    checkB!2(m, 17);
-    fillB!2(m, 33);
-    checkB!2(m, 33);
-    check!0(m, 220);
-    check!1(m, 100);
+        m.length!2 = 33;
+        checkB!2(m, 17);
+        fillB!2(m, 33);
+        checkB!2(m, 33);
+        check!0(m, 220);
+        check!1(m, 100);
 
-    m.length!1 = 195;
-    fillB!1(m, 195);
-    checkB!1(m, 195);
-    checkB!2(m, 33);
-    check!0(m, 220);
+        m.length!1 = 195;
+        fillB!1(m, 195);
+        checkB!1(m, 195);
+        checkB!2(m, 33);
+        check!0(m, 220);
 
-    auto marr = MultiArray!(BitPacked!(uint, 4), BitPacked!(uint, 6))(20, 10);
-    marr.length!0 = 15;
-    marr.length!1 = 30;
-    fill!1(marr, 30);
-    fill!0(marr, 15);
-    check!1(marr, 30);
-    check!0(marr, 15);
+        auto marr = MultiArray!(BitPacked!(uint, 4), BitPacked!(uint, 6))(20, 10);
+        marr.length!0 = 15;
+        marr.length!1 = 30;
+        fill!1(marr, 30);
+        fill!0(marr, 15);
+        check!1(marr, 30);
+        check!0(marr, 15);
+        return 0;
+    };
+    enum ct = dg();
+    auto rt = dg();
 }
 
 unittest
@@ -1134,6 +1139,22 @@ pure nothrow:
         }
     }
 
+    private void simpleWrite(TypeOfBitPacked!T val, size_t n)
+    in
+    {
+        static if(isIntegral!T)
+            assert(val <= mask);
+    }
+    body
+    {
+        auto q = n / factor;
+        auto r = n % factor;
+        size_t tgt_shift = bits*r;
+        size_t word = origin[q];
+        origin[q] = (word & ~(mask<<tgt_shift))
+            | (cast(size_t)val << tgt_shift);
+    }
+
     static if(factor == bytesPerWord// can safely pack by byte
          || factor == 1 // a whole word at a time
          || ((factor == bytesPerWord/2 || factor == bytesPerWord/4)
@@ -1164,7 +1185,10 @@ pure nothrow:
 
         void opIndexAssign(TypeOfBitPacked!T val, size_t idx)
         {
-            (cast(U*)origin)[idx] = cast(U)val;
+            if(__ctfe)
+                simpleWrite(val, idx);
+            else
+                (cast(U*)origin)[idx] = cast(U)val;
         }
     }
     else
@@ -1183,19 +1207,8 @@ pure nothrow:
         }
 
         void opIndexAssign(TypeOfBitPacked!T val, size_t n)
-        in
         {
-            static if(isIntegral!T)
-                assert(val <= mask);
-        }
-        body
-        {
-            auto q = n / factor;
-            auto r = n % factor;
-            size_t tgt_shift = bits*r;
-            size_t word = origin[q];
-            origin[q] = (word & ~(mask<<tgt_shift))
-                | (cast(size_t)val << tgt_shift);
+            return simpleWrite(val, n);
         }
     }
 
@@ -2980,7 +2993,10 @@ private:
         }
         else
             SP.destroy(data);
-        assert(!data.ptr);
+        version(bug10929)
+            assert(!data.ptr);
+        else
+            data = null;
     }
 
     void dupThisReference(uint count)
