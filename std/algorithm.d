@@ -8901,6 +8901,17 @@ wrapper around the original range, so both it and the original range are sorted,
 but other functions won't know that the original range has been sorted, whereas
 they $(I can) know that $(XREF range, SortedRange) has been sorted.
 
+
+The predicate is expected to satisfy certain rules in order for $(D sort) to
+behave as expected - otherwise, the program may fail on certain inputs (but not
+others) when not compiled in release mode, due to the cursory $(D assumeSorted)
+check. Specifically, $(D sort) expects $(D less(a,b) && less(b,c)) to imply
+$(D less(a,c)) (transitivity), and, conversely, $(D !less(a,b) && !less(b,c)) to
+imply $(D !less(a,c)). Note that the default predicate ($(D "a < b")) does not
+always satisfy these conditions for floating point types, because the expression
+will always be $(D false) when either $(D a) or $(D b) is NaN.
+
+
 See_Also:
     $(XREF range, assumeSorted)$(BR)
     STL's $(WEB sgi.com/tech/stl/_sort.html, _sort)$(BR)
