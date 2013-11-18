@@ -2625,12 +2625,12 @@ struct RefAppender(A : T[], T)
     Convenience function that returns an $(D Appender!A) object initialized
     with $(D array).
  +/
-Appender!(E[]) appender(A : E[], E)()
+Appender!(E[]) appender(A : E[], E)() nothrow
 {
     return Appender!(E[])(null);
 }
 /// ditto
-Appender!(E[]) appender(A : E[], E)(A array)
+Appender!(E[]) appender(A : E[], E)(A array) nothrow
 {
     static if (isMutable!E)
     {
@@ -2892,7 +2892,7 @@ unittest
     with $(D array).  Don't use null for the $(D array) pointer, use the other
     version of $(D appender) instead.
  +/
-RefAppender!(E[]) appender(A : E[]*, E)(A array)
+RefAppender!(E[]) appender(A : E[]*, E)(A array) nothrow
 {
     return RefAppender!(E[])(array);
 }
