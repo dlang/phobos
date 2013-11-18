@@ -1561,6 +1561,369 @@ unittest
 }
 
 /**
+Provides a Range interface to $(LREF dice). It rolls a dice based on the
+relative $(D proportions) provided and gives the corresponding index in
+$(D front). To generate a new dice roll, call $(D popFront). $(D proportions)
+may be any $(D InputRange) with a numeric $(D ElementType).
+
+$(LREF dice) might be more appropriate for single-use die, but if you plan to
+roll the same die multiple times, $(D DiceRange) will be significantly more
+efficient. Additionally, its interface makes it appropriate for use with other
+ranges when you use its convenience function, $(LREF diceRange).
+
+See $(LREF diceRange) for simple example usage.
+
+Tip:
+The $(XREF range,SearchPolicy) $(D Policy) is used internally to quickly search
+for a solution to a dice roll. If you are sure your data has a very strong
+negative skew (that is, your proportions are significantly higher with lower
+indices), you might benefit from choosing $(D SearchPolicy.gallop). Similarly,
+if your data has a very strong positive skew, $(D SearchPolicy.gallopBackwards)
+may improve performance slightly.
+
+Note:
+The default $(D Policy) is very effective at handling most cases and you
+may not actually benefit from changing the $(D Policy) even in cases with
+obvious skew.
+
+Tip:
+$(D DiceRange)s also have a configurable $(D StorageType), but it isn't exposed
+in the helper methods. By default, it uses a larger-than-necessary type except
+when it cannot, as is the case when the type is $(D ulong) or $(D real), which
+are the largest of their types. If you are certain that a smaller type can be
+used (and keep in mind that $(D StorageType) must be large enough to accommidate
+the sum of all of the proportions), then explicitly constructing a
+$(D DiceRange) with a smaller type can decrease memory usage and improve
+performance by increasing the likelyhood that the internal array can be fully
+contained in the processor's cache.
+
+If compiled with $(D debug) checks on, $(D DiceRange) check for integer overflow
+and significant loss of precision of floating point numbers. This can be used to
+help verify that your choice of smaller type does not cause issues.
+*/
+struct DiceRange(SearchPolicy Policy, StorageType, Rng)
+if(isNumeric!StorageType && isUniformRNG!Rng)
+{
+    private SortedRange!(StorageType[]) _propCumSumSorted;
+    private StorageType _sum;
+    private size_t _front;
+    private Rng* _rng;
+
+    this(InRange)(InRange proportions, ref Rng rng)
+    if(isInputRange!InRange && isNumeric!(ElementType!InRange)
+        && !isInfinite!InRange
+        && isImplicitlyConvertible!(ElementType!InRange, StorageType))
+    in
+    {
+        enforce(!proportions.empty, "Proportions cannot be empty");
+    }
+    body
+    {
+        _rng = &rng;
+        static if(isImplicitlyConvertible!( typeof(proportions.array), StorageType[] ))
+        {
+            StorageType[] propArray = proportions.array;
+        }
+        else
+        {
+           StorageType[] propArray = proportions.map!(to!StorageType).array;
+        }
+
+        prepareCumulativeSumArray(propArray);
+    }
+
+    private void prepareCumulativeSumArray(StorageType[] propArray)
+    {
+        // In the case of floating points, we need to avoid losing precision
+        // as we sum everything up.
+        alias AccumulatorType =
+            Select!(isFloatingPoint!StorageType, real, StorageType);
+
+        AccumulatorType accumulator = 0;
+        foreach(ref e; propArray)
+        {
+            debug
+            {
+                enforce(e >= 0, "Proportions in a dice must be non-negative");
+                AccumulatorType preAccumulation = accumulator;
+            }
+
+            accumulator += e;
+
+            debug
+            {
+                static if (isIntegral!StorageType)
+                {
+                    enforce(preAccumulation <= accumulator, "Overflow detected");
+                }
+                else static if(isFloatingPoint!StorageType)
+                {
+                    if(e > 0.0)
+                    {
+                        enforce(accumulator > preAccumulation, "Floating point loss of precision detected");
+                    }
+                }
+                else
+                    static assert(0);
+            }
+
+            e = accumulator;
+        }
+
+        _sum = propArray.back;
+
+        // Cumulative sum arrays are naturally sorted "a < b"
+        _propCumSumSorted = assumeSorted(propArray);
+
+        // Prime the next dice roll with popFront
+        popFront();
+    }
+
+    void popFront()
+    {
+        immutable point = uniform(0, _sum, *_rng);
+        assert(point < _sum);
+
+        // Return the number of elements that are not strictly greater than point
+        _front = _propCumSumSorted.length - _propCumSumSorted.upperBound!Policy(point).length;
+    }
+
+    enum bool empty = false;
+
+    @property
+    size_t front()
+    {
+        return _front;
+    }
+}
+
+// Pick an appropriate storage type for the element type of Rangea
+private template DiceRangeStorageFor(Range)
+{
+    private alias E = ElementType!Range;
+    static if (!isNumeric!E)
+    {
+        static assert(false,
+            "No appropriate DiceRange storage exists for " ~ E.stringof);
+    }
+
+    static if(isIntegral!E)
+    {
+        static if(is( Largest!(ushort, Unsigned!E) == ushort ))
+        {
+            alias DiceRangeStorageFor = uint;
+        }
+        else static if(is( Largest!(ulong, Unsigned!E) == ulong ))
+        {
+            alias DiceRangeStorageFor = ulong;
+        }
+        else // Some future type that is bigger
+            static assert(0);
+    }
+    else static if(isFloatingPoint!E)
+    {
+        alias DiceRangeStorageFor = Largest!(double,  E);
+    }
+    else
+        static assert(false);
+}
+
+/**
+Convenience functions for creating a $(D DiceRange) that uses specified
+$(D proportions) and a particular $(D rng).
+If no $(D rng) is provided, $(LREF rndGen) is used.
+
+Examples:
+----
+auto list = ["somewhat common", "very common", "rare"];
+auto proportions = [25, 50, 1];
+
+// Throw the dice 1000 times to choose elements out of list in the specified
+// proportions
+auto choices = proportions.diceRange().map!(e => list[e]).take(1000).array();
+----
+
+----
+// You want to create a realistic simulation of 500,000 people.
+// file.in contains records of names and counts of those names formated like:
+// NAME,count
+// The file may be arbitrarily large.
+auto data = File("file.in").byLine.map!(e => e.text.split(",")).array;
+auto simulatedNames = data
+                        .map!(e => e[1].to!size_t)
+                        .diceRange()
+                        .map!(e => data[e][0])
+                        .take(500_000).array;
+----
+
+In the last example, comparable usage of $(LREF dice) might not finish in a
+reasonable amount of time (possibly exceeding 10 minutes), especially if the
+number of proportions the file lists is higher than 50,000, which may be
+reasonable for a comprehensive list of names. However, a $(D DiceRange) will
+finish in under a second.
+*/
+auto diceRange(Range, Rng)(Range proportions, ref Rng rng)
+if(isInputRange!Range && isNumeric!(ElementType!Range)
+    && !isInfinite!Range && isUniformRNG!Rng)
+{
+    return DiceRange!(SearchPolicy.binarySearch, DiceRangeStorageFor!Range, Rng)(proportions, rng);
+}
+
+/// ditto
+auto diceRange(Range)(Range proportions)
+if(isInputRange!Range && isNumeric!(ElementType!Range) && !isInfinite!Range)
+{
+    return diceRange(proportions, rndGen);
+}
+
+unittest
+{
+    import std.range;
+
+    auto rnd = Random(unpredictableSeed);
+
+    // Basic relability tests...
+    {
+        alias InputTypes = TypeTuple!(byte, short, int, long,
+                ubyte, ushort, uint, ulong,
+                float, double, real);
+
+        alias Answers = TypeTuple!(0,1);
+
+        foreach(InType; InputTypes)
+        {
+            foreach(answer; Answers) {
+                InType[] props = [0,0];
+                props[answer] = 1;
+
+                auto turboDicer = props.diceRange(rnd);
+                assert(equal( repeat(answer).take(3), turboDicer.take(3) ));
+
+                static assert(isInputRange!( typeof(turboDicer) ));
+                static assert(isInfinite!( typeof(turboDicer) ));
+            }
+        }
+    }
+
+    {
+        // Also, test the diceRanges that don't take an rng
+        ulong[] props = [1, 0];
+        auto turboDicer = props.diceRange();
+        assert(equal(0.only, turboDicer.take(1)));
+
+        static assert(isInputRange!( typeof(turboDicer) ));
+        static assert(isInfinite!( typeof(turboDicer) ));
+    }
+
+    {
+        // Test out all different search policies...
+        alias SearchPolicies = TypeTuple!(SearchPolicy.gallop,
+                SearchPolicy.gallopBackwards, SearchPolicy.trot,
+                SearchPolicy.trotBackwards, SearchPolicy.binarySearch);
+        // and thoroughly test different inputs
+        alias InputTypes = TypeTuple!(byte, short, int, long,
+                ubyte, ushort, uint, ulong,
+                float, double, real);
+
+        // using a new, reproducable rng for this test...
+        auto reproRng = Xorshift(87324);
+
+        foreach(Policy; SearchPolicies)
+        {
+            foreach(InType; InputTypes)
+            {
+                InType[] props;
+                props.length = uniform(3, 50, reproRng);
+                props[] = 0;
+                size_t answer = uniform(0, props.length, reproRng);
+
+                static if(isIntegral!InType)
+                {
+                    props[answer] = InType.max;
+                }
+                else static if(isFloatingPoint!InType)
+                {
+                    props[answer] = 1.0;
+                }
+                else
+                    static assert(0);
+
+                assert(count!"a != b"(props, 0) == 1);
+
+                auto turboDicer =
+                    DiceRange!(Policy,
+                            DiceRangeStorageFor!(typeof(props)),
+                            typeof(reproRng))
+                        (props, reproRng);
+
+                assert(equal( repeat(answer).take(20), turboDicer.take(20) ));
+
+                static assert(isInputRange!( typeof(turboDicer) ));
+                static assert(isInfinite!( typeof(turboDicer) ));
+            }
+        }
+    }
+
+    {
+        // It should be a drop-in replacement for using dice
+        // (at least when floating point numbers are used...)
+        auto rnd1 = Random(313371776);
+        auto rnd2 = Random(313371776);
+        double[] props = [1.0, 2.0, 3.0];
+        auto oldDice = iota(30).map!(e => dice(rnd1, props));
+        auto turboDicer = props.diceRange(rnd2).take(30);
+        assert(equal(oldDice, turboDicer));
+    }
+
+    {
+        // diceRange has a relaxed constraint for proportions
+        // and can accept simple input ranges!
+        struct InputRangeDummy
+        {
+            int[] arr;
+            @property bool empty() { return arr.empty; }
+            @property int front() { return arr.front; }
+            void popFront() { arr = arr[1..$]; }
+        }
+        auto props1 = InputRangeDummy([1,0]);
+        auto turboDicer1 = props1.diceRange(rnd);
+        assert(equal([0,0,0], turboDicer1.take(3)));
+
+        auto props2 = InputRangeDummy([0,1]);
+        auto turboDicer2 = props2.diceRange(rnd);
+        assert(equal([1,1,1], turboDicer2.take(3)));
+    }
+
+    {
+        // Some dice ranges can be assigned to eachother
+        // Groups:
+        // {byte, ubyte, short, ushort}
+        // {int, uint, long, ulong}
+        // {double, float}
+        byte[] propByte = [0,1];
+        auto dicer1 = propByte.diceRange(rnd);
+        foreach(CompatType; TypeTuple!(ubyte, short, ushort))
+        {
+            CompatType[] compatProp = [0,1];
+            dicer1 = compatProp.diceRange(rnd);
+        }
+
+        int[] propInt = [0,1];
+        auto dicer2 = propInt.diceRange(rnd);
+        foreach(CompatType; TypeTuple!(uint, long, ulong))
+        {
+            CompatType[] compatProp = [0, 1];
+            dicer2 = compatProp.diceRange(rnd);
+        }
+
+        float[] propFloat = [0.0, 1.0];
+        auto dicer3 = propFloat.diceRange(rnd);
+        double[] propDouble = [0.0, 1.0];
+        dicer3 = propDouble.diceRange(rnd);
+    }
+}
+
+/**
 Covers a given range $(D r) in a random manner, i.e. goes through each
 element of $(D r) once and only once, just in a random order. $(D r)
 must be a random-access range with length.
