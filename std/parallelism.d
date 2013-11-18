@@ -1431,7 +1431,7 @@ public:
     */
     this(size_t nWorkers) @trusted
     {
-        synchronized(TaskPool.classinfo)
+        synchronized(typeid(TaskPool))
         {
             instanceStartIndex = nextInstanceIndex;
 
@@ -3272,7 +3272,7 @@ terminating the main thread.
 
     if(!initialized)
     {
-        synchronized(TaskPool.classinfo)
+        synchronized(typeid(TaskPool))
         {
             if(!pool)
             {
