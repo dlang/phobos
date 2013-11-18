@@ -13,8 +13,9 @@ Source: $(PHOBOSSRC std/_array.d)
 module std.array;
 
 import core.memory, core.bitop;
-import std.algorithm, std.ascii, std.conv, std.exception, std.range, std.string,
-       std.traits, std.typecons, std.typetuple, std.uni, std.utf;
+import std.algorithm, std.ascii, std.conv, std.exception, std.functional,
+       std.range, std.string, std.traits, std.typecons, std.typetuple,
+       std.uni, std.utf;
 import std.c.string : memcpy;
 version(unittest) import core.exception, std.stdio;
 
@@ -1385,45 +1386,117 @@ unittest //safety, purity, ctfe ...
     assertCTFEable!dg;
 }
 
-/**
-Splits a string by whitespace.
- */
-auto splitter(C)(C[] s) @safe pure
-    if(isSomeString!(C[]))
+/++
+Lazily splits the string $(D s) into words, using whitespace as
+the delimiter.
+
+This function is string specific and, contrary to $(D
+splitter!(std.uni.isWhite)), runs of whitespace will be merged together
+(no empty tokens will be produced).
+ +/
+auto splitter(C)(C[] s)
+if(isSomeChar!C)
 {
-    return std.algorithm.splitter!(std.uni.isWhite)(s);
+    static struct Result
+    {
+    private:
+        C[] _s;
+        size_t _frontLength;
+
+        void getFirst() pure @safe
+        {
+            auto r = find!(std.uni.isWhite)(_s);
+            _frontLength = _s.length - r.length;
+        }
+
+    public:
+        this(C[] s) pure @safe
+        {
+            _s = s.strip();
+            getFirst();
+        }
+
+        @property C[] front() pure @safe
+        {
+            version(assert) if (empty) throw new RangeError();
+            return _s[0 .. _frontLength];
+        }
+
+        void popFront() pure @safe
+        {
+            version(assert) if (empty) throw new RangeError();
+            _s = _s[_frontLength .. $].stripLeft();
+            getFirst();
+        }
+
+        @property bool empty() const pure nothrow @safe
+        {
+            return _s.empty;
+        }
+
+        @property inout(Result) save() inout pure nothrow @safe
+        {
+            return this;
+        }
+    }
+    return Result(s);
 }
 
 ///
 @safe pure unittest
 {
     auto a = " a     bcd   ef gh ";
-    assert(equal(splitter(a), ["", "a", "bcd", "ef", "gh"][]));
+    assert(equal(splitter(a), ["a", "bcd", "ef", "gh"][]));
 }
 
-/*@safe*/ pure unittest
+@safe pure unittest
 {
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
         S a = " a     bcd   ef gh ";
-        assert(equal(splitter(a), [to!S(""), to!S("a"), to!S("bcd"), to!S("ef"), to!S("gh")][]));
+        assert(equal(splitter(a), [to!S("a"), to!S("bcd"), to!S("ef"), to!S("gh")]));
         a = "";
         assert(splitter(a).empty);
     }
+
+    immutable string s = " a     bcd   ef gh ";
+    assert(equal(splitter(s), ["a", "bcd", "ef", "gh"][]));
 }
 
-/**************************************
- * Splits $(D s) into an array, using $(D delim) as the delimiter.
- */
-Unqual!(S1)[] split(S1, S2)(S1 s, S2 delim)
-if (isForwardRange!(Unqual!S1) && isForwardRange!S2)
+/++
+Eagerly splits $(D s) into an array, using $(D delim) as the delimiter.
+
+See also: $(XREF algorithm, splitter) for the lazy version of this operator.
+ +/
+auto split(R, E)(R r, E delim)
+if (isForwardRange!R && is(typeof(ElementType!R.init == E.init)))
 {
-    Unqual!S1 us = s;
-    auto app = appender!(Unqual!(S1)[])();
-    foreach (word; std.algorithm.splitter(us, delim))
-    {
-        app.put(word);
-    }
+    auto spl = std.algorithm.splitter(r, delim);
+    alias S = typeof(spl.front.init); // "Slice_t"
+    auto app = appender!(S[])();
+    foreach (e; spl)
+        app.put(e);
+    return app.data;
+}
+auto split(R1, R2)(R1 r, R2 delim)
+if (isForwardRange!R1 && isForwardRange!R2 && is(typeof(ElementType!R1.init == ElementType!R2.init)))
+{
+    auto spl = std.algorithm.splitter(r, delim);
+    alias S = typeof(spl.front.init); // "Slice_t"
+    auto app = appender!(S[])();
+    foreach (e; spl)
+        app.put(e);
+    return app.data;
+}
+///ditto
+auto split(alias isTerminator, R)(R r)
+if (isForwardRange!R && is(typeof(unaryFun!isTerminator(r.front))))
+{
+    auto spl = std.algorithm.splitter!isTerminator(r);
+    alias S = typeof(spl.front.init); // "Slice_t"
+    auto app = appender!(S[])();
+    foreach (e; spl)
+        app.put(e);
     return app.data;
 }
 
