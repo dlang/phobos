@@ -1063,7 +1063,7 @@ unittest
                string file = __FILE__, size_t line = __LINE__)
     {
         {
-            static if(is(T == typeof(T.dup)))
+            static if(is(T == typeof(T.init.dup)))
                 auto a = orig.dup;
             else
                 auto a = orig.idup;
@@ -1119,7 +1119,7 @@ unittest
     // variadic version
     bool testVar(T, U...)(T orig, size_t pos, U args)
     {
-        static if(is(T == typeof(T.dup)))
+        static if(is(T == typeof(T.init.dup)))
             auto a = orig.dup;
         else
             auto a = orig.idup;
@@ -2013,7 +2013,7 @@ unittest
                string file = __FILE__, size_t line = __LINE__)
     {
         {
-            static if(is(T == typeof(T.dup)))
+            static if(is(T == typeof(T.init.dup)))
                 auto a = orig.dup;
             else
                 auto a = orig.idup;
