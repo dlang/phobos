@@ -1184,7 +1184,12 @@ unittest
 
 
 /++
-    Strips leading whitespace.
+    Strips leading whitespace (as defined by $(XREF uni, isWhite)).
+
+    Returns: $(D str) stripped of leading whitespace.
+
+    Postconditions: $(D str) and the returned value
+    will share the same tail (see $(XREF array, sameTail)).
   +/
 C[] stripLeft(C)(C[] str) @safe pure
     if (isSomeChar!C)
@@ -1215,7 +1220,12 @@ C[] stripLeft(C)(C[] str) @safe pure
 
 
 /++
-    Strips trailing whitespace.
+    Strips trailing whitespace (as defined by $(XREF uni, isWhite)).
+
+    Returns: $(D str) stripped of trailing whitespace.
+
+    Postconditions: $(D str) and the returned value
+    will share the same head (see $(XREF array, sameHead)).
   +/
 C[] stripRight(C)(C[] str) @safe pure
     if (isSomeChar!C)
@@ -1246,7 +1256,10 @@ C[] stripRight(C)(C[] str) @safe pure
 
 
 /++
-    Strips both leading and trailing whitespace.
+    Strips both leading and trailing whitespace (as defined by
+    $(XREF uni, isWhite)).
+
+    Returns: $(D str) stripped of trailing whitespace.
   +/
 C[] strip(C)(C[] str) @safe pure
     if (isSomeChar!C)
