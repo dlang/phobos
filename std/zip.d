@@ -115,7 +115,7 @@ class ArchiveMember
 	if (cm == _compressionMethod) return;
 
 	if (_compressedSize > 0)
-		throw new Exception("Can't change compression method for a compressed element");
+		throw new ZipException("Can't change compression method for a compressed element");
 
 	_compressionMethod = cm;
     }
