@@ -1176,11 +1176,8 @@ unittest
  * enum ctfeID = parseUUID("8ab3060e-2cba-4f23-b74c-b52db3bdfb46");
  * //here parsing is done at compile time, no runtime overhead!
  * -------------------------
- *
- * BUGS: Could be pure, but this depends on parse!(string, 16).
  */
-
-@trusted UUID parseUUID(T)(T uuidString) if(isSomeString!T)
+UUID parseUUID(T)(T uuidString) if(isSomeString!T)
 {
     return parseUUID(uuidString);
 }
@@ -1192,7 +1189,7 @@ UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
     static if(isForwardRange!Range)
         auto errorCopy = uuidRange.save;
 
-    void parserError(size_t pos, UUIDParsingException.Reason reason, string message, Throwable next = null,
+    void parserError()(size_t pos, UUIDParsingException.Reason reason, string message, Throwable next = null,
         string file = __FILE__, size_t line = __LINE__)
     {
         static if(isForwardRange!Range)
@@ -1228,7 +1225,7 @@ UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
     size_t element = 0;
 
     //skip garbage
-    size_t skip()
+    size_t skip()()
     {
         size_t skipped;
         while(!uuidRange.empty && !isHexDigit(uuidRange.front))
@@ -1323,7 +1320,7 @@ UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
     return result;
 }
 
-unittest
+@safe pure unittest
 {
     import std.exception;
     import std.typetuple;
@@ -1566,7 +1563,7 @@ public class UUIDParsingException : Exception
         size_t position;
 
         private this(string input, size_t pos, Reason why = Reason.unknown, string msg = "",
-            Throwable next = null, string file = __FILE__, size_t line = __LINE__)
+            Throwable next = null, string file = __FILE__, size_t line = __LINE__) pure @trusted
         {
             input = input;
             position = pos;
