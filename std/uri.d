@@ -401,7 +401,7 @@ size_t uriLength(string s)
     size_t i;
 
     if (s.length <= 4)
-        goto Lno;
+        return -1;
 
     if (s.length > 7 && std.string.icmp(s[0 .. 7], "http://") == 0) {
         i = 7;
@@ -411,7 +411,7 @@ size_t uriLength(string s)
         if (s.length > 8 && std.string.icmp(s[0 .. 8], "https://") == 0)
             i = 8;
         else
-            goto Lno;
+            return -1;
     }
     //    if (icmp(s[0 .. 4], "www.") == 0)
     //  i = 4;
@@ -436,12 +436,9 @@ size_t uriLength(string s)
     }
     //if (!lastdot || (i - lastdot != 3 && i - lastdot != 4))
     if (!lastdot)
-        goto Lno;
+        return -1;
 
     return i;
-
-Lno:
-    return -1;
 }
 
 unittest
@@ -466,19 +463,19 @@ size_t emailLength(string s)
     size_t i;
 
     if (!isAlpha(s[0]))
-        goto Lno;
+        return -1;
 
     for (i = 1; 1; i++)
     {
         if (i == s.length)
-            goto Lno;
+            return -1;
         auto c = s[i];
         if (isAlphaNum(c))
             continue;
         if (c == '-' || c == '_' || c == '.')
             continue;
         if (c != '@')
-            goto Lno;
+            return -1;
         i++;
         break;
     }
@@ -501,12 +498,9 @@ size_t emailLength(string s)
         break;
     }
     if (!lastdot || (i - lastdot != 3 && i - lastdot != 4))
-        goto Lno;
+        return -1;
 
     return i;
-
-Lno:
-    return -1;
 }
 
 unittest

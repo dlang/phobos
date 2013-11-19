@@ -5137,6 +5137,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
         }
 
         //printf("formatArg(fc = '%c', m = '%c')\n", fc, m);
+        int mi;
         switch (m)
         {
             case Mangle.Tbool:
@@ -5279,7 +5280,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 return;
 
             case Mangle.Tarray:
-                int mi = 10;
+                mi = 10;
                 if (typeid(ti).name.length == 14 &&
                     typeid(ti).name[9..14] == "Array")
                 { // array of non-primitive types
@@ -5325,8 +5326,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
                         case Mangle.Tdchar:
                         LarrayDchar:
-                            auto sd = va_arg!(dstring)(argptr);
-                            s = toUTF8(sd);
+                            s = toUTF8(va_arg!(dstring)(argptr));
                         Lputstr:
                             if (fc != 's')
                                 throw new FormatException("string");
@@ -5501,28 +5501,30 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             }
         }
 
-        ptrdiff_t n = tmpbuf.length;
-        char c;
-        int hexoffset = uc ? ('A' - ('9' + 1)) : ('a' - ('9' + 1));
+        {
+            ptrdiff_t n = tmpbuf.length;
+            char c;
+            int hexoffset = uc ? ('A' - ('9' + 1)) : ('a' - ('9' + 1));
 
-        while (vnumber)
-        {
-            c = cast(char)((vnumber % base) + '0');
-            if (c > '9')
-                c += hexoffset;
-            vnumber /= base;
-            tmpbuf[--n] = c;
+            while (vnumber)
+            {
+                c = cast(char)((vnumber % base) + '0');
+                if (c > '9')
+                    c += hexoffset;
+                vnumber /= base;
+                tmpbuf[--n] = c;
+            }
+            if (tmpbuf.length - n < precision && precision < tmpbuf.length)
+            {
+                ptrdiff_t m = tmpbuf.length - precision;
+                tmpbuf[m .. n] = '0';
+                n = m;
+            }
+            else if (flags & FLhash && fc == 'o')
+                prefix = "0";
+            putstr(tmpbuf[n .. tmpbuf.length]);
+            return;
         }
-        if (tmpbuf.length - n < precision && precision < tmpbuf.length)
-        {
-            ptrdiff_t m = tmpbuf.length - precision;
-            tmpbuf[m .. n] = '0';
-            n = m;
-        }
-        else if (flags & FLhash && fc == 'o')
-            prefix = "0";
-        putstr(tmpbuf[n .. tmpbuf.length]);
-        return;
 
     Lreal:
         putreal(vreal);
