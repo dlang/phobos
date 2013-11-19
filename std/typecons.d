@@ -358,6 +358,8 @@ template Tuple(Specs...)
             Tup2 tup2 = void;
             static assert(tup1.field.length == tup2.field.length);
             foreach (i, _; Tup1.Types)
+            // Workaround dmd @@@BUG11557@@@
+            static if(!(is(_ == class) && is(typeof(tup2.field[i]) == class)))
             {
                 auto lhs = typeof(tup1.field[i]).init;
                 auto rhs = typeof(tup2.field[i]).init;
@@ -491,7 +493,11 @@ template Tuple(Specs...)
             {
                 if (field[i] != rhs.field[i])
                 {
-                    return field[i] < rhs.field[i] ? -1 : 1;
+                    // Workaround dmd @@@BUG11557@@@
+                    static if(is(Unused == class))
+                        return cast() field[i] < cast() rhs.field[i] ? -1 : 1;
+                    else
+                        return field[i] < rhs.field[i] ? -1 : 1;
                 }
             }
             return 0;
@@ -732,6 +738,18 @@ unittest
     {
         alias T = Tuple!(int[1][]);
         auto t = T([[10]]);
+    }
+    // 11591
+    {
+        alias T = Tuple!Object;
+        int[T] aa;
+        aa[T()] = 1;
+        assert(aa[T()] == 1);
+
+        // This isn't directly connected with the bug,
+        // just a CT test for @@@BUG11557@@@ workaround:
+        const T t;
+        assert(t <= t);
     }
 }
 unittest
