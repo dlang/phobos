@@ -228,37 +228,41 @@ class MmFile
                         dwCreationDisposition,
                         FILE_ATTRIBUTE_NORMAL,
                         cast(HANDLE)null);
-                if (hFile == INVALID_HANDLE_VALUE)
-                    goto err1;
             }
             else
                 hFile = null;
 
-            int hi = cast(int)(size>>32);
-            hFileMap = CreateFileMappingA(hFile, null, flProtect,
-                    hi, cast(uint)size, null);
-            if (hFileMap == null)               // mapping failed
-                goto err1;
-
-            if (size == 0)
+            hFileMap = null;
+            if (hFile != INVALID_HANDLE_VALUE)
             {
-                uint sizehi;
-                uint sizelow = GetFileSize(hFile,&sizehi);
-                size = (cast(ulong)sizehi << 32) + sizelow;
+                int hi = cast(int)(size>>32);
+                hFileMap = CreateFileMappingA(hFile, null, flProtect,
+                        hi, cast(uint)size, null);
             }
-            this.size = size;
+            if (hFileMap != null)               // mapping didn't fail
+            {
 
-            size_t initial_map = (window && 2*window<size)
-                ? 2*window : cast(size_t)size;
-            p = MapViewOfFileEx(hFileMap, dwDesiredAccess, 0, 0,
-                    initial_map, address);
-            if (!p) goto err1;
-            data = p[0 .. initial_map];
+                if (size == 0)
+                {
+                    uint sizehi;
+                    uint sizelow = GetFileSize(hFile,&sizehi);
+                    size = (cast(ulong)sizehi << 32) + sizelow;
+                }
+                this.size = size;
 
-            debug (MMFILE) printf("MmFile.this(): p = %p, size = %d\n", p, size);
-            return;
+                size_t initial_map = (window && 2*window<size)
+                    ? 2*window : cast(size_t)size;
+                p = MapViewOfFileEx(hFileMap, dwDesiredAccess, 0, 0,
+                        initial_map, address);
+                if (p)
+                {
+                    data = p[0 .. initial_map];
 
-          err1:
+                    debug (MMFILE) printf("MmFile.this(): p = %p, size = %d\n", p, size);
+                    return;
+                }
+            }
+
             if (hFileMap != null)
                 CloseHandle(hFileMap);
             hFileMap = null;
