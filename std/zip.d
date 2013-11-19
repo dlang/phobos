@@ -51,15 +51,19 @@ class ZipException : Exception
 }
 
 /**
+ * Compression method used by ArchiveMember
+ */
+enum CompressionMethod : ushort
+{
+	none = 0,	/// No compression, just archiving
+	deflate = 8 /// Deflate algorithm. Use zlib library to compress
+}
+
+/**
  * A member of the ZipArchive.
  */
 class ArchiveMember
 {
-    enum CompressionMethod : ushort
-    {
-	None = 0,
-	Deflate = 8
-    }
 
     ushort flags;                  /// Read/Write: normally set to 0
     std.datetime.DosFileTime time; /// Read/Write: Last modified time of the member. It's in the DOS date/time format.
@@ -76,7 +80,7 @@ class ArchiveMember
     ubyte[] extra;              /// Read/Write: extra data for this member.
     string comment;             /// Read/Write: comment associated with this member.
 
-    private ushort _compressionMethod;      
+	private CompressionMethod _compressionMethod;      
     private uint offset;
     private ushort _madeVersion = 20;       
     private ushort _extractVersion = 20;   
@@ -101,23 +105,28 @@ class ArchiveMember
     @property void expandedData(ubyte[] ed) 
     {
         _expandedData = ed;
-	_expandedSize  = to!uint(_expandedData.length);
-	_crc32 = std.zlib.crc32(0, cast(void[])_expandedData);
+		_expandedSize  = to!uint(_expandedData.length);
 
-	// Clean old compressed data, if any
-	_compressedData.length = 0;
-	_compressedSize = 0;  
+		// Clean old compressed data, if any
+		_compressedData.length = 0;
+		_compressedSize = 0;  
     }
 
-    @property ushort compressionMethod() { return _compressionMethod; } /// Read compression method used for this member \see CompressionMethod
-    @property void compressionMethod(ushort cm) 
+    @property CompressionMethod compressionMethod() { return _compressionMethod; } /// Read compression method used for this member \see CompressionMethod
+    
+	deprecated @property void compressionMethod(ushort cm)
+	{
+		compressionMethod(cast(CompressionMethod)(cm));
+	}
+
+	@property void compressionMethod(CompressionMethod cm) 
     {
-	if (cm == _compressionMethod) return;
+		if (cm == _compressionMethod) return;
 
-	if (_compressedSize > 0)
-		throw new ZipException("Can't change compression method for a compressed element");
+		if (_compressedSize > 0)
+			throw new ZipException("Can't change compression method for a compressed element");
 
-	_compressionMethod = cm;
+		_compressionMethod = cm;
     }
 
     debug(print)
@@ -243,11 +252,11 @@ class ZipArchive
             {
                 switch (de.compressionMethod)
                 {
-                    case ArchiveMember.CompressionMethod.None:
+                    case CompressionMethod.none:
                         de._compressedData = de._expandedData;
                         break;
 
-                    case ArchiveMember.CompressionMethod.Deflate:
+                    case CompressionMethod.deflate:
                         de._compressedData = cast(ubyte[])std.zlib.compress(cast(void[])de._expandedData);
                         de._compressedData = de._compressedData[2 .. de._compressedData.length - 4];
                         break;
@@ -257,6 +266,7 @@ class ZipArchive
                 }
 
                 de._compressedSize = to!uint(de._compressedData.length);
+				de._crc32 = std.zlib.crc32(0, cast(void[])de._expandedData);
             }
 
 
@@ -433,7 +443,7 @@ class ZipArchive
             de._madeVersion = getUshort(i + 4);
             de._extractVersion = getUshort(i + 6);
             de.flags = getUshort(i + 8);
-            de._compressionMethod = getUshort(i + 10);
+            de._compressionMethod = cast(CompressionMethod)getUshort(i + 10);
             de.time = cast(DosFileTime)getUint(i + 12);
             de._crc32 = getUint(i + 16);
             de._compressedSize = getUint(i + 20);
@@ -481,7 +491,7 @@ class ZipArchive
         // These values should match what is in the main zip archive directory
         de._extractVersion = getUshort(de.offset + 4);
         de.flags = getUshort(de.offset + 6);
-        de._compressionMethod = getUshort(de.offset + 8);
+        de._compressionMethod = cast(CompressionMethod)getUshort(de.offset + 8);
         de.time = cast(DosFileTime)getUint(de.offset + 10);
         de._crc32 = getUint(de.offset + 14);
         de._compressedSize = max(getUint(de.offset + 18), de.compressedSize);
@@ -510,11 +520,11 @@ class ZipArchive
 
         switch (de.compressionMethod)
         {
-            case ArchiveMember.CompressionMethod.None:
+            case CompressionMethod.none:
                 de._expandedData = de.compressedData;
                 return de.expandedData;
 
-            case ArchiveMember.CompressionMethod.Deflate:
+            case CompressionMethod.deflate:
                 // -15 is a magic value used to decompress zip files.
                 // It has the effect of not requiring the 2 byte header
                 // and 4 byte trailer.
