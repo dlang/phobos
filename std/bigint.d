@@ -243,7 +243,7 @@ public:
     }
 
     // BigInt op BigInt
-    BigInt opBinary(string op, T)(T y) pure
+    BigInt opBinary(string op, T)(T y) pure const
         if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="%") 
 			&& is (T: BigInt))
     {
@@ -252,7 +252,7 @@ public:
     }
 
     // BigInt op integer
-    BigInt opBinary(string op, T)(T y) pure
+    BigInt opBinary(string op, T)(T y) pure const
         if ((op=="+" || op == "*" || op=="-" || op=="/"
             || op==">>" || op=="<<" || op=="^^") && isIntegral!T)
     {
@@ -261,7 +261,7 @@ public:
     }
 
     //
-    int opBinary(string op, T : int)(T y) pure
+    int opBinary(string op, T : int)(T y) pure const
         if (op == "%" && isIntegral!T)
     {
         assert(y!=0);
@@ -273,14 +273,14 @@ public:
     }
 
     // Commutative operators
-    BigInt opBinaryRight(string op, T)(T y) pure
+    BigInt opBinaryRight(string op, T)(T y) pure const
         if ((op=="+" || op=="*") && isIntegral!T)
     {
         return opBinary!(op)(y);
     }
 
     //  BigInt = integer op BigInt
-    BigInt opBinaryRight(string op, T)(T y) pure
+    BigInt opBinaryRight(string op, T)(T y) pure const
         if (op == "-" && isIntegral!T)
     {
         ulong u = absUnsign(y);
@@ -295,7 +295,7 @@ public:
     }
 
     //  integer = integer op BigInt
-    T opBinaryRight(string op, T)(T x) pure
+    T opBinaryRight(string op, T)(T x) pure const
         if ((op=="%" || op=="/") && isIntegral!T)
     {
         static if (op == "%")
@@ -318,7 +318,7 @@ public:
         }
     }
     // const unary operations
-    BigInt opUnary(string op)() pure /*const*/ if (op=="+" || op=="-")
+    BigInt opUnary(string op)() pure const if (op=="+" || op=="-")
     {
        static if (op=="-")
        {
@@ -360,9 +360,14 @@ public:
     }
 
     ///
-    T opCast(T:bool)() pure
+    T opCast(T:bool)() pure const
     {
         return !isZero();
+    }
+    
+    ///
+    T opCast(T)() pure const if (is(Unqual!T == BigInt)) {
+        return this;
     }
 
     // Hack to make BigInt's typeinfo.compare work properly.
@@ -375,7 +380,7 @@ public:
     }
 
     ///
-    int opCmp(T)(T y) pure if (isIntegral!T)
+    int opCmp(T)(T y) pure const if (isIntegral!T)
     {
         if (sign != (y<0) )
             return sign ? -1 : 1;
@@ -521,7 +526,7 @@ private:
     }
 }
 
-string toDecimalString(BigInt x) 
+string toDecimalString(const(BigInt) x) 
 {
     string outbuff="";
     void sink(const(char)[] s) { outbuff ~= s; }
@@ -529,7 +534,7 @@ string toDecimalString(BigInt x)
     return outbuff;
 }
 
-string toHex(BigInt x) 
+string toHex(const(BigInt) x) 
 {
     string outbuff="";
     void sink(const(char)[] s) { outbuff ~= s; }
@@ -790,6 +795,11 @@ unittest
     import std.math:abs;
     auto r = abs(BigInt(-1000)); // 6486
     assert(r == 1000);
+    
+    auto r2 = abs(const(BigInt)(-500)); // 11188
+    assert(r2 == 500);
+    auto r3 = abs(immutable(BigInt)(-733)); // 11188
+    assert(r3 == 733);
 
     // opCast!bool
     BigInt one = 1, zero;
@@ -830,4 +840,41 @@ unittest // 8435 & 10118
     assert(keys.front == BigInt(123));
     keys.popFront();
     assert(keys.empty);
+}
+
+unittest // 11148
+{
+    void foo(BigInt) {}
+    const BigInt cbi = 3;
+    immutable BigInt ibi = 3;
+    
+    assert(__traits(compiles, foo(cbi)));
+    assert(__traits(compiles, foo(ibi)));
+    
+    import std.typetuple : TypeTuple;
+    import std.conv : to;
+    
+    foreach (T1; TypeTuple!(BigInt, const(BigInt), immutable(BigInt)))
+    {
+        foreach (T2; TypeTuple!(BigInt, const(BigInt), immutable(BigInt)))
+        {
+            T1 t1 = 2;
+            T2 t2 = t1;
+            
+            T2 t2_1 = to!T2(t1);
+            T2 t2_2 = cast(T2)t1;
+            
+            assert(t2 == t1);
+            assert(t2 == 2);
+            
+            assert(t2_1 == t1);
+            assert(t2_1 == 2);
+            
+            assert(t2_2 == t1);
+            assert(t2_2 == 2);
+        }
+    }
+    
+    BigInt n = 2;
+    n *= 2;
 }

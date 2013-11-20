@@ -153,14 +153,19 @@ version (Posix)
     version (OSX)
     {
         extern(C) char*** _NSGetEnviron() nothrow;
-        private const(char**)* environPtr;
-        extern(C) void std_process_static_this() { environPtr = _NSGetEnviron(); }
+        private __gshared const(char**)* environPtr;
+        extern(C) void std_process_shared_static_this() { environPtr = _NSGetEnviron(); }
         const(char**) environ() @property @trusted nothrow { return *environPtr; }
     }
     else
     {
         // Made available by the C runtime:
         extern(C) extern __gshared const char** environ;
+    }
+
+    unittest
+    {
+        new Thread({assert(environ !is null);}).start();
     }
 }
 

@@ -472,7 +472,8 @@ T toImpl(T, S)(ref S s)
 When source type supports member template function opCast, is is used.
 */
 T toImpl(T, S)(S value)
-    if (is(typeof(S.init.opCast!T()) : T) &&
+    if (!isImplicitlyConvertible!(S, T) &&
+        is(typeof(S.init.opCast!T()) : T) &&
         !isExactSomeString!T)
 {
     return value.opCast!T();
@@ -3865,7 +3866,8 @@ T* emplace(T, Args...)(T* chunk, auto ref Args args)
     static assert (is(T* : void*),
         format("Cannot emplace a %s because it is qualified.", T.stringof));
 
-    static assert(is(typeof({T t = args[0];})),
+    //static assert(is(typeof({T t = args[0];})),
+    static assert(is(typeof({T t = lvalueOf!(Args[0]);})), // @@@11497@@@
         format("%s cannot be emplaced from a %s.", T.stringof, Arg.stringof));
 
     static if (isStaticArray!T)
@@ -3989,7 +3991,8 @@ T* emplace(T, Args...)(T* chunk, auto ref Args args)
         format("Cannot emplace a %s because it is qualified.", T.stringof));
 
     static if (Args.length == 1 && is(Args[0] : T) &&
-        is (typeof({T t = args[0];})) //Check for legal postblit
+        //is (typeof({T t = args[0];})) //Check for legal postblit
+        is (typeof({T t = lvalueOf!(Args[0]);})) // @@@11497@@@
         )
     {
         static if (is(T == Unqual!(Args[0])))

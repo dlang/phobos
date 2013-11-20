@@ -27,7 +27,7 @@
   ...
 
   // Create a static regex at compile-time, which contains fast native code.
-  enum ctr = ctRegex!(`^.*/([^/]+)/?$`);
+  auto ctr = ctRegex!(`^.*/([^/]+)/?$`);
 
   // It works just like a normal regex:
   auto m2 = match("foo/bar", ctr);   // First match found here, if any
@@ -2084,8 +2084,6 @@ public struct Regex(Char)
         }
         return NamedGroupRange(dict, 0, dict.length);
     }
-
-    ///
 
 private:
     NamedGroup[] dict;  //maps name -> user group number
