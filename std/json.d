@@ -53,7 +53,6 @@ JSON value node
 */
 struct JSONValue
 {
-    ///
     union Store
     {
         /// Value when $(D type) is $(D JSON_TYPE.STRING).
@@ -69,11 +68,14 @@ struct JSONValue
         /// Value when $(D type) is $(D JSON_TYPE.ARRAY).
         JSONValue[]                     array;
     }
-    ///
-    Store store;
+    private Store store;
+    private JSON_TYPE type_tag;
 
     /// Specifies the _type of the value stored in this structure.
-    JSON_TYPE type;
+    @property JSON_TYPE type() const
+    {
+        return type_tag;
+    }
 
     /// Typesafe way of accessing $(D store.str).
     /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.STRING).
@@ -169,32 +171,32 @@ struct JSONValue
     {
         static if(is(T : typeof(null)))
         {
-            type = JSON_TYPE.NULL;
+            type_tag = JSON_TYPE.NULL;
         }
         else static if(is(T : string))
         {
-            type = JSON_TYPE.STRING;
+            type_tag = JSON_TYPE.STRING;
             store.str = arg;
         }
         else static if(is(T : ulong) && isUnsigned!T)
         {
-            type = JSON_TYPE.UINTEGER;
+            type_tag = JSON_TYPE.UINTEGER;
             store.uinteger = arg;
         }
         else static if(is(T : long))
         {
-            type = JSON_TYPE.INTEGER;
+            type_tag = JSON_TYPE.INTEGER;
             store.integer = arg;
         }
         else static if(isFloatingPoint!T)
         {
-            type = JSON_TYPE.FLOAT;
+            type_tag = JSON_TYPE.FLOAT;
             store.floating = arg;
         }
         else static if(is(T : Value[Key], Key, Value))
         {
             static assert(is(Key : string), "AA key must be string");
-            type = JSON_TYPE.OBJECT;
+            type_tag = JSON_TYPE.OBJECT;
             static if(is(Value : JSONValue)) {
                 store.object = arg;
             }
@@ -208,7 +210,7 @@ struct JSONValue
         }
         else static if(isArray!T)
         {
-            type = JSON_TYPE.ARRAY;
+            type_tag = JSON_TYPE.ARRAY;
             static if(is(ElementEncodingType!T : JSONValue))
             {
                 store.array = arg;
@@ -223,11 +225,11 @@ struct JSONValue
         }
         else static if(is(T : bool))
         {
-            type = arg ? JSON_TYPE.TRUE : JSON_TYPE.FALSE;
+            type_tag = arg ? JSON_TYPE.TRUE : JSON_TYPE.FALSE;
         }
         else static if(is(T : JSONValue))
         {
-            type = arg.type;
+            type_tag = arg.type;
             store = arg.store;
         }
         else
@@ -238,7 +240,7 @@ struct JSONValue
 
     private void assignRef(T)(ref T arg) if(isStaticArray!T)
     {
-        type = JSON_TYPE.ARRAY;
+        type_tag = JSON_TYPE.ARRAY;
         static if(is(ElementEncodingType!T : JSONValue))
         {
             store.array = arg;
@@ -266,7 +268,7 @@ struct JSONValue
     this(T : JSONValue)(inout T arg) inout
     {
         store = arg.store;
-        type = arg.type;
+        type_tag = arg.type;
     }
 
     void opAssign(T)(T arg) if(!isStaticArray!T && !is(T : JSONValue))
@@ -350,7 +352,7 @@ Parses a serialized string and returns a tree of JSON values.
 JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
 {
     JSONValue root = void;
-    root.type = JSON_TYPE.NULL;
+    root.type_tag = JSON_TYPE.NULL;
 
     if(json.empty) return root;
 
@@ -491,7 +493,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
         switch(c)
         {
             case '{':
-                value.type = JSON_TYPE.OBJECT;
+                value.type_tag = JSON_TYPE.OBJECT;
                 value.store.object = null;
 
                 if(testChar('}')) break;
@@ -511,7 +513,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
                 break;
 
             case '[':
-                value.type = JSON_TYPE.ARRAY;
+                value.type_tag = JSON_TYPE.ARRAY;
 
                 if(testChar(']'))
                 {
@@ -533,7 +535,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
                 break;
 
             case '"':
-                value.type = JSON_TYPE.STRING;
+                value.type_tag = JSON_TYPE.STRING;
                 value.store.str = parseString();
                 break;
 
@@ -584,7 +586,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
                 string data = number.data;
                 if(isFloat)
                 {
-                    value.type = JSON_TYPE.FLOAT;
+                    value.type_tag = JSON_TYPE.FLOAT;
                     value.store.floating = parse!real(data);
                 }
                 else
@@ -594,13 +596,13 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
                     else
                         value.store.uinteger = parse!ulong(data);
 
-                    value.type = !isNegative && value.store.uinteger & (1UL << 63) ? JSON_TYPE.UINTEGER : JSON_TYPE.INTEGER;
+                    value.type_tag = !isNegative && value.store.uinteger & (1UL << 63) ? JSON_TYPE.UINTEGER : JSON_TYPE.INTEGER;
                 }
                 break;
 
             case 't':
             case 'T':
-                value.type = JSON_TYPE.TRUE;
+                value.type_tag = JSON_TYPE.TRUE;
                 checkChar!(false, false)('r');
                 checkChar!(false, false)('u');
                 checkChar!(false, false)('e');
@@ -608,7 +610,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
 
             case 'f':
             case 'F':
-                value.type = JSON_TYPE.FALSE;
+                value.type_tag = JSON_TYPE.FALSE;
                 checkChar!(false, false)('a');
                 checkChar!(false, false)('l');
                 checkChar!(false, false)('s');
@@ -617,7 +619,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
 
             case 'n':
             case 'N':
-                value.type = JSON_TYPE.NULL;
+                value.type_tag = JSON_TYPE.NULL;
                 checkChar!(false, false)('u');
                 checkChar!(false, false)('l');
                 checkChar!(false, false)('l');
