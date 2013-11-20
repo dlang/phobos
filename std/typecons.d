@@ -1428,8 +1428,7 @@ unittest
 {
     // Bugzilla 10268
     import std.json;
-    JSONValue value = void;
-    value.type = JSON_TYPE.NULL;
+    JSONValue value = null;
     auto na = Nullable!JSONValue(value);
 
     struct S1 { int val; }
