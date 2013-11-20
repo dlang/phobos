@@ -32,20 +32,19 @@ private
 }
 
 /**
-JSON type enumeration
+JSON type enumeration. Indicates the type of a $(D JSONValue).
 */
 enum JSON_TYPE : byte
 {
-    /// Indicates the type of a $(D JSONValue).
-    STRING,
-    INTEGER, /// ditto
-    UINTEGER,/// integers > 2^63-1
-    FLOAT,   /// ditto
-    OBJECT,  /// ditto
-    ARRAY,   /// ditto
-    TRUE,    /// ditto
-    FALSE,   /// ditto
-    NULL     /// ditto
+    STRING,///
+    INTEGER,///
+    UINTEGER,///
+    FLOAT,///
+    OBJECT,///
+    ARRAY,///
+    TRUE,///
+    FALSE,///
+    NULL ///
 }
 
 /**
@@ -53,7 +52,7 @@ JSON value node
 */
 struct JSONValue
 {
-    ///
+    /// A union type for the value to be stored in
     union Store
     {
         /// Value when $(D type) is $(D JSON_TYPE.STRING).
@@ -69,7 +68,7 @@ struct JSONValue
         /// Value when $(D type) is $(D JSON_TYPE.ARRAY).
         JSONValue[]                     array;
     }
-    ///
+    ///The value itself, as a union
     Store store;
 
     /// Specifies the _type of the value stored in this structure.
@@ -216,17 +215,28 @@ struct JSONValue
         }
     }
 
-
+    /**
+     * Constructor for $(D JSONValue). If $(D arg) is a $(D JSONValue)
+     * the store and type will be copied to the new $(D JSONValue).
+     * Note that this is a shallow copy: if type is $(D JSON_TYPE.OBJECT)
+     * or $(D JSON_TYPE.ARRAY) then only the reference to the data will
+     * be copied.
+     * Otherwise, $(D arg) must be implicitly convertible to one of the
+     * following types: $(D typeof(null)), $(D string), $(D ulong),
+     * $(D long), $(D real), an associative array $(D V[K]) for any $(D V)
+     * and $(D K) i.e. a JSON object, any array or $(D bool). The type will
+     * be set accordingly.
+    */
     this(T)(T arg) if(!isStaticArray!T)
     {
         assign(arg);
     }
-
+    /// Ditto
     this(T)(ref T arg) if(isStaticArray!T)
     {
         assignRef(arg);
     }
-
+    /// Ditto
     this(T : JSONValue)(inout T arg) inout
     {
         store = arg.store;
@@ -261,6 +271,7 @@ struct JSONValue
         return store.object[k];
     }
 
+    /// Implements the foreach $(D opApply) interface for json arrays.
     int opApply(int delegate(size_t index, ref JSONValue) dg)
     {
         enforceEx!JSONException(type == JSON_TYPE.ARRAY,
@@ -277,7 +288,7 @@ struct JSONValue
         return result;
     }
 
-    /// Implements foreach interface json objects.
+    /// Implements the foreach $(D opApply) interface for json objects.
     int opApply(int delegate(string key, ref JSONValue) dg)
     {
         enforceEx!JSONException(type == JSON_TYPE.OBJECT,
