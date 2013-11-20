@@ -55,17 +55,11 @@ struct JSONValue
 {
     union Store
     {
-        /// Value when $(D type) is $(D JSON_TYPE.STRING).
         string                          str;
-        /// Value when $(D type) is $(D JSON_TYPE.INTEGER).
         long                            integer;
-        /// Value when $(D type) is $(D JSON_TYPE.UINTEGER).
         ulong                           uinteger;
-        /// Value when $(D type) is $(D JSON_TYPE.FLOAT).
         real                            floating;
-        /// Value when $(D type) is $(D JSON_TYPE.OBJECT).
         JSONValue[string]               object;
-        /// Value when $(D type) is $(D JSON_TYPE.ARRAY).
         JSONValue[]                     array;
     }
     private Store store;
@@ -77,8 +71,8 @@ struct JSONValue
         return type_tag;
     }
 
-    /// Typesafe way of accessing $(D store.str).
-    /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.STRING).
+    /// Value getter/setter for $(D JSON_TYPE.STRING).
+    /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.STRING).
     @property inout(string) str() inout
     {
         enforceEx!JSONException(type == JSON_TYPE.STRING,
@@ -92,8 +86,8 @@ struct JSONValue
         return store.str;
     }
 
-    /// Typesafe way of accessing $(D store.integer).
-    /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.INTEGER).
+    /// Value getter/setter for $(D JSON_TYPE.INTEGER).
+    /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.INTEGER).
     @property inout(long) integer() inout
     {
         enforceEx!JSONException(type == JSON_TYPE.INTEGER,
@@ -107,8 +101,8 @@ struct JSONValue
         return store.integer;
     }
 
-    /// Typesafe way of accessing $(D store.uinteger).
-    /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.UINTEGER).
+    /// Value getter/setter for $(D JSON_TYPE.UINTEGER).
+    /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.UINTEGER).
     @property inout(ulong) uinteger() inout
     {
         enforceEx!JSONException(type == JSON_TYPE.UINTEGER,
@@ -122,8 +116,8 @@ struct JSONValue
         return store.uinteger;
     }
 
-    /// Typesafe way of accessing $(D store.floating).
-    /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.FLOAT).
+    /// Value getter/setter for $(D JSON_TYPE.FLOAT).
+    /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.FLOAT).
     @property inout(real) floating() inout
     {
         enforceEx!JSONException(type == JSON_TYPE.FLOAT,
@@ -137,8 +131,8 @@ struct JSONValue
         return store.floating;
     }
 
-    /// Typesafe way of accessing $(D store.object).
-    /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT).
+    /// Value getter/setter for $(D JSON_TYPE.OBJECT).
+    /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.OBJECT).
     @property inout(JSONValue[string]) object() inout
     {
         enforceEx!JSONException(type == JSON_TYPE.OBJECT,
@@ -152,8 +146,8 @@ struct JSONValue
         return store.object;
     }
 
-    /// Typesafe way of accessing $(D store.array).
-    /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.ARRAY).
+    /// Value getter/setter for $(D JSON_TYPE.ARRAY).
+    /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.ARRAY).
     @property inout(JSONValue[]) array() inout
     {
         enforceEx!JSONException(type == JSON_TYPE.ARRAY,
