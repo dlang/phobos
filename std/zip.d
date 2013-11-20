@@ -55,7 +55,7 @@ class ZipException : Exception
  */
 enum CompressionMethod : ushort
 {
-    none = 0,    /// No compression, just archiving
+    none = 0,   /// No compression, just archiving
     deflate = 8 /// Deflate algorithm. Use zlib library to compress
 }
 
@@ -66,7 +66,7 @@ class ArchiveMember
 {
 
     ushort flags;                  /// Read/Write: normally set to 0
-    std.datetime.DosFileTime time; /// Read/Write: Last modified time of the member. It's in the DOS date/time format.
+    std.datetime.DosFileTime time; /// Read/Write: Last modified time of the member. DOS date/time format.
     ushort internalAttributes;     /// Read/Write
     uint externalAttributes;       /// Read/Write
     
@@ -93,13 +93,20 @@ class ArchiveMember
 
     @property ushort madeVersion()     { return _madeVersion; }    /// Read Only
     @property ushort extractVersion()     { return _extractVersion; }    /// Read Only
-    @property uint crc32()         { return _crc32; }        /// Read Only: cyclic redundancy check (CRC) value
-    @property uint compressedSize()     { return _compressedSize; }    /// Read Only: size of data of member in compressed form.
-    @property uint expandedSize()     { return _expandedSize; }    /// Read Only: size of data of member in expanded form.
+    @property uint crc32()         { return _crc32; }    /// Read Only: cyclic redundancy check (CRC) value
+
+    /// Read Only: size of data of member in compressed form.
+    @property uint compressedSize()     { return _compressedSize; }    
+
+    /// Read Only: size of data of member in expanded form.
+    @property uint expandedSize()     { return _expandedSize; }
     @property ushort diskNumber()     { return _diskNumber; }        /// Read Only: should be 0.
 
-    @property ubyte[] compressedData()     { return _compressedData; }     /// Read Only: data of member in compressed form.
-    @property ubyte[] expandedData()     { return _expandedData; }     /// Read data of member in uncompressed form.
+    /// Read Only: data of member in compressed form.
+    @property ubyte[] compressedData()     { return _compressedData; }
+
+    /// Read data of member in uncompressed form.
+    @property ubyte[] expandedData()     { return _expandedData; }     
 
     /// Write data of member in uncompressed form.
     @property void expandedData(ubyte[] ed) 
@@ -112,13 +119,22 @@ class ArchiveMember
         _compressedSize = 0;  
     }
 
-    @property CompressionMethod compressionMethod() { return _compressionMethod; } /// Read compression method used for this member \see CompressionMethod
-    
+    /** 
+     * Read compression method used for this member 
+     * See_Also: 
+     *     CompressionMethod
+     **/
+    @property CompressionMethod compressionMethod() { return _compressionMethod; } 
     deprecated @property void compressionMethod(ushort cm)
     {
         compressionMethod(cast(CompressionMethod)(cm));
     }
 
+    /** 
+     * Write compression method used for this member 
+     * See_Also: 
+     *     CompressionMethod
+     **/
     @property void compressionMethod(CompressionMethod cm) 
     {
         if (cm == _compressionMethod) return;
@@ -164,12 +180,19 @@ class ZipArchive
     private uint _diskStartDir;
     private uint _numEntries;   
     private uint _totalEntries; 
-    
-    @property ubyte[] data()       { return _data; }        /// Read Only: array representing the entire contents of the archive.
-    @property uint diskNumber()    { return _diskNumber; }    /// Read Only: 0 since multi-disk zip archives are not supported.
-    @property uint diskStartDir()  { return _diskStartDir; }    /// Read Only: 0 since multi-disk zip archives are not supported
-    @property uint numEntries()    { return _numEntries; }    /// Read Only: number of ArchiveMembers in the directory.
-    @property uint totalEntries()  { return _totalEntries; }    /// Read Only: same as totalEntries.
+
+    /// Read Only: array representing the entire contents of the archive.
+    @property ubyte[] data()       { return _data; }        
+
+    /// Read Only: 0 since multi-disk zip archives are not supported.
+    @property uint diskNumber()    { return _diskNumber; }    
+
+    /// Read Only: 0 since multi-disk zip archives are not supported
+    @property uint diskStartDir()  { return _diskStartDir; }    
+
+    /// Read Only: number of ArchiveMembers in the directory.
+    @property uint numEntries()    { return _numEntries; }    
+    @property uint totalEntries()  { return _totalEntries; }    /// ditto
     /**
      * Read Only: array indexed by the name of each member of the archive.
      *  All the members of the archive can be accessed with a foreach loop:
