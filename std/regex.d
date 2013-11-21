@@ -2727,7 +2727,7 @@ public:
                         static if(charSize == 1)
                             alias codeBounds = TypeTuple!(0xFFFF, 0x7FF, 0x7F, 0);
                         else //== 2
-                            static codeBounds = TypeTuple!(0xFFFF, 0);
+                            alias codeBounds = TypeTuple!(0xFFFF, 0);
                     
                         foreach(ival; set.byInterval)
                         {
@@ -6998,7 +6998,7 @@ unittest
             else
             {
                 //BUG: tv[v] is fine but tvd is not known at compile time?!
-                enum r = ctRegex!(tv[v].pattern, tv[v].flags);
+                auto r = ctRegex!(tv[v].pattern, tv[v].flags);
                 auto nr = regex(tvd.pattern, tvd.flags);
                 assert(equal(r.ir, nr.ir),
                     text("!C-T regex! failed to compile pattern #", a ,": ", tvd.pattern));
@@ -7024,7 +7024,7 @@ unittest
     run_tests!bmatch(); //backtracker
     run_tests!match(); //thompson VM
 }
-
+/*
 unittest
 {
     auto cr = ctRegex!("abc");
@@ -7092,7 +7092,7 @@ unittest
     assert(m9);
     assert(equal(map!"a.hit"(m9), ["First", "", "Second"]));
 }
-
+*/
 unittest
 {
 //global matching
