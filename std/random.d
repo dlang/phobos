@@ -1697,7 +1697,7 @@ if(isNumeric!StorageType && isUniformRNG!Rng)
     }
 }
 
-// Pick an appropriate storage type for the element type of Rangea
+// Pick an appropriate storage type for the element type of Range
 private template DiceRangeStorageFor(Range)
 {
     private alias E = ElementType!Range;
