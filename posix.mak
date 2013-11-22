@@ -333,6 +333,9 @@ zip :
 install2 : release
 	mkdir -p $(INSTALL_DIR)/lib
 	cp $(LIB) $(INSTALL_DIR)/lib/
+ifneq (,$(findstring $(OS),linux))
+	cp -P $(LIBSO) $(ROOT)/$(SONAME) $(ROOT)/libphobos2.so $(INSTALL_DIR)/lib/
+endif
 	mkdir -p $(INSTALL_DIR)/import/etc
 	mkdir -p $(INSTALL_DIR)/import/std
 	cp crc32.d $(INSTALL_DIR)/import/
