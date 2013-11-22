@@ -1615,7 +1615,7 @@ if(isNumeric!StorageType && isUniformRNG!Rng)
         && isImplicitlyConvertible!(ElementType!InRange, StorageType))
     in
     {
-        enforce(!proportions.empty, "Proportions cannot be empty");
+        assert(!proportions.empty, "Proportions cannot be empty");
     }
     body
     {
