@@ -1567,11 +1567,11 @@ $(D front). To generate a new dice roll, call $(D popFront). $(D proportions)
 may be any $(D InputRange) with a numeric $(D ElementType).
 
 $(LREF dice) might be more appropriate for single-use die, but if you plan to
-roll the same die multiple times, $(D DiceRange) will be significantly more
+roll the same die multiple times, $(D RandomDie) will be significantly more
 efficient. Additionally, its interface makes it appropriate for use with other
-ranges when you use its convenience function, $(LREF diceRange).
+ranges when you use its convenience function, $(LREF randomDie).
 
-See $(LREF diceRange) for simple example usage.
+See $(LREF randomDie) for simple example usage.
 
 Tip:
 The $(XREF range,SearchPolicy) $(D Policy) is used internally to quickly search
@@ -1587,21 +1587,21 @@ may not actually benefit from changing the $(D Policy) even in cases with
 obvious skew.
 
 Tip:
-$(D DiceRange)s also have a configurable $(D StorageType), but it isn't exposed
+$(D RandomDie)s also have a configurable $(D StorageType), but it isn't exposed
 in the helper methods. By default, it uses a larger-than-necessary type except
 when it cannot, as is the case when the type is $(D ulong) or $(D real), which
 are the largest of their types. If you are certain that a smaller type can be
 used (and keep in mind that $(D StorageType) must be large enough to accommidate
 the sum of all of the proportions), then explicitly constructing a
-$(D DiceRange) with a smaller type can decrease memory usage and improve
+$(D RandomDie) with a smaller type can decrease memory usage and improve
 performance by increasing the likelyhood that the internal array can be fully
 contained in the processor's cache.
 
-If compiled with $(D debug) checks on, $(D DiceRange) check for integer overflow
+If compiled with $(D debug) checks on, $(D RandomDie) check for integer overflow
 and significant loss of precision of floating point numbers. This can be used to
 help verify that your choice of smaller type does not cause issues.
 */
-struct DiceRange(SearchPolicy Policy, StorageType, Rng)
+struct RandomDie(SearchPolicy Policy, StorageType, Rng)
 if(isNumeric!StorageType && isUniformRNG!Rng)
 {
     private SortedRange!(StorageType[]) _propCumSumSorted;
@@ -1698,38 +1698,38 @@ if(isNumeric!StorageType && isUniformRNG!Rng)
 }
 
 // Pick an appropriate storage type for the element type of Range
-private template DiceRangeStorageFor(Range)
+private template RandomDieStorageFor(Range)
 {
     private alias E = ElementType!Range;
     static if (!isNumeric!E)
     {
         static assert(false,
-            "No appropriate DiceRange storage exists for " ~ E.stringof);
+            "No appropriate RandomDie storage exists for " ~ E.stringof);
     }
 
     static if(isIntegral!E)
     {
         static if(is( Largest!(ushort, Unsigned!E) == ushort ))
         {
-            alias DiceRangeStorageFor = uint;
+            alias RandomDieStorageFor = uint;
         }
         else static if(is( Largest!(ulong, Unsigned!E) == ulong ))
         {
-            alias DiceRangeStorageFor = ulong;
+            alias RandomDieStorageFor = ulong;
         }
         else // Some future type that is bigger
             static assert(0);
     }
     else static if(isFloatingPoint!E)
     {
-        alias DiceRangeStorageFor = Largest!(double,  E);
+        alias RandomDieStorageFor = Largest!(double,  E);
     }
     else
         static assert(false);
 }
 
 /**
-Convenience functions for creating a $(D DiceRange) that uses specified
+Convenience functions for creating a $(D RandomDie) that uses specified
 $(D proportions) and a particular $(D rng).
 If no $(D rng) is provided, $(LREF rndGen) is used.
 
@@ -1740,7 +1740,7 @@ auto proportions = [25, 50, 1];
 
 // Throw the dice 1000 times to choose elements out of list in the specified
 // proportions
-auto choices = proportions.diceRange().map!(e => list[e]).take(1000).array();
+auto choices = proportions.randomDie().map!(e => list[e]).take(1000).array();
 ----
 
 ----
@@ -1751,7 +1751,7 @@ auto choices = proportions.diceRange().map!(e => list[e]).take(1000).array();
 auto data = File("file.in").byLine.map!(e => e.text.split(",")).array;
 auto simulatedNames = data
                         .map!(e => e[1].to!size_t)
-                        .diceRange()
+                        .randomDie()
                         .map!(e => data[e][0])
                         .take(500_000).array;
 ----
@@ -1759,21 +1759,21 @@ auto simulatedNames = data
 In the last example, comparable usage of $(LREF dice) might not finish in a
 reasonable amount of time (possibly exceeding 10 minutes), especially if the
 number of proportions the file lists is higher than 50,000, which may be
-reasonable for a comprehensive list of names. However, a $(D DiceRange) will
+reasonable for a comprehensive list of names. However, a $(D RandomDie) will
 finish in under a second.
 */
-auto diceRange(Range, Rng)(Range proportions, ref Rng rng)
+auto randomDie(Range, Rng)(Range proportions, ref Rng rng)
 if(isInputRange!Range && isNumeric!(ElementType!Range)
     && !isInfinite!Range && isUniformRNG!Rng)
 {
-    return DiceRange!(SearchPolicy.binarySearch, DiceRangeStorageFor!Range, Rng)(proportions, rng);
+    return RandomDie!(SearchPolicy.binarySearch, RandomDieStorageFor!Range, Rng)(proportions, rng);
 }
 
 /// ditto
-auto diceRange(Range)(Range proportions)
+auto randomDie(Range)(Range proportions)
 if(isInputRange!Range && isNumeric!(ElementType!Range) && !isInfinite!Range)
 {
-    return diceRange(proportions, rndGen);
+    return randomDie(proportions, rndGen);
 }
 
 unittest
@@ -1796,7 +1796,7 @@ unittest
                 InType[] props = [0,0];
                 props[answer] = 1;
 
-                auto turboDicer = props.diceRange(rnd);
+                auto turboDicer = props.randomDie(rnd);
                 assert(equal( repeat(answer).take(3), turboDicer.take(3) ));
 
                 static assert(isInputRange!( typeof(turboDicer) ));
@@ -1806,9 +1806,9 @@ unittest
     }
 
     {
-        // Also, test the diceRanges that don't take an rng
+        // Also, test the randomeDies that don't take an rng
         ulong[] props = [1, 0];
-        auto turboDicer = props.diceRange();
+        auto turboDicer = props.randomDie();
         assert(equal(0.only, turboDicer.take(1)));
 
         static assert(isInputRange!( typeof(turboDicer) ));
@@ -1851,8 +1851,8 @@ unittest
                 assert(count!"a != b"(props, 0) == 1);
 
                 auto turboDicer =
-                    DiceRange!(Policy,
-                            DiceRangeStorageFor!(typeof(props)),
+                    RandomDie!(Policy,
+                            RandomDieStorageFor!(typeof(props)),
                             typeof(reproRng))
                         (props, reproRng);
 
@@ -1871,12 +1871,12 @@ unittest
         auto rnd2 = Random(313371776);
         double[] props = [1.0, 2.0, 3.0];
         auto oldDice = iota(30).map!(e => dice(rnd1, props));
-        auto turboDicer = props.diceRange(rnd2).take(30);
+        auto turboDicer = props.randomDie(rnd2).take(30);
         assert(equal(oldDice, turboDicer));
     }
 
     {
-        // diceRange has a relaxed constraint for proportions
+        // randomDie has a relaxed constraint for proportions
         // and can accept simple input ranges!
         struct InputRangeDummy
         {
@@ -1886,11 +1886,11 @@ unittest
             void popFront() { arr = arr[1..$]; }
         }
         auto props1 = InputRangeDummy([1,0]);
-        auto turboDicer1 = props1.diceRange(rnd);
+        auto turboDicer1 = props1.randomDie(rnd);
         assert(equal([0,0,0], turboDicer1.take(3)));
 
         auto props2 = InputRangeDummy([0,1]);
-        auto turboDicer2 = props2.diceRange(rnd);
+        auto turboDicer2 = props2.randomDie(rnd);
         assert(equal([1,1,1], turboDicer2.take(3)));
     }
 
@@ -1901,25 +1901,25 @@ unittest
         // {int, uint, long, ulong}
         // {double, float}
         byte[] propByte = [0,1];
-        auto dicer1 = propByte.diceRange(rnd);
+        auto dicer1 = propByte.randomDie(rnd);
         foreach(CompatType; TypeTuple!(ubyte, short, ushort))
         {
             CompatType[] compatProp = [0,1];
-            dicer1 = compatProp.diceRange(rnd);
+            dicer1 = compatProp.randomDie(rnd);
         }
 
         int[] propInt = [0,1];
-        auto dicer2 = propInt.diceRange(rnd);
+        auto dicer2 = propInt.randomDie(rnd);
         foreach(CompatType; TypeTuple!(uint, long, ulong))
         {
             CompatType[] compatProp = [0, 1];
-            dicer2 = compatProp.diceRange(rnd);
+            dicer2 = compatProp.randomDie(rnd);
         }
 
         float[] propFloat = [0.0, 1.0];
-        auto dicer3 = propFloat.diceRange(rnd);
+        auto dicer3 = propFloat.randomDie(rnd);
         double[] propDouble = [0.0, 1.0];
-        dicer3 = propDouble.diceRange(rnd);
+        dicer3 = propDouble.randomDie(rnd);
     }
 }
 
