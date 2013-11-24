@@ -96,7 +96,7 @@ struct BigUint
 private:
     pure invariant() 
     {
-        assert( data.length == 1 || data[$-1] != 0 );
+        assert( data.length >= 1 && (data.length == 1 || data[$-1] != 0 ));
     }    
     immutable(BigDigit) [] data = ZERO;
     this(immutable(BigDigit) [] x) pure
@@ -214,7 +214,11 @@ public:
             BigDigit tmp = cast(BigDigit)(y>>(i*BigDigitBits));
             if (tmp == 0)
                 if (data.length >= i+1)
-                    return 1;
+                {
+                    // Since ZERO is [0], so we cannot simply return 1 here, as
+                    // data[i] would be 0 for i==0 in that case.
+                    return (data[i] > 0) ? 1 : 0;
+                }
                 else
                     continue;
             else

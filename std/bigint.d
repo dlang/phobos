@@ -893,3 +893,9 @@ unittest // 11600
     assertThrown!ConvException(to!BigInt("__reallynow__"));
     assertThrown!ConvException(to!BigInt("-123four"));
 }
+
+unittest // 11583
+{
+    BigInt x = 0;
+    assert((x > 0) == false);
+}
