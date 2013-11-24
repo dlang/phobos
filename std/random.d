@@ -1600,12 +1600,16 @@ contained in the processor's cache.
 If compiled with $(D debug) checks on, $(D RandomDie) check for integer overflow
 and significant loss of precision of floating point numbers. This can be used to
 help verify that your choice of smaller type does not cause issues.
+
+These user specified $(D StorageType)s must be Unqualified (immutable, const,
+and shared types are not accepted) because, regardless of the qualifiers, the
+internal storage is immutable after it is created anyway.
 */
 struct RandomDie(SearchPolicy Policy, StorageType, Rng = void)
-if(isNumeric!StorageType && ( isUniformRNG!Rng || is(Rng == void) ))
+if(isNumeric!StorageType && is(Unqual!StorageType == StorageType)
+    && ( isUniformRNG!Rng || is(Rng == void) ))
 {
-    private SortedRange!(StorageType[]) _propCumSumSorted;
-    private StorageType _sum;
+    private SortedRange!( immutable(StorageType)[] ) _propCumSumSorted;
     private size_t _front;
 
     static if(is(Rng == void))
@@ -1620,7 +1624,7 @@ if(isNumeric!StorageType && ( isUniformRNG!Rng || is(Rng == void) ))
         }
         body
         {
-            prepareCumulativeSumArray(createProportionArray(proportions));
+            prepareCumulativeSumArray(proportions);
         }
     }
     else
@@ -1639,11 +1643,11 @@ if(isNumeric!StorageType && ( isUniformRNG!Rng || is(Rng == void) ))
         {
             _rng = rng;
 
-            prepareCumulativeSumArray(createProportionArray(proportions));
+            prepareCumulativeSumArray(proportions);
         }
     }
 
-    private StorageType[] createProportionArray(InRange)(InRange proportions)
+    private void prepareCumulativeSumArray(InRange)(InRange proportions)
     {
         static if(isImplicitlyConvertible!( typeof(proportions.array), StorageType[] ))
         {
@@ -1654,11 +1658,6 @@ if(isNumeric!StorageType && ( isUniformRNG!Rng || is(Rng == void) ))
            StorageType[] propArray = proportions.map!(to!StorageType).array;
         }
 
-        return propArray;
-    }
-
-    private void prepareCumulativeSumArray(StorageType[] propArray)
-    {
         // In the case of floating points, we need to avoid losing precision
         // as we sum everything up.
         alias AccumulatorType =
@@ -1695,27 +1694,25 @@ if(isNumeric!StorageType && ( isUniformRNG!Rng || is(Rng == void) ))
             e = accumulator;
         }
 
-        _sum = propArray.back;
-
         // Cumulative sum arrays are naturally sorted "a < b"
-        _propCumSumSorted = assumeSorted(propArray);
+        _propCumSumSorted = assumeSorted( assumeUnique(propArray)[] );
 
         // Prime the next dice roll with popFront
         popFront();
     }
-
     void popFront()
     {
+        immutable sum = _propCumSumSorted.back;
         static if(is(Rng == void))
         {
-            immutable point = uniform(0, _sum);
+            immutable point = uniform(0, sum);
         }
         else
         {
-            immutable point = uniform(0, _sum, _rng);
+            immutable point = uniform(0, sum, _rng);
         }
         
-        assert(point < _sum);
+        assert(point < sum);
 
         // Return the number of elements that are not strictly greater than point
         _front = _propCumSumSorted.length - _propCumSumSorted.upperBound!Policy(point).length;
@@ -1865,6 +1862,36 @@ unittest
 
     alias InputTypes = TypeTuple!(UnqualTypes, ConstTypes, ImmutableTypes);
 
+    //UnqualTypes are all of the possible user-specified RandomDie StorageTypes
+    //while InputTypes are all possible ElementTypes that should be supported
+    //by randomDie.
+
+    foreach(GoodUserType; UnqualTypes)
+    {
+        static assert(__traits(compiles, (){
+                GoodUserType[] range = [0];
+                auto dicer = RandomDie!(SearchPolicy.binarySearch,
+                                        GoodUserType,
+                                        typeof(rnd))(rnd, range);
+            }));
+    }
+    foreach(BadUserType; TypeTuple!(ConstTypes, Immutable))
+    {
+        static assert(!__traits(compiles, (){
+                BadUserType[] range = [0];
+                auto dicer = RandomDie!(SearchPolicy.binarySearch,
+                                        BadUserType,
+                                        typeof(rnd))(rnd, range);
+            }));
+    }
+    foreach(InType; InputTypes)
+    {
+        static assert(__traits(compiles, (){
+                InType[] range = [0];
+                auto dicer = randomDie(rnd, range);
+            }));
+    }
+
     // Basic relability tests...
     {
         alias Answers = TypeTuple!(0,1);
@@ -1936,7 +1963,8 @@ unittest
     }
 
     {
-        // Test out all different search policies...
+        // Test out all user-specified template parameters except RNGs
+
         alias SearchPolicies = TypeTuple!(SearchPolicy.gallop,
                 SearchPolicy.gallopBackwards, SearchPolicy.trot,
                 SearchPolicy.trotBackwards, SearchPolicy.binarySearch);
@@ -1946,7 +1974,7 @@ unittest
 
         foreach(Policy; SearchPolicies)
         {
-            foreach(InType; InputTypes)
+            foreach(InType; UnqualTypes)
             {
                 size_t len = uniform(3, 50, reproRng);
                 size_t answerIdx = uniform(0, len, reproRng);
@@ -1975,7 +2003,7 @@ unittest
 
                 auto turboDicer =
                     RandomDie!(Policy,
-                            RandomDieStorageFor!(typeof(props)),
+                            InType,
                             typeof(reproRng))
                         (reproRng, props);
 
