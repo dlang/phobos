@@ -1601,25 +1601,50 @@ If compiled with $(D debug) checks on, $(D RandomDie) check for integer overflow
 and significant loss of precision of floating point numbers. This can be used to
 help verify that your choice of smaller type does not cause issues.
 */
-struct RandomDie(SearchPolicy Policy, StorageType, Rng)
-if(isNumeric!StorageType && isUniformRNG!Rng)
+struct RandomDie(SearchPolicy Policy, StorageType, Rng = void)
+if(isNumeric!StorageType && ( isUniformRNG!Rng || is(Rng == void) ))
 {
     private SortedRange!(StorageType[]) _propCumSumSorted;
     private StorageType _sum;
     private size_t _front;
-    private Rng* _rng;
 
-    this(InRange)(InRange proportions, ref Rng rng)
-    if(isInputRange!InRange && isNumeric!(ElementType!InRange)
-        && !isInfinite!InRange
-        && isImplicitlyConvertible!(ElementType!InRange, StorageType))
-    in
+    static if(is(Rng == void))
     {
-        assert(!proportions.empty, "Proportions cannot be empty");
+        this(InRange)(InRange proportions)
+        if(isInputRange!InRange && isNumeric!(ElementType!InRange)
+            && !isInfinite!InRange
+            && isImplicitlyConvertible!(ElementType!InRange, StorageType))
+        in
+        {
+            assert(!proportions.empty, "Proportions cannot be empty");
+        }
+        body
+        {
+            prepareCumulativeSumArray(createProportionArray(proportions));
+        }
     }
-    body
+    else
     {
-        _rng = &rng;
+        private Rng _rng;
+
+        this(InRange)(InRange proportions, ref Rng rng)
+        if(isInputRange!InRange && isNumeric!(ElementType!InRange)
+            && !isInfinite!InRange
+            && isImplicitlyConvertible!(ElementType!InRange, StorageType))
+        in
+        {
+            assert(!proportions.empty, "Proportions cannot be empty");
+        }
+        body
+        {
+            _rng = rng;
+
+            prepareCumulativeSumArray(createProportionArray(proportions));
+        }
+    }
+
+    private StorageType[] createProportionArray(InRange)(InRange proportions)
+    {
         static if(isImplicitlyConvertible!( typeof(proportions.array), StorageType[] ))
         {
             StorageType[] propArray = proportions.array;
@@ -1629,7 +1654,7 @@ if(isNumeric!StorageType && isUniformRNG!Rng)
            StorageType[] propArray = proportions.map!(to!StorageType).array;
         }
 
-        prepareCumulativeSumArray(propArray);
+        return propArray;
     }
 
     private void prepareCumulativeSumArray(StorageType[] propArray)
@@ -1681,7 +1706,15 @@ if(isNumeric!StorageType && isUniformRNG!Rng)
 
     void popFront()
     {
-        immutable point = uniform(0, _sum, *_rng);
+        static if(is(Rng == void))
+        {
+            immutable point = uniform(0, _sum);
+        }
+        else
+        {
+            immutable point = uniform(0, _sum, _rng);
+        }
+        
         assert(point < _sum);
 
         // Return the number of elements that are not strictly greater than point
@@ -1761,6 +1794,33 @@ reasonable amount of time (possibly exceeding 10 minutes), especially if the
 number of proportions the file lists is higher than 50,000, which may be
 reasonable for a comprehensive list of names. However, a $(D RandomDie) will
 finish in under a second.
+
+$(B WARNING:) If an alternative RNG is desired, it is essential for this
+to be a $(I new) RNG seeded in an unpredictable manner. Passing it a RNG
+used elsewhere in the program will result in unintended correlations,
+due to the current implementation of RNGs as value types.
+
+Example:
+----
+int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
+foreach (e; randomDie(a, Random(unpredictableSeed)))  // correct!
+{
+    writeln(e);
+}
+
+foreach (e; randomDie(a, rndGen))  // DANGEROUS!! rndGen gets copied by value
+{
+    writeln(e);
+}
+
+foreach (e; randomDie(a, rndGen))  // ... so this second random die
+{                                  // will output the same sequence as
+    writeln(e);                    // the previous one.
+}
+----
+
+These issues will be resolved in a second-generation std.random that
+re-implements random number generators as reference types.
 */
 auto randomDie(Range, Rng)(Range proportions, ref Rng rng)
 if(isInputRange!Range && isNumeric!(ElementType!Range)
@@ -1773,7 +1833,7 @@ if(isInputRange!Range && isNumeric!(ElementType!Range)
 auto randomDie(Range)(Range proportions)
 if(isInputRange!Range && isNumeric!(ElementType!Range) && !isInfinite!Range)
 {
-    return randomDie(proportions, rndGen);
+    return RandomDie!(SearchPolicy.binarySearch, RandomDieStorageFor!Range, void)(proportions);
 }
 
 unittest
@@ -1820,6 +1880,24 @@ unittest
         {
             assert(e != 0);
         }
+    }
+
+    // Check that two randomDie using the default rng choose different items
+    {
+        auto dicer1 = randomDie(repeat(1).take(31)).take(500);
+        auto dicer2 = randomDie(repeat(1).take(31)).take(500);
+        bool different = false;
+
+        foreach(a, b; lockstep(dicer1, dicer2))
+        {
+            if(a != b)
+            {
+                different = true;
+                break;
+            }
+        }
+
+        assert(different, "2 randomDies each using default rng are behaving the same");
     }
 
     {
