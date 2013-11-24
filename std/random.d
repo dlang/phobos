@@ -1782,12 +1782,12 @@ unittest
 
     auto rnd = Random(unpredictableSeed);
 
-    // Basic relability tests...
-    {
-        alias InputTypes = TypeTuple!(byte, short, int, long,
+    alias InputTypes = TypeTuple!(byte, short, int, long,
                 ubyte, ushort, uint, ulong,
                 float, double, real);
 
+    // Basic relability tests...
+    {
         alias Answers = TypeTuple!(0,1);
 
         foreach(InType; InputTypes)
@@ -1802,6 +1802,23 @@ unittest
                 static assert(isInputRange!( typeof(turboDicer) ));
                 static assert(isInfinite!( typeof(turboDicer) ));
             }
+        }
+    }
+
+    // Check that randomDie actually chooses different items when used correctly
+    {
+        // using a new, reproducable rng for this test...
+        auto reproRng = Xorshift(87324);
+
+        auto turboDicer = randomDie([1,1,1], reproRng);
+        auto counts = [0,0,0];
+        foreach(i; turboDicer.take(100))
+        {
+            counts[i] += 1;
+        }
+        foreach(e; counts)
+        {
+            assert(e != 0);
         }
     }
 
@@ -1820,10 +1837,6 @@ unittest
         alias SearchPolicies = TypeTuple!(SearchPolicy.gallop,
                 SearchPolicy.gallopBackwards, SearchPolicy.trot,
                 SearchPolicy.trotBackwards, SearchPolicy.binarySearch);
-        // and thoroughly test different inputs
-        alias InputTypes = TypeTuple!(byte, short, int, long,
-                ubyte, ushort, uint, ulong,
-                float, double, real);
 
         // using a new, reproducable rng for this test...
         auto reproRng = Xorshift(87324);
