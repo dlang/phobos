@@ -1733,7 +1733,7 @@ if(isNumeric!StorageType && ( isUniformRNG!Rng || is(Rng == void) ))
 // Pick an appropriate storage type for the element type of Range
 private template RandomDieStorageFor(Range)
 {
-    private alias E = ElementType!Range;
+    private alias E = Unqual!(ElementType!Range);
     static if (!isNumeric!E)
     {
         static assert(false,
@@ -1755,7 +1755,7 @@ private template RandomDieStorageFor(Range)
     }
     else static if(isFloatingPoint!E)
     {
-        alias RandomDieStorageFor = Largest!(double,  E);
+        alias RandomDieStorageFor = Largest!(double, E);
     }
     else
         static assert(false);
@@ -1854,9 +1854,16 @@ unittest
 
     auto rnd = Random(unpredictableSeed);
 
-    alias InputTypes = TypeTuple!(byte, short, int, long,
+    alias Const(T) = const T;
+    alias Immutable(T) = immutable T;
+
+    alias UnqualTypes = TypeTuple!(byte, short, int, long,
                 ubyte, ushort, uint, ulong,
                 float, double, real);
+    alias ConstTypes = staticMap!(Const, UnqualTypes);
+    alias ImmutableTypes = staticMap!(Immutable, UnqualTypes);
+
+    alias InputTypes = TypeTuple!(UnqualTypes, ConstTypes, ImmutableTypes);
 
     // Basic relability tests...
     {
@@ -1865,8 +1872,14 @@ unittest
         foreach(InType; InputTypes)
         {
             foreach(answer; Answers) {
-                InType[] props = [0,0];
-                props[answer] = 1;
+                static if(answer == 0)
+                {
+                    InType[] props = [1,0];
+                }
+                else
+                {
+                    InType[] props = [0,1];
+                }
 
                 auto turboDicer = randomDie(rnd, props);
                 assert(equal( repeat(answer).take(3), turboDicer.take(3) ));
@@ -1935,22 +1948,29 @@ unittest
         {
             foreach(InType; InputTypes)
             {
-                InType[] props;
-                props.length = uniform(3, 50, reproRng);
-                props[] = 0;
-                size_t answer = uniform(0, props.length, reproRng);
+                size_t len = uniform(3, 50, reproRng);
+                size_t answerIdx = uniform(0, len, reproRng);
 
                 static if(isIntegral!InType)
                 {
-                    props[answer] = InType.max;
+                    InType answerValue = InType.max;
                 }
                 else static if(isFloatingPoint!InType)
                 {
-                    props[answer] = 1.0;
+                    InType answerValue = 1.0;
                 }
                 else
                     static assert(0);
 
+                InType zero = 0;
+
+                InType[] props = chain(
+                                    repeat(zero).take(answerIdx).array, 
+                                    only(answerValue).array,
+                                    repeat(zero).take(len - (answerIdx + 1)).array
+                                ).array;
+
+                assert(props.length == len);
                 assert(count!"a != b"(props, 0) == 1);
 
                 auto turboDicer =
@@ -1959,7 +1979,7 @@ unittest
                             typeof(reproRng))
                         (reproRng, props);
 
-                assert(equal( repeat(answer).take(20), turboDicer.take(20) ));
+                assert(equal( repeat(answerIdx).take(20), turboDicer.take(20) ));
 
                 static assert(isInputRange!( typeof(turboDicer) ));
                 static assert(isInfinite!( typeof(turboDicer) ));
