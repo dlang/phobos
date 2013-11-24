@@ -1631,7 +1631,7 @@ if(isNumeric!StorageType && is(Unqual!StorageType == StorageType)
     {
         private Rng _rng;
 
-        this(InRange)(ref Rng rng, InRange proportions)
+        this(InRange)(InRange proportions, ref Rng rng)
         if(isInputRange!InRange && isNumeric!(ElementType!InRange)
             && !isInfinite!InRange
             && isImplicitlyConvertible!(ElementType!InRange, StorageType))
@@ -1768,7 +1768,7 @@ Examples:
 // Throw the dice 1000 times to choose elements out of list in the specified
 // proportions
 auto list = ["somewhat common", "very common", "rare"];
-auto choices = randomDie(25, 50, 1).map!(e => list[e]).take(1000).array();
+auto choices = [25, 50, 1].randomDie().map!(e => list[e]).take(1000).array();
 ----
 
 ----
@@ -1777,7 +1777,7 @@ auto choices = randomDie(25, 50, 1).map!(e => list[e]).take(1000).array();
 // NAME,count
 // The file may be arbitrarily large.
 auto data = File("file.in").byLine.map!(e => e.text.split(",")).array;
-auto simulatedNames = randomDie(data.map!( e => e[1].to!size_t ))
+auto simulatedNames = data.map!( e => e[1].to!size_t ).randomDie()
                         .map!(e => data[e][0])
                         .take(500_000).array;
 ----
@@ -1796,17 +1796,17 @@ due to the current implementation of RNGs as value types.
 Example:
 ----
 int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
-foreach (e; randomDie(Random(unpredictableSeed), a))  // correct!
+foreach (e; randomDie(a, Random(unpredictableSeed)))  // correct!
 {
     writeln(e);
 }
 
-foreach (e; randomDie(rndGen, a))  // DANGEROUS!! rndGen gets copied by value
+foreach (e; randomDie(a, rndGen))  // DANGEROUS!! rndGen gets copied by value
 {
     writeln(e);
 }
 
-foreach (e; randomDie(rndGen, a))  // ... so this second random die
+foreach (e; randomDie(a, rndGen))  // ... so this second random die
 {                                  // will output the same sequence as
     writeln(e);                    // the previous one.
 }
@@ -1815,34 +1815,18 @@ foreach (e; randomDie(rndGen, a))  // ... so this second random die
 These issues will be resolved in a second-generation std.random that
 re-implements random number generators as reference types.
 */
-auto randomDie(Rng, Range)(ref Rng rng, Range proportions)
+auto randomDie(Rng, Range)(Range proportions, ref Rng rng)
 if(isInputRange!Range && isNumeric!(ElementType!Range)
-    && !isInfinite!Range && isUniformRNG!Rng
-    && !isArray!Range)
+    && !isInfinite!Range && isUniformRNG!Rng)
 {
-    return RandomDie!(SearchPolicy.binarySearch, RandomDieStorageFor!Range, Rng)(rng, proportions);
-}
-
-/// ditto
-auto randomDie(Rng, Num)(ref Rng rng, Num[] proportions...)
-if(isNumeric!Num && isUniformRNG!Rng)
-{
-    return RandomDie!(SearchPolicy.binarySearch, RandomDieStorageFor!(Num[]), Rng)(rng, proportions);
+    return RandomDie!(SearchPolicy.binarySearch, RandomDieStorageFor!Range, Rng)(proportions, rng);
 }
 
 /// ditto
 auto randomDie(Range)(Range proportions)
-if(isInputRange!Range && isNumeric!(ElementType!Range) && !isInfinite!Range
-    && !isArray!Range)
+if(isInputRange!Range && isNumeric!(ElementType!Range) && !isInfinite!Range)
 {
     return RandomDie!(SearchPolicy.binarySearch, RandomDieStorageFor!Range, void)(proportions);
-}
-
-/// ditto
-auto randomDie(Num)(Num[] proportions...)
-if(isNumeric!Num)
-{
-    return RandomDie!(SearchPolicy.binarySearch, RandomDieStorageFor!(Num[]), void)(proportions);
 }
 
 unittest
@@ -1872,7 +1856,7 @@ unittest
                 GoodUserType[] range = [0];
                 auto dicer = RandomDie!(SearchPolicy.binarySearch,
                                         GoodUserType,
-                                        typeof(rnd))(rnd, range);
+                                        typeof(rnd))(range, rnd);
             }));
     }
     foreach(BadUserType; TypeTuple!(ConstTypes, Immutable))
@@ -1881,14 +1865,14 @@ unittest
                 BadUserType[] range = [0];
                 auto dicer = RandomDie!(SearchPolicy.binarySearch,
                                         BadUserType,
-                                        typeof(rnd))(rnd, range);
+                                        typeof(rnd))(range, rnd);
             }));
     }
     foreach(InType; InputTypes)
     {
         static assert(__traits(compiles, (){
                 InType[] range = [0];
-                auto dicer = randomDie(rnd, range);
+                auto dicer = range.randomDie(rnd);
             }));
     }
 
@@ -1908,7 +1892,7 @@ unittest
                     InType[] props = [0,1];
                 }
 
-                auto turboDicer = randomDie(rnd, props);
+                auto turboDicer = props.randomDie(rnd);
                 assert(equal( repeat(answer).take(3), turboDicer.take(3) ));
 
                 static assert(isInputRange!( typeof(turboDicer) ));
@@ -1922,7 +1906,7 @@ unittest
         // using a new, reproducable rng for this test...
         auto reproRng = Xorshift(87324);
 
-        auto turboDicer = randomDie(reproRng, [1,1,1]);
+        auto turboDicer = [1,1,1].randomDie(reproRng);
         auto counts = [0,0,0];
         foreach(i; turboDicer.take(100))
         {
@@ -1936,8 +1920,8 @@ unittest
 
     // Check that two randomDie using the default rng choose different items
     {
-        auto dicer1 = randomDie(repeat(1).take(31)).take(500);
-        auto dicer2 = randomDie(repeat(1).take(31)).take(500);
+        auto dicer1 = repeat(1).take(31).randomDie().take(500);
+        auto dicer2 = repeat(1).take(31).randomDie().take(500);
         bool different = false;
 
         foreach(a, b; lockstep(dicer1, dicer2))
@@ -1955,7 +1939,7 @@ unittest
     {
         // Also, test the randomeDies that don't take an rng
         ulong[] props = [1, 0];
-        auto turboDicer = randomDie(props);
+        auto turboDicer = props.randomDie();
         assert(equal(0.only, turboDicer.take(1)));
 
         static assert(isInputRange!( typeof(turboDicer) ));
@@ -2005,7 +1989,7 @@ unittest
                     RandomDie!(Policy,
                             InType,
                             typeof(reproRng))
-                        (reproRng, props);
+                        (props, reproRng);
 
                 assert(equal( repeat(answerIdx).take(20), turboDicer.take(20) ));
 
@@ -2022,16 +2006,8 @@ unittest
         auto rnd2 = Random(313371776);
         double[] props = [1.0, 2.0, 3.0];
         auto oldDice = iota(30).map!(e => dice(rnd1, props));
-        auto turboDicer = randomDie(rnd2, props).take(30);
+        auto turboDicer = props.randomDie(rnd2).take(30);
         assert(equal(oldDice, turboDicer));
-    }
-
-    {
-        // Make sure that randomDie can take variable args like dice can
-        auto dicer = randomDie(rnd, 0, 1, 0);
-        auto dicerDefault = randomDie(0, 0, 1);
-        assert(equal( [1], dicer.take(1) ));
-        assert(equal( [2], dicerDefault.take(1) ));
     }
 
     {
@@ -2045,11 +2021,11 @@ unittest
             void popFront() { arr = arr[1..$]; }
         }
         auto props1 = InputRangeDummy([1,0]);
-        auto turboDicer1 = randomDie(rnd, props1);
+        auto turboDicer1 = props1.randomDie(rnd);
         assert(equal([0,0,0], turboDicer1.take(3)));
 
         auto props2 = InputRangeDummy([0,1]);
-        auto turboDicer2 = randomDie(rnd, props2);
+        auto turboDicer2 = props2.randomDie(rnd);
         assert(equal([1,1,1], turboDicer2.take(3)));
     }
 
@@ -2060,25 +2036,25 @@ unittest
         // {int, uint, long, ulong}
         // {double, float}
         byte[] propByte = [0,1];
-        auto dicer1 = randomDie(rnd, propByte);
+        auto dicer1 = propByte.randomDie(rnd);
         foreach(CompatType; TypeTuple!(ubyte, short, ushort))
         {
             CompatType[] compatProp = [0,1];
-            dicer1 = randomDie(rnd, compatProp);
+            dicer1 = compatProp.randomDie(rnd);
         }
 
         int[] propInt = [0,1];
-        auto dicer2 = randomDie(rnd, propInt);
+        auto dicer2 = propInt.randomDie(rnd);
         foreach(CompatType; TypeTuple!(uint, long, ulong))
         {
             CompatType[] compatProp = [0, 1];
-            dicer2 = randomDie(rnd, compatProp);
+            dicer2 = compatProp.randomDie(rnd);
         }
 
         float[] propFloat = [0.0, 1.0];
-        auto dicer3 = randomDie(rnd, propFloat);
+        auto dicer3 = propFloat.randomDie(rnd);
         double[] propDouble = [0.0, 1.0];
-        dicer3 = randomDie(rnd, propDouble);
+        dicer3 = propDouble.randomDie(rnd);
     }
 }
 
