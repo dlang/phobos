@@ -312,7 +312,7 @@ version(unittest)
  */
 template packageName(alias T)
 {
-    static if (is(typeof(__traits(parent, T))))
+    static if (__traits(compiles, __traits(parent, T)))
         enum parent = packageName!(__traits(parent, T));
     else
         enum string parent = null;
