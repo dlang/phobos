@@ -127,7 +127,7 @@ class ArchiveMember
     @property CompressionMethod compressionMethod() { return _compressionMethod; } 
     deprecated @property void compressionMethod(ushort cm)
     {
-        compressionMethod(cast(CompressionMethod)(cm));
+        compressionMethod = cast(CompressionMethod)(cm);
     }
 
     /** 
