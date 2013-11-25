@@ -1248,57 +1248,58 @@ if (isFloatingPoint!(CommonType!(T1, T2)))
 }
 
 // Implementation of uniform for integral types
-auto uniform(string boundaries = "[)",
-        T1, T2, UniformRandomNumberGenerator)
-(T1 a, T2 b, ref UniformRandomNumberGenerator urng)
+auto uniform(string boundaries = "[)", T1, T2, RandomGen)
+(T1 a, T2 b, ref RandomGen rng)
 if (isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2)))
 {
-    alias Unqual!(CommonType!(T1, T2)) ResultType;
-    // We handle the case "[)' as the common case, and we adjust all
-    // other cases to fit it.
+    alias ResultType = Unqual!(CommonType!(T1, T2));
     static if (boundaries[0] == '(')
     {
-        enforce(cast(ResultType) a < ResultType.max,
+        enforce(a < ResultType.max,
                 text("std.random.uniform(): invalid left bound ", a));
-        ResultType min = cast(ResultType) a + 1;
+        ResultType lower = a + 1;
     }
     else
     {
-        ResultType min = a;
+        ResultType lower = a;
     }
+    
     static if (boundaries[1] == ']')
     {
-        enforce(min <= cast(ResultType) b,
+        enforce(lower <= b,
                 text("std.random.uniform(): invalid bounding interval ",
                         boundaries[0], a, ", ", b, boundaries[1]));
-        if (b == ResultType.max && min == ResultType.min)
+        if (b == ResultType.max && lower == ResultType.min)
         {
             // Special case - all bits are occupied
-            return .uniform!ResultType(urng);
+            return std.random.uniform!ResultType(rng);
         }
-        auto count = unsigned(b - min) + 1u;
-        static assert(count.min == 0);
+        auto upperDist = unsigned(b - lower) + 1u;
     }
     else
     {
-        enforce(min < cast(ResultType) b,
+        enforce(lower < b,
                 text("std.random.uniform(): invalid bounding interval ",
                         boundaries[0], a, ", ", b, boundaries[1]));
-        auto count = unsigned(b - min);
-        static assert(count.min == 0);
+        auto upperDist = unsigned(b - lower);
     }
-    assert(count != 0);
-    if (count == 1) return min;
-    alias typeof(count) CountType;
-    static assert(CountType.min == 0);
-    auto bucketSize = 1u + (CountType.max - count + 1) / count;
-    CountType r;
+    
+    assert(upperDist != 0);
+    if (upperDist == 1) return lower;
+
+    alias UpperType = typeof(upperDist);
+    static assert(UpperType.min == 0);
+
+    UpperType offset, rnum, bucketFront;
     do
     {
-        r = cast(CountType) (uniform!CountType(urng) / bucketSize);
-    }
-    while (r >= count);
-    return cast(typeof(return)) (min + r);
+        rnum = uniform!UpperType(rng);
+        offset = rnum % upperDist;
+        bucketFront = rnum - offset;
+    } // while we're in an unfair bucket...
+    while (bucketFront > (UpperType.max - (upperDist - 1)));
+
+    return cast(ResultType)(lower + offset);
 }
 
 unittest
@@ -1321,6 +1322,68 @@ unittest
         size_t i = 50;
         while (--i && uniform(lo, hi) == init) {}
         assert(i > 0);
+    }
+
+    auto reproRng = Xorshift(239842);
+
+    foreach(T; TypeTuple!(char, wchar, dchar, byte, ubyte, short,
+                          ushort, int, uint, long, ulong))
+    {
+        T lo = T.min + 10, hi = T.max - 10;
+        T init = uniform(lo, hi, reproRng);
+        size_t i = 50;
+        while (--i && uniform(lo, hi, reproRng) == init) {}
+        assert(i > 0);
+    }
+
+    {
+        bool sawLB = false, sawUB = false;
+        foreach (i; 0 .. 50)
+        {
+            auto x = uniform!"[]"('a', 'd', reproRng);
+            if(x == 'a') sawLB = true;
+            if(x == 'd') sawUB = true;
+            assert('a' <= x && x <= 'd');
+        }
+        assert(sawLB && sawUB);
+    }
+
+    {
+        bool sawLB = false, sawUB = false;
+        foreach (i; 0 .. 50)
+        {
+            auto x = uniform('a', 'd', reproRng);
+            if(x == 'a') sawLB = true;
+            if(x == 'c') sawUB = true;
+            assert('a' <= x && x < 'd');
+        }
+        assert(sawLB && sawUB);
+    }
+
+    {
+        bool sawLB = false, sawUB = false;
+        foreach (i; 0 .. 50)
+        {
+            immutable int lo = -2, hi = 2;
+            auto x = uniform!"()"(lo, hi, reproRng);
+            if(x == (lo+1)) sawLB = true;
+            if(x == (hi-1)) sawUB = true;
+            assert(lo < x && x < hi);
+        }
+        assert(sawLB && sawUB);
+    }
+
+    {
+        bool sawLB = false, sawUB = false;
+        foreach(i; 0 .. 50)
+        {
+            immutable ubyte lo = 0, hi = 5;
+            auto x = uniform(lo, hi, reproRng);
+            if(x == lo) sawLB = true;
+            if(x == (hi-1)) sawUB = true;
+            assert(lo <= x && x < hi);
+        }
+        assert(sawLB && sawUB);
     }
 }
 
