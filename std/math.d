@@ -655,7 +655,7 @@ unittest
         r = -r;
         t = tan(x);
         //printf("tan(%Lg) = %Lg, should be %Lg\n", x, t, r);
-        if (!isIdentical(r, t) && !(r!<>=0 && t!<>=0)) assert(fabs(r-t) <= .0000001);
+        if (!isIdentical(r, t) && !(r!=r && t!=t)) assert(fabs(r-t) <= .0000001);
     }
     // overflow
     assert(isNaN(tan(real.infinity)));
@@ -2895,7 +2895,7 @@ real hypot(real x, real y) @safe pure nothrow
 
     real u = fabs(x);
     real v = fabs(y);
-    if (u !>= v)  // check for NaN as well.
+    if (!(u >= v))  // check for NaN as well.
     {
         v = u;
         u = fabs(y);
@@ -5352,7 +5352,7 @@ in
 {
     // both x and y must have the same sign, and must not be NaN.
     assert(signbit(x) == signbit(y));
-    assert(x<>=0 && y<>=0);
+    assert(x==x && y==y);
 }
 body
 {
