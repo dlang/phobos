@@ -191,7 +191,7 @@ returns a range containing the tuples $(D tuple(5, 1)),
 $(D tuple(2, 2)), and $(D tuple(3, 2)).)
 )
 $(TR $(TDNW $(LREF joiner)) $(TD $(D joiner(["hello",
-"world!"], ";")) returns a range that iterates over the characters $(D
+"world!"], "; ")) returns a range that iterates over the characters $(D
 "hello; world!"). No new string is created - the existing inputs are
 iterated.)
 )
