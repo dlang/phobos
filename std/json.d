@@ -172,7 +172,7 @@ struct JSONValue
             type_tag = JSON_TYPE.STRING;
             store.str = arg;
         }
-        else static if(is(Unqual!T == bool))
+        else static if(is(T : bool))
         {
             type_tag = arg ? JSON_TYPE.TRUE : JSON_TYPE.FALSE;
         }
@@ -894,6 +894,10 @@ unittest
 
     jv = false;
     assert(jv.type == JSON_TYPE.FALSE);
+
+    enum E{True = true}
+    jv = E.True;
+    assert(jv.type == JSON_TYPE.TRUE);
 }
 
 unittest
