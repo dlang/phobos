@@ -639,9 +639,8 @@ public:
     // return x op y
     static BigUint bitwiseOp(string op)(BigUint x, BigUint y, bool xSign, bool ySign, ref bool resultSign) pure if (op == "|" || op == "^" || op == "&")
     {
-        // Add one to length in case the 'virtual sign bit' is used. Strictly speaking not always necessary.
-        auto d1 = includeSign(x.data, y.uintLength+1, xSign);
-        auto d2 = includeSign(y.data, x.uintLength+1, ySign);
+        auto d1 = includeSign(x.data, y.uintLength, xSign);
+        auto d2 = includeSign(y.data, x.uintLength, ySign);
         
         foreach (i; 0..d1.length)
         {
@@ -981,17 +980,7 @@ BigDigit[] twosComplement(const(BigDigit) [] x, int length) pure {
 // Encode BigInt as BigDigit array (sign and 2's complement)
 BigDigit[] includeSign(const(BigDigit) [] x, int minSize, bool sign) pure
 {
-    int length = -1;
-    if (x.length > minSize) {
-        length = x.length;
-        
-        // Virtual sign bit. If this is in use, we need to use one more BigDigit.
-        if (x[$-1] > (BigDigit.max >> 1)) {
-            length++;
-        }
-    } else {
-        length = minSize;
-    }
+    int length = (x.length > minSize) ? x.length : minSize;
     if (sign) {
         return twosComplement(x, length);
     }
