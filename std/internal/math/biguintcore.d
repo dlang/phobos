@@ -635,6 +635,27 @@ public:
         divModInternal(result, rem, x.data, y.data);
         return BigUint(removeLeadingZeros(assumeUnique(rem)));
     }
+    
+    // return x op y
+    static BigUint bitwiseOp(string op)(BigUint x, BigUint y, bool xSign, bool ySign, ref bool resultSign) pure if (op == "|" || op == "^" || op == "&")
+    {
+        // Add one to length in case the 'virtual sign bit' is used. Strictly speaking not always necessary.
+        auto d1 = includeSign(x.data, y.uintLength+1, xSign);
+        auto d2 = includeSign(y.data, x.uintLength+1, ySign);
+        
+        foreach (i; 0..d1.length)
+        {
+            mixin("d1[i] " ~ op ~ "= d2[i];");
+        }
+        
+        mixin("resultSign = xSign " ~ op ~ " ySign;");
+        
+        if (resultSign) {
+            d1 = twosComplement(d1, d1.length);
+        }
+        
+        return BigUint(removeLeadingZeros(assumeUnique(d1)));
+    }
 
     /**
      * Return a BigUint which is x raised to the power of y.
@@ -943,6 +964,44 @@ unittest
 
 
 private:
+BigDigit[] twosComplement(const(BigDigit) [] x, int length) pure {
+    BigDigit [] result = new BigDigit[length];
+    
+    foreach (i; 0..x.length)
+    {
+        result[i] = ~x[i];
+    }
+    result[x.length..$] = BigDigit.max;
+    
+    bool sgn = false;
+    BigUint tmp = BigUint.addOrSubInt(BigUint(assumeUnique(result)), 1UL, false, sgn);
+    return cast(BigDigit[])tmp.data;
+}
+
+// Encode BigInt as BigDigit array (sign and 2's complement)
+BigDigit[] includeSign(const(BigDigit) [] x, int minSize, bool sign) pure
+{
+    int length = -1;
+    if (x.length > minSize) {
+        length = x.length;
+        
+        // Virtual sign bit. If this is in use, we need to use one more BigDigit.
+        if (x[$-1] > (BigDigit.max >> 1)) {
+            length++;
+        }
+    } else {
+        length = minSize;
+    }
+    if (sign) {
+        return twosComplement(x, length);
+    }
+    else
+    {
+        BigDigit [] result = new BigDigit[length];
+        result[0..x.length] = x;
+        return result;
+    }
+}
 
 // works for any type
 T intpow(T)(T x, ulong n) pure

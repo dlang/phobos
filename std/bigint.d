@@ -111,6 +111,12 @@ public:
         data = data.init; // @@@: Workaround for compiler bug
         opAssign(x);
     }
+    
+    ///
+    this(T)(T x) pure if (is(Unqual!T == BigInt))
+    {
+        opAssign(x);
+    }
 
     ///
     BigInt opAssign(T)(T x) pure if (isIntegral!T)
@@ -131,7 +137,7 @@ public:
     // BigInt op= integer
     BigInt opOpAssign(string op, T)(T y) pure
         if ((op=="+" || op=="-" || op=="*" || op=="/" || op=="%"
-          || op==">>" || op=="<<" || op=="^^") && isIntegral!T)
+          || op==">>" || op=="<<" || op=="^^" || op=="|" || op=="&" || op=="^") && isIntegral!T)
     {
         ulong u = absUnsign(y);
 
@@ -196,13 +202,18 @@ public:
             sign = (y & 1) ? sign : false;
             data = BigUint.pow(data, u);
         }
+        else static if (op=="|" || op=="&" || op=="^")
+        {
+            BigInt b = y;
+            opOpAssign!op(b);
+        }
         else static assert(0, "BigInt " ~ op[0..$-1] ~ "= " ~ T.stringof ~ " is not supported");
         return this;
     }
 
     // BigInt op= BigInt
     BigInt opOpAssign(string op, T)(T y) pure
-        if ((op=="+" || op== "-" || op=="*" || op=="/" || op=="%")
+        if ((op=="+" || op== "-" || op=="*" || op=="/" || op=="%" || op=="|" || op=="&" || op=="^")
             && is (T: BigInt))
     {
         static if (op == "+")
@@ -238,13 +249,17 @@ public:
                     sign = false;
             }
         }
+        else static if (op == "|" || op == "&" || op == "^")
+        {
+            data = BigUint.bitwiseOp!op(data, y.data, sign, y.sign, sign);
+        }
         else static assert(0, "BigInt " ~ op[0..$-1] ~ "= " ~ T.stringof ~ " is not supported");
         return this;
     }
 
     // BigInt op BigInt
     BigInt opBinary(string op, T)(T y) pure const
-        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="%") 
+        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="%" || op=="|" || op=="&" || op=="^") 
 			&& is (T: BigInt))
     {
         BigInt r = this;
@@ -253,7 +268,7 @@ public:
 
     // BigInt op integer
     BigInt opBinary(string op, T)(T y) pure const
-        if ((op=="+" || op == "*" || op=="-" || op=="/"
+        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="|" || op=="&" || op=="^"
             || op==">>" || op=="<<" || op=="^^") && isIntegral!T)
     {
         BigInt r = this;
@@ -274,7 +289,7 @@ public:
 
     // Commutative operators
     BigInt opBinaryRight(string op, T)(T y) pure const
-        if ((op=="+" || op=="*") && isIntegral!T)
+        if ((op=="+" || op=="*" || op=="|" || op=="&" || op=="^") && isIntegral!T)
     {
         return opBinary!(op)(y);
     }
@@ -318,13 +333,17 @@ public:
         }
     }
     // const unary operations
-    BigInt opUnary(string op)() pure const if (op=="+" || op=="-")
+    BigInt opUnary(string op)() pure const if (op=="+" || op=="-" || op=="~")
     {
        static if (op=="-")
        {
             BigInt r = this;
             r.negate();
             return r;
+        }
+        else static if (op=="~")
+        {
+            return -(this+1);
         }
         else static if (op=="+")
            return this;
@@ -877,4 +896,29 @@ unittest // 11148
     
     BigInt n = 2;
     n *= 2;
+}
+
+unittest // 8167
+{
+    BigInt a = BigInt(3);
+    BigInt b = BigInt(a);
+}
+
+unittest // 9061
+{
+    long l1 = 0x12345678_90ABCDEF;
+    long l2 = 0xFEDCBA09_87654321;
+    long l3 = l1 | l2;
+    long l4 = l1 & l2;
+    long l5 = l1 ^ l2;
+    
+    BigInt b1 = l1;
+    BigInt b2 = l2;
+    BigInt b3 = b1 | b2;
+    BigInt b4 = b1 & b2;
+    BigInt b5 = b1 ^ b2;
+    
+    assert(l3 == b3);
+    assert(l4 == b4);
+    assert(l5 == b5);
 }
