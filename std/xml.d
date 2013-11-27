@@ -377,7 +377,7 @@ S encode(S)(S s)
         lastI = i + 1;
     }
 
-    if (!result.data) return s;
+    if (!result.data.ptr) return s;
     result.put(s[lastI .. $]);
     return result.data;
 }

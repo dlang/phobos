@@ -2931,7 +2931,7 @@ version (unittest)
 
 int system(string command)
 {
-    if (!command) return std.c.process.system(null);
+    if (!command.ptr) return std.c.process.system(null);
     const commandz = toStringz(command);
     immutable status = std.c.process.system(commandz);
     if (status == -1) return status;

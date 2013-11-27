@@ -4273,7 +4273,7 @@ struct CtContext
                     {
                         $$ //$$
                     }
-                    if(test_$$() >= 0)`, id, code ? code : "return 0;",
+                    if(test_$$() >= 0)`, id, code.ptr ? code : "return 0;",
                         ir[pc].mnemonic, id);
             }
         }

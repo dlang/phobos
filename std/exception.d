@@ -365,7 +365,7 @@ T enforce(T, Dg, string file = __FILE__, size_t line = __LINE__)
 
 private void bailOut(string file, size_t line, in char[] msg) @safe pure
 {
-    throw new Exception(msg ? msg.idup : "Enforcement failed", file, line);
+    throw new Exception(msg.ptr ? msg.idup : "Enforcement failed", file, line);
 }
 
 unittest
