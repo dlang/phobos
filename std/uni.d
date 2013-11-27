@@ -645,7 +645,7 @@ import std.traits, std.range, std.algorithm, std.conv,
 import std.array; //@@BUG UFCS doesn't work with 'local' imports
 import core.bitop;
 
-version(unittest) import std.typecons;
+import std.typecons;
 
 // debug = std_uni;
 
