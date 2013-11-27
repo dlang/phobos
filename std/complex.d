@@ -15,8 +15,8 @@
 module std.complex;
 
 
-import std.format, std.math, std.numeric, std.traits;
-
+import std.exception, std.format, std.math, std.numeric, std.traits;
+import std.string : format;
 
 /** Helper function that returns a _complex number with the specified
     real and imaginary parts.
@@ -130,20 +130,22 @@ struct Complex(T)  if (isFloatingPoint!T)
     }
 
     static if (is(T == double))
-    ///
-    unittest
     {
-        auto c = complex(1.2, 3.4);
+        ///
+        unittest
+        {
+            auto c = complex(1.2, 3.4);
 
-        // Vanilla toString formatting:
-        assert(c.toString() == "1.2+3.4i");
+            // Vanilla toString formatting:
+            assert(c.toString() == "1.2+3.4i");
 
-        // Formatting with std.string.format specs: the precision and width
-        // specifiers apply to both the real and imaginary parts of the
-        // complex number.
-        import std.string : format;
-        assert(format("%.2f", c)  == "1.20+3.40i");
-        assert(format("%4.1f", c) == " 1.2+ 3.4i");
+            // Formatting with std.string.format specs: the precision and width
+            // specifiers apply to both the real and imaginary parts of the
+            // complex number.
+            import std.string : format;
+            assert(format("%.2f", c)  == "1.20+3.40i");
+            assert(format("%4.1f", c) == " 1.2+ 3.4i");
+        }
     }
 
     /// ditto
@@ -267,18 +269,87 @@ struct Complex(T)  if (isFloatingPoint!T)
     // complex op complex
     Complex!(CommonType!(T,R)) opBinary(string op, R)(Complex!R z) const
     {
-        alias typeof(return) C;
+        alias C = typeof(return);
         auto w = C(this.re, this.im);
         return w.opOpAssign!(op)(z);
+    }
+
+    // complex op imaginary
+    Complex!(CommonType!(T, R)) opBinary(string op, R)(Imaginary!R rhs) const
+    {
+        alias C = typeof(return);
+        auto w = C(this.re, this.im);
+        return w.opOpAssign!(op)(rhs);
     }
 
     // complex op numeric
     Complex!(CommonType!(T,R)) opBinary(string op, R)(R r) const
         if (isNumeric!R)
     {
-        alias typeof(return) C;
+        alias C = typeof(return);
         auto w = C(this.re, this.im);
         return w.opOpAssign!(op)(r);
+    }
+
+    // imaginary + complex, imaginary * complex
+    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(Imaginary!R lhs) const
+        if (op == "+" || op == "*")
+    {
+        return opBinary!(op)(lhs);
+    }
+
+    // imaginary - complex
+    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(Imaginary!R lhs) const
+        if (op == "-")
+    {
+        return typeof(return)(-re, lhs.im - im);
+    }
+
+    // imaginary / complex
+    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(Imaginary!R lhs) const
+        if (op == "/")
+    {
+        typeof(return) w = void;
+        alias FPTemporary!(typeof(w.re)) Tmp;
+
+        if (fabs(re) < fabs(im))
+        {
+            Tmp ratio = re / im;
+            Tmp idivd = lhs.im / ((re * ratio) + im);
+            w.re = idivd;
+            w.im = idivd * ratio;
+        }
+        else
+        {
+            Tmp ratio = im / re;
+            Tmp denom = re + im * ratio;
+            Tmp idivd = lhs.im / (re + (im * ratio));
+            w.re = idivd * ratio;
+            w.im = idivd;
+        }
+
+        return w;
+    }
+
+    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(Imaginary!R lhs) const
+        if (op == "^^")
+    {
+        FPTemporary!(CommonType!(T, R)) ab = void, ar = void;
+        if (lhs.im >= 0)
+        {
+            // r = lhs.im
+            // theta = PI / 2
+            ab = (lhs.im ^^ this.re) * std.math.exp(-PI_2 * this.im);
+            ar = (PI_2 * this.re) + (std.math.log(lhs.im) * this.im);
+        }
+        else
+        {
+            // r = -lhs.im
+            // theta = -PI / 2
+            ab = ((-lhs.im) ^^ this.re) * std.math.exp(PI_2 * this.im);
+            ar = (-PI_2 * this.re) + (std.math.log(-lhs.im) * this.im);
+        }
+        return typeof(return)(ab * std.math.cos(ar), ab * std.math.sin(ar));
     }
 
     // numeric + complex,  numeric * complex
@@ -292,7 +363,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R r) const
         if (op == "-" && isNumeric!R)
     {
-        return Complex(r - re, -im);
+        return typeof(return)(r - re, -im);
     }
 
     // numeric / complex
@@ -406,6 +477,48 @@ struct Complex(T)  if (isFloatingPoint!T)
         return this;
     }
 
+    // complex += imaginary, complex -= imaginary
+    ref Complex opOpAssign(string op, I)(I z)
+    if ((op == "+" || op == "-") && is(I R == Imaginary!R))
+    {
+        mixin ("this.im "~op~"= z.im;");
+        return this;
+    }
+
+    // complex *= imaginary
+    ref Complex opOpAssign(string op, I)(I z)
+        if (op == "*" && is(I R == Imaginary!R))
+    {
+        auto temp = -im * z.im;
+        im = re * z.im;
+        re = temp;
+        return this;
+    }
+
+    // complex /= imaginary
+    ref Complex opOpAssign(string op, I)(I z)
+    if (op == "/" && is(I R == Imaginary!R))
+    {
+        auto temp = im / z.im;
+        im = -re / z.im;
+        re = temp;
+        return this;
+    }
+
+    // complex ^^= imaginary
+    ref Complex opOpAssign(string op, I)(I z)
+        if (op == "^^" && is(I R == Imaginary!R))
+    {
+        FPTemporary!T r = abs(this);
+        FPTemporary!T t = arg(this);
+        FPTemporary!T ab = exp(-t * z.im);
+        FPTemporary!T ar = log(r) * z.im;
+
+        re = ab*std.math.cos(ar);
+        im = ab*std.math.sin(ar);
+        return this;
+    }
+
     // complex += numeric,  complex -= numeric
     ref Complex opOpAssign(string op, U : T)(U a)
         if (op == "+" || op == "-")
@@ -496,6 +609,50 @@ unittest
     auto cec = c1^^c2;
     assert (approxEqual(cec.re, 0.11524131979943839881, EPS));
     assert (approxEqual(cec.im, 0.21870790452746026696, EPS));
+
+    // Check complex-imaginary operations
+    auto i1 = imaginary(2.0);
+    auto cpi = c1 + i1;
+    assert(cpi.re == c1.re);
+    assert(cpi.im == c1.im + i1.im);
+
+    auto cmi = c1 - i1;
+    assert(cmi.re == c1.re);
+    assert(cmi.im == c1.im - i1.im);
+
+    auto cti = c1 * i1;
+    assert(approxEqual(abs(cti), abs(c1) * std.math.abs(i1.im), EPS));
+    // need to support both abs and arg for imaginaries
+
+    auto cdi = c1 / i1;
+    assert(approxEqual(abs(cdi), abs(c1) / std.math.abs(i1.im), EPS));
+    // again, need second unittest here
+
+    auto cei1 = c1 ^^ i1;
+    auto cei2 = c1 ^^ complex(0.0, i1.im);
+    assert(approxEqual(cei1.re, cei2.re, EPS));
+    assert(approxEqual(cei1.im, cei2.im, EPS));
+
+    auto ipc = i1 + c1;
+    assert(ipc == cpi);
+
+    auto imc = i1 - c1;
+    assert(imc == -cmi);
+
+    auto itc = i1 * c1;
+    assert(itc == cti);
+
+    auto idc = i1 / c1;
+    assert(idc == 1.0 / cdi);
+
+    auto iec1a = i1 ^^ c1;
+    auto iec1b = complex(0.0, i1.im) ^^ c1;
+    assert(iec1a == iec1b);
+
+    auto iec2a = (-i1) ^^ c1;
+    auto iec2b = complex(0.0, -i1.im) ^^ c1;
+    assert(approxEqual(iec2a.re, iec2b.re, EPS));
+    assert(approxEqual(iec2a.im, iec2b.im, EPS));
 
     // Check complex-real operations.
     double a = 123.456;
@@ -720,7 +877,7 @@ unittest
 
 
 /** Calculates the argument (or phase) of a complex number. */
-T arg(T)(Complex!T z) @safe pure nothrow
+real arg(T)(Complex!T z) @safe pure nothrow
 {
     return atan2(z.im, z.re);
 }
@@ -869,8 +1026,6 @@ unittest
 // Issue 10881: support %f formatting of complex numbers
 unittest
 {
-    import std.string : format;
-
     auto x = complex(1.2, 3.4);
     assert(format("%.2f", x) == "1.20+3.40i");
 
@@ -897,4 +1052,466 @@ unittest
 {
     // Test ease of use (vanilla toString() should be supported)
     assert(complex(1.2, 3.4).toString() == "1.2+3.4i");
+}
+
+/**
+ * Helper function that returns an _imaginary number with the specified
+ * magnitude.
+ *
+ * If $(D T) is a floating-point type, this function returns a type of
+ * $(D Imaginary!T), otherwise it returns an $(D Imaginary!double).
+ *
+ * Examples:
+ * ---
+ * auto i1 = imaginary(2.0);
+ * static assert (is(typeof(i1) == Imaginary!double));
+ * assert (i1.im == 2.0);
+ *
+ * auto i2 = imaginary(2);
+ * static assert (is(typeof(i2) == Imaginary!double));
+ * assert (i2 == i1);
+ *
+ * auto i3 = imaginary(3.14L);
+ * static assert (is(typeof(i3) == Imaginary!real));
+ * assert (i3.im == 3.14L);
+ * ---
+ */
+auto imaginary(T)(T im)
+{
+    static if (isFloatingPoint!T)
+    {
+        return Imaginary!T(im);
+    }
+    else
+    {
+        return Imaginary!double(im);
+    }
+}
+
+/**
+ * An imaginary number parameterized by a floating-point type $(D T).
+ */
+struct Imaginary(T)
+    if (isFloatingPoint!T)
+{
+    /**
+     * The imaginary part of the number.  This can be written to directly
+     * if it's useful to do so.
+     */
+    T im;
+
+    /**
+     * Converts the imaginary number to a string representation.
+     *
+     * The second form of this function is usually not called directly;
+     * instead, it is used via $(XREF string,format), as shown in the examples
+     * below.  Supported format characters are 'e', 'f', 'g', 'a', and 's'.
+     *
+     * See the $(LINK2 std_format.html, std.format) and $(XREF string, format)
+     * documentation for more information.
+     */
+    string toString()
+    {
+        import std.exception : assumeUnique;
+        char[] buf;
+        buf.reserve(100);
+        auto fmt = FormatSpec!char("%s");
+        toString((const(char)[] s) { buf ~= s; }, fmt);
+        return assumeUnique(buf);
+    }
+
+    /// ditto
+    void toString(Char)(scope void delegate(const(Char)[]) sink,
+                        FormatSpec!Char formatSpec) const
+    {
+        formatValue(sink, im, formatSpec);
+        if (im != 0) sink("i");
+    }
+
+    static if (is(T == double))
+    {
+        ///
+        unittest
+        {
+            auto im = Imaginary!double(3.4);
+            assert(im.toString() == "3.4i");
+
+            import std.string : format;
+            assert(format("%.2f", im) == "3.40i");
+            assert(format("%4.1f", im) == " 3.4i");
+
+            im.im = 0.0;
+            assert(im.toString() == "0");
+            assert(format("%.2f", im) == "0.00");
+            assert(format("%4.1f", im) == " 0.0");
+        }
+    }
+
+    this(R : T)(Imaginary!R that) @safe nothrow pure
+    {
+        this.im = that.im;
+    }
+
+    this(R : T)(Complex!R z)
+    {
+        if (z.re != 0)
+        {
+            throw new Exception(format("Cannot initialize %s with complex number %s whose real part is non-zero",
+                                       typeof(this).stringof, z));
+        }
+        else
+        {
+            this.im = z.im;
+        }
+    }
+
+    this(R : T)(R y) @safe nothrow pure
+    {
+        this.im = y;
+    }
+
+    // ------ Assignment operators ------------------------
+
+    // this = imaginary
+    ref Imaginary opAssign(R : T)(Imaginary!R that) @safe nothrow pure
+    {
+        this.im = that.im;
+        return this;
+    }
+
+    // this = complex (must have real part == 0)
+    ref Imaginary opAssign(R : T)(Complex!R z)
+    {
+        if (z.re != 0)
+        {
+            /* Question: leave this.im alone here, or set it to nan
+             * to reflect failed assignment?
+             */
+            throw new Exception(format("Cannot assign complex number %s with non-zero real part to %s",
+                                       z, typeof(this).stringof));
+        }
+        else
+        {
+            this.im = z.im;
+        }
+
+        return this;
+    }
+
+  @safe nothrow pure:
+    /* No numeric opAssign because built-in numerical types
+     * lie on the real axis, not the imaginary one ... :-)
+     *
+     * We could include support for built-in complex and
+     * imaginary types, but as Complex doesn't, it seems
+     * superfluous.
+     */
+
+    // ------ Comparison operators ------------------------
+
+    bool opEquals(R : T)(Imaginary!R that)
+    {
+        return this.im == that.im;
+    }
+
+    bool opEquals(R : T)(Complex!R z)
+    {
+        return z.re == 0 && this.im == z.im;
+    }
+
+    bool opEquals(R : T)(R re)
+    {
+        /* Since numerical types lie on the real axis,
+         * they are only equal to imaginary types if
+         * both are 0.
+         */
+        return re == 0 && this.im == 0;
+    }
+
+    // ------ Unary operators -----------------------------
+
+    Imaginary opUnary(string op)() const
+        if (op == "+")
+    {
+        return this;
+    }
+
+    Imaginary opUnary(string op)() const
+        if (op == "-")
+    {
+        return Imaginary(-im);
+    }
+
+    // ------ Binary operators ----------------------------
+
+    // imaginary + imaginary, imaginary - imaginary
+    Imaginary!(CommonType!(T, R)) opBinary(string op, R)(Imaginary!R rhs) const
+        if (op == "+" || op == "-")
+    {
+        return typeof(return)(mixin("this.im " ~ op ~ " rhs.im"));
+    }
+
+    // imaginary * imaginary
+    CommonType!(T, R) opBinary(string op, R)(Imaginary!R rhs) const
+        if (op == "*")
+    {
+        return -this.im * rhs.im;
+    }
+
+    // imaginary / imaginary
+    CommonType!(T, R) opBinary(string op, R)(Imaginary!R rhs) const
+        if (op == "/")
+    {
+        return this.im / rhs.im;
+    }
+
+    // imaginary ^^ imaginary
+    Complex!(CommonType!(T, R)) opBinary(string op, R)(Imaginary!R rhs) const
+        if (op == "^^")
+    {
+        FPTemporary!T r = abs(this);
+        FPTemporary!T t = arg(this);
+        FPTemporary!T ab = exp(-t * rhs.im);
+        FPTemporary!T ar = log(r) * rhs.im;
+
+        return typeof(return)(ab * std.math.cos(ar), ab * std.math.sin(ar));
+    }
+
+    // imaginary + numeric, imaginary - numeric
+    Complex!(CommonType!(T, R)) opBinary(string op, R)(R rhs) const
+        if (isNumeric!R && (op == "+" || op == "-"))
+    {
+        return typeof(return)(mixin(op ~ "rhs"), this.im);
+    }
+
+    // imaginary * numeric
+    Imaginary!(CommonType!(T, R)) opBinary(string op, R)(R rhs) const
+        if (isNumeric!R && op == "*")
+    {
+        return typeof(return)(this.im * rhs);
+    }
+
+    // imaginary / numeric
+    Imaginary!(CommonType!(T, R)) opBinary(string op, R)(R rhs) const
+        if (isNumeric!R && op == "/")
+    {
+        return typeof(return)(this.im / rhs);
+    }
+
+    // imaginary ^^ numeric
+    Complex!(CommonType!(T, R)) opBinary(string op, R)(R rhs) const
+        if (isNumeric!R && op == "^^")
+    {
+        FPTemporary!T r = abs(this);
+        FPTemporary!T t = arg(this);
+        FPTemporary!T ab = r ^^ rhs;
+        FPTemporary!T ar = rhs * t;
+
+        return typeof(return)(ab * std.math.cos(ar), ab * std.math.sin(ar));
+    }
+
+    // numeric + imaginary, numeric - imaginary
+    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R lhs) const
+        if (isNumeric!R && (op == "+" || op == "-"))
+    {
+        return typeof(return)(lhs, mixin(op ~ "this.im"));
+    }
+
+    // numeric * imaginary
+    Imaginary!(CommonType!(T, R)) opBinaryRight(string op, R)(R lhs) const
+        if (isNumeric!R && op == "*")
+    {
+        return opBinary!(op, R)(lhs);
+    }
+
+    // numeric / imaginary
+    Imaginary!(CommonType!(T, R)) opBinaryRight(string op, R)(R lhs) const
+        if (isNumeric!R && op == "/")
+    {
+        return typeof(return)((-lhs) / this.im);
+    }
+
+    // numeric ^^ imaginary
+    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R lhs) const
+        if (isNumeric!R && op == "^^")
+    {
+        alias F = FPTemporary!(CommonType!(T, R));
+
+        if (lhs >= 0)
+        {
+            // r = lhs
+            // theta = 0
+            //  ==> ab = 1.0
+            F ar = log(lhs) * this.im;
+            return typeof(return)(std.math.cos(ar), std.math.sin(ar));
+        }
+        else
+        {
+            // r = -lhs
+            // theta = PI
+            //  ==> ar = 0.0
+            F ab = std.math.exp(-PI * this.im);
+            F ar = this.im * std.math.log(-lhs);
+            return typeof(return)(ab * std.math.cos(ar), ab * std.math.sin(ar));
+        }
+    }
+}
+
+unittest
+{
+    // initialization
+    auto i1 = imaginary(5.9);
+    auto i2 = imaginary(complex(0.0, 3.7));
+    auto i3 = imaginary(i1);
+    assertThrown(imaginary(complex(1.1, 4.2)));
+
+    // Check comparison operations
+    assert(i1 != i2);
+    assert(i1 == i3);
+    assert(is(typeof(i1) == typeof(i3)));
+    assert(i1 == complex(0.0, i1.im));
+    assert(i1 != complex(0.1, i1.im));
+    assert(imaginary(0) == 0);
+    assert(imaginary(0) != 0.3);
+    assert(imaginary(0.3) != 0);
+    assert(imaginary(0.3) != 0.3);
+
+    // Check assignment
+    i3 = imaginary(i1.im + i2.im);
+    assert(i3.im == i1.im + i2.im);
+    i3 = complex(0.0, 3 * i1.im);
+    assert(i3.im == 3 * i1.im);
+    assertThrown(i3 = complex(1.3, 4 * i2.im));
+    assert(i3.im == 3 * i1.im); // unchanged, but perhaps should be nan?
+
+    // Check unary operations
+    assert(i1 == +i1);
+    assert((-i1).im == -(i1.im));
+    assert(i1 == -(-i1));
+
+    // Check imaginary-imaginary operations
+    auto ipi = i1 + i2;
+    assert(ipi.im == i1.im + i2.im);
+
+    auto imi = i1 - i2;
+    assert(imi.im == i1.im - i2.im);
+
+    auto iti = i1 * i2;
+    assert(isFloatingPoint!(typeof(iti)));
+    assert(iti == -i1.im * i2.im);
+
+    auto idi = i1 / i2;   // Amin?
+    assert(isFloatingPoint!(typeof(idi)));
+    assert(idi == i1.im / i2.im);
+
+    auto iei = imaginary(1.0) ^^ imaginary(1.0);  // i ^^ i
+    assert(is(typeof(iei) == Complex!double));
+    assert(approxEqual(iei.re, exp(-PI_2)));
+    assert(iei.im == 0);
+
+    auto iei1 = i1 ^^ i2;
+    auto iei2 = complex(0.0, i1.im) ^^ complex(0.0, i2.im);
+    assert(is(typeof(iei1) == typeof(iei2)));
+    assert(approxEqual(iei1.re, iei2.re));
+    assert(approxEqual(iei1.im, iei2.im));
+
+    // Check imaginary-numerical operations
+    real r1 = 3.5;
+
+    // imaginary op numeric
+    auto ipr = i1 + r1;    // patents ahoy!
+    assert(is(typeof(ipr) == Complex!real));
+    assert(ipr.re == r1);
+    assert(ipr.im == i1.im);
+
+    auto imr = i1 - r1;
+    assert(is(typeof(imr) == Complex!real));
+    assert(imr.re == -r1);
+    assert(imr.im == i1.im);
+
+    auto itr = i1 * r1;
+    assert(is(typeof(itr) == Imaginary!real));
+    assert(itr.im == i1.im * r1);
+
+    auto idr = i1 / r1;
+    assert(is(typeof(idr) == Imaginary!real));
+    assert(idr.im == i1.im / r1);
+
+    auto ier1 = i1 ^^ r1;
+    auto ier2 = complex(0.0, i1.im) ^^ r1;
+    assert(is(typeof(ier1) == typeof(ier2)));
+    assert(approxEqual(ier1.re, ier2.re));
+    assert(approxEqual(ier1.im, ier2.im));
+
+    // numeric op imaginary
+    auto rpi = r1 + i1;
+    assert(is(typeof(rpi) == Complex!real));
+    assert(rpi.re == r1);
+    assert(rpi.im == i1.im);
+    assert(rpi == ipr);
+
+    auto rmi = r1 - i1;
+    assert(is(typeof(rmi) == Complex!real));
+    assert(rmi.re == r1);
+    assert(rmi.im == -i1.im);
+    assert(rmi == -imr);
+
+    auto rti = r1 * i1;
+    assert(is(typeof(rti) == Imaginary!real));
+    assert(rti.im == i1.im * r1);
+    assert(rti == itr);
+
+    auto rdi = r1 / i1;  // do YOU have a healthy diet?
+    assert(is(typeof(rdi) == Imaginary!real));
+    assert(rdi.im == -r1 / i1.im);
+    assert(rdi == 1.0L / idr);
+    assert(rdi.im == -1.0 / idr.im);
+
+    auto rei1a = r1 ^^ i1;
+    auto rei1b = complex(r1, 0.0) ^^ i1;
+    assert(rei1a == rei1b);
+
+    auto rei2a = (-r1) ^^ i1;
+    auto rei2b = complex(-r1, 0.0) ^^ i1;
+    assert(rei2a == rei2b);
+}
+
+/** Calculates the absolute value (or modulus) of an imaginary number. */
+T abs(T)(Imaginary!T im) @safe pure nothrow
+{
+    return std.math.abs(im.im);
+}
+
+unittest
+{
+    assert (abs(imaginary(1.0)) == 1.0);
+    assert (abs(imaginary(-2.0L)) == 2.0L);
+}
+
+
+/** Calculates the argument (or phase) of an imaginary number. */
+real arg(T)(Imaginary!T im) @safe pure nothrow
+{
+    if (im.im > 0)
+    {
+        return PI_2;
+    }
+    else if (im.im < 0)
+    {
+        return -PI_2;
+    }
+    else
+    {
+        assert(im.im == 0);
+        return 0;
+    }
+}
+
+unittest
+{
+    assert(arg(imaginary(0.0)) == 0.0);
+    assert(arg(imaginary(1.0)) == PI_2);
+    assert(arg(imaginary(-0.1)) == -PI_2);
+    assert(approxEqual(arg(imaginary(3.5)), arg(complex(0.0, 3.5))));
+    assert(approxEqual(arg(imaginary(-7.2)), arg(complex(0.0, -7.2))));
 }
