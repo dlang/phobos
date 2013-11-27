@@ -963,7 +963,9 @@ unittest
 
 
 private:
-BigDigit[] twosComplement(const(BigDigit) [] x, int length) pure {
+BigDigit[] twosComplement(const(BigDigit) [] x, size_t length) pure
+{
+    assert(length != 0);
     BigDigit [] result = new BigDigit[length];
     
     foreach (i; 0..x.length)
@@ -978,10 +980,11 @@ BigDigit[] twosComplement(const(BigDigit) [] x, int length) pure {
 }
 
 // Encode BigInt as BigDigit array (sign and 2's complement)
-BigDigit[] includeSign(const(BigDigit) [] x, int minSize, bool sign) pure
+BigDigit[] includeSign(const(BigDigit) [] x, size_t minSize, bool sign) pure
 {
-    int length = (x.length > minSize) ? x.length : minSize;
-    if (sign) {
+    size_t length = (x.length > minSize) ? x.length : minSize;
+    if (sign)
+    {
         return twosComplement(x, length);
     }
     else
@@ -2284,7 +2287,6 @@ version(unittest)
 
 unittest
 {
-
     void printBiguint(const uint [] data)
     {
         char [] buff = biguintToHex(new char[data.length*9], data, '_');
