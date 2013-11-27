@@ -2233,7 +2233,7 @@ if (isInputRange!T)
                 formatValue(w, val.front, fmt);
             else
                 formatElement(w, val.front, fmt);
-            if (f.sep)
+            if (f.sep.ptr)
             {
                 put(w, fmt.trailing);
                 val.popFront();

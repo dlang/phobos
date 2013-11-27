@@ -3387,11 +3387,11 @@ unittest
 char[] soundex(const(char)[] string, char[] buffer = null) @safe pure nothrow
 in
 {
-    assert(!buffer || buffer.length >= 4);
+    assert(!buffer.ptr || buffer.length >= 4);
 }
 out (result)
 {
-    if (result)
+    if (result.ptr)
     {
         assert(result.length == 4);
         assert(result[0] >= 'A' && result[0] <= 'Z');
@@ -3422,7 +3422,7 @@ body
         }
         if (b == 0)
         {
-            if (!buffer)
+            if (!buffer.ptr)
                 buffer = new char[4];
             buffer[0] = c;
             b++;
