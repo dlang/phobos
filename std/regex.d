@@ -1330,14 +1330,7 @@ struct Parser(R)
             }
             put(Bytecode(greedy ? IR.InfiniteStart : IR.InfiniteQStart, len));
             enforce(ir.length + len < maxCompiledLength,  "maximum compiled pattern length is exceeded");
-            //workaround @@@BUG@@@ 9634
-            if(__ctfe)
-            {
-                foreach(v; ir[offset .. offset+len])
-                    ir ~= v;
-            }
-            else
-                ir ~= ir[offset .. offset+len];
+            ir ~= ir[offset .. offset+len];
             //IR.InfinteX is always a hotspot
             put(Bytecode(greedy ? IR.InfiniteEnd : IR.InfiniteQEnd, len));
             put(Bytecode.init); //merge index
