@@ -898,10 +898,7 @@ enum maxCompiledLength = 2^^18;
 //amounts to up to 4 Mb of auxilary table for matching
 enum maxCumulativeRepetitionLength = 2^^20;
 
-template BasicElementOf(Range)
-{
-    alias Unqual!(ElementEncodingType!Range) BasicElementOf;
-}
+alias BasicElementOf(Range) = Unqual!(ElementEncodingType!Range);
 
 struct Parser(R)
     if (isForwardRange!R && is(ElementType!R : dchar))
@@ -5847,16 +5844,10 @@ template ctRegexImpl(alias pattern, string flags=[])
     pattern = Regular expression
     flags = The _attributes (g, i, m and x accepted)
 +/
-public template ctRegex(alias pattern, alias flags=[])
-{
-    enum ctRegex = ctRegexImpl!(pattern, flags).nr;
-}
+enum ctRegex(alias pattern, alias flags=[]) = ctRegexImpl!(pattern, flags).nr;
 
-template isRegexFor(RegEx, R)
-{
-    enum isRegexFor = is(RegEx == Regex!(BasicElementOf!R))
-                 || is(RegEx == StaticRegex!(BasicElementOf!R));
-}
+enum isRegexFor(RegEx, R) = is(RegEx == Regex!(BasicElementOf!R))
+     || is(RegEx == StaticRegex!(BasicElementOf!R));
 
 /++
     Start matching $(D input) to regex pattern $(D re),
