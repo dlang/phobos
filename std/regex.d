@@ -5834,8 +5834,6 @@ template ctRegexImpl(alias pattern, string flags=[])
 }
 
 /++
-    Experimental feature.
-
     Compile regular expression using CTFE
     and generate optimized native machine code for matching it.
 
