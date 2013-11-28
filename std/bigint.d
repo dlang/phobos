@@ -878,3 +878,18 @@ unittest // 11148
     BigInt n = 2;
     n *= 2;
 }
+
+unittest // 11600
+{
+    import std.conv;
+    import std.exception : assertThrown;
+
+    // Original bug report
+    assertThrown!ConvException(to!BigInt("avadakedavra"));
+
+    // Digit string lookalikes that are actually invalid
+    assertThrown!ConvException(to!BigInt("0123hellothere"));
+    assertThrown!ConvException(to!BigInt("-hihomarylowe"));
+    assertThrown!ConvException(to!BigInt("__reallynow__"));
+    assertThrown!ConvException(to!BigInt("-123four"));
+}
