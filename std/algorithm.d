@@ -8976,7 +8976,7 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
     static if (is(LessRet == bool))
     {
         static if (ss == SwapStrategy.unstable)
-            quickSortImpl!(lessFun)(r, r.length);
+            quickSortImpl!(lessFun)(r, cast(real)r.length);
         else //use Tim Sort for semistable & stable
             TimSortImpl!(lessFun, Range).sort(r, null);
 
@@ -9058,9 +9058,10 @@ unittest
 			return a < b;
 		}
 
-		uint[] arr;
+		size_t[] arr;
 		arr.length = 1024;
-		foreach(i; 0..arr.length) arr[i] = i;
+		
+		foreach(k; 0..arr.length) arr[k] = k;
 		swapRanges(arr[0..$/2], arr[$/2..$]);
 
 		sort!(pred, SwapStrategy.unstable)(arr);
@@ -9338,6 +9339,9 @@ private template HeapSortImpl(alias less, Range)
 
     void heapSort(Range r)
 	{
+		// If true, there is nothing to do
+		if(r.length < 2) return;
+
 		// Build Heap
 		size_t i = (r.length - 2) / 2 + 1;
 		while(i > 0) sift(r, --i, r.length);
