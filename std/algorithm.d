@@ -9052,7 +9052,7 @@ unittest
 
 		// Compilation error if predicate is not static, i.e. a nested function
 		static uint comp;
-		static bool pred(uint a, uint b)
+		static bool pred(size_t a, size_t b)
 		{
 			++comp;
 			return a < b;
