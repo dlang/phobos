@@ -9286,7 +9286,7 @@ private void quickSortImpl(alias less, Range)(Range r, real depth)
 			HeapSortImpl!(less, Range).heapSort(r);
 			return;
 		}
-		depth *= (3.0/2.0);
+		depth *= (2.0/3.0);
 
         const pivotIdx = getPivot!(less)(r);
         auto pivot = r[pivotIdx];
