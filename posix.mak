@@ -144,16 +144,15 @@ DDOC=$(DMD)
 # Set VERSION, where the file is that contains the version string
 VERSION=../dmd/VERSION
 
-# Set SONAME, the name of the shared library.
-# The awk script will return the second group without leading zeros of the version string, i.e. 2.063.2 produces 63
-SONAME = libphobos2.so.0.$(shell awk -F. '{ print $$2 + 0 }' $(VERSION))
-
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))
-	LIB = $(ROOT)/libphobos2.a
-	LIBSO = $(ROOT)/$(SONAME).0
+	LIB:=$(ROOT)/libphobos2.a
+	# Set SONAME, the name of the shared library. (e.g. libphobos2.so.0.64)
+	SONAME:=$(shell V=`cat ${VERSION}`; echo libphobos2.so.$${V:2:1}.$${V:3:2})
+	VRELEASE:=$(shell V=`cat ${VERSION}`; test -z $${V:6} && echo 0 || echo $${V:6})
+	LIBSO:=$(ROOT)/$(SONAME).$(VRELEASE) # libphobos2.so.0.64.2
 else
-	LIB = $(ROOT)/phobos.lib
+	LIB:=$(ROOT)/phobos.lib
 endif
 
 ################################################################################
@@ -333,6 +332,9 @@ zip :
 install2 : release
 	mkdir -p $(INSTALL_DIR)/lib
 	cp $(LIB) $(INSTALL_DIR)/lib/
+ifneq (,$(findstring $(OS),linux))
+	cp -P $(LIBSO) $(ROOT)/$(SONAME) $(ROOT)/libphobos2.so $(INSTALL_DIR)/lib/
+endif
 	mkdir -p $(INSTALL_DIR)/import/etc
 	mkdir -p $(INSTALL_DIR)/import/std
 	cp crc32.d $(INSTALL_DIR)/import/
