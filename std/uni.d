@@ -31,7 +31,7 @@
         Converting text to any of the four normalization forms via $(LREF normalize).
     )
     $(LI
-        Decoding ($(LREF decodeGrapheme))  and iteration ($(LREF graphemeStride))
+        Decoding ($(LREF decodeGrapheme))  and iteration ($(LREF byGrapheme), $(LREF graphemeStride))
         by user-perceived characters, that is by $(LREF Grapheme) clusters.
     )
     $(LI
@@ -5186,6 +5186,193 @@ unittest
     s = "\u11A8\u0308\uAC01";
     assert(equalS(decodeGrapheme(s)[], "\u11A8\u0308"));
     assert(equalS(decodeGrapheme(s)[], "\uAC01"));
+}
+
+/++
+    $(P Iterate a string by grapheme.)
+
+    $(P Useful for doing string manipulation that needs to be aware
+    of graphemes.)
+
+    See_Also:
+        $(LREF byCodePoint)
++/
+// TODO: Bidirectional access
+auto byGrapheme(Range)(Range range)
+    if(isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
+{
+    static struct Result
+    {
+        private Range _range;
+        private Grapheme _front;
+
+        bool empty() @property
+        {
+            return _front.length == 0;
+        }
+
+        Grapheme front() @property
+        {
+            return _front;
+        }
+
+        void popFront()
+        {
+            _front = _range.empty ? Grapheme.init : _range.decodeGrapheme();
+        }
+
+        static if(isForwardRange!Range)
+        {
+            Result save() @property
+            {
+                return Result(_range.save, _front);
+            }
+        }
+    }
+
+    auto result = Result(range);
+    result.popFront();
+    return result;
+}
+
+///
+unittest
+{
+    auto text = "noe\u0308l"; // noël using e + combining diaeresis
+    assert(text.walkLength == 5); // 5 code points
+
+    auto gText = text.byGrapheme;
+    assert(gText.walkLength == 4); // 4 graphemes
+
+    assert(gText.take(3).equal("noe\u0308".byGrapheme));
+    assert(gText.drop(3).equal("l".byGrapheme));
+}
+
+// For testing non-forward-range input ranges
+version(unittest)
+private static struct InputRangeString
+{
+    private string s;
+
+    bool empty() @property { return s.empty; }
+    dchar front() @property { return s.front; }
+    void popFront() @property { s.popFront(); }
+}
+
+unittest
+{
+    assert("".byGrapheme.walkLength == 0);
+
+    auto reverse = "le\u0308on";
+    assert(reverse.walkLength == 5);
+
+    auto gReverse = reverse.byGrapheme;
+    assert(gReverse.walkLength == 4);
+
+    foreach(text; TypeTuple!("noe\u0308l"c, "noe\u0308l"w, "noe\u0308l"d))
+    {
+        assert(text.walkLength == 5);
+        static assert(isForwardRange!(typeof(text)));
+
+        auto gText = text.byGrapheme;
+        static assert(isForwardRange!(typeof(gText)));
+        assert(gText.walkLength == 4);
+        assert(gText.array.retro.equal(gReverse));
+    }
+
+    auto nonForwardRange = InputRangeString("noe\u0308l").byGrapheme;
+    static assert(!isForwardRange!(typeof(nonForwardRange)));
+    assert(nonForwardRange.walkLength == 4);
+}
+
+/++
+    $(P Lazily transform a range of $(LREF Grapheme)s to a range of code points.)
+
+    $(P Useful for converting the result to a string after doing operations
+    on graphemes.)
+
+    $(P Acts as the identity function when given a range of code points.)
++/
+// TODO: Propagate bidirectional access
+auto byCodePoint(Range)(Range range)
+    if(isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
+{
+    static struct Result
+    {
+        private Range _range;
+        private size_t i = 0;
+
+        bool empty() @property
+        {
+            return _range.empty;
+        }
+
+        dchar front() @property
+        {
+            return _range.front[i];
+        }
+
+        void popFront()
+        {
+            ++i;
+
+            if(i >= _range.front.length)
+            {
+                _range.popFront();
+                i = 0;
+            }
+        }
+
+        static if(isForwardRange!Range)
+        {
+            Result save() @property
+            {
+                return Result(_range.save, i);
+            }
+        }
+    }
+
+    return Result(range);
+}
+
+/// Ditto
+Range byCodePoint(Range)(Range range)
+    if(isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
+{
+    return range;
+}
+
+///
+unittest
+{
+    import std.string : text;
+
+    string s = "noe\u0308l"; // noël
+
+    // reverse it and convert the result to a string
+    string reverse = s.byGrapheme
+        .array
+        .retro
+        .byCodePoint
+        .text;
+
+    assert(reverse == "le\u0308on"); // lëon
+}
+
+unittest
+{
+    assert("".byGrapheme.byCodePoint.equal(""));
+
+    string text = "noe\u0308l";
+    static assert(is(typeof(text.byCodePoint) == string));
+
+    auto gText = InputRangeString(text).byGrapheme;
+    static assert(!isForwardRange!(typeof(gText)));
+
+    auto cpText = gText.byCodePoint;
+    static assert(!isForwardRange!(typeof(cpText)));
+
+    assert(cpText.walkLength == text.walkLength);
 }
 
 /++
