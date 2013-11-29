@@ -9044,6 +9044,28 @@ unittest
         auto a_10317 = new E_10317[10];
         sort(a_10317);
     }
+
+	{
+		// Issue 7767
+		// Unstable sort should complete without an excessive number of predicate calls
+		// This would suggest it's running in quadratic time
+
+		// Compilation error if predicate is not static, i.e. a nested function
+		static uint comp;
+		static bool pred(uint a, uint b)
+		{
+			++comp;
+			return a < b;
+		}
+
+		uint[] arr;
+		arr.length = 1024;
+		foreach(i; 0..arr.length) arr[i] = i;
+		swapRanges(arr[0..$/2], arr[$/2..$]);
+
+		sort!(pred, SwapStrategy.unstable)(arr);
+		assert(comp < 25_000);
+	}
 }
 
 private template validPredicates(E, less...) {
