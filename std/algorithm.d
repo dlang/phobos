@@ -9346,7 +9346,7 @@ private template HeapSortImpl(alias less, Range)
 		i = r.length - 1;
 		while(i > 0)
 		{
-			swap(r[0], r[i]);
+			swapAt(r, 0, i);
 			sift(r, 0, i);
 			--i;
 		}
