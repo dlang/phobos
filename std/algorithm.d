@@ -9272,7 +9272,7 @@ void swapAt(R)(R r, size_t i1, size_t i2)
     }
 }
 
-private void quickSortImpl(alias less, Range)(Range r, double depth)
+private void quickSortImpl(alias less, Range)(Range r, real depth)
 {
     alias ElementType!(Range) Elem;
     enum size_t optimisticInsertionSortGetsBetter = 25;
@@ -9286,7 +9286,7 @@ private void quickSortImpl(alias less, Range)(Range r, double depth)
 			HeapSortImpl!(less, Range).heapSort(r);
 			return;
 		}
-		depth /= 1.5;
+		depth *= (3.0/2.0);
 
         const pivotIdx = getPivot!(less)(r);
         auto pivot = r[pivotIdx];
@@ -9317,7 +9317,7 @@ private void quickSortImpl(alias less, Range)(Range r, double depth)
         {
             swap(left, right);
         }
-        .quickSortImpl!(less, Range)(right);
+        .quickSortImpl!(less, Range)(right, depth);
         r = left;
     }
     // residual sort
@@ -9355,7 +9355,6 @@ private template HeapSortImpl(alias less, Range)
 	void sift(Range r, size_t parent, immutable size_t end)
 	{
 		immutable root = parent;
-		auto value = r[parent];
 		size_t child = void;
 
 		// Sift down
@@ -9367,7 +9366,7 @@ private template HeapSortImpl(alias less, Range)
 
 			if(child + 1 < end && lessFun(r[child], r[child + 1])) child += 1;
 
-			r[parent] = r[child];
+			swapAt(r, parent, child);
 			parent = child;
 		}
 
@@ -9377,15 +9376,13 @@ private template HeapSortImpl(alias less, Range)
 		while(child > root)
 		{
 			parent = (child - 1) / 2;
-			if(lessFun(r[parent], value))
+			if(lessFun(r[parent], r[child]))
 			{
-				r[child] = r[parent];
+				swapAt(r, parent, child);
 				child = parent;
 			}
 			else break;
 		}
-
-		r[child] = value;
 	}
 }
 
