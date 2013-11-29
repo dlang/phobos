@@ -8934,8 +8934,7 @@ See_Also:
     STL's $(WEB sgi.com/tech/stl/_sort.html, _sort)$(BR)
     $(WEB sgi.com/tech/stl/stable_sort.html, stable_sort)
 
-Remark: Stable sort is implementated as Timsort, the original code at
-$(WEB github.com/Xinok/XSort, XSort) by Xinok, public domain.
+Remark: Stable sort is implementated as Timsort.
 
 Example:
 ----
@@ -8977,7 +8976,7 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
     static if (is(LessRet == bool))
     {
         static if (ss == SwapStrategy.unstable)
-            quickSortImpl!(lessFun)(r);
+            quickSortImpl!(lessFun)(r, r.length);
         else //use Tim Sort for semistable & stable
             TimSortImpl!(lessFun, Range).sort(r, null);
 
@@ -9251,7 +9250,7 @@ void swapAt(R)(R r, size_t i1, size_t i2)
     }
 }
 
-private void quickSortImpl(alias less, Range)(Range r)
+private void quickSortImpl(alias less, Range)(Range r, double depth)
 {
     alias ElementType!(Range) Elem;
     enum size_t optimisticInsertionSortGetsBetter = 25;
@@ -9260,6 +9259,13 @@ private void quickSortImpl(alias less, Range)(Range r)
     // partition
     while (r.length > optimisticInsertionSortGetsBetter)
     {
+		if(depth < 1.0)
+		{
+			HeapSortImpl!(less, Range).heapSort(r);
+			return;
+		}
+		depth /= 1.5;
+
         const pivotIdx = getPivot!(less)(r);
         auto pivot = r[pivotIdx];
 
@@ -9299,14 +9305,67 @@ private void quickSortImpl(alias less, Range)(Range r)
     }
 }
 
-/+
-    Tim Sort for Random-Access Ranges
+// Bottom-Up Heap-Sort Implementation
+private template HeapSortImpl(alias less, Range)
+{
+    static assert(isRandomAccessRange!Range);
+	static assert(hasLength!Range);
+	static assert(hasAssignableElements!Range);
 
-    Written and tested for DMD 2.059 and Phobos
+	alias binaryFun!less lessFun;
 
-    Authors:  Xinok
-    License:  Public Domain
-+/
+    void heapSort(Range r)
+	{
+		// Build Heap
+		size_t i = (r.length - 2) / 2 + 1;
+		while(i > 0) sift(r, --i, r.length);
+
+		// Sort
+		i = r.length - 1;
+		while(i > 0)
+		{
+			swap(r[0], r[i]);
+			sift(r, 0, i);
+			--i;
+		}
+	}
+
+	void sift(Range r, size_t parent, immutable size_t end)
+	{
+		immutable root = parent;
+		auto value = r[parent];
+		size_t child = void;
+
+		// Sift down
+		while(true)
+		{
+			child = parent * 2 + 1;
+
+			if(child >= end) break;
+
+			if(child + 1 < end && lessFun(r[child], r[child + 1])) child += 1;
+
+			r[parent] = r[child];
+			parent = child;
+		}
+
+		child = parent;
+
+		// Sift up
+		while(child > root)
+		{
+			parent = (child - 1) / 2;
+			if(lessFun(r[parent], value))
+			{
+				r[child] = r[parent];
+				child = parent;
+			}
+			else break;
+		}
+
+		r[child] = value;
+	}
+}
 
 // Tim Sort implementation
 private template TimSortImpl(alias pred, R)
