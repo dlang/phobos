@@ -9223,6 +9223,7 @@ private size_t getPivot(alias less, Range)(Range r)
 }
 
 private void optimisticInsertionSort(alias less, Range)(Range r)
+if(hasAssignableElements!Range)
 {
     alias binaryFun!(less) pred;
     if (r.length < 2) {
@@ -9240,6 +9241,24 @@ private void optimisticInsertionSort(alias less, Range)(Range r)
 
         r[j] = temp;
     }
+}
+
+private void optimisticInsertionSort(alias less, Range)(Range r)
+if(!hasAssignableElements!Range)
+{
+    alias binaryFun!(less) pred;
+    if (r.length < 2) {
+        return ;
+    }
+
+    immutable maxJ = r.length - 1;
+    for (size_t i = r.length - 2; i != size_t.max; --i)
+	{
+        for (size_t j = i; j < maxJ && pred(r[j + 1], r[j]); ++j)
+		{
+			swapAt(r, j, j + 1);
+		}
+	}
 }
 
 unittest
