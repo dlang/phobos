@@ -714,7 +714,7 @@ T findRoot(T, R)(scope R delegate(T) f, T a, T b)
 {
     auto r = findRoot(f, a, b, f(a), f(b), (T lo, T hi){ return false; });
     // Return the first value if it is smaller or NaN
-    return fabs(r[2]) !> fabs(r[3]) ? r[0] : r[1];
+    return !(fabs(r[2]) > fabs(r[3])) ? r[0] : r[1];
 }
 
 /** Find root of a real function f(x) by bracketing, allowing the
@@ -777,7 +777,7 @@ body {
     void bracket(T c)
     {
         T fc = f(c);
-        if (fc !<> 0) { // Exact solution, or NaN
+        if (fc == 0 || fc.isNaN) { // Exact solution, or NaN
             a = c;
             fa = fc;
             d = c;
@@ -847,11 +847,11 @@ body {
     }
 
     // On the first iteration we take a secant step:
-    if (fa !<> 0) {
+    if (fa == 0 || fa.isNaN) {
         done = true;
         b = a;
         fb = fa;
-    } else if (fb !<> 0) {
+    } else if (fb == 0 || fb.isNaN) {
         done = true;
         a = b;
         fa = fb;
@@ -891,7 +891,7 @@ whileloop:
                 real d32 = (d31 - q21) * fd / (fd - fa);
                 real q33 = (d32 - q22) * fa / (fe - fa);
                 c = a + (q31 + q32 + q33);
-                if (c!<>=0 || (c <= a) || (c >= b)) {
+                if (c.isNaN || (c <= a) || (c >= b)) {
                     // DAC: If the interpolation predicts a or b, it's
                     // probable that it's the actual root. Only allow this if
                     // we're already close to the root.
@@ -909,7 +909,7 @@ whileloop:
                 // DAC: Alefeld doesn't explain why the number of newton steps
                 // should vary.
                 c = newtonQuadratic(distinct ? 3 : 2);
-                if(c!<>=0 || (c <= a) || (c >= b)) {
+                if(c.isNaN || (c <= a) || (c >= b)) {
                     // Failure, try a secant step:
                     c = secant_interpolate(a, b, fa, fb);
                 }
@@ -936,7 +936,7 @@ whileloop:
         c = u - 2 * (fu / (fb - fa)) * (b - a);
         // DAC: If the secant predicts a value equal to an endpoint, it's
         // probably false.
-        if(c==a || c==b || c!<>=0 || fabs(c - u) > (b - a) / 2) {
+        if(c==a || c==b || c.isNaN || fabs(c - u) > (b - a) / 2) {
             if ((a-b) == a || (b-a) == b) {
                 if ( (a>0 && b<0) || (a<0 && b>0) ) c = 0;
                 else {
