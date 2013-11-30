@@ -3332,26 +3332,46 @@ template BacktrackingMatcher(bool CTregex)
                 return m;
             }
             static if(kicked)
-                auto searchFn = re.kickstart.empty ? &this.next :&this.search;
-            else
-                auto searchFn = &this.next;
+            {
+                if(!re.kickstart.empty)
+                { 
+                    for(;;)
+                    {
+
+                        if(matchFinalize())
+                            return true;
+                        else
+                        {
+                            if(atEnd)
+                                break;
+                            search();
+                            if(atEnd)
+                            {
+                                exhausted = true;
+                                return matchFinalize();
+                            }
+                        }
+                    }
+                    exhausted = true;
+                    return false; //early return
+                }                
+            }            
+            //no search available - skip a char at a time
             for(;;)
             {
-
                 if(matchFinalize())
                     return true;
                 else
                 {
                     if(atEnd)
                         break;
-                    searchFn();
+                    next();
                     if(atEnd)
                     {
                         exhausted = true;
                         return matchFinalize();
                     }
                 }
-
             }
             exhausted = true;
             return false;
@@ -4722,7 +4742,6 @@ enum OneShot { Fwd, Bwd };
         Match,
     }
 
-    //match the input and fill matches
     bool match(Group!DataIndex[] matches)
     {
         debug(std_regex_matcher)
@@ -4738,12 +4757,20 @@ enum OneShot { Fwd, Bwd };
             return matchOneShot(matches)==MatchResult.Match;
         }
         static if(kicked)
-            auto searchFn = re.kickstart.empty ? &this.next : &this.search;
-        else
-            auto searchFn = &this.next;
-        if((!matched) && clist.empty)
+            if(!re.kickstart.empty)
+                return matchImpl!(true)(matches);
+        return matchImpl!(false)(matches);           
+    }
+
+    //match the input and fill matches
+    bool matchImpl(bool withSearch)(Group!DataIndex[] matches)
+    {
+        if(!matched && clist.empty)
         {
-           searchFn();
+           static if(withSearch)
+                search();
+           else
+                next();
         }
         else//char in question is  fetched in prev call to match
         {
@@ -4780,8 +4807,16 @@ enum OneShot { Fwd, Bwd };
                 nlist = (ThreadList!DataIndex).init;
                 if(clist.tip is null)
                 {
-                    if(!searchFn())
-                        break;
+                    static if(withSearch)
+                    {
+                        if(!search())
+                            break;
+                    }
+                    else
+                    {
+                        if(!next())
+                            break;   
+                    }
                 }
                 else if(!next())
                 {
