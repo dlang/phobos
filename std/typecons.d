@@ -45,7 +45,7 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
 module std.typecons;
 import core.memory, core.stdc.stdlib;
 import std.algorithm, std.array, std.conv, std.exception, std.format,
-    std.string, std.traits, std.typetuple, std.range;
+    std.math, std.string, std.traits, std.typetuple, std.range;
 
 debug(Unique) import std.stdio;
 
@@ -1842,7 +1842,7 @@ unittest
     {
         interface I_1 { real test(); }
         auto o = new BlackHole!I_1;
-        assert(o.test() !<>= 0); // NaN
+        assert(o.test().isNaN); // NaN
     }
     // doc example
     {
@@ -1859,7 +1859,7 @@ unittest
         auto c = new BlackHole!C(42);
         assert(c.value == 42);
 
-        assert(c.realValue !<>= 0); // NaN
+        assert(c.realValue.isNaN); // NaN
         c.doSomething();
     }
 }
