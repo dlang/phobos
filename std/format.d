@@ -4395,10 +4395,10 @@ body
             }
             else static if (isAssociativeArray!T)
             {
-                auto key = unformatElement!(typeof(T.keys[0]))(input, fmt);
+                auto key = unformatElement!(typeof(T.init.keys[0]))(input, fmt);
                 fmt.readUpToNextSpec(input);        // eat key separator
 
-                result[key] = unformatElement!(typeof(T.values[0]))(input, fmt);
+                result[key] = unformatElement!(typeof(T.init.values[0]))(input, fmt);
             }
             debug (unformatRange) {
             if (input.empty) printf("-> front = [empty] ");
