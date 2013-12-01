@@ -753,7 +753,7 @@ T findRoot(T, R)(scope R delegate(T) f, T a, T b)
 Tuple!(T, T, R, R) findRoot(T,R)(scope R delegate(T) f, T ax, T bx, R fax, R fbx,
     scope bool delegate(T lo, T hi) tolerance)
 in {
-    assert(ax<>=0 && bx<>=0, "Limits must not be NaN");
+    assert(!ax.isNaN && !bx.isNaN, "Limits must not be NaN");
     assert(signbit(fax) != signbit(fbx), "Parameters must bracket the root.");
 }
 body {
@@ -999,7 +999,7 @@ unittest
     void testFindRoot(real delegate(real) f, real x1, real x2) {
         numCalls=0;
         ++numProblems;
-        assert(x1<>=0 && x2<>=0);
+        assert(!x1.isNaN && !x2.isNaN);
         assert(signbit(x1) != signbit(x2));
         auto result = findRoot(f, x1, x2, f(x1), f(x2),
           (real lo, real hi) { return false; });
