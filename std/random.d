@@ -1596,7 +1596,14 @@ if (isInstanceOf!(SortedRange, Range) && isNumeric!(ElementType!Range))
     {
         alias pred = std.functional.binaryFun!(TL[1]);
         alias T = ElementType!Range;
-        enum isAscending = pred(T.min, T.max);
+        static if(isFloatingPoint!T)
+        {
+            enum isAscending = pred(T.min_normal, T.max);
+        }
+        else
+        {
+            enum isAscending = pred(T.min, T.max);
+        }
     }
     else
         static assert(false);
@@ -1632,28 +1639,46 @@ if (isUniformRNG!Rng
 unittest
 {
     auto rnd = Random(unpredictableSeed);
-    alias answers = TypeTuple!(0, 1, 2, 3, 4, 5);
-    // Testing sorted by "a < b"
-    foreach(answer; answers)
-    {
-        auto testData = chain(repeat(0).take(answer), repeat(1).take(answers.length - answer));
-        auto chosen = dice(rnd, testData.array().assumeSorted());
-        assert(chosen == answer);
-    }
-    // Testing sorted by "a > b"
-    foreach(answer; answers)
-    {
-        auto testData = chain(repeat(1).take(answer + 1), repeat(0).take(answers.length - answer - 1));
-        auto chosen = dice(rnd, testData.array().assumeSorted!"a > b"());
-        assert(chosen == answer);
-    }
-    {
-        // works with descending sorted ranges too
-        auto sortedArr = chain(1.only, repeat(0).take(20)).array.assumeSorted!"a > b"();
-        auto i = dice(rnd, sortedArr);
-        assert(i == 0);
-    }
+    /+alias AcceptedTypes = TypeTuple!(
+                ubyte, ushort, uint, ulong,
+                byte, short, int, long,
+                float, double, real);+/
 
+    // subset of above to speed up compilation
+    alias AcceptedTypes = TypeTuple!(ushort, int, double);
+
+    auto answers = iota(5);
+    foreach(TestType; AcceptedTypes)
+    {
+        // Testing sorted by "a < b"
+        foreach(answer; answers)
+        {
+            auto testData = chain(repeat(cast(TestType) 0).take(answer),
+                    repeat(cast(TestType) 1).take(answers.length - answer));
+            auto chosen = dice(rnd, testData.array().assumeSorted());
+            assert(chosen == answer);
+        }
+        // Testing sorted by "a > b"
+        foreach(answer; answers)
+        {
+            auto testData = chain(repeat(cast(TestType) 1).take(answer + 1),
+                    repeat(cast(TestType) 0).take(answers.length - answer - 1));
+            auto chosen = dice(rnd, testData.array().assumeSorted!"a > b"());
+            assert(chosen == answer);
+        }
+
+        // Test for equivalence with standard dice
+        foreach(i; iota(100)) {
+            auto reproRnd1 = Random(14823+i);
+            auto reproRnd2 = reproRnd1.save;
+            auto stdDice    = dice(reproRnd1,
+                    repeat(cast(TestType) 1).take(100));
+            auto sortedDice = dice(reproRnd2,
+                    iota(cast(TestType) 1, cast(TestType) 101).assumeSorted());
+            assert(stdDice == sortedDice);
+        }
+    }
+    
 }
 
 /**
