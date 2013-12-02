@@ -1189,8 +1189,7 @@ struct Nullable(T)
 /**
 Constructor initializing $(D this) with $(D value).
  */
-    //this()(inout T value) inout   // proper signature
-    this(U:T)(inout U value) inout  // workaround for BUG 10313
+    this()(inout T value) inout
     {
         _value = value;
         _isNull = false;
