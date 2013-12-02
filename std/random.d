@@ -1592,11 +1592,11 @@ if (isInstanceOf!(SortedRange, Range) && isNumeric!(ElementType!Range))
 template isAscending(Range)
 if (isInstanceOf!(SortedRange, Range) && isNumeric!(ElementType!Range))
 {
-    static if(is(Range == SortedRange!TL, TL...))
+    static if (is(Range == SortedRange!TL, TL...))
     {
         alias pred = std.functional.binaryFun!(TL[1]);
         alias T = ElementType!Range;
-        static if(isFloatingPoint!T)
+        static if (isFloatingPoint!T)
         {
             enum isAscending = pred(T.min_normal, T.max);
         }
@@ -1613,7 +1613,7 @@ private size_t diceImpl(Rng, Range)(ref Rng rng, Range cumulativeRange)
 if (isUniformRNG!Rng
     && isInstanceOf!(SortedRange, Range) && isNumeric!(ElementType!Range))
 {
-    static if(isAscending!Range)
+    static if (isAscending!Range)
     {
         immutable sum = cumulativeRange.back;
     }
@@ -1626,7 +1626,7 @@ if (isUniformRNG!Rng
     immutable point = uniform(0, sum, rng);
     assert(point < sum);
 
-    static if(isAscending!Range)
+    static if (isAscending!Range)
     {
         return cumulativeRange.length - cumulativeRange.upperBound!(SearchPolicy.binarySearch)(point).length;
     }
@@ -1648,10 +1648,10 @@ unittest
     alias AcceptedTypes = TypeTuple!(ushort, int, double);
 
     auto answers = iota(5);
-    foreach(TestType; AcceptedTypes)
+    foreach (TestType; AcceptedTypes)
     {
         // Testing sorted by "a < b"
-        foreach(answer; answers)
+        foreach (answer; answers)
         {
             auto testData = chain(repeat(cast(TestType) 0).take(answer),
                     repeat(cast(TestType) 1).take(answers.length - answer));
@@ -1659,7 +1659,7 @@ unittest
             assert(chosen == answer);
         }
         // Testing sorted by "a > b"
-        foreach(answer; answers)
+        foreach (answer; answers)
         {
             auto testData = chain(repeat(cast(TestType) 1).take(answer + 1),
                     repeat(cast(TestType) 0).take(answers.length - answer - 1));
@@ -1668,7 +1668,8 @@ unittest
         }
 
         // Test for equivalence with standard dice
-        foreach(i; iota(100)) {
+        foreach (i; iota(100))
+        {
             auto reproRnd1 = Random(14823+i);
             auto reproRnd2 = reproRnd1.save;
             auto stdDice    = dice(reproRnd1,
