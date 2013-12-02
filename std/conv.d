@@ -3179,8 +3179,8 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     if (isExactSomeString!Source &&
         isAssociativeArray!Target && !is(Target == enum))
 {
-    alias KeyType = typeof(Target.keys[0]);
-    alias ValType = typeof(Target.values[0]);
+    alias KeyType = typeof(Target.init.keys[0]);
+    alias ValType = typeof(Target.init.values[0]);
 
     Target result;
 
