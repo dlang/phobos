@@ -1248,6 +1248,68 @@ if (isFloatingPoint!(CommonType!(T1, T2)))
 }
 
 // Implementation of uniform for integral types
+/+ Description of algorithm and suggestion of correctness:
+
+The modulus operator maps an integer to a small, finite space. For instance, `x
+% 3` will map whatever x is into the range [0 .. 3). 0 maps to 0, 1 maps to 1, 2
+maps to 2, 3 maps to 0, and so on infinitely. As long as the integer is
+uniformly chosen from the infinite space of all non-negative integers then `x %
+3` will uniformly fall into that range.
+
+(Non-negative is important in this case because some definitions of modulus,
+namely the one used in computers generally, map negative numbers differently to
+(-3 .. 0]. `uniform` does not use negative number modulus, thus we can safely
+ignore that fact.)
+
+The issue with computers is that integers have a finite space they must fit in,
+and our uniformly chosen random number is picked in that finite space. So, that
+method is not sufficient. You can look at it as the integer space being divided
+into "buckets" and every bucket after the first bucket maps directly into that
+first bucket. `[0, 1, 2]`, `[3, 4, 5]`, ... When integers are finite, then the
+last bucket has the chance to be "incomplete": `[uint.max - 3, uint.max - 2,
+uint.max - 1]`, `[uint.max]` ... (the last bucket only has 1!). The issue here
+is that _every_ bucket maps _completely_ to the first bucket except for that
+last one. The last one doesn't have corresponding mappings to 1 or 2, in this
+case, which makes it unfair.
+
+So, the answer is to simply "reroll" if you're in that last bucket, since it's
+the only unfair one. Eventually you'll roll into a fair bucket. Simply, instead
+of the meaning of the last bucket being "maps to `[0]`", it changes to "maps to
+`[0, 1, 2]`", which is precisely what we want.
+
+To generalize, `upperDist` represents the size of our buckets (and, thus, the
+exclusive upper bound for our desired uniform number). `rnum` is a uniformly
+random number picked from the space of integers that a computer can hold (we'll
+say `UpperType` represents that type).
+
+We'll first try to do the mapping into the first bucket by doing `offset = rnum
+% upperDist`. We can figure out the position of the front of the bucket we're in
+by `bucketFront = rnum - offset`.
+
+If we start at `UpperType.max` and walk backwards `upperDist - 1` spaces, then
+the space we land on is the last acceptable position where a full bucket can
+fit:
+
+```
+   bucketFront     UpperType.max
+      v                 v
+[..., 0, 1, 2, ..., upperDist - 1]
+      ^~~ upperDist - 1 ~~^
+```
+
+If the bucket starts any later, then it must have lost at least one number and
+at least that number won't be represented fairly.
+
+```
+                bucketFront     UpperType.max
+                     v                v
+[..., upperDist - 1, 0, 1, 2, ..., upperDist - 2]
+          ^~~~~~~~ upperDist - 1 ~~~~~~~^
+```
+
+Hence, our condition to reroll is
+`bucketFront > (UpperType.max - (upperDist - 1))`
++/
 auto uniform(string boundaries = "[)", T1, T2, RandomGen)
 (T1 a, T2 b, ref RandomGen rng)
 if (isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2)))
