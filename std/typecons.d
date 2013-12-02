@@ -417,7 +417,7 @@ template Tuple(Specs...)
          * Constructor taking one value for each field. Each argument must be
          * implicitly assignable to the respective element of the target.
          */
-        this()(Types values)
+        this(Types values)
         {
             field[] = values[];
         }
@@ -1189,8 +1189,7 @@ struct Nullable(T)
 /**
 Constructor initializing $(D this) with $(D value).
  */
-    //this()(inout T value) inout   // proper signature
-    this(U:T)(inout U value) inout  // workaround for BUG 10313
+    this(inout T value) inout
     {
         _value = value;
         _isNull = false;
@@ -1486,7 +1485,7 @@ struct Nullable(T, T nullValue)
 /**
 Constructor initializing $(D this) with $(D value).
  */
-    this()(T value)
+    this(T value)
     {
         _value = value;
     }
@@ -1494,7 +1493,7 @@ Constructor initializing $(D this) with $(D value).
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
  */
-    @property bool isNull()() const
+    @property bool isNull() const
     {
         return _value == nullValue;
     }
@@ -1520,7 +1519,7 @@ made. Note that the assignment may leave $(D this) in the null state.
 Gets the value. $(D this) must not be in the null state.
 This function is also called for the implicit conversion to $(D T).
  */
-    @property ref inout(T) get()() inout
+    @property ref inout(T) get() inout
     {
         //@@@6169@@@: We avoid any call that might evaluate nullValue's %s,
         //Because it might messup get's purity and safety inference.
