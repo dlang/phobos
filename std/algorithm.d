@@ -9045,28 +9045,28 @@ unittest
         sort(a_10317);
     }
 
-	{
-		// Issue 7767
-		// Unstable sort should complete without an excessive number of predicate calls
-		// This would suggest it's running in quadratic time
+    {
+        // Issue 7767
+        // Unstable sort should complete without an excessive number of predicate calls
+        // This would suggest it's running in quadratic time
 
-		// Compilation error if predicate is not static, i.e. a nested function
-		static uint comp;
-		static bool pred(size_t a, size_t b)
-		{
-			++comp;
-			return a < b;
-		}
+        // Compilation error if predicate is not static, i.e. a nested function
+        static uint comp;
+        static bool pred(size_t a, size_t b)
+        {
+            ++comp;
+            return a < b;
+        }
 
-		size_t[] arr;
-		arr.length = 1024;
-		
-		foreach(k; 0..arr.length) arr[k] = k;
-		swapRanges(arr[0..$/2], arr[$/2..$]);
+        size_t[] arr;
+        arr.length = 1024;
+        
+        foreach(k; 0..arr.length) arr[k] = k;
+        swapRanges(arr[0..$/2], arr[$/2..$]);
 
-		sort!(pred, SwapStrategy.unstable)(arr);
-		assert(comp < 25_000);
-	}
+        sort!(pred, SwapStrategy.unstable)(arr);
+        assert(comp < 25_000);
+    }
 }
 
 private template validPredicates(E, less...) {
@@ -9253,12 +9253,12 @@ if(!hasAssignableElements!Range)
 
     immutable maxJ = r.length - 1;
     for (size_t i = r.length - 2; i != size_t.max; --i)
-	{
+    {
         for (size_t j = i; j < maxJ && pred(r[j + 1], r[j]); ++j)
-		{
-			swapAt(r, j, j + 1);
-		}
-	}
+        {
+            swapAt(r, j, j + 1);
+        }
+    }
 }
 
 unittest
@@ -9301,12 +9301,12 @@ private void quickSortImpl(alias less, Range)(Range r, real depth)
     // partition
     while (r.length > optimisticInsertionSortGetsBetter)
     {
-		if(depth < 1.0)
-		{
-			HeapSortImpl!(less, Range).heapSort(r);
-			return;
-		}
-		depth *= (2.0/3.0);
+        if(depth < 1.0)
+        {
+            HeapSortImpl!(less, Range).heapSort(r);
+            return;
+        }
+        depth *= (2.0/3.0);
 
         const pivotIdx = getPivot!(less)(r);
         auto pivot = r[pivotIdx];
@@ -9351,62 +9351,62 @@ private void quickSortImpl(alias less, Range)(Range r, real depth)
 private template HeapSortImpl(alias less, Range)
 {
     static assert(isRandomAccessRange!Range);
-	static assert(hasLength!Range);
-	static assert(hasAssignableElements!Range);
+    static assert(hasLength!Range);
+    static assert(hasAssignableElements!Range);
 
-	alias binaryFun!less lessFun;
+    alias binaryFun!less lessFun;
 
     void heapSort(Range r)
-	{
-		// If true, there is nothing to do
-		if(r.length < 2) return;
+    {
+        // If true, there is nothing to do
+        if(r.length < 2) return;
 
-		// Build Heap
-		size_t i = (r.length - 2) / 2 + 1;
-		while(i > 0) sift(r, --i, r.length);
+        // Build Heap
+        size_t i = (r.length - 2) / 2 + 1;
+        while(i > 0) sift(r, --i, r.length);
 
-		// Sort
-		i = r.length - 1;
-		while(i > 0)
-		{
-			swapAt(r, 0, i);
-			sift(r, 0, i);
-			--i;
-		}
-	}
+        // Sort
+        i = r.length - 1;
+        while(i > 0)
+        {
+            swapAt(r, 0, i);
+            sift(r, 0, i);
+            --i;
+        }
+    }
 
-	void sift(Range r, size_t parent, immutable size_t end)
-	{
-		immutable root = parent;
-		size_t child = void;
+    void sift(Range r, size_t parent, immutable size_t end)
+    {
+        immutable root = parent;
+        size_t child = void;
 
-		// Sift down
-		while(true)
-		{
-			child = parent * 2 + 1;
+        // Sift down
+        while(true)
+        {
+            child = parent * 2 + 1;
 
-			if(child >= end) break;
+            if(child >= end) break;
 
-			if(child + 1 < end && lessFun(r[child], r[child + 1])) child += 1;
+            if(child + 1 < end && lessFun(r[child], r[child + 1])) child += 1;
 
-			swapAt(r, parent, child);
-			parent = child;
-		}
+            swapAt(r, parent, child);
+            parent = child;
+        }
 
-		child = parent;
+        child = parent;
 
-		// Sift up
-		while(child > root)
-		{
-			parent = (child - 1) / 2;
-			if(lessFun(r[parent], r[child]))
-			{
-				swapAt(r, parent, child);
-				child = parent;
-			}
-			else break;
-		}
-	}
+        // Sift up
+        while(child > root)
+        {
+            parent = (child - 1) / 2;
+            if(lessFun(r[parent], r[child]))
+            {
+                swapAt(r, parent, child);
+                child = parent;
+            }
+            else break;
+        }
+    }
 }
 
 // Tim Sort implementation
