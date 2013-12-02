@@ -1314,7 +1314,7 @@ unittest
     auto c = uniform(0.0, 1.0);
     assert(0 <= c && c < 1);
 
-    foreach(T; TypeTuple!(char, wchar, dchar, byte, ubyte, short, ushort,
+    foreach (T; TypeTuple!(char, wchar, dchar, byte, ubyte, short, ushort,
                           int, uint, long, ulong, float, double, real))
     {
         T lo = 0, hi = 100;
@@ -1326,7 +1326,7 @@ unittest
 
     auto reproRng = Xorshift(239842);
 
-    foreach(T; TypeTuple!(char, wchar, dchar, byte, ubyte, short,
+    foreach (T; TypeTuple!(char, wchar, dchar, byte, ubyte, short,
                           ushort, int, uint, long, ulong))
     {
         T lo = T.min + 10, hi = T.max - 10;
@@ -1341,8 +1341,8 @@ unittest
         foreach (i; 0 .. 50)
         {
             auto x = uniform!"[]"('a', 'd', reproRng);
-            if(x == 'a') sawLB = true;
-            if(x == 'd') sawUB = true;
+            if (x == 'a') sawLB = true;
+            if (x == 'd') sawUB = true;
             assert('a' <= x && x <= 'd');
         }
         assert(sawLB && sawUB);
@@ -1353,8 +1353,8 @@ unittest
         foreach (i; 0 .. 50)
         {
             auto x = uniform('a', 'd', reproRng);
-            if(x == 'a') sawLB = true;
-            if(x == 'c') sawUB = true;
+            if (x == 'a') sawLB = true;
+            if (x == 'c') sawUB = true;
             assert('a' <= x && x < 'd');
         }
         assert(sawLB && sawUB);
@@ -1366,8 +1366,8 @@ unittest
         {
             immutable int lo = -2, hi = 2;
             auto x = uniform!"()"(lo, hi, reproRng);
-            if(x == (lo+1)) sawLB = true;
-            if(x == (hi-1)) sawUB = true;
+            if (x == (lo+1)) sawLB = true;
+            if (x == (hi-1)) sawUB = true;
             assert(lo < x && x < hi);
         }
         assert(sawLB && sawUB);
@@ -1375,12 +1375,12 @@ unittest
 
     {
         bool sawLB = false, sawUB = false;
-        foreach(i; 0 .. 50)
+        foreach (i; 0 .. 50)
         {
             immutable ubyte lo = 0, hi = 5;
             auto x = uniform(lo, hi, reproRng);
-            if(x == lo) sawLB = true;
-            if(x == (hi-1)) sawUB = true;
+            if (x == lo) sawLB = true;
+            if (x == (hi-1)) sawUB = true;
             assert(lo <= x && x < hi);
         }
         assert(sawLB && sawUB);
