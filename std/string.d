@@ -570,7 +570,7 @@ unittest
   +/
 ptrdiff_t lastIndexOf(Char)(const(Char)[] s,
                           dchar c,
-                          CaseSensitive cs = CaseSensitive.yes)
+                          CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char)
 {
     if (cs == CaseSensitive.yes)
@@ -678,7 +678,7 @@ unittest
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
 ptrdiff_t lastIndexOf(Char)(const(Char)[] s, dchar c, const size_t startIdx,
-        CaseSensitive cs = CaseSensitive.yes)
+        CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char)
 {
     if (startIdx <= s.length)
@@ -729,7 +729,7 @@ unittest
   +/
 ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
                                   const(Char2)[] sub,
-                                  CaseSensitive cs = CaseSensitive.yes)
+                                  CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char1 && isSomeChar!Char2)
 {
     if (sub.empty)
@@ -759,7 +759,11 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
                     }
                     else
                     {
-                        if (memcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
+                        auto trustedMemcmp(in void* s1, in void* s2, size_t n) @trusted
+                        {
+                            return memcmp(s1, s2, n);
+                        }
+                        if (trustedMemcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
                             return i;
                     }
                 }
@@ -864,7 +868,7 @@ unittest
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
 ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
-        const size_t startIdx, CaseSensitive cs = CaseSensitive.yes)
+        const size_t startIdx, CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char1 && isSomeChar!Char2)
 {
     if (startIdx <= s.length)
