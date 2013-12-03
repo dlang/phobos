@@ -1347,7 +1347,6 @@ if (isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2)))
     }
     
     assert(upperDist != 0);
-    if (upperDist == 1) return lower;
 
     alias UpperType = typeof(upperDist);
     static assert(UpperType.min == 0);
@@ -1446,6 +1445,13 @@ unittest
             assert(lo <= x && x < hi);
         }
         assert(sawLB && sawUB);
+    }
+
+    {
+        foreach (i; 0 .. 30)
+        {
+            assert(i == uniform(i, i+1, reproRng));
+        }
     }
 }
 
