@@ -144,16 +144,19 @@ DDOC=$(DMD)
 # Set VERSION, where the file is that contains the version string
 VERSION=../dmd/VERSION
 
-# Set SONAME, the name of the shared library.
-# The awk script will return the second group without leading zeros of the version string, i.e. 2.063.2 produces 63
-SONAME = libphobos2.so.0.$(shell awk -F. '{ print $$2 + 0 }' $(VERSION))
-
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))
-	LIB = $(ROOT)/libphobos2.a
-	LIBSO = $(ROOT)/$(SONAME).0
+	LIB:=$(ROOT)/libphobos2.a
+	# 2.064.2 => libphobos2.so.64.2.0
+	# 2.065 => libphobos2.so.65.0.0
+	MAJOR:=$(shell awk -F. '{ print int($$2) }' $(VERSION))
+	MINOR:=$(shell awk -F. '{ print int($$3) }' $(VERSION))
+	PATCH:=0
+	# SONAME doesn't use patch level (ABI compatible)
+	SONAME:=libphobos2.so.$(MAJOR).$(MINOR)
+	LIBSO:=$(ROOT)/$(SONAME).$(PATCH)
 else
-	LIB = $(ROOT)/phobos.lib
+	LIB:=$(ROOT)/phobos.lib
 endif
 
 ################################################################################
