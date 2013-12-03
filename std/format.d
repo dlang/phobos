@@ -776,7 +776,7 @@ struct FormatSpec(Char)
        Construct a new $(D FormatSpec) using the format string $(D fmt), no
        processing is done until needed.
      */
-    this(in Char[] fmt)
+    this(in Char[] fmt) @safe pure
     {
         trailing = fmt;
     }
