@@ -8906,10 +8906,8 @@ unittest
 // sort
 /**
 Sorts a random-access range according to the predicate $(D less). Performs
-$(BIGOH r.length * log(r.length)) (if unstable) or $(BIGOH r.length *
-log(r.length) * log(r.length)) (if stable) evaluations of $(D less)
-and $(D swap).
-
+$(BIGOH r.length * log(r.length)) evaluations of $(D less). Stable sorting 
+requires $(D hasAssignableElements!Range) to be true.
 
 $(D sort) returns a $(XREF range, SortedRange) over the original range, which
 functions that can take advantage of sorted data can then use to know that the
@@ -8917,7 +8915,6 @@ range is sorted and adjust accordingly. The $(XREF range, SortedRange) is a
 wrapper around the original range, so both it and the original range are sorted,
 but other functions won't know that the original range has been sorted, whereas
 they $(I can) know that $(XREF range, SortedRange) has been sorted.
-
 
 The predicate is expected to satisfy certain rules in order for $(D sort) to
 behave as expected - otherwise, the program may fail on certain inputs (but not
@@ -8928,13 +8925,22 @@ imply $(D !less(a,c)). Note that the default predicate ($(D "a < b")) does not
 always satisfy these conditions for floating point types, because the expression
 will always be $(D false) when either $(D a) or $(D b) is NaN.
 
+Returns: The initial range wrapped as a $(D SortedRange) with the predicate 
+$(D binaryFun!less).
+
+Algorithms: $(WEB en.wikipedia.org/wiki/Introsort) is used for unstable sorting and
+$(WEB en.wikipedia.org/wiki/Timsort, Timsort) is used for stable sorting. 
+Each algorithm has benefits beyond stability. Introsort is generally faster but 
+Timsort may achieve greater speeds on data with low entropy or if predicate calls 
+are expensive. Introsort performs no allocations whereas Timsort will perform one
+or more allocations per call. Both algorithms have $(BIGOH n log n) worst-case 
+time complexity.
 
 See_Also:
     $(XREF range, assumeSorted)$(BR)
-    STL's $(WEB sgi.com/tech/stl/_sort.html, _sort)$(BR)
-    $(WEB sgi.com/tech/stl/stable_sort.html, stable_sort)
-
-Remark: Stable sort is implementated as Timsort.
+    $(XREF range, SortedRange)$(BR)
+    $(XREF algorithm, SwapStrategy)$(BR)
+    $(XREF functional, binaryFun)
 
 Example:
 ----
@@ -9223,40 +9229,35 @@ private size_t getPivot(alias less, Range)(Range r)
 }
 
 private void optimisticInsertionSort(alias less, Range)(Range r)
-if(hasAssignableElements!Range)
 {
     alias binaryFun!(less) pred;
-    if (r.length < 2) {
-        return ;
-    }
-
-    immutable maxJ = r.length - 1;
-    for (size_t i = r.length - 2; i != size_t.max; --i) {
-        size_t j = i;
-        auto temp = r[i];
-
-        for (; j < maxJ && pred(r[j + 1], temp); ++j) {
-            r[j] = r[j + 1];
-        }
-
-        r[j] = temp;
-    }
-}
-
-private void optimisticInsertionSort(alias less, Range)(Range r)
-if(!hasAssignableElements!Range)
-{
-    alias binaryFun!(less) pred;
-    if (r.length < 2) {
-        return ;
+    if (r.length < 2)
+    {
+        return;
     }
 
     immutable maxJ = r.length - 1;
     for (size_t i = r.length - 2; i != size_t.max; --i)
     {
-        for (size_t j = i; j < maxJ && pred(r[j + 1], r[j]); ++j)
+        size_t j = i;
+
+        static if (hasAssignableElements!Range)
         {
-            swapAt(r, j, j + 1);
+            auto temp = r[i];
+
+            for (; j < maxJ && pred(r[j + 1], temp); ++j)
+            {
+                r[j] = r[j + 1];
+            }
+
+            r[j] = temp;
+        }
+        else
+        {
+            for (; j < maxJ && pred(r[j + 1], r[j]); ++j)
+            {
+                swapAt(r, j, j + 1);
+            }
         }
     }
 }
