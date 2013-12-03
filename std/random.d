@@ -1325,7 +1325,7 @@ if (isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2)))
     {
         ResultType lower = a;
     }
-    
+
     static if (boundaries[1] == ']')
     {
         enforce(lower <= b,
@@ -1345,7 +1345,7 @@ if (isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2)))
                         boundaries[0], a, ", ", b, boundaries[1]));
         auto upperDist = unsigned(b - lower);
     }
-    
+
     assert(upperDist != 0);
 
     alias UpperType = typeof(upperDist);
