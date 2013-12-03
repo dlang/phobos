@@ -7187,15 +7187,6 @@ unittest
 /**
 This range iterates a single element. This is useful when a sole value
 must be passed to an algorithm expecting a range.
-
-Example:
-----
-assert(equal(only('♡'), "♡"));
-assert([1, 2, 3, 4].findSplitBefore(only(3))[0] == [1, 2]);
-
-string title = "The D Programming Language";
-assert(filter!isUpper(title).map!only().join(".") == "T.D.P.L");
-----
  */
 auto only(T)(T value)
 {
@@ -7236,16 +7227,19 @@ auto only(T)(T value)
     return Result(value);
 }
 
+///
 unittest
 {
-    // Examples
     assert(equal(only('♡'), "♡"));
     assert([1, 2, 3, 4].findSplitBefore(only(3))[0] == [1, 2]);
 
     import std.uni;
     string title = "The D Programming Language";
     assert(filter!isUpper(title).map!only().join(".") == "T.D.P.L");
+}
 
+unittest
+{
     foreach (x; tuple(1, '1', 1.0, "1", [1]))
     {
         auto a = only(x);
