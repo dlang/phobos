@@ -5869,7 +5869,7 @@ template ctRegexImpl(alias pattern, string flags=[])
     pattern = Regular expression
     flags = The _attributes (g, i, m and x accepted)
 +/
-enum ctRegex(alias pattern, alias flags=[]) = ctRegexImpl!(pattern, flags).nr;
+public enum ctRegex(alias pattern, alias flags=[]) = ctRegexImpl!(pattern, flags).nr;
 
 enum isRegexFor(RegEx, R) = is(RegEx == Regex!(BasicElementOf!R))
      || is(RegEx == StaticRegex!(BasicElementOf!R));

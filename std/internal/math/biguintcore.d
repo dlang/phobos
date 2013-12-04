@@ -1467,6 +1467,8 @@ in
 }
 body
 {
+    import std.conv : ConvException;
+
     // Convert to base 1e19 = 10_000_000_000_000_000_000.
     // (this is the largest power of 10 that will fit into a long).
     // The length will be less than 1 + s.length/log2(10) = 1 + s.length/3.3219.
@@ -1488,6 +1490,8 @@ body
     {
         if (s[i] == '_')
             continue;
+        if (s[i] < '0' || s[i] > '9')
+            throw new ConvException("invalid digit");
         x *= 10;
         x += s[i] - '0';
         ++lo;
