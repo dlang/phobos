@@ -3916,7 +3916,7 @@ if (isInputRange!InputRange &&
             {
                 EType* ptr = null;
                 //Note: we use "min/max" to handle sign mismatch.
-                if (min(EType.min, needle) == EType.min, needle && max(EType.max, needle) == EType.max)
+                if (min(EType.min, needle) == EType.min && max(EType.max, needle) == EType.max)
                     ptr = cast(EType*) memchr(haystack.ptr, needle, haystack.length);
 
                 return ptr ?
@@ -4041,6 +4041,15 @@ unittest
     }
     dg();
     assertCTFEable!dg;
+}
+unittest
+{
+    // Bugzilla 11603
+    enum Foo : ubyte { A }
+    assert([Foo.A].find(Foo.A).empty == false);
+
+    ubyte x = 0;
+    assert([x].find(x).empty == false);
 }
 
 /**
