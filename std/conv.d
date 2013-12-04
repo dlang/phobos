@@ -3179,8 +3179,8 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     if (isExactSomeString!Source &&
         isAssociativeArray!Target && !is(Target == enum))
 {
-    alias KeyType = typeof(Target.keys[0]);
-    alias ValType = typeof(Target.values[0]);
+    alias KeyType = typeof(Target.init.keys[0]);
+    alias ValType = typeof(Target.init.values[0]);
 
     Target result;
 
@@ -3866,8 +3866,7 @@ T* emplace(T, Args...)(T* chunk, auto ref Args args)
     static assert (is(T* : void*),
         format("Cannot emplace a %s because it is qualified.", T.stringof));
 
-    //static assert(is(typeof({T t = args[0];})),
-    static assert(is(typeof({T t = lvalueOf!(Args[0]);})), // @@@11497@@@
+    static assert(is(typeof({T t = args[0];})),
         format("%s cannot be emplaced from a %s.", T.stringof, Arg.stringof));
 
     static if (isStaticArray!T)
@@ -3991,8 +3990,7 @@ T* emplace(T, Args...)(T* chunk, auto ref Args args)
         format("Cannot emplace a %s because it is qualified.", T.stringof));
 
     static if (Args.length == 1 && is(Args[0] : T) &&
-        //is (typeof({T t = args[0];})) //Check for legal postblit
-        is (typeof({T t = lvalueOf!(Args[0]);})) // @@@11497@@@
+        is (typeof({T t = args[0];})) //Check for legal postblit
         )
     {
         static if (is(T == Unqual!(Args[0])))

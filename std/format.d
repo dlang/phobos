@@ -776,7 +776,7 @@ struct FormatSpec(Char)
        Construct a new $(D FormatSpec) using the format string $(D fmt), no
        processing is done until needed.
      */
-    this(in Char[] fmt)
+    this(in Char[] fmt) @safe pure
     {
         trailing = fmt;
     }
@@ -2233,7 +2233,7 @@ if (isInputRange!T)
                 formatValue(w, val.front, fmt);
             else
                 formatElement(w, val.front, fmt);
-            if (f.sep)
+            if (f.sep.ptr)
             {
                 put(w, fmt.trailing);
                 val.popFront();
@@ -4395,10 +4395,10 @@ body
             }
             else static if (isAssociativeArray!T)
             {
-                auto key = unformatElement!(typeof(T.keys[0]))(input, fmt);
+                auto key = unformatElement!(typeof(T.init.keys[0]))(input, fmt);
                 fmt.readUpToNextSpec(input);        // eat key separator
 
-                result[key] = unformatElement!(typeof(T.values[0]))(input, fmt);
+                result[key] = unformatElement!(typeof(T.init.values[0]))(input, fmt);
             }
             debug (unformatRange) {
             if (input.empty) printf("-> front = [empty] ");

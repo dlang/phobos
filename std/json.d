@@ -172,6 +172,10 @@ struct JSONValue
             type_tag = JSON_TYPE.STRING;
             store.str = arg;
         }
+        else static if(is(T : bool))
+        {
+            type_tag = arg ? JSON_TYPE.TRUE : JSON_TYPE.FALSE;
+        }
         else static if(is(T : ulong) && isUnsigned!T)
         {
             type_tag = JSON_TYPE.UINTEGER;
@@ -216,10 +220,6 @@ struct JSONValue
                     new_arg[i] = JSONValue(e);
                 store.array = new_arg;
             }
-        }
-        else static if(is(T : bool))
-        {
-            type_tag = arg ? JSON_TYPE.TRUE : JSON_TYPE.FALSE;
         }
         else static if(is(T : JSONValue))
         {
@@ -888,6 +888,16 @@ unittest
     jv.array = [JSONValue(1), JSONValue(2), JSONValue(3)];
     assert(jv.type == JSON_TYPE.ARRAY);
     assert(jv.array == [JSONValue(1), JSONValue(2), JSONValue(3)]);
+
+    jv = true;
+    assert(jv.type == JSON_TYPE.TRUE);
+
+    jv = false;
+    assert(jv.type == JSON_TYPE.FALSE);
+
+    enum E{True = true}
+    jv = E.True;
+    assert(jv.type == JSON_TYPE.TRUE);
 }
 
 unittest

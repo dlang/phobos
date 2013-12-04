@@ -191,7 +191,7 @@ returns a range containing the tuples $(D tuple(5, 1)),
 $(D tuple(2, 2)), and $(D tuple(3, 2)).)
 )
 $(TR $(TDNW $(LREF joiner)) $(TD $(D joiner(["hello",
-"world!"], ";")) returns a range that iterates over the characters $(D
+"world!"], "; ")) returns a range that iterates over the characters $(D
 "hello; world!"). No new string is created - the existing inputs are
 iterated.)
 )
@@ -8139,8 +8139,17 @@ if (s != SwapStrategy.stable
         if (blackouts[right].pos + blackouts[right].len >= range.length)
         {
             range.popBackN(blackouts[right].len);
-            --right;
-            continue;
+
+            // Since right is unsigned, we must check for this case, otherwise
+            // we might turn it into size_t.max and the loop condition will not
+            // fail when it should.
+            if (right > 0)
+            {
+                --right;
+                continue;
+            }
+            else
+                break;
         }
         // Advance to next blackout on the left
         assert(blackouts[left].pos >= steps);
@@ -8264,6 +8273,14 @@ unittest
     a = iota(0, 10).array();
     assert(remove!(SwapStrategy.unstable)(a, tuple(1, 4), tuple(6, 7))
             == [0, 9, 8, 7, 4, 5]);
+}
+
+unittest
+{
+    // Issue 11576
+    auto arr = [1,2,3];
+    arr = arr.remove!(SwapStrategy.unstable)(2);
+    assert(arr == [1,2]);
 }
 
 /**

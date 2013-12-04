@@ -15,10 +15,7 @@
 module std.complex;
 
 
-import std.format;
-import std.math;
-import std.numeric;
-import std.traits;
+import std.format, std.math, std.numeric, std.traits;
 
 
 /** Helper function that returns a _complex number with the specified
@@ -115,12 +112,12 @@ struct Complex(T)  if (isFloatingPoint!T)
 
     /** Converts the complex number to a string representation.
 
-	The second form of this function is usually not called directly;
-	instead, it is used via $(XREF format,format), as shown in the examples
-	below.  Supported format characters are 'e', 'f', 'g', 'a', and 's'.
+    The second form of this function is usually not called directly;
+    instead, it is used via $(XREF string,format), as shown in the examples
+    below.  Supported format characters are 'e', 'f', 'g', 'a', and 's'.
 
-	See the $(LINK2 std_format.html, std.format documentation) for more
-	information.
+    See the $(LINK2 std_format.html, std.format) and $(XREF string, format)
+    documentation for more information.
     */
     string toString() const /* TODO: pure @safe nothrow */
     {
@@ -141,9 +138,10 @@ struct Complex(T)  if (isFloatingPoint!T)
         // Vanilla toString formatting:
         assert(c.toString() == "1.2+3.4i");
 
-        // Formatting with std.format specs: the precision and width specifiers
-        // apply to both the real and imaginary parts of the complex number.
-        import std.string;
+        // Formatting with std.string.format specs: the precision and width
+        // specifiers apply to both the real and imaginary parts of the
+        // complex number.
+        import std.string : format;
         assert(format("%.2f", c)  == "1.20+3.40i");
         assert(format("%4.1f", c) == " 1.2+ 3.4i");
     }
@@ -159,26 +157,26 @@ struct Complex(T)  if (isFloatingPoint!T)
     }
 
     /**
-	$(RED Deprecated.  This function will be removed in March 2014.
-	  Please use $(XREF format,format) instead.)
+     * $(RED Deprecated.  This function will be removed in March 2014.
+     * Please use $(XREF string,format) instead.)
+     *
+     * Converts the complex number to a string representation.
+     *
+     * If a $(D sink) delegate is specified, the string is passed to it
+     * and this function returns $(D null).  Otherwise, this function
+     * returns the string representation directly.
 
-        Converts the complex number to a string representation.
-
-        If a $(D sink) delegate is specified, the string is passed to it
-        and this function returns $(D null).  Otherwise, this function
-        returns the string representation directly.
-
-        The output format is controlled via $(D formatSpec), which should consist
-        of a single POSIX format specifier, including the percent (%) character.
-        Note that complex numbers are floating point numbers, so the only
-        valid format characters are 'e', 'f', 'g', 'a', and 's', where 's'
-        gives the default behaviour. Positional parameters are not valid
-        in this context.
-
-        See the $(LINK2 std_format.html, std.format documentation) for
-        more information.
+     * The output format is controlled via $(D formatSpec), which should consist
+     * of a single POSIX format specifier, including the percent (%) character.
+     * Note that complex numbers are floating point numbers, so the only
+     * valid format characters are 'e', 'f', 'g', 'a', and 's', where 's'
+     * gives the default behaviour. Positional parameters are not valid
+     * in this context.
+     *
+     * See the $(LINK2 std_format.html, std.format) and $(XREF string, format)
+     * documentation for more information.
      */
-    deprecated("Please use std.format.format() instead.")
+    deprecated("Please use std.string.format instead.")
     string toString(scope void delegate(const(char)[]) sink,
                     string formatSpec = "%s")
         const
@@ -203,7 +201,7 @@ struct Complex(T)  if (isFloatingPoint!T)
         re = z.re;
         im = z.im;
     }
-    
+
     this(Rx : T, Ry : T)(Rx x, Ry y)
     {
         re = x;
@@ -545,7 +543,7 @@ unittest
 }
 
 unittest
-{    
+{
     // Assignments and comparisons
     Complex!double z;
 

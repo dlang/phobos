@@ -431,7 +431,7 @@ private:
                     && allowed!(typeof(A.init.values[0])))
             {
                 auto result = cast(VariantN*) parm;
-                *result = (*zis)[result.get!(typeof(A.keys[0]))];
+                *result = (*zis)[result.get!(typeof(A.init.keys[0]))];
                 break;
             }
             else
@@ -452,8 +452,8 @@ private:
             else static if (isAssociativeArray!(A))
             {
                 auto args = cast(VariantN*) parm;
-                (*zis)[args[1].get!(typeof(A.keys[0]))]
-                    = args[0].get!(typeof(A.values[0]));
+                (*zis)[args[1].get!(typeof(A.init.keys[0]))]
+                    = args[0].get!(typeof(A.init.values[0]));
                 break;
             }
             else
