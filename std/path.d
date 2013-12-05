@@ -1730,6 +1730,9 @@ unittest
     {
         assert (equal(pathSplitter("/foo/bar".dup), ["/", "foo", "bar"]));
     });
+
+    // Bugzilla 11691
+    static assert(is(typeof(pathSplitter!char().front) == const(char)[]));
 }
 
 
