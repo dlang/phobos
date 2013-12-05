@@ -2522,6 +2522,8 @@ void copy(in char[] from, in char[] to)
                 assert(size >= toxfer);
                 size -= toxfer;
             }
+            import core.sys.posix.sys.stat;
+            cenforce(fchmod(fdw, statbuf.st_mode)==0, from);
         }
 
         cenforce(core.sys.posix.unistd.close(fdw) != -1, from);
@@ -2546,6 +2548,27 @@ unittest
     assert(readText(t2) == "2");
 }
 
+unittest //issue 11434
+{
+    auto t1 = deleteme, t2 = deleteme~"2";
+    scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
+    write(t1, "1");
+    import core.sys.posix.sys.stat;
+    cenforce(chmod(toStringz(t1), octal!767)==0, t1);
+    copy(t1, t2);
+    assert(readText(t2) == "1");
+
+    stat_t statbuf = void;
+    immutable fd = core.sys.posix.fcntl.open(toStringz(t1), O_RDONLY);
+    cenforce(fd != -1, t2);
+    scope(exit) core.sys.posix.unistd.close(fd);
+
+    cenforce(fstat(fd, &statbuf) == 0, t2);
+
+    import std.string:format;
+    auto permissions = format("%o", statbuf.st_mode);
+    assert(permissions=="100767");
+}
 
 /++
     Remove directory and all of its content and subdirectories,
