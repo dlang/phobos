@@ -191,7 +191,7 @@ returns a range containing the tuples $(D tuple(5, 1)),
 $(D tuple(2, 2)), and $(D tuple(3, 2)).)
 )
 $(TR $(TDNW $(LREF joiner)) $(TD $(D joiner(["hello",
-"world!"], ";")) returns a range that iterates over the characters $(D
+"world!"], "; ")) returns a range that iterates over the characters $(D
 "hello; world!"). No new string is created - the existing inputs are
 iterated.)
 )
@@ -3916,7 +3916,7 @@ if (isInputRange!InputRange &&
             {
                 EType* ptr = null;
                 //Note: we use "min/max" to handle sign mismatch.
-                if (min(EType.min, needle) == EType.min, needle && max(EType.max, needle) == EType.max)
+                if (min(EType.min, needle) == EType.min && max(EType.max, needle) == EType.max)
                     ptr = cast(EType*) memchr(haystack.ptr, needle, haystack.length);
 
                 return ptr ?
@@ -4041,6 +4041,15 @@ unittest
     }
     dg();
     assertCTFEable!dg;
+}
+unittest
+{
+    // Bugzilla 11603
+    enum Foo : ubyte { A }
+    assert([Foo.A].find(Foo.A).empty == false);
+
+    ubyte x = 0;
+    assert([x].find(x).empty == false);
 }
 
 /**

@@ -2712,7 +2712,7 @@ Initialize with a message and an error code. */
         // If e is 0, we don't use the system error message.  (The message
         // is "Success", which is rather pointless for an exception.)
         super(e == 0 ? message
-                     : (message ? message ~ " (" ~ sysmsg ~ ")" : sysmsg));
+                     : (message.ptr ? message ~ " (" ~ sysmsg ~ ")" : sysmsg));
     }
 
 /** Convenience functions that throw an $(D StdioException). */

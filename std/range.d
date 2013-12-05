@@ -2491,7 +2491,7 @@ if (Ranges.length > 0 &&
             }
 
 // This is the entire state
-            Tuple!R source;
+            R source;
 // TODO: use a vtable (or more) instead of linear iteration
 
         public:
@@ -2849,6 +2849,14 @@ unittest
             }
         }
     }
+}
+
+unittest
+{
+    class Foo{}
+    immutable(Foo)[] a;
+    immutable(Foo)[] b;
+    auto c = chain(a, b);
 }
 
 /**

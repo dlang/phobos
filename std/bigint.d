@@ -922,3 +922,24 @@ unittest // 9061
     assert(l4 == b4);
     assert(l5 == b5);
 }
+
+unittest // 11600
+{
+    import std.conv;
+    import std.exception : assertThrown;
+
+    // Original bug report
+    assertThrown!ConvException(to!BigInt("avadakedavra"));
+
+    // Digit string lookalikes that are actually invalid
+    assertThrown!ConvException(to!BigInt("0123hellothere"));
+    assertThrown!ConvException(to!BigInt("-hihomarylowe"));
+    assertThrown!ConvException(to!BigInt("__reallynow__"));
+    assertThrown!ConvException(to!BigInt("-123four"));
+}
+
+unittest // 11583
+{
+    BigInt x = 0;
+    assert((x > 0) == false);
+}

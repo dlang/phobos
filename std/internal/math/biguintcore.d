@@ -96,7 +96,7 @@ struct BigUint
 private:
     pure invariant() 
     {
-        assert( data.length == 1 || data[$-1] != 0 );
+        assert( data.length >= 1 && (data.length == 1 || data[$-1] != 0 ));
     }    
     immutable(BigDigit) [] data = ZERO;
     this(immutable(BigDigit) [] x) pure
@@ -214,7 +214,11 @@ public:
             BigDigit tmp = cast(BigDigit)(y>>(i*BigDigitBits));
             if (tmp == 0)
                 if (data.length >= i+1)
-                    return 1;
+                {
+                    // Since ZERO is [0], so we cannot simply return 1 here, as
+                    // data[i] would be 0 for i==0 in that case.
+                    return (data[i] > 0) ? 1 : 0;
+                }
                 else
                     continue;
             else
@@ -1518,6 +1522,8 @@ in
 }
 body
 {
+    import std.conv : ConvException;
+
     // Convert to base 1e19 = 10_000_000_000_000_000_000.
     // (this is the largest power of 10 that will fit into a long).
     // The length will be less than 1 + s.length/log2(10) = 1 + s.length/3.3219.
@@ -1539,6 +1545,8 @@ body
     {
         if (s[i] == '_')
             continue;
+        if (s[i] < '0' || s[i] > '9')
+            throw new ConvException("invalid digit");
         x *= 10;
         x += s[i] - '0';
         ++lo;

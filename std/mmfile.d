@@ -218,7 +218,7 @@ class MmFile
                 assert(0);
             }
 
-            if (filename)
+            if (filename.ptr)
             {
                 auto namez = std.utf.toUTF16z(filename);
                 hFile = CreateFileW(namez,
@@ -489,9 +489,9 @@ class MmFile
     {
         debug (MMFILE) printf("MmFile.unmap()\n");
         version(Windows) {
-            errnoEnforce(!data || UnmapViewOfFile(data.ptr) != FALSE);
+            errnoEnforce(!data.ptr || UnmapViewOfFile(data.ptr) != FALSE);
         } else {
-            errnoEnforce(!data || munmap(cast(void*)data, data.length) == 0,
+            errnoEnforce(!data.ptr || munmap(cast(void*)data, data.length) == 0,
                     "munmap failed");
         }
         data = null;

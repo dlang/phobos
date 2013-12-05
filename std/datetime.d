@@ -32244,7 +32244,7 @@ version(testStdDateTime) @safe unittest
 {
     @safe static void func(TickDuration td)
     {
-        assert(td.to!("seconds", real)() <>= 0);
+        assert(!td.to!("seconds", real)().isNaN);
     }
 
     auto mt = measureTime!(func)();
@@ -32262,7 +32262,7 @@ version(testStdDateTime) unittest
 {
     static void func(TickDuration td)
     {
-        assert(td.to!("seconds", real)() <>= 0);
+        assert(!td.to!("seconds", real)().isNaN);
     }
 
     auto mt = measureTime!(func)();

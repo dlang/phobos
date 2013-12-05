@@ -570,7 +570,7 @@ unittest
   +/
 ptrdiff_t lastIndexOf(Char)(const(Char)[] s,
                           dchar c,
-                          CaseSensitive cs = CaseSensitive.yes)
+                          CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char)
 {
     if (cs == CaseSensitive.yes)
@@ -678,7 +678,7 @@ unittest
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
 ptrdiff_t lastIndexOf(Char)(const(Char)[] s, dchar c, const size_t startIdx,
-        CaseSensitive cs = CaseSensitive.yes)
+        CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char)
 {
     if (startIdx <= s.length)
@@ -729,7 +729,7 @@ unittest
   +/
 ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
                                   const(Char2)[] sub,
-                                  CaseSensitive cs = CaseSensitive.yes)
+                                  CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char1 && isSomeChar!Char2)
 {
     if (sub.empty)
@@ -759,7 +759,11 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
                     }
                     else
                     {
-                        if (memcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
+                        auto trustedMemcmp(in void* s1, in void* s2, size_t n) @trusted
+                        {
+                            return memcmp(s1, s2, n);
+                        }
+                        if (trustedMemcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
                             return i;
                     }
                 }
@@ -864,7 +868,7 @@ unittest
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
 ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
-        const size_t startIdx, CaseSensitive cs = CaseSensitive.yes)
+        const size_t startIdx, CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char1 && isSomeChar!Char2)
 {
     if (startIdx <= s.length)
@@ -3387,11 +3391,11 @@ unittest
 char[] soundex(const(char)[] string, char[] buffer = null) @safe pure nothrow
 in
 {
-    assert(!buffer || buffer.length >= 4);
+    assert(!buffer.ptr || buffer.length >= 4);
 }
 out (result)
 {
-    if (result)
+    if (result.ptr)
     {
         assert(result.length == 4);
         assert(result[0] >= 'A' && result[0] <= 'Z');
@@ -3422,7 +3426,7 @@ body
         }
         if (b == 0)
         {
-            if (!buffer)
+            if (!buffer.ptr)
                 buffer = new char[4];
             buffer[0] = c;
             b++;
