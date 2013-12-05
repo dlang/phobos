@@ -64,12 +64,6 @@ enum CompressionMethod : ushort
  */
 class ArchiveMember
 {
-
-    ushort flags;                  /// Read/Write: normally set to 0
-    std.datetime.DosFileTime time; /// Read/Write: Last modified time of the member. DOS date/time format.
-    ushort internalAttributes;     /// Read/Write
-    uint externalAttributes;       /// Read/Write
-    
     /**
      * Read/Write: Usually the file name of the archive member; it is used to
      * index the archive directory for the member. Each member must have a unique
@@ -80,16 +74,21 @@ class ArchiveMember
     ubyte[] extra;              /// Read/Write: extra data for this member.
     string comment;             /// Read/Write: comment associated with this member.
 
-    private CompressionMethod _compressionMethod;      
+    private ubyte[] _compressedData;
+    private ubyte[] _expandedData;
     private uint offset;
-    private ushort _madeVersion = 20;       
-    private ushort _extractVersion = 20;   
-    private uint _crc32;                    
-    private uint _compressedSize;           
-    private uint _expandedSize;             
-    private ushort _diskNumber;             
-    private ubyte[] _compressedData;     
-    private ubyte[] _expandedData;       
+    private uint _crc32;
+    private uint _compressedSize;
+    private uint _expandedSize;
+    private CompressionMethod _compressionMethod;
+    private ushort _madeVersion = 20;
+    private ushort _extractVersion = 20;
+    private ushort _diskNumber;
+
+    std.datetime.DosFileTime time; /// Read/Write: Last modified time of the member. DOS date/time format.
+    ushort flags;                  /// Read/Write: normally set to 0
+    ushort internalAttributes;     /// Read/Write
+    uint externalAttributes;       /// Read/Write
 
     @property ushort madeVersion()     { return _madeVersion; }    /// Read Only
     @property ushort extractVersion()     { return _extractVersion; }    /// Read Only
