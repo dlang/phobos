@@ -1544,9 +1544,9 @@ auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
     static struct PathSplitter
     {
     @safe pure nothrow:
-        @property empty() const { return _empty; }
+        @property bool empty() const { return _empty; }
 
-        @property front() const
+        @property const(C)[] front() const
         {
             assert (!empty, "PathSplitter: called front() on empty range");
             return _front;
@@ -1577,7 +1577,7 @@ auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
             }
         }
 
-        @property back() const
+        @property const(C)[] back() const
         {
             assert (!empty, "PathSplitter: called back() on empty range");
             return _back;
@@ -1730,6 +1730,10 @@ unittest
     {
         assert (equal(pathSplitter("/foo/bar".dup), ["/", "foo", "bar"]));
     });
+
+    // Bugzilla 11691
+    // front should return a mutable array of const elements
+    static assert(is(typeof(pathSplitter!char(null).front) == const(char)[]));
 }
 
 
