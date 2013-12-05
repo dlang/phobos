@@ -84,11 +84,12 @@ class ArchiveMember
     private ushort _madeVersion = 20;
     private ushort _extractVersion = 20;
     private ushort _diskNumber;
+    // should be private when deprecation done
+    deprecated("Please use fileAttributes instead.") uint externalAttributes;
 
     std.datetime.DosFileTime time; /// Read/Write: Last modified time of the member. DOS date/time format.
     ushort flags;                  /// Read/Write: normally set to 0
     ushort internalAttributes;     /// Read/Write
-    uint externalAttributes;       /// Read/Write
 
     @property ushort madeVersion()     { return _madeVersion; }    /// Read Only
     @property ushort extractVersion()     { return _extractVersion; }    /// Read Only
@@ -116,6 +117,56 @@ class ArchiveMember
         // Clean old compressed data, if any
         _compressedData.length = 0;
         _compressedSize = 0;
+    }
+
+    /**
+     * Set the OS specific file attributes, as obtained by
+     * $(XREF file,getAttributes) or $(XREF file,DirEntry.attributes), for this archive member.
+     */
+    @property void fileAttributes(uint attr)
+    {
+        version (Posix)
+        {
+            externalAttributes = attr & 0xFF << 16;
+            _madeVersion &= 0x00FF;
+            _madeVersion |= 0x0300; // attributes are in UNIX format
+        }
+        else version (Windows)
+        {
+            externalAttributes = attr;
+            _madeVersion &= 0x00FF; // attributes are in MS-DOS and OS/2 format
+        }
+        else
+        {
+            static assert(0, "Unimplemented platform");
+        }
+    }
+
+    /**
+     * Get the OS specific file attributes for the archive member.
+     *
+     * Returns: The file attributes or 0 if the file attributes were
+     * encoded for an incompatible OS (Windows vs. Posix).
+     *
+     */
+    @property uint fileAttributes() const
+    {
+        version (Posix)
+        {
+            if ((_madeVersion & 0xFF00) == 0x0300)
+                return externalAttributes >> 16;
+            return 0;
+        }
+        else version (Windows)
+        {
+            if ((_madeVersion & 0xFF00) == 0x0000)
+                return externalAttributes;
+            return 0;
+        }
+        else
+        {
+            static assert(0, "Unimplemented platform");
+        }
     }
 
     /**
