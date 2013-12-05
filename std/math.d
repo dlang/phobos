@@ -1881,13 +1881,13 @@ unittest
     resetIeeeFlags();
     x = exp(real.nan);
     f = ieeeFlags;
-    assert(isIdentical(x,real.nan));
+    assert(isIdentical(abs(x), real.nan));
     assert(f.flags == 0);
 
     resetIeeeFlags();
     x = exp(-real.nan);
     f = ieeeFlags;
-    assert(isIdentical(x, -real.nan));
+    assert(isIdentical(abs(x), real.nan));
     assert(f.flags == 0);
 
     x = exp(NaN(0x123));

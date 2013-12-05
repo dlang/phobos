@@ -2007,11 +2007,73 @@ body
     }
     else
     {
+        static if(is(Dst == wchar))
+        {
+            immutable minReservePlace = 2;
+        }
+        else static if(is(Dst == dchar))
+        {
+            immutable minReservePlace = 1;
+        }
+        else
+        {
+            immutable minReservePlace = 6;
+        }
+
+        Dst[] buffer = new Dst[s.length];
+        Dst[] tmpBuffer = buffer;
         const(Src)[] t = s;
+
         while (t.length != 0)
         {
-            r ~= encode!(Dst)(decode(t));
+            if(tmpBuffer.length < minReservePlace)
+            {
+                size_t prevLength = buffer.length;
+                buffer.length += t.length + minReservePlace;
+                tmpBuffer = buffer[prevLength - tmpBuffer.length .. $];
+            }
+            EncoderInstance!(Dst).encode(decode(t), tmpBuffer);
         }
+
+        r = cast(immutable)buffer[0 .. buffer.length - tmpBuffer.length];
+    }
+}
+
+unittest
+{
+    import std.typetuple;
+    {
+        import std.conv : to;
+
+        string asciiCharString = to!string(iota(0, 128, 1));
+
+        alias Types = TypeTuple!(string, Latin1String, AsciiString, Windows1252String, dstring, wstring);
+        foreach(S; Types)
+            foreach(D; Types)
+            {
+                string str;
+                S sStr;
+                D dStr;
+                transcode(asciiCharString, sStr);
+                transcode(sStr, dStr);
+                transcode(dStr, str);
+                assert(asciiCharString == str);
+            }
+    }
+    {
+        string czechChars = "Příliš žluťoučký kůň úpěl ďábelské ódy.";
+        alias Types = TypeTuple!(string, dstring, wstring);
+        foreach(S; Types)
+            foreach(D; Types)
+            {
+                string str;
+                S sStr;
+                D dStr;
+                transcode(czechChars, sStr);
+                transcode(sStr, dStr);
+                transcode(dStr, str);
+                assert(czechChars == str);
+            }
     }
 }
 

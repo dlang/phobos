@@ -13,7 +13,7 @@ Phobos is the standard library that comes with the
 Download
 --------
 
-Phobos packaged together with the compiler.
+Phobos is packaged together with the compiler.
 You should
 [download the whole precompiled package](http://dlang.org/download.html).
 
