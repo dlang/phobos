@@ -95,7 +95,7 @@ class ArchiveMember
     @property uint crc32()         { return _crc32; }    /// Read Only: cyclic redundancy check (CRC) value
 
     /// Read Only: size of data of member in compressed form.
-    @property uint compressedSize()     { return _compressedSize; }    
+    @property uint compressedSize()     { return _compressedSize; }
 
     /// Read Only: size of data of member in expanded form.
     @property uint expandedSize()     { return _expandedSize; }
@@ -105,36 +105,36 @@ class ArchiveMember
     @property ubyte[] compressedData()     { return _compressedData; }
 
     /// Read data of member in uncompressed form.
-    @property ubyte[] expandedData()     { return _expandedData; }     
+    @property ubyte[] expandedData()     { return _expandedData; }
 
     /// Write data of member in uncompressed form.
-    @property void expandedData(ubyte[] ed) 
+    @property void expandedData(ubyte[] ed)
     {
         _expandedData = ed;
         _expandedSize  = to!uint(_expandedData.length);
 
         // Clean old compressed data, if any
         _compressedData.length = 0;
-        _compressedSize = 0;  
+        _compressedSize = 0;
     }
 
-    /** 
-     * Read compression method used for this member 
-     * See_Also: 
+    /**
+     * Read compression method used for this member
+     * See_Also:
      *     CompressionMethod
      **/
-    @property CompressionMethod compressionMethod() { return _compressionMethod; } 
+    @property CompressionMethod compressionMethod() { return _compressionMethod; }
     deprecated @property void compressionMethod(ushort cm)
     {
         compressionMethod = cast(CompressionMethod)(cm);
     }
 
-    /** 
-     * Write compression method used for this member 
-     * See_Also: 
+    /**
+     * Write compression method used for this member
+     * See_Also:
      *     CompressionMethod
      **/
-    @property void compressionMethod(CompressionMethod cm) 
+    @property void compressionMethod(CompressionMethod cm)
     {
         if (cm == _compressionMethod) return;
 
@@ -172,25 +172,25 @@ class ZipArchive
 {
     string comment;     /// Read/Write: the archive comment. Must be less than 65536 bytes in length.
 
-    private ubyte[] _data;       
+    private ubyte[] _data;
     private uint endrecOffset;
 
     private uint _diskNumber;
     private uint _diskStartDir;
-    private uint _numEntries;   
-    private uint _totalEntries; 
+    private uint _numEntries;
+    private uint _totalEntries;
 
     /// Read Only: array representing the entire contents of the archive.
-    @property ubyte[] data()       { return _data; }        
+    @property ubyte[] data()       { return _data; }
 
     /// Read Only: 0 since multi-disk zip archives are not supported.
-    @property uint diskNumber()    { return _diskNumber; }    
+    @property uint diskNumber()    { return _diskNumber; }
 
     /// Read Only: 0 since multi-disk zip archives are not supported
-    @property uint diskStartDir()  { return _diskStartDir; }    
+    @property uint diskStartDir()  { return _diskStartDir; }
 
     /// Read Only: number of ArchiveMembers in the directory.
-    @property uint numEntries()    { return _numEntries; }    
+    @property uint numEntries()    { return _numEntries; }
     @property uint totalEntries()  { return _totalEntries; }    /// ditto
     /**
      * Read Only: array indexed by the name of each member of the archive.
