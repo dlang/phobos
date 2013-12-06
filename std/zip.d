@@ -86,8 +86,8 @@ class ArchiveMember
     private ushort _diskNumber;
     // should be private when deprecation done
     deprecated("Please use fileAttributes instead.") uint externalAttributes;
+    private DosFileTime _time;
 
-    std.datetime.DosFileTime time; /// Read/Write: Last modified time of the member. DOS date/time format.
     ushort flags;                  /// Read/Write: normally set to 0
     ushort internalAttributes;     /// Read/Write
 
@@ -167,6 +167,24 @@ class ArchiveMember
         {
             static assert(0, "Unimplemented platform");
         }
+    }
+
+    /// Set the last modification time for this member.
+    @property void time(SysTime time)
+    {
+        _time = SysTimeToDosFileTime(time);
+    }
+
+    /// ditto
+    @property void time(DosFileTime time)
+    {
+        _time = time;
+    }
+
+    /// Get the last modification time for this member.
+    @property DosFileTime time() const
+    {
+        return _time;
     }
 
     /**
