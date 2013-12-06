@@ -193,7 +193,9 @@ class ArchiveMember
      *     CompressionMethod
      **/
     @property CompressionMethod compressionMethod() { return _compressionMethod; }
-    deprecated @property void compressionMethod(ushort cm)
+
+    deprecated("Please use the enum CompressionMethod to set this property instead.")
+    @property void compressionMethod(ushort cm)
     {
         compressionMethod = cast(CompressionMethod)(cm);
     }
