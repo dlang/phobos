@@ -9363,7 +9363,7 @@ private template HeapSortImpl(alias less, Range)
         if(r.length < 2) return;
 
         // Build Heap
-        size_t i = (r.length - 2) / 2 + 1;
+        size_t i = r.length / 2;
         while(i > 0) sift(r, --i, r.length);
 
         // Sort
