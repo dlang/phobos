@@ -5256,7 +5256,7 @@ private static struct InputRangeString
 
     bool empty() @property { return s.empty; }
     dchar front() @property { return s.front; }
-    void popFront() @property { s.popFront(); }
+    void popFront() { s.popFront(); }
 }
 
 unittest
