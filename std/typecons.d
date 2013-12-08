@@ -2924,7 +2924,7 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
 
         public:
             mixin mixinAll!(
-                staticMap!(generateFun, staticIota!(0, TargetMembers.length)));
+                staticMap!(generateFun, toTypeTuple!(iota(0, TargetMembers.length))));
         }
     }
 }
@@ -3404,26 +3404,6 @@ unittest
     static assert(is(DerivedFunctionType!(F16, F17) == void));
     static assert(is(DerivedFunctionType!(F16, F18) == void));
     static assert(is(DerivedFunctionType!(F17, F18) == void));
-}
-
-private template staticIota(int beg, int end, int step = 1) if (step != 0)
-{
-    static if (beg + 1 >= end)
-    {
-        static if (beg >= end)
-        {
-            alias TypeTuple!() staticIota;
-        }
-        else
-        {
-            alias TypeTuple!(+beg) staticIota;
-        }
-    }
-    else
-    {
-        enum mid = beg + (end - beg) / 2;
-        alias staticIota = TypeTuple!(staticIota!(beg, mid), staticIota!(mid, end));
-    }
 }
 
 private template mixinAll(mixins...)
@@ -4314,7 +4294,7 @@ unittest // Issue 6580 testcase
             byte[size] arr;
             alignmentTest();
         }
-        foreach(i; TypeTuple!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
+        foreach(i; toTypeTuple!(iota(0, 11)))
             test!i();
     }
 }
