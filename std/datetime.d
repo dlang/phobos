@@ -26394,6 +26394,19 @@ public:
 
 
     /++
+        Params:
+            rhs = The $(D IntervalRange) to assign to this one.
+      +/
+    /+ref+/ IntervalRange opAssign(IntervalRange rhs) pure nothrow
+    {
+        _interval = rhs._interval;
+        _func = rhs._func;
+
+        return this;
+    }
+
+
+    /++
         Whether this $(D IntervalRange) is empty.
       +/
     @property bool empty() const pure nothrow
@@ -26911,6 +26924,19 @@ public:
 
 
     /++
+        Params:
+            rhs = The $(D PosInfIntervalRange) to assign to this one.
+      +/
+    /+ref+/ PosInfIntervalRange opAssign(PosInfIntervalRange rhs) pure nothrow
+    {
+        _interval = rhs._interval;
+        _func = rhs._func;
+
+        return this;
+    }
+
+
+    /++
         This is an infinite range, so it is never empty.
       +/
     enum bool empty = false;
@@ -27201,6 +27227,19 @@ public:
             rhs = The $(D NegInfIntervalRange) to assign to this one.
       +/
     /+ref+/ NegInfIntervalRange opAssign(ref NegInfIntervalRange rhs) pure nothrow
+    {
+        _interval = rhs._interval;
+        _func = rhs._func;
+
+        return this;
+    }
+
+
+    /++
+        Params:
+            rhs = The $(D NegInfIntervalRange) to assign to this one.
+      +/
+    /+ref+/ NegInfIntervalRange opAssign(NegInfIntervalRange rhs) pure nothrow
     {
         _interval = rhs._interval;
         _func = rhs._func;
