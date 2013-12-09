@@ -84,9 +84,16 @@ final class ArchiveMember
     private ushort _madeVersion = 20;
     private ushort _extractVersion = 20;
     private ushort _diskNumber;
+<<<<<<< HEAD
     private uint _externalAttributes;
     private DosFileTime _time;
 
+=======
+    // should be private when deprecation done
+    deprecated("Please use fileAttributes instead.") uint externalAttributes;
+
+    std.datetime.DosFileTime time; /// Read/Write: Last modified time of the member. DOS date/time format.
+>>>>>>> Merge pull request #1751 from dawgfoto/std_zip
     ushort flags;                  /// Read/Write: normally set to 0
     ushort internalAttributes;     /// Read/Write
 
@@ -131,13 +138,21 @@ final class ArchiveMember
     {
         version (Posix)
         {
+<<<<<<< HEAD
             _externalAttributes = (attr & 0xFFFF) << 16;
+=======
+            externalAttributes = attr & 0xFF << 16;
+>>>>>>> Merge pull request #1751 from dawgfoto/std_zip
             _madeVersion &= 0x00FF;
             _madeVersion |= 0x0300; // attributes are in UNIX format
         }
         else version (Windows)
         {
+<<<<<<< HEAD
             _externalAttributes = attr;
+=======
+            externalAttributes = attr;
+>>>>>>> Merge pull request #1751 from dawgfoto/std_zip
             _madeVersion &= 0x00FF; // attributes are in MS-DOS and OS/2 format
         }
         else
@@ -146,6 +161,7 @@ final class ArchiveMember
         }
     }
 
+<<<<<<< HEAD
     version (Posix) unittest
     {
         auto am = new ArchiveMember();
@@ -154,6 +170,8 @@ final class ArchiveMember
         assert((am._madeVersion & 0xFF00) == 0x0300);
     }
 
+=======
+>>>>>>> Merge pull request #1751 from dawgfoto/std_zip
     /**
      * Get the OS specific file attributes for the archive member.
      *
@@ -166,13 +184,21 @@ final class ArchiveMember
         version (Posix)
         {
             if ((_madeVersion & 0xFF00) == 0x0300)
+<<<<<<< HEAD
                 return _externalAttributes >> 16;
+=======
+                return externalAttributes >> 16;
+>>>>>>> Merge pull request #1751 from dawgfoto/std_zip
             return 0;
         }
         else version (Windows)
         {
             if ((_madeVersion & 0xFF00) == 0x0000)
+<<<<<<< HEAD
                 return _externalAttributes;
+=======
+                return externalAttributes;
+>>>>>>> Merge pull request #1751 from dawgfoto/std_zip
             return 0;
         }
         else
@@ -181,6 +207,7 @@ final class ArchiveMember
         }
     }
 
+<<<<<<< HEAD
     /// Set the last modification time for this member.
     @property void time(SysTime time)
     {
@@ -199,15 +226,21 @@ final class ArchiveMember
         return _time;
     }
 
+=======
+>>>>>>> Merge pull request #1751 from dawgfoto/std_zip
     /**
      * Read compression method used for this member
      * See_Also:
      *     CompressionMethod
      **/
     @property CompressionMethod compressionMethod() { return _compressionMethod; }
+<<<<<<< HEAD
 
     deprecated("Please use the enum CompressionMethod to set this property instead.")
     @property void compressionMethod(ushort cm)
+=======
+    deprecated @property void compressionMethod(ushort cm)
+>>>>>>> Merge pull request #1751 from dawgfoto/std_zip
     {
         compressionMethod = cast(CompressionMethod)(cm);
     }
