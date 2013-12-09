@@ -4316,7 +4316,7 @@ private template AliasThisTypeOf(T) if (isAggregateType!T)
 template BooleanTypeOf(T)
 {
     static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
-        alias X = OriginalType!AT;
+        alias X = BooleanTypeOf!AT;
     else
         alias X = OriginalType!T;
 
@@ -4346,12 +4346,28 @@ unittest
         }
 }
 
+unittest
+{
+    struct B
+    {
+        bool val;
+        alias val this;
+    }
+    struct S
+    {
+        B b;
+        alias b this;
+    }
+    static assert(is(BooleanTypeOf!B == bool));
+    static assert(is(BooleanTypeOf!S == bool));
+}
+
 /*
  */
 template IntegralTypeOf(T)
 {
     static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
-        alias X = OriginalType!AT;
+        alias X = IntegralTypeOf!AT;
     else
         alias X = OriginalType!T;
 
@@ -4385,7 +4401,7 @@ unittest
 template FloatingPointTypeOf(T)
 {
     static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
-        alias X = OriginalType!AT;
+        alias X = FloatingPointTypeOf!AT;
     else
         alias X = OriginalType!T;
 
@@ -4472,7 +4488,7 @@ template SignedTypeOf(T)
 template CharTypeOf(T)
 {
     static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
-        alias X = OriginalType!AT;
+        alias X = CharTypeOf!AT;
     else
         alias X = OriginalType!T;
 
@@ -4513,7 +4529,7 @@ unittest
 template StaticArrayTypeOf(T)
 {
     static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
-        alias X = OriginalType!AT;
+        alias X = StaticArrayTypeOf!AT;
     else
         alias X = OriginalType!T;
 
@@ -4548,7 +4564,7 @@ unittest
 template DynamicArrayTypeOf(T)
 {
     static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
-        alias X = OriginalType!AT;
+        alias X = DynamicArrayTypeOf!AT;
     else
         alias X = OriginalType!T;
 
@@ -4644,7 +4660,7 @@ unittest
 template AssocArrayTypeOf(T)
 {
     static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
-        alias X = OriginalType!AT;
+        alias X = AssocArrayTypeOf!AT;
     else
         alias X = OriginalType!T;
 
