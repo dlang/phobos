@@ -2832,7 +2832,7 @@ strings. (In such cases, the return value is not used.)
 S1 munch(S1, S2)(ref S1 s, S2 pattern)
 {
     size_t j = s.length;
-    foreach (i, c; s)
+    foreach (i, dchar c; s)
     {
         if (!inPattern(c, pattern))
         {
