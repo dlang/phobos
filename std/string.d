@@ -2846,11 +2846,13 @@ S1 munch(S1, S2)(ref S1 s, S2 pattern)
 
 @safe pure unittest
 {
-    string s = "123abc";
+    string s = "123€abc";
     string t = munch(s, "0123456789");
-    assert(t == "123" && s == "abc");
+    assert(t == "123" && s == "€abc");
     t = munch(s, "0123456789");
-    assert(t == "" && s == "abc");
+    assert(t == "" && s == "€abc");
+    t = munch(s, "£$€¥");
+    assert(t == "€" && s == "abc");
 }
 
 
