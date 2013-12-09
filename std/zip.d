@@ -64,12 +64,6 @@ enum CompressionMethod : ushort
  */
 class ArchiveMember
 {
-
-    ushort flags;                  /// Read/Write: normally set to 0
-    std.datetime.DosFileTime time; /// Read/Write: Last modified time of the member. DOS date/time format.
-    ushort internalAttributes;     /// Read/Write
-    uint externalAttributes;       /// Read/Write
-    
     /**
      * Read/Write: Usually the file name of the archive member; it is used to
      * index the archive directory for the member. Each member must have a unique
@@ -80,23 +74,29 @@ class ArchiveMember
     ubyte[] extra;              /// Read/Write: extra data for this member.
     string comment;             /// Read/Write: comment associated with this member.
 
-    private CompressionMethod _compressionMethod;      
+    private ubyte[] _compressedData;
+    private ubyte[] _expandedData;
     private uint offset;
-    private ushort _madeVersion = 20;       
-    private ushort _extractVersion = 20;   
-    private uint _crc32;                    
-    private uint _compressedSize;           
-    private uint _expandedSize;             
-    private ushort _diskNumber;             
-    private ubyte[] _compressedData;     
-    private ubyte[] _expandedData;       
+    private uint _crc32;
+    private uint _compressedSize;
+    private uint _expandedSize;
+    private CompressionMethod _compressionMethod;
+    private ushort _madeVersion = 20;
+    private ushort _extractVersion = 20;
+    private ushort _diskNumber;
+    // should be private when deprecation done
+    deprecated("Please use fileAttributes instead.") uint externalAttributes;
+
+    std.datetime.DosFileTime time; /// Read/Write: Last modified time of the member. DOS date/time format.
+    ushort flags;                  /// Read/Write: normally set to 0
+    ushort internalAttributes;     /// Read/Write
 
     @property ushort madeVersion()     { return _madeVersion; }    /// Read Only
     @property ushort extractVersion()     { return _extractVersion; }    /// Read Only
     @property uint crc32()         { return _crc32; }    /// Read Only: cyclic redundancy check (CRC) value
 
     /// Read Only: size of data of member in compressed form.
-    @property uint compressedSize()     { return _compressedSize; }    
+    @property uint compressedSize()     { return _compressedSize; }
 
     /// Read Only: size of data of member in expanded form.
     @property uint expandedSize()     { return _expandedSize; }
@@ -106,36 +106,86 @@ class ArchiveMember
     @property ubyte[] compressedData()     { return _compressedData; }
 
     /// Read data of member in uncompressed form.
-    @property ubyte[] expandedData()     { return _expandedData; }     
+    @property ubyte[] expandedData()     { return _expandedData; }
 
     /// Write data of member in uncompressed form.
-    @property void expandedData(ubyte[] ed) 
+    @property void expandedData(ubyte[] ed)
     {
         _expandedData = ed;
         _expandedSize  = to!uint(_expandedData.length);
 
         // Clean old compressed data, if any
         _compressedData.length = 0;
-        _compressedSize = 0;  
+        _compressedSize = 0;
     }
 
-    /** 
-     * Read compression method used for this member 
-     * See_Also: 
+    /**
+     * Set the OS specific file attributes, as obtained by
+     * $(XREF file,getAttributes) or $(XREF file,DirEntry.attributes), for this archive member.
+     */
+    @property void fileAttributes(uint attr)
+    {
+        version (Posix)
+        {
+            externalAttributes = attr & 0xFF << 16;
+            _madeVersion &= 0x00FF;
+            _madeVersion |= 0x0300; // attributes are in UNIX format
+        }
+        else version (Windows)
+        {
+            externalAttributes = attr;
+            _madeVersion &= 0x00FF; // attributes are in MS-DOS and OS/2 format
+        }
+        else
+        {
+            static assert(0, "Unimplemented platform");
+        }
+    }
+
+    /**
+     * Get the OS specific file attributes for the archive member.
+     *
+     * Returns: The file attributes or 0 if the file attributes were
+     * encoded for an incompatible OS (Windows vs. Posix).
+     *
+     */
+    @property uint fileAttributes() const
+    {
+        version (Posix)
+        {
+            if ((_madeVersion & 0xFF00) == 0x0300)
+                return externalAttributes >> 16;
+            return 0;
+        }
+        else version (Windows)
+        {
+            if ((_madeVersion & 0xFF00) == 0x0000)
+                return externalAttributes;
+            return 0;
+        }
+        else
+        {
+            static assert(0, "Unimplemented platform");
+        }
+    }
+
+    /**
+     * Read compression method used for this member
+     * See_Also:
      *     CompressionMethod
      **/
-    @property CompressionMethod compressionMethod() { return _compressionMethod; } 
+    @property CompressionMethod compressionMethod() { return _compressionMethod; }
     deprecated @property void compressionMethod(ushort cm)
     {
         compressionMethod = cast(CompressionMethod)(cm);
     }
 
-    /** 
-     * Write compression method used for this member 
-     * See_Also: 
+    /**
+     * Write compression method used for this member
+     * See_Also:
      *     CompressionMethod
      **/
-    @property void compressionMethod(CompressionMethod cm) 
+    @property void compressionMethod(CompressionMethod cm)
     {
         if (cm == _compressionMethod) return;
 
@@ -173,25 +223,25 @@ class ZipArchive
 {
     string comment;     /// Read/Write: the archive comment. Must be less than 65536 bytes in length.
 
-    private ubyte[] _data;       
+    private ubyte[] _data;
     private uint endrecOffset;
 
     private uint _diskNumber;
     private uint _diskStartDir;
-    private uint _numEntries;   
-    private uint _totalEntries; 
+    private uint _numEntries;
+    private uint _totalEntries;
 
     /// Read Only: array representing the entire contents of the archive.
-    @property ubyte[] data()       { return _data; }        
+    @property ubyte[] data()       { return _data; }
 
     /// Read Only: 0 since multi-disk zip archives are not supported.
-    @property uint diskNumber()    { return _diskNumber; }    
+    @property uint diskNumber()    { return _diskNumber; }
 
     /// Read Only: 0 since multi-disk zip archives are not supported
-    @property uint diskStartDir()  { return _diskStartDir; }    
+    @property uint diskStartDir()  { return _diskStartDir; }
 
     /// Read Only: number of ArchiveMembers in the directory.
-    @property uint numEntries()    { return _numEntries; }    
+    @property uint numEntries()    { return _numEntries; }
     @property uint totalEntries()  { return _totalEntries; }    /// ditto
     /**
      * Read Only: array indexed by the name of each member of the archive.
