@@ -798,6 +798,13 @@ size_t replicateBits(size_t times, size_t bits)(size_t val)
 {
     static if(times == 1)
         return val;
+    else static if(bits == 1)
+    {
+        static if(times == size_t.sizeof*8)
+            return val ? size_t.max : 0;
+        else
+            return val ? (1<<times)-1 : 0;
+    }
     else static if(times % 2)
         return (replicateBits!(times-1, bits)(val)<<bits) | val;
     else
@@ -890,7 +897,7 @@ struct MultiArray(Types...)
                 static if(n != dim-1)
                 {
                     auto start = raw_ptr!(n+1);
-                    size_t len = storage.length;
+                    size_t len = (storage.ptr+storage.length-start);
                     copyForward(start[0..len-delta], start[delta..len]);
 
                     // adjust offsets last, they affect raw_slice
@@ -941,69 +948,74 @@ private:
 
 unittest
 {
-    // sizes are:
-    // lvl0: 3, lvl1 : 2, lvl2: 1
-    auto m = MultiArray!(int, ubyte, int)(3,2,1);
+    enum dg = (){
+        // sizes are:
+        // lvl0: 3, lvl1 : 2, lvl2: 1
+        auto m = MultiArray!(int, ubyte, int)(3,2,1);
 
-    static void check(size_t k, T)(ref T m, int n)
-    {
-        foreach(i; 0..n)
-            assert(m.slice!(k)[i] == i+1, text("level:",i," : ",m.slice!(k)[0..n]));
-    }
+        static void check(size_t k, T)(ref T m, int n)
+        {
+            foreach(i; 0..n)
+                assert(m.slice!(k)[i] == i+1, text("level:",i," : ",m.slice!(k)[0..n]));
+        }
 
-    static void checkB(size_t k, T)(ref T m, int n)
-    {
-        foreach(i; 0..n)
-            assert(m.slice!(k)[i] == n-i, text("level:",i," : ",m.slice!(k)[0..n]));
-    }
+        static void checkB(size_t k, T)(ref T m, int n)
+        {
+            foreach(i; 0..n)
+                assert(m.slice!(k)[i] == n-i, text("level:",i," : ",m.slice!(k)[0..n]));
+        }
 
-    static void fill(size_t k, T)(ref T m, int n)
-    {
-        foreach(i; 0..n)
-            m.slice!(k)[i] = force!ubyte(i+1);
-    }
+        static void fill(size_t k, T)(ref T m, int n)
+        {
+            foreach(i; 0..n)
+                m.slice!(k)[i] = force!ubyte(i+1);
+        }
 
-    static void fillB(size_t k, T)(ref T m, int n)
-    {
-        foreach(i; 0..n)
-            m.slice!(k)[i] = force!ubyte(n-i);
-    }
+        static void fillB(size_t k, T)(ref T m, int n)
+        {
+            foreach(i; 0..n)
+                m.slice!(k)[i] = force!ubyte(n-i);
+        }
 
-    m.length!1 = 100;
-    fill!1(m, 100);
-    check!1(m, 100);
+        m.length!1 = 100;
+        fill!1(m, 100);
+        check!1(m, 100);
 
-    m.length!0 = 220;
-    fill!0(m, 220);
-    check!1(m, 100);
-    check!0(m, 220);
+        m.length!0 = 220;
+        fill!0(m, 220);
+        check!1(m, 100);
+        check!0(m, 220);
 
-    m.length!2 = 17;
-    fillB!2(m, 17);
-    checkB!2(m, 17);
-    check!0(m, 220);
-    check!1(m, 100);
+        m.length!2 = 17;
+        fillB!2(m, 17);
+        checkB!2(m, 17);
+        check!0(m, 220);
+        check!1(m, 100);
 
-    m.length!2 = 33;
-    checkB!2(m, 17);
-    fillB!2(m, 33);
-    checkB!2(m, 33);
-    check!0(m, 220);
-    check!1(m, 100);
+        m.length!2 = 33;
+        checkB!2(m, 17);
+        fillB!2(m, 33);
+        checkB!2(m, 33);
+        check!0(m, 220);
+        check!1(m, 100);
 
-    m.length!1 = 195;
-    fillB!1(m, 195);
-    checkB!1(m, 195);
-    checkB!2(m, 33);
-    check!0(m, 220);
+        m.length!1 = 195;
+        fillB!1(m, 195);
+        checkB!1(m, 195);
+        checkB!2(m, 33);
+        check!0(m, 220);
 
-    auto marr = MultiArray!(BitPacked!(uint, 4), BitPacked!(uint, 6))(20, 10);
-    marr.length!0 = 15;
-    marr.length!1 = 30;
-    fill!1(marr, 30);
-    fill!0(marr, 15);
-    check!1(marr, 30);
-    check!0(marr, 15);
+        auto marr = MultiArray!(BitPacked!(uint, 4), BitPacked!(uint, 6))(20, 10);
+        marr.length!0 = 15;
+        marr.length!1 = 30;
+        fill!1(marr, 30);
+        fill!0(marr, 15);
+        check!1(marr, 30);
+        check!0(marr, 15);
+        return 0;
+    };
+    enum ct = dg();
+    auto rt = dg();
 }
 
 unittest
@@ -1119,19 +1131,25 @@ pure nothrow:
 
     private T simpleIndex(size_t n) inout
     {
-        static if(factor == bytesPerWord*8)
-        {
-            // a re-write with less data dependency
-            auto q = n / factor;
-            auto r = n % factor;
-            return cast(T)(origin[q] & (mask<<r) ? 1 : 0);
-        }
-        else
-        {
-            auto q = n / factor;
-            auto r = n % factor;
-            return cast(T)((origin[q] >> bits*r) & mask);
-        }
+        auto q = n / factor;
+        auto r = n % factor;
+        return cast(T)((origin[q] >> bits*r) & mask);
+    }
+
+    private void simpleWrite(TypeOfBitPacked!T val, size_t n)
+    in
+    {
+        static if(isIntegral!T)
+            assert(val <= mask);
+    }
+    body
+    {
+        auto q = n / factor;
+        auto r = n % factor;
+        size_t tgt_shift = bits*r;
+        size_t word = origin[q];
+        origin[q] = (word & ~(mask<<tgt_shift))
+            | (cast(size_t)val << tgt_shift);
     }
 
     static if(factor == bytesPerWord// can safely pack by byte
@@ -1164,7 +1182,10 @@ pure nothrow:
 
         void opIndexAssign(TypeOfBitPacked!T val, size_t idx)
         {
-            (cast(U*)origin)[idx] = cast(U)val;
+            if(__ctfe)
+                simpleWrite(val, idx);
+            else
+                (cast(U*)origin)[idx] = cast(U)val;
         }
     }
     else
@@ -1183,19 +1204,8 @@ pure nothrow:
         }
 
         void opIndexAssign(TypeOfBitPacked!T val, size_t n)
-        in
         {
-            static if(isIntegral!T)
-                assert(val <= mask);
-        }
-        body
-        {
-            auto q = n / factor;
-            auto r = n % factor;
-            size_t tgt_shift = bits*r;
-            size_t word = origin[q];
-            origin[q] = (word & ~(mask<<tgt_shift))
-                | (cast(size_t)val << tgt_shift);
+            return simpleWrite(val, n);
         }
     }
 
@@ -1218,6 +1228,19 @@ pure nothrow:
         ptr = inout(PackedPtr!(T))(origin);
         limit = items;
     }
+
+    bool zeros(size_t s, size_t e)
+    in
+    {
+        assert(s <= e);
+    }
+    body
+    {
+        foreach(v; this[s..e])
+            if(v)
+                return false;
+        return true;
+    }   
 
     T opIndex(size_t idx) inout
     in
@@ -1663,11 +1686,14 @@ unittest
     static void destroy(T)(ref T arr)
         if(isDynamicArray!T && is(Unqual!T == T))
     {
-        debug
+        version(bug10929) //@@@BUG@@@
         {
-            arr[] = cast(typeof(T.init[0]))(0xdead_beef);
+            debug
+            {
+                arr[] = cast(typeof(T.init[0]))(0xdead_beef);
+            }
+            arr = null;
         }
-        arr = null;
     }
 
     static void destroy(T)(ref T arr)
@@ -1972,6 +1998,13 @@ public:
                 end = sp.length;
             }
 
+            this(Uint24Array!SP sp, size_t s, size_t e)
+            {
+                slice = sp;
+                start = s;
+                end = e;
+            }
+
             @property auto front()const
             {
                 uint a = slice[start];
@@ -1995,6 +2028,20 @@ public:
             {
                 end -= 2;
             }
+
+            auto opIndex(size_t idx) const
+            {
+                uint a = slice[start+idx*2];
+                uint b = slice[start+idx*2+1];
+                return CodepointInterval(a, b);
+            }
+
+            auto opSlice(size_t s, size_t e)
+            {
+                return Intervals(slice, s*2+start, e*2+start);
+            }
+
+            @property size_t length()const {  return slice.length/2; }
 
             @property bool empty()const { return start == end; }
 
@@ -2980,7 +3027,10 @@ private:
         }
         else
             SP.destroy(data);
-        assert(!data.ptr);
+        version(bug10929)
+            assert(!data.ptr);
+        else
+            data = null;
     }
 
     void dupThisReference(uint count)
@@ -3396,11 +3446,10 @@ private:
     enum lastLevel = Prefix.length-1;
     struct ConstructState
     {
-        bool zeros, ones; // current page is zeros? ones?
-        uint idx_zeros, idx_ones;
+        size_t idx_zeros, idx_ones;
     }
     // iteration over levels of Trie, each indexes its own level and thus a shortened domain
-    size_t[Prefix.length] indices;
+    size_t[Prefix.length] indices;    
     // default filler value to use
     Value defValue;
     // this is a full-width index of next item
@@ -3412,91 +3461,96 @@ private:
 
     @disable this();
 
+    //shortcut for index variable at level 'level'
+    @property ref idx(size_t level)(){ return indices[level]; }
+
     // this function assumes no holes in the input so
     // indices are going one by one
     void addValue(size_t level, T)(T val, size_t numVals)
     {
+        alias j = idx!level;
         enum pageSize = 1<<Prefix[level].bitSize;
         if(numVals == 0)
             return;
-        do
+        auto ptr = table.slice!(level);
+        if(numVals == 1)
         {
-            // need to take pointer again, memory block may move on resize
-            auto ptr = table.slice!(level);
-            static if(is(T : bool))
-            {
-                if(val)
-                    state[level].zeros = false;
-                else
-                    state[level].ones = false;
+            static if(level == Prefix.length-1)
+                ptr[j] = val;
+            else
+            {// can incur narrowing conversion
+                assert(j < ptr.length);
+                ptr[j] = force!(typeof(ptr[j]))(val);
             }
-            if(numVals == 1)
+            j++;
+            if(j % pageSize == 0)
+                spillToNextPage!level(ptr);
+            return;
+        }
+        // longer row of values
+        // get to the next page boundary
+        size_t nextPB = (j + pageSize) & ~(pageSize-1);
+        size_t n =  nextPB - j;// can fill right in this page
+        if(numVals < n) //fits in current page  
+        {
+            ptr[j..j+numVals]  = val;
+            j += numVals;
+            return;
+        }
+        static if(level != 0)//on the first level it always fits
+        {
+            numVals -= n;
+            //write till the end of current page
+            ptr[j..j+n]  = val;
+            j += n;
+            //spill to the next page
+            spillToNextPage!level(ptr);
+            // page at once loop
+            if(state[level].idx_zeros != size_t.max && val == T.init)
             {
-                static if(level == Prefix.length-1)
-                    ptr[indices[level]] = val;
-                else{// can incur narrowing conversion
-                    assert(indices[level] < ptr.length);
-                    ptr[indices[level]] = force!(typeof(ptr[indices[level]]))(val);
-                }
-                indices[level]++;
-                numVals = 0;
+                alias typeof(table.slice!(level-1)[0]) NextIdx;
+                addValue!(level-1)(force!NextIdx(state[level].idx_zeros),
+                    numVals/pageSize);
+                ptr = table.slice!level; //table structure might have changed
+                numVals %= pageSize;
             }
             else
             {
-                // where is the next page boundary
-                size_t nextPB = (indices[level]+pageSize)/pageSize*pageSize;
-                size_t j = indices[level];
-                size_t n =  nextPB-j;// can fill right in this page
-                if(numVals > n)
-                    numVals -= n;
-                else
+                while(numVals >= pageSize)
                 {
-                    n = numVals;
-                    numVals = 0;
-                }
-                static if(level < Prefix.length-1)
-                    assert(indices[level] <= 2^^Prefix[level+1].bitSize);
-                ptr[j..j+n]  = val;
-                j += n;
-                indices[level] = j;
-            }
-            // last level (i.e. topmost) has 1 "page"
-            // thus it need not to add a new page on upper level
-            static if(level != 0)
-            {
-                if(indices[level] % pageSize == 0)
+                    numVals -= pageSize;
+                    ptr[j..j+pageSize]  = val;
+                    j += pageSize;
                     spillToNextPage!level(ptr);
+                }
+            }
+            if(numVals)
+            {
+                // the leftovers, an incomplete page
+                ptr[j..j+numVals]  = val;
+                j += numVals;
             }
         }
-        while(numVals);
+    }
+
+    void spillToNextPage(size_t level, Slice)(ref Slice ptr)
+    {
+        // last level (i.e. topmost) has 1 "page"
+        // thus it need not to add a new page on upper level
+        static if(level != 0)
+            spillToNextPageImpl!(level)(ptr);
     }
 
     // this can re-use the current page if duplicate or allocate a new one
     // it also makes sure that previous levels point to the correct page in this level
-    void spillToNextPage(size_t level, Slice)(ref Slice ptr)
+    void spillToNextPageImpl(size_t level, Slice)(ref Slice ptr)
     {
         alias typeof(table.slice!(level-1)[0]) NextIdx;
         NextIdx next_lvl_index;
         enum pageSize = 1<<Prefix[level].bitSize;
-        static if(is(T : bool))
-        {
-            if(state[level].zeros)
-            {
-                if(state[level].idx_empty == uint.max)
-                {
-                    state[level].idx_empty = cast(uint)(indices[level]/pageSize - 1);
-                    goto L_allocate_page;
-                }
-                else
-                {
-                    next_lvl_index = force!NextIdx(state[level].idx_empty);
-                    indices[level] -= pageSize;// it is a duplicate
-                    goto L_know_index;
-                }
-            }
-        }
-        auto last = indices[level]-pageSize;
-        auto slice = ptr[indices[level] - pageSize..indices[level]];
+        assert(idx!level % pageSize == 0);
+        auto last = idx!level-pageSize;
+        auto slice = ptr[idx!level - pageSize..idx!level];
         size_t j;
         for(j=0; j<last; j+=pageSize)
         {
@@ -3514,14 +3568,18 @@ private:
                 writeln("LEVEL(", level
                         , ") src page is :", ptr, ": ", arrayRepr(slice[0..pageSize]));
                 }
-                indices[level] -= pageSize; // reuse this page, it is duplicate
+                idx!level -= pageSize; // reuse this page, it is duplicate
                 break;
             }
         }
         if(j == last)
         {
     L_allocate_page:
-            next_lvl_index = force!NextIdx(indices[level]/pageSize - 1);
+            next_lvl_index = force!NextIdx(idx!level/pageSize - 1);
+            if(state[level].idx_zeros == size_t.max && ptr.zeros(j, j+pageSize))
+            {                
+                state[level].idx_zeros = next_lvl_index;
+            }
             // allocate next page
             version(none)
             {
@@ -3535,17 +3593,12 @@ private:
                           [pageSize*next_lvl_index..(next_lvl_index+1)*pageSize]
                         ));
             }
-            table.length!level = table.length!level + pageSize;
+            table.length!level = table.length!level + pageSize;            
         }
     L_know_index:
-        // reset all zero/ones tracking variables
-        static if(is(TypeOfBitPacked!T : bool))
-        {
-            state[level].zeros = true;
-            state[level].ones = true;
-        }
         // for the previous level, values are indices to the pages in the current level
         addValue!(level-1)(next_lvl_index, 1);
+        ptr = table.slice!level; //re-load the slice after moves
     }
 
     // idx - full-width index to fill with v (full-width index != key)
@@ -3584,7 +3637,7 @@ public:
         defValue = filler;
         // zeros-page index, ones-page index
         foreach(ref v; state)
-            v = ConstructState(true, true, uint.max, uint.max);
+            v = ConstructState(size_t.max, size_t.max);
         table = typeof(table)(indices);
         // one page per level is a bootstrap minimum
         foreach(i; Sequence!(0, Prefix.length))
@@ -3703,8 +3756,7 @@ public:
         idx = cast(size_t)p[0](key);
         foreach(i, v; p[0..$-1])
             idx = cast(size_t)((_table.ptr!i[idx]<<p[i+1].bitSize) + p[i+1](key));
-        auto val = _table.ptr!(p.length-1)[idx];
-        return val;
+        return _table.ptr!(p.length-1)[idx];
     }
 
     @property size_t bytes(size_t n=size_t.max)() const
@@ -5256,7 +5308,7 @@ private static struct InputRangeString
 
     bool empty() @property { return s.empty; }
     dchar front() @property { return s.front; }
-    void popFront() @property { s.popFront(); }
+    void popFront() { s.popFront(); }
 }
 
 unittest

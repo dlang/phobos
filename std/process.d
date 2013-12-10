@@ -1883,7 +1883,7 @@ auto dmd = execute(["dmd", "myapp.d"]);
 if (dmd.status != 0) writeln("Compilation failed:\n", dmd.output);
 
 auto ls = executeShell("ls -l");
-if (ls.status == 0) writeln("Failed to retrieve file listing");
+if (ls.status != 0) writeln("Failed to retrieve file listing");
 else writeln(ls.output);
 ---
 

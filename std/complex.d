@@ -322,6 +322,30 @@ struct Complex(T)  if (isFloatingPoint!T)
         return w;
     }
 
+    // numeric ^^ complex
+    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R lhs) const
+        if (op == "^^" && isNumeric!R)
+    {
+        FPTemporary!(CommonType!(T, R)) ab = void, ar = void;
+
+        if (lhs >= 0)
+        {
+            // r = lhs
+            // theta = 0
+            ab = lhs ^^ this.re;
+            ar = log(lhs) * this.im;
+        }
+        else
+        {
+            // r = -lhs
+            // theta = PI
+            ab = (-lhs) ^^ this.re * exp(-PI * this.im);
+            ar = PI * this.re + log(-lhs) * this.im;
+        }
+
+        return typeof(return)(ab * std.math.cos(ar), ab * std.math.sin(ar));
+    }
+
     // OP-ASSIGN OPERATORS
 
     // complex += complex,  complex -= complex
@@ -492,6 +516,10 @@ unittest
     assert (approxEqual(abs(cdr), abs(c1)/a, EPS));
     assert (approxEqual(arg(cdr), arg(c1), EPS));
 
+    auto cer = c1^^3.0;
+    assert (approxEqual(abs(cer), abs(c1)^^3, EPS));
+    assert (approxEqual(arg(cer), arg(c1)*3, EPS));
+
     auto rpc = a + c1;
     assert (rpc == cpr);
 
@@ -506,9 +534,60 @@ unittest
     assert (approxEqual(abs(rdc), a/abs(c1), EPS));
     assert (approxEqual(arg(rdc), -arg(c1), EPS));
 
-    auto cer = c1^^3.0;
-    assert (approxEqual(abs(cer), abs(c1)^^3, EPS));
-    assert (approxEqual(arg(cer), arg(c1)*3, EPS));
+    auto rec1a = 1.0 ^^ c1;
+    assert(rec1a.re == 1.0);
+    assert(rec1a.im == 0.0);
+
+    auto rec2a = 1.0 ^^ c2;
+    assert(rec2a.re == 1.0);
+    assert(rec2a.im == 0.0);
+
+    auto rec1b = (-1.0) ^^ c1;
+    assert(approxEqual(abs(rec1b), std.math.exp(-PI * c1.im), EPS));
+    auto arg1b = arg(rec1b);
+    /* The argument _should_ be PI, but floating-point rounding error
+     * means that in fact the imaginary part is very slightly negative.
+     */
+    assert(approxEqual(arg1b, PI, EPS) || approxEqual(arg1b, -PI, EPS));
+
+    auto rec2b = (-1.0) ^^ c2;
+    assert(approxEqual(abs(rec2b), std.math.exp(-2 * PI), EPS));
+    assert(approxEqual(arg(rec2b), PI_2, EPS));
+
+    auto rec3a = 0.79 ^^ complex(6.8, 5.7);
+    auto rec3b = complex(0.79, 0.0) ^^ complex(6.8, 5.7);
+    assert(approxEqual(rec3a.re, rec3b.re, EPS));
+    assert(approxEqual(rec3a.im, rec3b.im, EPS));
+
+    auto rec4a = (-0.79) ^^ complex(6.8, 5.7);
+    auto rec4b = complex(-0.79, 0.0) ^^ complex(6.8, 5.7);
+    assert(approxEqual(rec4a.re, rec4b.re, EPS));
+    assert(approxEqual(rec4a.im, rec4b.im, EPS));
+
+    auto rer = a ^^ complex(2.0, 0.0);
+    auto rcheck = a ^^ 2.0;
+    static assert(is(typeof(rcheck) == double));
+    assert(feqrel(rer.re, rcheck) == double.mant_dig);
+    assert(isIdentical(rer.re, rcheck));
+    assert(rer.im == 0.0);
+
+    auto rer2 = (-a) ^^ complex(2.0, 0.0);
+    rcheck = (-a) ^^ 2.0;
+    assert(feqrel(rer2.re, rcheck) == double.mant_dig);
+    assert(isIdentical(rer2.re, rcheck));
+    assert(approxEqual(rer2.im, 0.0, EPS));
+
+    auto rer3 = (-a) ^^ complex(-2.0, 0.0);
+    rcheck = (-a) ^^ (-2.0);
+    assert(feqrel(rer3.re, rcheck) == double.mant_dig);
+    assert(isIdentical(rer3.re, rcheck));
+    assert(approxEqual(rer3.im, 0.0, EPS));
+
+    auto rer4 = a ^^ complex(-2.0, 0.0);
+    rcheck = a ^^ (-2.0);
+    assert(feqrel(rer4.re, rcheck) == double.mant_dig);
+    assert(isIdentical(rer4.re, rcheck));
+    assert(rer4.im == 0.0);
 
     // Check Complex-int operations.
     foreach (i; 0..6)
