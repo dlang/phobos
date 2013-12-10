@@ -60,7 +60,7 @@ DMD=dmd
 
 ## Location of where to write the html documentation files
 
-DOCSRC = .
+DOCSRC = ../dlang.org
 STDDOC = $(DOCSRC)/std.ddoc
 
 DOC=..\..\html\d\phobos
