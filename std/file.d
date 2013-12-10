@@ -2264,7 +2264,7 @@ unittest
     assert(readText(t2) == "2");
 }
 
-unittest //issue 11434
+version(Posix) unittest //issue 11434
 {
     auto t1 = deleteme, t2 = deleteme~"2";
     scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
