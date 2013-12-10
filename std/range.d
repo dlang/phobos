@@ -6889,7 +6889,7 @@ unittest
 This range iterates over fixed-sized chunks of size $(D chunkSize) of a
 $(D source) range. $(D Source) must be a forward range.
 
-If $(D !isInfinitite!Source) and $(D source.walkLength) is not evenly
+If $(D !isInfinite!Source) and $(D source.walkLength) is not evenly
 divisible by $(D chunkSize), the back element of this range will contain
 fewer than $(D chunkSize) elements.
 
