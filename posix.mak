@@ -48,17 +48,16 @@ ifeq (,$(OS))
      $(error Unrecognized or unsupported OS for uname: $(uname_S))
 endif
 
+MODEL:=
+uname_M:=$(shell uname -m)
+ifeq (x86_64,$(uname_M))
+	MODEL:=64
+endif
+ifeq (i686,$(uname_M))
+	MODEL:=32
+endif
 ifeq (,$(MODEL))
-    uname_M:=$(shell uname -m)
-    ifeq (x86_64,$(uname_M))
-        MODEL=64
-    else
-        ifeq (i686,$(uname_M))
-            MODEL=32
-        else
-            $(error Cannot figure 32/64 model from uname -m: $(uname_M))
-        endif
-    endif
+	$(error Cannot figure 32/64 model from uname -m: $(uname_M))
 endif
 
 MODEL_FLAG:=-m$(MODEL)
