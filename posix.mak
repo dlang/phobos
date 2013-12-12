@@ -1,51 +1,55 @@
 # Makefile to build linux D runtime library libphobos2.a and its unit test
 #
+# make => makes release build of the library
+#
 # make clean => removes all targets built by the makefile
 #
 # make zip => creates a zip file of all the sources (not targets)
 # referred to by the makefile, including the makefile
 #
-# make release => makes release build of the library (this is also the
-# default target)
+# make BUILD=debug => makes debug build of the library
 #
-# make debug => makes debug build of the library
+# make unittest => builds all unittests (for release) and runs them
 #
-# make unittest => builds all unittests (for both debug and release)
-# and runs them
+# make BUILD=debug unittest => builds all unittests (for debug) and runs them
 #
 # make html => makes html documentation
 #
 # make install => copies library to /usr/lib
+#
+# make unittest/std/somemodule.d => only builds and unittests std.somemodule
+#
 
+################################################################################
 # Configurable stuff, usually from the command line
 #
-# OS can be linux, win32, win32remote, win32wine, osx, or freebsd. If left
-# blank, the system will be determined by using uname
+# OS can be linux, win32, win32wine, osx, or freebsd. The system will be
+# determined by using uname
 
 QUIET:=@
 
 OS:=
 uname_S:=$(shell uname -s)
 ifeq (Darwin,$(uname_S))
-     OS:=osx
+    OS:=osx
 endif
 ifeq (Linux,$(uname_S))
-     OS:=linux
+    OS:=linux
 endif
 ifeq (FreeBSD,$(uname_S))
-     OS:=freebsd
+    OS:=freebsd
 endif
 ifeq (OpenBSD,$(uname_S))
-     OS:=openbsd
+    OS:=openbsd
 endif
 ifeq (Solaris,$(uname_S))
-     OS:=solaris
+    OS:=solaris
 endif
 ifeq (SunOS,$(uname_S))
-     OS:=solaris
+    OS:=solaris
 endif
 ifeq (,$(OS))
-     $(error Unrecognized or unsupported OS for uname: $(uname_S))
+    $(error Unrecognized or unsupported OS for uname: $(uname_S))
 endif
 
 ifeq (,$(MODEL))
@@ -61,7 +65,14 @@ ifeq (,$(MODEL))
     endif
 endif
 
-MODEL_FLAG:=-m$(MODEL)
+# Default to a release built, override with BUILD=debug
+BUILD=release
+
+ifneq ($(BUILD),release)
+    ifneq ($(BUILD),debug)
+        $(error Unrecognized BUILD=$(BUILD), must be 'debug' or 'release')
+    endif
+endif
 
 override PIC:=$(if $(PIC),-fPIC,)
 
@@ -79,14 +90,9 @@ BIGDOC_OUTPUT_DIR = /tmp
 SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES) $(EXTRA_DOCUMENTABLES))
 STDDOC = $(DOCSRC)/std.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc
-DDOCFLAGS=$(MODEL_FLAG) -w -d -c -o- -version=StdDdoc -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
-
-# BUILD can be debug or release, but is unset by default; recursive
-# invocation will set it. See the debug and release targets below.
-BUILD =
-
-# Fetch the makefile name, will use it in recursive calls
-MAKEFILE:=$(lastword $(MAKEFILE_LIST))
+# Set DDOC, the documentation generator
+DDOC=$(DMD) -m$(MODEL) -w -d -c -o- -version=StdDdoc \
+    -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
 # Set DRUNTIME name and full path
 ifeq (,$(findstring win,$(OS)))
@@ -99,19 +105,14 @@ endif
 # Set CC and DMD
 ifeq ($(OS),win32wine)
 	CC = wine dmc.exe
-	DMD ?= wine dmd.exe
+	DMD = wine dmd.exe
 	RUN = wine
 else
-	ifeq ($(OS),win32remote)
-		DMD ?= ssh 206.125.170.138 "cd code/dmd/phobos && dmd"
-		CC = ssh 206.125.170.138 "cd code/dmd/phobos && dmc"
+	DMD = ../dmd/src/dmd
+	ifeq ($(OS),win32)
+		CC = dmc
 	else
-		DMD ?= dmd
-		ifeq ($(OS),win32)
-			CC = dmc
-		else
-			CC = cc
-		endif
+		CC = cc
 	endif
 	RUN =
 endif
@@ -119,7 +120,7 @@ endif
 # Set CFLAGS
 CFLAGS=
 ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
-	CFLAGS += $(MODEL_FLAG) $(PIC)
+	CFLAGS += -m$(MODEL) $(PIC)
 	ifeq ($(BUILD),debug)
 		CFLAGS += -g
 	else
@@ -128,7 +129,7 @@ ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
 endif
 
 # Set DFLAGS
-DFLAGS=-I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d $(MODEL_FLAG) $(PIC)
+DFLAGS=-I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -m$(MODEL) $(PIC)
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
@@ -147,9 +148,6 @@ else
 endif
 
 LINKDL:=$(if $(findstring $(OS),linux),-L-ldl,)
-
-# Set DDOC, the documentation generator
-DDOC=$(DMD)
 
 # Set VERSION, where the file is that contains the version string
 VERSION=../dmd/VERSION
@@ -174,14 +172,14 @@ endif
 MAIN = $(ROOT)/emptymain.d
 
 # Stuff in std/
-STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
+STD_MODULES = $(addprefix std/, algorithm allocator array ascii base64 bigint \
         bitmanip compiler complex concurrency container conv		\
         cstream csv datetime demangle encoding exception	\
         file format functional getopt json math mathspecial md5	\
         metastrings mmfile numeric outbuffer parallelism path		\
         process random range regex signals socket socketstream	\
         stdint stdio stdiobase stream string syserror system traits		\
-        typecons typetuple uni uri utf uuid variant xml zip zlib)
+        typecons typed_allocator typetuple uni uri utf uuid variant xml zip zlib)
 
 STD_NET_MODULES = $(addprefix std/net/, isemail curl)
 
@@ -211,7 +209,8 @@ EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	unicode_comp unicode_decomp unicode_grapheme unicode_norm)
 
 # Aggregate all D modules relevant to this build
-D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES)
+D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES) \
+    $(STD_DIGEST_MODULES)
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
@@ -236,39 +235,43 @@ ALL_C_FILES = $(C_FILES) $(C_EXTRAS)
 
 OBJS = $(addsuffix $(DOTOBJ),$(addprefix $(ROOT)/,$(C_MODULES)))
 
+MAKEFILE = $(firstword $(MAKEFILE_LIST))
+
+SUBMAKE = $(MAKE) --no-print-directory OS=$(OS) -f $(MAKEFILE)
+
 ################################################################################
 # Rules begin here
 ################################################################################
 
-ifeq ($(BUILD),)
-# No build was defined, so here we define release and debug
-# targets. BUILD is not defined in user runs, only by recursive
-# self-invocations. So the targets in this branch are accessible to
-# end users.
+# Main target (builds the dll on linux, too)
 ifeq (linux,$(OS))
-release :
-	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release PIC=1 dll
-	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release
+all : $(BUILD) $(BUILD)_pic
+$(BUILD)_pic :
+	$(SUBMAKE) MODEL=$(MODEL) BUILD=$(BUILD) PIC=1 dll
 else
-release :
-	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release
-endif
-debug :
-	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=debug
-unittest :
-	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=debug unittest
-	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release unittest
-install :
-	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release INSTALL_DIR=$(INSTALL_DIR) DMD=$(DMD) install2
-else
-# This branch is normally taken in recursive builds. All we need to do
-# is set the default build to $(BUILD) (which is either debug or
-# release) and then let the unittest depend on that build's unittests.
-$(BUILD) : $(LIB)
-unittest : $(addsuffix $(DOTEXE),$(addprefix $(ROOT)/unittest/,$(D_MODULES)))
+all : $(BUILD)
 endif
 
+install :
+	$(SUBMAKE) MODEL=$(MODEL) BUILD=release INSTALL_DIR=$(INSTALL_DIR) \
+		DMD=$(DMD) install2
+
+$(BUILD) : $(LIB)
+unittest : $(addsuffix .d,$(addprefix unittest/,$(D_MODULES)))
+
+depend: $(addprefix $(ROOT)/unittest/,$(addsuffix .deps,$(D_MODULES)))
+
+include $(addprefix $(ROOT)/unittest/,$(addsuffix .deps,$(D_MODULES)))
+
 ################################################################################
+# Patterns begin here
+################################################################################
+
+$(ROOT)/unittest/%.deps:
+	@mkdir -p $(dir $@)
+	echo $(ROOT)/unittest/$*.o: \
+		`$(DMD) $(DFLAGS) -v -c -o- $*.d | grep '^import ' | \
+	    sed 's/.*(\(.*\))/\1/'` >$@
 
 $(ROOT)/%$(DOTOBJ) : %.c
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
@@ -290,15 +293,20 @@ $(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 
 ifeq (osx,$(OS))
 # Build fat library that combines the 32 bit and the 64 bit libraries
-libphobos2.a : generated/osx/release/32/libphobos2.a generated/osx/release/64/libphobos2.a
-	lipo generated/osx/release/32/libphobos2.a generated/osx/release/64/libphobos2.a -create -output generated/osx/release/libphobos2.a
+libphobos2.a: $(ROOT_OF_THEM_ALL)/osx/release/libphobos2.a
+$(ROOT_OF_THEM_ALL)/osx/release/libphobos2.a:
+	$(SUBMAKE) MODEL=32 BUILD=release
+	$(SUBMAKE) MODEL=64 BUILD=release
+	lipo $(ROOT_OF_THEM_ALL)/osx/release/32/libphobos2.a \
+	    $(ROOT_OF_THEM_ALL)/osx/release/64/libphobos2.a \
+	    -create -output $@
 endif
 
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 	@echo Testing $@ - disabled
 
 UT_D_OBJS:=$(addprefix $(ROOT)/unittest/,$(addsuffix .o,$(D_MODULES)))
-$(UT_D_OBJS): $(ROOT)/unittest/%.o: $(D_FILES)
+$(UT_D_OBJS): $(ROOT)/unittest/%.o: %.d
 	$(DMD) $(DFLAGS) -unittest -c -of$@ $*.d
 
 ifneq (linux,$(OS))
@@ -322,14 +330,8 @@ endif
 # macro that returns the module name given the src path
 moduleName=$(subst /,.,$(1))
 
-$(ROOT)/unittest/%$(DOTEXE) : $(ROOT)/unittest/test_runner
-	@mkdir -p $(dir $@)
-# make the file very old so it builds and runs again if it fails
-	@touch -t 197001230123 $@
-# run unittest in its own directory
+unittest/%.d : $(ROOT)/unittest/test_runner
 	$(QUIET)$(RUN) $< $(call moduleName,$*)
-# succeeded, render the file new again
-	@touch $@
 
 # Disable implicit rule
 %$(DOTEXE) : %$(DOTOBJ)
@@ -372,28 +374,28 @@ $(DOC_OUTPUT_DIR)/. :
 	mkdir -p $@
 
 $(DOC_OUTPUT_DIR)/std_%.html : std/%.d $(STDDOC)
-	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
+	$(DDOC) $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_c_%.html : std/c/%.d $(STDDOC)
-	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
+	$(DDOC) $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_c_linux_%.html : std/c/linux/%.d $(STDDOC)
-	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
+	$(DDOC) $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_c_windows_%.html : std/c/windows/%.d $(STDDOC)
-	$(DDOC) $(DDOCFLAGS) -Df$@ $<
+	$(DDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_net_%.html : std/net/%.d $(STDDOC)
-	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
+	$(DDOC) $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_digest_%.html : std/digest/%.d $(STDDOC)
-	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
+	$(DDOC) $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/etc_c_%.html : etc/c/%.d $(STDDOC)
-	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
+	$(DDOC) $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/%.html : %.d $(STDDOC)
-	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
+	$(DDOC) $(STDDOC) -Df$@ $<
 
 html : $(DOC_OUTPUT_DIR)/. $(HTMLS) $(STYLECSS_TGT)
 
@@ -402,9 +404,11 @@ rsync-prerelease : html
 	rsync -avz $(WEBSITE_DIR)/ d-programming@digitalmars.com:data/phobos-prerelase/
 
 html_consolidated :
-	$(DDOC) $(DDOCFLAGS) -Df$(DOCSRC)/std_consolidated_header.html $(DOCSRC)/std_consolidated_header.dd
-	$(DDOC) $(DDOCFLAGS) -Df$(DOCSRC)/std_consolidated_footer.html $(DOCSRC)/std_consolidated_footer.dd
+	$(DDOC) -Df$(DOCSRC)/std_consolidated_header.html $(DOCSRC)/std_consolidated_header.dd
+	$(DDOC) -Df$(DOCSRC)/std_consolidated_footer.html $(DOCSRC)/std_consolidated_footer.dd
 	$(MAKE) DOC_OUTPUT_DIR=$(BIGDOC_OUTPUT_DIR) STDDOC=$(BIGSTDDOC) html -j 8
 	cat $(DOCSRC)/std_consolidated_header.html $(BIGHTMLS)	\
 	$(DOCSRC)/std_consolidated_footer.html > $(DOC_OUTPUT_DIR)/std_consolidated.html
+
+#############################
 
