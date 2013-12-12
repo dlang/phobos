@@ -26399,10 +26399,7 @@ public:
       +/
     /+ref+/ IntervalRange opAssign(IntervalRange rhs) pure nothrow
     {
-        _interval = rhs._interval;
-        _func = rhs._func;
-
-        return this;
+        return this = rhs;
     }
 
 
@@ -26929,10 +26926,7 @@ public:
       +/
     /+ref+/ PosInfIntervalRange opAssign(PosInfIntervalRange rhs) pure nothrow
     {
-        _interval = rhs._interval;
-        _func = rhs._func;
-
-        return this;
+        return this = rhs;
     }
 
 
@@ -27241,10 +27235,7 @@ public:
       +/
     /+ref+/ NegInfIntervalRange opAssign(NegInfIntervalRange rhs) pure nothrow
     {
-        _interval = rhs._interval;
-        _func = rhs._func;
-
-        return this;
+        return this = rhs;
     }
 
 
