@@ -26393,10 +26393,7 @@ public:
     }
 
 
-    /++
-        Params:
-            rhs = The $(D IntervalRange) to assign to this one.
-      +/
+    /++ Ditto +/
     /+ref+/ IntervalRange opAssign(IntervalRange rhs) pure nothrow
     {
         return this = rhs;
@@ -26920,10 +26917,7 @@ public:
     }
 
 
-    /++
-        Params:
-            rhs = The $(D PosInfIntervalRange) to assign to this one.
-      +/
+    /++ Ditto +/
     /+ref+/ PosInfIntervalRange opAssign(PosInfIntervalRange rhs) pure nothrow
     {
         return this = rhs;
@@ -27229,10 +27223,7 @@ public:
     }
 
 
-    /++
-        Params:
-            rhs = The $(D NegInfIntervalRange) to assign to this one.
-      +/
+    /++ Ditto +/
     /+ref+/ NegInfIntervalRange opAssign(NegInfIntervalRange rhs) pure nothrow
     {
         return this = rhs;
