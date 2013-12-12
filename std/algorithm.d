@@ -2897,9 +2897,9 @@ unittest
     assert(equal(splitter!"a=='本'"("日本語"), ["日", "語"]));
 }
 
+//Explicitly undocumented. It will be removed in December 2014.
 //@@@6730@@@ This exists already in std.array, so this declaration, at best, will only create ambiguity.
-//unfortunatly, an alias will conflict with the existing splitter in std.algorithm.
-//It needs to be removed.
+//unfortunately, an alias will conflict with the existing splitter in std.algorithm.
 deprecated("Please use std.array.splitter for string specific splitting")
 auto splitter(Range)(Range input)
 if (isSomeString!Range)
@@ -5240,14 +5240,6 @@ unittest
         assert(r.save.countUntil([3, 4]) == 3);
         assert(r.save.countUntil(3) == 3);
     }
-}
-
-// Explicitly undocumented. It will be removed in November 2013.
-deprecated("Please use std.algorithm.countUntil instead.")
-ptrdiff_t indexOf(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
-if (is(typeof(startsWith!pred(haystack, needle))))
-{
-    return countUntil!pred(haystack, needle);
 }
 
 /**
@@ -10747,9 +10739,8 @@ unittest
     assert(canFind([0, 1, 2, 3], [1, 3], [2, 4]) == 0);
 }
 
-//Explictly Undocumented. Do not use. It may be deprecated in the future.
-//Use any instead.
-bool canFind(alias pred, Range)(Range range)
+//Explictly Undocumented. It will be removed in December 2014.
+deprecated("Please use any instead.") bool canFind(alias pred, Range)(Range range)
 {
     return any!pred(range);
 }
