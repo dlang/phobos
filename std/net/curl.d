@@ -1818,8 +1818,8 @@ private mixin template Protocol()
       * callback returns.
       *
       * Returns:
-      * The callback returns the incoming bytes read. If not the entire array is
-      * the request will abort.
+      * The callback returns the number of incoming bytes read. If the entire array is
+      * not read the request will abort.
       * The special value .pauseRequest can be returned in order to pause the
       * current request.
       *
