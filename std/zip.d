@@ -127,7 +127,7 @@ class ArchiveMember
     {
         version (Posix)
         {
-            externalAttributes = attr & 0xFF << 16;
+            externalAttributes = (attr & 0xFFFF) << 16;
             _madeVersion &= 0x00FF;
             _madeVersion |= 0x0300; // attributes are in UNIX format
         }
@@ -140,6 +140,14 @@ class ArchiveMember
         {
             static assert(0, "Unimplemented platform");
         }
+    }
+
+    version (Posix) unittest
+    {
+        auto am = new ArchiveMember();
+        am.fileAttributes = octal!100644;
+        assert(am.externalAttributes == octal!100644 << 16);
+        assert((am._madeVersion & 0xFF00) == 0x0300);
     }
 
     /**
