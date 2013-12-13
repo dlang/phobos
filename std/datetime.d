@@ -26393,6 +26393,13 @@ public:
     }
 
 
+    /++ Ditto +/
+    /+ref+/ IntervalRange opAssign(IntervalRange rhs) pure nothrow
+    {
+        return this = rhs;
+    }
+
+
     /++
         Whether this $(D IntervalRange) is empty.
       +/
@@ -26910,6 +26917,13 @@ public:
     }
 
 
+    /++ Ditto +/
+    /+ref+/ PosInfIntervalRange opAssign(PosInfIntervalRange rhs) pure nothrow
+    {
+        return this = rhs;
+    }
+
+
     /++
         This is an infinite range, so it is never empty.
       +/
@@ -27206,6 +27220,13 @@ public:
         _func = rhs._func;
 
         return this;
+    }
+
+
+    /++ Ditto +/
+    /+ref+/ NegInfIntervalRange opAssign(NegInfIntervalRange rhs) pure nothrow
+    {
+        return this = rhs;
     }
 
 
