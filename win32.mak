@@ -126,10 +126,12 @@ SRC_STD_3a= std\signals.d std\typetuple.d std\traits.d \
 
 SRC_STD_3b= std\datetime.d
 
+SRC_STD_COMPRESSION= std\compression\lz77.d
+
 #can't place SRC_STD_DIGEST in SRC_STD_REST because of out-of-memory issues
 SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d \
     std\digest\ripemd.d std\digest\digest.d
-SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST)
+SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST) $(SRC_STD_COMPRESSION)
 
 SRC_STD_5_HEAVY= std\algorithm.d
 
@@ -287,6 +289,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_concurrency.html \
 	$(DOC)\std_compiler.html \
 	$(DOC)\std_complex.html \
+	$(DOC)\std_compression_lz77.html \
 	$(DOC)\std_container.html \
 	$(DOC)\std_conv.html \
 	$(DOC)\std_digest_crc.html \
@@ -432,6 +435,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -cov=73 -unittest -main -run std\concurrency.d
 	$(DMD) -cov=95 -unittest -main -run std\datetime.d
 	$(DMD) -cov=96 -unittest -main -run std\uuid.d
+	$(DMD) -cov=85 -unittest -main -run std\compression\lz77.d
 	$(DMD) -cov=100 -unittest -main -run std\digest\crc.d
 	$(DMD) -cov=55 -unittest -main -run std\digest\sha.d
 	$(DMD) -cov=100 -unittest -main -run std\digest\md.d
@@ -709,6 +713,9 @@ $(DOC)\std_net_isemail.html : $(STDDOC) std\net\isemail.d
 $(DOC)\std_net_curl.html : $(STDDOC) std\net\curl.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_net_curl.html $(STDDOC) std\net\curl.d
 
+$(DOC)\std_compression_lz77.html : $(STDDOC) std\compression\lz77.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_compression_lz77.html $(STDDOC) std\compression\lz77.d
+
 $(DOC)\std_digest_crc.html : $(STDDOC) std\digest\crc.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_crc.html $(STDDOC) std\digest\crc.d
 
@@ -779,6 +786,7 @@ zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
 	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST) \
+	$(SRC_STD_COMPRESSION) \
 	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) \
 	$(SRC_STD_INTERNAL_WINDOWS)
 	del phobos.zip
@@ -799,6 +807,7 @@ zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_ZLIB)
 	zip32 -u phobos $(SRC_STD_NET)
 	zip32 -u phobos $(SRC_STD_DIGEST)
+	zip32 -u phobos $(SRC_STD_COMPRESSION)
 
 phobos.zip : zip
 
