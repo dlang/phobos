@@ -343,13 +343,7 @@ class ZipArchive
         uint directorySize = 0;
         foreach (ArchiveMember de; _directory)
         {
-            // We have just compressed this member
-            if (de.compressedSize > 0)
-            {
-                auto off = de.offset + 30 + de.name.length + de.extra.length;
-                de._compressedData = _data[off .. off + de.compressedSize];
-            }
-            else
+            if (!de._compressedData.length)
             {
                 switch (de.compressionMethod)
                 {
@@ -369,7 +363,7 @@ class ZipArchive
                 de._compressedSize = to!uint(de._compressedData.length);
                 de._crc32 = std.zlib.crc32(0, cast(void[])de._expandedData);
             }
-
+            assert(de._compressedData.length == de._compressedSize);
 
             archiveSize += 30 + de.name.length +
                                 de.extra.length +
@@ -701,4 +695,20 @@ debug(print)
         }
         printf("\n");
     }
+}
+
+unittest
+{
+    auto zip1 = new ZipArchive();
+    auto zip2 = new ZipArchive();
+    auto am1 = new ArchiveMember();
+    am1.name = "foo";
+    am1.expandedData = new ubyte[](1024);
+    zip1.addMember(am1);
+    zip1.build();
+    zip2.addMember(zip1.directory["foo"]);
+    zip2.build();
+    auto am2 = zip2.directory["foo"];
+    zip2.expand(am2);
+    assert(am1.expandedData == am2.expandedData);
 }
