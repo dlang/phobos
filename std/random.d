@@ -1428,7 +1428,8 @@ unittest
 
 /**
 Shuffles elements of $(D r) using $(D gen) as a shuffler. $(D r) must be
-a random-access range with length.
+a random-access range with length.  If no RNG is specified, $(D rndGen)
+will be used.
  */
 
 void randomShuffle(Range, RandomGen)(Range r, ref RandomGen gen)
@@ -1446,17 +1447,16 @@ void randomShuffle(Range)(Range r)
 
 unittest
 {
-    foreach(Rng; PseudoRngTypes)
+    foreach(RandomGen; PseudoRngTypes)
     {
-        static assert(isUniformRNG!Rng);
         // Also tests partialShuffle indirectly.
-        auto a = ([ 1, 2, 3, 4, 5, 6, 7, 8, 9 ]).dup;
+        auto a = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         auto b = a.dup;
-        Rng gen;
+        auto gen = RandomGen(unpredictableSeed);
         randomShuffle(a, gen);
-        assert(a.sort == b.sort);
+        assert(a.sort == b);
         randomShuffle(a);
-        assert(a.sort == b.sort);
+        assert(a.sort == b);
     }
 }
 
@@ -1469,23 +1469,39 @@ $(D partialShuffle) returns will not be independent of their order before
 $(D partialShuffle) was called.
 
 $(D r) must be a random-access range with length.  $(D n) must be less than
-or equal to $(D r.length).
+or equal to $(D r.length).  If no RNG is specified, $(D rndGen) will be used.
 */
-void partialShuffle(Range, RandomGen)(Range r, size_t n, ref RandomGen gen)
+void partialShuffle(Range, RandomGen)(Range r, in size_t n, ref RandomGen gen)
     if(isRandomAccessRange!Range && isUniformRNG!RandomGen)
 {
     enforce(n <= r.length, "n must be <= r.length for partialShuffle.");
     foreach (i; 0 .. n)
     {
-        swapAt(r, i, i + uniform(0, r.length - i, gen));
+        swapAt(r, i, i + uniform(0, n - i, gen));
     }
 }
 
 /// ditto
-void partialShuffle(Range)(Range r, size_t n)
+void partialShuffle(Range)(Range r, in size_t n)
     if(isRandomAccessRange!Range)
 {
     return partialShuffle(r, n, rndGen);
+}
+
+unittest
+{
+    foreach(RandomGen; PseudoRngTypes)
+    {
+        auto a = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        auto b = a.dup;
+        auto gen = RandomGen(unpredictableSeed);
+        partialShuffle(a, 5, gen);
+        assert(a[5 .. $] == b[5 .. $]);
+        assert(a[0 .. 5].sort == b[0 .. 5]);
+        partialShuffle(a, 6);
+        assert(a[6 .. $] == b[6 .. $]);
+        assert(a[0 .. 6].sort == b[0 .. 6]);
+    }
 }
 
 /**
