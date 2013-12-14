@@ -62,7 +62,7 @@ enum CompressionMethod : ushort
 /**
  * A member of the ZipArchive.
  */
-class ArchiveMember
+final class ArchiveMember
 {
     /**
      * Read/Write: Usually the file name of the archive member; it is used to
@@ -247,7 +247,7 @@ class ArchiveMember
  * Object representing the entire archive.
  * ZipArchives are collections of ArchiveMembers.
  */
-class ZipArchive
+final class ZipArchive
 {
     string comment;     /// Read/Write: the archive comment. Must be less than 65536 bytes in length.
 
