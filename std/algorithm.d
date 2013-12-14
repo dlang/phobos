@@ -6655,7 +6655,7 @@ unittest
 }
 
 // MinType
-template MinType(T...)
+private template MinType(T...)
 {
     static assert(T.length >= 2);
     static if (T.length == 2)
@@ -6682,32 +6682,57 @@ template MinType(T...)
     }
 }
 
+//less
+/*
+Returns $(D true) if $(D a) is smaller than $(D b). Unlike $(D <), $(D less)
+will properly handle arguments with unmatched size or sign
+*/ //named algoLess while private because of @@@10375@@@
+private bool algoLess(T1, T2)(T1 a, T2 b)
+{
+    static if (isIntegral!T1 && isIntegral!T2 &&
+               (mostNegative!T1 < 0) != (mostNegative!T2 < 0))
+    {
+        static if (mostNegative!T1 < 0)
+        {
+            static if (T1.sizeof > T2.sizeof)
+                return a < b;
+            else static if (T2.sizeof <= 4)
+            {
+                alias T = Select!(T2.sizeof < 4, int, long);
+                return cast(T)a < cast(T)b;
+            }
+            else
+                return a < b || a < 0;
+        }
+        else //if(mostNegative!T2 < 0)
+        {
+            static if (T2.sizeof > T1.sizeof)
+                return a < b;
+            else static if (T1.sizeof <= 4)
+            {
+                alias T = Select!(T1.sizeof < 4, int, long);
+                return cast(T)a < cast(T)b;
+            }
+            else
+                return a < b && b >= 0;
+        }
+    }
+    else
+        return a < b;
+}
+
 // min
 /**
-Returns the minimum of the passed-in values. The type of the result is
-computed by using $(XREF traits, CommonType).
+Returns the minimum of the passed-in values. The result is of a type
+with the correct size and sign to hold the result.
 */
 MinType!(T1, T2, T) min(T1, T2, T...)(T1 a, T2 b, T xs)
     if (is(typeof(a < b)))
 {
     static if (T.length == 0)
-    {
-        static if (isIntegral!T1 && isIntegral!T2 &&
-                   (mostNegative!T1 < 0) != (mostNegative!T2 < 0))
-        {
-            static if (mostNegative!T1 < 0)
-                immutable chooseB = b < a && a > 0;
-            else
-                immutable chooseB = b < a || b < 0;
-        }
-        else
-            immutable chooseB = b < a;
-        return cast(typeof(return)) (chooseB ? b : a);
-    }
+        return cast(typeof(return)) (b.algoLess(a) ? b : a);
     else
-    {
         return min(min(a, b), xs);
-    }
 }
 
 unittest
@@ -6729,6 +6754,15 @@ unittest
     static assert(is(typeof(min(a, f)) == int));
     assert(min(a, f) == -10);
 
+    int    s4 = -20_000;
+    ushort u2 =  33_000;
+    short  s2 = -20_000;
+    uint   u4 =  33_000;
+    assert(min(s2, u2) == s2);
+    assert(min(s4, u2) == s4);
+    assert(min(s2, u4) == s2);
+    assert(min(s4, u4) == s4);
+
     //Test user-defined types
     import std.datetime;
     assert(min(Date(2012, 12, 21), Date(1982, 1, 4)) == Date(1982, 1, 4));
@@ -6742,7 +6776,7 @@ unittest
 }
 
 // MaxType
-template MaxType(T...)
+private template MaxType(T...)
 {
     static assert(T.length >= 2);
     static if (T.length == 2)
@@ -6760,10 +6794,49 @@ template MaxType(T...)
     }
 }
 
+//greater
+/*
+Returns $(D true) if $(D a) is greater than $(D b). Unlike $(D <), $(D greater)
+will properly handle arguments with unmatched size or sign
+*/ //named algoGreater while private because of @@@10375@@@
+private bool algoGreater(T1, T2)(T1 a, T2 b)
+{
+    static if (isIntegral!T1 && isIntegral!T2 &&
+               (mostNegative!T1 < 0) != (mostNegative!T2 < 0))
+    {
+        static if (mostNegative!T1 < 0)
+        {
+            static if (T1.sizeof > T2.sizeof)
+                return a > b;
+            else static if (T2.sizeof <= 4)
+            {
+                alias T = Select!(T2.sizeof < 4, int, long);
+                return cast(T)a > cast(T)b;
+            }
+            else
+                return a > b && a >= 0;
+        }
+        else //if(mostNegative!T2 < 0)
+        {
+            static if (T2.sizeof > T1.sizeof)
+                return a > b;
+            else static if (T1.sizeof <= 4)
+            {
+                alias T = Select!(T1.sizeof < 4, int, long);
+                return cast(T)a > cast(T)b;
+            }
+            else
+                return a > b || b < 0;
+        }
+    }
+    else
+        return a > b;
+}
+
 // max
 /**
-Returns the maximum of the passed-in values. The type of the result is
-computed by using $(XREF traits, CommonType).
+Returns the maximum of the passed-in values. The result is of a type
+with the correct size and sign to hold the result.
 
 Example:
 ----
@@ -6782,23 +6855,9 @@ MaxType!(T1, T2, T) max(T1, T2, T...)(T1 a, T2 b, T xs)
     if (is(typeof(a < b)))
 {
     static if (T.length == 0)
-    {
-        static if (isIntegral!T1 && isIntegral!T2 &&
-                   (mostNegative!T1 < 0) != (mostNegative!T2 < 0))
-        {
-            static if (mostNegative!T1 < 0)
-                immutable chooseB = b > a || a < 0;
-            else
-                immutable chooseB = b > a && b > 0;
-        }
-        else
-            immutable chooseB = b > a;
-        return cast(typeof(return)) (chooseB ? b : a);
-    }
+        return cast(typeof(return)) (b.algoGreater(a) ? b : a);
     else
-    {
         return max(max(a, b), xs);
-    }
 }
 
 unittest
@@ -6819,6 +6878,15 @@ unittest
     uint f = 5;
     static assert(is(typeof(max(a, f)) == uint));
     assert(max(a, f) == 5);
+
+    int    s4 = -20_000;
+    ushort u2 =  33_000;
+    short  s2 = -20_000;
+    uint   u4 =  33_000;
+    assert(max(s2, u2) == u2);
+    assert(max(s4, u2) == u2);
+    assert(max(s2, u4) == u4);
+    assert(max(s4, u4) == u4);
 
     //Test user-defined types
     import std.datetime;
