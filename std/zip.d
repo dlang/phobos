@@ -96,7 +96,8 @@ class ArchiveMember
 
     /// OS specific file attributes
     deprecated("Please use fileAttributes instead.")
-    @property ref inout(uint) externalAttributes() inout { return _externalAttributes; }
+    @property ref inout(uint) externalAttributes() inout @safe pure nothrow
+    { return _externalAttributes; }
 
     /// Read Only: size of data of member in compressed form.
     @property uint compressedSize()     { return _compressedSize; }
