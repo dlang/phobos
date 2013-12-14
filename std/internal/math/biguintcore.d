@@ -654,7 +654,7 @@ public:
         mixin("resultSign = xSign " ~ op ~ " ySign;");
         
         if (resultSign) {
-            d1 = twosComplement(d1, d1.length);
+            twosComplement(d1, d1);
         }
         
         return BigUint(removeLeadingZeros(assumeUnique(d1)));
@@ -967,11 +967,8 @@ unittest
 
 
 private:
-BigDigit[] twosComplement(const(BigDigit) [] x, size_t length) pure
+void twosComplement(const(BigDigit) [] x, BigDigit[] result) pure
 {
-    assert(length != 0);
-    BigDigit [] result = new BigDigit[length];
-    
     foreach (i; 0..x.length)
     {
         result[i] = ~x[i];
@@ -980,7 +977,7 @@ BigDigit[] twosComplement(const(BigDigit) [] x, size_t length) pure
     
     bool sgn = false;
     
-    foreach (i; 0..length) {
+    foreach (i; 0..result.length) {
         if (result[i] == BigDigit.max) {
             result[i] = 0;
         } else {
@@ -988,23 +985,22 @@ BigDigit[] twosComplement(const(BigDigit) [] x, size_t length) pure
             break;
         }
     }
-    return result;
 }
 
 // Encode BigInt as BigDigit array (sign and 2's complement)
 BigDigit[] includeSign(const(BigDigit) [] x, size_t minSize, bool sign) pure
 {
     size_t length = (x.length > minSize) ? x.length : minSize;
+    BigDigit [] result = new BigDigit[length];
     if (sign)
     {
-        return twosComplement(x, length);
+        twosComplement(x, result);
     }
     else
     {
-        BigDigit [] result = new BigDigit[length];
         result[0..x.length] = x;
-        return result;
     }
+    return result;
 }
 
 // works for any type
