@@ -979,8 +979,16 @@ BigDigit[] twosComplement(const(BigDigit) [] x, size_t length) pure
     result[x.length..$] = BigDigit.max;
     
     bool sgn = false;
-    BigUint tmp = BigUint.addOrSubInt(BigUint(assumeUnique(result)), 1UL, false, sgn);
-    return cast(BigDigit[])tmp.data;
+    
+    foreach (i; 0..length) {
+        if (result[i] == BigDigit.max) {
+            result[i] = 0;
+        } else {
+            result[i] += 1;
+            break;
+        }
+    }
+    return result;
 }
 
 // Encode BigInt as BigDigit array (sign and 2's complement)
