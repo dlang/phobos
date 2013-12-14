@@ -84,8 +84,7 @@ class ArchiveMember
     private ushort _madeVersion = 20;
     private ushort _extractVersion = 20;
     private ushort _diskNumber;
-    // should be private when deprecation done
-    deprecated("Please use fileAttributes instead.") uint externalAttributes;
+    private uint _externalAttributes;
     private DosFileTime _time;
 
     ushort flags;                  /// Read/Write: normally set to 0
@@ -94,6 +93,10 @@ class ArchiveMember
     @property ushort madeVersion()     { return _madeVersion; }    /// Read Only
     @property ushort extractVersion()     { return _extractVersion; }    /// Read Only
     @property uint crc32()         { return _crc32; }    /// Read Only: cyclic redundancy check (CRC) value
+
+    /// OS specific file attributes
+    deprecated("Please use fileAttributes instead.")
+    @property ref inout(uint) externalAttributes() inout { return _externalAttributes; }
 
     /// Read Only: size of data of member in compressed form.
     @property uint compressedSize()     { return _compressedSize; }
@@ -127,13 +130,13 @@ class ArchiveMember
     {
         version (Posix)
         {
-            externalAttributes = (attr & 0xFFFF) << 16;
+            _externalAttributes = (attr & 0xFFFF) << 16;
             _madeVersion &= 0x00FF;
             _madeVersion |= 0x0300; // attributes are in UNIX format
         }
         else version (Windows)
         {
-            externalAttributes = attr;
+            _externalAttributes = attr;
             _madeVersion &= 0x00FF; // attributes are in MS-DOS and OS/2 format
         }
         else
@@ -146,7 +149,7 @@ class ArchiveMember
     {
         auto am = new ArchiveMember();
         am.fileAttributes = octal!100644;
-        assert(am.externalAttributes == octal!100644 << 16);
+        assert(am._externalAttributes == octal!100644 << 16);
         assert((am._madeVersion & 0xFF00) == 0x0300);
     }
 
@@ -162,13 +165,13 @@ class ArchiveMember
         version (Posix)
         {
             if ((_madeVersion & 0xFF00) == 0x0300)
-                return externalAttributes >> 16;
+                return _externalAttributes >> 16;
             return 0;
         }
         else version (Windows)
         {
             if ((_madeVersion & 0xFF00) == 0x0000)
-                return externalAttributes;
+                return _externalAttributes;
             return 0;
         }
         else
@@ -427,7 +430,7 @@ class ZipArchive
             putUshort(i + 32, cast(ushort)de.comment.length);
             putUshort(i + 34, de.diskNumber);
             putUshort(i + 36, de.internalAttributes);
-            putUint  (i + 38, de.externalAttributes);
+            putUint  (i + 38, de._externalAttributes);
             putUint  (i + 42, de.offset);
             i += 46;
 
@@ -554,7 +557,7 @@ class ZipArchive
             commentlen = getUshort(i + 32);
             de._diskNumber = getUshort(i + 34);
             de.internalAttributes = getUshort(i + 36);
-            de.externalAttributes = getUint(i + 38);
+            de._externalAttributes = getUint(i + 38);
             de.offset = getUint(i + 42);
             i += 46;
 
