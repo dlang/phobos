@@ -32,7 +32,7 @@ private import std.traits;
 /** A struct representing an arbitrary precision integer
  *
  * All arithmetic operations are supported, except
- * unsigned shift right (>>>). Logical operations are not currently supported.
+ * unsigned shift right (>>>). Logical operations (|, &, ^, ~) are supported, and behave as if BigInt was an infinite length 2's complement number.
  *
  * BigInt implements value semantics using copy-on-write. This means that
  * assignment is cheap, but operations such as x++ will cause heap
