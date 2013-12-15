@@ -245,26 +245,29 @@ ifeq ($(BUILD),)
 # targets. BUILD is not defined in user runs, only by recursive
 # self-invocations. So the targets in this branch are accessible to
 # end users.
-ifeq (linux,$(OS))
-release :
-	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release PIC=1 dll
-	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release
-else
 release :
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release
-endif
+
 debug :
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=debug
+
 unittest :
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=debug unittest
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release unittest
+
 install :
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release INSTALL_DIR=$(INSTALL_DIR) DMD=$(DMD) install2
 else
 # This branch is normally taken in recursive builds. All we need to do
 # is set the default build to $(BUILD) (which is either debug or
 # release) and then let the unittest depend on that build's unittests.
-$(BUILD) : $(LIB)
+ifeq (linux,$(OS))
+# The dll target comes first so that objects shared between dll and $(LIB) are build with PIC.
+$(BUILD): dll $(LIB)
+else
+$(BUILD): $(LIB)
+endif
+
 unittest : $(addsuffix $(DOTEXE),$(addprefix $(ROOT)/unittest/,$(D_MODULES)))
 endif
 
@@ -276,6 +279,8 @@ $(ROOT)/%$(DOTOBJ) : %.c
 
 $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
+
+$(ROOT)/libphobos2.so $(ROOT)/$(SONAME) $(LIBSO) dll: override PIC:=-fPIC
 
 dll : $(ROOT)/libphobos2.so
 
