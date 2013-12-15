@@ -547,6 +547,7 @@ template Tuple(Specs...)
         /**
          * Converts to string.
          */
+        static if (allSatisfy!(isPrintable, Types))
         string toString()
         {
             enum header = typeof(this).stringof ~ "(",
@@ -574,6 +575,14 @@ template Tuple(Specs...)
             return w.data;
         }
     }
+}
+
+private template isPrintable(T)
+{
+    enum isPrintable = is(typeof({
+        Appender!string w;
+        formattedWrite(w, "%s", T.init);
+    }));
 }
 
 private template Identity(alias T)
@@ -843,6 +852,11 @@ unittest
         auto t = tuple(1);
         t = tuple(2);   // assignment
     });
+}
+unittest
+{
+    class Foo{}
+    Tuple!(immutable(Foo)[]) a;
 }
 
 /**
