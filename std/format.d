@@ -2417,7 +2417,7 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
             fmt.writeUpToNextSpec(w);
             formatElement(w, v, fmt);
         }
-        if (f.sep)
+        if (f.sep.length)
         {
             fmt.writeUpToNextSpec(w);
             if (++i != end)

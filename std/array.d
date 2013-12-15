@@ -1955,7 +1955,7 @@ void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff
        !is(T == const T) &&
        !is(T == immutable T))
 {
-    if (overlap(array, stuff))
+    if (overlap(array, stuff).length)
     {
         // use slower/conservative method
         array = array[0 .. from] ~ stuff ~ array[to .. $];
