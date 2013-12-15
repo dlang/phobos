@@ -2505,15 +2505,7 @@ unittest
 }
 
 
-/*****************************************************
- * $(RED Deprecated. It will be removed in November 2013.
- *       Please use std.string.format instead.)
- *
- * Format arguments into a string.
- *
- * $(LREF format) was changed to use this implementation in November 2012,
- */
-
+// Explicitly undocumented. It will be removed in July 2014.
 deprecated("Please use std.string.format instead.") alias format xformat;
 
 deprecated unittest
@@ -2537,16 +2529,7 @@ deprecated unittest
 }
 
 
-/*****************************************************
- * $(RED Deprecated. It will be removed in November 2013.
- *       Please use std.string.sformat instead.)
- *
- * Format arguments into string $(D buf) which must be large
- * enough to hold the result. Throws RangeError if it is not.
- *
- * $(LREF sformat) was changed to use this implementation in November 2012,
- */
-
+// Explicitly undocumented. It will be removed in July 2014.
 deprecated("Please use std.string.sformat instead.") alias sformat xsformat;
 
 deprecated unittest

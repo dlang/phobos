@@ -2324,30 +2324,30 @@ Pointers to immutable objects are not considered raw aliasing.
 Example:
 ---
 // simple types
-static assert(!hasRawLocalAliasing!int);
-static assert( hasRawLocalAliasing!(char*));
-static assert(!hasRawLocalAliasing!(shared char*));
+static assert(!hasRawUnsharedAliasing!int);
+static assert( hasRawUnsharedAliasing!(char*));
+static assert(!hasRawUnsharedAliasing!(shared char*));
 // references aren't raw pointers
-static assert(!hasRawLocalAliasing!Object);
+static assert(!hasRawUnsharedAliasing!Object);
 // built-in arrays do contain raw pointers
-static assert( hasRawLocalAliasing!(int[]));
-static assert(!hasRawLocalAliasing!(shared int[]));
+static assert( hasRawUnsharedAliasing!(int[]));
+static assert(!hasRawUnsharedAliasing!(shared int[]));
 // aggregate of simple types
 struct S1 { int a; double b; }
-static assert(!hasRawLocalAliasing!S1);
+static assert(!hasRawUnsharedAliasing!S1);
 // indirect aggregation
 struct S2 { S1 a; double b; }
-static assert(!hasRawLocalAliasing!S2);
+static assert(!hasRawUnsharedAliasing!S2);
 // struct with a pointer member
 struct S3 { int a; double * b; }
-static assert( hasRawLocalAliasing!S3);
+static assert( hasRawUnsharedAliasing!S3);
 struct S4 { int a; shared double * b; }
-static assert( hasRawLocalAliasing!S4);
+static assert( hasRawUnsharedAliasing!S4);
 // struct with an indirect pointer member
 struct S5 { S3 a; double b; }
-static assert( hasRawLocalAliasing!S5);
+static assert( hasRawUnsharedAliasing!S5);
 struct S6 { S4 a; double b; }
-static assert(!hasRawLocalAliasing!S6);
+static assert(!hasRawUnsharedAliasing!S6);
 ----
 */
 
@@ -2780,11 +2780,10 @@ unittest
     static assert( hasIndirections!S26);
 }
 
-// These are for backwards compatibility, are intentionally lacking ddoc,
-// and should eventually be deprecated.
-alias hasUnsharedAliasing hasLocalAliasing;
-alias hasRawUnsharedAliasing hasRawLocalAliasing;
-alias hasUnsharedObjects hasLocalObjects;
+//Explicitly undocumented. They will be removed in December 2014.
+deprecated("Please use hasLocalAliasing instead.") alias hasUnsharedAliasing hasLocalAliasing;
+deprecated("Please use hasRawLocalAliasing instead.") alias hasRawUnsharedAliasing hasRawLocalAliasing;
+deprecated("Please use hasLocalObjects instead.") alias hasUnsharedObjects hasLocalObjects;
 
 /**
 Returns $(D true) if and only if $(D T)'s representation includes at

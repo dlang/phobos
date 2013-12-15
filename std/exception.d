@@ -460,7 +460,6 @@ unittest
     }
     enforceEx!E1(s);
     enforceEx!E2(s);
-    enforceEx!E3(s, "");    // deprecated
 }
 
 /++
@@ -534,18 +533,6 @@ template enforceEx(E)
     T enforceEx(T)(T value, string file = __FILE__, size_t line = __LINE__)
     {
         if (!value) throw new E(file, line);
-        return value;
-    }
-}
-
-// Explicitly undocumented. It will be removed in November 2013.
-deprecated("Please use the version of enforceEx which takes an exception that constructs with new E(msg, file, line).")
-template enforceEx(E)
-    if (is(typeof(new E(""))) && !is(typeof(new E("", __FILE__, __LINE__))) && !is(typeof(new E(__FILE__, __LINE__))))
-{
-    T enforceEx(T)(T value, lazy string msg = "")
-    {
-        if (!value) throw new E(msg);
         return value;
     }
 }

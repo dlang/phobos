@@ -84,7 +84,7 @@ final class ArchiveMember
     private ushort _madeVersion = 20;
     private ushort _extractVersion = 20;
     private ushort _diskNumber;
-    // should be private when deprecation done
+    // Explicitly undocumented. It will be undeprecated and made private in January 2015.
     deprecated("Please use fileAttributes instead.") uint externalAttributes;
     private DosFileTime _time;
 
@@ -202,6 +202,7 @@ final class ArchiveMember
      **/
     @property CompressionMethod compressionMethod() { return _compressionMethod; }
 
+    // Explicitly undocumented. It will be removed in January 2015.
     deprecated("Please use the enum CompressionMethod to set this property instead.")
     @property void compressionMethod(ushort cm)
     {
