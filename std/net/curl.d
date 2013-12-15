@@ -717,6 +717,13 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
         client.onReceiveHeader = null;
         client.onReceiveStatusLine = null;
         client.onReceive = null;
+
+        if (sendData !is null &&
+            (client.method == HTTP.Method.post || client.method == HTTP.Method.put))
+        {
+            client.onSend = null;
+            client.handle.onSeek = null;
+        }
     }
     client.url = url;
     HTTP.StatusLine statusLine;
@@ -795,7 +802,12 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
  */
 private auto _basicFTP(T)(const(char)[] url, const(void)[] sendData, FTP client)
 {
-    scope (exit) client.onReceive = null;
+    scope (exit)
+    {
+        client.onReceive = null;
+        if (!sendData.empty)
+            client.onSend = null;
+    }
 
     ubyte[] content;
 
@@ -2042,6 +2054,61 @@ struct HTTP
 
         /// The HTTP method to use.
         Method method = Method.undefined;
+
+        @property void onReceiveHeader(void delegate(in char[] key,
+                                                     in char[] value) callback)
+        {
+            // Wrap incoming callback in order to separate http status line from
+            // http headers.  On redirected requests there may be several such
+            // status lines. The last one is the one recorded.
+            auto dg = (in char[] header)
+            {
+                if (header.empty)
+                {
+                    // header delimiter
+                    return;
+                }
+                if (header.startsWith("HTTP/"))
+                {
+                    string[string] empty;
+                    headersIn = empty; // clear
+
+                    auto m = match(header, regex(r"^HTTP/(\d+)\.(\d+) (\d+) (.*)$"));
+                    if (m.empty)
+                    {
+                        // Invalid status line
+                    }
+                    else
+                    {
+                        status.majorVersion = to!ushort(m.captures[1]);
+                        status.minorVersion = to!ushort(m.captures[2]);
+                        status.code = to!ushort(m.captures[3]);
+                        status.reason = m.captures[4].idup;
+                        if (onReceiveStatusLine != null)
+                            onReceiveStatusLine(status);
+                    }
+                    return;
+                }
+
+                // Normal http header
+                auto m = match(cast(char[]) header, regex("(.*?): (.*)$"));
+
+                auto fieldName = m.captures[1].toLower().idup;
+                if (fieldName == "content-type")
+                {
+                    auto mct = match(cast(char[]) m.captures[2],
+                                     regex("charset=([^;]*)"));
+                    if (!mct.empty && mct.captures.length > 1)
+                        charset = mct.captures[1].idup;
+                }
+
+                if (!m.empty && callback !is null)
+                    callback(fieldName, m.captures[2]);
+                headersIn[fieldName] = m.captures[2].idup;
+            };
+
+            curl.onReceiveHeader = dg;
+        }
     }
 
     private RefCounted!Impl p;
@@ -2559,55 +2626,7 @@ struct HTTP
     @property void onReceiveHeader(void delegate(in char[] key,
                                                  in char[] value) callback)
     {
-        // Wrap incoming callback in order to separate http status line from
-        // http headers.  On redirected requests there may be several such
-        // status lines. The last one is the one recorded.
-        auto dg = (in char[] header)
-        {
-            if (header.empty)
-            {
-                // header delimiter
-                return;
-            }
-            if (header.startsWith("HTTP/"))
-            {
-                string[string] empty;
-                p.headersIn = empty; // clear
-
-                auto m = match(header, regex(r"^HTTP/(\d+)\.(\d+) (\d+) (.*)$"));
-                if (m.empty)
-                {
-                    // Invalid status line
-                }
-                else
-                {
-                    p.status.majorVersion = to!ushort(m.captures[1]);
-                    p.status.minorVersion = to!ushort(m.captures[2]);
-                    p.status.code = to!ushort(m.captures[3]);
-                    p.status.reason = m.captures[4].idup;
-                    if (p.onReceiveStatusLine != null)
-                        p.onReceiveStatusLine(p.status);
-                }
-                return;
-            }
-
-            // Normal http header
-            auto m = match(cast(char[]) header, regex("(.*?): (.*)$"));
-
-            auto fieldName = m.captures[1].toLower().idup;
-            if (fieldName == "content-type")
-            {
-                auto mct = match(cast(char[]) m.captures[2],
-                                 regex("charset=([^;]*)"));
-                if (!mct.empty && mct.captures.length > 1)
-                    p.charset = mct.captures[1].idup;
-            }
-
-            if (!m.empty && callback !is null)
-                callback(fieldName, m.captures[2]);
-            p.headersIn[fieldName] = m.captures[2].idup;
-        };
-        p.curl.onReceiveHeader = dg;
+        p.onReceiveHeader = callback;
     }
 
     /**
@@ -3070,6 +3089,23 @@ struct SMTP
                 curl.shutdown();
         }
         Curl curl;
+
+        @property void message(string msg)
+        {
+            auto _message = msg;
+            /**
+                This delegate reads the message text and copies it.
+            */
+            curl.onSend = delegate size_t(void[] data)
+            {
+                if (!msg.length) return 0;
+                auto m = cast(void[])msg;
+                size_t to_copy = min(data.length, _message.length);
+                data[0..to_copy] = (cast(void[])_message)[0..to_copy];
+                _message = _message[to_copy..$];
+                return to_copy;
+            };
+        }
     }
 
     private RefCounted!Impl p;
@@ -3339,19 +3375,7 @@ struct SMTP
 
     @property void message(string msg)
     {
-        auto _message = msg;
-        /**
-            This delegate reads the message text and copies it.
-        */
-        p.curl.onSend = delegate size_t(void[] data)
-        {
-            if (!msg.length) return 0;
-            auto m = cast(void[])msg;
-            size_t to_copy = min(data.length, _message.length);
-            data[0..to_copy] = (cast(void[])_message)[0..to_copy];
-            _message = _message[to_copy..$];
-            return to_copy;
-        };
+        p.message = msg;
     }
 }
 
@@ -3406,6 +3430,11 @@ alias CURLcode CurlCode;
   Wrapper to provide a better interface to libcurl than using the plain C API.
   It is recommended to use the $(D HTTP)/$(D FTP) etc. structs instead unless
   raw access to libcurl is needed.
+
+  Warning: This struct uses interior pointers for callbacks. Only allocate it
+  on the stack if you never move or copy it. This also means passing by reference
+  when passing Curl to other functions. Otherwise always allocate on
+  the heap. 
 */
 struct Curl
 {
