@@ -331,6 +331,7 @@ unittest
     --------------------
  +/
 T enforce(T)(T value, lazy const(char)[] msg = null, string file = __FILE__, size_t line = __LINE__)
+    if (is(typeof({ if (!value) {} })))
 {
     if (!value) bailOut(file, line, msg);
     return value;
@@ -344,6 +345,7 @@ T enforce(T)(T value, lazy const(char)[] msg = null, string file = __FILE__, siz
  +/
 T enforce(T, string file, size_t line = __LINE__)
     (T value, lazy const(char)[] msg = null)
+    if (is(typeof({ if (!value) {} })))
 {
     if (!value) bailOut(file, line, msg);
     return value;
@@ -357,7 +359,8 @@ T enforce(T, string file, size_t line = __LINE__)
  +/
 T enforce(T, Dg, string file = __FILE__, size_t line = __LINE__)
     (T value, scope Dg dg)
-    if (isSomeFunction!Dg && is(typeof( dg() )))
+    if (isSomeFunction!Dg && is(typeof( dg() )) &&
+        is(typeof({ if (!value) {} })))
 {
     if (!value) dg();
     return value;

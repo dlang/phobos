@@ -3976,12 +3976,12 @@ unittest
 @safe pure nothrow unittest
 {
     int[] a1 = [1, 2, 3];
-    assert(find              ([1, 2, 3], 2));
-    assert(find!((a,b)=>a==b)([1, 2, 3], 2));
+    assert(!find              ([1, 2, 3], 2).empty);
+    assert(!find!((a,b)=>a==b)([1, 2, 3], 2).empty);
     ubyte[] a2 = [1, 2, 3];
     ubyte   b2 = 2;
-    assert(find              ([1, 2, 3], 2));
-    assert(find!((a,b)=>a==b)([1, 2, 3], 2));
+    assert(!find              ([1, 2, 3], 2).empty);
+    assert(!find!((a,b)=>a==b)([1, 2, 3], 2).empty);
 }
 @safe pure unittest
 {
@@ -7251,7 +7251,7 @@ private:
     void AllocMatrix(size_t r, size_t c) {
         rows = r;
         cols = c;
-        if (!_matrix || _matrix.length < r || _matrix[0].length < c) {
+        if (_matrix.length < r || _matrix[0].length < c) {
             delete _matrix;
             _matrix = new CostType[][](r, c);
             InitMatrix();
@@ -7262,7 +7262,7 @@ private:
         foreach (i, row; _matrix) {
             row[0] = i * _deletionIncrement;
         }
-        if (!_matrix) return;
+        if (!_matrix.length) return;
         for (auto i = 0u; i != _matrix[0].length; ++i) {
             _matrix[0][i] = i * _insertionIncrement;
         }

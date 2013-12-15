@@ -318,7 +318,7 @@ template packageName(alias T)
         enum string parent = null;
 
     static if (T.stringof.startsWith("package "))
-        enum packageName = (parent ? parent ~ '.' : "") ~ T.stringof[8 .. $];
+        enum packageName = (parent.length ? parent ~ '.' : "") ~ T.stringof[8 .. $];
     else static if (parent)
         enum packageName = parent;
     else
