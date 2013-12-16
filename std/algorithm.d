@@ -855,13 +855,12 @@ unittest
 }
 
 /**
-$(DDOC_SECTION_H Multiple functions:) Sometimes it is very useful to
-compute multiple aggregates in one pass. One advantage is that the
-computation is faster because the looping overhead is shared. That's
-why $(D reduce) accepts multiple functions. If two or more functions
-are passed, $(D reduce) returns a $(XREF typecons, Tuple) object with
-one member per passed-in function. The number of seeds must be
-correspondingly increased.
+Sometimes it is very useful to compute multiple aggregates in one pass.
+One advantage is that the computation is faster because the looping overhead
+is shared. That's why $(D reduce) accepts multiple functions.
+If two or more functions are passed, $(D reduce) returns a
+$(XREF typecons, Tuple) object with one member per passed-in function.
+The number of seeds must be correspondingly increased.
 */
 unittest
 {
