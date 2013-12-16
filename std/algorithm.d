@@ -10869,9 +10869,9 @@ unittest
 }
 
 /**
-Lazily computes the intersection of two or more input ranges $(D
+Lazily computes the intersection of two input ranges $(D
 rs). The ranges are assumed to be sorted by $(D less). The element
-types of all ranges must have a common type.
+types of both ranges must have a common type.
  */
 struct SetIntersection(alias less = "a < b", Rs...)
 if (allSatisfy!(isInputRange, Rs))
@@ -10957,6 +10957,7 @@ if (allSatisfy!(isInputRange, Rs))
     return typeof(return)(ranges);
 }
 
+/+ setIntersection doesn't yet support more than two inputs
 ///
 unittest
 {
@@ -10966,6 +10967,16 @@ unittest
     assert(equal(setIntersection(a, a), a));
     assert(equal(setIntersection(a, b), [1, 2, 4, 7][]));
     assert(equal(setIntersection(a, b, c), [1, 4, 7][]));
+}
++/
+
+///
+unittest
+{
+    int[] a = [ 1, 2, 4, 5, 7, 9 ];
+    int[] b = [ 0, 1, 2, 4, 7, 8 ];
+    assert(equal(setIntersection(a, a), a));
+    assert(equal(setIntersection(a, b), [1, 2, 4, 7][]));
 }
 
 /**
