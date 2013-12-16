@@ -442,13 +442,30 @@ void handleOption(R)(string option, R receiver, ref string[] args,
                 a[1] != optionChar)
         {
             string[] expanded;
-            foreach (dchar c; a[1 .. $])
+            foreach (j, dchar c; a[1 .. $])
             {
+                // If the character is not alpha, stop right there. This allows
+                // e.g. -j100 to work as "pass argument 100 to option -j".
+                if (!isAlpha(c))
+                {
+                    expanded ~= a[j + 1 .. $];
+                    break;
+                }
                 expanded ~= text(optionChar, c);
             }
             args = args[0 .. i] ~ expanded ~ args[i + 1 .. $];
             continue;
         }
+        // One-letter options used with a dash may be "stuck" to their value,
+        // i.e. '-Dasd' is the same as '-D asd'. Do that at this level. If we
+        // don't, '-Da=b' will be misinterpreted as '-Da b'
+        if (a.length > 2 && a[0] == optionChar && a[1] != optionChar)
+        {
+            args = args[0 .. i] ~ args[i][0 .. 2] ~ args[i][2 .. $]
+                ~ args[i + 1 .. $];
+            continue;
+        }
+
         string val;
         if (!optMatch(a, option, val, cfg))
         {
@@ -841,4 +858,21 @@ unittest
     auto args = ["prog", "--opt=123", "--", "--a", "--b", "--c"];
     getopt(args, "opt", &opt);
     assert(args == ["prog", "--a", "--b", "--c"]);
+}
+
+unittest
+{
+    string foo, bar;
+    auto args = ["prog", "-thello", "-dbar=baz"];
+    getopt(args, "t", &foo, "d", &bar);
+    assert(foo == "hello");
+    assert(bar == "bar=baz");
+    // From bugzilla 5762
+    string a;
+    args = ["prog", "-a-0x12"];
+    getopt(args, config.bundling, "a|addr", &a);
+    assert(a == "-0x12", a);
+    args = ["prog", "--addr=-0x12"];
+    getopt(args, config.bundling, "a|addr", &a);
+    assert(a == "-0x12");
 }
