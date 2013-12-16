@@ -4056,7 +4056,7 @@ unittest
 {
     assert(find("hello, world", "World").empty);
     assert(find("hello, world", "wo") == "world");
-    assert(find([1, 2, 3, 4], SList!(2, 3)[]) == [2, 3, 4]);
+    assert([1, 2, 3, 4].find(SList!int(2, 3)[]) == [2, 3, 4]);
 }
 
 unittest
@@ -4388,7 +4388,7 @@ unittest
     assert(find(a, [ 1, 4 ]) == [ 1, 4, 2, 3 ]);
     assert(find(a, [ 1, 3 ], 4) == tuple([ 4, 2, 3 ], 2));
     // Mixed types allowed if comparable
-    assert(find(a, 5, [ 1.2, 3.5 ], 2.0, [ 1 ]) == tuple([ 2, 3 ], 3));
+    assert(find(a, 5, [ 1.2, 3.5 ], 2.0) == tuple([ 2, 3 ], 3));
 }
 
 unittest
