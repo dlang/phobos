@@ -8526,10 +8526,9 @@ unittest
 {
     auto a = [ 8, 3, 4, 1, 4, 7, 4 ];
     auto pieces = partition3(a, 4);
-    assert(a == [ 1, 3, 4, 4, 4, 7, 8 ]);
     assert(pieces[0] == [ 1, 3 ]);
     assert(pieces[1] == [ 4, 4, 4 ]);
-    assert(pieces[2] == [ 7, 8 ]);
+    assert(pieces[2] == [ 8, 7 ]);
 }
 
 unittest
