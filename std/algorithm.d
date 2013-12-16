@@ -6063,7 +6063,7 @@ unittest
     int[] a = [ 11, 10, 10, 9, 8, 8, 7, 8, 9 ];
     auto r = findAdjacent(a);
     assert(r == [ 10, 10, 9, 8, 8, 7, 8, 9 ]);
-    p = findAdjacent!("a < b")(a);
+    auto p = findAdjacent!("a < b")(a);
     assert(p == [ 7, 8, 9 ]);
 
 }
