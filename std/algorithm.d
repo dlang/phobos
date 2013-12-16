@@ -2383,10 +2383,8 @@ unittest
 {
     assert(equal(splitter("hello  world", ' '), [ "hello", "", "world" ]));
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
-    int[][] w = [ [1, 2], [], [3], [4, 5] ];
+    int[][] w = [ [1, 2], [], [3], [4, 5], [] ];
     assert(equal(splitter(a, 0), w));
-    a = null;
-    assert(equal(splitter(a, 0), [ (int[]).init ]));
     a = [ 0 ];
     assert(equal(splitter(a, 0), [ (int[]).init, (int[]).init ]));
     a = [ 0, 1 ];
