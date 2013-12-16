@@ -8614,10 +8614,7 @@ unittest
 {
     int[] v = [ 25, 7, 9, 2, 0, 5, 21 ];
     auto n = 4;
-    topN!(less)(v, n);
-    assert(v[n] == 9);
-    // Equivalent form:
-    topN!("a < b")(v, n);
+    topN!"a < b"(v, n);
     assert(v[n] == 9);
 }
 
