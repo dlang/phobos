@@ -401,10 +401,15 @@ function.
 */
 unittest
 {
-    auto arr1 = [ 1, 2, 3, 4 ];
-    foreach (e; map!("a + a", "a * a")(arr1))
+    auto sums = [2, 4, 6, 8];
+    auto products = [1, 4, 9, 16];
+
+    size_t i = 0;
+    foreach (result; [ 1, 2, 3, 4 ].map!("a + a", "a * a"))
     {
-        writeln(e[0], " ", e[1]);
+        assert(result[0] == sums[i]);
+        assert(result[1] == products[i]);
+        ++i;
     }
 }
 
