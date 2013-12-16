@@ -4299,21 +4299,31 @@ unittest
 // SomethingTypeOf
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
+private template AliasThisTypeOf(T) if (isAggregateType!T)
+{
+    alias members = TypeTuple!(__traits(getAliasThis, T));
+
+    static if (members.length == 1)
+    {
+        alias AliasThisTypeOf = typeof(__traits(getMember, T.init, members[0]));
+    }
+    else
+        static assert(0, T.stringof~" does not have alias this type");
+}
+
 /*
  */
 template BooleanTypeOf(T)
 {
-           inout(bool) idx(        inout(bool) );
-    shared(inout bool) idx( shared(inout bool) );
+    static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
+        alias X = BooleanTypeOf!AT;
+    else
+        alias X = OriginalType!T;
 
-       immutable(bool) idy(    immutable(bool) );
-
-    static if (is(T == enum))
-        alias .BooleanTypeOf!(OriginalType!T) BooleanTypeOf;
-    else static if (is(typeof(idx(T.init)) X) && !is(IntegralTypeOf!T))
-        alias X BooleanTypeOf;
-    else static if (is(typeof(idy(T.init)) X) && is(Unqual!X == bool) && !is(IntegralTypeOf!T))
-        alias X BooleanTypeOf;
+    static if (is(Unqual!X == bool))
+    {
+        alias BooleanTypeOf = X;
+    }
     else
         static assert(0, T.stringof~" is not boolean type");
 }
@@ -4336,47 +4346,35 @@ unittest
         }
 }
 
+unittest
+{
+    struct B
+    {
+        bool val;
+        alias val this;
+    }
+    struct S
+    {
+        B b;
+        alias b this;
+    }
+    static assert(is(BooleanTypeOf!B == bool));
+    static assert(is(BooleanTypeOf!S == bool));
+}
+
 /*
  */
 template IntegralTypeOf(T)
 {
-           inout(  byte) idx(        inout(  byte) );
-           inout( ubyte) idx(        inout( ubyte) );
-           inout( short) idx(        inout( short) );
-           inout(ushort) idx(        inout(ushort) );
-           inout(   int) idx(        inout(   int) );
-           inout(  uint) idx(        inout(  uint) );
-           inout(  long) idx(        inout(  long) );
-           inout( ulong) idx(        inout( ulong) );
-    shared(inout   byte) idx( shared(inout   byte) );
-    shared(inout  ubyte) idx( shared(inout  ubyte) );
-    shared(inout  short) idx( shared(inout  short) );
-    shared(inout ushort) idx( shared(inout ushort) );
-    shared(inout    int) idx( shared(inout    int) );
-    shared(inout   uint) idx( shared(inout   uint) );
-    shared(inout   long) idx( shared(inout   long) );
-    shared(inout  ulong) idx( shared(inout  ulong) );
+    static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
+        alias X = IntegralTypeOf!AT;
+    else
+        alias X = OriginalType!T;
 
-       immutable(  char) idy(    immutable(  char) );
-       immutable( wchar) idy(    immutable( wchar) );
-       immutable( dchar) idy(    immutable( dchar) );
-    // Integrals and characers are implicitly convertible with each other for value copy.
-    // Then adding exact overloads to detect it.
-       immutable(  byte) idy(    immutable(  byte) );
-       immutable( ubyte) idy(    immutable( ubyte) );
-       immutable( short) idy(    immutable( short) );
-       immutable(ushort) idy(    immutable(ushort) );
-       immutable(   int) idy(    immutable(   int) );
-       immutable(  uint) idy(    immutable(  uint) );
-       immutable(  long) idy(    immutable(  long) );
-       immutable( ulong) idy(    immutable( ulong) );
-
-    static if (is(T == enum))
-        alias .IntegralTypeOf!(OriginalType!T) IntegralTypeOf;
-    else static if (is(typeof(idx(T.init)) X))
-        alias X IntegralTypeOf;
-    else static if (is(typeof(idy(T.init)) X) && staticIndexOf!(Unqual!X, IntegralTypeList) >= 0)
-        alias X IntegralTypeOf;
+    static if (staticIndexOf!(Unqual!X, IntegralTypeList) >= 0)
+    {
+        alias IntegralTypeOf = X;
+    }
     else
         static assert(0, T.stringof~" is not an integral type");
 }
@@ -4402,23 +4400,15 @@ unittest
  */
 template FloatingPointTypeOf(T)
 {
-           inout( float) idx(        inout( float) );
-           inout(double) idx(        inout(double) );
-           inout(  real) idx(        inout(  real) );
-    shared(inout  float) idx( shared(inout  float) );
-    shared(inout double) idx( shared(inout double) );
-    shared(inout   real) idx( shared(inout   real) );
+    static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
+        alias X = FloatingPointTypeOf!AT;
+    else
+        alias X = OriginalType!T;
 
-       immutable( float) idy(   immutable( float) );
-       immutable(double) idy(   immutable(double) );
-       immutable(  real) idy(   immutable(  real) );
-
-    static if (is(T == enum))
-        alias .FloatingPointTypeOf!(OriginalType!T) FloatingPointTypeOf;
-    else static if (is(typeof(idx(T.init)) X))
-        alias X FloatingPointTypeOf;
-    else static if (is(typeof(idy(T.init)) X))
-        alias X FloatingPointTypeOf;
+    static if (staticIndexOf!(Unqual!X, FloatingPointTypeList) >= 0)
+    {
+        alias FloatingPointTypeOf = X;
+    }
     else
         static assert(0, T.stringof~" is not a floating point type");
 }
@@ -4444,10 +4434,10 @@ unittest
  */
 template NumericTypeOf(T)
 {
-    static if (is(IntegralTypeOf!T X))
-        alias X NumericTypeOf;
-    else static if (is(FloatingPointTypeOf!T X))
-        alias X NumericTypeOf;
+    static if (is(IntegralTypeOf!T X) || is(FloatingPointTypeOf!T X))
+    {
+        alias NumericTypeOf = X;
+    }
     else
         static assert(0, T.stringof~" is not a numeric type");
 }
@@ -4475,7 +4465,7 @@ template UnsignedTypeOf(T)
 {
     static if (is(IntegralTypeOf!T X) &&
                staticIndexOf!(Unqual!X, UnsignedIntTypeList) >= 0)
-        alias X UnsignedTypeOf;
+        alias UnsignedTypeOf = X;
     else
         static assert(0, T.stringof~" is not an unsigned type.");
 }
@@ -4486,9 +4476,9 @@ template SignedTypeOf(T)
 {
     static if (is(IntegralTypeOf!T X) &&
                staticIndexOf!(Unqual!X, SignedIntTypeList) >= 0)
-        alias X SignedTypeOf;
+        alias SignedTypeOf = X;
     else static if (is(FloatingPointTypeOf!T X))
-        alias X SignedTypeOf;
+        alias SignedTypeOf = X;
     else
         static assert(0, T.stringof~" is not an signed type.");
 }
@@ -4497,31 +4487,15 @@ template SignedTypeOf(T)
  */
 template CharTypeOf(T)
 {
-           inout( char) idx(        inout( char) );
-           inout(wchar) idx(        inout(wchar) );
-           inout(dchar) idx(        inout(dchar) );
-    shared(inout  char) idx( shared(inout  char) );
-    shared(inout wchar) idx( shared(inout wchar) );
-    shared(inout dchar) idx( shared(inout dchar) );
+    static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
+        alias X = CharTypeOf!AT;
+    else
+        alias X = OriginalType!T;
 
-      immutable(  char) idy(   immutable(  char) );
-      immutable( wchar) idy(   immutable( wchar) );
-      immutable( dchar) idy(   immutable( dchar) );
-    // Integrals and characers are implicitly convertible with each other for value copy.
-    // Then adding exact overloads to detect it.
-      immutable(  byte) idy(   immutable(  byte) );
-      immutable( ubyte) idy(   immutable( ubyte) );
-      immutable( short) idy(   immutable( short) );
-      immutable(ushort) idy(   immutable(ushort) );
-      immutable(   int) idy(   immutable(   int) );
-      immutable(  uint) idy(   immutable(  uint) );
-
-    static if (is(T == enum))
-        alias .CharTypeOf!(OriginalType!T) CharTypeOf;
-    else static if (is(typeof(idx(T.init)) X))
-        alias X CharTypeOf;
-    else static if (is(typeof(idy(T.init)) X) && staticIndexOf!(Unqual!X, CharTypeList) >= 0)
-        alias X CharTypeOf;
+    static if (staticIndexOf!(Unqual!X, CharTypeList) >= 0)
+    {
+        alias CharTypeOf = X;
+    }
     else
         static assert(0, T.stringof~" is not a character type");
 }
@@ -4554,12 +4528,13 @@ unittest
  */
 template StaticArrayTypeOf(T)
 {
-    inout(U[n]) idx(U, size_t n)( inout(U[n]) );
+    static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
+        alias X = StaticArrayTypeOf!AT;
+    else
+        alias X = OriginalType!T;
 
-    static if (is(T == enum))
-        alias .StaticArrayTypeOf!(OriginalType!T) StaticArrayTypeOf;
-    else static if (is(typeof(idx(defaultInit!T)) X))
-        alias X StaticArrayTypeOf;
+    static if (is(X : E[n], E, size_t n))
+        alias StaticArrayTypeOf = X;
     else
         static assert(0, T.stringof~" is not a static array type");
 }
@@ -4588,24 +4563,14 @@ unittest
  */
 template DynamicArrayTypeOf(T)
 {
-    inout(U[]) idx(U)( inout(U[]) );
+    static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
+        alias X = DynamicArrayTypeOf!AT;
+    else
+        alias X = OriginalType!T;
 
-    static if (is(T == enum))
-        alias .DynamicArrayTypeOf!(OriginalType!T) DynamicArrayTypeOf;
-    else static if (!is(StaticArrayTypeOf!T) &&
-                     is(typeof(idx(defaultInit!T)) X))
+    static if (is(Unqual!X : E[], E) && !is(typeof({ enum n = X.length; })))
     {
-        alias typeof(defaultInit!T[0]) E;
-
-                     E[]  idy(              E[]  );
-               const(E[]) idy(        const(E[]) );
-               inout(E[]) idy(        inout(E[]) );
-        shared(      E[]) idy( shared(      E[]) );
-        shared(const E[]) idy( shared(const E[]) );
-        shared(inout E[]) idy( shared(inout E[]) );
-           immutable(E[]) idy(    immutable(E[]) );
-
-        alias typeof(idy(defaultInit!T)) DynamicArrayTypeOf;
+        alias DynamicArrayTypeOf = X;
     }
     else
         static assert(0, T.stringof~" is not a dynamic array");
@@ -4635,10 +4600,10 @@ unittest
  */
 template ArrayTypeOf(T)
 {
-    static if (is(StaticArrayTypeOf!T X))
-        alias X ArrayTypeOf;
-    else static if (is(DynamicArrayTypeOf!T X))
-        alias X ArrayTypeOf;
+    static if (is(StaticArrayTypeOf!T X) || is(DynamicArrayTypeOf!T X))
+    {
+        alias ArrayTypeOf = X;
+    }
     else
         static assert(0, T.stringof~" is not an array type");
 }
@@ -4660,7 +4625,7 @@ template StringTypeOf(T)
     }
     else static if (is(T : const char[]) || is(T : const wchar[]) || is(T : const dchar[]))
     {
-        alias ArrayTypeOf!T StringTypeOf;
+        alias StringTypeOf = ArrayTypeOf!T;
     }
     else
         static assert(0, T.stringof~" is not a string type");
@@ -4694,39 +4659,15 @@ unittest
  */
 template AssocArrayTypeOf(T)
 {
-       immutable(V [K]) idx(K, V)(    immutable(V [K]) );
+    static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
+        alias X = AssocArrayTypeOf!AT;
+    else
+        alias X = OriginalType!T;
 
-           inout(V)[K]  idy(K, V)(        inout(V)[K]  );
-    shared(      V [K]) idy(K, V)( shared(      V [K]) );
-
-           inout(V [K]) idz(K, V)(        inout(V [K]) );
-    shared(inout V [K]) idz(K, V)( shared(inout V [K]) );
-
-           inout(immutable(V)[K])  idw(K, V)(        inout(immutable(V)[K])  );
-    shared(inout(immutable(V)[K])) idw(K, V)( shared(inout(immutable(V)[K])) );
-
-    static if (is(typeof(idx(defaultInit!T)) X))
+    static if (is(Unqual!X : V[K], K, V))
     {
-        alias X AssocArrayTypeOf;
+        alias AssocArrayTypeOf = X;
     }
-    else static if (is(typeof(idy(defaultInit!T)) X))
-    {
-        alias X AssocArrayTypeOf;
-    }
-    else static if (is(typeof(idz(defaultInit!T)) X))
-    {
-               inout(             V  [K]) idzp(K, V)(        inout(             V  [K]) );
-               inout(       const(V) [K]) idzp(K, V)(        inout(       const(V) [K]) );
-               inout(shared(const V) [K]) idzp(K, V)(        inout(shared(const V) [K]) );
-               inout(   immutable(V) [K]) idzp(K, V)(        inout(   immutable(V) [K]) );
-        shared(inout              V  [K]) idzp(K, V)( shared(inout              V  [K]) );
-        shared(inout        const(V) [K]) idzp(K, V)( shared(inout        const(V) [K]) );
-        shared(inout    immutable(V) [K]) idzp(K, V)( shared(inout    immutable(V) [K]) );
-
-        alias typeof(idzp(defaultInit!T)) AssocArrayTypeOf;
-    }
-    else static if (is(typeof(idw(defaultInit!T)) X))
-        alias X AssocArrayTypeOf;
     else
         static assert(0, T.stringof~" is not an associative array type");
 }
