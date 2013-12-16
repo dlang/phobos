@@ -367,36 +367,6 @@ in many languages of functional flavor. The call $(D map!(fun)(range))
 returns a range of which elements are obtained by applying $(D fun(x))
 left to right for all $(D x) in $(D range). The original ranges are
 not changed. Evaluation is done lazily.
-
-Example:
-----
-int[] arr1 = [ 1, 2, 3, 4 ];
-int[] arr2 = [ 5, 6 ];
-auto squares = map!(a => a * a)(chain(arr1, arr2));
-assert(equal(squares, [ 1, 4, 9, 16, 25, 36 ]));
-----
-
-Multiple functions can be passed to $(D map). In that case, the
-element type of $(D map) is a tuple containing one element for each
-function.
-
-Example:
-
-----
-auto arr1 = [ 1, 2, 3, 4 ];
-foreach (e; map!("a + a", "a * a")(arr1))
-{
-    writeln(e[0], " ", e[1]);
-}
-----
-
-You may alias $(D map) with some function(s) to a symbol and use
-it separately:
-
-----
-alias map!(to!string) stringize;
-assert(equal(stringize([ 1, 2, 3, 4 ]), [ "1", "2", "3", "4" ]));
-----
 */
 template map(fun...) if (fun.length >= 1)
 {
@@ -413,6 +383,44 @@ template map(fun...) if (fun.length >= 1)
 
         return MapResult!(_fun, Range)(r);
     }
+}
+
+///
+unittest
+{
+    int[] arr1 = [ 1, 2, 3, 4 ];
+    int[] arr2 = [ 5, 6 ];
+    auto squares = map!(a => a * a)(chain(arr1, arr2));
+    assert(equal(squares, [ 1, 4, 9, 16, 25, 36 ]));
+}
+
+/**
+Multiple functions can be passed to $(D map). In that case, the
+element type of $(D map) is a tuple containing one element for each
+function.
+*/
+unittest
+{
+    auto sums = [2, 4, 6, 8];
+    auto products = [1, 4, 9, 16];
+
+    size_t i = 0;
+    foreach (result; [ 1, 2, 3, 4 ].map!("a + a", "a * a"))
+    {
+        assert(result[0] == sums[i]);
+        assert(result[1] == products[i]);
+        ++i;
+    }
+}
+
+/**
+You may alias $(D map) with some function(s) to a symbol and use
+it separately:
+*/
+unittest
+{
+    alias map!(to!string) stringize;
+    assert(equal(stringize([ 1, 2, 3, 4 ]), [ "1", "2", "3", "4" ]));
 }
 
 private struct MapResult(alias fun, Range)
@@ -649,6 +657,7 @@ unittest
     const floatStep = 0.02;
     static assert(__traits(compiles, map!(i => i)(iota(floatBegin, floatEnd, floatStep))));
 }
+
 unittest
 {
     //slicing infinites
@@ -672,81 +681,7 @@ range), $(D result = fun(result, x)) gets evaluated. Finally, $(D
 result) is returned. The one-argument version $(D reduce!(fun)(range))
 works similarly, but it uses the first element of the range as the
 seed (the range must be non-empty).
-
-Many aggregate range operations turn out to be solved with $(D reduce)
-quickly and easily. The example below illustrates $(D reduce)'s
-remarkable power and flexibility.
-
-Example:
-----
-int[] arr = [ 1, 2, 3, 4, 5 ];
-// Sum all elements
-auto sum = reduce!((a,b) => a + b)(0, arr);
-assert(sum == 15);
-
-// Sum again, using a string predicate with "a" and "b"
-sum = reduce!"a + b"(0, arr);
-assert(sum == 15);
-
-// Compute the maximum of all elements
-auto largest = reduce!(max)(arr);
-assert(largest == 5);
-
-// Max again, but with Uniform Function Call Syntax (UFCS)
-largest = arr.reduce!(max);
-assert(largest == 5);
-
-// Compute the number of odd elements
-auto odds = reduce!((a,b) => a + (b & 1))(0, arr);
-assert(odds == 3);
-
-// Compute the sum of squares
-auto ssquares = reduce!((a,b) => a + b * b)(0, arr);
-assert(ssquares == 55);
-
-// Chain multiple ranges into seed
-int[] a = [ 3, 4 ];
-int[] b = [ 100 ];
-auto r = reduce!("a + b")(chain(a, b));
-assert(r == 107);
-
-// Mixing convertible types is fair game, too
-double[] c = [ 2.5, 3.0 ];
-auto r1 = reduce!("a + b")(chain(a, b, c));
-assert(approxEqual(r1, 112.5));
-
-// To minimize nesting of parentheses, Uniform Function Call Syntax can be used
-auto r2 = chain(a, b, c).reduce!("a + b");
-assert(approxEqual(r2, 112.5));
-----
-
-$(DDOC_SECTION_H Multiple functions:) Sometimes it is very useful to
-compute multiple aggregates in one pass. One advantage is that the
-computation is faster because the looping overhead is shared. That's
-why $(D reduce) accepts multiple functions. If two or more functions
-are passed, $(D reduce) returns a $(XREF typecons, Tuple) object with
-one member per passed-in function. The number of seeds must be
-correspondingly increased.
-
-Example:
-----
-double[] a = [ 3.0, 4, 7, 11, 3, 2, 5 ];
-// Compute minimum and maximum in one pass
-auto r = reduce!(min, max)(a);
-// The type of r is Tuple!(int, int)
-assert(approxEqual(r[0], 2));  // minimum
-assert(approxEqual(r[1], 11)); // maximum
-
-// Compute sum and sum of squares in one pass
-r = reduce!("a + b", "a + b * b")(tuple(0.0, 0.0), a);
-assert(approxEqual(r[0], 35));  // sum
-assert(approxEqual(r[1], 233)); // sum of squares
-// Compute average and standard deviation from the above
-auto avg = r[0] / a.length;
-auto stdev = sqrt(r[1] / a.length - avg * avg);
-----
  */
-
 template reduce(fun...) if (fun.length >= 1)
 {
     auto reduce(Args...)(Args args)
@@ -876,6 +811,80 @@ template reduce(fun...) if (fun.length >= 1)
     }
 }
 
+/**
+Many aggregate range operations turn out to be solved with $(D reduce)
+quickly and easily. The example below illustrates $(D reduce)'s
+remarkable power and flexibility.
+*/
+unittest
+{
+    int[] arr = [ 1, 2, 3, 4, 5 ];
+    // Sum all elements
+    auto sum = reduce!((a,b) => a + b)(0, arr);
+    assert(sum == 15);
+
+    // Sum again, using a string predicate with "a" and "b"
+    sum = reduce!"a + b"(0, arr);
+    assert(sum == 15);
+
+    // Compute the maximum of all elements
+    auto largest = reduce!(max)(arr);
+    assert(largest == 5);
+
+    // Max again, but with Uniform Function Call Syntax (UFCS)
+    largest = arr.reduce!(max);
+    assert(largest == 5);
+
+    // Compute the number of odd elements
+    auto odds = reduce!((a,b) => a + (b & 1))(0, arr);
+    assert(odds == 3);
+
+    // Compute the sum of squares
+    auto ssquares = reduce!((a,b) => a + b * b)(0, arr);
+    assert(ssquares == 55);
+
+    // Chain multiple ranges into seed
+    int[] a = [ 3, 4 ];
+    int[] b = [ 100 ];
+    auto r = reduce!("a + b")(chain(a, b));
+    assert(r == 107);
+
+    // Mixing convertible types is fair game, too
+    double[] c = [ 2.5, 3.0 ];
+    auto r1 = reduce!("a + b")(chain(a, b, c));
+    assert(approxEqual(r1, 112.5));
+
+    // To minimize nesting of parentheses, Uniform Function Call Syntax can be used
+    auto r2 = chain(a, b, c).reduce!("a + b");
+    assert(approxEqual(r2, 112.5));
+}
+
+/**
+Sometimes it is very useful to compute multiple aggregates in one pass.
+One advantage is that the computation is faster because the looping overhead
+is shared. That's why $(D reduce) accepts multiple functions.
+If two or more functions are passed, $(D reduce) returns a
+$(XREF typecons, Tuple) object with one member per passed-in function.
+The number of seeds must be correspondingly increased.
+*/
+unittest
+{
+    double[] a = [ 3.0, 4, 7, 11, 3, 2, 5 ];
+    // Compute minimum and maximum in one pass
+    auto r = reduce!(min, max)(a);
+    // The type of r is Tuple!(int, int)
+    assert(approxEqual(r[0], 2));  // minimum
+    assert(approxEqual(r[1], 11)); // maximum
+
+    // Compute sum and sum of squares in one pass
+    r = reduce!("a + b", "a + b * b")(tuple(0.0, 0.0), a);
+    assert(approxEqual(r[0], 35));  // sum
+    assert(approxEqual(r[1], 233)); // sum of squares
+    // Compute average and standard deviation from the above
+    auto avg = r[0] / a.length;
+    auto stdev = sqrt(r[1] / a.length - avg * avg);
+}
+
 unittest
 {
     debug(std_algorithm) scope(success)
@@ -964,13 +973,6 @@ unittest
 
 /**
 Fills $(D range) with a $(D filler).
-
-Example:
-----
-int[] a = [ 1, 2, 3, 4 ];
-fill(a, 5);
-assert(a == [ 5, 5, 5, 5 ]);
-----
  */
 void fill(Range, Value)(Range range, Value filler)
     if (isInputRange!Range && is(typeof(range.front = filler)))
@@ -992,6 +994,14 @@ void fill(Range, Value)(Range range, Value filler)
             range.front = filler;
         }
     }
+}
+
+///
+unittest
+{
+    int[] a = [ 1, 2, 3, 4 ];
+    fill(a, 5);
+    assert(a == [ 5, 5, 5, 5 ]);
 }
 
 unittest
@@ -1019,6 +1029,7 @@ unittest
     foreach (value; range.arr)
         assert(value == filler);
 }
+
 unittest
 {
     //ER8638_1 IS_NOT self assignable
@@ -1039,6 +1050,7 @@ unittest
     er8638_1.fill(5); //generic case
     er8638_2.fill(5); //opSlice(T.init) case
 }
+
 unittest
 {
     {
@@ -1057,14 +1069,6 @@ unittest
 Fills $(D range) with a pattern copied from $(D filler). The length of
 $(D range) does not have to be a multiple of the length of $(D
 filler). If $(D filler) is empty, an exception is thrown.
-
-Example:
-----
-int[] a = [ 1, 2, 3, 4, 5 ];
-int[] b = [ 8, 9 ];
-fill(a, b);
-assert(a == [ 8, 9, 8, 9, 8 ]);
-----
  */
 void fill(Range1, Range2)(Range1 range, Range2 filler)
     if (isInputRange!Range1
@@ -1131,6 +1135,15 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
             }
         }
     }
+}
+
+///
+unittest
+{
+    int[] a = [ 1, 2, 3, 4, 5 ];
+    int[] b = [ 8, 9 ];
+    fill(a, b);
+    assert(a == [ 8, 9, 8, 9, 8 ]);
 }
 
 unittest
@@ -1332,30 +1345,6 @@ Implements the homonym function present in various programming
 languages of functional flavor. The call $(D filter!(predicate)(range))
 returns a new range only containing elements $(D x) in $(D range) for
 which $(D predicate(x)) is $(D true).
-
-Example:
-----
-int[] arr = [ 1, 2, 3, 4, 5 ];
-
-// Sum all elements
-auto small = filter!(a => a < 3)(arr);
-assert(equal(small, [ 1, 2 ]));
-
-// Sum again, but with Uniform Function Call Syntax (UFCS)
-auto sum = arr.filter!(a => a < 3);
-assert(equal(sum, [ 1, 2 ]));
-
-// In combination with chain() to span multiple ranges
-int[] a = [ 3, -2, 400 ];
-int[] b = [ 100, -101, 102 ];
-auto r = chain(a, b).filter!(a => a > 0);
-assert(equal(r, [ 3, 400, 100, 102 ]));
-
-// Mixing convertible types is fair game, too
-double[] c = [ 2.5, 3.0 ];
-auto r1 = chain(c, a, b).filter!(a => cast(int) a != a);
-assert(approxEqual(r1, [ 2.5 ]));
-----
  */
 template filter(alias pred) if (is(typeof(unaryFun!pred)))
 {
@@ -1363,6 +1352,31 @@ template filter(alias pred) if (is(typeof(unaryFun!pred)))
     {
         return FilterResult!(unaryFun!pred, Range)(rs);
     }
+}
+
+///
+unittest
+{
+    int[] arr = [ 1, 2, 3, 4, 5 ];
+
+    // Sum all elements
+    auto small = filter!(a => a < 3)(arr);
+    assert(equal(small, [ 1, 2 ]));
+
+    // Sum again, but with Uniform Function Call Syntax (UFCS)
+    auto sum = arr.filter!(a => a < 3);
+    assert(equal(sum, [ 1, 2 ]));
+
+    // In combination with chain() to span multiple ranges
+    int[] a = [ 3, -2, 400 ];
+    int[] b = [ 100, -101, 102 ];
+    auto r = chain(a, b).filter!(a => a > 0);
+    assert(equal(r, [ 3, 400, 100, 102 ]));
+
+    // Mixing convertible types is fair game, too
+    double[] c = [ 2.5, 3.0 ];
+    auto r1 = chain(c, a, b).filter!(a => cast(int) a != a);
+    assert(approxEqual(r1, [ 2.5 ]));
 }
 
 private struct FilterResult(alias pred, Range)
@@ -1508,19 +1522,6 @@ unittest
  * that the filtered range can be spanned from both directions. Also,
  * $(XREF range, retro) can be applied against the filtered range.
  *
-Example:
-----
-int[] arr = [ 1, 2, 3, 4, 5 ];
-auto small = filterBidirectional!("a < 3")(arr);
-assert(small.back == 2);
-assert(equal(small, [ 1, 2 ]));
-assert(equal(retro(small), [ 2, 1 ]));
-// In combination with chain() to span multiple ranges
-int[] a = [ 3, -2, 400 ];
-int[] b = [ 100, -101, 102 ];
-auto r = filterBidirectional!("a > 0")(chain(a, b));
-assert(r.back == 102);
-----
  */
 template filterBidirectional(alias pred)
 {
@@ -1528,6 +1529,22 @@ template filterBidirectional(alias pred)
     {
         return FilterBidiResult!(unaryFun!pred, Range)(r);
     }
+}
+
+///
+unittest
+{
+    int[] arr = [ 1, 2, 3, 4, 5 ];
+    auto small = filterBidirectional!("a < 3")(arr);
+    static assert(isBidirectionalRange!(typeof(small)));
+    assert(small.back == 2);
+    assert(equal(small, [ 1, 2 ]));
+    assert(equal(retro(small), [ 2, 1 ]));
+    // In combination with chain() to span multiple ranges
+    int[] a = [ 3, -2, 400 ];
+    int[] b = [ 100, -101, 102 ];
+    auto r = filterBidirectional!("a > 0")(chain(a, b));
+    assert(r.back == 102);
 }
 
 private struct FilterBidiResult(alias pred, Range)
@@ -1574,21 +1591,6 @@ private struct FilterBidiResult(alias pred, Range)
     {
         return typeof(this)(_input.save);
     }
-}
-
-unittest
-{
-    int[] arr = [ 1, 2, 3, 4, 5 ];
-    auto small = filterBidirectional!("a < 3")(arr);
-    static assert(isBidirectionalRange!(typeof(small)));
-    assert(small.back == 2);
-    assert(equal(small, [ 1, 2 ]));
-    assert(equal(retro(small), [ 2, 1 ]));
-    // In combination with chain() to span multiple ranges
-    int[] a = [ 3, -2, 400 ];
-    int[] b = [ 100, -101, 102 ];
-    auto r = filterBidirectional!("a > 0")(chain(a, b));
-    assert(r.back == 102);
 }
 
 // move
@@ -1933,7 +1935,7 @@ Preconditions:
 $(D !pointsTo(lhs, lhs) && !pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
 && !pointsTo(rhs, rhs))
 
-See_Also: 
+See_Also:
     $(XREF exception, pointsTo)
  */
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow
@@ -2125,33 +2127,6 @@ void swapFront(R1, R2)(R1 r1, R2 r2)
 
 /**
 Forwards function arguments with saving ref-ness.
-
-Example:
----
-int foo(int n) { return 1; }
-int foo(ref int n) { return 2; }
-int bar()(auto ref int x) { return foo(forward!x); }
-
-assert(bar(1) == 1);
-int i;
-assert(bar(i) == 2);
----
-
----
-void foo(int n, ref string s) { s = null; foreach (i; 0..n) s ~= "Hello"; }
-
-// forwards all arguments which are bound to parameter tuple
-void bar(Args...)(auto ref Args args) { return foo(forward!args); }
-
-// forwards all arguments with swapping order
-void baz(Args...)(auto ref Args args) { return foo(forward!args[$/2..$], forward!args[0..$/2]); }
-
-string s;
-bar(1, s);
-assert(s == "Hello");
-baz(s, 2);
-assert(s == "HelloHello");
----
 */
 template forward(args...)
 {
@@ -2168,6 +2143,7 @@ template forward(args...)
         alias forward = TypeTuple!();
 }
 
+///
 unittest
 {
     class C
@@ -2182,12 +2158,15 @@ unittest
     assert(bar(i) == 2);
 }
 
+///
 unittest
 {
     void foo(int n, ref string s) { s = null; foreach (i; 0..n) s ~= "Hello"; }
 
+    // forwards all arguments which are bound to parameter tuple
     void bar(Args...)(auto ref Args args) { return foo(forward!args); }
 
+    // forwards all arguments with swapping order
     void baz(Args...)(auto ref Args args) { return foo(forward!args[$/2..$], forward!args[0..$/2]); }
 
     string s;
@@ -2252,20 +2231,6 @@ the split range.
 If the empty range is given, the result is a range with one empty
 element. If a range with one separator is given, the result is a range
 with two empty elements.
-
-Example:
----
-assert(equal(splitter("hello  world", ' '), [ "hello", "", "world" ]));
-int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
-int[][] w = [ [1, 2], [], [3], [4, 5] ];
-assert(equal(splitter(a, 0), w));
-a = null;
-assert(equal(splitter(a, 0), [ (int[]).init ]));
-a = [ 0 ];
-assert(equal(splitter(a, 0), [ (int[]).init, (int[]).init ]));
-a = [ 0, 1 ];
-assert(equal(splitter(a, 0), [ [], [1] ]));
-----
 */
 auto splitter(Range, Separator)(Range r, Separator s)
 if (is(typeof(ElementType!Range.init == Separator.init))
@@ -2415,6 +2380,19 @@ if (is(typeof(ElementType!Range.init == Separator.init))
     }
 
     return Result(r, s);
+}
+
+///
+unittest
+{
+    assert(equal(splitter("hello  world", ' '), [ "hello", "", "world" ]));
+    int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
+    int[][] w = [ [1, 2], [], [3], [4, 5], [] ];
+    assert(equal(splitter(a, 0), w));
+    a = [ 0 ];
+    assert(equal(splitter(a, 0), [ (int[]).init, (int[]).init ]));
+    a = [ 0, 1 ];
+    assert(equal(splitter(a, 0), [ [], [1] ]));
 }
 
 unittest
@@ -3002,17 +2980,6 @@ Lazily joins a range of ranges with a separator. The separator itself
 is a range. If you do not provide a separator, then the ranges are
 joined directly without anything in between them.
 
-Example:
-----
-assert(equal(joiner([""], "xyz"), ""));
-assert(equal(joiner(["", ""], "xyz"), "xyz"));
-assert(equal(joiner(["", "abc"], "xyz"), "xyzabc"));
-assert(equal(joiner(["abc", ""], "xyz"), "abcxyz"));
-assert(equal(joiner(["abc", "def"], "xyz"), "abcxyzdef"));
-assert(equal(joiner(["Mary", "has", "a", "little", "lamb"], "..."),
-  "Mary...has...a...little...lamb"));
-assert(equal(joiner(["abc", "def"]), "abcdef"));
-----
  */
 auto joiner(RoR, Separator)(RoR r, Separator sep)
 if (isInputRange!RoR && isInputRange!(ElementType!RoR)
@@ -3169,10 +3136,9 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
     return Result(r, sep);
 }
 
+///
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     static assert(isInputRange!(typeof(joiner([""], ""))));
     static assert(isForwardRange!(typeof(joiner([""], ""))));
     assert(equal(joiner([""], "xyz"), ""), text(joiner([""], "xyz")));
@@ -3507,17 +3473,18 @@ akin to the $(WEB wikipedia.org/wiki/_Uniq, _uniq) system
 utility). Equivalence of elements is assessed by using the predicate
 $(D pred), by default $(D "a == b"). If the given range is
 bidirectional, $(D uniq) also yields a bidirectional range.
-
-Example:
-----
-int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
-assert(equal(uniq(arr), [ 1, 2, 3, 4, 5 ][]));
-----
 */
 auto uniq(alias pred = "a == b", Range)(Range r)
 if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
 {
     return UniqResult!(binaryFun!pred, Range)(r);
+}
+
+///
+unittest
+{
+    int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
+    assert(equal(uniq(arr), [ 1, 2, 3, 4, 5 ][]));
 }
 
 private struct UniqResult(alias pred, Range)
@@ -3611,13 +3578,6 @@ the predicate $(D pred), by default $(D "a == b").
 
 $(D Group) is an input range if $(D R) is an input range, and a
 forward range in all other cases.
-
-Example:
-----
-int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
-assert(equal(group(arr), [ tuple(1, 1u), tuple(2, 4u), tuple(3, 1u),
-    tuple(4, 3u), tuple(5, 1u) ][]));
-----
 */
 struct Group(alias pred, R) if (isInputRange!R)
 {
@@ -3681,6 +3641,14 @@ struct Group(alias pred, R) if (isInputRange!R)
 Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
 {
     return typeof(return)(r);
+}
+
+///
+unittest
+{
+    int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
+    assert(equal(group(arr), [ tuple(1, 1u), tuple(2, 4u), tuple(3, 1u),
+        tuple(4, 3u), tuple(5, 1u) ][]));
 }
 
 unittest
@@ -3799,23 +3767,6 @@ Returns:
 $(D haystack) advanced such that $(D binaryFun!pred(haystack.front,
 needle)) is $(D true) (if no such position exists, returns $(D
 haystack) after exhaustion).
-
-Example:
-
-----
-assert(find("hello, world", ',') == ", world");
-assert(find([1, 2, 3, 5], 4) == []);
-assert(find(SList!int(1, 2, 3, 4, 5)[], 4) == SList!int(4, 5)[]);
-assert(find!"a > b"([1, 2, 3, 5], 2) == [3, 5]);
-
-auto a = [ 1, 2, 3 ];
-assert(find(a, 5).empty);       // not found
-assert(!find(a, 2).empty);      // found
-
-// Case-insensitive find of a string
-string[] s = [ "Hello", "world", "!" ];
-assert(!find!("toLower(a) == b")(s, "hello").empty);
-----
 
 See_Also:
      $(WEB sgi.com/tech/stl/_find.html, STL's _find)
@@ -3945,6 +3896,7 @@ if (isInputRange!InputRange &&
         return haystack;
     }
 }
+
 ///
 unittest
 {
@@ -3973,6 +3925,7 @@ unittest
     assert(find([1, 2, 3, 5], 4).empty);
     assert(equal(find!"a>b"("hello", 'k'), "llo"));
 }
+
 @safe pure nothrow unittest
 {
     int[] a1 = [1, 2, 3];
@@ -3983,6 +3936,7 @@ unittest
     assert(!find              ([1, 2, 3], 2).empty);
     assert(!find!((a,b)=>a==b)([1, 2, 3], 2).empty);
 }
+
 @safe pure unittest
 {
     foreach(R; TypeTuple!(string, wstring, dstring))
@@ -4007,6 +3961,7 @@ unittest
         }
     }
 }
+
 unittest
 {
     //CTFE
@@ -4023,6 +3978,7 @@ unittest
     static assert(find              ([1, 2, 3], 2));
     static assert(find!((a,b)=>a==b)([1, 2, 3], 2));
 }
+
 unittest
 {
     void dg() pure @safe nothrow
@@ -4042,6 +3998,7 @@ unittest
     dg();
     assertCTFEable!dg;
 }
+
 unittest
 {
     // Bugzilla 11603
@@ -4074,12 +4031,6 @@ Returns:
 
 $(D haystack) advanced such that $(D needle) is a prefix of it (if no
 such position exists, returns $(D haystack) advanced to termination).
-
-----
-assert(find("hello, world", "World").empty);
-assert(find("hello, world", "wo") == "world");
-assert(find([1, 2, 3, 4], SList!(2, 3)[]) == [2, 3, 4]);
-----
  */
 R1 find(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2
@@ -4102,6 +4053,14 @@ if (isForwardRange!R1 && isForwardRange!R2
     {
         return simpleMindedFind!pred(haystack, needle);
     }
+}
+
+///
+unittest
+{
+    assert(find("hello, world", "World").empty);
+    assert(find("hello, world", "wo") == "world");
+    assert([1, 2, 3, 4].find(SList!int(2, 3)[]) == [2, 3, 4]);
 }
 
 unittest
@@ -4405,16 +4364,6 @@ short[]), and conversely a $(D long) can be searched for a $(D float)
 or a $(D double[]). This makes for efficient searches without the need
 to coerce one side of the comparison into the other's side type.
 
-Example:
-----
-int[] a = [ 1, 4, 2, 3 ];
-assert(find(a, 4) == [ 4, 2, 3 ]);
-assert(find(a, [ 1, 4 ]) == [ 1, 4, 2, 3 ]);
-assert(find(a, [ 1, 3 ], 4) == tuple([ 4, 2, 3 ], 2));
-// Mixed types allowed if comparable
-assert(find(a, 5, [ 1.2, 3.5 ], 2.0, [ 1 ]) == tuple([ 2, 3 ], 3));
-----
-
 The complexity of the search is $(BIGOH haystack.length *
 max(needles.length)). (For needles that are individual items, length
 is considered to be 1.) The strategy used in searching several
@@ -4433,6 +4382,17 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
             return tuple(haystack, r);
         }
     }
+}
+
+///
+unittest
+{
+    int[] a = [ 1, 4, 2, 3 ];
+    assert(find(a, 4) == [ 4, 2, 3 ]);
+    assert(find(a, [ 1, 4 ]) == [ 1, 4, 2, 3 ]);
+    assert(find(a, [ 1, 3 ], 4) == tuple([ 4, 2, 3 ], 2));
+    // Mixed types allowed if comparable
+    assert(find(a, 5, [ 1.2, 3.5 ], 2.0) == tuple([ 2, 3 ], 3));
 }
 
 unittest
@@ -4464,7 +4424,7 @@ unittest
         assert(find(b, 200).length == b.length - b.length / 4);
     }
 
-// Case-insensitive find of a string
+    // Case-insensitive find of a string
     string[] s = [ "Hello", "world", "!" ];
     //writeln(find!("toUpper(a) == toUpper(b)")(s, "hello"));
     assert(find!("toUpper(a) == toUpper(b)")(s, "hello").length == 3);
@@ -4654,16 +4614,6 @@ To find the last element of a bidirectional $(D haystack) satisfying
 $(D pred), call $(D find!(pred)(retro(haystack))). See $(XREF
 range, retro).
 
-Example:
-----
-auto arr = [ 1, 2, 3, 4, 1 ];
-assert(find!("a > 2")(arr) == [ 3, 4, 1 ]);
-
-// with predicate alias
-bool pred(int x) { return x + 1 > 1.5; }
-assert(find!(pred)(arr) == arr);
-----
-
 See_Also:
      $(WEB sgi.com/tech/stl/find_if.html, STL's find_if)
 */
@@ -4736,15 +4686,6 @@ unittest
  * right after the first occurrence of $(D needle) and returns $(D
  * true). Otherwise, leaves $(D haystack) as is and returns $(D
  * false).
- *
- * Example:
-----
-string s = "abcdef";
-assert(findSkip(s, "cd") && s == "ef");
-s = "abcdef";
-assert(!findSkip(s, "cxd") && s == "abcdef");
-assert(findSkip(s, "def") && s.empty);
-----
  */
 bool findSkip(alias pred = "a == b", R1, R2)(ref R1 haystack, R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2
@@ -4757,6 +4698,7 @@ if (isForwardRange!R1 && isForwardRange!R2
     return true;
 }
 
+///
 unittest
 {
     string s = "abcdef";
@@ -4798,25 +4740,6 @@ If $(D haystack) is a random-access range, all three components of the
 tuple have the same type as $(D haystack). Otherwise, $(D haystack)
 must be a forward range and the type of $(D result[0]) and $(D
 result[1]) is the same as $(XREF range,takeExactly).
-
-Example:
-----
-auto a = "Carl Sagan Memorial Station";
-auto r = findSplit(a, "Velikovsky");
-assert(r[0] == a);
-assert(r[1].empty);
-assert(r[2].empty);
-r = findSplit(a, " ");
-assert(r[0] == "Carl");
-assert(r[1] == " ");
-assert(r[2] == "Sagan Memorial Station");
-auto r1 = findSplitBefore(a, "Sagan");
-assert(r1[0] == "Carl ", r1[0]);
-assert(r1[1] == "Sagan Memorial Station");
-auto r2 = findSplitAfter(a, "Sagan");
-assert(r2[0] == "Carl Sagan");
-assert(r2[1] == " Memorial Station");
-----
  */
 auto findSplit(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2)
@@ -4937,6 +4860,26 @@ if (isForwardRange!R1 && isForwardRange!R2)
     }
 }
 
+///
+unittest
+{
+    auto a = "Carl Sagan Memorial Station";
+    auto r = findSplit(a, "Velikovsky");
+    assert(r[0] == a);
+    assert(r[1].empty);
+    assert(r[2].empty);
+    r = findSplit(a, " ");
+    assert(r[0] == "Carl");
+    assert(r[1] == " ");
+    assert(r[2] == "Sagan Memorial Station");
+    auto r1 = findSplitBefore(a, "Sagan");
+    assert(r1[0] == "Carl ", r1[0]);
+    assert(r1[1] == "Sagan Memorial Station");
+    auto r2 = findSplitAfter(a, "Sagan");
+    assert(r2[0] == "Carl Sagan");
+    assert(r2[1] == " Memorial Station");
+}
+
 unittest
 {
     auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
@@ -5000,20 +4943,6 @@ unittest
     $(D haystack), then $(D -1) is returned.
 
     $(D needles) may be either an element or a range.
-
-    Examples:
---------------------
-assert(countUntil("hello world", "world") == 6);
-assert(countUntil("hello world", 'r') == 8);
-assert(countUntil("hello world", "programming") == -1);
-assert(countUntil("日本語", "本語") == 1);
-assert(countUntil("日本語", '語')   == 2);
-assert(countUntil("日本語", "五") == -1);
-assert(countUntil("日本語", '五') == -1);
-assert(countUntil([0, 7, 12, 22, 9], [12, 22]) == 2);
-assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
-assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
---------------------
   +/
 ptrdiff_t countUntil(alias pred = "a == b", R, Rs...)(R haystack, Rs needles)
     if (isForwardRange!R
@@ -5099,6 +5028,7 @@ ptrdiff_t countUntil(alias pred = "a == b", R, Rs...)(R haystack, Rs needles)
     static if (isInfinite!R) assert(0);
     else return -1;
 }
+
 /// ditto
 ptrdiff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
     if (isInputRange!R &&
@@ -5108,7 +5038,7 @@ ptrdiff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
     return countUntil!pred2(haystack);
 }
 
-//Verify Examples.
+///
 unittest
 {
     assert(countUntil("hello world", "world") == 6);
@@ -5122,6 +5052,7 @@ unittest
     assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
     assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
 }
+
 unittest
 {
     assert(countUntil("日本語", "") == 0);
@@ -5157,13 +5088,6 @@ unittest
 /++
     Returns the number of elements which must be popped from $(D haystack)
     before $(D pred(haystack.front)) is $(D true).
-
-    Examples:
---------------------
-assert(countUntil!(std.uni.isWhite)("hello world") == 5);
-assert(countUntil!(std.ascii.isDigit)("hello world") == -1);
-assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
---------------------
   +/
 ptrdiff_t countUntil(alias pred, R)(R haystack)
     if (isInputRange!R &&
@@ -5208,13 +5132,14 @@ ptrdiff_t countUntil(alias pred, R)(R haystack)
     else return -1;
 }
 
-//Verify Examples.
+///
 unittest
 {
     assert(countUntil!(std.uni.isWhite)("hello world") == 5);
     assert(countUntil!(std.ascii.isDigit)("hello world") == -1);
     assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
 }
+
 unittest
 {
     // References
@@ -5262,13 +5187,6 @@ enum OpenRight
 /**
 Lazily iterates $(D range) until value $(D sentinel) is found, at
 which point it stops.
-
-Example:
-----
-int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
-assert(equal(a.until(7), [1, 2, 4][]));
-assert(equal(a.until(7, OpenRight.no), [1, 2, 4, 7][]));
-----
  */
 struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
 {
@@ -5381,6 +5299,14 @@ until(alias pred, Range)
     return typeof(return)(range, openRight);
 }
 
+///
+unittest
+{
+    int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
+    assert(equal(a.until(7), [1, 2, 4][]));
+    assert(equal(a.until(7, OpenRight.no), [1, 2, 4, 7][]));
+}
+
 unittest
 {
     //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -5404,21 +5330,6 @@ with multiple of the ranges or elements in $(D withOneOfThese), then the
 shortest one matches (if there are two which match which are of the same
 length (e.g. $(D "a") and $(D 'a')), then the left-most of them in the argument
 list matches).
-
-Example:
-----
-assert(startsWith("abc", ""));
-assert(startsWith("abc", "a"));
-assert(!startsWith("abc", "b"));
-assert(startsWith("abc", 'a', "b") == 1);
-assert(startsWith("abc", "b", "a") == 2);
-assert(startsWith("abc", "a", "a") == 1);
-assert(startsWith("abc", "ab", "a") == 2);
-assert(startsWith("abc", "x", "a", "b") == 2);
-assert(startsWith("abc", "x", "aa", "ab") == 3);
-assert(startsWith("abc", "x", "aaa", "sab") == 0);
-assert(startsWith("abc", "x", "aaa", "a", "sab") == 3);
-----
  */
 uint startsWith(alias pred = "a == b", Range, Needles...)(Range doesThisStart, Needles withOneOfThese)
 if (isInputRange!Range && Needles.length > 1 &&
@@ -5569,6 +5480,22 @@ if (isInputRange!R &&
     return doesThisStart.empty
         ? false
         : binaryFun!pred(doesThisStart.front, withThis);
+}
+
+///
+unittest
+{
+    assert(startsWith("abc", ""));
+    assert(startsWith("abc", "a"));
+    assert(!startsWith("abc", "b"));
+    assert(startsWith("abc", 'a', "b") == 1);
+    assert(startsWith("abc", "b", "a") == 2);
+    assert(startsWith("abc", "a", "a") == 1);
+    assert(startsWith("abc", "ab", "a") == 2);
+    assert(startsWith("abc", "x", "a", "b") == 2);
+    assert(startsWith("abc", "x", "aa", "ab") == 3);
+    assert(startsWith("abc", "x", "aaa", "sab") == 0);
+    assert(startsWith("abc", "x", "aaa", "a", "sab") == 3);
 }
 
 unittest
@@ -5752,20 +5679,6 @@ unittest
 
 /**
 The reciprocal of $(D startsWith).
-
-Example:
-----
-assert(endsWith("abc", ""));
-assert(!endsWith("abc", "b"));
-assert(endsWith("abc", "a", 'c') == 2);
-assert(endsWith("abc", "c", "a") == 1);
-assert(endsWith("abc", "c", "c") == 1);
-assert(endsWith("abc", "bc", "c") == 2);
-assert(endsWith("abc", "x", "c", "b") == 2);
-assert(endsWith("abc", "x", "aa", "bc") == 3);
-assert(endsWith("abc", "x", "aaa", "sab") == 0);
-assert(endsWith("abc", "x", "aaa", 'c', "sab") == 3);
-----
  */
 uint endsWith(alias pred = "a == b", Range, Needles...)(Range doesThisEnd, Needles withOneOfThese)
 if (isBidirectionalRange!Range && Needles.length > 1 &&
@@ -5870,6 +5783,21 @@ if (isBidirectionalRange!R &&
         : binaryFun!pred(doesThisEnd.back, withThis);
 }
 
+///
+unittest
+{
+    assert(endsWith("abc", ""));
+    assert(!endsWith("abc", "b"));
+    assert(endsWith("abc", "a", 'c') == 2);
+    assert(endsWith("abc", "c", "a") == 1);
+    assert(endsWith("abc", "c", "c") == 1);
+    assert(endsWith("abc", "bc", "c") == 2);
+    assert(endsWith("abc", "x", "c", "b") == 2);
+    assert(endsWith("abc", "x", "aa", "bc") == 3);
+    assert(endsWith("abc", "x", "aaa", "sab") == 0);
+    assert(endsWith("abc", "x", "aaa", 'c', "sab") == 3);
+}
+
 unittest
 {
     debug(std_algorithm) scope(success)
@@ -5953,11 +5881,7 @@ unittest
 }
 
 /**
-Returns the common prefix of two ranges. Example:
-
-----
-assert(commonPrefix("hello, world", "hello, there") == "hello, ");
-----
+Returns the common prefix of two ranges.
 
 If the first argument is a string, then the result is a slice of $(D r1) which
 contains the characters that both ranges start with. For all other types, the
@@ -5996,6 +5920,12 @@ if (isForwardRange!R1 && isInputRange!R2 &&
         {}
         return takeExactly(result, i);
     }
+}
+
+///
+unittest
+{
+    assert(commonPrefix("hello, world", "hello, there") == "hello, ");
 }
 
 auto commonPrefix(alias pred, R1, R2)(R1 r1, R2 r2)
@@ -6113,17 +6043,8 @@ Advances $(D r) until it finds the first two adjacent elements $(D a),
 $(D b) that satisfy $(D pred(a, b)). Performs $(BIGOH r.length)
 evaluations of $(D pred).
 
-Example:
-----
-int[] a = [ 11, 10, 10, 9, 8, 8, 7, 8, 9 ];
-auto r = findAdjacent(a);
-assert(r == [ 10, 10, 9, 8, 8, 7, 8, 9 ]);
-p = findAdjacent!("a < b")(a);
-assert(p == [ 7, 8, 9 ]);
-
 See_Also:
      $(WEB sgi.com/tech/stl/adjacent_find.html, STL's adjacent_find)
-----
 */
 Range findAdjacent(alias pred = "a == b", Range)(Range r)
     if (isForwardRange!(Range))
@@ -6138,6 +6059,17 @@ Range findAdjacent(alias pred = "a == b", Range)(Range r)
     }
     static if (!isInfinite!Range)
         return ahead;
+}
+
+///
+unittest
+{
+    int[] a = [ 11, 10, 10, 9, 8, 8, 7, 8, 9 ];
+    auto r = findAdjacent(a);
+    assert(r == [ 10, 10, 9, 8, 8, 7, 8, 9 ]);
+    auto p = findAdjacent!("a < b")(a);
+    assert(p == [ 7, 8, 9 ]);
+
 }
 
 unittest
@@ -6170,14 +6102,7 @@ unittest
 Advances $(D seq) by calling $(D seq.popFront) until either $(D
 find!(pred)(choices, seq.front)) is $(D true), or $(D seq) becomes
 empty. Performs $(BIGOH seq.length * choices.length) evaluations of
-$(D pred). 
-
-Example:
-----
-int[] a = [ -1, 0, 1, 2, 3, 4, 5 ];
-int[] b = [ 3, 1, 2 ];
-assert(findAmong(a, b) == a[2 .. $]);
-----
+$(D pred).
 
 See_Also:
     $(WEB sgi.com/tech/stl/find_first_of.html, STL's find_first_of)
@@ -6190,6 +6115,14 @@ Range1 findAmong(alias pred = "a == b", Range1, Range2)(
     {
     }
     return seq;
+}
+
+///
+unittest
+{
+    int[] a = [ -1, 0, 1, 2, 3, 4, 5 ];
+    int[] b = [ 3, 1, 2 ];
+    assert(findAmong(a, b) == a[2 .. $]);
 }
 
 unittest
@@ -6220,22 +6153,6 @@ true). Performs $(BIGOH r.length) evaluations of $(D pred).
 
 Note: Regardless of the overload, $(D count) will not accept
 infinite ranges for $(D haystack).
-
-Example:
-----
-// count elements in range
-int[] a = [ 1, 2, 4, 3, 2, 5, 3, 2, 4 ];
-assert(count(a, 2) == 3);
-assert(count!("a > b")(a, 2) == 5);
-// count range in range
-assert(count("abcadfabf", "ab") == 2);
-assert(count("ababab", "abab") == 1);
-assert(count("ababab", "abx") == 0);
-// fuzzy count range in range
-assert(count!"std.uni.toLower(a) == std.uni.toLower(b)"("AbcAdFaBf", "ab") == 2);
-// count predicate in range
-assert(count!("a > 1")(a) == 8);
-----
 */
 size_t count(alias pred = "a == b", Range, E)(Range haystack, E needle)
     if (isInputRange!Range && !isInfinite!Range &&
@@ -6243,6 +6160,23 @@ size_t count(alias pred = "a == b", Range, E)(Range haystack, E needle)
 {
     bool pred2(ElementType!Range a) { return binaryFun!pred(a, needle); }
     return count!pred2(haystack);
+}
+
+///
+unittest
+{
+    // count elements in range
+    int[] a = [ 1, 2, 4, 3, 2, 5, 3, 2, 4 ];
+    assert(count(a, 2) == 3);
+    assert(count!("a > b")(a, 2) == 5);
+    // count range in range
+    assert(count("abcadfabf", "ab") == 2);
+    assert(count("ababab", "abab") == 1);
+    assert(count("ababab", "abx") == 0);
+    // fuzzy count range in range
+    assert(count!"std.uni.toLower(a) == std.uni.toLower(b)"("AbcAdFaBf", "ab") == 2);
+    // count predicate in range
+    assert(count!("a > 1")(a) == 8);
 }
 
 unittest
@@ -6294,14 +6228,6 @@ size_t count(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
     }
 }
 
-unittest
-{
-    assert(count("abcadfabf", "ab") == 2);
-    assert(count("ababab", "abab") == 1);
-    assert(count("ababab", "abx") == 0);
-    assert(count!((a, b) => std.uni.toLower(a) == std.uni.toLower(b))("AbcAdFaBf", "ab") == 2);
-}
-
 /// Ditto
 size_t count(alias pred = "true", R)(R haystack)
     if (isInputRange!R && !isInfinite!R &&
@@ -6330,20 +6256,7 @@ of $(D lPar) are closed by corresponding instances of $(D rPar). The
 parameter $(D maxNestingLevel) controls the nesting level allowed. The
 most common uses are the default or $(D 0). In the latter case, no
 nesting is allowed.
-
-Example:
-----
-auto s = "1 + $(LPAREN)2 * (3 + 1 / 2)";
-assert(!balancedParens(s, '(', ')'));
-s = "1 + (2 * (3 + 1) / 2)";
-assert(balancedParens(s, '(', ')'));
-s = "1 + (2 * (3 + 1) / 2)";
-assert(!balancedParens(s, '(', ')', 1));
-s = "1 + (2 * 3 + 1) / (2 - 5)";
-assert(balancedParens(s, '(', ')', 1));
-----
 */
-
 bool balancedParens(Range, E)(Range r, E lPar, E rPar,
         size_t maxNestingLevel = size_t.max)
 if (isInputRange!(Range) && is(typeof(r.front == lPar)))
@@ -6365,6 +6278,7 @@ if (isInputRange!(Range) && is(typeof(r.front == lPar)))
     return count == 0;
 }
 
+///
 unittest
 {
     auto s = "1 + (2 * (3 + 1 / 2)";
@@ -6383,23 +6297,7 @@ Returns $(D true) if and only if the two ranges compare equal element
 for element, according to binary predicate $(D pred). The ranges may
 have different element types, as long as $(D pred(a, b)) evaluates to
 $(D bool) for $(D a) in $(D r1) and $(D b) in $(D r2). Performs
-$(BIGOH min(r1.length, r2.length)) evaluations of $(D pred). 
-
-Example:
-----
-int[] a = [ 1, 2, 4, 3 ];
-assert(!equal(a, a[1..$]));
-assert(equal(a, a));
-
-// different types
-double[] b = [ 1.0, 2, 4, 3];
-assert(!equal(a, b[1..$]));
-assert(equal(a, b));
-
-// predicated: ensure that two vectors are approximately equal
-double[] c = [ 1.005, 2, 4, 3];
-assert(equal!(approxEqual)(b, c));
-----
+$(BIGOH min(r1.length, r2.length)) evaluations of $(D pred).
 
 See_Also:
     $(WEB sgi.com/tech/stl/_equal.html, STL's _equal)
@@ -6454,22 +6352,27 @@ bool equal(alias pred, Range1, Range2)(Range1 r1, Range2 r2)
     }
 }
 
+///
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    int[] a = [ 1, 2, 4, 3];
+    int[] a = [ 1, 2, 4, 3 ];
     assert(!equal(a, a[1..$]));
     assert(equal(a, a));
-    // test with different types
+
+    // different types
     double[] b = [ 1.0, 2, 4, 3];
     assert(!equal(a, b[1..$]));
     assert(equal(a, b));
 
-    // predicated
+    // predicated: ensure that two vectors are approximately equal
     double[] c = [ 1.005, 2, 4, 3];
     assert(equal!(approxEqual)(b, c));
+}
 
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     // various strings
     assert(equal("æøå", "æøå")); //UTF8 vs UTF8
     assert(!equal("???", "æøå")); //UTF8 vs UTF8
@@ -6499,7 +6402,10 @@ unittest
     equal!equal(["hello", "world"], ["hello"d, "world"d]);
 
     //Tests, with more fancy map ranges
+    int[] a = [ 1, 2, 4, 3 ];
     assert(equal([2, 4, 8, 6], map!"a*2"(a)));
+    double[] b = [ 1.0, 2, 4, 3];
+    double[] c = [ 1.005, 2, 4, 3];
     assert(equal!approxEqual(map!"a*2"(b), map!"a*2"(c)));
     assert(!equal([2, 4, 1, 3], map!"a*2"(a)));
     assert(!equal([2, 4, 1], map!"a*2"(a)));
@@ -6536,7 +6442,6 @@ elements.
 If the ranges are strings, $(D cmp) performs UTF decoding
 appropriately and compares the ranges one code point at a time.
 */
-
 int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2)
 if (isInputRange!R1 && isInputRange!R2 && !(isSomeString!R1 && isSomeString!R2))
 {
@@ -6764,19 +6669,6 @@ template MaxType(T...)
 /**
 Returns the maximum of the passed-in values. The type of the result is
 computed by using $(XREF traits, CommonType).
-
-Example:
-----
-int a = 5;
-short b = 6;
-double c = 2;
-auto d = max(a, b);
-assert(is(typeof(d) == int));
-assert(d == 6);
-auto e = min(a, b, c);
-assert(is(typeof(e) == double));
-assert(e == 2);
-----
 */
 MaxType!(T1, T2, T) max(T1, T2, T...)(T1 a, T2 b, T xs)
     if (is(typeof(a < b)))
@@ -6799,6 +6691,20 @@ MaxType!(T1, T2, T) max(T1, T2, T...)(T1 a, T2 b, T xs)
     {
         return max(max(a, b), xs);
     }
+}
+
+///
+unittest
+{
+    int a = 5;
+    short b = 6;
+    double c = 2;
+    auto d = max(a, b);
+    assert(is(typeof(d) == int));
+    assert(d == 6);
+    auto e = min(a, b, c);
+    assert(is(typeof(e) == double));
+    assert(e == 2);
 }
 
 unittest
@@ -6837,15 +6743,6 @@ Returns the minimum element of a range together with the number of
 occurrences. The function can actually be used for counting the
 maximum or any other ordering predicate (that's why $(D maxCount) is
 not provided).
-
-Example:
-----
-int[] a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
-// Minimum is 1 and occurs 3 times
-assert(minCount(a) == tuple(1, 3));
-// Maximum is 4 and occurs 2 times
-assert(minCount!("a > b")(a) == tuple(4, 2));
-----
  */
 Tuple!(ElementType!Range, size_t)
 minCount(alias pred = "a < b", Range)(Range range)
@@ -6924,24 +6821,32 @@ minCount(alias pred = "a < b", Range)(Range range)
                    "to keep track of the smallest %s element.", Range.stringof, T.stringof));
 }
 
+///
+unittest
+{
+    int[] a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
+    // Minimum is 1 and occurs 3 times
+    assert(minCount(a) == tuple(1, 3));
+    // Maximum is 4 and occurs 2 times
+    assert(minCount!("a > b")(a) == tuple(4, 2));
+}
+
 unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    int[] a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
-    assert(minCount(a) == tuple(1, 3));
-    assert(minCount!("a > b")(a) == tuple(4, 2));
     int[][] b = [ [4], [2, 4], [4], [4] ];
     auto c = minCount!("a[0] < b[0]")(b);
     assert(c == tuple([2, 4], 1), text(c[0]));
 
     //Test empty range
-    assertThrown(minCount(a[$..$]));
+    assertThrown(minCount(b[$..$]));
 
     //test with reference ranges. Test both input and forward.
     assert(minCount(new ReferenceInputRange!int([1, 2, 1, 0, 2, 0])) == tuple(0, 2));
     assert(minCount(new ReferenceForwardRange!int([1, 2, 1, 0, 2, 0])) == tuple(0, 2));
 }
+
 unittest
 {
     debug(std_algorithm) scope(success)
@@ -7007,15 +6912,6 @@ range), i.e. a subrange of $(D range) starting at the position of its
 smallest element and with the same ending as $(D range). The function
 can actually be used for counting the maximum or any other ordering
 predicate (that's why $(D maxPos) is not provided).
-
-Example:
-----
-int[] a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
-// Minimum is 1 and first occurs in position 3
-assert(minPos(a) == [ 1, 2, 4, 1, 1, 2 ]);
-// Maximum is 4 and first occurs in position 2
-assert(minPos!("a > b")(a) == [ 4, 1, 2, 4, 1, 1, 2 ]);
-----
  */
 Range minPos(alias pred = "a < b", Range)(Range range)
     if (isForwardRange!Range && !isInfinite!Range &&
@@ -7036,16 +6932,21 @@ Range minPos(alias pred = "a < b", Range)(Range range)
     return result;
 }
 
+///
+unittest
+{
+    int[] a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
+    // Minimum is 1 and first occurs in position 3
+    assert(minPos(a) == [ 1, 2, 4, 1, 1, 2 ]);
+    // Maximum is 4 and first occurs in position 2
+    assert(minPos!("a > b")(a) == [ 4, 1, 2, 4, 1, 1, 2 ]);
+}
+
 unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
-    // Minimum is 1 and first occurs in position 3
-    assert(minPos(a) == [ 1, 2, 4, 1, 1, 2 ]);
-    // Maximum is 4 and first occurs in position 5
-    assert(minPos!("a > b")(a) == [ 4, 1, 2, 4, 1, 1, 2 ]);
-
     //Test that an empty range works
     int[] b = a[$..$];
     assert(equal(minPos(b), b));
@@ -7053,6 +6954,7 @@ unittest
     //test with reference range.
     assert( equal( minPos(new ReferenceForwardRange!int([1, 2, 1, 0, 2, 0])), [0, 2, 0] ) );
 }
+
 unittest
 {
     //Rvalue range
@@ -7063,6 +6965,7 @@ unittest
                .minPos()
                .equal([ 1, 2, 4, 1, 1, 2 ]));
 }
+
 unittest
 {
     //BUG 9299
@@ -7084,21 +6987,11 @@ Sequentially compares elements in $(D r1) and $(D r2) in lockstep, and
 stops at the first mismatch (according to $(D pred), by default
 equality). Returns a tuple with the reduced ranges that start with the
 two mismatched values. Performs $(BIGOH min(r1.length, r2.length))
-evaluations of $(D pred). 
-
-Example:
-----
-int[]    x = [ 1,  5, 2, 7,   4, 3 ];
-double[] y = [ 1.0, 5, 2, 7.3, 4, 8 ];
-auto m = mismatch(x, y);
-assert(m[0] == x[3 .. $]);
-assert(m[1] == y[3 .. $]);
-----
+evaluations of $(D pred).
 
 See_Also:
     $(WEB sgi.com/tech/stl/_mismatch.html, STL's _mismatch)
 */
-
 Tuple!(Range1, Range2)
 mismatch(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
     if (isInputRange!(Range1) && isInputRange!(Range2))
@@ -7110,16 +7003,20 @@ mismatch(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
     return tuple(r1, r2);
 }
 
+///
+unittest
+{
+    int[]    x = [ 1,  5, 2, 7,   4, 3 ];
+    double[] y = [ 1.0, 5, 2, 7.3, 4, 8 ];
+    auto m = mismatch(x, y);
+    assert(m[0] == x[3 .. $]);
+    assert(m[1] == y[3 .. $]);
+}
+
 unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    // doc example
-    int[]    x = [ 1,  5, 2, 7,   4, 3 ];
-    double[] y = [ 1.0, 5, 2, 7.3, 4, 8 ];
-    auto m = mismatch(x, y);
-    assert(m[0] == [ 7, 4, 3 ]);
-    assert(m[1] == [ 7.3, 4, 8 ]);
 
     int[] a = [ 1, 2, 3 ];
     int[] b = [ 1, 2, 4, 5 ];
@@ -7287,16 +7184,6 @@ distance) between $(D s) and $(D t). The Levenshtein distance computes
 the minimal amount of edit operations necessary to transform $(D s)
 into $(D t).  Performs $(BIGOH s.length * t.length) evaluations of $(D
 equals) and occupies $(BIGOH s.length * t.length) storage.
-
-Example:
-----
-assert(levenshteinDistance("cat", "rat") == 1);
-assert(levenshteinDistance("parks", "spark") == 2);
-assert(levenshteinDistance("kitten", "sitting") == 3);
-// ignore case
-assert(levenshteinDistance!("std.uni.toUpper(a) == std.uni.toUpper(b)")
-    ("parks", "SPARK") == 2);
-----
 */
 size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
     (Range1 s, Range2 t)
@@ -7306,7 +7193,7 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
     return lev.distance(s, t);
 }
 
-//Verify Examples.
+///
 unittest
 {
     assert(levenshteinDistance("cat", "rat") == 1);
@@ -7319,14 +7206,6 @@ unittest
 /**
 Returns the Levenshtein distance and the edit path between $(D s) and
 $(D t).
-
-Example:
----
-string a = "Saturday", b = "Sunday";
-auto p = levenshteinDistanceAndPath(a, b);
-assert(p[0] == 3);
-assert(equal(p[1], "nrrnsnnn"));
----
 */
 Tuple!(size_t, EditOp[])
 levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
@@ -7336,6 +7215,15 @@ levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
     Levenshtein!(Range1, binaryFun!(equals)) lev;
     auto d = lev.distance(s, t);
     return tuple(d, lev.path());
+}
+
+///
+unittest
+{
+    string a = "Saturday", b = "Sunday";
+    auto p = levenshteinDistanceAndPath(a, b);
+    assert(p[0] == 3);
+    assert(equal(p[1], "nrrnsnnn"));
 }
 
 unittest
@@ -7348,62 +7236,12 @@ unittest
     assert(levenshteinDistance("aa", "abc") == 2);
     assert(levenshteinDistance("Saturday", "Sunday") == 3);
     assert(levenshteinDistance("kitten", "sitting") == 3);
-    //lev.deletionIncrement = 2;
-    //lev.insertionIncrement = 100;
-    string a = "Saturday", b = "Sunday";
-    auto p = levenshteinDistanceAndPath(a, b);
-    assert(cast(string) p[1] == "nrrnsnnn");
 }
 
 // copy
 /**
 Copies the content of $(D source) into $(D target) and returns the
 remaining (unfilled) part of $(D target).
-
-Example:
-----
-int[] a = [ 1, 5 ];
-int[] b = [ 9, 8 ];
-int[] c = new int[a.length + b.length + 10];
-auto d = copy(b, copy(a, c));
-assert(c[0 .. a.length + b.length] == a ~ b);
-assert(d.length == 10);
-----
-
-As long as the target range elements support assignment from source
-range elements, different types of ranges are accepted.
-
-Example:
-----
-float[] a = [ 1.0f, 5 ];
-double[] b = new double[a.length];
-auto d = copy(a, b);
-----
-
-To copy at most $(D n) elements from range $(D a) to range $(D b), you
-may want to use $(D copy(take(a, n), b)). To copy those elements from
-range $(D a) that satisfy predicate $(D pred) to range $(D b), you may
-want to use $(D copy(a.filter!(pred), b)).
-
-Example:
-----
-int[] a = [ 1, 5, 8, 9, 10, 1, 2, 0 ];
-auto b = new int[a.length];
-auto c = copy(a.filter!(a => (a & 1) == 1), b);
-assert(b[0 .. $ - c.length] == [ 1, 5, 9, 1 ]);
-----
-
-$(XREF range, retro) can be used to achieve behavior similar to
-$(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward').
-
-Example: 
-----
-import std.algorithm, std.range;
-int[] src = [1, 2, 4];
-int[] dst = [0, 0, 0, 0, 0];
-copy(src.retro, dst.retro);
-assert(dst == [0, 0, 1, 2, 4]);
-----
 
 See_Also:
     $(WEB sgi.com/tech/stl/_copy.html, STL's _copy)
@@ -7460,18 +7298,59 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
     }
 }
 
+///
+unittest
+{
+    int[] a = [ 1, 5 ];
+    int[] b = [ 9, 8 ];
+    int[] c = new int[a.length + b.length + 10];
+    auto d = copy(b, copy(a, c));
+    assert(c[0 .. a.length + b.length] == a ~ b);
+    assert(d.length == 10);
+}
+
+/**
+As long as the target range elements support assignment from source
+range elements, different types of ranges are accepted.
+*/
+unittest
+{
+    float[] a = [ 1.0f, 5 ];
+    double[] b = new double[a.length];
+    auto d = copy(a, b);
+}
+
+/**
+To copy at most $(D n) elements from range $(D a) to range $(D b), you
+may want to use $(D copy(take(a, n), b)). To copy those elements from
+range $(D a) that satisfy predicate $(D pred) to range $(D b), you may
+want to use $(D copy(a.filter!(pred), b)).
+*/
+unittest
+{
+    int[] a = [ 1, 5, 8, 9, 10, 1, 2, 0 ];
+    auto b = new int[a.length];
+    auto c = copy(a.filter!(a => (a & 1) == 1), b);
+    assert(b[0 .. $ - c.length] == [ 1, 5, 9, 1 ]);
+}
+
+/**
+$(XREF range, retro) can be used to achieve behavior similar to
+$(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward').
+*/
+unittest
+{
+    import std.algorithm, std.range;
+    int[] src = [1, 2, 4];
+    int[] dst = [0, 0, 0, 0, 0];
+    copy(src.retro, dst.retro);
+    assert(dst == [0, 0, 1, 2, 4]);
+}
+
 unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    {
-        int[] a = [ 1, 5 ];
-        int[] b = [ 9, 8 ];
-        int[] c = new int[a.length + b.length + 10];
-        auto d = copy(b, copy(a, c));
-        assert(c[0 .. a.length + b.length] == a ~ b);
-        assert(d.length == 10);
-    }
     {
         int[] a = [ 1, 5 ];
         int[] b = [ 9, 8 ];
@@ -7504,16 +7383,6 @@ Returns a tuple containing the remainder portions of $(D r1) and $(D
 r2) that were not swapped (one of them will be empty). The ranges may
 be of different types but must have the same element type and support
 swapping.
-
-Example:
-----
-int[] a = [ 100, 101, 102, 103 ];
-int[] b = [ 0, 1, 2, 3 ];
-auto c = swapRanges(a[1 .. 3], b[2 .. 4]);
-assert(c[0].empty && c[1].empty);
-assert(a == [ 100, 2, 3, 103 ]);
-assert(b == [ 0, 1, 101, 102 ]);
-----
 */
 Tuple!(Range1, Range2)
 swapRanges(Range1, Range2)(Range1 r1, Range2 r2)
@@ -7528,10 +7397,9 @@ swapRanges(Range1, Range2)(Range1 r1, Range2 r2)
     return tuple(r1, r2);
 }
 
+///
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 100, 101, 102, 103 ];
     int[] b = [ 0, 1, 2, 3 ];
     auto c = swapRanges(a[1 .. 3], b[2 .. 4]);
@@ -7545,15 +7413,8 @@ unittest
 Reverses $(D r) in-place.  Performs $(D r.length / 2) evaluations of $(D
 swap).
 
-Example:
-----
-int[] arr = [ 1, 2, 3 ];
-reverse(arr);
-assert(arr == [ 3, 2, 1 ]);
-
 See_Also:
     $(WEB sgi.com/tech/stl/_reverse.html, STL's _reverse)
-----
 */
 void reverse(Range)(Range r)
 if (isBidirectionalRange!Range && !isRandomAccessRange!Range
@@ -7566,6 +7427,14 @@ if (isBidirectionalRange!Range && !isRandomAccessRange!Range
         if (r.empty) break;
         r.popBack();
     }
+}
+
+///
+unittest
+{
+    int[] arr = [ 1, 2, 3 ];
+    reverse(arr);
+    assert(arr == [ 3, 2, 1 ]);
 }
 
 ///ditto
@@ -7602,13 +7471,6 @@ unittest
 Reverses $(D r) in-place, where $(D r) is a narrow string (having
 elements of type $(D char) or $(D wchar)). UTF sequences consisting of
 multiple code units are preserved properly.
-
-Example:
-----
-char[] arr = "hello\U00010143\u0100\U00010143".dup;
-reverse(arr);
-assert(arr == "\U00010143\u0100\U00010143olleh");
-----
 */
 void reverse(Char)(Char[] s)
 if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
@@ -7628,6 +7490,14 @@ if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
         }
     }
     reverse(r);
+}
+
+///
+unittest
+{
+    char[] arr = "hello\U00010143\u0100\U00010143".dup;
+    reverse(arr);
+    assert(arr == "\U00010143\u0100\U00010143olleh");
 }
 
 unittest
@@ -7791,39 +7661,6 @@ range such that all elements in $(D back) are brought to the beginning
 of the unified range. The relative ordering of elements in $(D front)
 and $(D back), respectively, remains unchanged.
 
-The simplest use of $(D bringToFront) is for rotating elements in a
-buffer. For example:
-
-----
-auto arr = [4, 5, 6, 7, 1, 2, 3];
-bringToFront(arr[0 .. 4], arr[4 .. $]);
-assert(arr == [ 1, 2, 3, 4, 5, 6, 7 ]);
-----
-
-The $(D front) range may actually "step over" the $(D back)
-range. This is very useful with forward ranges that cannot compute
-comfortably right-bounded subranges like $(D arr[0 .. 4]) above. In
-the example below, $(D r2) is a right subrange of $(D r1).
-
-----
-auto list = SList!(int)(4, 5, 6, 7, 1, 2, 3);
-auto r1 = list[];
-auto r2 = list[]; popFrontN(r2, 4);
-assert(equal(r2, [ 1, 2, 3 ]));
-bringToFront(r1, r2);
-assert(equal(list[], [ 1, 2, 3, 4, 5, 6, 7 ]));
-----
-
-Elements can be swapped across ranges of different types:
-
-----
-auto list = SList!(int)(4, 5, 6, 7);
-auto vec = [ 1, 2, 3 ];
-bringToFront(list[], vec);
-assert(equal(list[], [ 1, 2, 3, 4 ]));
-assert(equal(vec, [ 5, 6, 7 ]));
-----
-
 Performs $(BIGOH max(front.length, back.length)) evaluations of $(D
 swap).
 
@@ -7901,32 +7738,51 @@ size_t bringToFront(Range1, Range2)(Range1 front, Range2 back)
     return result;
 }
 
+/**
+The simplest use of $(D bringToFront) is for rotating elements in a
+buffer. For example:
+*/
+unittest
+{
+    auto arr = [4, 5, 6, 7, 1, 2, 3];
+    auto p = bringToFront(arr[0 .. 4], arr[4 .. $]);
+    assert(p == arr.length - 4);
+    assert(arr == [ 1, 2, 3, 4, 5, 6, 7 ]);
+}
+
+/**
+The $(D front) range may actually "step over" the $(D back)
+range. This is very useful with forward ranges that cannot compute
+comfortably right-bounded subranges like $(D arr[0 .. 4]) above. In
+the example below, $(D r2) is a right subrange of $(D r1).
+*/
+unittest
+{
+    auto list = SList!(int)(4, 5, 6, 7, 1, 2, 3);
+    auto r1 = list[];
+    auto r2 = list[]; popFrontN(r2, 4);
+    assert(equal(r2, [ 1, 2, 3 ]));
+    bringToFront(r1, r2);
+    assert(equal(list[], [ 1, 2, 3, 4, 5, 6, 7 ]));
+}
+
+
+/**
+Elements can be swapped across ranges of different types:
+*/
+unittest
+{
+    auto list = SList!(int)(4, 5, 6, 7);
+    auto vec = [ 1, 2, 3 ];
+    bringToFront(list[], vec);
+    assert(equal(list[], [ 1, 2, 3, 4 ]));
+    assert(equal(vec, [ 5, 6, 7 ]));
+}
+
 unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    // doc example
-    {
-        int[] arr = [4, 5, 6, 7, 1, 2, 3];
-        auto p = bringToFront(arr[0 .. 4], arr[4 .. $]);
-        assert(p == arr.length - 4);
-        assert(arr == [ 1, 2, 3, 4, 5, 6, 7 ], text(arr));
-    }
-    {
-        auto list = SList!(int)(4, 5, 6, 7, 1, 2, 3);
-        auto r1 = list[];
-        auto r2 = list[]; popFrontN(r2, 4);
-        assert(equal(r2, [ 1, 2, 3 ]));
-        bringToFront(r1, r2);
-        assert(equal(list[], [ 1, 2, 3, 4, 5, 6, 7 ]));
-    }
-    {
-        auto list = SList!(int)(4, 5, 6, 7);
-        auto vec = [ 1, 2, 3 ];
-        bringToFront(list[], vec);
-        assert(equal(list[], [ 1, 2, 3, 4 ]));
-        assert(equal(vec, [ 5, 6, 7 ]));
-    }
     // a more elaborate test
     {
         auto rnd = Random(unpredictableSeed);
@@ -8299,13 +8155,7 @@ elements are moved from the right end of the range over the elements
 to eliminate. If $(D s = SwapStrategy.stable) (the default),
 elements are moved progressively to front such that their relative
 order is preserved. Returns the filtered range.
-
-Example:
-----
-int[] a = [ 1, 2, 3, 2, 3, 4, 5, 2, 5, 6 ];
-assert(remove!("a == 2")(a) == [ 1, 3, 3, 4, 5, 5, 6 ]);
-----
- */
+*/
 Range remove(alias pred, SwapStrategy s = SwapStrategy.stable, Range)
 (Range range)
 if (isBidirectionalRange!Range)
@@ -8342,6 +8192,13 @@ if (isBidirectionalRange!Range)
         }
     }
     return result;
+}
+
+///
+unittest
+{
+    int[] a = [ 1, 2, 3, 2, 3, 4, 5, 2, 5, 6 ];
+    assert(remove!("a == 2")(a) == [ 1, 3, 3, 4, 5, 5, 6 ]);
 }
 
 unittest
@@ -8447,42 +8304,6 @@ $(D pred(a) == pred(b)). If $(D ss == SwapStrategy.semistable), $(D
 partition) preserves the relative ordering of all elements $(D a), $(D
 b) in the left part of $(D r) for which $(D pred(a) == pred(b)).
 
-Example:
-
-----
-auto Arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-auto arr = Arr.dup;
-static bool even(int a) { return (a & 1) == 0; }
-// Partition arr such that even numbers come first
-auto r = partition!(even)(arr);
-// Now arr is separated in evens and odds.
-// Numbers may have become shuffled due to instability
-assert(r == arr[5 .. $]);
-assert(count!(even)(arr[0 .. 5]) == 5);
-assert(find!(even)(r).empty);
-
-// Can also specify the predicate as a string.
-// Use 'a' as the predicate argument name
-arr[] = Arr[];
-r = partition!(q{(a & 1) == 0})(arr);
-assert(r == arr[5 .. $]);
-
-// Now for a stable partition:
-arr[] = Arr[];
-r = partition!(q{(a & 1) == 0}, SwapStrategy.stable)(arr);
-// Now arr is [2 4 6 8 10 1 3 5 7 9], and r points to 1
-assert(arr == [2, 4, 6, 8, 10, 1, 3, 5, 7, 9] && r == arr[5 .. $]);
-
-// In case the predicate needs to hold its own state, use a delegate:
-arr[] = Arr[];
-int x = 3;
-// Put stuff greater than 3 on the left
-bool fun(int a) { return a > x; }
-r = partition!(fun, SwapStrategy.semistable)(arr);
-// Now arr is [4 5 6 7 8 9 10 2 3 1] and r points to 2
-assert(arr == [4, 5, 6, 7, 8, 9, 10, 2, 3, 1] && r == arr[7 .. $]);
-----
-
 See_Also:
     STL's $(WEB sgi.com/tech/stl/_partition.html, _partition)$(BR)
     STL's $(WEB sgi.com/tech/stl/stable_partition.html, stable_partition)
@@ -8566,56 +8387,58 @@ Range partition(alias predicate,
     }
 }
 
-unittest // partition
+///
+unittest
 {
     auto Arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     auto arr = Arr.dup;
     static bool even(int a) { return (a & 1) == 0; }
-// Partition a such that even numbers come first
-    auto p1 = partition!(even)(arr);
-// Now arr is separated in evens and odds.
-    assert(p1 == arr[5 .. $], text(p1));
-    assert(count!(even)(arr[0 .. $ - p1.length]) == p1.length);
-    assert(find!(even)(p1).empty);
-// Notice that numbers have become shuffled due to instability
+    // Partition arr such that even numbers come first
+    auto r = partition!(even)(arr);
+    // Now arr is separated in evens and odds.
+    // Numbers may have become shuffled due to instability
+    assert(r == arr[5 .. $]);
+    assert(count!(even)(arr[0 .. 5]) == 5);
+    assert(find!(even)(r).empty);
+
+    // Can also specify the predicate as a string.
+    // Use 'a' as the predicate argument name
     arr[] = Arr[];
-// Can also specify the predicate as a string.
-// Use 'a' as the predicate argument name
-    p1 = partition!(q{(a & 1) == 0})(arr);
-    assert(p1 == arr[5 .. $]);
-// Same result as above. Now for a stable partition:
+    r = partition!(q{(a & 1) == 0})(arr);
+    assert(r == arr[5 .. $]);
+
+    // Now for a stable partition:
     arr[] = Arr[];
-    p1 = partition!(q{(a & 1) == 0}, SwapStrategy.stable)(arr);
-// Now arr is [2 4 6 8 10 1 3 5 7 9], and p points to 1
-    assert(arr == [2, 4, 6, 8, 10, 1, 3, 5, 7, 9], text(arr));
-    assert(p1 == arr[5 .. $], text(p1));
-// In case the predicate needs to hold its own state, use a delegate:
+    r = partition!(q{(a & 1) == 0}, SwapStrategy.stable)(arr);
+    // Now arr is [2 4 6 8 10 1 3 5 7 9], and r points to 1
+    assert(arr == [2, 4, 6, 8, 10, 1, 3, 5, 7, 9] && r == arr[5 .. $]);
+
+    // In case the predicate needs to hold its own state, use a delegate:
     arr[] = Arr[];
     int x = 3;
-// Put stuff greater than 3 on the left
+    // Put stuff greater than 3 on the left
     bool fun(int a) { return a > x; }
-    p1 = partition!(fun, SwapStrategy.semistable)(arr);
-// Now arr is [4 5 6 7 8 9 10 2 3 1] and p points to 2
-    assert(arr == [4, 5, 6, 7, 8, 9, 10, 2, 3, 1] && p1 == arr[7 .. $]);
+    r = partition!(fun, SwapStrategy.semistable)(arr);
+    // Now arr is [4 5 6 7 8 9 10 2 3 1] and r points to 2
+    assert(arr == [4, 5, 6, 7, 8, 9, 10, 2, 3, 1] && r == arr[7 .. $]);
+}
+
+unittest
+{
+    static bool even(int a) { return (a & 1) == 0; }
 
     // test with random data
-    auto a = rndstuff!(int)();
-    partition!(even)(a);
-    assert(isPartitioned!(even)(a));
-    auto b = rndstuff!(string)();
-    partition!(`a.length < 5`)(b);
-    assert(isPartitioned!(`a.length < 5`)(b));
+    auto a = rndstuff!int();
+    partition!even(a);
+    assert(isPartitioned!even(a));
+    auto b = rndstuff!string();
+    partition!`a.length < 5`(b);
+    assert(isPartitioned!`a.length < 5`(b));
 }
 
 /**
 Returns $(D true) if $(D r) is partitioned according to predicate $(D
 pred).
-
-Example:
-----
-int[] r = [ 1, 3, 5, 7, 8, 2, 4, ];
-assert(isPartitioned!("a & 1")(r));
-----
  */
 bool isPartitioned(alias pred, Range)(Range r)
     if (isForwardRange!(Range))
@@ -8632,12 +8455,11 @@ bool isPartitioned(alias pred, Range)(Range r)
     return true;
 }
 
+///
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] r = [ 1, 3, 5, 7, 8, 2, 4, ];
-    assert(isPartitioned!("a & 1")(r));
+    assert(isPartitioned!"a & 1"(r));
 }
 
 // partition3
@@ -8649,16 +8471,6 @@ elements in $(D r) that are equal to $(D pivot). Finally, the third
 and rightmost range only contains elements in $(D r) that are greater
 than $(D pivot). The less-than test is defined by the binary function
 $(D less).
-
-Example:
-----
-auto a = [ 8, 3, 4, 1, 4, 7, 4 ];
-auto pieces = partition3(a, 4);
-assert(a == [ 1, 3, 4, 4, 4, 7, 8 ]);
-assert(pieces[0] == [ 1, 3 ]);
-assert(pieces[1] == [ 4, 4, 4 ]);
-assert(pieces[2] == [ 7, 8 ]);
-----
 
 BUGS: stable $(D partition3) has not been implemented yet.
  */
@@ -8713,28 +8525,24 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
             r[r.length - strictlyGreater .. r.length]);
 }
 
+///
 unittest
 {
     auto a = [ 8, 3, 4, 1, 4, 7, 4 ];
     auto pieces = partition3(a, 4);
-    assert(a == [ 1, 3, 4, 4, 4, 8, 7 ]);
     assert(pieces[0] == [ 1, 3 ]);
     assert(pieces[1] == [ 4, 4, 4 ]);
     assert(pieces[2] == [ 8, 7 ]);
+}
 
-    a = null;
-    pieces = partition3(a, 4);
-    assert(a.empty);
-    assert(pieces[0].empty);
-    assert(pieces[1].empty);
-    assert(pieces[2].empty);
-
-    a.length = uniform(0, 100);
+unittest
+{
+    auto a = new int[](uniform(0, 100));
     foreach (ref e; a)
     {
         e = uniform(0, 50);
     }
-    pieces = partition3(a, 25);
+    auto pieces = partition3(a, 25);
     assert(pieces[0].length + pieces[1].length + pieces[2].length == a.length);
     foreach (e; pieces[0])
     {
@@ -8760,20 +8568,9 @@ and all elements $(D e2) from $(D r[nth]) to $(D r[r.length]) satisfy
 $(D !less(e2, r[nth])). Effectively, it finds the nth smallest
 (according to $(D less)) elements in $(D r). Performs an expected
 $(BIGOH r.length) (if unstable) or $(BIGOH r.length * log(r.length))
-(if stable) evaluations of $(D less) and $(D swap). 
+(if stable) evaluations of $(D less) and $(D swap).
 
 If $(D n >= r.length), the algorithm has no effect.
-
-Examples:
-----
-int[] v = [ 25, 7, 9, 2, 0, 5, 21 ];
-auto n = 4;
-topN!(less)(v, n);
-assert(v[n] == 9);
-// Equivalent form:
-topN!("a < b")(v, n);
-assert(v[n] == 9);
-----
 
 See_Also:
     $(WEB sgi.com/tech/stl/nth_element.html, STL's nth_element)
@@ -8814,6 +8611,15 @@ void topN(alias less = "a < b",
             r = r[0 .. pivot];
         }
     }
+}
+
+///
+unittest
+{
+    int[] v = [ 25, 7, 9, 2, 0, 5, 21 ];
+    auto n = 4;
+    topN!"a < b"(v, n);
+    assert(v[n] == 9);
 }
 
 unittest
@@ -8902,7 +8708,7 @@ void topN(alias less = "a < b",
     }
 }
 
-/// Ditto
+///
 unittest
 {
     int[] a = [ 5, 7, 2, 6, 7 ];
@@ -8915,7 +8721,7 @@ unittest
 // sort
 /**
 Sorts a random-access range according to the predicate $(D less). Performs
-$(BIGOH r.length * log(r.length)) evaluations of $(D less). Stable sorting 
+$(BIGOH r.length * log(r.length)) evaluations of $(D less). Stable sorting
 requires $(D hasAssignableElements!Range) to be true.
 
 $(D sort) returns a $(XREF range, SortedRange) over the original range, which
@@ -8934,15 +8740,15 @@ imply $(D !less(a,c)). Note that the default predicate ($(D "a < b")) does not
 always satisfy these conditions for floating point types, because the expression
 will always be $(D false) when either $(D a) or $(D b) is NaN.
 
-Returns: The initial range wrapped as a $(D SortedRange) with the predicate 
+Returns: The initial range wrapped as a $(D SortedRange) with the predicate
 $(D binaryFun!less).
 
 Algorithms: $(WEB en.wikipedia.org/wiki/Introsort) is used for unstable sorting and
-$(WEB en.wikipedia.org/wiki/Timsort, Timsort) is used for stable sorting. 
-Each algorithm has benefits beyond stability. Introsort is generally faster but 
-Timsort may achieve greater speeds on data with low entropy or if predicate calls 
+$(WEB en.wikipedia.org/wiki/Timsort, Timsort) is used for stable sorting.
+Each algorithm has benefits beyond stability. Introsort is generally faster but
+Timsort may achieve greater speeds on data with low entropy or if predicate calls
 are expensive. Introsort performs no allocations whereas Timsort will perform one
-or more allocations per call. Both algorithms have $(BIGOH n log n) worst-case 
+or more allocations per call. Both algorithms have $(BIGOH n log n) worst-case
 time complexity.
 
 See_Also:
@@ -8950,25 +8756,6 @@ See_Also:
     $(XREF range, SortedRange)$(BR)
     $(XREF algorithm, SwapStrategy)$(BR)
     $(XREF functional, binaryFun)
-
-Example:
-----
-int[] array = [ 1, 2, 3, 4 ];
-// sort in descending order
-sort!("a > b")(array);
-assert(array == [ 4, 3, 2, 1 ]);
-// sort in ascending order
-sort(array);
-assert(array == [ 1, 2, 3, 4 ]);
-// sort with a delegate
-bool myComp(int x, int y) { return x > y; }
-sort!(myComp)(array);
-assert(array == [ 4, 3, 2, 1 ]);
-// Showcase stable sorting
-string[] words = [ "aBc", "a", "abc", "b", "ABC", "c" ];
-sort!("toUpper(a) < toUpper(b)", SwapStrategy.stable)(words);
-assert(words == [ "a", "aBc", "abc", "ABC", "b", "c" ]);
-----
 */
 
 SortedRange!(Range, less)
@@ -9006,6 +8793,26 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         static assert(false, "Invalid predicate passed to sort: "~less);
     }
     return assumeSorted!less(r);
+}
+
+///
+unittest
+{
+    int[] array = [ 1, 2, 3, 4 ];
+    // sort in descending order
+    sort!("a > b")(array);
+    assert(array == [ 4, 3, 2, 1 ]);
+    // sort in ascending order
+    sort(array);
+    assert(array == [ 1, 2, 3, 4 ]);
+    // sort with a delegate
+    bool myComp(int x, int y) { return x > y; }
+    sort!(myComp)(array);
+    assert(array == [ 4, 3, 2, 1 ]);
+    // Showcase stable sorting
+    string[] words = [ "aBc", "a", "abc", "b", "ABC", "c" ];
+    sort!("toUpper(a) < toUpper(b)", SwapStrategy.stable)(words);
+    assert(words == [ "a", "aBc", "abc", "ABC", "b", "c" ]);
 }
 
 unittest
@@ -9075,7 +8882,7 @@ unittest
 
         size_t[] arr;
         arr.length = 1024;
-        
+
         foreach(k; 0..arr.length) arr[k] = k;
         swapRanges(arr[0..$/2], arr[$/2..$]);
 
@@ -9105,15 +8912,6 @@ and sorts elements that have the same $(D id) by $(D date)
 descending. Such a call is equivalent to $(D sort!"a.id != b.id ? a.id
 < b.id : a.date > b.date"(r)), but $(D multiSort) is faster because it
 does fewer comparisons (in addition to being more convenient).
-
-Example:
-----
-static struct Point { int x, y; }
-auto pts1 = [ Point(0, 0), Point(5, 5), Point(0, 1), Point(0, 2) ];
-auto pts2 = [ Point(0, 0), Point(0, 1), Point(0, 2), Point(5, 5) ];
-multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts1);
-assert(pts1 == pts2);
-----
  */
 template multiSort(less...) //if (less.length > 1)
 {
@@ -9157,6 +8955,16 @@ template multiSort(less...) //if (less.length > 1)
             sort!(lessFun, ss)(r);
         }
     }
+}
+
+///
+unittest
+{
+    static struct Point { int x, y; }
+    auto pts1 = [ Point(0, 0), Point(5, 5), Point(0, 1), Point(0, 2) ];
+    auto pts2 = [ Point(0, 0), Point(0, 1), Point(0, 2), Point(5, 5) ];
+    multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts1);
+    assert(pts1 == pts2);
 }
 
 unittest
@@ -10168,13 +9976,6 @@ the range $(D r[mid .. r.length]) in no particular order. Performs
 $(BIGOH r.length * log(mid)) evaluations of $(D pred). The
 implementation simply calls $(D topN!(less, ss)(r, n)) and then $(D
 sort!(less, ss)(r[0 .. n])).
-
-Example:
-----
-int[] a = [ 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 ];
-partialSort(a, 5);
-assert(a[0 .. 5] == [ 0, 1, 2, 3, 4 ]);
-----
 */
 void partialSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
     Range)(Range r, size_t n)
@@ -10184,10 +9985,9 @@ void partialSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
     sort!(less, ss)(r[0 .. n]);
 }
 
+///
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 ];
     partialSort(a, 5);
     assert(a[0 .. 5] == [ 0, 1, 2, 3, 4 ]);
@@ -10202,15 +10002,6 @@ exact strategy chosen depends on the relative sizes of $(D lhs) and
 $(D rhs).  Performs $(BIGOH lhs.length + rhs.length * log(rhs.length))
 (best case) to $(BIGOH (lhs.length + rhs.length) * log(lhs.length +
 rhs.length)) (worst-case) evaluations of $(D swap).
-
-Example:
-----
-int[] a = [ 1, 2, 3 ];
-int[] b = [ 4, 0, 6, 5 ];
-completeSort(assumeSorted(a), b);
-assert(a == [ 0, 1, 2 ]);
-assert(b == [ 3, 4, 5, 6 ]);
-----
 */
 void completeSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         Range1, Range2)(SortedRange!(Range1, less) lhs, Range2 rhs)
@@ -10228,16 +10019,12 @@ if (hasLength!(Range2) && hasSlicing!(Range2))
     }
 }
 
+///
 unittest
 {
-    debug(std_algorithm) scope(success)
-       writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 3 ];
     int[] b = [ 4, 0, 6, 5 ];
-    // @@@BUG@@@ The call below should work
-    // completeSort(assumeSorted(a), b);
-    completeSort!("a < b", SwapStrategy.unstable, int[], int[])(
-        assumeSorted(a), b);
+    completeSort(assumeSorted(a), b);
     assert(a == [ 0, 1, 2 ]);
     assert(b == [ 3, 4, 5, 6 ]);
 }
@@ -10247,16 +10034,6 @@ unittest
 Checks whether a forward range is sorted according to the comparison
 operation $(D less). Performs $(BIGOH r.length) evaluations of $(D
 less).
-
-Example:
-----
-int[] arr = [4, 3, 2, 1];
-assert(!isSorted(arr));
-sort(arr);
-assert(isSorted(arr));
-sort!("a > b")(arr);
-assert(isSorted!("a > b")(arr));
-----
 */
 bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
 {
@@ -10297,6 +10074,17 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
         }
     }
     return true;
+}
+
+///
+unittest
+{
+    int[] arr = [4, 3, 2, 1];
+    assert(!isSorted(arr));
+    sort(arr);
+    assert(isSorted(arr));
+    sort!("a > b")(arr);
+    assert(isSorted!("a > b")(arr));
 }
 
 unittest
@@ -10349,21 +10137,6 @@ relation involves not only $(D index) but also $(D r).
 
 Throws: If the second argument's length is less than that of the range
 indexed, an exception is thrown.
-
-Example:
-----
-immutable(int[]) arr = [ 2, 3, 1, 5, 0 ];
-// index using pointers
-auto index1 = new immutable(int)*[arr.length];
-makeIndex!("a < b")(arr, index1);
-assert(isSorted!("*a < *b")(index1));
-// index using offsets
-auto index2 = new size_t[arr.length];
-makeIndex!("a < b")(arr, index2);
-assert(isSorted!
-    ((size_t a, size_t b){ return arr[a] < arr[b];})
-    (index2));
-----
 */
 SortedRange!(RangeIndex, (a, b) => binaryFun!less(*a, *b))
 makeIndex(
@@ -10414,6 +10187,22 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
     // sort the index
     sort!((a, b) => binaryFun!less(r[cast(size_t) a], r[cast(size_t) b]), ss)
       (index);
+}
+
+///
+unittest
+{
+    immutable(int[]) arr = [ 2, 3, 1, 5, 0 ];
+    // index using pointers
+    auto index1 = new immutable(int)*[arr.length];
+    makeIndex!("a < b")(arr, index1);
+    assert(isSorted!("*a < *b")(index1));
+    // index using offsets
+    auto index2 = new size_t[arr.length];
+    makeIndex!("a < b")(arr, index2);
+    assert(isSorted!
+        ((size_t a, size_t b){ return arr[a] < arr[b];})
+        (index2));
 }
 
 unittest
@@ -10878,12 +10667,6 @@ unittest
 /**
 Returns $(D true) if and only if all values in $(D range) satisfy the
 predicate $(D pred).  Performs $(BIGOH r.length) evaluations of $(D pred).
-
-Examples:
----
-assert(all!"a & 1"([1, 3, 5, 7, 9]));
-assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
----
 */
 bool all(alias pred, R)(R range)
 if (isInputRange!R && is(typeof(unaryFun!pred(range.front))))
@@ -10891,10 +10674,17 @@ if (isInputRange!R && is(typeof(unaryFun!pred(range.front))))
     return find!(not!(unaryFun!pred))(range).empty;
 }
 
+///
 unittest
 {
     assert(all!"a & 1"([1, 3, 5, 7, 9]));
     assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
+    int x = 1;
+    assert(all!(a => a > x)([2, 3]));
+}
+
+unittest
+{
     int x = 1;
     assert(all!(a => a > x)([2, 3]));
 }
@@ -10905,14 +10695,6 @@ random-access range $(D target), where $(D n =
 target.length). Elements of $(D source) are not touched. If $(D
 sorted) is $(D true), the target is sorted. Otherwise, the target
 respects the $(WEB en.wikipedia.org/wiki/Binary_heap, heap property).
-
-Example:
-----
-int[] a = [ 10, 16, 2, 3, 1, 5, 0 ];
-int[] b = new int[3];
-topNCopy(a, b, true);
-assert(b == [ 0, 1, 2 ]);
-----
  */
 TRange topNCopy(alias less = "a < b", SRange, TRange)
     (SRange source, TRange target, SortOutput sorted = SortOutput.no)
@@ -10930,10 +10712,9 @@ TRange topNCopy(alias less = "a < b", SRange, TRange)
     return result;
 }
 
+///
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 10, 16, 2, 3, 1, 5, 0 ];
     int[] b = new int[3];
     topNCopy(a, b, SortOutput.yes);
@@ -10960,17 +10741,6 @@ are assumed to be sorted by $(D less). Elements in the output are not
 unique; the length of the output is the sum of the lengths of the
 inputs. (The $(D length) member is offered if all ranges also have
 length.) The element types of all ranges must have a common type.
-
-Example:
-----
-int[] a = [ 1, 2, 4, 5, 7, 9 ];
-int[] b = [ 0, 1, 2, 4, 7, 8 ];
-int[] c = [ 10 ];
-assert(setUnion(a, b).length == a.length + b.length);
-assert(equal(setUnion(a, b), [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9][]));
-assert(equal(setUnion(a, c, b),
-    [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9, 10][]));
-----
  */
 struct SetUnion(alias less = "a < b", Rs...) if (allSatisfy!(isInputRange, Rs))
 {
@@ -11087,14 +10857,13 @@ SetUnion!(less, Rs) setUnion(alias less = "a < b", Rs...)
     return typeof(return)(rs);
 }
 
+///
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
     int[] c = [ 10 ];
-    //foreach (e; setUnion(a, b)) writeln(e);
+
     assert(setUnion(a, b).length == a.length + b.length);
     assert(equal(setUnion(a, b), [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9][]));
     assert(equal(setUnion(a, c, b),
@@ -11104,19 +10873,9 @@ unittest
 }
 
 /**
-Lazily computes the intersection of two or more input ranges $(D
+Lazily computes the intersection of two input ranges $(D
 rs). The ranges are assumed to be sorted by $(D less). The element
-types of all ranges must have a common type.
-
-Example:
-----
-int[] a = [ 1, 2, 4, 5, 7, 9 ];
-int[] b = [ 0, 1, 2, 4, 7, 8 ];
-int[] c = [ 0, 1, 4, 5, 7, 8 ];
-assert(equal(setIntersection(a, a), a));
-assert(equal(setIntersection(a, b), [1, 2, 4, 7][]));
-assert(equal(setIntersection(a, b, c), [1, 4, 7][]));
-----
+types of both ranges must have a common type.
  */
 struct SetIntersection(alias less = "a < b", Rs...)
 if (allSatisfy!(isInputRange, Rs))
@@ -11202,38 +10961,32 @@ if (allSatisfy!(isInputRange, Rs))
     return typeof(return)(ranges);
 }
 
+/+ setIntersection doesn't yet support more than two inputs
+///
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
     int[] c = [ 0, 1, 4, 5, 7, 8 ];
-    //foreach (e; setIntersection(a, b, c)) writeln(e);
-    assert(equal(setIntersection(a, b), [1, 2, 4, 7][]));
     assert(equal(setIntersection(a, a), a));
+    assert(equal(setIntersection(a, b), [1, 2, 4, 7][]));
+    assert(equal(setIntersection(a, b, c), [1, 4, 7][]));
+}
++/
 
-    static assert(isForwardRange!(typeof(setIntersection(a, a))));
-    // assert(equal(setIntersection(a, b, b, a), [1, 2, 4, 7][]));
-    // assert(equal(setIntersection(a, b, c), [1, 4, 7][]));
-    // assert(equal(setIntersection(a, c, b), [1, 4, 7][]));
-    // assert(equal(setIntersection(b, a, c), [1, 4, 7][]));
-    // assert(equal(setIntersection(b, c, a), [1, 4, 7][]));
-    // assert(equal(setIntersection(c, a, b), [1, 4, 7][]));
-    // assert(equal(setIntersection(c, b, a), [1, 4, 7][]));
+///
+unittest
+{
+    int[] a = [ 1, 2, 4, 5, 7, 9 ];
+    int[] b = [ 0, 1, 2, 4, 7, 8 ];
+    assert(equal(setIntersection(a, a), a));
+    assert(equal(setIntersection(a, b), [1, 2, 4, 7][]));
 }
 
 /**
 Lazily computes the difference of $(D r1) and $(D r2). The two ranges
 are assumed to be sorted by $(D less). The element types of the two
 ranges must have a common type.
-
-Example:
-----
-int[] a = [ 1, 2, 4, 5, 7, 9 ];
-int[] b = [ 0, 1, 2, 4, 7, 8 ];
-assert(equal(setDifference(a, b), [5, 9][]));
-----
  */
 struct SetDifference(alias less = "a < b", R1, R2)
     if (isInputRange!(R1) && isInputRange!(R2))
@@ -11303,13 +11056,11 @@ SetDifference!(less, R1, R2) setDifference(alias less = "a < b", R1, R2)
     return typeof(return)(r1, r2);
 }
 
+///
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
-    //foreach (e; setDifference(a, b)) writeln(e);
     assert(equal(setDifference(a, b), [5, 9][]));
     static assert(isForwardRange!(typeof(setDifference(a, b))));
 }
@@ -11320,13 +11071,6 @@ i.e. the elements that are present in exactly one of $(D r1) and $(D
 r2). The two ranges are assumed to be sorted by $(D less), and the
 output is also sorted by $(D less). The element types of the two
 ranges must have a common type.
-
-Example:
-----
-int[] a = [ 1, 2, 4, 5, 7, 9 ];
-int[] b = [ 0, 1, 2, 4, 7, 8 ];
-assert(equal(setSymmetricDifference(a, b), [0, 5, 8, 9][]));
-----
  */
 struct SetSymmetricDifference(alias less = "a < b", R1, R2)
     if (isInputRange!(R1) && isInputRange!(R2))
@@ -11416,20 +11160,16 @@ setSymmetricDifference(alias less = "a < b", R1, R2)
     return typeof(return)(r1, r2);
 }
 
+///
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
-    //foreach (e; setSymmetricDifference(a, b)) writeln(e);
     assert(equal(setSymmetricDifference(a, b), [0, 5, 8, 9][]));
-
     static assert(isForwardRange!(typeof(setSymmetricDifference(a, b))));
 }
 
 // Internal random array generators
-
 version(unittest)
 {
     private enum size_t maxArraySize = 50;
@@ -11543,22 +11283,6 @@ of $(D ror) and discretionarily swaps and advances elements of it. If
 you want $(D ror) to preserve its contents after the call, you may
 want to pass a duplicate to $(D NWayUnion) (and perhaps cache the
 duplicate in between calls).
-
-Example:
-----
-double[][] a =
-[
-    [ 1, 4, 7, 8 ],
-    [ 1, 7 ],
-    [ 1, 7, 8],
-    [ 4 ],
-    [ 7 ],
-];
-auto witness = [
-    1, 1, 1, 4, 4, 7, 7, 7, 7, 8, 8
-];
-assert(equal(nWayUnion(a), witness[]));
-----
  */
 struct NWayUnion(alias less, RangeOfRanges)
 {
@@ -11614,10 +11338,9 @@ NWayUnion!(less, RangeOfRanges) nWayUnion
     return typeof(return)(ror);
 }
 
+///
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     double[][] a =
     [
         [ 1, 4, 7, 8 ],
@@ -11629,8 +11352,7 @@ unittest
     auto witness = [
         1, 1, 1, 4, 4, 7, 7, 7, 7, 8, 8
     ];
-    //foreach (e; nWayUnion(a)) writeln(e);
-    assert(equal(nWayUnion(a), witness[]));
+    assert(equal(nWayUnion(a), witness));
 }
 
 // largestPartialIntersection
@@ -11832,34 +11554,6 @@ while (nextPermutation(a))
  * Returns: false if the range was lexicographically the greatest, in which
  * case the range is reversed back to the lexicographically smallest
  * permutation; otherwise returns true.
- *
- * Example:
-----
-// Step through all permutations of a sorted array in lexicographic order
-int[] a = [1,2,3];
-assert(nextPermutation(a) == true);
-assert(a == [1,3,2]);
-assert(nextPermutation(a) == true);
-assert(a == [2,1,3]);
-assert(nextPermutation(a) == true);
-assert(a == [2,3,1]);
-assert(nextPermutation(a) == true);
-assert(a == [3,1,2]);
-assert(nextPermutation(a) == true);
-assert(a == [3,2,1]);
-assert(nextPermutation(a) == false);
-assert(a == [1,2,3]);
-----
-----
-// Step through permutations of an array containing duplicate elements:
-int[] a = [1,1,2];
-assert(nextPermutation(a) == true);
-assert(a == [1,2,1]);
-assert(nextPermutation(a) == true);
-assert(a == [2,1,1]);
-assert(nextPermutation(a) == false);
-assert(a == [1,1,2]);
-----
  */
 bool nextPermutation(alias less="a<b", BidirectionalRange)
                     (ref BidirectionalRange range)
@@ -11898,20 +11592,10 @@ bool nextPermutation(alias less="a<b", BidirectionalRange)
     return true;
 }
 
+///
 unittest
 {
-    // Boundary cases: arrays of 0 or 1 element.
-    int[] a1 = [];
-    assert(!nextPermutation(a1));
-    assert(a1 == []);
-
-    int[] a2 = [1];
-    assert(!nextPermutation(a2));
-    assert(a2 == [1]);
-}
-
-unittest
-{
+    // Step through all permutations of a sorted array in lexicographic order
     int[] a = [1,2,3];
     assert(nextPermutation(a) == true);
     assert(a == [1,3,2]);
@@ -11925,6 +11609,31 @@ unittest
     assert(a == [3,2,1]);
     assert(nextPermutation(a) == false);
     assert(a == [1,2,3]);
+}
+
+///
+unittest
+{
+    // Step through permutations of an array containing duplicate elements:
+    int[] a = [1,1,2];
+    assert(nextPermutation(a) == true);
+    assert(a == [1,2,1]);
+    assert(nextPermutation(a) == true);
+    assert(a == [2,1,1]);
+    assert(nextPermutation(a) == false);
+    assert(a == [1,1,2]);
+}
+
+unittest
+{
+    // Boundary cases: arrays of 0 or 1 element.
+    int[] a1 = [];
+    assert(!nextPermutation(a1));
+    assert(a1 == []);
+
+    int[] a2 = [1];
+    assert(!nextPermutation(a2));
+    assert(a2 == [1]);
 }
 
 unittest
@@ -12006,18 +11715,6 @@ unittest
 
 unittest
 {
-    // Test array with duplicate elements
-    int[] a = [1,1,2];
-    assert(nextPermutation(a) == true);
-    assert(a == [1,2,1]);
-    assert(nextPermutation(a) == true);
-    assert(a == [2,1,1]);
-    assert(nextPermutation(a) == false);
-    assert(a == [1,1,2]);
-}
-
-unittest
-{
     // Test with non-default sorting order
     int[] a = [3,2,1];
     assert(nextPermutation!"a > b"(a) == true);
@@ -12093,53 +11790,6 @@ while (nextEvenPermutation(a))
  * Returns: false if the range was lexicographically the greatest, in which
  * case the range is reversed back to the lexicographically smallest
  * permutation; otherwise returns true.
- *
- * Examples:
-----
-// Step through even permutations of a sorted array in lexicographic order
-int[] a = [1,2,3];
-assert(nextEvenPermutation(a) == true);
-assert(a == [2,3,1]);
-assert(nextEvenPermutation(a) == true);
-assert(a == [3,1,2]);
-assert(nextEvenPermutation(a) == false);
-assert(a == [1,2,3]);
-----
- * Even permutations are useful for generating coordinates of certain geometric
- * shapes. Here's a non-trivial example:
-----
-// Print the 60 vertices of a uniform truncated icosahedron (soccer ball)
-import std.math, std.stdio;
-enum real Phi = (1.0 + sqrt(5.0)) / 2.0;    // Golden ratio
-real[][] seeds = [
-    [0.0, 1.0, 3.0*Phi],
-    [1.0, 2.0+Phi, 2.0*Phi],
-    [Phi, 2.0, Phi^^3]
-];
-foreach (seed; seeds)
-{
-    // Loop over even permutations of each seed
-    do
-    {
-        // Loop over all sign changes of each permutation
-        size_t i;
-        do
-        {
-            // Generate all possible sign changes
-            for (i=0; i < seed.length; i++)
-            {
-                if (seed[i] != 0.0)
-                {
-                    seed[i] = -seed[i];
-                    if (seed[i] < 0.0)
-                        break;
-                }
-            }
-            writeln(seed);
-        } while (i < seed.length);
-    } while (nextEvenPermutation(seed));
-}
-----
  */
 bool nextEvenPermutation(alias less="a<b", BidirectionalRange)
                         (ref BidirectionalRange range)
@@ -12192,19 +11842,21 @@ bool nextEvenPermutation(alias less="a<b", BidirectionalRange)
     return ret;
 }
 
+///
 unittest
 {
-    auto a2 = [ 1, 2, 3 ];
+    // Step through even permutations of a sorted array in lexicographic order
+    int[] a = [1,2,3];
+    assert(nextEvenPermutation(a) == true);
+    assert(a == [2,3,1]);
+    assert(nextEvenPermutation(a) == true);
+    assert(a == [3,1,2]);
+    assert(nextEvenPermutation(a) == false);
+    assert(a == [1,2,3]);
+}
 
-    assert(nextEvenPermutation(a2));
-    assert(equal(a2, [ 2, 3, 1 ]));
-
-    assert(nextEvenPermutation(a2));
-    assert(equal(a2, [ 3, 1, 2 ]));
-
-    assert(!nextEvenPermutation(a2));
-    assert(equal(a2, [ 1, 2, 3 ]));
-
+unittest
+{
     auto a3 = [ 1, 2, 3, 4 ];
     int count = 1;
     while (nextEvenPermutation(a3)) count++;
@@ -12236,9 +11888,13 @@ unittest
     assert(b == [ 1, 3, 2 ]);
 }
 
+/**
+Even permutations are useful for generating coordinates of certain geometric
+shapes. Here's a non-trivial example:
+*/
 unittest
 {
-    // Verify correctness of ddoc example.
+    // Print the 60 vertices of a uniform truncated icosahedron (soccer ball)
     enum real Phi = (1.0 + sqrt(5.0)) / 2.0;    // Golden ratio
     real[][] seeds = [
         [0.0, 1.0, 3.0*Phi],
@@ -12289,49 +11945,6 @@ If both ranges are infinite, then both must be forward ranges.
 
 When there are more than two ranges, the above conditions apply to each
 adjacent pair of ranges.
-
-Examples:
----
-auto N = sequence!"n"(0);         // the range of natural numbers
-auto N2 = cartesianProduct(N, N); // the range of all pairs of natural numbers
-
-// Various arbitrary number pairs can be found in the range in finite time.
-assert(canFind(N2, tuple(0, 0)));
-assert(canFind(N2, tuple(123, 321)));
-assert(canFind(N2, tuple(11, 35)));
-assert(canFind(N2, tuple(279, 172)));
----
-
----
-auto B = [ 1, 2, 3 ];
-auto C = [ 4, 5, 6 ];
-auto BC = cartesianProduct(B, C);
-
-foreach (n; [[1, 4], [2, 4], [3, 4], [1, 5], [2, 5], [3, 5], [1, 6],
-             [2, 6], [3, 6]])
-{
-    assert(canFind(BC, tuple(n[0], n[1])));
-}
----
-
----
-auto A = [ 1, 2, 3 ];
-auto B = [ 'a', 'b', 'c' ];
-auto C = [ "x", "y", "z" ];
-auto ABC = cartesianProduct(A, B, C);
-
-assert(ABC.equal([
-    tuple(1, 'a', "x"), tuple(2, 'a', "x"), tuple(3, 'a', "x"),
-    tuple(1, 'b', "x"), tuple(2, 'b', "x"), tuple(3, 'b', "x"),
-    tuple(1, 'c', "x"), tuple(2, 'c', "x"), tuple(3, 'c', "x"),
-    tuple(1, 'a', "y"), tuple(2, 'a', "y"), tuple(3, 'a', "y"),
-    tuple(1, 'b', "y"), tuple(2, 'b', "y"), tuple(3, 'b', "y"),
-    tuple(1, 'c', "y"), tuple(2, 'c', "y"), tuple(3, 'c', "y"),
-    tuple(1, 'a', "z"), tuple(2, 'a', "z"), tuple(3, 'a', "z"),
-    tuple(1, 'b', "z"), tuple(2, 'b', "z"), tuple(3, 'b', "z"),
-    tuple(1, 'c', "z"), tuple(2, 'c', "z"), tuple(3, 'c', "z")
-]));
----
 */
 auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
 {
@@ -12366,6 +11979,33 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
     }
     else static assert(0, "cartesianProduct involving finite ranges must "~
                           "have at least one finite forward range");
+}
+
+///
+unittest
+{
+    auto N = sequence!"n"(0);         // the range of natural numbers
+    auto N2 = cartesianProduct(N, N); // the range of all pairs of natural numbers
+
+    // Various arbitrary number pairs can be found in the range in finite time.
+    assert(canFind(N2, tuple(0, 0)));
+    assert(canFind(N2, tuple(123, 321)));
+    assert(canFind(N2, tuple(11, 35)));
+    assert(canFind(N2, tuple(279, 172)));
+}
+
+///
+unittest
+{
+    auto B = [ 1, 2, 3 ];
+    auto C = [ 4, 5, 6 ];
+    auto BC = cartesianProduct(B, C);
+
+    foreach (n; [[1, 4], [2, 4], [3, 4], [1, 5], [2, 5], [3, 5], [1, 6],
+                 [2, 6], [3, 6]])
+    {
+        assert(canFind(BC, tuple(n[0], n[1])));
+    }
 }
 
 unittest
@@ -12578,6 +12218,7 @@ unittest
     assert(canFind(N4, tuple(10, 31, 7, 12)));
 }
 
+///
 unittest
 {
     auto A = [ 1, 2, 3 ];
