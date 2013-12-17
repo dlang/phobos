@@ -261,7 +261,7 @@ unittest : $(addsuffix .d,$(addprefix unittest/,$(D_MODULES)))
 
 depend: $(addprefix $(ROOT)/unittest/,$(addsuffix .deps,$(D_MODULES)))
 
-include $(addprefix $(ROOT)/unittest/,$(addsuffix .deps,$(D_MODULES)))
+-include $(addprefix $(ROOT)/unittest/,$(addsuffix .deps,$(D_MODULES)))
 
 ################################################################################
 # Patterns begin here
@@ -270,7 +270,7 @@ include $(addprefix $(ROOT)/unittest/,$(addsuffix .deps,$(D_MODULES)))
 $(ROOT)/unittest/%.deps:
 	@mkdir -p $(dir $@)
 	echo $(ROOT)/unittest/$*.o: \
-		`$(DMD) $(DFLAGS) -v -c -o- $*.d | grep '^import ' | \
+		`$(DMD) $(DFLAGS) -v -c -o- -unittest $*.d | grep '^import ' | \
 	    sed 's/.*(\(.*\))/\1/'` >$@
 
 $(ROOT)/%$(DOTOBJ) : %.c
