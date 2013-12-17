@@ -269,9 +269,10 @@ depend: $(addprefix $(ROOT)/unittest/,$(addsuffix .deps,$(D_MODULES)))
 
 $(ROOT)/unittest/%.deps:
 	@mkdir -p $(dir $@)
-	echo $(ROOT)/unittest/$*.o: \
-		`$(DMD) $(DFLAGS) -v -c -o- -unittest $*.d | grep '^import ' | \
-	    sed 's/.*(\(.*\))/\1/'` >$@
+	$(DMD) $(DFLAGS) -unittest -c -o- -deps=$@.tmp1 $*
+	echo '$@: ' `sed 's|.*(\(.*\)).*|\1|' $@.tmp1 | sort | uniq` >$@.tmp
+	mv $@.tmp $@
+	rm $@.tmp1
 
 $(ROOT)/%$(DOTOBJ) : %.c
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
