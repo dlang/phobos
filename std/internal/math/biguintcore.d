@@ -639,6 +639,26 @@ public:
         divModInternal(result, rem, x.data, y.data);
         return BigUint(removeLeadingZeros(assumeUnique(rem)));
     }
+    
+    // return x op y
+    static BigUint bitwiseOp(string op)(BigUint x, BigUint y, bool xSign, bool ySign, ref bool resultSign) pure if (op == "|" || op == "^" || op == "&")
+    {
+        auto d1 = includeSign(x.data, y.uintLength, xSign);
+        auto d2 = includeSign(y.data, x.uintLength, ySign);
+        
+        foreach (i; 0..d1.length)
+        {
+            mixin("d1[i] " ~ op ~ "= d2[i];");
+        }
+        
+        mixin("resultSign = xSign " ~ op ~ " ySign;");
+        
+        if (resultSign) {
+            twosComplement(d1, d1);
+        }
+        
+        return BigUint(removeLeadingZeros(assumeUnique(d1)));
+    }
 
     /**
      * Return a BigUint which is x raised to the power of y.
@@ -947,6 +967,41 @@ unittest
 
 
 private:
+void twosComplement(const(BigDigit) [] x, BigDigit[] result) pure
+{
+    foreach (i; 0..x.length)
+    {
+        result[i] = ~x[i];
+    }
+    result[x.length..$] = BigDigit.max;
+    
+    bool sgn = false;
+    
+    foreach (i; 0..result.length) {
+        if (result[i] == BigDigit.max) {
+            result[i] = 0;
+        } else {
+            result[i] += 1;
+            break;
+        }
+    }
+}
+
+// Encode BigInt as BigDigit array (sign and 2's complement)
+BigDigit[] includeSign(const(BigDigit) [] x, size_t minSize, bool sign) pure
+{
+    size_t length = (x.length > minSize) ? x.length : minSize;
+    BigDigit [] result = new BigDigit[length];
+    if (sign)
+    {
+        twosComplement(x, result);
+    }
+    else
+    {
+        result[0..x.length] = x;
+    }
+    return result;
+}
 
 // works for any type
 T intpow(T)(T x, ulong n) pure
@@ -2244,7 +2299,6 @@ version(unittest)
 
 unittest
 {
-
     void printBiguint(const uint [] data)
     {
         char [] buff = biguintToHex(new char[data.length*9], data, '_');
