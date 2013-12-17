@@ -270,7 +270,7 @@ depend: $(addprefix $(ROOT)/unittest/,$(addsuffix .deps,$(D_MODULES)))
 $(ROOT)/unittest/%.deps:
 	@mkdir -p $(dir $@)
 	$(DMD) $(DFLAGS) -unittest -c -o- -deps=$@.tmp1 $*
-	echo '$@: ' `sed 's|.*(\(.*\)).*|\1|' $@.tmp1 | sort | uniq` >$@.tmp
+	echo '$*$(DOTOBJ): ' `sed 's|.*(\(.*\)).*|\1|' $@.tmp1 | sort | uniq` >$@.tmp
 	mv $@.tmp $@
 	rm $@.tmp1
 
