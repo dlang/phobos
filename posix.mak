@@ -120,7 +120,7 @@ endif
 # Set CFLAGS
 CFLAGS=
 ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
-	CFLAGS += -m$(MODEL) $(PIC)
+	CFLAGS += -m$(MODEL) -fPIC
 	ifeq ($(BUILD),debug)
 		CFLAGS += -g
 	else
