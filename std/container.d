@@ -2582,7 +2582,7 @@ if (!is(Unqual!T == bool))
                  */
                 immutable oldLength = length;
                 auto newPayload =
-                    enforce((cast(T*) malloc(sz))[0 .. oldLength]);
+                    enforce(cast(T*) malloc(sz))[0 .. oldLength];
                 // copy old data over to new array
                 memcpy(newPayload.ptr, _payload.ptr, T.sizeof * oldLength);
                 // Zero out unused capacity to prevent gc from seeing
