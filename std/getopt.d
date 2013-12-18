@@ -456,15 +456,6 @@ void handleOption(R)(string option, R receiver, ref string[] args,
             args = args[0 .. i] ~ expanded ~ args[i + 1 .. $];
             continue;
         }
-        // One-letter options used with a dash may be "stuck" to their value,
-        // i.e. '-Dasd' is the same as '-D asd'. Do that at this level. If we
-        // don't, '-Da=b' will be misinterpreted as '-Da b'
-        if (a.length > 2 && a[0] == optionChar && a[1] != optionChar)
-        {
-            args = args[0 .. i] ~ args[i][0 .. 2] ~ args[i][2 .. $]
-                ~ args[i + 1 .. $];
-            continue;
-        }
 
         string val;
         if (!optMatch(a, option, val, cfg))
@@ -610,7 +601,7 @@ private bool optMatch(string arg, string optPattern, ref string value,
     // yank the second '-' if present
     if (isLong) arg = arg[1 .. $];
     immutable eqPos = std.string.indexOf(arg, assignChar);
-    if (eqPos >= 0)
+    if (isLong && eqPos >= 0)
     {
         // argument looks like --opt=value
         value = arg[eqPos + 1 .. $];
@@ -875,4 +866,9 @@ unittest
     args = ["prog", "--addr=-0x12"];
     getopt(args, config.bundling, "a|addr", &a);
     assert(a == "-0x12");
+    // From https://d.puremagic.com/issues/show_bug.cgi?id=11764
+    args = ["main", "-test"];
+    bool opt;
+    args.getopt(config.passThrough, "opt", &opt);
+    assert(args == ["main", "-test"]);
 }
