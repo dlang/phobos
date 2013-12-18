@@ -267,13 +267,6 @@ depend: $(addprefix $(ROOT)/unittest/,$(addsuffix .deps,$(D_MODULES)))
 # Patterns begin here
 ################################################################################
 
-$(ROOT)/unittest/%.deps:
-	@mkdir -p $(dir $@)
-	$(DMD) $(DFLAGS) -unittest -c -o- -deps=$@.tmp1 $*
-	echo '$*$(DOTOBJ): ' `sed 's|.*(\(.*\)).*|\1|' $@.tmp1 | sort | uniq` >$@.tmp
-	mv $@.tmp $@
-	rm $@.tmp1
-
 $(ROOT)/%$(DOTOBJ) : %.c
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
 	$(CC) -c $(CFLAGS) $< -o$@
@@ -308,7 +301,12 @@ $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 
 UT_D_OBJS:=$(addprefix $(ROOT)/unittest/,$(addsuffix .o,$(D_MODULES)))
 $(UT_D_OBJS): $(ROOT)/unittest/%.o: %.d
-	$(DMD) $(DFLAGS) -unittest -c -of$@ $*.d
+	@mkdir -p $(dir $@)
+	$(DMD) $(DFLAGS) -unittest -c -of$@ -deps=$(@:.o=.deps.tmp) $<
+	@echo $@: `sed 's|.*(\(.*\)).*|\1|' $(@:.o=.deps.tmp) | sort | uniq` \
+	   >$(@:.o=.deps)
+	@rm $(@:.o=.deps.tmp)
+#	$(DMD) $(DFLAGS) -unittest -c -of$@ $*.d
 
 ifneq (linux,$(OS))
 
@@ -337,8 +335,8 @@ unittest/%.d : $(ROOT)/unittest/test_runner
 # Disable implicit rule
 %$(DOTEXE) : %$(DOTOBJ)
 
-$(ROOT)/.directory :
-	mkdir -p $(ROOT) || exists $(ROOT)
+%/.directory :
+	mkdir -p $* || exists $*
 	touch $@
 
 clean :
