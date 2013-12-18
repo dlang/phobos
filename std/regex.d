@@ -6134,7 +6134,7 @@ private R replaceAllWith(alias output,
     input = string to search
     re = compiled regular expression to use
     format = format string to generate replacements from, 
-    see $(S_LINK Replace format string).
+    see $(S_LINK Replace format string, the format string).
 
     Returns:
     A string of the same type with the first match (if any) replaced. 
@@ -6246,7 +6246,7 @@ public @trusted void replaceFirstInto(alias fun, Sink, R, RegEx)
     input = string to search
     re = compiled regular expression to use
     format = format string to generate replacements from, 
-    see $(S_LINK Replace format string).
+    see $(S_LINK Replace format string, the format string).
 
     Returns:
     A string of the same type as $(D input) with the all 
