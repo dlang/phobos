@@ -10587,17 +10587,31 @@ unittest
 +/
 
 // canFind
-/**
-Returns $(D true) if and only if $(D value) can be found in $(D
-range). Performs $(BIGOH needle.length) evaluations of $(D pred).
- */
-bool canFind(alias pred = "a == b", R, E)(R haystack, E needle)
-if (is(typeof(find!pred(haystack, needle))))
-{
-    return !find!pred(haystack, needle).empty;
-}
-
 /++
+Convenience function. Like find, but only returns whether or not the search
+was succesful.
+ +/
+template canFind(alias pred="a == b")
+{
+    //Explictly Undocumented. Do not use. It may be deprecated in the future.
+    //Use any instead.
+    bool canFind(Range)(Range haystack)
+    if (is(typeof(find!pred(haystack))))
+    {
+        return any!pred(haystack);
+    }
+
+    /++
+    Returns $(D true) if and only if $(D value) can be found in $(D
+    range). Performs $(BIGOH needle.length) evaluations of $(D pred).
+     +/
+    bool canFind(Range, Element)(Range haystack, Element needle)
+    if (is(typeof(find!pred(haystack, needle))))
+    {
+        return !find!pred(haystack, needle).empty;
+    }
+
+    /++
     Returns the 1-based index of the first needle found in $(D haystack). If no
     needle is found, then $(D 0) is returned.
 
@@ -10607,13 +10621,14 @@ if (is(typeof(find!pred(haystack, needle))))
     $(D bool) for the same effect or used to get which needle was found first
     without having to deal with the tuple that $(D LREF find) returns for the
     same operation.
- +/
-size_t canFind(alias pred = "a == b", Range, Ranges...)(Range haystack, Ranges needles)
-if (Ranges.length > 1 &&
-    allSatisfy!(isForwardRange, Ranges) &&
-    is(typeof(find!pred(haystack, needles))))
-{
-    return find!pred(haystack, needles)[1];
+     +/
+    size_t canFind(Range, Ranges...)(Range haystack, Ranges needles)
+    if (Ranges.length > 1 &&
+        allSatisfy!(isForwardRange, Ranges) &&
+        is(typeof(find!pred(haystack, needles))))
+    {
+        return find!pred(haystack, needles)[1];
+    }
 }
 
 unittest
@@ -10638,22 +10653,34 @@ unittest
     assert(canFind([0, 1, 2, 3], [1, 3], [2, 4]) == 0);
 }
 
-//Explictly Undocumented. Do not use. It may be deprecated in the future.
-//Use any instead.
-bool canFind(alias pred, Range)(Range range)
+unittest
 {
-    return any!pred(range);
+    assert(equal!(canFind!"a < b")([[1, 2, 3], [7, 8, 9]], [2, 8]));
 }
 
-/**
-Returns $(D true) if and only if a value $(D v) satisfying the
-predicate $(D pred) can be found in the forward range $(D
-range). Performs $(BIGOH r.length) evaluations of $(D pred).
- */
-bool any(alias pred, Range)(Range range)
-if (is(typeof(find!pred(range))))
+/++
+Checks if $(I _any) of the elements verifies $(D pred).
+ +/
+template any(alias pred)
 {
-    return !find!pred(range).empty;
+    /++
+    Returns $(D true) if and only if $(I _any) value $(D v) found in the
+    input range $(D range) satisfies the predicate $(D pred).
+    Performs (at most) $(BIGOH r.length) evaluations of $(D pred).
+     +/
+    bool any(Range)(Range range)
+    if (isInputRange!Range && is(typeof(unaryFun!pred(range.front))))
+    {
+        return !find!pred(range).empty;
+    }
+}
+
+///
+unittest
+{
+    import std.ascii : isWhite;
+    assert( all!(any!isWhite)(["a a", "b b"]));
+    assert(!any!(all!isWhite)(["a a", "b b"]));
 }
 
 unittest
@@ -10664,21 +10691,31 @@ unittest
     assert(any!"a == 2"(a));
 }
 
-/**
-Returns $(D true) if and only if all values in $(D range) satisfy the
-predicate $(D pred).  Performs $(BIGOH r.length) evaluations of $(D pred).
-*/
-bool all(alias pred, R)(R range)
-if (isInputRange!R && is(typeof(unaryFun!pred(range.front))))
+/++
+Checks if $(I _all) of the elements verifies $(D pred).
+ +/
+template all(alias pred)
 {
-    return find!(not!(unaryFun!pred))(range).empty;
+    /++
+    Returns $(D true) if and only if $(I _all) values $(D v) found in the
+    input range $(D range) satisfy the predicate $(D pred).
+    Performs (at most) $(BIGOH r.length) evaluations of $(D pred).
+     +/
+    bool all(Range)(Range range)
+    if (isInputRange!Range && is(typeof(unaryFun!pred(range.front))))
+    {
+        return find!(not!(unaryFun!pred))(range).empty;
+    }
 }
 
 ///
 unittest
 {
-    assert(all!"a & 1"([1, 3, 5, 7, 9]));
+    assert( all!"a & 1"([1, 3, 5, 7, 9]));
     assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
+}
+unittest
+{
     int x = 1;
     assert(all!(a => a > x)([2, 3]));
 }
