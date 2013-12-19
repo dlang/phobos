@@ -872,8 +872,14 @@ private void copyBackwards(T)(T[] src, T[] dest)
 {
     import core.stdc.string;
     assert(src.length == dest.length);
+
+    void trustedMemmove(void* d, const void* s, size_t len) @trusted
+    {
+        memmove(d, s, len);
+    }
+
     if (!__ctfe)
-        memmove(dest.ptr, src.ptr, src.length * T.sizeof);
+        trustedMemmove(dest.ptr, src.ptr, src.length * T.sizeof);
     else
     {
         immutable len = src.length;
@@ -903,6 +909,35 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
 {
     static if(allSatisfy!(isInputRangeWithLengthOrConvertible!T, U))
     {
+        import core.stdc.string;
+        void assign(E)(ref T dest, ref E src)
+        {
+            static if (is(typeof(dest.opAssign(src))) ||
+                       !is(typeof(dest = src)))
+            {
+                // this should be in-place construction
+                emplace(&dest, src);
+            }
+            else
+            {
+                dest = src;
+            }
+        }
+        auto trustedAllocateArray(size_t n) @trusted nothrow
+        {
+            return uninitializedArray!(T[])(n);
+        }
+        void trustedMemcopy(T[] dest, T[] src) @trusted
+        {
+            assert(src.length == dest.length);
+            if (!__ctfe)
+                memcpy(dest.ptr, src.ptr, src.length * T.sizeof);
+            else
+            {
+                dest[] = src[];
+            }
+        }
+
         immutable oldLen = array.length;
         size_t to_insert = 0;
         foreach (i, E; U)
@@ -912,21 +947,25 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
             else
                 to_insert += stuff[i].length;
         }
-        array.length += to_insert;
-        copyBackwards(array[pos..oldLen], array[pos+to_insert..$]);
-        auto ptr = array.ptr + pos;
+        auto tmp = trustedAllocateArray(to_insert);
+        auto j = 0;
         foreach (i, E; U)
         {
             static if (is(E : T)) //ditto
             {
-                emplace(ptr++, stuff[i]);
+                assign(tmp[j++], stuff[i]);
             }
             else
             {
                 foreach (v; stuff[i])
-                    emplace(ptr++, v);
+                {
+                    assign(tmp[j++], v);
+                }
             }
         }
+        array.length += to_insert;
+        copyBackwards(array[pos..oldLen], array[pos+to_insert..$]);
+        trustedMemcopy(array[pos..pos+to_insert], tmp);
     }
     else
     {
@@ -1048,7 +1087,7 @@ private template isInputRangeOrConvertible(E)
 
 
 //Verify Example.
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 3, 4 ];
     a.insertInPlace(2, [ 1, 2 ]);
@@ -1164,20 +1203,20 @@ unittest
         }
         ~this()
         {
-            *payload = 0; //'destroy' it
+            if (payload)
+                *payload = 0; //'destroy' it
         }
         @property int getPayload(){ return *payload; }
         alias getPayload this;
     }
 
-    Int[] arr;// = [Int(1), Int(4), Int(5)]; //@@BUG 8740
-    arr ~= [Int(1), Int(4), Int(5)];
+    Int[] arr = [Int(1), Int(4), Int(5)];
     assert(arr[0] == 1);
     insertInPlace(arr, 1, Int(2), Int(3));
     assert(equal(arr, [1, 2, 3, 4, 5]));  //check it works with postblit
 }
 
-unittest
+@safe unittest
 {
     assertCTFEable!(
     {
