@@ -2260,7 +2260,10 @@ unittest
 private FILE* fopen(in char[] name, in char[] mode = "r")
 {
     version(Windows)
+    {
+        import std.utf;
         return _wfopen(toUTF16z(name), toUTF16z(mode));
+    }
     else version(Posix)
     {
         /*
