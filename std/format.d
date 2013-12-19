@@ -784,18 +784,18 @@ struct FormatSpec(Char)
         for (size_t i = 0; i < trailing.length; ++i)
         {
             if (trailing[i] != '%') continue;
-            if (trailing[++i] != '%')
+            put(writer, trailing[0 .. i]);
+            trailing = trailing[i .. $];
+            enforceFmt(trailing.length >= 2, `Unterminated format specifier: "%"`);
+            trailing = trailing[1 .. $];
+
+            if (trailing[0] != '%')
             {
-                // Spec found. Print, fill up the spec, and bailout
-                put(writer, trailing[0 .. i - 1]);
-                trailing = trailing[i .. $];
+                // Spec found. Fill up the spec, and bailout
                 fillUp();
                 return true;
             }
-            // Doubled! Now print whatever we had, then update the
-            // string and move on
-            put(writer, trailing[0 .. i - 1]);
-            trailing = trailing[i .. $];
+            // Doubled! Reset and Keep going
             i = 0;
         }
         // no format spec found
@@ -830,6 +830,11 @@ struct FormatSpec(Char)
         w.clear();
         while (f.writeUpToNextSpec(w)) continue;
         assert(w.data == "%%%");
+
+        f = FormatSpec("a%%b%%c%");
+        w.clear();
+        assertThrown!FormatException(f.writeUpToNextSpec(w));
+        assert(w.data == "a%b%c" && f.trailing == "%");
     }
 
     private void fillUp()
