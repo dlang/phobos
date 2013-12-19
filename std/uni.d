@@ -121,11 +121,11 @@
 
         // build the trie with the most sensible trie level
         // and bind it as a functor
-        auto cyrilicOrArmenian = toDelegate(set);
-        auto balance = find!(cyrilicOrArmenian)("Hello ընկեր!");
+        auto cyrillicOrArmenian = toDelegate(set);
+        auto balance = find!(cyrillicOrArmenian)("Hello ընկեր!");
         assert(balance == "ընկեր!");
         // compatible with bool delegate(dchar)
-        bool delegate(dchar) bindIt = cyrilicOrArmenian;
+        bool delegate(dchar) bindIt = cyrillicOrArmenian;
 
         // Normalization
         string s = "Plain ascii (and not only), is always normalized!";
@@ -721,11 +721,11 @@ unittest
 
     // build the trie with the most sensible trie level
     // and bind it as a functor
-    auto cyrilicOrArmenian = toDelegate(set);
-    auto balance = find!(cyrilicOrArmenian)("Hello ընկեր!");
+    auto cyrillicOrArmenian = toDelegate(set);
+    auto balance = find!(cyrillicOrArmenian)("Hello ընկեր!");
     assert(balance == "ընկեր!");
     // compatible with bool delegate(dchar)
-    bool delegate(dchar) bindIt = cyrilicOrArmenian;
+    bool delegate(dchar) bindIt = cyrillicOrArmenian;
 
     // Normalization
     string s = "Plain ascii (and not only), is always normalized!";
