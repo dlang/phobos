@@ -54,6 +54,7 @@ import std.algorithm;
 import std.array;
 import std.conv;
 import std.file: getcwd;
+import std.range;
 import std.string;
 import std.traits;
 
@@ -760,6 +761,9 @@ unittest
     extension is simply appended to the filename.  Including a leading dot
     in $(D ext) is optional.
 
+    If the extension is empty, this function is equivalent to
+    $(LREF stripExtension).
+
     This function normally allocates a new string (the possible exception
     being the case when path is immutable and doesn't already have an
     extension).
@@ -768,6 +772,7 @@ unittest
     ---
     assert (setExtension("file", "ext")      == "file.ext");
     assert (setExtension("file", ".ext")     == "file.ext");
+    assert (setExtension("file.old", "")     == "file");
     assert (setExtension("file.old", "new")  == "file.new");
     assert (setExtension("file.old", ".new") == "file.new");
     ---
@@ -776,10 +781,10 @@ immutable(Unqual!C1)[] setExtension(C1, C2)(in C1[] path, in C2[] ext)
     @trusted pure nothrow
     if (isSomeChar!C1 && !is(C1 == immutable) && is(Unqual!C1 == Unqual!C2))
 {
-    if (ext.length > 0 && ext[0] == '.')
-        return cast(typeof(return))(stripExtension(path)~ext);
-    else
+    if (ext.length > 0 && ext[0] != '.')
         return cast(typeof(return))(stripExtension(path)~'.'~ext);
+    else
+        return cast(typeof(return))(stripExtension(path)~ext);
 }
 
 ///ditto
@@ -787,6 +792,9 @@ immutable(C1)[] setExtension(C1, C2)(immutable(C1)[] path, const(C2)[] ext)
     @trusted pure nothrow
     if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
+    if (ext.length == 0)
+        return stripExtension(path);
+
     // Optimised for the case where path is immutable and has no extension
     if (ext.length > 0 && ext[0] == '.') ext = ext[1 .. $];
     auto i = extSeparatorPos(path);
@@ -829,8 +837,11 @@ unittest
 
     static assert (setExtension("file"w.dup, "ext"w) == "file.ext");
     static assert (setExtension("file.old"d.dup, "new"d) == "file.new");
-}
 
+    // Issue 10601
+    assert (setExtension("file", "") == "file");
+    assert (setExtension("file.ext", "") == "file");
+}
 
 
 
@@ -886,56 +897,113 @@ unittest
 }
 
 
+/** Combines one or more path segments.
 
+    This function takes a set of path segments, given as an input
+    range of string elements or as a set of string arguments,
+    and concatenates them with each other.  Directory separators
+    are inserted between segments if necessary.  If any of the
+    path segments are absolute (as defined by $(LREF isAbsolute)), the
+    preceding segments will be dropped.
 
-/** Combines one or more path components.
-
-    The given path components are concatenated with each other,
-    and if necessary, directory separators are inserted between
-    them. If any of the path components are rooted (as defined by
-    $(LREF isRooted)) the preceding path components will be dropped.
+    On Windows, if one of the path segments are rooted, but not absolute
+    (e.g. $(D `\foo`)), all preceding path segments down to the previous
+    root will be dropped.  (See below for an example.)
 
     This function always allocates memory to hold the resulting path.
+    The variadic overload is guaranteed to only perform a single
+    allocation, as is the range version if $(D paths) is a forward
+    range.
+*/
+immutable(ElementEncodingType!(ElementType!Range))[]
+    buildPath(Range)(Range segments)
+        if (isInputRange!Range && isSomeString!(ElementType!Range))
+{
+    if (segments.empty) return null;
 
-    Examples:
-    ---
+    // If this is a forward range, we can pre-calculate a maximum length.
+    static if (isForwardRange!Range)
+    {
+        auto segments2 = segments.save;
+        size_t precalc = 0;
+        foreach (segment; segments2) precalc += segment.length + 1;
+    }
+    // Otherwise, just venture a guess and resize later if necessary.
+    else size_t precalc = 255;
+
+    auto buf = new Unqual!(ElementEncodingType!(ElementType!Range))[](precalc);
+    size_t pos = 0;
+    foreach (segment; segments)
+    {
+        if (segment.empty) continue;
+        static if (!isForwardRange!Range)
+        {
+            immutable neededLength = pos + segment.length + 1;
+            if (buf.length < neededLength)
+                buf.length = reserve(buf, neededLength + buf.length/2);
+        }
+        if (pos > 0)
+        {
+            if (isRooted(segment))
+            {
+                version (Posix)
+                {
+                    pos = 0;
+                }
+                else version (Windows)
+                {
+                    if (isAbsolute(segment))
+                        pos = 0;
+                    else
+                    {
+                        pos = rootName(buf[0 .. pos]).length;
+                        if (pos > 0 && isDirSeparator(buf[pos-1])) --pos;
+                    }
+                }
+            }
+            else if (!isDirSeparator(buf[pos-1]))
+                buf[pos++] = dirSeparator[0];
+        }
+        buf[pos .. pos + segment.length] = segment[];
+        pos += segment.length;
+    }
+    static U trustedCast(U, V)(V v) @trusted pure nothrow { return cast(U) v; }
+    return trustedCast!(typeof(return))(buf[0 .. pos]);
+}
+
+/// ditto
+immutable(C)[] buildPath(C)(const(C[])[] paths...)
+    @safe pure nothrow
+    if (isSomeChar!C)
+{
+    return buildPath!(typeof(paths))(paths);
+}
+
+///
+unittest
+{
     version (Posix)
     {
         assert (buildPath("foo", "bar", "baz") == "foo/bar/baz");
-        assert (buildPath("/foo/", "bar")      == "/foo/bar");
+        assert (buildPath("/foo/", "bar/baz")  == "/foo/bar/baz");
         assert (buildPath("/foo", "/bar")      == "/bar");
     }
 
     version (Windows)
     {
         assert (buildPath("foo", "bar", "baz") == `foo\bar\baz`);
-        assert (buildPath(`c:\foo`, "bar")    == `c:\foo\bar`);
-        assert (buildPath("foo", `d:\bar`)    == `d:\bar`);
-        assert (buildPath("foo", `\bar`)      == `\bar`);
+        assert (buildPath(`c:\foo`, `bar\baz`) == `c:\foo\bar\baz`);
+        assert (buildPath("foo", `d:\bar`)     == `d:\bar`);
+        assert (buildPath("foo", `\bar`)       == `\bar`);
+        assert (buildPath(`c:\foo`, `\bar`)    == `c:\bar`);
     }
-    ---
-*/
-immutable(C)[] buildPath(C)(const(C[])[] paths...)
-    @safe pure //TODO: nothrow (because of reduce() and to())
-    if (isSomeChar!C)
-{
-    static typeof(return) joinPaths(const(C)[] lhs, const(C)[] rhs)
-        @trusted pure //TODO: nothrow (because of to())
-    {
-        if (rhs.empty) return to!(typeof(return))(lhs);
-        if (lhs.empty || isRooted(rhs)) return to!(typeof(return))(rhs);
-        if (isDirSeparator(lhs[$-1]) || isDirSeparator(rhs[0]))
-            return cast(typeof(return))(lhs ~ rhs);
-        else
-            return cast(typeof(return))(lhs ~ dirSeparator ~ rhs);
-    }
-
-    return to!(typeof(return))(reduce!joinPaths(paths));
 }
 
-
-unittest
+unittest // non-documented
 {
+    // ir() wraps an array in a plain (i.e. non-forward) input range, so that
+    // we can test both code paths
+    InputRange!(C[]) ir(C)(C[][] p...) { return inputRangeObject(p); }
     version (Posix)
     {
         assert (buildPath("foo") == "foo");
@@ -955,6 +1023,23 @@ unittest
 
         static assert (buildPath("foo", "bar", "baz") == "foo/bar/baz");
         static assert (buildPath("foo", "/bar", "baz") == "/bar/baz");
+
+        // The following are mostly duplicates of the above, except that the
+        // range version does not accept mixed constness.
+        assert (buildPath(ir("foo")) == "foo");
+        assert (buildPath(ir("/foo/")) == "/foo/");
+        assert (buildPath(ir("foo", "bar")) == "foo/bar");
+        assert (buildPath(ir("foo", "bar", "baz")) == "foo/bar/baz");
+        assert (buildPath(ir("foo/".dup, "bar".dup)) == "foo/bar");
+        assert (buildPath(ir("foo///".dup, "bar".dup)) == "foo///bar");
+        assert (buildPath(ir("/foo"w, "bar"w)) == "/foo/bar");
+        assert (buildPath(ir("foo"w.dup, "/bar"w.dup)) == "/bar");
+        assert (buildPath(ir("foo"w.dup, "bar/"w.dup)) == "foo/bar/");
+        assert (buildPath(ir("/"d, "foo"d)) == "/foo");
+        assert (buildPath(ir(""d.dup, "foo"d.dup)) == "foo");
+        assert (buildPath(ir("foo"d, ""d)) == "foo");
+        assert (buildPath(ir("foo", "bar", "baz")) == "foo/bar/baz");
+        assert (buildPath(ir("foo"w.dup, "/bar"w.dup, "baz"w.dup)) == "/bar/baz");
     }
     version (Windows)
     {
@@ -964,10 +1049,32 @@ unittest
         assert (buildPath("foo", `\bar`) == `\bar`);
         assert (buildPath(`c:\foo`, "bar") == `c:\foo\bar`);
         assert (buildPath("foo"w, `d:\bar`w.dup) ==  `d:\bar`);
+        assert (buildPath(`c:\foo\bar`, `\baz`) == `c:\baz`);
+        assert (buildPath(`\\foo\bar\baz`d, `foo`d, `\bar`d) == `\\foo\bar\bar`d);
 
         static assert (buildPath("foo", "bar", "baz") == `foo\bar\baz`);
         static assert (buildPath("foo", `c:\bar`, "baz") == `c:\bar\baz`);
+
+        assert (buildPath(ir("foo")) == "foo");
+        assert (buildPath(ir(`\foo/`)) == `\foo/`);
+        assert (buildPath(ir("foo", "bar", "baz")) == `foo\bar\baz`);
+        assert (buildPath(ir("foo", `\bar`)) == `\bar`);
+        assert (buildPath(ir(`c:\foo`, "bar")) == `c:\foo\bar`);
+        assert (buildPath(ir("foo"w.dup, `d:\bar`w.dup)) ==  `d:\bar`);
+        assert (buildPath(ir(`c:\foo\bar`, `\baz`)) == `c:\baz`);
+        assert (buildPath(ir(`\\foo\bar\baz`d, `foo`d, `\bar`d)) == `\\foo\bar\bar`d);
     }
+
+    // Test that allocation works as it should.
+    auto manyShort = "aaa".repeat(1000).array();
+    auto manyShortCombined = join(manyShort, dirSeparator);
+    assert (buildPath(manyShort) == manyShortCombined);
+    assert (buildPath(ir(manyShort)) == manyShortCombined);
+
+    auto fewLong = 'b'.repeat(500).array().repeat(10).array();
+    auto fewLongCombined = join(fewLong, dirSeparator);
+    assert (buildPath(fewLong) == fewLongCombined);
+    assert (buildPath(ir(fewLong)) == fewLongCombined);
 }
 
 unittest
@@ -983,7 +1090,6 @@ unittest
         assert (buildPath(ary) == `a\b`);
     }
 }
-
 
 
 /** Performs the same task as $(LREF buildPath),
@@ -1438,9 +1544,9 @@ auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
     static struct PathSplitter
     {
     @safe pure nothrow:
-        @property empty() const { return _empty; }
+        @property bool empty() const { return _empty; }
 
-        @property front() const
+        @property const(C)[] front() const
         {
             assert (!empty, "PathSplitter: called front() on empty range");
             return _front;
@@ -1471,7 +1577,7 @@ auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
             }
         }
 
-        @property back() const
+        @property const(C)[] back() const
         {
             assert (!empty, "PathSplitter: called back() on empty range");
             return _back;
@@ -1624,6 +1730,10 @@ unittest
     {
         assert (equal(pathSplitter("/foo/bar".dup), ["/", "foo", "bar"]));
     });
+
+    // Bugzilla 11691
+    // front should return a mutable array of const elements
+    static assert(is(typeof(pathSplitter!char(null).front) == const(char)[]));
 }
 
 
@@ -1789,6 +1899,7 @@ unittest
         assert (absolutePath(`some\file`, `c:\foo\bar`)    == `c:\foo\bar\some\file`);
         assert (absolutePath(`..\file`, `c:\foo\bar`)      == `c:\foo\bar\..\file`);
         assert (absolutePath(`c:\some\file`, `c:\foo\bar`) == `c:\some\file`);
+        assert (absolutePath(`\file`, `c:\foo\bar`)        == `c:\file`);
     }
     ---
 
@@ -1821,6 +1932,8 @@ unittest
         assert (absolutePath(`some\file`, `c:\foo\bar`)    == `c:\foo\bar\some\file`);
         assert (absolutePath(`..\file`, `c:\foo\bar`)      == `c:\foo\bar\..\file`);
         assert (absolutePath(`c:\some\file`, `c:\foo\bar`) == `c:\some\file`);
+        assert (absolutePath(`\`, `c:\`)                   == `c:\`);
+        assert (absolutePath(`\some\file`, `c:\foo\bar`)   == `c:\some\file`);
         static assert (absolutePath(`some\file`, `c:\foo\bar`) == `c:\foo\bar\some\file`);
     }
 
@@ -2638,6 +2751,9 @@ string expandTilde(string inputPath)
 {
     version(Posix)
     {
+        import core.stdc.string : strlen;
+        import core.stdc.stdlib : getenv, malloc, free;
+
         /*  Joins a path from a C string to the remainder of path.
 
             The last path separator from c_path is discarded. The result

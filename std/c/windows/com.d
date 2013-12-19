@@ -1,4 +1,5 @@
 module std.c.windows.com;
+version (Windows):
 
 pragma(lib,"uuid");
 
@@ -38,7 +39,7 @@ struct GUID {          // size is 16
         DWORD Data1;
         WORD  Data2;
         WORD  Data3;
-        BYTE  Data4[8];
+        BYTE[8]  Data4;
 }
 
 enum
@@ -58,11 +59,11 @@ enum
 }
 
 enum
-{ 
+{
        COINIT_APARTMENTTHREADED   = 0x2,
        COINIT_MULTITHREADED       = 0x0,
        COINIT_DISABLE_OLE1DDE     = 0x4,
-       COINIT_SPEED_OVER_MEMORY   = 0x8 
+       COINIT_SPEED_OVER_MEMORY   = 0x8
 }
 alias DWORD COINIT;
 enum RPC_E_CHANGED_MODE = 0x80010106;

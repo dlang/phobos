@@ -5,6 +5,7 @@
 
 
 module std.c.windows.winsock;
+version (Windows):
 
 private import std.stdint;
 private import std.c.windows.windows;
@@ -25,8 +26,8 @@ struct WSADATA
 {
     WORD wVersion;
     WORD wHighVersion;
-    char szDescription[WSADESCRIPTION_LEN + 1];
-    char szSystemStatus[WSASYS_STATUS_LEN + 1];
+    char[WSADESCRIPTION_LEN + 1] szDescription;
+    char[WSASYS_STATUS_LEN + 1] szSystemStatus;
     USHORT iMaxSockets;
     USHORT iMaxUdpDg;
     char* lpVendorInfo;

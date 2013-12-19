@@ -115,8 +115,8 @@ version(Windows)
             {
                 WORD wProcessorArchitecture;
                 WORD wReserved;
-            };
-        };
+            }
+        }
         DWORD     dwPageSize;
         LPVOID    lpMinimumApplicationAddress;
         LPVOID    lpMaximumApplicationAddress;
@@ -1431,7 +1431,7 @@ public:
     */
     this(size_t nWorkers) @trusted
     {
-        synchronized(TaskPool.classinfo)
+        synchronized(typeid(TaskPool))
         {
             instanceStartIndex = nextInstanceIndex;
 
@@ -3272,7 +3272,7 @@ terminating the main thread.
 
     if(!initialized)
     {
-        synchronized(TaskPool.classinfo)
+        synchronized(typeid(TaskPool))
         {
             if(!pool)
             {
@@ -3364,6 +3364,7 @@ private void submitAndExecute(
 
     alias typeof(scopedTask(doIt)) PTask;
     import core.stdc.stdlib;
+    import core.stdc.string : memcpy;
 
     // The logical thing to do would be to just use alloca() here, but that
     // causes problems on Windows for reasons that I don't understand
@@ -4102,7 +4103,7 @@ unittest
         auto tSlow = task!slowFun();
         pool1.put(tSlow);
         pool1.finish();
-        tSlow.yieldForce();
+        tSlow.yieldForce;
         // Can't assert that pool1.status == PoolState.stopNow because status
         // doesn't change until after the "done" flag is set and the waiting
         // thread is woken up.

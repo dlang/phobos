@@ -26,21 +26,27 @@
  */
 module std.uri;
 
-//debug=uri;        // uncomment to turn on debugging printf's
+//debug=uri;        // uncomment to turn on debugging writefln's
+debug(uri) private import std.stdio;
 
 /* ====================== URI Functions ================ */
 
 private import std.ascii;
 private import std.c.stdlib;
 private import std.utf;
-private import std.stdio;
-import std.exception;
+import core.exception : OutOfMemoryError;
+import std.exception : assumeUnique;
 
-class URIerror : Error
+class URIException : Exception
 {
-    this()
+    @safe pure nothrow this()
     {
-    super("URI error");
+        super("URI Exception");
+    }
+
+    @safe pure nothrow this(string msg)
+    {
+        super("URI Exception: " ~ msg);
     }
 }
 
@@ -60,19 +66,18 @@ __gshared ubyte[128] uri_flags;       // indexed by character
 shared static this()
 {
     // Initialize uri_flags[]
-
     static void helper(immutable char[] p, uint flags)
-    {   int i;
-
-    for (i = 0; i < p.length; i++)
-        uri_flags[p[i]] |= flags;
+    {
+        for (int i = 0; i < p.length; i++)
+            uri_flags[p[i]] |= flags;
     }
 
     uri_flags['#'] |= URI_Hash;
 
     for (int i = 'A'; i <= 'Z'; i++)
-    {   uri_flags[i] |= URI_Alpha;
-    uri_flags[i + 0x20] |= URI_Alpha;   // lowercase letters
+    {
+        uri_flags[i] |= URI_Alpha;
+        uri_flags[i + 0x20] |= URI_Alpha;   // lowercase letters
     }
     helper("0123456789", URI_Digit);
     helper(";/?:@&=+$,", URI_Reserved);
@@ -101,122 +106,127 @@ private string URI_Encode(dstring string, uint unescapedSet)
 
     for (k = 0; k != len; k++)
     {
-    C = string[k];
-    // if (C in unescapedSet)
-    if (C < uri_flags.length && uri_flags[C] & unescapedSet)
-    {
-        if (Rlen == Rsize)
-        {   char* R2;
+        C = string[k];
+        // if (C in unescapedSet)
+        if (C < uri_flags.length && uri_flags[C] & unescapedSet)
+        {
+            if (Rlen == Rsize)
+            {
+                char* R2;
 
-        Rsize *= 2;
-        if (Rsize > 1024)
-            R2 = (new char[Rsize]).ptr;
+                Rsize *= 2;
+                if (Rsize > 1024) {
+                    R2 = (new char[Rsize]).ptr;
+                }
+                else
+                {
+                    R2 = cast(char *)alloca(Rsize * char.sizeof);
+                    if (!R2)
+                        throw new OutOfMemoryError("Alloca failure");
+                }
+                R2[0..Rlen] = R[0..Rlen];
+                R = R2;
+            }
+            R[Rlen] = cast(char)C;
+            Rlen++;
+        }
         else
-        {   R2 = cast(char *)alloca(Rsize * char.sizeof);
-            if (!R2)
-            goto LthrowURIerror;
-        }
-        R2[0..Rlen] = R[0..Rlen];
-        R = R2;
-        }
-        R[Rlen] = cast(char)C;
-        Rlen++;
-    }
-    else
-    {   char[6] Octet;
-        uint L;
+        {
+            char[6] Octet;
+            uint L;
 
-        V = C;
+            V = C;
 
-        // Transform V into octets
-        if (V <= 0x7F)
-        {
-        Octet[0] = cast(char) V;
-        L = 1;
-        }
-        else if (V <= 0x7FF)
-        {
-        Octet[0] = cast(char)(0xC0 | (V >> 6));
-        Octet[1] = cast(char)(0x80 | (V & 0x3F));
-        L = 2;
-        }
-        else if (V <= 0xFFFF)
-        {
-        Octet[0] = cast(char)(0xE0 | (V >> 12));
-        Octet[1] = cast(char)(0x80 | ((V >> 6) & 0x3F));
-        Octet[2] = cast(char)(0x80 | (V & 0x3F));
-        L = 3;
-        }
-        else if (V <= 0x1FFFFF)
-        {
-        Octet[0] = cast(char)(0xF0 | (V >> 18));
-        Octet[1] = cast(char)(0x80 | ((V >> 12) & 0x3F));
-        Octet[2] = cast(char)(0x80 | ((V >> 6) & 0x3F));
-        Octet[3] = cast(char)(0x80 | (V & 0x3F));
-        L = 4;
-        }
-    /+
-        else if (V <= 0x3FFFFFF)
-        {
-        Octet[0] = cast(char)(0xF8 | (V >> 24));
-        Octet[1] = cast(char)(0x80 | ((V >> 18) & 0x3F));
-        Octet[2] = cast(char)(0x80 | ((V >> 12) & 0x3F));
-        Octet[3] = cast(char)(0x80 | ((V >> 6) & 0x3F));
-        Octet[4] = cast(char)(0x80 | (V & 0x3F));
-        L = 5;
-        }
-        else if (V <= 0x7FFFFFFF)
-        {
-        Octet[0] = cast(char)(0xFC | (V >> 30));
-        Octet[1] = cast(char)(0x80 | ((V >> 24) & 0x3F));
-        Octet[2] = cast(char)(0x80 | ((V >> 18) & 0x3F));
-        Octet[3] = cast(char)(0x80 | ((V >> 12) & 0x3F));
-        Octet[4] = cast(char)(0x80 | ((V >> 6) & 0x3F));
-        Octet[5] = cast(char)(0x80 | (V & 0x3F));
-        L = 6;
-        }
-     +/
-        else
-        {   goto LthrowURIerror;        // undefined UTF-32 code
-        }
+            // Transform V into octets
+            if (V <= 0x7F)
+            {
+                Octet[0] = cast(char) V;
+                L = 1;
+            }
+            else if (V <= 0x7FF)
+            {
+                Octet[0] = cast(char)(0xC0 | (V >> 6));
+                Octet[1] = cast(char)(0x80 | (V & 0x3F));
+                L = 2;
+            }
+            else if (V <= 0xFFFF)
+            {
+                Octet[0] = cast(char)(0xE0 | (V >> 12));
+                Octet[1] = cast(char)(0x80 | ((V >> 6) & 0x3F));
+                Octet[2] = cast(char)(0x80 | (V & 0x3F));
+                L = 3;
+            }
+            else if (V <= 0x1FFFFF)
+            {
+                Octet[0] = cast(char)(0xF0 | (V >> 18));
+                Octet[1] = cast(char)(0x80 | ((V >> 12) & 0x3F));
+                Octet[2] = cast(char)(0x80 | ((V >> 6) & 0x3F));
+                Octet[3] = cast(char)(0x80 | (V & 0x3F));
+                L = 4;
+            }
+            /+
+            else if (V <= 0x3FFFFFF)
+            {
+                Octet[0] = cast(char)(0xF8 | (V >> 24));
+                Octet[1] = cast(char)(0x80 | ((V >> 18) & 0x3F));
+                Octet[2] = cast(char)(0x80 | ((V >> 12) & 0x3F));
+                Octet[3] = cast(char)(0x80 | ((V >> 6) & 0x3F));
+                Octet[4] = cast(char)(0x80 | (V & 0x3F));
+                L = 5;
+            }
+            else if (V <= 0x7FFFFFFF)
+            {
+                Octet[0] = cast(char)(0xFC | (V >> 30));
+                Octet[1] = cast(char)(0x80 | ((V >> 24) & 0x3F));
+                Octet[2] = cast(char)(0x80 | ((V >> 18) & 0x3F));
+                Octet[3] = cast(char)(0x80 | ((V >> 12) & 0x3F));
+                Octet[4] = cast(char)(0x80 | ((V >> 6) & 0x3F));
+                Octet[5] = cast(char)(0x80 | (V & 0x3F));
+                L = 6;
+            }
+            +/
+            else
+            {
+                throw new URIException("Undefined UTF-32 code point");
+            }
 
-        if (Rlen + L * 3 > Rsize)
-        {   char *R2;
+            if (Rlen + L * 3 > Rsize)
+            {
+                char *R2;
 
-        Rsize = 2 * (Rlen + L * 3);
-        if (Rsize > 1024)
-            R2 = (new char[Rsize]).ptr;
-        else
-        {   R2 = cast(char *)alloca(Rsize * char.sizeof);
-            if (!R2)
-            goto LthrowURIerror;
-        }
-        R2[0..Rlen] = R[0..Rlen];
-        R = R2;
-        }
+                Rsize = 2 * (Rlen + L * 3);
+                if (Rsize > 1024) {
+                    R2 = (new char[Rsize]).ptr;
+                }
+                else
+                {
+                    R2 = cast(char *)alloca(Rsize * char.sizeof);
+                    if (!R2)
+                        throw new OutOfMemoryError("Alloca failure");
+                }
+                R2[0..Rlen] = R[0..Rlen];
+                R = R2;
+            }
 
-        for (j = 0; j < L; j++)
-        {
-        R[Rlen] = '%';
-        R[Rlen + 1] = hex2ascii[Octet[j] >> 4];
-        R[Rlen + 2] = hex2ascii[Octet[j] & 15];
+            for (j = 0; j < L; j++)
+            {
+                R[Rlen] = '%';
+                R[Rlen + 1] = hex2ascii[Octet[j] >> 4];
+                R[Rlen + 2] = hex2ascii[Octet[j] & 15];
 
-        Rlen += 3;
+                Rlen += 3;
+            }
         }
-    }
     }
 
     return R[0..Rlen].idup;
-
-LthrowURIerror:
-    throw new URIerror();
 }
 
 uint ascii2hex(dchar c)
 {
     return (c <= '9') ? c - '0' :
-       (c <= 'F') ? c - 'A' + 10 :
-            c - 'a' + 10;
+        (c <= 'F') ? c - 'A' + 10 :
+        c - 'a' + 10;
 }
 
 private dstring URI_Decode(string string, uint reservedSet)
@@ -225,8 +235,6 @@ private dstring URI_Decode(string string, uint reservedSet)
     uint k;
     uint V;
     dchar C;
-
-    //printf("URI_Decode('%.*s')\n", string);
 
     // Result array, allocated on stack
     dchar* R;
@@ -237,95 +245,96 @@ private dstring URI_Decode(string string, uint reservedSet)
 
     // Preallocate result buffer R guaranteed to be large enough for result
     auto Rsize = len;
-    if (Rsize > 1024 / dchar.sizeof)
-    R = (new dchar[Rsize]).ptr;
+    if (Rsize > 1024 / dchar.sizeof) {
+        R = (new dchar[Rsize]).ptr;
+    }
     else
-    {   R = cast(dchar *)alloca(Rsize * dchar.sizeof);
-    if (!R)
-        goto LthrowURIerror;
+    {
+        R = cast(dchar *)alloca(Rsize * dchar.sizeof);
+        if (!R)
+            throw new OutOfMemoryError("Alloca failure");
     }
     Rlen = 0;
 
     for (k = 0; k != len; k++)
-    {   char B;
-    uint start;
-
-    C = s[k];
-    if (C != '%')
-    {   R[Rlen] = C;
-        Rlen++;
-        continue;
-    }
-    start = k;
-    if (k + 2 >= len)
-        goto LthrowURIerror;
-    if (!isHexDigit(s[k + 1]) || !isHexDigit(s[k + 2]))
-        goto LthrowURIerror;
-    B = cast(char)((ascii2hex(s[k + 1]) << 4) + ascii2hex(s[k + 2]));
-    k += 2;
-    if ((B & 0x80) == 0)
     {
-        C = B;
-    }
-    else
-    {   uint n;
+        char B;
+        uint start;
 
-        for (n = 1; ; n++)
+        C = s[k];
+        if (C != '%')
         {
-        if (n > 4)
-            goto LthrowURIerror;
-        if (((B << n) & 0x80) == 0)
-        {
-            if (n == 1)
-            goto LthrowURIerror;
-            break;
+            R[Rlen] = C;
+            Rlen++;
+            continue;
         }
-        }
-
-        // Pick off (7 - n) significant bits of B from first byte of octet
-        V = B & ((1 << (7 - n)) - 1);   // (!!!)
-
-        if (k + (3 * (n - 1)) >= len)
-        goto LthrowURIerror;
-        for (j = 1; j != n; j++)
-        {
-        k++;
-        if (s[k] != '%')
-            goto LthrowURIerror;
+        start = k;
+        if (k + 2 >= len)
+            throw new URIException("Unexpected end of URI");
         if (!isHexDigit(s[k + 1]) || !isHexDigit(s[k + 2]))
-            goto LthrowURIerror;
+            throw new URIException("Expected two hexadecimal digits after '%'");
         B = cast(char)((ascii2hex(s[k + 1]) << 4) + ascii2hex(s[k + 2]));
-        if ((B & 0xC0) != 0x80)
-            goto LthrowURIerror;
         k += 2;
-        V = (V << 6) | (B & 0x3F);
+        if ((B & 0x80) == 0)
+        {
+            C = B;
         }
-        if (V > 0x10FFFF)
-        goto LthrowURIerror;
-        C = V;
-    }
-    if (C < uri_flags.length && uri_flags[C] & reservedSet)
-    {
-        // R ~= s[start .. k + 1];
-        int width = (k + 1) - start;
-        for (int ii = 0; ii < width; ii++)
-        R[Rlen + ii] = s[start + ii];
-        Rlen += width;
-    }
-    else
-    {
-        R[Rlen] = C;
-        Rlen++;
-    }
+        else
+        {
+            uint n;
+
+            for (n = 1; ; n++)
+            {
+                if (n > 4)
+                    throw new URIException("UTF-32 code point size too large");
+                if (((B << n) & 0x80) == 0)
+                {
+                    if (n == 1)
+                        throw new URIException("UTF-32 code point size too small");
+                    break;
+                }
+            }
+
+            // Pick off (7 - n) significant bits of B from first byte of octet
+            V = B & ((1 << (7 - n)) - 1);   // (!!!)
+
+            if (k + (3 * (n - 1)) >= len)
+                throw new URIException("UTF-32 unaligned String");
+            for (j = 1; j != n; j++)
+            {
+                k++;
+                if (s[k] != '%')
+                    throw new URIException("Expected: '%'");
+                if (!isHexDigit(s[k + 1]) || !isHexDigit(s[k + 2]))
+                    throw new URIException("Expected two hexadecimal digits after '%'");
+                B = cast(char)((ascii2hex(s[k + 1]) << 4) + ascii2hex(s[k + 2]));
+                if ((B & 0xC0) != 0x80)
+                    throw new URIException("Incorrect UTF-32 multi-byte sequence");
+                k += 2;
+                V = (V << 6) | (B & 0x3F);
+            }
+            if (V > 0x10FFFF)
+                throw new URIException("Unknown UTF-32 code point");
+            C = V;
+        }
+        if (C < uri_flags.length && uri_flags[C] & reservedSet)
+        {
+            // R ~= s[start .. k + 1];
+            int width = (k + 1) - start;
+            for (int ii = 0; ii < width; ii++)
+                R[Rlen + ii] = s[start + ii];
+            Rlen += width;
+        }
+        else
+        {
+            R[Rlen] = C;
+            Rlen++;
+        }
     }
     assert(Rlen <= Rsize);  // enforce our preallocation size guarantee
 
     // Copy array on stack to array in memory
     return R[0..Rlen].idup;
-
-
-LthrowURIerror:
-    throw new URIerror();
 }
 
 /*************************************
@@ -387,49 +396,59 @@ size_t uriLength(string s)
      *  https://
      *  www.
      */
+    import std.string : icmp;
 
     size_t i;
 
     if (s.length <= 4)
-    goto Lno;
+        return -1;
 
-    //writefln("isURL(%s)", s);
-    if (s.length > 7 && std.string.icmp(s[0 .. 7], "http://") == 0)
-    i = 7;
-    else if (s.length > 8 && std.string.icmp(s[0 .. 8], "https://") == 0)
-    i = 8;
-//    if (icmp(s[0 .. 4], "www.") == 0)
-//  i = 4;
+    if (s.length > 7 && std.string.icmp(s[0 .. 7], "http://") == 0) {
+        i = 7;
+    }
     else
-    goto Lno;
+    {
+        if (s.length > 8 && std.string.icmp(s[0 .. 8], "https://") == 0)
+            i = 8;
+        else
+            return -1;
+    }
+    //    if (icmp(s[0 .. 4], "www.") == 0)
+    //  i = 4;
 
     size_t lastdot;
     for (; i < s.length; i++)
     {
-    auto c = s[i];
-    if (isAlphaNum(c))
-        continue;
-    if (c == '-' || c == '_' || c == '?' ||
-        c == '=' || c == '%' || c == '&' ||
-        c == '/' || c == '+' || c == '#' ||
-        c == '~' || c == '$')
-        continue;
-    if (c == '.')
-    {
-        lastdot = i;
-        continue;
-    }
-    break;
+        auto c = s[i];
+        if (isAlphaNum(c))
+            continue;
+        if (c == '-' || c == '_' || c == '?' ||
+                c == '=' || c == '%' || c == '&' ||
+                c == '/' || c == '+' || c == '#' ||
+                c == '~' || c == '$')
+            continue;
+        if (c == '.')
+        {
+            lastdot = i;
+            continue;
+        }
+        break;
     }
     //if (!lastdot || (i - lastdot != 3 && i - lastdot != 4))
     if (!lastdot)
-    goto Lno;
+        return -1;
 
     return i;
-
-Lno:
-    return -1;
 }
+
+unittest
+{
+    string s1 = "http://www.digitalmars.com/~fred/fredsRX.html#foo end!";
+    assert (uriLength(s1) == 49);
+    string s2 = "no uri here";
+    assert (uriLength(s2) == -1);
+}
+
 
 /***************************
  * Does string s[] start with an email address?
@@ -440,81 +459,85 @@ Lno:
  *  RFC2822
  */
 size_t emailLength(string s)
-{   size_t i;
+{
+    size_t i;
 
     if (!isAlpha(s[0]))
-    goto Lno;
+        return -1;
 
     for (i = 1; 1; i++)
     {
-    if (i == s.length)
-        goto Lno;
-    auto c = s[i];
-    if (isAlphaNum(c))
-        continue;
-    if (c == '-' || c == '_' || c == '.')
-        continue;
-    if (c != '@')
-        goto Lno;
-    i++;
-    break;
+        if (i == s.length)
+            return -1;
+        auto c = s[i];
+        if (isAlphaNum(c))
+            continue;
+        if (c == '-' || c == '_' || c == '.')
+            continue;
+        if (c != '@')
+            return -1;
+        i++;
+        break;
     }
-    //writefln("test1 '%s'", s[0 .. i]);
 
     /* Now do the part past the '@'
      */
     size_t lastdot;
     for (; i < s.length; i++)
     {
-    auto c = s[i];
-    if (isAlphaNum(c))
-        continue;
-    if (c == '-' || c == '_')
-        continue;
-    if (c == '.')
-    {
-        lastdot = i;
-        continue;
-    }
-    break;
+        auto c = s[i];
+        if (isAlphaNum(c))
+            continue;
+        if (c == '-' || c == '_')
+            continue;
+        if (c == '.')
+        {
+            lastdot = i;
+            continue;
+        }
+        break;
     }
     if (!lastdot || (i - lastdot != 3 && i - lastdot != 4))
-    goto Lno;
+        return -1;
 
     return i;
+}
 
-Lno:
-    return -1;
+unittest
+{
+    string s1 = "my.e-mail@www.example-domain.com with garbage added";
+    assert (emailLength(s1) == 32);
+    string s2 = "no email address here";
+    assert (emailLength(s2) == -1);
 }
 
 
 unittest
 {
-    debug(uri) printf("uri.encodeURI.unittest\n");
+    debug(uri) writeln("uri.encodeURI.unittest");
 
     string s = "http://www.digitalmars.com/~fred/fred's RX.html#foo";
     string t = "http://www.digitalmars.com/~fred/fred's%20RX.html#foo";
 
     auto r = encode(s);
-    debug(uri) printf("r = '%.*s'\n", r);
+    debug(uri) writefln("r = '%s'", r);
     assert(r == t);
     r = decode(t);
-    debug(uri) printf("r = '%.*s'\n", r);
+    debug(uri) writefln("r = '%s'", r);
     assert(r == s);
 
     r = encode( decode("%E3%81%82%E3%81%82") );
     assert(r == "%E3%81%82%E3%81%82");
 
     r = encodeComponent("c++");
-    //printf("r = '%.*s'\n", r);
     assert(r == "c%2B%2B");
 
     auto str = new char[10_000_000];
     str[] = 'A';
     r = encodeComponent(assumeUnique(str));
     foreach (char c; r)
-    assert(c == 'A');
+        assert(c == 'A');
 
     r = decode("%41%42%43");
-    debug(uri) writefln(r);
+    debug(uri) writeln(r);
 }

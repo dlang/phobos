@@ -26393,6 +26393,13 @@ public:
     }
 
 
+    /++ Ditto +/
+    /+ref+/ IntervalRange opAssign(IntervalRange rhs) pure nothrow
+    {
+        return this = rhs;
+    }
+
+
     /++
         Whether this $(D IntervalRange) is empty.
       +/
@@ -26910,6 +26917,13 @@ public:
     }
 
 
+    /++ Ditto +/
+    /+ref+/ PosInfIntervalRange opAssign(PosInfIntervalRange rhs) pure nothrow
+    {
+        return this = rhs;
+    }
+
+
     /++
         This is an infinite range, so it is never empty.
       +/
@@ -27206,6 +27220,13 @@ public:
         _func = rhs._func;
 
         return this;
+    }
+
+
+    /++ Ditto +/
+    /+ref+/ NegInfIntervalRange opAssign(NegInfIntervalRange rhs) pure nothrow
+    {
+        return this = rhs;
     }
 
 
@@ -28181,9 +28202,9 @@ public:
                 try
                 {
                     auto currYear = (cast(Date)Clock.currTime()).year;
-                    auto janOffset = SysTime(Date(currYear, 1, 4), this).stdTime -
+                    auto janOffset = SysTime(Date(currYear, 1, 4), cast(immutable)this).stdTime -
                                      SysTime(Date(currYear, 1, 4), UTC()).stdTime;
-                    auto julyOffset = SysTime(Date(currYear, 7, 4), this).stdTime -
+                    auto julyOffset = SysTime(Date(currYear, 7, 4), cast(immutable)this).stdTime -
                                       SysTime(Date(currYear, 7, 4), UTC()).stdTime;
 
                     return janOffset != julyOffset;
@@ -30441,6 +30462,7 @@ string tzDatabaseNameToWindowsTZName(string tzName)
         case "Africa/Johannesburg": return "South Africa Standard Time";
         case "Africa/Lagos": return "W. Central Africa Standard Time";
         case "Africa/Nairobi": return "E. Africa Standard Time";
+        case "Africa/Tripoli": return "Libya Standard Time";
         case "Africa/Windhoek": return "Namibia Standard Time";
         case "America/Anchorage": return "Alaskan Standard Time";
         case "America/Asuncion": return "Paraguay Standard Time";
@@ -30635,6 +30657,7 @@ string windowsTZNameToTZDatabaseName(string tzName)
         case "Kaliningrad Standard Time": return "Europe/Kaliningrad";
         case "Kamchatka Standard Time": return "Asia/Kamchatka";
         case "Korea Standard Time": return "Asia/Seoul";
+        case "Libya Standard Time": return "Africa/Tripoli";
         case "Magadan Standard Time": return "Asia/Magadan";
         case "Mauritius Standard Time": return "Indian/Mauritius";
         case "Mexico Standard Time": return "America/Mexico_City";
@@ -32242,7 +32265,7 @@ version(testStdDateTime) @safe unittest
 {
     @safe static void func(TickDuration td)
     {
-        assert(td.to!("seconds", real)() <>= 0);
+        assert(!td.to!("seconds", real)().isNaN);
     }
 
     auto mt = measureTime!(func)();
@@ -32260,7 +32283,7 @@ version(testStdDateTime) unittest
 {
     static void func(TickDuration td)
     {
-        assert(td.to!("seconds", real)() <>= 0);
+        assert(!td.to!("seconds", real)().isNaN);
     }
 
     auto mt = measureTime!(func)();

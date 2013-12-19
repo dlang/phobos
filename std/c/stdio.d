@@ -18,13 +18,4 @@ extern (C):
 version (Windows)
 {
     extern shared ubyte[_NFILE] __fhnd_info;
-
-    enum
-    {
-        FHND_APPEND     = 0x04,
-        FHND_DEVICE     = 0x08,
-        FHND_TEXT       = 0x10,
-        FHND_BYTE       = 0x20,
-        FHND_WCHAR      = 0x40,
-    }
 }

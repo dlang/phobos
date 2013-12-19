@@ -36,6 +36,7 @@
  *
  * ////////////////////////////////////////////////////////////////////////// */
 module std.windows.registry;
+version (Windows):
 
 import std.array;
 import std.system : Endian, endian;
@@ -68,11 +69,13 @@ class Win32Exception : Exception
 {
     int error;
 
+    @safe pure nothrow
     this(string message, string fn = __FILE__, size_t ln = __LINE__, Throwable next = null)
     {
         super(message, fn, ln, next);
     }
 
+    @safe pure
     this(string message, int errnum, string fn = __FILE__, size_t ln = __LINE__, Throwable next = null)
     {
         super(text(message, " (", errnum, ")"), fn, ln, next);
@@ -116,6 +119,7 @@ public:
         Params:
             message = The message associated with the exception.
      */
+    @safe pure
     this(string message, string fn = __FILE__, size_t ln = __LINE__, Throwable next = null)
     {
         super(message, fn, ln, next);
@@ -128,6 +132,7 @@ public:
             message = The message associated with the exception.
             error = The Win32 error number associated with the exception.
      */
+    @safe pure
     this(string message, int error, string fn = __FILE__, size_t ln = __LINE__, Throwable next = null)
     {
         super(message, error, fn, ln, next);
@@ -520,6 +525,8 @@ in
 }
 body
 {
+    import core.bitop : bswap;
+
     REG_VALUE_TYPE type;
 
     // See bugzilla 961 on this
@@ -631,6 +638,8 @@ in
 }
 body
 {
+    import core.bitop : bswap;
+
     REG_VALUE_TYPE type;
 
     DWORD cbData = value.sizeof;
@@ -782,12 +791,14 @@ private void regProcessNthValue(HKEY hkey, scope void delegate(scope LONG delega
  */
 class Key
 {
+    @safe pure nothrow
     invariant()
     {
         assert(m_hkey !is null);
     }
 
 private:
+    @safe pure nothrow
     this(HKEY hkey, string name, bool created)
     in
     {
@@ -1147,12 +1158,14 @@ private:
  */
 class Value
 {
+    @safe pure nothrow
     invariant()
     {
         assert(m_key !is null);
     }
 
 private:
+    @safe pure nothrow
     this(Key key, string name, REG_VALUE_TYPE type)
     in
     {
@@ -1363,12 +1376,14 @@ foreach (string subkeyName; key.keyNames)
  */
 class KeyNameSequence
 {
+    @safe pure nothrow
     invariant()
     {
         assert(m_key !is null);
     }
 
 private:
+    @safe pure nothrow
     this(Key key)
     {
         m_key = key;
@@ -1458,12 +1473,14 @@ foreach (Key subkey; key.keys)
  */
 class KeySequence
 {
+    @safe pure nothrow
     invariant()
     {
         assert(m_key !is null);
     }
 
 private:
+    @safe pure nothrow
     this(Key key)
     {
         m_key = key;
@@ -1565,12 +1582,14 @@ foreach (string valueName; key.valueNames)
  */
 class ValueNameSequence
 {
+    @safe pure nothrow
     invariant()
     {
         assert(m_key !is null);
     }
 
 private:
+    @safe pure nothrow
     this(Key key)
     {
         m_key = key;
@@ -1659,12 +1678,14 @@ foreach (Value value; key.values)
  */
 class ValueSequence
 {
+    @safe pure nothrow
     invariant()
     {
         assert(m_key !is null);
     }
 
 private:
+    @safe pure nothrow
     this(Key key)
     {
         m_key = key;

@@ -3,11 +3,12 @@
 /++
     Functions which operate on ASCII characters.
 
-    All of the functions in std.ascii accept unicode characters but effectively
-    ignore them. All $(D isX) functions return $(D false) for unicode
-    characters, and all $(D toX) functions do nothing to unicode characters.
+    All of the functions in std.ascii accept Unicode characters but effectively
+    ignore them if they're not ASCII. All $(D isX) functions return $(D false)
+    for non-ASCII characters, and all $(D toX) functions do nothing to non-ASCII
+    characters.
 
-    For functions which operate on unicode characters, see
+    For functions which operate on Unicode characters, see
     $(LINK2 std_uni.html, std.uni).
 
     References:
@@ -17,26 +18,40 @@
     Macros:
         WIKI=Phobos/StdASCII
 
-    Copyright: Copyright 2000 -
+    Copyright: Copyright 2000 - 2013
     License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   $(WEB digitalmars.com, Walter Bright) and Jonathan M Davis
     Source:    $(PHOBOSSRC std/_ascii.d)
   +/
 module std.ascii;
 
-version(unittest) import std.range;
+version (unittest)
+{
+    // FIXME: When dmd bug #314 is fixed, make these selective.
+    import std.range; // : chain;
+    import std.traits; // : functionAttributes, FunctionAttribute, isSafe;
+    import std.typetuple; // : TypeTuple;
+}
 
 
-immutable hexDigits      = "0123456789ABCDEF";           /// 0..9A..F
 immutable fullHexDigits  = "0123456789ABCDEFabcdef";     /// 0..9A..Fa..f
-immutable digits         = "0123456789";                 /// 0..9
-immutable octalDigits    = "01234567";                   /// 0..7
-immutable lowercase      = "abcdefghijklmnopqrstuvwxyz"; /// a..z
-immutable letters        = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ~
-                           "abcdefghijklmnopqrstuvwxyz"; /// A..Za..z
-immutable uppercase      = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; /// A..Z
+immutable hexDigits      = fullHexDigits[0..16];         /// 0..9A..F
+immutable lowerHexDigits = "0123456789abcdef";           /// 0..9a..f
+immutable digits         = hexDigits[0..10];             /// 0..9
+immutable octalDigits    = digits[0..8];                 /// 0..7
+immutable letters        = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"; /// A..Za..z
+immutable uppercase      = letters[0..26];               /// A..Z
+immutable lowercase      = letters[26..52];              /// a..z
 immutable whitespace     = " \t\v\r\n\f";                /// ASCII whitespace
 
+/**
+Letter case specifier.
+ */
+enum LetterCase : bool
+{
+    upper, /// Upper case letters
+    lower  /// Lower case letters
+}
 
 version(Windows)
 {
@@ -57,7 +72,7 @@ else
   +/
 bool isAlphaNum(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & (_ALP|_DIG)) : false;
+    return c <= 'z' && c >= '0' && (c <= '9' || c >= 'a' || (c >= 'A' && c <= 'Z'));
 }
 
 unittest
@@ -75,7 +90,8 @@ unittest
   +/
 bool isAlpha(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & _ALP) : false;
+    // Optimizer can turn this into a bitmask operation on 64 bit code
+    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 }
 
 unittest
@@ -93,7 +109,7 @@ unittest
   +/
 bool isLower(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & _LC) : false;
+    return c >= 'a' && c <= 'z';
 }
 
 unittest
@@ -111,7 +127,7 @@ unittest
   +/
 bool isUpper(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & _UC) : false;
+    return c <= 'Z' && 'A' <= c;
 }
 
 unittest
@@ -129,7 +145,7 @@ unittest
   +/
 bool isDigit(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & _DIG) : false;
+    return '0' <= c && c <= '9';
 }
 
 unittest
@@ -165,7 +181,7 @@ unittest
   +/
 bool isHexDigit(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & _HEX) : false;
+    return c <= 'f' && c >= '0' && (c <= '9' || c >= 'a' || (c >= 'A' && c <= 'F'));
 }
 
 unittest
@@ -184,7 +200,7 @@ unittest
   +/
 bool isWhite(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & _SPC) : false;
+    return c == ' ' || (c >= 0x09 && c <= 0x0D);
 }
 
 unittest
@@ -202,12 +218,12 @@ unittest
   +/
 bool isControl(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & _CTL) : false;
+    return c < 0x20 || c == 0x7F;
 }
 
 unittest
 {
-    foreach(dchar c; iota(0, 32))
+    foreach(dchar c; 0 .. 32)
         assert(isControl(c));
     assert(isControl(127));
 
@@ -222,12 +238,12 @@ unittest
   +/
 bool isPunctuation(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & _PNC) : false;
+    return c <= '~' && c >= '!' && !isAlphaNum(c);
 }
 
 unittest
 {
-    foreach(dchar c; iota(0, 128))
+    foreach(dchar c; 0 .. 128)
     {
         if(isControl(c) || isAlphaNum(c) || c == ' ')
             assert(!isPunctuation(c));
@@ -243,12 +259,12 @@ unittest
   +/
 bool isGraphical(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & (_ALP|_DIG|_PNC)) : false;
+    return '!' <= c && c <= '~';
 }
 
 unittest
 {
-    foreach(dchar c; iota(0, 128))
+    foreach(dchar c; 0 .. 128)
     {
         if(isControl(c) || c == ' ')
             assert(!isGraphical(c));
@@ -257,18 +273,19 @@ unittest
     }
 }
 
+
 /++
     Whether or not $(D c) is a printable character - including the space
     character.
   +/
 bool isPrintable(dchar c) @safe pure nothrow
 {
-    return c <= 0x7F ? cast(bool)(_ctype[c] & (_ALP|_DIG|_PNC|_BLK)) : false;
+    return c >= ' ' && c <= '~';
 }
 
 unittest
 {
-    foreach(dchar c; iota(0, 128))
+    foreach(dchar c; 0 .. 128)
     {
         if(isControl(c))
             assert(!isPrintable(c));
@@ -289,7 +306,7 @@ bool isASCII(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(dchar c; iota(0, 128))
+    foreach(dchar c; 0 .. 128)
         assert(isASCII(c));
 
     assert(!isASCII(128));
@@ -299,26 +316,48 @@ unittest
 /++
     If $(D c) is an uppercase ASCII character, then its corresponding lowercase
     letter is returned. Otherwise, $(D c) is returned.
+
+    $(D C) can be any type which implicitly converts to $(D dchar). In the case
+    where it's a built-in type, or an enum of a built-in type,
+    $(D Unqual!(OriginalType!C)) is returned, whereas if it's a user-defined
+    type, $(D dchar) is returned.
   +/
-dchar toLower(dchar c) @safe pure nothrow
-out(result)
+auto toLower(C)(C c)
+    if(is(C : dchar))
 {
-    assert(!isUpper(result));
-}
-body
-{
-    return isUpper(c) ? c + cast(dchar)('a' - 'A') : c;
+    import std.traits : isAggregateType, OriginalType, Unqual;
+
+    alias OC = OriginalType!C;
+    static if (isAggregateType!OC)
+        alias R = dchar;
+    else
+        alias R = Unqual!OC;
+
+    return isUpper(c) ? cast(R)(cast(R)c + 'a' - 'A') : cast(R)c;
 }
 
-unittest
+@safe pure nothrow unittest
 {
-    foreach(i, c; uppercase)
-        assert(toLower(c) == lowercase[i]);
 
-    foreach(dchar c; iota(0, 128))
+    foreach(C; TypeTuple!(char, wchar, dchar, immutable char, ubyte))
     {
-        if(c < 'A' || c > 'Z')
+        foreach(i, c; uppercase)
+            assert(toLower(cast(C)c) == lowercase[i]);
+
+        foreach(C c; 0 .. 128)
+        {
+            if(c < 'A' || c > 'Z')
+                assert(toLower(c) == c);
+            else
+                assert(toLower(c) != c);
+        }
+
+        foreach(C c; 128 .. C.max)
             assert(toLower(c) == c);
+
+        //CTFE
+        static assert(toLower(cast(C)'a') == 'a');
+        static assert(toLower(cast(C)'A') == 'a');
     }
 }
 
@@ -326,66 +365,102 @@ unittest
 /++
     If $(D c) is a lowercase ASCII character, then its corresponding uppercase
     letter is returned. Otherwise, $(D c) is returned.
+
+    $(D C) can be any type which implicitly converts to $(D dchar). In the case
+    where it's a built-in type, or an enum of a built-in type,
+    $(D Unqual!(OriginalType!C)) is returned, whereas if it's a user-defined
+    type, $(D dchar) is returned.
   +/
-dchar toUpper(dchar c) @safe pure nothrow
-out(result)
+auto toUpper(C)(C c)
+    if(is(C : dchar))
 {
-    assert(!isLower(result));
-}
-body
-{
-    return isLower(c) ? c - cast(dchar)('a' - 'A') : c;
+    import std.traits : isAggregateType, OriginalType, Unqual;
+
+    alias OC = OriginalType!C;
+    static if (isAggregateType!OC)
+        alias R = dchar;
+    else
+        alias R = Unqual!OC;
+
+    return isLower(c) ? cast(R)(cast(R)c - ('a' - 'A')) : cast(R)c;
 }
 
-unittest
+@safe pure nothrow unittest
 {
-    foreach(i, c; lowercase)
-        assert(toUpper(c) == uppercase[i]);
-
-    foreach(dchar c; iota(0, 128))
+    foreach(C; TypeTuple!(char, wchar, dchar, immutable char, ubyte))
     {
-        if(c < 'a' || c > 'z')
+        foreach(i, c; lowercase)
+            assert(toUpper(cast(C)c) == uppercase[i]);
+
+        foreach(C c; 0 .. 128)
+        {
+            if(c < 'a' || c > 'z')
+                assert(toUpper(c) == c);
+            else
+                assert(toUpper(c) != c);
+        }
+
+        foreach(C c; 128 .. C.max)
             assert(toUpper(c) == c);
+
+        //CTFE
+        static assert(toUpper(cast(C)'a') == 'A');
+        static assert(toUpper(cast(C)'A') == 'A');
     }
 }
 
 
-//==============================================================================
-// Private Section.
-//==============================================================================
-private:
-
-enum
+unittest //Test both toUpper and toLower with non-builtin
 {
-    _SPC =      8,
-    _CTL =      0x20,
-    _BLK =      0x40,
-    _HEX =      0x80,
-    _UC  =      1,
-    _LC  =      2,
-    _PNC =      0x10,
-    _DIG =      4,
-    _ALP =      _UC|_LC,
+    //User Defined [Char|Wchar|Dchar]
+    static struct UDC {  char c; alias c this; }
+    static struct UDW { wchar c; alias c this; }
+    static struct UDD { dchar c; alias c this; }
+    //[Char|Wchar|Dchar] Enum
+    enum CE :  char {a = 'a', A = 'A'}
+    enum WE : wchar {a = 'a', A = 'A'}
+    enum DE : dchar {a = 'a', A = 'A'}
+    //User Defined [Char|Wchar|Dchar] Enum
+    enum UDCE : UDC {a = UDC('a'), A = UDC('A')}
+    enum UDWE : UDW {a = UDW('a'), A = UDW('A')}
+    enum UDDE : UDD {a = UDD('a'), A = UDD('A')}
+
+    //User defined types with implicit cast to dchar test.
+    foreach (Char; TypeTuple!(UDC, UDW, UDD))
+    {
+        assert(toLower(Char('a')) == 'a');
+        assert(toLower(Char('A')) == 'a');
+        static assert(toLower(Char('a')) == 'a');
+        static assert(toLower(Char('A')) == 'a');
+        static assert(toUpper(Char('a')) == 'A');
+        static assert(toUpper(Char('A')) == 'A');
+    }
+
+    //Various enum tests.
+    foreach (Enum; TypeTuple!(CE, WE, DE, UDCE, UDWE, UDDE))
+    {
+        assert(toLower(Enum.a) == 'a');
+        assert(toLower(Enum.A) == 'a');
+        assert(toUpper(Enum.a) == 'A');
+        assert(toUpper(Enum.A) == 'A');
+        static assert(toLower(Enum.a) == 'a');
+        static assert(toLower(Enum.A) == 'a');
+        static assert(toUpper(Enum.a) == 'A');
+        static assert(toUpper(Enum.A) == 'A');
+    }
+
+    //Return value type tests for enum of non-UDT. These should be the original type.
+    foreach (T; TypeTuple!(CE, WE, DE))
+    {
+        alias C = OriginalType!T;
+        static assert(is(typeof(toLower(T.init)) == C));
+        static assert(is(typeof(toUpper(T.init)) == C));
+    }
+
+    //Return value tests for UDT and enum of UDT. These should be dchar
+    foreach (T; TypeTuple!(UDC, UDW, UDD, UDCE, UDWE, UDDE))
+    {
+        static assert(is(typeof(toLower(T.init)) == dchar));
+        static assert(is(typeof(toUpper(T.init)) == dchar));
+    }
 }
-
-immutable ubyte _ctype[128] =
-[
-        _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
-        _CTL,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL,_CTL,
-        _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
-        _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
-        _SPC|_BLK,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
-        _PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
-        _DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,
-        _DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,
-        _PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
-        _PNC,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC,
-        _UC,_UC,_UC,_UC,_UC,_UC,_UC,_UC,
-        _UC,_UC,_UC,_UC,_UC,_UC,_UC,_UC,
-        _UC,_UC,_UC,_PNC,_PNC,_PNC,_PNC,_PNC,
-        _PNC,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC,
-        _LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
-        _LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
-        _LC,_LC,_LC,_PNC,_PNC,_PNC,_PNC,_CTL
-];
-

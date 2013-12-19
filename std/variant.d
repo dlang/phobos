@@ -65,7 +65,8 @@
  */
 module std.variant;
 
-import std.traits, std.c.string, std.typetuple, std.conv, std.exception;
+import std.c.string, std.conv, std.exception, std.traits, std.typecons,
+    std.typetuple;
 
 @trusted:
 
@@ -416,7 +417,8 @@ private:
             {
                 enforce(0, "Not implemented");
             }
-            static if (isDynamicArray!(A) && allowed!(typeof(A.init[0])))
+            // Can't handle void arrays as there isn't any result to return.
+            static if (isDynamicArray!(A) && !is(Unqual!(typeof(A.init[0])) == void) && allowed!(typeof(A.init[0])))
             {
                 // array type; input and output are the same VariantN
                 auto result = cast(VariantN*) parm;
@@ -429,7 +431,7 @@ private:
                     && allowed!(typeof(A.init.values[0])))
             {
                 auto result = cast(VariantN*) parm;
-                *result = (*zis)[result.get!(typeof(A.keys[0]))];
+                *result = (*zis)[result.get!(typeof(A.init.keys[0]))];
                 break;
             }
             else
@@ -450,8 +452,8 @@ private:
             else static if (isAssociativeArray!(A))
             {
                 auto args = cast(VariantN*) parm;
-                (*zis)[args[1].get!(typeof(A.keys[0]))]
-                    = args[0].get!(typeof(A.values[0]));
+                (*zis)[args[1].get!(typeof(A.init.keys[0]))]
+                    = args[0].get!(typeof(A.init.values[0]));
                 break;
             }
             else
@@ -460,7 +462,7 @@ private:
             }
 
         case OpID.catAssign:
-            static if (is(typeof((*zis)[0])) && is(typeof((*zis) ~= *zis)))
+            static if (!is(Unqual!(typeof((*zis)[0])) == void) && is(typeof((*zis)[0])) && is(typeof((*zis) ~= *zis)))
             {
                 // array type; parm is the element to append
                 auto arg = cast(VariantN*) parm;
@@ -493,7 +495,43 @@ private:
             }
 
         case OpID.apply:
-            assert(0);
+            static if (!isFunctionPointer!A && !isDelegate!A)
+            {
+                enforce(0, text("Cannot apply `()' to a value of type `",
+                                A.stringof, "'."));
+            }
+            else
+            {
+                alias ParamTypes = ParameterTypeTuple!A;
+                auto p = cast(VariantN*) parm;
+                auto argCount = p.get!size_t;
+                // To assign the tuple we need to use the unqualified version,
+                // otherwise we run into issues such as with const values.
+                // We still get the actual type from the Variant though
+                // to ensure that we retain const correctness.
+                Tuple!(staticMap!(Unqual, ParamTypes)) t;
+                enforce(t.length == argCount,
+                        text("Argument count mismatch: ",
+                             A.stringof, " expects ", t.length,
+                             " argument(s), not ", argCount, "."));
+                auto variantArgs = p[1 .. argCount + 1];
+                foreach (i, T; ParamTypes)
+                {
+                    t[i] = cast()variantArgs[i].get!T;
+                }
+
+                auto args = cast(Tuple!(ParamTypes))t;
+                static if(is(ReturnType!A == void))
+                {
+                    (*zis)(args.expand);
+                    *p = VariantN.init; // void returns uninitialized Variant.
+                }
+                else
+                {
+                    *p = (*zis)(args.expand);
+                }
+            }
+            break;
 
         default: assert(false);
         }
@@ -562,6 +600,18 @@ public:
             fptr = &handler!(T);
         }
         return this;
+    }
+
+    VariantN opCall(P...)(auto ref P params)
+    {
+        VariantN pack[P.length + 1];
+        pack[0] = P.length;
+        foreach (i, _; params)
+        {
+            pack[i + 1] = params[i];
+        }
+        fptr(OpID.apply, &store, &pack);
+        return pack[0];
     }
 
     /** Returns true if and only if the $(D_PARAM VariantN) object
@@ -785,6 +835,12 @@ public:
             auto temp = VariantN(rhs);
         return !fptr(OpID.compare, cast(ubyte[size]*) &store,
                      cast(void*) &temp);
+    }
+
+    // workaround for bug 10567 fix
+    int opCmp(ref const VariantN rhs) const
+    {
+        return (cast()this).opCmp!(VariantN)(cast()rhs);
     }
 
     /**
@@ -1095,6 +1151,18 @@ public:
     }
 }
 
+unittest
+{
+    Variant v;
+    int foo() { return 42; }
+    v = &foo;
+    assert(v() == 42);
+
+    static int bar(string s) { return to!int(s); }
+    v = &bar;
+    assert(v("43") == 43);
+}
+
 //Issue# 8195
 unittest
 {
@@ -1113,6 +1181,16 @@ unittest
 
     auto v = MyVariant(S.init);
     assert(v == S.init);
+}
+
+// Issue #10961
+unittest
+{
+    // Primarily test that we can assign a void[] to a Variant.
+    void[] elements = cast(void[])[1, 2, 3];
+    Variant v = elements;
+    void[] returned = v.get!(void[]);
+    assert(returned == elements);
 }
 
 /**
@@ -1554,6 +1632,36 @@ unittest
     v = null;
 }
 
+// Const parameters with opCall, issue 11361.
+unittest
+{
+    static string t1(string c) {
+        return c ~ "a";
+    }
+
+    static const(char)[] t2(const(char)[] p) {
+        return p ~ "b";
+    }
+
+    static char[] t3(int p) {
+        return p.text.dup;
+    }
+
+    Variant v1 = &t1;
+    Variant v2 = &t2;
+    Variant v3 = &t3;
+
+    assert(v1("abc") == "abca");
+    assert(v1("abc").type == typeid(string));
+    assert(v2("abc") == "abcb");
+
+    assert(v2(cast(char[])("abc".dup)) == "abcb");
+    assert(v2("abc").type == typeid(const(char)[]));
+
+    assert(v3(4) == ['4']);
+    assert(v3(4).type == typeid(char[]));
+}
+
 // Ordering comparisons of incompatible types, e.g. issue 7990.
 unittest
 {
@@ -1575,6 +1683,18 @@ unittest
     assertThrown!VariantException(Variant(A(3)) < A(4));
     assertThrown!VariantException(A(3) < Variant(A(4)));
     assertThrown!VariantException(Variant(A(3)) < Variant(A(4)));
+}
+
+// Handling of void function pointers / delegates, e.g. issue 11360
+unittest
+{
+    static void t1() { }
+    Variant v = &t1;
+    assert(v() == Variant.init);
+    
+    static int t2() { return 3; }
+    Variant v2 = &t2;
+    assert(v2() == 3);
 }
 
 /**

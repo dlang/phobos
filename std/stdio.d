@@ -120,6 +120,8 @@ else version (MICROSOFT_STDIO)
         int _fgetwc_nolock(_iobuf*);
         void _lock_file(FILE*);
         void _unlock_file(FILE*);
+        int _setmode(int, int);
+        int _fileno(FILE*);
     }
     alias _fputc_nolock FPUTC;
     alias _fputwc_nolock FPUTWC;
@@ -128,6 +130,9 @@ else version (MICROSOFT_STDIO)
 
     alias _lock_file FLOCK;
     alias _unlock_file FUNLOCK;
+
+    enum _O_BINARY = 0x8000;
+
 }
 else version (GCC_IO)
 {
@@ -746,7 +751,7 @@ Throws: $(D Exception) if the file is not opened.
 */
     void write(S...)(S args)
     {
-        auto w = lockingTextWriter;
+        auto w = lockingTextWriter();
         foreach (arg; args)
         {
             alias typeof(arg) A;
@@ -798,7 +803,7 @@ Throws: $(D Exception) if the file is not opened.
 */
     void writef(Char, A...)(in Char[] fmt, A args)
     {
-        std.format.formattedWrite(lockingTextWriter, fmt, args);
+        std.format.formattedWrite(lockingTextWriter(), fmt, args);
     }
 
 /**
@@ -810,44 +815,47 @@ Throws: $(D Exception) if the file is not opened.
 */
     void writefln(Char, A...)(in Char[] fmt, A args)
     {
-        auto w = lockingTextWriter;
+        auto w = lockingTextWriter();
         std.format.formattedWrite(w, fmt, args);
         w.put('\n');
     }
 
 /**
-Read line from stream $(D fp) and return it as a specified type.
+Read line from the file handle and return it as a specified type.
 
 This version manages its own read buffer, which means one memory allocation per call. If you are not 
 retaining a reference to the read data, consider the $(D File.readln(buf)) version, which may offer 
-better performance as it reuses its read buffer.
+better performance as it can reuse its read buffer.
 
 Params:
-    S = Template parameter; the type of the allocated buffer, and the type returned. Defaults to $(D string)
+    S = Template parameter; the type of the allocated buffer, and the type returned. Defaults to $(D string).
     terminator = line terminator (by default, '\n')
 
 Returns:
     The line that was read, including the line terminator character. 
+
+Throws:
+    $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
 
 Example:
 ---
 // Reads $(D stdin) and writes it to $(D stdout).
 import std.stdio;
 
-int main()
+void main()
 {
-    string buf;
-    while ((buf = readln()) !is null)
-        write(buf);
-    return 0;
+    string line;
+    while ((line = stdin.readln()) !is null)
+        write(line);
 }
 ---
 */
     S readln(S = string)(dchar terminator = '\n')
+    if (isSomeString!S)
     {
         Unqual!(ElementEncodingType!S)[] buf;
         readln(buf, terminator);
-        return assumeUnique(buf);
+        return cast(S)buf;
     }
 
     unittest
@@ -855,13 +863,13 @@ int main()
         auto deleteme = testFilename();
         std.file.write(deleteme, "hello\nworld\n");
         scope(exit) std.file.remove(deleteme);
-        foreach (C; Tuple!(char, wchar, dchar).Types)
+        foreach (String; TypeTuple!(string, char[], wstring, wchar[], dstring, dchar[]))
         {
             auto witness = [ "hello\n", "world\n" ];
             auto f = File(deleteme);
             uint i = 0;
-            immutable(C)[] buf;
-            while ((buf = f.readln!(typeof(buf))()).length)
+            String buf;
+            while ((buf = f.readln!String()).length)
             {
                 assert(i < witness.length);
                 assert(equal(buf, witness[i++]));
@@ -870,18 +878,33 @@ int main()
         }
     }
 
+    unittest
+    {
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "cześć \U0002000D");
+        scope(exit) std.file.remove(deleteme);
+        uint[] lengths=[12,8,7];
+        foreach (uint i,C; Tuple!(char, wchar, dchar).Types)
+        {
+            immutable(C)[] witness = "cześć \U0002000D";
+            auto buf = File(deleteme).readln!(immutable(C)[])();
+            assert(buf.length==lengths[i]);
+            assert(buf==witness);
+        }
+    }
+
 /**
-Read line from stream $(D fp) and write it to $(D buf[]), including
+Read line from the file handle and write it to $(D buf[]), including
 terminating character.
 
-This is often faster than $(D buf = File.readln()) because the buffer
-is reused each call. Note that reusing the buffer means that the
-previous contents of it has to be copied if needed.
+This can be faster than $(D line = File.readln()) because you can reuse
+the buffer for each call. Note that reusing the buffer means that you
+must copy the previous contents if you wish to retain them.
 
 Params:
-fp = input stream
 buf = buffer used to store the resulting line data. buf is
 resized as necessary.
+terminator = line terminator (by default, '\n')
 
 Returns:
 0 for end of file, otherwise number of characters read
@@ -891,37 +914,34 @@ conversion error.
 
 Example:
 ---
-// Reads $(D stdin) into a buffer
-// Dumps the buffer to $(D stdout) when it gets a "q"
+// Read lines from $(D stdin) into a string
+// Ignore lines starting with '#'
+// Write the string to $(D stdout)
 
-int main()
+void main()
 {
-    string[] outBuf;
-    string buf;
+    string output;
+    char[] buf;
 
     while (stdin.readln(buf))
     {
-        if (buf[0] == 'q')
-            break;
+        if (buf[0] == '#')
+            continue;
 
-        outBuf ~= buf.idup;
+        output ~= buf;
     }
 
-    foreach (line; outBuf)
-    {
-        write(line);
-    }
-
-    return 0;
+    write(output);
 }
 ---
 
-This method is more efficient than the one in the previous example
+This method can be more efficient than the one in the previous example
 because $(D stdin.readln(buf)) reuses (if possible) memory allocated
-by $(D buf), whereas $(D buf = stdin.readln()) makes a new memory allocation
-with every line. 
+for $(D buf), whereas $(D line = stdin.readln()) makes a new memory allocation
+for every line. 
 */
-    size_t readln(C)(ref C[] buf, dchar terminator = '\n') if (isSomeChar!C && !is(C == enum))
+    size_t readln(C)(ref C[] buf, dchar terminator = '\n')
+    if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum))
     {
         static if (is(C == char))
         {
@@ -934,7 +954,7 @@ with every line.
             string s = readln(terminator);
             buf.length = 0;
             if (!s.length) return 0;
-            foreach (wchar c; s)
+            foreach (C c; s)
             {
                 buf ~= c;
             }
@@ -944,7 +964,8 @@ with every line.
 
 /** ditto */
     size_t readln(C, R)(ref C[] buf, R terminator)
-        if (isBidirectionalRange!R && is(typeof(terminator.front == buf[0])))
+    if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum) &&
+        isBidirectionalRange!R && is(typeof(terminator.front == dchar.init)))
     {
         auto last = terminator.back;
         C[] buf2;
@@ -1051,15 +1072,149 @@ Returns the file number corresponding to this object.
         return .fileno(cast(FILE*) _p.handle);
     }
 
-/**
+// Note: This was documented until 2013/08
+/*
 Range that reads one line at a time.  Returned by $(LREF byLine).
 
 Allows to directly use range operations on lines of a file.
+*/
+    struct ByLine(Char, Terminator)
+    {
+    private:
+        /* Ref-counting stops the source range's ByLineImpl
+         * from getting out of sync after the range is copied, e.g.
+         * when accessing range.front, then using std.range.take,
+         * then accessing range.front again. */
+        alias Impl = RefCounted!(ByLineImpl!(Char, Terminator),
+            RefCountedAutoInitialize.no);
+        Impl impl;
+        
+        static if (isScalarType!Terminator)
+            enum defTerm = '\n';
+        else
+            enum defTerm = cast(Terminator)"\n";
+        
+    public:
+        this(File f, KeepTerminator kt = KeepTerminator.no,
+                Terminator terminator = defTerm)
+        {
+            impl = Impl(f, kt, terminator);
+        }
+        
+        @property bool empty()
+        {
+            return impl.refCountedPayload.empty;
+        }
+
+        @property Char[] front()
+        {
+            return impl.refCountedPayload.front;
+        }
+
+        void popFront()
+        {
+            impl.refCountedPayload.popFront();
+        }
+    }
+
+    private struct ByLineImpl(Char, Terminator)
+    {
+    private:
+        File file;
+        Char[] line;
+        Terminator terminator;
+        KeepTerminator keepTerminator;
+        bool first_call = true;
+
+    public:
+        this(File f, KeepTerminator kt, Terminator terminator)
+        {
+            file = f;
+            this.terminator = terminator;
+            keepTerminator = kt;
+        }
+
+        // Range primitive implementations.
+        @property bool empty()
+        {
+            if (line !is null) return false;
+            if (!file.isOpen) return true;
+
+            // First read ever, must make sure stream is not empty. We
+            // do so by reading a character and putting it back. Doing
+            // so is guaranteed to work on all files opened in all
+            // buffering modes.
+            auto fp = file.getFP();
+            auto c = fgetc(fp);
+            if (c == -1)
+            {
+                file.detach();
+                return true;
+            }
+            ungetc(c, fp) == c
+                || assert(false, "Bug in cstdlib implementation");
+            return false;
+        }
+
+        @property Char[] front()
+        {
+            if (first_call)
+            {
+                popFront();
+                first_call = false;
+            }
+            return line;
+        }
+
+        void popFront()
+        {
+            assert(file.isOpen);
+            assumeSafeAppend(line);
+            file.readln(line, terminator);
+            if (line.empty)
+            {
+                file.detach();
+                line = null;
+            }
+            else if (keepTerminator == KeepTerminator.no
+                    && std.algorithm.endsWith(line, terminator))
+            {
+                static if (isScalarType!Terminator)
+                    enum tlen = 1;
+                else static if (isArray!Terminator)
+                {
+                    static assert(
+                        is(Unqual!(ElementEncodingType!Terminator) == Char));
+                    const tlen = terminator.length;
+                }
+                else
+                    static assert(false);
+                line = line.ptr[0 .. line.length - tlen];
+            }
+        }
+    }
+
+/**
+Returns an input range set up to read from the file handle one line 
+at a time.
+
+The element type for the range will be $(D Char[]). Range primitives 
+may throw $(D StdioException) on I/O error.
+
+Note:
+Each $(D front) will not persist after $(D 
+popFront) is called, so the caller must copy its contents (e.g. by 
+calling $(D to!string)) if retention is needed.
+
+Params:
+Char = Character type for each line, defaulting to $(D char).
+keepTerminator = Use $(D KeepTerminator.yes) to include the 
+terminator at the end of each line.
+terminator = Line separator ($(D '\n') by default).
 
 Example:
-
 ----
-import std.algorithm, std.string, std.stdio;
+import std.algorithm, std.stdio, std.string;
 // Count words in a file using ranges.
 void main()
 {
@@ -1074,97 +1229,41 @@ void main()
 
 Example:
 ----
-import std.stdio;
-// Count lines in file using a foreach
+import std.range, std.stdio;
+// Read lines using foreach.
 void main()
 {
-    auto file = File("file.txt"); // open for reading
-    ulong lineCount = 0;
-    foreach (line; file.byLine())
+    auto file = File("file.txt"); // Open for reading
+    auto range = file.byLine();
+    // Print first three lines
+    foreach (line; range.take(3))
+        writeln(line);
+    // Print remaining lines beginning with '#'
+    foreach (line; range)
     {
-        ++lineCount;
+        if (!line.empty && line[0] == '#')
+            writeln(line);
     }
-    writeln("Lines in file: ", lineCount);
 }
 ----
+Notice that neither example accesses the line data returned by
+$(D front) after the corresponding $(D popFront) call is made (because
+the contents may well have changed).
 */
-    struct ByLine(Char, Terminator)
-    {
-        File file;
-        Char[] line;
-        Terminator terminator;
-        KeepTerminator keepTerminator;
-        bool first_call = true;
-
-        this(File f, KeepTerminator kt = KeepTerminator.no,
-                Terminator terminator = '\n')
-        {
-            file = f;
-            this.terminator = terminator;
-            keepTerminator = kt;
-        }
-
-        /// Range primitive implementations.
-        @property bool empty() const
-        {
-            if (line !is null) return false;
-            if (!file.isOpen) return true;
-
-            // First read ever, must make sure stream is not empty. We
-            // do so by reading a character and putting it back. Doing
-            // so is guaranteed to work on all files opened in all
-            // buffering modes. Although we internally mutate the
-            // state of the file, we restore everything, which
-            // justifies the cast.
-            auto mutableFP = (cast(File*) &file).getFP();
-            auto c = fgetc(mutableFP);
-            if (c == -1)
-            {
-                return true;
-            }
-            ungetc(c, mutableFP) == c
-                || assert(false, "Bug in cstdlib implementation");
-            return false;
-        }
-
-        /// Ditto
-        @property Char[] front()
-        {
-            if (first_call)
-            {
-                popFront();
-                first_call = false;
-            }
-            return line;
-        }
-
-        /// Ditto
-        void popFront()
-        {
-            assert(file.isOpen);
-            assumeSafeAppend(line);
-            file.readln(line, terminator);
-            if (line.empty)
-            {
-                file.detach();
-                line = null;
-            }
-            else if (keepTerminator == KeepTerminator.no
-                    && std.algorithm.endsWith(line, terminator))
-            {
-                line = line.ptr[0 .. line.length - 1];
-            }
-        }
-    }
-
-/**
-Convenience function that returns the $(D LinesReader) corresponding
-to this file. */
-    ByLine!(Char, Terminator) byLine(Terminator = char, Char = char)
+    auto byLine(Terminator = char, Char = char)
     (KeepTerminator keepTerminator = KeepTerminator.no,
             Terminator terminator = '\n')
+    if (isScalarType!Terminator)
     {
-        return typeof(return)(this, keepTerminator, terminator);
+        return ByLine!(Char, Terminator)(this, keepTerminator, terminator);
+    }
+
+/// ditto
+    auto byLine(Terminator, Char = char)
+    (KeepTerminator keepTerminator, Terminator terminator)
+    if (is(Unqual!(ElementEncodingType!Terminator) == Char))
+    {
+        return ByLine!(Char, Terminator)(this, keepTerminator, terminator);
     }
 
     unittest
@@ -1181,11 +1280,11 @@ to this file. */
         {
             assert(false);
         }
-        f.close();
+        f.detach();
+        assert(!f.isOpen);
 
-        void test(string txt, string[] witness,
-                KeepTerminator kt = KeepTerminator.no,
-                bool popFirstLine = false)
+        void testTerm(Terminator)(string txt, string[] witness,
+                KeepTerminator kt, Terminator term, bool popFirstLine)
         {
             uint i;
             std.file.write(deleteme, txt);
@@ -1195,17 +1294,27 @@ to this file. */
                 f.close();
                 assert(!f.isOpen);
             }
-            auto lines = f.byLine(kt);
+            auto lines = f.byLine(kt, term);
             if (popFirstLine)
             {
                 lines.popFront();
                 i = 1;
             }
+            assert(lines.empty || lines.front is lines.front);
             foreach (line; lines)
             {
                 assert(line == witness[i++]);
             }
             assert(i == witness.length, text(i, " != ", witness.length));
+        }
+        /* Wrap with default args.
+         * Note: Having a default argument for terminator = '\n' would prevent
+         * instantiating Terminator=string (or "\n" would prevent Terminator=char) */
+        void test(string txt, string[] witness,
+                KeepTerminator kt = KeepTerminator.no,
+                bool popFirstLine = false)
+        {
+            testTerm(txt, witness, kt, '\n', popFirstLine);
         }
 
         test("", null);
@@ -1213,12 +1322,44 @@ to this file. */
         test("asd\ndef\nasdf", [ "asd", "def", "asdf" ]);
         test("asd\ndef\nasdf", [ "asd", "def", "asdf" ], KeepTerminator.no, true);
         test("asd\ndef\nasdf\n", [ "asd", "def", "asdf" ]);
+        test("foo", [ "foo" ], KeepTerminator.no, true);
+        testTerm("bob\r\nmarge\r\nsteve\r\n", ["bob", "marge", "steve"],
+            KeepTerminator.no, "\r\n", false);
+        testTerm("sue\r", ["sue"], KeepTerminator.no, '\r', false);
 
         test("", null, KeepTerminator.yes);
         test("\n", [ "\n" ], KeepTerminator.yes);
         test("asd\ndef\nasdf", [ "asd\n", "def\n", "asdf" ], KeepTerminator.yes);
         test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes);
         test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes, true);
+        test("foo", [ "foo" ], KeepTerminator.yes, false);
+        testTerm("bob\r\nmarge\r\nsteve\r\n", ["bob\r\n", "marge\r\n", "steve\r\n"],
+            KeepTerminator.yes, "\r\n", false);
+        testTerm("sue\r", ["sue\r"], KeepTerminator.yes, '\r', false);
+
+        auto file = File.tmpfile();
+        file.write("1\n2\n3\n");
+
+        // bug 9599
+        file.rewind();
+        File.ByLine!(char, char) fbl = file.byLine();
+        auto fbl2 = fbl;
+        assert(fbl.front == "1");
+        assert(fbl.front is fbl2.front);
+        assert(fbl.take(1).equal(["1"]));
+        assert(fbl.equal(["2", "3"]));
+        assert(fbl.empty);
+        assert(file.isOpen); // we still have a valid reference
+        
+        file.rewind();
+        fbl = file.byLine();
+        assert(!fbl.drop(2).empty);
+        assert(fbl.equal(["3"]));
+        assert(fbl.empty);
+        assert(file.isOpen);
+        
+        file.detach();
+        assert(!file.isOpen);
     }
 
     template byRecord(Fields...)
@@ -1248,7 +1389,8 @@ to this file. */
     }
 
 
-    /**
+    // Note: This was documented until 2013/08
+    /*
      * Range that reads a chunk at a time.
      */
     struct ByChunk
@@ -1302,10 +1444,17 @@ to this file. */
     }
 
 /**
-Iterates through a file a chunk at a time by using $(D foreach).
+Returns an input range set up to read from the file handle a chunk at a 
+time.
+
+The element type for the range will be $(D ubyte[]). Range primitives 
+may throw $(D StdioException) on I/O error.
+
+Note: Each $(D front) will not persist after $(D 
+popFront) is called, so the caller must copy its contents (e.g. by 
+calling $(D buffer.dup)) if retention is needed.
 
 Example:
-
 ---------
 void main()
 {
@@ -1315,15 +1464,22 @@ void main()
   }
 }
 ---------
-
 The content of $(D buffer) is reused across calls. In the example
 above, $(D buffer.length) is 4096 for all iterations, except for the
 last one, in which case $(D buffer.length) may be less than 4096 (but
 always greater than zero).
 
-In case of an I/O error, an $(D StdioException) is thrown.
+Example:
+---
+import std.algorithm, std.stdio;
+
+void main()
+{
+    stdin.byChunk(1024).copy(stdout.lockingTextWriter());
+}
+---
  */
-    ByChunk byChunk(size_t chunkSize)
+    auto byChunk(size_t chunkSize)
     {
         return ByChunk(this, chunkSize);
     }
@@ -1351,7 +1507,8 @@ In case of an I/O error, an $(D StdioException) is thrown.
         assert(i == witness.length);
     }
 
-/**
+// Note: This was documented until 2013/08
+/*
 $(D Range) that locks the file and allows fast writing to it.
  */
     struct LockingTextWriter
@@ -1371,15 +1528,20 @@ $(D Range) that locks the file and allows fast writing to it.
 
         ~this()
         {
-            FUNLOCK(fps);
-            fps = null;
-            handle = null;
+            if(fps)
+            {
+                FUNLOCK(fps);
+                fps = null;
+                handle = null;
+            }
         }
 
         this(this)
         {
-            enforce(fps);
-            FLOCK(fps);
+            if(fps)
+            {
+                FLOCK(fps);
+            }
         }
 
         /// Range primitive implementations.
@@ -1485,8 +1647,11 @@ $(D Range) that locks the file and allows fast writing to it.
         }
     }
 
-/// Convenience function.
-    @property LockingTextWriter lockingTextWriter()
+/** Returns an output range that locks the file and allows fast writing to it.
+
+See $(LREF byChunk) for an example.
+*/
+    auto lockingTextWriter()
     {
         return LockingTextWriter(this);
     }
@@ -1739,7 +1904,8 @@ void writeln(T...)(T args)
     }
     else static if (T.length == 1 &&
                     is(typeof(args[0]) : const(char)[]) &&
-                    !is(typeof(args[0]) == enum) && !is(typeof(args[0]) == typeof(null)) &&
+                    !is(typeof(args[0]) == enum) &&
+                    !is(Unqual!(typeof(args[0])) == typeof(null)) &&
                     !isAggregateType!(typeof(args[0])))
     {
         // Specialization for strings - a very frequent case
@@ -1840,6 +2006,19 @@ unittest
         assert(cast(char[]) std.file.read(deleteme) ==
                 "A\nB\nA\nB\nA\nB\nA\nB\n");
 }
+
+unittest
+{
+    static auto useInit(T)(T ltw)
+    {
+        T val;
+        val = ltw;
+        val = T.init;
+        return val;
+    }
+    useInit(stdout.lockingTextWriter());
+}
+
 
 /***********************************
  * If the first argument $(D args[0]) is a $(D FILE*), use
@@ -1975,38 +2154,100 @@ unittest
 }
 
 /**********************************
- * Read line from stream $(D fp).
+ * Read line from $(D stdin).
+ * 
+ * This version manages its own read buffer, which means one memory allocation per call. If you are not 
+ * retaining a reference to the read data, consider the $(D readln(buf)) version, which may offer 
+ * better performance as it can reuse its read buffer.
+ * 
  * Returns:
- *        $(D null) for end of file,
- *        $(D char[]) for line read from $(D fp), including terminating character
+ *        The line that was read, including the line terminator character. 
  * Params:
- *        $(D fp) = input stream
- *        $(D terminator) = line terminator, '\n' by default
+ *        S = Template parameter; the type of the allocated buffer, and the type returned. Defaults to $(D string).
+ *        terminator = line terminator (by default, '\n')
  * Throws:
- *        $(D StdioException) on error
+ *        $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
  * Example:
  *        Reads $(D stdin) and writes it to $(D stdout).
 ---
 import std.stdio;
 
-int main()
+void main()
 {
-    string buf;
-    while ((buf = stdin.readln()) !is null)
-        write(buf);
-    return 0;
+    string line;
+    while ((line = readln()) !is null)
+        write(line);
 }
 ---
 */
-string readln(dchar terminator = '\n')
+S readln(S = string)(dchar terminator = '\n')
+if (isSomeString!S)
 {
-    return stdin.readln(terminator);
+    return stdin.readln!S(terminator);
+}
+
+/**********************************
+ * Read line from $(D stdin) and write it to buf[], including terminating character.
+ * 
+ * This can be faster than $(D line = readln()) because you can reuse
+ * the buffer for each call. Note that reusing the buffer means that you
+ * must copy the previous contents if you wish to retain them.
+ * 
+ * Returns:
+ *        $(D size_t) 0 for end of file, otherwise number of characters read
+ * Params:
+ *        buf = Buffer used to store the resulting line data. buf is resized as necessary.
+ *        terminator = line terminator (by default, '\n')
+ * Throws:
+ *        $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
+ * Example:
+ *        Reads $(D stdin) and writes it to $(D stdout).
+---
+import std.stdio;
+
+void main()
+{
+    char[] buf;
+    while (readln(buf))
+        write(buf);
+}
+---
+*/
+size_t readln(C)(ref C[] buf, dchar terminator = '\n')
+if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum))
+{
+    return stdin.readln(buf, terminator);
 }
 
 /** ditto */
-size_t readln(ref char[] buf, dchar terminator = '\n')
+size_t readln(C, R)(ref C[] buf, R terminator)
+if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum) &&
+    isBidirectionalRange!R && is(typeof(terminator.front == dchar.init)))
 {
     return stdin.readln(buf, terminator);
+}
+
+unittest
+{
+    //we can't actually test readln, so at the very least,
+    //we test compilability
+    void foo()
+    {
+        readln();
+        readln('\t');
+        foreach (String; TypeTuple!(string, char[], wstring, wchar[], dstring, dchar[]))
+        {
+            readln!String();
+            readln!String('\t');
+        }
+        foreach (String; TypeTuple!(char[], wchar[], dchar[]))
+        {
+            String buf;
+            readln(buf);
+            readln(buf, '\t');
+            readln(buf, "<br />");
+        }
+    }
 }
 
 /*
@@ -2328,18 +2569,17 @@ unittest
 }
 
 /**
-Iterates through a file a chunk at a time by using $(D
-foreach).
+Iterates through a file a chunk at a time by using $(D foreach).
 
 Example:
 
 ---------
 void main()
 {
-  foreach (ubyte[] buffer; chunks(stdin, 4096))
-  {
-    ... use buffer ...
-  }
+    foreach (ubyte[] buffer; chunks(stdin, 4096))
+    {
+        ... use buffer ...
+    }
 }
 ---------
 
@@ -2350,8 +2590,11 @@ The content of $(D buffer) is reused across calls. In the
 
  In case of an I/O error, an $(D StdioException) is thrown.
 */
-
-struct chunks
+auto chunks(File f, size_t size)
+{
+    return ChunksImpl(f, size);
+}
+private struct ChunksImpl
 {
     private File f;
     private size_t size;
@@ -2379,7 +2622,7 @@ struct chunks
 
     int opApply(D)(scope D dg)
     {
-        const maxStackSize = 1024 * 16;
+        enum maxStackSize = 1024 * 16;
         ubyte[] buffer = void;
         if (size < maxStackSize)
             buffer = (cast(ubyte*) alloca(size))[0 .. size];
@@ -2411,7 +2654,7 @@ struct chunks
 
 unittest
 {
-        //printf("Entering test at line %d\n", __LINE__);
+    //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
     auto deleteme = testFilename();
     scope(exit) { std.file.remove(deleteme); }
@@ -2454,6 +2697,8 @@ Initialize with a message and an error code. */
         errno = e;
         version (Posix)
         {
+            import std.c.string : strerror_r;
+
             char[256] buf = void;
             version (linux)
             {
@@ -2467,13 +2712,13 @@ Initialize with a message and an error code. */
         }
         else
         {
-            auto s = std.c.string.strerror(errno);
+            auto s = core.stdc.string.strerror(errno);
         }
         auto sysmsg = to!string(s);
         // If e is 0, we don't use the system error message.  (The message
         // is "Success", which is rather pointless for an exception.)
         super(e == 0 ? message
-                     : (message ? message ~ " (" ~ sysmsg ~ ")" : sysmsg));
+                     : (message.ptr ? message ~ " (" ~ sysmsg ~ ")" : sysmsg));
     }
 
 /** Convenience functions that throw an $(D StdioException). */
@@ -2905,18 +3150,22 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
         Bugs:
                 Only works on Linux
 */
-version(linux) {
+version(linux)
+{
     static import linux = std.c.linux.linux;
     static import sock = std.c.linux.socket;
+    import core.stdc.string : memcpy;
 
-    File openNetwork(string host, ushort port) {
+    File openNetwork(string host, ushort port)
+    {
         auto h = enforce( sock.gethostbyname(std.string.toStringz(host)),
             new StdioException("gethostbyname"));
 
         int s = sock.socket(sock.AF_INET, sock.SOCK_STREAM, 0);
         enforce(s != -1, new StdioException("socket"));
 
-        scope(failure) {
+        scope(failure)
+        {
             linux.close(s); // want to make sure it doesn't dangle if
                             // something throws. Upon normal exit, the
                             // File struct's reference counting takes
@@ -2928,7 +3177,7 @@ version(linux) {
 
         addr.sin_family = sock.AF_INET;
         addr.sin_port = sock.htons(port);
-        std.c.string.memcpy(&addr.sin_addr.s_addr, h.h_addr, h.h_length);
+        core.stdc.string.memcpy(&addr.sin_addr.s_addr, h.h_addr, h.h_length);
 
         enforce(sock.connect(s, cast(sock.sockaddr*) &addr, addr.sizeof) != -1,
             new StdioException("Connect failed"));
