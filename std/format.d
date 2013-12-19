@@ -71,10 +71,6 @@ class FormatException : Exception
     }
 }
 
-// Explicitly undocumented. It will be removed in November 2013.
-deprecated("Please use FormatException instead.")
-alias FormatException FormatError;
-
 private alias enforceFmt = enforceEx!FormatException;
 
 
