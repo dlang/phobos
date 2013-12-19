@@ -10658,16 +10658,18 @@ unittest
     equal!(canFind!"a < b")([[1, 2, 3], [7, 8, 9]], [2, 3]);
 }
 
-/**
-Returns $(D true) if and only if a value $(D v) satisfying the
-predicate $(D pred) can be found in the forward range $(D
-range). Performs $(BIGOH r.length) evaluations of $(D pred).
- */
+/++
+Checks if $(I _any) of the elements verifies $(D pred).
+ +/
 template any(alias pred)
 {
-    /// ditto
+    /++
+    Returns $(D true) if and only if $(I _any) value $(D v) found in the
+    input range $(D range) satisfies the predicate $(D pred).
+    Performs (at most) $(BIGOH r.length) evaluations of $(D pred).
+     +/
     bool any(Range)(Range range)
-    if (is(typeof(find!pred(range))))
+    if (isInputRange!Range && is(typeof(unaryFun!pred(range.front))))
     {
         return !find!pred(range).empty;
     }
@@ -10689,15 +10691,18 @@ unittest
     assert(any!"a == 2"(a));
 }
 
-/**
-Returns $(D true) if and only if all values in $(D range) satisfy the
-predicate $(D pred).  Performs $(BIGOH r.length) evaluations of $(D pred).
-*/
+/++
+Checks if $(I _all) of the elements verifies $(D pred).
+ +/
 template all(alias pred)
 {
-    /// ditto
-    bool all(R)(R range)
-    if (isInputRange!R && is(typeof(unaryFun!pred(range.front))))
+    /++
+    Returns $(D true) if and only if $(I _all) values $(D v) found in the
+    input range $(D range) satisfy the predicate $(D pred).
+    Performs (at most) $(BIGOH r.length) evaluations of $(D pred).
+     +/
+    bool all(Range)(Range range)
+    if (isInputRange!Range && is(typeof(unaryFun!pred(range.front))))
     {
         return find!(not!(unaryFun!pred))(range).empty;
     }
