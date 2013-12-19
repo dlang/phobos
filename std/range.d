@@ -4216,12 +4216,6 @@ Take!(Repeat!T) repeat(T)(T value, size_t n)
     return take(repeat(value), n);
 }
 
-// Explicitly undocumented. It will be removed in November 2013.
-deprecated("Please use std.range.repeat instead.") Take!(Repeat!T) replicate(T)(T value, size_t n)
-{
-    return repeat(value, n);
-}
-
 unittest
 {
     enforce(equal(repeat(5, 4), [ 5, 5, 5, 5 ][]));
@@ -8589,9 +8583,6 @@ sgi.com/tech/stl/binary_search.html, binary_search).
         }
         return false;
     }
-
-    // Explicitly undocumented. It will be removed in November 2013.
-    deprecated("Please use contains instead.") alias contains canFind;
 }
 
 // Doc examples

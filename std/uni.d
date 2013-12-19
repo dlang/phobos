@@ -6678,12 +6678,6 @@ public bool isWhite(dchar c)
     return isWhiteGen(c); // call pregenerated binary search
 }
 
-deprecated ("Please use std.uni.isLower instead")
-bool isUniLower(dchar c) @safe pure nothrow
-{
-    return isLower(c);
-}
-
 /++
     Return whether $(D c) is a Unicode lowercase $(CHARACTER).
 +/
@@ -6715,13 +6709,6 @@ bool isLower(dchar c)
 }
 
 
-deprecated ("Please use std.uni.isUpper instead")
-@safe pure nothrow
-bool isUniUpper(dchar c)
-{
-    return isUpper(c);
-}
-
 /++
     Return whether $(D c) is a Unicode uppercase $(CHARACTER).
 +/
@@ -6749,14 +6736,6 @@ bool isUpper(dchar c)
     assert(isUpper('\u1F18'));
     foreach(v; unicode.upperCase.byCodepoint)
         assert(isUpper(v) && !isLower(v));
-}
-
-
-deprecated ("Please use std.uni.toLower instead")
-@safe pure nothrow
-dchar toUniLower(dchar c)
-{
-    return toLower(c);
 }
 
 
@@ -7228,13 +7207,6 @@ unittest
 }
 
 
-deprecated("Please use std.uni.toUpper instead")
-@safe pure nothrow
-dchar toUniUpper(dchar c)
-{
-    return toUpper(c);
-}
-
 /++
     If $(D c) is a Unicode lowercase $(CHARACTER), then its uppercase equivalent
     is returned. Otherwise $(D c) is returned.
@@ -7382,12 +7354,6 @@ unittest
     }
 }
 
-deprecated("Please use std.uni.isAlpha instead.")
-@safe pure nothrow
-bool isUniAlpha(dchar c)
-{
-    return isAlpha(c);
-}
 
 /++
     Returns whether $(D c) is a Unicode alphabetic $(CHARACTER)

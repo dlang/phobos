@@ -73,10 +73,6 @@ version (Windows)
                                               LPCWSTR lpNewFileName,
                                               DWORD dwFlags);
 }
-else version (Posix)
-{
-    deprecated alias stat_t struct_stat64;
-}
 // }}}
 
 
