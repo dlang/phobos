@@ -1141,14 +1141,8 @@ unittest
  * //here parsing is done at compile time, no runtime overhead!
  * -------------------------
  */
-UUID parseUUID(T)(T uuidString) if(isSomeString!T)
-{
-    return parseUUID(uuidString);
-}
-
-///ditto
-UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
-    && is(Unqual!(ElementType!Range) == dchar))
+UUID parseUUID(Range)(auto ref Range uuidRange)
+if(isInputRange!Range  && is(ElementType!Range : dchar))
 {
     static if(isForwardRange!Range)
         auto errorCopy = uuidRange.save;
@@ -1419,6 +1413,12 @@ UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
         assert(parseHelper!S("///8ab3060e2cba4f23b74cb52db3bdfb46||")
             == parseUUID("8ab3060e-2cba-4f23-b74c-b52db3bdfb46"));
     }
+}
+unittest
+{
+    import std.algorithm, std.encoding;
+    parseUUID(filter!"true"("8ab3060e-2cba-4f23-b74c-b52db3bdfb46"));   //RValue range
+    parseUUID(cast(AsciiString)"8ab3060e-2cba-4f23-b74c-b52db3bdfb46"); //non-dchar element type
 }
 
 /**
