@@ -14,7 +14,7 @@ $(MYREF findSplitAfter) $(MYREF findSplitBefore) $(MYREF minCount)
 $(MYREF minPos) $(MYREF mismatch) $(MYREF skipOver) $(MYREF startsWith)
 $(MYREF until) )
 )
-$(TR $(TDNW Comparison) $(TD $(MYREF cmp) $(MYREF equal) $(MYREF
+$(TR $(TDNW Comparison) $(TD $(MYREF among) $(MYREF cmp) $(MYREF equal) $(MYREF
 levenshteinDistance) $(MYREF levenshteinDistanceAndPath) $(MYREF max)
 $(MYREF min) $(MYREF mismatch) )
 )
@@ -151,6 +151,9 @@ $(TR $(TDNW $(LREF until)) $(TD Lazily iterates a range
 until a specific value is found.)
 )
 $(LEADINGROW Comparison
+)
+$(TR $(TDNW $(LREF among)) $(TD Checks if a value is among a set
+of values, e.g. $(D if (v.among(1, 2, 3)) // `v` is 1, 2 or 3))
 )
 $(TR $(TDNW $(LREF cmp)) $(TD $(D cmp("abc", "abcd")) is $(D
 -1), $(D cmp("abc", "aba")) is $(D 1), and $(D cmp("abc", "abc")) is
@@ -12237,4 +12240,100 @@ unittest
         tuple(1, 'b', "z"), tuple(2, 'b', "z"), tuple(3, 'b', "z"),
         tuple(1, 'c', "z"), tuple(2, 'c', "z"), tuple(3, 'c', "z"),
     ]));
+}
+
+/**
+Find $(D value) _among $(D values), returning the 1-based index
+of the first matching value in $(D values), or $(D 0) if $(D value)
+is not _among $(D values). The predicate $(D pred) is used to
+compare values, and uses equality by default.
+
+See_Also:
+$(XREF algorithm, find) for finding a value in a range.
+*/
+uint among(alias pred = (a, b) => a == b, Value, Values...)
+    (Value value, Values values)
+    if (Values.length != 0)
+{
+    foreach (uint i, ref v; values)
+    {
+        import std.functional : binaryFun;
+        if (binaryFun!pred(value, v)) return i + 1;
+    }
+    return 0;
+}
+
+/// Ditto
+template among(values...)
+    if (isExpressionTuple!values)
+{
+    uint among(Value)(Value value)
+        if (!is(CommonType!(Value, values) == void))
+    {
+        switch (value)
+        {
+            foreach (uint i, v; values)
+                case v:
+                    return i + 1;
+            default:
+                return 0;
+        }
+    }
+}
+
+///
+unittest
+{
+    assert(3.among(1, 42, 24, 3, 2));
+
+    if (auto pos = "bar".among("foo", "bar", "baz"))
+        assert(pos == 2);
+    else
+        assert(false);
+
+    // 42 is larger than 24
+    assert(42.among!((lhs, rhs) => lhs > rhs)(43, 24, 100) == 2);
+}
+
+/**
+Alternatively, $(D values) can be passed at compile-time, allowing for a more
+efficient search, but one that only supports matching on equality:
+*/
+unittest
+{
+    assert(3.among!(2, 3, 4));
+    assert("bar".among!("foo", "bar", "baz") == 2);
+}
+
+unittest
+{
+    if (auto pos = 3.among(1, 2, 3))
+        assert(pos == 3);
+    else
+        assert(false);
+    assert(!4.among(1, 2, 3));
+
+    auto position = "hello".among("hello", "world");
+    assert(position);
+    assert(position == 1);
+
+    alias values = TypeTuple!("foo", "bar", "baz");
+    auto arr = [values];
+    assert(arr[0 .. "foo".among(values)] == ["foo"]);
+    assert(arr[0 .. "bar".among(values)] == ["foo", "bar"]);
+    assert(arr[0 .. "baz".among(values)] == arr);
+    assert("foobar".among(values) == 0);
+
+    if (auto pos = 3.among!(1, 2, 3))
+        assert(pos == 3);
+    else
+        assert(false);
+    assert(!4.among!(1, 2, 3));
+
+    position = "hello".among!("hello", "world");
+    assert(position);
+    assert(position == 1);
+
+    static assert(!__traits(compiles, "a".among!("a", 42)));
+    static assert(!__traits(compiles, (Object.init).among!(42, "a")));
 }
