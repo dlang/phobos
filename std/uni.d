@@ -2190,7 +2190,7 @@ public:
         Tests the presence of codepoint $(D ch) in this set,
         the same as $(LREF opIndex).
     */
-    bool opBinaryRight(string op: "in", U)(U ch)
+    bool opBinaryRight(string op: "in", U)(U ch) const
         if(is(U : dchar))
     {
         return this[ch];
