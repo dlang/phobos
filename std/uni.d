@@ -2195,6 +2195,15 @@ public:
     {
         return this[ch];
     }
+    
+    ///
+    unittest
+    {
+        assert('я' in unicode.Cyrillic);
+        assert('z' in unicode.Cyrillic == false);
+    }
+    
+    
 
     /// Obtains a set that is the inversion of this set. See also $(LREF inverted).
     auto opUnary(string op: "!")()
