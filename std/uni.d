@@ -2322,13 +2322,22 @@ private:
         return this;
     }
 
+
+
     ref intersect()(dchar ch)
     {
         foreach(i; byInterval)
-            if(i.a >= ch && ch < i.b)
+            if(i.a <= ch && ch < i.b)
                 return this = This.init.add(ch, ch+1);
         this = This.init;
         return this;
+    }
+
+
+    ///
+    unittest
+    {
+        assert(unicode.Cyrillic.intersect('-').byInterval.empty);
     }
 
     ref sub()(dchar ch)
