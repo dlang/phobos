@@ -2886,6 +2886,7 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
 {
     struct Result
     {
+        import std.conv;
         public Rs source;
         private size_t _current = size_t.max;
 
@@ -5124,7 +5125,7 @@ private string lockstepMixin(Ranges...)(bool withIndex)
     }
 
     import std.string : format, outdent;
-    
+
     foreach (idx, Range; Ranges)
     {
         params ~= format("%sElementType!(Ranges[%s])", hasLvalueElements!Range ? "ref " : "", idx);

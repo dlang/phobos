@@ -862,6 +862,7 @@ unittest
     // Mixing convertible types is fair game, too
     double[] c = [ 2.5, 3.0 ];
     auto r1 = reduce!("a + b")(chain(a, b, c));
+    import std.math;
     assert(approxEqual(r1, 112.5));
 
     // To minimize nesting of parentheses, Uniform Function Call Syntax can be used
@@ -883,6 +884,7 @@ unittest
     // Compute minimum and maximum in one pass
     auto r = reduce!(min, max)(a);
     // The type of r is Tuple!(int, int)
+    import std.math;
     assert(approxEqual(r[0], 2));  // minimum
     assert(approxEqual(r[1], 11)); // maximum
 
@@ -1392,6 +1394,7 @@ unittest
     // Mixing convertible types is fair game, too
     double[] c = [ 2.5, 3.0 ];
     auto r1 = chain(c, a, b).filter!(a => cast(int) a != a);
+    import std.math;
     assert(approxEqual(r1, [ 2.5 ]));
 }
 
@@ -1958,6 +1961,7 @@ See_Also:
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow
 if (allMutableFields!T && !is(typeof(T.init.proxySwap(T.init))))
 {
+    import std.traits;
     static if (!isAssignable!T || hasElaborateAssign!T)
     {
         if (&lhs != &rhs)
@@ -2012,6 +2016,7 @@ void swap(T)(T lhs, T rhs) if (is(typeof(T.init.proxySwap(T.init))))
 +/
 private template allMutableFields(T)
 {
+    import std.traits;
     alias OT = OriginalType!T;
     static if (is(OT == struct) || is(OT == union))
         enum allMutableFields = isMutable!OT && allSatisfy!(.allMutableFields, FieldTypeTuple!OT);
@@ -2291,6 +2296,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
 
             static if (isNarrowString!Range)
             {
+                import std.utf;
                 _separatorLength = codeLength!(ElementEncodingType!Range)(separator);
             }
             if (_input.empty)
@@ -3798,6 +3804,7 @@ InputRange find(alias pred = "a == b", InputRange, Element)(InputRange haystack,
 if (isInputRange!InputRange &&
     is (typeof(binaryFun!pred(haystack.front, needle)) : bool))
 {
+    import std.traits;
     alias R = InputRange;
     alias E = Element;
     alias predFun = binaryFun!pred;
@@ -3822,10 +3829,12 @@ if (isInputRange!InputRange &&
             //Note: "needle <= 0x7F" properly handles sign via unsigned promotion
             static if (is(UEEType == char))
             {
+                import std.utf;
                 if (!__ctfe && canSearchInCodeUnits!char(needle))
                 {
                     static R trustedMemchr(ref R haystack, ref E needle) @trusted nothrow pure
                     {
+                        import core.stdc.string : memchr;
                         auto ptr = memchr(haystack.ptr, needle, haystack.length);
                         return ptr ?
                              haystack[ptr - haystack.ptr .. $] :
@@ -3890,8 +3899,13 @@ if (isInputRange!InputRange &&
             {
                 EType* ptr = null;
                 //Note: we use "min/max" to handle sign mismatch.
-                if (min(EType.min, needle) == EType.min && max(EType.max, needle) == EType.max)
-                    ptr = cast(EType*) memchr(haystack.ptr, needle, haystack.length);
+                if (min(EType.min, needle) == EType.min
+                        && max(EType.max, needle) == EType.max)
+                {
+                    import core.stdc.string : memchr;
+                    ptr = cast(EType*) memchr(haystack.ptr, needle,
+                        haystack.length);
+                }
 
                 return ptr ?
                     haystack[ptr - haystack.ptr .. $] :
@@ -3925,6 +3939,7 @@ unittest
 {
     assert(find("hello, world", ',') == ", world");
     assert(find([1, 2, 3, 5], 4) == []);
+    import std.container;
     assert(equal(find(SList!int(1, 2, 3, 4, 5)[], 4), SList!int(4, 5)[]));
     assert(find!"a > b"([1, 2, 3, 5], 2) == [3, 5]);
 
@@ -4020,6 +4035,7 @@ unittest
         }
     }
     dg();
+    import std.exception;
     assertCTFEable!dg;
 }
 
@@ -4084,6 +4100,7 @@ unittest
 {
     assert(find("hello, world", "World").empty);
     assert(find("hello, world", "wo") == "world");
+    import std.container;
     assert([1, 2, 3, 4].find(SList!int(2, 3)[]) == [2, 3, 4]);
 }
 
@@ -6442,6 +6459,7 @@ unittest
     assert(equal([2, 4, 8, 6], map!"a*2"(a)));
     double[] b = [ 1.0, 2, 4, 3];
     double[] c = [ 1.005, 2, 4, 3];
+    import std.math;
     assert(equal!approxEqual(map!"a*2"(b), map!"a*2"(c)));
     assert(!equal([2, 4, 1, 3], map!"a*2"(a)));
     assert(!equal([2, 4, 1], map!"a*2"(a)));
@@ -6785,6 +6803,7 @@ minCount(alias pred = "a < b", Range)(Range range)
     if (isInputRange!Range && !isInfinite!Range &&
         is(typeof(binaryFun!pred(range.front, range.front))))
 {
+    import std.traits;
     alias T  = ElementType!Range;
     alias UT = Unqual!T;
     alias RetType = Tuple!(T, size_t);
@@ -6915,6 +6934,7 @@ unittest
         int i;
     }
     alias IS1 = immutable(S1);
+    import std.traits;
     static assert( isAssignable!S1);
     static assert( isAssignable!(S1, IS1));
 
@@ -7600,6 +7620,7 @@ Range stripLeft(Range, E)(Range range, E element)
 Range stripLeft(alias pred, Range)(Range range)
     if (isInputRange!Range && is(typeof(pred(range.front)) : bool))
 {
+    import std.functional;
     return find!(not!pred)(range);
 }
 
@@ -7798,6 +7819,7 @@ the example below, $(D r2) is a right subrange of $(D r1).
 */
 unittest
 {
+    import std.container;
     auto list = SList!(int)(4, 5, 6, 7, 1, 2, 3);
     auto r1 = list[];
     auto r2 = list[]; popFrontN(r2, 4);
@@ -7812,6 +7834,7 @@ Elements can be swapped across ranges of different types:
 */
 unittest
 {
+    import std.container;
     auto list = SList!(int)(4, 5, 6, 7);
     auto vec = [ 1, 2, 3 ];
     bringToFront(list[], vec);
@@ -10754,6 +10777,7 @@ template all(alias pred)
     bool all(Range)(Range range)
     if (isInputRange!Range && is(typeof(unaryFun!pred(range.front))))
     {
+        import std.functional;
         return find!(not!(unaryFun!pred))(range).empty;
     }
 }
