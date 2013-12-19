@@ -1270,6 +1270,8 @@ struct Parser(R)
             }
             else
                 error("Unexpected symbol in regex pattern");
+            if(min > max)
+                error("Illegal {n,m} quantifier");
             break;
         default:
             if(replace)
@@ -7434,6 +7436,12 @@ unittest
     auto str = "This,List";
     str = str.replace(reg, "-");
     assert(str == "This-List");
+}
+
+// bugzilla 11775
+unittest
+{
+    assert(collectException(regex("a{1,0}")));
 }
 
 }//version(unittest)
