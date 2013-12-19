@@ -2200,7 +2200,7 @@ public:
     unittest
     {
         assert('я' in unicode.Cyrillic);
-        assert('z' in unicode.Cyrillic == false);
+        assert(!('z' in unicode.Cyrillic));
     }
     
     
