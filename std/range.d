@@ -181,7 +181,7 @@ $(BOOKTABLE ,
         _range.
     ))
     $(TR $(TD $(D $(LREF only)))
-        $(TD Creates a _range that iterates over a single value.
+        $(TD Creates a _range that iterates over the given arguments.
     ))
 )
 
@@ -7184,68 +7184,233 @@ unittest
     assert(equal!`equal(a, b)`(oddsByPairs[3 .. $].take(2), [[13, 15], [17, 19]]));
 }
 
-/**
-This range iterates a single element. This is useful when a sole value
-must be passed to an algorithm expecting a range.
-
-Example:
-----
-assert(equal(only('♡'), "♡"));
-assert([1, 2, 3, 4].findSplitBefore(only(3))[0] == [1, 2]);
-
-string title = "The D Programming Language";
-assert(filter!isUpper(title).map!only().join(".") == "T.D.P.L");
-----
- */
-auto only(T)(T value)
+private struct OnlyResult(T, size_t arity)
 {
-    static struct Result
+    private this(Values...)(auto ref Values values)
     {
-        this(T value) { _value = value; }
-
-        @property T front() { assert(!_empty); return _value; }
-        @property T back() { assert(!_empty); return _value; }
-        @property bool empty() const { return _empty; }
-        @property size_t length() const { return !_empty; }
-        @property auto save() { return this; }
-        void popFront() { assert(!_empty); _empty = true; }
-        void popBack() { assert(!_empty); _empty = true; }
-        auto opSlice() { return this; }
-
-        T opIndex(size_t i)
-        {
-            version (assert)
-                if (_empty || i != 0)
-                    throw new RangeError;
-            return _value;
-        }
-
-        auto opSlice(size_t from, size_t to)
-        {
-            version (assert)
-                if (from > to || to > length)
-                    throw new RangeError;
-            Result copy = this;
-            copy._empty = _empty || from == to;
-            return copy;
-        }
-
-        private Unqual!T _value;
-        private bool _empty = false;
+        this.data = [values];
     }
-    return Result(value);
+
+    bool empty() @property
+    {
+        return frontIndex >= backIndex;
+    }
+
+    T front() @property
+    {
+        assert(!empty);
+        return data[frontIndex];
+    }
+
+    void popFront()
+    {
+        assert(!empty);
+        ++frontIndex;
+    }
+
+    T back() @property
+    {
+        assert(!empty);
+        return data[backIndex - 1];
+    }
+
+    void popBack()
+    {
+        assert(!empty);
+        --backIndex;
+    }
+
+    OnlyResult save() @property
+    {
+        return this;
+    }
+
+    size_t length() @property
+    {
+        return backIndex - frontIndex;
+    }
+
+    alias opDollar = length;
+
+    T opIndex(size_t idx)
+    {
+        // data[i + idx] will not throw a RangeError
+        // when i + idx points to elements popped
+        // with popBack
+        version(assert)
+            if(idx >= length)
+                throw new RangeError;
+        return data[frontIndex + idx];
+    }
+
+    OnlyResult opSlice()
+    {
+        return this;
+    }
+
+    OnlyResult opSlice(size_t from, size_t to)
+    {
+        OnlyResult result = this;
+        result.frontIndex += from;
+        result.backIndex = this.frontIndex + to;
+
+        version(assert)
+            if(to < from || to > length)
+                throw new RangeError;
+
+        return result;
+    }
+
+    private size_t frontIndex = 0;
+    private size_t backIndex = arity;
+
+    // @@@BUG@@@ 10643
+    version(none)
+    {
+        static if(hasElaborateAssign!T)
+        	private T[arity] data;
+        else
+        	private T[arity] data = void;
+    }
+    else
+        private T[arity] data;
 }
 
+// Specialize for single-element results
+private struct OnlyResult(T, size_t arity : 1)
+{
+    @property T front() { assert(!_empty); return _value; }
+    @property T back() { assert(!_empty); return _value; }
+    @property bool empty() const { return _empty; }
+    @property size_t length() const { return !_empty; }
+    @property auto save() { return this; }
+    void popFront() { assert(!_empty); _empty = true; }
+    void popBack() { assert(!_empty); _empty = true; }
+    alias opDollar = length;
+
+    T opIndex(size_t i)
+    {
+        version (assert)
+            if (_empty || i != 0)
+                throw new RangeError;
+        return _value;
+    }
+
+    OnlyResult opSlice()
+    {
+        return this;
+    }
+
+    OnlyResult opSlice(size_t from, size_t to)
+    {
+        version (assert)
+            if (from > to || to > length)
+                throw new RangeError;
+        OnlyResult copy = this;
+        copy._empty = _empty || from == to;
+        return copy;
+    }
+
+    private Unqual!T _value;
+    private bool _empty = false;
+}
+
+// Specialize for the empty range
+private struct OnlyResult(T, size_t arity : 0)
+{
+    private static struct EmptyElementType {}
+
+    bool empty() @property { return true; }
+    size_t length() @property { return 0; }
+    alias opDollar = length;
+    EmptyElementType front() @property { assert(false); }
+    void popFront() { assert(false); }
+    EmptyElementType back() @property { assert(false); }
+    void popBack() { assert(false); }
+    OnlyResult save() @property { return this; }
+
+    EmptyElementType opIndex(size_t i)
+    {
+        version(assert) throw new RangeError;
+        assert(false);
+    }
+
+    OnlyResult opSlice() { return this; }
+
+    OnlyResult opSlice(size_t from, size_t to)
+    {
+        version(assert)
+            if(from != 0 || to != 0)
+                throw new RangeError;
+        return this;
+    }
+}
+
+/**
+Assemble $(D values) into a range that carries all its
+elements in-situ.
+
+Useful when a single value or multiple disconnected values
+must be passed to an algorithm expecting a range, without
+having to perform dynamic memory allocation.
+
+As copying the range means copying all elements, it can be
+safely returned from functions. For the same reason, copying
+the returned range may be expensive for a large number of arguments.
+ */
+auto only(Values...)(auto ref Values values)
+    if(!is(CommonType!Values == void) || Values.length == 0)
+{
+    return OnlyResult!(CommonType!Values, Values.length)(values);
+}
+
+///
 unittest
 {
-    // Examples
     assert(equal(only('♡'), "♡"));
     assert([1, 2, 3, 4].findSplitBefore(only(3))[0] == [1, 2]);
+
+    assert(only("one", "two", "three").joiner(" ").equal("one two three"));
 
     import std.uni;
     string title = "The D Programming Language";
     assert(filter!isUpper(title).map!only().join(".") == "T.D.P.L");
+}
 
+version(unittest)
+{
+    // Verify that the same common type and same arity
+    // results in the same template instantiation
+    static assert(is(typeof(only(byte.init, int.init)) ==
+        typeof(only(int.init, byte.init))));
+
+    static assert(is(typeof(only((const(char)[]).init, string.init)) ==
+        typeof(only((const(char)[]).init, (const(char)[]).init))));
+}
+
+// Tests the zero-element result
+unittest
+{
+    auto emptyRange = only();
+
+    alias EmptyRange = typeof(emptyRange);
+    static assert(isInputRange!EmptyRange);
+    static assert(isForwardRange!EmptyRange);
+    static assert(isBidirectionalRange!EmptyRange);
+    static assert(isRandomAccessRange!EmptyRange);
+    static assert(hasLength!EmptyRange);
+    static assert(hasSlicing!EmptyRange);
+
+    assert(emptyRange.empty);
+    assert(emptyRange.length == 0);
+    assert(emptyRange.equal(emptyRange[]));
+    assert(emptyRange.equal(emptyRange.save));
+    assert(emptyRange[0 .. 0].equal(emptyRange));
+}
+
+// Tests the single-element result
+unittest
+{
     foreach (x; tuple(1, '1', 1.0, "1", [1]))
     {
         auto a = only(x);
@@ -7287,6 +7452,93 @@ unittest
     assert(equal(imm[0..0], imme));
     assert(equal(imm[1..1], imme));
     assert(imm[0] == 1);
+}
+
+// Tests multiple-element results
+unittest
+{
+    static assert(!__traits(compiles, only(1, "1")));
+
+    auto nums = only!(byte, uint, long)(1, 2, 3);
+    static assert(is(ElementType!(typeof(nums)) == long));
+    assert(nums.length == 3);
+
+    foreach(i; 0 .. 3)
+        assert(nums[i] == i + 1);
+
+    auto saved = nums.save;
+
+    foreach(i; 1 .. 4)
+    {
+        assert(nums.front == nums[0]);
+        assert(nums.front == i);
+        nums.popFront();
+        assert(nums.length == 3 - i);
+    }
+
+    assert(nums.empty);
+
+    assert(saved.equal(only(1, 2, 3)));
+    assert(saved.equal(saved[]));
+    assert(saved[0 .. 1].equal(only(1)));
+    assert(saved[0 .. 2].equal(only(1, 2)));
+    assert(saved[0 .. 3].equal(saved));
+    assert(saved[1 .. 3].equal(only(2, 3)));
+    assert(saved[2 .. 3].equal(only(3)));
+    assert(saved[0 .. 0].empty);
+    assert(saved[3 .. 3].empty);
+
+    alias data = TypeTuple!("one", "two", "three", "four");
+    static joined =
+        ["one two", "one two three", "one two three four"];
+    string[] joinedRange = joined;
+
+    foreach(argCount; TypeTuple!(2, 3, 4))
+    {
+        auto values = only(data[0 .. argCount]);
+        alias Values = typeof(values);
+        static assert(is(ElementType!Values == string));
+        static assert(isInputRange!Values);
+        static assert(isForwardRange!Values);
+        static assert(isBidirectionalRange!Values);
+        static assert(isRandomAccessRange!Values);
+        static assert(hasSlicing!Values);
+        static assert(hasLength!Values);
+
+        assert(values.length == argCount);
+        assert(values[0 .. $].equal(values[0 .. values.length]));
+        assert(values.joiner(" ").equal(joinedRange.front));
+        joinedRange.popFront();
+    }
+
+    assert(saved.retro.equal(only(3, 2, 1)));
+    assert(saved.length == 3);
+
+    assert(saved.back == 3);
+    saved.popBack();
+    assert(saved.length == 2);
+    assert(saved.back == 2);
+
+    assert(saved.front == 1);
+    saved.popFront();
+    assert(saved.length == 1);
+    assert(saved.front == 2);
+
+    saved.popBack();
+    assert(saved.empty);
+
+    auto imm = only!(immutable int, immutable int)(42, 24);
+    alias Imm = typeof(imm);
+    static assert(is(ElementType!Imm == immutable(int)));
+    assert(imm.front == 42);
+    imm.popFront();
+    assert(imm.front == 24);
+    imm.popFront();
+    assert(imm.empty);
+
+    static struct Test { int* a; }
+    immutable(Test) test;
+    only(test, test); // Works with mutable indirection
 }
 
 /**
