@@ -10655,7 +10655,7 @@ unittest
 
 unittest
 {
-    equal!(canFind!"a < b")([[1, 2, 3], [7, 8, 9]], [2, 3]);
+    assert(equal!(canFind!"a < b")([[1, 2, 3], [7, 8, 9]], [2, 8]));
 }
 
 /++
