@@ -5616,6 +5616,19 @@ public:
     }
 
     /++
+        Explicit cast to bool.
+        Useful as a shorthand for !(x.empty) in if and assert statements.
+
+        ---
+        import std.regex;
+
+        assert(!matchFirst("nothing", "something"));
+        ---
+    +/
+
+    @safe @property bool opCast(T:bool)() const nothrow { return !empty; }
+
+    /++
         Lookup named submatch.
 
         ---
@@ -5662,6 +5675,8 @@ unittest//verify example
     assert(c.back == "b");
     popFrontN(c, 2);
     assert(c.empty);
+
+    assert(!matchFirst("nothing", "something"));
 }
 
 /++
