@@ -6518,6 +6518,10 @@ private:
         else
         {
             _match = Rx(_input, separator);
+            //avoid first empty match
+            if(!_match.empty && _match.front.hit.length == 0)
+                _match.popFront();
+
         }
     }
 
@@ -6554,7 +6558,10 @@ public:
         {
             //skip past the separator
             _offset = _match.pre.length + _match.hit.length;
-            _match.popFront();
+            if(_offset == _input.length && _match.hit.length == 0)
+                _offset = _input.length + 1; //avoid empty match at end
+            else
+                _match.popFront();
         }
     }
 
@@ -7277,6 +7284,10 @@ unittest
         assert(w2[cnt++] == e);
     }
     assert(equal(sp2, w2));
+    //bugzilla 10772
+    auto s3 = "test";
+    assert(splitter(s3, regex("")).equal(["t", "e", "s", "t"]));
+    assert(splitter(s3, regex("x?")).equal(["t", "e", "s", "t"]));
 }
 
 unittest
