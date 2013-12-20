@@ -342,7 +342,10 @@ unittest
  *        guess connection type and create a new instance for this call only.
  *
  * The template parameter $(D T) specifies the type to return. Possible values
- * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
+ * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
+ * for $(D char), content will be converted from the connection character set
+ * (specified in HTTP response headers or FTP connection properties, both ISO-8859-1
+ * by default) to UTF-8.
  *
  * Example:
  * ----
@@ -396,14 +399,17 @@ unittest
  *
  * Params:
  * url = resource to post to
- * putData = data to send as the body of the request. An array
- *           of an arbitrary type is accepted and will be cast to ubyte[]
- *           before sending it.
+ * postData = data to send as the body of the request. An array
+ *            of an arbitrary type is accepted and will be cast to ubyte[]
+ *            before sending it.
  * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
  *        guess connection type and create a new instance for this call only.
  *
  * The template parameter $(D T) specifies the type to return. Possible values
- * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
+ * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
+ * for $(D char), content will be converted from the connection character set
+ * (specified in HTTP response headers or FTP connection properties, both ISO-8859-1
+ * by default) to UTF-8.
  *
  * Example:
  * ----
@@ -463,7 +469,10 @@ unittest
  *        guess connection type and create a new instance for this call only.
  *
  * The template parameter $(D T) specifies the type to return. Possible values
- * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
+ * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
+ * for $(D char), content will be converted from the connection character set
+ * (specified in HTTP response headers or FTP connection properties, both ISO-8859-1
+ * by default) to UTF-8.
  *
  * Example:
  * ----
@@ -708,6 +717,13 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
         client.onReceiveHeader = null;
         client.onReceiveStatusLine = null;
         client.onReceive = null;
+
+        if (sendData !is null &&
+            (client.method == HTTP.Method.post || client.method == HTTP.Method.put))
+        {
+            client.onSend = null;
+            client.handle.onSeek = null;
+        }
     }
     client.url = url;
     HTTP.StatusLine statusLine;
@@ -786,7 +802,12 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
  */
 private auto _basicFTP(T)(const(char)[] url, const(void)[] sendData, FTP client)
 {
-    scope (exit) client.onReceive = null;
+    scope (exit)
+    {
+        client.onReceive = null;
+        if (!sendData.empty)
+            client.onSend = null;
+    }
 
     ubyte[] content;
 
@@ -894,7 +915,6 @@ struct ByLineBuffer(Char)
  *
  * Params:
  * url = The url to receive content from
- * postData = Data to HTTP Post
  * keepTerminator = KeepTerminator.yes signals that the line terminator should be
  *                  returned as part of the lines in the range.
  * terminator = The character that terminates a line
@@ -1433,7 +1453,6 @@ static struct AsyncChunkInputRange
  * Params:
  * url = The url to receive content from
  * postData = Data to HTTP Post
- * terminator = The character that terminates a line
  * chunkSize = The size of the chunks
  * transmitBuffers = The number of chunks buffered asynchronously
  * conn = The connection to use e.g. HTTP or FTP.
@@ -1811,8 +1830,8 @@ private mixin template Protocol()
       * callback returns.
       *
       * Returns:
-      * The callback returns the incoming bytes read. If not the entire array is
-      * the request will abort.
+      * The callback returns the number of incoming bytes read. If the entire array is
+      * not read the request will abort.
       * The special value .pauseRequest can be returned in order to pause the
       * current request.
       *
@@ -2035,6 +2054,61 @@ struct HTTP
 
         /// The HTTP method to use.
         Method method = Method.undefined;
+
+        @property void onReceiveHeader(void delegate(in char[] key,
+                                                     in char[] value) callback)
+        {
+            // Wrap incoming callback in order to separate http status line from
+            // http headers.  On redirected requests there may be several such
+            // status lines. The last one is the one recorded.
+            auto dg = (in char[] header)
+            {
+                if (header.empty)
+                {
+                    // header delimiter
+                    return;
+                }
+                if (header.startsWith("HTTP/"))
+                {
+                    string[string] empty;
+                    headersIn = empty; // clear
+
+                    auto m = match(header, regex(r"^HTTP/(\d+)\.(\d+) (\d+) (.*)$"));
+                    if (m.empty)
+                    {
+                        // Invalid status line
+                    }
+                    else
+                    {
+                        status.majorVersion = to!ushort(m.captures[1]);
+                        status.minorVersion = to!ushort(m.captures[2]);
+                        status.code = to!ushort(m.captures[3]);
+                        status.reason = m.captures[4].idup;
+                        if (onReceiveStatusLine != null)
+                            onReceiveStatusLine(status);
+                    }
+                    return;
+                }
+
+                // Normal http header
+                auto m = match(cast(char[]) header, regex("(.*?): (.*)$"));
+
+                auto fieldName = m.captures[1].toLower().idup;
+                if (fieldName == "content-type")
+                {
+                    auto mct = match(cast(char[]) m.captures[2],
+                                     regex("charset=([^;]*)"));
+                    if (!mct.empty && mct.captures.length > 1)
+                        charset = mct.captures[1].idup;
+                }
+
+                if (!m.empty && callback !is null)
+                    callback(fieldName, m.captures[2]);
+                headersIn[fieldName] = m.captures[2].idup;
+            };
+
+            curl.onReceiveHeader = dg;
+        }
     }
 
     private RefCounted!Impl p;
@@ -2151,6 +2225,7 @@ struct HTTP
         p.curl.set(CurlOption.url, url);
     }
 
+    /// Set the CA certificate bundle file to use for SSL peer verification
     @property void caInfo(const(char)[] caFile)
     {
         p.curl.set(CurlOption.cainfo, caFile);
@@ -2551,55 +2626,7 @@ struct HTTP
     @property void onReceiveHeader(void delegate(in char[] key,
                                                  in char[] value) callback)
     {
-        // Wrap incoming callback in order to separate http status line from
-        // http headers.  On redirected requests there may be several such
-        // status lines. The last one is the one recorded.
-        auto dg = (in char[] header)
-        {
-            if (header.empty)
-            {
-                // header delimiter
-                return;
-            }
-            if (header.startsWith("HTTP/"))
-            {
-                string[string] empty;
-                p.headersIn = empty; // clear
-
-                auto m = match(header, regex(r"^HTTP/(\d+)\.(\d+) (\d+) (.*)$"));
-                if (m.empty)
-                {
-                    // Invalid status line
-                }
-                else
-                {
-                    p.status.majorVersion = to!ushort(m.captures[1]);
-                    p.status.minorVersion = to!ushort(m.captures[2]);
-                    p.status.code = to!ushort(m.captures[3]);
-                    p.status.reason = m.captures[4].idup;
-                    if (p.onReceiveStatusLine != null)
-                        p.onReceiveStatusLine(p.status);
-                }
-                return;
-            }
-
-            // Normal http header
-            auto m = match(cast(char[]) header, regex("(.*?): (.*)$"));
-
-            auto fieldName = m.captures[1].toLower().idup;
-            if (fieldName == "content-type")
-            {
-                auto mct = match(cast(char[]) m.captures[2],
-                                 regex("charset=([^;]*)"));
-                if (!mct.empty && mct.captures.length > 1)
-                    p.charset = mct.captures[1].idup;
-            }
-
-            if (!m.empty && callback !is null)
-                callback(fieldName, m.captures[2]);
-            p.headersIn[fieldName] = m.captures[2].idup;
-        };
-        p.curl.onReceiveHeader = dg;
+        p.onReceiveHeader = callback;
     }
 
     /**
@@ -3011,11 +3038,13 @@ struct FTP
         p.curl.set(CurlOption.postquote, p.commands);
     }
 
+    /// Connection encoding. Defaults to ISO-8859-1.
     @property void encoding(string name)
     {
         p.encoding = name;
     }
 
+    /// ditto
     @property string encoding()
     {
         return p.encoding;
@@ -3060,6 +3089,23 @@ struct SMTP
                 curl.shutdown();
         }
         Curl curl;
+
+        @property void message(string msg)
+        {
+            auto _message = msg;
+            /**
+                This delegate reads the message text and copies it.
+            */
+            curl.onSend = delegate size_t(void[] data)
+            {
+                if (!msg.length) return 0;
+                auto m = cast(void[])msg;
+                size_t to_copy = min(data.length, _message.length);
+                data[0..to_copy] = (cast(void[])_message)[0..to_copy];
+                _message = _message[to_copy..$];
+                return to_copy;
+            };
+        }
     }
 
     private RefCounted!Impl p;
@@ -3329,19 +3375,7 @@ struct SMTP
 
     @property void message(string msg)
     {
-        auto _message = msg;
-        /**
-            This delegate reads the message text and copies it.
-        */
-        p.curl.onSend = delegate size_t(void[] data)
-        {
-            if (!msg.length) return 0;
-            auto m = cast(void[])msg;
-            size_t to_copy = min(data.length, _message.length);
-            data[0..to_copy] = (cast(void[])_message)[0..to_copy];
-            _message = _message[to_copy..$];
-            return to_copy;
-        };
+        p.message = msg;
     }
 }
 
@@ -3357,6 +3391,7 @@ class CurlException : Exception
             line = The line number where the exception occurred.
             next = The previous exception in the chain of exceptions, if any.
       +/
+    @safe pure nothrow
     this(string msg,
          string file = __FILE__,
          size_t line = __LINE__,
@@ -3378,6 +3413,7 @@ class CurlTimeoutException : CurlException
             line = The line number where the exception occurred.
             next = The previous exception in the chain of exceptions, if any.
       +/
+    @safe pure nothrow
     this(string msg,
          string file = __FILE__,
          size_t line = __LINE__,
@@ -3394,6 +3430,11 @@ alias CURLcode CurlCode;
   Wrapper to provide a better interface to libcurl than using the plain C API.
   It is recommended to use the $(D HTTP)/$(D FTP) etc. structs instead unless
   raw access to libcurl is needed.
+
+  Warning: This struct uses interior pointers for callbacks. Only allocate it
+  on the stack if you never move or copy it. This also means passing by reference
+  when passing Curl to other functions. Otherwise always allocate on
+  the heap. 
 */
 struct Curl
 {
@@ -3507,6 +3548,8 @@ struct Curl
 
     private string errorString(CurlCode code)
     {
+        import core.stdc.string : strlen;
+
         auto msgZ = curl_easy_strerror(code);
         // doing the following (instead of just using std.conv.to!string) avoids 1 allocation
         return format("%s on handle %s", msgZ[0 .. core.stdc.string.strlen(msgZ)], handle);

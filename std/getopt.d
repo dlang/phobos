@@ -79,7 +79,7 @@ void main(string[] args)
  to their defaults and then invoke $(D getopt). If a
  command-line argument is recognized as an option with a parameter and
  the parameter cannot be parsed properly (e.g. a number is expected
- but not present), a $(D ConvException) exception is thrown.
+ but not present), a $(D Exception) exception is thrown.
 
  Depending on the type of the pointer being bound, $(D getopt)
  recognizes the following kinds of options:
@@ -178,15 +178,15 @@ Invoking the program with e.g. "--tune=alpha=0.5 --tune beta=0.6" will
 set $(D tuningParms) to [ "alpha" : 0.5, "beta" : 0.6 ]. In general,
 keys and values can be of any parsable types.)
 
-$(LI $(I Delegate options.) An option can be bound to a delegate with
-the signature $(D void delegate()), $(D void delegate(string option))
-or $(D void delegate(string option, string value)).
+$(LI $(I Callback options.) An option can be bound to a function or
+delegate with the signature $(D void function()), $(D void function(string option)),
+$(D void function(string option, string value)), or their delegate equivalents.
 
-$(UL $(LI In the $(D void delegate()) case, the delegate is invoked
-whenever the option is seen.) $(LI In the $(D void delegate(string
-option)) case, the option string (without the leading dash(es)) is
-passed to the delegate. After that, the option string is considered
-handled and removed from the options array.
+$(UL $(LI If the callback doesn't take any arguments, the callback is invoked
+whenever the option is seen.) $(LI If the callback takes one string argument,
+the option string (without the leading dash(es)) is passed to the callback.
+After that, the option string is considered handled and removed from the
+options array.
 
 ---------
 void main(string[] args)
@@ -208,10 +208,10 @@ void main(string[] args)
 }
 ---------
 
-)$(LI In the $(D void delegate(string option, string value)) case, the
+)$(LI If the callback takes two string arguments, the
 option string is handled as an option with one argument, and parsed
 accordingly. The option and its value are passed to the
-delegate. After that, whatever was passed to the delegate is
+callback. After that, whatever was passed to the callback is
 considered handled and removed from the list.
 
 ---------
@@ -372,7 +372,7 @@ enum config {
     noPassThrough,
     /// Stop at first argument that does not look like an option
     stopOnFirstNonOption,
-};
+}
 
 private void getoptImpl(T...)(ref string[] args,
     ref configuration cfg, T opts)
@@ -442,13 +442,21 @@ void handleOption(R)(string option, R receiver, ref string[] args,
                 a[1] != optionChar)
         {
             string[] expanded;
-            foreach (dchar c; a[1 .. $])
+            foreach (j, dchar c; a[1 .. $])
             {
+                // If the character is not alpha, stop right there. This allows
+                // e.g. -j100 to work as "pass argument 100 to option -j".
+                if (!isAlpha(c))
+                {
+                    expanded ~= a[j + 1 .. $];
+                    break;
+                }
                 expanded ~= text(optionChar, c);
             }
             args = args[0 .. i] ~ expanded ~ args[i + 1 .. $];
             continue;
         }
+
         string val;
         if (!optMatch(a, option, val, cfg))
         {
@@ -476,11 +484,11 @@ void handleOption(R)(string option, R receiver, ref string[] args,
         else
         {
             // non-boolean option, which might include an argument
-            //enum isDelegateWithOneParameter = is(typeof(receiver("")) : void);
-            enum isDelegateWithLessThanTwoParameters =
-                is(typeof(receiver) == delegate) &&
+            //enum isCallbackWithOneParameter = is(typeof(receiver("")) : void);
+            enum isCallbackWithLessThanTwoParameters =
+                (is(typeof(receiver) == delegate) || is(typeof(*receiver) == function)) &&
                 !is(typeof(receiver("", "")));
-            if (!isDelegateWithLessThanTwoParameters && !(val.length) && !incremental) {
+            if (!isCallbackWithLessThanTwoParameters && !(val.length) && !incremental) {
                 // Eat the next argument too.  Check to make sure there's one
                 // to be eaten first, though.
                 enforce(i < args.length,
@@ -504,7 +512,8 @@ void handleOption(R)(string option, R receiver, ref string[] args,
                 // string receiver
                 *receiver = to!(typeof(*receiver))(val);
             }
-            else static if (is(typeof(receiver) == delegate))
+            else static if (is(typeof(receiver) == delegate) ||
+                            is(typeof(*receiver) == function))
             {
                 static if (is(typeof(receiver("", "")) : void))
                 {
@@ -592,7 +601,7 @@ private bool optMatch(string arg, string optPattern, ref string value,
     // yank the second '-' if present
     if (isLong) arg = arg[1 .. $];
     immutable eqPos = std.string.indexOf(arg, assignChar);
-    if (eqPos >= 0)
+    if (isLong && eqPos >= 0)
     {
         // argument looks like --opt=value
         value = arg[eqPos + 1 .. $];
@@ -768,6 +777,33 @@ unittest
     bool tb1 = true;
     getopt(args, "fb1", &fb1, "fb2", &fb2, "tb1", &tb1);
     assert(fb1 && fb2 && !tb1);
+
+    // test function callbacks
+
+    static class MyEx : Exception
+    {
+        this() { super(""); }
+        this(string option) { this(); this.option = option; }
+        this(string option, string value) { this(option); this.value = value; }
+
+        string option;
+        string value;
+    }
+
+    static void myStaticHandler1() { throw new MyEx(); }
+    args = (["program.name", "--verbose"]).dup;
+    try { getopt(args, "verbose", &myStaticHandler1); assert(0); }
+    catch (MyEx ex) { assert(ex.option is null && ex.value is null); }
+
+    static void myStaticHandler2(string option) { throw new MyEx(option); }
+    args = (["program.name", "--verbose"]).dup;
+    try { getopt(args, "verbose", &myStaticHandler2); assert(0); }
+    catch (MyEx ex) { assert(ex.option == "verbose" && ex.value is null); }
+
+    static void myStaticHandler3(string option, string value) { throw new MyEx(option, value); }
+    args = (["program.name", "--verbose", "2"]).dup;
+    try { getopt(args, "verbose", &myStaticHandler3); assert(0); }
+    catch (MyEx ex) { assert(ex.option == "verbose" && ex.value == "2"); }
 }
 
 unittest
@@ -813,4 +849,26 @@ unittest
     auto args = ["prog", "--opt=123", "--", "--a", "--b", "--c"];
     getopt(args, "opt", &opt);
     assert(args == ["prog", "--a", "--b", "--c"]);
+}
+
+unittest
+{
+    string foo, bar;
+    auto args = ["prog", "-thello", "-dbar=baz"];
+    getopt(args, "t", &foo, "d", &bar);
+    assert(foo == "hello");
+    assert(bar == "bar=baz");
+    // From bugzilla 5762
+    string a;
+    args = ["prog", "-a-0x12"];
+    getopt(args, config.bundling, "a|addr", &a);
+    assert(a == "-0x12", a);
+    args = ["prog", "--addr=-0x12"];
+    getopt(args, config.bundling, "a|addr", &a);
+    assert(a == "-0x12");
+    // From https://d.puremagic.com/issues/show_bug.cgi?id=11764
+    args = ["main", "-test"];
+    bool opt;
+    args.getopt(config.passThrough, "opt", &opt);
+    assert(args == ["main", "-test"]);
 }

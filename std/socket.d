@@ -61,7 +61,7 @@ version(Windows)
     private alias std.c.windows.winsock.timeval _ctimeval;
     private alias std.c.windows.winsock.linger _clinger;
 
-    enum socket_t : SOCKET { INVALID_SOCKET };
+    enum socket_t : SOCKET { INVALID_SOCKET }
     private const int _SOCKET_ERROR = SOCKET_ERROR;
 
 
@@ -94,6 +94,7 @@ else version(Posix)
         static assert(false);
 
     import core.sys.posix.netdb;
+    import core.sys.posix.sys.un : sockaddr_un;
     private import core.sys.posix.fcntl;
     private import core.sys.posix.unistd;
     private import core.sys.posix.arpa.inet;
@@ -144,16 +145,6 @@ version(unittest)
 /// Base exception thrown by $(D std.socket).
 class SocketException: Exception
 {
-    // Explicitly undocumented. It will be removed in November 2013.
-    deprecated("Please use std.socket.SocketOSException instead.") @property int errorCode() const
-    {
-        auto osException = cast(SocketOSException)this;
-        if (osException)
-            return osException.errorCode;
-        else
-            return 0;
-    }
-
     ///
     this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
     {
@@ -1765,13 +1756,13 @@ public:
     /**
      * Construct a new $(D Internet6Address).
      * Params:
-     *   node = an IPv6 host address string in the form described in RFC 2373,
-     *          or a host name which will be resolved using $(D getAddressInfo).
-     *   port = (optional) service name or port number.
+     *   addr    = an IPv6 host address string in the form described in RFC 2373,
+     *             or a host name which will be resolved using $(D getAddressInfo).
+     *   service = (optional) service name.
      */
-    this(in char[] node, in char[] service = null)
+    this(in char[] addr, in char[] service = null)
     {
-        auto results = getAddressInfo(node, service, AddressFamily.INET6);
+        auto results = getAddressInfo(addr, service, AddressFamily.INET6);
         assert(results.length && results[0].family == AddressFamily.INET6);
         sin6 = *cast(sockaddr_in6*)results[0].address.name;
     }
@@ -1783,19 +1774,19 @@ public:
      *          or a host name which will be resolved using $(D getAddressInfo).
      *   port = port number, may be $(D PORT_ANY).
      */
-    this(in char[] node, ushort port)
+    this(in char[] addr, ushort port)
     {
         if (port == PORT_ANY)
-            this(node);
+            this(addr);
         else
-            this(node, to!string(port));
+            this(addr, to!string(port));
     }
 
     /**
      * Construct a new $(D Internet6Address).
      * Params:
      *   addr = (optional) an IPv6 host address in host byte order, or
-                $(D ADDR_ANY).
+     *          $(D ADDR_ANY).
      *   port = port number, may be $(D PORT_ANY).
      */
     this(ubyte[16] addr, ushort port)
@@ -1893,10 +1884,10 @@ static if (is(sockaddr_un))
 
         this(in char[] path)
         {
-            len = sockaddr_un.sun_path.offsetof + path.length + 1;
+            len = cast(socklen_t)(sockaddr_un.init.sun_path.offsetof + path.length + 1);
             sun = cast(sockaddr_un*) (new ubyte[len]).ptr;
             sun.sun_family = AF_UNIX;
-            sun.sun_path.ptr[0..path.length] = path;
+            sun.sun_path.ptr[0..path.length] = (cast(byte[]) path)[];
             sun.sun_path.ptr[path.length] = 0;
         }
 
@@ -1909,6 +1900,40 @@ static if (is(sockaddr_un))
         {
             return path;
         }
+    }
+
+    unittest
+    {
+        import core.stdc.stdio : remove;
+    
+        immutable ubyte[] data = [1, 2, 3, 4];
+        Socket[2] pair;
+        
+        auto name = "unix-address-family-unittest-socket-name";
+        auto address = new UnixAddress(name);
+        
+        auto listener = new Socket(AddressFamily.UNIX, SocketType.STREAM);
+        scope(exit) listener.close();
+        
+        listener.bind(address);
+        scope(exit) remove(toStringz(name));
+        
+        listener.listen(1);
+
+        pair[0] = new Socket(AddressFamily.UNIX, SocketType.STREAM);
+        scope(exit) listener.close();
+
+        pair[0].connect(address);
+        scope(exit) pair[0].close();
+
+        pair[1] = listener.accept();
+        scope(exit) pair[1].close();
+
+        pair[0].send(data);
+
+        auto buf = new ubyte[data.length];
+        pair[1].receive(buf);
+        assert(buf == data);
     }
 }
 
@@ -1993,9 +2018,6 @@ struct TimeVal
         mixin FieldProxy!(`ctimeval.tv_usec`, `microseconds`);
     }
 }
-
-// Explicitly undocumented. It will be removed in November 2013.
-deprecated("Please use std.socket.TimeVal instead.") alias TimeVal timeval;
 
 
 /**
@@ -2221,9 +2243,6 @@ struct Linger
         mixin FieldProxy!(`clinger.l_linger`, `time`);
     }
 }
-
-// Explicitly undocumented. It will be removed in November 2013.
-deprecated("Please use std.socket.Linger instead.") alias Linger linger;
 
 /// Specifies a socket option:
 enum SocketOption: int
@@ -2885,7 +2904,9 @@ public:
      * randomly varies on the order of 10ms.
      *
      * Params:
-     *   value = The timeout duration to set. Must not be negative.
+     *   level  = The level at which a socket option is defined.
+     *   option = Either $(D SocketOption.SNDTIMEO) or $(D SocketOption.RCVTIMEO).
+     *   value  = The timeout duration to set. Must not be negative.
      *
      * Throws: $(D SocketException) if setting the options fails.
      *
@@ -2925,7 +2946,7 @@ public:
         else version (Posix)
         {
             _ctimeval tv;
-            tv.tv_sec  = to!(typeof(tv.tv_sec ))(value.total!"seconds"());
+            tv.tv_sec  = to!(typeof(tv.tv_sec ))(value.total!"seconds");
             tv.tv_usec = to!(typeof(tv.tv_usec))(value.fracSec.usecs);
             setOption(level, option, (&tv)[0 .. 1]);
         }
@@ -3103,9 +3124,8 @@ public:
         return result;
     }
 
-    // This overload is explicitly not documented. Please do not use it. It will
-    // likely be deprecated in the future. It is against Phobos policy to have
-    // functions which use naked numbers for time values.
+    // Explicitly undocumented. It will be removed in December 2014.
+    deprecated("Please use the overload of select which takes a Duration instead.")
     static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, long microseconds)
     {
         TimeVal tv;

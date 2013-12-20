@@ -13,10 +13,10 @@ module std.internal.processinit;
 
 version(OSX)
 {
-    extern(C) void std_process_static_this();
+    extern(C) void std_process_shared_static_this();
 
     shared static this()
     {
-        std_process_static_this();
+        std_process_shared_static_this();
     }
 }

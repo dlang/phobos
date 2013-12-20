@@ -345,7 +345,7 @@ unittest {
     for (int i=1; fact<real.max; ++i) {
         // Require exact equality for small factorials
         if (i<14) assert(gamma(i*1.0L) == fact);
-        assert(feqrel(gamma(i*1.0L), fact) > real.mant_dig-15);
+        assert(feqrel(gamma(i*1.0L), fact) >= real.mant_dig-15);
         fact *= (i*1.0L);
     }
     assert(gamma(0.0) == real.infinity);
@@ -364,7 +364,7 @@ unittest {
     real SQRT_PI = 1.77245385090551602729816748334114518279754945612238L;
 
 
-    assert(feqrel(gamma(0.5L), SQRT_PI) == real.mant_dig);
+    assert(feqrel(gamma(0.5L), SQRT_PI) >= real.mant_dig-1);
     assert(feqrel(gamma(17.25L), 4.224986665692703551570937158682064589938e13L) >= real.mant_dig-4);
 
     assert(feqrel(gamma(1.0 / 3.0L),  2.67893853470774763365569294097467764412868937795730L) >= real.mant_dig-2);
@@ -892,12 +892,12 @@ unittest { // also tested by the normal distribution
 
     // Test against Mathematica   betaRegularized[z,a,b]
     // These arbitrary points are chosen to give good code coverage.
-    assert(feqrel(betaIncomplete(8, 10, 0.2), 0.010_934_315_234_099_2L) >=  real.mant_dig - 4);
+    assert(feqrel(betaIncomplete(8, 10, 0.2), 0.010_934_315_234_099_2L) >=  real.mant_dig - 5);
     assert(feqrel(betaIncomplete(2, 2.5, 0.9),0.989_722_597_604_452_767_171_003_59L) >= real.mant_dig - 1 );
-    assert(feqrel(betaIncomplete(1000, 800, 0.5), 1.179140859734704555102808541457164E-06L) >= real.mant_dig - 12 );
+    assert(feqrel(betaIncomplete(1000, 800, 0.5), 1.179140859734704555102808541457164E-06L) >= real.mant_dig - 13 );
     assert(feqrel(betaIncomplete(0.0001, 10000, 0.0001),0.999978059362107134278786L) >= real.mant_dig - 18 );
     assert(betaIncomplete(0.01, 327726.7, 0.545113) == 1.0);
-    assert(feqrel(betaIncompleteInv(8, 10, 0.010_934_315_234_099_2L), 0.2L) >= real.mant_dig - 1);
+    assert(feqrel(betaIncompleteInv(8, 10, 0.010_934_315_234_099_2L), 0.2L) >= real.mant_dig - 2);
     assert(feqrel(betaIncomplete(0.01, 498.437, 0.0121433),0.99999664562033077636065L) >= real.mant_dig - 1);
     assert(feqrel(betaIncompleteInv(5, 10, 0.2000002972865658842), 0.229121208190918L) >= real.mant_dig - 3);
     assert(feqrel(betaIncompleteInv(4, 7, 0.8000002209179505L), 0.483657360076904L) >= real.mant_dig - 3);
@@ -1504,7 +1504,7 @@ unittest {
     assert(digamma(1)== -EULERGAMMA);
     assert(feqrel(digamma(0.25), -PI/2 - 3* LN2 - EULERGAMMA) >= real.mant_dig-7);
     assert(feqrel(digamma(1.0L/6), -PI/2 *sqrt(3.0L) - 2* LN2 -1.5*log(3.0L) - EULERGAMMA) >= real.mant_dig-7);
-    assert(digamma(-5)!<>0);
+    assert(digamma(-5).isNaN);
     assert(feqrel(digamma(2.5), -EULERGAMMA - 2*LN2 + 2.0 + 2.0L/3) >= real.mant_dig-9);
     assert(isIdentical(digamma(NaN(0xABC)), NaN(0xABC)));
 

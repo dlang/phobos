@@ -46,39 +46,6 @@ $(TR $(TDNW Helpers) $(TD $(MYREF crcHexString) $(MYREF crc32Of))
  *
  * CTFE:
  * Digests do not work in CTFE
- *
- * Examples:
- * ---------
- * //Template API
- * import std.digest.crc;
- *
- * ubyte[4] hash = crc32Of("The quick brown fox jumps over the lazy dog");
- * assert(crcHexString(hash) == "414FA339");
- *
- * //Feeding data
- * ubyte[1024] data;
- * CRC32 crc;
- * crc.put(data[]);
- * crc.start(); //Start again
- * crc.put(data[]);
- * hash = crc.finish();
- * ---------
- *
- * ---------
- * //OOP API
- * import std.digest.crc;
- *
- * auto crc = new CRC32Digest();
- * ubyte[] hash = crc.digest("The quick brown fox jumps over the lazy dog");
- * assert(crcHexString(hash) == "414FA339");
- *
- * //Feeding data
- * ubyte[1024] data;
- * crc.put(data[]);
- * crc.reset(); //Start again
- * crc.put(data[]);
- * hash = crc.finish();
- * ---------
  */
 /*
  * Copyright (c) 2001 - 2002
@@ -98,7 +65,7 @@ version(unittest)
 
 import std.bitmanip;
 
-//verify example
+///
 unittest
 {
     //Template API
@@ -116,7 +83,7 @@ unittest
     hash = crc.finish();
 }
 
-//verify example
+///
 unittest
 {
     //OOP API
@@ -178,36 +145,6 @@ private immutable uint[256] crc32_table =
 /**
  * Template API CRC32 implementation.
  * See $(D std.digest.digest) for differences between template and OOP API.
- *
- * Examples:
- * --------
- * //Simple example, hashing a string using crc32Of helper function
- * ubyte[4] hash = crc32Of("abc");
- * //Let's get a hash string
- * assert(crcHexString(hash) == "352441C2");
- * --------
- *
- * --------
- * //Using the basic API
- * CRC32 hash;
- * ubyte[1024] data;
- * //Initialize data here...
- * hash.put(data);
- * ubyte[4] result = hash.finish();
- * --------
- *
- * --------
- * //Let's use the template features:
- * //Note: When passing a CRC32 to a function, it must be passed by reference!
- * void doSomething(T)(ref T hash) if(isDigest!T)
- * {
- *     hash.put(cast(ubyte)0);
- * }
- * CRC32 crc;
- * crc.start();
- * doSomething(crc);
- * assert(crcHexString(crc.finish()) == "D202EF8D");
- * --------
  */
 struct CRC32
 {
@@ -220,20 +157,20 @@ struct CRC32
          * Use this to feed the digest with data.
          * Also implements the $(XREF range, OutputRange) interface for $(D ubyte) and
          * $(D const(ubyte)[]).
-         *
-         * Examples:
-         * ----
-         * CRC32 dig;
-         * dig.put(cast(ubyte)0); //single ubyte
-         * dig.put(cast(ubyte)0, cast(ubyte)0); //variadic
-         * ubyte[10] buf;
-         * dig.put(buf); //buffer
-         * ----
          */
         @trusted pure nothrow void put(scope const(ubyte)[] data...)
         {
             foreach (val; data)
                 _state = (_state >> 8) ^ crc32_table[cast(ubyte)_state ^ val];
+        }
+        ///
+        unittest
+        {
+            CRC32 dig;
+            dig.put(cast(ubyte)0); //single ubyte
+            dig.put(cast(ubyte)0, cast(ubyte)0); //variadic
+            ubyte[10] buf;
+            dig.put(buf); //buffer
         }
 
         /**
@@ -244,36 +181,36 @@ struct CRC32
          * is not necessary. Calling start is only necessary to reset the Digest.
          *
          * Generic code which deals with different Digest types should always call start though.
-         *
-         * Examples:
-         * --------
-         * CRC32 digest;
-         * //digest.start(); //Not necessary
-         * digest.put(0);
-         * --------
          */
         @trusted pure nothrow void start()
         {
             this = CRC32.init;
         }
+        ///
+        unittest
+        {
+            CRC32 digest;
+            //digest.start(); //Not necessary
+            digest.put(0);
+        }
 
         /**
          * Returns the finished CRC32 hash. This also calls $(LREF start) to
          * reset the internal state.
-         *
-         * Examples:
-         * --------
-         * //Simple example
-         * CRC32 hash;
-         * hash.put(cast(ubyte)0);
-         * ubyte[4] result = hash.finish();
-         * --------
          */
         @trusted pure nothrow ubyte[4] finish()
         {
             auto tmp = peek();
             start();
             return tmp;
+        }
+        ///
+        unittest
+        {
+            //Simple example
+            CRC32 hash;
+            hash.put(cast(ubyte)0);
+            ubyte[4] result = hash.finish();
         }
 
         /**
@@ -287,7 +224,7 @@ struct CRC32
         }
 }
 
-//verify example
+///
 unittest
 {
     //Simple example, hashing a string using crc32Of helper function
@@ -296,7 +233,7 @@ unittest
     assert(crcHexString(hash) == "352441C2");
 }
 
-//verify example
+///
 unittest
 {
     //Using the basic API
@@ -307,11 +244,11 @@ unittest
     ubyte[4] result = hash.finish();
 }
 
-//verify example
+///
 unittest
 {
     //Let's use the template features:
-    //Note: When passing a CRC32 to a function, it must be passed by referece!
+    //Note: When passing a CRC32 to a function, it must be passed by reference!
     void doSomething(T)(ref T hash) if(isDigest!T)
     {
       hash.put(cast(ubyte)0);
@@ -369,12 +306,6 @@ unittest
 /**
  * This is a convenience alias for $(XREF digest.digest, digest) using the
  * CRC32 implementation.
- *
- * Examples:
- * ---------
- * ubyte[4] hash = crc32Of("abc");
- * assert(hash == digest!CRC32("abc")); //This is the same as above
- * ---------
  */
 //simple alias doesn't work here, hope this gets inlined...
 auto crc32Of(T...)(T data)
@@ -390,7 +321,7 @@ public alias toHexString!(Order.decreasing) crcHexString;
 ///ditto
 public alias toHexString!(Order.decreasing, 16) crcHexString;
 
-//verify example
+///
 unittest
 {
     ubyte[4] hash = crc32Of("abc");
@@ -403,34 +334,10 @@ unittest
  *
  * This is an alias for $(XREF digest.digest, WrapperDigest)!CRC32, see
  * $(XREF digest.digest, WrapperDigest) for more information.
- *
- * Examples:
- * --------
- * //Simple example, hashing a string using Digest.digest helper function
- * auto crc = new CRC32Digest();
- * ubyte[] hash = crc.digest("abc");
- * //Let's get a hash string
- * assert(crcHexString(hash) == "352441C2");
- * --------
- *
- * --------
- * //Let's use the OOP features:
- * void test(Digest dig)
- * {
- *     dig.put(cast(ubyte)0);
- * }
- * auto crc = new CRC32Digest();
- * test(crc);
- *
- * //Let's use a custom buffer:
- * ubyte[4] buf;
- * ubyte[] result = crc.finish(buf[]);
- * assert(crcHexString(result) == "D202EF8D");
- * --------
  */
 alias WrapperDigest!CRC32 CRC32Digest;
 
-//verify example
+///
 unittest
 {
     //Simple example, hashing a string using Digest.digest helper function
@@ -440,7 +347,7 @@ unittest
     assert(crcHexString(hash) == "352441C2");
 }
 
-//verify example
+///
 unittest
 {
      //Let's use the OOP features:
@@ -457,7 +364,7 @@ unittest
     assert(crcHexString(result) == "D202EF8D");
 }
 
-//verify example
+///
 unittest
 {
     //Simple example
@@ -466,7 +373,7 @@ unittest
     ubyte[] result = hash.finish();
 }
 
-//verify example
+///
 unittest
 {
     //using a supplied buffer

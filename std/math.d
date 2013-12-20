@@ -47,15 +47,22 @@
  *      HALF = &frac12;
  *
  * Copyright: Copyright Digital Mars 2000 - 2011.
+ *            D implementations of tan, atan, atan2, exp, expm1, exp2, log, log10, log1p,
+ *            log2, floor, ceil and lrint functions are based on the CEPHES math library,
+ *            which is Copyright (C) 2001 Stephen L. Moshier <steve@moshier.net>
+ *            and are incorporated herein by permission of the author.  The author
+ *            reserves the right to distribute this material elsewhere under different
+ *            copying permissions.  These modifications are distributed here under
+ *            the following terms:
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   $(WEB digitalmars.com, Walter Bright),
- *                        Don Clugston
+ *                        Don Clugston, Conversion of CEPHES math library to D by Iain Buclaw
  * Source: $(PHOBOSSRC std/_math.d)
  */
 module std.math;
 
 import core.stdc.math;
-import std.range, std.traits;
+import std.traits;
 
 version(unittest)
 {
@@ -123,8 +130,8 @@ version(unittest)
         if (isnan(x) || isnan(y))
             return 0;
 
-        char bufx[30];
-        char bufy[30];
+        char[30] bufx;
+        char[30] bufy;
         assert(ndigits < bufx.length);
 
         int ix;
@@ -329,7 +336,7 @@ unittest
     assert(abs(71.6Li) == 71.6L);
     assert(abs(-56) == 56);
     assert(abs(2321312L)  == 2321312L);
-    assert(abs(-1+1i) == sqrt(2.0));
+    assert(abs(-1+1i) == sqrt(2.0L));
 }
 
 /***********************************
@@ -486,8 +493,7 @@ trigerr:
     }
     return real.nan;
 
-Lret:
-    ;
+Lret: {}
     }
     else version(D_InlineAsm_X86_64)
     {
@@ -535,18 +541,78 @@ trigerr:
     }
     return real.nan;
 
-Lret:
-    ;
+Lret: {}
     }
     else
     {
-        return core.stdc.math.tanl(x);
+        // Coefficients for tan(x)
+        static immutable real[3] P = [
+           -1.7956525197648487798769E7L,
+            1.1535166483858741613983E6L,
+           -1.3093693918138377764608E4L,
+        ];
+        static immutable real[5] Q = [
+           -5.3869575592945462988123E7L,
+            2.5008380182335791583922E7L,
+           -1.3208923444021096744731E6L,
+            1.3681296347069295467845E4L,
+            1.0000000000000000000000E0L,
+        ];
+
+        // PI/4 split into three parts.
+        enum real P1 = 7.853981554508209228515625E-1L;
+        enum real P2 = 7.946627356147928367136046290398E-9L;
+        enum real P3 = 3.061616997868382943065164830688E-17L;
+
+        // Special cases.
+        if (x == 0.0 || isNaN(x))
+            return x;
+        if (isInfinity(x))
+            return real.nan;
+
+        // Make argument positive but save the sign.
+        bool sign = false;
+        if (signbit(x))
+        {
+            sign = true;
+            x = -x;
+        }
+
+        // Compute x mod PI/4.
+        real y = floor(x / PI_4);
+        // Strip high bits of integer part.
+        real z = ldexp(y, -4);
+        // Compute y - 16 * (y / 16).
+        z = y - ldexp(floor(z), 4);
+
+        // Integer and fraction part modulo one octant.
+        int j = cast(int)(z);
+
+        // Map zeros and singularities to origin.
+        if (j & 1)
+        {
+            j += 1;
+            y += 1.0;
+        }
+
+        z = ((x - y * P1) - y * P2) - y * P3;
+        real zz = z * z;
+
+        if (zz > 1.0e-20L)
+            y = z + z * (zz * poly(zz, P) / poly(zz, Q));
+        else
+            y = z;
+
+        if (j & 2)
+            y = -1.0 / y;
+
+        return (sign) ? -y : y;
     }
 }
 
 unittest
 {
-    static real vals[][2] =     // angle,tan
+    static real[2][] vals =     // angle,tan
         [
          [   0,   0],
          [   .5,  .5463024898],
@@ -589,7 +655,7 @@ unittest
         r = -r;
         t = tan(x);
         //printf("tan(%Lg) = %Lg, should be %Lg\n", x, t, r);
-        if (!isIdentical(r, t) && !(r!<>=0 && t!<>=0)) assert(fabs(r-t) <= .0000001);
+        if (!isIdentical(r, t) && !(r!=r && t!=t)) assert(fabs(r-t) <= .0000001);
     }
     // overflow
     assert(isNaN(tan(real.infinity)));
@@ -667,7 +733,72 @@ unittest
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(NAN))       $(TD yes))
  *  )
  */
-real atan(real x) @safe pure nothrow { return atan2(x, 1.0L); }
+real atan(real x) @safe pure nothrow
+{
+    version(InlineAsm_X86_Any)
+    {
+        return atan2(x, 1.0L);
+    }
+    else
+    {
+        // Coefficients for atan(x)
+        static immutable real[5] P = [
+           -5.0894116899623603312185E1L,
+           -9.9988763777265819915721E1L,
+           -6.3976888655834347413154E1L,
+           -1.4683508633175792446076E1L,
+           -8.6863818178092187535440E-1L,
+        ];
+        static immutable real[6] Q = [
+            1.5268235069887081006606E2L,
+            3.9157570175111990631099E2L,
+            3.6144079386152023162701E2L,
+            1.4399096122250781605352E2L,
+            2.2981886733594175366172E1L,
+            1.0000000000000000000000E0L,
+        ];
+
+        // tan(PI/8)
+        enum real TAN_PI_8 = 4.1421356237309504880169e-1L;
+        // tan(3 * PI/8)
+        enum real TAN3_PI_8 = 2.41421356237309504880169L;
+
+        // Special cases.
+        if (x == 0.0)
+            return x;
+        if (isInfinity(x))
+            return copysign(PI_2, x);
+
+        // Make argument positive but save the sign.
+        bool sign = false;
+        if (signbit(x))
+        {
+            sign = true;
+            x = -x;
+        }
+
+        // Range reduction.
+        real y;
+        if (x > TAN3_PI_8)
+        {
+            y = PI_2;
+            x = -(1.0 / x);
+        }
+        else if (x > TAN_PI_8)
+        {
+            y = PI_4;
+            x = (x - 1.0)/(x + 1.0);
+        }
+        else
+            y = 0.0;
+
+        // Rational form in x^^2.
+        real z = x * x;
+        y = y + (poly(z, P) / poly(z, Q)) * z * x + x;
+
+        return (sign) ? -y : y;
+    }
+}
 
 /// ditto
 double atan(double x) @safe pure nothrow { return atan(cast(real)x); }
@@ -726,7 +857,53 @@ real atan2(real y, real x) @trusted pure nothrow
     }
     else
     {
-        return core.stdc.math.atan2l(y,x);
+        // Special cases.
+        if (isNaN(x) || isNaN(y))
+            return real.nan;
+        if (y == 0.0)
+        {
+            if (x >= 0 && !signbit(x))
+                return copysign(0, y);
+            else
+                return copysign(PI, y);
+        }
+        if (x == 0.0)
+            return copysign(PI_2, y);
+        if (isInfinity(x))
+        {
+            if (signbit(x))
+            {
+                if (isInfinity(y))
+                    return copysign(3*PI_4, y);
+                else
+                    return copysign(PI, y);
+            }
+            else
+            {
+                if (isInfinity(y))
+                    return copysign(PI_4, y);
+                else
+                    return copysign(0.0, y);
+            }
+        }
+        if (isInfinity(y))
+            return copysign(PI_2, y);
+
+        // Call atan and determine the quadrant.
+        real z = atan(y / x);
+
+        if (signbit(x))
+        {
+            if (signbit(y))
+                z = z - PI;
+            else
+                z = z + PI;
+        }
+
+        if (z == 0.0)
+            return copysign(z, y);
+
+        return z;
     }
 }
 
@@ -1104,7 +1281,53 @@ real exp(real x) @trusted pure nothrow
     }
     else
     {
-        return core.stdc.math.expl(x);
+        // Coefficients for exp(x)
+        static immutable real[3] P = [
+            9.9999999999999999991025E-1L,
+            3.0299440770744196129956E-2L,
+            1.2617719307481059087798E-4L,
+        ];
+        static immutable real[4] Q = [
+            2.0000000000000000000897E0L,
+            2.2726554820815502876593E-1L,
+            2.5244834034968410419224E-3L,
+            3.0019850513866445504159E-6L,
+        ];
+
+        // C1 + C2 = LN2.
+        enum real C1 = 6.9314575195312500000000E-1L;
+        enum real C2 = 1.428606820309417232121458176568075500134E-6L;
+
+        // Overflow and Underflow limits.
+        enum real OF =  1.1356523406294143949492E4L;
+        enum real UF = -1.1432769596155737933527E4L;
+
+        // Special cases.
+        if (isNaN(x))
+            return x;
+        if (x > OF)
+            return real.infinity;
+        if (x < UF)
+            return 0.0;
+
+        // Express: e^^x = e^^g * 2^^n
+        //   = e^^g * e^^(n * LOG2E)
+        //   = e^^(g + n * LOG2E)
+        int n = cast(int)floor(LOG2E * x + 0.5);
+        x -= n * C1;
+        x -= n * C2;
+
+        // Rational approximation for exponential of the fractional part:
+        //  e^^x = 1 + 2x P(x^^2) / (Q(x^^2) - P(x^^2))
+        real xx = x * x;
+        real px = x * poly(xx, P);
+        x = px / (poly(xx, Q) - px);
+        x = 1.0 + ldexp(x, 1);
+
+        // Scale by power of 2.
+        x = ldexp(x, n);
+
+        return x;
     }
 }
 
@@ -1116,7 +1339,7 @@ float exp(float x)  @safe pure nothrow   { return exp(cast(real)x); }
 
 unittest
 {
-    assert(equalsDigit(exp(3.0), E * E * E, useDigits));
+    assert(equalsDigit(exp(3.0L), E * E * E, useDigits));
 }
 
 /**
@@ -1299,7 +1522,57 @@ L_largenegative:
     }
     else
     {
-        return core.stdc.math.expm1l(x);
+        // Coefficients for exp(x) - 1
+        static immutable real[5] P = [
+           -1.586135578666346600772998894928250240826E4L,
+            2.642771505685952966904660652518429479531E3L,
+           -3.423199068835684263987132888286791620673E2L,
+            1.800826371455042224581246202420972737840E1L,
+           -5.238523121205561042771939008061958820811E-1L,
+        ];
+        static immutable real[6] Q = [
+           -9.516813471998079611319047060563358064497E4L,
+            3.964866271411091674556850458227710004570E4L,
+           -7.207678383830091850230366618190187434796E3L,
+            7.206038318724600171970199625081491823079E2L,
+           -4.002027679107076077238836622982900945173E1L,
+            1.000000000000000000000000000000000000000E0L,
+        ];
+
+        // C1 + C2 = LN2.
+        enum real C1 = 6.9314575195312500000000E-1L;
+        enum real C2 = 1.4286068203094172321215E-6L;
+
+        // Overflow and Underflow limits.
+        enum real OF =  1.1356523406294143949492E4L;
+        enum real UF = -4.5054566736396445112120088E1L;
+
+        // Special cases.
+        if (x > OF)
+            return real.infinity;
+        if (x == 0.0)
+            return x;
+        if (x < UF)
+            return -1.0;
+
+        // Express x = LN2 (n + remainder), remainder not exceeding 1/2.
+        int n = cast(int)floor(0.5 + x / LN2);
+        x -= n * C1;
+        x -= n * C2;
+
+        // Rational approximation:
+        //  exp(x) - 1 = x + 0.5 x^^2 + x^^3 P(x) / Q(x)
+        real px = x * poly(x, P);
+        real qx = poly(x, Q);
+        real xx = x * x;
+        qx = x + (0.5 * xx + xx * px / qx);
+
+        // We have qx = exp(remainder LN2) - 1, so:
+        //  exp(x) - 1 = 2^^n (qx + 1) - 1 = 2^^n qx + 2^^n - 1.
+        px = ldexp(1.0, n);
+        x = px * qx + (px - 1.0);
+
+        return x;
     }
 }
 
@@ -1506,7 +1779,46 @@ L_was_nan:
     }
     else
     {
-        return core.stdc.math.exp2l(x);
+        // Coefficients for exp2(x)
+        static immutable real[3] P = [
+            2.0803843631901852422887E6L,
+            3.0286971917562792508623E4L,
+            6.0614853552242266094567E1L,
+        ];
+        static immutable real[4] Q = [
+            6.0027204078348487957118E6L,
+            3.2772515434906797273099E5L,
+            1.7492876999891839021063E3L,
+            1.0000000000000000000000E0L,
+        ];
+
+        // Overflow and Underflow limits.
+        enum real OF =  16384.0L;
+        enum real UF = -16382.0L;
+
+        // Special cases.
+        if (isNaN(x))
+            return x;
+        if (x > OF)
+            return real.infinity;
+        if (x < UF)
+            return 0.0;
+
+        // Separate into integer and fractional parts.
+        int n = cast(int)floor(x + 0.5);
+        x -= n;
+
+        // Rational approximation:
+        //  exp2(x) = 1.0 + 2x P(x^^2) / (Q(x^^2) - P(x^^2))
+        real xx = x * x;
+        real px = x * poly(xx, P);
+        x = px / (poly(xx, Q) - px);
+        x = 1.0 + ldexp(x, 1);
+
+        // Scale by power of 2.
+        x = ldexp(x, n);
+
+        return x;
     }
 }
 
@@ -1515,7 +1827,6 @@ unittest
     assert(exp2(0.5L)== SQRT2);
     assert(exp2(8.0L) == 256.0);
     assert(exp2(-9.0L)== 1.0L/512.0);
-    assert(exp(3.0L) == E*E*E);
     assert( core.stdc.math.exp2f(0.0f) == 1 );
     assert( core.stdc.math.exp2 (0.0)  == 1 );
     assert( core.stdc.math.exp2l(0.0L) == 1 );
@@ -1570,13 +1881,13 @@ unittest
     resetIeeeFlags();
     x = exp(real.nan);
     f = ieeeFlags;
-    assert(isIdentical(x,real.nan));
+    assert(isIdentical(abs(x), real.nan));
     assert(f.flags == 0);
 
     resetIeeeFlags();
     x = exp(-real.nan);
     f = ieeeFlags;
-    assert(isIdentical(x, -real.nan));
+    assert(isIdentical(abs(x), real.nan));
     assert(f.flags == 0);
 
     x = exp(NaN(0x123));
@@ -1653,7 +1964,7 @@ real frexp(real value, out int exp) @trusted pure nothrow
 {
     ushort* vu = cast(ushort*)&value;
     long* vl = cast(long*)&value;
-    uint ex;
+    int ex;
     alias floatTraits!(real) F;
 
     ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
@@ -1788,7 +2099,7 @@ real frexp(real value, out int exp) @trusted pure nothrow
 
 unittest
 {
-    static real vals[][3] =     // x,frexp,exp
+    static real[3][] vals =     // x,frexp,exp
         [
          [0.0,   0.0,    0],
          [-0.0,  -0.0,   0],
@@ -1818,7 +2129,7 @@ unittest
 
     static if (real.mant_dig == 64)
     {
-        static real extendedvals[][3] = [ // x,frexp,exp
+        static real[3][] extendedvals = [ // x,frexp,exp
                                           [0x1.a5f1c2eb3fe4efp+73L, 0x1.A5F1C2EB3FE4EFp-1L,   74],    // normal
                                           [0x1.fa01712e8f0471ap-1064L,  0x1.fa01712e8f0471ap-1L,     -1063],
                                           [real.min_normal,  .5,     -16381],
@@ -1929,7 +2240,7 @@ unittest
 
 unittest
 {
-    static real vals[][3] =    // value,exp,ldexp
+    static real[3][] vals =    // value,exp,ldexp
     [
     [    0,    0,    0],
     [    1,    0,    1],
@@ -1985,7 +2296,110 @@ real log(real x) @safe pure nothrow
     version (INLINE_YL2X)
         return yl2x(x, LN2);
     else
-        return core.stdc.math.logl(x);
+    {
+        // Coefficients for log(1 + x)
+        static immutable real[7] P = [
+            2.0039553499201281259648E1L,
+            5.7112963590585538103336E1L,
+            6.0949667980987787057556E1L,
+            2.9911919328553073277375E1L,
+            6.5787325942061044846969E0L,
+            4.9854102823193375972212E-1L,
+            4.5270000862445199635215E-5L,
+        ];
+        static immutable real[7] Q = [
+            6.0118660497603843919306E1L,
+            2.1642788614495947685003E2L,
+            3.0909872225312059774938E2L,
+            2.2176239823732856465394E2L,
+            8.3047565967967209469434E1L,
+            1.5062909083469192043167E1L,
+            1.0000000000000000000000E0L,
+        ];
+
+        // Coefficients for log(x)
+        static immutable real[4] R = [
+           -3.5717684488096787370998E1L,
+            1.0777257190312272158094E1L,
+           -7.1990767473014147232598E-1L,
+            1.9757429581415468984296E-3L,
+        ];
+        static immutable real[4] S = [
+           -4.2861221385716144629696E2L,
+            1.9361891836232102174846E2L,
+           -2.6201045551331104417768E1L,
+            1.0000000000000000000000E0L,
+        ];
+
+        // C1 + C2 = LN2.
+        enum real C1 = 6.9314575195312500000000E-1L;
+        enum real C2 = 1.4286068203094172321215E-6L;
+
+        // Special cases.
+        if (isNaN(x))
+            return x;
+        if (isInfinity(x) && !signbit(x))
+            return x;
+        if (x == 0.0)
+            return -real.infinity;
+        if (x < 0.0)
+            return real.nan;
+
+        // Separate mantissa from exponent.
+        // Note, frexp is used so that denormal numbers will be handled properly.
+        real y, z;
+        int exp;
+
+        x = frexp(x, exp);
+
+        // Logarithm using log(x) = z + z^^3 P(z) / Q(z),
+        // where z = 2(x - 1)/(x + 1)
+        if((exp > 2) || (exp < -2))
+        {
+            if(x < SQRT1_2)
+            {   // 2(2x - 1)/(2x + 1)
+                exp -= 1;
+                z = x - 0.5;
+                y = 0.5 * z + 0.5;
+            }       
+            else
+            {   // 2(x - 1)/(x + 1)
+                z = x - 0.5;
+                z -= 0.5;
+                y = 0.5 * x  + 0.5;
+            }
+            x = z / y;
+            z = x * x;
+            z = x * (z * poly(z, R) / poly(z, S));
+            z += exp * C2;
+            z += x;
+            z += exp * C1;
+
+            return z;
+        }
+
+        // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
+        if (x < SQRT1_2)
+        {   // 2x - 1
+            exp -= 1;
+            x = ldexp(x, 1) - 1.0;
+        }
+        else
+        {
+            x = x - 1.0;
+        }
+        z = x * x;
+        y = x * (z * poly(x, P) / poly(x, Q));
+        y += exp * C2;
+        z = y - ldexp(z, -1);
+
+        // Note, the sum of above terms does not exceed x/4,
+        // so it contributes at most about 1/4 lsb to the error.
+        z += x;
+        z += exp * C1;
+
+        return z;
+    }
 }
 
 unittest
@@ -2009,7 +2423,114 @@ real log10(real x) @safe pure nothrow
     version (INLINE_YL2X)
         return yl2x(x, LOG2);
     else
-        return core.stdc.math.log10l(x);
+    {
+        // Coefficients for log(1 + x)
+        static immutable real[7] P = [
+            2.0039553499201281259648E1L,
+            5.7112963590585538103336E1L,
+            6.0949667980987787057556E1L,
+            2.9911919328553073277375E1L,
+            6.5787325942061044846969E0L,
+            4.9854102823193375972212E-1L,
+            4.5270000862445199635215E-5L,
+        ];
+        static immutable real[7] Q = [
+            6.0118660497603843919306E1L,
+            2.1642788614495947685003E2L,
+            3.0909872225312059774938E2L,
+            2.2176239823732856465394E2L,
+            8.3047565967967209469434E1L,
+            1.5062909083469192043167E1L,
+            1.0000000000000000000000E0L,
+        ];
+
+        // Coefficients for log(x)
+        static immutable real[4] R = [
+           -3.5717684488096787370998E1L,
+            1.0777257190312272158094E1L,
+           -7.1990767473014147232598E-1L,
+            1.9757429581415468984296E-3L,
+        ];
+        static immutable real[4] S = [
+           -4.2861221385716144629696E2L,
+            1.9361891836232102174846E2L,
+           -2.6201045551331104417768E1L,
+            1.0000000000000000000000E0L,
+        ];
+
+        // log10(2) split into two parts.
+        enum real L102A =  0.3125L;
+        enum real L102B = -1.14700043360188047862611052755069732318101185E-2L;
+
+        // log10(e) split into two parts.
+        enum real L10EA =  0.5L;
+        enum real L10EB = -6.570551809674817234887108108339491770560299E-2L;
+
+        // Special cases are the same as for log.
+        if (isNaN(x))
+            return x;
+        if (isInfinity(x) && !signbit(x))
+            return x;
+        if (x == 0.0)
+            return -real.infinity;
+        if (x < 0.0)
+            return real.nan;
+
+        // Separate mantissa from exponent.
+        // Note, frexp is used so that denormal numbers will be handled properly.
+        real y, z;
+        int exp;
+
+        x = frexp(x, exp);
+
+        // Logarithm using log(x) = z + z^^3 P(z) / Q(z),
+        // where z = 2(x - 1)/(x + 1)
+        if((exp > 2) || (exp < -2))
+        {
+            if(x < SQRT1_2)
+            {   // 2(2x - 1)/(2x + 1)
+                exp -= 1;
+                z = x - 0.5;
+                y = 0.5 * z + 0.5;
+            }       
+            else
+            {   // 2(x - 1)/(x + 1)
+                z = x - 0.5;
+                z -= 0.5;
+                y = 0.5 * x  + 0.5;
+            }
+            x = z / y;
+            z = x * x;
+            y = x * (z * poly(z, R) / poly(z, S));
+            goto Ldone;
+        }
+
+        // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
+        if (x < SQRT1_2)
+        {   // 2x - 1
+            exp -= 1;
+            x = ldexp(x, 1) - 1.0;
+        }
+        else
+            x = x - 1.0;
+
+        z = x * x;
+        y = x * (z * poly(x, P) / poly(x, Q));
+        y = y - ldexp(z, -1);
+
+        // Multiply log of fraction by log10(e) and base 2 exponent by log10(2).
+        // This sequence of operations is critical and it may be horribly
+        // defeated by some compiler optimizers.
+    Ldone:
+        z = y * L10EB;
+        z += x * L10EB;
+        z += exp * L102B;
+        z += y * L10EA;
+        z += x * L10EA;
+        z += exp * L102A;
+
+        return z;
+    }
 }
 
 unittest
@@ -2043,7 +2564,17 @@ real log1p(real x) @safe pure nothrow
     }
     else
     {
-        return core.stdc.math.log1pl(x);
+        // Special cases.
+        if (isNaN(x) || x == 0.0)
+            return x;
+        if (isInfinity(x) && !signbit(x))
+            return x;
+        if (x == -1.0)
+            return -real.infinity;
+        if (x < -1.0)
+            return real.nan;
+
+        return log(x + 1.0);
     }
 }
 
@@ -2063,7 +2594,105 @@ real log2(real x) @safe pure nothrow
     version (INLINE_YL2X)
         return yl2x(x, 1);
     else
-        return core.stdc.math.log2l(x);
+    {
+        // Coefficients for log(1 + x)
+        static immutable real[7] P = [
+            2.0039553499201281259648E1L,
+            5.7112963590585538103336E1L,
+            6.0949667980987787057556E1L,
+            2.9911919328553073277375E1L,
+            6.5787325942061044846969E0L,
+            4.9854102823193375972212E-1L,
+            4.5270000862445199635215E-5L,
+        ];
+        static immutable real[7] Q = [
+            6.0118660497603843919306E1L,
+            2.1642788614495947685003E2L,
+            3.0909872225312059774938E2L,
+            2.2176239823732856465394E2L,
+            8.3047565967967209469434E1L,
+            1.5062909083469192043167E1L,
+            1.0000000000000000000000E0L,
+        ];
+
+        // Coefficients for log(x)
+        static immutable real[4] R = [
+           -3.5717684488096787370998E1L,
+            1.0777257190312272158094E1L,
+           -7.1990767473014147232598E-1L,
+            1.9757429581415468984296E-3L,
+        ];
+        static immutable real[4] S = [
+           -4.2861221385716144629696E2L,
+            1.9361891836232102174846E2L,
+           -2.6201045551331104417768E1L,
+            1.0000000000000000000000E0L,
+        ];
+
+        // Special cases are the same as for log.
+        if (isNaN(x))
+            return x;
+        if (isInfinity(x) && !signbit(x))
+            return x;
+        if (x == 0.0)
+            return -real.infinity;
+        if (x < 0.0)
+            return real.nan;
+
+        // Separate mantissa from exponent.
+        // Note, frexp is used so that denormal numbers will be handled properly.
+        real y, z;
+        int exp;
+
+        x = frexp(x, exp);
+
+        // Logarithm using log(x) = z + z^^3 P(z) / Q(z),
+        // where z = 2(x - 1)/(x + 1)
+        if((exp > 2) || (exp < -2))
+        {
+            if(x < SQRT1_2)
+            {   // 2(2x - 1)/(2x + 1)
+                exp -= 1;
+                z = x - 0.5;
+                y = 0.5 * z + 0.5;
+            }       
+            else
+            {   // 2(x - 1)/(x + 1)
+                z = x - 0.5;
+                z -= 0.5;
+                y = 0.5 * x  + 0.5;
+            }
+            x = z / y;
+            z = x * x;
+            y = x * (z * poly(z, R) / poly(z, S));
+            goto Ldone;
+        }
+
+        // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
+        if (x < SQRT1_2)
+        {   // 2x - 1
+            exp -= 1;
+            x = ldexp(x, 1) - 1.0;
+        }
+        else
+            x = x - 1.0;
+
+        z = x * x;
+        y = x * (z * poly(x, P) / poly(x, Q));
+        y = y - ldexp(z, -1);
+
+        // Multiply log of fraction by log10(e) and base 2 exponent by log10(2).
+        // This sequence of operations is critical and it may be horribly
+        // defeated by some compiler optimizers.
+    Ldone:
+        z = y * (LOG2E - 1.0);
+        z += x * (LOG2E - 1.0);
+        z += y;
+        z += x;
+        z += exp;
+
+        return z;
+    }
 }
 
 unittest
@@ -2266,7 +2895,7 @@ real hypot(real x, real y) @safe pure nothrow
 
     real u = fabs(x);
     real v = fabs(y);
-    if (u !>= v)  // check for NaN as well.
+    if (!(u >= v))  // check for NaN as well.
     {
         v = u;
         u = fabs(y);
@@ -2305,7 +2934,7 @@ real hypot(real x, real y) @safe pure nothrow
 
 unittest
 {
-    static real vals[][3] =     // x,y,hypot
+    static real[3][] vals =     // x,y,hypot
         [
             [ 0.0,     0.0,   0.0],
             [ 0.0,    -0.0,   0.0],
@@ -2339,7 +2968,7 @@ unittest
  * Returns the value of x rounded upward to the next integer
  * (toward positive infinity).
  */
-real ceil(real x)  @trusted nothrow
+real ceil(real x)  @trusted pure nothrow
 {
     version (Win64)
     {
@@ -2361,20 +2990,38 @@ real ceil(real x)  @trusted nothrow
         }
     }
     else
-        return core.stdc.math.ceill(x);
+    {
+        // Special cases.
+        if (isNaN(x) || isInfinity(x))
+            return x;
+
+        real y = floor(x);
+        if (y < x)
+            y += 1.0;
+
+        return y;
+    }
 }
 
 unittest
 {
     assert(ceil(+123.456) == +124);
     assert(ceil(-123.456) == -123);
+    assert(ceil(-1.234) == -1);
+    assert(ceil(-0.123) == 0);
+    assert(ceil(0.0) == 0);
+    assert(ceil(+0.123) == 1);
+    assert(ceil(+1.234) == 2);
+    assert(ceil(real.infinity) == real.infinity);
+    assert(isNaN(ceil(real.nan)));
+    assert(isNaN(ceil(real.init)));
 }
 
 /**************************************
  * Returns the value of x rounded downward to the next integer
  * (toward negative infinity).
  */
-real floor(real x) @trusted nothrow
+real floor(real x) @trusted pure nothrow
 {
     version (Win64)
     {
@@ -2396,13 +3043,99 @@ real floor(real x) @trusted nothrow
         }
     }
     else
-        return core.stdc.math.floorl(x);
+    {
+        // Bit clearing masks.
+        static immutable ushort[17] BMASK = [
+            0xffff, 0xfffe, 0xfffc, 0xfff8,
+            0xfff0, 0xffe0, 0xffc0, 0xff80,
+            0xff00, 0xfe00, 0xfc00, 0xf800,
+            0xf000, 0xe000, 0xc000, 0x8000,
+            0x0000,
+        ];
+
+        // Special cases.
+        if (isNaN(x) || isInfinity(x) || x == 0.0)
+            return x;
+
+        alias floatTraits!(real) F;
+        auto vu = *cast(ushort[real.sizeof/2]*)(&x);
+
+        // Find the exponent (power of 2)
+        static if (real.mant_dig == 53)
+        {
+            int exp = ((vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
+
+            version (LittleEndian)
+                int pos = 0;
+            else
+                int pos = 3;
+        }
+        else static if (real.mant_dig == 64)
+        {
+            int exp = (vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+
+            version (LittleEndian)
+                int pos = 0;
+            else
+                int pos = 4;
+        }
+        else if (real.mant_dig == 113)
+        {
+            int exp = (vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+
+            version (LittleEndian)
+                int pos = 0;
+            else
+                int pos = 7;
+        }
+        else
+            static assert(false, "Only 64-bit, 80-bit, and 128-bit reals are supported by floor()");
+
+        if (exp < 0)
+        {
+            if (x < 0.0)
+                return -1.0;
+            else
+                return 0.0;
+        }
+
+        exp = (real.mant_dig - 1) - exp;
+
+        // Clean out 16 bits at a time.
+        while (exp >= 16)
+        {
+            version (LittleEndian)
+                vu[pos++] = 0;
+            else
+                vu[pos--] = 0;
+            exp -= 16;
+        }
+
+        // Clear the remaining bits.
+        if (exp > 0)
+            vu[pos] &= BMASK[exp];
+
+        real y = *cast(real*)(&vu);
+
+        if ((x < 0.0) && (x != y))
+            y -= 1.0;
+
+        return y;
+    }
 }
 
 unittest
 {
     assert(floor(+123.456) == +123);
     assert(floor(-123.456) == -124);
+    assert(floor(-1.234) == -2);
+    assert(floor(-0.123) == -1);
+    assert(floor(0.0) == 0);
+    assert(floor(+0.123) == 0);
+    assert(floor(+1.234) == 1);
+    assert(floor(real.infinity) == real.infinity);
+    assert(isNaN(floor(real.nan)));
+    assert(isNaN(floor(real.init)));
 }
 
 /******************************************
@@ -2470,8 +3203,124 @@ long lrint(real x) @trusted pure nothrow
     }
     else
     {
-        return core.stdc.math.llrintl(x);
+        static if (real.mant_dig == 53)
+        {
+            long result;
+
+            // Rounding limit when casting from real(double) to ulong.
+            enum real OF = 4.50359962737049600000E15L;
+
+            uint* vi = cast(uint*)(&x);
+
+            // Find the exponent and sign
+            uint msb = vi[MANTISSA_MSB];
+            uint lsb = vi[MANTISSA_LSB];
+            int exp = ((msb >> 20) & 0x7ff) - 0x3ff;
+            int sign = msb >> 31;
+            msb &= 0xfffff;
+            msb |= 0x100000;
+
+            if (exp < 63)
+            {
+                if (exp >= 52)
+                    result = (cast(long) msb << (exp - 20)) | (lsb << (exp - 52));
+                else
+                {
+                    // Adjust x and check result.
+                    real j = sign ? -OF : OF;
+                    x = (j + x) - j;
+                    msb = vi[MANTISSA_MSB];
+                    lsb = vi[MANTISSA_LSB];
+                    exp = ((msb >> 20) & 0x7ff) - 0x3ff;
+                    msb &= 0xfffff;
+                    msb |= 0x100000;
+
+                    if (exp < 0)
+                        result = 0;
+                    else if (exp < 20)
+                        result = cast(long) msb >> (20 - exp);
+                    else if (exp == 20)
+                        result = cast(long) msb;
+                    else
+                        result = (cast(long) msb << (exp - 20)) | (lsb >> (52 - exp));
+                }
+            }
+            else
+            {
+                // It is left implementation defined when the number is too large.
+                return cast(long) x;
+            }
+
+            return sign ? -result : result;
+        }
+        else static if (real.mant_dig == 64)
+        {
+            alias floatTraits!(real) F;
+            long result;
+
+            // Rounding limit when casting from real(80-bit) to ulong.
+            enum real OF = 9.22337203685477580800E18L;
+
+            ushort* vu = cast(ushort*)(&x);
+            uint* vi = cast(uint*)(&x);
+
+            // Find the exponent and sign
+            int exp = (vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+            int sign = (vu[F.EXPPOS_SHORT] >> 15) & 1;
+
+            if (exp < 63)
+            {
+                // Adjust x and check result.
+                real j = sign ? -OF : OF;
+                x = (j + x) - j;
+                exp = (vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+
+                version (LittleEndian)
+                {
+                    if (exp < 0)
+                        result = 0;
+                    else if (exp <= 31)
+                        result = vi[1] >> (31 - exp);
+                    else
+                        result = (cast(long) vi[1] << (exp - 31)) | (vi[0] >> (63 - exp));
+                }
+                else
+                {
+                    if (exp < 0)
+                        result = 0;
+                    else if (exp <= 31)
+                        result = vi[1] >> (31 - exp);
+                    else
+                        result = (cast(long) vi[1] << (exp - 31)) | (vi[2] >> (63 - exp));
+                }
+            }
+            else
+            {
+                // It is left implementation defined when the number is too large
+                // to fit in a 64bit long.
+                return cast(long) x;
+            }
+
+            return sign ? -result : result;
+        }
+        else
+        {
+            static assert(false, "Only 64-bit and 80-bit reals are supported by lrint()");
+        }
     }
+}
+
+unittest
+{
+    assert(lrint(4.5) == 4);
+    assert(lrint(5.5) == 6);
+    assert(lrint(-4.5) == -4);
+    assert(lrint(-5.5) == -6);
+
+    assert(lrint(int.max - 0.5) == 2147483646L);
+    assert(lrint(int.max + 0.5) == 2147483648L);
+    assert(lrint(int.min - 0.5) == -2147483648L);
+    assert(lrint(int.min + 0.5) == -2147483648L);
 }
 
 /*******************************************
@@ -2837,7 +3686,7 @@ struct FloatingPointControl
         roundDown      = 0x0400,
         roundUp        = 0x0800,
         roundToZero    = 0x0C00
-    };
+    }
 
     /** IEEE hardware exceptions.
      *  By default, all exceptions are masked (disabled).
@@ -2855,7 +3704,7 @@ struct FloatingPointControl
                              | invalidException,
         allExceptions      = severeExceptions | underflowException
                              | inexactException | subnormalException,
-    };
+    }
 
 private:
     enum ushort EXCEPTION_MASK = 0x3F;
@@ -4089,13 +4938,18 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @trusted pure nothrow
 
     static real impl(real x, real y) pure nothrow
     {
+        // Special cases.
         if (isNaN(y))
             return y;
-
-        if (y == 0)
-            return 1;           // even if x is $(NAN)
-        if (isNaN(x) && y != 0)
+        if (isNaN(x) && y != 0.0)
             return x;
+
+        // Even if x is NaN.
+        if (y == 0.0)
+            return 1.0;
+        if (y == 1.0)
+            return x;
+
         if (isInfinity(y))
         {
             if (fabs(x) > 1)
@@ -4120,17 +4974,16 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @trusted pure nothrow
         if (isInfinity(x))
         {
             if (signbit(x))
-            {   long i;
-
-                i = cast(long)y;
-                if (y > 0)
+            {
+                long i = cast(long)y;
+                if (y > 0.0)
                 {
                     if (i == y && i & 1)
                         return -F.infinity;
                     else
                         return F.infinity;
                 }
-                else if (y < 0)
+                else if (y < 0.0)
                 {
                     if (i == y && i & 1)
                         return -0.0;
@@ -4140,9 +4993,9 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @trusted pure nothrow
             }
             else
             {
-                if (y > 0)
+                if (y > 0.0)
                     return F.infinity;
-                else if (y < 0)
+                else if (y < 0.0)
                     return +0.0;
             }
         }
@@ -4150,17 +5003,16 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @trusted pure nothrow
         if (x == 0.0)
         {
             if (signbit(x))
-            {   long i;
-
-                i = cast(long)y;
-                if (y > 0)
+            {
+                long i = cast(long)y;
+                if (y > 0.0)
                 {
                     if (i == y && i & 1)
                         return -0.0;
                     else
                         return +0.0;
                 }
-                else if (y < 0)
+                else if (y < 0.0)
                 {
                     if (i == y && i & 1)
                         return -F.infinity;
@@ -4170,12 +5022,61 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @trusted pure nothrow
             }
             else
             {
-                if (y > 0)
+                if (y > 0.0)
                     return +0.0;
-                else if (y < 0)
+                else if (y < 0.0)
                     return F.infinity;
             }
         }
+        if (x == 1.0)
+            return 1.0;
+
+        if (y >= F.max)
+        {
+            if ((x > 0.0 && x < 1.0) || (x > -1.0 && x < 0.0))
+                return 0.0;
+            if (x > 1.0 || x < -1.0)
+                return F.infinity;
+        }
+        if (y <= -F.max)
+        {
+            if ((x > 0.0 && x < 1.0) || (x > -1.0 && x < 0.0))
+                return F.infinity;
+            if (x > 1.0 || x < -1.0)
+                return 0.0;
+        }
+
+        if (x >= F.max)
+        {
+            if (y > 0.0)
+                return F.infinity;
+            else
+                return 0.0;
+        }
+        if (x <= -F.max)
+        {
+            long i = cast(long)y;
+            if (y > 0.0)
+            {
+                if (i == y && i & 1)
+                    return -F.infinity;
+                else
+                    return F.infinity;
+            }
+            else if (y < 0.0)
+            {
+                if (i == y && i & 1)
+                    return -0.0;
+                else
+                    return +0.0;
+            }
+        }
+
+        // Integer power of x.
+        long iy = cast(long)y;
+        if (iy == y && fabs(y) < 32768.0)
+            return pow(x, iy);
+
         double sign = 1.0;
         if (x < 0)
         {
@@ -4201,7 +5102,13 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @trusted pure nothrow
         }
         else
         {
-            return sign * core.stdc.math.powl(x, y);
+            // If x > 0, x ^^ y == 2 ^^ ( y * log2(x) )
+            // TODO: This is not accurate in practice. A fast and accurate
+            // (though complicated) method is described in:
+            // "An efficient rounding boundary test for pow(x, y)
+            // in double precision", C.Q. Lauter and V. Lefèvre, INRIA (2007).
+            Float w = exp2(y * log2(x));
+            return sign * w;
         }
     }
     return impl(x, y);
@@ -4445,7 +5352,7 @@ in
 {
     // both x and y must have the same sign, and must not be NaN.
     assert(signbit(x) == signbit(y));
-    assert(x<>=0 && y<>=0);
+    assert(x==x && y==y);
 }
 body
 {
@@ -4579,6 +5486,7 @@ public:
  * Uses Horner's rule A(x) = $(SUB a, 0) + x($(SUB a, 1) + x($(SUB a, 2)
  *                         + x($(SUB a, 3) + ...)))
  * Params:
+ *      x =     the value to evaluate.
  *      A =     array of coefficients $(SUB a, 0), $(SUB a, 1), etc.
  */
 real poly(real x, const real[] A) @trusted pure nothrow
@@ -4725,7 +5633,7 @@ unittest
 {
     debug (math) printf("math.poly.unittest\n");
     real x = 3.1;
-    static real pp[] = [56.1, 32.7, 6];
+    static real[] pp = [56.1, 32.7, 6];
 
     assert( poly(x, pp) == (56.1L + (32.7L + 6L * x) * x) );
 }
@@ -4741,6 +5649,7 @@ unittest
  */
 bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
 {
+    import std.range;
     static if (isInputRange!T)
     {
         static if (isInputRange!U)
@@ -4908,4 +5817,11 @@ unittest
 
     real r = tan(-2.0L);
     assert(fabs(r - 2.18504f) < .00001);
+}
+
+pure @safe nothrow unittest
+{
+    // issue 6381: floor/ceil should be usable in pure function.
+    auto x = floor(1.2);
+    auto y = ceil(1.2);
 }

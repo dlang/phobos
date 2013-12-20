@@ -38,6 +38,7 @@ class CFile : Stream {
   /**
    * Create the stream wrapper for the given C file.
    * Params:
+   *   cfile = a valid C $(B FILE) pointer to wrap.
    *   mode = a bitwise combination of $(B FileMode.In) for a readable file
    *          and $(B FileMode.Out) for a writeable file.
    *   seekable = indicates if the stream should be _seekable.
@@ -102,7 +103,7 @@ class CFile : Stream {
    * Ditto
    */
   override char ungetc(char c) {
-    return cast(char).std.c.stdio.ungetc(c,cfile);
+    return cast(char)std.c.stdio.ungetc(c,cfile);
   }
 
   /**

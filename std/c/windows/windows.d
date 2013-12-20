@@ -3,13 +3,6 @@
 States and other countries. */
 
 module std.c.windows.windows;
+version (Windows):
 
 public import core.sys.windows.windows;
-
-version (Windows)
-{
-}
-else
-{
-    static assert(0);           // Windows only
-}

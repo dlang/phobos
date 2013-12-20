@@ -377,7 +377,7 @@ S encode(S)(S s)
         lastI = i + 1;
     }
 
-    if (!result.data) return s;
+    if (!result.data.ptr) return s;
     result.put(s[lastI .. $]);
     return result.data;
 }
@@ -441,6 +441,8 @@ enum DecodeMode
  */
 string decode(string s, DecodeMode mode=DecodeMode.LOOSE)
 {
+    import std.utf : encode;
+
     if (mode == DecodeMode.NONE) return s;
 
     char[] buffer;
@@ -691,7 +693,7 @@ class Element : Item
      * Constructs an Element from a Tag.
      *
      * Params:
-     *      tag = the start or empty tag of the element.
+     *      tag_ = the start or empty tag of the element.
      */
     this(const(Tag) tag_)
     {
@@ -967,7 +969,7 @@ class Element : Item
  * $(DDOC_ENUM_MEMBERS EMPTY) Used for empty tags
  *
  */
-enum TagType { START, END, EMPTY };
+enum TagType { START, END, EMPTY }
 
 /**
  * Class representing an XML tag.
@@ -1115,9 +1117,10 @@ class Tag
         override int opCmp(Object o)
         {
             const tag = toType!(const Tag)(o);
+            // Note that attr is an AA, so the comparison is nonsensical (bug 10381)
             return
                 ((name != tag.name) ? ( name < tag.name ? -1 : 1 ) :
-                ((attr != tag.attr) ? ( attr < tag.attr ? -1 : 1 ) :
+                ((attr != tag.attr) ? ( cast(void *)attr < cast(void*)tag.attr ? -1 : 1 ) :
                 ((type != tag.type) ? ( type < tag.type ? -1 : 1 ) :
             0 )));
         }
@@ -1154,7 +1157,7 @@ class Tag
             {
                 string s = "<" ~ name;
                 foreach(key,val;attr)
-                    s ~= format(" %s=\"%s\"",key,decode(val,DecodeMode.LOOSE));
+                    s ~= format(" %s=\"%s\"",key,encode(val));
                 return s;
             }
 
@@ -1653,7 +1656,7 @@ class DocumentParser : ElementParser
      * This is enforced by the function's in contract.
      *
      * Params:
-     *      xmltext = the entire XML document as text
+     *      xmlText_ = the entire XML document as text
      *
      */
     this(string xmlText_)
@@ -2727,6 +2730,13 @@ EOS";
         assert(e.text() == "What & Up Second");
     };
     xml.parse();
+}
+
+unittest
+{
+    string s = `<tag attr="&quot;value&gt;" />`;
+    auto doc = new Document(s);
+    assert(doc.toString() == s);
 }
 
 /** The base class for exceptions thrown by this module */

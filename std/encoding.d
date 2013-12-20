@@ -645,7 +645,7 @@ template EncoderInstance(E)
 //=============================================================================
 
 /** Defines various character sets. */
-enum AsciiChar : ubyte { init };
+enum AsciiChar : ubyte { init }
 /// Ditto
 alias immutable(AsciiChar)[] AsciiString;
 
@@ -725,7 +725,7 @@ template EncoderInstance(CharType : AsciiChar)
 //=============================================================================
 
 /** Defines an Latin1-encoded character. */
-enum Latin1Char : ubyte { init };
+enum Latin1Char : ubyte { init }
 /**
 Defines an Latin1-encoded string (as an array of $(D
 immutable(Latin1Char))).
@@ -801,7 +801,7 @@ template EncoderInstance(CharType : Latin1Char)
 //=============================================================================
 
 /** Defines a Windows1252-encoded character. */
-enum Windows1252Char : ubyte { init };
+enum Windows1252Char : ubyte { init }
 /**
 Defines an Windows1252-encoded string (as an array of $(D
 immutable(Windows1252Char))).
@@ -1514,6 +1514,7 @@ unittest
 
  Params:
     s = the string to be counted
+    n = the current code point index
  */
 ptrdiff_t index(E)(const(E)[] s,int n)
 in
@@ -1688,7 +1689,8 @@ body
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 
  Params:
-    c = the code point to be encoded
+    c     = the code point to be encoded
+    array = the destination array
 
  Returns:
           the number of code units written to the array
@@ -1741,34 +1743,35 @@ Encodes $(D c) in units of type $(D E) and writes the result to the
 output range $(D R). Returns the number of $(D E)s written.
  */
 
-size_t encode(E, R)(dchar c, R range)
+size_t encode(E, R)(dchar c, auto ref R range)
+if (isNativeOutputRange!(R, E))
 {
     static if (is(Unqual!E == char))
     {
         if (c <= 0x7F)
         {
-            range.put(cast(char) c);
+            doPut(range, cast(char) c);
             return 1;
         }
         if (c <= 0x7FF)
         {
-            range.put(cast(char)(0xC0 | (c >> 6)));
-            range.put(cast(char)(0x80 | (c & 0x3F)));
+            doPut(range, cast(char)(0xC0 | (c >> 6)));
+            doPut(range, cast(char)(0x80 | (c & 0x3F)));
             return 2;
         }
         if (c <= 0xFFFF)
         {
-            range.put(cast(char)(0xE0 | (c >> 12)));
-            range.put(cast(char)(0x80 | ((c >> 6) & 0x3F)));
-            range.put(cast(char)(0x80 | (c & 0x3F)));
+            doPut(range, cast(char)(0xE0 | (c >> 12)));
+            doPut(range, cast(char)(0x80 | ((c >> 6) & 0x3F)));
+            doPut(range, cast(char)(0x80 | (c & 0x3F)));
             return 3;
         }
         if (c <= 0x10FFFF)
         {
-            range.put(cast(char)(0xF0 | (c >> 18)));
-            range.put(cast(char)(0x80 | ((c >> 12) & 0x3F)));
-            range.put(cast(char)(0x80 | ((c >> 6) & 0x3F)));
-            range.put(cast(char)(0x80 | (c & 0x3F)));
+            doPut(range, cast(char)(0xF0 | (c >> 18)));
+            doPut(range, cast(char)(0x80 | ((c >> 12) & 0x3F)));
+            doPut(range, cast(char)(0x80 | ((c >> 6) & 0x3F)));
+            doPut(range, cast(char)(0x80 | (c & 0x3F)));
             return 4;
         }
         else
@@ -1780,22 +1783,29 @@ size_t encode(E, R)(dchar c, R range)
     {
         if (c <= 0xFFFF)
         {
-            r.put(cast(wchar) c);
+            range.doPut(cast(wchar) c);
             return 1;
         }
-        r.put(cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800));
-        r.put(cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00));
+        range.doPut(cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800));
+        range.doPut(cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00));
         return 2;
     }
     else static if (is(Unqual!E == dchar))
     {
-        r.put(c);
+        range.doPut(c);
         return 1;
     }
     else
     {
-        assert(0);
+        static assert(0);
     }
+}
+unittest
+{
+    Appender!(char[]) r;
+    assert(encode!(char)('T', r) == 1);
+    assert(encode!(wchar)('T', r) == 1);
+    assert(encode!(dchar)('T', r) == 1);
 }
 
 /**
@@ -1817,7 +1827,8 @@ size_t encode(E, R)(dchar c, R range)
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 
  Params:
-    c = the code point to be encoded
+    c  = the code point to be encoded
+    dg = the delegate to invoke for each code unit
  */
 void encode(E)(dchar c, void delegate(E) dg)
 in
@@ -1898,7 +1909,7 @@ unittest
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 
  Params:
-    d = the code point to be encoded
+    c = the code point to be encoded
 
  Examples:
  --------------------------------------------------------
@@ -1996,11 +2007,73 @@ body
     }
     else
     {
+        static if(is(Dst == wchar))
+        {
+            immutable minReservePlace = 2;
+        }
+        else static if(is(Dst == dchar))
+        {
+            immutable minReservePlace = 1;
+        }
+        else
+        {
+            immutable minReservePlace = 6;
+        }
+
+        Dst[] buffer = new Dst[s.length];
+        Dst[] tmpBuffer = buffer;
         const(Src)[] t = s;
+
         while (t.length != 0)
         {
-            r ~= encode!(Dst)(decode(t));
+            if(tmpBuffer.length < minReservePlace)
+            {
+                size_t prevLength = buffer.length;
+                buffer.length += t.length + minReservePlace;
+                tmpBuffer = buffer[prevLength - tmpBuffer.length .. $];
+            }
+            EncoderInstance!(Dst).encode(decode(t), tmpBuffer);
         }
+
+        r = cast(immutable)buffer[0 .. buffer.length - tmpBuffer.length];
+    }
+}
+
+unittest
+{
+    import std.typetuple;
+    {
+        import std.conv : to;
+
+        string asciiCharString = to!string(iota(0, 128, 1));
+
+        alias Types = TypeTuple!(string, Latin1String, AsciiString, Windows1252String, dstring, wstring);
+        foreach(S; Types)
+            foreach(D; Types)
+            {
+                string str;
+                S sStr;
+                D dStr;
+                transcode(asciiCharString, sStr);
+                transcode(sStr, dStr);
+                transcode(dStr, str);
+                assert(asciiCharString == str);
+            }
+    }
+    {
+        string czechChars = "Příliš žluťoučký kůň úpěl ďábelské ódy.";
+        alias Types = TypeTuple!(string, dstring, wstring);
+        foreach(S; Types)
+            foreach(D; Types)
+            {
+                string str;
+                S sStr;
+                D dStr;
+                transcode(czechChars, sStr);
+                transcode(sStr, dStr);
+                transcode(dStr, str);
+                assert(czechChars == str);
+            }
     }
 }
 
@@ -2145,7 +2218,8 @@ abstract class EncodingScheme
          * The input to this function MUST be a valid code point.
          *
          * Params:
-         *    c = the code point to be encoded
+         *    c      = the code point to be encoded
+         *    buffer = the destination array
          *
          * Returns:
          *    the number of ubytes written.
@@ -2333,6 +2407,7 @@ abstract class EncodingScheme
      *
      * Params:
      *    s = the string to be counted
+     *    n = the current code point index
      */
     ptrdiff_t index(const(ubyte)[] s, size_t n)
     in

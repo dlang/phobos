@@ -25824,9 +25824,7 @@ static TP delegate(in TP) everyDayOfWeek(TP, Direction dir = Direction.fwd)(DayO
        (dir == Direction.fwd || dir == Direction.bwd) &&
        __traits(hasMember, TP, "dayOfWeek") &&
        !__traits(isStaticFunction, TP.dayOfWeek) &&
-       is(ReturnType!(TP.dayOfWeek) == DayOfWeek) &&
-       (functionAttributes!(TP.dayOfWeek) & FunctionAttribute.property) &&
-       (functionAttributes!(TP.dayOfWeek) & FunctionAttribute.nothrow_))
+       is(typeof(TP.dayOfWeek) == DayOfWeek))
 {
     TP func(in TP tp)
     {
@@ -25958,9 +25956,7 @@ static TP delegate(in TP) everyMonth(TP, Direction dir = Direction.fwd)(int mont
        (dir == Direction.fwd || dir == Direction.bwd) &&
        __traits(hasMember, TP, "month") &&
        !__traits(isStaticFunction, TP.month) &&
-       is(ReturnType!(TP.month) == Month) &&
-       (functionAttributes!(TP.month) & FunctionAttribute.property) &&
-       (functionAttributes!(TP.month) & FunctionAttribute.nothrow_))
+       is(typeof(TP.month) == Month))
 {
     enforceValid!"months"(month);
 
@@ -26394,6 +26390,13 @@ public:
         _func = rhs._func;
 
         return this;
+    }
+
+
+    /++ Ditto +/
+    /+ref+/ IntervalRange opAssign(IntervalRange rhs) pure nothrow
+    {
+        return this = rhs;
     }
 
 
@@ -26914,6 +26917,13 @@ public:
     }
 
 
+    /++ Ditto +/
+    /+ref+/ PosInfIntervalRange opAssign(PosInfIntervalRange rhs) pure nothrow
+    {
+        return this = rhs;
+    }
+
+
     /++
         This is an infinite range, so it is never empty.
       +/
@@ -27210,6 +27220,13 @@ public:
         _func = rhs._func;
 
         return this;
+    }
+
+
+    /++ Ditto +/
+    /+ref+/ NegInfIntervalRange opAssign(NegInfIntervalRange rhs) pure nothrow
+    {
+        return this = rhs;
     }
 
 
@@ -28185,9 +28202,9 @@ public:
                 try
                 {
                     auto currYear = (cast(Date)Clock.currTime()).year;
-                    auto janOffset = SysTime(Date(currYear, 1, 4), this).stdTime -
+                    auto janOffset = SysTime(Date(currYear, 1, 4), cast(immutable)this).stdTime -
                                      SysTime(Date(currYear, 1, 4), UTC()).stdTime;
-                    auto julyOffset = SysTime(Date(currYear, 7, 4), this).stdTime -
+                    auto julyOffset = SysTime(Date(currYear, 7, 4), cast(immutable)this).stdTime -
                                       SysTime(Date(currYear, 7, 4), UTC()).stdTime;
 
                     return janOffset != julyOffset;
@@ -30445,6 +30462,7 @@ string tzDatabaseNameToWindowsTZName(string tzName)
         case "Africa/Johannesburg": return "South Africa Standard Time";
         case "Africa/Lagos": return "W. Central Africa Standard Time";
         case "Africa/Nairobi": return "E. Africa Standard Time";
+        case "Africa/Tripoli": return "Libya Standard Time";
         case "Africa/Windhoek": return "Namibia Standard Time";
         case "America/Anchorage": return "Alaskan Standard Time";
         case "America/Asuncion": return "Paraguay Standard Time";
@@ -30639,6 +30657,7 @@ string windowsTZNameToTZDatabaseName(string tzName)
         case "Kaliningrad Standard Time": return "Europe/Kaliningrad";
         case "Kamchatka Standard Time": return "Asia/Kamchatka";
         case "Korea Standard Time": return "Asia/Seoul";
+        case "Libya Standard Time": return "Africa/Tripoli";
         case "Magadan Standard Time": return "Asia/Magadan";
         case "Mauritius Standard Time": return "Indian/Mauritius";
         case "Mexico Standard Time": return "America/Mexico_City";
@@ -32246,7 +32265,7 @@ version(testStdDateTime) @safe unittest
 {
     @safe static void func(TickDuration td)
     {
-        assert(td.to!("seconds", real)() <>= 0);
+        assert(!td.to!("seconds", real)().isNaN);
     }
 
     auto mt = measureTime!(func)();
@@ -32264,7 +32283,7 @@ version(testStdDateTime) unittest
 {
     static void func(TickDuration td)
     {
-        assert(td.to!("seconds", real)() <>= 0);
+        assert(!td.to!("seconds", real)().isNaN);
     }
 
     auto mt = measureTime!(func)();
@@ -33028,10 +33047,7 @@ template hasMin(T)
 {
     enum hasMin = __traits(hasMember, T, "min") &&
                   __traits(isStaticFunction, T.min) &&
-                  is(ReturnType!(T.min) == Unqual!T) &&
-                  (functionAttributes!(T.min) & FunctionAttribute.property) &&
-                  (functionAttributes!(T.min) & FunctionAttribute.nothrow_);
-                  //(functionAttributes!(T.min) & FunctionAttribute.pure_); //Ideally this would be the case, but SysTime's min() can't currently be pure.
+                  is(typeof(T.min) == Unqual!T);
 }
 
 unittest
@@ -33061,10 +33077,7 @@ template hasMax(T)
 {
     enum hasMax = __traits(hasMember, T, "max") &&
                   __traits(isStaticFunction, T.max) &&
-                  is(ReturnType!(T.max) == Unqual!T) &&
-                  (functionAttributes!(T.max) & FunctionAttribute.property) &&
-                  (functionAttributes!(T.max) & FunctionAttribute.nothrow_);
-                  //(functionAttributes!(T.max) & FunctionAttribute.pure_); //Ideally this would be the case, but SysTime's max() can't currently be pure.
+                  is(typeof(T.max) == Unqual!T);
 }
 
 unittest

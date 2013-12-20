@@ -38,13 +38,13 @@ CFLAGS=-mn -6 -r
 
 ## Flags for dmd D compiler
 
-DFLAGS=-O -release -w -d -property
+DFLAGS=-O -release -w -d
 #DFLAGS=-unittest -g -d
 #DFLAGS=-unittest -cov -g -d
 
 ## Flags for compiling unittests
 
-UDFLAGS=-O -w -d -property
+UDFLAGS=-O -w -d
 
 ## C compiler
 
@@ -60,7 +60,7 @@ DMD=dmd
 
 ## Location of where to write the html documentation files
 
-DOCSRC = .
+DOCSRC = ../dlang.org
 STDDOC = $(DOCSRC)/std.ddoc
 
 DOC=..\..\html\d\phobos
@@ -191,7 +191,9 @@ SRC_STD_C_OSX= std\c\osx\socket.d
 
 SRC_STD_C_FREEBSD= std\c\freebsd\socket.d
 
-SRC_STD_INTERNAL= std\internal\processinit.d std\internal\uni.d std\internal\uni_tab.d
+SRC_STD_INTERNAL= std\internal\processinit.d std\internal\uni.d std\internal\uni_tab.d \
+    std\internal\unicode_tables.d std\internal\unicode_comp.d std\internal\unicode_decomp.d \
+	std\internal\unicode_grapheme.d std\internal\unicode_norm.d
 
 SRC_STD_INTERNAL_DIGEST= std\internal\digest\sha_SSSE3.d
 
@@ -815,5 +817,9 @@ cleanhtml:
 install: phobos.zip
 	$(CP) phobos.lib phobos64.lib $(DIR)\windows\lib
 	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DRUNTIME)\lib\gcstub64.obj $(DIR)\windows\lib
+	+rd/s/q $(DIR)\html\d\phobos
+	+md $(DIR)\html\d\phobos
+	$(CP) $(DOCS) $(DIR)\html\d\phobos
+	$(CP) $(DOC)\phobos.html $(DIR)\html\d\phobos\index.html
 	+rd/s/q $(DIR)\src\phobos
 	unzip -o phobos.zip -d $(DIR)\src\phobos

@@ -15,10 +15,7 @@
 module std.complex;
 
 
-import std.format;
-import std.math;
-import std.numeric;
-import std.traits;
+import std.format, std.math, std.numeric, std.traits;
 
 
 /** Helper function that returns a _complex number with the specified
@@ -115,36 +112,85 @@ struct Complex(T)  if (isFloatingPoint!T)
 
     /** Converts the complex number to a string representation.
 
-        If a $(D sink) delegate is specified, the string is passed to it
-        and this function returns $(D null).  Otherwise, this function
-        returns the string representation directly.
+    The second form of this function is usually not called directly;
+    instead, it is used via $(XREF string,format), as shown in the examples
+    below.  Supported format characters are 'e', 'f', 'g', 'a', and 's'.
 
-        The output format is controlled via $(D formatSpec), which should consist
-        of a single POSIX format specifier, including the percent (%) character.
-        Note that complex numbers are floating point numbers, so the only
-        valid format characters are 'e', 'f', 'g', 'a', and 's', where 's'
-        gives the default behaviour. Positional parameters are not valid
-        in this context.
-
-        See the $(LINK2 std_format.html, std.format documentation) for
-        more information.
+    See the $(LINK2 std_format.html, std.format) and $(XREF string, format)
+    documentation for more information.
     */
-    string toString(scope void delegate(const(char)[]) sink = null,
+    string toString() const /* TODO: pure @safe nothrow */
+    {
+        import std.exception : assumeUnique;
+        char[] buf;
+        buf.reserve(100);
+        auto fmt = FormatSpec!char("%s");
+        toString((const(char)[] s) { buf ~= s; }, fmt);
+        return assumeUnique(buf);
+    }
+
+    static if (is(T == double))
+    ///
+    unittest
+    {
+        auto c = complex(1.2, 3.4);
+
+        // Vanilla toString formatting:
+        assert(c.toString() == "1.2+3.4i");
+
+        // Formatting with std.string.format specs: the precision and width
+        // specifiers apply to both the real and imaginary parts of the
+        // complex number.
+        import std.string : format;
+        assert(format("%.2f", c)  == "1.20+3.40i");
+        assert(format("%4.1f", c) == " 1.2+ 3.4i");
+    }
+
+    /// ditto
+    void toString(Char)(scope void delegate(const(Char)[]) sink,
+                        FormatSpec!Char formatSpec) const
+    {
+        formatValue(sink, re, formatSpec);
+        if (signbit(im) == 0) sink("+");
+        formatValue(sink, im, formatSpec);
+        sink("i");
+    }
+
+    /**
+     * $(RED Deprecated.  This function will be removed in March 2014.
+     * Please use $(XREF string,format) instead.)
+     *
+     * Converts the complex number to a string representation.
+     *
+     * If a $(D sink) delegate is specified, the string is passed to it
+     * and this function returns $(D null).  Otherwise, this function
+     * returns the string representation directly.
+
+     * The output format is controlled via $(D formatSpec), which should consist
+     * of a single POSIX format specifier, including the percent (%) character.
+     * Note that complex numbers are floating point numbers, so the only
+     * valid format characters are 'e', 'f', 'g', 'a', and 's', where 's'
+     * gives the default behaviour. Positional parameters are not valid
+     * in this context.
+     *
+     * See the $(LINK2 std_format.html, std.format) and $(XREF string, format)
+     * documentation for more information.
+     */
+    deprecated("Please use std.string.format instead.")
+    string toString(scope void delegate(const(char)[]) sink,
                     string formatSpec = "%s")
         const
     {
         if (sink == null)
         {
+            import std.exception : assumeUnique;
             char[] buf;
             buf.reserve(100);
-            toString((const(char)[] s) { buf ~= s; }, formatSpec);
-            return cast(string) buf;
+            formattedWrite((const(char)[] s) { buf ~= s; }, formatSpec, this);
+            return assumeUnique(buf);
         }
 
-        formattedWrite(sink, formatSpec, re);
-        if (signbit(im) == 0)  sink("+");
-        formattedWrite(sink, formatSpec, im);
-        sink("i");
+        formattedWrite(sink, formatSpec, this);
         return null;
     }
 
@@ -155,7 +201,7 @@ struct Complex(T)  if (isFloatingPoint!T)
         re = z.re;
         im = z.im;
     }
-    
+
     this(Rx : T, Ry : T)(Rx x, Ry y)
     {
         re = x;
@@ -274,6 +320,30 @@ struct Complex(T)  if (isFloatingPoint!T)
         }
 
         return w;
+    }
+
+    // numeric ^^ complex
+    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R lhs) const
+        if (op == "^^" && isNumeric!R)
+    {
+        FPTemporary!(CommonType!(T, R)) ab = void, ar = void;
+
+        if (lhs >= 0)
+        {
+            // r = lhs
+            // theta = 0
+            ab = lhs ^^ this.re;
+            ar = log(lhs) * this.im;
+        }
+        else
+        {
+            // r = -lhs
+            // theta = PI
+            ab = (-lhs) ^^ this.re * exp(-PI * this.im);
+            ar = PI * this.re + log(-lhs) * this.im;
+        }
+
+        return typeof(return)(ab * std.math.cos(ar), ab * std.math.sin(ar));
     }
 
     // OP-ASSIGN OPERATORS
@@ -446,6 +516,10 @@ unittest
     assert (approxEqual(abs(cdr), abs(c1)/a, EPS));
     assert (approxEqual(arg(cdr), arg(c1), EPS));
 
+    auto cer = c1^^3.0;
+    assert (approxEqual(abs(cer), abs(c1)^^3, EPS));
+    assert (approxEqual(arg(cer), arg(c1)*3, EPS));
+
     auto rpc = a + c1;
     assert (rpc == cpr);
 
@@ -460,9 +534,60 @@ unittest
     assert (approxEqual(abs(rdc), a/abs(c1), EPS));
     assert (approxEqual(arg(rdc), -arg(c1), EPS));
 
-    auto cer = c1^^3.0;
-    assert (approxEqual(abs(cer), abs(c1)^^3, EPS));
-    assert (approxEqual(arg(cer), arg(c1)*3, EPS));
+    auto rec1a = 1.0 ^^ c1;
+    assert(rec1a.re == 1.0);
+    assert(rec1a.im == 0.0);
+
+    auto rec2a = 1.0 ^^ c2;
+    assert(rec2a.re == 1.0);
+    assert(rec2a.im == 0.0);
+
+    auto rec1b = (-1.0) ^^ c1;
+    assert(approxEqual(abs(rec1b), std.math.exp(-PI * c1.im), EPS));
+    auto arg1b = arg(rec1b);
+    /* The argument _should_ be PI, but floating-point rounding error
+     * means that in fact the imaginary part is very slightly negative.
+     */
+    assert(approxEqual(arg1b, PI, EPS) || approxEqual(arg1b, -PI, EPS));
+
+    auto rec2b = (-1.0) ^^ c2;
+    assert(approxEqual(abs(rec2b), std.math.exp(-2 * PI), EPS));
+    assert(approxEqual(arg(rec2b), PI_2, EPS));
+
+    auto rec3a = 0.79 ^^ complex(6.8, 5.7);
+    auto rec3b = complex(0.79, 0.0) ^^ complex(6.8, 5.7);
+    assert(approxEqual(rec3a.re, rec3b.re, EPS));
+    assert(approxEqual(rec3a.im, rec3b.im, EPS));
+
+    auto rec4a = (-0.79) ^^ complex(6.8, 5.7);
+    auto rec4b = complex(-0.79, 0.0) ^^ complex(6.8, 5.7);
+    assert(approxEqual(rec4a.re, rec4b.re, EPS));
+    assert(approxEqual(rec4a.im, rec4b.im, EPS));
+
+    auto rer = a ^^ complex(2.0, 0.0);
+    auto rcheck = a ^^ 2.0;
+    static assert(is(typeof(rcheck) == double));
+    assert(feqrel(rer.re, rcheck) == double.mant_dig);
+    assert(isIdentical(rer.re, rcheck));
+    assert(rer.im == 0.0);
+
+    auto rer2 = (-a) ^^ complex(2.0, 0.0);
+    rcheck = (-a) ^^ 2.0;
+    assert(feqrel(rer2.re, rcheck) == double.mant_dig);
+    assert(isIdentical(rer2.re, rcheck));
+    assert(approxEqual(rer2.im, 0.0, EPS));
+
+    auto rer3 = (-a) ^^ complex(-2.0, 0.0);
+    rcheck = (-a) ^^ (-2.0);
+    assert(feqrel(rer3.re, rcheck) == double.mant_dig);
+    assert(isIdentical(rer3.re, rcheck));
+    assert(approxEqual(rer3.im, 0.0, EPS));
+
+    auto rer4 = a ^^ complex(-2.0, 0.0);
+    rcheck = a ^^ (-2.0);
+    assert(feqrel(rer4.re, rcheck) == double.mant_dig);
+    assert(isIdentical(rer4.re, rcheck));
+    assert(rer4.im == 0.0);
 
     // Check Complex-int operations.
     foreach (i; 0..6)
@@ -497,7 +622,7 @@ unittest
 }
 
 unittest
-{    
+{
     // Assignments and comparisons
     Complex!double z;
 
@@ -739,4 +864,37 @@ unittest
     assert (sqrt(complex(0.0)) == 0.0);
     assert (sqrt(complex(1.0L, 0)) == std.math.sqrt(1.0L));
     assert (sqrt(complex(-1.0L, 0)) == complex(0, 1.0L));
+}
+
+// Issue 10881: support %f formatting of complex numbers
+unittest
+{
+    import std.string : format;
+
+    auto x = complex(1.2, 3.4);
+    assert(format("%.2f", x) == "1.20+3.40i");
+
+    auto y = complex(1.2, -3.4);
+    assert(format("%.2f", y) == "1.20-3.40i");
+}
+
+unittest
+{
+    // Test wide string formatting
+    wstring wformat(T)(string format, Complex!T c)
+    {
+        import std.array : appender;
+        auto w = appender!wstring();
+        auto n = formattedWrite(w, format, c);
+        return w.data;
+    }
+
+    auto x = complex(1.2, 3.4);
+    assert(wformat("%.2f", x) == "1.20+3.40i"w);
+}
+
+unittest
+{
+    // Test ease of use (vanilla toString() should be supported)
+    assert(complex(1.2, 3.4).toString() == "1.2+3.4i");
 }

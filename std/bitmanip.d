@@ -27,7 +27,9 @@ module std.bitmanip;
 //debug = bitarray;                // uncomment to turn on debugging printf's
 
 import core.bitop;
+import std.format;
 import std.range;
+import std.string;
 import std.system;
 import std.traits;
 
@@ -67,23 +69,22 @@ private template createAccessors(
     }
     else
     {
-        static if (len + offset <= uint.sizeof * 8)
-            alias uint MasksType;
-        else
-            alias ulong MasksType;
-        enum MasksType
-            maskAllElse = ((1uL << len) - 1u) << offset,
-            signBitCheck = 1uL << (len - 1),
-            extendSign = ~((cast(MasksType)1u << len) - 1);
+        enum ulong
+            maskAllElse = ((~0uL) >> (64 - len)) << offset,
+            signBitCheck = 1uL << (len - 1);
+
         static if (T.min < 0)
         {
             enum long minVal = -(1uL << (len - 1));
             enum ulong maxVal = (1uL << (len - 1)) - 1;
+            alias Unsigned!(T) UT;
+            enum UT extendSign = cast(UT)~((~0uL) >> (64 - len));
         }
         else
         {
             enum ulong minVal = 0;
-            enum ulong maxVal = (1uL << len) - 1;
+            enum ulong maxVal = (~0uL) >> (64 - len);
+            enum extendSign = 0;
         }
 
         static if (is(T == bool))
@@ -216,6 +217,106 @@ template bitfields(T...)
 
 unittest
 {
+    // Degenerate bitfields (#8474 / #11160) tests mixed with range tests
+    struct Test1
+    {
+        mixin(bitfields!(uint, "a", 32,
+                        uint, "b", 4,
+                        uint, "c", 4,
+                        uint, "d", 8,
+                        uint, "e", 16,));
+
+        static assert(Test1.b_min == 0);
+        static assert(Test1.b_max == 15);
+    }
+
+    struct Test2
+    {
+        mixin(bitfields!(bool, "a", 0,
+                        ulong, "b", 64));
+
+        static assert(Test2.b_min == ulong.min);
+        static assert(Test2.b_max == ulong.max);
+    }
+
+    struct Test1b
+    {
+        mixin(bitfields!(bool, "a", 0,
+                        int, "b", 8));
+    }
+
+    struct Test2b
+    {
+        mixin(bitfields!(int, "a", 32,
+                        int, "b", 4,
+                        int, "c", 4,
+                        int, "d", 8,
+                        int, "e", 16,));
+
+        static assert(Test2b.b_min == -8);
+        static assert(Test2b.b_max == 7);
+    }
+
+    struct Test3b
+    {
+        mixin(bitfields!(bool, "a", 0,
+                        long, "b", 64));
+
+        static assert(Test3b.b_min == long.min);
+        static assert(Test3b.b_max == long.max);
+    }
+
+    struct Test4b
+    {
+        mixin(bitfields!(long, "a", 32,
+                        int, "b", 32));
+    }
+
+    // Sign extension tests
+    Test2b t2b;
+    Test4b t4b;
+    t2b.b = -5; assert(t2b.b == -5);
+    t2b.d = -5; assert(t2b.d == -5);
+    t2b.e = -5; assert(t2b.e == -5);
+    t4b.a = -5; assert(t4b.a == -5L);
+}
+
+unittest
+{
+    // Bug #6686
+    union  S {
+        ulong bits = ulong.max;
+        mixin (bitfields!(
+            ulong, "back",  31,
+            ulong, "front", 33)
+        );
+    }
+    S num;
+
+    num.bits = ulong.max;
+    num.back = 1;
+    assert(num.bits == 0xFFFF_FFFF_8000_0001uL);
+}
+
+unittest
+{
+    // Bug #5942
+    struct S
+    {
+        mixin(bitfields!(
+            int, "a" , 32,
+            int, "b" , 32
+        ));
+    }
+
+    S data;
+    data.b = 42;
+    data.a = 1;
+    assert(data.b == 42);
+}
+
+unittest
+{
     struct Test
     {
         mixin(bitfields!(bool, "a", 1,
@@ -266,7 +367,7 @@ unittest
     {
         struct MoreIntegrals {
             bool checkExpectations(uint eu, ushort es, uint ei) { return u == eu && s == es && i == ei; }
-            
+
             mixin(bitfields!(
                   uint, "u", 24,
                   short, "s", 16,
@@ -585,7 +686,7 @@ struct BitArray
         }
         return result;
     }
-    
+
     /** ditto */
     int opApply(scope int delegate(size_t, bool) dg) const
     {
@@ -721,9 +822,8 @@ struct BitArray
                 lo++;
                 hi--;
             }
-        Ldone:
-            ;
         }
+	Ldone:
         return this;
     }
 
@@ -1429,6 +1529,112 @@ struct BitArray
         assert(c[1] == 1);
         assert(c[2] == 0);
     }
+
+    /***************************************
+     * Return a string representation of this BitArray.
+     *
+     * Two format specifiers are supported:
+     * $(LI $(B %s) which prints the bits as an array, and)
+     * $(LI $(B %b) which prints the bits as 8-bit byte packets)
+     * separated with an underscore.
+     */
+    void toString(scope void delegate(const(char)[]) sink,
+                  FormatSpec!char fmt) const
+    {
+        switch(fmt.spec)
+        {
+            case 'b':
+                return formatBitString(sink);
+            case 's':
+                return formatBitArray(sink);
+            default:
+                throw new Exception("Unknown format specifier: %" ~ fmt.spec);
+        }
+    }
+
+    ///
+    unittest
+    {
+        BitArray b;
+        b.init([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
+
+        auto s1 = format("%s", b);
+        assert(s1 == "[0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]");
+
+        auto s2 = format("%b", b);
+        assert(s2 == "00001111_00001111");
+    }
+
+    private void formatBitString(scope void delegate(const(char)[]) sink) const
+    {
+        if (!length)
+            return;
+
+        auto leftover = len % 8;
+        foreach (idx; 0 .. leftover)
+        {
+            char[1] res = cast(char)(bt(ptr, idx) + '0');
+            sink.put(res[]);
+        }
+
+        if (leftover && len > 8)
+            sink.put("_");
+
+        size_t count;
+        foreach (idx; leftover .. len)
+        {
+            char[1] res = cast(char)(bt(ptr, idx) + '0');
+            sink.put(res[]);
+            if (++count == 8 && idx != len - 1)
+            {
+                sink.put("_");
+                count = 0;
+            }
+        }
+    }
+
+    private void formatBitArray(scope void delegate(const(char)[]) sink) const
+    {
+        sink("[");
+        foreach (idx; 0 .. len)
+        {
+            char[1] res = cast(char)(bt(ptr, idx) + '0');
+            sink(res[]);
+            if (idx+1 < len)
+                sink(", ");
+        }
+        sink("]");
+    }
+}
+
+unittest
+{
+    BitArray b;
+
+    b.init([]);
+    assert(format("%s", b) == "[]");
+    assert(format("%b", b) is null);
+
+    b.init([1]);
+    assert(format("%s", b) == "[1]");
+    assert(format("%b", b) == "1");
+
+    b.init([0, 0, 0, 0]);
+    assert(format("%b", b) == "0000");
+
+    b.init([0, 0, 0, 0, 1, 1, 1, 1]);
+    assert(format("%s", b) == "[0, 0, 0, 0, 1, 1, 1, 1]");
+    assert(format("%b", b) == "00001111");
+
+    b.init([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
+    assert(format("%s", b) == "[0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]");
+    assert(format("%b", b) == "00001111_00001111");
+
+    b.init([1, 0, 0, 0, 0, 1, 1, 1, 1]);
+    assert(format("%b", b) == "1_00001111");
+
+    b.init([1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
+    assert(format("%b", b) == "1_00001111_00001111");
 }
 
 /++
@@ -1960,7 +2166,7 @@ private template canSwapEndianness(T)
 unittest
 {
     foreach(T; TypeTuple!(bool, ubyte, byte, ushort, short, uint, int, ulong,
-                          long, char, wchar, dchar, float, double)) 
+                          long, char, wchar, dchar, float, double))
     {
         static assert(canSwapEndianness!(T));
         static assert(canSwapEndianness!(const T));
@@ -2169,7 +2375,7 @@ unittest
         ubyte[] buffer = [66, 0, 0, 0, 65, 200, 0, 0];
         assert(buffer.peek!float()== 32.0);
         assert(buffer.peek!float(4) == 25.0f);
-        
+
         size_t index = 0;
         assert(buffer.peek!float(&index) == 32.0f);
         assert(index == 4);
@@ -2183,7 +2389,7 @@ unittest
         ubyte[] buffer = [64, 64, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0];
         assert(buffer.peek!double() == 32.0);
         assert(buffer.peek!double(8) == 25.0);
-        
+
         size_t index = 0;
         assert(buffer.peek!double(&index) == 32.0);
         assert(index == 8);
@@ -2195,7 +2401,7 @@ unittest
     {
         //enum
         ubyte[] buffer = [0, 0, 0, 10, 0, 0, 0, 20, 0, 0, 0, 30];
-        
+
         enum Foo
         {
             one = 10,
@@ -2727,7 +2933,7 @@ unittest
     {
         //char (8bit)
         ubyte[] buffer = [0, 0, 0];
-        
+
         buffer.write!char('a', 0);
         assert(buffer == [97, 0, 0]);
 
@@ -2751,7 +2957,7 @@ unittest
     {
         //wchar (16bit - 2x ubyte)
         ubyte[] buffer = [0, 0, 0, 0];
-        
+
         buffer.write!wchar('ą', 0);
         assert(buffer == [1, 5, 0, 0]);
 
@@ -2771,7 +2977,7 @@ unittest
     {
         //dchar (32bit - 4x ubyte)
         ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
-        
+
         buffer.write!dchar('ą', 0);
         assert(buffer == [0, 0, 1, 5, 0, 0, 0, 0]);
 
@@ -2786,7 +2992,7 @@ unittest
         buffer.write!dchar('ą', &index);
         assert(buffer == [0, 0, 1, 7, 0, 0, 1, 5]);
         assert(index == 8);
-    }     
+    }
 
     {
         //float (32bit - 4x ubyte)
@@ -2817,7 +3023,7 @@ unittest
 
         buffer.write!double(25.0, 8);
         assert(buffer == [64, 64, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0]);
-        
+
         size_t index = 0;
         buffer.write!double(25.0, &index);
         assert(buffer == [64, 57, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0]);
@@ -2831,7 +3037,7 @@ unittest
     {
         //enum
         ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        
+
         enum Foo
         {
             one = 10,
@@ -3020,19 +3226,19 @@ unittest
     {
         //char wchar dchar
         auto buffer = appender!(const ubyte[])();
-        
+
         buffer.append!char('a');
         assert(buffer.data == [97]);
 
         buffer.append!char('b');
         assert(buffer.data == [97, 98]);
-        
+
         buffer.append!wchar('ą');
         assert(buffer.data == [97, 98, 1, 5]);
 
         buffer.append!dchar('ą');
         assert(buffer.data == [97, 98, 1, 5, 0, 0, 1, 5]);
-    }     
+    }
 
     {
         //float double
@@ -3048,7 +3254,7 @@ unittest
     {
         //enum
         auto buffer = appender!(const ubyte[])();
-        
+
         enum Foo
         {
             one = 10,

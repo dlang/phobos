@@ -69,6 +69,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
 {
     alias const(Char)[] tstring;
 
+    enum defaultThreshold = 16;
     int threshold;
     bool diagnose;
 
@@ -84,7 +85,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
 
         switch (errorLevel)
         {
-            case EmailStatusCode.warning: threshold = threshold; break;
+            case EmailStatusCode.warning: threshold = defaultThreshold; break;
             case EmailStatusCode.error: threshold = EmailStatusCode.valid; break;
             default: threshold = errorLevel;
         }
@@ -734,7 +735,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
             returnStatus ~= EmailStatusCode.rfc5321TopLevelDomainNumeric;
     }
 
-    returnStatus = array(std.algorithm.uniq(returnStatus));
+    returnStatus = array(uniq(returnStatus));
     auto finalStatus = returnStatus.max();
 
     if (returnStatus.length != 1)
@@ -1670,8 +1671,6 @@ enum EmailStatusCode
 
 private:
 
-enum threshold = 16;
-
 // Email parts for the isEmail function
 enum EmailPart
 {
@@ -1740,6 +1739,8 @@ enum AsciiToken
  */
 T max (T) (T[] arr)
 {
+    import std.algorithm/* : max*/;
+
     auto max = arr.front;
 
     foreach (i ; 0 .. arr.length - 1)
