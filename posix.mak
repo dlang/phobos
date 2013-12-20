@@ -271,7 +271,7 @@ $(ROOT)/%$(DOTOBJ) : %.c
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
 	$(CC) -c $(CFLAGS) $< -o$@
 
-$(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
+$(LIB) : $(OBJS) $(ALL_D_FILES) druntime_libs
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
 
 dll : $(ROOT)/libphobos2.so
@@ -282,7 +282,7 @@ $(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
 $(ROOT)/$(SONAME): $(LIBSO)
 	ln -sf $(notdir $(LIBSO)) $@
 
-$(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
+$(LIBSO): $(OBJS) $(ALL_D_FILES) druntime_libs
 	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(LINKDL) $(D_FILES) $(OBJS)
 
 ifeq (osx,$(OS))
@@ -310,7 +310,7 @@ $(UT_D_OBJS): $(ROOT)/unittest/%.o: %.d
 
 ifneq (linux,$(OS))
 
-$(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME)
+$(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) druntime_libs
 	$(DMD) $(DFLAGS) -unittest -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) -defaultlib= -debuglib= -L-lcurl
 
 else
@@ -318,7 +318,7 @@ else
 UT_LIBSO:=$(ROOT)/unittest/libphobos2-ut.so
 
 $(UT_LIBSO): override PIC:=-fPIC
-$(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO)
+$(UT_LIBSO): $(UT_D_OBJS) $(OBJS) druntime_libs
 	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LINKDL) -defaultlib= -debuglib= -L-lcurl
 
 $(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_LIBSO)
@@ -358,8 +358,11 @@ endif
 	cp -r etc/* $(INSTALL_DIR)/import/etc/
 	cp LICENSE_1_0.txt $(INSTALL_DIR)/phobos-LICENSE.txt
 
-$(DRUNTIME) $(DRUNTIMESO) :
-	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak MODEL=$(MODEL)
+# Target druntime_libs produces $(DRUNTIME) and $(DRUNTIMESO). See
+# http://stackoverflow.com/q/7081284 on why this setup makes sense.
+.PHONY: druntime_libs
+druntime_libs:
+	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak MODEL=$(MODEL) DMD=$(DMD) OS=$(OS)
 
 ###########################################################
 # html documentation
@@ -410,4 +413,3 @@ html_consolidated :
 	$(DOCSRC)/std_consolidated_footer.html > $(DOC_OUTPUT_DIR)/std_consolidated.html
 
 #############################
-
