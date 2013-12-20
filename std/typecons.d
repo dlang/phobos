@@ -43,9 +43,7 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
            Kenji Hara
  */
 module std.typecons;
-import core.memory, core.stdc.stdlib;
-import std.algorithm, std.array, std.conv, std.exception, std.format,
-    std.math, std.string, std.traits, std.typetuple, std.range;
+import std.traits, std.range;
 
 debug(Unique) import std.stdio;
 
@@ -321,6 +319,7 @@ template Tuple(Specs...)
         string decl = "";
         foreach (i, name; staticMap!(extractName, fieldSpecs))
         {
+            import std.string;
             decl ~= format("alias Identity!(field[%s]) _%s;", i, i);
             if (name.length != 0)
             {
@@ -567,6 +566,7 @@ template Tuple(Specs...)
                     formattedWrite(w, "%s", field[i].stringof);
                 else
                 {
+                    import std.format;
                     FormatSpec!char f;  // "%s"
                     formatElement(w, field[i], f);
                 }
@@ -580,6 +580,7 @@ template Tuple(Specs...)
 private template isPrintable(T)
 {
     enum isPrintable = is(typeof({
+        import std.format;
         Appender!string w;
         formattedWrite(w, "%s", T.init);
     }));
@@ -846,6 +847,7 @@ unittest
 }
 unittest
 {
+    import std.exception;
     // Bugzilla 10218
     assertCTFEable!(
     {
@@ -1851,6 +1853,7 @@ template BlackHole(Base)
 
 unittest
 {
+    import std.math;
     // return default
     {
         interface I_1 { real test(); }
@@ -2150,6 +2153,7 @@ private static:
     // overloaded function with the name.
     template INTERNAL_FUNCINFO_ID(string name, size_t i)
     {
+        import std.string;
         enum string INTERNAL_FUNCINFO_ID = format("F_%s_%s", name, i);
     }
 
@@ -2214,9 +2218,9 @@ private static:
             static if (varstyle & (Variadic.c | Variadic.d))
             {
                 // the argptr-forwarding problem
-                pragma(msg, "Warning: AutoImplement!(", Base, ") ",
-                        "ignored variadic arguments to the constructor ",
-                        FunctionTypeOf!(typeof(&ctor[0])) );
+                //pragma(msg, "Warning: AutoImplement!(", Base, ") ",
+                //        "ignored variadic arguments to the constructor ",
+                //        FunctionTypeOf!(typeof(&ctor[0])) );
             }
             return "super(args);";
         }
@@ -2430,6 +2434,7 @@ private static:
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
     // Internal stuffs
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
+    import std.string;
 
     enum CONSTRUCTOR_NAME = "__ctor";
 
@@ -2575,6 +2580,7 @@ private static:
             //
             if (__traits(isVirtualMethod, func))
                 code ~= "override ";
+            import std.string;
             code ~= format("extern(%s) %s %s(%s) %s %s\n",
                     functionLinkage!(func),
                     returnType,
@@ -3531,9 +3537,14 @@ if (!is(T == class))
 
         private void initialize(A...)(auto ref A args)
         {
+            import core.stdc.stdlib;
             _store = cast(Impl*) enforce(malloc(Impl.sizeof));
             static if (hasIndirections!T)
+            {
+                import core.memory;
                 GC.addRange(&_store._payload, T.sizeof);
+            }
+            import std.conv;
             emplace(&_store._payload, args);
             _store._count = 1;
         }
@@ -3612,7 +3623,11 @@ to deallocate the corresponding resource.
         // Done, deallocate
         .destroy(_refCounted._store._payload);
         static if (hasIndirections!T)
+        {
+            import core.memory;
             GC.removeRange(&_refCounted._store._payload);
+        }
+        import core.stdc.stdlib;
         free(_refCounted._store);
         _refCounted._store = null;
     }
@@ -4227,6 +4242,7 @@ template scoped(T)
         void* alignedStore = cast(void*) aligned(cast(size_t) result.Scoped_store.ptr);
         immutable size_t d = alignedStore - result.Scoped_store.ptr;
         *cast(size_t*) &result.Scoped_store[$ - size_t.sizeof] = d;
+        import std.conv;
         emplace!(Unqual!T)(result.Scoped_store[d .. $ - size_t.sizeof], args);
         return result;
     }
@@ -4256,7 +4272,7 @@ unittest
         auto e2 = ScopedObject();  //Illegal, must be built via scoped!A
         auto e3 = ScopedObject(1); //Illegal, must be built via scoped!A
     })));
-    
+
     // Use as member variable
     struct B
     {
