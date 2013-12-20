@@ -10920,8 +10920,9 @@ private:
     // Positions to the first elements that are all equal
     void adjustPosition()
     {
-        outer:
-        while (!empty)
+        if (empty) return;
+
+        outer: while (true)
         {
             foreach (i, ref r; _input[0 .. $ - 1])
             {
@@ -10929,11 +10930,13 @@ private:
                 if (comp(r.front, next.front))
                 {
                     r.popFront();
+                    if (r.empty) return;
                     continue outer;
                 }
                 if (comp(next.front, r.front))
                 {
                     next.popFront();
+                    if (next.empty) return;
                     continue outer;
                 }
             }
