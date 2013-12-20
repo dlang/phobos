@@ -290,8 +290,6 @@ public import std.array;
 import std.algorithm : copy, count, equal, filter, filterBidirectional,
     findSplitBefore, group, isSorted, joiner, move, map, max, min, sort, swap,
     until;
-import std.exception : assertNotThrown, assertThrown, enforce;
-import std.string : RangeError;
 import std.traits;
 import std.typecons : Tuple, tuple;
 import std.typetuple : allSatisfy, staticMap, TypeTuple;
@@ -4177,7 +4175,10 @@ struct Repeat(T)
     auto opSlice(size_t i, size_t j)
     {
         version (assert)
+        {
+            import std.string : RangeError;
             if (i > j) throw new RangeError();
+        }
         return this.takeExactly(j - i);
     }
     /// Ditto
@@ -4307,7 +4308,11 @@ struct Cycle(Range)
 
         auto opSlice(size_t i, size_t j)
         {
-            version (assert) if (i > j) throw new RangeError();
+            version (assert)
+            {
+                import std.string : RangeError;
+                if (i > j) throw new RangeError();
+            }
             auto retval = this.save;
             retval._index += i;
             return takeExactly(retval, j - i);
@@ -4408,7 +4413,11 @@ struct Cycle(R)
 
     auto opSlice(size_t i, size_t j)
     {
-        version (assert) if (i > j) throw new RangeError();
+        version (assert)
+        {
+            import std.string;
+            if (i > j) throw new RangeError();
+        }
         auto retval = this.save;
         retval._index += i;
         return takeExactly(retval, j - i);
@@ -4499,6 +4508,7 @@ unittest
 
                     assert(cRange[10] == 1);
 
+                    import std.exception, std.string;
                     assertThrown!RangeError(cy[2..1]);
                 }
             }
@@ -4978,6 +4988,7 @@ unittest
     assert(b == [2.0, 1.0, 3.0]);
 
     z = zip(StoppingPolicy.requireSameLength, a, b);
+    import std.exception;
     assertNotThrown((z.popBack(), z.popBack(), z.popBack()));
     assert(z.empty);
     assertThrown(z.popBack());
@@ -5098,6 +5109,7 @@ unittest
     static struct S { @disable this(); }
     static assert(__traits(compiles, zip((S[5]).init[])));
     auto z = zip(StoppingPolicy.longest, cast(S[]) null, new int[1]);
+    import std.exception;
     assertThrown(zip(StoppingPolicy.longest, cast(S[]) null, new int[1]).front);
 }
 
@@ -7247,8 +7259,11 @@ private struct OnlyResult(T, size_t arity)
         // when i + idx points to elements popped
         // with popBack
         version(assert)
+        {
+            import std.string;
             if(idx >= length)
                 throw new RangeError;
+        }
         return data[frontIndex + idx];
     }
 
@@ -7264,9 +7279,11 @@ private struct OnlyResult(T, size_t arity)
         result.backIndex = this.frontIndex + to;
 
         version(assert)
+        {
+            import std.string;
             if(to < from || to > length)
                 throw new RangeError;
-
+        }
         return result;
     }
 
@@ -7300,8 +7317,11 @@ private struct OnlyResult(T, size_t arity : 1)
     T opIndex(size_t i)
     {
         version (assert)
+        {
+            import std.string : RangeError;
             if (_empty || i != 0)
                 throw new RangeError;
+        }
         return _value;
     }
 
@@ -7313,8 +7333,11 @@ private struct OnlyResult(T, size_t arity : 1)
     OnlyResult opSlice(size_t from, size_t to)
     {
         version (assert)
+        {
+            import std.string;
             if (from > to || to > length)
                 throw new RangeError;
+        }
         OnlyResult copy = this;
         copy._empty = _empty || from == to;
         return copy;
@@ -7340,7 +7363,11 @@ private struct OnlyResult(T, size_t arity : 0)
 
     EmptyElementType opIndex(size_t i)
     {
-        version(assert) throw new RangeError;
+        version(assert)
+        {
+            import std.string;
+            throw new RangeError;
+        }
         assert(false);
     }
 
@@ -7349,8 +7376,11 @@ private struct OnlyResult(T, size_t arity : 0)
     OnlyResult opSlice(size_t from, size_t to)
     {
         version(assert)
+        {
+            import std.string;
             if(from != 0 || to != 0)
                 throw new RangeError;
+        }
         return this;
     }
 }
