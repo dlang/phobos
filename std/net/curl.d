@@ -188,7 +188,7 @@ version(unittest)
 }
 version(StdDdoc) import std.stdio;
 
-pragma(lib, "curl");
+version (Windows) pragma(lib, "curl");
 extern (C) void exit(int);
 
 // Default data timeout for Protcools
