@@ -3243,7 +3243,7 @@ unittest
     //assert(x == "wyda" ~ newline, text(x.length));
 
     import std.exception;  // Issue 9444
-    assertThrown!ErrnoException(shell("qwertyuiop09813478"));
+    assertThrown!ErrnoException(shell("qwertyuiop09813478 2>/dev/null"));
 }
 
 /**

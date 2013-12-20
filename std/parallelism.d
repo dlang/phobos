@@ -3916,7 +3916,7 @@ unittest
     scope(exit) poolInstance.stop();
 
     // The only way this can be verified is manually.
-    stderr.writeln("totalCPUs = ", totalCPUs);
+    debug(std_parallelism) stderr.writeln("totalCPUs = ", totalCPUs);
 
     auto oldPriority = poolInstance.priority;
     poolInstance.priority = Thread.PRIORITY_MAX;

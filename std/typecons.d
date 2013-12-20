@@ -1260,6 +1260,7 @@ unittest
 {
     Nullable!int a;
     assert(a.isNull);
+    import std.exception;
     assertThrown!Throwable(a.get);
     a = 5;
     assert(!a.isNull);
@@ -1308,6 +1309,7 @@ unittest
     s.x = 9190;
     assert(s.x == 9190);
     s.nullify();
+    import std.exception;
     assertThrown!Throwable(s.x = 9441);
 }
 unittest
@@ -1555,6 +1557,7 @@ unittest
 {
     Nullable!(int, int.min) a;
     assert(a.isNull);
+    import std.exception;
     assertThrown!Throwable(a.get);
     a = 5;
     assert(!a.isNull);
@@ -1724,6 +1727,7 @@ unittest
     a.nullify();
     assert(x == 42);
     assert(a.isNull);
+    import std.exception;
     assertThrown!Throwable(a.get);
     assertThrown!Throwable(a = 71);
     a.bind(&y);
@@ -3538,6 +3542,7 @@ if (!is(T == class))
         private void initialize(A...)(auto ref A args)
         {
             import core.stdc.stdlib;
+            import std.exception;
             _store = cast(Impl*) enforce(malloc(Impl.sizeof));
             static if (hasIndirections!T)
             {

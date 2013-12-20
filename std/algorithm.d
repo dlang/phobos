@@ -692,6 +692,7 @@ seed (the range must be non-empty).
  */
 template reduce(fun...) if (fun.length >= 1)
 {
+    import std.exception;
     auto reduce(Args...)(Args args)
     if (Args.length > 0 && Args.length <= 2 && isIterable!(Args[$ - 1]))
     {
@@ -1112,6 +1113,7 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
     }
     else
     {
+        import std.exception;
         enforce(!filler.empty, "Cannot fill range with an empty filler");
 
         static if (hasLength!Range1 && hasLength!Range2
@@ -1188,8 +1190,8 @@ unittest
     assert(a == [0, 1, 2, 3, 4]);
 
     //empty filler test
+    import std.exception;
     assertThrown(fill(a, a[$..$]));
-
 }
 
 /**
@@ -1882,6 +1884,7 @@ Range2 moveAll(Range1, Range2)(Range1 src, Range2 tgt)
 if (isInputRange!Range1 && isInputRange!Range2
         && is(typeof(move(src.front, tgt.front))))
 {
+    import std.exception;
     static if (isRandomAccessRange!Range1 && hasLength!Range1 && hasLength!Range2
          && hasSlicing!Range2 && isRandomAccessRange!Range2)
     {
@@ -1924,6 +1927,7 @@ Tuple!(Range1, Range2) moveSome(Range1, Range2)(Range1 src, Range2 tgt)
 if (isInputRange!Range1 && isInputRange!Range2
         && is(typeof(move(src.front, tgt.front))))
 {
+    import std.exception;
     for (; !src.empty && !tgt.empty; src.popFront(), tgt.popFront())
     {
         enforce(!tgt.empty);
@@ -2785,7 +2789,11 @@ private struct SplitterResult(alias isTerminator, Range)
 
     @property auto front()
     {
-        version(assert) if (empty) throw new RangeError();
+        version(assert)
+        {
+            import core.exception;
+            if (empty) throw new RangeError();
+        }
         static if (fullSlicing)
             return _input[0 .. _end];
         else
@@ -2794,7 +2802,11 @@ private struct SplitterResult(alias isTerminator, Range)
 
     void popFront()
     {
-        version(assert) if (empty) throw new RangeError();
+        version(assert)
+        {
+            import core.exception;
+            if (empty) throw new RangeError();
+        }
 
         static if (fullSlicing)
         {
@@ -6084,7 +6096,7 @@ unittest
         assert(equal(commonPrefix(filter!"true"("Пиво"), to!S("Пони")), takeExactly(filter!"true"("П"), 1)));
     }
 
-    import std.utf;
+    import std.exception, std.utf;
     assertThrown!UTFException(commonPrefix("\U0010FFFF\U0010FFFB", "\U0010FFFF\U0010FFFB"[0 .. $ - 1]));
 
     assert(commonPrefix("12345"d, [49, 50, 51, 60, 60]) == "123"d);
@@ -6272,6 +6284,7 @@ size_t count(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
         isForwardRange!R2 &&
         is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
+    import std.exception;
     enforce(!needle.empty, "Cannot count occurrences of an empty range");
     static if (isInfinite!R2)
     {
@@ -6823,6 +6836,7 @@ minCount(alias pred = "a < b", Range)(Range range)
         format("Error: Cannot call minCount on a %s, because it is not possible "
                "to copy the result value (a %s) into a Tuple.", Range.stringof, T.stringof));
 
+    import std.exception;
     enforce(!range.empty, "Can't count elements from an empty range");
     size_t occurrences = 1;
 
@@ -6910,6 +6924,7 @@ unittest
     assert(c == tuple([2, 4], 1), text(c[0]));
 
     //Test empty range
+    import std.exception;
     assertThrown(minCount(b[$..$]));
 
     //test with reference ranges. Test both input and forward.
@@ -7358,6 +7373,7 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
             // Array specialization.  This uses optimized memory copying
             // routines under the hood and is about 10-20x faster than the
             // generic implementation.
+            import std.exception;
             enforce(target.length >= source.length,
                 "Cannot copy a source array into a smaller target array.");
             target[0..source.length] = source[];
@@ -8069,6 +8085,7 @@ if (s != SwapStrategy.stable
         }
         static if (i > 0)
         {
+            import std.exception;
             enforce(blackouts[i - 1].pos + blackouts[i - 1].len
                     <= blackouts[i].pos,
                 "remove(): incorrect ordering of elements to remove");
@@ -8142,6 +8159,7 @@ if (s == SwapStrategy.stable && isForwardRange!Range && Offset.length >= 1)
             auto from = i;
             enum delta = 1;
         }
+        import std.exception;
         enforce(pos <= from,
                 "remove(): incorrect ordering of elements to remove");
         if (pass > 0)
@@ -8171,6 +8189,7 @@ unittest
 {
     // http://d.puremagic.com/issues/show_bug.cgi?id=10173
     int[] test = iota(0, 10).array();
+    import std.exception;
     assertThrown(remove!(SwapStrategy.stable)(test, tuple(2, 4), tuple(1, 3)));
     assertThrown(remove!(SwapStrategy.unstable)(test, tuple(2, 4), tuple(1, 3)));
     assertThrown(remove!(SwapStrategy.stable)(test, 2, 4, 1, 3));
@@ -10249,6 +10268,7 @@ makeIndex(
     size_t i;
     for (; !r.empty; r.popFront(), ++i)
         index[i] = addressOf(r.front);
+    import std.exception;
     enforce(index.length == i);
     // sort the index
     sort!((a, b) => binaryFun!less(*a, *b), ss)(index);
@@ -10267,6 +10287,7 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
     isIntegral!(ElementType!RangeIndex))
 {
     alias Unqual!(ElementType!RangeIndex) IndexType;
+    import std.exception;
     enforce(r.length == index.length,
         "r and index must be same length for makeIndex.");
     static if (IndexType.sizeof < size_t.sizeof)
@@ -10352,6 +10373,7 @@ void topNIndex(
 if (isIntegral!(ElementType!(RangeIndex)))
 {
     if (index.empty) return;
+    import std.exception;
     enforce(ElementType!(RangeIndex).max >= index.length,
             "Index type too small");
     bool indirectLess(ElementType!(RangeIndex) a, ElementType!(RangeIndex) b)
