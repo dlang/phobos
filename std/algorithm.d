@@ -10904,36 +10904,41 @@ unittest
 }
 
 /**
-Lazily computes the intersection of two input ranges $(D
-rs). The ranges are assumed to be sorted by $(D less). The element
-types of both ranges must have a common type.
+Lazily computes the intersection of two or more input ranges $(D
+ranges). The ranges are assumed to be sorted by $(D less). The element
+types of the ranges must have a common type.
  */
 struct SetIntersection(alias less = "a < b", Rs...)
-if (allSatisfy!(isInputRange, Rs))
+    if (allSatisfy!(isInputRange, Rs) &&
+        !is(CommonType!(staticMap!(ElementType, Rs)) == void))
 {
-    static assert(Rs.length == 2);
 private:
     Rs _input;
-    alias binaryFun!(less) comp;
-    alias CommonType!(staticMap!(.ElementType, Rs)) ElementType;
+    alias comp = binaryFun!less;
+    alias ElementType = CommonType!(staticMap!(.ElementType, Rs));
 
+    // Positions to the first elements that are all equal
     void adjustPosition()
     {
-        // Positions to the first two elements that are equal
+        outer:
         while (!empty)
         {
-            if (comp(_input[0].front, _input[1].front))
+            foreach (i, ref r; _input[0 .. $ - 1])
             {
-                _input[0].popFront();
+                alias next = _input[i + 1];
+                if (comp(r.front, next.front))
+                {
+                    r.popFront();
+                    continue outer;
+                }
+                if (comp(next.front, r.front))
+                {
+                    next.popFront();
+                    continue outer;
+                }
             }
-            else if (comp(_input[1].front, _input[0].front))
-            {
-                _input[1].popFront();
-            }
-            else
-            {
-                break;
-            }
+
+            return;
         }
     }
 
@@ -10947,9 +10952,9 @@ public:
 
     @property bool empty()
     {
-        foreach (i, U; Rs)
+        foreach (ref r; _input)
         {
-            if (_input[i].empty) return true;
+            if (r.empty) return true;
         }
         return false;
     }
@@ -10957,10 +10962,16 @@ public:
     void popFront()
     {
         assert(!empty);
-        assert(!comp(_input[0].front, _input[1].front)
-                && !comp(_input[1].front, _input[0].front));
-        _input[0].popFront();
-        _input[1].popFront();
+        foreach (i, ref r; _input[0 .. $ - 1])
+        {
+            alias next = _input[i + 1];
+            assert(!comp(r.front, next.front) && !comp(next.front, r.front));
+        }
+
+        foreach (ref r; _input)
+        {
+            r.popFront();
+        }
         adjustPosition();
     }
 
@@ -10972,7 +10983,7 @@ public:
 
     static if (allSatisfy!(isForwardRange, Rs))
     {
-        @property auto save()
+        @property SetIntersection save()
         {
             auto ret = this;
             foreach (ti, elem; _input)
@@ -10987,12 +10998,12 @@ public:
 /// Ditto
 SetIntersection!(less, Rs) setIntersection(alias less = "a < b", Rs...)
 (Rs ranges)
-if (allSatisfy!(isInputRange, Rs))
+    if (allSatisfy!(isInputRange, Rs) &&
+        !is(CommonType!(staticMap!(ElementType, Rs)) == void))
 {
     return typeof(return)(ranges);
 }
 
-/+ setIntersection doesn't yet support more than two inputs
 ///
 unittest
 {
@@ -11000,18 +11011,35 @@ unittest
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
     int[] c = [ 0, 1, 4, 5, 7, 8 ];
     assert(equal(setIntersection(a, a), a));
-    assert(equal(setIntersection(a, b), [1, 2, 4, 7][]));
-    assert(equal(setIntersection(a, b, c), [1, 4, 7][]));
+    assert(equal(setIntersection(a, b), [1, 2, 4, 7]));
+    assert(equal(setIntersection(a, b, c), [1, 4, 7]));
 }
-+/
 
-///
 unittest
 {
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
+    int[] c = [ 0, 1, 4, 5, 7, 8 ];
+    int[] d = [ 1, 3, 4 ];
+    int[] e = [ 4, 5 ];
+
     assert(equal(setIntersection(a, a), a));
-    assert(equal(setIntersection(a, b), [1, 2, 4, 7][]));
+    assert(equal(setIntersection(a, a, a), a));
+    assert(equal(setIntersection(a, b), [1, 2, 4, 7]));
+    assert(equal(setIntersection(a, b, c), [1, 4, 7]));
+    assert(equal(setIntersection(a, b, c, d), [1, 4]));
+    assert(equal(setIntersection(a, b, c, d, e), [4]));
+
+    auto inpA = a.filter!(_ => true), inpB = b.filter!(_ => true);
+    auto inpC = c.filter!(_ => true), inpD = d.filter!(_ => true);
+    assert(equal(setIntersection(inpA, inpB, inpC, inpD), [1, 4]));
+
+    assert(equal(setIntersection(a, b, b, a), [1, 2, 4, 7]));
+    assert(equal(setIntersection(a, c, b), [1, 4, 7]));
+    assert(equal(setIntersection(b, a, c), [1, 4, 7]));
+    assert(equal(setIntersection(b, c, a), [1, 4, 7]));
+    assert(equal(setIntersection(c, a, b), [1, 4, 7]));
+    assert(equal(setIntersection(c, b, a), [1, 4, 7]));
 }
 
 /**
