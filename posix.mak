@@ -358,8 +358,8 @@ endif
 	cp -r etc/* $(INSTALL_DIR)/import/etc/
 	cp LICENSE_1_0.txt $(INSTALL_DIR)/phobos-LICENSE.txt
 
-# Target druntime_libs produces $(DRUNTIME) and $(DRUNTIMESO)
-# See http://goo.gl/GvL6hX on why this setup makes sense.
+# Target druntime_libs produces $(DRUNTIME) and $(DRUNTIMESO). See
+# http://stackoverflow.com/q/7081284 on why this setup makes sense.
 .PHONY: druntime_libs
 druntime_libs:
 	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak MODEL=$(MODEL) DMD=$(DMD) OS=$(OS)
