@@ -146,10 +146,8 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 module std.traits;
-import std.algorithm;
 import std.typetuple;
 import std.typecons;
-import core.vararg;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Functions
@@ -317,6 +315,7 @@ template packageName(alias T)
     else
         enum string parent = null;
 
+    import std.algorithm;
     static if (T.stringof.startsWith("package "))
         enum packageName = (parent.length ? parent ~ '.' : "") ~ T.stringof[8 .. $];
     else static if (parent)
@@ -357,6 +356,7 @@ version(unittest)
  */
 template moduleName(alias T)
 {
+    import std.algorithm;
     static assert(!T.stringof.startsWith("package "), "cannot get the module name for a package");
 
     static if (T.stringof.startsWith("module "))
@@ -460,6 +460,7 @@ private template fullyQualifiedNameImplForSymbols(alias T)
 
     enum fullyQualifiedNameImplForSymbols = parentPrefix ~ (s)
     {
+        import std.algorithm;
         if(s.skipOver("package ") || s.skipOver("module "))
             return s;
         return s.findSplit("(")[0];
@@ -1588,6 +1589,7 @@ template variadicFunctionStyle(func...)
 
 unittest
 {
+    import core.vararg;
     extern(D) void novar() {}
     extern(C) void cstyle(int, ...) {}
     extern(D) void dstyle(...) {}
@@ -1735,6 +1737,7 @@ template SetFunctionAttributes(T, string linkage, uint attrs)
     if (isFunctionPointer!T || isDelegate!T)
 {
     mixin({
+        import std.algorithm;
         static assert(!(attrs & FunctionAttribute.trusted) ||
             !(attrs & FunctionAttribute.safe),
             "Cannot have a function/delegate that is both trusted and safe.");
@@ -1840,6 +1843,7 @@ unittest
             static assert(functionAttributes!T1 == FA.safe);
 
             // Add all known attributes, excluding conflicting ones.
+            import std.algorithm;
             enum allAttrs = reduce!"a | b"([EnumMembers!FA]) & ~FA.safe & ~FA.property;
             alias SetFunctionAttributes!(T1, functionLinkage!T, allAttrs) T2;
             static assert(functionAttributes!T2 == allAttrs);
@@ -3748,6 +3752,7 @@ unittest
 
 private template maxAlignment(U...) if(isTypeTuple!U)
 {
+    import std.algorithm;
     static if(U.length == 1)
         enum maxAlignment = U[0].alignof;
     else
