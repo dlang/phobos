@@ -346,26 +346,20 @@ Source: $(PHOBOSSRC std/_algorithm.d)
 module std.algorithm;
 //debug = std_algorithm;
 
-import std.container : BinaryHeap;
-import std.conv : text;
-import std.exception : pointsTo, enforce, to, emplace, assertThrown;
-import std.functional : unaryFun, binaryFun, adjoin;
-import std.random : Random, uniform, unpredictableSeed;
+
+import std.functional : unaryFun, binaryFun;
 import std.range;
-import std.string : representation, format;
-import std.typecons : tuple, Tuple;
 import std.traits : isIntegral, mostNegative, isSomeString, isMutable, Select,
     isArray, hasElaborateAssign, isStaticArray, isNarrowString, isIterable,
     Unqual, hasElaborateDestructor, unsigned, ForeachType, isDynamicArray,
     hasElaborateCopyConstructor, CommonType;
 import std.typetuple : TypeTuple, staticMap, allSatisfy;
-import std.utf : UTFException, decode;
 
 version(unittest)
 {
     debug(std_algorithm) import std.stdio;
     mixin(dummyRanges);
- }
+}
 
 private T* addressOf(T)(ref T val) { return &val; }
 
@@ -384,6 +378,7 @@ template map(fun...) if (fun.length >= 1)
     {
         static if (fun.length > 1)
         {
+            import std.functional;
             alias adjoin!(staticMap!(unaryFun, fun)) _fun;
         }
         else
@@ -429,6 +424,7 @@ it separately:
 */
 unittest
 {
+    import std.conv;
     alias map!(to!string) stringize;
     assert(equal(stringize([ 1, 2, 3, 4 ]), [ "1", "2", "3", "4" ]));
 }
@@ -548,12 +544,14 @@ unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    import std.conv;
     alias map!(to!string) stringize;
     assert(equal(stringize([ 1, 2, 3, 4 ]), [ "1", "2", "3", "4" ]));
     uint counter;
     alias map!((a) { return counter++; }) count;
     assert(equal(count([ 10, 2, 30, 4 ]), [ 0, 1, 2, 3 ]));
     counter = 0;
+    import std.functional;
     adjoin!((a) { return counter++; }, (a) { return counter++; })(1);
     alias map!((a) { return counter++; }, (a) { return counter++; }) countAndSquare;
     //assert(equal(countAndSquare([ 10, 2 ]), [ tuple(0u, 100), tuple(1u, 4) ]));
@@ -735,10 +733,12 @@ template reduce(fun...) if (fun.length >= 1)
                 {
                     static assert(fun.length > 1);
                     Unqual!(typeof(r.front)) seed = r.front;
+                    import std.functional;
                     typeof(adjoin!(staticMap!(binaryFun, fun))(seed, seed))
                         result = void;
                     foreach (i, T; result.Types)
                     {
+                        import std.conv;
                         emplace(&result[i], seed);
                     }
                     r.popFront();
@@ -776,6 +776,7 @@ template reduce(fun...) if (fun.length >= 1)
             }
             else
             {
+                import std.functional;
                 typeof(adjoin!(staticMap!(binaryFun, fun))(E.init, E.init))
                     result = void;
                 bool initialized = false;
@@ -801,6 +802,7 @@ template reduce(fun...) if (fun.length >= 1)
 
                     foreach (i, T; result.Types)
                     {
+                        import std.conv;
                         emplace(&result[i], elem);
                     }
                 }
@@ -1213,6 +1215,7 @@ void uninitializedFill(Range, Value)(Range range, Value filler)
     alias ElementType!Range T;
     static if (hasElaborateAssign!T)
     {
+        import std.conv;
         // Must construct stuff by the book
         for (; !range.empty; range.popFront())
             emplace(addressOf(range.front), filler);
@@ -1627,6 +1630,7 @@ $(D &source == &target || !pointsTo(source, source))
 */
 void move(T)(ref T source, ref T target)
 {
+    import std.exception;
     assert(!pointsTo(source, source));
     static if (is(T == struct))
     {
@@ -1968,6 +1972,7 @@ if (allMutableFields!T && !is(typeof(T.init.proxySwap(T.init))))
         {
             // For structs with non-trivial assignment, move memory directly
             // First check for undue aliasing
+            import std.exception;
             static if (hasIndirections!T)
                 assert(!pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
                     && !pointsTo(lhs, lhs) && !pointsTo(rhs, rhs));
@@ -2843,6 +2848,7 @@ unittest
     void compare(string sentence, string[] witness)
     {
         auto r = splitter!"a == ' '"(sentence);
+        import std.string;
         assert(equal(r.save, witness), format("got: %(%s, %) expected: %(%s, %)", r, witness));
     }
 
@@ -2888,6 +2894,7 @@ unittest
     {
         auto a = iota(entry.low, entry.high).filter!"true"();
         auto b = splitter!"a%2"(a);
+        import std.string;
         assert(equal!equal(b.save, entry.result), format("got: %(%s, %) expected: %(%s, %)", b, entry.result));
     }
 }
@@ -2923,6 +2930,7 @@ unittest
        foreach (word; std.array.splitter(std.string.strip(line))) {
             if (word in dictionary) continue; // Nothing to do
             auto newID = dictionary.length;
+            import std.conv;
             dictionary[to!string(word)] = cast(uint)newID;
         }
     }
@@ -2946,6 +2954,7 @@ unittest
     {
         foreach (s; [0, 1])
         {
+            import std.conv, std.string;
             auto result = split(input, s);
 
             assert(equal(result, split(input, [s])), format(`"[%(%s,%)]"`, split(input, [s])));
@@ -3491,6 +3500,7 @@ unittest
     auto r = joiner([inputRangeObject("ab"), inputRangeObject("cd")]);
     assert(isForwardRange!(typeof(r)));
 
+    import std.conv;
     auto str = to!string(r);
     assert(str == "abcd");
 }
@@ -3883,6 +3893,7 @@ if (isInputRange!InputRange &&
             size_t i = 0, next = 0;
             while (next < len)
             {
+                import std.utf;
                 if (predFun(decode(haystack, next), needle))
                     return haystack[i .. $];
                 i = next;
@@ -4674,6 +4685,7 @@ if (isInputRange!InputRange)
         size_t i = 0, next = 0;
         while (next < len)
         {
+            import std.utf;
             if (predFun(decode(haystack, next)))
                 return haystack[i .. $];
             i = next;
@@ -5544,6 +5556,7 @@ unittest
 
     foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
+        import std.conv;
         assert(!startsWith(to!S("abc"), 'c'));
         assert(startsWith(to!S("abc"), 'a', 'c') == 1);
         assert(!startsWith(to!S("abc"), 'x', 'n', 'b'));
@@ -5845,6 +5858,7 @@ unittest
 
     foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
+        import std.conv;
         assert(!endsWith(to!S("abc"), 'a'));
         assert(endsWith(to!S("abc"), 'a', 'c') == 2);
         assert(!endsWith(to!S("abc"), 'x', 'n', 'b'));
@@ -5978,6 +5992,7 @@ if (isNarrowString!R1 && isInputRange!R2 &&
 
     for (size_t j = 0; i < len && !r2.empty; r2.popFront(), i = j)
     {
+        import std.utf;
         immutable f = decode(r1, j);
         if (!binaryFun!pred(f, r2.front))
             break;
@@ -6010,6 +6025,7 @@ if (isNarrowString!R1 && isNarrowString!R2)
                     return r1[0 .. i - j];
             }
 
+            import std.utf;
             if (i == limit && j < codeLen)
                 throw new UTFException("Invalid UTF-8 sequence", i);
         }
@@ -6037,6 +6053,7 @@ unittest
     {
         foreach(T; TypeTuple!(string, wstring, dstring))
         {
+            import std.conv;
             assert(commonPrefix(to!S(""), to!T("")).empty);
             assert(commonPrefix(to!S(""), to!T("hello")).empty);
             assert(commonPrefix(to!S("hello"), to!T("")).empty);
@@ -6058,6 +6075,7 @@ unittest
             assert(commonPrefix!"a != b"(to!S("онво"), to!T("Пиво")) == to!S("он"));
         }
 
+        import std.conv;
         static assert(is(typeof(commonPrefix(to!S("Пиво"), filter!"true"("Пони"))) == S));
         assert(equal(commonPrefix(to!S("Пиво"), filter!"true"("Пони")), to!S("П")));
 
@@ -6066,6 +6084,7 @@ unittest
         assert(equal(commonPrefix(filter!"true"("Пиво"), to!S("Пони")), takeExactly(filter!"true"("П"), 1)));
     }
 
+    import std.utf;
     assertThrown!UTFException(commonPrefix("\U0010FFFF\U0010FFFB", "\U0010FFFF\U0010FFFB"[0 .. $ - 1]));
 
     assert(commonPrefix("12345"d, [49, 50, 51, 60, 60]) == "123"d);
@@ -6887,6 +6906,7 @@ unittest
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[][] b = [ [4], [2, 4], [4], [4] ];
     auto c = minCount!("a[0] < b[0]")(b);
+    import std.conv;
     assert(c == tuple([2, 4], 1), text(c[0]));
 
     //Test empty range
@@ -6919,6 +6939,7 @@ unittest
     assert(minCount!((ref immutable int a, ref immutable int b) => (a > b))(b) == tuple(4, 2));
 
     immutable(int[])[] c = [ [4], [2, 4], [4], [4] ];
+    import std.conv;
     assert(minCount!("a[0] < b[0]")(c) == tuple([2, 4], 1), text(c[0]));
 
     static struct S1
@@ -7527,6 +7548,7 @@ multiple code units are preserved properly.
 void reverse(Char)(Char[] s)
 if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
 {
+    import std.string;
     auto r = representation(s);
     for (size_t i = 0; i < s.length; )
     {
@@ -7842,6 +7864,7 @@ unittest
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     // a more elaborate test
     {
+        import std.random;
         auto rnd = Random(unpredictableSeed);
         int[] a = new int[uniform(100, 200, rnd)];
         int[] b = new int[uniform(100, 200, rnd)];
@@ -7853,6 +7876,7 @@ unittest
         auto n = bringToFront(c[0 .. a.length], c[a.length .. $]);
         //writeln("c= ", c);
         assert(n == b.length);
+        import std.conv;
         assert(c == b ~ a, text(c, "\n", a, "\n", b));
     }
     // different types, moveFront, no sameHead
@@ -8595,6 +8619,7 @@ unittest
 
 unittest
 {
+    import std.random;
     auto a = new int[](uniform(0, 100));
     foreach (ref e; a)
     {
@@ -8646,6 +8671,7 @@ void topN(alias less = "a < b",
             "Stable topN not yet implemented");
     while (r.length > nth)
     {
+        import std.random;
         auto pivot = uniform(0, r.length);
         swap(r[pivot], r.back);
         assert(!binaryFun!(less)(r.back, r.back));
@@ -8732,6 +8758,7 @@ unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    import std.random;
     int[] a = new int[uniform(1, 10000)];
         foreach (ref e; a) e = uniform(-1000, 1000);
     auto k = uniform(0, a.length);
@@ -8759,6 +8786,7 @@ void topN(alias less = "a < b",
 {
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
+    import std.container;
     auto heap = BinaryHeap!Range1(r1);
     for (; !r2.empty; r2.popFront())
     {
@@ -8840,6 +8868,7 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         else //use Tim Sort for semistable & stable
             TimSortImpl!(lessFun, Range).sort(r, null);
 
+        import std.conv;
         enum maxLen = 8;
         assert(isSorted!lessFun(r), text("Failed to sort range of type ",
                         Range.stringof, ". Actual result is: ",
@@ -8879,7 +8908,7 @@ unittest
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     // sort using delegate
     int a[] = new int[100];
-    auto rnd = Random(unpredictableSeed);
+    import std.random;    auto rnd = Random(unpredictableSeed);
     foreach (ref e; a) {
         e = uniform(-100, 100, rnd);
     }
@@ -9142,6 +9171,7 @@ unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    import std.random;
     auto rnd = Random(1);
     int a[] = new int[uniform(100, 200, rnd)];
     foreach (ref e; a) {
@@ -9941,12 +9971,14 @@ schwartzSort(alias transform, alias less = "a < b",
     }
     for (; length != r.length; ++length)
     {
+        import std.conv;
         emplace(xform1.ptr + length, unaryFun!transform(r[length]));
     }
     // Make sure we use ubyte[] and ushort[], not char[] and wchar[]
     // for the intermediate array, lest zip gets confused.
     static if (isNarrowString!(typeof(xform1)))
     {
+        import std.string;
         auto xform = xform1.representation();
     }
     else
@@ -10166,6 +10198,7 @@ unittest
 
     dchar[] ds = "コーヒーが好きです"d.dup;
     sort(ds);
+    import std.conv;
     string s = to!string(ds);
     assert(isSorted(ds));  // random-access
     assert(isSorted(s));   // bidirectional
@@ -10238,6 +10271,7 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
         "r and index must be same length for makeIndex.");
     static if (IndexType.sizeof < size_t.sizeof)
     {
+        import std.conv;
         enforce(r.length <= IndexType.max, "Cannot create an index with " ~
             "element type " ~ IndexType.stringof ~ " with length " ~
             to!string(r.length) ~ ".");
@@ -10324,6 +10358,7 @@ if (isIntegral!(ElementType!(RangeIndex)))
     {
         return binaryFun!(less)(r[a], r[b]);
     }
+    import std.container;
     auto heap = BinaryHeap!(RangeIndex, indirectLess)(index, 0);
     foreach (i; 0 .. r.length)
     {
@@ -10348,6 +10383,7 @@ if (is(ElementType!(RangeIndex) == ElementType!(Range)*))
     {
         return binaryFun!less(*a, *b);
     }
+    import std.container;
     auto heap = BinaryHeap!(RangeIndex, indirectLess)(index, 0);
     foreach (i; 0 .. r.length)
     {
@@ -10804,6 +10840,7 @@ TRange topNCopy(alias less = "a < b", SRange, TRange)
             && hasLength!(TRange) && hasSlicing!(TRange))
 {
     if (target.empty) return target;
+    import std.container;
     auto heap = BinaryHeap!(TRange, less)(target, 0);
     foreach (e; source) heap.conditionalInsert(e);
     auto result = target[0 .. heap.length];
@@ -11280,6 +11317,7 @@ version(unittest)
 
     private string[] rndstuff(T : string)()
     {
+        import std.random;
         static Random rnd;
         static bool first = true;
         if (first)
@@ -11303,6 +11341,7 @@ version(unittest)
 
     private int[] rndstuff(T : int)()
     {
+        import std.random;
         static Random rnd;
         static bool first = true;
         if (first)
@@ -11398,6 +11437,7 @@ struct NWayUnion(alias less, RangeOfRanges)
         // revert comparison order so we get the smallest elements first
         return comp(b.front, a.front);
     }
+    import std.container;
     BinaryHeap!(RangeOfRanges, compFront) _heap;
 
     this(RangeOfRanges ror)
@@ -12290,6 +12330,7 @@ auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
      * one level of tuples so that a ternary cartesian product, for example,
      * returns 3-element tuples instead of nested 2-element tuples.
      */
+    import std.string;
     enum string denest = format("tuple(a[0], %(a[1][%d]%|,%))",
                                 iota(0, otherRanges.length+1));
     return map!denest(
