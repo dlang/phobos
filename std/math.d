@@ -62,7 +62,7 @@
 module std.math;
 
 import core.stdc.math;
-import std.range, std.traits;
+import std.traits;
 
 version(unittest)
 {
@@ -5649,6 +5649,7 @@ unittest
  */
 bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
 {
+    import std.range;
     static if (isInputRange!T)
     {
         static if (isInputRange!U)
