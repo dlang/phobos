@@ -10922,26 +10922,36 @@ private:
     {
         if (empty) return;
 
-        outer: while (true)
+        uint done = 2;
+        while (done != 0)
         {
-            foreach (i, ref r; _input[0 .. $ - 1])
+            //Iterate left to right, lopping off the RHS when smaller than LHS
+            //This propagates the highest value to the right.
+            --done;
+            foreach (i, ref l; _input[0 .. $ - 1])
             {
-                alias next = _input[i + 1];
-                if (comp(r.front, next.front))
+                alias r = _input[i + 1];
+                if (comp(r.front, l.front)) //(l > r)?
                 {
                     r.popFront();
                     if (r.empty) return;
-                    continue outer;
-                }
-                if (comp(next.front, r.front))
-                {
-                    next.popFront();
-                    if (next.empty) return;
-                    continue outer;
+                    done = 2;
                 }
             }
+            if (done == 0) break;
 
-            return;
+            //Then iterate right to left, propagting the high value back to the left
+            --done;
+            foreach_reverse(i, ref l; _input[0 .. $ - 1])
+            {
+                alias r = _input[i + 1];
+                if (comp(l.front, r.front)) //(l < r)?
+                {
+                    l.popFront();
+                    if (l.empty) return;
+                    done = 2;
+                }
+            }
         }
     }
 
