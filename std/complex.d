@@ -1458,6 +1458,10 @@ real arg(T)(Imaginary!T im) @safe pure nothrow
     {
         return -PI_2;
     }
+    else if (isNaN(im.im))
+    {
+        return real.nan;
+    }
     else
     {
         assert(im.im == 0);
@@ -1472,4 +1476,5 @@ unittest
     assert(arg(imaginary(-0.1)) == -PI_2);
     assert(approxEqual(arg(imaginary(3.5)), arg(complex(0.0, 3.5))));
     assert(approxEqual(arg(imaginary(-7.2)), arg(complex(0.0, -7.2))));
+    assert(isNaN(arg(imaginary(float.nan))));
 }
