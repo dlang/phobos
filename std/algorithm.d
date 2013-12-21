@@ -10920,25 +10920,38 @@ private:
     // Positions to the first elements that are all equal
     void adjustPosition()
     {
-        outer:
-        while (!empty)
+        if (empty) return;
+
+        uint done = 2;
+        while (done != 0)
         {
-            foreach (i, ref r; _input[0 .. $ - 1])
+            //Iterate left to right, lopping off the RHS when smaller than LHS
+            //This propagates the highest value to the right.
+            --done;
+            foreach (i, ref lhs; _input[0 .. $ - 1])
             {
-                alias next = _input[i + 1];
-                if (comp(r.front, next.front))
+                alias rhs = _input[i + 1];
+                if (comp(rhs.front, lhs.front)) //(lhs > rhs)?
                 {
-                    r.popFront();
-                    continue outer;
-                }
-                if (comp(next.front, r.front))
-                {
-                    next.popFront();
-                    continue outer;
+                    rhs.popFront();
+                    if (rhs.empty) return;
+                    done = 2;
                 }
             }
+            if (done == 0) break;
 
-            return;
+            //Then iterate right to left, propagting the high value back to the left
+            --done;
+            foreach_reverse(i, ref lhs; _input[0 .. $ - 1])
+            {
+                alias rhs = _input[i + 1];
+                if (comp(lhs.front, rhs.front)) //(lhs < rhs)?
+                {
+                    lhs.popFront();
+                    if (lhs.empty) return;
+                    done = 2;
+                }
+            }
         }
     }
 
