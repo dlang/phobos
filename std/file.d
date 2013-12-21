@@ -963,6 +963,25 @@ uint getLinkAttributes(in char[] name)
 
 
 /++
+    Set the attributes of the given file.
+
+    Throws:
+        $(D FileException) if the given file does not exist.
+ +/
+void setAttributes(in char[] name, uint attributes)
+{
+    version (Windows)
+    {
+        cenforce(SetFileAttributesW(std.utf.toUTF16z(name), attributes), name);
+    }
+    else version (Posix)
+    {
+        cenforce(!chmod(toStringz(name), attributes), name);
+    }
+}
+
+
+/++
     Returns whether the given file is a directory.
 
     Params:
