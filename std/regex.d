@@ -5628,7 +5628,7 @@ public:
         ---
     +/
 
-    @safe @property bool opCast(T:bool)() const nothrow { return !empty; }
+    @safe bool opCast(T:bool)() const nothrow { return !empty; }
 
     /++
         Lookup named submatch.
