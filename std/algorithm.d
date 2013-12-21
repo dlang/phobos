@@ -10928,13 +10928,13 @@ private:
             //Iterate left to right, lopping off the RHS when smaller than LHS
             //This propagates the highest value to the right.
             --done;
-            foreach (i, ref l; _input[0 .. $ - 1])
+            foreach (i, ref lhs; _input[0 .. $ - 1])
             {
-                alias r = _input[i + 1];
-                if (comp(r.front, l.front)) //(l > r)?
+                alias rhs = _input[i + 1];
+                if (comp(rhs.front, lhs.front)) //(lhs > rhs)?
                 {
-                    r.popFront();
-                    if (r.empty) return;
+                    rhs.popFront();
+                    if (rhs.empty) return;
                     done = 2;
                 }
             }
@@ -10942,13 +10942,13 @@ private:
 
             //Then iterate right to left, propagting the high value back to the left
             --done;
-            foreach_reverse(i, ref l; _input[0 .. $ - 1])
+            foreach_reverse(i, ref lhs; _input[0 .. $ - 1])
             {
-                alias r = _input[i + 1];
-                if (comp(l.front, r.front)) //(l < r)?
+                alias rhs = _input[i + 1];
+                if (comp(lhs.front, rhs.front)) //(lhs < rhs)?
                 {
-                    l.popFront();
-                    if (l.empty) return;
+                    lhs.popFront();
+                    if (lhs.empty) return;
                     done = 2;
                 }
             }
