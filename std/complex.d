@@ -1152,19 +1152,6 @@ struct Imaginary(T)
         this.im = that.im;
     }
 
-    this(R : T)(Complex!R z)
-    {
-        if (z.re != 0)
-        {
-            throw new Exception(format("Cannot initialize %s with complex number %s whose real part is non-zero",
-                                       typeof(this).stringof, z));
-        }
-        else
-        {
-            this.im = z.im;
-        }
-    }
-
     this(R : T)(R y) @safe nothrow pure
     {
         this.im = y;
@@ -1176,25 +1163,6 @@ struct Imaginary(T)
     ref Imaginary opAssign(R : T)(Imaginary!R that) @safe nothrow pure
     {
         this.im = that.im;
-        return this;
-    }
-
-    // this = complex (must have real part == 0)
-    ref Imaginary opAssign(R : T)(Complex!R z)
-    {
-        if (z.re != 0)
-        {
-            /* Question: leave this.im alone here, or set it to nan
-             * to reflect failed assignment?
-             */
-            throw new Exception(format("Cannot assign complex number %s with non-zero real part to %s",
-                                       z, typeof(this).stringof));
-        }
-        else
-        {
-            this.im = z.im;
-        }
-
         return this;
     }
 
@@ -1212,11 +1180,6 @@ struct Imaginary(T)
     bool opEquals(R : T)(Imaginary!R that)
     {
         return this.im == that.im;
-    }
-
-    bool opEquals(R : T)(Complex!R z)
-    {
-        return z.re == 0 && this.im == z.im;
     }
 
     bool opEquals(R : T)(R re)
@@ -1361,16 +1324,13 @@ unittest
 {
     // initialization
     auto i1 = imaginary(5.9);
-    auto i2 = imaginary(complex(0.0, 3.7));
+    auto i2 = imaginary(3.7);
     auto i3 = imaginary(i1);
-    assertThrown(imaginary(complex(1.1, 4.2)));
 
     // Check comparison operations
     assert(i1 != i2);
     assert(i1 == i3);
     assert(is(typeof(i1) == typeof(i3)));
-    assert(i1 == complex(0.0, i1.im));
-    assert(i1 != complex(0.1, i1.im));
     assert(imaginary(0) == 0);
     assert(imaginary(0) != 0.3);
     assert(imaginary(0.3) != 0);
@@ -1379,10 +1339,8 @@ unittest
     // Check assignment
     i3 = imaginary(i1.im + i2.im);
     assert(i3.im == i1.im + i2.im);
-    i3 = complex(0.0, 3 * i1.im);
-    assert(i3.im == 3 * i1.im);
-    assertThrown(i3 = complex(1.3, 4 * i2.im));
-    assert(i3.im == 3 * i1.im); // unchanged, but perhaps should be nan?
+    i3 = imaginary(i1 + i2);
+    assert(i3.im == i1.im + i2.im);
 
     // Check unary operations
     assert(i1 == +i1);
