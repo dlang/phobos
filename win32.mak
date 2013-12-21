@@ -114,7 +114,7 @@ SRC_STD_2a_HEAVY= std\array.d std\functional.d std\path.d std\outbuffer.d std\ut
 
 SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
     std\metastrings.d std\bitmanip.d std\typecons.d \
-    std\uni.d std\base64.d std\ascii.d \
+    std\uni.d std\base64.d std\md5.d std\ascii.d \
     std\demangle.d std\uri.d std\mmfile.d std\getopt.d
 
 SRC_STD_3a= std\signals.d std\typetuple.d std\traits.d \
@@ -150,12 +150,12 @@ SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_3) $(SRC_STD_3a) $(SRC_STD_3b) $(SRC_STD_4) \
 	$(SRC_STD_5_HEAVY) $(SRC_STD_6) $(SRC_STD_REST)
 
-SRC=	unittest.d index.d
+SRC=	unittest.d crc32.d index.d
 
 SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d std\datetime.d \
 	std\csv.d std\file.d std\compiler.d std\system.d \
-	std\outbuffer.d std\base64.d \
+	std\outbuffer.d std\md5.d std\base64.d \
 	std\mmfile.d \
 	std\syserror.d \
 	std\random.d std\stream.d std\process.d \
@@ -308,6 +308,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_json.html \
 	$(DOC)\std_math.html \
 	$(DOC)\std_mathspecial.html \
+	$(DOC)\std_md5.html \
 	$(DOC)\std_metastrings.html \
 	$(DOC)\std_mmfile.html \
 	$(DOC)\std_numeric.html \
@@ -415,6 +416,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -cov=82 -unittest -main -run std\typecons.d
 	$(DMD) -cov=44 -unittest -main -run std\uni.d
 	$(DMD) -cov=91 -unittest -main -run std\base64.d
+	$(DMD) -cov=99 -unittest -main -run std\md5.d
 	$(DMD) -cov=100 -unittest -main -run std\ascii.d
 	$(DMD) -cov=0  -unittest -main -run std\demangle.d
 	$(DMD) -cov=57 -unittest -main -run std\uri.d
@@ -604,6 +606,9 @@ $(DOC)\std_math.html : $(STDDOC) std\math.d
 
 $(DOC)\std_mathspecial.html : $(STDDOC) std\mathspecial.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_mathspecial.html $(STDDOC) std\mathspecial.d
+
+$(DOC)\std_md5.html : $(STDDOC) std\md5.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_md5.html $(STDDOC) std\md5.d
 
 $(DOC)\std_metastrings.html : $(STDDOC) std\metastrings.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_metastrings.html $(STDDOC) std\metastrings.d

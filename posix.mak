@@ -175,7 +175,7 @@ MAIN = $(ROOT)/emptymain.d
 STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint \
         bitmanip compiler complex concurrency container conv		\
         cstream csv datetime demangle encoding exception	\
-        file format functional getopt json math mathspecial	\
+        file format functional getopt json math mathspecial md5	\
         metastrings mmfile numeric outbuffer parallelism path		\
         process random range regex signals socket socketstream	\
         stdint stdio stdiobase stream string syserror system traits		\
@@ -209,7 +209,7 @@ EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	unicode_comp unicode_decomp unicode_grapheme unicode_norm)
 
 # Aggregate all D modules relevant to this build
-D_MODULES = $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES) \
+D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES) \
     $(STD_DIGEST_MODULES)
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
@@ -353,6 +353,7 @@ ifneq (,$(findstring $(OS),linux))
 endif
 	mkdir -p $(INSTALL_DIR)/import/etc
 	mkdir -p $(INSTALL_DIR)/import/std
+	cp crc32.d $(INSTALL_DIR)/import/
 	cp -r std/* $(INSTALL_DIR)/import/std/
 	cp -r etc/* $(INSTALL_DIR)/import/etc/
 	cp LICENSE_1_0.txt $(INSTALL_DIR)/phobos-LICENSE.txt
