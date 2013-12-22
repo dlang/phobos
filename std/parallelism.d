@@ -1391,11 +1391,13 @@ private:
         this.head = task;
         singleTaskThread = new Thread(&doSingleTask);
         singleTaskThread.start();
-
-        if(priority != int.max)
+        
+        // Disabled untill writing code to support 
+        // running thread with specified priority
+        /*if(priority != int.max)
         {
             singleTaskThread.priority = priority;
-        }
+        }*/
     }
 
 public:
