@@ -242,6 +242,12 @@ struct Complex(T)  if (isFloatingPoint!T)
         return re == z.re && im == z.im;
     }
 
+    // this == imaginary
+    bool opEquals(R : T)(Imaginary!R rhs) const
+    {
+        return re == 0 && im == rhs.im;
+    }
+
     // this == numeric
     bool opEquals(R : T)(R r) const
     {
@@ -588,6 +594,19 @@ unittest
     assert ((-c2).re == -(c2.re));
     assert ((-c2).im == -(c2.im));
     assert (c2 == -(-c2));
+
+    auto c3 = Complex!double(0.0, 3.5);
+    auto c4 = Complex!double(0.2, 3.5);
+    auto i0 = Imaginary!double(3.5);
+
+    assert(c3 == i0);
+    assert(c4 != i0);
+
+    auto c5 = Complex!double(1.2, 0.0);
+    auto c6 = Complex!double(1.2, 5.9);
+
+    assert(c5 == 1.2);
+    assert(c6 != 1.2);
 
     // Check complex-complex operations.
     auto cpc = c1 + c2;
