@@ -1196,18 +1196,21 @@ struct Imaginary(T)
 
   @safe const nothrow pure:
     // ------ Comparison operators ------------------------
+
+    // imaginary == imaginary
     bool opEquals(R : T)(Imaginary!R that)
     {
         return this.im == that.im;
     }
 
+    // imaginary == numeric
     bool opEquals(R : T)(R re)
     {
         /* Since numerical types lie on the real axis,
          * they are only equal to imaginary types if
          * both are 0.
          */
-        return re == 0 && this.im == 0;
+        return isIdentical(re, 0) && isIdentical(im, 0);
     }
 
     // ------ Unary operators -----------------------------
