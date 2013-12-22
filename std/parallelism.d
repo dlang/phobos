@@ -1391,11 +1391,15 @@ private:
         this.head = task;
         singleTaskThread = new Thread(&doSingleTask);
         singleTaskThread.start();
+        
+        // Disabled until writing code to support 
+        // running thread with specified priority
+        // See https://d.puremagic.com/issues/show_bug.cgi?id=8960
 
-        if(priority != int.max)
+        /*if(priority != int.max)
         {
             singleTaskThread.priority = priority;
-        }
+        }*/
     }
 
 public:
