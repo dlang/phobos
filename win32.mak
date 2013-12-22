@@ -207,7 +207,7 @@ SRC_ETC=
 
 SRC_ETC_C= etc\c\zlib.d etc\c\curl.d etc\c\sqlite3.d
 
-SRC_TO_COMPILE_NOT_STD= crc32.d \
+SRC_TO_COMPILE_NOT_STD= \
 	$(SRC_STD_NET) \
 	$(SRC_STD_C) \
 	$(SRC_STD_WIN) \
@@ -453,7 +453,6 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -cov=87 -unittest -main -run std\parallelism.d
 	$(DMD) -cov=50 -unittest -main -run std\mathspecial.d
 	$(DMD) -cov=71 -unittest -main -run std\process.d
-	$(DMD) -cov=0  -unittest -main -run crc32.d 
 	$(DMD) -cov=70 -unittest -main -run std\net\isemail.d
 	$(DMD) -cov=2  -unittest -main -run std\net\curl.d
 	$(DMD) -cov=60 -unittest -main -run std\windows\registry.d
