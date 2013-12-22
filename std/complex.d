@@ -15,8 +15,7 @@
 module std.complex;
 
 
-import std.exception, std.format, std.math, std.numeric, std.traits;
-import std.string : format;
+import std.math, std.traits;
 
 /** Helper function that returns a _complex number with the specified
     real and imaginary parts.
@@ -104,6 +103,8 @@ unittest
 */
 struct Complex(T)  if (isFloatingPoint!T)
 {
+    import std.format, std.numeric;
+
     /** The real part of the number. */
     T re;
 
@@ -1032,6 +1033,7 @@ unittest
 // Issue 10881: support %f formatting of complex numbers
 unittest
 {
+    import std.string : format;
     auto x = complex(1.2, 3.4);
     assert(format("%.2f", x) == "1.20+3.40i");
 
@@ -1041,6 +1043,7 @@ unittest
 
 unittest
 {
+    import std.format;
     // Test wide string formatting
     wstring wformat(T)(string format, Complex!T c)
     {
@@ -1100,6 +1103,8 @@ auto imaginary(T)(T im)
 struct Imaginary(T)
     if (isFloatingPoint!T)
 {
+    import std.format, std.numeric;
+
     /**
      * The imaginary part of the number.  This can be written to directly
      * if it's useful to do so.
