@@ -315,26 +315,20 @@ struct Complex(T)  if (isFloatingPoint!T)
     Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(Imaginary!R lhs) const
         if (op == "/")
     {
-        typeof(return) w = void;
-        alias FPTemporary!(typeof(w.re)) Tmp;
+        alias F = FPTemporary!(typeof(typeof(return).re));
 
         if (fabs(re) < fabs(im))
         {
-            Tmp ratio = re / im;
-            Tmp idivd = lhs.im / ((re * ratio) + im);
-            w.re = idivd;
-            w.im = idivd * ratio;
+            F ratio = re / im;
+            F idivd = lhs.im / ((re * ratio) + im);
+            return typeof(return)(idivd, idivd * ratio);
         }
         else
         {
-            Tmp ratio = im / re;
-            Tmp denom = re + im * ratio;
-            Tmp idivd = lhs.im / (re + (im * ratio));
-            w.re = idivd * ratio;
-            w.im = idivd;
+            F ratio = im / re;
+            F idivd = lhs.im / (re + (im * ratio));
+            return typeof(return)(idivd * ratio, idivd);
         }
-
-        return w;
     }
 
     Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(Imaginary!R lhs) const
@@ -376,27 +370,20 @@ struct Complex(T)  if (isFloatingPoint!T)
     Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R r) const
         if (op == "/" && isNumeric!R)
     {
-        typeof(return) w;
-        alias FPTemporary!(typeof(w.re)) Tmp;
+        alias F = FPTemporary!(typeof(typeof(return).re));
 
         if (fabs(re) < fabs(im))
         {
-            Tmp ratio = re/im;
-            Tmp rdivd = r/(re*ratio + im);
-
-            w.re = rdivd*ratio;
-            w.im = -rdivd;
+            F ratio = re / im;
+            F rdivd = r / ((re * ratio) + im);
+            return typeof(return)(rdivd * ratio, -rdivd);
         }
         else
         {
-            Tmp ratio = im/re;
-            Tmp rdivd = r/(re + im*ratio);
-
-            w.re = rdivd;
-            w.im = -rdivd*ratio;
+            F ratio = im / re;
+            F rdivd = r / (re + (im * ratio));
+            return typeof(return)(rdivd, -rdivd * ratio);
         }
-
-        return w;
     }
 
     // numeric ^^ complex
