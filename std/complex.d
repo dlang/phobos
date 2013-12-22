@@ -1360,9 +1360,12 @@ unittest
 
     // Check assignment
     i3 = imaginary(i1.im + i2.im);
-    assert(i3.im == i1.im + i2.im);
+    auto rcheck = i1.im + i2.im;
+    assert(feqrel(i3.im, rcheck) == double.mant_dig);
+    assert(isIdentical(i3.im, rcheck));
     i3 = imaginary(i1 + i2);
-    assert(i3.im == i1.im + i2.im);
+    assert(feqrel(i3.im, rcheck) == double.mant_dig);
+    assert(isIdentical(i3.im, rcheck));
 
     // Check unary operations
     assert(i1 == +i1);
@@ -1371,18 +1374,26 @@ unittest
 
     // Check imaginary-imaginary operations
     auto ipi = i1 + i2;
-    assert(ipi.im == i1.im + i2.im);
+    rcheck = i1.im + i2.im;
+    assert(feqrel(ipi.im, rcheck) == double.mant_dig);
+    assert(isIdentical(ipi.im, rcheck));
 
     auto imi = i1 - i2;
-    assert(imi.im == i1.im - i2.im);
+    rcheck = i1.im - i2.im;
+    assert(feqrel(imi.im, rcheck) == double.mant_dig);
+    assert(isIdentical(imi.im, rcheck));
 
     auto iti = i1 * i2;
     assert(isFloatingPoint!(typeof(iti)));
-    assert(iti == -i1.im * i2.im);
+    rcheck = -i1.im * i2.im;
+    assert(feqrel(iti, rcheck) == double.mant_dig);
+    assert(isIdentical(iti, rcheck));
 
     auto idi = i1 / i2;   // Amin?
     assert(isFloatingPoint!(typeof(idi)));
-    assert(idi == i1.im / i2.im);
+    rcheck = i1.im / i2.im;
+    assert(feqrel(idi, rcheck) == double.mant_dig);
+    assert(isIdentical(idi, rcheck));
 
     auto iei = imaginary(1.0) ^^ imaginary(1.0);  // i ^^ i
     assert(is(typeof(iei) == Complex!double));
