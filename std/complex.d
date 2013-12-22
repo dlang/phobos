@@ -1147,12 +1147,13 @@ struct Imaginary(T)
         }
     }
 
-    this(R : T)(Imaginary!R that) @safe nothrow pure
+  @safe nothrow pure:
+    this(R : T)(Imaginary!R that)
     {
         this.im = that.im;
     }
 
-    this(R : T)(R y) @safe nothrow pure
+    this(R : T)(R y)
     {
         this.im = y;
     }
@@ -1160,13 +1161,12 @@ struct Imaginary(T)
     // ------ Assignment operators ------------------------
 
     // this = imaginary
-    ref Imaginary opAssign(R : T)(Imaginary!R that) @safe nothrow pure
+    ref Imaginary opAssign(R : T)(Imaginary!R that)
     {
         this.im = that.im;
         return this;
     }
 
-  @safe nothrow pure:
     /* No numeric opAssign because built-in numerical types
      * lie on the real axis, not the imaginary one ... :-)
      *
@@ -1175,8 +1175,8 @@ struct Imaginary(T)
      * superfluous.
      */
 
+  @safe const nothrow pure:
     // ------ Comparison operators ------------------------
-
     bool opEquals(R : T)(Imaginary!R that)
     {
         return this.im == that.im;
@@ -1193,13 +1193,13 @@ struct Imaginary(T)
 
     // ------ Unary operators -----------------------------
 
-    Imaginary opUnary(string op)() const
+    Imaginary opUnary(string op)()
         if (op == "+")
     {
         return this;
     }
 
-    Imaginary opUnary(string op)() const
+    Imaginary opUnary(string op)()
         if (op == "-")
     {
         return Imaginary(-im);
@@ -1208,28 +1208,28 @@ struct Imaginary(T)
     // ------ Binary operators ----------------------------
 
     // imaginary + imaginary, imaginary - imaginary
-    Imaginary!(CommonType!(T, R)) opBinary(string op, R)(Imaginary!R rhs) const
+    Imaginary!(CommonType!(T, R)) opBinary(string op, R)(Imaginary!R rhs)
         if (op == "+" || op == "-")
     {
         return typeof(return)(mixin("this.im " ~ op ~ " rhs.im"));
     }
 
     // imaginary * imaginary
-    CommonType!(T, R) opBinary(string op, R)(Imaginary!R rhs) const
+    CommonType!(T, R) opBinary(string op, R)(Imaginary!R rhs)
         if (op == "*")
     {
         return -this.im * rhs.im;
     }
 
     // imaginary / imaginary
-    CommonType!(T, R) opBinary(string op, R)(Imaginary!R rhs) const
+    CommonType!(T, R) opBinary(string op, R)(Imaginary!R rhs)
         if (op == "/")
     {
         return this.im / rhs.im;
     }
 
     // imaginary ^^ imaginary
-    Complex!(CommonType!(T, R)) opBinary(string op, R)(Imaginary!R rhs) const
+    Complex!(CommonType!(T, R)) opBinary(string op, R)(Imaginary!R rhs)
         if (op == "^^")
     {
         FPTemporary!T r = abs(this);
@@ -1241,28 +1241,28 @@ struct Imaginary(T)
     }
 
     // imaginary + numeric, imaginary - numeric
-    Complex!(CommonType!(T, R)) opBinary(string op, R)(R rhs) const
+    Complex!(CommonType!(T, R)) opBinary(string op, R)(R rhs)
         if (isNumeric!R && (op == "+" || op == "-"))
     {
         return typeof(return)(mixin(op ~ "rhs"), this.im);
     }
 
     // imaginary * numeric
-    Imaginary!(CommonType!(T, R)) opBinary(string op, R)(R rhs) const
+    Imaginary!(CommonType!(T, R)) opBinary(string op, R)(R rhs)
         if (isNumeric!R && op == "*")
     {
         return typeof(return)(this.im * rhs);
     }
 
     // imaginary / numeric
-    Imaginary!(CommonType!(T, R)) opBinary(string op, R)(R rhs) const
+    Imaginary!(CommonType!(T, R)) opBinary(string op, R)(R rhs)
         if (isNumeric!R && op == "/")
     {
         return typeof(return)(this.im / rhs);
     }
 
     // imaginary ^^ numeric
-    Complex!(CommonType!(T, R)) opBinary(string op, R)(R rhs) const
+    Complex!(CommonType!(T, R)) opBinary(string op, R)(R rhs)
         if (isNumeric!R && op == "^^")
     {
         FPTemporary!T r = abs(this);
@@ -1274,28 +1274,28 @@ struct Imaginary(T)
     }
 
     // numeric + imaginary, numeric - imaginary
-    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R lhs) const
+    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R lhs)
         if (isNumeric!R && (op == "+" || op == "-"))
     {
         return typeof(return)(lhs, mixin(op ~ "this.im"));
     }
 
     // numeric * imaginary
-    Imaginary!(CommonType!(T, R)) opBinaryRight(string op, R)(R lhs) const
+    Imaginary!(CommonType!(T, R)) opBinaryRight(string op, R)(R lhs)
         if (isNumeric!R && op == "*")
     {
         return opBinary!(op, R)(lhs);
     }
 
     // numeric / imaginary
-    Imaginary!(CommonType!(T, R)) opBinaryRight(string op, R)(R lhs) const
+    Imaginary!(CommonType!(T, R)) opBinaryRight(string op, R)(R lhs)
         if (isNumeric!R && op == "/")
     {
         return typeof(return)((-lhs) / this.im);
     }
 
     // numeric ^^ imaginary
-    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R lhs) const
+    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R lhs)
         if (isNumeric!R && op == "^^")
     {
         alias F = FPTemporary!(CommonType!(T, R));
