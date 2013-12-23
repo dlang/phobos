@@ -2091,6 +2091,7 @@ assert(stride(stride(a, 2), 3) == stride(a, 6));
 auto stride(Range)(Range r, size_t n)
 if (isInputRange!(Unqual!Range))
 {
+    import std.exception;
     enforce(n > 0, "Stride cannot have step zero.");
 
     static if (is(typeof(stride(r.source, n)) == Range))
@@ -3019,6 +3020,7 @@ unittest
     import std.conv : text;
     void test(int[] input, int[] witness)
     {
+        import std.exception;
         enforce(equal(radial(input), witness),
                 text(radial(input), " vs. ", witness));
     }
@@ -4219,6 +4221,7 @@ Take!(Repeat!T) repeat(T)(T value, size_t n)
 
 unittest
 {
+    import std.exception;
     enforce(equal(repeat(5, 4), [ 5, 5, 5, 5 ][]));
 }
 
@@ -4627,6 +4630,7 @@ struct Zip(Ranges...)
             case StoppingPolicy.requireSameLength:
                 foreach (i, Unused; R[1 .. $])
                 {
+                    import std.exception;
                     enforce(ranges[0].empty ==
                             ranges[i + 1].empty,
                             "Inequal-length ranges passed to Zip");
@@ -4806,6 +4810,7 @@ struct Zip(Ranges...)
         case StoppingPolicy.requireSameLength:
             foreach (i, Unused; R)
             {
+                import std.exception;
                 enforce(!ranges[i].empty, "Invalid Zip object");
                 ranges[i].popFront();
             }
@@ -4837,6 +4842,7 @@ struct Zip(Ranges...)
             case StoppingPolicy.requireSameLength:
                 foreach (i, Unused; R)
                 {
+                    import std.exception;
                     enforce(!ranges[i].empty, "Invalid Zip object");
                     ranges[i].popBack();
                 }
@@ -5158,6 +5164,7 @@ private string lockstepMixin(Ranges...)(bool withIndex)
 
             if (_stoppingPolicy == StoppingPolicy.requireSameLength)
             {
+                import std.exception;
                 foreach(range; ranges)
                     enforce(range.empty);
             }
@@ -5208,6 +5215,7 @@ struct Lockstep(Ranges...)
     this(R ranges, StoppingPolicy sp = StoppingPolicy.shortest)
     {
         _ranges = ranges;
+        import std.exception;
         enforce(sp != StoppingPolicy.longest,
                 "Can't use StoppingPolicy.Longest on Lockstep.");
         _stoppingPolicy = sp;
@@ -5605,6 +5613,7 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
             if ((current < pastLast && step >= 0) ||
                     (current > pastLast && step <= 0))
             {
+                import std.exception;
                 enforce(step != 0);
                 this.step = step;
                 this.current = current;
@@ -5761,6 +5770,7 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
         {
             this.start = start;
             this.step = step;
+            import std.exception;
             enforce(step != 0);
             immutable fcount = (end - start) / step;
             enforce(fcount >= 0, "iota: incorrect startup parameters");
@@ -6078,6 +6088,7 @@ struct FrontTransversal(Ror,
             immutable commonLength = _input.front.length;
             foreach (e; _input)
             {
+                import std.exception;
                 enforce(e.length == commonLength);
             }
         }
@@ -6352,6 +6363,7 @@ struct Transversal(Ror,
             immutable commonLength = _input.front.length;
             foreach (e; _input)
             {
+                import std.exception;
                 enforce(e.length == commonLength);
             }
         }

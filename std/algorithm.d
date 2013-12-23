@@ -352,10 +352,7 @@ module std.algorithm;
 
 import std.functional : unaryFun, binaryFun;
 import std.range;
-import std.traits : isIntegral, mostNegative, isSomeString, isMutable, Select,
-    isArray, hasElaborateAssign, isStaticArray, isNarrowString, isIterable,
-    Unqual, hasElaborateDestructor, unsigned, ForeachType, isDynamicArray,
-    hasElaborateCopyConstructor, CommonType;
+import std.traits;
 import std.typetuple : TypeTuple, staticMap, allSatisfy;
 
 version(unittest)
@@ -657,6 +654,7 @@ unittest
 
 unittest
 {
+    import std.range;
     // Issue #10130 - map of iota with const step.
     const step = 2;
     static assert(__traits(compiles, map!(i => i)(iota(0, 10, step))));
