@@ -3998,15 +3998,6 @@ unittest
     dg();
     assertCTFEable!dg;
 }
-unittest
-{
-    // Bugzilla 11603
-    enum Foo : ubyte { A }
-    assert([Foo.A].find(Foo.A).empty == false);
-
-    ubyte x = 0;
-    assert([x].find(x).empty == false);
-}
 
 unittest
 {
