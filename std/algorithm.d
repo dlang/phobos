@@ -14,7 +14,7 @@ $(MYREF findSplitAfter) $(MYREF findSplitBefore) $(MYREF minCount)
 $(MYREF minPos) $(MYREF mismatch) $(MYREF skipOver) $(MYREF startsWith)
 $(MYREF until) )
 )
-$(TR $(TDNW Comparison) $(TD $(MYREF cmp) $(MYREF equal) $(MYREF
+$(TR $(TDNW Comparison) $(TD $(MYREF among) $(MYREF cmp) $(MYREF equal) $(MYREF
 levenshteinDistance) $(MYREF levenshteinDistanceAndPath) $(MYREF max)
 $(MYREF min) $(MYREF mismatch) )
 )
@@ -151,6 +151,9 @@ $(TR $(TDNW $(LREF until)) $(TD Lazily iterates a range
 until a specific value is found.)
 )
 $(LEADINGROW Comparison
+)
+$(TR $(TDNW $(LREF among)) $(TD Checks if a value is among a set
+of values, e.g. $(D if (v.among(1, 2, 3)) // `v` is 1, 2 or 3))
 )
 $(TR $(TDNW $(LREF cmp)) $(TD $(D cmp("abc", "abcd")) is $(D
 -1), $(D cmp("abc", "aba")) is $(D 1), and $(D cmp("abc", "abc")) is
@@ -11035,36 +11038,41 @@ unittest
 }
 
 /**
-Lazily computes the intersection of two input ranges $(D
-rs). The ranges are assumed to be sorted by $(D less). The element
-types of both ranges must have a common type.
+Lazily computes the intersection of two or more input ranges $(D
+ranges). The ranges are assumed to be sorted by $(D less). The element
+types of the ranges must have a common type.
  */
 struct SetIntersection(alias less = "a < b", Rs...)
-if (allSatisfy!(isInputRange, Rs))
+    if (allSatisfy!(isInputRange, Rs) &&
+        !is(CommonType!(staticMap!(ElementType, Rs)) == void))
 {
-    static assert(Rs.length == 2);
 private:
     Rs _input;
-    alias binaryFun!(less) comp;
-    alias CommonType!(staticMap!(.ElementType, Rs)) ElementType;
+    alias comp = binaryFun!less;
+    alias ElementType = CommonType!(staticMap!(.ElementType, Rs));
 
+    // Positions to the first elements that are all equal
     void adjustPosition()
     {
-        // Positions to the first two elements that are equal
+        outer:
         while (!empty)
         {
-            if (comp(_input[0].front, _input[1].front))
+            foreach (i, ref r; _input[0 .. $ - 1])
             {
-                _input[0].popFront();
+                alias next = _input[i + 1];
+                if (comp(r.front, next.front))
+                {
+                    r.popFront();
+                    continue outer;
+                }
+                if (comp(next.front, r.front))
+                {
+                    next.popFront();
+                    continue outer;
+                }
             }
-            else if (comp(_input[1].front, _input[0].front))
-            {
-                _input[1].popFront();
-            }
-            else
-            {
-                break;
-            }
+
+            return;
         }
     }
 
@@ -11078,9 +11086,9 @@ public:
 
     @property bool empty()
     {
-        foreach (i, U; Rs)
+        foreach (ref r; _input)
         {
-            if (_input[i].empty) return true;
+            if (r.empty) return true;
         }
         return false;
     }
@@ -11088,10 +11096,16 @@ public:
     void popFront()
     {
         assert(!empty);
-        assert(!comp(_input[0].front, _input[1].front)
-                && !comp(_input[1].front, _input[0].front));
-        _input[0].popFront();
-        _input[1].popFront();
+        foreach (i, ref r; _input[0 .. $ - 1])
+        {
+            alias next = _input[i + 1];
+            assert(!comp(r.front, next.front) && !comp(next.front, r.front));
+        }
+
+        foreach (ref r; _input)
+        {
+            r.popFront();
+        }
         adjustPosition();
     }
 
@@ -11103,7 +11117,7 @@ public:
 
     static if (allSatisfy!(isForwardRange, Rs))
     {
-        @property auto save()
+        @property SetIntersection save()
         {
             auto ret = this;
             foreach (ti, elem; _input)
@@ -11118,12 +11132,12 @@ public:
 /// Ditto
 SetIntersection!(less, Rs) setIntersection(alias less = "a < b", Rs...)
 (Rs ranges)
-if (allSatisfy!(isInputRange, Rs))
+    if (allSatisfy!(isInputRange, Rs) &&
+        !is(CommonType!(staticMap!(ElementType, Rs)) == void))
 {
     return typeof(return)(ranges);
 }
 
-/+ setIntersection doesn't yet support more than two inputs
 ///
 unittest
 {
@@ -11131,18 +11145,35 @@ unittest
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
     int[] c = [ 0, 1, 4, 5, 7, 8 ];
     assert(equal(setIntersection(a, a), a));
-    assert(equal(setIntersection(a, b), [1, 2, 4, 7][]));
-    assert(equal(setIntersection(a, b, c), [1, 4, 7][]));
+    assert(equal(setIntersection(a, b), [1, 2, 4, 7]));
+    assert(equal(setIntersection(a, b, c), [1, 4, 7]));
 }
-+/
 
-///
 unittest
 {
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
+    int[] c = [ 0, 1, 4, 5, 7, 8 ];
+    int[] d = [ 1, 3, 4 ];
+    int[] e = [ 4, 5 ];
+
     assert(equal(setIntersection(a, a), a));
-    assert(equal(setIntersection(a, b), [1, 2, 4, 7][]));
+    assert(equal(setIntersection(a, a, a), a));
+    assert(equal(setIntersection(a, b), [1, 2, 4, 7]));
+    assert(equal(setIntersection(a, b, c), [1, 4, 7]));
+    assert(equal(setIntersection(a, b, c, d), [1, 4]));
+    assert(equal(setIntersection(a, b, c, d, e), [4]));
+
+    auto inpA = a.filter!(_ => true), inpB = b.filter!(_ => true);
+    auto inpC = c.filter!(_ => true), inpD = d.filter!(_ => true);
+    assert(equal(setIntersection(inpA, inpB, inpC, inpD), [1, 4]));
+
+    assert(equal(setIntersection(a, b, b, a), [1, 2, 4, 7]));
+    assert(equal(setIntersection(a, c, b), [1, 4, 7]));
+    assert(equal(setIntersection(b, a, c), [1, 4, 7]));
+    assert(equal(setIntersection(b, c, a), [1, 4, 7]));
+    assert(equal(setIntersection(c, a, b), [1, 4, 7]));
+    assert(equal(setIntersection(c, b, a), [1, 4, 7]));
 }
 
 /**
@@ -12407,4 +12438,100 @@ unittest
         tuple(1, 'b', "z"), tuple(2, 'b', "z"), tuple(3, 'b', "z"),
         tuple(1, 'c', "z"), tuple(2, 'c', "z"), tuple(3, 'c', "z"),
     ]));
+}
+
+/**
+Find $(D value) _among $(D values), returning the 1-based index
+of the first matching value in $(D values), or $(D 0) if $(D value)
+is not _among $(D values). The predicate $(D pred) is used to
+compare values, and uses equality by default.
+
+See_Also:
+$(XREF algorithm, find) for finding a value in a range.
+*/
+uint among(alias pred = (a, b) => a == b, Value, Values...)
+    (Value value, Values values)
+    if (Values.length != 0)
+{
+    foreach (uint i, ref v; values)
+    {
+        import std.functional : binaryFun;
+        if (binaryFun!pred(value, v)) return i + 1;
+    }
+    return 0;
+}
+
+/// Ditto
+template among(values...)
+    if (isExpressionTuple!values)
+{
+    uint among(Value)(Value value)
+        if (!is(CommonType!(Value, values) == void))
+    {
+        switch (value)
+        {
+            foreach (uint i, v; values)
+                case v:
+                    return i + 1;
+            default:
+                return 0;
+        }
+    }
+}
+
+///
+unittest
+{
+    assert(3.among(1, 42, 24, 3, 2));
+
+    if (auto pos = "bar".among("foo", "bar", "baz"))
+        assert(pos == 2);
+    else
+        assert(false);
+
+    // 42 is larger than 24
+    assert(42.among!((lhs, rhs) => lhs > rhs)(43, 24, 100) == 2);
+}
+
+/**
+Alternatively, $(D values) can be passed at compile-time, allowing for a more
+efficient search, but one that only supports matching on equality:
+*/
+unittest
+{
+    assert(3.among!(2, 3, 4));
+    assert("bar".among!("foo", "bar", "baz") == 2);
+}
+
+unittest
+{
+    if (auto pos = 3.among(1, 2, 3))
+        assert(pos == 3);
+    else
+        assert(false);
+    assert(!4.among(1, 2, 3));
+
+    auto position = "hello".among("hello", "world");
+    assert(position);
+    assert(position == 1);
+
+    alias values = TypeTuple!("foo", "bar", "baz");
+    auto arr = [values];
+    assert(arr[0 .. "foo".among(values)] == ["foo"]);
+    assert(arr[0 .. "bar".among(values)] == ["foo", "bar"]);
+    assert(arr[0 .. "baz".among(values)] == arr);
+    assert("foobar".among(values) == 0);
+
+    if (auto pos = 3.among!(1, 2, 3))
+        assert(pos == 3);
+    else
+        assert(false);
+    assert(!4.among!(1, 2, 3));
+
+    position = "hello".among!("hello", "world");
+    assert(position);
+    assert(position == 1);
+
+    static assert(!__traits(compiles, "a".among!("a", 42)));
+    static assert(!__traits(compiles, (Object.init).among!(42, "a")));
 }
