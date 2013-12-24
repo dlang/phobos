@@ -1479,6 +1479,8 @@ private auto packedArrayView(T)(inout(size_t)* ptr, size_t items) @trusted pure 
 // Partially unrolled binary search using Shar's method
 //============================================================================
 
+private import std.math : pow;
+
 string genUnrolledSwitchSearch(size_t size)
 {
     assert(isPowerOf2(size));
@@ -5812,6 +5814,8 @@ int sicmp(S1, S2)(S1 str1, S2 str2)
     if(isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar)
     && isForwardRange!S2 && is(Unqual!(ElementType!S2) == dchar))
 {
+    import std.utf : decode;
+
     alias sTable = simpleCaseTable;
     size_t ridx=0;
     foreach(dchar lhs; str1)
@@ -6532,6 +6536,8 @@ private auto splitNormalized(NormalizationForm norm, C)(const(C)[] input)
 
 private auto seekStable(NormalizationForm norm, C)(size_t idx, in C[] input)
 {
+    import std.utf : codeLength;
+
     auto br = input[0..idx];
     size_t region_start = 0;// default
     for(;;)
