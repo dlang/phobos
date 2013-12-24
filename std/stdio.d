@@ -1651,6 +1651,7 @@ $(D Range) that locks the file and allows fast writing to it.
                 {
                     version (Windows)
                     {
+                        import std.utf;
                         assert(isValidDchar(c));
                         if (c <= 0xFFFF)
                         {
@@ -1840,6 +1841,7 @@ void writefx(FILE* fps, TypeInfo[] arguments, void* argptr, int newline=false)
         {
             void putcw(dchar c)
             {
+                import std.utf;
                 assert(isValidDchar(c));
                 if (c <= 0xFFFF)
                 {
