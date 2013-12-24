@@ -349,14 +349,15 @@ Source: $(PHOBOSSRC std/_algorithm.d)
 module std.algorithm;
 //debug = std_algorithm;
 
-import std.c.string, core.bitop;
-import std.array, std.ascii, std.container, std.conv, std.exception,
-    std.functional, std.math, std.random, std.range, std.string,
-    std.traits, std.typecons, std.typetuple, std.uni, std.utf;
+
+import std.functional : unaryFun, binaryFun;
+import std.range;
+import std.traits;
+import std.typetuple : TypeTuple, staticMap, allSatisfy;
 
 version(unittest)
 {
-    import std.stdio;
+    debug(std_algorithm) import std.stdio;
     mixin(dummyRanges);
 }
 
@@ -377,6 +378,7 @@ template map(fun...) if (fun.length >= 1)
     {
         static if (fun.length > 1)
         {
+            import std.functional;
             alias adjoin!(staticMap!(unaryFun, fun)) _fun;
         }
         else
@@ -422,6 +424,7 @@ it separately:
 */
 unittest
 {
+    import std.conv;
     alias map!(to!string) stringize;
     assert(equal(stringize([ 1, 2, 3, 4 ]), [ "1", "2", "3", "4" ]));
 }
@@ -541,12 +544,14 @@ unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    import std.conv;
     alias map!(to!string) stringize;
     assert(equal(stringize([ 1, 2, 3, 4 ]), [ "1", "2", "3", "4" ]));
     uint counter;
     alias map!((a) { return counter++; }) count;
     assert(equal(count([ 10, 2, 30, 4 ]), [ 0, 1, 2, 3 ]));
     counter = 0;
+    import std.functional;
     adjoin!((a) { return counter++; }, (a) { return counter++; })(1);
     alias map!((a) { return counter++; }, (a) { return counter++; }) countAndSquare;
     //assert(equal(countAndSquare([ 10, 2 ]), [ tuple(0u, 100), tuple(1u, 4) ]));
@@ -649,6 +654,7 @@ unittest
 
 unittest
 {
+    import std.range;
     // Issue #10130 - map of iota with const step.
     const step = 2;
     static assert(__traits(compiles, map!(i => i)(iota(0, 10, step))));
@@ -687,6 +693,7 @@ seed (the range must be non-empty).
  */
 template reduce(fun...) if (fun.length >= 1)
 {
+    import std.exception;
     auto reduce(Args...)(Args args)
     if (Args.length > 0 && Args.length <= 2 && isIterable!(Args[$ - 1]))
     {
@@ -728,10 +735,12 @@ template reduce(fun...) if (fun.length >= 1)
                 {
                     static assert(fun.length > 1);
                     Unqual!(typeof(r.front)) seed = r.front;
+                    import std.functional;
                     typeof(adjoin!(staticMap!(binaryFun, fun))(seed, seed))
                         result = void;
                     foreach (i, T; result.Types)
                     {
+                        import std.conv;
                         emplace(&result[i], seed);
                     }
                     r.popFront();
@@ -769,6 +778,7 @@ template reduce(fun...) if (fun.length >= 1)
             }
             else
             {
+                import std.functional;
                 typeof(adjoin!(staticMap!(binaryFun, fun))(E.init, E.init))
                     result = void;
                 bool initialized = false;
@@ -794,6 +804,7 @@ template reduce(fun...) if (fun.length >= 1)
 
                     foreach (i, T; result.Types)
                     {
+                        import std.conv;
                         emplace(&result[i], elem);
                     }
                 }
@@ -855,6 +866,7 @@ unittest
     // Mixing convertible types is fair game, too
     double[] c = [ 2.5, 3.0 ];
     auto r1 = reduce!("a + b")(chain(a, b, c));
+    import std.math;
     assert(approxEqual(r1, 112.5));
 
     // To minimize nesting of parentheses, Uniform Function Call Syntax can be used
@@ -876,6 +888,7 @@ unittest
     // Compute minimum and maximum in one pass
     auto r = reduce!(min, max)(a);
     // The type of r is Tuple!(int, int)
+    import std.math;
     assert(approxEqual(r[0], 2));  // minimum
     assert(approxEqual(r[1], 11)); // maximum
 
@@ -1009,6 +1022,8 @@ unittest
 
 unittest
 {
+    import std.typecons;
+    import std.conv : text;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 3 ];
@@ -1035,6 +1050,7 @@ unittest
 
 unittest
 {
+    import std.typecons;
     //ER8638_1 IS_NOT self assignable
     static struct ER8638_1
     {
@@ -1098,6 +1114,7 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
     }
     else
     {
+        import std.exception;
         enforce(!filler.empty, "Cannot fill range with an empty filler");
 
         static if (hasLength!Range1 && hasLength!Range2
@@ -1151,6 +1168,7 @@ unittest
 
 unittest
 {
+    import std.typecons;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 3, 4, 5 ];
@@ -1173,8 +1191,8 @@ unittest
     assert(a == [0, 1, 2, 3, 4]);
 
     //empty filler test
+    import std.exception;
     assertThrown(fill(a, a[$..$]));
-
 }
 
 /**
@@ -1200,6 +1218,7 @@ void uninitializedFill(Range, Value)(Range range, Value filler)
     alias ElementType!Range T;
     static if (hasElaborateAssign!T)
     {
+        import std.conv;
         // Must construct stuff by the book
         for (; !range.empty; range.popFront())
             emplace(addressOf(range.front), filler);
@@ -1228,6 +1247,7 @@ assert(s == [ 0, 0, 0, 0, 0 ]);
 void initializeAll(Range)(Range range)
     if (isInputRange!Range && hasLvalueElements!Range && hasAssignableElements!Range)
 {
+    import std.c.string : memset;
     alias ElementType!Range T;
     static if (hasElaborateAssign!T)
     {
@@ -1260,6 +1280,7 @@ void initializeAll(Range)(Range range)
 
 unittest
 {
+    import std.typecons;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
@@ -1379,6 +1400,7 @@ unittest
     // Mixing convertible types is fair game, too
     double[] c = [ 2.5, 3.0 ];
     auto r1 = chain(c, a, b).filter!(a => cast(int) a != a);
+    import std.math;
     assert(approxEqual(r1, [ 2.5 ]));
 }
 
@@ -1501,6 +1523,7 @@ unittest
 
 unittest
 {
+    import std.functional : compose, pipe;
     assert(equal(compose!(map!"2 * a", filter!"a & 1")([1,2,3,4,5]),
                     [2,6,10]));
     assert(equal(pipe!(filter!"a & 1", map!"2 * a")([1,2,3,4,5]),
@@ -1610,6 +1633,7 @@ $(D &source == &target || !pointsTo(source, source))
 */
 void move(T)(ref T source, ref T target)
 {
+    import std.exception;
     assert(!pointsTo(source, source));
     static if (is(T == struct))
     {
@@ -1861,6 +1885,7 @@ Range2 moveAll(Range1, Range2)(Range1 src, Range2 tgt)
 if (isInputRange!Range1 && isInputRange!Range2
         && is(typeof(move(src.front, tgt.front))))
 {
+    import std.exception;
     static if (isRandomAccessRange!Range1 && hasLength!Range1 && hasLength!Range2
          && hasSlicing!Range2 && isRandomAccessRange!Range2)
     {
@@ -1903,6 +1928,7 @@ Tuple!(Range1, Range2) moveSome(Range1, Range2)(Range1 src, Range2 tgt)
 if (isInputRange!Range1 && isInputRange!Range2
         && is(typeof(move(src.front, tgt.front))))
 {
+    import std.exception;
     for (; !src.empty && !tgt.empty; src.popFront(), tgt.popFront())
     {
         enforce(!tgt.empty);
@@ -1944,12 +1970,14 @@ See_Also:
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow
 if (allMutableFields!T && !is(typeof(T.init.proxySwap(T.init))))
 {
+    import std.traits;
     static if (!isAssignable!T || hasElaborateAssign!T)
     {
         if (&lhs != &rhs)
         {
             // For structs with non-trivial assignment, move memory directly
             // First check for undue aliasing
+            import std.exception;
             static if (hasIndirections!T)
                 assert(!pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
                     && !pointsTo(lhs, lhs) && !pointsTo(rhs, rhs));
@@ -1998,6 +2026,7 @@ void swap(T)(T lhs, T rhs) if (is(typeof(T.init.proxySwap(T.init))))
 +/
 private template allMutableFields(T)
 {
+    import std.traits;
     alias OT = OriginalType!T;
     static if (is(OT == struct) || is(OT == union))
         enum allMutableFields = isMutable!OT && allSatisfy!(.allMutableFields, FieldTypeTuple!OT);
@@ -2133,6 +2162,7 @@ Forwards function arguments with saving ref-ness.
 */
 template forward(args...)
 {
+    import std.typecons;
     static if (args.length)
     {
         alias arg = args[0];
@@ -2140,10 +2170,10 @@ template forward(args...)
             alias fwd = arg;
         else
             @property fwd()(){ return move(arg); }
-        alias forward = TypeTuple!(fwd, forward!(args[1..$]));
+        alias forward = std.typecons.TypeTuple!(fwd, forward!(args[1..$]));
     }
     else
-        alias forward = TypeTuple!();
+        alias forward = std.typecons.TypeTuple!();
 }
 
 ///
@@ -2276,6 +2306,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
 
             static if (isNarrowString!Range)
             {
+                import std.utf;
                 _separatorLength = codeLength!(ElementEncodingType!Range)(separator);
             }
             if (_input.empty)
@@ -2625,6 +2656,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
 
 unittest
 {
+    import std.conv : text;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto s = ",abc, de, fg,hi,";
@@ -2831,6 +2863,7 @@ unittest
     void compare(string sentence, string[] witness)
     {
         auto r = splitter!"a == ' '"(sentence);
+        import std.string;
         assert(equal(r.save, witness), format("got: %(%s, %) expected: %(%s, %)", r, witness));
     }
 
@@ -2876,6 +2909,7 @@ unittest
     {
         auto a = iota(entry.low, entry.high).filter!"true"();
         auto b = splitter!"a%2"(a);
+        import std.string;
         assert(equal!equal(b.save, entry.result), format("got: %(%s, %) expected: %(%s, %)", b, entry.result));
     }
 }
@@ -2900,6 +2934,7 @@ if (isSomeString!Range)
 
 unittest
 {
+    import std.string : strip;
     // TDPL example, page 8
     uint[string] dictionary;
     char[][3] lines;
@@ -2910,6 +2945,7 @@ unittest
        foreach (word; std.array.splitter(std.string.strip(line))) {
             if (word in dictionary) continue; // Nothing to do
             auto newID = dictionary.length;
+            import std.conv;
             dictionary[to!string(word)] = cast(uint)newID;
         }
     }
@@ -2933,6 +2969,7 @@ unittest
     {
         foreach (s; [0, 1])
         {
+            import std.conv, std.string;
             auto result = split(input, s);
 
             assert(equal(result, split(input, [s])), format(`"[%(%s,%)]"`, split(input, [s])));
@@ -3152,6 +3189,9 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 ///
 unittest
 {
+    import std.conv : text;
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     static assert(isInputRange!(typeof(joiner([""], ""))));
     static assert(isForwardRange!(typeof(joiner([""], ""))));
     assert(equal(joiner([""], "xyz"), ""), text(joiner([""], "xyz")));
@@ -3475,6 +3515,7 @@ unittest
     auto r = joiner([inputRangeObject("ab"), inputRangeObject("cd")]);
     assert(isForwardRange!(typeof(r)));
 
+    import std.conv;
     auto str = to!string(r);
     assert(str == "abcd");
 }
@@ -3788,6 +3829,7 @@ InputRange find(alias pred = "a == b", InputRange, Element)(InputRange haystack,
 if (isInputRange!InputRange &&
     is (typeof(binaryFun!pred(haystack.front, needle)) : bool))
 {
+    import std.traits;
     alias R = InputRange;
     alias E = Element;
     alias predFun = binaryFun!pred;
@@ -3812,10 +3854,12 @@ if (isInputRange!InputRange &&
             //Note: "needle <= 0x7F" properly handles sign via unsigned promotion
             static if (is(UEEType == char))
             {
+                import std.utf;
                 if (!__ctfe && canSearchInCodeUnits!char(needle))
                 {
                     static R trustedMemchr(ref R haystack, ref E needle) @trusted nothrow pure
                     {
+                        import core.stdc.string : memchr;
                         auto ptr = memchr(haystack.ptr, needle, haystack.length);
                         return ptr ?
                              haystack[ptr - haystack.ptr .. $] :
@@ -3864,6 +3908,7 @@ if (isInputRange!InputRange &&
             size_t i = 0, next = 0;
             while (next < len)
             {
+                import std.utf;
                 if (predFun(decode(haystack, next), needle))
                     return haystack[i .. $];
                 i = next;
@@ -3880,8 +3925,13 @@ if (isInputRange!InputRange &&
             {
                 EType* ptr = null;
                 //Note: we use "min/max" to handle sign mismatch.
-                if (min(EType.min, needle) == EType.min && max(EType.max, needle) == EType.max)
-                    ptr = cast(EType*) memchr(haystack.ptr, needle, haystack.length);
+                if (min(EType.min, needle) == EType.min
+                        && max(EType.max, needle) == EType.max)
+                {
+                    import core.stdc.string : memchr;
+                    ptr = cast(EType*) memchr(haystack.ptr, needle,
+                        haystack.length);
+                }
 
                 return ptr ?
                     haystack[ptr - haystack.ptr .. $] :
@@ -3915,6 +3965,7 @@ unittest
 {
     assert(find("hello, world", ',') == ", world");
     assert(find([1, 2, 3, 5], 4) == []);
+    import std.container;
     assert(equal(find(SList!int(1, 2, 3, 4, 5)[], 4), SList!int(4, 5)[]));
     assert(find!"a > b"([1, 2, 3, 5], 2) == [3, 5]);
 
@@ -3929,6 +3980,7 @@ unittest
 
 unittest
 {
+    import std.container;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto lst = SList!int(1, 2, 5, 7, 3);
@@ -4009,6 +4061,7 @@ unittest
         }
     }
     dg();
+    import std.exception;
     assertCTFEable!dg;
 }
 
@@ -4073,11 +4126,13 @@ unittest
 {
     assert(find("hello, world", "World").empty);
     assert(find("hello, world", "wo") == "world");
+    import std.container;
     assert([1, 2, 3, 4].find(SList!int(2, 3)[]) == [2, 3, 4]);
 }
 
 unittest
 {
+    import std.container;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto lst = SList!int(1, 2, 5, 7, 3);
@@ -4223,6 +4278,7 @@ if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2 &&
 
 unittest
 {
+    import std.container;
     assert(find([ 1, 2, 3 ], SList!int(2, 3)[]) == [ 2, 3 ]);
     assert(find([ 1, 2, 1, 2, 3, 3 ], SList!int(2, 3)[]) == [ 2, 3, 3 ]);
 }
@@ -4422,6 +4478,7 @@ unittest
 
 unittest
 {
+    import std.typecons;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 3 ];
@@ -4442,12 +4499,14 @@ unittest
     //writeln(find!("toUpper(a) == toUpper(b)")(s, "hello"));
     assert(find!("toUpper(a) == toUpper(b)")(s, "hello").length == 3);
 
+    import std.string : toUpper;
     static bool f(string a, string b) { return toUpper(a) == toUpper(b); }
     assert(find!(f)(s, "hello").length == 3);
 }
 
 unittest
 {
+    import std.typecons;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 3, 2, 6 ];
@@ -4641,6 +4700,7 @@ if (isInputRange!InputRange)
         size_t i = 0, next = 0;
         while (next < len)
         {
+            import std.utf;
             if (predFun(decode(haystack, next)))
                 return haystack[i .. $];
             i = next;
@@ -5505,11 +5565,13 @@ unittest
 
 unittest
 {
+    import std.typecons;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
+        import std.conv;
         assert(!startsWith(to!S("abc"), 'c'));
         assert(startsWith(to!S("abc"), 'a', 'c') == 1);
         assert(!startsWith(to!S("abc"), 'x', 'n', 'b'));
@@ -5805,11 +5867,13 @@ unittest
 
 unittest
 {
+    import std.typecons;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
+        import std.conv;
         assert(!endsWith(to!S("abc"), 'a'));
         assert(endsWith(to!S("abc"), 'a', 'c') == 2);
         assert(!endsWith(to!S("abc"), 'x', 'n', 'b'));
@@ -5943,6 +6007,7 @@ if (isNarrowString!R1 && isInputRange!R2 &&
 
     for (size_t j = 0; i < len && !r2.empty; r2.popFront(), i = j)
     {
+        import std.utf;
         immutable f = decode(r1, j);
         if (!binaryFun!pred(f, r2.front))
             break;
@@ -5975,6 +6040,7 @@ if (isNarrowString!R1 && isNarrowString!R2)
                     return r1[0 .. i - j];
             }
 
+            import std.utf;
             if (i == limit && j < codeLen)
                 throw new UTFException("Invalid UTF-8 sequence", i);
         }
@@ -5986,6 +6052,7 @@ if (isNarrowString!R1 && isNarrowString!R2)
 
 unittest
 {
+    import std.typecons;
     assert(commonPrefix([1, 2, 3], [1, 2, 3, 4, 5]) == [1, 2, 3]);
     assert(commonPrefix([1, 2, 3, 4, 5], [1, 2, 3]) == [1, 2, 3]);
     assert(commonPrefix([1, 2, 3, 4], [1, 2, 3, 4]) == [1, 2, 3, 4]);
@@ -6001,6 +6068,7 @@ unittest
     {
         foreach(T; TypeTuple!(string, wstring, dstring))
         {
+            import std.conv;
             assert(commonPrefix(to!S(""), to!T("")).empty);
             assert(commonPrefix(to!S(""), to!T("hello")).empty);
             assert(commonPrefix(to!S("hello"), to!T("")).empty);
@@ -6022,6 +6090,7 @@ unittest
             assert(commonPrefix!"a != b"(to!S("онво"), to!T("Пиво")) == to!S("он"));
         }
 
+        import std.conv;
         static assert(is(typeof(commonPrefix(to!S("Пиво"), filter!"true"("Пони"))) == S));
         assert(equal(commonPrefix(to!S("Пиво"), filter!"true"("Пони")), to!S("П")));
 
@@ -6030,6 +6099,7 @@ unittest
         assert(equal(commonPrefix(filter!"true"("Пиво"), to!S("Пони")), takeExactly(filter!"true"("П"), 1)));
     }
 
+    import std.exception, std.utf;
     assertThrown!UTFException(commonPrefix("\U0010FFFF\U0010FFFB", "\U0010FFFF\U0010FFFB"[0 .. $ - 1]));
 
     assert(commonPrefix("12345"d, [49, 50, 51, 60, 60]) == "123"d);
@@ -6188,6 +6258,7 @@ unittest
 
 unittest
 {
+    import std.conv : text;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 4, 3, 2, 5, 3, 2, 4 ];
@@ -6218,6 +6289,7 @@ size_t count(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
         isForwardRange!R2 &&
         is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
+    import std.exception;
     enforce(!needle.empty, "Cannot count occurrences of an empty range");
     static if (isInfinite!R2)
     {
@@ -6362,6 +6434,9 @@ bool equal(alias pred, Range1, Range2)(Range1 r1, Range2 r2)
 ///
 unittest
 {
+    import std.math;
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 4, 3 ];
     assert(!equal(a, a[1..$]));
     assert(equal(a, a));
@@ -6413,6 +6488,7 @@ unittest
     assert(equal([2, 4, 8, 6], map!"a*2"(a)));
     double[] b = [ 1.0, 2, 4, 3];
     double[] c = [ 1.005, 2, 4, 3];
+    import std.math;
     assert(equal!approxEqual(map!"a*2"(b), map!"a*2"(c)));
     assert(!equal([2, 4, 1, 3], map!"a*2"(a)));
     assert(!equal([2, 4, 1], map!"a*2"(a)));
@@ -6756,6 +6832,7 @@ minCount(alias pred = "a < b", Range)(Range range)
     if (isInputRange!Range && !isInfinite!Range &&
         is(typeof(binaryFun!pred(range.front, range.front))))
 {
+    import std.traits;
     alias T  = ElementType!Range;
     alias UT = Unqual!T;
     alias RetType = Tuple!(T, size_t);
@@ -6764,6 +6841,7 @@ minCount(alias pred = "a < b", Range)(Range range)
         format("Error: Cannot call minCount on a %s, because it is not possible "
                "to copy the result value (a %s) into a Tuple.", Range.stringof, T.stringof));
 
+    import std.exception;
     enforce(!range.empty, "Can't count elements from an empty range");
     size_t occurrences = 1;
 
@@ -6831,6 +6909,9 @@ minCount(alias pred = "a < b", Range)(Range range)
 ///
 unittest
 {
+    import std.conv : text;
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
     // Minimum is 1 and occurs 3 times
     assert(minCount(a) == tuple(1, 3));
@@ -6844,9 +6925,11 @@ unittest
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[][] b = [ [4], [2, 4], [4], [4] ];
     auto c = minCount!("a[0] < b[0]")(b);
+    import std.conv;
     assert(c == tuple([2, 4], 1), text(c[0]));
 
     //Test empty range
+    import std.exception;
     assertThrown(minCount(b[$..$]));
 
     //test with reference ranges. Test both input and forward.
@@ -6876,6 +6959,7 @@ unittest
     assert(minCount!((ref immutable int a, ref immutable int b) => (a > b))(b) == tuple(4, 2));
 
     immutable(int[])[] c = [ [4], [2, 4], [4], [4] ];
+    import std.conv;
     assert(minCount!("a[0] < b[0]")(c) == tuple([2, 4], 1), text(c[0]));
 
     static struct S1
@@ -6883,6 +6967,7 @@ unittest
         int i;
     }
     alias IS1 = immutable(S1);
+    import std.traits;
     static assert( isAssignable!S1);
     static assert( isAssignable!(S1, IS1));
 
@@ -6965,6 +7050,7 @@ unittest
 unittest
 {
     //Rvalue range
+    import std.container;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     assert(Array!int(2, 3, 4, 1, 2, 4, 1, 1, 2)
@@ -7292,6 +7378,7 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
             // Array specialization.  This uses optimized memory copying
             // routines under the hood and is about 10-20x faster than the
             // generic implementation.
+            import std.exception;
             enforce(target.length >= source.length,
                 "Cannot copy a source array into a smaller target array.");
             target[0..source.length] = source[];
@@ -7482,6 +7569,7 @@ multiple code units are preserved properly.
 void reverse(Char)(Char[] s)
 if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
 {
+    import std.string;
     auto r = representation(s);
     for (size_t i = 0; i < s.length; )
     {
@@ -7567,6 +7655,7 @@ Range stripLeft(Range, E)(Range range, E element)
 Range stripLeft(alias pred, Range)(Range range)
     if (isInputRange!Range && is(typeof(pred(range.front)) : bool))
 {
+    import std.functional;
     return find!(not!pred)(range);
 }
 
@@ -7765,6 +7854,7 @@ the example below, $(D r2) is a right subrange of $(D r1).
 */
 unittest
 {
+    import std.container;
     auto list = SList!(int)(4, 5, 6, 7, 1, 2, 3);
     auto r1 = list[];
     auto r2 = list[]; popFrontN(r2, 4);
@@ -7779,6 +7869,7 @@ Elements can be swapped across ranges of different types:
 */
 unittest
 {
+    import std.container;
     auto list = SList!(int)(4, 5, 6, 7);
     auto vec = [ 1, 2, 3 ];
     bringToFront(list[], vec);
@@ -7788,10 +7879,13 @@ unittest
 
 unittest
 {
+    import std.container;
+    import std.conv : text;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     // a more elaborate test
     {
+        import std.random;
         auto rnd = Random(unpredictableSeed);
         int[] a = new int[uniform(100, 200, rnd)];
         int[] b = new int[uniform(100, 200, rnd)];
@@ -7803,6 +7897,7 @@ unittest
         auto n = bringToFront(c[0 .. a.length], c[a.length .. $]);
         //writeln("c= ", c);
         assert(n == b.length);
+        import std.conv;
         assert(c == b ~ a, text(c, "\n", a, "\n", b));
     }
     // different types, moveFront, no sameHead
@@ -7995,6 +8090,7 @@ if (s != SwapStrategy.stable
         }
         static if (i > 0)
         {
+            import std.exception;
             enforce(blackouts[i - 1].pos + blackouts[i - 1].len
                     <= blackouts[i].pos,
                 "remove(): incorrect ordering of elements to remove");
@@ -8068,6 +8164,7 @@ if (s == SwapStrategy.stable && isForwardRange!Range && Offset.length >= 1)
             auto from = i;
             enum delta = 1;
         }
+        import std.exception;
         enforce(pos <= from,
                 "remove(): incorrect ordering of elements to remove");
         if (pass > 0)
@@ -8097,6 +8194,7 @@ unittest
 {
     // http://d.puremagic.com/issues/show_bug.cgi?id=10173
     int[] test = iota(0, 10).array();
+    import std.exception;
     assertThrown(remove!(SwapStrategy.stable)(test, tuple(2, 4), tuple(1, 3)));
     assertThrown(remove!(SwapStrategy.unstable)(test, tuple(2, 4), tuple(1, 3)));
     assertThrown(remove!(SwapStrategy.stable)(test, 2, 4, 1, 3));
@@ -8397,6 +8495,7 @@ Range partition(alias predicate,
 ///
 unittest
 {
+    import std.conv : text;
     auto Arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     auto arr = Arr.dup;
     static bool even(int a) { return (a & 1) == 0; }
@@ -8544,6 +8643,7 @@ unittest
 
 unittest
 {
+    import std.random;
     auto a = new int[](uniform(0, 100));
     foreach (ref e; a)
     {
@@ -8595,6 +8695,7 @@ void topN(alias less = "a < b",
             "Stable topN not yet implemented");
     while (r.length > nth)
     {
+        import std.random;
         auto pivot = uniform(0, r.length);
         swap(r[pivot], r.back);
         assert(!binaryFun!(less)(r.back, r.back));
@@ -8681,6 +8782,7 @@ unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    import std.random;
     int[] a = new int[uniform(1, 10000)];
         foreach (ref e; a) e = uniform(-1000, 1000);
     auto k = uniform(0, a.length);
@@ -8708,6 +8810,7 @@ void topN(alias less = "a < b",
 {
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
+    import std.container;
     auto heap = BinaryHeap!Range1(r1);
     for (; !r2.empty; r2.popFront())
     {
@@ -8789,6 +8892,7 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         else //use Tim Sort for semistable & stable
             TimSortImpl!(lessFun, Range).sort(r, null);
 
+        import std.conv;
         enum maxLen = 8;
         assert(isSorted!lessFun(r), text("Failed to sort range of type ",
                         Range.stringof, ". Actual result is: ",
@@ -8828,7 +8932,7 @@ unittest
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     // sort using delegate
     int a[] = new int[100];
-    auto rnd = Random(unpredictableSeed);
+    import std.random;    auto rnd = Random(unpredictableSeed);
     foreach (ref e; a) {
         e = uniform(-100, 100, rnd);
     }
@@ -8852,6 +8956,7 @@ unittest
     assert(isSorted!(less)(a));
 
     string[] words = [ "aBc", "a", "abc", "b", "ABC", "c" ];
+    import std.string : toUpper;
     bool lessi(string a, string b) { return toUpper(a) < toUpper(b); }
     sort!(lessi, SwapStrategy.stable)(words);
     assert(words == [ "a", "aBc", "abc", "ABC", "b", "c" ]);
@@ -9090,6 +9195,7 @@ unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    import std.random;
     auto rnd = Random(1);
     int a[] = new int[uniform(100, 200, rnd)];
     foreach (ref e; a) {
@@ -9237,6 +9343,8 @@ private template HeapSortImpl(alias less, Range)
 // Tim Sort implementation
 private template TimSortImpl(alias pred, R)
 {
+    import core.bitop : bsr;
+
     static assert(isRandomAccessRange!R);
     static assert(hasLength!R);
     static assert(hasSlicing!R);
@@ -9887,12 +9995,14 @@ schwartzSort(alias transform, alias less = "a < b",
     }
     for (; length != r.length; ++length)
     {
+        import std.conv;
         emplace(xform1.ptr + length, unaryFun!transform(r[length]));
     }
     // Make sure we use ubyte[] and ushort[], not char[] and wchar[]
     // for the intermediate array, lest zip gets confused.
     static if (isNarrowString!(typeof(xform1)))
     {
+        import std.string;
         auto xform = xform1.representation();
     }
     else
@@ -9921,6 +10031,7 @@ unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    import std.math;
     static double entropy(double[] probs) {
         double result = 0;
         foreach (p; probs) {
@@ -9950,6 +10061,7 @@ unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    import std.math;
     static double entropy(double[] probs) {
         double result = 0;
         foreach (p; probs) {
@@ -10046,6 +10158,7 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
 {
     if (r.empty) return true;
 
+    import std.conv : text;
     static if (isRandomAccessRange!Range && hasLength!Range)
     {
         immutable limit = r.length - 1;
@@ -10109,6 +10222,7 @@ unittest
 
     dchar[] ds = "コーヒーが好きです"d.dup;
     sort(ds);
+    import std.conv;
     string s = to!string(ds);
     assert(isSorted(ds));  // random-access
     assert(isSorted(s));   // bidirectional
@@ -10159,6 +10273,7 @@ makeIndex(
     size_t i;
     for (; !r.empty; r.popFront(), ++i)
         index[i] = addressOf(r.front);
+    import std.exception;
     enforce(index.length == i);
     // sort the index
     sort!((a, b) => binaryFun!less(*a, *b), ss)(index);
@@ -10177,10 +10292,12 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
     isIntegral!(ElementType!RangeIndex))
 {
     alias Unqual!(ElementType!RangeIndex) IndexType;
+    import std.exception;
     enforce(r.length == index.length,
         "r and index must be same length for makeIndex.");
     static if (IndexType.sizeof < size_t.sizeof)
     {
+        import std.conv;
         enforce(r.length <= IndexType.max, "Cannot create an index with " ~
             "element type " ~ IndexType.stringof ~ " with length " ~
             to!string(r.length) ~ ".");
@@ -10261,12 +10378,14 @@ void topNIndex(
 if (isIntegral!(ElementType!(RangeIndex)))
 {
     if (index.empty) return;
+    import std.exception;
     enforce(ElementType!(RangeIndex).max >= index.length,
             "Index type too small");
     bool indirectLess(ElementType!(RangeIndex) a, ElementType!(RangeIndex) b)
     {
         return binaryFun!(less)(r[a], r[b]);
     }
+    import std.container;
     auto heap = BinaryHeap!(RangeIndex, indirectLess)(index, 0);
     foreach (i; 0 .. r.length)
     {
@@ -10291,6 +10410,7 @@ if (is(ElementType!(RangeIndex) == ElementType!(Range)*))
     {
         return binaryFun!less(*a, *b);
     }
+    import std.container;
     auto heap = BinaryHeap!(RangeIndex, indirectLess)(index, 0);
     foreach (i; 0 .. r.length)
     {
@@ -10304,6 +10424,7 @@ if (is(ElementType!(RangeIndex) == ElementType!(Range)*))
 
 unittest
 {
+    import std.conv : text;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     {
@@ -10710,6 +10831,7 @@ template all(alias pred)
     bool all(Range)(Range range)
     if (isInputRange!Range && is(typeof(unaryFun!pred(range.front))))
     {
+        import std.functional;
         return find!(not!(unaryFun!pred))(range).empty;
     }
 }
@@ -10745,6 +10867,7 @@ TRange topNCopy(alias less = "a < b", SRange, TRange)
             && hasLength!(TRange) && hasSlicing!(TRange))
 {
     if (target.empty) return target;
+    import std.container;
     auto heap = BinaryHeap!(TRange, less)(target, 0);
     foreach (e; source) heap.conditionalInsert(e);
     auto result = target[0 .. heap.length];
@@ -10766,6 +10889,7 @@ unittest
 
 unittest
 {
+    import std.random;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto r = Random(unpredictableSeed);
@@ -11248,6 +11372,7 @@ version(unittest)
 
     private string[] rndstuff(T : string)()
     {
+        import std.random;
         static Random rnd;
         static bool first = true;
         if (first)
@@ -11271,6 +11396,7 @@ version(unittest)
 
     private int[] rndstuff(T : int)()
     {
+        import std.random;
         static Random rnd;
         static bool first = true;
         if (first)
@@ -11366,6 +11492,7 @@ struct NWayUnion(alias less, RangeOfRanges)
         // revert comparison order so we get the smallest elements first
         return comp(b.front, a.front);
     }
+    import std.container;
     BinaryHeap!(RangeOfRanges, compFront) _heap;
 
     this(RangeOfRanges ror)
@@ -11545,6 +11672,7 @@ unittest
     largestPartialIntersection(a, b, SortOutput.yes);
     //sort(b);
     //writeln(b);
+    import std.conv : text;
     assert(b == [ tuple(7.0, 4u), tuple(1.0, 3u) ][], text(b));
     assert(a[0].empty);
 }
@@ -11564,6 +11692,7 @@ unittest
     auto b = new Tuple!(string, uint)[2];
     largestPartialIntersection(a, b, SortOutput.yes);
     //writeln(b);
+    import std.conv : text;
     assert(b == [ tuple("7", 4u), tuple("1", 3u) ][], text(b));
 }
 
@@ -11590,6 +11719,7 @@ unittest
 
 unittest
 {
+    import std.container;
     alias Tuple!(uint, uint) T;
     const Array!T arrayOne = Array!T( [ T(1,2), T(3,4) ] );
     const Array!T arrayTwo = Array!T([ T(1,2), T(3,4) ] );
@@ -11965,6 +12095,7 @@ shapes. Here's a non-trivial example:
 */
 unittest
 {
+    import std.math;
     // Print the 60 vertices of a uniform truncated icosahedron (soccer ball)
     enum real Phi = (1.0 + sqrt(5.0)) / 2.0;    // Golden ratio
     real[][] seeds = [
@@ -12254,6 +12385,7 @@ auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
      * one level of tuples so that a ternary cartesian product, for example,
      * returns 3-element tuples instead of nested 2-element tuples.
      */
+    import std.string;
     enum string denest = format("tuple(a[0], %(a[1][%d]%|,%))",
                                 iota(0, otherRanges.length+1));
     return map!denest(

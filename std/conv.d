@@ -21,9 +21,8 @@ WIKI = Phobos/StdConv
 */
 module std.conv;
 
-import std.math : ldexp;
 import core.stdc.string;
-import std.algorithm, std.array, std.ascii, std.exception, std.math, std.range,
+import std.algorithm, std.array, std.ascii, std.exception, std.range,
     std.string, std.traits, std.typecons, std.typetuple, std.uni,
     std.utf;
 import std.format;
@@ -103,6 +102,7 @@ private
         if (isSomeString!T)
     {
         auto w = appender!T();
+        import std.format;
         FormatSpec!(ElementEncodingType!T) f;
         formatValue(w, src, f);
         return w.data;
@@ -866,6 +866,7 @@ T toImpl(T, S)(S value)
         app.put("cast(");
         app.put(S.stringof);
         app.put(')');
+        import std.format;
         FormatSpec!char f;
         formatValue(app, cast(OriginalType!S)value, f);
         return app.data;
@@ -1351,7 +1352,7 @@ unittest
     // type.
     enum E1 : ulong { A = 1, B = 1UL<<48, C = 0 }
     assert(to!int(E1.A) == 1);
-    assert(to!bool(E1.A) == true);    
+    assert(to!bool(E1.A) == true);
     assertThrown!ConvOverflowException(to!int(E1.B)); // E1.B overflows int
     assertThrown!ConvOverflowException(to!bool(E1.B)); // E1.B overflows bool
     assert(to!bool(E1.C) == false);
@@ -1369,7 +1370,7 @@ unittest
     assert(to!byte(E3.B) == 1);
     assert(to!ubyte(E3.C) == 255);
     assert(to!bool(E3.B) == true);
-    assertThrown!ConvOverflowException(to!byte(E3.C));    
+    assertThrown!ConvOverflowException(to!byte(E3.C));
     assertThrown!ConvOverflowException(to!bool(E3.C));
     assert(to!bool(E3.D) == false);
 
@@ -1777,6 +1778,7 @@ template roundTo(Target)
     {
         static assert(isFloatingPoint!Source);
         static assert(isIntegral!Target);
+        import std.math;
         return to!Target(trunc(value + (value < 0 ? -0.5L : 0.5L)));
     }
 }
@@ -2434,7 +2436,8 @@ Target parse(Target, Source)(ref Source p)
             ()@trusted{ (cast(ushort*)&ldval)[4] = cast(ushort) e2; }();
 
             // Exponent is power of 2, not power of 10
-            ldval = ldexp(ldval,exp);
+            import std.math : ldexp;
+            ldval = ldexp(ldval, exp);
         }
         goto L6;
     }
@@ -2566,6 +2569,7 @@ unittest
     // Compare reals with given precision
     bool feq(in real rx, in real ry, in real precision = 0.000001L)
     {
+        import std.math;
         if (rx == ry)
             return 1;
 
@@ -2603,6 +2607,7 @@ unittest
         assert(to!Float("0") is 0.0);
         assert(to!Float("-0") is -0.0);
 
+        import std.math;
         assert(isnan(to!Float("nan")));
 
         assertThrown!ConvException(to!Float("\x00"));
@@ -4169,7 +4174,7 @@ unittest
         assert(!__traits(compiles, emplace(&sa, sb)));
     }
 }
- 
+
 unittest
 {
     static struct S
@@ -4352,7 +4357,7 @@ unittest
     enum c = bar!S2;
 }
 
- 
+
 unittest
 {
     struct S
@@ -4449,6 +4454,7 @@ unittest //http://forum.dlang.org/thread/nxbdgtdlmwscocbiypjs@forum.dlang.org
     {
         invariant()
         {
+            import std.math;
             if(j == 0)
                 assert(a.i.isNaN, "why is 'j' zero?? and i is not NaN?");
             else
@@ -4474,7 +4480,7 @@ unittest //http://forum.dlang.org/thread/nxbdgtdlmwscocbiypjs@forum.dlang.org
     assert(arr[1].j == 1);
     auto a2 = arr.array(); // << bang, invariant is raised, also if b2 and b3 are good
 }
- 
+
 //static arrays
 unittest
 {
