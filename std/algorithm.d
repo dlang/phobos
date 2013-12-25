@@ -3745,6 +3745,21 @@ ForwardRange)s.
 Although grouping after sorting is a common pattern, the range doesn't
 have to be sorted or structured in a particular way.
  */
+auto groupBy(alias pred = "a == b", R)(R r) if (isForwardRange!R)
+{
+    return GroupBy!(pred, R)(r);
+}
+
+/// Ditto
+unittest
+{
+    auto a = [ 1, 2, 2, 3, 3, 3, 4, 5, 5, 6, ];
+    auto g = groupBy(a);
+    auto witness = [ [1], [2, 2], [3, 3, 3], [4], [5, 5], [6], ];
+    assert(equal!equal(g, witness));
+}
+
+// For documentation, see function groupBy above
 struct GroupBy(alias pred, R) if (isForwardRange!R)
 {
     private import std.typecons;
@@ -3865,31 +3880,10 @@ struct GroupBy(alias pred, R) if (isForwardRange!R)
     }
 
     /// ditto
-    static if (isForwardRange!R)
-        @property auto save()
-        {
-            return GroupBy(_input.data.save);
-        }
-}
-
-/// Ditto
-unittest
-{
-    auto a = [ 1, 2, 2, 3, 3, 3, 4, 5, 5, 6, ];
-    auto g = groupBy(a);
-    auto witness = [ [1], [2, 2], [3, 3, 3], [4], [5, 5], [6], ];
-    uint i;
-    foreach (group; g)
+    @property auto save()
     {
-        assert(group.equal(witness[i++]));
+        return GroupBy(_input.data.save);
     }
-    assert(i == witness.length);
-}
-
-/// Ditto
-auto groupBy(alias pred = "a == b", R)(R r) if (isForwardRange!R)
-{
-    return GroupBy!(pred, R)(r);
 }
 
 unittest
@@ -3903,19 +3897,10 @@ unittest
     g1.popFront();
 
     auto witness2 = [ [1, 1, 1], [2, 2], [3, 3, 3], [4], [5, 5], [6], ];
-    uint i = 0;
-    foreach (group; g2)
-    {
-        assert(group.equal(witness2[i++]));
-    }
+    assert(equal!equal(g2, witness2));
 
     auto witness1 = [ [2, 2], [3, 3, 3], [4], [5, 5], [6], ];
-    i = 0;
-    foreach (group; g1)
-    {
-        assert(group.equal(witness1[i++]));
-    }
-    assert(i == witness1.length);
+    assert(equal!equal(g1, witness1));
 
     assert(firstGroup1.equal([1, 1, 1]));
     assert(firstGroup2.equal([1, 1, 1]));
