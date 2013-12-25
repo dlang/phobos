@@ -569,19 +569,22 @@ uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, S args)
             return 0;
         }
         alias typeof(*args[0]) A;
+        uint var_count = 0 ;
         static if (isTuple!A)
         {
             foreach (i, T; A.Types)
             {
                 (*args[0])[i] = unformatValue!(T)(r, spec);
                 skipUnstoredFields();
+                ++var_count;
             }
         }
         else
         {
             *args[0] = unformatValue!(A)(r, spec);
+            ++var_count;
         }
-        return 1 + formattedRead(r, spec.trailing, args[1 .. $]);
+        return var_count + formattedRead(r, spec.trailing, args[1 .. $]);
     }
 }
 
@@ -594,6 +597,14 @@ unittest
     assert(x == 1.2);
     assert(y == 3.4);
     assert(isnan(z));
+
+    //Returned count of variables, when using a Tuple: should be 3 (members in tuple), not 1.
+    Tuple!(double,double,double) w;
+    s = "5.6 7.8 9.0";
+    assert(formattedRead(s, " %s %s %s ", &w)==3);
+    //mix tuple and non-tuples - count should be 4 (not 2)
+    s = "1.2 3.4 5.6 7.8";
+    assert(formattedRead(s, " %s %s %s %s ", &w, &z)==4);
 }
 
 template FormatSpec(Char)
