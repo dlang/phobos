@@ -574,6 +574,8 @@ uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, S args)
         {
             foreach (i, T; A.Types)
             {
+                if (r.empty)
+                    break;
                 (*args[0])[i] = unformatValue!(T)(r, spec);
                 skipUnstoredFields();
                 ++var_count;
@@ -605,6 +607,28 @@ unittest
     //mix tuple and non-tuples - count should be 4 (not 2)
     s = "1.2 3.4 5.6 7.8";
     assert(formattedRead(s, " %s %s %s %s ", &w, &z)==4);
+
+    //Test insufficient input - with non-tuple variables
+    s = "1.2 3.4";
+    assert(formattedRead(s, " %s %s %s ", &x, &y, &z)==2);
+    //Test insufficient input - with tuples
+    s = "1.2 3.4";
+    assert(formattedRead(s, " %s %s %s ", &w)==2);
+
+    //Test string parsing:
+    Tuple!(string,string,string) ta;
+    string b;
+    string c;
+    string d;
+    //Test insufficient input with a tuple
+    s = "foo bar";
+    assert(formattedRead(s, " %s %s %s ", &ta)==2);
+    //Test insufficient input with a non-tuple
+    s = "foo bar";
+    assert(formattedRead(s, " %s %s %s ", &b,&c,&d)==2);
+    //Test insufficient input with mixed tuples and non-tuples
+    s = "foo bar baz";
+    assert(formattedRead(s, " %s %s %s %s %s ", &b,&ta,&c,&d)==3);
 }
 
 template FormatSpec(Char)
