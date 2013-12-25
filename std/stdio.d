@@ -1418,40 +1418,44 @@ the contents may well have changed).
         // }
     }
 
-
     // Note: This was documented until 2013/08
     /*
      * Range that reads a chunk at a time.
      */
     struct ByChunk
     {
-      private:
+    private:
         File    file_;
         ubyte[] chunk_;
 
+        void prime()
+        {
+            chunk_ = file_.rawRead(chunk_);
+            if (chunk_.length == 0)
+                file_.detach();
+        }
 
-      public:
+    public:
         this(File file, size_t size)
-        in
         {
-            assert(size, "size must be larger than 0");
-        }
-        body
-        {
-            file_  = file;
-            chunk_ = new ubyte[](size);
-
-            popFront();
+            this(file, new ubyte[](size));
         }
 
+        this(File file, ubyte[] buffer)
+        {
+            import std.exception;
+            enforce(buffer.length, "size must be larger than 0");
+            file_ = file;
+            chunk_ = buffer;
+            prime();
+        }
 
-        /// Range primitive operations.
+        // $(D ByChunk)'s input range primitive operations.
         @property nothrow
         bool empty() const
         {
             return !file_.isOpen;
         }
-
 
         /// Ditto
         @property nothrow
@@ -1461,15 +1465,11 @@ the contents may well have changed).
             return chunk_;
         }
 
-
         /// Ditto
         void popFront()
         {
             version(assert) if (empty) throw new RangeError();
-
-            chunk_ = file_.rawRead(chunk_);
-            if (chunk_.length == 0)
-                file_.detach();
+            prime();
         }
     }
 
@@ -1480,38 +1480,70 @@ time.
 The element type for the range will be $(D ubyte[]). Range primitives
 may throw $(D StdioException) on I/O error.
 
-Note: Each $(D front) will not persist after $(D
-popFront) is called, so the caller must copy its contents (e.g. by
-calling $(D buffer.dup)) if retention is needed.
+Example:
+---------
+void main()
+{
+    // Read standard input 4KB at a time
+    foreach (ubyte[] buffer; stdin.byChunk(4096))
+    {
+        ... use buffer ...
+    }
+}
+---------
+
+The parameter may be a number (as shown in the example above) dictating the
+size of each chunk. Alternatively, $(D byChunk) accepts a
+user-provided buffer that it uses directly.
 
 Example:
 ---------
 void main()
 {
-  foreach (ubyte[] buffer; stdin.byChunk(4096))
-  {
-    ... use buffer ...
-  }
+    // Read standard input 4KB at a time
+    foreach (ubyte[] buffer; stdin.byChunk(new ubyte[1024 * 4096]))
+    {
+        ... use buffer ...
+    }
 }
 ---------
-The content of $(D buffer) is reused across calls. In the example
-above, $(D buffer.length) is 4096 for all iterations, except for the
-last one, in which case $(D buffer.length) may be less than 4096 (but
+
+In either case, the content of the buffer is reused across calls. That means
+$(D front) will not persist after $(D popFront) is called, so if retention is
+needed, the caller must copy its contents (e.g. by calling $(D buffer.dup)).
+
+In the  example above, $(D buffer.length) is 4096 for all iterations, except
+for the last one, in which case $(D buffer.length) may be less than 4096 (but
 always greater than zero).
 
+With the mentioned limitations, $(D byChunks) works with any algorithm
+compatible with input ranges.
+
 Example:
 ---
+// Efficient file copy, 1MB at a time.
 import std.algorithm, std.stdio;
-
 void main()
 {
-    stdin.byChunk(1024).copy(stdout.lockingTextWriter());
+    stdin.byChunk(1024 * 1024).copy(stdout.lockingTextWriter());
 }
 ---
+
+Returns: A call to $(D byChunk) returns a range initialized with the $(D File)
+object and the appropriate buffer.
+
+Throws: If the user-provided size is zero or the user-provided buffer
+is empty, throws an $(D Exception). In case of an I/O error throws
+$(D StdioException).
  */
     auto byChunk(size_t chunkSize)
     {
         return ByChunk(this, chunkSize);
+    }
+/// Ditto
+    ByChunk byChunk(ubyte[] buffer)
+    {
+        return ByChunk(this, buffer);
     }
 
     unittest
@@ -1537,7 +1569,30 @@ void main()
         assert(i == witness.length);
     }
 
-// Note: This was documented until 2013/08
+    unittest
+    {
+        scope(failure) printf("Failed test at line %d\n", __LINE__);
+
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "asd\ndef\nasdf");
+
+        auto witness = ["asd\n", "def\n", "asdf" ];
+        auto f = File(deleteme);
+        scope(exit)
+        {
+            f.close();
+            assert(!f.isOpen);
+            std.file.remove(deleteme);
+        }
+
+        uint i;
+        foreach (chunk; f.byChunk(new ubyte[4]))
+            assert(chunk == cast(ubyte[])witness[i++]);
+
+        assert(i == witness.length);
+    }
+
+    // Note: This was documented until 2013/08
 /*
 $(D Range) that locks the file and allows fast writing to it.
  */
