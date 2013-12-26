@@ -2194,7 +2194,8 @@ Forwards function arguments with saving ref-ness.
 */
 template forward(args...)
 {
-    import std.typecons;
+    import std.typetuple;
+
     static if (args.length)
     {
         alias arg = args[0];
@@ -2202,10 +2203,10 @@ template forward(args...)
             alias fwd = arg;
         else
             @property fwd()(){ return move(arg); }
-        alias forward = std.typecons.TypeTuple!(fwd, forward!(args[1..$]));
+        alias forward = TypeTuple!(fwd, forward!(args[1..$]));
     }
     else
-        alias forward = std.typecons.TypeTuple!();
+        alias forward = TypeTuple!();
 }
 
 ///

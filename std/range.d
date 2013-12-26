@@ -2508,7 +2508,7 @@ if (Ranges.length > 0 &&
                 }
             }
 
-            import std.traits : anySatisfy;
+            import std.typetuple : anySatisfy;
 
             static if (anySatisfy!(isInfinite, R))
             {
@@ -4181,7 +4181,7 @@ struct Repeat(T)
     {
         version (assert)
         {
-            import std.string : RangeError;
+            import core.exception : RangeError;
             if (i > j) throw new RangeError();
         }
         return this.takeExactly(j - i);
@@ -4317,7 +4317,7 @@ struct Cycle(Range)
         {
             version (assert)
             {
-                import std.string : RangeError;
+                import core.exception : RangeError;
                 if (i > j) throw new RangeError();
             }
             auto retval = this.save;
@@ -4422,7 +4422,7 @@ struct Cycle(R)
     {
         version (assert)
         {
-            import std.string;
+            import core.exception : RangeError;
             if (i > j) throw new RangeError();
         }
         auto retval = this.save;
@@ -4507,8 +4507,8 @@ unittest
 
                 static if (isRandomAccessRange!DummyType)
                 {
+                    import core.exception : RangeError;
                     import std.exception : assertThrown;
-                    import std.string : RangeError;
 
                     {
                         cy[10] = 66;
@@ -4517,7 +4517,6 @@ unittest
                     }
 
                     assert(cRange[10] == 1);
-
                     assertThrown!RangeError(cy[2..1]);
                 }
             }
@@ -7291,7 +7290,7 @@ private struct OnlyResult(T, size_t arity)
         // with popBack
         version(assert)
         {
-            import std.string : RangeError;
+            import core.exception  : RangeError;
             if (idx >= length)
                 throw new RangeError;
         }
@@ -7311,7 +7310,7 @@ private struct OnlyResult(T, size_t arity)
 
         version(assert)
         {
-            import std.string : RangeError;
+            import core.exception : RangeError;
             if (to < from || to > length)
                 throw new RangeError;
         }
@@ -7349,7 +7348,7 @@ private struct OnlyResult(T, size_t arity : 1)
     {
         version (assert)
         {
-            import std.string : RangeError;
+            import core.exception : RangeError;
             if (_empty || i != 0)
                 throw new RangeError;
         }
@@ -7365,7 +7364,7 @@ private struct OnlyResult(T, size_t arity : 1)
     {
         version (assert)
         {
-            import std.string : RangeError;
+            import core.exception : RangeError;
             if (from > to || to > length)
                 throw new RangeError;
         }
@@ -7396,7 +7395,7 @@ private struct OnlyResult(T, size_t arity : 0)
     {
         version(assert)
         {
-            import std.string : RangeError;
+            import core.exception : RangeError;
             throw new RangeError;
         }
         assert(false);
@@ -7408,7 +7407,7 @@ private struct OnlyResult(T, size_t arity : 0)
     {
         version(assert)
         {
-            import std.string : RangeError;
+            import core.exception : RangeError;
             if (from != 0 || to != 0)
                 throw new RangeError;
         }
