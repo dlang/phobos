@@ -101,8 +101,9 @@ private
     T toStr(T, S)(S src)
         if (isSomeString!T)
     {
+        import std.format : FormatSpec, formatValue;
+
         auto w = appender!T();
-        import std.format;
         FormatSpec!(ElementEncodingType!T) f;
         formatValue(w, src, f);
         return w.data;
@@ -860,13 +861,14 @@ T toImpl(T, S)(S value)
             }
         }
 
+        import std.format : FormatSpec, formatValue;
+
         //Default case, delegate to format
         //Note: we don't call toStr directly, to avoid duplicate work.
         auto app = appender!T();
         app.put("cast(");
         app.put(S.stringof);
         app.put(')');
-        import std.format;
         FormatSpec!char f;
         formatValue(app, cast(OriginalType!S)value, f);
         return app.data;
@@ -1776,9 +1778,10 @@ template roundTo(Target)
 {
     Target roundTo(Source)(Source value)
     {
+        import std.math : trunc;
+
         static assert(isFloatingPoint!Source);
         static assert(isIntegral!Target);
-        import std.math;
         return to!Target(trunc(value + (value < 0 ? -0.5L : 0.5L)));
     }
 }
@@ -2435,8 +2438,9 @@ Target parse(Target, Source)(ref Source p)
             ()@trusted{ *cast(long*)&ldval = msdec; }();
             ()@trusted{ (cast(ushort*)&ldval)[4] = cast(ushort) e2; }();
 
-            // Exponent is power of 2, not power of 10
             import std.math : ldexp;
+
+            // Exponent is power of 2, not power of 10
             ldval = ldexp(ldval, exp);
         }
         goto L6;
@@ -2566,10 +2570,11 @@ Target parse(Target, Source)(ref Source p)
 
 unittest
 {
+    import std.math : isnan, fabs;
+
     // Compare reals with given precision
     bool feq(in real rx, in real ry, in real precision = 0.000001L)
     {
-        import std.math;
         if (rx == ry)
             return 1;
 
@@ -2607,7 +2612,6 @@ unittest
         assert(to!Float("0") is 0.0);
         assert(to!Float("-0") is -0.0);
 
-        import std.math;
         assert(isnan(to!Float("nan")));
 
         assertThrown!ConvException(to!Float("\x00"));
@@ -4444,7 +4448,10 @@ unittest //@@@9559@@@
 
 unittest //http://forum.dlang.org/thread/nxbdgtdlmwscocbiypjs@forum.dlang.org
 {
-    import std.datetime;
+    import std.array : array;
+    import std.datetime : SysTime, UTC;
+    import std.math : isNaN;
+
     static struct A
     {
         double i;
@@ -4454,7 +4461,6 @@ unittest //http://forum.dlang.org/thread/nxbdgtdlmwscocbiypjs@forum.dlang.org
     {
         invariant()
         {
-            import std.math;
             if(j == 0)
                 assert(a.i.isNaN, "why is 'j' zero?? and i is not NaN?");
             else
@@ -4473,7 +4479,6 @@ unittest //http://forum.dlang.org/thread/nxbdgtdlmwscocbiypjs@forum.dlang.org
     auto b3 = B(SysTime(0, UTC()), 1, A(1));
     assert(&b3);
 
-    import std.array;
     auto arr = [b2, b3];
 
     assert(arr[0].j == 1);

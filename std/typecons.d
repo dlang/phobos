@@ -319,7 +319,8 @@ template Tuple(Specs...)
         string decl = "";
         foreach (i, name; staticMap!(extractName, fieldSpecs))
         {
-            import std.string;
+            import std.string : format;
+
             decl ~= format("alias Identity!(field[%s]) _%s;", i, i);
             if (name.length != 0)
             {
@@ -566,7 +567,8 @@ template Tuple(Specs...)
                     formattedWrite(w, "%s", field[i].stringof);
                 else
                 {
-                    import std.format;
+                    import std.format : FormatSpec, formatElement;
+
                     FormatSpec!char f;  // "%s"
                     formatElement(w, field[i], f);
                 }
@@ -580,7 +582,8 @@ template Tuple(Specs...)
 private template isPrintable(T)
 {
     enum isPrintable = is(typeof({
-        import std.format;
+        import std.format : formattedWrite;
+
         Appender!string w;
         formattedWrite(w, "%s", T.init);
     }));
@@ -847,7 +850,8 @@ unittest
 }
 unittest
 {
-    import std.exception;
+    import std.exception : assertCTFEable;
+
     // Bugzilla 10218
     assertCTFEable!(
     {
@@ -1258,9 +1262,10 @@ $(D this) must not be in the null state.
 
 unittest
 {
+    import std.exception : assertThrown;
+
     Nullable!int a;
     assert(a.isNull);
-    import std.exception;
     assertThrown!Throwable(a.get);
     a = 5;
     assert(!a.isNull);
@@ -1299,6 +1304,8 @@ unittest
 }
 unittest
 {
+    import std.exception : assertThrown;
+
     static struct S { int x; }
     Nullable!S s;
     assert(s.isNull);
@@ -1309,7 +1316,6 @@ unittest
     s.x = 9190;
     assert(s.x == 9190);
     s.nullify();
-    import std.exception;
     assertThrown!Throwable(s.x = 9441);
 }
 unittest
@@ -1555,9 +1561,10 @@ Gets the value. $(D this) must not be in the null state.
 
 unittest
 {
+    import std.exception : assertThrown;
+
     Nullable!(int, int.min) a;
     assert(a.isNull);
-    import std.exception;
     assertThrown!Throwable(a.get);
     a = 5;
     assert(!a.isNull);
@@ -1715,6 +1722,8 @@ $(D this) must not be in the null state.
 
 unittest
 {
+    import std.exception : assertThrown;
+
     int x = 5, y = 7;
     auto a = NullableRef!(int)(&x);
     assert(!a.isNull);
@@ -1727,7 +1736,6 @@ unittest
     a.nullify();
     assert(x == 42);
     assert(a.isNull);
-    import std.exception;
     assertThrown!Throwable(a.get);
     assertThrown!Throwable(a = 71);
     a.bind(&y);
@@ -1857,7 +1865,8 @@ template BlackHole(Base)
 
 unittest
 {
-    import std.math;
+    import std.math : isNaN;
+
     // return default
     {
         interface I_1 { real test(); }
@@ -2157,7 +2166,8 @@ private static:
     // overloaded function with the name.
     template INTERNAL_FUNCINFO_ID(string name, size_t i)
     {
-        import std.string;
+        import std.string : format;
+
         enum string INTERNAL_FUNCINFO_ID = format("F_%s_%s", name, i);
     }
 
@@ -2528,6 +2538,8 @@ private static:
     public string generateFunction(
             string myFuncInfo, string name, func... )() @property
     {
+        import std.string : format;
+
         enum isCtor = (name == CONSTRUCTOR_NAME);
 
         string code; // the result
@@ -2584,7 +2596,6 @@ private static:
             //
             if (__traits(isVirtualMethod, func))
                 code ~= "override ";
-            import std.string;
             code ~= format("extern(%s) %s %s(%s) %s %s\n",
                     functionLinkage!(func),
                     returnType,
@@ -3541,15 +3552,14 @@ if (!is(T == class))
 
         private void initialize(A...)(auto ref A args)
         {
-            import core.stdc.stdlib;
-            import std.exception;
+            import core.memory : GC;
+            import core.stdc.stdlib : malloc;
+            import std.conv : emplace;
+            import std.exception : enforce;
+
             _store = cast(Impl*) enforce(malloc(Impl.sizeof));
             static if (hasIndirections!T)
-            {
-                import core.memory;
                 GC.addRange(&_store._payload, T.sizeof);
-            }
-            import std.conv;
             emplace(&_store._payload, args);
             _store._count = 1;
         }
@@ -3629,10 +3639,10 @@ to deallocate the corresponding resource.
         .destroy(_refCounted._store._payload);
         static if (hasIndirections!T)
         {
-            import core.memory;
+            import core.memory : GC;
             GC.removeRange(&_refCounted._store._payload);
         }
-        import core.stdc.stdlib;
+        import core.stdc.stdlib : free;
         free(_refCounted._store);
         _refCounted._store = null;
     }
@@ -4243,11 +4253,12 @@ template scoped(T)
     /// Returns the scoped object
     @system auto scoped(Args...)(auto ref Args args)
     {
+        import std.conv : emplace;
+
         Scoped result = void;
         void* alignedStore = cast(void*) aligned(cast(size_t) result.Scoped_store.ptr);
         immutable size_t d = alignedStore - result.Scoped_store.ptr;
         *cast(size_t*) &result.Scoped_store[$ - size_t.sizeof] = d;
-        import std.conv;
         emplace!(Unqual!T)(result.Scoped_store[d .. $ - size_t.sizeof], args);
         return result;
     }

@@ -219,7 +219,11 @@ public:
     /// Ditto
     void popFront()
     {
-        import std.exception;
+        import std.conv : text;
+        import std.exception : enforce;
+        import std.format : formattedRead;
+        import std.string : chomp;
+
         enforce(file.isOpen);
         file.readln(line);
         if (!line.length)
@@ -228,11 +232,8 @@ public:
         }
         else
         {
-            import std.conv, std.format, std.string : chomp;
             line = chomp(line);
             formattedRead(line, format, &current);
-            import std.conv;
-            import std.array;
             enforce(line.empty, text("Leftover characters in record: `",
                             line, "'"));
         }
@@ -295,7 +296,8 @@ Hello, Jimmy!
  */
 struct File
 {
-    import std.traits;
+    import std.traits : isScalarType, isArray;
+
     private struct Impl
     {
         FILE * handle = null; // Is null iff this Impl is closed by another File
@@ -307,8 +309,9 @@ struct File
 
     package this(FILE* handle, string name, uint refs = 1, bool isPopened = false)
     {
+        import std.exception : enforce;
+
         assert(!_p);
-        import std.exception;
         _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
         _p.handle = handle;
         _p.refs = refs;
@@ -332,7 +335,9 @@ Throws: $(D ErrnoException) if the file could not be opened.
  */
     this(string name, in char[] stdioOpenmode = "rb")
     {
-        import std.conv, std.exception;
+        import std.conv : text;
+        import std.exception : errnoEnforce;
+
         this(errnoEnforce(.fopen(name, stdioOpenmode),
                         text("Cannot open file `", name, "' in mode `",
                                 stdioOpenmode, "'")),
@@ -358,7 +363,8 @@ file.
  */
     void opAssign(File rhs)
     {
-        import std.algorithm;
+        import std.algorithm : swap;
+
         swap(this, rhs);
     }
 
@@ -385,8 +391,9 @@ Throws: $(D ErrnoException) in case of error.
  */
     version(Posix) void popen(string command, in char[] stdioOpenmode = "r")
     {
+        import std.exception : errnoEnforce;
+
         detach();
-        import std.exception;
         this = File(errnoEnforce(.popen(command, stdioOpenmode),
                         "Cannot run command `"~command~"'"),
                 command, 1, true);
@@ -406,7 +413,8 @@ Throws: $(D Exception) if the file is not opened.
  */
     @property bool eof() const pure
     {
-        import std.exception;
+        import std.exception : enforce;
+
         enforce(_p && _p.handle, "Calling eof() against an unopened file.");
         return .feof(cast(FILE*) _p.handle) != 0;
     }
@@ -449,7 +457,8 @@ Throws: $(D ErrnoException) on failure if closing the file.
 
     unittest
     {
-        import std.file;
+        static import std.file;
+
         auto deleteme = testFilename();
         scope(exit) std.file.remove(deleteme);
         auto f = File(deleteme, "w");
@@ -474,7 +483,8 @@ Throws: $(D ErrnoException) on error.
  */
     void close()
     {
-        import std.exception;
+        import std.exception : errnoEnforce;
+
         if (!_p) return; // succeed vacuously
         scope(exit)
         {
@@ -488,12 +498,13 @@ Throws: $(D ErrnoException) on error.
         scope(exit) _p.handle = null; // nullify the handle anyway
         version (Posix)
         {
+            import std.string : format;
+
             if (_p.isPopened)
             {
                 auto res = .pclose(_p.handle);
                 errnoEnforce(res != -1,
                         "Could not close pipe `"~_name~"'");
-                import std.string;
                 errnoEnforce(res == 0, format("Command returned %d", res));
                 return;
             }
@@ -522,7 +533,8 @@ Throws: $(D Exception) if the file is not opened or if the call to $D(fflush) fa
  */
     void flush()
     {
-        import std.exception;
+        import std.exception : enforce, errnoEnforce;
+
         errnoEnforce
         (.fflush(enforce(_p.handle, "Calling fflush() on an unopened file"))
                 == 0);
@@ -544,7 +556,8 @@ $(D rawRead) always reads in binary mode on Windows.
  */
     T[] rawRead(T)(T[] buffer)
     {
-        import std.exception;
+        import std.exception : enforce, errnoEnforce;
+
         enforce(buffer.length, "rawRead must take a non-empty buffer");
         version(Win32)
         {
@@ -592,6 +605,9 @@ Throws: $(D ErrnoException) if the file is not opened or if the call to $D(fread
  */
     void rawWrite(T)(in T[] buffer)
     {
+        import std.conv : text;
+        import std.exception : errnoEnforce;
+
         version(Windows)
         {
             flush(); // before changing translation mode
@@ -610,7 +626,6 @@ Throws: $(D ErrnoException) if the file is not opened or if the call to $D(fread
         auto result =
             .fwrite(buffer.ptr, T.sizeof, buffer.length, _p.handle);
         if (result == result.max) result = 0;
-        import std.conv, std.exception;
         errnoEnforce(result == buffer.length,
                 text("Wrote ", result, " instead of ", buffer.length,
                         " objects of type ", T.stringof, " to file `",
@@ -637,11 +652,12 @@ Throws: $(D Exception) if the file is not opened.
  */
     void seek(long offset, int origin = SEEK_SET)
     {
-        import std.exception;
+        import std.exception : enforce, errnoEnforce;
+        import std.conv : to, text;
+
         enforce(isOpen, "Attempting to seek() in an unopened file");
         version (Windows)
         {
-            import std.conv;
             errnoEnforce(fseek(_p.handle, to!int(offset), origin) == 0,
                     "Could not seek in file `"~_name~"'");
         }
@@ -668,9 +684,10 @@ Throws: $(D Exception) if the file is not opened.
         }
         else
         {
+            import std.conv : text;
+
             auto bigOffset = cast(ulong) int.max + 100;
             f.seek(bigOffset);
-            import std.conv;
             assert(f.tell == bigOffset, text(f.tell));
             // Uncomment the tests below only if you want to wait for
             // a long time
@@ -689,7 +706,8 @@ Throws: $(D Exception) if the file is not opened.
  */
     @property ulong tell() const
     {
-        import std.exception;
+        import std.exception : enforce, errnoEnforce;
+
         enforce(isOpen, "Attempting to tell() in an unopened file");
         version (Windows)
         {
@@ -706,13 +724,14 @@ Throws: $(D Exception) if the file is not opened.
 
     unittest
     {
+        import std.conv : text;
+
         auto deleteme = testFilename();
         std.file.write(deleteme, "abcdefghijklmnopqrstuvwqxyz");
         scope(exit) { std.file.remove(deleteme); }
         auto f = File(deleteme);
         auto a = new ubyte[4];
         f.rawRead(a);
-        import std.conv;
         assert(f.tell == 4, text(f.tell));
     }
 
@@ -724,7 +743,8 @@ Throws: $(D Exception) if the file is not opened.
  */
     void rewind()
     {
-        import std.exception;
+        import std.exception : enforce;
+
         enforce(isOpen, "Attempting to rewind() an unopened file");
         .rewind(_p.handle);
     }
@@ -738,7 +758,8 @@ Throws: $(D Exception) if the file is not opened.
  */
     void setvbuf(size_t size, int mode = _IOFBF)
     {
-        import std.exception;
+        import std.exception : enforce, errnoEnforce;
+
         enforce(isOpen, "Attempting to call setvbuf() on an unopened file");
         errnoEnforce(.setvbuf(_p.handle, null, mode, size) == 0,
                 "Could not set buffering for file `"~_name~"'");
@@ -753,7 +774,8 @@ Throws: $(D Exception) if the file is not opened.
 */
     void setvbuf(void[] buf, int mode = _IOFBF)
     {
-        import std.exception;
+        import std.exception : enforce, errnoEnforce;
+
         enforce(isOpen, "Attempting to call setvbuf() on an unopened file");
         errnoEnforce(.setvbuf(_p.handle,
                         cast(char*) buf.ptr, mode, buf.length) == 0,
@@ -782,7 +804,8 @@ Throws: $(D Exception) if the file is not opened.
             }
             else static if (isIntegral!A)
             {
-                import std.conv;
+                import std.conv : toTextRange;
+
                 toTextRange(arg, w);
             }
             else static if (isBoolean!A)
@@ -878,7 +901,8 @@ void main()
 
     unittest
     {
-        import std.algorithm;
+        import std.algorithm : equal;
+
         auto deleteme = testFilename();
         std.file.write(deleteme, "hello\nworld\n");
         scope(exit) std.file.remove(deleteme);
@@ -962,7 +986,8 @@ for every line.
     size_t readln(C)(ref C[] buf, dchar terminator = '\n')
     if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum))
     {
-        import std.exception;
+        import std.exception : enforce;
+
         static if (is(C == char))
         {
             enforce(_p && _p.handle, "Attempt to read from an unopened file.");
@@ -987,7 +1012,8 @@ for every line.
     if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum) &&
         isBidirectionalRange!R && is(typeof(terminator.front == dchar.init)))
     {
-        import std.algorithm;
+        import std.algorithm : endsWith, swap;
+
         auto last = terminator.back;
         C[] buf2;
         swap(buf, buf2);
@@ -1032,9 +1058,10 @@ for every line.
      */
     uint readf(Data...)(in char[] format, Data data)
     {
+        import std.format : formattedRead;
+
         assert(isOpen);
         auto input = LockingTextReader(this);
-        import std.format;
         return formattedRead(input, format, data);
     }
 
@@ -1055,7 +1082,8 @@ for every line.
  Note that the created file has no $(LREF name).*/
     static File tmpfile()
     {
-        import std.exception;
+        import std.exception : errnoEnforce;
+
         return File(errnoEnforce(core.stdc.stdio.tmpfile(),
                 "Could not create temporary file with tmpfile()"),
             null);
@@ -1067,7 +1095,8 @@ File) never takes the initiative in closing the file.
 Note that the created file has no $(LREF name)*/
     /*private*/ static File wrapFile(FILE* f)
     {
-        import std.exception;
+        import std.exception : enforce;
+
         return File(enforce(f, "Could not wrap null FILE*"),
             null, /*uint.max / 2*/ 9999);
     }
@@ -1077,7 +1106,8 @@ Returns the $(D FILE*) corresponding to this object.
  */
     FILE* getFP() pure
     {
-        import std.exception;
+        import std.exception : enforce;
+
         enforce(_p && _p.handle,
                 "Attempting to call getFP() on an unopened file");
         return _p.handle;
@@ -1093,7 +1123,8 @@ Returns the file number corresponding to this object.
  */
     /*version(Posix) */int fileno() const
     {
-        import std.exception;
+        import std.exception : enforce;
+
         enforce(isOpen, "Attempting to call fileno() on an unopened file");
         return .fileno(cast(FILE*) _p.handle);
     }
@@ -1108,6 +1139,7 @@ Allows to directly use range operations on lines of a file.
     {
     private:
         import std.typecons;
+
         /* Ref-counting stops the source range's ByLineImpl
          * from getting out of sync after the range is copied, e.g.
          * when accessing range.front, then using std.range.take,
@@ -1195,7 +1227,8 @@ Allows to directly use range operations on lines of a file.
 
         void popFront()
         {
-            import std.algorithm;
+            import std.algorithm : endsWith;
+
             assert(file.isOpen);
             assumeSafeAppend(line);
             file.readln(line, terminator);
@@ -1296,7 +1329,8 @@ the contents may well have changed).
 
     unittest
     {
-        import std.algorithm;
+        import std.algorithm : take, equal;
+
         //printf("Entering test at line %d\n", __LINE__);
         scope(failure) printf("Failed test at line %d\n", __LINE__);
         auto deleteme = testFilename();
@@ -1315,6 +1349,8 @@ the contents may well have changed).
         void testTerm(Terminator)(string txt, string[] witness,
                 KeepTerminator kt, Terminator term, bool popFirstLine)
         {
+            import std.conv : text;
+
             uint i;
             std.file.write(deleteme, txt);
             auto f = File(deleteme);
@@ -1334,7 +1370,6 @@ the contents may well have changed).
             {
                 assert(line == witness[i++]);
             }
-            import std.conv;
             assert(i == witness.length, text(i, " != ", witness.length));
         }
         /* Wrap with default args.
@@ -1549,7 +1584,8 @@ $(D Range) that locks the file and allows fast writing to it.
 
         this(ref File f)
         {
-            import std.exception;
+            import std.exception : enforce;
+
             enforce(f._p && f._p.handle);
             fps = f._p.handle;
             orientation = fwide(fps, 0);
@@ -1578,7 +1614,8 @@ $(D Range) that locks the file and allows fast writing to it.
         /// Range primitive implementations.
         void put(A)(A writeme) if (is(ElementType!A : const(dchar)))
         {
-            import std.exception;
+            import std.exception : errnoEnforce;
+
             alias ElementEncodingType!A C;
             static assert(!is(C == void));
             if (writeme[0].sizeof == 1 && orientation <= 0)
@@ -1651,7 +1688,8 @@ $(D Range) that locks the file and allows fast writing to it.
                 {
                     version (Windows)
                     {
-                        import std.utf;
+                        import std.utf : isValidDchar;
+
                         assert(isValidDchar(c));
                         if (c <= 0xFFFF)
                         {
@@ -1692,7 +1730,8 @@ See $(LREF byChunk) for an example.
 /// Get the size of the file, ulong.max if file is not searchable, but still throws if an actual error occurs.
     @property ulong size()
     {
-        import std.exception;
+        import std.exception : collectException;
+
         ulong pos = void;
         if (collectException(pos = tell)) return ulong.max;
         scope(exit) seek(pos);
@@ -1703,7 +1742,8 @@ See $(LREF byChunk) for an example.
 
 unittest
 {
-    import std.exception;
+    import std.exception : collectException;
+
     auto deleteme = testFilename();
     scope(exit) collectException(std.file.remove(deleteme));
     std.file.write(deleteme, "1 2 3");
@@ -1719,7 +1759,8 @@ struct LockingTextReader
 
     this(File f)
     {
-        import std.exception;
+        import std.exception : enforce;
+
         enforce(f.isOpen);
         _f = f;
         FLOCK(_f._p.handle);
@@ -1738,13 +1779,15 @@ struct LockingTextReader
 
     void opAssign(LockingTextReader r)
     {
-        import std.algorithm;
+        import std.algorithm : swap;
+
         swap(this, r);
     }
 
     @property bool empty()
     {
-        import std.exception;
+        import std.exception : enforce;
+
         if (!_f.isOpen || _f.eof) return true;
         if (_crt == _crt.init)
         {
@@ -1773,7 +1816,8 @@ struct LockingTextReader
         version(assert) if (empty) throw new RangeError();
         if (FGETC(cast(_iobuf*) _f._p.handle) == -1)
         {
-            import std.exception;
+            import std.exception : enforce;
+
             enforce(_f.eof);
         }
         _crt = _crt.init;
@@ -1841,7 +1885,8 @@ void writefx(FILE* fps, TypeInfo[] arguments, void* argptr, int newline=false)
         {
             void putcw(dchar c)
             {
-                import std.utf;
+                import std.utf : isValidDchar;
+
                 assert(isValidDchar(c));
                 if (c <= 0xFFFF)
                 {
@@ -1940,7 +1985,8 @@ void writeln(T...)(T args)
 {
     static if (T.length == 0)
     {
-        import std.exception;
+        import std.exception : enforce;
+
         enforce(fputc('\n', .stdout._p.handle) == '\n');
     }
     else static if (T.length == 1 &&
@@ -1949,8 +1995,9 @@ void writeln(T...)(T args)
                     !is(Unqual!(typeof(args[0])) == typeof(null)) &&
                     !isAggregateType!(typeof(args[0])))
     {
+        import std.exception : enforce;
+
         // Specialization for strings - a very frequent case
-        import std.exception;
         enforce(fprintf(.stdout._p.handle, "%.*s\n",
                         cast(int) args[0].length, args[0].ptr) >= 0);
     }
@@ -2299,10 +2346,11 @@ unittest
  */
 private FILE* fopen(in char[] name, in char[] mode = "r")
 {
-    import std.string;
+    import std.string : toStringz;
+
     version(Windows)
     {
-        import std.utf;
+        import std.utf : toUTF16z;
         return _wfopen(toUTF16z(name), toUTF16z(mode));
     }
     else version(Posix)
@@ -2331,7 +2379,8 @@ version (Posix)
      */
     FILE* popen(in char[] name, in char[] mode = "r")
     {
-        import std.string;
+        import std.string : toStringz;
+
         return core.sys.posix.stdio.popen(toStringz(name), toStringz(mode));
     }
 }
@@ -2438,7 +2487,8 @@ struct lines
                 Parms[0] i = 0;
             for (;;)
             {
-                import std.conv;
+                import std.conv : to;
+
                 if (!f.readln(line, terminator)) break;
                 auto copy = to!(Parms[$ - 1])(line);
                 static if (Parms.length == 2)
@@ -2463,7 +2513,9 @@ struct lines
     // no UTF checking
     int opApplyRaw(D)(scope D dg)
     {
-        import std.exception;
+        import std.exception : assumeUnique;
+        import std.conv : to;
+
         alias ParameterTypeTuple!(dg) Parms;
         enum duplicate = is(Parms[$ - 1] : immutable(ubyte)[]);
         int result = 1;
@@ -2475,7 +2527,6 @@ struct lines
             Parms[0] line = 0;
         while ((c = FGETC(cast(_iobuf*)f._p.handle)) != -1)
         {
-            import std.conv;
             buffer ~= to!(ubyte)(c);
             if (c == terminator)
             {
@@ -2744,6 +2795,8 @@ class StdioException : Exception
 Initialize with a message and an error code. */
     this(string message, uint e = .errno)
     {
+        import std.conv : to;
+
         errno = e;
         version (Posix)
         {
@@ -2764,7 +2817,6 @@ Initialize with a message and an error code. */
         {
             auto s = core.stdc.string.strerror(errno);
         }
-        import std.conv;
         auto sysmsg = to!string(s);
         // If e is 0, we don't use the system error message.  (The message
         // is "Success", which is rather pointless for an exception.)
@@ -3209,7 +3261,9 @@ version(linux)
 
     File openNetwork(string host, ushort port)
     {
-        import std.exception;
+        import std.conv : to;
+        import std.exception : enforce;
+
         auto h = enforce( sock.gethostbyname(std.string.toStringz(host)),
             new StdioException("gethostbyname"));
 
@@ -3234,7 +3288,6 @@ version(linux)
         enforce(sock.connect(s, cast(sock.sockaddr*) &addr, addr.sizeof) != -1,
             new StdioException("Connect failed"));
 
-        import std.conv;
         return File(enforce(fdopen(s, "w+".ptr)),
             host ~ ":" ~ to!string(port));
     }
@@ -3242,7 +3295,8 @@ version(linux)
 
 version(unittest) string testFilename(string file = __FILE__, size_t line = __LINE__)
 {
-    import std.conv, std.path;
+    import std.conv : text;
+    import std.path : baseName;
 
     // Non-ASCII characters can't be used because of snn.lib @@@BUG8643@@@
     version(DIGITAL_MARS_STDIO)

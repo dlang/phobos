@@ -2091,7 +2091,8 @@ assert(stride(stride(a, 2), 3) == stride(a, 6));
 auto stride(Range)(Range r, size_t n)
 if (isInputRange!(Unqual!Range))
 {
-    import std.exception;
+    import std.exception : enforce;
+
     enforce(n > 0, "Stride cannot have step zero.");
 
     static if (is(typeof(stride(r.source, n)) == Range))
@@ -2885,7 +2886,8 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
 {
     struct Result
     {
-        import std.conv;
+        import std.conv : to;
+
         public Rs source;
         private size_t _current = size_t.max;
 
@@ -3018,9 +3020,10 @@ if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R))
 unittest
 {
     import std.conv : text;
+    import std.exception : enforce;
+
     void test(int[] input, int[] witness)
     {
-        import std.exception;
         enforce(equal(radial(input), witness),
                 text(radial(input), " vs. ", witness));
     }
@@ -4221,7 +4224,8 @@ Take!(Repeat!T) repeat(T)(T value, size_t n)
 
 unittest
 {
-    import std.exception;
+    import std.exception : enforce;
+
     enforce(equal(repeat(5, 4), [ 5, 5, 5, 5 ][]));
 }
 
@@ -4503,6 +4507,9 @@ unittest
 
                 static if (isRandomAccessRange!DummyType)
                 {
+                    import std.exception : assertThrown;
+                    import std.string : RangeError;
+
                     {
                         cy[10] = 66;
                         scope(exit) cy[10] = 1;
@@ -4511,7 +4518,6 @@ unittest
 
                     assert(cRange[10] == 1);
 
-                    import std.exception, std.string;
                     assertThrown!RangeError(cy[2..1]);
                 }
             }
@@ -4613,6 +4619,8 @@ struct Zip(Ranges...)
     {
         @property bool empty()
         {
+            import std.exception : enforce;
+
             final switch (stoppingPolicy)
             {
             case StoppingPolicy.shortest:
@@ -4630,7 +4638,6 @@ struct Zip(Ranges...)
             case StoppingPolicy.requireSameLength:
                 foreach (i, Unused; R[1 .. $])
                 {
-                    import std.exception;
                     enforce(ranges[0].empty ==
                             ranges[i + 1].empty,
                             "Inequal-length ranges passed to Zip");
@@ -4792,6 +4799,8 @@ struct Zip(Ranges...)
 */
     void popFront()
     {
+        import std.exception : enforce;
+
         final switch (stoppingPolicy)
         {
         case StoppingPolicy.shortest:
@@ -4810,7 +4819,6 @@ struct Zip(Ranges...)
         case StoppingPolicy.requireSameLength:
             foreach (i, Unused; R)
             {
-                import std.exception;
                 enforce(!ranges[i].empty, "Invalid Zip object");
                 ranges[i].popFront();
             }
@@ -4824,6 +4832,8 @@ struct Zip(Ranges...)
 */
         void popBack()
         {
+            import std.exception : enforce;
+
             final switch (stoppingPolicy)
             {
             case StoppingPolicy.shortest:
@@ -4842,7 +4852,6 @@ struct Zip(Ranges...)
             case StoppingPolicy.requireSameLength:
                 foreach (i, Unused; R)
                 {
-                    import std.exception;
                     enforce(!ranges[i].empty, "Invalid Zip object");
                     ranges[i].popBack();
                 }
@@ -4979,6 +4988,8 @@ enum StoppingPolicy
 
 unittest
 {
+    import std.exception : assertThrown, assertNotThrown;
+
     int[] a = [ 1, 2, 3 ];
     float[] b = [ 1.0, 2.0, 3.0 ];
     foreach (e; zip(a, b))
@@ -4994,7 +5005,6 @@ unittest
     assert(b == [2.0, 1.0, 3.0]);
 
     z = zip(StoppingPolicy.requireSameLength, a, b);
-    import std.exception;
     assertNotThrown((z.popBack(), z.popBack(), z.popBack()));
     assert(z.empty);
     assertThrown(z.popBack());
@@ -5112,10 +5122,11 @@ unittest
 // Text for Issue 11196
 unittest
 {
+    import std.exception : assertThrown;
+
     static struct S { @disable this(); }
     static assert(__traits(compiles, zip((S[5]).init[])));
     auto z = zip(StoppingPolicy.longest, cast(S[]) null, new int[1]);
-    import std.exception;
     assertThrown(zip(StoppingPolicy.longest, cast(S[]) null, new int[1]).front);
 }
 
@@ -5125,6 +5136,8 @@ unittest
 */
 private string lockstepMixin(Ranges...)(bool withIndex)
 {
+    import std.string : format, outdent;
+
     string[] params;
     string[] emptyChecks;
     string[] dgArgs;
@@ -5135,8 +5148,6 @@ private string lockstepMixin(Ranges...)(bool withIndex)
         params ~= "size_t";
         dgArgs ~= "index";
     }
-
-    import std.string : format, outdent;
 
     foreach (idx, Range; Ranges)
     {
@@ -5150,6 +5161,8 @@ private string lockstepMixin(Ranges...)(bool withIndex)
     q{
         int opApply(scope int delegate(%s) dg)
         {
+            import std.exception : enforce;
+
             auto ranges = _ranges;
             int res;
             %s
@@ -5164,7 +5177,6 @@ private string lockstepMixin(Ranges...)(bool withIndex)
 
             if (_stoppingPolicy == StoppingPolicy.requireSameLength)
             {
-                import std.exception;
                 foreach(range; ranges)
                     enforce(range.empty);
             }
@@ -5214,8 +5226,9 @@ struct Lockstep(Ranges...)
 {
     this(R ranges, StoppingPolicy sp = StoppingPolicy.shortest)
     {
+        import std.exception : enforce;
+
         _ranges = ranges;
-        import std.exception;
         enforce(sp != StoppingPolicy.longest,
                 "Can't use StoppingPolicy.Longest on Lockstep.");
         _stoppingPolicy = sp;
@@ -5372,6 +5385,7 @@ foreach (e; take(recurrence!("a[n-1] * n")(1), 10)) { writeln(e); }
 struct Recurrence(alias fun, StateType, size_t stateSize)
 {
     private import std.functional : binaryFun;
+
     StateType[stateSize] _state;
     size_t _n;
 
@@ -5453,6 +5467,7 @@ struct Sequence(alias fun, State)
 {
 private:
     import std.functional : binaryFun;
+
     alias binaryFun!(fun, "a", "n") compute;
     alias typeof(compute(State.init, cast(size_t) 1)) ElementType;
     State _state;
@@ -5610,10 +5625,11 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
 
         this(Value current, Value pastLast, StepType step)
         {
+            import std.exception : enforce;
+
             if ((current < pastLast && step >= 0) ||
                     (current > pastLast && step <= 0))
             {
-                import std.exception;
                 enforce(step != 0);
                 this.step = step;
                 this.current = current;
@@ -5768,9 +5784,10 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
 
         this(Value start, Value end, Value step)
         {
+            import std.exception : enforce;
+
             this.start = start;
             this.step = step;
-            import std.exception;
             enforce(step != 0);
             immutable fcount = (end - start) / step;
             enforce(fcount >= 0, "iota: incorrect startup parameters");
@@ -6084,11 +6101,12 @@ struct FrontTransversal(Ror,
             // (isRandomAccessRange!RangeOfRanges
             //     && hasLength!RangeType)
         {
+            import std.exception : enforce;
+
             if (empty) return;
             immutable commonLength = _input.front.length;
             foreach (e; _input)
             {
-                import std.exception;
                 enforce(e.length == commonLength);
             }
         }
@@ -6359,11 +6377,12 @@ struct Transversal(Ror,
         prime();
         static if (opt == TransverseOptions.enforceNotJagged)
         {
+            import std.exception : enforce;
+
             if (empty) return;
             immutable commonLength = _input.front.length;
             foreach (e; _input)
             {
-                import std.exception;
                 enforce(e.length == commonLength);
             }
         }
@@ -7272,8 +7291,8 @@ private struct OnlyResult(T, size_t arity)
         // with popBack
         version(assert)
         {
-            import std.string;
-            if(idx >= length)
+            import std.string : RangeError;
+            if (idx >= length)
                 throw new RangeError;
         }
         return data[frontIndex + idx];
@@ -7292,8 +7311,8 @@ private struct OnlyResult(T, size_t arity)
 
         version(assert)
         {
-            import std.string;
-            if(to < from || to > length)
+            import std.string : RangeError;
+            if (to < from || to > length)
                 throw new RangeError;
         }
         return result;
@@ -7346,7 +7365,7 @@ private struct OnlyResult(T, size_t arity : 1)
     {
         version (assert)
         {
-            import std.string;
+            import std.string : RangeError;
             if (from > to || to > length)
                 throw new RangeError;
         }
@@ -7377,7 +7396,7 @@ private struct OnlyResult(T, size_t arity : 0)
     {
         version(assert)
         {
-            import std.string;
+            import std.string : RangeError;
             throw new RangeError;
         }
         assert(false);
@@ -7389,8 +7408,8 @@ private struct OnlyResult(T, size_t arity : 0)
     {
         version(assert)
         {
-            import std.string;
-            if(from != 0 || to != 0)
+            import std.string : RangeError;
+            if (from != 0 || to != 0)
                 throw new RangeError;
         }
         return this;
@@ -8240,6 +8259,7 @@ struct SortedRange(Range, alias pred = "a < b")
 if (isRandomAccessRange!Range && hasLength!Range)
 {
     private import std.functional : binaryFun;
+
     private alias binaryFun!pred predFun;
     private bool geq(L, R)(L lhs, R rhs)
     {
@@ -8259,7 +8279,10 @@ if (isRandomAccessRange!Range && hasLength!Range)
         if(!__ctfe)
         debug
         {
-            import core.bitop, std.conv, std.random;
+            import core.bitop : bsr;
+            import std.conv : text;
+            import std.random : MinstdRand, uniform;
+
             // Check the sortedness of the input
             if (this._input.length < 2) return;
             immutable size_t msb = bsr(this._input.length) + 1;
@@ -8774,6 +8797,7 @@ unittest
 unittest
 {
     import std.conv : text;
+
     int[] a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
     auto p = assumeSorted(a).equalRange(3);
     assert(equal(p, [ 3, 3, 3 ]), text(p));
