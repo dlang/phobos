@@ -327,6 +327,8 @@ template packageName(alias T)
 
 unittest
 {
+    import std.algorithm;
+
     // Commented out because of dmd @@@BUG8922@@@
     // static assert(packageName!std == "std");  // this package (currently: "std.std")
     static assert(packageName!(std.traits) == "std");     // this module
@@ -376,6 +378,8 @@ template moduleName(alias T)
 
 unittest
 {
+    import std.algorithm;
+
     static assert(!__traits(compiles, moduleName!std));
     static assert(moduleName!(std.traits) == "std.traits");            // this module
     static assert(moduleName!moduleName == "std.traits");              // symbol in this module

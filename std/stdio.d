@@ -190,6 +190,8 @@ else
 struct ByRecord(Fields...)
 {
 private:
+    import std.typecons : Tuple;
+
     File file;
     char[] line;
     Tuple!(Fields) current;
@@ -580,6 +582,8 @@ $(D rawRead) always reads in binary mode on Windows.
 
     unittest
     {
+        static import std.file;
+
         auto deleteme = testFilename();
         std.file.write(deleteme, "\r\n\n\r\n");
         scope(exit) std.file.remove(deleteme);
@@ -635,6 +639,8 @@ Throws: $(D ErrnoException) if the file is not opened or if the call to $D(fread
     version(Win64) {} else
     unittest
     {
+        static import std.file;
+
         auto deleteme = testFilename();
         auto f = File(deleteme, "w");
         scope(exit) std.file.remove(deleteme);
@@ -672,6 +678,8 @@ Throws: $(D Exception) if the file is not opened.
     version(Win64) {} else
     unittest
     {
+        static import std.file;
+
         auto deleteme = testFilename();
         auto f = File(deleteme, "w+");
         scope(exit) { f.close(); std.file.remove(deleteme); }
@@ -724,6 +732,7 @@ Throws: $(D Exception) if the file is not opened.
 
     unittest
     {
+        static import std.file;
         import std.conv : text;
 
         auto deleteme = testFilename();
@@ -796,6 +805,8 @@ Throws: $(D Exception) if the file is not opened.
             alias typeof(arg) A;
             static if (isAggregateType!A || is(A == enum))
             {
+                import std.format : formattedWrite;
+
                 std.format.formattedWrite(w, "%s", arg);
             }
             else static if (isSomeString!A)
@@ -818,6 +829,8 @@ Throws: $(D Exception) if the file is not opened.
             }
             else
             {
+                import std.format : formattedWrite;
+
                 // Most general case
                 std.format.formattedWrite(w, "%s", arg);
             }
@@ -844,6 +857,8 @@ Throws: $(D Exception) if the file is not opened.
 */
     void writef(Char, A...)(in Char[] fmt, A args)
     {
+        import std.format : formattedWrite;
+
         std.format.formattedWrite(lockingTextWriter(), fmt, args);
     }
 
@@ -856,6 +871,8 @@ Throws: $(D Exception) if the file is not opened.
 */
     void writefln(Char, A...)(in Char[] fmt, A args)
     {
+        import std.format : formattedWrite;
+
         auto w = lockingTextWriter();
         std.format.formattedWrite(w, fmt, args);
         w.put('\n');
@@ -901,7 +918,9 @@ void main()
 
     unittest
     {
+        static import std.file;
         import std.algorithm : equal;
+        import std.typetuple : TypeTuple;
 
         auto deleteme = testFilename();
         std.file.write(deleteme, "hello\nworld\n");
@@ -923,16 +942,19 @@ void main()
 
     unittest
     {
+        static import std.file;
+        import std.typecons : Tuple;
+
         auto deleteme = testFilename();
         std.file.write(deleteme, "cześć \U0002000D");
         scope(exit) std.file.remove(deleteme);
-        uint[] lengths=[12,8,7];
-        foreach (uint i,C; Tuple!(char, wchar, dchar).Types)
+        uint[] lengths = [12,8,7];
+        foreach (uint i, C; Tuple!(char, wchar, dchar).Types)
         {
             immutable(C)[] witness = "cześć \U0002000D";
             auto buf = File(deleteme).readln!(immutable(C)[])();
-            assert(buf.length==lengths[i]);
-            assert(buf==witness);
+            assert(buf.length == lengths[i]);
+            assert(buf == witness);
         }
     }
 
@@ -1033,6 +1055,9 @@ for every line.
 
     unittest
     {
+        static import std.file;
+        import std.typecons : Tuple;
+
         auto deleteme = testFilename();
         std.file.write(deleteme, "hello\n\rworld\nhow\n\rare ya");
         scope(exit) std.file.remove(deleteme);
@@ -1067,6 +1092,8 @@ for every line.
 
     unittest
     {
+        static import std.file;
+
         auto deleteme = testFilename();
         std.file.write(deleteme, "hello\nworld\n");
         scope(exit) std.file.remove(deleteme);
@@ -1329,6 +1356,7 @@ the contents may well have changed).
 
     unittest
     {
+        static import std.file;
         import std.algorithm : take, equal;
 
         //printf("Entering test at line %d\n", __LINE__);
@@ -1551,6 +1579,8 @@ void main()
 
     unittest
     {
+        static import std.file;
+
         scope(failure) printf("Failed test at line %d\n", __LINE__);
 
         auto deleteme = testFilename();
@@ -1742,6 +1772,7 @@ See $(LREF byChunk) for an example.
 
 unittest
 {
+    static import std.file;
     import std.exception : collectException;
 
     auto deleteme = testFilename();
@@ -1831,6 +1862,8 @@ struct LockingTextReader
 
 unittest
 {
+    static import std.file;
+
     static assert(isInputRange!LockingTextReader);
     auto deleteme = testFilename();
     std.file.write(deleteme, "1 2 3");
@@ -1849,6 +1882,9 @@ unittest
 private
 void writefx(FILE* fps, TypeInfo[] arguments, void* argptr, int newline=false)
 {
+    import std.format : doFormat;
+    import std.utf : toUTF8;
+
     int orientation = fwide(fps, 0);    // move this inside the lock?
 
     /* Do the file stream locking at the outermost level
@@ -1954,6 +1990,8 @@ void write(T...)(T args) if (!is(T[0] : File))
 
 unittest
 {
+    static import std.file;
+
     //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
     void[] buf;
@@ -2022,6 +2060,8 @@ unittest
 
 unittest
 {
+    static import std.file;
+
     //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
 
@@ -2066,6 +2106,8 @@ unittest
 
 unittest
 {
+    static import std.file;
+
     auto deleteme = testFilename();
     auto f = File(deleteme, "w");
     scope(exit) { std.file.remove(deleteme); }
@@ -2158,8 +2200,11 @@ void writef(T...)(T args)
 
 unittest
 {
+    static import std.file;
+
     //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
+
     // test writef
     auto deleteme = testFilename();
     auto f = File(deleteme, "w");
@@ -2186,8 +2231,11 @@ void writefln(T...)(T args)
 
 unittest
 {
-        //printf("Entering test at line %d\n", __LINE__);
+    static import std.file;
+
+    //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
+
     // test writefln
     auto deleteme = testFilename();
     auto f = File(deleteme, "w");
@@ -2318,6 +2366,8 @@ if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum) &&
 
 unittest
 {
+    import std.typetuple : TypeTuple;
+
     //we can't actually test readln, so at the very least,
     //we test compilability
     void foo()
@@ -2559,10 +2609,15 @@ struct lines
 
 unittest
 {
-        //printf("Entering test at line %d\n", __LINE__);
+    static import std.file;
+    import std.typetuple : TypeTuple;
+
+    //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
+
     auto deleteme = testFilename();
     scope(exit) { std.file.remove(deleteme); }
+
     alias TypeTuple!(string, wstring, dstring,
                      char[], wchar[], dchar[])
         TestedWith;
@@ -2755,10 +2810,14 @@ private struct ChunksImpl
 
 unittest
 {
+    static import std.file;
+
     //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
+
     auto deleteme = testFilename();
     scope(exit) { std.file.remove(deleteme); }
+
     // test looping with an empty file
     std.file.write(deleteme, "");
     auto f = File(deleteme, "r");
@@ -2863,8 +2922,12 @@ __gshared
 
 unittest
 {
+    static import std.file;
+    import std.typecons : tuple;
+
     scope(failure) printf("Failed test at line %d\n", __LINE__);
     auto deleteme = testFilename();
+
     std.file.write(deleteme, "1 2\n4 1\n5 100");
     scope(exit) std.file.remove(deleteme);
     {

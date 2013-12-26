@@ -44,6 +44,7 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
  */
 module std.typecons;
 import std.traits, std.range;
+import std.typetuple : TypeTuple, allSatisfy;
 
 debug(Unique) import std.stdio;
 
@@ -268,6 +269,8 @@ assert(!is(typeof(point1) == typeof(point2))); // passes
 */
 template Tuple(Specs...)
 {
+    import std.typetuple : staticMap;
+
     // Parse (type,name) pairs (FieldSpecs) out of the specified
     // arguments. Some fields would have name, others not.
     template parseSpecs(Specs...)
@@ -504,6 +507,8 @@ template Tuple(Specs...)
         void opAssign(R)(auto ref R rhs)
         if (areCompatibleTuples!(typeof(this), R, "="))
         {
+            import std.algorithm : swap;
+
             static if (is(R : Tuple!Types) && !__traits(isRef, rhs))
             {
                 if (__ctfe)
@@ -2796,6 +2801,8 @@ unittest
 template wrap(Targets...)
 if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
 {
+    import std.typetuple : staticMap;
+
     // strict upcast
     auto wrap(Source)(inout Source src) @trusted pure nothrow
     if (Targets.length == 1 && is(Source : Targets[0]))
@@ -2967,6 +2974,8 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
 template wrap(Targets...)
 if (Targets.length >= 1 && !allSatisfy!(isMutable, Targets))
 {
+    import std.typetuple : staticMap;
+
     alias wrap = .wrap!(staticMap!(Unqual, Targets));
 }
 
@@ -3199,6 +3208,8 @@ unittest
 // Make a tuple of non-static function symbols
 private template GetOverloadedMethods(T)
 {
+    import std.typetuple : Filter;
+
     alias allMembers = TypeTuple!(__traits(allMembers, T));
     template follows(size_t i = 0)
     {
@@ -3652,12 +3663,16 @@ Assignment operators
  */
     void opAssign(typeof(this) rhs)
     {
+        import std.algorithm : swap;
+
         swap(_refCounted._store, rhs._refCounted._store);
     }
 
 /// Ditto
     void opAssign(T rhs)
     {
+        import std.algorithm : move;
+
         static if (autoInit == RefCountedAutoInitialize.yes)
         {
             _refCounted.ensureInitialized();
@@ -3764,6 +3779,8 @@ unittest
 
 unittest
 {
+    import std.algorithm : swap;
+
     RefCounted!int p1, p2;
     swap(p1, p2);
 }

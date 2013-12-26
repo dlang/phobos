@@ -352,6 +352,7 @@ module std.algorithm;
 import std.functional : unaryFun, binaryFun;
 import std.range;
 import std.traits;
+import std.typecons : tuple, Tuple;
 import std.typetuple : TypeTuple, staticMap, allSatisfy;
 
 version(unittest)
@@ -564,6 +565,8 @@ unittest
 
 unittest
 {
+    import std.ascii : toUpper;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] arr1 = [ 1, 2, 3, 4 ];
@@ -1265,7 +1268,7 @@ assert(s == [ 0, 0, 0, 0, 0 ]);
 void initializeAll(Range)(Range range)
     if (isInputRange!Range && hasLvalueElements!Range && hasAssignableElements!Range)
 {
-    import core.stdc.string : memset;
+    import core.stdc.string : memset, memcpy;
 
     alias ElementType!Range T;
     static if (hasElaborateAssign!T)
@@ -1655,6 +1658,7 @@ $(D &source == &target || !pointsTo(source, source))
 */
 void move(T)(ref T source, ref T target)
 {
+    import core.stdc.string : memcpy;
     import std.exception : pointsTo;
 
     assert(!pointsTo(source, source));
@@ -1750,6 +1754,8 @@ unittest
 /// Ditto
 T move(T)(ref T source)
 {
+    import core.stdc.string : memcpy;
+
     // Can avoid to check aliasing.
 
     T result = void;
@@ -2295,6 +2301,8 @@ auto splitter(Range, Separator)(Range r, Separator s)
 if (is(typeof(ElementType!Range.init == Separator.init))
         && ((hasSlicing!Range && hasLength!Range) || isNarrowString!Range))
 {
+    import std.conv : unsigned;
+
     static struct Result
     {
     private:
@@ -2539,6 +2547,8 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
         && isForwardRange!Separator
         && (hasLength!Separator || isNarrowString!Separator))
 {
+    import std.conv : unsigned;
+
     static struct Result
     {
     private:
@@ -2946,6 +2956,8 @@ unittest
 
 unittest
 {
+    import std.uni : isWhite;
+
     //@@@6791@@@
     assert(equal(std.array.splitter("là dove terminava quella valle"), ["là", "dove", "terminava", "quella", "valle"]));
     assert(equal(splitter!(std.uni.isWhite)("là dove terminava quella valle"), ["là", "dove", "terminava", "quella", "valle"]));
@@ -3925,6 +3937,8 @@ if (isInputRange!InputRange &&
         //unconditional implementations
         static if (isDefaultPred)
         {
+            import std.utf : encode;
+
             //In case of default pred, it is faster to do string/string search.
             UEEType[is(UEEType == char) ? 4 : 2] buf;
 
@@ -5258,6 +5272,9 @@ ptrdiff_t countUntil(alias pred, R)(R haystack)
 ///
 unittest
 {
+    import std.ascii : isDigit;
+    import std.uni : isWhite;
+
     assert(countUntil!(std.uni.isWhite)("hello world") == 5);
     assert(countUntil!(std.ascii.isDigit)("hello world") == -1);
     assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
@@ -6081,7 +6098,7 @@ if (isNarrowString!R1 && isNarrowString!R2)
 {
     static if (ElementEncodingType!R1.sizeof == ElementEncodingType!R2.sizeof)
     {
-        import std.utf : UTFException;
+        import std.utf : stride, UTFException;
 
         immutable limit = min(r1.length, r2.length);
         for (size_t i = 0; i < limit;)
@@ -6603,6 +6620,9 @@ if (isInputRange!R1 && isInputRange!R2 && !(isSomeString!R1 && isSomeString!R2))
 // Specialization for strings (for speed purposes)
 int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSomeString!R2)
 {
+    import core.stdc.string : memcmp;
+    import std.utf : decode;
+
     static if (is(typeof(pred) : string))
         enum isLessThan = pred == "a < b";
     else
@@ -6640,7 +6660,7 @@ int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSom
                     }
                     return 0;
                 }()
-                : std.c.string.memcmp(r1.ptr, r2.ptr, len);
+                : core.stdc.string.memcmp(r1.ptr, r2.ptr, len);
             if (result) return result;
         }
         else
@@ -7359,6 +7379,8 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
 ///
 unittest
 {
+    import std.uni : toUpper;
+
     assert(levenshteinDistance("cat", "rat") == 1);
     assert(levenshteinDistance("parks", "spark") == 2);
     assert(levenshteinDistance("kitten", "sitting") == 3);
@@ -7641,6 +7663,7 @@ void reverse(Char)(Char[] s)
 if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
 {
     import std.string : representation;
+    import std.utf : stride;
 
     auto r = representation(s);
     for (size_t i = 0; i < s.length; )
