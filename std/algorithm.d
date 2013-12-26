@@ -662,7 +662,6 @@ unittest
 
 unittest
 {
-    import std.range;
     // Issue #10130 - map of iota with const step.
     const step = 2;
     static assert(__traits(compiles, map!(i => i)(iota(0, 10, step))));
@@ -1037,13 +1036,14 @@ unittest
 unittest
 {
     import std.conv : text;
-    import std.typecons;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+
     int[] a = [ 1, 2, 3 ];
     fill(a, 6);
     assert(a == [ 6, 6, 6 ], text(a));
+
     void fun0()
     {
         foreach (i; 0 .. 1000)
@@ -1054,6 +1054,7 @@ unittest
     void fun1() { foreach (i; 0 .. 1000) fill(a, 6); }
     //void fun2() { foreach (i; 0 .. 1000) fill2(a, 6); }
     //writeln(benchmark!(fun0, fun1, fun2)(10000));
+
     // fill should accept InputRange
     alias DummyRange!(ReturnBy.Reference, Length.No, RangeType.Input) InputRange;
     enum filler = uint.max;
@@ -1065,8 +1066,6 @@ unittest
 
 unittest
 {
-    import std.typecons;
-
     //ER8638_1 IS_NOT self assignable
     static struct ER8638_1
     {
@@ -1186,7 +1185,6 @@ unittest
 unittest
 {
     import std.exception : assertThrown;
-    import std.typecons;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -1302,8 +1300,6 @@ void initializeAll(Range)(Range range)
 
 unittest
 {
-    import std.typecons;
-
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
@@ -2001,7 +1997,6 @@ See_Also:
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow
 if (allMutableFields!T && !is(typeof(T.init.proxySwap(T.init))))
 {
-    import std.traits;
     static if (!isAssignable!T || hasElaborateAssign!T)
     {
         import std.exception : pointsTo;
@@ -2058,7 +2053,6 @@ void swap(T)(T lhs, T rhs) if (is(typeof(T.init.proxySwap(T.init))))
 +/
 private template allMutableFields(T)
 {
-    import std.traits;
     alias OT = OriginalType!T;
     static if (is(OT == struct) || is(OT == union))
         enum allMutableFields = isMutable!OT && allSatisfy!(.allMutableFields, FieldTypeTuple!OT);
@@ -3878,7 +3872,6 @@ InputRange find(alias pred = "a == b", InputRange, Element)(InputRange haystack,
 if (isInputRange!InputRange &&
     is (typeof(binaryFun!pred(haystack.front, needle)) : bool))
 {
-    import std.traits;
     alias R = InputRange;
     alias E = Element;
     alias predFun = binaryFun!pred;
@@ -4539,7 +4532,6 @@ unittest
 unittest
 {
     import std.string : toUpper;
-    import std.typecons;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -4568,8 +4560,6 @@ unittest
 
 unittest
 {
-    import std.typecons;
-
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
@@ -5634,7 +5624,6 @@ unittest
 unittest
 {
     import std.conv : to;
-    import std.typecons;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -5937,7 +5926,6 @@ unittest
 unittest
 {
     import std.conv : to;
-    import std.typecons;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -6126,7 +6114,6 @@ unittest
 {
     import std.conv : to;
     import std.exception : assertThrown;
-    import std.typecons;
     import std.utf : UTFException;
 
     assert(commonPrefix([1, 2, 3], [1, 2, 3, 4, 5]) == [1, 2, 3]);
@@ -6916,7 +6903,6 @@ minCount(alias pred = "a < b", Range)(Range range)
         is(typeof(binaryFun!pred(range.front, range.front))))
 {
     import std.exception : enforce;
-    import std.traits;
 
     alias T  = ElementType!Range;
     alias UT = Unqual!T;
@@ -7028,7 +7014,6 @@ unittest
 unittest
 {
     import std.conv : text;
-    import std.traits;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
