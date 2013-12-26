@@ -1028,6 +1028,11 @@ Kahan summation) algorithm.)
 
 For floating point inputs, calculations are made in $(D real)
 precision for $(D real) inputs and in $(D double) precision otherwise.
+
+Note that these specialized summing algorithms execute more primitive operations
+than vanilla summation. Therefore, if in certain cases maximum speed is required
+at expense of precision, one can use $(D reduce!((a, b) => a + b)(0, r)), which
+is not specialized for summation.
  */
 auto sum(R)(R r)
 if (isInputRange!R && !isFloatingPoint!(ElementType!R) && !isInfinite!R)
