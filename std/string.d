@@ -3242,8 +3242,7 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
             // Floating-Point Number
             return c.among!('l', 'L', 'f', 'F', 'i', 'I') != 0;
         }
-        // Check if separators are allow
-        // to be in the numeric string
+        // Check if separators are allowed to be in the numeric string
         if (!bAllowSep || !c.among!('_', ','))
             return false;
     }
