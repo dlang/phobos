@@ -2504,7 +2504,6 @@ unittest
     });
 }
 
-
 // Explicitly undocumented. It will be removed in July 2014.
 deprecated("Please use std.string.format instead.") alias format xformat;
 
@@ -2527,7 +2526,6 @@ deprecated unittest
     assertThrown!FormatException(xformat("foo %s", 123, 456));
     });
 }
-
 
 // Explicitly undocumented. It will be removed in July 2014.
 deprecated("Please use std.string.sformat instead.") alias sformat xsformat;
@@ -3147,150 +3145,127 @@ unittest
 
 bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
 {
-    ptrdiff_t iLen = s.length;
-    bool   bDecimalPoint = false;
-    bool   bExponent = false;
-    bool   bComplex = false;
-    auto sx = std.string.toLower(s);
-    int    j  = 0;
-    char   c;
-
-    //writefln("isNumeric(string, bool = false) called!");
-    // Empty string, return false
+    immutable iLen = s.length;
     if (iLen == 0)
         return false;
 
-    // Check for NaN (Not a Number)
-    if (sx == "nan" || sx == "nani" || sx == "nan+nani")
+    // Check for NaN (Not a Number) and for Infinity
+    if (s.among!((a, b) => icmp(a, b) == 0)
+            ("nan", "nani", "nan+nani", "inf", "-inf"))
         return true;
 
-    // Check for Infinity
-    if (sx == "inf" || sx == "-inf")
-        return true;
+    immutable j = s[0].among!('-', '+') != 0;
+    bool bDecimalPoint, bExponent, bComplex, sawDigits;
 
-    // A sign is allowed only in the 1st character
-    if (sx[0] == '-' || sx[0] == '+')
+    for (size_t i = j; i < iLen; i++)
     {
-        if (iLen == 1)  // but must be followed by other characters
-            return false;
-
-        j++;
-    }
-
-    for (int i = j; i < iLen; i++)
-    {
-        c = sx[i];
+        immutable c = s[i];
 
         // Digits are good, continue checking
         // with the popFront character... ;)
         if (c >= '0' && c <= '9')
+        {
+            sawDigits = true;
             continue;
+        }
 
         // Check for the complex type, and if found
         // reset the flags for checking the 2nd number.
-        else if (c == '+')
+        if (c == '+')
         {
-            if (i > 0)
-            {
-                bDecimalPoint = false;
-                bExponent = false;
-                bComplex = true;
-                continue;
-            }
-            else
+            if (!i)
                 return false;
+            bDecimalPoint = false;
+            bExponent = false;
+            bComplex = true;
+            sawDigits = false;
+            continue;
         }
+
         // Allow only one exponent per number
-        else if (c == 'e')
+        if (c.among!('e', 'E'))
         {
             // A 2nd exponent found, return not a number
-            if (bExponent)
+            if (bExponent || i + 1 >= iLen)
                 return false;
-
-            if (i + 1 < iLen)
-            {
-                // Look forward for the sign, and if
-                // missing then this is not a number.
-                if (sx[i + 1] != '-' && sx[i + 1] != '+')
-                    return false;
-                else
-                {
-                    bExponent = true;
-                    i++;
-                }
-            }
-            else
-                // Ending in "E", return not a number
+            // Look forward for the sign, and if
+            // missing then this is not a number.
+            if (!s[i + 1].among!('-', '+'))
                 return false;
+            bExponent = true;
+            i++;
+            continue;
         }
         // Allow only one decimal point per number to be used
-        else if (c == '.' )
+        if (c == '.' )
         {
             // A 2nd decimal point found, return not a number
             if (bDecimalPoint)
                 return false;
-
             bDecimalPoint = true;
             continue;
         }
         // Check for ending literal characters: "f,u,l,i,ul,fi,li",
-        // and wheater they're being used with the correct datatype.
-        else if (i == iLen - 2)
+        // and whether they're being used with the correct datatype.
+        if (i == iLen - 2)
         {
+            if (!sawDigits)
+                return false;
             // Integer Whole Number
-            if (sx[i..iLen] == "ul" &&
-               (!bDecimalPoint && !bExponent && !bComplex))
+            if (icmp(s[i..iLen], "ul") == 0 &&
+                    (!bDecimalPoint && !bExponent && !bComplex))
                 return true;
             // Floating-Point Number
-            else if ((sx[i..iLen] == "fi" || sx[i..iLen] == "li") &&
-                     (bDecimalPoint || bExponent || bComplex))
+            if (s[i..iLen].among!((a, b) => icmp(a, b) == 0)("fi", "li") &&
+                    (bDecimalPoint || bExponent || bComplex))
                 return true;
-            else if (sx[i..iLen] == "ul" &&
+            if (icmp(s[i..iLen], "ul") == 0 &&
                     (bDecimalPoint || bExponent || bComplex))
                 return false;
             // Could be a Integer or a Float, thus
             // all these suffixes are valid for both
-            else if (sx[i..iLen] == "ul" ||
-                     sx[i..iLen] == "fi" ||
-                     sx[i..iLen] == "li")
-                return true;
-            else
-                return false;
+            return s[i..iLen].among!((a, b) => icmp(a, b) == 0)
+                ("ul", "fi", "li") != 0;
         }
-        else if (i == iLen - 1)
+        if (i == iLen - 1)
         {
+            if (!sawDigits)
+                return false;
             // Integer Whole Number
-            if ((c == 'u' || c == 'l') &&
-                (!bDecimalPoint && !bExponent && !bComplex))
+            if (c.among!('u', 'l', 'U', 'L') &&
+                   (!bDecimalPoint && !bExponent && !bComplex))
                 return true;
             // Check to see if the last character in the string
             // is the required 'i' character
-            else if (bComplex)
-                if (c == 'i')
-                    return true;
-                else
-                    return false;
+            if (bComplex)
+                return c.among!('i', 'I') != 0;
             // Floating-Point Number
-            else if ((c == 'l' || c == 'f' || c == 'i') &&
-                     (bDecimalPoint || bExponent))
-                return true;
-            // Could be a Integer or a Float, thus
-            // all these suffixes are valid for both
-            else if (c == 'l' || c == 'f' || c == 'i')
-                return true;
-            else
-                return false;
+            return c.among!('l', 'L', 'f', 'F', 'i', 'I') != 0;
         }
-        else
-            // Check if separators are allow
-            // to be in the numeric string
-            if (bAllowSep == true && (c == '_' || c == ','))
-                continue;
-            else
-                return false;
+        // Check if separators are allowed to be in the numeric string
+        if (!bAllowSep || !c.among!('_', ','))
+            return false;
     }
 
-    return true;
+    return sawDigits;
+}
+
+unittest
+{
+    assert(!isNumeric("F"));
+    assert(!isNumeric("L"));
+    assert(!isNumeric("U"));
+    assert(!isNumeric("i"));
+    assert(!isNumeric("fi"));
+    assert(!isNumeric("ul"));
+    assert(!isNumeric("li"));
+    assert(!isNumeric("."));
+    assert(!isNumeric("-"));
+    assert(!isNumeric("+"));
+    assert(!isNumeric("e-"));
+    assert(!isNumeric("e+"));
+    assert(!isNumeric(".f"));
+    assert(!isNumeric("e+f"));
 }
 
 
