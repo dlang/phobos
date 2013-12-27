@@ -3149,22 +3149,17 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
     if (iLen == 0)
         return false;
 
-    auto sx = std.string.toLower(s);
-
-    // Check for NaN (Not a Number)
-    if (sx == "nan" || sx == "nani" || sx == "nan+nani")
+    // Check for NaN (Not a Number) and for Infinity
+    if (s.among!((a, b) => icmp(a, b) == 0)
+            ("nan", "nani", "nan+nani", "inf", "-inf"))
         return true;
 
-    // Check for Infinity
-    if (sx == "inf" || sx == "-inf")
-        return true;
-
-    immutable j = sx[0] == '-' || sx[0] == '+';
+    immutable j = s[0].among!('-', '+') != 0;
     bool bDecimalPoint, bExponent, bComplex, sawDigits;
 
     for (size_t i = j; i < iLen; i++)
     {
-        immutable c = sx[i];
+        immutable c = s[i];
 
         // Digits are good, continue checking
         // with the popFront character... ;)
@@ -3188,14 +3183,14 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
         }
 
         // Allow only one exponent per number
-        if (c == 'e')
+        if (c.among!('e', 'E'))
         {
             // A 2nd exponent found, return not a number
             if (bExponent || i + 1 >= iLen)
                 return false;
             // Look forward for the sign, and if
             // missing then this is not a number.
-            if (sx[i + 1] != '-' && sx[i + 1] != '+')
+            if (!s[i + 1].among!('-', '+'))
                 return false;
             bExponent = true;
             i++;
@@ -3217,45 +3212,39 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
             if (!sawDigits)
                 return false;
             // Integer Whole Number
-            if (sx[i..iLen] == "ul" &&
-                   (!bDecimalPoint && !bExponent && !bComplex))
+            if (icmp(s[i..iLen], "ul") == 0 &&
+                    (!bDecimalPoint && !bExponent && !bComplex))
                 return true;
             // Floating-Point Number
-            if ((sx[i..iLen] == "fi" || sx[i..iLen] == "li") &&
-                     (bDecimalPoint || bExponent || bComplex))
+            if (s[i..iLen].among!((a, b) => icmp(a, b) == 0)("fi", "li") &&
+                    (bDecimalPoint || bExponent || bComplex))
                 return true;
-            if (sx[i..iLen] == "ul" &&
+            if (icmp(s[i..iLen], "ul") == 0 &&
                     (bDecimalPoint || bExponent || bComplex))
                 return false;
             // Could be a Integer or a Float, thus
             // all these suffixes are valid for both
-            return sx[i..iLen] == "ul" ||
-                sx[i..iLen] == "fi" ||
-                sx[i..iLen] == "li";
+            return s[i..iLen].among!((a, b) => icmp(a, b) == 0)
+                ("ul", "fi", "li") != 0;
         }
         if (i == iLen - 1)
         {
             if (!sawDigits)
                 return false;
             // Integer Whole Number
-            if ((c == 'u' || c == 'l') &&
-                (!bDecimalPoint && !bExponent && !bComplex))
+            if (c.among!('u', 'l', 'U', 'L') &&
+                   (!bDecimalPoint && !bExponent && !bComplex))
                 return true;
             // Check to see if the last character in the string
             // is the required 'i' character
             if (bComplex)
-                return c == 'i';
+                return c.among!('i', 'I') != 0;
             // Floating-Point Number
-            if ((c == 'l' || c == 'f' || c == 'i') &&
-                    (bDecimalPoint || bExponent))
-                return true;
-            // Could be a Integer or a Float, thus
-            // all these suffixes are valid for both
-            return c == 'l' || c == 'f' || c == 'i';
+            return c.among!('l', 'L', 'f', 'F', 'i', 'I') != 0;
         }
         // Check if separators are allow
         // to be in the numeric string
-        if (!bAllowSep || c != '_' && c != ',')
+        if (!bAllowSep || !c.among!('_', ','))
             return false;
     }
 
