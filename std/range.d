@@ -8587,14 +8587,8 @@ auto p = a.upperBound(3);
 assert(equal(p, [4, 4, 5, 6]));
 ----
 */
-    auto upperBound(SearchPolicy sp = isRandomAccessRange!Range
-                    ? SearchPolicy.binarySearch
-                    : SearchPolicy.linear,
-                    V)(V value)
-    if (sp == SearchPolicy.linear
-        ||
-        isTwoWayCompatible!(predFun, ElementType!Range, V)
-        && isRandomAccessRange!Range && sp != SearchPolicy.linear)
+    auto upperBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
+    if (isTwoWayCompatible!(predFun, ElementType!Range, V))
     {
         static assert(isRandomAccessRange!Range || sp == SearchPolicy.linear,
             "Specify SearchPolicy.linear explicitly for "
