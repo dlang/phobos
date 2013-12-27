@@ -6512,62 +6512,55 @@ unittest
 
 // equal
 /**
-Returns $(D true) if and only if the two ranges compare equal element
-for element, according to binary predicate $(D pred). The ranges may
-have different element types, as long as $(D pred(a, b)) evaluates to
-$(D bool) for $(D a) in $(D r1) and $(D b) in $(D r2). Performs
-$(BIGOH min(r1.length, r2.length)) evaluations of $(D pred).
-
-See_Also:
-    $(WEB sgi.com/tech/stl/_equal.html, STL's _equal)
+Compares two ranges for equality, as defined by predicate $(D pred)
+(which is $(D ==) by default).
 */
-bool equal(Range1, Range2)(Range1 r1, Range2 r2)
-    if (isInputRange!Range1 && isInputRange!Range2
-        && is(typeof(r1.front == r2.front)))
+template equal(alias pred = "a == b")
 {
-    static if (isArray!Range1 && isArray!Range2
-        && is(typeof(r1 == r2)))
+    /++
+    Returns $(D true) if and only if the two ranges compare equal element
+    for element, according to binary predicate $(D pred). The ranges may
+    have different element types, as long as $(D pred(a, b)) evaluates to
+    $(D bool) for $(D a) in $(D r1) and $(D b) in $(D r2). Performs
+    $(BIGOH min(r1.length, r2.length)) evaluations of $(D pred).
+    
+    See_Also:
+        $(WEB sgi.com/tech/stl/_equal.html, STL's _equal)
+    +/
+    bool equal(Range1, Range2)(Range1 r1, Range2 r2)
+    if (isInputRange!Range1 && isInputRange!Range2 && is(typeof(binaryFun!pred(r1.front, r2.front))))
     {
-        //Ranges are comparable. Let the compiler do the comparison.
-        return r1 == r2;
-    }
-    else
-    {
-        //Need to do an actual compare, delegate to predicate version
-        return equal!"a==b"(r1, r2);
-    }
-}
-
-/// Ditto
-bool equal(alias pred, Range1, Range2)(Range1 r1, Range2 r2)
-    if (isInputRange!Range1 && isInputRange!Range2
-        && is(typeof(binaryFun!pred(r1.front, r2.front))))
-{
-    //Try a fast implementation when the ranges have comparable lengths
-    static if (hasLength!Range1 && hasLength!Range2
-        && is(typeof(r1.length == r2.length)))
-    {
-        auto len1 = r1.length;
-        auto len2 = r2.length;
-        if (len1 != len2) return false; //Short circuit return
-
-        //Lengths are the same, so we need to do an actual comparison
-        //Good news is we can sqeeze out a bit of performance by not checking if r2 is empty
-        for (; !r1.empty; r1.popFront(), r2.popFront())
+        //Start by detecting default pred and compatible dynamicarray.
+        static if (is(typeof(pred) == string) && pred == "a == b" &&
+            isArray!Range1 && isArray!Range2 && is(typeof(r1 == r2)))
         {
-            if (!binaryFun!(pred)(r1.front, r2.front)) return false;
+            return r1 == r2;
         }
-        return true;
-    }
-    else
-    {
-        //Generic case, we have to walk both ranges making sure neither is empty
-        for (; !r1.empty; r1.popFront(), r2.popFront())
+        //Try a fast implementation when the ranges have comparable lengths
+        else static if (hasLength!Range1 && hasLength!Range2 && is(typeof(r1.length == r2.length)))
         {
-            if (r2.empty) return false;
-            if (!binaryFun!(pred)(r1.front, r2.front)) return false;
+            auto len1 = r1.length;
+            auto len2 = r2.length;
+            if (len1 != len2) return false; //Short circuit return
+    
+            //Lengths are the same, so we need to do an actual comparison
+            //Good news is we can sqeeze out a bit of performance by not checking if r2 is empty
+            for (; !r1.empty; r1.popFront(), r2.popFront())
+            {
+                if (!binaryFun!(pred)(r1.front, r2.front)) return false;
+            }
+            return true;
         }
-        return r2.empty;
+        else
+        {
+            //Generic case, we have to walk both ranges making sure neither is empty
+            for (; !r1.empty; r1.popFront(), r2.popFront())
+            {
+                if (r2.empty) return false;
+                if (!binaryFun!(pred)(r1.front, r2.front)) return false;
+            }
+            return r2.empty;
+        }
     }
 }
 
@@ -6575,9 +6568,7 @@ bool equal(alias pred, Range1, Range2)(Range1 r1, Range2 r2)
 unittest
 {
     import std.math : approxEqual;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    import std.algorithm : equal;
 
     int[] a = [ 1, 2, 4, 3 ];
     assert(!equal(a, a[1..$]));
@@ -6590,7 +6581,23 @@ unittest
 
     // predicated: ensure that two vectors are approximately equal
     double[] c = [ 1.005, 2, 4, 3];
-    assert(equal!(approxEqual)(b, c));
+    assert(equal!approxEqual(b, c));
+}
+
+/++
+Tip: $(D equal) can itself be used as a predicate to other functions.
+This can be very useful when the element type of a range is itself a
+range. In particular, $(D equal) can be its own predicate, allowing
+range of range (of range...) comparisons.
+ +/
+unittest
+{
+    import std.algorithm : equal;
+    import std.range : iota, chunks;
+    assert(equal!(equal!equal)(
+        [[[0, 1], [2, 3]], [[4, 5], [6, 7]]],
+        iota(0, 8).chunks(2).chunks(2)
+    ));
 }
 
 unittest
