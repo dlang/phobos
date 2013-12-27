@@ -8604,9 +8604,9 @@ with elements strictly greater than $(D value)). The search schedule
 and its complexity are documented in $(LREF SearchPolicy).
 
 For ranges that do not offer random access, $(D SearchPolicy.linear)
-is the only policy allowed (and the default). For random-access
-searches, all policies are allowed, and $(D SearchPolicy.binarySearch)
-is the default.
+is the only policy allowed (and it must be specified explicitly lest it exposes
+user code to unexpected inefficiencies). For random-access searches, all
+policies are allowed, and $(D SearchPolicy.binarySearch) is the default.
 
 See_Also: STL's $(WEB sgi.com/tech/stl/lower_bound.html,upper_bound).
 
@@ -8617,15 +8617,12 @@ auto p = a.upperBound(3);
 assert(equal(p, [4, 4, 5, 6]));
 ----
 */
-    auto upperBound(SearchPolicy sp = isRandomAccessRange!Range
-                    ? SearchPolicy.binarySearch
-                    : SearchPolicy.linear,
-                    V)(V value)
-    if (sp == SearchPolicy.linear
-        ||
-        isTwoWayCompatible!(predFun, ElementType!Range, V)
-        && isRandomAccessRange!Range && sp != SearchPolicy.linear)
+    auto upperBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
+    if (isTwoWayCompatible!(predFun, ElementType!Range, V))
     {
+        static assert(isRandomAccessRange!Range || sp == SearchPolicy.linear,
+            "Specify SearchPolicy.linear explicitly for "
+            ~ typeof(this).stringof);
         static if (sp == SearchPolicy.linear)
         {
             for (; !_input.empty && !predFun(value, _input.front);
@@ -8901,14 +8898,14 @@ unittest
 unittest
 {
     import std.file, std.path;
-    auto name = join(tempDir(), "test.std.range." ~ text(__LINE__));
+    auto name = buildPath(tempDir(), "test.std.range." ~ text(__LINE__));
     auto f = File(name, "w");
     // write a sorted range of lines to the file
     f.write("abc\ndef\nghi\njkl");
     f.close();
     f.open(name);
     auto r = assumeSorted(f.byLine());
-    auto r1 = r.upperBound("def");
+    auto r1 = r.upperBound!(SearchPolicy.linear)("def");
     assert(r1.front == "ghi");
 }
 
