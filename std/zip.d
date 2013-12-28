@@ -90,9 +90,13 @@ final class ArchiveMember
     ushort flags;                  /// Read/Write: normally set to 0
     ushort internalAttributes;     /// Read/Write
 
-    @property ushort madeVersion()     { return _madeVersion; }    /// Read Only
     @property ushort extractVersion()     { return _extractVersion; }    /// Read Only
     @property uint crc32()         { return _crc32; }    /// Read Only: cyclic redundancy check (CRC) value
+
+    // Explicitly undocumented. It will be removed in January 2015.
+    deprecated("Please use fileAttributes instead.")
+    @property ref inout(ushort) madeVersion() inout @safe pure nothrow
+    { return _madeVersion; }
 
     // Explicitly undocumented. It will be removed in January 2015.
     deprecated("Please use fileAttributes instead.")
