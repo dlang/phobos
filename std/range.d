@@ -619,7 +619,7 @@ evaluated.
 
 In this table "doPut" is a method that places $(D e) into $(D r), using the
 correct primitive: $(D r.put(e)) if $(D R) defines $(D put), $(D r.front = e) if $(D r) is an input
-range (followed by $(D r.popFront()), or $(D r(e)) otherwise.
+range (followed by $(D r.popFront())), or $(D r(e)) otherwise.
 
 $(BOOKTABLE ,
     $(TR

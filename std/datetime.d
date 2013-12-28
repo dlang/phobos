@@ -1720,7 +1720,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         Minutes past the current hour.
 
         Params:
-            minutes = The minute to set this $(LREF SysTime)'s minute to.
+            minute = The minute to set this $(LREF SysTime)'s minute to.
 
         Throws:
             $(LREF DateTimeException) if the given minute are not a valid minute
@@ -2109,7 +2109,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         adjust the time to this $(LREF SysTime)'s time zone before returning.
 
         Params:
-            tz = The $(LREF2 .TimeZone, TimeZone) to set this $(LREF SysTime)'s time zone to.
+            timezone = The $(LREF2 .TimeZone, TimeZone) to set this $(LREF SysTime)'s time zone to.
       +/
     @property void timezone(immutable TimeZone timezone) pure nothrow
     {
@@ -8437,10 +8437,10 @@ assert(SysTime.fromISOString("20100704T070612+8:00") ==
         are +H, -H, +HH, -HH, +H:MM, -H:MM, +HH:MM, and -HH:MM.
 
         Params:
-            isoString = A string formatted in the ISO Extended format for dates
-                        and times.
-            tz        = The time zone to convert the given time to (no
-                        conversion occurs if null).
+            isoExtString = A string formatted in the ISO Extended format for dates
+                           and times.
+            tz           = The time zone to convert the given time to (no
+                           conversion occurs if null).
 
         Throws:
             $(LREF DateTimeException) if the given string is not in the ISO format
@@ -10538,6 +10538,8 @@ assert(d4 == Date(2001, 2, 28));
             units         = The type of units to add ("years" or "months").
             value         = The number of months or years to add to this
                             $(LREF Date).
+            allowOverflow = Whether the day should be allowed to overflow,
+                            causing the month to increment.
 
         Examples:
 --------------------
@@ -11217,7 +11219,7 @@ assert(d6 == Date(2001, 2, 28));
 
         Params:
             units = The units to add. Must be $(D "days").
-            value = The number of days to add to this $(LREF Date).
+            days  = The number of days to add to this $(LREF Date).
 
         Examples:
 --------------------
@@ -14615,7 +14617,7 @@ assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
         Whitespace is stripped from the given string.
 
         Params:
-            isoString = A string formatted in the ISO Extended format for times.
+            isoExtString = A string formatted in the ISO Extended format for times.
 
         Throws:
             $(LREF DateTimeException) if the given string is not in the ISO
@@ -16117,10 +16119,10 @@ dt3.roll!"seconds"(-1);
 assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
 --------------------
       +/
-    /+ref DateTime+/ void roll(string units)(long days) pure nothrow
+    /+ref DateTime+/ void roll(string units)(long value) pure nothrow
         if(units == "days")
     {
-        _date.roll!"days"(days);
+        _date.roll!"days"(value);
     }
 
     //Verify Examples.
@@ -17827,8 +17829,8 @@ assert(DateTime.fromISOString(" 20100704T070612 ") ==
         YYYY-MM-DDTHH:MM:SS. Whitespace is stripped from the given string.
 
         Params:
-            isoString = A string formatted in the ISO Extended format for dates
-                        and times.
+            isoExtString = A string formatted in the ISO Extended format for dates
+                           and times.
 
         Throws:
             $(LREF DateTimeException) if the given string is not in the ISO
@@ -19453,6 +19455,7 @@ assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
                 allowOverflow = Whether the days should be allowed to overflow
                                 on $(D begin) and $(D end), causing their month
                                 to increment.
+                dir           = The direction in time to expand the interval.
 
             Throws:
                 $(LREF DateTimeException) if this interval is empty or if the
@@ -22096,7 +22099,6 @@ assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
 
         Params:
             duration = The duration to expand the interval by.
-            dir      = The direction in time to expand the interval.
 
         Examples:
 --------------------
@@ -23531,7 +23533,7 @@ public:
 
     /++
         Params:
-            begin = The time point which begins the interval.
+            end = The time point which ends the interval.
 
         Examples:
 --------------------
@@ -24358,7 +24360,6 @@ assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
 
         Params:
             duration = The duration to expand the interval by.
-            dir      = The direction in time to expand the interval.
 
         Examples:
 --------------------
@@ -29091,13 +29092,13 @@ private:
     Represents a time zone from a TZ Database time zone file. Files from the TZ
     Database are how Posix systems hold their time zone information.
     Unfortunately, Windows does not use the TZ Database. To use the TZ Database,
-    use $(LREF PosixTimeZone) (which reads its information from the TZ Database
+    use $(D PosixTimeZone) (which reads its information from the TZ Database
     files on disk) on Windows by providing the TZ Database files and telling
     $(D PosixTimeZone.getTimeZone) where the directory holding them is.
 
-    To get a $(LREF PosixTimeZone), either call $(D PosixTimeZone.getTimeZone)
+    To get a $(D PosixTimeZone), either call $(D PosixTimeZone.getTimeZone)
     (which allows specifying the location the time zone files) or call
-    $(D TimeZone.getTimeZone) (which will give a $(LREF PosixTimeZone) on Posix
+    $(D TimeZone.getTimeZone) (which will give a $(D PosixTimeZone) on Posix
     systems and a $(LREF WindowsTimeZone) on Windows systems).
 
     Note:
@@ -29604,7 +29605,9 @@ assert(tz.dstName == "PDT");
         begin with "America".
 
         Params:
-            subName = The first part of the desired time zones.
+            subName       = The first part of the desired time zones.
+            tzDatabaseDir = The directory where the TZ Database files are
+                            located.
 
         Throws:
             $(D FileException) if it fails to read from disk.
@@ -31452,7 +31455,7 @@ version(StdDdoc)
         $(D FILETIME) struct.
 
         Params:
-            sysTime = The $(LREF SysTime) to convert.
+            stdTime = The number of hnsecs since midnight, January 1st, 1 A.D. UTC.
 
         Throws:
             $(LREF DateTimeException) if the given value will not fit in a
