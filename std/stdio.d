@@ -41,6 +41,7 @@ version (DigitalMars)
 
 version (Posix)
 {
+    import core.sys.posix.fcntl;
     import core.sys.posix.stdio;
     alias core.sys.posix.stdio.fileno fileno;
 }
@@ -100,6 +101,7 @@ version (DIGITAL_MARS_STDIO)
     enum _O_BINARY = 0x8000;
     int _fileno(FILE* f) { return f._file; }
     alias _fileno fileno;
+    alias _fdToHandle _get_osfhandle;
 }
 else version (MICROSOFT_STDIO)
 {
@@ -790,6 +792,228 @@ Throws: $(D Exception) if the file is not opened.
                         cast(char*) buf.ptr, mode, buf.length) == 0,
                 "Could not set buffering for file `"~_name~"'");
     }
+
+
+    version(Windows)
+    {
+        import core.sys.windows.windows;
+        import std.windows.syserror;
+        private BOOL lockImpl(alias F, Flags...)(ulong start, ulong length,
+            Flags flags)
+        {
+            if (!start && !length)
+                length = ulong.max;
+            ULARGE_INTEGER liStart = void, liLength = void;
+            liStart.QuadPart = start;
+            liLength.QuadPart = length;
+            OVERLAPPED overlapped;
+            overlapped.Offset = liStart.LowPart;
+            overlapped.OffsetHigh = liStart.HighPart;
+            overlapped.hEvent = null;
+            return F(cast(HANDLE)_get_osfhandle(fileno), flags, 0,
+                liLength.LowPart, liLength.HighPart, &overlapped);
+        }
+
+        private static T wenforce(T)(T cond, string str)
+        {
+            if (cond) return cond;
+            throw new Exception(str ~ ": " ~ sysErrorString(GetLastError()));
+        }
+    }
+    version(Posix)
+    {
+        private int lockImpl(int operation, short l_type,
+            ulong start, ulong length)
+        {
+            import std.conv : to;
+            import core.sys.posix.unistd : getpid;
+
+            flock fl = void;
+            fl.l_type   = l_type;
+            fl.l_whence = SEEK_SET;
+            fl.l_start  = to!off_t(start);
+            fl.l_len    = to!off_t(length);
+            fl.l_pid    = getpid();
+            return fcntl(fileno, operation, &fl);
+        }
+    }
+
+/**
+Locks the specified file segment. If the file segment is already locked
+by another process, waits until the existing lock is released.
+If both $(D start) and $(D length) are zero, the entire file is locked.
+
+Locks created using $(D lock) and $(D tryLock) have the following properties:
+$(UL
+ $(LI All locks are automatically released when the process terminates.)
+ $(LI Locks are not inherited by child processes.)
+ $(LI Closing a file will release all locks associated with the file. On POSIX,
+      even locks acquired via a different $(D File) will be released as well.)
+ $(LI Not all NFS implementations correctly implement file locking.)
+)
+ */
+    void lock(LockType lockType = LockType.readWrite,
+        ulong start = 0, ulong length = 0)
+    {
+        import std.exception : enforce, errnoEnforce;
+
+        enforce(isOpen, "Attempting to call lock() on an unopened file");
+        version (Posix)
+        {
+            immutable short type = lockType == LockType.readWrite
+                ? F_WRLCK : F_RDLCK;
+            errnoEnforce(lockImpl(F_SETLKW, type, start, length) != -1,
+                    "Could not set lock for file `"~_name~"'");
+        }
+        else
+        version(Windows)
+        {
+            immutable type = lockType == LockType.readWrite ?
+                LOCKFILE_EXCLUSIVE_LOCK : 0;
+            wenforce(lockImpl!LockFileEx(start, length, type),
+                    "Could not set lock for file `"~_name~"'");
+        }
+        else
+            static assert(false);
+    }
+
+/**
+Attempts to lock the specified file segment.
+If both $(D start) and $(D length) are zero, the entire file is locked.
+Returns: $(D true) if the lock was successful, and $(D false) if the
+specified file segment was already locked.
+ */
+    bool tryLock(LockType lockType = LockType.readWrite,
+        ulong start = 0, ulong length = 0)
+    {
+        import std.exception : enforce, errnoEnforce;
+
+        enforce(isOpen, "Attempting to call tryLock() on an unopened file");
+        version (Posix)
+        {
+            immutable short type = lockType == LockType.readWrite
+                ? F_WRLCK : F_RDLCK;
+            immutable res = lockImpl(F_SETLK, type, start, length);
+            if (res == -1 && (errno == EACCES || errno == EAGAIN))
+                return false;
+            errnoEnforce(res != -1, "Could not set lock for file `"~_name~"'");
+            return true;
+        }
+        else
+        version(Windows)
+        {
+            immutable type = lockType == LockType.readWrite
+                ? LOCKFILE_EXCLUSIVE_LOCK : 0;
+            immutable res = lockImpl!LockFileEx(start, length,
+                type | LOCKFILE_FAIL_IMMEDIATELY);
+            if (!res && (GetLastError() == ERROR_IO_PENDING
+                || GetLastError() == ERROR_LOCK_VIOLATION))
+                return false;
+            wenforce(res, "Could not set lock for file `"~_name~"'");
+            return true;
+        }
+        else
+            static assert(false);
+    }
+
+/**
+Removes the lock over the specified file segment.
+ */
+    void unlock(ulong start = 0, ulong length = 0)
+    {
+        import std.exception : enforce, errnoEnforce;
+
+        enforce(isOpen, "Attempting to call unlock() on an unopened file");
+        version (Posix)
+        {
+            errnoEnforce(lockImpl(F_SETLK, F_UNLCK, start, length) != -1,
+                    "Could not remove lock for file `"~_name~"'");
+        }
+        else
+        version(Windows)
+        {
+            wenforce(lockImpl!UnlockFileEx(start, length),
+                "Could not remove lock for file `"~_name~"'");
+        }
+        else
+            static assert(false);
+    }
+
+    version(Windows)
+    unittest
+    {
+        static import std.file;
+        auto deleteme = testFilename();
+        scope(exit) std.file.remove(deleteme);
+        auto f = File(deleteme, "wb");
+        assert(f.tryLock());
+        auto g = File(deleteme, "wb");
+        assert(!g.tryLock());
+        assert(!g.tryLock(LockType.read));
+        f.unlock();
+        f.lock(LockType.read);
+        assert(!g.tryLock());
+        assert(g.tryLock(LockType.read));
+        f.unlock();
+        g.unlock();
+    }
+
+    version(Posix)
+    unittest
+    {
+        static import std.file;
+        auto deleteme = testFilename();
+        scope(exit) std.file.remove(deleteme);
+
+        // Since locks are per-process, we cannot test lock failures within
+        // the same process. fork() is used to create a second process.
+        static void runForked(void delegate() code)
+        {
+            import core.sys.posix.unistd;
+            import core.sys.posix.sys.wait;
+            int child, status;
+            if ((child = fork()) == 0)
+            {
+                code();
+                exit(0);
+            }
+            else
+            {
+                assert(wait(&status) != -1);
+                assert(status == 0, "Fork crashed");
+            }
+        }
+
+        auto f = File(deleteme, "w+b");
+
+        runForked
+        ({
+            auto g = File(deleteme, "a+b");
+            assert(g.tryLock());
+            g.unlock();
+            assert(g.tryLock(LockType.read));
+        });
+
+        assert(f.tryLock());
+        runForked
+        ({
+            auto g = File(deleteme, "a+b");
+            assert(!g.tryLock());
+            assert(!g.tryLock(LockType.read));
+        });
+        f.unlock();
+
+        f.lock(LockType.read);
+        runForked
+        ({
+            auto g = File(deleteme, "a+b");
+            assert(!g.tryLock());
+            assert(g.tryLock(LockType.read));
+            g.unlock();
+        });
+        f.unlock();
+    }
+
 
 /**
 Writes its arguments in text format to the file.
@@ -1836,6 +2060,22 @@ unittest
     auto f = File(deleteme);
     assert(f.size == 5);
     assert(f.tell == 0);
+}
+
+/// Used to specify the lock type for $(D File.lock) and $(D File.tryLock).
+enum LockType
+{
+    /// Specifies a _read (shared) lock. A _read lock denies all processes
+    /// write access to the specified region of the file, including the
+    /// process that first locks the region. All processes can _read the
+    /// locked region. Multiple simultaneous _read locks are allowed, as
+    /// long as there are no exclusive locks.
+    read,
+    /// Specifies a read/write (exclusive) lock. A read/write lock denies all
+    /// other processes both read and write access to the locked file region.
+    /// If a segment has an exclusive lock, it may not have any shared locks
+    /// or other exclusive locks.
+    readWrite
 }
 
 struct LockingTextReader
