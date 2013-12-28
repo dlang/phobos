@@ -3659,13 +3659,6 @@ Assignment operators
         move(rhs, _refCounted._store._payload);
     }
 
-    /// Ditto
-    void opAssign(typeof(null))
-    {
-        destroy(this);
-        _refCounted._store = null;
-    }
-
     //version to have a single properly ddoc'ed function (w/ correct sig)
     version(StdDdoc)
     {

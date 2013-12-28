@@ -3804,7 +3804,7 @@ struct GroupBy(alias pred, R) if (isForwardRange!R)
             {
                 // Fast forward allGroups to this position
                 _allGroups.data = _thisGroup;
-                _allGroups = null;
+                _allGroups.refCountedStore = _allGroups.refCountedStore.init;
             }
             return result;
         }
