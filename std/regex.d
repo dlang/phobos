@@ -431,13 +431,16 @@ struct Bytecode
     }
 
     //bit twiddling helpers
-    @property uint data() const { return raw & 0x003f_ffff; }
+    //0-arg template due to @@@BUG@@@ 10985
+    @property uint data()() const { return raw & 0x003f_ffff; }
 
     //ditto
-    @property uint sequence() const { return 2 + (raw >> 22 & 0x3); }
+    //0-arg template due to @@@BUG@@@ 10985
+    @property uint sequence()() const { return 2 + (raw >> 22 & 0x3); }
 
     //ditto
-    @property IR code() const { return cast(IR)(raw>>24); }
+    //0-arg template due to @@@BUG@@@ 10985
+    @property IR code()() const { return cast(IR)(raw>>24); }
 
     //ditto
     @property bool hotspot() const { return hasMerge(code); }
@@ -2280,14 +2283,16 @@ unittest
 }
 
 //whether ch is one of unicode newline sequences
-bool endOfLine(dchar front, bool seenCr)
+//0-arg template due to @@@BUG@@@ 10985
+bool endOfLine()(dchar front, bool seenCr)
 {
     return ((front == '\n') ^ seenCr) || front == '\r'
     || front == NEL || front == LS || front == PS;
 }
 
 //
-bool startOfLine(dchar back, bool seenNl)
+//0-arg template due to @@@BUG@@@ 10985
+bool startOfLine()(dchar back, bool seenNl)
 {
     return ((back == '\r') ^ seenNl) || back == '\n'
     || back == NEL || back == LS || back == PS;
