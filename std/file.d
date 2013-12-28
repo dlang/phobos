@@ -1366,6 +1366,27 @@ void mkdir(in char[] pathname)
     }
 }
 
+// Same as mkdir but ignores "already exists" errors.
+// Returns: "true" if the directory was created,
+//   "false" if it already existed.
+private bool ensureDirExists(in char[] pathname)
+{
+    version(Windows)
+    {
+        if (CreateDirectoryW(std.utf.toUTF16z(pathname), null))
+            return true;
+        cenforce(GetLastError() == ERROR_ALREADY_EXISTS, pathname.idup);
+    }
+    else version(Posix)
+    {
+        if (core.sys.posix.sys.stat.mkdir(toStringz(pathname), octal!777) == 0)
+            return true;
+        cenforce(errno == EEXIST, pathname);
+    }
+    enforce(pathname.isDir, new FileException(pathname.idup));
+    return false;
+}
+
 /****************************************************
  * Make directory and all parent directories as needed.
  *
@@ -1388,12 +1409,30 @@ void mkdirRecurse(in char[] pathname)
     }
     if (!baseName(pathname).empty)
     {
-        mkdir(pathname);
+        ensureDirExists(pathname);
     }
 }
 
 unittest
 {
+    {
+        immutable basepath = deleteme ~ "_dir";
+        scope(exit) rmdirRecurse(basepath);
+
+        auto path = buildPath(basepath, "a", "..", "b");
+        mkdirRecurse(path);
+        path = path.buildNormalizedPath;
+        assert(path.isDir);
+
+        path = buildPath(basepath, "c");
+        write(path, "");
+        assertThrown!FileException(mkdirRecurse(path));
+
+        path = buildPath(basepath, "d");
+        mkdirRecurse(path);
+        mkdirRecurse(path); // should not throw
+    }
+
     // bug3570
     {
         immutable basepath = deleteme ~ "_dir";
