@@ -116,7 +116,7 @@ SRC_STD_math=std\math.d
 SRC_STD_3= std\csv.d std\complex.d std\numeric.d std\bigint.d
 SRC_STD_3c= std\datetime.d std\metastrings.d std\bitmanip.d std\typecons.d
 
-SRC_STD_3a= std\uni.d std\base64.d std\md5.d std\ascii.d \
+SRC_STD_3a= std\uni.d std\base64.d std\ascii.d \
     std\demangle.d std\uri.d std\mmfile.d std\getopt.d
 
 SRC_STD_3b= std\signals.d std\typetuple.d std\traits.d \
@@ -169,12 +169,12 @@ SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_6k) \
 	$(SRC_STD_7)
 
-SRC=	unittest.d crc32.d index.d
+SRC=	unittest.d index.d
 
 SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d std\datetime.d \
 	std\csv.d std\file.d std\compiler.d std\system.d \
-	std\outbuffer.d std\md5.d std\base64.d \
+	std\outbuffer.d std\base64.d \
 	std\mmfile.d \
 	std\syserror.d \
 	std\random.d std\stream.d std\process.d \
@@ -226,7 +226,7 @@ SRC_ETC=
 
 SRC_ETC_C= etc\c\zlib.d etc\c\curl.d etc\c\sqlite3.d
 
-SRC_TO_COMPILE_NOT_STD= crc32.d \
+SRC_TO_COMPILE_NOT_STD= \
 	$(SRC_STD_NET) \
 	$(SRC_STD_C) \
 	$(SRC_STD_WIN) \
@@ -327,7 +327,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_json.html \
 	$(DOC)\std_math.html \
 	$(DOC)\std_mathspecial.html \
-	$(DOC)\std_md5.html \
 	$(DOC)\std_metastrings.html \
 	$(DOC)\std_mmfile.html \
 	$(DOC)\std_numeric.html \
@@ -581,9 +580,6 @@ $(DOC)\std_math.html : $(STDDOC) std\math.d
 
 $(DOC)\std_mathspecial.html : $(STDDOC) std\mathspecial.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_mathspecial.html $(STDDOC) std\mathspecial.d
-
-$(DOC)\std_md5.html : $(STDDOC) std\md5.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_md5.html $(STDDOC) std\md5.d
 
 $(DOC)\std_metastrings.html : $(STDDOC) std\metastrings.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_metastrings.html $(STDDOC) std\metastrings.d
