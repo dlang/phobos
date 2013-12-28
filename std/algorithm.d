@@ -3799,7 +3799,8 @@ struct GroupBy(alias pred, R) if (isForwardRange!R)
         {
             auto result = _thisGroup.empty
                 || !binaryFun!pred(_thisGroup.front, _model);
-            if (result && !isNull(_allGroups) && _allGroups.groupId == _id)
+            if (result && !_allGroups.refCountedStore.isInitialized
+                && _allGroups.groupId == _id)
             {
                 // Fast forward allGroups to this position
                 _allGroups.data = _thisGroup;

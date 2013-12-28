@@ -3720,14 +3720,6 @@ assert(refCountedStore.isInitialized)).
     alias refCountedPayload this;
 }
 
-/**
-Returns $(D true) if $(D obj) is $(D null).
- */
-bool isNull(T)(auto ref RefCounted!T obj)
-{
-    return obj._refCounted._store !is null;
-}
-
 unittest
 {
     RefCounted!int* p;
