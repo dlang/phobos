@@ -10899,8 +10899,10 @@ unittest
 
 /++
 Checks if $(I _any) of the elements verifies $(D pred).
+$(D !any) can be used to verify that $(I none) of the elemnets verify
+$(D pred).
  +/
-template any(alias pred)
+template any(alias pred = "a")
 {
     /++
     Returns $(D true) if and only if $(I _any) value $(D v) found in the
@@ -10922,6 +10924,26 @@ unittest
     assert(!any!(all!isWhite)(["a a", "b b"]));
 }
 
+/++
+$(D any) can also be used without a predicate, if its items can be
+evaluated to true or false in a conditional statement. $(D !any) can be a
+convenient way to quickly test that $(I none) of the elements of a range
+evaluate to true.
+ +/
+unittest
+{
+    int[3] vals1 = [0, 0, 0];
+    assert(!any(vals1[])); //none of vals1 evaluate to true
+
+    int[3] vals2 = [2, 0, 2];
+    assert( any(vals2[]));
+    assert(!all(vals2[]));
+
+    int[3] vals3 = [3, 3, 3];
+    assert( any(vals3[]));
+    assert( all(vals3[]));
+}
+
 unittest
 {
     debug(std_algorithm) scope(success)
@@ -10933,7 +10955,7 @@ unittest
 /++
 Checks if $(I _all) of the elements verify $(D pred).
  +/
-template all(alias pred)
+template all(alias pred = "a")
 {
     /++
     Returns $(D true) if and only if $(I _all) values $(D v) found in the
@@ -10954,6 +10976,18 @@ unittest
 {
     assert( all!"a & 1"([1, 3, 5, 7, 9]));
     assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
+}
+
+/++
+$(D all) can also be used without a predicate, if its items can be
+evaluated to true or false in a conditional statement. This can be a
+convenient way to quickly evaluate that $(I _all) of the elements of a range
+are true.
+ +/
+unittest
+{
+    int[3] vals = [5, 3, 18];
+    assert( all(vals[]));
 }
 unittest
 {
