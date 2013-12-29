@@ -3765,13 +3765,12 @@ struct GroupBy(alias pred, R) if (isForwardRange!R)
     private import std.typecons;
     // This data will be shared between the GroupBy range and its
     // individual groups.
-    struct SharedInput
+    private struct SharedInput
     {
         R data;
         ulong groupId;
     }
     private RefCounted!SharedInput _input;
-    private ElementType!R _model;
     private Group _front;
 
     /**
@@ -3781,15 +3780,18 @@ struct GroupBy(alias pred, R) if (isForwardRange!R)
     {
         private RefCounted!SharedInput _allGroups;
         private R _thisGroup;
-        private ulong _id;
+        private ulong _id = ulong.max;
         private ElementType!R _model;
 
         private this(RefCounted!SharedInput allGroups)
         {
             _allGroups = allGroups;
             _thisGroup = allGroups.data.save;
-            _id = allGroups.groupId;
-            if (!_thisGroup.empty) _model = _thisGroup.front;
+            if (!_thisGroup.empty)
+            {
+                _id = allGroups.groupId;
+                _model = _thisGroup.front;
+            }
         }
 
         /**
@@ -3797,22 +3799,14 @@ struct GroupBy(alias pred, R) if (isForwardRange!R)
         */
         @property bool empty()
         {
-            auto result = _thisGroup.empty
-                || !binaryFun!pred(_thisGroup.front, _model);
-            if (result && !_allGroups.refCountedStore.isInitialized
-                && _allGroups.groupId == _id)
-            {
-                // Fast forward allGroups to this position
-                _allGroups.data = _thisGroup;
-                _allGroups.refCountedStore = _allGroups.refCountedStore.init;
-            }
-            return result;
+            return _id == _id.max;
         }
 
         /// ditto
         @property auto ref front()
         {
             assert(!empty);
+            assert(!_thisGroup.empty);
             return _thisGroup.front;
         }
 
@@ -3821,16 +3815,29 @@ struct GroupBy(alias pred, R) if (isForwardRange!R)
         {
             assert(!empty);
             _thisGroup.popFront();
+            if (_thisGroup.empty || !binaryFun!pred(_model, _thisGroup.front))
+            {
+                // Also fast forward the parent range
+                if (_allGroups.groupId == _id)
+                {
+                    _allGroups.data = _thisGroup;
+                }
+                // End of this group
+                _id = _id.max;
+            }
+            else
+            {
+                _model = _thisGroup.front;
+            }
         }
 
         /// ditto
-        static if (isForwardRange!R)
-            @property auto save()
-            {
-                auto result = this;
-                result._thisGroup = _thisGroup.save;
-                return result;
-            }
+        @property auto save()
+        {
+            auto result = this;
+            result._thisGroup = _thisGroup.save;
+            return result;
+        }
     }
 
     /**
@@ -3839,12 +3846,7 @@ struct GroupBy(alias pred, R) if (isForwardRange!R)
     this(R data)
     {
         _input = RefCounted!SharedInput(data, 0);
-        _front._allGroups = _input;
-        _front._thisGroup = data.save;
-        if (!data.empty)
-        {
-            _front._model = _model = data.front;
-        }
+        _front = Group(_input);
     }
 
     /**
@@ -3865,19 +3867,19 @@ struct GroupBy(alias pred, R) if (isForwardRange!R)
     /// ditto
     void popFront()
     {
-        for (; !_input.data.empty; _input.data.popFront())
+        // Walk the current group through its end
+        for (;; _front.popFront)
         {
-            if (binaryFun!pred(_input.data.front, _model))
+            if (_front.empty)
             {
-                continue;
+                // Anything left?
+                if (_input.data.empty) return;
+                break;
             }
-            // found a new group
-            _model = _input.data.front;
-            _front._model = _model;
-            _front._id = ++_input.groupId;
-            break;
         }
-        _front._thisGroup = _input.data.save;
+        // Found a new group
+        ++_input.groupId;
+        _front = Group(_input);
     }
 
     /// ditto
@@ -3905,6 +3907,9 @@ unittest
 
     assert(firstGroup1.equal([1, 1, 1]));
     assert(firstGroup2.equal([1, 1, 1]));
+
+    assert([1, 3, 2, 4, 5, 1].groupBy!"a <= b"().equal!equal(
+        [[1, 3], [2, 4, 5], [1]]));
 }
 
 // overwriteAdjacent
