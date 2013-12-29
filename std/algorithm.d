@@ -2959,14 +2959,84 @@ unittest
     assert(equal(splitter!"a=='本'"("日本語"), ["日", "語"]));
 }
 
-//Explicitly undocumented. It will be removed in December 2014.
-//@@@6730@@@ This exists already in std.array, so this declaration, at best, will only create ambiguity.
-//unfortunately, an alias will conflict with the existing splitter in std.algorithm.
-deprecated("Please use std.array.splitter for string specific splitting")
-auto splitter(Range)(Range input)
-if (isSomeString!Range)
+/++
+Lazily splits the string $(D s) into words, using whitespace as the delimiter.
+
+This function is string specific and, contrary to
+$(D splitter!(std.uni.isWhite)), runs of whitespace will be merged together
+(no empty tokens will be produced).
+ +/
+auto splitter(C)(C[] s)
+if (isSomeChar!C)
 {
-    return std.array.splitter(input);
+    static struct Result
+    {
+    private:
+        import core.exception;
+        C[] _s;
+        size_t _frontLength;
+
+        void getFirst() pure @safe
+        {
+            auto r = find!(std.uni.isWhite)(_s);
+            _frontLength = _s.length - r.length;
+        }
+
+    public:
+        this(C[] s) pure @safe
+        {
+            import std.string;
+            _s = s.strip();
+            getFirst();
+        }
+
+        @property C[] front() pure @safe
+        {
+            version(assert) if (empty) throw new RangeError();
+            return _s[0 .. _frontLength];
+        }
+
+        void popFront() pure @safe
+        {
+            import std.string : stripLeft;
+            version(assert) if (empty) throw new RangeError();
+            _s = _s[_frontLength .. $].stripLeft();
+            getFirst();
+        }
+
+        @property bool empty() const pure nothrow @safe
+        {
+            return _s.empty;
+        }
+
+        @property inout(Result) save() inout pure nothrow @safe
+        {
+            return this;
+        }
+    }
+    return Result(s);
+}
+
+///
+@safe pure unittest
+{
+    auto a = " a     bcd   ef gh ";
+    assert(equal(splitter(a), ["a", "bcd", "ef", "gh"][]));
+}
+
+@safe pure unittest
+{
+    foreach(S; TypeTuple!(string, wstring, dstring))
+    {
+        import std.conv : to;
+        S a = " a     bcd   ef gh ";
+        assert(equal(splitter(a), [to!S("a"), to!S("bcd"), to!S("ef"), to!S("gh")]));
+        a = "";
+        assert(splitter(a).empty);
+    }
+
+    immutable string s = " a     bcd   ef gh ";
+    assert(equal(splitter(s), ["a", "bcd", "ef", "gh"][]));
 }
 
 unittest
