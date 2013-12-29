@@ -11905,10 +11905,11 @@ unittest
 ----
 // Enumerate all permutations
 int[] a = [1,2,3,4,5];
-while (nextPermutation(a))
+do
 {
-    // a now contains the next permutation of the array.
-}
+    // use the current permutation and
+    // proceed to the next permutation of the array.
+} while (nextPermutation(a));
 ----
  * Returns: false if the range was lexicographically the greatest, in which
  * case the range is reversed back to the lexicographically smallest
@@ -12115,10 +12116,11 @@ unittest
 ----
 // Enumerate even permutations
 int[] a = [1,2,3,4,5];
-while (nextEvenPermutation(a))
+do
 {
-    // a now contains the next even permutation of the array.
-}
+    // use the current permutation and
+    // proceed to the next even permutation of the array.
+} while (nextEvenPermutation(a));
 ----
  * One can also generate the $(I odd) permutations of a range by noting that
  * permutations obey the rule that even + even = even, and odd + even = odd.
@@ -12133,11 +12135,12 @@ while (nextEvenPermutation(a))
 // Enumerate odd permutations
 int[] a = [1,2,3,4,5];
 swap(a[$-2], a[$-1]);    // a is now the first odd permutation of [1,2,3,4,5]
-while (nextEvenPermutation(a))
+do
 {
-    // a now contains the next odd permutation of the original array
+    // use the current permutation and
+    // proceed to the next odd permutation of the original array
     // (which is an even permutation of the first odd permutation).
-}
+} while (nextEvenPermutation(a));
 ----
  *
  * Warning: Since even permutations are only distinct from all permutations
