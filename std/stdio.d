@@ -533,7 +533,7 @@ _clearerr) for the file handle.
 Calls $(WEB cplusplus.com/reference/clibrary/cstdio/_fflush.html, _fflush)
 for the file handle.
 
-Throws: $(D Exception) if the file is not opened or if the call to $D(fflush) fails.
+Throws: $(D Exception) if the file is not opened or if the call to $(D fflush) fails.
  */
     void flush()
     {
@@ -554,7 +554,7 @@ This will be shorter than $(D buffer) if EOF was reached before the buffer
 could be filled.
 
 Throws: $(D Exception) if $(D buffer) is empty.
-        $(D ErrnoException) if the file is not opened or the call to $D(fread) fails.
+        $(D ErrnoException) if the file is not opened or the call to $(D fread) fails.
 
 $(D rawRead) always reads in binary mode on Windows.
  */
@@ -607,7 +607,7 @@ error is thrown if the buffer could not be written in its entirety.
 
 $(D rawWrite) always writes in binary mode on Windows.
 
-Throws: $(D ErrnoException) if the file is not opened or if the call to $D(fread) fails.
+Throws: $(D ErrnoException) if the file is not opened or if the call to $(D fwrite) fails.
  */
     void rawWrite(T)(in T[] buffer)
     {
@@ -656,7 +656,7 @@ Calls $(WEB cplusplus.com/reference/clibrary/cstdio/fseek.html, fseek)
 for the file handle.
 
 Throws: $(D Exception) if the file is not opened.
-        $(D ErrnoException) if the call to $D(fseek) fails.
+        $(D ErrnoException) if the call to $(D fseek) fails.
  */
     void seek(long offset, int origin = SEEK_SET)
     {
@@ -712,7 +712,7 @@ Calls $(WEB cplusplus.com/reference/clibrary/cstdio/ftell.html, ftell) for the
 managed file handle.
 
 Throws: $(D Exception) if the file is not opened.
-        $(D ErrnoException) if the call to $D(ftell) fails.
+        $(D ErrnoException) if the call to $(D ftell) fails.
  */
     @property ulong tell() const
     {
@@ -765,7 +765,7 @@ Calls $(WEB cplusplus.com/reference/clibrary/cstdio/_setvbuf.html, _setvbuf) for
 the file handle.
 
 Throws: $(D Exception) if the file is not opened.
-        $(D ErrnoException) if the call to $D(setvbuf) fails.
+        $(D ErrnoException) if the call to $(D setvbuf) fails.
  */
     void setvbuf(size_t size, int mode = _IOFBF)
     {
@@ -781,7 +781,7 @@ Calls $(WEB cplusplus.com/reference/clibrary/cstdio/_setvbuf.html,
 _setvbuf) for the file handle.
 
 Throws: $(D Exception) if the file is not opened.
-        $(D ErrnoException) if the call to $D(setvbuf) fails.
+        $(D ErrnoException) if the call to $(D setvbuf) fails.
 */
     void setvbuf(void[] buf, int mode = _IOFBF)
     {
