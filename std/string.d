@@ -72,7 +72,7 @@ class StringException : Exception
 /++
     Compares two ranges of characters lexicographically. The comparison is
     case insensitive. Use $(XREF algorithm, cmp) for a case sensitive
-    comparison. For details see $(XREF uni, icmp).
+    comparison. For details see $(XREF uni, _icmp).
 
     $(BOOKTABLE,
         $(TR $(TD $(D < 0))  $(TD $(D s1 < s2) ))
