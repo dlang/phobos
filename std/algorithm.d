@@ -11195,7 +11195,7 @@ ranges). The ranges are assumed to be sorted by $(D less). The element
 types of the ranges must have a common type.
  */
 struct SetIntersection(alias less = "a < b", Rs...)
-    if (allSatisfy!(isInputRange, Rs) &&
+    if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
         !is(CommonType!(staticMap!(ElementType, Rs)) == void))
 {
 private:
@@ -11206,25 +11206,25 @@ private:
     // Positions to the first elements that are all equal
     void adjustPosition()
     {
-        outer:
-        while (!empty)
+        if (empty) return;
+
+        size_t done = Rs.length;
+        static if (Rs.length > 1) while (true)
         {
-            foreach (i, ref r; _input[0 .. $ - 1])
+            foreach (i, ref r; _input)
             {
-                alias next = _input[i + 1];
-                if (comp(r.front, next.front))
-                {
-                    r.popFront();
-                    continue outer;
-                }
+                alias next = _input[(i + 1) % Rs.length];
+
                 if (comp(next.front, r.front))
                 {
-                    next.popFront();
-                    continue outer;
+                    do {
+                        next.popFront();
+                        if (next.empty) return;
+                    } while(comp(next.front, r.front));
+                    done = Rs.length;
                 }
+                if (--done == 0) return;
             }
-
-            return;
         }
     }
 
@@ -11248,10 +11248,10 @@ public:
     void popFront()
     {
         assert(!empty);
-        foreach (i, ref r; _input[0 .. $ - 1])
+        static if (Rs.length > 1) foreach (i, ref r; _input)
         {
-            alias next = _input[i + 1];
-            assert(!comp(r.front, next.front) && !comp(next.front, r.front));
+            alias next = _input[(i + 1) % Rs.length];
+            assert(!comp(r.front, next.front));
         }
 
         foreach (ref r; _input)
@@ -11272,9 +11272,9 @@ public:
         @property SetIntersection save()
         {
             auto ret = this;
-            foreach (ti, elem; _input)
+            foreach (i, ref r; _input)
             {
-                ret._input[ti] = elem.save;
+                ret._input[i] = r.save;
             }
             return ret;
         }
@@ -11282,9 +11282,8 @@ public:
 }
 
 /// Ditto
-SetIntersection!(less, Rs) setIntersection(alias less = "a < b", Rs...)
-(Rs ranges)
-    if (allSatisfy!(isInputRange, Rs) &&
+SetIntersection!(less, Rs) setIntersection(alias less = "a < b", Rs...)(Rs ranges)
+    if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
         !is(CommonType!(staticMap!(ElementType, Rs)) == void))
 {
     return typeof(return)(ranges);
