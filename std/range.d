@@ -4660,6 +4660,8 @@ struct Zip(Ranges...)
 
     private void emplaceIfCan(T)(T* addr)
     {
+        import std.conv : emplace;
+
         static if(__traits(compiles, emplace(addr)))
             emplace(addr);
         else
@@ -4671,6 +4673,8 @@ struct Zip(Ranges...)
 */
     @property ElementType front()
     {
+        import std.conv : emplace;
+
         ElementType result = void;
         foreach (i, Unused; R)
         {
@@ -4711,6 +4715,8 @@ struct Zip(Ranges...)
     {
         ElementType moveFront()
         {
+            import std.conv : emplace;
+
             ElementType result = void;
             foreach (i, Unused; R)
             {
@@ -4735,6 +4741,8 @@ struct Zip(Ranges...)
     {
         @property ElementType back()
         {
+            import std.conv : emplace;
+
             ElementType result = void;
             foreach (i, Unused; R)
             {
@@ -4758,6 +4766,8 @@ struct Zip(Ranges...)
         {
             ElementType moveBack()
             {
+                import std.conv : emplace;
+
                 ElementType result = void;
                 foreach (i, Unused; R)
                 {
@@ -4894,6 +4904,8 @@ struct Zip(Ranges...)
     static if (allSatisfy!(hasSlicing, R))
         auto opSlice(size_t from, size_t to)
         {
+            import std.conv : emplace;
+
             //Slicing an infinite range yields the type Take!R
             //For finite ranges, the type Take!R aliases to R
             Zip!(staticMap!(Take, R)) result = void;
@@ -4913,6 +4925,8 @@ struct Zip(Ranges...)
 */
         ElementType opIndex(size_t n)
         {
+            import std.conv : emplace;
+
             ElementType result = void;
             foreach (i, Range; R)
             {
@@ -4945,6 +4959,8 @@ struct Zip(Ranges...)
         {
             ElementType moveAt(size_t n)
             {
+                import std.conv : emplace;
+
                 ElementType result = void;
                 foreach (i, Range; R)
                 {
