@@ -1426,81 +1426,9 @@ unittest //safety, purity, ctfe ...
 }
 
 /++
-Lazily splits the string $(D s) into words, using whitespace as
-the delimiter.
-
-This function is string specific and, contrary to $(D
-splitter!(std.uni.isWhite)), runs of whitespace will be merged together
-(no empty tokens will be produced).
+Alias for $(XREF algorithm, splitter).
  +/
-auto splitter(C)(C[] s)
-if(isSomeChar!C)
-{
-    static struct Result
-    {
-    private:
-        C[] _s;
-        size_t _frontLength;
-
-        void getFirst() pure @safe
-        {
-            auto r = find!(std.uni.isWhite)(_s);
-            _frontLength = _s.length - r.length;
-        }
-
-    public:
-        this(C[] s) pure @safe
-        {
-            _s = s.strip();
-            getFirst();
-        }
-
-        @property C[] front() pure @safe
-        {
-            version(assert) if (empty) throw new RangeError();
-            return _s[0 .. _frontLength];
-        }
-
-        void popFront() pure @safe
-        {
-            version(assert) if (empty) throw new RangeError();
-            _s = _s[_frontLength .. $].stripLeft();
-            getFirst();
-        }
-
-        @property bool empty() const pure nothrow @safe
-        {
-            return _s.empty;
-        }
-
-        @property inout(Result) save() inout pure nothrow @safe
-        {
-            return this;
-        }
-    }
-    return Result(s);
-}
-
-///
-@safe pure unittest
-{
-    auto a = " a     bcd   ef gh ";
-    assert(equal(splitter(a), ["a", "bcd", "ef", "gh"][]));
-}
-
-@safe pure unittest
-{
-    foreach(S; TypeTuple!(string, wstring, dstring))
-    {
-        S a = " a     bcd   ef gh ";
-        assert(equal(splitter(a), [to!S("a"), to!S("bcd"), to!S("ef"), to!S("gh")]));
-        a = "";
-        assert(splitter(a).empty);
-    }
-
-    immutable string s = " a     bcd   ef gh ";
-    assert(equal(splitter(s), ["a", "bcd", "ef", "gh"][]));
-}
+alias splitter = std.algorithm.splitter;
 
 /++
 Eagerly splits $(D s) into an array, using $(D delim) as the delimiter.
@@ -2399,7 +2327,7 @@ struct Appender(A : T[], T)
             static if (is(Unqual!T == T))
                 alias uitem = item;
             else
-                auto ref uitem() @trusted nothrow @property { return cast(Unqual!T)item;} 
+                auto ref uitem() @trusted nothrow @property { return cast(Unqual!T)item;}
 
             //The idea is to only call emplace if we must.
             static if ( is(typeof(bigData[0].opAssign(uitem))) ||
