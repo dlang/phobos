@@ -1081,6 +1081,12 @@ unittest
     static assert(!isOutputRange!(inout(int)[], int));
 }
 
+unittest
+{
+    // 6973
+    static assert(isOutputRange!(OutputRange!int, int));
+}
+
 /**
 Returns $(D true) if $(D R) is a forward range. A forward range is an
 input range $(D r) that can save "checkpoints" by saving $(D r.save)

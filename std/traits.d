@@ -147,7 +147,6 @@
  */
 module std.traits;
 import std.typetuple;
-import std.typecons;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Functions
@@ -341,7 +340,7 @@ unittest
     static assert(packageName!Barrier == "core.sync");
 }
 
-version(unittest)
+version (none) version(unittest) //Please uncomment me when changing packageName to test global imports
 {
     import core.sync.barrier;  // global import
     static assert(packageName!core == "core");
@@ -392,7 +391,7 @@ unittest
     static assert(moduleName!Barrier == "core.sync.barrier");
 }
 
-version(unittest)
+version (none) version(unittest) //Please uncomment me when changing moduleName to test global imports
 {
     import core.sync.barrier;  // global import
     static assert(!__traits(compiles, moduleName!(core.sync)));
@@ -691,7 +690,7 @@ private template fullyQualifiedNameImplForTypes(T,
 
 unittest
 {
-    import std.string;
+    import std.string : format;
 
     // Verify those 2 are the same for simple case
     alias Ambiguous = const(QualifiedNameTests.Inner);
@@ -989,13 +988,6 @@ unittest
 
 /**
 Get, as a tuple, the identifiers of the parameters to a function symbol.
-
-Example:
----
-import std.traits;
-int foo(int num, string name);
-static assert([ParameterIdentifierTuple!foo] == ["num", "name"]);
----
  */
 template ParameterIdentifierTuple(func...)
     if (func.length == 1 && isCallable!func)
@@ -1034,9 +1026,9 @@ template ParameterIdentifierTuple(func...)
     alias Impl!() ParameterIdentifierTuple;
 }
 
+///
 unittest
 {
-    // Test for ddoc example
     import std.traits;
     int foo(int num, string name);
     static assert([ParameterIdentifierTuple!foo] == ["num", "name"]);
@@ -1081,15 +1073,6 @@ unittest
 /**
 Get, as a tuple, the default value of the parameters to a function symbol.
 If a parameter doesn't have the default value, $(D void) is returned instead.
-
-Example:
----
-import std.traits;
-int foo(int num, string name = "hello", int[] arr = [1,2,3]);
-static assert(is(ParameterDefaultValueTuple!foo[0] == void));
-static assert(   ParameterDefaultValueTuple!foo[1] == "hello");
-static assert(   ParameterDefaultValueTuple!foo[2] == [1,2,3]);
----
  */
 template ParameterDefaultValueTuple(func...)
     if (func.length == 1 && isCallable!func)
@@ -1133,9 +1116,10 @@ template ParameterDefaultValueTuple(func...)
     alias Impl!() ParameterDefaultValueTuple;
 }
 
+///
 unittest
 {
-    // Test for ddoc example
+    import std.traits;
     int foo(int num, string name = "hello", int[] arr = [1,2,3]);
     static assert(is(ParameterDefaultValueTuple!foo[0] == void));
     static assert(   ParameterDefaultValueTuple!foo[1] == "hello");
@@ -1808,8 +1792,7 @@ template SetFunctionAttributes(T, string linkage, uint attrs)
     // To avoid a lot of syntactic headaches, we just use the above version to
     // operate on the corresponding function pointer type and then remove the
     // indirection again.
-    alias FunctionTypeOf!(SetFunctionAttributes!(T*, linkage, attrs))
-        SetFunctionAttributes;
+    alias SetFunctionAttributes = FunctionTypeOf!(SetFunctionAttributes!(T*, linkage, attrs));
 }
 
 version (unittest)
@@ -2095,15 +2078,17 @@ template RepresentationTypeTuple(T)
         }
         else
         {
+            import std.typecons : Rebindable;
+
             static if (is(T[0] R: Rebindable!R))
             {
                 alias Impl!(Impl!R, T[1 .. $]) Impl;
             }
             else  static if (is(T[0] == struct) || is(T[0] == union))
             {
-    // @@@BUG@@@ this should work
-    //             alias .RepresentationTypes!(T[0].tupleof)
-    //                 RepresentationTypes;
+                // @@@BUG@@@ this should work
+                //alias .RepresentationTypes!(T[0].tupleof)
+                //    RepresentationTypes;
                 alias Impl!(FieldTypeTuple!(T[0]), T[1 .. $]) Impl;
             }
             else static if (is(T[0] U == typedef))
@@ -2155,6 +2140,8 @@ unittest
     static assert(R1.length == 2 && is(R1[0] == int) && is(R1[1] == float));
 
     /* Issue 6642 */
+    import std.typecons : Rebindable;
+
     struct S5 { int a; Rebindable!(immutable Object) b; }
     alias RepresentationTypeTuple!S5 R2;
     static assert(R2.length == 2 && is(R2[0] == int) && is(R2[1] == immutable(Object)));
@@ -2364,7 +2351,6 @@ struct S6 { S4 a; double b; }
 static assert(!hasRawUnsharedAliasing!S6);
 ----
 */
-
 private template hasRawUnsharedAliasing(T...)
 {
     template Impl(T...)
@@ -2564,7 +2550,6 @@ Statically evaluates to $(D true) if and only if $(D T)'s
 representation includes at least one non-immutable non-shared object
 reference.
 */
-
 private template hasUnsharedObjects(T...)
 {
     static if (T.length == 0)
@@ -2599,20 +2584,23 @@ $(LI a delegate.))
 
 template hasAliasing(T...)
 {
-    template isAliasingDelegate(T)
-    {
-        enum isAliasingDelegate = isDelegate!T
-                              && !is(T == immutable)
-                              && !is(FunctionTypeOf!T == immutable);
-    }
-    enum hasAliasing = hasRawAliasing!T || hasObjects!T ||
-        anySatisfy!(isAliasingDelegate, T, RepresentationTypeTuple!T);
-}
+    import std.typecons : Rebindable;
 
-// Specialization to special-case std.typecons.Rebindable.
-template hasAliasing(R : Rebindable!R)
-{
-    enum hasAliasing = hasAliasing!R;
+    static if (T.length && is(T[0] : Rebindable!R, R))
+    {
+        enum hasAliasing = hasAliasing!(R, T[1 .. $]);
+    }
+    else
+    {
+        template isAliasingDelegate(T)
+        {
+            enum isAliasingDelegate = isDelegate!T
+                                  && !is(T == immutable)
+                                  && !is(FunctionTypeOf!T == immutable);
+        }
+        enum hasAliasing = hasRawAliasing!T || hasObjects!T ||
+            anySatisfy!(isAliasingDelegate, T, RepresentationTypeTuple!T);
+    }
 }
 
 unittest
@@ -2653,6 +2641,7 @@ unittest
     interface I;
     static assert( hasAliasing!I);
 
+    import std.typecons : Rebindable;
     static assert( hasAliasing!(Rebindable!(const Object)));
     static assert(!hasAliasing!(Rebindable!(immutable Object)));
     static assert( hasAliasing!(Rebindable!(shared Object)));
@@ -2795,9 +2784,9 @@ unittest
 }
 
 //Explicitly undocumented. They will be removed in December 2014.
-deprecated("Please use hasLocalAliasing instead.") alias hasUnsharedAliasing hasLocalAliasing;
-deprecated("Please use hasRawLocalAliasing instead.") alias hasRawUnsharedAliasing hasRawLocalAliasing;
-deprecated("Please use hasLocalObjects instead.") alias hasUnsharedObjects hasLocalObjects;
+deprecated("Please use hasLocalAliasing instead.")    alias hasLocalAliasing    = hasUnsharedAliasing;
+deprecated("Please use hasRawLocalAliasing instead.") alias hasRawLocalAliasing = hasRawUnsharedAliasing;
+deprecated("Please use hasLocalObjects instead.")     alias hasLocalObjects     = hasUnsharedObjects;
 
 /**
 Returns $(D true) if and only if $(D T)'s representation includes at
@@ -2810,6 +2799,8 @@ immutable or shared.) $(LI a delegate that is not shared.))
 
 template hasUnsharedAliasing(T...)
 {
+    import std.typecons : Rebindable;
+
     static if (!T.length)
     {
         enum hasUnsharedAliasing = false;
@@ -2857,6 +2848,7 @@ unittest
     static assert(!hasUnsharedAliasing!S7);
 
     /* Issue 6642 */
+    import std.typecons : Rebindable;
     struct S8 { int a; Rebindable!(immutable Object) b; }
     static assert(!hasUnsharedAliasing!S8);
 
@@ -3177,10 +3169,6 @@ unittest
     static assert(hasMember!(S2, "blah"));
     static assert(hasMember!(C1, "blah"));
     static assert(hasMember!(C2, "blah"));
-
-    // 6973
-    import std.range;
-    static assert(isOutputRange!(OutputRange!int, int));
 }
 
 unittest
@@ -3760,40 +3748,34 @@ unittest
 }
 
 
-private template maxAlignment(U...) if(isTypeTuple!U)
+private template maxAlignment(U...) if (isTypeTuple!U)
 {
-    import std.algorithm : max;
-
-    static if(U.length == 1)
+    static if (U.length == 0)
+        static assert(0);
+    else static if (U.length == 1)
         enum maxAlignment = U[0].alignof;
     else
-        enum maxAlignment = max(U[0].alignof, .maxAlignment!(U[1 .. $]));
+    {
+        import std.algorithm : max;
+        enum maxAlignment = max(staticMap!(.maxAlignment, U));
+    }
 }
 
 
 /**
 Returns class instance alignment.
-
-Example:
----
-class A { byte b; }
-class B { long l; }
-
-// As class instance always has a hidden pointer
-static assert(classInstanceAlignment!A == (void*).alignof);
-static assert(classInstanceAlignment!B == long.alignof);
----
  */
 template classInstanceAlignment(T) if(is(T == class))
 {
     alias maxAlignment!(void*, typeof(T.tupleof)) classInstanceAlignment;
 }
-
+///
 unittest
 {
     class A { byte b; }
     class B { long l; }
 
+    // As class instance always has a hidden pointer
     static assert(classInstanceAlignment!A == (void*).alignof);
     static assert(classInstanceAlignment!B == long.alignof);
 }
@@ -3808,16 +3790,7 @@ Get the type that all types can be implicitly converted to. Useful
 e.g. in figuring out an array type from a bunch of initializing
 values. Returns $(D_PARAM void) if passed an empty list, or if the
 types have no common type.
-
-Example:
-
-----
-alias CommonType!(int, long, short) X;
-assert(is(X == long));
-alias CommonType!(int, char[], short) Y;
-assert(is(Y == void));
-----
-*/
+ */
 template CommonType(T...)
 {
     static if (!T.length)
@@ -3842,13 +3815,16 @@ template CommonType(T...)
     else
         alias void CommonType;
 }
-
+///
 unittest
 {
-    alias CommonType!(int, long, short) X;
-    static assert(is(X == long));
-    alias CommonType!(char[], int, long, short) Y;
-    static assert(is(Y == void), Y.stringof);
+    alias X = CommonType!(int, long, short);
+    assert(is(X == long));
+    alias Y = CommonType!(int, char[], short);
+    assert(is(Y == void));
+}
+unittest
+{
     static assert(is(CommonType!(3) == int));
     static assert(is(CommonType!(double, 4, float) == double));
     static assert(is(CommonType!(string, char[]) == const(char)[]));
@@ -5714,41 +5690,38 @@ unittest
 
 /**
  * Get the Key type of an Associative Array.
- * Example:
- * ---
- * import std.traits;
- * alias int[string] Hash;
- * static assert(is(KeyType!Hash == string));
- * KeyType!Hash str = "string";   // str is declared as string
- * ---
  */
 template KeyType(V : V[K], K)
 {
     alias K KeyType;
 }
+///
+unittest
+{
+    import std.traits;
+    alias Hash = int[string];
+    static assert(is(KeyType!Hash == string));
+    static assert(is(ValueType!Hash == int));
+    KeyType!Hash str = "a"; // str is declared as string
+    ValueType!Hash num = 1; // num is declared as int
+}
 
 /**
  * Get the Value type of an Associative Array.
- * Example:
- * ---
- * import std.traits;
- * alias int[string] Hash;
- * static assert(is(ValueType!Hash == int));
- * ValueType!Hash num = 1;   // num is declared as int
- * ---
  */
 template ValueType(V : V[K], K)
 {
     alias V ValueType;
 }
-
+///
 unittest
 {
-    alias int[string] Hash;
+    import std.traits;
+    alias Hash = int[string];
     static assert(is(KeyType!Hash == string));
     static assert(is(ValueType!Hash == int));
-    KeyType!Hash str = "a";
-    ValueType!Hash num = 1;
+    KeyType!Hash str = "a"; // str is declared as string
+    ValueType!Hash num = 1; // num is declared as int
 }
 
 /**
@@ -5866,7 +5839,7 @@ import std.conv;
 
 // Purposefully undocumented. Will be removed in June 2014.
 deprecated("unsigned has been moved to std.conv. Please adjust your imports accordingly.")
-alias std.conv.unsigned unsigned;
+alias unsigned = std.conv.unsigned;
 
 
 /**
