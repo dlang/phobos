@@ -467,8 +467,6 @@ enum dummyRanges = q{
 
 version(unittest)
 {
-    import std.container, std.conv, std.math, std.stdio;
-
     mixin(dummyRanges);
 
     // Tests whether forward, bidirectional and random access properties are
@@ -860,6 +858,8 @@ unittest
 
 unittest
 {
+    import std.conv : to;
+
     static struct PutC(C)
     {
         string result;
@@ -1058,6 +1058,8 @@ template isOutputRange(R, E)
 
 unittest
 {
+    import std.stdio : writeln;
+
     void myprint(in char[] s) { writeln('[', s, ']'); }
     static assert(isOutputRange!(typeof(&myprint), char));
 
@@ -3832,6 +3834,8 @@ unittest
 }
 unittest
 {
+    import std.container : DList;
+
     //Remove all but the first two elements
     auto a = DList!int(0, 1, 9, 9, 9, 9);
     a.remove(a[].drop(2));
@@ -3851,6 +3855,8 @@ unittest
 }
 unittest
 {
+    import std.container : DList;
+
     //insert before the last two elements
     auto a = DList!int(0, 1, 2, 5, 6);
     a.insertAfter(a[].dropBack(2), [3, 4]);
@@ -3934,6 +3940,8 @@ R dropBackOne(R)(R range)
 
 unittest
 {
+    import std.container : DList;
+
     auto dl = DList!int(9, 1, 2, 3, 9);
     assert(dl[].dropOne().dropBackOne().equal([1, 2, 3]));
 }
@@ -4660,6 +4668,8 @@ struct Zip(Ranges...)
 
     private void emplaceIfCan(T)(T* addr)
     {
+        import std.conv : emplace;
+
         static if(__traits(compiles, emplace(addr)))
             emplace(addr);
         else
@@ -4671,6 +4681,8 @@ struct Zip(Ranges...)
 */
     @property ElementType front()
     {
+        import std.conv : emplace;
+
         ElementType result = void;
         foreach (i, Unused; R)
         {
@@ -4711,6 +4723,8 @@ struct Zip(Ranges...)
     {
         ElementType moveFront()
         {
+            import std.conv : emplace;
+
             ElementType result = void;
             foreach (i, Unused; R)
             {
@@ -4735,6 +4749,8 @@ struct Zip(Ranges...)
     {
         @property ElementType back()
         {
+            import std.conv : emplace;
+
             ElementType result = void;
             foreach (i, Unused; R)
             {
@@ -4758,6 +4774,8 @@ struct Zip(Ranges...)
         {
             ElementType moveBack()
             {
+                import std.conv : emplace;
+
                 ElementType result = void;
                 foreach (i, Unused; R)
                 {
@@ -4894,6 +4912,8 @@ struct Zip(Ranges...)
     static if (allSatisfy!(hasSlicing, R))
         auto opSlice(size_t from, size_t to)
         {
+            import std.conv : emplace;
+
             //Slicing an infinite range yields the type Take!R
             //For finite ranges, the type Take!R aliases to R
             Zip!(staticMap!(Take, R)) result = void;
@@ -4913,6 +4933,8 @@ struct Zip(Ranges...)
 */
         ElementType opIndex(size_t n)
         {
+            import std.conv : emplace;
+
             ElementType result = void;
             foreach (i, Range; R)
             {
@@ -4945,6 +4967,8 @@ struct Zip(Ranges...)
         {
             ElementType moveAt(size_t n)
             {
+                import std.conv : emplace;
+
                 ElementType result = void;
                 foreach (i, Range; R)
                 {
@@ -5267,6 +5291,8 @@ Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges, StoppingPolicy s)
 
 unittest
 {
+    import std.conv : to;
+
     // The filters are to make these the lowest common forward denominator ranges,
     // i.e. w/o ref return, random access, length, etc.
     auto foo = filter!"a"([1,2,3,4,5]);
@@ -5613,6 +5639,8 @@ auto iota(B, E, S)(B begin, E end, S step)
 if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         && isIntegral!S)
 {
+    import std.conv : unsigned;
+
     alias CommonType!(Unqual!B, Unqual!E) Value;
     alias Unqual!S StepType;
     alias typeof(unsigned((end - begin) / step)) IndexType;
@@ -5707,6 +5735,8 @@ if (isFloatingPoint!(CommonType!(B, E)))
 auto iota(B, E)(B begin, E end)
 if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
 {
+    import std.conv : unsigned;
+
     alias CommonType!(Unqual!B, Unqual!E) Value;
     alias typeof(unsigned(end - begin)) IndexType;
 
@@ -5783,6 +5813,7 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
 
         this(Value start, Value end, Value step)
         {
+            import std.conv : to;
             import std.exception : enforce;
 
             this.start = start;
@@ -5855,6 +5886,8 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
 
 unittest
 {
+    import std.math : approxEqual, nextUp, nextDown;
+
     static assert(hasLength!(typeof(iota(0, 2))));
     auto r = iota(0, 10, 1);
     assert(r[$ - 1] == 9);
@@ -7887,10 +7920,14 @@ interface OutputRange(E) {
 
 // CTFE function that generates mixin code for one put() method for each
 // type E.
-private string putMethods(E...)() {
+private string putMethods(E...)()
+{
+    import std.conv : to;
+
     string ret;
 
-    foreach(ti, Unused; E) {
+    foreach (ti, Unused; E)
+    {
         ret ~= "void put(E[" ~ to!string(ti) ~ "] e) { .put(_range, e); }";
     }
 
