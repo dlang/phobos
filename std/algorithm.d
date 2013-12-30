@@ -697,6 +697,9 @@ range), $(D result = fun(result, x)) gets evaluated. Finally, $(D
 result) is returned. The one-argument version $(D reduce!(fun)(range))
 works similarly, but it uses the first element of the range as the
 seed (the range must be non-empty).
+
+See also: $(LREF sum) is similar to $(D reduce!((a, b) => a + b)) that offers
+precise summing of floating point numbers.
  */
 template reduce(fun...) if (fun.length >= 1)
 {
