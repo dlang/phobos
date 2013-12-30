@@ -1689,6 +1689,8 @@ the contents may well have changed).
 
     unittest
     {
+        // static import std.file;
+        //
         // auto deleteme = testFilename();
         // rndGen.popFront();
         // scope(failure) printf("Failed test at line %d\n", __LINE__);
@@ -1860,6 +1862,8 @@ $(D StdioException).
 
     unittest
     {
+        static import std.file;
+
         scope(failure) printf("Failed test at line %d\n", __LINE__);
 
         auto deleteme = testFilename();
@@ -3420,8 +3424,11 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 version (GCC_IO)
 private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 {
+    import std.utf : encode;
+
     if (fwide(fps, 0) > 0)
-    {   /* Stream is in wide characters.
+    {
+        /* Stream is in wide characters.
          * Read them and convert to chars.
          */
         FLOCK(fps);
@@ -3505,11 +3512,14 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 version (GENERIC_IO)
 private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 {
+    import std.utf : encode;
+
     FLOCK(fps);
     scope(exit) FUNLOCK(fps);
     auto fp = cast(_iobuf*)fps;
     if (fwide(fps, 0) > 0)
-    {   /* Stream is in wide characters.
+    {
+        /* Stream is in wide characters.
          * Read them and convert to chars.
          */
         version (Windows)

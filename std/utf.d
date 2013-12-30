@@ -1929,6 +1929,8 @@ unittest
 
 unittest
 {
+    import std.algorithm : filter;
+
     assertCTFEable!(
     {
     foreach (S; TypeTuple!( char[], const  char[],  string,
