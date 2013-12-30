@@ -2225,8 +2225,9 @@ struct Appender(A : T[], T)
 {
     private struct Data
     {
-        size_t capacity;
+        // arr is as long as its capacity.
         Unqual!T[] arr;
+        size_t length;
     }
 
     private Data* _data;
@@ -2239,9 +2240,12 @@ struct Appender(A : T[], T)
      */
     this(Unqual!T[] arr) @safe pure nothrow
     {
-        // initialize to a given array.
+        // intialize Data
         _data = new Data;
+
+        // initialize to a given array.
         _data.arr = arr;
+        _data.length = arr.length;
 
         if (__ctfe)
             return;
@@ -2254,7 +2258,6 @@ struct Appender(A : T[], T)
             arr = ()@trusted{ return arr.ptr[0 .. cap]; }();
         // we assume no reallocation occurred
         assert(arr.ptr is _data.arr.ptr);
-        _data.capacity = arr.length;
     }
 
     /**
@@ -2266,7 +2269,7 @@ struct Appender(A : T[], T)
     {
         if (_data)
         {
-            if (newCapacity > _data.capacity)
+            if (newCapacity > _data.arr.length)
                 ensureAddable(newCapacity - _data.arr.length);
         }
         else
@@ -2282,7 +2285,7 @@ struct Appender(A : T[], T)
      */
     @property size_t capacity() const @safe pure nothrow
     {
-        return _data ? _data.capacity : 0;
+        return _data ? _data.arr.length : 0;
     }
 
     /**
@@ -2293,7 +2296,7 @@ struct Appender(A : T[], T)
         /* @trusted operation:
          * casting Unqual!T[] to inout(T)[]
          */
-        return cast(typeof(return))(_data ? _data.arr : null);
+        return cast(typeof(return))(_data ? _data.arr[0 .. _data.length] : null);
     }
 
     // ensure we can add nelems elements, resizing as necessary
@@ -2301,10 +2304,12 @@ struct Appender(A : T[], T)
     {
         if (!_data)
             _data = new Data;
-        immutable len = _data.arr.length;
-        immutable reqlen = len + nelems;
 
-        if (()@trusted{ return _data.capacity; }() >= reqlen)
+        immutable len = _data.length;
+        immutable cap = _data.arr.length;
+        immutable reqcap = len + nelems;
+
+        if (cap >= reqcap)
             return;
 
         // need to increase capacity
@@ -2312,43 +2317,41 @@ struct Appender(A : T[], T)
         {
             static if (__traits(compiles, new Unqual!T[1]))
             {
-                _data.arr.length = reqlen;
+                _data.arr.length = reqcap;
             }
             else
             {
                 // avoid restriction of @disable this()
-                ()@trusted{ _data.arr = _data.arr[0 .. _data.capacity]; }();
-                foreach (i; _data.capacity .. reqlen)
+                foreach (i; cap .. reqcap)
                     _data.arr ~= Unqual!T.init;
             }
-            _data.arr = _data.arr[0 .. len];
-            _data.capacity = reqlen;
         }
         else
         {
             // Time to reallocate.
             // We need to almost duplicate what's in druntime, except we
             // have better access to the capacity field.
-            auto newlen = appenderNewCapacity!(T.sizeof)(_data.capacity, reqlen);
+            auto newcap = appenderNewCapacity!(T.sizeof)(cap, reqcap);
             // first, try extending the current block
             auto u = ()@trusted{ return
-                GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
+                GC.extend(_data.arr.ptr, (reqcap - cap) * T.sizeof, (newcap - cap) * T.sizeof);
             }();
             if (u)
             {
-                // extend worked, update the capacity
-                _data.capacity = u / T.sizeof;
+                // extend worked, update the array
+                ()@trusted{ _data.arr = _data.arr.ptr[0 .. u / T.sizeof]; }();
             }
             else
             {
                 // didn't work, must reallocate
                 auto bi = ()@trusted{ return
-                    GC.qalloc(newlen * T.sizeof, (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
+                    GC.qalloc(newcap * T.sizeof, (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
                 }();
-                _data.capacity = bi.size / T.sizeof;
                 if (len)
                     ()@trusted{ memcpy(bi.base, _data.arr.ptr, len * T.sizeof); }();
-                _data.arr = ()@trusted{ return (cast(Unqual!T*)bi.base)[0 .. len]; }();
+                ()@trusted{
+                    _data.arr = (cast(Unqual!T*)bi.base)[0 .. bi.size / T.sizeof];
+                }();
                 // leave the old data, for safety reasons
             }
         }
@@ -2391,31 +2394,15 @@ struct Appender(A : T[], T)
         else
         {
             ensureAddable(1);
-            immutable len = _data.arr.length;
+            immutable len = _data.length;
 
-            auto bigDataFun() @trusted nothrow { return _data.arr.ptr[0 .. len + 1];}
-            auto bigData = bigDataFun();
-
-            static if (is(Unqual!T == T))
-                alias uitem = item;
+            static if (is(U : Unqual!T))
+                emplace(&_data.arr[len], item);
             else
-                auto ref uitem() @trusted nothrow @property { return cast(Unqual!T)item;} 
-
-            //The idea is to only call emplace if we must.
-            static if ( is(typeof(bigData[0].opAssign(uitem))) ||
-                       !is(typeof(bigData[0] = uitem)))
-            {
-                //pragma(msg, T.stringof); pragma(msg, U.stringof);
-                emplace(&bigData[len], uitem);
-            }
-            else
-            {
-                //pragma(msg, T.stringof); pragma(msg, U.stringof);
-                bigData[len] = uitem;
-            }
+                emplace(&_data.arr[len], cast(Unqual!T)item);
 
             //We do this at the end, in case of exceptions
-            _data.arr = bigData;
+            ++_data.length;
         }
     }
 
@@ -2435,7 +2422,7 @@ struct Appender(A : T[], T)
         // another because we can't trust the length portion.
         static if (!(isSomeChar!T && isSomeChar!(ElementType!Range) &&
                      !is(immutable Range == immutable T[])) &&
-                    is(typeof(items.length) == size_t))
+                    (hasLength!Range || isSomeString!Range))
         {
             // optimization -- if this type is something other than a string,
             // and we are adding exactly one element, call the version for one
@@ -2450,47 +2437,30 @@ struct Appender(A : T[], T)
             }
 
             // make sure we have enough space, then add the items
-            ensureAddable(items.length);
-            immutable len = _data.arr.length;
-            immutable newlen = len + items.length;
+            immutable itemslen = items.length;
+            ensureAddable(itemslen);
 
-            auto bigDataFun() @trusted nothrow { return _data.arr.ptr[0 .. newlen];}
-            auto bigData = bigDataFun();
+            immutable len = _data.length;
+            immutable newlen = len + itemslen;
 
-            enum mustEmplace =  is(typeof(bigData[0].opAssign(cast(Unqual!T)items.front))) ||
-                               !is(typeof(bigData[0] = cast(Unqual!T)items.front));
-
-            static if (is(typeof(_data.arr[] = items[])) && !mustEmplace)
+            static if (is(typeof(_data.arr[] = items[])) && !hasElaborateAssign!(Unqual!T) )
             {
-                //pragma(msg, T.stringof); pragma(msg, Range.stringof);
-                bigData[len .. newlen] = items[];
-            }
-            else static if (is(Unqual!T == ElementType!Range))
-            {
-                foreach (ref it ; bigData[len .. newlen])
-                {
-                    static if (mustEmplace)
-                        emplace(&it, items.front);
-                    else
-                        it = items.front;
-                    items.popFront();
-                }
+                _data.arr[len .. newlen] = items[];
             }
             else
             {
-                static auto ref getUItem(U)(U item) @trusted {return cast(Unqual!T)item;}
-                foreach (ref it ; bigData[len .. newlen])
+                foreach (size_t i ; len .. newlen)
                 {
-                    static if (mustEmplace)
-                        emplace(&it, getUItem(items.front));
+                    static if (is(U : Unqual!T))
+                        emplace(&_data.arr[i], items.front);
                     else
-                        it = getUItem(items.front);
+                        emplace(&_data.arr[i], cast(Unqual!T)items.front);
                     items.popFront();
                 }
             }
 
             //We do this at the end, in case of exceptions
-            _data.arr = bigData;
+            _data.length = newlen;
         }
         else
         {
@@ -2539,7 +2509,7 @@ struct Appender(A : T[], T)
         {
             if (_data)
             {
-                _data.arr = ()@trusted{ return _data.arr.ptr[0 .. 0]; }();
+                _data.length = 0;
             }
         }
 
@@ -2552,8 +2522,8 @@ struct Appender(A : T[], T)
         {
             if (_data)
             {
-                enforce(newlength <= _data.arr.length);
-                _data.arr = ()@trusted{ return _data.arr.ptr[0 .. newlength]; }();
+                enforce(newlength <= _data.length);
+                _data.length = newlength;
             }
             else
                 enforce(newlength == 0);
