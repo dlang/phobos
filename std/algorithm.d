@@ -1997,7 +1997,7 @@ See_Also:
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow
 if (allMutableFields!T && !is(typeof(T.init.proxySwap(T.init))))
 {
-    static if (!isAssignable!T || hasElaborateAssign!T)
+    static if (hasElaborateAssign!T || !isAssignable!T)
     {
         import std.exception : pointsTo;
 
@@ -2166,6 +2166,13 @@ unittest
     }
     S s;
     static assert(!__traits(compiles, swap(s, s)));
+}
+
+unittest
+{
+    //11853
+    alias T = Tuple!(int, double);
+    static assert(isAssignable!T);
 }
 
 void swapFront(R1, R2)(R1 r1, R2 r2)
