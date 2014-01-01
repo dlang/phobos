@@ -428,6 +428,7 @@ version(unittest)
     {
         struct Inner
         {
+            const int opCmp(ref const Inner) { return 0; }
         }
 
         ref const(Inner[string]) func( ref Inner var1, lazy scope string var2 );
