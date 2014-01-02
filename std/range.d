@@ -4453,9 +4453,9 @@ struct Cycle(R)
     }
 
     private static struct DollarToken {}
-    enum opDollar = DollarToken.init;
 
-    Take!(Cycle!R) opSlice(size_t i, size_t j) nothrow
+    enum opDollar = DollarToken.init;
+    auto opSlice(size_t i, size_t j) nothrow
     in
     {
         if (i > j) throw new RangeError();
@@ -4465,9 +4465,9 @@ struct Cycle(R)
         return this[i .. $].takeExactly(j - i);
     }
 
-    inout(Cycle!R) opSlice(size_t i, DollarToken) inout nothrow
+    auto opSlice(size_t i, DollarToken) inout nothrow
     {
-        return Cycle!R(*cast(R*)_ptr, _index + i);
+        return inout(Cycle!R)(*cast(R*)_ptr, _index + i);
     }
 }
 
