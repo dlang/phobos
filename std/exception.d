@@ -1213,7 +1213,7 @@ class ErrnoException : Exception
     type must be the same as the expression's type.
 
     Params:
-        E            = The type of $(D Throwable)s to catch. Defaults to ${D Exception}
+        E            = The type of $(D Throwable)s to catch. Defaults to $(D Exception)
         T1           = The type of the expression.
         T2           = The return type of the error handler.
         expression   = The expression to run and return its result.
