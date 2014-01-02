@@ -4436,7 +4436,7 @@ struct Cycle(R)
         _index = index % N;
     }
 
-    @property ref inout(EType) front() inout nothrow
+    @property ref inout(ElementType) front() inout nothrow
     {
         return (*_ptr)[_index];
     }
