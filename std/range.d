@@ -4428,13 +4428,13 @@ struct Cycle(R)
         _index = index % N;
     }
 
-    enum bool empty = false;
-
     this(ref R input, size_t index) nothrow @system
     {
         _ptr = &input;
         _index = index % N;
     }
+
+    enum bool empty = false;
 
     @property ref inout(ElementType) front() inout nothrow
     {
@@ -4448,14 +4448,14 @@ struct Cycle(R)
             _index = 0;
     }
 
-    @property inout(Cycle) save() nothrow inout
-    {
-        return this;
-    }
-
     ref inout(EType) opIndex(size_t n) inout nothrow
     {
         return (*_ptr)[(n + _index) % N];
+    }
+
+    @property inout(Cycle) save() nothrow inout
+    {
+        return this;
     }
 
     private static struct DollarToken {}
