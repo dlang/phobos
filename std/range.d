@@ -4408,7 +4408,7 @@ struct Cycle(Range)
 
 /// ditto
 template Cycle(R)
-if (isInfinite!R)
+    if (isInfinite!R)
 {
     alias Cycle = R;
 }
@@ -4420,7 +4420,7 @@ struct Cycle(R)
     enum  N = R.length;
     private alias ElementType = .ElementType!R;
     private R* _ptr;
-    private size_t _index = 0;
+    private size_t _index;
 
     this(ref R input, size_t index) nothrow @system
     {
@@ -4429,11 +4429,6 @@ struct Cycle(R)
     }
 
     enum bool empty = false;
-
-    @property inout(Cycle) save() nothrow inout
-    {
-        return this;
-    }
 
     this(ref R input, size_t index) nothrow @system
     {
@@ -4451,6 +4446,11 @@ struct Cycle(R)
         ++_index;
         if ( _index == N)
             _index = 0;
+    }
+
+    @property inout(Cycle) save() nothrow inout
+    {
+        return this;
     }
 
     ref inout(EType) opIndex(size_t n) inout nothrow
