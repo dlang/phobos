@@ -4428,18 +4428,12 @@ struct Cycle(R)
         _index = index % N;
     }
 
-    this(ref R input, size_t index) nothrow @system
-    {
-        _ptr = &input;
-        _index = index % N;
-    }
-
-    enum bool empty = false;
-
     @property ref inout(ElementType) front() inout nothrow
     {
         return (*_ptr)[_index];
     }
+
+    enum bool empty = false;
 
     void popFront() nothrow
     {
