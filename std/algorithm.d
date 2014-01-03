@@ -3968,13 +3968,13 @@ if (isInputRange!InputRange &&
         //These are two special cases which can search without decoding the UTF stream.
         static if (isDefaultPred && isIntegralNeedle)
         {
+            import std.utf : canSearchInCodeUnits;
+
             //This special case deals with UTF8 search, when the needle
             //is represented by a single code point.
             //Note: "needle <= 0x7F" properly handles sign via unsigned promotion
             static if (is(UEEType == char))
             {
-                import std.utf : canSearchInCodeUnits;
-
                 if (!__ctfe && canSearchInCodeUnits!char(needle))
                 {
                     static R trustedMemchr(ref R haystack, ref E needle) @trusted nothrow pure
