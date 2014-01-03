@@ -861,7 +861,7 @@ private auto _decodeContent(T)(ubyte[] content, string encoding)
 
         auto strInfo = decodeString(content, scheme);
         enforceEx!CurlException(strInfo[0] != size_t.max,
-                                format("Invalid encoding sequence for enconding '%s'",
+                                format("Invalid encoding sequence for encoding '%s'",
                                        encoding));
 
         return strInfo[1];
