@@ -191,7 +191,7 @@ version(StdDdoc) import std.stdio;
 version (Windows) pragma(lib, "curl");
 extern (C) void exit(int);
 
-// Default data timeout for Protcools
+// Default data timeout for Protocols
 private enum _defaultDataTimeout = dur!"minutes"(2);
 
 /** Connection type used when the URL should be used to auto detect the protocol.
