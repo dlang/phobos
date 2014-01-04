@@ -4271,8 +4271,8 @@ struct Cycle(R)
 {
     static if (isRandomAccessRange!R && hasLength!R)
     {
-        R _original;
-        size_t _index;
+        private R _original;
+        private size_t _index;
 
         this(R input, size_t index = 0)
         {
@@ -4360,8 +4360,8 @@ struct Cycle(R)
     }
     else
     {
-        R _original;
-        R _current;
+        private R _original;
+        private R _current;
 
         this(R input)
         {
