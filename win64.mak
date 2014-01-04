@@ -119,7 +119,7 @@ SRC_STD_3c= std\datetime.d std\metastrings.d std\bitmanip.d std\typecons.d
 SRC_STD_3a= std\uni.d std\base64.d std\ascii.d \
     std\demangle.d std\uri.d std\mmfile.d std\getopt.d
 
-SRC_STD_3b= std\signals.d std\typetuple.d std\traits.d \
+SRC_STD_3b= std\signals.d std\signal.d std\typetuple.d std\traits.d \
     std\encoding.d std\xml.d \
     std\random.d \
     std\exception.d \
@@ -181,7 +181,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\socket.d std\socketstream.d std\format.d \
 	std\stdio.d std\uni.d std\uuid.d \
 	std\cstream.d std\demangle.d \
-	std\signals.d std\typetuple.d std\traits.d \
+	std\signals.d std\signal.d std\typetuple.d std\traits.d \
 	std\metastrings.d std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
 	std\functional.d std\algorithm.d std\array.d std\typecons.d \
@@ -338,6 +338,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_range.html \
 	$(DOC)\std_regex.html \
 	$(DOC)\std_signals.html \
+	$(DOC)\std_signal.html \
 	$(DOC)\std_socket.html \
 	$(DOC)\std_socketstream.html \
 	$(DOC)\std_stdint.html \
@@ -613,6 +614,9 @@ $(DOC)\std_regex.html : $(STDDOC) std\regex.d
 
 $(DOC)\std_signals.html : $(STDDOC) std\signals.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_signals.html $(STDDOC) std\signals.d
+
+$(DOC)\std_signal.html : $(STDDOC) std\signal.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_signal.html $(STDDOC) std\signal.d
 
 $(DOC)\std_socket.html : $(STDDOC) std\socket.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_socket.html $(STDDOC) std\socket.d
