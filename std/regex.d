@@ -106,10 +106,10 @@
           the BasicLatin Unicode $(U block).)
     $(REG_ROW \P{InBasicLatin}, Matches any character except ones in
           the BasicLatin Unicode $(U block).)
-    $(REG_ROW \p{Cyrilic}, Matches any character that is part of
-        Cyrilic $(U script).)
-    $(REG_ROW \P{Cyrilic}, Matches any character except ones in
-        Cyrilic $(U script).)
+    $(REG_ROW \p{Cyrillic}, Matches any character that is part of
+        Cyrillic $(U script).)
+    $(REG_ROW \P{Cyrillic}, Matches any character except ones in
+        Cyrillic $(U script).)
     $(REG_TITLE Quantifiers, Specify repetition of other elements)
     $(REG_ROW *, Matches previous character/subexpression 0 or more times.
       Greedy version - tries as many times as possible.)
