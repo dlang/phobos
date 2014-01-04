@@ -4341,12 +4341,13 @@ struct Cycle(R)
         enum opDollar = DollarToken.init;
 
         auto opSlice(size_t i, size_t j)
+        in
         {
-            version (assert)
-            {
-                import core.exception : RangeError;
-                if (i > j) throw new RangeError();
-            }
+            import core.exception : RangeError;
+            if (i > j) throw new RangeError();
+        }
+        body
+        {
             auto retval = this.save;
             retval._index += i;
             return takeExactly(retval, j - i);
@@ -4455,12 +4456,13 @@ struct Cycle(R)
     enum opDollar = DollarToken.init;
 
     auto opSlice(size_t i, size_t j)
+    in
     {
-        version (assert)
-        {
-            import core.exception : RangeError;
-            if (i > j) throw new RangeError();
-        }
+        import core.exception : RangeError;
+        if (i > j) throw new RangeError();
+    }
+    body
+    {
         auto retval = this.save;
         retval._index += i;
         return takeExactly(retval, j - i);
@@ -4554,7 +4556,6 @@ unittest
                     }
 
                     assert(cRange[10] == 1);
-                    assertThrown!RangeError(cy[2..1]);
                 }
             }
 
