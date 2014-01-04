@@ -3347,6 +3347,16 @@ unittest
     t3 = take(t2, 1);
 }
 
+unittest
+{
+    alias R1 = typeof(repeat(1));
+    alias R2 = typeof(cycle([1]));
+    alias TR1 = Take!R1;
+    alias TR2 = Take!R2;
+    static assert(isBidirectionalRange!TR1);
+    static assert(isBidirectionalRange!TR2);
+}
+
 /**
 Similar to $(LREF take), but assumes that $(D range) has at least $(D
 n) elements. Consequently, the result of $(D takeExactly(range, n))
