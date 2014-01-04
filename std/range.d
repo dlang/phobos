@@ -4348,16 +4348,12 @@ struct Cycle(R)
         }
         body
         {
-            auto retval = this.save;
-            retval._index += i;
-            return takeExactly(retval, j - i);
+            return this[i .. $].takeExactly(j - i);
         }
 
         auto opSlice(size_t i, DollarToken)
         {
-            auto retval = this.save;
-            retval._index += i;
-            return retval;
+            return typeof(this)(_original, _index + i);
         }
     }
     else
@@ -4463,16 +4459,12 @@ struct Cycle(R)
     }
     body
     {
-        auto retval = this.save;
-        retval._index += i;
-        return takeExactly(retval, j - i);
+        return this[i .. $].takeExactly(j - i);
     }
 
     auto opSlice(size_t i, DollarToken)
     {
-        auto retval = this.save;
-        retval._index += i;
-        return retval;
+        return typeof(this)(*cast(R*)_ptr, _index + i);
     }
 }
 
