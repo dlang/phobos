@@ -4413,13 +4413,13 @@ struct Cycle(R)
 template Cycle(R)
     if (isInfinite!R)
 {
-    alias R Cycle;
+    alias Cycle = R;
 }
 
 struct Cycle(R)
     if (isStaticArray!R)
 {
-    private alias typeof(R.init[0]) ElementType;
+    private alias ElementType = typeof(R.init[0]);
     private ElementType* _ptr;
     private size_t _index;
 
