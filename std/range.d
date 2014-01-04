@@ -4274,7 +4274,11 @@ struct Cycle(R)
         R _original;
         size_t _index;
 
-        this(R input, size_t index = 0) { _original = input; _index = index; }
+        this(R input, size_t index = 0)
+        {
+            _original = input;
+            _index = index;
+        }
 
         @property auto ref front()
         {
@@ -4300,7 +4304,10 @@ struct Cycle(R)
 
         enum bool empty = false;
 
-        void popFront() { ++_index; }
+        void popFront()
+        {
+            ++_index;
+        }
 
         auto ref opIndex(size_t n)
         {
@@ -4356,15 +4363,24 @@ struct Cycle(R)
         R _original;
         R _current;
 
-        this(R input) { _original = input; _current = input.save; }
+        this(R input)
+        {
+            _original = input;
+            _current = input.save;
+        }
 
-        @property auto ref front() { return _current.front; }
+        @property auto ref front()
+        {
+            return _current.front;
+        }
 
         static if (is(typeof((cast(const R)_current).front)))
+        {
             @property auto ref front() const
             {
                 return _current.front;
             }
+        }
 
         static if (hasAssignableElements!R)
         {
@@ -4418,7 +4434,10 @@ struct Cycle(R)
 
     enum bool empty = false;
 
-    void popFront() { ++_index; }
+    void popFront()
+    {
+        ++_index;
+    }
 
     ref inout(ElementType) opIndex(size_t n) inout
     {
