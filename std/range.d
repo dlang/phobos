@@ -4266,11 +4266,9 @@ assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
 
 Tip: This is a great way to implement simple circular buffers.
 */
-struct Cycle(Range)
-    if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
+struct Cycle(R)
+    if (isForwardRange!R && !isInfinite!R)
 {
-    alias Unqual!Range R;
-
     static if (isRandomAccessRange!R && hasLength!R)
     {
         R _original;
@@ -4461,14 +4459,14 @@ struct Cycle(R)
 
 /// Ditto
 Cycle!R cycle(R)(R input)
-    if (isForwardRange!(Unqual!R) && !isInfinite!(Unqual!R))
+    if (isForwardRange!R && !isInfinite!R)
 {
     return Cycle!R(input);
 }
 
 /// Ditto
 Cycle!R cycle(R)(R input, size_t index = 0)
-    if (isRandomAccessRange!(Unqual!R) && !isInfinite!(Unqual!R))
+    if (isRandomAccessRange!R && !isInfinite!R)
 {
     return Cycle!R(input, index);
 }
@@ -4503,7 +4501,8 @@ unittest
     c2[3]++;
     assert(nums[0] == 2);
 
-    static assert(is(Cycle!(immutable int[])));
+    immutable int[] immarr = [1, 2, 3];
+    auto cycleimm = cycle(immarr);
 
     foreach(DummyType; AllDummyRanges)
     {
