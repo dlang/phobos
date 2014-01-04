@@ -3194,7 +3194,7 @@ if (isInputRange!(Unqual!Range) &&
 
         static if (hasAssignableElements!R)
         {
-            auto back(ElementType!R v)
+            @property auto back(ElementType!R v)
             {
                 // This has to return auto instead of void because of Bug 4706.
                 assert(!empty,
