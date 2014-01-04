@@ -4333,7 +4333,8 @@ struct Cycle(R)
 
         @property Cycle save()
         {
-            return Cycle(this._original.save, this._index);
+            //No need to call _original.save, because Cycle never actually modifies _original
+            return Cycle(_original, _index);
         }
 
         private static struct DollarToken {}
@@ -4400,9 +4401,10 @@ struct Cycle(R)
 
         @property Cycle save()
         {
+            //No need to call _original.save, because Cycle never actually modifies _original
             Cycle ret = this;
-            ret._original = this._original.save;
-            ret._current =  this._current.save;
+            ret._original = _original;
+            ret._current =  _current.save;
             return ret;
         }
     }
