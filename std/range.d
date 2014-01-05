@@ -4171,25 +4171,19 @@ unittest
 
 /**
 Repeats one value forever.
+
+Models an infinite bidirectional and random access range, with slicing.
 */
 struct Repeat(T)
 {
     private T _value;
-    /// Range primitive implementations.
     @property T back() { return _value; }
-    /// Ditto
     @property T front() { return _value; }
-    /// Ditto
     enum bool empty = false;
-    /// Ditto
     void popBack() {}
-    /// Ditto
     void popFront() {}
-    /// Ditto
     @property Repeat!T save() { return this; }
-    /// Ditto
     T opIndex(size_t) { return _value; }
-    /// Ditto
     auto opSlice(size_t i, size_t j)
     {
         version (assert)
@@ -4199,13 +4193,8 @@ struct Repeat(T)
         }
         return this.takeExactly(j - i);
     }
-    /// Ditto
-    version (StdDdoc)
-        auto opDollar(){return DollarToken();} //Opaque signature for Ddoc
-    else
-        enum opDollar = DollarToken(); //Implementation defined signature
-
     private static struct DollarToken{}
+    enum opDollar = DollarToken.init;
     auto opSlice(size_t, DollarToken){return this;}
 }
 
