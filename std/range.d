@@ -4182,50 +4182,41 @@ unittest
 /**
 Repeats one value forever.
 
-Example:
-----
-enforce(equal(take(repeat(5), 4), [ 5, 5, 5, 5 ][]));
-----
+Models an infinite bidirectional and random access range, with slicing.
 */
 struct Repeat(T)
 {
     private T _value;
-    /// Range primitive implementations.
-    @property T back() { return _value; }
-    /// Ditto
-    @property T front() { return _value; }
-    /// Ditto
+    @property inout(T) front() inout { return _value; }
+    @property inout(T) back() inout { return _value; }
     enum bool empty = false;
-    /// Ditto
-    void popBack() {}
-    /// Ditto
     void popFront() {}
-    /// Ditto
-    @property Repeat!T save() { return this; }
-    /// Ditto
-    T opIndex(size_t) { return _value; }
-    /// Ditto
+    void popBack() {}
+    @property auto save() inout { return this; }
+    inout(T) opIndex(size_t) inout { return _value; }
     auto opSlice(size_t i, size_t j)
+    in
     {
-        version (assert)
-        {
-            import core.exception : RangeError;
-            if (i > j) throw new RangeError();
-        }
+        import core.exception : RangeError;
+        if (i > j) throw new RangeError();
+    }
+    body
+    {
         return this.takeExactly(j - i);
     }
-    /// Ditto
-    version (StdDdoc)
-        auto opDollar(){return DollarToken();} //Opaque signature for Ddoc
-    else
-        enum opDollar = DollarToken(); //Implementation defined signature
-
-    private static struct DollarToken{}
-    auto opSlice(size_t, DollarToken){return this;}
+    private static struct DollarToken {}
+    enum opDollar = DollarToken.init;
+    auto opSlice(size_t, DollarToken) inout { return this; }
 }
 
 /// Ditto
-Repeat!(T) repeat(T)(T value) { return Repeat!(T)(value); }
+Repeat!T repeat(T)(T value) { return Repeat!T(value); }
+
+///
+unittest
+{
+    assert(equal(5.repeat().take(4), [ 5, 5, 5, 5 ]));
+}
 
 unittest
 {
@@ -4253,11 +4244,10 @@ Take!(Repeat!T) repeat(T)(T value, size_t n)
     return take(repeat(value), n);
 }
 
+///
 unittest
 {
-    import std.exception : enforce;
-
-    enforce(equal(repeat(5, 4), [ 5, 5, 5, 5 ][]));
+    assert(equal(5.repeat(4), 5.repeat().take(4)));
 }
 
 /**
