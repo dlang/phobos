@@ -4185,17 +4185,18 @@ struct Repeat(T)
     @property Repeat!T save() { return this; }
     T opIndex(size_t) { return _value; }
     auto opSlice(size_t i, size_t j)
+    in
     {
-        version (assert)
-        {
-            import core.exception : RangeError;
-            if (i > j) throw new RangeError();
-        }
+        import core.exception : RangeError;
+        if (i > j) throw new RangeError();
+    }
+    body
+    {
         return this.takeExactly(j - i);
     }
-    private static struct DollarToken{}
+    private static struct DollarToken {}
     enum opDollar = DollarToken.init;
-    auto opSlice(size_t, DollarToken){return this;}
+    auto opSlice(size_t, DollarToken) {return this;}
 }
 
 /// Ditto
