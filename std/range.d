@@ -4210,7 +4210,7 @@ struct Repeat(T)
 }
 
 /// Ditto
-Repeat!(T) repeat(T)(T value) { return Repeat!(T)(value); }
+Repeat!T repeat(T)(T value) { return Repeat!T(value); }
 
 ///
 unittest
