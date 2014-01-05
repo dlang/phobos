@@ -1240,7 +1240,7 @@ pure nothrow:
             if(v)
                 return false;
         return true;
-    }   
+    }
 
     T opIndex(size_t idx) inout
     in
@@ -1837,7 +1837,7 @@ public alias InversionList!GcPolicy CodepointSet;
     to represent [a, b$(RPAREN) intervals of $(CODEPOINTS). As used in $(LREF InversionList).
     Any interval type should pass $(LREF isIntegralPair) trait.
 */
-public struct CodepointInterval 
+public struct CodepointInterval
 {
     uint[2] _tuple;
     alias _tuple this;
@@ -2197,15 +2197,15 @@ public:
     {
         return this[ch];
     }
-    
+
     ///
     unittest
     {
         assert('я' in unicode.Cyrillic);
         assert(!('z' in unicode.Cyrillic));
     }
-    
-    
+
+
 
     /// Obtains a set that is the inversion of this set. See also $(LREF inverted).
     auto opUnary(string op: "!")()
@@ -3469,7 +3469,7 @@ private:
         size_t idx_zeros, idx_ones;
     }
     // iteration over levels of Trie, each indexes its own level and thus a shortened domain
-    size_t[Prefix.length] indices;    
+    size_t[Prefix.length] indices;
     // default filler value to use
     Value defValue;
     // this is a full-width index of next item
@@ -3511,7 +3511,7 @@ private:
         // get to the next page boundary
         size_t nextPB = (j + pageSize) & ~(pageSize-1);
         size_t n =  nextPB - j;// can fill right in this page
-        if(numVals < n) //fits in current page  
+        if(numVals < n) //fits in current page
         {
             ptr[j..j+numVals]  = val;
             j += numVals;
@@ -3597,7 +3597,7 @@ private:
     L_allocate_page:
             next_lvl_index = force!NextIdx(idx!level/pageSize - 1);
             if(state[level].idx_zeros == size_t.max && ptr.zeros(j, j+pageSize))
-            {                
+            {
                 state[level].idx_zeros = next_lvl_index;
             }
             // allocate next page
@@ -3613,7 +3613,7 @@ private:
                           [pageSize*next_lvl_index..(next_lvl_index+1)*pageSize]
                         ));
             }
-            table.length!level = table.length!level + pageSize;            
+            table.length!level = table.length!level + pageSize;
         }
     L_know_index:
         // for the previous level, values are indices to the pages in the current level
@@ -7157,7 +7157,7 @@ S toLower(S)(S s) @trusted pure
         assert(low == ch || isLower(low), format("%s -> %s", ch, low));
     }
     assert(toLower("АЯ") == "ая");
-    
+
     assert("\u1E9E".toLower == "\u00df");
     assert("\u00df".toUpper == "SS");
 }
@@ -7707,9 +7707,9 @@ private:
     {
         import std.internal.unicode_grapheme;
         static immutable res = asTrie(hangulLVTrieEntries);
-        return res; 
+        return res;
     }
-    
+
     auto hangLVT()
     {
         import std.internal.unicode_grapheme;
@@ -7718,25 +7718,25 @@ private:
     }
 
     // tables below are used for composition/decomposition
-    auto combiningClassTrie() 
-    { 
+    auto combiningClassTrie()
+    {
         import std.internal.unicode_comp;
-        static immutable res = asTrie(combiningClassTrieEntries); 
-        return res; 
+        static immutable res = asTrie(combiningClassTrieEntries);
+        return res;
     }
 
     auto compatMappingTrie()
-    { 
+    {
         import std.internal.unicode_decomp;
-        static immutable res = asTrie(compatMappingTrieEntries); 
-        return res; 
+        static immutable res = asTrie(compatMappingTrieEntries);
+        return res;
     }
 
     auto canonMappingTrie()
-    { 
+    {
         import std.internal.unicode_decomp;
         static immutable res = asTrie(canonMappingTrieEntries);
-        return res; 
+        return res;
     }
 
     auto compositionJumpTrie()
