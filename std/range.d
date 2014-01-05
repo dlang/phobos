@@ -3194,7 +3194,7 @@ if (isInputRange!(Unqual!Range) &&
 
         static if (hasAssignableElements!R)
         {
-            auto back(ElementType!R v)
+            @property auto back(ElementType!R v)
             {
                 // This has to return auto instead of void because of Bug 4706.
                 assert(!empty,
@@ -3345,6 +3345,16 @@ unittest
 
     Take!(Take!string) t3;
     t3 = take(t2, 1);
+}
+
+unittest
+{
+    alias R1 = typeof(repeat(1));
+    alias R2 = typeof(cycle([1]));
+    alias TR1 = Take!R1;
+    alias TR2 = Take!R2;
+    static assert(isBidirectionalRange!TR1);
+    static assert(isBidirectionalRange!TR2);
 }
 
 /**
