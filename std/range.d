@@ -4177,11 +4177,11 @@ Models an infinite bidirectional and random access range, with slicing.
 struct Repeat(T)
 {
     private T _value;
-    @property T back() { return _value; }
     @property T front() { return _value; }
+    @property T back() { return _value; }
     enum bool empty = false;
-    void popBack() {}
     void popFront() {}
+    void popBack() {}
     @property Repeat!T save() { return this; }
     T opIndex(size_t) { return _value; }
     auto opSlice(size_t i, size_t j)
