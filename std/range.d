@@ -4244,11 +4244,10 @@ Take!(Repeat!T) repeat(T)(T value, size_t n)
     return take(repeat(value), n);
 }
 
+///
 unittest
 {
-    import std.exception : enforce;
-
-    enforce(equal(repeat(5, 4), [ 5, 5, 5, 5 ][]));
+    assert(equal(5.repeat(4), 5.repeat().take(4)));
 }
 
 /**
