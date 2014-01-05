@@ -4181,9 +4181,13 @@ struct Repeat(T)
 {
     private T _value;
     /// Range primitive implementations.
+    @property T back() { return _value; }
+    /// Ditto
     @property T front() { return _value; }
     /// Ditto
     enum bool empty = false;
+    /// Ditto
+    void popBack() {}
     /// Ditto
     void popFront() {}
     /// Ditto
@@ -4217,10 +4221,13 @@ unittest
 {
     auto  r = repeat(5);
     alias R = typeof(r);
+    static assert(isBidirectionalRange!R);
     static assert(isForwardRange!R);
     static assert(isInfinite!R);
     static assert(hasSlicing!R);
 
+    assert(r.back == 5);
+    assert(r.front == 5);
     assert(r.take(4).equal([ 5, 5, 5, 5 ]));
     assert(r[0 .. 4].equal([ 5, 5, 5, 5 ]));
 
