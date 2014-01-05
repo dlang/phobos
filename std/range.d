@@ -4171,11 +4171,6 @@ unittest
 
 /**
 Repeats one value forever.
-
-Example:
-----
-enforce(equal(take(repeat(5), 4), [ 5, 5, 5, 5 ][]));
-----
 */
 struct Repeat(T)
 {
@@ -4216,6 +4211,12 @@ struct Repeat(T)
 
 /// Ditto
 Repeat!(T) repeat(T)(T value) { return Repeat!(T)(value); }
+
+///
+unittest
+{
+    assert(equal(5.repeat().take(4), [ 5, 5, 5, 5 ]));
+}
 
 unittest
 {
