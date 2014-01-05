@@ -4420,20 +4420,21 @@ struct Cycle(R)
     private ElementType* _ptr;
     private size_t _index;
 
+nothrow:
     this(ref R input, size_t index = 0)
     {
         _ptr = input.ptr;
         _index = index;
     }
 
-    @property auto ref inout(ElementType) front() inout
+    @property ref inout(ElementType) front() inout
     {
         return _ptr[_index % R.length];
     }
 
     enum bool empty = false;
 
-    void popFront()
+    void popFront() nothrow
     {
         ++_index;
     }
@@ -4443,7 +4444,7 @@ struct Cycle(R)
         return _ptr[(n + _index) % R.length];
     }
 
-    @property Cycle save()
+    @property inout(Cycle) save() inout
     {
         return this;
     }
@@ -4462,7 +4463,7 @@ struct Cycle(R)
         return this[i .. $].takeExactly(j - i);
     }
 
-    auto opSlice(size_t i, DollarToken)
+    auto opSlice(size_t i, DollarToken) inout
     {
         return typeof(this)(*cast(R*)_ptr, _index + i);
     }
