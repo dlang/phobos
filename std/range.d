@@ -4266,17 +4266,19 @@ assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
 
 Tip: This is a great way to implement simple circular buffers.
 */
-struct Cycle(Range)
-    if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
+struct Cycle(R)
+    if (isForwardRange!R && !isInfinite!R)
 {
-    alias Unqual!Range R;
-
     static if (isRandomAccessRange!R && hasLength!R)
     {
-        R _original;
-        size_t _index;
+        private R _original;
+        private size_t _index;
 
-        this(R input, size_t index = 0) { _original = input; _index = index; }
+        this(R input, size_t index = 0)
+        {
+            _original = input;
+            _index = index;
+        }
 
         @property auto ref front()
         {
@@ -4302,7 +4304,10 @@ struct Cycle(Range)
 
         enum bool empty = false;
 
-        void popFront() { ++_index; }
+        void popFront()
+        {
+            ++_index;
+        }
 
         auto ref opIndex(size_t n)
         {
@@ -4328,45 +4333,52 @@ struct Cycle(Range)
 
         @property Cycle save()
         {
-            return Cycle(this._original.save, this._index);
+            //No need to call _original.save, because Cycle never actually modifies _original
+            return Cycle(_original, _index);
         }
 
         private static struct DollarToken {}
         enum opDollar = DollarToken.init;
 
         auto opSlice(size_t i, size_t j)
+        in
         {
-            version (assert)
-            {
-                import core.exception : RangeError;
-                if (i > j) throw new RangeError();
-            }
-            auto retval = this.save;
-            retval._index += i;
-            return takeExactly(retval, j - i);
+            import core.exception : RangeError;
+            if (i > j) throw new RangeError();
+        }
+        body
+        {
+            return this[i .. $].takeExactly(j - i);
         }
 
         auto opSlice(size_t i, DollarToken)
         {
-            auto retval = this.save;
-            retval._index += i;
-            return retval;
+            return typeof(this)(_original, _index + i);
         }
     }
     else
     {
-        R _original;
-        R _current;
+        private R _original;
+        private R _current;
 
-        this(R input) { _original = input; _current = input.save; }
+        this(R input)
+        {
+            _original = input;
+            _current = input.save;
+        }
 
-        @property auto ref front() { return _current.front; }
+        @property auto ref front()
+        {
+            return _current.front;
+        }
 
         static if (is(typeof((cast(const R)_current).front)))
+        {
             @property auto ref front() const
             {
                 return _current.front;
             }
+        }
 
         static if (hasAssignableElements!R)
         {
@@ -4386,9 +4398,10 @@ struct Cycle(Range)
 
         @property Cycle save()
         {
+            //No need to call _original.save, because Cycle never actually modifies _original
             Cycle ret = this;
-            ret._original = this._original.save;
-            ret._current =  this._current.save;
+            ret._original = _original;
+            ret._current =  _current.save;
             return ret;
         }
     }
@@ -4397,78 +4410,75 @@ struct Cycle(Range)
 template Cycle(R)
     if (isInfinite!R)
 {
-    alias R Cycle;
+    alias Cycle = R;
 }
 
 struct Cycle(R)
     if (isStaticArray!R)
 {
-    private alias typeof(R.init[0]) ElementType;
+    private alias ElementType = typeof(R.init[0]);
     private ElementType* _ptr;
     private size_t _index;
 
+nothrow:
     this(ref R input, size_t index = 0)
     {
         _ptr = input.ptr;
         _index = index;
     }
 
-    @property auto ref inout(ElementType) front() inout
+    @property ref inout(ElementType) front() inout
     {
         return _ptr[_index % R.length];
     }
 
     enum bool empty = false;
 
-    void popFront() { ++_index; }
+    void popFront() nothrow
+    {
+        ++_index;
+    }
 
     ref inout(ElementType) opIndex(size_t n) inout
     {
         return _ptr[(n + _index) % R.length];
     }
 
-    @property Cycle save()
+    @property inout(Cycle) save() inout
     {
         return this;
     }
 
     private static struct DollarToken {}
-
-    DollarToken opDollar()
-    {
-        return DollarToken.init;
-    }
+    enum opDollar = DollarToken.init;
 
     auto opSlice(size_t i, size_t j)
+    in
     {
-        version (assert)
-        {
-            import core.exception : RangeError;
-            if (i > j) throw new RangeError();
-        }
-        auto retval = this.save;
-        retval._index += i;
-        return takeExactly(retval, j - i);
+        import core.exception : RangeError;
+        if (i > j) throw new RangeError();
+    }
+    body
+    {
+        return this[i .. $].takeExactly(j - i);
     }
 
-    auto opSlice(size_t i, DollarToken)
+    auto opSlice(size_t i, DollarToken) inout
     {
-        auto retval = this.save;
-        retval._index += i;
-        return retval;
+        return typeof(this)(*cast(R*)_ptr, _index + i);
     }
 }
 
 /// Ditto
 Cycle!R cycle(R)(R input)
-    if (isForwardRange!(Unqual!R) && !isInfinite!(Unqual!R))
+    if (isForwardRange!R && !isInfinite!R)
 {
     return Cycle!R(input);
 }
 
 /// Ditto
 Cycle!R cycle(R)(R input, size_t index = 0)
-    if (isRandomAccessRange!(Unqual!R) && !isInfinite!(Unqual!R))
+    if (isRandomAccessRange!R && !isInfinite!R)
 {
     return Cycle!R(input, index);
 }
@@ -4503,7 +4513,8 @@ unittest
     c2[3]++;
     assert(nums[0] == 2);
 
-    static assert(is(Cycle!(immutable int[])));
+    immutable int[] immarr = [1, 2, 3];
+    auto cycleimm = cycle(immarr);
 
     foreach(DummyType; AllDummyRanges)
     {
@@ -4538,7 +4549,6 @@ unittest
                     }
 
                     assert(cRange[10] == 1);
-                    assertThrown!RangeError(cy[2..1]);
                 }
             }
 
