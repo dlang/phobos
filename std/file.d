@@ -1396,15 +1396,8 @@ private bool ensureDirExists(in char[] pathname)
 void mkdirRecurse(in char[] pathname)
 {
     const left = dirName(pathname);
-    if (!exists(left))
+    if (left.length != pathname.length && !exists(left))
     {
-        version (Windows)
-        {   /* Prevent infinite recursion if left is "d:\" and
-             * drive d does not exist.
-             */
-            if (left.length >= 3 && left[$ - 2] == ':')
-                throw new FileException(left.idup);
-        }
         mkdirRecurse(left);
     }
     if (!baseName(pathname).empty)
@@ -1431,6 +1424,11 @@ unittest
         path = buildPath(basepath, "d");
         mkdirRecurse(path);
         mkdirRecurse(path); // should not throw
+    }
+
+    version(Windows)
+    {
+        assertThrown!FileException(mkdirRecurse(`1:\foobar`));
     }
 
     // bug3570
