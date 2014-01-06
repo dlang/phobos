@@ -4434,7 +4434,7 @@ nothrow:
 
     enum bool empty = false;
 
-    void popFront() nothrow
+    void popFront()
     {
         ++_index;
     }
