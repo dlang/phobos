@@ -1947,7 +1947,7 @@ public:
     }
 
     /**
-        Construct a set from a range of sorted code point intervals.
+        Construct a set from a forward range of code point intervals.
     */
     this(Range)(Range intervals)
         if(isForwardRange!Range && isIntegralPair!(ElementType!Range))
@@ -1959,15 +1959,20 @@ public:
     }
 
     /**
-        Construct a set from plain values of sorted code point intervals.
+        Construct a set from plain values of code point intervals.
         Example:
         ---
+        import std.algorithm;
         auto set = CodepointSet('a', 'z'+1, 'а', 'я'+1);
         foreach(v; 'a'..'z'+1)
             assert(set[v]);
         // Cyrillic lowercase interval
         foreach(v; 'а'..'я'+1)
             assert(set[v]);
+        //specific order is not required, intervals may interesect
+        auto set2 = CodepointSet('а', 'я'+1, 'a', 'd', 'b', 'z'+1);
+        //the same end result
+        assert(set2.byInterval.equal(set.byInterval));
         ---
     */
     this()(uint[] intervals...)
@@ -2832,6 +2837,9 @@ private:
     // Cyrillic lowercase interval
     foreach(v; 'а'..'я'+1)
         assert(set[v]);
+    //specific order is not required, intervals may interesect
+    auto set2 = CodepointSet('а', 'я'+1, 'a', 'd', 'b', 'z'+1);
+    assert(set2.byInterval.equal(set.byInterval));
 
     auto gothic = unicode.Gothic;
     // Gothic letter ahsa
