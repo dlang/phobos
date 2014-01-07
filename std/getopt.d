@@ -348,7 +348,9 @@ void getopt(T...)(ref string[] args, T opts) {
     enforce(args.length,
             "Invalid arguments string passed: program name missing");
     configuration cfg;
-    return getoptImpl(args, cfg, opts);
+    OptHelp optHelp;
+    extractOptHelp(optHelp, opts);
+    return getoptImpl(args, cfg, optHelp, opts);
 }
 
 /**
@@ -374,22 +376,80 @@ enum config {
     stopOnFirstNonOption,
 }
 
-private void getoptImpl(T...)(ref string[] args,
-    ref configuration cfg, T opts)
+/**
+ * Help options for $(D getopt). You can pass an OptHelp struct instance to $(D
+ * getopt) in any position, except in between an option string and its
+ * bound pointer. The $(B header) and $(B footer) fields will be used to print
+ * the help strings when an unhandled --help argument is found.
+ */
+
+struct OptHelp
 {
+    ///
+    string header;
+
+    ///
+    string footer;
+
+private:
+    string[string] options;  // auto-filled
+}
+
+private void extractOptHelp(T...)(ref OptHelp optHelp, T opts)
+{
+    static if (is(typeof(opts[0]) : config))  // skip
+    {
+        extractOptHelp(optHelp, opts[1 .. $]);
+    }
+    else static if (opts.length >= 3 && is(typeof(opts[0]) == string) // option, help, address
+        && is(typeof(opts[1]) == string) && is(typeof(opts[2]) : P*, P))
+    {
+        optHelp.options[opts[0]] = opts[1];
+        extractOptHelp(optHelp, opts[3 .. $]);
+    }
+    else static if (is(typeof(opts[0]) == OptHelp))
+    {
+        optHelp.header = opts[0].header;
+        optHelp.footer = opts[0].footer;
+        extractOptHelp(optHelp, opts[1 .. $]);
+    }
+}
+
+private void getoptImpl(T...)(ref string[] args,
+    ref configuration cfg, OptHelp optHelp, T opts)
+{
+    import std.stdio : writeln, writefln;
     static if (opts.length)
     {
-        static if (is(typeof(opts[0]) : config))
+        static if (is(typeof(opts[0]) : OptHelp)) // skip
+        {
+            return getoptImpl(args, cfg, optHelp, opts[1 .. $]);
+        }
+        else static if (is(typeof(opts[0]) : config))
         {
             // it's a configuration flag, act on it
             setConfig(cfg, opts[0]);
-            return getoptImpl(args, cfg, opts[1 .. $]);
+            return getoptImpl(args, cfg, optHelp, opts[1 .. $]);
         }
         else
         {
             // it's an option string
             auto option = to!string(opts[0]);
-            auto receiver = opts[1];
+
+            // option, help, address
+            static if (is(typeof(opts[1]) == string) && is(typeof(opts[2]) : P*, P))
+            {
+                auto receiver = opts[2];
+                auto remainOpts = opts[3 .. $];
+                enum hasHelpString = true;
+            }
+            else
+            {
+                auto receiver = opts[1];
+                auto remainOpts = opts[2 .. $];
+                enum hasHelpString = false;
+            }
+
             bool incremental;
             // Handle options of the form --blah+
             if (option.length && option[$ - 1] == autoIncrementChar)
@@ -397,8 +457,17 @@ private void getoptImpl(T...)(ref string[] args,
                 option = option[0 .. $ - 1];
                 incremental = true;
             }
-            handleOption(option, receiver, args, cfg, incremental);
-            return getoptImpl(args, cfg, opts[2 .. $]);
+
+            // append help string (if present) if something went wrong
+            if (auto ex = collectException(handleOption(option, receiver, args, cfg, incremental)))
+            {
+                static if (hasHelpString)
+                    ex.msg ~= format("\n\nHelp string for option '%s': %s", option, opts[1]);
+
+                throw ex;
+            }
+
+            return getoptImpl(args, cfg, optHelp, remainOpts);
         }
     }
     else
@@ -415,6 +484,39 @@ private void getoptImpl(T...)(ref string[] args,
             {
                 // Consume the "--"
                 args = args.remove(i + 1);
+                break;
+            }
+            if (a == "--help")  // print the help string
+            {
+                if (!optHelp.header.empty)
+                    writeln(optHelp.header);
+
+                if (optHelp.options !is null)
+                {
+                    string[] options = optHelp.options.keys;
+                    sort(options);
+
+                    // calculate horizontal space offset for alignment
+                    auto maxlen = 1 + reduce!max(options.map!(a => a.length));
+                    string fmt = format("  %%-%ss%%s", maxlen);
+
+                    writeln("Options:");
+                    foreach (option; options)
+                        writefln(fmt, option, optHelp.options[option]);
+                }
+
+                if (!optHelp.footer.empty)
+                    writeln(optHelp.footer);
+
+                break;
+            }
+            if (a.startsWith("--help="))  // print a specific help option
+            {
+                string option = a[7 .. $];
+                if (auto help = option in optHelp.options)
+                    writefln("Help for option '%s': %s", option, *help);
+                else
+                    writefln("Note: Help not found for option '%s'.", option);
                 break;
             }
             if (!cfg.passThrough)
@@ -871,4 +973,121 @@ unittest
     bool opt;
     args.getopt(config.passThrough, "opt", &opt);
     assert(args == ["main", "-test"]);
+}
+
+unittest
+{
+    import std.file : readText, tempDir;
+
+    // temporarily redirect stdout
+    auto old_stdout = stdout;
+    scope (exit) stdout = old_stdout;
+    auto tempOut = tempDir() ~ "/" ~ __MODULE__;
+    stdout.open(tempOut, "w");
+
+    string[] args;
+
+    {
+        args = ["main", "--help"];
+        getopt(args, OptHelp("This is the header", "This is the footer"));
+        stdout = old_stdout;  // unblock redirect file
+        assert(tempOut.readText.startsWith("This is the header"));
+        assert(tempOut.readText.strip.endsWith("This is the footer"));
+        stdout.open(tempOut, "w");
+    }
+
+    {
+        args = ["main", "--help=doesnt_exist"];
+        getopt(args);
+        stdout = old_stdout;  // unblock redirect file
+        assert(tempOut.readText.strip == "Note: Help not found for option 'doesnt_exist'.");
+        stdout.open(tempOut, "w");
+    }
+
+    {
+        int size;
+        args = ["main", "--help=size"];
+        getopt(args, "size", &size);
+        stdout = old_stdout;  // unblock redirect file
+        assert(tempOut.readText.strip == "Note: Help not found for option 'size'.");
+        stdout.open(tempOut, "w");
+    }
+
+    {
+        int size;
+        args = ["main", "--help=size"];
+        getopt(args, "size", "The size option is great.", &size);
+        stdout = old_stdout;  // unblock redirect file
+        assert(tempOut.readText.strip == "Help for option 'size': The size option is great.");
+        stdout.open(tempOut, "w");
+    }
+
+    {
+        int size, colors;
+        args = ["main", "--help"];
+        getopt(args, "size", "The size option is great.", &size,
+                     "colors", "The colors option is nice.", &colors);
+        stdout = old_stdout;  // unblock redirect file
+        assert(tempOut.readText.strip.splitLines ==
+            ["Options:", "  colors The colors option is nice.", "  size   The size option is great."]);
+        stdout.open(tempOut, "w");
+    }
+
+    auto optHelp = OptHelp("Documentation: http://dlang.org/
+Usage:
+  app files.d ... { -switch }", "Copyright John Doe 2014");
+
+    {
+        int size, colors;
+        args = ["main", "--help"];
+        getopt(args, optHelp, "size", "The size option is great.", &size,
+                              "colors", "The colors option is nice.", &colors);
+        stdout = old_stdout;  // unblock redirect file
+        assert(tempOut.readText.strip.splitLines ==
+            ["Documentation: http://dlang.org/", "Usage:", "  app files.d ... { -switch }",
+             "Options:", "  colors The colors option is nice.", "  size   The size option is great.",
+             "Copyright John Doe 2014"]);
+        stdout.open(tempOut, "w");
+    }
+
+    {
+        int size, colors;
+        bool help;
+        args = ["main", "--help"];
+        getopt(args, optHelp, "help", &help,
+                              "size", "The size option is great.", &size,
+                              "colors", "The colors option is nice.", &colors);
+        stdout = old_stdout;  // unblock redirect file
+        assert(tempOut.readText.empty);  // ensure existing code continues to work.
+        stdout.open(tempOut, "w");
+    }
+
+    {
+        int size, colors;
+        string help;
+        args = ["main", "--help=size"];
+        getopt(args, optHelp, "help", &help,
+                              "size", "The size option is great.", &size,
+                              "colors", "The colors option is nice.", &colors);
+
+        assert(help == "size");
+        stdout = old_stdout;  // unblock redirect file
+        assert(tempOut.readText.empty);  // ensure existing code continues to work.
+        stdout.open(tempOut, "w");
+    }
+
+    {
+        int size;
+        args = ["main", "--size=large"];
+
+        try
+        {
+            getopt(args, optHelp, "size", "Specifies the size (e.g. 100)", &size);
+            assert(0);
+        }
+        catch (ConvException ex)
+        {
+            assert(ex.msg.endsWith("Help string for option 'size': Specifies the size (e.g. 100)"));
+        }
+    }
 }
