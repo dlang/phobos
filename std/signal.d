@@ -8,19 +8,15 @@
  * They were first introduced in the
  * $(LINK2 http://en.wikipedia.org/wiki/Qt_%28framework%29, Qt GUI toolkit), alternate implementations are
  * $(LINK2 http://libsigc.sourceforge.net, libsig++) or
- * $(LINK2 http://www.boost.org/doc/libs/1_55_0/doc/html/signals.html, Boost.Signals2)
- * similar concepts are implemented in other languages than C++ too. 
- *
- * This implementation supersedes the former std.signals, it fixes a few bugs,
- * but of more interest is the much more powerful interface. Not only can you
- * now attach signals to non objects, but also make indirect connections to
- * objects via wrapping delegates, adapting parameters as needed.
+ * $(LINK2 http://www.boost.org/doc/libs/1_55_0/doc/html/signals2.html, Boost.Signals2)
+ * similar concepts are implemented in other languages than C++ too.
  *
  * Copyright: Copyright Robert Klotzner 2012 - 2014.
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   Robert Klotzner
  */
-/*          Copyright Robert Klotzner 2012 - 2013.
+
+/*          Copyright Robert Klotzner 2012 - 2014.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -44,13 +40,337 @@ private extern (C) void  rt_attachDisposeEvent( Object obj, DisposeEvt evt );
 private extern (C) void  rt_detachDisposeEvent( Object obj, DisposeEvt evt );
 
 /**
+ * Full signal implementation.
+ *
+ * It implements the emit function, for all other functionality it has
+ * this aliased to RestrictedSignal.
+ *
+ * A signal is a way to couple components together in a very loose
+ * way. The receiver does not need to know anything about the sender
+ * and the sender does not need to know anything about the
+ * receivers. The sender will just call emit when something happens,
+ * the signal takes care of notifying all interested parties. By using
+ * wrapper delegates/functions, not even the function signature of
+ * sender/receiver need to match.
+ *
+ * Another consequence of this very loose coupling is, that a
+ * connected object will be freed by the GC if all references to it
+ * are dropped, even if it was still connected to a signal. The
+ * connection will simply be removed. This way the developer is freed of
+ * manually keeping track of connections.
+ *
+ * If in your application the connections made by a signal are not
+ * that loose you can use strongConnect(), in this case the GC won't
+ * free your object until it was disconnected from the signal or the
+ * signal got itself destroyed.
+ *
+ * This struct is not thread-safe in general, it just handles the
+ * concurrent parts of the GC.
+ *
+ * Bugs: The code probably won't compile with -profile because of bug:
+ *       $(LINK2 http://d.puremagic.com/issues/show_bug.cgi?id=10260, 10260)
+ *
+ * Example:
+ ---
+ import std.signal;
+ import std.stdio;
+ import std.functional;
+
+ class MyObject
+ {
+     // Public accessor method returning a RestrictedSignal, thus restricting
+     // the use of emit to this module. See the signal() string mixin below
+     // for a simpler way.
+     ref RestrictedSignal!(string, int) valueChanged() { return _valueChanged;}
+     private Signal!(string, int) _valueChanged;
+
+     int value() @property { return _value; }
+     int value(int v) @property
+     {
+        if (v != _value)
+        {
+            _value = v;
+            // call all the connected slots with the two parameters
+            _valueChanged.emit("setting new value", v);
+        }
+        return v;
+     }
+ private:
+     int _value;
+ }
+
+ class Observer
+ {   // our slot
+     void watch(string msg, int i)
+     {
+         writefln("Observed msg '%s' and value %s", msg, i);
+     }
+ }
+ void watch(string msg, int i)
+ {
+     writefln("Globally observed msg '%s' and value %s", msg, i);
+ }
+ void main()
+ {
+     auto a = new MyObject;
+     Observer o = new Observer;
+
+     a.value = 3;                // should not call o.watch()
+     a.valueChanged.connect!"watch"(o);        // o.watch is the slot
+     a.value = 4;                // should call o.watch()
+     a.valueChanged.disconnect!"watch"(o);     // o.watch is no longer a slot
+     a.value = 5;                // should not call o.watch()
+     a.valueChanged.connect!"watch"(o);        // connect again
+     // Do some fancy stuff:
+     a.valueChanged.connect!Observer(o, (obj, msg, i) =>  obj.watch("Some other text I made up", i+1));
+     a.valueChanged.strongConnect(toDelegate(&watch));
+     a.value = 6;                // should call o.watch()
+     destroy(o);                 // destroying o should automatically disconnect it
+     a.value = 7;                // should not call o.watch()
+ }
+---
+ * which should print:
+ * <pre>
+ * Observed msg 'setting new value' and value 4
+ * Observed msg 'setting new value' and value 6
+ * Observed msg 'Some other text I made up' and value 7
+ * Globally observed msg 'setting new value' and value 6
+ * Globally observed msg 'setting new value' and value 7
+ * </pre>
+ */
+struct Signal(Args...)
+{
+    alias restricted this;
+
+    /**
+     * Emit the signal.
+     *
+     * All connected slots which are still alive will be called.  If
+     * any of the slots throws an exception, the other slots will
+     * still be called. You'll receive a chained exception with all
+     * exceptions that were thrown. Thus slots won't influence each
+     * others execution.
+     *
+     * The slots are called in the same sequence as they were registered.
+     *
+     * emit also takes care of actually removing dead connections. For
+     * concurrency reasons they are just set to an invalid state by the GC.
+     *
+     * If you remove a slot during emit() it won't be called in the
+     * current run if it was not already.
+     *
+     * If you add a slot during emit() it will be called in the
+     * current emit() run. Note however, Signal is not thread-safe, "called
+     * during emit" basically means called from within a slot.
+     */
+    void emit( Args args ) @trusted
+    {
+        _restricted._impl.emit(args);
+    }
+
+    /**
+     * Get access to the rest of the signals functionality.
+     *
+     * By only granting your users access to the returned RestrictedSignal
+     * reference, you are preventing your users from calling emit on their
+     * own.
+     */
+    ref RestrictedSignal!(Args) restricted() @property @trusted
+    {
+        return _restricted;
+    }
+
+    private:
+    RestrictedSignal!(Args) _restricted;
+}
+
+/**
+ * The signal implementation, not providing an emit method.
+ *
+ * A RestrictedSignal reference is returned by Signal.restricted,
+ * it can safely be passed to users of your API, without
+ * allowing them to call emit().
+ */
+struct RestrictedSignal(Args...)
+{
+    /**
+     * Direct connection to an object.
+     *
+     * Use this method if you want to connect directly to an object's
+     * method matching the signature of this signal.  The connection
+     * will have weak reference semantics, meaning if you drop all
+     * references to the object the garbage collector will collect it
+     * and this connection will be removed.
+     *
+     * Preconditions: obj must not be null. mixin("&obj."~method)
+     * must be valid and compatible.
+     * Params:
+     *     obj = Some object of a class implementing a method
+     *     compatible with this signal.
+     */
+    void connect(string method, ClassType)(ClassType obj) @trusted
+        if (is(ClassType == class) && __traits(compiles, {void delegate(Args) dg = mixin("&obj."~method);}))
+    in
+    {
+        assert(obj);
+    }
+    body
+    {
+        _impl.addSlot(obj, cast(void delegate())mixin("&obj."~method));
+    }
+    /**
+     * Indirect connection to an object.
+     *
+     * Use this overload if you want to connect to an objects method
+     * which does not match the signal's signature.  You can provide
+     * any delegate to do the parameter adaption, but make sure your
+     * delegates' context does not contain a reference to the target
+     * object, instead use the provided obj parameter, where the
+     * object passed to connect will be passed to your delegate.
+     * This is to make weak ref semantics possible, if your delegate
+     * contains a ref to obj, the object won't be freed as long as
+     * the connection remains.
+     *
+     * Preconditions: obj and dg must not be null.
+     * dg's context must not be equal to obj.
+     *
+     * Params:
+     *     obj = The object to connect to. It will be passed to the
+     *     delegate when the signal is emitted.
+     *
+     *     dg = A wrapper delegate which takes care of calling some
+     *     method of obj. It can do any kind of parameter adjustments
+     *     necessary.
+     */
+    void connect(ClassType)(ClassType obj, void delegate(ClassType obj, Args) dg) @trusted
+        if (is(ClassType == class))
+    in
+    {
+        assert(obj);
+        assert(dg);
+        assert(cast(void*)obj !is dg.ptr);
+    }
+    body
+    {
+        _impl.addSlot(obj, cast(void delegate()) dg);
+    }
+
+    /**
+     * Connect with strong ref semantics.
+     *
+     * Use this overload if you either want strong ref
+     * semantics for some reason or because you want to connect some
+     * non-class method delegate. Whatever the delegates' context
+     * references will stay in memory as long as the signals'
+     * connection is not removed and the signal gets not destroyed
+     * itself.
+     *
+     * Preconditions: dg must not be null.
+     *
+     * Params:
+     *     dg = The delegate to be connected.
+     */
+    void strongConnect(void delegate(Args) dg) @trusted
+    in
+    {
+        assert(dg);
+    }
+    body
+    {
+        _impl.addSlot(null, cast(void delegate()) dg);
+    }
+
+
+    /**
+     * Disconnect a direct connection.
+     *
+     * After issuing this call, the connection to method of obj is lost
+     * and obj.method() will no longer be called on emit.
+     * Preconditions: Same as for direct connect.
+     */
+    void disconnect(string method, ClassType)(ClassType obj) @trusted
+        if (is(ClassType == class) && __traits(compiles, {void delegate(Args) dg = mixin("&obj."~method);}))
+    in
+    {
+        assert(obj);
+    }
+    body
+    {
+        void delegate(Args) dg = mixin("&obj."~method);
+        _impl.removeSlot(obj, cast(void delegate()) dg);
+    }
+
+    /**
+     * Disconnect an indirect connection.
+     *
+     * For this to work properly, dg has to be exactly the same as
+     * the one passed to connect. So if you used a lamda you have to
+     * keep a reference to it somewhere if you want to disconnect
+     * the connection later on.  If you want to remove all
+     * connections to a particular object, use the overload which only
+     * takes an object parameter.
+     */
+    void disconnect(ClassType)(ClassType obj, void delegate(ClassType, T1) dg) @trusted
+        if (is(ClassType == class))
+    in
+    {
+        assert(obj);
+        assert(dg);
+    }
+    body
+    {
+        _impl.removeSlot(obj, cast(void delegate())dg);
+    }
+
+    /**
+     * Disconnect all connections to obj.
+     *
+     * All connections to obj made with calls to connect are removed.
+     */
+    void disconnect(ClassType)(ClassType obj) @trusted if (is(ClassType == class))
+    in
+    {
+        assert(obj);
+    }
+    body
+    {
+        _impl.removeSlot(obj);
+    }
+
+    /**
+     * Disconnect a connection made with strongConnect.
+     *
+     * Disconnects all connections to dg.
+     */
+    void strongDisconnect(void delegate(Args) dg) @trusted
+    in
+    {
+        assert(dg);
+    }
+    body
+    {
+        _impl.removeSlot(null, cast(void delegate()) dg);
+    }
+    private:
+    SignalImpl _impl;
+}
+
+/**
  * string mixin for creating a signal.
  *
- * It creates a Signal instance named "_name", where name is given
- * as first parameter with given protection and an accessor method
- * with the current context protection named "name" returning either a
- * ref RestrictedSignal or ref Signal depending on the given
- * protection.
+ * If you found the above:
+---
+     ref RestrictedSignal!(string, int) valueChanged() { return _valueChanged;}
+     private Signal!(string, int) _valueChanged;
+---
+   a bit tedious, but still want to restrict the use of emit, you can use this
+   string mixin. The following would result in exactly the same code:
+---
+     mixin(signal!(string, int)("valueChanged"));
+---
+ * Additional flexibility is provided by the protection parameter,
+ * where you can change the protection of _valueChanged to protected
+ * for example.
  *
  * Bugs:
  *     This mixin generator does not work with templated types right now because of:
@@ -61,13 +381,13 @@ private extern (C) void  rt_detachDisposeEvent( Object obj, DisposeEvt evt );
  ---
  *     ref RestrictedSignal!(SomeTemplate!int) mysig() { return _mysig;}
  *     private Signal!(SomeTemplate!int) _mysig;
- ---     
+ ---
  *
  * Params:
  *   name = How the signal should be named. The ref returning function
  *   will be named like this, the actual struct instance will have an
  *   underscore prefixed.
- *   
+ *
  *   protection = Specifies how the full functionality (emit) of the
  *   signal should be protected. Default is private. If
  *   Protection.none is given, private is used for the Signal member
@@ -80,73 +400,6 @@ private extern (C) void  rt_detachDisposeEvent( Object obj, DisposeEvt evt );
  *     ref Signal!int mysig() { return _mysig;}
  *     private Signal!int _mysig;
  ---
- *
- * Example:
- ---
- import std.signal;
- import std.stdio;
- import std.functional;
-
- class MyObject
- {
-     // Mixin signal named valueChanged, with default "private" protection.
-     // (Only MyObject is allowed to emit the signal)
-     mixin(signal!(string, int)("valueChanged"));
-
-     int value() @property { return _value; }
-     int value(int v) @property
-     {
-        if (v != _value)
-        {
-            _value = v;
-            // call all the connected slots with the two parameters
-            _valueChanged.emit("setting new value", v);
-        }
-        return v;
-    }
-private:
-    int _value;
-}
-
-class Observer
-{   // our slot
-    void watch(string msg, int i)
-    {
-        writefln("Observed msg '%s' and value %s", msg, i);
-    }
-}
-void watch(string msg, int i)
-{
-    writefln("Globally observed msg '%s' and value %s", msg, i);
-}
-void main()
-{
-    auto a = new MyObject;
-    Observer o = new Observer;
-
-    a.value = 3;                // should not call o.watch()
-    a.valueChanged.connect!"watch"(o);        // o.watch is the slot
-    a.value = 4;                // should call o.watch()
-    a.valueChanged.disconnect!"watch"(o);     // o.watch is no longer a slot
-    a.value = 5;                // should not call o.watch()
-    a.valueChanged.connect!"watch"(o);        // connect again
-    // Do some fancy stuff:
-    a.valueChanged.connect!Observer(o, (obj, msg, i) =>  obj.watch("Some other text I made up", i+1));
-    a.valueChanged.strongConnect(toDelegate(&watch));
-    a.value = 6;                // should call o.watch()
-    destroy(o);                 // destroying o should automatically disconnect it
-    a.value = 7;                // should not call o.watch()
-
-}
----
- * which should print:
- * <pre>
- * Observed msg 'setting new value' and value 4
- * Observed msg 'setting new value' and value 6
- * Observed msg 'Some other text I made up' and value 7
- * Globally observed msg 'setting new value' and value 6
- * Globally observed msg 'setting new value' and value 7
- * </pre>
  */
 string signal(Args...)(string name, Protection protection=Protection.private_) @trusted // trusted necessary because of to!string
 {
@@ -179,261 +432,17 @@ enum Protection
     package_ /// The signal member variable will have package protection.
 }
 
-/**
- * Full signal implementation.
- *
- * It implements the emit function for all other functionality it has
- * this aliased to RestrictedSignal.
- *
- * A signal is a way to couple components together in a very loose
- * way. The receiver does not need to know anything about the sender
- * and the sender does not need to know anything about the
- * receivers. The sender will just call emit when something happens,
- * the signal takes care of notifying all interested parties. By using
- * wrapper delegates/functions, not even the function signature of
- * sender/receiver need to match.
- *
- * Another consequence of this very loose coupling is, that a
- * connected object will be freed by the GC if all references to it
- * are dropped, even if it was still connected to a signal, the
- * connection will simply be dropped. This way the developer is freed of
- * manually keeping track of connections.
- *
- * If in your application the connections made by a signal are not
- * that loose you can use strongConnect(), in this case the GC won't
- * free your object until it was disconnected from the signal or the
- * signal got itself destroyed.
- *
- * This struct is not thread-safe in general, it just handles the
- * concurrent parts of the GC.
- *
- * Bugs: The code probably won't compile with -profile because of bug:
- *       $(LINK2 http://d.puremagic.com/issues/show_bug.cgi?id=10260, 10260)
- */
-struct Signal(Args...)
-{
-    alias restricted this;
-
-    /**
-     * Emit the signal.
-     *
-     * All connected slots which are still alive will be called.  If
-     * any of the slots throws an exception, the other slots will
-     * still be called. You'll receive a chained exception with all
-     * exceptions that were thrown. Thus slots won't influence each
-     * others execution.
-     *
-     * The slots are called in the same sequence as they were registered.
-     *
-     * emit also takes care of actually removing dead connections. For
-     * concurrency reasons they are set just to an invalid state by the GC.
-     *
-     * If you remove a slot during emit() it won't be called in the
-     * current run if it was not already.
-     *
-     * If you add a slot during emit() it will be called in the
-     * current emit() run. Note however Signal is not thread-safe, "called
-     * during emit" basically means called from within a slot.
-     */
-    void emit( Args args ) @trusted
-    {
-        _restricted._impl.emit(args);
-    }
-
-    /**
-     * Get access to the rest of the signals functionality.
-     */
-    ref RestrictedSignal!(Args) restricted() @property @trusted
-    {
-        return _restricted;
-    }
-
-    private:
-    RestrictedSignal!(Args) _restricted;
-}
-
-/**
- * The signal implementation, not providing an emit method.
- *
- * The idea is to instantiate a Signal privately and provide a
- * public accessor method for accessing the contained
- * RestrictedSignal. You can use the signal string mixin, which does
- * exactly that.
- */
-struct RestrictedSignal(Args...)
-{
-    /**
-      * Direct connection to an object.
-      *
-      * Use this method if you want to connect directly to an object's
-      * method matching the signature of this signal.  The connection
-      * will have weak reference semantics, meaning if you drop all
-      * references to the object the garbage collector will collect it
-      * and this connection will be removed.
-      *
-      * Preconditions: obj must not be null. mixin("&obj."~method)
-      * must be valid and compatible.
-      * Params:
-      *     obj = Some object of a class implementing a method
-      *     compatible with this signal.
-      */
-    void connect(string method, ClassType)(ClassType obj) @trusted
-        if (is(ClassType == class) && __traits(compiles, {void delegate(Args) dg = mixin("&obj."~method);})) 
-    in
-    {
-        assert(obj);
-    }
-    body
-    {
-        _impl.addSlot(obj, cast(void delegate())mixin("&obj."~method));
-    }
-    /**
-      * Indirect connection to an object.
-      *
-      * Use this overload if you want to connect to an objects method
-      * which does not match the signal's signature.  You can provide
-      * any delegate to do the parameter adaption, but make sure your
-      * delegates' context does not contain a reference to the target
-      * object, instead use the provided obj parameter, where the
-      * object passed to connect will be passed to your delegate.
-      * This is to make weak ref semantics possible, if your delegate
-      * contains a ref to obj, the object won't be freed as long as
-      * the connection remains.
-      *
-      * Preconditions: obj and dg must not be null (dgs context
-      * may). dg's context must not be equal to obj.
-      *
-      * Params:
-      *     obj = The object to connect to. It will be passed to the
-      *     delegate when the signal is emitted.
-      *     
-      *     dg = A wrapper delegate which takes care of calling some
-      *     method of obj. It can do any kind of parameter adjustments
-      *     necessary.
-     */
-    void connect(ClassType)(ClassType obj, void delegate(ClassType obj, Args) dg) @trusted
-        if (is(ClassType == class)) 
-    in
-    {
-        assert(obj);
-        assert(dg);
-        assert(cast(void*)obj !is dg.ptr);
-    }
-    body
-    {
-        _impl.addSlot(obj, cast(void delegate()) dg);
-    }
-
-    /**
-      * Connect with strong ref semantics.
-      *
-      * Use this overload if you either really, really want strong ref
-      * semantics for some reason or because you want to connect some
-      * non-class method delegate. Whatever the delegates' context
-      * references, will stay in memory as long as the signals
-      * connection is not removed and the signal gets not destroyed
-      * itself.
-      *
-      * Preconditions: dg must not be null. (Its context may.)
-      *
-      * Params:
-      *     dg = The delegate to be connected.
-      */
-    void strongConnect(void delegate(Args) dg) @trusted
-    in
-    {
-        assert(dg);
-    }
-    body
-    {
-        _impl.addSlot(null, cast(void delegate()) dg);
-    }
-
-
-    /**
-      * Disconnect a direct connection.
-      *
-      * After issuing this call, the connection to method of obj is lost
-      * and obj.method() will no longer be called on emit.
-      * Preconditions: Same as for direct connect.
-      */
-    void disconnect(string method, ClassType)(ClassType obj) @trusted
-        if (is(ClassType == class) && __traits(compiles, {void delegate(Args) dg = mixin("&obj."~method);}))
-    in
-    {
-        assert(obj);
-    }
-    body
-    {
-        void delegate(Args) dg = mixin("&obj."~method);
-        _impl.removeSlot(obj, cast(void delegate()) dg);
-    }
-
-    /**
-      * Disconnect an indirect connection.
-      *
-      * For this to work properly, dg has to be exactly the same as
-      * the one passed to connect. So if you used a lamda you have to
-      * keep a reference to it somewhere if you want to disconnect
-      * the connection later on.  If you want to remove all
-      * connections to a particular object, use the overload which only
-      * takes an object parameter.
-     */
-    void disconnect(ClassType)(ClassType obj, void delegate(ClassType, T1) dg) @trusted
-        if (is(ClassType == class))
-    in
-    {
-        assert(obj);
-        assert(dg);
-    }
-    body
-    {
-        _impl.removeSlot(obj, cast(void delegate())dg);
-    }
-
-    /**
-      * Disconnect all connections to obj.
-      *
-      * All connections to obj made with calls to connect are removed. 
-     */
-    void disconnect(ClassType)(ClassType obj) @trusted if (is(ClassType == class))
-    in
-    {
-        assert(obj);
-    }
-    body
-    {
-        _impl.removeSlot(obj);
-    }
-    
-    /**
-      * Disconnect a connection made with strongConnect.
-      *
-      * Disconnects all connections to dg.
-      */
-    void strongDisconnect(void delegate(Args) dg) @trusted
-    in
-    {
-        assert(dg);
-    }
-    body
-    {
-        _impl.removeSlot(null, cast(void delegate()) dg);
-    }
-    private:
-    SignalImpl _impl;
-}
 
 private struct SignalImpl
 {
     /**
-      * Forbid copying.
-      * Unlike the old implementations, it would now be theoretically
-      * possible to copy a signal. Even different semantics are
-      * possible. But none of the possible semantics are what the user
-      * intended in all cases, so I believe it is still the safer
-      * choice to simply disallow copying.
-      */
+     * Forbid copying.
+     * Unlike the old implementations, it would now be theoretically
+     * possible to copy a signal. Even different semantics are
+     * possible. But none of the possible semantics are what the user
+     * intended in all cases, so I believe it is still the safer
+     * choice to simply disallow copying.
+     */
     @disable this(this);
     /// Forbid copying
     @disable void opAssign(SignalImpl other);
@@ -451,7 +460,7 @@ private struct SignalImpl
         doEmit(0, emptyCount, args);
         if (emptyCount > 0)
         {
-            _slots.slots = _slots.slots[0 .. $-emptyCount]; 
+            _slots.slots = _slots.slots[0 .. $-emptyCount];
             _slots.slots.assumeSafeAppend();
         }
     }
@@ -476,7 +485,7 @@ private struct SignalImpl
     {
         removeSlot((ref SlotImpl item) => item.wasConstructedFrom(obj, dg));
     }
-    void removeSlot(Object obj) 
+    void removeSlot(Object obj)
     {
         removeSlot((ref SlotImpl item) => item.obj is obj);
     }
@@ -490,6 +499,7 @@ private struct SignalImpl
                         // destructors to be run when within a GC managed array.
         }
     }
+
 /// Little helper functions:
 
     /**
@@ -510,7 +520,7 @@ private struct SignalImpl
             foreach (int i, ref slot; mslots)
             {
             // We are retrieving obj twice which is quite expensive because of GC lock:
-                if (!slot.isValid || isRemoved(slot)) 
+                if (!slot.isValid || isRemoved(slot))
                 {
                     emptyCount++;
                     slot.reset();
@@ -518,7 +528,7 @@ private struct SignalImpl
                 else if (emptyCount)
                     mslots[i-emptyCount].moveFrom(slot);
             }
-            
+
             if (emptyCount > 0)
             {
                 mslots = mslots[0..$-emptyCount];
@@ -529,14 +539,14 @@ private struct SignalImpl
     }
 
     /**
-     * Helper method to allow all slots being called even in case of an exception. 
+     * Helper method to allow all slots being called even in case of an exception.
      * All exceptions that occur will be chained.
      * Any invalid slots (GC collected or removed) will be dropped.
      */
     void doEmit(Args...)(int offset, ref int emptyCount, Args args )
     {
         int i=offset;
-        auto myslots = _slots.slots; 
+        auto myslots = _slots.slots;
         scope (exit) if (i+1<myslots.length) doEmit(i+1, emptyCount, args); // Carry on.
         if (emptyCount == -1)
         {
@@ -552,7 +562,7 @@ private struct SignalImpl
             {
                 bool result = myslots[i](args);
                 myslots = _slots.slots; // Refresh because addSlot might have been called.
-                if (!result) 
+                if (!result)
                     emptyCount++;
                 else if (emptyCount>0)
                 {
@@ -570,11 +580,11 @@ private struct SignalImpl
 // Simple convenience struct for signal implementation.
 // Its is inherently unsafe. It is not a template so SignalImpl does
 // not need to be one.
-private struct SlotImpl 
+private struct SlotImpl
 {
     @disable this(this);
     @disable void opAssign(SlotImpl other);
-    
+
     /// Pass null for o if you have a strong ref delegate.
     /// dg.funcptr must not point to heap memory.
     void construct(Object o, void delegate() dg)
@@ -587,7 +597,7 @@ private struct SlotImpl
         assert(GC.addrOf(_funcPtr) is null, "Your function is implemented on the heap? Such dirty tricks are not supported with std.signal!");
         if (o)
         {
-            if (_dataPtr is cast(void*) o) 
+            if (_dataPtr is cast(void*) o)
                 _dataPtr = directPtrFlag;
             hasObject = true;
         }
@@ -616,7 +626,7 @@ private struct SlotImpl
         _funcPtr = other._funcPtr;
         other.reset(); // Destroy original!
     }
-    
+
     @property Object obj()
     {
         return _obj.obj;
@@ -635,7 +645,7 @@ private struct SlotImpl
      *
      * Meaning opCall will call something and return true;
      */
-    bool isValid() @property 
+    bool isValid() @property
     {
         return funcPtr && (!hasObject || obj !is null);
     }
@@ -648,8 +658,8 @@ private struct SlotImpl
     {
         auto o = obj;
         void* o_addr = cast(void*)(o);
-        
-        if (!funcPtr || (hasObject && !o_addr)) 
+
+        if (!funcPtr || (hasObject && !o_addr))
             return false;
         if (_dataPtr is directPtrFlag || !hasObject)
         {
@@ -674,7 +684,7 @@ private struct SlotImpl
     }
     /**
      * Reset this instance to its initial value.
-     */   
+     */
     void reset() {
         _funcPtr = SlotImpl.init._funcPtr;
         _dataPtr = SlotImpl.init._dataPtr;
@@ -721,7 +731,7 @@ private struct WeakRef
      */
     @disable this(this);
     @disable void opAssign(WeakRef other);
-    void construct(Object o) 
+    void construct(Object o)
     in { assert(this is WeakRef.init); }
     body
     {
@@ -732,13 +742,13 @@ private struct WeakRef
         _obj.construct(cast(void*)o);
         rt_attachDisposeEvent(o, &unhook);
     }
-    Object obj() @property 
+    Object obj() @property
     {
         return cast(Object) _obj.address;
     }
     /**
      * Reset this instance to its intial value.
-     */   
+     */
     void reset()
     {
         auto o = obj;
@@ -750,7 +760,7 @@ private struct WeakRef
         //so the assertion of SlotImpl.moveFrom would fail.
         debug (signal) createdThis = null;
     }
-    
+
     ~this()
     {
         reset();
@@ -768,12 +778,12 @@ private struct WeakRef
 
         WeakRef* createdThis;
     }
-    
+
     void unhook(Object o)
     {
         _obj.reset();
     }
-    
+
     shared(InvisibleAddress) _obj;
 }
 
@@ -793,10 +803,10 @@ private shared struct InvisibleAddress
     {
         atomicStore(_addr, 0L);
     }
-    void* address() @property 
+    void* address() @property
     {
-        makeVisible(); 
-        scope (exit) makeInvisible(); 
+        makeVisible();
+        scope (exit) makeInvisible();
         GC.addrOf(cast(void*)atomicLoad(_addr)); // Just a dummy call to the GC
                                  // in order to wait for any possible running
                                  // collection to complete (have unhook called).
@@ -845,13 +855,13 @@ private:
         static long makeInvisible(long addr)
         {
             return ~addr;
-        }                
+        }
         static bool isVisible(long addr)
         {
             return !(addr & (1L << (ptrdiff_t.sizeof*8-1)));
         }
         static bool isNull(long addr)
-        {  
+        {
             return ( addr == 0 || addr == (~0) );
         }
     }
@@ -869,7 +879,7 @@ private:
             auto addrHigh = ((addr >> 16) & 0x0000ffff) | 0xffff0000;
             auto addrLow = (addr & 0x0000ffff) | 0xffff0000;
             return (cast(long)addrHigh << 32) | addrLow;
-        }                
+        }
         static bool isVisible(long addr)
         {
             return !((addr >> 32) & 0xffffffff);
@@ -1022,7 +1032,7 @@ unittest
         string captured_msg;
     }
 
-    class SimpleObserver 
+    class SimpleObserver
     {
         void watchOnlyInt(int i) {
             captured_value = i;
@@ -1077,7 +1087,7 @@ unittest
     //a.extendedSig.connect!Observer(o, (obj, msg, i) { obj.watch("Hahah", i); });
     a.extendedSig.connect!Observer(o, (obj, msg, i) => obj.watch("Hahah", i) );
 
-    a.value = 7;        
+    a.value = 7;
     debug (signal) stderr.writeln("After asignment!");
     assert(o.captured_value == 7);
     assert(o.captured_msg == "Hahah");
@@ -1275,26 +1285,26 @@ unittest {
     a.value6 = 46;
 }
 
-unittest 
+unittest
 {
     import std.stdio;
 
-    struct Property 
+    struct Property
     {
         alias value this;
         mixin(signal!(int)("signal"));
-        @property int value() 
+        @property int value()
         {
             return value_;
         }
-        ref Property opAssign(int val) 
+        ref Property opAssign(int val)
         {
             debug (signal) writeln("Assigning int to property with signal: ", &this);
             value_ = val;
             _signal.emit(val);
             return this;
         }
-        private: 
+        private:
         int value_;
     }
 
@@ -1303,7 +1313,7 @@ unittest
         debug (signal) writefln("observe: Wow! The value changed: %s", val);
     }
 
-    class Observer 
+    class Observer
     {
         void observe(int val)
         {
@@ -1328,12 +1338,12 @@ unittest
     assert(o.observed==prop);
 }
 
-unittest 
+unittest
 {
     debug (signal) import std.stdio;
     import std.conv;
     Signal!() s1;
-    void testfunc(int id) 
+    void testfunc(int id)
     {
         throw new Exception(to!string(id));
     }
@@ -1382,7 +1392,7 @@ unittest
     static assert(signal!int("a", Protection.protected_)=="protected Signal!(int) _a;\nref RestrictedSignal!(int) a() { return _a;}\n");
     static assert(signal!int("a", Protection.private_)=="private Signal!(int) _a;\nref RestrictedSignal!(int) a() { return _a;}\n");
     static assert(signal!int("a", Protection.none)=="private Signal!(int) _a;\nref Signal!(int) a() { return _a;}\n");
-    
+
     debug (signal)
     {
         pragma(msg, signal!int("a", Protection.package_));
@@ -1413,7 +1423,7 @@ unittest // Test nested emit/removal/addition ...
     {
         debug (signal) { import std.stdio; writefln("\nCALLED: %s, should called: %s", slot3called, slot3shouldcalled);}
         assert (slot3called == slot3shouldcalled);
-        if ( ++counter < 100) 
+        if ( ++counter < 100)
             slot3shouldcalled += counter;
         if ( counter < 100 )
             sig.strongConnect(&slot3);
