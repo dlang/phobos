@@ -4637,6 +4637,7 @@ enum OneShot { Fwd, Bwd };
     dchar front;
     DataIndex index;
     DataIndex genCounter;    //merge trace counter, goes up on every dchar
+    size_t[size_t] subCounters; //a table of gen counter per sub-engine: PC -> counter
     size_t threadSize;
     bool matched;
     bool exhausted;
@@ -4715,22 +4716,23 @@ enum OneShot { Fwd, Bwd };
         re.ir = piece;
         threadSize = matcher.threadSize;
         merge = matcher.merge;
-        genCounter = matcher.genCounter;
         freelist = matcher.freelist;
         front = matcher.front;
         index = matcher.index;
     }
 
-    auto fwdMatcher()(Bytecode[] piece)
+    auto fwdMatcher()(Bytecode[] piece, size_t counter)
     {
         auto m = ThompsonMatcher!(Char, Stream)(this, piece, s);
+        m.genCounter = counter;
         return m;
     }
 
-    auto bwdMatcher()(Bytecode[] piece)
+    auto bwdMatcher()(Bytecode[] piece, size_t counter)
     {
         alias BackLooper = typeof(s.loopBack(index));
         auto m = ThompsonMatcher!(Char, BackLooper)(this, piece, s.loopBack(index));
+        m.genCounter = counter;
         m.next();
         return m;
     }
@@ -5198,16 +5200,16 @@ enum OneShot { Fwd, Bwd };
                 uint end = t.pc + len + IRL!(IR.LookbehindEnd) + IRL!(IR.LookbehindStart);
                 bool positive = re.ir[t.pc].code == IR.LookbehindStart;
                 static if(Stream.isLoopback)
-                    auto matcher = fwdMatcher(re.ir[t.pc .. end]);
+                    auto matcher = fwdMatcher(re.ir[t.pc .. end], subCounters.get(t.pc, 0));
                 else
-                    auto matcher = bwdMatcher(re.ir[t.pc .. end]);
+                    auto matcher = bwdMatcher(re.ir[t.pc .. end], subCounters.get(t.pc, 0));
                 matcher.re.ngroup = re.ir[t.pc+2].raw - re.ir[t.pc+1].raw;
                 matcher.backrefed = backrefed.empty ? t.matches : backrefed;
                 //backMatch
                 bool nomatch = (matcher.matchOneShot(t.matches, IRL!(IR.LookbehindStart))
                     == MatchResult.Match) ^ positive;
                 freelist = matcher.freelist;
-                genCounter = matcher.genCounter;
+                subCounters[t.pc] = matcher.genCounter;
                 if(nomatch)
                 {
                     recycle(t);
@@ -5227,15 +5229,15 @@ enum OneShot { Fwd, Bwd };
                 uint end = t.pc+len+IRL!(IR.LookaheadEnd)+IRL!(IR.LookaheadStart);
                 bool positive = re.ir[t.pc].code == IR.LookaheadStart;
                 static if(Stream.isLoopback)
-                    auto matcher = bwdMatcher(re.ir[t.pc .. end]);
+                    auto matcher = bwdMatcher(re.ir[t.pc .. end], subCounters.get(t.pc, 0));
                 else
-                    auto matcher = fwdMatcher(re.ir[t.pc .. end]);
+                    auto matcher = fwdMatcher(re.ir[t.pc .. end], subCounters.get(t.pc, 0));
                 matcher.re.ngroup = me - ms;
                 matcher.backrefed = backrefed.empty ? t.matches : backrefed;
                 bool nomatch = (matcher.matchOneShot(t.matches, IRL!(IR.LookaheadStart)) 
                     == MatchResult.Match) ^ positive;
                 freelist = matcher.freelist;
-                genCounter = matcher.genCounter;
+                subCounters[t.pc] = matcher.genCounter;
                 s.reset(index);
                 next();
                 if(nomatch)
@@ -7353,12 +7355,15 @@ unittest
     NAME   = XPAW01_STA:STATION
     NAME   = XPAW01_STA
     ";
-        auto uniFileOld = data;
-        auto r = regex(
-           r"^NAME   = (?P<comp>[a-zA-Z0-9_]+):*(?P<blk>[a-zA-Z0-9_]*)","gm");
-        auto uniCapturesNew = match(uniFileOld, r);
-        for(int i = 0; i < 20; i++)
-            foreach (matchNew; uniCapturesNew) {}
+    auto uniFileOld = data;
+    auto r = regex(
+       r"^NAME   = (?P<comp>[a-zA-Z0-9_]+):*(?P<blk>[a-zA-Z0-9_]*)","gm");
+    auto uniCapturesNew = match(uniFileOld, r);
+    for(int i = 0; i < 20; i++)
+        foreach (matchNew; uniCapturesNew) {}
+    //a second issue with same symptoms
+    auto r2 = regex(`([а-яА-Я\-_]+\s*)+(?<=[\s\.,\^])`);
+    match("аллея Театральная", r2);
 }
 unittest
 {// bugzilla 8637 purity of enforce
