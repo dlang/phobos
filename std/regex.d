@@ -1086,7 +1086,11 @@ struct Parser(R)
                         if(current != '<')
                             error("Expected '<' in named group");
                         string name;
-                        while(next() && isAlpha(current))
+                        if(!next() || !(isAlpha(current) || current == '_'))
+                            error("Expected alpha starting a named group");
+                        name ~= current;
+                        while(next() && (isAlpha(current) || 
+                            current == '_' || ascii.isDigit(current)))
                         {
                             name ~= current;
                         }
@@ -7467,6 +7471,16 @@ unittest
 unittest
 {
     assert(collectException(regex("a{1,0}")));
+}
+
+// bugzilla 11839
+unittest
+{
+    assert(regex(`(?P<var1>\w+)`).namedCaptures.equal(["var1"]));
+    assert(collectException(regex(`(?P<1>\w+)`)));
+    assert(regex(`(?P<v1>\w+)`).namedCaptures.equal(["v1"]));
+    assert(regex(`(?P<__>\w+)`).namedCaptures.equal(["__"]));
+    assert(regex(`(?P<я>\w+)`).namedCaptures.equal(["я"]));
 }
 
 }//version(unittest)
