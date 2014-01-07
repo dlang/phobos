@@ -1240,7 +1240,7 @@ pure nothrow:
             if(v)
                 return false;
         return true;
-    }   
+    }
 
     T opIndex(size_t idx) inout
     in
@@ -1837,7 +1837,7 @@ public alias InversionList!GcPolicy CodepointSet;
     to represent [a, b$(RPAREN) intervals of $(CODEPOINTS). As used in $(LREF InversionList).
     Any interval type should pass $(LREF isIntegralPair) trait.
 */
-public struct CodepointInterval 
+public struct CodepointInterval
 {
     uint[2] _tuple;
     alias _tuple this;
@@ -1868,6 +1868,8 @@ public struct CodepointInterval
         rhs.popFront();
     }
 }
+
+
 
 /**
     $(P
@@ -1945,7 +1947,7 @@ public:
     }
 
     /**
-        Construct a set from a range of sorted code point intervals.
+        Construct a set from a forward range of code point intervals.
     */
     this(Range)(Range intervals)
         if(isForwardRange!Range && isIntegralPair!(ElementType!Range))
@@ -1953,30 +1955,40 @@ public:
         auto flattened = roundRobin(intervals.save.map!"a[0]"(),
             intervals.save.map!"a[1]"());
         data = Uint24Array!(SP)(flattened);
+        sanitize(); //enforce invariant: sort intervals etc.
     }
 
     /**
-        Construct a set from plain values of sorted code point intervals.
+        Construct a set from plain values of code point intervals.
         Example:
         ---
+        import std.algorithm;
         auto set = CodepointSet('a', 'z'+1, 'а', 'я'+1);
         foreach(v; 'a'..'z'+1)
             assert(set[v]);
         // Cyrillic lowercase interval
         foreach(v; 'а'..'я'+1)
             assert(set[v]);
+        //specific order is not required, intervals may interesect
+        auto set2 = CodepointSet('а', 'я'+1, 'a', 'd', 'b', 'z'+1);
+        //the same end result
+        assert(set2.byInterval.equal(set.byInterval));
         ---
     */
     this()(uint[] intervals...)
     in
     {
         assert(intervals.length % 2 == 0, "Odd number of interval bounds [a, b)!");
-        for(uint i=1; i<intervals.length; i++)
-            assert(intervals[i-1] < intervals[i]);
+        for(uint i=0; i<intervals.length/2; i++)
+        {
+            auto a = intervals[2*i], b = intervals[2*i+1];
+            assert(a < b, text("illegal interval [a, b): ", a, " > ", b));
+        }
     }
     body
     {
         data = Uint24Array!(SP)(intervals);
+        sanitize(); //enforce invariant: sort intervals etc.
     }
 
     /**
@@ -1991,68 +2003,7 @@ public:
     */
     @property auto byInterval()
     {
-        static struct Intervals
-        {
-            this(Uint24Array!SP sp)
-            {
-                slice = sp;
-                start = 0;
-                end = sp.length;
-            }
-
-            this(Uint24Array!SP sp, size_t s, size_t e)
-            {
-                slice = sp;
-                start = s;
-                end = e;
-            }
-
-            @property auto front()const
-            {
-                uint a = slice[start];
-                uint b = slice[start+1];
-                return CodepointInterval(a, b);
-            }
-
-            @property auto back()const
-            {
-                uint a = slice[end-2];
-                uint b = slice[end-1];
-                return CodepointInterval(a, b);
-            }
-
-            void popFront()
-            {
-                start += 2;
-            }
-
-            void popBack()
-            {
-                end -= 2;
-            }
-
-            auto opIndex(size_t idx) const
-            {
-                uint a = slice[start+idx*2];
-                uint b = slice[start+idx*2+1];
-                return CodepointInterval(a, b);
-            }
-
-            auto opSlice(size_t s, size_t e)
-            {
-                return Intervals(slice, s*2+start, e*2+start);
-            }
-
-            @property size_t length()const {  return slice.length/2; }
-
-            @property bool empty()const { return start == end; }
-
-            @property auto save(){ return this; }
-        private:
-            size_t start, end;
-            Uint24Array!SP slice;
-        }
-        return Intervals(data);
+        return Intervals!(typeof(data))(data);
     }
 
     /**
@@ -2197,15 +2148,15 @@ public:
     {
         return this[ch];
     }
-    
+
     ///
     unittest
     {
         assert('я' in unicode.Cyrillic);
         assert(!('z' in unicode.Cyrillic));
     }
-    
-    
+
+
 
     /// Obtains a set that is the inversion of this set. See also $(LREF inverted).
     auto opUnary(string op: "!")()
@@ -2324,8 +2275,6 @@ private:
         return this;
     }
 
-
-
     ref intersect()(dchar ch)
     {
         foreach(i; byInterval)
@@ -2334,7 +2283,6 @@ private:
         this = This.init;
         return this;
     }
-
 
     ///
     unittest
@@ -2371,6 +2319,7 @@ private:
         }
         return this;
     }
+
 // end of mixin-able part
 //============================================================================
 public:
@@ -2562,6 +2511,135 @@ public:
 private:
     alias typeof(this) This;
     alias size_t Marker;
+
+    // a random-access range of integral pairs
+    static struct Intervals(Range)
+    {
+        this(Range sp)
+        {
+            slice = sp;
+            start = 0;
+            end = sp.length;
+        }
+
+        this(Range sp, size_t s, size_t e)
+        {
+            slice = sp;
+            start = s;
+            end = e;
+        }
+
+        @property auto front()const
+        {
+            uint a = slice[start];
+            uint b = slice[start+1];
+            return CodepointInterval(a, b);
+        }
+
+        //may break sorted property - but we need std.sort to access it
+        //hence package protection attribute
+        package @property auto front(CodepointInterval val)
+        {
+            slice[start] = val.a;
+            slice[start+1] = val.b;
+        }
+
+        @property auto back()const
+        {
+            uint a = slice[end-2];
+            uint b = slice[end-1];
+            return CodepointInterval(a, b);
+        }
+
+        //ditto about package
+        package @property auto back(CodepointInterval val)
+        {
+            slice[end-2] = val.a;
+            slice[end-1] = val.b;
+        }
+
+        void popFront()
+        {
+            start += 2;
+        }
+
+        void popBack()
+        {
+            end -= 2;
+        }
+
+        auto opIndex(size_t idx) const
+        {
+            uint a = slice[start+idx*2];
+            uint b = slice[start+idx*2+1];
+            return CodepointInterval(a, b);
+        }
+
+        //ditto about package
+        package auto opIndexAssign(CodepointInterval val, size_t idx)
+        {
+            slice[start+idx*2] = val.a;
+            slice[start+idx*2+1] = val.b;
+        }
+
+        auto opSlice(size_t s, size_t e)
+        {
+            return Intervals(slice, s*2+start, e*2+start);
+        }
+
+        @property size_t length()const {  return slice.length/2; }
+
+        @property bool empty()const { return start == end; }
+
+        @property auto save(){ return this; }
+    private:
+        size_t start, end;
+        Range slice;
+    }
+
+    // called after construction from intervals
+    // to make sure invariants hold
+    void sanitize()
+    {
+        if (data.length == 0)
+            return;
+        alias Ival = CodepointInterval;
+        //intervals wrapper for a _range_ over packed array
+        auto ivals = Intervals!(typeof(data[]))(data[]);
+        sort!("a.a < b.a", SwapStrategy.stable)(ivals);
+        // what follows is a variation on stable remove
+        // differences:
+        // - predicate is binary, and is tested against
+        //   the last kept element (at 'i').
+        // - predicate mutates lhs (merges rhs into lhs)
+        size_t len = ivals.length;
+        size_t i = 0;
+        size_t j = 1;
+        while (j < len)
+        {
+            if (ivals[i].b >= ivals[j].a)
+            {
+                ivals[i] = Ival(ivals[i].a, max(ivals[i].b, ivals[j].b));
+                j++;
+            }
+            else //unmergable
+            {
+                // check if there is a hole after merges
+                // (in the best case we do 0 writes to ivals)
+                if (j != i+1)
+                    ivals[i+1] = ivals[j]; //copy over
+                i++;
+                j++;
+            }
+        }
+        len = i + 1;
+        for (size_t k=0; k + 1 < len; k++)
+        {
+            assert(ivals[k].a < ivals[k].b);
+            assert(ivals[k].b < ivals[k+1].a);
+        }
+        data.length = len * 2;
+    }
 
     // special case for normal InversionList
     ref subChar(dchar ch)
@@ -2759,6 +2837,9 @@ private:
     // Cyrillic lowercase interval
     foreach(v; 'а'..'я'+1)
         assert(set[v]);
+    //specific order is not required, intervals may interesect
+    auto set2 = CodepointSet('а', 'я'+1, 'a', 'd', 'b', 'z'+1);
+    assert(set2.byInterval.equal(set.byInterval));
 
     auto gothic = unicode.Gothic;
     // Gothic letter ahsa
@@ -3234,6 +3315,49 @@ version(unittest)
     }
 }
 
+
+//test constructor to work with any order of intervals
+@system unittest //@@@BUG@@@ iota is @system
+{
+    import std.conv, std.range, std.algorithm;
+    //ensure constructor handles bad ordering and overlap
+    auto c1 = CodepointSet('а', 'я'+1, 'А','Я'+1);
+    foreach(ch; chain(iota('a', 'я'+1)), iota('А','Я'+1))
+        assert(ch in c1, to!string(ch));
+
+    //contiguos
+    assert(CodepointSet(1000, 1006, 1006, 1009)
+        .byInterval.equal([tuple(1000, 1009)]));
+    //contains
+    assert(CodepointSet(900, 1200, 1000, 1100)
+        .byInterval.equal([tuple(900, 1200)]));
+    //intersect left
+    assert(CodepointSet(900, 1100, 1000, 1200)
+        .byInterval.equal([tuple(900, 1200)]));
+    //intersect right
+    assert(CodepointSet(1000, 1200, 900, 1100)
+        .byInterval.equal([tuple(900, 1200)]));
+
+    //ditto with extra items at end
+    assert(CodepointSet(1000, 1200, 900, 1100, 800, 850)
+        .byInterval.equal([tuple(800, 850), tuple(900, 1200)]));
+    assert(CodepointSet(900, 1100, 1000, 1200, 800, 850)
+        .byInterval.equal([tuple(800, 850), tuple(900, 1200)]));
+
+    //"plug a hole" test
+    auto c2 = CodepointSet(20, 40,
+        60, 80, 100, 140, 150, 200,
+        40, 60, 80, 100, 140, 150
+    );
+    assert(c2.byInterval.equal([tuple(20, 200)]));
+
+    auto c3 = CodepointSet(
+        20, 40, 60, 80, 100, 140, 150, 200,
+        0, 10, 15, 100, 10, 20, 200, 220);
+    assert(c3.byInterval.equal([tuple(0, 140), tuple(150, 220)]));
+}
+
+
 @trusted unittest
 {   // full set operations
     foreach(CodeList; AllSets)
@@ -3469,7 +3593,7 @@ private:
         size_t idx_zeros, idx_ones;
     }
     // iteration over levels of Trie, each indexes its own level and thus a shortened domain
-    size_t[Prefix.length] indices;    
+    size_t[Prefix.length] indices;
     // default filler value to use
     Value defValue;
     // this is a full-width index of next item
@@ -3511,7 +3635,7 @@ private:
         // get to the next page boundary
         size_t nextPB = (j + pageSize) & ~(pageSize-1);
         size_t n =  nextPB - j;// can fill right in this page
-        if(numVals < n) //fits in current page  
+        if(numVals < n) //fits in current page
         {
             ptr[j..j+numVals]  = val;
             j += numVals;
@@ -3597,7 +3721,7 @@ private:
     L_allocate_page:
             next_lvl_index = force!NextIdx(idx!level/pageSize - 1);
             if(state[level].idx_zeros == size_t.max && ptr.zeros(j, j+pageSize))
-            {                
+            {
                 state[level].idx_zeros = next_lvl_index;
             }
             // allocate next page
@@ -3613,7 +3737,7 @@ private:
                           [pageSize*next_lvl_index..(next_lvl_index+1)*pageSize]
                         ));
             }
-            table.length!level = table.length!level + pageSize;            
+            table.length!level = table.length!level + pageSize;
         }
     L_know_index:
         // for the previous level, values are indices to the pages in the current level
@@ -7157,7 +7281,7 @@ S toLower(S)(S s) @trusted pure
         assert(low == ch || isLower(low), format("%s -> %s", ch, low));
     }
     assert(toLower("АЯ") == "ая");
-    
+
     assert("\u1E9E".toLower == "\u00df");
     assert("\u00df".toUpper == "SS");
 }
@@ -7707,9 +7831,9 @@ private:
     {
         import std.internal.unicode_grapheme;
         static immutable res = asTrie(hangulLVTrieEntries);
-        return res; 
+        return res;
     }
-    
+
     auto hangLVT()
     {
         import std.internal.unicode_grapheme;
@@ -7718,25 +7842,25 @@ private:
     }
 
     // tables below are used for composition/decomposition
-    auto combiningClassTrie() 
-    { 
+    auto combiningClassTrie()
+    {
         import std.internal.unicode_comp;
-        static immutable res = asTrie(combiningClassTrieEntries); 
-        return res; 
+        static immutable res = asTrie(combiningClassTrieEntries);
+        return res;
     }
 
     auto compatMappingTrie()
-    { 
+    {
         import std.internal.unicode_decomp;
-        static immutable res = asTrie(compatMappingTrieEntries); 
-        return res; 
+        static immutable res = asTrie(compatMappingTrieEntries);
+        return res;
     }
 
     auto canonMappingTrie()
-    { 
+    {
         import std.internal.unicode_decomp;
         static immutable res = asTrie(canonMappingTrieEntries);
-        return res; 
+        return res;
     }
 
     auto compositionJumpTrie()
