@@ -146,7 +146,7 @@ version(USE_SSSE3)
     {
         assert(i < 100);
         string s;
-	if (i >= 10)
+        if (i >= 10)
             s ~= cast(char)('0' + (i / 10) % 10);
         return s ~ cast(char)('0' + i % 10);
     }

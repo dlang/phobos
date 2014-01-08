@@ -3584,14 +3584,14 @@ unittest
 // make sure that Array instances refuse ranges that don't belong to them
 unittest
 {
-	Array!int a = [1, 2, 3];
-	auto r = a.dup[];
-	assertThrown(a.insertBefore(r, 42));
-	assertThrown(a.insertBefore(r, [42]));
-	assertThrown(a.insertAfter(r, 42));
-	assertThrown(a.replace(r, 42));
-	assertThrown(a.replace(r, [42]));
-	assertThrown(a.linearRemove(r));
+    Array!int a = [1, 2, 3];
+    auto r = a.dup[];
+    assertThrown(a.insertBefore(r, 42));
+    assertThrown(a.insertBefore(r, [42]));
+    assertThrown(a.insertAfter(r, 42));
+    assertThrown(a.replace(r, 42));
+    assertThrown(a.replace(r, [42]));
+    assertThrown(a.linearRemove(r));
 }
 unittest
 {

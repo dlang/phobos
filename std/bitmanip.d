@@ -823,7 +823,7 @@ struct BitArray
                 hi--;
             }
         }
-	Ldone:
+    Ldone:
         return this;
     }
 

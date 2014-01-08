@@ -3522,7 +3522,7 @@ template BacktrackingMatcher(bool CTregex)
                         //no matching inside \r\n
                         if(atEnd || ((re.flags & RegexOption.multiline)
                             && endOfLine(front, s.loopBack(index).nextChar(back,bi)
-								&& back == '\r')))
+                                && back == '\r')))
                         {
                             pc += IRL!(IR.Eol);
                         }

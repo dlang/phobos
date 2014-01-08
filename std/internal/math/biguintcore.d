@@ -275,7 +275,7 @@ public:
      *  Separator characters do not contribute to the minPadding.
      */
     char [] toHexString(int frontExtraBytes, char separator = 0,
-			int minPadding=0, char padChar = '0') const pure
+            int minPadding=0, char padChar = '0') const pure
     {
         // Calculate number of extra padding bytes
         size_t extraPad = (minPadding > data.length * 2 * BigDigit.sizeof)
@@ -458,7 +458,7 @@ public:
     // If wantSub is false, return x + y, leaving sign unchanged
     // If wantSub is true, return abs(x - y), negating sign if x < y
     static BigUint addOrSubInt(Tulong)(const BigUint x, Tulong y,
-			bool wantSub, ref bool sign) pure if (is(Tulong == ulong))
+            bool wantSub, ref bool sign) pure if (is(Tulong == ulong))
     {
         BigUint r;
         if (wantSub)
@@ -508,7 +508,7 @@ public:
     // If wantSub is false, return x + y, leaving sign unchanged.
     // If wantSub is true, return abs(x - y), negating sign if x<y
     static BigUint addOrSub(BigUint x, BigUint y, bool wantSub, bool *sign)
-		pure
+        pure
     {
         BigUint r;
         if (wantSub)
@@ -1232,7 +1232,7 @@ BigDigit [] subInt(const BigDigit[] x, ulong y) pure
  *
  */
 void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
-	pure
+    pure
 {
     assert( result.length == x.length + y.length );
     assert( y.length > 0 );
@@ -1386,7 +1386,7 @@ import core.bitop : bsr;
 
 /// if remainder is null, only calculate quotient.
 void divModInternal(BigDigit [] quotient, BigDigit[] remainder, const BigDigit [] u,
-		const BigDigit [] v) pure
+        const BigDigit [] v) pure
 {
     assert(quotient.length == u.length - v.length + 1);
     assert(remainder == null || remainder.length == v.length);
@@ -1454,7 +1454,7 @@ private:
 // buff.length must be data.length*8 if separator is zero,
 // or data.length*9 if separator is non-zero. It will be completely filled.
 char [] biguintToHex(char [] buff, const BigDigit [] data, char separator=0)
-	pure
+    pure
 {
     int x=0;
     for (ptrdiff_t i=data.length - 1; i>=0; --i)
@@ -1657,7 +1657,7 @@ private:
 
 // Classic 'schoolbook' multiplication.
 void mulSimple(BigDigit[] result, const(BigDigit) [] left,
-		const(BigDigit)[] right) pure
+        const(BigDigit)[] right) pure
 in
 {
     assert(result.length == left.length + right.length);
@@ -1707,7 +1707,7 @@ body
 //  result = left - right
 // returns carry (0 or 1)
 BigDigit subSimple(BigDigit [] result,const(BigDigit) [] left,
-		const(BigDigit) [] right) pure
+        const(BigDigit) [] right) pure
 in
 {
     assert(result.length == left.length);
@@ -1753,7 +1753,7 @@ BigDigit addAssignSimple(BigDigit [] result, const(BigDigit) [] right) pure
 /* performs result += wantSub? - right : right;
 */
 BigDigit addOrSubAssignSimple(BigDigit [] result, const(BigDigit) [] right,
-		bool wantSub) pure
+        bool wantSub) pure
 {
     if (wantSub)
         return subAssignSimple(result, right);
@@ -1778,7 +1778,7 @@ bool less(const(BigDigit)[] x, const(BigDigit)[] y) pure
 
 // Set result = abs(x-y), return true if result is negative(x<y), false if x<=y.
 bool inplaceSub(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
-	pure
+    pure
 {
     assert(result.length == (x.length >= y.length) ? x.length : y.length);
 
@@ -1835,7 +1835,7 @@ size_t karatsubaRequiredBuffSize(size_t xlen) pure
 * scratchbuff      An array long enough to store all the temporaries. Will be destroyed.
 */
 void mulKaratsuba(BigDigit [] result, const(BigDigit) [] x,
-		const(BigDigit)[] y, BigDigit [] scratchbuff) pure
+        const(BigDigit)[] y, BigDigit [] scratchbuff) pure
 {
     assert(x.length >= y.length);
           assert(result.length < uint.max, "Operands too large");
@@ -1940,7 +1940,7 @@ void mulKaratsuba(BigDigit [] result, const(BigDigit) [] x,
 }
 
 void squareKaratsuba(BigDigit [] result, const BigDigit [] x,
-		BigDigit [] scratchbuff) pure
+        BigDigit [] scratchbuff) pure
 {
     // See mulKaratsuba for implementation comments.
     // Squaring is simpler, since it never gets asymmetric.
@@ -1997,7 +1997,7 @@ void squareKaratsuba(BigDigit [] result, const BigDigit [] x,
  * u[0..v.length] holds the remainder.
  */
 void schoolbookDivMod(BigDigit [] quotient, BigDigit [] u, in BigDigit [] v)
-	pure
+    pure
 {
     assert(quotient.length == u.length - v.length);
     assert(v.length > 1);

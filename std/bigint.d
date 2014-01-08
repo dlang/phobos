@@ -260,7 +260,7 @@ public:
     // BigInt op BigInt
     BigInt opBinary(string op, T)(T y) pure const
         if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="%" || op=="|" || op=="&" || op=="^")
-			&& is (T: BigInt))
+            && is (T: BigInt))
     {
         BigInt r = this;
         return r.opOpAssign!(op)(y);
