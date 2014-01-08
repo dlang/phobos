@@ -2646,6 +2646,9 @@ if (!is(Unqual!T == bool))
     private alias RefCounted!(Payload, RefCountedAutoInitialize.no) Data;
     private Data _data;
 
+/**
+Constructor taking a number of items
+     */
     this(U)(U[] values...) if (isImplicitlyConvertible!(U, T))
     {
         auto p = cast(T*) malloc(T.sizeof * values.length);
@@ -2660,6 +2663,16 @@ if (!is(Unqual!T == bool))
         }
         _data = Data(p[0 .. values.length]);
     }
+
+/**
+Constructor taking an input range
+     */
+    this(Stuff)(Stuff stuff)
+    if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T) && !is(Stuff == T[]))
+    {
+        insertBack(stuff);
+    }
+
 
 /**
 Comparison for equality.
@@ -3690,6 +3703,11 @@ unittest //11459
     }
     alias A = Array!S;
     alias B = Array!(shared bool);
+}
+
+unittest //11884
+{
+    auto a = Array!int([1, 2, 2].filter!"true"());
 }
 
 // BinaryHeap
