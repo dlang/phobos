@@ -1691,7 +1691,7 @@ unittest
     static void t1() { }
     Variant v = &t1;
     assert(v() == Variant.init);
-    
+
     static int t2() { return 3; }
     Variant v2 = &t2;
     assert(v2() == 3);

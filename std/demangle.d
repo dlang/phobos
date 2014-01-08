@@ -47,11 +47,11 @@ import std.demangle;
 void test(int x, float y) { }
 
 int main()
-{   
+{
     string buffer;
     bool inword;
     int c;
-    
+
     writefln("Try typing in: %s", test.mangleof);
     while ((c = fgetc(stdin)) != EOF)
     {
@@ -67,7 +67,7 @@ int main()
         }
         else
         {   if (c == '_' || isAlpha(c))
-            {   
+            {
                 inword = true;
                 buffer.length = 0;
                 buffer ~= cast(char) c;

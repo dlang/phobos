@@ -1391,8 +1391,8 @@ private:
         this.head = task;
         singleTaskThread = new Thread(&doSingleTask);
         singleTaskThread.start();
-        
-        // Disabled until writing code to support 
+
+        // Disabled until writing code to support
         // running thread with specified priority
         // See https://d.puremagic.com/issues/show_bug.cgi?id=8960
 

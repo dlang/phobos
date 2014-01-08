@@ -111,7 +111,7 @@ public:
         data = data.init; // @@@: Workaround for compiler bug
         opAssign(x);
     }
-    
+
     ///
     this(T)(T x) pure if (is(Unqual!T == BigInt))
     {
@@ -259,7 +259,7 @@ public:
 
     // BigInt op BigInt
     BigInt opBinary(string op, T)(T y) pure const
-        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="%" || op=="|" || op=="&" || op=="^") 
+        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="%" || op=="|" || op=="&" || op=="^")
 			&& is (T: BigInt))
     {
         BigInt r = this;
@@ -383,7 +383,7 @@ public:
     {
         return !isZero();
     }
-    
+
     ///
     T opCast(T)() pure const if (is(Unqual!T == BigInt)) {
         return this;
@@ -545,7 +545,7 @@ private:
     }
 }
 
-string toDecimalString(const(BigInt) x) 
+string toDecimalString(const(BigInt) x)
 {
     string outbuff="";
     void sink(const(char)[] s) { outbuff ~= s; }
@@ -553,7 +553,7 @@ string toDecimalString(const(BigInt) x)
     return outbuff;
 }
 
-string toHex(const(BigInt) x) 
+string toHex(const(BigInt) x)
 {
     string outbuff="";
     void sink(const(char)[] s) { outbuff ~= s; }
@@ -814,7 +814,7 @@ unittest
     import std.math:abs;
     auto r = abs(BigInt(-1000)); // 6486
     assert(r == 1000);
-    
+
     auto r2 = abs(const(BigInt)(-500)); // 11188
     assert(r2 == 500);
     auto r3 = abs(immutable(BigInt)(-733)); // 11188
@@ -866,34 +866,34 @@ unittest // 11148
     void foo(BigInt) {}
     const BigInt cbi = 3;
     immutable BigInt ibi = 3;
-    
+
     assert(__traits(compiles, foo(cbi)));
     assert(__traits(compiles, foo(ibi)));
-    
+
     import std.typetuple : TypeTuple;
     import std.conv : to;
-    
+
     foreach (T1; TypeTuple!(BigInt, const(BigInt), immutable(BigInt)))
     {
         foreach (T2; TypeTuple!(BigInt, const(BigInt), immutable(BigInt)))
         {
             T1 t1 = 2;
             T2 t2 = t1;
-            
+
             T2 t2_1 = to!T2(t1);
             T2 t2_2 = cast(T2)t1;
-            
+
             assert(t2 == t1);
             assert(t2 == 2);
-            
+
             assert(t2_1 == t1);
             assert(t2_1 == 2);
-            
+
             assert(t2_2 == t1);
             assert(t2_2 == 2);
         }
     }
-    
+
     BigInt n = 2;
     n *= 2;
 }
@@ -911,13 +911,13 @@ unittest // 9061
     long l3 = l1 | l2;
     long l4 = l1 & l2;
     long l5 = l1 ^ l2;
-    
+
     BigInt b1 = l1;
     BigInt b2 = l2;
     BigInt b3 = b1 | b2;
     BigInt b4 = b1 & b2;
     BigInt b5 = b1 ^ b2;
-    
+
     assert(l3 == b3);
     assert(l4 == b4);
     assert(l5 == b5);

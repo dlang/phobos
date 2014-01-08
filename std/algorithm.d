@@ -6523,7 +6523,7 @@ template equal(alias pred = "a == b")
     have different element types, as long as $(D pred(a, b)) evaluates to
     $(D bool) for $(D a) in $(D r1) and $(D b) in $(D r2). Performs
     $(BIGOH min(r1.length, r2.length)) evaluations of $(D pred).
-    
+
     See_Also:
         $(WEB sgi.com/tech/stl/_equal.html, STL's _equal)
     +/
@@ -6542,7 +6542,7 @@ template equal(alias pred = "a == b")
             auto len1 = r1.length;
             auto len2 = r2.length;
             if (len1 != len2) return false; //Short circuit return
-    
+
             //Lengths are the same, so we need to do an actual comparison
             //Good news is we can sqeeze out a bit of performance by not checking if r2 is empty
             for (; !r1.empty; r1.popFront(), r2.popFront())

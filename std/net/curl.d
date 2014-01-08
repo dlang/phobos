@@ -3442,7 +3442,7 @@ alias CURLcode CurlCode;
   Warning: This struct uses interior pointers for callbacks. Only allocate it
   on the stack if you never move or copy it. This also means passing by reference
   when passing Curl to other functions. Otherwise always allocate on
-  the heap. 
+  the heap.
 */
 struct Curl
 {

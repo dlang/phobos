@@ -1905,19 +1905,19 @@ static if (is(sockaddr_un))
     unittest
     {
         import core.stdc.stdio : remove;
-    
+
         immutable ubyte[] data = [1, 2, 3, 4];
         Socket[2] pair;
-        
+
         auto name = "unix-address-family-unittest-socket-name";
         auto address = new UnixAddress(name);
-        
+
         auto listener = new Socket(AddressFamily.UNIX, SocketType.STREAM);
         scope(exit) listener.close();
-        
+
         listener.bind(address);
         scope(exit) remove(toStringz(name));
-        
+
         listener.listen(1);
 
         pair[0] = new Socket(AddressFamily.UNIX, SocketType.STREAM);

@@ -806,7 +806,7 @@ unittest
     }
     ----
  */
-void multibyteMultiplyAccumulate(uint [] dest, const uint[] left, 
+void multibyteMultiplyAccumulate(uint [] dest, const uint[] left,
 		const uint [] right) pure {
     // Register usage
     // EDX:EAX = used in multiply

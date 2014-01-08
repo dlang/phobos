@@ -661,7 +661,7 @@ enum Order : bool
  * The additional order parameter can be used to specify the order of the input data.
  * By default the data is processed in increasing order, starting at index 0. To process it in the
  * opposite order, pass Order.decreasing as a parameter.
- * 
+ *
  * The additional letterCase parameter can be used to specify the case of the output data.
  * By default the output is in upper case. To change it to the lower case
  * pass LetterCase.lower as a parameter.
@@ -672,7 +672,7 @@ char[num*2] toHexString(Order order = Order.increasing, size_t num, LetterCase l
     static if (letterCase == LetterCase.upper)
     {
         import std.ascii : hexDigits = hexDigits;
-    }    
+    }
     else
     {
         import std.ascii : hexDigits = lowerHexDigits;
@@ -716,7 +716,7 @@ string toHexString(Order order = Order.increasing, LetterCase letterCase = Lette
     static if (letterCase == LetterCase.upper)
     {
         import std.ascii : hexDigits = hexDigits;
-    }    
+    }
     else
     {
         import std.ascii : hexDigits = lowerHexDigits;
@@ -865,7 +865,7 @@ class WrapperDigest(T) if(isDigest!T) : Digest
          *
          * Examples:
          * --------
-         * 
+         *
          * import std.digest.md;
          * ubyte[16] buf;
          * auto hash = new WrapperDigest!MD5();
