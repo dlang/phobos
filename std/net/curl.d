@@ -2063,48 +2063,56 @@ struct HTTP
             // status lines. The last one is the one recorded.
             auto dg = (in char[] header)
             {
-                if (header.empty)
+                import std.utf : UTFException;
+                try
                 {
-                    // header delimiter
-                    return;
-                }
-                if (header.startsWith("HTTP/"))
-                {
-                    string[string] empty;
-                    headersIn = empty; // clear
-
-                    auto m = match(header, regex(r"^HTTP/(\d+)\.(\d+) (\d+) (.*)$"));
-                    if (m.empty)
+                    if (header.empty)
                     {
-                        // Invalid status line
+                        // header delimiter
+                        return;
                     }
-                    else
+                    if (header.startsWith("HTTP/"))
                     {
-                        status.majorVersion = to!ushort(m.captures[1]);
-                        status.minorVersion = to!ushort(m.captures[2]);
-                        status.code = to!ushort(m.captures[3]);
-                        status.reason = m.captures[4].idup;
-                        if (onReceiveStatusLine != null)
-                            onReceiveStatusLine(status);
+                        string[string] empty;
+                        headersIn = empty; // clear
+
+                        auto m = match(header, regex(r"^HTTP/(\d+)\.(\d+) (\d+) (.*)$"));
+                        if (m.empty)
+                        {
+                            // Invalid status line
+                        }
+                        else
+                        {
+                            status.majorVersion = to!ushort(m.captures[1]);
+                            status.minorVersion = to!ushort(m.captures[2]);
+                            status.code = to!ushort(m.captures[3]);
+                            status.reason = m.captures[4].idup;
+                            if (onReceiveStatusLine != null)
+                                onReceiveStatusLine(status);
+                        }
+                        return;
                     }
-                    return;
+
+                    // Normal http header
+                    auto m = match(cast(char[]) header, regex("(.*?): (.*)$"));
+
+                    auto fieldName = m.captures[1].toLower().idup;
+                    if (fieldName == "content-type")
+                    {
+                        auto mct = match(cast(char[]) m.captures[2],
+                                         regex("charset=([^;]*)"));
+                        if (!mct.empty && mct.captures.length > 1)
+                            charset = mct.captures[1].idup;
+                    }
+
+                    if (!m.empty && callback !is null)
+                        callback(fieldName, m.captures[2]);
+                    headersIn[fieldName] = m.captures[2].idup;
                 }
-
-                // Normal http header
-                auto m = match(cast(char[]) header, regex("(.*?): (.*)$"));
-
-                auto fieldName = m.captures[1].toLower().idup;
-                if (fieldName == "content-type")
+                catch(UTFException e)
                 {
-                    auto mct = match(cast(char[]) m.captures[2],
-                                     regex("charset=([^;]*)"));
-                    if (!mct.empty && mct.captures.length > 1)
-                        charset = mct.captures[1].idup;
+                    //munch it - a header should be all ASCII, any "wrong UTF" is broken header
                 }
-
-                if (!m.empty && callback !is null)
-                    callback(fieldName, m.captures[2]);
-                headersIn[fieldName] = m.captures[2].idup;
             };
 
             curl.onReceiveHeader = dg;
