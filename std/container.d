@@ -321,7 +321,7 @@ Generally a container may define several types of ranges.
             assert(0);
         }
         /// Ditto
-        T opIndex(size_t i)
+        ref T opIndex(size_t i)
         {
             assert(0);
         }
@@ -457,7 +457,7 @@ Indexing operators yield or modify the value at a specified index.
     /**
        Indexing operators yield or modify the value at a specified index.
      */
-    ValueType opIndex(KeyType)
+    ref ValueType opIndex(KeyType)
     {
         assert(0);
     }
@@ -2779,7 +2779,7 @@ Defines the container's primary range, which is a random-access range.
             return move(_outer._data._payload[_a + i]);
         }
 
-        T opIndex(size_t i)
+        ref T opIndex(size_t i)
         {
             version (assert) if (_a + i >= _b) throw new RangeError();
             return _outer[_a + i];
@@ -3004,7 +3004,7 @@ Precondition: $(D i < length)
 
 Complexity: $(BIGOH 1)
      */
-    T opIndex(size_t i)
+    ref T opIndex(size_t i)
     {
         version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
         return _data._payload[i];
@@ -4223,7 +4223,7 @@ if (is(Unqual!T == bool))
             --_b;
         }
         /// Ditto
-        T opIndex(size_t i)
+        auto ref opIndex(size_t i)
         {
             return _outer[_a + i];
         }
