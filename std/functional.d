@@ -42,8 +42,8 @@ template unaryFun(alias fun, string parmName = "a")
     {
         auto unaryFun(ElementType)(auto ref ElementType __a)
         {
-            mixin("alias __a "~parmName~";");
-            mixin("return (" ~ fun ~ ");");
+            mixin("alias " ~ parmName ~ " = __a ;");
+            return mixin(fun);
         }
     }
     else
@@ -97,9 +97,9 @@ template binaryFun(alias fun, string parm1Name = "a",
         auto binaryFun(ElementType1, ElementType2)
             (auto ref ElementType1 __a, auto ref ElementType2 __b)
         {
-            mixin("alias __a "~parm1Name~";");
-            mixin("alias __b "~parm2Name~";");
-            mixin("return (" ~ fun ~ ");");
+            mixin("alias "~parm1Name~" = __a ;");
+            mixin("alias "~parm2Name~" = __b ;");
+            return mixin(fun);
         }
     }
     else
