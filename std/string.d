@@ -1392,19 +1392,22 @@ C1[] chomp(C1, C2)(C1[] str, const(C2)[] delimiter) @safe pure
     {
         if (str.endsWith(delimiter))
             return str[0 .. $ - delimiter.length];
+        return str;
     }
-
-    auto orig = str;
-
-    foreach_reverse (dchar c; delimiter)
+    else
     {
-        if (str.empty || str.back != c)
-            return orig;
+        auto orig = str;
 
-        str.popBack();
+        foreach_reverse (dchar c; delimiter)
+        {
+            if (str.empty || str.back != c)
+                return orig;
+
+            str.popBack();
+        }
+
+        return str;
     }
-
-    return str;
 }
 
 ///
@@ -1422,6 +1425,9 @@ C1[] chomp(C1, C2)(C1[] str, const(C2)[] delimiter) @safe pure
     assert(chomp(" hello world", "orld") == " hello w");
     assert(chomp(" hello world", " he") == " hello world");
     assert(chomp("", "hello") == "");
+
+    // Don't decode pointlessly
+    assert(chomp("hello\xFE", "\r") == "hello\xFE");
 }
 
 unittest
