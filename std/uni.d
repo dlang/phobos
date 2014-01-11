@@ -146,7 +146,7 @@
     $(P The following is a list of important Unicode notions
     and definitions. Any conventions used specifically in this
     module alone are marked as such. The descriptions are based on the formal
-    definition as found in ($WEB http://www.unicode.org/versions/Unicode6.2.0/ch03.pdf,
+    definition as found in $(WEB http://www.unicode.org/versions/Unicode6.2.0/ch03.pdf,
     chapter three of The Unicode Standard Core Specification.)
     )
 
@@ -1915,7 +1915,7 @@ public struct CodepointInterval
 
     $(P Memory usage is 6 bytes per each contiguous interval in a set.
     The value semantics are achieved by using the
-    ($WEB http://en.wikipedia.org/wiki/Copy-on-write, COW) technique
+    $(WEB http://en.wikipedia.org/wiki/Copy-on-write, COW) technique
     and thus it's $(RED not) safe to cast this type to $(D_KEYWORD shared).
     )
 
