@@ -2096,7 +2096,7 @@ unittest
 }
 
 /++
-    Returns an array that is $(D s) with $(D slice) replaced by
+    Returns a new array that is $(D s) with $(D slice) replaced by
     $(D replacement[]).
  +/
 inout(T)[] replaceSlice(T)(inout(T)[] s, in T[] slice, in T[] replacement)
