@@ -4593,6 +4593,43 @@ unittest // For infinite ranges
     assert (c == i);
 }
 
+unittest
+{
+    int[5] arr = [0, 1, 2, 3, 4];
+    auto cleS = cycle(arr);   //Static
+    auto cleD = cycle(arr[]); //Dynamic
+    assert(equal(cleS[5 .. 10], arr[]));
+    assert(equal(cleD[5 .. 10], arr[]));
+
+    //n is a multiple of 5 worth about 3/4 of size_t.max
+    auto n = size_t.max/4 + size_t.max/2;
+    n -= n % 5;
+
+    //Test index overflow
+    foreach (_ ; 0 .. 10)
+    {
+        cleS = cleS[n .. $];
+        cleD = cleD[n .. $];
+        assert(equal(cleS[5 .. 10], arr[]));
+        assert(equal(cleD[5 .. 10], arr[]));
+    }
+}
+
+unittest
+{
+    int[1] arr = [0];
+    auto cleS = cycle(arr);
+    cleS = cleS[10 .. $];
+    assert(equal(cleS[5 .. 10], 0.repeat(5)));
+    assert(cleS.front == 0);
+}
+
+unittest //10845
+{
+   auto a = inputRangeObject(iota(3).filter!"true");
+   assert(equal(cycle(a).take(10), [0, 1, 2, 0, 1, 2, 0, 1, 2, 0]));
+}
+
 private template lengthType(R) { alias typeof((inout int = 0){ R r = void; return r.length; }()) lengthType; }
 
 /**
