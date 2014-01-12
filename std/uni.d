@@ -2007,6 +2007,16 @@ public:
         sanitize(); //enforce invariant: sort intervals etc.
     }
 
+    //helper function that avoids sanity check to be CTFE-friendly
+    private static fromIntervals(Range)(Range intervals)
+    {
+        auto flattened = roundRobin(intervals.save.map!"a[0]"(),
+            intervals.save.map!"a[1]"());
+        InversionList set;
+        set.data = Uint24Array!(SP)(flattened);
+        return set;
+    }
+
     /**
         Construct a set from plain values of code point intervals.
         Example:
@@ -8576,7 +8586,7 @@ private:
 
 @safe auto asSet(const (ubyte)[] compressed)
 {
-    return CodepointSet(decompressIntervals(compressed));
+    return CodepointSet.fromIntervals(decompressIntervals(compressed));
 }
 
 @safe pure nothrow auto asTrie(T...)(in TrieEntry!T e)
