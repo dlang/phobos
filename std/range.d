@@ -4394,7 +4394,8 @@ struct Cycle(R)
         void popFront()
         {
             _current.popFront();
-            if (_current.empty) _current = _original;
+            if (_current.empty)
+                _current = _original.save;
         }
 
         @property Cycle save()
