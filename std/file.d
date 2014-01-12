@@ -2147,11 +2147,11 @@ else version(Posix)
 
             _didStat = true;
         }
-        
+
         /++
             This is to support lazy evaluation, because doing stat's is
             expensive and not always needed.
-            
+
             Try both stat and lstat for isFile and isDir
             to detect broken symlinks.
          +/
@@ -2159,11 +2159,11 @@ else version(Posix)
         {
             if(_didStat)
                 return;
-                
+
             if( stat(toStringz(_name), &_statBuf) != 0 )
             {
                 _ensureLStatDone();
-                
+
                 _statBuf = stat_t.init;
                 _statBuf.st_mode = S_IFLNK;
             }

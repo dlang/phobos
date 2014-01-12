@@ -7380,9 +7380,9 @@ private struct OnlyResult(T, size_t arity)
     version(none)
     {
         static if(hasElaborateAssign!T)
-        	private T[arity] data;
+            private T[arity] data;
         else
-        	private T[arity] data = void;
+            private T[arity] data = void;
     }
     else
         private T[arity] data;

@@ -742,7 +742,7 @@ inout(T)[] overlap(T)(inout(T)[] r1, inout(T)[] r2) @trusted pure nothrow
 
 @safe pure nothrow unittest // bugzilla 9836
 {
-	// range primitives for array should work with alias this types
+    // range primitives for array should work with alias this types
     struct Wrapper
     {
         int[] data;

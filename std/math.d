@@ -2361,7 +2361,7 @@ real log(real x) @safe pure nothrow
                 exp -= 1;
                 z = x - 0.5;
                 y = 0.5 * z + 0.5;
-            }       
+            }
             else
             {   // 2(x - 1)/(x + 1)
                 z = x - 0.5;
@@ -2492,7 +2492,7 @@ real log10(real x) @safe pure nothrow
                 exp -= 1;
                 z = x - 0.5;
                 y = 0.5 * z + 0.5;
-            }       
+            }
             else
             {   // 2(x - 1)/(x + 1)
                 z = x - 0.5;
@@ -2655,7 +2655,7 @@ real log2(real x) @safe pure nothrow
                 exp -= 1;
                 z = x - 0.5;
                 y = 0.5 * z + 0.5;
-            }       
+            }
             else
             {   // 2(x - 1)/(x + 1)
                 z = x - 0.5;

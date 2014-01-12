@@ -401,7 +401,7 @@ UNITTEST_OBJS= unittest1.obj unittest2.obj unittest2a.obj \
 		unittest6i.obj \
 		unittest6j.obj \
 		unittest6k.obj \
-		unittest7.obj 
+		unittest7.obj
 
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c           -ofunittest1.obj $(SRC_STD_1_HEAVY)

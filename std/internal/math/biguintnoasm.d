@@ -185,7 +185,7 @@ unittest
  * Returns carry.
  */
 uint multibyteMul(uint[] dest, const(uint)[] src, uint multiplier, uint carry)
-	pure
+    pure
 {
     assert(dest.length == src.length);
     ulong c = carry;
@@ -263,7 +263,7 @@ unittest
     ----
  */
 void multibyteMultiplyAccumulate(uint [] dest, const(uint)[] left, const(uint)
-		[] right) pure
+        [] right) pure
 {
     for (size_t i = 0; i < right.length; ++i)
     {
