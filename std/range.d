@@ -4277,20 +4277,19 @@ struct Cycle(R)
         this(R input, size_t index = 0)
         {
             _original = input;
-            _index = index;
+            _index = index % _original.length;
         }
 
         @property auto ref front()
         {
-            return _original[_index % _original.length];
+            return _original[_index];
         }
 
-        static if (is(typeof((cast(const R)_original)[0])) &&
-                   is(typeof((cast(const R)_original).length)))
+        static if (is(typeof((cast(const R)_original)[_index])))
         {
             @property auto ref front() const
             {
-                return _original[_index % _original.length];
+                return _original[_index];
             }
         }
 
@@ -4298,7 +4297,7 @@ struct Cycle(R)
         {
             @property auto front(ElementType!R val)
             {
-                _original[_index % _original.length] = val;
+                _original[_index] = val;
             }
         }
 
@@ -4307,6 +4306,8 @@ struct Cycle(R)
         void popFront()
         {
             ++_index;
+            if (_index >= _original.length)
+                _index = 0;
         }
 
         auto ref opIndex(size_t n)
@@ -4314,7 +4315,7 @@ struct Cycle(R)
             return _original[(n + _index) % _original.length];
         }
 
-        static if (is(typeof((cast(const R)_original)[0])) &&
+        static if (is(typeof((cast(const R)_original)[_index])) &&
                    is(typeof((cast(const R)_original).length)))
         {
             auto ref opIndex(size_t n) const
@@ -4424,12 +4425,12 @@ nothrow:
     this(ref R input, size_t index = 0)
     {
         _ptr = input.ptr;
-        _index = index;
+        _index = index % R.length;
     }
 
     @property ref inout(ElementType) front() inout
     {
-        return _ptr[_index % R.length];
+        return _ptr[_index];
     }
 
     enum bool empty = false;
@@ -4437,6 +4438,8 @@ nothrow:
     void popFront()
     {
         ++_index;
+        if (_index >= R.length)
+            _index = 0;
     }
 
     ref inout(ElementType) opIndex(size_t n) inout
