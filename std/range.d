@@ -4463,9 +4463,9 @@ nothrow:
         return this[i .. $].takeExactly(j - i);
     }
 
-    auto opSlice(size_t i, DollarToken) inout
+    typeof(this) opSlice(size_t i, DollarToken) inout
     {
-        return typeof(this)(*cast(R*)_ptr, _index + i);
+        return Cycle(*cast(R*)_ptr, _index + i);
     }
 }
 
