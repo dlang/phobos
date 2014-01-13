@@ -1680,20 +1680,10 @@ elements in $(D rhs).
         }
 
         /// ditto
-        @property T front()
+        @property ref T front()
         {
             assert(!empty, "DList.Range.front: Range is empty");
             return _first._payload;
-        }
-
-        /// ditto
-        static if(isAssignable!(T, T))
-        {
-            @property void front(T value)
-            {
-                assert(!empty, "DList.Range.front: Range is empty");
-                move(value, _first._payload);
-            }
         }
 
         /// ditto
@@ -1714,20 +1704,10 @@ elements in $(D rhs).
         @property Range save() { return this; }
 
         /// Bidirectional range primitives.
-        @property T back()
+        @property ref T back()
         {
             assert(!empty, "DList.Range.back: Range is empty");
             return _last._payload;
-        }
-
-        /// ditto
-        static if(isAssignable!(T, T))
-        {
-            @property void back(T value)
-            {
-                assert(!empty, "DList.Range.back: Range is empty");
-                move(value, _last._payload);
-            }
         }
 
         /// ditto
@@ -1790,24 +1770,10 @@ Forward to $(D opSlice().front).
 
 Complexity: $(BIGOH 1)
      */
-    @property T front()
+    @property ref T front()
     {
         assert(!empty, "DList.front: List is empty");
         return _first._payload;
-    }
-
-/**
-Forward to $(D opSlice().front(value)).
-
-Complexity: $(BIGOH 1)
-     */
-    static if(isAssignable!(T,T))
-    {
-        @property void front(T value)
-        {
-            assert(!empty, "DList.front: List is empty");
-            move(value, _first._payload);
-        }
     }
 
 /**
@@ -1815,24 +1781,10 @@ Forward to $(D opSlice().back).
 
 Complexity: $(BIGOH 1)
      */
-    @property T back()
+    @property ref T back()
     {
         assert(!empty, "DList.back: List is empty");
         return _last._payload;
-    }
-
-/**
-Forward to $(D opSlice().back(value)).
-
-Complexity: $(BIGOH 1)
-     */
-    static if(isAssignable!(T,T))
-    {
-        @property void back(T value)
-        {
-            assert(!empty, "DList.back: List is empty");
-            move(value, _last._payload);
-        }
     }
 
 /**
@@ -2105,7 +2057,8 @@ $(D r) and $(D m) is the length of $(D stuff).
     // Helper: insert $(D stuff) before Node $(D n). If $(D n) is $(D null) then insert at end.
     private size_t insertBeforeNode(Stuff)(Node* n, Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
-    {        size_t result;
+    {
+        size_t result;
         if(stuff.empty) return result;
 
         Node* first;
