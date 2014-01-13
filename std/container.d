@@ -2682,34 +2682,18 @@ Defines the container's primary range, which is a random-access range.
         {
             return _b - _a;
         }
+        alias opDollar = length;
 
-        size_t opDollar() @safe pure nothrow const
-        {
-            return length;
-        }
-
-        @property T front()
+        @property ref T front()
         {
             version (assert) if (empty) throw new RangeError();
             return _outer[_a];
         }
 
-        @property T back()
+        @property ref T back()
         {
             version (assert) if (empty) throw new RangeError();
             return _outer[_b - 1];
-        }
-
-        @property void front(T value)
-        {
-            version (assert) if (empty) throw new RangeError();
-            _outer[_a] = move(value);
-        }
-
-        @property void back(T value)
-        {
-            version (assert) if (empty) throw new RangeError();
-            _outer[_b - 1] = move(value);
         }
 
         void popFront() @safe pure nothrow
@@ -2742,36 +2726,10 @@ Defines the container's primary range, which is a random-access range.
             return move(_outer._data._payload[_a + i]);
         }
 
-        T opIndex(size_t i)
+        ref T opIndex(size_t i)
         {
             version (assert) if (_a + i >= _b) throw new RangeError();
             return _outer[_a + i];
-        }
-
-        void opIndexUnary(string op)(size_t i)
-            if(op == "++" || op == "--")
-        {
-            version (assert) if (_a + i >= _b) throw new RangeError();
-            mixin(op~"_outer[_a + i];");
-        }
-
-        T opIndexUnary(string op)(size_t i)
-            if(op != "++" && op != "--")
-        {
-            version (assert) if (_a + i >= _b) throw new RangeError();
-            mixin("return "~op~"_outer[_a + i];");
-        }
-
-        void opIndexAssign(T value, size_t i)
-        {
-            version (assert) if (_a + i >= _b) throw new RangeError();
-            _outer[_a + i] = value;
-        }
-
-        void opIndexOpAssign(string op)(T value, size_t i)
-        {
-            version (assert) if (_a + i >= _b) throw new RangeError();
-            mixin("_outer[i] "~op~"= value;");
         }
 
         typeof(this) opSlice()
@@ -2933,31 +2891,17 @@ Precondition: $(D !empty)
 
 Complexity: $(BIGOH 1)
      */
-    @property T front()
+    @property ref T front()
     {
         version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
         return _data._payload[0];
     }
 
     /// ditto
-    @property void front(T value)
-    {
-        version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
-        _data._payload[0] = value;
-    }
-
-    /// ditto
-    @property T back()
+    @property ref T back()
     {
         version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
         return _data._payload[$ - 1];
-    }
-
-    /// ditto
-    @property void back(T value)
-    {
-        version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
-        _data._payload[$ - 1] = value;
     }
 
 /**
@@ -2967,40 +2911,10 @@ Precondition: $(D i < length)
 
 Complexity: $(BIGOH 1)
      */
-    T opIndex(size_t i)
+    ref T opIndex(size_t i)
     {
         version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
         return _data._payload[i];
-    }
-
-    /// ditto
-    void opIndexUnary(string op)(size_t i)
-        if(op == "++" || op == "--")
-    {
-        version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
-        mixin(op~"_data._payload[i];");
-    }
-
-    /// ditto
-    T opIndexUnary(string op)(size_t i)
-        if(op != "++" && op != "--")
-    {
-        version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
-        mixin("return "~op~"_data._payload[i];");
-    }
-
-    /// ditto
-    void opIndexAssign(T value, size_t i)
-    {
-        version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
-        _data._payload[i] = value;
-    }
-
-    /// ditto
-    void opIndexOpAssign(string op)(T value, size_t i)
-    {
-        version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
-        mixin("_data._payload[i] "~op~"= value;");
     }
 
 /**
@@ -3010,19 +2924,20 @@ Precondition: $(D i < j && j < length)
 
 Complexity: $(BIGOH slice.length)
      */
-
     void opSliceAssign(T value)
     {
         if (!_data.refCountedStore.isInitialized) return;
         _data._payload[] = value;
     }
 
+    /// ditto
     void opSliceAssign(T value, size_t i, size_t j)
     {
         auto slice = _data.refCountedStore.isInitialized ? _data._payload : T[].init;
         slice[i .. j] = value;
     }
 
+    /// ditto
     void opSliceUnary(string op)()
         if(op == "++" || op == "--")
     {
