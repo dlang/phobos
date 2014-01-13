@@ -2170,6 +2170,7 @@ struct HTTP
         maxRedirects = HTTP.defaultMaxRedirects;
         p.charset = "ISO-8859-1"; // Default charset defined in HTTP RFC
         p.method = Method.undefined;
+        setUserAgent(HTTP.defaultUserAgent);
         dataTimeout = _defaultDataTimeout;
         onReceiveHeader = null;
         version (unittest) verbose = true;
@@ -2468,10 +2469,45 @@ struct HTTP
      */
     void addRequestHeader(const(char)[] name, const(char)[] value)
     {
+        if (icmp(name, "User-Agent") == 0)
+            return setUserAgent(value);
         string nv = format("%s: %s", name, value);
         p.headersOut = curl_slist_append(p.headersOut,
                                          cast(char*) toStringz(nv));
         p.curl.set(CurlOption.httpheader, p.headersOut);
+    }
+
+    /**
+     * The default "User-Agent" value send with a request.
+     * It has the form "Phobos-std.net.curl/$(I PHOBOS_VERSION) (libcurl/$(I CURL_VERSION))"
+     */
+    static immutable string defaultUserAgent;
+
+    shared static this()
+    {
+        import std.compiler : version_major, version_minor;
+
+        // http://curl.haxx.se/docs/versions.html
+        enum fmt = "Phobos-std.net.curl/%d.%03d (libcurl/%d.%d.%d)";
+        enum maxLen = fmt.length - "%d%03d%d%d%d".length + 10 + 10 + 3 + 3 + 3;
+
+        __gshared char[maxLen] buf = void;
+
+        auto curlVer = curl_version_info(CURLVERSION_NOW).version_num;
+        defaultUserAgent = cast(immutable)sformat(
+            buf, fmt, version_major, version_minor,
+            curlVer >> 16 & 0xFF, curlVer >> 8 & 0xFF, curlVer & 0xFF);
+    }
+
+    /** Set the value of the user agent request header field.
+     *
+     * By default a request has it's "User-Agent" field set to $(LREF
+     * defaultUserAgent) even if $(D setUserAgent) was never called.  Pass
+     * an empty string to suppress the "User-Agent" field altogether.
+     */
+    void setUserAgent(const(char)[] userAgent)
+    {
+        p.curl.set(CurlOption.useragent, userAgent);
     }
 
     /** The headers read from a successful response.
