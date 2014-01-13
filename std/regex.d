@@ -5494,30 +5494,6 @@ enum OneShot { Fwd, Bwd };
     to $(D match) or iteration over $(D RegexMatch) range.
 
     First element of range is the whole match.
-
-    Example, showing basic operations on $(D Captures):
-    ----
-    import std.regex;
-    import std.range;
-
-    void main()
-    {
-        auto m = match("@abc#", regex(`(\w)(\w)(\w)`));
-        auto c = m.captures;
-        assert(c.pre == "@"); // Part of input preceeding match
-        assert(c.post == "#"); // Immediately after match
-        assert(c.hit == c[0] && c.hit == "abc"); // The whole match
-        assert(c[2] =="b");
-        assert(c.front == "abc");
-        c.popFront();
-        assert(c.front == "a");
-        assert(c.back == "c");
-        c.popBack();
-        assert(c.back == "b");
-        popFrontN(c, 2);
-        assert(c.empty);
-    }
-    ----
 +/
 @trusted public struct Captures(R, DIndex = size_t)
     if(isSomeString!R)
@@ -5671,14 +5647,14 @@ public:
     @property ref captures(){ return this; }
 }
 
-unittest//verify example
+///
+unittest
 {
-    auto m = match("@abc#", regex(`(\w)(\w)(\w)`));
-    auto c = m.captures;
-    assert(c.pre == "@");// part of input preceeding match
-    assert(c.post == "#"); // immediately after match
-    assert(c.hit == c[0] && c.hit == "abc");// the whole match
-    assert(c[2] =="b");
+    auto c = matchFirst("@abc#", regex(`(\w)(\w)(\w)`));
+    assert(c.pre == "@"); // Part of input preceeding match
+    assert(c.post == "#"); // Immediately after match
+    assert(c.hit == c[0] && c.hit == "abc"); // The whole match
+    assert(c[2] == "b");
     assert(c.front == "abc");
     c.popFront();
     assert(c.front == "a");
