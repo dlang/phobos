@@ -4463,7 +4463,7 @@ nothrow:
         return this[i .. $].takeExactly(j - i);
     }
 
-    typeof(this) opSlice(size_t i, DollarToken) inout
+    inout(typeof(this)) opSlice(size_t i, DollarToken) inout
     {
         return Cycle(*cast(R*)_ptr, _index + i);
     }
@@ -4499,13 +4499,6 @@ unittest
 {
     assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
     static assert(isForwardRange!(Cycle!(uint[])));
-
-    int[3] a = [ 1, 2, 3 ];
-    static assert(isStaticArray!(typeof(a)));
-    auto c = cycle(a);
-    assert(a.ptr == c._ptr);
-    assert(equal(take(cycle(a), 5), [ 1, 2, 3, 1, 2 ][]));
-    static assert(isForwardRange!(typeof(c)));
 
     // Make sure ref is getting propagated properly.
     int[] nums = [1,2,3];
@@ -4564,6 +4557,22 @@ unittest
             }
         }
     }
+}
+
+unittest // For static arrays.
+{
+    int[3] a = [ 1, 2, 3 ];
+    static assert(isStaticArray!(typeof(a)));
+    auto c = cycle(a);
+    assert(a.ptr == c._ptr);
+    assert(equal(take(cycle(a), 5), [ 1, 2, 3, 1, 2 ][]));
+    static assert(isForwardRange!(typeof(c)));
+
+    // Test qualifiers on slicing.
+    alias C = typeof(c);
+    static assert(is(typeof(c[1 .. $]) == C));
+    const cConst = c;
+    static assert(is(typeof(cConst[1 .. $]) == const(C)));
 }
 
 unittest // For infinite ranges
