@@ -1027,20 +1027,10 @@ Defines the container's primary range, which embodies a forward range.
         @property bool empty() const { return !_head; }
 
         /// ditto
-        @property T front()
+        @property ref T front()
         {
             assert(!empty, "SList.Range.front: Range is empty");
             return _head._payload;
-        }
-
-        /// ditto
-        static if (isAssignable!(T, T))
-        {
-            @property void front(T value)
-            {
-                assert(!empty, "SList.Range.front: Range is empty");
-                move(value, _head._payload);
-            }
         }
 
         /// ditto
@@ -1108,24 +1098,10 @@ Forward to $(D opSlice().front).
 
 Complexity: $(BIGOH 1)
      */
-    @property T front()
+    @property ref T front()
     {
         assert(!empty, "SList.front: List is empty");
         return _root._payload;
-    }
-
-/**
-Forward to $(D opSlice().front(value)).
-
-Complexity: $(BIGOH 1)
-     */
-    static if (isAssignable!(T, T))
-    {
-        @property void front(T value)
-        {
-            assert(!empty, "SList.front: List is empty");
-            move(value, _root._payload);
-        }
     }
 
     unittest
