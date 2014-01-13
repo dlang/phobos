@@ -18,10 +18,10 @@ Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors:   $(WEB erdani.org, Andrei Alexandrescu)
 Credits:   This module and its documentation are inspired by Perl's $(WEB
-                   perldoc.perl.org/Getopt/Long.html, Getopt::Long) module. The syntax of
-                   D's $(D getopt) is simpler than its Perl counterpart because $(D
-                   getopt) infers the expected parameter types from the static types of
-                   the passed-in pointers.
+           perldoc.perl.org/Getopt/Long.html, Getopt::Long) module. The syntax of
+           D's $(D getopt) is simpler than its Perl counterpart because $(D
+           getopt) infers the expected parameter types from the static types of
+           the passed-in pointers.
 Source:    $(PHOBOSSRC std/_getopt.d)
 */
 /*
@@ -41,7 +41,9 @@ version (unittest)
 }
 
 /**
- Synopsis:
+   Parse and remove command line options from an string array.
+
+   Synopsis:
 
 ---------
 import std.getopt;
@@ -343,7 +345,6 @@ to another program). Invoking the example above with $(D "--foo -- --bar")
 parses foo but leaves "--bar" in $(D args). The double-dash itself is
 removed from the argument array.
 */
-
 void getopt(T...)(ref string[] args, T opts) {
     enforce(args.length,
             "Invalid arguments string passed: program name missing");
@@ -352,11 +353,11 @@ void getopt(T...)(ref string[] args, T opts) {
 }
 
 /**
- * Configuration options for $(D getopt). You can pass them to $(D
- * getopt) in any position, except in between an option string and its
- * bound pointer.
- */
-
+   Configuration options for $(D getopt). 
+   
+   You can pass them to $(D getopt) in any position, except in between an option 
+   string and its bound pointer.
+*/
 enum config {
     /// Turns case sensitivity on
     caseSensitive,
@@ -557,22 +558,24 @@ void handleOption(R)(string option, R receiver, ref string[] args,
 }
 
 /**
-   The option character. Defaults to '-' but it can be assigned to
-   prior to calling $(D getopt).
+   The option character (default '-'). 
+
+   Defaults to '-' but it can be assigned to prior to calling $(D getopt).
  */
 dchar optionChar = '-';
 
 /**
-   The string that conventionally marks the end of all
-   options. Defaults to "--" but can be assigned to prior to calling
-   $(D getopt). Assigning an empty string to $(D endOfOptions)
-   effectively disables it.
+   The string that conventionally marks the end of all options (default '--'). 
+
+   Defaults to "--" but can be assigned to prior to calling $(D getopt). Assigning an 
+   empty string to $(D endOfOptions) effectively disables it.
  */
 string endOfOptions = "--";
 
 /**
-   The assignment character used in options with parameters. Defaults
-   to '=' but can be assigned to prior to calling $(D getopt).
+   The assignment character used in options with parameters (default '='). 
+
+   Defaults to '=' but can be assigned to prior to calling $(D getopt).
  */
 dchar assignChar = '=';
 
