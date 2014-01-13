@@ -383,28 +383,28 @@ $(DOC_OUTPUT_DIR)/. :
 	mkdir -p $@
 
 $(DOC_OUTPUT_DIR)/std_%.html : std/%.d $(STDDOC)
-	$(DDOC) $(STDDOC) -Df$@ $<
+	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_c_%.html : std/c/%.d $(STDDOC)
-	$(DDOC) $(STDDOC) -Df$@ $<
+	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_c_linux_%.html : std/c/linux/%.d $(STDDOC)
-	$(DDOC) $(STDDOC) -Df$@ $<
+	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_c_windows_%.html : std/c/windows/%.d $(STDDOC)
 	$(DDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_net_%.html : std/net/%.d $(STDDOC)
-	$(DDOC) $(STDDOC) -Df$@ $<
+	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_digest_%.html : std/digest/%.d $(STDDOC)
-	$(DDOC) $(STDDOC) -Df$@ $<
+	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/etc_c_%.html : etc/c/%.d $(STDDOC)
-	$(DDOC) $(STDDOC) -Df$@ $<
+	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/%.html : %.d $(STDDOC)
-	$(DDOC) $(STDDOC) -Df$@ $<
+	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
 
 html : $(DOC_OUTPUT_DIR)/. $(HTMLS) $(STYLECSS_TGT)
 
