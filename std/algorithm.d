@@ -2293,11 +2293,19 @@ any narrow string type or sliceable range type, but is most popular
 with string types.
 
 Two adjacent separators are considered to surround an empty element in
-the split range.
+the split range. Use $(D filter!(a => !a.empty)) on the result to compress
+empty elements.
 
 If the empty range is given, the result is a range with one empty
 element. If a range with one separator is given, the result is a range
 with two empty elements.
+
+If splitting a string on whitespace and token compression is desired,
+consider using $(D splitter) without specifying a separator (see overload
+below).
+
+See also $(XREF regex, splitter) for a version that splits using a regular
+expression defined separator.
 */
 auto splitter(Range, Separator)(Range r, Separator s)
 if (is(typeof(ElementType!Range.init == Separator.init))
@@ -2542,6 +2550,13 @@ unittest
 Splits a range using another range as a separator. This can be used
 with any narrow string type or sliceable range type, but is most popular
 with string types.
+
+Two adjacent separators are considered to surround an empty element in
+the split range. Use $(D filter!(a => !a.empty)) on the result to compress
+empty elements.
+
+See also $(XREF regex, splitter) for a version that splits using a regular
+expression defined separator.
  */
 auto splitter(Range, Separator)(Range r, Separator s)
 if (is(typeof(Range.init.front == Separator.init.front) : bool)
