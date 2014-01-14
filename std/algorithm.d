@@ -9182,6 +9182,24 @@ unittest
         sort!(pred, SwapStrategy.unstable)(arr);
         assert(comp < 25_000);
     }
+
+    {
+        bool proxySwapCalled;
+        struct S
+        {
+            int i;
+            alias i this;
+            void proxySwap(ref S other) { swap(i, other.i); proxySwapCalled = true; }
+            @disable void opAssign(S value);
+        }
+
+        alias S[] R;
+        R r = [S(3), S(2), S(1)];
+        static assert(hasSwappableElements!R);
+        static assert(!hasAssignableElements!R);
+        r.sort();
+        assert(proxySwapCalled);
+    }
 }
 
 private template validPredicates(E, less...) {
