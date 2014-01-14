@@ -2071,7 +2071,7 @@ real frexp(real value, out int exp) @trusted pure nothrow
             else
             {
                 exp = (ex - F.EXPBIAS) >> 4;
-                vu[F.EXPPOS_SHORT] = cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FE0);
+                vu[F.EXPPOS_SHORT] = cast(ushort)((0x800F & vu[F.EXPPOS_SHORT]) | 0x3FE0);
             }
         }
         else if (!(*vl & 0x7FFF_FFFF_FFFF_FFFF))
