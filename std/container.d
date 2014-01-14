@@ -289,13 +289,20 @@ Generally a container may define several types of ranges.
  */
     struct Range
     {
-        /// Range primitives.
+        /++
+        Range primitives.
+        +/
         @property bool empty()
         {
             assert(0);
         }
         /// Ditto
-        @property T front()
+        @property ref T front() //ref return optional
+        {
+            assert(0);
+        }
+        /// Ditto
+        @property void front(T value) //Only when front does not return by ref
         {
             assert(0);
         }
@@ -310,7 +317,12 @@ Generally a container may define several types of ranges.
             assert(0);
         }
         /// Ditto
-        @property T back()
+        @property ref T back() //ref return optional
+        {
+            assert(0);
+        }
+        /// Ditto
+        @property void back(T value) //Only when front does not return by ref
         {
             assert(0);
         }
@@ -325,17 +337,22 @@ Generally a container may define several types of ranges.
             assert(0);
         }
         /// Ditto
-        T opIndex(size_t i)
+        T opIndex(size_t i) //ref return optional
         {
             assert(0);
         }
         /// Ditto
-        void opIndexAssign(T value, size_t i)
+        void opIndexAssign(size_t i, T value) //Only when front does not return by ref
         {
             assert(0);
         }
         /// Ditto
-        void opIndexOpAssign(string op)(T value, uint i)
+        T opIndexUnary(string op)(size_t i) //Only when front does not return by ref
+        {
+            assert(0);
+        }
+        /// Ditto
+        void opIndexOpAssign(string op)(size_t i, T value) //Only when front does not return by ref
         {
             assert(0);
         }
@@ -435,7 +452,12 @@ Forward to $(D opSlice().front) and $(D opSlice().back), respectively.
 
 Complexity: $(BIGOH log(n))
  */
-    @property T front()
+    @property ref T front() //ref return optional
+    {
+        assert(0);
+    }
+    /// Ditto
+    @property void front(T value) //Only when front does not return by ref
     {
         assert(0);
     }
@@ -445,7 +467,12 @@ Complexity: $(BIGOH log(n))
         assert(0);
     }
     /// Ditto
-    @property T back()
+    @property ref T back() //ref return optional
+    {
+        assert(0);
+    }
+    /// Ditto
+    @property void back(T value) //Only when front does not return by ref
     {
         assert(0);
     }
@@ -458,24 +485,27 @@ Complexity: $(BIGOH log(n))
 /**
 Indexing operators yield or modify the value at a specified index.
  */
-    /**
-       Indexing operators yield or modify the value at a specified index.
-     */
-    ValueType opIndex(KeyType)
+    ref T opIndex(KeyType) //ref return optional
     {
         assert(0);
     }
     /// ditto
-    void opIndexAssign(KeyType)
+    void opIndexAssign(KeyType i, T value) //Only when front does not return by ref
     {
         assert(0);
     }
     /// ditto
-    void opIndexOpAssign(string op)(KeyType)
+    T opIndexUnary(string op)(KeyType i) //Only when front does not return by ref
     {
         assert(0);
     }
-    T moveAt(size_t i)
+    /// ditto
+    void opIndexOpAssign(string op)(KeyType i, T value) //Only when front does not return by ref
+    {
+        assert(0);
+    }
+    /// ditto
+    T moveAt(KeyType i)
     {
         assert(0);
     }
