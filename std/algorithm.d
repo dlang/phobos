@@ -9466,7 +9466,7 @@ private template HeapSortImpl(alias less, Range)
 {
     static assert(isRandomAccessRange!Range);
     static assert(hasLength!Range);
-    static assert(hasAssignableElements!Range);
+    static assert(hasSwappableElements!Range || hasAssignableElements!Range);
 
     alias binaryFun!less lessFun;
 
