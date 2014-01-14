@@ -1824,7 +1824,7 @@ L_was_nan:
 
 unittest
 {
-    assert(exp2(0.5L)== SQRT2);
+    assert(feqrel(exp2(0.5L), SQRT2) >= real.mant_dig -1);
     assert(exp2(8.0L) == 256.0);
     assert(exp2(-9.0L)== 1.0L/512.0);
     assert( core.stdc.math.exp2f(0.0f) == 1 );
@@ -2228,14 +2228,27 @@ real ldexp(real n, int exp) @safe pure nothrow;    /* intrinsic */
 
 unittest
 {
-    assert(ldexp(1, -16384) == 0x1p-16384L);
-    assert(ldexp(1, -16382) == 0x1p-16382L);
-    int x;
-    real n = frexp(0x1p-16384L, x);
-    assert(n==0.5L);
-    assert(x==-16383);
-    assert(ldexp(n, x)==0x1p-16384L);
-
+    static if(real.mant_dig == 64)
+    {
+        assert(ldexp(1, -16384) == 0x1p-16384L);
+        assert(ldexp(1, -16382) == 0x1p-16382L);
+        int x;
+        real n = frexp(0x1p-16384L, x);
+        assert(n==0.5L);
+        assert(x==-16383);
+        assert(ldexp(n, x)==0x1p-16384L);
+    }
+    else static if(real.mant_dig == 53)
+    {
+        assert(ldexp(1, -1024) == 0x1p-1024L);
+        assert(ldexp(1, -1022) == 0x1p-1022L);
+        int x;
+        real n = frexp(0x1p-1024L, x);
+        assert(n==0.5L);
+        assert(x==-1023);
+        assert(ldexp(n, x)==0x1p-1024L);
+    }
+    else static assert(false, "Floating point type real not supported");
 }
 
 unittest
@@ -2960,7 +2973,7 @@ unittest
             real y = vals[i][1];
             real z = vals[i][2];
             real h = hypot(x, y);
-            assert(isIdentical(z, h));
+            assert(isIdentical(z,h) || feqrel(z, h) >= real.mant_dig - 1);
         }
 }
 
@@ -4805,13 +4818,17 @@ unittest
     {
         pragma(msg, "test disabled on x86_64, see bug 5628");
     }
+    else version(ARM)
+    {
+        pragma(msg, "test disabled on ARM, see bug 5628");
+    }
     else
     {
         assert(pow(xd, neg2) == 1 / (x * x));
         assert(pow(xf, neg8) == 1 / ((x * x) * (x * x) * (x * x) * (x * x)));
     }
 
-    assert(pow(x, neg3) == 1 / (x * x * x));
+    assert(feqrel(pow(x, neg3),  1 / (x * x * x)) >= real.mant_dig - 1);
 }
 
 unittest
@@ -5324,7 +5341,10 @@ unittest
     }
 
     assert(feqrel(7.1824L, 7.1824L) == real.mant_dig);
-    assert(feqrel(real.min_normal / 8, real.min_normal / 17) == 3);
+    static if(real.mant_dig == 64)
+    {
+        assert(feqrel(real.min_normal / 8, real.min_normal / 17) == 3);
+    }
 
     testFeqrel!(real)();
     testFeqrel!(double)();

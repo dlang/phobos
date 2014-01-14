@@ -591,12 +591,13 @@ uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, S args)
 
 unittest
 {
+    import std.math;
     string s = " 1.2 3.4 ";
     double x, y, z;
     assert(formattedRead(s, " %s %s %s ", &x, &y, &z) == 2);
     assert(s.empty);
-    assert(x == 1.2);
-    assert(y == 3.4);
+    assert(approxEqual(x, 1.2));
+    assert(approxEqual(y, 3.4));
     assert(isnan(z));
 }
 
