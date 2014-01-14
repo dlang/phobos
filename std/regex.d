@@ -822,7 +822,7 @@ Trie[CodepointSet] trieCache;
     //if(casefold)
     //   s = caseEnclose(s);
     if(negated)
-        s = s.inverted();
+        s = s.inverted;
     return s;
 }
 
@@ -1688,7 +1688,7 @@ struct Parser(R)
             switch(op)
             {
             case Operator.Negate:
-                stack.top.inverted();
+                stack.top = stack.top.inverted;
                 break;
             case Operator.Union:
                 auto s = stack.pop();//2nd operand
@@ -1917,7 +1917,6 @@ struct Parser(R)
     //\ - assumed to be processed, p - is current
     CodepointSet parseUnicodePropertySpec(bool negated)
     {
-        alias ucmp = comparePropertyName;
         enum MAX_PROPERTY = 128;
         char[MAX_PROPERTY] result;
         uint k = 0;
@@ -2054,7 +2053,7 @@ private:
     uint hotspotTableSize; //number of entries in merge table
     uint threadCount;
     uint flags;         //global regex flags
-    const(Trie)[]  tries; //
+    public const(Trie)[]  tries; //
     uint[] backrefed; //bit array of backreferenced submatches
     Kickstart!Char kickstart;
 
@@ -3188,7 +3187,7 @@ template BacktrackingMatcher(bool CTregex)
 
         static if(__traits(hasMember,Stream, "search"))
         {
-            enum kicked = true;
+            enum kicked = false; //true;
         }
         else
             enum kicked = false;
@@ -4634,7 +4633,7 @@ enum OneShot { Fwd, Bwd };
     bool exhausted;
     static if(__traits(hasMember,Stream, "search"))
     {
-        enum kicked = true;
+        enum kicked = false;
     }
     else
         enum kicked = false;
