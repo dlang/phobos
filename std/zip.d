@@ -101,11 +101,6 @@ final class ArchiveMember
 
     // Explicitly undocumented. It will be removed in January 2015.
     deprecated("Please use fileAttributes instead.")
-    @property ref inout(ushort) madeVersion() inout @safe pure nothrow
-    { return _madeVersion; }
-
-    // Explicitly undocumented. It will be removed in January 2015.
-    deprecated("Please use fileAttributes instead.")
     @property ref inout(uint) externalAttributes() inout @safe pure nothrow
     { return _externalAttributes; }
 
