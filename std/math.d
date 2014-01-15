@@ -4234,12 +4234,13 @@ real NaN(ulong payload) @trusted pure nothrow
 {
     static if (real.mant_dig == 64)
     {
-        //real80
+        //real80 (in x86 real format, the implied bit is actually 
+        //not implied but a real bit which is stored in the real)
         ulong v = 3; // implied bit = 1, quiet bit = 1
     }
     else
     {
-        ulong v = 2; // no implied bit. quiet bit = 1
+        ulong v = 1; // no implied bit. quiet bit = 1
     }
 
     ulong a = payload;
@@ -4299,6 +4300,17 @@ real NaN(ulong payload) @trusted pure nothrow
             * cast(ulong *)(&x) = v;
         }
         return x;
+    }
+}
+
+unittest
+{
+    static if (real.mant_dig == 53)
+    {
+        auto x = NaN(1);
+        auto xl = *cast(ulong*)&x;
+        assert(xl & 0x8_0000_0000_0000UL); //non-signaling bit, bit 52
+        assert((xl & 0x7FF0_0000_0000_0000UL) == 0x7FF0_0000_0000_0000UL); //all exp bits set
     }
 }
 
