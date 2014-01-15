@@ -4073,7 +4073,7 @@ bool isInfinity(real x) @trusted pure nothrow
     {
         // double
         return ((*cast(ulong *)&x) & 0x7FFF_FFFF_FFFF_FFFF)
-            == 0x7FF8_0000_0000_0000;
+            == 0x7FF0_0000_0000_0000;
     }
     else static if(real.mant_dig == 106)
     {
