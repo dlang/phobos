@@ -1438,9 +1438,9 @@ unittest
     assert( v.get!(string) == "Hello, World!" );
 
     // Literal arrays are dynamically-typed
-    v = cast(int[5]) [1,2,3,4,5];
-    assert( v.peek!(int[5]) );
-    assert( v.get!(int[5]) == [1,2,3,4,5] );
+    v = cast(int[4]) [1,2,3,4];
+    assert( v.peek!(int[4]) );
+    assert( v.get!(int[4]) == [1,2,3,4] );
 
     {
         // @@@BUG@@@: array literals should have type T[], not T[5] (I guess)
