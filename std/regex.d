@@ -15,12 +15,12 @@
   {
       // Print out all possible dd/mm/yy(yy) dates found in user input.
       // g - global: find all matches.
-      auto r = regex(r"\b[0-9][0-9]?/[0-9][0-9]?/[0-9][0-9](?:[0-9][0-9])?\b", "g");
+      auto r = regex(r"\b[0-9][0-9]?/[0-9][0-9]?/[0-9][0-9](?:[0-9][0-9])?\b");
       foreach(line; stdin.byLine)
       {
         // Match returns a range that can be iterated
         // to get all subsequent matches.
-        foreach(c; match(line, r))
+        foreach(c; matchAll(line, r))
             writeln(c.hit);
       }
   }
@@ -30,15 +30,15 @@
   auto ctr = ctRegex!(`^.*/([^/]+)/?$`);
 
   // It works just like a normal regex:
-  auto m2 = match("foo/bar", ctr);   // First match found here, if any
-  assert(m2);   // Be sure to check if there is a match before examining contents!
-  assert(m2.captures[1] == "bar");   // Captures is a range of submatches: 0 = full match.
+  auto c2 = matchFirst("foo/bar", ctr);   // First match found here, if any
+  assert(!c2.empty);   // Be sure to check if there is a match before examining contents!
+  assert(c2[1] == "bar");   // Captures is a range of submatches: 0 = full match.
 
   ...
 
-  // The result of the match is directly testable with if/assert/while.
+  // The result of the $(D matchAll) is directly testable with if/assert/while.
   // e.g. test if a string consists of letters:
-  assert(match("Letter", `^\p{L}+$`));
+  assert(matchFirst("Letter", `^\p{L}+$`));
 
 
   ---
@@ -5494,30 +5494,6 @@ enum OneShot { Fwd, Bwd };
     to $(D match) or iteration over $(D RegexMatch) range.
 
     First element of range is the whole match.
-
-    Example, showing basic operations on $(D Captures):
-    ----
-    import std.regex;
-    import std.range;
-
-    void main()
-    {
-        auto m = match("@abc#", regex(`(\w)(\w)(\w)`));
-        auto c = m.captures;
-        assert(c.pre == "@"); // Part of input preceeding match
-        assert(c.post == "#"); // Immediately after match
-        assert(c.hit == c[0] && c.hit == "abc"); // The whole match
-        assert(c[2] =="b");
-        assert(c.front == "abc");
-        c.popFront();
-        assert(c.front == "a");
-        assert(c.back == "c");
-        c.popBack();
-        assert(c.back == "b");
-        popFrontN(c, 2);
-        assert(c.empty);
-    }
-    ----
 +/
 @trusted public struct Captures(R, DIndex = size_t)
     if(isSomeString!R)
@@ -5648,8 +5624,7 @@ public:
         import std.regex;
         import std.range;
 
-        auto m = match("a = 42;", regex(`(?P<var>\w+)\s*=\s*(?P<value>\d+);`));
-        auto c = m.captures;
+        auto c = matchFirst("a = 42;", regex(`(?P<var>\w+)\s*=\s*(?P<value>\d+);`));
         assert(c["var"] == "a");
         assert(c["value"] == "42");
         popFrontN(c, 2);
@@ -5672,14 +5647,14 @@ public:
     @property ref captures(){ return this; }
 }
 
-unittest//verify example
+///
+unittest
 {
-    auto m = match("@abc#", regex(`(\w)(\w)(\w)`));
-    auto c = m.captures;
-    assert(c.pre == "@");// part of input preceeding match
-    assert(c.post == "#"); // immediately after match
-    assert(c.hit == c[0] && c.hit == "abc");// the whole match
-    assert(c[2] =="b");
+    auto c = matchFirst("@abc#", regex(`(\w)(\w)(\w)`));
+    assert(c.pre == "@"); // Part of input preceeding match
+    assert(c.post == "#"); // Immediately after match
+    assert(c.hit == c[0] && c.hit == "abc"); // The whole match
+    assert(c[2] == "b");
     assert(c.front == "abc");
     c.popFront();
     assert(c.front == "a");
@@ -5771,7 +5746,7 @@ public:
         Functionality for processing subsequent matches of global regexes via range interface:
         ---
         import std.regex;
-        auto m = match("Hello, world!", regex(`\w+`, "g"));
+        auto m = matchAll("Hello, world!", regex(`\w+`));
         assert(m.front.hit == "Hello");
         m.popFront();
         assert(m.front.hit == "world");
