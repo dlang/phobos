@@ -1995,7 +1995,7 @@ See_Also:
     $(XREF exception, pointsTo)
  */
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow
-if (allMutableFields!T && !is(typeof(T.init.proxySwap(T.init))))
+if (allMutableFields!T && !is(typeof(lhs.proxySwap(rhs))))
 {
     static if (hasElaborateAssign!T || !isAssignable!T)
     {
@@ -2039,7 +2039,7 @@ if (allMutableFields!T && !is(typeof(T.init.proxySwap(T.init))))
 }
 
 // Not yet documented
-void swap(T)(T lhs, T rhs) if (is(typeof(T.init.proxySwap(T.init))))
+void swap(T)(ref T lhs, ref T rhs) if (is(typeof(lhs.proxySwap(rhs))))
 {
     lhs.proxySwap(rhs);
 }
@@ -9197,6 +9197,24 @@ unittest
         sort!(pred, SwapStrategy.unstable)(arr);
         assert(comp < 25_000);
     }
+
+    {
+        bool proxySwapCalled;
+        struct S
+        {
+            int i;
+            alias i this;
+            void proxySwap(ref S other) { swap(i, other.i); proxySwapCalled = true; }
+            @disable void opAssign(S value);
+        }
+
+        alias S[] R;
+        R r = [S(3), S(2), S(1)];
+        static assert(hasSwappableElements!R);
+        static assert(!hasAssignableElements!R);
+        r.sort();
+        assert(proxySwapCalled);
+    }
 }
 
 private template validPredicates(E, less...) {
@@ -9481,7 +9499,7 @@ private template HeapSortImpl(alias less, Range)
 {
     static assert(isRandomAccessRange!Range);
     static assert(hasLength!Range);
-    static assert(hasAssignableElements!Range);
+    static assert(hasSwappableElements!Range || hasAssignableElements!Range);
 
     alias binaryFun!less lessFun;
 
