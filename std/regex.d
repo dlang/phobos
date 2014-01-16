@@ -14,11 +14,10 @@
   void main()
   {
       // Print out all possible dd/mm/yy(yy) dates found in user input.
-      // g - global: find all matches.
       auto r = regex(r"\b[0-9][0-9]?/[0-9][0-9]?/[0-9][0-9](?:[0-9][0-9])?\b");
       foreach(line; stdin.byLine)
       {
-        // Match returns a range that can be iterated
+        // matchAll() returns a range that can be iterated
         // to get all subsequent matches.
         foreach(c; matchAll(line, r))
             writeln(c.hit);
