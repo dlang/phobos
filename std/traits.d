@@ -3892,7 +3892,7 @@ template ImplicitConversionTargets(T)
             float, double, real)
             ImplicitConversionTargets;
     else static if (is(T == dchar))
-        alias TypeTuple!(wchar, dchar, int, uint, long, ulong,
+        alias TypeTuple!(dchar, int, uint, long, ulong,
             float, double, real)
             ImplicitConversionTargets;
     else static if (is(T : typeof(null)))
