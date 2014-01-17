@@ -3859,8 +3859,7 @@ template ImplicitConversionTargets(T)
             float, double, real, char, wchar, dchar)
             ImplicitConversionTargets;
     else static if (is(T == short))
-        alias TypeTuple!(ushort, int, uint, long, ulong,
-            float, double, real)
+        alias TypeTuple!(int, uint, long, ulong, float, double, real)
             ImplicitConversionTargets;
     else static if (is(T == ushort))
         alias TypeTuple!(int, uint, long, ulong, float, double, real)
@@ -3888,11 +3887,11 @@ template ImplicitConversionTargets(T)
             int, uint, long, ulong, float, double, real)
             ImplicitConversionTargets;
     else static if (is(T == wchar))
-        alias TypeTuple!(wchar, dchar, short, ushort, int, uint, long, ulong,
+        alias TypeTuple!(dchar, short, ushort, int, uint, long, ulong,
             float, double, real)
             ImplicitConversionTargets;
     else static if (is(T == dchar))
-        alias TypeTuple!(dchar, int, uint, long, ulong,
+        alias TypeTuple!(int, uint, long, ulong,
             float, double, real)
             ImplicitConversionTargets;
     else static if (is(T : typeof(null)))
