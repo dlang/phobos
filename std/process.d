@@ -2357,7 +2357,7 @@ private char[] escapeWindowsArgumentImpl(alias allocator)(in char[] arg)
     // backslash for each escaped character.
     size_t size = 1 + arg.length + 1;
 
-    foreach_reverse (c; arg)
+    foreach_reverse (char c; arg)
     {
         if (c == '"')
         {
@@ -2380,7 +2380,7 @@ private char[] escapeWindowsArgumentImpl(alias allocator)(in char[] arg)
     size_t p = size;
     buf[--p] = '"';
     escaping = true;
-    foreach_reverse (c; arg)
+    foreach_reverse (char c; arg)
     {
         if (c == '"')
             escaping = true;
@@ -2455,14 +2455,14 @@ private char[] escapePosixArgumentImpl(alias allocator)(in char[] arg)
     // return `'` ~ std.array.replace(arg, `'`, `'\''`) ~ `'`;
 
     size_t size = 1 + arg.length + 1;
-    foreach (c; arg)
+    foreach (char c; arg)
         if (c == '\'')
             size += 3;
 
     auto buf = allocator(size);
     size_t p = 0;
     buf[p++] = '\'';
-    foreach (c; arg)
+    foreach (char c; arg)
         if (c == '\'')
         {
             buf[p..p+4] = `'\''`;
