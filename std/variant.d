@@ -254,25 +254,35 @@ private:
         // by the incoming TypeInfo
         static bool tryPutting(A* src, TypeInfo targetType, void* target)
         {
-            alias TypeTuple!(A, ImplicitConversionTargets!A) AllTypes;
+            template ConstTypes(bool constOnly,T...)
+            {
+                static if(T.length == 0)
+                    alias T ConstTypes;
+                else static if(constOnly)
+                    alias TypeTuple!(const(T[0]), ConstTypes!(constOnly,T[1..$])) ConstTypes;
+                else
+                    alias TypeTuple!(T[0], const(T[0]), ConstTypes!(constOnly,T[1..$])) ConstTypes;
+            }
+            template ImmutableTypes(T...)
+            {
+                static if(T.length == 0)
+                    alias T ImmutableTypes;
+                else
+                    alias TypeTuple!(immutable(T[0]), ImmutableTypes!(T[1..$])) ImmutableTypes;
+            }
+            alias TypeTuple!(Unqual!A,ImplicitConversionTargets!(Unqual!A)) ConvTypes;
+            static if(is(A == immutable))
+                alias TypeTuple!(ConstTypes!(true,ConvTypes), ImmutableTypes!(ConvTypes)) AllTypes;
+            else
+                alias TypeTuple!(ConstTypes!(is(A == const),ConvTypes)) AllTypes;
+
             foreach (T ; AllTypes)
             {
-                if (targetType != typeid(T) &&
-                        targetType != typeid(const(T)))
+                if (targetType != typeid(T))
                 {
-                    static if (isImplicitlyConvertible!(T, immutable(T)))
-                    {
-                        if (targetType != typeid(immutable(T)))
-                        {
-                            continue;
-                        }
-                    }
-                    else
-                    {
-                        continue;
-                    }
+                    continue;
                 }
-                // found!!!
+
                 static if (is(typeof(*cast(T*) target = *src)))
                 {
                     auto zat = cast(T*) target;
@@ -280,6 +290,16 @@ private:
                     {
                         assert(target, "target must be non-null");
                         *zat = *src;
+                    }
+                }
+                else static if (is(T V == const(U), U) || is(T V == immutable(U), U))
+                {
+                    auto zat = cast(U*) target;
+                    if (src)
+                    {
+                        assert(target, "target must be non-null");
+                        alias Unqual!A UA;
+                        *zat = *(cast(UA*) (src));
                     }
                 }
                 else
@@ -2020,4 +2040,89 @@ unittest
     v1 = S(); // the payload is allocated on the heap
     v2 = v1;  // AssertError: target must be non-null
     assert(v1 == v2);
+}
+unittest
+{
+    // http://d.puremagic.com/issues/show_bug.cgi?id=7069
+    int i = 10;
+    Variant v = i;
+    assertNotThrown!VariantException(v.get!(int)());
+    assertNotThrown!VariantException(v.get!(const(int))());
+    assertThrown!VariantException(v.get!(immutable(int))());
+    assertNotThrown!VariantException(v.get!(const(float))());
+    assert(v.get!(const(float))() == 10.0);
+
+    const(int) ci = 20;
+    v = ci;
+    assertThrown!VariantException(v.get!(int)());
+    assertNotThrown!VariantException(v.get!(const(int))());
+    assertThrown!VariantException(v.get!(immutable(int))());
+    assertNotThrown!VariantException(v.get!(const(float))());
+    assert(v.get!(const(float))() == 20.0);
+
+    immutable(int) ii = ci;
+    v = ii;
+    assertThrown!VariantException(v.get!(int)());
+    assertNotThrown!VariantException(v.get!(const(int))());
+    assertNotThrown!VariantException(v.get!(immutable(int))());
+    assertNotThrown!VariantException(v.get!(const(float))());
+    assertNotThrown!VariantException(v.get!(immutable(float))());
+
+    int[] ai = [1,2,3];
+    v = ai;
+    assertNotThrown!VariantException(v.get!(int[])());
+    assertNotThrown!VariantException(v.get!(const(int[]))());
+    assertNotThrown!VariantException(v.get!(const(int)[])());
+    assertThrown!VariantException(v.get!(immutable(int[]))());
+    assertThrown!VariantException(v.get!(immutable(int)[])());
+
+    const(int[]) cai = [1,2,3];
+    v = cai;
+    assertThrown!VariantException(v.get!(int[])());
+    assertNotThrown!VariantException(v.get!(const(int[]))());
+    assertNotThrown!VariantException(v.get!(const(int)[])());
+    assertThrown!VariantException(v.get!(immutable(int)[])());
+    assertThrown!VariantException(v.get!(immutable(int[]))());
+
+    immutable(int[]) iai = [1,2,3];
+    v = iai;
+    assertThrown!VariantException(v.get!(int[])());
+    assertNotThrown!VariantException(v.get!(immutable(int)[])());
+    // Bug
+    //assertNotThrown!VariantException(v.get!(immutable(int[]))());
+    assertNotThrown!VariantException(v.get!(const(int[]))());
+    assertNotThrown!VariantException(v.get!(const(int)[])());
+
+    class A {}
+    class B :A {}
+    B b = new B();
+    v = b;
+    assertNotThrown!VariantException(v.get!(B)());
+    assertNotThrown!VariantException(v.get!(const(B))());
+    assertNotThrown!VariantException(v.get!(A)());
+    assertNotThrown!VariantException(v.get!(const(A))());
+    assertNotThrown!VariantException(v.get!(Object)());
+    assertNotThrown!VariantException(v.get!(const(Object))());
+    assertThrown!VariantException(v.get!(immutable(B))());
+
+    const(B) cb = new B();
+    v = cb;
+    assertThrown!VariantException(v.get!(B)());
+    assertNotThrown!VariantException(v.get!(const(B))());
+    assertThrown!VariantException(v.get!(immutable(B))());
+    assertThrown!VariantException(v.get!(A)());
+    assertNotThrown!VariantException(v.get!(const(A))());
+    assertThrown!VariantException(v.get!(Object)());
+    assertNotThrown!VariantException(v.get!(const(Object))());
+
+    immutable(B) ib = new immutable(B)();
+    v = ib;
+    assertThrown!VariantException(v.get!(B)());
+    assertNotThrown!VariantException(v.get!(const(B))());
+    assertNotThrown!VariantException(v.get!(immutable(B))());
+    assertNotThrown!VariantException(v.get!(const(A))());
+    assertNotThrown!VariantException(v.get!(immutable(A))());
+    assertThrown!VariantException(v.get!(Object)());
+    assertNotThrown!VariantException(v.get!(const(Object))());
+    assertNotThrown!VariantException(v.get!(immutable(Object))());
 }
