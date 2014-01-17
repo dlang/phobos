@@ -4799,7 +4799,7 @@ unittest
 }
 
 /**
-Detect whether $(D T) is a scalar type.
+Detect whether $(D T) is a scalar type (a built-in numeric, character or boolean type).
  */
 template isScalarType(T)
 {
@@ -4816,7 +4816,7 @@ unittest
 }
 
 /**
-Detect whether $(D T) is a basic type.
+Detect whether $(D T) is a basic type (scalar type or void).
  */
 template isBasicType(T)
 {
