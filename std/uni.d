@@ -4528,7 +4528,7 @@ enum Mode {
 
 mixin template ForwardStrings()
 { 
-    private bool fwdStr(string fn, C)(ref C[] str)
+    private bool fwdStr(string fn, C)(ref C[] str) const pure
     {
         alias type = typeof(units(str));
         return mixin(fn~"(*cast(type*)&str)");
@@ -4539,7 +4539,7 @@ template Utf8Matcher()
 {
     enum validSize(int sz) = sz >= 1 && sz <=4;
 
-    void badEncoding()
+    void badEncoding() pure @safe
     {
         import std.utf;
         throw new UTFException("Invalid UTF-8 sequence");
@@ -4572,7 +4572,7 @@ template Utf8Matcher()
     enum leadMask(size_t size) = (cast(size_t)1<<(7 - size))-1;
     enum encMask(size_t size) = ((1<<size)-1)<<(8-size);
     
-    char trancate()(char ch)
+    char trancate()(char ch) pure @safe
     {
         assert((ch & 0b1100_0000) == 0x80);
         ch -= 0x80;
@@ -4628,7 +4628,7 @@ template Utf8Matcher()
         }
         enum dispatch = genDispatch();
 
-        public bool match(Range)(ref Range inp)
+        public bool match(Range)(ref Range inp) const pure
             if(isRandomAccessRange!Range && is(ElementType!Range : char))
         {
             enum mode = Mode.skipOnMatch;
@@ -4643,7 +4643,7 @@ template Utf8Matcher()
 
         static if(Sizes.length == 4) // can skip iff can detect all encodings
         {
-            public bool skip(Range)(ref Range inp)
+            public bool skip(Range)(ref Range inp) const pure
                 if(isRandomAccessRange!Range && is(ElementType!Range : char))
             {
                 enum mode = Mode.alwaysSkip;
@@ -4657,7 +4657,7 @@ template Utf8Matcher()
             }
         }
 
-        public bool test(Range)(ref Range inp)
+        public bool test(Range)(ref Range inp) const pure
             if(isRandomAccessRange!Range && is(ElementType!Range : char))
         {
             enum mode = Mode.neverSkip;
@@ -4669,19 +4669,19 @@ template Utf8Matcher()
                 return mixin(dispatch);
         }
 
-        bool match(C)(ref C[] str)
+        bool match(C)(ref C[] str) const pure
             if(isSomeChar!C)
         {
             return fwdStr!"match"(str);
         }
 
-        bool skip(C)(ref C[] str)
+        bool skip(C)(ref C[] str) const pure
             if(isSomeChar!C)
         {
             return fwdStr!"skip"(str);
         }
 
-        bool test(C)(ref C[] str)
+        bool test(C)(ref C[] str) const pure
             if(isSomeChar!C)
         {
             return fwdStr!"test"(str);
@@ -4707,7 +4707,7 @@ template Utf8Matcher()
             return CherryPick!(Impl, SizesToPick)(&this);
         }
 
-        bool lookup(int size, Mode mode, Range)(ref Range inp)
+        bool lookup(int size, Mode mode, Range)(ref Range inp) const pure
         {
             import std.typecons;
             if(inp.length < size)
@@ -4741,8 +4741,8 @@ template Utf8Matcher()
             "Only lengths of 1, 2, 3 and 4 code unit are possible for UTF-8");
     private:
         I* m;
-        @property ref tab(int i)(){ return m.tables[i - 1]; }
-        bool lookup(int size, Mode mode, Range)(ref Range inp)
+        @property ref tab(int i)() const pure { return m.tables[i - 1]; }
+        bool lookup(int size, Mode mode, Range)(ref Range inp) const pure
         {
             return m.lookup!(size, mode)(inp);
         }
@@ -4754,7 +4754,7 @@ template Utf16Matcher()
 {
     enum validSize(int sz) = sz >= 1 && sz <=2;
 
-    void badEncoding()
+    void badEncoding() pure
     {
         import std.utf;
         throw new UTFException("Invalid UTF-16 sequence");
@@ -4804,7 +4804,7 @@ template Utf16Matcher()
     //sizeFlags, lookupUni and ascii
     mixin template DefMatcher()
     {
-        public bool match(Range)(ref Range inp)
+        public bool match(Range)(ref Range inp) const pure
             if(isRandomAccessRange!Range && is(ElementType!Range : wchar))
         {
             enum mode = Mode.skipOnMatch;
@@ -4819,7 +4819,7 @@ template Utf16Matcher()
 
         static if(Sizes.length == 2)
         {
-            public bool skip(Range)(ref Range inp)
+            public bool skip(Range)(ref Range inp) const pure
                 if(isRandomAccessRange!Range && is(ElementType!Range : wchar))
             {
                 enum mode = Mode.alwaysSkip;
@@ -4833,7 +4833,7 @@ template Utf16Matcher()
             }
         }
 
-        public bool test(Range)(ref Range inp)
+        public bool test(Range)(ref Range inp) const pure
             if(isRandomAccessRange!Range && is(ElementType!Range : wchar))
         {
             enum mode = Mode.neverSkip;
@@ -4845,19 +4845,19 @@ template Utf16Matcher()
                 return lookupUni!mode(inp);
         }
 
-        bool match(C)(ref C[] str)
+        bool match(C)(ref C[] str) const pure
             if(isSomeChar!C)
         {
             return fwdStr!"match"(str);
         }
 
-        bool skip(C)(ref C[] str)
+        bool skip(C)(ref C[] str) const pure
             if(isSomeChar!C)
         {
             return fwdStr!"skip"(str);
         }
 
-        bool test(C)(ref C[] str)
+        bool test(C)(ref C[] str) const pure
             if(isSomeChar!C)
         {
             return fwdStr!"test"(str);
@@ -4893,7 +4893,7 @@ template Utf16Matcher()
             return CherryPick!(Impl, SizesToPick)(&this);
         }
 
-        bool lookupUni(Mode mode, Range)(ref Range inp)
+        bool lookupUni(Mode mode, Range)(ref Range inp) const pure
         {            
             wchar x = cast(wchar)(inp[0] - 0xD800);
             //not a high surrogate
@@ -4945,10 +4945,10 @@ template Utf16Matcher()
 
         static if(sizeFlags & 1)
         {
-            @property ref ascii(){ return m.ascii; }
+            @property ref ascii()() const pure{ return m.ascii; }
         }
 
-        bool lookupUni(Mode mode, Range)(ref Range inp)
+        bool lookupUni(Mode mode, Range)(ref Range inp) const pure
         {
             return m.lookupUni!mode(inp);
         }
@@ -4996,6 +4996,7 @@ public auto decoder(C)(C[] s, size_t offset=0)
 {
     static struct Decoder
     {
+    pure nothrow:
         C[] str;
         size_t idx;
         @property C front(){ return str[idx]; }
@@ -5024,6 +5025,7 @@ public auto units(C)(C[] s)
 {
     static struct Units
     {
+    pure nothrow:
         C[] str;
         @property C front(){ return str[0]; }
         @property C back(){ return str[$-1]; }        
