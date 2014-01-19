@@ -732,7 +732,7 @@ unittest
         static assert(fqn!(typeof(cFuncPtr)) == format("extern(C) %s function(double, string)", inner_name));
 
         // Delegate type with qualified function type
-        static assert(fqn!(typeof(attrDeleg)) == format("shared(immutable(%s) "
+        static assert(fqn!(typeof(attrDeleg)) == format("shared(immutable(%s) "~
             "delegate(ref double, scope string) nothrow @trusted shared const)", inner_name));
 
         // Variable argument function types

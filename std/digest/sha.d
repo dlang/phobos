@@ -528,7 +528,7 @@ unittest
     digest = sha1Of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
     assert(digest == cast(ubyte[])x"761c457bf73b14d27e9e9265c46f4b4dda11f940");
 
-    digest = sha1Of("1234567890123456789012345678901234567890"
+    digest = sha1Of("1234567890123456789012345678901234567890"~
                     "1234567890123456789012345678901234567890");
     assert(digest == cast(ubyte[])x"50abf5706a150990a08b2c5ea40fa0e585554732");
 

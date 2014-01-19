@@ -566,7 +566,7 @@ public:
         else static if (is(T : const(VariantN)))
         {
             static assert(false,
-                    "Assigning Variant objects from const Variant"
+                    "Assigning Variant objects from const Variant"~
                     " objects is currently not supported.");
         }
         else

@@ -883,7 +883,7 @@ class WrapperDigest(T) if(isDigest!T) : Digest
         }
         body
         {
-            enum string msg = "Buffer needs to be at least " ~ digestLength!(T).stringof ~ " bytes "
+            enum string msg = "Buffer needs to be at least " ~ digestLength!(T).stringof ~ " bytes " ~
                 "big, check " ~ typeof(this).stringof ~ ".length!";
             asArray!(digestLength!T)(buf, msg) = _digest.finish();
             return buf[0 .. digestLength!T];
@@ -919,7 +919,7 @@ class WrapperDigest(T) if(isDigest!T) : Digest
             }
             body
             {
-                enum string msg = "Buffer needs to be at least " ~ digestLength!(T).stringof ~ " bytes "
+                enum string msg = "Buffer needs to be at least " ~ digestLength!(T).stringof ~ " bytes " ~
                     "big, check " ~ typeof(this).stringof ~ ".length!";
                 asArray!(digestLength!T)(buf, msg) = _digest.peek();
                 return buf[0 .. digestLength!T];

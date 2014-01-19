@@ -3767,7 +3767,7 @@ private:
         curIndex = idxB; // open-right
     }
 
-    enum errMsg = "non-monotonic prefix function(s), an unsorted range or "
+    enum errMsg = "non-monotonic prefix function(s), an unsorted range or "~
         "duplicate key->value mapping";
 
 public:
@@ -4919,7 +4919,7 @@ else
         "N", "Number",
         "P", "Punctuation",
         "S", "Symbol",
-        "Z", "Separator"
+        "Z", "Separator",
         "Graphical",
         "any",
         "ascii"

@@ -3748,7 +3748,7 @@ struct Curl
     {
         _onReceiveHeader = (in char[] od)
         {
-            throwOnStopped("Receive header callback called on "
+            throwOnStopped("Receive header callback called on "~
                            "cleaned up Curl instance");
             callback(od);
         };
@@ -3866,7 +3866,7 @@ struct Curl
     {
         _onSocketOption = (curl_socket_t sock, CurlSockType st)
         {
-            throwOnStopped("Socket option callback called on "
+            throwOnStopped("Socket option callback called on "~
                            "cleaned up Curl instance");
             return callback(sock, st);
         };
@@ -3908,7 +3908,7 @@ struct Curl
     {
         _onProgress = (size_t dlt, size_t dln, size_t ult, size_t uln)
         {
-            throwOnStopped("Progress callback called on cleaned "
+            throwOnStopped("Progress callback called on cleaned "~
                            "up Curl instance");
             return callback(dlt, dln, ult, uln);
         };
@@ -4186,9 +4186,9 @@ private static size_t _receiveAsyncLines(Terminator, Unit)
                 // onReceive. Can be up to a max of 4 bytes.
                 enforceEx!CurlException(data.length <= 4,
                                         format(
-                                        "Too many bytes left not decoded %s"
-                                        " > 4. Maybe the charset specified in"
-                                        " headers does not match "
+                                        "Too many bytes left not decoded %s"~
+                                        " > 4. Maybe the charset specified in"~
+                                        " headers does not match "~
                                         "the actual content downloaded?",
                                         data.length));
                 leftOverBytes ~= data;

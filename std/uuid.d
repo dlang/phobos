@@ -1475,7 +1475,7 @@ enum x500Namespace = UUID("6ba7b814-9dad-11d1-80b4-00c04fd430c8");
  * writeln(found);
  * -------------------
  */
-enum uuidRegex = r"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}"
+enum uuidRegex = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}"~
     "-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}";
 
 ///
@@ -1484,11 +1484,11 @@ unittest
     import std.algorithm;
     import std.regex;
 
-    string test = "Lorem ipsum dolor sit amet, consetetur "
-    "6ba7b814-9dad-11d1-80b4-00c04fd430c8 sadipscing \n"
-    "elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore \r\n"
-    "magna aliquyam erat, sed diam voluptua. "
-    "8ab3060e-2cba-4f23-b74c-b52db3bdfb46 At vero eos et accusam et "
+    string test = "Lorem ipsum dolor sit amet, consetetur "~
+    "6ba7b814-9dad-11d1-80b4-00c04fd430c8 sadipscing \n"~
+    "elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore \r\n"~
+    "magna aliquyam erat, sed diam voluptua. "~
+    "8ab3060e-2cba-4f23-b74c-b52db3bdfb46 At vero eos et accusam et "~
     "justo duo dolores et ea rebum.";
 
     auto r = regex(uuidRegex, "g");

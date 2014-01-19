@@ -2941,15 +2941,15 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
             static string makeSwitchIncrementCounter()
             {
                 string result =
-                    "auto next = _current == Rs.length - 1 ? 0 : _current + 1;\n"
+                    "auto next = _current == Rs.length - 1 ? 0 : _current + 1;\n"~
                     "switch (next) {\n";
                 foreach (i, R; Rs)
                 {
                     auto si = to!string(i);
                     auto si_1 = to!string(i ? i - 1 : Rs.length - 1);
-                    result ~= "case "~si~": "
-                        "if (!source["~si~"].empty) { _current = "~si~"; return; }\n"
-                        "if ("~si~" == _current) { _current = _current.max; return; }\n"
+                    result ~= "case "~si~": "~
+                        "if (!source["~si~"].empty) { _current = "~si~"; return; }\n"~
+                        "if ("~si~" == _current) { _current = _current.max; return; }\n"~
                         "goto case "~to!string((i + 1) % Rs.length)~";\n";
                 }
                 return result ~ "default: assert(0); }";

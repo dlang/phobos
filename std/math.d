@@ -162,14 +162,14 @@ version(LittleEndian)
 {
     static assert(real.mant_dig == 53 || real.mant_dig==64
                || real.mant_dig == 113,
-      "Only 64-bit, 80-bit, and 128-bit reals"
+      "Only 64-bit, 80-bit, and 128-bit reals"~
       " are supported for LittleEndian CPUs");
 }
 else
 {
     static assert(real.mant_dig == 53 || real.mant_dig==106
                || real.mant_dig == 113,
-    "Only 64-bit and 128-bit reals are supported for BigEndian CPUs."
+    "Only 64-bit and 128-bit reals are supported for BigEndian CPUs."~
     " double-double reals have partial support");
 }
 

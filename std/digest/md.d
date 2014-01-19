@@ -467,7 +467,7 @@ unittest
     digest = md5Of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
     assert(digest == cast(ubyte[])x"d174ab98d277d9f5a5611c2c9f419d9f");
 
-    digest = md5Of("1234567890123456789012345678901234567890"
+    digest = md5Of("1234567890123456789012345678901234567890"~
                     "1234567890123456789012345678901234567890");
     assert(digest == cast(ubyte[])x"57edf4a22be3c955ac49da2e2107b67a");
 

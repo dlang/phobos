@@ -1662,7 +1662,7 @@ public:
                 alias args[0..$ - 1] args2;
                 alias Args[0..$ - 1] Args2;
                 enforce(buf.length == len,
-                        text("Can't use a user supplied buffer that's the wrong "
+                        text("Can't use a user supplied buffer that's the wrong ",
                              "size.  (Expected  :", len, " Got:  ", buf.length));
             }
             else static if(randAssignable!(Args[$ - 1]) && Args.length > 1)

@@ -103,7 +103,7 @@ private template createAccessors(
         {
             // getter
             enum result = "@property @safe "~T.stringof~" "~name~"() pure nothrow const { auto result = "
-                "("~store~" & "
+                ~"("~store~" & "
                 ~ myToString(maskAllElse) ~ ") >>"
                 ~ myToString(offset) ~ ";"
                 ~ (T.min < 0
@@ -116,9 +116,9 @@ private template createAccessors(
                 ~"assert(v >= "~name~"_min); "
                 ~"assert(v <= "~name~"_max); "
                 ~store~" = cast(typeof("~store~"))"
-                " (("~store~" & ~cast(typeof("~store~"))"~myToString(maskAllElse)~")"
-                " | ((cast(typeof("~store~")) v << "~myToString(offset)~")"
-                " & "~myToString(maskAllElse)~"));}\n"
+                ~" (("~store~" & ~cast(typeof("~store~"))"~myToString(maskAllElse)~")"
+                ~" | ((cast(typeof("~store~")) v << "~myToString(offset)~")"
+                ~" & "~myToString(maskAllElse)~"));}\n"
             // constants
                 ~"enum "~T.stringof~" "~name~"_min = cast("~T.stringof~")"
                 ~myToString(minVal)~"; "

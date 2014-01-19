@@ -629,7 +629,7 @@ unittest
     digest = ripemd160Of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
     assert(digest == cast(ubyte[])x"b0e20b6e3116640286ed3a87a5713079b21f5189");
 
-    digest = ripemd160Of("1234567890123456789012345678901234567890"
+    digest = ripemd160Of("1234567890123456789012345678901234567890"~
                     "1234567890123456789012345678901234567890");
     assert(digest == cast(ubyte[])x"9b752e45573d4b39f4dbd3323cab82bf63326bfb");
 
