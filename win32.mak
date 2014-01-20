@@ -356,7 +356,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\etc_c_curl.html \
 	$(DOC)\etc_c_sqlite3.html \
 	$(DOC)\etc_c_zlib.html \
-	$(DOC)\phobos.html
+	$(DOC)\index.html
 
 $(LIB) : $(SRC_TO_COMPILE) \
 	$(ZLIB) $(DRUNTIMELIB) win32.mak win64.mak
@@ -481,8 +481,8 @@ DDOCFLAGS=$(DFLAGS) -version=StdDdoc
 $(DOC)\object.html : $(STDDOC) $(DRUNTIME)\src\object_.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\object.html $(STDDOC) $(DRUNTIME)\src\object_.d -I$(DRUNTIME)\src\
 
-$(DOC)\phobos.html : $(STDDOC) index.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\phobos.html $(STDDOC) index.d
+$(DOC)\index.html : $(STDDOC) index.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\index.html $(STDDOC) index.d
 
 $(DOC)\core_atomic.html : $(STDDOC) $(DRUNTIME)\src\core\atomic.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\core_atomic.html $(STDDOC) $(DRUNTIME)\src\core\atomic.d -I$(DRUNTIME)\src\
@@ -814,6 +814,6 @@ install: phobos.zip
 	+rd/s/q $(DIR)\html\d\phobos
 	+md $(DIR)\html\d\phobos
 	$(CP) $(DOCS) $(DIR)\html\d\phobos
-	$(CP) $(DOC)\phobos.html $(DIR)\html\d\phobos\index.html
+	$(CP) $(DOC)\index.html $(DIR)\html\d\phobos\index.html
 	+rd/s/q $(DIR)\src\phobos
 	unzip -o phobos.zip -d $(DIR)\src\phobos
