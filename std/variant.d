@@ -254,28 +254,18 @@ private:
         // by the incoming TypeInfo
         static bool tryPutting(A* src, TypeInfo targetType, void* target)
         {
-            template ConstTypes(bool constOnly,T...)
-            {
-                static if(T.length == 0)
-                    alias T ConstTypes;
-                else static if(constOnly)
-                    alias TypeTuple!(const(T[0]), ConstTypes!(constOnly,T[1..$])) ConstTypes;
-                else
-                    alias TypeTuple!(T[0], const(T[0]), ConstTypes!(constOnly,T[1..$])) ConstTypes;
-            }
-            template ImmutableTypes(T...)
-            {
-                static if(T.length == 0)
-                    alias T ImmutableTypes;
-                else
-                    alias TypeTuple!(immutable(T[0]), ImmutableTypes!(T[1..$])) ImmutableTypes;
-            }
-            alias TypeTuple!(Unqual!A,ImplicitConversionTargets!(Unqual!A)) ConvTypes;
-            static if(is(A == immutable))
-                alias TypeTuple!(ConstTypes!(true,ConvTypes), ImmutableTypes!(ConvTypes)) AllTypes;
-            else
-                alias TypeTuple!(ConstTypes!(is(A == const),ConvTypes)) AllTypes;
+            alias UA = Unqual!A;
+            alias MutaTypes = TypeTuple!(UA, ImplicitConversionTargets!UA);
+            alias ConstTypes = staticMap!(ConstOf, MutaTypes);
+            alias ImmuTypes  = staticMap!(ImmutableOf, MutaTypes);
 
+            static if (is(A == immutable))
+                alias AllTypes = TypeTuple!(ImmuTypes, ConstTypes);
+            else static if (is(A == const))
+                alias AllTypes = ConstTypes;
+            else //static if (isMutable!A)
+                alias AllTypes = TypeTuple!(MutaTypes, ConstTypes);
+                
             foreach (T ; AllTypes)
             {
                 if (targetType != typeid(T))
@@ -298,7 +288,6 @@ private:
                     if (src)
                     {
                         assert(target, "target must be non-null");
-                        alias Unqual!A UA;
                         *zat = *(cast(UA*) (src));
                     }
                 }
@@ -2050,7 +2039,7 @@ unittest
     assertNotThrown!VariantException(v.get!(const(int))());
     assertThrown!VariantException(v.get!(immutable(int))());
     assertNotThrown!VariantException(v.get!(const(float))());
-    assert(v.get!(const(float))() == 10.0);
+    assert(v.get!(const(float))() == 10.0f);
 
     const(int) ci = 20;
     v = ci;
@@ -2058,7 +2047,7 @@ unittest
     assertNotThrown!VariantException(v.get!(const(int))());
     assertThrown!VariantException(v.get!(immutable(int))());
     assertNotThrown!VariantException(v.get!(const(float))());
-    assert(v.get!(const(float))() == 20.0);
+    assert(v.get!(const(float))() == 20.0f);
 
     immutable(int) ii = ci;
     v = ii;
@@ -2088,7 +2077,7 @@ unittest
     v = iai;
     assertThrown!VariantException(v.get!(int[])());
     assertNotThrown!VariantException(v.get!(immutable(int)[])());
-    // Bug
+    // Bug ??? runtime error
     //assertNotThrown!VariantException(v.get!(immutable(int[]))());
     assertNotThrown!VariantException(v.get!(const(int[]))());
     assertNotThrown!VariantException(v.get!(const(int)[])());
