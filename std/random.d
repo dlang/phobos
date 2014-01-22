@@ -526,6 +526,11 @@ struct MersenneTwisterEngine(UIntType, size_t w, size_t n, size_t m, size_t r,
                              UIntType c, size_t l)
     if(isUnsigned!UIntType)
 {
+    static assert(1 <= m && m <= n);
+    static assert(0 <= r && 0 <= u && 0 <= s && 0 <= t && 0 <= l);
+    static assert(r <= w && u <= w && s <= w && t <= w && l <= w);
+    static assert(0 <= a && 0 <= b && 0 <= c);
+
     ///Mark this as a Rng
     enum bool isUniformRandom = true;
 
@@ -549,14 +554,9 @@ Parameter for the generator.
     /// Largest generated value.
     enum UIntType max =
         w == UIntType.sizeof * 8 ? UIntType.max : (1u << w) - 1;
+    static assert(a <= max && b <= max && c <= max);
     /// The default seed value.
     enum UIntType defaultSeed = 5489u;
-
-    static assert(1 <= m && m <= n);
-    static assert(0 <= r && 0 <= u && 0 <= s && 0 <= t && 0 <= l);
-    static assert(r <= w && u <= w && s <= w && t <= w && l <= w);
-    static assert(0 <= a && 0 <= b && 0 <= c);
-    static assert(a <= max && b <= max && c <= max);
 
 /**
    Constructs a MersenneTwisterEngine object.
