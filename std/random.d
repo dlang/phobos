@@ -782,6 +782,17 @@ unittest
     }
 }
 
+unittest //11690
+{
+    alias MT(UIntType, uint w) = MersenneTwisterEngine!(UIntType, w, 624, 397, 31,
+                                                        0x9908b0df, 11, 7,
+                                                        0x9d2c5680, 15,
+                                                        0xefc60000, 18);
+
+    foreach (R; TypeTuple!(MT!(uint, 32), MT!(ulong, 32), MT!(ulong, 48), MT!(ulong, 64)))
+        auto a = R();
+}
+
 
 /**
  * Xorshift generator using 32bit algorithm.
