@@ -536,19 +536,19 @@ struct MersenneTwisterEngine(UIntType, size_t w, size_t n, size_t m, size_t r,
     enum bool isUniformRandom = true;
 
 /**
-Parameter for the generator.
+Parameters for the generator.
 */
     enum size_t   wordSize   = w;
-    enum size_t   stateSize  = n;
-    enum size_t   shiftSize  = m;
-    enum size_t   maskBits   = r;
-    enum UIntType xorMask    = a;
-    enum UIntType temperingU = u;
-    enum size_t   temperingS = s;
-    enum UIntType temperingB = b;
-    enum size_t   temperingT = t;
-    enum UIntType temperingC = c;
-    enum size_t   temperingL = l;
+    enum size_t   stateSize  = n; /// ditto
+    enum size_t   shiftSize  = m; /// ditto
+    enum size_t   maskBits   = r; /// ditto
+    enum UIntType xorMask    = a; /// ditto
+    enum UIntType temperingU = u; /// ditto
+    enum size_t   temperingS = s; /// ditto
+    enum UIntType temperingB = b; /// ditto
+    enum size_t   temperingT = t; /// ditto
+    enum UIntType temperingC = c; /// ditto
+    enum size_t   temperingL = l; /// ditto
 
     /// Smallest generated value (0).
     enum UIntType min = 0;
