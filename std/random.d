@@ -528,20 +528,21 @@ struct MersenneTwisterEngine(UIntType, size_t w, size_t n, size_t m, size_t r,
 {
     ///Mark this as a Rng
     enum bool isUniformRandom = true;
+
 /**
 Parameter for the generator.
 */
-    enum size_t wordSize = w;
-    enum size_t stateSize = n;
-    enum size_t shiftSize = m;
-    enum size_t maskBits = r;
-    enum UIntType xorMask = a;
+    enum size_t   wordSize   = w;
+    enum size_t   stateSize  = n;
+    enum size_t   shiftSize  = m;
+    enum size_t   maskBits   = r;
+    enum UIntType xorMask    = a;
     enum UIntType temperingU = u;
-    enum size_t temperingS = s;
+    enum size_t   temperingS = s;
     enum UIntType temperingB = b;
-    enum size_t temperingT = t;
+    enum size_t   temperingT = t;
     enum UIntType temperingC = c;
-    enum size_t temperingL = l;
+    enum size_t   temperingL = l;
 
     /// Smallest generated value (0).
     enum UIntType min = 0;
@@ -723,9 +724,10 @@ gen.seed(unpredictableSeed);
 n = gen.front; // different across runs
 ----
  */
-alias MersenneTwisterEngine!(uint, 32, 624, 397, 31, 0x9908b0df, 11, 7,
-                             0x9d2c5680, 15, 0xefc60000, 18)
-    Mt19937;
+alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
+                                       0x9908b0df, 11, 7,
+                                       0x9d2c5680, 15,
+                                       0xefc60000, 18);
 
 unittest
 {
