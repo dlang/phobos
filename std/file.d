@@ -73,10 +73,6 @@ version (Windows)
                                               LPCWSTR lpNewFileName,
                                               DWORD dwFlags);
 }
-else version (Posix)
-{
-    deprecated alias stat_t struct_stat64;
-}
 // }}}
 
 
@@ -967,6 +963,26 @@ uint getLinkAttributes(in char[] name)
 
 
 /++
+    Set the attributes of the given file.
+
+    Throws:
+        $(D FileException) if the given file does not exist.
+ +/
+void setAttributes(in char[] name, uint attributes)
+{
+    version (Windows)
+    {
+        cenforce(SetFileAttributesW(std.utf.toUTF16z(name), attributes), name);
+    }
+    else version (Posix)
+    {
+        assert(attributes <= mode_t.max);
+        cenforce(!chmod(toStringz(name), cast(mode_t)attributes), name);
+    }
+}
+
+
+/++
     Returns whether the given file is a directory.
 
     Params:
@@ -1350,6 +1366,27 @@ void mkdir(in char[] pathname)
     }
 }
 
+// Same as mkdir but ignores "already exists" errors.
+// Returns: "true" if the directory was created,
+//   "false" if it already existed.
+private bool ensureDirExists(in char[] pathname)
+{
+    version(Windows)
+    {
+        if (CreateDirectoryW(std.utf.toUTF16z(pathname), null))
+            return true;
+        cenforce(GetLastError() == ERROR_ALREADY_EXISTS, pathname.idup);
+    }
+    else version(Posix)
+    {
+        if (core.sys.posix.sys.stat.mkdir(toStringz(pathname), octal!777) == 0)
+            return true;
+        cenforce(errno == EEXIST, pathname);
+    }
+    enforce(pathname.isDir, new FileException(pathname.idup));
+    return false;
+}
+
 /****************************************************
  * Make directory and all parent directories as needed.
  *
@@ -1359,25 +1396,41 @@ void mkdir(in char[] pathname)
 void mkdirRecurse(in char[] pathname)
 {
     const left = dirName(pathname);
-    if (!exists(left))
+    if (left.length != pathname.length && !exists(left))
     {
-        version (Windows)
-        {   /* Prevent infinite recursion if left is "d:\" and
-             * drive d does not exist.
-             */
-            if (left.length >= 3 && left[$ - 2] == ':')
-                throw new FileException(left.idup);
-        }
         mkdirRecurse(left);
     }
     if (!baseName(pathname).empty)
     {
-        mkdir(pathname);
+        ensureDirExists(pathname);
     }
 }
 
 unittest
 {
+    {
+        immutable basepath = deleteme ~ "_dir";
+        scope(exit) rmdirRecurse(basepath);
+
+        auto path = buildPath(basepath, "a", "..", "b");
+        mkdirRecurse(path);
+        path = path.buildNormalizedPath;
+        assert(path.isDir);
+
+        path = buildPath(basepath, "c");
+        write(path, "");
+        assertThrown!FileException(mkdirRecurse(path));
+
+        path = buildPath(basepath, "d");
+        mkdirRecurse(path);
+        mkdirRecurse(path); // should not throw
+    }
+
+    version(Windows)
+    {
+        assertThrown!FileException(mkdirRecurse(`1:\foobar`));
+    }
+
     // bug3570
     {
         immutable basepath = deleteme ~ "_dir";
@@ -2094,11 +2147,11 @@ else version(Posix)
 
             _didStat = true;
         }
-        
+
         /++
             This is to support lazy evaluation, because doing stat's is
             expensive and not always needed.
-            
+
             Try both stat and lstat for isFile and isDir
             to detect broken symlinks.
          +/
@@ -2106,11 +2159,11 @@ else version(Posix)
         {
             if(_didStat)
                 return;
-                
+
             if( stat(toStringz(_name), &_statBuf) != 0 )
             {
                 _ensureLStatDone();
-                
+
                 _statBuf = stat_t.init;
                 _statBuf.st_mode = S_IFLNK;
             }

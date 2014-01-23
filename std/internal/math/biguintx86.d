@@ -104,7 +104,7 @@ enum : int { KARATSUBASQUARELIMIT=26 }; // Minimum value for which square Karats
  * Set op == '+' for addition, '-' for subtraction.
  */
 uint multibyteAddSub(char op)(uint[] dest, const uint [] src1, const uint []
-		src2, uint carry) pure
+        src2, uint carry) pure
 {
     // Timing:
     // Pentium M: 2.25/int
@@ -557,7 +557,7 @@ unittest
  * Returns carry.
  */
 uint multibyteMul(uint[] dest, const uint[] src, uint multiplier, uint carry)
-	pure
+    pure
 {
     // Timing: definitely not optimal.
     // Pentium M: 5.0 cycles/operation, has 3 resource stalls/iteration
@@ -721,7 +721,7 @@ return "asm {
  * Returns carry out of MSB (0..FFFF_FFFF).
  */
 uint multibyteMulAdd(char op)(uint [] dest, const uint [] src, uint
-		multiplier, uint carry) pure {
+        multiplier, uint carry) pure {
     // Timing: This is the most time-critical bignum function.
     // Pentium M: 5.4 cycles/operation, still has 2 resource stalls + 1load block/iteration
 
@@ -806,8 +806,8 @@ unittest
     }
     ----
  */
-void multibyteMultiplyAccumulate(uint [] dest, const uint[] left, 
-		const uint [] right) pure {
+void multibyteMultiplyAccumulate(uint [] dest, const uint[] left,
+        const uint [] right) pure {
     // Register usage
     // EDX:EAX = used in multiply
     // EBX = index

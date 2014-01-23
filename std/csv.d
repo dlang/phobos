@@ -1165,7 +1165,7 @@ public:
     void popFront()
     {
         // Skip last of record when header is depleted.
-        if(_popCount && _popCount.empty)
+        if(_popCount.ptr && _popCount.empty)
             while(!recordEnd())
             {
                 prime(1);

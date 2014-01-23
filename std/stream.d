@@ -2675,7 +2675,7 @@ class MemoryStream: TArrayStream!(ubyte[]) {
   this(byte[] buf) { this(cast(ubyte[]) buf); } /// ditto
   this(char[] buf) { this(cast(ubyte[]) buf); } /// ditto
 
-  /// Ensure the stream can hold count bytes.
+  /// Ensure the stream can write count extra bytes from cursor position without an allocation.
   void reserve(size_t count) {
     if (cur + count > buf.length)
       buf.length = cast(uint)((cur + count) * 2);

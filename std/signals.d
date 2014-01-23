@@ -440,7 +440,7 @@ unittest {
         a.value2 = 42;
         a.value3 = 43;
     }
-    
+
     test(new Bar);
 
     class BarDerived: Bar
@@ -453,12 +453,12 @@ unittest {
         mixin Signal!(string, int)  s5;
         mixin Signal!(string, long) s6;
     }
-    
+
     auto a = new BarDerived;
-    
+
     test!Bar(a);
     test!BarDerived(a);
-    
+
     auto o4 = new Observer;
     auto o5 = new Observer;
     auto o6 = new Observer;

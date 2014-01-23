@@ -43,9 +43,8 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
            Kenji Hara
  */
 module std.typecons;
-import core.memory, core.stdc.stdlib;
-import std.algorithm, std.array, std.conv, std.exception, std.format,
-    std.math, std.string, std.traits, std.typetuple, std.range;
+import std.traits, std.range;
+import std.typetuple : TypeTuple, allSatisfy;
 
 debug(Unique) import std.stdio;
 
@@ -270,6 +269,8 @@ assert(!is(typeof(point1) == typeof(point2))); // passes
 */
 template Tuple(Specs...)
 {
+    import std.typetuple : staticMap;
+
     // Parse (type,name) pairs (FieldSpecs) out of the specified
     // arguments. Some fields would have name, others not.
     template parseSpecs(Specs...)
@@ -321,6 +322,8 @@ template Tuple(Specs...)
         string decl = "";
         foreach (i, name; staticMap!(extractName, fieldSpecs))
         {
+            import std.string : format;
+
             decl ~= format("alias Identity!(field[%s]) _%s;", i, i);
             if (name.length != 0)
             {
@@ -504,6 +507,8 @@ template Tuple(Specs...)
         void opAssign(R)(auto ref R rhs)
         if (areCompatibleTuples!(typeof(this), R, "="))
         {
+            import std.algorithm : swap;
+
             static if (is(R : Tuple!Types) && !__traits(isRef, rhs))
             {
                 if (__ctfe)
@@ -547,6 +552,7 @@ template Tuple(Specs...)
         /**
          * Converts to string.
          */
+        static if (allSatisfy!(isPrintable, Types))
         string toString()
         {
             enum header = typeof(this).stringof ~ "(",
@@ -566,6 +572,8 @@ template Tuple(Specs...)
                     formattedWrite(w, "%s", field[i].stringof);
                 else
                 {
+                    import std.format : FormatSpec, formatElement;
+
                     FormatSpec!char f;  // "%s"
                     formatElement(w, field[i], f);
                 }
@@ -574,6 +582,16 @@ template Tuple(Specs...)
             return w.data;
         }
     }
+}
+
+private template isPrintable(T)
+{
+    enum isPrintable = is(typeof({
+        import std.format : formattedWrite;
+
+        Appender!string w;
+        formattedWrite(w, "%s", T.init);
+    }));
 }
 
 private template Identity(alias T)
@@ -837,12 +855,19 @@ unittest
 }
 unittest
 {
+    import std.exception : assertCTFEable;
+
     // Bugzilla 10218
     assertCTFEable!(
     {
         auto t = tuple(1);
         t = tuple(2);   // assignment
     });
+}
+unittest
+{
+    class Foo{}
+    Tuple!(immutable(Foo)[]) a;
 }
 
 /**
@@ -1242,6 +1267,8 @@ $(D this) must not be in the null state.
 
 unittest
 {
+    import std.exception : assertThrown;
+
     Nullable!int a;
     assert(a.isNull);
     assertThrown!Throwable(a.get);
@@ -1282,6 +1309,8 @@ unittest
 }
 unittest
 {
+    import std.exception : assertThrown;
+
     static struct S { int x; }
     Nullable!S s;
     assert(s.isNull);
@@ -1537,6 +1566,8 @@ Gets the value. $(D this) must not be in the null state.
 
 unittest
 {
+    import std.exception : assertThrown;
+
     Nullable!(int, int.min) a;
     assert(a.isNull);
     assertThrown!Throwable(a.get);
@@ -1696,6 +1727,8 @@ $(D this) must not be in the null state.
 
 unittest
 {
+    import std.exception : assertThrown;
+
     int x = 5, y = 7;
     auto a = NullableRef!(int)(&x);
     assert(!a.isNull);
@@ -1837,6 +1870,8 @@ template BlackHole(Base)
 
 unittest
 {
+    import std.math : isNaN;
+
     // return default
     {
         interface I_1 { real test(); }
@@ -2136,6 +2171,8 @@ private static:
     // overloaded function with the name.
     template INTERNAL_FUNCINFO_ID(string name, size_t i)
     {
+        import std.string : format;
+
         enum string INTERNAL_FUNCINFO_ID = format("F_%s_%s", name, i);
     }
 
@@ -2200,9 +2237,9 @@ private static:
             static if (varstyle & (Variadic.c | Variadic.d))
             {
                 // the argptr-forwarding problem
-                pragma(msg, "Warning: AutoImplement!(", Base, ") ",
-                        "ignored variadic arguments to the constructor ",
-                        FunctionTypeOf!(typeof(&ctor[0])) );
+                //pragma(msg, "Warning: AutoImplement!(", Base, ") ",
+                //        "ignored variadic arguments to the constructor ",
+                //        FunctionTypeOf!(typeof(&ctor[0])) );
             }
             return "super(args);";
         }
@@ -2416,6 +2453,7 @@ private static:
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
     // Internal stuffs
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
+    import std.string;
 
     enum CONSTRUCTOR_NAME = "__ctor";
 
@@ -2505,6 +2543,8 @@ private static:
     public string generateFunction(
             string myFuncInfo, string name, func... )() @property
     {
+        import std.string : format;
+
         enum isCtor = (name == CONSTRUCTOR_NAME);
 
         string code; // the result
@@ -2761,6 +2801,8 @@ unittest
 template wrap(Targets...)
 if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
 {
+    import std.typetuple : staticMap;
+
     // strict upcast
     auto wrap(Source)(inout Source src) @trusted pure nothrow
     if (Targets.length == 1 && is(Source : Targets[0]))
@@ -2932,6 +2974,8 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
 template wrap(Targets...)
 if (Targets.length >= 1 && !allSatisfy!(isMutable, Targets))
 {
+    import std.typetuple : staticMap;
+
     alias wrap = .wrap!(staticMap!(Unqual, Targets));
 }
 
@@ -3164,6 +3208,8 @@ unittest
 // Make a tuple of non-static function symbols
 private template GetOverloadedMethods(T)
 {
+    import std.typetuple : Filter;
+
     alias allMembers = TypeTuple!(__traits(allMembers, T));
     template follows(size_t i = 0)
     {
@@ -3517,6 +3563,11 @@ if (!is(T == class))
 
         private void initialize(A...)(auto ref A args)
         {
+            import core.memory : GC;
+            import core.stdc.stdlib : malloc;
+            import std.conv : emplace;
+            import std.exception : enforce;
+
             _store = cast(Impl*) enforce(malloc(Impl.sizeof));
             static if (hasIndirections!T)
                 GC.addRange(&_store._payload, T.sizeof);
@@ -3598,7 +3649,11 @@ to deallocate the corresponding resource.
         // Done, deallocate
         .destroy(_refCounted._store._payload);
         static if (hasIndirections!T)
+        {
+            import core.memory : GC;
             GC.removeRange(&_refCounted._store._payload);
+        }
+        import core.stdc.stdlib : free;
         free(_refCounted._store);
         _refCounted._store = null;
     }
@@ -3608,12 +3663,16 @@ Assignment operators
  */
     void opAssign(typeof(this) rhs)
     {
+        import std.algorithm : swap;
+
         swap(_refCounted._store, rhs._refCounted._store);
     }
 
 /// Ditto
     void opAssign(T rhs)
     {
+        import std.algorithm : move;
+
         static if (autoInit == RefCountedAutoInitialize.yes)
         {
             _refCounted.ensureInitialized();
@@ -3720,6 +3779,8 @@ unittest
 
 unittest
 {
+    import std.algorithm : swap;
+
     RefCounted!int p1, p2;
     swap(p1, p2);
 }
@@ -4209,6 +4270,8 @@ template scoped(T)
     /// Returns the scoped object
     @system auto scoped(Args...)(auto ref Args args)
     {
+        import std.conv : emplace;
+
         Scoped result = void;
         void* alignedStore = cast(void*) aligned(cast(size_t) result.Scoped_store.ptr);
         immutable size_t d = alignedStore - result.Scoped_store.ptr;
@@ -4242,6 +4305,12 @@ unittest
         auto e2 = ScopedObject();  //Illegal, must be built via scoped!A
         auto e3 = ScopedObject(1); //Illegal, must be built via scoped!A
     })));
+
+    // Use as member variable
+    struct B
+    {
+        typeof(scoped!A()) a; // note the trailing parentheses
+    }
 
     // Use with alias
     alias makeScopedA = scoped!A;

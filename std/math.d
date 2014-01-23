@@ -62,7 +62,7 @@
 module std.math;
 
 import core.stdc.math;
-import std.range, std.traits;
+import std.traits;
 
 version(unittest)
 {
@@ -2071,7 +2071,7 @@ real frexp(real value, out int exp) @trusted pure nothrow
             else
             {
                 exp = (ex - F.EXPBIAS) >> 4;
-                vu[F.EXPPOS_SHORT] = cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FE0);
+                vu[F.EXPPOS_SHORT] = cast(ushort)((0x800F & vu[F.EXPPOS_SHORT]) | 0x3FE0);
             }
         }
         else if (!(*vl & 0x7FFF_FFFF_FFFF_FFFF))
@@ -2361,7 +2361,7 @@ real log(real x) @safe pure nothrow
                 exp -= 1;
                 z = x - 0.5;
                 y = 0.5 * z + 0.5;
-            }       
+            }
             else
             {   // 2(x - 1)/(x + 1)
                 z = x - 0.5;
@@ -2492,7 +2492,7 @@ real log10(real x) @safe pure nothrow
                 exp -= 1;
                 z = x - 0.5;
                 y = 0.5 * z + 0.5;
-            }       
+            }
             else
             {   // 2(x - 1)/(x + 1)
                 z = x - 0.5;
@@ -2655,7 +2655,7 @@ real log2(real x) @safe pure nothrow
                 exp -= 1;
                 z = x - 0.5;
                 y = 0.5 * z + 0.5;
-            }       
+            }
             else
             {   // 2(x - 1)/(x + 1)
                 z = x - 0.5;
@@ -3593,7 +3593,7 @@ private:
         }
     }
 public:
-    version (X86_Any) { // TODO: Lift this version condition when we support !x86.
+    version (IeeeFlagsSupport) {
 
      /// The result cannot be represented exactly, so rounding occured.
      /// (example: x = sin(0.1); )
@@ -3613,7 +3613,14 @@ public:
 
      }
 }
-
+version(X86_Any)
+{
+    version = IeeeFlagsSupport;
+}
+else version(ARM)
+{
+    version = IeeeFlagsSupport;
+}
 
 /// Set all of the floating-point status flags to false.
 void resetIeeeFlags() { IeeeFlags.resetIeeeFlags(); }
@@ -3680,49 +3687,103 @@ struct FloatingPointControl
     /** IEEE rounding modes.
      * The default mode is roundToNearest.
      */
-    enum : RoundingMode
+    version(ARM)
     {
-        roundToNearest = 0x0000,
-        roundDown      = 0x0400,
-        roundUp        = 0x0800,
-        roundToZero    = 0x0C00
+        enum : RoundingMode
+        {
+            roundToNearest = 0x000000,
+            roundDown      = 0x400000,
+            roundUp        = 0x800000,
+            roundToZero    = 0xC00000
+        }
+    }
+    else
+    {
+        enum : RoundingMode
+        {
+            roundToNearest = 0x0000,
+            roundDown      = 0x0400,
+            roundUp        = 0x0800,
+            roundToZero    = 0x0C00
+        }
     }
 
     /** IEEE hardware exceptions.
      *  By default, all exceptions are masked (disabled).
      */
-    enum : uint
+    version(ARM)
     {
-        inexactException      = 0x20,
-        underflowException    = 0x10,
-        overflowException     = 0x08,
-        divByZeroException    = 0x04,
-        subnormalException    = 0x02,
-        invalidException      = 0x01,
-        /// Severe = The overflow, division by zero, and invalid exceptions.
-        severeExceptions   = overflowException | divByZeroException
-                             | invalidException,
-        allExceptions      = severeExceptions | underflowException
-                             | inexactException | subnormalException,
+        enum : uint
+        {
+            subnormalException    = 0x8000,
+            inexactException      = 0x1000,
+            underflowException    = 0x0800,
+            overflowException     = 0x0400,
+            divByZeroException    = 0x0200,
+            invalidException      = 0x0100,
+            /// Severe = The overflow, division by zero, and invalid exceptions.
+            severeExceptions   = overflowException | divByZeroException
+                                 | invalidException,
+            allExceptions      = severeExceptions | underflowException
+                                 | inexactException | subnormalException,
+        }
+    }
+    else
+    {
+        enum : uint
+        {
+            inexactException      = 0x20,
+            underflowException    = 0x10,
+            overflowException     = 0x08,
+            divByZeroException    = 0x04,
+            subnormalException    = 0x02,
+            invalidException      = 0x01,
+            /// Severe = The overflow, division by zero, and invalid exceptions.
+            severeExceptions   = overflowException | divByZeroException
+                                 | invalidException,
+            allExceptions      = severeExceptions | underflowException
+                                 | inexactException | subnormalException,
+        }
     }
 
 private:
-    enum ushort EXCEPTION_MASK = 0x3F;
-    enum ushort ROUNDING_MASK = 0xC00;
+    version(ARM)
+    {
+        enum uint EXCEPTION_MASK = 0x9F00;
+        enum uint ROUNDING_MASK = 0xC00000;
+    }
+    else version(X86)
+    {
+        enum ushort EXCEPTION_MASK = 0x3F;
+        enum ushort ROUNDING_MASK = 0xC00;
+    }
+    else version(X86_64)
+    {
+        enum ushort EXCEPTION_MASK = 0x3F;
+        enum ushort ROUNDING_MASK = 0xC00;
+    }
+    else
+        static assert(false, "Architecture not supported");
 
 public:
     /// Enable (unmask) specific hardware exceptions. Multiple exceptions may be ORed together.
     void enableExceptions(uint exceptions)
     {
         initialize();
-        setControlState(getControlState() & ~(exceptions & EXCEPTION_MASK));
+        version(ARM)
+            setControlState(getControlState() | (exceptions & EXCEPTION_MASK));
+        else
+            setControlState(getControlState() & ~(exceptions & EXCEPTION_MASK));
     }
 
     /// Disable (mask) specific hardware exceptions. Multiple exceptions may be ORed together.
     void disableExceptions(uint exceptions)
     {
         initialize();
-        setControlState(getControlState() | (exceptions & EXCEPTION_MASK));
+        version(ARM)
+            setControlState(getControlState() & ~(exceptions & EXCEPTION_MASK));
+        else
+            setControlState(getControlState() | (exceptions & EXCEPTION_MASK));
     }
 
     //// Change the floating-point hardware rounding mode
@@ -3735,7 +3796,10 @@ public:
     /// Return the exceptions which are currently enabled (unmasked)
     @property static uint enabledExceptions()
     {
-        return (getControlState() & EXCEPTION_MASK) ^ EXCEPTION_MASK;
+        version(ARM)
+            return (getControlState() & EXCEPTION_MASK);
+        else
+            return (getControlState() & EXCEPTION_MASK) ^ EXCEPTION_MASK;
     }
 
     /// Return the currently active rounding mode
@@ -3753,9 +3817,18 @@ public:
     }
 
 private:
-    ushort savedState;
+    ControlState savedState;
 
     bool initialized = false;
+
+    version(ARM)
+    {
+        alias ControlState = uint;
+    }
+    else
+    {
+        alias ControlState = ushort;
+    }
 
     void initialize()
     {
@@ -4073,7 +4146,7 @@ bool isInfinity(real x) @trusted pure nothrow
     {
         // double
         return ((*cast(ulong *)&x) & 0x7FFF_FFFF_FFFF_FFFF)
-            == 0x7FF8_0000_0000_0000;
+            == 0x7FF0_0000_0000_0000;
     }
     else static if(real.mant_dig == 106)
     {
@@ -4234,12 +4307,13 @@ real NaN(ulong payload) @trusted pure nothrow
 {
     static if (real.mant_dig == 64)
     {
-        //real80
+        //real80 (in x86 real format, the implied bit is actually 
+        //not implied but a real bit which is stored in the real)
         ulong v = 3; // implied bit = 1, quiet bit = 1
     }
     else
     {
-        ulong v = 2; // no implied bit. quiet bit = 1
+        ulong v = 1; // no implied bit. quiet bit = 1
     }
 
     ulong a = payload;
@@ -4299,6 +4373,17 @@ real NaN(ulong payload) @trusted pure nothrow
             * cast(ulong *)(&x) = v;
         }
         return x;
+    }
+}
+
+unittest
+{
+    static if (real.mant_dig == 53)
+    {
+        auto x = NaN(1);
+        auto xl = *cast(ulong*)&x;
+        assert(xl & 0x8_0000_0000_0000UL); //non-signaling bit, bit 52
+        assert((xl & 0x7FF0_0000_0000_0000UL) == 0x7FF0_0000_0000_0000UL); //all exp bits set
     }
 }
 
@@ -5649,6 +5734,7 @@ unittest
  */
 bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
 {
+    import std.range;
     static if (isInputRange!T)
     {
         static if (isInputRange!U)

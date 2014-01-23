@@ -53,117 +53,6 @@ $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDi
  * CTFE:
  * Digests do not work in CTFE
  *
- * Examples:
- * ---------
- * import std.digest.crc;
- *
- * //Simple example
- * char[8] hexHash = hexDigest!CRC32("The quick brown fox jumps over the lazy dog");
- * assert(hexHash == "39A34F41");
- *
- * //Simple example, using the API manually
- * CRC32 context = makeDigest!CRC32();
- * context.put(cast(ubyte[])"The quick brown fox jumps over the lazy dog");
- * ubyte[4] hash = context.finish();
- * assert(toHexString(hash) == "39A34F41");
- * ---------
- *
- * ---------
- * //Generating the hashes of a file, idiomatic D way
- * import std.digest.crc, std.digest.sha, std.digest.md;
- * import std.stdio;
- *
- * // Digests a file and prints the result.
- * void digestFile(Hash)(string filename) if(isDigest!Hash)
- * {
- *     auto file = File(filename);
- *     auto result = digest!Hash(file.byChunk(4096 * 1024));
- *     writefln("%s (%s) = %s", Hash.stringof, filename, toHexString(result));
- * }
- *
- * void main(string[] args)
- * {
- *     foreach (name; args[1 .. $])
- *     {
- *         digestFile!MD5(name);
- *         digestFile!SHA1(name);
- *         digestFile!CRC32(name);
- *     }
- * }
- * ---------
- *
- * ---------
- * //Generating the hashes of a file using the template API, old school way
- * import std.digest.crc, std.digest.sha, std.digest.md;
- * import std.stdio;
- *
- * void main(string[] args)
- * {
- *     MD5 md5;
- *     SHA1 sha1;
- *     CRC32 crc32;
- *
- *     md5.start();
- *     sha1.start();
- *     crc32.start();
- *
- *     foreach (arg; args[1 .. $])
- *     {
- *         digestFile(md5, arg);
- *         digestFile(sha1, arg);
- *         digestFile(crc32, arg);
- *     }
- * }
- *
- * // Digests a file and prints the result.
- * void digestFile(Hash)(ref Hash hash, string filename) if(isDigest!Hash)
- * {
- *     File file = File(filename);
- *
- *     //As digests implement OutputRange, we could use std.algorithm.copy
- *     //Let's do it manually for now
- *     foreach (buffer; file.byChunk(4096 * 1024))
- *         hash.put(buffer);
- *
- *     auto result = hash.finish();
- *     writefln("%s (%s) = %s", hash.stringof, filename, toHexString(result));
- * }
- * ---------
- *
- * ---------
- * //The same using the OOP API
- * import std.digest.crc, std.digest.sha, std.digest.md;
- * import std.stdio;
- *
- * void main(string[] args)
- * {
- *     auto md5 = new MD5Digest();
- *     auto sha1 = new SHA1Digest();
- *     auto crc32 = new CRC32Digest();
- *
- *     foreach (arg; args[1 .. $])
- *     {
- *         digestFile(md5, arg);
- *         digestFile(sha1, arg);
- *         digestFile(crc32, arg);
- *     }
- * }
- *
- * // Digests a file and prints the result.
- * void digestFile(Digest hash, string filename)
- * {
- *     File file = File(filename);
- *
- *     //As digests implement OutputRange, we could use std.algorithm.copy
- *     //Let's do it manually for now
- *     foreach (buffer; file.byChunk(4096 * 1024))
- *         hash.put(buffer);
- *
- *     ubyte[] result = hash.finish();
- *     writefln("%s (%s) = %s", typeid(hash).toString(), filename, toHexString(result));
- * }
- * ---------
- *
  * TODO:
  * Digesting single bits (as opposed to bytes) is not implemented. This will be done as another
  * template constraint helper (hasBitDigesting!T) and an additional interface (BitDigest)
@@ -180,7 +69,7 @@ import std.algorithm : copy;
 import std.typetuple : allSatisfy;
 import std.ascii : LetterCase;
 
-//verify example
+///
 unittest
 {
     import std.digest.crc;
@@ -196,7 +85,7 @@ unittest
     assert(toHexString(hash) == "39A34F41");
 }
 
-//verify example
+///
 unittest
 {
     //Generating the hashes of a file, idiomatic D way
@@ -221,7 +110,7 @@ unittest
         }
     }
 }
-//verify example
+///
 unittest
 {
     //Generating the hashes of a file using the template API
@@ -260,7 +149,7 @@ unittest
     }
 }
 
-//verify example
+///
 unittest
 {
     import std.digest.crc, std.digest.sha, std.digest.md;
@@ -310,19 +199,6 @@ version(ExampleDigest)
      * $(LI A digest must be a struct (value type) to pass the $(LREF isDigest) test.)
      * $(LI A digest passing the $(LREF isDigest) test is always an $(D OutputRange))
      * )
-     *
-     * Examples:
-     * ----
-     * //Using the OutputRange feature
-     * import std.algorithm : copy;
-     * import std.range : repeat;
-     * import std.digest.md;
-     *
-     * auto oneMillionRange = repeat!ubyte(cast(ubyte)'a', 1000000);
-     * auto ctx = makeDigest!MD5();
-     * copy(oneMillionRange, &ctx); //Note: You must pass a pointer to copy!
-     * assert(ctx.finish().toHexString() == "7707D6AE4E027C70EEA2A935C2296F21");
-     * ----
      */
     struct ExampleDigest
     {
@@ -376,7 +252,7 @@ version(ExampleDigest)
     }
 }
 
-//verify example
+///
 unittest
 {
     //Using the OutputRange feature
@@ -397,21 +273,6 @@ unittest
  * Note:
  * This is very useful as a template constraint (see examples)
  *
- * Examples:
- * ---------
- * import std.digest.crc;
- * static assert(isDigest!CRC32);
- * ---------
- *
- * ---------
- * void myFunction(T)() if(isDigest!T)
- * {
- *     T dig;
- *     dig.start();
- *     auto result = dig.finish();
- * }
- * ---------
- *
  * BUGS:
  * $(UL
  * $(LI Does not yet verify that put takes scope parameters.)
@@ -431,13 +292,13 @@ template isDigest(T)
         }));
 }
 
-//verify example
+///
 unittest
 {
     import std.digest.crc;
     static assert(isDigest!CRC32);
 }
-//verify example
+///
 unittest
 {
     import std.digest.crc;
@@ -452,19 +313,6 @@ unittest
 
 /**
  * Use this template to get the type which is returned by a digest's $(LREF finish) method.
- *
- * Examples:
- * --------
- * import std.digest.crc;
- * assert(is(DigestType!(CRC32) == ubyte[4]));
- * --------
- *
- * --------
- * import std.digest.crc;
- * CRC32 dig;
- * dig.start();
- * DigestType!CRC32 result = dig.finish();
- * --------
  */
 template DigestType(T)
 {
@@ -480,13 +328,13 @@ template DigestType(T)
         static assert(false, T.stringof ~ " is not a digest! (fails isDigest!T)");
 }
 
-//verify example
+///
 unittest
 {
     import std.digest.crc;
     assert(is(DigestType!(CRC32) == ubyte[4]));
 }
-//verify example
+///
 unittest
 {
     import std.digest.crc;
@@ -505,22 +353,6 @@ unittest
  * $(LI This is very useful as a template constraint (see examples))
  * $(LI This also checks if T passes $(LREF isDigest))
  * )
- *
- * Examples:
- * ---------
- * import std.digest.crc, std.digest.md;
- * assert(!hasPeek!(MD5));
- * assert(hasPeek!CRC32);
- * ---------
- *
- * ---------
- * void myFunction(T)() if(hasPeek!T)
- * {
- *     T dig;
- *     dig.start();
- *     auto result = dig.peek();
- * }
- * ---------
  */
 template hasPeek(T)
 {
@@ -532,14 +364,14 @@ template hasPeek(T)
         }));
 }
 
-//verify example
+///
 unittest
 {
     import std.digest.crc, std.digest.md;
     assert(!hasPeek!(MD5));
     assert(hasPeek!CRC32);
 }
-//verify example
+///
 unittest
 {
     import std.digest.crc;
@@ -569,14 +401,6 @@ private template isDigestibleRange(Range)
  *
  * Params:
  *  range= an $(D InputRange) with $(D ElementType) $(D ubyte), $(D ubyte[]) or $(D ubyte[num])
- *
- *
- * Examples:
- * ---------
- * import std.digest.md;
- * auto testRange = repeat!ubyte(cast(ubyte)'a', 100);
- * auto md5 = digest!MD5(testRange);
- * ---------
  */
 DigestType!Hash digest(Hash, Range)(auto ref Range range) if(!isArray!Range
     && isDigestibleRange!Range)
@@ -587,7 +411,7 @@ DigestType!Hash digest(Hash, Range)(auto ref Range range) if(!isArray!Range
     return hash.finish();
 }
 
-//verify example
+///
 unittest
 {
     import std.digest.md;
@@ -600,22 +424,6 @@ unittest
  *
  * Params:
  *  data= one or more arrays of any type
- *
- * Examples:
- * ---------
- * import std.digest.md, std.digest.sha, std.digest.crc;
- * auto md5   = digest!MD5(  "The quick brown fox jumps over the lazy dog");
- * auto sha1  = digest!SHA1( "The quick brown fox jumps over the lazy dog");
- * auto crc32 = digest!CRC32("The quick brown fox jumps over the lazy dog");
- * assert(toHexString(crc32) == "39A34F41");
- * ---------
- *
- * ---------
- * //It's also possible to pass multiple values to this function:
- * import std.digest.crc;
- * auto crc32 = digest!CRC32("The quick ", "brown ", "fox jumps over the lazy dog");
- * assert(toHexString(crc32) == "39A34F41");
- * ---------
  */
 DigestType!Hash digest(Hash, T...)(scope const T data) if(allSatisfy!(isArray, typeof(data)))
 {
@@ -626,7 +434,7 @@ DigestType!Hash digest(Hash, T...)(scope const T data) if(allSatisfy!(isArray, t
     return hash.finish();
 }
 
-//verify example
+///
 unittest
 {
     import std.digest.md, std.digest.sha, std.digest.crc;
@@ -636,7 +444,7 @@ unittest
     assert(toHexString(crc32) == "39A34F41");
 }
 
-//verify example
+///
 unittest
 {
     import std.digest.crc;
@@ -652,14 +460,6 @@ unittest
  * Params:
  *  order= the order in which the bytes are processed (see $(LREF toHexString))
  *  range= an $(D InputRange) with $(D ElementType) $(D ubyte), $(D ubyte[]) or $(D ubyte[num])
- *
- *
- * Examples:
- * ---------
- * import std.digest.md;
- * auto testRange = repeat!ubyte(cast(ubyte)'a', 100);
- * assert(hexDigest!MD5(testRange) == "36A92CC94A9E0FA21F625F8BFB007ADF");
- * ---------
  */
 char[digestLength!(Hash)*2] hexDigest(Hash, Order order = Order.increasing, Range)(ref Range range)
     if(!isArray!Range && isDigestibleRange!Range)
@@ -667,7 +467,7 @@ char[digestLength!(Hash)*2] hexDigest(Hash, Order order = Order.increasing, Rang
     return toHexString!order(digest!Hash(range));
 }
 
-//verify example
+///
 unittest
 {
     import std.digest.md;
@@ -681,18 +481,6 @@ unittest
  * Params:
  *  order= the order in which the bytes are processed (see $(LREF toHexString))
  *  data= one or more arrays of any type
- *
- * Examples:
- * ---------
- * import std.digest.crc;
- * assert(hexDigest!(CRC32, Order.decreasing)("The quick brown fox jumps over the lazy dog") == "414FA339");
- * ---------
- *
- * ---------
- * //It's also possible to pass multiple values to this function:
- * import std.digest.crc;
- * assert(hexDigest!(CRC32, Order.decreasing)("The quick ", "brown ", "fox jumps over the lazy dog") == "414FA339");
- * ---------
  */
 char[digestLength!(Hash)*2] hexDigest(Hash, Order order = Order.increasing, T...)(scope const T data)
     if(allSatisfy!(isArray, typeof(data)))
@@ -700,13 +488,13 @@ char[digestLength!(Hash)*2] hexDigest(Hash, Order order = Order.increasing, T...
     return toHexString!order(digest!Hash(data));
 }
 
-//verify example
+///
 unittest
 {
     import std.digest.crc;
     assert(hexDigest!(CRC32, Order.decreasing)("The quick brown fox jumps over the lazy dog") == "414FA339");
 }
-//verify example
+///
 unittest
 {
     import std.digest.crc;
@@ -716,14 +504,6 @@ unittest
 /**
  * This is a convenience function which returns an initialized digest, so it's not necessary to call
  * start manually.
- *
- * Examples:
- * ---------
- * import std.digest.md;
- * auto md5 = makeDigest!MD5();
- * md5.put("Hello");
- * assert(toHexString(md5.finish()) == "93B885ADFE0DA089CDF634904FD59F71");
- * ---------
  */
 Hash makeDigest(Hash)()
 {
@@ -732,7 +512,7 @@ Hash makeDigest(Hash)()
     return hash;
 }
 
-//verify example
+///
 unittest
 {
     import std.digest.md;
@@ -751,19 +531,6 @@ unittest
  *
  * Note:
  * A Digest implementation is always an $(D OutputRange)
- *
- * Examples:
- * ----
- * //Using the OutputRange feature
- * import std.algorithm : copy;
- * import std.range : repeat;
- * import std.digest.md;
- *
- * auto oneMillionRange = repeat!ubyte(cast(ubyte)'a', 1000000);
- * auto ctx = new MD5Digest();
- * copy(oneMillionRange, ctx);
- * assert(ctx.finish().toHexString() == "7707D6AE4E027C70EEA2A935C2296F21");
- * ----
  */
 interface Digest
 {
@@ -815,22 +582,6 @@ interface Digest
 
         /**
          * This is a convenience function to calculate the hash of a value using the OOP API.
-         *
-         * Examples:
-         * ---------
-         * import std.digest.md, std.digest.sha, std.digest.crc;
-         * ubyte[] md5   = (new MD5Digest()).digest("The quick brown fox jumps over the lazy dog");
-         * ubyte[] sha1  = (new SHA1Digest()).digest("The quick brown fox jumps over the lazy dog");
-         * ubyte[] crc32 = (new CRC32Digest()).digest("The quick brown fox jumps over the lazy dog");
-         * assert(crcHexString(crc32) == "414FA339");
-         * ---------
-         *
-         * ---------
-         * //It's also possible to pass multiple values to this function:
-         * import std.digest.crc;
-         * ubyte[] crc32 = (new CRC32Digest()).digest("The quick ", "brown ", "fox jumps over the lazy dog");
-         * assert(crcHexString(crc32) == "414FA339");
-         * ---------
          */
         final @trusted nothrow ubyte[] digest(scope const(void[])[] data...)
         {
@@ -841,7 +592,7 @@ interface Digest
         }
 }
 
-//verify example
+///
 unittest
 {
     //Using the OutputRange feature
@@ -855,7 +606,7 @@ unittest
     assert(ctx.finish().toHexString() == "7707D6AE4E027C70EEA2A935C2296F21");
 }
 
-//verify example
+///
 unittest
 {
     import std.digest.md, std.digest.sha, std.digest.crc;
@@ -865,7 +616,7 @@ unittest
     assert(crcHexString(crc32) == "414FA339");
 }
 
-//verify example
+///
 unittest
 {
     import std.digest.crc;
@@ -879,7 +630,7 @@ unittest
     assert(isOutputRange!(Digest, ubyte));
 }
 
-//verify example
+///
 unittest
 {
     void test(Digest dig)
@@ -910,41 +661,10 @@ enum Order : bool
  * The additional order parameter can be used to specify the order of the input data.
  * By default the data is processed in increasing order, starting at index 0. To process it in the
  * opposite order, pass Order.decreasing as a parameter.
- * 
+ *
  * The additional letterCase parameter can be used to specify the case of the output data.
  * By default the output is in upper case. To change it to the lower case
  * pass LetterCase.lower as a parameter.
- *
- * Examples:
- * --------
- * //With template API:
- * auto crc32 = digest!CRC32("The quick ", "brown ", "fox jumps over the lazy dog");
- * assert(toHexString(crc32) == "39A34F41");
- * --------
- * 
- * --------
- * //Lower case variant:
- * auto crc32 = digest!CRC32("The quick ", "brown ", "fox jumps over the lazy dog");
- * assert(toHexString!(LetterCase.lower)(crc32) == "39a34f41");
- * --------
- * 
- * --------
- * //Usually CRCs are printed in this order, though:
- * auto crc32 = digest!CRC32("The quick ", "brown ", "fox jumps over the lazy dog");
- * assert(toHexString!(Order.decreasing)(crc32) == "414FA339");
- * --------
- *
- * --------
- * //With OOP API:
- * auto crc32 = (new CRC32Digest()).digest("The quick ", "brown ", "fox jumps over the lazy dog");
- * assert(toHexString(crc32) == "39A34F41");
- * --------
- *
- * --------
- * //Usually CRCs are printed in this order, though:
- * auto crc32 = (new CRC32Digest()).digest("The quick ", "brown ", "fox jumps over the lazy dog");
- * assert(toHexString!(Order.decreasing)(crc32) == "414FA339");
- * --------
  */
 char[num*2] toHexString(Order order = Order.increasing, size_t num, LetterCase letterCase = LetterCase.upper)
 (in ubyte[num] digest)
@@ -952,7 +672,7 @@ char[num*2] toHexString(Order order = Order.increasing, size_t num, LetterCase l
     static if (letterCase == LetterCase.upper)
     {
         import std.ascii : hexDigits = hexDigits;
-    }    
+    }
     else
     {
         import std.ascii : hexDigits = lowerHexDigits;
@@ -996,7 +716,7 @@ string toHexString(Order order = Order.increasing, LetterCase letterCase = Lette
     static if (letterCase == LetterCase.upper)
     {
         import std.ascii : hexDigits = hexDigits;
-    }    
+    }
     else
     {
         import std.ascii : hexDigits = lowerHexDigits;
@@ -1032,23 +752,26 @@ auto toHexString(LetterCase letterCase, Order order = Order.increasing)(in ubyte
 
 //For more example unittests, see Digest.digest, digest
 
-//verify example
+///
 unittest
 {
     import std.digest.crc;
-    //Usually CRCs are printed in this order, though:
+    //Test with template API:
     auto crc32 = digest!CRC32("The quick ", "brown ", "fox jumps over the lazy dog");
+    //Lower case variant:
+    assert(toHexString!(LetterCase.lower)(crc32) == "39a34f41");
+    //Usually CRCs are printed in this order, though:
     assert(toHexString!(Order.decreasing)(crc32) == "414FA339");
     assert(toHexString!(LetterCase.lower, Order.decreasing)(crc32) == "414fa339");
-    assert(toHexString!(LetterCase.lower)(crc32) == "39a34f41");
 }
 
-//verify example
+///
 unittest
 {
     import std.digest.crc;
-    //Usually CRCs are printed in this order, though:
+    // With OOP API
     auto crc32 = (new CRC32Digest()).digest("The quick ", "brown ", "fox jumps over the lazy dog");
+    //Usually CRCs are printed in this order, though:
     assert(toHexString!(Order.decreasing)(crc32) == "414FA339");
 }
 
@@ -1110,17 +833,6 @@ class WrapperDigest(T) if(isDigest!T) : Digest
          * Use this to feed the digest with data.
          * Also implements the $(XREF range, OutputRange) interface for $(D ubyte) and
          * $(D const(ubyte)[]).
-         *
-         * Examples:
-         * ----
-         * void test(Digest dig)
-         * {
-         *     dig.put(cast(ubyte)0); //single ubyte
-         *     dig.put(cast(ubyte)0, cast(ubyte)0); //variadic
-         *     ubyte[10] buf;
-         *     dig.put(buf); //buffer
-         * }
-         * ----
          */
         @trusted nothrow void put(scope const(ubyte)[] data...)
         {
@@ -1153,15 +865,7 @@ class WrapperDigest(T) if(isDigest!T) : Digest
          *
          * Examples:
          * --------
-         * //Simple example
-         * import std.digest.md;
-         * auto hash = new WrapperDigest!MD5();
-         * hash.put(cast(ubyte)0);
-         * auto result = hash.finish();
-         * --------
          *
-         * --------
-         * //using a supplied buffer
          * import std.digest.md;
          * ubyte[16] buf;
          * auto hash = new WrapperDigest!MD5();
@@ -1231,7 +935,7 @@ class WrapperDigest(T) if(isDigest!T) : Digest
         }
 }
 
-//verify example
+///
 unittest
 {
     import std.digest.md;
@@ -1241,9 +945,10 @@ unittest
     auto result = hash.finish();
 }
 
-//verify example
+///
 unittest
 {
+    //using a supplied buffer
     import std.digest.md;
     ubyte[16] buf;
     auto hash = new WrapperDigest!MD5();

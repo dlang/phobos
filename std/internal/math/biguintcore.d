@@ -94,10 +94,10 @@ public:
 struct BigUint
 {
 private:
-    pure invariant() 
+    pure invariant()
     {
         assert( data.length >= 1 && (data.length == 1 || data[$-1] != 0 ));
-    }    
+    }
     immutable(BigDigit) [] data = ZERO;
     this(immutable(BigDigit) [] x) pure
     {
@@ -274,8 +274,8 @@ public:
      *  between every 8 digits.
      *  Separator characters do not contribute to the minPadding.
      */
-    char [] toHexString(int frontExtraBytes, char separator = 0, 
-			int minPadding=0, char padChar = '0') const pure
+    char [] toHexString(int frontExtraBytes, char separator = 0,
+            int minPadding=0, char padChar = '0') const pure
     {
         // Calculate number of extra padding bytes
         size_t extraPad = (minPadding > data.length * 2 * BigDigit.sizeof)
@@ -457,8 +457,8 @@ public:
 
     // If wantSub is false, return x + y, leaving sign unchanged
     // If wantSub is true, return abs(x - y), negating sign if x < y
-    static BigUint addOrSubInt(Tulong)(const BigUint x, Tulong y, 
-			bool wantSub, ref bool sign) pure if (is(Tulong == ulong))
+    static BigUint addOrSubInt(Tulong)(const BigUint x, Tulong y,
+            bool wantSub, ref bool sign) pure if (is(Tulong == ulong))
     {
         BigUint r;
         if (wantSub)
@@ -508,7 +508,7 @@ public:
     // If wantSub is false, return x + y, leaving sign unchanged.
     // If wantSub is true, return abs(x - y), negating sign if x<y
     static BigUint addOrSub(BigUint x, BigUint y, bool wantSub, bool *sign)
-		pure
+        pure
     {
         BigUint r;
         if (wantSub)
@@ -638,6 +638,26 @@ public:
         BigDigit [] rem = new BigDigit[y.data.length];
         divModInternal(result, rem, x.data, y.data);
         return BigUint(removeLeadingZeros(assumeUnique(rem)));
+    }
+
+    // return x op y
+    static BigUint bitwiseOp(string op)(BigUint x, BigUint y, bool xSign, bool ySign, ref bool resultSign) pure if (op == "|" || op == "^" || op == "&")
+    {
+        auto d1 = includeSign(x.data, y.uintLength, xSign);
+        auto d2 = includeSign(y.data, x.uintLength, ySign);
+
+        foreach (i; 0..d1.length)
+        {
+            mixin("d1[i] " ~ op ~ "= d2[i];");
+        }
+
+        mixin("resultSign = xSign " ~ op ~ " ySign;");
+
+        if (resultSign) {
+            twosComplement(d1, d1);
+        }
+
+        return BigUint(removeLeadingZeros(assumeUnique(d1)));
     }
 
     /**
@@ -947,6 +967,41 @@ unittest
 
 
 private:
+void twosComplement(const(BigDigit) [] x, BigDigit[] result) pure
+{
+    foreach (i; 0..x.length)
+    {
+        result[i] = ~x[i];
+    }
+    result[x.length..$] = BigDigit.max;
+
+    bool sgn = false;
+
+    foreach (i; 0..result.length) {
+        if (result[i] == BigDigit.max) {
+            result[i] = 0;
+        } else {
+            result[i] += 1;
+            break;
+        }
+    }
+}
+
+// Encode BigInt as BigDigit array (sign and 2's complement)
+BigDigit[] includeSign(const(BigDigit) [] x, size_t minSize, bool sign) pure
+{
+    size_t length = (x.length > minSize) ? x.length : minSize;
+    BigDigit [] result = new BigDigit[length];
+    if (sign)
+    {
+        twosComplement(x, result);
+    }
+    else
+    {
+        result[0..x.length] = x;
+    }
+    return result;
+}
 
 // works for any type
 T intpow(T)(T x, ulong n) pure
@@ -1177,7 +1232,7 @@ BigDigit [] subInt(const BigDigit[] x, ulong y) pure
  *
  */
 void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
-	pure
+    pure
 {
     assert( result.length == x.length + y.length );
     assert( y.length > 0 );
@@ -1331,7 +1386,7 @@ import core.bitop : bsr;
 
 /// if remainder is null, only calculate quotient.
 void divModInternal(BigDigit [] quotient, BigDigit[] remainder, const BigDigit [] u,
-		const BigDigit [] v) pure
+        const BigDigit [] v) pure
 {
     assert(quotient.length == u.length - v.length + 1);
     assert(remainder == null || remainder.length == v.length);
@@ -1399,7 +1454,7 @@ private:
 // buff.length must be data.length*8 if separator is zero,
 // or data.length*9 if separator is non-zero. It will be completely filled.
 char [] biguintToHex(char [] buff, const BigDigit [] data, char separator=0)
-	pure
+    pure
 {
     int x=0;
     for (ptrdiff_t i=data.length - 1; i>=0; --i)
@@ -1601,8 +1656,8 @@ private:
 // with COW.
 
 // Classic 'schoolbook' multiplication.
-void mulSimple(BigDigit[] result, const(BigDigit) [] left, 
-		const(BigDigit)[] right) pure
+void mulSimple(BigDigit[] result, const(BigDigit) [] left,
+        const(BigDigit)[] right) pure
 in
 {
     assert(result.length == left.length + right.length);
@@ -1651,8 +1706,8 @@ body
 
 //  result = left - right
 // returns carry (0 or 1)
-BigDigit subSimple(BigDigit [] result,const(BigDigit) [] left, 
-		const(BigDigit) [] right) pure
+BigDigit subSimple(BigDigit [] result,const(BigDigit) [] left,
+        const(BigDigit) [] right) pure
 in
 {
     assert(result.length == left.length);
@@ -1698,7 +1753,7 @@ BigDigit addAssignSimple(BigDigit [] result, const(BigDigit) [] right) pure
 /* performs result += wantSub? - right : right;
 */
 BigDigit addOrSubAssignSimple(BigDigit [] result, const(BigDigit) [] right,
-		bool wantSub) pure
+        bool wantSub) pure
 {
     if (wantSub)
         return subAssignSimple(result, right);
@@ -1723,7 +1778,7 @@ bool less(const(BigDigit)[] x, const(BigDigit)[] y) pure
 
 // Set result = abs(x-y), return true if result is negative(x<y), false if x<=y.
 bool inplaceSub(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
-	pure
+    pure
 {
     assert(result.length == (x.length >= y.length) ? x.length : y.length);
 
@@ -1779,8 +1834,8 @@ size_t karatsubaRequiredBuffSize(size_t xlen) pure
 * Params:
 * scratchbuff      An array long enough to store all the temporaries. Will be destroyed.
 */
-void mulKaratsuba(BigDigit [] result, const(BigDigit) [] x, 
-		const(BigDigit)[] y, BigDigit [] scratchbuff) pure
+void mulKaratsuba(BigDigit [] result, const(BigDigit) [] x,
+        const(BigDigit)[] y, BigDigit [] scratchbuff) pure
 {
     assert(x.length >= y.length);
           assert(result.length < uint.max, "Operands too large");
@@ -1884,8 +1939,8 @@ void mulKaratsuba(BigDigit [] result, const(BigDigit) [] x,
     addOrSubAssignSimple(result[half..$], mid, !midNegative);
 }
 
-void squareKaratsuba(BigDigit [] result, const BigDigit [] x, 
-		BigDigit [] scratchbuff) pure
+void squareKaratsuba(BigDigit [] result, const BigDigit [] x,
+        BigDigit [] scratchbuff) pure
 {
     // See mulKaratsuba for implementation comments.
     // Squaring is simpler, since it never gets asymmetric.
@@ -1942,7 +1997,7 @@ void squareKaratsuba(BigDigit [] result, const BigDigit [] x,
  * u[0..v.length] holds the remainder.
  */
 void schoolbookDivMod(BigDigit [] quotient, BigDigit [] u, in BigDigit [] v)
-	pure
+    pure
 {
     assert(quotient.length == u.length - v.length);
     assert(v.length > 1);
@@ -2244,7 +2299,6 @@ version(unittest)
 
 unittest
 {
-
     void printBiguint(const uint [] data)
     {
         char [] buff = biguintToHex(new char[data.length*9], data, '_');

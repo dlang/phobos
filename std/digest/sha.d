@@ -45,40 +45,6 @@ $(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
  * Macros:
  *      WIKI = Phobos/StdSha1
  *      MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
- *
- * Examples:
- * ---------
- * //Template API
- * import std.digest.sha;
- *
- * ubyte[20] hash = sha1Of("abc");
- * assert(toHexString(hash) == "A9993E364706816ABA3E25717850C26C9CD0D89D");
- *
- * //Feeding data
- * ubyte[1024] data;
- * SHA1 sha;
- * sha.start();
- * sha.put(data[]);
- * sha.start(); //Start again
- * sha.put(data[]);
- * hash = sha.finish();
- * ---------
- *
- * ---------
- * //OOP API
- * import std.digest.sha;
- *
- * auto sha = new SHA1Digest();
- * ubyte[] hash = sha.digest("abc");
- * assert(toHexString(hash) == "A9993E364706816ABA3E25717850C26C9CD0D89D");
- *
- * //Feeding data
- * ubyte[1024] data;
- * sha.put(data[]);
- * sha.reset(); //Start again
- * sha.put(data[]);
- * hash = sha.finish();
- * ---------
  */
 
 /*          Copyright Kai Nacke 2012.
@@ -88,7 +54,7 @@ $(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
  */
 module std.digest.sha;
 
-//verify example
+///
 unittest
 {
     //Template API
@@ -107,7 +73,7 @@ unittest
     hash = sha.finish();
 }
 
-//verify example
+///
 unittest
 {
     //OOP API
@@ -194,37 +160,6 @@ private nothrow pure uint rotateLeft(uint x, uint n)
 /**
  * Template API SHA1 implementation.
  * See $(D std.digest.digest) for differences between template and OOP API.
- *
- * Examples:
- * --------
- * //Simple example, hashing a string using sha1Of helper function
- * ubyte[20] hash = sha1Of("abc");
- * //Let's get a hash string
- * assert(toHexString(hash) == "A9993E364706816ABA3E25717850C26C9CD0D89D");
- * --------
- *
- * --------
- * //Using the basic API
- * SHA1 hash;
- * hash.start();
- * ubyte[1024] data;
- * //Initialize data here...
- * hash.put(data);
- * ubyte[20] result = hash.finish();
- * --------
- *
- * --------
- * //Let's use the template features:
- * //Note: When passing a SHA1 to a function, it must be passed by referece!
- * void doSomething(T)(ref T hash) if(isDigest!T)
- * {
- *     hash.put(cast(ubyte)0);
- * }
- * SHA1 sha;
- * sha.start();
- * doSomething(sha);
- * assert(toHexString(sha.finish()) == "5BA93C9DB0CFF93F52B521D7420E43F6EDA2784F");
- * --------
  */
 struct SHA1
 {
@@ -437,15 +372,6 @@ struct SHA1
          * Use this to feed the digest with data.
          * Also implements the $(XREF range, OutputRange) interface for $(D ubyte) and
          * $(D const(ubyte)[]).
-         *
-         * Examples:
-         * ----
-         * SHA1 dig;
-         * dig.put(cast(ubyte)0); //single ubyte
-         * dig.put(cast(ubyte)0, cast(ubyte)0); //variadic
-         * ubyte[10] buf;
-         * dig.put(buf); //buffer
-         * ----
          */
         @trusted nothrow pure void put(scope const(ubyte)[] input...)
         {
@@ -478,19 +404,20 @@ struct SHA1
             if (inputLen - i)
                 (&buffer[index])[0 .. inputLen-i] = (&input[i])[0 .. inputLen-i];
         }
+        ///
+        unittest
+        {
+            SHA1 dig;
+            dig.put(cast(ubyte)0); //single ubyte
+            dig.put(cast(ubyte)0, cast(ubyte)0); //variadic
+            ubyte[10] buf;
+            dig.put(buf); //buffer
+        }
+
 
         /**
          * Returns the finished SHA1 hash. This also calls $(LREF start) to
          * reset the internal state.
-         *
-         * Examples:
-         * --------
-         * //Simple example
-         * SHA1 hash;
-         * hash.start();
-         * hash.put(cast(ubyte)0);
-         * ubyte[20] result = hash.finish();
-         * --------
          */
         @trusted nothrow pure ubyte[20] finish()
         {
@@ -516,9 +443,18 @@ struct SHA1
             start();
             return data;
         }
+        ///
+        unittest
+        {
+            //Simple example
+            SHA1 hash;
+            hash.start();
+            hash.put(cast(ubyte)0);
+            ubyte[20] result = hash.finish();
+        }
 }
 
-//verify example
+///
 unittest
 {
     //Simple example, hashing a string using sha1Of helper function
@@ -527,7 +463,7 @@ unittest
     assert(toHexString(hash) == "A9993E364706816ABA3E25717850C26C9CD0D89D");
 }
 
-//verify example
+///
 unittest
 {
     //Using the basic API
@@ -539,7 +475,7 @@ unittest
     ubyte[20] result = hash.finish();
 }
 
-//verify example
+///
 unittest
 {
     //Let's use the template features:
@@ -552,26 +488,6 @@ unittest
     sha.start();
     doSomething(sha);
     assert(toHexString(sha.finish()) == "5BA93C9DB0CFF93F52B521D7420E43F6EDA2784F");
-}
-
-//verify example
-unittest
-{
-    SHA1 dig;
-    dig.put(cast(ubyte)0); //single ubyte
-    dig.put(cast(ubyte)0, cast(ubyte)0); //variadic
-    ubyte[10] buf;
-    dig.put(buf); //buffer
-}
-
-//verify example
-unittest
-{
-    //Simple example
-    SHA1 hash;
-    hash.start();
-    hash.put(cast(ubyte)0);
-    ubyte[20] result = hash.finish();
 }
 
 unittest
@@ -632,12 +548,6 @@ unittest
 /**
  * This is a convenience alias for $(XREF digest.digest, digest) using the
  * SHA1 implementation.
- *
- * Examples:
- * ---------
- * ubyte[20] hash = sha1Of("abc");
- * assert(hash == digest!SHA1("abc")); //This is the same as above
- * ---------
  */
 //simple alias doesn't work here, hope this gets inlined...
 auto sha1Of(T...)(T data)
@@ -645,7 +555,7 @@ auto sha1Of(T...)(T data)
     return digest!(SHA1, T)(data);
 }
 
-//verify example
+///
 unittest
 {
     ubyte[20] hash = sha1Of("abc");
@@ -669,34 +579,10 @@ unittest
  *
  * This is an alias for $(XREF digest.digest, WrapperDigest)!SHA1, see
  * $(XREF digest.digest, WrapperDigest) for more information.
- *
- * Examples:
- * --------
- * //Simple example, hashing a string using Digest.digest helper function
- * auto sha = new SHA1Digest();
- * ubyte[] hash = sha.digest("abc");
- * //Let's get a hash string
- * assert(toHexString(hash) == "A9993E364706816ABA3E25717850C26C9CD0D89D");
- * --------
- *
- * --------
- * //Let's use the OOP features:
- * void test(Digest dig)
- * {
- *     dig.put(cast(ubyte)0);
- * }
- * auto sha = new SHA1Digest();
- * test(sha);
- *
- * //Let's use a custom buffer:
- * ubyte[20] buf;
- * ubyte[] result = sha.finish(buf[]);
- * assert(toHexString(result) == "5BA93C9DB0CFF93F52B521D7420E43F6EDA2784F");
- * --------
  */
 alias WrapperDigest!SHA1 SHA1Digest;
 
-//verify example
+///
 unittest
 {
     //Simple example, hashing a string using Digest.digest helper function
@@ -706,7 +592,7 @@ unittest
     assert(toHexString(hash) == "A9993E364706816ABA3E25717850C26C9CD0D89D");
 }
 
-//verify example
+///
 unittest
 {
     //Let's use the OOP features:

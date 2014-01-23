@@ -188,10 +188,10 @@ version(unittest)
 }
 version(StdDdoc) import std.stdio;
 
-pragma(lib, "curl");
+version (Windows) pragma(lib, "curl");
 extern (C) void exit(int);
 
-// Default data timeout for Protcools
+// Default data timeout for Protocols
 private enum _defaultDataTimeout = dur!"minutes"(2);
 
 /** Connection type used when the URL should be used to auto detect the protocol.
@@ -717,6 +717,13 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
         client.onReceiveHeader = null;
         client.onReceiveStatusLine = null;
         client.onReceive = null;
+
+        if (sendData !is null &&
+            (client.method == HTTP.Method.post || client.method == HTTP.Method.put))
+        {
+            client.onSend = null;
+            client.handle.onSeek = null;
+        }
     }
     client.url = url;
     HTTP.StatusLine statusLine;
@@ -795,7 +802,12 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
  */
 private auto _basicFTP(T)(const(char)[] url, const(void)[] sendData, FTP client)
 {
-    scope (exit) client.onReceive = null;
+    scope (exit)
+    {
+        client.onReceive = null;
+        if (!sendData.empty)
+            client.onSend = null;
+    }
 
     ubyte[] content;
 
@@ -849,7 +861,7 @@ private auto _decodeContent(T)(ubyte[] content, string encoding)
 
         auto strInfo = decodeString(content, scheme);
         enforceEx!CurlException(strInfo[0] != size_t.max,
-                                format("Invalid encoding sequence for enconding '%s'",
+                                format("Invalid encoding sequence for encoding '%s'",
                                        encoding));
 
         return strInfo[1];
@@ -1818,8 +1830,8 @@ private mixin template Protocol()
       * callback returns.
       *
       * Returns:
-      * The callback returns the incoming bytes read. If not the entire array is
-      * the request will abort.
+      * The callback returns the number of incoming bytes read. If the entire array is
+      * not read the request will abort.
       * The special value .pauseRequest can be returned in order to pause the
       * current request.
       *
@@ -2042,6 +2054,69 @@ struct HTTP
 
         /// The HTTP method to use.
         Method method = Method.undefined;
+
+        @property void onReceiveHeader(void delegate(in char[] key,
+                                                     in char[] value) callback)
+        {
+            // Wrap incoming callback in order to separate http status line from
+            // http headers.  On redirected requests there may be several such
+            // status lines. The last one is the one recorded.
+            auto dg = (in char[] header)
+            {
+                import std.utf : UTFException;
+                try
+                {
+                    if (header.empty)
+                    {
+                        // header delimiter
+                        return;
+                    }
+                    if (header.startsWith("HTTP/"))
+                    {
+                        string[string] empty;
+                        headersIn = empty; // clear
+
+                        auto m = match(header, regex(r"^HTTP/(\d+)\.(\d+) (\d+) (.*)$"));
+                        if (m.empty)
+                        {
+                            // Invalid status line
+                        }
+                        else
+                        {
+                            status.majorVersion = to!ushort(m.captures[1]);
+                            status.minorVersion = to!ushort(m.captures[2]);
+                            status.code = to!ushort(m.captures[3]);
+                            status.reason = m.captures[4].idup;
+                            if (onReceiveStatusLine != null)
+                                onReceiveStatusLine(status);
+                        }
+                        return;
+                    }
+
+                    // Normal http header
+                    auto m = match(cast(char[]) header, regex("(.*?): (.*)$"));
+
+                    auto fieldName = m.captures[1].toLower().idup;
+                    if (fieldName == "content-type")
+                    {
+                        auto mct = match(cast(char[]) m.captures[2],
+                                         regex("charset=([^;]*)"));
+                        if (!mct.empty && mct.captures.length > 1)
+                            charset = mct.captures[1].idup;
+                    }
+
+                    if (!m.empty && callback !is null)
+                        callback(fieldName, m.captures[2]);
+                    headersIn[fieldName] = m.captures[2].idup;
+                }
+                catch(UTFException e)
+                {
+                    //munch it - a header should be all ASCII, any "wrong UTF" is broken header
+                }
+            };
+
+            curl.onReceiveHeader = dg;
+        }
     }
 
     private RefCounted!Impl p;
@@ -2095,6 +2170,7 @@ struct HTTP
         maxRedirects = HTTP.defaultMaxRedirects;
         p.charset = "ISO-8859-1"; // Default charset defined in HTTP RFC
         p.method = Method.undefined;
+        setUserAgent(HTTP.defaultUserAgent);
         dataTimeout = _defaultDataTimeout;
         onReceiveHeader = null;
         version (unittest) verbose = true;
@@ -2393,10 +2469,45 @@ struct HTTP
      */
     void addRequestHeader(const(char)[] name, const(char)[] value)
     {
+        if (icmp(name, "User-Agent") == 0)
+            return setUserAgent(value);
         string nv = format("%s: %s", name, value);
         p.headersOut = curl_slist_append(p.headersOut,
                                          cast(char*) toStringz(nv));
         p.curl.set(CurlOption.httpheader, p.headersOut);
+    }
+
+    /**
+     * The default "User-Agent" value send with a request.
+     * It has the form "Phobos-std.net.curl/$(I PHOBOS_VERSION) (libcurl/$(I CURL_VERSION))"
+     */
+    static immutable string defaultUserAgent;
+
+    shared static this()
+    {
+        import std.compiler : version_major, version_minor;
+
+        // http://curl.haxx.se/docs/versions.html
+        enum fmt = "Phobos-std.net.curl/%d.%03d (libcurl/%d.%d.%d)";
+        enum maxLen = fmt.length - "%d%03d%d%d%d".length + 10 + 10 + 3 + 3 + 3;
+
+        __gshared char[maxLen] buf = void;
+
+        auto curlVer = curl_version_info(CURLVERSION_NOW).version_num;
+        defaultUserAgent = cast(immutable)sformat(
+            buf, fmt, version_major, version_minor,
+            curlVer >> 16 & 0xFF, curlVer >> 8 & 0xFF, curlVer & 0xFF);
+    }
+
+    /** Set the value of the user agent request header field.
+     *
+     * By default a request has it's "User-Agent" field set to $(LREF
+     * defaultUserAgent) even if $(D setUserAgent) was never called.  Pass
+     * an empty string to suppress the "User-Agent" field altogether.
+     */
+    void setUserAgent(const(char)[] userAgent)
+    {
+        p.curl.set(CurlOption.useragent, userAgent);
     }
 
     /** The headers read from a successful response.
@@ -2559,55 +2670,7 @@ struct HTTP
     @property void onReceiveHeader(void delegate(in char[] key,
                                                  in char[] value) callback)
     {
-        // Wrap incoming callback in order to separate http status line from
-        // http headers.  On redirected requests there may be several such
-        // status lines. The last one is the one recorded.
-        auto dg = (in char[] header)
-        {
-            if (header.empty)
-            {
-                // header delimiter
-                return;
-            }
-            if (header.startsWith("HTTP/"))
-            {
-                string[string] empty;
-                p.headersIn = empty; // clear
-
-                auto m = match(header, regex(r"^HTTP/(\d+)\.(\d+) (\d+) (.*)$"));
-                if (m.empty)
-                {
-                    // Invalid status line
-                }
-                else
-                {
-                    p.status.majorVersion = to!ushort(m.captures[1]);
-                    p.status.minorVersion = to!ushort(m.captures[2]);
-                    p.status.code = to!ushort(m.captures[3]);
-                    p.status.reason = m.captures[4].idup;
-                    if (p.onReceiveStatusLine != null)
-                        p.onReceiveStatusLine(p.status);
-                }
-                return;
-            }
-
-            // Normal http header
-            auto m = match(cast(char[]) header, regex("(.*?): (.*)$"));
-
-            auto fieldName = m.captures[1].toLower().idup;
-            if (fieldName == "content-type")
-            {
-                auto mct = match(cast(char[]) m.captures[2],
-                                 regex("charset=([^;]*)"));
-                if (!mct.empty && mct.captures.length > 1)
-                    p.charset = mct.captures[1].idup;
-            }
-
-            if (!m.empty && callback !is null)
-                callback(fieldName, m.captures[2]);
-            p.headersIn[fieldName] = m.captures[2].idup;
-        };
-        p.curl.onReceiveHeader = dg;
+        p.onReceiveHeader = callback;
     }
 
     /**
@@ -3070,6 +3133,23 @@ struct SMTP
                 curl.shutdown();
         }
         Curl curl;
+
+        @property void message(string msg)
+        {
+            auto _message = msg;
+            /**
+                This delegate reads the message text and copies it.
+            */
+            curl.onSend = delegate size_t(void[] data)
+            {
+                if (!msg.length) return 0;
+                auto m = cast(void[])msg;
+                size_t to_copy = min(data.length, _message.length);
+                data[0..to_copy] = (cast(void[])_message)[0..to_copy];
+                _message = _message[to_copy..$];
+                return to_copy;
+            };
+        }
     }
 
     private RefCounted!Impl p;
@@ -3339,19 +3419,7 @@ struct SMTP
 
     @property void message(string msg)
     {
-        auto _message = msg;
-        /**
-            This delegate reads the message text and copies it.
-        */
-        p.curl.onSend = delegate size_t(void[] data)
-        {
-            if (!msg.length) return 0;
-            auto m = cast(void[])msg;
-            size_t to_copy = min(data.length, _message.length);
-            data[0..to_copy] = (cast(void[])_message)[0..to_copy];
-            _message = _message[to_copy..$];
-            return to_copy;
-        };
+        p.message = msg;
     }
 }
 
@@ -3406,6 +3474,11 @@ alias CURLcode CurlCode;
   Wrapper to provide a better interface to libcurl than using the plain C API.
   It is recommended to use the $(D HTTP)/$(D FTP) etc. structs instead unless
   raw access to libcurl is needed.
+
+  Warning: This struct uses interior pointers for callbacks. Only allocate it
+  on the stack if you never move or copy it. This also means passing by reference
+  when passing Curl to other functions. Otherwise always allocate on
+  the heap.
 */
 struct Curl
 {

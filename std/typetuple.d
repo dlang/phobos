@@ -34,8 +34,6 @@
  */
 module std.typetuple;
 
-import std.traits;
-
 /**
  * Creates a typetuple out of a sequence of zero or more types.
  */
@@ -561,12 +559,15 @@ template staticMap(alias F, T...)
 ///
 unittest
 {
+    import std.traits : Unqual;
     alias TL = staticMap!(Unqual, int, const int, immutable int);
     static assert(is(TL == TypeTuple!(int, int, int)));
 }
 
 unittest
 {
+    import std.traits : Unqual;
+
     // empty
     alias staticMap!(Unqual) Empty;
     static assert(Empty.length == 0);
@@ -607,6 +608,8 @@ template allSatisfy(alias F, T...)
 ///
 unittest
 {
+    import std.traits : isIntegral;
+
     static assert(!allSatisfy!(isIntegral, int, double));
     static assert( allSatisfy!(isIntegral, int, long));
 }
@@ -639,6 +642,8 @@ template anySatisfy(alias F, T...)
 ///
 unittest
 {
+    import std.traits : isIntegral;
+
     static assert(!anySatisfy!(isIntegral, string, double));
     static assert( anySatisfy!(isIntegral, int, double));
 }
@@ -673,6 +678,8 @@ template Filter(alias pred, TList...)
 ///
 unittest
 {
+    import std.traits : isNarrowString, isUnsigned;
+
     alias Types1 = TypeTuple!(string, wstring, dchar[], char[], dstring, int);
     alias TL1 = Filter!(isNarrowString, Types1);
     static assert(is(TL1 == TypeTuple!(string, wstring, char[])));
@@ -684,6 +691,8 @@ unittest
 
 unittest
 {
+    import std.traits : isPointer;
+
     static assert(is(Filter!(isPointer, int, void*, char[], int*) == TypeTuple!(void*, int*)));
     static assert(is(Filter!isPointer == TypeTuple!()));
 }
@@ -723,7 +732,7 @@ template templateNot(alias pred)
 ///
 unittest
 {
-    import std.traits;
+    import std.traits : isPointer;
 
     alias isNoPointer = templateNot!isPointer;
     static assert(!isNoPointer!(int*));
@@ -770,6 +779,8 @@ template templateAnd(Preds...)
 ///
 unittest
 {
+    import std.traits : isNumeric, isUnsigned;
+
     alias storesNegativeNumbers = templateAnd!(isNumeric, templateNot!isUnsigned);
     static assert(storesNegativeNumbers!int);
     static assert(!storesNegativeNumbers!string && !storesNegativeNumbers!uint);
@@ -826,6 +837,8 @@ template templateOr(Preds...)
 ///
 unittest
 {
+    import std.traits : isPointer, isUnsigned;
+
     alias isPtrOrUnsigned = templateOr!(isPointer, isUnsigned);
     static assert( isPtrOrUnsigned!uint &&  isPtrOrUnsigned!(short*));
     static assert(!isPtrOrUnsigned!int  && !isPtrOrUnsigned!(string));

@@ -99,7 +99,7 @@ $(MYREF oidNamespace) $(MYREF x500Namespace) )
  */
 module std.uuid;
 
-import std.algorithm, std.array, std.ascii;
+import std.array, std.ascii;
 import std.conv, std.digest.md, std.digest.sha, std.random, std.range, std.string, std.traits;
 
 /**
@@ -138,7 +138,7 @@ public struct UUID
             return result;
         }
 
-        unittest
+        @safe pure unittest
         {
             assert(UUID(cast(ubyte[16])[138, 179, 6, 14, 44, 186, 79, 35, 183, 76, 181, 45,
                 179, 189, 251, 70])._toString() == "8ab3060e-2cba-4f23-b74c-b52db3bdfb46");
@@ -215,7 +215,7 @@ public struct UUID
          * that is not needed right now.
          */
 
-        unittest
+        @safe pure unittest
         {
             UUID tmp;
             tmp.data = cast(ubyte[16])[0,1,2,3,4,5,6,7,8,9,10,11,12,
@@ -234,28 +234,25 @@ public struct UUID
         /**
          * Construct a UUID struct from the 16 byte representation
          * of a UUID.
-         *
-         * Examples:
-         * -------------------------
-         * ubyte[16] data = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
-         * auto tmp = UUID(data);
-         * assert(tmp.data == data);
-         * -------------------------
          */
-        @safe pure nothrow this()(ubyte[16] uuidData)
+        @safe pure nothrow this(ref in ubyte[16] uuidData)
+        {
+            data = uuidData;
+        }
+        /// ditto
+        @safe pure nothrow this(in ubyte[16] uuidData)
         {
             data = uuidData;
         }
 
-        unittest
+        ///
+        @safe pure unittest
         {
-           ubyte[16] data = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
-           auto tmp = UUID(data);
-           assert(tmp.data == data);
-
-            enum UUID ctfeID = UUID(cast(ubyte[16])[0,1,2,3,4,5,6,7,8,9,10,11,12,
-                13,14,15]);
-            assert(ctfeID == tmp);
+            enum ubyte[16] data = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
+            auto uuid = UUID(data);
+            enum ctfe = UUID(data);
+            assert(uuid.data == data);
+            assert(ctfe.data == data);
         }
 
 /+
@@ -330,10 +327,8 @@ public struct UUID
          * enum ctfeID = UUID("8ab3060e-2cba-4f23-b74c-b52db3bdfb46");
          * //here parsing is done at compile time, no runtime overhead!
          * -------------------------
-         *
-         * BUGS: Could be pure, but this depends on parse!(string, 16).
          */
-        @trusted this(T)(T[] uuid) if(isSomeChar!(Unqual!T))
+        this(T)(in T[] uuid) if(isSomeChar!(Unqual!T))
         {
             if(uuid.length < 36)
             {
@@ -391,7 +386,7 @@ public struct UUID
             this.data = data2;
         }
 
-        unittest
+        @safe pure unittest
         {
             import std.exception;
             import std.typetuple;
@@ -451,19 +446,11 @@ public struct UUID
         /**
          * Returns true if and only if the UUID is equal
          * to {00000000-0000-0000-0000-000000000000}
-         *
-         * Examples:
-         * -------------------------
-         * UUID id;
-         * assert(id.empty);
-         * id = UUID("00000000-0000-0000-0000-000000000001");
-         * assert(!id.empty);
-         * -------------------------
          */
         @trusted pure nothrow @property bool empty() const
         {
             if(__ctfe)
-                return find!"a!=0"(data[]).empty; //simple
+                return data == (ubyte[16]).init;
 
             auto p = cast(const(size_t*))data.ptr;
             static if(size_t.sizeof == 4)
@@ -474,11 +461,17 @@ public struct UUID
                 static assert(false, "nonsense, it's not 32 or 64 bit");
         }
 
-        unittest
+        ///
+        @safe pure unittest
         {
             UUID id;
             assert(id.empty);
+            id = UUID("00000000-0000-0000-0000-000000000001");
+            assert(!id.empty);
+        }
 
+        @safe pure unittest
+        {
             ubyte[16] getData(size_t i)
             {
                 ubyte[16] data;
@@ -516,12 +509,6 @@ public struct UUID
          *
          * See_Also:
          * $(MYREF3 UUID.Variant, Variant)
-         *
-         * Examples:
-         * ------------------------
-         * assert(UUID("8ab3060e-2cba-4f23-b74c-b52db3bdfb46").variant
-         *     == UUID.Variant.rfc4122);
-         * ------------------------
          */
         @safe pure nothrow @property Variant variant() const
         {
@@ -542,13 +529,13 @@ public struct UUID
             }
         }
 
-        //Verify Example.
-        unittest
+        ///
+        @safe pure unittest
         {
             assert(UUID("8ab3060e-2cba-4f23-b74c-b52db3bdfb46").variant
                == UUID.Variant.rfc4122);
         }
-        unittest
+        pure unittest
         {
             Variant[ubyte] tests = cast(Variant[ubyte])[0x00 : Variant.ncs,
                                     0x10 : Variant.ncs,
@@ -582,12 +569,6 @@ public struct UUID
          *
          * See_Also:
          * $(MYREF3 UUID.Version, Version)
-         *
-         * Examples:
-         * ----------------------------
-         *  assert(UUID("8ab3060e-2cba-4f23-b74c-b52db3bdfb46").uuidVersion
-         *      == UUID.Version.randomNumberBased);
-         * ----------------------------
          */
         @safe pure nothrow @property Version uuidVersion() const
         {
@@ -608,7 +589,7 @@ public struct UUID
                 return Version.unknown;
         }
 
-        //Verify Example.
+        ///
         unittest
         {
             assert(UUID("8ab3060e-2cba-4f23-b74c-b52db3bdfb46").uuidVersion
@@ -643,38 +624,24 @@ public struct UUID
 
         /**
          * Swap the data of this UUID with the data of rhs.
-         *
-         * Note: linear complexity
-         *
-         * Examples:
-         * ----------------------------
-         * UUID u1;
-         * auto u2 = UUID(cast(ubyte[16])[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]);
-         * u1.swap(u2);
-         *
-         * assert(u1.data == cast(ubyte[16])[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]);
-         * assert(u2.data == cast(ubyte[16])[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]);
-         * ----------------------------
          */
-        @safe nothrow void swap(ref UUID rhs)
+        @safe nothrow pure void swap(ref UUID rhs)
         {
-            std.algorithm.swap(this.data, rhs.data);
+            auto bck = data;
+            data = rhs.data;
+            rhs.data = bck;
         }
 
+        ///
         unittest
         {
+            immutable ubyte[16] data = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
             UUID u1;
-            auto u2 = UUID(cast(ubyte[16])[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]);
+            UUID u2 = UUID(data);
             u1.swap(u2);
 
-            auto values1 = cast(ubyte[16])[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
-            auto values2 = cast(ubyte[16])[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
-            assert(u1.data == values2);
-            assert(u2.data == values1);
-
-            u1.swap(u2);
-            assert(u2.data == values2);
-            assert(u1.data == values1);
+            assert(u1 == UUID(data));
+            assert(u2 == UUID.init);
         }
 
         /**
@@ -701,7 +668,7 @@ public struct UUID
          * sort(ids);
          * -------------------------
          */
-        @safe pure nothrow bool opEquals(const UUID s) const
+        @safe pure nothrow bool opEquals(in UUID s) const
         {
             return s.data == this.data;
         }
@@ -709,7 +676,7 @@ public struct UUID
         /**
          * ditto
          */
-        @safe pure nothrow bool opEquals(ref const UUID s) const
+        @safe pure nothrow bool opEquals(ref in UUID s) const
         {
             return s.data == this.data;
         }
@@ -717,7 +684,7 @@ public struct UUID
         /**
          * ditto
          */
-        @safe pure nothrow int opCmp(ref const UUID s) const
+        @safe pure nothrow int opCmp(in UUID s) const
         {
             return cmp(this.data[], s.data[]);
         }
@@ -725,7 +692,7 @@ public struct UUID
         /**
          * ditto
          */
-        @safe pure nothrow int opCmp(const UUID s) const
+        @safe pure nothrow int opCmp(ref in UUID s) const
         {
             return cmp(this.data[], s.data[]);
         }
@@ -796,12 +763,6 @@ public struct UUID
 
         /**
          * Return the UUID as a string in the canonical form.
-         *
-         * Examples:
-         * ----------------------------------
-         * auto id = UUID("8ab3060e-2cba-4f23-b74c-b52db3bdfb46");
-         * assert(id.toString() == "8ab3060e-2cba-4f23-b74c-b52db3bdfb46");
-         * ----------------------------------
          */
         void toString(scope void delegate(const(char)[]) sink) const
         {
@@ -816,6 +777,14 @@ public struct UUID
                 return _toString().idup;
             catch(Exception)
                 assert(0, "It should be impossible for idup to throw.");
+        }
+
+        ///
+        @safe pure unittest
+        {
+            immutable str = "8ab3060e-2cba-4f23-b74c-b52db3bdfb46";
+            auto id = UUID(str);
+            assert(id.toString() == str);
         }
 
         unittest
@@ -834,11 +803,6 @@ public struct UUID
             u1.toString(&sink);
             assert(buf == "8ab3060e-2cba-4f23-b74c-b52db3bdfb46");
         }
-}
-
-unittest
-{
-    assert(UUID.init.empty);
 }
 
 
@@ -891,7 +855,7 @@ unittest
 /**
  * ditto
  */
-@trusted pure UUID md5UUID(const(ubyte[]) data, const UUID namespace = UUID.init)
+@safe pure UUID md5UUID(const(ubyte[]) data, const UUID namespace = UUID.init)
 {
     MD5 hash;
     hash.start();
@@ -920,7 +884,7 @@ unittest
     return u;
 }
 
-unittest
+@safe pure unittest
 {
     auto simpleID = md5UUID("test.uuid.any.string");
     assert(simpleID.data == cast(ubyte[16])[126, 206, 86, 72, 29, 233, 62, 213, 178, 139, 198, 136,
@@ -993,7 +957,7 @@ unittest
  * for strings and wstrings. It's always possible to pass wstrings and dstrings
  * by using the ubyte[] function overload (but be aware of endianness issues!).
  */
-@trusted pure UUID sha1UUID(const(char[]) name, const UUID namespace = UUID.init)
+@safe pure UUID sha1UUID(in char[] name, const UUID namespace = UUID.init)
 {
     return sha1UUID(cast(const(ubyte[]))name, namespace);
 }
@@ -1001,7 +965,7 @@ unittest
 /**
  * ditto
  */
-@trusted pure UUID sha1UUID(const(ubyte[]) data, const UUID namespace = UUID.init)
+@safe pure UUID sha1UUID(in ubyte[] data, const UUID namespace = UUID.init)
 {
     SHA1 sha;
     sha.start();
@@ -1031,7 +995,7 @@ unittest
     return u;
 }
 
-unittest
+@safe pure unittest
 {
     auto simpleID = sha1UUID("test.uuid.any.string");
     assert(simpleID.data == cast(ubyte[16])[16, 209, 239, 61, 99, 12, 94, 70, 159, 79, 255, 250,
@@ -1079,7 +1043,7 @@ unittest
  * auto uuid3 = randomUUID(gen);
  * ------------------------------------------
  */
-@trusted UUID randomUUID()()
+@trusted UUID randomUUID()
 {
     return randomUUID(rndGen);
 }
@@ -1094,7 +1058,7 @@ static assert(is(typeof(rndGen) == Mt19937));
 /**
  * ditto
  */
-UUID randomUUID(RNG)(ref RNG randomGen) if(isUniformRNG!(RNG) &&
+@trusted UUID randomUUID(RNG)(ref RNG randomGen) if(isUniformRNG!(RNG) &&
     isIntegral!(typeof(RNG.front)))
 {
     enum size_t elemSize = typeof(RNG.front).sizeof;
@@ -1176,11 +1140,8 @@ unittest
  * enum ctfeID = parseUUID("8ab3060e-2cba-4f23-b74c-b52db3bdfb46");
  * //here parsing is done at compile time, no runtime overhead!
  * -------------------------
- *
- * BUGS: Could be pure, but this depends on parse!(string, 16).
  */
-
-@trusted UUID parseUUID(T)(T uuidString) if(isSomeString!T)
+UUID parseUUID(T)(T uuidString) if(isSomeString!T)
 {
     return parseUUID(uuidString);
 }
@@ -1192,7 +1153,7 @@ UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
     static if(isForwardRange!Range)
         auto errorCopy = uuidRange.save;
 
-    void parserError(size_t pos, UUIDParsingException.Reason reason, string message, Throwable next = null,
+    void parserError()(size_t pos, UUIDParsingException.Reason reason, string message, Throwable next = null,
         string file = __FILE__, size_t line = __LINE__)
     {
         static if(isForwardRange!Range)
@@ -1228,7 +1189,7 @@ UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
     size_t element = 0;
 
     //skip garbage
-    size_t skip()
+    size_t skip()()
     {
         size_t skipped;
         while(!uuidRange.empty && !isHexDigit(uuidRange.front))
@@ -1323,7 +1284,7 @@ UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
     return result;
 }
 
-unittest
+@safe pure unittest
 {
     import std.exception;
     import std.typetuple;
@@ -1517,6 +1478,7 @@ enum x500Namespace = UUID("6ba7b814-9dad-11d1-80b4-00c04fd430c8");
 enum uuidRegex = r"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}"
     "-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}";
 
+///
 unittest
 {
     import std.algorithm;
@@ -1535,9 +1497,10 @@ unittest
     {
         found ~= UUID(c.hit);
     }
-    assert(found.length == 2);
-    assert(canFind(found, UUID("6ba7b814-9dad-11d1-80b4-00c04fd430c8")));
-    assert(canFind(found, UUID("8ab3060e-2cba-4f23-b74c-b52db3bdfb46")));
+    assert(found == [
+        UUID("6ba7b814-9dad-11d1-80b4-00c04fd430c8"),
+        UUID("8ab3060e-2cba-4f23-b74c-b52db3bdfb46"),
+    ]);
 }
 
 /**
@@ -1546,34 +1509,33 @@ unittest
  */
 public class UUIDParsingException : Exception
 {
-    public:
-        /**
-         * The reason why parsing the UUID string failed (if known)
-         */
-        enum Reason
-        {
-            unknown, ///
-            tooLittle, ///The passed in input was correct, but more input was expected.
-            tooMuch, ///The input data is too long (There's no guarantee the first part of the data is valid)
-            invalidChar, ///Encountered an invalid character
+    /**
+     * The reason why parsing the UUID string failed (if known)
+     */
+    enum Reason
+    {
+        unknown, ///
+        tooLittle, ///The passed in input was correct, but more input was expected.
+        tooMuch, ///The input data is too long (There's no guarantee the first part of the data is valid)
+        invalidChar, ///Encountered an invalid character
 
-        }
-        ///ditto
-        Reason reason;
-        ///The original input string which should have been parsed.
-        string input;
-        ///The position in the input string where the error occurred.
-        size_t position;
+    }
+    ///ditto
+    Reason reason;
+    ///The original input string which should have been parsed.
+    string input;
+    ///The position in the input string where the error occurred.
+    size_t position;
 
-        private this(string input, size_t pos, Reason why = Reason.unknown, string msg = "",
-            Throwable next = null, string file = __FILE__, size_t line = __LINE__)
-        {
-            input = input;
-            position = pos;
-            reason = why;
-            string message = format("An error occured in the UUID parser: %s\n" ~
-              " * Input:\t'%s'\n * Position:\t%s", msg, replace(replace(input,
-              "\r", "\\r"), "\n", "\\n"), pos);
-            super(message, file, line, next);
-        }
+    private this(string input, size_t pos, Reason why = Reason.unknown, string msg = "",
+        Throwable next = null, string file = __FILE__, size_t line = __LINE__) pure @trusted
+    {
+        input = input;
+        position = pos;
+        reason = why;
+        string message = format("An error occured in the UUID parser: %s\n" ~
+          " * Input:\t'%s'\n * Position:\t%s", msg, replace(replace(input,
+          "\r", "\\r"), "\n", "\\n"), pos);
+        super(message, file, line, next);
+    }
 }

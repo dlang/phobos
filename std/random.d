@@ -1248,57 +1248,119 @@ if (isFloatingPoint!(CommonType!(T1, T2)))
 }
 
 // Implementation of uniform for integral types
-auto uniform(string boundaries = "[)",
-        T1, T2, UniformRandomNumberGenerator)
-(T1 a, T2 b, ref UniformRandomNumberGenerator urng)
+/+ Description of algorithm and suggestion of correctness:
+
+The modulus operator maps an integer to a small, finite space. For instance, `x
+% 3` will map whatever x is into the range [0 .. 3). 0 maps to 0, 1 maps to 1, 2
+maps to 2, 3 maps to 0, and so on infinitely. As long as the integer is
+uniformly chosen from the infinite space of all non-negative integers then `x %
+3` will uniformly fall into that range.
+
+(Non-negative is important in this case because some definitions of modulus,
+namely the one used in computers generally, map negative numbers differently to
+(-3 .. 0]. `uniform` does not use negative number modulus, thus we can safely
+ignore that fact.)
+
+The issue with computers is that integers have a finite space they must fit in,
+and our uniformly chosen random number is picked in that finite space. So, that
+method is not sufficient. You can look at it as the integer space being divided
+into "buckets" and every bucket after the first bucket maps directly into that
+first bucket. `[0, 1, 2]`, `[3, 4, 5]`, ... When integers are finite, then the
+last bucket has the chance to be "incomplete": `[uint.max - 3, uint.max - 2,
+uint.max - 1]`, `[uint.max]` ... (the last bucket only has 1!). The issue here
+is that _every_ bucket maps _completely_ to the first bucket except for that
+last one. The last one doesn't have corresponding mappings to 1 or 2, in this
+case, which makes it unfair.
+
+So, the answer is to simply "reroll" if you're in that last bucket, since it's
+the only unfair one. Eventually you'll roll into a fair bucket. Simply, instead
+of the meaning of the last bucket being "maps to `[0]`", it changes to "maps to
+`[0, 1, 2]`", which is precisely what we want.
+
+To generalize, `upperDist` represents the size of our buckets (and, thus, the
+exclusive upper bound for our desired uniform number). `rnum` is a uniformly
+random number picked from the space of integers that a computer can hold (we'll
+say `UpperType` represents that type).
+
+We'll first try to do the mapping into the first bucket by doing `offset = rnum
+% upperDist`. We can figure out the position of the front of the bucket we're in
+by `bucketFront = rnum - offset`.
+
+If we start at `UpperType.max` and walk backwards `upperDist - 1` spaces, then
+the space we land on is the last acceptable position where a full bucket can
+fit:
+
+```
+   bucketFront     UpperType.max
+      v                 v
+[..., 0, 1, 2, ..., upperDist - 1]
+      ^~~ upperDist - 1 ~~^
+```
+
+If the bucket starts any later, then it must have lost at least one number and
+at least that number won't be represented fairly.
+
+```
+                bucketFront     UpperType.max
+                     v                v
+[..., upperDist - 1, 0, 1, 2, ..., upperDist - 2]
+          ^~~~~~~~ upperDist - 1 ~~~~~~~^
+```
+
+Hence, our condition to reroll is
+`bucketFront > (UpperType.max - (upperDist - 1))`
++/
+auto uniform(string boundaries = "[)", T1, T2, RandomGen)
+(T1 a, T2 b, ref RandomGen rng)
 if (isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2)))
 {
-    alias Unqual!(CommonType!(T1, T2)) ResultType;
-    // We handle the case "[)' as the common case, and we adjust all
-    // other cases to fit it.
+    alias ResultType = Unqual!(CommonType!(T1, T2));
     static if (boundaries[0] == '(')
     {
-        enforce(cast(ResultType) a < ResultType.max,
+        enforce(a < ResultType.max,
                 text("std.random.uniform(): invalid left bound ", a));
-        ResultType min = cast(ResultType) a + 1;
+        ResultType lower = a + 1;
     }
     else
     {
-        ResultType min = a;
+        ResultType lower = a;
     }
+
     static if (boundaries[1] == ']')
     {
-        enforce(min <= cast(ResultType) b,
+        enforce(lower <= b,
                 text("std.random.uniform(): invalid bounding interval ",
                         boundaries[0], a, ", ", b, boundaries[1]));
-        if (b == ResultType.max && min == ResultType.min)
+        if (b == ResultType.max && lower == ResultType.min)
         {
             // Special case - all bits are occupied
-            return .uniform!ResultType(urng);
+            return std.random.uniform!ResultType(rng);
         }
-        auto count = unsigned(b - min) + 1u;
-        static assert(count.min == 0);
+        auto upperDist = unsigned(b - lower) + 1u;
     }
     else
     {
-        enforce(min < cast(ResultType) b,
+        enforce(lower < b,
                 text("std.random.uniform(): invalid bounding interval ",
                         boundaries[0], a, ", ", b, boundaries[1]));
-        auto count = unsigned(b - min);
-        static assert(count.min == 0);
+        auto upperDist = unsigned(b - lower);
     }
-    assert(count != 0);
-    if (count == 1) return min;
-    alias typeof(count) CountType;
-    static assert(CountType.min == 0);
-    auto bucketSize = 1u + (CountType.max - count + 1) / count;
-    CountType r;
+
+    assert(upperDist != 0);
+
+    alias UpperType = typeof(upperDist);
+    static assert(UpperType.min == 0);
+
+    UpperType offset, rnum, bucketFront;
     do
     {
-        r = cast(CountType) (uniform!CountType(urng) / bucketSize);
-    }
-    while (r >= count);
-    return cast(typeof(return)) (min + r);
+        rnum = uniform!UpperType(rng);
+        offset = rnum % upperDist;
+        bucketFront = rnum - offset;
+    } // while we're in an unfair bucket...
+    while (bucketFront > (UpperType.max - (upperDist - 1)));
+
+    return cast(ResultType)(lower + offset);
 }
 
 unittest
@@ -1313,7 +1375,7 @@ unittest
     auto c = uniform(0.0, 1.0);
     assert(0 <= c && c < 1);
 
-    foreach(T; TypeTuple!(char, wchar, dchar, byte, ubyte, short, ushort,
+    foreach (T; TypeTuple!(char, wchar, dchar, byte, ubyte, short, ushort,
                           int, uint, long, ulong, float, double, real))
     {
         T lo = 0, hi = 100;
@@ -1321,6 +1383,75 @@ unittest
         size_t i = 50;
         while (--i && uniform(lo, hi) == init) {}
         assert(i > 0);
+    }
+
+    auto reproRng = Xorshift(239842);
+
+    foreach (T; TypeTuple!(char, wchar, dchar, byte, ubyte, short,
+                          ushort, int, uint, long, ulong))
+    {
+        T lo = T.min + 10, hi = T.max - 10;
+        T init = uniform(lo, hi, reproRng);
+        size_t i = 50;
+        while (--i && uniform(lo, hi, reproRng) == init) {}
+        assert(i > 0);
+    }
+
+    {
+        bool sawLB = false, sawUB = false;
+        foreach (i; 0 .. 50)
+        {
+            auto x = uniform!"[]"('a', 'd', reproRng);
+            if (x == 'a') sawLB = true;
+            if (x == 'd') sawUB = true;
+            assert('a' <= x && x <= 'd');
+        }
+        assert(sawLB && sawUB);
+    }
+
+    {
+        bool sawLB = false, sawUB = false;
+        foreach (i; 0 .. 50)
+        {
+            auto x = uniform('a', 'd', reproRng);
+            if (x == 'a') sawLB = true;
+            if (x == 'c') sawUB = true;
+            assert('a' <= x && x < 'd');
+        }
+        assert(sawLB && sawUB);
+    }
+
+    {
+        bool sawLB = false, sawUB = false;
+        foreach (i; 0 .. 50)
+        {
+            immutable int lo = -2, hi = 2;
+            auto x = uniform!"()"(lo, hi, reproRng);
+            if (x == (lo+1)) sawLB = true;
+            if (x == (hi-1)) sawUB = true;
+            assert(lo < x && x < hi);
+        }
+        assert(sawLB && sawUB);
+    }
+
+    {
+        bool sawLB = false, sawUB = false;
+        foreach (i; 0 .. 50)
+        {
+            immutable ubyte lo = 0, hi = 5;
+            auto x = uniform(lo, hi, reproRng);
+            if (x == lo) sawLB = true;
+            if (x == (hi-1)) sawUB = true;
+            assert(lo <= x && x < hi);
+        }
+        assert(sawLB && sawUB);
+    }
+
+    {
+        foreach (i; 0 .. 30)
+        {
+            assert(i == uniform(i, i+1, reproRng));
+        }
     }
 }
 
@@ -1428,7 +1559,8 @@ unittest
 
 /**
 Shuffles elements of $(D r) using $(D gen) as a shuffler. $(D r) must be
-a random-access range with length.
+a random-access range with length.  If no RNG is specified, $(D rndGen)
+will be used.
  */
 
 void randomShuffle(Range, RandomGen)(Range r, ref RandomGen gen)
@@ -1446,17 +1578,16 @@ void randomShuffle(Range)(Range r)
 
 unittest
 {
-    foreach(Rng; PseudoRngTypes)
+    foreach(RandomGen; PseudoRngTypes)
     {
-        static assert(isUniformRNG!Rng);
         // Also tests partialShuffle indirectly.
-        auto a = ([ 1, 2, 3, 4, 5, 6, 7, 8, 9 ]).dup;
+        auto a = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         auto b = a.dup;
-        Rng gen;
+        auto gen = RandomGen(unpredictableSeed);
         randomShuffle(a, gen);
-        assert(a.sort == b.sort);
+        assert(a.sort == b);
         randomShuffle(a);
-        assert(a.sort == b.sort);
+        assert(a.sort == b);
     }
 }
 
@@ -1469,23 +1600,39 @@ $(D partialShuffle) returns will not be independent of their order before
 $(D partialShuffle) was called.
 
 $(D r) must be a random-access range with length.  $(D n) must be less than
-or equal to $(D r.length).
+or equal to $(D r.length).  If no RNG is specified, $(D rndGen) will be used.
 */
-void partialShuffle(Range, RandomGen)(Range r, size_t n, ref RandomGen gen)
+void partialShuffle(Range, RandomGen)(Range r, in size_t n, ref RandomGen gen)
     if(isRandomAccessRange!Range && isUniformRNG!RandomGen)
 {
     enforce(n <= r.length, "n must be <= r.length for partialShuffle.");
     foreach (i; 0 .. n)
     {
-        swapAt(r, i, i + uniform(0, r.length - i, gen));
+        swapAt(r, i, i + uniform(0, n - i, gen));
     }
 }
 
 /// ditto
-void partialShuffle(Range)(Range r, size_t n)
+void partialShuffle(Range)(Range r, in size_t n)
     if(isRandomAccessRange!Range)
 {
     return partialShuffle(r, n, rndGen);
+}
+
+unittest
+{
+    foreach(RandomGen; PseudoRngTypes)
+    {
+        auto a = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        auto b = a.dup;
+        auto gen = RandomGen(unpredictableSeed);
+        partialShuffle(a, 5, gen);
+        assert(a[5 .. $] == b[5 .. $]);
+        assert(a[0 .. 5].sort == b[0 .. 5]);
+        partialShuffle(a, 6);
+        assert(a[6 .. $] == b[6 .. $]);
+        assert(a[0 .. 6].sort == b[0 .. 6]);
+    }
 }
 
 /**

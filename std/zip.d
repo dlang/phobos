@@ -37,6 +37,7 @@ import std.datetime;
 import core.bitop;
 import std.conv;
 import std.algorithm;
+import std.bitmanip : littleEndianToNative, nativeToLittleEndian;
 
 //debug=print;
 
@@ -62,7 +63,7 @@ enum CompressionMethod : ushort
 /**
  * A member of the ZipArchive.
  */
-class ArchiveMember
+final class ArchiveMember
 {
     /**
      * Read/Write: Usually the file name of the archive member; it is used to
@@ -84,16 +85,24 @@ class ArchiveMember
     private ushort _madeVersion = 20;
     private ushort _extractVersion = 20;
     private ushort _diskNumber;
-    // should be private when deprecation done
-    deprecated("Please use fileAttributes instead.") uint externalAttributes;
+    private uint _externalAttributes;
     private DosFileTime _time;
 
     ushort flags;                  /// Read/Write: normally set to 0
     ushort internalAttributes;     /// Read/Write
 
-    @property ushort madeVersion()     { return _madeVersion; }    /// Read Only
     @property ushort extractVersion()     { return _extractVersion; }    /// Read Only
     @property uint crc32()         { return _crc32; }    /// Read Only: cyclic redundancy check (CRC) value
+
+    // Explicitly undocumented. It will be removed in January 2015.
+    deprecated("Please use fileAttributes instead.")
+    @property ref inout(ushort) madeVersion() inout @safe pure nothrow
+    { return _madeVersion; }
+
+    // Explicitly undocumented. It will be removed in January 2015.
+    deprecated("Please use fileAttributes instead.")
+    @property ref inout(uint) externalAttributes() inout @safe pure nothrow
+    { return _externalAttributes; }
 
     /// Read Only: size of data of member in compressed form.
     @property uint compressedSize()     { return _compressedSize; }
@@ -127,19 +136,27 @@ class ArchiveMember
     {
         version (Posix)
         {
-            externalAttributes = attr & 0xFF << 16;
+            _externalAttributes = (attr & 0xFFFF) << 16;
             _madeVersion &= 0x00FF;
             _madeVersion |= 0x0300; // attributes are in UNIX format
         }
         else version (Windows)
         {
-            externalAttributes = attr;
+            _externalAttributes = attr;
             _madeVersion &= 0x00FF; // attributes are in MS-DOS and OS/2 format
         }
         else
         {
             static assert(0, "Unimplemented platform");
         }
+    }
+
+    version (Posix) unittest
+    {
+        auto am = new ArchiveMember();
+        am.fileAttributes = octal!100644;
+        assert(am._externalAttributes == octal!100644 << 16);
+        assert((am._madeVersion & 0xFF00) == 0x0300);
     }
 
     /**
@@ -154,13 +171,13 @@ class ArchiveMember
         version (Posix)
         {
             if ((_madeVersion & 0xFF00) == 0x0300)
-                return externalAttributes >> 16;
+                return _externalAttributes >> 16;
             return 0;
         }
         else version (Windows)
         {
             if ((_madeVersion & 0xFF00) == 0x0000)
-                return externalAttributes;
+                return _externalAttributes;
             return 0;
         }
         else
@@ -194,6 +211,7 @@ class ArchiveMember
      **/
     @property CompressionMethod compressionMethod() { return _compressionMethod; }
 
+    // Explicitly undocumented. It will be removed in January 2015.
     deprecated("Please use the enum CompressionMethod to set this property instead.")
     @property void compressionMethod(ushort cm)
     {
@@ -239,7 +257,7 @@ class ArchiveMember
  * Object representing the entire archive.
  * ZipArchives are collections of ArchiveMembers.
  */
-class ZipArchive
+final class ZipArchive
 {
     string comment;     /// Read/Write: the archive comment. Must be less than 65536 bytes in length.
 
@@ -335,13 +353,7 @@ class ZipArchive
         uint directorySize = 0;
         foreach (ArchiveMember de; _directory)
         {
-            // We have just compressed this member
-            if (de.compressedSize > 0)
-            {
-                auto off = de.offset + 30 + de.name.length + de.extra.length;
-                de._compressedData = _data[off .. off + de.compressedSize];
-            }
-            else
+            if (!de._compressedData.length)
             {
                 switch (de.compressionMethod)
                 {
@@ -361,7 +373,7 @@ class ZipArchive
                 de._compressedSize = to!uint(de._compressedData.length);
                 de._crc32 = std.zlib.crc32(0, cast(void[])de._expandedData);
             }
-
+            assert(de._compressedData.length == de._compressedSize);
 
             archiveSize += 30 + de.name.length +
                                 de.extra.length +
@@ -419,7 +431,7 @@ class ZipArchive
             putUshort(i + 32, cast(ushort)de.comment.length);
             putUshort(i + 34, de.diskNumber);
             putUshort(i + 36, de.internalAttributes);
-            putUint  (i + 38, de.externalAttributes);
+            putUint  (i + 38, de._externalAttributes);
             putUint  (i + 42, de.offset);
             i += 46;
 
@@ -546,7 +558,7 @@ class ZipArchive
             commentlen = getUshort(i + 32);
             de._diskNumber = getUshort(i + 34);
             de.internalAttributes = getUshort(i + 36);
-            de.externalAttributes = getUint(i + 38);
+            de._externalAttributes = getUint(i + 38);
             de.offset = getUint(i + 42);
             i += 46;
 
@@ -633,50 +645,24 @@ class ZipArchive
 
     ushort getUshort(int i)
     {
-        version (LittleEndian)
-        {
-            return *cast(ushort *)&_data[i];
-        }
-        else
-        {
-            ubyte b0 = _data[i];
-            ubyte b1 = _data[i + 1];
-            return (b1 << 8) | b0;
-        }
+        ubyte[2] result = data[i .. i + 2];
+        return littleEndianToNative!ushort(result);
     }
 
     uint getUint(int i)
     {
-        version (LittleEndian)
-        {
-            return *cast(uint *)&_data[i];
-        }
-        else
-        {
-            return bswap(*cast(uint *)&_data[i]);
-        }
+        ubyte[4] result = data[i .. i + 4];
+        return littleEndianToNative!uint(result);
     }
 
     void putUshort(int i, ushort us)
     {
-        version (LittleEndian)
-        {
-            *cast(ushort *)&_data[i] = us;
-        }
-        else
-        {
-            _data[i] = cast(ubyte)us;
-            _data[i + 1] = cast(ubyte)(us >> 8);
-        }
+        data[i .. i + 2] = nativeToLittleEndian(us);
     }
 
     void putUint(int i, uint ui)
     {
-        version (BigEndian)
-        {
-            ui = bswap(ui);
-        }
-        *cast(uint *)&_data[i] = ui;
+        data[i .. i + 4] = nativeToLittleEndian(ui);
     }
 }
 
@@ -693,4 +679,20 @@ debug(print)
         }
         printf("\n");
     }
+}
+
+unittest
+{
+    auto zip1 = new ZipArchive();
+    auto zip2 = new ZipArchive();
+    auto am1 = new ArchiveMember();
+    am1.name = "foo";
+    am1.expandedData = new ubyte[](1024);
+    zip1.addMember(am1);
+    zip1.build();
+    zip2.addMember(zip1.directory["foo"]);
+    zip2.build();
+    auto am2 = zip2.directory["foo"];
+    zip2.expand(am2);
+    assert(am1.expandedData == am2.expandedData);
 }

@@ -331,6 +331,7 @@ unittest
     --------------------
  +/
 T enforce(T)(T value, lazy const(char)[] msg = null, string file = __FILE__, size_t line = __LINE__)
+    if (is(typeof({ if (!value) {} })))
 {
     if (!value) bailOut(file, line, msg);
     return value;
@@ -344,6 +345,7 @@ T enforce(T)(T value, lazy const(char)[] msg = null, string file = __FILE__, siz
  +/
 T enforce(T, string file, size_t line = __LINE__)
     (T value, lazy const(char)[] msg = null)
+    if (is(typeof({ if (!value) {} })))
 {
     if (!value) bailOut(file, line, msg);
     return value;
@@ -357,7 +359,8 @@ T enforce(T, string file, size_t line = __LINE__)
  +/
 T enforce(T, Dg, string file = __FILE__, size_t line = __LINE__)
     (T value, scope Dg dg)
-    if (isSomeFunction!Dg && is(typeof( dg() )))
+    if (isSomeFunction!Dg && is(typeof( dg() )) &&
+        is(typeof({ if (!value) {} })))
 {
     if (!value) dg();
     return value;
@@ -460,7 +463,6 @@ unittest
     }
     enforceEx!E1(s);
     enforceEx!E2(s);
-    enforceEx!E3(s, "");    // deprecated
 }
 
 /++
@@ -534,18 +536,6 @@ template enforceEx(E)
     T enforceEx(T)(T value, string file = __FILE__, size_t line = __LINE__)
     {
         if (!value) throw new E(file, line);
-        return value;
-    }
-}
-
-// Explicitly undocumented. It will be removed in November 2013.
-deprecated("Please use the version of enforceEx which takes an exception that constructs with new E(msg, file, line).")
-template enforceEx(E)
-    if (is(typeof(new E(""))) && !is(typeof(new E("", __FILE__, __LINE__))) && !is(typeof(new E(__FILE__, __LINE__))))
-{
-    T enforceEx(T)(T value, lazy string msg = "")
-    {
-        if (!value) throw new E(msg);
         return value;
     }
 }
@@ -1223,7 +1213,7 @@ class ErrnoException : Exception
     type must be the same as the expression's type.
 
     Params:
-        E            = The type of $(D Throwable)s to catch. Defaults to ${D Exception}
+        E            = The type of $(D Throwable)s to catch. Defaults to $(D Exception)
         T1           = The type of the expression.
         T2           = The return type of the error handler.
         expression   = The expression to run and return its result.

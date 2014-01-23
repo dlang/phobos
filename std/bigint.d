@@ -32,7 +32,7 @@ private import std.traits;
 /** A struct representing an arbitrary precision integer
  *
  * All arithmetic operations are supported, except
- * unsigned shift right (>>>). Logical operations are not currently supported.
+ * unsigned shift right (>>>). Bitwise operations (|, &, ^, ~) are supported, and behave as if BigInt was an infinite length 2's complement number.
  *
  * BigInt implements value semantics using copy-on-write. This means that
  * assignment is cheap, but operations such as x++ will cause heap
@@ -113,6 +113,12 @@ public:
     }
 
     ///
+    this(T)(T x) pure if (is(Unqual!T == BigInt))
+    {
+        opAssign(x);
+    }
+
+    ///
     BigInt opAssign(T)(T x) pure if (isIntegral!T)
     {
         data = cast(ulong)absUnsign(x);
@@ -131,7 +137,7 @@ public:
     // BigInt op= integer
     BigInt opOpAssign(string op, T)(T y) pure
         if ((op=="+" || op=="-" || op=="*" || op=="/" || op=="%"
-          || op==">>" || op=="<<" || op=="^^") && isIntegral!T)
+          || op==">>" || op=="<<" || op=="^^" || op=="|" || op=="&" || op=="^") && isIntegral!T)
     {
         ulong u = absUnsign(y);
 
@@ -196,13 +202,18 @@ public:
             sign = (y & 1) ? sign : false;
             data = BigUint.pow(data, u);
         }
+        else static if (op=="|" || op=="&" || op=="^")
+        {
+            BigInt b = y;
+            opOpAssign!op(b);
+        }
         else static assert(0, "BigInt " ~ op[0..$-1] ~ "= " ~ T.stringof ~ " is not supported");
         return this;
     }
 
     // BigInt op= BigInt
     BigInt opOpAssign(string op, T)(T y) pure
-        if ((op=="+" || op== "-" || op=="*" || op=="/" || op=="%")
+        if ((op=="+" || op== "-" || op=="*" || op=="/" || op=="%" || op=="|" || op=="&" || op=="^")
             && is (T: BigInt))
     {
         static if (op == "+")
@@ -238,14 +249,18 @@ public:
                     sign = false;
             }
         }
+        else static if (op == "|" || op == "&" || op == "^")
+        {
+            data = BigUint.bitwiseOp!op(data, y.data, sign, y.sign, sign);
+        }
         else static assert(0, "BigInt " ~ op[0..$-1] ~ "= " ~ T.stringof ~ " is not supported");
         return this;
     }
 
     // BigInt op BigInt
     BigInt opBinary(string op, T)(T y) pure const
-        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="%") 
-			&& is (T: BigInt))
+        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="%" || op=="|" || op=="&" || op=="^")
+            && is (T: BigInt))
     {
         BigInt r = this;
         return r.opOpAssign!(op)(y);
@@ -253,7 +268,7 @@ public:
 
     // BigInt op integer
     BigInt opBinary(string op, T)(T y) pure const
-        if ((op=="+" || op == "*" || op=="-" || op=="/"
+        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="|" || op=="&" || op=="^"
             || op==">>" || op=="<<" || op=="^^") && isIntegral!T)
     {
         BigInt r = this;
@@ -274,7 +289,7 @@ public:
 
     // Commutative operators
     BigInt opBinaryRight(string op, T)(T y) pure const
-        if ((op=="+" || op=="*") && isIntegral!T)
+        if ((op=="+" || op=="*" || op=="|" || op=="&" || op=="^") && isIntegral!T)
     {
         return opBinary!(op)(y);
     }
@@ -318,13 +333,17 @@ public:
         }
     }
     // const unary operations
-    BigInt opUnary(string op)() pure const if (op=="+" || op=="-")
+    BigInt opUnary(string op)() pure const if (op=="+" || op=="-" || op=="~")
     {
        static if (op=="-")
        {
             BigInt r = this;
             r.negate();
             return r;
+        }
+        else static if (op=="~")
+        {
+            return -(this+1);
         }
         else static if (op=="+")
            return this;
@@ -364,7 +383,7 @@ public:
     {
         return !isZero();
     }
-    
+
     ///
     T opCast(T)() pure const if (is(Unqual!T == BigInt)) {
         return this;
@@ -526,7 +545,7 @@ private:
     }
 }
 
-string toDecimalString(const(BigInt) x) 
+string toDecimalString(const(BigInt) x)
 {
     string outbuff="";
     void sink(const(char)[] s) { outbuff ~= s; }
@@ -534,7 +553,7 @@ string toDecimalString(const(BigInt) x)
     return outbuff;
 }
 
-string toHex(const(BigInt) x) 
+string toHex(const(BigInt) x)
 {
     string outbuff="";
     void sink(const(char)[] s) { outbuff ~= s; }
@@ -795,7 +814,7 @@ unittest
     import std.math:abs;
     auto r = abs(BigInt(-1000)); // 6486
     assert(r == 1000);
-    
+
     auto r2 = abs(const(BigInt)(-500)); // 11188
     assert(r2 == 500);
     auto r3 = abs(immutable(BigInt)(-733)); // 11188
@@ -847,36 +866,61 @@ unittest // 11148
     void foo(BigInt) {}
     const BigInt cbi = 3;
     immutable BigInt ibi = 3;
-    
+
     assert(__traits(compiles, foo(cbi)));
     assert(__traits(compiles, foo(ibi)));
-    
+
     import std.typetuple : TypeTuple;
     import std.conv : to;
-    
+
     foreach (T1; TypeTuple!(BigInt, const(BigInt), immutable(BigInt)))
     {
         foreach (T2; TypeTuple!(BigInt, const(BigInt), immutable(BigInt)))
         {
             T1 t1 = 2;
             T2 t2 = t1;
-            
+
             T2 t2_1 = to!T2(t1);
             T2 t2_2 = cast(T2)t1;
-            
+
             assert(t2 == t1);
             assert(t2 == 2);
-            
+
             assert(t2_1 == t1);
             assert(t2_1 == 2);
-            
+
             assert(t2_2 == t1);
             assert(t2_2 == 2);
         }
     }
-    
+
     BigInt n = 2;
     n *= 2;
+}
+
+unittest // 8167
+{
+    BigInt a = BigInt(3);
+    BigInt b = BigInt(a);
+}
+
+unittest // 9061
+{
+    long l1 = 0x12345678_90ABCDEF;
+    long l2 = 0xFEDCBA09_87654321;
+    long l3 = l1 | l2;
+    long l4 = l1 & l2;
+    long l5 = l1 ^ l2;
+
+    BigInt b1 = l1;
+    BigInt b2 = l2;
+    BigInt b3 = b1 | b2;
+    BigInt b4 = b1 & b2;
+    BigInt b5 = b1 ^ b2;
+
+    assert(l3 == b3);
+    assert(l4 == b4);
+    assert(l5 == b5);
 }
 
 unittest // 11600

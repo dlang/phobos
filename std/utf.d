@@ -94,10 +94,6 @@ class UTFException : Exception
 }
 
 
-// Explicitly undocumented. It will be removed in November 2013.
-deprecated("Please use std.utf.UTFException instead.") alias UtfException = UTFException;
-
-
 /++
     Returns whether $(D c) is a valid UTF-32 character.
 
@@ -1933,6 +1929,8 @@ unittest
 
 unittest
 {
+    import std.algorithm : filter;
+
     assertCTFEable!(
     {
     foreach (S; TypeTuple!( char[], const  char[],  string,

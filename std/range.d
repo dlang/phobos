@@ -181,7 +181,7 @@ $(BOOKTABLE ,
         _range.
     ))
     $(TR $(TD $(D $(LREF only)))
-        $(TD Creates a _range that iterates over a single value.
+        $(TD Creates a _range that iterates over the given arguments.
     ))
 )
 
@@ -287,9 +287,12 @@ to $(WEB fantascienza.net/leonardo/so/, Leonardo Maffi).
 module std.range;
 
 public import std.array;
-import core.bitop, core.exception;
-import std.algorithm, std.conv, std.exception,  std.functional,
-    std.traits, std.typecons, std.typetuple, std.string;
+import std.algorithm : copy, count, equal, filter, filterBidirectional,
+    findSplitBefore, group, isSorted, joiner, move, map, max, min, sort, swap,
+    until;
+import std.traits;
+import std.typecons : Tuple, tuple;
+import std.typetuple : allSatisfy, staticMap, TypeTuple;
 
 // For testing only.  This code is included in a string literal to be included
 // in whatever module it's needed in, so that each module that uses it can be
@@ -464,8 +467,6 @@ enum dummyRanges = q{
 
 version(unittest)
 {
-    import std.container, std.conv, std.math, std.stdio;
-
     mixin(dummyRanges);
 
     // Tests whether forward, bidirectional and random access properties are
@@ -616,7 +617,7 @@ evaluated.
 
 In this table "doPut" is a method that places $(D e) into $(D r), using the
 correct primitive: $(D r.put(e)) if $(D R) defines $(D put), $(D r.front = e) if $(D r) is an input
-range (followed by $(D r.popFront()), or $(D r(e)) otherwise.
+range (followed by $(D r.popFront())), or $(D r(e)) otherwise.
 
 $(BOOKTABLE ,
     $(TR
@@ -857,6 +858,8 @@ unittest
 
 unittest
 {
+    import std.conv : to;
+
     static struct PutC(C)
     {
         string result;
@@ -1055,6 +1058,8 @@ template isOutputRange(R, E)
 
 unittest
 {
+    import std.stdio : writeln;
+
     void myprint(in char[] s) { writeln('[', s, ']'); }
     static assert(isOutputRange!(typeof(&myprint), char));
 
@@ -1074,6 +1079,12 @@ unittest
 
     static assert(!isOutputRange!(const(int)[], int));
     static assert(!isOutputRange!(inout(int)[], int));
+}
+
+unittest
+{
+    // 6973
+    static assert(isOutputRange!(OutputRange!int, int));
 }
 
 /**
@@ -2088,6 +2099,8 @@ assert(stride(stride(a, 2), 3) == stride(a, 6));
 auto stride(Range)(Range r, size_t n)
 if (isInputRange!(Unqual!Range))
 {
+    import std.exception : enforce;
+
     enforce(n > 0, "Stride cannot have step zero.");
 
     static if (is(typeof(stride(r.source, n)) == Range))
@@ -2503,6 +2516,8 @@ if (Ranges.length > 0 &&
                 }
             }
 
+            import std.typetuple : anySatisfy;
+
             static if (anySatisfy!(isInfinite, R))
             {
 // Propagate infiniteness.
@@ -2879,6 +2894,8 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
 {
     struct Result
     {
+        import std.conv : to;
+
         public Rs source;
         private size_t _current = size_t.max;
 
@@ -3010,6 +3027,9 @@ if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R))
 
 unittest
 {
+    import std.conv : text;
+    import std.exception : enforce;
+
     void test(int[] input, int[] witness)
     {
         enforce(equal(radial(input), witness),
@@ -3174,7 +3194,7 @@ if (isInputRange!(Unqual!Range) &&
 
         static if (hasAssignableElements!R)
         {
-            auto back(ElementType!R v)
+            @property auto back(ElementType!R v)
             {
                 // This has to return auto instead of void because of Bug 4706.
                 assert(!empty,
@@ -3325,6 +3345,16 @@ unittest
 
     Take!(Take!string) t3;
     t3 = take(t2, 1);
+}
+
+unittest
+{
+    alias R1 = typeof(repeat(1));
+    alias R2 = typeof(cycle([1]));
+    alias TR1 = Take!R1;
+    alias TR2 = Take!R2;
+    static assert(isBidirectionalRange!TR1);
+    static assert(isBidirectionalRange!TR2);
 }
 
 /**
@@ -3707,6 +3737,8 @@ unittest
         int[] _arr;
     }
 
+    import std.string : format;
+
     foreach(range; TypeTuple!(`[1, 2, 3, 4, 5]`,
                               `"hello world"`,
                               `"hello world"w`,
@@ -3818,6 +3850,8 @@ unittest
 }
 unittest
 {
+    import std.container : DList;
+
     //Remove all but the first two elements
     auto a = DList!int(0, 1, 9, 9, 9, 9);
     a.remove(a[].drop(2));
@@ -3837,6 +3871,8 @@ unittest
 }
 unittest
 {
+    import std.container : DList;
+
     //insert before the last two elements
     auto a = DList!int(0, 1, 2, 5, 6);
     a.insertAfter(a[].dropBack(2), [3, 4]);
@@ -3920,6 +3956,8 @@ R dropBackOne(R)(R range)
 
 unittest
 {
+    import std.container : DList;
+
     auto dl = DList!int(9, 1, 2, 3, 9);
     assert(dl[].dropOne().dropBackOne().equal([1, 2, 3]));
 }
@@ -4144,52 +4182,53 @@ unittest
 /**
 Repeats one value forever.
 
-Example:
-----
-enforce(equal(take(repeat(5), 4), [ 5, 5, 5, 5 ][]));
-----
+Models an infinite bidirectional and random access range, with slicing.
 */
 struct Repeat(T)
 {
     private T _value;
-    /// Range primitive implementations.
-    @property T front() { return _value; }
-    /// Ditto
+    @property inout(T) front() inout { return _value; }
+    @property inout(T) back() inout { return _value; }
     enum bool empty = false;
-    /// Ditto
     void popFront() {}
-    /// Ditto
-    @property Repeat!T save() { return this; }
-    /// Ditto
-    T opIndex(size_t) { return _value; }
-    /// Ditto
+    void popBack() {}
+    @property auto save() inout { return this; }
+    inout(T) opIndex(size_t) inout { return _value; }
     auto opSlice(size_t i, size_t j)
+    in
     {
-        version (assert)
-            if (i > j) throw new RangeError();
+        import core.exception : RangeError;
+        if (i > j) throw new RangeError();
+    }
+    body
+    {
         return this.takeExactly(j - i);
     }
-    /// Ditto
-    version (StdDdoc)
-        auto opDollar(){return DollarToken();} //Opaque signature for Ddoc
-    else
-        enum opDollar = DollarToken(); //Implementation defined signature
-
-    private static struct DollarToken{}
-    auto opSlice(size_t, DollarToken){return this;}
+    private static struct DollarToken {}
+    enum opDollar = DollarToken.init;
+    auto opSlice(size_t, DollarToken) inout { return this; }
 }
 
 /// Ditto
-Repeat!(T) repeat(T)(T value) { return Repeat!(T)(value); }
+Repeat!T repeat(T)(T value) { return Repeat!T(value); }
+
+///
+unittest
+{
+    assert(equal(5.repeat().take(4), [ 5, 5, 5, 5 ]));
+}
 
 unittest
 {
     auto  r = repeat(5);
     alias R = typeof(r);
+    static assert(isBidirectionalRange!R);
     static assert(isForwardRange!R);
     static assert(isInfinite!R);
     static assert(hasSlicing!R);
 
+    assert(r.back == 5);
+    assert(r.front == 5);
     assert(r.take(4).equal([ 5, 5, 5, 5 ]));
     assert(r[0 .. 4].equal([ 5, 5, 5, 5 ]));
 
@@ -4205,15 +4244,10 @@ Take!(Repeat!T) repeat(T)(T value, size_t n)
     return take(repeat(value), n);
 }
 
-// Explicitly undocumented. It will be removed in November 2013.
-deprecated("Please use std.range.repeat instead.") Take!(Repeat!T) replicate(T)(T value, size_t n)
-{
-    return repeat(value, n);
-}
-
+///
 unittest
 {
-    enforce(equal(repeat(5, 4), [ 5, 5, 5, 5 ][]));
+    assert(equal(5.repeat(4), 5.repeat().take(4)));
 }
 
 /**
@@ -4232,17 +4266,19 @@ assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
 
 Tip: This is a great way to implement simple circular buffers.
 */
-struct Cycle(Range)
-    if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
+struct Cycle(R)
+    if (isForwardRange!R && !isInfinite!R)
 {
-    alias Unqual!Range R;
-
     static if (isRandomAccessRange!R && hasLength!R)
     {
-        R _original;
-        size_t _index;
+        private R _original;
+        private size_t _index;
 
-        this(R input, size_t index = 0) { _original = input; _index = index; }
+        this(R input, size_t index = 0)
+        {
+            _original = input;
+            _index = index;
+        }
 
         @property auto ref front()
         {
@@ -4268,7 +4304,10 @@ struct Cycle(Range)
 
         enum bool empty = false;
 
-        void popFront() { ++_index; }
+        void popFront()
+        {
+            ++_index;
+        }
 
         auto ref opIndex(size_t n)
         {
@@ -4294,41 +4333,52 @@ struct Cycle(Range)
 
         @property Cycle save()
         {
-            return Cycle(this._original.save, this._index);
+            //No need to call _original.save, because Cycle never actually modifies _original
+            return Cycle(_original, _index);
         }
 
         private static struct DollarToken {}
         enum opDollar = DollarToken.init;
 
         auto opSlice(size_t i, size_t j)
+        in
         {
-            version (assert) if (i > j) throw new RangeError();
-            auto retval = this.save;
-            retval._index += i;
-            return takeExactly(retval, j - i);
+            import core.exception : RangeError;
+            if (i > j) throw new RangeError();
+        }
+        body
+        {
+            return this[i .. $].takeExactly(j - i);
         }
 
         auto opSlice(size_t i, DollarToken)
         {
-            auto retval = this.save;
-            retval._index += i;
-            return retval;
+            return typeof(this)(_original, _index + i);
         }
     }
     else
     {
-        R _original;
-        R _current;
+        private R _original;
+        private R _current;
 
-        this(R input) { _original = input; _current = input.save; }
+        this(R input)
+        {
+            _original = input;
+            _current = input.save;
+        }
 
-        @property auto ref front() { return _current.front; }
+        @property auto ref front()
+        {
+            return _current.front;
+        }
 
         static if (is(typeof((cast(const R)_current).front)))
+        {
             @property auto ref front() const
             {
                 return _current.front;
             }
+        }
 
         static if (hasAssignableElements!R)
         {
@@ -4348,9 +4398,10 @@ struct Cycle(Range)
 
         @property Cycle save()
         {
+            //No need to call _original.save, because Cycle never actually modifies _original
             Cycle ret = this;
-            ret._original = this._original.save;
-            ret._current =  this._current.save;
+            ret._original = _original;
+            ret._current =  _current.save;
             return ret;
         }
     }
@@ -4359,74 +4410,75 @@ struct Cycle(Range)
 template Cycle(R)
     if (isInfinite!R)
 {
-    alias R Cycle;
+    alias Cycle = R;
 }
 
 struct Cycle(R)
     if (isStaticArray!R)
 {
-    private alias typeof(R.init[0]) ElementType;
+    private alias ElementType = typeof(R.init[0]);
     private ElementType* _ptr;
     private size_t _index;
 
+nothrow:
     this(ref R input, size_t index = 0)
     {
         _ptr = input.ptr;
         _index = index;
     }
 
-    @property auto ref inout(ElementType) front() inout
+    @property ref inout(ElementType) front() inout
     {
         return _ptr[_index % R.length];
     }
 
     enum bool empty = false;
 
-    void popFront() { ++_index; }
+    void popFront()
+    {
+        ++_index;
+    }
 
     ref inout(ElementType) opIndex(size_t n) inout
     {
         return _ptr[(n + _index) % R.length];
     }
 
-    @property Cycle save()
+    @property inout(Cycle) save() inout
     {
         return this;
     }
 
     private static struct DollarToken {}
-
-    DollarToken opDollar()
-    {
-        return DollarToken.init;
-    }
+    enum opDollar = DollarToken.init;
 
     auto opSlice(size_t i, size_t j)
+    in
     {
-        version (assert) if (i > j) throw new RangeError();
-        auto retval = this.save;
-        retval._index += i;
-        return takeExactly(retval, j - i);
+        import core.exception : RangeError;
+        if (i > j) throw new RangeError();
+    }
+    body
+    {
+        return this[i .. $].takeExactly(j - i);
     }
 
-    auto opSlice(size_t i, DollarToken)
+    inout(typeof(this)) opSlice(size_t i, DollarToken) inout
     {
-        auto retval = this.save;
-        retval._index += i;
-        return retval;
+        return Cycle(*cast(R*)_ptr, _index + i);
     }
 }
 
 /// Ditto
 Cycle!R cycle(R)(R input)
-    if (isForwardRange!(Unqual!R) && !isInfinite!(Unqual!R))
+    if (isForwardRange!R && !isInfinite!R)
 {
     return Cycle!R(input);
 }
 
 /// Ditto
 Cycle!R cycle(R)(R input, size_t index = 0)
-    if (isRandomAccessRange!(Unqual!R) && !isInfinite!(Unqual!R))
+    if (isRandomAccessRange!R && !isInfinite!R)
 {
     return Cycle!R(input, index);
 }
@@ -4448,20 +4500,14 @@ unittest
     assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
     static assert(isForwardRange!(Cycle!(uint[])));
 
-    int[3] a = [ 1, 2, 3 ];
-    static assert(isStaticArray!(typeof(a)));
-    auto c = cycle(a);
-    assert(a.ptr == c._ptr);
-    assert(equal(take(cycle(a), 5), [ 1, 2, 3, 1, 2 ][]));
-    static assert(isForwardRange!(typeof(c)));
-
     // Make sure ref is getting propagated properly.
     int[] nums = [1,2,3];
     auto c2 = cycle(nums);
     c2[3]++;
     assert(nums[0] == 2);
 
-    static assert(is(Cycle!(immutable int[])));
+    immutable int[] immarr = [1, 2, 3];
+    auto cycleimm = cycle(immarr);
 
     foreach(DummyType; AllDummyRanges)
     {
@@ -4486,6 +4532,9 @@ unittest
 
                 static if (isRandomAccessRange!DummyType)
                 {
+                    import core.exception : RangeError;
+                    import std.exception : assertThrown;
+
                     {
                         cy[10] = 66;
                         scope(exit) cy[10] = 1;
@@ -4493,8 +4542,6 @@ unittest
                     }
 
                     assert(cRange[10] == 1);
-
-                    assertThrown!RangeError(cy[2..1]);
                 }
             }
 
@@ -4510,6 +4557,22 @@ unittest
             }
         }
     }
+}
+
+unittest // For static arrays.
+{
+    int[3] a = [ 1, 2, 3 ];
+    static assert(isStaticArray!(typeof(a)));
+    auto c = cycle(a);
+    assert(a.ptr == c._ptr);
+    assert(equal(take(cycle(a), 5), [ 1, 2, 3, 1, 2 ][]));
+    static assert(isForwardRange!(typeof(c)));
+
+    // Test qualifiers on slicing.
+    alias C = typeof(c);
+    static assert(is(typeof(c[1 .. $]) == C));
+    const cConst = c;
+    static assert(is(typeof(cConst[1 .. $]) == const(C)));
 }
 
 unittest // For infinite ranges
@@ -4595,6 +4658,8 @@ struct Zip(Ranges...)
     {
         @property bool empty()
         {
+            import std.exception : enforce;
+
             final switch (stoppingPolicy)
             {
             case StoppingPolicy.shortest:
@@ -4635,6 +4700,8 @@ struct Zip(Ranges...)
 
     private void emplaceIfCan(T)(T* addr)
     {
+        import std.conv : emplace;
+
         static if(__traits(compiles, emplace(addr)))
             emplace(addr);
         else
@@ -4646,6 +4713,8 @@ struct Zip(Ranges...)
 */
     @property ElementType front()
     {
+        import std.conv : emplace;
+
         ElementType result = void;
         foreach (i, Unused; R)
         {
@@ -4686,6 +4755,8 @@ struct Zip(Ranges...)
     {
         ElementType moveFront()
         {
+            import std.conv : emplace;
+
             ElementType result = void;
             foreach (i, Unused; R)
             {
@@ -4710,6 +4781,8 @@ struct Zip(Ranges...)
     {
         @property ElementType back()
         {
+            import std.conv : emplace;
+
             ElementType result = void;
             foreach (i, Unused; R)
             {
@@ -4733,6 +4806,8 @@ struct Zip(Ranges...)
         {
             ElementType moveBack()
             {
+                import std.conv : emplace;
+
                 ElementType result = void;
                 foreach (i, Unused; R)
                 {
@@ -4773,6 +4848,8 @@ struct Zip(Ranges...)
 */
     void popFront()
     {
+        import std.exception : enforce;
+
         final switch (stoppingPolicy)
         {
         case StoppingPolicy.shortest:
@@ -4804,6 +4881,8 @@ struct Zip(Ranges...)
 */
         void popBack()
         {
+            import std.exception : enforce;
+
             final switch (stoppingPolicy)
             {
             case StoppingPolicy.shortest:
@@ -4865,6 +4944,8 @@ struct Zip(Ranges...)
     static if (allSatisfy!(hasSlicing, R))
         auto opSlice(size_t from, size_t to)
         {
+            import std.conv : emplace;
+
             //Slicing an infinite range yields the type Take!R
             //For finite ranges, the type Take!R aliases to R
             Zip!(staticMap!(Take, R)) result = void;
@@ -4884,6 +4965,8 @@ struct Zip(Ranges...)
 */
         ElementType opIndex(size_t n)
         {
+            import std.conv : emplace;
+
             ElementType result = void;
             foreach (i, Range; R)
             {
@@ -4916,6 +4999,8 @@ struct Zip(Ranges...)
         {
             ElementType moveAt(size_t n)
             {
+                import std.conv : emplace;
+
                 ElementType result = void;
                 foreach (i, Range; R)
                 {
@@ -4958,6 +5043,8 @@ enum StoppingPolicy
 
 unittest
 {
+    import std.exception : assertThrown, assertNotThrown;
+
     int[] a = [ 1, 2, 3 ];
     float[] b = [ 1.0, 2.0, 3.0 ];
     foreach (e; zip(a, b))
@@ -5090,6 +5177,8 @@ unittest
 // Text for Issue 11196
 unittest
 {
+    import std.exception : assertThrown;
+
     static struct S { @disable this(); }
     static assert(__traits(compiles, zip((S[5]).init[])));
     auto z = zip(StoppingPolicy.longest, cast(S[]) null, new int[1]);
@@ -5102,6 +5191,8 @@ unittest
 */
 private string lockstepMixin(Ranges...)(bool withIndex)
 {
+    import std.string : format, outdent;
+
     string[] params;
     string[] emptyChecks;
     string[] dgArgs;
@@ -5125,6 +5216,8 @@ private string lockstepMixin(Ranges...)(bool withIndex)
     q{
         int opApply(scope int delegate(%s) dg)
         {
+            import std.exception : enforce;
+
             auto ranges = _ranges;
             int res;
             %s
@@ -5188,6 +5281,8 @@ struct Lockstep(Ranges...)
 {
     this(R ranges, StoppingPolicy sp = StoppingPolicy.shortest)
     {
+        import std.exception : enforce;
+
         _ranges = ranges;
         enforce(sp != StoppingPolicy.longest,
                 "Can't use StoppingPolicy.Longest on Lockstep.");
@@ -5228,6 +5323,8 @@ Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges, StoppingPolicy s)
 
 unittest
 {
+    import std.conv : to;
+
     // The filters are to make these the lowest common forward denominator ranges,
     // i.e. w/o ref return, random access, length, etc.
     auto foo = filter!"a"([1,2,3,4,5]);
@@ -5344,6 +5441,8 @@ foreach (e; take(recurrence!("a[n-1] * n")(1), 10)) { writeln(e); }
  */
 struct Recurrence(alias fun, StateType, size_t stateSize)
 {
+    private import std.functional : binaryFun;
+
     StateType[stateSize] _state;
     size_t _n;
 
@@ -5424,6 +5523,8 @@ unittest
 struct Sequence(alias fun, State)
 {
 private:
+    import std.functional : binaryFun;
+
     alias binaryFun!(fun, "a", "n") compute;
     alias typeof(compute(State.init, cast(size_t) 1)) ElementType;
     State _state;
@@ -5570,6 +5671,8 @@ auto iota(B, E, S)(B begin, E end, S step)
 if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         && isIntegral!S)
 {
+    import std.conv : unsigned;
+
     alias CommonType!(Unqual!B, Unqual!E) Value;
     alias Unqual!S StepType;
     alias typeof(unsigned((end - begin) / step)) IndexType;
@@ -5581,6 +5684,8 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
 
         this(Value current, Value pastLast, StepType step)
         {
+            import std.exception : enforce;
+
             if ((current < pastLast && step >= 0) ||
                     (current > pastLast && step <= 0))
             {
@@ -5662,6 +5767,8 @@ if (isFloatingPoint!(CommonType!(B, E)))
 auto iota(B, E)(B begin, E end)
 if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
 {
+    import std.conv : unsigned;
+
     alias CommonType!(Unqual!B, Unqual!E) Value;
     alias typeof(unsigned(end - begin)) IndexType;
 
@@ -5738,6 +5845,9 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
 
         this(Value start, Value end, Value step)
         {
+            import std.conv : to;
+            import std.exception : enforce;
+
             this.start = start;
             this.step = step;
             enforce(step != 0);
@@ -5808,6 +5918,8 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
 
 unittest
 {
+    import std.math : approxEqual, nextUp, nextDown;
+
     static assert(hasLength!(typeof(iota(0, 2))));
     auto r = iota(0, 10, 1);
     assert(r[$ - 1] == 9);
@@ -6053,6 +6165,8 @@ struct FrontTransversal(Ror,
             // (isRandomAccessRange!RangeOfRanges
             //     && hasLength!RangeType)
         {
+            import std.exception : enforce;
+
             if (empty) return;
             immutable commonLength = _input.front.length;
             foreach (e; _input)
@@ -6327,6 +6441,8 @@ struct Transversal(Ror,
         prime();
         static if (opt == TransverseOptions.enforceNotJagged)
         {
+            import std.exception : enforce;
+
             if (empty) return;
             immutable commonLength = _input.front.length;
             foreach (e; _input)
@@ -7184,68 +7300,251 @@ unittest
     assert(equal!`equal(a, b)`(oddsByPairs[3 .. $].take(2), [[13, 15], [17, 19]]));
 }
 
-/**
-This range iterates a single element. This is useful when a sole value
-must be passed to an algorithm expecting a range.
-
-Example:
-----
-assert(equal(only('♡'), "♡"));
-assert([1, 2, 3, 4].findSplitBefore(only(3))[0] == [1, 2]);
-
-string title = "The D Programming Language";
-assert(filter!isUpper(title).map!only().join(".") == "T.D.P.L");
-----
- */
-auto only(T)(T value)
+private struct OnlyResult(T, size_t arity)
 {
-    static struct Result
+    private this(Values...)(auto ref Values values)
     {
-        this(T value) { _value = value; }
-
-        @property T front() { assert(!_empty); return _value; }
-        @property T back() { assert(!_empty); return _value; }
-        @property bool empty() const { return _empty; }
-        @property size_t length() const { return !_empty; }
-        @property auto save() { return this; }
-        void popFront() { assert(!_empty); _empty = true; }
-        void popBack() { assert(!_empty); _empty = true; }
-        auto opSlice() { return this; }
-
-        T opIndex(size_t i)
-        {
-            version (assert)
-                if (_empty || i != 0)
-                    throw new RangeError;
-            return _value;
-        }
-
-        auto opSlice(size_t from, size_t to)
-        {
-            version (assert)
-                if (from > to || to > length)
-                    throw new RangeError;
-            Result copy = this;
-            copy._empty = _empty || from == to;
-            return copy;
-        }
-
-        private Unqual!T _value;
-        private bool _empty = false;
+        this.data = [values];
     }
-    return Result(value);
+
+    bool empty() @property
+    {
+        return frontIndex >= backIndex;
+    }
+
+    T front() @property
+    {
+        assert(!empty);
+        return data[frontIndex];
+    }
+
+    void popFront()
+    {
+        assert(!empty);
+        ++frontIndex;
+    }
+
+    T back() @property
+    {
+        assert(!empty);
+        return data[backIndex - 1];
+    }
+
+    void popBack()
+    {
+        assert(!empty);
+        --backIndex;
+    }
+
+    OnlyResult save() @property
+    {
+        return this;
+    }
+
+    size_t length() @property
+    {
+        return backIndex - frontIndex;
+    }
+
+    alias opDollar = length;
+
+    T opIndex(size_t idx)
+    {
+        // data[i + idx] will not throw a RangeError
+        // when i + idx points to elements popped
+        // with popBack
+        version(assert)
+        {
+            import core.exception  : RangeError;
+            if (idx >= length)
+                throw new RangeError;
+        }
+        return data[frontIndex + idx];
+    }
+
+    OnlyResult opSlice()
+    {
+        return this;
+    }
+
+    OnlyResult opSlice(size_t from, size_t to)
+    {
+        OnlyResult result = this;
+        result.frontIndex += from;
+        result.backIndex = this.frontIndex + to;
+
+        version(assert)
+        {
+            import core.exception : RangeError;
+            if (to < from || to > length)
+                throw new RangeError;
+        }
+        return result;
+    }
+
+    private size_t frontIndex = 0;
+    private size_t backIndex = arity;
+
+    // @@@BUG@@@ 10643
+    version(none)
+    {
+        static if(hasElaborateAssign!T)
+            private T[arity] data;
+        else
+            private T[arity] data = void;
+    }
+    else
+        private T[arity] data;
 }
 
+// Specialize for single-element results
+private struct OnlyResult(T, size_t arity : 1)
+{
+    @property T front() { assert(!_empty); return _value; }
+    @property T back() { assert(!_empty); return _value; }
+    @property bool empty() const { return _empty; }
+    @property size_t length() const { return !_empty; }
+    @property auto save() { return this; }
+    void popFront() { assert(!_empty); _empty = true; }
+    void popBack() { assert(!_empty); _empty = true; }
+    alias opDollar = length;
+
+    T opIndex(size_t i)
+    {
+        version (assert)
+        {
+            import core.exception : RangeError;
+            if (_empty || i != 0)
+                throw new RangeError;
+        }
+        return _value;
+    }
+
+    OnlyResult opSlice()
+    {
+        return this;
+    }
+
+    OnlyResult opSlice(size_t from, size_t to)
+    {
+        version (assert)
+        {
+            import core.exception : RangeError;
+            if (from > to || to > length)
+                throw new RangeError;
+        }
+        OnlyResult copy = this;
+        copy._empty = _empty || from == to;
+        return copy;
+    }
+
+    private Unqual!T _value;
+    private bool _empty = false;
+}
+
+// Specialize for the empty range
+private struct OnlyResult(T, size_t arity : 0)
+{
+    private static struct EmptyElementType {}
+
+    bool empty() @property { return true; }
+    size_t length() @property { return 0; }
+    alias opDollar = length;
+    EmptyElementType front() @property { assert(false); }
+    void popFront() { assert(false); }
+    EmptyElementType back() @property { assert(false); }
+    void popBack() { assert(false); }
+    OnlyResult save() @property { return this; }
+
+    EmptyElementType opIndex(size_t i)
+    {
+        version(assert)
+        {
+            import core.exception : RangeError;
+            throw new RangeError;
+        }
+        assert(false);
+    }
+
+    OnlyResult opSlice() { return this; }
+
+    OnlyResult opSlice(size_t from, size_t to)
+    {
+        version(assert)
+        {
+            import core.exception : RangeError;
+            if (from != 0 || to != 0)
+                throw new RangeError;
+        }
+        return this;
+    }
+}
+
+/**
+Assemble $(D values) into a range that carries all its
+elements in-situ.
+
+Useful when a single value or multiple disconnected values
+must be passed to an algorithm expecting a range, without
+having to perform dynamic memory allocation.
+
+As copying the range means copying all elements, it can be
+safely returned from functions. For the same reason, copying
+the returned range may be expensive for a large number of arguments.
+ */
+auto only(Values...)(auto ref Values values)
+    if(!is(CommonType!Values == void) || Values.length == 0)
+{
+    return OnlyResult!(CommonType!Values, Values.length)(values);
+}
+
+///
 unittest
 {
-    // Examples
     assert(equal(only('♡'), "♡"));
     assert([1, 2, 3, 4].findSplitBefore(only(3))[0] == [1, 2]);
+
+    assert(only("one", "two", "three").joiner(" ").equal("one two three"));
 
     import std.uni;
     string title = "The D Programming Language";
     assert(filter!isUpper(title).map!only().join(".") == "T.D.P.L");
+}
 
+version(unittest)
+{
+    // Verify that the same common type and same arity
+    // results in the same template instantiation
+    static assert(is(typeof(only(byte.init, int.init)) ==
+        typeof(only(int.init, byte.init))));
+
+    static assert(is(typeof(only((const(char)[]).init, string.init)) ==
+        typeof(only((const(char)[]).init, (const(char)[]).init))));
+}
+
+// Tests the zero-element result
+unittest
+{
+    auto emptyRange = only();
+
+    alias EmptyRange = typeof(emptyRange);
+    static assert(isInputRange!EmptyRange);
+    static assert(isForwardRange!EmptyRange);
+    static assert(isBidirectionalRange!EmptyRange);
+    static assert(isRandomAccessRange!EmptyRange);
+    static assert(hasLength!EmptyRange);
+    static assert(hasSlicing!EmptyRange);
+
+    assert(emptyRange.empty);
+    assert(emptyRange.length == 0);
+    assert(emptyRange.equal(emptyRange[]));
+    assert(emptyRange.equal(emptyRange.save));
+    assert(emptyRange[0 .. 0].equal(emptyRange));
+}
+
+// Tests the single-element result
+unittest
+{
     foreach (x; tuple(1, '1', 1.0, "1", [1]))
     {
         auto a = only(x);
@@ -7287,6 +7586,93 @@ unittest
     assert(equal(imm[0..0], imme));
     assert(equal(imm[1..1], imme));
     assert(imm[0] == 1);
+}
+
+// Tests multiple-element results
+unittest
+{
+    static assert(!__traits(compiles, only(1, "1")));
+
+    auto nums = only!(byte, uint, long)(1, 2, 3);
+    static assert(is(ElementType!(typeof(nums)) == long));
+    assert(nums.length == 3);
+
+    foreach(i; 0 .. 3)
+        assert(nums[i] == i + 1);
+
+    auto saved = nums.save;
+
+    foreach(i; 1 .. 4)
+    {
+        assert(nums.front == nums[0]);
+        assert(nums.front == i);
+        nums.popFront();
+        assert(nums.length == 3 - i);
+    }
+
+    assert(nums.empty);
+
+    assert(saved.equal(only(1, 2, 3)));
+    assert(saved.equal(saved[]));
+    assert(saved[0 .. 1].equal(only(1)));
+    assert(saved[0 .. 2].equal(only(1, 2)));
+    assert(saved[0 .. 3].equal(saved));
+    assert(saved[1 .. 3].equal(only(2, 3)));
+    assert(saved[2 .. 3].equal(only(3)));
+    assert(saved[0 .. 0].empty);
+    assert(saved[3 .. 3].empty);
+
+    alias data = TypeTuple!("one", "two", "three", "four");
+    static joined =
+        ["one two", "one two three", "one two three four"];
+    string[] joinedRange = joined;
+
+    foreach(argCount; TypeTuple!(2, 3, 4))
+    {
+        auto values = only(data[0 .. argCount]);
+        alias Values = typeof(values);
+        static assert(is(ElementType!Values == string));
+        static assert(isInputRange!Values);
+        static assert(isForwardRange!Values);
+        static assert(isBidirectionalRange!Values);
+        static assert(isRandomAccessRange!Values);
+        static assert(hasSlicing!Values);
+        static assert(hasLength!Values);
+
+        assert(values.length == argCount);
+        assert(values[0 .. $].equal(values[0 .. values.length]));
+        assert(values.joiner(" ").equal(joinedRange.front));
+        joinedRange.popFront();
+    }
+
+    assert(saved.retro.equal(only(3, 2, 1)));
+    assert(saved.length == 3);
+
+    assert(saved.back == 3);
+    saved.popBack();
+    assert(saved.length == 2);
+    assert(saved.back == 2);
+
+    assert(saved.front == 1);
+    saved.popFront();
+    assert(saved.length == 1);
+    assert(saved.front == 2);
+
+    saved.popBack();
+    assert(saved.empty);
+
+    auto imm = only!(immutable int, immutable int)(42, 24);
+    alias Imm = typeof(imm);
+    static assert(is(ElementType!Imm == immutable(int)));
+    assert(imm.front == 42);
+    imm.popFront();
+    assert(imm.front == 24);
+    imm.popFront();
+    assert(imm.empty);
+
+    static struct Test { int* a; }
+    immutable(Test) test;
+    only(test, test); // Works with mutable indirection
 }
 
 /**
@@ -7566,10 +7952,14 @@ interface OutputRange(E) {
 
 // CTFE function that generates mixin code for one put() method for each
 // type E.
-private string putMethods(E...)() {
+private string putMethods(E...)()
+{
+    import std.conv : to;
+
     string ret;
 
-    foreach(ti, Unused; E) {
+    foreach (ti, Unused; E)
+    {
         ret ~= "void put(E[" ~ to!string(ti) ~ "] e) { .put(_range, e); }";
     }
 
@@ -7936,6 +8326,8 @@ enum SearchPolicy
 struct SortedRange(Range, alias pred = "a < b")
 if (isRandomAccessRange!Range && hasLength!Range)
 {
+    private import std.functional : binaryFun;
+
     private alias binaryFun!pred predFun;
     private bool geq(L, R)(L lhs, R rhs)
     {
@@ -7955,7 +8347,9 @@ if (isRandomAccessRange!Range && hasLength!Range)
         if(!__ctfe)
         debug
         {
-            import std.random;
+            import core.bitop : bsr;
+            import std.conv : text;
+            import std.random : MinstdRand, uniform;
 
             // Check the sortedness of the input
             if (this._input.length < 2) return;
@@ -8322,9 +8716,6 @@ sgi.com/tech/stl/binary_search.html, binary_search).
         }
         return false;
     }
-
-    // Explicitly undocumented. It will be removed in November 2013.
-    deprecated("Please use contains instead.") alias contains canFind;
 }
 
 // Doc examples
@@ -8473,6 +8864,8 @@ unittest
 
 unittest
 {
+    import std.conv : text;
+
     int[] a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
     auto p = assumeSorted(a).equalRange(3);
     assert(equal(p, [ 3, 3, 3 ]), text(p));

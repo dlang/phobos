@@ -313,7 +313,7 @@ struct sqlite3_vfs {
   /*
   ** The methods above are in versions 1 and 2 of the sqlite_vfs object.
   ** New fields may be appended in figure versions.  The iVersion
-  ** value will increment whenever this happens. 
+  ** value will increment whenever this happens.
   */
 };
 
@@ -392,7 +392,7 @@ enum
 	SQLITE_CONFIG_MEMSTATUS     = 9,  /** boolean */
 	SQLITE_CONFIG_MUTEX        = 10,  /** sqlite3_mutex_methods* */
 	SQLITE_CONFIG_GETMUTEX     = 11;  /** sqlite3_mutex_methods* */
-/* previously SQLITE_CONFIG_CHUNKALLOC 12 which is now unused. */ 
+/* previously SQLITE_CONFIG_CHUNKALLOC 12 which is now unused. */
 /// Ditto
 enum
 	SQLITE_CONFIG_LOOKASIDE    = 13,  /** int int */
@@ -556,7 +556,7 @@ enum
 */
 void *sqlite3_trace(sqlite3*, void function (void*,const char*) xTrace, void*);
 /// Ditto
-void *sqlite3_profile(sqlite3*, 
+void *sqlite3_profile(sqlite3*,
              void function (void*,const char*,sqlite3_uint64) xProfile, void*);
 
 /**
@@ -955,26 +955,26 @@ void sqlite3_result_zeroblob(sqlite3_context*, int n);
 ** CAPI3REF: Define New Collating Sequences
 */
 int sqlite3_create_collation(
-  sqlite3*, 
-  const(char)*zName, 
-  int eTextRep, 
+  sqlite3*,
+  const(char)*zName,
+  int eTextRep,
   void *pArg,
   int function (void*,int,const void*,int,const void*) xCompare
 );
 /// Ditto
 int sqlite3_create_collation_v2(
-  sqlite3*, 
-  const(char)*zName, 
-  int eTextRep, 
+  sqlite3*,
+  const(char)*zName,
+  int eTextRep,
   void *pArg,
   int function (void*,int,const void*,int,const void*) xCompare,
   void function (void*) xDestroy
 );
 /// Ditto
 int sqlite3_create_collation16(
-  sqlite3*, 
+  sqlite3*,
   const(void)*zName,
-  int eTextRep, 
+  int eTextRep,
   void *pArg,
   int function (void*,int,const void*,int,const void*) xCompare
 );
@@ -983,13 +983,13 @@ int sqlite3_create_collation16(
 ** CAPI3REF: Collation Needed Callbacks
 */
 int sqlite3_collation_needed(
-  sqlite3*, 
-  void*, 
+  sqlite3*,
+  void*,
   void function (void*,sqlite3*,int eTextRep,const char*)
 );
 /// Ditto
 int sqlite3_collation_needed16(
-  sqlite3*, 
+  sqlite3*,
   void*,
   void function (void*,sqlite3*,int eTextRep,const void*)
 );
@@ -1014,7 +1014,7 @@ int sqlite3_rekey(
 );
 
 /**
-** Specify the activation key for a SEE database.  Unless 
+** Specify the activation key for a SEE database.  Unless
 ** activated, none of the SEE routines will work.
 */
 void sqlite3_activate_see(
@@ -1022,7 +1022,7 @@ void sqlite3_activate_see(
 );
 
 /**
-** Specify the activation key for a CEROD database.  Unless 
+** Specify the activation key for a CEROD database.  Unless
 ** activated, none of the CEROD routines will work.
 */
 void sqlite3_activate_cerod(
@@ -1065,7 +1065,7 @@ void *sqlite3_rollback_hook(sqlite3*, void function (void *), void*);
 ** CAPI3REF: Data Change Notification Callbacks
 */
 void *sqlite3_update_hook(
-  sqlite3*, 
+  sqlite3*,
   void function (void *,int ,char *, char *, sqlite3_int64),
   void*
 );
@@ -1537,7 +1537,7 @@ void sqlite3_log(int iErrCode, const char *zFormat, ...);
 ** CAPI3REF: Write-Ahead Log Commit Hook
 */
 void *sqlite3_wal_hook(
-  sqlite3*, 
+  sqlite3*,
   int function (void *,sqlite3*,const char*,int),
   void*
 );

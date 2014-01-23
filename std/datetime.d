@@ -5,13 +5,13 @@
 
     This module provides:
     $(UL
-        $(LI Types to represent points in time: $(D SysTime), $(D Date),
-             $(D TimeOfDay), and $(D DateTime).)
+        $(LI Types to represent points in time: $(LREF SysTime), $(LREF Date),
+             $(LREF TimeOfDay), and $(LREF2 .DateTime, DateTime).)
         $(LI Types to represent intervals of time.)
         $(LI Types to represent ranges over intervals of time.)
-        $(LI Types to represent time zones (used by $(D SysTime)).)
+        $(LI Types to represent time zones (used by $(LREF SysTime)).)
         $(LI A platform-independent, high precision stopwatch type:
-             $(D StopWatch))
+             $(LREF StopWatch))
         $(LI Benchmarking functions.)
         $(LI Various helper functions.)
     )
@@ -45,20 +45,21 @@
     be done on a series of time points.
 
     The types that the typical user is most likely to be interested in are
-    $(D Date) (if they want dates but don't care about time), $(D DateTime)
-    (if they want dates and times but don't care about time zones), $(D SysTime)
+    $(LREF Date) (if they want dates but don't care about time), $(LREF DateTime)
+    (if they want dates and times but don't care about time zones), $(LREF SysTime)
     (if they want the date and time from the OS and/or do care about time
     zones), and StopWatch (a platform-independent, high precision stop watch).
-    $(D Date) and $(D DateTime) are optimized for calendar-based operations,
-    while $(D SysTime) is designed for dealing with time from the OS. Check out
+    $(LREF Date) and $(LREF DateTime) are optimized for calendar-based operations,
+    while $(LREF SysTime) is designed for dealing with time from the OS. Check out
     their specific documentation for more details.
 
-    To get the current time, use $(D Clock.currTime). It will return the current
-    time as a $(D SysTime). To print it, $(D toString) is
+    To get the current time, use $(LREF2 .Clock.currTime, Clock.currTime).
+    It will return the current
+    time as a $(LREF SysTime). To print it, $(D toString) is
     sufficient, but if using $(D toISOString), $(D toISOExtString), or
     $(D toSimpleString), use the corresponding $(D fromISOString),
     $(D fromISOExtString), or $(D fromISOExtString) to create a
-    $(D SysTime) from the string.
+    $(LREF SysTime) from the string.
 
 --------------------
 auto currentTime = Clock.currTime();
@@ -81,11 +82,11 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
     weren't).
 
     Note:
-        $(D DateTimeException) is an alias for core.time's $(D TimeException),
+        $(LREF DateTimeException) is an alias for $(CXREF time, TimeException),
         so you don't need to worry about core.time functions and std.datetime
         functions throwing different exception types (except in the rare case
-        that they throw something other than $(D TimeException) or
-        $(D DateTimeException)).
+        that they throw something other than $(CXREF time, TimeException) or
+        $(LREF DateTimeException)).
 
     See_Also:
         <a href="../intro-to-datetime.html">Introduction to std&#46;_datetime </a><br>
@@ -99,6 +100,8 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
     License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Jonathan M Davis and Kato Shoichi
     Source:    $(PHOBOSSRC std/_datetime.d)
+    Macros:
+        LREF2=<a href="#$1">$(D $2)</a>
 +/
 module std.datetime;
 
@@ -238,8 +241,8 @@ enum AllowDayOverflow
 }
 
 /++
-    Indicates a direction in time. One example of its use is $(D Interval)'s
-    $(D expand) function which uses it to indicate whether the interval should
+    Indicates a direction in time. One example of its use is $(LREF2 .Interval, Interval)'s
+    $(LREF expand, expand) function which uses it to indicate whether the interval should
     be expanded backwards (into the past), forwards (into the future), or both.
   +/
 enum Direction
@@ -369,8 +372,8 @@ private immutable string[12] shortMonthNames = [
 //==============================================================================
 
 /++
-    Exception type used by std.datetime. It's an alias to TimeException, which
-    is what core.time uses. Either can be caught without concern about which
+    Exception type used by std.datetime. It's an alias to $(CXREF time, TimeException).
+    Either can be caught without concern about which
     module it came from.
   +/
 alias TimeException DateTimeException;
@@ -387,7 +390,7 @@ public:
         Returns the current time in the given time zone.
 
         Throws:
-            $(D ErrnoException) (on Posix) or $(D Exception) (on Windows)
+            $(XREF exception, ErrnoException) (on Posix) or $(XREF exception, Exception) (on Windows)
             if it fails to get the time of day.
       +/
     static SysTime currTime(immutable TimeZone tz = LocalTime())
@@ -424,7 +427,7 @@ public:
         current time.
 
         Throws:
-            $(D DateTimeException) if it fails to get the time.
+            $(LREF DateTimeException) if it fails to get the time.
       +/
     @trusted
     static @property long currStdTime()
@@ -479,7 +482,7 @@ public:
             either Windows or Linux.
 
         Throws:
-            $(D DateTimeException) if it fails to get the time.
+            $(LREF DateTimeException) if it fails to get the time.
       +/
     @safe
     static @property TickDuration currSystemTick()
@@ -505,7 +508,7 @@ public:
             either Windows or on Linux.
 
         Throws:
-            $(D DateTimeException) if it fails to get the time.
+            $(LREF DateTimeException) if it fails to get the time.
       +/
     @safe
     static @property TickDuration currAppTick()
@@ -534,41 +537,41 @@ private:
 /++
     $(D SysTime) is the type used to get the current time from the
     system or doing anything that involves time zones. Unlike
-    $(D DateTime), the time zone is an integral part of $(D SysTime) (though for
+    $(LREF DateTime), the time zone is an integral part of $(D SysTime) (though for
     local time applications, time zones can be ignored and
     it will work, since it defaults to using the local time zone). It holds its
     internal time in std time (hnsecs since midnight, January 1st, 1 A.D. UTC),
     so it interfaces well with the system time. However, that means that, unlike
-    $(D DateTime), it is not optimized for calendar-based operations, and
+    $(LREF DateTime), it is not optimized for calendar-based operations, and
     getting individual units from it such as years or days is going to involve
     conversions and be less efficient.
 
     For calendar-based operations that don't
-    care about time zones, then $(D DateTime) would be the type to
+    care about time zones, then $(LREF DateTime) would be the type to
     use. For system time, use $(D SysTime).
 
-    $(D Clock.currTime) will return the current time as a $(D SysTime).
-    To convert a $(D SysTime) to a $(D Date) or $(D DateTime), simply cast
-    it. To convert a $(D Date) or $(D DateTime) to a
+    $(LREF2 .Clock.currTime, Clock.currTime) will return the current time as a $(D SysTime).
+    To convert a $(D SysTime) to a $(LREF Date) or $(LREF DateTime), simply cast
+    it. To convert a $(LREF Date) or $(LREF DateTime) to a
     $(D SysTime), use $(D SysTime)'s constructor, and pass in the
-    intended time zone with it (or don't pass in a $(D TimeZone), and the local
+    intended time zone with it (or don't pass in a $(LREF2 .TimeZone, TimeZone), and the local
     time zone will be used). Be aware, however, that converting from a
-    $(D DateTime) to a $(D SysTime) will not necessarily be 100% accurate due to
+    $(LREF DateTime) to a $(D SysTime) will not necessarily be 100% accurate due to
     DST (one hour of the year doesn't exist and another occurs twice).
     To not risk any conversion errors, keep times as
     $(D SysTime)s. Aside from DST though, there shouldn't be any conversion
     problems.
 
     For using time zones other than local time or UTC, use
-    $(D PosixTimeZone) on Posix systems (or on Windows, if providing the TZ
-    Database files), and use $(D WindowsTimeZone) on Windows systems.
+    $(LREF PosixTimeZone) on Posix systems (or on Windows, if providing the TZ
+    Database files), and use $(LREF WindowsTimeZone) on Windows systems.
     The time in $(D SysTime) is kept internally in hnsecs from midnight,
     January 1st, 1 A.D. UTC. Conversion error cannot happen when changing
-    the time zone of a $(D SysTime). $(D LocalTime) is the $(D TimeZone) class
-    which represents the local time, and $(D UTC) is the $(D TimeZone) class
-    which represents UTC. $(D SysTime) uses $(D LocalTime) if no $(D TimeZone)
+    the time zone of a $(D SysTime). $(LREF LocalTime) is the $(LREF2 .TimeZone, TimeZone) class
+    which represents the local time, and $(D UTC) is the $(LREF2 .TimeZone, TimeZone) class
+    which represents UTC. $(D SysTime) uses $(LREF LocalTime) if no $(LREF2 .TimeZone, TimeZone)
     is provided. For more details on time zones, see the documentation for
-    $(D TimeZone), $(D PosixTimeZone), and $(D WindowsTimeZone).
+    $(LREF2 .TimeZone, TimeZone), $(LREF PosixTimeZone), and $(LREF WindowsTimeZone).
 
     $(D SysTime)'s range is from approximately 29,000 B.C. to approximately
     29,000 A.D.
@@ -579,11 +582,11 @@ public:
 
     /++
         Params:
-            dateTime = The $(D DateTime) to use to set this $(D SysTime)'s
-                       internal std time. As $(D DateTime) has no concept of
+            dateTime = The $(LREF DateTime) to use to set this $(LREF SysTime)'s
+                       internal std time. As $(LREF DateTime) has no concept of
                        time zone, tz is used as its time zone.
-            tz       = The $(D TimeZone) to use for this $(D SysTime). If null,
-                       $(D LocalTime) will be used. The given $(D DateTime) is
+            tz       = The $(LREF2 .TimeZone, TimeZone) to use for this $(LREF SysTime). If null,
+                       $(LREF LocalTime) will be used. The given $(LREF DateTime) is
                        assumed to be in the given time zone.
       +/
     this(in DateTime dateTime, immutable TimeZone tz = null) nothrow
@@ -618,16 +621,16 @@ public:
 
     /++
         Params:
-            dateTime = The $(D DateTime) to use to set this $(D SysTime)'s
-                       internal std time. As $(D DateTime) has no concept of
+            dateTime = The $(LREF DateTime) to use to set this $(LREF SysTime)'s
+                       internal std time. As $(LREF DateTime) has no concept of
                        time zone, tz is used as its time zone.
             fracSec  = The fractional seconds portion of the time.
-            tz       = The $(D TimeZone) to use for this $(D SysTime). If null,
-                       $(D LocalTime) will be used. The given $(D DateTime) is
+            tz       = The $(LREF2 .TimeZone, TimeZone) to use for this $(LREF SysTime). If null,
+                       $(LREF LocalTime) will be used. The given $(LREF DateTime) is
                        assumed to be in the given time zone.
 
         Throws:
-            $(D DateTimeException) if $(D fracSec) is negative.
+            $(LREF DateTimeException) if $(D fracSec) is negative.
       +/
     this(in DateTime dateTime, in FracSec fracSec, immutable TimeZone tz = null)
     {
@@ -680,11 +683,11 @@ public:
 
     /++
         Params:
-            date = The $(D Date) to use to set this $(D SysTime)'s internal std
-                   time. As $(D Date) has no concept of time zone, tz is used as
+            date = The $(LREF Date) to use to set this $(LREF SysTime)'s internal std
+                   time. As $(LREF Date) has no concept of time zone, tz is used as
                    its time zone.
-            tz   = The $(D TimeZone) to use for this $(D SysTime). If null,
-                   $(D LocalTime) will be used. The given $(D Date) is assumed
+            tz   = The $(LREF2 .TimeZone, TimeZone) to use for this $(LREF SysTime). If null,
+                   $(LREF LocalTime) will be used. The given $(LREF Date) is assumed
                    to be in the given time zone.
       +/
     this(in Date date, immutable TimeZone tz = null) nothrow
@@ -731,8 +734,8 @@ public:
 
         Params:
             stdTime = The number of hnsecs since midnight, January 1st, 1 A.D. UTC.
-            tz      = The $(D TimeZone) to use for this $(D SysTime). If null,
-                      $(D LocalTime) will be used.
+            tz      = The $(LREF2 .TimeZone, TimeZone) to use for this $(LREF SysTime). If null,
+                      $(LREF LocalTime) will be used.
       +/
     this(long stdTime, immutable TimeZone tz = null) pure nothrow
     {
@@ -759,7 +762,7 @@ public:
 
     /++
         Params:
-            rhs = The $(D SysTime) to assign to this one.
+            rhs = The $(LREF SysTime) to assign to this one.
       +/
     ref SysTime opAssign(const ref SysTime rhs) pure nothrow
     {
@@ -771,7 +774,7 @@ public:
 
     /++
         Params:
-            rhs = The $(D SysTime) to assign to this one.
+            rhs = The $(LREF SysTime) to assign to this one.
       +/
     ref SysTime opAssign(SysTime rhs) pure nothrow
     {
@@ -782,8 +785,8 @@ public:
     }
 
     /++
-        Checks for equality between this $(D SysTime) and the given
-        $(D SysTime).
+        Checks for equality between this $(LREF SysTime) and the given
+        $(LREF SysTime).
 
         Note that the time zone is ignored. Only the internal
         std times (which are in UTC) are compared.
@@ -843,9 +846,9 @@ public:
     }
 
     /++
-        Compares this $(D SysTime) with the given $(D SysTime).
+        Compares this $(LREF SysTime) with the given $(LREF SysTime).
 
-        Time zone is irrelevant when comparing $(D SysTime)s.
+        Time zone is irrelevant when comparing $(LREF SysTime)s.
 
         Returns:
             $(BOOKTABLE,
@@ -972,10 +975,10 @@ public:
         are B.C.
 
         Params:
-            year = The year to set this $(D SysTime)'s year to.
+            year = The year to set this $(LREF SysTime)'s year to.
 
         Throws:
-            $(D DateTimeException) if the new year is not a leap year and the
+            $(LREF DateTimeException) if the new year is not a leap year and the
             resulting date would be on February 29th.
 
         Examples:
@@ -1062,7 +1065,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).year == -7);
         Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
 
         Throws:
-            $(D DateTimeException) if $(D isAD) is true.
+            $(LREF DateTimeException) if $(D isAD) is true.
 
         Examples:
 --------------------
@@ -1109,10 +1112,10 @@ assert(SysTime(DateTime(-100, 1, 1, 4, 59, 0)).yearBC == 101);
         Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
 
         Params:
-            year = The year B.C. to set this $(D SysTime)'s year to.
+            year = The year B.C. to set this $(LREF SysTime)'s year to.
 
         Throws:
-            $(D DateTimeException) if a non-positive value is given.
+            $(LREF DateTimeException) if a non-positive value is given.
 
         Examples:
 --------------------
@@ -1273,10 +1276,10 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).month == 4);
         Month of a Gregorian Year.
 
         Params:
-            month = The month to set this $(D SysTime)'s month to.
+            month = The month to set this $(LREF SysTime)'s month to.
 
         Throws:
-            $(D DateTimeException) if the given month is not a valid month.
+            $(LREF DateTimeException) if the given month is not a valid month.
      +/
     @property void month(Month month)
     {
@@ -1438,10 +1441,10 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         Day of a Gregorian Month.
 
         Params:
-            day = The day of the month to set this $(D SysTime)'s day to.
+            day = The day of the month to set this $(LREF SysTime)'s day to.
 
         Throws:
-            $(D DateTimeException) if the given day is not a valid day of the
+            $(LREF DateTimeException) if the given day is not a valid day of the
             current month.
      +/
     @property void day(int day)
@@ -1597,10 +1600,10 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         Hours past midnight.
 
         Params:
-            hour = The hours to set this $(D SysTime)'s hour to.
+            hour = The hours to set this $(LREF SysTime)'s hour to.
 
         Throws:
-            $(D DateTimeException) if the given hour are not a valid hour of
+            $(LREF DateTimeException) if the given hour are not a valid hour of
             the day.
      +/
     @property void hour(int hour)
@@ -1717,10 +1720,10 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         Minutes past the current hour.
 
         Params:
-            minutes = The minute to set this $(D SysTime)'s minute to.
+            minute = The minute to set this $(LREF SysTime)'s minute to.
 
         Throws:
-            $(D DateTimeException) if the given minute are not a valid minute
+            $(LREF DateTimeException) if the given minute are not a valid minute
             of an hour.
      +/
     @property void minute(int minute)
@@ -1841,10 +1844,10 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         Seconds past the current minute.
 
         Params:
-            second = The second to set this $(D SysTime)'s second to.
+            second = The second to set this $(LREF SysTime)'s second to.
 
         Throws:
-            $(D DateTimeException) if the given second are not a valid second
+            $(LREF DateTimeException) if the given second are not a valid second
             of a minute.
      +/
     @property void second(int second)
@@ -1967,11 +1970,11 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         Fractional seconds passed the second.
 
         Params:
-            fracSec = The fractional seconds to set this $(D SysTimes)'s
+            fracSec = The fractional seconds to set this $(LREF SysTime)'s
                       fractional seconds to.
 
         Throws:
-            $(D DateTimeException) if $(D fracSec) is negative.
+            $(LREF DateTimeException) if $(D fracSec) is negative.
      +/
     @property void fracSec(FracSec fracSec)
     {
@@ -2029,7 +2032,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
     /++
         The total hnsecs from midnight, January 1st, 1 A.D. UTC. This is the
-        internal representation of $(D SysTime).
+        internal representation of $(LREF SysTime).
      +/
     @property long stdTime() const pure nothrow
     {
@@ -2055,7 +2058,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
     /++
         The total hnsecs from midnight, January 1st, 1 A.D. UTC. This is the
-        internal representation of $(D SysTime).
+        internal representation of $(LREF SysTime).
 
         Params:
             stdTime = The number of hnsecs since January 1st, 1 A.D. UTC.
@@ -2088,10 +2091,10 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
 
     /++
-        The current time zone of this $(D SysTime). Its internal time is always
+        The current time zone of this $(LREF SysTime). Its internal time is always
         kept in UTC, so there are no conversion issues between time zones due to
         DST. Functions which return all or part of the time - such as hours -
-        adjust the time to this $(D SysTime)'s time zone before returning.
+        adjust the time to this $(LREF SysTime)'s time zone before returning.
       +/
     @property immutable(TimeZone) timezone() const pure nothrow
     {
@@ -2100,13 +2103,13 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
 
     /++
-        The current time zone of this $(D SysTime). It's internal time is always
+        The current time zone of this $(LREF SysTime). It's internal time is always
         kept in UTC, so there are no conversion issues between time zones due to
         DST. Functions which return all or part of the time - such as hours -
-        adjust the time to this $(D SysTime)'s time zone before returning.
+        adjust the time to this $(LREF SysTime)'s time zone before returning.
 
         Params:
-            tz = The $(D TimeZone) to set this $(D SysTime)'s time zone to.
+            timezone = The $(LREF2 .TimeZone, TimeZone) to set this $(LREF SysTime)'s time zone to.
       +/
     @property void timezone(immutable TimeZone timezone) pure nothrow
     {
@@ -2118,7 +2121,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
 
     /++
-        Returns whether DST is in effect for this $(D SysTime).
+        Returns whether DST is in effect for this $(LREF SysTime).
       +/
     @property bool dstInEffect() const nothrow
     {
@@ -2128,7 +2131,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
 
     /++
-        Returns what the offset from UTC is for this $(D SysTime).
+        Returns what the offset from UTC is for this $(LREF SysTime).
         It includes the DST offset in effect at that time (if any).
       +/
     @property Duration utcOffset() const nothrow
@@ -2138,8 +2141,8 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
 
     /++
-        Returns a $(D SysTime) with the same std time as this one, but with
-        $(D LocalTime) as its time zone.
+        Returns a $(LREF SysTime) with the same std time as this one, but with
+        $(LREF LocalTime) as its time zone.
       +/
     SysTime toLocalTime() const nothrow
     {
@@ -2173,7 +2176,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
 
     /++
-        Returns a $(D SysTime) with the same std time as this one, but with
+        Returns a $(LREF SysTime) with the same std time as this one, but with
         $(D UTC) as its time zone.
       +/
     SysTime toUTC() const pure nothrow
@@ -2196,7 +2199,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
 
     /++
-        Returns a $(D SysTime) with the same std time as this one, but with
+        Returns a $(LREF SysTime) with the same std time as this one, but with
         given time zone as its time zone.
       +/
     SysTime toOtherTZ(immutable TimeZone tz) const pure nothrow
@@ -2224,7 +2227,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
     /++
         Returns a $(D time_t) which represents the same time as this
-        $(D SysTime).
+        $(LREF SysTime).
 
         Note that like all conversions in std.datetime, this is a truncating
         conversion.
@@ -2257,7 +2260,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
 
     /++
-        Returns a $(D timeval) which represents this $(D SysTime).
+        Returns a $(D timeval) which represents this $(LREF SysTime).
 
         Note that like all conversions in std.datetime, this is a truncating
         conversion.
@@ -2310,7 +2313,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
 
     /++
-        Returns a $(D tm) which represents this $(D SysTime).
+        Returns a $(D tm) which represents this $(LREF SysTime).
       +/
     tm toTM() const nothrow
     {
@@ -2406,7 +2409,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
 
     /++
-        Adds the given number of years or months to this $(D SysTime). A
+        Adds the given number of years or months to this $(LREF SysTime). A
         negative number will subtract.
 
         Note that if day overflow is allowed, and the date with the adjusted
@@ -2420,7 +2423,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         Params:
             units         = The type of units to add ("years" or "months").
             value         = The number of months or years to add to this
-                            $(D SysTime).
+                            $(LREF SysTime).
             allowOverflow = Whether the days should be allowed to overflow,
                             causing the month to increment.
 
@@ -3580,12 +3583,12 @@ assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
 
 
     /++
-        Adds the given number of years or months to this $(D SysTime). A
+        Adds the given number of years or months to this $(LREF SysTime). A
         negative number will subtract.
 
         The difference between rolling and adding is that rolling does not
-        affect larger units. Rolling a $(D SysTime) 12 months
-        gets the exact same $(D SysTime). However, the days can still be affected
+        affect larger units. Rolling a $(LREF SysTime) 12 months
+        gets the exact same $(LREF SysTime). However, the days can still be affected
         due to the differing number of days in each month.
 
         Because there are no units larger than years, there is no difference
@@ -3594,7 +3597,7 @@ assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
         Params:
             units         = The type of units to add ("years" or "months").
             value         = The number of months or years to add to this
-                            $(D SysTime).
+                            $(LREF SysTime).
             allowOverflow = Whether the days should be allowed to overflow,
                             causing the month to increment.
 
@@ -4468,12 +4471,12 @@ assert(st6 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
 
 
     /++
-        Adds the given number of units to this $(D SysTime). A negative number
+        Adds the given number of units to this $(LREF SysTime). A negative number
         will subtract.
 
         The difference between rolling and adding is that rolling does not
-        affect larger units. For instance, rolling a $(D SysTime) one
-        year's worth of days gets the exact same $(D SysTime).
+        affect larger units. For instance, rolling a $(LREF SysTime) one
+        year's worth of days gets the exact same $(LREF SysTime).
 
         Accepted units are $(D "days"), $(D "minutes"), $(D "hours"),
         $(D "minutes"), $(D "seconds"), $(D "msecs"), $(D "usecs"), and
@@ -4485,7 +4488,7 @@ assert(st6 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
 
         Params:
             units = The units to add.
-            value = The number of $(D_PARAM units) to add to this $(D SysTime).
+            value = The number of $(D_PARAM units) to add to this $(LREF SysTime).
 
         Examples:
 --------------------
@@ -5888,9 +5891,9 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
 
     /++
         Gives the result of adding or subtracting a duration from this
-        $(D SysTime).
+        $(LREF SysTime).
 
-        The legal types of arithmetic for $(D SysTime) using this operator are
+        The legal types of arithmetic for $(LREF SysTime) using this operator are
 
         $(BOOKTABLE,
         $(TR $(TD SysTime) $(TD +) $(TD duration) $(TD -->) $(TD SysTime))
@@ -5899,7 +5902,7 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
 
         Params:
             duration = The duration to add to or subtract from this
-                       $(D SysTime).
+                       $(LREF SysTime).
       +/
     SysTime opBinary(string op, D)(in D duration) const pure nothrow
         if((op == "+" || op == "-") &&
@@ -6114,9 +6117,9 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
 
     /++
         Gives the result of adding or subtracting a duration from this
-        $(D SysTime), as well as assigning the result to this $(D SysTime).
+        $(LREF SysTime), as well as assigning the result to this $(LREF SysTime).
 
-        The legal types of arithmetic for $(D SysTime) using this operator are
+        The legal types of arithmetic for $(LREF SysTime) using this operator are
 
         $(BOOKTABLE,
         $(TR $(TD SysTime) $(TD +) $(TD duration) $(TD -->) $(TD SysTime))
@@ -6125,7 +6128,7 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
 
         Params:
             duration = The duration to add to or subtract from this
-                       $(D SysTime).
+                       $(LREF SysTime).
       +/
     /+ref+/ SysTime opOpAssign(string op, D)(in D duration) pure nothrow
         if((op == "+" || op == "-") &&
@@ -6322,9 +6325,9 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
 
 
     /++
-        Gives the difference between two $(D SysTime)s.
+        Gives the difference between two $(LREF SysTime)s.
 
-        The legal types of arithmetic for $(D SysTime) using this operator are
+        The legal types of arithmetic for $(LREF SysTime) using this operator are
 
         $(BOOKTABLE,
         $(TR $(TD SysTime) $(TD -) $(TD SysTime) $(TD -->) $(TD duration))
@@ -6428,13 +6431,13 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
 
 
     /++
-        Returns the difference between the two $(D SysTime)s in months.
+        Returns the difference between the two $(LREF SysTime)s in months.
 
         To get the difference in years, subtract the year property
-        of two $(D SysTime)s. To get the difference in days or weeks,
-        subtract the $(D SysTime)s themselves and use the $(D Duration)
+        of two $(LREF SysTime)s. To get the difference in days or weeks,
+        subtract the $(LREF SysTime)s themselves and use the $(CXREF time, Duration)
         that results. Because converting between months and smaller
-        units requires a specific date (which $(D Duration)s don't have),
+        units requires a specific date (which $(CXREF time, Duration)s don't have),
         getting the difference in months requires some math using both
         the year and month properties, so this is a convenience function for
         getting the difference in months.
@@ -6446,7 +6449,7 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
         and January 31st are one month apart.
 
         Params:
-            rhs = The $(D SysTime) to subtract from this one.
+            rhs = The $(LREF SysTime) to subtract from this one.
 
         Examples:
 --------------------
@@ -6490,7 +6493,7 @@ assert(SysTime(Date(1999, 1, 1)).diffMonths(SysTime(Date(1999, 3, 31))) == -2);
 
 
     /++
-        Whether this $(D SysTime) is in a leap year.
+        Whether this $(LREF SysTime) is in a leap year.
      +/
     @property bool isLeapYear() const nothrow
     {
@@ -6512,7 +6515,7 @@ assert(SysTime(Date(1999, 1, 1)).diffMonths(SysTime(Date(1999, 3, 31))) == -2);
 
 
     /++
-        Day of the week this $(D SysTime) is on.
+        Day of the week this $(LREF SysTime) is on.
       +/
     @property DayOfWeek dayOfWeek() const nothrow
     {
@@ -6534,7 +6537,7 @@ assert(SysTime(Date(1999, 1, 1)).diffMonths(SysTime(Date(1999, 3, 31))) == -2);
 
 
     /++
-        Day of the year this $(D SysTime) is on.
+        Day of the year this $(LREF SysTime) is on.
 
         Examples:
 --------------------
@@ -6572,7 +6575,7 @@ assert(SysTime(DateTime(2000, 12, 31, 21, 20, 0)).dayOfYear == 366);
 
         Params:
             day = The day of the year to set which day of the year this
-                  $(D SysTime) is on.
+                  $(LREF SysTime) is on.
       +/
     @property void dayOfYear(int day)
     {
@@ -6603,7 +6606,7 @@ assert(SysTime(DateTime(2000, 12, 31, 21, 20, 0)).dayOfYear == 366);
 
 
     /++
-        The Xth day of the Gregorian Calendar that this $(D SysTime) is on.
+        The Xth day of the Gregorian Calendar that this $(LREF SysTime) is on.
 
         Examples:
 --------------------
@@ -6974,11 +6977,11 @@ assert(SysTime(DateTime(2010, 12, 31, 15, 45, 50)).dayOfGregorianCal == 734_137)
 
 
     /++
-        The Xth day of the Gregorian Calendar that this $(D SysTime) is on.
-        Setting this property does not affect the time portion of $(D SysTime).
+        The Xth day of the Gregorian Calendar that this $(LREF SysTime) is on.
+        Setting this property does not affect the time portion of $(LREF SysTime).
 
         Params:
-            days = The day of the Gregorian Calendar to set this $(D SysTime)
+            days = The day of the Gregorian Calendar to set this $(LREF SysTime)
                    to.
 
         Examples:
@@ -7250,7 +7253,7 @@ assert(st == SysTime(DateTime(2010, 12, 31, 12, 0, 0)));
 
 
     /++
-        The ISO 8601 week of the year that this $(D SysTime) is in.
+        The ISO 8601 week of the year that this $(LREF SysTime) is in.
 
         See_Also:
             $(WEB en.wikipedia.org/wiki/ISO_week_date, ISO Week Date).
@@ -7275,7 +7278,7 @@ assert(st == SysTime(DateTime(2010, 12, 31, 12, 0, 0)));
 
 
     /++
-        $(D SysTime) for the last day in the month that this Date is in.
+        $(LREF SysTime) for the last day in the month that this Date is in.
         The time portion of endOfMonth is always 23:59:59.9999999.
 
         Examples:
@@ -7374,7 +7377,7 @@ assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9),
 
 
     /++
-        The last day in the month that this $(D SysTime) is in.
+        The last day in the month that this $(LREF SysTime) is in.
 
         Examples:
 --------------------
@@ -7479,9 +7482,10 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
 
 
     /++
-        The julian day for this $(D SysTime) at the given time. For example,
-        prior to noon, 1996-03-31 would be the julian day number 2_450_173, so
-        this function returns 2_450_173, while from noon onward, the julian
+        The $(WEB en.wikipedia.org/wiki/Julian_day, Julian day)
+        for this $(LREF SysTime) at the given time. For example,
+        prior to noon, 1996-03-31 would be the Julian day number 2_450_173, so
+        this function returns 2_450_173, while from noon onward, the Julian
         day number would be 2_450_174, so this function returns 2_450_174.
       +/
     @property long julianDay() const nothrow
@@ -7528,8 +7532,8 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
 
 
     /++
-        The modified julian day for any time on this date (since, the modified
-        julian day changes at midnight).
+        The modified $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for any time on this date (since, the modified
+        Julian day changes at midnight).
       +/
     @property long modJulianDay() const nothrow
     {
@@ -7555,7 +7559,7 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
 
 
     /++
-        Returns a $(D Date) equivalent to this $(D SysTime).
+        Returns a $(LREF Date) equivalent to this $(LREF SysTime).
       +/
     Date opCast(T)() const nothrow
         if(is(Unqual!T == Date))
@@ -7592,7 +7596,7 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
 
 
     /++
-        Returns a $(D DateTime) equivalent to this $(D SysTime).
+        Returns a $(LREF DateTime) equivalent to this $(LREF SysTime).
       +/
     DateTime opCast(T)() const nothrow
         if(is(Unqual!T == DateTime))
@@ -7654,7 +7658,7 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
 
 
     /++
-        Returns a $(D TimeOfDay) equivalent to this $(D SysTime).
+        Returns a $(LREF TimeOfDay) equivalent to this $(LREF SysTime).
       +/
     TimeOfDay opCast(T)() const nothrow
         if(is(Unqual!T == TimeOfDay))
@@ -7718,7 +7722,7 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
 
 
     /++
-        Converts this $(D SysTime) to a string with the format
+        Converts this $(LREF SysTime) to a string with the format
         YYYYMMDDTHHMMSS.FFFFFFFTZ (where F is fractional seconds and TZ is time
         zone).
 
@@ -7728,7 +7732,7 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
         (so no trailing zeroes), and if there are no fractional seconds, then
         there is no decimal point.
 
-        If this $(D SysTime)'s time zone is $(D LocalTime), then TZ is empty.
+        If this $(LREF SysTime)'s time zone is $(LREF LocalTime), then TZ is empty.
         If its time zone is $(D UTC), then it is "Z". Otherwise, it is the
         offset from UTC (e.g. +1:00 or -7:00). Note that the offset from UTC
         is $(I not) enough to uniquely identify the time zone.
@@ -7863,7 +7867,7 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
 
 
     /++
-        Converts this $(D SysTime) to a string with the format
+        Converts this $(LREF SysTime) to a string with the format
         YYYY-MM-DDTHH:MM:SS.FFFFFFFTZ (where F is fractional seconds and TZ
         is the time zone).
 
@@ -7873,7 +7877,7 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
         (so no trailing zeroes), and if there are no fractional seconds, then
         there is no decimal point.
 
-        If this $(D SysTime)'s time zone is $(D LocalTime), then TZ is empty. If
+        If this $(LREF SysTime)'s time zone is $(LREF LocalTime), then TZ is empty. If
         its time zone is $(D UTC), then it is "Z". Otherwise, it is the offset
         from UTC (e.g. +1:00 or -7:00). Note that the offset from UTC is
         $(I not) enough to uniquely identify the time zone.
@@ -8006,7 +8010,7 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
     }
 
     /++
-        Converts this $(D SysTime) to a string with the format
+        Converts this $(LREF SysTime) to a string with the format
         YYYY-Mon-DD HH:MM:SS.FFFFFFFTZ (where F is fractional seconds and TZ
         is the time zone).
 
@@ -8016,7 +8020,7 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
         (so no trailing zeroes), and if there are no fractional seconds, then
         there is no decimal point.
 
-        If this $(D SysTime)'s time zone is $(D LocalTime), then TZ is empty. If
+        If this $(LREF SysTime)'s time zone is $(LREF LocalTime), then TZ is empty. If
         its time zone is $(D UTC), then it is "Z". Otherwise, it is the offset
         from UTC (e.g. +1:00 or -7:00). Note that the offset from UTC is
         $(I not) enough to uniquely identify the time zone.
@@ -8150,7 +8154,7 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
 
 
     /+
-        Converts this $(D SysTime) to a string.
+        Converts this $(LREF SysTime) to a string.
       +/
     //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
     //have versions of toString() with extra modifiers, so we define one version
@@ -8161,7 +8165,7 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
     }
 
     /++
-        Converts this $(D SysTime) to a string.
+        Converts this $(LREF SysTime) to a string.
       +/
     //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
     //have versions of toString() with extra modifiers, so we define one version
@@ -8186,7 +8190,7 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
 
 
     /++
-        Creates a $(D SysTime) from a string with the format
+        Creates a $(LREF SysTime) from a string with the format
         YYYYMMDDTHHMMSS.FFFFFFFTZ (where F is fractional seconds is the time
         zone). Whitespace is stripped from the given string.
 
@@ -8195,11 +8199,11 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
         all zeroes. However, a decimal point with nothing following it is
         invalid.
 
-        If there is no time zone in the string, then $(D LocalTime) is used. If
+        If there is no time zone in the string, then $(LREF LocalTime) is used. If
         the time zone is "Z", then $(D UTC) is used. Otherwise, a
         $(LREF SimpleTimeZone) which corresponds to the given offset from UTC is
-        used. To get the returned $(D SysTime) to be a particular time
-        zone, pass in that time zone and the $(D SysTime) to be returned
+        used. To get the returned $(LREF SysTime) to be a particular time
+        zone, pass in that time zone and the $(LREF SysTime) to be returned
         will be converted to that time zone (though it will still be read in as
         whatever time zone is in its string).
 
@@ -8212,8 +8216,8 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
                         conversion occurs if null).
 
         Throws:
-            $(D DateTimeException) if the given string is not in the ISO format
-            or if the resulting $(D SysTime) would not be valid.
+            $(LREF DateTimeException) if the given string is not in the ISO format
+            or if the resulting $(LREF SysTime) would not be valid.
 
         Examples:
 --------------------
@@ -8412,7 +8416,7 @@ assert(SysTime.fromISOString("20100704T070612+8:00") ==
 
 
     /++
-        Creates a $(D SysTime) from a string with the format
+        Creates a $(LREF SysTime) from a string with the format
         YYYY-MM-DDTHH:MM:SS.FFFFFFFTZ (where F is fractional seconds is the
         time zone). Whitespace is stripped from the given string.
 
@@ -8421,11 +8425,11 @@ assert(SysTime.fromISOString("20100704T070612+8:00") ==
         seconds with all zeroes. However, a decimal point with nothing following
         it is invalid.
 
-        If there is no time zone in the string, then $(D LocalTime) is used. If
+        If there is no time zone in the string, then $(LREF LocalTime) is used. If
         the time zone is "Z", then $(D UTC) is used. Otherwise, a
         $(LREF SimpleTimeZone) which corresponds to the given offset from UTC is
-        used. To get the returned $(D SysTime) to be a particular time
-        zone, pass in that time zone and the $(D SysTime) to be returned
+        used. To get the returned $(LREF SysTime) to be a particular time
+        zone, pass in that time zone and the $(LREF SysTime) to be returned
         will be converted to that time zone (though it will still be read in as
         whatever time zone is in its string).
 
@@ -8433,14 +8437,14 @@ assert(SysTime.fromISOString("20100704T070612+8:00") ==
         are +H, -H, +HH, -HH, +H:MM, -H:MM, +HH:MM, and -HH:MM.
 
         Params:
-            isoString = A string formatted in the ISO Extended format for dates
-                        and times.
-            tz        = The time zone to convert the given time to (no
-                        conversion occurs if null).
+            isoExtString = A string formatted in the ISO Extended format for dates
+                           and times.
+            tz           = The time zone to convert the given time to (no
+                           conversion occurs if null).
 
         Throws:
-            $(D DateTimeException) if the given string is not in the ISO format
-            or if the resulting $(D SysTime) would not be valid.
+            $(LREF DateTimeException) if the given string is not in the ISO format
+            or if the resulting $(LREF SysTime) would not be valid.
 
         Examples:
 --------------------
@@ -8644,7 +8648,7 @@ assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
 
 
     /++
-        Creates a $(D SysTime) from a string with the format
+        Creates a $(LREF SysTime) from a string with the format
         YYYY-MM-DD HH:MM:SS.FFFFFFFTZ (where F is fractional seconds is the
         time zone). Whitespace is stripped from the given string.
 
@@ -8653,11 +8657,11 @@ assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
         with all zeroes. However, a decimal point with nothing following it is
         invalid.
 
-        If there is no time zone in the string, then $(D LocalTime) is used. If
+        If there is no time zone in the string, then $(LREF LocalTime) is used. If
         the time zone is "Z", then $(D UTC) is used. Otherwise, a
         $(LREF SimpleTimeZone) which corresponds to the given offset from UTC is
-        used. To get the returned $(D SysTime) to be a particular time
-        zone, pass in that time zone and the $(D SysTime) to be returned
+        used. To get the returned $(LREF SysTime) to be a particular time
+        zone, pass in that time zone and the $(LREF SysTime) to be returned
         will be converted to that time zone (though it will still be read in as
         whatever time zone is in its string).
 
@@ -8672,8 +8676,8 @@ assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
                            conversion occurs if null).
 
         Throws:
-            $(D DateTimeException) if the given string is not in the ISO format
-            or if the resulting $(D SysTime) would not be valid.
+            $(LREF DateTimeException) if the given string is not in the ISO format
+            or if the resulting $(LREF SysTime) would not be valid.
 
         Examples:
 --------------------
@@ -8883,10 +8887,10 @@ assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+8:00") ==
 
 
     /++
-        Returns the $(D SysTime) farthest in the past which is representable
-        by $(D SysTime).
+        Returns the $(LREF SysTime) farthest in the past which is representable
+        by $(LREF SysTime).
 
-        The $(D SysTime) which is returned is in UTC.
+        The $(LREF SysTime) which is returned is in UTC.
       +/
     @property static SysTime min() pure nothrow
     {
@@ -8904,10 +8908,10 @@ assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+8:00") ==
 
 
     /++
-        Returns the $(D SysTime) farthest in the future which is representable
-        by $(D SysTime).
+        Returns the $(LREF SysTime) farthest in the future which is representable
+        by $(LREF SysTime).
 
-        The $(D SysTime) which is returned is in UTC.
+        The $(LREF SysTime) which is returned is in UTC.
       +/
     @property static SysTime max() pure nothrow
     {
@@ -8927,7 +8931,7 @@ assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+8:00") ==
 private:
 
     /+
-        Returns $(D stdTime) converted to $(D SysTime)'s time zone.
+        Returns $(D stdTime) converted to $(LREF SysTime)'s time zone.
       +/
     @property long adjTime() const nothrow
     {
@@ -8936,7 +8940,7 @@ private:
 
 
     /+
-        Converts the given hnsecs from $(D SysTime)'s time zone to std time.
+        Converts the given hnsecs from $(LREF SysTime)'s time zone to std time.
       +/
     @property void adjTime(long adjTime) nothrow
     {
@@ -8959,7 +8963,9 @@ private:
 
 
 /++
-    Represents a date in the Proleptic Gregorian Calendar ranging from
+    Represents a date in the
+    $(WEB http://en.wikipedia.org/wiki/Proleptic_Gregorian_calendar, Proleptic Gregorian Calendar)
+    ranging from
     32,768 B.C. to 32,767 A.D. Positive years are A.D. Non-positive years are
     B.C.
 
@@ -8967,9 +8973,9 @@ private:
     optimized for calendar-based operations.
 
     $(D Date) uses the Proleptic Gregorian Calendar, so it assumes the Gregorian
-    leap year calculations for its entire length. And, as per
-    $(WEB en.wikipedia.org/wiki/ISO_8601, ISO 8601), it also treats 1 B.C. as
-    year 0. So, 1 B.C. is 0, 2 B.C. is -1, etc. Use $(D yearBC) if want B.C. as
+    leap year calculations for its entire length. As per
+    $(WEB en.wikipedia.org/wiki/ISO_8601, ISO 8601), it treats 1 B.C. as
+    year 0, i.e. 1 B.C. is 0, 2 B.C. is -1, etc. Use $(LREF yearBC) to use B.C. as
     a positive integer with 1 B.C. being the year prior to 1 A.D.
 
     Year 0 is a leap year.
@@ -8980,7 +8986,7 @@ public:
 
     /++
         Throws:
-            $(D DateTimeException) if the resulting $(D Date) would not be valid.
+            $(LREF DateTimeException) if the resulting $(LREF Date) would not be valid.
 
         Params:
             year  = Year of the Gregorian Calendar. Positive values are A.D.
@@ -9065,7 +9071,7 @@ public:
     /++
         Params:
             day = The Xth day of the Gregorian Calendar that the constructed
-                  $(D Date) will be for.
+                  $(LREF Date) will be for.
      +/
     this(int day) pure nothrow
     {
@@ -9199,7 +9205,7 @@ public:
 
 
     /++
-        Compares this $(D Date) with the given $(D Date).
+        Compares this $(LREF Date) with the given $(LREF Date).
 
         Returns:
             $(BOOKTABLE,
@@ -9359,7 +9365,7 @@ assert(Date(-7, 4, 5).year == -7);
             year = The year to set this Date's year to.
 
         Throws:
-            $(D DateTimeException) if the new year is not a leap year and the
+            $(LREF DateTimeException) if the new year is not a leap year and the
             resulting date would be on February 29th.
      +/
     @property void year(int year) pure
@@ -9406,7 +9412,7 @@ assert(Date(-7, 4, 5).year == -7);
         Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
 
         Throws:
-            $(D DateTimeException) if $(D isAD) is true.
+            $(LREF DateTimeException) if $(D isAD) is true.
 
         Examples:
 --------------------
@@ -9450,10 +9456,10 @@ assert(Date(-100, 1, 1).yearBC == 101);
         Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
 
         Params:
-            year = The year B.C. to set this $(D Date)'s year to.
+            year = The year B.C. to set this $(LREF Date)'s year to.
 
         Throws:
-            $(D DateTimeException) if a non-positive value is given.
+            $(LREF DateTimeException) if a non-positive value is given.
 
         Examples:
 --------------------
@@ -9540,10 +9546,10 @@ assert(Date(-7, 4, 5).month == 4);
         Month of a Gregorian Year.
 
         Params:
-            month = The month to set this $(D Date)'s month to.
+            month = The month to set this $(LREF Date)'s month to.
 
         Throws:
-            $(D DateTimeException) if the given month is not a valid month or if
+            $(LREF DateTimeException) if the given month is not a valid month or if
             the current day would not be valid in the given month.
      +/
     @property void month(Month month) pure
@@ -9627,10 +9633,10 @@ assert(Date(-7, 4, 5).day == 5);
         Day of a Gregorian Month.
 
         Params:
-            day = The day of the month to set this $(D Date)'s day to.
+            day = The day of the month to set this $(LREF Date)'s day to.
 
         Throws:
-            $(D DateTimeException) if the given day is not a valid day of the
+            $(LREF DateTimeException) if the given day is not a valid day of the
             current month.
      +/
     @property void day(int day) pure
@@ -9729,7 +9735,7 @@ assert(Date(-7, 4, 5).day == 5);
 
 
     /++
-        Adds the given number of years or months to this $(D Date). A negative
+        Adds the given number of years or months to this $(LREF Date). A negative
         number will subtract.
 
         Note that if day overflow is allowed, and the date with the adjusted
@@ -9743,7 +9749,7 @@ assert(Date(-7, 4, 5).day == 5);
         Params:
             units         = The type of units to add ("years" or "months").
             value         = The number of months or years to add to this
-                            $(D Date).
+                            $(LREF Date).
             allowOverflow = Whether the day should be allowed to overflow,
                             causing the month to increment.
 
@@ -10517,12 +10523,12 @@ assert(d4 == Date(2001, 2, 28));
 
 
     /++
-        Adds the given number of years or months to this $(D Date). A negative
+        Adds the given number of years or months to this $(LREF Date). A negative
         number will subtract.
 
         The difference between rolling and adding is that rolling does not
-        affect larger units. Rolling a $(D Date) 12 months gets
-        the exact same $(D Date). However, the days can still be affected due to
+        affect larger units. Rolling a $(LREF Date) 12 months gets
+        the exact same $(LREF Date). However, the days can still be affected due to
         the differing number of days in each month.
 
         Because there are no units larger than years, there is no difference
@@ -10531,7 +10537,9 @@ assert(d4 == Date(2001, 2, 28));
         Params:
             units         = The type of units to add ("years" or "months").
             value         = The number of months or years to add to this
-                            $(D Date).
+                            $(LREF Date).
+            allowOverflow = Whether the day should be allowed to overflow,
+                            causing the month to increment.
 
         Examples:
 --------------------
@@ -11200,18 +11208,18 @@ assert(d6 == Date(2001, 2, 28));
 
 
     /++
-        Adds the given number of units to this $(D Date). A negative number will
+        Adds the given number of units to this $(LREF Date). A negative number will
         subtract.
 
         The difference between rolling and adding is that rolling does not
-        affect larger units. For instance, rolling a $(D Date) one
-        year's worth of days gets the exact same $(D Date).
+        affect larger units. For instance, rolling a $(LREF Date) one
+        year's worth of days gets the exact same $(LREF Date).
 
         The only accepted units are $(D "days").
 
         Params:
             units = The units to add. Must be $(D "days").
-            value = The number of days to add to this $(D Date).
+            days  = The number of days to add to this $(LREF Date).
 
         Examples:
 --------------------
@@ -11457,7 +11465,7 @@ assert(d == Date(2010, 1, 25));
 
     /++
         Gives the result of adding or subtracting a duration from this
-        $(D Date).
+        $(LREF Date).
 
         The legal types of arithmetic for Date using this operator are
 
@@ -11467,7 +11475,7 @@ assert(d == Date(2010, 1, 25));
         )
 
         Params:
-            duration = The duration to add to or subtract from this $(D Date).
+            duration = The duration to add to or subtract from this $(LREF Date).
       +/
     Date opBinary(string op, D)(in D duration) const pure nothrow
         if((op == "+" || op == "-") &&
@@ -11569,9 +11577,9 @@ assert(d == Date(2010, 1, 25));
 
     /++
         Gives the result of adding or subtracting a duration from this
-        $(D Date), as well as assigning the result to this $(D Date).
+        $(LREF Date), as well as assigning the result to this $(LREF Date).
 
-        The legal types of arithmetic for $(D Date) using this operator are
+        The legal types of arithmetic for $(LREF Date) using this operator are
 
         $(BOOKTABLE,
         $(TR $(TD Date) $(TD +) $(TD duration) $(TD -->) $(TD Date))
@@ -11579,7 +11587,7 @@ assert(d == Date(2010, 1, 25));
         )
 
         Params:
-            duration = The duration to add to or subtract from this $(D Date).
+            duration = The duration to add to or subtract from this $(LREF Date).
       +/
     /+ref+/ Date opOpAssign(string op, D)(in D duration) pure nothrow
         if((op == "+" || op == "-") &&
@@ -11661,7 +11669,7 @@ assert(d == Date(2010, 1, 25));
 
 
     /++
-        Gives the difference between two $(D Date)s.
+        Gives the difference between two $(LREF Date)s.
 
         The legal types of arithmetic for Date using this operator are
 
@@ -11706,25 +11714,25 @@ assert(d == Date(2010, 1, 25));
 
 
     /++
-        Returns the difference between the two $(D Date)s in months.
+        Returns the difference between the two $(LREF Date)s in months.
 
         To get the difference in years, subtract the year property
-        of two $(D SysTime)s. To get the difference in days or weeks,
-        subtract the $(D SysTime)s themselves and use the $(D Duration)
+        of two $(LREF SysTime)s. To get the difference in days or weeks,
+        subtract the $(LREF SysTime)s themselves and use the $(CXREF time, Duration)
         that results. Because converting between months and smaller
-        units requires a specific date (which $(D Duration)s don't have),
+        units requires a specific date (which $(CXREF time, Duration)s don't have),
         getting the difference in months requires some math using both
         the year and month properties, so this is a convenience function for
         getting the difference in months.
 
         Note that the number of days in the months or how far into the month
-        either $(D Date) is is irrelevant. It is the difference in the month
+        either $(LREF Date) is is irrelevant. It is the difference in the month
         property combined with the difference in years * 12. So, for instance,
         December 31st and January 1st are one month apart just as December 1st
         and January 31st are one month apart.
 
         Params:
-            rhs = The $(D Date) to subtract from this one.
+            rhs = The $(LREF Date) to subtract from this one.
 
         Examples:
 --------------------
@@ -11970,7 +11978,7 @@ assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
 
 
     /++
-        Whether this $(D Date) is in a leap year.
+        Whether this $(LREF Date) is in a leap year.
      +/
     @property bool isLeapYear() const pure nothrow
     {
@@ -11992,7 +12000,7 @@ assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
 
 
     /++
-        Day of the week this $(D Date) is on.
+        Day of the week this $(LREF Date) is on.
       +/
     @property DayOfWeek dayOfWeek() const pure nothrow
     {
@@ -12014,7 +12022,7 @@ assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
 
 
     /++
-        Day of the year this $(D Date) is on.
+        Day of the year this $(LREF Date) is on.
 
         Examples:
 --------------------
@@ -12076,10 +12084,10 @@ assert(Date(2000, 12, 31).dayOfYear == 366);
 
         Params:
             day = The day of the year to set which day of the year this
-                  $(D Date) is on.
+                  $(LREF Date) is on.
 
         Throws:
-            $(D DateTimeException) if the given day is an invalid day of the
+            $(LREF DateTimeException) if the given day is an invalid day of the
             year.
       +/
     @property void dayOfYear(int day) pure
@@ -12130,7 +12138,7 @@ assert(Date(2000, 12, 31).dayOfYear == 366);
 
 
     /++
-        The Xth day of the Gregorian Calendar that this $(D Date) is on.
+        The Xth day of the Gregorian Calendar that this $(LREF Date) is on.
 
         Examples:
 --------------------
@@ -12228,10 +12236,10 @@ assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
     }
 
     /++
-        The Xth day of the Gregorian Calendar that this $(D Date) is on.
+        The Xth day of the Gregorian Calendar that this $(LREF Date) is on.
 
         Params:
-            day = The day of the Gregorian Calendar to set this $(D Date) to.
+            day = The day of the Gregorian Calendar to set this $(LREF Date) to.
 
         Examples:
 --------------------
@@ -12311,7 +12319,7 @@ assert(date == Date(2010, 12, 31));
 
 
     /++
-        The ISO 8601 week of the year that this $(D Date) is in.
+        The ISO 8601 week of the year that this $(LREF Date) is in.
 
         See_Also:
             $(WEB en.wikipedia.org/wiki/ISO_week_date, ISO Week Date)
@@ -12416,7 +12424,7 @@ assert(date == Date(2010, 12, 31));
 
 
     /++
-        $(D Date) for the last day in the month that this $(D Date) is in.
+        $(LREF Date) for the last day in the month that this $(LREF Date) is in.
 
         Examples:
 --------------------
@@ -12483,7 +12491,7 @@ assert(Date(2000, 6, 4).endOfMonth == Date(1999, 6, 30));
 
 
     /++
-        The last day in the month that this $(D Date) is in.
+        The last day in the month that this $(LREF Date) is in.
 
         Examples:
 --------------------
@@ -12587,7 +12595,7 @@ assert(!Date(-2010, 1, 1).isAD);
 
 
     /++
-        The julian day for this $(D Date) at noon (since the julian day changes
+        The $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for this $(LREF Date) at noon (since the Julian day changes
         at noon).
       +/
     @property long julianDay() const pure nothrow
@@ -12617,8 +12625,8 @@ assert(!Date(-2010, 1, 1).isAD);
 
 
     /++
-        The modified julian day for any time on this date (since, the modified
-        julian day changes at midnight).
+        The modified $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for any time on this date (since, the modified
+        Julian day changes at midnight).
       +/
     @property long modJulianDay() const pure nothrow
     {
@@ -12641,7 +12649,7 @@ assert(!Date(-2010, 1, 1).isAD);
 
 
     /++
-        Converts this $(D Date) to a string with the format YYYYMMDD.
+        Converts this $(LREF Date) to a string with the format YYYYMMDD.
 
         Examples:
 --------------------
@@ -12704,7 +12712,7 @@ assert(Date(-4, 1, 5).toISOString() == "-00040105");
     }
 
     /++
-        Converts this $(D Date) to a string with the format YYYY-MM-DD.
+        Converts this $(LREF Date) to a string with the format YYYY-MM-DD.
 
         Examples:
 --------------------
@@ -12767,7 +12775,7 @@ assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
     }
 
     /++
-        Converts this $(D Date) to a string with the format YYYY-Mon-DD.
+        Converts this $(LREF Date) to a string with the format YYYY-Mon-DD.
 
         Examples:
 --------------------
@@ -12833,7 +12841,7 @@ assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
 
 
     /+
-        Converts this $(D Date) to a string.
+        Converts this $(LREF Date) to a string.
       +/
     //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
     //have versions of toString() with extra modifiers, so we define one version
@@ -12844,7 +12852,7 @@ assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
     }
 
     /++
-        Converts this $(D Date) to a string.
+        Converts this $(LREF Date) to a string.
       +/
     //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
     //have versions of toString() with extra modifiers, so we define one version
@@ -12869,15 +12877,15 @@ assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
 
 
     /++
-        Creates a $(D Date) from a string with the format YYYYMMDD. Whitespace
+        Creates a $(LREF Date) from a string with the format YYYYMMDD. Whitespace
         is stripped from the given string.
 
         Params:
             isoString = A string formatted in the ISO format for dates.
 
         Throws:
-            $(D DateTimeException) if the given string is not in the ISO format
-            or if the resulting $(D Date) would not be valid.
+            $(LREF DateTimeException) if the given string is not in the ISO format
+            or if the resulting $(LREF Date) would not be valid.
 
         Examples:
 --------------------
@@ -12993,7 +13001,7 @@ assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
 
 
     /++
-        Creates a $(D Date) from a string with the format YYYY-MM-DD. Whitespace
+        Creates a $(LREF Date) from a string with the format YYYY-MM-DD. Whitespace
         is stripped from the given string.
 
         Params:
@@ -13001,8 +13009,8 @@ assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
                            dates.
 
         Throws:
-            $(D DateTimeException) if the given string is not in the ISO
-            Extended format or if the resulting $(D Date) would not be valid.
+            $(LREF DateTimeException) if the given string is not in the ISO
+            Extended format or if the resulting $(LREF Date) would not be valid.
 
         Examples:
 --------------------
@@ -13123,7 +13131,7 @@ assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
 
 
     /++
-        Creates a $(D Date) from a string with the format YYYY-Mon-DD.
+        Creates a $(LREF Date) from a string with the format YYYY-Mon-DD.
         Whitespace is stripped from the given string.
 
         Params:
@@ -13131,8 +13139,8 @@ assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
                            formats dates.
 
         Throws:
-            $(D DateTimeException) if the given string is not in the correct
-            format or if the resulting $(D Date) would not be valid.
+            $(LREF DateTimeException) if the given string is not in the correct
+            format or if the resulting $(LREF Date) would not be valid.
 
         Examples:
 --------------------
@@ -13257,8 +13265,8 @@ assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
 
 
     /++
-        Returns the $(D Date) farthest in the past which is representable by
-        $(D Date).
+        Returns the $(LREF Date) farthest in the past which is representable by
+        $(LREF Date).
       +/
     @property static Date min() pure nothrow
     {
@@ -13281,8 +13289,8 @@ assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
 
 
     /++
-        Returns the $(D Date) farthest in the future which is representable by
-        $(D Date).
+        Returns the $(LREF Date) farthest in the future which is representable by
+        $(LREF Date).
       +/
     @property static Date max() pure nothrow
     {
@@ -13323,7 +13331,7 @@ private:
     }
 
     /+
-        Adds the given number of days to this $(D Date). A negative number will
+        Adds the given number of days to this $(LREF Date). A negative number will
         subtract.
 
         The month will be adjusted along with the day if the number of days
@@ -13548,7 +13556,7 @@ public:
             second = Second of the minute [0 - 60$(RPAREN).
 
         Throws:
-            $(D DateTimeException) if the resulting $(D TimeOfDay) would be not
+            $(LREF DateTimeException) if the resulting $(LREF TimeOfDay) would be not
             be valid.
      +/
     this(int hour, int minute, int second = 0) pure
@@ -13597,7 +13605,7 @@ public:
 
 
     /++
-        Compares this $(D TimeOfDay) with the given $(D TimeOfDay).
+        Compares this $(LREF TimeOfDay) with the given $(LREF TimeOfDay).
 
         Returns:
             $(BOOKTABLE,
@@ -13693,11 +13701,11 @@ public:
         Hours passed midnight.
 
         Params:
-            hour = The hour of the day to set this $(D TimeOfDay)'s hour to.
+            hour = The hour of the day to set this $(LREF TimeOfDay)'s hour to.
 
         Throws:
-            $(D DateTimeException) if the given hour would result in an invalid
-            $(D TimeOfDay).
+            $(LREF DateTimeException) if the given hour would result in an invalid
+            $(LREF TimeOfDay).
      +/
     @property void hour(int hour) pure
     {
@@ -13750,11 +13758,11 @@ public:
         Minutes passed the hour.
 
         Params:
-            minute = The minute to set this $(D TimeOfDay)'s minute to.
+            minute = The minute to set this $(LREF TimeOfDay)'s minute to.
 
         Throws:
-            $(D DateTimeException) if the given minute would result in an
-            invalid $(D TimeOfDay).
+            $(LREF DateTimeException) if the given minute would result in an
+            invalid $(LREF TimeOfDay).
      +/
     @property void minute(int minute) pure
     {
@@ -13807,11 +13815,11 @@ public:
         Seconds passed the minute.
 
         Params:
-            second = The second to set this $(D TimeOfDay)'s second to.
+            second = The second to set this $(LREF TimeOfDay)'s second to.
 
         Throws:
-            $(D DateTimeException) if the given second would result in an
-            invalid $(D TimeOfDay).
+            $(LREF DateTimeException) if the given second would result in an
+            invalid $(LREF TimeOfDay).
      +/
     @property void second(int second) pure
     {
@@ -13838,20 +13846,20 @@ public:
 
 
     /++
-        Adds the given number of units to this $(D TimeOfDay). A negative number
+        Adds the given number of units to this $(LREF TimeOfDay). A negative number
         will subtract.
 
         The difference between rolling and adding is that rolling does not
-        affect larger units. For instance, rolling a $(D TimeOfDay)
+        affect larger units. For instance, rolling a $(LREF TimeOfDay)
         one hours's worth of minutes gets the exact same
-        $(D TimeOfDay).
+        $(LREF TimeOfDay).
 
         Accepted units are $(D "hours"), $(D "minutes"), and $(D "seconds").
 
         Params:
             units = The units to add.
             value = The number of $(D_PARAM units) to add to this
-                    $(D TimeOfDay).
+                    $(LREF TimeOfDay).
 
         Examples:
 --------------------
@@ -14146,9 +14154,9 @@ assert(tod6 == TimeOfDay(0, 0, 59));
 
     /++
         Gives the result of adding or subtracting a duration from this
-        $(D TimeOfDay).
+        $(LREF TimeOfDay).
 
-        The legal types of arithmetic for $(D TimeOfDay) using this operator are
+        The legal types of arithmetic for $(LREF TimeOfDay) using this operator are
 
         $(BOOKTABLE,
         $(TR $(TD TimeOfDay) $(TD +) $(TD duration) $(TD -->) $(TD TimeOfDay))
@@ -14157,7 +14165,7 @@ assert(tod6 == TimeOfDay(0, 0, 59));
 
         Params:
             duration = The duration to add to or subtract from this
-                       $(D TimeOfDay).
+                       $(LREF TimeOfDay).
       +/
     TimeOfDay opBinary(string op, D)(in D duration) const pure nothrow
         if((op == "+" || op == "-") &&
@@ -14251,10 +14259,10 @@ assert(tod6 == TimeOfDay(0, 0, 59));
 
     /++
         Gives the result of adding or subtracting a duration from this
-        $(D TimeOfDay), as well as assigning the result to this
-        $(D TimeOfDay).
+        $(LREF TimeOfDay), as well as assigning the result to this
+        $(LREF TimeOfDay).
 
-        The legal types of arithmetic for $(D TimeOfDay) using this operator are
+        The legal types of arithmetic for $(LREF TimeOfDay) using this operator are
 
         $(BOOKTABLE,
         $(TR $(TD TimeOfDay) $(TD +) $(TD duration) $(TD -->) $(TD TimeOfDay))
@@ -14263,7 +14271,7 @@ assert(tod6 == TimeOfDay(0, 0, 59));
 
         Params:
             duration = The duration to add to or subtract from this
-                       $(D TimeOfDay).
+                       $(LREF TimeOfDay).
       +/
     /+ref+/ TimeOfDay opOpAssign(string op, D)(in D duration) pure nothrow
         if((op == "+" || op == "-") &&
@@ -14334,16 +14342,16 @@ assert(tod6 == TimeOfDay(0, 0, 59));
 
 
     /++
-        Gives the difference between two $(D TimeOfDay)s.
+        Gives the difference between two $(LREF TimeOfDay)s.
 
-        The legal types of arithmetic for $(D TimeOfDay) using this operator are
+        The legal types of arithmetic for $(LREF TimeOfDay) using this operator are
 
         $(BOOKTABLE,
         $(TR $(TD TimeOfDay) $(TD -) $(TD TimeOfDay) $(TD -->) $(TD duration))
         )
 
         Params:
-            rhs = The $(D TimeOfDay) to subtract from this one.
+            rhs = The $(LREF TimeOfDay) to subtract from this one.
       +/
     Duration opBinary(string op)(in TimeOfDay rhs) const pure nothrow
         if(op == "-")
@@ -14387,7 +14395,7 @@ assert(tod6 == TimeOfDay(0, 0, 59));
 
 
     /++
-        Converts this $(D TimeOfDay) to a string with the format HHMMSS.
+        Converts this $(LREF TimeOfDay) to a string with the format HHMMSS.
 
         Examples:
 --------------------
@@ -14422,7 +14430,7 @@ assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
 
 
     /++
-        Converts this $(D TimeOfDay) to a string with the format HH:MM:SS.
+        Converts this $(LREF TimeOfDay) to a string with the format HH:MM:SS.
 
         Examples:
 --------------------
@@ -14457,7 +14465,7 @@ assert(TimeOfDay(12, 30, 33).toISOExtString() == "123033");
 
 
     /+
-        Converts this $(D TimeOfDay) to a string.
+        Converts this $(LREF TimeOfDay) to a string.
       +/
     //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
     //have versions of toString() with extra modifiers, so we define one version
@@ -14497,15 +14505,15 @@ assert(TimeOfDay(12, 30, 33).toISOExtString() == "123033");
 
 
     /++
-        Creates a $(D TimeOfDay) from a string with the format HHMMSS.
+        Creates a $(LREF TimeOfDay) from a string with the format HHMMSS.
         Whitespace is stripped from the given string.
 
         Params:
             isoString = A string formatted in the ISO format for times.
 
         Throws:
-            $(D DateTimeException) if the given string is not in the ISO format
-            or if the resulting $(D TimeOfDay) would not be valid.
+            $(LREF DateTimeException) if the given string is not in the ISO format
+            or if the resulting $(LREF TimeOfDay) would not be valid.
 
         Examples:
 --------------------
@@ -14605,15 +14613,15 @@ assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
 
 
     /++
-        Creates a $(D TimeOfDay) from a string with the format HH:MM:SS.
+        Creates a $(LREF TimeOfDay) from a string with the format HH:MM:SS.
         Whitespace is stripped from the given string.
 
         Params:
-            isoString = A string formatted in the ISO Extended format for times.
+            isoExtString = A string formatted in the ISO Extended format for times.
 
         Throws:
-            $(D DateTimeException) if the given string is not in the ISO
-            Extended format or if the resulting $(D TimeOfDay) would not be
+            $(LREF DateTimeException) if the given string is not in the ISO
+            Extended format or if the resulting $(LREF TimeOfDay) would not be
             valid.
 
         Examples:
@@ -14886,7 +14894,7 @@ private:
 
 
     /+
-        Whether the given values form a valid $(D TimeOfDay).
+        Whether the given values form a valid $(LREF TimeOfDay).
      +/
     static bool _valid(int hour, int minute, int second) pure nothrow
     {
@@ -14917,11 +14925,11 @@ private:
 
 
 /++
-   Combines the $(D Date) and $(D TimeOfDay) structs to give an object
+   Combines the $(LREF Date) and $(LREF TimeOfDay) structs to give an object
    which holds both the date and the time. It is optimized for calendar-based
    operations and has no concept of time zone. For an object which is
    optimized for time operations based on the system time, use
-   $(D SysTime). $(D SysTime) has a concept of time zone and has much higher
+   $(LREF SysTime). $(LREF SysTime) has a concept of time zone and has much higher
    precision (hnsecs). $(D DateTime) is intended primarily for calendar-based
    uses rather than precise time operations.
   +/
@@ -14931,8 +14939,8 @@ public:
 
     /++
         Params:
-            date = The date portion of $(D DateTime).
-            tod  = The time portion of $(D DateTime).
+            date = The date portion of $(LREF DateTime).
+            tod  = The time portion of $(LREF DateTime).
       +/
     this(in Date date, in TimeOfDay tod = TimeOfDay.init) pure nothrow
     {
@@ -15001,7 +15009,7 @@ public:
 
 
     /++
-        Compares this $(D DateTime) with the given $(D DateTime.).
+        Compares this $(LREF DateTime) with the given $(D DateTime.).
 
         Returns:
             $(BOOKTABLE,
@@ -15221,7 +15229,7 @@ public:
 
 
     /++
-        The date portion of $(D DateTime).
+        The date portion of $(LREF DateTime).
       +/
     @property Date date() const pure nothrow
     {
@@ -15251,10 +15259,10 @@ public:
 
 
     /++
-        The date portion of $(D DateTime).
+        The date portion of $(LREF DateTime).
 
         Params:
-            date = The Date to set this $(D DateTime)'s date portion to.
+            date = The Date to set this $(LREF DateTime)'s date portion to.
       +/
     @property void date(in Date date) pure nothrow
     {
@@ -15279,7 +15287,7 @@ public:
 
 
     /++
-        The time portion of $(D DateTime).
+        The time portion of $(LREF DateTime).
       +/
     @property TimeOfDay timeOfDay() const pure nothrow
     {
@@ -15309,10 +15317,10 @@ public:
 
 
     /++
-        The time portion of $(D DateTime).
+        The time portion of $(LREF DateTime).
 
         Params:
-            tod = The $(D TimeOfDay) to set this $(D DateTime)'s time portion
+            tod = The $(LREF TimeOfDay) to set this $(LREF DateTime)'s time portion
                   to.
       +/
     @property void timeOfDay(in TimeOfDay tod) pure nothrow
@@ -15367,10 +15375,10 @@ public:
         are B.C.
 
         Params:
-            year = The year to set this $(D DateTime)'s year to.
+            year = The year to set this $(LREF DateTime)'s year to.
 
         Throws:
-            $(D DateTimeException) if the new year is not a leap year and if the
+            $(LREF DateTimeException) if the new year is not a leap year and if the
             resulting date would be on February 29th.
 
         Examples:
@@ -15416,7 +15424,7 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).year == -7);
         Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
 
         Throws:
-            $(D DateTimeException) if $(D isAD) is true.
+            $(LREF DateTimeException) if $(D isAD) is true.
 
         Examples:
 --------------------
@@ -15455,10 +15463,10 @@ assert(DateTime(Date(-100, 1, 1), TimeOfDay(4, 59, 0)).yearBC == 101);
         Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
 
         Params:
-            year = The year B.C. to set this $(D DateTime)'s year to.
+            year = The year B.C. to set this $(LREF DateTime)'s year to.
 
         Throws:
-            $(D DateTimeException) if a non-positive value is given.
+            $(LREF DateTimeException) if a non-positive value is given.
 
         Examples:
 --------------------
@@ -15543,10 +15551,10 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).month == 4);
         Month of a Gregorian Year.
 
         Params:
-            month = The month to set this $(D DateTime)'s month to.
+            month = The month to set this $(LREF DateTime)'s month to.
 
         Throws:
-            $(D DateTimeException) if the given month is not a valid month.
+            $(LREF DateTimeException) if the given month is not a valid month.
      +/
     @property void month(Month month) pure
     {
@@ -15629,10 +15637,10 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
         Day of a Gregorian Month.
 
         Params:
-            day = The day of the month to set this $(D DateTime)'s day to.
+            day = The day of the month to set this $(LREF DateTime)'s day to.
 
         Throws:
-            $(D DateTimeException) if the given day is not a valid day of the
+            $(LREF DateTimeException) if the given day is not a valid day of the
             current month.
      +/
     @property void day(int day) pure
@@ -15754,11 +15762,11 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
         Hours passed midnight.
 
         Params:
-            hour = The hour of the day to set this $(D DateTime)'s hour to.
+            hour = The hour of the day to set this $(LREF DateTime)'s hour to.
 
         Throws:
-            $(D DateTimeException) if the given hour would result in an invalid
-            $(D DateTime).
+            $(LREF DateTimeException) if the given hour would result in an invalid
+            $(LREF DateTime).
      +/
     @property void hour(int hour) pure
     {
@@ -15810,11 +15818,11 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
         Minutes passed the hour.
 
         Params:
-            minute = The minute to set this $(D DateTime)'s minute to.
+            minute = The minute to set this $(LREF DateTime)'s minute to.
 
         Throws:
-            $(D DateTimeException) if the given minute would result in an
-            invalid $(D DateTime).
+            $(LREF DateTimeException) if the given minute would result in an
+            invalid $(LREF DateTime).
      +/
     @property void minute(int minute) pure
     {
@@ -15866,11 +15874,11 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
         Seconds passed the minute.
 
         Params:
-            second = The second to set this $(D DateTime)'s second to.
+            second = The second to set this $(LREF DateTime)'s second to.
 
         Throws:
-            $(D DateTimeException) if the given seconds would result in an
-            invalid $(D DateTime).
+            $(LREF DateTimeException) if the given seconds would result in an
+            invalid $(LREF DateTime).
      +/
     @property void second(int second) pure
     {
@@ -15896,7 +15904,7 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
 
 
     /++
-        Adds the given number of years or months to this $(D DateTime). A
+        Adds the given number of years or months to this $(LREF DateTime). A
         negative number will subtract.
 
         Note that if day overflow is allowed, and the date with the adjusted
@@ -15910,7 +15918,7 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
         Params:
             units         = The type of units to add ("years" or "months").
             value         = The number of months or years to add to this
-                            $(D DateTime).
+                            $(LREF DateTime).
             allowOverflow = Whether the days should be allowed to overflow,
                             causing the month to increment.
 
@@ -15978,12 +15986,12 @@ assert(dt4 == DateTime(2001, 2, 28, 12, 30, 33));
 
 
     /++
-        Adds the given number of years or months to this $(D DateTime). A
+        Adds the given number of years or months to this $(LREF DateTime). A
         negative number will subtract.
 
         The difference between rolling and adding is that rolling does not
-        affect larger units. Rolling a $(D DateTime) 12 months
-        gets the exact same $(D DateTime). However, the days can still be
+        affect larger units. Rolling a $(LREF DateTime) 12 months
+        gets the exact same $(LREF DateTime). However, the days can still be
         affected due to the differing number of days in each month.
 
         Because there are no units larger than years, there is no difference
@@ -15992,7 +16000,7 @@ assert(dt4 == DateTime(2001, 2, 28, 12, 30, 33));
         Params:
             units         = The type of units to add ("years" or "months").
             value         = The number of months or years to add to this
-                            $(D DateTime).
+                            $(LREF DateTime).
             allowOverflow = Whether the days should be allowed to overflow,
                             causing the month to increment.
 
@@ -16078,19 +16086,19 @@ assert(dt6 == DateTime(2001, 2, 28, 12, 30, 33));
 
 
     /++
-        Adds the given number of units to this $(D DateTime). A negative number
+        Adds the given number of units to this $(LREF DateTime). A negative number
         will subtract.
 
         The difference between rolling and adding is that rolling does not
-        affect larger units. For instance, rolling a $(D DateTime) one
-        year's worth of days gets the exact same $(D DateTime).
+        affect larger units. For instance, rolling a $(LREF DateTime) one
+        year's worth of days gets the exact same $(LREF DateTime).
 
         Accepted units are $(D "days"), $(D "minutes"), $(D "hours"),
         $(D "minutes"), and $(D "seconds").
 
         Params:
             units = The units to add.
-            value = The number of $(D_PARAM units) to add to this $(D DateTime).
+            value = The number of $(D_PARAM units) to add to this $(LREF DateTime).
 
         Examples:
 --------------------
@@ -16111,10 +16119,10 @@ dt3.roll!"seconds"(-1);
 assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
 --------------------
       +/
-    /+ref DateTime+/ void roll(string units)(long days) pure nothrow
+    /+ref DateTime+/ void roll(string units)(long value) pure nothrow
         if(units == "days")
     {
-        _date.roll!"days"(days);
+        _date.roll!"days"(value);
     }
 
     //Verify Examples.
@@ -16671,9 +16679,9 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
 
     /++
         Gives the result of adding or subtracting a duration from this
-        $(D DateTime).
+        $(LREF DateTime).
 
-        The legal types of arithmetic for $(D DateTime) using this operator are
+        The legal types of arithmetic for $(LREF DateTime) using this operator are
 
         $(BOOKTABLE,
         $(TR $(TD DateTime) $(TD +) $(TD duration) $(TD -->) $(TD DateTime))
@@ -16682,7 +16690,7 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
 
         Params:
             duration = The duration to add to or subtract from this
-                       $(D DateTime).
+                       $(LREF DateTime).
       +/
     DateTime opBinary(string op, D)(in D duration) const pure nothrow
         if((op == "+" || op == "-") &&
@@ -16781,9 +16789,9 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
 
     /++
         Gives the result of adding or subtracting a duration from this
-        $(D DateTime), as well as assigning the result to this $(D DateTime).
+        $(LREF DateTime), as well as assigning the result to this $(LREF DateTime).
 
-        The legal types of arithmetic for $(D DateTime) using this operator are
+        The legal types of arithmetic for $(LREF DateTime) using this operator are
 
         $(BOOKTABLE,
         $(TR $(TD DateTime) $(TD +) $(TD duration) $(TD -->) $(TD DateTime))
@@ -16792,7 +16800,7 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
 
         Params:
             duration = The duration to add to or subtract from this
-                       $(D DateTime).
+                       $(LREF DateTime).
       +/
     /+ref+/ DateTime opOpAssign(string op, D)(in D duration) pure nothrow
         if((op == "+" || op == "-") &&
@@ -16872,9 +16880,9 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
 
 
     /++
-        Gives the difference between two $(D DateTime)s.
+        Gives the difference between two $(LREF DateTime)s.
 
-        The legal types of arithmetic for $(D DateTime) using this operator are
+        The legal types of arithmetic for $(LREF DateTime) using this operator are
 
         $(BOOKTABLE,
         $(TR $(TD DateTime) $(TD -) $(TD DateTime) $(TD -->) $(TD duration))
@@ -16960,13 +16968,13 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
 
 
     /++
-        Returns the difference between the two $(D DateTime)s in months.
+        Returns the difference between the two $(LREF DateTime)s in months.
 
         To get the difference in years, subtract the year property
-        of two $(D SysTime)s. To get the difference in days or weeks,
-        subtract the $(D SysTime)s themselves and use the $(D Duration)
+        of two $(LREF SysTime)s. To get the difference in days or weeks,
+        subtract the $(LREF SysTime)s themselves and use the $(CXREF time, Duration)
         that results. Because converting between months and smaller
-        units requires a specific date (which $(D Duration)s don't have),
+        units requires a specific date (which $(CXREF time, Duration)s don't have),
         getting the difference in months requires some math using both
         the year and month properties, so this is a convenience function for
         getting the difference in months.
@@ -16978,7 +16986,7 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
         and January 31st are one month apart.
 
         Params:
-            rhs = The $(D DateTime) to subtract from this one.
+            rhs = The $(LREF DateTime) to subtract from this one.
 
         Examples:
 --------------------
@@ -17029,7 +17037,7 @@ assert(DateTime(1999, 1, 1, 7, 2, 4).diffMonths(
 
 
     /++
-        Whether this $(D DateTime) is in a leap year.
+        Whether this $(LREF DateTime) is in a leap year.
      +/
     @property bool isLeapYear() const pure nothrow
     {
@@ -17051,7 +17059,7 @@ assert(DateTime(1999, 1, 1, 7, 2, 4).diffMonths(
 
 
     /++
-        Day of the week this $(D DateTime) is on.
+        Day of the week this $(LREF DateTime) is on.
       +/
     @property DayOfWeek dayOfWeek() const pure nothrow
     {
@@ -17073,7 +17081,7 @@ assert(DateTime(1999, 1, 1, 7, 2, 4).diffMonths(
 
 
     /++
-        Day of the year this $(D DateTime) is on.
+        Day of the year this $(LREF DateTime) is on.
 
         Examples:
 --------------------
@@ -17111,7 +17119,7 @@ assert(DateTime(Date(2000, 12, 31), TimeOfDay(21, 20, 0)).dayOfYear == 366);
 
         Params:
             day = The day of the year to set which day of the year this
-                  $(D DateTime) is on.
+                  $(LREF DateTime) is on.
       +/
     @property void dayOfYear(int day) pure
     {
@@ -17133,7 +17141,7 @@ assert(DateTime(Date(2000, 12, 31), TimeOfDay(21, 20, 0)).dayOfYear == 366);
 
 
     /++
-        The Xth day of the Gregorian Calendar that this $(D DateTime) is on.
+        The Xth day of the Gregorian Calendar that this $(LREF DateTime) is on.
 
         Examples:
 --------------------
@@ -17187,12 +17195,12 @@ assert(DateTime(Date(2010, 12, 31), TimeOfDay(15, 45, 50)).dayOfGregorianCal ==
 
 
     /++
-        The Xth day of the Gregorian Calendar that this $(D DateTime) is on.
+        The Xth day of the Gregorian Calendar that this $(LREF DateTime) is on.
         Setting this property does not affect the time portion of
-        $(D DateTime).
+        $(LREF DateTime).
 
         Params:
-            days = The day of the Gregorian Calendar to set this $(D DateTime)
+            days = The day of the Gregorian Calendar to set this $(LREF DateTime)
                    to.
 
         Examples:
@@ -17267,7 +17275,7 @@ assert(dt == DateTime(Date(2010, 12, 31), TimeOfDay(12, 0, 0)));
 
 
     /++
-        The ISO 8601 week of the year that this $(D DateTime) is in.
+        The ISO 8601 week of the year that this $(LREF DateTime) is in.
 
         See_Also:
             $(WEB en.wikipedia.org/wiki/ISO_week_date, ISO Week Date)
@@ -17292,7 +17300,7 @@ assert(dt == DateTime(Date(2010, 12, 31), TimeOfDay(12, 0, 0)));
 
 
     /++
-        $(D DateTime) for the last day in the month that this $(D DateTime) is
+        $(LREF DateTime) for the last day in the month that this $(LREF DateTime) is
         in. The time portion of endOfMonth is always 23:59:59.
 
         Examples:
@@ -17367,7 +17375,7 @@ assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonth ==
 
 
     /++
-        The last day in the month that this $(D DateTime) is in.
+        The last day in the month that this $(LREF DateTime) is in.
 
         Examples:
 --------------------
@@ -17435,8 +17443,8 @@ assert(!DateTime(Date(-2010, 1, 1), TimeOfDay(2, 2, 2)).isAD);
 
 
     /++
-        The julian day for this $(D DateTime) at the given time. For example,
-        prior to noon, 1996-03-31 would be the julian day number 2_450_173, so
+        The $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for this $(LREF DateTime) at the given time. For example,
+        prior to noon, 1996-03-31 would be the Julian day number 2_450_173, so
         this function returns 2_450_173, while from noon onward, the julian
         day number would be 2_450_174, so this function returns 2_450_174.
       +/
@@ -17485,8 +17493,8 @@ assert(!DateTime(Date(-2010, 1, 1), TimeOfDay(2, 2, 2)).isAD);
 
 
     /++
-        The modified julian day for any time on this date (since, the modified
-        julian day changes at midnight).
+        The modified $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for any time on this date (since, the modified
+        Julian day changes at midnight).
       +/
     @property long modJulianDay() const pure nothrow
     {
@@ -17512,7 +17520,7 @@ assert(!DateTime(Date(-2010, 1, 1), TimeOfDay(2, 2, 2)).isAD);
 
 
     /++
-        Converts this $(D DateTime) to a string with the format YYYYMMDDTHHMMSS.
+        Converts this $(LREF DateTime) to a string with the format YYYYMMDDTHHMMSS.
 
         Examples:
 --------------------
@@ -17571,7 +17579,7 @@ assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOString() ==
 
 
     /++
-        Converts this $(D DateTime) to a string with the format
+        Converts this $(LREF DateTime) to a string with the format
         YYYY-MM-DDTHH:MM:SS.
 
         Examples:
@@ -17630,7 +17638,7 @@ assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtString() ==
     }
 
     /++
-        Converts this $(D DateTime) to a string with the format
+        Converts this $(LREF DateTime) to a string with the format
         YYYY-Mon-DD HH:MM:SS.
 
         Examples:
@@ -17690,7 +17698,7 @@ assert(DateTime(Dte(-4, 1, 5), TimeOfDay(0, 0, 2)).toSimpleString() ==
 
 
     /+
-        Converts this $(D DateTime) to a string.
+        Converts this $(LREF DateTime) to a string.
       +/
     //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
     //have versions of toString() with extra modifiers, so we define one version
@@ -17701,7 +17709,7 @@ assert(DateTime(Dte(-4, 1, 5), TimeOfDay(0, 0, 2)).toSimpleString() ==
     }
 
     /++
-        Converts this $(D DateTime) to a string.
+        Converts this $(LREF DateTime) to a string.
       +/
     //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
     //have versions of toString() with extra modifiers, so we define one version
@@ -17727,15 +17735,15 @@ assert(DateTime(Dte(-4, 1, 5), TimeOfDay(0, 0, 2)).toSimpleString() ==
 
 
     /++
-        Creates a $(D DateTime) from a string with the format YYYYMMDDTHHMMSS.
+        Creates a $(LREF DateTime) from a string with the format YYYYMMDDTHHMMSS.
         Whitespace is stripped from the given string.
 
         Params:
             isoString = A string formatted in the ISO format for dates and times.
 
         Throws:
-            $(D DateTimeException) if the given string is not in the ISO format
-            or if the resulting $(D DateTime) would not be valid.
+            $(LREF DateTimeException) if the given string is not in the ISO format
+            or if the resulting $(LREF DateTime) would not be valid.
 
         Examples:
 --------------------
@@ -17817,16 +17825,16 @@ assert(DateTime.fromISOString(" 20100704T070612 ") ==
 
 
     /++
-        Creates a $(D DateTime) from a string with the format
+        Creates a $(LREF DateTime) from a string with the format
         YYYY-MM-DDTHH:MM:SS. Whitespace is stripped from the given string.
 
         Params:
-            isoString = A string formatted in the ISO Extended format for dates
-                        and times.
+            isoExtString = A string formatted in the ISO Extended format for dates
+                           and times.
 
         Throws:
-            $(D DateTimeException) if the given string is not in the ISO
-            Extended format or if the resulting $(D DateTime) would not be
+            $(LREF DateTimeException) if the given string is not in the ISO
+            Extended format or if the resulting $(LREF DateTime) would not be
             valid.
 
         Examples:
@@ -17908,7 +17916,7 @@ assert(DateTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
 
 
     /++
-        Creates a $(D DateTime) from a string with the format
+        Creates a $(LREF DateTime) from a string with the format
         YYYY-Mon-DD HH:MM:SS. Whitespace is stripped from the given string.
 
         Params:
@@ -17916,8 +17924,8 @@ assert(DateTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
                            formats dates and times.
 
         Throws:
-            $(D DateTimeException) if the given string is not in the correct
-            format or if the resulting $(D DateTime) would not be valid.
+            $(LREF DateTimeException) if the given string is not in the correct
+            format or if the resulting $(LREF DateTime) would not be valid.
 
         Examples:
 --------------------
@@ -18002,8 +18010,8 @@ assert(DateTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") ==
 
 
     /++
-        Returns the $(D DateTime) farthest in the past which is representable by
-        $(D DateTime).
+        Returns the $(LREF DateTime) farthest in the past which is representable by
+        $(LREF DateTime).
       +/
     @property static DateTime min() pure nothrow
     out(result)
@@ -18032,8 +18040,8 @@ assert(DateTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") ==
 
 
     /++
-        Returns the $(D DateTime) farthest in the future which is representable
-        by $(D DateTime).
+        Returns the $(LREF DateTime) farthest in the future which is representable
+        by $(LREF DateTime).
       +/
     @property static DateTime max() pure nothrow
     out(result)
@@ -18073,7 +18081,7 @@ private:
         same goes for any larger units.
 
         Params:
-            seconds = The number of seconds to add to this $(D DateTime).
+            seconds = The number of seconds to add to this $(LREF DateTime).
       +/
     ref DateTime addSeconds(long seconds) pure nothrow
     {
@@ -18314,7 +18322,7 @@ public:
                     interval.
 
         Throws:
-            $(D DateTimeException) if $(D_PARAM end) is before $(D_PARAM begin).
+            $(LREF DateTimeException) if $(D_PARAM end) is before $(D_PARAM begin).
 
         Examples:
 --------------------
@@ -18338,7 +18346,7 @@ Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
             duration = The duration from the starting point to the end point.
 
         Throws:
-            $(D DateTimeException) if the resulting $(D end) is before
+            $(LREF DateTimeException) if the resulting $(D end) is before
             $(D begin).
 
         Examples:
@@ -18360,7 +18368,7 @@ assert(Interval!Date(Date(1996, 1, 2), dur!"years"(3)) ==
 
     /++
         Params:
-            rhs = The $(D Interval) to assign to this one.
+            rhs = The $(LREF2 .Interval, Interval) to assign to this one.
       +/
     /+ref+/ Interval opAssign(const ref Interval rhs) pure nothrow
     {
@@ -18373,7 +18381,7 @@ assert(Interval!Date(Date(1996, 1, 2), dur!"years"(3)) ==
 
     /++
         Params:
-            rhs = The $(D Interval) to assign to this one.
+            rhs = The $(LREF2 .Interval, Interval) to assign to this one.
       +/
     /+ref+/ Interval opAssign(Interval rhs) pure nothrow
     {
@@ -18406,7 +18414,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).begin ==
             timePoint = The time point to set $(D begin) to.
 
         Throws:
-            $(D DateTimeException) if the resulting interval would be invalid.
+            $(LREF DateTimeException) if the resulting interval would be invalid.
       +/
     @property void begin(TP timePoint) pure
     {
@@ -18439,7 +18447,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).end ==
             timePoint = The time point to set end to.
 
         Throws:
-            $(D DateTimeException) if the resulting interval would be invalid.
+            $(LREF DateTimeException) if the resulting interval would be invalid.
       +/
     @property void end(TP timePoint) pure
     {
@@ -18487,7 +18495,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).empty);
             timePoint = The time point to check for inclusion in this interval.
 
         Throws:
-            $(D DateTimeException) if this interval is empty.
+            $(LREF DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
@@ -18515,7 +18523,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
             interval = The interval to check for inclusion in this interval.
 
         Throws:
-            $(D DateTimeException) if either interval is empty.
+            $(LREF DateTimeException) if either interval is empty.
 
         Examples:
 --------------------
@@ -18551,7 +18559,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
             interval = The interval to check for inclusion in this interval.
 
         Throws:
-            $(D DateTimeException) if this interval is empty.
+            $(LREF DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
@@ -18578,7 +18586,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
             interval = The interval to check for inclusion in this interval.
 
         Throws:
-            $(D DateTimeException) if this interval is empty.
+            $(LREF DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
@@ -18602,7 +18610,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
                         it.
 
         Throws:
-            $(D DateTimeException) if this interval is empty.
+            $(LREF DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
@@ -18632,7 +18640,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
             interval = The interval to check for against this interval.
 
         Throws:
-            $(D DateTimeException) if either interval is empty.
+            $(LREF DateTimeException) if either interval is empty.
 
         Examples:
 --------------------
@@ -18663,7 +18671,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
             interval = The interval to check for against this interval.
 
         Throws:
-            $(D DateTimeException) if this interval is empty.
+            $(LREF DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
@@ -18693,7 +18701,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
             interval = The interval to check for against this interval.
 
         Throws:
-            $(D DateTimeException) if this interval is empty.
+            $(LREF DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
@@ -18717,7 +18725,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
                         it.
 
         Throws:
-            $(D DateTimeException) if this interval is empty.
+            $(LREF DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
@@ -18747,7 +18755,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
             interval = The interval to check against this interval.
 
         Throws:
-            $(D DateTimeException) if either interval is empty.
+            $(LREF DateTimeException) if either interval is empty.
 
         Examples:
 --------------------
@@ -18781,7 +18789,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
             interval = The interval to check against this interval.
 
         Throws:
-            $(D DateTimeException) if this interval is empty.
+            $(LREF DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
@@ -18805,7 +18813,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
             interval = The interval to check against this interval.
 
         Throws:
-            $(D DateTimeException) if this interval is empty.
+            $(LREF DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
@@ -18828,7 +18836,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
             interval = The interval to check for intersection with this interval.
 
         Throws:
-            $(D DateTimeException) if either interval is empty.
+            $(LREF DateTimeException) if either interval is empty.
 
         Examples:
 --------------------
@@ -18858,7 +18866,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
             interval = The interval to check for intersection with this interval.
 
         Throws:
-            $(D DateTimeException) if this interval is empty.
+            $(LREF DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
@@ -18884,7 +18892,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
             interval = The interval to check for intersection with this interval.
 
         Throws:
-            $(D DateTimeException) if this interval is empty.
+            $(LREF DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
@@ -18910,7 +18918,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
             interval = The interval to intersect with this interval.
 
         Throws:
-            $(D DateTimeException) if the two intervals do not intersect or if
+            $(LREF DateTimeException) if the two intervals do not intersect or if
             either interval is empty.
 
         Examples:
@@ -18942,7 +18950,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
             interval = The interval to intersect with this interval.
 
         Throws:
-            $(D DateTimeException) if the two intervals do not intersect or if
+            $(LREF DateTimeException) if the two intervals do not intersect or if
             this interval is empty.
 
         Examples:
@@ -18971,7 +18979,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
             interval = The interval to intersect with this interval.
 
         Throws:
-            $(D DateTimeException) if the two intervals do not intersect or if
+            $(LREF DateTimeException) if the two intervals do not intersect or if
             this interval is empty.
 
         Examples:
@@ -19001,7 +19009,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
                        interval.
 
         Throws:
-            $(D DateTimeException) if either interval is empty.
+            $(LREF DateTimeException) if either interval is empty.
 
         Examples:
 --------------------
@@ -19032,7 +19040,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
                        interval.
 
         Throws:
-            $(D DateTimeException) if this interval is empty.
+            $(LREF DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
@@ -19059,7 +19067,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
                        interval.
 
         Throws:
-            $(D DateTimeException) if this interval is empty.
+            $(LREF DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
@@ -19085,7 +19093,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
             interval = The interval to merge with this interval.
 
         Throws:
-            $(D DateTimeException) if the two intervals do not intersect and are
+            $(LREF DateTimeException) if the two intervals do not intersect and are
             not adjacent or if either interval is empty.
 
         Examples:
@@ -19118,7 +19126,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
             interval = The interval to merge with this interval.
 
         Throws:
-            $(D DateTimeException) if the two intervals do not intersect and are
+            $(LREF DateTimeException) if the two intervals do not intersect and are
             not adjacent or if this interval is empty.
 
         Examples:
@@ -19148,7 +19156,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
             interval = The interval to merge with this interval.
 
         Throws:
-            $(D DateTimeException) if the two intervals do not intersect and are not
+            $(LREF DateTimeException) if the two intervals do not intersect and are not
             adjacent or if this interval is empty.
 
         Examples:
@@ -19180,7 +19188,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
             interval = The interval to create a span together with this interval.
 
         Throws:
-            $(D DateTimeException) if either interval is empty.
+            $(LREF DateTimeException) if either interval is empty.
 
         Examples:
 --------------------
@@ -19214,7 +19222,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
             interval = The interval to create a span together with this interval.
 
         Throws:
-            $(D DateTimeException) if this interval is empty.
+            $(LREF DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
@@ -19244,7 +19252,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
             interval = The interval to create a span together with this interval.
 
         Throws:
-            $(D DateTimeException) if this interval is empty.
+            $(LREF DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
@@ -19275,7 +19283,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
             duration = The duration to shift the interval by.
 
         Throws:
-            $(D DateTimeException) this interval is empty or if the resulting
+            $(LREF DateTimeException) this interval is empty or if the resulting
             interval would be invalid.
 
         Examples:
@@ -19325,7 +19333,7 @@ assert(interval2 == Interval!Date(Date(1995, 11, 13), Date(2012, 2, 15)));
                                 to increment.
 
             Throws:
-                $(D DateTimeException) if this interval is empty or if the
+                $(LREF DateTimeException) if this interval is empty or if the
                 resulting interval would be invalid.
 
             Examples:
@@ -19372,7 +19380,7 @@ assert(interval2 == Interval!Date(Date(1994, 1, 2), Date(2010, 3, 1)));
             dir      = The direction in time to expand the interval.
 
         Throws:
-            $(D DateTimeException) this interval is empty or if the resulting
+            $(LREF DateTimeException) this interval is empty or if the resulting
             interval would be invalid.
 
         Examples:
@@ -19447,9 +19455,10 @@ assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
                 allowOverflow = Whether the days should be allowed to overflow
                                 on $(D begin) and $(D end), causing their month
                                 to increment.
+                dir           = The direction in time to expand the interval.
 
             Throws:
-                $(D DateTimeException) if this interval is empty or if the
+                $(LREF DateTimeException) if this interval is empty or if the
                 resulting interval would be invalid.
 
             Examples:
@@ -19530,7 +19539,7 @@ assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
         $(D_PARAM func) would generate).
 
         If $(D_PARAM func) ever generates a time point less than or equal to the
-        current $(D front) of the range, then a $(D DateTimeException) will be
+        current $(D front) of the range, then a $(LREF DateTimeException) will be
         thrown. The range will be empty and iteration complete when
         $(D_PARAM func) generates a time point equal to or beyond the $(D end)
         of the interval.
@@ -19546,7 +19555,7 @@ assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
                        before returning it.
 
         Throws:
-            $(D DateTimeException) if this interval is empty.
+            $(LREF DateTimeException) if this interval is empty.
 
         Warning:
             $(D_PARAM func) must be logically pure. Ideally, $(D_PARAM func)
@@ -19623,7 +19632,7 @@ assert(range.empty);
         $(D_PARAM func) would generate).
 
         If $(D_PARAM func) ever generates a time point greater than or equal to
-        the current $(D front) of the range, then a $(D DateTimeException) will
+        the current $(D front) of the range, then a $(LREF DateTimeException) will
         be thrown. The range will be empty and iteration complete when
         $(D_PARAM func) generates a time point equal to or less than the
         $(D begin) of the interval.
@@ -19639,7 +19648,7 @@ assert(range.empty);
                        before returning it.
 
         Throws:
-            $(D DateTimeException) if this interval is empty.
+            $(LREF DateTimeException) if this interval is empty.
 
         Warning:
             $(D_PARAM func) must be logically pure. Ideally, $(D_PARAM func)
@@ -19745,7 +19754,7 @@ private:
 
     /+
         Throws:
-            $(D DateTimeException) if this interval is empty.
+            $(LREF DateTimeException) if this interval is empty.
       +/
     void _enforceNotEmpty(size_t line = __LINE__) const pure
     {
@@ -21379,7 +21388,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(Date(2000, 1, 5)));
             interval = The interval to check for inclusion in this interval.
 
         Throws:
-            $(D DateTimeException) if the given interval is empty.
+            $(LREF DateTimeException) if the given interval is empty.
 
         Examples:
 --------------------
@@ -21477,7 +21486,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(Date(2000, 1, 5)));
             interval = The interval to check for against this interval.
 
         Throws:
-            $(D DateTimeException) if the given interval is empty.
+            $(LREF DateTimeException) if the given interval is empty.
 
         Examples:
 --------------------
@@ -21570,7 +21579,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(Date(2000, 1, 5)));
             interval = The interval to check against this interval.
 
         Throws:
-            $(D DateTimeException) if the given interval is empty.
+            $(LREF DateTimeException) if the given interval is empty.
 
         Examples:
 --------------------
@@ -21646,7 +21655,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
             interval = The interval to check for intersection with this interval.
 
         Throws:
-            $(D DateTimeException) if the given interval is empty.
+            $(LREF DateTimeException) if the given interval is empty.
 
         Examples:
 --------------------
@@ -21722,7 +21731,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
             interval = The interval to intersect with this interval.
 
         Throws:
-            $(D DateTimeException) if the two intervals do not intersect or if
+            $(LREF DateTimeException) if the two intervals do not intersect or if
             the given interval is empty.
 
         Examples:
@@ -21776,7 +21785,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
             interval = The interval to intersect with this interval.
 
         Throws:
-            $(D DateTimeException) if the two intervals do not intersect.
+            $(LREF DateTimeException) if the two intervals do not intersect.
 
         Examples:
 --------------------
@@ -21805,7 +21814,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
                        interval.
 
         Throws:
-            $(D DateTimeException) if the given interval is empty.
+            $(LREF DateTimeException) if the given interval is empty.
 
         Examples:
 --------------------
@@ -21878,7 +21887,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
             interval = The interval to merge with this interval.
 
         Throws:
-            $(D DateTimeException) if the two intervals do not intersect and are
+            $(LREF DateTimeException) if the two intervals do not intersect and are
             not adjacent or if the given interval is empty.
 
         Note:
@@ -21946,7 +21955,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(
                        interval.
 
         Throws:
-            $(D DateTimeException) if the given interval is empty.
+            $(LREF DateTimeException) if the given interval is empty.
 
         Note:
             There is no overload for $(D span) which takes a
@@ -22056,7 +22065,7 @@ assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
                                 on $(D begin), causing its month to increment.
 
             Throws:
-                $(D DateTimeException) if this interval is empty or if the
+                $(LREF DateTimeException) if this interval is empty or if the
                 resulting interval would be invalid.
 
             Examples:
@@ -22090,7 +22099,6 @@ assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
 
         Params:
             duration = The duration to expand the interval by.
-            dir      = The direction in time to expand the interval.
 
         Examples:
 --------------------
@@ -22125,7 +22133,7 @@ assert(interval2 == PosInfInterval!Date(Date(1996, 1, 4)));
                                 on $(D begin), causing its month to increment.
 
             Throws:
-                $(D DateTimeException) if this interval is empty or if the
+                $(LREF DateTimeException) if this interval is empty or if the
                 resulting interval would be invalid.
 
             Examples:
@@ -22167,7 +22175,7 @@ assert(interval2 == PosInfInterval!Date(Date(1998, 1, 2)));
         $(D_PARAM func) would generate).
 
         If $(D_PARAM func) ever generates a time point less than or equal to the
-        current $(D front) of the range, then a $(D DateTimeException) will be
+        current $(D front) of the range, then a $(LREF DateTimeException) will be
         thrown.
 
         There are helper functions in this module which generate common
@@ -22181,7 +22189,7 @@ assert(interval2 == PosInfInterval!Date(Date(1998, 1, 2)));
                        before returning it.
 
         Throws:
-            $(D DateTimeException) if this interval is empty.
+            $(LREF DateTimeException) if this interval is empty.
 
         Warning:
             $(D_PARAM func) must be logically pure. Ideally, $(D_PARAM func)
@@ -23525,7 +23533,7 @@ public:
 
     /++
         Params:
-            begin = The time point which begins the interval.
+            end = The time point which ends the interval.
 
         Examples:
 --------------------
@@ -23628,7 +23636,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(Date(2012, 3, 1)));
             interval = The interval to check for inclusion in this interval.
 
         Throws:
-            $(D DateTimeException) if the given interval is empty.
+            $(LREF DateTimeException) if the given interval is empty.
 
         Examples:
 --------------------
@@ -23720,7 +23728,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2012, 3, 1)));
             interval = The interval to check for against this interval.
 
         Throws:
-            $(D DateTimeException) if the given interval is empty
+            $(LREF DateTimeException) if the given interval is empty
 
         Examples:
 --------------------
@@ -23825,7 +23833,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(2012, 3, 1)));
             interval = The interval to check against this interval.
 
         Throws:
-            $(D DateTimeException) if the given interval is empty.
+            $(LREF DateTimeException) if the given interval is empty.
 
         Examples:
 --------------------
@@ -23904,7 +23912,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
             interval = The interval to check for intersection with this interval.
 
         Throws:
-            $(D DateTimeException) if the given interval is empty.
+            $(LREF DateTimeException) if the given interval is empty.
 
         Examples:
 --------------------
@@ -23979,7 +23987,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
             interval = The interval to intersect with this interval.
 
         Throws:
-            $(D DateTimeException) if the two intervals do not intersect or if
+            $(LREF DateTimeException) if the two intervals do not intersect or if
             the given interval is empty.
 
         Examples:
@@ -24010,7 +24018,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
             interval = The interval to intersect with this interval.
 
         Throws:
-            $(D DateTimeException) if the two intervals do not intersect.
+            $(LREF DateTimeException) if the two intervals do not intersect.
 
         Examples:
 --------------------
@@ -24062,7 +24070,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
                        interval.
 
         Throws:
-            $(D DateTimeException) if the given interval is empty.
+            $(LREF DateTimeException) if the given interval is empty.
 
         Examples:
 --------------------
@@ -24141,7 +24149,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
             interval = The interval to merge with this interval.
 
         Throws:
-            $(D DateTimeException) if the two intervals do not intersect and are
+            $(LREF DateTimeException) if the two intervals do not intersect and are
             not adjacent or if the given interval is empty.
 
         Note:
@@ -24209,7 +24217,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
                        interval.
 
         Throws:
-            $(D DateTimeException) if the given interval is empty.
+            $(LREF DateTimeException) if the given interval is empty.
 
         Note:
             There is no overload for $(D span) which takes a
@@ -24318,7 +24326,7 @@ assert(interval2 == NegInfInterval!Date( Date(2012, 2, 15)));
                                 on $(D end), causing its month to increment.
 
             Throws:
-                $(D DateTimeException) if empty is true or if the resulting
+                $(LREF DateTimeException) if empty is true or if the resulting
                 interval would be invalid.
 
             Examples:
@@ -24352,7 +24360,6 @@ assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
 
         Params:
             duration = The duration to expand the interval by.
-            dir      = The direction in time to expand the interval.
 
         Examples:
 --------------------
@@ -24387,7 +24394,7 @@ assert(interval2 == NegInfInterval!Date(Date(2012, 2, 28)));
                                 on $(D end), causing their month to increment.
 
             Throws:
-                $(D DateTimeException) if empty is true or if the resulting
+                $(LREF DateTimeException) if empty is true or if the resulting
                 interval would be invalid.
 
             Examples:
@@ -24429,7 +24436,7 @@ assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
         $(D_PARAM func) would generate).
 
         If $(D_PARAM func) ever generates a time point greater than or equal to
-        the current $(D front) of the range, then a $(D DateTimeException) will
+        the current $(D front) of the range, then a $(LREF DateTimeException) will
         be thrown.
 
         There are helper functions in this module which generate common
@@ -24443,7 +24450,7 @@ assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
                        before returning it.
 
         Throws:
-            $(D DateTimeException) if this interval is empty.
+            $(LREF DateTimeException) if this interval is empty.
 
         Warning:
             $(D_PARAM func) must be logically pure. Ideally, $(D_PARAM func)
@@ -26165,7 +26172,7 @@ unittest
     number of years, month, and duration later.
 
     The difference between this version of $(D everyDuration) and the version
-    which just takes a $(D Duration) is that this one also takes the number of
+    which just takes a $(CXREF time, Duration) is that this one also takes the number of
     years and months (along with an $(D AllowDayOverflow) to indicate whether
     adding years and months should allow the days to overflow).
 
@@ -26334,27 +26341,27 @@ unittest
 
 
 /++
-    A range over an $(D Interval).
+    A range over an $(LREF2 .Interval, Interval).
 
-    $(D IntervalRange) is only ever constructed by $(D Interval). However, when
+    $(D IntervalRange) is only ever constructed by $(LREF2 .Interval, Interval). However, when
     it is constructed, it is given a function, $(D func), which is used to
     generate the time points which are iterated over. $(D func) takes a time
     point and returns a time point of the same type. For instance,
     to iterate over all of the days in
-    the interval $(D Interval!Date), pass a function to $(D Interval)'s $(D fwdRange)
-    where that function took a $(D Date) and returned a $(D Date) which was one
+    the interval $(D Interval!Date), pass a function to $(LREF2 .Interval, Interval)'s $(D fwdRange)
+    where that function took a $(LREF Date) and returned a $(LREF Date) which was one
     day later. That function would then be used by $(D IntervalRange)'s
-    $(D popFront) to iterate over the $(D Date)s in the interval.
+    $(D popFront) to iterate over the $(LREF Date)s in the interval.
 
     If $(D dir == Direction.fwd), then a range iterates forward in time, whereas
     if $(D dir == Direction.bwd), then it iterates backwards in time. So, if
     $(D dir == Direction.fwd) then $(D front == interval.begin), whereas if
     $(D dir == Direction.bwd) then $(D front == interval.end). $(D func) must
     generate a time point going in the proper direction of iteration, or a
-    $(D DateTimeException) will be thrown. So, to iterate forward in
+    $(LREF DateTimeException) will be thrown. So, to iterate forward in
     time, the time point that $(D func) generates must be later in time than the
     one passed to it. If it's either identical or earlier in time, then a
-    $(D DateTimeException) will be thrown. To iterate backwards, then
+    $(LREF DateTimeException) will be thrown. To iterate backwards, then
     the generated time point must be before the time point which was passed in.
 
     If the generated time point is ever passed the edge of the range in the
@@ -26368,10 +26375,10 @@ unittest
     it and its $(D end) is excluded from it, if $(D dir == Direction.bwd), then
     $(D begin) is treated as excluded and $(D end) is treated as included. This
     allows for the same behavior in both directions. This works because none of
-    $(D Interval)'s functions which care about whether $(D begin) or $(D end) is
+    $(LREF2 .Interval, Interval)'s functions which care about whether $(D begin) or $(D end) is
     included or excluded are ever called by $(D IntervalRange). $(D interval)
     returns a normal interval, regardless of whether $(D dir == Direction.fwd)
-    or if $(D dir == Direction.bwd), so any $(D Interval) functions which are
+    or if $(D dir == Direction.bwd), so any $(LREF2 .Interval, Interval) functions which are
     called on it which care about whether $(D begin) or $(D end) are included or
     excluded will treat $(D begin) as included and $(D end) as excluded.
   +/
@@ -26393,6 +26400,13 @@ public:
     }
 
 
+    /++ Ditto +/
+    /+ref+/ IntervalRange opAssign(IntervalRange rhs) pure nothrow
+    {
+        return this = rhs;
+    }
+
+
     /++
         Whether this $(D IntervalRange) is empty.
       +/
@@ -26406,7 +26420,7 @@ public:
         The first time point in the range.
 
         Throws:
-            $(D DateTimeException) if the range is empty.
+            $(LREF DateTimeException) if the range is empty.
       +/
     @property TP front() const pure
     {
@@ -26429,7 +26443,7 @@ public:
         than the interval's $(D begin), then $(D front) is set to $(D begin).
 
         Throws:
-            $(D DateTimeException) if the range is empty or if the generated
+            $(LREF DateTimeException) if the range is empty or if the generated
             time point is in the wrong direction (i.e. if iterating
             forward and the generated time point is before $(D front), or if
             iterating backwards and the generated time point is after
@@ -26517,7 +26531,7 @@ private:
 
     /+
         Throws:
-            $(D DateTimeException) if this interval is empty.
+            $(LREF DateTimeException) if this interval is empty.
       +/
     void _enforceNotEmpty(size_t line = __LINE__) const pure
     {
@@ -26528,7 +26542,7 @@ private:
 
     /+
         Throws:
-            $(D DateTimeException) if $(D_PARAM newTP) is in the wrong
+            $(LREF DateTimeException) if $(D_PARAM newTP) is in the wrong
             direction.
       +/
     void _enforceCorrectDirection(in TP newTP, size_t line = __LINE__) const
@@ -26878,19 +26892,19 @@ unittest
     takes a time point and returns a time point of the same type. For
     instance, to iterate
     over all of the days in the interval $(D PosInfInterval!Date), pass a function to
-    $(D PosInfInterval)'s $(D fwdRange) where that function took a $(D Date) and
-    returned a $(D Date) which was one day later. That function would then be
+    $(D PosInfInterval)'s $(D fwdRange) where that function took a $(LREF Date) and
+    returned a $(LREF Date) which was one day later. That function would then be
     used by $(D PosInfIntervalRange)'s $(D popFront) to iterate over the
-    $(D Date)s in the interval - though obviously, since the range is infinite,
+    $(LREF Date)s in the interval - though obviously, since the range is infinite,
     use a function such as $(D std.range.take) with it rather than
     iterating over $(I all) of the dates.
 
     As the interval goes to positive infinity, the range is always iterated over
     forwards, never backwards. $(D func) must generate a time point going in
-    the proper direction of iteration, or a $(D DateTimeException) will be
+    the proper direction of iteration, or a $(LREF DateTimeException) will be
     thrown. So, the time points that $(D func) generates must be later in time
     than the one passed to it. If it's either identical or earlier in time, then
-    a $(D DateTimeException) will be thrown.
+    a $(LREF DateTimeException) will be thrown.
   +/
 struct PosInfIntervalRange(TP)
     if(isTimePoint!TP)
@@ -26907,6 +26921,13 @@ public:
         _func = rhs._func;
 
         return this;
+    }
+
+
+    /++ Ditto +/
+    /+ref+/ PosInfIntervalRange opAssign(PosInfIntervalRange rhs) pure nothrow
+    {
+        return this = rhs;
     }
 
 
@@ -26930,7 +26951,7 @@ public:
         time point in the range.
 
         Throws:
-            $(D DateTimeException) if the generated time point is less than
+            $(LREF DateTimeException) if the generated time point is less than
             $(D front).
       +/
     void popFront()
@@ -26987,7 +27008,7 @@ private:
 
     /+
         Throws:
-            $(D DateTimeException) if $(D_PARAME newTP) is in the wrong
+            $(LREF DateTimeException) if $(D_PARAME newTP) is in the wrong
             direction.
       +/
     void _enforceCorrectDirection(in TP newTP, size_t line = __LINE__) const
@@ -27168,19 +27189,19 @@ unittest
     takes a time point and returns a time point of the same type. For
     instance, to iterate
     over all of the days in the interval $(D NegInfInterval!Date), pass a function to
-    $(D NegInfInterval)'s $(D bwdRange) where that function took a $(D Date) and
-    returned a $(D Date) which was one day earlier. That function would then be
+    $(D NegInfInterval)'s $(D bwdRange) where that function took a $(LREF Date) and
+    returned a $(LREF Date) which was one day earlier. That function would then be
     used by $(D NegInfIntervalRange)'s $(D popFront) to iterate over the
-    $(D Date)s in the interval - though obviously, since the range is infinite,
+    $(LREF Date)s in the interval - though obviously, since the range is infinite,
     use a function such as $(D std.range.take) with it rather than
     iterating over $(I all) of the dates.
 
     As the interval goes to negative infinity, the range is always iterated over
     backwards, never forwards. $(D func) must generate a time point going in
-    the proper direction of iteration, or a $(D DateTimeException) will be
+    the proper direction of iteration, or a $(LREF DateTimeException) will be
     thrown. So, the time points that $(D func) generates must be earlier in time
     than the one passed to it. If it's either identical or later in time, then a
-    $(D DateTimeException) will be thrown.
+    $(LREF DateTimeException) will be thrown.
 
     Also note that while normally the $(D end) of an interval is excluded from
     it, $(D NegInfIntervalRange) treats it as if it were included. This allows
@@ -27209,6 +27230,13 @@ public:
     }
 
 
+    /++ Ditto +/
+    /+ref+/ NegInfIntervalRange opAssign(NegInfIntervalRange rhs) pure nothrow
+    {
+        return this = rhs;
+    }
+
+
     /++
         This is an infinite range, so it is never empty.
       +/
@@ -27229,7 +27257,7 @@ public:
         time point in the range.
 
         Throws:
-            $(D DateTimeException) if the generated time point is greater than
+            $(LREF DateTimeException) if the generated time point is greater than
             $(D front).
       +/
     void popFront()
@@ -27286,7 +27314,7 @@ private:
 
     /+
         Throws:
-            $(D DateTimeException) if $(D_PARAM newTP) is in the wrong
+            $(LREF DateTimeException) if $(D_PARAM newTP) is in the wrong
             direction.
       +/
     void _enforceCorrectDirection(in TP newTP, size_t line = __LINE__) const
@@ -27462,8 +27490,8 @@ unittest
 //==============================================================================
 
 /++
-    Represents a time zone. It is used with $(D SysTime) to indicate the time
-    zone of a $(D SysTime).
+    Represents a time zone. It is used with $(LREF SysTime) to indicate the time
+    zone of a $(LREF SysTime).
   +/
 abstract class TimeZone
 {
@@ -27471,7 +27499,7 @@ public:
 
     /++
         The name of the time zone per the TZ Database. This is the name used to
-        get a $(D TimeZone) by name with $(D TimeZone.getTimeZone).
+        get a $(LREF2 .TimeZone, TimeZone) by name with $(D TimeZone.getTimeZone).
 
         See_Also:
             $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
@@ -27569,11 +27597,11 @@ public:
 
 
     /++
-        Returns a $(D TimeZone) with the give name per the TZ Database.
+        Returns a $(LREF2 .TimeZone, TimeZone) with the give name per the TZ Database.
 
-        This returns a $(D PosixTimeZone) on Posix systems and a
-        $(D WindowsTimeZone) on Windows systems. For
-        $(D PosixTimeZone) on Windows, call $(D PosixTimeZone.getTimeZone)
+        This returns a $(LREF PosixTimeZone) on Posix systems and a
+        $(LREF WindowsTimeZone) on Windows systems. For
+        $(LREF PosixTimeZone) on Windows, call $(D PosixTimeZone.getTimeZone)
         directly and give it the location of the TZ Database time zone files on
         disk.
 
@@ -27594,7 +27622,7 @@ public:
             name = The TZ Database name of the desired time zone
 
         Throws:
-            $(D DateTimeException) if the given time zone could not be found.
+            $(LREF DateTimeException) if the given time zone could not be found.
 
         Examples:
 --------------------
@@ -27904,7 +27932,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
 
         Throws:
             $(D FileException) on Posix systems if it fails to read from disk.
-            $(D DateTimeException) on Windows systems if it fails to read the
+            $(LREF DateTimeException) on Windows systems if it fails to read the
             registry.
       +/
     static string[] getInstalledTZNames(string subName = "")
@@ -27977,7 +28005,7 @@ private:
 
     This uses the underlying C calls to adjust the time rather than using
     specific D code based off of system settings to calculate the time such as
-    $(D PosixTimeZone) and $(D WindowsTimeZone) do. That also means that it will
+    $(LREF PosixTimeZone) and $(LREF WindowsTimeZone) do. That also means that it will
     use whatever the current time zone is on the system, even if the system's
     time zone changes while the program is running.
   +/
@@ -27986,7 +28014,7 @@ final class LocalTime : TimeZone
 public:
 
     /++
-        $(D LocalTime) is a singleton class. $(D LocalTime) returns its only
+        $(LREF LocalTime) is a singleton class. $(LREF LocalTime) returns its only
         instance.
       +/
     static immutable(LocalTime) opCall() pure nothrow
@@ -28000,7 +28028,7 @@ public:
     {
         /++
             The name of the time zone per the TZ Database. This is the name used to
-            get a $(D TimeZone) by name with $(D TimeZone.getTimeZone).
+            get a $(LREF2 .TimeZone, TimeZone) by name with $(D TimeZone.getTimeZone).
 
             Note that this always returns the empty string. This is because time
             zones cannot be uniquely identified by the attributes given by the
@@ -28555,7 +28583,7 @@ private:
 
 
 /++
-    A $(D TimeZone) which represents UTC.
+    A $(LREF2 .TimeZone, TimeZone) which represents UTC.
   +/
 final class UTC : TimeZone
 {
@@ -28687,7 +28715,7 @@ private:
     Represents a time zone with an offset (in minutes, west is negative) from
     UTC but no DST.
 
-    It's primarily used as the time zone in the result of $(D SysTime)'s
+    It's primarily used as the time zone in the result of $(LREF SysTime)'s
     $(D fromISOString), $(D fromISOExtString), and $(D fromSimpleString).
 
     $(D name) and $(D dstName) are always the empty string since this time zone
@@ -29064,21 +29092,21 @@ private:
     Represents a time zone from a TZ Database time zone file. Files from the TZ
     Database are how Posix systems hold their time zone information.
     Unfortunately, Windows does not use the TZ Database. To use the TZ Database,
-    use $(LREF PosixTimeZone) (which reads its information from the TZ Database
+    use $(D PosixTimeZone) (which reads its information from the TZ Database
     files on disk) on Windows by providing the TZ Database files and telling
     $(D PosixTimeZone.getTimeZone) where the directory holding them is.
 
     To get a $(D PosixTimeZone), either call $(D PosixTimeZone.getTimeZone)
     (which allows specifying the location the time zone files) or call
     $(D TimeZone.getTimeZone) (which will give a $(D PosixTimeZone) on Posix
-    systems and a $(D WindowsTimeZone) on Windows systems).
+    systems and a $(LREF WindowsTimeZone) on Windows systems).
 
     Note:
         Unless your system's local time zone deals with leap seconds (which is
         highly unlikely), then the only way to get a time zone which
-        takes leap seconds into account is to use $(D PosixTimeZone) with a
+        takes leap seconds into account is to use $(LREF PosixTimeZone) with a
         time zone whose name starts with "right/". Those time zone files do
-        include leap seconds, and $(D PosixTimeZone) will take them into account
+        include leap seconds, and $(LREF PosixTimeZone) will take them into account
         (though posix systems which use a "right/" time zone as their local time
         zone will $(I not) take leap seconds into account even though they're
         in the file).
@@ -29235,7 +29263,7 @@ public:
 
 
     /++
-        Returns a $(D TimeZone) with the give name per the TZ Database. The time
+        Returns a $(LREF2 .TimeZone, TimeZone) with the give name per the TZ Database. The time
         zone information is fetched from the TZ Database time zone files in the
         given directory.
 
@@ -29251,10 +29279,10 @@ public:
                             located. Because these files are not located on
                             Windows systems, provide them
                             and give their location here to
-                            use $(D PosixTimeZone)s.
+                            use $(LREF PosixTimeZone)s.
 
         Throws:
-            $(D DateTimeException) if the given time zone could not be found or
+            $(LREF DateTimeException) if the given time zone could not be found or
             $(D FileException) if the TZ Database file could not be opened.
 
         Examples:
@@ -29577,7 +29605,9 @@ assert(tz.dstName == "PDT");
         begin with "America".
 
         Params:
-            subName = The first part of the desired time zones.
+            subName       = The first part of the desired time zones.
+            tzDatabaseDir = The directory where the TZ Database files are
+                            located.
 
         Throws:
             $(D FileException) if it fails to read from disk.
@@ -29817,7 +29847,7 @@ private:
 
     /+
         Throws:
-            $(D DateTimeException) if $(D result) is false.
+            $(LREF DateTimeException) if $(D result) is false.
       +/
     static void _enforceValidTZFile(bool result, size_t line = __LINE__)
     {
@@ -29908,17 +29938,17 @@ version(StdDdoc)
         occur (especially for historical dates). Also, the TZ Database files
         include far more time zones than Windows does. So, for accurate
         time zone information, use the TZ Database files with
-        $(LREF PosixTimeZone) rather than $(D WindowsTimeZone). However, because
-        $(D WindowsTimeZone) uses Windows system calls to deal with the time,
+        $(LREF PosixTimeZone) rather than $(LREF WindowsTimeZone). However, because
+        $(LREF WindowsTimeZone) uses Windows system calls to deal with the time,
         it's far more likely to match the behavior of other Windows programs.
         Be aware of the differences when selecting a method.
 
-        $(D WindowsTimeZone) does not exist on Posix systems.
+        $(LREF WindowsTimeZone) does not exist on Posix systems.
 
-        To get a $(D WindowsTimeZone), either call
+        To get a $(LREF WindowsTimeZone), either call
         $(D WindowsTimeZone.getTimeZone) or call $(D TimeZone.getTimeZone)
         (which will give a $(LREF PosixTimeZone) on Posix systems and a
-         $(D WindowsTimeZone) on Windows systems).
+         $(LREF WindowsTimeZone) on Windows systems).
 
         See_Also:
             $(WEB www.iana.org/time-zones, Home of the TZ Database files)
@@ -29973,7 +30003,7 @@ version(StdDdoc)
 
 
         /++
-            Returns a $(D TimeZone) with the given name per the Windows time
+            Returns a $(LREF2 .TimeZone, TimeZone) with the given name per the Windows time
             zone names. The time zone information is fetched from the Windows
             registry.
 
@@ -29987,7 +30017,7 @@ version(StdDdoc)
                 name = The TZ Database name of the desired time zone.
 
             Throws:
-                $(D DateTimeException) if the given time zone could not be
+                $(LREF DateTimeException) if the given time zone could not be
                 found.
 
             Examples:
@@ -30427,7 +30457,7 @@ else version(Posix)
         tzName = The TZ Database name to convert.
 
     Throws:
-        $(D DateTimeException) if the given $(D_PARAM tzName) cannot be
+        $(LREF DateTimeException) if the given $(D_PARAM tzName) cannot be
         converted.
   +/
 string tzDatabaseNameToWindowsTZName(string tzName)
@@ -30577,7 +30607,7 @@ unittest
         tzName = The TZ Database name to convert.
 
     Throws:
-        $(D DateTimeException) if the given $(D_PARAM tzName) cannot be
+        $(LREF DateTimeException) if the given $(D_PARAM tzName) cannot be
         converted.
   +/
 string windowsTZNameToTZDatabaseName(string tzName)
@@ -31347,7 +31377,7 @@ version(StdDdoc)
     /++
         $(BLUE This function is Windows-Only.)
 
-        Converts a $(D SYSTEMTIME) struct to a $(D SysTime).
+        Converts a $(D SYSTEMTIME) struct to a $(LREF SysTime).
 
         Params:
             st = The $(D SYSTEMTIME) struct to convert.
@@ -31357,8 +31387,8 @@ version(StdDdoc)
                  or UTC, depending on the call).
 
         Throws:
-            $(D DateTimeException) if the given $(D SYSTEMTIME) will not fit in
-            a $(D SysTime), which is highly unlikely to happen given that
+            $(LREF DateTimeException) if the given $(D SYSTEMTIME) will not fit in
+            a $(LREF SysTime), which is highly unlikely to happen given that
             $(D SysTime.max) is in 29,228 A.D. and the maximum $(D SYSTEMTIME)
             is in 30,827 A.D.
       +/
@@ -31368,18 +31398,18 @@ version(StdDdoc)
     /++
         $(BLUE This function is Windows-Only.)
 
-        Converts a $(D SysTime) to a $(D SYSTEMTIME) struct.
+        Converts a $(LREF SysTime) to a $(D SYSTEMTIME) struct.
 
         The $(D SYSTEMTIME) which is returned will be set using the given
-        $(D SysTime)'s time zone, so to get the $(D SYSTEMTIME) in
-        UTC, set the $(D SysTime)'s time zone to UTC.
+        $(LREF SysTime)'s time zone, so to get the $(D SYSTEMTIME) in
+        UTC, set the $(LREF SysTime)'s time zone to UTC.
 
         Params:
-            sysTime = The $(D SysTime) to convert.
+            sysTime = The $(LREF SysTime) to convert.
 
         Throws:
-            $(D DateTimeException) if the given $(D SysTime) will not fit in a
-            $(D SYSTEMTIME). This will only happen if the $(D SysTime)'s date is
+            $(LREF DateTimeException) if the given $(LREF SysTime) will not fit in a
+            $(D SYSTEMTIME). This will only happen if the $(LREF SysTime)'s date is
             prior to 1601 A.D.
       +/
     SYSTEMTIME SysTimeToSYSTEMTIME(in SysTime sysTime);
@@ -31395,7 +31425,7 @@ version(StdDdoc)
             ft = The $(D FILETIME) struct to convert.
 
         Throws:
-            $(D DateTimeException) if the given $(D FILETIME) cannot be
+            $(LREF DateTimeException) if the given $(D FILETIME) cannot be
             represented as the return value.
       +/
     long FILETIMEToStdTime(const FILETIME* ft);
@@ -31404,16 +31434,16 @@ version(StdDdoc)
     /++
         $(BLUE This function is Windows-Only.)
 
-        Converts a $(D FILETIME) struct to a $(D SysTime).
+        Converts a $(D FILETIME) struct to a $(LREF SysTime).
 
         Params:
             ft = The $(D FILETIME) struct to convert.
-            tz = The time zone that the $(D SysTime) will be in ($(D FILETIME)s
+            tz = The time zone that the $(LREF SysTime) will be in ($(D FILETIME)s
                  are in UTC).
 
         Throws:
-            $(D DateTimeException) if the given $(D FILETIME) will not fit in a
-            $(D SysTime).
+            $(LREF DateTimeException) if the given $(D FILETIME) will not fit in a
+            $(LREF SysTime).
       +/
     SysTime FILETIMEToSysTime(const FILETIME* ft, immutable TimeZone tz = LocalTime());
 
@@ -31425,10 +31455,10 @@ version(StdDdoc)
         $(D FILETIME) struct.
 
         Params:
-            sysTime = The $(D SysTime) to convert.
+            stdTime = The number of hnsecs since midnight, January 1st, 1 A.D. UTC.
 
         Throws:
-            $(D DateTimeException) if the given value will not fit in a
+            $(LREF DateTimeException) if the given value will not fit in a
             $(D FILETIME).
       +/
     FILETIME stdTimeToFILETIME(long stdTime);
@@ -31437,15 +31467,15 @@ version(StdDdoc)
     /++
         $(BLUE This function is Windows-Only.)
 
-        Converts a $(D SysTime) to a $(D FILETIME) struct.
+        Converts a $(LREF SysTime) to a $(D FILETIME) struct.
 
         $(D FILETIME)s are always in UTC.
 
         Params:
-            sysTime = The $(D SysTime) to convert.
+            sysTime = The $(LREF SysTime) to convert.
 
         Throws:
-            $(D DateTimeException) if the given $(D SysTime) will not fit in a
+            $(LREF DateTimeException) if the given $(LREF SysTime) will not fit in a
             $(D FILETIME).
       +/
     FILETIME SysTimeToFILETIME(SysTime sysTime);
@@ -31645,14 +31675,14 @@ else version(Windows)
 alias uint DosFileTime;
 
 /++
-    Converts from DOS file date/time to $(D SysTime).
+    Converts from DOS file date/time to $(LREF SysTime).
 
     Params:
         dft = The DOS file time to convert.
         tz  = The time zone which the DOS file time is assumed to be in.
 
     Throws:
-        $(D DateTimeException) if the $(D DosFileTime) is invalid.
+        $(LREF DateTimeException) if the $(D DosFileTime) is invalid.
   +/
 SysTime DosFileTimeToSysTime(DosFileTime dft, immutable TimeZone tz = LocalTime())
 {
@@ -31693,13 +31723,13 @@ unittest
 
 
 /++
-    Converts from $(D SysTime) to DOS file date/time.
+    Converts from $(LREF SysTime) to DOS file date/time.
 
     Params:
-        sysTime = The $(D SysTime) to convert.
+        sysTime = The $(LREF SysTime) to convert.
 
     Throws:
-        $(D DateTimeException) if the given $(D SysTime) cannot be converted to
+        $(LREF DateTimeException) if the given $(LREF SysTime) cannot be converted to
         a $(D DosFileTime).
   +/
 DosFileTime SysTimeToDosFileTime(SysTime sysTime)
@@ -31771,7 +31801,7 @@ bool validTimeUnits(string[] units...)
         )
 
     Throws:
-        $(D DateTimeException) if either of the given strings is not a valid
+        $(LREF DateTimeException) if either of the given strings is not a valid
         time unit string.
  +/
 int cmpTimeUnits(string lhs, string rhs)
@@ -31953,12 +31983,12 @@ bool valid(string units)(int year, int month, int day) pure nothrow
     Params:
         units = The units of time to validate.
         value = The number to validate.
-        file  = The file that the $(D DateTimeException) will list if thrown.
-        line  = The line number that the $(D DateTimeException) will list if
+        file  = The file that the $(LREF DateTimeException) will list if thrown.
+        line  = The line number that the $(LREF DateTimeException) will list if
                 thrown.
 
     Throws:
-        $(D DateTimeException) if $(D valid!units(value)) is false.
+        $(LREF DateTimeException) if $(D valid!units(value)) is false.
   +/
 void enforceValid(string units)(int value, string file = __FILE__, size_t line = __LINE__) pure
     if(units == "months" ||
@@ -31995,12 +32025,12 @@ void enforceValid(string units)(int value, string file = __FILE__, size_t line =
         year  = The year of the day to validate.
         month = The month of the day to validate.
         day   = The day to validate.
-        file  = The file that the $(D DateTimeException) will list if thrown.
-        line  = The line number that the $(D DateTimeException) will list if
+        file  = The file that the $(LREF DateTimeException) will list if thrown.
+        line  = The line number that the $(LREF DateTimeException) will list if
                 thrown.
 
     Throws:
-        $(D DateTimeException) if $(D valid!"days"(year, month, day)) is false.
+        $(LREF DateTimeException) if $(D valid!"days"(year, month, day)) is false.
   +/
 void enforceValid(string units)(int year, Month month, int day, string file = __FILE__, size_t line = __LINE__) pure
     if(units == "days")
@@ -32632,7 +32662,7 @@ unittest
         plural      = Whether the string should be plural or not.
 
     Throws:
-        $(D DateTimeException) if the given month is not a valid month.
+        $(LREF DateTimeException) if the given month is not a valid month.
   +/
 string monthToString(Month month, bool useLongName = true) pure
 {
@@ -32701,7 +32731,7 @@ unittest
         monthStr = The string representation of the month to get the Month for.
 
     Throws:
-        $(D DateTimeException) if the given month is not a valid month string.
+        $(LREF DateTimeException) if the given month is not a valid month string.
   +/
 Month monthFromString(string monthStr)
 {

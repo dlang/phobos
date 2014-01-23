@@ -14,13 +14,12 @@
   void main()
   {
       // Print out all possible dd/mm/yy(yy) dates found in user input.
-      // g - global: find all matches.
-      auto r = regex(r"\b[0-9][0-9]?/[0-9][0-9]?/[0-9][0-9](?:[0-9][0-9])?\b", "g");
+      auto r = regex(r"\b[0-9][0-9]?/[0-9][0-9]?/[0-9][0-9](?:[0-9][0-9])?\b");
       foreach(line; stdin.byLine)
       {
-        // Match returns a range that can be iterated
+        // matchAll() returns a range that can be iterated
         // to get all subsequent matches.
-        foreach(c; match(line, r))
+        foreach(c; matchAll(line, r))
             writeln(c.hit);
       }
   }
@@ -30,15 +29,15 @@
   auto ctr = ctRegex!(`^.*/([^/]+)/?$`);
 
   // It works just like a normal regex:
-  auto m2 = match("foo/bar", ctr);   // First match found here, if any
-  assert(m2);   // Be sure to check if there is a match before examining contents!
-  assert(m2.captures[1] == "bar");   // Captures is a range of submatches: 0 = full match.
+  auto c2 = matchFirst("foo/bar", ctr);   // First match found here, if any
+  assert(!c2.empty);   // Be sure to check if there is a match before examining contents!
+  assert(c2[1] == "bar");   // Captures is a range of submatches: 0 = full match.
 
   ...
 
-  // The result of the match is directly testable with if/assert/while.
+  // The result of the $(D matchAll) is directly testable with if/assert/while.
   // e.g. test if a string consists of letters:
-  assert(match("Letter", `^\p{L}+$`));
+  assert(matchFirst("Letter", `^\p{L}+$`));
 
 
   ---
@@ -50,15 +49,15 @@
   Checks of this sort of are better addressed by additional post-processing.
 
   The basic syntax shouldn't surprise experienced users of regular expressions.
-  For an introduction to $(D std.regex) see a 
-  $(WEB dlang.org/regular-expression.html, short tour) of the module API 
+  For an introduction to $(D std.regex) see a
+  $(WEB dlang.org/regular-expression.html, short tour) of the module API
   and its abilities.
 
-  There are other web resources on regular expressions to help newcomers, 
-  and a good $(WEB www.regular-expressions.info, reference with tutorial) 
+  There are other web resources on regular expressions to help newcomers,
+  and a good $(WEB www.regular-expressions.info, reference with tutorial)
   can easily be found.
 
-  This library uses a remarkably common ECMAScript syntax flavor 
+  This library uses a remarkably common ECMAScript syntax flavor
   with the following extensions:
   $(UL
     $(LI Named subexpressions, with Python syntax. )
@@ -106,10 +105,10 @@
           the BasicLatin Unicode $(U block).)
     $(REG_ROW \P{InBasicLatin}, Matches any character except ones in
           the BasicLatin Unicode $(U block).)
-    $(REG_ROW \p{Cyrilic}, Matches any character that is part of
-        Cyrilic $(U script).)
-    $(REG_ROW \P{Cyrilic}, Matches any character except ones in
-        Cyrilic $(U script).)
+    $(REG_ROW \p{Cyrillic}, Matches any character that is part of
+        Cyrillic $(U script).)
+    $(REG_ROW \P{Cyrillic}, Matches any character except ones in
+        Cyrillic $(U script).)
     $(REG_TITLE Quantifiers, Specify repetition of other elements)
     $(REG_ROW *, Matches previous character/subexpression 0 or more times.
       Greedy version - tries as many times as possible.)
@@ -202,13 +201,13 @@
   *With exception of point 1.1.1, as of yet, normalization of input
     is expected to be enforced by user.
 
-    $(SECTION Replace format string) 
+    $(SECTION Replace format string)
 
-    A set of functions in this module that do the substitution rely 
-    on a simple format to guide the process. In particular the table below 
-    applies to the $(D format) argument of 
+    A set of functions in this module that do the substitution rely
+    on a simple format to guide the process. In particular the table below
+    applies to the $(D format) argument of
     $(LREF replaceFirst) and $(LREF replaceAll).
-    
+
     The format string can reference parts of match using the following notation.
     $(REG_TABLE
         $(REG_TITLE Format specifier, Replaced by )
@@ -227,8 +226,8 @@
     are slices of the original input. The notable exception is the $(D replace)
     family of functions  that generate a new string from the input.
 
-    In cases where producing the replacement is the ultimate goal 
-    $(LREF replaceFirstInto) and $(LREF replaceAllInto) could come in handy 
+    In cases where producing the replacement is the ultimate goal
+    $(LREF replaceFirstInto) and $(LREF replaceAllInto) could come in handy
     as functions that  avoid allocations even for replacement.
 
     Copyright: Copyright Dmitry Olshansky, 2011-
@@ -431,13 +430,16 @@ struct Bytecode
     }
 
     //bit twiddling helpers
-    @property uint data() const { return raw & 0x003f_ffff; }
+    //0-arg template due to @@@BUG@@@ 10985
+    @property uint data()() const { return raw & 0x003f_ffff; }
 
     //ditto
-    @property uint sequence() const { return 2 + (raw >> 22 & 0x3); }
+    //0-arg template due to @@@BUG@@@ 10985
+    @property uint sequence()() const { return 2 + (raw >> 22 & 0x3); }
 
     //ditto
-    @property IR code() const { return cast(IR)(raw>>24); }
+    //0-arg template due to @@@BUG@@@ 10985
+    @property IR code()() const { return cast(IR)(raw>>24); }
 
     //ditto
     @property bool hotspot() const { return hasMerge(code); }
@@ -627,7 +629,7 @@ struct Group(DataIndex)
             }
             else if(code[pc].isStart || code[pc].isEnd)
             {
-                //skip over other embedded lookbehinds they are reversed 
+                //skip over other embedded lookbehinds they are reversed
                 if(code[pc].code == IR.LookbehindStart
                     || code[pc].code == IR.NeglookbehindStart)
                 {
@@ -664,7 +666,7 @@ struct Group(DataIndex)
                             newRpc--;
                         }
                         stack.push(tuple(newStart, newEnd, newRpc));
-                        r += code[i].data + IRL!(IR.Option);                        
+                        r += code[i].data + IRL!(IR.Option);
                         i += code[i].data + IRL!(IR.Option);
                     }
                     pc = i;
@@ -873,7 +875,7 @@ auto memoizeExpr(string expr)()
     @property size_t length(){ return data.length; }
 
     void push(T val){ data ~= val;  }
-    
+
     T pop()
     {
         assert(!empty);
@@ -887,7 +889,7 @@ auto memoizeExpr(string expr)()
     @property ref T top()
     {
         assert(!empty);
-        return data[$ - 1]; 
+        return data[$ - 1];
     }
 }
 
@@ -1083,7 +1085,11 @@ struct Parser(R)
                         if(current != '<')
                             error("Expected '<' in named group");
                         string name;
-                        while(next() && isAlpha(current))
+                        if(!next() || !(isAlpha(current) || current == '_'))
+                            error("Expected alpha starting a named group");
+                        name ~= current;
+                        while(next() && (isAlpha(current) ||
+                            current == '_' || ascii.isDigit(current)))
                         {
                             name ~= current;
                         }
@@ -1270,6 +1276,8 @@ struct Parser(R)
             }
             else
                 error("Unexpected symbol in regex pattern");
+            if(min > max)
+                error("Illegal {n,m} quantifier");
             break;
         default:
             if(replace)
@@ -1418,8 +1426,8 @@ struct Parser(R)
         ir[fix+2] = Bytecode.fromRaw(groupStack.top+g);
         groupStack.top += g;
         if(ir[fix].code == IR.LookbehindStart || ir[fix].code == IR.NeglookbehindStart)
-        {            
-            reverseBytecode(ir[fix + IRL!(IR.LookbehindStart) .. $]);            
+        {
+            reverseBytecode(ir[fix + IRL!(IR.LookbehindStart) .. $]);
     }
         put(ir[fix].paired);
     }
@@ -2278,14 +2286,16 @@ unittest
 }
 
 //whether ch is one of unicode newline sequences
-bool endOfLine(dchar front, bool seenCr)
+//0-arg template due to @@@BUG@@@ 10985
+bool endOfLine()(dchar front, bool seenCr)
 {
     return ((front == '\n') ^ seenCr) || front == '\r'
     || front == NEL || front == LS || front == PS;
 }
 
 //
-bool startOfLine(dchar back, bool seenNl)
+//0-arg template due to @@@BUG@@@ 10985
+bool startOfLine()(dchar back, bool seenNl)
 {
     return ((back == '\r') ^ seenNl) || back == '\n'
     || back == NEL || back == LS || back == PS;
@@ -3334,7 +3344,7 @@ template BacktrackingMatcher(bool CTregex)
             static if(kicked)
             {
                 if(!re.kickstart.empty)
-                { 
+                {
                     for(;;)
                     {
 
@@ -3354,8 +3364,8 @@ template BacktrackingMatcher(bool CTregex)
                     }
                     exhausted = true;
                     return false; //early return
-                }                
-            }            
+                }
+            }
             //no search available - skip a char at a time
             for(;;)
             {
@@ -3511,7 +3521,7 @@ template BacktrackingMatcher(bool CTregex)
                         //no matching inside \r\n
                         if(atEnd || ((re.flags & RegexOption.multiline)
                             && endOfLine(front, s.loopBack(index).nextChar(back,bi)
-								&& back == '\r')))
+                                && back == '\r')))
                         {
                             pc += IRL!(IR.Eol);
                         }
@@ -3687,7 +3697,7 @@ template BacktrackingMatcher(bool CTregex)
                         {
                             alias Matcher = BacktrackingMatcher!(Char, typeof(s.loopBack(index)));
                             auto matcher = Matcher(re, s.loopBack(index), mem);
-                        }                        
+                        }
                         matcher.matches = matches[ms .. me];
                         matcher.re.ir = re.ir[pc + IRL!(IR.LookbehindStart) .. pc + IRL!(IR.LookbehindStart) + len + IRL!(IR.LookbehindEnd)];
                         matcher.backrefed  = backrefed.empty ? matches : backrefed;
@@ -4028,13 +4038,13 @@ struct CtContext
             break;
         case IR.LookaheadStart:
         case IR.NeglookaheadStart:
-        case IR.LookbehindStart: 
+        case IR.LookbehindStart:
         case IR.NeglookbehindStart:
             uint len = ir[0].data;
             bool behind = ir[0].code == IR.LookbehindStart || ir[0].code == IR.NeglookbehindStart;
             bool negative = ir[0].code == IR.NeglookaheadStart || ir[0].code == IR.NeglookbehindStart;
             string fwdType = "typeof(fwdMatcher(matcher, []))";
-            string bwdType = "typeof(bwdMatcher(matcher, []))"; 
+            string bwdType = "typeof(bwdMatcher(matcher, []))";
             string fwdCreate = "fwdMatcher(matcher, mem)";
             string bwdCreate = "bwdMatcher(matcher, mem)";
             uint start = IRL!(IR.LookbehindStart);
@@ -4070,12 +4080,12 @@ struct CtContext
                         $$
                     else
                         $$`, addr,
-                        behind ? fwdType : bwdType, behind ? bwdType : fwdType, 
+                        behind ? fwdType : bwdType, behind ? bwdType : fwdType,
                         addr, context.ctGenRegEx(slice),
-                        behind ? fwdCreate : bwdCreate, behind ? bwdCreate : fwdCreate, 
+                        behind ? fwdCreate : bwdCreate, behind ? bwdCreate : fwdCreate,
                         ir[1].raw, ir[2].raw, //start - end of matches slice
-                        addr, 
-                        negative ? "!lookaround.matchImpl()" : "lookaround.matchImpl()", 
+                        addr,
+                        negative ? "!lookaround.matchImpl()" : "lookaround.matchImpl()",
                         nextInstr, bailOut);
             ir = ir[end .. $];
             r.addr = addr + 1;
@@ -4101,7 +4111,7 @@ struct CtContext
         for(;;)
         {
             assert(ir[0].code == IR.Option);
-            auto len = ir[0].data;            
+            auto len = ir[0].data;
             if(optL+len < ir.length  && ir[optL+len].code == IR.Option)//not a last option
             {
                 auto nir = ir[optL .. optL+len-IRL!(IR.GotoEndOr)];
@@ -4247,7 +4257,7 @@ struct CtContext
                     goto case $$;`, step, addr+2, addr+1, restoreCode(),
                     ir[0].code == IR.RepeatEnd ? addr+2 : fixup );
             ir = ir[ir[0].length..$];
-            break;        
+            break;
         case IR.Option:
             r ~= ctSub( `
                 {
@@ -4457,9 +4467,9 @@ struct CtContext
         case IR.Backref:
             string mStr = "auto referenced = ";
             mStr ~= ir[0].localRef
-                ? ctSub("s[matches[$$].begin .. matches[$$].end];", 
+                ? ctSub("s[matches[$$].begin .. matches[$$].end];",
                     ir[0].data, ir[0].data)
-                : ctSub("s[backrefed[$$].begin .. backrefed[$$].end];", 
+                : ctSub("s[backrefed[$$].begin .. backrefed[$$].end];",
                     ir[0].data, ir[0].data);
             code ~= ctSub( `
                     $$
@@ -4630,6 +4640,7 @@ enum OneShot { Fwd, Bwd };
     dchar front;
     DataIndex index;
     DataIndex genCounter;    //merge trace counter, goes up on every dchar
+    size_t[size_t] subCounters; //a table of gen counter per sub-engine: PC -> counter
     size_t threadSize;
     bool matched;
     bool exhausted;
@@ -4708,22 +4719,23 @@ enum OneShot { Fwd, Bwd };
         re.ir = piece;
         threadSize = matcher.threadSize;
         merge = matcher.merge;
-        genCounter = matcher.genCounter;
         freelist = matcher.freelist;
         front = matcher.front;
         index = matcher.index;
     }
 
-    auto fwdMatcher()(Bytecode[] piece)
+    auto fwdMatcher()(Bytecode[] piece, size_t counter)
     {
         auto m = ThompsonMatcher!(Char, Stream)(this, piece, s);
+        m.genCounter = counter;
         return m;
     }
 
-    auto bwdMatcher()(Bytecode[] piece)
+    auto bwdMatcher()(Bytecode[] piece, size_t counter)
     {
         alias BackLooper = typeof(s.loopBack(index));
         auto m = ThompsonMatcher!(Char, BackLooper)(this, piece, s.loopBack(index));
+        m.genCounter = counter;
         m.next();
         return m;
     }
@@ -4759,7 +4771,7 @@ enum OneShot { Fwd, Bwd };
         static if(kicked)
             if(!re.kickstart.empty)
                 return matchImpl!(true)(matches);
-        return matchImpl!(false)(matches);           
+        return matchImpl!(false)(matches);
     }
 
     //match the input and fill matches
@@ -4815,7 +4827,7 @@ enum OneShot { Fwd, Bwd };
                     else
                     {
                         if(!next())
-                            break;   
+                            break;
                     }
                 }
                 else if(!next())
@@ -5191,16 +5203,16 @@ enum OneShot { Fwd, Bwd };
                 uint end = t.pc + len + IRL!(IR.LookbehindEnd) + IRL!(IR.LookbehindStart);
                 bool positive = re.ir[t.pc].code == IR.LookbehindStart;
                 static if(Stream.isLoopback)
-                    auto matcher = fwdMatcher(re.ir[t.pc .. end]);
+                    auto matcher = fwdMatcher(re.ir[t.pc .. end], subCounters.get(t.pc, 0));
                 else
-                    auto matcher = bwdMatcher(re.ir[t.pc .. end]);
+                    auto matcher = bwdMatcher(re.ir[t.pc .. end], subCounters.get(t.pc, 0));
                 matcher.re.ngroup = re.ir[t.pc+2].raw - re.ir[t.pc+1].raw;
                 matcher.backrefed = backrefed.empty ? t.matches : backrefed;
                 //backMatch
                 bool nomatch = (matcher.matchOneShot(t.matches, IRL!(IR.LookbehindStart))
                     == MatchResult.Match) ^ positive;
                 freelist = matcher.freelist;
-                genCounter = matcher.genCounter;
+                subCounters[t.pc] = matcher.genCounter;
                 if(nomatch)
                 {
                     recycle(t);
@@ -5220,15 +5232,15 @@ enum OneShot { Fwd, Bwd };
                 uint end = t.pc+len+IRL!(IR.LookaheadEnd)+IRL!(IR.LookaheadStart);
                 bool positive = re.ir[t.pc].code == IR.LookaheadStart;
                 static if(Stream.isLoopback)
-                    auto matcher = bwdMatcher(re.ir[t.pc .. end]);
+                    auto matcher = bwdMatcher(re.ir[t.pc .. end], subCounters.get(t.pc, 0));
                 else
-                    auto matcher = fwdMatcher(re.ir[t.pc .. end]);
+                    auto matcher = fwdMatcher(re.ir[t.pc .. end], subCounters.get(t.pc, 0));
                 matcher.re.ngroup = me - ms;
                 matcher.backrefed = backrefed.empty ? t.matches : backrefed;
-                bool nomatch = (matcher.matchOneShot(t.matches, IRL!(IR.LookaheadStart)) 
+                bool nomatch = (matcher.matchOneShot(t.matches, IRL!(IR.LookaheadStart))
                     == MatchResult.Match) ^ positive;
                 freelist = matcher.freelist;
-                genCounter = matcher.genCounter;
+                subCounters[t.pc] = matcher.genCounter;
                 s.reset(index);
                 next();
                 if(nomatch)
@@ -5243,7 +5255,7 @@ enum OneShot { Fwd, Bwd };
                     t.pc = end;
                 break;
             case IR.LookaheadEnd:
-            case IR.NeglookaheadEnd:            
+            case IR.NeglookaheadEnd:
             case IR.LookbehindEnd:
             case IR.NeglookbehindEnd:
                 t.pc = re.ir[t.pc].indexOfPair(t.pc);
@@ -5481,30 +5493,6 @@ enum OneShot { Fwd, Bwd };
     to $(D match) or iteration over $(D RegexMatch) range.
 
     First element of range is the whole match.
-
-    Example, showing basic operations on $(D Captures):
-    ----
-    import std.regex;
-    import std.range;
-
-    void main()
-    {
-        auto m = match("@abc#", regex(`(\w)(\w)(\w)`));
-        auto c = m.captures;
-        assert(c.pre == "@"); // Part of input preceeding match
-        assert(c.post == "#"); // Immediately after match
-        assert(c.hit == c[0] && c.hit == "abc"); // The whole match
-        assert(c[2] =="b");
-        assert(c.front == "abc");
-        c.popFront();
-        assert(c.front == "a");
-        assert(c.back == "c");
-        c.popBack();
-        assert(c.back == "b");
-        popFrontN(c, 2);
-        assert(c.empty);
-    }
-    ----
 +/
 @trusted public struct Captures(R, DIndex = size_t)
     if(isSomeString!R)
@@ -5610,10 +5598,23 @@ public:
     R opIndex()(size_t i) /*const*/ //@@@BUG@@@
     {
         assert(_f + i < _b,text("requested submatch number ", i," is out of range"));
-        assert(matches[_f + i].begin <= matches[_f + i].end, 
+        assert(matches[_f + i].begin <= matches[_f + i].end,
             text("wrong match: ", matches[_f + i].begin, "..", matches[_f + i].end));
         return _input[matches[_f + i].begin .. matches[_f + i].end];
     }
+
+    /++
+        Explicit cast to bool.
+        Useful as a shorthand for !(x.empty) in if and assert statements.
+
+        ---
+        import std.regex;
+
+        assert(!matchFirst("nothing", "something"));
+        ---
+    +/
+
+    @safe bool opCast(T:bool)() const nothrow { return !empty; }
 
     /++
         Lookup named submatch.
@@ -5622,8 +5623,7 @@ public:
         import std.regex;
         import std.range;
 
-        auto m = match("a = 42;", regex(`(?P<var>\w+)\s*=\s*(?P<value>\d+);`));
-        auto c = m.captures;
+        auto c = matchFirst("a = 42;", regex(`(?P<var>\w+)\s*=\s*(?P<value>\d+);`));
         assert(c["var"] == "a");
         assert(c["value"] == "42");
         popFrontN(c, 2);
@@ -5646,14 +5646,14 @@ public:
     @property ref captures(){ return this; }
 }
 
-unittest//verify example
+///
+unittest
 {
-    auto m = match("@abc#", regex(`(\w)(\w)(\w)`));
-    auto c = m.captures;
-    assert(c.pre == "@");// part of input preceeding match
-    assert(c.post == "#"); // immediately after match
-    assert(c.hit == c[0] && c.hit == "abc");// the whole match
-    assert(c[2] =="b");
+    auto c = matchFirst("@abc#", regex(`(\w)(\w)(\w)`));
+    assert(c.pre == "@"); // Part of input preceeding match
+    assert(c.post == "#"); // Immediately after match
+    assert(c.hit == c[0] && c.hit == "abc"); // The whole match
+    assert(c[2] == "b");
     assert(c.front == "abc");
     c.popFront();
     assert(c.front == "a");
@@ -5662,6 +5662,8 @@ unittest//verify example
     assert(c.back == "b");
     popFrontN(c, 2);
     assert(c.empty);
+
+    assert(!matchFirst("nothing", "something"));
 }
 
 /++
@@ -5743,7 +5745,7 @@ public:
         Functionality for processing subsequent matches of global regexes via range interface:
         ---
         import std.regex;
-        auto m = match("Hello, world!", regex(`\w+`, "g"));
+        auto m = matchAll("Hello, world!", regex(`\w+`));
         assert(m.front.hit == "Hello");
         m.popFront();
         assert(m.front.hit == "world");
@@ -5796,7 +5798,7 @@ private @trusted auto matchOnce(alias Engine, RegEx, R)(R input, RegEx re)
     void[] memory = enforce(malloc(size))[0..size];
     scope(exit) free(memory.ptr);
     auto captures = Captures!(R, EngineType.DataIndex)(input, re.ngroup, re.dict);
-    auto engine = EngineType(re, Input!Char(input), memory);    
+    auto engine = EngineType(re, Input!Char(input), memory);
     static if(is(RegEx == StaticRegex!(BasicElementOf!R)))
         engine.nativeFn = re.nativeFn;
     captures._empty = !engine.match(captures.matches);
@@ -5878,15 +5880,15 @@ enum isRegexFor(RegEx, R) = is(RegEx == Regex!(BasicElementOf!R))
     Start matching $(D input) to regex pattern $(D re),
     using Thompson NFA matching scheme.
 
-    The use of this function is $(RED discouraged) - use either of 
-    $(LREF matchAll) or $(LREF matchFirst). 
+    The use of this function is $(RED discouraged) - use either of
+    $(LREF matchAll) or $(LREF matchFirst).
 
-    Delegating  the kind of operation 
+    Delegating  the kind of operation
     to "g" flag is soon to be phased out along with the
-    ability to choose the exact matching scheme. The choice of 
-    matching scheme to use depends highly on the pattern kind and 
+    ability to choose the exact matching scheme. The choice of
+    matching scheme to use depends highly on the pattern kind and
     can done automatically on case by case basis.
-    
+
     Returns: a $(D RegexMatch) object holding engine state after first match.
 +/
 
@@ -5910,7 +5912,7 @@ public auto match(R, RegEx)(R input, RegEx re)
 }
 
 /++
-    Find the first (leftmost) slice of the $(D input) that 
+    Find the first (leftmost) slice of the $(D input) that
     matches the pattern $(D re). This function picks the most suitable
     regular expression engine depending on the pattern properties.
 
@@ -5923,8 +5925,8 @@ public auto match(R, RegEx)(R input, RegEx re)
         compiled native machine code. )
     )
 
-    Returns: 
-    $(LREF Captures) containing the extent of a match together with all submatches 
+    Returns:
+    $(LREF Captures) containing the extent of a match together with all submatches
     if there was a match, otherwise an empty $(LREF Captures) object.
 +/
 public auto matchFirst(R, RegEx)(R input, RegEx re)
@@ -5948,10 +5950,10 @@ public auto matchFirst(R, RegEx)(R input, RegEx re)
 
 /++
     Initiate a search for all non-overlapping matches to the pattern $(D re)
-    in the given $(D input). The result is a lazy range of matches generated 
+    in the given $(D input). The result is a lazy range of matches generated
     as they are encountered in the input going left to right.
 
-    This function picks the most suitable regular expression engine 
+    This function picks the most suitable regular expression engine
     depending on the pattern properties.
 
     $(D re) parameter can be one of three types:
@@ -5963,9 +5965,9 @@ public auto matchFirst(R, RegEx)(R input, RegEx re)
         compiled native machine code. )
     )
 
-    Returns: 
-    $(LREF RegexMatch) object that represents matcher state 
-    after the first match was found or an empty one if not present. 
+    Returns:
+    $(LREF RegexMatch) object that represents matcher state
+    after the first match was found or an empty one if not present.
 +/
 public auto matchAll(R, RegEx)(R input, RegEx re)
     if(isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
@@ -6028,13 +6030,13 @@ public auto matchAll(R, RegEx)(R input, RegEx re)
     Start matching of $(D input) to regex pattern $(D re),
     using traditional $(LUCKY backtracking) matching scheme.
 
-    The use of this function is $(RED discouraged) - use either of 
-    $(LREF matchAll) or $(LREF matchFirst). 
+    The use of this function is $(RED discouraged) - use either of
+    $(LREF matchAll) or $(LREF matchFirst).
 
-    Delegating  the kind of operation 
+    Delegating  the kind of operation
     to "g" flag is soon to be phased out along with the
-    ability to choose the exact matching scheme. The choice of 
-    matching scheme to use depends highly on the pattern kind and 
+    ability to choose the exact matching scheme. The choice of
+    matching scheme to use depends highly on the pattern kind and
     can done automatically on case by case basis.
 
     Returns: a $(D RegexMatch) object holding engine
@@ -6074,7 +6076,7 @@ private @trusted void replaceCapturesInto(alias output, Sink, R, T)
     // "is a nested function and cannot be accessed from"
     static if(isReplaceFunctor!(output, R))
         sink.put(output(captures)); //"mutator" type of function
-    else 
+    else
         output(captures, sink); //"output" type of function
     sink.put(captures.post);
 }
@@ -6083,7 +6085,7 @@ private @trusted void replaceCapturesInto(alias output, Sink, R, T)
 private void replaceMatchesInto(alias output, Sink, R, T)
         (ref Sink sink, R input, T matches)
     if(isOutputRange!(Sink, dchar) && isSomeString!R)
-{    
+{
     size_t offset = 0;
     foreach(cap; matches)
     {
@@ -6091,7 +6093,7 @@ private void replaceMatchesInto(alias output, Sink, R, T)
         // same hack, see replaceCapturesInto
         static if(isReplaceFunctor!(output, R))
             sink.put(output(cap)); //"mutator" type of function
-        else 
+        else
             output(cap, sink); //"output" type of function
         offset = cap.pre.length + cap.hit.length;
     }
@@ -6110,13 +6112,13 @@ private R replaceFirstWith(alias output, R, RegEx)(R input, RegEx re)
     return app.data;
 }
 
-// ditto for replaceAll 
+// ditto for replaceAll
 // the method parameter allows old API to ride on the back of the new one
-private R replaceAllWith(alias output, 
+private R replaceAllWith(alias output,
         alias method=matchAll, R, RegEx)(R input, RegEx re)
     if(isSomeString!R && isRegexFor!(RegEx, R))
 {
-    auto matches = method(input, re); //inout(C)[] fails 
+    auto matches = method(input, re); //inout(C)[] fails
     if(matches.empty)
         return input;
     auto app = appender!(R)();
@@ -6128,16 +6130,16 @@ private R replaceAllWith(alias output,
     Construct a new string from $(D input) by replacing the first match with
     a string generated from it according to the $(D format) specifier.
 
-    To replace all matches use $(LREF replaceAll). 
+    To replace all matches use $(LREF replaceAll).
 
     Params:
     input = string to search
     re = compiled regular expression to use
-    format = format string to generate replacements from, 
-    see $(S_LINK Replace format string).
+    format = format string to generate replacements from,
+    see $(S_LINK Replace format string, the format string).
 
     Returns:
-    A string of the same type with the first match (if any) replaced. 
+    A string of the same type with the first match (if any) replaced.
     If no match is found returns the input string itself.
 
     Example:
@@ -6148,22 +6150,22 @@ private R replaceAllWith(alias output,
 public R replaceFirst(R, C, RegEx)(R input, RegEx re, const(C)[] format)
     if(isSomeString!R && is(C : dchar) && isRegexFor!(RegEx, R))
 {
-    return replaceFirstWith!((m, sink) => replaceFmt(format, m, sink))(input, re);    
+    return replaceFirstWith!((m, sink) => replaceFmt(format, m, sink))(input, re);
 }
 
 /++
-    This is a general replacement tool that construct a new string by replacing 
-    matches of pattern $(D re) in the $(D input). Unlike the other overload 
+    This is a general replacement tool that construct a new string by replacing
+    matches of pattern $(D re) in the $(D input). Unlike the other overload
     there is no format string instead captures are passed to
-    to a user-defined functor $(D fun) that returns a new string 
+    to a user-defined functor $(D fun) that returns a new string
     to use as replacement.
 
-    This version replaces the first match in $(D input), 
+    This version replaces the first match in $(D input),
     see $(LREF replaceAll) to replace the all of the matches.
 
-    Returns: 
-    A new string of the same type as $(D input) with all matches 
-    replaced by return values of $(D fun). If no matches found 
+    Returns:
+    A new string of the same type as $(D input) with all matches
+    replaced by return values of $(D fun). If no matches found
     returns the $(D input) itself.
 
     Example:
@@ -6182,11 +6184,11 @@ public R replaceFirst(alias fun, R, RegEx)(R input, RegEx re)
 
 /++
     A variation on $(LREF replaceFirst) that instead of allocating a new string
-    on each call outputs the result piece-wise to the $(D sink). In particular 
+    on each call outputs the result piece-wise to the $(D sink). In particular
     this enables efficient construction of a final output incrementally.
-    
+
     Like in $(LREF replaceFirst) family of functions there is an overload
-    for the substitution guided by the $(D format) string   
+    for the substitution guided by the $(D format) string
     and the one with the user defined callback.
 
     Example:
@@ -6203,7 +6205,7 @@ public R replaceFirst(alias fun, R, RegEx)(R input, RegEx re)
 +/
 public @trusted void replaceFirstInto(Sink, R, C, RegEx)
         (ref Sink sink, R input, RegEx re, const(C)[] format)
-    if(isOutputRange!(Sink, dchar) && isSomeString!R 
+    if(isOutputRange!(Sink, dchar) && isSomeString!R
         && is(C : dchar) && isRegexFor!(RegEx, R))
     {
     replaceCapturesInto!((m, sink) => replaceFmt(format, m, sink))
@@ -6236,8 +6238,8 @@ public @trusted void replaceFirstInto(alias fun, Sink, R, RegEx)
 }
 
 /++
-    Construct a new string from $(D input) by replacing all of the 
-    fragments that match a pattern $(D re) with a string generated 
+    Construct a new string from $(D input) by replacing all of the
+    fragments that match a pattern $(D re) with a string generated
     from the match according to the $(D format) specifier.
 
     To replace only the first match use $(LREF replaceFirst).
@@ -6245,12 +6247,12 @@ public @trusted void replaceFirstInto(alias fun, Sink, R, RegEx)
     Params:
     input = string to search
     re = compiled regular expression to use
-    format = format string to generate replacements from, 
-    see $(S_LINK Replace format string).
+    format = format string to generate replacements from,
+    see $(S_LINK Replace format string, the format string).
 
     Returns:
-    A string of the same type as $(D input) with the all 
-    of the matches (if any) replaced. 
+    A string of the same type as $(D input) with the all
+    of the matches (if any) replaced.
     If no match is found returns the input string itself.
 
     Example:
@@ -6263,22 +6265,22 @@ public @trusted void replaceFirstInto(alias fun, Sink, R, RegEx)
 public @trusted R replaceAll(R, C, RegEx)(R input, RegEx re, const(C)[] format)
     if(isSomeString!R && is(C : dchar) && isRegexFor!(RegEx, R))
 {
-    return replaceAllWith!((m, sink) => replaceFmt(format, m, sink))(input, re);    
+    return replaceAllWith!((m, sink) => replaceFmt(format, m, sink))(input, re);
 }
 
 /++
-    This is a general replacement tool that construct a new string by replacing 
-    matches of pattern $(D re) in the $(D input). Unlike the other overload 
+    This is a general replacement tool that construct a new string by replacing
+    matches of pattern $(D re) in the $(D input). Unlike the other overload
     there is no format string instead captures are passed to
-    to a user-defined functor $(D fun) that returns a new string 
+    to a user-defined functor $(D fun) that returns a new string
     to use as replacement.
 
-    This version replaces all of the matches found in $(D input), 
+    This version replaces all of the matches found in $(D input),
     see $(LREF replaceFirst) to replace the first match only.
 
-    Returns: 
-    A new string of the same type as $(D input) with all matches 
-    replaced by return values of $(D fun). If no matches found 
+    Returns:
+    A new string of the same type as $(D input) with all matches
+    replaced by return values of $(D fun). If no matches found
     returns the $(D input) itself.
 
     Params:
@@ -6306,10 +6308,10 @@ public @trusted R replaceAll(alias fun, R, RegEx)(R input, RegEx re)
 
 /++
     A variation on $(LREF replaceAll) that instead of allocating a new string
-    on each call outputs the result piece-wise to the $(D sink). In particular 
+    on each call outputs the result piece-wise to the $(D sink). In particular
     this enables efficient construction of a final output incrementally.
 
-    As with $(LREF replaceAll) there are 2 overloads - one with a format string, 
+    As with $(LREF replaceAll) there are 2 overloads - one with a format string,
     the other one with a user defined functor.
 
     Example:
@@ -6320,14 +6322,14 @@ public @trusted R replaceAll(alias fun, R, RegEx)(R input, RegEx re)
     replaceAllInto!(cap => retro(cap[0]))(sink, text, regex(`\b\w{3}\b`));
     auto swapped = sink.data.dup; // make a copy explicitly
     assert(swapped == "woH era uoy doing?");
-    sink.clear(); 
+    sink.clear();
     replaceAllInto!(cap => retro(cap[0]))(sink, swapped, regex(`\b\w{3}\b`));
     assert(sink.data == text);
     ---
 +/
 public @trusted void replaceAllInto(Sink, R, C, RegEx)
         (Sink sink, R input, RegEx re, const(C)[] format)
-    if(isOutputRange!(Sink, dchar) && isSomeString!R 
+    if(isOutputRange!(Sink, dchar) && isSomeString!R
         && is(C : dchar) && isRegexFor!(RegEx, R))
     {
     replaceMatchesInto!((m, sink) => replaceFmt(format, m, sink))
@@ -6351,7 +6353,7 @@ public @trusted void replaceAllInto(alias fun, Sink, R, RegEx)
     replaceAllInto!(cap => retro(cap[0]))(sink, text, regex(`\b\w{3}\b`));
     auto swapped = sink.data.dup; // make a copy explicitly
     assert(swapped == "woH era uoy doing?");
-    sink.clear(); 
+    sink.clear();
     replaceAllInto!(cap => retro(cap[0]))(sink, swapped, regex(`\b\w{3}\b`));
     assert(sink.data == text);
 }
@@ -6382,7 +6384,7 @@ public @trusted void replaceAllInto(alias fun, Sink, R, RegEx)
         auto rep1A = replaceAll!(cap => cap[0][0]~"o".to!S()~cap[0][1..$])(s1, re1);
         assert(rep1A == t1A);
         assert(replaceAll!(cap => "ho".to!S())(s2, re2) == t2A);
-        
+
         auto sink = appender!S();
         replaceFirstInto(sink, s1, re1, "court");
         assert(sink.data == t1F);
@@ -6396,11 +6398,11 @@ public @trusted void replaceAllInto(alias fun, Sink, R, RegEx)
 }
 
 /++
-    Old API for replacement, operation depends on flags of pattern $(D re). 
+    Old API for replacement, operation depends on flags of pattern $(D re).
     With "g" flag it performs the equivalent of $(LREF replaceAll) otherwise it
     works the same as $(LREF replaceFirst).
 
-    The use of this function is $(RED discouraged), please use $(LREF replaceAll) 
+    The use of this function is $(RED discouraged), please use $(LREF replaceAll)
     or $(LREF replaceFirst) explicitly.
 +/
 public R replace(alias scheme = match, R, C, RegEx)(R input, RegEx re, const(C)[] format)
@@ -6966,7 +6968,7 @@ unittest
                     if(c == 'y')
                     {
                         auto result = produceExpected(m, to!(String)(tvd.format));
-                        assert(result == to!String(tvd.replace), 
+                        assert(result == to!String(tvd.replace),
                             text(matchFn.stringof ~": mismatch pattern #", a, ": ", tvd.pattern," expected: ",
                                     tvd.replace, " vs ", result));
                     }
@@ -7008,19 +7010,19 @@ unittest
             {
                 static assert(!__traits(compiles, (){
                     enum r = regex(tvd.pattern, tvd.flags);
-                }), "errornously compiles regex pattern: " ~ tvd.pattern);    
+                }), "errornously compiles regex pattern: " ~ tvd.pattern);
             }
             else
             {
                 //BUG: tv[v] is fine but tvd is not known at compile time?!
                 enum r = ctRegex!(tv[v].pattern, tv[v].flags);
                 auto nr = regex(tvd.pattern, tvd.flags);
-                assert(equal(r.ir, nr.ir), 
+                assert(equal(r.ir, nr.ir),
                     text("!C-T regex! failed to compile pattern #", a ,": ", tvd.pattern));
                 auto m = match(tvd.input, r);
                 auto c = tvd.result[0];
-                bool ok = (c == 'y') ^ m.empty;                
-                assert(ok, text("ctRegex: failed to match pattern #", 
+                bool ok = (c == 'y') ^ m.empty;
+                assert(ok, text("ctRegex: failed to match pattern #",
                     a ,": ", tvd.pattern));
                 if(c == 'y')
                 {
@@ -7331,12 +7333,15 @@ unittest
     NAME   = XPAW01_STA:STATION
     NAME   = XPAW01_STA
     ";
-        auto uniFileOld = data;
-        auto r = regex(
-           r"^NAME   = (?P<comp>[a-zA-Z0-9_]+):*(?P<blk>[a-zA-Z0-9_]*)","gm");
-        auto uniCapturesNew = match(uniFileOld, r);
-        for(int i = 0; i < 20; i++)
-            foreach (matchNew; uniCapturesNew) {}
+    auto uniFileOld = data;
+    auto r = regex(
+       r"^NAME   = (?P<comp>[a-zA-Z0-9_]+):*(?P<blk>[a-zA-Z0-9_]*)","gm");
+    auto uniCapturesNew = match(uniFileOld, r);
+    for(int i = 0; i < 20; i++)
+        foreach (matchNew; uniCapturesNew) {}
+    //a second issue with same symptoms
+    auto r2 = regex(`([а-яА-Я\-_]+\s*)+(?<=[\s\.,\^])`);
+    match("аллея Театральная", r2);
 }
 unittest
 {// bugzilla 8637 purity of enforce
@@ -7396,13 +7401,13 @@ unittest
     char[] input = ['a', 'b', 'c'];
     string format = "($1)";
     // used to give a compile error:
-    auto re = regex(`(a)`, "g");        
+    auto re = regex(`(a)`, "g");
     auto r = replace(input, re, format);
     assert(r == "(a)bc");
 }
 
 // bugzilla 9634
-unittest 
+unittest
 {
     auto re = ctRegex!"(?:a+)";
     assert(match("aaaa", re).hit == "aaaa");
@@ -7434,6 +7439,22 @@ unittest
     auto str = "This,List";
     str = str.replace(reg, "-");
     assert(str == "This-List");
+}
+
+// bugzilla 11775
+unittest
+{
+    assert(collectException(regex("a{1,0}")));
+}
+
+// bugzilla 11839
+unittest
+{
+    assert(regex(`(?P<var1>\w+)`).namedCaptures.equal(["var1"]));
+    assert(collectException(regex(`(?P<1>\w+)`)));
+    assert(regex(`(?P<v1>\w+)`).namedCaptures.equal(["v1"]));
+    assert(regex(`(?P<__>\w+)`).namedCaptures.equal(["__"]));
+    assert(regex(`(?P<я>\w+)`).namedCaptures.equal(["я"]));
 }
 
 }//version(unittest)

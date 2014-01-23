@@ -18,10 +18,10 @@ Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors:   $(WEB erdani.org, Andrei Alexandrescu)
 Credits:   This module and its documentation are inspired by Perl's $(WEB
-                   perldoc.perl.org/Getopt/Long.html, Getopt::Long) module. The syntax of
-                   D's $(D getopt) is simpler than its Perl counterpart because $(D
-                   getopt) infers the expected parameter types from the static types of
-                   the passed-in pointers.
+           perldoc.perl.org/Getopt/Long.html, Getopt::Long) module. The syntax of
+           D's $(D getopt) is simpler than its Perl counterpart because $(D
+           getopt) infers the expected parameter types from the static types of
+           the passed-in pointers.
 Source:    $(PHOBOSSRC std/_getopt.d)
 */
 /*
@@ -41,7 +41,9 @@ version (unittest)
 }
 
 /**
- Synopsis:
+   Parse and remove command line options from an string array.
+
+   Synopsis:
 
 ---------
 import std.getopt;
@@ -343,7 +345,6 @@ to another program). Invoking the example above with $(D "--foo -- --bar")
 parses foo but leaves "--bar" in $(D args). The double-dash itself is
 removed from the argument array.
 */
-
 void getopt(T...)(ref string[] args, T opts) {
     enforce(args.length,
             "Invalid arguments string passed: program name missing");
@@ -352,11 +353,11 @@ void getopt(T...)(ref string[] args, T opts) {
 }
 
 /**
- * Configuration options for $(D getopt). You can pass them to $(D
- * getopt) in any position, except in between an option string and its
- * bound pointer.
- */
-
+   Configuration options for $(D getopt). 
+   
+   You can pass them to $(D getopt) in any position, except in between an option 
+   string and its bound pointer.
+*/
 enum config {
     /// Turns case sensitivity on
     caseSensitive,
@@ -442,13 +443,21 @@ void handleOption(R)(string option, R receiver, ref string[] args,
                 a[1] != optionChar)
         {
             string[] expanded;
-            foreach (dchar c; a[1 .. $])
+            foreach (j, dchar c; a[1 .. $])
             {
+                // If the character is not alpha, stop right there. This allows
+                // e.g. -j100 to work as "pass argument 100 to option -j".
+                if (!isAlpha(c))
+                {
+                    expanded ~= a[j + 1 .. $];
+                    break;
+                }
                 expanded ~= text(optionChar, c);
             }
             args = args[0 .. i] ~ expanded ~ args[i + 1 .. $];
             continue;
         }
+
         string val;
         if (!optMatch(a, option, val, cfg))
         {
@@ -549,22 +558,24 @@ void handleOption(R)(string option, R receiver, ref string[] args,
 }
 
 /**
-   The option character. Defaults to '-' but it can be assigned to
-   prior to calling $(D getopt).
+   The option character (default '-'). 
+
+   Defaults to '-' but it can be assigned to prior to calling $(D getopt).
  */
 dchar optionChar = '-';
 
 /**
-   The string that conventionally marks the end of all
-   options. Defaults to "--" but can be assigned to prior to calling
-   $(D getopt). Assigning an empty string to $(D endOfOptions)
-   effectively disables it.
+   The string that conventionally marks the end of all options (default '--'). 
+
+   Defaults to "--" but can be assigned to prior to calling $(D getopt). Assigning an 
+   empty string to $(D endOfOptions) effectively disables it.
  */
 string endOfOptions = "--";
 
 /**
-   The assignment character used in options with parameters. Defaults
-   to '=' but can be assigned to prior to calling $(D getopt).
+   The assignment character used in options with parameters (default '='). 
+
+   Defaults to '=' but can be assigned to prior to calling $(D getopt).
  */
 dchar assignChar = '=';
 
@@ -593,7 +604,7 @@ private bool optMatch(string arg, string optPattern, ref string value,
     // yank the second '-' if present
     if (isLong) arg = arg[1 .. $];
     immutable eqPos = std.string.indexOf(arg, assignChar);
-    if (eqPos >= 0)
+    if (isLong && eqPos >= 0)
     {
         // argument looks like --opt=value
         value = arg[eqPos + 1 .. $];
@@ -841,4 +852,26 @@ unittest
     auto args = ["prog", "--opt=123", "--", "--a", "--b", "--c"];
     getopt(args, "opt", &opt);
     assert(args == ["prog", "--a", "--b", "--c"]);
+}
+
+unittest
+{
+    string foo, bar;
+    auto args = ["prog", "-thello", "-dbar=baz"];
+    getopt(args, "t", &foo, "d", &bar);
+    assert(foo == "hello");
+    assert(bar == "bar=baz");
+    // From bugzilla 5762
+    string a;
+    args = ["prog", "-a-0x12"];
+    getopt(args, config.bundling, "a|addr", &a);
+    assert(a == "-0x12", a);
+    args = ["prog", "--addr=-0x12"];
+    getopt(args, config.bundling, "a|addr", &a);
+    assert(a == "-0x12");
+    // From https://d.puremagic.com/issues/show_bug.cgi?id=11764
+    args = ["main", "-test"];
+    bool opt;
+    args.getopt(config.passThrough, "opt", &opt);
+    assert(args == ["main", "-test"]);
 }

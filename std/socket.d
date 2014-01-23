@@ -145,16 +145,6 @@ version(unittest)
 /// Base exception thrown by $(D std.socket).
 class SocketException: Exception
 {
-    // Explicitly undocumented. It will be removed in November 2013.
-    deprecated("Please use std.socket.SocketOSException instead.") @property int errorCode() const
-    {
-        auto osException = cast(SocketOSException)this;
-        if (osException)
-            return osException.errorCode;
-        else
-            return 0;
-    }
-
     ///
     this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
     {
@@ -1915,19 +1905,19 @@ static if (is(sockaddr_un))
     unittest
     {
         import core.stdc.stdio : remove;
-    
+
         immutable ubyte[] data = [1, 2, 3, 4];
         Socket[2] pair;
-        
+
         auto name = "unix-address-family-unittest-socket-name";
         auto address = new UnixAddress(name);
-        
+
         auto listener = new Socket(AddressFamily.UNIX, SocketType.STREAM);
         scope(exit) listener.close();
-        
+
         listener.bind(address);
         scope(exit) remove(toStringz(name));
-        
+
         listener.listen(1);
 
         pair[0] = new Socket(AddressFamily.UNIX, SocketType.STREAM);
@@ -2028,9 +2018,6 @@ struct TimeVal
         mixin FieldProxy!(`ctimeval.tv_usec`, `microseconds`);
     }
 }
-
-// Explicitly undocumented. It will be removed in November 2013.
-deprecated("Please use std.socket.TimeVal instead.") alias TimeVal timeval;
 
 
 /**
@@ -2256,9 +2243,6 @@ struct Linger
         mixin FieldProxy!(`clinger.l_linger`, `time`);
     }
 }
-
-// Explicitly undocumented. It will be removed in November 2013.
-deprecated("Please use std.socket.Linger instead.") alias Linger linger;
 
 /// Specifies a socket option:
 enum SocketOption: int
@@ -3140,9 +3124,8 @@ public:
         return result;
     }
 
-    // This overload is explicitly not documented. Please do not use it. It will
-    // likely be deprecated in the future. It is against Phobos policy to have
-    // functions which use naked numbers for time values.
+    // Explicitly undocumented. It will be removed in December 2014.
+    deprecated("Please use the overload of select which takes a Duration instead.")
     static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, long microseconds)
     {
         TimeVal tv;
