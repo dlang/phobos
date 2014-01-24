@@ -396,7 +396,7 @@ auto csvReader(Contents = string,
 // Test standard iteration over input.
 unittest
 {
-    string str = `one,"two ""quoted"""` ~ "\n\"three\nnew line\",""\nfive,six";
+    string str = `one,"two ""quoted"""` ~ "\n\"three\nnew line\",\nfive,six";
     auto records = csvReader(str);
 
     int count;
@@ -700,7 +700,7 @@ unittest
             return text[0];
         }
     }
-    auto ir = InputRange("Name,Occupation,Salary\r"d
+    auto ir = InputRange("Name,Occupation,Salary\r"d~
           "Joe,Carpenter,300000\nFred,Blacksmith,400000\r\n"d);
 
     foreach(record; csvReader(ir, cast(string[])null))
@@ -1178,7 +1178,7 @@ public:
                 if(_input.rowLength != 0)
                     if(_input.col != _input.rowLength)
                         throw new CSVException(
-                           format("Row %s's length %s does not match "
+                           format("Row %s's length %s does not match "~
                                   "previous length of %s.", _input.row,
                                   _input.col, _input.rowLength));
             return;
@@ -1187,7 +1187,7 @@ public:
                 if(_input.rowLength != 0)
                     if(_input.col > _input.rowLength)
                         throw new CSVException(
-                           format("Row %s's length %s does not match "
+                           format("Row %s's length %s does not match "~
                                   "previous length of %s.", _input.row,
                                   _input.col, _input.rowLength));
         }

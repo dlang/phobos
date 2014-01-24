@@ -2730,7 +2730,7 @@ template generateAssertTrap(C, func.../+[BUG 4217]+/)
 {
     static if (functionAttributes!(func) & FunctionAttribute.nothrow_) //XXX
     {
-        pragma(msg, "Warning: WhiteHole!(", C, ") used assert(0) instead "
+        pragma(msg, "Warning: WhiteHole!(", C, ") used assert(0) instead ",
                 "of Error for the auto-implemented nothrow function ",
                 C, ".", __traits(identifier, func));
         enum string generateAssertTrap =

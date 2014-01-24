@@ -2403,7 +2403,7 @@ Target parse(Target, Source)(ref Source p)
             {   case '-':    sexp++;
                              goto case;
                 case '+':    p.popFront(); enforce(!p.empty,
-                                new ConvException("Error converting input"
+                                new ConvException("Error converting input"~
                                 " to floating point"));
                              break;
                 default: {}
@@ -2421,7 +2421,7 @@ Target parse(Target, Source)(ref Source p)
             ndigits = 1;
         }
         exp += (sexp) ? -e : e;
-        enforce(ndigits, new ConvException("Error converting input"
+        enforce(ndigits, new ConvException("Error converting input"~
                         " to floating point"));
 
         if (msdec)

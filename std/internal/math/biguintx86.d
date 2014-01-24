@@ -139,7 +139,7 @@ L_unrolled:
         ~ indexedLoopUnroll( 8,
         "mov EAX, [@*4-8*4+EDX+ECX*4];"
         ~ ( op == '+' ? "adc" : "sbb" ) ~ " EAX, [@*4-8*4+ESI+ECX*4];"
-        "mov [@*4-8*4+EDI+ECX*4], EAX;")
+        ~ "mov [@*4-8*4+EDI+ECX*4], EAX;")
         ~ "}");
 asm {
         setc AL; // save carry
@@ -156,7 +156,7 @@ L_residual:
         ~ indexedLoopUnroll( 1,
         "mov EAX, [@*4+EDX+ECX*4];"
         ~ ( op == '+' ? "adc" : "sbb" ) ~ " EAX, [@*4+ESI+ECX*4];"
-        "mov [@*4+EDI+ECX*4], EAX;") ~ "}");
+        ~ "mov [@*4+EDI+ECX*4], EAX;") ~ "}");
 asm {
         setc AL; // save carry
         add ECX, 1;

@@ -410,11 +410,11 @@ unittest
                 "delegate void() " ~
                 (EncloseSafe ? "@safe " : "") ~
                 (EnclosePure ? "pure " : "") ~
-                "{ ""enforce(true, { "
+                "{ enforce(true, { " ~
                         "int n; " ~
                         (BodySafe ? "" : "auto p = &n + 10; "    ) ~    // unsafe code
                         (BodyPure ? "" : "static int g; g = 10; ") ~    // impure code
-                    "}); "
+                    "}); " ~
                 "}";
             enum expect =
                 (BodySafe || !EncloseSafe) && (!EnclosePure || BodyPure);

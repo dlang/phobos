@@ -621,7 +621,7 @@ Parameter for the generator.
         mti = n;
         if(range.empty && j < n)
         {
-            throw new Exception(format("MersenneTwisterEngine.seed: Input range didn't provide enough"
+            throw new Exception(format("MersenneTwisterEngine.seed: Input range didn't provide enough"~
                 " elements: Need %s elemnets.", n));
         }
 

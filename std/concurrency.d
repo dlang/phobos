@@ -626,7 +626,7 @@ private void _send(T...)( MsgType type, Tid tid, T vals )
 void receive(T...)( T ops )
 in
 {
-    assert(mbox !is null, "Cannot receive a message until a thread was spawned "
+    assert(mbox !is null, "Cannot receive a message until a thread was spawned "~
            "or thisTid was passed to a running thread.");
 }
 body
@@ -708,7 +708,7 @@ private template receiveOnlyRet(T...)
 receiveOnlyRet!(T) receiveOnly(T...)()
 in
 {
-    assert(mbox !is null, "Cannot receive a message until a thread was spawned "
+    assert(mbox !is null, "Cannot receive a message until a thread was spawned "~
            "or thisTid was passed to a running thread.");
 }
 body
@@ -775,7 +775,7 @@ unittest
 bool receiveTimeout(T...)( Duration duration, T ops )
 in
 {
-    assert(mbox !is null, "Cannot receive a message until a thread was spawned "
+    assert(mbox !is null, "Cannot receive a message until a thread was spawned "~
            "or thisTid was passed to a running thread.");
 }
 body

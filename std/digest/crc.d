@@ -296,7 +296,7 @@ unittest
     digest = crc32Of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
     assert(digest == cast(ubyte[])x"d2e6c21f");
 
-    digest = crc32Of("1234567890123456789012345678901234567890"
+    digest = crc32Of("1234567890123456789012345678901234567890"~
                     "1234567890123456789012345678901234567890");
     assert(digest == cast(ubyte[])x"724aa97c");
 

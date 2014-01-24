@@ -4799,8 +4799,8 @@ unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    string h = "/homes/aalexand/d/dmd/bin/../lib/libphobos.a(dmain2.o)"
-        "(.gnu.linkonce.tmain+0x74): In function `main' undefined reference"
+    string h = "/homes/aalexand/d/dmd/bin/../lib/libphobos.a(dmain2.o)"~
+        "(.gnu.linkonce.tmain+0x74): In function `main' undefined reference"~
         " to `_Dmain':";
     string[] ns = ["libphobos", "function", " undefined", "`", ":"];
     foreach (n ; ns) {
@@ -7008,7 +7008,7 @@ minCount(alias pred = "a < b", Range)(Range range)
     alias RetType = Tuple!(T, size_t);
 
     static assert (is(typeof(RetType(range.front, 1))),
-        format("Error: Cannot call minCount on a %s, because it is not possible "
+        format("Error: Cannot call minCount on a %s, because it is not possible "~
                "to copy the result value (a %s) into a Tuple.", Range.stringof, T.stringof));
 
     enforce(!range.empty, "Can't count elements from an empty range");
@@ -7071,7 +7071,7 @@ minCount(alias pred = "a < b", Range)(Range range)
     }
     else
         static assert(false,
-            format("Sorry, can't find the minCount of a %s: Don't know how "
+            format("Sorry, can't find the minCount of a %s: Don't know how "~
                    "to keep track of the smallest %s element.", Range.stringof, T.stringof));
 }
 
@@ -10389,7 +10389,7 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
             if (!binaryFun!less(r[i + 1], r[i])) continue;
             assert(
                 !binaryFun!less(r[i], r[i + 1]),
-                text("Predicate for isSorted is not antisymmetric. Both"
+                text("Predicate for isSorted is not antisymmetric. Both",
                         " pred(a, b) and pred(b, a) are true for a=", r[i],
                         " and b=", r[i+1], " in positions ", i, " and ",
                         i + 1));
@@ -10408,7 +10408,7 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
             // Check for antisymmetric predicate
             assert(
                 !binaryFun!less(r.front, ahead.front),
-                text("Predicate for isSorted is not antisymmetric. Both"
+                text("Predicate for isSorted is not antisymmetric. Both",
                         " pred(a, b) and pred(b, a) are true for a=", r.front,
                         " and b=", ahead.front, " in positions ", i, " and ",
                         i + 1));
