@@ -3820,7 +3820,7 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
     // @@@BUG@@@: add private here, std.algorithm doesn't unittest anymore
     /*private*/ void pop(Store store)
     {
-        assert(!store.empty);
+        assert(!store.empty, "Cannot pop an empty store.");
         if (store.length == 1) return;
         auto t1 = moveFront(store[]);
         auto t2 = moveBack(store[]);
@@ -3964,7 +3964,7 @@ according to $(D less).
      */
     @property ElementType!Store front()
     {
-        enforce(!empty);
+        enforce(!empty, "Cannot call front on an empty heap.");
         return _store.front;
     }
 
@@ -4023,7 +4023,7 @@ Removes the largest element from the heap.
      */
     void removeFront()
     {
-        enforce(!empty);
+        enforce(!empty, "Cannot call removeFront on an empty heap.");
         if (_length > 1)
         {
             auto t1 = moveFront(_store[]);
@@ -4053,7 +4053,7 @@ Replaces the largest element in the store with $(D value).
     void replaceFront(ElementType!Store value)
     {
         // must replace the top
-        assert(!empty);
+        assert(!empty, "Cannot call replaceFront on an empty heap.");
         _store.front = value;
         percolateDown(_store, 0, _length);
         assertValid();
@@ -4076,7 +4076,7 @@ must be collected.
             return true;
         }
         // must replace the top
-        assert(!_store.empty);
+        assert(!_store.empty, "Cannot replace front of an empty heap.");
         if (!comp(value, _store.front)) return false; // value >= largest
         _store.front = value;
         percolateDown(_store, 0, _length);
