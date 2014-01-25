@@ -3820,7 +3820,7 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
     // @@@BUG@@@: add private here, std.algorithm doesn't unittest anymore
     /*private*/ void pop(Store store)
     {
-        assert(!store.empty, "Cannot pop from empty store.");
+        assert(!store.empty, "Cannot pop an empty store.");
         if (store.length == 1) return;
         auto t1 = moveFront(store[]);
         auto t2 = moveBack(store[]);
