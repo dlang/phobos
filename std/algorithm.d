@@ -1082,12 +1082,12 @@ unittest
 }
 
 // Pairwise summation http://en.wikipedia.org/wiki/Pairwise_summation
-ElementType!R sum(R)(R r)
+auto sum(R)(R r)
 if (hasSlicing!R && hasLength!R && isFloatingPoint!(ElementType!R))
 {
     switch (r.length)
     {
-    case 0: return 0;
+    case 0: return 0.0;
     case 1: return r.front;
     case 2: return r.front + r[1];
     default: return sum(r[0 .. $ / 2]) + sum(r[$ / 2 .. $]);
@@ -1097,7 +1097,11 @@ if (hasSlicing!R && hasLength!R && isFloatingPoint!(ElementType!R))
 unittest
 {
     static assert(is(typeof(sum([1., 2., 3., 4.])) == double));
-    static assert(is(typeof(sum([1F, 2F, 3F, 4F])) == float));
+    static assert(is(typeof(sum([1F, 2F, 3F, 4F])) == double));
+    const(float[]) a = [1F, 2F, 3F, 4F];
+    static assert(is(typeof(sum(a)) == double));
+    const(float)[] b = [1F, 2F, 3F, 4F];
+    static assert(is(typeof(sum(a)) == double));
 
     double[] empty;
     assert(sum(empty) == 0);
