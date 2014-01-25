@@ -38,13 +38,13 @@ CFLAGS=-mn -6 -r
 
 ## Flags for dmd D compiler
 
-DFLAGS=-O -release -w -d
-#DFLAGS=-unittest -g -d
-#DFLAGS=-unittest -cov -g -d
+DFLAGS=-O -release -w
+#DFLAGS=-unittest -g
+#DFLAGS=-unittest -cov -g
 
 ## Flags for compiling unittests
 
-UDFLAGS=-O -w -d
+UDFLAGS=-O -w
 
 ## C compiler
 
@@ -426,7 +426,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -cov=62 -unittest -main -run std\encoding.d
 	$(DMD) -cov=61 -unittest -main -run std\xml.d
 	$(DMD) -cov=79 -unittest -main -run std\random.d
-	$(DMD) -cov=92 -unittest -main -d -run std\exception.d
+	$(DMD) -cov=92 -unittest -main -run std\exception.d
 	$(DMD) -cov=73 -unittest -main -run std\concurrency.d
 	$(DMD) -cov=95 -unittest -main -run std\datetime.d
 	$(DMD) -cov=96 -unittest -main -run std\uuid.d
@@ -443,7 +443,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -cov=53 -unittest -main -run std\socket.d
 	$(DMD) -cov=0  -unittest -main -run std\socketstream.d
 	$(DMD) -cov=88 -unittest -main -run std\container.d
-	$(DMD) -cov=90 -unittest -main -d -run std\conv.d
+	$(DMD) -cov=90 -unittest -main -run std\conv.d
 	$(DMD) -cov=0  -unittest -main -run std\zip.d
 	$(DMD) -cov=92 -unittest -main -run std\cstream.d
 	$(DMD) -cov=77 -unittest -main -run std\regex.d
@@ -650,7 +650,7 @@ $(DOC)\std_stdio.html : $(STDDOC) std\stdio.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_stdio.html $(STDDOC) std\stdio.d
 
 $(DOC)\std_stream.html : $(STDDOC) std\stream.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_stream.html -d $(STDDOC) std\stream.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_stream.html $(STDDOC) std\stream.d
 
 $(DOC)\std_string.html : $(STDDOC) std\string.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_string.html $(STDDOC) std\string.d
@@ -659,7 +659,7 @@ $(DOC)\std_system.html : $(STDDOC) std\system.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_system.html $(STDDOC) std\system.d
 
 $(DOC)\std_thread.html : $(STDDOC) $(DRUNTIME)\src\core\thread.d
-	$(DMD) -c -o- -d $(DDOCFLAGS) -Df$(DOC)\std_thread.html $(STDDOC) -I$(DRUNTIME)\src $(DRUNTIME)\src\core\thread.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_thread.html $(STDDOC) -I$(DRUNTIME)\src $(DRUNTIME)\src\core\thread.d
 
 $(DOC)\std_traits.html : $(STDDOC) std\traits.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_traits.html $(STDDOC) std\traits.d
