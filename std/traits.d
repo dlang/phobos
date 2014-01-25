@@ -5793,7 +5793,7 @@ template Largest(T...) if(T.length >= 1)
 
 unittest
 {
-    static assert(is(Largest!(uint, ubyte, ulong, real) == real));
+    static assert(is(Largest!(uint, ubyte, ushort, real) == real));
     static assert(is(Largest!(ulong, double) == ulong));
     static assert(is(Largest!(double, ulong) == double));
     static assert(is(Largest!(uint, byte, double, short) == double));

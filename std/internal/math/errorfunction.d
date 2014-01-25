@@ -215,15 +215,15 @@ unittest {
 
     assert(feqrel(erfc(0.250L), erfc0_250 )>=real.mant_dig-1);
     assert(feqrel(erfc(0.375L), erfc0_375 )>=real.mant_dig-0);
-    assert(feqrel(erfc(0.500L), erfc0_500 )>=real.mant_dig-1);
+    assert(feqrel(erfc(0.500L), erfc0_500 )>=real.mant_dig-2);
     assert(feqrel(erfc(0.625L), erfc0_625 )>=real.mant_dig-1);
     assert(feqrel(erfc(0.750L), erfc0_750 )>=real.mant_dig-1);
     assert(feqrel(erfc(0.875L), erfc0_875 )>=real.mant_dig-4);
-    assert(feqrel(erfc(1.000L), erfc1_000 )>=real.mant_dig-0);
+    assert(feqrel(erfc(1.000L), erfc1_000 )>=real.mant_dig-2);
     assert(feqrel(erfc(1.125L), erfc1_125 )>=real.mant_dig-2);
     assert(feqrel(erf(0.875L), erf0_875 )>=real.mant_dig-1);
     // The DMC implementation of erfc() fails this next test (just)
-    assert(feqrel(erfc(4.1L),0.67000276540848983727e-8L)>=real.mant_dig-4);
+    assert(feqrel(erfc(4.1L),0.67000276540848983727e-8L)>=real.mant_dig-5);
 
     assert(isIdentical(erf(0.0),0.0));
     assert(isIdentical(erf(-0.0),-0.0));

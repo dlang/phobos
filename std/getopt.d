@@ -660,6 +660,7 @@ private void setConfig(ref configuration cfg, config option)
 
 unittest
 {
+    import std.math;
     uint paranoid = 2;
     string[] args = (["program.name",
                       "--paranoid", "--paranoid", "--paranoid"]).dup;
@@ -706,8 +707,8 @@ unittest
     getopt(args, "tune", &tuningParms);
     assert(args.length == 1);
     assert(tuningParms.length == 2);
-    assert(tuningParms["alpha"] == 0.5);
-    assert(tuningParms["beta"] == 0.6);
+    assert(approxEqual(tuningParms["alpha"], 0.5));
+    assert(approxEqual(tuningParms["beta"], 0.6));
 
     uint verbosityLevel = 1;
     void myHandler(string option)
