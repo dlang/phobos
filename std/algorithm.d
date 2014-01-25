@@ -10932,8 +10932,12 @@ was succesful.
  +/
 template canFind(alias pred="a == b")
 {
-    //Explictly Undocumented. It will be removed in December 2014.
-    deprecated("Please use any instead.") bool canFind(Range)(Range haystack)
+    /++
+    Returns $(D true) if and only if any value $(D v) found in the
+    input range $(D range) satisfies the predicate $(D pred).
+    Performs (at most) $(BIGOH r.length) evaluations of $(D pred).
+     +/
+    bool canFind(Range)(Range haystack)
     if (is(typeof(find!pred(haystack))))
     {
         return any!pred(haystack);
