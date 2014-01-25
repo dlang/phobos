@@ -1983,45 +1983,6 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
 /**
   * HTTP client functionality.
   *
-  * Example:
-  * ---
-  * import std.net.curl, std.stdio;
-  *
-  * // Get with custom data receivers
-  * auto http = HTTP("dlang.org");
-  * http.onReceiveHeader =
-  *     (in char[] key, in char[] value) { writeln(key ~ ": " ~ value); };
-  * http.onReceive = (ubyte[] data) { /+ drop +/ return data.length; };
-  * http.perform();
-  *
-  * // Put with data senders
-  * auto msg = "Hello world";
-  * http.contentLength = msg.length;
-  * http.onSend = (void[] data)
-  * {
-  *     auto m = cast(void[])msg;
-  *     size_t len = m.length > data.length ? data.length : m.length;
-  *     if (len == 0) return len;
-  *     data[0..len] = m[0..len];
-  *     msg = msg[len..$];
-  *     return len;
-  * };
-  * http.perform();
-  *
-  * // Track progress
-  * http.method = HTTP.Method.get;
-  * http.url = "http://upload.wikimedia.org/wikipedia/commons/"
-  *            "5/53/Wikipedia-logo-en-big.png";
-  * http.onReceive = (ubyte[] data) { return data.length; };
-  * http.onProgress = (double dltotal, double dlnow,
-  *                    double ultotal, double ulnow)
-  * {
-  *     writeln("Progress ", dltotal, ", ", dlnow, ", ", ultotal, ", ", ulnow);
-  *     return 0;
-  * };
-  * http.perform();
-  * ---
-  *
   * See_Also: $(WEB www.ietf.org/rfc/rfc2616.txt, RFC2616)
   *
   */
@@ -2790,6 +2751,45 @@ struct HTTP
     }
 
 } // HTTP
+
+///
+unittest
+{
+    import std.net.curl, std.stdio;
+
+    // Get with custom data receivers
+    auto http = HTTP("dlang.org");
+    http.onReceiveHeader =
+        (in char[] key, in char[] value) { writeln(key ~ ": " ~ value); };
+    http.onReceive = (ubyte[] data) { /+ drop +/ return data.length; };
+    http.perform();
+
+    // Put with data senders
+    auto msg = "Hello world";
+    http.contentLength = msg.length;
+    http.onSend = (void[] data)
+    {
+            auto m = cast(void[])msg;
+            size_t len = m.length > data.length ? data.length : m.length;
+            if (len == 0) return len;
+            data[0..len] = m[0..len];
+            msg = msg[len..$];
+            return len;
+    };
+    http.perform();
+
+    // Track progress
+    http.method = HTTP.Method.get;
+    http.url = "http://upload.wikimedia.org/wikipedia/commons/" ~
+        "5/53/Wikipedia-logo-en-big.png";
+    http.onReceive = (ubyte[] data) { return data.length; };
+    http.onProgress = (size_t dltotal, size_t dlnow, size_t ultotal, size_t ulnow)
+    {
+            writeln("Progress ", dltotal, ", ", dlnow, ", ", ultotal, ", ", ulnow);
+            return 0;
+    };
+    http.perform();
+}
 
 /**
    FTP client functionality.
