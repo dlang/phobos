@@ -236,15 +236,6 @@ private
 }
 package
 {
-    /* Get an expression typed as T, like T.init */
-    template defaultInit(T)
-    {
-        static if (!is(typeof({ T v = void; })))    // inout(U)
-            @property T defaultInit(T v = T.init);
-        else
-            @property T defaultInit();
-    }
-
     // Add specific qualifier to the given type T
     template MutableOf(T)     { alias MutableOf     =              T  ; }
     template InoutOf(T)       { alias InoutOf       =        inout(T) ; }
