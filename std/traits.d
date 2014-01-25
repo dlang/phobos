@@ -107,7 +107,6 @@
  * ))
  * $(TR $(TD General Types) $(TD
  *           $(LREF Unqual)
- *           $(LREF CompatibleUnqual)
  *           $(LREF ForeachType)
  *           $(LREF OriginalType)
  *           $(LREF PointerTarget)
@@ -5614,7 +5613,7 @@ static assert(is(CompatibleUnqual!(const S) == S));
 static assert(is(CompatibleUnqual!(const P) == const P));
 ----
  */
-template CompatibleUnqual(T)
+package template CompatibleUnqual(T)
 {
     static if (is(T : Unqual!T))
         alias CompatibleUnqual = Unqual!T;

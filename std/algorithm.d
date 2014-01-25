@@ -364,7 +364,7 @@ version(unittest)
 private T* addressOf(T)(ref T val) { return &val; }
 
 /**
-$(D auto map(Range)(Range r) if (isInputRange!(Unqual!Range));)
+$(D auto map(Range)(Range r) if (isInputRange!(CompatibleUnqual!Range));)
 
 Implements the homonym function (also known as $(D transform)) present
 in many languages of functional flavor. The call $(D map!(fun)(range))
@@ -374,7 +374,7 @@ not changed. Evaluation is done lazily.
 */
 template map(fun...) if (fun.length >= 1)
 {
-    auto map(Range)(Range r) if (isInputRange!(Unqual!Range))
+    auto map(Range)(Range r) if (isInputRange!(CompatibleUnqual!Range))
     {
         static if (fun.length > 1)
         {
@@ -433,7 +433,7 @@ unittest
 
 private struct MapResult(alias fun, Range)
 {
-    alias Unqual!Range R;
+    alias CompatibleUnqual!Range R;
     //alias typeof(fun(.ElementType!R.init)) ElementType;
     R _input;
 
@@ -711,7 +711,7 @@ template reduce(fun...) if (fun.length >= 1)
             {
                 alias args[0] seed;
                 alias args[1] r;
-                Unqual!(Args[0]) result = seed;
+                CompatibleUnqual!(Args[0]) result = seed;
                 for (; !r.empty; r.popFront())
                 {
                     static if (fun.length == 1)
@@ -745,7 +745,7 @@ template reduce(fun...) if (fun.length >= 1)
                     import std.conv : emplace;
 
                     static assert(fun.length > 1);
-                    Unqual!(typeof(r.front)) seed = r.front;
+                    CompatibleUnqual!(typeof(r.front)) seed = r.front;
                     typeof(adjoin!(staticMap!(binaryFun, fun))(seed, seed))
                         result = void;
                     foreach (i, T; result.Types)
@@ -771,11 +771,11 @@ template reduce(fun...) if (fun.length >= 1)
             {
                 static if (fun.length == 1)
                 {
-                    auto result = Tuple!(Unqual!(Args[0]))(args[0]);
+                    auto result = Tuple!(CompatibleUnqual!(Args[0]))(args[0]);
                 }
                 else
                 {
-                    Unqual!(Args[0]) result = args[0];
+                    CompatibleUnqual!(Args[0]) result = args[0];
                 }
 
                 enum bool initialized = true;
@@ -1382,7 +1382,7 @@ unittest
 }
 
 /**
-$(D auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range));)
+$(D auto filter(Range)(Range rs) if (isInputRange!(CompatibleUnqual!Range));)
 
 Implements the homonym function present in various programming
 languages of functional flavor. The call $(D filter!(predicate)(range))
@@ -1391,7 +1391,7 @@ which $(D predicate(x)) is $(D true).
  */
 template filter(alias pred) if (is(typeof(unaryFun!pred)))
 {
-    auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range))
+    auto filter(Range)(Range rs) if (isInputRange!(CompatibleUnqual!Range))
     {
         return FilterResult!(unaryFun!pred, Range)(rs);
     }
@@ -1426,7 +1426,7 @@ unittest
 
 private struct FilterResult(alias pred, Range)
 {
-    alias Unqual!Range R;
+    alias CompatibleUnqual!Range R;
     R _input;
 
     this(R r)
@@ -1560,7 +1560,7 @@ unittest
 }
 
 /**
- * $(D auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(Unqual!Range));)
+ * $(D auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(CompatibleUnqual!Range));)
  *
  * Similar to $(D filter), except it defines a bidirectional
  * range. There is a speed disadvantage - the constructor spends time
@@ -1572,7 +1572,7 @@ unittest
  */
 template filterBidirectional(alias pred)
 {
-    auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(Unqual!Range))
+    auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(CompatibleUnqual!Range))
     {
         return FilterBidiResult!(unaryFun!pred, Range)(r);
     }
@@ -1596,7 +1596,7 @@ unittest
 
 private struct FilterBidiResult(alias pred, Range)
 {
-    alias Unqual!Range R;
+    alias CompatibleUnqual!Range R;
     R _input;
 
     this(R r)
