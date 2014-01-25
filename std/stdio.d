@@ -1447,6 +1447,11 @@ Allows to directly use range operations on lines of a file.
         // Range primitive implementations.
         @property bool empty()
         {
+            if (first_call)
+            {
+                popFront();
+                first_call = false;
+            }
             if (line !is null) return false;
             if (!file.isOpen) return true;
 
@@ -1623,6 +1628,10 @@ the contents may well have changed).
                 assert(line == witness[i++]);
             }
             assert(i == witness.length, text(i, " != ", witness.length));
+
+            // Issue 11830
+            auto walkedLength = File(deleteme).byLine.walkLength;
+            assert(walkedLength == witness.length, text(walkedLength, " != ", witness.length));
         }
         /* Wrap with default args.
          * Note: Having a default argument for terminator = '\n' would prevent
