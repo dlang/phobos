@@ -8405,7 +8405,7 @@ if (isInputRange!Range)
 
     /// Ditto
     static if (isRandomAccessRange!Range)
-        auto opIndex(size_t i)
+        auto ref opIndex(size_t i)
         {
             return _input[i];
         }
@@ -8461,19 +8461,6 @@ if (isInputRange!Range)
             }
         }
         return first;
-    }
-
-    // Specialization for linear
-    private size_t getTransitionIndex(SearchPolicy sp, alias test, V)(V v)
-    if (sp == SearchPolicy.linear)
-    {
-        size_t i = 0;
-        immutable count = _input.length;
-        for (; i < count; ++i)
-        {
-            if (test(_input[i], v)) break;
-        }
-        return i;
     }
 
     // Specialization for trot and gallop
@@ -8543,7 +8530,7 @@ if (isInputRange!Range)
 
 // lowerBound
 /**
-   This function uses binary search with policy $(D sp) to find the
+   This function uses a search with policy $(D sp) to find the
    largest left subrange on which $(D pred(x, value)) is $(D true) for
    all $(D x) (e.g., if $(D pred) is "less than", returns the portion of
    the range with elements strictly smaller than $(D value)). The search
@@ -8560,7 +8547,7 @@ if (isInputRange!Range)
 */
     auto lowerBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V)
-         && isRandomAccessRange!Range)
+         && hasSlicing!Range)
     {
         return this[0 .. getTransitionIndex!(sp, geq)(value)];
     }
@@ -8590,7 +8577,7 @@ assert(equal(p, [4, 4, 5, 6]));
     auto upperBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V))
     {
-        static assert(isRandomAccessRange!Range || sp == SearchPolicy.linear,
+        static assert(hasSlicing!Range || sp == SearchPolicy.linear,
             "Specify SearchPolicy.linear explicitly for "
             ~ typeof(this).stringof);
         static if (sp == SearchPolicy.linear)
@@ -8885,7 +8872,7 @@ unittest
 // Test on an input range
 unittest
 {
-    import std.file, std.path;
+    import std.stdio, std.file, std.path, std.conv;
     auto name = buildPath(tempDir(), "test.std.range." ~ text(__LINE__));
     auto f = File(name, "w");
     // write a sorted range of lines to the file
