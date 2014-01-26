@@ -1434,7 +1434,6 @@ Allows to directly use range operations on lines of a file.
         Char[] line;
         Terminator terminator;
         KeepTerminator keepTerminator;
-        bool first_call = true;
 
     public:
         this(File f, KeepTerminator kt, Terminator terminator)
@@ -1442,16 +1441,12 @@ Allows to directly use range operations on lines of a file.
             file = f;
             this.terminator = terminator;
             keepTerminator = kt;
+            popFront();
         }
 
         // Range primitive implementations.
         @property bool empty()
         {
-            if (first_call)
-            {
-                popFront();
-                first_call = false;
-            }
             if (line !is null) return false;
             if (!file.isOpen) return true;
 
@@ -1473,11 +1468,6 @@ Allows to directly use range operations on lines of a file.
 
         @property Char[] front()
         {
-            if (first_call)
-            {
-                popFront();
-                first_call = false;
-            }
             return line;
         }
 
