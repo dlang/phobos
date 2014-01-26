@@ -810,8 +810,8 @@ Throws: $(D Exception) if the file is not opened.
             overlapped.Offset = liStart.LowPart;
             overlapped.OffsetHigh = liStart.HighPart;
             overlapped.hEvent = null;
-            return F(cast(HANDLE)_get_osfhandle(fileno), flags, 0,
-                liLength.LowPart, liLength.HighPart, &overlapped);
+            return F(windowsHandle, flags, 0, liLength.LowPart,
+                liLength.HighPart, &overlapped);
         }
 
         private static T wenforce(T)(T cond, string str)
@@ -1379,6 +1379,19 @@ Returns the file number corresponding to this object.
         enforce(isOpen, "Attempting to call fileno() on an unopened file");
         return .fileno(cast(FILE*) _p.handle);
     }
+
+/**
+Returns the underlying operating system $(D HANDLE) (Windows only).
+*/
+    version(StdDdoc)
+    @property HANDLE windowsHandle();
+
+    version(Windows)
+    @property HANDLE windowsHandle()
+    {
+        return cast(HANDLE)_get_osfhandle(fileno);
+    }
+
 
 // Note: This was documented until 2013/08
 /*
