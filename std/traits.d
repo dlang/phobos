@@ -46,6 +46,8 @@
  *           $(LREF InterfacesTuple)
  *           $(LREF TransitiveBaseTypeTuple)
  *           $(LREF MemberFunctionsTuple)
+ *           $(LREF TemplateOf)
+ *           $(LREF TemplateArgsOf)
  *           $(LREF classInstanceAlignment)
  * ))
  * $(TR $(TD Type Conversion) $(TD
@@ -3746,6 +3748,94 @@ unittest
     static assert(is(typeof(&Test_foo[0]) == void function()));
     static assert(is(typeof(&Test_foo[2]) == void function(int)));
     static assert(is(typeof(&Test_foo[1]) == void function(int, int)));
+}
+
+
+/**
+Returns an alias to the template that $(D T) is an instance of.
+
+Example:
+--------------------
+struct Foo(T, U) {}
+static assert(__traits(isSame, TemplateOf!(Foo!(int, real)), Foo));
+--------------------
+ */
+template TemplateOf(alias T : Base!Args, alias Base, Args...)
+{
+    alias TemplateOf = Base;
+}
+
+template TemplateOf(T : Base!Args, alias Base, Args...)
+{
+    alias TemplateOf = Base;
+}
+
+unittest
+{
+    template Foo1(A) {}
+    template Foo2(A, B) {}
+    template Foo3(alias A) {}
+    template Foo4(string A) {}
+    struct Foo5(A) {}
+    struct Foo6(A, B) {}
+    struct Foo7(alias A) {}
+    template Foo8(A) { template Foo9(B) {} }
+    template Foo10() {}
+
+    static assert(__traits(isSame, TemplateOf!(Foo1!(int)), Foo1));
+    static assert(__traits(isSame, TemplateOf!(Foo2!(int, int)), Foo2));
+    static assert(__traits(isSame, TemplateOf!(Foo3!(123)), Foo3));
+    static assert(__traits(isSame, TemplateOf!(Foo4!("123")), Foo4));
+    static assert(__traits(isSame, TemplateOf!(Foo5!(int)), Foo5));
+    static assert(__traits(isSame, TemplateOf!(Foo6!(int, int)), Foo6));
+    static assert(__traits(isSame, TemplateOf!(Foo7!(123)), Foo7));
+    static assert(__traits(isSame, TemplateOf!(Foo8!(int).Foo9!(real)), Foo8!(int).Foo9));
+    static assert(__traits(isSame, TemplateOf!(Foo10!()), Foo10));
+}
+
+
+/**
+Returns a $(D TypeTuple) of the template arguments used to instantiate $(D T).
+
+Example:
+--------------------
+struct Foo(T, U) {}
+static assert(is(TemplateArgsOf!(Foo!(int, real)) == TypeTuple!(int, real)));
+--------------------
+ */
+template TemplateArgsOf(alias T : Base!Args, alias Base, Args...)
+{
+    alias TemplateArgsOf = Args;
+}
+
+template TemplateArgsOf(T : Base!Args, alias Base, Args...)
+{
+    alias TemplateArgsOf = Args;
+}
+
+unittest
+{
+    template Foo1(A) {}
+    template Foo2(A, B) {}
+    template Foo3(alias A) {}
+    template Foo4(string A) {}
+    struct Foo5(A) {}
+    struct Foo6(A, B) {}
+    struct Foo7(alias A) {}
+    template Foo8(A) { template Foo9(B) {} }
+    template Foo10() {}
+
+    enum x = 123;
+    enum y = "123";
+    static assert(is(TemplateArgsOf!(Foo1!(int)) == TypeTuple!(int)));
+    static assert(is(TemplateArgsOf!(Foo2!(int, int)) == TypeTuple!(int, int)));
+    static assert(__traits(isSame, TemplateArgsOf!(Foo3!(x)), TypeTuple!(x)));
+    static assert(__traits(isSame, TemplateArgsOf!(Foo4!(y)), TypeTuple!(y)));
+    static assert(is(TemplateArgsOf!(Foo5!(int)) == TypeTuple!(int)));
+    static assert(is(TemplateArgsOf!(Foo6!(int, int)) == TypeTuple!(int, int)));
+    static assert(__traits(isSame, TemplateArgsOf!(Foo7!(x)), TypeTuple!(x)));
+    static assert(is(TemplateArgsOf!(Foo8!(int).Foo9!(real)) == TypeTuple!(real)));
+    static assert(is(TemplateArgsOf!(Foo10!()) == TypeTuple!()));
 }
 
 
