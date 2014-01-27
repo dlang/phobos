@@ -1924,27 +1924,32 @@ $(D Range) that locks the file and allows fast writing to it.
         }
 
         /// Range primitive implementations.
-        void put(A)(A writeme) if (is(ElementType!A : const(dchar)))
+        void put(A)(A writeme)
+            if (is(ElementType!A : const(dchar)) &&
+                isInputRange!A &&
+                !isInfinite!A)
         {
             import std.exception : errnoEnforce;
 
             alias C = ElementEncodingType!A;
             static assert(!is(C == void));
-            if (writeme[0].sizeof == 1 && orientation <= 0)
+            static if (isSomeString!A && C.sizeof == 1)
             {
-                //file.write(writeme); causes infinite recursion!!!
-                //file.rawWrite(writeme);
-                auto result =
-                    .fwrite(writeme.ptr, C.sizeof, writeme.length, fps);
-                if (result != writeme.length) errnoEnforce(0);
-            }
-            else
-            {
-                // put each character in turn
-                foreach (dchar c; writeme)
+                if (orientation <= 0)
                 {
-                    put(c);
+                    //file.write(writeme); causes infinite recursion!!!
+                    //file.rawWrite(writeme);
+                    auto result =
+                        .fwrite(writeme.ptr, C.sizeof, writeme.length, fps);
+                    if (result != writeme.length) errnoEnforce(0);
+                    return;
                 }
+            }
+
+            // put each character in turn
+            foreach (dchar c; writeme)
+            {
+                put(c);
             }
         }
 
@@ -2063,6 +2068,25 @@ unittest
     auto f = File(deleteme);
     assert(f.size == 5);
     assert(f.tell == 0);
+}
+
+unittest
+{
+    auto deleteme = testFilename();
+    scope(exit) std.file.remove(deleteme);
+
+    {
+        File f = File(deleteme, "w");
+        auto writer = f.lockingTextWriter();
+        static assert(isOutputRange!(typeof(writer), dchar));
+        writer.put("日本語");
+        writer.put("日本語"w);
+        writer.put("日本語"d);
+        writer.put('日');
+        writer.put(chain(only('本'), only('語')));
+        writer.put(repeat('#', 12)); // BUG 11945
+    }
+    assert(File(deleteme).readln() == "日本語日本語日本語日本語############");
 }
 
 /// Used to specify the lock type for $(D File.lock) and $(D File.tryLock).
