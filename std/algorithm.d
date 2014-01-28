@@ -10467,57 +10467,57 @@ $(BIGOH r.length * log(r.length)) time, $(D sort) is better suited for this
 purpose. Similarly, if the number of elements to iterate is known beforehand,
 it may be more efficient to use $(D partialSort). $(D lazySort) is most suited
 for uses where the number of elements to iterate is unknown before iteration.
-
-Examples:
-----
-int[] a = [4, 3, 1, 2];
-assert(lazySort(a).front == 1);
-assert(lazySort(a).equal([1, 2, 3, 4]));
-----
  */
 auto lazySort(alias less = "a < b", Range)(Range r)
     if (isRandomAccessRange!Range &&
         hasAssignableElements!Range &&
-        !isInfinite!Range &&
-        is(typeof(binaryFun!less(r.front, r.front)) : bool))
+        !isInfinite!Range)
 {
-    import std.functional : binaryReverseArgs;
+    return LazySort!(less, Range)(r);
+}
+
+///
+unittest
+{
+    int[] a = [4, 3, 1, 2];
+    assert(lazySort(a).front == 1);
+    assert(lazySort(a).equal([1, 2, 3, 4]));
+}
+
+private struct LazySort(alias less, Range)
+{
     import std.container : BinaryHeap, heapify;
+    import std.functional : binaryReverseArgs;
 
-    static struct Result
+    // BinaryHeap implements a max-heap when given less, so we need to
+    // provide 'more' to make it a min-heap.
+    private alias more = binaryReverseArgs!(binaryFun!less);
+    private BinaryHeap!(Range, more) _heap;
+
+    this(Range store)
     {
-        // BinaryHeap implements a max-heap when given less, so we need to
-        // provide 'more' to make it a min-heap.
-        alias more = binaryReverseArgs!(binaryFun!less);
-
-        private BinaryHeap!(Range, more) _heap;
-
-        this(Range store)
-        {
-            _heap = heapify!more(store);
-        }
-
-        @property auto ref front()
-        {
-            return _heap.front;
-        }
-
-        @property bool empty()
-        {
-            return _heap.empty;
-        }
-
-        @property size_t length()
-        {
-            return _heap.length;
-        }
-
-        void popFront()
-        {
-            _heap.removeFront();
-        }
+        _heap = heapify!more(store);
     }
-    return Result(r);
+
+    @property auto ref front()
+    {
+        return _heap.front;
+    }
+
+    @property bool empty()
+    {
+        return _heap.empty;
+    }
+
+    @property size_t length()
+    {
+        return _heap.length;
+    }
+
+    void popFront()
+    {
+        _heap.removeFront();
+    }
 }
 
 unittest
@@ -10534,6 +10534,9 @@ unittest
 
     dchar[] chars = "qwertyuiopasdfghjklzxcvbnm"d.dup;
     assert(lazySort(chars).equal("abcdefghijklmnopqrstuvwxyz"));
+
+    dchar[] chars2 = "The quick brown fox jumps over the lazy dog"d.dup;
+    assert(lazySort(chars2.dup).equal(chars2.sort()));
 }
 
 // makeIndex
