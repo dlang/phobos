@@ -124,25 +124,11 @@ version (Windows)
     version (DMC_RUNTIME) { } else
     {
         import core.stdc.stdint;
-        extern(C)
-        {
-            int _fileno(FILE* stream);
-            HANDLE _get_osfhandle(int fd);
-            int _open_osfhandle(HANDLE osfhandle, int flags);
-            FILE* _fdopen(int fd, const (char)* mode);
-            int _close(int fd);
-        }
         enum
         {
             STDIN_FILENO  = 0,
             STDOUT_FILENO = 1,
             STDERR_FILENO = 2,
-        }
-        enum
-        {
-            _O_RDONLY = 0x0000,
-            _O_APPEND = 0x0004,
-            _O_TEXT   = 0x4000,
         }
     }
 }
@@ -483,13 +469,9 @@ private Pid spawnProcessImpl(in char[] commandLine,
     static void prepareStream(ref File file, DWORD stdHandle, string which,
                               out int fileDescriptor, out HANDLE handle)
     {
-        fileDescriptor = _fileno(file.getFP());
+        fileDescriptor = file.isOpen ? file.fileno() : -1;
         if (fileDescriptor < 0)   handle = GetStdHandle(stdHandle);
-        else
-        {
-            version (DMC_RUNTIME) handle = _fdToHandle(fileDescriptor);
-            else    /* MSVCRT */  handle = _get_osfhandle(fileDescriptor);
-        }
+        else                      handle = file.windowsHandle;
 
         DWORD dwFlags;
         if (GetHandleInformation(handle, &dwFlags))
@@ -1440,69 +1422,24 @@ Pipe pipe() @trusted //TODO: @safe
             0);
     }
 
-    // Create file descriptors from the handles
-    version (DMC_RUNTIME)
+    scope(failure)
     {
-        auto readFD  = _handleToFD(readHandle, FHND_DEVICE);
-        auto writeFD = _handleToFD(writeHandle, FHND_DEVICE);
-    }
-    else // MSVCRT
-    {
-        auto readFD  = _open_osfhandle(readHandle, _O_RDONLY);
-        auto writeFD = _open_osfhandle(writeHandle, _O_APPEND);
-    }
-    version (DMC_RUNTIME) alias _close = .close;
-    if (readFD == -1 || writeFD == -1)
-    {
-        // Close file descriptors, then throw.
-        if (readFD >= 0) _close(readFD);
-        else CloseHandle(readHandle);
-        if (writeFD >= 0) _close(writeFD);
-        else CloseHandle(writeHandle);
-        throw new StdioException("Error creating pipe");
+        CloseHandle(readHandle);
+        CloseHandle(writeHandle);
     }
 
-    // Create FILE pointers from the file descriptors
-    Pipe p;
-    version (DMC_RUNTIME)
+    try
     {
-        // This is a re-implementation of DMC's fdopen, but without the
-        // mucking with the file descriptor.  POSIX standard requires the
-        // new fdopen'd file to retain the given file descriptor's
-        // position.
-        FILE * local_fdopen(int fd, const(char)* mode)
-        {
-            auto fp = core.stdc.stdio.fopen("NUL", mode);
-            if(!fp) return null;
-            FLOCK(fp);
-            auto iob = cast(_iobuf*)fp;
-            .close(iob._file);
-            iob._file = fd;
-            iob._flag &= ~_IOTRAN;
-            FUNLOCK(fp);
-            return fp;
-        }
-
-        auto readFP  = local_fdopen(readFD, "r");
-        auto writeFP = local_fdopen(writeFD, "a");
+        Pipe p;
+        p._read .windowsHandleOpen(readHandle , "r");
+        p._write.windowsHandleOpen(writeHandle, "a");
+        return p;
     }
-    else // MSVCRT
+    catch (Exception e)
     {
-        auto readFP  = _fdopen(readFD, "r");
-        auto writeFP = _fdopen(writeFD, "a");
+        throw new StdioException("Error attaching pipe (" ~ e.msg ~ ")",
+            0);
     }
-    if (readFP == null || writeFP == null)
-    {
-        // Close streams, then throw.
-        if (readFP != null) fclose(readFP);
-        else _close(readFD);
-        if (writeFP != null) fclose(writeFP);
-        else _close(writeFD);
-        throw new StdioException("Cannot open pipe");
-    }
-    p._read = File(readFP, null);
-    p._write = File(writeFP, null);
-    return p;
 }
 
 
