@@ -5822,9 +5822,9 @@ if (is(typeof(binaryFun!pred(r1.front, r2.front))))
     return r2.empty ? (r1 = r, true) : false;
 }
 
+///
 unittest
 {
-    //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto s1 = "Hello world";
     assert(!skipOver(s1, "Ha"));
     assert(s1 == "Hello world");
@@ -5851,6 +5851,7 @@ if (is(typeof(binaryFun!pred(r.front, e))))
         : false;
 }
 
+///
 unittest {
     auto s1 = "Hello world";
     assert(!skipOver(s1, 'a'));
@@ -6774,6 +6775,7 @@ int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSom
     }
 }
 
+///
 unittest
 {
     int result;
@@ -10991,6 +10993,20 @@ template canFind(alias pred="a == b")
     }
 }
 
+///
+unittest
+{
+    assert(canFind([0, 1, 2, 3], 2) == true);
+    assert(canFind([0, 1, 2, 3], [1, 2], [2, 3]));
+    assert(canFind([0, 1, 2, 3], [1, 2], [2, 3]) == 1);
+    assert(canFind([0, 1, 2, 3], [1, 7], [2, 3]));
+    assert(canFind([0, 1, 2, 3], [1, 7], [2, 3]) == 2);
+
+    assert(canFind([0, 1, 2, 3], 4) == false);
+    assert(!canFind([0, 1, 2, 3], [1, 3], [2, 4]));
+    assert(canFind([0, 1, 2, 3], [1, 3], [2, 4]) == 0);
+}
+
 unittest
 {
     debug(std_algorithm) scope(success)
@@ -11001,16 +11017,6 @@ unittest
         auto b = a[a.length / 2];
         assert(canFind(a, b));
     }
-
-    assert(canFind([0, 1, 2, 3], 2) == true);
-    assert(canFind([0, 1, 2, 3], [1, 2], [2, 3]));
-    assert(canFind([0, 1, 2, 3], [1, 2], [2, 3]) == 1);
-    assert(canFind([0, 1, 2, 3], [1, 7], [2, 3]));
-    assert(canFind([0, 1, 2, 3], [1, 7], [2, 3]) == 2);
-
-    assert(canFind([0, 1, 2, 3], 4) == false);
-    assert(!canFind([0, 1, 2, 3], [1, 3], [2, 4]));
-    assert(canFind([0, 1, 2, 3], [1, 3], [2, 4]) == 0);
 }
 
 unittest
