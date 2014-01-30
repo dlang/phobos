@@ -1995,7 +1995,7 @@ See_Also:
     $(XREF exception, pointsTo)
  */
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow
-if (allMutableFields!T && !is(typeof(lhs.proxySwap(rhs))))
+if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
 {
     static if (hasElaborateAssign!T || !isAssignable!T)
     {
@@ -2044,34 +2044,65 @@ void swap(T)(ref T lhs, ref T rhs) if (is(typeof(lhs.proxySwap(rhs))))
     lhs.proxySwap(rhs);
 }
 
-/+
-    Trait like isMutable. It also verifies that the fields inside a value
-    type aggregate are also mutable.
-
-     A "value type aggregate" is a struct or an union, but not a class nor
-     an interface.
-+/
-private template allMutableFields(T)
+// Equivalent with TypeStruct::isAssinable in compiler code.
+private template isBlitAssignable(T) if (!is(T == struct))
 {
-    alias OT = OriginalType!T;
-    static if (is(OT == struct) || is(OT == union))
-        enum allMutableFields = isMutable!OT && allSatisfy!(.allMutableFields, FieldTypeTuple!OT);
+    static if (is(T == U[n], U, size_t n))
+        enum isBlitAssignable = isBlitAssignable!U;
     else
-        enum allMutableFields = isMutable!OT;
+        enum isBlitAssignable = isMutable!T;
+}
+private template isBlitAssignable(T) if (is(T == struct))
+{
+    enum isBlitAssignable =
+        isMutable!T &&
+        {
+            size_t offset = 0;
+            bool assignable = true;
+            foreach (i, F; FieldTypeTuple!T)
+            {
+                static if (i == 0)
+                {
+                }
+                else if (T.tupleof[i].offsetof == offset)
+                {
+                    if (assignable)
+                        continue;
+                }
+                else
+                {
+                    if (!assignable)
+                        return false;
+                }
+                assignable = isBlitAssignable!(typeof(T.tupleof[i]));
+                offset = T.tupleof[i].offsetof;
+            }
+            return assignable;
+        }();
 }
 
 unittest
 {
-    static assert( allMutableFields!int);
-    static assert(!allMutableFields!(const int));
+    static assert( isBlitAssignable!int);
+    static assert(!isBlitAssignable!(const int));
 
-    class C{const int i;}
-    static assert( allMutableFields!C);
+    class C{ const int i; }
+    static assert( isBlitAssignable!C);
 
-    struct S1{int i;}
-    struct S2{const int i;}
-    static assert( allMutableFields!S1);
-    static assert(!allMutableFields!S2);
+    struct S1{ int i; }
+    struct S2{ const int i; }
+    static assert( isBlitAssignable!S1);
+    static assert(!isBlitAssignable!S2);
+
+    struct S3X { union {       int x;       int y; } }
+    struct S3Y { union {       int x; const int y; } }
+    struct S3Z { union { const int x; const int y; } }
+    static assert( isBlitAssignable!(S3X));
+    static assert( isBlitAssignable!(S3Y));
+    static assert(!isBlitAssignable!(S3Z));
+    static assert( isBlitAssignable!(S3X[3]));
+    static assert( isBlitAssignable!(S3Y[3]));
+    static assert(!isBlitAssignable!(S3Z[3]));
 }
 
 unittest
@@ -2173,6 +2204,14 @@ unittest
     //11853
     alias T = Tuple!(int, double);
     static assert(isAssignable!T);
+}
+
+unittest
+{
+    // 12024
+    import std.datetime;
+    SysTime a, b;
+    swap(a, b);
 }
 
 void swapFront(R1, R2)(R1 r1, R2 r2)
