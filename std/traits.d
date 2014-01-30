@@ -4017,6 +4017,85 @@ unittest
 }
 
 
+// Equivalent with TypeStruct::isAssinable in compiler code.
+package template isBlitAssignable(T)
+{
+    static if (is(T == U[n], U, size_t n))
+    {
+        enum isBlitAssignable = isBlitAssignable!U;
+    }
+    else static if (is(T == struct) || is(T == union))
+    {
+        enum isBlitAssignable = isMutable!T &&
+        {
+            size_t offset = 0;
+            bool assignable = true;
+            foreach (i, F; FieldTypeTuple!T)
+            {
+                static if (i == 0)
+                {
+                }
+                else if (T.tupleof[i].offsetof == offset)
+                {
+                    if (assignable)
+                        continue;
+                }
+                else
+                {
+                    if (!assignable)
+                        return false;
+                }
+                assignable = isBlitAssignable!(typeof(T.tupleof[i]));
+                offset = T.tupleof[i].offsetof;
+            }
+            return assignable;
+        }();
+    }
+    else
+        enum isBlitAssignable = isMutable!T;
+}
+
+unittest
+{
+    static assert( isBlitAssignable!int);
+    static assert(!isBlitAssignable!(const int));
+
+    class C{ const int i; }
+    static assert( isBlitAssignable!C);
+
+    struct S1{ int i; }
+    struct S2{ const int i; }
+    static assert( isBlitAssignable!S1);
+    static assert(!isBlitAssignable!S2);
+
+    struct S3X { union {       int x;       int y; } }
+    struct S3Y { union {       int x; const int y; } }
+    struct S3Z { union { const int x; const int y; } }
+    static assert( isBlitAssignable!(S3X));
+    static assert( isBlitAssignable!(S3Y));
+    static assert(!isBlitAssignable!(S3Z));
+    static assert(!isBlitAssignable!(const S3X));
+    static assert(!isBlitAssignable!(inout S3Y));
+    static assert(!isBlitAssignable!(immutable S3Z));
+    static assert( isBlitAssignable!(S3X[3]));
+    static assert( isBlitAssignable!(S3Y[3]));
+    static assert(!isBlitAssignable!(S3Z[3]));
+
+    union U1X {       int x;       int y; }
+    union U1Y {       int x; const int y; }
+    union U1Z { const int x; const int y; }
+    static assert( isBlitAssignable!(U1X));
+    static assert( isBlitAssignable!(U1Y));
+    static assert(!isBlitAssignable!(U1Z));
+    static assert(!isBlitAssignable!(const U1X));
+    static assert(!isBlitAssignable!(inout U1Y));
+    static assert(!isBlitAssignable!(immutable U1Z));
+    static assert( isBlitAssignable!(U1X[3]));
+    static assert( isBlitAssignable!(U1Y[3]));
+    static assert(!isBlitAssignable!(U1Z[3]));
+}
+
+
 /*
 Works like $(D isImplicitlyConvertible), except this cares only about storage
 classes of the arguments.
