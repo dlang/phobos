@@ -1923,10 +1923,6 @@ void main()
 }
 --------------------
 
-BUGS:
-  Nothrow functions cause program to abort in release mode because the trap is
-  implemented with $(D assert(0)) for nothrow functions.
-
 See_Also:
   AutoImplement, generateAssertTrap
  */
@@ -1947,8 +1943,8 @@ class NotImplementedError : Error
 
 unittest
 {
+    import std.exception : assertThrown;
     // nothrow
-    debug // see the BUGS above
     {
         interface I_1
         {
@@ -1956,11 +1952,8 @@ unittest
             void bar() nothrow;
         }
         auto o = new WhiteHole!I_1;
-        uint trap;
-        try { o.foo(); } catch (Error e) { ++trap; }
-        assert(trap == 1);
-        try { o.bar(); } catch (Error e) { ++trap; }
-        assert(trap == 2);
+        assertThrown!NotImplementedError(o.foo());
+        assertThrown!NotImplementedError(o.bar());
     }
     // doc example
     {
@@ -2726,21 +2719,11 @@ template generateEmptyFunction(C, func.../+[BUG 4217]+/)
 }
 
 /// ditto
-template generateAssertTrap(C, func.../+[BUG 4217]+/)
+template generateAssertTrap(C, func...)
 {
-    static if (functionAttributes!(func) & FunctionAttribute.nothrow_) //XXX
-    {
-        pragma(msg, "Warning: WhiteHole!(", C, ") used assert(0) instead ",
-                "of Error for the auto-implemented nothrow function ",
-                C, ".", __traits(identifier, func));
-        enum string generateAssertTrap =
-            `assert(0, "` ~ C.stringof ~ "." ~ __traits(identifier, func)
-                    ~ ` is not implemented");`;
-    }
-    else
-        enum string generateAssertTrap =
-            `throw new NotImplementedError("` ~ C.stringof ~ "."
-                    ~ __traits(identifier, func) ~ `");`;
+    enum string generateAssertTrap =
+        `throw new NotImplementedError("` ~ C.stringof ~ "."
+                ~ __traits(identifier, func) ~ `");`;
 }
 
 private
