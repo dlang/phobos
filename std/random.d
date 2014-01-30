@@ -526,36 +526,37 @@ struct MersenneTwisterEngine(UIntType, size_t w, size_t n, size_t m, size_t r,
                              UIntType c, size_t l)
     if(isUnsigned!UIntType)
 {
-    ///Mark this as a Rng
-    enum bool isUniformRandom = true;
-/**
-Parameter for the generator.
-*/
-    enum size_t wordSize = w;
-    enum size_t stateSize = n;
-    enum size_t shiftSize = m;
-    enum size_t maskBits = r;
-    enum UIntType xorMask = a;
-    enum UIntType temperingU = u;
-    enum size_t temperingS = s;
-    enum UIntType temperingB = b;
-    enum size_t temperingT = t;
-    enum UIntType temperingC = c;
-    enum size_t temperingL = l;
-
-    /// Smallest generated value (0).
-    enum UIntType min = 0;
-    /// Largest generated value.
-    enum UIntType max =
-        w == UIntType.sizeof * 8 ? UIntType.max : (1u << w) - 1;
-    /// The default seed value.
-    enum UIntType defaultSeed = 5489u;
-
+    static assert(0 < w && w <= UIntType.sizeof * 8);
     static assert(1 <= m && m <= n);
     static assert(0 <= r && 0 <= u && 0 <= s && 0 <= t && 0 <= l);
     static assert(r <= w && u <= w && s <= w && t <= w && l <= w);
     static assert(0 <= a && 0 <= b && 0 <= c);
+
+    ///Mark this as a Rng
+    enum bool isUniformRandom = true;
+
+/**
+Parameters for the generator.
+*/
+    enum size_t   wordSize   = w;
+    enum size_t   stateSize  = n; /// ditto
+    enum size_t   shiftSize  = m; /// ditto
+    enum size_t   maskBits   = r; /// ditto
+    enum UIntType xorMask    = a; /// ditto
+    enum UIntType temperingU = u; /// ditto
+    enum size_t   temperingS = s; /// ditto
+    enum UIntType temperingB = b; /// ditto
+    enum size_t   temperingT = t; /// ditto
+    enum UIntType temperingC = c; /// ditto
+    enum size_t   temperingL = l; /// ditto
+
+    /// Smallest generated value (0).
+    enum UIntType min = 0;
+    /// Largest generated value.
+    enum UIntType max = UIntType.max >> (UIntType.sizeof * 8u - w);
     static assert(a <= max && b <= max && c <= max);
+    /// The default seed value.
+    enum UIntType defaultSeed = 5489u;
 
 /**
    Constructs a MersenneTwisterEngine object.
@@ -723,9 +724,10 @@ gen.seed(unpredictableSeed);
 n = gen.front; // different across runs
 ----
  */
-alias MersenneTwisterEngine!(uint, 32, 624, 397, 31, 0x9908b0df, 11, 7,
-                             0x9d2c5680, 15, 0xefc60000, 18)
-    Mt19937;
+alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
+                                       0x9908b0df, 11, 7,
+                                       0x9d2c5680, 15,
+                                       0xefc60000, 18);
 
 unittest
 {
@@ -778,6 +780,17 @@ unittest
         version(none) { assert(gen1 !is gen2); }
         assert(gen1.take(100).array() == gen2.take(100).array());
     }
+}
+
+unittest //11690
+{
+    alias MT(UIntType, uint w) = MersenneTwisterEngine!(UIntType, w, 624, 397, 31,
+                                                        0x9908b0df, 11, 7,
+                                                        0x9d2c5680, 15,
+                                                        0xefc60000, 18);
+
+    foreach (R; TypeTuple!(MT!(uint, 32), MT!(ulong, 32), MT!(ulong, 48), MT!(ulong, 64)))
+        auto a = R();
 }
 
 
