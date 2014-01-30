@@ -2045,14 +2045,14 @@ void swap(T)(ref T lhs, ref T rhs) if (is(typeof(lhs.proxySwap(rhs))))
 }
 
 // Equivalent with TypeStruct::isAssinable in compiler code.
-private template isBlitAssignable(T) if (!is(T == struct))
+private template isBlitAssignable(T) if (!is(T == struct) && !is(T == union))
 {
     static if (is(T == U[n], U, size_t n))
         enum isBlitAssignable = isBlitAssignable!U;
     else
         enum isBlitAssignable = isMutable!T;
 }
-private template isBlitAssignable(T) if (is(T == struct))
+private template isBlitAssignable(T) if (is(T == struct) || is(T == union))
 {
     enum isBlitAssignable =
         isMutable!T &&
@@ -2100,9 +2100,25 @@ unittest
     static assert( isBlitAssignable!(S3X));
     static assert( isBlitAssignable!(S3Y));
     static assert(!isBlitAssignable!(S3Z));
+    static assert(!isBlitAssignable!(const S3X));
+    static assert(!isBlitAssignable!(inout S3Y));
+    static assert(!isBlitAssignable!(immutable S3Z));
     static assert( isBlitAssignable!(S3X[3]));
     static assert( isBlitAssignable!(S3Y[3]));
     static assert(!isBlitAssignable!(S3Z[3]));
+
+    union U1X {       int x;       int y; }
+    union U1Y {       int x; const int y; }
+    union U1Z { const int x; const int y; }
+    static assert( isBlitAssignable!(U1X));
+    static assert( isBlitAssignable!(U1Y));
+    static assert(!isBlitAssignable!(U1Z));
+    static assert(!isBlitAssignable!(const U1X));
+    static assert(!isBlitAssignable!(inout U1Y));
+    static assert(!isBlitAssignable!(immutable U1Z));
+    static assert( isBlitAssignable!(U1X[3]));
+    static assert( isBlitAssignable!(U1Y[3]));
+    static assert(!isBlitAssignable!(U1Z[3]));
 }
 
 unittest
