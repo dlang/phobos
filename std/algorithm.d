@@ -1995,7 +1995,7 @@ See_Also:
     $(XREF exception, pointsTo)
  */
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow
-if (allMutableFields!T && !is(typeof(lhs.proxySwap(rhs))))
+if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
 {
     static if (hasElaborateAssign!T || !isAssignable!T)
     {
@@ -2042,36 +2042,6 @@ if (allMutableFields!T && !is(typeof(lhs.proxySwap(rhs))))
 void swap(T)(ref T lhs, ref T rhs) if (is(typeof(lhs.proxySwap(rhs))))
 {
     lhs.proxySwap(rhs);
-}
-
-/+
-    Trait like isMutable. It also verifies that the fields inside a value
-    type aggregate are also mutable.
-
-     A "value type aggregate" is a struct or an union, but not a class nor
-     an interface.
-+/
-private template allMutableFields(T)
-{
-    alias OT = OriginalType!T;
-    static if (is(OT == struct) || is(OT == union))
-        enum allMutableFields = isMutable!OT && allSatisfy!(.allMutableFields, FieldTypeTuple!OT);
-    else
-        enum allMutableFields = isMutable!OT;
-}
-
-unittest
-{
-    static assert( allMutableFields!int);
-    static assert(!allMutableFields!(const int));
-
-    class C{const int i;}
-    static assert( allMutableFields!C);
-
-    struct S1{int i;}
-    struct S2{const int i;}
-    static assert( allMutableFields!S1);
-    static assert(!allMutableFields!S2);
 }
 
 unittest
@@ -2173,6 +2143,14 @@ unittest
     //11853
     alias T = Tuple!(int, double);
     static assert(isAssignable!T);
+}
+
+unittest
+{
+    // 12024
+    import std.datetime;
+    SysTime a, b;
+    swap(a, b);
 }
 
 void swapFront(R1, R2)(R1 r1, R2 r2)
