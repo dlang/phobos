@@ -4020,9 +4020,14 @@ unittest
 // Equivalent with TypeStruct::isAssinable in compiler code.
 package template isBlitAssignable(T)
 {
-    static if (is(T == U[n], U, size_t n))
+    static if (is(OriginalType!T U) && !is(T == U))
     {
         enum isBlitAssignable = isBlitAssignable!U;
+    }
+    else static if (isStaticArray!T && is(T == E[n], E, size_t n))
+    // Workaround for issue 11499 : isStaticArray!T should not be necessary.
+    {
+        enum isBlitAssignable = isBlitAssignable!E;
     }
     else static if (is(T == struct) || is(T == union))
     {
@@ -4080,6 +4085,18 @@ unittest
     static assert( isBlitAssignable!(S3X[3]));
     static assert( isBlitAssignable!(S3Y[3]));
     static assert(!isBlitAssignable!(S3Z[3]));
+    enum ES3X : S3X { a = S3X() }
+    enum ES3Y : S3Y { a = S3Y() }
+    enum ES3Z : S3Z { a = S3Z() }
+    static assert( isBlitAssignable!(ES3X));
+    static assert( isBlitAssignable!(ES3Y));
+    static assert(!isBlitAssignable!(ES3Z));
+    static assert(!isBlitAssignable!(const ES3X));
+    static assert(!isBlitAssignable!(inout ES3Y));
+    static assert(!isBlitAssignable!(immutable ES3Z));
+    static assert( isBlitAssignable!(ES3X[3]));
+    static assert( isBlitAssignable!(ES3Y[3]));
+    static assert(!isBlitAssignable!(ES3Z[3]));
 
     union U1X {       int x;       int y; }
     union U1Y {       int x; const int y; }
@@ -4093,6 +4110,27 @@ unittest
     static assert( isBlitAssignable!(U1X[3]));
     static assert( isBlitAssignable!(U1Y[3]));
     static assert(!isBlitAssignable!(U1Z[3]));
+    enum EU1X : U1X { a = U1X() }
+    enum EU1Y : U1Y { a = U1Y() }
+    enum EU1Z : U1Z { a = U1Z() }
+    static assert( isBlitAssignable!(EU1X));
+    static assert( isBlitAssignable!(EU1Y));
+    static assert(!isBlitAssignable!(EU1Z));
+    static assert(!isBlitAssignable!(const EU1X));
+    static assert(!isBlitAssignable!(inout EU1Y));
+    static assert(!isBlitAssignable!(immutable EU1Z));
+    static assert( isBlitAssignable!(EU1X[3]));
+    static assert( isBlitAssignable!(EU1Y[3]));
+    static assert(!isBlitAssignable!(EU1Z[3]));
+
+    struct SA
+    {
+        @property int[3] foo() { return [1,2,3]; }
+        alias foo this;
+        const int x;    // SA is not blit assignable
+    }
+    static assert(!isStaticArray!SA);
+    static assert(!isBlitAssignable!(SA[3]));
 }
 
 
