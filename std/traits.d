@@ -3967,7 +3967,7 @@ unittest
     // int is assignable to int
     static assert( isAssignable!int);
 
-    // immutable int is not assinable to immutable int
+    // immutable int is not assignable to immutable int
     static assert(!isAssignable!(immutable int));
 }
 
@@ -4017,7 +4017,7 @@ unittest
 }
 
 
-// Equivalent with TypeStruct::isAssinable in compiler code.
+// Equivalent with TypeStruct::isAssignable in compiler code.
 package template isBlitAssignable(T)
 {
     static if (is(OriginalType!T U) && !is(T == U))
