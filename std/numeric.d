@@ -679,7 +679,7 @@ unittest
 
 private:
 // Return true if a and b have opposite sign.
-bool oppositeSigns(T)(T a, T b)
+bool oppositeSigns(Ta, Tb)(Ta a, Tb b)
 {
     return signbit(a) != signbit(b);
 }
