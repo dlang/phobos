@@ -1175,13 +1175,13 @@ unittest
 */
 }
 
-
 //regression control
 unittest
 {
     static assert(__traits(compiles, findRoot((float x)=>cast(real)x, float.init, float.init)));
     static assert(__traits(compiles, findRoot!real((x)=>cast(double)x, real.init, real.init)));
 }
+
 
 /**
 Computes $(LUCKY Euclidean distance) between input ranges $(D a) and
