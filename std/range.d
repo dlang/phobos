@@ -4684,15 +4684,18 @@ struct Zip(Ranges...)
     }
 
     static if (allSatisfy!(isForwardRange, R))
+    {
+        private this(ref Zip other)
+        {
+            foreach (i, Unused; R)
+                ranges[i] = other.ranges[i].save;
+            stoppingPolicy = other.stoppingPolicy;
+        }
         @property Zip save()
         {
-            Zip result = this;
-            foreach (i, Unused; R)
-            {
-                result.ranges[i] = result.ranges[i].save;
-            }
-            return result;
+            return Zip(this);
         }
+    }
 
     private void emplaceIfCan(T)(T* addr)
     {
@@ -5191,6 +5194,21 @@ unittest
     static assert(__traits(compiles, zip((S[5]).init[])));
     auto z = zip(StoppingPolicy.longest, cast(S[]) null, new int[1]);
     assertThrown(zip(StoppingPolicy.longest, cast(S[]) null, new int[1]).front);
+}
+
+unittest //12007
+{
+    static struct R
+    {
+        enum empty = false;
+        void popFront(){}
+        int front(){return 1;} @property
+        R save(){return this;} @property
+        void opAssign(R) @disable;
+    }
+    R r;
+    auto z = zip(r, r);
+    auto zz = z.save;
 }
 
 /*
