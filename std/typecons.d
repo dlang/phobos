@@ -3947,6 +3947,23 @@ mixin template Proxy(alias a)
             }
         }
     }
+
+    static if (isArray!(typeof(a)))
+    {
+        auto opDollar() const { return a.length; }
+    }
+    else static if (is(typeof(a.opDollar!0)))
+    {
+        auto ref opDollar(size_t pos)() { return a.opDollar!pos(); }
+    }
+    else static if (is(typeof(a.opDollar) == function))
+    {
+        auto ref opDollar() { return a.opDollar(); }
+    }
+    else static if (is(typeof(a.opDollar)))
+    {
+        alias opDollar = a.opDollar;
+    }
 }
 unittest
 {
@@ -4197,6 +4214,43 @@ unittest
     Typedef!(int[3]) sa;
     static assert(sa.length == 3);
     static assert(typeof(sa).length == 3);
+
+    Typedef!(int[3]) dollar1;
+    assert(dollar1[0..$] is dollar1[0..3]);
+
+    Typedef!(int[]) dollar2;
+    dollar2.length = 3;
+    assert(dollar2[0..$] is dollar2[0..3]);
+
+    static struct Dollar1
+    {
+        static struct DollarToken {}
+        enum opDollar = DollarToken.init;
+        auto opSlice(size_t, DollarToken) { return 1; }
+        auto opSlice(size_t, size_t) { return 2; }
+    }
+
+    Typedef!Dollar1 drange1;
+    assert(drange1[0..$] == 1);
+    assert(drange1[0..1] == 2);
+
+    static struct Dollar2
+    {
+        size_t opDollar(size_t pos)() { return pos == 0 ? 1 : 100; }
+        size_t opIndex(size_t i, size_t j) { return i + j; }
+    }
+
+    Typedef!Dollar2 drange2;
+    assert(drange2[$, $] == 101);
+
+    static struct Dollar3
+    {
+        size_t opDollar() { return 123; }
+        size_t opIndex(size_t i) { return i; }
+    }
+
+    Typedef!Dollar3 drange3;
+    assert(drange3[$] == 123);
 }
 
 unittest
