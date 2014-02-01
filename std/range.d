@@ -4772,11 +4772,11 @@ struct Zip(Ranges...)
         return result;
     }
 
-    static if (allSatisfy!(hasAssignableElements, R))
-    {
 /**
    Sets the front of all iterated ranges.
 */
+    static if (allSatisfy!(hasAssignableElements, R))
+    {
         @property void front(ElementType v)
         {
             foreach (i, Unused; R)
@@ -4916,10 +4916,10 @@ struct Zip(Ranges...)
         }
     }
 
-    static if (allSatisfy!(isBidirectionalRange, R))
 /**
    Calls $(D popBack) for all controlled ranges.
 */
+    static if (allSatisfy!(isBidirectionalRange, R))
         void popBack()
         {
             import std.exception : enforce;
@@ -4998,12 +4998,12 @@ struct Zip(Ranges...)
             return result;
         }
 
-    static if (allSatisfy!(isRandomAccessRange, R))
-    {
 /**
    Returns the $(D n)th element in the composite range. Defined if all
    ranges offer random access.
 */
+    static if (allSatisfy!(isRandomAccessRange, R))
+    {
         ElementType opIndex(size_t n)
         {
             import std.conv : emplace;
@@ -5017,12 +5017,12 @@ struct Zip(Ranges...)
             return result;
         }
 
-        static if (allSatisfy!(hasAssignableElements, R))
-        {
 /**
    Assigns to the $(D n)th element in the composite range. Defined if
    all ranges offer random access.
 */
+        static if (allSatisfy!(hasAssignableElements, R))
+        {
             void opIndexAssign(ElementType v, size_t n)
             {
                 foreach (i, Range; R)
