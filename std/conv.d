@@ -2372,7 +2372,8 @@ Target parse(Target, Source)(ref Source p)
                 }
             }
             if (i == '.' && !dot)
-            {       p.popFront();
+            {
+                p.popFront();
                 dot = 4;
             }
             else
@@ -2384,7 +2385,8 @@ Target parse(Target, Source)(ref Source p)
         {
             msdec++;
             if (msdec == 0)                 // overflow
-            {   msdec = 0x8000000000000000L;
+            {
+                msdec = 0x8000000000000000L;
                 exp++;
             }
         }
@@ -2400,7 +2402,8 @@ Target parse(Target, Source)(ref Source p)
         if (!p.empty)
         {
             switch (p.front)
-            {   case '-':    sexp++;
+            {
+                case '-':    sexp++;
                              goto case;
                 case '+':    p.popFront(); enforce(!p.empty,
                                 new ConvException("Error converting input"
@@ -2432,7 +2435,8 @@ Target parse(Target, Source)(ref Source p)
 
                 // left justify mantissa
                 while (msdec >= 0)
-                {   msdec <<= 1;
+                {
+                    msdec <<= 1;
                     e2--;
                 }
 
@@ -2536,7 +2540,8 @@ Target parse(Target, Source)(ref Source p)
                 if (msdec < (0x7FFFFFFFFFFFL-10)/10)
                     msdec = msdec * 10 + (i - '0');
                 else if (msscale < (0xFFFFFFFF-10)/10)
-                {   lsdec = lsdec * 10 + (i - '0');
+                {
+                    lsdec = lsdec * 10 + (i - '0');
                     msscale *= 10;
                 }
                 else
@@ -2577,7 +2582,8 @@ Target parse(Target, Source)(ref Source p)
         p.popFront();
         enforce(!p.empty, new ConvException("Unexpected end of input"));
         switch (p.front)
-        {   case '-':    sexp++;
+        {
+            case '-':    sexp++;
                          goto case;
             case '+':    p.popFront();
                          break;
