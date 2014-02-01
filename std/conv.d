@@ -2372,7 +2372,8 @@ Target parse(Target, Source)(ref Source p)
                 }
             }
             if (i == '.' && !dot)
-            {       p.popFront();
+            {
+                p.popFront();
                 dot = 4;
             }
             else
@@ -2384,7 +2385,8 @@ Target parse(Target, Source)(ref Source p)
         {
             msdec++;
             if (msdec == 0)                 // overflow
-            {   msdec = 0x8000000000000000L;
+            {
+                msdec = 0x8000000000000000L;
                 exp++;
             }
         }
@@ -2400,7 +2402,8 @@ Target parse(Target, Source)(ref Source p)
         if (!p.empty)
         {
             switch (p.front)
-            {   case '-':    sexp++;
+            {
+                case '-':    sexp++;
                              goto case;
                 case '+':    p.popFront(); enforce(!p.empty,
                                 new ConvException("Error converting input"~
@@ -2424,25 +2427,93 @@ Target parse(Target, Source)(ref Source p)
         enforce(ndigits, new ConvException("Error converting input"~
                         " to floating point"));
 
-        if (msdec)
+        static if (real.mant_dig == 64)
         {
-            int e2 = 0x3FFF + 63;
+            if (msdec)
+            {
+                int e2 = 0x3FFF + 63;
 
-            // left justify mantissa
-            while (msdec >= 0)
-            {   msdec <<= 1;
-                e2--;
+                // left justify mantissa
+                while (msdec >= 0)
+                {
+                    msdec <<= 1;
+                    e2--;
+                }
+
+                // Stuff mantissa directly into real
+                ()@trusted{ *cast(long*)&ldval = msdec; }();
+                ()@trusted{ (cast(ushort*)&ldval)[4] = cast(ushort) e2; }();
+
+                import std.math : ldexp;
+
+                // Exponent is power of 2, not power of 10
+                ldval = ldexp(ldval,exp);
             }
-
-            // Stuff mantissa directly into real
-            ()@trusted{ *cast(long*)&ldval = msdec; }();
-            ()@trusted{ (cast(ushort*)&ldval)[4] = cast(ushort) e2; }();
-
-            import std.math : ldexp;
-
-            // Exponent is power of 2, not power of 10
-            ldval = ldexp(ldval, exp);
         }
+        else static if (real.mant_dig == 53)
+        {
+            if (msdec)
+            {
+                //Exponent bias + 52:
+                //After shifting 52 times left, exp must be 1
+                int e2 = 0x3FF + 52;
+
+                // right justify mantissa
+                // first 11 bits must be zero, rest is implied bit + mantissa
+                // shift one time less, do rounding, shift again
+                while ((msdec & 0xFFC0_0000_0000_0000) != 0)
+                {
+                    msdec  = ((cast(ulong)msdec) >> 1);
+                    e2++;
+                }
+
+                //Have to shift one more time
+                //and do rounding
+                if((msdec & 0xFFE0_0000_0000_0000) != 0)
+                {
+                    auto roundUp = (msdec & 0x1);
+
+                    msdec  = ((cast(ulong)msdec) >> 1);
+                    e2++;
+                    if(roundUp)
+                    {
+                        msdec += 1;
+                        //If mantissa was 0b1111... and we added +1
+                        //the mantissa should be 0b10000 (think of implicit bit)
+                        //and the exponent increased
+                        if((msdec & 0x0020_0000_0000_0000) != 0)
+                        {
+                            msdec = 0x0010_0000_0000_0000;
+                            e2++;
+                        }
+                    }
+                }
+
+
+                // left justify mantissa
+                // bit 11 must be 1
+                while ((msdec & 0x0010_0000_0000_0000) == 0)
+                {
+                    msdec <<= 1;
+                    e2--;
+                }
+
+                // Stuff mantissa directly into double
+                // (first including implicit bit)
+                ()@trusted{ *cast(long *)&ldval = msdec; }();
+                //Store exponent, now overwriting implicit bit
+                ()@trusted{ *cast(long *)&ldval &= 0x000F_FFFF_FFFF_FFFF; }();
+                ()@trusted{ *cast(long *)&ldval |= ((e2 & 0xFFFUL) << 52); }();
+
+                import std.math : ldexp;
+
+                // Exponent is power of 2, not power of 10
+                ldval = ldexp(ldval,exp);
+            }
+        }
+        else
+            static assert(false, "Floating point format of real type not supported");
+
         goto L6;
     }
     else // not hex
@@ -2469,7 +2540,8 @@ Target parse(Target, Source)(ref Source p)
                 if (msdec < (0x7FFFFFFFFFFFL-10)/10)
                     msdec = msdec * 10 + (i - '0');
                 else if (msscale < (0xFFFFFFFF-10)/10)
-                {   lsdec = lsdec * 10 + (i - '0');
+                {
+                    lsdec = lsdec * 10 + (i - '0');
                     msscale *= 10;
                 }
                 else
@@ -2510,7 +2582,8 @@ Target parse(Target, Source)(ref Source p)
         p.popFront();
         enforce(!p.empty, new ConvException("Unexpected end of input"));
         switch (p.front)
-        {   case '-':    sexp++;
+        {
+            case '-':    sexp++;
                          goto case;
             case '+':    p.popFront();
                          break;
@@ -2641,6 +2714,78 @@ unittest
     assert(to!string(r) == to!string(real.max));
 }
 
+//Tests for the double implementation
+unittest
+{
+    import core.stdc.stdlib;
+    static if(real.mant_dig == 53)
+    {
+        //Should be parsed exactly: 53 bit mantissa
+        string s = "0x1A_BCDE_F012_3456p10";
+        auto x = parse!real(s);
+        assert(x == 0x1A_BCDE_F012_3456p10L);
+        //1 bit is implicit
+        assert(((*cast(ulong*)&x) & 0x000F_FFFF_FFFF_FFFF) == 0xA_BCDE_F012_3456);
+        assert(strtod("0x1ABCDEF0123456p10", null) == x);
+
+        //Should be parsed exactly: 10 bit mantissa
+        s = "0x3FFp10";
+        x = parse!real(s);
+        assert(x == 0x03FFp10);
+        //1 bit is implicit
+        assert(((*cast(ulong*)&x) & 0x000F_FFFF_FFFF_FFFF) == 0x000F_F800_0000_0000);
+        assert(strtod("0x3FFp10", null) == x);
+
+        //60 bit mantissa, round up
+        s = "0xFFF_FFFF_FFFF_FFFFp10";
+        x = parse!real(s);
+        assert(approxEqual(x, 0xFFF_FFFF_FFFF_FFFFp10));
+        //1 bit is implicit
+        assert(((*cast(ulong*)&x) & 0x000F_FFFF_FFFF_FFFF) == 0x0000_0000_0000_0000);
+        assert(strtod("0xFFFFFFFFFFFFFFFp10", null) == x);
+
+        //60 bit mantissa, round down
+        s = "0xFFF_FFFF_FFFF_FF90p10";
+        x = parse!real(s);
+        assert(approxEqual(x, 0xFFF_FFFF_FFFF_FF90p10));
+        //1 bit is implicit
+        assert(((*cast(ulong*)&x) & 0x000F_FFFF_FFFF_FFFF) == 0x000F_FFFF_FFFF_FFFF);
+        assert(strtod("0xFFFFFFFFFFFFF90p10", null) == x);
+
+        //61 bit mantissa, round up 2
+        s = "0x1F0F_FFFF_FFFF_FFFFp10";
+        x = parse!real(s);
+        assert(approxEqual(x, 0x1F0F_FFFF_FFFF_FFFFp10));
+        //1 bit is implicit
+        assert(((*cast(ulong*)&x) & 0x000F_FFFF_FFFF_FFFF) == 0x000F_1000_0000_0000);
+        assert(strtod("0x1F0FFFFFFFFFFFFFp10", null) == x);
+
+        //61 bit mantissa, round down 2
+        s = "0x1F0F_FFFF_FFFF_FF10p10";
+        x = parse!real(s);
+        assert(approxEqual(x, 0x1F0F_FFFF_FFFF_FF10p10));
+        //1 bit is implicit
+        assert(((*cast(ulong*)&x) & 0x000F_FFFF_FFFF_FFFF) == 0x000F_0FFF_FFFF_FFFF);
+        assert(strtod("0x1F0FFFFFFFFFFF10p10", null) == x);
+
+        //Huge exponent
+        s = "0x1F_FFFF_FFFF_FFFFp900";
+        x = parse!real(s);
+        assert(strtod("0x1FFFFFFFFFFFFFp900", null) == x);
+
+        //exponent too big -> converror
+        s = "";
+        assertThrown!ConvException(x = parse!real(s));
+        assert(strtod("0x1FFFFFFFFFFFFFp1024", null) == real.infinity);
+
+        //-exponent too big -> 0
+        s = "0x1FFFFFFFFFFFFFp-2000";
+        x = parse!real(s);
+        assert(x == 0);
+        assert(strtod("0x1FFFFFFFFFFFFFp-2000", null) == x);
+    }
+}
+
 unittest
 {
     import core.stdc.errno;
@@ -2650,7 +2795,16 @@ unittest
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     struct longdouble
     {
-        ushort[5] value;
+        static if(real.mant_dig == 64)
+        {
+            ushort value[5];
+        }
+        else static if(real.mant_dig == 53)
+        {
+            ushort value[4];
+        }
+        else
+            static assert(false, "Not implemented");
     }
 
     real ld;
@@ -2659,11 +2813,18 @@ unittest
     longdouble x1;
     int i;
 
-    string s = "0x1.FFFFFFFFFFFFFFFEp-16382";
-    ld = parse!real(s);
-    assert(s.empty);
+    static if(real.mant_dig == 64)
+        enum s = "0x1.FFFFFFFFFFFFFFFEp-16382";
+    else static if(real.mant_dig == 53)
+        enum s = "0x1.FFFFFFFFFFFFFFFEp-1000";
+    else
+        static assert(false, "Floating point format for real not supported");
+
+    auto s2 = s.idup;
+    ld = parse!real(s2);
+    assert(s2.empty);
     x = *cast(longdouble *)&ld;
-    ld1 = strtold("0x1.FFFFFFFFFFFFFFFEp-16382", null);
+    ld1 = strtold(s.ptr, null);
     x1 = *cast(longdouble *)&ld1;
     assert(x1 == x && ld1 == ld);
 
@@ -2674,9 +2835,9 @@ unittest
     // printf("\n");
     assert(!errno);
 
-    s = "1.0e5";
-    ld = parse!real(s);
-    assert(s.empty);
+    s2 = "1.0e5";
+    ld = parse!real(s2);
+    assert(s2.empty);
     x = *cast(longdouble *)&ld;
     ld1 = strtold("1.0e5", null);
     x1 = *cast(longdouble *)&ld1;
