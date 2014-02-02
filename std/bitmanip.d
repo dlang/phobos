@@ -1578,7 +1578,7 @@ struct BitArray
     {
         return iota(dim).
                filter!(i => ptr[i]).
-               map!(i => ptr[i].bitsSet.map!(a => a + i * bitsPerSizeT)).
+               map!(i => BitsSet!size_t(ptr[i], i * bitsPerSizeT)).
                joiner();
     }
 
@@ -3594,6 +3594,52 @@ unittest
         assert(countBitsSet(1UL << i) == 1);
 }
 
+private struct BitsSet(T)
+{
+    static assert(T.sizeof <= 8, "bitsSet assumes T is no more than 64-bit.");
+
+    this(T value, size_t startIndex = 0)
+    {
+        _value = value;
+        uint n = countTrailingZeros(value);
+        _index = startIndex + n;
+        _value >>>= n;
+    }
+
+    @property size_t front()
+    {
+        return _index;
+    }
+
+    @property bool empty() const
+    {
+        return !_value;
+    }
+
+    void popFront()
+    {
+        assert(_value, "Cannot call popFront on empty range.");
+
+        _value >>>= 1;
+        uint n = countTrailingZeros(_value);
+        _value >>>= n;
+        _index += n + 1;
+    }
+
+    @property auto save()
+    {
+        return this;
+    }
+
+    @property size_t length()
+    {
+        return countBitsSet(_value);
+    }
+
+    private T _value;
+    private size_t _index;
+}
+
 /**
 Range that iterates the indices of the set bits in $(D value).
 Index 0 corresponds to the least significant bit.
@@ -3602,50 +3648,7 @@ For signed integers, the highest index corresponds to the sign bit.
 auto bitsSet(T)(T value)
     if (isIntegral!T)
 {
-    static assert(T.sizeof <= 8, "bitsSet assumes T is no more than 64-bit.");
-
-    static struct Result
-    {
-        this(T value)
-        {
-            _value = value;
-            _index = countTrailingZeros(value);
-            _value >>>= _index;
-        }
-
-        @property uint front()
-        {
-            return _index;
-        }
-
-        @property bool empty() const
-        {
-            return !_value;
-        }
-
-        void popFront()
-        {
-            assert(_value, "Cannot call popFront on empty range.");
-            _value >>>= 1;
-            uint n = countTrailingZeros(_value);
-            _value >>>= n;
-            _index += n + 1;
-        }
-
-        @property auto save()
-        {
-            return this;
-        }
-
-        @property size_t length()
-        {
-            return countBitsSet(_value);
-        }
-
-        private T _value;
-        private uint _index = 0;
-    }
-    return Result(value);
+    return BitsSet!T(value);
 }
 
 ///
