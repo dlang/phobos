@@ -1896,6 +1896,13 @@ unittest
         assert(c.realValue.isNaN); // NaN
         c.doSomething();
     }
+
+    // Bugzilla 12058
+    interface Foo
+    {
+        inout(Object) foo() inout;
+    }
+    BlackHole!Foo o;
 }
 
 
@@ -2586,6 +2593,7 @@ private static:
                 string postc = "";
                 if (is(Func ==    shared)) postc ~= " shared";
                 if (is(Func ==     const)) postc ~= " const";
+                if (is(Func ==     inout)) postc ~= " inout";
                 if (is(Func == immutable)) postc ~= " immutable";
                 return postc;
             }
