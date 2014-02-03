@@ -3435,48 +3435,24 @@ For signed integers, the sign bit is included in the count.
 uint countTrailingZeros(T)(T value)
     if (isIntegral!T)
 {
-    // http://graphics.stanford.edu/~seander/bithacks.html#ZerosOnRightParallel
-    import std.conv : signed;
+    // bsf doesn't give the correct result for 0.
+    if (!value)
+        return 8 * T.sizeof;
 
-    T v = value;
-    uint c = 8 * T.sizeof;
-    v &= -signed(v);
-    if (v) c--;
-    static if (T.sizeof == 8)
+    static if (T.sizeof == 8 && size_t.sizeof == 4)
     {
-        if (v & 0x00000000FFFFFFFF) c -= 32;
-        if (v & 0x0000FFFF0000FFFF) c -= 16;
-        if (v & 0x00FF00FF00FF00FF) c -= 8;
-        if (v & 0x0F0F0F0F0F0F0F0F) c -= 4;
-        if (v & 0x3333333333333333) c -= 2;
-        if (v & 0x5555555555555555) c -= 1;
-    }
-    else static if (T.sizeof == 4)
-    {
-        if (v & 0x0000FFFF) c -= 16;
-        if (v & 0x00FF00FF) c -= 8;
-        if (v & 0x0F0F0F0F) c -= 4;
-        if (v & 0x33333333) c -= 2;
-        if (v & 0x55555555) c -= 1;
-    }
-    else static if (T.sizeof == 2)
-    {
-        if (v & 0x00FF) c -= 8;
-        if (v & 0x0F0F) c -= 4;
-        if (v & 0x3333) c -= 2;
-        if (v & 0x5555) c -= 1;
-    }
-    else static if (T.sizeof == 1)
-    {
-        if (v & 0x0F) c -= 4;
-        if (v & 0x33) c -= 2;
-        if (v & 0x55) c -= 1;
+        // bsf's parameter is size_t, so it doesn't work with 64-bit integers
+        // on a 32-bit machine. For this case, we call bsf on each 32-bit half.
+        uint lower = cast(uint)value;
+        if (lower)
+            return bsf(lower);
+        value >>>= 32;
+        return 32 + bsf(cast(uint)value);
     }
     else
     {
-        static assert("countTrailingZeros only supports 1, 2, 4, or 8 byte sized integers.");
+        return bsf(value);
     }
-    return c;
 }
 
 ///
