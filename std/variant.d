@@ -2035,83 +2035,83 @@ unittest
     // http://d.puremagic.com/issues/show_bug.cgi?id=7069
     int i = 10;
     Variant v = i;
-    assertNotThrown!VariantException(v.get!(int)());
-    assertNotThrown!VariantException(v.get!(const(int))());
-    assertThrown!VariantException(v.get!(immutable(int))());
-    assertNotThrown!VariantException(v.get!(const(float))());
-    assert(v.get!(const(float))() == 10.0f);
+    assertNotThrown!VariantException(v.get!(int));
+    assertNotThrown!VariantException(v.get!(const(int)));
+    assertThrown!VariantException(v.get!(immutable(int)));
+    assertNotThrown!VariantException(v.get!(const(float)));
+    assert(v.get!(const(float)) == 10.0f);
 
     const(int) ci = 20;
     v = ci;
-    assertThrown!VariantException(v.get!(int)());
-    assertNotThrown!VariantException(v.get!(const(int))());
-    assertThrown!VariantException(v.get!(immutable(int))());
-    assertNotThrown!VariantException(v.get!(const(float))());
-    assert(v.get!(const(float))() == 20.0f);
+    assertThrown!VariantException(v.get!(int));
+    assertNotThrown!VariantException(v.get!(const(int)));
+    assertThrown!VariantException(v.get!(immutable(int)));
+    assertNotThrown!VariantException(v.get!(const(float)));
+    assert(v.get!(const(float)) == 20.0f);
 
     immutable(int) ii = ci;
     v = ii;
-    assertThrown!VariantException(v.get!(int)());
-    assertNotThrown!VariantException(v.get!(const(int))());
-    assertNotThrown!VariantException(v.get!(immutable(int))());
-    assertNotThrown!VariantException(v.get!(const(float))());
-    assertNotThrown!VariantException(v.get!(immutable(float))());
+    assertThrown!VariantException(v.get!(int));
+    assertNotThrown!VariantException(v.get!(const(int)));
+    assertNotThrown!VariantException(v.get!(immutable(int)));
+    assertNotThrown!VariantException(v.get!(const(float)));
+    assertNotThrown!VariantException(v.get!(immutable(float)));
 
     int[] ai = [1,2,3];
     v = ai;
-    assertNotThrown!VariantException(v.get!(int[])());
-    assertNotThrown!VariantException(v.get!(const(int[]))());
-    assertNotThrown!VariantException(v.get!(const(int)[])());
-    assertThrown!VariantException(v.get!(immutable(int[]))());
-    assertThrown!VariantException(v.get!(immutable(int)[])());
+    assertNotThrown!VariantException(v.get!(int[]));
+    assertNotThrown!VariantException(v.get!(const(int[])));
+    assertNotThrown!VariantException(v.get!(const(int)[]));
+    assertThrown!VariantException(v.get!(immutable(int[])));
+    assertThrown!VariantException(v.get!(immutable(int)[]));
 
     const(int[]) cai = [1,2,3];
     v = cai;
-    assertThrown!VariantException(v.get!(int[])());
-    assertNotThrown!VariantException(v.get!(const(int[]))());
-    assertNotThrown!VariantException(v.get!(const(int)[])());
-    assertThrown!VariantException(v.get!(immutable(int)[])());
-    assertThrown!VariantException(v.get!(immutable(int[]))());
+    assertThrown!VariantException(v.get!(int[]));
+    assertNotThrown!VariantException(v.get!(const(int[])));
+    assertNotThrown!VariantException(v.get!(const(int)[]));
+    assertThrown!VariantException(v.get!(immutable(int)[]));
+    assertThrown!VariantException(v.get!(immutable(int[])));
 
     immutable(int[]) iai = [1,2,3];
     v = iai;
-    assertThrown!VariantException(v.get!(int[])());
-    assertNotThrown!VariantException(v.get!(immutable(int)[])());
+    assertThrown!VariantException(v.get!(int[]));
+    assertNotThrown!VariantException(v.get!(immutable(int)[]));
     // Bug ??? runtime error
-    //assertNotThrown!VariantException(v.get!(immutable(int[]))());
-    assertNotThrown!VariantException(v.get!(const(int[]))());
-    assertNotThrown!VariantException(v.get!(const(int)[])());
+    //assertNotThrown!VariantException(v.get!(immutable(int[])));
+    assertNotThrown!VariantException(v.get!(const(int[])));
+    assertNotThrown!VariantException(v.get!(const(int)[]));
 
     class A {}
     class B :A {}
     B b = new B();
     v = b;
-    assertNotThrown!VariantException(v.get!(B)());
-    assertNotThrown!VariantException(v.get!(const(B))());
-    assertNotThrown!VariantException(v.get!(A)());
-    assertNotThrown!VariantException(v.get!(const(A))());
-    assertNotThrown!VariantException(v.get!(Object)());
-    assertNotThrown!VariantException(v.get!(const(Object))());
-    assertThrown!VariantException(v.get!(immutable(B))());
+    assertNotThrown!VariantException(v.get!(B));
+    assertNotThrown!VariantException(v.get!(const(B)));
+    assertNotThrown!VariantException(v.get!(A));
+    assertNotThrown!VariantException(v.get!(const(A)));
+    assertNotThrown!VariantException(v.get!(Object));
+    assertNotThrown!VariantException(v.get!(const(Object)));
+    assertThrown!VariantException(v.get!(immutable(B)));
 
     const(B) cb = new B();
     v = cb;
-    assertThrown!VariantException(v.get!(B)());
-    assertNotThrown!VariantException(v.get!(const(B))());
-    assertThrown!VariantException(v.get!(immutable(B))());
-    assertThrown!VariantException(v.get!(A)());
-    assertNotThrown!VariantException(v.get!(const(A))());
-    assertThrown!VariantException(v.get!(Object)());
-    assertNotThrown!VariantException(v.get!(const(Object))());
+    assertThrown!VariantException(v.get!(B));
+    assertNotThrown!VariantException(v.get!(const(B)));
+    assertThrown!VariantException(v.get!(immutable(B)));
+    assertThrown!VariantException(v.get!(A));
+    assertNotThrown!VariantException(v.get!(const(A)));
+    assertThrown!VariantException(v.get!(Object));
+    assertNotThrown!VariantException(v.get!(const(Object)));
 
     immutable(B) ib = new immutable(B)();
     v = ib;
-    assertThrown!VariantException(v.get!(B)());
-    assertNotThrown!VariantException(v.get!(const(B))());
-    assertNotThrown!VariantException(v.get!(immutable(B))());
-    assertNotThrown!VariantException(v.get!(const(A))());
-    assertNotThrown!VariantException(v.get!(immutable(A))());
-    assertThrown!VariantException(v.get!(Object)());
-    assertNotThrown!VariantException(v.get!(const(Object))());
-    assertNotThrown!VariantException(v.get!(immutable(Object))());
+    assertThrown!VariantException(v.get!(B));
+    assertNotThrown!VariantException(v.get!(const(B)));
+    assertNotThrown!VariantException(v.get!(immutable(B)));
+    assertNotThrown!VariantException(v.get!(const(A)));
+    assertNotThrown!VariantException(v.get!(immutable(A)));
+    assertThrown!VariantException(v.get!(Object));
+    assertNotThrown!VariantException(v.get!(const(Object)));
+    assertNotThrown!VariantException(v.get!(immutable(Object)));
 }
