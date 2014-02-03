@@ -31049,13 +31049,24 @@ private:
 
    Examples:
 --------------------
-int a;
-void f0() {}
-void f1() {auto b = a;}
-void f2() {auto b = to!(string)(a);}
-auto r = benchmark!(f0, f1, f2)(10_000);
-writefln("Milliseconds to call fun[0] n times: %s", r[0].msecs);
+import std.datetime;
+import std.stdio;
+import std.conv;
+
+void main()
+{
+    int a;
+    void f0() {}
+    void f1() {auto b = a;}
+    void f2() {auto b = to!(string)(a);}
+
+    auto r = benchmark!(f0, f1, f2)(10_000);
+    writefln("Milliseconds to call fun[0] n times: %s", r[0].msecs);
+}
 --------------------
+
+    References:
+        $(LREF measureTime)
   +/
 TickDuration[lengthof!(fun)()] benchmark(fun...)(uint n)
 {
@@ -32221,13 +32232,25 @@ version(StdDdoc)
 
         Examples:
 --------------------
-writeln("benchmark start!");
+import std.datetime;
+import std.stdio;
+
+void main()
 {
-auto mt = measureTime!((a){assert(a.seconds);});
-doSomething();
+    writeln("benchmark start!");
+    {
+    auto mt = measureTime!((TickDuration a){ writefln("%s msecs elapsed time", a.msecs); });
+    doSomething();
+    }
+    writeln("benchmark end!");
 }
-writeln("benchmark end!");
+
+void doSomething() {
+    foreach (i; 0..1_000_000) { }
+}
 --------------------
+        References:
+            $(LREF benchmark)
       +/
     auto measureTime(alias func)();
 }
