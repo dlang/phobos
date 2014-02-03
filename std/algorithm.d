@@ -336,7 +336,7 @@ $(TR $(TDNW $(LREF uninitializedFill)) $(TD Fills a range
 
 Macros:
 WIKI = Phobos/StdAlgorithm
-MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
+MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#.$1">$1</a>&nbsp;</font>
 
 Copyright: Andrei Alexandrescu 2008-.
 
