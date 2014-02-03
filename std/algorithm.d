@@ -7,8 +7,8 @@ $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
 $(TR $(TDNW Searching) $(TD $(MYREF all) $(MYREF any) $(MYREF balancedParens) $(MYREF
-boyerMooreFinder) $(MYREF canFind) $(MYREF count) $(MYREF countUntil)
-$(MYREF commonPrefix) $(MYREF endsWith) $(MYREF find) $(MYREF
+boyerMooreFinder) $(MYREF canFind) $(MYREF commonPrefix) $(MYREF count)
+$(MYREF countUntil) $(MYREF endsWith) $(MYREF find) $(MYREF
 findAdjacent) $(MYREF findAmong) $(MYREF findSkip) $(MYREF findSplit)
 $(MYREF findSplitAfter) $(MYREF findSplitBefore) $(MYREF minCount)
 $(MYREF minPos) $(MYREF mismatch) $(MYREF skipOver) $(MYREF startsWith)
@@ -101,6 +101,9 @@ $(TR $(TDNW $(LREF countUntil)) $(TD $(D countUntil(a, b))
 returns the number of steps taken in $(D a) to reach $(D b); for
 example, $(D countUntil("hello!", "o")) returns $(D 4).)
 )
+$(TR $(TDNW $(LREF commonPrefix)) $(TD $(D commonPrefix("parakeet",
+"parachute")) returns $(D "para").)
+)
 $(TR $(TDNW $(LREF endsWith)) $(TD $(D endsWith("rocks", "ks"))
 returns $(D true).)
 )
@@ -138,6 +141,9 @@ $(TR $(TDNW $(LREF minCount)) $(TD $(D minCount([2, 1, 1, 4,
 $(TR $(TDNW $(LREF minPos)) $(TD $(D minPos([2, 3, 1, 3, 4,
 1])) returns the subrange $(D [1, 3, 4, 1]), i.e., positions the range
 at the first occurrence of its minimal element.)
+)
+$(TR $(TDNW $(LREF mismatch)) $(TD $(D mismatch("parakeet", "parachute"))
+returns the two ranges $(D "keet") and $(D "chute").)
 )
 $(TR $(TDNW $(LREF skipOver)) $(TD Assume $(D a = "blah"). Then
 $(D skipOver(a, "bi")) leaves $(D a) unchanged and returns $(D false),
@@ -241,6 +247,9 @@ $(TR $(TDNW $(LREF partialSort)) $(TD If $(D a = [5, 4, 3, 2,
 $(TR $(TDNW $(LREF partition)) $(TD Partitions a range
 according to a predicate.)
 )
+$(TR $(TDNW $(LREF partition3)) $(TD Partitions a range
+in three parts (less than, equal, greater than the given pivot).)
+)
 $(TR $(TDNW $(LREF schwartzSort)) $(TD Sorts with the help of
 the $(LUCKY Schwartzian transform).)
 )
@@ -306,6 +315,9 @@ range to another.)
 $(TR $(TDNW $(LREF moveSome)) $(TD Moves as many elements as
 possible from one range to another.)
 )
+$(TR $(TDNW $(LREF remove)) $(TD Removes elements from a range
+in-place, and returns the shortened range.)
+)
 $(TR $(TDNW $(LREF reverse)) $(TD If $(D a = [1, 2, 3]), $(D
 reverse(a)) changes it to $(D [3, 2, 1]).)
 )
@@ -336,7 +348,7 @@ $(TR $(TDNW $(LREF uninitializedFill)) $(TD Fills a range
 
 Macros:
 WIKI = Phobos/StdAlgorithm
-MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
+MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#.$1">$1</a>&nbsp;</font>
 
 Copyright: Andrei Alexandrescu 2008-.
 
