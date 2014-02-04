@@ -474,7 +474,7 @@ void handleOption(R)(string option, R receiver, ref string[] args,
             // parse '--b=true/false'
             if (val.length)
             {
-                *receiver = parse!(typeof(*receiver))(val);
+                *receiver = to!(typeof(*receiver))(val);
                 break;
             }
 
@@ -499,8 +499,7 @@ void handleOption(R)(string option, R receiver, ref string[] args,
             }
             static if (is(typeof(*receiver) == enum))
             {
-                // enum receiver
-                *receiver = parse!(typeof(*receiver))(val);
+                *receiver = to!(typeof(*receiver))(val);
             }
             else static if (is(typeof(*receiver) : real))
             {
@@ -875,4 +874,32 @@ unittest
     bool opt;
     args.getopt(config.passThrough, "opt", &opt);
     assert(args == ["main", "-test"]);
+}
+
+unittest // From bugzilla 7693
+{
+    enum Foo {
+        bar,
+        baz
+    }
+
+    auto args = ["prog", "--foo=barZZZ"];
+    Foo foo;
+    assertThrown(getopt(args, "foo", &foo));
+    args = ["prog", "--foo=bar"];
+    assertNotThrown(getopt(args, "foo", &foo));
+    args = ["prog", "--foo", "barZZZ"];
+    assertThrown(getopt(args, "foo", &foo));
+    args = ["prog", "--foo", "baz"];
+    assertNotThrown(getopt(args, "foo", &foo));
+}
+
+unittest // same bug as 7693 only for bool
+{
+    auto args = ["prog", "--foo=truefoobar"];
+    bool foo;
+    assertThrown(getopt(args, "foo", &foo));
+    args = ["prog", "--foo"];
+    getopt(args, "foo", &foo);
+	assert(foo);
 }
