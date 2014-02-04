@@ -31047,15 +31047,12 @@ private:
         that it took to call $(D fun[0]) $(D n) times. The second value is the
         length of time it took to call $(D fun[1]) $(D n) times. Etc.
 
-   Examples:
---------------------
-int a;
-void f0() {}
-void f1() {auto b = a;}
-void f2() {auto b = to!(string)(a);}
-auto r = benchmark!(f0, f1, f2)(10_000);
-writefln("Milliseconds to call fun[0] n times: %s", r[0].msecs);
---------------------
+    Note that casting the TickDurations to $(CXREF time, Duration)s will make
+    the results easier to deal with (and it may change in the future that
+    benchmark will return an array of Durations rather than TickDurations).
+
+    See_Also:
+        $(LREF measureTime)
   +/
 TickDuration[lengthof!(fun)()] benchmark(fun...)(uint n)
 {
@@ -31074,17 +31071,17 @@ TickDuration[lengthof!(fun)()] benchmark(fun...)(uint n)
     return result;
 }
 
-//Verify Examples.
-version(testStdDateTime) unittest
+///
+unittest
 {
-    void writefln(S...)(S args){}
-
     int a;
     void f0() {}
     void f1() {auto b = a;}
-    void f2() {auto b = to!(string)(a);}
+    void f2() {auto b = to!string(a);}
     auto r = benchmark!(f0, f1, f2)(10_000);
-    writefln("Milliseconds to call fun[0] n times: %s", r[0].msecs);
+    auto f0Result = to!Duration(r[0]); // time f0 took to run 10,000 times
+    auto f1Result = to!Duration(r[1]); // time f1 took to run 10,000 times
+    auto f2Result = to!Duration(r[2]); // time f2 took to run 10,000 times
 }
 
 version(testStdDateTime) @safe unittest
@@ -32221,13 +32218,29 @@ version(StdDdoc)
 
         Examples:
 --------------------
-writeln("benchmark start!");
 {
-auto mt = measureTime!((a){assert(a.seconds);});
-doSomething();
+    auto mt = measureTime!((TickDuration a)
+        { /+ do something when the scope is exited +/ });
+    // do something that needs to be timed
 }
-writeln("benchmark end!");
 --------------------
+
+        which is functionally equivalent to
+
+--------------------
+{
+    auto sw = StopWatch(AutoStart.yes);
+    scope(exit)
+    {
+        TickDuration a = sw.peek();
+        /+ do something when the scope is exited +/
+    }
+    // do something that needs to be timed
+}
+--------------------
+
+        See_Also:
+            $(LREF benchmark)
       +/
     auto measureTime(alias func)();
 }
@@ -32267,6 +32280,26 @@ else
             }
         }
         return Result(AutoStart.yes);
+    }
+}
+
+// Verify Example.
+unittest
+{
+    {
+        auto mt = measureTime!((TickDuration a)
+            { /+ do something when the scope is exited +/ });
+        // do something that needs to be timed
+    }
+
+    {
+        auto sw = StopWatch(AutoStart.yes);
+        scope(exit)
+        {
+            TickDuration a = sw.peek();
+            /+ do something when the scope is exited +/
+        }
+        // do something that needs to be timed
     }
 }
 
