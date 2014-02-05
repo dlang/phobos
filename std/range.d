@@ -1056,23 +1056,28 @@ template isOutputRange(R, E)
     }));
 }
 
+///
+unittest
+{
+    void myprint(in char[] s) { }
+    static assert(isOutputRange!(typeof(&myprint), char));
+
+    static assert(!isOutputRange!(char[], char));
+    static assert( isOutputRange!(dchar[], wchar));
+    static assert( isOutputRange!(dchar[], dchar));
+}
+
 unittest
 {
     import std.stdio : writeln;
-
-    void myprint(in char[] s) { writeln('[', s, ']'); }
-    static assert(isOutputRange!(typeof(&myprint), char));
 
     auto app = appender!string();
     string s;
     static assert( isOutputRange!(Appender!string, string));
     static assert( isOutputRange!(Appender!string*, string));
     static assert(!isOutputRange!(Appender!string, int));
-    static assert(!isOutputRange!(char[], char));
     static assert(!isOutputRange!(wchar[], wchar));
     static assert( isOutputRange!(dchar[], char));
-    static assert( isOutputRange!(dchar[], wchar));
-    static assert( isOutputRange!(dchar[], dchar));
     static assert( isOutputRange!(dchar[], string));
     static assert( isOutputRange!(dchar[], wstring));
     static assert( isOutputRange!(dchar[], dstring));
@@ -1356,6 +1361,7 @@ template hasMobileElements(R)
     })));
 }
 
+///
 unittest
 {
     static struct HasPostblit
@@ -1390,22 +1396,26 @@ template ElementType(R)
 unittest
 {
     // Standard arrays: returns the type of the elements of the array
-    static assert(is(ElementType!(byte[]) == byte));
     static assert(is(ElementType!(int[]) == int));
 
     // Accessing .front retrieves the decoded dchar
     static assert(is(ElementType!(char[])  == dchar)); // rvalue
-    static assert(is(ElementType!(wchar[]) == dchar)); // rvalue
     static assert(is(ElementType!(dchar[]) == dchar)); // lvalue
 
     // Ditto
     static assert(is(ElementType!(string) == dchar));
-    static assert(is(ElementType!(wstring) == dchar));
     static assert(is(ElementType!(dstring) == immutable(dchar)));
 
     // For ranges it gets the type of .front.
     auto range = iota(0, 10);
     static assert(is(ElementType!(typeof(range)) == int));
+}
+
+unittest
+{
+    static assert(is(ElementType!(byte[]) == byte));
+    static assert(is(ElementType!(wchar[]) == dchar)); // rvalue
+    static assert(is(ElementType!(wstring) == dchar));
 }
 
 unittest
@@ -1471,19 +1481,22 @@ unittest
 {
     // internally the range stores the encoded type
     static assert(is(ElementEncodingType!(char[])  == char));
-    static assert(is(ElementEncodingType!(wchar[]) == wchar));
-    static assert(is(ElementEncodingType!(dchar[]) == dchar));
 
-    // ditto
-    static assert(is(ElementEncodingType!(string)  == immutable(char)));
     static assert(is(ElementEncodingType!(wstring) == immutable(wchar)));
-    static assert(is(ElementEncodingType!(dstring) == immutable(dchar)));
 
     static assert(is(ElementEncodingType!(byte[]) == byte));
-    static assert(is(ElementEncodingType!(int[])  == int));
 
     auto range = iota(0, 10);
     static assert(is(ElementEncodingType!(typeof(range)) == int));
+}
+
+unittest
+{
+    static assert(is(ElementEncodingType!(wchar[]) == wchar));
+    static assert(is(ElementEncodingType!(dchar[]) == dchar));
+    static assert(is(ElementEncodingType!(string)  == immutable(char)));
+    static assert(is(ElementEncodingType!(dstring) == immutable(dchar)));
+    static assert(is(ElementEncodingType!(int[])  == int));
 }
 
 unittest
@@ -1533,13 +1546,13 @@ template hasSwappableElements(R)
     }));
 }
 
+///
 unittest
 {
     static assert(!hasSwappableElements!(const int[]));
     static assert(!hasSwappableElements!(const(int)[]));
     static assert(!hasSwappableElements!(inout(int)[]));
     static assert( hasSwappableElements!(int[]));
-  //static assert( hasSwappableElements!(char[]));
 }
 
 /**
@@ -1566,6 +1579,7 @@ template hasAssignableElements(R)
     }));
 }
 
+///
 unittest
 {
     static assert(!hasAssignableElements!(const int[]));
@@ -1589,6 +1603,7 @@ template hasLvalueElements(R)
     }));
 }
 
+///
 unittest
 {
     static assert( hasLvalueElements!(int[]));
@@ -1599,7 +1614,10 @@ unittest
 
     auto c = chain([1, 2, 3], [4, 5, 6]);
     static assert( hasLvalueElements!(typeof(c)));
+}
 
+unittest
+{
     // bugfix 6336
     struct S { immutable int value; }
     static assert( isInputRange!(S[]));
@@ -1631,6 +1649,7 @@ template hasLength(R)
     }));
 }
 
+///
 unittest
 {
     static assert(!hasLength!(char[]));
@@ -1668,6 +1687,7 @@ template isInfinite(R)
         enum bool isInfinite = false;
 }
 
+///
 unittest
 {
     static assert(!isInfinite!(int[]));
@@ -1757,6 +1777,7 @@ template hasSlicing(R)
     }));
 }
 
+///
 unittest
 {
     static assert( hasSlicing!(int[]));
@@ -1878,14 +1899,6 @@ unittest
 Iterates a bidirectional range backwards. The original range can be
 accessed by using the $(D source) property. Applying retro twice to
 the same range yields the original range.
-
-Example:
-----
-int[] a = [ 1, 2, 3, 4, 5 ];
-assert(equal(retro(a), [ 5, 4, 3, 2, 1 ][]));
-assert(retro(a).source is a);
-assert(retro(retro(a)) is a);
-----
  */
 auto retro(Range)(Range r)
 if (isBidirectionalRange!(Unqual!Range))
@@ -1998,6 +2011,16 @@ if (isBidirectionalRange!(Unqual!Range))
     }
 }
 
+
+///
+unittest
+{
+	int[] a = [ 1, 2, 3, 4, 5 ];
+	assert(equal(retro(a), [ 5, 4, 3, 2, 1 ][]));
+	assert(retro(a).source is a);
+	assert(retro(retro(a)) is a);
+}
+
 unittest
 {
     static assert(isBidirectionalRange!(typeof(retro("hello"))));
@@ -2019,10 +2042,12 @@ unittest
     test([ 1, 2, 3, 4, 5 ], [ 5, 4, 3, 2, 1 ]);
     test([ 1, 2, 3, 4, 5, 6 ], [ 6, 5, 4, 3, 2, 1 ]);
 
-   // static assert(is(Retro!(immutable int[])));
    immutable foo = [1,2,3].idup;
    retro(foo);
+}
 
+unittest
+{
     foreach(DummyType; AllDummyRanges) {
         static if (!isBidirectionalRange!DummyType) {
             static assert(!__traits(compiles, Retro!DummyType));
@@ -2881,13 +2906,6 @@ continues again from $(D r1). For example, if two ranges are involved,
 it alternately yields elements off the two ranges. $(D roundRobin)
 stops after it has consumed all ranges (skipping over the ones that
 finish early).
-
-Example:
-----
-int[] a = [ 1, 2, 3, 4];
-int[] b = [ 10, 20 ];
-assert(equal(roundRobin(a, b), [1, 10, 2, 20, 3, 4]));
-----
  */
 auto roundRobin(Rs...)(Rs rs)
 if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
@@ -2989,6 +3007,7 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
     return Result(rs, 0);
 }
 
+///
 unittest
 {
     int[] a = [ 1, 2, 3 ];
@@ -3002,14 +3021,6 @@ Iterates a random-access range starting from a given point and
 progressively extending left and right from that point. If no initial
 point is given, iteration starts from the middle of the
 range. Iteration spans the entire range.
-
-Example:
-----
-int[] a = [ 1, 2, 3, 4, 5 ];
-assert(equal(radial(a), [ 3, 4, 2, 5, 1 ]));
-a = [ 1, 2, 3, 4 ];
-assert(equal(radial(a), [ 2, 3, 1, 4 ]));
-----
  */
 auto radial(Range, I)(Range r, I startingIndex)
 if (isRandomAccessRange!(Unqual!Range) && hasLength!(Unqual!Range) && isIntegral!I)
@@ -3023,6 +3034,15 @@ auto radial(R)(R r)
 if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R))
 {
     return .radial(r, (r.length - !r.empty) / 2);
+}
+
+///
+unittest
+{
+    int[] a = [ 1, 2, 3, 4, 5 ];
+    assert(equal(radial(a), [ 3, 4, 2, 5, 1 ]));
+    a = [ 1, 2, 3, 4 ];
+    assert(equal(radial(a), [ 2, 3, 1, 4 ]));
 }
 
 unittest
@@ -3073,15 +3093,6 @@ unittest
 Lazily takes only up to $(D n) elements of a range. This is
 particularly useful when using with infinite ranges. If the range
 offers random access and $(D length), $(D Take) offers them as well.
-
-Example:
-----
-int[] arr1 = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
-auto s = take(arr1, 5);
-assert(s.length == 5);
-assert(s[4] == 5);
-assert(equal(s, [ 1, 2, 3, 4, 5 ][]));
-----
  */
 struct Take(Range)
 if (isInputRange!(Unqual!Range) &&
@@ -3256,6 +3267,16 @@ if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R))
     // @@@BUG@@@
     //return input[0 .. min(n, $)];
     return input[0 .. min(n, input.length)];
+}
+
+///
+unittest
+{
+    int[] arr1 = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
+    auto s = take(arr1, 5);
+    assert(s.length == 5);
+    assert(s[4] == 5);
+    assert(equal(s, [ 1, 2, 3, 4, 5 ][]));
 }
 
 // take(take(r, n1), n2)
@@ -3437,6 +3458,7 @@ if (isInputRange!R)
     }
 }
 
+///
 unittest
 {
     auto a = [ 1, 2, 3, 4, 5 ];
@@ -3447,7 +3469,12 @@ unittest
     assert(b.length == 3);
     assert(b.front == 1);
     assert(b.back == 3);
+}
 
+unittest
+{
+    auto a = [ 1, 2, 3, 4, 5 ];
+    auto b = takeExactly(a, 3);
     auto c = takeExactly(b, 2);
 
     auto d = filter!"a > 0"(a);
@@ -3458,7 +3485,11 @@ unittest
     assert(e.front == 1);
 
     assert(equal(takeExactly(e, 3), [1, 2, 3]));
+}
 
+unittest
+{
+    auto a = [ 1, 2, 3, 4, 5 ];
     //Test that take and takeExactly are the same for ranges which define length
     //but aren't sliceable.
     struct L
@@ -3520,21 +3551,6 @@ Returns a range with at most one element; for example, $(D
 takeOne([42, 43, 44])) returns a range consisting of the integer $(D
 42). Calling $(D popFront()) off that range renders it empty.
 
-----
-auto s = takeOne([42, 43, 44]);
-static assert(isRandomAccessRange!(typeof(s)));
-assert(s.length == 1);
-assert(!s.empty);
-assert(s.front == 42);
-s.front() = 43;
-assert(s.front == 43);
-assert(s.back == 43);
-assert(s[0] == 43);
-s.popFront();
-assert(s.length == 0);
-assert(s.empty);
-----
-
 In effect $(D takeOne(r)) is somewhat equivalent to $(D take(r, 1)) but in
 certain interfaces it is important to know statically that the range may only
 have at most one element.
@@ -3577,6 +3593,7 @@ auto takeOne(R)(R source) if (isInputRange!R)
     }
 }
 
+///
 unittest
 {
     auto s = takeOne([42, 43, 44]);
@@ -3597,13 +3614,6 @@ unittest
     Returns an empty range which is statically known to be empty and is
     guaranteed to have $(D length) and be random access regardless of $(D R)'s
     capabilities.
-
-    Examples:
---------------------
-auto range = takeNone!(int[])();
-assert(range.length == 0);
-assert(range.empty);
---------------------
   +/
 auto takeNone(R)()
     if(isInputRange!R)
@@ -3611,12 +3621,16 @@ auto takeNone(R)()
     return typeof(takeOne(R.init)).init;
 }
 
+///
 unittest
 {
     auto range = takeNone!(int[])();
     assert(range.length == 0);
     assert(range.empty);
+}
 
+unittest
+{
     enum ctfe = takeNone!(int[])();
     static assert(ctfe.length == 0);
     static assert(ctfe.empty);
@@ -3627,13 +3641,6 @@ unittest
     Creates an empty range from the given range in $(BIGOH 1). If it can, it
     will return the same range type. If not, it will return
     $(D takeExactly(range, 0)).
-
-    Examples:
---------------------
-assert(takeNone([42, 27, 19]).empty);
-assert(takeNone("dlang.org").empty);
-assert(takeNone(filter!"true"([42, 27, 19])).empty);
---------------------
   +/
 auto takeNone(R)(R range)
     if(isInputRange!R)
@@ -3659,7 +3666,7 @@ auto takeNone(R)(R range)
     return retval;
 }
 
-//Verify Examples.
+///
 unittest
 {
     assert(takeNone([42, 27, 19]).empty);
@@ -3797,34 +3804,6 @@ unittest
     Note: $(D drop) and $(D dropBack) will only pop $(I up to)
     $(D n) elements but will stop if the range is empty first.
 
-    Examples:
---------------------
-assert([0, 2, 1, 5, 0, 3].drop(3) == [5, 0, 3]);
-assert("hello world".drop(6) == "world");
-assert("hello world".drop(50).empty);
-assert("hello world".take(6).drop(3).equal("lo "));
---------------------
-
---------------------
-//Remove all but the first two elements
-auto a = DList!int(0, 1, 9, 9, 9);
-a.remove(a[].drop(2));
-assert(a[].equal(a[].take(2)));
---------------------
-
---------------------
-assert([0, 2, 1, 5, 0, 3].dropBack(3) == [0, 2, 1]);
-assert("hello world".dropBack(6) == "hello");
-assert("hello world".dropBack(50).empty);
-assert("hello world".drop(4).dropBack(4).equal("o w"));
---------------------
-
---------------------
-//insert before the last two elements
-auto a = DList!int(0, 1, 2, 5, 6);
-a.insertAfter(a[].dropBack(2), [3, 4]);
-assert(a[].equal(iota(0, 7)));
---------------------
   +/
 R drop(R)(R range, size_t n)
     if(isInputRange!R)
@@ -3840,7 +3819,7 @@ R dropBack(R)(R range, size_t n)
     return range;
 }
 
-//Verify Examples
+///
 unittest
 {
     assert([0, 2, 1, 5, 0, 3].drop(3) == [5, 0, 3]);
@@ -3848,6 +3827,15 @@ unittest
     assert("hello world".drop(50).empty);
     assert("hello world".take(6).drop(3).equal("lo "));
 }
+
+unittest
+{
+    assert([0, 2, 1, 5, 0, 3].dropBack(3) == [0, 2, 1]);
+    assert("hello world".dropBack(6) == "hello");
+    assert("hello world".dropBack(50).empty);
+    assert("hello world".drop(4).dropBack(4).equal("o w"));
+}
+
 unittest
 {
     import std.container : DList;
@@ -3857,18 +3845,13 @@ unittest
     a.remove(a[].drop(2));
     assert(a[].equal(a[].take(2)));
 }
+
 unittest
 {
     assert(drop("", 5).empty);
     assert(equal(drop(filter!"true"([0, 2, 1, 5, 0, 3]), 3), [5, 0, 3]));
 }
-unittest
-{
-    assert([0, 2, 1, 5, 0, 3].dropBack(3) == [0, 2, 1]);
-    assert("hello world".dropBack(6) == "hello");
-    assert("hello world".dropBack(50).empty);
-    assert("hello world".drop(4).dropBack(4).equal("o w"));
-}
+
 unittest
 {
     import std.container : DList;
@@ -3906,22 +3889,20 @@ R dropBackExactly(R)(R range, size_t n)
     return range;
 }
 
+///
 unittest
 {
-    //RA+slicing
     auto a = [1, 2, 3];
-    assert(a.dropExactly(1) == [2, 3]);
-    assert(a.dropBackExactly(1) == [1, 2]);
+    assert(a.dropExactly(2) == [3]);
+    assert(a.dropBackExactly(2) == [1]);
 
-    //UTF string
     string s = "日本語";
-    assert(s.dropExactly(1) == "本語");
-    assert(s.dropBackExactly(1) == "日本");
+    assert(s.dropExactly(2) == "語");
+    assert(s.dropBackExactly(2) == "日");
 
-    //Bidirectional
     auto bd = filterBidirectional!"true"([1, 2, 3]);
-    assert(bd.dropExactly(1).equal([2, 3]));
-    assert(bd.dropBackExactly(1).equal([1, 2]));
+    assert(bd.dropExactly(2).equal([3]));
+    assert(bd.dropBackExactly(2).equal([1]));
 }
 
 /++
@@ -3933,12 +3914,6 @@ unittest
 
     $(D dropBackOne) provides the same functionality but instead calls
     $(D range.popBack()).
-
-    Example:
-----
-auto dl = DList!int(9, 1, 2, 3, 9);
-assert(dl[].dropOne().dropBackOne().equal([1, 2, 3]));
-----
 +/
 R dropOne(R)(R range)
     if (isInputRange!R)
@@ -3954,26 +3929,22 @@ R dropBackOne(R)(R range)
     return range;
 }
 
+///
 unittest
 {
     import std.container : DList;
 
     auto dl = DList!int(9, 1, 2, 3, 9);
     assert(dl[].dropOne().dropBackOne().equal([1, 2, 3]));
-}
-unittest
-{
-    //RA+slicing
+
     auto a = [1, 2, 3];
     assert(a.dropOne() == [2, 3]);
     assert(a.dropBackOne() == [1, 2]);
 
-    //UTF string
     string s = "日本語";
     assert(s.dropOne() == "本語");
     assert(s.dropBackOne() == "日本");
 
-    //Bidirectional
     auto bd = filterBidirectional!"true"([1, 2, 3]);
     assert(bd.dropOne().equal([2, 3]));
     assert(bd.dropBackOne().equal([1, 2]));
@@ -3992,23 +3963,6 @@ unittest
 
     $(D popBackN) will behave the same but instead removes elements from
     the back of the (bidirectional) range instead of the front.
-
-    Example:
-----
-int[] a = [ 1, 2, 3, 4, 5 ];
-a.popFrontN(2);
-assert(a == [ 3, 4, 5 ]);
-a.popFrontN(7);
-assert(a == [ ]);
-----
-
-----
-int[] a = [ 1, 2, 3, 4, 5 ];
-a.popBackN(2);
-assert(a == [ 1, 2, 3 ]);
-a.popBackN(7);
-assert(a == [ ]);
-----
 */
 size_t popFrontN(Range)(ref Range r, size_t n)
     if (isInputRange!Range)
@@ -4076,6 +4030,7 @@ size_t popBackN(Range)(ref Range r, size_t n)
     return n;
 }
 
+///
 unittest
 {
     int[] a = [ 1, 2, 3, 4, 5 ];
@@ -4084,6 +4039,8 @@ unittest
     a.popFrontN(7);
     assert(a == [ ]);
 }
+
+///
 unittest
 {
     auto LL = iota(1L, 7L);
@@ -4091,6 +4048,8 @@ unittest
     assert(equal(LL, [3L, 4L, 5L, 6L]));
     assert(r == 2);
 }
+
+///
 unittest
 {
     int[] a = [ 1, 2, 3, 4, 5 ];
@@ -4099,6 +4058,8 @@ unittest
     a.popBackN(7);
     assert(a == [ ]);
 }
+
+///
 unittest
 {
     auto LL = iota(1L, 7L);
@@ -4155,23 +4116,21 @@ void popBackExactly(Range)(ref Range r, size_t n)
             r.popBack();
 }
 
+///
 unittest
 {
-    //RA+slicing
     auto a = [1, 2, 3];
     a.popFrontExactly(1);
     assert(a == [2, 3]);
     a.popBackExactly(1);
     assert(a == [2]);
 
-    //UTF string
     string s = "日本語";
     s.popFrontExactly(1);
     assert(s == "本語");
     s.popBackExactly(1);
     assert(s == "本");
 
-    //Bidirectional
     auto bd = filterBidirectional!"true"([1, 2, 3]);
     bd.popFrontExactly(1);
     assert(bd.equal([2, 3]));
@@ -4258,11 +4217,6 @@ itself. If the original range has random access, $(D Cycle) offers
 random access and also offers a constructor taking an initial position
 $(D index). $(D Cycle) works with static arrays in addition to ranges,
 mostly for performance reasons.
-
-Example:
-----
-assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
-----
 
 Tip: This is a great way to implement simple circular buffers.
 */
@@ -4480,6 +4434,12 @@ Cycle!R cycle(R)(R input)
     return Cycle!R(input);
 }
 
+///
+unittest
+{
+    assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
+}
+
 /// Ditto
 Cycle!R cycle(R)(R input, size_t index = 0)
     if (isRandomAccessRange!R && !isInfinite!R)
@@ -4501,7 +4461,6 @@ Cycle!R cycle(R)(ref R input, size_t index = 0)
 
 unittest
 {
-    assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
     static assert(isForwardRange!(Cycle!(uint[])));
 
     // Make sure ref is getting propagated properly.
@@ -4654,14 +4613,6 @@ private template lengthType(R) { alias typeof((inout int = 0){ R r = void; retur
    Zip) is extremely powerful because it allows manipulating several
    ranges in lockstep. For example, the following code sorts two arrays
    in parallel:
-
-   ----
-   int[] a = [ 1, 2, 3 ];
-   string[] b = [ "a", "b", "c" ];
-   sort!("a[0] > b[0]")(zip(a, b));
-   assert(a == [ 3, 2, 1 ]);
-   assert(b == [ "c", "b", "a" ]);
-   ----
 */
 struct Zip(Ranges...)
     if (Ranges.length && allSatisfy!(isInputRange, Ranges))
@@ -5061,6 +5012,16 @@ auto zip(Ranges...)(Ranges ranges)
     return Zip!Ranges(ranges);
 }
 
+///
+unittest
+{
+	int[] a = [ 1, 2, 3 ];
+	string[] b = [ "a", "b", "c" ];
+	sort!("a[0] > b[0]")(zip(a, b));
+	assert(a == [ 3, 2, 1 ]);
+	assert(b == [ "c", "b", "a" ]);
+}
+
 /// Ditto
 auto zip(Ranges...)(StoppingPolicy sp, Ranges ranges)
     if (Ranges.length && allSatisfy!(isInputRange, Ranges))
@@ -5299,23 +5260,13 @@ private string lockstepMixin(Ranges...)(bool withIndex)
    $(D foreach) loop, it will be silently accepted but any modifications
    to the variable will not be propagated to the underlying range.
 
-   Examples:
-   ---
-   auto arr1 = [1,2,3,4,5];
-   auto arr2 = [6,7,8,9,10];
-
-   foreach(ref a, ref b; lockstep(arr1, arr2))
-   {
-       a += b;
-   }
-
-   assert(arr1 == [7,9,11,13,15]);
-
    // Lockstep also supports iterating with an index variable:
+   Example:
+   -------
    foreach(index, a, b; lockstep(arr1, arr2)) {
        writefln("Index %s:  a = %s, b = %s", index, a, b);
    }
-   ---
+   -------
 */
 struct Lockstep(Ranges...)
     if (Ranges.length > 1 && allSatisfy!(isInputRange, Ranges))
@@ -5360,6 +5311,20 @@ Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges, StoppingPolicy s)
         return Lockstep!Ranges(ranges, s);
     else
         return ranges[0];
+}
+
+///
+unittest
+{
+   auto arr1 = [1,2,3,4,5];
+   auto arr2 = [6,7,8,9,10];
+
+   foreach(ref a, ref b; lockstep(arr1, arr2))
+   {
+       a += b;
+   }
+
+   assert(arr1 == [7,9,11,13,15]);
 }
 
 unittest
@@ -5554,12 +5519,6 @@ unittest
 
    The state of the sequence is stored as a $(D Tuple) so it can be
    heterogeneous.
-
-   Example:
-   ----
-   // a[0] = 1, a[1] = 2, a[n] = a[0] + n * a[1]
-   auto odds = sequence!("a[0] + n * a[1]")(1, 2);
-   ----
 */
 struct Sequence(alias fun, State)
 {
@@ -5630,6 +5589,17 @@ Sequence!(fun, Tuple!(State)) sequence(alias fun, State...)(State args)
     return typeof(return)(tuple(args));
 }
 
+///
+unittest
+{
+    auto odds = sequence!("a[0] + n * a[1]")(1, 2);
+    assert(odds.front == 1);
+    odds.popFront();
+    assert(odds.front == 3);
+    odds.popFront();
+    assert(odds.front == 5);
+}
+
 unittest
 {
     auto y = Sequence!("a[0] + n * a[1]", Tuple!(int, int))
@@ -5648,19 +5618,6 @@ unittest
         assert(odds[0] == currentOdd);
         odds.popFront();
     }
-}
-
-
-
-unittest
-{
-    // documentation example
-    auto odds = sequence!("a[0] + n * a[1]")(1, 2);
-    assert(odds.front == 1);
-    odds.popFront();
-    assert(odds.front == 3);
-    odds.popFront();
-    assert(odds.front == 5);
 }
 
 unittest
@@ -5696,17 +5653,6 @@ unittest
    Throws:
    $(D Exception) if $(D begin != end && step == 0), an exception is
    thrown.
-
-   Example:
-   ----
-   auto r = iota(0, 10, 1);
-   assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9][]));
-   r = iota(0, 11, 3);
-   assert(equal(r, [0, 3, 6, 9][]));
-   assert(r[2] == 6);
-   auto rf = iota(0.0, 0.5, 0.1);
-   assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4]));
-   ----
 */
 auto iota(B, E, S)(B begin, E end, S step)
 if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
@@ -5957,6 +5903,19 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
     return Result(begin, end, step);
 }
 
+///
+unittest
+{
+   import std.math : approxEqual;
+   auto r = iota(0, 10, 1);
+   assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9][]));
+   r = iota(0, 11, 3);
+   assert(equal(r, [0, 3, 6, 9][]));
+   assert(r[2] == 6);
+   auto rf = iota(0.0, 0.5, 0.1);
+   assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4]));
+}
+
 unittest
 {
     import std.math : approxEqual, nextUp, nextDown;
@@ -6160,15 +6119,6 @@ enum TransverseOptions
 /**
    Given a range of ranges, iterate transversally through the first
    elements of each of the enclosed ranges.
-
-   Example:
-   ----
-   int[][] x = new int[][2];
-   x[0] = [1, 2];
-   x[1] = [3, 4];
-   auto ror = frontTransversal(x);
-   assert(equal(ror, [ 1, 3 ][]));
-   ---
 */
 struct FrontTransversal(Ror,
         TransverseOptions opt = TransverseOptions.assumeJagged)
@@ -6374,6 +6324,16 @@ FrontTransversal!(RangeOfRanges, opt) frontTransversal(
     return typeof(return)(rr);
 }
 
+///
+unittest
+{
+   int[][] x = new int[][2];
+   x[0] = [1, 2];
+   x[1] = [3, 4];
+   auto ror = frontTransversal(x);
+   assert(equal(ror, [ 1, 3 ][]));
+}
+
 unittest {
     static assert(is(FrontTransversal!(immutable int[][])));
 
@@ -6437,15 +6397,6 @@ unittest {
    Given a range of ranges, iterate transversally through the the $(D
    n)th element of each of the enclosed ranges. All elements of the
    enclosing range must offer random access.
-
-   Example:
-   ----
-   int[][] x = new int[][2];
-   x[0] = [1, 2];
-   x[1] = [3, 4];
-   auto ror = transversal(x, 1);
-   assert(equal(ror, [ 2, 4 ][]));
-   ---
 */
 struct Transversal(Ror,
         TransverseOptions opt = TransverseOptions.assumeJagged)
@@ -6664,6 +6615,16 @@ Transversal!(RangeOfRanges, opt) transversal
     return typeof(return)(rr, n);
 }
 
+///
+unittest
+{
+   int[][] x = new int[][2];
+   x[0] = [1, 2];
+   x[1] = [3, 4];
+   auto ror = transversal(x, 1);
+   assert(equal(ror, [ 2, 4 ][]));
+}
+
 unittest
 {
     int[][] x = new int[][2];
@@ -6772,6 +6733,7 @@ auto transposed(RangeOfRanges)(RangeOfRanges rr)
     return Transposed!RangeOfRanges(rr);
 }
 
+///
 unittest
 {
     int[][] x = new int[][2];
@@ -6796,20 +6758,6 @@ may also repeat elements.
 $(D Source) must be a random access range.  The returned range will be
 bidirectional or random-access if $(D Indices) is bidirectional or
 random-access, respectively.
-
-Examples:
----
-auto source = [1, 2, 3, 4, 5];
-auto indices = [4, 3, 1, 2, 0, 4];
-auto ind = indexed(source, indices);
-assert(equal(ind, [5, 4, 2, 3, 1, 5]));
-
-// When elements of indices are duplicated and Source has lvalue elements,
-// these are aliased in ind.
-ind[0]++;
-assert(ind[0] == 6);
-assert(ind[5] == 6);
----
 */
 struct Indexed(Source, Indices)
     if(isRandomAccessRange!Source && isInputRange!Indices &&
@@ -7013,10 +6961,19 @@ Indexed!(Source, Indices) indexed(Source, Indices)(Source source, Indices indice
     return typeof(return)(source, indices);
 }
 
+///
+unittest
+{
+    auto source = [1, 2, 3, 4, 5];
+    auto indices = [4, 3, 1, 2, 0, 4];
+    auto ind = indexed(source, indices);
+    assert(equal(ind, [5, 4, 2, 3, 1, 5]));
+    assert(equal(retro(ind), [5, 1, 3, 2, 4, 5]));
+}
+
 unittest
 {
     {
-        // Test examples.
         auto ind = indexed([1, 2, 3, 4, 5], [1, 3, 4]);
         assert(ind.physicalIndex(0) == 1);
     }
@@ -7024,15 +6981,16 @@ unittest
     auto source = [1, 2, 3, 4, 5];
     auto indices = [4, 3, 1, 2, 0, 4];
     auto ind = indexed(source, indices);
-    assert(equal(ind, [5, 4, 2, 3, 1, 5]));
-    assert(equal(retro(ind), [5, 1, 3, 2, 4, 5]));
 
     // When elements of indices are duplicated and Source has lvalue elements,
     // these are aliased in ind.
     ind[0]++;
     assert(ind[0] == 6);
     assert(ind[5] == 6);
+}
 
+unittest
+{
     foreach(DummyType; AllDummyRanges)
     {
         auto d = DummyType.init;
@@ -7049,18 +7007,6 @@ $(D source) range. $(D Source) must be a forward range.
 If $(D !isInfinite!Source) and $(D source.walkLength) is not evenly
 divisible by $(D chunkSize), the back element of this range will contain
 fewer than $(D chunkSize) elements.
-
-Examples:
----
-auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-auto chunks = chunks(source, 4);
-assert(chunks[0] == [1, 2, 3, 4]);
-assert(chunks[1] == [5, 6, 7, 8]);
-assert(chunks[2] == [9, 10]);
-assert(chunks.back == chunks[2]);
-assert(chunks.front == chunks[0]);
-assert(chunks.length == 3);
----
 */
 struct Chunks(Source)
     if (isForwardRange!Source)
@@ -7264,6 +7210,7 @@ if (isForwardRange!Source)
     return typeof(return)(source, chunkSize);
 }
 
+///
 unittest
 {
     auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -7275,7 +7222,12 @@ unittest
     assert(chunks.front == chunks[0]);
     assert(chunks.length == 3);
     assert(equal(retro(array(chunks)), array(retro(chunks))));
+}
 
+unittest
+{
+    auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    auto chunks = chunks(source, 4);
     auto chunks2 = chunks.save;
     chunks.popFront();
     assert(chunks[0] == [5, 6, 7, 8]);
@@ -7542,12 +7494,12 @@ auto only(Values...)(auto ref Values values)
 ///
 unittest
 {
+    import std.uni;
     assert(equal(only('♡'), "♡"));
     assert([1, 2, 3, 4].findSplitBefore(only(3))[0] == [1, 2]);
 
     assert(only("one", "two", "three").joiner(" ").equal("one two three"));
 
-    import std.uni;
     string title = "The D Programming Language";
     assert(filter!isUpper(title).map!only().join(".") == "T.D.P.L");
 }
@@ -7735,6 +7687,24 @@ ElementType!R moveFront(R)(R r)
     }
 }
 
+///
+unittest
+{
+    auto a = [ 1, 2, 3 ];
+    assert(moveFront(a) == 1);
+
+    // define a perfunctory input range
+    struct InputRange
+    {
+        @property bool empty() { return false; }
+        @property int front() { return 42; }
+        void popFront() {}
+        int moveFront() { return 43; }
+    }
+    InputRange r;
+    assert(moveFront(r) == 43);
+}
+
 unittest
 {
     struct R
@@ -7765,11 +7735,12 @@ ElementType!R moveBack(R)(R r)
     }
 }
 
+///
 unittest
 {
     struct TestRange
     {
-        int payload;
+        int payload = 5;
         @property bool empty() { return false; }
         @property TestRange save() { return this; }
         @property ref int front() { return payload; }
@@ -7780,6 +7751,7 @@ unittest
     static assert(isBidirectionalRange!TestRange);
     TestRange r;
     auto x = moveBack(r);
+	assert(x == 5);
 }
 
 /**
@@ -7801,21 +7773,18 @@ ElementType!R moveAt(R, I)(R r, I i) if (isIntegral!I)
     }
 }
 
+///
 unittest
 {
-    auto a = [ 1, 2, 3 ];
-    assert(moveFront(a) == 1);
-    // define a perfunctory input range
-    struct InputRange
+    auto a = [1,2,3,4];
+    foreach(idx, it; a)
     {
-        @property bool empty() { return false; }
-        @property int front() { return 42; }
-        void popFront() {}
-        int moveFront() { return 43; }
+        assert(it == moveAt(a, idx));
     }
-    InputRange r;
-    assert(moveFront(r) == 43);
+}
 
+unittest 
+{
     foreach(DummyType; AllDummyRanges) {
         auto d = DummyType.init;
         assert(moveFront(d) == 1);
