@@ -29319,7 +29319,7 @@ assert(tz.dstName == "PDT");
             _enforceValidTZFile(readVal!(char[])(tzFile, 4) == "TZif");
 
             immutable char tzFileVersion = readVal!char(tzFile);
-            _enforceValidTZFile(tzFileVersion == '\0' || tzFileVersion == '2');
+            _enforceValidTZFile(tzFileVersion == '\0' || tzFileVersion == '2' || tzFileVersion == '3');
 
             {
                 auto zeroBlock = readVal!(ubyte[])(tzFile, 15);
@@ -29403,12 +29403,13 @@ assert(tz.dstName == "PDT");
 
             _enforceValidTZFile(!tzFile.eof);
 
-            //If version 2, the information is duplicated in 64-bit.
-            if(tzFileVersion == '2')
+            //If version 2 or 3, the information is duplicated in 64-bit.
+            if(tzFileVersion == '2' || tzFileVersion == '3')
             {
                 _enforceValidTZFile(readVal!(char[])(tzFile, 4) == "TZif");
 
-                _enforceValidTZFile(readVal!(char)(tzFile) == '2');
+                immutable char tzFileVersion2 = readVal!(char)(tzFile);
+                _enforceValidTZFile(tzFileVersion2 == '2' || tzFileVersion2 == '3');
 
                 {
                     auto zeroBlock = readVal!(ubyte[])(tzFile, 15);
