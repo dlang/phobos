@@ -5060,7 +5060,9 @@ unittest
     assert(b == [2.0, 1.0, 3.0]);
 
     z = zip(StoppingPolicy.requireSameLength, a, b);
-    assertNotThrown((z.popBack(), z.popBack(), z.popBack()));
+    assertNotThrown(z.popBack());
+    assertNotThrown(z.popBack());
+    assertNotThrown(z.popBack());
     assert(z.empty);
     assertThrown(z.popBack());
 

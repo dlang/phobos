@@ -1097,7 +1097,10 @@ struct FormatSpec(Char)
 
         put(w, '%');
         if (indexStart != 0)
-            formatValue(w, indexStart, f), put(w, '$');
+        {
+            formatValue(w, indexStart, f);
+            put(w, '$');
+        }
         if (flDash)  put(w, '-');
         if (flZero)  put(w, '0');
         if (flSpace) put(w, ' ');
@@ -1106,7 +1109,10 @@ struct FormatSpec(Char)
         if (width != 0)
             formatValue(w, width, f);
         if (precision != FormatSpec!Char.UNSPECIFIED)
-            put(w, '.'), formatValue(w, precision, f);
+        {
+            put(w, '.');
+            formatValue(w, precision, f);
+        }
         put(w, spec);
         return w.data;
     }
@@ -2264,7 +2270,10 @@ private void formatChar(Writer)(Writer w, in dchar c, in char quote)
     if (std.uni.isGraphical(c))
     {
         if (c == quote || c == '\\')
-            put(w, '\\'), put(w, c);
+        {
+            put(w, '\\');
+            put(w, c);
+        }
         else
             put(w, c);
     }
@@ -4418,8 +4427,9 @@ body
                 enforce(i <= T.length);
             }
 
-            auto sep =
-                spec.sep ? fmt.readUpToNextSpec(input), spec.sep
+            if (spec.sep)
+                fmt.readUpToNextSpec(input);
+            auto sep = spec.sep ? spec.sep
                          : fmt.trailing;
             debug (unformatRange) {
             if (!sep.empty && !input.empty) printf("-> %c, sep = %.*s\n", input.front, sep);

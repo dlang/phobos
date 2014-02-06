@@ -478,9 +478,15 @@ public:
         if (!hex && !signChar && (f.width == 0 || minw < f.width))
         {
             if (f.flPlus)
-                signChar = '+', ++minw;
+            {
+                signChar = '+';
+                ++minw;
+            }
             else if (f.flSpace)
-                signChar = ' ', ++minw;
+            {
+                signChar = ' ';
+                ++minw;
+            }
         }
 
         auto maxw = minw < f.width ? f.width : minw;
