@@ -989,7 +989,9 @@ struct BitArray
 
     /***************************************
      * Map the $(D BitArray) onto $(D v), with $(D numbits) being the number of bits
-     * in the array. Does not copy the data.
+     * in the array. Does not copy the data. $(D v.length) must be a multiple of
+     * $(D size_t.sizeof). If there are unmapped bits in the final mapped word then
+     * these will be set to 0.
      *
      * This is the inverse of $(D opCast).
      */
@@ -997,7 +999,7 @@ struct BitArray
     in
     {
         assert(numbits <= v.length * 8);
-        assert((v.length & 3) == 0);
+        assert(v.length % size_t.sizeof == 0);
     }
     body
     {
@@ -1561,6 +1563,7 @@ struct BitArray
     ///
     unittest
     {
+        debug(bitarray) printf("BitArray.toString unittest\n");
         BitArray b;
         b.init([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
 
@@ -1599,19 +1602,21 @@ struct BitArray
 
     unittest
     {
+        debug(bitarray) printf("BitArray.bitsSet unittest\n");
         BitArray b;
-        b.init([0xFFFF_FFFF], 0);
+        enum wordBits = size_t.sizeof * 8;
+        b.init([size_t.max], 0);
         assert(b.bitsSet.empty);
-        b.init([0xFFFF_FFFF], 1);
+        b.init([size_t.max], 1);
         assert(b.bitsSet.equal([0]));
-        b.init([0xFFFF_FFFF], 32);
-        assert(b.bitsSet.equal(iota(32)));
-        b.init([0xFFFF_FFFF, 0xFFFF_FFFF], 32);
-        assert(b.bitsSet.equal(iota(32)));
-        b.init([0xFFFF_FFFF, 0xFFFF_FFFF], 49);
-        assert(b.bitsSet.equal(iota(49)));
-        b.init([0xFFFF_FFFF, 0xFFFF_FFFF], 64);
-        assert(b.bitsSet.equal(iota(64)));
+        b.init([size_t.max], wordBits);
+        assert(b.bitsSet.equal(iota(wordBits)));
+        b.init([size_t.max, size_t.max], wordBits);
+        assert(b.bitsSet.equal(iota(wordBits)));
+        b.init([size_t.max, size_t.max], wordBits + 1);
+        assert(b.bitsSet.equal(iota(wordBits + 1)));
+        b.init([size_t.max, size_t.max], wordBits * 2);
+        assert(b.bitsSet.equal(iota(wordBits * 2)));
     }
 
     private void formatBitString(scope void delegate(const(char)[]) sink) const
