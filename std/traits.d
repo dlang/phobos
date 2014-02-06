@@ -5713,6 +5713,54 @@ unittest
     static assert(is(Unqual!ImmIntArr == immutable(int)[]));
 }
 
+/**
+Removes as many qualifiers as possible while maintaining compatibility
+with $(D T).
+
+Example:
+----
+static assert(is(CompatibleUnqual!int == int));
+static assert(is(CompatibleUnqual!(const int) == int));
+static assert(is(CompatibleUnqual!(const(int[])) == const(int)[]));
+
+struct S { int i; }
+struct P { int* p; }
+static assert(is(CompatibleUnqual!(const S) == S));
+static assert(is(CompatibleUnqual!(const P) == const P));
+----
+ */
+package template CompatibleUnqual(T)
+{
+    static if (is(T : Unqual!T))
+        alias CompatibleUnqual = Unqual!T;
+    else
+        alias CompatibleUnqual = T;
+}
+
+unittest
+{
+    static struct S { int i; }
+    static struct P { int* p; }
+
+    static assert(is(CompatibleUnqual!(int[])            == int[]));
+    static assert(is(CompatibleUnqual!(const(int[]))     == const(int)[]));
+    static assert(is(CompatibleUnqual!(immutable(int[])) == immutable(int)[]));
+    static assert(is(CompatibleUnqual!(S)                == S));
+    static assert(is(CompatibleUnqual!(const S)          == S));
+    static assert(is(CompatibleUnqual!(inout S)          == S));
+    static assert(is(CompatibleUnqual!(immutable S)      == S));
+    static assert(is(CompatibleUnqual!(shared S)         == S));
+    static assert(is(CompatibleUnqual!(shared const S)   == S));
+    static assert(is(CompatibleUnqual!(shared inout S)   == S));
+    static assert(is(CompatibleUnqual!(P)                == P));
+    static assert(is(CompatibleUnqual!(const P)          == const P));
+    static assert(is(CompatibleUnqual!(inout P)          == inout P));
+    static assert(is(CompatibleUnqual!(immutable P)      == immutable P));
+    static assert(is(CompatibleUnqual!(shared P)         == shared P));
+    static assert(is(CompatibleUnqual!(shared const P)   == shared const P));
+    static assert(is(CompatibleUnqual!(shared inout P)   == shared inout P));
+}
+
 // [For internal use]
 private template ModifyTypePreservingSTC(alias Modifier, T)
 {

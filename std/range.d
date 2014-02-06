@@ -1901,7 +1901,7 @@ accessed by using the $(D source) property. Applying retro twice to
 the same range yields the original range.
  */
 auto retro(Range)(Range r)
-if (isBidirectionalRange!(Unqual!Range))
+if (isBidirectionalRange!(CompatibleUnqual!Range))
 {
     // Check for retro(retro(r)) and just return r in that case
     static if (is(typeof(retro(r.source)) == Range))
@@ -1912,7 +1912,7 @@ if (isBidirectionalRange!(Unqual!Range))
     {
         static struct Result()
         {
-            private alias Unqual!Range R;
+            private alias CompatibleUnqual!Range R;
 
             // User code can get and set source, too
             R source;
@@ -2122,7 +2122,7 @@ assert(stride(stride(a, 2), 3) == stride(a, 6));
 ----
  */
 auto stride(Range)(Range r, size_t n)
-if (isInputRange!(Unqual!Range))
+if (isInputRange!(CompatibleUnqual!Range))
 {
     import std.exception : enforce;
 
@@ -2137,7 +2137,7 @@ if (isInputRange!(Unqual!Range))
     {
         static struct Result
         {
-            private alias Unqual!Range R;
+            private alias CompatibleUnqual!Range R;
             public R source;
             private size_t _n;
 
@@ -2483,8 +2483,8 @@ assert(equal(s, [1, 2, 3, 4, 5, 6, 7][]));
  */
 auto chain(Ranges...)(Ranges rs)
 if (Ranges.length > 0 &&
-    allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)) &&
-    !is(CommonType!(staticMap!(ElementType, staticMap!(Unqual, Ranges))) == void))
+    allSatisfy!(isInputRange, staticMap!(CompatibleUnqual, Ranges)) &&
+    !is(CommonType!(staticMap!(ElementType, staticMap!(CompatibleUnqual, Ranges))) == void))
 {
     static if (Ranges.length == 1)
     {
@@ -2495,7 +2495,7 @@ if (Ranges.length > 0 &&
         static struct Result
         {
         private:
-            alias staticMap!(Unqual, Ranges) R;
+            alias staticMap!(CompatibleUnqual, Ranges) R;
             alias CommonType!(staticMap!(.ElementType, R)) RvalueElementType;
             private template sameET(A)
             {
@@ -2908,7 +2908,7 @@ stops after it has consumed all ranges (skipping over the ones that
 finish early).
  */
 auto roundRobin(Rs...)(Rs rs)
-if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
+if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(CompatibleUnqual, Rs)))
 {
     struct Result
     {
@@ -2977,7 +2977,7 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
             mixin(makeSwitchIncrementCounter());
         }
 
-        static if (allSatisfy!(isForwardRange, staticMap!(Unqual, Rs)))
+        static if (allSatisfy!(isForwardRange, staticMap!(CompatibleUnqual, Rs)))
             @property auto save()
             {
                 Result result = this;
@@ -3023,7 +3023,7 @@ point is given, iteration starts from the middle of the
 range. Iteration spans the entire range.
  */
 auto radial(Range, I)(Range r, I startingIndex)
-if (isRandomAccessRange!(Unqual!Range) && hasLength!(Unqual!Range) && isIntegral!I)
+if (isRandomAccessRange!(CompatibleUnqual!Range) && hasLength!(CompatibleUnqual!Range) && isIntegral!I)
 {
     if (!r.empty) ++startingIndex;
     return roundRobin(retro(r[0 .. startingIndex]), r[startingIndex .. r.length]);
@@ -3031,7 +3031,7 @@ if (isRandomAccessRange!(Unqual!Range) && hasLength!(Unqual!Range) && isIntegral
 
 /// Ditto
 auto radial(R)(R r)
-if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R))
+if (isRandomAccessRange!(CompatibleUnqual!R) && hasLength!(CompatibleUnqual!R))
 {
     return .radial(r, (r.length - !r.empty) / 2);
 }
@@ -3095,12 +3095,12 @@ particularly useful when using with infinite ranges. If the range
 offers random access and $(D length), $(D Take) offers them as well.
  */
 struct Take(Range)
-if (isInputRange!(Unqual!Range) &&
+if (isInputRange!(CompatibleUnqual!Range) &&
     //take _cannot_ test hasSlicing on infinite ranges, because hasSlicing uses
     //take for slicing infinite ranges.
     !((!isInfinite!(Unqual!Range) && hasSlicing!(Unqual!Range)) || is(Range T == Take!T)))
 {
-    private alias Unqual!Range R;
+    private alias CompatibleUnqual!Range R;
 
     // User accessible in read and write
     public R source;
@@ -3253,8 +3253,8 @@ if (isInputRange!(Unqual!Range) &&
 // This template simply aliases itself to R and is useful for consistency in
 // generic code.
 template Take(R)
-if (isInputRange!(Unqual!R) &&
-    ((!isInfinite!(Unqual!R) && hasSlicing!(Unqual!R)) || is(R T == Take!T)))
+if (isInputRange!(CompatibleUnqual!R) &&
+    ((!isInfinite!(CompatibleUnqual!R) && hasSlicing!(CompatibleUnqual!R)) || is(R T == Take!T)))
 {
     alias R Take;
 }
@@ -3262,7 +3262,7 @@ if (isInputRange!(Unqual!R) &&
 // take for finite ranges with slicing
 /// ditto
 Take!R take(R)(R input, size_t n)
-if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R))
+if (isInputRange!(CompatibleUnqual!R) && !isInfinite!(CompatibleUnqual!R) && hasSlicing!(CompatibleUnqual!R))
 {
     // @@@BUG@@@
     //return input[0 .. min(n, $)];
@@ -3288,7 +3288,7 @@ if (is(R T == Take!T))
 
 // Regular take for input ranges
 Take!(R) take(R)(R input, size_t n)
-if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) && !is(R T == Take!T)))
+if (isInputRange!(CompatibleUnqual!R) && (isInfinite!(CompatibleUnqual!R) || !hasSlicing!(CompatibleUnqual!R) && !is(R T == Take!T)))
 {
     return Take!R(input, n);
 }
@@ -5660,8 +5660,8 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
 {
     import std.conv : unsigned;
 
-    alias CommonType!(Unqual!B, Unqual!E) Value;
-    alias Unqual!S StepType;
+    alias CommonType!(CompatibleUnqual!B, CompatibleUnqual!E) Value;
+    alias CompatibleUnqual!S StepType;
     alias typeof(unsigned((end - begin) / step)) IndexType;
 
     static struct Result
@@ -5756,7 +5756,7 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
 {
     import std.conv : unsigned;
 
-    alias CommonType!(Unqual!B, Unqual!E) Value;
+    alias CommonType!(CompatibleUnqual!B, CompatibleUnqual!E) Value;
     alias typeof(unsigned(end - begin)) IndexType;
 
     static struct Result
@@ -5824,7 +5824,7 @@ auto iota(E)(E end)
 auto iota(B, E, S)(B begin, E end, S step)
 if (isFloatingPoint!(CommonType!(B, E, S)))
 {
-    alias Unqual!(CommonType!(B, E, S)) Value;
+    alias CompatibleUnqual!(CommonType!(B, E, S)) Value;
     static struct Result
     {
         private Value start, step;
@@ -6123,7 +6123,7 @@ enum TransverseOptions
 struct FrontTransversal(Ror,
         TransverseOptions opt = TransverseOptions.assumeJagged)
 {
-    alias Unqual!(Ror)               RangeOfRanges;
+    alias CompatibleUnqual!(Ror)     RangeOfRanges;
     alias .ElementType!RangeOfRanges RangeType;
     alias .ElementType!RangeType     ElementType;
 
@@ -6401,7 +6401,7 @@ unittest {
 struct Transversal(Ror,
         TransverseOptions opt = TransverseOptions.assumeJagged)
 {
-    private alias Unqual!Ror RangeOfRanges;
+    private alias CompatibleUnqual!Ror RangeOfRanges;
     private alias ElementType!RangeOfRanges InnerRange;
     private alias ElementType!InnerRange E;
 
@@ -7431,7 +7431,7 @@ private struct OnlyResult(T, size_t arity : 1)
         return copy;
     }
 
-    private Unqual!T _value;
+    private CompatibleUnqual!T _value;
     private bool _empty = false;
 }
 
@@ -7993,7 +7993,7 @@ class OutputRangeObject(R, E...) : staticMap!(OutputRange, E) {
 
 
 /**Returns the interface type that best matches $(D R).*/
-template MostDerivedInputRange(R) if (isInputRange!(Unqual!R)) {
+template MostDerivedInputRange(R) if (isInputRange!(CompatibleUnqual!R)) {
     private alias ElementType!R E;
 
     static if (isRandomAccessRange!R) {
@@ -8029,11 +8029,11 @@ template MostDerivedInputRange(R) if (isInputRange!(Unqual!R)) {
  * all relevant range primitives in virtual functions.  If $(D R) is already
  * derived from the $(D InputRange) interface, aliases itself away.
  */
-template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
+template InputRangeObject(R) if (isInputRange!(CompatibleUnqual!R)) {
     static if (is(R : InputRange!(ElementType!R))) {
         alias R InputRangeObject;
-    } else static if (!is(Unqual!R == R)) {
-        alias InputRangeObject!(Unqual!R) InputRangeObject;
+    } else static if (!is(CompatibleUnqual!R == R)) {
+        alias InputRangeObject!(CompatibleUnqual!R) InputRangeObject;
     } else {
 
         ///
@@ -8844,9 +8844,9 @@ almost-sorted range is likely to pass it). To check for sortedness at
 cost $(BIGOH n), use $(XREF algorithm,isSorted).
  */
 auto assumeSorted(alias pred = "a < b", R)(R r)
-if (isRandomAccessRange!(Unqual!R))
+if (isRandomAccessRange!(CompatibleUnqual!R))
 {
-    return SortedRange!(Unqual!R, pred)(r);
+    return SortedRange!(CompatibleUnqual!R, pred)(r);
 }
 
 unittest
