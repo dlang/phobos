@@ -3772,6 +3772,198 @@ unittest
     static assert(__traits(compiles, b = octal!1L));
 }
 
+/+
+emplaceRef is a package function for phobos internal use. It works like
+emplace, but takes its argument by ref (as opposed to "by pointer").
+
+This makes it easier to use, easier to be safe, and faster in a non-inline
+build.
++/
+package ref T emplaceRef(T)(ref T chunk)
+{
+    static assert (is(T* : void*),
+        format("Cannot emplace a %s because it is qualified.", T.stringof));
+
+    static assert (is(typeof({static T i;})),
+        format("Cannot emplace a %1$s because %1$s.this() is annotated with @disable.", T.stringof));
+
+    return emplaceInitializer(chunk);
+}
+// ditto
+package ref T emplaceRef(T, Args...)(ref T chunk, auto ref Args args)
+if (!is(T == struct) && Args.length == 1)
+{
+    alias Arg = Args[0];
+    alias arg = args[0];
+
+    static assert (is(T* : void*),
+        format("Cannot emplace a %s because it is qualified.", T.stringof));
+
+    static assert(is(typeof({T t = args[0];})),
+        format("%s cannot be emplaced from a %s.", T.stringof, Arg.stringof));
+
+    static if (isStaticArray!T)
+    {
+        alias UArg = Unqual!Arg;
+        alias E = typeof(chunk.ptr[0]);
+        enum N = T.length;
+
+        static if (is(Arg : T))
+        {
+            //Matching static array
+            static if (isAssignable!(T, Arg) && !hasElaborateAssign!T)
+                chunk = arg;
+            else static if (is(UArg == T))
+            {
+                memcpy(&chunk, &arg, T.sizeof);
+                static if (hasElaborateCopyConstructor!T)
+                    typeid(T).postblit(cast(void*)&chunk);
+            }
+            else
+                emplaceRef(chunk, cast(T)arg);
+        }
+        else static if (is(Arg : E[]))
+        {
+            //Matching dynamic array
+            static if (is(typeof(chunk[] = arg[])) && !hasElaborateAssign!T)
+                chunk[] = arg[];
+            else static if (is(UArg == E[]))
+            {
+                assert(N == chunk.length, "Array length missmatch in emplace");
+                memcpy(cast(void*)&chunk, arg.ptr, T.sizeof);
+                static if (hasElaborateCopyConstructor!T)
+                    typeid(T).postblit(cast(void*)&chunk);
+            }
+            else
+                emplaceRef(chunk, cast(E[])arg);
+        }
+        else static if (is(Arg : E))
+        {
+            //Case matching single element to array.
+            static if (is(typeof(chunk[] = arg)) && !hasElaborateAssign!T)
+                chunk[] = arg;
+            else static if (is(UArg == E))
+            {
+                //Note: We copy everything, and then postblit just once.
+                //This is as exception safe as what druntime can provide us.
+                foreach(i; 0 .. N)
+                    memcpy(cast(void*)&(chunk[i]), &arg, E.sizeof);
+                static if (hasElaborateCopyConstructor!T)
+                    typeid(T).postblit(cast(void*)&chunk);
+            }
+            else
+                //Alias this. Coerce.
+                emplaceRef(chunk, cast(E)arg);
+        }
+        else static if (is(typeof(emplaceRef(chunk[0], arg))))
+        {
+            //Final case for everything else:
+            //Types that don't match (int to uint[2])
+            //Recursion for multidimensions
+            static if (is(typeof(chunk[] = arg)) && !hasElaborateAssign!T)
+                chunk[] = arg;
+            else
+                foreach(i; 0 .. N)
+                    emplaceRef(chunk[i], arg);
+        }
+        else
+            static assert(0, format("Sorry, this implementation doesn't know how to emplace a %s with a %s", T.stringof, Arg.stringof));
+
+        return chunk;
+    }
+    else
+    {
+        chunk = arg;
+        return chunk;
+    }
+}
+// ditto
+package ref T emplaceRef(T, Args...)(ref T chunk, auto ref Args args)
+if (is(T == struct))
+{
+    static assert (is(T* : void*),
+        format("Cannot emplace a %s because it is qualified.", T.stringof));
+
+    static if (Args.length == 1 && is(Args[0] : T) &&
+        is (typeof({T t = args[0];})) //Check for legal postblit
+        )
+    {
+        static if (is(T == Unqual!(Args[0])))
+        {
+            //Types match exactly: we postblit
+            static if (isAssignable!T && !hasElaborateAssign!T)
+                chunk = args[0];
+            else
+            {
+                memcpy(&chunk, &args[0], T.sizeof);
+                static if (hasElaborateCopyConstructor!T)
+                    typeid(T).postblit(&chunk);
+            }
+        }
+        else
+            //Alias this. Coerce to type T.
+            emplaceRef(chunk, cast(T)args[0]);
+    }
+    else static if (is(typeof(chunk.__ctor(args))))
+    {
+        // T defines a genuine constructor accepting args
+        // Go the classic route: write .init first, then call ctor
+        emplaceInitializer(chunk);
+        chunk.__ctor(args);
+    }
+    else static if (is(typeof(T.opCall(args))))
+    {
+        //Can be built calling opCall
+        emplaceOpCaller(chunk, args); //emplaceOpCaller is deprecated
+    }
+    else static if (is(typeof(T(args))))
+    {
+        // Struct without constructor that has one matching field for
+        // each argument. Individually emplace each field
+        emplaceInitializer(chunk);
+        foreach (i, ref field; chunk.tupleof[0 .. Args.length])
+        {
+            alias Field = typeof(field);
+            static if (is(Field == Unqual!Field))
+                emplaceRef(field, args[i]);
+            else
+                emplaceRef(*cast(Unqual!Field*)&field, args[i]);
+        }
+    }
+    else
+    {
+        //We can't emplace. Try to diagnose a disabled postblit.
+        static assert(!(Args.length == 1 && is(Args[0] : T)),
+            format("Cannot emplace a %1$s because %1$s.this(this) is annotated with @disable.", T.stringof));
+
+        //We can't emplace.
+        static assert(false,
+            format("%s cannot be emplaced from %s.", T.stringof, Args[].stringof));
+    }
+
+    return chunk;
+}
+//emplace helper functions
+private ref T emplaceInitializer(T)(ref T chunk) @trusted pure nothrow
+{
+    static if (isAssignable!T && !hasElaborateAssign!T)
+        chunk = T.init;
+    else
+    {
+        static immutable T init = T.init;
+        memcpy(&chunk, &init, T.sizeof);
+    }
+    return chunk;
+}
+private deprecated("Using static opCall for emplace is deprecated. Plase use emplace(chunk, T(args)) instead.")
+ref T emplaceOpCaller(T, Args...)(ref T chunk, auto ref Args args)
+{
+    static assert (is(typeof({T t = T.opCall(args);})),
+        format("%s.opCall does not return adequate data for construction.", T.stringof));
+    return emplaceRef(chunk, chunk.opCall(args));
+}
+
+
 // emplace
 /**
 Given a pointer $(D chunk) to uninitialized memory (but already typed
@@ -3783,13 +3975,33 @@ as $(D chunk)).
  */
 T* emplace(T)(T* chunk) @safe nothrow pure
 {
-    static assert (is(T* : void*),
-        format("Cannot emplace a %s because it is qualified.", T.stringof));
+    emplaceRef(*chunk);
+    return chunk;
+}
 
-    static assert (is(typeof({static T i;})),
-        format("Cannot emplace a %1$s because %1$s.this() is annotated with @disable.", T.stringof));
+/**
+Given a pointer $(D chunk) to uninitialized memory (but already typed
+as a non-class type $(D T)), constructs an object of type $(D T) at
+that address from arguments $(D args).
 
-    return emplaceInitializer(chunk);
+This function can be $(D @trusted) if the corresponding constructor of
+$(D T) is $(D @safe).
+
+Returns: A pointer to the newly constructed object (which is the same
+as $(D chunk)).
+ */
+T* emplace(T, Args...)(T* chunk, auto ref Args args)
+if (!is(T == struct) && Args.length == 1)
+{
+    emplaceRef(*chunk, args);
+    return chunk;
+}
+/// ditto
+T* emplace(T, Args...)(T* chunk, auto ref Args args)
+if (is(T == struct))
+{
+    emplaceRef(*chunk, args);
+    return chunk;
 }
 
 version(unittest) private struct __conv_EmplaceTest
@@ -3913,104 +4125,7 @@ unittest
     emplace(&ss2, ss1);
 }
 
-/**
-Given a pointer $(D chunk) to uninitialized memory (but already typed
-as a non-class type $(D T)), constructs an object of type $(D T) at
-that address from arguments $(D args).
-
-This function can be $(D @trusted) if the corresponding constructor of
-$(D T) is $(D @safe).
-
-Returns: A pointer to the newly constructed object (which is the same
-as $(D chunk)).
- */
-T* emplace(T, Args...)(T* chunk, auto ref Args args)
-    if (!is(T == struct) && Args.length == 1)
-{
-    alias Arg = Args[0];
-    alias arg = args[0];
-
-    static assert (is(T* : void*),
-        format("Cannot emplace a %s because it is qualified.", T.stringof));
-
-    static assert(is(typeof({T t = args[0];})),
-        format("%s cannot be emplaced from a %s.", T.stringof, Arg.stringof));
-
-    static if (isStaticArray!T)
-    {
-        alias UArg = Unqual!Arg;
-        alias E = typeof(chunk.ptr[0]);
-        enum N = T.length;
-
-        static if (is(Arg : T))
-        {
-            //Matching static array
-            static if (isAssignable!(T, Arg) && !hasElaborateAssign!T)
-                *chunk = arg;
-            else static if (is(UArg == T))
-            {
-                memcpy(chunk, &arg, T.sizeof);
-                static if (hasElaborateCopyConstructor!T)
-                    typeid(T).postblit(cast(void*)&chunk);
-            }
-            else
-                emplace(chunk, cast(T)arg);
-        }
-        else static if (is(Arg : E[]))
-        {
-            //Matching dynamic array
-            static if (is(typeof((*chunk)[] = arg[])) && !hasElaborateAssign!T)
-                (*chunk)[] = arg[];
-            else static if (is(UArg == E[]))
-            {
-                assert(N == chunk.length, "Array length missmatch in emplace");
-                memcpy(cast(void*)chunk, arg.ptr, T.sizeof);
-                static if (hasElaborateCopyConstructor!T)
-                    typeid(T).postblit(cast(void*)&chunk);
-            }
-            else
-                emplace(chunk, cast(E[])arg);
-        }
-        else static if (is(Arg : E))
-        {
-            //Case matching single element to array.
-            static if (is(typeof((*chunk)[] = arg)) && !hasElaborateAssign!T)
-                (*chunk)[] = arg;
-            else static if (is(UArg == E))
-            {
-                //Note: We copy everything, and then postblit just once.
-                //This is as exception safe as what druntime can provide us.
-                foreach(i; 0 .. N)
-                    memcpy(cast(void*)(chunk.ptr + i), &arg, E.sizeof);
-                static if (hasElaborateCopyConstructor!T)
-                    typeid(T).postblit(chunk);
-            }
-            else
-                //Alias this. Coerce.
-                emplace(chunk, cast(E)arg);
-        }
-        else static if (is(typeof(emplace(chunk.ptr, arg))))
-        {
-            //Final case for everything else:
-            //Types that don't match (int to uint[2])
-            //Recursion for multidimensions
-            static if (is(typeof((*chunk)[] = arg)) && !hasElaborateAssign!T)
-                (*chunk)[] = arg;
-
-            foreach(i; 0 .. N)
-                emplace(chunk.ptr + i, arg);
-        }
-        else
-            static assert(0, format("Sorry, this implementation doesn't know how to emplace a %s with a %s", T.stringof, Arg.stringof));
-
-        return chunk;
-    }
-    else
-    {
-        *chunk = arg;
-        return chunk;
-    }
-}
+//Start testing emplace-args here
 
 unittest
 {
@@ -4049,100 +4164,7 @@ unittest
     assert(sa[0].i == 5 && sa[1].i == 5);
 }
 
-/// ditto
-T* emplace(T, Args...)(T* chunk, auto ref Args args)
-    if (is(T == struct))
-{
-    static assert (is(T* : void*),
-        format("Cannot emplace a %s because it is qualified.", T.stringof));
-
-    static if (Args.length == 1 && is(Args[0] : T) &&
-        is (typeof({T t = args[0];})) //Check for legal postblit
-        )
-    {
-        static if (is(T == Unqual!(Args[0])))
-        {
-            //Types match exactly: we postblit
-            static if (isAssignable!T && !hasElaborateAssign!T)
-                *chunk = args[0];
-            else
-            {
-                memcpy(chunk, &args[0], T.sizeof);
-                static if (hasElaborateCopyConstructor!T)
-                    typeid(T).postblit(chunk);
-            }
-        }
-        else
-            //Alias this. Coerce to type T.
-            emplace(chunk, cast(T)args[0]);
-    }
-    else static if (is(typeof(chunk.__ctor(args))))
-    {
-        // T defines a genuine constructor accepting args
-        // Go the classic route: write .init first, then call ctor
-        emplaceInitializer(chunk);
-        chunk.__ctor(args);
-    }
-    else static if (is(typeof(T.opCall(args))))
-    {
-        //Can be built calling opCall
-        emplaceOpCaller(chunk, args); //emplaceOpCaller is deprecated
-    }
-    else static if (is(typeof(T(args))))
-    {
-        // Struct without constructor that has one matching field for
-        // each argument. Individually emplace each field
-        emplaceInitializer(chunk);
-        foreach (i, ref field; chunk.tupleof[0 .. Args.length])
-            emplace(emplaceGetAddr(field), args[i]);
-    }
-    else
-    {
-        //We can't emplace. Try to diagnose a disabled postblit.
-        static assert(!(Args.length == 1 && is(Args[0] : T)),
-            format("Cannot emplace a %1$s because %1$s.this(this) is annotated with @disable.", T.stringof));
-
-        //We can't emplace.
-        static assert(false,
-            format("%s cannot be emplaced from %s.", T.stringof, Args[].stringof));
-    }
-
-    return chunk;
-}
-
-//emplace helper functions
-private T* emplaceInitializer(T)(T* chunk) @trusted pure nothrow
-{
-    static if (isAssignable!T && !hasElaborateAssign!T)
-        *chunk = T.init;
-    else
-    {
-        static immutable T init = T.init;
-        memcpy(chunk, &init, T.sizeof);
-    }
-    return chunk;
-}
-private deprecated("Using static opCall for emplace is deprecated. Plase use emplace(chunk, T(args)) instead.")
-T* emplaceOpCaller(T, Args...)(T* chunk, auto ref Args args)
-{
-    static assert (is(typeof({T t = T.opCall(args);})),
-        format("%s.opCall does not return adequate data for construction.", T.stringof));
-    return emplace(chunk, chunk.opCall(args));
-}
-private
-{
-    //Helper to keep simple aggregate emplace safe.
-    auto emplaceGetAddr(T)(ref T t) @trusted
-    if (is(T == Unqual!T))
-    {
-        return &t;
-    }
-    auto emplaceGetAddr(T)(ref T t)
-    if (!is(T == Unqual!T))
-    {
-        return cast(Unqual!T*)&t;
-    }
-}
+//Start testing emplace-struct here
 
 // Test constructor branch
 unittest
