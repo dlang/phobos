@@ -3864,7 +3864,13 @@ mixin template Proxy(alias a)
             return a < b ? -1 : a > b ? +1 : 0;
     }
 
-    auto ref opCall(this X, Args...)(auto ref Args args) { return a(args); }
+    auto ref opCall(this X, Args...)(auto ref Args args) 
+    {
+        static if(is(typeof(a.opCall(args))))
+            return a.opCall(args);
+        else
+            return a(args); 
+    }
 
     auto ref opCast(T, this X)() { return cast(T)a; }
 
@@ -3934,7 +3940,15 @@ mixin template Proxy(alias a)
             // member template
             template opDispatch(T...)
             {
-                auto ref opDispatch(this X, Args...)(auto ref Args args){ return mixin("a."~name~"!T(args)"); }
+                auto ref opDispatch(this X, Args...)(auto ref Args args)
+                { 
+                    static if (Args.length)
+                        // T is empty, deduction is in effect
+                        return mixin("a."~name~"!"~Args.stringof~"(args)");
+                    else
+                        // T is explicitly specified
+                        return mixin("a."~name~"!T(args)");
+                }
             }
         }
     }
@@ -4159,6 +4173,27 @@ unittest
     bool[Name] names;
     names[Name("a")] = true;
     bool* b = Name("a") in names;
+}
+unittest
+{
+    // bug11947
+    struct RealThing {
+        void variadic(T...)(T args) {}
+        void opCall(T...)(T args) {}
+    }
+
+    struct Impostor {
+        private RealThing p;
+        mixin Proxy!p;
+    }
+
+    Impostor test;
+    // variadic template method
+    test.variadic();
+    test.variadic("hello");
+    // variadic opCall
+    test();
+    test("hello");
 }
 
 /**
