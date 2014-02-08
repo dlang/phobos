@@ -547,12 +547,12 @@ unittest
 }
 
 /+
-puts the whole raw element $(D t) into $(D r). doPut will not attempt to
-iterate, slice or transcode $(D t) in any way shape or form. It will $(B only)
-call the correct primitive ($(D r.put(t)),  $(D r.front = t) or
+puts the whole raw element $(D e) into $(D r). doPut will not attempt to
+iterate, slice or transcode $(D e) in any way shape or form. It will $(B only)
+call the correct primitive ($(D r.put(e)),  $(D r.front = e) or
 $(D r(0)) once.
 
-This can be important when $(D t) needs to be placed in $(D r) unchanged.
+This can be important when $(D e) needs to be placed in $(D r) unchanged.
 Furthermore, it can be useful when working with $(D InputRange)s, as doPut
 guarantees that no more than a single element will be placed.
 +/
