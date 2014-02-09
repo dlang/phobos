@@ -3811,7 +3811,7 @@ if (!is(T == struct) && Args.length == 1)
         static if (is(Arg : T))
         {
             //Matching static array
-            static if (isAssignable!(T, Arg) && !hasElaborateAssign!T)
+            static if (!hasElaborateAssign!T && isAssignable!(T, Arg))
                 chunk = arg;
             else static if (is(UArg == T))
             {
@@ -3825,7 +3825,7 @@ if (!is(T == struct) && Args.length == 1)
         else static if (is(Arg : E[]))
         {
             //Matching dynamic array
-            static if (is(typeof(chunk[] = arg[])) && !hasElaborateAssign!T)
+            static if (!hasElaborateAssign!T && is(typeof(chunk[] = arg[])))
                 chunk[] = arg[];
             else static if (is(UArg == E[]))
             {
@@ -3840,7 +3840,7 @@ if (!is(T == struct) && Args.length == 1)
         else static if (is(Arg : E))
         {
             //Case matching single element to array.
-            static if (is(typeof(chunk[] = arg)) && !hasElaborateAssign!T)
+            static if (!hasElaborateAssign!T && is(typeof(chunk[] = arg)))
                 chunk[] = arg;
             else static if (is(UArg == E))
             {
@@ -3860,7 +3860,7 @@ if (!is(T == struct) && Args.length == 1)
             //Final case for everything else:
             //Types that don't match (int to uint[2])
             //Recursion for multidimensions
-            static if (is(typeof(chunk[] = arg)) && !hasElaborateAssign!T)
+            static if (!hasElaborateAssign!T && is(typeof(chunk[] = arg)))
                 chunk[] = arg;
             else
                 foreach(i; 0 .. N)
@@ -3891,7 +3891,7 @@ if (is(T == struct))
         static if (is(T == Unqual!(Args[0])))
         {
             //Types match exactly: we postblit
-            static if (isAssignable!T && !hasElaborateAssign!T)
+            static if (!hasElaborateAssign!T && isAssignable!T)
                 chunk = args[0];
             else
             {
@@ -3946,7 +3946,7 @@ if (is(T == struct))
 //emplace helper functions
 private ref T emplaceInitializer(T)(ref T chunk) @trusted pure nothrow
 {
-    static if (isAssignable!T && !hasElaborateAssign!T)
+    static if (!hasElaborateAssign!T && isAssignable!T)
         chunk = T.init;
     else
     {

@@ -7202,7 +7202,7 @@ minCount(alias pred = "a < b", Range)(Range range)
         }
         return RetType(least.front, occurrences);
     }
-    else static if (isAssignable!(UT, T) || (isAssignable!UT && !hasElaborateAssign!UT))
+    else static if (isAssignable!(UT, T) || (!hasElaborateAssign!UT && isAssignable!UT))
     {
         UT v = UT.init;
         static if (isAssignable!(UT, T)) v = range.front;
