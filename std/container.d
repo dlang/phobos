@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
-Defines generic _containers.
+Defines generic containers.
 
 Source: $(PHOBOSSRC std/_container.d)
 Macros:
@@ -17,11 +17,15 @@ boost.org/LICENSE_1_0.txt)).
 
 Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
 
-$(BOOKTABLE $(TEXTWITHCOMMAS Container primitives. Below, $(D C) means
-a _container type, $(D c) is a value of _container type, $(D n$(SUB
-x)) represents the effective length of value $(D x), which could be a
-single element (in which case $(D n$(SUB x)) is $(D 1)), a _container,
-or a range.),
+$(BOOKTABLE $(TEXTWITHCOMMAS Container primitives. A _container need not
+implement all primitives, but if a primitive is implemented, it must
+support the syntax described in the $(B syntax) column with the semantics
+described in the $(B description) column, and it must not have worse worst-case
+complexity than denoted in big-O notation in the $(BIGOH &middot;) column.
+Below, $(D C) means a _container type, $(D c) is a value of _container
+type, $(D n$(SUBx)) represents the effective length of value $(D x),
+which could be a single element (in which case $(D n$(SUB x)) is $(D 1)),
+a _container, or a range.),
 
 $(TR $(TH Syntax) $(TH $(BIGOH &middot;)) $(TH Description))
 
