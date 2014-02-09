@@ -914,6 +914,21 @@ unittest
 
 unittest
 {
+    // Adding new json element via array() / object() directly
+
+    JSONValue jarr = JSONValue([10]);
+    foreach (i; 0..9)
+        jarr.array ~= JSONValue(i);
+    assert(jarr.array.length == 10);
+
+    JSONValue jobj = JSONValue(["key" : JSONValue("value")]);
+    foreach (i; 0..9)
+        jobj.object[text("key", i)] = JSONValue(text("value", i));
+    assert(jobj.object.length == 10);
+}
+
+unittest
+{
     // An overly simple test suite, if it can parse a serializated string and
     // then use the resulting values tree to generate an identical
     // serialization, both the decoder and encoder works.
