@@ -844,8 +844,12 @@ Pid spawnShell(in char[] command,
 {
     version (Windows)
     {
-        auto args = escapeShellArguments(userShell, shellSwitch)
-                    ~ " " ~ command;
+        // CMD does not parse its arguments like other programs.
+        // It does not use CommandLineToArgvW.
+        // Instead, it treats the first and last quote specially.
+        // See CMD.EXE /? for details.
+        auto args = escapeShellFileName(userShell)
+                    ~ ` ` ~ shellSwitch ~ ` "` ~ command ~ `"`;
     }
     else version (Posix)
     {
@@ -888,6 +892,22 @@ unittest
     f.close();
     auto output = std.file.readText(tmpFile);
     assert (output == "bar\nbar\n" || output == "bar\r\nbar\r\n");
+}
+
+version (Windows)
+unittest
+{
+    TestScript prog = "echo %0 %*";
+    auto outputFn = uniqueTempPath();
+    scope(exit) if (exists(outputFn)) remove(outputFn);
+    auto args = [`a b c`, `a\b\c\`, `a"b"c"`];
+    auto result = executeShell(
+        escapeShellCommand([prog.path] ~ args)
+        ~ " > " ~
+        escapeShellFileName(outputFn));
+    assert(result.status == 0);
+    auto args2 = outputFn.readText().strip().parseCommandLine()[1..$];
+    assert(args == args2, text(args2));
 }
 
 
@@ -1770,7 +1790,7 @@ unittest
     pp.stdin.flush();
     assert (wait(pp.pid) == 1);
 
-    pp = pipeShell(prog.path~" AAAAA BBB",
+    pp = pipeShell(escapeShellCommand(prog.path, "AAAAA", "BBB"),
                    Redirect.stdin | Redirect.stdoutToStderr | Redirect.stderr);
     pp.stdin.writeln("ab");
     pp.stdin.flush();
@@ -2144,7 +2164,9 @@ version (unittest)
 private string uniqueTempPath()
 {
     import std.file, std.uuid;
-    return buildPath(tempDir(), randomUUID().toString());
+    // Path should contain spaces to test escaping whitespace
+    return buildPath(tempDir(), "std.process temporary file " ~
+        randomUUID().toString());
 }
 
 
@@ -2198,7 +2220,25 @@ characters (NUL on all platforms, as well as CR and LF on Windows).
 string escapeShellCommand(in char[][] args...)
     //TODO: @safe pure nothrow
 {
-    return escapeShellCommandString(escapeShellArguments(args));
+    if (args.empty)
+        return null;
+    version (Windows)
+    {
+        // Do not ^-escape the first argument (the program path),
+        // as the shell parses it differently from parameters.
+        // ^-escaping a program path that contains spaces will fail.
+        string result = escapeShellFileName(args[0]);
+        if (args.length > 1)
+        {
+            result ~= " " ~ escapeShellCommandString(
+                escapeShellArguments(args[1..$]));
+        }
+        return result;
+    }
+    version (Posix)
+    {
+        return escapeShellCommandString(escapeShellArguments(args));
+    }
 }
 
 unittest
@@ -2211,29 +2251,29 @@ unittest
     TestVector[] tests =
     [
         {
-            args    : ["foo"],
-            windows : `^"foo^"`,
-            posix   : `'foo'`
+            args    : ["foo bar"],
+            windows : `"foo bar"`,
+            posix   : `'foo bar'`
         },
         {
-            args    : ["foo", "hello"],
-            windows : `^"foo^" ^"hello^"`,
-            posix   : `'foo' 'hello'`
+            args    : ["foo bar", "hello"],
+            windows : `"foo bar" ^"hello^"`,
+            posix   : `'foo bar' 'hello'`
         },
         {
-            args    : ["foo", "hello world"],
-            windows : `^"foo^" ^"hello world^"`,
-            posix   : `'foo' 'hello world'`
+            args    : ["foo bar", "hello world"],
+            windows : `"foo bar" ^"hello world^"`,
+            posix   : `'foo bar' 'hello world'`
         },
         {
-            args    : ["foo", "hello", "world"],
-            windows : `^"foo^" ^"hello^" ^"world^"`,
-            posix   : `'foo' 'hello' 'world'`
+            args    : ["foo bar", "hello", "world"],
+            windows : `"foo bar" ^"hello^" ^"world^"`,
+            posix   : `'foo bar' 'hello' 'world'`
         },
         {
-            args    : ["foo", `'"^\`],
-            windows : `^"foo^" ^"'\^"^^\\^"`,
-            posix   : `'foo' ''\''"^\'`
+            args    : ["foo bar", `'"^\`],
+            windows : `"foo bar" ^"'\^"^^\\^"`,
+            posix   : `'foo bar' ''\''"^\'`
         },
     ];
 
@@ -2406,6 +2446,17 @@ version(Windows) version(unittest)
     extern (Windows) wchar_t**  CommandLineToArgvW(wchar_t*, int*);
     extern (C) size_t wcslen(in wchar *);
 
+    string[] parseCommandLine(string line)
+    {
+        LPWSTR lpCommandLine = (to!(wchar[])(line) ~ "\0"w).ptr;
+        int numArgs;
+        LPWSTR* args = CommandLineToArgvW(lpCommandLine, &numArgs);
+        scope(exit) LocalFree(args);
+        return args[0..numArgs]
+            .map!(arg => to!string(arg[0..wcslen(arg)]))
+            .array();
+    }
+
     unittest
     {
         string[] testStrings = [
@@ -2427,13 +2478,9 @@ version(Windows) version(unittest)
         foreach (s; testStrings)
         {
             auto q = escapeWindowsArgument(s);
-            LPWSTR lpCommandLine = (to!(wchar[])("Dummy.exe " ~ q) ~ "\0"w).ptr;
-            int numArgs;
-            LPWSTR* args = CommandLineToArgvW(lpCommandLine, &numArgs);
-            scope(exit) LocalFree(args);
-            assert(numArgs==2, s ~ " => " ~ q ~ " #" ~ text(numArgs-1));
-            auto arg = to!string(args[1][0..wcslen(args[1])]);
-            assert(arg == s, s ~ " => " ~ q ~ " => " ~ arg);
+            auto args = parseCommandLine("Dummy.exe " ~ q);
+            assert(args.length==2, s ~ " => " ~ q ~ " #" ~ text(args.length-1));
+            assert(args[1] == s, s ~ " => " ~ q ~ " => " ~ args[1]);
         }
     }
 }
