@@ -7046,14 +7046,14 @@ minCount(alias pred = "a < b", Range)(Range range)
     }
     else static if (hasLvalueElements!Range)
     {
-        T* p = &(range.front());
+        T* p = addressOf(range.front);
         for (range.popFront(); !range.empty; range.popFront())
         {
             if (binaryFun!pred(*p, range.front)) continue;
             if (binaryFun!pred(range.front, *p))
             {
                 // change the min
-                p = &(range.front());
+                p = addressOf(range.front);
                 occurrences = 1;
             }
             else
@@ -7111,10 +7111,8 @@ unittest
 
     static struct R(T) //input range
     {
-        T[] a;
-        bool empty() @property{return a.empty;}
-        ref T front() @property{return a.front;}
-        void popFront() {a.popFront();}
+        T[] arr;
+        alias arr this;
     }
 
     immutable         a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
@@ -7149,7 +7147,14 @@ unittest
     static assert(!isAssignable!(S2, IS2));
     static assert(!hasElaborateAssign!S2);
 
-    foreach (Type; TypeTuple!(S1, immutable(S1), S2, immutable(S2)))
+    static struct S3
+    {
+        int i;
+        void opAssign(ref S3 other) @disable;
+    }
+    static assert(!isAssignable!S3);
+
+    foreach (Type; TypeTuple!(S1, IS1, S2, IS2, S3))
     {
         static if (is(Type == immutable)) alias V = immutable int;
         else                              alias V = int;
