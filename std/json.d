@@ -133,7 +133,7 @@ struct JSONValue
 
     /// Value getter/setter for $(D JSON_TYPE.OBJECT).
     /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.OBJECT).
-    @property inout(JSONValue[string]) object() inout
+    @property ref inout(JSONValue[string]) object() inout
     {
         enforceEx!JSONException(type == JSON_TYPE.OBJECT,
                                 "JSONValue is not an object");
@@ -148,7 +148,7 @@ struct JSONValue
 
     /// Value getter/setter for $(D JSON_TYPE.ARRAY).
     /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.ARRAY).
-    @property inout(JSONValue[]) array() inout
+    @property ref inout(JSONValue[]) array() inout
     {
         enforceEx!JSONException(type == JSON_TYPE.ARRAY,
                                 "JSONValue is not an array");
