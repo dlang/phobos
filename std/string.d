@@ -937,7 +937,7 @@ auto representation(Char)(Char[] s) pure nothrow
     if (isSomeChar!Char)
 {
     // Get representation type
-    alias TypeTuple!(ubyte, ushort, uint)[Char.sizeof / 2] U;
+    alias U = TypeTuple!(ubyte, ushort, uint)[Char.sizeof / 2];
 
     // const and immutable storage classes
     static if (is(Char == immutable))
@@ -1731,7 +1731,7 @@ S detab(S)(S s, size_t tabSize = 8) @trusted pure
     if (isSomeString!S)
 {
     assert(tabSize > 0);
-    alias Unqual!(typeof(s[0])) C;
+    alias C = Unqual!(typeof(s[0]));
     bool changes = false;
     C[] result;
     int column;
@@ -1817,7 +1817,7 @@ S entab(S)(S s, size_t tabSize = 8) @trusted pure
     if (isSomeString!S)
 {
     bool changes = false;
-    alias Unqual!(typeof(s[0])) C;
+    alias C = Unqual!(typeof(s[0]));
     C[] result;
 
     int nspaces = 0;
@@ -2511,7 +2511,7 @@ unittest
 }
 
 // Explicitly undocumented. It will be removed in July 2014.
-deprecated("Please use std.string.format instead.") alias format xformat;
+deprecated("Please use std.string.format instead.") alias xformat = format;
 
 deprecated unittest
 {
@@ -2534,7 +2534,7 @@ deprecated unittest
 }
 
 // Explicitly undocumented. It will be removed in July 2014.
-deprecated("Please use std.string.sformat instead.") alias sformat xsformat;
+deprecated("Please use std.string.sformat instead.") alias xsformat = sformat;
 
 deprecated unittest
 {

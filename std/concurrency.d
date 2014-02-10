@@ -142,7 +142,7 @@ private
 
         auto map(Op)( Op op )
         {
-            alias ParameterTypeTuple!(Op) Args;
+            alias Args = ParameterTypeTuple!(Op);
 
             static if( Args.length == 1 )
             {
@@ -163,8 +163,8 @@ private
         foreach( i, t1; T )
         {
             static assert( isFunctionPointer!t1 || isDelegate!t1 );
-            alias ParameterTypeTuple!(t1) a1;
-            alias ReturnType!(t1) r1;
+            alias a1 = ParameterTypeTuple!(t1);
+            alias r1 = ReturnType!(t1);
 
             static if( i < T.length - 1 && is( r1 == void ) )
             {
@@ -175,7 +175,7 @@ private
                 foreach( t2; T[i+1 .. $] )
                 {
                     static assert( isFunctionPointer!t2 || isDelegate!t2 );
-                    alias ParameterTypeTuple!(t2) a2;
+                    alias a2 = ParameterTypeTuple!(t2);
 
                     static assert( !is( a1 == a2 ),
                                    "function with arguments " ~ a1.stringof ~
@@ -372,8 +372,8 @@ private template isSpawnable(F, T...)
 {
     template isParamsImplicitlyConvertible(F1, F2, int i=0)
     {
-        alias ParameterTypeTuple!F1 param1;
-        alias ParameterTypeTuple!F2 param2;
+        alias param1 = ParameterTypeTuple!F1;
+        alias param2 = ParameterTypeTuple!F2;
         static if (param1.length != param2.length)
             enum isParamsImplicitlyConvertible = false;
         else static if (param1.length == i)
@@ -673,9 +673,9 @@ unittest
 private template receiveOnlyRet(T...)
 {
     static if( T.length == 1 )
-        alias T[0] receiveOnlyRet;
+        alias receiveOnlyRet = T[0];
     else
-        alias Tuple!(T) receiveOnlyRet;
+        alias receiveOnlyRet = Tuple!(T);
 }
 
 /**
@@ -1127,16 +1127,16 @@ private
 
             static if( isImplicitlyConvertible!(T[0], Duration) )
             {
-                alias TypeTuple!(T[1 .. $]) Ops;
-                alias vals[1 .. $] ops;
+                alias Ops = TypeTuple!(T[1 .. $]);
+                alias ops = vals[1 .. $];
                 assert( vals[0] >= dur!"msecs"(0) );
                 enum timedWait = true;
                 Duration period = vals[0];
             }
             else
             {
-                alias TypeTuple!(T) Ops;
-                alias vals[0 .. $] ops;
+                alias Ops = TypeTuple!(T);
+                alias ops = vals[0 .. $];
                 enum timedWait = false;
             }
 
@@ -1144,7 +1144,7 @@ private
             {
                 foreach( i, t; Ops )
                 {
-                    alias ParameterTypeTuple!(t) Args;
+                    alias Args = ParameterTypeTuple!(t);
                     auto op = ops[i];
 
                     if( msg.convertsTo!(Args) )
@@ -1418,8 +1418,8 @@ private
         //////////////////////////////////////////////////////////////////////
 
 
-        alias bool function(Tid) OnMaxFn;
-        alias List!(Message)     ListT;
+        alias OnMaxFn = bool function(Tid);
+        alias ListT   = List!(Message);
 
     private:
         //////////////////////////////////////////////////////////////////////

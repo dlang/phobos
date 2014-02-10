@@ -452,7 +452,7 @@ unittest
 
     errnoEnforce(s);
 
-    alias Exception E1;
+    alias E1 = Exception;
     static class E2 : Exception
     {
         this(string fn, size_t ln) { super("", fn, ln); }
@@ -565,7 +565,7 @@ unittest
 
 unittest
 {
-    alias enforceEx!Exception enf;
+    alias enf = enforceEx!Exception;
     assertNotThrown(enf(true));
     assertThrown(enf(false, "blah"));
 }

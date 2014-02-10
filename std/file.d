@@ -181,11 +181,11 @@ void[] read(in char[] name, size_t upTo = size_t.max)
 {
     version(Windows)
     {
-        alias TypeTuple!(GENERIC_READ,
+        alias defaults =
+            TypeTuple!(GENERIC_READ,
                 FILE_SHARE_READ, (SECURITY_ATTRIBUTES*).init, OPEN_EXISTING,
                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
-                HANDLE.init)
-            defaults;
+                HANDLE.init);
         auto h = CreateFileW(std.utf.toUTF16z(name), defaults);
 
         cenforce(h != INVALID_HANDLE_VALUE, name);
@@ -316,10 +316,10 @@ void write(in char[] name, const void[] buffer)
 {
     version(Windows)
     {
-        alias TypeTuple!(GENERIC_WRITE, 0, null, CREATE_ALWAYS,
+        alias defaults =
+            TypeTuple!(GENERIC_WRITE, 0, null, CREATE_ALWAYS,
                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
-                HANDLE.init)
-            defaults;
+                HANDLE.init);
         auto h = CreateFileW(std.utf.toUTF16z(name), defaults);
 
         cenforce(h != INVALID_HANDLE_VALUE, name);
@@ -355,9 +355,9 @@ void append(in char[] name, in void[] buffer)
 {
     version(Windows)
     {
-        alias TypeTuple!(GENERIC_WRITE,0,null,OPEN_ALWAYS,
-                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,HANDLE.init)
-            defaults;
+        alias defaults =
+            TypeTuple!(GENERIC_WRITE,0,null,OPEN_ALWAYS,
+                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,HANDLE.init);
 
         auto h = CreateFileW(std.utf.toUTF16z(name), defaults);
 
@@ -687,15 +687,15 @@ void setTimes(in char[] name,
     {
         const ta = SysTimeToFILETIME(accessTime);
         const tm = SysTimeToFILETIME(modificationTime);
-        alias TypeTuple!(GENERIC_WRITE,
+        alias defaults =
+            TypeTuple!(GENERIC_WRITE,
                          0,
                          null,
                          OPEN_EXISTING,
                          FILE_ATTRIBUTE_NORMAL |
                          FILE_ATTRIBUTE_DIRECTORY |
                          FILE_FLAG_BACKUP_SEMANTICS,
-                         HANDLE.init)
-              defaults;
+                         HANDLE.init);
         auto h = CreateFileW(std.utf.toUTF16z(name), defaults);
 
         cenforce(h != INVALID_HANDLE_VALUE, name);
@@ -1887,7 +1887,7 @@ assert(!de2.isFile);
         @property uint linkAttributes();
 
         version(Windows)
-            alias void* stat_t;
+            alias stat_t = void*;
 
         /++
             $(BLUE This function is Posix-Only.)

@@ -1726,7 +1726,7 @@ class BufferedStream : FilterStream {
     else
       return TreadLine!(char).readLine(inBuffer);
   }
-  alias Stream.readLine readLine;
+  alias readLine = Stream.readLine;
 
   override wchar[] readLineW(wchar[] inBuffer) {
     if (ungetAvailable())
@@ -1734,7 +1734,7 @@ class BufferedStream : FilterStream {
     else
       return TreadLine!(wchar).readLine(inBuffer);
   }
-  alias Stream.readLineW readLineW;
+  alias readLineW = Stream.readLineW;
 
   override void flush()
   out {
@@ -1824,7 +1824,7 @@ version (Windows) {
 version (Posix) {
   private import core.sys.posix.fcntl;
   private import core.sys.posix.unistd;
-  alias int HANDLE;
+  alias HANDLE = int;
 }
 
 /// This subclass is for unbuffered file system streams.

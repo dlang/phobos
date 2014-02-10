@@ -1965,7 +1965,7 @@ real frexp(real value, out int exp) @trusted pure nothrow
     ushort* vu = cast(ushort*)&value;
     long* vl = cast(long*)&value;
     int ex;
-    alias floatTraits!(real) F;
+    alias F = floatTraits!(real);
 
     ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
     static if (real.mant_dig == 64)     // real80
@@ -2215,8 +2215,8 @@ int ilogb(real x)  @trusted nothrow
         return core.stdc.math.ilogbl(x);
 }
 
-alias core.stdc.math.FP_ILOGB0   FP_ILOGB0;
-alias core.stdc.math.FP_ILOGBNAN FP_ILOGBNAN;
+alias FP_ILOGB0   = core.stdc.math.FP_ILOGB0;
+alias FP_ILOGBNAN = core.stdc.math.FP_ILOGBNAN;
 
 
 /*******************************************
@@ -3070,7 +3070,7 @@ real floor(real x) @trusted pure nothrow
         if (isNaN(x) || isInfinity(x) || x == 0.0)
             return x;
 
-        alias floatTraits!(real) F;
+        alias F = floatTraits!(real);
         auto vu = *cast(ushort[real.sizeof/2]*)(&x);
 
         // Find the exponent (power of 2)
@@ -3268,7 +3268,7 @@ long lrint(real x) @trusted pure nothrow
         }
         else static if (real.mant_dig == 64)
         {
-            alias floatTraits!(real) F;
+            alias F = floatTraits!(real);
             long result;
 
             // Rounding limit when casting from real(80-bit) to ulong.
@@ -3695,7 +3695,7 @@ assert(rint(1.1) == 1);
  */
 struct FloatingPointControl
 {
-    alias uint RoundingMode;
+    alias RoundingMode = uint;
 
     /** IEEE rounding modes.
      * The default mode is roundToNearest.
@@ -3966,7 +3966,7 @@ unittest
 
 bool isNaN(real x) @trusted pure nothrow
 {
-    alias floatTraits!(real) F;
+    alias F = floatTraits!(real);
     static if (real.mant_dig == 53) // double
     {
         ulong*  p = cast(ulong *)&x;
@@ -4010,7 +4010,7 @@ unittest
 
 int isFinite(real e) @trusted pure nothrow
 {
-    alias floatTraits!(real) F;
+    alias F = floatTraits!(real);
     ushort* pe = cast(ushort *)&e;
     return (pe[F.EXPPOS_SHORT] & F.EXPMASK) != F.EXPMASK;
 }
@@ -4033,7 +4033,7 @@ unittest
 
 int isNormal(X)(X x) @trusted pure nothrow
 {
-    alias floatTraits!(X) F;
+    alias F = floatTraits!(X);
 
     static if(real.mant_dig == 106) // doubledouble
     {
@@ -4111,7 +4111,7 @@ unittest
 
 int isSubnormal(real x) @trusted pure nothrow
 {
-    alias floatTraits!(real) F;
+    alias F = floatTraits!(real);
     static if (real.mant_dig == 53)
     {
         // double
@@ -4154,7 +4154,7 @@ unittest
 
 bool isInfinity(real x) @trusted pure nothrow
 {
-    alias floatTraits!(real) F;
+    alias F = floatTraits!(real);
     static if (real.mant_dig == 53)
     {
         // double
@@ -4257,7 +4257,7 @@ real copysign(real to, real from) @trusted pure nothrow
     ubyte* pto   = cast(ubyte *)&to;
     const ubyte* pfrom = cast(ubyte *)&from;
 
-    alias floatTraits!(real) F;
+    alias F = floatTraits!(real);
     pto[F.SIGNPOS_BYTE] &= 0x7F;
     pto[F.SIGNPOS_BYTE] |= pfrom[F.SIGNPOS_BYTE] & 0x80;
     return to;
@@ -4493,7 +4493,7 @@ debug(UnitTest)
  */
 real nextUp(real x) @trusted pure nothrow
 {
-    alias floatTraits!(real) F;
+    alias F = floatTraits!(real);
     static if (real.mant_dig == 53)
     {
         // double
@@ -5036,7 +5036,7 @@ real pow(I, F)(I x, F y) @trusted pure nothrow
 Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @trusted pure nothrow
     if (isFloatingPoint!(F) && isFloatingPoint!(G))
 {
-    alias typeof(return) Float;
+    alias Float = typeof(return);
 
     static real impl(real x, real y) pure nothrow
     {
@@ -5322,7 +5322,7 @@ int feqrel(X)(X x, X y) @trusted pure nothrow
         ushort *pb = cast(ushort *)(&y);
         ushort *pd = cast(ushort *)(&diff);
 
-        alias floatTraits!(X) F;
+        alias F = floatTraits!(X);
 
         // The difference in abs(exponent) between x or y and abs(x-y)
         // is equal to the number of significand bits of x which are
@@ -5468,7 +5468,7 @@ body
     // The implementation is simple: cast x and y to integers,
     // average them (avoiding overflow), and cast the result back to a floating-point number.
 
-    alias floatTraits!(real) F;
+    alias F = floatTraits!(real);
     T u;
     static if (T.mant_dig==64)
     {   // real80
@@ -5830,11 +5830,11 @@ unittest
 }
 
 // Included for backwards compatibility with Phobos1
-alias isNaN isnan;
-alias isFinite isfinite;
-alias isNormal isnormal;
-alias isSubnormal issubnormal;
-alias isInfinity isinf;
+alias isnan = isNaN;
+alias isfinite = isFinite;
+alias isnormal = isNormal;
+alias issubnormal = isSubnormal;
+alias isinf = isInfinity;
 
 /* **********************************
  * Building block functions, they

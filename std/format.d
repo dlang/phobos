@@ -572,7 +572,7 @@ uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, S args)
             // Input is empty, nothing to read
             return 0;
         }
-        alias typeof(*args[0]) A;
+        alias A = typeof(*args[0]);
         static if (isTuple!A)
         {
             foreach (i, T; A.Types)
@@ -604,7 +604,7 @@ unittest
 template FormatSpec(Char)
     if (!is(Unqual!Char == Char))
 {
-    alias FormatSpec!(Unqual!Char) FormatSpec;
+    alias FormatSpec = FormatSpec!(Unqual!Char);
 }
 
 /**
@@ -1905,7 +1905,7 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
     }
     else static if (!isInputRange!T)
     {
-        alias Unqual!(ArrayTypeOf!T) U;
+        alias U = Unqual!(ArrayTypeOf!T);
         static assert(isInputRange!U);
         U val = obj;
         formatValue(w, val, f);
@@ -2327,17 +2327,17 @@ if (is(StringTypeOf!T) && !is(T == enum))
         static if (is(typeof(str[0]) : const(char)))
         {
             enum postfix = 'c';
-            alias const(ubyte)[] IntArr;
+            alias IntArr = const(ubyte)[];
         }
         else static if (is(typeof(str[0]) : const(wchar)))
         {
             enum postfix = 'w';
-            alias const(ushort)[] IntArr;
+            alias IntArr = const(ushort)[];
         }
         else static if (is(typeof(str[0]) : const(dchar)))
         {
             enum postfix = 'd';
-            alias const(uint)[] IntArr;
+            alias IntArr = const(uint)[];
         }
         formattedWrite(w, "x\"%(%02X %)\"%s", cast(IntArr)str, postfix);
     }
@@ -3702,8 +3702,9 @@ unittest
     // }
 
     auto stream = appender!(char[])();
-    alias TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong,
-            float, double, real) AllNumerics;
+    alias AllNumerics =
+        TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong,
+                   float, double, real);
     foreach (T; AllNumerics)
     {
         T value = 1;
@@ -3745,8 +3746,8 @@ void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = _
     static if (isAssociativeArray!T)
     if (__ctfe)
     {
-        alias val aa1;
-        alias val2 aa2;
+        alias aa1 = val;
+        alias aa2 = val2;
         //assert(aa1 == aa2);
 
         assert(aa1.length == aa2.length);
@@ -3792,8 +3793,8 @@ void formatReflectTest(T)(ref T val, string fmt, string[] formatted, string fn =
     static if (isAssociativeArray!T)
     if (__ctfe)
     {
-        alias val aa1;
-        alias val2 aa2;
+        alias aa1 = val;
+        alias aa2 = val2;
         //assert(aa1 == aa2);
 
         assert(aa1.length == aa2.length);

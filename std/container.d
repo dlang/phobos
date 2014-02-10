@@ -261,7 +261,7 @@ struct TotalContainer(T)
 If the container has a notion of key-value mapping, $(D KeyType)
 defines the type of the key of the container.
  */
-    alias T KeyType;
+    alias KeyType = T;
 
 /**
 If the container has a notion of multikey-value mapping, $(D
@@ -271,7 +271,7 @@ the type of the $(D k)th key of the container.
 A container may define both $(D KeyType) and $(D KeyTypes), e.g. in
 the case it has the notion of primary/preferred key.
  */
-    alias TypeTuple!T KeyTypes;
+    alias KeyTypes = TypeTuple!T;
 
 /**
 If the container has a notion of key-value mapping, $(D ValueType)
@@ -279,7 +279,7 @@ defines the type of the value of the container. Typically, a map-style
 container mapping values of type $(D K) to values of type $(D V)
 defines $(D KeyType) to be $(D K) and $(D ValueType) to be $(D V).
  */
-    alias T ValueType;
+    alias ValueType = T;
 
 /**
 Defines the container's primary range, which embodies one of the
@@ -844,7 +844,7 @@ assert(equal(arr[], [4, 2, 3, 1]));
 auto rbt = make!(RedBlackTree!(int, "a > b"))([4, 2, 3, 1]);
 assert(equal(rbt[], [4, 3, 2, 1]));
 
-alias make!(DList!int) makeList;
+alias makeList = make!(DList!int);
 auto list = makeList([1, 7, 42]);
 assert(equal(list[], [1, 7, 42]));
 --------------------
@@ -874,7 +874,7 @@ unittest
     auto rbt = make!(RedBlackTree!(int, "a > b"))([4, 2, 3, 1]);
     assert(equal(rbt[], [4, 3, 2, 1]));
 
-    alias make!(DList!int) makeList;
+    alias makeList = make!(DList!int);
     auto list = makeList([1, 7, 42]);
     assert(equal(list[], [1, 7, 42]));
 }
@@ -1177,13 +1177,13 @@ Complexity: $(BIGOH m), where $(D m) is the length of $(D stuff)
     }
 
 /// ditto
-    alias insertFront insert;
+    alias insert = insertFront;
 
 /// ditto
-    alias insert stableInsert;
+    alias stableInsert = insert;
 
     /// ditto
-    alias insertFront stableInsertFront;
+    alias stableInsertFront = insertFront;
 
 /**
 Picks one value from the front of the container, removes it from the
@@ -1203,7 +1203,7 @@ Complexity: $(BIGOH 1).
         return result;
     }
     /// ditto
-    alias removeAny stableRemoveAny;
+    alias stableRemoveAny = removeAny;
 
 /**
 Removes the value at the front of the container. The stable version
@@ -1221,7 +1221,7 @@ Complexity: $(BIGOH 1).
     }
 
     /// ditto
-    alias removeFront stableRemoveFront;
+    alias stableRemoveFront = removeFront;
 
 /**
 Removes $(D howMany) values at the front or back of the
@@ -1248,7 +1248,7 @@ Complexity: $(BIGOH howMany * log(n)).
     }
 
     /// ditto
-    alias removeFront stableRemoveFront;
+    alias stableRemoveFront = removeFront;
 
 /**
 Inserts $(D stuff) after range $(D r), which must be a range
@@ -1332,7 +1332,7 @@ $(D r) and $(D m) is the length of $(D stuff).
     }
 
 /// ditto
-    alias insertAfter stableInsertAfter;
+    alias stableInsertAfter = insertAfter;
 
 /**
 Removes a range from the list in linear time.
@@ -1387,7 +1387,7 @@ Complexity: $(BIGOH n)
     }
 
 /// ditto
-    alias linearRemove stableLinearRemove;
+    alias stableLinearRemove = linearRemove;
 }
 
 unittest
@@ -1930,16 +1930,16 @@ Complexity: $(BIGOH log(n))
     }
 
     /// ditto
-    alias insertBack insert;
+    alias insert = insertBack;
 
     /// ditto
-    alias insert stableInsert;
+    alias stableInsert = insert;
 
     /// ditto
-    alias insertFront stableInsertFront;
+    alias stableInsertFront = insertFront;
 
     /// ditto
-    alias insertBack stableInsertBack;
+    alias stableInsertBack = insertBack;
 
 /**
 Picks one value from the front of the container, removes it from the
@@ -1966,7 +1966,7 @@ Complexity: $(BIGOH 1).
         return result;
     }
     /// ditto
-    alias removeAny stableRemoveAny;
+    alias stableRemoveAny = removeAny;
 
 /**
 Removes the value at the front/back of the container. The stable version
@@ -1991,7 +1991,7 @@ Complexity: $(BIGOH 1).
     }
 
     /// ditto
-    alias removeFront stableRemoveFront;
+    alias stableRemoveFront = removeFront;
 
     /// ditto
     void removeBack()
@@ -2005,7 +2005,7 @@ Complexity: $(BIGOH 1).
     }
 
     /// ditto
-    alias removeBack stableRemoveBack;
+    alias stableRemoveBack = removeBack;
 
 /**
 Removes $(D howMany) values at the front or back of the
@@ -2039,7 +2039,7 @@ Complexity: $(BIGOH howMany * log(n)).
     }
 
     /// ditto
-    alias removeFront stableRemoveFront;
+    alias stableRemoveFront = removeFront;
 
     /// ditto
     size_t removeBack(size_t howMany)
@@ -2058,7 +2058,7 @@ Complexity: $(BIGOH howMany * log(n)).
     }
 
     /// ditto
-    alias removeBack stableRemoveBack;
+    alias stableRemoveBack = removeBack;
 
 /**
 Inserts $(D stuff) after range $(D r), which must be a non-empty range
@@ -2084,7 +2084,7 @@ $(D r) and $(D m) is the length of $(D stuff).
     }
 
     /// ditto
-    alias insertBefore stableInsertBefore;
+    alias stableInsertBefore = insertBefore;
 
     /// ditto
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
@@ -2094,7 +2094,7 @@ $(D r) and $(D m) is the length of $(D stuff).
     }
 
     /// ditto
-    alias insertAfter stableInsertAfter;
+    alias stableInsertAfter = insertAfter;
 
     // Helper: insert $(D stuff) before Node $(D n). If $(D n) is $(D null) then insert at end.
     private size_t insertBeforeNode(Stuff)(Node* n, Stuff stuff)
@@ -2275,9 +2275,9 @@ Complexity: $(BIGOH r.walkLength)
     /** $(RED Scheduled for deprecation. These methods are not actually stable.
     Use the standard $(D remove) or $(D linearRemove) instead.)
          */
-    alias remove stableRemove;
+    alias stableRemove = remove;
     /// ditto
-    alias linearRemove stableLinearRemove;
+    alias stableLinearRemove = linearRemove;
 }
 
 unittest
@@ -2313,7 +2313,7 @@ unittest
 
 unittest
 {
-    alias DList!int IntList;
+    alias IntList = DList!int;
     IntList list = IntList([0,1,2,3]);
     assert(equal(list[],[0,1,2,3]));
     list.insertBack([4,5,6,7]);
@@ -2328,7 +2328,7 @@ unittest
 
 unittest
 {
-    alias DList!int IntList;
+    alias IntList = DList!int;
     IntList list = IntList([0,1,2,3]);
     auto range = list[];
     for( ; !range.empty; range.popFront())
@@ -2647,7 +2647,7 @@ if (!is(Unqual!T == bool))
             return result;
         }
     }
-    private alias RefCounted!(Payload, RefCountedAutoInitialize.no) Data;
+    private alias Data = RefCounted!(Payload, RefCountedAutoInitialize.no);
     private Data _data;
 
 /**
@@ -3179,7 +3179,7 @@ Complexity: $(BIGOH log(n)).
         return result;
     }
     /// ditto
-    alias removeAny stableRemoveAny;
+    alias stableRemoveAny = removeAny;
 
 /**
 Inserts $(D value) to the front or back of the container. $(D stuff)
@@ -3200,7 +3200,7 @@ elements in $(D stuff)
         return _data.insertBack(stuff);
     }
     /// ditto
-    alias insertBack insert;
+    alias insert = insertBack;
 
 /**
 Removes the value at the back of the container. The stable version
@@ -3222,7 +3222,7 @@ Complexity: $(BIGOH log(n)).
         _data._payload = _data._payload[0 .. $ - 1];
     }
     /// ditto
-    alias removeBack stableRemoveBack;
+    alias stableRemoveBack = removeBack;
 
 /**
 Removes $(D howMany) values at the front or back of the
@@ -3252,7 +3252,7 @@ Complexity: $(BIGOH howMany).
         return howMany;
     }
     /// ditto
-    alias removeBack stableRemoveBack;
+    alias stableRemoveBack = removeBack;
 
 /**
 Inserts $(D stuff) before, after, or instead range $(D r), which must
@@ -3397,7 +3397,7 @@ $(D r)
         return this[length - tailLength .. length];
     }
     /// ditto
-    alias remove stableLinearRemove;
+    alias stableLinearRemove = remove;
 }
 
 unittest
@@ -3496,7 +3496,7 @@ unittest
 {
     auto a = Array!int(0, 1, 2, 3, 4, 5, 6)[];
     auto b = Array!int(6, 5, 4, 3, 2, 1, 0)[];
-    alias typeof(a) A;
+    alias A = typeof(a);
 
     static assert(isRandomAccessRange!A);
     static assert(hasSlicing!A);
@@ -3524,7 +3524,7 @@ version(unittest)
 }
 unittest
 {
-    alias structBug5920 S;
+    alias S = structBug5920;
     uint dMask;
 
     auto arr = Array!S(cast(S[])[]);
@@ -3769,7 +3769,7 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
     }
     private RefCounted!(Data, RefCountedAutoInitialize.no) _payload;
     // Comparison predicate
-    private alias binaryFun!(less) comp;
+    private alias comp = binaryFun!(less);
     // Convenience accessors
     private @property ref Store _store()
     {
@@ -4635,17 +4635,17 @@ if (is(Unqual!T == bool))
        Complexity: $(BIGOH m * log(n)), where $(D m) is the number of
        elements in $(D stuff)
      */
-    alias insertBack insert;
+    alias insert = insertBack;
     ///ditto
-    alias insertBack stableInsert;
+    alias stableInsert = insertBack;
 
     /**
        Same as $(D insert(stuff)) and $(D stableInsert(stuff))
        respectively, but relax the complexity constraint to linear.
      */
-    alias insertBack linearInsert;
+    alias linearInsert = insertBack;
     ///ditto
-    alias insertBack stableLinearInsert;
+    alias stableLinearInsert = insertBack;
 
     /**
        Picks one value in the container, removes it from the
@@ -4666,7 +4666,7 @@ if (is(Unqual!T == bool))
         return result;
     }
     /// ditto
-    alias removeAny stableRemoveAny;
+    alias stableRemoveAny = removeAny;
 
     unittest
     {
@@ -4729,7 +4729,7 @@ if (is(Unqual!T == bool))
         else return stuff.length;
     }
     /// ditto
-    alias insertBack stableInsertBack;
+    alias stableInsertBack = insertBack;
 
     /**
        Removes the value at the front or back of the container. The
@@ -4759,7 +4759,7 @@ if (is(Unqual!T == bool))
         }
     }
     /// ditto
-    alias removeBack stableRemoveBack;
+    alias stableRemoveBack = removeBack;
 
     /**
        Removes $(D howMany) values at the front or back of the
@@ -4825,7 +4825,7 @@ if (is(Unqual!T == bool))
         return inserted;
     }
     /// ditto
-    alias insertBefore stableInsertBefore;
+    alias stableInsertBefore = insertBefore;
 
     unittest
     {
@@ -4852,7 +4852,7 @@ if (is(Unqual!T == bool))
         return inserted;
     }
     /// ditto
-    alias insertAfter stableInsertAfter;
+    alias stableInsertAfter = insertAfter;
 
     unittest
     {
@@ -4880,7 +4880,7 @@ if (is(Unqual!T == bool))
         return 1;
     }
     /// ditto
-    alias replace stableReplace;
+    alias stableReplace = replace;
 
     unittest
     {
@@ -4909,7 +4909,7 @@ if (is(Unqual!T == bool))
         return this[r._a .. length];
     }
     /// ditto
-    alias linearRemove stableLinearRemove;
+    alias stableLinearRemove = linearRemove;
 }
 
 unittest
@@ -4956,7 +4956,7 @@ struct RBNode(V)
     /*
      * Convenience alias
      */
-    alias RBNode* Node;
+    alias Node = RBNode*;
 
     private Node _left;
     private Node _right;
@@ -5540,7 +5540,7 @@ struct RBNode(V)
 final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     if(is(typeof(binaryFun!less(T.init, T.init))))
 {
-    alias binaryFun!less _less;
+    alias _less = binaryFun!less;
 
     // BUG: this must come first in the struct due to issue 2810
 
@@ -5650,10 +5650,10 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     /**
       * Element type for the tree
       */
-    alias T Elem;
+    alias Elem = T;
 
     // used for convenience
-    private alias RBNode!Elem.Node Node;
+    private alias Node = RBNode!Elem.Node;
 
     private Node   _end;
     private Node   _begin;
@@ -5998,7 +5998,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     }
 
     /// ditto
-    alias stableInsert insert;
+    alias insert = stableInsert;
 
     static if(doUnittest) unittest
     {

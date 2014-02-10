@@ -442,13 +442,13 @@ enum dummyRanges = q{
                 return arr.length;
             }
 
-            alias length opDollar;
+            alias opDollar = length;
         }
     }
 
     enum dummyLength = 10;
 
-    alias TypeTuple!(
+    alias AllDummyRanges = TypeTuple!(
         DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Forward),
         DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Bidirectional),
         DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random),
@@ -461,7 +461,7 @@ enum dummyRanges = q{
         DummyRange!(ReturnBy.Value, Length.No, RangeType.Input),
         DummyRange!(ReturnBy.Value, Length.No, RangeType.Forward),
         DummyRange!(ReturnBy.Value, Length.No, RangeType.Bidirectional)
-    ) AllDummyRanges;
+    );
 
 };
 
@@ -1290,7 +1290,7 @@ unittest
         void popBack();
         ref int opIndex(uint);
         @property size_t length();
-        alias length opDollar;
+        alias opDollar = length;
         //int opSlice(uint, uint);
     }
     static assert(!isRandomAccessRange!(A));
@@ -1321,7 +1321,7 @@ unittest
 
         int opIndex(size_t n) const { return 0; }
         @property size_t length() const { return 0; }
-        alias length opDollar;
+        alias opDollar = length;
 
         void put(int e){  }
     }
@@ -1387,9 +1387,9 @@ $(D void).
 template ElementType(R)
 {
     static if (is(typeof(R.init.front.init) T))
-        alias T ElementType;
+        alias ElementType = T;
     else
-        alias void ElementType;
+        alias ElementType = void;
 }
 
 ///
@@ -1471,9 +1471,9 @@ $(D ElementType).
 template ElementEncodingType(R)
 {
     static if (isNarrowString!R)
-        alias typeof(*lvalueOf!R.ptr) ElementEncodingType;
+        alias ElementEncodingType = typeof(*lvalueOf!R.ptr);
     else
-        alias ElementType!R ElementEncodingType;
+        alias ElementEncodingType = ElementType!R;
 }
 
 ///
@@ -1912,14 +1912,14 @@ if (isBidirectionalRange!(Unqual!Range))
     {
         static struct Result()
         {
-            private alias Unqual!Range R;
+            private alias R = Unqual!Range;
 
             // User code can get and set source, too
             R source;
 
             static if (hasLength!R)
             {
-                private alias CommonType!(size_t, typeof(source.length)) IndexType;
+                private alias IndexType = CommonType!(size_t, typeof(source.length));
 
                 IndexType retroIndex(IndexType n)
                 {
@@ -1928,7 +1928,7 @@ if (isBidirectionalRange!(Unqual!Range))
             }
 
         public:
-            alias R Source;
+            alias Source = R;
 
             @property bool empty() { return source.empty; }
             @property auto save()
@@ -2003,7 +2003,7 @@ if (isBidirectionalRange!(Unqual!Range))
                     return source.length;
                 }
 
-                alias length opDollar;
+                alias opDollar = length;
             }
         }
 
@@ -2137,7 +2137,7 @@ if (isInputRange!(Unqual!Range))
     {
         static struct Result
         {
-            private alias Unqual!Range R;
+            private alias R = Unqual!Range;
             public R source;
             private size_t _n;
 
@@ -2321,7 +2321,7 @@ if (isInputRange!(Unqual!Range))
                     return (source.length + _n - 1) / _n;
                 }
 
-                alias length opDollar;
+                alias opDollar = length;
             }
         }
         return Result(r, n);
@@ -2495,8 +2495,8 @@ if (Ranges.length > 0 &&
         static struct Result
         {
         private:
-            alias staticMap!(Unqual, Ranges) R;
-            alias CommonType!(staticMap!(.ElementType, R)) RvalueElementType;
+            alias R = staticMap!(Unqual, Ranges);
+            alias RvalueElementType = CommonType!(staticMap!(.ElementType, R));
             private template sameET(A)
             {
                 enum sameET = is(.ElementType!A == RvalueElementType);
@@ -2511,7 +2511,7 @@ if (Ranges.length > 0 &&
             }
             else
             {
-                alias RvalueElementType ElementType;
+                alias ElementType = RvalueElementType;
             }
             static if (allSameType && allSatisfy!(hasLvalueElements, R))
             {
@@ -2686,7 +2686,7 @@ if (Ranges.length > 0 &&
                     return result;
                 }
 
-                alias length opDollar;
+                alias opDollar = length;
             }
 
             static if (allSatisfy!(isRandomAccessRange, R))
@@ -3000,7 +3000,7 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
                 return result;
             }
 
-            alias length opDollar;
+            alias opDollar = length;
         }
     }
 
@@ -3100,14 +3100,14 @@ if (isInputRange!(Unqual!Range) &&
     //take for slicing infinite ranges.
     !((!isInfinite!(Unqual!Range) && hasSlicing!(Unqual!Range)) || is(Range T == Take!T)))
 {
-    private alias Unqual!Range R;
+    private alias R = Unqual!Range;
 
     // User accessible in read and write
     public R source;
 
     private size_t _maxAvailable;
 
-    alias R Source;
+    alias Source = R;
 
     @property bool empty()
     {
@@ -3165,7 +3165,7 @@ if (isInputRange!(Unqual!Range) &&
             return _maxAvailable;
         }
 
-        alias length opDollar;
+        alias opDollar = length;
     }
     else static if (hasLength!R)
     {
@@ -3174,7 +3174,7 @@ if (isInputRange!(Unqual!Range) &&
             return min(_maxAvailable, source.length);
         }
 
-        alias length opDollar;
+        alias opDollar = length;
     }
 
     static if (isRandomAccessRange!R)
@@ -3256,7 +3256,7 @@ template Take(R)
 if (isInputRange!(Unqual!R) &&
     ((!isInfinite!(Unqual!R) && hasSlicing!(Unqual!R)) || is(R T == Take!T)))
 {
-    alias R Take;
+    alias Take = R;
 }
 
 // take for finite ranges with slicing
@@ -3321,7 +3321,7 @@ unittest
     foreach(DummyType; AllDummyRanges) {
         DummyType dummy;
         auto t = take(dummy, 5);
-        alias typeof(t) T;
+        alias T = typeof(t);
 
         static if (isRandomAccessRange!DummyType) {
             static assert(isRandomAccessRange!T);
@@ -3423,7 +3423,7 @@ if (isInputRange!R)
             }
             void popFront() { _input.popFront(); --_n; }
             @property size_t length() const { return _n; }
-            alias length opDollar;
+            alias opDollar = length;
 
             static if (isForwardRange!R)
                 @property auto save()
@@ -3578,7 +3578,7 @@ auto takeOne(R)(R source) if (isInputRange!R)
             @property auto save() { return Result(_source.save, empty); }
             @property auto ref back() { assert(!empty); return _source.front; }
             @property size_t length() const { return !empty; }
-            alias length opDollar;
+            alias opDollar = length;
             auto ref opIndex(size_t n) { assert(n < length); return _source.front; }
             auto opSlice(size_t m, size_t n)
             {
@@ -4589,7 +4589,7 @@ unittest //10845
    assert(equal(cycle(a).take(10), [0, 1, 2, 0, 1, 2, 0, 1, 2, 0]));
 }
 
-private template lengthType(R) { alias typeof((inout int = 0){ R r = void; return r.length; }()) lengthType; }
+private alias lengthType(R) = typeof((inout int = 0){ R r = void; return r.length; }());
 
 /**
    Iterate several ranges in lockstep. The element type is a proxy tuple
@@ -4619,7 +4619,7 @@ struct Zip(Ranges...)
 {
     alias R = Ranges;
     R ranges;
-    alias Tuple!(staticMap!(.ElementType, R)) ElementType;
+    alias ElementType = Tuple!(staticMap!(.ElementType, R));
     StoppingPolicy stoppingPolicy = StoppingPolicy.shortest;
 
 /**
@@ -4926,7 +4926,7 @@ struct Zip(Ranges...)
             return result;
         }
 
-        alias length opDollar;
+        alias opDollar = length;
     }
 
 /**
@@ -5085,7 +5085,7 @@ unittest
     auto stuff = tuple(tuple(a1, a2),
             tuple(filter!"a"(a1), filter!"a"(a2)));
 
-    alias Zip!(immutable(int)[], immutable(float)[]) FOO;
+    alias FOO = Zip!(immutable(int)[], immutable(float)[]);
 
     foreach(t; stuff.expand) {
         auto arr1 = t[0];
@@ -5294,7 +5294,7 @@ private:
 // single range.
 template Lockstep(Range)
 {
-    alias Range Lockstep;
+    alias Lockstep = Range;
 }
 
 /// Ditto
@@ -5525,8 +5525,8 @@ struct Sequence(alias fun, State)
 private:
     import std.functional : binaryFun;
 
-    alias binaryFun!(fun, "a", "n") compute;
-    alias typeof(compute(State.init, cast(size_t) 1)) ElementType;
+    alias compute = binaryFun!(fun, "a", "n");
+    alias ElementType = typeof(compute(State.init, cast(size_t) 1));
     State _state;
     size_t _n;
     ElementType _cache;
@@ -5660,9 +5660,9 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
 {
     import std.conv : unsigned;
 
-    alias CommonType!(Unqual!B, Unqual!E) Value;
-    alias Unqual!S StepType;
-    alias typeof(unsigned((end - begin) / step)) IndexType;
+    alias Value = CommonType!(Unqual!B, Unqual!E);
+    alias StepType = Unqual!S;
+    alias IndexType = typeof(unsigned((end - begin) / step));
 
     static struct Result
     {
@@ -5737,7 +5737,7 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
             }
         }
 
-        alias length opDollar;
+        alias opDollar = length;
     }
 
     return Result(begin, end, step);
@@ -5756,8 +5756,8 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
 {
     import std.conv : unsigned;
 
-    alias CommonType!(Unqual!B, Unqual!E) Value;
-    alias typeof(unsigned(end - begin)) IndexType;
+    alias Value = CommonType!(Unqual!B, Unqual!E);
+    alias IndexType = typeof(unsigned(end - begin));
 
     static struct Result
     {
@@ -5807,7 +5807,7 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
             return unsigned(pastLast - current);
         }
 
-        alias length opDollar;
+        alias opDollar = length;
     }
 
     return Result(begin, end);
@@ -5824,7 +5824,7 @@ auto iota(E)(E end)
 auto iota(B, E, S)(B begin, E end, S step)
 if (isFloatingPoint!(CommonType!(B, E, S)))
 {
-    alias Unqual!(CommonType!(B, E, S)) Value;
+    alias Value = Unqual!(CommonType!(B, E, S));
     static struct Result
     {
         private Value start, step;
@@ -5897,7 +5897,7 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
             return count - index;
         }
 
-        alias length opDollar;
+        alias opDollar = length;
     }
 
     return Result(begin, end, step);
@@ -6123,9 +6123,9 @@ enum TransverseOptions
 struct FrontTransversal(Ror,
         TransverseOptions opt = TransverseOptions.assumeJagged)
 {
-    alias Unqual!(Ror)               RangeOfRanges;
-    alias .ElementType!RangeOfRanges RangeType;
-    alias .ElementType!RangeType     ElementType;
+    alias RangeOfRanges = Unqual!(Ror);
+    alias RangeType     = .ElementType!RangeOfRanges;
+    alias ElementType   = .ElementType!RangeType;
 
     private void prime()
     {
@@ -6401,9 +6401,9 @@ unittest {
 struct Transversal(Ror,
         TransverseOptions opt = TransverseOptions.assumeJagged)
 {
-    private alias Unqual!Ror RangeOfRanges;
-    private alias ElementType!RangeOfRanges InnerRange;
-    private alias ElementType!InnerRange E;
+    private alias RangeOfRanges = Unqual!Ror;
+    private alias InnerRange = ElementType!RangeOfRanges;
+    private alias E = ElementType!InnerRange;
 
     private void prime()
     {
@@ -6584,7 +6584,7 @@ struct Transversal(Ror,
                 return _input.length;
             }
 
-            alias length opDollar;
+            alias opDollar = length;
         }
 
 /**
@@ -6665,7 +6665,7 @@ unittest
     }
 
     // Test w/o ref return.
-    alias DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random) D;
+    alias D = DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random);
     auto drs = [D.init, D.init];
     foreach(num; 0..10) {
         auto t = transversal!(TransverseOptions.enforceNotJagged)(drs, num);
@@ -6684,7 +6684,7 @@ unittest
 
 struct Transposed(RangeOfRanges)
 {
-    //alias typeof(map!"a.front"(RangeOfRanges.init)) ElementType;
+    //alias ElementType = typeof(map!"a.front"(RangeOfRanges.init));
 
     this(RangeOfRanges input)
     {
@@ -6873,7 +6873,7 @@ struct Indexed(Source, Indices)
             return _indices.length;
         }
 
-        alias length opDollar;
+        alias opDollar = length;
     }
 
     static if(isRandomAccessRange!Indices)
@@ -7559,7 +7559,7 @@ unittest
         b.popBack();
         assert(b.empty && b.length == 0 && b[].empty);
 
-        alias typeof(a) A;
+        alias A = typeof(a);
         static assert(isInputRange!A);
         static assert(isForwardRange!A);
         static assert(isBidirectionalRange!A);
@@ -7901,7 +7901,7 @@ interface RandomAccessFinite(E) : BidirectionalRange!(E) {
     @property size_t length();
 
     ///
-    alias length opDollar;
+    alias opDollar = length;
 
     // Can't support slicing until issues with requiring slicing for all
     // finite random access ranges are fully resolved.
@@ -7994,33 +7994,33 @@ class OutputRangeObject(R, E...) : staticMap!(OutputRange, E) {
 
 /**Returns the interface type that best matches $(D R).*/
 template MostDerivedInputRange(R) if (isInputRange!(Unqual!R)) {
-    private alias ElementType!R E;
+    private alias E = ElementType!R;
 
     static if (isRandomAccessRange!R) {
         static if (isInfinite!R) {
-            alias RandomAccessInfinite!E MostDerivedInputRange;
+            alias MostDerivedInputRange = RandomAccessInfinite!E;
         } else static if (hasAssignableElements!R) {
-            alias RandomFiniteAssignable!E MostDerivedInputRange;
+            alias MostDerivedInputRange = RandomFiniteAssignable!E;
         } else {
-            alias RandomAccessFinite!E MostDerivedInputRange;
+            alias MostDerivedInputRange = RandomAccessFinite!E;
         }
     } else static if (isBidirectionalRange!R) {
         static if (hasAssignableElements!R) {
-            alias BidirectionalAssignable!E MostDerivedInputRange;
+            alias MostDerivedInputRange = BidirectionalAssignable!E;
         } else {
-            alias BidirectionalRange!E MostDerivedInputRange;
+            alias MostDerivedInputRange = BidirectionalRange!E;
         }
     } else static if (isForwardRange!R) {
         static if (hasAssignableElements!R) {
-            alias ForwardAssignable!E MostDerivedInputRange;
+            alias MostDerivedInputRange = ForwardAssignable!E;
         } else {
-            alias ForwardRange!E MostDerivedInputRange;
+            alias MostDerivedInputRange = ForwardRange!E;
         }
     } else {
         static if (hasAssignableElements!R) {
-            alias InputAssignable!E MostDerivedInputRange;
+            alias MostDerivedInputRange = InputAssignable!E;
         } else {
-            alias InputRange!E MostDerivedInputRange;
+            alias MostDerivedInputRange = InputRange!E;
         }
     }
 }
@@ -8031,15 +8031,15 @@ template MostDerivedInputRange(R) if (isInputRange!(Unqual!R)) {
  */
 template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
     static if (is(R : InputRange!(ElementType!R))) {
-        alias R InputRangeObject;
+        alias InputRangeObject = R;
     } else static if (!is(Unqual!R == R)) {
-        alias InputRangeObject!(Unqual!R) InputRangeObject;
+        alias InputRangeObject = InputRangeObject!(Unqual!R);
     } else {
 
         ///
         class InputRangeObject : MostDerivedInputRange!(R) {
             private R _range;
-            private alias ElementType!R E;
+            private alias E = ElementType!R;
 
             this(R range) {
                 this._range = range;
@@ -8102,7 +8102,7 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
                         return _range.length;
                     }
 
-                    alias length opDollar;
+                    alias opDollar = length;
 
                     // Can't support slicing until all the issues with
                     // requiring slicing support for finite random access
@@ -8338,7 +8338,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
 {
     private import std.functional : binaryFun;
 
-    private alias binaryFun!pred predFun;
+    private alias predFun = binaryFun!pred;
     private bool geq(L, R)(L lhs, R rhs)
     {
         return !predFun(lhs, rhs);
@@ -8434,7 +8434,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
         return _input.length;
     }
 
-    alias length opDollar;
+    alias opDollar = length;
 
 /**
    Releases the controlled range and returns it.
@@ -9165,7 +9165,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
         private static string _genSave() @safe pure nothrow
         {
             return `import std.conv;` ~
-                   `alias typeof((*_range).save) S;` ~
+                   `alias S = typeof((*_range).save);` ~
                    `static assert(isForwardRange!S, S.stringof ~ " is not a forward range.");` ~
                    `auto mem = new void[S.sizeof];` ~
                    `emplace!S(mem, cast(S)(*_range).save);` ~
@@ -9325,7 +9325,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
         private static string _genOpSlice() @safe pure nothrow
         {
             return `import std.conv;` ~
-                   `alias typeof((*_range)[begin .. end]) S;` ~
+                   `alias S = typeof((*_range)[begin .. end]);` ~
                    `static assert(hasSlicing!S, S.stringof ~ " is not sliceable.");` ~
                    `auto mem = new void[S.sizeof];` ~
                    `emplace!S(mem, cast(S)(*_range)[begin .. end]);` ~

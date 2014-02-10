@@ -868,7 +868,7 @@ private auto _decodeContent(T)(ubyte[] content, string encoding)
     }
 }
 
-alias std.string.KeepTerminator KeepTerminator;
+alias KeepTerminator = std.string.KeepTerminator;
 /++
 struct ByLineBuffer(Char)
 {
@@ -1583,10 +1583,10 @@ private mixin template Protocol()
 
     /// Value to return from $(D onSend)/$(D onReceive) delegates in order to
     /// pause a request
-    alias CurlReadFunc.pause requestPause;
+    alias requestPause = CurlReadFunc.pause;
 
     /// Value to return from onSend delegate in order to abort a request
-    alias CurlReadFunc.abort requestAbort;
+    alias requestAbort = CurlReadFunc.abort;
 
     static uint defaultAsyncStringBufferSize = 100;
 
@@ -1662,7 +1662,7 @@ private mixin template Protocol()
     }
 
     /// Type of proxy
-    alias etc.c.curl.CurlProxy CurlProxy;
+    alias CurlProxy = etc.c.curl.CurlProxy;
 
     /** Proxy type
      *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
@@ -2030,7 +2030,7 @@ struct HTTP
     mixin Protocol;
 
     /// Authentication method equal to $(ECXREF curl, CurlAuth)
-    alias CurlAuth AuthMethod;
+    alias AuthMethod = CurlAuth;
 
     static private uint defaultMaxRedirects = 10;
 
@@ -2125,7 +2125,7 @@ struct HTTP
 
         $(WEB www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.25, _RFC2616 Section 14.25)
     */
-    alias CurlTimeCond TimeCond;
+    alias TimeCond = CurlTimeCond;
 
     /**
        Constructor taking the url as parameter.
@@ -2247,10 +2247,10 @@ struct HTTP
     {
         /// Value to return from $(D onSend)/$(D onReceive) delegates in order to
         /// pause a request
-        alias CurlReadFunc.pause requestPause;
+        alias requestPause = CurlReadFunc.pause;
 
         /// Value to return from onSend delegate in order to abort a request
-        alias CurlReadFunc.abort requestAbort;
+        alias requestAbort = CurlReadFunc.abort;
 
         /**
            True if the instance is stopped. A stopped instance is not usable.
@@ -2291,7 +2291,7 @@ struct HTTP
         @property void proxyPort(ushort port);
 
         /// Type of proxy
-        alias etc.c.curl.CurlProxy CurlProxy;
+        alias CurlProxy = etc.c.curl.CurlProxy;
 
         /** Proxy type
          *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
@@ -2894,10 +2894,10 @@ struct FTP
     {
         /// Value to return from $(D onSend)/$(D onReceive) delegates in order to
         /// pause a request
-        alias CurlReadFunc.pause requestPause;
+        alias requestPause = CurlReadFunc.pause;
 
         /// Value to return from onSend delegate in order to abort a request
-        alias CurlReadFunc.abort requestAbort;
+        alias requestAbort = CurlReadFunc.abort;
 
         /**
            True if the instance is stopped. A stopped instance is not usable.
@@ -2938,7 +2938,7 @@ struct FTP
         @property void proxyPort(ushort port);
 
         /// Type of proxy
-        alias etc.c.curl.CurlProxy CurlProxy;
+        alias CurlProxy = etc.c.curl.CurlProxy;
 
         /** Proxy type
          *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
@@ -3234,10 +3234,10 @@ struct SMTP
     {
         /// Value to return from $(D onSend)/$(D onReceive) delegates in order to
         /// pause a request
-        alias CurlReadFunc.pause requestPause;
+        alias requestPause = CurlReadFunc.pause;
 
         /// Value to return from onSend delegate in order to abort a request
-        alias CurlReadFunc.abort requestAbort;
+        alias requestAbort = CurlReadFunc.abort;
 
         /**
            True if the instance is stopped. A stopped instance is not usable.
@@ -3278,7 +3278,7 @@ struct SMTP
         @property void proxyPort(ushort port);
 
         /// Type of proxy
-        alias etc.c.curl.CurlProxy CurlProxy;
+        alias CurlProxy = etc.c.curl.CurlProxy;
 
         /** Proxy type
          *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
@@ -3471,7 +3471,7 @@ class CurlTimeoutException : CurlException
 }
 
 /// Equal to $(ECXREF curl, CURLcode)
-alias CURLcode CurlCode;
+alias CurlCode = CURLcode;
 
 /**
   Wrapper to provide a better interface to libcurl than using the plain C API.
@@ -3497,8 +3497,8 @@ struct Curl
         curl_global_cleanup();
     }
 
-    alias void[] OutData;
-    alias ubyte[] InData;
+    alias OutData = void[];
+    alias InData = ubyte[];
     bool stopped;
 
     // A handle should not be used by two threads simultaneously
@@ -3513,8 +3513,8 @@ struct Curl
     private int delegate(size_t dltotal, size_t dlnow,
                          size_t ultotal, size_t ulnow) _onProgress;
 
-    alias CurlReadFunc.pause requestPause;
-    alias CurlReadFunc.abort requestAbort;
+    alias requestPause = CurlReadFunc.pause;
+    alias requestAbort = CurlReadFunc.abort;
 
     /**
        Initialize the instance by creating a working curl handle.

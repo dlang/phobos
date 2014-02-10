@@ -91,38 +91,42 @@ struct This;
 template AssociativeArray(T)
 {
     enum bool valid = false;
-    alias void Key;
-    alias void Value;
+    alias Key = void;
+    alias Value = void;
 }
 
 template AssociativeArray(T : V[K], K, V)
 {
     enum bool valid = true;
-    alias K Key;
-    alias V Value;
+    alias Key = K;
+    alias Value = V;
 }
 
 template This2Variant(V, T...)
 {
-    static if (T.length == 0) alias TypeTuple!() This2Variant;
+    static if (T.length == 0)
+        alias This2Variant = TypeTuple!();
     else static if (is(AssociativeArray!(T[0]).Key == This))
     {
         static if (is(AssociativeArray!(T[0]).Value == This))
-            alias TypeTuple!(V[V],
-                    This2Variant!(V, T[1 .. $])) This2Variant;
+            alias This2Variant =
+                TypeTuple!(V[V],
+                           This2Variant!(V, T[1 .. $]));
         else
-            alias TypeTuple!(AssociativeArray!(T[0]).Value[V],
-                    This2Variant!(V, T[1 .. $])) This2Variant;
+            alias This2Variant =
+                TypeTuple!(AssociativeArray!(T[0]).Value[V],
+                           This2Variant!(V, T[1 .. $]));
     }
     else static if (is(AssociativeArray!(T[0]).Value == This))
-        alias TypeTuple!(V[AssociativeArray!(T[0]).Key],
-                This2Variant!(V, T[1 .. $])) This2Variant;
+        alias This2Variant =
+            TypeTuple!(V[AssociativeArray!(T[0]).Key],
+                       This2Variant!(V, T[1 .. $]));
     else static if (is(T[0] == This[]))
-        alias TypeTuple!(V[], This2Variant!(V, T[1 .. $])) This2Variant;
+        alias This2Variant = TypeTuple!(V[], This2Variant!(V, T[1 .. $]));
     else static if (is(T[0] == This*))
-        alias TypeTuple!(V*, This2Variant!(V, T[1 .. $])) This2Variant;
+        alias This2Variant = TypeTuple!(V*, This2Variant!(V, T[1 .. $]));
     else
-       alias TypeTuple!(T[0], This2Variant!(V, T[1 .. $])) This2Variant;
+        alias This2Variant = TypeTuple!(T[0], This2Variant!(V, T[1 .. $]));
 }
 
 /**
@@ -153,7 +157,7 @@ template This2Variant(V, T...)
 
 struct VariantN(size_t maxDataSize, AllowedTypesX...)
 {
-    alias This2Variant!(VariantN, AllowedTypesX) AllowedTypes;
+    alias AllowedTypes = This2Variant!(VariantN, AllowedTypesX);
 
 private:
     // Compute the largest practical size from maxDataSize
@@ -475,7 +479,7 @@ private:
             {
                 // array type; parm is the element to append
                 auto arg = cast(VariantN*) parm;
-                alias typeof((*zis)[0]) E;
+                alias E = typeof((*zis)[0]);
                 if (arg[0].convertsTo!(E))
                 {
                     // append one element to the array
@@ -706,11 +710,11 @@ public:
     // {
     //     static if (isStaticArray!(T))
     //     {
-    //         alias typeof(testing123(&T[0])) DecayStaticToDynamicArray;
+    //         alias DecayStaticToDynamicArray = typeof(testing123(&T[0]));
     //     }
     //     else
     //     {
-    //         alias T DecayStaticToDynamicArray;
+    //         alias DecayStaticToDynamicArray = T;
     //     }
     // }
 
@@ -839,7 +843,7 @@ public:
     bool opEquals(T)(auto ref T rhs) const
     {
         static if (is(Unqual!T == VariantN))
-            alias rhs temp;
+            alias temp = rhs;
         else
             auto temp = VariantN(rhs);
         return !fptr(OpID.compare, cast(ubyte[size]*) &store,
@@ -861,7 +865,7 @@ public:
     int opCmp(T)(T rhs)
     {
         static if (is(T == VariantN))
-            alias rhs temp;
+            alias temp = rhs;
         else
             auto temp = VariantN(rhs);
         auto result = fptr(OpID.compare, &store, &temp);
@@ -1129,7 +1133,7 @@ public:
      */
     int opApply(Delegate)(scope Delegate dg) if (is(Delegate == delegate))
     {
-        alias ParameterTypeTuple!(Delegate)[0] A;
+        alias A = ParameterTypeTuple!(Delegate)[0];
         if (type == typeid(A[]))
         {
             auto arr = get!(A[]);
@@ -1185,8 +1189,8 @@ unittest
     }
 
     static assert(S.sizeof >= Variant.sizeof);
-    alias TypeTuple!(string, int, S) Types;
-    alias VariantN!(maxSize!Types, Types) MyVariant;
+    alias Types = TypeTuple!(string, int, S);
+    alias MyVariant = VariantN!(maxSize!Types, Types);
 
     auto v = MyVariant(S.init);
     assert(v == S.init);
@@ -1233,7 +1237,7 @@ unittest
 
 template Algebraic(T...)
 {
-    alias VariantN!(maxSize!(T), T) Algebraic;
+    alias Algebraic = VariantN!(maxSize!(T), T);
 }
 
 /**
@@ -1246,7 +1250,7 @@ $(D_PARAM VariantN) directly with a different maximum size either for
 storing larger types, or for saving memory.
  */
 
-alias VariantN!(maxSize!(creal, char[], void delegate())) Variant;
+alias Variant = VariantN!(maxSize!(creal, char[], void delegate()));
 
 /**
  * Returns an array of variants constructed from $(D_PARAM args).
@@ -1325,18 +1329,18 @@ static class VariantException : Exception
 
 unittest
 {
-    alias This2Variant!(char, int, This[int]) W1;
-    alias TypeTuple!(int, char[int]) W2;
+    alias W1 = This2Variant!(char, int, This[int]);
+    alias W2 = TypeTuple!(int, char[int]);
     static assert(is(W1 == W2));
 
-    alias Algebraic!(void, string) var_t;
+    alias var_t = Algebraic!(void, string);
     var_t foo = "quux";
 }
 
 unittest
 {
     // @@@BUG@@@
-    // alias Algebraic!(real, This[], This[int], This[This]) A;
+    // alias A = Algebraic!(real, This[], This[int], This[This]);
     // A v1, v2, v3;
     // v2 = 5.0L;
     // v3 = 42.0L;
@@ -1901,7 +1905,7 @@ unittest
 private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant)
     if (isAlgebraic!VariantType && Handler.length > 0)
 {
-    alias VariantType.AllowedTypes AllowedTypes;
+    alias AllowedTypes = VariantType.AllowedTypes;
 
 
     /**
@@ -1929,7 +1933,7 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
                 // Handle normal function objects
                 static if (isSomeFunction!dg)
                 {
-                    alias ParameterTypeTuple!dg Params;
+                    alias Params = ParameterTypeTuple!dg;
                     static if (Params.length == 0)
                     {
                         // Just check exception functions in the first

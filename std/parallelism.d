@@ -209,18 +209,18 @@ private template MapType(R, functions...)
 {
     static if(functions.length == 0)
     {
-        alias typeof(unaryFun!(functions[0])(ElementType!R.init)) MapType;
+        alias MapType = typeof(unaryFun!(functions[0])(ElementType!R.init));
     }
     else
     {
-        alias typeof(adjoin!(staticMap!(unaryFun, functions))
-                     (ElementType!R.init)) MapType;
+        alias MapType = typeof(adjoin!(staticMap!(unaryFun, functions))
+                     (ElementType!R.init));
     }
 }
 
 private template ReduceType(alias fun, R, E)
 {
-    alias typeof(binaryFun!fun(E.init, ElementType!R.init)) ReduceType;
+    alias ReduceType = typeof(binaryFun!fun(E.init, ElementType!R.init));
 }
 
 private template noUnsharedAliasing(T)
@@ -242,17 +242,17 @@ private template isSafeTask(F)
 
 unittest
 {
-    alias void function() @safe F1;
-    alias void function() F2;
-    alias void function(uint, string) @trusted F3;
-    alias void function(uint, char[]) F4;
+    alias F1 = void function() @safe;
+    alias F2 = void function();
+    alias F3 = void function(uint, string) @trusted;
+    alias F4 = void function(uint, char[]);
 
     static assert( isSafeTask!F1);
     static assert(!isSafeTask!F2);
     static assert( isSafeTask!F3);
     static assert(!isSafeTask!F4);
 
-    alias uint[] function(uint, string) pure @trusted F5;
+    alias F5 = uint[] function(uint, string) pure @trusted;
     static assert( isSafeTask!F5);
 }
 
@@ -300,7 +300,7 @@ private enum TaskStatus : ubyte
 
 private template AliasReturn(alias fun, T...)
 {
-    alias typeof({ T args; return fun(args); }) AliasReturn;
+    alias AliasReturn = typeof({ T args; return fun(args); });
 }
 
 // Should be private, but std.algorithm.reduce is used in the zero-thread case
@@ -309,13 +309,13 @@ template reduceAdjoin(functions...)
 {
     static if(functions.length == 1)
     {
-        alias binaryFun!(functions[0]) reduceAdjoin;
+        alias reduceAdjoin = binaryFun!(functions[0]);
     }
     else
     {
         T reduceAdjoin(T, U)(T lhs, U rhs)
         {
-            alias staticMap!(binaryFun, functions) funs;
+            alias funs = staticMap!(binaryFun, functions);
 
             foreach(i, Unused; typeof(lhs.expand))
             {
@@ -331,13 +331,13 @@ private template reduceFinish(functions...)
 {
     static if(functions.length == 1)
     {
-        alias binaryFun!(functions[0]) reduceFinish;
+        alias reduceFinish = binaryFun!(functions[0]);
     }
     else
     {
         T reduceFinish(T)(T lhs, T rhs)
         {
-            alias staticMap!(binaryFun, functions) funs;
+            alias funs = staticMap!(binaryFun, functions);
 
             foreach(i, Unused; typeof(lhs.expand))
             {
@@ -474,11 +474,11 @@ struct Task(alias fun, Args...)
     */
     static if(__traits(isSame, fun, run))
     {
-        alias _args[1..$] args;
+        alias args = _args[1..$];
     }
     else
     {
-        alias _args args;
+        alias args = _args;
     }
 
 
@@ -514,7 +514,7 @@ struct Task(alias fun, Args...)
     The return type of the function called by this $(D Task).  This can be
     $(D void).
     */
-    alias typeof(fun(_args)) ReturnType;
+    alias ReturnType = typeof(fun(_args));
 
     static if(!is(ReturnType == void))
     {
@@ -1534,7 +1534,7 @@ public:
     ParallelForeach!R parallel(R)(R range, size_t workUnitSize)
     {
         enforce(workUnitSize > 0, "workUnitSize must be > 0.");
-        alias ParallelForeach!R RetType;
+        alias RetType = ParallelForeach!R;
         return RetType(this, range, workUnitSize);
     }
 
@@ -1642,14 +1642,14 @@ public:
         {
             static if(functions.length == 1)
             {
-                alias unaryFun!(functions[0]) fun;
+                alias fun = unaryFun!(functions[0]);
             }
             else
             {
-                alias adjoin!(staticMap!(unaryFun, functions)) fun;
+                alias fun = adjoin!(staticMap!(unaryFun, functions));
             }
 
-            alias args[0] range;
+            alias range = args[0];
             immutable len = range.length;
 
             static if(
@@ -1658,9 +1658,9 @@ public:
                 is(MapType!(Args[0], functions) : ElementType!(Args[$ - 1]))
                 )
             {
-                alias args[$ - 1] buf;
-                alias args[0..$ - 1] args2;
-                alias Args[0..$ - 1] Args2;
+                alias buf = args[$ - 1];
+                alias args2 = args[0..$ - 1];
+                alias Args2 = Args[0..$ - 1];
                 enforce(buf.length == len,
                         text("Can't use a user supplied buffer that's the wrong ",
                              "size.  (Expected  :", len, " Got:  ", buf.length));
@@ -1672,8 +1672,8 @@ public:
             else
             {
                 auto buf = uninitializedArray!(MapType!(Args[0], functions)[])(len);
-                alias args args2;
-                alias Args Args2;
+                alias args2 = args;
+                alias Args2 = Args;
             }
 
             if(!len) return buf;
@@ -1689,7 +1689,7 @@ public:
                 auto workUnitSize = defaultWorkUnitSize(range.length);
             }
 
-            alias typeof(range) R;
+            alias R = typeof(range);
 
             if(workUnitSize > len)
             {
@@ -1823,11 +1823,11 @@ public:
                     "Work unit size must be smaller than buffer size.");
             static if(functions.length == 1)
             {
-                alias unaryFun!(functions[0]) fun;
+                alias fun = unaryFun!(functions[0]);
             }
             else
             {
-                alias adjoin!(staticMap!(unaryFun, functions)) fun;
+                alias fun = adjoin!(staticMap!(unaryFun, functions));
             }
 
             static final class Map
@@ -1841,7 +1841,7 @@ public:
                 is(typeof(source.bufPos)) &&
                 is(typeof(source.doBufSwap()));
 
-                alias MapType!(S, functions) E;
+                alias E = MapType!(S, functions);
                 E[] buf1, buf2;
                 S source;
                 TaskPool pool;
@@ -1852,7 +1852,7 @@ public:
 
             static if(isRandomAccessRange!S)
             {
-                alias S FromType;
+                alias FromType = S;
 
                 void popSource()
                 {
@@ -1885,7 +1885,7 @@ public:
                                  );
                 }
 
-                alias typeof(source.buf1) FromType;
+                alias FromType = typeof(source.buf1);
                 FromType from;
 
                 // Just swap our input buffer with source's output buffer.
@@ -1912,7 +1912,7 @@ public:
             }
             else
             {
-                alias ElementType!S[] FromType;
+                alias FromType = ElementType!S[];
 
                 // The temporary array that data is copied to before being
                 // mapped.
@@ -2138,7 +2138,7 @@ public:
             // the heap.
 
             // The element type of S.
-            alias ElementType!S E;  // Needs to be here b/c of forward ref bugs.
+            alias E = ElementType!S;  // Needs to be here b/c of forward ref bugs.
 
         private:
             E[] buf1, buf2;
@@ -2428,19 +2428,19 @@ public:
         ///
         auto reduce(Args...)(Args args)
         {
-            alias reduceAdjoin!functions fun;
-            alias reduceFinish!functions finishFun;
+            alias fun = reduceAdjoin!functions;
+            alias finishFun = reduceFinish!functions;
 
             static if(isIntegral!(Args[$ - 1]))
             {
                 size_t workUnitSize = cast(size_t) args[$ - 1];
-                alias args[0..$ - 1] args2;
-                alias Args[0..$ - 1] Args2;
+                alias args2 = args[0..$ - 1];
+                alias Args2 = Args[0..$ - 1];
             }
             else
             {
-                alias args args2;
-                alias Args Args2;
+                alias args2 = args;
+                alias Args2 = Args;
             }
 
             auto makeStartValue(Type)(Type e)
@@ -2466,8 +2466,8 @@ public:
             static if(args2.length == 2)
             {
                 static assert(isInputRange!(Args2[1]));
-                alias args2[1] range;
-                alias args2[0] seed;
+                alias range = args2[1];
+                alias seed = args2[0];
                 enum explicitSeed = true;
 
                 static if(!is(typeof(workUnitSize)))
@@ -2478,7 +2478,7 @@ public:
             else
             {
                 static assert(args2.length == 1);
-                alias args2[0] range;
+                alias range = args2[0];
 
                 static if(!is(typeof(workUnitSize)))
                 {
@@ -2493,8 +2493,8 @@ public:
                 range.popFront();
             }
 
-            alias typeof(seed) E;
-            alias typeof(range) R;
+            alias E = typeof(seed);
+            alias R = typeof(range);
 
             E reduceOnRange(R range, size_t lowerBound, size_t upperBound)
             {
@@ -2596,7 +2596,7 @@ public:
             immutable size_t nWorkUnits = (len / workUnitSize) + ((len % workUnitSize == 0) ? 0 : 1);
             assert(nWorkUnits * workUnitSize >= len);
 
-            alias Task!(run, typeof(&reduceOnRange), R, size_t, size_t) RTask;
+            alias RTask = Task!(run, typeof(&reduceOnRange), R, size_t, size_t);
             RTask[] tasks;
 
             // Can't use alloca() due to Bug 3753.  Use a fixed buffer
@@ -3366,7 +3366,7 @@ private void submitAndExecute(
 {
     immutable nThreads = pool.size + 1;
 
-    alias typeof(scopedTask(doIt)) PTask;
+    alias PTask = typeof(scopedTask(doIt));
     import core.stdc.stdlib;
     import core.stdc.string : memcpy;
 
@@ -3625,7 +3625,7 @@ enum string parallelApplyMixinInputRange = q{
 
         static if(hasLvalueElements!R)
         {
-            alias ElementType!R*[] Temp;
+            alias Temp = ElementType!R*[];
             Temp temp;
 
             // Returns:  The previous value of nPopped.
@@ -3655,7 +3655,7 @@ enum string parallelApplyMixinInputRange = q{
         else
         {
 
-            alias ElementType!R[] Temp;
+            alias Temp = ElementType!R[];
             Temp temp;
 
             // Returns:  The previous value of nPopped.
@@ -3788,17 +3788,17 @@ private struct ParallelForeach(R)
     TaskPool pool;
     R range;
     size_t workUnitSize;
-    alias ElementType!R E;
+    alias E = ElementType!R;
 
     static if(hasLvalueElements!R)
     {
-        alias int delegate(ref E) NoIndexDg;
-        alias int delegate(size_t, ref E) IndexDg;
+        alias NoIndexDg = int delegate(ref E);
+        alias IndexDg = int delegate(size_t, ref E);
     }
     else
     {
-        alias int delegate(E) NoIndexDg;
-        alias int delegate(size_t, E) IndexDg;
+        alias NoIndexDg = int delegate(E);
+        alias IndexDg = int delegate(size_t, E);
     }
 
     int opApply(scope NoIndexDg dg)
@@ -3837,8 +3837,8 @@ private struct RoundRobinBuffer(C1, C2)
 {
     // No need for constraints because they're already checked for in asyncBuf.
 
-    alias ParameterTypeTuple!(C1.init)[0] Array;
-    alias typeof(Array.init[0]) T;
+    alias Array = ParameterTypeTuple!(C1.init)[0];
+    alias T = typeof(Array.init[0]);
 
     T[][] bufs;
     size_t index;

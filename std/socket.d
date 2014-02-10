@@ -58,8 +58,8 @@ version(Windows)
     pragma (lib, "wsock32.lib");
 
     private import std.c.windows.windows, std.c.windows.winsock, std.windows.syserror;
-    private alias std.c.windows.winsock.timeval _ctimeval;
-    private alias std.c.windows.winsock.linger _clinger;
+    private alias _ctimeval = std.c.windows.winsock.timeval;
+    private alias _clinger = std.c.windows.winsock.linger;
 
     enum socket_t : SOCKET { INVALID_SOCKET }
     private const int _SOCKET_ERROR = SOCKET_ERROR;
@@ -103,8 +103,8 @@ else version(Posix)
     private import core.sys.posix.sys.time;
     //private import core.sys.posix.sys.select;
     private import core.sys.posix.sys.socket;
-    private alias core.sys.posix.sys.time.timeval _ctimeval;
-    private alias core.sys.posix.sys.socket.linger _clinger;
+    private alias _ctimeval = core.sys.posix.sys.time.timeval;
+    private alias _clinger = core.sys.posix.sys.socket.linger;
 
     private import core.stdc.errno;
 
@@ -739,7 +739,7 @@ class InternetHost
     }
 
     version(Windows)
-        alias getHostNoSync getHost;
+        alias getHost = getHostNoSync;
     else
     {
         // posix systems use global state for return value, so we
@@ -2003,8 +2003,8 @@ private mixin template FieldProxy(string target, string field)
 struct TimeVal
 {
     _ctimeval ctimeval;
-    alias typeof(ctimeval.tv_sec) tv_sec_t;
-    alias typeof(ctimeval.tv_usec) tv_usec_t;
+    alias tv_sec_t = typeof(ctimeval.tv_sec);
+    alias tv_usec_t = typeof(ctimeval.tv_usec);
 
     version (StdDdoc) // no DDoc for string mixins, can't forward individual fields
     {
@@ -2389,8 +2389,8 @@ struct Linger
 
     version (StdDdoc) // no DDoc for string mixins, can't forward individual fields
     {
-        private alias typeof(_clinger.init.l_onoff ) l_onoff_t;
-        private alias typeof(_clinger.init.l_linger) l_linger_t;
+        private alias l_onoff_t = typeof(_clinger.init.l_onoff );
+        private alias l_linger_t = typeof(_clinger.init.l_linger);
         l_onoff_t  on;   /// Nonzero for _on.
         l_linger_t time; /// Linger _time.
     }

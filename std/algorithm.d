@@ -392,11 +392,11 @@ template map(fun...) if (fun.length >= 1)
         {
             import std.functional : adjoin;
 
-            alias adjoin!(staticMap!(unaryFun, fun)) _fun;
+            alias _fun = adjoin!(staticMap!(unaryFun, fun));
         }
         else
         {
-            alias unaryFun!fun _fun;
+            alias _fun = unaryFun!fun;
         }
 
         return MapResult!(_fun, Range)(r);
@@ -439,14 +439,13 @@ unittest
 {
     import std.conv : to;
 
-    alias map!(to!string) stringize;
+    alias stringize = map!(to!string);
     assert(equal(stringize([ 1, 2, 3, 4 ]), [ "1", "2", "3", "4" ]));
 }
 
 private struct MapResult(alias fun, Range)
 {
-    alias Unqual!Range R;
-    //alias typeof(fun(.ElementType!R.init)) ElementType;
+    alias R = Unqual!Range;
     R _input;
 
     static if (isBidirectionalRange!R)
@@ -493,9 +492,9 @@ private struct MapResult(alias fun, Range)
     static if (isRandomAccessRange!R)
     {
         static if (is(typeof(_input[ulong.max])))
-            private alias ulong opIndex_t;
+            private alias opIndex_t = ulong;
         else
-            private alias uint opIndex_t;
+            private alias opIndex_t = uint;
 
         auto ref opIndex(opIndex_t index)
         {
@@ -510,7 +509,7 @@ private struct MapResult(alias fun, Range)
             return _input.length;
         }
 
-        alias length opDollar;
+        alias opDollar = length;
     }
 
     static if (hasSlicing!R)
@@ -562,16 +561,16 @@ unittest
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
-    alias map!(to!string) stringize;
+    alias stringize = map!(to!string);
     assert(equal(stringize([ 1, 2, 3, 4 ]), [ "1", "2", "3", "4" ]));
 
     uint counter;
-    alias map!((a) { return counter++; }) count;
+    alias count = map!((a) { return counter++; });
     assert(equal(count([ 10, 2, 30, 4 ]), [ 0, 1, 2, 3 ]));
 
     counter = 0;
     adjoin!((a) { return counter++; }, (a) { return counter++; })(1);
-    alias map!((a) { return counter++; }, (a) { return counter++; }) countAndSquare;
+    alias countAndSquare = map!((a) { return counter++; }, (a) { return counter++; });
     //assert(equal(countAndSquare([ 10, 2 ]), [ tuple(0u, 100), tuple(1u, 4) ]));
 }
 
@@ -721,8 +720,8 @@ template reduce(fun...) if (fun.length >= 1)
         {
             static if (Args.length == 2)
             {
-                alias args[0] seed;
-                alias args[1] r;
+                alias seed = args[0];
+                alias r    = args[1];
                 Unqual!(Args[0]) result = seed;
                 for (; !r.empty; r.popFront())
                 {
@@ -744,7 +743,7 @@ template reduce(fun...) if (fun.length >= 1)
             {
                 enforce(!args[$ - 1].empty,
                     "Cannot reduce an empty range w/o an explicit seed value.");
-                alias args[0] r;
+                alias r = args[0];
                 static if (fun.length == 1)
                 {
                     auto seed = r.front;
@@ -775,9 +774,9 @@ template reduce(fun...) if (fun.length >= 1)
             // copying, iterating by dchar over strings, and dealing with the
             // no explicit start value case would become an unreadable mess
             // if these were merged.
-            alias args[$ - 1] r;
-            alias Args[$ - 1] R;
-            alias ForeachType!R E;
+            alias r = args[$ - 1];
+            alias R = Args[$ - 1];
+            alias E = ForeachType!R;
 
             static if (args.length == 2)
             {
@@ -1018,7 +1017,7 @@ Fills $(D range) with a $(D filler).
 void fill(Range, Value)(Range range, Value filler)
     if (isInputRange!Range && is(typeof(range.front = filler)))
 {
-    alias ElementType!Range T;
+    alias T = ElementType!Range;
 
     static if (is(typeof(range[] = filler)))
     {
@@ -1068,7 +1067,7 @@ unittest
     //writeln(benchmark!(fun0, fun1, fun2)(10000));
 
     // fill should accept InputRange
-    alias DummyRange!(ReturnBy.Reference, Length.No, RangeType.Input) InputRange;
+    alias InputRange = DummyRange!(ReturnBy.Reference, Length.No, RangeType.Input);
     enum filler = uint.max;
     InputRange range;
     fill(range, filler);
@@ -1207,7 +1206,7 @@ unittest
     assert(a == [ 1, 2, 1, 2, 1 ]);
 
     // fill should accept InputRange
-    alias DummyRange!(ReturnBy.Reference, Length.No, RangeType.Input) InputRange;
+    alias InputRange = DummyRange!(ReturnBy.Reference, Length.No, RangeType.Input);
     InputRange range;
     fill(range,[1,2]);
     foreach (i,value;range.arr)
@@ -1245,7 +1244,7 @@ assert(s == [ 42, 42, 42, 42, 42 ]);
 void uninitializedFill(Range, Value)(Range range, Value filler)
     if (isInputRange!Range && hasLvalueElements!Range && is(typeof(range.front = filler)))
 {
-    alias ElementType!Range T;
+    alias T = ElementType!Range;
     static if (hasElaborateAssign!T)
     {
         import std.conv : emplace;
@@ -1280,7 +1279,7 @@ void initializeAll(Range)(Range range)
 {
     import core.stdc.string : memset, memcpy;
 
-    alias ElementType!Range T;
+    alias T = ElementType!Range;
     static if (hasElaborateAssign!T)
     {
         //Elaborate opAssign. Must go the memcpy road.
@@ -1306,7 +1305,7 @@ void initializeAll(Range)(Range range)
 void initializeAll(Range)(Range range)
     if (is(Range == char[]) || is(Range == wchar[]))
 {
-    alias ElementEncodingType!Range T;
+    alias T = ElementEncodingType!Range;
     range[] = T.init;
 }
 
@@ -1438,7 +1437,7 @@ unittest
 
 private struct FilterResult(alias pred, Range)
 {
-    alias Unqual!Range R;
+    alias R = Unqual!Range;
     R _input;
 
     this(R r)
@@ -1608,7 +1607,7 @@ unittest
 
 private struct FilterBidiResult(alias pred, Range)
 {
-    alias Unqual!Range R;
+    alias R = Unqual!Range;
     R _input;
 
     this(R r)
@@ -2309,7 +2308,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
         Range _input;
         Separator _separator;
         // Do we need hasLength!Range? popFront uses _input.length...
-        alias typeof(unsigned(_input.length)) IndexType;
+        alias IndexType = typeof(unsigned(_input.length));
         enum IndexType _unComputed = IndexType.max - 1, _atEnd = IndexType.max;
         IndexType _frontLength = _unComputed;
         IndexType _backLength = _unComputed;
@@ -2561,7 +2560,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
     private:
         Range _input;
         Separator _separator;
-        alias typeof(unsigned(_input.length)) RIndexType;
+        alias RIndexType = typeof(unsigned(_input.length));
         // _frontLength == size_t.max means empty
         RIndexType _frontLength = RIndexType.max;
         static if (isBidirectionalRange!Range)
@@ -3762,7 +3761,7 @@ struct Group(alias pred, R) if (isInputRange!R)
 {
     private R _input;
     private Tuple!(ElementType!R, uint) _current;
-    private alias binaryFun!pred comp;
+    private alias comp = binaryFun!pred;
 
     this(R input)
     {
@@ -4240,9 +4239,9 @@ if (isForwardRange!R1 && isForwardRange!R2
     {
         //return cast(R1) find(representation(haystack), representation(needle));
         // Specialization for simple string search
-        alias Select!(haystack[0].sizeof == 1, ubyte[],
-                Select!(haystack[0].sizeof == 2, ushort[], uint[]))
-            Representation;
+        alias Representation =
+            Select!(haystack[0].sizeof == 1, ubyte[],
+                Select!(haystack[0].sizeof == 2, ushort[], uint[]));
         // Will use the array specialization
         return cast(R1) .find!(pred, Representation, Representation)
             (cast(Representation) haystack, cast(Representation) needle);
@@ -4767,7 +4766,7 @@ public:
         return needle.length;
     }
 
-    alias length opDollar;
+    alias opDollar = length;
 }
 
 /// Ditto
@@ -5329,7 +5328,7 @@ ptrdiff_t countUntil(alias pred, R)(R haystack)
     }
     else //Everything else
     {
-        alias ElementType!R T; //For narrow strings forces dchar iteration
+        alias T = ElementType!R; //For narrow strings forces dchar iteration
         foreach (T elem; haystack)
         {
             if (unaryFun!pred(elem)) return i;
@@ -5541,8 +5540,8 @@ if (isInputRange!Range && Needles.length > 1 &&
     is(typeof(.startsWith!pred(doesThisStart, withOneOfThese[0])) : bool ) &&
     is(typeof(.startsWith!pred(doesThisStart, withOneOfThese[1 .. $])) : uint))
 {
-    alias doesThisStart haystack;
-    alias withOneOfThese needles;
+    alias haystack = doesThisStart;
+    alias needles  = withOneOfThese;
 
     // Make one pass looking for empty ranges in needles
     foreach (i, Unused; Needles)
@@ -5614,8 +5613,8 @@ if (isInputRange!R1 &&
     isInputRange!R2 &&
     is(typeof(binaryFun!pred(doesThisStart.front, withThis.front)) : bool))
 {
-    alias doesThisStart haystack;
-    alias withThis needle;
+    alias haystack = doesThisStart;
+    alias needle   = withThis;
 
     static if (is(typeof(pred) : string))
         enum isDefaultPred = pred == "a == b";
@@ -5893,8 +5892,8 @@ if (isBidirectionalRange!Range && Needles.length > 1 &&
     is(typeof(.endsWith!pred(doesThisEnd, withOneOfThese[0])) : bool) &&
     is(typeof(.endsWith!pred(doesThisEnd, withOneOfThese[1 .. $])) : uint))
 {
-    alias doesThisEnd haystack;
-    alias withOneOfThese needles;
+    alias haystack = doesThisEnd;
+    alias needles  = withOneOfThese;
 
     // Make one pass looking for empty ranges in needles
     foreach (i, Unused; Needles)
@@ -5960,8 +5959,8 @@ if (isBidirectionalRange!R1 &&
     isBidirectionalRange!R2 &&
     is(typeof(binaryFun!pred(doesThisEnd.back, withThis.back)) : bool))
 {
-    alias doesThisEnd haystack;
-    alias withThis needle;
+    alias haystack = doesThisEnd;
+    alias needle   = withThis;
 
     static if (is(typeof(pred) : string))
         enum isDefaultPred = pred == "a == b";
@@ -6459,7 +6458,7 @@ size_t count(alias pred = "true", R)(R haystack)
         is(typeof(unaryFun!pred(haystack.front)) : bool))
 {
     size_t result;
-    alias ElementType!R T; //For narrow strings forces dchar iteration
+    alias T = ElementType!R; //For narrow strings forces dchar iteration
     foreach (T elem; haystack)
         if (unaryFun!pred(elem)) ++result;
     return result;
@@ -6810,24 +6809,24 @@ template MinType(T...)
     static if (T.length == 2)
     {
         static if (!is(typeof(T[0].min)))
-            alias CommonType!(T[0 .. 2]) MinType;
+            alias MinType = CommonType!(T[0 .. 2]);
         else
         {
             enum hasMostNegative = is(typeof(mostNegative!(T[0]))) &&
                                    is(typeof(mostNegative!(T[1])));
             static if (hasMostNegative && mostNegative!(T[1]) < mostNegative!(T[0]))
-                alias T[1] MinType;
+                alias MinType = T[1];
             else static if (hasMostNegative && mostNegative!(T[1]) > mostNegative!(T[0]))
-                alias T[0] MinType;
+                alias MinType = T[0];
             else static if (T[1].max < T[0].max)
-                alias T[1] MinType;
+                alias MinType = T[1];
             else
-                alias T[0] MinType;
+                alias MinType = T[0];
         }
     }
     else
     {
-        alias MinType!(MinType!(T[0 .. 2]), T[2 .. $]) MinType;
+        alias MinType = MinType!(MinType!(T[0 .. 2]), T[2 .. $]);
     }
 }
 
@@ -6897,15 +6896,15 @@ template MaxType(T...)
     static if (T.length == 2)
     {
         static if (!is(typeof(T[0].min)))
-            alias CommonType!(T[0 .. 2]) MaxType;
+            alias MaxType = CommonType!(T[0 .. 2]);
         else static if (T[1].max > T[0].max)
-            alias T[1] MaxType;
+            alias MaxType = T[1];
         else
-            alias T[0] MaxType;
+            alias MaxType = T[0];
     }
     else
     {
-        alias MaxType!(MaxType!(T[0], T[1]), T[2 .. $]) MaxType;
+        alias MaxType = MaxType!(MaxType!(T[0], T[1]), T[2 .. $]);
     }
 }
 
@@ -8521,7 +8520,7 @@ assert(arr == [ 1, 3, 5, 4, 5 ]);
 //                 alias move = .move,
 //                 Range)(Range r)
 // {
-//     alias Iterator!(Range) It;
+//     alias It = Iterator!(Range);
 //     static void assignIter(It a, It b) { move(*b, *a); }
 //     return range(begin(r), partitionold!(not!(pred), ss, assignIter, Range)(r));
 // }
@@ -8551,7 +8550,7 @@ assert(arr == [ 1, 3, 4, 5, 4, 5, 2  ]);
 //                 SwapStrategy ss = SwapStrategy.semistable,
 //                 Range, Value)(Range r, Value v)
 // {
-//     alias Iterator!(Range) It;
+//     alias It = Iterator!(Range);
 //     bool comp(typeof(*It) a) { return !binaryFun!(pred)(a, v); }
 //     static void assignIterB(It a, It b) { *a = *b; }
 //     return range(begin(r),
@@ -8601,7 +8600,7 @@ Range partition(alias predicate,
     if ((ss == SwapStrategy.stable && isRandomAccessRange!(Range))
             || (ss != SwapStrategy.stable && isForwardRange!(Range)))
 {
-    alias unaryFun!(predicate) pred;
+    alias pred = unaryFun!(predicate);
     if (r.empty) return r;
     static if (ss == SwapStrategy.stable)
     {
@@ -8611,7 +8610,7 @@ Range partition(alias predicate,
             return r;
         }
         const middle = r.length / 2;
-        alias .partition!(pred, ss, Range) recurse;
+        alias recurse = .partition!(pred, ss, Range);
         auto lower = recurse(r[0 .. middle]);
         auto upper = recurse(r[middle .. $]);
         bringToFront(lower, r[middle .. r.length - upper.length]);
@@ -8775,7 +8774,7 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
     // The algorithm is described in "Engineering a sort function" by
     // Jon Bentley et al, pp 1257.
 
-    alias binaryFun!less lessFun;
+    alias lessFun = binaryFun!less;
     size_t i, j, k = r.length, l = k;
 
  bigloop:
@@ -9072,8 +9071,8 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
        Stable sorting uses TimSort, which needs to copy elements into a buffer,
        requiring assignable elements. +/
 {
-    alias binaryFun!(less) lessFun;
-    alias typeof(lessFun(r.front, r.front)) LessRet;    // instantiate lessFun
+    alias lessFun = binaryFun!(less);
+    alias LessRet = typeof(lessFun(r.front, r.front));    // instantiate lessFun
     static if (is(LessRet == bool))
     {
         import std.conv : text;
@@ -9205,7 +9204,7 @@ unittest
             @disable void opAssign(S value);
         }
 
-        alias S[] R;
+        alias R = S[];
         R r = [S(3), S(2), S(1)];
         static assert(hasSwappableElements!R);
         static assert(!hasAssignableElements!R);
@@ -9244,14 +9243,14 @@ template multiSort(less...) //if (less.length > 1)
         static if (is(typeof(less[$ - 1]) == SwapStrategy))
         {
             enum ss = less[$ - 1];
-            alias less[0 .. $ - 1] funs;
+            alias funs = less[0 .. $ - 1];
         }
         else
         {
-            alias SwapStrategy.unstable ss;
-            alias less funs;
+            alias ss = SwapStrategy.unstable;
+            alias funs = less;
         }
-        alias binaryFun!(funs[0]) lessFun;
+        alias lessFun = binaryFun!(funs[0]);
 
         static if (funs.length > 1)
         {
@@ -9334,7 +9333,7 @@ private size_t getPivot(alias less, Range)(Range r)
     // then returns the index of the middle element.  In effect, it uses the
     // median-of-three heuristic.
 
-    alias binaryFun!(less) pred;
+    alias pred = binaryFun!(less);
     immutable len = r.length;
     immutable size_t mid = len / 2;
     immutable uint result = ((cast(uint) (pred(r[0], r[mid]))) << 2) |
@@ -9370,7 +9369,7 @@ private size_t getPivot(alias less, Range)(Range r)
 
 private void optimisticInsertionSort(alias less, Range)(Range r)
 {
-    alias binaryFun!(less) pred;
+    alias pred = binaryFun!(less);
     if (r.length < 2)
     {
         return;
@@ -9438,7 +9437,7 @@ void swapAt(R)(R r, size_t i1, size_t i2)
 
 private void quickSortImpl(alias less, Range)(Range r, real depth)
 {
-    alias ElementType!(Range) Elem;
+    alias Elem = ElementType!(Range);
     enum size_t optimisticInsertionSortGetsBetter = 25;
     static assert(optimisticInsertionSortGetsBetter >= 1);
 
@@ -9455,7 +9454,7 @@ private void quickSortImpl(alias less, Range)(Range r, real depth)
         const pivotIdx = getPivot!(less)(r);
         auto pivot = r[pivotIdx];
 
-        alias binaryFun!(less) pred;
+        alias pred = binaryFun!(less);
 
         // partition
         swapAt(r, pivotIdx, r.length - 1);
@@ -9498,7 +9497,7 @@ private template HeapSortImpl(alias less, Range)
     static assert(hasLength!Range);
     static assert(hasSwappableElements!Range || hasAssignableElements!Range);
 
-    alias binaryFun!less lessFun;
+    alias lessFun = binaryFun!less;
 
     void heapSort(Range r)
     {
@@ -9563,9 +9562,9 @@ private template TimSortImpl(alias pred, R)
     static assert(hasSlicing!R);
     static assert(hasAssignableElements!R);
 
-    alias ElementType!R T;
+    alias T = ElementType!R;
 
-    alias binaryFun!pred less;
+    alias less = binaryFun!pred;
     bool greater(T a, T b){ return less(b, a); }
     bool greaterEqual(T a, T b){ return !less(a, b); }
     bool lessEqual(T a, T b){ return !less(b, a); }
@@ -9988,12 +9987,12 @@ private template TimSortImpl(alias pred, R)
         body
         {
             size_t lower = 0, center = 1, upper = range.length;
-            alias center gap;
+            alias gap = center;
 
             static if (forwardReverse)
             {
-                static if (!lowerUpper) alias lessEqual comp; // reverse lower
-                static if (lowerUpper)  alias less comp;      // reverse upper
+                static if (!lowerUpper) alias comp = lessEqual; // reverse lower
+                static if (lowerUpper)  alias comp = less;      // reverse upper
 
                 // Gallop Search Reverse
                 while (gap <= upper)
@@ -10020,8 +10019,8 @@ private template TimSortImpl(alias pred, R)
             }
             else
             {
-                static if (!lowerUpper) alias greater comp;      // forward lower
-                static if (lowerUpper)  alias greaterEqual comp; // forward upper
+                static if (!lowerUpper) alias comp = greater;      // forward lower
+                static if (lowerUpper)  alias comp = greaterEqual; // forward upper
 
                 // Gallop Search Forward
                 while (lower + gap < upper)
@@ -10051,10 +10050,10 @@ private template TimSortImpl(alias pred, R)
         }
     }
 
-    alias gallopSearch!(false, false) gallopForwardLower;
-    alias gallopSearch!(false, true)  gallopForwardUpper;
-    alias gallopSearch!(true, false)  gallopReverseLower;
-    alias gallopSearch!(true, true)   gallopReverseUpper;
+    alias gallopForwardLower = gallopSearch!(false, false);
+    alias gallopForwardUpper = gallopSearch!(false,  true);
+    alias gallopReverseLower = gallopSearch!( true, false);
+    alias gallopReverseUpper = gallopSearch!( true,  true);
 }
 
 unittest
@@ -10515,7 +10514,7 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
     import std.exception : enforce;
     import std.conv : to;
 
-    alias Unqual!(ElementType!RangeIndex) IndexType;
+    alias IndexType = Unqual!(ElementType!RangeIndex);
     enforce(r.length == index.length,
         "r and index must be same length for makeIndex.");
     static if (IndexType.sizeof < size_t.sizeof)
@@ -10558,8 +10557,8 @@ unittest
     immutable(int)[] arr = [ 2, 3, 1, 5, 0 ];
     // index using pointers
     auto index1 = new immutable(int)*[arr.length];
-    alias typeof(arr) ImmRange;
-    alias typeof(index1) ImmIndex;
+    alias ImmRange = typeof(arr);
+    alias ImmIndex = typeof(index1);
     static assert(isForwardRange!(ImmRange));
     static assert(isRandomAccessRange!(ImmIndex));
     static assert(!isIntegral!(ElementType!(ImmIndex)));
@@ -10678,11 +10677,11 @@ unittest
     SwapStrategy ss,
     SRange, TRange)(SRange source, TRange target)
 {
-    alias binaryFun!(less) lessFun;
+    alias lessFun = binaryFun!(less);
     static assert(ss == SwapStrategy.unstable,
             "Stable indexing not yet implemented");
-    alias Iterator!(SRange) SIter;
-    alias std.iterator.ElementType!(TRange) TElem;
+    alias SIter = Iterator!(SRange);
+    alias TElem = std.iterator.ElementType!(TRange);
     enum usingInt = isIntegral!(TElem);
 
     static if (usingInt)
@@ -10890,7 +10889,7 @@ unittest
 //     SwapStrategy ss = SwapStrategy.unstable,
 //     Range)(Range r)
 // {
-//     alias Iterator!(Range) Iter;
+//     alias Iter = Iterator!(Range);
 //     auto result = new Iter[r.length];
 //     // assume collection already ordered
 //     size_t i = 0;
@@ -10899,7 +10898,7 @@ unittest
 //         result[i++] = it;
 //     }
 //     // sort the index
-//     alias typeof(transform(*result[0])) Transformed;
+//     alias Transformed = typeof(transform(*result[0]));
 //     static bool indirectLess(Transformed a, Transformed b)
 //     {
 //         return less(a, b);
@@ -11185,7 +11184,7 @@ struct SetUnion(alias less = "a < b", Rs...) if (allSatisfy!(isInputRange, Rs))
 {
 private:
     Rs _r;
-    alias binaryFun!(less) comp;
+    alias comp = binaryFun!(less);
     uint _crt;
 
     void adjustPosition(uint candidate = 0)()
@@ -11218,7 +11217,7 @@ private:
     }
 
 public:
-    alias CommonType!(staticMap!(.ElementType, Rs)) ElementType;
+    alias ElementType = CommonType!(staticMap!(.ElementType, Rs));
 
     this(Rs rs)
     {
@@ -11285,7 +11284,7 @@ public:
             return result;
         }
 
-        alias length opDollar;
+        alias opDollar = length;
     }
 }
 
@@ -11460,7 +11459,7 @@ struct SetDifference(alias less = "a < b", R1, R2)
 private:
     R1 r1;
     R2 r2;
-    alias binaryFun!(less) comp;
+    alias comp = binaryFun!(less);
 
     void adjustPosition()
     {
@@ -11545,7 +11544,7 @@ private:
     R1 r1;
     R2 r2;
     //bool usingR2;
-    alias binaryFun!(less) comp;
+    alias comp = binaryFun!(less);
 
     void adjustPosition()
     {
@@ -11758,8 +11757,8 @@ struct NWayUnion(alias less, RangeOfRanges)
 {
     import std.container : BinaryHeap;
 
-    private alias .ElementType!(.ElementType!RangeOfRanges) ElementType;
-    private alias binaryFun!less comp;
+    private alias ElementType = .ElementType!(.ElementType!RangeOfRanges);
+    private alias comp = binaryFun!less;
     private RangeOfRanges _ror;
     static bool compFront(.ElementType!RangeOfRanges a,
             .ElementType!RangeOfRanges b)
@@ -11922,7 +11921,7 @@ void largestPartialIntersectionWeighted
 (RangeOfRanges ror, Range tgt, WeightsAA weights, SortOutput sorted = SortOutput.no)
 {
     if (tgt.empty) return;
-    alias ElementType!Range InfoType;
+    alias InfoType = ElementType!Range;
     bool heapComp(InfoType a, InfoType b)
     {
         return weights[a[0]] * a[1] > weights[b[0]] * b[1];
@@ -11999,7 +11998,7 @@ unittest
 {
     import std.container : Array;
 
-    alias Tuple!(uint, uint) T;
+    alias T = Tuple!(uint, uint);
     const Array!T arrayOne = Array!T( [ T(1,2), T(3,4) ] );
     const Array!T arrayTwo = Array!T([ T(1,2), T(3,4) ] );
 

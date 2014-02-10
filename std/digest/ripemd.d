@@ -670,7 +670,7 @@ unittest
  * This is an alias for $(XREF digest.digest, WrapperDigest)!RIPEMD160, see
  * $(XREF digest.digest, WrapperDigest) for more information.
  */
-alias WrapperDigest!RIPEMD160 RIPEMD160Digest;
+alias RIPEMD160Digest = WrapperDigest!RIPEMD160;
 
 ///
 unittest

@@ -53,13 +53,13 @@ version(unittest) import std.algorithm, std.conv, std.file, std.stdio;
 /**
  * The Base64
  */
-alias Base64Impl!('+', '/') Base64;
+alias Base64 = Base64Impl!('+', '/');
 
 
 /**
  * The "URL and Filename safe" Base64
  */
-alias Base64Impl!('-', '_') Base64URL;
+alias Base64URL = Base64Impl!('-', '_');
 
 
 /**
@@ -67,8 +67,8 @@ alias Base64Impl!('-', '_') Base64URL;
  *
  * Example:
  * -----
- * alias Base64Impl!('+', '/')                   Base64;    // The Base64 format(Already defined).
- * alias Base64Impl!('!', '=', Base64.NoPadding) Base64Re;  // non-standard Base64 format for Regular expression
+ * alias Base64   = Base64Impl!('+', '/');                    // The Base64 format(Already defined).
+ * alias Base64Re = Base64Impl!('!', '=', Base64.NoPadding);  // non-standard Base64 format for Regular expression
  * -----
  *
  * NOTE:
@@ -1422,7 +1422,7 @@ class Base64Exception : Exception
 
 unittest
 {
-    alias Base64Impl!('!', '=', Base64.NoPadding) Base64Re;
+    alias Base64Re = Base64Impl!('!', '=', Base64.NoPadding);
 
     // Test vectors from RFC 4648
     ubyte[][string] tv = [
@@ -1646,7 +1646,7 @@ unittest
     }
 
     { // Encoder and Decoder for single character encoding and decoding
-        alias Base64Impl!('+', '/', Base64.NoPadding) Base64NoPadding;
+        alias Base64NoPadding = Base64Impl!('+', '/', Base64.NoPadding);
 
         auto tests = [
             ""       : ["", "", "", ""],
