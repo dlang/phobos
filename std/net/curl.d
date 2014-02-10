@@ -2130,11 +2130,12 @@ struct HTTP
     /**
        Constructor taking the url as parameter.
     */
-    this(const(char)[] url)
+    static HTTP opCall(const(char)[] url)
     {
-        initialize();
-
-        this.url = url;
+        HTTP http;
+        http.initialize();
+        http.url = url;
+        return http;
     }
 
     static HTTP opCall()
@@ -2820,11 +2821,12 @@ struct FTP
     /**
        FTP access to the specified url.
     */
-    this(const(char)[] url)
+    static FTP opCall(const(char)[] url)
     {
-        initialize();
-
-        this.url = url;
+        FTP ftp;
+        ftp.initialize();
+        ftp.url = url;
+        return ftp;
     }
 
     static FTP opCall()
@@ -3157,11 +3159,12 @@ struct SMTP
     /**
         Sets to the URL of the SMTP server.
     */
-    this(const(char)[] url)
+    static SMTP opCall(const(char)[] url)
     {
-        initialize();
-
-        this.url = url;
+        SMTP smtp;
+        smtp.initialize();
+        smtp.url = url;
+        return smtp;
     }
 
     static SMTP opCall()
