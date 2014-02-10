@@ -133,7 +133,7 @@ struct JSONValue
 
     /// Value getter/setter for $(D JSON_TYPE.OBJECT).
     /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.OBJECT).
-    @property inout(JSONValue[string]) object() inout
+    @property ref inout(JSONValue[string]) object() inout
     {
         enforceEx!JSONException(type == JSON_TYPE.OBJECT,
                                 "JSONValue is not an object");
@@ -148,7 +148,7 @@ struct JSONValue
 
     /// Value getter/setter for $(D JSON_TYPE.ARRAY).
     /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.ARRAY).
-    @property inout(JSONValue[]) array() inout
+    @property ref inout(JSONValue[]) array() inout
     {
         enforceEx!JSONException(type == JSON_TYPE.ARRAY,
                                 "JSONValue is not an array");
@@ -910,6 +910,21 @@ unittest
     enum E{True = true}
     jv = E.True;
     assert(jv.type == JSON_TYPE.TRUE);
+}
+
+unittest
+{
+    // Adding new json element via array() / object() directly
+
+    JSONValue jarr = JSONValue([10]);
+    foreach (i; 0..9)
+        jarr.array ~= JSONValue(i);
+    assert(jarr.array.length == 10);
+
+    JSONValue jobj = JSONValue(["key" : JSONValue("value")]);
+    foreach (i; 0..9)
+        jobj.object[text("key", i)] = JSONValue(text("value", i));
+    assert(jobj.object.length == 10);
 }
 
 unittest
