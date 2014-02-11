@@ -112,22 +112,23 @@ private template CustomFloatParams(uint bits)
 {
     enum CustomFloatFlags flags = CustomFloatFlags.ieee
                 ^ ((bits == 80) ? CustomFloatFlags.storeNormalized : CustomFloatFlags.none);
-    static if (bits ==  8) alias CustomFloatParams!( 4,  3, flags) CustomFloatParams;
-    static if (bits == 16) alias CustomFloatParams!(10,  5, flags) CustomFloatParams;
-    static if (bits == 32) alias CustomFloatParams!(23,  8, flags) CustomFloatParams;
-    static if (bits == 64) alias CustomFloatParams!(52, 11, flags) CustomFloatParams;
-    static if (bits == 80) alias CustomFloatParams!(64, 15, flags) CustomFloatParams;
+    static if (bits ==  8) alias CustomFloatParams = CustomFloatParams!( 4,  3, flags);
+    static if (bits == 16) alias CustomFloatParams = CustomFloatParams!(10,  5, flags);
+    static if (bits == 32) alias CustomFloatParams = CustomFloatParams!(23,  8, flags);
+    static if (bits == 64) alias CustomFloatParams = CustomFloatParams!(52, 11, flags);
+    static if (bits == 80) alias CustomFloatParams = CustomFloatParams!(64, 15, flags);
 }
 
 private template CustomFloatParams(uint precision, uint exponentWidth, CustomFloatFlags flags)
 {
-    alias TypeTuple!(
-        precision,
-        exponentWidth,
-        flags,
-        (1 << (exponentWidth - ((flags & flags.probability) == 0)))
-         - ((flags & (flags.nan | flags.infinity)) != 0) - ((flags & flags.probability) != 0)
-    ) CustomFloatParams; // ((flags & CustomFloatFlags.probability) == 0)
+    alias CustomFloatParams =
+        TypeTuple!(
+            precision,
+            exponentWidth,
+            flags,
+            (1 << (exponentWidth - ((flags & flags.probability) == 0)))
+             - ((flags & (flags.nan | flags.infinity)) != 0) - ((flags & flags.probability) != 0)
+        ); // ((flags & CustomFloatFlags.probability) == 0)
 }
 
 /**
@@ -155,20 +156,20 @@ private template CustomFloatParams(uint precision, uint exponentWidth, CustomFlo
  * z = sin(cast(float)x) + cos(cast(float)y);           // Or use cast(T) to explicitly convert
  *
  * // Define a 8-bit custom float for storing probabilities
- * alias CustomFloat!(4, 4, CustomFloatFlags.ieee^CustomFloatFlags.probability^CustomFloatFlags.signed ) Probability;
+ * alias Probability = CustomFloat!(4, 4, CustomFloatFlags.ieee^CustomFloatFlags.probability^CustomFloatFlags.signed );
  * auto p = Probability(0.5);
  * ----
  */
 template CustomFloat(uint bits)
 if (bits == 8 || bits == 16 || bits == 32 || bits == 64 || bits == 80)
 {
-    alias CustomFloat!(CustomFloatParams!(bits)) CustomFloat;
+    alias CustomFloat = CustomFloat!(CustomFloatParams!(bits));
 }
 /// ditto
 template CustomFloat(uint precision, uint exponentWidth, CustomFloatFlags flags = CustomFloatFlags.ieee)
 if (((flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision + exponentWidth > 0)
 {
-    alias CustomFloat!(CustomFloatParams!(precision, exponentWidth, flags)) CustomFloat;
+    alias CustomFloat = CustomFloat!(CustomFloatParams!(precision, exponentWidth, flags));
 }
 /// ditto
 struct CustomFloat(
@@ -182,21 +183,21 @@ struct CustomFloat(
     private:
         // get the correct unsigned bitfield type to support > 32 bits
         template uType(uint bits) {
-            static if(bits <= size_t.sizeof*8)  alias size_t uType;
-            else                                alias ulong  uType;
+            static if(bits <= size_t.sizeof*8)  alias uType = size_t;
+            else                                alias uType = ulong ;
         }
 
         // get the correct signed   bitfield type to support > 32 bits
         template sType(uint bits) {
-            static if(bits <= ptrdiff_t.sizeof*8-1) alias ptrdiff_t sType;
-            else                                    alias long      sType;
+            static if(bits <= ptrdiff_t.sizeof*8-1) alias sType = ptrdiff_t;
+            else                                    alias sType = long;
         }
 
-        alias uType!precision     T_sig;
-        alias uType!exponentWidth T_exp;
-        alias sType!exponentWidth T_signed_exp;
+        alias T_sig = uType!precision;
+        alias T_exp = uType!exponentWidth;
+        alias T_signed_exp = sType!exponentWidth;
 
-        alias CustomFloatFlags Flags;
+        alias Flags = CustomFloatFlags;
 
         // Facilitate converting numeric types to custom float
         union ToBinary(F)
@@ -556,13 +557,13 @@ struct CustomFloat(
 
 unittest
 {
-    alias TypeTuple!(
-        CustomFloat!(5, 10),
-        CustomFloat!(5, 11, CustomFloatFlags.ieee ^ CustomFloatFlags.signed),
-        CustomFloat!(1, 15, CustomFloatFlags.ieee ^ CustomFloatFlags.signed),
-        CustomFloat!(4, 3, CustomFloatFlags.ieee | CustomFloatFlags.probability ^ CustomFloatFlags.signed)
-
-        ) FPTypes;
+    alias FPTypes =
+        TypeTuple!(
+            CustomFloat!(5, 10),
+            CustomFloat!(5, 11, CustomFloatFlags.ieee ^ CustomFloatFlags.signed),
+            CustomFloat!(1, 15, CustomFloatFlags.ieee ^ CustomFloatFlags.signed),
+            CustomFloat!(4, 3, CustomFloatFlags.ieee | CustomFloatFlags.probability ^ CustomFloatFlags.signed)
+        );
 
     foreach (F; FPTypes)
     {
@@ -627,7 +628,7 @@ on very many factors.
  */
 template FPTemporary(F) if (isFloatingPoint!F)
 {
-    alias real FPTemporary;
+    alias FPTemporary = real;
 }
 
 /**
@@ -1590,9 +1591,9 @@ unittest
 // {
 //     ReturnType!(fun) tabulateFixed(ParameterTypeTuple!(fun) arg)
 //     {
-//         alias ParameterTypeTuple!(fun)[0] num;
+//         alias num = ParameterTypeTuple!(fun)[0];
 //         static num[n] table;
-//         alias arg[0] x;
+//         alias x = arg[0];
 //         enforce(left <= x && x < right);
 //         immutable i = cast(uint) (table.length
 //                 * ((x - left) / (right - left)));
@@ -1618,7 +1619,7 @@ unittest
 // unittest
 // {
 //     enum epsilon = 0.01;
-//     alias tabulateFixed!(tanh, 700, epsilon, 0.2, 3) fasttanh;
+//     alias fasttanh = tabulateFixed!(tanh, 700, epsilon, 0.2, 3);
 //     uint testSize = 100000;
 //     auto rnd = Random(unpredictableSeed);
 //     foreach (i; 0 .. testSize) {
@@ -2176,7 +2177,7 @@ unittest
 // though floats seem accurate enough for all practical purposes, since
 // they pass the "approxEqual(inverseFft(fft(arr)), arr)" test even for
 // size 2 ^^ 22.
-private alias float lookup_t;
+private alias lookup_t = float;
 
 /**A class for performing fast Fourier transforms of power of two sizes.
  * This class encapsulates a large amount of state that is reusable when
@@ -2231,7 +2232,7 @@ private:
         assert(range.length >= 4);
         assert(isPowerOfTwo(range.length));
     } body {
-        alias ElementType!R E;
+        alias E = ElementType!R;
 
         // Converts odd indices of range to the imaginary components of
         // a range half the size.  The even indices become the real components.
@@ -2244,7 +2245,7 @@ private:
             // source.length is even because it has to be a power of 2.
             static struct OddToImaginary {
                 R source;
-                alias Complex!(CommonType!(E, typeof(buf[0].re))) C;
+                alias C = Complex!(CommonType!(E, typeof(buf[0].re)));
 
                 @property {
                     C front() {
@@ -2506,7 +2507,7 @@ public:
             slowFourier2(range, buf);
             return;
         } else {
-            alias ElementType!R E;
+            alias E = ElementType!R;
             static if(is(E : real)) {
                 return fftImplPureReal(range, buf);
             } else {
@@ -2628,7 +2629,7 @@ unittest {
     assert(approxEqual(map!"a.re"(fft1), map!"a.re"(fft1Float)));
     assert(approxEqual(map!"a.im"(fft1), map!"a.im"(fft1Float)));
 
-    alias Complex!float C;
+    alias C = Complex!float;
     auto arr2 = [C(1,2), C(3,4), C(5,6), C(7,8), C(9,10),
         C(11,12), C(13,14), C(15,16)];
     auto fft2 = fft(arr2);
@@ -2689,7 +2690,7 @@ struct Stride(R) {
     Unqual!R range;
     size_t _nSteps;
     size_t _length;
-    alias ElementType!(R) E;
+    alias E = ElementType!(R);
 
     this(R range, size_t nStepsIn) {
         this.range = range;
@@ -2765,7 +2766,7 @@ void slowFourier2(Ret, R)(R range, Ret buf) {
 // Hard-coded base case for FFT of size 4.  Doesn't work as well as the size
 // 2 case.
 void slowFourier4(Ret, R)(R range, Ret buf) {
-    alias ElementType!Ret C;
+    alias C = ElementType!Ret;
 
     assert(range.length == 4);
     assert(buf.length == 4);

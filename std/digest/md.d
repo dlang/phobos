@@ -508,7 +508,7 @@ unittest
  * This is an alias for $(XREF digest.digest, WrapperDigest)!MD5, see
  * $(XREF digest.digest, WrapperDigest) for more information.
  */
-alias WrapperDigest!MD5 MD5Digest;
+alias MD5Digest = WrapperDigest!MD5;
 
 ///
 unittest

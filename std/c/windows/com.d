@@ -8,8 +8,8 @@ import std.c.windows.windows;
 import std.string;
 
 alias WCHAR OLECHAR;
-alias OLECHAR *LPOLESTR;
-alias OLECHAR *LPCOLESTR;
+alias LPOLESTR = OLECHAR*;
+alias LPCOLESTR = OLECHAR*;
 
 enum
 {
@@ -65,11 +65,11 @@ enum
        COINIT_DISABLE_OLE1DDE     = 0x4,
        COINIT_SPEED_OVER_MEMORY   = 0x8
 }
-alias DWORD COINIT;
+alias COINIT = DWORD;
 enum RPC_E_CHANGED_MODE = 0x80010106;
 
-alias const(GUID) IID;
-alias const(GUID) CLSID;
+alias IID = const(GUID);
+alias CLSID = const(GUID);
 
 extern (C)
 {

@@ -317,9 +317,9 @@ auto crc32Of(T...)(T data)
  * This is a convenience alias for $(XREF digest.digest, toHexString) producing the usual
  * CRC32 string output.
  */
-public alias toHexString!(Order.decreasing) crcHexString;
+public alias crcHexString = toHexString!(Order.decreasing);
 ///ditto
-public alias toHexString!(Order.decreasing, 16) crcHexString;
+public alias crcHexString = toHexString!(Order.decreasing, 16);
 
 ///
 unittest
@@ -335,7 +335,7 @@ unittest
  * This is an alias for $(XREF digest.digest, WrapperDigest)!CRC32, see
  * $(XREF digest.digest, WrapperDigest) for more information.
  */
-alias WrapperDigest!CRC32 CRC32Digest;
+alias CRC32Digest = WrapperDigest!CRC32;
 
 ///
 unittest

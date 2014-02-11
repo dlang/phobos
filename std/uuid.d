@@ -1316,8 +1316,8 @@ UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
             }
         }
     }
-    alias TestRange!false TestInputRange;
-    alias TestRange!true TestForwardRange;
+    alias TestInputRange = TestRange!false;
+    alias TestForwardRange = TestRange!true;
 
     assert(isInputRange!TestInputRange);
     assert(is(ElementType!TestInputRange == dchar));

@@ -3886,7 +3886,7 @@ template BacktrackingMatcher(bool CTregex)
 //generate code for TypeTuple(S, S+1, S+2, ... E)
 @system string ctGenSeq(int S, int E)
 {
-    string s = "alias TypeTuple!(";
+    string s = "alias Sequence = TypeTuple!(";
     if(S < E)
         s ~= to!string(S);
     for(int i = S+1; i < E;i++)
@@ -3894,7 +3894,7 @@ template BacktrackingMatcher(bool CTregex)
         s ~= ", ";
         s ~= to!string(i);
     }
-    return s ~") Sequence;";
+    return s ~");";
 }
 
 //alias to TypeTuple(S, S+1, S+2, ... E)
@@ -5364,7 +5364,7 @@ enum OneShot { Fwd, Bwd };
         {
             writefln("---------------single shot match ----------------- ");
         }
-            alias eval evalFn;
+        alias evalFn = eval;
         assert(clist == (ThreadList!DataIndex).init || startPc == RestartPc); // incorrect after a partial match
         assert(nlist == (ThreadList!DataIndex).init || startPc == RestartPc);
             startPc = startPc;

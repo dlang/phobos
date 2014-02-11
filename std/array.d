@@ -28,7 +28,7 @@ a special case in an overload.
 ForeachType!Range[] array(Range)(Range r)
 if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
 {
-    alias ForeachType!Range E;
+    alias E = ForeachType!Range;
     static if (hasLength!Range)
     {
         if(r.length == 0) return null;
@@ -243,8 +243,8 @@ auto assocArray(Range)(Range r)
     if (isInputRange!Range && isTuple!(ElementType!Range) &&
         ElementType!Range.length == 2)
 {
-    alias ElementType!Range.Types[0] KeyType;
-    alias ElementType!Range.Types[1] ValueType;
+    alias KeyType = ElementType!Range.Types[0];
+    alias ValueType = ElementType!Range.Types[1];
     ValueType[KeyType] aa;
     foreach (t; r)
         aa[t[0]] = t[1];
@@ -364,7 +364,7 @@ if(allSatisfy!(isIntegral, I))
         to!string(sizes.length) ~ " dimensions specified for a " ~
         to!string(nDimensions!T) ~ " dimensional array.");
 
-    alias typeof(T.init[0]) E;
+    alias E = typeof(T.init[0]);
 
     auto ptr = (__ctfe) ?
         {
@@ -693,7 +693,7 @@ slice, returns that slice. Otherwise, returns the null slice.
 */
 inout(T)[] overlap(T)(inout(T)[] r1, inout(T)[] r2) @trusted pure nothrow
 {
-    alias inout(T) U;
+    alias U = inout(T);
     static U* max(U* a, U* b) nothrow { return a > b ? a : b; }
     static U* min(U* a, U* b) nothrow { return a < b ? a : b; }
 
@@ -1303,7 +1303,7 @@ returns a new array. For a lazy version, refer to $(XREF range, repeat).
  */
 ElementEncodingType!S[] replicate(S)(S s, size_t n) if (isDynamicArray!S)
 {
-    alias ElementEncodingType!S[] RetType;
+    alias RetType = ElementEncodingType!S[];
 
     // Optimization for return join(std.range.repeat(s, n));
     if (n == 0)
@@ -1529,8 +1529,8 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
        isInputRange!R &&
        is(Unqual!(ElementType!(ElementType!RoR)) == Unqual!(ElementType!R)))
 {
-    alias ElementType!RoR RoRElem;
-    alias typeof(return) RetType;
+    alias RoRElem = ElementType!RoR;
+    alias RetType = typeof(return);
 
     if (ror.empty)
         return RetType.init;
@@ -1544,7 +1544,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     else static if (!isArray!R)
         auto sepArr = array(sep);
     else
-        alias sep sepArr;
+        alias sepArr = sep;
 
     auto result = appender!RetType();
     static if(isForwardRange!RoR &&
@@ -1574,12 +1574,12 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
     if(isInputRange!RoR &&
        isInputRange!(ElementType!RoR))
 {
-    alias typeof(return) RetType;
+    alias RetType = typeof(return);
 
     if (ror.empty)
         return RetType.init;
 
-    alias ElementType!RoR R;
+    alias R = ElementType!RoR;
     auto result = appender!RetType();
     static if(isForwardRange!RoR && (hasLength!R || isNarrowString!R))
     {
@@ -1692,7 +1692,7 @@ unittest
     assert(join([[1, 2], [41, 42]]) == [1, 2, 41, 42]);
     assert(join(cast(int[][])[]).empty);
 
-    alias filter!"true" f;
+    alias f = filter!"true";
     assert(join([[1, 2], [41, 42]],          [5, 6]) == [1, 2, 5, 6, 41, 42]);
     assert(join(f([[1, 2], [41, 42]]),       [5, 6]) == [1, 2, 5, 6, 41, 42]);
     assert(join([f([1, 2]), f([41, 42])],    [5, 6]) == [1, 2, 5, 6, 41, 42]);
@@ -1792,7 +1792,7 @@ unittest
     }
     foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
-        alias ElementEncodingType!S Char;
+        alias Char = ElementEncodingType!S;
         S s = to!S("yet another dummy text, yet another ...");
         S from = to!S("yet another");
         S into = to!S("some");
@@ -2068,7 +2068,7 @@ unittest
     foreach(S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
                           const(char[]), immutable(char[])))
     {
-        alias Unqual!S T;
+        alias T = Unqual!S;
 
         auto s = to!S("This is a foo foo list");
         auto from = to!T("foo");
@@ -2350,7 +2350,7 @@ struct Appender(A : T[], T)
     // Const fixing hack.
     void put(Range)(Range items) if (canPutConstRange!Range)
     {
-        alias put!(Unqual!Range) p;
+        alias p = put!(Unqual!Range);
         p(items);
     }
 
@@ -2542,7 +2542,7 @@ struct RefAppender(A : T[], T)
         mixin("return impl." ~ fn ~ "(args);");
     }
 
-    private alias Appender!(A, T) AppenderType;
+    private alias AppenderType = Appender!(A, T);
 
     /**
      * Appends one item to the managed array.

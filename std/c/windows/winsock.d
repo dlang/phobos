@@ -13,8 +13,8 @@ private import std.c.windows.windows;
 
 extern(Windows):
 
-alias size_t SOCKET;
-alias int    socklen_t;
+alias SOCKET = size_t;
+alias socklen_t = int;
 
 const SOCKET INVALID_SOCKET = cast(SOCKET)~0;
 const int SOCKET_ERROR = -1;
@@ -32,7 +32,7 @@ struct WSADATA
     USHORT iMaxUdpDg;
     char* lpVendorInfo;
 }
-alias WSADATA* LPWSADATA;
+alias LPWSADATA = WSADATA*;
 
 
 const int IOCPARM_MASK =  0x7F;
@@ -226,7 +226,7 @@ struct fd_set_custom(uint SETSIZE)
     SOCKET[SETSIZE] fd_array;
 }
 
-alias fd_set_custom!FD_SETSIZE fd_set;
+alias fd_set = fd_set_custom!FD_SETSIZE;
 
 // Removes.
 void FD_CLR(SOCKET fd, fd_set* set)
@@ -519,14 +519,14 @@ union in6_addr
     uint16_t[8] s6_addr16;
     uint32_t[4] s6_addr32;
 
-    alias s6_addr8 s6_addr;
+    alias s6_addr = s6_addr8;
 }
 
 
 const in6_addr IN6ADDR_ANY = { s6_addr8: [0] };
 const in6_addr IN6ADDR_LOOPBACK = { s6_addr8: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1] };
-//alias IN6ADDR_ANY IN6ADDR_ANY_INIT;
-//alias IN6ADDR_LOOPBACK IN6ADDR_LOOPBACK_INIT;
+//alias IN6ADDR_ANY_INIT = IN6ADDR_ANY;
+//alias IN6ADDR_LOOPBACK_INIT = IN6ADDR_LOOPBACK;
 
 const uint INET_ADDRSTRLEN = 16;
 const uint INET6_ADDRSTRLEN = 46;
@@ -587,8 +587,8 @@ struct hostent
 }
 
 struct WSAOVERLAPPED;
-alias WSAOVERLAPPED* LPWSAOVERLAPPED;
-alias void function(DWORD, DWORD, LPWSAOVERLAPPED, DWORD) LPWSAOVERLAPPED_COMPLETION_ROUTINE;
+alias LPWSAOVERLAPPED = WSAOVERLAPPED*;
+alias LPWSAOVERLAPPED_COMPLETION_ROUTINE = void function(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
 int WSAIoctl(SOCKET s, DWORD dwIoControlCode,
     LPVOID lpvInBuffer, DWORD cbInBuffer,
     LPVOID lpvOutBuffer, DWORD cbOutBuffer,

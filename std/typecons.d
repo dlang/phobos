@@ -14,11 +14,11 @@ Synopsis:
 
 ----
 // value tuples
-alias Tuple!(float, "x", float, "y", float, "z") Coord;
+alias Coord = Tuple!(float, "x", float, "y", float, "z");
 Coord c;
 c[1] = 1;       // access by index
 c.z = 1;        // access by given name
-alias Tuple!(string, string) DicEntry; // names can be omitted
+alias DicEntry = Tuple!(string, string); // names can be omitted
 
 // Rebindable references to const and immutable objects
 void bar()
@@ -60,9 +60,10 @@ Example:
 struct Unique(T)
 {
 static if (is(T:Object))
-    alias T RefT;
+    alias RefT = T;
 else
-    alias T * RefT;
+    alias RefT = T*;
+
 public:
 /+ Doesn't work yet
     /**
@@ -170,7 +171,7 @@ unittest
         ~this() { writefln("    Bar destructor"); }
         int val() const { return 4; }
     }
-    alias Unique!(Bar) UBar;
+    alias UBar = Unique!(Bar);
     UBar g(UBar u)
     {
         return u;
@@ -194,7 +195,7 @@ unittest
         ~this() { writefln("    Bar destructor"); }
         int val() const { return 3; }
     }
-    alias Unique!(Foo) UFoo;
+    alias UFoo = Unique!(Foo);
 
     UFoo f(UFoo u)
     {
@@ -246,7 +247,7 @@ members. The method above is still applicable to all fields.
 Example:
 
 ----
-alias Tuple!(int, "index", string, "value") Entry;
+alias Entry = Tuple!(int, "index", string, "value");
 Entry e;
 e.index = 4;
 e.value = "Hello";
@@ -277,19 +278,21 @@ template Tuple(Specs...)
     {
         static if (Specs.length == 0)
         {
-            alias TypeTuple!() parseSpecs;
+            alias parseSpecs = TypeTuple!();
         }
         else static if (is(Specs[0]))
         {
             static if (is(typeof(Specs[1]) : string))
             {
-                alias TypeTuple!(FieldSpec!(Specs[0 .. 2]),
-                                 parseSpecs!(Specs[2 .. $])) parseSpecs;
+                alias parseSpecs =
+                    TypeTuple!(FieldSpec!(Specs[0 .. 2]),
+                               parseSpecs!(Specs[2 .. $]));
             }
             else
             {
-                alias TypeTuple!(FieldSpec!(Specs[0]),
-                                 parseSpecs!(Specs[1 .. $])) parseSpecs;
+                alias parseSpecs =
+                    TypeTuple!(FieldSpec!(Specs[0]),
+                               parseSpecs!(Specs[1 .. $]));
             }
         }
         else
@@ -301,19 +304,19 @@ template Tuple(Specs...)
 
     template FieldSpec(T, string s = "")
     {
-        alias T Type;
-        alias s name;
+        alias Type = T;
+        alias name = s;
     }
 
-    alias parseSpecs!Specs fieldSpecs;
+    alias fieldSpecs = parseSpecs!Specs;
 
     // Used with staticMap.
-    template extractType(alias spec) { alias spec.Type extractType; }
-    template extractName(alias spec) { alias spec.name extractName; }
+    alias extractType(alias spec) = spec.Type;
+    alias extractName(alias spec) = spec.name;
 
     // Generates named fields as follows:
-    //    alias Identity!(field[0]) name_0;
-    //    alias Identity!(field[1]) name_1;
+    //    alias name_0 = Identity!(field[0]);
+    //    alias name_1 = Identity!(field[1]);
     //      :
     // NOTE: field[k] is an expression (which yields a symbol of a
     //       variable) and can't be aliased directly.
@@ -324,10 +327,10 @@ template Tuple(Specs...)
         {
             import std.string : format;
 
-            decl ~= format("alias Identity!(field[%s]) _%s;", i, i);
+            decl ~= format("alias _%s = Identity!(field[%s]);", i, i);
             if (name.length != 0)
             {
-                decl ~= format("alias _%s %s;", i, name);
+                decl ~= format("alias %s = _%s;", name, i);
             }
         }
         return decl;
@@ -335,21 +338,18 @@ template Tuple(Specs...)
 
     // Returns Specs for a subtuple this[from .. to] preserving field
     // names if any.
-    template sliceSpecs(size_t from, size_t to)
-    {
-        alias staticMap!(expandSpec,
-                         fieldSpecs[from .. to]) sliceSpecs;
-    }
+    alias sliceSpecs(size_t from, size_t to) =
+        staticMap!(expandSpec, fieldSpecs[from .. to]);
 
     template expandSpec(alias spec)
     {
         static if (spec.name.length == 0)
         {
-            alias TypeTuple!(spec.Type) expandSpec;
+            alias expandSpec = TypeTuple!(spec.Type);
         }
         else
         {
-            alias TypeTuple!(spec.Type, spec.name) expandSpec;
+            alias expandSpec = TypeTuple!(spec.Type, spec.name);
         }
     }
 
@@ -374,7 +374,7 @@ template Tuple(Specs...)
         /**
          * The type of the tuple's components.
          */
-        alias staticMap!(extractType, fieldSpecs) Types;
+        alias Types = staticMap!(extractType, fieldSpecs);
 
         /**
          * Use $(D t.expand) for a tuple $(D t) to expand it into its
@@ -584,20 +584,15 @@ template Tuple(Specs...)
     }
 }
 
-private template isPrintable(T)
-{
-    enum isPrintable = is(typeof({
+private enum bool isPrintable(T) =
+    is(typeof({
         import std.format : formattedWrite;
 
         Appender!string w;
         formattedWrite(w, "%s", T.init);
     }));
-}
 
-private template Identity(alias T)
-{
-    alias T Identity;
-}
+private alias Identity(alias T) = T;
 
 unittest
 {
@@ -743,7 +738,7 @@ unittest
     {
         const int x = 1;
         auto t1 = tuple(x);
-        alias Tuple!(const(int)) T;
+        alias T = Tuple!(const(int));
         auto t2 = T(1);
     }
     // 9431
@@ -961,11 +956,11 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!T)
 {
     static if (!is(T X == const U, U) && !is(T X == immutable U, U))
     {
-        alias T Rebindable;
+        alias Rebindable = T;
     }
     else static if (isArray!T)
     {
-        alias const(ElementType!T)[] Rebindable;
+        alias Rebindable = const(ElementType!T)[];
     }
     else
     {
@@ -1862,11 +1857,7 @@ void main()
 See_Also:
   AutoImplement, generateEmptyFunction
  */
-template BlackHole(Base)
-{
-    alias AutoImplement!(Base, generateEmptyFunction, isAbstractFunction)
-            BlackHole;
-}
+alias BlackHole(Base) = AutoImplement!(Base, generateEmptyFunction, isAbstractFunction);
 
 unittest
 {
@@ -1933,11 +1924,7 @@ void main()
 See_Also:
   AutoImplement, generateAssertTrap
  */
-template WhiteHole(Base)
-{
-    alias AutoImplement!(Base, generateAssertTrap, isAbstractFunction)
-            WhiteHole;
-}
+alias WhiteHole(Base) = AutoImplement!(Base, generateAssertTrap, isAbstractFunction);
 
 // / ditto
 class NotImplementedError : Error
@@ -2036,10 +2023,7 @@ string generateLogger(C, alias fun)() @property
 
 --------------------
 // Sees if fun returns something.
-template hasValue(alias fun)
-{
-    enum bool hasValue = !is(ReturnType!(fun) == void);
-}
+enum bool hasValue(alias fun) = !is(ReturnType!(fun) == void);
 --------------------
 
 
@@ -2068,9 +2052,8 @@ $(UL
  */
 class AutoImplement(Base, alias how, alias what = isAbstractFunction) : Base
 {
-    private alias AutoImplement_Helper!(
-            "autoImplement_helper_", "Base", Base, how, what )
-             autoImplement_helper_;
+    private alias autoImplement_helper_ =
+        AutoImplement_Helper!("autoImplement_helper_", "Base", Base, how, what);
     mixin(autoImplement_helper_.code);
 }
 
@@ -2092,15 +2075,15 @@ private static:
     {
         static if (lst.length > 0)
         {
-            alias staticFilter!(pred, lst[1 .. $]) tail;
+            alias tail = staticFilter!(pred, lst[1 .. $]);
             //
             static if (pred!(lst[0]))
-                alias TypeTuple!(lst[0], tail) staticFilter;
+                alias staticFilter = TypeTuple!(lst[0], tail);
             else
-                alias tail staticFilter;
+                alias staticFilter = tail;
         }
         else
-            alias TypeTuple!() staticFilter;
+            alias staticFilter = TypeTuple!();
     }
 
     // Returns function overload sets in the class C, filtered with pred.
@@ -2110,19 +2093,19 @@ private static:
         {
             static if (names.length > 0)
             {
-                alias staticFilter!(pred, MemberFunctionsTuple!(C, names[0])) methods;
-                alias Impl!(names[1 .. $]) next;
+                alias methods = staticFilter!(pred, MemberFunctionsTuple!(C, names[0]));
+                alias next = Impl!(names[1 .. $]);
 
                 static if (methods.length > 0)
-                    alias TypeTuple!(OverloadSet!(names[0], methods), next) Impl;
+                    alias Impl = TypeTuple!(OverloadSet!(names[0], methods), next);
                 else
-                    alias next Impl;
+                    alias Impl = next;
             }
             else
-                alias TypeTuple!() Impl;
+                alias Impl = TypeTuple!();
         }
 
-        alias Impl!(__traits(allMembers, C)) enumerateOverloads;
+        alias enumerateOverloads = Impl!(__traits(allMembers, C));
     }
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
@@ -2130,27 +2113,23 @@ private static:
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
     // Add a non-final check to the cherrypickMethod.
-    template canonicalPicker(fun.../+[BUG 4217]+/)
-    {
-        enum bool canonicalPicker = !__traits(isFinalFunction, fun[0]) &&
-                                    cherrypickMethod!(fun);
-    }
+    enum bool canonicalPicker(fun.../+[BUG 4217]+/) =
+        !__traits(isFinalFunction, fun[0]) && cherrypickMethod!(fun);
 
     /*
      * A tuple of overload sets, each item of which consists of functions to be
      * implemented by the generated code.
      */
-    alias enumerateOverloads!(Base, canonicalPicker) targetOverloadSets;
+    alias targetOverloadSets = enumerateOverloads!(Base, canonicalPicker);
 
     /*
      * A tuple of the super class' constructors.  Used for forwarding
      * constructor calls.
      */
     static if (__traits(hasMember, Base, "__ctor"))
-        alias OverloadSet!("__ctor", __traits(getOverloads, Base, "__ctor"))
-                ctorOverloadSet;
+        alias ctorOverloadSet = OverloadSet!("__ctor", __traits(getOverloads, Base, "__ctor"));
     else
-        alias OverloadSet!("__ctor") ctorOverloadSet; // empty
+        alias ctorOverloadSet = OverloadSet!("__ctor"); // empty
 
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
@@ -2195,10 +2174,9 @@ private static:
         {
             mixin populate!(name, methods[0 .. $ - 1]);
             //
-            alias methods[$ - 1] target;
+            alias target = methods[$ - 1];
             enum ith = methods.length - 1;
-            mixin( "alias FuncInfo!(target) " ~
-                        INTERNAL_FUNCINFO_ID!(name, ith) ~ ";" );
+            mixin("alias " ~ INTERNAL_FUNCINFO_ID!(name, ith) ~ " = FuncInfo!target;");
         }
     }
 
@@ -2262,10 +2240,8 @@ private static:
     // Generated code
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
-    alias MemberFunctionGenerator!( ConstructorGeneratingPolicy!() )
-            ConstructorGenerator;
-    alias MemberFunctionGenerator!( MethodGeneratingPolicy!() )
-            MethodGenerator;
+    alias ConstructorGenerator = MemberFunctionGenerator!(ConstructorGeneratingPolicy!());
+    alias MethodGenerator      = MemberFunctionGenerator!(MethodGeneratingPolicy!());
 
     public enum string code =
         ConstructorGenerator.generateCode!(  ctorOverloadSet ) ~ "\n" ~
@@ -2404,7 +2380,7 @@ Used by MemberFunctionGenerator.
 package template OverloadSet(string nam, T...)
 {
     enum string name = nam;
-    alias T contents;
+    alias contents = T;
 }
 
 /*
@@ -2412,13 +2388,13 @@ Used by MemberFunctionGenerator.
  */
 package template FuncInfo(alias func, /+[BUG 4217 ?]+/ T = typeof(&func))
 {
-    alias         ReturnType!(T) RT;
-    alias ParameterTypeTuple!(T) PT;
+    alias RT =         ReturnType!T;
+    alias PT = ParameterTypeTuple!T;
 }
 package template FuncInfo(Func)
 {
-    alias         ReturnType!(Func) RT;
-    alias ParameterTypeTuple!(Func) PT;
+    alias RT =         ReturnType!Func;
+    alias PT = ParameterTypeTuple!Func;
 }
 
 /*
@@ -2466,24 +2442,21 @@ private static:
     // preferred identifier for i-th parameter variable
     static if (__traits(hasMember, Policy, "PARAMETER_VARIABLE_ID"))
     {
-        alias Policy.PARAMETER_VARIABLE_ID PARAMETER_VARIABLE_ID;
+        alias PARAMETER_VARIABLE_ID = Policy.PARAMETER_VARIABLE_ID;
     }
     else
     {
-        template PARAMETER_VARIABLE_ID(size_t i)
-        {
-            enum string PARAMETER_VARIABLE_ID = format("a%s", i);
-                // default: a0, a1, ...
-        }
+        enum string PARAMETER_VARIABLE_ID(size_t i) = format("a%s", i);
+            // default: a0, a1, ...
     }
 
     // Returns a tuple consisting of 0,1,2,...,n-1.  For static foreach.
     template CountUp(size_t n)
     {
         static if (n > 0)
-            alias TypeTuple!(CountUp!(n - 1), n - 1) CountUp;
+            alias CountUp = TypeTuple!(CountUp!(n - 1), n - 1);
         else
-            alias TypeTuple!() CountUp;
+            alias CountUp = TypeTuple!();
     }
 
 
@@ -2503,7 +2476,7 @@ private static:
         foreach (i_; CountUp!(0 + overloads.length)) // workaround
         {
             enum i = 0 + i_; // workaround
-            alias overloads[i] oset;
+            alias oset = overloads[i];
 
             code ~= generateCodeForOverloadSet!(oset);
 
@@ -2512,9 +2485,10 @@ private static:
                 // The generated function declarations may hide existing ones
                 // in the base class (cf. HiddenFuncError), so we put an alias
                 // declaration here to reveal possible hidden functions.
-                code ~= format("alias %s.%s %s;\n",
+                code ~= format("alias %s = %s.%s;\n",
+                            oset.name,
                             Policy.BASE_CLASS_ID, // [BUG 2540] super.
-                            oset.name, oset.name );
+                            oset.name);
             }
         }
         return code;
@@ -2551,8 +2525,8 @@ private static:
 
         /*** Function Declarator ***/
         {
-            alias FunctionTypeOf!(func) Func;
-            alias FunctionAttribute FA;
+            alias Func = FunctionTypeOf!(func);
+            alias FA = FunctionAttribute;
             enum atts     = functionAttributes!(func);
             enum realName = isCtor ? "this" : name;
 
@@ -2618,10 +2592,10 @@ private static:
             /* Declare keywords: args, self and parent. */
             string preamble;
 
-            preamble ~= "alias TypeTuple!(" ~ enumerateParameters!(nparams) ~ ") args;\n";
+            preamble ~= "alias args = TypeTuple!(" ~ enumerateParameters!(nparams) ~ ");\n";
             if (!isCtor)
             {
-                preamble ~= "alias " ~ name ~ " self;\n";
+                preamble ~= "alias self = " ~ name ~ ";\n";
                 if (WITH_BASE_CLASS && !__traits(isAbstractFunction, func))
                     //preamble ~= "alias super." ~ name ~ " parent;\n"; // [BUG 2540]
                     preamble ~= "auto parent = &super." ~ name ~ ";\n";
@@ -2647,8 +2621,8 @@ private static:
      */
     private string generateParameters(string myFuncInfo, func...)()
     {
-        alias ParameterStorageClass STC;
-        alias ParameterStorageClassTuple!(func) stcs;
+        alias STC = ParameterStorageClass;
+        alias stcs = ParameterStorageClassTuple!(func);
         enum nparams = stcs.length;
 
         string params = ""; // the result
@@ -2925,7 +2899,7 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
                 }
                 static @property mod()
                 {
-                    alias TypeTuple!(TargetMembers[i].type)[0] type;
+                    alias type = TypeTuple!(TargetMembers[i].type)[0];
                     string r;
                     static if (is(type == immutable))       r ~= " immutable";
                     else
@@ -3449,11 +3423,11 @@ private template staticIota(int beg, int end)
     {
         static if (beg >= end)
         {
-            alias TypeTuple!() staticIota;
+            alias staticIota = TypeTuple!();
         }
         else
         {
-            alias TypeTuple!(+beg) staticIota;
+            alias staticIota = TypeTuple!(+beg);
         }
     }
     else
@@ -3473,7 +3447,7 @@ private template mixinAll(mixins...)
         }
         else
         {
-            alias mixins[0] it;
+            alias it = mixins[0];
             mixin it;
         }
     }
@@ -3486,10 +3460,7 @@ private template mixinAll(mixins...)
 
 private template Bind(alias Template, args1...)
 {
-    template Bind(args2...)
-    {
-        alias Bind = Template!(args1, args2);
-    }
+    alias Bind(args2...) = Template!(args1, args2);
 }
 
 
@@ -3788,7 +3759,7 @@ unittest
        U u;
     }
 
-    alias RefCounted!S SRC;
+    alias SRC = RefCounted!S;
 }
 
 // 6436
@@ -4164,10 +4135,7 @@ unittest
 /**
 Library typedef.
  */
-template Typedef(T)
-{
-    alias .Typedef!(T, T.init) Typedef;
-}
+alias Typedef(T) = .Typedef!(T, T.init);
 
 /// ditto
 struct Typedef(T, T init, string cookie=null)
@@ -4198,8 +4166,8 @@ unittest
 
     static assert(typeof(z).init == 1.0);
 
-    alias Typedef!(int, 0, "dollar") Dollar;
-    alias Typedef!(int, 0, "yen") Yen;
+    alias Dollar = Typedef!(int, 0, "dollar");
+    alias Yen    = Typedef!(int, 0, "yen");
     static assert(!is(Dollar == Yen));
 
     Typedef!(int[3]) sa;
@@ -4251,7 +4219,7 @@ unittest
     import std.bitmanip;
     static import core.stdc.config;
 
-    alias Typedef!(core.stdc.config.c_ulong) c_ulong;
+    alias c_ulong = Typedef!(core.stdc.config.c_ulong);
 
     static struct Foo
     {
@@ -4277,8 +4245,8 @@ template scoped(T)
 {
     // _d_newclass now use default GC alignment (looks like (void*).sizeof * 2 for
     // small objects). We will just use the maximum of filed alignments.
-    alias classInstanceAlignment!T alignment;
-    alias _alignUp!alignment aligned;
+    alias alignment = classInstanceAlignment!T;
+    alias aligned = _alignUp!alignment;
 
     static struct Scoped
     {

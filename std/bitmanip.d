@@ -77,7 +77,7 @@ private template createAccessors(
         {
             enum long minVal = -(1uL << (len - 1));
             enum ulong maxVal = (1uL << (len - 1)) - 1;
-            alias Unsigned!(T) UT;
+            alias UT = Unsigned!(T);
             enum UT extendSign = cast(UT)~((~0uL) >> (64 - len));
         }
         else
@@ -141,17 +141,17 @@ private template createFields(string store, size_t offset, Ts...)
     static if (!Ts.length)
     {
         static if (offset == ubyte.sizeof * 8)
-            alias ubyte StoreType;
+            alias StoreType = ubyte;
         else static if (offset == ushort.sizeof * 8)
-            alias ushort StoreType;
+            alias StoreType = ushort;
         else static if (offset == uint.sizeof * 8)
-            alias uint StoreType;
+            alias StoreType = uint;
         else static if (offset == ulong.sizeof * 8)
-            alias ulong StoreType;
+            alias StoreType = ulong;
         else
         {
             static assert(false, "Field widths must sum to 8, 16, 32, or 64");
-            alias ulong StoreType; // just to avoid another error msg
+            alias StoreType = ulong; // just to avoid another error msg
         }
         enum result = "private " ~ StoreType.stringof ~ " " ~ store ~ ";";
     }
@@ -3347,7 +3347,7 @@ unittest
     foreach(endianness; TypeTuple!(Endian.bigEndian, Endian.littleEndian))
     {
         auto toWrite = appender!(ubyte[])();
-        alias TypeTuple!(uint, int, long, ulong, short, ubyte, ushort, byte, uint) Types;
+        alias Types = TypeTuple!(uint, int, long, ulong, short, ubyte, ushort, byte, uint);
         ulong[] values = [42, -11, long.max, 1098911981329L, 16, 255, 19012, 2, 17];
         assert(Types.length == values.length);
 

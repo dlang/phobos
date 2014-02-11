@@ -318,11 +318,12 @@ template DigestType(T)
 {
     static if(isDigest!T)
     {
-        alias ReturnType!(typeof(
+        alias DigestType =
+            ReturnType!(typeof(
             {
                 T dig = void;
                 return dig.finish();
-            })) DigestType;
+            }));
     }
     else
         static assert(false, T.stringof ~ " is not a digest! (fails isDigest!T)");

@@ -390,7 +390,7 @@ T toImpl(T, S)(S value)
     // Conversion between same size
     foreach (S; TypeTuple!(byte, short, int, long))
     {
-        alias Unsigned!S U;
+        alias U = Unsigned!S;
 
         foreach (Sint; TypeTuple!(S, const S, immutable S))
         foreach (Uint; TypeTuple!(U, const U, immutable U))
@@ -411,8 +411,8 @@ T toImpl(T, S)(S value)
     foreach (i, S1; TypeTuple!(byte, short, int, long))
     foreach (   S2; TypeTuple!(byte, short, int, long)[i+1..$])
     {
-        alias Unsigned!S1 U1;
-        alias Unsigned!S2 U2;
+        alias U1 = Unsigned!S1;
+        alias U2 = Unsigned!S2;
 
         static assert(U1.sizeof < S2.sizeof);
 
@@ -694,18 +694,18 @@ T toImpl(T, S)(S value)
 // Unittest for 6288
 @safe pure unittest
 {
-    template Identity(T)        { alias              T   Identity; }
-    template toConst(T)         { alias        const(T)  toConst; }
-    template toShared(T)        { alias       shared(T)  toShared; }
-    template toSharedConst(T)   { alias shared(const(T)) toSharedConst; }
-    template toImmutable(T)     { alias    immutable(T)  toImmutable; }
+    alias Identity(T)      =              T;
+    alias toConst(T)       =        const T;
+    alias toShared(T)      =       shared T;
+    alias toSharedConst(T) = shared const T;
+    alias toImmutable(T)   =    immutable T;
     template AddModifier(int n) if (0 <= n && n < 5)
     {
-             static if (n == 0) alias Identity       AddModifier;
-        else static if (n == 1) alias toConst        AddModifier;
-        else static if (n == 2) alias toShared       AddModifier;
-        else static if (n == 3) alias toSharedConst  AddModifier;
-        else static if (n == 4) alias toImmutable    AddModifier;
+             static if (n == 0) alias AddModifier = Identity;
+        else static if (n == 1) alias AddModifier = toConst;
+        else static if (n == 2) alias AddModifier = toShared;
+        else static if (n == 3) alias AddModifier = toSharedConst;
+        else static if (n == 4) alias AddModifier = toImmutable;
     }
 
     interface I {}
@@ -719,8 +719,8 @@ T toImpl(T, S)(S value)
     foreach (m1; TypeTuple!(0,1,2,3,4)) // enumerate modifiers
     foreach (m2; TypeTuple!(0,1,2,3,4)) // ditto
     {
-        alias AddModifier!m1 srcmod;
-        alias AddModifier!m2 tgtmod;
+        alias srcmod = AddModifier!m1;
+        alias tgtmod = AddModifier!m2;
         //pragma(msg, srcmod!Object, " -> ", tgtmod!Object, ", convertible = ",
         //            isImplicitlyConvertible!(srcmod!Object, tgtmod!Object));
 
@@ -823,7 +823,7 @@ T toImpl(T, S)(S value)
     else static if (is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[]))
     {
         // Converting void array to string
-        alias Unqual!(ElementEncodingType!T) Char;
+        alias Char = Unqual!(ElementEncodingType!T);
         auto raw = cast(const(ubyte)[]) value;
         enforce(raw.length % Char.sizeof == 0,
                 new ConvException("Alignment mismatch in converting a "
@@ -915,16 +915,15 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
         // string to string conversion
         debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
 
-        alias TypeTuple!(char, wchar, dchar) Chars;
+        alias Chars = TypeTuple!(char, wchar, dchar);
         foreach (LhsC; Chars)
         {
-            alias TypeTuple!(LhsC[], const(LhsC)[], immutable(LhsC)[]) LhStrings;
+            alias LhStrings = TypeTuple!(LhsC[], const(LhsC)[], immutable(LhsC)[]);
             foreach (Lhs; LhStrings)
             {
                 foreach (RhsC; Chars)
                 {
-                    alias TypeTuple!(RhsC[], const(RhsC)[], immutable(RhsC)[])
-                        RhStrings;
+                    alias RhStrings = TypeTuple!(RhsC[], const(RhsC)[], immutable(RhsC)[]);
                     foreach (Rhs; RhStrings)
                     {
                         Lhs s1 = to!Lhs("wyda");
@@ -993,10 +992,10 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     // Conversion representing character value with string
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
 
-    alias TypeTuple!(
-         char, const( char), immutable( char),
-        wchar, const(wchar), immutable(wchar),
-        dchar, const(dchar), immutable(dchar)) AllChars;
+    alias AllChars =
+        TypeTuple!( char, const( char), immutable( char),
+                   wchar, const(wchar), immutable(wchar),
+                   dchar, const(dchar), immutable(dchar));
     foreach (Char1; AllChars)
     {
         foreach (Char2; AllChars)
@@ -1444,8 +1443,8 @@ T toImpl(T, S)(S value)
 {
     /* This code is potentially unsafe.
      */
-    alias KeyType!T   K2;
-    alias ValueType!T V2;
+    alias K2 = KeyType!T;
+    alias V2 = ValueType!T;
 
     // While we are "building" the AA, we need to unqualify its values, and only re-qualify at the end
     Unqual!V2[K2] result;
@@ -2999,7 +2998,7 @@ Target parse(Target, Source)(ref Source s)
 
 @safe pure unittest
 {
-    alias typeof(null) NullType;
+    alias NullType = typeof(null);
     auto s1 = "null";
     assert(parse!NullType(s1) is null);
     assert(s1 == "");
@@ -4602,7 +4601,7 @@ unittest
 
 unittest //@@@9559@@@
 {
-    alias Nullable!int I;
+    alias I = Nullable!int;
     auto ints = [0, 1, 2].map!(i => i & 1 ? I.init : I(i))();
     auto asArray = std.array.array(ints);
 }

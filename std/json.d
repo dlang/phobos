@@ -27,8 +27,8 @@ import std.exception;
 private
 {
     // Prevent conflicts from these generic names
-    alias std.utf.stride UTFStride;
-    alias std.utf.decode toUnicode;
+    alias UTFStride = std.utf.stride;
+    alias toUnicode = std.utf.decode;
 }
 
 /**

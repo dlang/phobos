@@ -18,7 +18,7 @@
 module std.internal.math.biguintnoasm;
 
 public:
-alias uint BigDigit; // A Bignum is an array of BigDigits.
+alias BigDigit = uint; // A Bignum is an array of BigDigits.
 
     // Limits for when to switch between multiplication algorithms.
 enum : int { KARATSUBALIMIT = 10 }; // Minimum value for which Karatsuba is worthwhile.

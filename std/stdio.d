@@ -43,7 +43,7 @@ version (Posix)
 {
     import core.sys.posix.fcntl;
     import core.sys.posix.stdio;
-    alias core.sys.posix.stdio.fileno fileno;
+    alias fileno = core.sys.posix.stdio.fileno;
 }
 
 version (linux)
@@ -89,19 +89,19 @@ version (DIGITAL_MARS_STDIO)
 
         int setmode(int, int);
     }
-    alias _fputc_nlock FPUTC;
-    alias _fputwc_nlock FPUTWC;
-    alias _fgetc_nlock FGETC;
-    alias _fgetwc_nlock FGETWC;
+    alias FPUTC = _fputc_nlock;
+    alias FPUTWC = _fputwc_nlock;
+    alias FGETC = _fgetc_nlock;
+    alias FGETWC = _fgetwc_nlock;
 
-    alias __fp_lock FLOCK;
-    alias __fp_unlock FUNLOCK;
+    alias FLOCK = __fp_lock;
+    alias FUNLOCK = __fp_unlock;
 
-    alias setmode _setmode;
+    alias _setmode = setmode;
     enum _O_BINARY = 0x8000;
     int _fileno(FILE* f) { return f._file; }
-    alias _fileno fileno;
-    alias _fdToHandle _get_osfhandle;
+    alias fileno = _fileno;
+    alias _get_osfhandle = _fdToHandle;
 }
 else version (MICROSOFT_STDIO)
 {
@@ -119,13 +119,13 @@ else version (MICROSOFT_STDIO)
         int _setmode(int, int);
         int _fileno(FILE*);
     }
-    alias _fputc_nolock FPUTC;
-    alias _fputwc_nolock FPUTWC;
-    alias _fgetc_nolock FGETC;
-    alias _fgetwc_nolock FGETWC;
+    alias FPUTC = _fputc_nolock;
+    alias FPUTWC = _fputwc_nolock;
+    alias FGETC = _fgetc_nolock;
+    alias FGETWC = _fgetwc_nolock;
 
-    alias _lock_file FLOCK;
-    alias _unlock_file FUNLOCK;
+    alias FLOCK = _lock_file;
+    alias FUNLOCK = _unlock_file;
 
     enum _O_BINARY = 0x8000;
 
@@ -151,13 +151,13 @@ else version (GCC_IO)
                 size_t size, size_t n, _iobuf *stream);
     }
 
-    alias fputc_unlocked FPUTC;
-    alias fputwc_unlocked FPUTWC;
-    alias fgetc_unlocked FGETC;
-    alias fgetwc_unlocked FGETWC;
+    alias FPUTC = fputc_unlocked;
+    alias FPUTWC = fputwc_unlocked;
+    alias FGETC = fgetc_unlocked;
+    alias FGETWC = fgetwc_unlocked;
 
-    alias flockfile FLOCK;
-    alias funlockfile FUNLOCK;
+    alias FLOCK = flockfile;
+    alias FUNLOCK = funlockfile;
 }
 else version (GENERIC_IO)
 {
@@ -175,13 +175,13 @@ else version (GENERIC_IO)
     int fgetc_unlocked(_iobuf* fp) { return fgetc(cast(shared) fp); }
     int fgetwc_unlocked(_iobuf* fp) { return fgetwc(cast(shared) fp); }
 
-    alias fputc_unlocked FPUTC;
-    alias fputwc_unlocked FPUTWC;
-    alias fgetc_unlocked FGETC;
-    alias fgetwc_unlocked FGETWC;
+    alias FPUTC = fputc_unlocked;
+    alias FPUTWC = fputwc_unlocked;
+    alias FGETC = fgetc_unlocked;
+    alias FGETWC = fgetwc_unlocked;
 
-    alias flockfile FLOCK;
-    alias funlockfile FUNLOCK;
+    alias FLOCK = flockfile;
+    alias FUNLOCK = funlockfile;
 }
 else
 {
@@ -1026,7 +1026,7 @@ Throws: $(D Exception) if the file is not opened.
         auto w = lockingTextWriter();
         foreach (arg; args)
         {
-            alias typeof(arg) A;
+            alias A = typeof(arg);
             static if (isAggregateType!A || is(A == enum))
             {
                 import std.format : formattedWrite;
@@ -1928,7 +1928,7 @@ $(D Range) that locks the file and allows fast writing to it.
         {
             import std.exception : errnoEnforce;
 
-            alias ElementEncodingType!A C;
+            alias C = ElementEncodingType!A;
             static assert(!is(C == void));
             if (writeme[0].sizeof == 1 && orientation <= 0)
             {
@@ -2271,7 +2271,7 @@ unittest
  * $(RED Scheduled for deprecation in January 2013.
  *       Please use $(D isFileHandle) instead.)
  */
-alias isFileHandle isStreamingDevice;
+alias isStreamingDevice = isFileHandle;
 
 /***********************************
 For each argument $(D arg) in $(D args), format the argument (as per
@@ -2818,18 +2818,18 @@ struct lines
 //             if (fileName.length && fclose(f))
 //                 StdioException("Could not close file `"~fileName~"'");
 //         }
-        alias ParameterTypeTuple!(dg) Parms;
+        alias Parms = ParameterTypeTuple!(dg);
         static if (isSomeString!(Parms[$ - 1]))
         {
             enum bool duplicate = is(Parms[$ - 1] == string)
                 || is(Parms[$ - 1] == wstring) || is(Parms[$ - 1] == dstring);
             int result = 0;
             static if (is(Parms[$ - 1] : const(char)[]))
-                alias char C;
+                alias C = char;
             else static if (is(Parms[$ - 1] : const(wchar)[]))
-                alias wchar C;
+                alias C = wchar;
             else static if (is(Parms[$ - 1] : const(dchar)[]))
-                alias dchar C;
+                alias C = dchar;
             C[] line;
             static if (Parms.length == 2)
                 Parms[0] i = 0;
@@ -2864,7 +2864,7 @@ struct lines
         import std.exception : assumeUnique;
         import std.conv : to;
 
-        alias ParameterTypeTuple!(dg) Parms;
+        alias Parms = ParameterTypeTuple!(dg);
         enum duplicate = is(Parms[$ - 1] : immutable(ubyte)[]);
         int result = 1;
         int c = void;
@@ -2881,7 +2881,7 @@ struct lines
                 static if (duplicate)
                     auto arg = assumeUnique(buffer);
                 else
-                    alias buffer arg;
+                    alias arg = buffer;
                 // unlock the file while calling the delegate
                 FUNLOCK(f._p.handle);
                 scope(exit) FLOCK(f._p.handle);
@@ -2916,9 +2916,9 @@ unittest
     auto deleteme = testFilename();
     scope(exit) { std.file.remove(deleteme); }
 
-    alias TypeTuple!(string, wstring, dstring,
-                     char[], wchar[], dchar[])
-        TestedWith;
+    alias TestedWith =
+          TypeTuple!(string, wstring, dstring,
+                     char[], wchar[], dchar[]);
     foreach (T; TestedWith) {
         // test looping with an empty file
         std.file.write(deleteme, "");
@@ -2960,8 +2960,8 @@ unittest
 
     // test with ubyte[] inputs
     //@@@BUG 2612@@@
-    //alias TypeTuple!(immutable(ubyte)[], ubyte[]) TestedWith2;
-    alias TypeTuple!(immutable(ubyte)[], ubyte[]) TestedWith2;
+    //alias TestedWith2 = TypeTuple!(immutable(ubyte)[], ubyte[]);
+    alias TestedWith2 = TypeTuple!(immutable(ubyte)[], ubyte[]);
     foreach (T; TestedWith2) {
         // test looping with an empty file
         std.file.write(deleteme, "");

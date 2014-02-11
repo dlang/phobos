@@ -942,7 +942,7 @@ private:
     enum dim = Types.length;
     size_t[dim] offsets;// offset for level x
     size_t[dim] sz;// size of level x
-    alias staticMap!(bitSizeOf, Types) bitWidth;
+    alias bitWidth = staticMap!(bitSizeOf, Types);
     size_t[] storage;
 }
 
@@ -1020,15 +1020,16 @@ unittest
 
 unittest
 {// more bitpacking tests
-    alias MultiArray!(BitPacked!(size_t, 3)
+    alias Bitty =
+      MultiArray!(BitPacked!(size_t, 3)
                 , BitPacked!(size_t, 4)
                 , BitPacked!(size_t, 3)
                 , BitPacked!(size_t, 6)
-                , bool) Bitty;
-    alias sliceBits!(13, 16) fn1;
-    alias sliceBits!( 9, 13) fn2;
-    alias sliceBits!( 6,  9) fn3;
-    alias sliceBits!( 0,  6) fn4;
+                , bool);
+    alias fn1 = sliceBits!(13, 16);
+    alias fn2 = sliceBits!( 9, 13);
+    alias fn3 = sliceBits!( 6,  9);
+    alias fn4 = sliceBits!( 0,  6);
     static void check(size_t lvl, MA)(ref MA arr){
         for(size_t i = 0; i< arr.length!lvl; i++)
             assert(arr.slice!(lvl)[i] == i, text("Mismatch on lvl ", lvl, " idx ", i, " value: ", arr.slice!(lvl)[i]));
@@ -1411,7 +1412,7 @@ private struct SliceOverIndexed(T)
         return true;
     }
 private:
-    alias typeof(T.init[0]) Item;
+    alias Item = typeof(T.init[0]);
     size_t from, to;
     T* arr;
 }
@@ -1567,7 +1568,7 @@ template sharMethod(alias uniLowerBound)
         if(is(T : ElementType!Range))
     {
         import std.functional;
-        alias binaryFun!_pred pred;
+        alias pred = binaryFun!_pred;
         if(range.length == 0)
             return 0;
         if(isPowerOf2(range.length))
@@ -1583,8 +1584,8 @@ template sharMethod(alias uniLowerBound)
     }
 }
 
-alias sharMethod!uniformLowerBound sharLowerBound;
-alias sharMethod!switchUniformLowerBound sharSwitchLowerBound;
+alias sharLowerBound = sharMethod!uniformLowerBound;
+alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
 
 unittest
 {
@@ -1761,7 +1762,7 @@ unittest
 }
 
 //build hack
-alias Uint24Array!ReallocPolicy _RealArray;
+alias _RealArray = Uint24Array!ReallocPolicy;
 
 unittest
 {
@@ -1824,13 +1825,13 @@ public template isIntegralPair(T, V=uint)
     The recommended default type for set of $(CODEPOINTS).
     For details, see the current implementation: $(LREF InversionList).
 */
-public alias InversionList!GcPolicy CodepointSet;
+public alias CodepointSet = InversionList!GcPolicy;
 
 
 //@@@BUG: std.typecons tuples depend on std.format to produce fields mixin
 // which relies on std.uni.isGraphical and this chain blows up with Forward reference error
 // hence below doesn't seem to work
-// public alias Tuple!(uint, "a", uint, "b") CodepointInterval;
+// public alias CodepointInterval = Tuple!(uint, "a", uint, "b");
 
 /**
     The recommended type of $(XREF _typecons, Tuple)
@@ -2509,8 +2510,8 @@ public:
     }
 
 private:
-    alias typeof(this) This;
-    alias size_t Marker;
+    alias This = typeof(this);
+    alias Marker = size_t;
 
     // a random-access range of integral pairs
     static struct Intervals(Range)
@@ -3202,8 +3203,8 @@ private:
 
     foreach(Policy; TypeTuple!(GcPolicy, ReallocPolicy))
     {
-        alias typeof(Uint24Array!Policy.init[]) Range;
-        alias Uint24Array!Policy U24A;
+        alias Range = typeof(Uint24Array!Policy.init[]);
+        alias U24A = Uint24Array!Policy;
         static assert(isForwardRange!Range);
         static assert(isBidirectionalRange!Range);
         static assert(isOutputRange!(Range, uint));
@@ -3238,7 +3239,7 @@ private:
 
 version(unittest)
 {
-    private alias TypeTuple!(InversionList!GcPolicy, InversionList!ReallocPolicy) AllSets;
+    private alias AllSets = TypeTuple!(InversionList!GcPolicy, InversionList!ReallocPolicy);
 }
 
 @trusted unittest// core set primitives test
@@ -3533,7 +3534,7 @@ template mapTrieIndex(Prefix...)
     size_t mapTrieIndex(Key)(Key key)
         if(isValidPrefixForTrie!(Key, Prefix))
     {
-        alias Prefix p;
+        alias p = Prefix;
         size_t idx;
         foreach(i, v; p[0..$-1])
         {
@@ -3652,7 +3653,7 @@ private:
             // page at once loop
             if(state[level].idx_zeros != size_t.max && val == T.init)
             {
-                alias typeof(table.slice!(level-1)[0]) NextIdx;
+                alias NextIdx = typeof(table.slice!(level-1)[0]);
                 addValue!(level-1)(force!NextIdx(state[level].idx_zeros),
                     numVals/pageSize);
                 ptr = table.slice!level; //table structure might have changed
@@ -3689,7 +3690,7 @@ private:
     // it also makes sure that previous levels point to the correct page in this level
     void spillToNextPageImpl(size_t level, Slice)(ref Slice ptr)
     {
-        alias typeof(table.slice!(level-1)[0]) NextIdx;
+        alias NextIdx = typeof(table.slice!(level-1)[0]);
         NextIdx next_lvl_index;
         enum pageSize = 1<<Prefix[level].bitSize;
         assert(idx!level % pageSize == 0);
@@ -3929,10 +3930,11 @@ private:
 template GetBitSlicing(size_t top, sizes...)
 {
     static if(sizes.length > 0)
-        alias TypeTuple!(sliceBits!(top - sizes[0], top)
-            , GetBitSlicing!(top - sizes[0], sizes[1..$])) GetBitSlicing;
+        alias GetBitSlicing =
+            TypeTuple!(sliceBits!(top - sizes[0], top),
+                       GetBitSlicing!(top - sizes[0], sizes[1..$]));
     else
-        alias TypeTuple!()  GetBitSlicing;
+        alias GetBitSlicing = TypeTuple!();
 }
 
 template callableWith(T)
@@ -4481,8 +4483,8 @@ struct sliceBits(size_t from, size_t to)
 
 uint low_8(uint x) { return x&0xFF; }
 @safe pure nothrow uint midlow_8(uint x){ return (x&0xFF00)>>8; }
-alias assumeSize!(low_8, 8) lo8;
-alias assumeSize!(midlow_8, 8) mlo8;
+alias lo8 = assumeSize!(low_8, 8);
+alias mlo8 = assumeSize!(midlow_8, 8);
 
 static assert(bitSizeOf!lo8 == 8);
 static assert(bitSizeOf!(sliceBits!(4, 7)) == 3);
@@ -4491,9 +4493,9 @@ static assert(bitSizeOf!(BitPacked!(uint, 2)) == 2);
 template Sequence(size_t start, size_t end)
 {
     static if(start < end)
-        alias TypeTuple!(start, Sequence!(start+1, end)) Sequence;
+        alias Sequence = TypeTuple!(start, Sequence!(start+1, end));
     else
-        alias TypeTuple!() Sequence;
+        alias Sequence = TypeTuple!();
 }
 
 //---- TRIE TESTS ----
@@ -4521,8 +4523,8 @@ unittest
         }
     }
     //@@@BUG link failure, lambdas not found by linker somehow (in case of trie2)
-    // alias assumeSize!(8, function (uint x) { return x&0xFF; }) lo8;
-    // alias assumeSize!(7, function (uint x) { return (x&0x7F00)>>8; }) next8;
+    // alias lo8   = assumeSize!(8, function (uint x) { return x&0xFF; });
+    // alias next8 = assumeSize!(7, function (uint x) { return (x&0x7F00)>>8; });
     alias CodepointSet Set;
     auto set = Set('A','Z','a','z');
     auto trie = buildTrie!(bool, uint, 256, lo8)(set.byInterval);// simple bool array
@@ -4620,7 +4622,7 @@ template idxTypes(Key, size_t fullBits, Prefix...)
 {
     static if(Prefix.length == 1)
     {// the last level is value level, so no index once reduced to 1-level
-        alias TypeTuple!() idxTypes;
+        alias idxTypes = TypeTuple!();
     }
     else
     {
@@ -4629,10 +4631,11 @@ template idxTypes(Key, size_t fullBits, Prefix...)
         // The bottom level is known to hold full bit width
         // thus it's size in pages is full_bit_width - size_of_last_prefix
         // Recourse on this notion
-        alias TypeTuple!(
-            idxTypes!(Key, fullBits - bitSizeOf!(Prefix[$-1]), Prefix[0..$-1]),
-            BitPacked!(typeof(Prefix[$-2](Key.init)), fullBits - bitSizeOf!(Prefix[$-1]))
-        ) idxTypes;
+        alias idxTypes =
+            TypeTuple!(
+                idxTypes!(Key, fullBits - bitSizeOf!(Prefix[$-1]), Prefix[0..$-1]),
+                BitPacked!(typeof(Prefix[$-2](Key.init)), fullBits - bitSizeOf!(Prefix[$-1]))
+            );
     }
 }
 
@@ -4815,7 +4818,7 @@ else
 @trusted bool loadProperty(Set=CodepointSet, C)
     (in C[] name, ref Set target)
 {
-    alias comparePropertyName ucmp;
+    alias ucmp = comparePropertyName;
     // conjure cumulative properties by hand
     if(ucmp(name, "L") == 0 || ucmp(name, "Letter") == 0)
     {
@@ -5194,9 +5197,9 @@ template genericDecodeGrapheme(bool getValue)
     alias graphemeExtend = graphemeExtendTrie;
     alias spacingMark = mcTrie;
     static if(getValue)
-        alias Grapheme Value;
+        alias Value = Grapheme;
     else
-        alias void Value;
+        alias Value = void;
 
     Value genericDecodeGrapheme(Input)(ref Input range)
     {

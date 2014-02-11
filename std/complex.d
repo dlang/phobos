@@ -267,7 +267,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     // complex op complex
     Complex!(CommonType!(T,R)) opBinary(string op, R)(Complex!R z) const
     {
-        alias typeof(return) C;
+        alias C = typeof(return);
         auto w = C(this.re, this.im);
         return w.opOpAssign!(op)(z);
     }
@@ -276,7 +276,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     Complex!(CommonType!(T,R)) opBinary(string op, R)(R r) const
         if (isNumeric!R)
     {
-        alias typeof(return) C;
+        alias C = typeof(return);
         auto w = C(this.re, this.im);
         return w.opOpAssign!(op)(r);
     }
@@ -300,7 +300,7 @@ struct Complex(T)  if (isFloatingPoint!T)
         if (op == "/" && isNumeric!R)
     {
         typeof(return) w;
-        alias FPTemporary!(typeof(w.re)) Tmp;
+        alias Tmp = FPTemporary!(typeof(w.re));
 
         if (fabs(re) < fabs(im))
         {
@@ -684,7 +684,7 @@ unittest
 */
 template Complex(T) if (is(T R == Complex!R))
 {
-    alias T Complex;
+    alias Complex = T;
 }
 
 unittest

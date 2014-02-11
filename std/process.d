@@ -1451,7 +1451,7 @@ Pipe pipe() @trusted //TODO: @safe
         auto readFD  = _open_osfhandle(readHandle, _O_RDONLY);
         auto writeFD = _open_osfhandle(writeHandle, _O_APPEND);
     }
-    version (DMC_RUNTIME) alias .close _close;
+    version (DMC_RUNTIME) alias _close = .close;
     if (readFD == -1 || writeFD == -1)
     {
         // Close file descriptors, then throw.
@@ -3022,8 +3022,8 @@ private void toAStringz(in string[] a, const(char)**az)
 
 // Incorporating idea (for spawnvp() on Posix) from Dave Fladebo
 
-alias std.c.process._P_WAIT P_WAIT;
-alias std.c.process._P_NOWAIT P_NOWAIT;
+alias P_WAIT = std.c.process._P_WAIT;
+alias P_NOWAIT = std.c.process._P_NOWAIT;
 
 int spawnvp(int mode, string pathname, string[] argv)
 {
@@ -3099,11 +3099,11 @@ Lerror:
 }   // _spawnvp
 private
 {
-    alias WIFSTOPPED stopped;
-    alias WIFSIGNALED signaled;
-    alias WTERMSIG termsig;
-    alias WIFEXITED exited;
-    alias WEXITSTATUS exitstatus;
+    alias stopped = WIFSTOPPED;
+    alias signaled = WIFSIGNALED;
+    alias termsig = WTERMSIG;
+    alias exited = WIFEXITED;
+    alias exitstatus = WEXITSTATUS;
 }   // private
 }   // version (Posix)
 
@@ -3223,7 +3223,7 @@ else
  * writefln("Current process id: %s", getpid());
  * ---
  */
-alias core.thread.getpid getpid;
+alias getpid = core.thread.getpid;
 
 /**
    Runs $(D_PARAM cmd) in a shell and returns its standard output. If

@@ -42,8 +42,8 @@ else
     import std.internal.math.biguintnoasm;
 }
 
-alias multibyteAddSub!('+') multibyteAdd;
-alias multibyteAddSub!('-') multibyteSub;
+alias multibyteAdd = multibyteAddSub!('+');
+alias multibyteSub = multibyteAddSub!('-');
 
 
 private import core.cpuid;
@@ -65,11 +65,11 @@ immutable size_t FASTDIVLIMIT; // crossover to recursive division
 static if (BigDigit.sizeof == int.sizeof)
 {
     enum { LG2BIGDIGITBITS = 5, BIGDIGITSHIFTMASK = 31 };
-    alias ushort BIGHALFDIGIT;
+    alias BIGHALFDIGIT = ushort;
 }
 else static if (BigDigit.sizeof == long.sizeof)
 {
-    alias uint BIGHALFDIGIT;
+    alias BIGHALFDIGIT = uint;
     enum { LG2BIGDIGITBITS = 6, BIGDIGITSHIFTMASK = 63 };
 }
 else static assert(0, "Unsupported BigDigit size");

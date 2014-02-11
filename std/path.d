@@ -121,7 +121,7 @@ version(Windows) private bool isSeparator(dchar c)  @safe pure nothrow
 {
     return isDirSeparator(c) || isDriveSeparator(c);
 }
-version(Posix) private alias isDirSeparator isSeparator;
+version(Posix) private alias isSeparator = isDirSeparator;
 
 
 /*  Helper function that determines the position of the last
@@ -1840,7 +1840,7 @@ else version (Windows) bool isAbsolute(C)(in C[] path)  @safe pure nothrow
     return isDriveRoot(path) || isUNC(path);
 }
 
-else version (Posix) alias isRooted isAbsolute;
+else version (Posix) alias isAbsolute = isRooted;
 
 
 unittest

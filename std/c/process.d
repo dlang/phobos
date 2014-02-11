@@ -44,7 +44,7 @@ version (Windows)
 {
     uint _beginthread(void function(void *),uint,void *);
 
-    extern (Windows) alias uint function (void *) stdfp;
+    extern (Windows) alias stdfp = uint function (void *);
 
     uint _beginthreadex(void* security, uint stack_size,
             stdfp start_addr, void* arglist, uint initflag,

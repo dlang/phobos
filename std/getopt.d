@@ -541,8 +541,8 @@ void handleOption(R)(string option, R receiver, ref string[] args,
             else static if (isAssociativeArray!(typeof(*receiver)))
             {
                 // hash receiver
-                alias typeof(receiver.keys[0]) K;
-                alias typeof(receiver.values[0]) V;
+                alias K = typeof(receiver.keys[0]);
+                alias V = typeof(receiver.values[0]);
                 auto j = std.string.indexOf(val, assignChar);
                 auto key = val[0 .. j], value = val[j + 1 .. $];
                 (*receiver)[to!(K)(key)] = to!(V)(value);

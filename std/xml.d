@@ -1696,9 +1696,9 @@ class DocumentParser : ElementParser
  */
 class ElementParser
 {
-    alias void delegate(string) Handler;
-    alias void delegate(in Element element) ElementHandler;
-    alias void delegate(ElementParser parser) ParserHandler;
+    alias Handler = void delegate(string);
+    alias ElementHandler = void delegate(in Element element);
+    alias ParserHandler = void delegate(ElementParser parser);
 
     private
     {
@@ -2821,7 +2821,7 @@ class CheckException : XMLException
     }
 }
 
-private alias CheckException Err;
+private alias Err = CheckException;
 
 // Private helper functions
 

@@ -647,12 +647,12 @@ template EncoderInstance(E)
 /** Defines various character sets. */
 enum AsciiChar : ubyte { init }
 /// Ditto
-alias immutable(AsciiChar)[] AsciiString;
+alias AsciiString = immutable(AsciiChar)[];
 
 template EncoderInstance(CharType : AsciiChar)
 {
-    alias AsciiChar E;
-    alias AsciiString EString;
+    alias E = AsciiChar;
+    alias EString = AsciiString;
 
     @property string encodingName()
     {
@@ -730,12 +730,12 @@ enum Latin1Char : ubyte { init }
 Defines an Latin1-encoded string (as an array of $(D
 immutable(Latin1Char))).
  */
-alias immutable(Latin1Char)[] Latin1String; ///
+alias Latin1String = immutable(Latin1Char)[]; ///
 
 template EncoderInstance(CharType : Latin1Char)
 {
-    alias Latin1Char E;
-    alias Latin1String EString;
+    alias E = Latin1Char;
+    alias EString = Latin1String;
 
     @property string encodingName()
     {
@@ -806,12 +806,12 @@ enum Windows1252Char : ubyte { init }
 Defines an Windows1252-encoded string (as an array of $(D
 immutable(Windows1252Char))).
  */
-alias immutable(Windows1252Char)[] Windows1252String; ///
+alias Windows1252String = immutable(Windows1252Char)[]; ///
 
 template EncoderInstance(CharType : Windows1252Char)
 {
-    alias Windows1252Char E;
-    alias Windows1252String EString;
+    alias E = Windows1252Char;
+    alias EString = Windows1252String;
 
     @property string encodingName()
     {
@@ -907,8 +907,8 @@ template EncoderInstance(CharType : Windows1252Char)
 
 template EncoderInstance(CharType : char)
 {
-    alias char E;
-    alias immutable(char)[] EString;
+    alias E = char;
+    alias EString = immutable(char)[];
 
     @property string encodingName()
     {
@@ -1073,8 +1073,8 @@ template EncoderInstance(CharType : char)
 
 template EncoderInstance(CharType : wchar)
 {
-    alias wchar E;
-    alias immutable(wchar)[] EString;
+    alias E = wchar;
+    alias EString = immutable(wchar)[];
 
     @property string encodingName()
     {
@@ -1170,8 +1170,8 @@ template EncoderInstance(CharType : wchar)
 
 template EncoderInstance(CharType : dchar)
 {
-    alias dchar E;
-    alias immutable(dchar)[] EString;
+    alias E = dchar;
+    alias EString = immutable(dchar)[];
 
     @property string encodingName()
     {

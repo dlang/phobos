@@ -91,7 +91,7 @@ unittest
 
 public:
 
-alias uint BigDigit; // A Bignum is an array of BigDigits. Usually the machine word size.
+alias BigDigit = uint; // A Bignum is an array of BigDigits. Usually the machine word size.
 
 // Limits for when to switch between multiplication algorithms.
 enum : int { KARATSUBALIMIT = 18 }; // Minimum value for which Karatsuba is worthwhile.

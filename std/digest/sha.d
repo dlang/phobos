@@ -174,7 +174,7 @@ struct SHA1
     }
     else
     {
-        alias transformX86 transform;
+        alias transform = transformX86;
     }
 
     private:
@@ -580,7 +580,7 @@ unittest
  * This is an alias for $(XREF digest.digest, WrapperDigest)!SHA1, see
  * $(XREF digest.digest, WrapperDigest) for more information.
  */
-alias WrapperDigest!SHA1 SHA1Digest;
+alias SHA1Digest = WrapperDigest!SHA1;
 
 ///
 unittest
