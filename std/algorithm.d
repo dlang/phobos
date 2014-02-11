@@ -11122,6 +11122,12 @@ unittest
     assert(all!(a => a > x)([2, 3]));
 }
 
+unittest
+{
+    // Issue 9184
+    assert(all!(a => a >= 0)([1, 2, 3]));
+}
+
 /**
 Copies the top $(D n) elements of the input range $(D source) into the
 random-access range $(D target), where $(D n =
