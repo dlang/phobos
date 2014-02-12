@@ -3712,8 +3712,7 @@ unittest //11884
 
 unittest //8282
 {
-    static struct Bug8282 {}
-    Array!(Bug8282)* arr = new Array!(Bug8282);
+    auto arr = new Array!int;
 }
 
 // BinaryHeap
