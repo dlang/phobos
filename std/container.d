@@ -3742,17 +3742,6 @@ If $(D Store) is a range, the $(D BinaryHeap) cannot grow beyond the
 size of that range. If $(D Store) is a container that supports $(D
 insertBack), the $(D BinaryHeap) may grow by adding elements to the
 container.
-
-Example:
-----
-// Example from "Introduction to Algorithms" Cormen et al, p 146
-int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
-auto h = heapify(a);
-// largest element
-assert(h.front == 16);
-// a has the heap property
-assert(equal(a, [ 16, 14, 10, 9, 8, 7, 4, 3, 2, 1 ]));
-----
      */
 struct BinaryHeap(Store, alias less = "a < b")
 if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
@@ -4087,6 +4076,18 @@ must be collected.
         assertValid();
         return true;
     }
+}
+
+///
+unittest
+{
+    // Example from "Introduction to Algorithms" Cormen et al, p 146
+    int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
+    auto h = heapify(a);
+    // largest element
+    assert(h.front == 16);
+    // a has the heap property
+    assert(equal(a, [ 16, 14, 10, 8, 7, 9, 3, 2, 4, 1 ]));
 }
 
 /**
