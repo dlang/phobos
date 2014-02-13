@@ -388,15 +388,26 @@ template map(fun...) if (fun.length >= 1)
 {
     auto map(Range)(Range r) if (isInputRange!(Unqual!Range))
     {
+        alias AppliedReturnType(alias f) = typeof(f(r.front));
+
         static if (fun.length > 1)
         {
             import std.functional : adjoin;
+            import std.typetuple : staticIndexOf;
 
-            alias _fun = adjoin!(staticMap!(unaryFun, fun));
+            alias _funs = staticMap!(unaryFun, fun);
+            alias _fun = adjoin!_funs;
+
+            alias ReturnTypes = staticMap!(AppliedReturnType, _funs);
+            static assert(staticIndexOf!(void, ReturnTypes) == -1,
+                          "All mapping functions must not return void.");
         }
         else
         {
             alias _fun = unaryFun!fun;
+
+            static assert(!is(AppliedReturnType!_fun == void),
+                          "Mapping function must not return void.");
         }
 
         return MapResult!(_fun, Range)(r);
@@ -663,6 +674,14 @@ unittest
     static assert(!is(ms1[0..1])); //narrow strings can't be sliced
     assert(equal(ms2[0..2], "日本"w));
     assert(equal(ms3[0..2], "HE"));
+
+    // Issue 5753
+    static void voidFun(int) {}
+    static int nonvoidFun(int) { return 0; }
+    static assert(!__traits(compiles, map!voidFun([1])));
+    static assert(!__traits(compiles, map!(voidFun, voidFun)([1])));
+    static assert(!__traits(compiles, map!(nonvoidFun, voidFun)([1])));
+    static assert(!__traits(compiles, map!(voidFun, nonvoidFun)([1])));
 }
 unittest
 {
