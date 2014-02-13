@@ -353,20 +353,36 @@ template Tuple(Specs...)
         }
     }
 
-    template areCompatibleTuples(Tup1, Tup2, string op)
+    enum areCompatibleTuples(Tup1, Tup2, string op) = isTuple!Tup2 && is(typeof(
     {
-        enum areCompatibleTuples = isTuple!Tup2 && is(typeof(
+        Tup1 tup1 = void;
+        Tup2 tup2 = void;
+        static assert(tup1.field.length == tup2.field.length);
+        foreach (i, _; Tup1.Types)
         {
-            Tup1 tup1 = void;
-            Tup2 tup2 = void;
-            static assert(tup1.field.length == tup2.field.length);
-            foreach (i, _; Tup1.Types)
-            {
-                auto lhs = typeof(tup1.field[i]).init;
-                auto rhs = typeof(tup2.field[i]).init;
-                auto result = mixin("lhs "~op~" rhs");
-            }
-        }));
+            auto lhs = typeof(tup1.field[i]).init;
+            auto rhs = typeof(tup2.field[i]).init;
+            auto result = mixin("lhs "~op~" rhs");
+        }
+    }));
+
+    enum areBuildCompatibleTuples(Tup1, Tup2) = isTuple!Tup2 && is(typeof(
+    {
+        static assert(Tup1.Types.length == Tup2.Types.length);
+        foreach (i, _; Tup1.Types)
+            static assert(isBuildable!(Tup1.Types[i], Tup2.Types[i]));
+    }));
+
+    /+ Returns $(D true) iff a $(D T) can be initialized from a $(D U). +/
+    enum isBuildable(T, U) =  is(typeof(
+    {
+        U u = U.init;
+        T t = u;
+    }));
+    /+ Helper for partial instanciation +/
+    template isBuildableFrom(U)
+    {
+        enum isBuildableFrom(T) = isBuildable!(T, U);
     }
 
     struct Tuple
@@ -417,8 +433,7 @@ template Tuple(Specs...)
         alias field = expand;
 
         /**
-         * Constructor taking one value for each field. Each argument must be
-         * implicitly assignable to the respective element of the target.
+         * Constructor taking one value for each field.
          */
         this(Types values)
         {
@@ -426,8 +441,7 @@ template Tuple(Specs...)
         }
 
         /**
-         * Constructor taking a compatible array. The array element type must
-         * be implicitly assignable to each element of the target.
+         * Constructor taking a compatible array.
          *
          * Examples:
          * ----
@@ -436,8 +450,7 @@ template Tuple(Specs...)
          * ----
          */
         this(U, size_t n)(U[n] values)
-        if (n == Types.length &&
-            is(typeof({ foreach (i, _; Types) field[i] = values[i]; })))
+        if (n == Types.length && allSatisfy!(isBuildableFrom!U, Types))
         {
             foreach (i, _; Types)
             {
@@ -446,12 +459,10 @@ template Tuple(Specs...)
         }
 
         /**
-         * Constructor taking a compatible tuple. Each element of the source
-         * must be implicitly assignable to the respective element of the
-         * target.
+         * Constructor taking a compatible tuple.
          */
         this(U)(U another)
-        if (areCompatibleTuples!(typeof(this), U, "="))
+        if (areBuildCompatibleTuples!(typeof(this), U))
         {
             field[] = another.field[];
         }
@@ -934,6 +945,28 @@ unittest
 {
     class Foo{}
     Tuple!(immutable(Foo)[]) a;
+}
+
+unittest
+{
+    //Test non-assignable
+    static struct S
+    {
+        int* p;
+    }
+    alias IS = immutable S;
+    static assert(!isAssignable!IS);
+
+    auto s = IS.init;
+
+    alias TIS = Tuple!IS;
+    TIS a = tuple(s);
+    TIS b = a;
+
+    alias TISIS = Tuple!(IS, IS);
+    TISIS d = tuple(s, s);
+    IS[2] ss;
+    TISIS e = TISIS(ss);
 }
 
 /**
