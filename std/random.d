@@ -1530,6 +1530,13 @@ if (is(E == enum))
     return uniform!E(rndGen);
 }
 
+///
+unittest
+{
+    enum Fruit { apple, mango, pear }
+    auto randFruit = uniform!Fruit();
+}
+
 unittest
 {
     enum Fruit { Apple = 12, Mango = 29, Pear = 72 }
