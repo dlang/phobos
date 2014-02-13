@@ -4632,11 +4632,8 @@ struct Zip(Ranges...)
  */
     this(R rs, StoppingPolicy s = StoppingPolicy.shortest)
     {
+        ranges[] = rs[];
         stoppingPolicy = s;
-        foreach (i, Unused; R)
-        {
-            ranges[i] = rs[i];
-        }
     }
 
 /**
