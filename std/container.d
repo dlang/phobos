@@ -3714,6 +3714,11 @@ unittest //11884
     auto a = Array!int([1, 2, 2].filter!"true"());
 }
 
+unittest //8282
+{
+    auto arr = new Array!int;
+}
+
 // BinaryHeap
 /**
 Implements a $(WEB en.wikipedia.org/wiki/Binary_heap, binary heap)
