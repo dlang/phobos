@@ -239,7 +239,7 @@ final class ArchiveMember
     {
         printf("name = '%.*s'\n", name.length, name.ptr);
         printf("\tcomment = '%.*s'\n", comment.length, comment.ptr);
-        printf("\tmadeVersion = x%04x\n", madeVersion);
+        printf("\tmadeVersion = x%04x\n", _madeVersion);
         printf("\textractVersion = x%04x\n", extractVersion);
         printf("\tflags = x%04x\n", flags);
         printf("\tcompressionMethod = %d\n", compressionMethod);
@@ -418,7 +418,7 @@ final class ZipArchive
         foreach (ArchiveMember de; _directory)
         {
             _data[i .. i + 4] = cast(ubyte[])"PK\x01\x02";
-            putUshort(i + 4,  de.madeVersion);
+            putUshort(i + 4,  de._madeVersion);
             putUshort(i + 6,  de.extractVersion);
             putUshort(i + 8,  de.flags);
             putUshort(i + 10, de._compressionMethod);
