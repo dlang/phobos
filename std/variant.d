@@ -503,7 +503,7 @@ private:
             else
             {
                 alias ParamTypes = ParameterTypeTuple!A;
-                auto p = cast(VariantN*) parm;
+                auto p = cast(Variant*) parm;
                 auto argCount = p.get!size_t;
                 // To assign the tuple we need to use the unqualified version,
                 // otherwise we run into issues such as with const values.
@@ -524,7 +524,7 @@ private:
                 static if(is(ReturnType!A == void))
                 {
                     (*zis)(args.expand);
-                    *p = VariantN.init; // void returns uninitialized Variant.
+                    *p = Variant.init; // void returns uninitialized Variant.
                 }
                 else
                 {
@@ -602,9 +602,9 @@ public:
         return this;
     }
 
-    VariantN opCall(P...)(auto ref P params)
+    Variant opCall(P...)(auto ref P params)
     {
-        VariantN pack[P.length + 1];
+        Variant[P.length + 1] pack;
         pack[0] = P.length;
         foreach (i, _; params)
         {
@@ -1660,6 +1660,23 @@ unittest
 
     assert(v3(4) == ['4']);
     assert(v3(4).type == typeid(char[]));
+}
+
+// issue 12071
+unittest
+{
+    static struct Structure { int data; }
+    alias VariantTest = Algebraic!(Structure delegate());
+
+    bool called = false;
+    Structure example()
+    {
+        called = true;
+        return Structure.init;
+    }
+    auto m = VariantTest(&example);
+    m();
+    assert(called);
 }
 
 // Ordering comparisons of incompatible types, e.g. issue 7990.
