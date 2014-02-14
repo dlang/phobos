@@ -259,7 +259,7 @@ import std.array, std.algorithm, std.range,
        std.functional, std.exception;
 
 import core.bitop, core.stdc.string, core.stdc.stdlib;
-static import ascii = std.ascii;
+static import std.ascii;
 import std.string : representation;
 
 debug(std_regex_parser) import std.stdio; //trace parser progress
@@ -1001,7 +1001,7 @@ struct Parser(R)
     uint parseDecimal()
     {
         uint r = 0;
-        while(ascii.isDigit(current))
+        while(std.ascii.isDigit(current))
         {
             if(r >= (uint.max/10))
                 error("Overflow in decimal number");
@@ -1089,7 +1089,7 @@ struct Parser(R)
                             error("Expected alpha starting a named group");
                         name ~= current;
                         while(next() && (isAlpha(current) ||
-                            current == '_' || ascii.isDigit(current)))
+                            current == '_' || std.ascii.isDigit(current)))
                         {
                             name ~= current;
                         }
@@ -1257,14 +1257,14 @@ struct Parser(R)
             break;
         case '{':
             enforce(next(), "Unexpected end of regex pattern");
-            enforce(ascii.isDigit(current), "First number required in repetition");
+            enforce(std.ascii.isDigit(current), "First number required in repetition");
             min = parseDecimal();
             if(current == '}')
                 max = min;
             else if(current == ',')
             {
                 next();
-                if(ascii.isDigit(current))
+                if(std.ascii.isDigit(current))
                     max = parseDecimal();
                 else if(current == '}')
                     max = infinite;
@@ -1927,7 +1927,7 @@ struct Parser(R)
             enforce(nref < maxBackref, "Backref to unseen group");
             //perl's disambiguation rule i.e.
             //get next digit only if there is such group number
-            while(nref < maxBackref && next() && ascii.isDigit(current))
+            while(nref < maxBackref && next() && std.ascii.isDigit(current))
             {
                 nref = nref * 10 + current - '0';
             }
@@ -1963,7 +1963,7 @@ struct Parser(R)
         {
             while(k < MAX_PROPERTY && next() && current !='}' && current !=':')
                 if(current != '-' && current != ' ' && current != '_')
-                    result[k++] = cast(char)ascii.toLower(current);
+                    result[k++] = cast(char)std.ascii.toLower(current);
             enforce(k != MAX_PROPERTY, "invalid property name");
             enforce(current == '}', "} expected ");
         }
@@ -6446,7 +6446,7 @@ L_Replace_Loop:
             format = format[offset .. $];
             break;
         case State.Dollar:
-            if(ascii.isDigit(format[0]))
+            if(std.ascii.isDigit(format[0]))
             {
                 uint digit = parse!uint(format);
                 enforce(ignoreBadSubs || digit < captures.length, text("invalid submatch number ", digit));
@@ -6455,7 +6455,7 @@ L_Replace_Loop:
             }
             else if(format[0] == '{')
             {
-                auto x = find!(a => !ascii.isAlpha(a))(format[1..$]);
+                auto x = find!(a => !std.ascii.isAlpha(a))(format[1..$]);
                 enforce(!x.empty && x[0] == '}', "no matching '}' in replacement format");
                 auto name = format[1 .. $ - x.length];
                 format = x[1..$];
