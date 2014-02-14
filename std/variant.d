@@ -669,7 +669,12 @@ public:
         static if (!is(T == void))
             static assert(allowed!(T), "Cannot store a " ~ T.stringof
                     ~ " in a " ~ VariantN.stringof);
-        return type == typeid(T) ? cast(T*) &store : null;
+        if (type != typeid(T))
+            return null;
+        static if (T.sizeof <= size)
+            return cast(T*)&store;
+        else 
+            return *cast(T**)&store;
     }
 
     /**
@@ -1725,6 +1730,37 @@ unittest
     static int t2() { return 3; }
     Variant v2 = &t2;
     assert(v2() == 3);
+}
+
+// Using peek for large structs, issue 8580
+unittest
+{
+    struct TestStruct(bool pad)
+    {
+        int val1;
+        static if (pad)
+            ubyte[Variant.size] padding;
+        int val2;
+    }
+
+    void testPeekWith(T)() 
+    {
+        T inst;
+        inst.val1 = 3;
+        inst.val2 = 4;
+        Variant v = inst;
+        T* original = v.peek!T;
+        assert(original.val1 == 3);
+        assert(original.val2 == 4);
+        original.val1 = 6;
+        original.val2 = 8;
+        T modified = v.get!T;
+        assert(modified.val1 == 6);
+        assert(modified.val2 == 8);
+    }
+
+    testPeekWith!(TestStruct!false)();
+    testPeekWith!(TestStruct!true)();
 }
 
 /**
