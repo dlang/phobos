@@ -253,6 +253,38 @@ private:
             return null;
         }
 
+        static ptrdiff_t compare(A* rhsPA, A* zis, OpID selector)
+        {
+            static if (is(typeof(*rhsPA == *zis)))
+            {
+                if (*rhsPA == *zis)
+                {
+                    return 0;
+                }
+                static if (is(typeof(*zis < *rhsPA)))
+                {
+                    // Many types (such as any deriving from Object)
+                    // will throw on an invalid opCmp, so do it only
+                    // if the caller requests it.
+                    if(selector == OpID.compare)
+                        return *zis < *rhsPA ? -1 : 1;
+                    else
+                        return ptrdiff_t.min;
+                }
+                else
+                {
+                    // Not equal, and type does not support ordering
+                    // comparisons.
+                    return ptrdiff_t.min;
+                }
+            }
+            else
+            {
+                // Type does not support comparisons at all.
+                return ptrdiff_t.min;
+            }
+        }
+
         auto zis = getPtr(pStore);
         // Input: TypeInfo object
         // Output: target points to a copy of *me, if me was not null
@@ -338,34 +370,7 @@ private:
             {
                 // cool! Same type!
                 auto rhsPA = getPtr(&rhsP.store);
-                static if (is(typeof(*rhsPA == *zis)))
-                {
-                    if (*rhsPA == *zis)
-                    {
-                        return 0;
-                    }
-                    static if (is(typeof(*zis < *rhsPA)))
-                    {
-                        // Many types (such as any deriving from Object)
-                        // will throw on an invalid opCmp, so do it only
-                        // if the caller requests it.
-                        if(selector == OpID.compare)
-                            return *zis < *rhsPA ? -1 : 1;
-                        else
-                            return ptrdiff_t.min;
-                    }
-                    else
-                    {
-                        // Not equal, and type does not support ordering
-                        // comparisons.
-                        return ptrdiff_t.min;
-                    }
-                }
-                else
-                {
-                    // Type does not support comparisons at all.
-                    return ptrdiff_t.min;
-                }
+                return compare(rhsPA, zis, selector);
             } else if (rhsType == typeid(void))
             {
                 // No support for ordering comparisons with
@@ -380,7 +385,10 @@ private:
                 // also fix up its fptr
                 temp.fptr = rhsP.fptr;
                 // now lhsWithRhsType is a full-blown VariantN of rhs's type
-                return temp.opCmp(*rhsP);
+                if(selector == OpID.compare)
+                    return temp.opCmp(*rhsP);
+                else
+                    return temp.opEquals(*rhsP) ? 0 : 1;
             }
             // Does rhs convert to zis?
             *cast(TypeInfo*) &temp.store = typeid(A);
@@ -388,31 +396,7 @@ private:
             {
                 // cool! Now temp has rhs in my type!
                 auto rhsPA = getPtr(&temp.store);
-                static if (is(typeof(*rhsPA == *zis)))
-                {
-                    if (*rhsPA == *zis)
-                    {
-                        return 0;
-                    }
-                    static if (is(typeof(*zis < *rhsPA)))
-                    {
-                        if(selector == OpID.compare)
-                            return *zis < *rhsPA ? -1 : 1;
-                        else
-                            return ptrdiff_t.min;
-                    }
-                    else
-                    {
-                        // Not equal, and type does not support ordering
-                        // comparisons.
-                        return ptrdiff_t.min;
-                    }
-                }
-                else
-                {
-                    // Type does not support comparisons at all.
-                    return ptrdiff_t.min;
-                }
+                return compare(rhsPA, zis, selector);
             }
             return ptrdiff_t.min; // dunno
         case OpID.toString:
