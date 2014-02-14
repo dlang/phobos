@@ -1720,7 +1720,6 @@ unittest
     class EmptyClass { }
     struct EmptyStruct { }
     alias EmptyArray = void[0];
-
     alias Alg = Algebraic!(EmptyClass, EmptyStruct, EmptyArray);
 
     Variant testEmpty(T)() 
@@ -1739,9 +1738,11 @@ unittest
     testEmpty!EmptyStruct();
     testEmpty!EmptyArray();
 
-    EmptyArray e = EmptyArray.init;
-    Variant v2 = e;
-    assert(v2.length == 0);
+    // EmptyClass/EmptyStruct sizeof is 1, so we have this to test just size 0.
+    EmptyArray arr = EmptyArray.init;
+    Algebraic!(EmptyArray) a = arr;
+    assert(a.length == 0);
+    assert(a.get!EmptyArray == arr);
 }
 
 // Handling of void function pointers / delegates, e.g. issue 11360
