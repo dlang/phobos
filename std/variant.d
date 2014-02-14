@@ -1739,7 +1739,7 @@ unittest
     testEmpty!EmptyStruct();
     testEmpty!EmptyArray();
 
-    EmptyArray e;
+    EmptyArray e = EmptyArray.init;
     Variant v2 = e;
     assert(v2.length == 0);
 }
