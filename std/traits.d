@@ -150,6 +150,7 @@
 module std.traits;
 import std.typetuple;
 
+
 ///////////////////////////////////////////////////////////////////////////////
 // Functions
 ///////////////////////////////////////////////////////////////////////////////
@@ -301,6 +302,167 @@ version(unittest)
 }
 
 
+// Auxiliary struct template used by AliasTuple.
+private
+struct AliasTupleImpl(U...){}
+
+/++
+AliasTuple can be used to box any type/symbol, and is more general than TypeTuple. 
+It can be used to compare TypeTuples:
+Example:
+ ---
+ module mymodule;
+ import std.traits;
+ import std.typetuple;
+ int b;
+ alias b2=b;
+ static assert(is(AliasTuple!(double,"a",b) == AliasTuple!(double,"a",b2));
+ ---
++/
+template AliasTuple(T...){
+    alias AliasTuple=AliasTupleImpl!T;
+}
+unittest
+{   
+    import std.typetuple:Alias;
+    alias fun=Alias!(a=>a);
+    alias fun2=fun;
+    int b;
+    alias b1=b;
+    auto b2=b;    
+    static assert(is(AliasTuple!(double,"a",b,fun) == AliasTuple!(double,"a",b1,fun2)));
+    static assert(!is(AliasTuple!(double,"a",b,fun) == AliasTuple!(double,"a",b2,fun2)));
+}
+
+private
+	template isComparableAtCompileTime(alias T1,alias T2)
+{
+	static assert(T1==T2);
+}
+
+/++
+Tests whether T is such that alias T2=T compiles.
++/
+	template isAliasable(alias T)
+{
+	enum isAliasable=true;
+}
+	template isAliasable(T)
+{
+	enum isAliasable=false;
+}
+unittest
+{
+	static assert(!isAliasable!(double));
+	static assert(isAliasable!("foo"));
+	static assert(isAliasable!(A1));
+	static assert(isAliasable!(A1!double));
+	static assert(isAliasable!(A2));
+	static assert(isAliasable!(a=>a));
+	enum b=1;
+	static assert(isAliasable!b);
+}
+/++
+Tests for equality between 2 symbols (types/templates/values etc).
++/
+template isSame(T...) if(T.length==2)
+{
+	static if(__traits(compiles, isComparableAtCompileTime!(T[0],T[1]))){
+		enum isSame=T[0]==T[1];
+	}
+	else static if(isAliasable!(T[0]) && isAliasable!(T[1]))
+		enum isSame=__traits(isSame, T[0],T[1]);
+
+	else static if(__traits(compiles,is(T[0]==T[1]))){
+		enum isSame=is(T[0]==T[1]);
+	}
+	else{
+		enum isSame=false; //eg: "foo" , int
+	}
+}
+unittest
+{
+	static assert(isSame!(double,double));
+	static assert(isSame!(A1,A1));
+	static assert(isSame!(A1!int,A1!int));
+	static assert(!isSame!(A1!int,A1!float));
+	static assert(isSame!("foo","foo"));
+	static assert(!isSame!("foo","bar"));
+	static assert(!isSame!(a=>a,a=>a));
+	auto fun=(int a)=>a;
+	static assert(isSame!(fun,fun));
+	static assert(!isSame!("foo",int));
+}
+
+/++
+ Retrieves template symbol from a template instantiation. Works with structs/classes but not yet with functions.
+ Example:
+ ---
+ module mymodule;
+ import std.traits;
+ struct A1(T){}
+ static assert(isSame!(getTemplateParent!(A1!double),A1));
+ ---
++/
+template GetTemplateParent(T : TI!TP, alias TI, TP...)
+{
+	alias GetTemplateParent = TI;
+}
+template GetTemplateParent(alias T : TI!TP, alias TI, TP...)
+{
+	//TODO: how come this doesn't work with functions?
+	alias GetTemplateParent = TI;
+}
+unittest
+{
+	static assert(isSame!(GetTemplateParent!(A1!double),A1));
+	static assert(isSame!(GetTemplateParent!(A4!(a=>a,int)),A4));
+	static assert(isSame!(GetTemplateParent!(A3!(int)),A3));
+}
+/++
+ Retrieves template arguments from a template instantiation. Works with structs/classes but not yet with functions.
+ Example:
+ ---
+ module mymodule;
+ import std.traits;
+ import std.typetuple;
+ struct A(alias T...){}
+ static assert(is(AliasTuple!("foo",int) == AliasTuple!(GetTemplateArguments!(A!("foo",int)))));
+ ---
++/
+template GetTemplateArguments(T : TI!TP, alias TI, TP...)
+{
+	alias GetTemplateArguments = TP;
+}
+template GetTemplateArguments(alias T : TI!TP, alias TI, TP...)
+{
+	//TODO: how come this doesn't work with functions?
+	alias GetTemplateArguments = TP;
+}
+unittest
+{
+	import std.typetuple;
+    static assert(is(AliasTuple!double == AliasTuple!(GetTemplateArguments!(A1!double))));
+    static assert(is(AliasTuple!("foo",int) == AliasTuple!(GetTemplateArguments!(A4!("foo",int)))));
+}
+/++
+Tests whether T is a template instantiation.
++/
+template isTemplateInstantiation(T...) if(T.length==1)
+{
+	enum isTemplateInstantiation=is(typeof(GetTemplateParent!T));
+}
+unittest
+{
+	static assert(isTemplateInstantiation!(A1!double));
+	static assert(!isTemplateInstantiation!(A1));
+	static assert(!isTemplateInstantiation!(A2));
+	static assert(!isTemplateInstantiation!(A3));
+	static assert(isTemplateInstantiation!(A3!double));
+	static assert(!isTemplateInstantiation!(A3!double.A));
+	static assert(!isTemplateInstantiation!(int));
+}
+
 /**
  * Get the full package name for the given symbol.
  * Example:
@@ -424,7 +586,7 @@ template fullyQualifiedName(T...)
 
 version(unittest)
 {
-    // Used for both fullyQualifiedNameImplForTypes and fullyQualifiedNameImplForSymbols unittests
+    // Used for unittests of fullyQualifiedNameImplForTypes, fullyQualifiedNameImplForSymbols etc.
     private struct QualifiedNameTests
     {
         struct Inner
@@ -456,6 +618,15 @@ version(unittest)
     private enum QualifiedEnum
     {
         a = 42
+    }
+
+    private{
+        struct A1(T){}
+        struct A2{}
+        template A3(T){
+            struct A{}
+        }
+        struct A4(alias fun,T...){}        
     }
 }
 
