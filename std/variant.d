@@ -186,7 +186,7 @@ private:
 
     // Each internal operation is encoded with an identifier. See
     // the "handler" function below.
-    enum OpID { getTypeInfo, get, compare, testConversion, toString,
+    enum OpID { getTypeInfo, get, compare, equals, testConversion, toString,
             index, indexAssign, catAssign, copyOut, length,
             apply }
 
@@ -216,6 +216,7 @@ private:
             // no need to copy the data (it's garbage)
             break;
         case OpID.compare:
+        case OpID.equals:
             auto rhs = cast(const VariantN *) parm;
             return rhs.peek!(A)
                 ? 0 // all uninitialized are equal
@@ -251,6 +252,7 @@ private:
             }
             return null;
         }
+
         auto zis = getPtr(pStore);
         // Input: TypeInfo object
         // Output: target points to a copy of *me, if me was not null
@@ -328,6 +330,7 @@ private:
         case OpID.testConversion:
             return !tryPutting(null, *cast(TypeInfo*) parm, null);
         case OpID.compare:
+        case OpID.equals:
             auto rhsP = cast(VariantN *) parm;
             auto rhsType = rhsP.type;
             // Are we the same?
@@ -335,15 +338,21 @@ private:
             {
                 // cool! Same type!
                 auto rhsPA = getPtr(&rhsP.store);
-                static if (is(typeof(A.init == A.init)))
+                static if (is(typeof(*rhsPA == *zis)))
                 {
                     if (*rhsPA == *zis)
                     {
                         return 0;
                     }
-                    static if (is(typeof(A.init < A.init)))
+                    static if (is(typeof(*zis < *rhsPA)))
                     {
-                        return *zis < *rhsPA ? -1 : 1;
+                        // Many types (such as any deriving from Object)
+                        // will throw on an invalid opCmp, so do it only
+                        // if the caller requests it.
+                        if(selector == OpID.compare)
+                            return *zis < *rhsPA ? -1 : 1;
+                        else
+                            return ptrdiff_t.min;
                     }
                     else
                     {
@@ -379,15 +388,18 @@ private:
             {
                 // cool! Now temp has rhs in my type!
                 auto rhsPA = getPtr(&temp.store);
-                static if (is(typeof(A.init == A.init)))
+                static if (is(typeof(*rhsPA == *zis)))
                 {
                     if (*rhsPA == *zis)
                     {
                         return 0;
                     }
-                    static if (is(typeof(A.init < A.init)))
+                    static if (is(typeof(*zis < *rhsPA)))
                     {
-                        return *zis < *rhsPA ? -1 : 1;
+                        if(selector == OpID.compare)
+                            return *zis < *rhsPA ? -1 : 1;
+                        else
+                            return ptrdiff_t.min;
                     }
                     else
                     {
@@ -846,7 +858,7 @@ public:
             alias temp = rhs;
         else
             auto temp = VariantN(rhs);
-        return !fptr(OpID.compare, cast(ubyte[size]*) &store,
+        return !fptr(OpID.equals, cast(ubyte[size]*) &store,
                      cast(void*) &temp);
     }
 
@@ -1643,6 +1655,24 @@ unittest
     // bug 7070
     Variant v;
     v = null;
+}
+
+// Class and interface opEquals, issue 12157
+unittest 
+{
+    class Foo { }
+
+    class DerivedFoo : Foo { }
+
+    Foo f1 = new Foo();
+    Foo f2 = new DerivedFoo();
+
+    Variant v1 = f1, v2 = f2;
+    assert(v1 == f1);
+    assert(v1 != new Foo());
+    assert(v1 != f2);
+    assert(v2 != v1);
+    assert(v2 == f2);
 }
 
 // Const parameters with opCall, issue 11361.
