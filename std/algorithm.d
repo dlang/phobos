@@ -1995,7 +1995,7 @@ See_Also:
     $(XREF exception, pointsTo)
  */
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow
-if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
+if (isBlitAssignable!T && !is(typeof(T.init.proxySwap(T.init))))
 {
     static if (hasElaborateAssign!T || !isAssignable!T)
     {
