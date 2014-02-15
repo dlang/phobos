@@ -167,7 +167,6 @@ private:
         ubyte[maxDataSize] data;
     }
     enum size = SizeChecker.sizeof - (int function()).sizeof;
-    static assert(size >= (void*).sizeof);
 
     /** Tells whether a type $(D_PARAM T) is statically allowed for
      * storage inside a $(D_PARAM VariantN) object by looking
@@ -1713,6 +1712,37 @@ unittest
     assertThrown!VariantException(Variant(A(3)) < A(4));
     assertThrown!VariantException(A(3) < Variant(A(4)));
     assertThrown!VariantException(Variant(A(3)) < Variant(A(4)));
+}
+
+// Handling of empty types and arrays, e.g. issue 10958
+unittest 
+{
+    class EmptyClass { }
+    struct EmptyStruct { }
+    alias EmptyArray = void[0];
+    alias Alg = Algebraic!(EmptyClass, EmptyStruct, EmptyArray);
+
+    Variant testEmpty(T)() 
+    {
+        T inst;
+        Variant v = inst;
+        assert(v.get!T == inst);
+        assert(v.peek!T !is null);
+        assert(*v.peek!T == inst);
+        Alg alg = inst;
+        assert(alg.get!T == inst);
+        return v;
+    }
+
+    testEmpty!EmptyClass();
+    testEmpty!EmptyStruct();
+    testEmpty!EmptyArray();
+
+    // EmptyClass/EmptyStruct sizeof is 1, so we have this to test just size 0.
+    EmptyArray arr = EmptyArray.init;
+    Algebraic!(EmptyArray) a = arr;
+    assert(a.length == 0);
+    assert(a.get!EmptyArray == arr);
 }
 
 // Handling of void function pointers / delegates, e.g. issue 11360
