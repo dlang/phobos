@@ -860,7 +860,8 @@ struct BitArray
         }
 
         n = this.length & (bitsPerSizeT-1);
-        size_t mask = (1 << n) - 1;
+
+        size_t mask = (cast(size_t)1 << n) - 1;
         //printf("i = %d, n = %d, mask = %x, %x, %x\n", i, n, mask, p1[i], p2[i]);
         return (mask == 0) || (p1[i] & mask) == (p2[i] & mask);
     }
@@ -885,6 +886,18 @@ struct BitArray
         assert(a != c);
         assert(a != d);
         assert(a == e);
+
+        foreach (i; 1 .. 256)
+        {
+            foreach (j; 0 .. i)
+            {
+                BitArray a1, a2;
+                a1.length = i;
+                a2.length = i;
+                a1[j] = true;
+                assert(a1 != a2);
+            }
+        }
     }
 
     /***************************************
