@@ -912,7 +912,7 @@ struct FormatSpec(Char)
                 else
                 {
                     nested = to!(typeof(nested))(trailing[i + 1 .. j - 1]);
-                    sep = null;
+                    sep = null; // use null (issue 12135)
                 }
                 //this = FormatSpec(innerTrailingSpec);
                 spec = '(';
@@ -2419,7 +2419,7 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
             fmt.writeUpToNextSpec(w);
             formatElement(w, v, fmt);
         }
-        if (f.sep.length)
+        if (f.sep !is null)
         {
             fmt.writeUpToNextSpec(w);
             if (++i != end)
@@ -2456,6 +2456,10 @@ unittest
     // use range formatting for key and value, and use %|
     formatTest( "{%([%04d->%(%c.%)]%| $ %)}", aa3,
                [`{[0001->h.e.l.l.o] $ [0002->w.o.r.l.d]}`, `{[0002->w.o.r.l.d] $ [0001->h.e.l.l.o]}`] );
+
+    // issue 12135
+    formatTest("%(%s:<%s>%|,%)", [1:2], "1:<2>");
+    formatTest("%(%s:<%s>%|%)" , [1:2], "1:<2>");
 }
 
 unittest
