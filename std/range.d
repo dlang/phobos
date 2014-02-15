@@ -183,6 +183,10 @@ $(BOOKTABLE ,
     $(TR $(TD $(D $(LREF only)))
         $(TD Creates a _range that iterates over the given arguments.
     ))
+    $(TR $(TD $(D $(LREF tee)))
+        $(TD Creates a _range that wraps a given _range, forwarding along
+        its elements while also calling a provided function with each element.
+    ))
 )
 
 These _range-construction tools are implemented using templates; but sometimes
@@ -9739,4 +9743,198 @@ unittest    // bug 9060
     until(r, 7);
     static void foo(R)(R r) { until!(x => x > 7)(r); }
     foo(r);
+}
+
+/*****************************************************************************/
+
+/**
+  Implements a "tee" style pipe, wrapping an input range so that elements
+  of the range can be passed to a provided function as they are iterated over.
+
+  If the pipeOnFront Flag is set to yes, func is called on front.
+  Otherwise, func is called on popFront (the default behavior).
+
+  Examples:
+---
+  int[] values = [1, 4, 9, 16, 25];
+
+  int count = 0;
+  auto newValues = values.filter!(a => a < 10)
+                     .tee!(a => count++)
+                     .map!(a => a + 1)
+                     .filter!(a => a < 10);
+  assert(equal(newValues3, [2, 5]));
+  assert(count == 3);
+
+  auto printValues = values.filter!(a => a < 10)
+                       .tee!(a => writefln("pre-map: %d", a))
+                       .map!(a => a + 1)
+                       .tee!(a => writefln("post-map: %d", a))
+                       .filter!(a => a < 10);
+  assert(equal(printValues, [2, 5]));
+  // Outputs (order due to range evaluation):
+  //   post-map: 2
+  //   pre-map: 1
+  //   post-map: 5
+  //   pre-map: 4
+  //   post-map: 10
+  //   pre-map: 9
+---
+
+*/ 
+template tee(alias func, Flag!"pipeOnFront" pipeOnFront = No.pipeOnFront)
+  if (is(typeof(unaryFun!func)))
+{
+    auto tee(Range)(Range inputRange) if (isInputRange!(Range))
+    {
+        struct Result(Range)
+        {
+            private Range _input;
+
+            this(Range r)
+            {
+                _input = r;
+            }
+
+            static if (isInfinite!Range)
+            {
+                enum bool empty = false;
+            }
+            else
+            {
+                @property bool empty() { return _input.empty; }
+            }
+
+            void popFront()
+            {
+                assert(!_input.empty);
+                static if (!pipeOnFront)
+                {
+                    unaryFun!func(_input.front);
+                }
+                _input.popFront();
+            }
+
+            @property auto ref front()
+            {
+                static if (pipeOnFront)
+                {
+                    unaryFun!func(_input.front);
+                }
+                return _input.front;
+            }
+
+            static if (isForwardRange!Range)
+            {
+                @property auto save()
+                {
+                    return typeof(this)(_input.save);
+                }
+            }
+        }
+
+        return Result!(Range)(inputRange);
+    }
+}
+
+unittest
+{
+    // Pass-through
+    int[] values = [1, 4, 9, 16, 25];
+
+    auto newValues = tee!(a => a + 1)(values);
+    assert(equal(newValues, values));
+
+    auto newValues2 = tee!(a => a = 0)(values);
+    assert(equal(newValues2, values));
+
+    int count = 0;
+    auto newValues3 = filter!(a => a < 10)(values)
+                      .tee!(a => count++)()
+                      .map!(a => a + 1)()
+                      .filter!(a => a < 10)();
+    assert(equal(newValues3, [2, 5]));
+    assert(count == 3);
+}
+
+unittest
+{
+    char[] txt = "Line one, Line 2".dup;
+
+    bool isVowel(dchar c)
+    {
+        return (std.string.indexOf("AaEeIiOoUu", c) != -1);
+    }
+
+    int vowelCount = 0;
+    int shiftedCount = 0;
+    auto removeVowels = tee!(c => isVowel(c) ? vowelCount++ : 0)(txt)
+                          .filter!(c => !isVowel(c))()
+                          .map!(c => (c == ' ') ? c : c + 1)()
+                          .tee!(c => isVowel(c) ? shiftedCount++ : 0)();
+    assert(equal(removeVowels, "Mo o- Mo 3"));
+    assert(vowelCount == 6);
+    assert(shiftedCount == 3);
+}
+
+unittest
+{
+    // Manually stride to test different pipe behavior.
+    void testRange(Range)(Range r)
+    {
+        const int strideLen = 3;
+        int i = 0;
+        typeof(Range.front) elem;
+        while (!r.empty)
+        {
+            if (i % strideLen == 0)
+            {
+                elem = r.front();
+            }
+            r.popFront();
+            i++;
+        }
+    }
+
+    string txt = "abcdefghijklmnopqrstuvwxyz";
+
+    int popCount = 0;
+    auto pipeOnPop = tee!(a => popCount++)(txt);
+    testRange(pipeOnPop);
+    assert(popCount == 26);
+
+    int frontCount = 0;
+    auto pipeOnFront = tee!(a => frontCount++, Yes.pipeOnFront)(txt);
+    testRange(pipeOnFront);
+    assert(frontCount == 9);
+}
+
+unittest
+{
+    // Verify save behavior, using a reference type InputRange.
+    class C
+    {
+        int _data;
+        @property int front() { return _data; }
+        @property bool empty() { return false; }
+        void popFront() { _data++; }
+        @property auto save()
+        {
+            C result = new C();
+            result._data = _data;
+            return result;
+        }
+    }
+
+    C nums = new C();
+
+    auto range = tee!(a => a + 1)(nums);
+    range.popFront();
+    assert(range.front == 1);
+
+    auto saved = range.save;
+    range.popFront();
+    range.popFront();
+    assert(range.front == 3);
+    assert(saved.front == 1);
 }
