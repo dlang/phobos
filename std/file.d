@@ -2839,7 +2839,7 @@ unittest
         path = The directory to iterate over.
         pattern  = String with wildcards, such as $(RED "*.d"). The supported
                    wildcard strings are described under
-                   $(XREF path, globMatch).
+                   $(XREF _path, globMatch).
         mode = Whether the directory's sub-directories should be iterated
                over depth-first ($(D_PARAM depth)), breadth-first
                ($(D_PARAM breadth)), or not at all ($(D_PARAM shallow)).
