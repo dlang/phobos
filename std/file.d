@@ -2389,8 +2389,13 @@ void rmdirRecurse(ref DirEntry de)
     if(!de.isDir)
         throw new FileException(de.name, "Not a directory");
 
-    if(de.isSymlink)
-        remove(de.name);
+    if (de.isSymlink)
+    {
+        version (Windows)
+            rmdir(de.name);
+        else
+            remove(de.name);
+    }
     else
     {
         // all children, recursively depth-first
