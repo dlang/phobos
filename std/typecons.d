@@ -1023,13 +1023,13 @@ break the soundness of D's type system and does not incur any of the
 risks usually associated with $(D cast).
 
  */
-template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!T)
+template Rebindable(T) if (is(T == class) || is(T == interface) || isDynamicArray!T)
 {
     static if (!is(T X == const U, U) && !is(T X == immutable U, U))
     {
         alias Rebindable = T;
     }
-    else static if (isArray!T)
+    else static if (isDynamicArray!T)
     {
         alias Rebindable = const(ElementEncodingType!T)[];
     }
@@ -1079,7 +1079,7 @@ Convenience function for creating a $(D Rebindable) using automatic type
 inference.
 */
 Rebindable!T rebindable(T)(T obj)
-if (is(T == class) || is(T == interface) || isArray!T)
+if (is(T == class) || is(T == interface) || isDynamicArray!T)
 {
     typeof(return) ret;
     ret = obj;
@@ -1173,6 +1173,10 @@ unittest
         static assert(is(Rebindable!(const(T[])) == const(T)[]));
         static assert(is(Rebindable!(T[]) == T[]));
     }
+
+    // Issue 12046
+    static assert(!__traits(compiles, Rebindable!(int[1])));
+    static assert(!__traits(compiles, Rebindable!(const int[1])));
 }
 
 /**
