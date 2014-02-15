@@ -289,13 +289,20 @@ Generally a container may define several types of ranges.
  */
     struct Range
     {
-        /// Range primitives.
+        /++
+        Range primitives.
+        +/
         @property bool empty()
         {
             assert(0);
         }
         /// Ditto
-        @property T front()
+        @property ref T front() //ref return optional
+        {
+            assert(0);
+        }
+        /// Ditto
+        @property void front(T value) //Only when front does not return by ref
         {
             assert(0);
         }
@@ -310,7 +317,12 @@ Generally a container may define several types of ranges.
             assert(0);
         }
         /// Ditto
-        @property T back()
+        @property ref T back() //ref return optional
+        {
+            assert(0);
+        }
+        /// Ditto
+        @property void back(T value) //Only when front does not return by ref
         {
             assert(0);
         }
@@ -325,17 +337,22 @@ Generally a container may define several types of ranges.
             assert(0);
         }
         /// Ditto
-        T opIndex(size_t i)
+        T opIndex(size_t i) //ref return optional
         {
             assert(0);
         }
         /// Ditto
-        void opIndexAssign(T value, size_t i)
+        void opIndexAssign(size_t i, T value) //Only when front does not return by ref
         {
             assert(0);
         }
         /// Ditto
-        void opIndexOpAssign(string op)(T value, uint i)
+        T opIndexUnary(string op)(size_t i) //Only when front does not return by ref
+        {
+            assert(0);
+        }
+        /// Ditto
+        void opIndexOpAssign(string op)(size_t i, T value) //Only when front does not return by ref
         {
             assert(0);
         }
@@ -435,7 +452,12 @@ Forward to $(D opSlice().front) and $(D opSlice().back), respectively.
 
 Complexity: $(BIGOH log(n))
  */
-    @property T front()
+    @property ref T front() //ref return optional
+    {
+        assert(0);
+    }
+    /// Ditto
+    @property void front(T value) //Only when front does not return by ref
     {
         assert(0);
     }
@@ -445,7 +467,12 @@ Complexity: $(BIGOH log(n))
         assert(0);
     }
     /// Ditto
-    @property T back()
+    @property ref T back() //ref return optional
+    {
+        assert(0);
+    }
+    /// Ditto
+    @property void back(T value) //Only when front does not return by ref
     {
         assert(0);
     }
@@ -458,24 +485,27 @@ Complexity: $(BIGOH log(n))
 /**
 Indexing operators yield or modify the value at a specified index.
  */
-    /**
-       Indexing operators yield or modify the value at a specified index.
-     */
-    ValueType opIndex(KeyType)
+    ref T opIndex(KeyType) //ref return optional
     {
         assert(0);
     }
     /// ditto
-    void opIndexAssign(KeyType)
+    void opIndexAssign(KeyType i, T value) //Only when front does not return by ref
     {
         assert(0);
     }
     /// ditto
-    void opIndexOpAssign(string op)(KeyType)
+    T opIndexUnary(string op)(KeyType i) //Only when front does not return by ref
     {
         assert(0);
     }
-    T moveAt(size_t i)
+    /// ditto
+    void opIndexOpAssign(string op)(KeyType i, T value) //Only when front does not return by ref
+    {
+        assert(0);
+    }
+    /// ditto
+    T moveAt(KeyType i)
     {
         assert(0);
     }
@@ -997,20 +1027,10 @@ Defines the container's primary range, which embodies a forward range.
         @property bool empty() const { return !_head; }
 
         /// ditto
-        @property T front()
+        @property ref T front()
         {
             assert(!empty, "SList.Range.front: Range is empty");
             return _head._payload;
-        }
-
-        /// ditto
-        static if (isAssignable!(T, T))
-        {
-            @property void front(T value)
-            {
-                assert(!empty, "SList.Range.front: Range is empty");
-                move(value, _head._payload);
-            }
         }
 
         /// ditto
@@ -1078,24 +1098,10 @@ Forward to $(D opSlice().front).
 
 Complexity: $(BIGOH 1)
      */
-    @property T front()
+    @property ref T front()
     {
         assert(!empty, "SList.front: List is empty");
         return _root._payload;
-    }
-
-/**
-Forward to $(D opSlice().front(value)).
-
-Complexity: $(BIGOH 1)
-     */
-    static if (isAssignable!(T, T))
-    {
-        @property void front(T value)
-        {
-            assert(!empty, "SList.front: List is empty");
-            move(value, _root._payload);
-        }
     }
 
     unittest
@@ -1674,20 +1680,10 @@ elements in $(D rhs).
         }
 
         /// ditto
-        @property T front()
+        @property ref T front()
         {
             assert(!empty, "DList.Range.front: Range is empty");
             return _first._payload;
-        }
-
-        /// ditto
-        static if(isAssignable!(T, T))
-        {
-            @property void front(T value)
-            {
-                assert(!empty, "DList.Range.front: Range is empty");
-                move(value, _first._payload);
-            }
         }
 
         /// ditto
@@ -1708,20 +1704,10 @@ elements in $(D rhs).
         @property Range save() { return this; }
 
         /// Bidirectional range primitives.
-        @property T back()
+        @property ref T back()
         {
             assert(!empty, "DList.Range.back: Range is empty");
             return _last._payload;
-        }
-
-        /// ditto
-        static if(isAssignable!(T, T))
-        {
-            @property void back(T value)
-            {
-                assert(!empty, "DList.Range.back: Range is empty");
-                move(value, _last._payload);
-            }
         }
 
         /// ditto
@@ -1784,24 +1770,10 @@ Forward to $(D opSlice().front).
 
 Complexity: $(BIGOH 1)
      */
-    @property T front()
+    @property ref T front()
     {
         assert(!empty, "DList.front: List is empty");
         return _first._payload;
-    }
-
-/**
-Forward to $(D opSlice().front(value)).
-
-Complexity: $(BIGOH 1)
-     */
-    static if(isAssignable!(T,T))
-    {
-        @property void front(T value)
-        {
-            assert(!empty, "DList.front: List is empty");
-            move(value, _first._payload);
-        }
     }
 
 /**
@@ -1809,24 +1781,10 @@ Forward to $(D opSlice().back).
 
 Complexity: $(BIGOH 1)
      */
-    @property T back()
+    @property ref T back()
     {
         assert(!empty, "DList.back: List is empty");
         return _last._payload;
-    }
-
-/**
-Forward to $(D opSlice().back(value)).
-
-Complexity: $(BIGOH 1)
-     */
-    static if(isAssignable!(T,T))
-    {
-        @property void back(T value)
-        {
-            assert(!empty, "DList.back: List is empty");
-            move(value, _last._payload);
-        }
     }
 
 /**
@@ -2099,7 +2057,8 @@ $(D r) and $(D m) is the length of $(D stuff).
     // Helper: insert $(D stuff) before Node $(D n). If $(D n) is $(D null) then insert at end.
     private size_t insertBeforeNode(Stuff)(Node* n, Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
-    {        size_t result;
+    {
+        size_t result;
         if(stuff.empty) return result;
 
         Node* first;
@@ -2723,34 +2682,18 @@ Defines the container's primary range, which is a random-access range.
         {
             return _b - _a;
         }
+        alias opDollar = length;
 
-        size_t opDollar() @safe pure nothrow const
-        {
-            return length;
-        }
-
-        @property T front()
+        @property ref T front()
         {
             version (assert) if (empty) throw new RangeError();
             return _outer[_a];
         }
 
-        @property T back()
+        @property ref T back()
         {
             version (assert) if (empty) throw new RangeError();
             return _outer[_b - 1];
-        }
-
-        @property void front(T value)
-        {
-            version (assert) if (empty) throw new RangeError();
-            _outer[_a] = move(value);
-        }
-
-        @property void back(T value)
-        {
-            version (assert) if (empty) throw new RangeError();
-            _outer[_b - 1] = move(value);
         }
 
         void popFront() @safe pure nothrow
@@ -2783,36 +2726,10 @@ Defines the container's primary range, which is a random-access range.
             return move(_outer._data._payload[_a + i]);
         }
 
-        T opIndex(size_t i)
+        ref T opIndex(size_t i)
         {
             version (assert) if (_a + i >= _b) throw new RangeError();
             return _outer[_a + i];
-        }
-
-        void opIndexUnary(string op)(size_t i)
-            if(op == "++" || op == "--")
-        {
-            version (assert) if (_a + i >= _b) throw new RangeError();
-            mixin(op~"_outer[_a + i];");
-        }
-
-        T opIndexUnary(string op)(size_t i)
-            if(op != "++" && op != "--")
-        {
-            version (assert) if (_a + i >= _b) throw new RangeError();
-            mixin("return "~op~"_outer[_a + i];");
-        }
-
-        void opIndexAssign(T value, size_t i)
-        {
-            version (assert) if (_a + i >= _b) throw new RangeError();
-            _outer[_a + i] = value;
-        }
-
-        void opIndexOpAssign(string op)(T value, size_t i)
-        {
-            version (assert) if (_a + i >= _b) throw new RangeError();
-            mixin("_outer[i] "~op~"= value;");
         }
 
         typeof(this) opSlice()
@@ -2974,31 +2891,17 @@ Precondition: $(D !empty)
 
 Complexity: $(BIGOH 1)
      */
-    @property T front()
+    @property ref T front()
     {
         version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
         return _data._payload[0];
     }
 
     /// ditto
-    @property void front(T value)
-    {
-        version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
-        _data._payload[0] = value;
-    }
-
-    /// ditto
-    @property T back()
+    @property ref T back()
     {
         version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
         return _data._payload[$ - 1];
-    }
-
-    /// ditto
-    @property void back(T value)
-    {
-        version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
-        _data._payload[$ - 1] = value;
     }
 
 /**
@@ -3008,40 +2911,10 @@ Precondition: $(D i < length)
 
 Complexity: $(BIGOH 1)
      */
-    T opIndex(size_t i)
+    ref T opIndex(size_t i)
     {
         version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
         return _data._payload[i];
-    }
-
-    /// ditto
-    void opIndexUnary(string op)(size_t i)
-        if(op == "++" || op == "--")
-    {
-        version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
-        mixin(op~"_data._payload[i];");
-    }
-
-    /// ditto
-    T opIndexUnary(string op)(size_t i)
-        if(op != "++" && op != "--")
-    {
-        version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
-        mixin("return "~op~"_data._payload[i];");
-    }
-
-    /// ditto
-    void opIndexAssign(T value, size_t i)
-    {
-        version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
-        _data._payload[i] = value;
-    }
-
-    /// ditto
-    void opIndexOpAssign(string op)(T value, size_t i)
-    {
-        version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
-        mixin("_data._payload[i] "~op~"= value;");
     }
 
 /**
@@ -3051,19 +2924,20 @@ Precondition: $(D i < j && j < length)
 
 Complexity: $(BIGOH slice.length)
      */
-
     void opSliceAssign(T value)
     {
         if (!_data.refCountedStore.isInitialized) return;
         _data._payload[] = value;
     }
 
+    /// ditto
     void opSliceAssign(T value, size_t i, size_t j)
     {
         auto slice = _data.refCountedStore.isInitialized ? _data._payload : T[].init;
         slice[i .. j] = value;
     }
 
+    /// ditto
     void opSliceUnary(string op)()
         if(op == "++" || op == "--")
     {
