@@ -594,6 +594,59 @@ private enum bool isPrintable(T) =
 
 private alias Identity(alias T) = T;
 
+/**
+    Return a copy of a Tuple with its fields in reverse order.
+ */
+ReverseTupleType!T reverse(T)(T t)
+    if (isTuple!T)
+{
+    import std.typetuple : Reverse;
+    // @@@BUG@@@ Cannot be an internal function due to forward reference issues.
+
+    // @@@BUG@@@ 9929 Need 'this' when calling template with expanded tuple
+    // return tuple(Reverse!(t.expand));
+
+    typeof(return) result;
+    auto tup = t.expand;
+    result.expand = Reverse!tup;
+    return result;
+}
+
+///
+unittest
+{
+    auto tup = tuple(1, "2");
+    assert(tup.reverse == tuple("2", 1));
+}
+
+/* Get a Tuple type with the reverse specification of Tuple T. */
+private template ReverseTupleType(T)
+    if (isTuple!T)
+{
+    static if (is(T : Tuple!A, A...))
+        alias ReverseTupleType = Tuple!(ReverseTupleSpecs!A);
+}
+
+/* Reverse the Specs of a Tuple. */
+private template ReverseTupleSpecs(T...)
+{
+    static if (T.length > 1)
+    {
+        static if (is(typeof(T[$-1]) : string))
+        {
+            alias ReverseTupleSpecs = TypeTuple!(T[$-2], T[$-1], ReverseTupleSpecs!(T[0 .. $-2]));
+        }
+        else
+        {
+            alias ReverseTupleSpecs = TypeTuple!(T[$-1], ReverseTupleSpecs!(T[0 .. $-1]));
+        }
+    }
+    else
+    {
+        alias ReverseTupleSpecs = T;
+    }
+}
+
 unittest
 {
     {
@@ -745,6 +798,24 @@ unittest
     {
         alias T = Tuple!(int[1][]);
         auto t = T([[10]]);
+    }
+    // 7666
+    {
+        auto tup = tuple(1, "2");
+        assert(tup.reverse == tuple("2", 1));
+    }
+    {
+        Tuple!(int, "x", string, "y") tup = tuple(1, "2");
+        auto rev = tup.reverse;
+        assert(rev == tuple("2", 1));
+        assert(rev.x == 1 && rev.y == "2");
+    }
+    {
+        Tuple!(wchar, dchar, int, "x", string, "y", char, byte, float) tup;
+        tup = tuple('a', 'b', 3, "4", 'c', cast(byte)0x0D, 0.00);
+        auto rev = tup.reverse;
+        assert(rev == tuple(0.00, cast(byte)0x0D, 'c', "4", 3, 'b', 'a'));
+        assert(rev.x == 3 && rev.y == "4");
     }
 }
 unittest
