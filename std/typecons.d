@@ -1031,7 +1031,7 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!T)
     }
     else static if (isArray!T)
     {
-        alias Rebindable = const(ElementType!T)[];
+        alias Rebindable = const(ElementEncodingType!T)[];
     }
     else
     {
@@ -1162,6 +1162,17 @@ unittest
     const arrConst = arr;
     assert(rebindable(arr) == arr);
     assert(rebindable(arrConst) == arr);
+
+    // Issue 7654
+    immutable(char[]) s7654;
+    Rebindable!(typeof(s7654)) r7654 = s7654;
+
+    foreach (T; TypeTuple!(char, wchar, char, int))
+    {
+        static assert(is(Rebindable!(immutable(T[])) == immutable(T)[]));
+        static assert(is(Rebindable!(const(T[])) == const(T)[]));
+        static assert(is(Rebindable!(T[]) == T[]));
+    }
 }
 
 /**
