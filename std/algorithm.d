@@ -727,6 +727,9 @@ range), $(D result = fun(result, x)) gets evaluated. Finally, $(D
 result) is returned. The one-argument version $(D reduce!(fun)(range))
 works similarly, but it uses the first element of the range as the
 seed (the range must be non-empty).
+
+See also: $(LREF sum) is similar to $(D reduce!((a, b) => a + b)) that offers
+precise summing of floating point numbers.
  */
 template reduce(fun...) if (fun.length >= 1)
 {
@@ -1028,6 +1031,148 @@ unittest
     assert(m == 10);
     immutable minmax = reduce!(min, max)(numbers);
     assert(minmax == tuple(10, 30));
+}
+
+// sum
+/**
+Sums elements of $(D r), which must be a finite input range. Although
+conceptually $(D sum(r)) is equivalent to $(D reduce!((a, b) => a +
+b)(0, r)), $(D sum) uses specialized algorithms to maximize accuracy,
+as follows.
+
+$(UL
+$(LI If $(D ElementType!R) is $(D bool) or integral of size less than
+$(D 4), then calculations are performed in 32 bits. Correspondingly,
+$(D sum) returns $(D int) for signed numbers or $(D uint) for $(D
+bool) or unsigned numbers.)
+$(LI If $(D ElementType!R) is integral of size greater than or equal
+to $(D 4), then calculations are performed in 64
+bits. Correspondingly, $(D sum) returns $(D long) for signed numbers
+or $(D ulong) for unsigned numbers.)
+$(LI If $(D ElementType!R) is a floating-point type and $(D R) is a
+random-access range with length, then $(D sum) uses the $(WEB
+en.wikipedia.org/wiki/Pairwise_summation, pairwise summation)
+algorithm.)
+$(LI If $(D ElementType!R) is a floating-point type and $(D R) is a
+finite input range (but not a random-access range with length), then
+$(D sum) uses the $(WEB en.wikipedia.org/wiki/Kahan_summation,
+Kahan summation) algorithm.)
+)
+
+For floating point inputs, calculations are made in $(D real)
+precision for $(D real) inputs and in $(D double) precision otherwise.
+
+Note that these specialized summing algorithms execute more primitive operations
+than vanilla summation. Therefore, if in certain cases maximum speed is required
+at expense of precision, one can use $(D reduce!((a, b) => a + b)(0, r)), which
+is not specialized for summation.
+ */
+auto sum(R)(R r)
+if (isInputRange!R && !isFloatingPoint!(ElementType!R) && !isInfinite!R)
+{
+    alias E = ElementType!R;
+    static if (isIntegral!E || is(Unqual!E == bool))
+        static if (E.sizeof >= 4)
+            static if (E.min < 0)
+                alias Result = long;
+            else
+                alias Result = ulong;
+        else
+            static if (E.min < 0)
+                alias Result = int;
+            else
+                alias Result = uint;
+    else
+        alias Result = E;
+    Result seed = 0;
+    return reduce!"a + b"(seed, r);
+}
+
+/// Ditto
+unittest
+{
+    assert(sum([1, 2, 3, 4]) == 10);
+    assert(sum([1.0, 2, 3, 4]) == 10);
+    assert(sum([false, true, true, false, true]) == 3);
+}
+
+unittest
+{
+    static assert(is(typeof(sum([1, 2, 3, 4])) == long));
+    static assert(is(typeof(sum([1U, 2U, 3U, 4U])) == ulong));
+    static assert(is(typeof(sum([1L, 2L, 3L, 4L])) == long));
+    static assert(is(typeof(sum([1UL, 2UL, 3UL, 4UL])) == ulong));
+
+    int[] empty;
+    assert(sum(empty) == 0);
+    assert(sum([42]) == 42);
+    assert(sum([42, 43]) == 42 + 43);
+    assert(sum([42, 43, 44]) == 42 + 43 + 44);
+    assert(sum([42, 43, 44, 45]) == 42 + 43 + 44 + 45);
+}
+
+// Pairwise summation http://en.wikipedia.org/wiki/Pairwise_summation
+auto sum(R)(R r)
+if (hasSlicing!R && hasLength!R && isFloatingPoint!(ElementType!R))
+{
+    switch (r.length)
+    {
+    case 0: return 0.0;
+    case 1: return r.front;
+    case 2: return r.front + r[1];
+    default: return sum(r[0 .. $ / 2]) + sum(r[$ / 2 .. $]);
+    }
+}
+
+unittest
+{
+    static assert(is(typeof(sum([1., 2., 3., 4.])) == double));
+    static assert(is(typeof(sum([1F, 2F, 3F, 4F])) == double));
+    const(float[]) a = [1F, 2F, 3F, 4F];
+    static assert(is(typeof(sum(a)) == double));
+    const(float)[] b = [1F, 2F, 3F, 4F];
+    static assert(is(typeof(sum(a)) == double));
+
+    double[] empty;
+    assert(sum(empty) == 0);
+    assert(sum([42.]) == 42);
+    assert(sum([42., 43.]) == 42 + 43);
+    assert(sum([42., 43., 44.]) == 42 + 43 + 44);
+    assert(sum([42., 43., 44., 45.5]) == 42 + 43 + 44 + 45.5);
+}
+
+// Kahan algo http://en.wikipedia.org/wiki/Kahan_summation_algorithm
+auto sum(R)(R r)
+if (isInputRange!R && !(hasSlicing!R && hasLength!R)
+    && isFloatingPoint!(ElementType!R) && !isInfinite!R)
+{
+    static if (is(Unqual!(ElementType!R) == real))
+        alias Result = real;
+    else
+        alias Result = double;
+    Result result = 0, c = 0;
+    for (; !r.empty; r.popFront())
+    {
+        auto y = r.front - c;
+        auto t = result + y;
+        c = (t - result) - y;
+        result = t;
+    }
+    return result;
+}
+
+unittest
+{
+    import std.container;
+    static assert(is(typeof(sum(SList!float()[])) == double));
+    static assert(is(typeof(sum(SList!double()[])) == double));
+    static assert(is(typeof(sum(SList!real()[])) == real));
+
+    assert(sum(SList!double()[]) == 0);
+    assert(sum(SList!double(1)[]) == 1);
+    assert(sum(SList!double(1, 2)[]) == 1 + 2);
+    assert(sum(SList!double(1, 2, 3)[]) == 1 + 2 + 3);
+    assert(sum(SList!double(1, 2, 3, 4)[]) == 10);
 }
 
 /**
