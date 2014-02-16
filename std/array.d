@@ -1631,7 +1631,7 @@ unittest
   +/
 ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     if(isInputRange!RoR &&
-       isInputRange!(ElementType!RoR) &&
+       isInputRange!(Unqual!(ElementType!RoR)) &&
        isInputRange!R &&
        is(Unqual!(ElementType!(ElementType!RoR)) == Unqual!(ElementType!R)))
 {
@@ -1678,7 +1678,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
 /// Ditto
 ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
     if(isInputRange!RoR &&
-       isInputRange!(ElementType!RoR))
+       isInputRange!(Unqual!(ElementType!RoR)))
 {
     alias RetType = typeof(return);
 
@@ -1707,6 +1707,10 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
 
     assert(join([[1, 2, 3], [4, 5]], [72, 73]) == [1, 2, 3, 72, 73, 4, 5]);
     assert(join([[1, 2, 3], [4, 5]]) == [1, 2, 3, 4, 5]);
+
+    const string[] arr = ["apple", "banana"];
+    assert(arr.join(",") == "apple,banana");
+    assert(arr.join() == "applebanana");
 }
 
 unittest
