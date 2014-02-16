@@ -513,7 +513,7 @@ Indexing operators yield or modify the value at a specified index.
 /**
 $(D k in container) returns true if the given key is in the container.
  */
-    bool opBinary(string op)(KeyType k) if (op == "in")
+    bool opBinaryRight(string op)(KeyType k) if (op == "in")
     {
         assert(0);
     }
