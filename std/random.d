@@ -1231,7 +1231,7 @@ unittest
 auto uniform(string boundaries = "[)",
         T1, T2, UniformRandomNumberGenerator)
 (T1 a, T2 b, ref UniformRandomNumberGenerator urng)
-if (isFloatingPoint!(CommonType!(T1, T2)))
+if (isFloatingPoint!(CommonType!(T1, T2)) && isUniformRNG!UniformRandomNumberGenerator)
 {
     alias NumberType = Unqual!(CommonType!(T1, T2));
     static if (boundaries[0] == '(')
@@ -1325,7 +1325,8 @@ Hence, our condition to reroll is
 +/
 auto uniform(string boundaries = "[)", T1, T2, RandomGen)
 (T1 a, T2 b, ref RandomGen rng)
-if (isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2)))
+if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
+     isUniformRNG!RandomGen)
 {
     alias ResultType = Unqual!(CommonType!(T1, T2));
     static if (boundaries[0] == '(')
@@ -1475,7 +1476,7 @@ passed, uses the default $(D rndGen).
  */
 auto uniform(T, UniformRandomNumberGenerator)
 (ref UniformRandomNumberGenerator urng)
-if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
+if (!is(T == enum) && (isIntegral!T || isSomeChar!T) && isUniformRNG!UniformRandomNumberGenerator)
 {
     auto r = urng.front;
     urng.popFront();
@@ -1517,7 +1518,7 @@ generator is passed, uses the default $(D rndGen).
  */
 auto uniform(E, UniformRandomNumberGenerator)
 (ref UniformRandomNumberGenerator urng)
-if (is(E == enum))
+if (is(E == enum) && isUniformRNG!UniformRandomNumberGenerator)
 {
     static immutable E[EnumMembers!E.length] members = [EnumMembers!E];
     return members[std.random.uniform(0, members.length, urng)];
