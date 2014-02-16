@@ -69,6 +69,8 @@ version(Windows)
     /+ Waiting for druntime pull 299
     +/
     extern (C) nothrow FILE* _wfopen(in wchar* filename, in wchar* mode);
+
+    import core.sys.windows.windows : HANDLE;
 }
 
 version (DIGITAL_MARS_STDIO)
@@ -101,7 +103,6 @@ version (DIGITAL_MARS_STDIO)
     enum _O_BINARY = 0x8000;
     int _fileno(FILE* f) { return f._file; }
     alias fileno = _fileno;
-    alias _get_osfhandle = _fdToHandle;
 }
 else version (MICROSOFT_STDIO)
 {
@@ -118,6 +119,7 @@ else version (MICROSOFT_STDIO)
         void _unlock_file(FILE*);
         int _setmode(int, int);
         int _fileno(FILE*);
+        FILE* _fdopen(int, const (char)*);
     }
     alias FPUTC = _fputc_nolock;
     alias FPUTWC = _fputwc_nolock;
@@ -127,8 +129,13 @@ else version (MICROSOFT_STDIO)
     alias FLOCK = _lock_file;
     alias FUNLOCK = _unlock_file;
 
-    enum _O_BINARY = 0x8000;
-
+    enum
+    {
+        _O_RDONLY = 0x0000,
+        _O_APPEND = 0x0004,
+        _O_TEXT   = 0x4000,
+        _O_BINARY = 0x8000,
+    }
 }
 else version (GCC_IO)
 {
@@ -402,6 +409,94 @@ Throws: $(D ErrnoException) in case of error.
                         "Cannot run command `"~command~"'"),
                 command, 1, true);
     }
+
+/**
+First calls $(D detach) (throwing on failure), and then attempts to
+associate the given file descriptor with the $(D File). The mode must
+be compatible with the mode of the file descriptor.
+
+Throws: $(D ErrnoException) in case of error.
+ */
+    void fdopen(int fd, in char[] stdioOpenmode = "rb")
+    {
+        fdopen(fd, stdioOpenmode, null);
+    }
+
+    package void fdopen(int fd, in char[] stdioOpenmode, string name)
+    {
+        import std.string : toStringz;
+        import std.exception : errnoEnforce;
+
+        detach();
+
+        version (DIGITAL_MARS_STDIO)
+        {
+            // This is a re-implementation of DMC's fdopen, but without the
+            // mucking with the file descriptor.  POSIX standard requires the
+            // new fdopen'd file to retain the given file descriptor's
+            // position.
+            auto fp = core.stdc.stdio.fopen("NUL", toStringz(stdioOpenmode));
+            errnoEnforce(fp, "Cannot open placeholder NUL stream");
+            FLOCK(fp);
+            auto iob = cast(_iobuf*)fp;
+            .close(iob._file);
+            iob._file = fd;
+            iob._flag &= ~_IOTRAN;
+            FUNLOCK(fp);
+        }
+        else
+        {
+            version (Windows) // MSVCRT
+                auto fp = _fdopen(fd, toStringz(stdioOpenmode));
+            else
+                auto fp = .fdopen(fd, toStringz(stdioOpenmode));
+            errnoEnforce(fp);
+        }
+        this = File(fp, name);
+    }
+
+/**
+First calls $(D detach) (throwing on failure), and then attempts to
+associate the given Windows $(D HANDLE) with the $(D File). The mode must
+be compatible with the access attributes of the handle. Windows only.
+
+Throws: $(D ErrnoException) in case of error.
+*/
+    version(StdDdoc)
+    void windowsHandleOpen(HANDLE handle, in char[] stdioOpenmode);
+
+    version(Windows)
+    void windowsHandleOpen(HANDLE handle, in char[] stdioOpenmode)
+    {
+        import std.exception : errnoEnforce;
+        import std.string : format;
+
+        // Create file descriptors from the handles
+        version (DIGITAL_MARS_STDIO)
+            auto fd = _handleToFD(handle, FHND_DEVICE);
+        else // MSVCRT
+        {
+            int mode;
+            modeLoop:
+            foreach (c; stdioOpenmode)
+                switch (c)
+                {
+                    case 'r': mode |= _O_RDONLY; break;
+                    case '+': mode &=~_O_RDONLY; break;
+                    case 'a': mode |= _O_APPEND; break;
+                    case 'b': mode |= _O_BINARY; break;
+                    case 't': mode |= _O_TEXT;   break;
+                    case ',': break modeLoop;
+                    default: break;
+                }
+
+            auto fd = _open_osfhandle(cast(intptr_t)handle, mode);
+        }
+
+        errnoEnforce(fd >= 0, "Cannot open Windows HANDLE");
+        fdopen(fd, stdioOpenmode, "HANDLE(%s)".format(handle));
+    }
+
 
 /** Returns $(D true) if the file is opened. */
     @property bool isOpen() const pure nothrow
@@ -797,7 +892,7 @@ Throws: $(D Exception) if the file is not opened.
     version(Windows)
     {
         import core.sys.windows.windows;
-        import std.windows.syserror;
+
         private BOOL lockImpl(alias F, Flags...)(ulong start, ulong length,
             Flags flags)
         {
@@ -810,12 +905,14 @@ Throws: $(D Exception) if the file is not opened.
             overlapped.Offset = liStart.LowPart;
             overlapped.OffsetHigh = liStart.HighPart;
             overlapped.hEvent = null;
-            return F(cast(HANDLE)_get_osfhandle(fileno), flags, 0,
-                liLength.LowPart, liLength.HighPart, &overlapped);
+            return F(windowsHandle, flags, 0, liLength.LowPart,
+                liLength.HighPart, &overlapped);
         }
 
         private static T wenforce(T)(T cond, string str)
         {
+            import std.windows.syserror;
+
             if (cond) return cond;
             throw new Exception(str ~ ": " ~ sysErrorString(GetLastError()));
         }
@@ -1379,6 +1476,22 @@ Returns the file number corresponding to this object.
         enforce(isOpen, "Attempting to call fileno() on an unopened file");
         return .fileno(cast(FILE*) _p.handle);
     }
+
+/**
+Returns the underlying operating system $(D HANDLE) (Windows only).
+*/
+    version(StdDdoc)
+    @property HANDLE windowsHandle();
+
+    version(Windows)
+    @property HANDLE windowsHandle()
+    {
+        version (DIGITAL_MARS_STDIO)
+            return _fdToHandle(fileno);
+        else
+            return cast(HANDLE)_get_osfhandle(fileno);
+    }
+
 
 // Note: This was documented until 2013/08
 /*
@@ -3679,8 +3792,9 @@ version(linux)
         enforce(sock.connect(s, cast(sock.sockaddr*) &addr, addr.sizeof) != -1,
             new StdioException("Connect failed"));
 
-        return File(enforce(fdopen(s, "w+".ptr)),
-            host ~ ":" ~ to!string(port));
+        File f;
+        f.fdopen(s, "w+", host ~ ":" ~ to!string(port));
+        return f;
     }
 }
 
