@@ -166,6 +166,8 @@ import std.traits;
 import std.typecons;
 import std.typetuple;
 
+public import etc.c.curl : CurlOption;
+
 version(unittest)
 {
     // Run unit test with the PHOBOS_TEST_ALLOW_NET=1 set in order to
