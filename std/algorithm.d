@@ -775,7 +775,7 @@ template reduce(fun...) if (fun.length >= 1)
                 else
                 {
                     import std.functional : adjoin;
-                    import std.conv : emplace;
+                    import std.conv : emplaceRef;
 
                     static assert(fun.length > 1);
                     Unqual!(typeof(r.front)) seed = r.front;
@@ -783,7 +783,7 @@ template reduce(fun...) if (fun.length >= 1)
                         result = void;
                     foreach (i, T; result.Types)
                     {
-                        emplace(&result[i], seed);
+                        emplaceRef(result[i], seed);
                     }
                     r.popFront();
                     return reduce(result, r);
@@ -840,7 +840,7 @@ template reduce(fun...) if (fun.length >= 1)
                 }
                 else
                 {
-                    import std.conv : emplace;
+                    import std.conv : emplaceRef;
 
                     static if (is(typeof(&initialized)))
                     {
@@ -849,7 +849,7 @@ template reduce(fun...) if (fun.length >= 1)
 
                     foreach (i, T; result.Types)
                     {
-                        emplace(&result[i], elem);
+                        emplaceRef(result[i], elem);
                     }
                 }
             }
@@ -1411,11 +1411,11 @@ void uninitializedFill(Range, Value)(Range range, Value filler)
     alias T = ElementType!Range;
     static if (hasElaborateAssign!T)
     {
-        import std.conv : emplace;
+        import std.conv : emplaceRef;
 
         // Must construct stuff by the book
         for (; !range.empty; range.popFront())
-            emplace(addressOf(range.front), filler);
+            emplaceRef(range.front, filler);
     }
     else
         // Doesn't matter whether fill is initialized or not
@@ -7202,7 +7202,7 @@ minCount(alias pred = "a < b", Range)(Range range)
         }
         return RetType(least.front, occurrences);
     }
-    else static if (isAssignable!(UT, T) || (isAssignable!UT && !hasElaborateAssign!UT))
+    else static if (isAssignable!(UT, T) || (!hasElaborateAssign!UT && isAssignable!UT))
     {
         UT v = UT.init;
         static if (isAssignable!(UT, T)) v = range.front;

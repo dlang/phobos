@@ -40,13 +40,9 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
         auto result = trustedAllocateArray(r.length);
 
         size_t i;
-        static auto trustedGetAddr(T)(ref T t) @trusted nothrow pure
-        {
-            return &t;
-        }
         foreach (e; r)
         {
-            emplace(trustedGetAddr(result[i]), e);
+            emplaceRef(result[i], e);
             ++i;
         }
         return cast(E[])result;
@@ -1016,19 +1012,6 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
     static if(allSatisfy!(isInputRangeWithLengthOrConvertible!T, U))
     {
         import core.stdc.string;
-        void assign(E)(ref T dest, ref E src)
-        {
-            static if (is(typeof(dest.opAssign(src))) ||
-                       !is(typeof(dest = src)))
-            {
-                // this should be in-place construction
-                emplace(&dest, src);
-            }
-            else
-            {
-                dest = src;
-            }
-        }
         auto trustedAllocateArray(size_t n) @trusted nothrow
         {
             return uninitializedArray!(T[])(n);
@@ -1059,13 +1042,13 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
         {
             static if (is(E : T)) //ditto
             {
-                assign(tmp[j++], stuff[i]);
+                emplaceRef(tmp[j++], stuff[i]);
             }
             else
             {
                 foreach (v; stuff[i])
                 {
-                    assign(tmp[j++], v);
+                    emplaceRef(tmp[j++], v);
                 }
             }
         }
@@ -2439,18 +2422,7 @@ struct Appender(A : T[], T)
             else
                 auto ref uitem() @trusted nothrow @property { return cast(Unqual!T)item;}
 
-            //The idea is to only call emplace if we must.
-            static if ( is(typeof(bigData[0].opAssign(uitem))) ||
-                       !is(typeof(bigData[0] = uitem)))
-            {
-                //pragma(msg, T.stringof); pragma(msg, U.stringof);
-                emplace(&bigData[len], uitem);
-            }
-            else
-            {
-                //pragma(msg, T.stringof); pragma(msg, U.stringof);
-                bigData[len] = uitem;
-            }
+            emplaceRef(bigData[len], uitem);
 
             //We do this at the end, in case of exceptions
             _data.arr = bigData;
@@ -2507,10 +2479,7 @@ struct Appender(A : T[], T)
             {
                 foreach (ref it ; bigData[len .. newlen])
                 {
-                    static if (mustEmplace)
-                        emplace(&it, items.front);
-                    else
-                        it = items.front;
+                    emplaceRef(it, items.front);
                     items.popFront();
                 }
             }
@@ -2519,10 +2488,7 @@ struct Appender(A : T[], T)
                 static auto ref getUItem(U)(U item) @trusted {return cast(Unqual!T)item;}
                 foreach (ref it ; bigData[len .. newlen])
                 {
-                    static if (mustEmplace)
-                        emplace(&it, getUItem(items.front));
-                    else
-                        it = getUItem(items.front);
+                    emplaceRef(it, getUItem(items.front));
                     items.popFront();
                 }
             }
