@@ -570,7 +570,7 @@ Example:
 ----
 ulong factImpl(ulong n)
 {
-    return n < 2 ? 1 : n * mfact(n - 1);
+    return n < 2 ? 1 : n * factImpl(n - 1);
 }
 alias fact = memoize!factImpl;
 ...
