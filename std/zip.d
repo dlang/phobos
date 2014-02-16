@@ -572,6 +572,11 @@ final class ZipArchive
             de.comment = cast(string)(_data[i .. i + commentlen]);
             i += commentlen;
 
+            immutable uint dataOffset = de.offset + 30 + namelen + extralen;
+            if (dataOffset + de.compressedSize > endrecOffset)
+                throw new ZipException("Invalid directory entry offset or size.");
+            de._compressedData = _data[dataOffset .. dataOffset + de.compressedSize];
+
             _directory[de.name] = de;
 
         }
@@ -689,10 +694,13 @@ unittest
     am1.name = "foo";
     am1.expandedData = new ubyte[](1024);
     zip1.addMember(am1);
-    zip1.build();
+    auto data1 = zip1.build();
     zip2.addMember(zip1.directory["foo"]);
     zip2.build();
     auto am2 = zip2.directory["foo"];
     zip2.expand(am2);
     assert(am1.expandedData == am2.expandedData);
+    auto zip3 = new ZipArchive(data1);
+    zip3.build();
+    assert(zip3.directory["foo"].compressedSize == am1.compressedSize);
 }
