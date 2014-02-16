@@ -475,9 +475,30 @@ When source type supports member template function opCast, is is used.
 T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
         is(typeof(S.init.opCast!T()) : T) &&
-        !isExactSomeString!T)
+        !isExactSomeString!T &&
+        !is(typeof(T(value))))
 {
     return value.opCast!T();
+}
+
+@safe pure unittest
+{
+    static struct Test
+    {
+        struct T
+        {
+            this(S s) @safe pure { }
+        }
+        struct S
+        {
+            T opCast(U)() @safe pure { assert(false); }
+        }
+    }
+    to!(Test.T)(Test.S());
+
+    // make sure std.conv.to is doing the same thing as initialization
+    Test.S s;
+    Test.T t = s;
 }
 
 @safe pure unittest
