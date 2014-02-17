@@ -282,7 +282,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                         }
 
                         endOrDie = false;
-                        elementLength = 0,
+                        elementLength = 0;
                         elementCount++;
 
                         //atomList[EmailPart.componentDomain][elementCount] = "";

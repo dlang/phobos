@@ -531,7 +531,8 @@ public:
     {
         if(s.empty)
             return;
-        const(CodepointSet) set = s.chars > 500_000 ? (negative=true, s.dup.negate()) : s;
+        negative = s.chars > 500_000;
+        const(CodepointSet) set = negative ? s.dup.negate() : s;
         uint bound = 0;//set up on first iteration
         ushort emptyBlock = ushort.max;
         auto ivals  = set.ivals;

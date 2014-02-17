@@ -5972,7 +5972,9 @@ if (is(typeof(binaryFun!pred(r1.front, r2.front))))
         r.popFront();
         r2.popFront();
     }
-    return r2.empty ? (r1 = r, true) : false;
+    if (r2.empty)
+        r1 = r;
+    return r2.empty;
 }
 
 ///
@@ -5999,9 +6001,10 @@ unchanged and return $(D false).
 bool skipOver(alias pred = "a == b", R, E)(ref R r, E e)
 if (is(typeof(binaryFun!pred(r.front, e))))
 {
-    return binaryFun!pred(r.front, e)
-        ? (r.popFront(), true)
-        : false;
+    if (!binaryFun!pred(r.front, e))
+        return false;
+    r.popFront();
+    return true;
 }
 
 ///

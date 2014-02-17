@@ -1730,10 +1730,15 @@ public:
     {
         const(ubyte)[16]* addr;
         static if (is(typeof(IN6ADDR_ANY)))
-            return addr = &IN6ADDR_ANY.s6_addr, *addr;
-        else
-        static if (is(typeof(in6addr_any)))
-            return addr = &in6addr_any.s6_addr, *addr;
+        {
+            addr = &IN6ADDR_ANY.s6_addr;
+            return *addr;
+        }
+        else static if (is(typeof(in6addr_any)))
+        {
+            addr = &in6addr_any.s6_addr;
+            return *addr;
+        }
         else
             static assert(0);
     }

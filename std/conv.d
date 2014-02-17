@@ -2309,12 +2309,16 @@ Target parse(Target, Source)(ref Source p)
     case 'i': case 'I':
         p.popFront();
         enforce(!p.empty, bailOut());
-        if (std.ascii.toLower(p.front) == 'n' &&
-                (p.popFront(), enforce(!p.empty, bailOut()), std.ascii.toLower(p.front) == 'f'))
+        if (std.ascii.toLower(p.front) == 'n')
         {
-            // 'inf'
             p.popFront();
-            return sign ? -Target.infinity : Target.infinity;
+            enforce(!p.empty, bailOut());
+            if (std.ascii.toLower(p.front) == 'f')
+            {
+                // 'inf'
+                p.popFront();
+                return sign ? -Target.infinity : Target.infinity;
+            }
         }
         goto default;
     default: {}
@@ -2541,8 +2545,11 @@ Target parse(Target, Source)(ref Source p)
         if (std.ascii.toUpper(p.front) == 'N' && !startsWithZero)
         {
             // nan
-            enforce((p.popFront(), !p.empty && std.ascii.toUpper(p.front) == 'A')
-                    && (p.popFront(), !p.empty && std.ascii.toUpper(p.front) == 'N'),
+            p.popFront();
+            enforce(!p.empty && std.ascii.toUpper(p.front) == 'A',
+                   new ConvException("error converting input to floating point"));
+            p.popFront();
+            enforce(!p.empty && std.ascii.toUpper(p.front) == 'N',
                    new ConvException("error converting input to floating point"));
             // skip past the last 'n'
             p.popFront();

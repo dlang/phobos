@@ -2275,10 +2275,12 @@ Variable names are chosen to match those in Vitter's paper.
             while (true)
             {
                 // Step D2: set values of x and u.
-                for (x = _available * (1-_Vprime), s = cast(size_t) trunc(x);
-                     s >= qu1;
-                     x = _available * (1-_Vprime), s = cast(size_t) trunc(x))
+                while(1)
                 {
+                    x = _available * (1-_Vprime);
+                    s = cast(size_t) trunc(x);
+                    if (s < qu1)
+                        break;
                     _Vprime = newVprime(_toSelect);
                 }
 
