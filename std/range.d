@@ -4583,8 +4583,8 @@ unittest
 
 unittest //10845
 {
-   auto a = inputRangeObject(iota(3).filter!"true");
-   assert(equal(cycle(a).take(10), [0, 1, 2, 0, 1, 2, 0, 1, 2, 0]));
+    auto a = inputRangeObject(iota(3).filter!"true");
+    assert(equal(cycle(a).take(10), [0, 1, 2, 0, 1, 2, 0, 1, 2, 0]));
 }
 
 private alias lengthType(R) = typeof(R.init.length.init);
@@ -7781,7 +7781,7 @@ unittest
     }
 }
 
-unittest 
+unittest
 {
     foreach(DummyType; AllDummyRanges) {
         auto d = DummyType.init;
