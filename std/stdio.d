@@ -457,7 +457,7 @@ Throws: $(D ErrnoException) in case of error.
 
     // Declare a dummy HANDLE to allow generating documentation
     // for Windows-only methods.
-    version(StdDdoc) version(Windows) {} else alias HANDLE = int;
+    version(StdDdoc) { version(Windows) {} else alias HANDLE = int; }
 
 /**
 First calls $(D detach) (throwing on failure), and then attempts to
