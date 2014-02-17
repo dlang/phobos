@@ -455,6 +455,10 @@ Throws: $(D ErrnoException) in case of error.
         this = File(fp, name);
     }
 
+    // Declare a dummy HANDLE to allow generating documentation
+    // for Windows-only methods.
+    version(StdDdoc) version(Windows) {} else alias HANDLE = int;
+
 /**
 First calls $(D detach) (throwing on failure), and then attempts to
 associate the given Windows $(D HANDLE) with the $(D File). The mode must
