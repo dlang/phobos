@@ -4421,7 +4421,8 @@ nothrow:
 
     inout(typeof(this)) opSlice(size_t i, DollarToken) inout
     {
-        return Cycle(*cast(R*)_ptr, _index + i);
+        // cast: Issue 12177 workaround
+        return cast(typeof(return))Cycle(*cast(R*)_ptr, _index + i);
     }
 }
 
@@ -4583,8 +4584,13 @@ unittest
 
 unittest //10845
 {
-   auto a = inputRangeObject(iota(3).filter!"true");
-   assert(equal(cycle(a).take(10), [0, 1, 2, 0, 1, 2, 0, 1, 2, 0]));
+    auto a = inputRangeObject(iota(3).filter!"true");
+    assert(equal(cycle(a).take(10), [0, 1, 2, 0, 1, 2, 0, 1, 2, 0]));
+}
+
+unittest // 12177
+{
+    auto a = recurrence!q{a[n - 1] ~ a[n - 2]}("1", "0");
 }
 
 private alias lengthType(R) = typeof(R.init.length.init);
@@ -7783,7 +7789,7 @@ unittest
     }
 }
 
-unittest 
+unittest
 {
     foreach(DummyType; AllDummyRanges) {
         auto d = DummyType.init;
