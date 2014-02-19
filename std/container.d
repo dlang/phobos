@@ -1629,9 +1629,7 @@ Constructor taking a number of nodes
 Constructor taking an input range
      */
     this(Stuff)(Stuff stuff)
-    if (isInputRange!Stuff
-            && isImplicitlyConvertible!(ElementType!Stuff, T)
-            && !is(Stuff == T[]))
+    if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
         insertBack(stuff);
     }
@@ -1642,7 +1640,8 @@ Comparison for equality.
 Complexity: $(BIGOH min(n, n1)) where $(D n1) is the number of
 elements in $(D rhs).
      */
-    bool opEquals(ref const DList rhs) const
+    bool opEquals()(ref const DList rhs) const
+    if (is(typeof(front == front)))
     {
         if(_first == rhs._first) return _last == rhs._last;
         if(_last == rhs._last) return false;
@@ -1675,7 +1674,7 @@ elements in $(D rhs).
         @property const nothrow
         bool empty()
         {
-            assert(!!_first == !!_last, "DList.Range: chain is in an inconsistent state (maybe it was cut?)");
+            assert(!!_first == !!_last, "DList.Range: Invalidated state");
             return !_first;
         }
 
@@ -1696,6 +1695,7 @@ elements in $(D rhs).
             }
             else
             {
+                assert(_first is _first._next._prev, "DList.Range: Invalidated state");
                 _first = _first._next;
             }
         }
@@ -1720,6 +1720,7 @@ elements in $(D rhs).
             }
             else
             {
+                assert(_last is _last._prev._next, "DList.Range: Invalidated state");
                 _last = _last._prev;
             }
         }
@@ -1741,6 +1742,19 @@ Complexity: $(BIGOH 1)
     {
         assert(!!_first == !!_last, "DList: Internal error, inconsistant list");
         return _first is null;
+    }
+
+/**
+Removes all contents from the $(D DList).
+
+Postcondition: $(D empty)
+
+Complexity: $(BIGOH 1)
+     */
+    void clear()
+    {
+        //remove actual elements.
+        remove(this[]);
     }
 
 /**
@@ -1770,7 +1784,7 @@ Forward to $(D opSlice().front).
 
 Complexity: $(BIGOH 1)
      */
-    @property ref T front()
+    @property ref inout(T) front() inout
     {
         assert(!empty, "DList.front: List is empty");
         return _first._payload;
@@ -1781,90 +1795,66 @@ Forward to $(D opSlice().back).
 
 Complexity: $(BIGOH 1)
      */
-    @property ref T back()
+    @property ref inout(T) back() inout
     {
         assert(!empty, "DList.back: List is empty");
         return _last._payload;
     }
 
+/+ ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ +/
+/+                        BEGIN CONCAT FUNCTIONS HERE                         +/
+/+ ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ +/
+
 /**
 Returns a new $(D DList) that's the concatenation of $(D this) and its
-argument.
+argument $(D rhs).
      */
     DList opBinary(string op, Stuff)(Stuff rhs)
-    if (op == "~" && isImplicitlyConvertible!(Stuff, T))
+    if (op == "~" && is(typeof(insertBack(rhs))))
     {
         auto ret = this.dup;
-        ret ~= rhs;
+        ret.insertBack(rhs);
         return ret;
     }
     /// ditto
-    DList opBinary(string op, Stuff)(Stuff rhs)
-    if (op == "~" && (is(Stuff == DList) || is(typeof(DList(rhs)))))
+    DList opBinary(string op)(DList rhs)
+    if (op == "~")
+    {
+        return ret ~ rhs[];
+    }
+
+/**
+Returns a new $(D DList) that's the concatenation of the argument $(D lhs)
+and $(D this).
+     */
+    DList opBinaryRight(string op, Stuff)(Stuff lhs)
+    if (op == "~" && is(typeof(insertFront(lhs))))
     {
         auto ret = this.dup;
-        ret ~= rhs;
+        ret.insertFront(lhs);
         return ret;
     }
 
 /**
-Returns a new $(D DList) that's the concatenation of the argument and $(D this)
-     */
-    DList opBinaryRight(string op, Stuff)(Stuff rhs)
-    if (op == "~" && isImplicitlyConvertible!(Stuff, T))
-    {
-        auto ret = this.dup;
-        ret.opOpAssignRightPrivate!"~"(rhs);
-        return ret;
-    }
-
-/// ditto
-    DList opBinaryRight(string op, Stuff)(Stuff rhs)
-    if (op == "~" && isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
-    {
-        auto ret = this.dup;
-        ret.opOpAssignRightPrivate!"~"(rhs);
-        return ret;
-    }
-
-/**
-Appends the contents of stuff into this.
+Appends the contents of the argument $(D rhs) into $(D this).
      */
     DList opOpAssign(string op, Stuff)(Stuff rhs)
-    if (op == "~" && isImplicitlyConvertible!(Stuff, T))
-    {
-        if (_last) _last._next = rhs._first;
-        if (rhs._first) rhs_.first._prev = _last;
-    }
-
-/// ditto
-    DList opOpAssign(string op, Stuff)(Stuff rhs)
-    if (op == "~" && isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
+    if (op == "~" && is(typeof(insertBack(rhs))))
     {
         insertBack(rhs);
         return this;
     }
 
-// Private implementations helpers for opOpBinaryRight
-    DList opOpAssignRightPrivate(string op, Stuff)(Stuff lhs)
-    if (op == "~" && isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
+/// ditto
+    DList opOpAssign(string op)(DList rhs)
+    if (op == "~")
     {
-        this.insertFront(lhs);
-        return this;
+        return this ~= rhs[];
     }
 
-/**
-Removes all contents from the $(D DList).
-
-Postcondition: $(D empty)
-
-Complexity: $(BIGOH 1)
-     */
-    void clear()
-    {
-        //remove actual elements.
-        remove(this[]);
-    }
+/+ ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ +/
+/+                        BEGIN INSERT FUNCTIONS HERE                         +/
+/+ ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ +/
 
 /**
 Inserts $(D stuff) to the front/back of the container. $(D stuff) can be a
@@ -1900,6 +1890,46 @@ Complexity: $(BIGOH log(n))
     alias stableInsertBack = insertBack;
 
 /**
+Inserts $(D stuff) after range $(D r), which must be a non-empty range
+previously extracted from this container.
+
+$(D stuff) can be a value convertible to $(D T) or a range of objects
+convertible to $(D T). The stable version behaves the same, but
+guarantees that ranges iterating over the container are never
+invalidated.
+
+Elements are not actually removed from the chain, but the $(D DList)'s,
+first/last pointer is advanced.
+
+Returns: The number of values inserted.
+
+Complexity: $(BIGOH k + m), where $(D k) is the number of elements in
+$(D r) and $(D m) is the length of $(D stuff).
+     */
+    size_t insertBefore(Stuff)(Range r, Stuff stuff)
+    {
+        Node* n = (r._first) ? r._first : _first;
+        return insertBeforeNode(n, stuff);
+    }
+
+    /// ditto
+    alias stableInsertBefore = insertBefore;
+
+    /// ditto
+    size_t insertAfter(Stuff)(Range r, Stuff stuff)
+    {
+        Node* n = (r._last) ? r._last._next : null;
+        return insertBeforeNode(n, stuff);
+    }
+
+    /// ditto
+    alias stableInsertAfter = insertAfter;
+
+/+ ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ +/
+/+                        BEGIN REMOVE FUNCTIONS HERE                         +/
+/+ ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ +/
+
+/**
 Picks one value from the front of the container, removes it from the
 container, and returns it.
 
@@ -1915,7 +1945,7 @@ Complexity: $(BIGOH 1).
     T removeAny()
     {
         assert(!empty, "DList.removeAny: List is empty");
-        auto result = move(_last._payload);
+        auto result = move(back);
         _last = _last._prev;
         if (_last is null)
         {
@@ -2019,110 +2049,6 @@ Complexity: $(BIGOH howMany * log(n)).
     alias stableRemoveBack = removeBack;
 
 /**
-Inserts $(D stuff) after range $(D r), which must be a non-empty range
-previously extracted from this container.
-
-$(D stuff) can be a value convertible to $(D T) or a range of objects
-convertible to $(D T). The stable version behaves the same, but
-guarantees that ranges iterating over the container are never
-invalidated.
-
-Elements are not actually removed from the chain, but the $(D DList)'s,
-first/last pointer is advanced.
-
-Returns: The number of values inserted.
-
-Complexity: $(BIGOH k + m), where $(D k) is the number of elements in
-$(D r) and $(D m) is the length of $(D stuff).
-     */
-    size_t insertBefore(Stuff)(Range r, Stuff stuff)
-    {
-        Node* n = (r._first) ? r._first : _first;
-        return insertBeforeNode(n, stuff);
-    }
-
-    /// ditto
-    alias stableInsertBefore = insertBefore;
-
-    /// ditto
-    size_t insertAfter(Stuff)(Range r, Stuff stuff)
-    {
-        Node* n = (r._last) ? r._last._next : null;
-        return insertBeforeNode(n, stuff);
-    }
-
-    /// ditto
-    alias stableInsertAfter = insertAfter;
-
-    // Helper: insert $(D stuff) before Node $(D n). If $(D n) is $(D null) then insert at end.
-    private size_t insertBeforeNode(Stuff)(Node* n, Stuff stuff)
-    if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
-    {
-        size_t result;
-        if(stuff.empty) return result;
-
-        Node* first;
-        Node* last;
-        //scope block
-        {
-            auto item = stuff.front;
-            stuff.popFront();
-            last = first = new Node(item, null, null);
-            ++result;
-        }
-        foreach (item; stuff)
-        {
-            last = new Node(item, last, null);
-            ++result;
-        }
-
-        //We have created a first-last chain. Now we insert it.
-        if(!_first)
-        {
-            _first = first;
-            _last = last;
-        }
-        else
-        {
-            assert(_last);
-            if(n)
-            {
-                if(n._prev)
-                {
-                    n._prev._next = first;
-                    first._prev = n._prev;
-                }
-                n._prev = last;
-                last._next = n;
-                if(n is _first)
-                  _first = first;
-            }
-            else
-            {
-                if(_last._next)
-                {
-                    _last._next._prev = last;
-                    last._next = _last._next;
-                }
-                _last._next = first;
-                first._prev = _last;
-                _last = last;
-            }
-        }
-        assert(_first);
-        assert(_last);
-        return result;
-    }
-
-    // Helper: insert $(D stuff) before Node $(D n). If $(D n) is $(D null) then insert at end.
-    private size_t insertBeforeNode(Stuff)(Node* n, Stuff stuff)
-    if (isImplicitlyConvertible!(Stuff, T))
-    {
-        Stuff[] stuffs = (&stuff)[0 .. 1];
-        return insertBeforeNode(n, stuffs);
-    }
-
-/**
 Removes all elements belonging to $(D r), which must be a range
 obtained originally from this container.
 
@@ -2194,14 +2120,7 @@ Complexity: $(BIGOH 1)
     }
 
     /// ditto
-    template linearRemove(R) if (is(R == Range))
-    {
-        Range linearRemove(R r) { return remove(r); }
-    }
-
-    /// ditto
-    Range linearRemove(R)(R r)
-        if (is(R == Range))
+    Range linearRemove(Range r)
     {
          return remove(r);
     }
@@ -2213,8 +2132,7 @@ fixed amount of elements from the range.
 
 Complexity: $(BIGOH r.walkLength)
      */
-    Range linearRemove(R)(R r)
-        if (is(R == Take!Range))
+    Range linearRemove(Take!Range r)
     {
         if (r.empty)
             return Range(null,null);
@@ -2231,12 +2149,79 @@ Complexity: $(BIGOH r.walkLength)
         return remove(Range(first, last));
     }
 
-    /** $(RED Scheduled for deprecation. These methods are not actually stable.
-    Use the standard $(D remove) or $(D linearRemove) instead.)
-         */
+    /// ditto
     alias stableRemove = remove;
     /// ditto
     alias stableLinearRemove = linearRemove;
+
+private:
+    // Helper: insert $(D stuff) before Node $(D n). If $(D n) is $(D null) then insert at end.
+    size_t insertBeforeNode(Stuff)(Node* n, Stuff stuff)
+    if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
+    {
+        size_t result;
+        if(stuff.empty) return result;
+
+        Node* first;
+        Node* last;
+        //scope block
+        {
+            auto item = stuff.front;
+            stuff.popFront();
+            last = first = new Node(item, null, null);
+            ++result;
+        }
+        foreach (item; stuff)
+        {
+            last = new Node(item, last, null);
+            ++result;
+        }
+
+        //We have created a first-last chain. Now we insert it.
+        if(!_first)
+        {
+            _first = first;
+            _last = last;
+        }
+        else
+        {
+            assert(_last);
+            if(n)
+            {
+                if(n._prev)
+                {
+                    n._prev._next = first;
+                    first._prev = n._prev;
+                }
+                n._prev = last;
+                last._next = n;
+                if(n is _first)
+                  _first = first;
+            }
+            else
+            {
+                if(_last._next)
+                {
+                    _last._next._prev = last;
+                    last._next = _last._next;
+                }
+                _last._next = first;
+                first._prev = _last;
+                _last = last;
+            }
+        }
+        assert(_first);
+        assert(_last);
+        return result;
+    }
+
+    // Helper: insert $(D stuff) before Node $(D n). If $(D n) is $(D null) then insert at end.
+    size_t insertBeforeNode(Stuff)(Node* n, Stuff stuff)
+    if (isImplicitlyConvertible!(Stuff, T))
+    {
+        Stuff[] stuffs = (&stuff)[0 .. 1];
+        return insertBeforeNode(n, stuffs);
+    }
 }
 
 unittest
@@ -2272,6 +2257,23 @@ unittest
 
 unittest
 {
+    //Tests construction signatures
+    alias IntList = DList!int;
+    auto a0 = IntList();
+    auto a1 = IntList(0);
+    auto a2 = IntList(0, 1);
+    auto a3 = IntList([0]);
+    auto a4 = IntList([0, 1]);
+
+    assert(a0[].empty);
+    assert(equal(a1[], [0]));
+    assert(equal(a2[], [0, 1]));
+    assert(equal(a3[], [0]));
+    assert(equal(a4[], [0, 1]));
+}
+
+unittest
+{
     alias IntList = DList!int;
     IntList list = IntList([0,1,2,3]);
     assert(equal(list[],[0,1,2,3]));
@@ -2296,6 +2298,7 @@ unittest
         if (item == 2)
         {
             list.stableLinearRemove(take(range,1));
+            break;
         }
     }
     assert(equal(list[],[0,1,3]));
@@ -2308,6 +2311,7 @@ unittest
         if (item == 2)
         {
             list.stableLinearRemove(take(range,2));
+            break;
         }
     }
     assert(equal(list[],[0,1]));
@@ -2320,6 +2324,7 @@ unittest
         if (item == 0)
         {
             list.stableLinearRemove(take(range,2));
+            break;
         }
     }
     assert(equal(list[],[2,3]));
@@ -2332,6 +2337,7 @@ unittest
         if (item == 1)
         {
             list.stableLinearRemove(take(range,2));
+            break;
         }
     }
     assert(equal(list[],[0,3]));
