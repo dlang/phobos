@@ -1175,6 +1175,165 @@ unittest
     assert(sum(SList!double(1, 2, 3, 4)[]) == 10);
 }
 
+/++
+The $(D fold) familly of functions is composed of $(D foldl), $(D foldr),
+$(D foldl1) and $(D foldr1). Given a predicate $(D fun), it will accumulate
+each member of of the $(D Range) $(D r) into a result.
+
+$(D fun) may be a single function, or several functions. Several functions
+my be passed at once, in order to fold according to several predicates at
+once, such as to find both the min and max of a range in a single pass. If
+several predicates are passed, the result is returned in the form of a
+$(XREF typecons, Tuple).
+
+When no initial value ($D seed) is given, the $(D foldl) and $(D foldr) will
+use the identity object ($D ElementType!Range.init) as an initial value
+(reminder, for floating point values, this is $(D NaN)). If a seed is passed,
+then there must be either exactly one common seed for all the predicates,
+or one seed per predicate.
+
+$(D foldl1) and $(D foldr1) can be used to explicitly fold a range, when no
+default seed is applicable, such as when searching for the min or max of a
+range. In this case, $(D r) must not be empty, and the result of
+$(D pred(r.front, r.front)) must be assignable back to a
+$(D ElementType!Range).
+
+$(D foldl) and $(foldl1) will fold $(D r) in a left associative order,
+whereas $(D foldr) and $(D foldr1) will fold $(D r) in a right associative
+order.
+
+$(D fold) and $(D fold1) are aliases for $(D foldl) and $(D foldl1),
+respectivelly.
++/
+alias fold = foldl;
+/// ditto
+alias fold1 = foldl1;
+/// ditto
+template foldl(fun...)
+if (fun.length > 0)
+{
+    auto foldl(Range, Args...)(Range r, Args seeds)
+    if (isInputRange!Range)
+    {
+        return foldImpl!(FoldDirection.Left, fun)(r, seeds);
+    }
+}
+/// ditto
+template foldl1(fun...)
+if (fun.length > 0)
+{
+    auto foldl1(Range)(Range r)
+    if (isInputRange!Range)
+    {
+        return foldImpl1!(FoldDirection.Left, fun)(r);
+    }
+}
+/// ditto
+template foldr(fun...)
+if (fun.length > 0)
+{
+    auto foldr(Range, Args...)(Range r, Args seeds)
+    if (isBidirectionalRange!Range)
+    {
+        return foldImpl!(FoldDirection.Right, fun)(r, seeds);
+    }
+}
+/// ditto
+template foldr1(fun...)
+if (fun.length > 0)
+{
+    auto foldr1(Range)(Range r)
+    if (isBidirectionalRange!Range)
+    {
+        return foldImpl1!(FoldDirection.Right, fun)(r);
+    }
+}
+
+private enum FoldDirection
+{
+    Left,
+    Right,
+}
+
+private template foldImpl(FoldDirection direction, fun...)
+{
+    auto foldImpl(Range, Args...)(Range r, Args seeds)
+    {
+        enum  N = fun.length; 
+        alias E = Unqual!(ElementType!Range);
+
+        static if (Args.length == 0)
+            RepeatType!(E, N) result;
+        else static if (Args.length == fun.length)
+            alias result = seeds;
+        else static if (Args.length == 1)
+            RepeatType!(Args[0], N) result = seeds[0];
+        else
+        {
+            import std.string;
+            static assert(0, format("There must be 0, 1 or %s.length (%s) seeds, not %s", fun.stringof, fun.length, Args.length));
+        }
+
+        assert (!r.empty, "fold 1: Range is empty");
+
+        static if (direction == FoldDirection.Left)
+            for ( ; !r.empty; r.popFront() )
+                foreach (i, _; fun)
+                    result[i] = binaryFun!(fun[i])(result[i], r.front);
+        else
+            for ( ; !r.empty; r.popBack() )
+                foreach (i, _; fun)
+                    result[i] = binaryFun!(fun[i])(r.back, result[i]);
+
+        static if (fun.length == 1)
+            return result[0];
+        else
+            return tuple(result);
+    }
+}
+private template foldImpl1(FoldDirection direction, fun...)
+{
+    auto foldImpl1(Range)(Range r)
+    {
+        enum  N = fun.length; 
+        alias E = Unqual!(ElementType!Range);
+
+        E seed = r.front;
+        r.popFront();
+
+        return foldImpl!(direction, fun)(r, seed);
+    }
+}
+
+private template RepeatType(Type, size_t N)
+{
+    static if (N == 1)
+        alias RepeatType = TypeTuple!(Type);
+    else
+        alias RepeatType = TypeTuple!(RepeatType!(Type, N/2), RepeatType!(Type, N - N/2));
+}
+
+/// ditto
+unittest
+{
+    //A simple fold. Seed defaults to 0.
+    assert([1, 2, 3, 4].fold!"a + b"() == 10);
+
+    //A dual fold. Two explicit seeds are provided.
+    //Result is a tuple.
+    assert([1, 2, 3, 4].fold!("a + b", "a * b")(0, 1) == tuple(10, 24));
+
+    //A triple fold, with a single common seed.
+    assert([1, 2, 3, 4].fold!("a + b", "-a -b", "a * b")(1) == tuple(11, -1, 24));
+
+    //fold1 can be used to use the range's front as a seed.
+    assert([1, 2, 3, 4].fold !(min, max)() == tuple(0, 4));
+    assert([1, 2, 3, 4].fold1!(min, max)() == tuple(1, 4));
+
+    //foldr can be used when a right-associative fold is required
+    assert([1, 2, 3, 4].foldr!("b / a")(96) == 4);
+}
+
 /**
 Fills $(D range) with a $(D filler).
  */
