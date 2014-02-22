@@ -20,7 +20,7 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.functional;
 
-import std.traits, std.typecons, std.typetuple;
+import std.traits, std.typetuple;
 
 /**
 Transforms a string representing an expression into a unary
@@ -38,6 +38,7 @@ template unaryFun(alias fun, string parmName = "a")
 {
     static if (is(typeof(fun) : string))
     {
+        import std.traits, std.typecons, std.typetuple;
         import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
         auto unaryFun(ElementType)(auto ref ElementType __a)
         {
@@ -93,6 +94,7 @@ template binaryFun(alias fun, string parm1Name = "a",
 {
     static if (is(typeof(fun) : string))
     {
+        import std.traits, std.typecons, std.typetuple;
         import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
         auto binaryFun(ElementType1, ElementType2)
             (auto ref ElementType1 __a, auto ref ElementType2 __b)
@@ -356,10 +358,12 @@ template adjoin(F...) if (F.length)
         }
         else static if (F.length == 2)
         {
+            import std.typecons : Tuple, tuple;
             return tuple(F[0](a), F[1](a));
         }
         else
         {
+            import std.typecons : Tuple, tuple;
             import std.conv : emplaceRef;
             alias Head = typeof(F[0](a));
             Tuple!(Head, typeof(.adjoin!(F[1..$])(a)).Types) result = void;
@@ -374,6 +378,7 @@ template adjoin(F...) if (F.length)
 
 unittest
 {
+    import std.typecons;
     static bool F1(int a) { return a != 0; }
     auto x1 = adjoin!(F1)(5);
     static int F2(int a) { return a / 2; }
@@ -592,6 +597,7 @@ template memoize(alias fun, uint maxSize = uint.max)
 {
     ReturnType!fun memoize(ParameterTypeTuple!fun args)
     {
+        import std.typecons : Tuple, tuple;
         static ReturnType!fun[Tuple!(typeof(args))] memo;
         auto t = tuple(args);
         auto p = t in memo;
@@ -639,7 +645,10 @@ unittest
     assert(fact(10) == 3628800);
 }
 
-private struct DelegateFaker(F) {
+private struct DelegateFaker(F)
+{
+    import std.typecons;
+    
     // for @safe
     static F castToF(THIS)(THIS x) @trusted
     {
