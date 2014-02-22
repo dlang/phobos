@@ -1265,9 +1265,15 @@ private template foldImpl(FoldDirection direction, fun...)
         static if (Args.length == 0)
             RepeatType!(E, N) result;
         else static if (Args.length == fun.length)
-            alias result = seeds;
+        {
+            alias UArgs = staticMap!(Unqual, Args);
+            static if (is(UArgs == Args))
+                alias result = seeds;
+            else
+                UArgs result = seeds;
+        }
         else static if (Args.length == 1)
-            RepeatType!(Args[0], N) result = seeds[0];
+            RepeatType!(Unqual!(Args[0]), N) result = seeds[0];
         else
         {
             import std.string;
@@ -1298,7 +1304,7 @@ private template foldImpl1(FoldDirection direction, fun...)
 
         assert (!r.empty, "fold 1: Range is empty");
 
-        E seed = r.front;
+        MultiResultType!(E, fun) seed = r.front;
         r.popFront();
 
         return foldImpl!(direction, fun)(r, seed);
@@ -1311,6 +1317,13 @@ private template RepeatType(Type, size_t N)
         alias RepeatType = TypeTuple!(Type);
     else
         alias RepeatType = TypeTuple!(RepeatType!(Type, N/2), RepeatType!(Type, N - N/2));
+}
+private template MultiResultType(E, fun...)
+{
+    static if (fun.length == 1)
+        alias MultiResultType = TypeTuple!(typeof(binaryFun!(fun[0])(E.init, E.init)));
+    else
+        alias MultiResultType = TypeTuple!(MultiResultType!(E, fun[0 .. $/2]), MultiResultType!(E, fun[0 .. $/2]));
 }
 
 /// ditto
@@ -1332,6 +1345,107 @@ unittest
 
     //foldr can be used when a right-associative fold is required
     assert([1, 2, 3, 4].foldr!("b / a")(96) == 4);
+}
+
+unittest
+{
+    import std.math : approxEqual;
+
+    int[] arr = [ 1, 2, 3, 4, 5 ];
+    // Sum all elements
+    auto sum = arr.fold!((a,b) => a + b)(0);
+    assert(sum == 15);
+
+    // Sum again, using a string predicate with "a" and "b"
+    sum = arr.fold!"a + b"(0);
+    assert(sum == 15);
+
+    // Compute the maximum of all elements
+    auto largest = arr.fold1!max();
+    assert(largest == 5);
+
+    // Compute the number of odd elements
+    auto odds = arr.fold!((a,b) => a + (b & 1))(0);
+    assert(odds == 3);
+
+    // Compute the sum of squares
+    auto ssquares = arr.fold!((a,b) => a + b * b)(0);
+    assert(ssquares == 55);
+
+    // Chain multiple ranges into seed
+    int[] a = [ 3, 4 ];
+    int[] b = [ 100 ];
+    auto r = chain(a, b).fold!("a + b")();
+    assert(r == 107);
+
+    // Mixing convertible types is fair game, too
+    double[] c = [ 2.5, 3.0 ];
+    auto r1 = chain(a, b, c).fold1!("a + b")();
+    assert(approxEqual(r1, 112.5));
+}
+
+unittest
+{
+    import std.math : approxEqual, sqrt;
+
+    double[] a = [ 3.0, 4, 7, 11, 3, 2, 5 ];
+    // Compute minimum and maximum in one pass
+    auto r = a.fold1!(min, max)();
+    // The type of r is Tuple!(int, int)
+    assert(approxEqual(r[0], 2));  // minimum
+    assert(approxEqual(r[1], 11)); // maximum
+
+    // Compute sum and sum of squares in one pass
+    r = a.fold!("a + b", "a + b * b")(0.0);
+    assert(approxEqual(r[0], 35));  // sum
+    assert(approxEqual(r[1], 233)); // sum of squares
+    // Compute average and standard deviation from the above
+    auto avg = r[0] / a.length;
+    auto stdev = sqrt(r[1] / a.length - avg * avg);
+}
+
+unittest
+{
+    double[] a = [ 3, 4 ];
+    auto r = a.fold!("a + b")(0.0);
+    assert(r == 7);
+    r = a.fold1!("a + b")();
+    assert(r == 7);
+    r = a.fold1!min();
+    assert(r == 3);
+    double[] b = [ 100 ];
+    auto r1 = chain(a, b).fold1!("a + b")();
+    assert(r1 == 107);
+
+    // two funs
+    auto r2 = a.fold!("a + b", "a - b")(0.0, 0.0);
+    assert(r2[0] == 7 && r2[1] == -7);
+    auto r3 = a.fold1!("a + b", "a - b")();
+    assert(r3[0] == 7 && r3[1] == -1);
+
+    a = [ 1, 2, 3, 4, 5 ];
+    // Stringize with commas
+    string rep = a.fold!("a ~ `, ` ~ to!(string)(b)")("");
+    assert(rep[2 .. $] == "1, 2, 3, 4, 5", "["~rep[2 .. $]~"]");
+}
+
+unittest
+{
+    const float a = 0.0;
+    const float[] b = [ 1.2, 3, 3.3 ];
+    float[] c = [ 1.2, 3, 3.3 ];
+    auto r = b.fold!"a + b"(a);
+    r = c.fold!"a + b"(a);
+}
+
+unittest
+{
+    // Issue #10408 - Two-function fold of a const array.
+    const numbers = [10, 30, 20];
+    immutable m = numbers.fold1!min();
+    assert(m == 10);
+    immutable minmax = numbers.fold1!(min, max);
+    assert(minmax == tuple(10, 30));
 }
 
 /**
