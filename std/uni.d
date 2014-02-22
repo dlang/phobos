@@ -6933,28 +6933,29 @@ private S toCase(alias indexFn, uint maxIdx, alias tableFn, S)(S s) @trusted pur
         ushort idx = indexFn(cOuter);
         if(idx == ushort.max)
             continue;
-        auto result = s[0 .. i].dup;
+        auto result = appender!S(s[0..i]);
+        result.reserve(s.length);
         foreach(dchar c; s[i .. $])
         {
             idx = indexFn(c);
             if(idx == ushort.max)
-                result ~= c;
+                result.put(c);
             else if(idx < maxIdx)
             {
                 c = tableFn(idx);
-                result ~= c;
+                result.put(c);
             }
             else
             {
                 auto val = tableFn(idx);
                 // unpack length + codepoint
                 uint len = val>>24;
-                result ~= cast(dchar)(val & 0xFF_FFFF);
+                result.put(cast(dchar)(val & 0xFF_FFFF));
                 foreach(j; idx+1..idx+len)
-                    result ~= tableFn(j);
+                    result.put(tableFn(j));
             }
         }
-        return cast(S) result;
+        return result.data;
     }
     return s;
 }
