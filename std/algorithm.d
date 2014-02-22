@@ -1178,7 +1178,7 @@ unittest
 /++
 The $(D fold) familly of functions is composed of $(D foldl), $(D foldr),
 $(D foldl1) and $(D foldr1). Given a predicate $(D fun), it will accumulate
-each member of of the $(D Range) $(D r) into a result.
+each member of the $(D Range) $(D r) into a result.
 
 $(D fun) may be a single function, or several functions. Several functions
 my be passed at once, in order to fold according to several predicates at
@@ -1203,7 +1203,7 @@ whereas $(D foldr) and $(D foldr1) will fold $(D r) in a right associative
 order.
 
 $(D fold) and $(D fold1) are aliases for $(D foldl) and $(D foldl1),
-respectivelly.
+respectively.
 +/
 alias fold = foldl;
 /// ditto
@@ -1215,7 +1215,7 @@ if (fun.length > 0)
     auto foldl(Range, Args...)(Range r, Args seeds)
     if (isInputRange!Range)
     {
-        return foldImpl!(FoldDirection.Left, fun)(r, seeds);
+        return foldImpl!(FoldDirection.left, fun)(r, seeds);
     }
 }
 /// ditto
@@ -1225,7 +1225,7 @@ if (fun.length > 0)
     auto foldl1(Range)(Range r)
     if (isInputRange!Range)
     {
-        return foldImpl1!(FoldDirection.Left, fun)(r);
+        return foldImpl1!(FoldDirection.left, fun)(r);
     }
 }
 /// ditto
@@ -1235,7 +1235,7 @@ if (fun.length > 0)
     auto foldr(Range, Args...)(Range r, Args seeds)
     if (isBidirectionalRange!Range)
     {
-        return foldImpl!(FoldDirection.Right, fun)(r, seeds);
+        return foldImpl!(FoldDirection.right, fun)(r, seeds);
     }
 }
 /// ditto
@@ -1245,14 +1245,14 @@ if (fun.length > 0)
     auto foldr1(Range)(Range r)
     if (isBidirectionalRange!Range)
     {
-        return foldImpl1!(FoldDirection.Right, fun)(r);
+        return foldImpl1!(FoldDirection.right, fun)(r);
     }
 }
 
 private enum FoldDirection
 {
-    Left,
-    Right,
+    left,
+    right,
 }
 
 private template foldImpl(FoldDirection direction, fun...)
@@ -1274,9 +1274,7 @@ private template foldImpl(FoldDirection direction, fun...)
             static assert(0, format("There must be 0, 1 or %s.length (%s) seeds, not %s", fun.stringof, fun.length, Args.length));
         }
 
-        assert (!r.empty, "fold 1: Range is empty");
-
-        static if (direction == FoldDirection.Left)
+        static if (direction == FoldDirection.left)
             for ( ; !r.empty; r.popFront() )
                 foreach (i, _; fun)
                     result[i] = binaryFun!(fun[i])(result[i], r.front);
@@ -1297,6 +1295,8 @@ private template foldImpl1(FoldDirection direction, fun...)
     {
         enum  N = fun.length; 
         alias E = Unqual!(ElementType!Range);
+
+        assert (!r.empty, "fold 1: Range is empty");
 
         E seed = r.front;
         r.popFront();
