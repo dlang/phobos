@@ -2325,7 +2325,7 @@ struct Appender(A : T[], T)
         immutable len = _data.arr.length;
         immutable reqlen = len + nelems;
 
-        if (()@trusted{ return _data.capacity; }() >= reqlen)
+        if (_data.capacity >= reqlen)
             return;
 
         // need to increase capacity
