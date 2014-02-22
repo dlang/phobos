@@ -4185,6 +4185,7 @@ struct CtContext
             break;
         case IR.InfiniteQEnd:
             testCode = ctQuickTest(ir[IRL!(IR.InfiniteEnd) .. $],addr + 1);
+            auto altCode = testCode.length ? ctSub("else goto case $$;", fixup) : "";
             r ~= ctSub( `
                     if(tracker_$$ == index)
                     {//source not consumed
@@ -4197,13 +4198,12 @@ struct CtContext
                         $$
                         goto case $$;
                     }
-                    else
-                        goto case $$;
+                    $$
                 case $$://restore state and go inside loop
                     $$
-                    goto case $$;`, curInfLoop, addr+2, curInfLoop,
-                    testCode, saveCode(addr+1),
-                    addr+2, fixup, addr+1, restoreCode(), fixup);
+                    goto case $$;`, curInfLoop, addr+2, 
+                    curInfLoop, testCode, saveCode(addr+1),
+                    addr+2, altCode, addr+1, restoreCode(), fixup);
             ir = ir[ir[0].length..$];
             break;
         case IR.RepeatStart, IR.RepeatQStart:
@@ -7455,6 +7455,15 @@ unittest
     assert(regex(`(?P<v1>\w+)`).namedCaptures.equal(["v1"]));
     assert(regex(`(?P<__>\w+)`).namedCaptures.equal(["__"]));
     assert(regex(`(?P<я>\w+)`).namedCaptures.equal(["я"]));
+}
+
+// bugzilla 12105
+unittest
+{
+    auto r = ctRegex!`.*?(?!a)`;
+    assert("aaab".matchFirst(r).hit == "aaa");
+    auto r2 = ctRegex!`.*(?!a)`;
+    assert("aaab".matchFirst(r2).hit == "aaab");
 }
 
 }//version(unittest)
