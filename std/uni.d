@@ -6934,6 +6934,7 @@ private S toCase(alias indexFn, uint maxIdx, alias tableFn, S)(S s) @trusted pur
         if(idx == ushort.max)
             continue;
         auto result = appender!S(s[0..i]);
+        result.reserve(s.length);
         foreach(dchar c; s[i .. $])
         {
             idx = indexFn(c);
