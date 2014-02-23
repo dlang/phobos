@@ -68,10 +68,10 @@
     $(LI
         Another useful building block for Unicode-aware parsers is avoiding wasteful
         UTF decoding yet performing character classification of encoded $(CODEPOINTS).
-        $(LREF utfMatcher) provides an improvement over the usual workflow 
-        of decode-classify-process, combining decode and classify steps. 
-        By extracting nessary bits directly from encoded 
-        $(S_LINK Code unit, code units) matchers achieve 
+        $(LREF utfMatcher) provides an improvement over the usual workflow
+        of decode-classify-process, combining decode and classify steps.
+        By extracting nessary bits directly from encoded
+        $(S_LINK Code unit, code units) matchers achieve
         significant performance improvement. See $(LREF MatcherConcept) for
         common interface of UTF matchers.
     )
@@ -1390,7 +1390,6 @@ private struct SliceOverIndexed(T)
 {
     enum assignableIndex = is(typeof((){ T.init[0] = Item.init; }));
     enum assignableSlice = is(typeof((){ T.init[0..0] = Item.init; }));
-
     auto opIndex(size_t idx)const
     in
     {
@@ -1888,6 +1887,7 @@ public alias CodepointSet = InversionList!GcPolicy;
 */
 public struct CodepointInterval
 {
+pure:
     uint[2] _tuple;
     alias _tuple this;
     this(uint low, uint high)
@@ -1899,8 +1899,8 @@ public struct CodepointInterval
     {
         return this[0] == val[0] && this[1] == val[1];
     }
-    @property ref uint a(){ return _tuple[0]; }
-    @property ref uint b(){ return _tuple[1]; }
+    @property ref inout(uint) a() inout { return _tuple[0]; }
+    @property ref inout(uint) b() inout { return _tuple[1]; }
 }
 
 //@@@BUG another forward reference workaround
@@ -1980,10 +1980,11 @@ public struct CodepointInterval
 @trusted public struct InversionList(SP=GcPolicy)
 {
 public:
+
     /**
         Construct from another code point set of any type.
     */
-    this(Set)(Set set)
+    this(Set)(Set set) pure
         if(isCodepointSet!Set)
     {
         uint[] arr;
@@ -1998,7 +1999,7 @@ public:
     /**
         Construct a set from a forward range of code point intervals.
     */
-    this(Range)(Range intervals)
+    this(Range)(Range intervals) /*pure */ //@@@BUG@@@ sort is not pure
         if(isForwardRange!Range && isIntegralPair!(ElementType!Range))
     {
         auto flattened = roundRobin(intervals.save.map!"a[0]"(),
@@ -2008,12 +2009,29 @@ public:
     }
 
     //helper function that avoids sanity check to be CTFE-friendly
-    private static fromIntervals(Range)(Range intervals)
+    private static fromIntervals(Range)(Range intervals) pure
     {
         auto flattened = roundRobin(intervals.save.map!"a[0]"(),
             intervals.save.map!"a[1]"());
         InversionList set;
         set.data = Uint24Array!(SP)(flattened);
+        return set;
+    }
+    //ditto untill sort is CTFE-able
+    private static fromIntervals()(uint[] intervals...) pure
+    in
+    {
+        assert(intervals.length % 2 == 0, "Odd number of interval bounds [a, b)!");
+        for(uint i=0; i<intervals.length/2; i++)
+        {
+            auto a = intervals[2*i], b = intervals[2*i+1];
+            assert(a < b, text("illegal interval [a, b): ", a, " > ", b));
+        }
+    }
+    body
+    {
+        InversionList set;
+        set.data = Uint24Array!(SP)(intervals);
         return set;
     }
 
@@ -3095,7 +3113,7 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
     alias opDollar = length;
 
     // Read 24-bit packed integer
-    uint opIndex(size_t idx)const
+    uint opIndex(size_t idx) const
     {
         return read24(data.ptr, idx);
     }
@@ -4382,7 +4400,7 @@ public template buildTrie(Value, Key, Args...)
     }
 }
 
-//helper in place of assumeSize to 
+//helper in place of assumeSize to
 //reduce mangled name & help DMD inline Trie functors
 struct clamp(size_t bits)
 {
@@ -4407,19 +4425,19 @@ public struct MatcherConcept
 {
     /**
         $(P Perform a sematic equivalent 2 operations:
-        decoding a $(CODEPOINT) at front of $(D inp) and testing if  
+        decoding a $(CODEPOINT) at front of $(D inp) and testing if
         it belongs to the set of $(CODEPOINTS) of this matcher. )
 
         $(P The effect on $(D inp) depends on the kind of function called:)
 
         $(P Match. If the codepoint is found in the set then range $(D inp)
-        is advanced by its size in $(S_LINK Code unit, code units), 
+        is advanced by its size in $(S_LINK Code unit, code units),
         otherwise the range is not modifed.)
 
         $(P Skip. The range is always advanced by the size
         of the tested $(CODEPOINT) regardless of the result of test.)
 
-        $(P Test. The range is left unaffected regardless 
+        $(P Test. The range is left unaffected regardless
         of the result of test.)
     */
     public bool match(Range)(ref Range inp)
@@ -4445,7 +4463,7 @@ public struct MatcherConcept
     public unittest
     {
         string truth = "2² = 4";
-        auto m = utfMatcher!char(unicode.Number);    
+        auto m = utfMatcher!char(unicode.Number);
         assert(m.match(truth)); // '2' is a number all right
         assert(truth == "² = 4"); // skips on match
         assert(m.match(truth)); // so is the superscript '2'
@@ -4458,17 +4476,17 @@ public struct MatcherConcept
     }
     /**
         Advanced feature - provide direct access to a subset of matcher based a
-        set of known encoding lengths. Lengths are provided in 
-        $(S_LINK Code unit, code units). The sub-matcher then may do less 
+        set of known encoding lengths. Lengths are provided in
+        $(S_LINK Code unit, code units). The sub-matcher then may do less
         operations per any $(D test)/$(D match).
 
-        Use with care as the sub-matcher won't match 
-        any $(CODEPOINTS) that have encoded length that doesn't belong 
-        to the selected set of lengths. Also the sub-matcher object references 
-        the parent matcher and must not be used past the liftetime 
+        Use with care as the sub-matcher won't match
+        any $(CODEPOINTS) that have encoded length that doesn't belong
+        to the selected set of lengths. Also the sub-matcher object references
+        the parent matcher and must not be used past the liftetime
         of the latter.
 
-        Another caveat of using sub-matcher is that skip is not available 
+        Another caveat of using sub-matcher is that skip is not available
         preciesly because sub-matcher doesn't detect all lengths.
     */
     @property auto subMatcher(Lengths...)()
@@ -4481,7 +4499,7 @@ public struct MatcherConcept
     public unittest
     {
         auto m = utfMatcher!char(unicode.Number);
-        string square = "2²";        
+        string square = "2²";
         // about sub-matchers
         assert(!m.subMatcher!(2,3,4).test(square)); // ASCII no covered
         assert(m.subMatcher!1.match(square)); // ASCII-only, works
@@ -4500,7 +4518,7 @@ public struct MatcherConcept
 /**
     Test if $(D M) is a Matcher for ranges of $(D Char).
 */
-public enum isMatcher(M, C) = __traits(compiles, (){    
+public enum isMatcher(M, C) = __traits(compiles, (){
     C[] s;
     auto d = s.decoder;
     M m;
@@ -4527,7 +4545,7 @@ enum Mode {
 };
 
 mixin template ForwardStrings()
-{ 
+{
     private bool fwdStr(string fn, C)(ref C[] str) const pure
     {
         alias type = typeof(units(str));
@@ -4548,10 +4566,10 @@ template Utf8Matcher()
     //for 1-stage ASCII
     alias AsciiSpec = TypeTuple!(bool, char, clamp!7);
     //for 2-stage lookup of 2 byte UTF-8 sequences
-    alias Utf8Spec2 = TypeTuple!(bool, char[2], 
+    alias Utf8Spec2 = TypeTuple!(bool, char[2],
         clampIdx!(0, 5), clampIdx!(1, 6));
     //ditto for 3 byte
-    alias Utf8Spec3 = TypeTuple!(bool, char[3], 
+    alias Utf8Spec3 = TypeTuple!(bool, char[3],
         clampIdx!(0, 4),
         clampIdx!(1, 6),
         clampIdx!(2, 6)
@@ -4571,7 +4589,7 @@ template Utf8Matcher()
 
     enum leadMask(size_t size) = (cast(size_t)1<<(7 - size))-1;
     enum encMask(size_t size) = ((1<<size)-1)<<(8-size);
-    
+
     char trancate()(char ch) pure @safe
     {
         assert((ch & 0b1100_0000) == 0x80);
@@ -4585,7 +4603,7 @@ template Utf8Matcher()
         char[4] buf;
         std.utf.encode(buf, ch);
         char[sz] ret;
-        buf[0] &= leadMask!sz;        
+        buf[0] &= leadMask!sz;
         foreach(n; 1..sz)
             buf[n] = buf[n] & 0x3f; //keep 6 lower bits
         ret[] = buf[0..sz];
@@ -4613,7 +4631,7 @@ template Utf8Matcher()
         import std.string : format;
         enum hasASCII = staticIndexOf!(1, Sizes) >= 0;
         alias UniSizes = Erase!(1, Sizes);
-        
+
         //generate dispatch code sequence for unicode parts
         static auto genDispatch()
         {
@@ -4621,7 +4639,7 @@ template Utf8Matcher()
             foreach(size; UniSizes)
                 code ~= format(q{
                     (ch & ~leadMask!%d) == encMask!(%d)
-                        ? lookup!(%d, mode)(inp) : 
+                        ? lookup!(%d, mode)(inp) :
                 }, size, size, size);
             code ~= "false";
             return code;
@@ -4692,9 +4710,9 @@ template Utf8Matcher()
 
     struct Impl(Sizes...)
     {
-        static assert(allSatisfy!(validSize, Sizes), 
+        static assert(allSatisfy!(validSize, Sizes),
             "Only lengths of 1, 2, 3 and 4 code unit are possible for UTF-8");
-    private:        
+    private:
         //pick tables for chosen sizes
         alias OurTabs = staticMap!(Table, Sizes);
         OurTabs tables;
@@ -4711,7 +4729,7 @@ template Utf8Matcher()
         {
             import std.typecons;
             if(inp.length < size)
-                return badEncoding(), false;        
+                return badEncoding(), false;
             char[size] needle = void;
             needle[0] = leadMask!size & inp[0];
             foreach(i; staticIota!(1, size))
@@ -4737,7 +4755,7 @@ template Utf8Matcher()
 
     struct CherryPick(I, Sizes...)
     {
-        static assert(allSatisfy!(validSize, Sizes), 
+        static assert(allSatisfy!(validSize, Sizes),
             "Only lengths of 1, 2, 3 and 4 code unit are possible for UTF-8");
     private:
         I* m;
@@ -4761,17 +4779,17 @@ template Utf16Matcher()
     }
 
     alias Seq = TypeTuple;
-    //1-stage ASCII    
+    //1-stage ASCII
     alias AsciiSpec = Seq!(bool, wchar, clamp!7);
     //2-stage BMP
     alias BmpSpec = Seq!(bool, wchar, sliceBits!(7, 16), sliceBits!(0, 7));
     //4-stage - full Unicode
     //assume that 0xD800 & 0xDC00 bits are cleared
     //thus leaving 10 bit per wchar to worry about
-    alias UniSpec = Seq!(bool, wchar[2], 
+    alias UniSpec = Seq!(bool, wchar[2],
         assumeSize!(x=>x[0]>>4, 6), assumeSize!(x=>x[0]&0xf, 4),
-        assumeSize!(x=>x[1]>>6, 4), assumeSize!(x=>x[1]&0x3f, 6), 
-    );    
+        assumeSize!(x=>x[1]>>6, 4), assumeSize!(x=>x[1]&0x3f, 6),
+    );
     alias Ascii = typeof(TrieBuilder!(AsciiSpec)(false).build());
     alias Bmp = typeof(TrieBuilder!(BmpSpec)(false).build());
     alias Uni = typeof(TrieBuilder!(UniSpec)(false).build());
@@ -4790,8 +4808,8 @@ template Utf16Matcher()
     auto build(Set)(Set set)
     {
         auto ascii = set & unicode.ASCII;
-        auto bmp = (set & CodepointSet(0x80, 0xFFFF+1)) 
-            - CodepointSet(0xD800, 0xDFFF+1);
+        auto bmp = (set & CodepointSet.fromIntervals(0x80, 0xFFFF+1))
+            - CodepointSet.fromIntervals(0xD800, 0xDFFF+1);
         auto other = set - (bmp | ascii);
         auto asciiT = ascii.byCodepoint.map!(x=>cast(char)x).buildTrie!(AsciiSpec);
         auto bmpT = bmp.byCodepoint.map!(x=>cast(wchar)x).buildTrie!(BmpSpec);
@@ -4826,7 +4844,7 @@ template Utf16Matcher()
                 assert(!inp.empty);
                 auto ch = inp[0];
                 static if(sizeFlags & 1)
-                    return ch < 0x80 ? (inp.popFront(), ascii[ch]) 
+                    return ch < 0x80 ? (inp.popFront(), ascii[ch])
                         : lookupUni!mode(inp);
                 else
                     return lookupUni!mode(inp);
@@ -4862,7 +4880,7 @@ template Utf16Matcher()
         {
             return fwdStr!"test"(str);
         }
-        
+
         mixin ForwardStrings; //dispatch strings to range versions
     }
 
@@ -4870,7 +4888,7 @@ template Utf16Matcher()
         if(Sizes.length >= 1 && Sizes.length <= 2)
     {
     private:
-        static assert(allSatisfy!(validSize, Sizes), 
+        static assert(allSatisfy!(validSize, Sizes),
             "Only lengths of 1 and 2 code units are possible in UTF-16");
         static if(Sizes.length > 1)
             enum sizeFlags = Sizes[0] | Sizes[1];
@@ -4880,7 +4898,7 @@ template Utf16Matcher()
         static if(sizeFlags & 1)
         {
             Ascii ascii;
-            Bmp bmp;            
+            Bmp bmp;
         }
         static if(sizeFlags & 2)
         {
@@ -4894,7 +4912,7 @@ template Utf16Matcher()
         }
 
         bool lookupUni(Mode mode, Range)(ref Range inp) const pure
-        {            
+        {
             wchar x = cast(wchar)(inp[0] - 0xD800);
             //not a high surrogate
             if(x > 0x3FF)
@@ -4902,7 +4920,7 @@ template Utf16Matcher()
                 static if(sizeFlags & 1)
                 {
                     auto ch = inp[0];
-                    static if(mode == Mode.alwaysSkip)                       
+                    static if(mode == Mode.alwaysSkip)
                         inp.popFront();
                     static if(mode == Mode.skipOnMatch)
                         return bmp[ch] && (inp.popFront(), true);
@@ -4915,9 +4933,9 @@ template Utf16Matcher()
             else
             {
                 static if(sizeFlags & 2)
-                {                    
+                {
                     if(inp.length < 2)
-                        badEncoding();                    
+                        badEncoding();
                     wchar y = cast(wchar)(inp[1] - 0xDC00);
                     //not a low surrogate
                     if(y > 0x3FF)
@@ -4953,24 +4971,24 @@ template Utf16Matcher()
             return m.lookupUni!mode(inp);
         }
         mixin DefMatcher;
-        static assert(allSatisfy!(validSize, Sizes), 
+        static assert(allSatisfy!(validSize, Sizes),
             "Only lengths of 1 and 2 code units are possible in UTF-16");
     }
 }
 
 private auto utf8Matcher(Set)(Set set)
-{    
-    return Utf8Matcher!().build(set);    
+{
+    return Utf8Matcher!().build(set);
 }
 
 private auto utf16Matcher(Set)(Set set)
 {
-    return Utf16Matcher!().build(set);  
+    return Utf16Matcher!().build(set);
 }
 
 /**
     Constructs a matcher object
-    to classify $(CODEPOINTS) from the $(D set) for encoding 
+    to classify $(CODEPOINTS) from the $(D set) for encoding
     that has $(D Char) as code unit.
 
     See $(LREF MatcherConcept) for API outline.
@@ -4983,15 +5001,15 @@ public auto utfMatcher(Char, Set)(Set set)
     else static if(is(Char : wchar))
         return utf16Matcher(set);
     else static if(is(Char : dchar))
-        static assert(false, "UTF-32 needs no decoding, 
+        static assert(false, "UTF-32 needs no decoding,
             and thus not supported by utfMatcher");
     else
-        static assert(false, "Only character types 'char' and 'wchar' are allowed"); 
+        static assert(false, "Only character types 'char' and 'wchar' are allowed");
 }
 
 
 //a range of code units, packed with index to speed up forward iteration
-public auto decoder(C)(C[] s, size_t offset=0)
+package auto decoder(C)(C[] s, size_t offset=0)
     if(is(C : wchar) || is(C : char))
 {
     static struct Decoder
@@ -5000,7 +5018,7 @@ public auto decoder(C)(C[] s, size_t offset=0)
         C[] str;
         size_t idx;
         @property C front(){ return str[idx]; }
-        @property C back(){ return str[$-1]; }        
+        @property C back(){ return str[$-1]; }
         void popFront(){ idx++; }
         void popBack(){ str = str[0..$-1]; }
         void popFrontN(size_t n){ idx += n; }
@@ -5017,10 +5035,10 @@ public auto decoder(C)(C[] s, size_t offset=0)
 }
 
 /*
-    Expose UTF string $(D s) as a random-access 
+    Expose UTF string $(D s) as a random-access
     range of $(S_LINK Code unit, code units).
 */
-public auto units(C)(C[] s)
+package auto units(C)(C[] s)
     if(is(C : wchar) || is(C : char))
 {
     static struct Units
@@ -5028,7 +5046,7 @@ public auto units(C)(C[] s)
     pure nothrow:
         C[] str;
         @property C front(){ return str[0]; }
-        @property C back(){ return str[$-1]; }        
+        @property C back(){ return str[$-1]; }
         void popFront(){ str = str[1..$]; }
         void popBack(){ str = str[0..$-1]; }
         void popFrontN(size_t n){ str = str[n..$]; }
@@ -5088,7 +5106,7 @@ unittest
     assert(codec.idx == 2);
     assert(!utf8.skip(codec));
     assert(!utf8.skip(codec));
-    
+
     foreach(i; 0..7)
     {
         assert(!asc.test(codec));
@@ -5136,9 +5154,9 @@ unittest
         assert(testAll(utf16, c16));
         assert(testAll(bmp, c16) || len16 != 1);
         assert(testAll(nonBmp, c16) || len16 != 2);
-        
+
         assert(testAll(utf8, c8));
-        
+
         //submatchers return false on out of their domain
         assert(testAll(ascii, c8) || len != 1);
         assert(testAll(uni2, c8) || len != 2);
@@ -5562,13 +5580,14 @@ unittest
 }
 
 // Creates a range of $(D CodepointInterval) that lazily decodes compressed data.
-@safe package auto decompressIntervals(const(ubyte)[] data)
+@safe package auto decompressIntervals(const(ubyte)[] data) pure
 {
     return DecompressedIntervals(data);
 }
 
 @trusted struct DecompressedIntervals
 {
+pure:
     const(ubyte)[] _stream;
     size_t _idx;
     CodepointInterval _front;
@@ -5620,7 +5639,7 @@ else
 {
 
 // helper for looking up code point sets
-@trusted ptrdiff_t findUnicodeSet(alias table, C)(in C[] name)
+@trusted ptrdiff_t findUnicodeSet(alias table, C)(in C[] name) pure
 {
     auto range = assumeSorted!((a,b) => propertyNameLess(a,b))
         (table.map!"a.name"());
@@ -5631,7 +5650,7 @@ else
 }
 
 // another one that loads it
-@trusted bool loadUnicodeSet(alias table, Set, C)(in C[] name, ref Set dest)
+@trusted bool loadUnicodeSet(alias table, Set, C)(in C[] name, ref Set dest) pure
 {
     auto idx = findUnicodeSet!table(name);
     if(idx >= 0)
@@ -5643,7 +5662,7 @@ else
 }
 
 @trusted bool loadProperty(Set=CodepointSet, C)
-    (in C[] name, ref Set target)
+    (in C[] name, ref Set target) pure
 {
     alias ucmp = comparePropertyName;
     // conjure cumulative properties by hand
@@ -5731,9 +5750,9 @@ else
         target |= asSet(uniProps.So);
     }
     else if(ucmp(name, "any") == 0)
-        target = Set(0,0x110000);
+        target = Set.fromIntervals(0, 0x110000);
     else if(ucmp(name, "ascii") == 0)
-        target = Set(0,0x80);
+        target = Set.fromIntervals(0, 0x80);
     else
         return loadUnicodeSet!(uniProps.tab)(name, target);
     return true;
@@ -5837,7 +5856,7 @@ template SetSearcher(alias table, string kind)
         ---
     */
 
-    static @property auto opDispatch(string name)()
+    static @property auto opDispatch(string name)() pure
     {
         static if(findAny(name))
             return loadAny(name);
@@ -5943,7 +5962,7 @@ private:
             || (ucmp(name[0..2],"In") == 0 && findSetName!(blocks.tab)(name[2..$]));
     }
 
-    static auto loadAny(Set=CodepointSet, C)(in C[] name)
+    static auto loadAny(Set=CodepointSet, C)(in C[] name) pure
     {
         Set set;
         bool loaded = loadProperty(name, set) || loadUnicodeSet!(scripts.tab)(name, set)
@@ -8586,7 +8605,7 @@ private:
 // load static data from pre-generated tables into usable datastructures
 
 
-@safe auto asSet(const (ubyte)[] compressed)
+@safe auto asSet(const (ubyte)[] compressed) pure
 {
     return CodepointSet.fromIntervals(decompressIntervals(compressed));
 }
