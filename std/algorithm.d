@@ -1175,6 +1175,279 @@ unittest
     assert(sum(SList!double(1, 2, 3, 4)[]) == 10);
 }
 
+/++
+The $(D fold) familly of functions is composed of $(D foldl), $(D foldr),
+$(D foldl1) and $(D foldr1). Given a predicate $(D fun), it will accumulate
+each member of the $(D Range) $(D r) into a result.
+
+$(D fun) may be a single function, or several functions. Several functions
+my be passed at once, in order to fold according to several predicates at
+once, such as to find both the min and max of a range in a single pass. If
+several predicates are passed, the result is returned in the form of a
+$(XREF typecons, Tuple).
+
+When no initial value ($D seed) is given, the $(D foldl) and $(D foldr) will
+use the identity object ($D ElementType!Range.init) as an initial value
+(reminder, for floating point values, this is $(D NaN)). If a seed is passed,
+then there must be either exactly one common seed for all the predicates,
+or one seed per predicate.
+
+$(D foldl1) and $(D foldr1) can be used to explicitly fold a range, when no
+default seed is applicable, such as when searching for the min or max of a
+range. In this case, $(D r) must not be empty, and the result of
+$(D pred(r.front, r.front)) must be assignable back to a
+$(D ElementType!Range).
+
+$(D foldl) and $(foldl1) will fold $(D r) in a left associative order,
+whereas $(D foldr) and $(D foldr1) will fold $(D r) in a right associative
+order.
+
+$(D fold) and $(D fold1) are aliases for $(D foldl) and $(D foldl1),
+respectively.
++/
+alias fold = foldl;
+/// ditto
+alias fold1 = foldl1;
+/// ditto
+template foldl(fun...)
+if (fun.length > 0)
+{
+    auto foldl(Range, Args...)(Range r, Args seeds)
+    if (isInputRange!Range)
+    {
+        return foldImpl!(FoldDirection.left, fun)(r, seeds);
+    }
+}
+/// ditto
+template foldl1(fun...)
+if (fun.length > 0)
+{
+    auto foldl1(Range)(Range r)
+    if (isInputRange!Range)
+    {
+        return foldImpl1!(FoldDirection.left, fun)(r);
+    }
+}
+/// ditto
+template foldr(fun...)
+if (fun.length > 0)
+{
+    auto foldr(Range, Args...)(Range r, Args seeds)
+    if (isBidirectionalRange!Range)
+    {
+        return foldImpl!(FoldDirection.right, fun)(r, seeds);
+    }
+}
+/// ditto
+template foldr1(fun...)
+if (fun.length > 0)
+{
+    auto foldr1(Range)(Range r)
+    if (isBidirectionalRange!Range)
+    {
+        return foldImpl1!(FoldDirection.right, fun)(r);
+    }
+}
+
+private enum FoldDirection
+{
+    left,
+    right,
+}
+
+private template foldImpl(FoldDirection direction, fun...)
+{
+    auto foldImpl(Range, Args...)(Range r, Args seeds)
+    {
+        enum  N = fun.length; 
+        alias E = Unqual!(ElementType!Range);
+
+        static if (Args.length == 0)
+            RepeatType!(E, N) result;
+        else static if (Args.length == fun.length)
+        {
+            alias UArgs = staticMap!(Unqual, Args);
+            static if (is(UArgs == Args))
+                alias result = seeds;
+            else
+                UArgs result = seeds;
+        }
+        else static if (Args.length == 1)
+            RepeatType!(Unqual!(Args[0]), N) result = seeds[0];
+        else
+        {
+            import std.string;
+            static assert(0, format("There must be 0, 1 or %s.length (%s) seeds, not %s", fun.stringof, fun.length, Args.length));
+        }
+
+        static if (direction == FoldDirection.left)
+            for ( ; !r.empty; r.popFront() )
+                foreach (i, _; fun)
+                    result[i] = binaryFun!(fun[i])(result[i], r.front);
+        else
+            for ( ; !r.empty; r.popBack() )
+                foreach (i, _; fun)
+                    result[i] = binaryFun!(fun[i])(r.back, result[i]);
+
+        static if (fun.length == 1)
+            return result[0];
+        else
+            return tuple(result);
+    }
+}
+private template foldImpl1(FoldDirection direction, fun...)
+{
+    auto foldImpl1(Range)(Range r)
+    {
+        enum  N = fun.length; 
+        alias E = Unqual!(ElementType!Range);
+
+        assert (!r.empty, "fold 1: Range is empty");
+
+        MultiResultType!(E, fun) seed = r.front;
+        r.popFront();
+
+        return foldImpl!(direction, fun)(r, seed);
+    }
+}
+
+private template RepeatType(Type, size_t N)
+{
+    static if (N == 1)
+        alias RepeatType = TypeTuple!(Type);
+    else
+        alias RepeatType = TypeTuple!(RepeatType!(Type, N/2), RepeatType!(Type, N - N/2));
+}
+private template MultiResultType(E, fun...)
+{
+    static if (fun.length == 1)
+        alias MultiResultType = TypeTuple!(typeof(binaryFun!(fun[0])(E.init, E.init)));
+    else
+        alias MultiResultType = TypeTuple!(MultiResultType!(E, fun[0 .. $/2]), MultiResultType!(E, fun[0 .. $/2]));
+}
+
+/// ditto
+unittest
+{
+    //A simple fold. Seed defaults to 0.
+    assert([1, 2, 3, 4].fold!"a + b"() == 10);
+
+    //A dual fold. Two explicit seeds are provided.
+    //Result is a tuple.
+    assert([1, 2, 3, 4].fold!("a + b", "a * b")(0, 1) == tuple(10, 24));
+
+    //A triple fold, with a single common seed.
+    assert([1, 2, 3, 4].fold!("a + b", "-a -b", "a * b")(1) == tuple(11, -1, 24));
+
+    //fold1 can be used to use the range's front as a seed.
+    assert([1, 2, 3, 4].fold !(min, max)() == tuple(0, 4));
+    assert([1, 2, 3, 4].fold1!(min, max)() == tuple(1, 4));
+
+    //foldr can be used when a right-associative fold is required
+    assert([1, 2, 3, 4].foldr!("b / a")(96) == 4);
+}
+
+unittest
+{
+    import std.math : approxEqual;
+
+    int[] arr = [ 1, 2, 3, 4, 5 ];
+    // Sum all elements
+    auto sum = arr.fold!((a,b) => a + b)(0);
+    assert(sum == 15);
+
+    // Sum again, using a string predicate with "a" and "b"
+    sum = arr.fold!"a + b"(0);
+    assert(sum == 15);
+
+    // Compute the maximum of all elements
+    auto largest = arr.fold1!max();
+    assert(largest == 5);
+
+    // Compute the number of odd elements
+    auto odds = arr.fold!((a,b) => a + (b & 1))(0);
+    assert(odds == 3);
+
+    // Compute the sum of squares
+    auto ssquares = arr.fold!((a,b) => a + b * b)(0);
+    assert(ssquares == 55);
+
+    // Chain multiple ranges into seed
+    int[] a = [ 3, 4 ];
+    int[] b = [ 100 ];
+    auto r = chain(a, b).fold!("a + b")();
+    assert(r == 107);
+
+    // Mixing convertible types is fair game, too
+    double[] c = [ 2.5, 3.0 ];
+    auto r1 = chain(a, b, c).fold1!("a + b")();
+    assert(approxEqual(r1, 112.5));
+}
+
+unittest
+{
+    import std.math : approxEqual, sqrt;
+
+    double[] a = [ 3.0, 4, 7, 11, 3, 2, 5 ];
+    // Compute minimum and maximum in one pass
+    auto r = a.fold1!(min, max)();
+    // The type of r is Tuple!(int, int)
+    assert(approxEqual(r[0], 2));  // minimum
+    assert(approxEqual(r[1], 11)); // maximum
+
+    // Compute sum and sum of squares in one pass
+    r = a.fold!("a + b", "a + b * b")(0.0);
+    assert(approxEqual(r[0], 35));  // sum
+    assert(approxEqual(r[1], 233)); // sum of squares
+    // Compute average and standard deviation from the above
+    auto avg = r[0] / a.length;
+    auto stdev = sqrt(r[1] / a.length - avg * avg);
+}
+
+unittest
+{
+    double[] a = [ 3, 4 ];
+    auto r = a.fold!("a + b")(0.0);
+    assert(r == 7);
+    r = a.fold1!("a + b")();
+    assert(r == 7);
+    r = a.fold1!min();
+    assert(r == 3);
+    double[] b = [ 100 ];
+    auto r1 = chain(a, b).fold1!("a + b")();
+    assert(r1 == 107);
+
+    // two funs
+    auto r2 = a.fold!("a + b", "a - b")(0.0, 0.0);
+    assert(r2[0] == 7 && r2[1] == -7);
+    auto r3 = a.fold1!("a + b", "a - b")();
+    assert(r3[0] == 7 && r3[1] == -1);
+
+    a = [ 1, 2, 3, 4, 5 ];
+    // Stringize with commas
+    string rep = a.fold!("a ~ `, ` ~ to!(string)(b)")("");
+    assert(rep[2 .. $] == "1, 2, 3, 4, 5", "["~rep[2 .. $]~"]");
+}
+
+unittest
+{
+    const float a = 0.0;
+    const float[] b = [ 1.2, 3, 3.3 ];
+    float[] c = [ 1.2, 3, 3.3 ];
+    auto r = b.fold!"a + b"(a);
+    r = c.fold!"a + b"(a);
+}
+
+unittest
+{
+    // Issue #10408 - Two-function fold of a const array.
+    const numbers = [10, 30, 20];
+    immutable m = numbers.fold1!min();
+    assert(m == 10);
+    immutable minmax = numbers.fold1!(min, max);
+    assert(minmax == tuple(10, 30));
+}
+
 /**
 Fills $(D range) with a $(D filler).
  */
