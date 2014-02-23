@@ -3802,7 +3802,7 @@ version(linux)
     }
 }
 
-version(unittest) string testFilename(string file = __FILE__, size_t line = __LINE__)
+version(unittest) string testFilename(string file = __FILE__, size_t line = __LINE__) @safe pure
 {
     import std.conv : text;
     import std.path : baseName;
