@@ -4460,7 +4460,7 @@ public struct MatcherConcept
         assert(false);
     }
     ///
-    public unittest
+    @safe public unittest
     {
         string truth = "2² = 4";
         auto m = utfMatcher!char(unicode.Number);
@@ -4496,7 +4496,7 @@ public struct MatcherConcept
     }
 
     ///
-    public unittest
+    @safe public unittest
     {
         auto m = utfMatcher!char(unicode.Number);
         string square = "2²";
@@ -4646,7 +4646,7 @@ template Utf8Matcher()
         }
         enum dispatch = genDispatch();
 
-        public bool match(Range)(ref Range inp) const pure
+        public bool match(Range)(ref Range inp) const pure @trusted
             if(isRandomAccessRange!Range && is(ElementType!Range : char))
         {
             enum mode = Mode.skipOnMatch;
@@ -4661,7 +4661,7 @@ template Utf8Matcher()
 
         static if(Sizes.length == 4) // can skip iff can detect all encodings
         {
-            public bool skip(Range)(ref Range inp) const pure
+            public bool skip(Range)(ref Range inp) const pure @trusted
                 if(isRandomAccessRange!Range && is(ElementType!Range : char))
             {
                 enum mode = Mode.alwaysSkip;
@@ -4675,7 +4675,7 @@ template Utf8Matcher()
             }
         }
 
-        public bool test(Range)(ref Range inp) const pure
+        public bool test(Range)(ref Range inp) const pure @trusted
             if(isRandomAccessRange!Range && is(ElementType!Range : char))
         {
             enum mode = Mode.neverSkip;
@@ -4687,19 +4687,19 @@ template Utf8Matcher()
                 return mixin(dispatch);
         }
 
-        bool match(C)(ref C[] str) const pure
+        bool match(C)(ref C[] str) const pure @trusted
             if(isSomeChar!C)
         {
             return fwdStr!"match"(str);
         }
 
-        bool skip(C)(ref C[] str) const pure
+        bool skip(C)(ref C[] str) const pure @trusted
             if(isSomeChar!C)
         {
             return fwdStr!"skip"(str);
         }
 
-        bool test(C)(ref C[] str) const pure
+        bool test(C)(ref C[] str) const pure @trusted
             if(isSomeChar!C)
         {
             return fwdStr!"test"(str);
@@ -4720,12 +4720,12 @@ template Utf8Matcher()
         //static disptach helper UTF size ==> table
         alias tab(int i) = tables[i - 1];
 
-        public @property auto subMatcher(SizesToPick...)()
+        public @property auto subMatcher(SizesToPick...)() @trusted
         {
             return CherryPick!(Impl, SizesToPick)(&this);
         }
 
-        bool lookup(int size, Mode mode, Range)(ref Range inp) const pure
+        bool lookup(int size, Mode mode, Range)(ref Range inp) const pure @trusted
         {
             import std.typecons;
             if(inp.length < size)
@@ -4822,7 +4822,7 @@ template Utf16Matcher()
     //sizeFlags, lookupUni and ascii
     mixin template DefMatcher()
     {
-        public bool match(Range)(ref Range inp) const pure
+        public bool match(Range)(ref Range inp) const pure @trusted
             if(isRandomAccessRange!Range && is(ElementType!Range : wchar))
         {
             enum mode = Mode.skipOnMatch;
@@ -4837,7 +4837,7 @@ template Utf16Matcher()
 
         static if(Sizes.length == 2)
         {
-            public bool skip(Range)(ref Range inp) const pure
+            public bool skip(Range)(ref Range inp) const pure @trusted
                 if(isRandomAccessRange!Range && is(ElementType!Range : wchar))
             {
                 enum mode = Mode.alwaysSkip;
@@ -4851,7 +4851,7 @@ template Utf16Matcher()
             }
         }
 
-        public bool test(Range)(ref Range inp) const pure
+        public bool test(Range)(ref Range inp) const pure @trusted
             if(isRandomAccessRange!Range && is(ElementType!Range : wchar))
         {
             enum mode = Mode.neverSkip;
@@ -4863,19 +4863,19 @@ template Utf16Matcher()
                 return lookupUni!mode(inp);
         }
 
-        bool match(C)(ref C[] str) const pure
+        bool match(C)(ref C[] str) const pure @trusted
             if(isSomeChar!C)
         {
             return fwdStr!"match"(str);
         }
 
-        bool skip(C)(ref C[] str) const pure
+        bool skip(C)(ref C[] str) const pure @trusted
             if(isSomeChar!C)
         {
             return fwdStr!"skip"(str);
         }
 
-        bool test(C)(ref C[] str) const pure
+        bool test(C)(ref C[] str) const pure @trusted
             if(isSomeChar!C)
         {
             return fwdStr!"test"(str);
@@ -4906,7 +4906,7 @@ template Utf16Matcher()
         }
         mixin DefMatcher;
 
-        public @property auto subMatcher(SizesToPick...)()
+        public @property auto subMatcher(SizesToPick...)() @trusted
         {
             return CherryPick!(Impl, SizesToPick)(&this);
         }
@@ -4976,12 +4976,12 @@ template Utf16Matcher()
     }
 }
 
-private auto utf8Matcher(Set)(Set set)
+private auto utf8Matcher(Set)(Set set) @trusted
 {
     return Utf8Matcher!().build(set);
 }
 
-private auto utf16Matcher(Set)(Set set)
+private auto utf16Matcher(Set)(Set set) @trusted
 {
     return Utf16Matcher!().build(set);
 }
@@ -4993,7 +4993,7 @@ private auto utf16Matcher(Set)(Set set)
 
     See $(LREF MatcherConcept) for API outline.
 */
-public auto utfMatcher(Char, Set)(Set set)
+public auto utfMatcher(Char, Set)(Set set) @trusted
     if(isCodepointSet!Set)
 {
     static if(is(Char : char))
@@ -5009,7 +5009,7 @@ public auto utfMatcher(Char, Set)(Set set)
 
 
 //a range of code units, packed with index to speed up forward iteration
-package auto decoder(C)(C[] s, size_t offset=0)
+package auto decoder(C)(C[] s, size_t offset=0) @trusted
     if(is(C : wchar) || is(C : char))
 {
     static struct Decoder
@@ -5062,7 +5062,7 @@ package auto units(C)(C[] s)
     return Units(s);
 }
 
-unittest
+@safe unittest
 {
     import std.range;
     string rs = "hi! ﾈемног砀 текста";
@@ -5118,7 +5118,7 @@ unittest
     assert(codec.idx == i);
 }
 
-unittest
+@safe unittest
 {
     static bool testAll(Matcher, Range)(ref Matcher m, ref Range r)
     {
