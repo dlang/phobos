@@ -3928,10 +3928,10 @@ struct CtContext
         total_matches = re.ngroup;
     }
 
-    CtContext lookaround()
+    CtContext lookaround(uint s, uint e)
     {
         CtContext ct;
-        ct.total_matches = total_matches;
+        ct.total_matches = e - s;
         ct.match = 1;
         return ct;
     }
@@ -4049,7 +4049,7 @@ struct CtContext
             string bwdCreate = "bwdMatcher(matcher, mem)";
             uint start = IRL!(IR.LookbehindStart);
             uint end = IRL!(IR.LookbehindStart)+len+IRL!(IR.LookaheadEnd);
-            CtContext context = lookaround(); //split off new context
+            CtContext context = lookaround(ir[1].raw, ir[2].raw); //split off new context
             auto slice = ir[start .. end];
             r.code ~= ctSub(`
             case $$: //fake lookaround "atom"
@@ -5206,14 +5206,13 @@ enum OneShot { Fwd, Bwd };
                     auto matcher = fwdMatcher(re.ir[t.pc .. end], subCounters.get(t.pc, 0));
                 else
                     auto matcher = bwdMatcher(re.ir[t.pc .. end], subCounters.get(t.pc, 0));
-                matcher.re.ngroup = re.ir[t.pc+2].raw - re.ir[t.pc+1].raw;
+                matcher.re.ngroup = me - ms;
                 matcher.backrefed = backrefed.empty ? t.matches : backrefed;
                 //backMatch
-                bool nomatch = (matcher.matchOneShot(t.matches, IRL!(IR.LookbehindStart))
-                    == MatchResult.Match) ^ positive;
+                auto mRes = matcher.matchOneShot(t.matches.ptr[ms .. me], IRL!(IR.LookbehindStart));
                 freelist = matcher.freelist;
                 subCounters[t.pc] = matcher.genCounter;
-                if(nomatch)
+                if((mRes == MatchResult.Match) ^ positive)
                 {
                     recycle(t);
                     t = worklist.fetch();
@@ -5237,13 +5236,12 @@ enum OneShot { Fwd, Bwd };
                     auto matcher = fwdMatcher(re.ir[t.pc .. end], subCounters.get(t.pc, 0));
                 matcher.re.ngroup = me - ms;
                 matcher.backrefed = backrefed.empty ? t.matches : backrefed;
-                bool nomatch = (matcher.matchOneShot(t.matches, IRL!(IR.LookaheadStart))
-                    == MatchResult.Match) ^ positive;
+                auto mRes = matcher.matchOneShot(t.matches.ptr[ms .. me], IRL!(IR.LookaheadStart));
                 freelist = matcher.freelist;
                 subCounters[t.pc] = matcher.genCounter;
                 s.reset(index);
                 next();
-                if(nomatch)
+                if((mRes == MatchResult.Match) ^ positive)
                 {
                     recycle(t);
                     t = worklist.fetch();
@@ -5258,9 +5256,7 @@ enum OneShot { Fwd, Bwd };
             case IR.NeglookaheadEnd:
             case IR.LookbehindEnd:
             case IR.NeglookbehindEnd:
-                t.pc = re.ir[t.pc].indexOfPair(t.pc);
-                uint ms = re.ir[t.pc+1].raw, me = re.ir[t.pc+2].raw;
-                finish(t, matches.ptr[ms..me]);
+                finish(t, matches.ptr[0 .. re.ngroup]);
                 recycle(t);
                 //cut off low priority threads
                 recycle(clist);
@@ -7455,6 +7451,14 @@ unittest
     assert(regex(`(?P<v1>\w+)`).namedCaptures.equal(["v1"]));
     assert(regex(`(?P<__>\w+)`).namedCaptures.equal(["__"]));
     assert(regex(`(?P<я>\w+)`).namedCaptures.equal(["я"]));
+}
+
+// bugzilla 12076
+unittest
+{
+    auto RE = ctRegex!(r"(?<!x\w+)\s(\w+)");
+    string s = "one two";
+    auto m = match(s, RE);
 }
 
 // bugzilla 12105
