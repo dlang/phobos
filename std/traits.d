@@ -442,12 +442,35 @@ version(unittest)
         const(Inner[const(Inner)]) qualAarray;
 
         shared(immutable(Inner) delegate(ref double, scope string) const shared @trusted nothrow) attrDeleg;
+
+        struct Data(T) { int x; }
+        void tfunc(T...)(T args) {}
+
+        template Inst(alias A) { int x; }
     }
 
     private enum QualifiedEnum
     {
         a = 42
     }
+}
+
+private template fqnSym(alias T : X!A, alias X, A...)
+{
+    template fqnTuple(T...)
+    {
+        static if (T.length == 0)
+            enum fqnTuple = "";
+        else static if (T.length == 1)
+            enum fqnTuple = fullyQualifiedName!(T[0]);
+        else
+            enum fqnTuple = fullyQualifiedName!(T[0]) ~ ", "
+                          ~ fqnTuple!(T[1 .. $]);
+    }
+
+    enum fqnSym =
+        fqnSym!(__traits(parent, X)) ~
+        '.' ~ __traits(identifier, X) ~ "!(" ~ fqnTuple!A ~ ")";
 }
 
 private template fqnSym(alias T)
@@ -457,14 +480,15 @@ private template fqnSym(alias T)
     else
         enum parentPrefix = null;
 
-    enum fqnSym = parentPrefix ~ (s)
+    static string adjustIdent(string s)
     {
         import std.algorithm : skipOver, findSplit;
 
         if (s.skipOver("package ") || s.skipOver("module "))
             return s;
         return s.findSplit("(")[0];
-    }(__traits(identifier, T));
+    }
+    enum fqnSym = parentPrefix ~ adjustIdent(__traits(identifier, T));
 }
 
 unittest
@@ -474,10 +498,18 @@ unittest
     // Make sure those 2 are the same
     static assert(fqnSym!fqn == fqn!fqn);
 
-    // Main tests
     static assert(fqn!fqn == "std.traits.fullyQualifiedName");
-    static assert(fqn!(QualifiedNameTests.Inner) == "std.traits.QualifiedNameTests.Inner");
-    static assert(fqn!(QualifiedNameTests.func) == "std.traits.QualifiedNameTests.func");
+
+    alias qnTests = QualifiedNameTests;
+    enum prefix = "std.traits.QualifiedNameTests.";
+    static assert(fqn!(qnTests.Inner)           == prefix ~ "Inner");
+    static assert(fqn!(qnTests.func)            == prefix ~ "func");
+    static assert(fqn!(qnTests.Data!int)        == prefix ~ "Data!(int)");
+    static assert(fqn!(qnTests.Data!int.x)      == prefix ~ "Data!(int).x");
+    static assert(fqn!(qnTests.tfunc!(int[]))   == prefix ~ "tfunc!(int[])");
+    static assert(fqn!(qnTests.Inst!(Object))   == prefix ~ "Inst!(object.Object)");
+    static assert(fqn!(qnTests.Inst!(Object).x) == prefix ~ "Inst!(object.Object).x");
+
     import core.sync.barrier;
     static assert(fqn!Barrier == "core.sync.barrier.Barrier");
 }
