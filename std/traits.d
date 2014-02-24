@@ -408,14 +408,14 @@ template fullyQualifiedName(T...)
 {
 
     static if (is(T))
-        enum fullyQualifiedName = fullyQualifiedNameImplForTypes!(T[0], false, false, false, false);
+        enum fullyQualifiedName = fqnType!(T[0], false, false, false, false);
     else
-        enum fullyQualifiedName = fullyQualifiedNameImplForSymbols!(T[0]);
+        enum fullyQualifiedName = fqnSym!(T[0]);
 }
 
 version(unittest)
 {
-    // Used for both fullyQualifiedNameImplForTypes and fullyQualifiedNameImplForSymbols unittests
+    // Used for both fqnType and fqnSym unittests
     private struct QualifiedNameTests
     {
         struct Inner
@@ -450,18 +450,18 @@ version(unittest)
     }
 }
 
-private template fullyQualifiedNameImplForSymbols(alias T)
+private template fqnSym(alias T)
 {
     static if (__traits(compiles, __traits(parent, T)))
-        enum parentPrefix = fullyQualifiedNameImplForSymbols!(__traits(parent, T)) ~ '.';
+        enum parentPrefix = fqnSym!(__traits(parent, T)) ~ '.';
     else
         enum parentPrefix = null;
 
-    enum fullyQualifiedNameImplForSymbols = parentPrefix ~ (s)
+    enum fqnSym = parentPrefix ~ (s)
     {
         import std.algorithm : skipOver, findSplit;
 
-        if(s.skipOver("package ") || s.skipOver("module "))
+        if (s.skipOver("package ") || s.skipOver("module "))
             return s;
         return s.findSplit("(")[0];
     }(__traits(identifier, T));
@@ -469,20 +469,20 @@ private template fullyQualifiedNameImplForSymbols(alias T)
 
 unittest
 {
+    alias fqn = fullyQualifiedName;
+
     // Make sure those 2 are the same
-    static assert(fullyQualifiedNameImplForSymbols!fullyQualifiedName
-        == fullyQualifiedName!fullyQualifiedName);
+    static assert(fqnSym!fqn == fqn!fqn);
 
     // Main tests
-    alias fqn = fullyQualifiedName;
     static assert(fqn!fqn == "std.traits.fullyQualifiedName");
     static assert(fqn!(QualifiedNameTests.Inner) == "std.traits.QualifiedNameTests.Inner");
     static assert(fqn!(QualifiedNameTests.func) == "std.traits.QualifiedNameTests.func");
     import core.sync.barrier;
-    static assert(fullyQualifiedName!Barrier == "core.sync.barrier.Barrier");
+    static assert(fqn!Barrier == "core.sync.barrier.Barrier");
 }
 
-private template fullyQualifiedNameImplForTypes(T,
+private template fqnType(T,
     bool alreadyConst, bool alreadyImmutable, bool alreadyShared, bool alreadyInout)
 {
     import std.string;
@@ -604,42 +604,42 @@ private template fullyQualifiedNameImplForTypes(T,
 
     static if (is(T == string))
     {
-        enum fullyQualifiedNameImplForTypes = "string";
+        enum fqnType = "string";
     }
     else static if (is(T == wstring))
     {
-        enum fullyQualifiedNameImplForTypes = "wstring";
+        enum fqnType = "wstring";
     }
     else static if (is(T == dstring))
     {
-        enum fullyQualifiedNameImplForTypes = "dstring";
+        enum fqnType = "dstring";
     }
     else static if (isBasicType!T && !is(T == enum))
     {
-        enum fullyQualifiedNameImplForTypes = chain!((Unqual!T).stringof);
+        enum fqnType = chain!((Unqual!T).stringof);
     }
     else static if (isAggregateType!T || is(T == enum))
     {
-        enum fullyQualifiedNameImplForTypes = chain!(fullyQualifiedNameImplForSymbols!T);
+        enum fqnType = chain!(fqnSym!T);
     }
     else static if (isStaticArray!T)
     {
         import std.conv;
 
-        enum fullyQualifiedNameImplForTypes = chain!(
-            format("%s[%s]", fullyQualifiedNameImplForTypes!(typeof(T.init[0]), qualifiers), T.length)
+        enum fqnType = chain!(
+            format("%s[%s]", fqnType!(typeof(T.init[0]), qualifiers), T.length)
         );
     }
     else static if (isArray!T)
     {
-        enum fullyQualifiedNameImplForTypes = chain!(
-            format("%s[]", fullyQualifiedNameImplForTypes!(typeof(T.init[0]), qualifiers))
+        enum fqnType = chain!(
+            format("%s[]", fqnType!(typeof(T.init[0]), qualifiers))
         );
     }
     else static if (isAssociativeArray!T)
     {
-        enum fullyQualifiedNameImplForTypes = chain!(
-            format("%s[%s]", fullyQualifiedNameImplForTypes!(ValueType!T, qualifiers), fullyQualifiedNameImplForTypes!(KeyType!T, noQualifiers))
+        enum fqnType = chain!(
+            format("%s[%s]", fqnType!(ValueType!T, qualifiers), fqnType!(KeyType!T, noQualifiers))
         );
     }
     else static if (isSomeFunction!T)
@@ -653,8 +653,8 @@ private template fullyQualifiedNameImplForTypes(T,
                 is(F == const) ? " const" : ""
             );
             enum formatStr = "%s%s delegate(%s)%s%s";
-            enum fullyQualifiedNameImplForTypes = chain!(
-                format(formatStr, linkageString!T, fullyQualifiedNameImplForTypes!(ReturnType!T, noQualifiers),
+            enum fqnType = chain!(
+                format(formatStr, linkageString!T, fqnType!(ReturnType!T, noQualifiers),
                     parametersTypeString!(T), functionAttributeString!T, qualifierString)
             );
         }
@@ -665,16 +665,16 @@ private template fullyQualifiedNameImplForTypes(T,
             else
                 enum formatStr = "%s%s(%s)%s";
 
-            enum fullyQualifiedNameImplForTypes = chain!(
-                format(formatStr, linkageString!T, fullyQualifiedNameImplForTypes!(ReturnType!T, noQualifiers),
+            enum fqnType = chain!(
+                format(formatStr, linkageString!T, fqnType!(ReturnType!T, noQualifiers),
                     parametersTypeString!(T), functionAttributeString!T)
             );
         }
     }
     else static if (isPointer!T)
     {
-        enum fullyQualifiedNameImplForTypes = chain!(
-            format("%s*", fullyQualifiedNameImplForTypes!(PointerTarget!T, qualifiers))
+        enum fqnType = chain!(
+            format("%s*", fqnType!(PointerTarget!T, qualifiers))
         );
     }
     else
@@ -685,13 +685,13 @@ private template fullyQualifiedNameImplForTypes(T,
 unittest
 {
     import std.string : format;
+    alias fqn = fullyQualifiedName;
 
     // Verify those 2 are the same for simple case
     alias Ambiguous = const(QualifiedNameTests.Inner);
-    static assert(fullyQualifiedName!Ambiguous == fullyQualifiedNameImplForTypes!(Ambiguous, false, false, false, false));
+    static assert(fqn!Ambiguous == fqnType!(Ambiguous, false, false, false, false));
 
     // Main tests
-    alias fqn = fullyQualifiedName;
     enum inner_name = "std.traits.QualifiedNameTests.Inner";
     with (QualifiedNameTests)
     {
