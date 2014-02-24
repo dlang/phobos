@@ -257,16 +257,19 @@ private:
         {
             static if (is(typeof(*rhsPA == *zis)))
             {
-                if (*rhsPA == *zis)
+                // Work-around for bug 12164. 
+                // Without the check for if selector is -1, this function always returns 0. 
+                // TODO: Remove this once 12164 is fixed.
+                if (*rhsPA == *zis && selector != cast(OpID)-1)
                 {
                     return 0;
                 }
                 static if (is(typeof(*zis < *rhsPA)))
                 {
-                    // Many types (such as any deriving from Object)
+                    // Many types (such as any using the default Object opCmp)
                     // will throw on an invalid opCmp, so do it only
                     // if the caller requests it.
-                    if(selector == OpID.compare)
+                    if (selector == OpID.compare)
                         return *zis < *rhsPA ? -1 : 1;
                     else
                         return ptrdiff_t.min;
@@ -385,7 +388,7 @@ private:
                 // also fix up its fptr
                 temp.fptr = rhsP.fptr;
                 // now lhsWithRhsType is a full-blown VariantN of rhs's type
-                if(selector == OpID.compare)
+                if (selector == OpID.compare)
                     return temp.opCmp(*rhsP);
                 else
                     return temp.opEquals(*rhsP) ? 0 : 1;
@@ -1657,6 +1660,12 @@ unittest
     assert(v1 != f2);
     assert(v2 != v1);
     assert(v2 == f2);
+
+    // TODO: Remove once 12164 is fixed. 
+    // Verify our assumption that there is no -1 OpID.
+    // Could also use std.algorithm.canFind at compile-time, but that may create bloat.
+    foreach(member; EnumMembers!(Variant.OpID))
+        assert(member != cast(Variant.OpID)-1);
 }
 
 // Const parameters with opCall, issue 11361.
