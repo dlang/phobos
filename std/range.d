@@ -9759,9 +9759,14 @@ unittest    // bug 9060
 /**
   Implements a "tee" style pipe, wrapping an input range so that elements
   of the range can be passed to a provided function as they are iterated over.
+  This is useful for printing out intermediate values in a long chain of range
+  code, or performing some operation with side-effects on each call to front 
+  or popFront. It is not reccommended to modify the element in the provided
+  function. For that, use $(LREF map).
 
   If the pipeOnFront Flag is set to yes, func is called on front.
-  Otherwise, func is called on popFront (the default behavior).
+  Otherwise, func is called on popFront. The default behaviour is 
+  to call func on popFront.
 
   Examples:
 ---
