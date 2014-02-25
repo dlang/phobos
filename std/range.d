@@ -9754,9 +9754,7 @@ unittest    // bug 9060
     foo(r);
 }
 
-/*****************************************************************************/
-
-/**
+/++
   Implements a "tee" style pipe, wrapping an input range so that elements
   of the range can be passed to a provided function as they are iterated over.
   This is useful for printing out intermediate values in a long chain of range
@@ -9797,8 +9795,7 @@ unittest    // bug 9060
   //   post-map: 10
   //   pre-map: 9
 ---
-
-*/ 
++/
 
 auto tee(alias fun, Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, Range)(Range inputRange) 
     if (isInputRange!(Range) && is(typeof(unaryFun!fun)))
@@ -9890,17 +9887,17 @@ unittest
     // Pass-through
     int[] values = [1, 4, 9, 16, 25];
 
-    auto newValues = tee!(a => a + 1)(values);
+    auto newValues = values.tee!(a => a + 1);
     assert(equal(newValues, values));
 
-    auto newValues2 = tee!(a => a = 0)(values);
+    auto newValues2 = values.tee!(a => a = 0);
     assert(equal(newValues2, values));
 
     int count = 0;
-    auto newValues3 = filter!(a => a < 10)(values)
-                      .tee!(a => count++)()
-                      .map!(a => a + 1)()
-                      .filter!(a => a < 10)();
+    auto newValues3 = values.filter!(a => a < 10)
+                                .tee!(a => count++)
+                                .map!(a => a + 1)
+                                .filter!(a => a < 10);
     assert(equal(newValues3, [2, 5]));
     assert(count == 3);
 }
@@ -9911,15 +9908,15 @@ unittest
 
     bool isVowel(dchar c)
     {
-        return (std.string.indexOf("AaEeIiOoUu", c) != -1);
+        return std.string.indexOf("AaEeIiOoUu", c) != -1;
     }
 
     int vowelCount = 0;
     int shiftedCount = 0;
-    auto removeVowels = tee!(c => isVowel(c) ? vowelCount++ : 0)(txt)
-                          .filter!(c => !isVowel(c))()
-                          .map!(c => (c == ' ') ? c : c + 1)()
-                          .tee!(c => isVowel(c) ? shiftedCount++ : 0)();
+    auto removeVowels = txt.tee!(c => isVowel(c) ? vowelCount++ : 0)
+                                .filter!(c => !isVowel(c))
+                                .map!(c => (c == ' ') ? c : c + 1)
+                                .tee!(c => isVowel(c) ? shiftedCount++ : 0);
     assert(equal(removeVowels, "Mo o- Mo 3"));
     assert(vowelCount == 6);
     assert(shiftedCount == 3);
@@ -9947,12 +9944,12 @@ unittest
     string txt = "abcdefghijklmnopqrstuvwxyz";
 
     int popCount = 0;
-    auto pipeOnPop = tee!(a => popCount++)(txt);
+    auto pipeOnPop = txt.tee!(a => popCount++);
     testRange(pipeOnPop);
     assert(popCount == 26);
 
     int frontCount = 0;
-    auto pipeOnFront = tee!(a => frontCount++, No.pipeOnPop)(txt);
+    auto pipeOnFront = txt.tee!(a => frontCount++, No.pipeOnPop);
     testRange(pipeOnFront);
     assert(frontCount == 9);
 }
@@ -9976,7 +9973,7 @@ unittest
 
     C nums = new C();
 
-    auto range = tee!(a => a + 1)(nums);
+    auto range = nums.tee!(a => a + 1);
     range.popFront();
     assert(range.front == 1);
 
