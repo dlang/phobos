@@ -9797,12 +9797,28 @@ unittest    // bug 9060
 
 */ 
 
-auto tee(alias func, Flag!"pipeOnFront" pipeOnFront = No.pipeOnFront, Range)(Range inputRange) 
-    if (isInputRange!(Range) && is(typeof(unaryFun!func)))
+auto tee(alias fun, Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, Range)(Range inputRange) 
+    if (isInputRange!(Range) && is(typeof(unaryFun!fun)))
 {
     struct Result(Range)
     {
+		private alias _fun = unaryFun!fun;
         private Range _input;
+
+		static if (hasLength!Range)
+		{
+			static if (__traits(compiles, { enum len = typeof(_input).length; }))
+			{
+				enum length = _input.length;
+			}
+			else
+			{
+				@property length()
+				{
+					return _input.length;
+				}
+			}
+		}
 
         static if (isInfinite!Range)
         {
@@ -9816,21 +9832,43 @@ auto tee(alias func, Flag!"pipeOnFront" pipeOnFront = No.pipeOnFront, Range)(Ran
         void popFront()
         {
             assert(!_input.empty);
-            static if (!pipeOnFront)
+            static if (pipeOnPop)
             {
-                unaryFun!func(_input.front);
+                _fun(_input.front);
             }
             _input.popFront();
         }
 
         @property auto ref front()
         {
-            static if (pipeOnFront)
+            static if (!pipeOnPop)
             {
-                unaryFun!func(_input.front);
+                _fun(_input.front);
             }
             return _input.front;
         }
+
+		static if (isBidirectionalRange!Range)
+		{
+			void popBack()
+			{
+				assert(!_input.empty);
+				static if (pipeOnPop)
+				{
+					_fun(_input.back);
+				}
+				_input.popBack();
+			}
+
+			@property auto ref back()
+			{
+				static if (!pipeOnPop)
+				{
+					_fun(_input.front);
+				}
+				return _fun(_input.back);
+			}
+		}
 
         static if (isForwardRange!Range)
         {
