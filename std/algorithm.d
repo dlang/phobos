@@ -1070,21 +1070,7 @@ is not specialized for summation.
 auto sum(R)(R r)
 if (isInputRange!R && !isFloatingPoint!(ElementType!R) && !isInfinite!R)
 {
-    alias E = ElementType!R;
-    static if (isIntegral!E || is(Unqual!E == bool))
-        static if (E.sizeof >= 4)
-            static if (E.min < 0)
-                alias Result = long;
-            else
-                alias Result = ulong;
-        else
-            static if (E.min < 0)
-                alias Result = int;
-            else
-                alias Result = uint;
-    else
-        alias Result = E;
-    Result seed = 0;
+    typeof(r.front + r.front) seed = 0;
     return reduce!"a + b"(seed, r);
 }
 
@@ -1098,9 +1084,11 @@ unittest
 
 unittest
 {
-    static assert(is(typeof(sum([1, 2, 3, 4])) == long));
-    static assert(is(typeof(sum([1U, 2U, 3U, 4U])) == ulong));
-    static assert(is(typeof(sum([1L, 2L, 3L, 4L])) == long));
+    static assert(is(typeof(sum([cast( byte)1])) ==  int));
+    static assert(is(typeof(sum([cast(ubyte)1])) ==  int));
+    static assert(is(typeof(sum([  1,   2,   3,   4])) ==  int));
+    static assert(is(typeof(sum([ 1U,  2U,  3U,  4U])) == uint));
+    static assert(is(typeof(sum([ 1L,  2L,  3L,  4L])) ==  long));
     static assert(is(typeof(sum([1UL, 2UL, 3UL, 4UL])) == ulong));
 
     int[] empty;
@@ -1126,8 +1114,8 @@ if (hasSlicing!R && hasLength!R && isFloatingPoint!(ElementType!R))
 
 unittest
 {
-    static assert(is(typeof(sum([1., 2., 3., 4.])) == double));
-    static assert(is(typeof(sum([1F, 2F, 3F, 4F])) == double));
+    static assert(is(typeof(sum([1.0, 2.0, 3.0, 4.0])) == double));
+    static assert(is(typeof(sum([ 1F,  2F,  3F,  4F])) == double));
     const(float[]) a = [1F, 2F, 3F, 4F];
     static assert(is(typeof(sum(a)) == double));
     const(float)[] b = [1F, 2F, 3F, 4F];
