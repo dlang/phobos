@@ -3437,7 +3437,7 @@ unittest
 Counts the number of trailing zeros in the binary representation of $(D value).
 For signed integers, the sign bit is included in the count.
 */
-uint countTrailingZeros(T)(T value)
+private uint countTrailingZeros(T)(T value)
     if (isIntegral!T)
 {
     // bsf doesn't give the correct result for 0.
@@ -3499,7 +3499,7 @@ unittest
 Counts the number of set bits in the binary representation of $(D value).
 For signed integers, the sign bit is included in the count.
 */
-uint countBitsSet(T)(T value)
+private uint countBitsSet(T)(T value)
     if (isIntegral!T)
 {
     // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
