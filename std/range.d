@@ -9760,13 +9760,16 @@ unittest    // bug 9060
   Implements a "tee" style pipe, wrapping an input range so that elements
   of the range can be passed to a provided function as they are iterated over.
   This is useful for printing out intermediate values in a long chain of range
-  code, or performing some operation with side-effects on each call to front 
-  or popFront. It is not reccommended to modify the element in the provided
-  function. For that, use $(LREF map).
+  code, or performing some operation with side-effects on each call to $(D front) 
+  or $(D popFront). Unless $(D fun) receives $(D front) by reference, any
+  modifications made to $(D front) will have no effect. Even if $(D fun) is
+  received by reference, it is not recommended to modify $(D front) in $(D fun).
 
-  If the pipeOnFront Flag is set to yes, func is called on front.
-  Otherwise, func is called on popFront. The default behaviour is 
-  to call func on popFront.
+  If the $(D pipeOnPop) $(D Flag) is set to $(D Yes), $(D fun) is called on 
+  $(D front) before popping. Otherwise, $(D fun) will be called on each access 
+  of $(D front). The default behaviour is to call $(D fun) on $(D front) when
+  calling $(D popFront). If the underlying range defines $(D back)/$(D popBack),
+  they behave the same way as $(D front) and $(popFront).
 
   Examples:
 ---
@@ -9949,7 +9952,7 @@ unittest
     assert(popCount == 26);
 
     int frontCount = 0;
-    auto pipeOnFront = tee!(a => frontCount++, Yes.pipeOnFront)(txt);
+    auto pipeOnFront = tee!(a => frontCount++, No.pipeOnPop)(txt);
     testRange(pipeOnFront);
     assert(frontCount == 9);
 }
