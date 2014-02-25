@@ -3854,7 +3854,6 @@ public:
     */
     this(Value filler)
     {
-        import std.typecons : staticIota;
         curIndex = 0;
         defValue = filler;
         // zeros-page index, ones-page index
@@ -3862,8 +3861,8 @@ public:
             v = ConstructState(size_t.max, size_t.max);
         table = typeof(table)(indices);
         // one page per level is a bootstrap minimum
-        foreach(i; staticIota!(0, Prefix.length))
-            table.length!i = (1<<Prefix[i].bitSize);
+        foreach(i, Pred; Prefix)
+            table.length!i = (1<<Pred.bitSize);
     }
 
     /**
@@ -4590,7 +4589,7 @@ template Utf8Matcher()
     enum leadMask(size_t size) = (cast(size_t)1<<(7 - size))-1;
     enum encMask(size_t size) = ((1<<size)-1)<<(8-size);
 
-    char trancate()(char ch) pure @safe
+    char truncate()(char ch) pure @safe
     {
         assert((ch & 0b1100_0000) == 0x80);
         ch -= 0x80;
@@ -4734,7 +4733,7 @@ template Utf8Matcher()
             needle[0] = leadMask!size & inp[0];
             foreach(i; staticIota!(1, size))
             {
-                needle[i] = trancate(inp[i]);
+                needle[i] = truncate(inp[i]);
             }
             static if(mode == Mode.alwaysSkip)
             {
