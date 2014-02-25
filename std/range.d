@@ -9759,9 +9759,23 @@ unittest    // bug 9060
   of the range can be passed to a provided function as they are iterated over.
   This is useful for printing out intermediate values in a long chain of range
   code, or performing some operation with side-effects on each call to $(D front) 
-  or $(D popFront). Unless $(D fun) receives $(D front) by reference, any
-  modifications made to $(D front) will have no effect. Even if $(D fun) is
-  received by reference, it is not recommended to modify $(D front) in $(D fun).
+  or $(D popFront). It is important to note that as the resultant range is
+  evaluated lazily, $(D fun) will not actually be executed until the range is
+  "walked", using functions that evaluate ranges, such as $(LREF array) or
+  $(D reduce).
+
+  Example:
+---
+  int [] values = [1, 4, 9, 16, 25];
+
+  int count = 0;
+  auto newValues = values.tee!(a => count++);
+  //Count has not been incremented as the
+  //result of tee has not yet been evaluated
+  assert(count == 0);
+  auto arrValues = count.array;
+  //The result of tee has now been evaluated and count is 3
+  assert(count == 3);
 
   If the $(D pipeOnPop) $(D Flag) is set to $(D Yes), $(D fun) is called on 
   $(D front) before popping. Otherwise, $(D fun) will be called on each access 
@@ -9807,7 +9821,7 @@ auto tee(alias fun, Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, Range)(Range inp
 
         static if (hasLength!Range)
         {
-            static if (__traits(compiles, { enum len = typeof(_input).length; }))
+            static if (__traits(compiles, { enum len = Range.length; }))
             {
                 enum length = _input.length;
             }
@@ -9887,10 +9901,10 @@ unittest
     // Pass-through
     int[] values = [1, 4, 9, 16, 25];
 
-    auto newValues = values.tee!(a => a + 1);
+    auto newValues = values.tee!(a => a + 1).array;
     assert(equal(newValues, values));
 
-    auto newValues2 = values.tee!(a => a = 0);
+    auto newValues2 = values.tee!(a => a = 0).array;
     assert(equal(newValues2, values));
 
     int count = 0;
@@ -9898,6 +9912,8 @@ unittest
                                 .tee!(a => count++)
                                 .map!(a => a + 1)
                                 .filter!(a => a < 10);
+    //Fine, equal also evaluates any lazy ranges passed to it.
+    //count is not 3 until equal evaluates newValues3
     assert(equal(newValues3, [2, 5]));
     assert(count == 3);
 }
