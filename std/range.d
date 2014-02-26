@@ -9835,9 +9835,10 @@ auto tee(alias fun, Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, Range)(Range inp
 
             static if (isRandomAccessRange!Range)
             {
-                auto ref opIndex(IndexType n) { return source[n]; }
+                private alias IndexType = CommonType!(size_t, typeof(_input.length));
+                auto ref opIndex(IndexType n) { return _input[n]; }
                 
-                alias opDollar = _input.length;
+                alias opDollar = length;
             }
         }
 
