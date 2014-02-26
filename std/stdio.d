@@ -360,7 +360,7 @@ Throws: $(D ErrnoException) if the file could not be opened.
         detach();
     }
 
-    this(this)
+    this(this) @safe
     {
         if (!_p) return;
         assert(_p.refs);
@@ -503,7 +503,7 @@ Throws: $(D ErrnoException) in case of error.
 
 
 /** Returns $(D true) if the file is opened. */
-    @property bool isOpen() const pure nothrow
+    @property bool isOpen() const @safe pure nothrow
     {
         return _p !is null && _p.handle;
     }
@@ -525,7 +525,7 @@ Throws: $(D Exception) if the file is not opened.
 /** Returns the name of the last opened file, if any.
 If a $(D File) was created with $(LREF tmpfile) and $(LREF wrapFile)
 it has no name.*/
-    @property string name() const pure nothrow
+    @property string name() const @safe pure nothrow
     {
         return _name;
     }
@@ -1456,7 +1456,7 @@ Note that the created file has no $(LREF name)*/
 /**
 Returns the $(D FILE*) corresponding to this object.
  */
-    FILE* getFP() pure
+    FILE* getFP() @safe pure
     {
         import std.exception : enforce;
 
