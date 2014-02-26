@@ -9832,6 +9832,13 @@ auto tee(alias fun, Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, Range)(Range inp
                     return _input.length;
                 }
             }
+
+            static if (isRandomAccessRange!Range)
+            {
+                auto ref opIndex(IndexType n) { return source[n]; }
+                
+                alias opDollar = _input.length;
+            }
         }
 
         static if (isInfinite!Range)
