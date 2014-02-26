@@ -4143,7 +4143,20 @@ Models an infinite bidirectional and random access range, with slicing.
 */
 struct Repeat(T)
 {
-    private T _value;
+private:
+    //Store a non-qualified T when possible: This is to make Repeat assignable
+    static if ((is(T == class) || is(T == interface)) && (is(T == const) || is(T == immutable)))
+    {
+        import std.typecons;
+        alias UT = Rebindable!T;
+    }
+    else static if (is(T : Unqual!T))
+        alias UT = Unqual!T;
+    else
+        alias UT = T;
+    UT _value;
+
+public:
     @property inout(T) front() inout { return _value; }
     @property inout(T) back() inout { return _value; }
     enum bool empty = false;
@@ -4205,6 +4218,21 @@ Take!(Repeat!T) repeat(T)(T value, size_t n)
 unittest
 {
     assert(equal(5.repeat(4), 5.repeat().take(4)));
+}
+
+unittest //12007
+{
+    static class C{}
+    Repeat!(immutable int) ri;
+    ri = ri.save;
+    Repeat!(immutable C) rc;
+    rc = rc.save;
+
+    import std.algorithm;
+    immutable int[] A = [1,2,3];
+    immutable int[] B = [4,5,6];
+
+    auto AB = cartesianProduct(A,B);
 }
 
 /**
