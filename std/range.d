@@ -9759,10 +9759,13 @@ unittest    // bug 9060
   of the range can be passed to a provided function as they are iterated over.
   This is useful for printing out intermediate values in a long chain of range
   code, or performing some operation with side-effects on each call to $(D front) 
-  or $(D popFront). It is important to note that as the resultant range is
+  or $(D popFront), and $(D back) or $(D popBack), if the underlying range
+  supports random access.
+
+  It is important to note that as the resultant range is
   evaluated lazily, $(D fun) will not actually be executed until the range is
   "walked", using functions that evaluate ranges, such as $(LREF array) or
-  $(D reduce).
+  $(LREF reduce).
 
   Example:
 ---
@@ -9777,11 +9780,11 @@ unittest    // bug 9060
   //The result of tee has now been evaluated and count is 3
   assert(count == 3);
 
-  If the $(D pipeOnPop) $(D Flag) is set to $(D Yes), $(D fun) is called on 
-  $(D front) before popping. Otherwise, $(D fun) will be called on each access 
+  If the $(D pipeOnPop) $(D Flag) is equal to $(D Yes.pipeOnPop), $(D fun) is called 
+  on $(D front) before popping. Otherwise, $(D fun) will be called on each access 
   of $(D front). The default behaviour is to call $(D fun) on $(D front) when
   calling $(D popFront). If the underlying range defines $(D back)/$(D popBack),
-  they behave the same way as $(D front) and $(popFront).
+  they behave the same way as $(D front) and $(popFront) in regards to $(D pipeOnPop).
 
   Examples:
 ---
