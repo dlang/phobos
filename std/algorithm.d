@@ -1056,10 +1056,16 @@ $(LI In all other cases, a simple element by element addition is done.)
 )
 
 For floating point inputs, calculations are made in $(D real)
-precision for $(D real) inputs and in $(D double) precision otherwise.
+precision for $(D real) inputs and in $(D double) precision otherwise
+(Note this is a special case that deviates from $(D reduce)'s behavior,
+which would have kept $(D float) precision for a $(D float) range).
 For all other types, the calculations are done in the same type obtained
 from from adding two elements of the range, which may be a different
 type from the elements themselves (for example, in case of integral promotion).
+
+A seed may be passed to $(D sum). Not only will this seed be used as an initial
+value, but its type will override all the above, and determine the algorithm
+and precision used for sumation.
 
 Note that these specialized summing algorithms execute more primitive operations
 than vanilla summation. Therefore, if in certain cases maximum speed is required
@@ -1067,19 +1073,86 @@ at expense of precision, one can use $(D reduce!((a, b) => a + b)(0, r)), which
 is not specialized for summation.
  */
 auto sum(R)(R r)
-if (isInputRange!R && !isFloatingPoint!(ElementType!R) && !isInfinite!R)
+if (isInputRange!R && !isInfinite!R && is(typeof(r.front + r.front)))
 {
-    typeof(r.front + r.front) seed = 0;
-    return reduce!"a + b"(seed, r);
+    alias E = Unqual!(ElementType!R);
+    static if (isFloatingPoint!E)
+        typeof(E.init  +     0.0) seed = 0; //biggest of double/real
+    else
+        typeof(r.front + r.front) seed = 0;
+    return sum(r, seed);
+}
+/// ditto
+auto sum(R, E)(R r, E seed)
+if (isInputRange!R && !isInfinite!R && is(typeof(seed = seed + r.front)))
+{
+    static if (isFloatingPoint!E)
+    {
+        static if (hasLength!R && hasSlicing!R)
+            return seed + sumPairwise!E(r);
+        else
+            return sumKahan!E(seed, r);
+    }
+    else
+    {
+        return reduce!"a + b"(seed, r);
+    }
+}
+
+// Pairwise summation http://en.wikipedia.org/wiki/Pairwise_summation
+private auto sumPairwise(Result, R)(R r)
+{
+    static assert (isFloatingPoint!Result);
+    switch (r.length)
+    {
+    case 0: return cast(Result) 0;
+    case 1: return cast(Result) r.front;
+    case 2: return cast(Result) r[0] + cast(Result) r[1];
+    default: return sumPairwise!Result(r[0 .. $ / 2]) + sumPairwise!Result(r[$ / 2 .. $]);
+    }
+}
+
+// Kahan algo http://en.wikipedia.org/wiki/Kahan_summation_algorithm
+private auto sumKahan(Result, R)(Result result, R r)
+{
+    static assert (isFloatingPoint!Result && isMutable!Result);
+    Result c = 0;
+    for (; !r.empty; r.popFront())
+    {
+        auto y = r.front - c;
+        auto t = result + y;
+        c = (t - result) - y;
+        result = t;
+    }
+    return result;
 }
 
 /// Ditto
 unittest
 {
-    assert(sum([  1, 2, 3, 4]) == 10);
-    assert(sum([1.0, 2, 3, 4]) == 10);
+    //simple integral sumation
+    assert(sum([ 1, 2, 3, 4]) == 10);
+
+    //with integral promotion
     assert(sum([false, true, true, false, true]) == 3);
     assert(sum(ubyte.max.repeat(100)) == 25500);
+
+    //The result may overflow
+    assert(uint.max.repeat(3).sum()           ==  4294967293U );
+    //But a seed can be used to change the sumation primitive
+    assert(uint.max.repeat(3).sum(ulong.init) == 12884901885UL);
+
+    //Floating point sumation
+    assert(sum([1.0, 2.0, 3.0, 4.0]) == 10);
+
+    //Floating point operations have double precision minimum
+    static assert(is(typeof(sum([1F, 2F, 3F, 4F])) == double));
+    assert(sum([1F, 2, 3, 4]) == 10);
+
+    //Force pair-wise floating point sumation on large integers
+    import std.math : approxEqual;
+    assert(iota(ulong.max / 2, ulong.max / 2 + 4096).sum(0.0)
+               .approxEqual((ulong.max / 2) * 4096.0 + 4096^^2 / 2));
 }
 
 unittest
@@ -1099,19 +1172,6 @@ unittest
     assert(sum([42, 43, 44, 45]) == 42 + 43 + 44 + 45);
 }
 
-// Pairwise summation http://en.wikipedia.org/wiki/Pairwise_summation
-auto sum(R)(R r)
-if (hasSlicing!R && hasLength!R && isFloatingPoint!(ElementType!R))
-{
-    switch (r.length)
-    {
-    case 0: return 0.0;
-    case 1: return r.front;
-    case 2: return r.front + r[1];
-    default: return sum(r[0 .. $ / 2]) + sum(r[$ / 2 .. $]);
-    }
-}
-
 unittest
 {
     static assert(is(typeof(sum([1.0, 2.0, 3.0, 4.0])) == double));
@@ -1127,26 +1187,6 @@ unittest
     assert(sum([42., 43.]) == 42 + 43);
     assert(sum([42., 43., 44.]) == 42 + 43 + 44);
     assert(sum([42., 43., 44., 45.5]) == 42 + 43 + 44 + 45.5);
-}
-
-// Kahan algo http://en.wikipedia.org/wiki/Kahan_summation_algorithm
-auto sum(R)(R r)
-if (isInputRange!R && !(hasSlicing!R && hasLength!R)
-    && isFloatingPoint!(ElementType!R) && !isInfinite!R)
-{
-    static if (is(Unqual!(ElementType!R) == real))
-        alias Result = real;
-    else
-        alias Result = double;
-    Result result = 0, c = 0;
-    for (; !r.empty; r.popFront())
-    {
-        auto y = r.front - c;
-        auto t = result + y;
-        c = (t - result) - y;
-        result = t;
-    }
-    return result;
 }
 
 unittest
