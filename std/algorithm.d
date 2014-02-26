@@ -1041,26 +1041,22 @@ b)(0, r)), $(D sum) uses specialized algorithms to maximize accuracy,
 as follows.
 
 $(UL
-$(LI If $(D ElementType!R) is $(D bool) or integral of size less than
-$(D 4), then calculations are performed in 32 bits. Correspondingly,
-$(D sum) returns $(D int) for signed numbers or $(D uint) for $(D
-bool) or unsigned numbers.)
-$(LI If $(D ElementType!R) is integral of size greater than or equal
-to $(D 4), then calculations are performed in 64
-bits. Correspondingly, $(D sum) returns $(D long) for signed numbers
-or $(D ulong) for unsigned numbers.)
 $(LI If $(D ElementType!R) is a floating-point type and $(D R) is a
-random-access range with length, then $(D sum) uses the $(WEB
-en.wikipedia.org/wiki/Pairwise_summation, pairwise summation)
+random-access range with length and slicing, then $(D sum) uses the
+$(WEB en.wikipedia.org/wiki/Pairwise_summation, pairwise summation)
 algorithm.)
 $(LI If $(D ElementType!R) is a floating-point type and $(D R) is a
-finite input range (but not a random-access range with length), then
+finite input range (but not a random-access range with slicing), then
 $(D sum) uses the $(WEB en.wikipedia.org/wiki/Kahan_summation,
 Kahan summation) algorithm.)
+$(LI In al other cases, a simple element by element addition is done.)
 )
 
 For floating point inputs, calculations are made in $(D real)
 precision for $(D real) inputs and in $(D double) precision otherwise.
+For all other types, the calculations are done in the same type obtained
+from from adding two elements of the range, which may be a different
+type from the elements themselves (for example, in case of integral promotion).
 
 Note that these specialized summing algorithms execute more primitive operations
 than vanilla summation. Therefore, if in certain cases maximum speed is required
@@ -1077,9 +1073,10 @@ if (isInputRange!R && !isFloatingPoint!(ElementType!R) && !isInfinite!R)
 /// Ditto
 unittest
 {
-    assert(sum([1, 2, 3, 4]) == 10);
+    assert(sum([  1, 2, 3, 4]) == 10);
     assert(sum([1.0, 2, 3, 4]) == 10);
     assert(sum([false, true, true, false, true]) == 3);
+    assert(sum(ubyte.max.repeat(100)) == 25500);
 }
 
 unittest
