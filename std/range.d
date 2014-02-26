@@ -9821,16 +9821,9 @@ auto tee(alias fun, Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, Range)(Range inp
 
         static if (hasLength!Range)
         {
-            static if (__traits(compiles, { enum len = Range.length; }))
+            @property length()
             {
-                enum length = _input.length;
-            }
-            else
-            {
-                @property length()
-                {
-                    return _input.length;
-                }
+                return _input.length;
             }
 
             static if (isRandomAccessRange!Range)
