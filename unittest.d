@@ -13,9 +13,7 @@
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
-version(Win64) {}
-else
-{
+
 public import std.base64;
 public import std.compiler;
 public import std.concurrency;
@@ -62,13 +60,7 @@ public import std.digest.crc;
 public import std.digest.sha;
 public import std.digest.md;
 
-}
-
 int main(char[][] args)
-{
-
-version(Win64) {}
-else
 {
     // Bring in unit test for module by referencing function in it
 
@@ -132,6 +124,5 @@ else
     auto crc = crc32Of("hello");
     auto string = toHexString(crc);
     puts("Success!");
-}
     return 0;
 }

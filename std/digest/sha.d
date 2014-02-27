@@ -95,6 +95,10 @@ version(D_PIC)
 {
     // Do not use (Bug9378).
 }
+else version(Win64)
+{
+    // wrong calling convention
+}
 else version(D_InlineAsm_X86)
 {
     private version = USE_SSSE3;

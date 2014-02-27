@@ -870,6 +870,7 @@ unittest
     auto env = ["foo" : "bar"];
     assert (wait(spawnShell(cmd~redir, env)) == 0);
     auto f = File(tmpFile, "a");
+    version(Win64) f.seek(0, SEEK_END); // MSVCRT probably seeks to the end when writing, not before
     assert (wait(spawnShell(cmd, std.stdio.stdin, f, std.stdio.stderr, env)) == 0);
     f.close();
     auto output = std.file.readText(tmpFile);
@@ -1306,13 +1307,10 @@ void kill(Pid pid, int codeOrSignal)
     version (Windows)
     {
         if (codeOrSignal < 0) throw new ProcessException("Invalid exit code");
-        version (Win32)
-        {
-            // On Windows XP, TerminateProcess() appears to terminate the
-            // *current* process if it is passed an invalid handle...
-            if (pid.osHandle == INVALID_HANDLE_VALUE)
-                throw new ProcessException("Invalid process handle");
-        }
+        // On Windows, TerminateProcess() appears to terminate the
+        // *current* process if it is passed an invalid handle...
+        if (pid.osHandle == INVALID_HANDLE_VALUE)
+            throw new ProcessException("Invalid process handle");
         if (!TerminateProcess(pid.osHandle, codeOrSignal))
             throw ProcessException.newFromLastError();
     }

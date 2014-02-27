@@ -662,7 +662,7 @@ $(D rawRead) always reads in binary mode on Windows.
         import std.exception : enforce, errnoEnforce;
 
         enforce(buffer.length, "rawRead must take a non-empty buffer");
-        version(Win32)
+        version(Windows)
         {
             immutable fd = ._fileno(_p.handle);
             immutable mode = ._setmode(fd, _O_BINARY);
@@ -737,7 +737,6 @@ Throws: $(D ErrnoException) if the file is not opened or if the call to $(D fwri
                         _name, "'"));
     }
 
-    version(Win64) {} else
     unittest
     {
         static import std.file;
@@ -776,7 +775,6 @@ Throws: $(D Exception) if the file is not opened.
         }
     }
 
-    version(Win64) {} else
     unittest
     {
         static import std.file;
@@ -1769,8 +1767,19 @@ the contents may well have changed).
         testTerm("bob\r\nmarge\r\nsteve\r\n", ["bob\r\n", "marge\r\n", "steve\r\n"],
             KeepTerminator.yes, "\r\n", false);
         testTerm("sue\r", ["sue\r"], KeepTerminator.yes, '\r', false);
+    }
 
-        auto file = File.tmpfile();
+    unittest
+    {
+        version(Win64)
+        {
+            /* the C function tmpfile doesn't seem to work, even when called from C */ 
+            auto deleteme = testFilename();
+            auto file = File(deleteme, "w+");
+            scope(success) std.file.remove(deleteme);
+        }
+        else
+            auto file = File.tmpfile();
         file.write("1\n2\n3\n");
 
         // bug 9599
