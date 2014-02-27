@@ -20,7 +20,7 @@ $(MYREF min) $(MYREF mismatch) )
 )
 $(TR $(TDNW Iteration) $(TD $(MYREF filter) $(MYREF filterBidirectional)
 $(MYREF group) $(MYREF joiner) $(MYREF map) $(MYREF reduce) $(MYREF
-splitter) $(MYREF uniq) )
+splitter) $(MYREF sum) $(MYREF uniq) )
 )
 $(TR $(TDNW Sorting) $(TD $(MYREF completeSort) $(MYREF isPartitioned)
 $(MYREF isSorted) $(MYREF makeIndex) $(MYREF nextPermutation)
@@ -212,6 +212,9 @@ $(TR $(TDNW $(LREF reduce)) $(TD $(D reduce!"a + b"([1, 2, 3,
 )
 $(TR $(TDNW $(LREF splitter)) $(TD Lazily splits a range by a
 separator.)
+)
+$(TR $(TDNW $(LREF sum)) $(TD Same as $(D reduce), but specialized for
+accurate summation.)
 )
 $(TR $(TDNW $(LREF uniq)) $(TD Iterates over the unique elements
 in a range, which is assumed sorted.)
