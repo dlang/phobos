@@ -364,7 +364,7 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I))
 
 @safe nothrow pure unittest
 {
-    minimallyInitializedArray!(int[][][][][])();
+    const iarr = minimallyInitializedArray!(int[][][][][])();
     double[] arr = minimallyInitializedArray!(double[])(100);
     assert(arr.length == 100);
 
@@ -2796,8 +2796,8 @@ Appender!(E[]) appender(A : E[], E)(A array)
     {
         auto w = appender!string();
         w.reserve(4);
-        w.capacity;
-        w.data;
+        const cap = w.capacity;
+        const dat = w.data;
         try
         {
             wchar wc = 'a';
@@ -2810,8 +2810,8 @@ Appender!(E[]) appender(A : E[], E)(A array)
     {
         auto w = appender!(int[])();
         w.reserve(4);
-        w.capacity;
-        w.data;
+        const cap = w.capacity;
+        const dat = w.data;
         w.put(10);
         w.put([10]);
         w.clear();
