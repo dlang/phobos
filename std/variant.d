@@ -1801,7 +1801,7 @@ unittest
  * with $(D_PARM variant)'s current value. Visiting handlers are passed
  * in the template parameter list.
  * It is statically ensured that all types of
- * $(D_PARAM variant) are handled accross all handlers.
+ * $(D_PARAM variant) are handled across all handlers.
  * $(D_PARAM visit) allows delegates and static functions to be passed
  * as parameters.
  *
@@ -1832,7 +1832,7 @@ unittest
  *                         == -1);
  * ----------------------
  * Returns: The return type of visit is deduced from the visiting functions and must be
- * the same accross all overloads.
+ * the same across all overloads.
  * Throws: If no parameter-less, error function is specified:
  * $(D_PARAM VariantException) if $(D_PARAM variant) doesn't hold a value.
  */
@@ -1930,7 +1930,7 @@ unittest
  * ----------------------
  *
  * Returns: The return type of tryVisit is deduced from the visiting functions and must be
- * the same accross all overloads.
+ * the same across all overloads.
  * Throws: If no parameter-less, error function is specified: $(D_PARAM VariantException) if
  *         $(D_PARAM variant) doesn't hold a value or
  *         if $(D_PARAM variant) holds a value which isn't handled by the visiting

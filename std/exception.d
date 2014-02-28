@@ -702,7 +702,7 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  * but its name documents assumptions on the part of the
  * caller. $(D assumeUnique(arr)) should only be called when
  * there are no more active mutable aliases to elements of $(D
- * arr). To strenghten this assumption, $(D assumeUnique(arr))
+ * arr). To strengthen this assumption, $(D assumeUnique(arr))
  * also clears $(D arr) before returning. Essentially $(D
  * assumeUnique(arr)) indicates commitment from the caller that there
  * is no more mutable access to any of $(D arr)'s elements
@@ -727,7 +727,7 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  * ----
  *
  * The use in the example above is correct because $(D result)
- * was private to $(D letters) and is unaccessible in writing
+ * was private to $(D letters) and is inaccessible in writing
  * after the function returns. The following example shows an
  * incorrect use of $(D assumeUnique).
  *
@@ -1259,7 +1259,7 @@ class ErrnoException : Exception
     static assert(!__traits(compiles, (new Object()).ifThrown(1)));
     --------------------
 
-    If you need to use the actual thrown expection, you can use a delegate.
+    If you need to use the actual thrown exception, you can use a delegate.
     Example:
     --------------------
     //Use a lambda to get the thrown object.

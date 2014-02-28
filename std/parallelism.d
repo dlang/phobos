@@ -2091,7 +2091,7 @@ public:
     Given a $(D source) range that is expensive to iterate over, returns an
     input range that asynchronously buffers the contents of
     $(D source) into a buffer of $(D bufSize) elements in a worker thread,
-    while making prevously buffered elements from a second buffer, also of size
+    while making previously buffered elements from a second buffer, also of size
     $(D bufSize), available via the range interface of the returned
     object.  The returned range has a length iff $(D hasLength!S).
     $(D asyncBuf) is useful, for example, when performing expensive operations
@@ -2104,7 +2104,7 @@ public:
     void main()
     {
         // Fetch lines of a file in a background thread
-        // while processing prevously fetched lines,
+        // while processing previously fetched lines,
         // dealing with byLine's buffer recycling by
         // eagerly duplicating every line.
         auto lines = File("foo.txt").byLine();
@@ -2296,7 +2296,7 @@ public:
     Examples:
     ---
     // Fetch lines of a file in a background
-    // thread while processing prevously fetched
+    // thread while processing previously fetched
     // lines, without duplicating any lines.
     auto file = File("foo.txt");
 
@@ -2965,7 +2965,7 @@ public:
 
     The proper way to instantiate this object is to call
     $(D WorkerLocalStorage.toRange).  Once instantiated, this object behaves
-    as a finite random-access range with assignable, lvalue elemends and
+    as a finite random-access range with assignable, lvalue elements and
     a length equal to the number of worker threads in the $(D TaskPool) that
     created it plus 1.
      */
@@ -3078,7 +3078,7 @@ public:
     a call to $(D Task.workForce), $(D Task.yieldForce) or $(D Task.spinForce)
     causes them to be executed.
 
-    Use only if you have waitied on every $(D Task) and therefore know the
+    Use only if you have waited on every $(D Task) and therefore know the
     queue is empty, or if you speculatively executed some tasks and no longer
     need the results.
      */

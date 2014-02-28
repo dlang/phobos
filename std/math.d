@@ -4,7 +4,7 @@
  * Elementary mathematical functions
  *
  * Contains the elementary mathematical functions (powers, roots,
- * and trignometric functions), and low-level floating-point operations.
+ * and trigonometric functions), and low-level floating-point operations.
  * Mathematical special functions are available in std.mathspecial.
  *
  * The functionality closely follows the IEEE754-2008 standard for
@@ -3615,7 +3615,7 @@ private:
 public:
     version (IeeeFlagsSupport) {
 
-     /// The result cannot be represented exactly, so rounding occured.
+     /// The result cannot be represented exactly, so rounding occurred.
      /// (example: x = sin(0.1); )
      @property bool inexact() { return (flags & INEXACT_MASK) != 0; }
 

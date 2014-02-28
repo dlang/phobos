@@ -244,7 +244,7 @@ unittest
 enum CaseSensitive { no, yes }
 
 /++
-    Returns the index of the first occurence of $(D c) in $(D s). If $(D c)
+    Returns the index of the first occurrence of $(D c) in $(D s). If $(D c)
     is not found, then $(D -1) is returned.
 
     $(D cs) indicates whether the comparisons are case sensitive.
@@ -339,7 +339,7 @@ unittest
 }
 
 /++
-    Returns the index of the first occurence of $(D c) in $(D s) with respect
+    Returns the index of the first occurrence of $(D c) in $(D s) with respect
     to the start index $(D startIdx). If $(D c) is not found, then $(D -1) is
     returned. If $(D c) is found the value of the returned index is at least
     $(D startIdx). $(D startIdx) represents a codeunit index in $(D s). If the
@@ -404,7 +404,7 @@ unittest
 }
 
 /++
-    Returns the index of the first occurence of $(D sub) in $(D s). If $(D sub)
+    Returns the index of the first occurrence of $(D sub) in $(D s). If $(D sub)
     is not found, then $(D -1) is returned.
 
     $(D cs) indicates whether the comparisons are case sensitive.
@@ -480,7 +480,7 @@ unittest
 }
 
 /++
-    Returns the index of the first occurence of $(D sub) in $(D s) with
+    Returns the index of the first occurrence of $(D sub) in $(D s) with
     respect to the start index $(D startIdx). If $(D sub) is not found, then
     $(D -1) is returned. If $(D sub) is found the value of the returned index
     is at least $(D startIdx). $(D startIdx) represents a codeunit index in
@@ -563,7 +563,7 @@ unittest
 }
 
 /++
-    Returns the index of the last occurence of $(D c) in $(D s). If $(D c)
+    Returns the index of the last occurrence of $(D c) in $(D s). If $(D c)
     is not found, then $(D -1) is returned.
 
     $(D cs) indicates whether the comparisons are case sensitive.
@@ -668,7 +668,7 @@ unittest
 }
 
 /++
-    Returns the index of the last occurence of $(D c) in $(D s). If $(D c) is
+    Returns the index of the last occurrence of $(D c) in $(D s). If $(D c) is
     not found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
     the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
     codeunit index in $(D s). If the sequence ending at $(D startIdx) does not
@@ -722,7 +722,7 @@ unittest
 }
 
 /++
-    Returns the index of the last occurence of $(D sub) in $(D s). If $(D sub)
+    Returns the index of the last occurrence of $(D sub) in $(D s). If $(D sub)
     is not found, then $(D -1) is returned.
 
     $(D cs) indicates whether the comparisons are case sensitive.
@@ -858,7 +858,7 @@ unittest
 }
 
 /++
-    Returns the index of the last occurence of $(D sub) in $(D s). If $(D sub)
+    Returns the index of the last occurrence of $(D sub) in $(D s). If $(D sub)
     is not found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
     the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
     codeunit index in $(D s). If the sequence ending at $(D startIdx) does not
@@ -2941,7 +2941,7 @@ unittest
     $(D to) is taken to be the same as $(D from).
 
     If the modifier $(D 'd') is $(I not) present, and $(D to) is shorter than
-    $(D from), then $(D to) is extended by replicating the last charcter in
+    $(D from), then $(D to) is extended by replicating the last character in
     $(D to).
 
     Both $(D from) and $(D to) may contain ranges using the $(D '-') character

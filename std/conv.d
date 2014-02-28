@@ -3544,7 +3544,7 @@ The $(D octal) facility is intended as an experimental facility to
 replace _octal literals starting with $(D '0'), which many find
 confusing. Using $(D octal!177) or $(D octal!"177") instead of $(D
 0177) as an _octal literal makes code clearer and the intent more
-visible. If use of this facility becomes preponderent, a future
+visible. If use of this facility becomes predominant, a future
 version of the language may deem old-style _octal literals deprecated.
 
 The rules for strings are the usual for literals: If it can fit in an
