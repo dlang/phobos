@@ -26,7 +26,7 @@ import std.algorithm, std.ascii, std.bitmanip, std.conv,
     std.system, std.traits, std.typetuple,
     std.utf;
 version (Win64) {
-    import std.math : isnan;
+    import std.math : isnan, isInfinity;
 }
 version(unittest) {
     import std.math;
@@ -1580,17 +1580,25 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     }
     enforceFmt(std.algorithm.find("fgFGaAeEs", fs.spec).length,
         "floating");
+
     version (Win64)
     {
-        if (isnan(val)) // snprintf writes 1.#QNAN
+        double tval = val; // convert early to get "inf" in case of overflow
+        string s;
+        if (isnan(tval))
+            s = "nan"; // snprintf writes 1.#QNAN
+        else if (isInfinity(tval))
+            s = val >= 0 ? "inf" : "-inf"; // snprintf writes 1.#INF
+
+        if (s.length > 0) 
         {
           version(none)
           {
-            return formatValue(w, "nan", f);
+            return formatValue(w, s, f);
           }
           else  // FIXME:workaroun
           {
-            auto s = "nan"[0 .. f.precision < $ ? f.precision : $];
+            s = s[0 .. f.precision < $ ? f.precision : $];
             if (!f.flDash)
             {
                 // right align
@@ -1609,6 +1617,8 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
           }
         }
     }
+    else
+        alias val tval;
     if (fs.spec == 's') fs.spec = 'g';
     char[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
                      + 1 /*\0*/] sprintfSpec = void;
@@ -1626,12 +1636,13 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     sprintfSpec[i] = 0;
     //printf("format: '%s'; geeba: %g\n", sprintfSpec.ptr, val);
     char[512] buf;
+
     immutable n = snprintf(buf.ptr, buf.length,
-            sprintfSpec.ptr,
-            fs.width,
-            // negative precision is same as no precision specified
-            fs.precision == fs.UNSPECIFIED ? -1 : fs.precision,
-            val);
+                           sprintfSpec.ptr,
+                           fs.width,
+                           // negative precision is same as no precision specified
+                           fs.precision == fs.UNSPECIFIED ? -1 : fs.precision,
+                           tval);
     enforceFmt(n >= 0,
         "floating point formatting failure");
     put(w, buf[0 .. strlen(buf.ptr)]);
@@ -3276,6 +3287,11 @@ unittest
         assert(stream.data == "1.67 -0XA.3D70A3D70A3D8P-3 nan",
                 stream.data);
     }
+    else version (Win64)
+    {
+        assert(stream.data == "1.67 -0X1.47AE14P+0 nan",
+                stream.data);
+    }
     else
     {
         assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
@@ -3301,7 +3317,10 @@ unittest
 
     formattedWrite(stream, "%a %A", 1.32, 6.78f);
     //formattedWrite(stream, "%x %X", 1.32);
-    assert(stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB86P+2");
+    version (Win64)
+        assert(stream.data == "0x1.51eb85p+0 0X1.B1EB86P+2");
+    else
+        assert(stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB86P+2");
     stream.clear();
 
     formattedWrite(stream, "%#06.*f",2,12.345);
@@ -4981,11 +5000,13 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                     int n;
                     version (Win64)
                     {
-                        if(isnan(v)) // snprintf writes 1.#QNAN
+                        if (isnan(v)) // snprintf writes 1.#QNAN
                             n = snprintf(fbuf.ptr, sl, "nan");
+                        else if(isInfinity(v)) // snprintf writes 1.#INF
+                            n = snprintf(fbuf.ptr, sl, v < 0 ? "-inf" : "inf");
                         else
                             n = snprintf(fbuf.ptr, sl, format.ptr, field_width,
-                                precision, cast(double)v);
+                                         precision, cast(double)v);
                     }
                     else
                         n = snprintf(fbuf.ptr, sl, format.ptr, field_width,
@@ -5800,6 +5821,8 @@ unittest
     //else
     version (MinGW)
         assert(s == "1.67 -0XA.3D70A3D70A3D8P-3 nan", s);
+    else version (Win64)
+        assert(s == "1.67 -0X1.47AE14P+0 nan", s);
     else
         assert(s == "1.67 -0X1.47AE147AE147BP+0 nan", s);
 
