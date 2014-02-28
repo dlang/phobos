@@ -1052,7 +1052,7 @@ $(LI If $(D ElementType!R) is a floating-point type and $(D R) is a
 finite input range (but not a random-access range with slicing), then
 $(D sum) uses the $(WEB en.wikipedia.org/wiki/Kahan_summation,
 Kahan summation) algorithm.)
-$(LI In al other cases, a simple element by element addition is done.)
+$(LI In all other cases, a simple element by element addition is done.)
 )
 
 For floating point inputs, calculations are made in $(D real)
@@ -2063,8 +2063,8 @@ unittest// Issue 8057
 /**
 For each element $(D a) in $(D src) and each element $(D b) in $(D
 tgt) in lockstep in increasing order, calls $(D move(a, b)). Returns
-the leftover portion of $(D tgt). Throws an exeption if there is not
-enough room in $(D tgt) to acommodate all of $(D src).
+the leftover portion of $(D tgt). Throws an exception if there is not
+enough room in $(D tgt) to accommodate all of $(D src).
 
 Preconditions:
 $(D walkLength(src) <= walkLength(tgt))
@@ -2147,7 +2147,7 @@ need not be assignable at all to be swapped.
 If $(D lhs) and $(D rhs) reference the same instance, then nothing is done.
 
 $(D lhs) and $(D rhs) must be mutable. If $(D T) is a struct or union, then
-its fields must also all be (recursivelly) mutable.
+its fields must also all be (recursively) mutable.
 
 Preconditions:
 
@@ -4078,7 +4078,7 @@ haystack) are compared with $(D needle) by using predicate $(D
 pred). Performs $(BIGOH walkLength(haystack)) evaluations of $(D
 pred).
 
-To _find the last occurence of $(D needle) in $(D haystack), call $(D
+To _find the last occurrence of $(D needle) in $(D haystack), call $(D
 find(retro(haystack), needle)). See $(XREF range, retro).
 
 Params:
@@ -11113,7 +11113,7 @@ unittest
 // canFind
 /++
 Convenience function. Like find, but only returns whether or not the search
-was succesful.
+was successful.
  +/
 template canFind(alias pred="a == b")
 {
@@ -11191,7 +11191,7 @@ unittest
 
 /++
 Checks if $(I _any) of the elements verifies $(D pred).
-$(D !any) can be used to verify that $(I none) of the elemnets verify
+$(D !any) can be used to verify that $(I none) of the elements verify
 $(D pred).
  +/
 template any(alias pred = "a")
@@ -12026,7 +12026,7 @@ $(D 7.0) is the correct answer because it occurs in $(D 4) out of the
 $(D 5) inputs, more than any other number. The second member of the
 resulting tuple is indeed $(D 4) (recording the number of occurrences
 of $(D 7.0)). If more of the top-frequent numbers are needed, just
-create a larger $(D tgt) range. In the axample above, creating $(D b)
+create a larger $(D tgt) range. In the example above, creating $(D b)
 with length $(D 2) yields $(D tuple(1.0, 3u)) in the second position.
 
 The function $(D largestPartialIntersection) is useful for

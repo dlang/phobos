@@ -545,7 +545,7 @@ Implements the range interface primitive $(D popFront) for built-in
 arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.popFront) is
 equivalent to $(D popFront(array)). For $(GLOSSARY narrow strings),
-$(D popFront) automaticaly advances to the next $(GLOSSARY code
+$(D popFront) automatically advances to the next $(GLOSSARY code
 point).
 */
 
@@ -643,7 +643,7 @@ Implements the range interface primitive $(D popBack) for built-in
 arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.popBack) is
 equivalent to $(D popBack(array)). For $(GLOSSARY narrow strings), $(D
-popFront) automaticaly eliminates the last $(GLOSSARY code point).
+popFront) automatically eliminates the last $(GLOSSARY code point).
 */
 
 void popBack(T)(ref T[] a) @safe pure nothrow
@@ -707,7 +707,7 @@ Implements the range interface primitive $(D front) for built-in
 arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.front) is
 equivalent to $(D front(array)). For $(GLOSSARY narrow strings), $(D
-front) automaticaly returns the first $(GLOSSARY code point) as a $(D
+front) automatically returns the first $(GLOSSARY code point) as a $(D
 dchar).
 */
 @property ref T front(T)(T[] a) @safe pure nothrow
@@ -750,7 +750,7 @@ Implements the range interface primitive $(D back) for built-in
 arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.back) is
 equivalent to $(D back(array)). For $(GLOSSARY narrow strings), $(D
-back) automaticaly returns the last $(GLOSSARY code point) as a $(D
+back) automatically returns the last $(GLOSSARY code point) as a $(D
 dchar).
 */
 @property ref T back(T)(T[] a) @safe pure nothrow if (!isNarrowString!(T[]))
@@ -1822,7 +1822,7 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
 
 /++
     Same as above, but outputs the result via OutputRange $(D sink).
-    If no match is found the original array is transfered to $(D sink) as is.
+    If no match is found the original array is transferred to $(D sink) as is.
 +/
 void replaceInto(E, Sink, R1, R2)(Sink sink, E[] subject, R1 from, R2 to)
 if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
