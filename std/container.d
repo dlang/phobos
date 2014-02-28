@@ -82,7 +82,7 @@ first element of the _container, in a _container-defined order.))
 $(TR $(TDNW $(D c.moveFront)) $(TDNW $(D log n$(SUB c))) $(TD
 Destructively reads and returns the first element of the
 _container. The slot is not removed from the _container; it is left
-initalized with $(D T.init). This routine need not be defined if $(D
+initialized with $(D T.init). This routine need not be defined if $(D
 front) returns a $(D ref).))
 
 $(TR $(TDNW $(D c.front = v)) $(TDNW $(D log n$(SUB c))) $(TD Assigns
@@ -94,7 +94,7 @@ last element of the _container, in a _container-defined order.))
 $(TR $(TDNW $(D c.moveBack)) $(TDNW $(D log n$(SUB c))) $(TD
 Destructively reads and returns the last element of the
 container. The slot is not removed from the _container; it is left
-initalized with $(D T.init). This routine need not be defined if $(D
+initialized with $(D T.init). This routine need not be defined if $(D
 front) returns a $(D ref).))
 
 $(TR $(TDNW $(D c.back = v)) $(TDNW $(D log n$(SUB c))) $(TD Assigns

@@ -150,7 +150,7 @@ private template CustomFloatParams(uint precision, uint exponentWidth, CustomFlo
  * writeln(w);
  *
  * // Functions calls require conversion
- * z = sin(+x)           + cos(+y);                     // Use uniary plus to concisely convert to a real
+ * z = sin(+x)           + cos(+y);                     // Use unary plus to concisely convert to a real
  * z = sin(x.re)         + cos(y.re);                   // Or use the .re property to convert to a real
  * z = sin(x.get!float)  + cos(y.get!float);            // Or use get!T
  * z = sin(cast(float)x) + cos(cast(float)y);           // Or use cast(T) to explicitly convert

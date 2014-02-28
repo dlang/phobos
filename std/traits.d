@@ -3038,7 +3038,7 @@ unittest
    Classes and unions never have elaborate assignments.
 
    Note: Structs with (possibly nested) postblit operator(s) will have a
-   hidden yet elaborate compiler generated assignement operator (unless
+   hidden yet elaborate compiler generated assignment operator (unless
    explicitly disabled).
  */
 template hasElaborateAssign(S)

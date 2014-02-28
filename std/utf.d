@@ -154,7 +154,7 @@ unittest
         valid UTF-8 sequence.
 
     Notes:
-        $(D stride) will only analize the first $(D str[index]) element. It
+        $(D stride) will only analyze the first $(D str[index]) element. It
         will not fully verify the validity of UTF-8 sequence, nor even verify
         the presence of the sequence: it will not actually guarantee that
         $(D index + stride(str, index) <= str.length).
@@ -422,7 +422,7 @@ unittest
         valid UTF-16 sequence.
 
     Notes:
-        $(D stride) will only analize the first $(D str[index]) element. It
+        $(D stride) will only analyze the first $(D str[index]) element. It
         will not fully verify the validity of UTF-16 sequence, nor even verify
         the presence of the sequence: it will not actually guarantee that
         $(D index + stride(str, index) <= str.length).
@@ -534,7 +534,7 @@ uint stride(S)(auto ref S str)
         end of a valid UTF-16 sequence.
 
     Notes:
-        $(D stride) will only analize the element at $(D str[index - 1])
+        $(D stride) will only analyze the element at $(D str[index - 1])
         element. It will not fully verify the validity of UTF-16 sequence, nor
         even verify the presence of the sequence: it will not actually
         guarantee that $(D stride(str, index) <= index).

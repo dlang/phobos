@@ -5646,7 +5646,7 @@ public:
 unittest
 {
     auto c = matchFirst("@abc#", regex(`(\w)(\w)(\w)`));
-    assert(c.pre == "@"); // Part of input preceeding match
+    assert(c.pre == "@"); // Part of input preceding match
     assert(c.post == "#"); // Immediately after match
     assert(c.hit == c[0] && c.hit == "abc"); // The whole match
     assert(c[2] == "b");

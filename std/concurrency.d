@@ -926,7 +926,7 @@ static ~this()
 
 /**
  * Associates name with tid in a process-local map.  When the thread
- * represented by tid termiantes, any names associated with it will be
+ * represented by tid terminates, any names associated with it will be
  * automatically unregistered.
  *
  * Params:
