@@ -989,7 +989,9 @@ struct BitArray
 
     /***************************************
      * Map the $(D BitArray) onto $(D v), with $(D numbits) being the number of bits
-     * in the array. Does not copy the data.
+     * in the array. Does not copy the data. $(D v.length) must be a multiple of
+     * $(D size_t.sizeof). If there are unmapped bits in the final mapped word then
+     * these will be set to 0.
      *
      * This is the inverse of $(D opCast).
      */
@@ -997,12 +999,18 @@ struct BitArray
     in
     {
         assert(numbits <= v.length * 8);
-        assert((v.length & 3) == 0);
+        assert(v.length % size_t.sizeof == 0);
     }
     body
     {
         ptr = cast(size_t*)v.ptr;
         len = numbits;
+        size_t finalBits = len % bitsPerSizeT;
+        if (finalBits != 0)
+        {
+            // Need to mask away extraneous bits from v.
+            ptr[dim - 1] &= (cast(size_t)1 << finalBits) - 1;
+        }
     }
 
     unittest
@@ -1555,6 +1563,7 @@ struct BitArray
     ///
     unittest
     {
+        debug(bitarray) printf("BitArray.toString unittest\n");
         BitArray b;
         b.init([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
 
@@ -1563,6 +1572,51 @@ struct BitArray
 
         auto s2 = format("%b", b);
         assert(s2 == "00001111_00001111");
+    }
+
+    /***************************************
+     * Return a lazy range of the indices of set bits.
+     */
+    @property auto bitsSet()
+    {
+        return iota(dim).
+               filter!(i => ptr[i]).
+               map!(i => BitsSet!size_t(ptr[i], i * bitsPerSizeT)).
+               joiner();
+    }
+
+    ///
+    unittest
+    {
+        BitArray b1;
+        b1.init([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
+        assert(b1.bitsSet.equal([4, 5, 6, 7, 12, 13, 14, 15]));
+
+        BitArray b2;
+        b2.length = 1000;
+        b2[333] = true;
+        b2[666] = true;
+        b2[999] = true;
+        assert(b2.bitsSet.equal([333, 666, 999]));
+    }
+
+    unittest
+    {
+        debug(bitarray) printf("BitArray.bitsSet unittest\n");
+        BitArray b;
+        enum wordBits = size_t.sizeof * 8;
+        b.init([size_t.max], 0);
+        assert(b.bitsSet.empty);
+        b.init([size_t.max], 1);
+        assert(b.bitsSet.equal([0]));
+        b.init([size_t.max], wordBits);
+        assert(b.bitsSet.equal(iota(wordBits)));
+        b.init([size_t.max, size_t.max], wordBits);
+        assert(b.bitsSet.equal(iota(wordBits)));
+        b.init([size_t.max, size_t.max], wordBits + 1);
+        assert(b.bitsSet.equal(iota(wordBits + 1)));
+        b.init([size_t.max, size_t.max], wordBits * 2);
+        assert(b.bitsSet.equal(iota(wordBits * 2)));
     }
 
     private void formatBitString(scope void delegate(const(char)[]) sink) const
@@ -3377,4 +3431,238 @@ unittest
         }
         assert(toRead.empty);
     }
+}
+
+/**
+Counts the number of trailing zeros in the binary representation of $(D value).
+For signed integers, the sign bit is included in the count.
+*/
+private uint countTrailingZeros(T)(T value)
+    if (isIntegral!T)
+{
+    // bsf doesn't give the correct result for 0.
+    if (!value)
+        return 8 * T.sizeof;
+
+    static if (T.sizeof == 8 && size_t.sizeof == 4)
+    {
+        // bsf's parameter is size_t, so it doesn't work with 64-bit integers
+        // on a 32-bit machine. For this case, we call bsf on each 32-bit half.
+        uint lower = cast(uint)value;
+        if (lower)
+            return bsf(lower);
+        value >>>= 32;
+        return 32 + bsf(cast(uint)value);
+    }
+    else
+    {
+        return bsf(value);
+    }
+}
+
+///
+unittest
+{
+    assert(countTrailingZeros(1) == 0);
+    assert(countTrailingZeros(0) == 32);
+    assert(countTrailingZeros(int.min) == 31);
+    assert(countTrailingZeros(256) == 8);
+}
+
+unittest
+{
+    foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    {
+        assert(countTrailingZeros(cast(T)0) == 8 * T.sizeof);
+        assert(countTrailingZeros(cast(T)1) == 0);
+        assert(countTrailingZeros(cast(T)2) == 1);
+        assert(countTrailingZeros(cast(T)3) == 0);
+        assert(countTrailingZeros(cast(T)4) == 2);
+        assert(countTrailingZeros(cast(T)5) == 0);
+        assert(countTrailingZeros(cast(T)64) == 6);
+        static if (isSigned!T)
+        {
+            assert(countTrailingZeros(cast(T)-1) == 0);
+            assert(countTrailingZeros(T.min) == 8 * T.sizeof - 1);
+        }
+        else
+        {
+            assert(countTrailingZeros(T.max) == 0);
+        }
+    }
+    assert(countTrailingZeros(1_000_000) == 6);
+    foreach (i; 0..63)
+        assert(countTrailingZeros(1UL << i) == i);
+}
+
+/**
+Counts the number of set bits in the binary representation of $(D value).
+For signed integers, the sign bit is included in the count.
+*/
+private uint countBitsSet(T)(T value)
+    if (isIntegral!T)
+{
+    // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+    static if (T.sizeof == 8)
+    {
+        T c = value - ((value >> 1) & 0x55555555_55555555);
+        c = ((c >> 2) & 0x33333333_33333333) + (c & 0x33333333_33333333);
+        c = ((c >> 4) + c) & 0x0F0F0F0F_0F0F0F0F;
+        c = ((c >> 8) + c) & 0x00FF00FF_00FF00FF;
+        c = ((c >> 16) + c) & 0x0000FFFF_0000FFFF;
+        c = ((c >> 32) + c) & 0x00000000_FFFFFFFF;
+    }
+    else static if (T.sizeof == 4)
+    {
+        T c = value - ((value >> 1) & 0x55555555);
+        c = ((c >> 2) & 0x33333333) + (c & 0x33333333);
+        c = ((c >> 4) + c) & 0x0F0F0F0F;
+        c = ((c >> 8) + c) & 0x00FF00FF;
+        c = ((c >> 16) + c) & 0x0000FFFF;
+    }
+    else static if (T.sizeof == 2)
+    {
+        uint c = value - ((value >> 1) & 0x5555);
+        c = ((c >> 2) & 0x3333) + (c & 0X3333);
+        c = ((c >> 4) + c) & 0x0F0F;
+        c = ((c >> 8) + c) & 0x00FF;
+    }
+    else static if (T.sizeof == 1)
+    {
+        uint c = value - ((value >> 1) & 0x55);
+        c = ((c >> 2) & 0x33) + (c & 0X33);
+        c = ((c >> 4) + c) & 0x0F;
+    }
+    else
+    {
+        static assert("countBitsSet only supports 1, 2, 4, or 8 byte sized integers.");
+    }
+    return cast(uint)c;
+}
+
+///
+unittest
+{
+    assert(countBitsSet(1) == 1);
+    assert(countBitsSet(0) == 0);
+    assert(countBitsSet(int.min) == 1);
+    assert(countBitsSet(uint.max) == 32);
+}
+
+unittest
+{
+    foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    {
+        assert(countBitsSet(cast(T)0) == 0);
+        assert(countBitsSet(cast(T)1) == 1);
+        assert(countBitsSet(cast(T)2) == 1);
+        assert(countBitsSet(cast(T)3) == 2);
+        assert(countBitsSet(cast(T)4) == 1);
+        assert(countBitsSet(cast(T)5) == 2);
+        assert(countBitsSet(cast(T)127) == 7);
+        static if (isSigned!T)
+        {
+            assert(countBitsSet(cast(T)-1) == 8 * T.sizeof);
+            assert(countBitsSet(T.min) == 1);
+        }
+        else
+        {
+            assert(countBitsSet(T.max) == 8 * T.sizeof);
+        }
+    }
+    assert(countBitsSet(1_000_000) == 7);
+    foreach (i; 0..63)
+        assert(countBitsSet(1UL << i) == 1);
+}
+
+private struct BitsSet(T)
+{
+    static assert(T.sizeof <= 8, "bitsSet assumes T is no more than 64-bit.");
+
+    this(T value, size_t startIndex = 0)
+    {
+        _value = value;
+        uint n = countTrailingZeros(value);
+        _index = startIndex + n;
+        _value >>>= n;
+    }
+
+    @property size_t front()
+    {
+        return _index;
+    }
+
+    @property bool empty() const
+    {
+        return !_value;
+    }
+
+    void popFront()
+    {
+        assert(_value, "Cannot call popFront on empty range.");
+
+        _value >>>= 1;
+        uint n = countTrailingZeros(_value);
+        _value >>>= n;
+        _index += n + 1;
+    }
+
+    @property auto save()
+    {
+        return this;
+    }
+
+    @property size_t length()
+    {
+        return countBitsSet(_value);
+    }
+
+    private T _value;
+    private size_t _index;
+}
+
+/**
+Range that iterates the indices of the set bits in $(D value).
+Index 0 corresponds to the least significant bit.
+For signed integers, the highest index corresponds to the sign bit.
+*/
+auto bitsSet(T)(T value)
+    if (isIntegral!T)
+{
+    return BitsSet!T(value);
+}
+
+///
+unittest
+{
+    assert(bitsSet(1).equal([0]));
+    assert(bitsSet(5).equal([0, 2]));
+    assert(bitsSet(-1).equal(iota(32)));
+    assert(bitsSet(int.min).equal([31]));
+}
+
+unittest
+{
+    foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    {
+        assert(bitsSet(cast(T)0).empty);
+        assert(bitsSet(cast(T)1).equal([0]));
+        assert(bitsSet(cast(T)2).equal([1]));
+        assert(bitsSet(cast(T)3).equal([0, 1]));
+        assert(bitsSet(cast(T)4).equal([2]));
+        assert(bitsSet(cast(T)5).equal([0, 2]));
+        assert(bitsSet(cast(T)127).equal(iota(7)));
+        static if (isSigned!T)
+        {
+            assert(bitsSet(cast(T)-1).equal(iota(8 * T.sizeof)));
+            assert(bitsSet(T.min).equal([8 * T.sizeof - 1]));
+        }
+        else
+        {
+            assert(bitsSet(T.max).equal(iota(8 * T.sizeof)));
+        }
+    }
+    assert(bitsSet(1_000_000).equal([6, 9, 14, 16, 17, 18, 19]));
+    foreach (i; 0..63)
+        assert(bitsSet(1UL << i).equal([i]));
 }
