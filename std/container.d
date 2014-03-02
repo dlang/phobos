@@ -3892,7 +3892,7 @@ and $(D length == capacity), throws an exception.
             n = parentIdx;
         }
         ++_length;
-        assertValid();
+        debug(BinaryHeap) assertValid();
         return 1;
     }
 
@@ -3934,7 +3934,7 @@ Replaces the largest element in the store with $(D value).
         assert(!empty, "Cannot call replaceFront on an empty heap.");
         _store.front = value;
         percolateDown(_store, 0, _length);
-        assertValid();
+        debug(BinaryHeap) assertValid();
     }
 
 /**
@@ -3958,7 +3958,7 @@ must be collected.
         if (!comp(value, _store.front)) return false; // value >= largest
         _store.front = value;
         percolateDown(_store, 0, _length);
-        assertValid();
+        debug(BinaryHeap) assertValid();
         return true;
     }
 }
