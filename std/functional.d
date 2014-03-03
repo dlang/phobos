@@ -244,7 +244,8 @@ template partial(alias fun, alias arg)
 Deprecated alias for $(D partial), kept for backwards compatibility
  */
 
-deprecated alias curry = partial;
+deprecated("Please use std.functional.partial instead")
+alias curry = partial;
 
 // tests for partially evaluating callables
 unittest
