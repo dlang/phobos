@@ -4024,7 +4024,8 @@ mixin template Proxy(alias a)
             // member template
             template opDispatch(T...)
             {
-                auto ref opDispatch(this X, Args...)(auto ref Args args){ return mixin("a."~name~"!T(args)"); }
+                enum targs = T.length ? "!T" : "";
+                auto ref opDispatch(this X, Args...)(auto ref Args args){ return mixin("a."~name~targs~"(args)"); }
             }
         }
     }
@@ -4147,6 +4148,10 @@ unittest
         const int func(int x, int y){ return x; }
         void func1(ref int a){ a = 9; }
 
+        T ifti1(T)(T t) { return t; }
+        void ifti2(Args...)(Args args) { }
+        void ifti3(T, Args...)(Args args) { }
+
         T opCast(T)(){ return T.init; }
 
         T tempfunc(T)() { return T.init; }
@@ -4188,6 +4193,11 @@ unittest
     assert(h.func(2,4) == 2);
     h.func1(n);
     assert(n == 9);
+
+    // IFTI
+    assert(h.ifti1(4) == 4);
+    h.ifti2(4);
+    h.ifti3!int(4, 3);
 
     // bug5896 test
     assert(h.opCast!int() == 0);
