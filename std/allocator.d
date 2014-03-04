@@ -943,7 +943,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     static assert(
         !stateSize!Prefix || Allocator.alignment >= Prefix.alignof,
         "AffixAllocator does not work with allocators offering a smaller"
-        " alignment than the prefix alignment.");
+        ~ " alignment than the prefix alignment.");
     static assert(alignment % Suffix.alignof == 0,
         "This restriction could be relaxed in the future.");
 
@@ -960,7 +960,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     parent allocator.
     */
     static if (stateSize!Allocator) Allocator parent;
-    else alias Allocator.it parent;
+    else alias parent = Allocator.it;
 
     template Impl()
     {
@@ -1118,7 +1118,7 @@ unittest
 
 unittest
 {
-    alias AffixAllocator!(Mallocator, size_t) A;
+    alias A = AffixAllocator!(Mallocator, size_t);
     auto b = A.it.allocate(10);
     A.it.prefix(b) = 10;
     assert(A.it.prefix(b) == 10);
