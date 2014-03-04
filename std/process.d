@@ -271,6 +271,9 @@ stderr  = The standard error stream of the child process.
 env     = Additional environment variables for the child process.
 config  = Flags that control process creation. See $(LREF Config)
           for an overview of available flags.
+workDir = The working directory for the new process.
+          By default the child process inherits the parent's working
+          directory.
 
 Returns:
 A $(LREF Pid) object that corresponds to the spawned process.
@@ -286,18 +289,20 @@ Pid spawnProcess(in char[][] args,
                  File stdout = std.stdio.stdout,
                  File stderr = std.stdio.stderr,
                  const string[string] env = null,
-                 Config config = Config.none)
+                 Config config = Config.none,
+                 in char[] workDir = null)
     @trusted // TODO: Should be @safe
 {
     version (Windows)    auto  args2 = escapeShellArguments(args);
     else version (Posix) alias args2 = args;
-    return spawnProcessImpl(args2, stdin, stdout, stderr, env, config);
+    return spawnProcessImpl(args2, stdin, stdout, stderr, env, config, workDir);
 }
 
 /// ditto
 Pid spawnProcess(in char[][] args,
                  const string[string] env,
-                 Config config = Config.none)
+                 Config config = Config.none,
+                 in char[] workDir = null)
     @trusted // TODO: Should be @safe
 {
     return spawnProcess(args,
@@ -305,7 +310,8 @@ Pid spawnProcess(in char[][] args,
                         std.stdio.stdout,
                         std.stdio.stderr,
                         env,
-                        config);
+                        config,
+                        workDir);
 }
 
 /// ditto
@@ -314,20 +320,22 @@ Pid spawnProcess(in char[] program,
                  File stdout = std.stdio.stdout,
                  File stderr = std.stdio.stderr,
                  const string[string] env = null,
-                 Config config = Config.none)
+                 Config config = Config.none,
+                 in char[] workDir = null)
     @trusted
 {
     return spawnProcess((&program)[0 .. 1],
-                        stdin, stdout, stderr, env, config);
+                        stdin, stdout, stderr, env, config, workDir);
 }
 
 /// ditto
 Pid spawnProcess(in char[] program,
                  const string[string] env,
-                 Config config = Config.none)
+                 Config config = Config.none,
+                 in char[] workDir = null)
     @trusted
 {
-    return spawnProcess((&program)[0 .. 1], env, config);
+    return spawnProcess((&program)[0 .. 1], env, config, workDir);
 }
 
 /*
@@ -342,7 +350,8 @@ private Pid spawnProcessImpl(in char[][] args,
                              File stdout,
                              File stderr,
                              const string[string] env,
-                             Config config)
+                             Config config,
+                             in char[] workDir)
     @trusted // TODO: Should be @safe
 {
     import core.exception: RangeError;
@@ -370,6 +379,25 @@ private Pid spawnProcessImpl(in char[][] args,
     // Prepare environment.
     auto envz = createEnv(env, !(config & Config.newEnv));
 
+    // Open the working directory.
+    // We use open in the parent and fchdir in the child
+    // so that most errors (directory doesn't exist, not a directory)
+    // can be propagated as exceptions before forking.
+    int workDirFD = 0;
+    scope(exit) if (workDirFD > 0) close(workDirFD);
+    if (workDir)
+    {
+        import core.sys.posix.fcntl;
+        workDirFD = open(toStringz(workDir), O_RDONLY);
+        if (workDirFD < 0)
+            throw ProcessException.newFromErrno("Failed to open working directory");
+        stat_t s;
+        if (fstat(workDirFD, &s) < 0)
+            throw ProcessException.newFromErrno("Failed to stat working directory");
+        if (!S_ISDIR(s.st_mode))
+            throw new ProcessException("Not a directory: " ~ cast(string)workDir);
+    }
+
     // Get the file descriptors of the streams.
     // These could potentially be invalid, but that is OK.  If so, later calls
     // to dup2() and close() will just silently fail without causing any harm.
@@ -383,6 +411,21 @@ private Pid spawnProcessImpl(in char[][] args,
     if (id == 0)
     {
         // Child process
+
+        // Set the working directory.
+        if (workDirFD)
+        {
+            if (fchdir(workDirFD) < 0)
+            {
+                // Fail. It is dangerous to run a program
+                // in an unexpected working directory.
+                core.sys.posix.stdio.perror("spawnProcess(): " ~
+                    "Failed to set working directory");
+                core.sys.posix.unistd._exit(1);
+                assert(0);
+            }
+            close(workDirFD);
+        }
 
         // Redirect streams and close the old file descriptors.
         // In the case that stderr is redirected to stdout, we need
@@ -448,13 +491,15 @@ private Pid spawnProcessImpl(in char[] commandLine,
                              File stdout,
                              File stderr,
                              const string[string] env,
-                             Config config)
+                             Config config,
+                             in char[] workDir)
     @trusted
 {
     import core.exception: RangeError;
 
     if (commandLine.empty) throw new RangeError("Command line is empty");
     auto commandz = toUTFz!(wchar*)(commandLine);
+    auto workDirz = workDir is null ? null : toUTFz!(wchar*)(workDir);
 
     // Prepare environment.
     auto envz = createEnv(env, !(config & Config.newEnv));
@@ -501,7 +546,7 @@ private Pid spawnProcessImpl(in char[] commandLine,
         CREATE_UNICODE_ENVIRONMENT |
         ((config & Config.suppressConsole) ? CREATE_NO_WINDOW : 0);
     if (!CreateProcessW(null, commandz, null, null, true, dwCreationFlags,
-                        envz, null, &startinfo, &pi))
+                        envz, workDirz, &startinfo, &pi))
         throw ProcessException.newFromLastError("Failed to spawn new process");
 
     // figure out if we should close any of the streams
@@ -790,6 +835,31 @@ unittest // Error handling in spawnProcess()
     assertThrown!ProcessException(spawnProcess("./rgiuhrifuheiohnmnvqweoijwf"));
 }
 
+unittest // Specifying a working directory.
+{
+    TestScript prog = "echo foo>bar";
+
+    auto directory = uniqueTempPath();
+    mkdir(directory);
+    scope(exit) rmdirRecurse(directory);
+
+    auto pid = spawnProcess([prog.path], null, Config.none, directory);
+    wait(pid);
+    assert(exists(buildPath(directory, "bar")));
+}
+
+unittest // Specifying a bad working directory.
+{
+    TestScript prog = "echo";
+
+    auto directory = uniqueTempPath();
+    assertThrown!ProcessException(spawnProcess([prog.path], null, Config.none, directory));
+
+    std.file.write(directory, "foo");
+    scope(exit) remove(directory);
+    assertThrown!ProcessException(spawnProcess([prog.path], null, Config.none, directory));
+}
+
 
 /**
 A variation on $(LREF spawnProcess) that runs the given _command through
@@ -821,7 +891,8 @@ Pid spawnShell(in char[] command,
                File stdout = std.stdio.stdout,
                File stderr = std.stdio.stderr,
                const string[string] env = null,
-               Config config = Config.none)
+               Config config = Config.none,
+               in char[] workDir = null)
     @trusted // TODO: Should be @safe
 {
     version (Windows)
@@ -840,13 +911,14 @@ Pid spawnShell(in char[] command,
         args[1] = shellSwitch;
         args[2] = command;
     }
-    return spawnProcessImpl(args, stdin, stdout, stderr, env, config);
+    return spawnProcessImpl(args, stdin, stdout, stderr, env, config, workDir);
 }
 
 /// ditto
 Pid spawnShell(in char[] command,
                const string[string] env,
-               Config config = Config.none)
+               Config config = Config.none,
+               in char[] workDir = null)
     @trusted // TODO: Should be @safe
 {
     return spawnShell(command,
@@ -854,7 +926,8 @@ Pid spawnShell(in char[] command,
                       std.stdio.stdout,
                       std.stdio.stderr,
                       env,
-                      config);
+                      config,
+                      workDir);
 }
 
 unittest
@@ -1518,6 +1591,9 @@ env      = Additional environment variables for the child process.
 config   = Flags that control process creation. See $(LREF Config)
            for an overview of available flags, and note that the
            $(D retainStd...) flags have no effect in this function.
+workDir  = The working directory for the new process.
+           By default the child process inherits the parent's working
+           directory.
 
 Returns:
 A $(LREF ProcessPipes) object which contains $(XREF stdio,File)
@@ -1546,30 +1622,33 @@ foreach (line; pipes.stderr.byLine) errors ~= line.idup;
 ProcessPipes pipeProcess(in char[][] args,
                          Redirect redirect = Redirect.all,
                          const string[string] env = null,
-                         Config config = Config.none)
+                         Config config = Config.none,
+                         in char[] workDir = null)
     @trusted //TODO: @safe
 {
-    return pipeProcessImpl!spawnProcess(args, redirect, env, config);
+    return pipeProcessImpl!spawnProcess(args, redirect, env, config, workDir);
 }
 
 /// ditto
 ProcessPipes pipeProcess(in char[] program,
                          Redirect redirect = Redirect.all,
                          const string[string] env = null,
-                         Config config = Config.none)
+                         Config config = Config.none,
+                         in char[] workDir = null)
     @trusted
 {
-    return pipeProcessImpl!spawnProcess(program, redirect, env, config);
+    return pipeProcessImpl!spawnProcess(program, redirect, env, config, workDir);
 }
 
 /// ditto
 ProcessPipes pipeShell(in char[] command,
                        Redirect redirect = Redirect.all,
                        const string[string] env = null,
-                       Config config = Config.none)
+                       Config config = Config.none,
+                       in char[] workDir = null)
     @safe
 {
-    return pipeProcessImpl!spawnShell(command, redirect, env, config);
+    return pipeProcessImpl!spawnShell(command, redirect, env, config, workDir);
 }
 
 // Implementation of the pipeProcess() family of functions.
@@ -1577,7 +1656,8 @@ private ProcessPipes pipeProcessImpl(alias spawnFunc, Cmd)
                                     (Cmd command,
                                      Redirect redirectFlags,
                                      const string[string] env = null,
-                                     Config config = Config.none)
+                                     Config config = Config.none,
+                                     in char[] workDir = null)
     @trusted //TODO: @safe
 {
     File childStdin, childStdout, childStderr;
@@ -1644,7 +1724,7 @@ private ProcessPipes pipeProcessImpl(alias spawnFunc, Cmd)
 
     config &= ~(Config.retainStdin | Config.retainStdout | Config.retainStderr);
     pipes._pid = spawnFunc(command, childStdin, childStdout, childStderr,
-                           env, config);
+                           env, config, workDir);
     return pipes;
 }
 
@@ -1861,6 +1941,9 @@ config    = Flags that control process creation. See $(LREF Config)
             $(D retainStd...) flags have no effect in this function.
 maxOutput = The maximum number of bytes of output that should be
             captured.
+workDir   = The working directory for the new process.
+            By default the child process inherits the parent's working
+            directory.
 
 Returns:
 A $(D struct) which contains the fields $(D int status) and
@@ -1880,30 +1963,33 @@ $(XREF stdio,StdioException) on failure to capture output.
 auto execute(in char[][] args,
              const string[string] env = null,
              Config config = Config.none,
-             size_t maxOutput = size_t.max)
+             size_t maxOutput = size_t.max,
+             in char[] workDir = null)
     @trusted //TODO: @safe
 {
-    return executeImpl!pipeProcess(args, env, config, maxOutput);
+    return executeImpl!pipeProcess(args, env, config, maxOutput, workDir);
 }
 
 /// ditto
 auto execute(in char[] program,
              const string[string] env = null,
              Config config = Config.none,
-             size_t maxOutput = size_t.max)
+             size_t maxOutput = size_t.max,
+             in char[] workDir = null)
     @trusted //TODO: @safe
 {
-    return executeImpl!pipeProcess(program, env, config, maxOutput);
+    return executeImpl!pipeProcess(program, env, config, maxOutput, workDir);
 }
 
 /// ditto
 auto executeShell(in char[] command,
                   const string[string] env = null,
                   Config config = Config.none,
-                  size_t maxOutput = size_t.max)
+                  size_t maxOutput = size_t.max,
+                  in char[] workDir = null)
     @trusted //TODO: @safe
 {
-    return executeImpl!pipeShell(command, env, config, maxOutput);
+    return executeImpl!pipeShell(command, env, config, maxOutput, workDir);
 }
 
 // Does the actual work for execute() and executeShell().
@@ -1911,10 +1997,11 @@ private auto executeImpl(alias pipeFunc, Cmd)(
     Cmd commandLine,
     const string[string] env = null,
     Config config = Config.none,
-    size_t maxOutput = size_t.max)
+    size_t maxOutput = size_t.max,
+    in char[] workDir = null)
 {
     auto p = pipeFunc(commandLine, Redirect.stdout | Redirect.stderrToStdout,
-                      env, config);
+                      env, config, workDir);
 
     auto a = appender!(ubyte[])();
     enum size_t defaultChunkSize = 4096;
