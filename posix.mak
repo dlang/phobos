@@ -91,8 +91,10 @@ SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(S
 STDDOC = $(DOCSRC)/std.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc
 # Set DDOC, the documentation generator
-DDOC=$(DMD) -m$(MODEL) -w -c -o- -version=StdDdoc \
-    -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
+DDOC = $(DMD)
+# default DDOC flags
+DDOC_FLAGS = -m$(MODEL) -w -c -o- -version=StdDdoc -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
+override DDOC += $(DDOC_FLAGS)
 
 # Set DRUNTIME name and full path
 ifeq (,$(findstring win,$(OS)))
