@@ -1420,12 +1420,19 @@ for every line.
         static import std.file;
 
         auto deleteme = testFilename();
-        std.file.write(deleteme, "hello\nworld\n");
+        std.file.write(deleteme, "hello\nworld\ntrue\nfalse\n");
         scope(exit) std.file.remove(deleteme);
         string s;
         auto f = File(deleteme);
         f.readf("%s\n", &s);
         assert(s == "hello", "["~s~"]");
+        f.readf("%s\n", &s);
+        assert(s == "world", "["~s~"]");
+
+        // Issue 11698
+        bool b1, b2;
+        f.readf("%s\n%s\n", &b1, &b2);
+        assert(b1 == true && b2 == false);
     }
 
 /**

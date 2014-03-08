@@ -1853,6 +1853,75 @@ unittest
  */
 
 Target parse(Target, Source)(ref Source s)
+    if (isInputRange!Source &&
+        !isExactSomeString!Source &&
+        isSomeChar!(ElementType!Source) &&
+        is(Unqual!Target == bool))
+{
+    if (!s.empty)
+    {
+        auto c1 = s.front;
+        if (c1 == 't' || c1 == 'T')
+        {
+            s.popFront();
+            foreach (c; "rue")
+            {
+                if (!s.empty && std.ascii.toLower(s.front) == c)
+                    s.popFront();
+                else
+                    goto Lerr;
+            }
+            return true;
+        }
+        else if (c1 == 'f' || c1 == 'F')
+        {
+            s.popFront();
+            foreach (c; "alse")
+            {
+                if (!s.empty && std.ascii.toLower(s.front) == c)
+                    s.popFront();
+                else
+                    goto Lerr;
+            }
+            return false;
+        }
+    }
+Lerr:
+    throw parseError("bool should be case-insensitive 'true' or 'false'");
+}
+
+unittest
+{
+    struct InputString
+    {
+        string _s;
+        @property auto front() { return _s.front; }
+        @property bool empty() { return _s.empty; }
+        void popFront() { _s.popFront(); }
+    }
+
+    auto s = InputString("trueFALSETrueFalsetRUEfALSE");
+    assert(parse!bool(s) == true);
+    assert(s.equal("FALSETrueFalsetRUEfALSE"));
+    assert(parse!bool(s) == false);
+    assert(s.equal("TrueFalsetRUEfALSE"));
+    assert(parse!bool(s) == true);
+    assert(s.equal("FalsetRUEfALSE"));
+    assert(parse!bool(s) == false);
+    assert(s.equal("tRUEfALSE"));
+    assert(parse!bool(s) == true);
+    assert(s.equal("fALSE"));
+    assert(parse!bool(s) == false);
+    assert(s.empty);
+
+    foreach (ss; ["tfalse", "ftrue", "t", "f", "tru", "fals", ""])
+    {
+        s = InputString(ss);
+        assertThrown!ConvException(parse!bool(s));
+    }
+}
+
+Target parse(Target, Source)(ref Source s)
     if (isSomeChar!(ElementType!Source) &&
         isIntegral!Target && !is(Target == enum))
 {
