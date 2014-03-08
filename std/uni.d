@@ -5434,10 +5434,10 @@ unittest
     See_Also:
         $(LREF byCodePoint)
 +/
-// TODO: Bidirectional access
 auto byGrapheme(Range)(Range range)
     if(isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 {
+    // TODO: Bidirectional access
     static struct Result
     {
         private Range _range;
