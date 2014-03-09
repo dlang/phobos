@@ -1052,7 +1052,7 @@ unittest
         static struct NoCopy { this(this) { assert(0); } }
         static struct Holder { NoCopy a, b, c; }
         Holder h;
-        pointsTo(h, h);
+        const pt = pointsTo(h, h);
     }
 
     shared S3 sh3;
@@ -1381,6 +1381,6 @@ unittest
 version(unittest) package
 @property void assertCTFEable(alias dg)()
 {
-    static assert({ dg(); return true; }());
-    dg();
+    static assert({ cast(void)dg(); return true; }());
+    cast(void)dg();
 }

@@ -7714,7 +7714,7 @@ unittest
 
     static struct Test { int* a; }
     immutable(Test) test;
-    only(test, test); // Works with mutable indirection
+    const value = only(test, test); // Works with mutable indirection
 }
 
 /**
