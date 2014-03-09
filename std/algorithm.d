@@ -23,7 +23,7 @@ $(MYREF group) $(MYREF joiner) $(MYREF map) $(MYREF reduce) $(MYREF
 splitter) $(MYREF sum) $(MYREF uniq) )
 )
 $(TR $(TDNW Sorting) $(TD $(MYREF completeSort) $(MYREF isPartitioned)
-$(MYREF isSorted) $(MYREF makeIndex) $(MYREF nextPermutation)
+$(MYREF isSorted) $(MYREF lazySort) $(MYREF makeIndex) $(MYREF nextPermutation)
 $(MYREF nextEvenPermutation) $(MYREF partialSort) $(MYREF
 partition) $(MYREF partition3) $(MYREF schwartzSort) $(MYREF sort)
 $(MYREF topN) $(MYREF topNCopy) )
@@ -233,6 +233,9 @@ true) for a portion of the range and $(D false) afterwards.)
 )
 $(TR $(TDNW $(LREF isSorted)) $(TD $(D isSorted([1, 1, 2, 3]))
 returns $(D true).)
+)
+$(TR $(TDNW $(LREF lazySort)) $(TD Lazily iterates a range in
+sorted order according to a predicate.)
 )
 $(TR $(TDNW $(LREF makeIndex)) $(TD Creates a separate index
 for a range.)
@@ -10616,6 +10619,91 @@ unittest
     string s = to!string(ds);
     assert(isSorted(ds));  // random-access
     assert(isSorted(s));   // bidirectional
+}
+
+// lazySort
+/**
+Returns a range that lazily iterates $(D r) in sorted order according
+to $(D less). $(D r) is modified by the range in-place.
+
+Construction of the range is done in $(BIGOH r.length) time, and each call
+to $(D popFront) is performed in $(BIGOH log(r.length)) time.
+
+While a $(D lazySort) range can be fully iterated in
+$(BIGOH r.length * log(r.length)) time, $(D sort) is better suited for this
+purpose. Similarly, if the number of elements to iterate is known beforehand,
+it may be more efficient to use $(D partialSort). $(D lazySort) is most suited
+for uses where the number of elements to iterate is unknown before iteration.
+ */
+auto lazySort(alias less = "a < b", Range)(Range r)
+    if (isRandomAccessRange!Range &&
+        hasAssignableElements!Range &&
+        !isInfinite!Range)
+{
+    return LazySort!(less, Range)(r);
+}
+
+///
+unittest
+{
+    int[] a = [4, 3, 1, 2];
+    assert(lazySort(a).front == 1);
+    assert(lazySort(a).equal([1, 2, 3, 4]));
+}
+
+private struct LazySort(alias less, Range)
+{
+    import std.container : BinaryHeap, heapify;
+    import std.functional : binaryReverseArgs;
+
+    // BinaryHeap implements a max-heap when given less, so we need to
+    // provide 'more' to make it a min-heap.
+    private alias more = binaryReverseArgs!(binaryFun!less);
+    private BinaryHeap!(Range, more) _heap;
+
+    this(Range store)
+    {
+        _heap = heapify!more(store);
+    }
+
+    @property auto ref front()
+    {
+        return _heap.front;
+    }
+
+    @property bool empty()
+    {
+        return _heap.empty;
+    }
+
+    @property size_t length()
+    {
+        return _heap.length;
+    }
+
+    void popFront()
+    {
+        _heap.removeFront();
+    }
+}
+
+unittest
+{
+    // Examples
+    int[] a = [4, 3, 1, 2];
+    assert(lazySort(a).front == 1);
+    assert(lazySort(a).equal([1, 2, 3, 4]));
+    assert(lazySort(a).length == 4);
+
+    assert(lazySort(["foo", "bar", "baz"]).equal(["bar", "baz", "foo"]));
+    assert(lazySort!"a > b"(["foo", "bar", "baz"]).equal(["foo", "baz", "bar"]));
+    assert(lazySort!"a > b"(a).equal([4, 3, 2, 1]));
+
+    dchar[] chars = "qwertyuiopasdfghjklzxcvbnm"d.dup;
+    assert(lazySort(chars).equal("abcdefghijklmnopqrstuvwxyz"));
+
+    dchar[] chars2 = "The quick brown fox jumps over the lazy dog"d.dup;
+    assert(lazySort(chars2.dup).equal(chars2.sort()));
 }
 
 // makeIndex
