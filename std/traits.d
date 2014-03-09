@@ -447,6 +447,8 @@ version(unittest)
         void tfunc(T...)(T args) {}
 
         template Inst(alias A) { int x; }
+
+        class Test12309(T, int x, string s) {}
     }
 
     private enum QualifiedEnum
@@ -462,10 +464,14 @@ private template fqnSym(alias T : X!A, alias X, A...)
         static if (T.length == 0)
             enum fqnTuple = "";
         else static if (T.length == 1)
-            enum fqnTuple = fullyQualifiedName!(T[0]);
+        {
+            static if (isExpressionTuple!T)
+                enum fqnTuple = T[0].stringof;
+            else
+                enum fqnTuple = fullyQualifiedName!(T[0]);
+        }
         else
-            enum fqnTuple = fullyQualifiedName!(T[0]) ~ ", "
-                          ~ fqnTuple!(T[1 .. $]);
+            enum fqnTuple = fqnTuple!(T[0]) ~ ", " ~ fqnTuple!(T[1 .. $]);
     }
 
     enum fqnSym =
@@ -509,6 +515,9 @@ unittest
     static assert(fqn!(qnTests.tfunc!(int[]))   == prefix ~ "tfunc!(int[])");
     static assert(fqn!(qnTests.Inst!(Object))   == prefix ~ "Inst!(object.Object)");
     static assert(fqn!(qnTests.Inst!(Object).x) == prefix ~ "Inst!(object.Object).x");
+
+    static assert(fqn!(qnTests.Test12309!(int, 10, "str"))
+                                                == prefix ~ "Test12309!(int, 10, \"str\")");
 
     import core.sync.barrier;
     static assert(fqn!Barrier == "core.sync.barrier.Barrier");
