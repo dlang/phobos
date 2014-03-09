@@ -28,6 +28,15 @@ a special case in an overload.
 ForeachType!Range[] array(Range)(Range r)
 if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
 {
+    if (__ctfe)
+    {
+        // Compile-time version to avoid memcpy calls.
+        typeof(return) result;
+        foreach (e; r)
+            result ~= e;
+        return result;
+    }
+
     alias E = ForeachType!Range;
     static if (hasLength!Range)
     {
@@ -91,6 +100,14 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
     }
     auto a = array([Foo(1), Foo(2), Foo(3), Foo(4), Foo(5)][]);
     assert(equal(a, [Foo(1), Foo(2), Foo(3), Foo(4), Foo(5)]));
+}
+
+unittest
+{
+    // Issue 12315
+    static struct Bug12315 { immutable int i; }
+    enum bug12315 = [Bug12315(123456789)].array();
+    static assert(bug12315[0].i == 123456789);
 }
 
 /**
