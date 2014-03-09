@@ -71,6 +71,44 @@ struct JSONValue
         return type_tag;
     }
 
+    /// Sets the _type of this $(D JSONValue). Previous content is cleared.
+    /// $(RED Scheduled for deprecation in September 2014. Instead, please
+    /// assign the value with the adequate type to $(D JSONValue) directly.)
+    @property JSON_TYPE type(JSON_TYPE newType)
+    {
+        if (type_tag != newType
+         && ((type_tag != JSON_TYPE.INTEGER && type_tag != JSON_TYPE.UINTEGER)
+          || (newType  != JSON_TYPE.INTEGER && newType  != JSON_TYPE.UINTEGER)))
+        {
+            final switch (newType)
+            {
+                case JSON_TYPE.STRING:
+                    store.str = store.str.init;
+                    break;
+                case JSON_TYPE.INTEGER:
+                    store.integer = store.integer.init;
+                    break;
+                case JSON_TYPE.UINTEGER:
+                    store.uinteger = store.uinteger.init;
+                    break;
+                case JSON_TYPE.FLOAT:
+                    store.floating = store.floating.init;
+                    break;
+                case JSON_TYPE.OBJECT:
+                    store.object = store.object.init;
+                    break;
+                case JSON_TYPE.ARRAY:
+                    store.array = store.array.init;
+                    break;
+                case JSON_TYPE.TRUE:
+                case JSON_TYPE.FALSE:
+                case JSON_TYPE.NULL:
+                    break;
+            }
+        }
+        return type_tag = newType;
+    }
+
     /// Value getter/setter for $(D JSON_TYPE.STRING).
     /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.STRING).
     @property inout(string) str() inout
@@ -1006,4 +1044,28 @@ unittest
         []
     ]
 }`);
+}
+
+unittest
+{
+    // Bugzilla 12332
+
+    JSONValue jv;
+    jv.type = JSON_TYPE.INTEGER;
+    jv = 1;
+    assert(jv.type == JSON_TYPE.INTEGER);
+    assert(jv.integer == 1);
+    jv.type = JSON_TYPE.UINTEGER;
+    assert(jv.uinteger == 1);
+
+    jv.type = JSON_TYPE.STRING;
+    assertThrown!JSONException(jv.integer == 1);
+    assert(jv.str is null);
+    jv.str = "123";
+    assert(jv.str == "123");
+    jv.type = JSON_TYPE.STRING;
+    assert(jv.str == "123");
+
+    jv.type = JSON_TYPE.TRUE;
+    assert(jv.type == JSON_TYPE.TRUE);
 }
