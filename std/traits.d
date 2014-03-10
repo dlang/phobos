@@ -291,6 +291,8 @@ version(unittest)
     }
 }
 
+private alias parentOf(alias sym) = Identity!(__traits(parent, sym));
+private alias parentOf(alias sym : T!Args, alias T, Args...) = Identity!(__traits(parent, T));
 
 /**
  * Get the full package name for the given symbol.
@@ -304,8 +306,8 @@ template packageName(alias T)
 {
     import std.algorithm : startsWith;
 
-    static if (__traits(compiles, __traits(parent, T)))
-        enum parent = packageName!(__traits(parent, T));
+    static if (__traits(compiles, parentOf!T))
+        enum parent = packageName!(parentOf!T);
     else
         enum string parent = null;
 
@@ -331,6 +333,9 @@ unittest
     static assert(packageName!core == "core");
     static assert(packageName!(core.sync) == "core.sync");
     static assert(packageName!Barrier == "core.sync");
+
+    struct X12287(T) { T i; }
+    static assert(packageName!(X12287!int.i) == "std");
 }
 
 version (none) version(unittest) //Please uncomment me when changing packageName to test global imports
@@ -365,7 +370,7 @@ template moduleName(alias T)
         enum moduleName = packagePrefix ~ T.stringof[7..$];
     }
     else
-        alias moduleName = moduleName!(__traits(parent, T));    // If you use enum, it will cause compiler ICE
+        alias moduleName = moduleName!(parentOf!T); // If you use enum, it will cause compiler ICE
 }
 
 unittest
@@ -382,6 +387,9 @@ unittest
     static assert(!__traits(compiles, moduleName!(core.sync)));
     static assert(moduleName!(core.sync.barrier) == "core.sync.barrier");
     static assert(moduleName!Barrier == "core.sync.barrier");
+
+    struct X12287(T) { T i; }
+    static assert(moduleName!(X12287!int.i) == "std.traits");
 }
 
 version (none) version(unittest) //Please uncomment me when changing moduleName to test global imports
