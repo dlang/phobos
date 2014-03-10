@@ -34,6 +34,7 @@ debug(uri) private import std.stdio;
 private import std.ascii;
 private import std.c.stdlib;
 private import std.utf;
+private import std.traits : isSomeChar;
 import core.exception : OutOfMemoryError;
 import std.exception : assumeUnique;
 
@@ -229,7 +230,7 @@ uint ascii2hex(dchar c)
         c - 'a' + 10;
 }
 
-private dstring URI_Decode(string string, uint reservedSet)
+private dstring URI_Decode(Char)(in Char[] uri, uint reservedSet) if (isSomeChar!Char)
 {
     uint j;
     uint k;
@@ -240,8 +241,8 @@ private dstring URI_Decode(string string, uint reservedSet)
     dchar* R;
     uint Rlen;
 
-    auto len = string.length;
-    auto s = string.ptr;
+    auto len = uri.length;
+    auto s = uri.ptr;
 
     // Preallocate result buffer R guaranteed to be large enough for result
     auto Rsize = len;
@@ -343,7 +344,7 @@ private dstring URI_Decode(string string, uint reservedSet)
  * Escape sequences that resolve to the '#' character are not replaced.
  */
 
-string decode(string encodedURI)
+string decode(Char)(in Char[] encodedURI) if (isSomeChar!Char)
 {
     auto s = URI_Decode(encodedURI, URI_Reserved | URI_Hash);
     return std.utf.toUTF8(s);
@@ -354,7 +355,7 @@ string decode(string encodedURI)
  * escape sequences are decoded.
  */
 
-string decodeComponent(string encodedURIComponent)
+string decodeComponent(Char)(in Char[] encodedURIComponent) if (isSomeChar!Char)
 {
     auto s = URI_Decode(encodedURIComponent, 0);
     return std.utf.toUTF8(s);
@@ -365,7 +366,7 @@ string decodeComponent(string encodedURIComponent)
  * not a valid URI character is escaped. The '#' character is not escaped.
  */
 
-string encode(string uri)
+string encode(Char)(in Char[] uri) if (isSomeChar!Char)
 {
     auto s = std.utf.toUTF32(uri);
     return URI_Encode(s, URI_Reserved | URI_Hash | URI_Alpha | URI_Digit | URI_Mark);
@@ -376,7 +377,7 @@ string encode(string uri)
  * Any character not a letter, digit, or one of -_.!~*'() is escaped.
  */
 
-string encodeComponent(string uriComponent)
+string encodeComponent(Char)(in Char[] uriComponent) if (isSomeChar!Char)
 {
     auto s = std.utf.toUTF32(uriComponent);
     return URI_Encode(s, URI_Alpha | URI_Digit | URI_Mark);
@@ -385,11 +386,11 @@ string encodeComponent(string uriComponent)
 /***************************
  * Does string s[] start with a URL?
  * Returns:
- *  -1    it does not
+ *  -1   it does not
  *  len  it does, and s[0..len] is the slice of s[] that is that URL
  */
 
-size_t uriLength(string s)
+size_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
 {
     /* Must start with one of:
      *  http://
@@ -458,7 +459,7 @@ unittest
  * References:
  *  RFC2822
  */
-size_t emailLength(string s)
+size_t emailLength(Char)(in Char[] s) if (isSomeChar!Char)
 {
     size_t i;
 
@@ -516,28 +517,45 @@ unittest
 {
     debug(uri) writeln("uri.encodeURI.unittest");
 
-    string s = "http://www.digitalmars.com/~fred/fred's RX.html#foo";
-    string t = "http://www.digitalmars.com/~fred/fred's%20RX.html#foo";
+    string source = "http://www.digitalmars.com/~fred/fred's RX.html#foo";
+    string target = "http://www.digitalmars.com/~fred/fred's%20RX.html#foo";
 
-    auto r = encode(s);
-    debug(uri) writefln("r = '%s'", r);
-    assert(r == t);
-    r = decode(t);
-    debug(uri) writefln("r = '%s'", r);
-    assert(r == s);
+    auto result = encode(source);
+    debug(uri) writefln("result = '%s'", result);
+    assert(result == target);
+    result = decode(target);
+    debug(uri) writefln("result = '%s'", result);
+    assert(result == source);
 
-    r = encode( decode("%E3%81%82%E3%81%82") );
-    assert(r == "%E3%81%82%E3%81%82");
+    result = encode(decode("%E3%81%82%E3%81%82"));
+    assert(result == "%E3%81%82%E3%81%82");
 
-    r = encodeComponent("c++");
-    assert(r == "c%2B%2B");
+    result = encodeComponent("c++");
+    assert(result == "c%2B%2B");
 
     auto str = new char[10_000_000];
     str[] = 'A';
-    r = encodeComponent(assumeUnique(str));
-    foreach (char c; r)
+    result = encodeComponent(str);
+    foreach (char c; result)
         assert(c == 'A');
 
-    r = decode("%41%42%43");
-    debug(uri) writeln(r);
+    result = decode("%41%42%43");
+    debug(uri) writeln(result);
+
+    import std.typetuple : TypeTuple;
+    foreach (StringType; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    {
+        import std.conv : to;
+        StringType decoded1 = source.to!StringType;
+        string encoded1 = encode(decoded1);
+        assert(decoded1 == source.to!StringType); // check that `decoded1` wasn't changed
+        assert(encoded1 == target);
+        assert(decoded1 == decode(encoded1).to!StringType);
+
+        StringType encoded2 = target.to!StringType;
+        string decoded2 = decode(encoded2);
+        assert(encoded2 == target.to!StringType); // check that `encoded2` wasn't changed
+        assert(decoded2 == source);
+        assert(encoded2 == encode(decoded2).to!StringType);
+    }
 }
