@@ -4525,7 +4525,12 @@ public enum isMatcher(M, C) = __traits(compiles, (){
     assert(is(typeof(m.match(d)) == bool));
     assert(is(typeof(m.test(d)) == bool));
     static if(is(typeof(m.skip(d))))
+    {
         assert(is(typeof(m.skip(d)) == bool));
+        assert(is(typeof(m.skip(s)) == bool));
+    }
+    assert(is(typeof(m.match(s)) == bool));
+    assert(is(typeof(m.test(s)) == bool));
 });
 
 unittest
