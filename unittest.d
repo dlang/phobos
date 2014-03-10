@@ -65,8 +65,8 @@ int main(char[][] args)
     // Bring in unit test for module by referencing function in it
 
     cmp("foo", "bar");                  // string
-    filenameCharCmp('a', 'b');          // path
-    isNaN(1.0);                         // math
+    const fcc = filenameCharCmp('a', 'b');          // path
+    const inn = isNaN(1.0);                         // math
     std.conv.to!double("1.0");          // std.conv
     OutBuffer b = new OutBuffer();      // outbuffer
     auto r = regex("");                 // regex
@@ -78,7 +78,7 @@ int main(char[][] args)
     Clock.currTime();                   // datetime
     Exception e = new ReadException(""); // stream
     din.eof();                           // cstream
-    isValidDchar(cast(dchar)0);          // utf
+    const ivd = isValidDchar(cast(dchar)0);          // utf
     std.uri.ascii2hex(0);                // uri
     std.zlib.adler32(0,null);            // D.zlib
     auto t = task!cmp("foo", "bar");  // parallelism
@@ -101,12 +101,12 @@ int main(char[][] args)
     assert(x[1] == 3);
     assert(x[2] == 45);
 
-    std.math.sin(3.0);
+    const sin3 = std.math.sin(3.0);
     std.mathspecial.gamma(6.2);
 
     std.demangle.demangle("hello");
 
-    std.uni.isAlpha('A');
+    const iaa = std.uni.isAlpha('A');
 
     std.file.exists("foo");
 
