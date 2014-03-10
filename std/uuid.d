@@ -1114,6 +1114,14 @@ unittest
  *     as long as these characters do not contain [0-9a-fA-F])
  * )
  *
+ * Note:
+ * Like most parsers, it consumes its argument. This means:
+ * -------------------------
+ * string s = "8AB3060E-2CBA-4F23-b74c-B52Db3BDFB46";
+ * parseUUID(s);
+ * assert(s == "");
+ * -------------------------
+ *
  * Throws:
  * $(LREF UUIDParsingException) if the input is invalid
  *
