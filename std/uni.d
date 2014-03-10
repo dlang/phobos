@@ -4459,7 +4459,8 @@ public struct MatcherConcept
         assert(!m.test(truth)); // '=' is not a number
         assert(truth == "= 4"); // test never affects argument
     }
-    /**
+
+    /*
         Advanced feature - provide direct access to a subset of matcher based a
         set of known encoding lengths. Lengths are provided in 
         $(S_LINK Code unit, code units). The sub-matcher then may do less 
@@ -4705,7 +4706,7 @@ template Utf8Matcher()
         //static disptach helper UTF size ==> table
         alias tab(int i) = tables[i - 1];
 
-        public @property auto subMatcher(SizesToPick...)() @trusted
+        package @property auto subMatcher(SizesToPick...)() @trusted
         {
             return CherryPick!(Impl, SizesToPick)(&this);
         }
@@ -4891,7 +4892,7 @@ template Utf16Matcher()
         }
         mixin DefMatcher;
 
-        public @property auto subMatcher(SizesToPick...)() @trusted
+        package @property auto subMatcher(SizesToPick...)() @trusted
         {
             return CherryPick!(Impl, SizesToPick)(&this);
         }
