@@ -196,32 +196,32 @@ template not(alias pred)
 }
 
 /**
-Curries $(D fun) by tying its first argument to a particular value.
+Partially evaluates $(D fun) by tying its first argument to a particular value.
 
 Example:
 
 ----
 int fun(int a, int b) { return a + b; }
-alias curry!(fun, 5) fun5;
+alias partial!(fun, 5) fun5;
 assert(fun5(6) == 11);
 ----
 
 Note that in most cases you'd use an alias instead of a value
-assignment. Using an alias allows you to curry template functions
-without committing to a particular type of the function.
+assignment. Using an alias allows you to partially evaluate template
+functions without committing to a particular type of the function.
  */
-template curry(alias fun, alias arg)
+template partial(alias fun, alias arg)
 {
     static if (is(typeof(fun) == delegate) || is(typeof(fun) == function))
     {
-        ReturnType!fun curry(ParameterTypeTuple!fun[1..$] args2)
+        ReturnType!fun partial(ParameterTypeTuple!fun[1..$] args2)
         {
             return fun(arg, args2);
         }
     }
     else
     {
-        auto curry(Ts...)(Ts args2)
+        auto partial(Ts...)(Ts args2)
         {
             static if (is(typeof(fun(arg, args2))))
             {
@@ -244,37 +244,44 @@ template curry(alias fun, alias arg)
     }
 }
 
-// tests for currying callables
+/**
+Deprecated alias for $(D partial), kept for backwards compatibility
+ */
+
+deprecated("Please use std.functional.partial instead")
+alias curry = partial;
+
+// tests for partially evaluating callables
 unittest
 {
     static int f1(int a, int b) { return a + b; }
-    assert(curry!(f1, 5)(6) == 11);
+    assert(partial!(f1, 5)(6) == 11);
 
     int f2(int a, int b) { return a + b; }
     int x = 5;
-    assert(curry!(f2, x)(6) == 11);
+    assert(partial!(f2, x)(6) == 11);
     x = 7;
-    assert(curry!(f2, x)(6) == 13);
-    static assert(curry!(f2, 5)(6) == 11);
+    assert(partial!(f2, x)(6) == 13);
+    static assert(partial!(f2, 5)(6) == 11);
 
     auto dg = &f2;
-    auto f3 = &curry!(dg, x);
+    auto f3 = &partial!(dg, x);
     assert(f3(6) == 13);
 
     static int funOneArg(int a) { return a; }
-    assert(curry!(funOneArg, 1)() == 1);
+    assert(partial!(funOneArg, 1)() == 1);
 
     static int funThreeArgs(int a, int b, int c) { return a + b + c; }
-    alias funThreeArgs1 = curry!(funThreeArgs, 1);
+    alias funThreeArgs1 = partial!(funThreeArgs, 1);
     assert(funThreeArgs1(2, 3) == 6);
     static assert(!is(typeof(funThreeArgs1(2))));
 
     enum xe = 5;
-    alias fe = curry!(f2, xe);
+    alias fe = partial!(f2, xe);
     static assert(fe(6) == 11);
 }
 
-// tests for currying templated/overloaded callables
+// tests for partially evaluating templated/overloaded callables
 unittest
 {
     static auto add(A, B)(A x, B y)
@@ -282,17 +289,17 @@ unittest
         return x + y;
     }
 
-    alias add5 = curry!(add, 5);
+    alias add5 = partial!(add, 5);
     assert(add5(6) == 11);
     static assert(!is(typeof(add5())));
     static assert(!is(typeof(add5(6, 7))));
 
-    // taking address of templated curry needs explicit type
+    // taking address of templated partial evaluation needs explicit type
     auto dg = &add5!(int);
     assert(dg(6) == 11);
 
     int x = 5;
-    alias addX = curry!(add, x);
+    alias addX = partial!(add, x);
     assert(addX(6) == 11);
 
     static struct Callable
@@ -302,9 +309,9 @@ unittest
         double opCall(double a, double b) { return a + b; }
     }
     Callable callable;
-    assert(curry!(Callable, "5")("6") == "56");
-    assert(curry!(callable, 5)(6) == 30);
-    assert(curry!(callable, 7.0)(3.0) == 7.0 + 3.0);
+    assert(partial!(Callable, "5")("6") == "56");
+    assert(partial!(callable, 5)(6) == 30);
+    assert(partial!(callable, 7.0)(3.0) == 7.0 + 3.0);
 
     static struct TCallable
     {
@@ -314,15 +321,15 @@ unittest
         }
     }
     TCallable tcallable;
-    assert(curry!(tcallable, 5)(6) == 11);
-    static assert(!is(typeof(curry!(tcallable, "5")(6))));
+    assert(partial!(tcallable, 5)(6) == 11);
+    static assert(!is(typeof(partial!(tcallable, "5")(6))));
 
     static A funOneArg(A)(A a) { return a; }
-    alias funOneArg1 = curry!(funOneArg, 1);
+    alias funOneArg1 = partial!(funOneArg, 1);
     assert(funOneArg1() == 1);
 
     static auto funThreeArgs(A, B, C)(A a, B b, C c) { return a + b + c; }
-    alias funThreeArgs1 = curry!(funThreeArgs, 1);
+    alias funThreeArgs1 = partial!(funThreeArgs, 1);
     assert(funThreeArgs1(2, 3) == 6);
     static assert(!is(typeof(funThreeArgs1(1))));
 
