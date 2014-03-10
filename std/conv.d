@@ -1860,30 +1860,18 @@ Target parse(Target, Source)(ref Source s)
 {
     if (!s.empty)
     {
-        auto c1 = s.front;
-        if (c1 == 't' || c1 == 'T')
+        auto c1 = std.ascii.toLower(s.front);
+        bool result = (c1 == 't');
+        if (result || c1 == 'f')
         {
             s.popFront();
-            foreach (c; "rue")
+            foreach (c; result ? "rue" : "alse")
             {
-                if (!s.empty && std.ascii.toLower(s.front) == c)
-                    s.popFront();
-                else
+                if (s.empty || std.ascii.toLower(s.front) != c)
                     goto Lerr;
+                s.popFront();
             }
-            return true;
-        }
-        else if (c1 == 'f' || c1 == 'F')
-        {
-            s.popFront();
-            foreach (c; "alse")
-            {
-                if (!s.empty && std.ascii.toLower(s.front) == c)
-                    s.popFront();
-                else
-                    goto Lerr;
-            }
-            return false;
+            return result;
         }
     }
 Lerr:
