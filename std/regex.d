@@ -2717,12 +2717,19 @@ public:
                     }
                     else
                     {
-                        /*
+                        
                         static if(charSize == 1)
                             static immutable codeBounds = [0x0, 0x7F, 0x80, 0x7FF, 0x800, 0xFFFF, 0x10000, 0x10FFFF];
                         else //== 2
                             static immutable codeBounds = [0x0, 0xFFFF, 0x10000, 0x10FFFF];
-                        auto srange = assumeSorted!"a <= b"(set.byInterval);
+                        uint[] arr = new uint[set.byInterval.length * 2];
+                        size_t ofs = 0;
+                        foreach(ival; set.byInterval)
+                        {
+                            arr[ofs++] = ival.a;
+                            arr[ofs++] = ival.b;
+                        }
+                        auto srange = assumeSorted!"a <= b"(arr);
                         for(uint i = 0; i < codeBounds.length/2; i++)
                         {
                             auto start = srange.lowerBound(codeBounds[2*i]).length;
@@ -2730,29 +2737,6 @@ public:
                             if(end > start || (end == start && (end & 1)))
                                s[numS++] = (i+1)*charSize;
                         }
-                        */
-                        static if(charSize == 1)
-                            alias codeBounds = TypeTuple!(0xFFFF, 0x7FF, 0x7F, 0);
-                        else //== 2
-                            alias codeBounds = TypeTuple!(0xFFFF, 0);
-                    
-                        foreach(ival; set.byInterval)
-                        {
-                            foreach(i, bound; codeBounds)
-                            {
-                                if(ival[1] > bound) //compare starting with greater
-                                {
-                                    s[codeBounds.length - 1 - i] = codeBounds.length - i;
-                                    goto L_OutOfLoop;
-                    }
-                            }
-                    L_OutOfLoop:
-                            ;
-                        }
-                        //leave only non-zero items in s
-                        for(size_t j = 0; j<codeBounds.length; j++)
-                            if(s[j])
-                                s[numS++] = j;
                     }
                     if(numS == 0 || t.idx + s[numS-1] > n_length)
                         goto L_StopThread;
@@ -3195,7 +3179,7 @@ template BacktrackingMatcher(bool CTregex)
 
         static if(__traits(hasMember,Stream, "search"))
         {
-            enum kicked = false; //true;
+            enum kicked = true;
         }
         else
             enum kicked = false;
