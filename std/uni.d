@@ -7049,64 +7049,66 @@ unittest
 */
 package auto simpleCaseFoldings(dchar ch)
 {
+    alias sTable = simpleCaseTable;
     static struct Range
     {
     pure nothrow:
-        const(SimpleCaseEntry)* s; //if == 0, then read c
+        uint idx; //if == uint.max, then read c.
         union
         {
-            dchar c;
+            dchar c; // == 0 - empty range
             uint len;
         }
+        @property bool isSmall() const { return idx == uint.max; }
 
         this(dchar ch)
         {
+            idx = uint.max;
             c = ch;
-            s = null;
         }
 
-        this(const(SimpleCaseEntry)[] slice)
+        this(uint start, uint size)
         {
-            s = slice.ptr;
-            len = cast(uint)slice.length;
+            idx = start;
+            len = size;
         }
 
         @property dchar front() const
         {
             assert(!empty);
-            if(!s)
+            if(isSmall)
             {
                 return c;
             }
-            auto ch = s.ch;
+            auto ch = sTable[idx].ch;
             return ch;
         }
 
         @property bool empty() const
         {
-            if(!s)
+            if(isSmall)
             {
-                return c == dchar.max;
+                return c == 0;
             }
             return len == 0;
         }
 
         @property uint length() const
         {
-            if(!s)
+            if(isSmall)
             {
-                return c == dchar.max ? 0 : 1;
+                return c == 0 ? 0 : 1;
             }
             return len;
         }
 
         void popFront()
         {
-            if(!s)
-                c = dchar.max;
+            if(isSmall)
+                c = 0;
             else
             {
-                s++;
+                idx++;
                 len--;
             }
         }
@@ -7114,23 +7116,24 @@ package auto simpleCaseFoldings(dchar ch)
     immutable idx = simpleCaseTrie[ch];
     if (idx == EMPTY_CASE_TRIE)
         return Range(ch);
-    alias sTable = simpleCaseTable;
     auto entry = sTable[idx];
     immutable start = idx - entry.n;
-    return Range(sTable[start .. start + entry.size]);
+    return Range(start, entry.size);
 }
 
 unittest
 {
-    auto r = simpleCaseFoldings('Э').array;
-    assert(r.length == 2);
-    assert(r.canFind('э') && r.canFind('Э'));
-    auto sr = simpleCaseFoldings('~');
-    assert(sr.equalS("~"));
-    //A with ring above - casefolds to the same bucket as Angstrom sign
-    sr = simpleCaseFoldings('Å');
-    assert(sr.length == 3);
-    assert(sr.canFind('å') && sr.canFind('Å') && sr.canFind('\u212B'));
+    assertCTFEable!((){
+        auto r = simpleCaseFoldings('Э').array;
+        assert(r.length == 2);
+        assert(r.canFind('э') && r.canFind('Э'));
+        auto sr = simpleCaseFoldings('~');
+        assert(sr.equalS("~"));
+        //A with ring above - casefolds to the same bucket as Angstrom sign
+        sr = simpleCaseFoldings('Å');
+        assert(sr.length == 3);
+        assert(sr.canFind('å') && sr.canFind('Å') && sr.canFind('\u212B'));
+    });
 }
 
 /++
