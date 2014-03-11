@@ -1687,19 +1687,19 @@ private void testFloatingToIntegral(Floating, Integral)()
 
 
 /**
-String to non-string conversion runs parsing.
+String and string ranges to non-string conversion runs parsing.
 $(UL
   $(LI When the source is a wide string, it is first converted to a narrow
        string and then parsed.)
   $(LI When the source is a narrow string, normal text parsing occurs.))
 */
 T toImpl(T, S)(S value)
-    if ( isExactSomeString!S && isDynamicArray!S &&
-        !isExactSomeString!T && is(typeof(parse!T(value))))
+    if (isSomeChar!(ElementType!S) && !isExactSomeString!T
+        && is(typeof(parse!T(value))))
 {
     scope(success)
     {
-        if (value.length)
+        if (!value.empty)
         {
             throw convError!(S, T)(value);
         }
@@ -1709,12 +1709,12 @@ T toImpl(T, S)(S value)
 
 /// ditto
 T toImpl(T, S)(S value, uint radix)
-    if ( isExactSomeString!S && isDynamicArray!S &&
-        !isExactSomeString!T && is(typeof(parse!T(value, radix))))
+    if (isSomeChar!(ElementType!S) && !isExactSomeString!T
+        && is(typeof(parse!T(value, radix))))
 {
     scope(success)
     {
-        if (value.length)
+        if (!value.empty)
         {
             throw convError!(S, T)(value);
         }
@@ -1742,6 +1742,23 @@ T toImpl(T, S)(S value, uint radix)
     // 6255
     auto n = to!int("FF", 16);
     assert(n == 255);
+}
+
+@safe pure unittest
+{
+    string str;
+    foreach(chunk; "101010110101101010111".chunks(7))
+    {
+        str ~= to!char(chunk, 2);
+    }
+
+    foreach(chunk; "656667".chunks(2))
+    {
+        str ~= to!char(chunk, 10);
+    }
+
+    assert(str[0 .. 3].equal("UVW"));
+    assert(str[3 .. 6].equal("ABC"));
 }
 
 /**
@@ -2109,6 +2126,30 @@ Lerr:
     assertCTFEable!({ string s =  "1234abc"; assert(parse! int(s) ==  1234 && s == "abc"); });
     assertCTFEable!({ string s = "-1234abc"; assert(parse! int(s) == -1234 && s == "abc"); });
     assertCTFEable!({ string s =  "1234abc"; assert(parse!uint(s) ==  1234 && s == "abc"); });
+}
+
+/// ditto
+Target parse(Target, Source)(ref Source s, uint radix)
+    if (isSomeChar!(ElementType!Source) &&
+        isSomeChar!Target && !is(Target == enum))
+{
+    static if (is(Unqual!Target == dchar))
+        alias T = uint;
+    else static if (is(Unqual!Target == wchar))
+        alias T = ushort;
+    else static if (is(Unqual!Target == char))
+        alias T = ubyte;
+    return cast(Target)parse!T(s, radix);
+}
+
+@safe pure unittest
+{
+    assert(to!char("1010101",2) == 'U');
+    assert(to!wchar("1010110",2) == 'V');
+    assert(to!dchar("1010111",2) == 'W');
+    assert(to!char("65",10) == 'A');
+    assert(to!wchar("66",10) == 'B');
+    assert(to!dchar("67",10) == 'C');
 }
 
 /// ditto
