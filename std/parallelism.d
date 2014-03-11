@@ -209,6 +209,10 @@ private template MapType(R, functions...)
 {
     static if(functions.length == 0)
     {
+        static assert(0);
+    }
+    else static if(functions.length == 1)
+    {
         alias MapType = typeof(unaryFun!(functions[0])(ElementType!R.init));
     }
     else
