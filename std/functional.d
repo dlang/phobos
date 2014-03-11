@@ -348,20 +348,10 @@ Takes multiple functions and adjoins them together. The result is a
 $(XREF typecons, Tuple) with one element per passed-in function. Upon
 invocation, the returned tuple is the adjoined results of all
 functions.
-
-Example:
-
-----
-static bool f1(int a) { return a != 0; }
-static int f2(int a) { return a / 2; }
-auto x = adjoin!(f1, f2)(5);
-assert(is(typeof(x) == Tuple!(bool, int)));
-assert(x[0] == true && x[1] == 2);
-----
 */
 template adjoin(F...) if (F.length)
 {
-    auto adjoin(V...)(V a)
+    auto adjoin(V...)(auto ref V a)
     {
         static if (F.length == 1)
         {
@@ -385,6 +375,17 @@ template adjoin(F...) if (F.length)
             return result;
         }
     }
+}
+
+///
+unittest
+{
+    import std.functional, std.typecons;
+    static bool f1(int a) { return a != 0; }
+    static int f2(int a) { return a / 2; }
+    auto x = adjoin!(f1, f2)(5);
+    assert(is(typeof(x) == Tuple!(bool, int)));
+    assert(x[0] == true && x[1] == 2);
 }
 
 unittest
