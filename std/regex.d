@@ -812,6 +812,17 @@ Trie[CodepointSet] trieCache;
     return slot;
 }
 
+auto caseEnclose(CodepointSet set)
+{
+    auto cased = set & unicode.LC;
+    foreach (dchar ch; cased.byCodepoint)
+    {
+        foreach(c; simpleCaseFoldings(ch))
+            set |= c;
+    }
+    return set;
+}
+
 /+
     fetch codepoint set corresponding to a name (InBlock or binary property)
 +/
@@ -819,8 +830,8 @@ Trie[CodepointSet] trieCache;
 {
     CodepointSet s = unicode(name);
     //FIXME: caseEnclose for new uni as Set | CaseEnclose(SET && LC)
-    //if(casefold)
-    //   s = caseEnclose(s);
+    if(casefold)
+       s = caseEnclose(s);
     if(negated)
         s = s.inverted;
     return s;
@@ -1346,18 +1357,17 @@ struct Parser(R)
             break;
         default:
             //FIXME: getCommonCasing in new std uni
-            /*if(re_flags & RegexOption.casefold)
+            if(re_flags & RegexOption.casefold)
             {
-                dchar[5] data;
-                auto range = getCommonCasing(current, data);
+                auto range = simpleCaseFoldings(current);
                 assert(range.length <= 5);
                 if(range.length == 1)
-                    put(Bytecode(IR.Char, range[0]));
+                    put(Bytecode(IR.Char, range.front));
                 else
                     foreach(v; range)
                         put(Bytecode(IR.OrChar, v, cast(uint)range.length));
             }
-            else*/
+            else
                 put(Bytecode(IR.Char, current));
             next();
         }
@@ -1411,15 +1421,13 @@ struct Parser(R)
 
         static void addWithFlags(ref CodepointSet set, uint ch, uint re_flags)
         {
-            //FIXME: getCommonCasing in new std uni
-            /*if(re_flags & RegexOption.casefold)
+            if(re_flags & RegexOption.casefold)
             {
-                dchar[5] chars;
-                auto range = getCommonCasing(ch, chars);
+                auto range = simpleCaseFoldings(ch);
                 foreach(v; range)
-                    set.add(v);
+                    set |= v;
             }
-            else*/
+            else
                 set |= ch;
         }
 
@@ -7023,7 +7031,7 @@ unittest
     run_tests!bmatch(); //backtracker
     run_tests!match(); //thompson VM
 }
-/*
+
 unittest
 {
     auto cr = ctRegex!("abc");
@@ -7072,6 +7080,7 @@ unittest
     assert(equal(mx.captures, [ "B", "B"]));
     enum cx2 = ctRegex!"(A|B)*";
     assert(match("BAAA",cx2));
+    
     enum cx3 = ctRegex!("a{3,4}","i");
     auto mx3 = match("AaA",cx3);
     assert(mx3);
@@ -7091,7 +7100,7 @@ unittest
     assert(m9);
     assert(equal(map!"a.hit"(m9), ["First", "", "Second"]));
 }
-*/
+
 unittest
 {
 //global matching
