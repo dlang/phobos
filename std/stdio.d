@@ -318,7 +318,7 @@ struct File
     private Impl* _p;
     private string _name;
 
-    package this(FILE* handle, string name, uint refs = 1, bool isPopened = false)
+    package this(FILE* handle, string name, uint refs = 1, bool isPopened = false) @trusted
     {
         import std.exception : enforce;
 
@@ -514,7 +514,7 @@ cplusplus.com/reference/clibrary/cstdio/feof.html, feof)).
 
 Throws: $(D Exception) if the file is not opened.
  */
-    @property bool eof() const pure
+    @property bool eof() const @trusted pure
     {
         import std.exception : enforce;
 
@@ -622,7 +622,7 @@ If the file is not opened, succeeds vacuously. Otherwise, returns
 $(WEB cplusplus.com/reference/clibrary/cstdio/_clearerr.html,
 _clearerr) for the file handle.
  */
-    void clearerr() pure nothrow
+    void clearerr() @safe pure nothrow
     {
         _p is null || _p.handle is null ||
         .clearerr(_p.handle);
@@ -811,7 +811,7 @@ managed file handle.
 Throws: $(D Exception) if the file is not opened.
         $(D ErrnoException) if the call to $(D ftell) fails.
  */
-    @property ulong tell() const
+    @property ulong tell() const @trusted
     {
         import std.exception : enforce, errnoEnforce;
 
@@ -849,7 +849,7 @@ for the file handle.
 
 Throws: $(D Exception) if the file is not opened.
  */
-    void rewind()
+    void rewind() @safe
     {
         import std.exception : enforce;
 
@@ -864,7 +864,7 @@ the file handle.
 Throws: $(D Exception) if the file is not opened.
         $(D ErrnoException) if the call to $(D setvbuf) fails.
  */
-    void setvbuf(size_t size, int mode = _IOFBF)
+    void setvbuf(size_t size, int mode = _IOFBF) @trusted
     {
         import std.exception : enforce, errnoEnforce;
 
@@ -880,7 +880,7 @@ _setvbuf) for the file handle.
 Throws: $(D Exception) if the file is not opened.
         $(D ErrnoException) if the call to $(D setvbuf) fails.
 */
-    void setvbuf(void[] buf, int mode = _IOFBF)
+    void setvbuf(void[] buf, int mode = _IOFBF) @trusted
     {
         import std.exception : enforce, errnoEnforce;
 
@@ -1471,7 +1471,7 @@ Returns the $(D FILE*) corresponding to this object.
 /**
 Returns the file number corresponding to this object.
  */
-    /*version(Posix) */int fileno() const
+    /*version(Posix) */int fileno() const @trusted
     {
         import std.exception : enforce;
 
