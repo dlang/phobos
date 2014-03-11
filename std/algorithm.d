@@ -9249,7 +9249,7 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         import std.conv : text;
 
         static if (ss == SwapStrategy.unstable)
-            quickSortImpl!(lessFun)(r, cast(real)r.length);
+            quickSortImpl!(lessFun)(r, r.length);
         else //use Tim Sort for semistable & stable
             TimSortImpl!(lessFun, Range).sort(r, null);
 
@@ -9606,7 +9606,7 @@ void swapAt(R)(R r, size_t i1, size_t i2)
     }
 }
 
-private void quickSortImpl(alias less, Range)(Range r, real depth)
+private void quickSortImpl(alias less, Range)(Range r, size_t depth)
 {
     alias Elem = ElementType!(Range);
     enum size_t optimisticInsertionSortGetsBetter = 25;
@@ -9615,12 +9615,12 @@ private void quickSortImpl(alias less, Range)(Range r, real depth)
     // partition
     while (r.length > optimisticInsertionSortGetsBetter)
     {
-        if(depth < 1.0)
+        if (depth == 0)
         {
             HeapSortImpl!(less, Range).heapSort(r);
             return;
         }
-        depth *= (2.0/3.0);
+        depth = depth >= depth.max / 2 ? (depth / 3) * 2 : (depth * 2) / 3;
 
         const pivotIdx = getPivot!(less)(r);
         auto pivot = r[pivotIdx];
