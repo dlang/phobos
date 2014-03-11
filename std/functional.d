@@ -351,7 +351,7 @@ functions.
 */
 template adjoin(F...) if (F.length)
 {
-    auto adjoin(V...)(V a)
+    auto adjoin(V...)(auto ref V a)
     {
         static if (F.length == 1)
         {
