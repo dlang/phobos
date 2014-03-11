@@ -6039,7 +6039,7 @@ private:
     {
         Set set;
         bool loaded = loadProperty(name, set) || loadUnicodeSet!(scripts.tab)(name, set)
-            || (ucmp(name[0..2],"In") == 0
+            || (name.length > 2 && ucmp(name[0..2],"In") == 0
                 && loadUnicodeSet!(blocks.tab)(name[2..$], set));
         if(loaded)
             return set;
@@ -6069,6 +6069,7 @@ unittest
     import std.exception;
     // R-T look up throws if no such set is found
     assert(collectException(unicode("InCyrilliac")));
+    assert(collectException(unicode("X")));
 
     assert(unicode.block.Greek_and_Coptic == unicode.InGreek_and_Coptic);
 
