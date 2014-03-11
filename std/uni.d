@@ -7040,6 +7040,98 @@ unittest
     });
 }
 
+// This is package for the moment to be used as a support tool for std.regex
+// It needs a better API
+/*
+    Return a range of all $(CODEPOINTS) that casefold to
+    and from this $(D ch).
+*/
+package auto simpleCaseFoldings(dchar ch)
+{
+    static struct Range
+    {
+    pure nothrow:
+        const(SimpleCaseEntry)* s; //if == 0, then read c
+        union
+        {
+            dchar c;
+            uint len;
+        }
+
+        this(dchar ch)
+        {
+            c = ch;
+            s = null;
+        }
+
+        this(const(SimpleCaseEntry)[] slice)
+        {
+            s = slice.ptr;
+            len = cast(uint)slice.length;
+        }
+
+        @property dchar front() const
+        {
+            assert(!empty);
+            if(!s)
+            {
+                return c;
+            }
+            auto ch = s.ch;
+            return ch;
+        }
+
+        @property bool empty() const
+        {
+            if(!s)
+            {
+                return c == dchar.max;
+            }
+            return len == 0;
+        }
+
+        @property uint length() const
+        {
+            if(!s)
+            {
+                return c == dchar.max ? 0 : 1;
+            }
+            return len;
+        }
+
+        void popFront()
+        {
+            if(!s)
+                c = dchar.max;
+            else
+            {
+                s++;
+                len--;
+            }
+        }
+    }
+    immutable idx = simpleCaseTrie[ch];
+    if (idx == EMPTY_CASE_TRIE)
+        return Range(ch);
+    alias sTable = simpleCaseTable;
+    auto entry = sTable[idx];
+    immutable start = idx - entry.n;
+    return Range(sTable[start .. start + entry.size]);
+}
+
+unittest
+{
+    auto r = simpleCaseFoldings('Э').array;
+    assert(r.length == 2);
+    assert(r.canFind('э') && r.canFind('Э'));
+    auto sr = simpleCaseFoldings('~');
+    assert(sr.equalS("~"));
+    //A with ring above - casefolds to the same bucket as Angstrom sign
+    sr = simpleCaseFoldings('Å');
+    assert(sr.length == 3);
+    assert(sr.canFind('å') && sr.canFind('Å') && sr.canFind('\u212B'));
+}
+
 /++
     $(P Returns the $(S_LINK Combining class, combining class) of $(D ch).)
 
