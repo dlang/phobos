@@ -353,18 +353,17 @@ template adjoin(F...) if (F.length)
 {
     auto adjoin(V...)(auto ref V a)
     {
+        import std.typecons : Tuple, tuple;
         static if (F.length == 1)
         {
-            return F[0](a);
+            return tuple(F[0](a));
         }
         else static if (F.length == 2)
         {
-            import std.typecons : Tuple, tuple;
             return tuple(F[0](a), F[1](a));
         }
         else
         {
-            import std.typecons : Tuple, tuple;
             import std.conv : emplaceRef;
             alias Head = typeof(F[0](a));
             Tuple!(Head, typeof(.adjoin!(F[1..$])(a)).Types) result = void;
@@ -392,7 +391,7 @@ unittest
 {
     import std.typecons;
     static bool F1(int a) { return a != 0; }
-    auto x1 = adjoin!(F1)(5);
+    auto x1 = adjoin!(F1)(5)[0];
     static int F2(int a) { return a / 2; }
     auto x2 = adjoin!(F1, F2)(5);
     assert(is(typeof(x2) == Tuple!(bool, int)));
@@ -409,7 +408,7 @@ unittest
         int fun() { return 42 + store(5); }
     }
     S s;
-    s.store = (int a) { return eff4(a); };
+    s.store = (int a) { return eff4(a)[0]; };
     auto x4 = s.fun();
     assert(x4 == 43);
 }
