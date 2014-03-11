@@ -9817,7 +9817,7 @@ unittest    // bug 9060
 auto tee(alias fun, Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, Range)(Range inputRange) 
     if (isInputRange!(Range) && is(typeof(unaryFun!fun)))
 {
-    struct Result(Range)
+    struct Result
     {
         private alias _fun = unaryFun!fun;
         private Range _input;
@@ -9897,7 +9897,7 @@ auto tee(alias fun, Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, Range)(Range inp
         }
     }
 
-    return Result!(Range)(inputRange);
+    return Result(inputRange);
 }
 
 unittest
