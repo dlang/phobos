@@ -576,11 +576,15 @@ package void doPut(R, E)(ref R r, auto ref E e)
         r.front = e;
         r.popFront();
     }
+    else static if (is(typeof(r(e))))
+    {
+        r(e);
+    }
     else
     {
-        static assert(is(typeof(r(e))),
+        import std.string;
+        static assert (false, 
             format("Cannot nativaly put a %s into a %s.", E.stringof, R.stringof));
-        r(e);
     }
 }
 
@@ -696,7 +700,10 @@ void put(R, E)(ref R r, E e)
         }
     }
     else
+    {
+        import std.string;
         static assert (false, format("Cannot put a %s into a %s.", E.stringof, R.stringof));
+    }
 }
 
 //Helper function to handle chars as quickly and as elegantly as possible
@@ -743,7 +750,10 @@ if (isSomeChar!E)
         encode!(C, R)(e, r);
     }
     else
+    {
+        import std.string;
         static assert (false, format("Cannot put a %s into a %s.", E.stringof, R.stringof));
+    }
 }
 
 pure unittest
