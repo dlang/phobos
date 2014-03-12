@@ -639,9 +639,7 @@ Throws: $(D Exception) if the file is not opened or if the call to $(D fflush) f
         import std.exception : enforce, errnoEnforce;
 
         enforce(isOpen, "Attempting to flush() in an unopened file");
-        errnoEnforce
-        (.fflush(enforce(_p.handle, "Calling fflush() on an unopened file"))
-                == 0);
+        errnoEnforce(.fflush(_p.handle) == 0);
     }
 
 /**
