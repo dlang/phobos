@@ -1190,7 +1190,7 @@ unittest //alias this test
 class ErrnoException : Exception
 {
     uint errno;                 // operating system error code
-    this(string msg, string file = null, size_t line = 0)
+    this(string msg, string file = null, size_t line = 0) @trusted
     {
         errno = .errno;
         version (linux)
