@@ -191,7 +191,7 @@ SRC_STD_C_OSX= std\c\osx\socket.d
 
 SRC_STD_C_FREEBSD= std\c\freebsd\socket.d
 
-SRC_STD_INTERNAL= std\internal\processinit.d std\internal\uni.d std\internal\uni_tab.d \
+SRC_STD_INTERNAL= std\internal\processinit.d \
 	std\internal\unicode_tables.d std\internal\unicode_comp.d std\internal\unicode_decomp.d \
 	std\internal\unicode_grapheme.d std\internal\unicode_norm.d std\internal\scopebuffer.d
 
@@ -454,8 +454,6 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -cov=70 -unittest -main -run std\net\isemail.d
 	$(DMD) -cov=2  -unittest -main -run std\net\curl.d
 	$(DMD) -cov=60 -unittest -main -run std\windows\registry.d
-	$(DMD) -cov=55 -unittest -main -run std\internal\uni.d
-	$(DMD) -cov=0  -unittest -main -run std\internal\uni_tab.d
 	$(DMD) -cov=0  -unittest -main -run std\internal\digest\sha_SSSE3.d
 	$(DMD) -cov=50 -unittest -main -run std\internal\math\biguintcore.d
 	$(DMD) -cov=75 -unittest -main -run std\internal\math\biguintnoasm.d
