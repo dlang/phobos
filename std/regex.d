@@ -1792,7 +1792,7 @@ struct Parser(R)
     //try to generate optimal IR code for this CodepointSet
     @trusted void charsetToIr(CodepointSet set)
     {//@@@BUG@@@ writeln is @system
-        uint chars = set.length;
+        uint chars = cast(uint)set.length;
         if(chars < Bytecode.maxSequence)
         {
             switch(chars)
