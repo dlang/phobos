@@ -535,9 +535,9 @@ If the file is not opened, returns $(D false). Otherwise, returns
 $(WEB cplusplus.com/reference/clibrary/cstdio/ferror.html, ferror) for
 the file handle.
  */
-    @property bool error() const pure nothrow
+    @property bool error() const @trusted pure nothrow
     {
-        return !_p.handle || .ferror(cast(FILE*) _p.handle);
+        return !isOpen || .ferror(cast(FILE*) _p.handle);
     }
 
 /**
@@ -634,10 +634,11 @@ for the file handle.
 
 Throws: $(D Exception) if the file is not opened or if the call to $(D fflush) fails.
  */
-    void flush()
+    void flush() @trusted
     {
         import std.exception : enforce, errnoEnforce;
 
+        enforce(isOpen, "Attempting to flush() in an unopened file");
         errnoEnforce
         (.fflush(enforce(_p.handle, "Calling fflush() on an unopened file"))
                 == 0);
