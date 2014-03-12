@@ -560,9 +560,7 @@ private struct MapResult(alias fun, Range)
     {
         @property auto save()
         {
-            auto result = this;
-            result._input = result._input.save;
-            return result;
+            return typeof(this)(_input.save);
         }
     }
 }
@@ -715,6 +713,12 @@ unittest
     static assert(hasSlicing!RR);
     rr = rr[6 .. $]; //Advances 1 cycle and 1 unit
     assert(equal(rr[0 .. 5], [1, 4, 9, 16, 0]));
+}
+
+unittest
+{
+    struct S {int* p;}
+    auto m = immutable(S).init.repeat().map!"a".save;
 }
 
 /**
