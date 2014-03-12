@@ -540,6 +540,18 @@ the file handle.
         return !isOpen || .ferror(cast(FILE*) _p.handle);
     }
 
+    unittest
+    {
+        // Issue 12349
+        static import std.file;
+        auto deleteme = testFilename();
+        auto f = File(deleteme, "w");
+        scope(exit) std.file.remove(deleteme);
+
+        f.close();
+        assert(f.error);
+    }
+
 /**
 Detaches from the underlying file. If the sole owner, calls $(D close).
 
@@ -640,6 +652,20 @@ Throws: $(D Exception) if the file is not opened or if the call to $(D fflush) f
 
         enforce(isOpen, "Attempting to flush() in an unopened file");
         errnoEnforce(.fflush(_p.handle) == 0);
+    }
+
+    unittest
+    {
+        // Issue 12349
+        static import std.file;
+        import std.exception: assertThrown;
+
+        auto deleteme = testFilename();
+        auto f = File(deleteme, "w");
+        scope(exit) std.file.remove(deleteme);
+
+        f.close();
+        assertThrown(f.flush());
     }
 
 /**
