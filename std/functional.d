@@ -348,31 +348,37 @@ Takes multiple functions and adjoins them together. The result is a
 $(XREF typecons, Tuple) with one element per passed-in function. Upon
 invocation, the returned tuple is the adjoined results of all
 functions.
+
+Note: In the special case where where only a single function is provided 
+($(D F.length == 1)), adjoin simply aliases to the single passed function
+($(D F[0])).
 */
 template adjoin(F...) if (F.length)
 {
-    auto adjoin(V...)(auto ref V a)
+    static if (F.length == 1)
     {
-        static if (F.length == 1)
-        {
-            return F[0](a);
-        }
-        else static if (F.length == 2)
-        {
-            import std.typecons : Tuple, tuple;
-            return tuple(F[0](a), F[1](a));
-        }
-        else
+        alias adjoin = F[0];
+    }
+    else
+    {
+        auto adjoin(V...)(auto ref V a)
         {
             import std.typecons : Tuple, tuple;
-            import std.conv : emplaceRef;
-            alias Head = typeof(F[0](a));
-            Tuple!(Head, typeof(.adjoin!(F[1..$])(a)).Types) result = void;
-            foreach (i, Unused; result.Types)
+            static if (F.length == 2)
             {
-                emplaceRef(result[i], F[i](a));
+                return tuple(F[0](a), F[1](a));
             }
-            return result;
+            else
+            {
+                import std.conv : emplaceRef;
+                alias Head = typeof(F[0](a));
+                Tuple!(Head, typeof(.adjoin!(F[1..$])(a)).Types) result = void;
+                foreach (i, Unused; result.Types)
+                {
+                    emplaceRef(result[i], F[i](a));
+                }
+                return result;
+            }
         }
     }
 }
