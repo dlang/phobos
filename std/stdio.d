@@ -3813,6 +3813,7 @@ version(linux)
     {
         import std.conv : to;
         import std.exception : enforce;
+        import std.string : toStringz;
 
         auto h = enforce( sock.gethostbyname(std.string.toStringz(host)),
             new StdioException("gethostbyname"));
