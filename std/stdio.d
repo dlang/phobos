@@ -1800,6 +1800,8 @@ the contents may well have changed).
 
         version(Win64)
         {
+            static import std.file;
+
             /* the C function tmpfile doesn't seem to work, even when called from C */ 
             auto deleteme = testFilename();
             auto file = File(deleteme, "w+");
