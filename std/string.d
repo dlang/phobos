@@ -148,7 +148,7 @@ unittest
     to it in your D code. Otherwise, it may go away during a garbage collection
     cycle and cause a nasty bug when the C code tries to use it.
   +/
-immutable(char)* toStringz(const(char)[] s) pure nothrow
+immutable(char)* toStringz(const(char)[] s) @trusted pure nothrow
 in
 {
     // The assert below contradicts the unittests!
@@ -191,7 +191,7 @@ body
 }
 
 /++ Ditto +/
-immutable(char)* toStringz(string s) pure nothrow
+immutable(char)* toStringz(string s) @trusted pure nothrow
 {
     if (s.empty) return "".ptr;
     /* Peek past end of s[], if it's 0, no conversion necessary.
@@ -210,7 +210,7 @@ immutable(char)* toStringz(string s) pure nothrow
     return toStringz(cast(const char[]) s);
 }
 
-unittest
+pure nothrow unittest
 {
     debug(string) printf("string.toStringz.unittest\n");
 
