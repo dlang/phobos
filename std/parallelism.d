@@ -345,15 +345,6 @@ private template reduceFinish(functions...)
     }
 }
 
-private template isAssignable(T)
-{
-    enum isAssignable = is(typeof({
-        T a;
-        T b;
-        a = b;
-    }));
-}
-
 private template isRoundRobin(R : RoundRobinBuffer!(C1, C2), C1, C2)
 {
     enum isRoundRobin = true;
