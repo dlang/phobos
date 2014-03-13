@@ -596,7 +596,7 @@ referring to the same handle will see a closed file henceforth.
 
 Throws: $(D ErrnoException) on error.
  */
-    void close()
+    void close() @trusted
     {
         import std.exception : errnoEnforce;
 
