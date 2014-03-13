@@ -2939,7 +2939,9 @@ Complexity: $(BIGOH slice.length)
     /// ditto
     void opSliceAssign(T value, size_t i, size_t j)
     {
-        auto slice = _data.refCountedStore.isInitialized ? _data._payload : T[].init;
+        auto slice = _data.refCountedStore.isInitialized ?
+            _data._payload :
+            T[].init;
         slice[i .. j] = value;
     }
 

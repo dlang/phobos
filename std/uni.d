@@ -5582,7 +5582,7 @@ Range byCodePoint(Range)(Range range)
 ///
 unittest
 {
-    import std.string : text;
+    import std.conv : text;
 
     string s = "noe\u0308l"; // noël
 

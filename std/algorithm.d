@@ -3145,6 +3145,8 @@ if (isSomeChar!C)
 
         void getFirst() pure @safe
         {
+            import std.uni : isWhite;
+
             auto r = find!(std.uni.isWhite)(_s);
             _frontLength = _s.length - r.length;
         }

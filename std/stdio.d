@@ -1716,7 +1716,7 @@ the contents may well have changed).
     unittest
     {
         static import std.file;
-        import std.algorithm : take, equal;
+        import std.algorithm : equal;
 
         //printf("Entering test at line %d\n", __LINE__);
         scope(failure) printf("Failed test at line %d\n", __LINE__);
@@ -1796,6 +1796,8 @@ the contents may well have changed).
 
     unittest
     {
+        import std.algorithm : equal;
+
         version(Win64)
         {
             /* the C function tmpfile doesn't seem to work, even when called from C */ 
@@ -2117,6 +2119,8 @@ $(D Range) that locks the file and allows fast writing to it.
             }
             else static if (c.sizeof == 2)
             {
+                import std.utf : toUTF8;
+
                 if (orientation <= 0)
                 {
                     if (c <= 0x7F)
@@ -2138,6 +2142,8 @@ $(D Range) that locks the file and allows fast writing to it.
             }
             else // 32-bit characters
             {
+                import std.utf : toUTF8;
+
                 if (orientation <= 0)
                 {
                     if (c <= 0x7F)
@@ -2223,6 +2229,8 @@ unittest
 
 unittest
 {
+    static import std.file;
+
     auto deleteme = testFilename();
     scope(exit) std.file.remove(deleteme);
 

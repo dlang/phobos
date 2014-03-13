@@ -1579,6 +1579,8 @@ struct BitArray
      */
     @property auto bitsSet()
     {
+        import std.algorithm : filter, map, joiner;
+
         return iota(dim).
                filter!(i => ptr[i]).
                map!(i => BitsSet!size_t(ptr[i], i * bitsPerSizeT)).
@@ -1588,6 +1590,8 @@ struct BitArray
     ///
     unittest
     {
+        import std.algorithm : equal;
+
         BitArray b1;
         b1.init([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
         assert(b1.bitsSet.equal([4, 5, 6, 7, 12, 13, 14, 15]));
@@ -1602,6 +1606,8 @@ struct BitArray
 
     unittest
     {
+        import std.algorithm : equal;
+
         debug(bitarray) printf("BitArray.bitsSet unittest\n");
         BitArray b;
         enum wordBits = size_t.sizeof * 8;
@@ -3635,6 +3641,8 @@ auto bitsSet(T)(T value)
 ///
 unittest
 {
+    import std.algorithm : equal;
+
     assert(bitsSet(1).equal([0]));
     assert(bitsSet(5).equal([0, 2]));
     assert(bitsSet(-1).equal(iota(32)));
@@ -3643,6 +3651,8 @@ unittest
 
 unittest
 {
+    import std.algorithm : equal;
+
     foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assert(bitsSet(cast(T)0).empty);
