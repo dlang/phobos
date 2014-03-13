@@ -7449,6 +7449,13 @@ unittest
     assert("aaab".matchFirst(r2).hit == "aaab");
 }
 
+//bugzilla 11784
+unittest
+{
+    assert("abcdefghijklmnopqrstuvwxyz"
+        .matchFirst("[a-z&&[^aeiuo]]").hit == "b");
+}
+
 // bugzilla 12582
 unittest
 {
