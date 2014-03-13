@@ -207,15 +207,11 @@ private bool atomicCasUbyte(ref ubyte stuff, ubyte testVal, ubyte newVal)
 /*--------------------- Generic helper functions, etc.------------------------*/
 private template MapType(R, functions...)
 {
-    static if(functions.length == 0)
-    {
-        alias MapType = typeof(unaryFun!(functions[0])(ElementType!R.init));
-    }
-    else
-    {
-        alias MapType = typeof(adjoin!(staticMap!(unaryFun, functions))
-                     (ElementType!R.init));
-    }
+    static assert(functions.length)
+
+    ElementType!R e = void;
+    alias MapType =
+        typeof(adjoin!(staticMap!(unaryFun, functions))(e));
 }
 
 private template ReduceType(alias fun, R, E)
@@ -1640,14 +1636,7 @@ public:
         auto amap(Args...)(Args args)
         if(isRandomAccessRange!(Args[0]))
         {
-            static if(functions.length == 1)
-            {
-                alias fun = unaryFun!(functions[0]);
-            }
-            else
-            {
-                alias fun = adjoin!(staticMap!(unaryFun, functions));
-            }
+            alias fun = adjoin!(staticMap!(unaryFun, functions));
 
             alias range = args[0];
             immutable len = range.length;
@@ -1821,14 +1810,7 @@ public:
         {
             enforce(workUnitSize == size_t.max || workUnitSize <= bufSize,
                     "Work unit size must be smaller than buffer size.");
-            static if(functions.length == 1)
-            {
-                alias fun = unaryFun!(functions[0]);
-            }
-            else
-            {
-                alias fun = adjoin!(staticMap!(unaryFun, functions));
-            }
+            alias fun = adjoin!(staticMap!(unaryFun, functions));
 
             static final class Map
             {
