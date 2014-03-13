@@ -4160,7 +4160,7 @@ private:
         import std.typecons;
         alias UT = Rebindable!T;
     }
-    else static if (is(T : Unqual!T))
+    else static if (is(T : Unqual!T) && is(Unqual!T : T))
         alias UT = Unqual!T;
     else
         alias UT = T;
