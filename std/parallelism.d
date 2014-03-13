@@ -207,7 +207,7 @@ private bool atomicCasUbyte(ref ubyte stuff, ubyte testVal, ubyte newVal)
 /*--------------------- Generic helper functions, etc.------------------------*/
 private template MapType(R, functions...)
 {
-    static assert(functions.length)
+    static assert(functions.length);
 
     ElementType!R e = void;
     alias MapType =
