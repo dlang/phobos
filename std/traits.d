@@ -5386,7 +5386,8 @@ unittest
 }
 
 /**
- * Tells whether the tuple T is an expression tuple.
+ * Check whether the tuple T is an expression tuple.
+ * An expression tuple only contains expressions. See also $(LREF isTypeTuple).
  */
 template isExpressionTuple(T ...)
 {
@@ -5399,6 +5400,14 @@ template isExpressionTuple(T ...)
             !is(T[0]) && __traits(compiles, { auto ex = T[0]; });
     else
         enum bool isExpressionTuple = true; // default
+}
+
+///
+unittest
+{
+    static assert(isExpressionTuple!(1, 2.0, "a"));
+    static assert(!isExpressionTuple!(int, double, string));
+    static assert(!isExpressionTuple!(int, 2.0, "a"));
 }
 
 unittest
@@ -5422,7 +5431,8 @@ unittest
 
 
 /**
-Detect whether tuple $(D T) is a type tuple.
+ * Check whether the tuple $(D T) is a type tuple.
+ * A type tuple only contains types. See also $(LREF isExpressionTuple).
  */
 template isTypeTuple(T...)
 {
@@ -5432,6 +5442,14 @@ template isTypeTuple(T...)
         enum bool isTypeTuple = is(T[0]);
     else
         enum bool isTypeTuple = true; // default
+}
+
+///
+unittest
+{
+    static assert(isTypeTuple!(int, float, string));
+    static assert(!isTypeTuple!(1, 2.0, "a"));
+    static assert(!isTypeTuple!(1, double, string));
 }
 
 unittest
