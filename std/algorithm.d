@@ -5055,21 +5055,19 @@ unittest
  * false).
  */
 bool findSkip(alias pred = "a == b", R, E)(ref R haystack, E needle)
-    if (isForwardRange!R &&
-        is(typeof(binaryFun!pred(haystack.front, needle)) : bool))
+if (isForwardRange!R &&
+    is(typeof(binaryFun!pred(haystack.front, needle))))
 {
     return findSkipImpl!pred(haystack, needle);
 }
 /// ditto
 bool findSkip(alias pred = "a == b", R1, R2)(ref R1 haystack, R2 needle)
-    if (isForwardRange!R1 && isForwardRange!R2 &&
-        is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
+if (isForwardRange!R1 && isForwardRange!R2 &&
+    is(typeof(binaryFun!pred(haystack.front, needle.front))))
 {
     return findSkipImpl!pred(haystack, needle);
 }
-//Both findSkip actually just forward to findSplitAfter, so they have the same
-//Implementation. There are two declarations of "findSkip", only for
-//documentation and template restraints reasons.
+
 private bool findSkipImpl(alias pred, R1, N)(ref R1 haystack, N needle)
 {
     auto parts = findSplitAfter!pred(haystack, needle);
@@ -5080,8 +5078,18 @@ private bool findSkipImpl(alias pred, R1, N)(ref R1 haystack, N needle)
 ///
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    string s = "abcdef";
+    assert(findSkip(s, "cd") && s == "ef");
+    s = "abcdef";
+    assert(!findSkip(s, "cxd") && s == "abcdef");
+    s = "abcdef";
+    assert(findSkip(s, "def") && s.empty);
+}
+
+unittest
+{
+    import std.string;
+
     {
         string s1 = "abcdef";
         string s2 = "abcdef";
@@ -5097,15 +5105,15 @@ unittest
     {
         string s1 = "abcdef";
         string s2 = "abcdef";
-        assert( findSkip(s1, "def") && s1 == "", text(`expected "", got `, s1));
-        assert( findSkip(s2,   'f') && s2 == "", text(`expected "", got `, s2));
+        assert( findSkip(s1, "def") && s1 == "", format(`expected "", got "%s"`, s1));
+        assert( findSkip(s2,   'f') && s2 == "", format(`expected "", got "%s"`, s2));
     }
 }
 
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    import std.string;
+
     {
         string s1 = "日本語";
         string s2 = "日本語";
@@ -5121,15 +5129,13 @@ unittest
     {
         string s1 = "日本語";
         string s2 = "日本語";
-        assert(findSkip(s1, "語") && s1 == "", text(`expected "", got `, s1));
-        assert(findSkip(s2, '語') && s2 == "", text(`expected "", got `, s2));
+        assert(findSkip(s1, "語") && s1 == "", format(`expected "", got "%s"`, s1));
+        assert(findSkip(s2, '語') && s2 == "", format(`expected "", got "%s"`, s2));
     }
 }
 
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto a = new ReferenceForwardRange!int([1, 2, 3]);
     a.findSkip([0]);
     assert(a.save.equal([1, 2, 3]));
@@ -5168,38 +5174,22 @@ If $(D haystack) is a random-access range, all three components of the
 tuple have the same type as $(D haystack). Otherwise, $(D haystack)
 must be a forward range and the type of $(D result[0]) and $(D
 result[1]) is the same as $(XREF range,takeExactly).
-
-Example:
-----
-auto a = "Carl Sagan Memorial Station";
-auto r = findSplit(a, "Velikovsky");
-assert(r[0] == a);
-assert(r[1].empty);
-assert(r[2].empty);
-r = findSplit(a, " ");
-assert(r[0] == "Carl");
-assert(r[1] == " ");
-assert(r[2] == "Sagan Memorial Station");
-auto r1 = findSplitBefore(a, "Sagan");
-assert(r1[0] == "Carl ", r1[0]);
-assert(r1[1] == "Sagan Memorial Station");
-auto r2 = findSplitAfter(a, "Sagan");
-assert(r2[0] == "Carl Sagan");
-assert(r2[1] == " Memorial Station");
-----
  */
 auto findSplit(alias pred = "a == b", R, E)(R haystack, E needle)
     if (isForwardRange!R &&
-        is(typeof(binaryFun!pred(haystack.front, needle)) : bool))
+        is(typeof(binaryFun!pred(haystack.front, needle))))
 {
-    static if (isSomeString!R || (isRandomAccessRange!R && hasSlicing!R && hasLength!R))
+    static if (isSomeString!R || (isRandomAccessRange!R && hasLength!R && hasSlicing!R))
     {
         auto balance = find!pred(haystack.save, needle);
         immutable pos1 = haystack.length - balance.length;
         static if (isNarrowString!R)
+        {
+            import std.utf : codeLength;
             immutable size_t needleLength = needle.codeLength!(ElementEncodingType!R)();
+        }
         else
-            immutable size_t needleLength = 1;
+            enum size_t needleLength = 1;
         immutable pos2 = pos1 + (balance.empty ? 0 : needleLength);
         return tuple(haystack[0 .. pos1],
                      haystack[pos1 .. pos2],
@@ -5228,7 +5218,7 @@ auto findSplit(alias pred = "a == b", R, E)(R haystack, E needle)
 /// ditto
 auto findSplit(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
     if (isForwardRange!R1 && isForwardRange!R2 &&
-        is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
+        is(typeof(binaryFun!pred(haystack.front, needle.front))))
 {
     static if ((isSomeString!R1 && isSomeString!R2)
             || (isRandomAccessRange!R1 && hasSlicing!R1 && hasLength!R1 && hasLength!R2))
@@ -5307,7 +5297,7 @@ auto findSplit(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 /// Ditto
 auto findSplitBefore(alias pred = "a == b", R, E)(R haystack, E needle)
     if (isForwardRange!R &&
-        is(typeof(binaryFun!pred(haystack.front, needle)) : bool))
+        is(typeof(binaryFun!pred(haystack.front, needle))))
 {
     static if (isSomeString!R || (isRandomAccessRange!R && hasSlicing!R && hasLength!R))
     {
@@ -5324,14 +5314,14 @@ auto findSplitBefore(alias pred = "a == b", R, E)(R haystack, E needle)
             if (binaryFun!pred(haystack.front, needle))
                 break;
         }
-        //This works in both cases actually.
+        //This works in both cases.
         return tuple(original.takeExactly(pos), haystack);
     }
 }
 /// Ditto
 auto findSplitBefore(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
     if (isForwardRange!R1 && isForwardRange!R2 &&
-        is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
+        is(typeof(binaryFun!pred(haystack.front, needle.front))))
 {
     static if ((isSomeString!R1 && isSomeString!R2)
             || (isRandomAccessRange!R1 && hasSlicing!R1 && hasLength!R1 && hasLength!R2))
@@ -5389,15 +5379,18 @@ auto findSplitBefore(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 /// Ditto
 auto findSplitAfter(alias pred = "a == b", R, E)(R haystack, E needle)
     if (isForwardRange!R &&
-        is(typeof(binaryFun!pred(haystack.front, needle)) : bool))
+        is(typeof(binaryFun!pred(haystack.front, needle))))
 {
     static if (isSomeString!R || (isRandomAccessRange!R && hasSlicing!R && hasLength!R))
     {
         auto balance = find!pred(haystack.save, needle);
         static if (isNarrowString!R)
+        {
+            import std.utf : codeLength;
             immutable size_t needleLength = needle.codeLength!(ElementEncodingType!R)();
+        }
         else
-            immutable size_t needleLength = 1;
+            enum size_t needleLength = 1;
         immutable pos = balance.empty ? 0 : (haystack.length - balance.length + needleLength);
         return tuple(haystack[0 .. pos], haystack[pos .. haystack.length]);
     }
@@ -5420,7 +5413,7 @@ auto findSplitAfter(alias pred = "a == b", R, E)(R haystack, E needle)
 /// Ditto
 auto findSplitAfter(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
     if (isForwardRange!R1 && isForwardRange!R2 &&
-        is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
+        is(typeof(binaryFun!pred(haystack.front, needle.front))))
 {
     static if ((isSomeString!R1 && isSomeString!R2)
             || (isRandomAccessRange!R1 && hasSlicing!R1 && hasLength!R1 && hasLength!R2))
@@ -5499,8 +5492,6 @@ unittest
 
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     //RA split on element
     auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
 
@@ -5530,8 +5521,6 @@ unittest
 
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     //Fwd reference split on element
     auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
     auto fwd = new ReferenceForwardRange!int(a);
@@ -5562,8 +5551,6 @@ unittest
 
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     //Check unicode with split element
     {
         //Standard RA string
@@ -5603,8 +5590,6 @@ unittest
 
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     //RA split range
     auto a = [ 1, 2, 1, 3, 1, 4 ];
 
@@ -5644,8 +5629,6 @@ unittest
 
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     //Forward Reference split range
     auto a = [ 1, 2, 1, 3, 1, 4 ];
     auto fwd = new ReferenceForwardRange!int(a);
@@ -5686,8 +5669,6 @@ unittest
 
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     //test reference text ranges
     auto a = new ReferenceForwardRange!(immutable(dchar))("Carl Sagan Memorial Station"d);
     auto n  = new ReferenceForwardRange!(immutable(dchar))("Velikovsky"d);
@@ -5716,8 +5697,6 @@ unittest
 
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     //test with infinite ranges
     auto h = new ReferenceInfiniteForwardRange!int(0);
     auto n = new ReferenceForwardRange!int([3, 4]);
@@ -5737,8 +5716,6 @@ unittest
 
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     //Test special case empty haystack/needle
     {
         int[] r;
@@ -5799,8 +5776,6 @@ unittest
 
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     //Try to confuse find split by matching at end/begining of range
     auto h = filter!"true"("abcd"d);
     auto nl = filter!"true"("ab"d);
