@@ -888,6 +888,12 @@ unittest
     BigUint a = [1];
     assert(a == 1);
     assert(a < 0x8000_0000_0000_0000UL); // bug 9548
+
+    // bug 12234
+    BigUint z = [0];
+    assert(z == 0UL);
+    assert(!(z > 0UL));
+    assert(!(z < 0UL));
 }
 
 // Remove leading zeros from x, to restore the BigUint invariant
