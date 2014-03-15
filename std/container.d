@@ -3915,6 +3915,9 @@ Removes the largest element from the heap.
         percolateDown(_store, 0, _length);
     }
 
+    /// ditto
+    alias popFront = removeFront;
+
 /**
 Removes the largest element from the heap and returns a copy of
 it. The element still resides in the heap's store. For performance
@@ -3965,16 +3968,24 @@ must be collected.
     }
 }
 
-///
+/// Example from "Introduction to Algorithms" Cormen et al, p 146
 unittest
 {
-    // Example from "Introduction to Algorithms" Cormen et al, p 146
     int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
     auto h = heapify(a);
     // largest element
     assert(h.front == 16);
     // a has the heap property
     assert(equal(a, [ 16, 14, 10, 8, 7, 9, 3, 2, 4, 1 ]));
+}
+
+/// $(D BinaryHeap) implements the standard input range interface, allowing
+/// lazy iteration of the underlying range in descending order.
+unittest
+{
+    int[] a = [4, 1, 3, 2, 16, 9, 10, 14, 8, 7];
+    auto top5 = heapify(a).take(5);
+    assert(top5.equal([16, 14, 10, 9, 8]));
 }
 
 /**
@@ -4014,6 +4025,15 @@ unittest
         }
         assert(b == [ 16, 14, 10, 8, 7, 3, 9, 1, 4, 2 ], text(b));
     }
+}
+
+unittest
+{
+    // Test range interface.
+    int[] a = [4, 1, 3, 2, 16, 9, 10, 14, 8, 7];
+    auto h = heapify(a);
+    static assert(isInputRange!(typeof(h)));
+    assert(h.equal([16, 14, 10, 9, 8, 7, 4, 3, 2, 1]));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
