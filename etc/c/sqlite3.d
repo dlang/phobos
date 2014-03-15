@@ -1,3 +1,4 @@
+/// <script type="text/javascript">inhibitQuickIndex = 1</script>
 module etc.c.sqlite3;
 /*
 ** 2001 September 15
