@@ -66,11 +66,12 @@
         but for user-defined data sets.
     )
     $(LI
-        Another useful building block for Unicode-aware parsers is avoiding unnecesary
-        UTF decoding yet performing character classification of encoded $(CODEPOINTS).
-        $(LREF utfMatcher) provides an improvement over the usual workflow 
-        of decode-classify-process, combining decoding and classification steps.
-        By extracting necessary bits directly from encoded
+        A useful technique for Unicode-aware parsers that perform
+        character classification of encoded $(CODEPOINTS)
+        is to avoid unnecassary decoding at all costs.
+        $(LREF UtfMatcher) provides an improvement over the usual workflow
+        of decode-classify-process, combining the decoding and classification
+        steps. By extracting necessary bits directly from encoded
         $(S_LINK Code unit, code units) matchers achieve 
         significant performance improvements. See $(LREF MatcherConcept) for
         the common interface of UTF matchers.
