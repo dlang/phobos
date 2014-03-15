@@ -8430,8 +8430,6 @@ if (isInputRange!Range)
         alias opDollar = length;
     }
 
-    alias opDollar = length;
-
 /**
    Releases the controlled range and returns it.
 */
