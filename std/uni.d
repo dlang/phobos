@@ -66,11 +66,12 @@
         but for user-defined data sets.
     )
     $(LI
-        Another useful building block for Unicode-aware parsers is avoiding unnecesary
-        UTF decoding yet performing character classification of encoded $(CODEPOINTS).
-        $(LREF utfMatcher) provides an improvement over the usual workflow
-        of decode-classify-process, combining decoding and classification steps.
-        By extracting necessary bits directly from encoded
+        A useful technique for Unicode-aware parsers that perform
+        character classification of encoded $(CODEPOINTS)
+        is to avoid unnecassary decoding at all costs.
+        $(LREF UtfMatcher) provides an improvement over the usual workflow
+        of decode-classify-process, combining the decoding and classification
+        steps. By extracting necessary bits directly from encoded
         $(S_LINK Code unit, code units) matchers achieve
         significant performance improvements. See $(LREF MatcherConcept) for
         the common interface of UTF matchers.
@@ -2683,7 +2684,7 @@ private:
         alias Ival = CodepointInterval;
         // intervals wrapper for a _range_ over packed array
         auto ivals = Intervals!(typeof(data[]))(data[]);
-        //@@@BUG@@@ can't use "a.a < b.a" see issue 12265 
+        //@@@BUG@@@ can't use "a.a < b.a" see issue 12265
         sort!((a,b) => a.a < b.a, SwapStrategy.stable)(ivals);
         // what follows is a variation on stable remove
         // differences:
@@ -4418,7 +4419,7 @@ struct clampIdx(size_t idx, size_t bits)
     Conceptual type that outlines the common properties of all UTF Matchers.
 
     Note: For illustration purposes only, every method
-    call results in assertion failure. 
+    call results in assertion failure.
     Use $(LREF utfMatcher) to obtain a concrete matcher
     for UTF-8 or UTF-16 encodings.
 */
