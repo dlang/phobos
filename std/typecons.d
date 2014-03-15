@@ -3536,7 +3536,7 @@ unittest
     static assert(is(DerivedFunctionType!(F17, F18) == void));
 }
 
-private template staticIota(int beg, int end)
+package template staticIota(int beg, int end)
 {
     static if (beg + 1 >= end)
     {
