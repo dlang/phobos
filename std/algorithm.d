@@ -2999,7 +2999,7 @@ private struct SplitterResult(alias isTerminator, Range)
         static if (fullSlicing)
             return _input[0 .. _end];
         else
-            return _input.save.takeExactly(_end);
+            return _input.takeExactly(_end);
     }
 
     void popFront()
