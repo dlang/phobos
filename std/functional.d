@@ -353,32 +353,30 @@ Note: In the special case where where only a single function is provided
 ($(D F.length == 1)), adjoin simply aliases to the single passed function
 ($(D F[0])).
 */
-template adjoin(F...) if (F.length)
+template adjoin(F...) if (F.length == 1)
 {
-    static if (F.length == 1)
+    alias adjoin = F[0];
+}
+/// ditto
+template adjoin(F...) if (F.length > 1)
+{
+    auto adjoin(V...)(auto ref V a)
     {
-        alias adjoin = F[0];
-    }
-    else
-    {
-        auto adjoin(V...)(auto ref V a)
+        import std.typecons : Tuple, tuple;
+        static if (F.length == 2)
         {
-            import std.typecons : Tuple, tuple;
-            static if (F.length == 2)
+            return tuple(F[0](a), F[1](a));
+        }
+        else
+        {
+            import std.conv : emplaceRef;
+            alias Head = typeof(F[0](a));
+            Tuple!(Head, typeof(.adjoin!(F[1..$])(a)).Types) result = void;
+            foreach (i, Unused; result.Types)
             {
-                return tuple(F[0](a), F[1](a));
+                emplaceRef(result[i], F[i](a));
             }
-            else
-            {
-                import std.conv : emplaceRef;
-                alias Head = typeof(F[0](a));
-                Tuple!(Head, typeof(.adjoin!(F[1..$])(a)).Types) result = void;
-                foreach (i, Unused; result.Types)
-                {
-                    emplaceRef(result[i], F[i](a));
-                }
-                return result;
-            }
+            return result;
         }
     }
 }
