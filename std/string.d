@@ -137,9 +137,11 @@ unittest
 }
 
 /++
-    Returns a $(D string) slice of a C-style null-terminated string.
+    Returns a D-style array of $(D char) given a zero-terminated C-style string.
+    The returned array will retain the same type qualifiers as the input.
 
-    $(RED Important Note:) The returned $(D string) is a slice of the original buffer.
+    $(RED Important Note:) The returned array is a slice of the original buffer.
+    The original data is not changed and not copied.
 +/
 
 inout(char)[] fromStringz(inout(char)* cString) @system pure {
