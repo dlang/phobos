@@ -66,14 +66,14 @@
         but for user-defined data sets.
     )
     $(LI
-        Another useful building block for Unicode-aware parsers is avoiding wasteful
+        Another useful building block for Unicode-aware parsers is avoiding unnecesary
         UTF decoding yet performing character classification of encoded $(CODEPOINTS).
         $(LREF utfMatcher) provides an improvement over the usual workflow 
-        of decode-classify-process, combining decode and classify steps. 
-        By extracting nessary bits directly from encoded 
+        of decode-classify-process, combining decoding and classification steps.
+        By extracting necessary bits directly from encoded
         $(S_LINK Code unit, code units) matchers achieve 
-        significant performance improvement. See $(LREF MatcherConcept) for
-        common interface of UTF matchers.
+        significant performance improvements. See $(LREF MatcherConcept) for
+        the common interface of UTF matchers.
     )
     $(LI
         Generally useful building blocks for customized normalization:
@@ -1999,7 +1999,7 @@ public:
     /**
         Construct a set from a forward range of code point intervals.
     */
-    this(Range)(Range intervals) /*pure */ //@@@BUG@@@ sort is not pure
+    this(Range)(Range intervals) pure
         if(isForwardRange!Range && isIntegralPair!(ElementType!Range))
     {
         auto flattened = roundRobin(intervals.save.map!"a[0]"(),
@@ -2022,9 +2022,9 @@ public:
     in
     {
         assert(intervals.length % 2 == 0, "Odd number of interval bounds [a, b)!");
-        for(uint i=0; i<intervals.length/2; i++)
+        for (uint i = 0; i < intervals.length; i += 2)
         {
-            auto a = intervals[2*i], b = intervals[2*i+1];
+            auto a = intervals[i], b = intervals[i+1];
             assert(a < b, text("illegal interval [a, b): ", a, " > ", b));
         }
     }
@@ -2056,9 +2056,9 @@ public:
     in
     {
         assert(intervals.length % 2 == 0, "Odd number of interval bounds [a, b)!");
-        for(uint i=0; i<intervals.length/2; i++)
+        for (uint i = 0; i < intervals.length; i += 2)
         {
-            auto a = intervals[2*i], b = intervals[2*i+1];
+            auto a = intervals[i], b = intervals[i+1];
             assert(a < b, text("illegal interval [a, b): ", a, " > ", b));
         }
     }
@@ -2683,7 +2683,8 @@ private:
         alias Ival = CodepointInterval;
         //intervals wrapper for a _range_ over packed array
         auto ivals = Intervals!(typeof(data[]))(data[]);
-        sort!("a.a < b.a", SwapStrategy.stable)(ivals);
+        //@@@BUG@@@ can't use "a.a < b.a" see issue 12265 
+        sort!((a,b) => a.a < b.a, SwapStrategy.stable)(ivals);
         // what follows is a variation on stable remove
         // differences:
         // - predicate is binary, and is tested against
@@ -4385,7 +4386,7 @@ public template buildTrie(Value, Key, Args...)
     }
 }
 
-//helper in place of assumeSize to 
+// helper in place of assumeSize to
 //reduce mangled name & help DMD inline Trie functors
 struct clamp(size_t bits)
 {
@@ -4400,16 +4401,17 @@ struct clampIdx(size_t idx, size_t bits)
 }
 
 /**
-    Conceptual struct that outlines common properties of any UTF Matcher.
+    Conceptual type that outlines the common properties of all UTF Matchers.
 
     Note: For illustration purposes only, every method
-    call results in assert fail. Use $(LREF utfMatcher) to obtain concrete matcher
+    call results in assertion failure. 
+    Use $(LREF utfMatcher) to obtain a concrete matcher
     for UTF-8 or UTF-16 encodings.
 */
 public struct MatcherConcept
 {
     /**
-        $(P Perform a sematic equivalent 2 operations:
+        $(P Perform a semantic equivalent 2 operations:
         decoding a $(CODEPOINT) at front of $(D inp) and testing if  
         it belongs to the set of $(CODEPOINTS) of this matcher. )
 
@@ -4502,9 +4504,9 @@ public struct MatcherConcept
 }
 
 /**
-    Test if $(D M) is a Matcher for ranges of $(D Char).
+    Test if $(D M) is an UTF Matcher for ranges of $(D Char).
 */
-public enum isMatcher(M, C) = __traits(compiles, (){    
+public enum isUtfMatcher(M, C) = __traits(compiles, (){
     C[] s;
     auto d = s.decoder;
     M m;
@@ -4523,10 +4525,10 @@ unittest
 {
     alias CharMatcher = typeof(utfMatcher!char(CodepointSet.init));
     alias WcharMatcher = typeof(utfMatcher!wchar(CodepointSet.init));
-    static assert(isMatcher!(CharMatcher, char));
-    static assert(isMatcher!(CharMatcher, immutable(char)));
-    static assert(isMatcher!(WcharMatcher, wchar));
-    static assert(isMatcher!(WcharMatcher, immutable(wchar)));
+    static assert(isUtfMatcher!(CharMatcher, char));
+    static assert(isUtfMatcher!(CharMatcher, immutable(char)));
+    static assert(isUtfMatcher!(WcharMatcher, wchar));
+    static assert(isUtfMatcher!(WcharMatcher, immutable(wchar)));
 }
 
 enum Mode {
@@ -4794,7 +4796,7 @@ template Utf16Matcher()
     }
 
     alias Seq = TypeTuple;
-    //1-stage ASCII    
+    // 1-stage ASCII
     alias AsciiSpec = Seq!(bool, wchar, clamp!7);
     //2-stage BMP
     alias BmpSpec = Seq!(bool, wchar, sliceBits!(7, 16), sliceBits!(0, 7));
