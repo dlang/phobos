@@ -362,21 +362,20 @@ template adjoin(F...) if (F.length > 1)
 {
     auto adjoin(V...)(auto ref V a)
     {
-        import std.typecons : Tuple, tuple;
+        import std.typecons : tuple;
         static if (F.length == 2)
         {
             return tuple(F[0](a), F[1](a));
         }
+        else static if (F.length == 3)
+        {
+            return tuple(F[0](a), F[1](a), F[2](a));
+        }
         else
         {
-            import std.conv : emplaceRef;
-            alias Head = typeof(F[0](a));
-            Tuple!(Head, typeof(.adjoin!(F[1..$])(a)).Types) result = void;
-            foreach (i, Unused; result.Types)
-            {
-                emplaceRef(result[i], F[i](a));
-            }
-            return result;
+            import std.string : format;
+            import std.range : iota;
+            return mixin (q{tuple(%(F[%s](a)%|, %))}.format(iota(0, F.length)));
         }
     }
 }
@@ -416,6 +415,25 @@ unittest
     s.store = (int a) { return eff4(a); };
     auto x4 = s.fun();
     assert(x4 == 43);
+}
+
+unittest
+{
+    import std.typetuple : staticMap;
+    import std.typecons : Tuple, tuple;
+    alias funs = staticMap!(unaryFun, "a", "a * 2", "a * 3", "a * a", "-a");
+    alias afun = adjoin!funs;
+    assert(afun(5) == tuple(5, 10, 15, 25, -5));
+
+    static class C{}
+    alias IC = immutable(C);
+    IC foo(){return typeof(return).init;}
+    Tuple!(IC, IC, IC, IC) ret1 = adjoin!(foo, foo, foo, foo)();
+
+    static struct S{int* p;}
+    alias IS = immutable(S);
+    IS bar(){return typeof(return).init;}
+    enum Tuple!(IS, IS, IS, IS) ret2 = adjoin!(bar, bar, bar, bar)();
 }
 
 // /*private*/ template NaryFun(string fun, string letter, V...)
