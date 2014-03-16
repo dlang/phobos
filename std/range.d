@@ -8879,7 +8879,7 @@ unittest
     f.open(name);
     auto r = assumeSorted(f.byLine());
     auto r1 = r.upperBound!(SearchPolicy.linear)("def");
-    assert(r1.front == "ghi");
+    assert(r1.front == "ghi", r1.front);
 }
 
 /**
