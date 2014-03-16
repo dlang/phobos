@@ -1677,14 +1677,16 @@ if (isNumeric!Num && isForwardRange!Rng)
 
 /// Ditto
 size_t dice(R, Range)(ref R rnd, Range proportions)
-if (isForwardRange!Range && isNumeric!(ElementType!Range) && !isArray!Range)
+if (!isInstanceOf!(SortedRange, Range) && isForwardRange!Range
+    && isNumeric!(ElementType!Range) && !isArray!Range)
 {
     return diceImpl(rnd, proportions);
 }
 
 /// Ditto
 size_t dice(Range)(Range proportions)
-if (isForwardRange!Range && isNumeric!(ElementType!Range) && !isArray!Range)
+if (!isInstanceOf!(SortedRange, Range) && isForwardRange!Range
+    && isNumeric!(ElementType!Range) && !isArray!Range)
 {
     return diceImpl(rndGen, proportions);
 }
@@ -1697,7 +1699,8 @@ if (isNumeric!Num)
 }
 
 private size_t diceImpl(Rng, Range)(ref Rng rng, Range proportions)
-if (isForwardRange!Range && isNumeric!(ElementType!Range) && isForwardRange!Rng)
+if (isForwardRange!Range && !isInstanceOf!(SortedRange, Range)
+    && isNumeric!(ElementType!Range) && isForwardRange!Rng)
 {
     double sum = reduce!("(assert(b >= 0), a + b)")(0.0, proportions.save);
     enforce(sum > 0, "Proportions in a dice cannot sum to zero");
@@ -1726,6 +1729,125 @@ unittest
 
     i = dice(100U, 0U);
     assert(i == 0);
+}
+
+/**
+Alternative form of dice that accepts a cumulative sum range of probabilities,
+$(D cumulativeRange), which is given as a $(D SortedRange). Returns the index
+of the item chosen.
+
+Example:
+---
+auto cumulativeArr = iota(10, 20).assumeSorted();
+auto chosen = dice(cumulativeArr);
+// higher chance of chosen being 0 than not.
+---
+*/
+size_t dice(Rng, Range)(ref Rng rng, Range cumulativeRange)
+if (isUniformRNG!Rng
+    && isInstanceOf!(SortedRange, Range) && isNumeric!(ElementType!Range))
+{
+    return diceImpl(rng, cumulativeRange);
+}
+
+/// ditto
+size_t dice(Range)(Range cumulativeRange)
+if (isInstanceOf!(SortedRange, Range) && isNumeric!(ElementType!Range))
+{
+    return diceImpl(rndGen, cumulativeRange);
+}
+
+template isAscending(Range)
+if (isInstanceOf!(SortedRange, Range) && isNumeric!(ElementType!Range))
+{
+    static if (is(Range == SortedRange!TL, TL...))
+    {
+        alias pred = std.functional.binaryFun!(TL[1]);
+        alias T = ElementType!Range;
+        static if (isFloatingPoint!T)
+        {
+            enum isAscending = pred(T.min_normal, T.max);
+        }
+        else
+        {
+            enum isAscending = pred(T.min, T.max);
+        }
+    }
+    else
+        static assert(false);
+}
+
+private size_t diceImpl(Rng, Range)(ref Rng rng, Range cumulativeRange)
+if (isUniformRNG!Rng
+    && isInstanceOf!(SortedRange, Range) && isNumeric!(ElementType!Range))
+{
+    static if (isAscending!Range)
+    {
+        immutable sum = cumulativeRange.back;
+    }
+    else
+    {
+        immutable sum = cumulativeRange.front;
+    }
+
+    enforce(sum > 0, "Proportions in a dice cannot sum to zero");
+    immutable point = uniform(0, sum, rng);
+    assert(point < sum);
+
+    static if (isAscending!Range)
+    {
+        return cumulativeRange.length - cumulativeRange.upperBound!(SearchPolicy.binarySearch)(point).length;
+    }
+    else // is descending
+    {
+        return cumulativeRange.lowerBound!(SearchPolicy.binarySearch)(point).length - 1;
+    }
+}
+
+unittest
+{
+    auto rnd = Random(unpredictableSeed);
+    /+alias AcceptedTypes = TypeTuple!(
+                ubyte, ushort, uint, ulong,
+                byte, short, int, long,
+                float, double, real);+/
+
+    // subset of above to speed up compilation
+    alias AcceptedTypes = TypeTuple!(ushort, int, double);
+
+    auto answers = iota(5);
+    foreach (TestType; AcceptedTypes)
+    {
+        // Testing sorted by "a < b"
+        foreach (answer; answers)
+        {
+            auto testData = chain(repeat(cast(TestType) 0).take(answer),
+                    repeat(cast(TestType) 1).take(answers.length - answer));
+            auto chosen = dice(rnd, testData.array().assumeSorted());
+            assert(chosen == answer);
+        }
+        // Testing sorted by "a > b"
+        foreach (answer; answers)
+        {
+            auto testData = chain(repeat(cast(TestType) 1).take(answer + 1),
+                    repeat(cast(TestType) 0).take(answers.length - answer - 1));
+            auto chosen = dice(rnd, testData.array().assumeSorted!"a > b"());
+            assert(chosen == answer);
+        }
+
+        // Test for equivalence with standard dice
+        foreach (i; iota(100))
+        {
+            auto reproRnd1 = Random(14823+i);
+            auto reproRnd2 = reproRnd1.save;
+            auto stdDice    = dice(reproRnd1,
+                    repeat(cast(TestType) 1).take(100));
+            auto sortedDice = dice(reproRnd2,
+                    iota(cast(TestType) 1, cast(TestType) 101).assumeSorted());
+            assert(stdDice == sortedDice);
+        }
+    }
+    
 }
 
 /**
