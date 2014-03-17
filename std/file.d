@@ -23,7 +23,7 @@ import core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
        core.stdc.errno, std.algorithm, std.array, std.conv,
        std.datetime, std.exception, std.format, std.path, std.process,
        std.range, std.stdio, std.string, std.traits,
-       std.typecons, std.typetuple, std.utf;
+       std.typecons, std.typetuple, std.utf, std.internal.scopebuffer;
 
 
 version (Windows)
@@ -173,7 +173,7 @@ void main()
 }
 ----
 
-Returns: Untyped array of bytes _read.
+Returns: GC allocated untyped array of bytes _read.
 
 Throws: $(D FileException) on error.
  */
@@ -186,7 +186,11 @@ void[] read(in char[] name, size_t upTo = size_t.max)
                 FILE_SHARE_READ, (SECURITY_ATTRIBUTES*).init, OPEN_EXISTING,
                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
                 HANDLE.init);
-        auto h = CreateFileW(std.utf.toUTF16z(name), defaults);
+
+        wchar[64] tmpbuf = void;
+        auto sz = ScopeBuffer!wchar(tmpbuf);
+        scope(exit) sz.free();
+        auto h = CreateFileW(name.toUTFWz(sz), defaults);
 
         cenforce(h != INVALID_HANDLE_VALUE, name);
         scope(exit) cenforce(CloseHandle(h), name);
@@ -211,7 +215,10 @@ void[] read(in char[] name, size_t upTo = size_t.max)
             maxSlackMemoryAllowed = 1024;
         // }
 
-        immutable fd = core.sys.posix.fcntl.open(toStringz(name),
+        char[64] tmpbuf = void;
+        auto sz = ScopeBuffer!char(tmpbuf);
+        scope(exit) sz.free();
+        immutable fd = core.sys.posix.fcntl.open(name.toUTFCz(sz),
                 core.sys.posix.fcntl.O_RDONLY);
         cenforce(fd != -1, name);
         scope(exit) core.sys.posix.unistd.close(fd);
@@ -320,7 +327,10 @@ void write(in char[] name, const void[] buffer)
             TypeTuple!(GENERIC_WRITE, 0, null, CREATE_ALWAYS,
                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
                 HANDLE.init);
-        auto h = CreateFileW(std.utf.toUTF16z(name), defaults);
+        wchar[64] tmpbuf = void;
+        auto sz = ScopeBuffer!wchar(tmpbuf);
+        scope(exit) sz.free();
+        auto h = CreateFileW(name.toUTFWz(sz), defaults);
 
         cenforce(h != INVALID_HANDLE_VALUE, name);
         scope(exit) cenforce(CloseHandle(h), name);
@@ -359,7 +369,10 @@ void append(in char[] name, in void[] buffer)
             TypeTuple!(GENERIC_WRITE,0,null,OPEN_ALWAYS,
                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,HANDLE.init);
 
-        auto h = CreateFileW(std.utf.toUTF16z(name), defaults);
+        wchar[64] tmpbuf = void;
+        auto sz = ScopeBuffer!wchar(tmpbuf);
+        scope(exit) sz.free();
+        auto h = CreateFileW(name.toUTFWz(sz), defaults);
 
         cenforce(h != INVALID_HANDLE_VALUE, name);
         scope(exit) cenforce(CloseHandle(h), name);
@@ -378,7 +391,10 @@ void append(in char[] name, in void[] buffer)
 version(Posix) private void writeImpl(in char[] name,
         in void[] buffer, in uint mode)
 {
-    immutable fd = core.sys.posix.fcntl.open(toStringz(name),
+    char[64] tmpbuf = void;
+    auto sz = ScopeBuffer!char(tmpbuf);
+    scope(exit) sz.free();
+    immutable fd = core.sys.posix.fcntl.open(name.toUTFCz(sz),
             mode, octal!666);
     cenforce(fd != -1, name);
     {
@@ -400,13 +416,29 @@ void rename(in char[] from, in char[] to)
 {
     version(Windows)
     {
-        enforce(MoveFileExW(std.utf.toUTF16z(from), std.utf.toUTF16z(to), MOVEFILE_REPLACE_EXISTING),
+        wchar[64] tmpbuf = void;
+        auto sz = ScopeBuffer!wchar(tmpbuf);
+        scope(exit) sz.free();
+        from.toUTFWz(sz);
+        auto fromlen = sz.length;
+        auto p = to.toUTFWz(sz);
+        auto result = MoveFileExW(p, p + fromlen, MOVEFILE_REPLACE_EXISTING);
+        enforce(result,
                 new FileException(
                     text("Attempting to rename file ", from, " to ",
                             to)));
     }
     else version(Posix)
-        cenforce(core.stdc.stdio.rename(toStringz(from), toStringz(to)) == 0, to);
+    {
+        char[64] tmpbuf = void;
+        auto sz = ScopeBuffer!char(tmpbuf);
+        scope(exit) sz.free();
+        from.toUTFCz(sz);
+        auto fromlen = sz.length();
+        auto p = to.toUTFCz(sz);              // points to 0 terminated from[]
+        auto result = core.stdc.stdio.rename(p, p + fromlen);
+        cenforce(result == 0, to);
+    }
 }
 
 unittest
@@ -430,17 +462,31 @@ void remove(in char[] name)
 {
     version(Windows)
     {
-        cenforce(DeleteFileW(std.utf.toUTF16z(name)), name);
+        wchar[64] tmpbuf = void;
+        auto sz = ScopeBuffer!wchar(tmpbuf);
+        scope(exit) sz.free();
+        auto result = DeleteFileW(name.toUTFWz(sz));
+        cenforce(result, name);
     }
     else version(Posix)
-        cenforce(core.stdc.stdio.remove(toStringz(name)) == 0,
+    {
+        char[64] tmpbuf = void;
+        auto sz = ScopeBuffer!char(tmpbuf);
+        scope(exit) sz.free();
+        auto result = core.stdc.stdio.remove(name.toUTFCz(sz));
+        cenforce(result == 0,
             "Failed to remove file " ~ name);
+    }
 }
 
 version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(in char[] name)
 {
     WIN32_FILE_ATTRIBUTE_DATA fad;
-    enforce(GetFileAttributesExW(std.utf.toUTF16z(name), GET_FILEEX_INFO_LEVELS.GetFileExInfoStandard, &fad), new FileException(name.idup));
+    wchar[64] tmpbuf = void;
+    auto sz = ScopeBuffer!wchar(tmpbuf);
+    scope(exit) sz.free();
+    auto result = GetFileAttributesExW(name.toUTFWz(sz), GET_FILEEX_INFO_LEVELS.GetFileExInfoStandard, &fad);
+    enforce(result, new FileException(name.idup));
     return fad;
 }
 
@@ -467,7 +513,7 @@ ulong getSize(in char[] name)
     else version(Posix)
     {
         stat_t statbuf = void;
-        cenforce(stat(toStringz(name), &statbuf) == 0, name);
+        cenforce(dstat(name, &statbuf) == 0, name);
         return statbuf.st_size;
     }
 }
@@ -511,7 +557,7 @@ void getTimes(in char[] name,
     {
         stat_t statbuf = void;
 
-        cenforce(stat(toStringz(name), &statbuf) == 0, name);
+        cenforce(dstat(name, &statbuf) == 0, name);
 
         accessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
         modificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
@@ -696,7 +742,10 @@ void setTimes(in char[] name,
                          FILE_ATTRIBUTE_DIRECTORY |
                          FILE_FLAG_BACKUP_SEMANTICS,
                          HANDLE.init);
-        auto h = CreateFileW(std.utf.toUTF16z(name), defaults);
+        wchar[64] tmpbuf = void;
+        auto sz = ScopeBuffer!wchar(tmpbuf);
+        scope(exit) sz.free();
+        auto h = CreateFileW(name.toUTFWz(sz), defaults);
 
         cenforce(h != INVALID_HANDLE_VALUE, name);
 
@@ -712,7 +761,11 @@ void setTimes(in char[] name,
         t[0] = accessTime.toTimeVal();
         t[1] = modificationTime.toTimeVal();
 
-        cenforce(utimes(toStringz(name), t) == 0, name);
+        char[64] tmpbuf = void;
+        auto sz = ScopeBuffer!char(tmpbuf);
+        scope(exit) sz.free();
+        auto result = utimes(name.toUTFCz(sz), t);
+        cenforce(result == 0, name);
     }
 }
 
@@ -761,7 +814,7 @@ SysTime timeLastModified(in char[] name)
     {
         stat_t statbuf = void;
 
-        cenforce(stat(toStringz(name), &statbuf) == 0, name);
+        cenforce(dstat(name, &statbuf) == 0, name);
 
         return SysTime(unixTimeToStdTime(statbuf.st_mtime));
     }
@@ -816,7 +869,7 @@ SysTime timeLastModified(in char[] name, SysTime returnIfMissing)
     {
         stat_t statbuf = void;
 
-        return stat(toStringz(name), &statbuf) != 0 ?
+        return dstat(name, &statbuf) != 0 ?
                returnIfMissing :
                SysTime(unixTimeToStdTime(statbuf.st_mtime));
     }
@@ -851,7 +904,11 @@ bool exists(in char[] name) @trusted
     {
 // http://msdn.microsoft.com/library/default.asp?url=/library/en-us/
 // fileio/base/getfileattributes.asp
-        return GetFileAttributesW(std.utf.toUTF16z(name)) != 0xFFFFFFFF;
+        wchar[64] tmpbuf = void;
+        auto sz = ScopeBuffer!wchar(tmpbuf);
+        scope(exit) sz.free();
+        auto result = GetFileAttributesW(name.toUTFWz(sz));
+        return result != 0xFFFFFFFF;
     }
     else version(Posix)
     {
@@ -876,7 +933,7 @@ bool exists(in char[] name) @trusted
         */
 
         stat_t statbuf = void;
-        return lstat(toStringz(name), &statbuf) == 0;
+        return dlstat(name, &statbuf) == 0;
     }
 }
 
@@ -914,7 +971,10 @@ uint getAttributes(in char[] name)
 {
     version(Windows)
     {
-        immutable result = GetFileAttributesW(std.utf.toUTF16z(name));
+        wchar[64] tmpbuf = void;
+        auto sz = ScopeBuffer!wchar(tmpbuf);
+        scope(exit) sz.free();
+        immutable result = GetFileAttributesW(name.toUTFWz(sz));
 
         enforce(result != uint.max, new FileException(name.idup));
 
@@ -924,7 +984,7 @@ uint getAttributes(in char[] name)
     {
         stat_t statbuf = void;
 
-        cenforce(stat(toStringz(name), &statbuf) == 0, name);
+        cenforce(dstat(name, &statbuf) == 0, name);
 
         return statbuf.st_mode;
     }
@@ -956,7 +1016,7 @@ uint getLinkAttributes(in char[] name)
     else version(Posix)
     {
         stat_t lstatbuf = void;
-        cenforce(lstat(toStringz(name), &lstatbuf) == 0, name);
+        cenforce(dlstat(name, &lstatbuf) == 0, name);
         return lstatbuf.st_mode;
     }
 }
@@ -972,12 +1032,20 @@ void setAttributes(in char[] name, uint attributes)
 {
     version (Windows)
     {
-        cenforce(SetFileAttributesW(std.utf.toUTF16z(name), attributes), name);
+        wchar[64] tmpbuf = void;
+        auto sz = ScopeBuffer!wchar(tmpbuf);
+        scope(exit) sz.free();
+        auto result = SetFileAttributesW(name.toUTFWz(sz), attributes);
+        cenforce(result, name);
     }
     else version (Posix)
     {
         assert(attributes <= mode_t.max);
-        cenforce(!chmod(toStringz(name), cast(mode_t)attributes), name);
+        char[64] tmpbuf = void;
+        auto sz = ScopeBuffer!char(tmpbuf);
+        scope(exit) sz.free();
+        auto result = chmod(name.toUTFCz(sz), cast(mode_t)attributes);
+        cenforce(!result, name);
     }
 }
 
@@ -1337,12 +1405,20 @@ void chdir(in char[] pathname)
 {
     version(Windows)
     {
-        enforce(SetCurrentDirectoryW(std.utf.toUTF16z(pathname)),
+        wchar[64] tmpbuf = void;
+        auto sz = ScopeBuffer!wchar(tmpbuf);
+        scope(exit) sz.free();
+        auto result = SetCurrentDirectoryW(pathname.toUTFWz(sz));
+        enforce(result,
                 new FileException(pathname.idup));
     }
     else version(Posix)
     {
-        cenforce(core.sys.posix.unistd.chdir(toStringz(pathname)) == 0,
+        char[64] tmpbuf = void;
+        auto sz = ScopeBuffer!char(tmpbuf);
+        scope(exit) sz.free();
+        auto result = core.sys.posix.unistd.chdir(pathname.toUTFCz(sz));
+        cenforce(result == 0,
                 pathname);
     }
 }
@@ -1356,12 +1432,20 @@ void mkdir(in char[] pathname)
 {
     version(Windows)
     {
-        enforce(CreateDirectoryW(std.utf.toUTF16z(pathname), null),
+        wchar[64] tmpbuf = void;
+        auto sz = ScopeBuffer!wchar(tmpbuf);
+        scope(exit) sz.free();
+        auto result = CreateDirectoryW(pathname.toUTFWz(sz), null);
+        enforce(result,
                 new FileException(pathname.idup));
     }
     else version(Posix)
     {
-        cenforce(core.sys.posix.sys.stat.mkdir(toStringz(pathname), octal!777) == 0,
+        char[64] tmpbuf = void;
+        auto sz = ScopeBuffer!char(tmpbuf);
+        scope(exit) sz.free();
+        auto result = core.sys.posix.sys.stat.mkdir(pathname.toUTFCz(sz), octal!777);
+        cenforce(result == 0,
                  pathname);
     }
 }
@@ -1373,13 +1457,21 @@ private bool ensureDirExists(in char[] pathname)
 {
     version(Windows)
     {
-        if (CreateDirectoryW(std.utf.toUTF16z(pathname), null))
+        wchar[64] tmpbuf = void;
+        auto sz = ScopeBuffer!wchar(tmpbuf);
+        scope(exit) sz.free();
+        auto result = CreateDirectoryW(pathname.toUTFWz(sz), null);
+        if (result)
             return true;
         cenforce(GetLastError() == ERROR_ALREADY_EXISTS, pathname.idup);
     }
     else version(Posix)
     {
-        if (core.sys.posix.sys.stat.mkdir(toStringz(pathname), octal!777) == 0)
+        char[64] tmpbuf = void;
+        auto sz = ScopeBuffer!char(tmpbuf);
+        scope(exit) sz.free();
+        auto result = core.sys.posix.sys.stat.mkdir(pathname.toUTFCz(sz), octal!777);
+        if (result == 0)
             return true;
         cenforce(errno == EEXIST, pathname);
     }
@@ -1459,12 +1551,22 @@ void rmdir(in char[] pathname)
 {
     version(Windows)
     {
-        cenforce(RemoveDirectoryW(std.utf.toUTF16z(pathname)),
+        wchar[64] tmpbuf = void;
+        auto sz = ScopeBuffer!wchar(tmpbuf);
+        scope(exit) sz.free();
+        auto result = RemoveDirectoryW(pathname.toUTFWz(sz));
+
+        cenforce(result,
                 pathname);
     }
     else version(Posix)
     {
-        cenforce(core.sys.posix.unistd.rmdir(toStringz(pathname)) == 0,
+        char[64] tmpbuf = void;
+        auto sz = ScopeBuffer!char(tmpbuf);
+        scope(exit) sz.free();
+        auto result = core.sys.posix.unistd.rmdir(pathname.toUTFCz(sz));
+
+        cenforce(result == 0,
                 pathname);
     }
 }
@@ -2142,7 +2244,7 @@ else version(Posix)
             if(_didStat)
                 return;
 
-            enforce(stat(toStringz(_name), &_statBuf) == 0,
+            enforce(dstat(_name, &_statBuf) == 0,
                     "Failed to stat file `" ~ _name ~ "'");
 
             _didStat = true;
@@ -2160,7 +2262,7 @@ else version(Posix)
             if(_didStat)
                 return;
 
-            if( stat(toStringz(_name), &_statBuf) != 0 )
+            if( dstat(_name, &_statBuf) != 0 )
             {
                 _ensureLStatDone();
 
@@ -2184,7 +2286,7 @@ else version(Posix)
 
             stat_t statbuf = void;
 
-            enforce(lstat(toStringz(_name), &statbuf) == 0,
+            enforce(dlstat(_name, &statbuf) == 0,
                 "Failed to stat file `" ~ _name ~ "'");
 
             _lstatMode = statbuf.st_mode;
@@ -2295,13 +2397,22 @@ void copy(in char[] from, in char[] to)
 {
     version(Windows)
     {
-        immutable result = CopyFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to), false);
+        wchar[64] tmpbuf = void;
+        auto sz = ScopeBuffer!wchar(tmpbuf);
+        scope(exit) sz.free();
+        from.toUTFWz(sz);
+        auto fromlen = sz.length;
+        auto p = to.toUTFWz(sz);
+        immutable result = CopyFileW(p, p + fromlen, false);
         if (!result)
             throw new FileException(to.idup);
     }
     else version(Posix)
     {
-        immutable fd = core.sys.posix.fcntl.open(toStringz(from), O_RDONLY);
+        char[64] tmpbuf = void;
+        auto sz = ScopeBuffer!char(tmpbuf);
+        scope(exit) sz.free();
+        immutable fd = core.sys.posix.fcntl.open(from.toUTFCz(sz), O_RDONLY);
         cenforce(fd != -1, from);
         scope(exit) core.sys.posix.unistd.close(fd);
 
@@ -2309,7 +2420,8 @@ void copy(in char[] from, in char[] to)
         cenforce(fstat(fd, &statbuf) == 0, from);
         //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, from);
 
-        auto toz = toStringz(to);
+        sz.length = 0;
+        auto toz = to.toUTFCz(sz);
         immutable fdw = core.sys.posix.fcntl.open(toz,
                 O_CREAT | O_WRONLY | O_TRUNC, octal!666);
         cenforce(fdw != -1, from);
@@ -2520,7 +2632,10 @@ private struct DirIteratorImpl
         {
             string search_pattern = buildPath(directory, "*.*");
             WIN32_FIND_DATAW findinfo;
-            HANDLE h = FindFirstFileW(toUTF16z(search_pattern), &findinfo);
+            wchar[64] tmpbuf = void;
+            auto sz = ScopeBuffer!wchar(tmpbuf);
+            scope(exit) sz.free();
+            auto h = FindFirstFileW(search_pattern.toUTFWz(sz), &findinfo);
             cenforce(h != INVALID_HANDLE_VALUE, directory);
             _stack.put(DirHandle(directory, h));
             return toNext(false, &findinfo);
@@ -2604,7 +2719,11 @@ private struct DirIteratorImpl
 
         bool stepIn(string directory)
         {
-            auto h = cenforce(opendir(toStringz(directory)), directory);
+            char[64] tmpbuf = void;
+            auto sz = ScopeBuffer!char(tmpbuf);
+            scope(exit) sz.free();
+            auto h = opendir(directory.toUTFCz(sz));
+            cenforce(h, directory);
             _stack.put(DirHandle(directory, h));
             return next();
         }
@@ -3180,4 +3299,44 @@ string tempDir() @trusted
         if (cache is null) cache = ".";
     }
     return cache;
+}
+
+version (Windows)
+{
+    /* *******
+     * Reads from range t and writes as wchar's to s. Appends a 0.
+     * Sadly, not nothrow.
+     */
+    private wchar* toUTFWz(T, S)(ref T t, ref S s)
+    {
+        foreach (wchar w; t)
+            s.put(w);
+        s.put(0);
+        return s[].ptr;
+    }
+}
+
+version (Posix)
+{
+    /* Ditto, but with char's
+     */
+    private char* toUTFCz(T, S)(ref T t, ref S s) nothrow
+    {
+        s.put(t);
+        s.put(0);
+        return s[].ptr;
+    }
+
+
+    private alias dstat = statImpl!stat;
+    private alias dlstat = statImpl!lstat;
+
+    private auto statImpl(alias statFunc)(in char[] name, stat_t* statbuf) nothrow
+    {
+        char[64] tmpbuf = void;
+        auto sz = ScopeBuffer!char(tmpbuf);
+        auto result = statFunc(name.toUTFCz(sz), statbuf);
+        sz.free();
+        return result;
+    }
 }
