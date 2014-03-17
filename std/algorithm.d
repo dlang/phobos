@@ -1593,16 +1593,33 @@ unittest
 
 private struct FilterResult(alias pred, Range)
 {
+private:
+
     alias R = Unqual!Range;
     R _input;
+    bool _initialized = false;
 
-    this(R r)
+    void popFrontUntilNextMatch()
+    {
+        while (!_input.empty && !pred(_input.front))
+            _input.popFront();
+    }
+
+    void initialize()
+    {
+        if (!_initialized)
+        {
+            popFrontUntilNextMatch();
+            _initialized = true;
+        }
+    }
+
+public:
+
+    this(R r, bool _was_initialized = false)
     {
         _input = r;
-        while (!_input.empty && !pred(_input.front))
-        {
-            _input.popFront();
-        }
+        _initialized = _was_initialized;
     }
 
     auto opSlice() { return this; }
@@ -1613,19 +1630,23 @@ private struct FilterResult(alias pred, Range)
     }
     else
     {
-        @property bool empty() { return _input.empty; }
+        @property bool empty()
+        {
+            initialize();
+            return _input.empty;
+        }
     }
 
     void popFront()
     {
-        do
-        {
-            _input.popFront();
-        } while (!_input.empty && !pred(_input.front));
+        initialize();
+        _input.popFront();
+        popFrontUntilNextMatch();
     }
 
     @property auto ref front()
     {
+        initialize();
         return _input.front;
     }
 
@@ -1633,7 +1654,7 @@ private struct FilterResult(alias pred, Range)
     {
         @property auto save()
         {
-            return typeof(this)(_input.save);
+            return typeof(this)(_input.save, _initialized);
         }
     }
 }
@@ -1730,10 +1751,10 @@ unittest
  * $(D auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(Unqual!Range));)
  *
  * Similar to $(D filter), except it defines a bidirectional
- * range. There is a speed disadvantage - the constructor spends time
- * finding the last element in the range that satisfies the filtering
- * condition (in addition to finding the first one). The advantage is
- * that the filtered range can be spanned from both directions. Also,
+ * range. Merely constructing the range doesn't impose a performance
+ * penalty - only on first access time is spent finding the first and
+ * last element in the input range that satisfies the filtering condition.
+ * The filtered range can be spanned from both directions. Also,
  * $(XREF range, retro) can be applied against the filtered range.
  *
  */
@@ -1763,47 +1784,77 @@ unittest
 
 private struct FilterBidiResult(alias pred, Range)
 {
+private:
+
     alias R = Unqual!Range;
     R _input;
+    bool _initialized = false;
 
-    this(R r)
+    void popFrontUntilNextMatch()
     {
-        _input = r;
-        while (!_input.empty && !pred(_input.front)) _input.popFront();
-        while (!_input.empty && !pred(_input.back)) _input.popBack();
+        while (!_input.empty && !pred(_input.front))
+            _input.popFront();
     }
 
-    @property bool empty() { return _input.empty; }
+    void popBackUntilNextMatch()
+    {
+        while (!_input.empty && !pred(_input.back))
+            _input.popBack();
+    }
+
+    void initialize()
+    {
+        if (!_initialized)
+        {
+            popFrontUntilNextMatch();
+            popBackUntilNextMatch();
+            _initialized = true;
+        }
+    }
+
+public:
+
+    this(R r, bool _was_initialized = false)
+    {
+        _input = r;
+        _initialized = _was_initialized;
+    }
+
+    @property bool empty()
+    {
+        initialize();
+        return _input.empty;
+    }
 
     void popFront()
     {
-        do
-        {
-            _input.popFront();
-        } while (!_input.empty && !pred(_input.front));
+        initialize();
+        _input.popFront();
+        popFrontUntilNextMatch();
     }
 
     @property auto ref front()
     {
+        initialize();
         return _input.front;
     }
 
     void popBack()
     {
-        do
-        {
-            _input.popBack();
-        } while (!_input.empty && !pred(_input.back));
+        initialize();
+        _input.popBack();
+        popBackUntilNextMatch();
     }
 
     @property auto ref back()
     {
+        initialize();
         return _input.back;
     }
 
     @property auto save()
     {
-        return typeof(this)(_input.save);
+        return typeof(this)(_input.save, _initialized);
     }
 }
 
