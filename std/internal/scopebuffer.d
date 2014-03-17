@@ -174,8 +174,13 @@ struct ScopeBuffer(T, alias realloc = core.stdc.stdlib.realloc)
 
     /************************
      * Append array s to the buffer.
+     *
+     * If $(D const(T)) can be converted to $(D T), then put will accept
+     * $(D const(T)[] as input. It will accept a $(D T[]) otherwise.
      */
-    void put(const(T)[] s)
+    private alias CT = Select!(is(const(T) : T), const(T), T);
+    /// ditto
+    void put(CT[] s)
     {
         const newlen = used + s.length;
         assert((cast(ulong)used + s.length) <= uint.max);
@@ -185,7 +190,7 @@ struct ScopeBuffer(T, alias realloc = core.stdc.stdlib.realloc)
             assert(len <= uint.max / 2);
             resize(newlen <= len * 2 ? len * 2 : newlen);
         }
-        buf[used .. newlen] = cast(T[])s[];
+        buf[used .. newlen] = s[];
         used = cast(uint)newlen;
     }
 
@@ -380,4 +385,11 @@ unittest
     ScopeBuffer!(int*) b;
     int*[] s;
     b.put(s);
+
+    ScopeBuffer!char c;
+    string s1;
+    char[] s2;
+    c.put(s1);
+    c.put(s2);
 }
+
