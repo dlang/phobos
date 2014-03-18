@@ -882,7 +882,7 @@ auto memoizeExpr(string expr)()
         auto val = data[$ - 1];
         data = data[0 .. $ - 1];
         if(!__ctfe)
-            data.assumeSafeAppend();
+            cast(void)data.assumeSafeAppend();
         return val;
     }
 
@@ -2644,7 +2644,7 @@ private:
         auto t = worklist[$-1];
         worklist.length -= 1;
         if(!__ctfe)
-            worklist.assumeSafeAppend();
+            cast(void)worklist.assumeSafeAppend();
         return t;
     }
 
@@ -4201,7 +4201,7 @@ struct CtContext
                     $$
                 case $$://restore state and go inside loop
                     $$
-                    goto case $$;`, curInfLoop, addr+2, 
+                    goto case $$;`, curInfLoop, addr+2,
                     curInfLoop, testCode, saveCode(addr+1),
                     addr+2, altCode, addr+1, restoreCode(), fixup);
             ir = ir[ir[0].length..$];
