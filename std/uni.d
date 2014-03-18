@@ -1224,9 +1224,10 @@ private:
 {
 pure nothrow:
 
-    this(inout(size_t)* origin, size_t items)inout
+    this(inout(size_t)* origin, size_t offset, size_t items) inout
     {
         ptr = inout(PackedPtr!(T))(origin);
+        ofs = offset;
         limit = items;
     }
 
@@ -1237,8 +1238,27 @@ pure nothrow:
     }
     body
     {
-        foreach(v; this[s..e])
-            if(v)
+        s += ofs;
+        e += ofs;
+        size_t pad_s = roundUp(s);
+        if ( s >= e)
+        {
+            foreach (i; s..e)
+                if(ptr[i])
+                    return false;
+            return true;
+        }
+        size_t pad_e = roundDown(e);
+        size_t i;
+        for(i=s; i<pad_s; i++)
+            if(ptr[i])
+                return false;
+        // all in between is x*factor elements
+        for(size_t j=i/factor; i<pad_e; i+=factor, j++)
+            if(ptr.origin[j])
+                return false;
+        for(; i<e; i++)
+            if(ptr[i])
                 return false;
         return true;
     }
@@ -1250,7 +1270,7 @@ pure nothrow:
     }
     body
     {
-        return ptr[idx];
+        return ptr[ofs + idx];
     }
 
     static if(isBitPacked!T) // lack of user-defined implicit conversion
@@ -1268,7 +1288,7 @@ pure nothrow:
     }
     body
     {
-        ptr[idx] = val;
+        ptr[ofs + idx] = val;
     }
 
     static if(isBitPacked!T) // lack of user-defined implicit conversions
@@ -1287,8 +1307,11 @@ pure nothrow:
     }
     body
     {
+        // account for ofsetted view
+        start += ofs;
+        end += ofs;
         // rounded to factor granularity
-        size_t pad_start = (start+factor-1)/factor*factor;// rounded up
+        size_t pad_start = roundUp(start);// rounded up
         if(pad_start >= end) //rounded up >= then end of slice
         {
             //nothing to gain, use per element assignment
@@ -1296,7 +1319,7 @@ pure nothrow:
                 ptr[i] = val;
             return;
         }
-        size_t pad_end = end/factor*factor; // rounded down
+        size_t pad_end = roundDown(end); // rounded down
         size_t i;
         for(i=start; i<pad_start; i++)
             ptr[i] = val;
@@ -1311,18 +1334,31 @@ pure nothrow:
             ptr[i] = val;
     }
 
-    auto opSlice(size_t from, size_t to)
+    auto opSlice(size_t from, size_t to)inout
+    in
     {
-        return sliceOverIndexed(from, to, &this);
+        assert(from <= to);
+        assert(ofs + to <= limit);
+    }
+    body
+    {
+        return typeof(this)(ptr.origin, ofs + from, to - from);
     }
 
     auto opSlice(){ return opSlice(0, length); }
 
     bool opEquals(T)(auto ref T arr) const
     {
-        if(length != arr.length)
+        if(limit != arr.limit)
            return false;
-        for(size_t i=0;i<length; i++)
+        size_t s1 = ofs, s2 = arr.ofs;
+        size_t e1 = s1 + limit, e2 = s2 + limit;
+        if(s1 % factor == 0 && s2 % factor == 0 && length % factor == 0)
+        {
+            return ptr.origin[s1/factor .. e1/factor]
+                == arr.ptr.origin[s2/factor .. e2/factor];
+        }
+        for(size_t i=0;i<limit; i++)
             if(this[i] != arr[i])
                 return false;
         return true;
@@ -1331,10 +1367,12 @@ pure nothrow:
     @property size_t length()const{ return limit; }
 
 private:
+    auto roundUp()(size_t val){ return (val+factor-1)/factor*factor; }
+    auto roundDown()(size_t val){ return val/factor*factor; }
     // factor - number of elements in one machine word
     enum factor = size_t.sizeof*8/bits;
     PackedPtr!(T) ptr;
-    size_t limit;
+    size_t ofs, limit;
 }
 
 
@@ -1472,7 +1510,7 @@ unittest
 
 private auto packedArrayView(T)(inout(size_t)* ptr, size_t items) @trusted pure nothrow
 {
-    return inout(PackedArrayView!T)(ptr, items);
+    return inout(PackedArrayView!T)(ptr, 0, items);
 }
 
 
@@ -3699,7 +3737,7 @@ private:
         size_t j;
         for(j=0; j<last; j+=pageSize)
         {
-            if(equalS(ptr[j..j+pageSize], slice[0..pageSize]))
+            if(ptr[j..j+pageSize] == slice)
             {
                 // get index to it, reuse ptr space for the next block
                 next_lvl_index = force!NextIdx(j/pageSize);
@@ -5396,10 +5434,10 @@ unittest
     See_Also:
         $(LREF byCodePoint)
 +/
-// TODO: Bidirectional access
 auto byGrapheme(Range)(Range range)
     if(isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 {
+    // TODO: Bidirectional access
     static struct Result
     {
         private Range _range;
@@ -5544,7 +5582,7 @@ Range byCodePoint(Range)(Range range)
 ///
 unittest
 {
-    import std.string : text;
+    import std.conv : text;
 
     string s = "noe\u0308l"; // noël
 

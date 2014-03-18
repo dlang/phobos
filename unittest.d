@@ -13,9 +13,7 @@
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
-version(Win64) {}
-else
-{
+
 public import std.base64;
 public import std.compiler;
 public import std.concurrency;
@@ -62,19 +60,13 @@ public import std.digest.crc;
 public import std.digest.sha;
 public import std.digest.md;
 
-}
-
 int main(char[][] args)
-{
-
-version(Win64) {}
-else
 {
     // Bring in unit test for module by referencing function in it
 
     cmp("foo", "bar");                  // string
-    filenameCharCmp('a', 'b');          // path
-    isNaN(1.0);                         // math
+    const fcc = filenameCharCmp('a', 'b');          // path
+    const inn = isNaN(1.0);                         // math
     std.conv.to!double("1.0");          // std.conv
     OutBuffer b = new OutBuffer();      // outbuffer
     auto r = regex("");                 // regex
@@ -86,7 +78,7 @@ else
     Clock.currTime();                   // datetime
     Exception e = new ReadException(""); // stream
     din.eof();                           // cstream
-    isValidDchar(cast(dchar)0);          // utf
+    const ivd = isValidDchar(cast(dchar)0);          // utf
     std.uri.ascii2hex(0);                // uri
     std.zlib.adler32(0,null);            // D.zlib
     auto t = task!cmp("foo", "bar");  // parallelism
@@ -109,12 +101,12 @@ else
     assert(x[1] == 3);
     assert(x[2] == 45);
 
-    std.math.sin(3.0);
+    const sin3 = std.math.sin(3.0);
     std.mathspecial.gamma(6.2);
 
     std.demangle.demangle("hello");
 
-    std.uni.isAlpha('A');
+    const iaa = std.uni.isAlpha('A');
 
     std.file.exists("foo");
 
@@ -132,6 +124,5 @@ else
     auto crc = crc32Of("hello");
     auto string = toHexString(crc);
     puts("Success!");
-}
     return 0;
 }

@@ -25,6 +25,8 @@ import std.traits, std.typetuple;
 /**
 Transforms a string representing an expression into a unary
 function. The string must use symbol name $(D a) as the parameter.
+If $(D fun) is not a string, $(D unaryFun) aliases itself away to
+$(D fun).
 
 Example:
 
@@ -78,6 +80,8 @@ unittest
 Transforms a string representing an expression into a Boolean binary
 predicate. The string must use symbol names $(D a) and $(D b) as the
 compared elements.
+If $(D fun) is not a string, $(D binaryFun) aliases itself away to
+$(D fun).
 
    Example:
 
@@ -192,32 +196,32 @@ template not(alias pred)
 }
 
 /**
-Curries $(D fun) by tying its first argument to a particular value.
+Partially evaluates $(D fun) by tying its first argument to a particular value.
 
 Example:
 
 ----
 int fun(int a, int b) { return a + b; }
-alias curry!(fun, 5) fun5;
+alias partial!(fun, 5) fun5;
 assert(fun5(6) == 11);
 ----
 
 Note that in most cases you'd use an alias instead of a value
-assignment. Using an alias allows you to curry template functions
-without committing to a particular type of the function.
+assignment. Using an alias allows you to partially evaluate template
+functions without committing to a particular type of the function.
  */
-template curry(alias fun, alias arg)
+template partial(alias fun, alias arg)
 {
     static if (is(typeof(fun) == delegate) || is(typeof(fun) == function))
     {
-        ReturnType!fun curry(ParameterTypeTuple!fun[1..$] args2)
+        ReturnType!fun partial(ParameterTypeTuple!fun[1..$] args2)
         {
             return fun(arg, args2);
         }
     }
     else
     {
-        auto curry(Ts...)(Ts args2)
+        auto partial(Ts...)(Ts args2)
         {
             static if (is(typeof(fun(arg, args2))))
             {
@@ -240,37 +244,44 @@ template curry(alias fun, alias arg)
     }
 }
 
-// tests for currying callables
+/**
+Deprecated alias for $(D partial), kept for backwards compatibility
+ */
+
+deprecated("Please use std.functional.partial instead")
+alias curry = partial;
+
+// tests for partially evaluating callables
 unittest
 {
     static int f1(int a, int b) { return a + b; }
-    assert(curry!(f1, 5)(6) == 11);
+    assert(partial!(f1, 5)(6) == 11);
 
     int f2(int a, int b) { return a + b; }
     int x = 5;
-    assert(curry!(f2, x)(6) == 11);
+    assert(partial!(f2, x)(6) == 11);
     x = 7;
-    assert(curry!(f2, x)(6) == 13);
-    static assert(curry!(f2, 5)(6) == 11);
+    assert(partial!(f2, x)(6) == 13);
+    static assert(partial!(f2, 5)(6) == 11);
 
     auto dg = &f2;
-    auto f3 = &curry!(dg, x);
+    auto f3 = &partial!(dg, x);
     assert(f3(6) == 13);
 
     static int funOneArg(int a) { return a; }
-    assert(curry!(funOneArg, 1)() == 1);
+    assert(partial!(funOneArg, 1)() == 1);
 
     static int funThreeArgs(int a, int b, int c) { return a + b + c; }
-    alias funThreeArgs1 = curry!(funThreeArgs, 1);
+    alias funThreeArgs1 = partial!(funThreeArgs, 1);
     assert(funThreeArgs1(2, 3) == 6);
     static assert(!is(typeof(funThreeArgs1(2))));
 
     enum xe = 5;
-    alias fe = curry!(f2, xe);
+    alias fe = partial!(f2, xe);
     static assert(fe(6) == 11);
 }
 
-// tests for currying templated/overloaded callables
+// tests for partially evaluating templated/overloaded callables
 unittest
 {
     static auto add(A, B)(A x, B y)
@@ -278,17 +289,17 @@ unittest
         return x + y;
     }
 
-    alias add5 = curry!(add, 5);
+    alias add5 = partial!(add, 5);
     assert(add5(6) == 11);
     static assert(!is(typeof(add5())));
     static assert(!is(typeof(add5(6, 7))));
 
-    // taking address of templated curry needs explicit type
+    // taking address of templated partial evaluation needs explicit type
     auto dg = &add5!(int);
     assert(dg(6) == 11);
 
     int x = 5;
-    alias addX = curry!(add, x);
+    alias addX = partial!(add, x);
     assert(addX(6) == 11);
 
     static struct Callable
@@ -298,9 +309,9 @@ unittest
         double opCall(double a, double b) { return a + b; }
     }
     Callable callable;
-    assert(curry!(Callable, "5")("6") == "56");
-    assert(curry!(callable, 5)(6) == 30);
-    assert(curry!(callable, 7.0)(3.0) == 7.0 + 3.0);
+    assert(partial!(Callable, "5")("6") == "56");
+    assert(partial!(callable, 5)(6) == 30);
+    assert(partial!(callable, 7.0)(3.0) == 7.0 + 3.0);
 
     static struct TCallable
     {
@@ -310,15 +321,15 @@ unittest
         }
     }
     TCallable tcallable;
-    assert(curry!(tcallable, 5)(6) == 11);
-    static assert(!is(typeof(curry!(tcallable, "5")(6))));
+    assert(partial!(tcallable, 5)(6) == 11);
+    static assert(!is(typeof(partial!(tcallable, "5")(6))));
 
     static A funOneArg(A)(A a) { return a; }
-    alias funOneArg1 = curry!(funOneArg, 1);
+    alias funOneArg1 = partial!(funOneArg, 1);
     assert(funOneArg1() == 1);
 
     static auto funThreeArgs(A, B, C)(A a, B b, C c) { return a + b + c; }
-    alias funThreeArgs1 = curry!(funThreeArgs, 1);
+    alias funThreeArgs1 = partial!(funThreeArgs, 1);
     assert(funThreeArgs1(2, 3) == 6);
     static assert(!is(typeof(funThreeArgs1(1))));
 
@@ -338,42 +349,46 @@ $(XREF typecons, Tuple) with one element per passed-in function. Upon
 invocation, the returned tuple is the adjoined results of all
 functions.
 
-Example:
-
-----
-static bool f1(int a) { return a != 0; }
-static int f2(int a) { return a / 2; }
-auto x = adjoin!(f1, f2)(5);
-assert(is(typeof(x) == Tuple!(bool, int)));
-assert(x[0] == true && x[1] == 2);
-----
+Note: In the special case where where only a single function is provided 
+($(D F.length == 1)), adjoin simply aliases to the single passed function
+($(D F[0])).
 */
-template adjoin(F...) if (F.length)
+template adjoin(F...) if (F.length == 1)
 {
-    auto adjoin(V...)(V a)
+    alias adjoin = F[0];
+}
+/// ditto
+template adjoin(F...) if (F.length > 1)
+{
+    auto adjoin(V...)(auto ref V a)
     {
-        static if (F.length == 1)
+        import std.typecons : tuple;
+        static if (F.length == 2)
         {
-            return F[0](a);
-        }
-        else static if (F.length == 2)
-        {
-            import std.typecons : Tuple, tuple;
             return tuple(F[0](a), F[1](a));
+        }
+        else static if (F.length == 3)
+        {
+            return tuple(F[0](a), F[1](a), F[2](a));
         }
         else
         {
-            import std.typecons : Tuple, tuple;
-            import std.conv : emplaceRef;
-            alias Head = typeof(F[0](a));
-            Tuple!(Head, typeof(.adjoin!(F[1..$])(a)).Types) result = void;
-            foreach (i, Unused; result.Types)
-            {
-                emplaceRef(result[i], F[i](a));
-            }
-            return result;
+            import std.string : format;
+            import std.range : iota;
+            return mixin (q{tuple(%(F[%s](a)%|, %))}.format(iota(0, F.length)));
         }
     }
+}
+
+///
+unittest
+{
+    import std.functional, std.typecons;
+    static bool f1(int a) { return a != 0; }
+    static int f2(int a) { return a / 2; }
+    auto x = adjoin!(f1, f2)(5);
+    assert(is(typeof(x) == Tuple!(bool, int)));
+    assert(x[0] == true && x[1] == 2);
 }
 
 unittest
@@ -400,6 +415,25 @@ unittest
     s.store = (int a) { return eff4(a); };
     auto x4 = s.fun();
     assert(x4 == 43);
+}
+
+unittest
+{
+    import std.typetuple : staticMap;
+    import std.typecons : Tuple, tuple;
+    alias funs = staticMap!(unaryFun, "a", "a * 2", "a * 3", "a * a", "-a");
+    alias afun = adjoin!funs;
+    assert(afun(5) == tuple(5, 10, 15, 25, -5));
+
+    static class C{}
+    alias IC = immutable(C);
+    IC foo(){return typeof(return).init;}
+    Tuple!(IC, IC, IC, IC) ret1 = adjoin!(foo, foo, foo, foo)();
+
+    static struct S{int* p;}
+    alias IS = immutable(S);
+    IS bar(){return typeof(return).init;}
+    enum Tuple!(IS, IS, IS, IS) ret2 = adjoin!(bar, bar, bar, bar)();
 }
 
 // /*private*/ template NaryFun(string fun, string letter, V...)

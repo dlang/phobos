@@ -581,11 +581,15 @@ package void doPut(R, E)(ref R r, auto ref E e)
         r.front = e;
         r.popFront();
     }
+    else static if (is(typeof(r(e))))
+    {
+        r(e);
+    }
     else
     {
-        static assert(is(typeof(r(e))),
+        import std.string;
+        static assert (false, 
             format("Cannot nativaly put a %s into a %s.", E.stringof, R.stringof));
-        r(e);
     }
 }
 
@@ -701,7 +705,10 @@ void put(R, E)(ref R r, E e)
         }
     }
     else
+    {
+        import std.string;
         static assert (false, format("Cannot put a %s into a %s.", E.stringof, R.stringof));
+    }
 }
 
 //Helper function to handle chars as quickly and as elegantly as possible
@@ -748,7 +755,10 @@ if (isSomeChar!E)
         encode!(C, R)(e, r);
     }
     else
+    {
+        import std.string;
         static assert (false, format("Cannot put a %s into a %s.", E.stringof, R.stringof));
+    }
 }
 
 pure unittest
@@ -4148,7 +4158,20 @@ Models an infinite bidirectional and random access range, with slicing.
 */
 struct Repeat(T)
 {
-    private T _value;
+private:
+    //Store a non-qualified T when possible: This is to make Repeat assignable
+    static if ((is(T == class) || is(T == interface)) && (is(T == const) || is(T == immutable)))
+    {
+        import std.typecons;
+        alias UT = Rebindable!T;
+    }
+    else static if (is(T : Unqual!T) && is(Unqual!T : T))
+        alias UT = Unqual!T;
+    else
+        alias UT = T;
+    UT _value;
+
+public:
     @property inout(T) front() inout { return _value; }
     @property inout(T) back() inout { return _value; }
     enum bool empty = false;
@@ -4210,6 +4233,21 @@ Take!(Repeat!T) repeat(T)(T value, size_t n)
 unittest
 {
     assert(equal(5.repeat(4), 5.repeat().take(4)));
+}
+
+unittest //12007
+{
+    static class C{}
+    Repeat!(immutable int) ri;
+    ri = ri.save;
+    Repeat!(immutable C) rc;
+    rc = rc.save;
+
+    import std.algorithm;
+    immutable int[] A = [1,2,3];
+    immutable int[] B = [4,5,6];
+
+    auto AB = cartesianProduct(A,B);
 }
 
 /**
@@ -4626,6 +4664,8 @@ private alias lengthType(R) = typeof(R.init.length.init);
 struct Zip(Ranges...)
     if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 {
+    import std.string : format; //for generic mixins
+
     alias R = Ranges;
     R ranges;
     alias ElementType = Tuple!(staticMap!(.ElementType, R));
@@ -4637,11 +4677,8 @@ struct Zip(Ranges...)
  */
     this(R rs, StoppingPolicy s = StoppingPolicy.shortest)
     {
+        ranges[] = rs[];
         stoppingPolicy = s;
-        foreach (i, Unused; R)
-        {
-            ranges[i] = rs[i];
-        }
     }
 
 /**
@@ -4689,24 +4726,21 @@ struct Zip(Ranges...)
     }
 
     static if (allSatisfy!(isForwardRange, R))
+    {
         @property Zip save()
         {
-            Zip result = this;
-            foreach (i, Unused; R)
-            {
-                result.ranges[i] = result.ranges[i].save;
-            }
-            return result;
+            //Zip(ranges[0].save, ranges[1].save, ..., stoppingPolicy)
+            return mixin (q{Zip(%(ranges[%s]%|, %), stoppingPolicy)}.format(iota(0, R.length)));
         }
+    }
 
-    private void emplaceIfCan(T)(T* addr)
+    private .ElementType!(R[i]) tryGetInit(size_t i)()
     {
-        import std.conv : emplace;
-
-        static if(__traits(compiles, emplace(addr)))
-            emplace(addr);
-        else
+        alias E = .ElementType!(R[i]);
+        static if (!is(typeof({static E i;})))
             throw new Exception("Range with non-default constructable elements exhausted.");
+        else
+            return E.init;
     }
 
 /**
@@ -4714,22 +4748,9 @@ struct Zip(Ranges...)
 */
     @property ElementType front()
     {
-        import std.conv : emplace;
-
-        ElementType result = void;
-        foreach (i, Unused; R)
-        {
-            auto addr = cast(Unqual!(typeof(result[i]))*) &result[i];
-            if (ranges[i].empty)
-            {
-                emplaceIfCan(addr);
-            }
-            else
-            {
-                emplace(addr, ranges[i].front);
-            }
-        }
-        return result;
+        auto tryGetFront(size_t i)(){return ranges[i].empty ? tryGetInit!i() : ranges[i].front;}
+        //ElementType(tryGetFront!0, tryGetFront!1, ...)
+        return mixin(q{ElementType(%(tryGetFront!%s, %))}.format(iota(0, R.length)));
     }
 
 /**
@@ -4756,22 +4777,9 @@ struct Zip(Ranges...)
     {
         ElementType moveFront()
         {
-            import std.conv : emplace;
-
-            ElementType result = void;
-            foreach (i, Unused; R)
-            {
-                auto addr = cast(Unqual!(typeof(result[i]))*) &result[i];
-                if (!ranges[i].empty)
-                {
-                    emplace(addr, .moveFront(ranges[i]));
-                }
-                else
-                {
-                    emplaceIfCan(addr);
-                }
-            }
-            return result;
+            auto tryMoveFront(size_t i)(){return ranges[i].empty ? tryGetInit!i() : .moveFront(ranges[i]);}
+            //ElementType(tryMoveFront!0, tryMoveFront!1, ...)
+            return mixin(q{ElementType(%(tryMoveFront!%s, %))}.format(iota(0, R.length)));
         }
     }
 
@@ -4782,22 +4790,11 @@ struct Zip(Ranges...)
     {
         @property ElementType back()
         {
-            import std.conv : emplace;
+            //TODO: Fixme! BackElement != back of all ranges in case of jagged-ness
 
-            ElementType result = void;
-            foreach (i, Unused; R)
-            {
-                auto addr = cast(Unqual!(typeof(result[i]))*) &result[i];
-                if (!ranges[i].empty)
-                {
-                    emplace(addr, ranges[i].back);
-                }
-                else
-                {
-                    emplaceIfCan(addr);
-                }
-            }
-            return result;
+            auto tryGetBack(size_t i)(){return ranges[i].empty ? tryGetInit!i() : ranges[i].back;}
+            //ElementType(tryGetBack!0, tryGetBack!1, ...)
+            return mixin(q{ElementType(%(tryGetBack!%s, %))}.format(iota(0, R.length)));
         }
 
 /**
@@ -4807,22 +4804,11 @@ struct Zip(Ranges...)
         {
             ElementType moveBack()
             {
-                import std.conv : emplace;
+                //TODO: Fixme! BackElement != back of all ranges in case of jagged-ness
 
-                ElementType result = void;
-                foreach (i, Unused; R)
-                {
-                    auto addr = cast(Unqual!(typeof(result[i]))*) &result[i];
-                    if (!ranges[i].empty)
-                    {
-                        emplace(addr, .moveBack(ranges[i]));
-                    }
-                    else
-                    {
-                        emplaceIfCan(addr);
-                    }
-                }
-                return result;
+                auto tryMoveBack(size_t i)(){return ranges[i].empty ? tryGetInit!i() : .moveFront(ranges[i]);}
+                //ElementType(tryMoveBack!0, tryMoveBack!1, ...)
+                return mixin(q{ElementType(%(tryMoveBack!%s, %))}.format(iota(0, R.length)));
             }
         }
 
@@ -4833,6 +4819,9 @@ struct Zip(Ranges...)
         {
             @property void back(ElementType v)
             {
+                //TODO: Fixme! BackElement != back of all ranges in case of jagged-ness.
+                //Not sure the call is even legal for StoppingPolicy.longest
+
                 foreach (i, Unused; R)
                 {
                     if (!ranges[i].empty)
@@ -4880,8 +4869,10 @@ struct Zip(Ranges...)
    Calls $(D popBack) for all controlled ranges.
 */
     static if (allSatisfy!(isBidirectionalRange, R))
+    {
         void popBack()
         {
+            //TODO: Fixme! In case of jaggedness, this is wrong.
             import std.exception : enforce;
 
             final switch (stoppingPolicy)
@@ -4908,6 +4899,7 @@ struct Zip(Ranges...)
                 break;
             }
         }
+    }
 
 /**
    Returns the length of this range. Defined only if all ranges define
@@ -4917,22 +4909,19 @@ struct Zip(Ranges...)
     {
         @property auto length()
         {
-            CommonType!(staticMap!(lengthType, R)) result = ranges[0].length;
-            if (stoppingPolicy == StoppingPolicy.requireSameLength)
-                return result;
-            foreach (i, Unused; R[1 .. $])
+            static if (Ranges.length == 1)
+                return ranges[0].length;
+            else
             {
+                if (stoppingPolicy == StoppingPolicy.requireSameLength)
+                    return ranges[0].length;
+
+                //[min|max](ranges[0].length, ranges[1].length, ...)
                 if (stoppingPolicy == StoppingPolicy.shortest)
-                {
-                    result = min(ranges[i + 1].length, result);
-                }
+                    return mixin(q{min(%(ranges[%s].length%|, %))}.format(iota(0, R.length)));
                 else
-                {
-                    assert(stoppingPolicy == StoppingPolicy.longest);
-                    result = max(ranges[i + 1].length, result);
-                }
+                    return mixin(q{max(%(ranges[%s].length%|, %))}.format(iota(0, R.length)));
             }
-            return result;
         }
 
         alias opDollar = length;
@@ -4943,20 +4932,17 @@ struct Zip(Ranges...)
    slicing.
 */
     static if (allSatisfy!(hasSlicing, R))
+    {
         auto opSlice(size_t from, size_t to)
         {
-            import std.conv : emplace;
-
             //Slicing an infinite range yields the type Take!R
             //For finite ranges, the type Take!R aliases to R
-            Zip!(staticMap!(Take, R)) result = void;
-            emplace(&result.stoppingPolicy, stoppingPolicy);
-            foreach (i, Unused; R)
-            {
-                emplace(&result.ranges[i], ranges[i][from .. to]);
-            }
-            return result;
+            alias ZipResult = Zip!(staticMap!(Take, R));
+
+            //ZipResult(ranges[0][from .. to], ranges[1][from .. to], ..., stoppingPolicy)
+            return mixin (q{ZipResult(%(ranges[%s][from .. to]%|, %), stoppingPolicy)}.format(iota(0, R.length)));
         }
+    }
 
 /**
    Returns the $(D n)th element in the composite range. Defined if all
@@ -4966,15 +4952,11 @@ struct Zip(Ranges...)
     {
         ElementType opIndex(size_t n)
         {
-            import std.conv : emplace;
+            //TODO: Fixme! This may create an out of bounds access
+            //for StoppingPolicy.longest
 
-            ElementType result = void;
-            foreach (i, Range; R)
-            {
-                auto addr = cast(Unqual!(typeof(result[i]))*) &result[i];
-                emplace(addr, ranges[i][n]);
-            }
-            return result;
+            //ElementType(ranges[0][n], ranges[1][n], ...)
+            return mixin (q{ElementType(%(ranges[%s][n]%|, %))}.format(iota(0, R.length)));
         }
 
 /**
@@ -4985,6 +4967,7 @@ struct Zip(Ranges...)
         {
             void opIndexAssign(ElementType v, size_t n)
             {
+                //TODO: Fixme! Not sure the call is even legal for StoppingPolicy.longest
                 foreach (i, Range; R)
                 {
                     ranges[i][n] = v[i];
@@ -5000,15 +4983,11 @@ struct Zip(Ranges...)
         {
             ElementType moveAt(size_t n)
             {
-                import std.conv : emplace;
+                //TODO: Fixme! This may create an out of bounds access
+                //for StoppingPolicy.longest
 
-                ElementType result = void;
-                foreach (i, Range; R)
-                {
-                    auto addr = cast(Unqual!(typeof(result[i]))*) &result[i];
-                    emplace(addr, .moveAt(ranges[i], n));
-                }
-                return result;
+                //ElementType(.moveAt(ranges[0], n), .moveAt(ranges[1], n), ..., )
+                return mixin (q{ElementType(%(.moveAt(ranges[%s], n)%|, %))}.format(iota(0, R.length)));
             }
         }
     }
@@ -5175,7 +5154,8 @@ unittest
     assert(a == [1, 2, 3, 4, 5]);
     assert(b == [6, 5, 2, 1, 3]);
 }
-unittest
+
+@safe pure unittest
 {
     auto LL = iota(1L, 1000L);
     auto z = zip(LL, [4]);
@@ -5188,7 +5168,7 @@ unittest
 }
 
 // Text for Issue 11196
-unittest
+@safe pure unittest
 {
     import std.exception : assertThrown;
 
@@ -5196,6 +5176,21 @@ unittest
     static assert(__traits(compiles, zip((S[5]).init[])));
     auto z = zip(StoppingPolicy.longest, cast(S[]) null, new int[1]);
     assertThrown(zip(StoppingPolicy.longest, cast(S[]) null, new int[1]).front);
+}
+
+@safe pure unittest //12007
+{
+    static struct R
+    {
+        enum empty = false;
+        void popFront(){}
+        int front(){return 1;} @property
+        R save(){return this;} @property
+        void opAssign(R) @disable;
+    }
+    R r;
+    auto z = zip(r, r);
+    auto zz = z.save;
 }
 
 /*
@@ -7676,7 +7671,7 @@ unittest
 
     static struct Test { int* a; }
     immutable(Test) test;
-    only(test, test); // Works with mutable indirection
+    const value = only(test, test); // Works with mutable indirection
 }
 
 /**

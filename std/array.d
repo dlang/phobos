@@ -28,6 +28,15 @@ a special case in an overload.
 ForeachType!Range[] array(Range)(Range r)
 if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
 {
+    if (__ctfe)
+    {
+        // Compile-time version to avoid memcpy calls.
+        typeof(return) result;
+        foreach (e; r)
+            result ~= e;
+        return result;
+    }
+
     alias E = ForeachType!Range;
     static if (hasLength!Range)
     {
@@ -91,6 +100,14 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
     }
     auto a = array([Foo(1), Foo(2), Foo(3), Foo(4), Foo(5)][]);
     assert(equal(a, [Foo(1), Foo(2), Foo(3), Foo(4), Foo(5)]));
+}
+
+unittest
+{
+    // Issue 12315
+    static struct Bug12315 { immutable int i; }
+    enum bug12315 = [Bug12315(123456789)].array();
+    static assert(bug12315[0].i == 123456789);
 }
 
 /**
@@ -364,7 +381,7 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I))
 
 @safe nothrow pure unittest
 {
-    minimallyInitializedArray!(int[][][][][])();
+    const iarr = minimallyInitializedArray!(int[][][][][])();
     double[] arr = minimallyInitializedArray!(double[])(100);
     assert(arr.length == 100);
 
@@ -545,7 +562,7 @@ Implements the range interface primitive $(D popFront) for built-in
 arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.popFront) is
 equivalent to $(D popFront(array)). For $(GLOSSARY narrow strings),
-$(D popFront) automaticaly advances to the next $(GLOSSARY code
+$(D popFront) automatically advances to the next $(GLOSSARY code
 point).
 */
 
@@ -643,7 +660,7 @@ Implements the range interface primitive $(D popBack) for built-in
 arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.popBack) is
 equivalent to $(D popBack(array)). For $(GLOSSARY narrow strings), $(D
-popFront) automaticaly eliminates the last $(GLOSSARY code point).
+popFront) automatically eliminates the last $(GLOSSARY code point).
 */
 
 void popBack(T)(ref T[] a) @safe pure nothrow
@@ -707,7 +724,7 @@ Implements the range interface primitive $(D front) for built-in
 arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.front) is
 equivalent to $(D front(array)). For $(GLOSSARY narrow strings), $(D
-front) automaticaly returns the first $(GLOSSARY code point) as a $(D
+front) automatically returns the first $(GLOSSARY code point) as a $(D
 dchar).
 */
 @property ref T front(T)(T[] a) @safe pure nothrow
@@ -750,7 +767,7 @@ Implements the range interface primitive $(D back) for built-in
 arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.back) is
 equivalent to $(D back(array)). For $(GLOSSARY narrow strings), $(D
-back) automaticaly returns the last $(GLOSSARY code point) as a $(D
+back) automatically returns the last $(GLOSSARY code point) as a $(D
 dchar).
 */
 @property ref T back(T)(T[] a) @safe pure nothrow if (!isNarrowString!(T[]))
@@ -1822,7 +1839,7 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
 
 /++
     Same as above, but outputs the result via OutputRange $(D sink).
-    If no match is found the original array is transfered to $(D sink) as is.
+    If no match is found the original array is transferred to $(D sink) as is.
 +/
 void replaceInto(E, Sink, R1, R2)(Sink sink, E[] subject, R1 from, R2 to)
 if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
@@ -2796,8 +2813,8 @@ Appender!(E[]) appender(A : E[], E)(A array)
     {
         auto w = appender!string();
         w.reserve(4);
-        w.capacity;
-        w.data;
+        const cap = w.capacity;
+        const dat = w.data;
         try
         {
             wchar wc = 'a';
@@ -2810,8 +2827,8 @@ Appender!(E[]) appender(A : E[], E)(A array)
     {
         auto w = appender!(int[])();
         w.reserve(4);
-        w.capacity;
-        w.data;
+        const cap = w.capacity;
+        const dat = w.data;
         w.put(10);
         w.put([10]);
         w.clear();

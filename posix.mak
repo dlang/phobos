@@ -208,7 +208,7 @@ EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	std/internal/digest/, sha_SSSE3 ) $(addprefix \
 	std/internal/math/, biguintcore biguintnoasm biguintx86	\
 	gammafunction errorfunction) $(addprefix std/internal/, \
-	processinit uni uni_tab unicode_tables \
+	processinit uni uni_tab unicode_tables scopebuffer \
 	unicode_comp unicode_decomp unicode_grapheme unicode_norm)
 
 # Aggregate all D modules relevant to this build
@@ -240,8 +240,6 @@ OBJS = $(addsuffix $(DOTOBJ),$(addprefix $(ROOT)/,$(C_MODULES)))
 
 MAKEFILE = $(firstword $(MAKEFILE_LIST))
 
-SUBMAKE = $(MAKE) --no-print-directory OS=$(OS) -f $(MAKEFILE)
-
 ################################################################################
 # Rules begin here
 ################################################################################
@@ -250,13 +248,13 @@ SUBMAKE = $(MAKE) --no-print-directory OS=$(OS) -f $(MAKEFILE)
 ifeq (linux,$(OS))
 all : $(BUILD) $(BUILD)_pic
 $(BUILD)_pic :
-	$(SUBMAKE) MODEL=$(MODEL) BUILD=$(BUILD) PIC=1 dll
+	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=$(BUILD) PIC=1 dll
 else
 all : $(BUILD)
 endif
 
 install :
-	$(SUBMAKE) MODEL=$(MODEL) BUILD=release INSTALL_DIR=$(INSTALL_DIR) \
+	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release INSTALL_DIR=$(INSTALL_DIR) \
 		DMD=$(DMD) install2
 
 $(BUILD) : $(LIB)
@@ -297,8 +295,8 @@ ifeq (osx,$(OS))
 # Build fat library that combines the 32 bit and the 64 bit libraries
 libphobos2.a: $(ROOT_OF_THEM_ALL)/osx/release/libphobos2.a
 $(ROOT_OF_THEM_ALL)/osx/release/libphobos2.a:
-	$(SUBMAKE) MODEL=32 BUILD=release
-	$(SUBMAKE) MODEL=64 BUILD=release
+	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=32 BUILD=release
+	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=64 BUILD=release
 	lipo $(ROOT_OF_THEM_ALL)/osx/release/32/libphobos2.a \
 	    $(ROOT_OF_THEM_ALL)/osx/release/64/libphobos2.a \
 	    -create -output $@

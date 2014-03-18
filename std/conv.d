@@ -1853,6 +1853,63 @@ unittest
  */
 
 Target parse(Target, Source)(ref Source s)
+    if (isInputRange!Source &&
+        !isExactSomeString!Source &&
+        isSomeChar!(ElementType!Source) &&
+        is(Unqual!Target == bool))
+{
+    if (!s.empty)
+    {
+        auto c1 = std.ascii.toLower(s.front);
+        bool result = (c1 == 't');
+        if (result || c1 == 'f')
+        {
+            s.popFront();
+            foreach (c; result ? "rue" : "alse")
+            {
+                if (s.empty || std.ascii.toLower(s.front) != c)
+                    goto Lerr;
+                s.popFront();
+            }
+            return result;
+        }
+    }
+Lerr:
+    throw parseError("bool should be case-insensitive 'true' or 'false'");
+}
+
+unittest
+{
+    struct InputString
+    {
+        string _s;
+        @property auto front() { return _s.front; }
+        @property bool empty() { return _s.empty; }
+        void popFront() { _s.popFront(); }
+    }
+
+    auto s = InputString("trueFALSETrueFalsetRUEfALSE");
+    assert(parse!bool(s) == true);
+    assert(s.equal("FALSETrueFalsetRUEfALSE"));
+    assert(parse!bool(s) == false);
+    assert(s.equal("TrueFalsetRUEfALSE"));
+    assert(parse!bool(s) == true);
+    assert(s.equal("FalsetRUEfALSE"));
+    assert(parse!bool(s) == false);
+    assert(s.equal("tRUEfALSE"));
+    assert(parse!bool(s) == true);
+    assert(s.equal("fALSE"));
+    assert(parse!bool(s) == false);
+    assert(s.empty);
+
+    foreach (ss; ["tfalse", "ftrue", "t", "f", "tru", "fals", ""])
+    {
+        s = InputString(ss);
+        assertThrown!ConvException(parse!bool(s));
+    }
+}
+
+Target parse(Target, Source)(ref Source s)
     if (isSomeChar!(ElementType!Source) &&
         isIntegral!Target && !is(Target == enum))
 {
@@ -2851,7 +2908,10 @@ unittest
     ld = parse!real(s2);
     assert(s2.empty);
     x = *cast(longdouble *)&ld;
-    ld1 = strtold(s.ptr, null);
+    version (Win64)
+        ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod
+    else
+        ld1 = strtold(s.ptr, null);
     x1 = *cast(longdouble *)&ld1;
     assert(x1 == x && ld1 == ld);
 
@@ -3541,7 +3601,7 @@ The $(D octal) facility is intended as an experimental facility to
 replace _octal literals starting with $(D '0'), which many find
 confusing. Using $(D octal!177) or $(D octal!"177") instead of $(D
 0177) as an _octal literal makes code clearer and the intent more
-visible. If use of this facility becomes preponderent, a future
+visible. If use of this facility becomes predominant, a future
 version of the language may deem old-style _octal literals deprecated.
 
 The rules for strings are the usual for literals: If it can fit in an

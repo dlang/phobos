@@ -20,7 +20,7 @@ $(MYREF min) $(MYREF mismatch) )
 )
 $(TR $(TDNW Iteration) $(TD $(MYREF filter) $(MYREF filterBidirectional)
 $(MYREF group) $(MYREF joiner) $(MYREF map) $(MYREF reduce) $(MYREF
-splitter) $(MYREF uniq) )
+splitter) $(MYREF sum) $(MYREF uniq) )
 )
 $(TR $(TDNW Sorting) $(TD $(MYREF completeSort) $(MYREF isPartitioned)
 $(MYREF isSorted) $(MYREF makeIndex) $(MYREF nextPermutation)
@@ -212,6 +212,9 @@ $(TR $(TDNW $(LREF reduce)) $(TD $(D reduce!"a + b"([1, 2, 3,
 )
 $(TR $(TDNW $(LREF splitter)) $(TD Lazily splits a range by a
 separator.)
+)
+$(TR $(TDNW $(LREF sum)) $(TD Same as $(D reduce), but specialized for
+accurate summation.)
 )
 $(TR $(TDNW $(LREF uniq)) $(TD Iterates over the unique elements
 in a range, which is assumed sorted.)
@@ -557,9 +560,7 @@ private struct MapResult(alias fun, Range)
     {
         @property auto save()
         {
-            auto result = this;
-            result._input = result._input.save;
-            return result;
+            return typeof(this)(_input.save);
         }
     }
 }
@@ -712,6 +713,12 @@ unittest
     static assert(hasSlicing!RR);
     rr = rr[6 .. $]; //Advances 1 cycle and 1 unit
     assert(equal(rr[0 .. 5], [1, 4, 9, 16, 0]));
+}
+
+unittest
+{
+    struct S {int* p;}
+    auto m = immutable(S).init.repeat().map!"a".save;
 }
 
 /**
@@ -1041,26 +1048,22 @@ b)(0, r)), $(D sum) uses specialized algorithms to maximize accuracy,
 as follows.
 
 $(UL
-$(LI If $(D ElementType!R) is $(D bool) or integral of size less than
-$(D 4), then calculations are performed in 32 bits. Correspondingly,
-$(D sum) returns $(D int) for signed numbers or $(D uint) for $(D
-bool) or unsigned numbers.)
-$(LI If $(D ElementType!R) is integral of size greater than or equal
-to $(D 4), then calculations are performed in 64
-bits. Correspondingly, $(D sum) returns $(D long) for signed numbers
-or $(D ulong) for unsigned numbers.)
 $(LI If $(D ElementType!R) is a floating-point type and $(D R) is a
-random-access range with length, then $(D sum) uses the $(WEB
-en.wikipedia.org/wiki/Pairwise_summation, pairwise summation)
+random-access range with length and slicing, then $(D sum) uses the
+$(WEB en.wikipedia.org/wiki/Pairwise_summation, pairwise summation)
 algorithm.)
 $(LI If $(D ElementType!R) is a floating-point type and $(D R) is a
-finite input range (but not a random-access range with length), then
+finite input range (but not a random-access range with slicing), then
 $(D sum) uses the $(WEB en.wikipedia.org/wiki/Kahan_summation,
 Kahan summation) algorithm.)
+$(LI In all other cases, a simple element by element addition is done.)
 )
 
 For floating point inputs, calculations are made in $(D real)
 precision for $(D real) inputs and in $(D double) precision otherwise.
+For all other types, the calculations are done in the same type obtained
+from from adding two elements of the range, which may be a different
+type from the elements themselves (for example, in case of integral promotion).
 
 Note that these specialized summing algorithms execute more primitive operations
 than vanilla summation. Therefore, if in certain cases maximum speed is required
@@ -1070,37 +1073,26 @@ is not specialized for summation.
 auto sum(R)(R r)
 if (isInputRange!R && !isFloatingPoint!(ElementType!R) && !isInfinite!R)
 {
-    alias E = ElementType!R;
-    static if (isIntegral!E || is(Unqual!E == bool))
-        static if (E.sizeof >= 4)
-            static if (E.min < 0)
-                alias Result = long;
-            else
-                alias Result = ulong;
-        else
-            static if (E.min < 0)
-                alias Result = int;
-            else
-                alias Result = uint;
-    else
-        alias Result = E;
-    Result seed = 0;
+    typeof(r.front + r.front) seed = 0;
     return reduce!"a + b"(seed, r);
 }
 
 /// Ditto
 unittest
 {
-    assert(sum([1, 2, 3, 4]) == 10);
+    assert(sum([  1, 2, 3, 4]) == 10);
     assert(sum([1.0, 2, 3, 4]) == 10);
     assert(sum([false, true, true, false, true]) == 3);
+    assert(sum(ubyte.max.repeat(100)) == 25500);
 }
 
 unittest
 {
-    static assert(is(typeof(sum([1, 2, 3, 4])) == long));
-    static assert(is(typeof(sum([1U, 2U, 3U, 4U])) == ulong));
-    static assert(is(typeof(sum([1L, 2L, 3L, 4L])) == long));
+    static assert(is(typeof(sum([cast( byte)1])) ==  int));
+    static assert(is(typeof(sum([cast(ubyte)1])) ==  int));
+    static assert(is(typeof(sum([  1,   2,   3,   4])) ==  int));
+    static assert(is(typeof(sum([ 1U,  2U,  3U,  4U])) == uint));
+    static assert(is(typeof(sum([ 1L,  2L,  3L,  4L])) ==  long));
     static assert(is(typeof(sum([1UL, 2UL, 3UL, 4UL])) == ulong));
 
     int[] empty;
@@ -1126,8 +1118,8 @@ if (hasSlicing!R && hasLength!R && isFloatingPoint!(ElementType!R))
 
 unittest
 {
-    static assert(is(typeof(sum([1., 2., 3., 4.])) == double));
-    static assert(is(typeof(sum([1F, 2F, 3F, 4F])) == double));
+    static assert(is(typeof(sum([1.0, 2.0, 3.0, 4.0])) == double));
+    static assert(is(typeof(sum([ 1F,  2F,  3F,  4F])) == double));
     const(float[]) a = [1F, 2F, 3F, 4F];
     static assert(is(typeof(sum(a)) == double));
     const(float)[] b = [1F, 2F, 3F, 4F];
@@ -2075,8 +2067,8 @@ unittest// Issue 8057
 /**
 For each element $(D a) in $(D src) and each element $(D b) in $(D
 tgt) in lockstep in increasing order, calls $(D move(a, b)). Returns
-the leftover portion of $(D tgt). Throws an exeption if there is not
-enough room in $(D tgt) to acommodate all of $(D src).
+the leftover portion of $(D tgt). Throws an exception if there is not
+enough room in $(D tgt) to accommodate all of $(D src).
 
 Preconditions:
 $(D walkLength(src) <= walkLength(tgt))
@@ -2159,7 +2151,7 @@ need not be assignable at all to be swapped.
 If $(D lhs) and $(D rhs) reference the same instance, then nothing is done.
 
 $(D lhs) and $(D rhs) must be mutable. If $(D T) is a struct or union, then
-its fields must also all be (recursivelly) mutable.
+its fields must also all be (recursively) mutable.
 
 Preconditions:
 
@@ -3007,7 +2999,7 @@ private struct SplitterResult(alias isTerminator, Range)
         static if (fullSlicing)
             return _input[0 .. _end];
         else
-            return _input.save.takeExactly(_end);
+            return _input.takeExactly(_end);
     }
 
     void popFront()
@@ -3153,6 +3145,8 @@ if (isSomeChar!C)
 
         void getFirst() pure @safe
         {
+            import std.uni : isWhite;
+
             auto r = find!(std.uni.isWhite)(_s);
             _frontLength = _s.length - r.length;
         }
@@ -4090,7 +4084,7 @@ haystack) are compared with $(D needle) by using predicate $(D
 pred). Performs $(BIGOH walkLength(haystack)) evaluations of $(D
 pred).
 
-To _find the last occurence of $(D needle) in $(D haystack), call $(D
+To _find the last occurrence of $(D needle) in $(D haystack), call $(D
 find(retro(haystack), needle)). See $(XREF range, retro).
 
 Params:
@@ -9261,7 +9255,7 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         import std.conv : text;
 
         static if (ss == SwapStrategy.unstable)
-            quickSortImpl!(lessFun)(r, cast(real)r.length);
+            quickSortImpl!(lessFun)(r, r.length);
         else //use Tim Sort for semistable & stable
             TimSortImpl!(lessFun, Range).sort(r, null);
 
@@ -9618,7 +9612,7 @@ void swapAt(R)(R r, size_t i1, size_t i2)
     }
 }
 
-private void quickSortImpl(alias less, Range)(Range r, real depth)
+private void quickSortImpl(alias less, Range)(Range r, size_t depth)
 {
     alias Elem = ElementType!(Range);
     enum size_t optimisticInsertionSortGetsBetter = 25;
@@ -9627,12 +9621,12 @@ private void quickSortImpl(alias less, Range)(Range r, real depth)
     // partition
     while (r.length > optimisticInsertionSortGetsBetter)
     {
-        if(depth < 1.0)
+        if (depth == 0)
         {
             HeapSortImpl!(less, Range).heapSort(r);
             return;
         }
-        depth *= (2.0/3.0);
+        depth = depth >= depth.max / 2 ? (depth / 3) * 2 : (depth * 2) / 3;
 
         const pivotIdx = getPivot!(less)(r);
         auto pivot = r[pivotIdx];
@@ -11125,7 +11119,7 @@ unittest
 // canFind
 /++
 Convenience function. Like find, but only returns whether or not the search
-was succesful.
+was successful.
  +/
 template canFind(alias pred="a == b")
 {
@@ -11203,7 +11197,7 @@ unittest
 
 /++
 Checks if $(I _any) of the elements verifies $(D pred).
-$(D !any) can be used to verify that $(I none) of the elemnets verify
+$(D !any) can be used to verify that $(I none) of the elements verify
 $(D pred).
  +/
 template any(alias pred = "a")
@@ -12038,7 +12032,7 @@ $(D 7.0) is the correct answer because it occurs in $(D 4) out of the
 $(D 5) inputs, more than any other number. The second member of the
 resulting tuple is indeed $(D 4) (recording the number of occurrences
 of $(D 7.0)). If more of the top-frequent numbers are needed, just
-create a larger $(D tgt) range. In the axample above, creating $(D b)
+create a larger $(D tgt) range. In the example above, creating $(D b)
 with length $(D 2) yields $(D tuple(1.0, 3u)) in the second position.
 
 The function $(D largestPartialIntersection) is useful for

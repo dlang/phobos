@@ -82,7 +82,7 @@ first element of the _container, in a _container-defined order.))
 $(TR $(TDNW $(D c.moveFront)) $(TDNW $(D log n$(SUB c))) $(TD
 Destructively reads and returns the first element of the
 _container. The slot is not removed from the _container; it is left
-initalized with $(D T.init). This routine need not be defined if $(D
+initialized with $(D T.init). This routine need not be defined if $(D
 front) returns a $(D ref).))
 
 $(TR $(TDNW $(D c.front = v)) $(TDNW $(D log n$(SUB c))) $(TD Assigns
@@ -94,7 +94,7 @@ last element of the _container, in a _container-defined order.))
 $(TR $(TDNW $(D c.moveBack)) $(TDNW $(D log n$(SUB c))) $(TD
 Destructively reads and returns the last element of the
 container. The slot is not removed from the _container; it is left
-initalized with $(D T.init). This routine need not be defined if $(D
+initialized with $(D T.init). This routine need not be defined if $(D
 front) returns a $(D ref).))
 
 $(TR $(TDNW $(D c.back = v)) $(TDNW $(D log n$(SUB c))) $(TD Assigns
@@ -2939,7 +2939,9 @@ Complexity: $(BIGOH slice.length)
     /// ditto
     void opSliceAssign(T value, size_t i, size_t j)
     {
-        auto slice = _data.refCountedStore.isInitialized ? _data._payload : T[].init;
+        auto slice = _data.refCountedStore.isInitialized ?
+            _data._payload :
+            T[].init;
         slice[i .. j] = value;
     }
 
@@ -3892,7 +3894,7 @@ and $(D length == capacity), throws an exception.
             n = parentIdx;
         }
         ++_length;
-        assertValid();
+        debug(BinaryHeap) assertValid();
         return 1;
     }
 
@@ -3912,6 +3914,9 @@ Removes the largest element from the heap.
         --_length;
         percolateDown(_store, 0, _length);
     }
+
+    /// ditto
+    alias popFront = removeFront;
 
 /**
 Removes the largest element from the heap and returns a copy of
@@ -3934,7 +3939,7 @@ Replaces the largest element in the store with $(D value).
         assert(!empty, "Cannot call replaceFront on an empty heap.");
         _store.front = value;
         percolateDown(_store, 0, _length);
-        assertValid();
+        debug(BinaryHeap) assertValid();
     }
 
 /**
@@ -3958,21 +3963,29 @@ must be collected.
         if (!comp(value, _store.front)) return false; // value >= largest
         _store.front = value;
         percolateDown(_store, 0, _length);
-        assertValid();
+        debug(BinaryHeap) assertValid();
         return true;
     }
 }
 
-///
+/// Example from "Introduction to Algorithms" Cormen et al, p 146
 unittest
 {
-    // Example from "Introduction to Algorithms" Cormen et al, p 146
     int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
     auto h = heapify(a);
     // largest element
     assert(h.front == 16);
     // a has the heap property
     assert(equal(a, [ 16, 14, 10, 8, 7, 9, 3, 2, 4, 1 ]));
+}
+
+/// $(D BinaryHeap) implements the standard input range interface, allowing
+/// lazy iteration of the underlying range in descending order.
+unittest
+{
+    int[] a = [4, 1, 3, 2, 16, 9, 10, 14, 8, 7];
+    auto top5 = heapify(a).take(5);
+    assert(top5.equal([16, 14, 10, 9, 8]));
 }
 
 /**
@@ -4012,6 +4025,15 @@ unittest
         }
         assert(b == [ 16, 14, 10, 8, 7, 3, 9, 1, 4, 2 ], text(b));
     }
+}
+
+unittest
+{
+    // Test range interface.
+    int[] a = [4, 1, 3, 2, 16, 9, 10, 14, 8, 7];
+    auto h = heapify(a);
+    static assert(isInputRange!(typeof(h)));
+    assert(h.equal([16, 14, 10, 9, 8, 7, 4, 3, 2, 1]));
 }
 
 ////////////////////////////////////////////////////////////////////////////////

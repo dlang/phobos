@@ -185,7 +185,7 @@ private:
 
     // Each internal operation is encoded with an identifier. See
     // the "handler" function below.
-    enum OpID { getTypeInfo, get, compare, testConversion, toString,
+    enum OpID { getTypeInfo, get, compare, equals, testConversion, toString,
             index, indexAssign, catAssign, copyOut, length,
             apply }
 
@@ -215,6 +215,7 @@ private:
             // no need to copy the data (it's garbage)
             break;
         case OpID.compare:
+        case OpID.equals:
             auto rhs = cast(const VariantN *) parm;
             return rhs.peek!(A)
                 ? 0 // all uninitialized are equal
@@ -250,6 +251,42 @@ private:
             }
             return null;
         }
+
+        static ptrdiff_t compare(A* rhsPA, A* zis, OpID selector)
+        {
+            static if (is(typeof(*rhsPA == *zis)))
+            {
+                // Work-around for bug 12164. 
+                // Without the check for if selector is -1, this function always returns 0. 
+                // TODO: Remove this once 12164 is fixed.
+                if (*rhsPA == *zis && selector != cast(OpID)-1)
+                {
+                    return 0;
+                }
+                static if (is(typeof(*zis < *rhsPA)))
+                {
+                    // Many types (such as any using the default Object opCmp)
+                    // will throw on an invalid opCmp, so do it only
+                    // if the caller requests it.
+                    if (selector == OpID.compare)
+                        return *zis < *rhsPA ? -1 : 1;
+                    else
+                        return ptrdiff_t.min;
+                }
+                else
+                {
+                    // Not equal, and type does not support ordering
+                    // comparisons.
+                    return ptrdiff_t.min;
+                }
+            }
+            else
+            {
+                // Type does not support comparisons at all.
+                return ptrdiff_t.min;
+            }
+        }
+
         auto zis = getPtr(pStore);
         // Input: TypeInfo object
         // Output: target points to a copy of *me, if me was not null
@@ -327,6 +364,7 @@ private:
         case OpID.testConversion:
             return !tryPutting(null, *cast(TypeInfo*) parm, null);
         case OpID.compare:
+        case OpID.equals:
             auto rhsP = cast(VariantN *) parm;
             auto rhsType = rhsP.type;
             // Are we the same?
@@ -334,28 +372,7 @@ private:
             {
                 // cool! Same type!
                 auto rhsPA = getPtr(&rhsP.store);
-                static if (is(typeof(A.init == A.init)))
-                {
-                    if (*rhsPA == *zis)
-                    {
-                        return 0;
-                    }
-                    static if (is(typeof(A.init < A.init)))
-                    {
-                        return *zis < *rhsPA ? -1 : 1;
-                    }
-                    else
-                    {
-                        // Not equal, and type does not support ordering
-                        // comparisons.
-                        return ptrdiff_t.min;
-                    }
-                }
-                else
-                {
-                    // Type does not support comparisons at all.
-                    return ptrdiff_t.min;
-                }
+                return compare(rhsPA, zis, selector);
             } else if (rhsType == typeid(void))
             {
                 // No support for ordering comparisons with
@@ -370,7 +387,10 @@ private:
                 // also fix up its fptr
                 temp.fptr = rhsP.fptr;
                 // now lhsWithRhsType is a full-blown VariantN of rhs's type
-                return temp.opCmp(*rhsP);
+                if (selector == OpID.compare)
+                    return temp.opCmp(*rhsP);
+                else
+                    return temp.opEquals(*rhsP) ? 0 : 1;
             }
             // Does rhs convert to zis?
             *cast(TypeInfo*) &temp.store = typeid(A);
@@ -378,28 +398,7 @@ private:
             {
                 // cool! Now temp has rhs in my type!
                 auto rhsPA = getPtr(&temp.store);
-                static if (is(typeof(A.init == A.init)))
-                {
-                    if (*rhsPA == *zis)
-                    {
-                        return 0;
-                    }
-                    static if (is(typeof(A.init < A.init)))
-                    {
-                        return *zis < *rhsPA ? -1 : 1;
-                    }
-                    else
-                    {
-                        // Not equal, and type does not support ordering
-                        // comparisons.
-                        return ptrdiff_t.min;
-                    }
-                }
-                else
-                {
-                    // Type does not support comparisons at all.
-                    return ptrdiff_t.min;
-                }
+                return compare(rhsPA, zis, selector);
             }
             return ptrdiff_t.min; // dunno
         case OpID.toString:
@@ -850,7 +849,7 @@ public:
             alias temp = rhs;
         else
             auto temp = VariantN(rhs);
-        return !fptr(OpID.compare, cast(ubyte[size]*) &store,
+        return !fptr(OpID.equals, cast(ubyte[size]*) &store,
                      cast(void*) &temp);
     }
 
@@ -1649,6 +1648,30 @@ unittest
     v = null;
 }
 
+// Class and interface opEquals, issue 12157
+unittest 
+{
+    class Foo { }
+
+    class DerivedFoo : Foo { }
+
+    Foo f1 = new Foo();
+    Foo f2 = new DerivedFoo();
+
+    Variant v1 = f1, v2 = f2;
+    assert(v1 == f1);
+    assert(v1 != new Foo());
+    assert(v1 != f2);
+    assert(v2 != v1);
+    assert(v2 == f2);
+
+    // TODO: Remove once 12164 is fixed. 
+    // Verify our assumption that there is no -1 OpID.
+    // Could also use std.algorithm.canFind at compile-time, but that may create bloat.
+    foreach(member; EnumMembers!(Variant.OpID))
+        assert(member != cast(Variant.OpID)-1);
+}
+
 // Const parameters with opCall, issue 11361.
 unittest
 {
@@ -1801,7 +1824,7 @@ unittest
  * with $(D_PARM variant)'s current value. Visiting handlers are passed
  * in the template parameter list.
  * It is statically ensured that all types of
- * $(D_PARAM variant) are handled accross all handlers.
+ * $(D_PARAM variant) are handled across all handlers.
  * $(D_PARAM visit) allows delegates and static functions to be passed
  * as parameters.
  *
@@ -1832,7 +1855,7 @@ unittest
  *                         == -1);
  * ----------------------
  * Returns: The return type of visit is deduced from the visiting functions and must be
- * the same accross all overloads.
+ * the same across all overloads.
  * Throws: If no parameter-less, error function is specified:
  * $(D_PARAM VariantException) if $(D_PARAM variant) doesn't hold a value.
  */
@@ -1930,7 +1953,7 @@ unittest
  * ----------------------
  *
  * Returns: The return type of tryVisit is deduced from the visiting functions and must be
- * the same accross all overloads.
+ * the same across all overloads.
  * Throws: If no parameter-less, error function is specified: $(D_PARAM VariantException) if
  *         $(D_PARAM variant) doesn't hold a value or
  *         if $(D_PARAM variant) holds a value which isn't handled by the visiting

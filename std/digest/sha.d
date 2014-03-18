@@ -95,6 +95,10 @@ version(D_PIC)
 {
     // Do not use (Bug9378).
 }
+else version(Win64)
+{
+    // wrong calling convention
+}
 else version(D_InlineAsm_X86)
 {
     private version = USE_SSSE3;
@@ -479,7 +483,7 @@ unittest
 unittest
 {
     //Let's use the template features:
-    //Note: When passing a SHA1 to a function, it must be passed by referece!
+    //Note: When passing a SHA1 to a function, it must be passed by reference!
     void doSomething(T)(ref T hash) if(isDigest!T)
     {
       hash.put(cast(ubyte)0);

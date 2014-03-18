@@ -291,6 +291,8 @@ version(unittest)
     }
 }
 
+private alias parentOf(alias sym) = Identity!(__traits(parent, sym));
+private alias parentOf(alias sym : T!Args, alias T, Args...) = Identity!(__traits(parent, T));
 
 /**
  * Get the full package name for the given symbol.
@@ -304,8 +306,8 @@ template packageName(alias T)
 {
     import std.algorithm : startsWith;
 
-    static if (__traits(compiles, __traits(parent, T)))
-        enum parent = packageName!(__traits(parent, T));
+    static if (__traits(compiles, parentOf!T))
+        enum parent = packageName!(parentOf!T);
     else
         enum string parent = null;
 
@@ -331,6 +333,9 @@ unittest
     static assert(packageName!core == "core");
     static assert(packageName!(core.sync) == "core.sync");
     static assert(packageName!Barrier == "core.sync");
+
+    struct X12287(T) { T i; }
+    static assert(packageName!(X12287!int.i) == "std");
 }
 
 version (none) version(unittest) //Please uncomment me when changing packageName to test global imports
@@ -365,7 +370,7 @@ template moduleName(alias T)
         enum moduleName = packagePrefix ~ T.stringof[7..$];
     }
     else
-        alias moduleName = moduleName!(__traits(parent, T));    // If you use enum, it will cause compiler ICE
+        alias moduleName = moduleName!(parentOf!T); // If you use enum, it will cause compiler ICE
 }
 
 unittest
@@ -382,6 +387,9 @@ unittest
     static assert(!__traits(compiles, moduleName!(core.sync)));
     static assert(moduleName!(core.sync.barrier) == "core.sync.barrier");
     static assert(moduleName!Barrier == "core.sync.barrier");
+
+    struct X12287(T) { T i; }
+    static assert(moduleName!(X12287!int.i) == "std.traits");
 }
 
 version (none) version(unittest) //Please uncomment me when changing moduleName to test global imports
@@ -408,14 +416,14 @@ template fullyQualifiedName(T...)
 {
 
     static if (is(T))
-        enum fullyQualifiedName = fullyQualifiedNameImplForTypes!(T[0], false, false, false, false);
+        enum fullyQualifiedName = fqnType!(T[0], false, false, false, false);
     else
-        enum fullyQualifiedName = fullyQualifiedNameImplForSymbols!(T[0]);
+        enum fullyQualifiedName = fqnSym!(T[0]);
 }
 
 version(unittest)
 {
-    // Used for both fullyQualifiedNameImplForTypes and fullyQualifiedNameImplForSymbols unittests
+    // Used for both fqnType and fqnSym unittests
     private struct QualifiedNameTests
     {
         struct Inner
@@ -442,6 +450,13 @@ version(unittest)
         const(Inner[const(Inner)]) qualAarray;
 
         shared(immutable(Inner) delegate(ref double, scope string) const shared @trusted nothrow) attrDeleg;
+
+        struct Data(T) { int x; }
+        void tfunc(T...)(T args) {}
+
+        template Inst(alias A) { int x; }
+
+        class Test12309(T, int x, string s) {}
     }
 
     private enum QualifiedEnum
@@ -450,39 +465,73 @@ version(unittest)
     }
 }
 
-private template fullyQualifiedNameImplForSymbols(alias T)
+private template fqnSym(alias T : X!A, alias X, A...)
+{
+    template fqnTuple(T...)
+    {
+        static if (T.length == 0)
+            enum fqnTuple = "";
+        else static if (T.length == 1)
+        {
+            static if (isExpressionTuple!T)
+                enum fqnTuple = T[0].stringof;
+            else
+                enum fqnTuple = fullyQualifiedName!(T[0]);
+        }
+        else
+            enum fqnTuple = fqnTuple!(T[0]) ~ ", " ~ fqnTuple!(T[1 .. $]);
+    }
+
+    enum fqnSym =
+        fqnSym!(__traits(parent, X)) ~
+        '.' ~ __traits(identifier, X) ~ "!(" ~ fqnTuple!A ~ ")";
+}
+
+private template fqnSym(alias T)
 {
     static if (__traits(compiles, __traits(parent, T)))
-        enum parentPrefix = fullyQualifiedNameImplForSymbols!(__traits(parent, T)) ~ '.';
+        enum parentPrefix = fqnSym!(__traits(parent, T)) ~ '.';
     else
         enum parentPrefix = null;
 
-    enum fullyQualifiedNameImplForSymbols = parentPrefix ~ (s)
+    static string adjustIdent(string s)
     {
         import std.algorithm : skipOver, findSplit;
 
-        if(s.skipOver("package ") || s.skipOver("module "))
+        if (s.skipOver("package ") || s.skipOver("module "))
             return s;
         return s.findSplit("(")[0];
-    }(__traits(identifier, T));
+    }
+    enum fqnSym = parentPrefix ~ adjustIdent(__traits(identifier, T));
 }
 
 unittest
 {
-    // Make sure those 2 are the same
-    static assert(fullyQualifiedNameImplForSymbols!fullyQualifiedName
-        == fullyQualifiedName!fullyQualifiedName);
-
-    // Main tests
     alias fqn = fullyQualifiedName;
+
+    // Make sure those 2 are the same
+    static assert(fqnSym!fqn == fqn!fqn);
+
     static assert(fqn!fqn == "std.traits.fullyQualifiedName");
-    static assert(fqn!(QualifiedNameTests.Inner) == "std.traits.QualifiedNameTests.Inner");
-    static assert(fqn!(QualifiedNameTests.func) == "std.traits.QualifiedNameTests.func");
+
+    alias qnTests = QualifiedNameTests;
+    enum prefix = "std.traits.QualifiedNameTests.";
+    static assert(fqn!(qnTests.Inner)           == prefix ~ "Inner");
+    static assert(fqn!(qnTests.func)            == prefix ~ "func");
+    static assert(fqn!(qnTests.Data!int)        == prefix ~ "Data!(int)");
+    static assert(fqn!(qnTests.Data!int.x)      == prefix ~ "Data!(int).x");
+    static assert(fqn!(qnTests.tfunc!(int[]))   == prefix ~ "tfunc!(int[])");
+    static assert(fqn!(qnTests.Inst!(Object))   == prefix ~ "Inst!(object.Object)");
+    static assert(fqn!(qnTests.Inst!(Object).x) == prefix ~ "Inst!(object.Object).x");
+
+    static assert(fqn!(qnTests.Test12309!(int, 10, "str"))
+                                                == prefix ~ "Test12309!(int, 10, \"str\")");
+
     import core.sync.barrier;
-    static assert(fullyQualifiedName!Barrier == "core.sync.barrier.Barrier");
+    static assert(fqn!Barrier == "core.sync.barrier.Barrier");
 }
 
-private template fullyQualifiedNameImplForTypes(T,
+private template fqnType(T,
     bool alreadyConst, bool alreadyImmutable, bool alreadyShared, bool alreadyInout)
 {
     import std.string;
@@ -604,42 +653,42 @@ private template fullyQualifiedNameImplForTypes(T,
 
     static if (is(T == string))
     {
-        enum fullyQualifiedNameImplForTypes = "string";
+        enum fqnType = "string";
     }
     else static if (is(T == wstring))
     {
-        enum fullyQualifiedNameImplForTypes = "wstring";
+        enum fqnType = "wstring";
     }
     else static if (is(T == dstring))
     {
-        enum fullyQualifiedNameImplForTypes = "dstring";
+        enum fqnType = "dstring";
     }
     else static if (isBasicType!T && !is(T == enum))
     {
-        enum fullyQualifiedNameImplForTypes = chain!((Unqual!T).stringof);
+        enum fqnType = chain!((Unqual!T).stringof);
     }
     else static if (isAggregateType!T || is(T == enum))
     {
-        enum fullyQualifiedNameImplForTypes = chain!(fullyQualifiedNameImplForSymbols!T);
+        enum fqnType = chain!(fqnSym!T);
     }
     else static if (isStaticArray!T)
     {
         import std.conv;
 
-        enum fullyQualifiedNameImplForTypes = chain!(
-            format("%s[%s]", fullyQualifiedNameImplForTypes!(typeof(T.init[0]), qualifiers), T.length)
+        enum fqnType = chain!(
+            format("%s[%s]", fqnType!(typeof(T.init[0]), qualifiers), T.length)
         );
     }
     else static if (isArray!T)
     {
-        enum fullyQualifiedNameImplForTypes = chain!(
-            format("%s[]", fullyQualifiedNameImplForTypes!(typeof(T.init[0]), qualifiers))
+        enum fqnType = chain!(
+            format("%s[]", fqnType!(typeof(T.init[0]), qualifiers))
         );
     }
     else static if (isAssociativeArray!T)
     {
-        enum fullyQualifiedNameImplForTypes = chain!(
-            format("%s[%s]", fullyQualifiedNameImplForTypes!(ValueType!T, qualifiers), fullyQualifiedNameImplForTypes!(KeyType!T, noQualifiers))
+        enum fqnType = chain!(
+            format("%s[%s]", fqnType!(ValueType!T, qualifiers), fqnType!(KeyType!T, noQualifiers))
         );
     }
     else static if (isSomeFunction!T)
@@ -653,8 +702,8 @@ private template fullyQualifiedNameImplForTypes(T,
                 is(F == const) ? " const" : ""
             );
             enum formatStr = "%s%s delegate(%s)%s%s";
-            enum fullyQualifiedNameImplForTypes = chain!(
-                format(formatStr, linkageString!T, fullyQualifiedNameImplForTypes!(ReturnType!T, noQualifiers),
+            enum fqnType = chain!(
+                format(formatStr, linkageString!T, fqnType!(ReturnType!T, noQualifiers),
                     parametersTypeString!(T), functionAttributeString!T, qualifierString)
             );
         }
@@ -665,16 +714,16 @@ private template fullyQualifiedNameImplForTypes(T,
             else
                 enum formatStr = "%s%s(%s)%s";
 
-            enum fullyQualifiedNameImplForTypes = chain!(
-                format(formatStr, linkageString!T, fullyQualifiedNameImplForTypes!(ReturnType!T, noQualifiers),
+            enum fqnType = chain!(
+                format(formatStr, linkageString!T, fqnType!(ReturnType!T, noQualifiers),
                     parametersTypeString!(T), functionAttributeString!T)
             );
         }
     }
     else static if (isPointer!T)
     {
-        enum fullyQualifiedNameImplForTypes = chain!(
-            format("%s*", fullyQualifiedNameImplForTypes!(PointerTarget!T, qualifiers))
+        enum fqnType = chain!(
+            format("%s*", fqnType!(PointerTarget!T, qualifiers))
         );
     }
     else
@@ -685,13 +734,13 @@ private template fullyQualifiedNameImplForTypes(T,
 unittest
 {
     import std.string : format;
+    alias fqn = fullyQualifiedName;
 
     // Verify those 2 are the same for simple case
     alias Ambiguous = const(QualifiedNameTests.Inner);
-    static assert(fullyQualifiedName!Ambiguous == fullyQualifiedNameImplForTypes!(Ambiguous, false, false, false, false));
+    static assert(fqn!Ambiguous == fqnType!(Ambiguous, false, false, false, false));
 
     // Main tests
-    alias fqn = fullyQualifiedName;
     enum inner_name = "std.traits.QualifiedNameTests.Inner";
     with (QualifiedNameTests)
     {
@@ -3006,7 +3055,7 @@ unittest
    Classes and unions never have elaborate assignments.
 
    Note: Structs with (possibly nested) postblit operator(s) will have a
-   hidden yet elaborate compiler generated assignement operator (unless
+   hidden yet elaborate compiler generated assignment operator (unless
    explicitly disabled).
  */
 template hasElaborateAssign(S)
@@ -5337,7 +5386,8 @@ unittest
 }
 
 /**
- * Tells whether the tuple T is an expression tuple.
+ * Check whether the tuple T is an expression tuple.
+ * An expression tuple only contains expressions. See also $(LREF isTypeTuple).
  */
 template isExpressionTuple(T ...)
 {
@@ -5350,6 +5400,14 @@ template isExpressionTuple(T ...)
             !is(T[0]) && __traits(compiles, { auto ex = T[0]; });
     else
         enum bool isExpressionTuple = true; // default
+}
+
+///
+unittest
+{
+    static assert(isExpressionTuple!(1, 2.0, "a"));
+    static assert(!isExpressionTuple!(int, double, string));
+    static assert(!isExpressionTuple!(int, 2.0, "a"));
 }
 
 unittest
@@ -5373,7 +5431,8 @@ unittest
 
 
 /**
-Detect whether tuple $(D T) is a type tuple.
+ * Check whether the tuple $(D T) is a type tuple.
+ * A type tuple only contains types. See also $(LREF isExpressionTuple).
  */
 template isTypeTuple(T...)
 {
@@ -5383,6 +5442,14 @@ template isTypeTuple(T...)
         enum bool isTypeTuple = is(T[0]);
     else
         enum bool isTypeTuple = true; // default
+}
+
+///
+unittest
+{
+    static assert(isTypeTuple!(int, float, string));
+    static assert(!isTypeTuple!(1, 2.0, "a"));
+    static assert(!isTypeTuple!(1, double, string));
 }
 
 unittest

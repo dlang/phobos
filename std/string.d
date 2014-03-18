@@ -136,6 +136,24 @@ unittest
     });
 }
 
+/++
+    Returns a D-style array of $(D char) given a zero-terminated C-style string.
+    The returned array will retain the same type qualifiers as the input.
+
+    $(RED Important Note:) The returned array is a slice of the original buffer.
+    The original data is not changed and not copied.
++/
+
+inout(char)[] fromStringz(inout(char)* cString) @system pure {
+    return cString ? cString[0 .. strlen(cString)] : null;
+}
+
+///
+@system pure unittest
+{
+    assert(fromStringz(null) == null);
+    assert(fromStringz("foo") == "foo");
+}
 
 /++
     Returns a C-style zero-terminated string equivalent to $(D s). $(D s)
@@ -148,7 +166,7 @@ unittest
     to it in your D code. Otherwise, it may go away during a garbage collection
     cycle and cause a nasty bug when the C code tries to use it.
   +/
-immutable(char)* toStringz(const(char)[] s) pure nothrow
+immutable(char)* toStringz(const(char)[] s) @trusted pure nothrow
 in
 {
     // The assert below contradicts the unittests!
@@ -191,7 +209,7 @@ body
 }
 
 /++ Ditto +/
-immutable(char)* toStringz(string s) pure nothrow
+immutable(char)* toStringz(string s) @trusted pure nothrow
 {
     if (s.empty) return "".ptr;
     /* Peek past end of s[], if it's 0, no conversion necessary.
@@ -210,7 +228,7 @@ immutable(char)* toStringz(string s) pure nothrow
     return toStringz(cast(const char[]) s);
 }
 
-unittest
+pure nothrow unittest
 {
     debug(string) printf("string.toStringz.unittest\n");
 
@@ -244,7 +262,7 @@ unittest
 enum CaseSensitive { no, yes }
 
 /++
-    Returns the index of the first occurence of $(D c) in $(D s). If $(D c)
+    Returns the index of the first occurrence of $(D c) in $(D s). If $(D c)
     is not found, then $(D -1) is returned.
 
     $(D cs) indicates whether the comparisons are case sensitive.
@@ -339,7 +357,7 @@ unittest
 }
 
 /++
-    Returns the index of the first occurence of $(D c) in $(D s) with respect
+    Returns the index of the first occurrence of $(D c) in $(D s) with respect
     to the start index $(D startIdx). If $(D c) is not found, then $(D -1) is
     returned. If $(D c) is found the value of the returned index is at least
     $(D startIdx). $(D startIdx) represents a codeunit index in $(D s). If the
@@ -404,7 +422,7 @@ unittest
 }
 
 /++
-    Returns the index of the first occurence of $(D sub) in $(D s). If $(D sub)
+    Returns the index of the first occurrence of $(D sub) in $(D s). If $(D sub)
     is not found, then $(D -1) is returned.
 
     $(D cs) indicates whether the comparisons are case sensitive.
@@ -480,7 +498,7 @@ unittest
 }
 
 /++
-    Returns the index of the first occurence of $(D sub) in $(D s) with
+    Returns the index of the first occurrence of $(D sub) in $(D s) with
     respect to the start index $(D startIdx). If $(D sub) is not found, then
     $(D -1) is returned. If $(D sub) is found the value of the returned index
     is at least $(D startIdx). $(D startIdx) represents a codeunit index in
@@ -563,7 +581,7 @@ unittest
 }
 
 /++
-    Returns the index of the last occurence of $(D c) in $(D s). If $(D c)
+    Returns the index of the last occurrence of $(D c) in $(D s). If $(D c)
     is not found, then $(D -1) is returned.
 
     $(D cs) indicates whether the comparisons are case sensitive.
@@ -668,7 +686,7 @@ unittest
 }
 
 /++
-    Returns the index of the last occurence of $(D c) in $(D s). If $(D c) is
+    Returns the index of the last occurrence of $(D c) in $(D s). If $(D c) is
     not found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
     the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
     codeunit index in $(D s). If the sequence ending at $(D startIdx) does not
@@ -722,7 +740,7 @@ unittest
 }
 
 /++
-    Returns the index of the last occurence of $(D sub) in $(D s). If $(D sub)
+    Returns the index of the last occurrence of $(D sub) in $(D s). If $(D sub)
     is not found, then $(D -1) is returned.
 
     $(D cs) indicates whether the comparisons are case sensitive.
@@ -858,7 +876,7 @@ unittest
 }
 
 /++
-    Returns the index of the last occurence of $(D sub) in $(D s). If $(D sub)
+    Returns the index of the last occurrence of $(D sub) in $(D s). If $(D sub)
     is not found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
     the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
     codeunit index in $(D s). If the sequence ending at $(D startIdx) does not
@@ -2941,7 +2959,7 @@ unittest
     $(D to) is taken to be the same as $(D from).
 
     If the modifier $(D 'd') is $(I not) present, and $(D to) is shorter than
-    $(D from), then $(D to) is extended by replicating the last charcter in
+    $(D from), then $(D to) is extended by replicating the last character in
     $(D to).
 
     Both $(D from) and $(D to) may contain ranges using the $(D '-') character

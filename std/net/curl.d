@@ -123,7 +123,7 @@ http.perform();
 First, an instance of the reference-counted HTTP struct is created. Then the
 custom delegates are set. These will be called whenever the HTTP instance
 receives a header and a data buffer, respectively. In this simple example, the
-headers are writting to stdout and the data is ignored. If the request should be
+headers are written to stdout and the data is ignored. If the request should be
 stopped before it has finished then return something less than data.length from
 the onReceive callback. See $(LREF onReceiveHeader)/$(LREF onReceive) for more
 information. Finally the HTTP request is effected by calling perform(), which is
@@ -139,7 +139,7 @@ License: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors: Jonas Drewsen. Some of the SMTP code contributed by Jimmy Cao.
 
 Credits: The functionally is based on $(WEB _curl.haxx.se/libcurl, libcurl).
-         LibCurl is licensed under an MIT/X derivate license.
+         LibCurl is licensed under an MIT/X derivative license.
 */
 /*
          Copyright Jonas Drewsen 2011 - 2012.

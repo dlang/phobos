@@ -212,7 +212,7 @@ SRC_STD_C_FREEBSD= std\c\freebsd\socket.d
 
 SRC_STD_INTERNAL= std\internal\processinit.d std\internal\uni.d std\internal\uni_tab.d \
 	std\internal\unicode_tables.d std\internal\unicode_comp.d std\internal\unicode_decomp.d \
-	std\internal\unicode_grapheme.d std\internal\unicode_norm.d
+	std\internal\unicode_grapheme.d std\internal\unicode_norm.d std\internal\scopebuffer.d
 
 SRC_STD_INTERNAL_DIGEST= std\internal\digest\sha_SSSE3.d
 
@@ -404,30 +404,30 @@ UNITTEST_OBJS= unittest1.obj unittest2.obj unittest2a.obj \
 		unittest7.obj
 
 unittest : $(LIB)
-	$(DMD) $(UDFLAGS) -c           -ofunittest1.obj $(SRC_STD_1_HEAVY)
-	$(DMD) $(UDFLAGS) -c           -ofunittest2.obj $(SRC_STD_2_HEAVY)
-	$(DMD) $(UDFLAGS) -c           -ofunittest2a.obj $(SRC_STD_2a_HEAVY)
-	$(DMD) $(UDFLAGS) -c           -ofunittestM.obj $(SRC_STD_math)
-	$(DMD) $(UDFLAGS) -c           -ofunittest3.obj $(SRC_STD_3)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest2.obj $(SRC_STD_2_HEAVY)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest2a.obj $(SRC_STD_2a_HEAVY)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittestM.obj $(SRC_STD_math)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3.obj $(SRC_STD_3)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3a.obj $(SRC_STD_3a)
-	$(DMD) $(UDFLAGS) -c           -ofunittest3b.obj $(SRC_STD_3b)
-	$(DMD) $(UDFLAGS) -c           -ofunittest3c.obj $(SRC_STD_3c)
-	$(DMD) $(UDFLAGS) -c           -ofunittest4.obj $(SRC_STD_4)
-	$(DMD) $(UDFLAGS) -c           -ofunittest5.obj $(SRC_STD_5_HEAVY)
-	$(DMD) $(UDFLAGS) -c           -ofunittest6a.obj $(SRC_STD_6a)
-	$(DMD) $(UDFLAGS) -c           -ofunittest6b.obj $(SRC_STD_6b)
-	$(DMD) $(UDFLAGS) -c           -ofunittest6c.obj $(SRC_STD_6c)
-	$(DMD) $(UDFLAGS) -c           -ofunittest6d.obj $(SRC_STD_6d)
-	$(DMD) $(UDFLAGS) -c           -ofunittest6e.obj $(SRC_STD_6e)
-	$(DMD) $(UDFLAGS) -c           -ofunittest6h.obj $(SRC_STD_6h)
-	$(DMD) $(UDFLAGS) -c           -ofunittest6i.obj $(SRC_STD_6i)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3b.obj $(SRC_STD_3b)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3c.obj $(SRC_STD_3c)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest4.obj $(SRC_STD_4)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5.obj $(SRC_STD_5_HEAVY)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6a.obj $(SRC_STD_6a)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6b.obj $(SRC_STD_6b)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6c.obj $(SRC_STD_6c)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6d.obj $(SRC_STD_6d)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6e.obj $(SRC_STD_6e)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6h.obj $(SRC_STD_6h)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6i.obj $(SRC_STD_6i)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6f.obj $(SRC_STD_6f)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6g.obj $(SRC_STD_6g)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6j.obj $(SRC_STD_6j)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6k.obj $(SRC_STD_6k)
-	$(DMD) $(UDFLAGS) -c           -ofunittest7.obj $(SRC_STD_7)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest7.obj $(SRC_STD_7)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8.obj $(SRC_TO_COMPILE_NOT_STD)
-	$(DMD) $(UDFLAGS)    -unittest unittest.d $(UNITTEST_OBJS) \
+	$(DMD) $(UDFLAGS) -L/OPT:NOICF -unittest unittest.d $(UNITTEST_OBJS) \
 	    $(ZLIB) $(DRUNTIMELIB)
 	.\unittest.exe
 
@@ -749,7 +749,7 @@ $(DOC)\etc_c_zlib.html : $(STDDOC) etc\c\zlib.d
 zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
-	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST)\
+	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST) \
 	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) \
 	$(SRC_STD_INTERNAL_WINDOWS)
 	del phobos.zip

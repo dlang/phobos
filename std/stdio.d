@@ -318,7 +318,7 @@ struct File
     private Impl* _p;
     private string _name;
 
-    package this(FILE* handle, string name, uint refs = 1, bool isPopened = false)
+    package this(FILE* handle, string name, uint refs = 1, bool isPopened = false) @trusted
     {
         import std.exception : enforce;
 
@@ -355,12 +355,12 @@ Throws: $(D ErrnoException) if the file could not be opened.
                 name);
     }
 
-    ~this()
+    ~this() @safe
     {
         detach();
     }
 
-    this(this)
+    this(this) @safe
     {
         if (!_p) return;
         assert(_p.refs);
@@ -503,7 +503,7 @@ Throws: $(D ErrnoException) in case of error.
 
 
 /** Returns $(D true) if the file is opened. */
-    @property bool isOpen() const pure nothrow
+    @property bool isOpen() const @safe pure nothrow
     {
         return _p !is null && _p.handle;
     }
@@ -514,7 +514,7 @@ cplusplus.com/reference/clibrary/cstdio/feof.html, feof)).
 
 Throws: $(D Exception) if the file is not opened.
  */
-    @property bool eof() const pure
+    @property bool eof() const @trusted pure
     {
         import std.exception : enforce;
 
@@ -525,7 +525,7 @@ Throws: $(D Exception) if the file is not opened.
 /** Returns the name of the last opened file, if any.
 If a $(D File) was created with $(LREF tmpfile) and $(LREF wrapFile)
 it has no name.*/
-    @property string name() const pure nothrow
+    @property string name() const @safe pure nothrow
     {
         return _name;
     }
@@ -535,9 +535,21 @@ If the file is not opened, returns $(D false). Otherwise, returns
 $(WEB cplusplus.com/reference/clibrary/cstdio/ferror.html, ferror) for
 the file handle.
  */
-    @property bool error() const pure nothrow
+    @property bool error() const @trusted pure nothrow
     {
-        return !_p.handle || .ferror(cast(FILE*) _p.handle);
+        return !isOpen || .ferror(cast(FILE*) _p.handle);
+    }
+
+    unittest
+    {
+        // Issue 12349
+        static import std.file;
+        auto deleteme = testFilename();
+        auto f = File(deleteme, "w");
+        scope(exit) std.file.remove(deleteme);
+
+        f.close();
+        assert(f.error);
     }
 
 /**
@@ -545,7 +557,7 @@ Detaches from the underlying file. If the sole owner, calls $(D close).
 
 Throws: $(D ErrnoException) on failure if closing the file.
   */
-    void detach()
+    void detach() @safe
     {
         if (!_p) return;
         if (_p.refs == 1)
@@ -584,7 +596,7 @@ referring to the same handle will see a closed file henceforth.
 
 Throws: $(D ErrnoException) on error.
  */
-    void close()
+    void close() @trusted
     {
         import std.exception : errnoEnforce;
 
@@ -622,7 +634,7 @@ If the file is not opened, succeeds vacuously. Otherwise, returns
 $(WEB cplusplus.com/reference/clibrary/cstdio/_clearerr.html,
 _clearerr) for the file handle.
  */
-    void clearerr() pure nothrow
+    void clearerr() @safe pure nothrow
     {
         _p is null || _p.handle is null ||
         .clearerr(_p.handle);
@@ -634,13 +646,26 @@ for the file handle.
 
 Throws: $(D Exception) if the file is not opened or if the call to $(D fflush) fails.
  */
-    void flush()
+    void flush() @trusted
     {
         import std.exception : enforce, errnoEnforce;
 
-        errnoEnforce
-        (.fflush(enforce(_p.handle, "Calling fflush() on an unopened file"))
-                == 0);
+        enforce(isOpen, "Attempting to flush() in an unopened file");
+        errnoEnforce(.fflush(_p.handle) == 0);
+    }
+
+    unittest
+    {
+        // Issue 12349
+        static import std.file;
+        import std.exception: assertThrown;
+
+        auto deleteme = testFilename();
+        auto f = File(deleteme, "w");
+        scope(exit) std.file.remove(deleteme);
+
+        f.close();
+        assertThrown(f.flush());
     }
 
 /**
@@ -662,7 +687,7 @@ $(D rawRead) always reads in binary mode on Windows.
         import std.exception : enforce, errnoEnforce;
 
         enforce(buffer.length, "rawRead must take a non-empty buffer");
-        version(Win32)
+        version(Windows)
         {
             immutable fd = ._fileno(_p.handle);
             immutable mode = ._setmode(fd, _O_BINARY);
@@ -737,7 +762,6 @@ Throws: $(D ErrnoException) if the file is not opened or if the call to $(D fwri
                         _name, "'"));
     }
 
-    version(Win64) {} else
     unittest
     {
         static import std.file;
@@ -776,7 +800,6 @@ Throws: $(D Exception) if the file is not opened.
         }
     }
 
-    version(Win64) {} else
     unittest
     {
         static import std.file;
@@ -813,7 +836,7 @@ managed file handle.
 Throws: $(D Exception) if the file is not opened.
         $(D ErrnoException) if the call to $(D ftell) fails.
  */
-    @property ulong tell() const
+    @property ulong tell() const @trusted
     {
         import std.exception : enforce, errnoEnforce;
 
@@ -851,7 +874,7 @@ for the file handle.
 
 Throws: $(D Exception) if the file is not opened.
  */
-    void rewind()
+    void rewind() @safe
     {
         import std.exception : enforce;
 
@@ -866,7 +889,7 @@ the file handle.
 Throws: $(D Exception) if the file is not opened.
         $(D ErrnoException) if the call to $(D setvbuf) fails.
  */
-    void setvbuf(size_t size, int mode = _IOFBF)
+    void setvbuf(size_t size, int mode = _IOFBF) @trusted
     {
         import std.exception : enforce, errnoEnforce;
 
@@ -882,7 +905,7 @@ _setvbuf) for the file handle.
 Throws: $(D Exception) if the file is not opened.
         $(D ErrnoException) if the call to $(D setvbuf) fails.
 */
-    void setvbuf(void[] buf, int mode = _IOFBF)
+    void setvbuf(void[] buf, int mode = _IOFBF) @trusted
     {
         import std.exception : enforce, errnoEnforce;
 
@@ -1420,12 +1443,19 @@ for every line.
         static import std.file;
 
         auto deleteme = testFilename();
-        std.file.write(deleteme, "hello\nworld\n");
+        std.file.write(deleteme, "hello\nworld\ntrue\nfalse\n");
         scope(exit) std.file.remove(deleteme);
         string s;
         auto f = File(deleteme);
         f.readf("%s\n", &s);
         assert(s == "hello", "["~s~"]");
+        f.readf("%s\n", &s);
+        assert(s == "world", "["~s~"]");
+
+        // Issue 11698
+        bool b1, b2;
+        f.readf("%s\n%s\n", &b1, &b2);
+        assert(b1 == true && b2 == false);
     }
 
 /**
@@ -1456,7 +1486,7 @@ Note that the created file has no $(LREF name)*/
 /**
 Returns the $(D FILE*) corresponding to this object.
  */
-    FILE* getFP() pure
+    FILE* getFP() @safe pure
     {
         import std.exception : enforce;
 
@@ -1473,7 +1503,7 @@ Returns the $(D FILE*) corresponding to this object.
 /**
 Returns the file number corresponding to this object.
  */
-    /*version(Posix) */int fileno() const
+    /*version(Posix) */int fileno() const @trusted
     {
         import std.exception : enforce;
 
@@ -1693,7 +1723,7 @@ the contents may well have changed).
     unittest
     {
         static import std.file;
-        import std.algorithm : take, equal;
+        import std.algorithm : equal;
 
         //printf("Entering test at line %d\n", __LINE__);
         scope(failure) printf("Failed test at line %d\n", __LINE__);
@@ -1769,8 +1799,23 @@ the contents may well have changed).
         testTerm("bob\r\nmarge\r\nsteve\r\n", ["bob\r\n", "marge\r\n", "steve\r\n"],
             KeepTerminator.yes, "\r\n", false);
         testTerm("sue\r", ["sue\r"], KeepTerminator.yes, '\r', false);
+    }
 
-        auto file = File.tmpfile();
+    unittest
+    {
+        import std.algorithm : equal;
+
+        version(Win64)
+        {
+            static import std.file;
+
+            /* the C function tmpfile doesn't seem to work, even when called from C */ 
+            auto deleteme = testFilename();
+            auto file = File(deleteme, "w+");
+            scope(success) std.file.remove(deleteme);
+        }
+        else
+            auto file = File.tmpfile();
         file.write("1\n2\n3\n");
 
         // bug 9599
@@ -2083,6 +2128,8 @@ $(D Range) that locks the file and allows fast writing to it.
             }
             else static if (c.sizeof == 2)
             {
+                import std.utf : toUTF8;
+
                 if (orientation <= 0)
                 {
                     if (c <= 0x7F)
@@ -2104,6 +2151,8 @@ $(D Range) that locks the file and allows fast writing to it.
             }
             else // 32-bit characters
             {
+                import std.utf : toUTF8;
+
                 if (orientation <= 0)
                 {
                     if (c <= 0x7F)
@@ -2189,6 +2238,8 @@ unittest
 
 unittest
 {
+    static import std.file;
+
     auto deleteme = testFilename();
     scope(exit) std.file.remove(deleteme);
 
@@ -3771,6 +3822,7 @@ version(linux)
     {
         import std.conv : to;
         import std.exception : enforce;
+        import std.string : toStringz;
 
         auto h = enforce( sock.gethostbyname(std.string.toStringz(host)),
             new StdioException("gethostbyname"));
