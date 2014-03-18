@@ -4593,6 +4593,7 @@ template Utf8Matcher()
     static auto encode(size_t sz)(dchar ch)
         if(sz > 1)
     {
+        import std.utf : encode;
         char[4] buf;
         std.utf.encode(buf, ch);
         char[sz] ret;
@@ -5165,6 +5166,7 @@ package auto units(C)(C[] s)
     auto uni24 = utf8.subMatcher!(2,4);
     foreach(ch; unicode.L.byCodepoint.stride(3))
     {
+        import std.utf : encode;
         char[4] buf;
         wchar[2] buf16;
         auto len = std.utf.encode(buf, ch);
