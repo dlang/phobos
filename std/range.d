@@ -9823,14 +9823,6 @@ auto tee(alias fun, Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, Range)(Range inp
             {
                 return _input.length;
             }
-
-            static if (isRandomAccessRange!Range)
-            {
-                private alias IndexType = CommonType!(size_t, typeof(_input.length));
-                auto ref opIndex(IndexType n) { return _input[n]; }
-                
-                alias opDollar = length;
-            }
         }
 
         static if (isInfinite!Range)
@@ -9859,36 +9851,6 @@ auto tee(alias fun, Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, Range)(Range inp
                 _fun(_input.front);
             }
             return _input.front;
-        }
-
-        static if (isBidirectionalRange!Range)
-        {
-            void popBack()
-            {
-                assert(!_input.empty);
-                static if (pipeOnPop)
-                {
-                    _fun(_input.back);
-                }
-                _input.popBack();
-            }
-
-            @property auto ref back()
-            {
-                static if (!pipeOnPop)
-                {
-                    _fun(_input.front);
-                }
-                return _fun(_input.back);
-            }
-        }
-
-        static if (isForwardRange!Range)
-        {
-            @property auto save()
-            {
-                return typeof(this)(_input.save);
-            }
         }
     }
 
@@ -9967,34 +9929,4 @@ unittest
     auto pipeOnFront = txt.tee!(a => frontCount++, No.pipeOnPop);
     testRange(pipeOnFront);
     assert(frontCount == 9);
-}
-
-unittest
-{
-    // Verify save behavior, using a reference type InputRange.
-    class C
-    {
-        int _data;
-        @property int front() { return _data; }
-        @property bool empty() { return false; }
-        void popFront() { _data++; }
-        @property auto save()
-        {
-            C result = new C();
-            result._data = _data;
-            return result;
-        }
-    }
-
-    C nums = new C();
-
-    auto range = nums.tee!(a => a + 1);
-    range.popFront();
-    assert(range.front == 1);
-
-    auto saved = range.save;
-    range.popFront();
-    range.popFront();
-    assert(range.front == 3);
-    assert(saved.front == 1);
 }
