@@ -313,7 +313,7 @@ struct CodepointSet
                 ivals[i-1] = ivals[i];//moveAll(ivals[1..$], ivals[0..$-1]);
             ivals = ivals[0..$-1];
             if(!__ctfe)
-                assumeSafeAppend(ivals);
+                cast(void)assumeSafeAppend(ivals);
         }
         if(ivals[$-1] != endOfRange)
             insertInPlaceAlt(ivals, ivals.length, endOfRange);
@@ -321,7 +321,7 @@ struct CodepointSet
         {
             ivals = ivals[0..$-1] ;
             if(!__ctfe)
-                assumeSafeAppend(ivals);
+                cast(void)assumeSafeAppend(ivals);
         }
         assert(!(ivals.length & 1));
         return this;
