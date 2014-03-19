@@ -2286,14 +2286,14 @@ dstring toUTF32(in dchar[] s) @safe
   +/
 template toUTFz(P)
 {
-    P toUTFz(S)(S str) @system
+    P toUTFz(S)(S str) @safe pure
     {
         return toUTFzImpl!(P, S)(str);
     }
 }
 
 ///
-unittest
+@safe pure unittest
 {
     auto p1 = toUTFz!(char*)("hello world");
     auto p2 = toUTFz!(const(char)*)("hello world");
@@ -2303,7 +2303,7 @@ unittest
     auto p6 = toUTFz!(immutable(dchar)*)("hello world"w);
 }
 
-private P toUTFzImpl(P, S)(S str) @system
+private P toUTFzImpl(P, S)(S str) @safe pure
     if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
         is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)) &&
         is(immutable(Unqual!(ElementEncodingType!S)) == ElementEncodingType!S))
@@ -2327,7 +2327,8 @@ private P toUTFzImpl(P, S)(S str) @system
     {
         if (!__ctfe)
         {
-            immutable p = str.ptr + str.length;
+            auto trustedPtrAdd(S s) @trusted { return s.ptr + s.length; }
+            immutable p = trustedPtrAdd(str);
 
             // Peek past end of str, if it's 0, no conversion necessary.
             // Note that the compiler will put a 0 past the end of static
@@ -2346,7 +2347,7 @@ private P toUTFzImpl(P, S)(S str) @system
     }
 }
 
-private P toUTFzImpl(P, S)(S str) @system
+private P toUTFzImpl(P, S)(S str) @safe pure
     if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
         is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)) &&
         !is(immutable(Unqual!(ElementEncodingType!S)) == ElementEncodingType!S))
@@ -2362,7 +2363,8 @@ private P toUTFzImpl(P, S)(S str) @system
     {
         if (!__ctfe)
         {
-            auto p = str.ptr + str.length;
+            auto trustedPtrAdd(S s) @trusted { return s.ptr + s.length; }
+            auto p = trustedPtrAdd(str);
 
             if ((cast(size_t)p & 3) && *p == '\0')
                 return str.ptr;
@@ -2379,11 +2381,12 @@ private P toUTFzImpl(P, S)(S str) @system
         copy[0 .. $ - 1] = str[];
         copy[$ - 1] = '\0';
 
-        return cast(P)copy.ptr;
+        auto trustedCast(typeof(copy) c) @trusted { return cast(P)c.ptr; }
+        return trustedCast(copy);
     }
 }
 
-private P toUTFzImpl(P, S)(S str)
+private P toUTFzImpl(P, S)(S str) @safe pure
     if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
         !is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)))
 //C1[], const(C1)[], or immutable(C1)[] -> C2*, const(C2)*, or immutable(C2)*
@@ -2397,7 +2400,7 @@ private P toUTFzImpl(P, S)(S str)
     return cast(P)retval.data.ptr;
 }
 
-unittest
+@safe pure unittest
 {
     import std.algorithm;
 
@@ -2425,23 +2428,26 @@ unittest
         temp[0 .. $ - 1] = s1[0 .. $];
         temp[$ - 1] = '\n';
         --temp.length;
-        auto s2 = assumeUnique(temp);
+        auto trustedAssumeUnique(T)(T t) @trusted { return assumeUnique(t); }
+        auto s2 = trustedAssumeUnique(temp);
         assert(s1 == s2);
+
+        void trustedCStringAssert(P, S)(S s) @trusted
+        {
+            auto p = toUTFz!P(s);
+            assert(p[0 .. s.length] == s);
+            assert(p[s.length] == '\0');
+        }
 
         foreach (P; TypeTuple!(C*, const(C)*, immutable(C)*))
         {
-            auto p1 = toUTFz!P(s1);
-            assert(p1[0 .. s1.length] == s1);
-            assert(p1[s1.length] == '\0');
-
-            auto p2 = toUTFz!P(s2);
-            assert(p2[0 .. s2.length] == s2);
-            assert(p2[s2.length] == '\0');
+            trustedCStringAssert!P(s1);
+            trustedCStringAssert!P(s2);
         }
     }
     });
 
-    static void test(P, S)(S s, size_t line = __LINE__)
+    static void test(P, S)(S s, size_t line = __LINE__) @trusted
     {
         auto p = toUTFz!P(s);
         immutable len = zeroLen(p);
@@ -2491,13 +2497,13 @@ unittest
     $(D toUTF16z) is suitable for calling the 'W' functions in the Win32 API
     that take an $(D LPWSTR) or $(D LPCWSTR) argument.
   +/
-const(wchar)* toUTF16z(C)(const(C)[] str)
+const(wchar)* toUTF16z(C)(const(C)[] str) @safe pure
     if (isSomeChar!C)
 {
     return toUTFz!(const(wchar)*)(str);
 }
 
-unittest
+@safe pure unittest
 {
     //toUTFz is already thoroughly tested, so this will just verify that
     //toUTF16z compiles properly for the various string types.
@@ -2508,7 +2514,7 @@ unittest
 
 /* ================================ tests ================================== */
 
-unittest
+pure unittest
 {
     debug(utf) printf("utf.toUTF.unittest\n");
 
