@@ -4691,8 +4691,6 @@ struct Zip(Ranges...)
     {
         @property bool empty()
         {
-            import std.exception : enforce;
-
             final switch (stoppingPolicy)
             {
             case StoppingPolicy.shortest:
@@ -4708,15 +4706,13 @@ struct Zip(Ranges...)
                 }
                 return true;
             case StoppingPolicy.requireSameLength:
+                immutable b = ranges[0].empty;
                 foreach (i, Unused; R[1 .. $])
                 {
-                    enforce(ranges[0].empty ==
-                            ranges[i + 1].empty,
-                            "Inequal-length ranges passed to Zip");
+                    assert(b == ranges[i + 1].empty, "Inequal-length ranges passed to Zip");
                 }
-                return ranges[0].empty;
+                return b;
             }
-            assert(false);
         }
     }
 
@@ -4786,6 +4782,7 @@ struct Zip(Ranges...)
         @property ElementType back()
         {
             //TODO: Fixme! BackElement != back of all ranges in case of jagged-ness
+            //@@@12404@@@
 
             auto tryGetBack(size_t i)(){return ranges[i].empty ? tryGetInit!i() : ranges[i].back;}
             //ElementType(tryGetBack!0, tryGetBack!1, ...)
@@ -4800,6 +4797,7 @@ struct Zip(Ranges...)
             ElementType moveBack()
             {
                 //TODO: Fixme! BackElement != back of all ranges in case of jagged-ness
+                //@@@12404@@@
 
                 auto tryMoveBack(size_t i)(){return ranges[i].empty ? tryGetInit!i() : .moveFront(ranges[i]);}
                 //ElementType(tryMoveBack!0, tryMoveBack!1, ...)
@@ -4816,6 +4814,7 @@ struct Zip(Ranges...)
             {
                 //TODO: Fixme! BackElement != back of all ranges in case of jagged-ness.
                 //Not sure the call is even legal for StoppingPolicy.longest
+                //@@@12404@@@
 
                 foreach (i, Unused; R)
                 {
@@ -4833,14 +4832,15 @@ struct Zip(Ranges...)
 */
     void popFront()
     {
-        import std.exception : enforce;
-
         final switch (stoppingPolicy)
         {
-        case StoppingPolicy.shortest:
+        case StoppingPolicy.shortest, StoppingPolicy.requireSameLength:
             foreach (i, Unused; R)
             {
                 assert(!ranges[i].empty);
+            }
+            foreach (i, Unused; R)
+            {
                 ranges[i].popFront();
             }
             break;
@@ -4848,13 +4848,6 @@ struct Zip(Ranges...)
             foreach (i, Unused; R)
             {
                 if (!ranges[i].empty) ranges[i].popFront();
-            }
-            break;
-        case StoppingPolicy.requireSameLength:
-            foreach (i, Unused; R)
-            {
-                enforce(!ranges[i].empty, "Invalid Zip object");
-                ranges[i].popFront();
             }
             break;
         }
@@ -4868,14 +4861,17 @@ struct Zip(Ranges...)
         void popBack()
         {
             //TODO: Fixme! In case of jaggedness, this is wrong.
-            import std.exception : enforce;
+            //@@@12404@@@
 
             final switch (stoppingPolicy)
             {
-            case StoppingPolicy.shortest:
+            case StoppingPolicy.shortest, StoppingPolicy.requireSameLength:
                 foreach (i, Unused; R)
                 {
                     assert(!ranges[i].empty);
+                }
+                foreach (i, Unused; R)
+                {
                     ranges[i].popBack();
                 }
                 break;
@@ -4883,13 +4879,6 @@ struct Zip(Ranges...)
                 foreach (i, Unused; R)
                 {
                     if (!ranges[i].empty) ranges[i].popBack();
-                }
-                break;
-            case StoppingPolicy.requireSameLength:
-                foreach (i, Unused; R)
-                {
-                    enforce(!ranges[i].empty, "Invalid Zip object");
-                    ranges[i].popBack();
                 }
                 break;
             }
@@ -4905,11 +4894,20 @@ struct Zip(Ranges...)
         @property auto length()
         {
             static if (Ranges.length == 1)
+            {
                 return ranges[0].length;
+            }
             else
             {
                 if (stoppingPolicy == StoppingPolicy.requireSameLength)
-                    return ranges[0].length;
+                {
+                    CommonType!(staticMap!(lengthType, R)) result = ranges[0].length;
+                    foreach (i, Unused; R[1 .. $])
+                    {
+                        assert(result == ranges[i + 1].length, "Inequal-length ranges passed to Zip");
+                    }
+                    return result;
+                }
 
                 //[min|max](ranges[0].length, ranges[1].length, ...)
                 if (stoppingPolicy == StoppingPolicy.shortest)
@@ -5045,11 +5043,10 @@ unittest
     assert(b == [2.0, 1.0, 3.0]);
 
     z = zip(StoppingPolicy.requireSameLength, a, b);
-    assertNotThrown(z.popBack());
-    assertNotThrown(z.popBack());
-    assertNotThrown(z.popBack());
+    z.popBack();
+    z.popBack();
+    z.popBack();
     assert(z.empty);
-    assertThrown(z.popBack());
 
     a = [ 1, 2, 3 ];
     b = [ 1.0, 2.0, 3.0 ];
@@ -5078,12 +5075,6 @@ unittest
         auto zShortest = zip(arr1, arr2);
         assert(equal(map!"a[0]"(zShortest), [1, 2]));
         assert(equal(map!"a[1]"(zShortest), [1, 2]));
-
-        try {
-            auto zSame = zip(StoppingPolicy.requireSameLength, arr1, arr2);
-            foreach(elem; zSame) {}
-            assert(0);
-        } catch { /* It's supposed to throw.*/ }
 
         auto zLongest = zip(StoppingPolicy.longest, arr1, arr2);
         assert(!zLongest.ranges[0].empty);
@@ -5150,7 +5141,7 @@ unittest
     assert(b == [6, 5, 2, 1, 3]);
 }
 
-@safe pure unittest
+nothrow @safe pure unittest
 {
     auto LL = iota(1L, 1000L);
     auto z = zip(LL, [4]);
@@ -5173,7 +5164,7 @@ unittest
     assertThrown(zip(StoppingPolicy.longest, cast(S[]) null, new int[1]).front);
 }
 
-@safe pure unittest //12007
+nothrow @safe pure unittest //12007
 {
     static struct R
     {
