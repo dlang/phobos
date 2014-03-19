@@ -2884,7 +2884,7 @@ unittest
  * (to $(D _wfopen) on Windows)
  * with appropriately-constructed C-style strings.
  */
-private FILE* fopen(in char[] name, in char[] mode = "r")
+private FILE* fopen(in char[] name, in char[] mode = "r") @trusted
 {
     import std.string : toStringz;
 
@@ -2917,7 +2917,7 @@ version (Posix)
      * Convenience function that forwards to $(D std.c.stdio.popen)
      * with appropriately-constructed C-style strings.
      */
-    FILE* popen(in char[] name, in char[] mode = "r")
+    FILE* popen(in char[] name, in char[] mode = "r") @trusted
     {
         import std.string : toStringz;
 
