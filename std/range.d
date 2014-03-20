@@ -8370,7 +8370,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
             static MinstdRand gen;
             immutable start = uniform(0, step, gen);
             auto st = stride(this._input, step);
-            static if(is(typeof(text(st))))
+            static if (is(typeof(text(st))))
             {
                 assert(isSorted!pred(st), text(st));
             }
