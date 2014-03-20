@@ -1,4 +1,3 @@
-
 /*
  * Copyright: 2014 by Digital Mars
  * License: $(LINK2 http://boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -176,7 +175,7 @@ struct ScopeBuffer(T, alias realloc = core.stdc.stdlib.realloc)
      * Append array s to the buffer.
      *
      * If $(D const(T)) can be converted to $(D T), then put will accept
-     * $(D const(T)[] as input. It will accept a $(D T[]) otherwise.
+     * $(D const(T)[]) as input. It will accept a $(D T[]) otherwise.
      */
     private alias CT = Select!(is(const(T) : T), const(T), T);
     /// ditto
