@@ -114,6 +114,7 @@
  *           $(LREF PointerTarget)
  *           $(LREF KeyType)
  *           $(LREF ValueType)
+ *           $(LREF DimensionCount)
  *           $(LREF Unsigned)
  *           $(LREF Largest)
  *           $(LREF Signed)
@@ -5919,6 +5920,29 @@ unittest
     KeyType!Hash str = "a"; // str is declared as string
     ValueType!Hash num = 1; // num is declared as int
 }
+
+/**
+ * Returns the dimension count of a static or dynamic array.
+ * Dimensions are counted up to the first non-array element type.
+ */
+enum DimensionCount(T : E[], E) = DimCountImpl!E + 1;
+
+///
+unittest
+{
+    static assert(DimensionCount!(int[]) == 1);
+    static assert(DimensionCount!(int[][]) == 2);
+    static assert(DimensionCount!(int[1][ ]) == 2);
+    static assert(DimensionCount!(int[ ][1]) == 2);
+    static assert(DimensionCount!(int[1][1]) == 2);
+    static assert(DimensionCount!(int[][]*[]) == 1);
+
+    // can only be called on arrays
+    static assert(!__traits(compiles, DimensionCount!int));
+}
+
+private enum DimCountImpl(T : E[], E) = DimCountImpl!E + 1;
+private enum DimCountImpl(T) = 0;
 
 /**
  * Returns the corresponding unsigned type for T. T must be a numeric
