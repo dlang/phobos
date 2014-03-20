@@ -566,7 +566,7 @@ package void doPut(R, E)(ref R r, auto ref E e)
     static if (usingPut)
     {
         static assert(is(typeof(r.put(e))),
-            format("Cannot nativaly put a %s into a %s.", E.stringof, R.stringof));
+            format("Cannot natively put a %s into a %s.", E.stringof, R.stringof));
         r.put(e);
     }
     else static if (isInputRange!R)
@@ -2023,10 +2023,10 @@ if (isBidirectionalRange!(Unqual!Range))
 ///
 unittest
 {
-	int[] a = [ 1, 2, 3, 4, 5 ];
-	assert(equal(retro(a), [ 5, 4, 3, 2, 1 ][]));
-	assert(retro(a).source is a);
-	assert(retro(retro(a)) is a);
+        int[] a = [ 1, 2, 3, 4, 5 ];
+        assert(equal(retro(a), [ 5, 4, 3, 2, 1 ][]));
+        assert(retro(a).source is a);
+        assert(retro(retro(a)) is a);
 }
 
 unittest
@@ -4998,11 +4998,11 @@ auto zip(Ranges...)(Ranges ranges)
 ///
 unittest
 {
-	int[] a = [ 1, 2, 3 ];
-	string[] b = [ "a", "b", "c" ];
-	sort!("a[0] > b[0]")(zip(a, b));
-	assert(a == [ 3, 2, 1 ]);
-	assert(b == [ "c", "b", "a" ]);
+        int[] a = [ 1, 2, 3 ];
+        string[] b = [ "a", "b", "c" ];
+        sort!("a[0] > b[0]")(zip(a, b));
+        assert(a == [ 3, 2, 1 ]);
+        assert(b == [ "c", "b", "a" ]);
 }
 
 /// Ditto
@@ -7752,7 +7752,7 @@ unittest
     static assert(isBidirectionalRange!TestRange);
     TestRange r;
     auto x = moveBack(r);
-	assert(x == 5);
+        assert(x == 5);
 }
 
 /**
@@ -7992,6 +7992,20 @@ class OutputRangeObject(R, E...) : staticMap!(OutputRange, E) {
     mixin(putMethods!E());
 }
 
+/** Implements an $(D OutputRange) that does nothing with elements fed to it.
+ */
+struct BitBucket(E)
+{
+    void put(E) { }
+}
+
+unittest
+{
+    import std.algorithm : copy;
+
+    BitBucket!char b;
+    "hello".copy(b);
+}
 
 /**Returns the interface type that best matches $(D R).*/
 template MostDerivedInputRange(R) if (isInputRange!(Unqual!R)) {
