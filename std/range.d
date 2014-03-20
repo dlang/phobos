@@ -2024,10 +2024,10 @@ if (isBidirectionalRange!(Unqual!Range))
 ///
 unittest
 {
-	int[] a = [ 1, 2, 3, 4, 5 ];
-	assert(equal(retro(a), [ 5, 4, 3, 2, 1 ][]));
-	assert(retro(a).source is a);
-	assert(retro(retro(a)) is a);
+    int[] a = [ 1, 2, 3, 4, 5 ];
+    assert(equal(retro(a), [ 5, 4, 3, 2, 1 ][]));
+    assert(retro(a).source is a);
+    assert(retro(retro(a)) is a);
 }
 
 unittest
@@ -5018,11 +5018,11 @@ auto zip(Ranges...)(Ranges ranges)
 ///
 unittest
 {
-	int[] a = [ 1, 2, 3 ];
-	string[] b = [ "a", "b", "c" ];
-	sort!("a[0] > b[0]")(zip(a, b));
-	assert(a == [ 3, 2, 1 ]);
-	assert(b == [ "c", "b", "a" ]);
+    int[] a = [ 1, 2, 3 ];
+    string[] b = [ "a", "b", "c" ];
+    sort!("a[0] > b[0]")(zip(a, b));
+    assert(a == [ 3, 2, 1 ]);
+    assert(b == [ "c", "b", "a" ]);
 }
 
 /// Ditto
@@ -7777,7 +7777,7 @@ unittest
     static assert(isBidirectionalRange!TestRange);
     TestRange r;
     auto x = moveBack(r);
-	assert(x == 5);
+    assert(x == 5);
 }
 
 /**
@@ -9830,3 +9830,18 @@ unittest    // bug 9060
     static void foo(R)(R r) { until!(x => x > 7)(r); }
     foo(r);
 }
+
+/*********************************
+ * An OutputRange that discards the data it receives.
+ */
+struct NullSink
+{
+    void put(E)(E){}
+}
+
+unittest
+{
+    import std.algorithm;
+    [4, 5, 6].map!(x => x * 2).copy(NullSink());
+}
+
