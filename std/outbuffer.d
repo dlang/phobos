@@ -33,6 +33,7 @@ private
  * OutBuffer's byte order is the format native to the computer.
  * To control the byte order (endianness), use a class derived
  * from OutBuffer.
+ * OutBuffer's internal buffer is allocated with the GC.
  */
 
 class OutBuffer
@@ -84,6 +85,11 @@ class OutBuffer
                 GC.clrAttr(data.ptr, GC.BlkAttr.NO_SCAN);
             }
         }
+
+    /**********************************
+     * put enables OutBuffer to be used as an OutputRange.
+     */
+    alias write put;
 
     /*************************************
      * Append data to the internal buffer.
@@ -368,4 +374,27 @@ unittest
     //auto s = buf.toString();
     //printf("buf = '%.*s'\n", s.length, s.ptr);
     assert(cmp(buf.toString(), "hello world 6") == 0);
+}
+
+unittest
+{
+    import std.range;
+    static assert(isOutputRange!(OutBuffer, char));
+
+    import std.algorithm;
+  {
+    OutBuffer buf = new OutBuffer();
+    "hello".copy(buf);
+    assert(buf.toBytes() == "hello");
+  }
+  {
+    OutBuffer buf = new OutBuffer();
+    "hello"w.copy(buf);
+    assert(buf.toBytes() == "h\x00e\x00l\x00l\x00o\x00");
+  }
+  {
+    OutBuffer buf = new OutBuffer();
+    "hello"d.copy(buf);
+    assert(buf.toBytes() == "h\x00\x00\x00e\x00\x00\x00l\x00\x00\x00l\x00\x00\x00o\x00\x00\x00");
+  }
 }
