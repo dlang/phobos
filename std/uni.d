@@ -69,7 +69,7 @@
         A useful technique for Unicode-aware parsers that perform
         character classification of encoded $(CODEPOINTS)
         is to avoid unnecassary decoding at all costs.
-        $(LREF UtfMatcher) provides an improvement over the usual workflow
+        $(LREF utfMatcher) provides an improvement over the usual workflow
         of decode-classify-process, combining the decoding and classification
         steps. By extracting necessary bits directly from encoded
         $(S_LINK Code unit, code units) matchers achieve 
@@ -2015,7 +2015,7 @@ public:
         auto flattened = roundRobin(intervals.save.map!"a[0]"(),
             intervals.save.map!"a[1]"());
         InversionList set;
-        set.data = Uint24Array!(SP)(flattened);
+        set.data = CowArray!(SP)(flattened);
         return set;
     }
     //ditto untill sort is CTFE-able
@@ -2032,7 +2032,7 @@ public:
     body
     {
         InversionList set;
-        set.data = Uint24Array!(SP)(intervals);
+        set.data = CowArray!(SP)(intervals);
         return set;
     }
 
@@ -2454,7 +2454,7 @@ public:
         ---
         import std.stdio;
 
-        // construct set directly from [a, b) intervals
+        // construct set directly from [a, b$RPAREN intervals
         auto set = CodepointSet(10, 12, 45, 65, 100, 200);
         writeln(set);
         writeln(set.toSourceCode("func"));
@@ -4448,7 +4448,7 @@ public struct MatcherConcept
         assert(false);
     }
     ///
-    @safe public unittest
+    @safe unittest
     {
         string truth = "2² = 4";
         auto m = utfMatcher!char(unicode.Number);    
@@ -4485,7 +4485,7 @@ public struct MatcherConcept
     }
 
     ///
-    @safe public unittest
+    @safe unittest
     {
         auto m = utfMatcher!char(unicode.Number);
         string square = "2²";        
