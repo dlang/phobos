@@ -1699,7 +1699,7 @@ if (isNumeric!Num)
 private size_t diceImpl(Rng, Range)(ref Rng rng, Range proportions)
 if (isForwardRange!Range && isNumeric!(ElementType!Range) && isForwardRange!Rng)
 {
-    double sum = reduce!("(assert(b >= 0), a + b)")(0.0, proportions.save);
+    double sum = reduce!((a,b) { assert(b >= 0); return a + b; })(0.0, proportions.save);
     enforce(sum > 0, "Proportions in a dice cannot sum to zero");
     immutable point = uniform(0.0, sum, rng);
     assert(point < sum);
