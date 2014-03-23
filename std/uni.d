@@ -5530,10 +5530,10 @@ unittest
 
     $(P Acts as the identity function when given a range of code points.)
 +/
-// TODO: Propagate bidirectional access
 auto byCodePoint(Range)(Range range)
     if(isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
 {
+	// TODO: Propagate bidirectional access
     static struct Result
     {
         private Range _range;
