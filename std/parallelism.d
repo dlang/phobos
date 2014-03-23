@@ -1711,9 +1711,21 @@ public:
 
                     immutable end = min(len, start + workUnitSize);
 
-                    foreach(i; start..end)
+                    static if (hasSlicing!R)
                     {
-                        buf[i] = fun(range[i]);
+                        auto subrange = range[start..end];
+                        foreach(i; start..end)
+                        {
+                            buf[i] = fun(subrange.front());
+                            subrange.popFront();
+                        }
+                    }
+                    else
+                    {
+                        foreach(i; start..end)
+                        {
+                            buf[i] = fun(range[i]);
+                        }
                     }
                 }
             }
