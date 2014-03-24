@@ -353,9 +353,9 @@ void getopt(T...)(ref string[] args, T opts) {
 }
 
 /**
-   Configuration options for $(D getopt). 
-   
-   You can pass them to $(D getopt) in any position, except in between an option 
+   Configuration options for $(D getopt).
+
+   You can pass them to $(D getopt) in any position, except in between an option
    string and its bound pointer.
 */
 enum config {
@@ -557,22 +557,22 @@ void handleOption(R)(string option, R receiver, ref string[] args,
 }
 
 /**
-   The option character (default '-'). 
+   The option character (default '-').
 
    Defaults to '-' but it can be assigned to prior to calling $(D getopt).
  */
 dchar optionChar = '-';
 
 /**
-   The string that conventionally marks the end of all options (default '--'). 
+   The string that conventionally marks the end of all options (default '--').
 
-   Defaults to "--" but can be assigned to prior to calling $(D getopt). Assigning an 
+   Defaults to "--" but can be assigned to prior to calling $(D getopt). Assigning an
    empty string to $(D endOfOptions) effectively disables it.
  */
 string endOfOptions = "--";
 
 /**
-   The assignment character used in options with parameters (default '='). 
+   The assignment character used in options with parameters (default '=').
 
    Defaults to '=' but can be assigned to prior to calling $(D getopt).
  */
