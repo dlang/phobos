@@ -41,6 +41,20 @@ version (unittest)
 }
 
 /**
+ * Thrown on one of the following conditions:
+ * - An unrecognized command-line argument is passed
+ *   and $(D std.getopt.config.passThrough) was not present.
+ */
+class GetOptException : Exception
+{
+    @safe pure nothrow
+    this(string msg, string file = __FILE__, size_t line = __LINE__)
+    {
+        super(msg, file, line);
+    }
+}
+
+/**
    Parse and remove command line options from an string array.
 
    Synopsis:
@@ -81,7 +95,10 @@ void main(string[] args)
  to their defaults and then invoke $(D getopt). If a
  command-line argument is recognized as an option with a parameter and
  the parameter cannot be parsed properly (e.g. a number is expected
- but not present), a $(D Exception) exception is thrown.
+ but not present), a $(D ConvException) exception is thrown.
+ If $(D std.getopt.config.passThrough) was not passed to getopt
+ and an unrecognized command-line argument is found, a $(D GetOptException)
+ is thrown.
 
  Depending on the type of the pointer being bound, $(D getopt)
  recognizes the following kinds of options:
@@ -420,7 +437,7 @@ private void getoptImpl(T...)(ref string[] args,
             }
             if (!cfg.passThrough)
             {
-                throw new Exception("Unrecognized option "~a);
+                throw new GetOptException("Unrecognized option "~a);
             }
         }
     }
@@ -874,6 +891,16 @@ unittest
     bool opt;
     args.getopt(config.passThrough, "opt", &opt);
     assert(args == ["main", "-test"]);
+}
+
+unittest // 5228
+{
+    auto args = ["prog", "--foo=bar"];
+    int abc;
+    assertThrown!GetOptException(getopt(args, "abc", &abc));
+
+    args = ["prog", "--abc=string"];
+    assertThrown!ConvException(getopt(args, "abc", &abc));
 }
 
 unittest // From bugzilla 7693
