@@ -1184,6 +1184,9 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
             }
 
             index += i + 1;
+            static if (i == 3)
+                if (d > dchar.max)
+                    throw invalidUTF();
             return d;
         }
     }
@@ -1525,7 +1528,16 @@ unittest
     });
 }
 
-
+unittest
+{
+    char[4] val;
+    val[0] = 0b1111_0111;
+    val[1] = 0b1011_1111;
+    val[2] = 0b1011_1111;
+    val[3] = 0b1011_1111;
+    size_t i = 0;
+    assertThrown!UTFException((){ dchar ch = decode(val[], i); }());
+}
 /* =================== Encode ======================= */
 
 /++
