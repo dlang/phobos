@@ -292,12 +292,13 @@ private template blockAttribute(T)
     }
     else
     {
-        enum blockAttribute = GC.BlkAttr.NO_SCAN;
+        enum blockAttribute = GC.BlkAttr.NO_SCAN | GC.BlkAttr.APPENDABLE;
     }
 }
 version(unittest)
 {
     static assert(!(blockAttribute!void & GC.BlkAttr.NO_SCAN));
+    static assert(blockAttribute!uint & GC.BlkAttr.APPENDABLE);
 }
 
 // Returns the number of dimensions in an array T.
