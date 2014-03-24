@@ -3826,6 +3826,7 @@ unittest
         result ~= c;
     }
 
+    import std.string : format;
     assert(equal(result, "abc12def34"d),
         "Unexpected result: '%s'"d.format(result));
 }
@@ -7046,8 +7047,8 @@ MinType!T min(T...)(T args)
         alias a = args[0];
         alias b = args[1];
 
-        static assert (is(typeof(a < b)),
-            format("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
+        static assert (is(typeof(a < b)), {import std.string : format;
+            return format("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof);}());
 
         static if (isIntegral!T0 && isIntegral!T1 &&
                    (mostNegative!T0 < 0) != (mostNegative!T1 < 0))
@@ -7132,8 +7133,8 @@ MaxType!T max(T...)(T args)
         alias a = args[0];
         alias b = args[1];
 
-        static assert (is(typeof(a < b)),
-            format("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
+        static assert (is(typeof(a < b)), {import std.string : format;
+            return format("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof);}());
 
         static if (isIntegral!T0 && isIntegral!T1 &&
                    (mostNegative!T0 < 0) != (mostNegative!T1 < 0))
@@ -7215,9 +7216,9 @@ minCount(alias pred = "a < b", Range)(Range range)
     alias UT = Unqual!T;
     alias RetType = Tuple!(T, size_t);
 
-    static assert (is(typeof(RetType(range.front, 1))),
-        format("Error: Cannot call minCount on a %s, because it is not possible "~
-               "to copy the result value (a %s) into a Tuple.", Range.stringof, T.stringof));
+    static assert (is(typeof(RetType(range.front, 1))), {import std.string : format;
+        return format("Error: Cannot call minCount on a %s, because it is not possible "~
+               "to copy the result value (a %s) into a Tuple.", Range.stringof, T.stringof);}());
 
     enforce(!range.empty, "Can't count elements from an empty range");
     size_t occurrences = 1;
@@ -7278,9 +7279,12 @@ minCount(alias pred = "a < b", Range)(Range range)
         return RetType(*p, occurrences);
     }
     else
+    {
+        import std.string : format;
         static assert(false,
             format("Sorry, can't find the minCount of a %s: Don't know how "~
                    "to keep track of the smallest %s element.", Range.stringof, T.stringof));
+    }
 }
 
 ///
