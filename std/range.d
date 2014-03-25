@@ -9751,16 +9751,16 @@ unittest    // bug 9060
 
 /++
   Implements a "tee" style pipe, wrapping an input range so that elements
-  of the range can be passed to a provided function as they are iterated over.
-  This is useful for printing out intermediate values in a long chain of range
-  code, or performing some operation with side-effects on each call to $(D front) 
-  or $(D popFront), and $(D back) or $(D popBack), if the underlying range
-  supports random access.
+  of the range can be passed to a provided function or $(LREF OutputRange)
+  as they are iterated over. This is useful for printing out intermediate 
+  values in a long chain of range code, performing some operation with 
+  side-effects on each call to $(D front) or $(D popFront), or diverting
+  the elements of a range into an auxiliary $(LREF OutputRange). 
 
-  It is important to note that as the resultant range is
-  evaluated lazily, $(D fun) will not actually be executed until the range is
-  "walked", using functions that evaluate ranges, such as $(LREF array) or
-  $(LREF reduce).
+  It is important to note that as the resultant range is evaluated lazily, 
+  in the case of the version of $(D tee) that takes a function, the function
+  will not actually be executed until the range is "walked" using functions 
+  that evaluate ranges, such as $(LREF array) or $(LREF reduce).
 
   Example:
 ---
@@ -9775,11 +9775,11 @@ unittest    // bug 9060
   //The result of tee has now been evaluated and count is 3
   assert(count == 3);
 
-  If the $(D pipeOnPop) $(D Flag) is equal to $(D Yes.pipeOnPop), $(D fun) is called 
-  on $(D front) before popping. Otherwise, $(D fun) will be called on each access 
-  of $(D front). The default behaviour is to call $(D fun) on $(D front) when
-  calling $(D popFront). If the underlying range defines $(D back)/$(D popBack),
-  they behave the same way as $(D front) and $(popFront) in regards to $(D pipeOnPop).
+  If a function is passed to $(D tee) and $(D pipeOnPop) is equal to
+  $(D Yes.pipeOnPop), $(D fun) is called on $(D front) before popping. 
+  Otherwise, $(D fun) will be called on $(D front) exactly once per element. 
+  The default behaviour is to call $(D fun) on $(D front) when calling 
+  $(D popFront).
 
   Examples:
 ---
@@ -9787,11 +9787,19 @@ unittest    // bug 9060
 
   int count = 0;
   auto newValues = values.filter!(a => a < 10)
-                     .tee!(a => count++)
+                     .tee!(a => count++, No.pipeOnPop)
                      .map!(a => a + 1)
                      .filter!(a => a < 10);
-  assert(equal(newValues3, [2, 5]));
-  assert(count == 3);
+  auto val = newValues.front;
+  assert(count == 1);
+  //front is only evaluated once per element
+  val = newValues.front;
+  assert(count == 1);
+  //popFront() called, fun will be called
+  //again on the next access to front
+  newValues.popFront();
+  newValues.front;
+  assert(count == 2);
 
   auto printValues = values.filter!(a => a < 10)
                        .tee!(a => writefln("pre-map: %d", a))
@@ -9843,7 +9851,7 @@ if (isInputRange!R1 && isOutputRange!(R2, typeof(inputRange.front)))
             assert(!_input.empty);
             static if (pipeOnPop)
             {
-                output.put(_input.front);
+                _output.put(_input.front);
             }
             else
             {
@@ -9879,7 +9887,7 @@ unittest
     // Pass-through
     int[] values = [1, 4, 9, 16, 25];
 
-    auto newValues = values.tee(values).array;
+    auto newValues = values.tee!(a => a + 1).array;
     assert(equal(newValues, values));
 
     auto newValues2 = values.tee!(a => a = 0).array;
