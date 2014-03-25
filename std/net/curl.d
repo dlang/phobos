@@ -4146,7 +4146,7 @@ private static size_t _receiveAsyncLines(Terminator, Unit)
                     {
                         buffer = cast(Unit[])buf;
                         buffer.length = 0;
-                        buffer.assumeSafeAppend();
+                        cast(void)buffer.assumeSafeAppend();
                         bufferValid = true;
                     },
                     (bool flag) { aborted = true; }

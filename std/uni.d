@@ -6584,9 +6584,9 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
         }
         // reset variables
         decomposed.length = 0;
-        decomposed.assumeSafeAppend();
+        cast(void)decomposed.assumeSafeAppend();
         ccc.length = 0;
-        ccc.assumeSafeAppend();
+        cast(void)ccc.assumeSafeAppend();
         input = input[anchors[1]..$];
         // and move on
         anchors = splitNormalized!norm(input);
@@ -7921,4 +7921,3 @@ private:
 }
 
 }// version(!std_uni_bootstrap)
-
