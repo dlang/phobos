@@ -9809,15 +9809,19 @@ unittest    // bug 9060
 ---
 +/
 
-auto tee(alias fun, Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, Range)(Range inputRange) 
-    if (isInputRange!(Range) && is(typeof(unaryFun!fun)))
+auto tee(Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, R1, R2)(R1 inputRange, R2 outputRange)
+if (isInputRange!R1 && isOutputRange!(R2, typeof(inputRange.front)))
 {
     struct Result
     {
-        private alias _fun = unaryFun!fun;
-        private Range _input;
+        private R1 _input;
+        private R2 _output;
+        static if (!pipeOnPop)
+        {
+            private bool _frontAccessed;
+        }
 
-        static if (hasLength!Range)
+        static if (hasLength!R1)
         {
             @property length()
             {
@@ -9825,7 +9829,7 @@ auto tee(alias fun, Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, Range)(Range inp
             }
         }
 
-        static if (isInfinite!Range)
+        static if (isInfinite!R1)
         {
             enum bool empty = false;
         }
@@ -9839,7 +9843,11 @@ auto tee(alias fun, Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, Range)(Range inp
             assert(!_input.empty);
             static if (pipeOnPop)
             {
-                _fun(_input.front);
+                output.put(_input.front);
+            }
+            else
+            {
+                _frontAccessed = false;
             }
             _input.popFront();
         }
@@ -9848,13 +9856,22 @@ auto tee(alias fun, Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, Range)(Range inp
         {
             static if (!pipeOnPop)
             {
-                _fun(_input.front);
+                if (!_frontAccessed)
+                {
+                    _frontAccessed = true;
+                    _output.put(_input.front);
+                }
             }
             return _input.front;
         }
     }
 
-    return Result(inputRange);
+    return Result(inputRange, outputRange);
+}
+
+auto tee(alias fun, Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, R1)(R1 inputRange)
+{
+    return tee!pipeOnPop(inputRange, fun!(typeof(inputRange.front)));
 }
 
 unittest
@@ -9862,7 +9879,7 @@ unittest
     // Pass-through
     int[] values = [1, 4, 9, 16, 25];
 
-    auto newValues = values.tee!(a => a + 1).array;
+    auto newValues = values.tee(values).array;
     assert(equal(newValues, values));
 
     auto newValues2 = values.tee!(a => a = 0).array;
@@ -9870,14 +9887,15 @@ unittest
 
     int count = 0;
     auto newValues3 = values.filter!(a => a < 10)
-                                .tee!(a => count++)
-                                .map!(a => a + 1)
-                                .filter!(a => a < 10);
+        .tee!(a => count++)
+        .map!(a => a + 1)
+        .filter!(a => a < 10);
     //Fine, equal also evaluates any lazy ranges passed to it.
     //count is not 3 until equal evaluates newValues3
     assert(equal(newValues3, [2, 5]));
     assert(count == 3);
 }
+
 
 unittest
 {
@@ -9891,9 +9909,9 @@ unittest
     int vowelCount = 0;
     int shiftedCount = 0;
     auto removeVowels = txt.tee!(c => isVowel(c) ? vowelCount++ : 0)
-                                .filter!(c => !isVowel(c))
-                                .map!(c => (c == ' ') ? c : c + 1)
-                                .tee!(c => isVowel(c) ? shiftedCount++ : 0);
+        .filter!(c => !isVowel(c))
+        .map!(c => (c == ' ') ? c : c + 1)
+        .tee!(c => isVowel(c) ? shiftedCount++ : 0);
     assert(equal(removeVowels, "Mo o- Mo 3"));
     assert(vowelCount == 6);
     assert(shiftedCount == 3);
@@ -9906,12 +9924,17 @@ unittest
     {
         const int strideLen = 3;
         int i = 0;
-        typeof(Range.front) elem;
+        typeof(Range.front) elem1;
+        typeof(Range.front) elem2;
         while (!r.empty)
         {
             if (i % strideLen == 0)
             {
-                elem = r.front();
+                //Make sure front is only
+                //evaluated once per item
+                elem1 = r.front;
+                elem2 = r.front;
+                assert(elem1 == elem2);
             }
             r.popFront();
             i++;
