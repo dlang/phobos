@@ -9887,9 +9887,9 @@ unittest
 
     int count = 0;
     auto newValues3 = values.filter!(a => a < 10)
-        .tee!(a => count++)
-        .map!(a => a + 1)
-        .filter!(a => a < 10);
+                            .tee!(a => count++)
+                            .map!(a => a + 1)
+                            .filter!(a => a < 10);
     //Fine, equal also evaluates any lazy ranges passed to it.
     //count is not 3 until equal evaluates newValues3
     assert(equal(newValues3, [2, 5]));
@@ -9909,9 +9909,9 @@ unittest
     int vowelCount = 0;
     int shiftedCount = 0;
     auto removeVowels = txt.tee!(c => isVowel(c) ? vowelCount++ : 0)
-        .filter!(c => !isVowel(c))
-        .map!(c => (c == ' ') ? c : c + 1)
-        .tee!(c => isVowel(c) ? shiftedCount++ : 0);
+                                .filter!(c => !isVowel(c))
+                                .map!(c => (c == ' ') ? c : c + 1)
+                                .tee!(c => isVowel(c) ? shiftedCount++ : 0);
     assert(equal(removeVowels, "Mo o- Mo 3"));
     assert(vowelCount == 6);
     assert(shiftedCount == 3);
