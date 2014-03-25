@@ -378,6 +378,15 @@ version(unittest)
 
 private T* addressOf(T)(ref T val) { return &val; }
 
+// Same as std.string.format, but "self-importing".
+// Helps reduce code and imports, particularly in static asserts.
+// Also helps with missing imports errors.
+private template algoFormat()
+{
+    import std.string : format;
+    alias algoFormat = std.string.format;
+}
+
 /**
 $(D auto map(Range)(Range r) if (isInputRange!(Unqual!Range));)
 
@@ -3102,10 +3111,8 @@ unittest
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     void compare(string sentence, string[] witness)
     {
-        import std.string : format;
-
         auto r = splitter!"a == ' '"(sentence);
-        assert(equal(r.save, witness), format("got: %(%s, %) expected: %(%s, %)", r, witness));
+        assert(equal(r.save, witness), algoFormat("got: %(%s, %) expected: %(%s, %)", r, witness));
     }
 
     compare(" Mary  has a little lamb.   ",
@@ -3148,11 +3155,9 @@ unittest
     ];
     foreach ( entry ; entries )
     {
-        import std.string : format;
-
         auto a = iota(entry.low, entry.high).filter!"true"();
         auto b = splitter!"a%2"(a);
-        assert(equal!equal(b.save, entry.result), format("got: %(%s, %) expected: %(%s, %)", b, entry.result));
+        assert(equal!equal(b.save, entry.result), algoFormat("got: %(%s, %) expected: %(%s, %)", b, entry.result));
     }
 }
 
@@ -3277,7 +3282,7 @@ unittest
 unittest
 {
     import std.conv : text;
-    import std.string : split, format;
+    import std.string : split;
 
     // Check consistency:
     // All flavors of split should produce the same results
@@ -3291,7 +3296,7 @@ unittest
         {
             auto result = split(input, s);
 
-            assert(equal(result, split(input, [s])), format(`"[%(%s,%)]"`, split(input, [s])));
+            assert(equal(result, split(input, [s])), algoFormat(`"[%(%s,%)]"`, split(input, [s])));
             //assert(equal(result, split(input, [s].filter!"true"())));                          //Not yet implemented
             assert(equal(result, split!((a) => a == s)(input)), text(split!((a) => a == s)(input)));
 
@@ -3827,7 +3832,7 @@ unittest
     }
 
     assert(equal(result, "abc12def34"d),
-        "Unexpected result: '%s'"d.format(result));
+        "Unexpected result: '%s'"d.algoFormat(result));
 }
 
 // Issue 8061
@@ -7047,7 +7052,7 @@ MinType!T min(T...)(T args)
         alias b = args[1];
 
         static assert (is(typeof(a < b)),
-            format("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
+            algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
 
         static if (isIntegral!T0 && isIntegral!T1 &&
                    (mostNegative!T0 < 0) != (mostNegative!T1 < 0))
@@ -7133,7 +7138,7 @@ MaxType!T max(T...)(T args)
         alias b = args[1];
 
         static assert (is(typeof(a < b)),
-            format("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
+            algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
 
         static if (isIntegral!T0 && isIntegral!T1 &&
                    (mostNegative!T0 < 0) != (mostNegative!T1 < 0))
@@ -7216,7 +7221,7 @@ minCount(alias pred = "a < b", Range)(Range range)
     alias RetType = Tuple!(T, size_t);
 
     static assert (is(typeof(RetType(range.front, 1))),
-        format("Error: Cannot call minCount on a %s, because it is not possible "~
+        algoFormat("Error: Cannot call minCount on a %s, because it is not possible "~
                "to copy the result value (a %s) into a Tuple.", Range.stringof, T.stringof));
 
     enforce(!range.empty, "Can't count elements from an empty range");
@@ -7279,7 +7284,7 @@ minCount(alias pred = "a < b", Range)(Range range)
     }
     else
         static assert(false,
-            format("Sorry, can't find the minCount of a %s: Don't know how "~
+            algoFormat("Sorry, can't find the minCount of a %s: Don't know how "~
                    "to keep track of the smallest %s element.", Range.stringof, T.stringof));
 }
 
@@ -12879,14 +12884,12 @@ unittest
 /// ditto
 auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
 {
-    import std.string : format;
-
     /* We implement the n-ary cartesian product by recursively invoking the
      * binary cartesian product. To make the resulting range nicer, we denest
      * one level of tuples so that a ternary cartesian product, for example,
      * returns 3-element tuples instead of nested 2-element tuples.
      */
-    enum string denest = format("tuple(a[0], %(a[1][%d]%|,%))",
+    enum string denest = algoFormat("tuple(a[0], %(a[1][%d]%|,%))",
                                 iota(0, otherRanges.length+1));
     return map!denest(
         cartesianProduct(range1, cartesianProduct(range2, otherRanges))
