@@ -9961,3 +9961,20 @@ unittest
     testRange(pipeOnFront);
     assert(frontCount == 9);
 }
+
+unittest
+{
+    //Test diverting elements to an OutputRange
+    string txt = "abcdefghijklmnopqrstuvwxyz";
+
+    dchar[] asink = new dchar[](txt.length);
+    auto result = txt.tee(asink).array;
+	assert(equal(txt, result) && equal(result, asink));
+
+	dchar[] asink2 = new dchar[](txt.length);
+	auto fsink = (dchar c) { asink2.put(c); };
+	//auto result2 = txt.tee(fsink).array;
+	//import std.stdio;
+	//writeln(asink2);
+	//assert(equal(txt, result) && (equal(result, asink2)));
+}
