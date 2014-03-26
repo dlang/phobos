@@ -175,7 +175,7 @@ template isSeedable(Rng)
         }));
 }
 
-unittest
+@safe pure nothrow unittest
 {
     struct NoRng
     {
@@ -271,7 +271,7 @@ The parameters of this distribution. The random number is $(D_PARAM x
             (cast(ulong)a * (m-1) + c) % m == (c < a ? c - a + m : c - a));
 
     // Check for maximum range
-    private static ulong gcd(ulong a, ulong b)
+    private static ulong gcd(ulong a, ulong b) @safe pure nothrow
     {
         while (b)
         {
@@ -282,7 +282,7 @@ The parameters of this distribution. The random number is $(D_PARAM x
         return a;
     }
 
-    private static ulong primeFactorsOnly(ulong n)
+    private static ulong primeFactorsOnly(ulong n) @safe pure nothrow
     {
         ulong result = 1;
         ulong iter = 2;
@@ -298,7 +298,7 @@ The parameters of this distribution. The random number is $(D_PARAM x
         return result * n;
     }
 
-    unittest
+    @safe pure nothrow unittest
     {
         static assert(primeFactorsOnly(100) == 10);
         //writeln(primeFactorsOnly(11));
@@ -310,7 +310,7 @@ The parameters of this distribution. The random number is $(D_PARAM x
     }
 
     private static bool properLinearCongruentialParameters(ulong m,
-            ulong a, ulong c)
+            ulong a, ulong c) @safe pure nothrow
     {
         if (m == 0)
         {
@@ -344,7 +344,7 @@ The parameters of this distribution. The random number is $(D_PARAM x
 Constructs a $(D_PARAM LinearCongruentialEngine) generator seeded with
 $(D x0).
  */
-    this(UIntType x0)
+    this(UIntType x0) @safe pure
     {
         seed(x0);
     }
@@ -352,7 +352,7 @@ $(D x0).
 /**
    (Re)seeds the generator.
 */
-    void seed(UIntType x0 = 1)
+    void seed(UIntType x0 = 1) @safe pure
     {
         static if (c == 0)
         {
@@ -366,7 +366,7 @@ $(D x0).
 /**
    Advances the random sequence.
 */
-    void popFront()
+    void popFront() @safe pure nothrow
     {
         static if (m)
         {
@@ -402,13 +402,13 @@ $(D x0).
 /**
    Returns the current number in the random sequence.
 */
-    @property UIntType front()
+    @property UIntType front() @safe pure nothrow
     {
         return _x;
     }
 
 ///
-    @property typeof(this) save()
+    @property typeof(this) save() @safe pure nothrow
     {
         return this;
     }
@@ -421,7 +421,7 @@ Always $(D false) (random generators are infinite ranges).
 /**
    Compares against $(D_PARAM rhs) for equality.
  */
-    bool opEquals(ref const LinearCongruentialEngine rhs) const
+    bool opEquals(ref const LinearCongruentialEngine rhs) const @safe pure nothrow
     {
         return _x == rhs._x;
     }
@@ -561,7 +561,7 @@ Parameters for the generator.
 /**
    Constructs a MersenneTwisterEngine object.
 */
-    this(UIntType value)
+    this(UIntType value) @safe pure nothrow
     {
         seed(value);
     }
@@ -572,7 +572,7 @@ Parameters for the generator.
    This seed function gives 2^32 starting points. To allow the RNG to be started in any one of its
    internal states use the seed overload taking an InputRange.
 */
-    void seed()(UIntType value = defaultSeed)
+    void seed()(UIntType value = defaultSeed) @safe pure nothrow
     {
         static if (w == UIntType.sizeof * 8)
         {
@@ -632,7 +632,7 @@ Parameters for the generator.
 /**
    Advances the generator.
 */
-    void popFront()
+    void popFront() @safe pure nothrow
     {
         if (mti == size_t.max) seed();
         enum UIntType
@@ -683,14 +683,14 @@ Parameters for the generator.
 /**
    Returns the current random value.
  */
-    @property UIntType front()
+    @property UIntType front() @safe pure nothrow
     {
         if (mti == size_t.max) seed();
         return _y;
     }
 
 ///
-    @property typeof(this) save()
+    @property typeof(this) save() @safe pure nothrow
     {
         return this;
     }
@@ -729,7 +729,7 @@ alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
                                        0x9d2c5680, 15,
                                        0xefc60000, 18);
 
-unittest
+nothrow unittest
 {
     static assert(isUniformRNG!Mt19937);
     static assert(isUniformRNG!(Mt19937, uint));
@@ -752,7 +752,7 @@ unittest
     gen.seed(map!((a) => unpredictableSeed)(repeat(0)));
 }
 
-unittest
+@safe pure nothrow unittest
 {
     uint a, b;
     {
@@ -782,7 +782,7 @@ unittest
     }
 }
 
-unittest //11690
+@safe pure nothrow unittest //11690
 {
     alias MT(UIntType, uint w) = MersenneTwisterEngine!(UIntType, w, 624, 397, 31,
                                                         0x9908b0df, 11, 7,
@@ -857,7 +857,7 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
      * Constructs a $(D XorshiftEngine) generator seeded with $(D_PARAM x0).
      */
     @safe
-    this(UIntType x0)
+    nothrow this(UIntType x0) pure
     {
         seed(x0);
     }
@@ -867,7 +867,7 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
      * (Re)seeds the generator.
      */
     @safe
-    nothrow void seed(UIntType x0)
+    nothrow void seed(UIntType x0) pure
     {
         // Initialization routine from MersenneTwisterEngine.
         foreach (i, e; seeds_)
@@ -884,7 +884,7 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
      * Returns the current number in the random sequence.
      */
     @property @safe
-    nothrow UIntType front()
+    nothrow UIntType front() pure
     {
         static if (bits == 192)
             return value_;
@@ -897,7 +897,7 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
      * Advances the random sequence.
      */
     @safe
-    nothrow void popFront()
+    nothrow void popFront() pure
     {
         UIntType temp;
 
@@ -958,8 +958,8 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
     /**
      * Captures a range state.
      */
-    @property
-    typeof(this) save()
+    @property @safe
+    nothrow typeof(this) save() pure
     {
         return this;
     }
@@ -969,7 +969,7 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
      * Compares against $(D_PARAM rhs) for equality.
      */
     @safe
-    nothrow bool opEquals(ref const XorshiftEngine rhs) const
+    nothrow bool opEquals(ref const XorshiftEngine rhs) const pure
     {
         return seeds_ == rhs.seeds_;
     }
@@ -977,7 +977,7 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
 
   private:
     @safe
-    static nothrow void sanitizeSeeds(ref UIntType[size] seeds)
+    static nothrow void sanitizeSeeds(ref UIntType[size] seeds) pure
     {
         for (uint i; i < seeds.length; i++)
         {
@@ -987,7 +987,7 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
     }
 
 
-    unittest
+    @safe pure nothrow unittest
     {
         static if (size  ==  4)  // Other bits too
         {
