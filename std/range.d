@@ -9878,8 +9878,16 @@ if (isInputRange!R1 && isOutputRange!(R2, typeof(inputRange.front)))
 }
 
 auto tee(alias fun, Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, R1)(R1 inputRange)
+if (is(typeof(fun) == void) || isSomeFunction!fun)
 {
-    return tee!pipeOnPop(inputRange, fun!(typeof(inputRange.front)));
+    static if (is(typeof(fun) == void))
+    {
+        return tee!pipeOnPop(inputRange, fun!(typeof(inputRange.front)));
+    }
+    else
+    {
+        return tee!pipeOnPop(inputRange, fun);
+    }
 }
 
 unittest
@@ -9967,17 +9975,35 @@ unittest
     //Test diverting elements to an OutputRange
     string txt = "abcdefghijklmnopqrstuvwxyz";
 
-    dchar[] asink = new dchar[](txt.length);
-    auto result = txt.tee(asink).array;
-    assert(equal(txt, result) && equal(result, asink));
+    dchar[] asink1 = [];
+    auto fsink = (dchar c) { asink1 ~= c; };
+    auto result1 = txt.tee(fsink).array;
+    assert(equal(txt, result1) && (equal(result1, asink1)));
 
-    dchar[] asink2 = [];
-    auto fsink = (dchar c) { asink2 ~= c; };
-    auto result2 = txt.tee(fsink).array;
-    assert(equal(txt, result2) && (equal(result2, asink2)));
+    dchar[] _asink1 = [];
+    auto _result1 = txt.tee!((dchar c) { _asink1 ~= c; })().array;
+    assert(equal(txt, _result1) && (equal(_result1, _asink1)));
 
-    char[] asink3 = new dchar[](txt.length);
-    void fsink2(dchar c) { put(asink3, 3); }
-    auto result3 = txt.tee(&fsink2).array;
+    dchar[] asink2 = new dchar[](txt.length);
+    void fsink2(dchar c) { static int i = 0; asink2[i] = c; i++; }
+    auto result2 = txt.tee(&fsink2).array;
+    assert(equal(txt, result2) && equal(result2, asink2));
+
+    dchar[] asink3 = new dchar[](txt.length);
+    auto result3 = txt.tee(asink3).array;
     assert(equal(txt, result3) && equal(result3, asink3));
+
+    foreach (CharType; TypeTuple!(char, wchar, dchar))
+    {
+        auto appSink = appender!(CharType[])();
+        auto appResult = txt.tee(appSink).array;
+        assert(equal(txt, appResult) && equal(appResult, appSink.data));
+    }
+
+    foreach (StringType; TypeTuple!(string, wstring, dstring))
+    {
+        auto appSink = appender!StringType();
+        auto appResult = txt.tee(appSink).array;
+        assert(equal(txt, appResult) && equal(appResult, appSink.data));
+    }
 }
