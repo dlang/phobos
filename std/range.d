@@ -9974,5 +9974,10 @@ unittest
     dchar[] asink2 = [];
     auto fsink = (dchar c) { asink2 ~= c; };
     auto result2 = txt.tee(fsink).array;
-    assert(equal(txt, result) && (equal(result, asink2)));
+    assert(equal(txt, result2) && (equal(result2, asink2)));
+
+    char[] asink3 = new dchar[](txt.length);
+    void fsink2(dchar c) { put(asink3, 3); }
+    auto result3 = txt.tee(&fsink2).array;
+    assert(equal(txt, result3) && equal(result3, asink3));
 }
