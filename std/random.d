@@ -1594,9 +1594,23 @@ body
     {
         immutable T u = (rng.front - rng.min) * factor;
         rng.popFront();
-        if (u < 1)
+        static if (isIntegral!R)
         {
+            /* if RNG variates are integral, we're guaranteed
+             * by the definition of factor that u < 1.
+             */
             return u;
+        }
+        else
+        {
+            /* Otherwise we have to check, just in case a
+             * floating-point RNG returns a variate that is
+             * exactly equal to its maximum
+             */
+            if (u < 1)
+            {
+                return u;
+            }
         }
     }
 
