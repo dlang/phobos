@@ -153,7 +153,7 @@ unittest
 */
 template reverseArgs(alias pred)
 {
-    auto reverseArgs(Args...)(Args args)
+    auto reverseArgs(Args...)(auto ref Args args)
         if (is(typeof(pred(Reverse!args))))
     {
         return pred(Reverse!args);
@@ -180,7 +180,14 @@ unittest
    Binary predicate that reverses the order of arguments, e.g., given
    $(D pred(a, b)), returns $(D pred(b, a)).
 */
-alias binaryReverseArgs = reverseArgs;
+template binaryReverseArgs(alias pred)
+{
+    auto binaryReverseArgs(ElementType1, ElementType2)
+            (ElementType1 a, ElementType2 b)
+    {
+        return pred(b, a);
+    }
+}
 
 unittest
 {
