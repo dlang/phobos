@@ -799,7 +799,7 @@ template reduce(fun...) if (fun.length >= 1)
                         result = void;
                     foreach (i, T; result.Types)
                     {
-                        emplaceRef(result[i], seed);
+                        emplaceRef!T(result[i], seed);
                     }
                     r.popFront();
                     return reduce(result, r);
@@ -865,7 +865,7 @@ template reduce(fun...) if (fun.length >= 1)
 
                     foreach (i, T; result.Types)
                     {
-                        emplaceRef(result[i], elem);
+                        emplaceRef!T(result[i], elem);
                     }
                 }
             }
@@ -1456,7 +1456,7 @@ void uninitializedFill(Range, Value)(Range range, Value filler)
 
         // Must construct stuff by the book
         for (; !range.empty; range.popFront())
-            emplaceRef(range.front, filler);
+            emplaceRef!T(range.front, filler);
     }
     else
         // Doesn't matter whether fill is initialized or not

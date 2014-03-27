@@ -51,7 +51,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
         size_t i;
         foreach (e; r)
         {
-            emplaceRef(result[i], e);
+            emplaceRef!E(result[i], e);
             ++i;
         }
         return cast(E[])result;
@@ -108,6 +108,12 @@ unittest
     static struct Bug12315 { immutable int i; }
     enum bug12315 = [Bug12315(123456789)].array();
     static assert(bug12315[0].i == 123456789);
+}
+
+unittest
+{
+    static struct S{int* p;}
+    auto a = array(immutable(S).init.repeat(5));
 }
 
 /**
@@ -1059,13 +1065,13 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
         {
             static if (is(E : T)) //ditto
             {
-                emplaceRef(tmp[j++], stuff[i]);
+                emplaceRef!T(tmp[j++], stuff[i]);
             }
             else
             {
                 foreach (v; stuff[i])
                 {
-                    emplaceRef(tmp[j++], v);
+                    emplaceRef!T(tmp[j++], v);
                 }
             }
         }
@@ -2434,12 +2440,7 @@ struct Appender(A : T[], T)
             auto bigDataFun() @trusted nothrow { return _data.arr.ptr[0 .. len + 1];}
             auto bigData = bigDataFun();
 
-            static if (is(Unqual!T == T))
-                alias uitem = item;
-            else
-                auto ref uitem() @trusted nothrow @property { return cast(Unqual!T)item;}
-
-            emplaceRef(bigData[len], uitem);
+            emplaceRef!T(bigData[len], item);
 
             //We do this at the end, in case of exceptions
             _data.arr = bigData;
@@ -2484,28 +2485,18 @@ struct Appender(A : T[], T)
             auto bigDataFun() @trusted nothrow { return _data.arr.ptr[0 .. newlen];}
             auto bigData = bigDataFun();
 
-            enum mustEmplace =  is(typeof(bigData[0].opAssign(cast(Unqual!T)items.front))) ||
-                               !is(typeof(bigData[0] = cast(Unqual!T)items.front));
+            alias UT = Unqual!T;
 
-            static if (is(typeof(_data.arr[] = items[])) && !mustEmplace)
+            static if (is(typeof(_data.arr[] = items[])) &&
+                !hasElaborateAssign!(Unqual!T) && isAssignable!(UT, ElementEncodingType!Range))
             {
-                //pragma(msg, T.stringof); pragma(msg, Range.stringof);
                 bigData[len .. newlen] = items[];
-            }
-            else static if (is(Unqual!T == ElementType!Range))
-            {
-                foreach (ref it ; bigData[len .. newlen])
-                {
-                    emplaceRef(it, items.front);
-                    items.popFront();
-                }
             }
             else
             {
-                static auto ref getUItem(U)(U item) @trusted {return cast(Unqual!T)item;}
                 foreach (ref it ; bigData[len .. newlen])
                 {
-                    emplaceRef(it, getUItem(items.front));
+                    emplaceRef!T(it, items.front);
                     items.popFront();
                 }
             }
