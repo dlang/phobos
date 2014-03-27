@@ -148,17 +148,39 @@ unittest
 //alias equalTo = binaryFun!(q{a == b});
 
 /**
+   N-ary predicate that reverses the order of arguments, e.g., given
+   $(D pred(a, b, c)), returns $(D pred(c, b, a)).
+*/
+template reverseArgs(alias pred)
+{
+    auto reverseArgs(Args...)(Args args)
+        if (is(typeof(pred(Reverse!args))))
+    {
+        return pred(Reverse!args);
+    }
+}
+
+unittest
+{
+    alias gt = reverseArgs!(binaryFun!("a < b"));
+    assert(gt(2, 1) && !gt(1, 1));
+    int x = 42;
+    bool xyz(int a, int b) { return a * x < b / x; }
+    auto foo = &xyz;
+    foo(4, 5);
+    alias zyx = reverseArgs!(foo);
+    assert(zyx(5, 4) == foo(4, 5));
+
+    int abc(int a, int b, int c) { return a * b + c; }
+    alias cba = reverseArgs!abc;
+    assert(abc(91, 17, 32) == cba(32, 17, 91));
+}
+
+/**
    Binary predicate that reverses the order of arguments, e.g., given
    $(D pred(a, b)), returns $(D pred(b, a)).
 */
-template binaryReverseArgs(alias pred)
-{
-    auto binaryReverseArgs(ElementType1, ElementType2)
-            (ElementType1 a, ElementType2 b)
-    {
-        return pred(b, a);
-    }
-}
+alias binaryReverseArgs = reverseArgs
 
 unittest
 {
