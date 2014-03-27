@@ -7052,9 +7052,13 @@ unittest
 
 // MinType
 private template MinType(T...)
-    if (T.length >= 2)
+    if (T.length >= 1)
 {
-    static if (T.length == 2)
+    static if (T.length == 1)
+    {
+        alias MinType = T[0];
+    }
+    else static if (T.length == 2)
     {
         static if (!is(typeof(T[0].min)))
             alias MinType = CommonType!T;
@@ -7074,44 +7078,46 @@ private template MinType(T...)
     }
     else
     {
-        alias MinType = MinType!(T[0 .. $/2], MinType!(T[$/2 .. $]));
+        alias MinType = MinType!(MinType!(T[0 .. ($+1)/2]), MinType!(T[($+1)/2 .. $]));
     }
 }
 
 // min
 /**
-Returns the minimum of the passed-in values. The type of the result is
-computed by using $(XREF traits, CommonType).
+Returns the minimum of the passed-in values.
 */
 MinType!T min(T...)(T args)
     if (T.length >= 2)
 {
-    static if (T.length == 2)
+    //Get "a"
+    static if (T.length <= 2)
+        alias args[0] a;
+    else
+        auto a = min(args[0 .. ($+1)/2]);
+    alias typeof(a) T0;
+
+    //Get "b"
+    static if (T.length <= 3)
+        alias args[$-1] b;
+    else
+        auto b = min(args[($+1)/2 .. $]);
+    alias typeof(b) T1;
+
+    static assert (is(typeof(a < b)),
+        algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
+
+    //Do the "min" proper with a and b
+    static if (isIntegral!T0 && isIntegral!T1 &&
+               (mostNegative!T0 < 0) != (mostNegative!T1 < 0))
     {
-        alias T0 = T[0];
-        alias T1 = T[1];
-        alias a = args[0];
-        alias b = args[1];
-
-        static assert (is(typeof(a < b)),
-            algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
-
-        static if (isIntegral!T0 && isIntegral!T1 &&
-                   (mostNegative!T0 < 0) != (mostNegative!T1 < 0))
-        {
-            static if (mostNegative!T0 < 0)
-                immutable chooseB = b < a && a > 0;
-            else
-                immutable chooseB = b < a || b < 0;
-        }
+        static if (mostNegative!T0 < 0)
+            immutable chooseB = b < a && a > 0;
         else
-            immutable chooseB = b < a;
-        return cast(typeof(return)) (chooseB ? b : a);
+            immutable chooseB = b < a || b < 0;
     }
     else
-    {
-        return min(args[0 .. $/2], min(args[$/2 .. $]));
-    }
+        immutable chooseB = b < a;
+    return cast(typeof(return)) (chooseB ? b : a);
 }
 
 unittest
@@ -7147,9 +7153,13 @@ unittest
 
 // MaxType
 private template MaxType(T...)
-    if (T.length >= 2)
+    if (T.length >= 1)
 {
-    static if (T.length == 2)
+    static if (T.length == 1)
+    {
+        alias MaxType = T[0];
+    }
+    else static if (T.length == 2)
     {
         static if (!is(typeof(T[0].min)))
             alias MaxType = CommonType!T;
@@ -7160,44 +7170,46 @@ private template MaxType(T...)
     }
     else
     {
-        alias MaxType = MaxType!(T[0 .. $/2], MaxType!(T[$/2 .. $]));
+        alias MaxType = MaxType!(MaxType!(T[0 .. ($+1)/2]), MaxType!(T[($+1)/2 .. $]));
     }
 }
 
 // max
 /**
-Returns the maximum of the passed-in values. The type of the result is
-computed by using $(XREF traits, CommonType).
+Returns the maximum of the passed-in values.
 */
 MaxType!T max(T...)(T args)
     if (T.length >= 2)
 {
-    static if (T.length == 2)
+    //Get "a"
+    static if (T.length <= 2)
+        alias args[0] a;
+    else
+        auto a = max(args[0 .. ($+1)/2]);
+    alias typeof(a) T0;
+
+    //Get "b"
+    static if (T.length <= 3)
+        alias args[$-1] b;
+    else
+        auto b = max(args[($+1)/2 .. $]);
+    alias typeof(b) T1;
+
+    static assert (is(typeof(a < b)),
+        algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
+
+    //Do the "max" proper with a and b
+    static if (isIntegral!T0 && isIntegral!T1 &&
+               (mostNegative!T0 < 0) != (mostNegative!T1 < 0))
     {
-        alias T0 = T[0];
-        alias T1 = T[1];
-        alias a = args[0];
-        alias b = args[1];
-
-        static assert (is(typeof(a < b)),
-            algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
-
-        static if (isIntegral!T0 && isIntegral!T1 &&
-                   (mostNegative!T0 < 0) != (mostNegative!T1 < 0))
-        {
-            static if (mostNegative!T0 < 0)
-                immutable chooseB = b > a || a < 0;
-            else
-                immutable chooseB = b > a && b > 0;
-        }
+        static if (mostNegative!T0 < 0)
+            immutable chooseB = b > a || a < 0;
         else
-            immutable chooseB = b > a;
-        return cast(typeof(return)) (chooseB ? b : a);
+            immutable chooseB = b > a && b > 0;
     }
     else
-    {
-        return max(args[0 .. $/2], max(args[$/2 .. $]));
-    }
+        immutable chooseB = b > a;
+    return cast(typeof(return)) (chooseB ? b : a);
 }
 
 ///
