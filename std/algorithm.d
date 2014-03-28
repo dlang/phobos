@@ -1872,7 +1872,10 @@ void move(T)(ref T source, ref T target)
         // and bitblast source over it
         static if (hasElaborateDestructor!T) typeid(T).destroy(&target);
 
-        memcpy(&target, &source, T.sizeof);
+        static if (hasElaborateAssign!T || !isAssignable!T)
+            memcpy(&target, &source, T.sizeof);
+        else
+            target = source;
 
         // If the source defines a destructor or a postblit hook, we must obliterate the
         // object in order to avoid double freeing and undue aliasing
@@ -1896,11 +1899,6 @@ void move(T)(ref T source, ref T target)
         // Primitive data (including pointers and arrays) or class -
         // assignment works great
         target = source;
-        // static if (is(typeof(source = null)))
-        // {
-        //     // Nullify the source to help the garbage collector
-        //     source = null;
-        // }
     }
 }
 
@@ -1908,25 +1906,27 @@ unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    Object obj1 = new Object;
-    Object obj2 = obj1;
-    Object obj3;
-    move(obj2, obj3);
-    assert(obj3 is obj1);
+    import std.exception : assertCTFEable;
+    assertCTFEable!((){
+        Object obj1 = new Object;
+        Object obj2 = obj1;
+        Object obj3;
+        move(obj2, obj3);
+        assert(obj3 is obj1);
 
-    static struct S1 { int a = 1, b = 2; }
-    S1 s11 = { 10, 11 };
-    S1 s12;
-    move(s11, s12);
-    assert(s11.a == 10 && s11.b == 11 && s12.a == 10 && s12.b == 11);
+        static struct S1 { int a = 1, b = 2; }
+        S1 s11 = { 10, 11 };
+        S1 s12;
+        move(s11, s12);
+        assert(s11.a == 10 && s11.b == 11 && s12.a == 10 && s12.b == 11);
 
-    static struct S2 { int a = 1; int * b; }
-    S2 s21 = { 10, null };
-    s21.b = new int;
-    S2 s22;
-    move(s21, s22);
-    assert(s21 == s22);
-
+        static struct S2 { int a = 1; int * b; }
+        S2 s21 = { 10, null };
+        s21.b = new int;
+        S2 s22;
+        move(s21, s22);
+        assert(s21 == s22);
+    });
     // Issue 5661 test(1)
     static struct S3
     {
@@ -1965,8 +1965,10 @@ T move(T)(ref T source)
     static if (is(T == struct))
     {
         // Can avoid destructing result.
-
-        memcpy(&result, &source, T.sizeof);
+        static if (hasElaborateAssign!T || !isAssignable!T)
+            memcpy(&result, &source, T.sizeof);
+        else
+            result = source;
 
         // If the source defines a destructor or a postblit hook, we must obliterate the
         // object in order to avoid double freeing and undue aliasing
@@ -1998,21 +2000,24 @@ unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    Object obj1 = new Object;
-    Object obj2 = obj1;
-    Object obj3 = move(obj2);
-    assert(obj3 is obj1);
+    import std.exception : assertCTFEable;
+    assertCTFEable!((){
+        Object obj1 = new Object;
+        Object obj2 = obj1;
+        Object obj3 = move(obj2);
+        assert(obj3 is obj1);
 
-    static struct S1 { int a = 1, b = 2; }
-    S1 s11 = { 10, 11 };
-    S1 s12 = move(s11);
-    assert(s11.a == 10 && s11.b == 11 && s12.a == 10 && s12.b == 11);
+        static struct S1 { int a = 1, b = 2; }
+        S1 s11 = { 10, 11 };
+        S1 s12 = move(s11);
+        assert(s11.a == 10 && s11.b == 11 && s12.a == 10 && s12.b == 11);
 
-    static struct S2 { int a = 1; int * b; }
-    S2 s21 = { 10, null };
-    s21.b = new int;
-    S2 s22 = move(s21);
-    assert(s21 == s22);
+        static struct S2 { int a = 1; int * b; }
+        S2 s21 = { 10, null };
+        s21.b = new int;
+        S2 s22 = move(s21);
+        assert(s21 == s22);
+    });
 
     // Issue 5661 test(1)
     static struct S3
