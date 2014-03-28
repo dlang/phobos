@@ -93,7 +93,7 @@ textbuf = doSomething(textbuf, args);
  */
 
 @system
-struct ScopeBuffer(T, alias realloc = core.stdc.stdlib.realloc)
+struct ScopeBuffer(T, alias realloc = /*core.stdc.stdlib*/.realloc)
           if (isAssignable!T &&
               !hasElaborateDestructor!T &&
               !hasElaborateCopyConstructor!T &&
