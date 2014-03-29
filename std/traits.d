@@ -3049,8 +3049,10 @@ unittest
    True if $(D S) or any type directly embedded in the representation of $(D S)
    defines an elaborate assignment. Elaborate assignments are introduced by
    defining $(D opAssign(typeof(this))) or $(D opAssign(ref typeof(this)))
-   for a $(D struct) or when there is a compiler-generated $(D opAssign)
-   (in case $(D S) has an elaborate copy constructor or destructor).
+   for a $(D struct) or when there is a compiler-generated $(D opAssign).
+
+   A type $(D S) gets compiler-generated $(D opAssign) in case it has
+   an elaborate copy constructor or elaborate destructor.
 
    Classes and unions never have elaborate assignments.
 
