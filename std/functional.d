@@ -174,6 +174,14 @@ unittest
     int abc(int a, int b, int c) { return a * b + c; }
     alias cba = reverseArgs!abc;
     assert(abc(91, 17, 32) == cba(32, 17, 91));
+
+    int a(int a) { return a * 2; }
+    alias _a = reverseArgs!a;
+    assert(a(2) == _a(2));
+
+    int b() { return 4; }
+    alias _b = reverseArgs!b;
+    assert(b() == _b());
 }
 
 /**
