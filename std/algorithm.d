@@ -7748,13 +7748,15 @@ unittest
 Copies the content of $(D source) into $(D target) and returns the
 remaining (unfilled) part of $(D target).
 
+Preconditions: $(D target) shall have enough room to accomodate
+$(D source).
+
 See_Also:
     $(WEB sgi.com/tech/stl/_copy.html, STL's _copy)
  */
 Range2 copy(Range1, Range2)(Range1 source, Range2 target)
 if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 {
-
     static Range2 genericImpl(Range1 source, Range2 target)
     {
         // Specialize for 2 random access ranges.
@@ -7763,6 +7765,9 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
         static if (isRandomAccessRange!Range1 && hasLength!Range1
             && hasSlicing!Range2 && isRandomAccessRange!Range2 && hasLength!Range2)
         {
+            assert(target.length >= source.length,
+                "Cannot copy a source range into a smaller target range.");
+
             auto len = source.length;
             foreach (idx; 0 .. len)
                 target[idx] = source[idx];
@@ -7778,8 +7783,6 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
     static if (isArray!Range1 && isArray!Range2 &&
                is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
     {
-        import std.exception : enforce;
-
         immutable overlaps = source.ptr < target.ptr + target.length &&
                              target.ptr < source.ptr + source.length;
 
@@ -7792,7 +7795,7 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
             // Array specialization.  This uses optimized memory copying
             // routines under the hood and is about 10-20x faster than the
             // generic implementation.
-            enforce(target.length >= source.length,
+            assert(target.length >= source.length,
                 "Cannot copy a source array into a smaller target array.");
             target[0..source.length] = source[];
 
