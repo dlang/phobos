@@ -735,10 +735,7 @@ unittest
     auto m = immutable(S).init.repeat().map!"a".save;
 }
 
-/**
-$(D auto reduce(Args...)(Args args)
-    if (Args.length > 0 && Args.length <= 2 && isIterable!(Args[$ - 1]));)
-
+/++
 Implements the homonym function (also known as $(D accumulate), $(D
 compress), $(D inject), or $(D foldl)) present in various programming
 languages of functional flavor. The call $(D reduce!(fun)(seed,
@@ -751,142 +748,124 @@ seed (the range must be non-empty).
 
 See also: $(LREF sum) is similar to $(D reduce!((a, b) => a + b)) that offers
 precise summing of floating point numbers.
- */
++/
 template reduce(fun...) if (fun.length >= 1)
 {
-    import std.exception : enforce;
+    alias binfuns = staticMap!(binaryFun, fun);
+    static if (fun.length > 1)
+        import std.typecons : tuple, isTuple;
 
-    auto reduce(Args...)(Args args)
-    if (Args.length > 0 && Args.length <= 2 && isIterable!(Args[$ - 1]))
+    /++
+    No-seed version. The first element of $(D r) is used as the seed's value.
+
+    For each function $(D f) in $(D fun), the corresponding
+    seed type $(D S) is $(D Unqual!(typeof(f(e, e)))), where $(D e) is an
+    element of $(D r): $(D ElementType!R) for ranges,
+    and $(D ForeachType!R) otherwise.
+
+    Once S has been determined, then $(D S s = e;) and $(D s = f(s, e);)
+    must both be legal.
+
+    If $(D r) is empty, an $(D Exception) is thrown.
+    +/
+    auto reduce(R)(R r)
+    if (isIterable!R)
     {
-        static if (isInputRange!(Args[$ - 1]))
-        {
-            static if (Args.length == 2)
-            {
-                alias seed = args[0];
-                alias r    = args[1];
-                Unqual!(Args[0]) result = seed;
-                for (; !r.empty; r.popFront())
-                {
-                    static if (fun.length == 1)
-                    {
-                        result = binaryFun!(fun[0])(result, r.front);
-                    }
-                    else
-                    {
-                        foreach (i, Unused; Args[0].Types)
-                        {
-                            result[i] = binaryFun!(fun[i])(result[i], r.front);
-                        }
-                    }
-                }
-                return result;
-            }
-            else
-            {
-                enforce(!args[$ - 1].empty,
-                    "Cannot reduce an empty range w/o an explicit seed value.");
-                alias r = args[0];
-                static if (fun.length == 1)
-                {
-                    auto seed = r.front;
-                    r.popFront();
-                    return reduce(seed, r);
-                }
-                else
-                {
-                    import std.functional : adjoin;
-                    import std.conv : emplaceRef;
+        import std.exception : enforce;
+        alias E = Select!(isInputRange!R, ElementType!R, ForeachType!R);
+        alias Args = staticMap!(ReduceSeedType!E, binfuns);
 
-                    static assert(fun.length > 1);
-                    Unqual!(typeof(r.front)) seed = r.front;
-                    typeof(adjoin!(staticMap!(binaryFun, fun))(seed, seed))
-                        result = void;
-                    foreach (i, T; result.Types)
-                    {
-                        emplaceRef!T(result[i], seed);
-                    }
-                    r.popFront();
-                    return reduce(result, r);
-                }
-            }
+        static if (isInputRange!R)
+        {
+            enforce(!r.empty);
+            Args result = r.front;
+            r.popFront();
+            return reduceImpl!false(r, result);
         }
         else
-        {   // opApply case.  Coded as a separate case because efficiently
-            // handling all of the small details like avoiding unnecessary
-            // copying, iterating by dchar over strings, and dealing with the
-            // no explicit start value case would become an unreadable mess
-            // if these were merged.
-            alias r = args[$ - 1];
-            alias R = Args[$ - 1];
-            alias E = ForeachType!R;
-
-            static if (args.length == 2)
-            {
-                static if (fun.length == 1)
-                {
-                    auto result = Tuple!(Unqual!(Args[0]))(args[0]);
-                }
-                else
-                {
-                    Unqual!(Args[0]) result = args[0];
-                }
-
-                enum bool initialized = true;
-            }
-            else static if (fun.length == 1)
-            {
-                Tuple!(typeof(binaryFun!fun(E.init, E.init))) result = void;
-                bool initialized = false;
-            }
-            else
-            {
-                import std.functional : adjoin;
-
-                typeof(adjoin!(staticMap!(binaryFun, fun))(E.init, E.init))
-                    result = void;
-                bool initialized = false;
-            }
-
-            // For now, just iterate using ref to avoid unnecessary copying.
-            // When Bug 2443 is fixed, this may need to change.
-            foreach (ref elem; r)
-            {
-                if (initialized)
-                {
-                    foreach (i, T; result.Types)
-                    {
-                        result[i] = binaryFun!(fun[i])(result[i], elem);
-                    }
-                }
-                else
-                {
-                    import std.conv : emplaceRef;
-
-                    static if (is(typeof(&initialized)))
-                    {
-                        initialized = true;
-                    }
-
-                    foreach (i, T; result.Types)
-                    {
-                        emplaceRef!T(result[i], elem);
-                    }
-                }
-            }
-
-            enforce(initialized,
-                "Cannot reduce an empty iterable w/o an explicit seed value.");
-
-            static if (fun.length == 1)
-            {
-                return result[0];
-            }
-            else
-            {
-                return result;
-            }
+        {
+            auto result = Args.init;
+            return reduceImpl!true(r, result);
         }
+    }
+
+    /++
+    Seed version. The seed should be a single value if $(D fun) is a
+    single function. If $(D fun) is multiple functions, then $(D seed)
+    should be a $(XREF typecons,Tuple), with one field per function in $(D f).
+
+    For convenience, if the seed is const, or has qualified fields, then
+    $(D reduce) will operate on an unqualified copy. If this happens
+    then the returned type will not perfectly match $(D S).
+    +/
+    auto reduce(S, R)(S seed, R r)
+    if (isIterable!R)
+    {
+        static if (fun.length == 1)
+            return reducePreImpl(r, seed);
+        else
+        {
+            static assert(isTuple!S, algoFormat("Seed %s should be a Tuple", S.stringof));
+            return reducePreImpl(r, seed.expand);
+        }
+    }
+
+    private auto reducePreImpl(R, Args...)(R r, ref Args args)
+    {
+        alias Result = staticMap!(Unqual, Args);
+        static if (is(Result == Args))
+            alias result = args;
+        else
+            Result result = args;
+        return reduceImpl!false(r, result);
+    }
+
+    private auto reduceImpl(bool mustInitialize, R, Args...)(R r, ref Args args)
+    if (isIterable!R)
+    {
+        static assert(Args.length == fun.length,
+            algoFormat("Seed %s does not have the correct amount of fields (should be %s)", Args.stringof, fun.length));
+        alias E = Select!(isInputRange!R, ElementType!R, ForeachType!R);
+
+        static if (mustInitialize) bool initialized = false;
+        foreach (/+auto ref+/ E e; r) // @@@4707@@@
+        {
+            foreach (i, f; binfuns)
+                static assert(is(typeof(args[i] = f(args[i], e))),
+                    algoFormat("Incompatible function/seed/element: %s/%s/%s", fullyQualifiedName!f, Args[i].stringof, E.stringof));
+
+            static if (mustInitialize) if (initialized == false)
+            {
+                import std.conv : emplaceRef;
+                foreach (i, f; binfuns)
+                    emplaceRef!(Args[i])(args[i], e);
+                initialized = true;
+                continue;
+            }
+
+            foreach (i, f; binfuns)
+                args[i] = f(args[i], e);
+        }
+        static if (mustInitialize) if (!initialized) throw new Exception("Cannot reduce an empty iterable w/o an explicit seed value.");
+
+        static if (Args.length == 1)
+            return args[0];
+        else
+            return tuple(args);
+    }
+}
+
+//Helper for Reduce
+private template ReduceSeedType(E)
+{
+    static template ReduceSeedType(alias fun)
+    {
+        E e = E.init;
+        static alias ReduceSeedType = Unqual!(typeof(fun(e, e)));
+        static assert(is(typeof({
+            ReduceSeedType s = e;
+            s = fun(s, e);
+        })), algoFormat("Unable to deduce an acceptable seed type for %s with element type %s.", fullyQualifiedName!fun, E.stringof));
     }
 }
 
