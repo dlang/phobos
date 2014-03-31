@@ -865,20 +865,20 @@ T toImpl(T, S)(S value)
         {
             switch(value)
             {
-                foreach (I, member; NoDuplicates!(EnumMembers!S))
+                foreach (member; NoDuplicates!(EnumMembers!S))
                 {
                     case member:
-                        return to!T(enumRep!(immutable(T), S, I));
+                        return to!T(enumRep!(immutable(T), S, member));
                 }
                 default:
             }
         }
         else
         {
-            foreach (I, member; EnumMembers!S)
+            foreach (member; EnumMembers!S)
             {
                 if (value == member)
-                    return to!T(enumRep!(immutable(T), S, I));
+                    return to!T(enumRep!(immutable(T), S, member));
             }
         }
 
@@ -923,10 +923,10 @@ unittest
 //Static representation of the index I of the enum S,
 //In representation T.
 //T must be an immutable string (avoids un-necessary initializations).
-private template enumRep(T, S, size_t I)
+private template enumRep(T, S, S value)
 if (is (T == immutable) && isExactSomeString!T && is(S == enum))
 {
-    static T enumRep = to!T(__traits(allMembers, S)[I]);
+    static T enumRep = toStr!T(value);
 }
 
 @safe pure unittest
@@ -1183,9 +1183,14 @@ unittest
     enum E
     {
         foo,
-        bar,
         doo = foo, // check duplicate switch statements
+        bar,
     }
+
+    //Test regression 12494
+    assert(to!string(E.foo) == "foo");
+    assert(to!string(E.doo) == "foo");
+    assert(to!string(E.bar) == "bar");
 
     foreach (S; TypeTuple!(string, wstring, dstring, const(char[]), const(wchar[]), const(dchar[])))
     {
