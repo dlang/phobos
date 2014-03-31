@@ -19,8 +19,8 @@ levenshteinDistance) $(MYREF levenshteinDistanceAndPath) $(MYREF max)
 $(MYREF min) $(MYREF mismatch) )
 )
 $(TR $(TDNW Iteration) $(TD $(MYREF filter) $(MYREF filterBidirectional)
-$(MYREF group) $(MYREF joiner) $(MYREF map) $(MYREF reduce) $(MYREF
-splitter) $(MYREF sum) $(MYREF uniq) )
+$(MYREF fold) $(MYREF group) $(MYREF joiner) $(MYREF map) $(MYREF reduce)
+$(MYREF splitter) $(MYREF sum) $(MYREF uniq) )
 )
 $(TR $(TDNW Sorting) $(TD $(MYREF completeSort) $(MYREF isPartitioned)
 $(MYREF isSorted) $(MYREF makeIndex) $(MYREF nextPermutation)
@@ -728,6 +728,287 @@ unittest
 {
     struct S {int* p;}
     auto m = immutable(S).init.repeat().map!"a".save;
+}
+
+/++
+Implements the homonym function (also known as $(D reduce), $(D accumulate),
+$(D compress), $(D inject), or $(D reduce)) present in various programming
+languages of functional flavor. The call $(D fold!fun(range, seed))
+first assigns $(D seed) to an internal variable $(D result),
+also called the accumulator. Then, for each element $(D x) in $(D
+range), $(D result = fun(result, x)) gets evaluated. Finally, $(D
+result) is returned. The one-argument version $(D fold!fun(range))
+works similarly, but it uses the first element of the range as the
+seed (the range must be non-empty).
+
+See also: $(LREF sum) is similar to $(D fold!((a, b) => a + b)) that offers
+precise summing of floating point numbers.
+
+Note: $(D fold) replaces $(D reduce): It retains the same functionality and
+behavior, but uses an updated and more convenient interface.
++/
+template fold(funs...)
+if (funs.length > 0)
+{
+    /++
+    The main $(D fold) function. $(D range) is an input range.
+    $(D seeds) is an optional parameter pack argument, which may be empty,
+    contain 1 seed, or as many seeds as there are predicates.
+
+    Note: If no seeds are provided, then it is an $(D Error) to pass an empty
+    range. This is a deviation from $(D reduce).
+    +/
+    auto fold(Range, Args...)(Range range, Args seeds)
+    if (isInputRange!Range)
+    {
+        alias E = ElementEncodingType!Range;
+        alias UE = Unqual!E;
+
+        //Begin by generating/evaluating the seed/result.
+        static if (Args.length == 0)
+        {
+            //No seeds: Evaluate the result's type with FoldSeedType.
+            //Check the range is not empty, and place it's front in the seed.
+            assert (!range.empty);
+            FoldSeedType!(E, funs) result = range.front;
+            range.popFront();
+        }
+        else static if (Args.length == funs.length)
+        {
+            //As many seeds as functions: Simply use the seeds.
+
+            //TODO: meta-magic could allow making a copy of only
+            //the non-const seeds, instead of all of them.
+            alias UArgs = staticMap!(Unqual, Args);
+            static if (is(UArgs == Args))
+                alias result = seeds;
+            else
+                UArgs result = seeds;
+        }
+        else static if (Args.length == 1)
+        {
+            //Only 1 seed provided. Repeat it as necessary.
+            RepeatType!(Unqual!(Args[0]), funs.length) result = seeds[0];
+        }
+        else
+        {
+            import std.string;
+            static assert(0, format("There must be 0, 1 or %s.length (%s) seeds, not %s",
+                funs.stringof, funs.length, Args.length));
+        }
+        //Finished initializing the seed.
+
+        //Actual work now.
+        static if (funs.length == 1)
+        {
+            //Only 1 fun: we avoid making a copy in the foreach.
+            foreach ( /+auto+/ ref E e; range )
+                result[0] = binaryFun!(funs[0])(result[0], e);
+            return result[0];
+        }
+        else
+        {
+            //Multiple funs. We don't use "ref" to "cache" the front (less calls to range.front).
+            foreach ( E e; range )
+            {
+                foreach (i, _; funs)
+                    result[i] = binaryFun!(funs[i])(result[i], e);
+            }
+            import std.typecons : tuple;
+            return tuple(result);
+        }
+    }
+}
+
+/+
+Helper template to evaluate Fold's seed type.
++/
+private template FoldSeedType(E, funs...)
+{
+    static if (funs.length == 0)
+        alias FoldSeedType = TypeTuple!();
+    static if (funs.length == 1)
+        alias FoldSeedType = TypeTuple!(FoldSingleSeedType!(binaryFun!(funs[0]), E, E, 4));
+    else
+        alias FoldSeedType = TypeTuple!(FoldSeedType!(E, funs[0 .. $/2]), FoldSeedType!(E, funs[0 .. $/2]));
+}
+//This tries to find a stable seed type for E, starts searching with S.
+//It gets N depth in tries
+private template FoldSingleSeedType(alias fun, S, E, size_t N)
+{
+    S s = S.init;
+    E e = E.init;
+    static if (N > 0 && is(typeof(fun(s, e)) R))
+    {
+        alias UR = Unqual!R; 
+        static if (is(UR == S))
+            alias FoldSingleSeedType = S;
+        else
+            alias FoldSingleSeedType = FoldSingleSeedType!(fun, UR, E, N - 1); 
+    }
+    else
+    {
+        import std.string : format;
+        static assert (0, format(
+                "fold failed to implicitly deduce the seed type for the function %s. " ~
+                "Please provide a seed explicitly.", fullyQualifiedName!fun));
+    }
+}
+
+/+
+Repeats type $(D Type) $(D N) times in a $(D TypeTyple).
++/
+//TODO: Move into std.typetuple?
+private template RepeatType(Type, size_t N)
+{
+    static if (N == 0)
+        alias RepeatType = TypeTuple!();
+    static if (N == 1)
+        alias RepeatType = TypeTuple!Type;
+    else
+        alias RepeatType = TypeTuple!(RepeatType!(Type, N/2), RepeatType!(Type, N - N/2));
+}
+
+/++
+Many aggregate range operations turn out to be solved with $(D fold)
+quickly and easily. The example below illustrates $(D fold)'s
+remarkable power and flexibility.
++/
+nothrow pure @safe unittest
+{
+    import std.math : approxEqual;
+
+    int[] arr = [ 1, 2, 3, 4, 5 ];
+    // Sum all elements
+    auto sum = arr.fold!((a,b) => a + b)(0);
+    assert(sum == 15);
+
+    // Sum again, using a string predicate with "a" and "b"
+    sum = arr.fold!"a + b"(0);
+    assert(sum == 15);
+
+    // Compute the maximum of all elements
+    auto largest = arr.fold!max();
+    assert(largest == 5);
+
+    // Compute the number of odd elements
+    auto odds = arr.fold!((a,b) => a + (b & 1))(0);
+    assert(odds == 3);
+
+    // Compute the sum of squares
+    auto ssquares = arr.fold!((a,b) => a + b * b)();
+    assert(ssquares == 55);
+
+    // Chain multiple ranges into seed
+    int[] a = [ 3, 4 ];
+    int[] b = [ 100 ];
+    auto r = chain(a, b).fold!("a + b")();
+    assert(r == 107);
+
+    // Mixing convertible types is fair game, too
+    double[] c = [ 2.5, 3.0 ];
+    auto r1 = chain(a, b, c).fold!("a + b")();
+    assert(approxEqual(r1, 112.5));
+}
+
+/++
+Sometimes it is very useful to compute multiple aggregates in one pass.
+One advantage is that the computation is faster because the looping overhead
+is shared. That's why $(D fold) accepts multiple functions.
+If two or more functions are passed, $(D fold) returns a
+$(XREF typecons, Tuple) object with one member per passed-in function.
+The number of seeds must be correspondingly increased.
++/
+nothrow pure @safe unittest
+{
+    import std.math : approxEqual, sqrt;
+
+    double[] a = [ 3.0, 4, 7, 11, 3, 2, 5 ];
+    // Compute minimum and maximum in one pass
+    auto r = a.fold!(min, max)();
+    // The type of r is Tuple!(int, int)
+    assert(approxEqual(r[0], 2));  // minimum
+    assert(approxEqual(r[1], 11)); // maximum
+
+    // Compute sum and sum of squares in one pass.
+    // This can be used to compute get the average and standard deviation.
+    // A single seed (0.0) is passed, but it is optional
+    // if the range is not empty.
+    r = a.fold!("a + b", "a + b * b")(0.0);
+    assert(approxEqual(r[0], 35));  // sum
+    assert(approxEqual(r[1], 233)); // sum of squares
+
+    // Compute sum and products in one pass.
+    // This can be used to compute get the linear and geometric average.
+    // Two different seeds are passed, but they are optional
+    // if the range  is not empty
+    r = a.fold!("a + b", "a * b")(0.0, 1.0);
+    assert(approxEqual(r[0], 35));    // linear sum
+    assert(approxEqual(r[1], 27720)); // geomeric sum
+    
+}
+
+nothrow pure @safe unittest
+{
+    double[] a = [ 3, 4 ];
+    auto r = a.fold!("a + b")(0.0);
+    assert(r == 7);
+    r = a.fold!("a + b")();
+    assert(r == 7);
+    r = a.fold!min();
+    assert(r == 3);
+    double[] b = [ 100 ];
+    auto r1 = chain(a, b).fold!("a + b")();
+    assert(r1 == 107);
+
+    // two funs
+    auto r2 = a.fold!("a + b", "a - b")(0.0);
+    assert(r2[0] == 7 && r2[1] == -7);
+    auto r3 = a.fold!("a + b", "a - b")();
+    assert(r3[0] == 7 && r3[1] == -1);
+}
+
+unittest
+{
+    auto a = [ 1, 2, 3, 4, 5 ];
+    // Stringize with commas
+    // A seed is needed here, because '1' is not an acceptable default seed.
+    string rep = a.fold!("a ~ `, ` ~ to!(string)(b)")("");
+    assert(rep[2 .. $] == "1, 2, 3, 4, 5", "["~rep[2 .. $]~"]");
+}
+
+nothrow pure @safe unittest
+{
+    const float a = 0.0;
+    const float[] b = [ 1.2, 3, 3.3 ];
+    float[] c = [ 1.2, 3, 3.3 ];
+    auto r = b.fold!"a + b"(a);
+    r = c.fold!"a + b"(a);
+}
+
+nothrow pure @safe unittest
+{
+    // Issue #10408 - Two-function reduce of a const array.
+    const numbers = [10, 30, 20];
+    immutable m = fold!(min)(numbers);
+    assert(m == 10);
+    immutable minmax = fold!(min, max)(numbers);
+    assert(minmax == tuple(10, 30));
+}
+
+unittest
+{
+    //test hard to find seed type
+    static struct S
+    {
+    static:
+        ushort fun(ubyte,  ubyte){assert(0);}
+        uint   fun(ushort, ubyte){assert(0);}
+        ulong  fun(uint,   ubyte){assert(0);}
+        ulong  fun(ulong,  ubyte){assert(0);}
+    }
+    ubyte[] a;
+    static assert(is(typeof(a.fold!(S.fun)()) == ulong));
 }
 
 /**
