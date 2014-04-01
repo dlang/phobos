@@ -5075,3 +5075,296 @@ unittest
     assert(flag1 == Yes.abc);
 }
 
+/**
+Detect whether an enum is of integral type and has only "flag" values
+(i.e. values with a bit count of exactly 1).
+Additionally, a zero value is allowed for compatibility with enums including
+a "None" value.
+*/
+template isBitFlagEnum(E)
+{
+    static if (is(E Base == enum) && isIntegral!Base)
+    {
+        enum isBitFlagEnum = (E.min >= 0) &&
+        {
+            foreach (immutable flag; EnumMembers!E)
+            {
+                Base value = flag;
+                value &= value - 1;
+                if (value != 0) return false;
+            }
+            return true;
+        }();
+    }
+    else
+    {
+        enum isBitFlagEnum = false;
+    }
+}
+
+///
+@safe pure nothrow unittest
+{
+    enum A
+    {
+        None,
+        A = 1<<0,
+        B = 1<<1,
+        C = 1<<2,
+        D = 1<<3,
+    }
+
+    static assert(isBitFlagEnum!A);
+
+    enum B
+    {
+        A,
+        B,
+        C,
+        D // D == 3
+    }
+
+    static assert(!isBitFlagEnum!B);
+
+    enum C: double
+    {
+        A = 1<<0,
+        B = 1<<1
+    }
+
+    static assert(!isBitFlagEnum!C);
+}
+
+/**
+A typesafe structure for storing combination of enum values.
+
+This template defines a simple struct to represent bitwise OR combinations of
+enum values. It can be used if all the enum values are integral constants with
+a bit count of at most 1, or if the $(D unsafe) parameter is explicitly set to
+Yes.
+This is much safer than using the enum itself to store
+the OR combination, which can produce surprising effects like this:
+----
+enum E
+{
+    A = 1<<0,
+    B = 1<<1
+}
+E e = E.A | E.B;
+// will throw SwitchError
+final switch(e)
+{
+    case E.A:
+        return;
+    case E.B:
+        return;
+}
+----
+*/
+struct BitFlags(E, Flag!"unsafe" unsafe = No.unsafe) if (unsafe || isBitFlagEnum!(E))
+{
+@safe @nogc pure nothrow:
+private:
+    enum isBaseEnumType(T) = is(E == T);
+    alias Base = OriginalType!E;
+    Base mValue;
+    static struct Negation
+    {
+    @safe @nogc pure nothrow:
+    private:
+        Base mValue;
+
+        // Prevent non-copy construction outside the module.
+        @disable this();
+        this(Base value)
+        {
+            mValue = value;
+        }
+    }
+
+public:
+    this(E flag)
+    {
+        this = flag;
+    }
+
+    this(T...)(T flags)
+        if (allSatisfy!(isBaseEnumType, T))
+    {
+        this = flags;
+    }
+
+    bool opCast(B: bool)() const
+    {
+        return mValue != 0;
+    }
+
+    Base opCast(B)() const
+        if (isImplicitlyConvertible!(Base, B))
+    {
+        return mValue;
+    }
+
+    Negation opUnary(string op)() const
+        if (op == "~")
+    {
+        return Negation(~mValue);
+    }
+
+    auto ref opAssign(T...)(T flags)
+        if (allSatisfy!(isBaseEnumType, T))
+    {
+        mValue = 0;
+        foreach (E flag; flags)
+        {
+            mValue |= flag;
+        }
+        return this;
+    }
+
+    auto ref opAssign(E flag)
+    {
+        mValue = flag;
+        return this;
+    }
+
+    auto ref opOpAssign(string op: "|")(BitFlags flags)
+    {
+        mValue |= flags.mValue;
+        return this;
+    }
+
+    auto ref opOpAssign(string op: "&")(BitFlags  flags)
+    {
+        mValue &= flags.mValue;
+        return this;
+    }
+
+    auto ref opOpAssign(string op: "|")(E flag)
+    {
+        mValue |= flag;
+        return this;
+    }
+
+    auto ref opOpAssign(string op: "&")(E flag)
+    {
+        mValue &= flag;
+        return this;
+    }
+
+    auto ref opOpAssign(string op: "&")(Negation negatedFlags)
+    {
+        mValue &= negatedFlags.mValue;
+        return this;
+    }
+
+    auto opBinary(string op)(BitFlags flags) const
+        if (op == "|" || op == "&")
+    {
+        BitFlags result = this;
+        result.opOpAssign!op(flags);
+        return result;
+    }
+
+    auto opBinary(string op)(E flag) const
+        if (op == "|" || op == "&")
+    {
+        BitFlags result = this;
+        result.opOpAssign!op(flag);
+        return result;
+    }
+
+    auto opBinary(string op: "&")(Negation negatedFlags) const
+    {
+        BitFlags result = this;
+        result.opOpAssign!op(negatedFlags);
+        return result;
+    }
+
+    auto opBinaryRight(string op)(E flag) const
+        if (op == "|" || op == "&")
+    {
+        return opBinary!op(flag);
+    }
+}
+
+/// BitFlags can be manipulated with the usual operators
+@safe @nogc pure nothrow unittest
+{
+    // You can use such an enum with BitFlags straight away
+    enum Enum
+    {
+        None,
+        A = 1<<0,
+        B = 1<<1,
+        C = 1<<2
+    }
+    static assert(__traits(compiles, BitFlags!Enum));
+
+    // You need to specify the $(D unsafe) parameter for enum with custom values
+    enum UnsafeEnum
+    {
+        A,
+        B,
+        C,
+        D = B|C
+    }
+    static assert(!__traits(compiles, BitFlags!UnsafeEnum));
+    static assert(__traits(compiles, BitFlags!(UnsafeEnum, Yes.unsafe)));
+
+    immutable BitFlags!Enum flags_empty;
+    // A default constructed BitFlags has no value set
+    assert(!(flags_empty & Enum.A) && !(flags_empty & Enum.B) && !(flags_empty & Enum.B));
+
+    // Value can be set with the | operator
+    immutable BitFlags!Enum flags_A = flags_empty | Enum.A;
+
+    // And tested with the & operator
+    assert(flags_A & Enum.A);
+
+    // Which commutes
+    assert(Enum.A & flags_A);
+
+    // BitFlags can be variadically initialized
+    immutable BitFlags!Enum flags_AB = BitFlags!Enum(Enum.A, Enum.B);
+    assert((flags_AB & Enum.A) && (flags_AB & Enum.B) && !(flags_AB & Enum.C));
+
+    // Use the ~ operator for subtracting flags
+    immutable BitFlags!Enum flags_B = flags_AB & ~BitFlags!Enum(Enum.A);
+    assert(!(flags_B & Enum.A) && (flags_B & Enum.B) && !(flags_B & Enum.C));
+
+    // You can use the EnumMembers template to set all flags
+    immutable BitFlags!Enum flags_all = EnumMembers!Enum;
+
+    // use & between BitFlags for intersection
+    immutable BitFlags!Enum flags_BC = BitFlags!Enum(Enum.B, Enum.C);
+    assert (flags_B == (flags_BC & flags_AB));
+
+    // All the binary operators work in their assignment version
+    BitFlags!Enum temp = flags_empty;
+    temp |= flags_AB;
+    assert(temp == (flags_empty | flags_AB));
+    temp = flags_empty;
+    temp |= Enum.B;
+    assert(temp == (flags_empty | Enum.B));
+    temp = flags_empty;
+    temp &= flags_AB;
+    assert(temp == (flags_empty & flags_AB));
+    temp = flags_empty;
+    temp &= Enum.A;
+    assert(temp == (flags_empty & Enum.A));
+
+    // BitFlags with no value set evaluate to false
+    assert(!flags_empty);
+
+    // BitFlags with at least one value set evaluate to true
+    assert(flags_A);
+
+    // This can be useful to check intersection between BitFlags
+    assert(flags_A & flags_AB);
+    assert(flags_AB & Enum.A);
+
+    // Finally, you can of course get you raw value out of flags
+    auto value = cast(int)flags_A;
+    assert(value == Enum.A);
+}
