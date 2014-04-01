@@ -2281,11 +2281,11 @@ struct Appender(A : T[], T)
      * it will be used by the appender.  After initializing an appender on an array,
      * appending to the original array will reallocate.
      */
-    this(Unqual!T[] arr) @safe pure nothrow
+    this(T[] arr) @trusted pure nothrow
     {
         // initialize to a given array.
         _data = new Data;
-        _data.arr = arr;
+        _data.arr = cast(Unqual!T[])arr; //trusted
 
         if (__ctfe)
             return;
@@ -2293,12 +2293,29 @@ struct Appender(A : T[], T)
         // We want to use up as much of the block the array is in as possible.
         // if we consume all the block that we can, then array appending is
         // safe WRT built-in append, and we can use the entire block.
-        auto cap = ()@trusted{ return arr.capacity; }();
+        auto cap = arr.capacity; //trusted
         if (cap > arr.length)
-            arr = ()@trusted{ return arr.ptr[0 .. cap]; }();
+            arr = arr.ptr[0 .. cap]; //trusted
+
         // we assume no reallocation occurred
         assert(arr.ptr is _data.arr.ptr);
         _data.capacity = arr.length;
+    }
+
+    //Broken function. To be removed.
+    static if (is(T == immutable))
+    {
+        deprecated ("Using this constructor will break the type system. Please fix your code to use `Appender!(T[]).this(T[] arr)' directly.")
+        this(Unqual!T[] arr) pure nothrow
+        {
+            this(cast(T[]) arr);
+        }
+
+        //temporary: For resolving ambiguity:
+        this(typeof(null))
+        {
+            this(cast(T[]) null);
+        }
     }
 
     /**
@@ -2683,17 +2700,7 @@ Appender!(E[]) appender(A : E[], E)()
 /// ditto
 Appender!(E[]) appender(A : E[], E)(A array)
 {
-    static if (isMutable!E)
-    {
-        return Appender!(E[])(array);
-    }
-    else
-    {
-        /* @system operation:
-         * - casting array to Unqual!E[] (remove qualifiers)
-         */
-        return Appender!(E[])(cast(Unqual!E[])array);
-    }
+    return Appender!(E[])(array);
 }
 
 @safe pure nothrow unittest
@@ -2936,6 +2943,40 @@ unittest
     }
    "12".map!Foo.array;
    [1, 2].map!Bar.array;
+}
+
+unittest
+{
+    //New appender signature tests
+    alias mutARR = int[];
+    alias conARR = const(int)[];
+    alias immARR = immutable(int)[];
+
+    mutARR mut;
+    conARR con;
+    immARR imm;
+
+    {auto app = Appender!mutARR(mut);}                //Always worked. Should work. Should not create a warning.
+    static assert(!is(typeof(Appender!mutARR(con)))); //Never worked.  Should not work.
+    static assert(!is(typeof(Appender!mutARR(imm)))); //Never worked.  Should not work.
+
+    {auto app = Appender!conARR(mut);} //Always worked. Should work. Should not create a warning.
+    {auto app = Appender!conARR(con);} //Didn't work.   Now works.   Should not create a warning.
+    {auto app = Appender!conARR(imm);} //Didn't work.   Now works.   Should not create a warning.
+
+    //{auto app = Appender!immARR(mut);}                //Worked. Will cease to work. Creates warning. 
+    //static assert(!is(typeof(Appender!immARR(mut)))); //Worked. Will cease to work. Uncomment me after full deprecation.
+    static assert(!is(typeof(Appender!immARR(con))));   //Never worked. Should not work.
+    {auto app = Appender!immARR(imm);}                  //Didn't work.  Now works. Should not create a warning.
+
+    //Deprecated. Please uncomment and make sure this doesn't work:
+    //char[] cc;
+    //static assert(!is(typeof(Appender!string(cc))));
+
+    //This should always work:
+    appender!string(null);
+    appender!(const(char)[])(null);
+    appender!(char[])(null);
 }
 
 /++
