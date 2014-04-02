@@ -1811,18 +1811,18 @@ struct Parser(R)
         else
         {
             auto ivals = set.byInterval;
-            //if(ivals.length > maxCharsetUsed)
+            if(ivals.length*2 > maxCharsetUsed)
             {
                 auto t  = getTrie(set);
                 put(Bytecode(IR.Trie, cast(uint)tries.length));
                 tries ~= t;
                 debug(std_regex_allocation) writeln("Trie generated");
             }
-            /*else
+            else
             {
                 put(Bytecode(IR.CodepointSet, cast(uint)charsets.length));
                 tries ~= Trie.init;
-            }*/
+            }
             charsets ~= set;
             assert(charsets.length == tries.length);
         }
@@ -2300,7 +2300,7 @@ int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
         case IR.Any:
             return 0;
         case IR.CodepointSet:
-            if(re.charsets[re.ir[pc].data][front])
+            if(re.charsets[re.ir[pc].data].scanFor(front))
                 return 0;
             else
                 return -1;
@@ -3424,7 +3424,7 @@ template BacktrackingMatcher(bool CTregex)
                         next();
                         break;
                     case IR.CodepointSet:
-                        if(atEnd || !re.charsets[re.ir[pc].data][front])
+                        if(atEnd || !re.charsets[re.ir[pc].data].scanFor(front))
                             goto L_backtrack;
                         next();
                         pc += IRL!(IR.CodepointSet);
@@ -4344,7 +4344,7 @@ struct CtContext
             break;
         case IR.CodepointSet:
             code ~= ctSub( `
-                    if(atEnd || !re.charsets[$$][front])
+                    if(atEnd || !re.charsets[$$].scanFor(front))
                         $$
                     $$
                 $$`, ir[0].data, bailOut, addr >= 0 ? "next();" :"", nextInstr);
@@ -5289,7 +5289,7 @@ enum OneShot { Fwd, Bwd };
                           return;
                       break;
             case IR.CodepointSet:
-                      if(re.charsets[re.ir[t.pc].data][front])
+                      if(re.charsets[re.ir[t.pc].data].scanFor(front))
                       {
                           t.pc += IRL!(IR.CodepointSet);
                           nlist.insertBack(t);
