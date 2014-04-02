@@ -4625,7 +4625,7 @@ enum OneShot { Fwd, Bwd };
     bool exhausted;
     static if(__traits(hasMember,Stream, "search"))
     {
-        enum kicked = false;
+        enum kicked = true;
     }
     else
         enum kicked = false;
