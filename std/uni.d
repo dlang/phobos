@@ -1800,7 +1800,7 @@ unittest
 }
 
 //build hack
-alias _RealArray = Uint24Array!ReallocPolicy;
+alias _RealArray = CowArray!ReallocPolicy;
 
 unittest
 {
@@ -1952,7 +1952,7 @@ public struct CodepointInterval
         from predefined ones.
     )
 
-    $(P Memory usage is 6 bytes per each contiguous interval in a set.
+    $(P Memory usage is 8 bytes per each contiguous interval in a set.
     The value semantics are achieved by using the
     $(WEB http://en.wikipedia.org/wiki/Copy-on-write, COW) technique
     and thus it's $(RED not) safe to cast this type to $(D_KEYWORD shared).
@@ -1982,7 +1982,7 @@ public:
             arr ~= v.a;
             arr ~= v.b;
         }
-        data = Uint24Array!(SP)(arr);
+        data = CowArray!(SP)(arr);
     }
 
     /**
@@ -1993,7 +1993,7 @@ public:
     {
         auto flattened = roundRobin(intervals.save.map!"a[0]"(),
             intervals.save.map!"a[1]"());
-        data = Uint24Array!(SP)(flattened);
+        data = CowArray!(SP)(flattened);
         sanitize(); //enforce invariant: sort intervals etc.
     }
 
@@ -2026,7 +2026,7 @@ public:
     }
     body
     {
-        data = Uint24Array!(SP)(intervals);
+        data = CowArray!(SP)(intervals);
         sanitize(); //enforce invariant: sort intervals etc.
     }
 
@@ -2859,7 +2859,7 @@ private:
         return idx;
     }
 
-    Uint24Array!SP data;
+    CowArray!SP data;
 };
 
 @system unittest
@@ -2989,9 +2989,7 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
     else
         return safeWrite24(ptr, val, idx);
 }
-
-// Packed array of 24-bit integers, COW semantics.
-@trusted struct Uint24Array(SP=GcPolicy)
+@trusted struct CowArray(SP=GcPolicy)
 {
     this(Range)(Range range)
         if(isInputRange!Range && hasLength!Range)
@@ -3034,7 +3032,7 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
     // report one less then actual size
     @property size_t length() const
     {
-        return data.length ? (data.length-4)/3 : 0;
+        return data.length ? data.length - 1 : 0;
     }
 
     //+ an extra slot for ref-count
@@ -3046,10 +3044,10 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
                 freeThisReference();
             return;
         }
-        immutable bytes = len*3+4; // including ref-count
+        immutable total = len + 1; // including ref-count
         if(empty)
         {
-            data = SP.alloc!ubyte(bytes);
+            data = SP.alloc!uint(total);
             refCount = 1;
             return;
         }
@@ -3057,9 +3055,9 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
         if(cur_cnt != 1) // have more references to this memory
         {
             refCount = cur_cnt - 1;
-            auto new_data = SP.alloc!ubyte(bytes);
+            auto new_data = SP.alloc!uint(total);
             // take shrinking into account
-            auto to_copy = min(bytes, data.length)-4;
+            auto to_copy = min(total, data.length) - 1;
             copy(data[0..to_copy], new_data[0..to_copy]);
             data = new_data; // before setting refCount!
             refCount = 1;
@@ -3067,31 +3065,24 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
         else // 'this' is the only reference
         {
             // use the realloc (hopefully in-place operation)
-            data = SP.realloc(data, bytes);
+            data = SP.realloc(data, total);
             refCount = 1; // setup a ref-count in the new end of the array
         }
     }
 
     alias opDollar = length;
 
-    // Read 24-bit packed integer
-    uint opIndex(size_t idx)const
+    uint opIndex()(size_t idx)const
     {
-        return read24(data.ptr, idx);
+        return data[idx];
     }
 
-    // Write 24-bit packed integer
     void opIndexAssign(uint val, size_t idx)
-    in
-    {
-        assert(!empty && val <= 0xFF_FFFF);
-    }
-    body
     {
         auto cnt = refCount;
         if(cnt != 1)
             dupThisReference(cnt);
-        write24(data.ptr, val, idx);
+        data[idx] = val;
     }
 
     //
@@ -3100,7 +3091,7 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
         return sliceOverIndexed(from, to, &this);
     }
 
-    ///
+    //
     auto opSlice(size_t from, size_t to) const
     {
         return sliceOverIndexed(from, to, &this);
@@ -3112,7 +3103,7 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
         return opSlice(0, length);
     }
 
-    // length slices before the ref count
+    // ditto
     auto opSlice() const
     {
         return opSlice(0, length);
@@ -3132,28 +3123,23 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
         this[$-1] = val;
     }
 
-    bool opEquals()(auto const ref Uint24Array rhs)const
+    bool opEquals()(auto const ref CowArray rhs)const
     {
         if(empty ^ rhs.empty)
             return false; // one is empty and the other isn't
-        return empty || data[0..$-4] == rhs.data[0..$-4];
+        return empty || data[0..$-1] == rhs.data[0..$-1];
     }
 
 private:
     // ref-count is right after the data
     @property uint refCount() const
     {
-        return read24(data.ptr, length);
+        return data[$-1];
     }
 
     @property void refCount(uint cnt)
-    in
     {
-        assert(cnt <= 0xFF_FFFF);
-    }
-    body
-    {
-        write24(data.ptr, cnt, length);
+        data[$-1] = cnt;
     }
 
     void freeThisReference()
@@ -3183,14 +3169,14 @@ private:
         // dec shared ref-count
         refCount = count - 1;
         // copy to the new chunk of RAM
-        auto new_data = SP.alloc!ubyte(data.length);
+        auto new_data = SP.alloc!uint(data.length);
         // bit-blit old stuff except the counter
-        copy(data[0..$-4], new_data[0..$-4]);
+        copy(data[0..$-1], new_data[0..$-1]);
         data = new_data; // before setting refCount!
         refCount = 1; // so that this updates the right one
     }
 
-    ubyte[] data;
+    uint[] data;
 }
 
 @trusted unittest// Uint24 tests //@@@BUG@@ iota is system ?!
@@ -3241,8 +3227,8 @@ private:
 
     foreach(Policy; TypeTuple!(GcPolicy, ReallocPolicy))
     {
-        alias Range = typeof(Uint24Array!Policy.init[]);
-        alias U24A = Uint24Array!Policy;
+        alias Range = typeof(CowArray!Policy.init[]);
+        alias U24A = CowArray!Policy;
         static assert(isForwardRange!Range);
         static assert(isBidirectionalRange!Range);
         static assert(isOutputRange!(Range, uint));
