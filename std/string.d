@@ -256,70 +256,31 @@ pure nothrow unittest
 }
 
 
-/**
-   Flag indicating whether a search is case-sensitive.
-*/
+/++
+Flag indicating whether a search is case-sensitive.
++/
 enum CaseSensitive { no, yes }
 
 /++
-    Returns the index of the first occurrence of $(D c) in $(D s). If $(D c)
-    is not found, then $(D -1) is returned.
+Returns the index of the first occurrence of $(D c) in $(D s). If $(D c)
+is not found, then $(D -1) is returned.
 
-    $(D cs) indicates whether the comparisons are case sensitive.
-  +/
-ptrdiff_t indexOf(Char)(in Char[] s,
-                      dchar c,
-                      CaseSensitive cs = CaseSensitive.yes) @safe pure
-    if (isSomeChar!Char)
+$(D cs) indicates whether the comparisons are case sensitive.
++/
+ptrdiff_t indexOf(Char)(in Char[] s, dchar c) @safe pure
+if (isSomeChar!Char)
 {
-    if (cs == CaseSensitive.yes)
+    return indexOf!(CaseSensitive.yes)(s, c);
+}
+/// ditto
+ptrdiff_t indexOf(Char)(in Char[] s, dchar c, CaseSensitive cs) @safe pure
+if (isSomeChar!Char)
+{
+    final switch(cs)
     {
-        static if (Char.sizeof == 1)
-        {
-            if (std.ascii.isASCII(c) && !__ctfe)
-            {                                               // Plain old ASCII
-                auto trustedmemchr() @trusted { return cast(Char*)memchr(s.ptr, c, s.length); }
-                auto p = trustedmemchr();
-                if (p)
-                    return p - s.ptr;
-                else
-                    return -1;
-            }
-        }
-
-        // c is a universal character
-        foreach (ptrdiff_t i, dchar c2; s)
-        {
-            if (c == c2)
-                return i;
-        }
+        case CaseSensitive.yes: return indexOf!(CaseSensitive.yes)(s, c);
+        case CaseSensitive.no : return indexOf!(CaseSensitive.no )(s, c);
     }
-    else
-    {
-        if (std.ascii.isASCII(c))
-        {                                                   // Plain old ASCII
-            auto c1 = cast(char) std.ascii.toLower(c);
-
-            foreach (ptrdiff_t i, c2; s)
-            {
-                auto c3 = std.ascii.toLower(c2);
-                if (c1 == c3)
-                    return i;
-            }
-        }
-        else
-        {                                                   // c is a universal character
-            auto c1 = std.uni.toLower(c);
-
-            foreach (ptrdiff_t i, dchar c2; s)
-            {
-                auto c3 = std.uni.toLower(c2);
-                if (c1 == c3)
-                    return i;
-            }
-        }
-    }
-    return -1;
 }
 
 unittest
@@ -357,28 +318,29 @@ unittest
 }
 
 /++
-    Returns the index of the first occurrence of $(D c) in $(D s) with respect
-    to the start index $(D startIdx). If $(D c) is not found, then $(D -1) is
-    returned. If $(D c) is found the value of the returned index is at least
-    $(D startIdx). $(D startIdx) represents a codeunit index in $(D s). If the
-    sequence starting at $(D startIdx) does not represent a well formed codepoint,
-    then a $(XREF utf,UTFException) may be thrown.
+Returns the index of the first occurrence of $(D c) in $(D s) with respect
+to the start index $(D startIdx). If $(D c) is not found, then $(D -1) is
+returned. If $(D c) is found the value of the returned index is at least
+$(D startIdx). $(D startIdx) represents a codeunit index in $(D s). If the
+sequence starting at $(D startIdx) does not represent a well formed codepoint,
+then a $(XREF utf,UTFException) may be thrown.
 
-    $(D cs) indicates whether the comparisons are case sensitive.
-  +/
-ptrdiff_t indexOf(Char)(const(Char)[] s, dchar c, const size_t startIdx,
-        CaseSensitive cs = CaseSensitive.yes) @safe pure
-    if (isSomeChar!Char)
+$(D cs) indicates whether the comparisons are case sensitive.
++/
+ptrdiff_t indexOf(Char)(in Char[] s, dchar c, size_t startIdx) @safe pure
+if (isSomeChar!Char)
 {
-    if (startIdx < s.length)
+    return indexOf!(CaseSensitive.yes)(s, c, startIdx);
+}
+/// ditto
+ptrdiff_t indexOf(Char)(in Char[] s, dchar c, size_t startIdx, CaseSensitive cs) @safe pure
+if (isSomeChar!Char)
+{
+    final switch(cs)
     {
-        ptrdiff_t foundIdx = indexOf(s[startIdx .. $], c, cs);
-        if (foundIdx != -1)
-        {
-            return foundIdx + cast(ptrdiff_t)startIdx;
-        }
+        case CaseSensitive.yes: return indexOf!(CaseSensitive.yes)(s, c, startIdx);
+        case CaseSensitive.no : return indexOf!(CaseSensitive.no )(s, c, startIdx);
     }
-    return -1;
 }
 
 unittest
@@ -422,28 +384,25 @@ unittest
 }
 
 /++
-    Returns the index of the first occurrence of $(D sub) in $(D s). If $(D sub)
-    is not found, then $(D -1) is returned.
+Returns the index of the first occurrence of $(D sub) in $(D s). If $(D sub)
+is not found, then $(D -1) is returned.
 
-    $(D cs) indicates whether the comparisons are case sensitive.
-  +/
-ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s,
-                              const(Char2)[] sub,
-                              CaseSensitive cs = CaseSensitive.yes)
-    if (isSomeChar!Char1 && isSomeChar!Char2)
+$(D cs) indicates whether the comparisons are case sensitive.
++/
+ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub)
+if (isSomeChar!Char1 && isSomeChar!Char2)
 {
-    const(Char1)[] balance;
-    if (cs == CaseSensitive.yes)
+    return indexOf!(CaseSensitive.yes)(s, sub);
+}
+/// ditto
+ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub, CaseSensitive cs)
+if (isSomeChar!Char1 && isSomeChar!Char2)
+{
+    final switch(cs)
     {
-        balance = std.algorithm.find(s, sub);
+        case CaseSensitive.yes: return indexOf!(CaseSensitive.yes)(s, sub);
+        case CaseSensitive.no : return indexOf!(CaseSensitive.no )(s, sub);
     }
-    else
-    {
-        balance = std.algorithm.find!
-            ((a, b) => std.uni.toLower(a) == std.uni.toLower(b))
-            (s, sub);
-    }
-    return balance.empty ? -1 : balance.ptr - s.ptr;
 }
 
 unittest
@@ -498,32 +457,34 @@ unittest
 }
 
 /++
-    Returns the index of the first occurrence of $(D sub) in $(D s) with
-    respect to the start index $(D startIdx). If $(D sub) is not found, then
-    $(D -1) is returned. If $(D sub) is found the value of the returned index
-    is at least $(D startIdx). $(D startIdx) represents a codeunit index in
-    $(D s). If the sequence starting at $(D startIdx) does not represent a well
-    formed codepoint, then a $(XREF utf,UTFException) may be thrown.
+Returns the index of the first occurrence of $(D sub) in $(D s) with
+respect to the start index $(D startIdx). If $(D sub) is not found, then
+$(D -1) is returned. If $(D sub) is found the value of the returned index
+is at least $(D startIdx). $(D startIdx) represents a codeunit index in
+$(D s). If the sequence starting at $(D startIdx) does not represent a well
+formed codepoint, then a $(XREF utf,UTFException) may be thrown.
 
-    $(D cs) indicates whether the comparisons are case sensitive.
-  +/
-ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
-        const size_t startIdx, CaseSensitive cs = CaseSensitive.yes)
-    if (isSomeChar!Char1 && isSomeChar!Char2)
+$(D cs) indicates whether the comparisons are case sensitive.
++/
+ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub, size_t startIdx)
+if (isSomeChar!Char1 && isSomeChar!Char2)
 {
-    if (startIdx < s.length)
+    return indexOf!(CaseSensitive.yes)(s, sub, startIdx);
+}
+/// ditto
+ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub, size_t startIdx, CaseSensitive cs)
+if (isSomeChar!Char1 && isSomeChar!Char2)
+{
+    final switch(cs)
     {
-        ptrdiff_t foundIdx = indexOf(s[startIdx .. $], sub, cs);
-        if (foundIdx != -1)
-        {
-            return foundIdx + cast(ptrdiff_t)startIdx;
-        }
+        case CaseSensitive.yes: return indexOf!(CaseSensitive.yes)(s, sub, startIdx);
+        case CaseSensitive.no : return indexOf!(CaseSensitive.no )(s, sub, startIdx);
     }
-    return -1;
 }
 
 unittest
 {
+    import std.stdio;
     debug(string) printf("string.indexOf(startIdx).unittest\n");
 
     foreach(S; TypeTuple!(string, wstring, dstring))
@@ -581,70 +542,166 @@ unittest
 }
 
 /++
-    Returns the index of the last occurrence of $(D c) in $(D s). If $(D c)
-    is not found, then $(D -1) is returned.
-
-    $(D cs) indicates whether the comparisons are case sensitive.
-  +/
-ptrdiff_t lastIndexOf(Char)(const(Char)[] s,
-                          dchar c,
-                          CaseSensitive cs = CaseSensitive.yes) @safe pure
-    if (isSomeChar!Char)
+Same as the $(D indexOf) functions above, but the $(D cs) flag (for case
+sensitivity), is passed as a static template parameter.
++/
+template indexOf(CaseSensitive cs)
 {
-    if (cs == CaseSensitive.yes)
+    /// simple character in string search.
+    ptrdiff_t indexOf(Char)(in Char[] s, dchar c) @safe pure
+    if (isSomeChar!Char)
     {
-        if (canSearchInCodeUnits!Char(c))
+        static if (cs == CaseSensitive.yes)
         {
-            foreach_reverse (i, it; s)
-            {
-                if (it == c)
-                {
-                    return i;
-                }
-            }
+            auto balance = find(s, c);
+            if (balance.length)
+                return s.length - balance.length;
         }
         else
         {
-            foreach_reverse (i, dchar it; s)
+            if (std.ascii.isASCII(c))
             {
-                if (it == c)
+                // Plain old ASCII
+                auto c1 = cast(char) std.ascii.toLower(c);
+    
+                foreach (ptrdiff_t i, c2; s)
                 {
-                    return i;
+                    auto c3 = std.ascii.toLower(c2);
+                    if (c1 == c3)
+                        return i;
+                }
+            }
+            else
+            {
+                // c is a universal character
+                auto c1 = std.uni.toLower(c);
+    
+                foreach (ptrdiff_t i, dchar c2; s)
+                {
+                    auto c3 = std.uni.toLower(c2);
+                    if (c1 == c3)
+                        return i;
                 }
             }
         }
+        return -1;
     }
-    else
+    /// Simple character in string search, with $(D startIdx) offset.
+    ptrdiff_t indexOf(Char)(const(Char)[] s, dchar c, size_t startIdx) @safe pure
+    if (isSomeChar!Char)
     {
-        if (std.ascii.isASCII(c))
+        if (startIdx < s.length)
         {
-            immutable c1 = std.ascii.toLower(c);
-
-            foreach_reverse (i, it; s)
+            ptrdiff_t foundIdx = indexOf(s[startIdx .. $], c);
+            if (foundIdx != -1)
             {
-                immutable c2 = std.ascii.toLower(it);
-                if (c1 == c2)
-                {
-                    return i;
-                }
+                return foundIdx + cast(ptrdiff_t)startIdx;
             }
+        }
+        return -1;
+    }
+    /// substring in string search.
+    ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub)
+    if (isSomeChar!Char1 && isSomeChar!Char2)
+    {
+        const(Char1)[] balance;
+        static if (cs == CaseSensitive.yes)
+        {
+            balance = std.algorithm.find(s, sub);
         }
         else
         {
-            immutable c1 = std.uni.toLower(c);
-
-            foreach_reverse (i, dchar it; s)
+            balance = std.algorithm.find!  ((a, b) => std.uni.toLower(a) == std.uni.toLower(b))(s, sub);
+        }
+        return balance.empty ? -1 : s.length - balance.length;
+    }
+    /// substring in string search, with $(D startIdx) offset.
+    ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub, size_t startIdx)
+    if (isSomeChar!Char1 && isSomeChar!Char2)
+    {
+        if (startIdx < s.length)
+        {
+            ptrdiff_t foundIdx = indexOf(s[startIdx .. $], sub);
+            if (foundIdx != -1)
             {
-                immutable c2 = std.uni.toLower(it);
-                if (c1 == c2)
-                {
-                    return i;
-                }
+                return foundIdx + cast(ptrdiff_t)startIdx;
             }
         }
+        return -1;
     }
+}
 
-    return -1;
+unittest
+{
+    //indexOf behavior is already mostly validated by previous tests.
+    //This mainly tests potential overload ambiguities.
+    alias CSYes = CaseSensitive.yes;
+    alias CSNo  = CaseSensitive.no;
+
+    assert(indexOf        ("hello world", ' '       ) == 5);
+    assert(indexOf        ("hello world", ' ', CSYes) == 5);
+    assert(indexOf        ("hello world", ' ', CSNo ) == 5);
+    assert(indexOf!CSYes  ("hello world", ' '       ) == 5);
+    assert(indexOf!CSNo   ("hello world", ' '       ) == 5);
+    assert(indexOf!char   ("hello world", ' '       ) == 5);
+    assert(indexOf!char   ("hello world", ' ', CSYes) == 5);
+    assert(indexOf!char   ("hello world", ' ', CSNo ) == 5);
+    assert(indexOf        ("hello world", "world"       ) == 6);
+    assert(indexOf        ("hello world", "world", CSYes) == 6);
+    assert(indexOf        ("hello world", "world", CSNo ) == 6);
+    assert(indexOf!CSYes  ("hello world", "world"       ) == 6);
+    assert(indexOf!CSNo   ("hello world", "world"       ) == 6);
+    assert(indexOf!char   ("hello world", "world"       ) == 6);
+    assert(indexOf!char   ("hello world", "world", CSYes) == 6);
+    assert(indexOf!char   ("hello world", "world", CSNo ) == 6);
+    assert(indexOf        ("hello world", ' ', 3       ) == 5);
+    assert(indexOf        ("hello world", ' ', 3, CSYes) == 5);
+    assert(indexOf        ("hello world", ' ', 3, CSNo ) == 5);
+    assert(indexOf!CSYes  ("hello world", ' ', 3       ) == 5);
+    assert(indexOf!CSNo   ("hello world", ' ', 3       ) == 5);
+    assert(indexOf!char   ("hello world", ' ', 3       ) == 5);
+    assert(indexOf!char   ("hello world", ' ', 3, CSYes) == 5);
+    assert(indexOf!char   ("hello world", ' ', 3, CSNo ) == 5);
+    assert(indexOf        ("hello world", "world", 3       ) == 6);
+    assert(indexOf        ("hello world", "world", 3, CSYes) == 6);
+    assert(indexOf        ("hello world", "world", 3, CSNo ) == 6);
+    assert(indexOf!CSYes  ("hello world", "world", 3       ) == 6);
+    assert(indexOf!CSNo   ("hello world", "world", 3       ) == 6);
+    assert(indexOf!char   ("hello world", "world", 3       ) == 6);
+    assert(indexOf!char   ("hello world", "world", 3, CSYes) == 6);
+    assert(indexOf!char   ("hello world", "world", 3, CSNo ) == 6);
+    alias indexOfYes = indexOf!CSYes;
+    alias indexOfNo  = indexOf!CSNo;
+    assert(indexOfYes!char("hello world", ' ') == 5);
+    assert(indexOfNo !char("hello world", ' ') == 5);
+    assert(indexOfYes!char("hello world", "world") == 6);
+    assert(indexOfNo !char("hello world", "world") == 6);
+    assert(indexOfYes!char("hello world", ' ', 3) == 5);
+    assert(indexOfNo !char("hello world", ' ', 3) == 5);
+    assert(indexOfYes!char("hello world", "world", 3) == 6);
+    assert(indexOfNo !char("hello world", "world", 3) == 6);
+}
+
+/++
+Returns the index of the last occurrence of $(D c) in $(D s). If $(D c)
+is not found, then $(D -1) is returned.
+
+$(D cs) indicates whether the comparisons are case sensitive.
++/
+ptrdiff_t lastIndexOf(Char)(in Char[] s, dchar c) @safe pure
+if (isSomeChar!Char)
+{
+    return lastIndexOf!(CaseSensitive.yes)(s, c);
+}
+/// ditto
+ptrdiff_t lastIndexOf(Char)(in Char[] s, dchar c, CaseSensitive cs) @safe pure
+if (isSomeChar!Char)
+{
+    final switch(cs)
+    {
+        case CaseSensitive.yes: return lastIndexOf!(CaseSensitive.yes)(s, c);
+        case CaseSensitive.no : return lastIndexOf!(CaseSensitive.no )(s, c);
+    }
 }
 
 unittest
@@ -686,25 +743,29 @@ unittest
 }
 
 /++
-    Returns the index of the last occurrence of $(D c) in $(D s). If $(D c) is
-    not found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
-    the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
-    codeunit index in $(D s). If the sequence ending at $(D startIdx) does not
-    represent a well formed codepoint, then a $(XREF utf,UTFException) may be
-    thrown.
+Returns the index of the last occurrence of $(D c) in $(D s). If $(D c) is
+not found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
+the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
+codeunit index in $(D s). If the sequence ending at $(D startIdx) does not
+represent a well formed codepoint, then a $(XREF utf,UTFException) may be
+thrown.
 
-    $(D cs) indicates whether the comparisons are case sensitive.
-  +/
-ptrdiff_t lastIndexOf(Char)(const(Char)[] s, dchar c, const size_t startIdx,
-        CaseSensitive cs = CaseSensitive.yes) @safe pure
-    if (isSomeChar!Char)
+$(D cs) indicates whether the comparisons are case sensitive.
++/
+ptrdiff_t lastIndexOf(Char)(in Char[] s, dchar c, size_t startIdx) @safe pure
+if (isSomeChar!Char)
 {
-    if (startIdx <= s.length)
+    return lastIndexOf!(CaseSensitive.yes)(s, c, startIdx);
+}
+/// ditto
+ptrdiff_t lastIndexOf(Char)(in Char[] s, dchar c, size_t startIdx, CaseSensitive cs) @safe pure
+if (isSomeChar!Char)
+{
+    final switch(cs)
     {
-        return lastIndexOf(s[0u .. startIdx], c, cs);
+        case CaseSensitive.yes: return lastIndexOf!(CaseSensitive.yes)(s, c, startIdx);
+        case CaseSensitive.no : return lastIndexOf!(CaseSensitive.no )(s, c, startIdx);
     }
-
-    return -1;
 }
 
 unittest
@@ -740,81 +801,25 @@ unittest
 }
 
 /++
-    Returns the index of the last occurrence of $(D sub) in $(D s). If $(D sub)
-    is not found, then $(D -1) is returned.
+Returns the index of the last occurrence of $(D sub) in $(D s). If $(D sub)
+is not found, then $(D -1) is returned.
 
-    $(D cs) indicates whether the comparisons are case sensitive.
-  +/
-ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
-                                  const(Char2)[] sub,
-                                  CaseSensitive cs = CaseSensitive.yes) @safe pure
-    if (isSomeChar!Char1 && isSomeChar!Char2)
+$(D cs) indicates whether the comparisons are case sensitive.
++/
+ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub)
+if (isSomeChar!Char1 && isSomeChar!Char2)
 {
-    if (sub.empty)
-        return s.length;
-
-    if (walkLength(sub) == 1)
-        return lastIndexOf(s, sub.front, cs);
-
-    if (cs == CaseSensitive.yes)
+    return lastIndexOf!(CaseSensitive.yes)(s, sub);
+}
+/// ditto
+ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub, CaseSensitive cs)
+if (isSomeChar!Char1 && isSomeChar!Char2)
+{
+    final switch(cs)
     {
-        static if (is(Unqual!Char1 == Unqual!Char2))
-        {
-            immutable c = sub[0];
-
-            for (ptrdiff_t i = s.length - sub.length; i >= 0; --i)
-            {
-                if (s[i] == c)
-                {
-                    if (__ctfe)
-                    {
-                        foreach (j; 1 .. sub.length)
-                        {
-                            if (s[i + j] != sub[j])
-                                continue;
-                        }
-                        return i;
-                    }
-                    else
-                    {
-                        auto trustedMemcmp(in void* s1, in void* s2, size_t n) @trusted
-                        {
-                            return memcmp(s1, s2, n);
-                        }
-                        if (trustedMemcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
-                            return i;
-                    }
-                }
-            }
-        }
-        else
-        {
-            for (size_t i = s.length; !s.empty;)
-            {
-                if (s.endsWith(sub))
-                    return cast(ptrdiff_t)i - to!(const(Char1)[])(sub).length;
-
-                i -= strideBack(s, i);
-                s = s[0 .. i];
-            }
-        }
+        case CaseSensitive.yes: return lastIndexOf!(CaseSensitive.yes)(s, sub);
+        case CaseSensitive.no : return lastIndexOf!(CaseSensitive.no )(s, sub);
     }
-    else
-    {
-        for (size_t i = s.length; !s.empty;)
-        {
-            if (endsWith!((a, b) => std.uni.toLower(a) == std.uni.toLower(b))
-                         (s, sub))
-            {
-                return cast(ptrdiff_t)i - to!(const(Char1)[])(sub).length;
-            }
-
-            i -= strideBack(s, i);
-            s = s[0 .. i];
-        }
-    }
-
-    return -1;
 }
 
 unittest
@@ -876,25 +881,29 @@ unittest
 }
 
 /++
-    Returns the index of the last occurrence of $(D sub) in $(D s). If $(D sub)
-    is not found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
-    the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
-    codeunit index in $(D s). If the sequence ending at $(D startIdx) does not
-    represent a well formed codepoint, then a $(XREF utf,UTFException) may be
-    thrown.
+Returns the index of the last occurrence of $(D sub) in $(D s). If $(D sub)
+is not found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
+the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
+codeunit index in $(D s). If the sequence ending at $(D startIdx) does not
+represent a well formed codepoint, then a $(XREF utf,UTFException) may be
+thrown.
 
-    $(D cs) indicates whether the comparisons are case sensitive.
-  +/
-ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
-        const size_t startIdx, CaseSensitive cs = CaseSensitive.yes) @safe pure
-    if (isSomeChar!Char1 && isSomeChar!Char2)
+$(D cs) indicates whether the comparisons are case sensitive.
++/
+ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub, size_t startIdx)
+if (isSomeChar!Char1 && isSomeChar!Char2)
 {
-    if (startIdx <= s.length)
+    return lastIndexOf!(CaseSensitive.yes)(s, sub, startIdx);
+}
+/// ditto
+ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub, size_t startIdx, CaseSensitive cs)
+if (isSomeChar!Char1 && isSomeChar!Char2)
+{
+    final switch(cs)
     {
-        return lastIndexOf(s[0u .. startIdx], sub, cs);
+        case CaseSensitive.yes: return lastIndexOf!(CaseSensitive.yes)(s, sub, startIdx);
+        case CaseSensitive.no : return lastIndexOf!(CaseSensitive.no )(s, sub, startIdx);
     }
-
-    return -1;
 }
 
 unittest
@@ -945,6 +954,214 @@ unittest
     }
 }
 
+/++
+Same as the $(D lastIndexOf) functions above, but the $(D cs) flag (for case
+sensitivity), is passed as a static template parameter.
++/
+template lastIndexOf(CaseSensitive cs)
+{
+    /// simple character in string search.
+    ptrdiff_t lastIndexOf(Char)(const(Char)[] s, dchar c) @safe pure
+    if (isSomeChar!Char)
+    {
+        static if (cs == CaseSensitive.yes)
+        {
+            if (canSearchInCodeUnits!Char(c))
+            {
+                foreach_reverse (i, it; s)
+                {
+                    if (it == c)
+                    {
+                        return i;
+                    }
+                }
+            }
+            else
+            {
+                foreach_reverse (i, dchar it; s)
+                {
+                    if (it == c)
+                    {
+                        return i;
+                    }
+                }
+            }
+        }
+        else
+        {
+            if (std.ascii.isASCII(c))
+            {
+                immutable c1 = std.ascii.toLower(c);
+    
+                foreach_reverse (i, it; s)
+                {
+                    immutable c2 = std.ascii.toLower(it);
+                    if (c1 == c2)
+                    {
+                        return i;
+                    }
+                }
+            }
+            else
+            {
+                immutable c1 = std.uni.toLower(c);
+    
+                foreach_reverse (i, dchar it; s)
+                {
+                    immutable c2 = std.uni.toLower(it);
+                    if (c1 == c2)
+                    {
+                        return i;
+                    }
+                }
+            }
+        }
+    
+        return -1;
+    }
+    /// Simple character in string search, with $(D startIdx) offset.
+    ptrdiff_t lastIndexOf(Char)(const(Char)[] s, dchar c, size_t startIdx) @safe pure
+    if (isSomeChar!Char)
+    {
+        if (startIdx <= s.length)
+        {
+            return lastIndexOf(s[0u .. startIdx], c);
+        }
+        return -1;
+    }
+    /// substring in string search.
+    ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub)
+    if (isSomeChar!Char1 && isSomeChar!Char2)
+    {
+        if (sub.empty)
+            return s.length;
+
+        if (walkLength(sub) == 1)
+            return lastIndexOf(s, sub.front);
+
+        static if (cs == CaseSensitive.yes)
+        {
+            static if (is(Unqual!Char1 == Unqual!Char2))
+            {
+                immutable c = sub[0];
+
+                for (ptrdiff_t i = s.length - sub.length; i >= 0; --i)
+                {
+                    if (s[i] == c)
+                    {
+                        if (__ctfe)
+                        {
+                            foreach (j; 1 .. sub.length)
+                            {
+                                if (s[i + j] != sub[j])
+                                    continue;
+                            }
+                            return i;
+                        }
+                        else
+                        {
+                            auto trustedMemcmp(in void* s1, in void* s2, size_t n) @trusted
+                            {
+                                return memcmp(s1, s2, n);
+                            }
+                            if (trustedMemcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
+                                return i;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (size_t i = s.length; !s.empty;)
+                {
+                    if (s.endsWith(sub))
+                        return cast(ptrdiff_t)i - to!(const(Char1)[])(sub).length;
+
+                    i -= strideBack(s, i);
+                    s = s[0 .. i];
+                }
+            }
+        }
+        else
+        {
+            for (size_t i = s.length; !s.empty;)
+            {
+                if (endsWith!((a, b) => std.uni.toLower(a) == std.uni.toLower(b))
+                             (s, sub))
+                {
+                    return cast(ptrdiff_t)i - to!(const(Char1)[])(sub).length;
+                }
+
+                i -= strideBack(s, i);
+                s = s[0 .. i];
+            }
+        }
+
+        return -1;
+    }
+    /// substring in string search, with $(D startIdx) offset.
+    ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub, size_t startIdx)
+    if (isSomeChar!Char1 && isSomeChar!Char2)
+    {
+        if (startIdx <= s.length)
+        {
+            return lastIndexOf(s[0u .. startIdx], sub);
+        }
+        return -1;
+    }
+}
+
+unittest
+{
+    //lastIndexOf behavior is already mostly validated by previous tests.
+    //This mainly tests potential overload ambiguities.
+    alias CSYes = CaseSensitive.yes;
+    alias CSNo  = CaseSensitive.no;
+
+    assert(lastIndexOf        ("hello world", ' '       ) == 5);
+    assert(lastIndexOf        ("hello world", ' ', CSYes) == 5);
+    assert(lastIndexOf        ("hello world", ' ', CSNo ) == 5);
+    assert(lastIndexOf!CSYes  ("hello world", ' '       ) == 5);
+    assert(lastIndexOf!CSNo   ("hello world", ' '       ) == 5);
+    assert(lastIndexOf!char   ("hello world", ' '       ) == 5);
+    assert(lastIndexOf!char   ("hello world", ' ', CSYes) == 5);
+    assert(lastIndexOf!char   ("hello world", ' ', CSNo ) == 5);
+    assert(lastIndexOf        ("hello world", "wo"       ) == 6);
+    assert(lastIndexOf        ("hello world", "wo", CSYes) == 6);
+    assert(lastIndexOf        ("hello world", "wo", CSNo ) == 6);
+    assert(lastIndexOf!CSYes  ("hello world", "wo"       ) == 6);
+    assert(lastIndexOf!CSNo   ("hello world", "wo"       ) == 6);
+    assert(lastIndexOf!char   ("hello world", "wo"       ) == 6);
+    assert(lastIndexOf!char   ("hello world", "wo", CSYes) == 6);
+    assert(lastIndexOf!char   ("hello world", "wo", CSNo ) == 6);
+    assert(lastIndexOf        ("hello world", ' ', 8       ) == 5);
+    assert(lastIndexOf        ("hello world", ' ', 8       ) == 5);
+    assert(lastIndexOf        ("hello world", ' ', 8, CSYes) == 5);
+    assert(lastIndexOf        ("hello world", ' ', 8, CSNo ) == 5);
+    assert(lastIndexOf!CSYes  ("hello world", ' ', 8       ) == 5);
+    assert(lastIndexOf!CSNo   ("hello world", ' ', 8       ) == 5);
+    assert(lastIndexOf!char   ("hello world", ' ', 8       ) == 5);
+    assert(lastIndexOf!char   ("hello world", ' ', 8, CSYes) == 5);
+    assert(lastIndexOf!char   ("hello world", ' ', 8, CSNo ) == 5);
+    assert(lastIndexOf        ("hello world", "wo", 8       ) == 6);
+    assert(lastIndexOf        ("hello world", "wo", 8, CSYes) == 6);
+    assert(lastIndexOf        ("hello world", "wo", 8, CSNo ) == 6);
+    assert(lastIndexOf!CSYes  ("hello world", "wo", 8       ) == 6);
+    assert(lastIndexOf!CSNo   ("hello world", "wo", 8       ) == 6);
+    assert(lastIndexOf!char   ("hello world", "wo", 8       ) == 6);
+    assert(lastIndexOf!char   ("hello world", "wo", 8, CSYes) == 6);
+    assert(lastIndexOf!char   ("hello world", "wo", 8, CSNo ) == 6);
+    alias lastIndexOfYes = lastIndexOf!CSYes;
+    alias lastIndexOfNo  = lastIndexOf!CSNo;
+    assert(lastIndexOfYes!char("hello world", ' ') == 5);
+    assert(lastIndexOfNo !char("hello world", ' ') == 5);
+    assert(lastIndexOfYes!char("hello world", "wo") == 6);
+    assert(lastIndexOfNo !char("hello world", "wo") == 6);
+    assert(lastIndexOfYes!char("hello world", ' ', 8) == 5);
+    assert(lastIndexOfNo !char("hello world", ' ', 8) == 5);
+    assert(lastIndexOfYes!char("hello world", "wo", 8) == 6);
+    assert(lastIndexOfNo !char("hello world", "wo", 8) == 6);
+}
 
 /**
  * Returns the representation of a string, which has the same type
