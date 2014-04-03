@@ -1842,7 +1842,7 @@ unittest
 unittest
 {
     FloatingPointControl ctrl;
-    if(FloatingPointControl.hasExceptionTraps())
+    if(FloatingPointControl.hasExceptionTraps)
         ctrl.disableExceptions(FloatingPointControl.allExceptions);
     ctrl.rounding = FloatingPointControl.roundToNearest;
 
@@ -3962,7 +3962,7 @@ unittest
     {
         assert(FloatingPointControl.rounding
                == FloatingPointControl.roundToNearest);
-        if(FloatingPointControl.hasExceptionTraps())
+        if(FloatingPointControl.hasExceptionTraps)
             assert(FloatingPointControl.enabledExceptions == 0);
     }
 

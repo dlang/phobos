@@ -1716,7 +1716,7 @@ public:
                         auto subrange = range[start..end];
                         foreach(i; start..end)
                         {
-                            buf[i] = fun(subrange.front());
+                            buf[i] = fun(subrange.front);
                             subrange.popFront();
                         }
                     }
