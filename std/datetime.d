@@ -7737,23 +7737,6 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
         is $(I not) enough to uniquely identify the time zone.
 
         Time zone offsets will be in the form +HH:MM or -HH:MM.
-
-        Examples:
---------------------
-assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOString() ==
-       "20100704T070612");
-
-assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
-               FracSec.from!"msecs"(24)).toISOString() ==
-       "19981225T021500.024");
-
-assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOString() ==
-       "00000105T230959");
-
-assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
-               FracSec.from!"hnsecs"(520_920)).toISOString() ==
-       "-00040105T000002.052092");
---------------------
       +/
     string toISOString() const nothrow
     {
@@ -7794,11 +7777,30 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             assert(0, "format() threw.");
     }
 
+    ///
+    unittest
+    {
+        assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOString() ==
+               "20100704T070612");
+
+        assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
+                       FracSec.from!"msecs"(24)).toISOString() ==
+               "19981225T021500.024");
+
+        assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOString() ==
+               "00000105T230959");
+
+        assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
+                       FracSec.from!"hnsecs"(520_920)).toISOString() ==
+               "-00040105T000002.052092");
+    }
+
     unittest
     {
         version(testStdDateTime)
         {
             //Test A.D.
+            assert(SysTime.init.toISOString() == "00010101T000000Z");
             assert(SysTime(DateTime.init, UTC()).toISOString() == "00010101T000000Z");
             assert(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1), UTC()).toISOString() == "00010101T000000.0000001Z");
 
@@ -7847,19 +7849,6 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             //static assert(__traits(compiles, cast(TimeOfDay)ist));
 
             //Verify Examples.
-            assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOString() ==
-                   "20100704T070612");
-
-            assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
-                           FracSec.from!"msecs"(24)).toISOString() ==
-                   "19981225T021500.024");
-
-            assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOString() ==
-                   "00000105T230959");
-
-            assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
-                           FracSec.from!"hnsecs"(520_920)).toISOString() ==
-                   "-00040105T000002.052092");
         }
     }
 
@@ -7882,23 +7871,6 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
         $(I not) enough to uniquely identify the time zone.
 
         Time zone offsets will be in the form +HH:MM or -HH:MM.
-
-        Examples:
---------------------
-assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtString() ==
-       "2010-07-04T07:06:12");
-
-assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
-               FracSec.from!"msecs"(24)).toISOExtString() ==
-       "1998-12-25T02:15:00.024");
-
-assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOExtString() ==
-       "0000-01-05T23:09:59");
-
-assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
-               FracSec.from!"hnsecs"(520_920)).toISOExtString() ==
-       "-0004-01-05T00:00:02.052092");
---------------------
       +/
     string toISOExtString() const nothrow
     {
@@ -7939,11 +7911,30 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             assert(0, "format() threw.");
     }
 
+    ///
+    unittest
+    {
+        assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtString() ==
+               "2010-07-04T07:06:12");
+
+        assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
+                       FracSec.from!"msecs"(24)).toISOExtString() ==
+               "1998-12-25T02:15:00.024");
+
+        assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOExtString() ==
+               "0000-01-05T23:09:59");
+
+        assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
+                       FracSec.from!"hnsecs"(520_920)).toISOExtString() ==
+               "-0004-01-05T00:00:02.052092");
+    }
+
     unittest
     {
         version(testStdDateTime)
         {
             //Test A.D.
+            assert(SysTime.init.toISOExtString() == "0001-01-01T00:00:00Z");
             assert(SysTime(DateTime.init, UTC()).toISOExtString() == "0001-01-01T00:00:00Z");
             assert(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1), UTC()).toISOExtString() == "0001-01-01T00:00:00.0000001Z");
 
@@ -7990,21 +7981,6 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
             static assert(__traits(compiles, cast(TimeOfDay)cst));
             //static assert(__traits(compiles, cast(TimeOfDay)ist));
-
-            //Verify Examples.
-            assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtString() ==
-                   "2010-07-04T07:06:12");
-
-            assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
-                           FracSec.from!"msecs"(24)).toISOExtString() ==
-                   "1998-12-25T02:15:00.024");
-
-            assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOExtString() ==
-                   "0000-01-05T23:09:59");
-
-            assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
-                           FracSec.from!"hnsecs"(520_920)).toISOExtString() ==
-                   "-0004-01-05T00:00:02.052092");
         }
     }
 
@@ -8025,23 +8001,6 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
         $(I not) enough to uniquely identify the time zone.
 
         Time zone offsets will be in the form +HH:MM or -HH:MM.
-
-        Examples:
---------------------
-assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toSimpleString() ==
-       "2010-Jul-04 07:06:12");
-
-assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
-               FracSec.from!"msecs"(24)).toSimpleString() ==
-       "1998-Dec-25 02:15:00.024");
-
-assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toSimpleString() ==
-       "0000-Jan-05 23:09:59");
-
-assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
-               FracSec.from!"hnsecs"(520_920)).toSimpleString() ==
-        "-0004-Jan-05 00:00:02.052092");
---------------------
       +/
     string toSimpleString() const nothrow
     {
@@ -8082,11 +8041,30 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             assert(0, "format() threw.");
     }
 
+    ///
+    unittest
+    {
+        assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toSimpleString() ==
+               "2010-Jul-04 07:06:12");
+
+        assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
+                       FracSec.from!"msecs"(24)).toSimpleString() ==
+               "1998-Dec-25 02:15:00.024");
+
+        assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toSimpleString() ==
+               "0000-Jan-05 23:09:59");
+
+        assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
+                       FracSec.from!"hnsecs"(520_920)).toSimpleString() ==
+                "-0004-Jan-05 00:00:02.052092");
+    }
+
     unittest
     {
         version(testStdDateTime)
         {
             //Test A.D.
+            assert(SysTime.init.toString() == "0001-Jan-01 00:00:00Z");
             assert(SysTime(DateTime.init, UTC()).toString() == "0001-Jan-01 00:00:00Z");
             assert(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1), UTC()).toString() == "0001-Jan-01 00:00:00.0000001Z");
 
@@ -8133,42 +8111,12 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
             static assert(__traits(compiles, cast(TimeOfDay)cst));
             //static assert(__traits(compiles, cast(TimeOfDay)ist));
-
-            //Verify Examples.
-            assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toSimpleString() ==
-                   "2010-Jul-04 07:06:12");
-
-            assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
-                           FracSec.from!"msecs"(24)).toSimpleString() ==
-                   "1998-Dec-25 02:15:00.024");
-
-            assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toSimpleString() ==
-                   "0000-Jan-05 23:09:59");
-
-            assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
-                           FracSec.from!"hnsecs"(520_920)).toSimpleString() ==
-                    "-0004-Jan-05 00:00:02.052092");
         }
-    }
-
-
-    /+
-        Converts this $(LREF SysTime) to a string.
-      +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
-    string toString()
-    {
-        return toSimpleString();
     }
 
     /++
         Converts this $(LREF SysTime) to a string.
       +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
     string toString() const nothrow
     {
         return toSimpleString();
@@ -8947,17 +8895,13 @@ private:
     }
 
 
-    //Commented out due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5058
-    /+
-    invariant()
-    {
-        assert(_timezone !is null, "Invariant Failure: timezone is null. Were you foolish enough to use SysTime.init? (since timezone for SysTime.init can't be set at compile time).");
-    }
-    +/
-
-
     long  _stdTime;
-    Rebindable!(immutable TimeZone) _timezone;
+    Rebindable!(immutable TimeZone) _timezone = UTC();
+
+    unittest
+    {
+        assert(SysTime.init == SysTime(0, UTC()));
+    }
 }
 
 
