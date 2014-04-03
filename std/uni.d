@@ -2756,7 +2756,7 @@ private:
     {
         auto range = assumeSorted(data[]);
         size_t pos;
-        size_t a_idx = range.lowerBound(a).length;
+        size_t a_idx = hint + range[hint..$].lowerBound(a).length;
         if(a_idx == range.length)
         {
             //  [---+++----++++----++++++]
@@ -2809,7 +2809,7 @@ private:
                 {
                     assert(b_idx+1 < data.length);
                     pos = genericReplace(data, a_idx, b_idx+2, [data[b_idx+1]]);
-                    return pos;
+                    return pos - 1;
                 }
                 to_insert = [b, top ];
             }
@@ -2830,7 +2830,7 @@ private:
                 {
                     assert(b_idx+1 < data.length);
                     pos = genericReplace(data, a_idx, b_idx+2, [a, data[b_idx+1] ]);
-                    return pos;
+                    return pos - 1;
                 }
                 to_insert = [a, b, top];
             }
@@ -2841,7 +2841,7 @@ private:
             writefln("marker idx: %d; length=%d", pos, data[pos], data.length);
             writeln("inserting ", to_insert);
         }
-        return pos;
+        return pos - 1;
     }
 
     //
@@ -5754,7 +5754,7 @@ else
     // conjure cumulative properties by hand
     if(ucmp(name, "L") == 0 || ucmp(name, "Letter") == 0)
     {
-        target |= asSet(uniProps.Lu);
+        target = asSet(uniProps.Lu);
         target |= asSet(uniProps.Ll);
         target |= asSet(uniProps.Lt);
         target |= asSet(uniProps.Lo);
@@ -5762,25 +5762,25 @@ else
     }
     else if(ucmp(name,"LC") == 0 || ucmp(name,"Cased Letter")==0)
     {
-        target |= asSet(uniProps.Ll);
+        target = asSet(uniProps.Ll);
         target |= asSet(uniProps.Lu);
         target |= asSet(uniProps.Lt);// Title case
     }
     else if(ucmp(name, "M") == 0 || ucmp(name, "Mark") == 0)
     {
-        target |= asSet(uniProps.Mn);
+        target = asSet(uniProps.Mn);
         target |= asSet(uniProps.Mc);
         target |= asSet(uniProps.Me);
     }
     else if(ucmp(name, "N") == 0 || ucmp(name, "Number") == 0)
     {
-        target |= asSet(uniProps.Nd);
+        target = asSet(uniProps.Nd);
         target |= asSet(uniProps.Nl);
         target |= asSet(uniProps.No);
     }
     else if(ucmp(name, "P") == 0 || ucmp(name, "Punctuation") == 0)
     {
-        target |= asSet(uniProps.Pc);
+        target = asSet(uniProps.Pc);
         target |= asSet(uniProps.Pd);
         target |= asSet(uniProps.Ps);
         target |= asSet(uniProps.Pe);
@@ -5790,27 +5790,27 @@ else
     }
     else if(ucmp(name, "S") == 0 || ucmp(name, "Symbol") == 0)
     {
-        target |= asSet(uniProps.Sm);
+        target = asSet(uniProps.Sm);
         target |= asSet(uniProps.Sc);
         target |= asSet(uniProps.Sk);
         target |= asSet(uniProps.So);
     }
     else if(ucmp(name, "Z") == 0 || ucmp(name, "Separator") == 0)
     {
-        target |= asSet(uniProps.Zs);
+        target = asSet(uniProps.Zs);
         target |= asSet(uniProps.Zl);
         target |= asSet(uniProps.Zp);
     }
     else if(ucmp(name, "C") == 0 || ucmp(name, "Other") == 0)
     {
-        target |= asSet(uniProps.Co);
+        target = asSet(uniProps.Co);
         target |= asSet(uniProps.Lo);
         target |= asSet(uniProps.No);
         target |= asSet(uniProps.So);
         target |= asSet(uniProps.Po);
     }
     else if(ucmp(name, "graphical") == 0){
-        target |= asSet(uniProps.Alphabetic);
+        target = asSet(uniProps.Alphabetic);
 
         target |= asSet(uniProps.Mn);
         target |= asSet(uniProps.Mc);
