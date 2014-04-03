@@ -3042,6 +3042,14 @@ unittest
     format("%s", &i);
 }
 
+unittest
+{
+    // Test for issue 11778
+    int* p = null;
+    assertThrown(format("%d", p));
+    assertThrown(format("%04d", p + 2));
+}
+
 @safe pure unittest
 {
     // Test for issue 12505
