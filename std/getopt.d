@@ -595,6 +595,9 @@ void handleOption(R)(string option, R receiver, ref string[] args,
                 alias K = typeof(receiver.keys[0]);
                 alias V = typeof(receiver.values[0]);
 
+                import std.range : only;
+                import std.typecons : Tuple, tuple;
+
                 static Tuple!(K, V) getter(string input)
                 {
                     auto j = std.string.indexOf(input, assignChar);
@@ -608,8 +611,6 @@ void handleOption(R)(string option, R receiver, ref string[] args,
                     foreach (k, v; range.map!getter)
                         (*receiver)[k] = v;
                 }
-
-                import std.range : only;
 
                 if (arraySep == "")
                     setHash(receiver, val.only);
