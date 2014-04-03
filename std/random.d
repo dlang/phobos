@@ -1551,6 +1551,109 @@ unittest
 }
 
 /**
+ * Generates a uniformly-distributed floating point number of type
+ * $(D T) in the range [0, 1).  If no random number generator is
+ * specified, the default RNG $(D rndGen) will be used as the source
+ * of randomness.
+ *
+ * $(D uniform01) offers a faster generation of random variates than
+ * the equivalent $(D uniform!"[)"(0.0, 1.0)) and so may be preferred
+ * for some applications.
+ */
+T uniform01(T = double)()
+    if (isFloatingPoint!T)
+{
+    return uniform01!T(rndGen);
+}
+
+/// ditto
+T uniform01(T = double, UniformRNG)(ref UniformRNG rng)
+    if (isFloatingPoint!T && isUniformRNG!UniformRNG)
+out (result)
+{
+    assert(0 <= result);
+    assert(result < 1);
+}
+body
+{
+    alias R = typeof(rng.front);
+    static if (isIntegral!R)
+    {
+        enum T factor = 1 / (T(1) + rng.max - rng.min);
+    }
+    else static if (isFloatingPoint!R)
+    {
+        enum T factor = 1 / (rng.max - rng.min);
+    }
+    else
+    {
+        static assert(false);
+    }
+
+    while (true)
+    {
+        immutable T u = (rng.front - rng.min) * factor;
+        rng.popFront();
+        static if (isIntegral!R)
+        {
+            /* if RNG variates are integral, we're guaranteed
+             * by the definition of factor that u < 1.
+             */
+            return u;
+        }
+        else
+        {
+            /* Otherwise we have to check, just in case a
+             * floating-point RNG returns a variate that is
+             * exactly equal to its maximum
+             */
+            if (u < 1)
+            {
+                return u;
+            }
+        }
+    }
+
+    // Shouldn't ever get here.
+    assert(false);
+}
+
+unittest
+{
+    import std.typetuple;
+    foreach (UniformRNG; PseudoRngTypes)
+    {
+
+        foreach (T; TypeTuple!(float, double, real))
+        {
+            UniformRNG rng = UniformRNG(unpredictableSeed);
+
+            auto a = uniform01();
+            assert(is(typeof(a) == double));
+            assert(0 <= a && a < 1);
+
+            auto b = uniform01(rng);
+            assert(is(typeof(a) == double));
+            assert(0 <= b && b < 1);
+
+            auto c = uniform01!T();
+            assert(is(typeof(c) == T));
+            assert(0 <= c && c < 1);
+
+            auto d = uniform01!T(rng);
+            assert(is(typeof(d) == T));
+            assert(0 <= d && d < 1);
+
+            T init = uniform01!T(rng);
+            size_t i = 50;
+            while (--i && uniform01!T(rng) == init) {}
+            assert(i > 0);
+            assert(i < 50);
+        }
+    }
+}
+
+/**
 Generates a uniform probability distribution of size $(D n), i.e., an
 array of size $(D n) of positive numbers of type $(D F) that sum to
 $(D 1). If $(D useThis) is provided, it is used as storage.
