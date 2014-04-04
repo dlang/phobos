@@ -2723,37 +2723,17 @@ least one of the following: $(OL $(LI a raw pointer $(D U*);) $(LI an
 array $(D U[]);) $(LI a reference to a class type $(D C).)
 $(LI an associative array.) $(LI a delegate.))
  */
-
 template hasIndirections(T)
 {
-    template Impl(T...)
-    {
-        static if (!T.length)
-        {
-            enum Impl = false;
-        }
-        else static if(isFunctionPointer!(T[0]))
-        {
-            enum Impl = Impl!(T[1 .. $]);
-        }
-        else static if(isStaticArray!(T[0]))
-        {
-            static if (is(T[0] _ : void[N], size_t N))
-                enum Impl = true;
-            else
-                enum Impl = Impl!(T[1 .. $]) ||
-                    Impl!(RepresentationTypeTuple!(typeof(T[0].init[0])));
-        }
-        else
-        {
-            enum Impl = isPointer!(T[0]) || isDynamicArray!(T[0]) ||
-                is (T[0] : const(Object)) || isAssociativeArray!(T[0]) ||
-                isDelegate!(T[0]) || is(T[0] == interface)
-                || Impl!(T[1 .. $]);
-        }
-    }
-
-    enum hasIndirections = Impl!(T, RepresentationTypeTuple!T);
+    static if (is(T == struct) || is(T == union))
+        enum hasIndirections = anySatisfy!(.hasIndirections, FieldTypeTuple!T);
+    else static if (isStaticArray!T && is(T : E[N], E, size_t N))
+        enum hasIndirections = is(E == void) ? true : hasIndirections!E;
+    else static if (isFunctionPointer!T)
+        enum hasIndirections = false;
+    else
+        enum hasIndirections = isPointer!T || isDelegate!T || isDynamicArray!T ||
+            isAssociativeArray!T || is (T == class) || is(T == interface);
 }
 
 unittest
@@ -2823,6 +2803,21 @@ unittest
     static assert( hasIndirections!S24);
     static assert( hasIndirections!S25);
     static assert( hasIndirections!S26);
+}
+
+unittest //12000
+{
+    static struct S(T) 
+    {
+        static assert(hasIndirections!T);
+    }
+    
+    static class A(T) 
+    {
+        S!A a;
+    }
+    
+    A!int dummy;
 }
 
 //Explicitly undocumented. They will be removed in December 2014.
