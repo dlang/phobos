@@ -402,7 +402,7 @@ $(D x0).
 /**
    Returns the current number in the random sequence.
 */
-    @property UIntType front() @safe pure nothrow
+    @property UIntType front() const @safe pure nothrow
     {
         return _x;
     }
@@ -884,7 +884,7 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
      * Returns the current number in the random sequence.
      */
     @property @safe
-    nothrow UIntType front() pure
+    nothrow UIntType front() const pure
     {
         static if (bits == 192)
             return value_;
