@@ -9851,7 +9851,7 @@ if (isInputRange!R1 && isOutputRange!(R2, typeof(inputRange.front)))
             assert(!_input.empty);
             static if (pipeOnPop)
             {
-                _output.put(_input.front);
+                put(_output, _input.front);
             }
             else
             {
@@ -9867,7 +9867,7 @@ if (isInputRange!R1 && isOutputRange!(R2, typeof(inputRange.front)))
                 if (!_frontAccessed)
                 {
                     _frontAccessed = true;
-                    _output.put(_input.front);
+                    put(_output, _input.front);
                 }
             }
             return _input.front;
