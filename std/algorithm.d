@@ -1090,10 +1090,10 @@ if (isInputRange!R && !isInfinite!R && is(typeof(r.front + r.front)))
 {
     alias E = Unqual!(ElementType!R);
     static if (isFloatingPoint!E)
-        typeof(E.init  +     0.0) seed = 0; //biggest of double/real
+        alias Seed = typeof(E.init  + 0.0); //biggest of double/real
     else
-        typeof(r.front + r.front) seed = 0;
-    return sum(r, seed);
+        alias Seed = typeof(r.front + r.front);
+    return sum(r, Unqual!Seed(0));
 }
 /// ditto
 auto sum(R, E)(R r, E seed)
@@ -1214,6 +1214,24 @@ unittest
     assert(sum(SList!double(1, 2)[]) == 1 + 2);
     assert(sum(SList!double(1, 2, 3)[]) == 1 + 2 + 3);
     assert(sum(SList!double(1, 2, 3, 4)[]) == 10);
+}
+
+unittest // 12434
+{
+    immutable a = [10, 20];
+    auto s1 = sum(a);             // Error
+    auto s2 = a.map!(x => x).sum; // Error
+}
+
+unittest
+{
+    import std.bigint;
+    immutable BigInt[] a = BigInt("1_000_000_000_000_000_000").repeat(10).array();
+    immutable ulong[]  b = (ulong.max/2).repeat(10).array();
+    auto sa = a.sum();
+    auto sb = b.sum(BigInt(0)); //reduce ulongs into bigint
+    assert(sa == BigInt("10_000_000_000_000_000_000"));
+    assert(sb == (BigInt(ulong.max/2) * 10));
 }
 
 /**
