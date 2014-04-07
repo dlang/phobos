@@ -51,7 +51,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
         size_t i;
         foreach (e; r)
         {
-            emplaceRef(result[i], e);
+            emplaceRef!E(result[i], e);
             ++i;
         }
         return cast(E[])result;
@@ -108,6 +108,12 @@ unittest
     static struct Bug12315 { immutable int i; }
     enum bug12315 = [Bug12315(123456789)].array();
     static assert(bug12315[0].i == 123456789);
+}
+
+unittest
+{
+    static struct S{int* p;}
+    auto a = array(immutable(S).init.repeat(5));
 }
 
 /**
@@ -381,7 +387,7 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I))
 
 @safe nothrow pure unittest
 {
-    const iarr = minimallyInitializedArray!(int[][][][][])();
+    cast(void)minimallyInitializedArray!(int[][][][][])();
     double[] arr = minimallyInitializedArray!(double[])(100);
     assert(arr.length == 100);
 
@@ -1059,13 +1065,13 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
         {
             static if (is(E : T)) //ditto
             {
-                emplaceRef(tmp[j++], stuff[i]);
+                emplaceRef!T(tmp[j++], stuff[i]);
             }
             else
             {
                 foreach (v; stuff[i])
                 {
-                    emplaceRef(tmp[j++], v);
+                    emplaceRef!T(tmp[j++], v);
                 }
             }
         }
@@ -2275,11 +2281,11 @@ struct Appender(A : T[], T)
      * it will be used by the appender.  After initializing an appender on an array,
      * appending to the original array will reallocate.
      */
-    this(Unqual!T[] arr) @safe pure nothrow
+    this(T[] arr) @trusted pure nothrow
     {
         // initialize to a given array.
         _data = new Data;
-        _data.arr = arr;
+        _data.arr = cast(Unqual!T[])arr; //trusted
 
         if (__ctfe)
             return;
@@ -2287,12 +2293,29 @@ struct Appender(A : T[], T)
         // We want to use up as much of the block the array is in as possible.
         // if we consume all the block that we can, then array appending is
         // safe WRT built-in append, and we can use the entire block.
-        auto cap = ()@trusted{ return arr.capacity; }();
+        auto cap = arr.capacity; //trusted
         if (cap > arr.length)
-            arr = ()@trusted{ return arr.ptr[0 .. cap]; }();
+            arr = arr.ptr[0 .. cap]; //trusted
+
         // we assume no reallocation occurred
         assert(arr.ptr is _data.arr.ptr);
         _data.capacity = arr.length;
+    }
+
+    //Broken function. To be removed.
+    static if (is(T == immutable))
+    {
+        deprecated ("Using this constructor will break the type system. Please fix your code to use `Appender!(T[]).this(T[] arr)' directly.")
+        this(Unqual!T[] arr) pure nothrow
+        {
+            this(cast(T[]) arr);
+        }
+
+        //temporary: For resolving ambiguity:
+        this(typeof(null))
+        {
+            this(cast(T[]) null);
+        }
     }
 
     /**
@@ -2434,12 +2457,7 @@ struct Appender(A : T[], T)
             auto bigDataFun() @trusted nothrow { return _data.arr.ptr[0 .. len + 1];}
             auto bigData = bigDataFun();
 
-            static if (is(Unqual!T == T))
-                alias uitem = item;
-            else
-                auto ref uitem() @trusted nothrow @property { return cast(Unqual!T)item;}
-
-            emplaceRef(bigData[len], uitem);
+            emplaceRef!T(bigData[len], item);
 
             //We do this at the end, in case of exceptions
             _data.arr = bigData;
@@ -2484,28 +2502,18 @@ struct Appender(A : T[], T)
             auto bigDataFun() @trusted nothrow { return _data.arr.ptr[0 .. newlen];}
             auto bigData = bigDataFun();
 
-            enum mustEmplace =  is(typeof(bigData[0].opAssign(cast(Unqual!T)items.front))) ||
-                               !is(typeof(bigData[0] = cast(Unqual!T)items.front));
+            alias UT = Unqual!T;
 
-            static if (is(typeof(_data.arr[] = items[])) && !mustEmplace)
+            static if (is(typeof(_data.arr[] = items[])) &&
+                !hasElaborateAssign!(Unqual!T) && isAssignable!(UT, ElementEncodingType!Range))
             {
-                //pragma(msg, T.stringof); pragma(msg, Range.stringof);
                 bigData[len .. newlen] = items[];
-            }
-            else static if (is(Unqual!T == ElementType!Range))
-            {
-                foreach (ref it ; bigData[len .. newlen])
-                {
-                    emplaceRef(it, items.front);
-                    items.popFront();
-                }
             }
             else
             {
-                static auto ref getUItem(U)(U item) @trusted {return cast(Unqual!T)item;}
                 foreach (ref it ; bigData[len .. newlen])
                 {
-                    emplaceRef(it, getUItem(items.front));
+                    emplaceRef!T(it, items.front);
                     items.popFront();
                 }
             }
@@ -2692,17 +2700,7 @@ Appender!(E[]) appender(A : E[], E)()
 /// ditto
 Appender!(E[]) appender(A : E[], E)(A array)
 {
-    static if (isMutable!E)
-    {
-        return Appender!(E[])(array);
-    }
-    else
-    {
-        /* @system operation:
-         * - casting array to Unqual!E[] (remove qualifiers)
-         */
-        return Appender!(E[])(cast(Unqual!E[])array);
-    }
+    return Appender!(E[])(array);
 }
 
 @safe pure nothrow unittest
@@ -2813,8 +2811,8 @@ Appender!(E[]) appender(A : E[], E)(A array)
     {
         auto w = appender!string();
         w.reserve(4);
-        const cap = w.capacity;
-        const dat = w.data;
+        cast(void)w.capacity;
+        cast(void)w.data;
         try
         {
             wchar wc = 'a';
@@ -2827,8 +2825,8 @@ Appender!(E[]) appender(A : E[], E)(A array)
     {
         auto w = appender!(int[])();
         w.reserve(4);
-        const cap = w.capacity;
-        const dat = w.data;
+        cast(void)w.capacity;
+        cast(void)w.data;
         w.put(10);
         w.put([10]);
         w.clear();
@@ -2945,6 +2943,40 @@ unittest
     }
    "12".map!Foo.array;
    [1, 2].map!Bar.array;
+}
+
+unittest
+{
+    //New appender signature tests
+    alias mutARR = int[];
+    alias conARR = const(int)[];
+    alias immARR = immutable(int)[];
+
+    mutARR mut;
+    conARR con;
+    immARR imm;
+
+    {auto app = Appender!mutARR(mut);}                //Always worked. Should work. Should not create a warning.
+    static assert(!is(typeof(Appender!mutARR(con)))); //Never worked.  Should not work.
+    static assert(!is(typeof(Appender!mutARR(imm)))); //Never worked.  Should not work.
+
+    {auto app = Appender!conARR(mut);} //Always worked. Should work. Should not create a warning.
+    {auto app = Appender!conARR(con);} //Didn't work.   Now works.   Should not create a warning.
+    {auto app = Appender!conARR(imm);} //Didn't work.   Now works.   Should not create a warning.
+
+    //{auto app = Appender!immARR(mut);}                //Worked. Will cease to work. Creates warning. 
+    //static assert(!is(typeof(Appender!immARR(mut)))); //Worked. Will cease to work. Uncomment me after full deprecation.
+    static assert(!is(typeof(Appender!immARR(con))));   //Never worked. Should not work.
+    {auto app = Appender!immARR(imm);}                  //Didn't work.  Now works. Should not create a warning.
+
+    //Deprecated. Please uncomment and make sure this doesn't work:
+    //char[] cc;
+    //static assert(!is(typeof(Appender!string(cc))));
+
+    //This should always work:
+    appender!string(null);
+    appender!(const(char)[])(null);
+    appender!(char[])(null);
 }
 
 /++

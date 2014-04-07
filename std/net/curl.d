@@ -2015,8 +2015,8 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   * http.url = "http://upload.wikimedia.org/wikipedia/commons/"
   *            "5/53/Wikipedia-logo-en-big.png";
   * http.onReceive = (ubyte[] data) { return data.length; };
-  * http.onProgress = (double dltotal, double dlnow,
-  *                    double ultotal, double ulnow)
+  * http.onProgress = (size_t dltotal, size_t dlnow,
+  *                    size_t ultotal, size_t ulnow)
   * {
   *     writeln("Progress ", dltotal, ", ", dlnow, ", ", ultotal, ", ", ulnow);
   *     return 0;

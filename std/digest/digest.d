@@ -67,7 +67,7 @@ module std.digest.digest;
 import std.exception, std.range, std.traits;
 import std.algorithm : copy;
 import std.typetuple : allSatisfy;
-import std.ascii : LetterCase;
+public import std.ascii : LetterCase;
 
 ///
 unittest

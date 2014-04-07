@@ -344,7 +344,7 @@ object refers to it anymore.
 
 Throws: $(D ErrnoException) if the file could not be opened.
  */
-    this(string name, in char[] stdioOpenmode = "rb")
+    this(string name, in char[] stdioOpenmode = "rb") @safe
     {
         import std.conv : text;
         import std.exception : errnoEnforce;
@@ -372,7 +372,7 @@ Assigns a file to another. The target of the assignment gets detached
 from whatever file it was attached to, and attaches itself to the new
 file.
  */
-    void opAssign(File rhs)
+    void opAssign(File rhs) @safe
     {
         import std.algorithm : swap;
 
@@ -387,7 +387,7 @@ cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen) function.
 
 Throws: $(D ErrnoException) in case of error.
  */
-    void open(string name, in char[] stdioOpenmode = "rb")
+    void open(string name, in char[] stdioOpenmode = "rb") @safe
     {
         detach();
         this = File(name, stdioOpenmode);
@@ -400,7 +400,7 @@ opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
 
 Throws: $(D ErrnoException) in case of error.
  */
-    version(Posix) void popen(string command, in char[] stdioOpenmode = "r")
+    version(Posix) void popen(string command, in char[] stdioOpenmode = "r") @safe
     {
         import std.exception : errnoEnforce;
 
@@ -2884,7 +2884,7 @@ unittest
  * (to $(D _wfopen) on Windows)
  * with appropriately-constructed C-style strings.
  */
-private FILE* fopen(in char[] name, in char[] mode = "r")
+private FILE* fopen(in char[] name, in char[] mode = "r") @trusted
 {
     import std.string : toStringz;
 
@@ -2917,7 +2917,7 @@ version (Posix)
      * Convenience function that forwards to $(D std.c.stdio.popen)
      * with appropriately-constructed C-style strings.
      */
-    FILE* popen(in char[] name, in char[] mode = "r")
+    FILE* popen(in char[] name, in char[] mode = "r") @trusted
     {
         import std.string : toStringz;
 

@@ -588,7 +588,7 @@ package void doPut(R, E)(ref R r, auto ref E e)
     else
     {
         import std.string;
-        static assert (false, 
+        static assert (false,
             format("Cannot nativaly put a %s into a %s.", E.stringof, R.stringof));
     }
 }
@@ -7671,7 +7671,7 @@ unittest
 
     static struct Test { int* a; }
     immutable(Test) test;
-    const value = only(test, test); // Works with mutable indirection
+    cast(void)only(test, test); // Works with mutable indirection
 }
 
 /**
@@ -8375,7 +8375,14 @@ if (isRandomAccessRange!Range && hasLength!Range)
             static MinstdRand gen;
             immutable start = uniform(0, step, gen);
             auto st = stride(this._input, step);
-            assert(isSorted!pred(st), text(st));
+            static if (is(typeof(text(st))))
+            {
+                assert(isSorted!pred(st), text(st));
+            }
+            else
+            {
+                assert(isSorted!pred(st));
+            }
         }
     }
 

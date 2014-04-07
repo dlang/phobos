@@ -378,6 +378,15 @@ version(unittest)
 
 private T* addressOf(T)(ref T val) { return &val; }
 
+// Same as std.string.format, but "self-importing".
+// Helps reduce code and imports, particularly in static asserts.
+// Also helps with missing imports errors.
+private template algoFormat()
+{
+    import std.string : format;
+    alias algoFormat = std.string.format;
+}
+
 /**
 $(D auto map(Range)(Range r) if (isInputRange!(Unqual!Range));)
 
@@ -790,7 +799,7 @@ template reduce(fun...) if (fun.length >= 1)
                         result = void;
                     foreach (i, T; result.Types)
                     {
-                        emplaceRef(result[i], seed);
+                        emplaceRef!T(result[i], seed);
                     }
                     r.popFront();
                     return reduce(result, r);
@@ -856,7 +865,7 @@ template reduce(fun...) if (fun.length >= 1)
 
                     foreach (i, T; result.Types)
                     {
-                        emplaceRef(result[i], elem);
+                        emplaceRef!T(result[i], elem);
                     }
                 }
             }
@@ -1060,10 +1069,16 @@ $(LI In all other cases, a simple element by element addition is done.)
 )
 
 For floating point inputs, calculations are made in $(D real)
-precision for $(D real) inputs and in $(D double) precision otherwise.
+precision for $(D real) inputs and in $(D double) precision otherwise
+(Note this is a special case that deviates from $(D reduce)'s behavior,
+which would have kept $(D float) precision for a $(D float) range).
 For all other types, the calculations are done in the same type obtained
 from from adding two elements of the range, which may be a different
 type from the elements themselves (for example, in case of integral promotion).
+
+A seed may be passed to $(D sum). Not only will this seed be used as an initial
+value, but its type will override all the above, and determine the algorithm
+and precision used for sumation.
 
 Note that these specialized summing algorithms execute more primitive operations
 than vanilla summation. Therefore, if in certain cases maximum speed is required
@@ -1071,19 +1086,86 @@ at expense of precision, one can use $(D reduce!((a, b) => a + b)(0, r)), which
 is not specialized for summation.
  */
 auto sum(R)(R r)
-if (isInputRange!R && !isFloatingPoint!(ElementType!R) && !isInfinite!R)
+if (isInputRange!R && !isInfinite!R && is(typeof(r.front + r.front)))
 {
-    typeof(r.front + r.front) seed = 0;
-    return reduce!"a + b"(seed, r);
+    alias E = Unqual!(ElementType!R);
+    static if (isFloatingPoint!E)
+        typeof(E.init  +     0.0) seed = 0; //biggest of double/real
+    else
+        typeof(r.front + r.front) seed = 0;
+    return sum(r, seed);
+}
+/// ditto
+auto sum(R, E)(R r, E seed)
+if (isInputRange!R && !isInfinite!R && is(typeof(seed = seed + r.front)))
+{
+    static if (isFloatingPoint!E)
+    {
+        static if (hasLength!R && hasSlicing!R)
+            return seed + sumPairwise!E(r);
+        else
+            return sumKahan!E(seed, r);
+    }
+    else
+    {
+        return reduce!"a + b"(seed, r);
+    }
+}
+
+// Pairwise summation http://en.wikipedia.org/wiki/Pairwise_summation
+private auto sumPairwise(Result, R)(R r)
+{
+    static assert (isFloatingPoint!Result);
+    switch (r.length)
+    {
+    case 0: return cast(Result) 0;
+    case 1: return cast(Result) r.front;
+    case 2: return cast(Result) r[0] + cast(Result) r[1];
+    default: return sumPairwise!Result(r[0 .. $ / 2]) + sumPairwise!Result(r[$ / 2 .. $]);
+    }
+}
+
+// Kahan algo http://en.wikipedia.org/wiki/Kahan_summation_algorithm
+private auto sumKahan(Result, R)(Result result, R r)
+{
+    static assert (isFloatingPoint!Result && isMutable!Result);
+    Result c = 0;
+    for (; !r.empty; r.popFront())
+    {
+        auto y = r.front - c;
+        auto t = result + y;
+        c = (t - result) - y;
+        result = t;
+    }
+    return result;
 }
 
 /// Ditto
 unittest
 {
-    assert(sum([  1, 2, 3, 4]) == 10);
-    assert(sum([1.0, 2, 3, 4]) == 10);
+    //simple integral sumation
+    assert(sum([ 1, 2, 3, 4]) == 10);
+
+    //with integral promotion
     assert(sum([false, true, true, false, true]) == 3);
     assert(sum(ubyte.max.repeat(100)) == 25500);
+
+    //The result may overflow
+    assert(uint.max.repeat(3).sum()           ==  4294967293U );
+    //But a seed can be used to change the sumation primitive
+    assert(uint.max.repeat(3).sum(ulong.init) == 12884901885UL);
+
+    //Floating point sumation
+    assert(sum([1.0, 2.0, 3.0, 4.0]) == 10);
+
+    //Floating point operations have double precision minimum
+    static assert(is(typeof(sum([1F, 2F, 3F, 4F])) == double));
+    assert(sum([1F, 2, 3, 4]) == 10);
+
+    //Force pair-wise floating point sumation on large integers
+    import std.math : approxEqual;
+    assert(iota(ulong.max / 2, ulong.max / 2 + 4096).sum(0.0)
+               .approxEqual((ulong.max / 2) * 4096.0 + 4096^^2 / 2));
 }
 
 unittest
@@ -1103,19 +1185,6 @@ unittest
     assert(sum([42, 43, 44, 45]) == 42 + 43 + 44 + 45);
 }
 
-// Pairwise summation http://en.wikipedia.org/wiki/Pairwise_summation
-auto sum(R)(R r)
-if (hasSlicing!R && hasLength!R && isFloatingPoint!(ElementType!R))
-{
-    switch (r.length)
-    {
-    case 0: return 0.0;
-    case 1: return r.front;
-    case 2: return r.front + r[1];
-    default: return sum(r[0 .. $ / 2]) + sum(r[$ / 2 .. $]);
-    }
-}
-
 unittest
 {
     static assert(is(typeof(sum([1.0, 2.0, 3.0, 4.0])) == double));
@@ -1131,26 +1200,6 @@ unittest
     assert(sum([42., 43.]) == 42 + 43);
     assert(sum([42., 43., 44.]) == 42 + 43 + 44);
     assert(sum([42., 43., 44., 45.5]) == 42 + 43 + 44 + 45.5);
-}
-
-// Kahan algo http://en.wikipedia.org/wiki/Kahan_summation_algorithm
-auto sum(R)(R r)
-if (isInputRange!R && !(hasSlicing!R && hasLength!R)
-    && isFloatingPoint!(ElementType!R) && !isInfinite!R)
-{
-    static if (is(Unqual!(ElementType!R) == real))
-        alias Result = real;
-    else
-        alias Result = double;
-    Result result = 0, c = 0;
-    for (; !r.empty; r.popFront())
-    {
-        auto y = r.front - c;
-        auto t = result + y;
-        c = (t - result) - y;
-        result = t;
-    }
-    return result;
 }
 
 unittest
@@ -1407,7 +1456,7 @@ void uninitializedFill(Range, Value)(Range range, Value filler)
 
         // Must construct stuff by the book
         for (; !range.empty; range.popFront())
-            emplaceRef(range.front, filler);
+            emplaceRef!T(range.front, filler);
     }
     else
         // Doesn't matter whether fill is initialized or not
@@ -1810,21 +1859,12 @@ private struct FilterBidiResult(alias pred, Range)
 // move
 /**
 Moves $(D source) into $(D target) via a destructive
-copy. Specifically: $(UL $(LI If $(D hasAliasing!T) is true (see
-$(XREF traits, hasAliasing)), then the representation of $(D source)
-is bitwise copied into $(D target) and then $(D source = T.init) is
-evaluated.)  $(LI Otherwise, $(D target = source) is evaluated.)) See
-also $(XREF exception, pointsTo).
-
-Preconditions:
-$(D &source == &target || !pointsTo(source, source))
+copy.
 */
 void move(T)(ref T source, ref T target)
 {
     import core.stdc.string : memcpy;
-    import std.exception : pointsTo;
 
-    assert(!pointsTo(source, source));
     static if (is(T == struct))
     {
         if (&source == &target) return;
@@ -1832,7 +1872,10 @@ void move(T)(ref T source, ref T target)
         // and bitblast source over it
         static if (hasElaborateDestructor!T) typeid(T).destroy(&target);
 
-        memcpy(&target, &source, T.sizeof);
+        static if (hasElaborateAssign!T || !isAssignable!T)
+            memcpy(&target, &source, T.sizeof);
+        else
+            target = source;
 
         // If the source defines a destructor or a postblit hook, we must obliterate the
         // object in order to avoid double freeing and undue aliasing
@@ -1856,11 +1899,6 @@ void move(T)(ref T source, ref T target)
         // Primitive data (including pointers and arrays) or class -
         // assignment works great
         target = source;
-        // static if (is(typeof(source = null)))
-        // {
-        //     // Nullify the source to help the garbage collector
-        //     source = null;
-        // }
     }
 }
 
@@ -1868,25 +1906,27 @@ unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    Object obj1 = new Object;
-    Object obj2 = obj1;
-    Object obj3;
-    move(obj2, obj3);
-    assert(obj3 is obj1);
+    import std.exception : assertCTFEable;
+    assertCTFEable!((){
+        Object obj1 = new Object;
+        Object obj2 = obj1;
+        Object obj3;
+        move(obj2, obj3);
+        assert(obj3 is obj1);
 
-    static struct S1 { int a = 1, b = 2; }
-    S1 s11 = { 10, 11 };
-    S1 s12;
-    move(s11, s12);
-    assert(s11.a == 10 && s11.b == 11 && s12.a == 10 && s12.b == 11);
+        static struct S1 { int a = 1, b = 2; }
+        S1 s11 = { 10, 11 };
+        S1 s12;
+        move(s11, s12);
+        assert(s11.a == 10 && s11.b == 11 && s12.a == 10 && s12.b == 11);
 
-    static struct S2 { int a = 1; int * b; }
-    S2 s21 = { 10, null };
-    s21.b = new int;
-    S2 s22;
-    move(s21, s22);
-    assert(s21 == s22);
-
+        static struct S2 { int a = 1; int * b; }
+        S2 s21 = { 10, null };
+        s21.b = new int;
+        S2 s22;
+        move(s21, s22);
+        assert(s21 == s22);
+    });
     // Issue 5661 test(1)
     static struct S3
     {
@@ -1925,8 +1965,10 @@ T move(T)(ref T source)
     static if (is(T == struct))
     {
         // Can avoid destructing result.
-
-        memcpy(&result, &source, T.sizeof);
+        static if (hasElaborateAssign!T || !isAssignable!T)
+            memcpy(&result, &source, T.sizeof);
+        else
+            result = source;
 
         // If the source defines a destructor or a postblit hook, we must obliterate the
         // object in order to avoid double freeing and undue aliasing
@@ -1958,21 +2000,24 @@ unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    Object obj1 = new Object;
-    Object obj2 = obj1;
-    Object obj3 = move(obj2);
-    assert(obj3 is obj1);
+    import std.exception : assertCTFEable;
+    assertCTFEable!((){
+        Object obj1 = new Object;
+        Object obj2 = obj1;
+        Object obj3 = move(obj2);
+        assert(obj3 is obj1);
 
-    static struct S1 { int a = 1, b = 2; }
-    S1 s11 = { 10, 11 };
-    S1 s12 = move(s11);
-    assert(s11.a == 10 && s11.b == 11 && s12.a == 10 && s12.b == 11);
+        static struct S1 { int a = 1, b = 2; }
+        S1 s11 = { 10, 11 };
+        S1 s12 = move(s11);
+        assert(s11.a == 10 && s11.b == 11 && s12.a == 10 && s12.b == 11);
 
-    static struct S2 { int a = 1; int * b; }
-    S2 s21 = { 10, null };
-    s21.b = new int;
-    S2 s22 = move(s21);
-    assert(s21 == s22);
+        static struct S2 { int a = 1; int * b; }
+        S2 s21 = { 10, null };
+        s21.b = new int;
+        S2 s22 = move(s21);
+        assert(s21 == s22);
+    });
 
     // Issue 5661 test(1)
     static struct S3
@@ -2135,7 +2180,7 @@ unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    int[] a = [ 1, 2, 3, 4, 5 ];
+   int[] a = [ 1, 2, 3, 4, 5 ];
     int[] b = new int[3];
     assert(moveSome(a, b)[0] is a[3 .. $]);
     assert(a[0 .. 3] == b);
@@ -2151,31 +2196,16 @@ need not be assignable at all to be swapped.
 If $(D lhs) and $(D rhs) reference the same instance, then nothing is done.
 
 $(D lhs) and $(D rhs) must be mutable. If $(D T) is a struct or union, then
-its fields must also all be (recursively) mutable.
-
-Preconditions:
-
-$(D !pointsTo(lhs, lhs) && !pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
-&& !pointsTo(rhs, rhs))
-
-See_Also:
-    $(XREF exception, pointsTo)
+its fields must also all be (recursivelly) mutable.
  */
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow
 if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
 {
     static if (hasElaborateAssign!T || !isAssignable!T)
     {
-        import std.exception : pointsTo;
-
         if (&lhs != &rhs)
         {
             // For structs with non-trivial assignment, move memory directly
-            // First check for undue aliasing
-            static if (hasIndirections!T)
-                assert(!pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
-                    && !pointsTo(lhs, lhs) && !pointsTo(rhs, rhs));
-            // Swap bits
             ubyte[T.sizeof] t = void;
             auto a = (cast(ubyte*) &lhs)[0 .. T.sizeof];
             auto b = (cast(ubyte*) &rhs)[0 .. T.sizeof];
@@ -2317,6 +2347,42 @@ unittest
     // 12024
     import std.datetime;
     SysTime a, b;
+
+    //Verify swap is callable even with
+    //internal pointers
+    static struct S
+    {
+        S[] someRange;
+        void opAssign(S other)
+        {
+            assert(0);
+        }
+    }
+
+    S[2] arr;
+    foreach(ref e; arr)
+        //The elements are themselves part of arr
+        //this means there is some aliasing
+        e.someRange = arr[];
+
+    //verify this calls still works
+    swap(arr[0], arr[1]);
+}
+
+unittest // 9975
+{
+    import std.exception : pointsTo;
+    static struct S2
+    {
+        union
+        {
+            size_t sz;
+            string s;
+        }
+    }
+    S2 a , b;
+    a.sz = -1;
+    assert(pointsTo(a, b));
     swap(a, b);
 }
 
@@ -3062,10 +3128,8 @@ unittest
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     void compare(string sentence, string[] witness)
     {
-        import std.string : format;
-
         auto r = splitter!"a == ' '"(sentence);
-        assert(equal(r.save, witness), format("got: %(%s, %) expected: %(%s, %)", r, witness));
+        assert(equal(r.save, witness), algoFormat("got: %(%s, %) expected: %(%s, %)", r, witness));
     }
 
     compare(" Mary  has a little lamb.   ",
@@ -3108,11 +3172,9 @@ unittest
     ];
     foreach ( entry ; entries )
     {
-        import std.string : format;
-
         auto a = iota(entry.low, entry.high).filter!"true"();
         auto b = splitter!"a%2"(a);
-        assert(equal!equal(b.save, entry.result), format("got: %(%s, %) expected: %(%s, %)", b, entry.result));
+        assert(equal!equal(b.save, entry.result), algoFormat("got: %(%s, %) expected: %(%s, %)", b, entry.result));
     }
 }
 
@@ -3237,7 +3299,7 @@ unittest
 unittest
 {
     import std.conv : text;
-    import std.string : split, format;
+    import std.string : split;
 
     // Check consistency:
     // All flavors of split should produce the same results
@@ -3251,7 +3313,7 @@ unittest
         {
             auto result = split(input, s);
 
-            assert(equal(result, split(input, [s])), format(`"[%(%s,%)]"`, split(input, [s])));
+            assert(equal(result, split(input, [s])), algoFormat(`"[%(%s,%)]"`, split(input, [s])));
             //assert(equal(result, split(input, [s].filter!"true"())));                          //Not yet implemented
             assert(equal(result, split!((a) => a == s)(input)), text(split!((a) => a == s)(input)));
 
@@ -3787,7 +3849,7 @@ unittest
     }
 
     assert(equal(result, "abc12def34"d),
-        "Unexpected result: '%s'"d.format(result));
+        "Unexpected result: '%s'"d.algoFormat(result));
 }
 
 // Issue 8061
@@ -7007,7 +7069,7 @@ MinType!T min(T...)(T args)
         alias b = args[1];
 
         static assert (is(typeof(a < b)),
-            format("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
+            algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
 
         static if (isIntegral!T0 && isIntegral!T1 &&
                    (mostNegative!T0 < 0) != (mostNegative!T1 < 0))
@@ -7093,7 +7155,7 @@ MaxType!T max(T...)(T args)
         alias b = args[1];
 
         static assert (is(typeof(a < b)),
-            format("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
+            algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
 
         static if (isIntegral!T0 && isIntegral!T1 &&
                    (mostNegative!T0 < 0) != (mostNegative!T1 < 0))
@@ -7176,7 +7238,7 @@ minCount(alias pred = "a < b", Range)(Range range)
     alias RetType = Tuple!(T, size_t);
 
     static assert (is(typeof(RetType(range.front, 1))),
-        format("Error: Cannot call minCount on a %s, because it is not possible "~
+        algoFormat("Error: Cannot call minCount on a %s, because it is not possible "~
                "to copy the result value (a %s) into a Tuple.", Range.stringof, T.stringof));
 
     enforce(!range.empty, "Can't count elements from an empty range");
@@ -7239,7 +7301,7 @@ minCount(alias pred = "a < b", Range)(Range range)
     }
     else
         static assert(false,
-            format("Sorry, can't find the minCount of a %s: Don't know how "~
+            algoFormat("Sorry, can't find the minCount of a %s: Don't know how "~
                    "to keep track of the smallest %s element.", Range.stringof, T.stringof));
 }
 
@@ -7686,13 +7748,15 @@ unittest
 Copies the content of $(D source) into $(D target) and returns the
 remaining (unfilled) part of $(D target).
 
+Preconditions: $(D target) shall have enough room to accomodate
+$(D source).
+
 See_Also:
     $(WEB sgi.com/tech/stl/_copy.html, STL's _copy)
  */
 Range2 copy(Range1, Range2)(Range1 source, Range2 target)
 if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 {
-
     static Range2 genericImpl(Range1 source, Range2 target)
     {
         // Specialize for 2 random access ranges.
@@ -7701,6 +7765,9 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
         static if (isRandomAccessRange!Range1 && hasLength!Range1
             && hasSlicing!Range2 && isRandomAccessRange!Range2 && hasLength!Range2)
         {
+            assert(target.length >= source.length,
+                "Cannot copy a source range into a smaller target range.");
+
             auto len = source.length;
             foreach (idx; 0 .. len)
                 target[idx] = source[idx];
@@ -7716,8 +7783,6 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
     static if (isArray!Range1 && isArray!Range2 &&
                is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
     {
-        import std.exception : enforce;
-
         immutable overlaps = source.ptr < target.ptr + target.length &&
                              target.ptr < source.ptr + source.length;
 
@@ -7730,7 +7795,7 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
             // Array specialization.  This uses optimized memory copying
             // routines under the hood and is about 10-20x faster than the
             // generic implementation.
-            enforce(target.length >= source.length,
+            assert(target.length >= source.length,
                 "Cannot copy a source array into a smaller target array.");
             target[0..source.length] = source[];
 
@@ -12839,14 +12904,12 @@ unittest
 /// ditto
 auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
 {
-    import std.string : format;
-
     /* We implement the n-ary cartesian product by recursively invoking the
      * binary cartesian product. To make the resulting range nicer, we denest
      * one level of tuples so that a ternary cartesian product, for example,
      * returns 3-element tuples instead of nested 2-element tuples.
      */
-    enum string denest = format("tuple(a[0], %(a[1][%d]%|,%))",
+    enum string denest = algoFormat("tuple(a[0], %(a[1][%d]%|,%))",
                                 iota(0, otherRanges.length+1));
     return map!denest(
         cartesianProduct(range1, cartesianProduct(range2, otherRanges))

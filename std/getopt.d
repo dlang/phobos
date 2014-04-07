@@ -41,6 +41,20 @@ version (unittest)
 }
 
 /**
+ * Thrown on one of the following conditions:
+ * - An unrecognized command-line argument is passed
+ *   and $(D std.getopt.config.passThrough) was not present.
+ */
+class GetOptException : Exception
+{
+    @safe pure nothrow
+    this(string msg, string file = __FILE__, size_t line = __LINE__)
+    {
+        super(msg, file, line);
+    }
+}
+
+/**
    Parse and remove command line options from an string array.
 
    Synopsis:
@@ -81,7 +95,10 @@ void main(string[] args)
  to their defaults and then invoke $(D getopt). If a
  command-line argument is recognized as an option with a parameter and
  the parameter cannot be parsed properly (e.g. a number is expected
- but not present), a $(D Exception) exception is thrown.
+ but not present), a $(D ConvException) exception is thrown.
+ If $(D std.getopt.config.passThrough) was not passed to getopt
+ and an unrecognized command-line argument is found, a $(D GetOptException)
+ is thrown.
 
  Depending on the type of the pointer being bound, $(D getopt)
  recognizes the following kinds of options:
@@ -165,7 +182,18 @@ getopt(args, "output", &outputFiles);
 
  Invoking the program with "--output=myfile.txt --output=yourfile.txt"
  or "--output myfile.txt --output yourfile.txt" will set $(D
- outputFiles) to [ "myfile.txt", "yourfile.txt" ] .)
+ outputFiles) to [ "myfile.txt", "yourfile.txt" ].
+
+ Alternatively you can set $(LREF arraySep) as the element separator:
+
+---------
+string[] outputFiles;
+arraySep = ",";  // defaults to "", separation by whitespace
+getopt(args, "output", &outputFiles);
+---------
+
+ With the above code you can invoke the program with
+ "--output=myfile.txt,yourfile.txt", or "--output myfile.txt,yourfile.txt".)
 
  $(LI $(I Hash options.) If an option is bound to an associative
  array, a string of the form "name=value" is expected as the next
@@ -177,8 +205,20 @@ getopt(args, "tune", &tuningParms);
 ---------
 
 Invoking the program with e.g. "--tune=alpha=0.5 --tune beta=0.6" will
-set $(D tuningParms) to [ "alpha" : 0.5, "beta" : 0.6 ]. In general,
-keys and values can be of any parsable types.)
+set $(D tuningParms) to [ "alpha" : 0.5, "beta" : 0.6 ].
+
+Alternatively you can set $(LREF arraySep) as the element separator:
+
+---------
+double[string] tuningParms;
+arraySep = ",";  // defaults to "", separation by whitespace
+getopt(args, "tune", &tuningParms);
+---------
+
+With the above code you can invoke the program with
+"--tune=alpha=0.5,beta=0.6", or "--tune alpha=0.5,beta=0.6".
+
+In general, the keys and values can be of any parsable types.
 
 $(LI $(I Callback options.) An option can be bound to a function or
 delegate with the signature $(D void function()), $(D void function(string option)),
@@ -353,9 +393,9 @@ void getopt(T...)(ref string[] args, T opts) {
 }
 
 /**
-   Configuration options for $(D getopt). 
-   
-   You can pass them to $(D getopt) in any position, except in between an option 
+   Configuration options for $(D getopt).
+
+   You can pass them to $(D getopt) in any position, except in between an option
    string and its bound pointer.
 */
 enum config {
@@ -420,7 +460,7 @@ private void getoptImpl(T...)(ref string[] args,
             }
             if (!cfg.passThrough)
             {
-                throw new Exception("Unrecognized option "~a);
+                throw new GetOptException("Unrecognized option "~a);
             }
         }
     }
@@ -536,16 +576,46 @@ void handleOption(R)(string option, R receiver, ref string[] args,
             else static if (isArray!(typeof(*receiver)))
             {
                 // array receiver
-                *receiver ~= [ to!(typeof((*receiver)[0]))(val) ];
+                import std.range : ElementEncodingType;
+                alias E = ElementEncodingType!(typeof(*receiver));
+
+                if (arraySep == "")
+                {
+                    *receiver ~= to!E(val);
+                }
+                else
+                {
+                    foreach (elem; val.splitter(arraySep).map!(a => to!E(a)))
+                        *receiver ~= elem;
+                }
             }
             else static if (isAssociativeArray!(typeof(*receiver)))
             {
                 // hash receiver
                 alias K = typeof(receiver.keys[0]);
                 alias V = typeof(receiver.values[0]);
-                auto j = std.string.indexOf(val, assignChar);
-                auto key = val[0 .. j], value = val[j + 1 .. $];
-                (*receiver)[to!(K)(key)] = to!(V)(value);
+
+                import std.range : only;
+                import std.typecons : Tuple, tuple;
+
+                static Tuple!(K, V) getter(string input)
+                {
+                    auto j = std.string.indexOf(input, assignChar);
+                    auto key = input[0 .. j];
+                    auto value = input[j + 1 .. $];
+                    return tuple(to!K(key), to!V(value));
+                }
+
+                static void setHash(Range)(R receiver, Range range)
+                {
+                    foreach (k, v; range.map!getter)
+                        (*receiver)[k] = v;
+                }
+
+                if (arraySep == "")
+                    setHash(receiver, val.only);
+                else
+                    setHash(receiver, val.splitter(arraySep));
             }
             else
             {
@@ -556,27 +626,90 @@ void handleOption(R)(string option, R receiver, ref string[] args,
     }
 }
 
+// 5316 - arrays with arraySep
+unittest
+{
+    arraySep = ",";
+    scope (exit) arraySep = "";
+
+    string[] names;
+    auto args = ["program.name", "-nfoo,bar,baz"];
+    getopt(args, "name|n", &names);
+    assert(names == ["foo", "bar", "baz"], to!string(names));
+
+    names = names.init;
+    args = ["program.name", "-n" "foo,bar,baz"].dup;
+    getopt(args, "name|n", &names);
+    assert(names == ["foo", "bar", "baz"], to!string(names));
+
+    names = names.init;
+    args = ["program.name", "--name=foo,bar,baz"].dup;
+    getopt(args, "name|n", &names);
+    assert(names == ["foo", "bar", "baz"], to!string(names));
+
+    names = names.init;
+    args = ["program.name", "--name", "foo,bar,baz"].dup;
+    getopt(args, "name|n", &names);
+    assert(names == ["foo", "bar", "baz"], to!string(names));
+}
+
+// 5316 - associative arrays with arraySep
+unittest
+{
+    arraySep = ",";
+    scope (exit) arraySep = "";
+
+    int[string] values;
+    values = values.init;
+    auto args = ["program.name", "-vfoo=0,bar=1,baz=2"].dup;
+    getopt(args, "values|v", &values);
+    assert(values == ["foo":0, "bar":1, "baz":2], to!string(values));
+
+    values = values.init;
+    args = ["program.name", "-v", "foo=0,bar=1,baz=2"].dup;
+    getopt(args, "values|v", &values);
+    assert(values == ["foo":0, "bar":1, "baz":2], to!string(values));
+
+    values = values.init;
+    args = ["program.name", "--values=foo=0,bar=1,baz=2"];
+    getopt(args, "values|t", &values);
+    assert(values == ["foo":0, "bar":1, "baz":2], to!string(values));
+
+    values = values.init;
+    args = ["program.name", "--values", "foo=0,bar=1,baz=2"].dup;
+    getopt(args, "values|v", &values);
+    assert(values == ["foo":0, "bar":1, "baz":2], to!string(values));
+}
+
 /**
-   The option character (default '-'). 
+   The option character (default '-').
 
    Defaults to '-' but it can be assigned to prior to calling $(D getopt).
  */
 dchar optionChar = '-';
 
 /**
-   The string that conventionally marks the end of all options (default '--'). 
+   The string that conventionally marks the end of all options (default '--').
 
-   Defaults to "--" but can be assigned to prior to calling $(D getopt). Assigning an 
+   Defaults to "--" but can be assigned to prior to calling $(D getopt). Assigning an
    empty string to $(D endOfOptions) effectively disables it.
  */
 string endOfOptions = "--";
 
 /**
-   The assignment character used in options with parameters (default '='). 
+   The assignment character used in options with parameters (default '=').
 
    Defaults to '=' but can be assigned to prior to calling $(D getopt).
  */
 dchar assignChar = '=';
+
+/**
+   The string used to separate the elements of an array or associative array
+   (default is "" which means the elements are separated by whitespace).
+
+   Defaults to "" but can be assigned to prior to calling $(D getopt).
+ */
+string arraySep = "";
 
 enum autoIncrementChar = '+';
 
@@ -698,16 +831,30 @@ unittest
              "--output", "yourfile.txt"]).dup;
     getopt(args, "output", &outputFiles);
     assert(outputFiles.length == 2
-           && outputFiles[0] == "myfile.txt" && outputFiles[0] == "myfile.txt");
+           && outputFiles[0] == "myfile.txt" && outputFiles[1] == "yourfile.txt");
 
-    args = (["program.name", "--tune=alpha=0.5",
-             "--tune", "beta=0.6"]).dup;
-    double[string] tuningParms;
-    getopt(args, "tune", &tuningParms);
-    assert(args.length == 1);
-    assert(tuningParms.length == 2);
-    assert(approxEqual(tuningParms["alpha"], 0.5));
-    assert(approxEqual(tuningParms["beta"], 0.6));
+    outputFiles = [];
+    arraySep = ",";
+    args = (["program.name", "--output", "myfile.txt,yourfile.txt"]).dup;
+    getopt(args, "output", &outputFiles);
+    assert(outputFiles.length == 2
+           && outputFiles[0] == "myfile.txt" && outputFiles[1] == "yourfile.txt");
+    arraySep = "";
+
+    foreach (testArgs;
+        [["program.name", "--tune=alpha=0.5", "--tune", "beta=0.6"],
+         ["program.name", "--tune=alpha=0.5,beta=0.6"],
+         ["program.name", "--tune", "alpha=0.5,beta=0.6"]])
+    {
+        arraySep = ",";
+        double[string] tuningParms;
+        getopt(testArgs, "tune", &tuningParms);
+        assert(testArgs.length == 1);
+        assert(tuningParms.length == 2);
+        assert(approxEqual(tuningParms["alpha"], 0.5));
+        assert(approxEqual(tuningParms["beta"], 0.6));
+        arraySep = "";
+    }
 
     uint verbosityLevel = 1;
     void myHandler(string option)
@@ -874,6 +1021,16 @@ unittest
     bool opt;
     args.getopt(config.passThrough, "opt", &opt);
     assert(args == ["main", "-test"]);
+}
+
+unittest // 5228
+{
+    auto args = ["prog", "--foo=bar"];
+    int abc;
+    assertThrown!GetOptException(getopt(args, "abc", &abc));
+
+    args = ["prog", "--abc=string"];
+    assertThrown!ConvException(getopt(args, "abc", &abc));
 }
 
 unittest // From bugzilla 7693

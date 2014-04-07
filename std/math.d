@@ -1842,7 +1842,8 @@ unittest
 unittest
 {
     FloatingPointControl ctrl;
-    ctrl.disableExceptions(FloatingPointControl.allExceptions);
+    if(FloatingPointControl.hasExceptionTraps)
+        ctrl.disableExceptions(FloatingPointControl.allExceptions);
     ctrl.rounding = FloatingPointControl.roundToNearest;
 
     // @@BUG@@: Non-immutable array literals are ridiculous.
@@ -3961,7 +3962,8 @@ unittest
     {
         assert(FloatingPointControl.rounding
                == FloatingPointControl.roundToNearest);
-        assert(FloatingPointControl.enabledExceptions == 0);
+        if(FloatingPointControl.hasExceptionTraps)
+            assert(FloatingPointControl.enabledExceptions == 0);
     }
 
     {

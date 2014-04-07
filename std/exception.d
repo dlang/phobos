@@ -1052,7 +1052,7 @@ unittest
         static struct NoCopy { this(this) { assert(0); } }
         static struct Holder { NoCopy a, b, c; }
         Holder h;
-        const pt = pointsTo(h, h);
+        cast(void)pointsTo(h, h);
     }
 
     shared S3 sh3;

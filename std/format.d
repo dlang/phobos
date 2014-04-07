@@ -1304,8 +1304,7 @@ unittest
    $(D null) literal is formatted as $(D "null").
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (is(Unqual!T == typeof(null)) &&
-!is(T == enum) && !hasToString!(T, Char))
+if (is(Unqual!T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
 {
     enforceFmt(f.spec == 's',
         "null");
@@ -2960,31 +2959,39 @@ unittest
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 {
-    if (val is null)
-        put(w, "null");
-    else
+    static if (isInputRange!T)
     {
-        static if (isInputRange!T)
+        if (val !is null)
         {
             formatRange(w, *val, f);
+            return;
         }
-        else
+    }
+
+    static if (is(typeof({ shared const void* p = val; })))
+        alias SharedOf(T) = shared(T);
+    else
+        alias SharedOf(T) = T;
+
+    const SharedOf!(void*) p = val;
+    const pnum = ()@trusted{ return cast(ulong) p; }();
+
+    if (f.spec == 's')
+    {
+        if (p is null)
         {
-            const p = val;
-            const pnum = ()@trusted{ return cast(ulong) p; }();
-            if (f.spec == 's')
-            {
-                FormatSpec!Char fs = f; // fs is copy for change its values.
-                fs.spec = 'X';
-                formatValue(w, pnum, fs);
-            }
-            else
-            {
-                enforceFmt(f.spec == 'X' || f.spec == 'x',
-                   "Expected one of %s, %x or %X for pointer type.");
-                formatValue(w, pnum, f);
-            }
+            put(w, "null");
+            return;
         }
+        FormatSpec!Char fs = f; // fs is copy for change its values.
+        fs.spec = 'X';
+        formatValue(w, pnum, fs);
+    }
+    else
+    {
+        enforceFmt(f.spec == 'X' || f.spec == 'x',
+           "Expected one of %s, %x or %X for pointer type.");
+        formatValue(w, pnum, f);
     }
 }
 
@@ -3033,6 +3040,21 @@ unittest
     // Test for issue 9336
     shared int i;
     format("%s", &i);
+}
+
+unittest
+{
+    // Test for issue 11778
+    int* p = null;
+    assertThrown(format("%d", p));
+    assertThrown(format("%04d", p + 2));
+}
+
+@safe pure unittest
+{
+    // Test for issue 12505
+    void* p = null;
+    formatTest( "%08X", p, "00000000" );
 }
 
 /**
