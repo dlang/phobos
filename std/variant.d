@@ -2225,3 +2225,17 @@ unittest
     assertNotThrown!VariantException(v.get!(const(Object)));
     assertNotThrown!VariantException(v.get!(immutable(Object)));
 }
+
+unittest 
+{
+    static struct DummyScope
+    {
+        // https://d.puremagic.com/issues/show_bug.cgi?id=12540
+        alias Alias12540 = Algebraic!Class12540;
+
+        static class Class12540 
+        {
+            Alias12540 entity;
+        }
+    }
+}
