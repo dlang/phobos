@@ -2293,12 +2293,14 @@ struct Appender(A : T[], T)
         // We want to use up as much of the block the array is in as possible.
         // if we consume all the block that we can, then array appending is
         // safe WRT built-in append, and we can use the entire block.
-        auto cap = arr.capacity; //trusted
-        if (cap > arr.length)
-            arr = arr.ptr[0 .. cap]; //trusted
-
-        // we assume no reallocation occurred
-        assert(arr.ptr is _data.arr.ptr);
+        // We only do this for mutable types that can be extended.
+        static if (isMutable!T && is(typeof(arr.length = size_t.max)))
+        {
+            auto cap = arr.capacity; //trusted
+            // Replace with "GC.setAttr( Not Appendable )" once pure (and fixed)
+            if (cap > arr.length)
+                arr.length = cap;
+        }
         _data.capacity = arr.length;
     }
 
@@ -3049,6 +3051,20 @@ unittest
     short[] range = [1, 2, 3];
     app.put(range);
     assert(app.data == [1, 2, 3]);
+}
+
+unittest
+{
+    string s = "hello".idup;
+    char[] a = "hello".dup;
+    auto appS = appender(s);
+    auto appA = appender(a);
+    put(appS, 'w');
+    put(appA, 'w');
+    s ~= 'a'; //Clobbers here?
+    a ~= 'a'; //Clobbers here?
+    assert(appS.data == "hellow");
+    assert(appA.data == "hellow");
 }
 
 /*
