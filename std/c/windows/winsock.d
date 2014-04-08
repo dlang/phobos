@@ -12,6 +12,7 @@ private import std.c.windows.windows;
 
 
 extern(Windows):
+nothrow:
 
 alias SOCKET = size_t;
 alias socklen_t = int;
