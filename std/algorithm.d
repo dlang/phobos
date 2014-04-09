@@ -1141,7 +1141,7 @@ private auto sumKahan(Result, R)(Result result, R r)
 }
 
 /// Ditto
-unittest
+@safe pure nothrow unittest
 {
     //simple integral sumation
     assert(sum([ 1, 2, 3, 4]) == 10);
@@ -1168,7 +1168,7 @@ unittest
                .approxEqual((ulong.max / 2) * 4096.0 + 4096^^2 / 2));
 }
 
-unittest
+@safe pure nothrow unittest
 {
     static assert(is(typeof(sum([cast( byte)1])) ==  int));
     static assert(is(typeof(sum([cast(ubyte)1])) ==  int));
@@ -1185,7 +1185,7 @@ unittest
     assert(sum([42, 43, 44, 45]) == 42 + 43 + 44 + 45);
 }
 
-unittest
+@safe pure nothrow unittest
 {
     static assert(is(typeof(sum([1.0, 2.0, 3.0, 4.0])) == double));
     static assert(is(typeof(sum([ 1F,  2F,  3F,  4F])) == double));
@@ -1202,7 +1202,7 @@ unittest
     assert(sum([42., 43., 44., 45.5]) == 42 + 43 + 44 + 45.5);
 }
 
-unittest
+@safe pure nothrow unittest
 {
     import std.container;
     static assert(is(typeof(sum(SList!float()[])) == double));
@@ -1216,7 +1216,7 @@ unittest
     assert(sum(SList!double(1, 2, 3, 4)[]) == 10);
 }
 
-unittest // 12434
+@safe pure nothrow unittest // 12434
 {
     immutable a = [10, 20];
     auto s1 = sum(a);             // Error
@@ -9335,28 +9335,23 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
     alias LessRet = typeof(lessFun(r.front, r.front));    // instantiate lessFun
     static if (is(LessRet == bool))
     {
-        import std.conv : text;
-
         static if (ss == SwapStrategy.unstable)
             quickSortImpl!(lessFun)(r, r.length);
         else //use Tim Sort for semistable & stable
             TimSortImpl!(lessFun, Range).sort(r, null);
 
         enum maxLen = 8;
-        assert(isSorted!lessFun(r), text("Failed to sort range of type ",
-                        Range.stringof, ". Actual result is: ",
-                        r[0 .. r.length > maxLen ? maxLen : r.length ],
-                        r.length > maxLen ? "..." : ""));
+        assert(isSorted!lessFun(r), "Failed to sort range of type " ~ Range.stringof);
     }
     else
     {
-        static assert(false, "Invalid predicate passed to sort: "~less);
+        static assert(false, "Invalid predicate passed to sort: " ~ less.stringof);
     }
     return assumeSorted!less(r);
 }
 
 ///
-unittest
+@safe pure nothrow unittest
 {
     int[] array = [ 1, 2, 3, 4 ];
     // sort in descending order
@@ -9366,9 +9361,13 @@ unittest
     sort(array);
     assert(array == [ 1, 2, 3, 4 ]);
     // sort with a delegate
-    bool myComp(int x, int y) { return x > y; }
+    bool myComp(int x, int y) @safe pure nothrow { return x > y; }
     sort!(myComp)(array);
     assert(array == [ 4, 3, 2, 1 ]);
+}
+///
+unittest
+{
     // Showcase stable sorting
     string[] words = [ "aBc", "a", "abc", "b", "ABC", "c" ];
     sort!("toUpper(a) < toUpper(b)", SwapStrategy.stable)(words);
@@ -9759,7 +9758,8 @@ private template HeapSortImpl(alias less, Range)
 
     alias lessFun = binaryFun!less;
 
-    void heapSort(Range r)
+    //template because of @@@12410@@@
+    void heapSort()(Range r) 
     {
         // If true, there is nothing to do
         if(r.length < 2) return;
@@ -9778,7 +9778,8 @@ private template HeapSortImpl(alias less, Range)
         }
     }
 
-    void sift(Range r, size_t parent, immutable size_t end)
+    //template because of @@@12410@@@
+    void sift()(Range r, size_t parent, immutable size_t end)
     {
         immutable root = parent;
         size_t child = void;
@@ -10633,8 +10634,6 @@ less).
 */
 bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
 {
-    import std.conv : text;
-
     if (r.empty) return true;
 
     static if (isRandomAccessRange!Range && hasLength!Range)
@@ -10645,10 +10644,8 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
             if (!binaryFun!less(r[i + 1], r[i])) continue;
             assert(
                 !binaryFun!less(r[i], r[i + 1]),
-                text("Predicate for isSorted is not antisymmetric. Both",
-                        " pred(a, b) and pred(b, a) are true for a=", r[i],
-                        " and b=", r[i+1], " in positions ", i, " and ",
-                        i + 1));
+                "Predicate for isSorted is not antisymmetric. Both" ~
+                        " pred(a, b) and pred(b, a) are true for certain values.");
             return false;
         }
     }
@@ -10664,10 +10661,8 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
             // Check for antisymmetric predicate
             assert(
                 !binaryFun!less(r.front, ahead.front),
-                text("Predicate for isSorted is not antisymmetric. Both",
-                        " pred(a, b) and pred(b, a) are true for a=", r.front,
-                        " and b=", ahead.front, " in positions ", i, " and ",
-                        i + 1));
+                "Predicate for isSorted is not antisymmetric. Both" ~
+                        " pred(a, b) and pred(b, a) are true for certain values.");
             return false;
         }
     }
