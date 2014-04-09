@@ -2271,6 +2271,7 @@ struct Appender(A : T[], T)
     {
         size_t capacity;
         Unqual!T[] arr;
+        bool canExtend = false;
     }
 
     private Data* _data;
@@ -2394,26 +2395,29 @@ struct Appender(A : T[], T)
             // have better access to the capacity field.
             auto newlen = appenderNewCapacity!(T.sizeof)(_data.capacity, reqlen);
             // first, try extending the current block
-            auto u = ()@trusted{ return
-                GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
-            }();
-            if (u)
+            if (_data.canExtend)
             {
-                // extend worked, update the capacity
-                _data.capacity = u / T.sizeof;
-            }
-            else
-            {
-                // didn't work, must reallocate
-                auto bi = ()@trusted{ return
-                    GC.qalloc(newlen * T.sizeof, (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
+                auto u = ()@trusted{ return
+                    GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
                 }();
-                _data.capacity = bi.size / T.sizeof;
-                if (len)
-                    ()@trusted{ memcpy(bi.base, _data.arr.ptr, len * T.sizeof); }();
-                _data.arr = ()@trusted{ return (cast(Unqual!T*)bi.base)[0 .. len]; }();
-                // leave the old data, for safety reasons
+                if (u)
+                {
+                    // extend worked, update the capacity
+                    _data.capacity = u / T.sizeof;
+                    return;
+                }
             }
+
+            // didn't work, must reallocate
+            auto bi = ()@trusted{ return
+                GC.qalloc(newlen * T.sizeof, (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
+            }();
+            _data.capacity = bi.size / T.sizeof;
+            if (len)
+                ()@trusted{ memcpy(bi.base, _data.arr.ptr, len * T.sizeof); }();
+            _data.arr = ()@trusted{ return (cast(Unqual!T*)bi.base)[0 .. len]; }();
+            _data.canExtend = true;
+            // leave the old data, for safety reasons
         }
     }
 
@@ -2979,6 +2983,25 @@ unittest
     appender!string(null);
     appender!(const(char)[])(null);
     appender!(char[])(null);
+}
+
+unittest //Test large allocations (for GC.extend)
+{
+    Appender!(char[]) app;
+    app.reserve(1); //cover reserve on non-initialized
+    foreach(_; 0 .. 100_000)
+        app.put('a');
+    assert(equal(app.data, 'a'.repeat(100_000)));
+}
+
+unittest
+{
+    auto reference = new ubyte[](2048 + 1); //a number big enough to have a full page (EG: the GC extends)
+    auto arr = reference.dup;
+    auto app = appender(arr[0 .. 0]);
+    app.reserve(1); //This should not trigger a call to extend
+    app.put(ubyte(1)); //Don't clobber arr
+    assert(reference[] == arr[]);
 }
 
 /++
