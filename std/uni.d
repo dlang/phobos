@@ -6984,6 +6984,16 @@ private S toCase(alias indexFn, uint maxIdx, alias tableFn, S)(S s) @trusted pur
     return s;
 }
 
+unittest //12428
+{
+    auto s = "abcdefghij".replicate(300);
+    s = s[0..10];
+
+    toUpper(s);
+
+    assert(s == "abcdefghij");
+}
+
 // TODO: helper, I wish std.utf was more flexible (and stright)
 private size_t encodeTo(char[] buf, size_t idx, dchar c) @trusted pure
 {
