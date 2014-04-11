@@ -1740,8 +1740,8 @@ the contents may well have changed).
         f.detach();
         assert(!f.isOpen);
 
-        void testTerm(Terminator)(string txt, string[] witness,
-                KeepTerminator kt, Terminator term, bool popFirstLine)
+        void test(Terminator)(string txt, string[] witness,
+                KeepTerminator kt, Terminator term, bool popFirstLine = false)
         {
             import std.conv : text;
 
@@ -1770,35 +1770,28 @@ the contents may well have changed).
             auto walkedLength = File(deleteme).byLine.walkLength;
             assert(walkedLength == witness.length, text(walkedLength, " != ", witness.length));
         }
-        /* Wrap with default args.
-         * Note: Having a default argument for terminator = '\n' would prevent
-         * instantiating Terminator=string (or "\n" would prevent Terminator=char) */
-        void test(string txt, string[] witness,
-                KeepTerminator kt = KeepTerminator.no,
-                bool popFirstLine = false)
-        {
-            testTerm(txt, witness, kt, '\n', popFirstLine);
-        }
 
-        test("", null);
-        test("\n", [ "" ]);
-        test("asd\ndef\nasdf", [ "asd", "def", "asdf" ]);
-        test("asd\ndef\nasdf", [ "asd", "def", "asdf" ], KeepTerminator.no, true);
-        test("asd\ndef\nasdf\n", [ "asd", "def", "asdf" ]);
-        test("foo", [ "foo" ], KeepTerminator.no, true);
-        testTerm("bob\r\nmarge\r\nsteve\r\n", ["bob", "marge", "steve"],
-            KeepTerminator.no, "\r\n", false);
-        testTerm("sue\r", ["sue"], KeepTerminator.no, '\r', false);
+        KeepTerminator kt = KeepTerminator.no;
+        test("", null, kt, '\n');
+        test("\n", [ "" ], kt, '\n');
+        test("asd\ndef\nasdf", [ "asd", "def", "asdf" ], kt, '\n');
+        test("asd\ndef\nasdf", [ "asd", "def", "asdf" ], kt, '\n', true);
+        test("asd\ndef\nasdf\n", [ "asd", "def", "asdf" ], kt, '\n');
+        test("foo", [ "foo" ], kt, '\n', true);
+        test("bob\r\nmarge\r\nsteve\r\n", ["bob", "marge", "steve"],
+            kt, "\r\n");
+        test("sue\r", ["sue"], kt, '\r');
 
-        test("", null, KeepTerminator.yes);
-        test("\n", [ "\n" ], KeepTerminator.yes);
-        test("asd\ndef\nasdf", [ "asd\n", "def\n", "asdf" ], KeepTerminator.yes);
-        test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes);
-        test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes, true);
-        test("foo", [ "foo" ], KeepTerminator.yes, false);
-        testTerm("bob\r\nmarge\r\nsteve\r\n", ["bob\r\n", "marge\r\n", "steve\r\n"],
-            KeepTerminator.yes, "\r\n", false);
-        testTerm("sue\r", ["sue\r"], KeepTerminator.yes, '\r', false);
+        kt = KeepTerminator.yes;
+        test("", null, kt, '\n');
+        test("\n", [ "\n" ], kt, '\n');
+        test("asd\ndef\nasdf", [ "asd\n", "def\n", "asdf" ], kt, '\n');
+        test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], kt, '\n');
+        test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], kt, '\n', true);
+        test("foo", [ "foo" ], kt, '\n');
+        test("bob\r\nmarge\r\nsteve\r\n", ["bob\r\n", "marge\r\n", "steve\r\n"],
+            kt, "\r\n");
+        test("sue\r", ["sue\r"], kt, '\r');
     }
 
     unittest
