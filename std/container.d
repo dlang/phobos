@@ -2476,9 +2476,15 @@ if (!is(Unqual!T == bool))
         // Destructor releases array memory
         ~this()
         {
-            foreach (ref e; _payload) .destroy(e);
+            //Warning: destroy will also destroy class instances.
+            //The hasElaborateDestructor protects us here.
+            static if (hasElaborateDestructor!T)
+                foreach (ref e; _payload)
+                    .destroy(e);
+
             static if (hasIndirections!T)
                 GC.removeRange(_payload.ptr);
+
             free(_payload.ptr);
         }
 
@@ -2514,13 +2520,10 @@ if (!is(Unqual!T == bool))
             if (length >= newLength)
             {
                 // shorten
-                static if (is(T == struct) && hasElaborateDestructor!T)
-                {
+                static if (hasElaborateDestructor!T)
                     foreach (ref e; _payload.ptr[newLength .. _payload.length])
-                    {
                         .destroy(e);
-                    }
-                }
+
                 _payload = _payload.ptr[0 .. newLength];
                 return;
             }
@@ -3022,7 +3025,7 @@ Complexity: $(BIGOH n)
      */
     void clear()
     {
-        .destroy(_data);
+        _data = Data.init;
     }
 
 /**
@@ -3096,11 +3099,9 @@ Complexity: $(BIGOH log(n)).
     void removeBack()
     {
         enforce(!empty);
-        static if (is(T == struct))
-        {
-            // Destroy this guy
+        static if (hasElaborateDestructor!T)
             .destroy(_data._payload[$ - 1]);
-        }
+
         _data._payload = _data._payload[0 .. $ - 1];
     }
     /// ditto
@@ -3122,14 +3123,10 @@ Complexity: $(BIGOH howMany).
     size_t removeBack(size_t howMany)
     {
         if (howMany > length) howMany = length;
-        static if (is(T == struct))
-        {
-            // Destroy this guy
+        static if (hasElaborateDestructor!T)
             foreach (ref e; _data._payload[$ - howMany .. $])
-            {
                 .destroy(e);
-            }
-        }
+
         _data._payload = _data._payload[0 .. $ - howMany];
         return howMany;
     }
@@ -3599,6 +3596,42 @@ unittest //11884
 unittest //8282
 {
     auto arr = new Array!int;
+}
+
+unittest //6998
+{
+    static int i = 0;
+    class C
+    {
+        int dummy = 1;
+        this(){++i;}
+        ~this(){--i;}
+    }
+
+    assert(i == 0);
+    auto c = new C();
+    assert(i == 1);
+    
+    //scope
+    {
+        auto arr = Array!C(c);
+        assert(i == 1);
+    }
+    //Array should not have destroyed the class instance
+    assert(i == 1);
+
+    //Just to make sure the GC doesn't collect before the above test.
+    assert(c.dummy ==1);
+}
+unittest //6998-2
+{
+    static class C {int i;}
+    auto c = new C;
+    c.i = 42;
+    Array!C a;
+    a ~= c;
+    a.clear;
+    assert(c.i == 42); //fails
 }
 
 // BinaryHeap
