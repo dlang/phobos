@@ -1745,7 +1745,7 @@ the contents may well have changed).
             return impl.refCountedPayload.empty;
         }
 
-        @property immutable(Char)[] front()
+        @property Char[] front()
         {
             return impl.refCountedPayload.front;
         }
@@ -1758,14 +1758,14 @@ the contents may well have changed).
 
     private struct ByLineCopyImpl(Char, Terminator)
     {
-        ByLineImpl!(Char, Terminator) impl;
+        ByLineImpl!(Unqual!Char, Terminator) impl;
         bool gotFront;
-        immutable(Char)[] line;
+        Char[] line;
         
     public:
         this(File f, KeepTerminator kt, Terminator terminator)
         {
-            impl = ByLineImpl!(Char, Terminator)(f, kt, terminator);
+            impl = ByLineImpl!(Unqual!Char, Terminator)(f, kt, terminator);
         }
 
         @property bool empty()
@@ -1776,7 +1776,7 @@ the contents may well have changed).
         @property front()
         {
             if (!gotFront)
-                line = impl.front.idup;
+                line = impl.front.dup;
             return line;
         }
         
@@ -1791,11 +1791,11 @@ the contents may well have changed).
 Returns an input range set up to read from the file handle one line
 at a time. Each line will be newly allocated.
 
-The element type for the range will be $(D immutable(Char)[]). Range 
+The element type for the range will be $(D Char[]). Range 
 primitives may throw $(D StdioException) on I/O error.
 
 Params:
-Char = Character type for each line, defaulting to $(D char).
+Char = Character type for each line, defaulting to $(D immutable char).
 keepTerminator = Use $(D KeepTerminator.yes) to include the
 terminator at the end of each line.
 terminator = Line separator ($(D '\n') by default).
@@ -1817,7 +1817,7 @@ void main()
 See_Also:
 $(XREF file,readText)
 */
-    auto byLineCopy(Terminator = char, Char = char)
+    auto byLineCopy(Terminator = char, Char = immutable char)
     (KeepTerminator keepTerminator = KeepTerminator.no,
             Terminator terminator = '\n')
     if (isScalarType!Terminator)
@@ -1826,11 +1826,19 @@ $(XREF file,readText)
     }
 
 /// ditto
-    auto byLineCopy(Terminator, Char = char)
+    auto byLineCopy(Terminator, Char = immutable char)
     (KeepTerminator keepTerminator, Terminator terminator)
-    if (is(Unqual!(ElementEncodingType!Terminator) == Char))
+    if (is(Unqual!(ElementEncodingType!Terminator) == Unqual!Char))
     {
         return ByLineCopy!(Char, Terminator)(this, keepTerminator, terminator);
+    }
+    
+    unittest
+    {
+        static assert(is(typeof(File("").byLine.front) == char[]));
+        static assert(is(typeof(File("").byLineCopy.front) == string));
+        static assert(
+            is(typeof(File("").byLineCopy!(char, char).front) == char[]));
     }
 
     unittest
@@ -1947,12 +1955,6 @@ $(XREF file,readText)
 
         file.detach();
         assert(!file.isOpen);
-    }
-    
-    unittest
-    {
-        static assert(is(typeof(File("").byLine.front) == char[]));
-        static assert(is(typeof(File("").byLineCopy.front) == string));
     }
 
     template byRecord(Fields...)
