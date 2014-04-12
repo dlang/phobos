@@ -1271,38 +1271,6 @@ unittest
     static assert(passNormalY || passAbnormalY && double.alignof <= int.alignof);
 }
 
-/*--*
-First-class reference type
-*/
-struct Ref(T)
-{
-    private T * _p;
-    this(ref T value) { _p = &value; }
-    ref T opDot() { return *_p; }
-    /*ref*/ T opImplicitCastTo() { return *_p; }
-    @property ref T value() { return *_p; }
-
-    void opAssign(T value)
-    {
-        *_p = value;
-    }
-    void opAssign(T * value)
-    {
-        _p = value;
-    }
-}
-
-unittest
-{
-    Ref!(int) x;
-    int y = 42;
-    x = &y;
-    assert(x.value == 42);
-    x = 5;
-    assert(x.value == 5);
-    assert(y == 5);
-}
-
 /**
 Defines a value paired with a distinctive "null" state that denotes
 the absence of a value. If default constructed, a $(D
