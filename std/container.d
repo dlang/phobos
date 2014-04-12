@@ -2326,6 +2326,15 @@ unittest
     assert(a[].equal([1, 2, 3, 7]));
 }
 
+unittest //12566
+{
+    auto dl2 = DList!int([2,7]);
+    dl2.removeFront();
+    assert(dl2[].walkLength == 1);
+    dl2.removeBack();
+    assert(dl2.empty, "not empty?!");
+}
+
 /**
 Array type with deterministic control of memory. The memory allocated
 for the array is reclaimed as soon as possible; there is no reliance
@@ -3479,7 +3488,7 @@ unittest //6998
     assert(i == 0);
     auto c = new C();
     assert(i == 1);
-    
+
     //scope
     {
         auto arr = Array!C(c);
