@@ -4632,13 +4632,14 @@ template Utf8Matcher()
             string code;
             foreach(size; UniSizes)
                 code ~= format(q{
-                    (ch & ~leadMask!%d) == encMask!(%d)
-                        ? lookup!(%d, mode)(inp) : 
+                    if ((ch & ~leadMask!%d) == encMask!(%d))
+                        return lookup!(%d, mode)(inp);
+                    else 
                 }, size, size, size);
             static if (Sizes.length == 4) //covers all code unit cases
-                code ~= "(badEncoding(), false)";
+                code ~= "{ badEncoding(); return false; }";
             else
-                code ~= "false"; //may be just fine but not covered
+                code ~= "return false;"; //may be just fine but not covered
             return code;
         }
         enum dispatch = genDispatch();
@@ -4650,10 +4651,19 @@ template Utf8Matcher()
             assert(!inp.empty);
             auto ch = inp[0];
             static if(hasASCII)
-                return ch < 0x80 ? tab!1[ch] && (inp.popFront(), true)
-                    : mixin(dispatch);
+            {
+                if (ch < 0x80)
+                {
+                    bool r = tab!1[ch];
+                    if(r)
+                        inp.popFront();
+                    return r;
+                }
+                else
+                    mixin(dispatch);
+            }
             else
-                return mixin(dispatch);
+                mixin(dispatch);
         }
 
         static if(Sizes.length == 4) // can skip iff can detect all encodings
@@ -4665,10 +4675,17 @@ template Utf8Matcher()
                 assert(!inp.empty);
                 auto ch = inp[0];
                 static if(hasASCII)
-                    return ch < 0x80 ? (inp.popFront(), tab!1[ch])
-                        : mixin(dispatch);
+                {
+                    if (ch < 0x80)
+                    {
+                        inp.popFront();
+                        return tab!1[ch];
+                    }
+                    else
+                        mixin(dispatch);
+                }
                 else
-                    return mixin(dispatch);
+                    mixin(dispatch);
             }
         }
 
@@ -4679,9 +4696,14 @@ template Utf8Matcher()
             assert(!inp.empty);
             auto ch = inp[0];
             static if(hasASCII)
-                return ch < 0x80 ? tab!1[ch] : mixin(dispatch);
+            {
+                if (ch < 0x80)
+                    return tab!1[ch];
+                else
+                    mixin(dispatch);
+            }
             else
-                return mixin(dispatch);
+                mixin(dispatch);
         }
 
         bool match(C)(ref C[] str) const pure @trusted
