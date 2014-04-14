@@ -616,6 +616,49 @@ unittest
     static assert( allSatisfy!(isIntegral, int, long));
 }
 
+/** Tests whether all given items sets of size $(D N) used as arguments to the
+predicate $(D F) evaluates to $(D true).
+
+Some predicates require more than one parameter at a time. $(D allSatisfyN)
+passes $(D N) elements at a time to the predicate. If the $(D T.length % N !=
+0) $(D allSatisfyN) evaluates to $(D false).
+*/
+template allSatisfyN(alias F, size_t N, T...)
+{
+    static if (T.length == 0)
+    {
+        enum allSatisfyN = true;
+    }
+    else static if (T.length < N)
+    {
+        enum allSatisfyN = false;
+    }
+    else static if (T.length >= N)
+    {
+        enum allSatisfyN = F!(T[0 .. N]) &&
+            allSatisfyN!(F, N, T[N .. $]);
+    }
+}
+
+///
+unittest
+{
+    import std.range : isOutputRange;
+
+    static assert(!allSatisfyN!(isOutputRange, 2u, int[], double));
+    static assert( allSatisfyN!(isOutputRange, 2u, long[], long));
+}
+
+unittest
+{
+    import std.range : isOutputRange;
+
+    static assert( allSatisfyN!(isOutputRange, 2u));
+    static assert(!allSatisfyN!(isOutputRange, 2u, int[]));
+    static assert( allSatisfyN!(isOutputRange, 2u, long[], long, int[], int));
+}
+
+
 /**
 Tests whether all given items satisfy a template predicate, i.e. evaluates to
 $(D F!(T[0]) || F!(T[1]) || ... || F!(T[$ - 1])).
