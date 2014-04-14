@@ -5792,7 +5792,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     /**
      * Fetch a range that spans all the elements in the container.
      *
-     * Complexity: $(BIGOH log(n))
+     * Complexity: $(BIGOH 1)
      */
     Range opSlice()
     {
@@ -5802,7 +5802,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     /**
      * The front element in the container
      *
-     * Complexity: $(BIGOH log(n))
+     * Complexity: $(BIGOH 1)
      */
     Elem front()
     {
