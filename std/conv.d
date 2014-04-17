@@ -289,7 +289,7 @@ template to(T)
 }
 
 // Tests for issue 6175
-@safe pure unittest
+@safe pure nothrow unittest
 {
     char[9] sarr = "blablabla";
     auto darr = to!(char[])(sarr);
@@ -298,14 +298,14 @@ template to(T)
 }
 
 // Tests for issue 7348
-@safe pure unittest
+@safe pure /+nothrow+/ unittest
 {
     assert(to!string(null) == "null");
     assert(text(null) == "null");
 }
 
 // Tests for issue 11390
-@safe pure unittest
+@safe pure /+nothrow+/ unittest
 {
     const(typeof(null)) ctn;
     immutable(typeof(null)) itn;
@@ -367,14 +367,14 @@ T toImpl(T, S)(S value)
     return value;
 }
 
-@safe pure unittest
+@safe pure nothrow unittest
 {
     enum E { a }  // Issue 9523 - Allow identity enum conversion
     auto e = to!E(E.a);
     assert(e == E.a);
 }
 
-@safe pure unittest
+@safe pure nothrow unittest
 {
     int a = 42;
     auto b = to!long(a);
@@ -459,7 +459,7 @@ T toImpl(T, S)(ref S s)
     return toImpl!(T, typeof(s[0])[])(s);
 }
 
-@safe pure unittest
+@safe pure nothrow unittest
 {
     char[4] test = ['a', 'b', 'c', 'd'];
     static assert(!isInputRange!(Unqual!(char[4])));
@@ -976,14 +976,14 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     assert(c == "abcx");
 }
 
-@system pure unittest
+@system pure nothrow unittest
 {
     // char* to string conversion
     assert(to!string(cast(char*) null) == "");
     assert(to!string("foo\0".ptr) == "foo");
 }
 
-@safe pure unittest
+@safe pure /+nothrow+/ unittest
 {
     // Conversion representing bool value with string
     bool b;
@@ -1020,26 +1020,26 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     assert(s2 == "foo");
 }
 
-@safe pure unittest
+@safe pure nothrow unittest
 {
     // Conversion representing integer values with string
 
     foreach (Int; TypeTuple!(ubyte, ushort, uint, ulong))
     {
-        assert(to!string(to!Int(0)) == "0");
-        assert(to!string(to!Int(9)) == "9");
-        assert(to!string(to!Int(123)) == "123");
+        assert(to!string(Int(0)) == "0");
+        assert(to!string(Int(9)) == "9");
+        assert(to!string(Int(123)) == "123");
     }
 
     foreach (Int; TypeTuple!(byte, short, int, long))
     {
-        assert(to!string(to!Int(0)) == "0");
-        assert(to!string(to!Int(9)) == "9");
-        assert(to!string(to!Int(123)) == "123");
-        assert(to!string(to!Int(-0)) == "0");
-        assert(to!string(to!Int(-9)) == "-9");
-        assert(to!string(to!Int(-123)) == "-123");
-        assert(to!string(to!(const Int)(6)) == "6");
+        assert(to!string(Int(0)) == "0");
+        assert(to!string(Int(9)) == "9");
+        assert(to!string(Int(123)) == "123");
+        assert(to!string(Int(-0)) == "0");
+        assert(to!string(Int(-9)) == "-9");
+        assert(to!string(Int(-123)) == "-123");
+        assert(to!string(const(Int)(6)) == "6");
     }
 
     assert(wtext(int.max) == "2147483647"w);
@@ -1054,7 +1054,7 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     });
 }
 
-@safe pure unittest
+@safe pure /+nothrow+/ unittest
 {
     // Conversion representing dynamic/static array with string
     long[] b = [ 1, 3, 5 ];
@@ -1121,7 +1121,7 @@ unittest
     assert(to!string(s8080) == "<S>");
 }
 
-unittest
+/+nothrow+/ unittest
 {
     // Conversion representing enum value with string
     enum EB : bool { a = true }
@@ -1250,24 +1250,24 @@ body
     }
 }
 
-@safe pure unittest
+@safe pure nothrow unittest
 {
     foreach (Int; TypeTuple!(uint, ulong))
     {
-        assert(to!string(to!Int(16), 16) == "10");
-        assert(to!string(to!Int(15), 2u) == "1111");
-        assert(to!string(to!Int(1), 2u) == "1");
-        assert(to!string(to!Int(0x1234AF), 16u) == "1234AF");
-        assert(to!string(to!Int(0x1234BCD), 16u, LetterCase.upper) == "1234BCD");
-        assert(to!string(to!Int(0x1234AF), 16u, LetterCase.lower) == "1234af");
+        assert(to!string(Int(16), 16) == "10");
+        assert(to!string(Int(15), 2u) == "1111");
+        assert(to!string(Int(1), 2u) == "1");
+        assert(to!string(Int(0x1234AF), 16u) == "1234AF");
+        assert(to!string(Int(0x1234BCD), 16u, LetterCase.upper) == "1234BCD");
+        assert(to!string(Int(0x1234AF), 16u, LetterCase.lower) == "1234af");
     }
 
     foreach (Int; TypeTuple!(int, long))
     {
-        assert(to!string(to!Int(-10), 10u) == "-10");
+        assert(to!string(Int(-10), 10u) == "-10");
     }
 
-    assert(to!string(cast(byte)-10, 16) == "F6");
+    assert(to!string(byte(-10), 16) == "F6");
     assert(to!string(long.min) == "-9223372036854775808");
     assert(to!string(long.max) == "9223372036854775807");
 }
@@ -1457,7 +1457,6 @@ T toImpl(T, S)(S value)
     a = [null:["hello":int.max]];
     assertThrown!ConvOverflowException(to!(short[wstring][string[double[]]])(a));
 }
-version(none) // masked by unexpected linker error in posix platforms
 unittest // Extra cases for AA with qualifiers conversion
 {
     int[][int[]] a;// = [[], []];
