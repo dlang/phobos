@@ -1232,8 +1232,6 @@ body
         return cast(T)buffer[index .. $].dup;
     }
 
-    enforce(radix >= 2 && radix <= 36, new ConvException("Radix error"));
-
     switch(radix)
     {
         case 10:
