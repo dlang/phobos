@@ -1776,7 +1776,10 @@ the contents may well have changed).
         @property front()
         {
             if (!gotFront)
+            {
                 line = impl.front.dup;
+                gotFront = true;
+            }
             return line;
         }
         
@@ -1955,6 +1958,18 @@ $(XREF file,readText)
 
         file.detach();
         assert(!file.isOpen);
+    }
+
+    unittest
+    {
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "hi");
+        scope(success) std.file.remove(deleteme);
+
+        auto blc = File(deleteme).byLineCopy;
+        assert(!blc.empty);
+        // check front is cached
+        assert(blc.front is blc.front);
     }
 
     template byRecord(Fields...)
