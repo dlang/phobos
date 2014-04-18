@@ -3553,14 +3553,21 @@ struct Curl
                                  opensocketfunction, noprogress,
                                  progressdata, progressfunction,
                                  debugdata, debugfunction,
-                                 ssl_ctx_function, interleavedata,
+                                 interleavedata,
                                  interleavefunction, chunk_data,
                                  chunk_bgn_function, chunk_end_function,
                                  fnmatch_data, fnmatch_function,
-                                 ssh_keydata, cookiejar, postfields);
+                                 cookiejar, postfields);
             foreach(option; tt)
                 copy.clear(option);
         }
+
+        // The options are only supported by libcurl when it has been built 
+        // against certain versions of OpenSSL - if your libcurl uses an old 
+        // OpenSSL, or uses an entirely different SSL engine, attempting to 
+        // clear these normally will raise an exception
+        copy.clearIfSupported(CurlOption.ssl_ctx_function);
+        copy.clearIfSupported(CurlOption.ssh_keydata);
 
         // Enable for curl version > 7.21.7
         static if (LIBCURL_VERSION_MAJOR >= 7 &&
@@ -3679,6 +3686,22 @@ struct Curl
     {
         throwOnStopped();
         _check(curl_easy_setopt(this.handle, option, null));
+    }
+
+    /**
+       Clear a pointer option. Does not raise an exception if the underlying
+       libcurl does not support the option. Use sparingly.
+       Params:
+       option = A $(ECXREF curl, CurlOption) as found in the curl documentation
+    */
+    void clearIfSupported(CurlOption option)
+    {
+        throwOnStopped();
+        auto rval = curl_easy_setopt(this.handle, option, null);
+        if (rval != CurlError.unknown_telnet_option)
+        {
+            _check(rval);
+        }
     }
 
     /**
