@@ -8985,15 +8985,6 @@ private:
     }
 
 
-    //Commented out due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5058
-    /+
-    invariant()
-    {
-        assert(_timezone !is null, "Invariant Failure: timezone is null. Were you foolish enough to use SysTime.init? (since timezone for SysTime.init can't be set at compile time).");
-    }
-    +/
-
-
     long  _stdTime;
     Rebindable!(immutable TimeZone) _timezone = InitTimeZone();
 }
