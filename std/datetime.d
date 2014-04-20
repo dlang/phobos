@@ -575,6 +575,15 @@ private:
 
     $(D SysTime)'s range is from approximately 29,000 B.C. to approximately
     29,000 A.D.
+
+    Note: $(D SysTime.init) is treated similarly to NaN in that any operation on
+    it other than assignment will leave it at the same value in order to make
+    it more obvious when code does not assign it a real value prior to using
+    it. Also, $(D sysTime is SysTime.init) is guaranteed to be true when
+    $(D sysTime) is $(D SysTime.init) but not true for any other $(D SysTime)s,
+    even if they have they have a $(D stdTime) value of $(D 0) like
+    $(D SysTime.init) does ($(D SysTime.init) is equivalent to
+    0001-01-01T00:00:00+00:00).
   +/
 struct SysTime
 {
@@ -2100,6 +2109,13 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         return _timezone;
     }
 
+    unittest
+    {
+        assert(SysTime.init.timezone is InitTimeZone());
+        assert(Clock.currTime().timezone is LocalTime());
+        assert(Clock.currTime(UTC()).timezone is UTC());
+    }
+
 
     /++
         The current time zone of this $(LREF SysTime). It's internal time is always
@@ -2108,14 +2124,39 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         adjust the time to this $(LREF SysTime)'s time zone before returning.
 
         Params:
-            timezone = The $(LREF2 .TimeZone, TimeZone) to set this $(LREF SysTime)'s time zone to.
+            tz = The $(LREF2 .TimeZone, TimeZone) to set this $(LREF SysTime)'s time zone to.
       +/
-    @property void timezone(immutable TimeZone timezone) pure nothrow
+    @property void timezone(immutable TimeZone tz) pure nothrow
     {
-        if(timezone is null)
-            _timezone = LocalTime();
-        else
-            _timezone = timezone;
+        if(tz is InitTimeZone())
+        {
+            _stdTime = 0;
+            _timezone = tz;
+        }
+        else if(_timezone !is InitTimeZone())
+            _timezone = tz is null ? LocalTime() : tz;
+    }
+
+    unittest
+    {
+        {
+            auto st = SysTime(DateTime(1982, 1, 4, 20, 59, 12));
+            assert(st.timezone !is InitTimeZone());
+            st.timezone = InitTimeZone();
+            assert(st.timezone is InitTimeZone());
+            assert(st.stdTime == 0);
+            assert(st is SysTime.init);
+        }
+
+        auto st = SysTime(DateTime(1982, 1, 4, 20, 59, 12), UTC());
+        assert(st.timezone is UTC());
+        immutable stdTime = st.stdTime;
+        st.timezone = null;
+        assert(st.timezone is LocalTime());
+        assert(st.stdTime == stdTime);
+        st.timezone = UTC();
+        assert(st.timezone is UTC());
+        assert(st.stdTime == stdTime);
     }
 
 
@@ -2200,27 +2241,44 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
     /++
         Returns a $(LREF SysTime) with the same std time as this one, but with
         given time zone as its time zone.
+
+        Params:
+            tz = The $(LREF2 .TimeZone, TimeZone) to use for the returned
+                 $(LREF SysTime)'s time zone.
       +/
     SysTime toOtherTZ(immutable TimeZone tz) const pure nothrow
     {
-        if(tz is null)
-            return SysTime(_stdTime, LocalTime());
+        if(tz is InitTimeZone())
+            return SysTime.init;
         else
-            return SysTime(_stdTime, tz);
+            return SysTime(_stdTime, tz is null ? LocalTime() : tz);
     }
 
     unittest
     {
-        version(testStdDateTime)
         {
-            auto stz = new immutable SimpleTimeZone(dur!"minutes"(11 * 60));
-            auto sysTime = SysTime(DateTime(1982, 1, 4, 8, 59, 7), FracSec.from!"hnsecs"(27));
-            assert(sysTime == sysTime.toOtherTZ(stz));
-            assert(sysTime._stdTime == sysTime.toOtherTZ(stz)._stdTime);
-            assert(sysTime.toOtherTZ(stz).timezone is stz);
-            assert(sysTime.toOtherTZ(stz).timezone !is LocalTime());
-            assert(sysTime.toOtherTZ(stz).timezone !is UTC());
+            auto st = SysTime(DateTime(1982, 1, 4, 20, 59, 12));
+            assert(st.timezone is LocalTime());
+            auto other = st.toOtherTZ(SysTime.init.timezone);
+            assert(other.timezone is InitTimeZone());
+            assert(other.stdTime == 0);
+            assert(other is SysTime.init);
         }
+
+        {
+            auto st = SysTime(DateTime(1982, 1, 4, 20, 59, 12), UTC());
+            auto other = st.toOtherTZ(null);
+            assert(st == other);
+            assert(st.stdTime == other.stdTime);
+            assert(other.timezone is LocalTime());
+        }
+
+        auto stz = new immutable SimpleTimeZone(dur!"minutes"(11 * 60));
+        auto st = SysTime(DateTime(1982, 1, 4, 8, 59, 7), FracSec.from!"hnsecs"(27));
+        auto other = st.toOtherTZ(stz);
+        assert(st == other);
+        assert(st.stdTime == other.stdTime);
+        assert(other.timezone is stz);
     }
 
 
@@ -2449,6 +2507,9 @@ assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
         if(units == "years" ||
            units == "months")
     {
+        if(_timezone is InitTimeZone())
+            return this;
+
         auto hnsecs = adjTime;
         auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
 
@@ -2503,6 +2564,12 @@ assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
     {
         version(testStdDateTime)
         {
+            {
+                SysTime st;
+                st.add!"years"(1);
+                assert(st is SysTime.init);
+            }
+
             //Test A.D.
             {
                 auto sysTime = SysTime(Date(1999, 7, 6));
@@ -2702,6 +2769,12 @@ assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
     {
         version(testStdDateTime)
         {
+            {
+                SysTime st;
+                st.add!"years"(1, AllowDayOverflow.no);
+                assert(st is SysTime.init);
+            }
+
             //Test A.D.
             {
                 auto sysTime = SysTime(Date(1999, 7, 6));
@@ -2904,6 +2977,12 @@ assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
     {
         version(testStdDateTime)
         {
+            {
+                SysTime st;
+                st.add!"months"(1);
+                assert(st is SysTime.init);
+            }
+
             //Test A.D.
             {
                 auto sysTime = SysTime(Date(1999, 7, 6));
@@ -3247,6 +3326,12 @@ assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
     {
         version(testStdDateTime)
         {
+            {
+                SysTime st;
+                st.add!"months"(1, AllowDayOverflow.no);
+                assert(st is SysTime.init);
+            }
+
             //Test A.D.
             {
                 auto sysTime = SysTime(Date(1999, 7, 6));
@@ -3711,6 +3796,12 @@ assert(st6 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
     {
         version(testStdDateTime)
         {
+            {
+                SysTime st;
+                st.roll!"months"(1);
+                assert(st is SysTime.init);
+            }
+
             //Test A.D.
             {
                 auto sysTime = SysTime(Date(1999, 7, 6));
@@ -4103,6 +4194,12 @@ assert(st6 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
     {
         version(testStdDateTime)
         {
+            {
+                SysTime st;
+                st.roll!"months"(1, AllowDayOverflow.no);
+                assert(st is SysTime.init);
+            }
+
             //Test A.D.
             {
                 auto sysTime = SysTime(Date(1999, 7, 6));
@@ -4517,6 +4614,9 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
     /+ref SysTime+/ void roll(string units)(long value) nothrow
         if(units == "days")
     {
+        if(_timezone is InitTimeZone())
+            return;
+
         auto hnsecs = adjTime;
         auto gdays = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
 
@@ -4574,6 +4674,12 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
     {
         version(testStdDateTime)
         {
+            {
+                SysTime st;
+                st.roll!"days"(1);
+                assert(st is SysTime.init);
+            }
+
             //Test A.D.
             {
                 auto sysTime = SysTime(Date(1999, 2, 28));
@@ -4857,6 +4963,9 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
            units == "minutes" ||
            units == "seconds")
     {
+        if(_timezone is InitTimeZone())
+            return;
+
         try
         {
             auto hnsecs = adjTime;
@@ -4899,6 +5008,12 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
     {
         version(testStdDateTime)
         {
+            {
+                SysTime st;
+                st.roll!"hours"(1);
+                assert(st is SysTime.init);
+            }
+
             static void TestST(SysTime orig, int hours, in SysTime expected)
             {
                 orig.roll!"hours"(hours);
@@ -5134,6 +5249,12 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
     {
         version(testStdDateTime)
         {
+            {
+                SysTime st;
+                st.roll!"minutes"(1);
+                assert(st is SysTime.init);
+            }
+
             static void TestST(SysTime orig, int minutes, in SysTime expected)
             {
                 orig.roll!"minutes"(minutes);
@@ -5337,6 +5458,12 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
     {
         version(testStdDateTime)
         {
+            {
+                SysTime st;
+                st.roll!"seconds"(1);
+                assert(st is SysTime.init);
+            }
+
             static void TestST(SysTime orig, int seconds, in SysTime expected)
             {
                 orig.roll!"seconds"(seconds);
@@ -5520,6 +5647,9 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
            units == "usecs" ||
            units == "hnsecs")
     {
+        if(_timezone is InitTimeZone())
+            return;
+
         auto hnsecs = adjTime;
         immutable days = splitUnitsFromHNSecs!"days"(hnsecs);
         immutable negative = hnsecs < 0;
@@ -5551,6 +5681,12 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
     {
         version(testStdDateTime)
         {
+            {
+                SysTime st;
+                st.roll!"msecs"(1);
+                assert(st is SysTime.init);
+            }
+
             static void TestST(SysTime orig, int milliseconds, in SysTime expected)
             {
                 orig.roll!"msecs"(milliseconds);
@@ -5648,6 +5784,12 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
     {
         version(testStdDateTime)
         {
+            {
+                SysTime st;
+                st.roll!"usecs"(1);
+                assert(st is SysTime.init);
+            }
+
             static void TestST(SysTime orig, long microseconds, in SysTime expected)
             {
                 orig.roll!"usecs"(microseconds);
@@ -5763,6 +5905,12 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
     {
         version(testStdDateTime)
         {
+            {
+                SysTime st;
+                st.roll!"hnsecs"(1);
+                assert(st is SysTime.init);
+            }
+
             static void TestST(SysTime orig, long hnsecs, in SysTime expected)
             {
                 orig.roll!"hnsecs"(hnsecs);
@@ -5908,6 +6056,9 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
     {
+        if(_timezone is InitTimeZone())
+            return this;
+
         SysTime retval = SysTime(this._stdTime, this._timezone);
 
         static if(is(Unqual!D == Duration))
@@ -5935,6 +6086,9 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
     {
         version(testStdDateTime)
         {
+            assert(SysTime.init + dur!"weeks"(1) is SysTime.init);
+            assert(SysTime.init - dur!"weeks"(1) is SysTime.init);
+
             auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678));
 
             assert(st + dur!"weeks"(7) == SysTime(DateTime(1999, 8, 24, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
@@ -6134,6 +6288,9 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
     {
+        if(_timezone is InitTimeZone())
+            return this;
+
         static if(is(Unqual!D == Duration))
             auto hnsecs = duration.total!"hnsecs";
         else static if(is(Unqual!D == TickDuration))
@@ -6159,6 +6316,14 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
     {
         version(testStdDateTime)
         {
+            {
+                SysTime st;
+                st += dur!"weeks"(1);
+                assert(st is SysTime.init);
+                st -= dur!"weeks"(1);
+                assert(st is SysTime.init);
+            }
+
             assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) + dur!"weeks"(7) == SysTime(DateTime(1999, 8, 24, 12, 30, 33)));
             assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) + dur!"weeks"(-7) == SysTime(DateTime(1999, 5, 18, 12, 30, 33)));
             assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) + dur!"days"(7) == SysTime(DateTime(1999, 7, 13, 12, 30, 33)));
@@ -8152,36 +8317,32 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
     }
 
 
-    /+
-        Converts this $(LREF SysTime) to a string.
-      +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
-    string toString()
-    {
-        return toSimpleString();
-    }
-
     /++
         Converts this $(LREF SysTime) to a string.
+
+        Note that the specific format is not guaranteed and should not be relied
+        upon. For instance, it's currently the same as $(LREF toSimpleString),
+        but it might be changed to be the same as $(LREF toISOExtString) in
+        the future.
+
+        $(D SysTime.init) returns $(D "SysTime.init") so that it stands out like
+        a sore thumb, since a $(D SysTime) really should be assigned to
+        something other than $(D SysTime.init) before being used.
       +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
     string toString() const nothrow
     {
-        return toSimpleString();
+        return _timezone is InitTimeZone() ? "SysTime.init" : toSimpleString();
     }
 
     unittest
     {
         version(testStdDateTime)
         {
-            auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+            assert(SysTime.init.toString() == "SysTime.init");
+            assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)).toString() == "1999-Jul-06 12:30:33");
+
             const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
             //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            static assert(__traits(compiles, st.toString()));
             static assert(__traits(compiles, cst.toString()));
             //static assert(__traits(compiles, ist.toString()));
         }
@@ -8947,6 +9108,36 @@ private:
     }
 
 
+    // TimeZone for SysTime.init which enables it to function kind of like a NaN
+    // for SysTime in that its value always stays the same unless it's assigned to.
+    // It also enables SysTime.init to be unique for the is operator.
+    final class InitTimeZone : TimeZone
+    {
+    public:
+
+        static immutable(InitTimeZone) opCall() pure nothrow { return _initTimeZone; }
+
+        @property override bool hasDST() const nothrow { return false; }
+
+        override bool dstInEffect(long stdTime) const nothrow { return false; }
+
+        override long utcToTZ(long stdTime) const nothrow { return 0; }
+
+        override long tzToUTC(long adjTime) const nothrow { return 0; }
+
+        override Duration utcOffsetAt(long stdTime) const nothrow { return Duration.zero; }
+
+    private:
+
+        this() immutable pure
+        {
+            super("SysTime.init's timezone", "SysTime.init's timezone", "SysTime.init's timezone");
+        }
+
+        static immutable InitTimeZone _initTimeZone = new immutable(InitTimeZone);
+    }
+
+
     //Commented out due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5058
     /+
     invariant()
@@ -8957,7 +9148,7 @@ private:
 
 
     long  _stdTime;
-    Rebindable!(immutable TimeZone) _timezone;
+    Rebindable!(immutable TimeZone) _timezone = InitTimeZone();
 }
 
 
