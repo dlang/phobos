@@ -6994,16 +6994,22 @@ unittest
         else version(std_regex_ct2)
         {
             pragma(msg, "Testing 2nd part of ctRegex");
-            alias Tests = Sequence!(90, 165);
+            alias Tests = Sequence!(90, 155);
         }
         else version(std_regex_ct3)
         {
             pragma(msg, "Testing 3rd part of ctRegex");
-            alias Tests = Sequence!(185, 220);
+            alias Tests = Sequence!(155, 174);
         }
+        //FIXME: #174-178 contains CTFE parser bug
         else version(std_regex_ct4)
         {
             pragma(msg, "Testing 4th part of ctRegex");
+            alias Tests = Sequence!(178, 220);
+        }
+        else version(std_regex_ct5)
+        {
+            pragma(msg, "Testing 5th part of ctRegex");
             alias Tests = Sequence!(220, tv.length);
         }
         else
