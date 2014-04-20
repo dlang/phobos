@@ -7836,6 +7836,7 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
     unittest
     {
         //Test A.D.
+        assert(SysTime.init.toISOString() == "00010101T000000+00:00");
         assert(SysTime(DateTime.init, UTC()).toISOString() == "00010101T000000Z");
         assert(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1), UTC()).toISOString() == "00010101T000000.0000001Z");
 
@@ -7978,6 +7979,7 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
     unittest
     {
         //Test A.D.
+        assert(SysTime.init.toISOExtString() == "0001-01-01T00:00:00+00:00");
         assert(SysTime(DateTime.init, UTC()).toISOExtString() == "0001-01-01T00:00:00Z");
         assert(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1), UTC()).toISOExtString() == "0001-01-01T00:00:00.0000001Z");
 
@@ -8118,6 +8120,7 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
     unittest
     {
         //Test A.D.
+        assert(SysTime.init.toSimpleString() == "0001-Jan-01 00:00:00+00:00");
         assert(SysTime(DateTime.init, UTC()).toString() == "0001-Jan-01 00:00:00Z");
         assert(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1), UTC()).toString() == "0001-Jan-01 00:00:00.0000001Z");
 
