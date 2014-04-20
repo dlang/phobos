@@ -670,14 +670,14 @@ else
     import std.internal.unicode_tables; // generated file
 }
 
-void copyBackwards(T)(T[] src, T[] dest)
+void copyBackwards(T,U)(T[] src, U[] dest)
 {
     assert(src.length == dest.length);
     for(size_t i=src.length; i-- > 0; )
         dest[i] = src[i];
 }
 
-void copyForward(T)(T[] src, T[] dest)
+void copyForward(T,U)(T[] src, U[] dest)
 {
     assert(src.length == dest.length);
     for(size_t i=0; i<src.length; i++)
@@ -1673,10 +1673,9 @@ unittest
             dest.length = dest.length+delta;//@@@BUG lame @property
         else
             dest = Policy.realloc(dest, dest.length+delta);
-        auto rem = copy(retro(dest[to..dest.length-delta])
-             , retro(dest[to+delta..dest.length]));
-        assert(rem.empty);
-        copy(stuff, dest[from..stuff_end]);
+        copyBackwards(dest[to..dest.length-delta],
+            dest[to+delta..dest.length]);
+        copyForward(stuff, dest[from..stuff_end]);
     }
     else if(stuff.length == delta)
     {
@@ -1686,13 +1685,12 @@ unittest
     {// replace decreases length by delta
         delta = delta - stuff.length;
         copy(stuff, dest[from..stuff_end]);
-        auto rem =  copy(dest[to..dest.length]
-             , dest[stuff_end..dest.length-delta]);
+        copyForward(dest[to..dest.length],
+            dest[stuff_end..dest.length-delta]);
         static if(is(Policy == void))
             dest.length = dest.length - delta;//@@@BUG lame @property
         else
             dest = Policy.realloc(dest, dest.length-delta);
-        assert(rem.empty);
     }
     return stuff_end;
 }
@@ -1737,14 +1735,11 @@ unittest
     static void destroy(T)(ref T arr)
         if(isDynamicArray!T && is(Unqual!T == T))
     {
-        version(bug10929) //@@@BUG@@@
+        debug
         {
-            debug
-            {
-                arr[] = cast(typeof(T.init[0]))(0xdead_beef);
-            }
-            arr = null;
+            arr[] = cast(typeof(T.init[0]))(0xdead_beef);
         }
+        arr = null;
     }
 
     static void destroy(T)(ref T arr)
@@ -1994,7 +1989,7 @@ public:
             arr ~= v.a;
             arr ~= v.b;
         }
-        data = CowArray!(SP)(arr);
+        data = CowArray!(SP).reuse(arr);
     }
 
     /**
@@ -2003,9 +1998,13 @@ public:
     this(Range)(Range intervals) pure
         if(isForwardRange!Range && isIntegralPair!(ElementType!Range))
     {
-        auto flattened = roundRobin(intervals.save.map!"a[0]"(),
-            intervals.save.map!"a[1]"());
-        data = CowArray!(SP)(flattened);
+        uint[] arr;
+        foreach(v; intervals)
+        {
+            SP.append(arr, v.a);
+            SP.append(arr, v.b);
+        }
+        data = CowArray!(SP).reuse(arr);
         sanitize(); //enforce invariant: sort intervals etc.
     }
 
@@ -2750,22 +2749,23 @@ private:
     Marker addInterval(int a, int b, Marker hint=Marker.init)
     in
     {
-        assert(a <= b, text(a, " > ", b));
+        assert(a <= b);
     }
     body
     {
         auto range = assumeSorted(data[]);
         size_t pos;
-        size_t a_idx = hint + range[hint..$].lowerBound(a).length;
+        size_t a_idx = hint + range[hint..$].lowerBound!(SearchPolicy.gallop)(a).length;
         if(a_idx == range.length)
         {
             //  [---+++----++++----++++++]
             //  [                         a  b]
-            data.append([a, b]);
+            data.append(a, b);
             return data.length-1;
         }
-        size_t b_idx = range[a_idx..range.length].lowerBound(b).length+a_idx;
-        uint[] to_insert;
+        size_t b_idx = range[a_idx..range.length].lowerBound!(SearchPolicy.gallop)(b).length+a_idx;
+        uint[3] buf = void;
+        uint to_insert;
         debug(std_uni)
         {
             writefln("a_idx=%d; b_idx=%d;", a_idx, b_idx);
@@ -2776,14 +2776,17 @@ private:
             //  [      s     a                 b]
             if(a_idx & 1)// a in positive
             {
-                to_insert = [ b ];
+                buf[0] = b;
+                to_insert = 1;
             }
             else// a in negative
             {
-                to_insert = [a, b];
+                buf[0] = a;
+                buf[1] = b;
+                to_insert = 2;
             }
-            genericReplace(data, a_idx, b_idx, to_insert);
-            return a_idx+to_insert.length-1;
+            pos = genericReplace(data, a_idx, b_idx, buf[0..to_insert]);
+            return pos - 1;
         }
 
         uint top = data[b_idx];
@@ -2799,7 +2802,8 @@ private:
             {
                 //  [-------++++++++----++++++-]
                 //  [       s    a        b    ]
-                to_insert = [top];
+                buf[0] = top;
+                to_insert = 1;
             }
             else // b in negative
             {
@@ -2808,10 +2812,13 @@ private:
                 if(top == b)
                 {
                     assert(b_idx+1 < data.length);
-                    pos = genericReplace(data, a_idx, b_idx+2, [data[b_idx+1]]);
+                    buf[0] = data[b_idx+1];
+                    pos = genericReplace(data, a_idx, b_idx+2, buf[0..1]);
                     return pos - 1;
                 }
-                to_insert = [b, top ];
+                buf[0] = b;
+                buf[1] = top;
+                to_insert = 2;
             }
         }
         else
@@ -2820,7 +2827,9 @@ private:
             {
                 //  [----------+++++----++++++-]
                 //  [     a     b              ]
-                to_insert = [a, top];
+                buf[0] = a;
+                buf[1] = top;
+                to_insert = 2;
             }
             else// b in negative
             {
@@ -2829,17 +2838,22 @@ private:
                 if(top == b)
                 {
                     assert(b_idx+1 < data.length);
-                    pos = genericReplace(data, a_idx, b_idx+2, [a, data[b_idx+1] ]);
+                    buf[0] = a;
+                    buf[1] = data[b_idx+1];
+                    pos = genericReplace(data, a_idx, b_idx+2, buf[0..2]);
                     return pos - 1;
                 }
-                to_insert = [a, b, top];
+                buf[0] = a;
+                buf[1] = b;
+                buf[2] = top;
+                to_insert = 3;
             }
         }
-        pos = genericReplace(data, a_idx, b_idx+1, to_insert);
+        pos = genericReplace(data, a_idx, b_idx+1, buf[0..to_insert]);
         debug(std_uni)
         {
             writefln("marker idx: %d; length=%d", pos, data[pos], data.length);
-            writeln("inserting ", to_insert);
+            writeln("inserting ", buf[0..to_insert]);
         }
         return pos - 1;
     }
@@ -3044,11 +3058,21 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
 }
 @trusted struct CowArray(SP=GcPolicy)
 {
+    static auto reuse(uint[] arr)
+    {
+        CowArray cow;
+        cow.data = arr;
+        SP.append(cow.data, 1);
+        assert(cow.refCount == 1);
+        assert(cow.length == arr.length);
+        return cow;
+    }
+
     this(Range)(Range range)
         if(isInputRange!Range && hasLength!Range)
     {
         length = range.length;
-        copy(range, this[]);
+        copy(range, data[0..$-1]);
     }
 
     this(Range)(Range range)
@@ -3056,7 +3080,7 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
     {
         auto len = walkLength(range.save);
         length = len;
-        copy(range, this[]);
+        copy(range, data[0..$-1]);
     }
 
     this(this)
@@ -3141,13 +3165,20 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
     //
     auto opSlice(size_t from, size_t to)
     {
-        return sliceOverIndexed(from, to, &this);
+        if(!empty)
+        {
+            auto cnt = refCount;
+            if(cnt != 1)
+                dupThisReference(cnt);
+        }
+        return data[from .. to];
+        
     }
 
     //
     auto opSlice(size_t from, size_t to) const
     {
-        return sliceOverIndexed(from, to, &this);
+        return data[from .. to];
     }
 
     // length slices before the ref count
@@ -3170,10 +3201,10 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
         copy(range, this[nl-range.length..nl]);
     }
 
-    void append()(uint val)
+    void append()(uint[] val...)
     {
-        length = length + 1;
-        this[$-1] = val;
+        length = length + val.length;
+        data[$-val.length-1 .. $-1] = val[];
     }
 
     bool opEquals()(auto const ref CowArray rhs)const
@@ -3206,10 +3237,7 @@ private:
         }
         else
             SP.destroy(data);
-        version(bug10929)
-            assert(!data.ptr);
-        else
-            data = null;
+        assert(!data.ptr);
     }
 
     void dupThisReference(uint count)
