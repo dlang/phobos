@@ -580,7 +580,6 @@ unittest // by Dave
 
     bool CompressThenUncompress (ubyte[] src)
     {
-      try {
         ubyte[] dst = cast(ubyte[])std.zlib.compress(cast(void[])src);
         double ratio = (dst.length / cast(double)src.length);
         debug(zlib) writef("src.length: %1$d, dst: %2$d, Ratio = %3$f", src.length, dst.length, ratio);
@@ -588,12 +587,8 @@ unittest // by Dave
         uncompressedBuf = cast(ubyte[])std.zlib.uncompress(cast(void[])dst);
         assert(src.length == uncompressedBuf.length);
         assert(src == uncompressedBuf);
-      }
-      catch {
-        debug(zlib) writefln(" ... Exception thrown when src.length = %1$d.", src.length);
-        return false;
-      }
-      return true;
+
+        return true;
     }
 
 
