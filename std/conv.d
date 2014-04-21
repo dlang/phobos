@@ -276,15 +276,16 @@ might fail the range check.
  */
 template to(T)
 {
-    T to(A...)(A args)
-        if (!isRawStaticArray!A)
+    static enum is6175(S) = isRawStaticArray!S && isDynamicArray!T && isImplicitlyConvertible!(S, T);
+
+    T to(A...)(auto ref A args)
+        if (!is6175!(A[0]))
     {
         return toImpl!T(args);
     }
 
-    // Fix issue 6175
     T to(S)(ref S arg)
-        if (isRawStaticArray!S)
+        if (is6175!S)
     {
         return toImpl!T(arg);
     }
@@ -338,6 +339,13 @@ template to(T)
 
     alias AA = int[int];
     assertThrown!ConvException(to!AA(" [1:1]"));
+}
+
+// Tests for issue 12181
+@safe pure unittest
+{
+    enum int[2] arr = [1, 2];
+    assert(to!string(arr) == "[1, 2]");
 }
 
 /**
