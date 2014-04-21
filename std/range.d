@@ -291,7 +291,6 @@ import std.algorithm : copy, count, equal, filter, filterBidirectional,
     findSplitBefore, group, isSorted, joiner, move, map, max, min, sort, swap,
     until;
 import std.traits;
-import std.typecons : Tuple, tuple;
 import std.typetuple : allSatisfy, staticMap, TypeTuple;
 
 // For testing only.  This code is included in a string literal to be included
@@ -869,6 +868,7 @@ unittest
 unittest
 {
     import std.conv : to;
+    import std.typecons : tuple;
 
     static struct PutC(C)
     {
@@ -4660,6 +4660,7 @@ struct Zip(Ranges...)
     if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 {
     import std.string : format; //for generic mixins
+    import std.typecons : Tuple;
 
     alias R = Ranges;
     R ranges;
@@ -5029,6 +5030,7 @@ enum StoppingPolicy
 unittest
 {
     import std.exception : assertThrown, assertNotThrown;
+    import std.typecons : tuple;
 
     int[] a = [ 1, 2, 3 ];
     float[] b = [ 1.0, 2.0, 3.0 ];
@@ -5152,6 +5154,7 @@ unittest
 
 @safe pure unittest
 {
+    import std.typecons : tuple;
     auto LL = iota(1L, 1000L);
     auto z = zip(LL, [4]);
 
@@ -5585,9 +5588,11 @@ public:
 }
 
 /// Ditto
-Sequence!(fun, Tuple!(State)) sequence(alias fun, State...)(State args)
+auto sequence(alias fun, State...)(State args)
 {
-    return typeof(return)(tuple(args));
+    import std.typecons : Tuple, tuple;
+    alias Return = Sequence!(fun, Tuple!State);
+    return Return(tuple(args));
 }
 
 ///
@@ -5603,8 +5608,8 @@ unittest
 
 unittest
 {
-    auto y = Sequence!("a[0] + n * a[1]", Tuple!(int, int))
-        (tuple(0, 4));
+    import std.typecons : Tuple, tuple;
+    auto y = Sequence!("a[0] + n * a[1]", Tuple!(int, int))(tuple(0, 4));
     static assert(isForwardRange!(typeof(y)));
 
     //@@BUG
@@ -7539,6 +7544,7 @@ unittest
 // Tests the single-element result
 unittest
 {
+    import std.typecons : tuple;
     foreach (x; tuple(1, '1', 1.0, "1", [1]))
     {
         auto a = only(x);
@@ -8664,6 +8670,7 @@ assert(equal(r[2], [ 4, 4, 5, 6 ]));
     auto trisect(V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V))
     {
+        import std.typecons : tuple;
         size_t first = 0, count = _input.length;
         while (count > 0)
         {
