@@ -5363,7 +5363,6 @@ enum OneShot { Fwd, Bwd };
         alias evalFn = eval;
         assert(clist == (ThreadList!DataIndex).init || startPc == RestartPc); // incorrect after a partial match
         assert(nlist == (ThreadList!DataIndex).init || startPc == RestartPc);
-            startPc = startPc;
         if(!atEnd)//if no char
         {
             debug(std_regex_matcher)
